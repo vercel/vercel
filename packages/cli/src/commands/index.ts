@@ -4,12 +4,14 @@ import { bisectCommand } from './bisect/command';
 import { buildCommand } from './build/command';
 import { cacheCommand } from './cache/command';
 import { certsCommand } from './certs/command';
+import { contractCommand } from './contract/command';
 import { curlCommand } from './curl/command';
 import { deployCommand } from './deploy/command';
 import { devCommand } from './dev/command';
 import { dnsCommand } from './dns/command';
 import { domainsCommand } from './domains/command';
 import { envCommand } from './env/command';
+import { flagsCommand } from './flags/command';
 import { gitCommand } from './git/command';
 import { guidanceCommand } from './guidance/command';
 import { httpstatCommand } from './httpstat/command';
@@ -23,8 +25,8 @@ import { listCommand } from './list/command';
 import { loginCommand } from './login/command';
 import { logoutCommand } from './logout/command';
 import { logsCommand } from './logs/command';
-import { logsv2Command } from './logsv2/command';
 import { mcpCommand } from './mcp/command';
+import { metricsCommand } from './metrics/command';
 import { microfrontendsCommand } from './microfrontends/command';
 import { openCommand } from './open/command';
 import { projectCommand } from './project/command';
@@ -39,8 +41,10 @@ import { targetCommand } from './target/command';
 import { teamsCommand } from './teams/command';
 import { telemetryCommand } from './telemetry/command';
 import { upgradeCommand } from './upgrade/command';
+import { usageCommand } from './usage/command';
 import { whoamiCommand } from './whoami/command';
 import { blobCommand } from './blob/command';
+import { webhooksCommand } from './webhooks/command';
 import type { Command } from './help';
 import output from '../output-manager';
 
@@ -52,12 +56,14 @@ const commandsStructs = [
   buildCommand,
   cacheCommand,
   certsCommand,
+  contractCommand,
   curlCommand,
   deployCommand,
   devCommand,
   dnsCommand,
   domainsCommand,
   envCommand,
+  flagsCommand,
   gitCommand,
   httpstatCommand,
   initCommand,
@@ -70,7 +76,6 @@ const commandsStructs = [
   loginCommand,
   logoutCommand,
   logsCommand,
-  logsv2Command,
   mcpCommand,
   microfrontendsCommand,
   openCommand,
@@ -86,6 +91,8 @@ const commandsStructs = [
   teamsCommand,
   telemetryCommand,
   upgradeCommand,
+  webhooksCommand,
+  usageCommand,
   whoamiCommand,
   // added because we don't have a full help command
   { name: 'help', aliases: [] },
@@ -93,6 +100,10 @@ const commandsStructs = [
 
 if (process.env.FF_GUIDANCE_MODE) {
   commandsStructs.push(guidanceCommand);
+}
+
+if (process.env.FF_METRICS) {
+  commandsStructs.push(metricsCommand);
 }
 
 export function getCommandAliases(command: Pick<Command, 'name' | 'aliases'>) {

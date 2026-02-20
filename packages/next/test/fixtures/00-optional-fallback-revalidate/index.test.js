@@ -32,7 +32,7 @@ const getProps = async path => {
 
 const getInitialData = async path => {
   return fetch(
-    `${ctx.deploymentUrl}/_next/data/testing-build-id${path}.json`
+    `${ctx.deploymentUrl}/_next/data/build-TfctsWXpff2fKS${path}.json`
   ).then(res => res.json());
 };
 

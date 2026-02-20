@@ -68,6 +68,8 @@ export interface ClientOptions extends Stdio {
   isAgent?: boolean;
   /** Name of the agent running the CLI (e.g., 'claude', 'cursor') */
   agentName?: string;
+  /** Run without interactive prompts; true when --non-interactive or when agent is detected */
+  nonInteractive?: boolean;
   /** Dangerously skip all permission prompts (--dangerously-skip-permissions flag) */
   dangerouslySkipPermissions?: boolean;
 }
@@ -111,8 +113,12 @@ export default class Client extends EventEmitter implements Stdio {
   isAgent: boolean;
   /** Name of the agent running the CLI */
   agentName?: string;
+  /** Run without interactive prompts; true when --non-interactive or when agent is detected */
+  nonInteractive: boolean;
   /** Dangerously skip all permission prompts (--dangerously-skip-permissions flag) */
   dangerouslySkipPermissions: boolean;
+  /** Track if we've already logged the token source debug message */
+  private _loggedTokenSource: boolean = false;
 
   constructor(opts: ClientOptions) {
     super();
@@ -130,6 +136,7 @@ export default class Client extends EventEmitter implements Stdio {
     this.telemetryEventStore = opts.telemetryEventStore;
     this.isAgent = opts.isAgent ?? false;
     this.agentName = opts.agentName;
+    this.nonInteractive = opts.nonInteractive ?? this.isAgent;
     this.dangerouslySkipPermissions = opts.dangerouslySkipPermissions ?? false;
 
     const theme = {
@@ -188,7 +195,20 @@ export default class Client extends EventEmitter implements Stdio {
 
     // If we have a valid access token, do nothing
     if (isValidAccessToken(authConfig)) {
-      output.debug('Valid access token, skipping token refresh.');
+      if (!this._loggedTokenSource) {
+        if (authConfig.tokenSource === 'flag') {
+          output.debug(
+            'Using token from `--token` argument, skipping token refresh.'
+          );
+        } else if (authConfig.tokenSource === 'env') {
+          output.debug(
+            'Using token from VERCEL_TOKEN environment variable, skipping token refresh.'
+          );
+        } else {
+          output.debug('Valid access token, skipping token refresh.');
+        }
+        this._loggedTokenSource = true;
+      }
       return;
     }
 

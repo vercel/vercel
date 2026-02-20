@@ -35,7 +35,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
 
   it('should revalidate content properly from /blog', async () => {
     const dataRes = await fetch(
-      `${ctx.deploymentUrl}/_next/data/testing-build-id/blog.json`
+      `${ctx.deploymentUrl}/_next/data/build-TfctsWXpff2fKS/blog.json`
     );
     expect(dataRes.status).toBe(200);
 
@@ -69,7 +69,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
 
   it('should load content properly from /blog/first', async () => {
     const dataRes = await fetch(
-      `${ctx.deploymentUrl}/_next/data/testing-build-id/blog/first.json`
+      `${ctx.deploymentUrl}/_next/data/build-TfctsWXpff2fKS/blog/first.json`
     );
     expect(dataRes.status).toBe(200);
 
@@ -104,7 +104,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
 
   it('should rewrite/404 for fallback: false page without preview mode', async () => {
     const dataRes = await fetch(
-      `${ctx.deploymentUrl}/_next/data/testing-build-id/blog/another.json`
+      `${ctx.deploymentUrl}/_next/data/build-TfctsWXpff2fKS/blog/another.json`
     );
     expect(dataRes.status).toBe(404);
     expect(await dataRes.text()).toContain('This page could not be found');
@@ -142,7 +142,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
 
   it('should load fallback: false page with preview mode', async () => {
     const dataRes = await fetch(
-      `${ctx.deploymentUrl}/_next/data/testing-build-id/blog/another.json`,
+      `${ctx.deploymentUrl}/_next/data/build-TfctsWXpff2fKS/blog/another.json`,
       {
         headers: {
           Cookie: previewCookie,

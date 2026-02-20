@@ -20,9 +20,11 @@ it('Should build the 404-getstaticprops example', async () => {
   expect(output['404']).toBeDefined();
   expect(output['404'].type).toBe('FileFsRef');
   expect(output['404'].allowQuery).toBe(undefined);
-  expect(output['_next/data/testing-build-id/404.json']).toBeDefined();
-  expect(output['_next/data/testing-build-id/404.json'].type).toBe('FileFsRef');
-  expect(output['_next/data/testing-build-id/404.json'].allowQuery).toBe(
+  expect(output['_next/data/build-TfctsWXpff2fKS/404.json']).toBeDefined();
+  expect(output['_next/data/build-TfctsWXpff2fKS/404.json'].type).toBe(
+    'FileFsRef'
+  );
+  expect(output['_next/data/build-TfctsWXpff2fKS/404.json'].allowQuery).toBe(
     undefined
   );
   const filePaths = Object.keys(output);

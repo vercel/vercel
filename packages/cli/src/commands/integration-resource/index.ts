@@ -45,7 +45,7 @@ export default async function main(client: Client) {
     output.print(
       help(integrationResourceCommand, { columns: client.stderr.columns })
     );
-    return 2;
+    return 0;
   }
 
   function printHelp(command: Command) {
@@ -62,7 +62,7 @@ export default async function main(client: Client) {
       if (needHelp) {
         telemetry.trackCliFlagHelp('integration-resource', subcommandOriginal);
         printHelp(createThresholdSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandCreateThreshold(subcommandOriginal);
       return createThreshold(client);
@@ -71,7 +71,7 @@ export default async function main(client: Client) {
       if (needHelp) {
         telemetry.trackCliFlagHelp('integration-resource', subcommandOriginal);
         printHelp(removeSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandRemove(subcommandOriginal);
       return remove(client);
@@ -80,7 +80,7 @@ export default async function main(client: Client) {
       if (needHelp) {
         telemetry.trackCliFlagHelp('integration-resource', subcommandOriginal);
         printHelp(disconnectSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandDisconnect(subcommandOriginal);
       return disconnect(client);

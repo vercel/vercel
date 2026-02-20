@@ -1,5 +1,87 @@
 # @vercel/next
 
+## 4.15.31
+
+### Patch Changes
+
+- Added support for `regions` and `functionFailoverRegions` in per-function configuration from `vercel.json` for Next.js projects. ([#15149](https://github.com/vercel/vercel/pull/15149))
+
+## 4.15.30
+
+### Patch Changes
+
+- Update to latest Next.js adapter version' ([#15124](https://github.com/vercel/vercel/pull/15124))
+
+- Add `NEXT_BUILDER_INTEGRATION` env to all `packages/next` vercel.json fixtures. ([#15124](https://github.com/vercel/vercel/pull/15124))
+
+## 4.15.29
+
+### Patch Changes
+
+- Update to latest Next.js adapter version ([#15088](https://github.com/vercel/vercel/pull/15088))
+
+## 4.15.28
+
+### Patch Changes
+
+- [ppr] Support config.cacheComponents ([#14937](https://github.com/vercel/vercel/pull/14937))
+
+## 4.15.27
+
+### Patch Changes
+
+- Update Next.js adapter version ([#14922](https://github.com/vercel/vercel/pull/14922))
+
+## 4.15.26
+
+### Patch Changes
+
+- Update to latest Next.js adapter ([#14909](https://github.com/vercel/vercel/pull/14909))
+
+- Strip routes-manifest.json for determinism more ([#14908](https://github.com/vercel/vercel/pull/14908))
+
+## 4.15.25
+
+### Patch Changes
+
+- [next] Apply routes-manifest onMatchHeaders ([#14903](https://github.com/vercel/vercel/pull/14903))
+
+- Make adapters flag explicit value for opt-in ([#14905](https://github.com/vercel/vercel/pull/14905))
+
+## 4.15.24
+
+### Patch Changes
+
+- Add version gate for adapters opt-in ([#14896](https://github.com/vercel/vercel/pull/14896))
+
+## 4.15.23
+
+### Patch Changes
+
+- Update to latest Next.js adapter ([#14888](https://github.com/vercel/vercel/pull/14888))
+
+- Fix pages-manifest.json when using i18n ([#14878](https://github.com/vercel/vercel/pull/14878))
+
+## 4.15.22
+
+### Patch Changes
+
+- Remove 404.html prerenders from serverless function ([#14836](https://github.com/vercel/vercel/pull/14836))
+
+## 4.15.21
+
+### Patch Changes
+
+- Strip routes-manifest.json for determinism ([#14783](https://github.com/vercel/vercel/pull/14783))
+
+- Update Next.js adapter version ([#14801](https://github.com/vercel/vercel/pull/14801))
+
+## 4.15.20
+
+### Patch Changes
+
+- Fix assertion for cacheComponents with getStaticProps route ([#14807](https://github.com/vercel/vercel/pull/14807))
+
 ## 4.15.19
 
 ### Patch Changes

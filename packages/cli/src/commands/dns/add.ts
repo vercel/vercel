@@ -23,7 +23,7 @@ export default async function add(client: Client, argv: string[]) {
   let parsedArgs;
   const flagsSpecification = getFlagsSpecification(addSubcommand.options);
   try {
-    parsedArgs = parseArguments(argv, flagsSpecification, { permissive: true });
+    parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
     printError(err);
     return 1;

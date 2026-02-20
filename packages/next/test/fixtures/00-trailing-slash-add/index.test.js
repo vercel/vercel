@@ -17,7 +17,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     // request _next/data until we get the revalidated content
     for (let i = 0; i < 10; i++) {
       const dataRes = await fetch(
-        `${ctx.deploymentUrl}/_next/data/testing-build-id/index.json`
+        `${ctx.deploymentUrl}/_next/data/build-TfctsWXpff2fKS/index.json`
       );
       expect(dataRes.status).toBe(200);
       const data = await dataRes.json();

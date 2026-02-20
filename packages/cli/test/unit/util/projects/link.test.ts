@@ -1,11 +1,13 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { join } from 'path';
+import { mkdirp, writeJSON } from 'fs-extra';
 import { getLinkedProject } from '../../../../src/util/projects/link';
 import { client } from '../../../mocks/client';
 
 import { defaultProject, useProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
+import { setupTmpDir } from '../../../helpers/setup-unit-fixture';
 
 type UnPromisify<T> = T extends Promise<infer U> ? U : T;
 
@@ -199,6 +201,82 @@ describe('getLinkedProject', () => {
     expect(link.org.id).toEqual('team_dummy');
     expect(link.org.type).toEqual('team');
     expect(link.project.id).toEqual('QmScb7GPQt6gsS');
+    expect(link.repoRoot).toEqual(cwd);
+  });
+
+  it('should prefer `project.json` over `repo.json` when both exist', async () => {
+    const repoRoot = setupTmpDir('project-link-precedence');
+    const cwd = join(repoRoot, 'apps', 'docs');
+
+    // Repo-level link that would normally require disambiguation.
+    await mkdirp(join(repoRoot, '.vercel'));
+    await writeJSON(join(repoRoot, '.vercel', 'repo.json'), {
+      remoteName: 'origin',
+      projects: [
+        {
+          id: 'repo-proj-1',
+          name: 'repo-proj-1',
+          directory: '.',
+          orgId: 'team_dummy',
+        },
+        {
+          id: 'repo-proj-2',
+          name: 'repo-proj-2',
+          directory: '.',
+          orgId: 'team_dummy',
+        },
+      ],
+    });
+
+    // Explicit directory-level link should win.
+    await mkdirp(join(cwd, '.vercel'));
+    await writeJSON(join(cwd, '.vercel', 'project.json'), {
+      orgId: 'team_dummy',
+      projectId: 'project-json-project',
+      projectName: 'project-json-project',
+    });
+
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      id: 'project-json-project',
+      name: 'project-json-project',
+    });
+
+    const selectSpy = vi.spyOn(client.input, 'select');
+    const link = await getLinkedProject(client, cwd);
+
+    // If repo.json was consulted, we'd have prompted to disambiguate.
+    expect(selectSpy).not.toHaveBeenCalled();
+    selectSpy.mockRestore();
+
+    if (link.status !== 'linked') {
+      throw new Error('Expected to be linked');
+    }
+    expect(link.project.id).toEqual('project-json-project');
+    expect(link.repoRoot).toBeUndefined();
+  });
+
+  it('should return link with legacy `repo.json` (top-level orgId)', async () => {
+    const cwd = fixture('monorepo-link-legacy');
+
+    useUser();
+    useTeams('team_dummy');
+
+    useProject({
+      ...defaultProject,
+      id: 'QmbKpqpiUqbcke',
+      name: 'monorepo-dashboard',
+    });
+    const link = await getLinkedProject(client, join(cwd, 'dashboard'));
+    if (link.status !== 'linked') {
+      throw new Error('Expected to be linked');
+    }
+    // Should fall back to top-level orgId when project-level orgId is not set
+    expect(link.org.id).toEqual('team_dummy');
+    expect(link.org.type).toEqual('team');
+    expect(link.project.id).toEqual('QmbKpqpiUqbcke');
     expect(link.repoRoot).toEqual(cwd);
   });
 

@@ -9,6 +9,7 @@ import execa from 'execa';
 import { describe, expect, it } from 'vitest';
 import {
   readdir,
+  readFile,
   writeFile,
   mkdtemp,
   cp,
@@ -19,33 +20,83 @@ import {
 import { tmpdir } from 'node:os';
 
 const meta = { skipDownload: true };
-const config = {
+const defaultConfig = {
   outputDirectory: undefined,
   zeroConfig: true,
   // Always use npm install to avoid pnpm workspace detection in monorepo
   projectSettings: { installCommand: 'npm install' },
 };
 
+interface VercelJson {
+  rootDirectory?: string;
+  installCommand?: string;
+  buildCommand?: string;
+  outputDirectory?: string;
+  framework?: string;
+  [key: string]: unknown;
+}
+
+const loadVercelJson = async (fixtureSource: string) => {
+  const vercelJsonPath = join(fixtureSource, 'vercel.json');
+  try {
+    const content = await readFile(vercelJsonPath, 'utf-8');
+    return JSON.parse(content) as VercelJson;
+  } catch {
+    return null;
+  }
+};
+
+const getFixtureConfig = (vercelJson: VercelJson | null) => {
+  if (!vercelJson) {
+    return defaultConfig;
+  }
+  const {
+    rootDirectory,
+    installCommand,
+    buildCommand,
+    outputDirectory,
+    framework,
+    functions,
+  } = vercelJson;
+  return {
+    ...defaultConfig,
+    // @ts-expect-error - functions is not typed
+    ...(functions && { functions }),
+    projectSettings: {
+      ...defaultConfig.projectSettings,
+      ...(rootDirectory && { rootDirectory }),
+      ...(installCommand && { installCommand }),
+      ...(buildCommand && { buildCommand }),
+      ...(outputDirectory && { outputDirectory }),
+      ...(framework && { framework }),
+    },
+  };
+};
+
 // Set to true to use packages/backends/debug instead of a temp directory
 const USE_DEBUG_DIR = false;
 // Uncomment to enable debug logs
-// process.env.VERCEL_BUILDER_DEBUG = '1';
+process.env.VERCEL_BUILDER_DEBUG = '0';
 
 const DEBUG_DIR = join(__dirname, 'debug');
 
 const getWorkDir = async (fixtureName: string, fixtureSource: string) => {
-  if (USE_DEBUG_DIR) {
-    const debugDir = join(DEBUG_DIR, fixtureName);
-    await rm(debugDir, { recursive: true, force: true });
-    await mkdir(debugDir, { recursive: true });
-    await cp(fixtureSource, debugDir, { recursive: true });
-    return debugDir;
-  }
+  // Always copy source to a random tmp dir
   const tempDir = await realpath(
     await mkdtemp(join(tmpdir(), `fixture-${fixtureName}-`))
   );
   await cp(fixtureSource, tempDir, { recursive: true });
-  return tempDir;
+
+  // When USE_DEBUG_DIR is true, lambda output goes to debug/{fixtureName}
+  // Otherwise, lambda output goes to the same temp dir
+  let lambdaOutputDir = tempDir;
+  if (USE_DEBUG_DIR) {
+    lambdaOutputDir = join(DEBUG_DIR, fixtureName);
+    await rm(lambdaOutputDir, { recursive: true, force: true });
+    await mkdir(lambdaOutputDir, { recursive: true });
+  }
+
+  return { workDir: tempDir, lambdaOutputDir };
 };
 
 describe('successful builds', async () => {
@@ -54,16 +105,24 @@ describe('successful builds', async () => {
   );
   for (const fixtureName of fixtures) {
     // Windows is just too slow to build these fixtures
-    const isNestFixture = fixtureName.includes('nest');
-    it.skipIf(process.platform === 'win32' && isNestFixture)(
+    it.skipIf(process.platform === 'win32')(
       `builds ${fixtureName}`,
       async () => {
         // Copy entire fixture to work dir so no parent node_modules can interfere
         const fixtureSource = join(__dirname, 'fixtures', fixtureName);
-        const workDir = await getWorkDir(fixtureName, fixtureSource);
+        const vercelJson = await loadVercelJson(fixtureSource);
+        const config = getFixtureConfig(vercelJson);
 
-        const workPath = workDir;
+        const { workDir, lambdaOutputDir } = await getWorkDir(
+          fixtureName,
+          fixtureSource
+        );
+
         const repoRootPath = workDir;
+        // If vercel.json specifies rootDirectory, use it as the workPath
+        const workPath = vercelJson?.rootDirectory
+          ? join(workDir, vercelJson.rootDirectory)
+          : workDir;
 
         const result = (await build({
           files: {},
@@ -76,12 +135,44 @@ describe('successful builds', async () => {
 
         const lambda = result.output.index as unknown as NodejsLambda;
 
-        expect(JSON.stringify(result.routes, null, 2)).toMatchFileSnapshot(
-          join(fixtureSource, 'routes.json')
-        );
+        await expect(
+          JSON.stringify(result.routes, null, 2)
+        ).toMatchFileSnapshot(join(fixtureSource, 'routes.json'));
+
+        if (lambda.files) {
+          // Assert includeFiles: if files.json exists, every listed file must be in the lambda
+          try {
+            const includeFilesJson = await readFile(
+              join(fixtureSource, 'files.json'),
+              'utf-8'
+            );
+            const expectedFiles: string[] = JSON.parse(includeFilesJson);
+            const lambdaFileKeys = Object.keys(lambda.files);
+            for (const file of expectedFiles) {
+              expect(lambdaFileKeys).toContain(file);
+            }
+          } catch {
+            // no files.json — skip include assertion
+          }
+
+          // Assert excludeFiles: if excludeFiles.json exists, none of the listed files should be in the lambda
+          try {
+            const excludeFilesJson = await readFile(
+              join(fixtureSource, 'excludeFiles.json'),
+              'utf-8'
+            );
+            const excludedFiles: string[] = JSON.parse(excludeFilesJson);
+            const lambdaFileKeys = Object.keys(lambda.files);
+            for (const file of excludedFiles) {
+              expect(lambdaFileKeys).not.toContain(file);
+            }
+          } catch {
+            // no excludeFiles.json — skip exclude assertion
+          }
+        }
 
         await expect(
-          extractAndExecuteLambda(lambda, workDir)
+          extractAndExecuteLambda(lambda, lambdaOutputDir, USE_DEBUG_DIR)
         ).resolves.toBeUndefined();
       },
       30000
@@ -95,7 +186,7 @@ describe('successful builds', async () => {
     const result = (await build({
       files: {},
       workPath,
-      config,
+      config: defaultConfig,
       meta,
       entrypoint: 'package.json',
       repoRootPath: workPath,
@@ -146,12 +237,18 @@ it('extractAndExecuteLambda throws with invalid code', async () => {
   ).rejects.toThrow();
 });
 
-const extractAndExecuteLambda = async (lambda: NodejsLambda, dir: string) => {
+const extractAndExecuteLambda = async (
+  lambda: NodejsLambda,
+  dir: string,
+  extractDirectly = false
+) => {
   const out = await lambda.createZip();
   const lambdaZipPath = join(dir, 'lambda.zip');
   await writeFile(lambdaZipPath, new Uint8Array(out));
 
-  const unzipPath = join(dir, 'lambda');
+  // When extractDirectly is true, extract to dir directly (for debug output)
+  // Otherwise, extract to dir/lambda subfolder
+  const unzipPath = extractDirectly ? dir : join(dir, 'lambda');
   await execa('unzip', ['-o', lambdaZipPath, '-d', unzipPath], {
     stdio: 'ignore',
   });

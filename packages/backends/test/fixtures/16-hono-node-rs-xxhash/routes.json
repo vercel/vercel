@@ -1,0 +1,16 @@
+[
+  {
+    "handle": "filesystem"
+  },
+  {
+    "src": "^(?:\\/hash\\/([^\\/]+))(?:\\/$)?$",
+    "dest": "/hash/:input",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "src": "/(.*)",
+    "dest": "/"
+  }
+]

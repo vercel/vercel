@@ -1,3 +1,4 @@
+process.env.NEXT_BUILDER_INTEGRATION = '1';
 process.env.NEXT_TELEMETRY_DISABLED = '1';
 
 const path = require('path');
@@ -776,5 +777,86 @@ describe('action-headers', () => {
     }
     expect(foundActionNames.length).toBe(5);
     expect(foundActionNames.sort()).toMatchSnapshot();
+  });
+});
+
+describe('determinism', () => {
+  /**
+   * @type {import('@vercel/build-utils').BuildResultV2Typical}
+   */
+  let buildResult;
+  let workPath;
+
+  describe('with pages/404', () => {
+    beforeAll(async () => {
+      const oldValue = process.env.NEXT_DEPLOYMENT_ID;
+      try {
+        process.env.NEXT_DEPLOYMENT_ID = '123456789';
+        const result = await runBuildLambda(
+          path.join(__dirname, '../fixtures/00-app-dir-not-found-pages-interop')
+        );
+        ({ buildResult, workPath } = result);
+      } finally {
+        process.env.NEXT_DEPLOYMENT_ID = oldValue;
+      }
+    });
+
+    it('should not include prerenders in functions lambdas', async () => {
+      for (const entry of Object.values(buildResult.output)) {
+        if (entry.type === 'Lambda' || entry.type === 'EdgeFunction') {
+          expect(Object.keys(entry.files)).not.toContainEqual(
+            expect.stringMatching(/\.html$|.rsc$/)
+          );
+        }
+      }
+    });
+
+    it('should strip routes-manifest', async () => {
+      let originalManifest = JSON.parse(
+        await fs.readFile(
+          path.join(workPath, '.next', 'routes-manifest.json'),
+          'utf8'
+        )
+      );
+      expect(originalManifest.deploymentId).toBeDefined();
+
+      for (const entry of Object.values(buildResult.output)) {
+        if (entry.type === 'Lambda' || entry.type === 'EdgeFunction') {
+          const manifest = entry.files['.next/routes-manifest.json'];
+          if (manifest) {
+            expect(manifest.type).toBe('FileBlob');
+            let parsed = JSON.parse(manifest.data);
+            expect(parsed.deploymentId).toBeUndefined();
+            expect(parsed.headers.length).toBe(0);
+            expect(parsed.onMatchHeaders.length).toBe(0);
+          }
+        }
+      }
+    });
+  });
+
+  describe('without pages/404', () => {
+    beforeAll(async () => {
+      const oldValue = process.env.NEXT_DEPLOYMENT_ID;
+      try {
+        process.env.NEXT_DEPLOYMENT_ID = '123456789';
+        const result = await runBuildLambda(
+          path.join(__dirname, '../fixtures/00-app-dir-not-found')
+        );
+        ({ buildResult, workPath } = result);
+      } finally {
+        process.env.NEXT_DEPLOYMENT_ID = oldValue;
+      }
+    });
+
+    it('should not include prerenders in functions lambdas', async () => {
+      for (const entry of Object.values(buildResult.output)) {
+        if (entry.type === 'Lambda' || entry.type === 'EdgeFunction') {
+          expect(Object.keys(entry.files)).not.toContainEqual(
+            expect.stringMatching(/\.html$|.rsc$/)
+          );
+        }
+      }
+    });
   });
 });

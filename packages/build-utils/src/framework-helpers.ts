@@ -16,11 +16,16 @@ export const BACKEND_FRAMEWORKS = [
 export const PYTHON_FRAMEWORKS = [
   'fastapi',
   'flask',
+  'django',
   'python', // Generic Python framework preset
 ] as const;
 
 export const RUNTIME_FRAMEWORKS = ['python'] as const;
 
+/**
+ * List of framework-specific backend builders that get replaced by UNIFIED_BACKEND_BUILDER
+ * when experimental backends is enabled
+ */
 export const BACKEND_BUILDERS = [
   '@vercel/express',
   '@vercel/hono',
@@ -30,6 +35,11 @@ export const BACKEND_BUILDERS = [
   '@vercel/fastify',
   '@vercel/elysia',
 ] as const;
+
+/**
+ * The unified backend builder that replaces framework-specific backend builders
+ */
+export const UNIFIED_BACKEND_BUILDER = '@vercel/backends' as const;
 
 export type BackendFramework = (typeof BACKEND_FRAMEWORKS)[number];
 export type PythonFramework = (typeof PYTHON_FRAMEWORKS)[number];
@@ -68,6 +78,7 @@ export function isExperimentalBackendsEnabled(): boolean {
 
 export function isBackendBuilder(builder: Builder | null | undefined): boolean {
   if (!builder) return false;
+  if (builder.use === UNIFIED_BACKEND_BUILDER) return true;
   const use = builder.use as (typeof BACKEND_BUILDERS)[number];
   return BACKEND_BUILDERS.includes(use);
 }

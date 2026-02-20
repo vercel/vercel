@@ -25,5 +25,8 @@
       "status": 200,
       "mustContain": "hello api"
     }
-  ]
+  ],
+  "env": {
+    "NEXT_BUILDER_INTEGRATION": "1"
+  }
 }

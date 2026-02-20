@@ -42,6 +42,11 @@ export interface VercelClientOptions {
    * This file will be included in prebuilt deployments.
    */
   bulkRedirectsPath?: string | null;
+  /**
+   * When true, creates an experimental manual deployment. This mode requires
+   * that the user later continues the deployment with an API call.
+   */
+  manual?: boolean;
 }
 
 /** @deprecated Use VercelClientOptions instead. */
@@ -171,12 +176,6 @@ export interface VercelConfig {
   images?: Images;
   crons?: Cron[];
   bunVersion?: string;
-  customErrorPage?:
-    | string
-    | {
-        default5xx?: string;
-        default4xx?: string;
-      };
   /**
    * Path to a file containing bulk redirects (relative to the project root).
    * This file will be included in prebuilt deployments.
@@ -226,12 +225,7 @@ export interface DeploymentOptions {
   meta?: Dictionary<string>;
   projectSettings?: ProjectSettings;
   gitMetadata?: GitMetadata;
+  actor?: string;
   autoAssignCustomDomains?: boolean;
   customEnvironmentSlugOrId?: string;
-  customErrorPage?:
-    | string
-    | {
-        default5xx?: string;
-        default4xx?: string;
-      };
 }

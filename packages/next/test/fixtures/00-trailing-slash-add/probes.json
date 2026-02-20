@@ -63,15 +63,15 @@
     },
     {
       "fetchOptions": { "redirect": "manual" },
-      "path": "/_next/data/testing-build-id/blog/post-1.json/",
+      "path": "/_next/data/build-TfctsWXpff2fKS/blog/post-1.json/",
       "status": 308,
       "responseHeaders": {
-        "refresh": "/url=/_next/data/testing-build-id/blog/post-1.json$/"
+        "refresh": "/url=/_next/data/build-TfctsWXpff2fKS/blog/post-1.json$/"
       }
     },
     {
       "fetchOptions": { "redirect": "manual" },
-      "path": "/_next/data/testing-build-id/blog/post-1.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/blog/post-1.json",
       "status": 200,
       "mustContain": "\"post-1\""
     },

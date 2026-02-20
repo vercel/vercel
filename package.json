@@ -54,8 +54,8 @@
     "prettier-check": "prettier --check .",
     "prepare": "husky install",
     "pack": "cd utils && node -r ts-eager/register ./pack.ts",
-    "ci:version": "changeset version && node utils/sync-python-version.js && pnpm install --no-frozen-lockfile",
-    "ci:publish": "pnpm publish -r && node utils/update-canary-tags.mjs && changeset tag",
+    "ci:version": "changeset version && node utils/sync-python-version.js && uv lock && pnpm install --no-frozen-lockfile",
+    "ci:publish": "node utils/publish-runtimes.mjs && pnpm publish -r && node utils/update-canary-tags.mjs && changeset tag",
     "type-check": "turbo type-check --concurrency=12 --output-logs=errors-only --summarize --continue"
   },
   "lint-staged": {
@@ -120,6 +120,24 @@
       "jest/no-focused-tests": 2
     },
     "overrides": [
+      {
+        "files": [
+          "packages/cli/src/commands/**/*"
+        ],
+        "excludedFiles": [
+          "**/index.ts",
+          "**/blob/store.ts"
+        ],
+        "rules": {
+          "no-restricted-syntax": [
+            "error",
+            {
+              "selector": "Property[key.name='permissive'][value.value=true]",
+              "message": "Do not use 'permissive: true' in leaf commands. Unknown flags will be treated as arguments, causing misleading errors. Only index.ts routing files should use permissive mode."
+            }
+          ]
+        }
+      },
       {
         "files": [
           "packages/cli/**/*"

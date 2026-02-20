@@ -3,27 +3,32 @@ import type { Configuration } from './types';
 
 export async function fetchMarketplaceIntegrations(
   client: Client,
-  slug: string
+  slug: string,
+  teamId: string
 ) {
   const searchParams = new URLSearchParams();
   searchParams.set('view', 'account');
   searchParams.set('installationType', 'marketplace');
   searchParams.set('integrationIdOrSlug', slug);
+  searchParams.set('teamId', teamId);
   return await client.fetch<Configuration[]>(
     `/v2/integrations/configurations?${searchParams}`,
     {
       json: true,
+      useCurrentTeam: false,
     }
   );
 }
 
 export async function getFirstConfiguration(
   client: Client,
-  integrationSlug: string
+  integrationSlug: string,
+  teamId: string
 ) {
   const configurations = await fetchMarketplaceIntegrations(
     client,
-    integrationSlug
+    integrationSlug,
+    teamId
   );
   return configurations.length > 0 ? configurations[0] : undefined;
 }

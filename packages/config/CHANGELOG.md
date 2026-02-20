@@ -1,5 +1,39 @@
 # @vercel/router-sdk
 
+## 0.0.33
+
+### Patch Changes
+
+- Fix rewrite regexp conversion when header transforms are present ([#15134](https://github.com/vercel/vercel/pull/15134))
+
+## 0.0.32
+
+### Patch Changes
+
+- Add a new `matchers` export that exposes helpers to make matching against headers, query params, cookies, and host simpler to write. ([#15064](https://github.com/vercel/vercel/pull/15064))
+
+## 0.0.31
+
+### Patch Changes
+
+- Add support for `functions[*].functionFailoverRegions` in `vercel.json` and build output config generation. ([#14969](https://github.com/vercel/vercel/pull/14969))
+
+  This enables per-function failover region configuration instead of only top-level defaults for all functions.
+
+## 0.0.30
+
+### Patch Changes
+
+- Add new expirementalTrigger format for queues v2beta ([#14970](https://github.com/vercel/vercel/pull/14970))
+
+## 0.0.29
+
+### Patch Changes
+
+- Add support for `regions` in `vercel.json` function-level configuration. ([#14963](https://github.com/vercel/vercel/pull/14963))
+
+  Matching function `regions` are now parsed from `functions` config, written into lambda output config, and documented in config types so they override top-level deployment regions for that function.
+
 ## 0.0.28
 
 ### Patch Changes

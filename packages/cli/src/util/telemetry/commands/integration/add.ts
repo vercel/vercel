@@ -6,11 +6,59 @@ export class IntegrationAddTelemetryClient
   extends TelemetryClient
   implements TelemetryMethods<typeof addSubcommand>
 {
-  trackCliArgumentName(v: string | undefined, known?: boolean) {
+  trackCliArgumentIntegration(v: string | undefined, known?: boolean) {
     if (v) {
       this.trackCliArgument({
-        arg: 'name',
+        arg: 'integration',
         value: known ? v : this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionName(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'name',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionMetadata(v: string[] | undefined) {
+    if (v?.length) {
+      this.trackCliOption({
+        option: 'metadata',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionPlan(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'plan',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliFlagNoConnect(v: boolean | undefined) {
+    if (v) {
+      this.trackCliFlag('no-connect');
+    }
+  }
+
+  trackCliFlagNoEnvPull(v: boolean | undefined) {
+    if (v) {
+      this.trackCliFlag('no-env-pull');
+    }
+  }
+
+  trackCliOptionEnvironment(v: string[] | undefined) {
+    if (v?.length) {
+      this.trackCliOption({
+        option: 'environment',
+        value: this.redactedValue,
       });
     }
   }

@@ -8,7 +8,19 @@ export const configureSubcommand = {
   arguments: [],
   examples: [
     {
-      name: 'Configure a new rolling release with an intial stage of 10% that lasts for 5 minutes before automatically advancing to 100%',
+      name: 'Enable automatic rolling release: 10% for 5 minutes, then 50% for 10 minutes, then 100%',
+      value: `${packageName} rolling-release configure --enable --advancement-type=automatic --stage=10,5m --stage=50,10m`,
+    },
+    {
+      name: 'Enable manual-approval rolling release: 10%, then 50%, then 100% (each stage requires approval)',
+      value: `${packageName} rolling-release configure --enable --advancement-type=manual-approval --stage=10 --stage=50`,
+    },
+    {
+      name: 'Disable rolling releases',
+      value: `${packageName} rolling-release configure --disable`,
+    },
+    {
+      name: 'Configure with raw JSON (advanced)',
       value: `${packageName} rolling-release configure --cfg='{"enabled":true, "advancementType":"automatic", "stages":[{"targetPercentage":10,"duration":5},{"targetPercentage":100}]}'`,
     },
   ],
@@ -18,7 +30,38 @@ export const configureSubcommand = {
       shorthand: null,
       deprecated: false,
       type: String,
-      description: "The project's rolling release configuration",
+      description: 'Raw JSON configuration (advanced). Overrides other flags.',
+    },
+    {
+      name: 'enable',
+      shorthand: null,
+      deprecated: false,
+      type: Boolean,
+      description: 'Enable rolling releases for this project',
+    },
+    {
+      name: 'disable',
+      shorthand: null,
+      deprecated: false,
+      type: Boolean,
+      description: 'Disable rolling releases for this project',
+    },
+    {
+      name: 'advancement-type',
+      shorthand: null,
+      deprecated: false,
+      type: String,
+      argument: 'TYPE',
+      description: 'How stages advance: "automatic" or "manual-approval"',
+    },
+    {
+      name: 'stage',
+      shorthand: null,
+      deprecated: false,
+      type: [String],
+      argument: 'PERCENTAGE[,DURATION]',
+      description:
+        'Add a rollout stage. Percentage (1-99) with optional duration for automatic advancement (e.g. "10,5m"). Can be specified multiple times. A final 100% stage is added automatically.',
     },
   ],
 } as const;
@@ -141,7 +184,8 @@ export const fetchSubcommand = {
 export const rollingReleaseCommand = {
   name: 'rolling-release',
   aliases: ['rr'],
-  description: "Manage your project's rolling release.",
+  description:
+    'Rolling releases gradually shift traffic to a new deployment in stages, allowing you to monitor for errors before serving all traffic. Learn more: https://vercel.com/docs/rolling-releases',
   arguments: [],
   subcommands: [
     configureSubcommand,
@@ -154,40 +198,32 @@ export const rollingReleaseCommand = {
   options: [],
   examples: [
     {
+      name: 'Enable automatic rolling release with two stages',
+      value: `${packageName} rr configure --enable --advancement-type=automatic --stage=10,5m --stage=50,10m`,
+    },
+    {
+      name: 'Enable manual-approval rolling release',
+      value: `${packageName} rr configure --enable --advancement-type=manual-approval --stage=10 --stage=50`,
+    },
+    {
+      name: 'Disable rolling releases',
+      value: `${packageName} rr configure --disable`,
+    },
+    {
       name: 'Start a rolling release',
       value: `${packageName} rr start --dpl=dpl_123`,
     },
     {
-      name: 'Start a rolling release using URL',
-      value: `${packageName} rr start --dpl=https://example.vercel.app`,
-    },
-    {
-      name: 'Configure a new rolling release with an intial stage of 10% that lasts for 5 minutes before automatically advancing to 100%',
-      value: `${packageName} rolling-release configure --cfg='{"enabled":true, "advancementType":"automatic", "stages":[{"targetPercentage":10,"duration":5},{"targetPercentage":100}]}'`,
-    },
-    {
-      name: 'Configure a new rolling release with an intial stage of 10% that requires approval, prior to advancing to 100%',
-      value: `${packageName} rolling-release configure --cfg='{"enabled":true, "advancementType":"manual-approval","stages":[{"targetPercentage":10},{"targetPercentage":100}]}'`,
-    },
-    {
-      name: 'Configure a new rolling release with an intial stage of 10% that requires approval, prior to advancing to 50%, and then again to 100%',
-      value: `${packageName} rolling-release configure --cfg='{"enabled":true, "advancementType":"manual-approval", "stages":[{"targetPercentage":10},{"targetPercentage":50},{"targetPercentage":100}]}'`,
-    },
-    {
-      name: 'Disable rolling releases',
-      value: `${packageName} rolling-release configure --cfg='disable'`,
-    },
-    {
       name: 'Approve an active rolling release stage',
-      value: `${packageName} rolling-release approve --currentStageIndex=0 --dpl=dpl_123`,
+      value: `${packageName} rr approve --currentStageIndex=0 --dpl=dpl_123`,
     },
     {
-      name: 'Abort an active rolling release.',
-      value: `${packageName} rolling-release abort --dpl=dpl_123`,
+      name: 'Abort an active rolling release',
+      value: `${packageName} rr abort --dpl=dpl_123`,
     },
     {
-      name: 'Complete an active rolling release.',
-      value: `${packageName} rolling-release complete --dpl=dpl_123`,
+      name: 'Complete an active rolling release',
+      value: `${packageName} rr complete --dpl=dpl_123`,
     },
   ],
 } as const;

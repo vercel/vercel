@@ -42,7 +42,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
   it('should render the page on-demand with preview mode enabled', async () => {
     for (const locale of ['fr', 'en-US', 'fr-FR', 'nl', 'nl-NL', 'de']) {
       const dataRes = await fetch(
-        `${ctx.deploymentUrl}/_next/data/testing-build-id/${locale}/preview-only-not-found.json`
+        `${ctx.deploymentUrl}/_next/data/build-TfctsWXpff2fKS/${locale}/preview-only-not-found.json`
       );
       expect(await dataRes.text()).toContain('This page could not be found');
 
@@ -71,7 +71,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
       expect(previewHtml).toContain('preview notFound page');
 
       const dataPreviewRes = await fetch(
-        `${ctx.deploymentUrl}/_next/data/testing-build-id/${locale}/preview-only-not-found.json`,
+        `${ctx.deploymentUrl}/_next/data/build-TfctsWXpff2fKS/${locale}/preview-only-not-found.json`,
         {
           headers: {
             Cookie: previewCookie,

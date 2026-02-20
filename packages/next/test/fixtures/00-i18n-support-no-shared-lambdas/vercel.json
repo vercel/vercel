@@ -355,5 +355,8 @@
       "status": 200,
       "mustContain": "slug\":\"first\""
     }
-  ]
+  ],
+  "env": {
+    "NEXT_BUILDER_INTEGRATION": "1"
+  }
 }

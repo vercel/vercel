@@ -32,3 +32,11 @@ export function getCommandName(subcommands?: string): string {
   }
   return cmd(vercel);
 }
+
+/**
+ * Plain (unstyled) command string for JSON output, e.g. "vercel open".
+ * Use this in action_required payloads so JSON doesn't contain ANSI escape codes.
+ */
+export function getCommandNamePlain(subcommands?: string): string {
+  return subcommands ? `${packageName} ${subcommands}` : packageName;
+}

@@ -263,6 +263,7 @@ type RoutesManifestOld = {
         fallback: (Rewrite & RoutesManifestRegex)[];
       };
   headers?: (Header & RoutesManifestRegex)[];
+  onMatchHeaders?: (Header & RoutesManifestRegex)[];
   dynamicRoutes: RoutesManifestRoute[];
   staticRoutes: RoutesManifestRoute[];
   version: 1 | 2 | 3;
@@ -1118,6 +1119,9 @@ export async function createLambdaFromPseudoLayers({
 // https://github.com/vercel/next.js/blob/6169e786020b63e101cc09285e1277e278cd34b8/packages/next/src/server/config-shared.ts#L1588
 export type NextConfigRuntime = {
   pageExtensions: string[];
+  // experimental.cacheComponents has been moved out of experimental
+  // at https://github.com/vercel/next.js/pull/85035
+  cacheComponents?: boolean;
   experimental?: {
     cacheComponents?: boolean;
     clientParamParsingOrigins?: string[];
@@ -1868,10 +1872,24 @@ export function addLocaleOrDefault(
     : pathname;
 }
 
+function regionsArrayEqual(
+  a: string[] | undefined,
+  b: string[] | undefined
+): boolean {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  if (a.length !== b.length) return false;
+  const sortedA = [...a].sort();
+  const sortedB = [...b].sort();
+  return sortedA.every((val, i) => val === sortedB[i]);
+}
+
 export type LambdaGroup = {
   pages: string[];
   memory?: number;
   maxDuration?: number;
+  regions?: string[];
+  functionFailoverRegions?: string[];
   supportsCancellation?: boolean;
   isAppRouter?: boolean;
   isAppRouteHandler?: boolean;
@@ -1943,6 +1961,8 @@ export async function getPageLambdaGroups({
       architecture?: NodejsLambda['architecture'];
       memory?: number;
       maxDuration?: number;
+      regions?: string[];
+      functionFailoverRegions?: string[];
       experimentalTriggers?: NodejsLambda['experimentalTriggers'];
       supportsCancellation?: boolean;
     } = {};
@@ -2022,6 +2042,11 @@ export async function getPageLambdaGroups({
           const matches =
             group.maxDuration === opts.maxDuration &&
             group.memory === opts.memory &&
+            regionsArrayEqual(group.regions, opts.regions) &&
+            regionsArrayEqual(
+              group.functionFailoverRegions,
+              opts.functionFailoverRegions
+            ) &&
             group.isPrerenders === isPrerenderRoute &&
             group.isExperimentalPPR === isExperimentalPPR &&
             JSON.stringify(group.experimentalTriggers) ===

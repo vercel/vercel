@@ -155,27 +155,6 @@ const cronsSchema = {
   },
 };
 
-const customErrorPageSchema = {
-  oneOf: [
-    { type: 'string', minLength: 1 },
-    {
-      type: 'object',
-      additionalProperties: false,
-      minProperties: 1,
-      properties: {
-        default5xx: {
-          type: 'string',
-          minLength: 1,
-        },
-        default4xx: {
-          type: 'string',
-          minLength: 1,
-        },
-      },
-    },
-  ],
-};
-
 const serviceConfigSchema = {
   type: 'object',
   additionalProperties: false,
@@ -184,11 +163,6 @@ const serviceConfigSchema = {
       enum: ['web', 'cron', 'worker'],
     },
     entrypoint: {
-      type: 'string',
-      minLength: 1,
-      maxLength: 512,
-    },
-    workspace: {
       type: 'string',
       minLength: 1,
       maxLength: 512,
@@ -278,6 +252,10 @@ const serviceConfigSchema = {
  */
 const experimentalServicesSchema = {
   type: 'object',
+  propertyNames: {
+    pattern: '^[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$',
+    maxLength: 64,
+  },
   additionalProperties: serviceConfigSchema,
 };
 
@@ -289,6 +267,10 @@ const experimentalServicesSchema = {
  */
 const experimentalServiceGroupsSchema = {
   type: 'object',
+  propertyNames: {
+    pattern: '^[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$',
+    maxLength: 64,
+  },
   additionalProperties: {
     type: 'array',
     items: {
@@ -315,7 +297,6 @@ const vercelConfigSchema = {
     functions: functionsSchema,
     images: imagesSchema,
     crons: cronsSchema,
-    customErrorPage: customErrorPageSchema,
     bunVersion: { type: 'string' },
     experimentalServices: experimentalServicesSchema,
     experimentalServiceGroups: experimentalServiceGroupsSchema,

@@ -13,6 +13,7 @@ describe('index', () => {
         ['cache', 'cache'],
         ['cert', 'certs'],
         ['certs', 'certs'],
+        ['contract', 'contract'],
         ['curl', 'curl'],
         ['deploy', 'deploy'],
         ['dev', 'dev'],
@@ -21,6 +22,7 @@ describe('index', () => {
         ['domain', 'domains'],
         ['domains', 'domains'],
         ['env', 'env'],
+        ['flags', 'flags'],
         ['git', 'git'],
         ['help', 'help'],
         ['httpstat', 'httpstat'],
@@ -38,7 +40,6 @@ describe('index', () => {
         ['login', 'login'],
         ['logout', 'logout'],
         ['logs', 'logs'],
-        ['logsv2', 'logsv2'],
         ['ls', 'list'],
         ['mcp', 'mcp'],
         ['mf', 'microfrontends'],
@@ -63,6 +64,9 @@ describe('index', () => {
         ['teams', 'teams'],
         ['telemetry', 'telemetry'],
         ['upgrade', 'upgrade'],
+        ['webhook', 'webhooks'],
+        ['webhooks', 'webhooks'],
+        ['usage', 'usage'],
         ['whoami', 'whoami'],
       ])
     );

@@ -119,6 +119,18 @@ export class DeployTelemetryClient
       this.trackCliFlag('prebuilt');
     }
   }
+  trackCliSubcommandInit(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'init',
+      value: actual,
+    });
+  }
+  trackCliSubcommandContinue(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'continue',
+      value: actual,
+    });
+  }
   trackCliFlagProd(flag: boolean | undefined) {
     if (flag) {
       this.trackCliFlag('prod');
@@ -142,6 +154,15 @@ export class DeployTelemetryClient
   trackCliFlagYes(flag: boolean | undefined) {
     if (flag) {
       this.trackCliFlag('yes');
+    }
+  }
+
+  trackDeploymentId(id: string | undefined) {
+    if (id) {
+      this.trackCommandOutput({
+        key: 'deployment-id',
+        value: id,
+      });
     }
   }
 }

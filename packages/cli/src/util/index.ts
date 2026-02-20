@@ -53,6 +53,8 @@ export interface CreateOptions {
   noWait?: boolean;
   withFullLogs?: boolean;
   autoAssignCustomDomains?: boolean;
+  agentName?: string;
+  manual?: boolean;
 }
 
 export interface RemoveOptions {
@@ -128,6 +130,8 @@ export default class Now {
       noWait,
       withFullLogs,
       autoAssignCustomDomains,
+      agentName,
+      manual,
     }: CreateOptions,
     org: Org,
     isSettingUpProject: boolean,
@@ -149,6 +153,7 @@ export default class Now {
       target: target || undefined,
       projectSettings,
       source: 'cli',
+      actor: agentName,
       autoAssignCustomDomains,
     };
 
@@ -177,6 +182,7 @@ export default class Now {
       noWait,
       withFullLogs,
       bulkRedirectsPath: nowConfig.bulkRedirectsPath,
+      manual,
     });
 
     if (deployment && deployment.warnings) {
@@ -224,7 +230,7 @@ export default class Now {
 
       if (error.limit && error.limit.reset) {
         const { reset } = error.limit;
-        const difference = reset * 1000 - Date.now();
+        const difference = reset - Date.now();
 
         msg += `Please retry in ${ms(difference, { long: true })}.`;
       } else {

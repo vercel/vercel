@@ -68,17 +68,25 @@ export class UvRunner {
       );
     }
 
+    // Only apply the startsWith filter when in Vercel Build Image
+    // (local builds use system Python paths, not /uv/python/)
+    if (process.env.VERCEL_BUILD_IMAGE) {
+      pyList = pyList.filter(
+        entry =>
+          entry.path !== null &&
+          entry.path.startsWith(UV_PYTHON_PATH_PREFIX) &&
+          entry.implementation === 'cpython'
+      );
+    } else {
+      pyList = pyList.filter(
+        entry => entry.path !== null && entry.implementation === 'cpython'
+      );
+    }
+
     return new Set(
-      pyList
-        .filter(
-          entry =>
-            entry.path !== null &&
-            entry.path.startsWith(UV_PYTHON_PATH_PREFIX) &&
-            entry.implementation === 'cpython'
-        )
-        .map(
-          entry => `${entry.version_parts.major}.${entry.version_parts.minor}`
-        )
+      pyList.map(
+        entry => `${entry.version_parts.major}.${entry.version_parts.minor}`
+      )
     );
   }
 
@@ -86,18 +94,34 @@ export class UvRunner {
     venvPath: string;
     projectDir: string;
     locked?: boolean;
+    frozen?: boolean;
+    noBuild?: boolean;
   }): Promise<void> {
-    const { venvPath, projectDir, locked } = options;
+    const { venvPath, projectDir, locked, frozen, noBuild } = options;
     const args = ['sync', '--active', '--no-dev', '--link-mode', 'copy'];
-    if (locked) {
+    if (frozen) {
+      args.push('--frozen');
+    } else if (locked) {
       args.push('--locked');
+    }
+    if (noBuild) {
+      args.push('--no-build');
     }
     args.push('--no-editable');
     await this.runUvCmd(args, projectDir, venvPath);
   }
 
-  async lock(projectDir: string): Promise<void> {
+  async lock(
+    projectDir: string,
+    options?: { noBuild?: boolean; upgrade?: boolean }
+  ): Promise<void> {
     const args = ['lock'];
+    if (options?.noBuild) {
+      args.push('--no-build');
+    }
+    if (options?.upgrade) {
+      args.push('--upgrade');
+    }
     const pretty = `uv ${args.join(' ')}`;
     debug(`Running "${pretty}" in ${projectDir}...`);
     try {
@@ -106,11 +130,20 @@ export class UvRunner {
         env: getProtectedUvEnv(process.env),
       });
     } catch (err) {
-      throw new Error(
+      const error: Error & { code?: unknown } = new Error(
         `Failed to run "${pretty}": ${
           err instanceof Error ? err.message : String(err)
         }`
       );
+      // retain code/signal to ensure it's treated as a build error
+      if (err && typeof err === 'object') {
+        if ('code' in err) {
+          error.code = (err as { code: number | string }).code;
+        } else if ('signal' in err) {
+          error.code = (err as { signal: string }).signal;
+        }
+      }
+      throw error;
     }
   }
 
@@ -137,6 +170,19 @@ export class UvRunner {
     const args = ['add', '--active', '-r', requirementsPath];
     debug(`Running "uv ${args.join(' ')}" in ${projectDir}...`);
     await this.runUvCmd(args, projectDir, venvPath);
+  }
+
+  /**
+   * Run a `uv pip` command (e.g., `uv pip install`).
+   */
+  async pip(options: {
+    venvPath: string;
+    projectDir: string;
+    args: string[];
+  }): Promise<void> {
+    const { venvPath, projectDir, args } = options;
+    const fullArgs = ['pip', ...args];
+    await this.runUvCmd(fullArgs, projectDir, venvPath);
   }
 
   private async runUvCmd(
@@ -304,4 +350,37 @@ export function getProtectedUvEnv(
     ...baseEnv,
     UV_PYTHON_DOWNLOADS: UV_PYTHON_DOWNLOADS_MODE,
   };
+}
+
+/**
+ * Directory name where the uv binary will be bundled in the Lambda package.
+ * This is used for runtime dependency installation.
+ */
+export const UV_BUNDLE_DIR = '_uv';
+
+/**
+ * Get the path to the uv binary for bundling into the Lambda package.
+ * Uses `which` to find uv in PATH, or falls back to known locations.
+ *
+ * @param pythonPath Path to Python interpreter (used for fallback resolution)
+ * @returns Path to the uv binary
+ * @throws Error if uv binary cannot be found
+ */
+export async function getUvBinaryForBundling(
+  pythonPath: string
+): Promise<string> {
+  const uvPath = await findUvBinary(pythonPath);
+  if (!uvPath) {
+    throw new Error(
+      'Cannot find uv binary for bundling. ' +
+        'Ensure uv is installed and available in PATH.'
+    );
+  }
+
+  // Resolve symlinks to get the actual binary path.
+  // This is important because in Vercel's build container,
+  // /usr/local/bin/uv is a symlink to /uv/uv. If we don't resolve it,
+  // the Lambda will contain a symlink rather than the actual binary.
+  const resolvedPath = await fs.promises.realpath(uvPath);
+  return resolvedPath;
 }
