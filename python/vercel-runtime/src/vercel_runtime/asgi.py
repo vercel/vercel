@@ -19,7 +19,11 @@ def get_header(scope: dict[str, Any], name: str) -> str | None:
     target = name.lower().encode("latin1")
     try:
         for key, value in headers:
-            if isinstance(key, (bytes, bytearray)) and bytes(key).lower() == target:
+            is_match = (
+                isinstance(key, (bytes, bytearray))
+                and bytes(key).lower() == target
+            )
+            if is_match:
                 if isinstance(value, (bytes, bytearray)):
                     return bytes(value).decode("latin1")
                 return str(value)

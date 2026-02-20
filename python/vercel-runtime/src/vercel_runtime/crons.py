@@ -52,9 +52,7 @@ def bootstrap_cron_service_app(module: object) -> ASGI:
         method = str(scope.get("method") or "GET").upper()
         if method not in ("GET", "POST"):
             await drain_body(receive)
-            await send_json_response(
-                send, 405, {"error": "method not allowed"}
-            )
+            await send_json_response(send, 405, {"error": "method not allowed"})
             return
 
         cron_secret = os.environ.get("CRON_SECRET")
