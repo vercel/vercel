@@ -1,5 +1,5 @@
 import sleep from 'sleep-promise';
-import { fetch, getApiDeploymentsUrl } from './utils';
+import { fetchApi, getApiDeploymentsUrl } from './utils';
 import { getPollingDelay } from './utils/get-polling-delay';
 import {
   isDone,
@@ -92,7 +92,7 @@ export async function* checkDeploymentStatus(
     let deploymentResponse: any;
     let retriesLeft = RETRY_COUNT;
     while (true) {
-      deploymentResponse = await fetch(
+      deploymentResponse = await fetchApi(
         `${apiDeployments}/${deployment.id || deployment.deploymentId}${
           teamId ? `?teamId=${teamId}` : ''
         }`,

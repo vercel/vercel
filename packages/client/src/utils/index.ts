@@ -324,7 +324,7 @@ interface FetchOpts extends RequestInit {
   dispatcher?: import('undici').Dispatcher;
 }
 
-export const fetch = async (
+export const fetchApi = async (
   url: string,
   token: string,
   opts: FetchOpts = {},
