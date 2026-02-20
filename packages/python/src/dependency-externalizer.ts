@@ -20,14 +20,23 @@ import { getUvBinaryForBundling, UV_BUNDLE_DIR } from './uv';
 
 const readFile = promisify(fs.readFile);
 
-// AWS Lambda uncompressed size limit is 250MB, but we use 249MB to leave a small buffer
+let ephemeralStorageSizeMiB = 500;
+const maximiseTmpSpace =
+  process.env.VERCEL_MAXIMISE_TMP_SPACE === '1' ||
+  process.env.VERCEL_MAXIMISE_TMP_SPACE === 'true';
+
+if (maximiseTmpSpace) {
+  ephemeralStorageSizeMiB = 10000; // Leave a small buffer
+}
+
 export const LAMBDA_SIZE_THRESHOLD_BYTES = 249 * 1024 * 1024;
+
 // Pack Lambda up to 245MB to leave a buffer
 export const LAMBDA_PACKING_TARGET_BYTES = 245 * 1024 * 1024;
 
 // AWS Lambda ephemeral storage (/tmp) is 512MB. Use 500MB to leave a buffer
 // for runtime overhead (.pyc generation, uv cache, metadata, etc.)
-export const LAMBDA_EPHEMERAL_STORAGE_BYTES = 500 * 1024 * 1024;
+export const LAMBDA_EPHEMERAL_STORAGE_BYTES = 10000 * 1024 * 1024;
 
 interface PythonDependencyExternalizerOptions {
   venvPath: string;
