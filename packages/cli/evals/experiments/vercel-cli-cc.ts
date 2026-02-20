@@ -25,11 +25,11 @@ async function cleanupProjects() {
 const config: ExperimentConfig = {
   agent: 'vercel-ai-gateway/claude-code',
   evals: 'marketplace/*',
-  runs: 1,
+  runs: 3,
   earlyExit: true,
-  timeout: 600,
+  timeout: 900,
   async setup(sandbox: Sandbox) {
-    const token = process.env.VERCEL_TOKEN || process.env.VERCEL_OIDC_TOKEN;
+    const token = process.env.VERCEL_TOKEN;
     if (!token) {
       throw new Error(
         'VERCEL_TOKEN or VERCEL_OIDC_TOKEN is required for CLI evals.'
