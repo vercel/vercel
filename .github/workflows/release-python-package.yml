@@ -1,8 +1,13 @@
-name: Release Python Workers Package
+name: Release Python Package
 
 on:
   workflow_dispatch:
     inputs:
+      package:
+        description: 'Python package to publish ("all" or package name)'
+        required: true
+        default: all
+        type: string
       force:
         description: 'Force publish even if version has not changed'
         required: false
@@ -42,4 +47,4 @@ jobs:
           version: '0.9.22'
 
       - name: Publish
-        run: node python/vercel-workers/publish.mjs ${{ inputs.force == true && '--force' || '' }}
+        run: node python/publish.mjs --package="${{ inputs.package }}" ${{ inputs.force == true && '--force' || '' }}
