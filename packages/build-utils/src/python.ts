@@ -2,6 +2,7 @@ import fs from 'fs';
 import { join } from 'path';
 import {
   containsAppOrHandler,
+  getStringConstant,
   parseDjangoSettingsModule,
 } from '@vercel/python-analysis';
 import debug from './debug';
@@ -45,6 +46,39 @@ export async function getDjangoSettingsModule(
     }
   } catch {
     debug('manage.py not found or unreadable, skipping Django settings module');
+  }
+  return null;
+}
+
+/**
+ * For Django projects: resolve the WSGI application entrypoint by reading
+ * DJANGO_SETTINGS_MODULE from manage.py, loading that settings file, and
+ * returning the file path for WSGI_APPLICATION (e.g. 'myapp.wsgi.application'
+ * -> 'myapp/wsgi.py'). Returns null if any step fails.
+ */
+export async function getDjangoEntrypoint(
+  workPath: string
+): Promise<string | null> {
+  const settingsModule = await getDjangoSettingsModule(workPath);
+  if (!settingsModule) return null;
+  const settingsPath = join(
+    workPath,
+    `${settingsModule.replace(/\./g, '/')}.py`
+  );
+  try {
+    const settingsContent = await fs.promises.readFile(settingsPath, 'utf-8');
+    const wsgiApplication = await getStringConstant(
+      settingsContent,
+      'WSGI_APPLICATION'
+    );
+    if (wsgiApplication) {
+      const modulePath = wsgiApplication.split('.').slice(0, -1).join('/');
+      const wsgiPath = `${modulePath}.py`;
+      debug(`Django WSGI entrypoint from ${settingsModule}: ${wsgiPath}`);
+      return wsgiPath;
+    }
+  } catch {
+    debug(`Failed to read or parse settings file: ${settingsPath}`);
   }
   return null;
 }
