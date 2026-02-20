@@ -1,0 +1,17 @@
+.vercel
+
+node_modules
+.next
+apps/docs/.docusaurus
+apps/docs/build
+
+.venv
+venv
+__pycache__
+*.py[cod]
+
+services/rb-api/vendor
+services/rb-api/.bundle
+
+services/go-api/*.test
+services/go-api/*.out

@@ -1,5 +1,32 @@
 # @vercel/python-analysis
 
+## 0.6.0
+
+### Minor Changes
+
+- Optimize cold starts for lambdas >250MB ([#15080](https://github.com/vercel/vercel/pull/15080))
+
+  1. Remove `uv pip install` and replace it with `uv sync --inexact --frozen`
+  2. Pack the lambda zip with dependencies up to 245MB then only install the remaining ones at runtime
+
+## 0.5.0
+
+### Minor Changes
+
+- Use dist-info RECORD to properly manage installed Python dependencies ([#15083](https://github.com/vercel/vercel/pull/15083))
+
+## 0.4.1
+
+### Patch Changes
+
+- log contents of malformed manifests ([#15019](https://github.com/vercel/vercel/pull/15019))
+
+## 0.4.0
+
+### Minor Changes
+
+- Use python-analysis for manifest detection and conversion ([#14956](https://github.com/vercel/vercel/pull/14956))
+
 ## 0.3.2
 
 ### Patch Changes

@@ -1,7 +1,12 @@
 import FileBlob from './file-blob';
 import FileFsRef from './file-fs-ref';
 import FileRef from './file-ref';
-import { Lambda, createLambda, getLambdaOptionsFromFunction } from './lambda';
+import {
+  Lambda,
+  createLambda,
+  getLambdaOptionsFromFunction,
+  sanitizeConsumerName,
+} from './lambda';
 import { NodejsLambda } from './nodejs-lambda';
 import { Prerender } from './prerender';
 import download, {
@@ -38,6 +43,7 @@ import {
   findPackageJson,
   traverseUpDirectories,
   PipInstallResult,
+  NpmInstallOutput,
 } from './fs/run-user-scripts';
 import {
   getLatestNodeVersion,
@@ -85,6 +91,7 @@ export {
   getSupportedBunVersion,
   detectPackageManager,
   runNpmInstall,
+  NpmInstallOutput,
   runBundleInstall,
   runPipInstall,
   PipInstallResult,
@@ -106,6 +113,7 @@ export {
   isSymbolicLink,
   isDirectory,
   getLambdaOptionsFromFunction,
+  sanitizeConsumerName,
   scanParentDirs,
   findPackageJson,
   getIgnoreFilter,

@@ -79,10 +79,15 @@ export async function getProjectLink(
   client: Client,
   path: string
 ): Promise<ProjectLink | null> {
-  return (
-    (await getProjectLinkFromRepoLink(client, path)) ||
-    (await getLinkFromDir(getVercelDirectory(path)))
-  );
+  // Prefer an explicit per-directory link (`.vercel/project.json`) over a
+  // repository-level link (`.vercel/repo.json`). This prevents scenarios where
+  // a freshly-created local link (e.g. after `vc link`) is ignored and the
+  // user is re-prompted to select a repo-linked project again.
+  const dirLink = await getLinkFromDir(getVercelDirectory(path));
+  if (dirLink) {
+    return dirLink;
+  }
+  return await getProjectLinkFromRepoLink(client, path);
 }
 
 async function getProjectLinkFromRepoLink(
@@ -112,9 +117,23 @@ async function getProjectLinkFromRepoLink(
     });
   }
   if (project) {
+    // Prefer project-level orgId, fall back to top-level for backwards compat
+    const orgId = project.orgId ?? repoLink.repoConfig.orgId;
+    if (!orgId) {
+      const projectInfo = [
+        project.name ? `name: "${project.name}"` : '',
+        project.directory ? `directory: "${project.directory}"` : '',
+      ]
+        .filter(Boolean)
+        .join(', ');
+      const details = projectInfo ? ` Project: { ${projectInfo} }.` : '';
+      throw new Error(
+        `Could not determine org ID from repo.json config at "${repoLink.repoConfigPath}".${details} Please re-link the repository.`
+      );
+    }
     return {
       repoRoot: repoLink.rootPath,
-      orgId: repoLink.repoConfig.orgId,
+      orgId,
       projectId: project.id,
       projectRootDirectory: project.directory,
     };
@@ -188,11 +207,22 @@ async function hasProjectLink(
 
   // linked via `repo.json`?
   const repoLink = await getRepoLink(client, path);
-  if (
-    repoLink?.repoConfig?.orgId === projectLink.orgId &&
-    repoLink.repoConfig.projects.find(p => p.id === projectLink.projectId)
-  ) {
-    return true;
+  if (repoLink?.repoConfig) {
+    const matchingProject = repoLink.repoConfig.projects.find(
+      p => p.id === projectLink.projectId
+    );
+    if (matchingProject) {
+      // Prefer project-level orgId, fall back to top-level for backwards compat
+      const orgId = matchingProject.orgId ?? repoLink.repoConfig.orgId;
+      if (!orgId) {
+        throw new Error(
+          `Invalid "repo.json": missing "orgId" for project "${matchingProject.id}" and no top-level "orgId" is defined.`
+        );
+      }
+      if (orgId === projectLink.orgId) {
+        return true;
+      }
+    }
   }
 
   // if the project is already linked, we skip linking
@@ -249,7 +279,7 @@ export async function getLinkedProject(
       output.stopSpinner();
 
       if (err.missingToken || err.invalidToken) {
-        throw new InvalidToken();
+        throw new InvalidToken(client.authConfig.tokenSource);
       } else if (err.code === 'forbidden' || err.code === 'team_unauthorized') {
         throw new NowBuildError({
           message: `Could not retrieve Project Settings. To link your Project, remove the ${outputCode(
@@ -290,10 +320,23 @@ export async function getLinkedProject(
   return { status: 'linked', org, project, repoRoot: link.repoRoot };
 }
 
+const VERCEL_DIR_README_CONTENT = `> Why do I have a folder named ".vercel" in my project?
+The ".vercel" folder is created when you link a directory to a Vercel project.
+
+> What does the "project.json" file contain?
+The "project.json" file contains:
+- The ID of the Vercel project that you linked ("projectId")
+- The ID of the user or team your Vercel project is owned by ("orgId")
+
+> Should I commit the ".vercel" folder?
+No, you should not share the ".vercel" folder with anyone.
+Upon creation, it will be automatically added to your ".gitignore" file.
+`;
+
 export async function writeReadme(path: string) {
   await writeFile(
     join(path, VERCEL_DIR, VERCEL_DIR_README),
-    await readFile(join(__dirname, 'VERCEL_DIR_README.txt'), 'utf8')
+    VERCEL_DIR_README_CONTENT
   );
 }
 

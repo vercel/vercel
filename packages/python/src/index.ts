@@ -24,10 +24,11 @@ import {
 import {
   ensureUvProject,
   resolveVendorDir,
-  mirrorSitePackagesIntoVendor,
   installRequirementsFile,
   installRequirement,
 } from './install';
+import { PythonDependencyExternalizer } from './dependency-externalizer';
+import { detectInstallSource } from './install';
 import { UvRunner, getUvBinaryOrInstall } from './uv';
 import { readConfigFile } from '@vercel/build-utils';
 import {
@@ -257,9 +258,17 @@ export const build: BuildV3 = async ({
     let lock: {
       _meta?: { requires?: { python_version?: string } };
     } = {};
+    const pipfileLockPath = join(pipfileLockDir, 'Pipfile.lock');
     try {
-      const json = await readFile(join(pipfileLockDir, 'Pipfile.lock'), 'utf8');
-      lock = JSON.parse(json);
+      const pipfileLockContent = await readFile(pipfileLockPath, 'utf8');
+      try {
+        lock = JSON.parse(pipfileLockContent);
+      } catch (err) {
+        console.log(
+          `Failed to parse "Pipfile.lock". File content:\n${pipfileLockContent}`
+        );
+        throw err;
+      }
     } catch (err) {
       throw new NowBuildError({
         code: 'INVALID_PIPFILE_LOCK',
@@ -349,31 +358,71 @@ export const build: BuildV3 = async ({
     );
   }
 
+  // Track the lock file path and project info for package classification (used when runtime install is enabled)
+  let uvLockPath: string | null = null;
+  let uvProjectDir: string | null = null;
+  let projectName: string | undefined;
+  let noBuildCheckFailed = false;
+
   if (!assumeDepsInstalled) {
     // Default installation path: use uv to normalize manifests into a uv.lock and
     // sync dependencies into the virtualenv, including required runtime deps.
     // Ensure all installation paths are normalized into a pyproject.toml and uv.lock
     // for consistent installation logic and idempotency.
-    const { projectDir } = await ensureUvProject({
+    const { projectDir, lockPath, lockFileProvidedByUser } =
+      await ensureUvProject({
+        workPath,
+        entryDirectory,
+        repoRootPath,
+        pythonVersion: pythonVersion.version,
+        uv,
+        generateLockFile: true,
+        requireBinaryWheels: false,
+      });
+
+    uvLockPath = lockPath;
+    uvProjectDir = projectDir;
+
+    // Get the project name from python-analysis for package classification
+    const installInfo = await detectInstallSource({
       workPath,
       entryDirectory,
-      fsFiles,
       repoRootPath,
-      pythonPath: pythonVersion.pythonPath,
-      pipPath: pythonVersion.pipPath,
-      pythonVersion: pythonVersion.version,
-      uv,
-      venvPath,
-      meta,
     });
+    projectName = installInfo.pythonPackage?.manifest?.data?.project?.name;
+
+    // For user-provided lock files, check if all packages have binary wheels
+    // available BEFORE running the actual sync. We track this result so we can
+    // error later if runtime dependency installation is needed (which requires
+    // all public packages to have pre-built wheels).
+    if (lockFileProvidedByUser) {
+      try {
+        await uv.sync({
+          venvPath,
+          projectDir,
+          frozen: true,
+          noBuild: true,
+        });
+      } catch (err) {
+        // Note the failure but don't error yet - we only need wheels
+        // if runtime dependency install is required (bundle > 250MB)
+        noBuildCheckFailed = true;
+        debug(
+          `--no-build check failed: ${err instanceof Error ? err.message : String(err)}`
+        );
+      }
+    }
 
     // `ensureUvProject` would have produced a `pyproject.toml` or `uv.lock`
     // so we can use `uv sync` to install dependencies into the active
     // virtual environment.
+    // Use --frozen for user-provided lock files (respects exact versions),
+    // --locked for generated lock files (validates consistency).
     await uv.sync({
       venvPath,
       projectDir,
-      locked: true,
+      frozen: lockFileProvidedByUser,
+      locked: !lockFileProvidedByUser,
     });
   }
 
@@ -477,12 +526,28 @@ from vercel_runtime.vc_init import vc_handler
 
   const files: Files = await glob('**', globOptions);
 
-  const vendorFiles = await mirrorSitePackagesIntoVendor({
+  // Bundle dependencies, using runtime installation for oversized bundles
+  const depExternalizer = new PythonDependencyExternalizer({
     venvPath,
-    vendorDirName: vendorDir,
+    vendorDir,
+    workPath,
+    uvLockPath,
+    uvProjectDir,
+    projectName,
+    noBuildCheckFailed,
+    pythonPath: pythonVersion.pythonPath,
   });
-  for (const [p, f] of Object.entries(vendorFiles)) {
-    files[p] = f;
+
+  const { overLambdaLimit, allVendorFiles } =
+    await depExternalizer.analyze(files);
+
+  if (overLambdaLimit) {
+    await depExternalizer.generateBundle(files);
+  } else {
+    // Bundle all dependencies since we're not doing runtime installation
+    for (const [p, f] of Object.entries(allVendorFiles)) {
+      files[p] = f;
+    }
   }
 
   // in order to allow the user to have `server.py`, we

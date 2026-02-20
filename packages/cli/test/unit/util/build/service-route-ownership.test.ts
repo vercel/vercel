@@ -76,4 +76,22 @@ describe('scopeRoutesToServiceOwnership()', () => {
     expect(match?.[1]).toBe('users');
     expect(match?.[2]).toBe('123');
   });
+
+  test('scopes unanchored catch-all routes while preserving captures', () => {
+    const owner = createWebService('web', '/');
+    const routes: Route[] = [{ src: '/(.*)' }];
+    const scoped = scopeRoutesToServiceOwnership({
+      routes,
+      owner,
+      allServices: [owner, createWebService('dashboard', '/dashboard')],
+    });
+
+    const regex = getRegex(scoped[0]);
+    expect(regex.test('/about')).toBe(true);
+    expect(regex.test('/dashboard')).toBe(false);
+
+    const match = regex.exec('/about/team');
+    expect(match).toBeTruthy();
+    expect(match?.[1]).toBe('about/team');
+  });
 });

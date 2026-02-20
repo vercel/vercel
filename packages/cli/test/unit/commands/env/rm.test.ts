@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import env from '../../../../src/commands/env';
 import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
 import { client } from '../../../mocks/client';
@@ -49,6 +49,42 @@ describe('env rm', () => {
           value: `${command}:${subcommand}`,
         },
       ]);
+    });
+  });
+
+  describe('non-interactive', () => {
+    it('outputs action_required with missing_name when name not provided', async () => {
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+        throw new Error('exit');
+      });
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+      client.nonInteractive = true;
+      client.setArgv(
+        'env',
+        'rm',
+        '--non-interactive',
+        '--cwd=../../../test-custom-deployment-id'
+      );
+      const exitCodePromise = env(client);
+
+      await expect(exitCodePromise).rejects.toThrow('exit');
+      expect(logSpy).toHaveBeenCalled();
+      const payload = JSON.parse(
+        logSpy.mock.calls[logSpy.mock.calls.length - 1][0]
+      );
+      expect(payload).toMatchObject({
+        status: 'action_required',
+        reason: 'missing_name',
+        message: expect.stringMatching(/name|Example/),
+        next: expect.any(Array),
+      });
+      expect(payload.next[0].command).toMatch(/env rm/);
+      expect(payload.next[0].command).toContain('--yes');
+      expect(payload.next[0].command).toContain('--non-interactive');
+
+      exitSpy.mockRestore();
+      logSpy.mockRestore();
     });
   });
 

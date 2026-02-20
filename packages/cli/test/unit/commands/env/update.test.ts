@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach } from 'vitest';
+import { describe, expect, it, beforeEach, vi } from 'vitest';
 import env from '../../../../src/commands/env';
 import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
 import { client } from '../../../mocks/client';
@@ -58,6 +58,157 @@ describe('env update', () => {
 
     const exitCode = await exitCodePromise;
     expect(exitCode, 'exit code for "env update"').toEqual(1);
+  });
+
+  describe('non-interactive', () => {
+    it('outputs action_required with missing_requirements when name and value not provided', async () => {
+      const cwd = setupUnitFixture('vercel-env-pull');
+      client.cwd = cwd;
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+        throw new Error('exit');
+      });
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+      client.nonInteractive = true;
+      client.setArgv(
+        'env',
+        'update',
+        '--non-interactive',
+        '--cwd=../../../test-custom-deployment-id'
+      );
+      const exitCodePromise = env(client);
+
+      await expect(exitCodePromise).rejects.toThrow('exit');
+      expect(logSpy).toHaveBeenCalled();
+      const payload = JSON.parse(
+        logSpy.mock.calls[logSpy.mock.calls.length - 1][0]
+      );
+      expect(payload).toMatchObject({
+        status: 'action_required',
+        reason: 'missing_requirements',
+        missing: expect.arrayContaining(['missing_name', 'missing_value']),
+        message: expect.stringMatching(/name|--value|Example/),
+        next: expect.any(Array),
+      });
+      expect(payload.next[0].command).toMatch(/env update/);
+      expect(payload.next[0].command).toContain('--value');
+      expect(payload.next[0].command).toContain('--yes');
+      expect(payload.next[0].command).toContain('--non-interactive');
+
+      exitSpy.mockRestore();
+      logSpy.mockRestore();
+    });
+
+    it('outputs action_required with missing_value only when name and target provided (production, no branch)', async () => {
+      const cwd = setupUnitFixture('vercel-env-pull');
+      client.cwd = cwd;
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+        throw new Error('exit');
+      });
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+      client.nonInteractive = true;
+      client.setArgv(
+        'env',
+        'update',
+        'name',
+        'production',
+        '--non-interactive',
+        '--cwd=../../../test-custom-deployment-id'
+      );
+      const exitCodePromise = env(client);
+
+      await expect(exitCodePromise).rejects.toThrow('exit');
+      expect(logSpy).toHaveBeenCalled();
+      const payload = JSON.parse(
+        logSpy.mock.calls[logSpy.mock.calls.length - 1][0]
+      );
+      expect(payload).toMatchObject({
+        status: 'action_required',
+        reason: 'missing_requirements',
+        missing: ['missing_value'],
+        message: expect.stringMatching(/--value|stdin/),
+        next: expect.any(Array),
+      });
+      // Production does not need branch in suggested command
+      expect(payload.next[0].command).toMatch(
+        /env update name production --value/
+      );
+      expect(payload.next[0].command).not.toMatch(/<gitbranch>/);
+
+      exitSpy.mockRestore();
+      logSpy.mockRestore();
+    });
+
+    it('outputs error env_not_found when variable does not exist', async () => {
+      const cwd = setupUnitFixture('vercel-env-pull');
+      client.cwd = cwd;
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+        throw new Error('exit');
+      });
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+      client.nonInteractive = true;
+      client.setArgv(
+        'env',
+        'update',
+        'NON_EXISTENT_VAR',
+        '--value',
+        'x',
+        '--yes',
+        '--non-interactive'
+      );
+      const exitCodePromise = env(client);
+
+      await expect(exitCodePromise).rejects.toThrow('exit');
+      expect(logSpy).toHaveBeenCalled();
+      const payload = JSON.parse(
+        logSpy.mock.calls[logSpy.mock.calls.length - 1][0]
+      );
+      expect(payload).toMatchObject({
+        status: 'error',
+        reason: 'env_not_found',
+        message: expect.stringContaining('NON_EXISTENT_VAR'),
+      });
+
+      exitSpy.mockRestore();
+      logSpy.mockRestore();
+    });
+
+    it('outputs error invalid_arguments when too many args', async () => {
+      const cwd = setupUnitFixture('vercel-env-pull');
+      client.cwd = cwd;
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+        throw new Error('exit');
+      });
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+      client.nonInteractive = true;
+      client.setArgv(
+        'env',
+        'update',
+        'VAR1',
+        'production',
+        'branch',
+        'extra',
+        '--non-interactive'
+      );
+      const exitCodePromise = env(client);
+
+      await expect(exitCodePromise).rejects.toThrow('exit');
+      expect(logSpy).toHaveBeenCalled();
+      const payload = JSON.parse(
+        logSpy.mock.calls[logSpy.mock.calls.length - 1][0]
+      );
+      expect(payload).toMatchObject({
+        status: 'error',
+        reason: 'invalid_arguments',
+        message: expect.stringMatching(/Invalid number|Usage/),
+      });
+
+      exitSpy.mockRestore();
+      logSpy.mockRestore();
+    });
   });
 
   it('should prompt for variable name when not provided', async () => {

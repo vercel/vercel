@@ -148,6 +148,33 @@ const metadataSchema3: MetadataSchema = {
   required: ['Region'],
 };
 
+const metadataFullTypes: MetadataSchema = {
+  type: 'object',
+  properties: {
+    region: {
+      'ui:control': 'select',
+      'ui:label': 'Region',
+      type: 'string',
+      'ui:options': ['iad1', 'sfo1'],
+    },
+    auth: {
+      'ui:control': 'toggle',
+      'ui:label': 'Auth',
+      description: 'Enable built-in authentication',
+      type: 'boolean',
+      default: false,
+    },
+    readRegions: {
+      type: 'array',
+      'ui:control': 'multi-vercel-region',
+      'ui:label': 'Read Regions',
+      items: { type: 'string' },
+      'ui:options': ['iad1', 'sfo1', 'fra1'],
+    },
+  },
+  required: ['region'],
+};
+
 const metadataUnsupported: MetadataSchema = {
   type: 'object',
   properties: {
@@ -182,11 +209,26 @@ const metadataUnsupported: MetadataSchema = {
   required: ['region'],
 };
 
+const metadataNoDefaults: MetadataSchema = {
+  type: 'object',
+  properties: {
+    tier: {
+      'ui:control': 'select',
+      'ui:label': 'Tier',
+      type: 'string',
+      'ui:options': ['starter', 'pro', 'enterprise'],
+    },
+  },
+  required: ['tier'],
+};
+
 const integrations: Record<string, Integration> = {
   acme: {
     id: 'acme',
     name: 'Acme Integration',
     slug: 'acme',
+    eulaDocUri: 'https://example.com/eula',
+    privacyDocUri: 'https://example.com/privacy',
     products: [
       {
         id: 'acme-product',
@@ -202,6 +244,8 @@ const integrations: Record<string, Integration> = {
     id: 'acme-two-products',
     name: 'Acme Integration Two Products',
     slug: 'acme-two-products',
+    eulaDocUri: 'https://example.com/eula',
+    privacyDocUri: 'https://example.com/privacy',
     products: [
       {
         id: 'acme-product-a',
@@ -247,6 +291,21 @@ const integrations: Record<string, Integration> = {
     slug: 'acme-no-products',
     products: [],
   },
+  'acme-full-schema': {
+    id: 'acme-full-schema',
+    name: 'Acme Full Schema',
+    slug: 'acme-full-schema',
+    products: [
+      {
+        id: 'acme-product',
+        name: 'Acme Product',
+        slug: 'acme',
+        type: 'storage',
+        shortDescription: 'The Acme product with all field types',
+        metadataSchema: metadataFullTypes,
+      },
+    ],
+  },
   'acme-prepayment': {
     id: 'acme-prepayment',
     name: 'Acme Prepayment',
@@ -262,10 +321,42 @@ const integrations: Record<string, Integration> = {
       },
     ],
   },
+  'acme-required': {
+    id: 'acme-required',
+    name: 'Acme Required',
+    slug: 'acme-required',
+    products: [
+      {
+        id: 'acme-product',
+        name: 'Acme Product',
+        slug: 'acme',
+        type: 'storage',
+        shortDescription: 'The Acme product with required metadata',
+        metadataSchema: metadataNoDefaults,
+      },
+    ],
+  },
+  'acme-multi': {
+    id: 'acme-multi',
+    name: 'Acme Multi',
+    slug: 'acme-multi',
+    products: [
+      {
+        id: 'acme-product',
+        name: 'Acme Product',
+        slug: 'acme',
+        type: 'storage',
+        shortDescription: 'The Acme product with multiple fields',
+        metadataSchema: metadataSchema2,
+      },
+    ],
+  },
   'acme-unsupported': {
-    id: 'acme',
+    id: 'acme-unsupported',
     name: 'Acme Integration',
-    slug: 'acme',
+    slug: 'acme-unsupported',
+    eulaDocUri: 'https://example.com/eula',
+    privacyDocUri: 'https://example.com/privacy',
     products: [
       {
         id: 'acme-product',
@@ -432,6 +523,48 @@ const integrationPlans: Record<string, unknown> = {
           },
         ],
         disabled: true,
+      },
+    ],
+  },
+  'acme-unsupported': {
+    plans: [
+      {
+        id: 'pro',
+        type: 'subscription',
+        name: 'Pro Plan',
+        scope: 'installation',
+        description: 'Pro Plan',
+        paymentMethodRequired: true,
+        details: [],
+        highlightedDetails: [],
+      },
+    ],
+  },
+  'acme-multi': {
+    plans: [
+      {
+        id: 'pro',
+        type: 'subscription',
+        name: 'Pro Plan',
+        scope: 'installation',
+        description: 'Pro Plan',
+        paymentMethodRequired: true,
+        details: [],
+        highlightedDetails: [],
+      },
+    ],
+  },
+  'acme-two-products': {
+    plans: [
+      {
+        id: 'pro',
+        type: 'subscription',
+        name: 'Pro Plan',
+        scope: 'installation',
+        description: 'Pro Plan',
+        paymentMethodRequired: true,
+        details: [],
+        highlightedDetails: [],
       },
     ],
   },
@@ -866,21 +999,6 @@ const autoProvisionResponses: Record<
     },
     billingPlan: null,
   },
-  install: {
-    kind: 'install',
-    url: 'https://vercel.com/acme/~/integrations/checkout/acme?productSlug=acme',
-    integration: autoProvisionIntegration,
-    product: autoProvisionProduct,
-  },
-  'install-no-policies': {
-    kind: 'install',
-    url: 'https://vercel.com/acme/~/integrations/checkout/acme?productSlug=acme',
-    integration: {
-      ...autoProvisionIntegration,
-      policies: {},
-    },
-    product: autoProvisionProduct,
-  },
   metadata: {
     kind: 'metadata',
     url: 'https://vercel.com/acme/~/integrations/checkout/acme?productSlug=acme',
@@ -894,6 +1012,70 @@ const autoProvisionResponses: Record<
     product: autoProvisionProduct,
   },
 };
+
+const discoverIntegrations = [
+  {
+    slug: 'neon',
+    name: 'Neon',
+    shortDescription: 'Serverless Postgres with branching',
+    tagIds: ['tag_databases', 'tag_dev_tools'],
+    isMarketplace: true,
+    canInstall: true,
+    products: [
+      {
+        slug: 'neon',
+        name: 'Neon Postgres',
+        shortDescription: 'Serverless Postgres database',
+        tags: ['postgres'],
+      },
+    ],
+  },
+  {
+    slug: 'acme-multi',
+    name: 'Acme Multi',
+    shortDescription: 'Multi-product integration',
+    tagIds: ['tag_databases'],
+    isMarketplace: true,
+    canInstall: true,
+    products: [
+      {
+        slug: 'acme-kv',
+        name: 'Acme KV',
+        shortDescription: 'Key-value store',
+        tags: ['storage', 'redis'],
+      },
+      {
+        slug: 'acme-db',
+        name: 'Acme DB',
+        shortDescription: 'Relational database',
+        tags: ['postgres'],
+      },
+    ],
+  },
+  {
+    slug: 'acme-hidden',
+    name: 'Acme Hidden',
+    shortDescription: 'Should be filtered out because canInstall is false',
+    tagIds: ['tag_databases'],
+    isMarketplace: true,
+    canInstall: false,
+    products: [{ slug: 'storage', name: 'Storage' }],
+  },
+  {
+    slug: 'acme-external',
+    name: 'Acme External',
+    shortDescription: 'Should be filtered out because isMarketplace is false',
+    tagIds: ['tag_dev_tools'],
+    isMarketplace: false,
+    canInstall: true,
+    products: [{ slug: 'connect', name: 'Connect' }],
+  },
+];
+
+const discoverCategories = [
+  { id: 'tag_databases', title: 'Storage' },
+  { id: 'tag_dev_tools', title: 'DevTools' },
+];
 
 export function useResources(returnError?: number) {
   client.scenario.get('/:version/storage/stores', (req, res) => {
@@ -915,6 +1097,29 @@ export function useResources(returnError?: number) {
   });
 }
 
+export function useIntegrationDiscover(opts?: {
+  integrationsStatus?: number;
+  categoriesStatus?: number;
+}) {
+  client.scenario.get('/v2/integrations/integrations', (_req, res) => {
+    if (opts?.integrationsStatus) {
+      res.status(opts.integrationsStatus);
+      res.end();
+      return;
+    }
+    res.json(discoverIntegrations);
+  });
+
+  client.scenario.get('/v2/integrations/categories', (_req, res) => {
+    if (opts?.categoriesStatus) {
+      res.status(opts.categoriesStatus);
+      res.end();
+      return;
+    }
+    res.json(discoverCategories);
+  });
+}
+
 export function useConfiguration() {
   client.scenario.get('/:version/integrations/configurations', (req, res) => {
     const { integrationIdOrSlug } = req.query;
@@ -928,7 +1133,7 @@ export function useConfiguration() {
     const foundConfigs =
       configurations[(integrationIdOrSlug ?? 'acme-no-results') as string];
 
-    res.json(foundConfigs);
+    res.json(foundConfigs ?? []);
   });
 }
 
@@ -984,9 +1189,11 @@ export function usePreauthorization(opts?: {
 export function useIntegration({
   withInstallation,
   ownerId,
+  installShouldFail,
 }: {
   withInstallation: boolean;
   ownerId?: string;
+  installShouldFail?: boolean;
 }) {
   const storeId = 'store_123';
 
@@ -1020,6 +1227,7 @@ export function useIntegration({
         ? [
             {
               id: `${integrationIdOrSlug}-install`,
+              integrationId: integrationIdOrSlug,
               installationType: 'marketplace',
               ownerId,
             },
@@ -1065,14 +1273,35 @@ export function useIntegration({
       res.end();
     }
   );
+
+  const installRequestBodies: unknown[] = [];
+
+  client.scenario.post(
+    '/v2/integrations/integration/:integrationId/marketplace/install',
+    (req, res) => {
+      installRequestBodies.push(req.body);
+      if (installShouldFail) {
+        res.status(500);
+        res.json({ error: { message: 'Internal Server Error' } });
+        return;
+      }
+      res.json({
+        id: `${req.params.integrationId}-new-install`,
+      });
+    }
+  );
+
+  return { installRequestBodies };
 }
 
 export function useAutoProvision(opts?: {
   responseKey?: keyof typeof autoProvisionResponses;
-  secondResponseKey?: keyof typeof autoProvisionResponses;
+  withInstallation?: boolean;
+  ownerId?: string;
 }) {
-  let callCount = 0;
+  const withInstallation = opts?.withInstallation ?? true;
   const storeId = 'resource_123';
+  const requestBodies: unknown[] = [];
 
   // Integration fetch endpoint (needed for auto-provision flow)
   client.scenario.get(
@@ -1091,25 +1320,38 @@ export function useAutoProvision(opts?: {
     }
   );
 
+  // Installations endpoint (needed for upfront install check)
+  client.scenario.get('/:version/integrations/configurations', (req, res) => {
+    const { installationType, integrationIdOrSlug } = req.query;
+    if (installationType !== 'marketplace') {
+      res.status(500);
+      res.end();
+      return;
+    }
+    res.json(
+      withInstallation
+        ? [
+            {
+              id: 'acme-install',
+              integrationId: integrationIdOrSlug,
+              installationType: 'marketplace',
+              ownerId: opts?.ownerId ?? 'team_dummy',
+            },
+          ]
+        : []
+    );
+  });
+
   // Auto-provision endpoint
   client.scenario.post(
     '/v1/integrations/integration/:integrationSlug/marketplace/auto-provision/:productSlug',
-    (_req, res) => {
-      callCount++;
+    (req, res) => {
+      requestBodies.push(req.body);
 
-      // First call returns the first response, subsequent calls return second response
-      const responseKey =
-        callCount === 1
-          ? (opts?.responseKey ?? 'provisioned')
-          : (opts?.secondResponseKey ?? opts?.responseKey ?? 'provisioned');
+      const response =
+        autoProvisionResponses[opts?.responseKey ?? 'provisioned'];
 
-      const response = autoProvisionResponses[responseKey];
-
-      if (
-        response.kind === 'install' ||
-        response.kind === 'metadata' ||
-        response.kind === 'unknown'
-      ) {
+      if (response.kind === 'metadata' || response.kind === 'unknown') {
         // 422 responses for fallback cases
         res.status(422);
         res.json(response);
@@ -1135,4 +1377,6 @@ export function useAutoProvision(opts?: {
       res.end();
     }
   );
+
+  return { requestBodies };
 }

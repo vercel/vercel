@@ -14,12 +14,26 @@
 export { containsAppOrHandler } from './semantic/entrypoints';
 
 // =============================================================================
+// Installed package analysis (WASM-based .dist-info parsing)
+// =============================================================================
+
+export type {
+  Distribution,
+  DistributionIndex,
+  PackagePath,
+  DirectUrlInfo,
+} from './manifest/dist-metadata';
+
+export { scanDistributions } from './manifest/dist-metadata';
+
+// =============================================================================
 // Package discovery (runtime + types)
 // =============================================================================
 
 export type {
   PythonConfig,
   PythonConfigs,
+  PythonLockFile,
   PythonManifest,
   PythonManifestOrigin,
   PythonPackage,
@@ -29,9 +43,39 @@ export type {
 export {
   discoverPythonPackage,
   PythonConfigKind,
+  PythonLockFileKind,
   PythonManifestConvertedKind,
   PythonManifestKind,
 } from './manifest/package';
+
+// =============================================================================
+// Manifest serialization utilities
+// =============================================================================
+
+export {
+  createMinimalManifest,
+  stringifyManifest,
+  type CreateMinimalManifestOptions,
+} from './manifest/serialize';
+
+// =============================================================================
+// uv.lock parsing and package classification
+// =============================================================================
+
+export type {
+  ClassifyPackagesOptions,
+  PackageClassification,
+  UvLockFile,
+  UvLockPackage,
+  UvLockPackageSource,
+} from './manifest/uv-lock-parser';
+
+export {
+  classifyPackages,
+  isPrivatePackageSource,
+  normalizePackageName,
+  parseUvLock,
+} from './manifest/uv-lock-parser';
 
 // =============================================================================
 // Python selection (runtime + types)

@@ -1,5 +1,51 @@
 # @vercel/fs-detectors
 
+## 5.8.9
+
+### Patch Changes
+
+- [services] ([#15093](https://github.com/vercel/vercel/pull/15093))
+  - consolidate `workspace` and `entrypoint` from `experimentalServices` `vercel.json` schema
+  - make `framework` config in service optional -- infer framework from service workspace when not explicitly provided
+
+## 5.8.8
+
+### Patch Changes
+
+- Updated dependencies [[`d103a83aa1d6a283760709990907204f85a136b2`](https://github.com/vercel/vercel/commit/d103a83aa1d6a283760709990907204f85a136b2)]:
+  - @vercel/frameworks@3.18.0
+
+## 5.8.7
+
+### Patch Changes
+
+- [services] infer workspace from manifest: when workspace is not explicitly configured, infer from nearest manifest to entrypoint ([#14986](https://github.com/vercel/vercel/pull/14986))
+
+## 5.8.6
+
+### Patch Changes
+
+- Services routing improvements: ([#15018](https://github.com/vercel/vercel/pull/15018))
+
+  - Fix route ownership scoping so parent service catch-alls (e.g. Vite SPA fallback) don't capture sibling service prefixes
+  - Move shared ownership-guard helpers (`getOwnershipGuard`, `scopeRouteSourceToOwnership`) to `@vercel/routing-utils`
+  - Place runtime service function outputs under internal `/_svc/<service>/index` namespace to prevent filesystem path leakage
+  - Block `/_svc` as a reserved routePrefix in service validation
+  - Scope all builder-emitted routes (not just route-owning builders) to their service ownership before merging
+
+- Updated dependencies [[`3cd0b559f1815fdb13f7aa05114bae2b0b0b0e68`](https://github.com/vercel/vercel/commit/3cd0b559f1815fdb13f7aa05114bae2b0b0b0e68)]:
+  - @vercel/routing-utils@5.3.3
+  - @vercel/frameworks@3.17.1
+
+## 5.8.5
+
+### Patch Changes
+
+- Add service configuration to BuildOptions ([#14918](https://github.com/vercel/vercel/pull/14918))
+
+- - Fix services routing for runtime entrypoints by using extensionless function destinations, disabling framework `defaultRoutes` injection during services builds, and ensuring deterministic route merging precedence for services. ([#14946](https://github.com/vercel/vercel/pull/14946))
+  - Scope route-owning builder routes to their owning service prefixes in services mode, preventing cross-service route leakage
+
 ## 5.8.4
 
 ### Patch Changes

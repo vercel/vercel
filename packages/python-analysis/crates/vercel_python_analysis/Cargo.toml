@@ -11,6 +11,11 @@ crate-type = ["cdylib"]
 ruff_python_ast = { git = "https://github.com/astral-sh/ruff", rev = "22f240dadf58837f9ac55e5f06d591449f620847" }
 ruff_python_parser = { git = "https://github.com/astral-sh/ruff", rev = "22f240dadf58837f9ac55e5f06d591449f620847" }
 wit-bindgen.workspace = true
+uv-pypi-types.workspace = true
+uv-normalize.workspace = true
+csv.workspace = true
+serde.workspace = true
+serde_json.workspace = true
 
 [build-dependencies]
 wit-bindgen-rust.workspace = true

@@ -8,7 +8,8 @@ import type { IntegrationProduct } from './types';
  */
 export function formatProductHelp(
   integrationSlug: string,
-  products: IntegrationProduct[]
+  products: IntegrationProduct[],
+  commandName = 'integration add'
 ): string {
   const lines: string[] = [];
   lines.push('');
@@ -29,7 +30,7 @@ export function formatProductHelp(
   lines.push(`  ${chalk.dim('Usage:')}`);
   lines.push('');
   lines.push(
-    `    ${chalk.cyan(`$ ${packageName} integration add ${integrationSlug}/<product-slug>`)}`
+    `    ${chalk.cyan(`$ ${packageName} ${commandName} ${integrationSlug}/<product-slug>`)}`
   );
   lines.push('');
 

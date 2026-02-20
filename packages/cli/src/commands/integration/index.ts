@@ -13,6 +13,8 @@ import { balance } from './balance';
 import {
   addSubcommand,
   balanceSubcommand,
+  discoverSubcommand,
+  guideSubcommand,
   integrationCommand,
   listSubcommand,
   openSubcommand,
@@ -21,13 +23,16 @@ import {
 import { list } from './list';
 import { openIntegration } from './open-integration';
 import { remove } from './remove-integration';
-import { fetchIntegration } from '../../util/integration/fetch-integration';
-import { formatProductHelp } from '../../util/integration/format-product-help';
+import { discover } from './discover';
+import { guide } from './guide';
+import { printAddDynamicHelp } from './add-help';
 
 const COMMAND_CONFIG = {
   add: getCommandAliases(addSubcommand),
   open: getCommandAliases(openSubcommand),
   list: getCommandAliases(listSubcommand),
+  discover: getCommandAliases(discoverSubcommand),
+  guide: getCommandAliases(guideSubcommand),
   balance: getCommandAliases(balanceSubcommand),
   remove: getCommandAliases(removeSubcommand),
 };
@@ -74,25 +79,19 @@ export default async function main(client: Client) {
     case 'add': {
       if (needHelp) {
         telemetry.trackCliFlagHelp('integration', subcommandOriginal);
-        printHelp(addSubcommand);
 
-        // Dynamic help: if an integration slug is provided, fetch and show available products
-        const rawArg = subArgs[0];
-        if (rawArg) {
-          // Strip product slug if slash syntax was used (e.g. "upstash/upstash-kv" → "upstash")
-          const integrationSlug = rawArg.split('/')[0];
-          try {
-            const integration = await fetchIntegration(client, integrationSlug);
-            const products = integration.products ?? [];
-            if (products.length > 1) {
-              output.print(formatProductHelp(integrationSlug, products));
-            }
-          } catch (err: unknown) {
-            output.debug(
-              `Failed to fetch integration for dynamic help: ${err}`
-            );
-          }
+        const printed = await printAddDynamicHelp(
+          client,
+          subArgs[0],
+          addSubcommand,
+          cmd => printHelp(cmd),
+          'integration add'
+        );
+
+        if (!printed) {
+          printHelp(addSubcommand);
         }
+
         return 0;
       }
       telemetry.trackCliSubcommandAdd(subcommandOriginal);
@@ -106,18 +105,7 @@ export default async function main(client: Client) {
         printError(error);
         return 1;
       }
-      const resourceName = addParsedArgs.flags['--name'] as string | undefined;
-      const noConnect = addParsedArgs.flags['--no-connect'] as
-        | boolean
-        | undefined;
-      const noEnvPull = addParsedArgs.flags['--no-env-pull'] as
-        | boolean
-        | undefined;
-
-      return add(client, addParsedArgs.args, resourceName, {
-        noConnect,
-        noEnvPull,
-      });
+      return add(client, addParsedArgs.args, addParsedArgs.flags);
     }
     case 'list': {
       if (needHelp) {
@@ -128,6 +116,24 @@ export default async function main(client: Client) {
       telemetry.trackCliSubcommandList(subcommandOriginal);
       return list(client);
     }
+    case 'discover': {
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('integration', subcommandOriginal);
+        printHelp(discoverSubcommand);
+        return 0;
+      }
+      telemetry.trackCliSubcommandDiscover(subcommandOriginal);
+      return discover(client, subArgs);
+    }
+    case 'guide': {
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('integration', subcommandOriginal);
+        printHelp(guideSubcommand);
+        return 0;
+      }
+      telemetry.trackCliSubcommandGuide(subcommandOriginal);
+      return guide(client, subArgs);
+    }
     case 'balance': {
       if (needHelp) {
         telemetry.trackCliFlagHelp('integration', subcommandOriginal);
@@ -135,7 +141,7 @@ export default async function main(client: Client) {
         return 0;
       }
       telemetry.trackCliSubcommandBalance(subcommandOriginal);
-      return balance(client, subArgs);
+      return balance(client);
     }
     case 'open': {
       if (needHelp) {

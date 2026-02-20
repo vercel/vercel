@@ -19,6 +19,7 @@ import type arg from 'arg';
 export interface DeploymentUrlOptions {
   deploymentFlag?: string;
   protectionBypassFlag?: string;
+  autoConfirm?: boolean;
 }
 
 export interface DeploymentUrlResult {
@@ -32,6 +33,7 @@ export interface CommandSetupResult {
   deploymentFlag?: string;
   protectionBypassFlag?: string;
   toolFlags: string[];
+  yes: boolean;
 }
 
 export interface CommandTelemetryClient {
@@ -120,6 +122,7 @@ export function setupCurlLikeCommand(
     deploymentFlag,
     protectionBypassFlag,
     toolFlags,
+    yes: !!flags['--yes'],
   };
 }
 
@@ -132,7 +135,7 @@ export async function getDeploymentUrlAndToken(
   path: string,
   options: DeploymentUrlOptions
 ): Promise<DeploymentUrlResult | number> {
-  const { deploymentFlag, protectionBypassFlag } = options;
+  const { deploymentFlag, protectionBypassFlag, autoConfirm } = options;
 
   let link;
   let scope;
@@ -152,7 +155,9 @@ export async function getDeploymentUrlAndToken(
   }
 
   try {
-    link = await ensureLink(commandName, client, client.cwd);
+    link = await ensureLink(commandName, client, client.cwd, {
+      autoConfirm,
+    });
   } catch (err: unknown) {
     if (isErrnoException(err) && err.code === 'NOT_AUTHORIZED') {
       output.error(err.message);

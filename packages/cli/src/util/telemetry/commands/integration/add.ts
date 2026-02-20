@@ -24,6 +24,24 @@ export class IntegrationAddTelemetryClient
     }
   }
 
+  trackCliOptionMetadata(v: string[] | undefined) {
+    if (v?.length) {
+      this.trackCliOption({
+        option: 'metadata',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionPlan(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'plan',
+        value: this.redactedValue,
+      });
+    }
+  }
+
   trackCliFlagNoConnect(v: boolean | undefined) {
     if (v) {
       this.trackCliFlag('no-connect');
@@ -33,6 +51,15 @@ export class IntegrationAddTelemetryClient
   trackCliFlagNoEnvPull(v: boolean | undefined) {
     if (v) {
       this.trackCliFlag('no-env-pull');
+    }
+  }
+
+  trackCliOptionEnvironment(v: string[] | undefined) {
+    if (v?.length) {
+      this.trackCliOption({
+        option: 'environment',
+        value: this.redactedValue,
+      });
     }
   }
 }
