@@ -78,7 +78,7 @@ A promise that resolves when the tag is added.
 
 #### Defined in
 
-[packages/functions/src/addcachetag/index.ts:3](https://github.com/vercel/vercel/blob/main/packages/functions/src/addcachetag/index.ts#L3)
+[packages/functions/src/addcachetag/index.ts:4](https://github.com/vercel/vercel/blob/main/packages/functions/src/addcachetag/index.ts#L4)
 
 ---
 
@@ -133,7 +133,7 @@ attachDatabasePool(pgPool);
 
 #### Defined in
 
-[packages/functions/src/purge/index.ts:28](https://github.com/vercel/vercel/blob/main/packages/functions/src/purge/index.ts#L28)
+[packages/functions/src/purge/index.ts:29](https://github.com/vercel/vercel/blob/main/packages/functions/src/purge/index.ts#L29)
 
 ---
 
@@ -154,7 +154,7 @@ attachDatabasePool(pgPool);
 
 #### Defined in
 
-[packages/functions/src/purge/index.ts:12](https://github.com/vercel/vercel/blob/main/packages/functions/src/purge/index.ts#L12)
+[packages/functions/src/purge/index.ts:13](https://github.com/vercel/vercel/blob/main/packages/functions/src/purge/index.ts#L13)
 
 ---
 
@@ -261,7 +261,7 @@ An instance of the Vercel Runtime Cache.
 
 #### Defined in
 
-[packages/functions/src/cache/index.ts:55](https://github.com/vercel/vercel/blob/main/packages/functions/src/cache/index.ts#L55)
+[packages/functions/src/cache/index.ts:48](https://github.com/vercel/vercel/blob/main/packages/functions/src/cache/index.ts#L48)
 
 ---
 
@@ -331,7 +331,7 @@ https://vercel.com/docs/projects/environment-variables/system-environment-variab
 
 #### Defined in
 
-[packages/functions/src/purge/index.ts:23](https://github.com/vercel/vercel/blob/main/packages/functions/src/purge/index.ts#L23)
+[packages/functions/src/purge/index.ts:24](https://github.com/vercel/vercel/blob/main/packages/functions/src/purge/index.ts#L24)
 
 ---
 
@@ -351,7 +351,7 @@ https://vercel.com/docs/projects/environment-variables/system-environment-variab
 
 #### Defined in
 
-[packages/functions/src/purge/index.ts:4](https://github.com/vercel/vercel/blob/main/packages/functions/src/purge/index.ts#L4)
+[packages/functions/src/purge/index.ts:5](https://github.com/vercel/vercel/blob/main/packages/functions/src/purge/index.ts#L5)
 
 ---
 
