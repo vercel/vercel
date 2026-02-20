@@ -107,6 +107,7 @@ export async function detectGenericPythonEntrypoint(
       }
     }
 
+    // Search candidate locations using AST-based detection
     const candidates = PYTHON_CANDIDATE_ENTRYPOINTS.filter(
       (c: string) => !!fsFiles[c]
     );
@@ -142,7 +143,7 @@ export async function detectDjangoPythonEntrypoint(
       }
     }
 
-    // If the Django WSGI entrypoint exists and is valid, use it
+    // Look for an entrypoint via manage.py -> settings.py -> WSGI_APPLICATION
     const wsgiEntry = await getDjangoEntrypoint(workPath);
     if (wsgiEntry && fsFiles[wsgiEntry]) {
       debug(`Using Django WSGI entrypoint: ${wsgiEntry}`);
