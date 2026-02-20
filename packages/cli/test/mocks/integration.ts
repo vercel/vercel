@@ -1011,6 +1011,14 @@ const autoProvisionResponses: Record<
     integration: autoProvisionIntegration,
     product: autoProvisionProduct,
   },
+  installed: {
+    kind: 'provisioned',
+    integration: autoProvisionIntegration,
+    product: autoProvisionProduct,
+    installation: { id: 'install_123' },
+    resource: null,
+    billingPlan: null,
+  },
 };
 
 const discoverIntegrations = [
@@ -1356,8 +1364,9 @@ export function useAutoProvision(opts?: {
         res.status(422);
         res.json(response);
       } else {
-        // 201 for successful provisioning
-        res.status(201);
+        // 200 for installation-only (no resource), 201 for resource provisioning
+        const provisioned = response as AutoProvisionedResponse;
+        res.status(provisioned.resource ? 201 : 200);
         res.json(response);
       }
     }

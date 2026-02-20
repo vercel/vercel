@@ -222,7 +222,7 @@ export interface AutoProvisionedResponse {
   integration: AutoProvisionIntegration;
   product: AutoProvisionProduct;
   installation: { id: string };
-  resource: AutoProvisionResource;
+  resource: AutoProvisionResource | null;
   billingPlan: BillingPlan | null;
 }
 
