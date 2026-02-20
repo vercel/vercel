@@ -1,0 +1,18 @@
+{
+  "projectSettings": {
+    "framework": "services"
+  },
+  "experimentalServices": {
+    "web": {
+      "framework": "fastapi",
+      "entrypoint": "main.py",
+      "routePrefix": "/"
+    },
+    "worker": {
+      "type": "worker",
+      "entrypoint": "worker.py",
+      "topic": "celery",
+      "consumer": "default"
+    }
+  }
+}
