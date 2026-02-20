@@ -6,6 +6,7 @@ const config: ExperimentConfig = {
   earlyExit: true,
   scripts: ['build'],
   timeout: 600,
+  sandbox: 'docker',
 };
 
 export default config;

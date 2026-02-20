@@ -28,6 +28,7 @@ const config: ExperimentConfig = {
   runs: 3,
   earlyExit: true,
   timeout: 900,
+  sandbox: 'docker',
   async setup(sandbox: Sandbox) {
     const token = process.env.VERCEL_TOKEN;
     if (!token) {
