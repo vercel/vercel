@@ -141,8 +141,8 @@ export const createThresholdSubcommand = {
       name: 'create threshold',
       value: [
         `${packageName} integration-resource create-threshold <resource> <minimum> <spend> <limit> [options]`,
-        `${packageName} integration-resource create-threshold my-acme-resource 100 50 2000`,
-        `${packageName} integration-resource create-threshold my-acme-resource 100 50 2000 --yes`,
+        `${packageName} integration-resource create-threshold my-acme-resource 50 100 2000`,
+        `${packageName} integration-resource create-threshold my-acme-resource 50 100 2000 --yes`,
       ],
     },
   ],
