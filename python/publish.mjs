@@ -15,13 +15,14 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, '..');
+const PYTHON_VERSIONS_PATH = 'packages/python/src/package-versions.ts';
 
 const PYTHON_PACKAGES = [
   {
     name: 'vercel-workers',
     projectDir: 'python/vercel-workers',
     versionPin: {
-      path: 'packages/python/src/workers-version.ts',
+      path: PYTHON_VERSIONS_PATH,
       exportName: 'VERCEL_WORKERS_VERSION',
     },
     uvRunGroupArgs: ['--group=test'],
@@ -31,7 +32,7 @@ const PYTHON_PACKAGES = [
     name: 'vercel-runtime',
     projectDir: 'python/vercel-runtime',
     versionPin: {
-      path: 'packages/python/src/runtime-version.ts',
+      path: PYTHON_VERSIONS_PATH,
       exportName: 'VERCEL_RUNTIME_VERSION',
     },
     uvRunGroupArgs: ['--only-group=test'],

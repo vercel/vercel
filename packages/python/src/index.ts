@@ -1,8 +1,7 @@
 import fs from 'fs';
 import { promisify } from 'util';
 import { join, dirname, basename, parse } from 'path';
-import { VERCEL_RUNTIME_VERSION } from './runtime-version';
-import { VERCEL_WORKERS_VERSION } from './workers-version';
+import { VERCEL_RUNTIME_VERSION } from './package-versions';
 import {
   download,
   glob,
