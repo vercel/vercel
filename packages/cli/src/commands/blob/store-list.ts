@@ -110,8 +110,8 @@ export default async function listStores(
       : `Blob stores:`;
     output.log(header);
 
-    // Non-TTY: print table and exit
-    if (!client.stdin.isTTY) {
+    // Non-TTY (piped output or non-interactive input): print table and exit
+    if (!client.stdin.isTTY || !client.stdout.isTTY) {
       output.print(
         table(
           [
