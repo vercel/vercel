@@ -42,7 +42,6 @@ export interface ServicesRoutes {
   /**
    * Internal routes for cron services.
    * These route `/_svc/{serviceName}/crons/{entry}/{handler}` to the cron function.
-   * TODO: Implement
    */
   crons: Route[];
   /**

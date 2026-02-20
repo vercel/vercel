@@ -1108,6 +1108,27 @@ describe.skipIf(flakey)('build', () => {
     ]);
   });
 
+  it('should include cron services in build output crons', async () => {
+    const cwd = fixture('with-services-cron');
+    const output = join(cwd, '.vercel', 'output');
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toBe(0);
+
+    const config = await fs.readJSON(join(output, 'config.json'));
+    expect(config).toHaveProperty('crons', [
+      {
+        path: '/_svc/cleanup/crons/api/cron/cron',
+        schedule: '0 0 * * *',
+      },
+    ]);
+    expect(config.routes).toContainEqual({
+      src: '^/_svc/cleanup/crons/api/cron/cron$',
+      dest: '/_svc/cleanup/index',
+      check: true,
+    });
+  });
+
   it('should fail build when CRON_SECRET contains invalid HTTP header characters', async () => {
     const cwd = fixture('with-cron');
     const output = join(cwd, '.vercel', 'output');

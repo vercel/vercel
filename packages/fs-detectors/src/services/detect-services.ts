@@ -11,6 +11,7 @@ import {
   type ServicesRoutes,
 } from './types';
 import {
+  getInternalServiceCronPath,
   getInternalServiceFunctionPath,
   getInternalServiceWorkerPath,
   isRouteOwningBuilder,
@@ -135,7 +136,9 @@ export async function detectServices(
  *   Internal queue callback routes under `/_svc/{serviceName}/workers/{entry}/{handler}`
  *   that rewrite to `/_svc/{serviceName}/index`.
  *
- * - Cron services: TODO - internal routes under `/_svc/`
+ * - Cron services:
+ *   Internal cron callback routes under `/_svc/{serviceName}/crons/{entry}/{handler}`
+ *   that rewrite to `/_svc/{serviceName}/index`.
  */
 export function generateServicesRoutes(
   services: ResolvedService[]
@@ -223,6 +226,18 @@ export function generateServicesRoutes(
     const functionPath = getInternalServiceFunctionPath(service.name);
     workers.push({
       src: `^${escapeRegex(workerPath)}$`,
+      dest: functionPath,
+      check: true,
+    });
+  }
+
+  const cronServices = services.filter(s => s.type === 'cron');
+  for (const service of cronServices) {
+    const cronEntrypoint = service.entrypoint || service.builder.src || 'index';
+    const cronPath = getInternalServiceCronPath(service.name, cronEntrypoint);
+    const functionPath = getInternalServiceFunctionPath(service.name);
+    crons.push({
+      src: `^${escapeRegex(cronPath)}$`,
       dest: functionPath,
       check: true,
     });

@@ -1,0 +1,27 @@
+{
+  "probes": [
+    {
+      "path": "/",
+      "status": 200,
+      "mustContain": "Hello from FastAPI web service"
+    },
+    {
+      "path": "/health",
+      "status": 200,
+      "mustContain": "ok"
+    },
+    {
+      "path": "/_svc/cleanup/crons/jobs/cleanup/cron",
+      "method": "GET",
+      "status": 200,
+      "mustContain": "ok"
+    },
+    {
+      "path": "/_svc/cleanup/crons/jobs/cleanup/cron",
+      "method": "POST",
+      "body": {},
+      "status": 200,
+      "mustContain": "ok"
+    }
+  ]
+}

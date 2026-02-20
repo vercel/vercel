@@ -19,6 +19,7 @@ export {
   isRouteOwningBuilder,
   INTERNAL_SERVICE_PREFIX,
   getInternalServiceFunctionPath,
+  getInternalServiceCronPath,
   getInternalServiceCronPathPrefix,
   getInternalServiceWorkerPath,
   getInternalServiceWorkerPathPrefix,
