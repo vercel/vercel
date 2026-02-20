@@ -144,7 +144,9 @@ export default async function credits(client: Client, argv: string[]) {
       output.success(
         `Purchased ${chalk.bold(`$${amount}`)} of ${label} credits for ${chalk.bold(contextName)} ${purchaseStamp()}`
       );
-      output.debug(`Purchase intent: ${result.purchaseIntent.id}`);
+      if (result.purchaseIntent) {
+        output.debug(`Purchase intent: ${result.purchaseIntent.id}`);
+      }
     }
 
     return 0;
