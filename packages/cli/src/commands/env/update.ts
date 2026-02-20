@@ -68,6 +68,7 @@ export default async function update(client: Client, argv: string[]) {
   telemetryClient.trackCliArgumentGitBranch(envGitBranch);
   telemetryClient.trackCliFlagSensitive(opts['--sensitive']);
   telemetryClient.trackCliFlagYes(opts['--yes']);
+  telemetryClient.trackCliOptionValue(valueFromFlag);
 
   if (args.length > 3) {
     if (client.nonInteractive) {
