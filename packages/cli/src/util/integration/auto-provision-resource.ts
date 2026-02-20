@@ -53,7 +53,7 @@ export async function autoProvisionResource(
 
     // 200/201/202 - success
     if (res.ok) {
-      return res.json();
+      return (await res.json()) as AutoProvisionResult;
     }
 
     // Shouldn't reach here - client.fetch throws on non-ok responses

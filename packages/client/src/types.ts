@@ -1,4 +1,4 @@
-import type { Agent } from 'http';
+import type { Dispatcher } from 'undici';
 import type {
   Builder,
   BuilderFunctions,
@@ -35,7 +35,7 @@ export interface VercelClientOptions {
   isDirectory?: boolean;
   skipAutoDetectionConfirmation?: boolean;
   archive?: ArchiveFormat;
-  agent?: Agent;
+  dispatcher?: Dispatcher;
   projectName?: string;
   /**
    * Path to a file containing bulk redirects (relative to the project root).

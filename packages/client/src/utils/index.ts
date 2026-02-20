@@ -1,5 +1,4 @@
 import { FilesMap } from './hashes';
-import nodeFetch, { RequestInit } from 'node-fetch';
 import { join, sep, relative, basename } from 'path';
 import { URL } from 'url';
 import ignore from 'ignore';
@@ -322,9 +321,10 @@ interface FetchOpts extends RequestInit {
   teamId?: string;
   headers?: { [key: string]: any };
   userAgent?: string;
+  dispatcher?: import('undici').Dispatcher;
 }
 
-export const fetch = async (
+export const fetchApi = async (
   url: string,
   token: string,
   opts: FetchOpts = {},
@@ -360,9 +360,14 @@ export const fetch = async (
     'user-agent': userAgent,
   };
 
+  // The built-in fetch requires duplex: 'half' when body is a stream
+  if (opts.body && typeof opts.body === 'object' && 'pipe' in opts.body) {
+    (opts as Record<string, unknown>).duplex = 'half';
+  }
+
   debug(`${opts.method || 'GET'} ${url}`);
   time = Date.now();
-  const res = await nodeFetch(url, opts);
+  const res = await globalThis.fetch(url, opts);
   debug(`DONE in ${Date.now() - time}ms: ${opts.method || 'GET'} ${url}`);
   semaphore.release();
 

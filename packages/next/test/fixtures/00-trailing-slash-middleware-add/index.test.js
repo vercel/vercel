@@ -1,6 +1,5 @@
 const path = require('path');
 const fs = require('fs-extra');
-const fetch = require('node-fetch');
 const { deployAndTest, waitFor } = require('../../utils');
 
 describe(`${__dirname.split(path.sep).pop()}`, () => {

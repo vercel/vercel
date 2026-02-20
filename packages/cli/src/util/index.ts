@@ -2,7 +2,6 @@ import qs from 'querystring';
 import { parse as parseUrl } from 'url';
 import retry from 'async-retry';
 import ms from 'ms';
-import fetch, { Headers } from 'node-fetch';
 import bytes from 'bytes';
 import chalk from 'chalk';
 import ua from './ua';
@@ -163,7 +162,7 @@ export default class Now {
 
     const deployment = await processDeployment({
       now: this,
-      agent: this._client.agent,
+      dispatcher: this._client.dispatcher,
       path,
       requestBody,
       uploadStamp,
@@ -375,9 +374,14 @@ export default class Now {
       body = opts.body;
     }
 
+    // The built-in fetch requires duplex: 'half' when body is a stream
+    const fetchOpts: Record<string, unknown> = { ...opts, body };
+    if (body && typeof body === 'object' && 'pipe' in body) {
+      fetchOpts.duplex = 'half';
+    }
     const res = await output.time(
       `${opts.method || 'GET'} ${this._apiUrl}${_url} ${opts.body || ''}`,
-      fetch(`${this._apiUrl}${_url}`, { ...opts, body })
+      fetch(`${this._apiUrl}${_url}`, fetchOpts as RequestInit)
     );
     printIndications(res);
     return res;

@@ -19,7 +19,7 @@ vi.mock('../src/utils', async () => {
   const actual = await vi.importActual('../src/utils');
   return {
     ...actual,
-    fetch: mockFetch,
+    fetchApi: mockFetch,
     buildFileTree: mockBuildFileTree,
   };
 });

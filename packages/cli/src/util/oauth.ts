@@ -1,4 +1,3 @@
-import fetch, { type Response } from 'node-fetch';
 import ua from './ua';
 import { hostname } from 'os';
 
@@ -51,7 +50,7 @@ async function discoveryEndpointRequest(issuer: URL): Promise<Response> {
 async function processDiscoveryEndpointResponse(
   response: Response
 ): Promise<[Error] | [null, AuthorizationServerMetadata]> {
-  const json = await response.json();
+  const json = (await response.json()) as Record<string, unknown>;
 
   if (!response.ok) {
     return [new Error('Discovery endpoint request failed')];
@@ -147,7 +146,7 @@ export async function processDeviceAuthorizationResponse(
       },
     ]
 > {
-  const json = await response.json();
+  const json = (await response.json()) as Record<string, unknown>;
 
   if (!response.ok) {
     return [new OAuthError('Device authorization request failed', json)];
@@ -215,9 +214,6 @@ export async function deviceAccessTokenRequest(options: {
           grant_type: 'urn:ietf:params:oauth:grant-type:device_code',
           ...options,
         }),
-        // TODO: Drop `node-fetch` and just use `signal`
-        timeout: 10 * 1000,
-        // @ts-expect-error: Signal is part of `fetch` spec, should drop `node-fetch`
         signal: AbortSignal.timeout(10 * 1000),
       }),
     ];
@@ -252,7 +248,7 @@ interface TokenSet {
 export async function processTokenResponse(
   response: Response
 ): Promise<[OAuthError | TypeError] | [null, TokenSet]> {
-  const json = await response.json();
+  const json = (await response.json()) as Record<string, unknown>;
 
   if (!response.ok) {
     return [new OAuthError('Device access token request failed', json)];
@@ -274,7 +270,7 @@ export async function processTokenResponse(
   if ('scope' in json && typeof json.scope !== 'string')
     return [new TypeError('Expected `scope` to be a string')];
 
-  return [null, json];
+  return [null, json as unknown as TokenSet];
 }
 
 /**
@@ -304,7 +300,7 @@ export async function processRevocationResponse(
   response: Response
 ): Promise<[OAuthError | Error] | [null, null]> {
   if (response.ok) return [null, null];
-  const json = await response.json();
+  const json = (await response.json()) as Record<string, unknown>;
 
   return [new OAuthError('Revocation request failed', json)];
 }
@@ -394,7 +390,8 @@ export function isOAuthError(error: unknown): error is OAuthError {
   return error instanceof OAuthError;
 }
 
-function canParseURL(url: string) {
+function canParseURL(url: unknown): url is string {
+  if (typeof url !== 'string') return false;
   try {
     return !!new URL(url);
   } catch {
@@ -436,11 +433,11 @@ export async function processInspectTokenResponse(
   response: Response
 ): Promise<[IntrospectionError] | [null, AccessToken]> {
   try {
-    const token = await response.json();
+    const token = (await response.json()) as Record<string, unknown>;
     if (!token || typeof token !== 'object' || !('active' in token)) {
       throw new IntrospectionError('Invalid token introspection response');
     }
-    return [null, token];
+    return [null, token as unknown as AccessToken];
   } catch (cause) {
     return [new IntrospectionError('Could not introspect token.', { cause })];
   }

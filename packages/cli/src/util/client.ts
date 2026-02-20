@@ -13,12 +13,6 @@ import retry, {
   type RetryFunction,
   type Options as RetryOptions,
 } from 'async-retry';
-import fetch, {
-  type BodyInit,
-  Headers,
-  type RequestInit,
-  type Response,
-} from 'node-fetch';
 import ua from './ua';
 import responseError from './response-error';
 import printIndications from './print-indications';
@@ -37,7 +31,7 @@ import type {
 import { sharedPromise } from './promise';
 import { APIError } from './errors-ts';
 import { normalizeError } from '@vercel/error-utils';
-import type { Agent } from 'http';
+import type { Dispatcher } from 'undici';
 import sleep from './sleep';
 import type * as tty from 'tty';
 import output from '../output-manager';
@@ -48,7 +42,8 @@ const isSAMLError = (v: any): v is SAMLError => {
 };
 
 export interface FetchOptions extends Omit<RequestInit, 'body'> {
-  body?: BodyInit | JSONObject;
+  body?: RequestInit['body'] | JSONObject;
+  duplex?: 'half';
   json?: boolean;
   retry?: RetryOptions;
   useCurrentTeam?: boolean;
@@ -62,7 +57,7 @@ export interface ClientOptions extends Stdio {
   config: GlobalConfig;
   localConfig?: VercelConfig;
   localConfigPath?: string;
-  agent?: Agent;
+  dispatcher?: Dispatcher;
   telemetryEventStore: TelemetryEventStore;
   /** Whether the CLI is being run by an AI agent */
   isAgent?: boolean;
@@ -103,7 +98,7 @@ export default class Client extends EventEmitter implements Stdio {
   stdout: tty.WriteStream;
   stderr: tty.WriteStream;
   config: GlobalConfig;
-  agent?: Agent;
+  dispatcher?: Dispatcher;
   localConfig?: VercelConfig;
   localConfigPath?: string;
   requestIdCounter: number;
@@ -122,7 +117,7 @@ export default class Client extends EventEmitter implements Stdio {
 
   constructor(opts: ClientOptions) {
     super();
-    this.agent = opts.agent;
+    this.dispatcher = opts.dispatcher;
     this.argv = opts.argv;
     this.apiUrl = opts.apiUrl;
     this.authConfig = opts.authConfig;
@@ -373,6 +368,14 @@ export default class Client extends EventEmitter implements Stdio {
     }
 
     const requestId = this.requestIdCounter++;
+    // The built-in fetch requires duplex: 'half' when body is a stream
+    const fetchOpts: Record<string, unknown> = { ...opts, headers, body };
+    if (body && typeof body === 'object' && 'pipe' in body) {
+      fetchOpts.duplex = 'half';
+    }
+    if (this.dispatcher) {
+      fetchOpts.dispatcher = this.dispatcher;
+    }
     return output.time(
       res => {
         if (res) {
@@ -383,7 +386,7 @@ export default class Client extends EventEmitter implements Stdio {
           return `#${requestId} → ${opts.method || 'GET'} ${url.href}`;
         }
       },
-      fetch(url, { agent: this.agent, ...opts, headers, body })
+      fetch(url, fetchOpts as RequestInit)
     );
   }
 

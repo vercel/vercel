@@ -7,8 +7,6 @@ import semVer from 'semver';
 import { homedir } from 'os';
 import { runNpmInstall } from '@vercel/build-utils';
 import { execCli } from './helpers/exec';
-import type { RequestInfo } from 'node-fetch';
-import fetch from 'node-fetch';
 import fs from 'fs-extra';
 import { logo } from '../src/util/pkg-name';
 import sleep from '../src/util/sleep';
@@ -38,7 +36,7 @@ const pickUrl = (stdout: string) => {
   return lines[lines.length - 1];
 };
 
-const waitForDeployment = async (href: RequestInfo) => {
+const waitForDeployment = async (href: string | URL | Request) => {
   console.log(`waiting for ${href} to become ready...`);
   const start = Date.now();
   const max = ms('4m');
@@ -124,7 +122,7 @@ test('deploy with metadata containing "=" in the value', async () => {
 
   const { host } = new URL(stdout);
   const res = await apiFetch(`/v12/now/deployments/get?url=${host}`);
-  const deployment = await res.json();
+  const deployment = (await res.json()) as Record<string, any>;
   expect(deployment.meta.someKey).toBe('=');
 });
 
@@ -493,9 +491,9 @@ test('create a staging deployment', async () => {
   expect(targetCall.exitCode, formatOutput(targetCall)).toBe(0);
 
   const { host } = new URL(targetCall.stdout);
-  const deployment = await apiFetch(
+  const deployment = (await apiFetch(
     `/v10/now/deployments/unknown?url=${host}`
-  ).then(resp => resp.json());
+  ).then(resp => resp.json())) as Record<string, any>;
   expect(deployment.target).toBe('staging');
 });
 
@@ -516,9 +514,9 @@ test('create a production deployment', async () => {
   expect(targetCall.stdout).toMatch(/https:\/\//gm);
 
   const { host: targetHost } = new URL(targetCall.stdout);
-  const targetDeployment = await apiFetch(
+  const targetDeployment = (await apiFetch(
     `/v10/now/deployments/unknown?url=${targetHost}`
-  ).then(resp => resp.json());
+  ).then(resp => resp.json())) as Record<string, any>;
   expect(targetDeployment.target).toBe('production');
 
   const call = await execCli(binaryPath, [directory, '--prod', ...args]);
@@ -528,9 +526,9 @@ test('create a production deployment', async () => {
   expect(call.stdout).toMatch(/https:\/\//gm);
 
   const { host } = new URL(call.stdout);
-  const deployment = await apiFetch(
+  const deployment = (await apiFetch(
     `/v10/now/deployments/unknown?url=${host}`
-  ).then(resp => resp.json());
+  ).then(resp => resp.json())) as Record<string, any>;
   expect(deployment.target).toBe('production');
 });
 
@@ -814,7 +812,7 @@ test('deploy a Lambda with 128MB of memory', async () => {
 
   // It won't be exactly 128MB,
   // so we just compare if it is lower than 450MB
-  const { memory } = await response.json();
+  const { memory } = (await response.json()) as Record<string, any>;
   expect(memory).toBe(128);
 });
 

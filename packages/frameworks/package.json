@@ -27,7 +27,6 @@
     "@types/jest": "27.4.1",
     "@types/js-yaml": "3.12.1",
     "@types/node": "20.11.0",
-    "@types/node-fetch": "2.5.8",
     "@vercel/routing-utils": "workspace:*",
     "ajv": "6.12.3",
     "jest-junit": "16.0.0",

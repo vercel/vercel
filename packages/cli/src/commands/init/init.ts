@@ -8,6 +8,7 @@ import listInput from '../../util/input/list';
 import listItem from '../../util/output/list-item';
 import toHumanPath from '../../util/humanize-path';
 import type Client from '../../util/client';
+import { toNodeReadable } from '../../util/web-stream';
 import cmd from '../../util/output/cmd';
 import didYouMean from '../../util/did-you-mean';
 import { getCommandName } from '../../util/pkg-name';
@@ -145,10 +146,11 @@ async function extractExample(
 
       await new Promise((resolve, reject) => {
         const extractor = tar.extract(folder);
-        res.body.on('error', reject);
+        const body = toNodeReadable(res.body!);
+        body.on('error', reject);
         extractor.on('error', reject);
         extractor.on('finish', resolve);
-        res.body.pipe(extractor);
+        body.pipe(extractor);
       });
 
       const successLog = `Initialized "${chalk.bold(

@@ -1,4 +1,3 @@
-const fetch = require('node-fetch');
 const retryBailByDefault = require('./retry-bail-by-default.js');
 
 const ABSOLUTE_URL_PATTERN = /^https?:\/\//i;

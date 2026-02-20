@@ -1,8 +1,6 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import logout from '../../../../src/commands/logout';
 import { client } from '../../../mocks/client';
-import { vi } from 'vitest';
-import _fetch, { type Response } from 'node-fetch';
 import {
   as,
   VERCEL_CLI_CLIENT_ID,
@@ -10,11 +8,7 @@ import {
 } from '../../../../src/util/oauth';
 import { randomUUID } from 'node:crypto';
 
-const fetch = vi.mocked(_fetch);
-vi.mock('node-fetch', async () => ({
-  ...(await vi.importActual('node-fetch')),
-  default: vi.fn(),
-}));
+const fetchSpy = vi.spyOn(globalThis, 'fetch');
 
 function mockResponse(data: unknown, ok = true): Response {
   return {
@@ -31,7 +25,7 @@ beforeEach(() => {
 
 describe('logout', () => {
   it('successful logout', async () => {
-    fetch.mockResolvedValueOnce(
+    fetchSpy.mockResolvedValueOnce(
       mockResponse({
         issuer: 'https://vercel.com',
         device_authorization_endpoint: 'https://vercel.com',
@@ -43,7 +37,7 @@ describe('logout', () => {
     );
     const _as = await as();
 
-    fetch.mockResolvedValueOnce(mockResponse({}));
+    fetchSpy.mockResolvedValueOnce(mockResponse({}));
 
     client.setArgv('logout');
     client.authConfig.token = randomUUID();
@@ -56,8 +50,8 @@ describe('logout', () => {
     expect(exitCode, 'exit code for "logout"').toBe(0);
     await expect(client.stderr).toOutput('Success! Logged out!');
 
-    expect(fetch).toHaveBeenCalledTimes(2);
-    expect(fetch).toHaveBeenNthCalledWith(
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    expect(fetchSpy).toHaveBeenNthCalledWith(
       2,
       _as.revocation_endpoint,
       expect.objectContaining({
@@ -71,7 +65,7 @@ describe('logout', () => {
     );
 
     expect(
-      fetch.mock.calls[1][1]?.body?.toString(),
+      (fetchSpy.mock.calls[1][1] as RequestInit)?.body?.toString(),
       'Requesting token revocation with the correct params'
     ).toBe(
       new URLSearchParams({
@@ -98,7 +92,7 @@ describe('logout', () => {
       error_description:
         'The request is missing a required parameter, includes an unsupported parameter value (other than grant type), repeats a parameter, includes multiple credentials, utilizes more than one mechanism for authenticating the client, or is otherwise malformed.',
     };
-    fetch.mockResolvedValueOnce(mockResponse(invalidResponse, false));
+    fetchSpy.mockResolvedValueOnce(mockResponse(invalidResponse, false));
 
     client.setArgv('logout', '--debug');
     client.authConfig.token = randomUUID();

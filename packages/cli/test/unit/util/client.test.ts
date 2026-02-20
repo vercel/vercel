@@ -1,57 +1,47 @@
-import { beforeEach, describe, expect, it } from 'vitest';
-import { listen } from 'async-listen';
-import { createProxy } from 'proxy';
-import { ProxyAgent } from 'proxy-agent';
-import { createServer } from 'http';
+import { describe, expect, it, vi } from 'vitest';
 import { client } from '../../mocks/client';
+import { Agent } from 'undici';
 
 describe('Client', () => {
   describe('fetch()', () => {
-    beforeEach(() => {
-      delete process.env.HTTPS_PROXY;
-      delete process.env.HTTP_PROXY;
-      client.agent?.destroy();
-      client.agent = undefined;
-    });
+    it('should pass the dispatcher to fetch', async () => {
+      const dispatcher = new Agent();
+      client.dispatcher = dispatcher;
 
-    it('should respect the `HTTP_PROXY` env var', async () => {
-      let requestCount = 0;
-      const proxy = createProxy();
-      const proxyUrl = await listen(proxy);
+      const fetchSpy = vi.spyOn(globalThis, 'fetch');
 
-      // For HTTP proxying, listen to 'request' events instead of 'connect'
-      proxy.on('request', () => {
-        requestCount++;
+      client.scenario.get('/v2/test', (_req, res) => {
+        res.json({ ok: true });
       });
-
-      // Create a mock HTTP server that returns 200
-      const mockServer = createServer((req, res) => {
-        res.writeHead(200, { 'Content-Type': 'text/plain' });
-        res.end('OK');
-      });
-      const mockServerUrl = await listen(mockServer);
 
       try {
-        process.env.HTTP_PROXY = proxyUrl.href;
+        await client.fetch('/v2/test');
 
-        client.agent = new ProxyAgent({
-          keepAlive: true,
-          // Ensure localhost isn't bypassed
-          rejectUnauthorized: false,
-        });
-
-        expect(requestCount).toEqual(0);
-        const res = await client.fetch(mockServerUrl.href, { json: false });
-        expect(requestCount).toEqual(1);
-        expect(res.status).toEqual(200);
+        expect(fetchSpy).toHaveBeenCalledWith(
+          expect.anything(),
+          expect.objectContaining({ dispatcher })
+        );
       } finally {
-        client.agent?.destroy();
-        await new Promise<void>(resolve => {
-          proxy.close(() => resolve());
-        });
-        await new Promise<void>(resolve => {
-          mockServer.close(() => resolve());
-        });
+        fetchSpy.mockRestore();
+        client.dispatcher = undefined;
+      }
+    });
+
+    it('should not include dispatcher when not set', async () => {
+      client.dispatcher = undefined;
+      const fetchSpy = vi.spyOn(globalThis, 'fetch');
+
+      client.scenario.get('/v2/test2', (_req, res) => {
+        res.json({ ok: true });
+      });
+
+      try {
+        await client.fetch('/v2/test2');
+
+        const callArgs = fetchSpy.mock.calls[0][1] as Record<string, unknown>;
+        expect(callArgs.dispatcher).toBeUndefined();
+      } finally {
+        fetchSpy.mockRestore();
       }
     });
   });

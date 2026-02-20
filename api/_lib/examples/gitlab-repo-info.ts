@@ -1,5 +1,3 @@
-import fetch from 'node-fetch';
-
 interface Repo {
   repo: string;
   owner: {
