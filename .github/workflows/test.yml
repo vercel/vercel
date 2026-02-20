@@ -1,4 +1,4 @@
-name: Tests
+name: Unit Tests
 
 on:
   pull_request:
@@ -17,10 +17,10 @@ jobs:
   setup:
     name: Find Changes
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request' && github.event.pull_request.title != 'Version Packages'
+    if: github.event_name == 'pull_request'
     outputs:
       tests: ${{ steps['set-tests'].outputs['tests'] }}
-      dplUrl: ${{ steps.waitForTarball.outputs.url }}
+      dplUrl: ${{ steps.resolveTarball.outputs.url }}
       affectedPackages: ${{ steps['affected-packages'].outputs['packages'] }}
       testStrategy: ${{ steps['affected-packages'].outputs['strategy'] }}
       affectedCount: ${{ steps['affected-packages'].outputs['count'] }}
@@ -77,24 +77,98 @@ jobs:
           echo "allPackages=$ALL_PACKAGES" >> $GITHUB_OUTPUT
       - id: set-tests
         run: |
-          # Set base SHA for affected package detection
-          export TURBO_BASE_SHA="${{ github.event.pull_request.base.sha }}"
-
-          TESTS_ARRAY=$(node utils/chunk-tests.js $SCRIPT_NAME)
-          echo "Files to test:"
+          TESTS_ARRAY=$(node utils/chunk-tests.js)
+          echo "Unit tests to run:"
           echo "$TESTS_ARRAY"
           echo "tests=$TESTS_ARRAY" >> $GITHUB_OUTPUT
+        env:
+          TURBO_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          TEST_TYPE: unit
       - uses: patrickedqvist/wait-for-vercel-preview@bfdff514ff78a669f2536e9f4dd4ef5813a704a2
         id: waitForTarball
+        continue-on-error: true
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           max_timeout: 360
           check_interval: 5
+      - name: Resolve Vercel tarball URL
+        id: resolveTarball
+        uses: actions/github-script@v7
+        env:
+          WAIT_URL: ${{ steps.waitForTarball.outputs.url }}
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const prNumber =
+              context.payload.pull_request?.number ?? context.issue.number;
+
+            const waitUrl = process.env.WAIT_URL || '';
+            if (waitUrl) {
+              core.info(`Using deployment URL from wait step: ${waitUrl}`);
+              core.setOutput('url', waitUrl);
+              return;
+            }
+
+            core.info(
+              'No deployment found for the current HEAD commit. Falling back to the most recent successful Vercel preview deployment for this PR.'
+            );
+
+            const { data: commits } = await github.rest.pulls.listCommits({
+              owner,
+              repo,
+              pull_number: prNumber,
+              per_page: 100,
+            });
+
+            // API returns commits oldest->newest; prefer newest first.
+            const shas = commits.map(c => c.sha).reverse();
+
+            for (const sha of shas) {
+              core.info(`Checking deployments for ${sha}...`);
+
+              const { data: deployments } =
+                await github.rest.repos.listDeployments({
+                  owner,
+                  repo,
+                  sha,
+                  environment: 'Preview',
+                  per_page: 5,
+                });
+
+              for (const deployment of deployments) {
+                if (deployment.creator?.login !== 'vercel[bot]') {
+                  continue;
+                }
+
+                const { data: statuses } =
+                  await github.rest.repos.listDeploymentStatuses({
+                    owner,
+                    repo,
+                    deployment_id: deployment.id,
+                    per_page: 10,
+                  });
+
+                const success = statuses.find(
+                  s => s.state === 'success' && s.environment_url
+                );
+
+                if (success?.environment_url) {
+                  core.info(`Resolved deployment URL: ${success.environment_url}`);
+                  core.setOutput('url', success.environment_url);
+                  return;
+                }
+              }
+            }
+
+            core.setFailed(
+              'No Vercel preview deployment found for any commit in this PR.'
+            );
 
   comment-test-strategy:
     name: Comment Test Strategy
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request' && github.event.pull_request.title != 'Version Packages'
+    if: github.event_name == 'pull_request'
     needs:
       - setup
     steps:
@@ -121,12 +195,12 @@ jobs:
             const unaffectedPackages = allPackagesList.filter(pkg => !affectedSet.has(pkg));
             const unaffectedList = unaffectedPackages.map(p => `1. \`${p}\``).join('\n');
 
-            let message = '## 🧪 Test Strategy\n\n';
+            let message = '## 🧪 Unit Test Strategy\n\n';
             message += `**Comparing**: [\`${baseSha.substring(0, 7)}\`](https://github.com/${context.repo.owner}/${context.repo.repo}/commit/${baseSha}) → [\`${headSha.substring(0, 7)}\`](https://github.com/${context.repo.owner}/${context.repo.repo}/commit/${headSha}) ([view diff](https://github.com/${context.repo.owner}/${context.repo.repo}/compare/${baseSha}...${headSha}))\n\n`;
 
             if (strategy === 'all-e2e') {
-              message += '**Strategy**: Code changed outside of a package - running ALL tests\n\n';
-              message += '⚠️ All tests will run because global code changes could impact all packages.\n\n';
+              message += '**Strategy**: Code changed outside of a package - running all unit tests\n\n';
+              message += '⚠️ All unit tests will run because global code changes could impact all packages.\n\n';
               if (packages) {
                 const packageList = packages.split(',').map(p => `1. \`${p.trim()}\``).join('\n');
                 message += `<details>\n<summary>Affected packages - ${affectedCount} (${percentage}%)</summary>\n\n${packageList}\n\n</details>\n\n`;
@@ -136,7 +210,7 @@ jobs:
               }
               message += '### Results\n\n';
               message += '- **Unit tests**: All affected packages will run unit tests\n';
-              message += '- **E2E tests**: All e2e tests will run\n';
+              message += '- **E2E tests**: Running in parallel via E2E Tests workflow\n';
               message += '- **Type checks**: All affected packages will run type checks';
             } else if (strategy === 'affected-only') {
               message += '**Strategy**: Affected packages only\n\n';
@@ -150,18 +224,18 @@ jobs:
               }
               message += '### Results\n\n';
               message += '- **Unit tests**: Only affected packages will run unit tests\n';
-              message += '- **E2E tests**: Only affected packages will run e2e tests\n';
+              message += '- **E2E tests**: Running in parallel via E2E Tests workflow\n';
               message += '- **Type checks**: Only affected packages will run type checks';
             } else if (strategy === 'no-tests') {
               message += '**Strategy**: No tests needed\n\n';
               message += '✨ No packages affected - skipping tests\n\n';
               message += '### Results\n\n';
               message += '- **Unit tests**: None\n';
-              message += '- **E2E tests**: None\n';
+              message += '- **E2E tests**: Running in parallel via E2E Tests workflow\n';
               message += '- **Type checks**: None';
             } else if (strategy === 'test-all') {
-              message += '**Strategy**: Full test suite\n\n';
-              message += '🔄 Running all tests (unable to determine affected packages)\n\n';
+              message += '**Strategy**: Full unit test suite\n\n';
+              message += '🔄 Running all unit tests (unable to determine affected packages)\n\n';
               if (packages) {
                 const packageList = packages.split(',').map(p => `1. \`${p.trim()}\``).join('\n');
                 message += `<details>\n<summary>Affected packages - ${affectedCount} (${percentage}%)</summary>\n\n${packageList}\n\n</details>\n\n`;
@@ -171,14 +245,14 @@ jobs:
               }
               message += '### Results\n\n';
               message += '- **Unit tests**: All packages will run unit tests\n';
-              message += '- **E2E tests**: All e2e tests will run\n';
+              message += '- **E2E tests**: Running in parallel via E2E Tests workflow\n';
               message += '- **Type checks**: All packages will run type checks';
             } else {
               message += '**Strategy**: Unknown\n\n';
               message += `⚠️ Unknown strategy: ${strategy}\n\n`;
               message += '### Results\n\n';
               message += '- **Unit tests**: Unknown\n';
-              message += '- **E2E tests**: Unknown\n';
+              message += '- **E2E tests**: Running in parallel via E2E Tests workflow\n';
               message += '- **Type checks**: Unknown';
             }
 
@@ -193,7 +267,7 @@ jobs:
 
             const existingComment = comments.find(comment =>
               comment.user.login === 'github-actions[bot]' &&
-              comment.body.includes('## 🧪 Test Strategy')
+              (comment.body.includes('## 🧪 Unit Test Strategy') || comment.body.includes('## 🧪 Test Strategy'))
             );
 
             if (existingComment) {
@@ -230,6 +304,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.nodeVersion }}
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@f7ccc83f9ed1e5b9c81d8a67d7ad1a747e22a561 # 2025-12-16
+        with:
+          toolchain: stable
+          targets: wasm32-wasip2
 
       # yarn 1.22.21 introduced a Corepack bug when running tests.
       # this can be removed once https://github.com/yarnpkg/yarn/issues/9015 is resolved

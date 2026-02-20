@@ -1,0 +1,8 @@
+{
+  "functions": {
+    "index.ts": {
+      "includeFiles": "templates/**/*.art",
+      "excludeFiles": "secret.txt"
+    }
+  }
+}

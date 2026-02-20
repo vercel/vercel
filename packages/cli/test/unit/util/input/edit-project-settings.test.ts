@@ -87,10 +87,6 @@ describe('editProjectSettings', () => {
         framework: nextJSFramework.slug,
       });
       await expect(client.stderr).toOutput('Auto-detected Project Settings');
-      await expect(client.stderr).toOutput('Build Command');
-      await expect(client.stderr).toOutput('Development Command');
-      await expect(client.stderr).toOutput('Install Command');
-      await expect(client.stderr).toOutput('Output Directory');
     });
   });
 

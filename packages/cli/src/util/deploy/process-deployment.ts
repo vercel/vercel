@@ -50,6 +50,7 @@ export default async function processDeployment({
   noWait,
   withFullLogs,
   agent,
+  manual,
   ...args
 }: {
   now: Now;
@@ -71,6 +72,8 @@ export default async function processDeployment({
   noWait?: boolean;
   withFullLogs?: boolean;
   agent?: Agent;
+  bulkRedirectsPath?: string | null;
+  manual?: boolean;
 }) {
   const {
     now,
@@ -83,6 +86,7 @@ export default async function processDeployment({
     prebuilt,
     vercelOutputDir,
     rootDirectory,
+    bulkRedirectsPath,
   } = args;
 
   const client = now._client;
@@ -109,6 +113,8 @@ export default async function processDeployment({
     archive,
     agent,
     projectName,
+    bulkRedirectsPath,
+    manual,
   };
 
   const deployingSpinnerVal = isSettingUpProject

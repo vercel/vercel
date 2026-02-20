@@ -1,0 +1,16 @@
+[
+  {
+    "handle": "filesystem"
+  },
+  {
+    "src": "^(?:\\/health)(?:\\/$)?$",
+    "dest": "/health",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "src": "/(.*)",
+    "dest": "/"
+  }
+]

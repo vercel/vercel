@@ -41,6 +41,12 @@ export default async function inputProject(
     return detectedProject || detectedProjectName;
   }
 
+  if (client.nonInteractive) {
+    const err = new Error('Confirmation required');
+    (err as NodeJS.ErrnoException).code = 'HEADLESS';
+    throw err;
+  }
+
   let shouldLinkProject;
 
   if (!detectedProject) {

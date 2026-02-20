@@ -141,7 +141,7 @@ it('should only nodejs24.x', async () => {
 it('should not allow nodejs18.x when not available', async () => {
   // Simulates AL2023 build-container
   await expect(getSupportedNodeVersion('18.x', true, [20])).rejects.toThrow(
-    'Found invalid Node.js Version: "18.x". Please set Node.js Version to 20.x in your Project Settings to use Node.js 20.'
+    'Found invalid or discontinued Node.js Version: "18.x". Please set Node.js Version to 20.x in your Project Settings to use Node.js 20.'
   );
 });
 
@@ -592,6 +592,69 @@ it('should support passQuery correctly', async () => {
     });
   }).toThrowError(
     `The \`passQuery\` argument for \`Prerender\` must be a boolean.`
+  );
+});
+
+it('should support exposeErrBody correctly', async () => {
+  const prerenderWithTrue = new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    exposeErrBody: true,
+  });
+  expect(prerenderWithTrue.exposeErrBody).toBe(true);
+
+  const prerenderWithFalse = new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    exposeErrBody: false,
+  });
+  expect(prerenderWithFalse.exposeErrBody).toBeUndefined();
+
+  const prerenderWithUndefined = new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    exposeErrBody: undefined,
+  });
+  expect(prerenderWithUndefined.exposeErrBody).toBeUndefined();
+
+  const prerenderWithoutProperty = new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+  });
+  expect(prerenderWithoutProperty.exposeErrBody).toBeUndefined();
+
+  expect(() => {
+    new Prerender({
+      expiration: 1,
+      fallback: null,
+      group: 1,
+      bypassToken: 'some-long-bypass-token-to-make-it-work',
+      // @ts-expect-error testing invalid field
+      exposeErrBody: 'true',
+    });
+  }).toThrowError(
+    `The \`exposeErrBody\` argument for \`Prerender\` must be a boolean.`
+  );
+
+  expect(() => {
+    new Prerender({
+      expiration: 1,
+      fallback: null,
+      group: 1,
+      bypassToken: 'some-long-bypass-token-to-make-it-work',
+      // @ts-expect-error testing invalid field
+      exposeErrBody: 1,
+    });
+  }).toThrowError(
+    `The \`exposeErrBody\` argument for \`Prerender\` must be a boolean.`
   );
 });
 

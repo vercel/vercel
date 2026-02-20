@@ -1,5 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { createRoutes, Router, deploymentEnv } from './router';
+import { createRoutes, Router, deploymentEnv, matchers } from './router';
+
+const { header, cookie, query, host } = matchers;
 import { cacheHeader } from 'pretty-cache-header';
 
 describe('Router', () => {
@@ -189,6 +191,189 @@ describe('Router', () => {
     });
   });
 
+  describe('condition helpers', () => {
+    describe('header()', () => {
+      it('should create a presence-only condition', () => {
+        expect(header('x-admin-token')).toEqual({
+          type: 'header',
+          key: 'x-admin-token',
+        });
+      });
+
+      it('should create a regex value condition', () => {
+        expect(header('accept', '(.*)text/markdown(.*)')).toEqual({
+          type: 'header',
+          key: 'accept',
+          value: '(.*)text/markdown(.*)',
+        });
+      });
+
+      it('should create an operator-based condition', () => {
+        expect(header('x-user-role', { inc: ['admin', 'moderator'] })).toEqual({
+          type: 'header',
+          key: 'x-user-role',
+          inc: ['admin', 'moderator'],
+        });
+      });
+
+      it('should support all operator types', () => {
+        expect(header('x-version', { eq: 2 })).toEqual({
+          type: 'header',
+          key: 'x-version',
+          eq: 2,
+        });
+        expect(header('x-version', { neq: 'beta' })).toEqual({
+          type: 'header',
+          key: 'x-version',
+          neq: 'beta',
+        });
+        expect(header('x-version', { gte: 2 })).toEqual({
+          type: 'header',
+          key: 'x-version',
+          gte: 2,
+        });
+        expect(header('x-version', { gt: 1 })).toEqual({
+          type: 'header',
+          key: 'x-version',
+          gt: 1,
+        });
+        expect(header('x-version', { lt: 5 })).toEqual({
+          type: 'header',
+          key: 'x-version',
+          lt: 5,
+        });
+        expect(header('x-version', { lte: 5 })).toEqual({
+          type: 'header',
+          key: 'x-version',
+          lte: 5,
+        });
+        expect(header('x-auth', { pre: 'Bearer ' })).toEqual({
+          type: 'header',
+          key: 'x-auth',
+          pre: 'Bearer ',
+        });
+        expect(header('x-auth', { suf: '-token' })).toEqual({
+          type: 'header',
+          key: 'x-auth',
+          suf: '-token',
+        });
+        expect(header('x-role', { ninc: ['guest'] })).toEqual({
+          type: 'header',
+          key: 'x-role',
+          ninc: ['guest'],
+        });
+      });
+    });
+
+    describe('cookie()', () => {
+      it('should create a presence-only condition', () => {
+        expect(cookie('session')).toEqual({
+          type: 'cookie',
+          key: 'session',
+        });
+      });
+
+      it('should create a regex value condition', () => {
+        expect(cookie('theme', 'dark|light')).toEqual({
+          type: 'cookie',
+          key: 'theme',
+          value: 'dark|light',
+        });
+      });
+
+      it('should create an operator-based condition', () => {
+        expect(cookie('session', { pre: 'secure-' })).toEqual({
+          type: 'cookie',
+          key: 'session',
+          pre: 'secure-',
+        });
+      });
+    });
+
+    describe('query()', () => {
+      it('should create a presence-only condition', () => {
+        expect(query('debug')).toEqual({
+          type: 'query',
+          key: 'debug',
+        });
+      });
+
+      it('should create a regex value condition', () => {
+        expect(query('format', 'markdown')).toEqual({
+          type: 'query',
+          key: 'format',
+          value: 'markdown',
+        });
+      });
+
+      it('should create an operator-based condition', () => {
+        expect(query('page', { gte: 1 })).toEqual({
+          type: 'query',
+          key: 'page',
+          gte: 1,
+        });
+      });
+    });
+
+    describe('host()', () => {
+      it('should create a host value condition', () => {
+        expect(host('example.com')).toEqual({
+          type: 'host',
+          value: 'example.com',
+        });
+      });
+
+      it('should create a host operator condition', () => {
+        expect(host({ suf: '.example.com' })).toEqual({
+          type: 'host',
+          suf: '.example.com',
+        });
+      });
+    });
+
+    describe('end-to-end with router', () => {
+      it('should work in rewrite has/missing arrays', () => {
+        const rewrite = router.rewrite(
+          '/admin/(.*)',
+          'https://admin.backend.com/$1',
+          {
+            has: [
+              header('x-user-role', { inc: ['admin', 'moderator'] }),
+              cookie('session', { pre: 'secure-' }),
+            ],
+            missing: [header('x-legacy-auth')],
+          }
+        );
+        expect(rewrite).toEqual({
+          source: '/admin/(.*)',
+          destination: 'https://admin.backend.com/$1',
+          has: [
+            { type: 'header', key: 'x-user-role', inc: ['admin', 'moderator'] },
+            { type: 'cookie', key: 'session', pre: 'secure-' },
+          ],
+          missing: [{ type: 'header', key: 'x-legacy-auth' }],
+        });
+      });
+
+      it('should mix helpers with raw Condition objects', () => {
+        const rewrite = router.rewrite('/api/(.*)', 'https://backend.com/$1', {
+          has: [
+            header('authorization', { pre: 'Bearer ' }),
+            { type: 'header', key: 'x-api-version', gte: 2 },
+          ],
+        });
+        expect(rewrite).toEqual({
+          source: '/api/(.*)',
+          destination: 'https://backend.com/$1',
+          has: [
+            { type: 'header', key: 'authorization', pre: 'Bearer ' },
+            { type: 'header', key: 'x-api-version', gte: 2 },
+          ],
+        });
+      });
+    });
+  });
+
   describe('rewrite with transforms', () => {
     it('should return Route with transforms and extract env vars', () => {
       const route = router.rewrite(
@@ -203,7 +388,7 @@ describe('Router', () => {
       );
 
       expect(route).toMatchObject({
-        src: '/users/:userId',
+        src: '^\\/users(?:\\/([^\\/]+?))$',
         dest: 'https://api.example.com/users/$1',
         transforms: [
           {
@@ -252,7 +437,7 @@ describe('Router', () => {
       );
 
       expect(route).toMatchObject({
-        src: '/api/(.*)',
+        src: '^\\/api(?:\\/(.*))$',
         dest: 'https://backend.example.com/$1',
         respectOriginCacheControl: false,
       });
@@ -287,9 +472,8 @@ describe('Router', () => {
       }));
 
       expect(route).toMatchObject({
-        src: '/old',
+        src: '^\\/old$',
         dest: '/new',
-        redirect: true,
         status: 308,
         transforms: [
           {

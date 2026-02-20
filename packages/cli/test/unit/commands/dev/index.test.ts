@@ -10,7 +10,9 @@ vi.mock('../../../../src/util/dev/server', () => {
   class DevServer {
     devCommand = 'framework dev';
     feed() {}
-    stop() {}
+    stop() {
+      return Promise.resolve();
+    }
     start() {}
   }
   return { default: DevServer };

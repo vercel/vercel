@@ -1,17 +1,13 @@
 {
   "name": "app",
   "version": "1.0.50",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "bun run --watch src/index.ts"
-  },
   "type": "module",
   "dependencies": {
-    "elysia": "latest",
-    "typescript": "latest"
+    "elysia": "1.2.25",
+    "typescript": "5.8.3"
   },
   "devDependencies": {
-    "bun-types": "latest"
+    "bun-types": "1.2.5"
   },
   "module": "src/index.js"
 }

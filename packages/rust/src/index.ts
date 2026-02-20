@@ -39,6 +39,12 @@ async function buildHandler(options: BuildOptions): Promise<BuildResultV3> {
   // we are building for a prebuilt deployment, so we need to cross-compile
   const crossCompilationEnabled = !isVercelBuild && !meta?.isDev;
 
+  if (crossCompilationEnabled && process.platform === 'win32') {
+    throw new Error(
+      'Production prebuilt deployments for @vercel/rust are not yet supported on Windows. Please use a Linux or macOS environment, or deploy directly on Vercel.'
+    );
+  }
+
   await installRustToolchain();
 
   debug('Creating file system');

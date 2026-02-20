@@ -51,6 +51,7 @@ describe('checkDeploymentStatus()', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useFakeTimers();
+    vi.spyOn(Math, 'random').mockReturnValue(0.1);
   });
 
   describe('retry logic', () => {
@@ -81,11 +82,13 @@ describe('checkDeploymentStatus()', () => {
         payload: expect.objectContaining({ readyState: 'READY' }),
       });
       expect(mockFetch).toHaveBeenCalledTimes(3);
-      expect(sleep).toHaveBeenCalledWith(6_000);
-      expect(sleep).toHaveBeenCalledWith(7_000);
+      // 6_000 + 3_000 skew (RETRY_DELAY_SKEW_MS * 0.1)
+      expect(sleep).toHaveBeenCalledWith(9_000);
+      // 7_000 + 3_000 skew
+      expect(sleep).toHaveBeenCalledWith(10_000);
     });
 
-    it('should retry up to 3 times on consecutive failures', async () => {
+    it('should retry up to 5 times on consecutive failures', async () => {
       mockFetch.mockResolvedValue(mockResponse(500, { error: 'mock error' }));
 
       const iterator = checkDeploymentStatus(
@@ -98,8 +101,9 @@ describe('checkDeploymentStatus()', () => {
         type: 'error',
         payload: 'mock error',
       });
-      expect(sleep).toHaveBeenCalledWith(5_000);
-      expect(mockFetch).toHaveBeenCalledTimes(3);
+      // 5_000 + 3_000 skew (RETRY_DELAY_SKEW_MS * 0.1)
+      expect(sleep).toHaveBeenCalledWith(8_000);
+      expect(mockFetch).toHaveBeenCalledTimes(5);
     });
   });
 });

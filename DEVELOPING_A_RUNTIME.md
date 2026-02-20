@@ -5,6 +5,8 @@ the Runtime API interface. It's a way to add support for a new programming langu
 
 > Note: If you're the author of a web framework, please use the [Build Output API](https://vercel.com/docs/build-output-api/v3) instead to make your framework compatible with Vercel.
 
+> **See also:** The agent skill at [`.claude/skills/vercel-runtime-implementation-guide.md`](.claude/skills/vercel-runtime-implementation-guide.md) for Fluid protocol documentation and implementation checklists.
+
 A Runtime is an npm module that implements the following interface:
 
 ```typescript

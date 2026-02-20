@@ -24,6 +24,7 @@
     { "delay": 3200 },
     { "path": "/bg-logs?ns=RANDOMNESS_PLACEHOLDER", "status": 200, "mustContain": "30 log files", "retries": 10, "retryDelay": 1000 },
 
-    { "path": "/bg-crash?ns=RANDOMNESS_PLACEHOLDER&token=K", "status": 200, "mustContain": "queued" }
+    { "path": "/bg-crash?ns=RANDOMNESS_PLACEHOLDER&token=K", "status": 200, "mustContain": "queued" },
+    { "logMustContain": "Using python version: 3.12" }
   ]
 }

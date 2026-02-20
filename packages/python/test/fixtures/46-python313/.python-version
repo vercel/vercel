@@ -1,0 +1,4 @@
+# This file specifies the Python version for this project.
+# It takes priority over pyproject.toml requires-python.
+# Managed by pyenv, asdf, uv, and other version managers.
+3.13

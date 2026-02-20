@@ -16,6 +16,7 @@ jobs:
   release:
     name: Release
     runs-on: ubuntu-latest
+    environment: release # Must be kept for trusted publishing on PyPI
     permissions:
       contents: write
       id-token: write
@@ -32,6 +33,22 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@f7ccc83f9ed1e5b9c81d8a67d7ad1a747e22a561 # 2025-12-16
+        with:
+          toolchain: stable
+          targets: wasm32-wasip2
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version-file: 'pyproject.toml'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@eac588ad8def6316056a12d4907a9d4d84ff7a3b # v7.3.0
+        with:
+          version: '0.9.22'
 
       - name: install npm@9
         run: npm i -g npm@9

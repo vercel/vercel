@@ -4,12 +4,17 @@ export function sortBuilders<B extends { use: string }>(builds: B[]): B[] {
   const frontendRuntimeSet = new Set(
     frameworkList.map(f => f.useRuntime?.use || '@vercel/static-build')
   );
-  // `@vercel/python` is a special case for the "fasthtml" preset.
-  // Delete it from the frontend set, and then special case it below
-  // so that it is treated as "middle" priority in the sort.
+  // runtime builders, e.g. `@vercel/python`, `@vercel/ruby`, are special cases
+  // for runtime framework presets.
+  // Delete them from the frontend set, and then special case them below
+  // so that they are treated as "middle" priority in the sort.
   frontendRuntimeSet.delete('@vercel/python');
+  frontendRuntimeSet.delete('@vercel/ruby');
+  frontendRuntimeSet.delete('@vercel/rust');
   const toNumber = (build: B) =>
-    build.use === '@vercel/python'
+    build.use === '@vercel/python' ||
+    build.use === '@vercel/ruby' ||
+    build.use === '@vercel/rust'
       ? 1
       : frontendRuntimeSet.has(build.use)
         ? 0

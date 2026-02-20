@@ -1,5 +1,122 @@
 # @vercel/static-build
 
+## 2.8.40
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.138
+
+## 2.8.39
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.137
+
+## 2.8.38
+
+### Patch Changes
+
+- Add support for `functions[*].functionFailoverRegions` in `vercel.json` and build output config generation. ([#14969](https://github.com/vercel/vercel/pull/14969))
+
+  This enables per-function failover region configuration instead of only top-level defaults for all functions.
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.136
+
+## 2.8.37
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.135
+
+## 2.8.36
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.134
+
+## 2.8.35
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.133
+
+## 2.8.34
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.132
+
+## 2.8.33
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.131
+
+## 2.8.32
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.130
+
+## 2.8.31
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.129
+
+## 2.8.30
+
+### Patch Changes
+
+- [services] static-build frontends support ([#14819](https://github.com/vercel/vercel/pull/14819))
+
+## 2.8.29
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.128
+
+## 2.8.28
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.127
+
+## 2.8.27
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.126
+
+## 2.8.26
+
+### Patch Changes
+
+- [ruby] fix static build failures, add gem executable to PATH ([#14683](https://github.com/vercel/vercel/pull/14683))
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.125
+
+## 2.8.25
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.124
+
 ## 2.8.24
 
 ### Patch Changes

@@ -13,6 +13,28 @@ const defaultKeyHashFunction = (key: string) => {
 
 const defaultNamespaceSeparator = '$';
 
+function encodeTags(tags: string[]): string[] {
+  return tags.map(encodeURIComponent);
+}
+
+function encodeTag(tag: string | string[]): string | string[] {
+  return Array.isArray(tag) ? encodeTags(tag) : encodeURIComponent(tag);
+}
+
+function encodeOptions(options?: {
+  name?: string;
+  tags?: string[];
+  ttl?: number;
+}): { name?: string; tags?: string[]; ttl?: number } | undefined {
+  if (!options) {
+    return undefined;
+  }
+  if (options.tags && options.tags.length > 0) {
+    return { ...options, tags: encodeTags(options.tags) };
+  }
+  return options;
+}
+
 let inMemoryCacheInstance: InMemoryCache | null = null;
 let buildCacheInstance: BuildCache | null = null;
 
@@ -75,13 +97,17 @@ function wrapWithKeyTransformation(
       value: unknown,
       options?: { name?: string; tags?: string[]; ttl?: number }
     ) => {
-      return resolveCache().set(makeKey(key), value, options);
+      const encodedOptions = encodeOptions(options);
+      if (encodedOptions) {
+        return resolveCache().set(makeKey(key), value, encodedOptions);
+      }
+      return resolveCache().set(makeKey(key), value);
     },
     delete: (key: string) => {
       return resolveCache().delete(makeKey(key));
     },
     expireTag: (tag: string | string[]) => {
-      return resolveCache().expireTag(tag);
+      return resolveCache().expireTag(encodeTag(tag));
     },
   };
 }

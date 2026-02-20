@@ -46,3 +46,6 @@ packages/gatsby-plugin-vercel-analytics
 
 # functions
 packages/functions/**/*.js
+
+# python packages
+python/

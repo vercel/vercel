@@ -1,0 +1,12 @@
+{
+  "name": "vercel-flags-test",
+  "scripts": {
+    "build": "next build",
+    "dev": "next"
+  },
+  "dependencies": {
+    "next": "^14.0.0",
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0"
+  }
+}

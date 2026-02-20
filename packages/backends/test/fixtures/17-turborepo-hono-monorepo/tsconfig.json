@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "compilerOptions": {
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "noFallthroughCasesInSwitch": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "lib": ["ESNext"],
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "noEmit": true,
+    "resolveJsonModule": true,
+    "target": "ES2021",
+    "isolatedModules": true,
+    // TODO: We'll need to turn this on at a later date.
+    "noUncheckedIndexedAccess": false
+  },
+  // `include` becomes [] if files is specified, but we don't want that
+  // because it breaks ts-server for many editors.
+  "include": ["**/*"],
+  "exclude": ["**/cdk.out/**/*"]
+}

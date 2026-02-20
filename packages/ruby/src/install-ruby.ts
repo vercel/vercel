@@ -133,7 +133,7 @@ function getRubyPath(meta: Meta, gemfileContents: string) {
       .split('\n')
       .find(line => line.startsWith('ruby'));
     if (line) {
-      const strVersion = line.slice(4).trim().slice(1, -1).replace('~>', '');
+      const strVersion = line.slice(4).trim().slice(1, -1).replace(/~>\s*/, '');
       const found = allOptions.some(o => {
         // The array is already in order so return the first
         // match which will be the newest version.

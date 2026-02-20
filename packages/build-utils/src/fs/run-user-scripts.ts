@@ -117,6 +117,29 @@ export interface SpawnOptionsExtended extends SpawnOptions {
    * the error code, stdout and stderr.
    */
   ignoreNon0Exit?: boolean;
+
+  /**
+   * Writable stream to pipe stdout to (e.g., for prefixing output in multi-service mode).
+   * When provided, stdio is automatically set to 'pipe'.
+   */
+  outputStream?: NodeJS.WritableStream;
+
+  /**
+   * Writable stream to pipe stderr to (e.g., for prefixing output in multi-service mode).
+   * When provided, stdio is automatically set to 'pipe'.
+   */
+  errorStream?: NodeJS.WritableStream;
+}
+
+export interface NpmInstallOutput {
+  /**
+   * Writable stream for stdout (e.g., for prefixing output in multi-service mode)
+   */
+  stdout?: NodeJS.WritableStream;
+  /**
+   * Writable stream for stderr (e.g., for prefixing output in multi-service mode)
+   */
+  stderr?: NodeJS.WritableStream;
 }
 
 export function spawnAsync(
@@ -126,10 +149,24 @@ export function spawnAsync(
 ) {
   return new Promise<void>((resolve, reject) => {
     const stderrLogs: Buffer[] = [];
-    opts = { stdio: 'inherit', ...opts };
+    const hasCustomStreams = opts.outputStream || opts.errorStream;
+
+    if (hasCustomStreams) {
+      opts = { ...opts, stdio: ['inherit', 'pipe', 'pipe'] };
+    } else {
+      opts = { stdio: 'inherit', ...opts };
+    }
+
     const child = spawn(command, args, opts);
 
-    if (opts.stdio === 'pipe' && child.stderr) {
+    if (hasCustomStreams) {
+      if (child.stdout && opts.outputStream) {
+        child.stdout.pipe(opts.outputStream);
+      }
+      if (child.stderr && opts.errorStream) {
+        child.stderr.pipe(opts.errorStream);
+      }
+    } else if (opts.stdio === 'pipe' && child.stderr) {
       child.stderr.on('data', data => stderrLogs.push(data));
     }
 
@@ -146,7 +183,7 @@ export function spawnAsync(
         new NowBuildError({
           code: `BUILD_UTILS_SPAWN_${code || signal}`,
           message:
-            opts.stdio === 'inherit'
+            opts.stdio === 'inherit' || hasCustomStreams
               ? `${cmd} exited with ${code || signal}`
               : stderrLogs.map(line => line.toString()).join(''),
         })
@@ -737,10 +774,12 @@ async function runInstallCommand({
   packageManager,
   args,
   opts,
+  output,
 }: {
   packageManager: CliType;
   args: string[];
   opts: SpawnOptionsExtended;
+  output?: NpmInstallOutput;
 }) {
   const { commandArguments, prettyCommand } =
     getInstallCommandForPackageManager(packageManager, args);
@@ -749,6 +788,9 @@ async function runInstallCommand({
   if (process.env.NPM_ONLY_PRODUCTION) {
     commandArguments.push('--production');
   }
+
+  opts.outputStream = output?.stdout;
+  opts.errorStream = output?.stderr;
 
   await spawnAsync(packageManager, commandArguments, opts);
 }
@@ -791,7 +833,8 @@ export async function runNpmInstall(
   args: string[] = [],
   spawnOpts?: SpawnOptions,
   meta?: Meta,
-  projectCreatedAt?: number
+  projectCreatedAt?: number,
+  output?: NpmInstallOutput
 ): Promise<boolean> {
   if (meta?.isDev) {
     debug('Skipping dependency installation because dev mode is enabled');
@@ -856,7 +899,11 @@ export async function runNpmInstall(
     }
 
     const installTime = Date.now();
-    console.log('Installing dependencies...');
+    if (output?.stdout) {
+      output.stdout.write('Installing dependencies...\n');
+    } else {
+      console.log('Installing dependencies...');
+    }
     debug(`Installing to ${destPath}`);
 
     const opts: SpawnOptionsExtended = { cwd: destPath, ...spawnOpts };
@@ -887,6 +934,7 @@ export async function runNpmInstall(
       packageManager: cliType,
       args,
       opts,
+      output,
     });
 
     debug(`Install complete [${Date.now() - installTime}ms]`);
@@ -1542,25 +1590,45 @@ export async function runBundleInstall(
   await spawnAsync('bundle', args.concat(['install']), opts);
 }
 
+export type PipInstallResult =
+  | { installed: false }
+  | {
+      installed: true;
+      /**
+       * The directory where packages were installed.
+       * Add this to PYTHONPATH when running Python commands.
+       */
+      targetDir: string;
+    };
+
 export async function runPipInstall(
   destPath: string,
   args: string[] = [],
   spawnOpts?: SpawnOptions,
   meta?: Meta
-) {
+): Promise<PipInstallResult> {
   if (meta && meta.isDev) {
     debug('Skipping dependency installation because dev mode is enabled');
-    return;
+    return { installed: false };
   }
 
   assert(path.isAbsolute(destPath));
-  const opts = { ...spawnOpts, cwd: destPath, prettyCommand: 'pip3 install' };
 
+  // Install to a target directory so we can set PYTHONPATH to point to it
+  const targetDir = path.join(destPath, '.vercel_python_packages');
+
+  const opts = {
+    ...spawnOpts,
+    cwd: destPath,
+    prettyCommand: 'uv pip install',
+  };
   await spawnAsync(
-    'pip3',
-    ['install', '--disable-pip-version-check', ...args],
+    'uv',
+    ['pip', 'install', '--target', targetDir, ...args],
     opts
   );
+
+  return { installed: true, targetDir };
 }
 
 export function getScriptName(

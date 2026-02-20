@@ -266,6 +266,62 @@ describe('validateConfig', () => {
     );
   });
 
+  it('should not error with valid function regions', async () => {
+    const error = validateConfig({
+      functions: {
+        'api/test.js': {
+          regions: ['sfo1', 'iad1'],
+        },
+      },
+    });
+    expect(error).toBeNull();
+  });
+
+  it('should error with invalid function regions type', async () => {
+    const error = validateConfig({
+      functions: {
+        'api/test.js': {
+          // @ts-ignore
+          regions: 'iad1',
+        },
+      },
+    });
+    expect(error!.message).toEqual(
+      "Invalid vercel.json - `functions['api/test.js'].regions` should be array."
+    );
+    expect(error!.link).toEqual(
+      'https://vercel.com/docs/concepts/projects/project-configuration#functions'
+    );
+  });
+
+  it('should not error with valid functionFailoverRegions', async () => {
+    const error = validateConfig({
+      functions: {
+        'api/test.js': {
+          functionFailoverRegions: ['dub1', 'fra1'],
+        },
+      },
+    });
+    expect(error).toBeNull();
+  });
+
+  it('should error with invalid functionFailoverRegions type', async () => {
+    const error = validateConfig({
+      functions: {
+        'api/test.js': {
+          // @ts-ignore
+          functionFailoverRegions: 'dub1',
+        },
+      },
+    });
+    expect(error!.message).toEqual(
+      "Invalid vercel.json - `functions['api/test.js'].functionFailoverRegions` should be array."
+    );
+    expect(error!.link).toEqual(
+      'https://vercel.com/docs/concepts/projects/project-configuration#functions'
+    );
+  });
+
   it('should error with "functions" and "builds"', async () => {
     const error = validateConfig({
       builds: [
@@ -412,6 +468,7 @@ describe('validateConfig', () => {
               maxDeliveries: 3,
               retryAfterSeconds: 10,
               initialDelaySeconds: 0,
+              maxConcurrency: 5,
             },
           ],
         },
@@ -652,6 +709,53 @@ describe('validateConfig', () => {
     expect(error).toBeNull();
   });
 
+  it('should error with invalid maxConcurrency type', () => {
+    const error = validateConfig({
+      functions: {
+        'api/test.js': {
+          experimentalTriggers: [
+            {
+              type: 'queue/v1beta',
+              topic: 'test-topic',
+              consumer: 'test-consumer',
+              // @ts-expect-error - Testing invalid maxConcurrency type
+              maxConcurrency: 'five',
+            },
+          ],
+        },
+      },
+    });
+    expect(error!.message).toEqual(
+      "Invalid vercel.json - `functions['api/test.js'].experimentalTriggers[0].maxConcurrency` should be number."
+    );
+    expect(error!.link).toEqual(
+      'https://vercel.com/docs/concepts/projects/project-configuration#functions'
+    );
+  });
+
+  it('should error with invalid maxConcurrency value', () => {
+    const error = validateConfig({
+      functions: {
+        'api/test.js': {
+          experimentalTriggers: [
+            {
+              type: 'queue/v1beta',
+              topic: 'test-topic',
+              consumer: 'test-consumer',
+              maxConcurrency: 0,
+            },
+          ],
+        },
+      },
+    });
+    expect(error!.message).toEqual(
+      "Invalid vercel.json - `functions['api/test.js'].experimentalTriggers[0].maxConcurrency` should be >= 1."
+    );
+    expect(error!.link).toEqual(
+      'https://vercel.com/docs/concepts/projects/project-configuration#functions'
+    );
+  });
+
   it('should allow supportsCancellation boolean', () => {
     const error = validateConfig({
       functions: {
@@ -677,5 +781,101 @@ describe('validateConfig', () => {
     expect(error?.link).toEqual(
       'https://vercel.com/docs/concepts/projects/project-configuration#functions'
     );
+  });
+
+  describe('queue/v2beta', () => {
+    it('should allow valid v2beta trigger without consumer', () => {
+      const error = validateConfig({
+        functions: {
+          'api/test.js': {
+            experimentalTriggers: [
+              {
+                type: 'queue/v2beta',
+                topic: 'test-topic',
+              },
+            ],
+          },
+        },
+      });
+      expect(error).toBeNull();
+    });
+
+    it('should allow v2beta trigger with optional fields', () => {
+      const error = validateConfig({
+        functions: {
+          'api/test.js': {
+            experimentalTriggers: [
+              {
+                type: 'queue/v2beta',
+                topic: 'test-topic',
+                maxDeliveries: 3,
+                retryAfterSeconds: 10,
+                initialDelaySeconds: 60,
+                maxConcurrency: 5,
+              },
+            ],
+          },
+        },
+      });
+      expect(error).toBeNull();
+    });
+
+    it('should error when v2beta has consumer field', () => {
+      const error = validateConfig({
+        functions: {
+          'api/test.js': {
+            experimentalTriggers: [
+              {
+                type: 'queue/v2beta',
+                topic: 'test-topic',
+                consumer: 'should-not-be-here',
+              } as any,
+            ],
+          },
+        },
+      });
+      expect(error).not.toBeNull();
+      expect(error!.link).toEqual(
+        'https://vercel.com/docs/concepts/projects/project-configuration#functions'
+      );
+    });
+
+    it('should error when v2beta has missing topic', () => {
+      const error = validateConfig({
+        functions: {
+          'api/test.js': {
+            experimentalTriggers: [
+              {
+                type: 'queue/v2beta',
+              } as any,
+            ],
+          },
+        },
+      });
+      expect(error).not.toBeNull();
+      expect(error!.link).toEqual(
+        'https://vercel.com/docs/concepts/projects/project-configuration#functions'
+      );
+    });
+
+    it('should error when v2beta has invalid maxDeliveries', () => {
+      const error = validateConfig({
+        functions: {
+          'api/test.js': {
+            experimentalTriggers: [
+              {
+                type: 'queue/v2beta',
+                topic: 'test-topic',
+                maxDeliveries: 0,
+              },
+            ],
+          },
+        },
+      });
+      expect(error).not.toBeNull();
+      expect(error!.link).toEqual(
+        'https://vercel.com/docs/concepts/projects/project-configuration#functions'
+      );
+    });
   });
 });

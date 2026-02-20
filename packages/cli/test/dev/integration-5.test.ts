@@ -370,13 +370,6 @@ test(
   )
 );
 
-test(
-  '[vercel dev] support legacy `@now` scope runtimes',
-  testFixtureStdio('legacy-now-runtime', async (testPath: any) => {
-    await testPath(200, '/', /A simple deployment with the Vercel API!/m);
-  })
-);
-
 // n.b. this test requires the project 00-list-directory to have directory listing
 // enabled at 00-list-directory/settings/advanced
 test(

@@ -53,6 +53,8 @@ export interface CreateOptions {
   noWait?: boolean;
   withFullLogs?: boolean;
   autoAssignCustomDomains?: boolean;
+  agentName?: string;
+  manual?: boolean;
 }
 
 export interface RemoveOptions {
@@ -128,6 +130,8 @@ export default class Now {
       noWait,
       withFullLogs,
       autoAssignCustomDomains,
+      agentName,
+      manual,
     }: CreateOptions,
     org: Org,
     isSettingUpProject: boolean,
@@ -149,6 +153,7 @@ export default class Now {
       target: target || undefined,
       projectSettings,
       source: 'cli',
+      actor: agentName,
       autoAssignCustomDomains,
     };
 
@@ -176,6 +181,8 @@ export default class Now {
       rootDirectory,
       noWait,
       withFullLogs,
+      bulkRedirectsPath: nowConfig.bulkRedirectsPath,
+      manual,
     });
 
     if (deployment && deployment.warnings) {
@@ -223,7 +230,7 @@ export default class Now {
 
       if (error.limit && error.limit.reset) {
         const { reset } = error.limit;
-        const difference = reset * 1000 - Date.now();
+        const difference = reset - Date.now();
 
         msg += `Please retry in ${ms(difference, { long: true })}.`;
       } else {
@@ -307,7 +314,12 @@ export default class Now {
         const error = await responseError(res, 'Failed to remove deployment');
         // Always respect Retry-After headers and retry
         if (typeof error.retryAfterMs === 'number') {
-          await sleep(error.retryAfterMs);
+          // The `Retry-After` header from the api tells us when the next rate
+          // limit token is available. There may only be a single rate limit
+          // token available at that time. Add a random skew to prevent creating
+          // a thundering herd.
+          const randomSkewMs = 30_000 * Math.random();
+          await sleep(error.retryAfterMs + randomSkewMs);
           throw error;
         }
         if (res.status > 200 && res.status < 500) {
@@ -372,7 +384,7 @@ export default class Now {
   }
 
   // public fetch with built-in retrying that can be
-  // used from external utilities. it optioanlly
+  // used from external utilities. it optionally
   // receives a `retry` object in the opts that is
   // passed to the retry utility
   // it accepts a `json` option, which defaults to `true`
@@ -406,7 +418,12 @@ export default class Now {
       const err = await responseError(res);
       // Always respect Retry-After headers and retry
       if (typeof err.retryAfterMs === 'number') {
-        await sleep(err.retryAfterMs);
+        // The `Retry-After` header from the api tells us when the next rate
+        // limit token is available. There may only be a single rate limit
+        // token available at that time. Add a random skew to prevent creating
+        // a thundering herd.
+        const randomSkewMs = 30_000 * Math.random();
+        await sleep(err.retryAfterMs + randomSkewMs);
         throw err;
       }
       if (res.status >= 400 && res.status < 500) {

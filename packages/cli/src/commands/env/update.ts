@@ -8,6 +8,7 @@ import readStandardInput from '../../util/input/read-standard-input';
 import param from '../../util/output/param';
 import { emoji, prependEmoji } from '../../util/emoji';
 import { isKnownError } from '../../util/env/known-error';
+import { validateEnvValue } from '../../util/env/validate-env';
 import formatEnvironments from '../../util/env/format-environments';
 import { getCommandName } from '../../util/pkg-name';
 import { isAPIError } from '../../util/errors-ts';
@@ -180,8 +181,21 @@ export default async function update(client: Client, argv: string[]) {
     });
   }
 
-  // Confirm the update unless --yes flag is provided
-  if (!opts['--yes']) {
+  const skipConfirm = opts['--yes'] || !!stdInput;
+  const { finalValue, alreadyConfirmed } = await validateEnvValue({
+    envName,
+    initialValue: envValue,
+    skipConfirm,
+    promptForValue: () =>
+      client.input.text({ message: `What's the new value of ${envName}?` }),
+    selectAction: choices =>
+      client.input.select({ message: 'How to proceed?', choices }),
+    showWarning: msg => output.warn(msg),
+    showLog: msg => output.log(msg),
+  });
+
+  // Confirm the update unless --yes flag is provided or already confirmed from validation
+  if (!opts['--yes'] && !alreadyConfirmed) {
     const currentTargets = formatEnvironments(
       link,
       selectedEnv,
@@ -215,7 +229,7 @@ export default async function update(client: Client, argv: string[]) {
       selectedEnv.id,
       type,
       envName,
-      envValue,
+      finalValue,
       allTargets,
       selectedEnv.gitBranch || ''
     );

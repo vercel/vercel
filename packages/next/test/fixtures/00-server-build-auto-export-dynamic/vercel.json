@@ -28,5 +28,8 @@
       "path": "/another/invite/hello",
       "mustContain": "hello from /[teamSlug]/[project]/[id]"
     }
-  ]
+  ],
+  "env": {
+    "NEXT_BUILDER_INTEGRATION": "1"
+  }
 }

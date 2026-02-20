@@ -124,9 +124,7 @@ const configFileToBuildMap = new Map<string, GetOutputFunction>();
 /**
  * Register TypeScript compiler.
  */
-export function register(
-  opts: Options & { useTypescript5?: boolean } = {}
-): Register {
+export function register(opts: Options = {}): Register {
   const options = Object.assign({}, DEFAULTS, opts);
 
   const ignoreDiagnostics = [
@@ -144,11 +142,11 @@ export function register(
       paths: [options.project || cwd],
     });
   } catch (e) {
-    compiler = opts.useTypescript5 ? 'typescript5' : 'typescript';
+    compiler = 'typescript';
   }
   //eslint-disable-next-line @typescript-eslint/no-var-requires
   const ts: typeof _ts = require_(compiler);
-  if (compiler === 'typescript' || compiler === 'typescript5') {
+  if (compiler === 'typescript') {
     console.log(
       `Using built-in TypeScript ${ts.version} since "typescript" is missing from "devDependencies"`
     );

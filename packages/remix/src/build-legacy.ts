@@ -546,12 +546,8 @@ module.exports = config;`;
     ...staticFiles,
     ...transformedBuildAssets,
   };
+  const assetsPath = remixConfig.publicPath.replace(/^\/|\/$/g, '');
   const routes: any[] = [
-    {
-      src: `^/${remixConfig.publicPath.replace(/^\/|\/$/g, '')}/(.*)$`,
-      headers: { 'cache-control': 'public, max-age=31536000, immutable' },
-      continue: true,
-    },
     {
       handle: 'filesystem',
     },
@@ -606,6 +602,18 @@ module.exports = config;`;
   routes.push({
     src: '/(.*)',
     dest: '/404',
+  });
+
+  // Routes to call after a file has been matched.
+  // Cache headers are set here so they only apply to files that exist,
+  // preventing 404 responses from being cached with immutable headers.
+  routes.push({
+    handle: 'hit',
+  });
+  routes.push({
+    src: `^/${assetsPath}/(.*)$`,
+    headers: { 'cache-control': 'public, max-age=31536000, immutable' },
+    continue: true,
   });
 
   return { routes, output, framework: { version: remixVersion } };

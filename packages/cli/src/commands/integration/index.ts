@@ -2,6 +2,7 @@ import { getCommandAliases } from '..';
 import output from '../../output-manager';
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
+import { printError } from '../../util/error';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import getInvalidSubcommand from '../../util/get-invalid-subcommand';
 import getSubcommand from '../../util/get-subcommand';
@@ -12,6 +13,8 @@ import { balance } from './balance';
 import {
   addSubcommand,
   balanceSubcommand,
+  discoverSubcommand,
+  guideSubcommand,
   integrationCommand,
   listSubcommand,
   openSubcommand,
@@ -20,11 +23,16 @@ import {
 import { list } from './list';
 import { openIntegration } from './open-integration';
 import { remove } from './remove-integration';
+import { discover } from './discover';
+import { guide } from './guide';
+import { printAddDynamicHelp } from './add-help';
 
 const COMMAND_CONFIG = {
   add: getCommandAliases(addSubcommand),
   open: getCommandAliases(openSubcommand),
   list: getCommandAliases(listSubcommand),
+  discover: getCommandAliases(discoverSubcommand),
+  guide: getCommandAliases(guideSubcommand),
   balance: getCommandAliases(balanceSubcommand),
   remove: getCommandAliases(removeSubcommand),
 };
@@ -64,42 +72,82 @@ export default async function main(client: Client) {
         columns: client.stderr.columns,
       })
     );
-    return 2;
+    return 0;
   }
 
   switch (subcommand) {
     case 'add': {
       if (needHelp) {
         telemetry.trackCliFlagHelp('integration', subcommandOriginal);
-        printHelp(addSubcommand);
-        return 2;
+
+        const printed = await printAddDynamicHelp(
+          client,
+          subArgs[0],
+          addSubcommand,
+          cmd => printHelp(cmd),
+          'integration add'
+        );
+
+        if (!printed) {
+          printHelp(addSubcommand);
+        }
+
+        return 0;
       }
       telemetry.trackCliSubcommandAdd(subcommandOriginal);
-      return add(client, subArgs);
+
+      // Parse add-specific flags from subArgs (which contains everything after 'add')
+      const addFlagsSpec = getFlagsSpecification(addSubcommand.options);
+      let addParsedArgs;
+      try {
+        addParsedArgs = parseArguments(subArgs, addFlagsSpec);
+      } catch (error) {
+        printError(error);
+        return 1;
+      }
+      return add(client, addParsedArgs.args, addParsedArgs.flags);
     }
     case 'list': {
       if (needHelp) {
         telemetry.trackCliFlagHelp('integration', subcommandOriginal);
         printHelp(listSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandList(subcommandOriginal);
       return list(client);
+    }
+    case 'discover': {
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('integration', subcommandOriginal);
+        printHelp(discoverSubcommand);
+        return 0;
+      }
+      telemetry.trackCliSubcommandDiscover(subcommandOriginal);
+      return discover(client, subArgs);
+    }
+    case 'guide': {
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('integration', subcommandOriginal);
+        printHelp(guideSubcommand);
+        return 0;
+      }
+      telemetry.trackCliSubcommandGuide(subcommandOriginal);
+      return guide(client, subArgs);
     }
     case 'balance': {
       if (needHelp) {
         telemetry.trackCliFlagHelp('integration', subcommandOriginal);
         printHelp(balanceSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandBalance(subcommandOriginal);
-      return balance(client, subArgs);
+      return balance(client);
     }
     case 'open': {
       if (needHelp) {
         telemetry.trackCliFlagHelp('integration', subcommandOriginal);
         printHelp(openSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandOpen(subcommandOriginal);
       return openIntegration(client, subArgs);
@@ -108,7 +156,7 @@ export default async function main(client: Client) {
       if (needHelp) {
         telemetry.trackCliFlagHelp('integration', subcommandOriginal);
         printHelp(removeSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandRemove(subcommandOriginal);
       return remove(client);
