@@ -16,6 +16,7 @@ use crate::entrypoint::contains_app_or_handler_impl;
 impl crate::bindings::Guest for PythonAnalyzer {
     /// Check if Python source code contains or exports:
     /// - A top-level 'app' callable (e.g., Flask, FastAPI, Sanic apps)
+    /// - A top-level 'application' callable (e.g., Django)
     /// - A top-level 'handler' class (e.g., BaseHTTPRequestHandler subclass)
     ///
     /// Returns true if found, false otherwise.
