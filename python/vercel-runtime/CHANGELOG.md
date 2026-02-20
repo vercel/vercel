@@ -1,5 +1,11 @@
 # vercel-runtime
 
+## 0.5.1
+
+### Patch Changes
+
+- fix typings ([#15170](https://github.com/vercel/vercel/pull/15170))
+
 ## 0.5.0
 
 ### Minor Changes
