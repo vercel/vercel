@@ -84,6 +84,39 @@ export async function openIntegration(client: Client, subArgs: string[]) {
     }
   }
 
+  // If the first argument didn't match an integration slug and no second
+  // argument was provided, try treating it as a resource name instead.
+  if (!configuration && !resourceName) {
+    let resources;
+    try {
+      resources = await getResources(client, team.id);
+    } catch (error) {
+      output.error(`Failed to fetch resources: ${(error as Error).message}`);
+      return 1;
+    }
+
+    const resource = resources.find(r => r.name === integrationSlug);
+
+    if (!resource) {
+      output.error(
+        `No integration or resource found for ${chalk.bold(`"${integrationSlug}"`)}.`
+      );
+      return 1;
+    }
+
+    const configId = resource.product?.integrationConfigurationId;
+    if (!configId) {
+      output.error(
+        `Resource ${chalk.bold(`"${integrationSlug}"`)} is not associated with a marketplace integration.`
+      );
+      return 1;
+    }
+
+    const link = buildSSOLink(team, configId, resource.externalResourceId);
+    outputLink(client, link, asJson, integrationSlug, true);
+    return 0;
+  }
+
   if (!configuration) {
     output.error(
       `No configuration found for ${chalk.bold(`"${integrationSlug}"`)}.`
