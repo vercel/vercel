@@ -10,6 +10,7 @@ import type { ExperimentConfig } from '@vercel/agent-eval';
  */
 const config: ExperimentConfig = {
   agent: 'vercel-ai-gateway/claude-code',
+  evals: ['build', 'non-interactive'],
   runs: 1,
   earlyExit: false, // Run all evals to completion so we get explicit pass/fail for each
   timeout: 600,

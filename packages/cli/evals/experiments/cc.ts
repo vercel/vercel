@@ -2,6 +2,7 @@ import type { ExperimentConfig } from '@vercel/agent-eval';
 
 const config: ExperimentConfig = {
   agent: 'vercel-ai-gateway/claude-code',
+  evals: 'build',
   runs: 1,
   earlyExit: true,
   scripts: ['build'],

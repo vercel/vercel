@@ -1,11 +1,14 @@
 import { test, expect } from 'vitest';
 import { readFileSync } from 'fs';
+import { homedir } from 'os';
+import { join } from 'path';
 import { Vercel } from '@vercel/sdk';
 
 function getToken(): string {
+  const home = homedir();
   const paths = [
-    '/home/vercel-sandbox/.local/share/com.vercel.cli/auth.json',
-    '/home/vercel-sandbox/.vercel/auth.json',
+    join(home, '.local/share/com.vercel.cli/auth.json'),
+    join(home, '.vercel/auth.json'),
   ];
   for (const p of paths) {
     try {
@@ -17,7 +20,7 @@ function getToken(): string {
   }
 
   try {
-    const bashrc = readFileSync('/home/vercel-sandbox/.bashrc', 'utf-8');
+    const bashrc = readFileSync(join(home, '.bashrc'), 'utf-8');
     const match = bashrc.match(/export VERCEL_TOKEN="([^"]+)"/);
     if (match) return match[1];
   } catch {

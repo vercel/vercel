@@ -52,17 +52,17 @@ const config: ExperimentConfig = {
     // Escape single quotes for safe interpolation into shell single-quoted strings
     const shellEscape = (s: string) => s.replace(/'/g, "'\\''");
 
-    // Write Vercel CLI auth config
+    // Write Vercel CLI auth config (use $HOME for portability across sandbox backends)
     const authJson = JSON.stringify({ token });
     await sandbox.runCommand('bash', [
       '-c',
-      `mkdir -p /home/vercel-sandbox/.vercel && printf '%s' '${shellEscape(authJson)}' > /home/vercel-sandbox/.vercel/auth.json`,
+      `mkdir -p "$HOME/.vercel" && printf '%s' '${shellEscape(authJson)}' > "$HOME/.vercel/auth.json"`,
     ]);
 
     // Export VERCEL_TOKEN in .bashrc for agent and eval subprocesses
     await sandbox.runCommand('bash', [
       '-c',
-      `printf 'export VERCEL_TOKEN="%s"\\n' '${shellEscape(token)}' >> /home/vercel-sandbox/.bashrc`,
+      `printf 'export VERCEL_TOKEN="%s"\\n' '${shellEscape(token)}' >> "$HOME/.bashrc"`,
     ]);
 
     // Detect team ID
