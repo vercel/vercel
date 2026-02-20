@@ -1,0 +1,17 @@
+{
+  "name": "evals",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@vercel/agent-eval": "^0.7.1",
+    "@vercel/sdk": "1.19.6",
+    "typescript": "5.9.3"
+  }
+}
