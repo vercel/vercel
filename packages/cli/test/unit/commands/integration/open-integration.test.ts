@@ -165,6 +165,63 @@ describe('integration', () => {
           });
         });
 
+        describe('--format=json', () => {
+          it('should output SSO link as JSON without opening browser', async () => {
+            useProject({
+              ...defaultProject,
+              id: 'vercel-integration-open',
+              name: 'vercel-integration-open',
+            });
+            client.setArgv('integration', 'open', 'acme', '--format=json');
+            const exitCode = await integrationCommand(client);
+            expect(exitCode, 'exit code for "integration"').toEqual(0);
+            expect(openMock).not.toHaveBeenCalled();
+            await expect(client.stdout).toOutput(
+              '"url": "https://vercel.com/api/marketplace/sso?teamId=team_dummy&integrationConfigurationId=acme-1"'
+            );
+          });
+
+          it('should track --format telemetry', async () => {
+            useProject({
+              ...defaultProject,
+              id: 'vercel-integration-open',
+              name: 'vercel-integration-open',
+            });
+            client.setArgv('integration', 'open', 'acme', '--format=json');
+            const exitCode = await integrationCommand(client);
+            expect(exitCode).toEqual(0);
+
+            expect(client.telemetryEventStore).toHaveTelemetryEvents([
+              {
+                key: 'subcommand:open',
+                value: 'open',
+              },
+              {
+                key: 'option:format',
+                value: 'json',
+              },
+              {
+                key: 'argument:name',
+                value: 'acme',
+              },
+            ]);
+          });
+
+          it('should error for invalid format value', async () => {
+            useProject({
+              ...defaultProject,
+              id: 'vercel-integration-open',
+              name: 'vercel-integration-open',
+            });
+            client.setArgv('integration', 'open', 'acme', '--format=xml');
+            const exitCode = await integrationCommand(client);
+            expect(exitCode, 'exit code for "integration"').toEqual(1);
+            await expect(client.stderr).toOutput(
+              'Error: Invalid output format: "xml"'
+            );
+          });
+        });
+
         describe('non-TTY stdout', () => {
           it('should write raw URL to stdout when piped', async () => {
             useProject({
@@ -230,6 +287,27 @@ describe('integration', () => {
             'acme',
             'store-acme-connected-project',
             '--json'
+          );
+          const exitCode = await integrationCommand(client);
+          expect(exitCode, 'exit code for "integration"').toEqual(0);
+          expect(openMock).not.toHaveBeenCalled();
+          await expect(client.stdout).toOutput(
+            '"url": "https://vercel.com/api/marketplace/sso?teamId=team_dummy&integrationConfigurationId=acme-1&resource_id=ext_store_1"'
+          );
+        });
+
+        it('should output resource SSO link as JSON with --format=json', async () => {
+          useProject({
+            ...defaultProject,
+            id: 'vercel-integration-open',
+            name: 'vercel-integration-open',
+          });
+          client.setArgv(
+            'integration',
+            'open',
+            'acme',
+            'store-acme-connected-project',
+            '--format=json'
           );
           const exitCode = await integrationCommand(client);
           expect(exitCode, 'exit code for "integration"').toEqual(0);

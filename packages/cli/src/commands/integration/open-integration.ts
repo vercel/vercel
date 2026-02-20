@@ -7,20 +7,39 @@ import { getFirstConfiguration } from '../../util/integration/fetch-marketplace-
 import { buildSSOLink } from '../../util/integration/build-sso-link';
 import { IntegrationOpenTelemetryClient } from '../../util/telemetry/commands/integration/open';
 import { getResources } from '../../util/integration-resource/get-resources';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import { parseArguments } from '../../util/get-args';
+import { printError } from '../../util/error';
+import { validateJsonOutput } from '../../util/output-format';
+import { openSubcommand } from './command';
 import output from '../../output-manager';
 
-export async function openIntegration(
-  client: Client,
-  args: string[],
-  json?: boolean
-) {
+export async function openIntegration(client: Client, subArgs: string[]) {
   const telemetry = new IntegrationOpenTelemetryClient({
     opts: {
       store: client.telemetryEventStore,
     },
   });
 
-  telemetry.trackCliFlagJson(json);
+  const flagsSpecification = getFlagsSpecification(openSubcommand.options);
+  let parsedArguments;
+  try {
+    parsedArguments = parseArguments(subArgs, flagsSpecification);
+  } catch (error) {
+    printError(error);
+    return 1;
+  }
+
+  const { args } = parsedArguments;
+  const formatResult = validateJsonOutput(parsedArguments.flags);
+  if (!formatResult.valid) {
+    output.error(formatResult.error);
+    return 1;
+  }
+  const asJson = formatResult.jsonOutput;
+
+  telemetry.trackCliFlagJson(parsedArguments.flags['--json']);
+  telemetry.trackCliOptionFormat(parsedArguments.flags['--format']);
 
   if (args.length > 2) {
     output.error(
@@ -104,21 +123,21 @@ export async function openIntegration(
       resource.externalResourceId
     );
 
-    outputLink(client, link, json, resourceName, true);
+    outputLink(client, link, asJson, resourceName, true);
     return 0;
   }
 
   // No resource specified — open the integration dashboard
   const link = buildSSOLink(team, configurationId);
 
-  outputLink(client, link, json, integrationSlug, false);
+  outputLink(client, link, asJson, integrationSlug, false);
   return 0;
 }
 
 function outputLink(
   client: Client,
   link: string,
-  json: boolean | undefined,
+  json: boolean,
   name: string,
   isResource: boolean
 ) {

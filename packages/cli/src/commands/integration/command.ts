@@ -158,15 +158,7 @@ export const openSubcommand = {
       required: false,
     },
   ],
-  options: [
-    {
-      name: 'json',
-      shorthand: null,
-      type: Boolean,
-      deprecated: false,
-      description: 'Output the SSO link as JSON',
-    },
-  ],
+  options: [formatOption, jsonOption],
   examples: [
     {
       name: "Open a marketplace integration's dashboard",
@@ -185,8 +177,8 @@ export const openSubcommand = {
     {
       name: 'Get the SSO link as JSON',
       value: [
-        `${packageName} integration open acme --json`,
-        `${packageName} integration open acme my-acme-store --json`,
+        `${packageName} integration open acme --format=json`,
+        `${packageName} integration open acme my-acme-store --format=json`,
       ],
     },
   ],
