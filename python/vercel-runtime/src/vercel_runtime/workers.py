@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import contextlib
 import os
-from collections.abc import Mapping
 from importlib import import_module
 from importlib.util import find_spec
-from typing import Callable, cast
+from typing import TYPE_CHECKING, cast
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Mapping
 
 
 def _has_module(module_name: str) -> bool:
@@ -85,7 +87,7 @@ def _bootstrap_dramatiq_worker_app(module: object) -> object | None:
     get_broker = getattr(dramatiq_mod, "get_broker", None)
     if callable(get_broker):
         with contextlib.suppress(Exception):
-            get_broker_fn = cast(Callable[[], object], get_broker)
+            get_broker_fn = cast("Callable[[], object]", get_broker)
             broker_candidates.append(get_broker_fn())
 
     resolved_broker: object | None = None
@@ -103,7 +105,7 @@ def _bootstrap_dramatiq_worker_app(module: object) -> object | None:
     actors = getattr(resolved_broker, "actors", None)
     actors_mapping: Mapping[object, object] | None = None
     if isinstance(actors, dict):
-        actors_mapping = cast(Mapping[object, object], actors)
+        actors_mapping = cast("Mapping[object, object]", actors)
     if actors_mapping is None or len(actors_mapping) == 0:
         raise RuntimeError(
             "Worker service did not register any Dramatiq "
@@ -116,7 +118,10 @@ def _bootstrap_dramatiq_worker_app(module: object) -> object | None:
         raise RuntimeError(
             "Failed to resolve Dramatiq ASGI adapter from vercel-workers."
         )
-    get_asgi_app_fn = cast(Callable[[object], object], get_asgi_app)
+    get_asgi_app_fn = cast(
+        "Callable[[object], object]",
+        get_asgi_app,
+    )
     return get_asgi_app_fn(resolved_broker)
 
 
@@ -131,7 +136,10 @@ def _bootstrap_celery_worker_app(module: object) -> object | None:
     get_asgi_app = getattr(celery_app, "get_asgi_app", None)
     if callable(get_asgi_app):
         with contextlib.suppress(Exception):
-            get_asgi_app_fn = cast(Callable[[], object], get_asgi_app)
+            get_asgi_app_fn = cast(
+                "Callable[[], object]",
+                get_asgi_app,
+            )
             wrapped_app = get_asgi_app_fn()
             if wrapped_app is not None:
                 return wrapped_app
@@ -157,7 +165,10 @@ def _bootstrap_celery_worker_app(module: object) -> object | None:
         raise RuntimeError(
             "Failed to resolve Celery ASGI adapter from vercel-workers."
         )
-    get_adapter_app_fn = cast(Callable[[object], object], get_adapter_app)
+    get_adapter_app_fn = cast(
+        "Callable[[object], object]",
+        get_adapter_app,
+    )
     return get_adapter_app_fn(celery_app)
 
 
@@ -175,11 +186,17 @@ def _bootstrap_generic_worker_app() -> object | None:
         return None
 
     with contextlib.suppress(Exception):
-        has_subscriptions_fn = cast(Callable[[], bool], has_subscriptions)
+        has_subscriptions_fn = cast(
+            "Callable[[], bool]",
+            has_subscriptions,
+        )
         if not has_subscriptions_fn():
             return None
 
-        get_asgi_app_fn = cast(Callable[[], object], get_asgi_app)
+        get_asgi_app_fn = cast(
+            "Callable[[], object]",
+            get_asgi_app,
+        )
         return get_asgi_app_fn()
 
     return None
