@@ -2901,6 +2901,51 @@ exports[`help command > integration help output snapshots > integration balance 
 "
 `;
 
+exports[`help command > integration help output snapshots > integration guide subcommand > integration guide subcommand help column width 120 1`] = `
+"
+  ▲ vercel integration guide integration [options]
+
+  Show getting started guides and code snippets for a marketplace integration                                           
+
+  Options:
+
+  -f,  --framework <FRAMEWORK>  Select a framework guide without interactive prompt (e.g., nextjs, remix, astro, nuxtjs,
+                                sveltekit)                                                                              
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+       --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - Show guides for a single-product integration
+
+    $ vercel integration guide <integration-name>
+    $ vercel integration guide neon
+
+  - Show guides for a specific product of a multi-product integration
+
+    $ vercel integration guide <integration>/<product>
+    $ vercel integration guide aws/aws-dynamodb
+
+  - Show the Next.js guide without prompts (useful for CI/agents)
+
+    $ vercel integration guide neon --framework nextjs
+
+"
+`;
+
 exports[`help command > integration help output snapshots > integration help column width 40 1`] = `
 "
   ▲ vercel integration command
@@ -2922,6 +2967,20 @@ exports[`help command > integration help output snapshots > integration help col
                              specif…
                              market…
                              integr…
+  discover                   Discov…
+                             availa…
+                             market…
+                             integr…
+  guide     integration      Show   
+                             getting
+                             started
+                             guides 
+                             and    
+                             code   
+                             snippe…
+                             for a  
+                             market…
+                             integr…
   list      [project]        List   
                              resour…
                              from   
@@ -2930,10 +2989,6 @@ exports[`help command > integration help output snapshots > integration help col
                              for the
                              current
                              project
-  discover                   Discov…
-                             availa…
-                             market…
-                             integr…
   open      name [resource]  Opens a
                              market…
                              integr…
@@ -3015,9 +3070,11 @@ exports[`help command > integration help output snapshots > integration help col
   add       integration      Installs a marketplace integration             
   balance   integration      Shows the balances and thresholds of a         
                              specified marketplace integration              
+  discover                   Discover available marketplace integrations    
+  guide     integration      Show getting started guides and code snippets  
+                             for a marketplace integration                  
   list      [project]        List resources from marketplace integrations   
                              for the current project                        
-  discover                   Discover available marketplace integrations    
   open      name [resource]  Opens a marketplace integration's or resource's
                              dashboard via SSO                              
   remove    integration      Uninstalls a marketplace integration           
@@ -3058,8 +3115,9 @@ exports[`help command > integration help output snapshots > integration help col
 
   add       integration      Installs a marketplace integration                                                     
   balance   integration      Shows the balances and thresholds of a specified marketplace integration               
-  list      [project]        List resources from marketplace integrations for the current project                   
   discover                   Discover available marketplace integrations                                            
+  guide     integration      Show getting started guides and code snippets for a marketplace integration            
+  list      [project]        List resources from marketplace integrations for the current project                   
   open      name [resource]  Opens a marketplace integration's or resource's dashboard via SSO                      
   remove    integration      Uninstalls a marketplace integration                                                   
 
@@ -3665,10 +3723,14 @@ exports[`help command > list help output snapshots > list help column width 40 1
 "
   ▲ vercel list [app] [options]
 
-  List app deployments for an app.      
+  List deployments.                     
 
   Options:
 
+  -a,  --all                   List       
+                               resources  
+                               across all 
+                               projects   
        --environment <TARGET>             
   -F,  --format <FORMAT>       Specify the
                                output     
@@ -3767,7 +3829,11 @@ exports[`help command > list help output snapshots > list help column width 40 1
 
     $ vercel list
 
-  - List all deployments for the project \`my-app\` in the team of the currently linked project
+  - List all deployments across all projects
+
+    $ vercel list --all
+
+  - List all deployments for the project \`my-app\`
 
     $ vercel list my-app
 
@@ -3794,10 +3860,11 @@ exports[`help command > list help output snapshots > list help column width 80 1
 "
   ▲ vercel list [app] [options]
 
-  List app deployments for an app.                                              
+  List deployments.                                                             
 
   Options:
 
+  -a,  --all                   List resources across all projects                 
        --environment <TARGET>                                                     
   -F,  --format <FORMAT>       Specify the output format (json)                   
   -m,  --meta <KEY=VALUE>      Filter deployments by metadata (e.g.: \`-m          
@@ -3834,7 +3901,11 @@ exports[`help command > list help output snapshots > list help column width 80 1
 
     $ vercel list
 
-  - List all deployments for the project \`my-app\` in the team of the currently linked project
+  - List all deployments across all projects
+
+    $ vercel list --all
+
+  - List all deployments for the project \`my-app\`
 
     $ vercel list my-app
 
@@ -3861,10 +3932,11 @@ exports[`help command > list help output snapshots > list help column width 120 
 "
   ▲ vercel list [app] [options]
 
-  List app deployments for an app.                                                                                      
+  List deployments.                                                                                                     
 
   Options:
 
+  -a,  --all                   List resources across all projects                                                         
        --environment <TARGET>                                                                                             
   -F,  --format <FORMAT>       Specify the output format (json)                                                           
   -m,  --meta <KEY=VALUE>      Filter deployments by metadata (e.g.: \`-m KEY=value\`). Can appear many times.              
@@ -3896,7 +3968,11 @@ exports[`help command > list help output snapshots > list help column width 120 
 
     $ vercel list
 
-  - List all deployments for the project \`my-app\` in the team of the currently linked project
+  - List all deployments across all projects
+
+    $ vercel list --all
+
+  - List all deployments for the project \`my-app\`
 
     $ vercel list my-app
 
