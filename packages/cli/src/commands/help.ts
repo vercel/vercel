@@ -330,7 +330,6 @@ export function buildHelpOutput(
   options: BuildHelpOutputOptions
 ) {
   const outputArray: (string | null)[] = [
-    '',
     buildCommandSynopsisLine(command, options.parent),
     buildDescriptionLine(command, options),
     buildSubcommandLines(command.subcommands, options),
