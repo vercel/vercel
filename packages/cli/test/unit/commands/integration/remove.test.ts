@@ -301,7 +301,15 @@ describe('integration', () => {
           await expect(client.stderr).toOutput('Uninstalling integration…');
 
           await expect(client.stderr).toOutput(
-            `Error: Failed to remove ${integration}: ${errorOptions.errorMessage} (${errorOptions.errorStatus})`
+            `Cannot uninstall ${integration} because it still has resources.`
+          );
+          await expect(client.stderr).toOutput(
+            'Resources that must be removed first:'
+          );
+          await expect(client.stderr).toOutput('store-acme-other-project');
+          await expect(client.stderr).toOutput('store-acme-no-projects');
+          await expect(client.stderr).toOutput(
+            `integration remove ${integration}`
           );
 
           await expect(exitCodePromise).resolves.toEqual(1);
