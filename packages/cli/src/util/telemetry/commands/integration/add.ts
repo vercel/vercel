@@ -62,4 +62,13 @@ export class IntegrationAddTelemetryClient
       });
     }
   }
+
+  trackCliOptionInstallationId(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'installation-id',
+        value: this.redactedValue,
+      });
+    }
+  }
 }
