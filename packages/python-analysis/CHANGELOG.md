@@ -1,5 +1,11 @@
 # @vercel/python-analysis
 
+## 0.7.0
+
+### Minor Changes
+
+- Add django experimental framework. ([#15196](https://github.com/vercel/vercel/pull/15196))
+
 ## 0.6.0
 
 ### Minor Changes

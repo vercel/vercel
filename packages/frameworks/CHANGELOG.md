@@ -1,5 +1,11 @@
 # @vercel/frameworks
 
+## 3.19.0
+
+### Minor Changes
+
+- Add django experimental framework. ([#15196](https://github.com/vercel/vercel/pull/15196))
+
 ## 3.18.0
 
 ### Minor Changes
