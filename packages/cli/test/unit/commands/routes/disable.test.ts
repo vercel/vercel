@@ -56,4 +56,15 @@ describe('routes disable', () => {
     expect(exitCode).toEqual(1);
     await expect(client.stderr).toOutput('No route found');
   });
+
+  it('should send enabled: false in PATCH body', async () => {
+    useEditRoute();
+    client.setArgv('routes', 'disable', 'Enabled Route');
+    const exitCode = await routes(client);
+    expect(exitCode).toEqual(0);
+
+    const { capturedBodies } = await import('../../../mocks/routes');
+    const body = capturedBodies.edit as any;
+    expect(body.route.enabled).toBe(false);
+  });
 });

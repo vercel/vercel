@@ -1,19 +1,87 @@
 import { client } from './client';
 
+/**
+ * Last captured request bodies from mock endpoints.
+ * Tests can use these to verify the correct data was sent to the API.
+ */
+export const capturedBodies: {
+  edit?: unknown;
+  delete?: unknown;
+  stage?: unknown;
+} = {};
+
 function createRoute(index: number) {
+  // Build a realistic route with varying features based on index:
+  // - index 0: rewrite with response headers and a request header transform
+  // - index 1: redirect (301) with a has condition
+  // - index 2: set-status (403) only, no dest
+  // - index 3+: cycle through rewrite/redirect patterns
+  const isRedirect = index % 3 === 1;
+  const isSetStatus = index % 3 === 2;
+
+  const route: {
+    src: string;
+    dest?: string;
+    status?: number;
+    headers?: Record<string, string>;
+    continue?: boolean;
+    transforms?: Array<{
+      type: string;
+      op: string;
+      target: { key: string };
+      args?: string;
+    }>;
+    has?: Array<{ type: string; key?: string; value?: string }>;
+  } = {
+    src: `/path-${index}/(.*)`,
+  };
+
+  if (isSetStatus) {
+    route.status = 403;
+    // No dest for set-status
+  } else if (isRedirect) {
+    route.dest = `/dest-${index}/$1`;
+    route.status = 301;
+  } else {
+    route.dest = `/dest-${index}/$1`;
+  }
+
+  // Add headers for every 4th route
+  if (index % 4 === 0) {
+    route.headers = { 'Cache-Control': 'max-age=3600' };
+    route.continue = true;
+  }
+
+  // Add transforms for route 0
+  if (index === 0) {
+    route.transforms = [
+      {
+        type: 'request.headers',
+        op: 'set',
+        target: { key: 'X-Forwarded-Host' },
+        args: 'example.com',
+      },
+    ];
+  }
+
+  // Add conditions for route 1
+  if (index === 1) {
+    route.has = [{ type: 'header', key: 'Authorization' }];
+  }
+
   return {
     id: `route-${index}`,
     name: `Route ${index}`,
     description: `Description for route ${index}`,
     enabled: index % 3 !== 0, // Every 3rd route is disabled
     staged: index % 5 === 1, // Every 5th route (starting at 1) is staged
-    route: {
-      src: `/path-${index}/(.*)`,
-      dest: `/dest-${index}/$1`,
-      status: index % 2 === 0 ? undefined : 301,
-      headers:
-        index % 4 === 0 ? { 'Cache-Control': 'max-age=3600' } : undefined,
-    },
+    srcSyntax: index % 2 === 0 ? 'regex' : 'path-to-regexp',
+    route,
+    routeType: isSetStatus
+      ? ('set_status' as const)
+      : isRedirect
+        ? ('redirect' as const)
+        : ('rewrite' as const),
   };
 }
 
@@ -502,6 +570,7 @@ export function useDeleteRoute() {
 
   client.scenario.delete('/v1/projects/:projectId/routes', (req, res) => {
     const body = req.body as { routeIds: string[] };
+    capturedBodies.delete = body;
 
     // Validate all IDs exist
     const missing = body.routeIds.filter(id => !routes.find(r => r.id === id));
@@ -580,7 +649,10 @@ export function useEditRoute() {
   client.scenario.patch(
     '/v1/projects/:projectId/routes/:routeId',
     (req, res) => {
-      const body = req.body as { route?: { enabled?: boolean; name?: string } };
+      const body = req.body as {
+        route?: { enabled?: boolean; name?: string; route?: unknown };
+      };
+      capturedBodies.edit = body;
 
       res.json({
         route: {
@@ -588,7 +660,7 @@ export function useEditRoute() {
           name: body.route?.name ?? 'Updated Route',
           enabled: body.route?.enabled ?? true,
           staged: true,
-          route: { src: '^/test$' },
+          route: body.route?.route ?? { src: '^/test$' },
         },
         version: {
           id: 'new-staging-version',
@@ -646,7 +718,8 @@ export function useStageRoutes() {
     }
   );
 
-  client.scenario.put('/v1/projects/:projectId/routes', (_req, res) => {
+  client.scenario.put('/v1/projects/:projectId/routes', (req, res) => {
+    capturedBodies.stage = req.body;
     res.json({
       version: {
         id: 'new-staging-version',
@@ -658,6 +731,252 @@ export function useStageRoutes() {
       },
     });
   });
+}
+
+/**
+ * Rich mock for comprehensive edit testing.
+ * Provides routes with all feature combinations for thorough edit mutation testing.
+ */
+export function useEditRouteComprehensive() {
+  const routes = [
+    {
+      id: 'rewrite-route',
+      name: 'API Rewrite',
+      description: 'Proxies API requests',
+      enabled: true,
+      staged: false,
+      srcSyntax: 'path-to-regexp',
+      route: {
+        src: '/api/:path*',
+        dest: 'https://api.example.com/:path*',
+        headers: {
+          'Cache-Control': 'no-cache',
+          'X-Custom': 'value',
+        },
+        transforms: [
+          {
+            type: 'request.headers',
+            op: 'set',
+            target: { key: 'X-Forwarded-Host' },
+            args: 'myapp.com',
+          },
+          { type: 'request.headers', op: 'delete', target: { key: 'X-Debug' } },
+          {
+            type: 'request.query',
+            op: 'set',
+            target: { key: 'source' },
+            args: 'cli',
+          },
+          {
+            type: 'response.headers',
+            op: 'append',
+            target: { key: 'Vary' },
+            args: 'Accept',
+          },
+        ],
+        has: [
+          { type: 'header', key: 'Authorization' },
+          { type: 'cookie', key: 'session', value: '^.+$' },
+        ],
+        missing: [{ type: 'header', key: 'X-Block' }],
+        continue: true,
+      },
+      routeType: 'rewrite',
+    },
+    {
+      id: 'redirect-route',
+      name: 'Blog Redirect',
+      description: 'Redirects old blog to new',
+      enabled: true,
+      staged: false,
+      srcSyntax: 'equals',
+      route: {
+        src: '/blog',
+        dest: '/articles',
+        status: 301,
+      },
+      routeType: 'redirect',
+    },
+    {
+      id: 'status-route',
+      name: 'Block Admin',
+      description: 'Blocks admin access',
+      enabled: false,
+      staged: false,
+      srcSyntax: 'regex',
+      route: {
+        src: '^/admin/.*$',
+        status: 403,
+      },
+      routeType: 'set_status',
+    },
+    {
+      id: 'header-only-route',
+      name: 'CORS Headers',
+      enabled: true,
+      staged: false,
+      srcSyntax: 'regex',
+      route: {
+        src: '^/api/.*$',
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET,POST',
+        },
+        continue: true,
+      },
+      routeType: 'transform',
+    },
+  ];
+
+  client.scenario.get('/v1/projects/:projectId/routes', (_req, res) => {
+    res.json({
+      routes,
+      version: {
+        id: 'live-version',
+        s3Key: 'routes/live.json',
+        lastModified: Date.now(),
+        createdBy: 'user@example.com',
+        isLive: true,
+        ruleCount: routes.length,
+      },
+    });
+  });
+
+  client.scenario.get(
+    '/v1/projects/:projectId/routes/versions',
+    (_req, res) => {
+      res.json({
+        versions: [
+          {
+            id: 'staging-version',
+            isLive: false,
+            isStaging: true,
+            ruleCount: routes.length,
+          },
+          {
+            id: 'live-version',
+            isLive: true,
+            isStaging: false,
+            ruleCount: routes.length,
+          },
+        ],
+      });
+    }
+  );
+
+  client.scenario.patch(
+    '/v1/projects/:projectId/routes/:routeId',
+    (req, res) => {
+      const body = req.body as Record<string, unknown>;
+      capturedBodies.edit = body;
+
+      res.json({
+        route: {
+          id: req.params.routeId,
+          ...(body.route as Record<string, unknown>),
+          staged: true,
+        },
+        version: {
+          id: 'new-staging-version',
+          s3Key: 'routes/staging.json',
+          lastModified: Date.now(),
+          createdBy: 'user@example.com',
+          isStaging: true,
+          isLive: false,
+          ruleCount: routes.length,
+        },
+      });
+    }
+  );
+}
+
+export function useStageRoutesWithSingleRoute() {
+  const routes = [
+    { ...createRoute(0), name: 'Only Route', id: 'only-route-id' },
+  ];
+
+  client.scenario.get('/v1/projects/:projectId/routes', (_req, res) => {
+    res.json({
+      routes,
+      version: {
+        id: 'live-version',
+        s3Key: 'routes/live.json',
+        lastModified: Date.now(),
+        createdBy: 'user@example.com',
+        isLive: true,
+        ruleCount: routes.length,
+      },
+    });
+  });
+
+  client.scenario.get(
+    '/v1/projects/:projectId/routes/versions',
+    (_req, res) => {
+      res.json({
+        versions: [
+          {
+            id: 'live-version',
+            isLive: true,
+            isStaging: false,
+            ruleCount: routes.length,
+          },
+        ],
+      });
+    }
+  );
+}
+
+export function useEditRouteWithApiError() {
+  const routes = [
+    {
+      ...createRoute(0),
+      name: 'Test Route',
+      id: 'test-route-id',
+      enabled: false,
+    },
+  ];
+
+  client.scenario.get('/v1/projects/:projectId/routes', (_req, res) => {
+    res.json({
+      routes,
+      version: {
+        id: 'live-version',
+        s3Key: 'routes/live.json',
+        lastModified: Date.now(),
+        createdBy: 'user@example.com',
+        isLive: true,
+        ruleCount: routes.length,
+      },
+    });
+  });
+
+  client.scenario.get(
+    '/v1/projects/:projectId/routes/versions',
+    (_req, res) => {
+      res.json({
+        versions: [
+          {
+            id: 'staging-version',
+            isLive: false,
+            isStaging: true,
+            ruleCount: 1,
+          },
+        ],
+      });
+    }
+  );
+
+  client.scenario.patch(
+    '/v1/projects/:projectId/routes/:routeId',
+    (_req, res) => {
+      res.status(403).json({
+        error: {
+          code: 'feature_not_enabled',
+          message: 'Project-level routes are not enabled for this project.',
+        },
+      });
+    }
+  );
 }
 
 export function useRoutesForInspect() {

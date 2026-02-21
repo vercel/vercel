@@ -14,6 +14,7 @@ import {
   listVersionsSubcommand,
   inspectSubcommand,
   addSubcommand,
+  editSubcommand,
   deleteSubcommand,
   enableSubcommand,
   disableSubcommand,
@@ -32,6 +33,7 @@ const COMMAND_CONFIG = {
   'list-versions': getCommandAliases(listVersionsSubcommand),
   inspect: getCommandAliases(inspectSubcommand),
   add: getCommandAliases(addSubcommand),
+  edit: getCommandAliases(editSubcommand),
   delete: getCommandAliases(deleteSubcommand),
   enable: getCommandAliases(enableSubcommand),
   disable: getCommandAliases(disableSubcommand),
@@ -115,6 +117,14 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandAdd(subcommandOriginal);
       return add(client, args);
+    case 'edit':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('routes', subcommandOriginal);
+        printHelp(editSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandEdit(subcommandOriginal);
+      return (await import('./edit')).default(client, args);
     case 'delete':
       if (needHelp) {
         telemetry.trackCliFlagHelp('routes', subcommandOriginal);
