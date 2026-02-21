@@ -48,7 +48,13 @@ export function getPackageJSON() {
 
   let packageJSONPath = getPackageJSONPath(rootDir);
   while (!fs.existsSync(packageJSONPath)) {
-    rootDir = path.join(rootDir, '..');
+    const parentDir = path.dirname(rootDir);
+    if (parentDir === rootDir) {
+      throw new Error(
+        `Could not find package.json walking up from ${path.dirname(filePath)}`
+      );
+    }
+    rootDir = parentDir;
     packageJSONPath = getPackageJSONPath(rootDir);
   }
 
