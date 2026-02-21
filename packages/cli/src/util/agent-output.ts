@@ -11,6 +11,8 @@ export interface ActionRequiredPayload {
   reason?: string;
   action?: string;
   message: string;
+  /** Hint for agents: run one of the commands in next[] to complete without prompting. */
+  hint?: string;
   verification_uri?: string;
   choices?: Array<{ id: string; name: string }>;
   next?: Array<{ command: string; when?: string }>;
@@ -276,6 +278,10 @@ export function outputActionRequired(
     payload,
     client.argv
   );
+  if (!enriched.hint && enriched.next?.length) {
+    enriched.hint =
+      'Run one of the commands in next[] to complete without prompting.';
+  }
   // eslint-disable-next-line no-console
   console.log(JSON.stringify(enriched, null, 2));
   process.exit(exitCode);
