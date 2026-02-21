@@ -14,7 +14,9 @@ export type EnvRecordsSource =
   | 'vercel-cli:dev'
   | 'vercel-cli:pull'
   | 'vercel-cli:link'
-  | 'vercel-cli:integration:add';
+  | 'vercel-cli:integration:add'
+  | 'vercel-cli:blob:store-add'
+  | 'vercel-cli:blob:store-remove';
 
 export default async function getEnvRecords(
   client: Client,

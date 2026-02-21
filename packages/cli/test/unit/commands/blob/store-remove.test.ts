@@ -2,6 +2,7 @@ import { describe, beforeEach, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import removeStore from '../../../../src/commands/blob/store-remove';
 import * as linkModule from '../../../../src/util/projects/link';
+import * as envPullModule from '../../../../src/commands/env/pull';
 import output from '../../../../src/output-manager';
 import type { BlobRWToken } from '../../../../src/util/blob/token';
 
@@ -9,9 +10,23 @@ import type { BlobRWToken } from '../../../../src/util/blob/token';
 vi.mock('../../../../src/util/projects/link');
 vi.mock('../../../../src/util/blob/token');
 vi.mock('../../../../src/output-manager');
+vi.mock('../../../../src/commands/env/pull');
 
 const mockedGetLinkedProject = vi.mocked(linkModule.getLinkedProject);
+const mockedEnvPullCommandLogic = vi.mocked(envPullModule.envPullCommandLogic);
 const mockedOutput = vi.mocked(output);
+
+function mockFetchForRemove(
+  storeData: { id: string; name: string },
+  connections: { project: { name: string } }[] = []
+) {
+  return vi
+    .fn()
+    .mockResolvedValueOnce({ store: storeData }) // GET store
+    .mockResolvedValueOnce({ connections }) // GET connections
+    .mockResolvedValueOnce({}) // DELETE connections
+    .mockResolvedValueOnce({}); // DELETE store
+}
 
 describe('blob store remove', () => {
   const textInputMock = vi.fn().mockResolvedValue('store_1234567890123456');
@@ -23,16 +38,15 @@ describe('blob store remove', () => {
     vi.clearAllMocks();
     client.reset();
 
-    // Default successful mocks - mock different responses for GET and DELETE
-    client.fetch = vi
-      .fn()
-      .mockResolvedValueOnce({
-        store: { id: 'store_1234567890123456', name: 'Test Store' },
-      }) // GET response
-      .mockResolvedValueOnce({}); // DELETE response
+    client.fetch = mockFetchForRemove({
+      id: 'store_1234567890123456',
+      name: 'Test Store',
+    });
 
     client.input.text = textInputMock;
     client.input.confirm = confirmInputMock;
+
+    mockedEnvPullCommandLogic.mockResolvedValue(undefined);
 
     // Default linked project mock
     mockedGetLinkedProject.mockResolvedValue({
@@ -58,14 +72,16 @@ describe('blob store remove', () => {
       expect(exitCode).toBe(0);
       expect(mockedGetLinkedProject).toHaveBeenCalledWith(client);
 
-      // Should first fetch store details
+      // Should fetch store details and connections
       expect(client.fetch).toHaveBeenNthCalledWith(
         1,
         `/v1/storage/stores/${storeId}`,
-        {
-          method: 'GET',
-          accountId: 'org_123',
-        }
+        { method: 'GET', accountId: 'org_123' }
+      );
+      expect(client.fetch).toHaveBeenNthCalledWith(
+        2,
+        `/v1/storage/stores/${storeId}/connections`,
+        { method: 'GET', accountId: 'org_123' }
       );
 
       // Should show confirmation prompt
@@ -74,20 +90,71 @@ describe('blob store remove', () => {
         false
       );
 
-      // Should then delete the store
+      // Should remove connections first, then delete store
       expect(client.fetch).toHaveBeenNthCalledWith(
-        2,
+        3,
+        `/v1/storage/stores/${storeId}/connections`,
+        { method: 'DELETE', accountId: 'org_123' }
+      );
+      expect(client.fetch).toHaveBeenNthCalledWith(
+        4,
         `/v1/storage/stores/blob/${storeId}`,
-        {
-          method: 'DELETE',
-          accountId: 'org_123',
-        }
+        { method: 'DELETE', accountId: 'org_123' }
       );
 
       expect(mockedOutput.debug).toHaveBeenCalledWith('Deleting blob store');
       expect(mockedOutput.spinner).toHaveBeenCalledWith('Deleting blob store');
       expect(mockedOutput.stopSpinner).toHaveBeenCalled();
       expect(mockedOutput.success).toHaveBeenCalledWith('Blob store deleted');
+
+      // Should auto-pull env vars since project is linked
+      expect(mockedEnvPullCommandLogic).toHaveBeenCalledWith(
+        client,
+        '.env.local',
+        true,
+        'development',
+        expect.objectContaining({ status: 'linked' }),
+        undefined,
+        client.cwd,
+        'vercel-cli:blob:store-remove'
+      );
+    });
+
+    it('should show connected projects in confirmation message', async () => {
+      client.fetch = mockFetchForRemove(
+        { id: 'store_1234567890123456', name: 'Test Store' },
+        [{ project: { name: 'my-app' } }, { project: { name: 'my-site' } }]
+      );
+
+      const storeId = 'store_abcd1234567890efgh';
+      const exitCode = await removeStore(client, [storeId], noToken);
+
+      expect(exitCode).toBe(0);
+      expect(confirmInputMock).toHaveBeenCalledWith(
+        'Are you sure you want to remove Test Store (store_1234567890123456)? This store is connected to my-app, my-site. This action cannot be undone.',
+        false
+      );
+    });
+
+    it('should show remaining project count when more than 2 connections', async () => {
+      client.fetch = mockFetchForRemove(
+        { id: 'store_1234567890123456', name: 'Test Store' },
+        [
+          { project: { name: 'app1' } },
+          { project: { name: 'app2' } },
+          { project: { name: 'app3' } },
+          { project: { name: 'app4' } },
+        ]
+      );
+
+      const storeId = 'store_abcd1234567890efgh';
+      const exitCode = await removeStore(client, [storeId], noToken);
+
+      expect(exitCode).toBe(0);
+      expect(confirmInputMock).toHaveBeenCalledWith(
+        'Are you sure you want to remove Test Store (store_1234567890123456)? This store is connected to app1, app2 and 2 other projects. This action cannot be undone.',
+        false
+      );
     });
 
     it('should prompt for store ID when not provided', async () => {
@@ -101,24 +168,20 @@ describe('blob store remove', () => {
         validate: expect.any(Function),
       });
 
-      // Should first fetch store details
       expect(client.fetch).toHaveBeenNthCalledWith(
         1,
         '/v1/storage/stores/store_1234567890123456',
-        {
-          method: 'GET',
-          accountId: 'org_123',
-        }
+        { method: 'GET', accountId: 'org_123' }
       );
-
-      // Should then delete the store
       expect(client.fetch).toHaveBeenNthCalledWith(
-        2,
+        3,
+        '/v1/storage/stores/store_1234567890123456/connections',
+        { method: 'DELETE', accountId: 'org_123' }
+      );
+      expect(client.fetch).toHaveBeenNthCalledWith(
+        4,
         '/v1/storage/stores/blob/store_1234567890123456',
-        {
-          method: 'DELETE',
-          accountId: 'org_123',
-        }
+        { method: 'DELETE', accountId: 'org_123' }
       );
     });
 
@@ -129,22 +192,25 @@ describe('blob store remove', () => {
 
       expect(exitCode).toBe(0);
 
-      // Should use accountId for both GET and DELETE
       expect(client.fetch).toHaveBeenNthCalledWith(
         1,
         `/v1/storage/stores/${storeId}`,
-        {
-          method: 'GET',
-          accountId: 'org_123',
-        }
+        { method: 'GET', accountId: 'org_123' }
       );
       expect(client.fetch).toHaveBeenNthCalledWith(
         2,
+        `/v1/storage/stores/${storeId}/connections`,
+        { method: 'GET', accountId: 'org_123' }
+      );
+      expect(client.fetch).toHaveBeenNthCalledWith(
+        3,
+        `/v1/storage/stores/${storeId}/connections`,
+        { method: 'DELETE', accountId: 'org_123' }
+      );
+      expect(client.fetch).toHaveBeenNthCalledWith(
+        4,
         `/v1/storage/stores/blob/${storeId}`,
-        {
-          method: 'DELETE',
-          accountId: 'org_123',
-        }
+        { method: 'DELETE', accountId: 'org_123' }
       );
     });
 
@@ -160,23 +226,29 @@ describe('blob store remove', () => {
 
       expect(exitCode).toBe(0);
 
-      // Should not include accountId for both GET and DELETE
       expect(client.fetch).toHaveBeenNthCalledWith(
         1,
         `/v1/storage/stores/${storeId}`,
-        {
-          method: 'GET',
-          accountId: undefined,
-        }
+        { method: 'GET', accountId: undefined }
       );
       expect(client.fetch).toHaveBeenNthCalledWith(
         2,
-        `/v1/storage/stores/blob/${storeId}`,
-        {
-          method: 'DELETE',
-          accountId: undefined,
-        }
+        `/v1/storage/stores/${storeId}/connections`,
+        { method: 'GET', accountId: undefined }
       );
+      expect(client.fetch).toHaveBeenNthCalledWith(
+        3,
+        `/v1/storage/stores/${storeId}/connections`,
+        { method: 'DELETE', accountId: undefined }
+      );
+      expect(client.fetch).toHaveBeenNthCalledWith(
+        4,
+        `/v1/storage/stores/blob/${storeId}`,
+        { method: 'DELETE', accountId: undefined }
+      );
+
+      // Should NOT auto-pull env vars since project is not linked
+      expect(mockedEnvPullCommandLogic).not.toHaveBeenCalled();
     });
 
     it('should not delete store when user declines confirmation', async () => {
@@ -187,14 +259,11 @@ describe('blob store remove', () => {
 
       expect(exitCode).toBe(0);
 
-      // Should fetch store details
+      // Should fetch store details and connections
       expect(client.fetch).toHaveBeenNthCalledWith(
         1,
         `/v1/storage/stores/${storeId}`,
-        {
-          method: 'GET',
-          accountId: 'org_123',
-        }
+        { method: 'GET', accountId: 'org_123' }
       );
 
       // Should show confirmation prompt
@@ -203,8 +272,8 @@ describe('blob store remove', () => {
         false
       );
 
-      // Should NOT make delete request
-      expect(client.fetch).toHaveBeenCalledTimes(1);
+      // Should NOT make delete requests (only 2 GETs)
+      expect(client.fetch).toHaveBeenCalledTimes(2);
 
       expect(mockedOutput.success).toHaveBeenCalledWith(
         'Blob store not removed'
@@ -228,10 +297,7 @@ describe('blob store remove', () => {
       expect(client.fetch).toHaveBeenNthCalledWith(
         1,
         '/v1/storage/stores/store_xyz789',
-        {
-          method: 'GET',
-          accountId: 'org_123',
-        }
+        { method: 'GET', accountId: 'org_123' }
       );
     });
   });
@@ -303,8 +369,6 @@ describe('blob store remove', () => {
 
       expect(exitCode).toBe(1);
       expect(mockedOutput.success).not.toHaveBeenCalled();
-      // Should not attempt DELETE since GET failed
-      expect(client.fetch).toHaveBeenCalledTimes(1);
     });
 
     it('should return 1 when deletion fails after successful fetch', async () => {
@@ -312,8 +376,10 @@ describe('blob store remove', () => {
         .fn()
         .mockResolvedValueOnce({
           store: { id: 'store_123', name: 'Test Store' },
-        }) // GET succeeds
-        .mockRejectedValueOnce(new Error('Delete failed')); // DELETE fails
+        }) // GET store
+        .mockResolvedValueOnce({ connections: [] }) // GET connections
+        .mockResolvedValueOnce({}) // DELETE connections succeeds
+        .mockRejectedValueOnce(new Error('Delete failed')); // DELETE store fails
 
       const exitCode = await removeStore(
         client,
@@ -323,36 +389,37 @@ describe('blob store remove', () => {
 
       expect(exitCode).toBe(1);
       expect(mockedOutput.success).not.toHaveBeenCalled();
-      expect(client.fetch).toHaveBeenCalledTimes(2);
+      expect(client.fetch).toHaveBeenCalledTimes(4);
     });
   });
 
   describe('API call behavior', () => {
-    it('should make GET and DELETE requests to correct endpoints', async () => {
+    it('should make GET store, GET connections, DELETE connections, and DELETE store requests to correct endpoints', async () => {
       const storeId = 'store_endpoint_test_12345';
 
       const exitCode = await removeStore(client, [storeId], noToken);
 
       expect(exitCode).toBe(0);
 
-      // Should first make GET request
       expect(client.fetch).toHaveBeenNthCalledWith(
         1,
         `/v1/storage/stores/${storeId}`,
-        {
-          method: 'GET',
-          accountId: 'org_123',
-        }
+        { method: 'GET', accountId: 'org_123' }
       );
-
-      // Should then make DELETE request
       expect(client.fetch).toHaveBeenNthCalledWith(
         2,
+        `/v1/storage/stores/${storeId}/connections`,
+        { method: 'GET', accountId: 'org_123' }
+      );
+      expect(client.fetch).toHaveBeenNthCalledWith(
+        3,
+        `/v1/storage/stores/${storeId}/connections`,
+        { method: 'DELETE', accountId: 'org_123' }
+      );
+      expect(client.fetch).toHaveBeenNthCalledWith(
+        4,
         `/v1/storage/stores/blob/${storeId}`,
-        {
-          method: 'DELETE',
-          accountId: 'org_123',
-        }
+        { method: 'DELETE', accountId: 'org_123' }
       );
     });
 
@@ -374,22 +441,25 @@ describe('blob store remove', () => {
 
       expect(exitCode).toBe(0);
 
-      // Should use different org ID for both GET and DELETE
       expect(client.fetch).toHaveBeenNthCalledWith(
         1,
         `/v1/storage/stores/${storeId}`,
-        {
-          method: 'GET',
-          accountId: 'org_different_456',
-        }
+        { method: 'GET', accountId: 'org_different_456' }
       );
       expect(client.fetch).toHaveBeenNthCalledWith(
         2,
+        `/v1/storage/stores/${storeId}/connections`,
+        { method: 'GET', accountId: 'org_different_456' }
+      );
+      expect(client.fetch).toHaveBeenNthCalledWith(
+        3,
+        `/v1/storage/stores/${storeId}/connections`,
+        { method: 'DELETE', accountId: 'org_different_456' }
+      );
+      expect(client.fetch).toHaveBeenNthCalledWith(
+        4,
         `/v1/storage/stores/blob/${storeId}`,
-        {
-          method: 'DELETE',
-          accountId: 'org_different_456',
-        }
+        { method: 'DELETE', accountId: 'org_different_456' }
       );
     });
 
@@ -403,31 +473,28 @@ describe('blob store remove', () => {
       ];
 
       for (const storeId of storeIdFormats) {
-        // Reset mocks for each iteration
-        client.fetch = vi
-          .fn()
-          .mockResolvedValueOnce({ store: { id: storeId, name: 'Test Store' } })
-          .mockResolvedValueOnce({});
+        client.fetch = mockFetchForRemove({
+          id: storeId,
+          name: 'Test Store',
+        });
 
         const exitCode = await removeStore(client, [storeId], noToken);
         expect(exitCode).toBe(0);
 
-        // Should make both GET and DELETE requests
         expect(client.fetch).toHaveBeenNthCalledWith(
           1,
           `/v1/storage/stores/${storeId}`,
-          {
-            method: 'GET',
-            accountId: 'org_123',
-          }
+          { method: 'GET', accountId: 'org_123' }
         );
         expect(client.fetch).toHaveBeenNthCalledWith(
-          2,
+          3,
+          `/v1/storage/stores/${storeId}/connections`,
+          { method: 'DELETE', accountId: 'org_123' }
+        );
+        expect(client.fetch).toHaveBeenNthCalledWith(
+          4,
           `/v1/storage/stores/blob/${storeId}`,
-          {
-            method: 'DELETE',
-            accountId: 'org_123',
-          }
+          { method: 'DELETE', accountId: 'org_123' }
         );
       }
     });
@@ -452,22 +519,20 @@ describe('blob store remove', () => {
 
       expect(exitCode).toBe(0);
 
-      // Should use prompted store ID for both GET and DELETE
       expect(client.fetch).toHaveBeenNthCalledWith(
         1,
         `/v1/storage/stores/${promptedStoreId}`,
-        {
-          method: 'GET',
-          accountId: 'org_123',
-        }
+        { method: 'GET', accountId: 'org_123' }
       );
       expect(client.fetch).toHaveBeenNthCalledWith(
-        2,
+        3,
+        `/v1/storage/stores/${promptedStoreId}/connections`,
+        { method: 'DELETE', accountId: 'org_123' }
+      );
+      expect(client.fetch).toHaveBeenNthCalledWith(
+        4,
         `/v1/storage/stores/blob/${promptedStoreId}`,
-        {
-          method: 'DELETE',
-          accountId: 'org_123',
-        }
+        { method: 'DELETE', accountId: 'org_123' }
       );
     });
   });
@@ -520,22 +585,25 @@ describe('blob store remove', () => {
 
       expect(exitCode).toBe(0);
 
-      // Should use team account ID for both GET and DELETE
       expect(client.fetch).toHaveBeenNthCalledWith(
         1,
         '/v1/storage/stores/store_team_test_123456',
-        {
-          method: 'GET',
-          accountId: 'team_123',
-        }
+        { method: 'GET', accountId: 'team_123' }
       );
       expect(client.fetch).toHaveBeenNthCalledWith(
         2,
+        '/v1/storage/stores/store_team_test_123456/connections',
+        { method: 'GET', accountId: 'team_123' }
+      );
+      expect(client.fetch).toHaveBeenNthCalledWith(
+        3,
+        '/v1/storage/stores/store_team_test_123456/connections',
+        { method: 'DELETE', accountId: 'team_123' }
+      );
+      expect(client.fetch).toHaveBeenNthCalledWith(
+        4,
         '/v1/storage/stores/blob/store_team_test_123456',
-        {
-          method: 'DELETE',
-          accountId: 'team_123',
-        }
+        { method: 'DELETE', accountId: 'team_123' }
       );
     });
 
@@ -560,22 +628,25 @@ describe('blob store remove', () => {
 
       expect(exitCode).toBe(0);
 
-      // Should use personal account ID for both GET and DELETE
       expect(client.fetch).toHaveBeenNthCalledWith(
         1,
         '/v1/storage/stores/store_personal_test123',
-        {
-          method: 'GET',
-          accountId: 'user_123',
-        }
+        { method: 'GET', accountId: 'user_123' }
       );
       expect(client.fetch).toHaveBeenNthCalledWith(
         2,
+        '/v1/storage/stores/store_personal_test123/connections',
+        { method: 'GET', accountId: 'user_123' }
+      );
+      expect(client.fetch).toHaveBeenNthCalledWith(
+        3,
+        '/v1/storage/stores/store_personal_test123/connections',
+        { method: 'DELETE', accountId: 'user_123' }
+      );
+      expect(client.fetch).toHaveBeenNthCalledWith(
+        4,
         '/v1/storage/stores/blob/store_personal_test123',
-        {
-          method: 'DELETE',
-          accountId: 'user_123',
-        }
+        { method: 'DELETE', accountId: 'user_123' }
       );
     });
   });

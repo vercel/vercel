@@ -9,18 +9,23 @@ function isAccess(value: string): value is BlobAccess {
 }
 
 /**
- * Parses and validates an --access flag value, defaulting to 'public'.
- * Returns the validated access value, or null if invalid (with error printed).
+ * Parses and validates an --access flag value.
+ * Returns the validated access value, or null if missing/invalid (with error printed).
  */
 export function parseAccessFlag(
   accessFlag: string | undefined
 ): BlobAccess | null {
-  const access = accessFlag ?? 'public';
-  if (!isAccess(access)) {
+  if (accessFlag === undefined) {
     output.error(
-      `Invalid access value: '${access}'. Must be 'public' or 'private'.`
+      "Missing required --access flag. Must be 'public' or 'private'."
     );
     return null;
   }
-  return access;
+  if (!isAccess(accessFlag)) {
+    output.error(
+      `Invalid access value: '${accessFlag}'. Must be 'public' or 'private'.`
+    );
+    return null;
+  }
+  return accessFlag;
 }
