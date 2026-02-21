@@ -245,6 +245,9 @@ async function handleInitDeployment(
     );
   }
 
+  const cliMeta = parseMeta(parsedArguments.flags['--meta']);
+  const isV0 = cliMeta.v0 === 'true';
+
   const link = await ensureLink('deploy', client, cwd, {
     autoConfirm,
     setupMsg: 'Set up and deploy',
@@ -253,6 +256,7 @@ async function handleInitDeployment(
       nowConfig: localConfig,
       paths,
     }),
+    v0: isV0,
   });
   if (typeof link === 'number') {
     return link;
@@ -351,11 +355,7 @@ async function handleInitDeployment(
     }
   }
 
-  const meta = Object.assign(
-    {},
-    parseMeta(localConfig.meta),
-    parseMeta(parsedArguments.flags['--meta'])
-  );
+  const meta = Object.assign({}, parseMeta(localConfig.meta), cliMeta);
 
   const gitMetadata = await createGitMeta(cwd, project);
 
@@ -792,6 +792,9 @@ async function handleDefaultDeploy(
     );
   }
 
+  const cliMeta = parseMeta(parsedArguments.flags['--meta']);
+  const isV0 = cliMeta.v0 === 'true';
+
   const link = await ensureLink('deploy', client, cwd, {
     autoConfirm,
     setupMsg: 'Set up and deploy',
@@ -800,6 +803,7 @@ async function handleDefaultDeploy(
       nowConfig: localConfig,
       paths,
     }),
+    v0: isV0,
   });
   if (typeof link === 'number') {
     return link;
@@ -956,11 +960,7 @@ async function handleDefaultDeploy(
   }
 
   // #region Meta
-  const meta = Object.assign(
-    {},
-    parseMeta(localConfig.meta),
-    parseMeta(parsedArguments.flags['--meta'])
-  );
+  const meta = Object.assign({}, parseMeta(localConfig.meta), cliMeta);
 
   const gitMetadata = await createGitMeta(cwd, project);
   // #endregion
