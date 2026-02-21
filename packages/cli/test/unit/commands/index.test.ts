@@ -56,6 +56,7 @@ describe('index', () => {
         ['rm', 'remove'],
         ['rollback', 'rollback'],
         ['rolling-release', 'rolling-release'],
+        ['routes', 'routes'],
         ['rr', 'rolling-release'],
         ['switch', 'teams'],
         ['target', 'target'],

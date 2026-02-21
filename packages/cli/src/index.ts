@@ -848,6 +848,10 @@ const main = async () => {
           telemetry.trackCliCommandRedirects(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).redirects;
           break;
+        case 'routes':
+          telemetry.trackCliCommandRoutes(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).routes;
+          break;
         case 'remove':
           telemetry.trackCliCommandRemove(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).remove;
