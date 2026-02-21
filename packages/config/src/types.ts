@@ -264,6 +264,7 @@ export interface Rewrite {
   has?: Condition[];
   missing?: Condition[];
   respectOriginCacheControl?: boolean;
+  allowedFunctionRegions?: string[];
 }
 
 /**

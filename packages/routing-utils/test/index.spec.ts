@@ -906,6 +906,112 @@ describe('normalizeRoutes', () => {
 
     assertValid(routes, routesSchema);
   });
+
+  test('accepts valid routes with allowedFunctionRegions', () => {
+    const routes: Route[] = [
+      {
+        src: '^/api/eu/(.*)$',
+        dest: '/api/$1',
+        allowedFunctionRegions: ['fra1', 'cdg1'],
+      },
+      {
+        src: '^/api/pci/(.*)$',
+        allowedFunctionRegions: ['iad1'],
+      },
+    ];
+
+    assertValid(routes);
+
+    const normalized = normalizeRoutes(routes);
+    assert.equal(normalized.error, null);
+    assert.deepStrictEqual(normalized.routes, routes);
+  });
+
+  test('accepts routes with empty allowedFunctionRegions array', () => {
+    const routes: Route[] = [
+      {
+        src: '^/api/(.*)$',
+        dest: '/api/$1',
+        allowedFunctionRegions: [],
+      },
+    ];
+
+    assertValid(routes);
+
+    const normalized = normalizeRoutes(routes);
+    assert.equal(normalized.error, null);
+  });
+
+  test('fails if allowedFunctionRegions is not an array', () => {
+    assertError(
+      [
+        {
+          src: '^/api/(.*)$',
+          // @ts-ignore
+          allowedFunctionRegions: 'fra1',
+        },
+      ],
+      [
+        {
+          keyword: 'type',
+          dataPath: '[0].allowedFunctionRegions',
+          schemaPath: '#/items/anyOf/0/properties/allowedFunctionRegions/type',
+          params: { type: 'array' },
+          message: 'should be array',
+        },
+        {
+          keyword: 'additionalProperties',
+          dataPath: '[0]',
+          schemaPath: '#/items/anyOf/1/additionalProperties',
+          params: { additionalProperty: 'src' },
+          message: 'should NOT have additional properties',
+        },
+        {
+          keyword: 'anyOf',
+          dataPath: '[0]',
+          schemaPath: '#/items/anyOf',
+          params: {},
+          message: 'should match some schema in anyOf',
+        },
+      ]
+    );
+  });
+
+  test('fails if allowedFunctionRegions contains non-string items', () => {
+    assertError(
+      [
+        {
+          src: '^/api/(.*)$',
+          // @ts-ignore
+          allowedFunctionRegions: [123, 'fra1'],
+        },
+      ],
+      [
+        {
+          keyword: 'type',
+          dataPath: '[0].allowedFunctionRegions[0]',
+          schemaPath:
+            '#/items/anyOf/0/properties/allowedFunctionRegions/items/type',
+          params: { type: 'string' },
+          message: 'should be string',
+        },
+        {
+          keyword: 'additionalProperties',
+          dataPath: '[0]',
+          schemaPath: '#/items/anyOf/1/additionalProperties',
+          params: { additionalProperty: 'src' },
+          message: 'should NOT have additional properties',
+        },
+        {
+          keyword: 'anyOf',
+          dataPath: '[0]',
+          schemaPath: '#/items/anyOf',
+          params: {},
+          message: 'should match some schema in anyOf',
+        },
+      ]
+    );
+  });
 });
 
 describe('getTransformedRoutes', () => {
@@ -1416,6 +1522,25 @@ describe('getTransformedRoutes', () => {
               },
             },
           ],
+        },
+      ],
+    };
+
+    assertValid(vercelConfig.rewrites, rewritesSchema);
+  });
+
+  test('should validate rewrites with allowedFunctionRegions', () => {
+    const vercelConfig = {
+      rewrites: [
+        {
+          source: '/api/eu/(.*)',
+          destination: '/api/$1',
+          allowedFunctionRegions: ['fra1', 'cdg1', 'lhr1'],
+        },
+        {
+          source: '/api/pci/(.*)',
+          destination: '/api/$1',
+          allowedFunctionRegions: ['iad1'],
         },
       ],
     };
