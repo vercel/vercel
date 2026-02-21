@@ -226,6 +226,13 @@ export interface AutoProvisionedResponse {
   billingPlan: BillingPlan | null;
 }
 
+export interface AutoProvisionInstallationInfo {
+  id: string;
+  type?: 'marketplace' | 'external';
+  externalId?: string;
+  status?: string;
+}
+
 export interface AutoProvisionFallback {
   kind: string;
   reason?: string;
@@ -234,6 +241,7 @@ export interface AutoProvisionFallback {
   integration: AutoProvisionIntegration;
   product: AutoProvisionProduct;
   installation?: { id: string };
+  installations?: AutoProvisionInstallationInfo[];
 }
 
 export type AutoProvisionResult =

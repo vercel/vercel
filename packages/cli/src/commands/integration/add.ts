@@ -47,7 +47,8 @@ type AddOptions = PostProvisionOptions;
 export async function add(
   client: Client,
   args: string[],
-  flags: IntegrationAddFlags
+  flags: IntegrationAddFlags,
+  commandName?: 'integration add' | 'install'
 ) {
   const resourceNameArg = flags['--name'];
   const metadataFlags = flags['--metadata'];
@@ -59,6 +60,7 @@ export async function add(
     );
     return 1;
   }
+  const installationId = flags['--installation-id'];
   const options: AddOptions = {
     noConnect: flags['--no-connect'],
     noEnvPull: flags['--no-env-pull'],
@@ -114,10 +116,12 @@ export async function add(
       productSlug,
       metadata: metadataFlags,
       billingPlanId,
+      installationId,
       noConnect: options.noConnect,
       noEnvPull: options.noEnvPull,
       environments: options.environments,
       prefix,
+      commandName,
     });
   }
 

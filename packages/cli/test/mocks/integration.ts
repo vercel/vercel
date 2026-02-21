@@ -1029,6 +1029,22 @@ const autoProvisionResponses: Record<
     integration: autoProvisionIntegration,
     product: autoProvisionProduct,
   },
+  multiple_installations: {
+    kind: 'unknown',
+    reason: 'multiple_installations',
+    url: 'https://vercel.com/acme/~/integrations/checkout/acme?productSlug=acme',
+    integration: autoProvisionIntegration,
+    product: autoProvisionProduct,
+    installations: [
+      { id: 'icfg_marketplace_1', type: 'marketplace', status: 'active' },
+      {
+        id: 'icfg_external_1',
+        type: 'external',
+        externalId: 'aws-account-123',
+        status: 'active',
+      },
+    ],
+  },
 };
 
 const discoverIntegrations = [
@@ -1383,6 +1399,17 @@ export function useAutoProvision(opts?: {
     '/v1/integrations/integration/:integrationSlug/marketplace/auto-provision/:productSlug',
     (req, res) => {
       requestBodies.push(req.body);
+
+      // When installationId is provided and responseKey is multiple_installations,
+      // simulate the server accepting the selection and provisioning successfully
+      if (
+        req.body.installationId &&
+        opts?.responseKey === 'multiple_installations'
+      ) {
+        res.status(201);
+        res.json(autoProvisionResponses['provisioned']);
+        return;
+      }
 
       const response =
         autoProvisionResponses[opts?.responseKey ?? 'provisioned'];

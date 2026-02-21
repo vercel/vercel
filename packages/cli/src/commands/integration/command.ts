@@ -71,6 +71,15 @@ export const addSubcommand = {
       description:
         'Prefix for environment variable names (e.g., --prefix NEON2_ creates NEON2_DATABASE_URL instead of DATABASE_URL)',
     },
+    {
+      name: 'installation-id',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      argument: 'ID',
+      description:
+        'Installation ID to use when multiple installations exist for the integration',
+    },
   ],
   examples: [
     {
