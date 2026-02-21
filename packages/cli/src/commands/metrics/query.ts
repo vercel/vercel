@@ -15,11 +15,11 @@ import {
 } from './validation';
 import { getDefaultAggregation } from './schema-data';
 import {
-  formatCsv,
   formatQueryJson,
   formatErrorJson,
   getRollupColumnName,
 } from './output';
+import { formatText } from './text-output';
 import {
   resolveTimeRange,
   computeGranularity,
@@ -359,7 +359,22 @@ export default async function query(
       )
     );
   } else {
-    client.stdout.write(formatCsv(response.data ?? [], groupBy, rollupColumn));
+    client.stdout.write(
+      formatText(response, {
+        event,
+        measure,
+        aggregation,
+        groupBy,
+        filter,
+        scope,
+        projectName:
+          scope.type === 'project-with-slug' ? scope.projectName : undefined,
+        teamName: scope.teamSlug,
+        periodStart: rounded.start.toISOString(),
+        periodEnd: rounded.end.toISOString(),
+        granularity: granResult.duration,
+      })
+    );
   }
 
   return 0;
