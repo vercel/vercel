@@ -1,3 +1,4 @@
+import os from 'os';
 import output from '../../output-manager';
 import type Client from '../client';
 import { APIError } from '../errors-ts';
@@ -7,6 +8,21 @@ import type {
   AutoProvisionResult,
   Metadata,
 } from './types';
+
+function generateDeviceFingerprint() {
+  return {
+    userAgent: `vercel-cli/${process.env.npm_package_version ?? 'unknown'}`,
+    operatingSystem: `${os.platform()}-${os.arch()}`,
+    timezone:
+      Intl.DateTimeFormat().resolvedOptions().timeZone ?? 'UTC',
+    acceptedLanguage: process.env.LANG?.split('.')[0] ?? 'en-US',
+    acceptedCharset: 'utf-8',
+    capabilitiesJsWebgl: false,
+    gpuVendor: 'none',
+    gpuModel: 'none',
+    plugins: 'none',
+  };
+}
 
 function isAutoProvisionFallback(
   error: unknown
@@ -39,6 +55,7 @@ export async function autoProvisionResource(
     metadata,
     acceptedPolicies,
     source: 'cli',
+    deviceFingerprint: generateDeviceFingerprint(),
     ...(billingPlanId ? { billingPlanId } : {}),
   };
   output.debug(`Auto-provision request: POST ${endpoint}`);
