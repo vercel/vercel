@@ -7,11 +7,11 @@ import { getLinkedProject } from '../../util/projects/link';
 import { getCommandName } from '../../util/pkg-name';
 import output from '../../output-manager';
 import type { Command } from '../help';
-import type {
-  RoutingRule,
-  RouteType,
-  RoutePosition,
-  RouteVersion,
+import {
+  getRouteTypeLabel,
+  type RoutingRule,
+  type RoutePosition,
+  type RouteVersion,
 } from '../../util/routes/types';
 
 export interface ParsedSubcommand {
@@ -210,6 +210,11 @@ export async function offerAutoPromote(
   );
   const { default: stamp } = await import('../../util/output/stamp');
 
+  // Always inform the user that changes are staged
+  output.print(
+    `\n  ${chalk.gray(`This change is staged. Run ${chalk.cyan(getCommandName('routes publish'))} to make it live, or ${chalk.cyan(getCommandName('routes discard-staging'))} to undo.`)}\n`
+  );
+
   if (!hadExistingStagingVersion && !opts.skipPrompts) {
     output.print('\n');
     const shouldPromote = await client.input.confirm(
@@ -252,10 +257,10 @@ export function printDiffSummary(routes: RoutingRule[], maxDisplay = 10): void {
   for (const route of displayRoutes) {
     const symbol = getDiffSymbol(route);
     const label = getDiffLabel(route);
-    const routeType = getRouteTypeDisplayLabel(route);
+    const routeType = getRouteTypeLabel(route);
 
     output.print(
-      `  ${symbol} ${route.name}${routeType ? ` ${chalk.gray(`(${routeType})`)}` : ''} ${chalk.gray(`- ${label}`)}\n`
+      `  ${symbol} ${route.name}${routeType !== '-' ? ` ${chalk.gray(`(${routeType})`)}` : ''} ${chalk.gray(`- ${label}`)}\n`
     );
   }
 
@@ -290,17 +295,76 @@ export function getDiffLabel(route: RoutingRule): string {
   return 'Modified';
 }
 
-export function getRouteTypeDisplayLabel(route: RoutingRule): string | null {
-  if (!route.routeType) return null;
+/**
+ * Resolves a single route identifier (name or ID) to a RoutingRule.
+ * Tries exact ID match first, then case-insensitive name match.
+ * If multiple routes match, prompts the user to select interactively.
+ * Returns null if not found or selection is cancelled.
+ */
+export async function resolveRoute(
+  client: Client,
+  routes: RoutingRule[],
+  identifier: string
+): Promise<RoutingRule | null> {
+  // Exact ID match
+  const byId = routes.find(r => r.id === identifier);
+  if (byId) return byId;
 
-  const typeLabels: Record<RouteType, string> = {
-    rewrite: 'Rewrite',
-    redirect: 'Redirect',
-    set_status: 'Set Status',
-    transform: 'Transform',
-  };
+  // Case-insensitive name match
+  const query = identifier.toLowerCase();
+  const matches = routes.filter(
+    r =>
+      r.name.toLowerCase() === query ||
+      r.name.toLowerCase().includes(query) ||
+      r.id.toLowerCase().includes(query)
+  );
 
-  return typeLabels[route.routeType] ?? null;
+  if (matches.length === 0) {
+    return null;
+  }
+
+  if (matches.length === 1) {
+    return matches[0];
+  }
+
+  // Multiple matches — interactive disambiguation
+  const selectedId = await client.input.select({
+    message: `Multiple routes match "${identifier}". Select one:`,
+    choices: matches.map(route => ({
+      value: route.id,
+      name: `${route.name} ${chalk.gray(`(${route.route.src})`)}`,
+    })),
+  });
+
+  return matches.find(r => r.id === selectedId) ?? null;
+}
+
+/**
+ * Resolves multiple route identifiers to RoutingRules.
+ * Returns null if any identifier cannot be resolved.
+ * Deduplicates resolved routes by ID.
+ */
+export async function resolveRoutes(
+  client: Client,
+  routes: RoutingRule[],
+  identifiers: string[]
+): Promise<RoutingRule[] | null> {
+  const resolved = new Map<string, RoutingRule>();
+
+  for (const identifier of identifiers) {
+    const route = await resolveRoute(client, routes, identifier);
+    if (!route) {
+      output.error(
+        `No route found matching "${identifier}". Run ${chalk.cyan(
+          getCommandName('routes list')
+        )} to see all routes.`
+      );
+      return null;
+    }
+    resolved.set(route.id, route);
+  }
+
+  return Array.from(resolved.values());
 }
 
 /**
