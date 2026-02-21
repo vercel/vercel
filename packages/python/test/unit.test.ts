@@ -1198,6 +1198,26 @@ describe('Django entrypoint discovery', () => {
     if (fs.existsSync(workPath)) fs.removeSync(workPath);
   });
 
+  it('resolves Django entrypoint from a subdirectory', async () => {
+    const workPath = path.join(
+      tmpdir(),
+      `python-django-root-dir-${Date.now()}`
+    );
+    fs.mkdirSync(workPath, { recursive: true });
+
+    // Django app lives under root dir "mysite"; no manage.py at workPath root
+    await writeFiles(workPath, {
+      'mysite/manage.py': `os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')`,
+      'mysite/config/settings.py': `WSGI_APPLICATION = 'config.wsgi.application'`,
+      'mysite/config/wsgi.py': `application = lambda env, start: None`,
+    });
+
+    const result = await detectDjangoPythonEntrypoint(workPath, 'missing.py');
+    expect(result).toBe('mysite/config/wsgi.py');
+
+    if (fs.existsSync(workPath)) fs.removeSync(workPath);
+  });
+
   it('build() discovers Django entrypoint from WSGI_APPLICATION when configured entrypoint is missing', async () => {
     const workPath = path.join(tmpdir(), `python-django-build-${Date.now()}`);
     fs.mkdirSync(workPath, { recursive: true });
