@@ -21,6 +21,7 @@ import type {
   Metadata,
 } from '../../util/integration/types';
 import { promptForTermAcceptance } from '../../util/integration/prompt-for-terms';
+import { acceptTermsViaBrowser } from '../../util/integration/accept-terms-via-browser';
 import { createMetadataWizard, type MetadataWizard } from './wizard';
 import { provisionStoreResource } from '../../util/integration/provision-store-resource';
 import { resolveResourceName } from '../../util/integration/generate-resource-name';
@@ -228,29 +229,45 @@ export async function add(
 
   // Handle missing installation — prompt for terms and install
   if (!installation) {
-    const acceptedPolicies = await promptForTermAcceptance(client, integration);
-    if (!acceptedPolicies) {
-      return 1;
-    }
-    let installResult;
-    try {
-      installResult = await installMarketplaceIntegration(
+    if (client.isAgent || !client.stdin.isTTY) {
+      // Browser-based terms acceptance for agents and non-TTY environments
+      const result = await acceptTermsViaBrowser(
         client,
-        integration.id,
-        acceptedPolicies
+        team.id,
+        integration
       );
-    } catch (error) {
-      output.error(
-        `Failed to install integration: ${(error as Error).message}`
+      if (!result) {
+        return 1;
+      }
+      installation = result;
+    } else {
+      const acceptedPolicies = await promptForTermAcceptance(
+        client,
+        integration
       );
-      return 1;
+      if (!acceptedPolicies) {
+        return 1;
+      }
+      let installResult;
+      try {
+        installResult = await installMarketplaceIntegration(
+          client,
+          integration.id,
+          acceptedPolicies
+        );
+      } catch (error) {
+        output.error(
+          `Failed to install integration: ${(error as Error).message}`
+        );
+        return 1;
+      }
+      installation = {
+        id: installResult.id,
+        integrationId: integration.id,
+        installationType: 'marketplace',
+        ownerId: team.id,
+      };
     }
-    installation = {
-      id: installResult.id,
-      integrationId: integration.id,
-      installationType: 'marketplace',
-      ownerId: team.id,
-    };
   }
 
   // Check if CLI provisioning is possible (metadata-wise)

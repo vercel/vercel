@@ -7,6 +7,7 @@ import { autoProvisionResource } from '../../util/integration/auto-provision-res
 import { fetchIntegrationWithTelemetry } from '../../util/integration/fetch-integration';
 import { fetchInstallations } from '../../util/integration/fetch-installations';
 import { promptForTermAcceptance } from '../../util/integration/prompt-for-terms';
+import { acceptTermsViaBrowser } from '../../util/integration/accept-terms-via-browser';
 import { selectProduct } from '../../util/integration/select-product';
 import type {
   AcceptedPolicies,
@@ -131,11 +132,25 @@ export async function addAutoProvision(
 
   let acceptedPolicies: AcceptedPolicies = {};
   if (!teamInstallation) {
-    const policies = await promptForTermAcceptance(client, integration);
-    if (!policies) {
-      return 1;
+    if (client.isAgent || !client.stdin.isTTY) {
+      // Browser-based terms acceptance for agents and non-TTY environments
+      const result = await acceptTermsViaBrowser(
+        client,
+        team.id,
+        integration
+      );
+      if (!result) {
+        return 1;
+      }
+      // Installation was created by the browser — the auto-provision API
+      // will see the existing installation and skip term acceptance.
+    } else {
+      const policies = await promptForTermAcceptance(client, integration);
+      if (!policies) {
+        return 1;
+      }
+      acceptedPolicies = policies;
     }
-    acceptedPolicies = policies;
   }
 
   // 4. Validate metadata flags (if provided) BEFORE prompting for resource name
