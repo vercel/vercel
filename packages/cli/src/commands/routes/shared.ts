@@ -7,7 +7,12 @@ import { getLinkedProject } from '../../util/projects/link';
 import { getCommandName } from '../../util/pkg-name';
 import output from '../../output-manager';
 import type { Command } from '../help';
-import type { RoutePosition, RouteVersion } from '../../util/routes/types';
+import type {
+  RoutingRule,
+  RouteType,
+  RoutePosition,
+  RouteVersion,
+} from '../../util/routes/types';
 
 export interface ParsedSubcommand {
   args: string[];
@@ -63,6 +68,18 @@ export async function confirmAction(
   }
 
   return await client.input.confirm(message, false);
+}
+
+export function validateRequiredArgs(
+  args: string[],
+  required: string[]
+): string | null {
+  for (let i = 0; i < required.length; i++) {
+    if (!args[i]) {
+      return `Missing required argument: ${required[i]}`;
+    }
+  }
+  return null;
 }
 
 /**
@@ -224,4 +241,94 @@ export async function offerAutoPromote(
       `There are other staged changes. Review with ${chalk.cyan(getCommandName('routes list --staging'))} before promoting.`
     );
   }
+}
+
+/**
+ * Print a summary of route changes for diff display.
+ */
+export function printDiffSummary(routes: RoutingRule[], maxDisplay = 10): void {
+  const displayRoutes = routes.slice(0, maxDisplay);
+
+  for (const route of displayRoutes) {
+    const symbol = getDiffSymbol(route);
+    const label = getDiffLabel(route);
+    const routeType = getRouteTypeDisplayLabel(route);
+
+    output.print(
+      `  ${symbol} ${route.name}${routeType ? ` ${chalk.gray(`(${routeType})`)}` : ''} ${chalk.gray(`- ${label}`)}\n`
+    );
+  }
+
+  if (routes.length > maxDisplay) {
+    output.print(
+      chalk.gray(`\n  ... and ${routes.length - maxDisplay} more changes\n`)
+    );
+  }
+}
+
+export function getDiffSymbol(route: RoutingRule): string {
+  if (route.action === '+') return chalk.green('+');
+  if (route.action === '-') return chalk.red('-');
+  return chalk.yellow('~');
+}
+
+export function getDiffLabel(route: RoutingRule): string {
+  if (route.action === '+') return 'Added';
+  if (route.action === '-') return 'Deleted';
+
+  const isReordered =
+    route.previousIndex !== undefined && route.newIndex !== undefined;
+
+  if (isReordered) {
+    return `Reordered (${route.previousIndex! + 1} → ${route.newIndex! + 1})`;
+  }
+
+  if (route.previousEnabled !== undefined) {
+    return route.enabled === false ? 'Disabled' : 'Enabled';
+  }
+
+  return 'Modified';
+}
+
+export function getRouteTypeDisplayLabel(route: RoutingRule): string | null {
+  if (!route.routeType) return null;
+
+  const typeLabels: Record<RouteType, string> = {
+    rewrite: 'Rewrite',
+    redirect: 'Redirect',
+    set_status: 'Set Status',
+    transform: 'Transform',
+  };
+
+  return typeLabels[route.routeType] ?? null;
+}
+
+/**
+ * Find a version by ID, supporting partial ID matching.
+ */
+export function findVersionById(
+  versions: RouteVersion[],
+  identifier: string
+):
+  | { version: RouteVersion; error?: undefined }
+  | { version?: undefined; error: string } {
+  const matchingVersions = versions.filter(v => v.id.startsWith(identifier));
+
+  if (matchingVersions.length === 0) {
+    return {
+      error: `Version "${identifier}" not found. Run ${chalk.cyan(
+        getCommandName('routes list-versions')
+      )} to see available versions.`,
+    };
+  }
+
+  if (matchingVersions.length > 1) {
+    return {
+      error: `Multiple versions match "${identifier}". Please provide a more specific ID:\n${matchingVersions
+        .map(v => `  ${v.id}`)
+        .join('\n')}`,
+    };
+  }
+
+  return { version: matchingVersions[0] };
 }

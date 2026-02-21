@@ -56,7 +56,6 @@ export function useRoutes(count: number = 3) {
     // Filter by type if provided
     if (filter) {
       routes = routes.filter(r => {
-        if (filter === 'header') return r.route.headers;
         if (filter === 'redirect')
           return (
             r.route.status && [301, 302, 307, 308].includes(r.route.status)
@@ -279,6 +278,184 @@ export function usePromoteRouteVersion() {
   );
 }
 
+export function useUpdateRouteVersion(options?: {
+  versions?: Array<{
+    id: string;
+    isLive?: boolean;
+    isStaging?: boolean;
+    ruleCount?: number;
+  }>;
+}) {
+  // Default versions: staging, live, and one previous
+  const defaultVersions = [
+    {
+      id: 'staging-version',
+      isStaging: true,
+      isLive: false,
+      ruleCount: 5,
+    },
+    {
+      id: 'live-version',
+      isStaging: false,
+      isLive: true,
+      ruleCount: 3,
+    },
+    {
+      id: 'previous-version',
+      isStaging: false,
+      isLive: false,
+      ruleCount: 2,
+    },
+  ];
+
+  const versions = (options?.versions ?? defaultVersions).map((v, i) => ({
+    id: v.id,
+    lastModified: Date.now() - i * 60000,
+    createdBy: 'user@example.com',
+    isStaging: v.isStaging ?? false,
+    isLive: v.isLive ?? false,
+    ruleCount: v.ruleCount ?? 5,
+    alias: v.isStaging ? 'test-routes-staging.vercel.app' : undefined,
+  }));
+
+  // Mock get versions
+  client.scenario.get(
+    '/v1/projects/:projectId/routes/versions',
+    (_req, res) => {
+      res.json({ versions });
+    }
+  );
+
+  // Mock update version (promote/restore/discard)
+  client.scenario.post(
+    '/v1/projects/:projectId/routes/versions',
+    (req, res) => {
+      const body = req.body as { id: string; action: string };
+
+      const version = versions.find(v => v.id === body.id);
+      if (!version) {
+        res.status(404).json({ error: { message: 'Version not found' } });
+        return;
+      }
+
+      if (body.action === 'promote') {
+        if (version.isLive) {
+          res
+            .status(400)
+            .json({ error: { message: 'Version is already live' } });
+          return;
+        }
+        if (!version.isStaging) {
+          res.status(400).json({
+            error: { message: 'Only staging versions can be promoted' },
+          });
+          return;
+        }
+      }
+
+      if (body.action === 'restore') {
+        if (version.isLive) {
+          res.status(400).json({
+            error: { message: 'Cannot restore the live version' },
+          });
+          return;
+        }
+        if (version.isStaging) {
+          res.status(400).json({
+            error: { message: 'Cannot restore a staging version' },
+          });
+          return;
+        }
+      }
+
+      if (body.action === 'discard') {
+        if (!version.isStaging) {
+          res.status(400).json({
+            error: { message: 'Only staging versions can be discarded' },
+          });
+          return;
+        }
+      }
+
+      res.json({
+        version: {
+          id: version.id,
+          lastModified: Date.now(),
+          createdBy: version.createdBy,
+          isLive: body.action === 'promote' || body.action === 'restore',
+          isStaging: false,
+          ruleCount: version.ruleCount,
+        },
+      });
+    }
+  );
+}
+
+export function useRoutesWithDiffForPublish() {
+  // Routes with diff info including reorder
+  client.scenario.get('/v1/projects/:projectId/routes', (req, res) => {
+    const diff = req.query.diff === 'true';
+
+    const routes = [
+      {
+        ...createRoute(0),
+        name: 'Added route',
+        action: diff ? ('+' as const) : undefined,
+        routeType: 'rewrite' as const,
+      },
+      {
+        ...createRoute(1),
+        name: 'Deleted route',
+        action: diff ? ('-' as const) : undefined,
+        routeType: 'redirect' as const,
+      },
+      {
+        ...createRoute(2),
+        name: 'Modified route',
+        action: diff ? ('~' as const) : undefined,
+        routeType: 'transform' as const,
+      },
+      {
+        ...createRoute(3),
+        name: 'Reordered route',
+        action: diff ? ('~' as const) : undefined,
+        previousIndex: diff ? 5 : undefined,
+        newIndex: diff ? 3 : undefined,
+        routeType: 'transform' as const,
+      },
+      {
+        ...createRoute(4),
+        name: 'Enabled route',
+        enabled: true,
+        action: diff ? ('~' as const) : undefined,
+        previousEnabled: diff ? false : undefined,
+        routeType: 'rewrite' as const,
+      },
+      {
+        ...createRoute(5),
+        name: 'Disabled route',
+        enabled: false,
+        action: diff ? ('~' as const) : undefined,
+        previousEnabled: diff ? true : undefined,
+        routeType: 'redirect' as const,
+      },
+      { ...createRoute(6), name: 'Unchanged route', action: undefined },
+    ];
+
+    res.json({
+      routes,
+      version: {
+        id: 'staging-version',
+        lastModified: Date.now(),
+        createdBy: 'user@example.com',
+        isStaging: true,
+        ruleCount: routes.length,
+        alias: 'test-routes-staging.vercel.app',
+      },
+    });
+  });
+}
+
 export function useRoutesForInspect() {
   const detailedRoutes = [
     {
@@ -293,7 +470,7 @@ export function useRoutesForInspect() {
         dest: '/new-page',
         status: 308,
       },
-      routeTypes: ['redirect'],
+      routeType: 'redirect',
     },
     {
       id: 'route-header-456',
@@ -310,7 +487,7 @@ export function useRoutesForInspect() {
         },
         continue: true,
       },
-      routeTypes: ['header'],
+      routeType: 'transform',
     },
     {
       id: 'route-condition-789',
@@ -325,7 +502,7 @@ export function useRoutesForInspect() {
         missing: [{ type: 'cookie', key: 'auth' }],
         has: [{ type: 'header', key: 'Accept', value: 'text/html' }],
       },
-      routeTypes: ['rewrite'],
+      routeType: 'rewrite',
     },
     {
       id: 'route-transform-101',
@@ -357,7 +534,7 @@ export function useRoutesForInspect() {
           },
         ],
       },
-      routeTypes: ['rewrite', 'transform'],
+      routeType: 'rewrite',
     },
   ];
 
@@ -411,7 +588,7 @@ export function useRoutesForInspectDiff() {
           { type: 'query', key: 'version', value: '2' },
         ],
       },
-      routeTypes: ['rewrite', 'header'],
+      routeType: 'rewrite',
     },
     {
       id: 'route-diff-new',
@@ -423,7 +600,7 @@ export function useRoutesForInspectDiff() {
         src: '/new-page',
         dest: '/new-handler',
       },
-      routeTypes: ['rewrite'],
+      routeType: 'rewrite',
     },
   ];
 
@@ -444,7 +621,7 @@ export function useRoutesForInspectDiff() {
         },
         has: [{ type: 'header', key: 'Authorization' }],
       },
-      routeTypes: ['rewrite', 'header'],
+      routeType: 'rewrite',
     },
   ];
 
