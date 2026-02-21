@@ -51,7 +51,10 @@ export async function printAddDynamicHelp(
           formatMetadataSchemaHelp(
             product.metadataSchema,
             integrationSlug,
-            metadataProductSlug
+            metadataProductSlug,
+            {
+              autoRegion: process.env.FF_AUTO_PROVISION_INSTALL === '1',
+            }
           )
         );
       }

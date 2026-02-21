@@ -84,15 +84,31 @@ function generateExample(
 }
 
 /**
+ * Whether a field uses a vercel-region control that is auto-detected
+ * by the auto-provision API endpoint.
+ */
+export function isAutoDetectedRegion(prop: MetadataSchemaProperty): boolean {
+  const control = prop['ui:control'];
+  return control === 'vercel-region' || control === 'multi-vercel-region';
+}
+
+export interface FormatMetadataSchemaHelpOptions {
+  /** When true, vercel-region fields show "(auto-detected)" instead of "(required)" */
+  autoRegion?: boolean;
+}
+
+/**
  * Format metadata schema as help text for CLI display
  * @param schema The metadata schema to format
  * @param integrationName The integration slug/name
  * @param productSlug Optional product slug (for multi-product integrations, shown as integration/product)
+ * @param options Optional formatting options
  */
 export function formatMetadataSchemaHelp(
   schema: MetadataSchema,
   integrationName: string,
-  productSlug?: string
+  productSlug?: string,
+  options?: FormatMetadataSchemaHelpOptions
 ): string {
   const lines: string[] = [];
   lines.push('');
@@ -117,7 +133,13 @@ export function formatMetadataSchemaHelp(
     }
 
     const isRequired = required.has(key);
-    const requiredSuffix = isRequired ? chalk.red(' (required)') : '';
+    const isRegionAuto =
+      isRequired && options?.autoRegion && isAutoDetectedRegion(prop);
+    const requiredSuffix = isRequired
+      ? isRegionAuto
+        ? chalk.dim(' (auto-detected)')
+        : chalk.red(' (required)')
+      : '';
 
     const typeHint =
       prop.type === 'boolean'
