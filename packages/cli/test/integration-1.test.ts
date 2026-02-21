@@ -1,7 +1,7 @@
 import path from 'path';
 import { execCli } from './helpers/exec';
 import fetch from 'node-fetch';
-import { apiFetch } from './helpers/api-fetch';
+import { apiFetch, deleteProject } from './helpers/api-fetch';
 import fs from 'fs-extra';
 import sleep from '../src/util/sleep';
 import waitForPrompt from './helpers/wait-for-prompt';
@@ -375,25 +375,29 @@ test('deploy from a nested directory', async () => {
     },
   });
 
-  await waitForPrompt(vc, /Set up and deploy[^?]+\?/);
-  vc.stdin?.write('yes\n');
+  try {
+    await waitForPrompt(vc, /Set up and deploy[^?]+\?/);
+    vc.stdin?.write('yes\n');
 
-  await waitForPrompt(vc, 'Which scope should contain your project?');
-  vc.stdin?.write('\n');
+    await waitForPrompt(vc, 'Which scope should contain your project?');
+    vc.stdin?.write('\n');
 
-  await waitForPrompt(vc, 'Link to existing project?');
-  vc.stdin?.write('no\n');
+    await waitForPrompt(vc, 'Link to existing project?');
+    vc.stdin?.write('no\n');
 
-  await waitForPrompt(vc, `What’s your project’s name? (${projectName})`);
-  vc.stdin?.write(`\n`);
+    await waitForPrompt(vc, `What's your project's name? (${projectName})`);
+    vc.stdin?.write(`\n`);
 
-  await waitForPrompt(vc, 'In which directory is your code located?');
-  vc.stdin?.write('app\n');
+    await waitForPrompt(vc, 'In which directory is your code located?');
+    vc.stdin?.write('app\n');
 
-  // This means the framework detection worked!
-  await waitForPrompt(vc, 'Auto-detected Project Settings for Next.js');
+    // This means the framework detection worked!
+    await waitForPrompt(vc, 'Auto-detected Project Settings for Next.js');
 
-  vc.kill();
+    vc.kill();
+  } finally {
+    await deleteProject(projectName);
+  }
 });
 
 test('deploy from a nested directory with `--archive=tgz` option', async () => {
@@ -413,25 +417,29 @@ test('deploy from a nested directory with `--archive=tgz` option', async () => {
     }
   );
 
-  await waitForPrompt(vc, /Set up and deploy[^?]+\?/);
-  vc.stdin?.write('yes\n');
+  try {
+    await waitForPrompt(vc, /Set up and deploy[^?]+\?/);
+    vc.stdin?.write('yes\n');
 
-  await waitForPrompt(vc, 'Which scope should contain your project?');
-  vc.stdin?.write('\n');
+    await waitForPrompt(vc, 'Which scope should contain your project?');
+    vc.stdin?.write('\n');
 
-  await waitForPrompt(vc, 'Link to existing project?');
-  vc.stdin?.write('no\n');
+    await waitForPrompt(vc, 'Link to existing project?');
+    vc.stdin?.write('no\n');
 
-  await waitForPrompt(vc, `What’s your project’s name? (${projectName})`);
-  vc.stdin?.write(`\n`);
+    await waitForPrompt(vc, `What's your project's name? (${projectName})`);
+    vc.stdin?.write(`\n`);
 
-  await waitForPrompt(vc, 'In which directory is your code located?');
-  vc.stdin?.write('app\n');
+    await waitForPrompt(vc, 'In which directory is your code located?');
+    vc.stdin?.write('app\n');
 
-  // This means the framework detection worked!
-  await waitForPrompt(vc, 'Auto-detected Project Settings for Next.js');
+    // This means the framework detection worked!
+    await waitForPrompt(vc, 'Auto-detected Project Settings for Next.js');
 
-  vc.kill();
+    vc.kill();
+  } finally {
+    await deleteProject(projectName);
+  }
 });
 
 test('deploy using --local-config flag above target', async () => {
