@@ -61,6 +61,7 @@ export async function disconnect(client: Client) {
     output.error('Team not found.');
     return 1;
   }
+  client.config.currentTeam = team.id;
 
   const isMissingResourceOrIntegration = parsedArguments.args.length < 2;
   if (isMissingResourceOrIntegration) {
@@ -97,7 +98,7 @@ export async function disconnect(client: Client) {
   telemetry.trackCliFlagAll(shouldDisconnectAll);
 
   output.spinner('Retrieving resource…', 500);
-  const resources = await getResources(client, team.id);
+  const resources = await getResources(client);
   const targetedResource = resources.find(
     resource => resource.name === resourceName
   );

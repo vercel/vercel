@@ -74,6 +74,7 @@ export async function list(client: Client) {
     output.error('Team not found.');
     return 1;
   }
+  client.config.currentTeam = team.id;
 
   if (!project && !parsedArguments.flags['--all']) {
     project = await getLinkedProject(client).then(result => {
@@ -94,7 +95,7 @@ export async function list(client: Client) {
 
   try {
     output.spinner('Retrieving resources…', 500);
-    resources = await getResources(client, team.id);
+    resources = await getResources(client);
   } catch (error) {
     output.error(`Failed to fetch resources: ${(error as Error).message}`);
     return 1;

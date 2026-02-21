@@ -130,6 +130,7 @@ export async function add(
     output.error('Team not found');
     return 1;
   }
+  client.config.currentTeam = team.id;
 
   const integration = await fetchIntegrationWithTelemetry(
     client,
