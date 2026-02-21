@@ -16,6 +16,7 @@ export interface PostProvisionOptions {
   noConnect?: boolean;
   noEnvPull?: boolean;
   environments?: string[];
+  prefix?: string;
 }
 
 /**
@@ -85,7 +86,8 @@ export async function postProvisionSetup(
       client,
       project.id,
       resourceId,
-      environments
+      environments,
+      { envVarPrefix: options.prefix }
     );
   } catch (error) {
     output.stopSpinner();

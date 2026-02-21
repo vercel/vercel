@@ -62,6 +62,15 @@ export const addSubcommand = {
       description:
         'Environment to connect (can be repeated: production, preview, development). Defaults to all.',
     },
+    {
+      name: 'prefix',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      argument: 'PREFIX',
+      description:
+        'Prefix for environment variable names (e.g., --prefix NEON2_ creates NEON2_DATABASE_URL instead of DATABASE_URL)',
+    },
   ],
   examples: [
     {
@@ -115,6 +124,10 @@ export const addSubcommand = {
     {
       name: 'Install without pulling environment variables',
       value: `${packageName} integration add acme --no-env-pull`,
+    },
+    {
+      name: 'Install with a prefix for environment variable names',
+      value: `${packageName} integration add acme --prefix NEON2_`,
     },
     {
       name: 'Show available products for an integration',

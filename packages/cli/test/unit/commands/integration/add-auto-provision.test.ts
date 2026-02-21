@@ -1480,7 +1480,9 @@ describe('integration add (auto-provision)', () => {
         client,
         'vercel-integration-add',
         'resource_123',
-        ['production']
+        ['production'],
+        undefined,
+        undefined
       );
     });
 
@@ -1513,7 +1515,9 @@ describe('integration add (auto-provision)', () => {
         client,
         'vercel-integration-add',
         'resource_123',
-        ['production', 'preview']
+        ['production', 'preview'],
+        undefined,
+        undefined
       );
     });
 
@@ -1546,7 +1550,9 @@ describe('integration add (auto-provision)', () => {
         client,
         'vercel-integration-add',
         'resource_123',
-        ['production']
+        ['production'],
+        undefined,
+        undefined
       );
     });
 
@@ -1571,7 +1577,9 @@ describe('integration add (auto-provision)', () => {
         client,
         'vercel-integration-add',
         'resource_123',
-        ['production', 'preview', 'development']
+        ['production', 'preview', 'development'],
+        undefined,
+        undefined
       );
     });
 
@@ -1596,7 +1604,9 @@ describe('integration add (auto-provision)', () => {
         client,
         'vercel-integration-add',
         'resource_123',
-        ['development']
+        ['development'],
+        undefined,
+        undefined
       );
     });
 
@@ -1623,6 +1633,125 @@ describe('integration add (auto-provision)', () => {
       expect(exitCode).toEqual(1);
       await expect(client.stderr).toOutput(
         'Error: Invalid environment value: "staging", "test". Must be one of: production, preview, development'
+      );
+    });
+  });
+
+  describe('--prefix flag', () => {
+    beforeEach(() => {
+      useAutoProvision({ responseKey: 'provisioned' });
+    });
+
+    it('should pass prefix to connectResourceToProject', async () => {
+      useProject({
+        ...defaultProject,
+        id: 'vercel-integration-add',
+        name: 'vercel-integration-add',
+      });
+      const cwd = setupUnitFixture('vercel-integration-add');
+      client.cwd = cwd;
+      client.setArgv('integration', 'add', 'acme', '--prefix', 'NEON2_');
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'Acme Product successfully provisioned: acme-gray-apple'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+      expect(connectMock).toHaveBeenCalledWith(
+        client,
+        'vercel-integration-add',
+        'resource_123',
+        ['production', 'preview', 'development'],
+        { envVarPrefix: 'NEON2_' }
+      );
+    });
+
+    it('should not pass prefix to connectResourceToProject when not provided', async () => {
+      useProject({
+        ...defaultProject,
+        id: 'vercel-integration-add',
+        name: 'vercel-integration-add',
+      });
+      const cwd = setupUnitFixture('vercel-integration-add');
+      client.cwd = cwd;
+      client.setArgv('integration', 'add', 'acme');
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'Acme Product successfully provisioned: acme-gray-apple'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+      expect(connectMock).toHaveBeenCalledWith(
+        client,
+        'vercel-integration-add',
+        'resource_123',
+        ['production', 'preview', 'development'],
+        { envVarPrefix: undefined }
+      );
+    });
+
+    it('should track prefix telemetry when --prefix is used', async () => {
+      client.setArgv('integration', 'add', 'acme', '--prefix', 'NEON2_');
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'Acme Product successfully provisioned'
+      );
+
+      await exitCodePromise;
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'subcommand:add',
+          value: 'add',
+        },
+        {
+          key: 'option:prefix',
+          value: '[REDACTED]',
+        },
+        {
+          key: 'argument:integration',
+          value: 'acme',
+        },
+      ]);
+    });
+
+    it('should work with --prefix and --environment together', async () => {
+      useProject({
+        ...defaultProject,
+        id: 'vercel-integration-add',
+        name: 'vercel-integration-add',
+      });
+      const cwd = setupUnitFixture('vercel-integration-add');
+      client.cwd = cwd;
+      client.setArgv(
+        'integration',
+        'add',
+        'acme',
+        '--prefix',
+        'NEON2_',
+        '--environment',
+        'production'
+      );
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'Acme Product successfully provisioned: acme-gray-apple'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+      expect(connectMock).toHaveBeenCalledWith(
+        client,
+        'vercel-integration-add',
+        'resource_123',
+        ['production'],
+        undefined,
+        'NEON2_'
       );
     });
   });

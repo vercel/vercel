@@ -48,6 +48,7 @@ export async function addAutoProvision(
   telemetry.trackCliFlagNoEnvPull(options.noEnvPull);
   telemetry.trackCliOptionPlan(options.billingPlanId);
   telemetry.trackCliOptionEnvironment(options.environments);
+  telemetry.trackCliOptionPrefix(options.prefix);
 
   // 1. Get team context
   const { contextName, team } = await getScope(client);
@@ -155,7 +156,6 @@ export async function addAutoProvision(
       }
       return 1;
     }
-    // Validate all required fields are present
     if (!validateAndPrintRequiredMetadata(parsed, product.metadataSchema)) {
       return 1;
     }
