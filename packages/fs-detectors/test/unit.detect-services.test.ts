@@ -723,6 +723,30 @@ describe('detectServices', () => {
       expect(result.errors).toEqual([]);
     });
 
+    it('should generate internal cron callback routes', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            cleanup: {
+              type: 'cron',
+              entrypoint: 'cron/cleanup.ts',
+              schedule: '0 0 * * *',
+            },
+          },
+        }),
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      expect(result.services).toHaveLength(1);
+      expect(result.routes.crons).toHaveLength(1);
+      expect(result.routes.crons[0]).toEqual({
+        src: '^/_svc/cleanup/crons/cron/cleanup/cron$',
+        dest: '/_svc/cleanup/index',
+        check: true,
+      });
+    });
+
     it('should return error for cron without schedule', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': JSON.stringify({

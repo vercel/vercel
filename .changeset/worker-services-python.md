@@ -4,4 +4,4 @@
 'vercel': patch
 ---
 
-Add background worker service support for Python (Dramatiq/Celery) and propagate vercel headers context to worker handlers.
+Add background worker and cron service support for Python, including auto-bootstrap of cron entrypoints and internal services cron routing.

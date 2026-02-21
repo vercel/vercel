@@ -63,6 +63,15 @@ export function getInternalServiceWorkerPath(
   return `${getInternalServiceWorkerPathPrefix(serviceName)}/${normalizedEntrypoint}/${handler}`;
 }
 
+export function getInternalServiceCronPath(
+  serviceName: string,
+  entrypoint: string,
+  handler = 'cron'
+): string {
+  const normalizedEntrypoint = normalizeInternalServiceEntrypoint(entrypoint);
+  return `${getInternalServiceCronPathPrefix(serviceName)}/${normalizedEntrypoint}/${handler}`;
+}
+
 export function getBuilderForRuntime(runtime: ServiceRuntime): string {
   const builder = RUNTIME_BUILDERS[runtime];
   if (!builder) {

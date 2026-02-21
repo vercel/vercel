@@ -72,6 +72,7 @@ async def _run_runtime(
     entrypoint_rel: str,
     module_name: str,
     ipc_socket_path: str,
+    extra_env: dict[str, str] | None = None,
 ) -> AsyncIterator[asyncio.subprocess.Process]:
     env = {
         **_base_env(),
@@ -80,6 +81,8 @@ async def _run_runtime(
         "__VC_HANDLER_MODULE_NAME": module_name,
         "VERCEL_IPC_PATH": ipc_socket_path,
     }
+    if extra_env:
+        env.update(extra_env)
     cmd = [sys.executable]
     if _coverage_active():
         cmd.append(str(_COV_WRAPPER))
@@ -468,6 +471,73 @@ class TestASGIApp(_RuntimeTestCase):
             self.assertIn(b"200", data)
 
 
+class TestCronService(_RuntimeTestCase):
+    """Tests for cron service bootstrap behavior."""
+
+    async def test_cron_secret_is_enforced_by_wrapper(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "cron_dunder_main.py", self.tmp_path
+        )
+        marker_path = self.tmp_path / "cron-auth.marker"
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+            extra_env={
+                "VERCEL_SERVICE_TYPE": "cron",
+                "CRON_SECRET": "super-secret",
+                "CRON_MARKER_FILE": str(marker_path),
+            },
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            resp = await _http_get(port, "/run")
+            self.assertEqual(resp.status, 401)
+            self.assertEqual(resp.read().decode(), '{"error":"unauthorized"}')
+
+            resp = await _http_get(
+                port,
+                "/run",
+                headers={"authorization": "Bearer super-secret"},
+            )
+            self.assertEqual(resp.status, 200)
+            self.assertEqual(resp.read().decode(), '{"ok":true}')
+            self.assertTrue(marker_path.exists())
+            self.assertEqual(marker_path.read_text(), "ran")
+
+    async def test_bootstraps_dunder_main_entrypoint_for_cron_service(
+        self,
+    ) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "cron_dunder_main.py", self.tmp_path
+        )
+        marker_path = self.tmp_path / "cron-dunder-main.marker"
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+            extra_env={
+                "VERCEL_SERVICE_TYPE": "cron",
+                "CRON_MARKER_FILE": str(marker_path),
+            },
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            resp = await _http_get(port, "/run")
+            self.assertEqual(resp.status, 200)
+            self.assertEqual(resp.read().decode(), '{"ok":true}')
+            self.assertTrue(marker_path.exists())
+            self.assertEqual(marker_path.read_text(), "ran")
+
+
 class TestLogging(_RuntimeTestCase):
     """Tests for IPC log message forwarding."""
 
@@ -549,6 +619,23 @@ class TestErrorPaths(_RuntimeTestCase):
             async with asyncio.timeout(10.0):
                 returncode = await proc.wait()
             self.assertEqual(returncode, 1)
+
+    async def test_missing_cron_entrypoint_exits(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "missing_export.py", self.tmp_path
+        )
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+            extra_env={"VERCEL_SERVICE_TYPE": "cron"},
+        ) as proc:
+            async with asyncio.timeout(10.0):
+                returncode = await proc.wait()
+            self.assertEqual(returncode, 1)
+            stderr = await _read_stderr(proc)
+            self.assertIn("Error bootstrapping cron service app:", stderr)
 
     async def test_bad_handler_subclass_exits(
         self,
