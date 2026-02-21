@@ -38,6 +38,8 @@ export function errorHandler(error: Error, extras?: { [key: string]: any }) {
       scope.setTag('service', serviceName);
       scope.setTag('function_name', assertEnv('AWS_LAMBDA_FUNCTION_NAME'));
 
+      // NOTE: `extras` is optional. If it is `undefined`, then `Object.entries(extras)` will throw,
+      // which can mask the original error we are trying to report.
       for (const [k, v] of Object.entries(extras)) {
         scope.setExtra(k, v);
       }

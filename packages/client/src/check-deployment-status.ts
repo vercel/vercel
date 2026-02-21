@@ -124,6 +124,9 @@ export async function* checkDeploymentStatus(
 
       break;
     }
+    // NOTE: Our `fetch()` helper in `./utils` sets `accept: application/json`, but it does not
+    // guarantee the response is valid JSON (e.g. proxies, 502/503 HTML bodies, auth gateways).
+    // In those cases `response.json()` will throw, so callers should be aware of this failure mode.
     const deploymentUpdate = await deploymentResponse.json();
 
     if (deploymentUpdate.error) {
