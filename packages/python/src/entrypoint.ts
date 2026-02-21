@@ -143,25 +143,38 @@ export async function detectDjangoPythonEntrypoint(
       }
     }
 
-    // Look for an entrypoint via manage.py -> settings.py -> WSGI_APPLICATION
-    const wsgiEntry = await getDjangoEntrypoint(workPath);
-    if (wsgiEntry && fsFiles[wsgiEntry]) {
-      debug(`Using Django WSGI entrypoint: ${wsgiEntry}`);
-      return wsgiEntry;
-    }
-
-    // Fall back to AST-based detection
+    // Get root directories
     const rootGlobs = await glob('*', {
       cwd: workPath,
       includeDirectories: true,
     });
-    const dirs = Object.keys(rootGlobs).filter(
-      name =>
-        !name.startsWith('.') &&
-        rootGlobs[name].mode != null &&
-        isDirectory(rootGlobs[name].mode)
-    );
-    const baseCandidates = getCandidateEntrypointsInDirs(dirs);
+    const rootDirs = [
+      '',
+      ...Object.keys(rootGlobs).filter(
+        name =>
+          !name.startsWith('.') &&
+          rootGlobs[name].mode != null &&
+          isDirectory(rootGlobs[name].mode)
+      ),
+    ];
+
+    // Look for an entrypoint via manage.py -> settings.py -> WSGI_APPLICATION:
+    // Try workPath and immediate subdirectories.
+    for (const rootDir of ['', ...rootDirs]) {
+      const currPath = join(workPath, rootDir);
+      const wsgiEntry = await getDjangoEntrypoint(currPath);
+      if (wsgiEntry) {
+        const fullWsgiEntry = pathPosix.join(rootDir, wsgiEntry);
+        if (fsFiles[fullWsgiEntry]) {
+          debug(`Using Django WSGI entrypoint: ${fullWsgiEntry}`);
+          return fullWsgiEntry;
+        }
+      }
+    }
+
+    // Fall back to AST-based detection,
+    // Look in all immediate subdirectories, not just those specified in PYTHON_ENTRYPOINT_DIRS.
+    const baseCandidates = getCandidateEntrypointsInDirs(rootDirs);
     const candidates = baseCandidates.filter((c: string) => !!fsFiles[c]);
     return findValidEntrypoint(fsFiles, candidates);
   } catch {
