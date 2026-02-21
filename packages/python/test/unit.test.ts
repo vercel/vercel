@@ -47,6 +47,7 @@ import { build } from '../src/index';
 import { createVenvEnv, getVenvBinDir } from '../src/utils';
 import { UV_PYTHON_DOWNLOADS_MODE, getProtectedUvEnv } from '../src/uv';
 import { createPyprojectToml } from '../src/install';
+import { detectDjangoPythonEntrypoint } from '../src/entrypoint';
 import { FileBlob } from '@vercel/build-utils';
 let warningMessages: string[];
 const originalConsoleWarn = console.warn;
@@ -1109,6 +1110,148 @@ describe('fastapi entrypoint discovery - positive cases', () => {
     expect(content.includes('os.path.join(_here, "index.py")')).toBe(true);
 
     fs.removeSync(workPath);
+  });
+});
+
+describe('Django entrypoint discovery', () => {
+  async function writeFiles(
+    workPath: string,
+    files: Record<string, string>
+  ): Promise<void> {
+    for (const [rel, content] of Object.entries(files)) {
+      const full = path.join(workPath, rel);
+      fs.mkdirSync(path.dirname(full), { recursive: true });
+      fs.writeFileSync(full, content);
+    }
+  }
+
+  it('uses configured entrypoint when it exists and is valid', async () => {
+    const workPath = path.join(
+      tmpdir(),
+      `python-django-configured-${Date.now()}`
+    );
+    fs.mkdirSync(workPath, { recursive: true });
+
+    await writeFiles(workPath, {
+      'hello/world.py': `application = lambda env, start: None`,
+    });
+
+    const result = await detectDjangoPythonEntrypoint(
+      workPath,
+      'hello/world.py'
+    );
+    expect(result).toBe('hello/world.py');
+
+    if (fs.existsSync(workPath)) fs.removeSync(workPath);
+  });
+
+  it('resolves Django entrypoint from WSGI_APPLICATION (hello.wsgi.application -> hello/wsgi.py)', async () => {
+    const workPath = path.join(tmpdir(), `python-django-wsgi-${Date.now()}`);
+    fs.mkdirSync(workPath, { recursive: true });
+
+    await writeFiles(workPath, {
+      'manage.py': `os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'hello.settings')`,
+      'hello/settings.py': `WSGI_APPLICATION = 'hello.wsgi.application'`,
+      'hello/wsgi.py': `application = lambda env, start: None`,
+    });
+
+    const result = await detectDjangoPythonEntrypoint(workPath, 'missing.py');
+    expect(result).toBe('hello/wsgi.py');
+
+    if (fs.existsSync(workPath)) fs.removeSync(workPath);
+  });
+
+  it('falls back to candidate when manage.py is missing', async () => {
+    const workPath = path.join(
+      tmpdir(),
+      `python-django-fallback-${Date.now()}`
+    );
+    fs.mkdirSync(workPath, { recursive: true });
+
+    await writeFiles(workPath, {
+      'src/app.py': `application = lambda env, start: None`,
+    });
+
+    const result = await detectDjangoPythonEntrypoint(workPath, 'missing.py');
+    expect(result).toBe('src/app.py');
+
+    if (fs.existsSync(workPath)) fs.removeSync(workPath);
+  });
+
+  it('falls back to candidate when WSGI path is not on filesystem', async () => {
+    const workPath = path.join(
+      tmpdir(),
+      `python-django-wsgi-missing-${Date.now()}`
+    );
+    fs.mkdirSync(workPath, { recursive: true });
+
+    await writeFiles(workPath, {
+      'manage.py': `os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'hello.settings')`,
+      'hello/settings.py': `WSGI_APPLICATION = 'hello.wsgi.application'`,
+      'src/app.py': `application = lambda env, start: None`,
+    });
+    // WSGI_APPLICATION value does not refer to a valid file
+
+    const result = await detectDjangoPythonEntrypoint(workPath, 'missing.py');
+    expect(result).toBe('src/app.py');
+
+    if (fs.existsSync(workPath)) fs.removeSync(workPath);
+  });
+
+  it('resolves Django entrypoint from a subdirectory', async () => {
+    const workPath = path.join(
+      tmpdir(),
+      `python-django-root-dir-${Date.now()}`
+    );
+    fs.mkdirSync(workPath, { recursive: true });
+
+    // Django app lives under root dir "mysite"; no manage.py at workPath root
+    await writeFiles(workPath, {
+      'mysite/manage.py': `os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')`,
+      'mysite/config/settings.py': `WSGI_APPLICATION = 'config.wsgi.application'`,
+      'mysite/config/wsgi.py': `application = lambda env, start: None`,
+    });
+
+    const result = await detectDjangoPythonEntrypoint(workPath, 'missing.py');
+    expect(result).toBe('mysite/config/wsgi.py');
+
+    if (fs.existsSync(workPath)) fs.removeSync(workPath);
+  });
+
+  it('build() discovers Django entrypoint from WSGI_APPLICATION when configured entrypoint is missing', async () => {
+    const workPath = path.join(tmpdir(), `python-django-build-${Date.now()}`);
+    fs.mkdirSync(workPath, { recursive: true });
+    makeMockPython('3.9');
+
+    const files = {
+      'manage.py': new FileBlob({
+        data: "os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'hello.settings')\n",
+      }),
+      'hello/settings.py': new FileBlob({
+        data: "WSGI_APPLICATION = 'hello.world.application'\n",
+      }),
+      'hello/world.py': new FileBlob({
+        data: 'application = lambda env, start: None\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath,
+      files,
+      entrypoint: 'index.py',
+      meta: { isDev: true },
+      config: { framework: 'django' },
+      repoRootPath: workPath,
+    });
+
+    const handler = result.output.files?.['vc__handler__python.py'];
+    if (!handler || !('data' in handler)) {
+      throw new Error('handler bootstrap not found');
+    }
+    const content = handler.data.toString();
+    expect(content).toContain('os.path.join(_here, "hello/world.py")');
+
+    if (fs.existsSync(workPath)) fs.removeSync(workPath);
   });
 });
 

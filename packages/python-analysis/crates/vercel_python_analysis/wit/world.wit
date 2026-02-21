@@ -4,11 +4,21 @@ package vercel:python-analysis;
 world python-analysis {
     /// Check if Python source code contains or exports:
     /// - A top-level 'app' callable (e.g., Flask, FastAPI, Sanic apps)
+    /// - A top-level 'application' callable (e.g., Django)
     /// - A top-level 'handler' class (e.g., BaseHTTPRequestHandler subclass)
     ///
     /// Returns true if found, false otherwise.
     /// Returns false for invalid Python syntax.
     export contains-app-or-handler: func(source: string) -> bool;
+
+    /// Extract the string value of a top-level constant with the given name.
+    /// Only considers simple or annotated assignments at module level whose value is a string literal.
+    export get-string-constant: func(source: string, name: string) -> option<string>;
+
+    /// Extract the default value from os.environ.setdefault('DJANGO_SETTINGS_MODULE', '...')
+    /// in Python source (e.g. manage.py). Returns the second argument (e.g. 'app.settings')
+    /// or none if not found or parse error.
+    export parse-django-settings-module: func(source: string) -> option<string>;
 
     // =========================================================================
     // Installed package distribution metadata parsing
