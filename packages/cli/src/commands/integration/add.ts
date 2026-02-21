@@ -52,6 +52,7 @@ export async function add(
   const resourceNameArg = flags['--name'];
   const metadataFlags = flags['--metadata'];
   const billingPlanId = flags['--plan'];
+  const installationId = flags['--installation-id'];
   const options: AddOptions = {
     noConnect: flags['--no-connect'],
     noEnvPull: flags['--no-env-pull'],
@@ -106,6 +107,7 @@ export async function add(
       productSlug,
       metadata: metadataFlags,
       billingPlanId,
+      installationId,
       noConnect: options.noConnect,
       noEnvPull: options.noEnvPull,
       environments: options.environments,

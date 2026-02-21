@@ -1448,6 +1448,107 @@ describe('integration add (auto-provision)', () => {
     });
   });
 
+  describe('--installation-id flag', () => {
+    it('should show error with installation list when multiple installations exist', async () => {
+      useAutoProvision({ responseKey: 'multiple_installations' });
+
+      client.setArgv('integration', 'add', 'acme');
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'Multiple installations found for "acme"'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(1);
+      const stderr = client.stderr.getFullOutput();
+      expect(stderr).toContain('icfg_marketplace_1');
+      expect(stderr).toContain('icfg_external_1');
+      expect(stderr).toContain('--installation-id');
+    });
+
+    it('should include externalId and status in the installation list', async () => {
+      useAutoProvision({ responseKey: 'multiple_installations' });
+
+      client.setArgv('integration', 'add', 'acme');
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'Multiple installations found for "acme"'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(1);
+      const stderr = client.stderr.getFullOutput();
+      expect(stderr).toContain('externalId=aws-account-123');
+      expect(stderr).toContain('status=active');
+    });
+
+    it('should provision successfully with --installation-id', async () => {
+      const { requestBodies } = useAutoProvision({
+        responseKey: 'multiple_installations',
+      });
+
+      client.setArgv(
+        'integration',
+        'add',
+        'acme',
+        '--installation-id',
+        'icfg_marketplace_1'
+      );
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'Acme Product successfully provisioned: acme-gray-apple'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+      expect(requestBodies[0]).toMatchObject({
+        installationId: 'icfg_marketplace_1',
+      });
+    });
+
+    it('should pass installationId in request body', async () => {
+      const { requestBodies } = useAutoProvision({
+        responseKey: 'provisioned',
+      });
+
+      client.setArgv(
+        'integration',
+        'add',
+        'acme',
+        '--installation-id',
+        'icfg_custom'
+      );
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'Acme Product successfully provisioned: acme-gray-apple'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+      expect(requestBodies[0]).toMatchObject({
+        installationId: 'icfg_custom',
+      });
+    });
+
+    it('should include product slug in the suggested command when using slash syntax', async () => {
+      useAutoProvision({ responseKey: 'multiple_installations' });
+
+      client.setArgv('integration', 'add', 'acme-two-products/acme-a');
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'vercel integration add acme-two-products/acme-a --installation-id'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(1);
+    });
+  });
+
   describe('--environment flag', () => {
     beforeEach(() => {
       useAutoProvision({ responseKey: 'provisioned' });

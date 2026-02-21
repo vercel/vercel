@@ -62,6 +62,15 @@ export const addSubcommand = {
       description:
         'Environment to connect (can be repeated: production, preview, development). Defaults to all.',
     },
+    {
+      name: 'installation-id',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      argument: 'ID',
+      description:
+        'Installation ID to use when multiple installations exist for the integration',
+    },
   ],
   examples: [
     {
