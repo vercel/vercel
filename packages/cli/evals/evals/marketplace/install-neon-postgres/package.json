@@ -1,0 +1,11 @@
+{
+  "name": "install-neon-postgres",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "devDependencies": {
+    "@types/node": "20.11.0",
+    "@vercel/sdk": "^1.18.0",
+    "vitest": "^2.0.0"
+  }
+}
