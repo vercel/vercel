@@ -86,6 +86,12 @@ export type RouteWithSrc = {
     cookie?: string;
   };
   /**
+   * Aliases for `src`, `dest`, `statusCode`, converted during normalization
+   */
+  source?: string;
+  destination?: string;
+  statusCode?: number;
+  /**
    * A middleware key within the `output` key under the build result.
    * Overrides a `middleware` definition.
    */
