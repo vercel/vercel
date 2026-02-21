@@ -1,5 +1,9 @@
 import output from '../../output-manager';
-import { getAllOptionValues, isHiddenOnCreate } from './format-schema-help';
+import {
+  getAllOptionValues,
+  isAutoDetectedRegion,
+  isHiddenOnCreate,
+} from './format-schema-help';
 import type { Metadata, MetadataSchema } from './types';
 
 export interface ParseMetadataResult {
@@ -145,12 +149,18 @@ export function parseMetadataFlags(
   return { metadata, errors };
 }
 
+export interface ValidateRequiredMetadataOptions {
+  /** When true, skip vercel-region fields (auto-detected by the server) */
+  skipAutoRegion?: boolean;
+}
+
 /**
  * Validate that all required metadata fields are provided.
  */
 export function validateRequiredMetadata(
   metadata: Metadata,
-  schema: MetadataSchema
+  schema: MetadataSchema,
+  options?: ValidateRequiredMetadataOptions
 ): string[] {
   const errors: string[] = [];
   const required = schema.required ?? [];
@@ -160,6 +170,15 @@ export function validateRequiredMetadata(
 
     // Skip hidden fields (they use defaults server-side)
     if (propSchema && isHiddenOnCreate(propSchema)) {
+      continue;
+    }
+
+    // Skip vercel-region fields when auto-provision handles them
+    if (
+      options?.skipAutoRegion &&
+      propSchema &&
+      isAutoDetectedRegion(propSchema)
+    ) {
       continue;
     }
 
@@ -178,9 +197,10 @@ export function validateRequiredMetadata(
  */
 export function validateAndPrintRequiredMetadata(
   metadata: Metadata,
-  schema: MetadataSchema
+  schema: MetadataSchema,
+  options?: ValidateRequiredMetadataOptions
 ): boolean {
-  const errors = validateRequiredMetadata(metadata, schema);
+  const errors = validateRequiredMetadata(metadata, schema, options);
   for (const error of errors) {
     output.error(error);
   }
