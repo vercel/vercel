@@ -110,7 +110,7 @@ describe('routes inspect', () => {
     client.setArgv('routes', 'inspect', 'API transforms');
     const exitCode = await routes(client);
     expect(exitCode, 'exit code for inspect with transforms').toEqual(0);
-    await expect(client.stderr).toOutput('Transforms');
+    await expect(client.stderr).toOutput('Request Header');
   });
 
   it('should show interactive selection when multiple matches', async () => {
