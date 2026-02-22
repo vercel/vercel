@@ -8,7 +8,7 @@ import {
   lambdaKnapsack,
   LAMBDA_SIZE_THRESHOLD_BYTES,
   LAMBDA_PACKING_TARGET_BYTES,
-  LAMBDA_EPHEMERAL_STORAGE_BYTES,
+  MAX_RUNTIME_DEPS_SIZE_BYTES,
 } from '../src/dependency-externalizer';
 import { classifyPackages, parseUvLock } from '@vercel/python-analysis';
 import { FileFsRef, FileBlob } from '@vercel/build-utils';
@@ -134,13 +134,13 @@ describe('dependency externalizer support', () => {
       expect(LAMBDA_SIZE_THRESHOLD_BYTES).toBe(249 * 1024 * 1024);
     });
 
-    it('LAMBDA_EPHEMERAL_STORAGE_BYTES is 500 MB by default', () => {
+    it('MAX_RUNTIME_DEPS_SIZE_BYTES is 500 MB by default', () => {
       // Without VERCEL_PYTHON_INCREASED_EPHEMERAL_STORAGE, limit is 500 MB
-      expect(LAMBDA_EPHEMERAL_STORAGE_BYTES).toBe(500 * 1024 * 1024);
+      expect(MAX_RUNTIME_DEPS_SIZE_BYTES).toBe(500 * 1024 * 1024);
     });
 
     it('ephemeral storage limit is greater than the bundle size threshold', () => {
-      expect(LAMBDA_EPHEMERAL_STORAGE_BYTES).toBeGreaterThan(
+      expect(MAX_RUNTIME_DEPS_SIZE_BYTES).toBeGreaterThan(
         LAMBDA_SIZE_THRESHOLD_BYTES
       );
     });

@@ -26,8 +26,8 @@ export const LAMBDA_SIZE_THRESHOLD_BYTES = 249 * 1024 * 1024;
 // Pack Lambda up to 245MB to leave a buffer
 export const LAMBDA_PACKING_TARGET_BYTES = 245 * 1024 * 1024;
 
-// Ephemeral storage size in MB requested from AWS when increased storage is enabled.
-export const EPHEMERAL_STORAGE_SIZE_MB = 1024;
+// The /tmp size in MB we request from AWS when increased ephemeral storage is enabled.
+export const REQUESTED_TMP_SIZE_MB = 1024;
 
 // Feature flag: when enabled, the builder requests 1024 MB of /tmp and allows
 // up to 1000 MB of total dependencies for runtime installation.
@@ -39,7 +39,7 @@ export const increasedEphemeralStorage =
 // With the flag: 1000 MB (fits in 1024 MB /tmp with 24 MB buffer).
 // Note: VERCEL_MAXIMISE_TMP_SPACE does NOT affect this limit — it only
 // controls the Lambda's /tmp size on the API side, not the dependency cap.
-export const LAMBDA_EPHEMERAL_STORAGE_BYTES = increasedEphemeralStorage
+export const MAX_RUNTIME_DEPS_SIZE_BYTES = increasedEphemeralStorage
   ? 1000 * 1024 * 1024
   : 500 * 1024 * 1024;
 
@@ -72,7 +72,7 @@ export class PythonDependencyExternalizer {
   /**
    * Whether this bundle requires extra ephemeral storage for runtime installation.
    * Set to true by generateBundle(). When true, the Lambda should be configured
-   * with EPHEMERAL_STORAGE_SIZE_MB of /tmp space.
+   * with REQUESTED_TMP_SIZE_MB (1024 MB) of /tmp space.
    */
   public needsExtraEphemeralStorage = false;
 
@@ -147,9 +147,9 @@ export class PythonDependencyExternalizer {
     );
 
     // Verify total deps won't exceed the ephemeral storage limit
-    if (this.totalBundleSize > LAMBDA_EPHEMERAL_STORAGE_BYTES) {
+    if (this.totalBundleSize > MAX_RUNTIME_DEPS_SIZE_BYTES) {
       const ephemeralLimitMB = (
-        LAMBDA_EPHEMERAL_STORAGE_BYTES /
+        MAX_RUNTIME_DEPS_SIZE_BYTES /
         (1024 * 1024)
       ).toFixed(0);
       throw new NowBuildError({
