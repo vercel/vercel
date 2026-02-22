@@ -200,9 +200,7 @@ export async function testPath(
   const opts: FetchOptions = {
     retries: isCI ? 5 : 0,
     ...fetchOpts,
-    // @ts-expect-error - this value is part of a hack to work around
-    // https://github.com/node-fetch/node-fetch/issues/417#issuecomment-587233352
-    redirect: 'manual-dont-change',
+    redirect: 'manual',
     status,
   };
   const url = `${origin}${path}`;
@@ -230,13 +228,7 @@ export async function testPath(
 
   if (expectedHeaders) {
     Object.entries(expectedHeaders).forEach(([key, expectedValue]) => {
-      let actualValue = res.headers.get(key);
-      if (key.toLowerCase() === 'location' && actualValue === '//') {
-        // HACK: `node-fetch` has strange behavior for location header so fix it
-        // with `manual-dont-change` opt and convert double slash to single.
-        // See https://github.com/node-fetch/node-fetch/issues/417#issuecomment-587233352
-        actualValue = '/';
-      }
+      const actualValue = res.headers.get(key);
       expect(actualValue, getEnvironmentMessage(isDev)).toBe(expectedValue);
     });
   }
@@ -655,4 +647,4 @@ afterEach(async () => {
   );
 });
 
-export { fetch };
+export const fetch = globalThis.fetch;
