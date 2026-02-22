@@ -544,4 +544,53 @@ describe('Router', () => {
       expect(route.transforms[0].env).toEqual(['REGION', 'DATACENTER']);
     });
   });
+
+  describe('getConfig', () => {
+    it('should return routes when route() is used', () => {
+      router.route({
+        src: '^\\/test$',
+        dest: '/dest',
+      });
+
+      const config = router.getConfig();
+      expect(config.routes).toBeDefined();
+      expect(config.routes).toHaveLength(1);
+      expect(config.routes?.[0].src).toBe('^\\/test$');
+    });
+
+    it('should include rewrites with transforms as routes', () => {
+      const route = router.rewrite(
+        '/api/:path*',
+        'https://backend.example.com/$1',
+        {
+          requestHeaders: {
+            authorization: deploymentEnv('API_KEY'),
+          },
+        }
+      );
+
+      // The rewrite should already have the converted regex
+      expect(route).toMatchObject({
+        src: '^\\/api(?:\\/((?:[^\\/]+?)(?:\\/(?:[^\\/]+?))*))?$',
+        dest: 'https://backend.example.com/$1',
+      });
+    });
+
+    it('should convert destination params correctly when route uses path params', () => {
+      const route = router.rewrite(
+        '/users/:userId/posts/:postId',
+        'https://api.example.com/users/$1/posts/$2',
+        ({ userId }) => ({
+          requestHeaders: {
+            'x-user-id': userId,
+          },
+        })
+      );
+
+      expect(route).toMatchObject({
+        src: '^\\/users(?:\\/([^\\/]+?))\\/posts(?:\\/([^\\/]+?))$',
+        dest: 'https://api.example.com/users/$1/posts/$2',
+      });
+    });
+  });
 });

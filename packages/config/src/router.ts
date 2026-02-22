@@ -1212,9 +1212,13 @@ export class Router {
 
     // Convert rewrites to routes
     const routesFromRewrites: Route[] = rewritesNeedingRoutes.map(rewrite => {
+      // Convert path-to-regexp patterns to regex for routes format
+      const { src: regexSrc, segments } = sourceToRegex(rewrite.source);
+      const convertedDest = convertDestination(rewrite.destination, segments);
+
       const route: Route = {
-        src: rewrite.source,
-        dest: rewrite.destination,
+        src: regexSrc,
+        dest: convertedDest,
       };
       if (rewrite.transforms) route.transforms = rewrite.transforms;
       if (rewrite.methods) route.methods = rewrite.methods;
@@ -1233,9 +1237,18 @@ export class Router {
       // Convert standalone redirects to routes
       const routesFromRedirects: Route[] = this.redirectRules.map(
         redirectRule => {
+          // Convert path-to-regexp patterns to regex for routes format
+          const { src: regexSrc, segments } = sourceToRegex(
+            redirectRule.source
+          );
+          const convertedDest = convertDestination(
+            redirectRule.destination,
+            segments
+          );
+
           const route: Route = {
-            src: redirectRule.source,
-            dest: redirectRule.destination,
+            src: regexSrc,
+            dest: convertedDest,
             status:
               redirectRule.statusCode || (redirectRule.permanent ? 308 : 307),
           };
@@ -1247,9 +1260,13 @@ export class Router {
 
       // Convert legacy rewrites (without transforms) to routes
       const routesFromLegacyRewrites: Route[] = legacyRewrites.map(rewrite => {
+        // Convert path-to-regexp patterns to regex for routes format
+        const { src: regexSrc, segments } = sourceToRegex(rewrite.source);
+        const convertedDest = convertDestination(rewrite.destination, segments);
+
         const route: Route = {
-          src: rewrite.source,
-          dest: rewrite.destination,
+          src: regexSrc,
+          dest: convertedDest,
         };
         if (rewrite.has) route.has = rewrite.has;
         if (rewrite.missing) route.missing = rewrite.missing;
@@ -1266,6 +1283,9 @@ export class Router {
           return !isCachingHeader;
         })
         .map(headerRule => {
+          // Convert path-to-regexp patterns to regex for routes format
+          const { src: regexSrc } = sourceToRegex(headerRule.source);
+
           const transforms: Transform[] = headerRule.headers.map(header => ({
             type: 'response.headers' as TransformType,
             op: 'set' as TransformOp,
@@ -1274,7 +1294,7 @@ export class Router {
           }));
 
           const route: Route = {
-            src: headerRule.source,
+            src: regexSrc,
             transforms,
           };
           if (headerRule.has) route.has = headerRule.has;
