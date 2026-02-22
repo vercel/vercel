@@ -26,24 +26,22 @@ export const LAMBDA_SIZE_THRESHOLD_BYTES = 249 * 1024 * 1024;
 // Pack Lambda up to 245MB to leave a buffer
 export const LAMBDA_PACKING_TARGET_BYTES = 245 * 1024 * 1024;
 
-// Fixed ephemeral storage size (1 GB) requested when runtime install is needed.
-// This balances cold-start performance with available space for dependencies.
+// Ephemeral storage size in MB requested from AWS when increased storage is enabled.
 export const EPHEMERAL_STORAGE_SIZE_MB = 1024;
 
-// When VERCEL_MAXIMISE_TMP_SPACE is set, use the full AWS maximum instead.
-const maximiseTmpSpace =
-  process.env.VERCEL_MAXIMISE_TMP_SPACE === '1' ||
-  process.env.VERCEL_MAXIMISE_TMP_SPACE === 'true';
+// Feature flag: when enabled, the builder requests 1024 MB of /tmp and allows
+// up to 1000 MB of total dependencies for runtime installation.
+export const increasedEphemeralStorage =
+  process.env.VERCEL_PYTHON_INCREASED_EPHEMERAL_STORAGE === '1';
 
-const maxEphemeralStorageMB = maximiseTmpSpace
-  ? 10240
-  : EPHEMERAL_STORAGE_SIZE_MB;
-
-// The maximum total dependency size in bytes we can support, with a ~2% buffer
-// for runtime overhead (.pyc generation, uv cache, metadata, etc.)
-export const LAMBDA_EPHEMERAL_STORAGE_BYTES = Math.floor(
-  maxEphemeralStorageMB * 1024 * 1024 * 0.98
-);
+// Maximum total dependency size (in bytes) that can be installed at runtime.
+// Without the flag: 500 MB (fits in default 512 MB /tmp with 12 MB buffer).
+// With the flag: 1000 MB (fits in 1024 MB /tmp with 24 MB buffer).
+// Note: VERCEL_MAXIMISE_TMP_SPACE does NOT affect this limit — it only
+// controls the Lambda's /tmp size on the API side, not the dependency cap.
+export const LAMBDA_EPHEMERAL_STORAGE_BYTES = increasedEphemeralStorage
+  ? 1000 * 1024 * 1024
+  : 500 * 1024 * 1024;
 
 interface PythonDependencyExternalizerOptions {
   venvPath: string;
@@ -150,7 +148,10 @@ export class PythonDependencyExternalizer {
 
     // Verify total deps won't exceed the ephemeral storage limit
     if (this.totalBundleSize > LAMBDA_EPHEMERAL_STORAGE_BYTES) {
-      const ephemeralLimitMB = maxEphemeralStorageMB;
+      const ephemeralLimitMB = (
+        LAMBDA_EPHEMERAL_STORAGE_BYTES /
+        (1024 * 1024)
+      ).toFixed(0);
       throw new NowBuildError({
         code: 'LAMBDA_SIZE_EXCEEDED',
         message:
