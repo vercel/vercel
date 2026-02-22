@@ -79,17 +79,7 @@ export function setupCurlLikeCommand(
   const separatorIndex = process.argv.indexOf('--');
   const path = parsedArgs.args[0];
 
-  telemetryClient.trackCliArgumentPath(path);
-
-  const deploymentFlag = flags['--deployment'];
-  if (deploymentFlag) {
-    telemetryClient.trackCliOptionDeployment(deploymentFlag);
-  }
-
   const protectionBypassFlag = flags['--protection-bypass'];
-  if (protectionBypassFlag) {
-    telemetryClient.trackCliOptionProtectionBypass(protectionBypassFlag);
-  }
 
   if (!path || path === '--' || path.startsWith('-')) {
     output.error(
@@ -99,16 +89,33 @@ export function setupCurlLikeCommand(
     return 1;
   }
 
-  // Disallow passing a full URL as the path arg to avoid duplicating the base URL
+  // Parse full URLs to extract deployment URL and path
+  let resolvedPath = path;
+  let resolvedDeploymentFlag = flags['--deployment'];
   if (path.startsWith('http://') || path.startsWith('https://')) {
-    output.error(
-      `The <path> argument must be a relative API path (e.g., '/' or '/api/hello'), not a full URL.`
-    );
-    output.print(
-      `To target a specific deployment within the currently linked project, use the --deployment <id|url> flag.`
-    );
-    print(help(command, { columns: client.stderr.columns }));
-    return 1;
+    try {
+      const parsedUrl = new URL(path);
+      // Extract the origin as the deployment URL
+      resolvedDeploymentFlag = parsedUrl.origin;
+      // Extract the pathname (and search params if present) as the path
+      resolvedPath = parsedUrl.pathname + parsedUrl.search;
+      output.debug(
+        `Parsed full URL: deployment=${resolvedDeploymentFlag}, path=${resolvedPath}`
+      );
+    } catch {
+      output.error(`Invalid URL provided: ${path}`);
+      print(help(command, { columns: client.stderr.columns }));
+      return 1;
+    }
+  }
+
+  // Track telemetry after URL parsing so we track the resolved values
+  telemetryClient.trackCliArgumentPath(resolvedPath);
+  if (resolvedDeploymentFlag) {
+    telemetryClient.trackCliOptionDeployment(resolvedDeploymentFlag);
+  }
+  if (protectionBypassFlag) {
+    telemetryClient.trackCliOptionProtectionBypass(protectionBypassFlag);
   }
 
   const toolFlags =
@@ -118,8 +125,8 @@ export function setupCurlLikeCommand(
   );
 
   return {
-    path,
-    deploymentFlag,
+    path: resolvedPath,
+    deploymentFlag: resolvedDeploymentFlag,
     protectionBypassFlag,
     toolFlags,
     yes: !!flags['--yes'],

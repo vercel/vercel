@@ -145,18 +145,83 @@ describe('curl', () => {
       ]);
     });
 
-    it('should reject when a full https URL is provided as the path', async () => {
-      client.setArgv('curl', 'https://example.com/api/hello');
+    it('should accept a full https URL and extract deployment URL and path', async () => {
+      await setupLinkedProject();
+
+      client.setArgv(
+        'curl',
+        'https://my-deployment-abc123.vercel.app/api/hello',
+        '--protection-bypass',
+        'test-secret'
+      );
       const exitCode = await curl(client);
-      expect(exitCode).toEqual(1);
-      await expect(client.stderr).toOutput('must be a relative API path');
+
+      expect(exitCode).toEqual(0);
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'argument:path',
+          value: 'slash',
+        },
+        {
+          key: 'option:deployment',
+          value: 'url',
+        },
+        {
+          key: 'option:protection-bypass',
+          value: '[REDACTED]',
+        },
+      ]);
     });
 
-    it('should reject when a full http URL is provided as the path', async () => {
-      client.setArgv('curl', 'http://localhost:3000/');
+    it('should accept a full https URL with query params', async () => {
+      await setupLinkedProject();
+
+      client.setArgv(
+        'curl',
+        'https://my-deployment-abc123.vercel.app/api/hello?foo=bar&baz=qux',
+        '--protection-bypass',
+        'test-secret'
+      );
       const exitCode = await curl(client);
-      expect(exitCode).toEqual(1);
-      await expect(client.stderr).toOutput('must be a relative API path');
+
+      expect(exitCode).toEqual(0);
+    });
+
+    it('should accept a full http URL', async () => {
+      await setupLinkedProject();
+
+      client.setArgv(
+        'curl',
+        'http://localhost:3000/',
+        '--protection-bypass',
+        'test-secret'
+      );
+      const exitCode = await curl(client);
+
+      expect(exitCode).toEqual(0);
+    });
+
+    it('should pass the correct URL to curl when given a full URL', async () => {
+      await setupLinkedProject();
+
+      client.setArgv(
+        'curl',
+        'https://my-deployment.vercel.app/api/hello?query=test',
+        '--protection-bypass',
+        'test-secret'
+      );
+      const exitCode = await curl(client);
+
+      expect(exitCode).toEqual(0);
+      // Verify spawn was called with curl and the correct --url flag
+      expect(spawnMock).toHaveBeenCalledWith(
+        'curl',
+        expect.arrayContaining([
+          '--url',
+          'https://my-deployment.vercel.app/api/hello?query=test',
+        ]),
+        expect.any(Object)
+      );
     });
 
     it('should reject unrecognized flags before --', async () => {
