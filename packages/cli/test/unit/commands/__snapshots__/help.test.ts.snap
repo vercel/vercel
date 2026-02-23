@@ -3241,8 +3241,8 @@ exports[`help command > integration-resource help output snapshots > integration
   - create threshold
 
     $ vercel integration-resource create-threshold <resource> <minimum> <spend> <limit> [options]
-    $ vercel integration-resource create-threshold my-acme-resource 100 50 2000
-    $ vercel integration-resource create-threshold my-acme-resource 100 50 2000 --yes
+    $ vercel integration-resource create-threshold my-acme-resource 50 100 2000
+    $ vercel integration-resource create-threshold my-acme-resource 50 100 2000 --yes
 
 "
 `;

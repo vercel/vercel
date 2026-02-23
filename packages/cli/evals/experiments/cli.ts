@@ -33,6 +33,7 @@ function listSkillFiles(dir: string, baseDir: string = dir): string[] {
  */
 const config: ExperimentConfig = {
   agent: 'vercel-ai-gateway/claude-code',
+  evals: ['build', 'non-interactive'],
   runs: 1,
   earlyExit: false, // Run all evals to completion so we get explicit pass/fail for each
   timeout: 900, // 15 min per eval (env can need link + env ls; build is long)

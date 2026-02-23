@@ -74,7 +74,7 @@ describe('integration-resource', () => {
           `Error: No resource ${resource} found.`
         );
 
-        await expect(exitCodePromise).resolves.toEqual(0);
+        await expect(exitCodePromise).resolves.toEqual(1);
       });
 
       it('exits gracefully when cancelling confirmation for deleting a resource', async () => {
