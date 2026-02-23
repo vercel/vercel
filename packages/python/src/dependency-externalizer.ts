@@ -40,8 +40,6 @@ export const DEFAULT_MAX_RUNTIME_DEPS_SIZE_BYTES = 500 * 1024 * 1024;
 // Maximum total dependency size (in bytes) that can be installed at runtime.
 // Without the flag: 500 MB (fits in default 512 MB /tmp with 12 MB buffer).
 // With the flag: 1000 MB (fits in 1024 MB /tmp with 24 MB buffer).
-// Note: VERCEL_MAXIMISE_TMP_SPACE does NOT affect this limit — it only
-// controls the Lambda's /tmp size on the API side, not the dependency cap.
 export const MAX_RUNTIME_DEPS_SIZE_BYTES = increasedEphemeralStorage
   ? 1000 * 1024 * 1024
   : DEFAULT_MAX_RUNTIME_DEPS_SIZE_BYTES;
