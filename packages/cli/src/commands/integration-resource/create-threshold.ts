@@ -70,8 +70,8 @@ export async function createThreshold(client: Client) {
 
   // Assert resource is valid
   if (!targetedResource) {
-    output.log(`The resource ${chalk.bold(resourceName)} was not found.`);
-    return 0;
+    output.error(`The resource ${chalk.bold(resourceName)} was not found.`);
+    return 1;
   }
 
   if (!targetedResource.product?.integrationConfigurationId) {
@@ -165,12 +165,12 @@ function parseCreateThresholdArguments(
   telemetry.trackCliArgumentLimit(args[3]);
 
   const resourceName = args[0];
-  const minimum = Number.parseFloat(args[1]) * 100;
-  const spend = Number.parseInt(args[2]) * 100;
-  const limit = Number.parseInt(args[3]) * 100;
+  const minimum = Math.round(Number.parseFloat(args[1]) * 100);
+  const spend = Math.round(Number.parseFloat(args[2]) * 100);
+  const limit = Math.round(Number.parseFloat(args[3]) * 100);
   if (isNaN(minimum)) {
     throw new Error(
-      'Minimum is an invalid number format. Spend must be a positive number (ex. "5.75")'
+      'Minimum is an invalid number format. Minimum must be a positive number (ex. "5.75")'
     );
   }
   if (isNaN(spend)) {
