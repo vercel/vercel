@@ -804,6 +804,7 @@ describe('detectServices', () => {
             },
           },
         }),
+        'worker/processor.py': 'def handler(event): pass',
       });
       const result = await detectServices({ fs });
 

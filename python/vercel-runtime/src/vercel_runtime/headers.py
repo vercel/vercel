@@ -1,15 +1,35 @@
 from __future__ import annotations
 
 import contextlib
+from collections.abc import Iterable, Mapping
+from contextvars import ContextVar
+from typing import cast
+
+_cv_headers: ContextVar[Mapping[str, str] | None] = ContextVar(
+    "vercel_runtime_headers",
+    default=None,
+)
 
 
-def set_vercel_headers(headers: dict[str, str] | None) -> None:
-    with contextlib.suppress(Exception):
-        from vercel.headers import (  # type: ignore[import-not-found]  # noqa: PLC0415
-            set_headers,
-        )
+def _iter_header_items(headers: object) -> list[tuple[object, object]]:
+    if isinstance(headers, Mapping):
+        mapping_headers = cast("Mapping[object, object]", headers)
+        return list(mapping_headers.items())
 
-        set_headers(headers)
+    items = getattr(headers, "items", None)
+    if callable(items):
+        with contextlib.suppress(Exception):
+            return list(cast("Iterable[tuple[object, object]]", items()))
+
+    return []
+
+
+def set_headers(headers: Mapping[str, str] | None) -> None:
+    _ = _cv_headers.set(headers)
+
+
+def get_headers() -> Mapping[str, str] | None:
+    return _cv_headers.get()
 
 
 def decode_header_bytes(value: bytes) -> str:
@@ -30,38 +50,39 @@ def set_vercel_headers_from_asgi_pairs(
         value = decode_header_bytes(value_bytes)
         normalized[key] = value
 
-    set_vercel_headers(normalized if normalized else None)
+    set_headers(normalized if normalized else None)
 
 
 def set_vercel_headers_from_http_headers(
     headers: object,
 ) -> None:
     normalized: dict[str, str] = {}
-    with contextlib.suppress(Exception):
-        for key, value in headers.items():  # type: ignore[attr-defined]
-            if not key:
-                continue
-            normalized[str(key).lower()] = str(value)
+    for key, value in _iter_header_items(headers):
+        if key is None or value is None:
+            continue
+        normalized[str(key).lower()] = str(value)
 
-    set_vercel_headers(normalized if normalized else None)
+    set_headers(normalized if normalized else None)
 
 
 def clear_vercel_headers_context() -> None:
-    set_vercel_headers(None)
+    set_headers(None)
 
 
 def normalize_event_headers(
     raw_headers: object,
 ) -> dict[str, str]:
     normalized: dict[str, str] = {}
-    if isinstance(raw_headers, dict):
-        for key, value in raw_headers.items():
+    if isinstance(raw_headers, Mapping):
+        typed_headers = cast("Mapping[object, object]", raw_headers)
+        for key, value in typed_headers.items():
             if key is None or value is None:
                 continue
             if isinstance(value, list):
-                if not value:
+                value_list = cast("list[object]", value)
+                if not value_list:
                     continue
-                normalized[str(key)] = str(value[0])
+                normalized[str(key)] = str(value_list[0])
             else:
                 normalized[str(key)] = str(value)
 

@@ -8,7 +8,7 @@ from tests._dist import PROJECT_ROOT
 
 
 class TestLint(unittest.TestCase):
-    def test_cqa_ruff_lint_check(self):
+    def test_cqa_ruff_lint_check(self) -> None:
         if not importlib.util.find_spec("ruff"):
             raise unittest.SkipTest("ruff is not installed") from None
 
@@ -23,7 +23,7 @@ class TestLint(unittest.TestCase):
             output = ex.output.decode()
             raise AssertionError(f"ruff validation failed:\n{output}") from None
 
-    def test_cqa_ruff_format_check(self):
+    def test_cqa_ruff_format_check(self) -> None:
         if not importlib.util.find_spec("ruff"):
             raise unittest.SkipTest("ruff is not installed")
 
@@ -40,8 +40,7 @@ class TestLint(unittest.TestCase):
                 f"ruff format validation failed:\n{output}"
             ) from None
 
-    @unittest.skip("disabled for now")
-    def test_cqa_mypy(self):
+    def test_cqa_typecheck_mypy(self) -> None:
         config_path = PROJECT_ROOT / "pyproject.toml"
         if not os.path.exists(config_path):
             raise RuntimeError("could not locate pyproject.toml file")
@@ -68,8 +67,7 @@ class TestLint(unittest.TestCase):
                 output += "\n\n" + ex.stderr.decode()
             raise AssertionError(f"mypy validation failed:\n{output}") from None
 
-    @unittest.skip("disabled for now")
-    def test_cqa_pyright(self):
+    def test_cqa_typecheck_pyright(self) -> None:
         config_path = PROJECT_ROOT / "pyproject.toml"
         if not os.path.exists(config_path):
             raise RuntimeError("could not locate pyproject.toml file")
@@ -82,7 +80,7 @@ class TestLint(unittest.TestCase):
                 [
                     sys.executable,
                     "-m",
-                    "pyright",
+                    "basedpyright",
                 ],
                 check=True,
                 capture_output=True,

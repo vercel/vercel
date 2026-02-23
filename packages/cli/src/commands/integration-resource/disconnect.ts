@@ -5,6 +5,7 @@ import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import getScope from '../../util/get-scope';
 import { printError } from '../../util/error';
+import { validateJsonOutput } from '../../util/output-format';
 import {
   disconnectResourceFromAllProjects,
   disconnectResourceFromProject,
@@ -39,6 +40,22 @@ export async function disconnect(client: Client) {
     return 1;
   }
 
+  const formatResult = validateJsonOutput(parsedArguments.flags);
+  if (!formatResult.valid) {
+    output.error(formatResult.error);
+    return 1;
+  }
+  const asJson = formatResult.jsonOutput;
+
+  const skipConfirmation = !!parsedArguments.flags['--yes'];
+
+  telemetry.trackCliOptionFormat(parsedArguments.flags['--format']);
+
+  if (asJson && !skipConfirmation) {
+    output.error('--format=json requires --yes to skip confirmation prompts');
+    return 1;
+  }
+
   const { team } = await getScope(client);
   if (!team) {
     output.error('Team not found.');
@@ -59,7 +76,6 @@ export async function disconnect(client: Client) {
     return 1;
   }
 
-  const skipConfirmation = !!parsedArguments.flags['--yes'];
   const shouldDisconnectAll = parsedArguments.flags['--all'];
   const isProjectSpecified = parsedArguments.args.length === 3;
 
@@ -97,9 +113,9 @@ export async function disconnect(client: Client) {
       await handleDisconnectAllProjects(
         client,
         targetedResource,
-        !!parsedArguments.flags['--yes']
+        !!parsedArguments.flags['--yes'],
+        asJson
       );
-      return 0;
     } catch (error) {
       if (error instanceof CancelledError) {
         output.log(error.message);
@@ -111,6 +127,15 @@ export async function disconnect(client: Client) {
       }
       throw error;
     }
+
+    if (asJson) {
+      const projects =
+        targetedResource.projectsMetadata?.map(project => project.name) ?? [];
+      client.stdout.write(
+        `${JSON.stringify({ resource: targetedResource.name, disconnected: true, projects }, null, 2)}\n`
+      );
+    }
+    return 0;
   }
 
   if (!specifiedProject) {
@@ -132,7 +157,8 @@ export async function disconnect(client: Client) {
     client,
     targetedResource,
     specifiedProject,
-    skipConfirmation
+    skipConfirmation,
+    asJson
   );
 }
 
@@ -140,7 +166,8 @@ async function handleDisconnectProject(
   client: Client,
   resource: Resource,
   projectName: string,
-  skipConfirmation: boolean
+  skipConfirmation: boolean,
+  asJson: boolean
 ): Promise<number> {
   const project = resource.projectsMetadata?.find(
     project => projectName === project.name
@@ -163,9 +190,6 @@ async function handleDisconnectProject(
   try {
     output.spinner('Disconnecting resource…', 500);
     await disconnectResourceFromProject(client, resource, project);
-    output.success(
-      `Disconnected ${chalk.bold(project.name)} from ${chalk.bold(resource.name)}`
-    );
   } catch (error) {
     output.error(
       `A problem occurred while disconnecting: ${(error as Error).message}`
@@ -173,13 +197,25 @@ async function handleDisconnectProject(
     return 1;
   }
 
+  if (asJson) {
+    output.stopSpinner();
+    client.stdout.write(
+      `${JSON.stringify({ resource: resource.name, disconnected: true, projects: [projectName] }, null, 2)}\n`
+    );
+    return 0;
+  }
+
+  output.success(
+    `Disconnected ${chalk.bold(project.name)} from ${chalk.bold(resource.name)}`
+  );
   return 0;
 }
 
 export async function handleDisconnectAllProjects(
   client: Client,
   resource: Resource,
-  skipConfirmation: boolean
+  skipConfirmation: boolean,
+  asJson = false
 ): Promise<void> {
   if (resource.projectsMetadata?.length === 0) {
     output.log(`${chalk.bold(resource.name)} has no projects to disconnect.`);
@@ -196,9 +232,13 @@ export async function handleDisconnectAllProjects(
   try {
     output.spinner('Disconnecting projects from resource…', 500);
     await disconnectResourceFromAllProjects(client, resource);
-    output.success(
-      `Disconnected all projects from ${chalk.bold(resource.name)}`
-    );
+    if (asJson) {
+      output.stopSpinner();
+    } else {
+      output.success(
+        `Disconnected all projects from ${chalk.bold(resource.name)}`
+      );
+    }
   } catch (error) {
     throw new FailedError(
       `A problem occurred while disconnecting all projects: ${(error as Error).message}`

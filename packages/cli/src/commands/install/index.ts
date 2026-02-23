@@ -4,6 +4,7 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { help } from '../help';
 import { add } from '../integration/add';
+import { printAddDynamicHelp } from '../integration/add-help';
 import { addSubcommand } from '../integration/command';
 import { installCommand } from './command';
 import output from '../../output-manager';
@@ -27,7 +28,19 @@ export default async function install(client: Client) {
 
   if (flags['--help']) {
     telemetry.trackCliFlagHelp('install');
-    output.print(help(installCommand, { columns: client.stderr.columns }));
+
+    const printed = await printAddDynamicHelp(
+      client,
+      args[1],
+      installCommand,
+      cmd => output.print(help(cmd, { columns: client.stderr.columns })),
+      'install'
+    );
+
+    if (!printed) {
+      output.print(help(installCommand, { columns: client.stderr.columns }));
+    }
+
     return 0;
   }
 

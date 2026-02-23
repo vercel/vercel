@@ -1133,7 +1133,7 @@ export function useConfiguration() {
     const foundConfigs =
       configurations[(integrationIdOrSlug ?? 'acme-no-results') as string];
 
-    res.json(foundConfigs);
+    res.json(foundConfigs ?? []);
   });
 }
 
