@@ -1,5 +1,48 @@
 # vercel
 
+## 50.22.2
+
+### Patch Changes
+
+- fix(cli): add `integration-resource` command to `vc --help` output ([#15191](https://github.com/vercel/vercel/pull/15191))
+
+- feat(cli): add marketplace funnel telemetry to integration add command ([#15065](https://github.com/vercel/vercel/pull/15065))
+
+- fix(cli): send bare array for installation threshold batch endpoint ([#15154](https://github.com/vercel/vercel/pull/15154))
+
+- fix(cli): filter empty strings from trailing commas in array metadata ([#15163](https://github.com/vercel/vercel/pull/15163))
+
+- fix(cli): add non-TTY guards and fix exit codes in marketplace commands ([#15158](https://github.com/vercel/vercel/pull/15158))
+
+- fix(cli): show actionable error when removing integration with existing resources ([#15164](https://github.com/vercel/vercel/pull/15164))
+
+- fix(cli): fix create-threshold help example, decimal parsing, exit code, error message, and balance mapping ([#15154](https://github.com/vercel/vercel/pull/15154))
+
+- Adding in a non-interactive flag for env command ([#14912](https://github.com/vercel/vercel/pull/14912))
+
+- fix(cli): unify teamId scoping for all marketplace integration commands ([#15183](https://github.com/vercel/vercel/pull/15183))
+
+- Updated dependencies [[`7d2603c0bf55d61dbde8a35c62ea12c598b1a7ec`](https://github.com/vercel/vercel/commit/7d2603c0bf55d61dbde8a35c62ea12c598b1a7ec), [`3c4aff4acbfa603705556d145236b8a9ef106331`](https://github.com/vercel/vercel/commit/3c4aff4acbfa603705556d145236b8a9ef106331), [`984d44875f959058f5d13fea27373785b1d66b6f`](https://github.com/vercel/vercel/commit/984d44875f959058f5d13fea27373785b1d66b6f), [`88817b1ca96e2c04c0a965cc226d47a58b5cab6b`](https://github.com/vercel/vercel/commit/88817b1ca96e2c04c0a965cc226d47a58b5cab6b), [`cb79f6f8080fddd3673a8911566085e0265b060b`](https://github.com/vercel/vercel/commit/cb79f6f8080fddd3673a8911566085e0265b060b)]:
+  - @vercel/go@3.4.2
+  - @vercel/next@4.15.32
+  - @vercel/python@6.16.0
+  - @vercel/ruby@2.3.2
+  - @vercel/build-utils@13.5.0
+  - @vercel/static-build@2.8.41
+  - @vercel/backends@0.0.37
+  - @vercel/elysia@0.1.40
+  - @vercel/express@0.1.49
+  - @vercel/fastify@0.1.43
+  - @vercel/h3@0.1.49
+  - @vercel/hono@0.2.43
+  - @vercel/hydrogen@1.3.5
+  - @vercel/koa@0.1.23
+  - @vercel/nestjs@0.2.44
+  - @vercel/node@5.6.7
+  - @vercel/redwood@2.4.9
+  - @vercel/remix-builder@5.5.10
+  - @vercel/rust@1.0.5
+
 ## 50.22.1
 
 ### Patch Changes
