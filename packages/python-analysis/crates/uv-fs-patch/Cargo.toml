@@ -1,0 +1,20 @@
+# Patched uv-fs: stripped to only the two functions needed by uv-pep508
+# (normalize_url_path, normalize_absolute_path).
+# Everything else has been removed for wasm32-wasip2.
+[package]
+name = "uv-fs"
+version = "0.0.20"
+edition.workspace = true
+rust-version.workspace = true
+
+[lib]
+doctest = false
+
+[dependencies]
+percent-encoding = "2.3.1"
+
+[features]
+default = []
+# no-op: keeps dependents that request these features happy
+tokio = []
+serde = []

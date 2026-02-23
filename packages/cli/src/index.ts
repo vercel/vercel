@@ -353,13 +353,20 @@ const main = async () => {
   }
 
   // Shared API `Client` instance for all sub-commands to utilize.
-  // Non-interactive when: --non-interactive flag, or agent running without a TTY (so Cursor terminal stays interactive).
+  // Non-interactive when: --non-interactive is set, or agent is detected (and no TTY). Explicit --non-interactive=false overrides agent detection.
   const stdinIsTTY = process.stdin?.isTTY === true;
   const nonInteractiveFlag = parsedArgs.flags['--non-interactive'] === true;
-  const nonInteractive = nonInteractiveFlag || (isAgent && !stdinIsTTY);
+  const argv = process.argv;
+  const explicitNonInteractiveFalse =
+    argv.includes('--non-interactive=false') ||
+    (argv.includes('--non-interactive') &&
+      argv[argv.indexOf('--non-interactive') + 1] === 'false');
+  const nonInteractive = explicitNonInteractiveFalse
+    ? false
+    : nonInteractiveFlag || (isAgent && !stdinIsTTY);
 
   output.debug(
-    `Agent/TTY/nonInteractive: isAgent=${isAgent} agentName=${detectedAgent?.name ?? 'none'} stdin.isTTY=${String(process.stdin?.isTTY)} --non-interactive=${nonInteractiveFlag} => nonInteractive=${nonInteractive}`
+    `Agent/TTY/nonInteractive: isAgent=${isAgent} agentName=${detectedAgent?.name ?? 'none'} stdin.isTTY=${String(process.stdin?.isTTY)} --non-interactive=${nonInteractiveFlag} explicitFalse=${explicitNonInteractiveFalse} => nonInteractive=${nonInteractive}`
   );
 
   // Only load proxy-agent if proxy env vars are configured (saves ~60ms startup)
@@ -483,11 +490,13 @@ const main = async () => {
   }
 
   // Check for VERCEL_TOKEN environment variable if --token flag not provided
-  if (
-    typeof parsedArgs.flags['--token'] !== 'string' &&
-    process.env.VERCEL_TOKEN
-  ) {
+  // Track where the token came from for better error messages
+  let tokenSource: 'flag' | 'env' | undefined;
+  if (typeof parsedArgs.flags['--token'] === 'string') {
+    tokenSource = 'flag';
+  } else if (process.env.VERCEL_TOKEN) {
     parsedArgs.flags['--token'] = process.env.VERCEL_TOKEN;
+    tokenSource = 'env';
   }
 
   if (
@@ -531,7 +540,7 @@ const main = async () => {
       return 1;
     }
 
-    client.authConfig = { token, skipWrite: true };
+    client.authConfig = { token, skipWrite: true, tokenSource };
 
     // Don't use team from config if `--token` was set
     if (client.config && client.config.currentTeam) {
@@ -802,6 +811,15 @@ const main = async () => {
           telemetry.trackCliCommandLogs(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).logs;
           break;
+        case 'metrics':
+          if (process.env.FF_METRICS) {
+            telemetry.trackCliCommandMetrics(userSuppliedSubCommand);
+            func = (await import('./commands-bulk.js')).metrics;
+            break;
+          } else {
+            func = null;
+            break;
+          }
         case 'microfrontends':
           telemetry.trackCliCommandMicrofrontends(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).microfrontends;
@@ -1001,15 +1019,26 @@ main()
             `Changelog: ${output.link(changelog, changelog, { fallback: false })}\n`
           );
 
-          const shouldUpgrade = await client.input.confirm(
-            'Would you like to upgrade now?',
-            true
-          );
+          try {
+            const shouldUpgrade = await client.input.confirm(
+              'Would you like to upgrade now?',
+              true
+            );
 
-          if (shouldUpgrade) {
-            const upgradeExitCode = await executeUpgrade();
-            process.exitCode = upgradeExitCode;
-            return;
+            if (shouldUpgrade) {
+              const upgradeExitCode = await executeUpgrade();
+              process.exitCode = upgradeExitCode;
+              return;
+            }
+          } catch (err: unknown) {
+            if (
+              err instanceof Error &&
+              err.message.includes('User force closed the prompt')
+            ) {
+              // User pressed Ctrl+C to dismiss the prompt
+            } else {
+              throw err;
+            }
           }
         } else {
           const errorMsg =

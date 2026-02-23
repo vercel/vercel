@@ -1,4 +1,3 @@
-import type { Team } from '@vercel-internals/types';
 import chalk from 'chalk';
 import output from '../../output-manager';
 import type Client from '../../util/client';
@@ -6,6 +5,7 @@ import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import getScope from '../../util/get-scope';
 import { printError } from '../../util/error';
+import { validateJsonOutput } from '../../util/output-format';
 import { deleteResource as _deleteResource } from '../../util/integration-resource/delete-resource';
 import { getResources } from '../../util/integration-resource/get-resources';
 import {
@@ -34,11 +34,28 @@ export async function remove(client: Client) {
     return 1;
   }
 
+  const formatResult = validateJsonOutput(parsedArguments.flags);
+  if (!formatResult.valid) {
+    output.error(formatResult.error);
+    return 1;
+  }
+  const asJson = formatResult.jsonOutput;
+
+  const skipConfirmation = !!parsedArguments.flags['--yes'];
+
+  telemetry.trackCliOptionFormat(parsedArguments.flags['--format']);
+
+  if (asJson && !skipConfirmation) {
+    output.error('--format=json requires --yes to skip confirmation prompts');
+    return 1;
+  }
+
   const { team } = await getScope(client);
   if (!team) {
     output.error('Team not found.');
     return 1;
   }
+  client.config.currentTeam = team.id;
 
   const isMissingResourceOrIntegration = parsedArguments.args.length < 2;
   if (isMissingResourceOrIntegration) {
@@ -52,7 +69,6 @@ export async function remove(client: Client) {
     return 1;
   }
 
-  const skipConfirmation = !!parsedArguments.flags['--yes'];
   const disconnectAll = !!parsedArguments.flags['--disconnect-all'];
   const resourceName = parsedArguments.args[1];
 
@@ -61,7 +77,7 @@ export async function remove(client: Client) {
   telemetry.trackCliFlagYes(skipConfirmation);
 
   output.spinner('Retrieving resource…', 500);
-  const resources = await getResources(client, team.id);
+  const resources = await getResources(client);
   const targetedResource = resources.find(
     resource => resource.name === resourceName
   );
@@ -69,7 +85,7 @@ export async function remove(client: Client) {
 
   if (!targetedResource) {
     output.error(`No resource ${chalk.bold(resourceName)} found.`);
-    return 0;
+    return 1;
   }
 
   if (disconnectAll) {
@@ -77,7 +93,8 @@ export async function remove(client: Client) {
       await handleDisconnectAllProjects(
         client,
         targetedResource,
-        skipConfirmation
+        skipConfirmation,
+        asJson
       );
     } catch (error) {
       if (error instanceof CancelledError) {
@@ -92,19 +109,20 @@ export async function remove(client: Client) {
     }
   }
 
-  return await handleDeleteResource(client, team, targetedResource, {
+  return await handleDeleteResource(client, targetedResource, {
     skipConfirmation,
     skipProjectCheck: disconnectAll,
+    asJson,
   });
 }
 
 async function handleDeleteResource(
   client: Client,
-  team: Team,
   resource: Resource,
   options?: {
     skipConfirmation: boolean;
     skipProjectCheck: boolean;
+    asJson: boolean;
   }
 ): Promise<number> {
   const hasProjects =
@@ -112,6 +130,13 @@ async function handleDeleteResource(
   if (!options?.skipProjectCheck && hasProjects) {
     output.error(
       `Cannot delete resource ${chalk.bold(resource.name)} while it has connected projects. Please disconnect any projects using this resource first or use the \`--disconnect-all\` flag.`
+    );
+    return 1;
+  }
+
+  if (!options?.skipConfirmation && !client.stdin.isTTY) {
+    output.error(
+      'Confirmation required. Use `--yes` to skip the confirmation prompt.'
     );
     return 1;
   }
@@ -126,8 +151,7 @@ async function handleDeleteResource(
 
   try {
     output.spinner('Deleting resource…', 500);
-    await _deleteResource(client, resource, team);
-    output.success(`${chalk.bold(resource.name)} successfully deleted.`);
+    await _deleteResource(client, resource);
   } catch (error) {
     output.error(
       `A problem occurred when attempting to delete ${chalk.bold(resource.name)}: ${(error as Error).message}`
@@ -135,6 +159,15 @@ async function handleDeleteResource(
     return 1;
   }
 
+  if (options?.asJson) {
+    output.stopSpinner();
+    client.stdout.write(
+      `${JSON.stringify({ resource: resource.name, removed: true }, null, 2)}\n`
+    );
+    return 0;
+  }
+
+  output.success(`${chalk.bold(resource.name)} successfully deleted.`);
   return 0;
 }
 

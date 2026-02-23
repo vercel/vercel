@@ -150,3 +150,11 @@ export const nonInteractiveOption = {
   description:
     'Run without interactive prompts; when an agent is detected this is the default',
 } as const;
+
+export const allOption = {
+  name: 'all',
+  shorthand: 'a',
+  type: Boolean,
+  deprecated: false,
+  description: 'List resources across all projects',
+} as const;

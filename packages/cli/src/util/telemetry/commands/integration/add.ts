@@ -53,4 +53,13 @@ export class IntegrationAddTelemetryClient
       this.trackCliFlag('no-env-pull');
     }
   }
+
+  trackCliOptionEnvironment(v: string[] | undefined) {
+    if (v?.length) {
+      this.trackCliOption({
+        option: 'environment',
+        value: this.redactedValue,
+      });
+    }
+  }
 }

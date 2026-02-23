@@ -521,8 +521,8 @@ async function doBuild(
   }
 
   if (process.env.VERCEL_EXPERIMENTAL_EMBED_FLAG_DEFINITIONS === '1') {
-    const { emitFlagsDefinitions } = await import('./emit-flags-definitions');
-    await emitFlagsDefinitions(cwd, process.env);
+    const { emitFlagsDatafiles } = await import('./emit-flags-datafiles');
+    await emitFlagsDatafiles(cwd, process.env);
   }
 
   // Get a list of source files
@@ -620,7 +620,7 @@ async function doBuild(
 
   const builderSpecs = new Set(builds.map(b => b.use));
 
-  const buildersWithPkgs = await importBuilders(builderSpecs, cwd);
+  const buildersWithPkgs = await importBuilders(builderSpecs, cwd, span);
 
   // Populate Files -> FileFsRef mapping
   const filesMap: Files = {};
@@ -720,6 +720,10 @@ async function doBuild(
       const service = hasDetectedServices
         ? servicesByBuilderSrc.get(build.src)
         : undefined;
+      const stripServiceRoutePrefix =
+        !!service?.routePrefix &&
+        service?.routePrefix !== '/' &&
+        service?.routePrefixSource === 'generated';
 
       let buildWorkPath = workPath;
       let buildEntrypoint = build.src;
@@ -830,7 +834,11 @@ async function doBuild(
       }
 
       const builderSpan = span.child('vc.builder', {
-        name: builderPkg.name,
+        'builder.name': builderPkg.name,
+        'builder.version': builderPkg.version,
+        'builder.dynamicallyInstalled': String(
+          builderWithPkg.dynamicallyInstalled
+        ),
       });
 
       const serviceRoutePrefix = build.config?.routePrefix;
@@ -1029,6 +1037,7 @@ async function doBuild(
               standalone,
               workPath: buildWorkPath,
               service,
+              stripServiceRoutePrefix,
             })
           )
           .then(

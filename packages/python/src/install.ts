@@ -1,19 +1,11 @@
 import execa from 'execa';
 import fs from 'fs';
 import { join, dirname } from 'path';
-import {
-  FileFsRef,
-  Files,
-  Meta,
-  NowBuildError,
-  debug,
-  glob,
-} from '@vercel/build-utils';
+import { Meta, NowBuildError, debug } from '@vercel/build-utils';
 import {
   discoverPythonPackage,
   stringifyManifest,
   createMinimalManifest,
-  normalizePackageName,
   PythonAnalysisError,
   PythonLockFileKind,
   PythonManifestConvertedKind,
@@ -22,9 +14,6 @@ import {
 import { getVenvPythonBin } from './utils';
 import { UvRunner, filterUnsafeUvPipArgs, getProtectedUvEnv } from './uv';
 import { DEFAULT_PYTHON_VERSION } from './version';
-
-// AWS Lambda uncompressed size limit is 250MB, but we use 249MB to leave a small buffer
-export const LAMBDA_SIZE_THRESHOLD_BYTES = 249 * 1024 * 1024;
 
 const makeDependencyCheckCode = (dependency: string) => `
 from importlib import util
@@ -535,168 +524,4 @@ export async function installRequirementsFile({
     ['--upgrade', '-r', filePath, ...args],
     targetDir
   );
-}
-
-export async function mirrorSitePackagesIntoVendor({
-  venvPath,
-  vendorDirName,
-}: {
-  venvPath: string;
-  vendorDirName: string;
-}): Promise<Files> {
-  const vendorFiles: Files = {};
-  // Map the files from site-packages in the virtual environment
-  // into the Lambda bundle under `_vendor`.
-  try {
-    const sitePackageDirs = await getVenvSitePackagesDirs(venvPath);
-    for (const dir of sitePackageDirs) {
-      if (!fs.existsSync(dir)) continue;
-
-      const dirFiles = await glob('**', dir);
-      for (const relativePath of Object.keys(dirFiles)) {
-        if (
-          relativePath.endsWith('.pyc') ||
-          relativePath.includes('__pycache__')
-        ) {
-          continue;
-        }
-
-        const srcFsPath = join(dir, relativePath);
-
-        const bundlePath = join(vendorDirName, relativePath).replace(
-          /\\/g,
-          '/'
-        );
-        vendorFiles[bundlePath] = new FileFsRef({ fsPath: srcFsPath });
-      }
-    }
-  } catch (err) {
-    console.log('Failed to collect site-packages from virtual environment');
-    throw err;
-  }
-
-  return vendorFiles;
-}
-
-/**
- * Calculate the total uncompressed size of files in a Files object.
- */
-export async function calculateBundleSize(files: Files): Promise<number> {
-  let totalSize = 0;
-
-  for (const filePath of Object.keys(files)) {
-    const file = files[filePath];
-    if ('fsPath' in file && file.fsPath) {
-      try {
-        const stats = await fs.promises.stat(file.fsPath);
-        totalSize += stats.size;
-      } catch (err) {
-        console.warn(
-          `Warning: Failed to stat file ${file.fsPath}, size will not be included in bundle calculation: ${err}`
-        );
-      }
-    } else if ('data' in file) {
-      // FileBlob with data
-      const data = (file as { data: string | Buffer }).data;
-      totalSize +=
-        typeof data === 'string' ? Buffer.byteLength(data) : data.length;
-    }
-  }
-
-  return totalSize;
-}
-
-/**
- * Mirror only private packages from site-packages into the _vendor directory.
- */
-export async function mirrorPrivatePackagesIntoVendor({
-  venvPath,
-  vendorDirName,
-  privatePackages,
-}: {
-  venvPath: string;
-  vendorDirName: string;
-  privatePackages: string[];
-}): Promise<Files> {
-  const vendorFiles: Files = {};
-
-  if (privatePackages.length === 0) {
-    debug('No private packages to bundle');
-    return vendorFiles;
-  }
-
-  const privatePackageSet = new Set(privatePackages.map(normalizePackageName));
-
-  try {
-    const sitePackageDirs = await getVenvSitePackagesDirs(venvPath);
-
-    for (const dir of sitePackageDirs) {
-      if (!fs.existsSync(dir)) continue;
-
-      const entries = await fs.promises.readdir(dir, { withFileTypes: true });
-
-      for (const entry of entries) {
-        // Skip __pycache__ and .pyc files
-        if (entry.name === '__pycache__' || entry.name.endsWith('.pyc')) {
-          continue;
-        }
-
-        // Check if this entry belongs to a private package.
-        // Per PEP 427, dist-info directories are named {distribution}-{version}.dist-info
-        // where {distribution} has non-alphanumeric chars (except .) replaced with underscores.
-        // E.g., "my-package" becomes "my_package-1.0.0.dist-info"
-        const entryBaseName = entry.name
-          .replace(/-[\d.]+\.dist-info$/, '')
-          .replace(/\.dist-info$/, '')
-          .replace(/-[\d.]+\.egg-info$/, '')
-          .replace(/\.egg-info$/, '');
-
-        const normalizedEntry = normalizePackageName(entryBaseName);
-
-        // Include if it matches a private package
-        const isPrivate = privatePackageSet.has(normalizedEntry);
-
-        if (isPrivate) {
-          const entryPath = join(dir, entry.name);
-
-          if (entry.isDirectory()) {
-            // Recursively add all files in the directory
-            const dirFiles = await glob('**', entryPath);
-            for (const relativePath of Object.keys(dirFiles)) {
-              if (
-                relativePath.endsWith('.pyc') ||
-                relativePath.includes('__pycache__')
-              ) {
-                continue;
-              }
-
-              const srcFsPath = join(entryPath, relativePath);
-              const bundlePath = join(
-                vendorDirName,
-                entry.name,
-                relativePath
-              ).replace(/\\/g, '/');
-              vendorFiles[bundlePath] = new FileFsRef({ fsPath: srcFsPath });
-            }
-          } else {
-            // Single file
-            const bundlePath = join(vendorDirName, entry.name).replace(
-              /\\/g,
-              '/'
-            );
-            vendorFiles[bundlePath] = new FileFsRef({ fsPath: entryPath });
-          }
-        }
-      }
-    }
-
-    debug(
-      `Bundled ${Object.keys(vendorFiles).length} files from private packages`
-    );
-  } catch (err) {
-    console.log('Failed to collect private packages from virtual environment');
-    throw err;
-  }
-
-  return vendorFiles;
 }

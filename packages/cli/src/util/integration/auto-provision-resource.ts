@@ -15,7 +15,7 @@ function isAutoProvisionFallback(
     typeof error === 'object' &&
     error !== null &&
     'kind' in error &&
-    ['install', 'metadata', 'unknown'].includes(
+    ['metadata', 'unknown'].includes(
       (error as { kind: unknown }).kind as string
     ) &&
     'url' in error &&

@@ -116,5 +116,8 @@
       "status": 200,
       "mustContain": "slug\":\"second\""
     }
-  ]
+  ],
+  "env": {
+    "NEXT_BUILDER_INTEGRATION": "1"
+  }
 }

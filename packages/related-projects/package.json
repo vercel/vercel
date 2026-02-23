@@ -1,6 +1,6 @@
 {
   "name": "@vercel/related-projects",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Vercel utilities for working with related projects",
   "files": [
     "dist"
