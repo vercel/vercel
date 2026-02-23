@@ -3,7 +3,7 @@
 '@vercel/static-config': minor
 '@vercel/fs-detectors': minor
 '@vercel/next': minor
-'@vercel/remix': minor
+'@vercel/remix-builder': minor
 '@vercel/static-build': minor
 '@vercel/gatsby-plugin-vercel-builder': minor
 'vercel': minor
