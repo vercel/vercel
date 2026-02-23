@@ -1,5 +1,5 @@
 {
-  "name": "env",
+  "name": "env-ls",
   "type": "module",
   "private": true,
   "scripts": {
