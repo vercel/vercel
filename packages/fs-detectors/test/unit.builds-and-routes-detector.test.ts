@@ -243,6 +243,36 @@ describe('Test `detectBuilders`', () => {
     expect(builders.length).toBe(2);
   });
 
+  it('framework + public with experimental backends', async () => {
+    const previousExperimentalBackends =
+      process.env.VERCEL_EXPERIMENTAL_BACKENDS;
+    process.env.VERCEL_EXPERIMENTAL_BACKENDS = '1';
+
+    try {
+      const files = ['package.json', 'public/logo.svg'];
+      const pkg = {
+        dependencies: { hono: '4.10.1' },
+      };
+
+      const { builders } = await invokeDetectBuildersAndThrow(files, pkg, {
+        projectSettings: {
+          framework: 'hono',
+        },
+      });
+
+      expect(builders.length).toBe(2);
+      expect(builders[0].use).toBe('@vercel/static');
+      expect(builders[0].src).toBe('public/**/*');
+      expect(builders[1].use).toBe('@vercel/backends');
+    } finally {
+      if (previousExperimentalBackends === undefined) {
+        delete process.env.VERCEL_EXPERIMENTAL_BACKENDS;
+      } else {
+        process.env.VERCEL_EXPERIMENTAL_BACKENDS = previousExperimentalBackends;
+      }
+    }
+  });
+
   it('api go with test files', async () => {
     const files = [
       'api/index.go',
@@ -1483,6 +1513,37 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(builders.length).toBe(2);
     expect(errorRoutes.length).toBe(1);
     expect((errorRoutes[0] as Source).status).toBe(404);
+  });
+
+  it('framework + public with experimental backends', async () => {
+    const previousExperimentalBackends =
+      process.env.VERCEL_EXPERIMENTAL_BACKENDS;
+    process.env.VERCEL_EXPERIMENTAL_BACKENDS = '1';
+
+    try {
+      const files = ['package.json', 'public/logo.svg'];
+      const pkg = {
+        dependencies: { hono: '4.10.1' },
+      };
+
+      const { builders } = await invokeDetectBuildersAndThrow(files, pkg, {
+        projectSettings: {
+          framework: 'hono',
+        },
+        featHandleMiss,
+      });
+
+      expect(builders.length).toBe(2);
+      expect(builders[0].use).toBe('@vercel/static');
+      expect(builders[0].src).toBe('public/**/*');
+      expect(builders[1].use).toBe('@vercel/backends');
+    } finally {
+      if (previousExperimentalBackends === undefined) {
+        delete process.env.VERCEL_EXPERIMENTAL_BACKENDS;
+      } else {
+        process.env.VERCEL_EXPERIMENTAL_BACKENDS = previousExperimentalBackends;
+      }
+    }
   });
 
   it('api go with test files', async () => {
