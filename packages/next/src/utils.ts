@@ -3727,7 +3727,9 @@ if (vercelFunctionRegionsVar) {
  * - `home` refers to the regions set in vercel.json or on the Vercel dashboard project config.
  * - `global` refers to all regions.
  */
-function normalizeRegions(regions: Regions): undefined | string | string[] {
+export function normalizeRegions(
+  regions: Regions
+): undefined | string | string[] {
   if (typeof regions === 'string') {
     regions = [regions];
   }
