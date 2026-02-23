@@ -1290,6 +1290,25 @@ describe('Django entrypoint discovery', () => {
     if (fs.existsSync(workPath)) fs.removeSync(workPath);
   });
 
+  it('resolves Django entrypoint from Procfile (web: uwsgi .ini)', async () => {
+    const workPath = path.join(
+      tmpdir(),
+      `python-django-procfile-uwsgi-${Date.now()}`
+    );
+    fs.mkdirSync(workPath, { recursive: true });
+
+    await writeFiles(workPath, {
+      Procfile: 'web: uwsgi uwsgi.ini',
+      'uwsgi.ini': '[uwsgi]\nmodule = myproject.wsgi:application\n',
+      'myproject/wsgi.py': `application = lambda env, start: None`,
+    });
+
+    const result = await detectDjangoPythonEntrypoint(workPath, 'missing.py');
+    expect(result).toBe('myproject/wsgi.py');
+
+    if (fs.existsSync(workPath)) fs.removeSync(workPath);
+  });
+
   it('skips Procfile when matched path does not exist (falls back to WSGI or AST)', async () => {
     const workPath = path.join(
       tmpdir(),

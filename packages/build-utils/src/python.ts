@@ -29,30 +29,71 @@ export async function isPythonEntrypoint(
 }
 
 /**
- * Read Procfile, parse the web process and return the application module path.
- * Supports:
- * - gunicorn <module> or <module>:<attr>
- * - uvicorn <module> or <module>:<attr>
+ * Read Procfile at workPath and parse the web process. Supports:
+ * - web: gunicorn <module> or <module>:<attr>
+ * - web: uvicorn <module> or <module>:<attr>
+ * - web: uwsgi <settings>.ini (reads module = <appModule> from the INI)
+ * Returns the corresponding Python file path or null.
  */
 export async function getProcfileWebEntrypoint(
   workPath: string
 ): Promise<string | null> {
-  const procfilePath = join(workPath, 'Procfile');
   try {
+    const procfilePath = join(workPath, 'Procfile');
     const procfileContent = await fs.promises.readFile(procfilePath, 'utf-8');
-    const pyId = '[A-Za-z_][A-Za-z0-9_]*';
-    const appPattern = `${pyId}(?:\\.${pyId})*(?::${pyId})?`;
-    const match = procfileContent.match(
-      new RegExp(`web:\\s*(?:gunicorn|uvicorn)\\s+(${appPattern})`)
-    );
-    if (match) {
-      const modulePath = match[1].split(':')[0];
-      return `${modulePath.replace(/\./g, '/')}.py`;
-    }
+    const gunicornUvicorn = parseProcfileWebGunicornUvicorn(procfileContent);
+    if (gunicornUvicorn) return gunicornUvicorn;
+    const uwsgiIni = await parseProcfileWebUwsgiIni(workPath, procfileContent);
+    if (uwsgiIni) return uwsgiIni;
   } catch {
     debug('Procfile not found or unreadable, skipping Procfile web entrypoint');
   }
   return null;
+}
+
+const PY_ID = '[A-Za-z_][A-Za-z0-9_]*';
+const APP_SPEC_PATTERN = `${PY_ID}(?:\\.${PY_ID})*(?::${PY_ID})?`;
+
+function moduleSpecToPath(appSpec: string): string {
+  const modulePath = appSpec.split(':')[0];
+  return `${modulePath.replace(/\./g, '/')}.py`;
+}
+
+/**
+ * Parse Procfile content for "web: gunicorn <module>" or "web: uvicorn <module>".
+ * Returns the corresponding .py path or null.
+ */
+function parseProcfileWebGunicornUvicorn(
+  procfileContent: string
+): string | null {
+  const match = procfileContent.match(
+    new RegExp(`web:\\s*(?:gunicorn|uvicorn)\\s+(${APP_SPEC_PATTERN})`)
+  );
+  return match ? moduleSpecToPath(match[1]) : null;
+}
+
+/**
+ * Parse Procfile content for "web: uwsgi <settings>.ini", then read the INI
+ * and extract "module = <appModule>" or "module = <appModule>:<attr>".
+ * Returns the corresponding .py path or null.
+ */
+async function parseProcfileWebUwsgiIni(
+  workPath: string,
+  procfileContent: string
+): Promise<string | null> {
+  const uwsgiMatch = procfileContent.match(/web:\s*uwsgi\s+(\S+\.ini)/);
+  if (!uwsgiMatch) return null;
+  const iniPath = join(workPath, uwsgiMatch[1]);
+  try {
+    const iniContent = await fs.promises.readFile(iniPath, 'utf-8');
+    const match = iniContent.match(
+      new RegExp(`^\\s*module\\s*=\\s*(${APP_SPEC_PATTERN})\\s*$`, 'm')
+    );
+    return match ? moduleSpecToPath(match[1]) : null;
+  } catch {
+    debug(`uWSGI config not found or unreadable: ${iniPath}`);
+    return null;
+  }
 }
 
 /**
