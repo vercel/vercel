@@ -1,4 +1,4 @@
-import { afterEach, describe, it, expect } from 'vitest';
+import { afterEach, describe, it, expect, vi } from 'vitest';
 import fs from 'fs-extra';
 import path from 'path';
 import { tmpdir } from 'os';
@@ -144,10 +144,17 @@ describe('dependency externalizer support', () => {
         LAMBDA_SIZE_THRESHOLD_BYTES
       );
     });
-    it('MAX_RUNTIME_DEPS_SIZE_BYTES is 1000 MB when VERCEL_PYTHON_INCREASED_EPHEMERAL_STORAGE is "1"', () => {
+    it('MAX_RUNTIME_DEPS_SIZE_BYTES is 1000 MB when VERCEL_PYTHON_INCREASED_EPHEMERAL_STORAGE is "1"', async () => {
       const originalEnv = process.env.VERCEL_PYTHON_INCREASED_EPHEMERAL_STORAGE;
       process.env.VERCEL_PYTHON_INCREASED_EPHEMERAL_STORAGE = '1';
-      expect(MAX_RUNTIME_DEPS_SIZE_BYTES).toBe(1000 * 1024 * 1024);
+
+      // MAX_RUNTIME_DEPS_SIZE_BYTES is evaluated at module load time, so we
+      // must reset the module registry and re-import to pick up the new env.
+      vi.resetModules();
+      const { MAX_RUNTIME_DEPS_SIZE_BYTES: reloadedMax } = await import(
+        '../src/dependency-externalizer'
+      );
+      expect(reloadedMax).toBe(1000 * 1024 * 1024);
 
       if (originalEnv === undefined) {
         delete process.env.VERCEL_PYTHON_INCREASED_EPHEMERAL_STORAGE;
