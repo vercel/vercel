@@ -173,7 +173,7 @@ export async function detectDjangoPythonEntrypoint(
 
     // Look for an entrypoint via manage.py -> settings.py -> WSGI_APPLICATION:
     // Try workPath and immediate subdirectories.
-    for (const rootDir of ['', ...rootDirs]) {
+    for (const rootDir of rootDirs) {
       const currPath = join(workPath, rootDir);
       const wsgiEntry = await getDjangoEntrypoint(currPath);
       if (wsgiEntry) {
