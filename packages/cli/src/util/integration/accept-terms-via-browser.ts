@@ -22,7 +22,7 @@ export async function acceptTermsViaBrowser(
   output.log(
     'Opening browser for terms acceptance. Accept the terms to continue...'
   );
-  output.debug(`Opening URL: ${url.href}`);
+  output.log(`Visit this URL if the browser does not open: ${url.href}`);
 
   open(url.href).catch((err: unknown) =>
     output.debug(`Failed to open browser: ${err}`)
