@@ -7,7 +7,7 @@ import {
   getLambdaOptionsFromFunction,
   sanitizeConsumerName,
 } from './lambda';
-import { NodejsLambda } from './nodejs-lambda';
+import { NodejsLambda, type NodejsLambdaOptions } from './nodejs-lambda';
 import { Prerender } from './prerender';
 import download, {
   downloadFile,
@@ -68,6 +68,7 @@ export {
   FileRef,
   Lambda,
   NodejsLambda,
+  NodejsLambdaOptions,
   createLambda,
   Prerender,
   download,

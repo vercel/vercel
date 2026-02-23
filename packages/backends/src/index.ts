@@ -9,6 +9,7 @@ import {
   type PrepareCache,
   type BuildV2,
   type Lambda,
+  type NodejsLambdaOptions,
   isBunVersion,
 } from '@vercel/build-utils';
 import { findEntrypointOrThrow } from './cervel/index.js';
@@ -136,7 +137,22 @@ export const build: BuildV2 = async args => {
     const introspectionResult = await introspectionPromise;
     await typescriptPromise;
 
-    const lambda = new NodejsLambda({
+    const getFunctionConfigOverrides = (dest: string) => {
+      const functionConfig = args.config.functions?.[
+        dest
+      ] as NodejsLambdaOptions;
+      return {
+        regions: functionConfig?.regions,
+        maxDuration: functionConfig?.maxDuration,
+        memory: functionConfig?.memory,
+        architecture: functionConfig?.architecture,
+        supportsCancellation: functionConfig?.supportsCancellation,
+      };
+    };
+
+    const functionConfigOverrides = getFunctionConfigOverrides(entrypoint);
+
+    const lambdaArgs: NodejsLambdaOptions = {
       runtime: nodeVersion.runtime,
       handler,
       files,
@@ -144,10 +160,13 @@ export const build: BuildV2 = async args => {
       shouldAddHelpers: false,
       shouldAddSourcemapSupport: true,
       awsLambdaHandler: '',
+      ...functionConfigOverrides,
       shouldDisableAutomaticFetchInstrumentation:
         process.env.VERCEL_TRACING_DISABLE_AUTOMATIC_FETCH_INSTRUMENTATION ===
         '1',
-    });
+    };
+
+    const lambda = new NodejsLambda(lambdaArgs);
 
     // Build routes: filesystem handler, then introspected routes, then catch-all
     const routes = [
