@@ -2,7 +2,9 @@
 
 Bare-bones evals infrastructure for the Vercel CLI using [@vercel/agent-eval](https://github.com/vercel-labs/agent-eval). Evals are colocated in `packages/cli/evals/` so CLI maintainers can own them. Scripts are in the CLI `package.json` (collocated with the `build` script).
 
-**Status:** Evals: **non-interactive** (prefer non-interactive flags for `vercel link`), **build** (run `vc build` on a minimal static site), **env** (link then run `vc env ls` to list environment variables). The runner discovers evals in `evals/evals/` (dirs with PROMPT.md + EVAL.ts + package.json). If none are found it exits successfully; if any exist it runs `@vercel/agent-eval`. Add evals under `evals/evals/<name>/` when ready.
+**Status:** Evals: **non-interactive** (prefer non-interactive flags for `vercel link`), **build** (run `vc build` on a minimal static site), **env** (list env vars with `vc env ls`), **env-add** (add env var with unique key), **env-pull** (pull env to file), **env-update** (add then update env var with unique key), **env-remove** (add then remove env var with unique key). The runner discovers evals in `evals/evals/` (dirs with PROMPT.md + EVAL.ts + package.json). If none are found it exits successfully; if any exist it runs `@vercel/agent-eval`. Add evals under `evals/evals/<name>/` when ready.
+
+**Env evals and unique keys:** Evals that create env vars (env-add, env-update, env-remove) require a **unique variable name per run** (e.g. `EVAL_ADD_<timestamp>`, `EVAL_UPDATE_<timestamp>`, `EVAL_REMOVE_<timestamp>`) so concurrent or repeated runs do not overwrite the same variable. The prompt instructs the agent to choose such a key and write it to `env-key-used.txt`; the EVAL asserts the prefix.
 
 ## Structure
 
