@@ -34,6 +34,9 @@ export const REQUESTED_TMP_SIZE_MB = 1024;
 export const increasedEphemeralStorage =
   process.env.VERCEL_PYTHON_INCREASED_EPHEMERAL_STORAGE === '1';
 
+// Default maximum dependency size (500 MB) that fits in the standard 512 MB /tmp.
+export const DEFAULT_MAX_RUNTIME_DEPS_SIZE_BYTES = 500 * 1024 * 1024;
+
 // Maximum total dependency size (in bytes) that can be installed at runtime.
 // Without the flag: 500 MB (fits in default 512 MB /tmp with 12 MB buffer).
 // With the flag: 1000 MB (fits in 1024 MB /tmp with 24 MB buffer).
@@ -41,7 +44,7 @@ export const increasedEphemeralStorage =
 // controls the Lambda's /tmp size on the API side, not the dependency cap.
 export const MAX_RUNTIME_DEPS_SIZE_BYTES = increasedEphemeralStorage
   ? 1000 * 1024 * 1024
-  : 500 * 1024 * 1024;
+  : DEFAULT_MAX_RUNTIME_DEPS_SIZE_BYTES;
 
 interface PythonDependencyExternalizerOptions {
   venvPath: string;
@@ -69,11 +72,7 @@ export class PythonDependencyExternalizer {
   private totalBundleSize: number = 0;
   private analyzed = false;
 
-  /**
-   * Whether this bundle requires extra ephemeral storage for runtime installation.
-   * Set to true by generateBundle(). When true, the Lambda should be configured
-   * with REQUESTED_TMP_SIZE_MB (1024 MB) of /tmp space.
-   */
+  // Populated by generateBundle()
   public needsExtraEphemeralStorage = false;
 
   constructor(options: PythonDependencyExternalizerOptions) {
@@ -163,8 +162,10 @@ export class PythonDependencyExternalizer {
       });
     }
 
-    // Mark that this bundle needs extra ephemeral storage for runtime install
-    this.needsExtraEphemeralStorage = true;
+    // Only request increased ephemeral storage when deps exceed the default
+    // 500 MB limit that fits in the standard 512 MB /tmp.
+    this.needsExtraEphemeralStorage =
+      this.totalBundleSize > DEFAULT_MAX_RUNTIME_DEPS_SIZE_BYTES;
 
     // If the earlier --no-build check failed, we know some packages don't have pre-built wheels.
     if (this.noBuildCheckFailed) {
