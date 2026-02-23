@@ -69,4 +69,13 @@ export class IntegrationAddTelemetryClient
       value: JSON.stringify(props),
     });
   }
+
+  trackCliOptionPrefix(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'prefix',
+        value: this.redactedValue,
+      });
+    }
+  }
 }
