@@ -41,8 +41,10 @@ export async function getProcfileWebEntrypoint(
   try {
     const procfilePath = join(workPath, 'Procfile');
     const procfileContent = await fs.promises.readFile(procfilePath, 'utf-8');
-    const gunicornUvicorn = parseProcfileWebGunicornUvicorn(procfileContent);
-    if (gunicornUvicorn) return gunicornUvicorn;
+    const gunicorn = parseProcfileWebGunicorn(procfileContent);
+    if (gunicorn) return gunicorn;
+    const uvicorn = parseProcfileWebUvicorn(procfileContent);
+    if (uvicorn) return uvicorn;
     const uwsgiIni = await parseProcfileWebUwsgiIni(workPath, procfileContent);
     if (uwsgiIni) return uwsgiIni;
   } catch {
@@ -60,14 +62,23 @@ function moduleSpecToPath(appSpec: string): string {
 }
 
 /**
- * Parse Procfile content for "web: gunicorn <module>" or "web: uvicorn <module>".
+ * Parse Procfile content for "web: gunicorn <module>" or "web: gunicorn <module>:<attr>".
  * Returns the corresponding .py path or null.
  */
-function parseProcfileWebGunicornUvicorn(
-  procfileContent: string
-): string | null {
+function parseProcfileWebGunicorn(procfileContent: string): string | null {
   const match = procfileContent.match(
-    new RegExp(`web:\\s*(?:gunicorn|uvicorn)\\s+(${APP_SPEC_PATTERN})`)
+    new RegExp(`web:\\s*gunicorn\\s+(${APP_SPEC_PATTERN})`)
+  );
+  return match ? moduleSpecToPath(match[1]) : null;
+}
+
+/**
+ * Parse Procfile content for "web: uvicorn <module>" or "web: uvicorn <module>:<attr>".
+ * Returns the corresponding .py path or null.
+ */
+function parseProcfileWebUvicorn(procfileContent: string): string | null {
+  const match = procfileContent.match(
+    new RegExp(`web:\\s*uvicorn\\s+(${APP_SPEC_PATTERN})`)
   );
   return match ? moduleSpecToPath(match[1]) : null;
 }
