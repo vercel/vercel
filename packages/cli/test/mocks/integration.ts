@@ -1122,7 +1122,12 @@ export function useIntegrationDiscover(opts?: {
 
 export function useConfiguration() {
   client.scenario.get('/:version/integrations/configurations', (req, res) => {
-    const { integrationIdOrSlug } = req.query;
+    const { integrationIdOrSlug, teamId } = req.query;
+
+    if (!teamId) {
+      res.status(400).json({ error: 'teamId is required' });
+      return;
+    }
 
     if (integrationIdOrSlug === 'error') {
       res.status(500);
@@ -1133,7 +1138,7 @@ export function useConfiguration() {
     const foundConfigs =
       configurations[(integrationIdOrSlug ?? 'acme-no-results') as string];
 
-    res.json(foundConfigs);
+    res.json(foundConfigs ?? []);
   });
 }
 

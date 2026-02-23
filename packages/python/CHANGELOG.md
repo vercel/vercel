@@ -1,5 +1,11 @@
 # @vercel/python
 
+## 6.15.1
+
+### Patch Changes
+
+- Check if file exists before mirroring into vendor ([#15181](https://github.com/vercel/vercel/pull/15181))
+
 ## 6.15.0
 
 ### Minor Changes

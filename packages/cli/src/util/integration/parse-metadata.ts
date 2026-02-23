@@ -28,8 +28,8 @@ export function parseMetadataFlags(
       continue;
     }
 
-    const key = item.slice(0, eqIndex);
-    const value = item.slice(eqIndex + 1);
+    const key = item.slice(0, eqIndex).trim();
+    const value = item.slice(eqIndex + 1).trim();
 
     const propSchema = schema.properties[key];
     if (!propSchema) {
@@ -69,7 +69,10 @@ export function parseMetadataFlags(
       }
       metadata[key] = num;
     } else if (propSchema.type === 'array') {
-      const items = value.split(',').map(v => v.trim());
+      const items = value
+        .split(',')
+        .map(v => v.trim())
+        .filter(v => v.length > 0);
       const itemType = propSchema.items?.type;
 
       if (itemType === 'number') {
