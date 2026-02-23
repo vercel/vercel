@@ -62,13 +62,14 @@ import { cloneEnv } from './clone-env';
 import { hardLinkDir } from './hard-link-dir';
 import { validateNpmrc } from './validate-npmrc';
 
+export type { NodejsLambdaOptions };
+
 export {
   FileBlob,
   FileFsRef,
   FileRef,
   Lambda,
   NodejsLambda,
-  NodejsLambdaOptions,
   createLambda,
   Prerender,
   download,
