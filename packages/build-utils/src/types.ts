@@ -410,11 +410,13 @@ export interface Builder {
   config?: Config;
 }
 
+export type MaxDuration = number | 'max';
+
 export interface BuilderFunctions {
   [key: string]: {
     architecture?: LambdaArchitecture;
     memory?: number;
-    maxDuration?: number;
+    maxDuration?: MaxDuration;
     regions?: string[];
     functionFailoverRegions?: string[];
     runtime?: string;
@@ -765,7 +767,7 @@ export interface ExperimentalServiceConfig {
 
   /** Lambda config */
   memory?: number;
-  maxDuration?: number;
+  maxDuration?: MaxDuration;
   includeFiles?: string | string[];
   excludeFiles?: string | string[];
 

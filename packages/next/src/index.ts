@@ -2065,7 +2065,7 @@ export const build: BuildV2 = async buildOptions => {
           let lambdaOptions: {
             architecture?: NodejsLambda['architecture'];
             memory?: number;
-            maxDuration?: number;
+            maxDuration?: number | 'max';
             experimentalTriggers?: TriggerEvent[];
             supportsCancellation?: boolean;
           } = {};

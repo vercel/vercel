@@ -677,6 +677,7 @@ function validateFunctions({ functions = {} }: Options) {
 
     if (
       func.maxDuration !== undefined &&
+      func.maxDuration !== 'max' &&
       (func.maxDuration < 1 ||
         func.maxDuration > 900 ||
         !Number.isInteger(func.maxDuration))

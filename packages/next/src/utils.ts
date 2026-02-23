@@ -1875,7 +1875,7 @@ export function addLocaleOrDefault(
 export type LambdaGroup = {
   pages: string[];
   memory?: number;
-  maxDuration?: number;
+  maxDuration?: number | 'max';
   supportsCancellation?: boolean;
   isAppRouter?: boolean;
   isAppRouteHandler?: boolean;
@@ -1946,7 +1946,7 @@ export async function getPageLambdaGroups({
     let opts: {
       architecture?: NodejsLambda['architecture'];
       memory?: number;
-      maxDuration?: number;
+      maxDuration?: number | 'max';
       experimentalTriggers?: NodejsLambda['experimentalTriggers'];
       supportsCancellation?: boolean;
     } = {};
@@ -3624,7 +3624,7 @@ export type FunctionsConfigManifestV1 = {
   functions: Record<
     string,
     {
-      maxDuration?: number | undefined;
+      maxDuration?: number | 'max' | undefined;
       runtime?: 'nodejs';
       matchers?: Array<{
         regexp: string;

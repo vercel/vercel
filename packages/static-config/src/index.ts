@@ -19,7 +19,9 @@ export const BaseFunctionConfigSchema = {
     },
     runtime: { type: 'string' },
     memory: { type: 'number' },
-    maxDuration: { type: 'number' },
+    maxDuration: {
+      oneOf: [{ type: 'number' }, { type: 'string', enum: ['max'] }],
+    },
     supportsCancellation: {
       type: 'boolean',
     },

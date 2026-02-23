@@ -24,6 +24,14 @@ describe('validateConfig', () => {
     expect(error).toBeNull();
   });
 
+  it('should not error with maxDuration set to "max"', async () => {
+    const config = {
+      functions: { 'api/user.go': { memory: 128, maxDuration: 'max' } },
+    };
+    const error = validateConfig(config);
+    expect(error).toBeNull();
+  });
+
   it('should not error with builds and routes', async () => {
     const config = {
       builds: [{ src: 'api/index.js', use: '@vercel/node' }],

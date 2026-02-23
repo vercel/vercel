@@ -209,7 +209,7 @@ async function readFunctionsConfig({ workPath }: { workPath: string }) {
     string,
     {
       memory?: number;
-      maxDuration?: number;
+      maxDuration?: number | 'max';
       runtime?: string;
       handler?: string;
       regions?: string[];
@@ -236,7 +236,7 @@ function parseFunctionConfig(data: Record<string, unknown>) {
 
   const config: {
     memory?: number;
-    maxDuration?: number;
+    maxDuration?: number | 'max';
     runtime?: string;
     handler?: string;
     regions?: string[];
@@ -247,8 +247,8 @@ function parseFunctionConfig(data: Record<string, unknown>) {
     config.memory = data.memory;
   }
 
-  if (typeof data.maxDuration === 'number') {
-    config.maxDuration = data.maxDuration;
+  if (typeof data.maxDuration === 'number' || data.maxDuration === 'max') {
+    config.maxDuration = data.maxDuration as number | 'max';
   }
 
   // In case of a custom runtime, a custom handler has to be provided.

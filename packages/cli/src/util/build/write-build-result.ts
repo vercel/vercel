@@ -53,7 +53,7 @@ export const OUTPUT_DIR = join(VERCEL_DIR, 'output');
 interface FunctionConfiguration {
   architecture?: string;
   memory?: number;
-  maxDuration?: number;
+  maxDuration?: number | 'max';
   regions?: Lambda['regions'];
   functionFailoverRegions?: Lambda['functionFailoverRegions'];
   experimentalTriggers?: TriggerEvent[];
