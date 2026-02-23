@@ -30,6 +30,7 @@ export const help = () => `
       inspect              [id]        Displays information related to a deployment
       i | install          [name]      Install an integration from the Marketplace
       integration          [cmd]       Manages your Marketplace integrations
+      ir | integration-resource [cmd]  Manages your Marketplace integration resources
       link                 [path]      Link local directory to a Vercel Project
       ls | list            [app]       Lists deployments
       login                [email]     Logs into your account or creates a new one
