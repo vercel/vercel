@@ -30,7 +30,7 @@ jobs:
       - name: Discover Python packages
         id: discoverPythonPackages
         run: |
-          PACKAGES="$(node utils/get-python-packages.js --packages || echo '[]')"
+          PACKAGES="$(node utils/get-python-packages.js --packages)"
           echo "packages=$PACKAGES" >> "$GITHUB_OUTPUT"
           echo "Discovered Python packages: $PACKAGES"
 
@@ -51,11 +51,20 @@ jobs:
 
             const owner = context.repo.owner;
             const repo = context.repo.repo;
-            let pythonPackages = [];
-            try {
-              pythonPackages = JSON.parse(process.env.PYTHON_PACKAGES || '[]');
-            } catch (error) {
-              console.log(`Failed to parse discovered Python packages: ${error}`);
+            const pythonPackages = JSON.parse(process.env.PYTHON_PACKAGES || '[]');
+            if (!Array.isArray(pythonPackages)) {
+              throw new Error('PYTHON_PACKAGES must be a JSON array');
+            }
+            for (const pkg of pythonPackages) {
+              if (
+                !pkg ||
+                typeof pkg.packageDir !== 'string' ||
+                typeof pkg.packageName !== 'string'
+              ) {
+                throw new Error(
+                  `Invalid PYTHON_PACKAGES entry: ${JSON.stringify(pkg)}`
+                );
+              }
             }
 
             function toPythonEnvVar(packageName) {
