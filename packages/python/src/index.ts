@@ -28,8 +28,8 @@ import {
   installRequirement,
 } from './install';
 import {
-  MAX_RUNTIME_DEPS_SIZE_BYTES,
   PythonDependencyExternalizer,
+  REQUESTED_TMP_SIZE_MB,
 } from './dependency-externalizer';
 import { detectInstallSource } from './install';
 import { UvRunner, getUvBinaryOrInstall } from './uv';
@@ -576,7 +576,7 @@ from vercel_runtime.vc_init import vc_handler
     ephemeralStorageSize:
       depExternalizer.needsExtraEphemeralStorage &&
       process.env.VERCEL_PYTHON_INCREASED_EPHEMERAL_STORAGE === '1'
-        ? MAX_RUNTIME_DEPS_SIZE_BYTES / 1024 / 1024 // convert bytes to MB
+        ? REQUESTED_TMP_SIZE_MB
         : undefined,
   });
 
