@@ -44,6 +44,10 @@ export const addSubcommand = {
       name: 'environment',
       required: false,
     },
+    {
+      name: 'git-branch',
+      required: false,
+    },
   ],
   options: [
     {
@@ -68,6 +72,15 @@ export const addSubcommand = {
       description: 'Receive command suggestions once command is complete',
       shorthand: null,
       type: Boolean,
+      deprecated: false,
+    },
+    {
+      name: 'value',
+      description:
+        'Value for the variable (non-interactive). Otherwise use stdin or you will be prompted.',
+      shorthand: null,
+      type: String,
+      argument: 'VALUE',
       deprecated: false,
     },
   ],
@@ -97,7 +110,7 @@ export const addSubcommand = {
     {
       name: 'Add a new Environment Variable for a specific Environment and Git Branch',
       value: [
-        `${packageName} env add <name> ${targetPlaceholder} <git-branch>`,
+        `${packageName} env add <name> ${targetPlaceholder} <gitbranch>`,
         `${packageName} env add DB_PASS preview feat1`,
       ],
     },
@@ -108,6 +121,10 @@ export const addSubcommand = {
         `cat ~/.npmrc | ${packageName} env add NPM_RC preview`,
         `${packageName} env add API_URL production < url.txt`,
       ],
+    },
+    {
+      name: 'Add with value as argument (non-interactive)',
+      value: `${packageName} env add API_TOKEN production --value "secret" --yes`,
     },
   ],
 } as const;
@@ -275,6 +292,15 @@ export const updateSubcommand = {
       ...yesOption,
       description:
         'Skip the confirmation prompt when updating an Environment Variable',
+    },
+    {
+      name: 'value',
+      description:
+        'New value for the variable (non-interactive). Otherwise use stdin or you will be prompted.',
+      shorthand: null,
+      type: String,
+      argument: 'VALUE',
+      deprecated: false,
     },
   ],
   examples: [

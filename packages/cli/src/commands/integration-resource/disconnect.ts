@@ -61,6 +61,7 @@ export async function disconnect(client: Client) {
     output.error('Team not found.');
     return 1;
   }
+  client.config.currentTeam = team.id;
 
   const isMissingResourceOrIntegration = parsedArguments.args.length < 2;
   if (isMissingResourceOrIntegration) {
@@ -97,7 +98,7 @@ export async function disconnect(client: Client) {
   telemetry.trackCliFlagAll(shouldDisconnectAll);
 
   output.spinner('Retrieving resource…', 500);
-  const resources = await getResources(client, team.id);
+  const resources = await getResources(client);
   const targetedResource = resources.find(
     resource => resource.name === resourceName
   );
@@ -105,7 +106,7 @@ export async function disconnect(client: Client) {
 
   if (!targetedResource) {
     output.error(`No resource ${chalk.bold(resourceName)} found.`);
-    return 0;
+    return 1;
   }
 
   if (parsedArguments.flags['--all']) {
@@ -179,6 +180,13 @@ async function handleDisconnectProject(
     return 0;
   }
 
+  if (!skipConfirmation && !client.stdin.isTTY) {
+    output.error(
+      'Confirmation required. Use `--yes` to skip the confirmation prompt.'
+    );
+    return 1;
+  }
+
   if (
     !skipConfirmation &&
     !(await confirmDisconnectProject(client, resource, project))
@@ -220,6 +228,12 @@ export async function handleDisconnectAllProjects(
   if (resource.projectsMetadata?.length === 0) {
     output.log(`${chalk.bold(resource.name)} has no projects to disconnect.`);
     return;
+  }
+
+  if (!skipConfirmation && !client.stdin.isTTY) {
+    throw new FailedError(
+      'Confirmation required. Use `--yes` to skip the confirmation prompt.'
+    );
   }
 
   if (
