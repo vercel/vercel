@@ -403,7 +403,10 @@ export function extractGroupedSeries(
   const valueByGroup = new Map<string, Map<string, number | null>>();
 
   for (const row of data) {
-    const values = groupBy.map(field => String(row[field] ?? ''));
+    const values = groupBy.map(field => {
+      const v = row[field];
+      return v == null || v === '' ? '(not set)' : String(v);
+    });
     const key = toGroupKey(values);
     if (!valueByGroup.has(key)) {
       // Preserve first-seen ordering from API response so output order is stable.
