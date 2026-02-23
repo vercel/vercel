@@ -2812,6 +2812,35 @@ describe('Test `detectRoutes` with `featHandleMiss=true`', () => {
     });
   });
 
+  it('VERCEL_DISABLE_API_404 omits the api 404 route', async () => {
+    const originalEnv = process.env.VERCEL_DISABLE_API_404;
+    process.env.VERCEL_DISABLE_API_404 = '1';
+    try {
+      const featHandleMiss = true;
+      const files = ['api/user.go', 'api/team.js', 'api/package.json'];
+
+      const { rewriteRoutes } = await invokeDetectBuildersAndThrow(
+        files,
+        null,
+        {
+          featHandleMiss,
+        }
+      );
+      // The 404 route for /api should not be present
+      expect(
+        rewriteRoutes.find(
+          (r: any) => r.src === '^/api(/.*)?$' && r.status === 404
+        )
+      ).toBeUndefined();
+    } finally {
+      if (originalEnv === undefined) {
+        delete process.env.VERCEL_DISABLE_API_404;
+      } else {
+        process.env.VERCEL_DISABLE_API_404 = originalEnv;
+      }
+    }
+  });
+
   it('conflicting file path with same name', async () => {
     const featHandleMiss = true;
     const files = ['api/user.go', 'api/user.js'];

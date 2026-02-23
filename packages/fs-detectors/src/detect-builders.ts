@@ -1142,11 +1142,16 @@ function getRouteResult(
       const hasApiBuild = apiBuilders.find(builder => {
         return builder.src?.startsWith('api/');
       });
-      if (typeof ignoreRuntimes === 'undefined' && hasApiBuild) {
+      if (
+        typeof ignoreRuntimes === 'undefined' &&
+        hasApiBuild &&
+        process.env.VERCEL_DISABLE_API_404 !== '1'
+      ) {
         // This route is only necessary to hide the directory listing
         // to avoid enumerating serverless function names.
         // But it causes issues in `vc dev` for frameworks that handle
         // their own functions such as redwood, so we ignore.
+        // Can be disabled by setting VERCEL_DISABLE_API_404=1.
         rewriteRoutes.push({
           src: '^/api(/.*)?$',
           status: 404,
