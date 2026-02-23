@@ -1349,11 +1349,13 @@ export function useIntegration({
 export function useAutoProvision(opts?: {
   responseKey?: keyof typeof autoProvisionResponses;
   withInstallation?: boolean;
+  installationAppearsAfterPolls?: number;
   ownerId?: string;
 }) {
   const withInstallation = opts?.withInstallation ?? true;
   const storeId = 'resource_123';
   const requestBodies: unknown[] = [];
+  let installationPollCount = 0;
 
   // Integration fetch endpoint (needed for auto-provision flow)
   client.scenario.get(
@@ -1380,6 +1382,29 @@ export function useAutoProvision(opts?: {
       res.end();
       return;
     }
+
+    // If installationAppearsAfterPolls is set and no initial installation,
+    // simulate delayed installation creation (for browser terms flow tests)
+    if (
+      !withInstallation &&
+      opts?.installationAppearsAfterPolls !== undefined
+    ) {
+      installationPollCount++;
+      if (installationPollCount > opts.installationAppearsAfterPolls) {
+        res.json([
+          {
+            id: 'acme-install',
+            integrationId: integrationIdOrSlug,
+            installationType: 'marketplace',
+            ownerId: opts?.ownerId ?? 'team_dummy',
+          },
+        ]);
+        return;
+      }
+      res.json([]);
+      return;
+    }
+
     res.json(
       withInstallation
         ? [
