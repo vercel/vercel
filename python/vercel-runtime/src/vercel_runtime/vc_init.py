@@ -469,7 +469,7 @@ if os.path.exists(_runtime_config_path):
                 "--no-cache",
                 "--no-progress",
                 "--link-mode",
-                "copy",
+                "hardlink",
             ]
             for _pkg in _config.get("bundledPackages", []):
                 _sync_cmd.extend(["--no-install-package", _pkg])
