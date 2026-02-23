@@ -62,6 +62,15 @@ export const addSubcommand = {
       description:
         'Environment to connect (can be repeated: production, preview, development). Defaults to all.',
     },
+    {
+      name: 'prefix',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      argument: 'PREFIX',
+      description:
+        'Prefix for environment variable names (e.g., --prefix NEON2_ creates NEON2_DATABASE_URL instead of DATABASE_URL)',
+    },
   ],
   examples: [
     {
@@ -117,6 +126,10 @@ export const addSubcommand = {
       value: `${packageName} integration add acme --no-env-pull`,
     },
     {
+      name: 'Install with a prefix for environment variable names',
+      value: `${packageName} integration add acme --prefix NEON2_`,
+    },
+    {
       name: 'Show available products for an integration',
       value: `${packageName} integration add acme --help`,
     },
@@ -160,6 +173,13 @@ export const openSubcommand = {
   ],
   options: [formatOption],
   examples: [
+    {
+      name: "Open a resource's dashboard by resource name",
+      value: [
+        `${packageName} integration open <resource-name>`,
+        `${packageName} integration open my-acme-store`,
+      ],
+    },
     {
       name: "Open a marketplace integration's dashboard",
       value: [

@@ -319,6 +319,71 @@ describe('integration', () => {
         });
       });
 
+      describe('resource name as first argument', () => {
+        const teamId = 'team_dummy';
+
+        beforeEach(() => {
+          const teams = useTeams(teamId);
+          const team = Array.isArray(teams) ? teams[0] : teams.teams[0];
+          client.config.currentTeam = team.id;
+
+          useConfiguration();
+          useResources();
+        });
+
+        it('should open resource dashboard when first argument is a resource name', async () => {
+          useProject({
+            ...defaultProject,
+            id: 'vercel-integration-open',
+            name: 'vercel-integration-open',
+          });
+          client.setArgv('integration', 'open', 'store-acme-connected-project');
+          const exitCode = await integrationCommand(client);
+          expect(exitCode, 'exit code for "integration"').toEqual(0);
+          await expect(client.stderr).toOutput(
+            'Opening the store-acme-connected-project resource dashboard...'
+          );
+          expect(openMock).toHaveBeenCalledWith(
+            'https://vercel.com/api/marketplace/sso?teamId=team_dummy&integrationConfigurationId=acme-1&resource_id=ext_store_1'
+          );
+        });
+
+        it('should output resource SSO link as JSON when first argument is a resource name', async () => {
+          useProject({
+            ...defaultProject,
+            id: 'vercel-integration-open',
+            name: 'vercel-integration-open',
+          });
+          client.setArgv(
+            'integration',
+            'open',
+            'store-acme-connected-project',
+            '--format=json'
+          );
+          const exitCode = await integrationCommand(client);
+          expect(exitCode, 'exit code for "integration"').toEqual(0);
+          expect(openMock).not.toHaveBeenCalled();
+          await expect(client.stdout).toOutput(
+            '"url": "https://vercel.com/api/marketplace/sso?teamId=team_dummy&integrationConfigurationId=acme-1&resource_id=ext_store_1"'
+          );
+        });
+
+        it('should error when resource has no integrationConfigurationId', async () => {
+          useProject({
+            ...defaultProject,
+            id: 'vercel-integration-open',
+            name: 'vercel-integration-open',
+          });
+          // 'foobar' is a non-marketplace resource with empty product
+          client.setArgv('integration', 'open', 'foobar');
+          const exitCode = await integrationCommand(client);
+          expect(exitCode, 'exit code for "integration"').toEqual(1);
+          await expect(client.stderr).toOutput(
+            'Error: Resource "foobar" is not associated with a marketplace integration.'
+          );
+        });
+      });
+
       describe('errors', () => {
         it('should error when no argument is passed', async () => {
           client.setArgv('integration', 'open');
@@ -343,13 +408,33 @@ describe('integration', () => {
           await expect(client.stderr).toOutput('Error: Team not found');
         });
 
-        it('should error when no configuration exists for the provided slug', async () => {
+        it('should error when no configuration or resource exists for the provided name', async () => {
+          const teams = useTeams('team_dummy');
+          const team = Array.isArray(teams) ? teams[0] : teams.teams[0];
+          client.config.currentTeam = team.id;
+          useConfiguration();
+          useResources();
+
+          client.setArgv('integration', 'open', 'acme-no-results');
+          const exitCode = await integrationCommand(client);
+          expect(exitCode, 'exit code for "integration"').toEqual(1);
+          await expect(client.stderr).toOutput(
+            'Error: No integration or resource found for "acme-no-results".'
+          );
+        });
+
+        it('should still error with configuration message when slug fails and resource arg is provided', async () => {
           const teams = useTeams('team_dummy');
           const team = Array.isArray(teams) ? teams[0] : teams.teams[0];
           client.config.currentTeam = team.id;
           useConfiguration();
 
-          client.setArgv('integration', 'open', 'acme-no-results');
+          client.setArgv(
+            'integration',
+            'open',
+            'acme-no-results',
+            'some-resource'
+          );
           const exitCode = await integrationCommand(client);
           expect(exitCode, 'exit code for "integration"').toEqual(1);
           await expect(client.stderr).toOutput(
@@ -362,6 +447,7 @@ describe('integration', () => {
           const team = Array.isArray(teams) ? teams[0] : teams.teams[0];
           client.config.currentTeam = team.id;
           useConfiguration();
+          useResources();
 
           client.setArgv('integration', 'open', 'acme-no-results');
           const exitCode = await integrationCommand(client);
