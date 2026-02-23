@@ -8,6 +8,7 @@ import {
   MockInstance,
 } from 'vitest';
 import { delimiter } from 'path';
+import fs from 'fs-extra';
 import { getEnvForPackageManager } from '../src';
 import { PNPM_10_PREFERRED_AT } from '../src/fs/run-user-scripts';
 import { getNodeVersionByMajor } from '../src/fs/node-version';
@@ -15,10 +16,15 @@ import { getNodeVersionByMajor } from '../src/fs/node-version';
 describe('Test `getEnvForPackageManager()`', () => {
   let consoleLogSpy: MockInstance<typeof console.log>;
   let consoleWarnSpy: MockInstance<typeof console.warn>;
+  // Mock existsSync to return true so that tests that expect a hardcoded path
+  // (e.g. /pnpm9/node_modules/.bin) to be prepended to PATH still pass even
+  // when those directories don't exist on the test machine.
+  let existsSyncSpy: MockInstance<typeof fs.existsSync>;
 
   beforeEach(() => {
     consoleLogSpy = vi.spyOn(console, 'log');
     consoleWarnSpy = vi.spyOn(console, 'warn');
+    existsSyncSpy = vi.spyOn(fs, 'existsSync').mockReturnValue(true);
   });
 
   afterEach(() => {
@@ -314,6 +320,27 @@ describe('Test `getEnvForPackageManager()`', () => {
       } else if (consoleLogOutput === null) {
         expect(consoleWarnSpy).not.toHaveBeenCalled();
       }
+    });
+
+    test('should not prepend pnpm path when it does not exist on disk', () => {
+      // Simulate running outside Vercel infrastructure where hardcoded paths
+      // like /pnpm9/node_modules/.bin do not exist.
+      existsSyncSpy.mockReturnValue(false);
+      const result = getEnvForPackageManager({
+        cliType: 'pnpm',
+        nodeVersion: getNodeVersionByMajor(18),
+        packageJsonPackageManager: undefined,
+        lockfileVersion: 7.0,
+        env: {
+          FOO: 'bar',
+          PATH: 'foo',
+        },
+      });
+      expect(result).toStrictEqual({
+        FOO: 'bar',
+        PATH: 'foo',
+      });
+      expect(consoleLogSpy).not.toHaveBeenCalled();
     });
   });
 

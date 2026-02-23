@@ -997,9 +997,10 @@ export function getEnvForPackageManager({
     return oldPath.split(path.delimiter).includes(newPath);
   };
 
-  if (newPath && !alreadyInPath(newPath)) {
+  if (newPath && !alreadyInPath(newPath) && fs.existsSync(newPath)) {
     // Ensure that the binaries of the detected package manager are at the
-    // beginning of the `$PATH`.
+    // beginning of the `$PATH`. Skip when the path does not exist on disk
+    // (e.g. running `vercel build` locally outside Vercel's infrastructure).
     const oldPath = env.PATH + '';
     newEnv.PATH = `${newPath}${path.delimiter}${oldPath}`;
 
