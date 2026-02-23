@@ -29,6 +29,33 @@ export async function isPythonEntrypoint(
 }
 
 /**
+ * Read Procfile, parse the web process and return the application module path.
+ * Supports:
+ * - gunicorn <module> or <module>:<attr>
+ * - uvicorn <module> or <module>:<attr>
+ */
+export async function getProcfileWebEntrypoint(
+  workPath: string
+): Promise<string | null> {
+  const procfilePath = join(workPath, 'Procfile');
+  try {
+    const procfileContent = await fs.promises.readFile(procfilePath, 'utf-8');
+    const pyId = '[A-Za-z_][A-Za-z0-9_]*';
+    const appPattern = `${pyId}(?:\\.${pyId})*(?::${pyId})?`;
+    const match = procfileContent.match(
+      new RegExp(`web:\\s*(?:gunicorn|uvicorn)\\s+(${appPattern})`)
+    );
+    if (match) {
+      const modulePath = match[1].split(':')[0];
+      return `${modulePath.replace(/\./g, '/')}.py`;
+    }
+  } catch {
+    debug('Procfile not found or unreadable, skipping Procfile web entrypoint');
+  }
+  return null;
+}
+
+/**
  * For Django projects: read manage.py if present and return the value set for
  * DJANGO_SETTINGS_MODULE (e.g. from os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'app.settings')).
  * Returns null if manage.py is missing or the pattern is not found.
