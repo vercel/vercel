@@ -1,6 +1,6 @@
 [project]
 name = "vercel-runtime"
-version = "0.4.1"
+version = "0.5.1"
 license = "Apache-2.0"
 license-files = [
   "src/vercel_runtime/_vendor/*/LICEN[CS]E*",
@@ -23,6 +23,119 @@ classifiers = [
 [build-system]
 requires = ["uv_build>=0.9.22,<0.10.0"]
 build-backend = "uv_build"
+
+[dependency-groups]
+test = [
+    "attrs~=25.3.0",
+    "basedpyright~=1.37.0",
+    "mypy~=1.19.0",
+    "pytest~=9.0.2",
+    "pytest-cov~=7.0.0",
+    "ruff~=0.15.1",
+]
+
+[tool.uv]
+default-groups = ["test"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+mypy_path = "src"
+packages = ["vercel_runtime", "tests"]
+explicit_package_bases = true
+
+[[tool.mypy.overrides]]
+module = ["vercel_runtime._vendor.*"]
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = ["tests.fixtures.*"]
+ignore_errors = true
+
+[tool.basedpyright]
+pythonVersion = "3.12"
+typeCheckingMode = "strict"
+include = ["src/vercel_runtime", "tests"]
+exclude = ["src/vercel_runtime/_vendor", "tests/fixtures"]
+extraPaths = ["src"]
+
+[[tool.basedpyright.executionEnvironments]]
+root = "tests"
+extraPaths = [".", "src"]
+reportPrivateUsage = false
+
+[tool.ruff]
+line-length = 80
+indent-width = 4
+target-version = "py312"
+exclude = [
+    ".github",
+    ".git",
+    "src/vercel_runtime/_vendor",
+]
+
+[tool.ruff.lint]
+preview = true
+extend-select = [
+    "B",    # flake8-bugbear
+    "C4",   # flake8-comprehensions
+    "E",    # error
+    "ERA",  # flake8-eradicate
+    "F",    # pyflakes
+    "FBT",  # flake8-boolean-trap
+    "G",    # flake8-logging-format
+    "I",    # isort
+    "N",    # pep8-naming
+    "PGH",  # pygrep-hooks
+    "PIE",  # flake8-pie
+    "PLE",  # pylint-error
+    "PLW",  # pylint-warning
+    "PLC",  # pylint-convention
+    "RUF",  # ruff specific
+    "SIM",  # flake8-simplify
+    "T20",  # flake8-print
+    "TC",   # flake8-type-checking
+    "UP",   # pyupgrade
+    "W",    # warning
+]
+
+extend-ignore = [
+    "D",       # pydocstyle
+    "F541",    # f-string-missing-placeholders
+    "PLW1514", # unspecified-encoding (UTF-8 is Python 3 default)
+    "RUF067",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = [
+    "N806",    # allow uppercase variable names
+    "PLC0415", # guarded/conditional imports in tests
+    "PLC2701", # allow private imports in tests
+]
+"tests/fixtures/**/*.py" = [
+    "N801",    # handler must be lowercase (vc_init.py convention)
+    "N802",    # do_GET is BaseHTTPRequestHandler convention
+    "T201",    # print is used intentionally in fixtures
+    "PLC0415", # conditional imports in fixtures are fine
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.coverage.run]
+source = ["vercel_runtime"]
+parallel = true
+omit = ["src/vercel_runtime/_vendor/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "@abstractmethod",
+    "raise NotImplementedError",
+]
 
 [tool.vendoring]
 destination = "src/vercel_runtime/_vendor/"

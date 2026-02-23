@@ -54,5 +54,8 @@
         "content-type": "text/x-component"
       }
     }
-  ]
+  ],
+  "env": {
+    "NEXT_BUILDER_INTEGRATION": "1"
+  }
 }

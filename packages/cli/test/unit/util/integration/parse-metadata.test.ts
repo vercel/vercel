@@ -306,6 +306,24 @@ describe('parseMetadataFlags', () => {
         readRegions: ['sfo1', 'iad1', 'fra1'],
       });
     });
+
+    it('filters empty strings from trailing commas', () => {
+      const result = parseMetadataFlags(['tags=a,'], arraySchema);
+      expect(result.errors).toEqual([]);
+      expect(result.metadata).toEqual({ tags: ['a'] });
+    });
+
+    it('filters empty strings from leading commas', () => {
+      const result = parseMetadataFlags(['tags=,a'], arraySchema);
+      expect(result.errors).toEqual([]);
+      expect(result.metadata).toEqual({ tags: ['a'] });
+    });
+
+    it('filters empty strings from multiple consecutive commas', () => {
+      const result = parseMetadataFlags(['tags=a,,b'], arraySchema);
+      expect(result.errors).toEqual([]);
+      expect(result.metadata).toEqual({ tags: ['a', 'b'] });
+    });
   });
 });
 

@@ -107,11 +107,14 @@ const wheelPath = join(distDir, wheels[0]);
 // Smoke test the wheel
 run('uv', [
   'run',
+  '--only-group=test',
+  '--locked',
   '--isolated',
-  '--no-project',
+  '--project=python/vercel-runtime',
   '--with',
   wheelPath,
-  'python/vercel-runtime/tests/release_smoke_test.py',
+  'pytest',
+  '-k not test_cqa_',
 ]);
 
 // Publish to PyPI (relies on OIDC trusted publishing env set up by the release.yml workflow)

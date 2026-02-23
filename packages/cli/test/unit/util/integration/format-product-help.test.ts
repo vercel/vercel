@@ -49,4 +49,12 @@ describe('formatProductHelp', () => {
     expect(result).toContain('Available products for "my-integration"');
     expect(result).toContain('my-integration/<product-slug>');
   });
+
+  it('should use custom commandName in usage example', () => {
+    const products = [makeProduct({ slug: 'prod-a', name: 'Product A' })];
+    const result = stripAnsi(formatProductHelp('acme', products, 'install'));
+
+    expect(result).toContain('$ vercel install acme/<product-slug>');
+    expect(result).not.toContain('integration add');
+  });
 });

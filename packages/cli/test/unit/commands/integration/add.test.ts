@@ -1424,6 +1424,38 @@ describe('integration', () => {
               expect.stringMatching(/planId=pro/)
             );
           });
+
+          it('should include planId in web UI URL for non-subscription plan selected interactively', async () => {
+            useProject({
+              ...defaultProject,
+              id: 'vercel-integration-add',
+              name: 'vercel-integration-add',
+            });
+            const cwd = setupUnitFixture('vercel-integration-add');
+            client.cwd = cwd;
+            client.setArgv('integration', 'add', 'acme-prepayment');
+            const exitCodePromise = integrationCommand(client);
+            await expect(client.stderr).toOutput(
+              `Installing Acme Product by Acme Prepayment under ${team.slug}`
+            );
+            await expect(client.stderr).toOutput(
+              'Choose your region (Use arrow keys)'
+            );
+            client.stdin.write('\n');
+            await expect(client.stderr).toOutput(
+              'Choose a billing plan (Use arrow keys)'
+            );
+            client.stdin.write('\n');
+            await expect(client.stderr).toOutput(
+              'You have selected a plan that cannot be provisioned through the CLI. Open \nVercel Dashboard?'
+            );
+            client.stdin.write('Y\n');
+            const exitCode = await exitCodePromise;
+            expect(exitCode).toEqual(1);
+            const calledUrl = openMock.mock.calls[0]?.[0] as string;
+            const parsed = new URL(calledUrl);
+            expect(parsed.searchParams.get('planId')).toEqual('pro');
+          });
         });
       });
 

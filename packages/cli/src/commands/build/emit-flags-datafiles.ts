@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { NowBuildError } from '@vercel/build-utils';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -6,7 +7,7 @@ import output from '../../output-manager';
 import pkg from '../../util/pkg';
 
 const FLAGS_HOST = 'https://flags.vercel.com';
-const FLAGS_DEFINITIONS_VERSION = '1.0.0';
+const FLAGS_DEFINITIONS_VERSION = '1.0.1';
 
 type BundledDefinitions = Record<string, unknown>;
 
@@ -21,14 +22,24 @@ function obfuscate(sdkKey: string, prefixLength = 18): string {
 }
 
 /**
+ * Computes a SHA-256 hex digest of the given SDK key.
+ */
+function hashSdkKey(sdkKey: string): string {
+  return createHash('sha256').update(sdkKey).digest('hex');
+}
+
+/**
  * Generates a JS module with deduplicated, lazily-parsed definitions.
+ *
+ * The map keys are SHA-256 hashes of the SDK keys so that raw keys
+ * are not embedded in the output.
  *
  * Output format:
  * ```js
  * const memo = (fn) => { let cached; return () => (cached ??= fn()); };
  * const _d0 = memo(() => JSON.parse('...'));
- * const map = { "vf_key1": _d0, "vf_key2": _d0 };
- * export function get(sdkKey) { return map[sdkKey]?.() ?? null; }
+ * const map = { "<sha256_hash>": _d0 };
+ * export function get(hashedSdkKey) { return map[hashedSdkKey]?.() ?? null; }
  * ```
  */
 function generateDefinitionsModule(
@@ -51,6 +62,9 @@ function generateDefinitionsModule(
   // Map SDK keys to their definition index
   const keyToIndex = sdkKeys.map((_, i) => stringToIndex.get(stringified[i]));
 
+  // Hash each SDK key
+  const hashedKeys = sdkKeys.map(hashSdkKey);
+
   // Generate JS
   const lines: string[] = [
     'const memo = (fn) => { let cached; return () => (cached ??= fn()); };',
@@ -67,12 +81,12 @@ function generateDefinitionsModule(
   lines.push('');
   lines.push('const map = {');
   for (let i = 0; i < sdkKeys.length; i++) {
-    lines.push(`  ${JSON.stringify(sdkKeys[i])}: _d${keyToIndex[i]},`);
+    lines.push(`  ${JSON.stringify(hashedKeys[i])}: _d${keyToIndex[i]},`);
   }
   lines.push('};');
   lines.push('');
-  lines.push('export function get(sdkKey) {');
-  lines.push('  return map[sdkKey]?.() ?? null;');
+  lines.push('export function get(hashedSdkKey) {');
+  lines.push('  return map[hashedSdkKey]?.() ?? null;');
   lines.push('}');
   lines.push('');
   lines.push(
@@ -89,7 +103,7 @@ function generateDefinitionsModule(
  * from flags.vercel.com, and writes them to a synthetic package that can be
  * imported at runtime.
  */
-export async function emitFlagsDefinitions(
+export async function emitFlagsDatafiles(
   cwd: string,
   env: NodeJS.ProcessEnv
 ): Promise<void> {
@@ -166,7 +180,7 @@ export async function emitFlagsDefinitions(
   const dtsPath = join(storageDir, 'index.d.ts');
   const packageJsonPath = join(storageDir, 'package.json');
   const dts = [
-    'export function get(sdkKey: string): Record<string, unknown> | null;',
+    'export function get(hashedSdkKey: string): Record<string, unknown> | null;',
     'export const version: string;',
     '',
   ].join('\n');
