@@ -120,7 +120,7 @@ async function buildPythonWheel({
         lastTag,
         'HEAD',
         '--',
-        pkgPath,
+        packagePath,
       ]).catch(err => err);
 
       if (result.exitCode === 0) {
