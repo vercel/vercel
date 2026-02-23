@@ -19,16 +19,6 @@ const PYTHON_VERSIONS_PATH = 'packages/python/src/package-versions.ts';
 
 const PYTHON_PACKAGES = [
   {
-    name: 'vercel-workers',
-    projectDir: 'python/vercel-workers',
-    versionPin: {
-      path: PYTHON_VERSIONS_PATH,
-      exportName: 'VERCEL_WORKERS_VERSION',
-    },
-    uvRunGroupArgs: ['--group=test'],
-    pytestArgs: ['-v', '--tb=short', '-k', 'not test_cqa_'],
-  },
-  {
     name: 'vercel-runtime',
     projectDir: 'python/vercel-runtime',
     versionPin: {
@@ -37,6 +27,16 @@ const PYTHON_PACKAGES = [
     },
     uvRunGroupArgs: ['--only-group=test'],
     pytestArgs: ['-k', 'not test_cqa_'],
+  },
+  {
+    name: 'vercel-workers',
+    projectDir: 'python/vercel-workers',
+    versionPin: {
+      path: PYTHON_VERSIONS_PATH,
+      exportName: 'VERCEL_WORKERS_VERSION',
+    },
+    uvRunGroupArgs: ['--group=test'],
+    pytestArgs: ['-v', '--tb=short', '-k', 'not test_cqa_'],
   },
 ].map(pkg => ({
   ...pkg,
@@ -127,8 +127,7 @@ function run(cmd, args) {
     execFileSync(cmd, args, { stdio: 'inherit', cwd: root });
   } catch (err) {
     const code = err.status ?? 1;
-    console.error(`command failed with exit code ${code}: ${cmdline}`);
-    process.exit(code);
+    throw new Error(`command failed with exit code ${code}: ${cmdline}`);
   }
 }
 
@@ -232,8 +231,21 @@ function main() {
   const { force, packageNames } = parseArgs(process.argv.slice(2));
   const selectedPackages = packageNames.map(name => pythonPackageMap.get(name));
 
+  const failures = [];
   for (const pkg of selectedPackages) {
-    publishPackage(pkg, { force });
+    try {
+      publishPackage(pkg, { force });
+    } catch (err) {
+      console.error(`\nFailed to publish ${pkg.name}: ${err.message}\n`);
+      failures.push(pkg.name);
+    }
+  }
+
+  if (failures.length > 0) {
+    console.error(
+      `Publication failed for: ${failures.join(', ')} (${failures.length}/${selectedPackages.length} packages)`
+    );
+    process.exit(1);
   }
 }
 
