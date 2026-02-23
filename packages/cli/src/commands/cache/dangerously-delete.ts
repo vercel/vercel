@@ -66,11 +66,12 @@ export default async function dangerouslyDelete(
   let postUrl = '';
   let postBody = {};
   if (tag) {
-    itemName = plural('tag', tag.split(',').length, false);
+    const tags = tag.split(',').map((t: string) => t.replace(/,/g, '!'));
+    itemName = plural('tag', tags.length, false);
     itemValue = tag;
     flag = '--tag';
     postUrl = '/v1/edge-cache/dangerously-delete-by-tags';
-    postBody = { tags: tag, revalidationDeadlineSeconds: revalidate };
+    postBody = { tags, revalidationDeadlineSeconds: revalidate };
   } else if (srcimg) {
     itemName = 'source image';
     itemValue = srcimg;

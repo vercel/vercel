@@ -51,7 +51,7 @@ describe('cache invalidate', () => {
   it('should succeed with --tag', async () => {
     client.scenario.post(`/v1/edge-cache/invalidate-by-tags`, (req, res) => {
       expect(req.body).toEqual({
-        tags: 'foo',
+        tags: ['foo'],
       });
       res.end();
     });
@@ -66,7 +66,7 @@ describe('cache invalidate', () => {
   it('should succeed with multiple tags', async () => {
     client.scenario.post(`/v1/edge-cache/invalidate-by-tags`, (req, res) => {
       expect(req.body).toEqual({
-        tags: 'foo,bar,baz',
+        tags: ['foo', 'bar', 'baz'],
       });
       res.end();
     });

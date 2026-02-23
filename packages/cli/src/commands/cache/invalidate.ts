@@ -64,11 +64,12 @@ export default async function invalidate(
   let postUrl = '';
   let postBody = {};
   if (tag) {
-    itemName = plural('tag', tag.split(',').length, false);
+    const tags = tag.split(',').map((t: string) => t.replace(/,/g, '!'));
+    itemName = plural('tag', tags.length, false);
     itemValue = tag;
     flag = '--tag';
     postUrl = '/v1/edge-cache/invalidate-by-tags';
-    postBody = { tags: tag };
+    postBody = { tags };
   } else if (srcimg) {
     itemName = 'source image';
     itemValue = srcimg;

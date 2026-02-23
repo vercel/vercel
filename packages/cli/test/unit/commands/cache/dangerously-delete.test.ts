@@ -56,7 +56,7 @@ describe('cache dangerously-delete', () => {
       `/v1/edge-cache/dangerously-delete-by-tags`,
       (req, res) => {
         expect(req.body).toEqual({
-          tags: 'foo',
+          tags: ['foo'],
         });
         res.end();
       }
@@ -74,7 +74,7 @@ describe('cache dangerously-delete', () => {
       `/v1/edge-cache/dangerously-delete-by-tags`,
       (req, res) => {
         expect(req.body).toEqual({
-          tags: 'foo,bar,baz',
+          tags: ['foo', 'bar', 'baz'],
         });
         res.end();
       }
@@ -92,7 +92,7 @@ describe('cache dangerously-delete', () => {
       `/v1/edge-cache/dangerously-delete-by-tags`,
       (req, res) => {
         expect(req.body).toEqual({
-          tags: 'foo',
+          tags: ['foo'],
           revalidationDeadlineSeconds: 60,
         });
         res.end();
