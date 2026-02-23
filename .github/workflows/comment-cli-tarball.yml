@@ -25,13 +25,23 @@ jobs:
           max_timeout: 360
           check_interval: 5
 
+      - uses: actions/checkout@v4
+
+      - name: Discover Python packages
+        id: discoverPythonPackages
+        run: |
+          PACKAGES="$(node utils/get-python-packages.js --packages || echo '[]')"
+          echo "packages=$PACKAGES" >> "$GITHUB_OUTPUT"
+          echo "Discovered Python packages: $PACKAGES"
+
       - name: Comment PR with CLI tarball instructions
         uses: actions/github-script@v7
+        env:
+          PYTHON_PACKAGES: ${{ steps.discoverPythonPackages.outputs.packages }}
         with:
           script: |
             const deploymentUrl = '${{ steps.waitForDeployment.outputs.url }}';
             const prNumber = context.issue.number;
-            const prSha = '${{ github.event.pull_request.head.sha }}';
 
             // Validate deployment URL before posting
             if (!deploymentUrl || deploymentUrl === '') {
@@ -41,8 +51,12 @@ jobs:
 
             const owner = context.repo.owner;
             const repo = context.repo.repo;
-            const headOwner = context.payload.pull_request.head.repo.owner.login;
-            const headRepo = context.payload.pull_request.head.repo.name;
+            let pythonPackages = [];
+            try {
+              pythonPackages = JSON.parse(process.env.PYTHON_PACKAGES || '[]');
+            } catch (error) {
+              console.log(`Failed to parse discovered Python packages: ${error}`);
+            }
 
             function toTitleCase(value) {
               return value
@@ -54,79 +68,6 @@ jobs:
 
             function toPythonEnvVar(packageName) {
               return `${packageName.replace(/[^a-zA-Z0-9]/g, '_').toUpperCase()}_PYTHON`;
-            }
-
-            function parsePyprojectName(pyproject) {
-              const match = pyproject.match(/^name\s*=\s*"([^"]+)"/m);
-              return match?.[1] ?? null;
-            }
-
-            async function listPythonPackagesFromRepo() {
-              const sources = [
-                { owner: headOwner, repo: headRepo, ref: prSha },
-                { owner, repo, ref: 'main' },
-              ];
-
-              for (const source of sources) {
-                try {
-                  const { data: pythonEntries } =
-                    await github.rest.repos.getContent({
-                      owner: source.owner,
-                      repo: source.repo,
-                      path: 'python',
-                      ref: source.ref,
-                    });
-
-                  if (!Array.isArray(pythonEntries)) {
-                    continue;
-                  }
-
-                  const packageDirs = pythonEntries
-                    .filter(entry => entry.type === 'dir')
-                    .map(entry => entry.name)
-                    .sort();
-
-                  const packages = [];
-                  for (const packageDir of packageDirs) {
-                    try {
-                      const { data: pyprojectFile } =
-                        await github.rest.repos.getContent({
-                          owner: source.owner,
-                          repo: source.repo,
-                          path: `python/${packageDir}/pyproject.toml`,
-                          ref: source.ref,
-                        });
-
-                      if (Array.isArray(pyprojectFile) || !pyprojectFile.content) {
-                        continue;
-                      }
-
-                      const pyproject = Buffer.from(
-                        pyprojectFile.content,
-                        pyprojectFile.encoding || 'base64'
-                      ).toString('utf8');
-                      const packageName = parsePyprojectName(pyproject) || packageDir;
-
-                      packages.push({
-                        packageDir,
-                        packageName,
-                      });
-                    } catch {
-                      // Not a Python package directory, skip.
-                    }
-                  }
-
-                  if (packages.length > 0) {
-                    return packages;
-                  }
-                } catch (error) {
-                  console.log(
-                    `Failed to list Python package directories from ${source.owner}/${source.repo}@${source.ref}: ${error}`
-                  );
-                }
-              }
-
-              return [];
             }
 
             let message = '## 📦 CLI Tarball Ready\n\n';
@@ -148,7 +89,6 @@ jobs:
             message += '}\n';
             message += '```\n';
 
-            const pythonPackages = await listPythonPackagesFromRepo();
             for (const { packageDir, packageName } of pythonPackages) {
               try {
                 const resp = await fetch(
