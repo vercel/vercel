@@ -6,6 +6,7 @@ import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import getScope from '../../util/get-scope';
 import { printError } from '../../util/error';
+import { validateJsonOutput } from '../../util/output-format';
 import { getFirstConfiguration } from '../../util/integration/fetch-marketplace-integrations';
 import { removeIntegration } from '../../util/integration/remove-integration';
 import { removeSubcommand } from './command';
@@ -28,11 +29,29 @@ export async function remove(client: Client) {
     return 1;
   }
 
+  const formatResult = validateJsonOutput(parsedArguments.flags);
+  if (!formatResult.valid) {
+    output.error(formatResult.error);
+    return 1;
+  }
+  const asJson = formatResult.jsonOutput;
+
+  const skipConfirmation = !!parsedArguments.flags['--yes'];
+
+  telemetry.trackCliFlagYes(skipConfirmation);
+  telemetry.trackCliOptionFormat(parsedArguments.flags['--format']);
+
+  if (asJson && !skipConfirmation) {
+    output.error('--format=json requires --yes to skip confirmation prompts');
+    return 1;
+  }
+
   const { team } = await getScope(client);
   if (!team) {
     output.error('Team not found.');
     return 1;
   }
+  client.config.currentTeam = team.id;
 
   const isMissingResourceOrIntegration = parsedArguments.args.length < 2;
   if (isMissingResourceOrIntegration) {
@@ -47,23 +66,27 @@ export async function remove(client: Client) {
   }
 
   const integrationName = parsedArguments.args[1];
-  const skipConfirmation = !!parsedArguments.flags['--yes'];
-  telemetry.trackCliFlagYes(skipConfirmation);
 
   output.spinner('Retrieving integration…', 500);
   const integrationConfiguration = await getFirstConfiguration(
     client,
-    integrationName,
-    team.id
+    integrationName
   );
   output.stopSpinner();
 
   if (!integrationConfiguration) {
     output.error(`No integration ${chalk.bold(integrationName)} found.`);
     telemetry.trackCliArgumentIntegration(integrationName, false);
-    return 0;
+    return 1;
   }
   telemetry.trackCliArgumentIntegration(integrationName, true);
+
+  if (!skipConfirmation && !client.stdin.isTTY) {
+    output.error(
+      'Confirmation required. Use `--yes` to skip the confirmation prompt.'
+    );
+    return 1;
+  }
 
   const userDidNotConfirm =
     !skipConfirmation &&
@@ -80,7 +103,7 @@ export async function remove(client: Client) {
 
   try {
     output.spinner('Uninstalling integration…', 1000);
-    await removeIntegration(client, integrationConfiguration, team);
+    await removeIntegration(client, integrationConfiguration);
   } catch (error) {
     output.error(
       chalk.red(
@@ -88,6 +111,14 @@ export async function remove(client: Client) {
       )
     );
     return 1;
+  }
+
+  if (asJson) {
+    output.stopSpinner();
+    client.stdout.write(
+      `${JSON.stringify({ integration: integrationName, removed: true }, null, 2)}\n`
+    );
+    return 0;
   }
 
   output.success(`${chalk.bold(integrationName)} successfully removed.`);

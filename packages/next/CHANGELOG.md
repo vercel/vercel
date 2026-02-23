@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.15.31
+
+### Patch Changes
+
+- Added support for `regions` and `functionFailoverRegions` in per-function configuration from `vercel.json` for Next.js projects. ([#15149](https://github.com/vercel/vercel/pull/15149))
+
 ## 4.15.30
 
 ### Patch Changes

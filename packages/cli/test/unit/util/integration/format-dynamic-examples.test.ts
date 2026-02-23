@@ -49,4 +49,13 @@ describe('formatDynamicExamples', () => {
       ).toBe(true);
     }
   });
+
+  it('should use custom commandName in examples', () => {
+    const output = stripAnsi(
+      formatDynamicExamples('test-integration', productWithSchema, 'install')
+    );
+
+    expect(output).toContain('$ vercel install test-integration');
+    expect(output).not.toContain('integration add');
+  });
 });

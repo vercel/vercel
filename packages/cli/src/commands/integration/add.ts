@@ -130,6 +130,7 @@ export async function add(
     output.error('Team not found');
     return 1;
   }
+  client.config.currentTeam = team.id;
 
   const integration = await fetchIntegrationWithTelemetry(
     client,
@@ -457,7 +458,7 @@ async function provisionResourceViaCLI(
         projectLink.value,
         name,
         metadata,
-        billingPlanId
+        billingPlan.id
       );
     }
 

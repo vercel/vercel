@@ -160,7 +160,7 @@ async function detectServicesFrontendSubdir(
 
   services[serviceName] = {
     framework: frontendFramework.slug ?? undefined,
-    workspace: frontendLocation,
+    entrypoint: frontendLocation,
     routePrefix: '/',
   };
 
@@ -295,7 +295,7 @@ async function detectServiceInDir(
     return {
       service: {
         framework: framework.slug ?? undefined,
-        workspace: dirPath,
+        entrypoint: dirPath,
         routePrefix: `/_/${serviceName}`,
       },
     };
