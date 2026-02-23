@@ -112,6 +112,19 @@ describe('integration add (auto-provision)', () => {
         ['--yes'],
         'vercel-cli:integration:add'
       );
+
+      expect(client.telemetryEventStore.readonlyEvents).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            key: 'output:marketplace_checkout_provisioning_completed',
+            value: expect.stringContaining('"resource_id":"resource_123"'),
+          }),
+          expect.objectContaining({
+            key: 'output:marketplace_project_connected',
+            value: expect.stringContaining('"project_id"'),
+          }),
+        ])
+      );
     });
 
     it('should warn when env pull fails', async () => {
@@ -167,6 +180,21 @@ describe('integration add (auto-provision)', () => {
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(1);
       expect(pullMock).not.toHaveBeenCalled();
+
+      expect(client.telemetryEventStore.readonlyEvents).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            key: 'output:marketplace_checkout_provisioning_completed',
+            value: expect.stringContaining('"resource_id":"resource_123"'),
+          }),
+          expect.objectContaining({
+            key: 'output:marketplace_project_connect_failed',
+            value: expect.stringContaining(
+              '"error_message":"Connection failed"'
+            ),
+          }),
+        ])
+      );
     });
 
     it('should skip connecting with --no-connect flag', async () => {
@@ -235,6 +263,24 @@ describe('integration add (auto-provision)', () => {
           key: 'argument:integration',
           value: 'acme',
         },
+        {
+          key: 'output:marketplace_install_flow_started',
+          value: expect.stringContaining('"integration_slug":"acme"'),
+        },
+        {
+          key: 'output:marketplace_checkout_plan_selected',
+          value: expect.stringContaining(
+            '"plan_selection_method":"server_default"'
+          ),
+        },
+        {
+          key: 'output:marketplace_checkout_provisioning_started',
+          value: expect.stringContaining('"integration_slug":"acme"'),
+        },
+        {
+          key: 'output:marketplace_checkout_provisioning_completed',
+          value: expect.stringContaining('"resource_id":"resource_123"'),
+        },
       ]);
     });
 
@@ -266,6 +312,24 @@ describe('integration add (auto-provision)', () => {
         {
           key: 'argument:integration',
           value: 'acme',
+        },
+        {
+          key: 'output:marketplace_install_flow_started',
+          value: expect.stringContaining('"integration_slug":"acme"'),
+        },
+        {
+          key: 'output:marketplace_checkout_plan_selected',
+          value: expect.stringContaining(
+            '"plan_selection_method":"server_default"'
+          ),
+        },
+        {
+          key: 'output:marketplace_checkout_provisioning_started',
+          value: expect.stringContaining('"integration_slug":"acme"'),
+        },
+        {
+          key: 'output:marketplace_checkout_provisioning_completed',
+          value: expect.stringContaining('"resource_id":"resource_123"'),
         },
       ]);
     });
@@ -319,6 +383,19 @@ describe('integration add (auto-provision)', () => {
 
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(1);
+
+      expect(client.telemetryEventStore.readonlyEvents).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            key: 'output:marketplace_install_flow_started',
+            value: expect.stringContaining('"integration_slug":"acme"'),
+          }),
+          expect.objectContaining({
+            key: 'output:marketplace_install_flow_dropped',
+            value: expect.stringContaining('"reason":"policy_declined"'),
+          }),
+        ])
+      );
     });
 
     it('should exit with code 1 when privacy policy declined', async () => {
@@ -458,6 +535,27 @@ describe('integration add (auto-provision)', () => {
       expect(openMock).toHaveBeenCalledWith(
         expect.not.stringMatching(/metadata=/)
       );
+
+      expect(client.telemetryEventStore.readonlyEvents).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            key: 'output:marketplace_install_flow_started',
+            value: expect.stringContaining('"integration_slug":"acme"'),
+          }),
+          expect.objectContaining({
+            key: 'output:marketplace_checkout_plan_selected',
+            value: expect.stringContaining('"plan_selection_method"'),
+          }),
+          expect.objectContaining({
+            key: 'output:marketplace_checkout_provisioning_started',
+            value: expect.stringContaining('"integration_slug":"acme"'),
+          }),
+          expect.objectContaining({
+            key: 'output:marketplace_install_flow_web_fallback',
+            value: expect.stringContaining('"reason"'),
+          }),
+        ])
+      );
     });
 
     it('should forward --metadata to browser fallback URL', async () => {
@@ -534,6 +632,21 @@ describe('integration add (auto-provision)', () => {
       expect(openMock).toHaveBeenCalledWith(
         expect.not.stringMatching(/metadata=/)
       );
+    });
+
+    it('should open browser for install fallback (policies not accepted server-side)', async () => {
+      useAutoProvision({ responseKey: 'install' });
+
+      client.setArgv('integration', 'add', 'acme');
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'Additional setup required. Opening browser...'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(1);
+      expect(openMock).toHaveBeenCalled();
     });
 
     it('should forward --metadata to browser URL on unknown fallback', async () => {
@@ -819,6 +932,19 @@ describe('integration add (auto-provision)', () => {
         'Error: Resource name can only contain letters, numbers, underscores, and hyphens'
       );
       expect(exitCode).toEqual(1);
+
+      expect(client.telemetryEventStore.readonlyEvents).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            key: 'output:marketplace_install_flow_started',
+            value: expect.stringContaining('"integration_slug":"acme"'),
+          }),
+          expect.objectContaining({
+            key: 'output:marketplace_install_flow_dropped',
+            value: expect.stringContaining('"reason":"resource_name_invalid"'),
+          }),
+        ])
+      );
     });
 
     it('should reject empty resource name from --name flag', async () => {

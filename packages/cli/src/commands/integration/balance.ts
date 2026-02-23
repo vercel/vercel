@@ -234,7 +234,10 @@ function outputBalanceInformation(
         ? (resources.find(r => r.externalResourceId === threshold.resourceId)
             ?.name ?? threshold.resourceId)
         : 'installation';
-      mappings[resourceName] = { threshold, resourceName };
+      mappings[threshold.resourceId ?? 'installation'] = {
+        threshold,
+        resourceName,
+      };
     }
   }
 

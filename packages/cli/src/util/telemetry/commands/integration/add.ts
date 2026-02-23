@@ -62,4 +62,11 @@ export class IntegrationAddTelemetryClient
       });
     }
   }
+
+  trackMarketplaceEvent(event: string, props: Record<string, unknown>) {
+    this.trackCommandOutput({
+      key: event,
+      value: JSON.stringify(props),
+    });
+  }
 }

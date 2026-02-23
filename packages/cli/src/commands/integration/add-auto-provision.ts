@@ -1,4 +1,5 @@
 import chalk from 'chalk';
+import { errorToString } from '@vercel/error-utils';
 import open from 'open';
 import output from '../../output-manager';
 import type Client from '../../util/client';
@@ -10,6 +11,8 @@ import { promptForTermAcceptance } from '../../util/integration/prompt-for-terms
 import { selectProduct } from '../../util/integration/select-product';
 import type {
   AcceptedPolicies,
+  AutoProvisionedResponse,
+  AutoProvisionFallback,
   AutoProvisionResult,
 } from '../../util/integration/types';
 import { resolveResourceName } from '../../util/integration/generate-resource-name';
@@ -49,7 +52,7 @@ export async function addAutoProvision(
   telemetry.trackCliOptionPlan(options.billingPlanId);
   telemetry.trackCliOptionEnvironment(options.environments);
 
-  // 1. Get team context
+  // Get team context
   const { contextName, team } = await getScope(client);
   if (!team) {
     output.error('Team not found');
@@ -57,7 +60,7 @@ export async function addAutoProvision(
   }
   client.config.currentTeam = team.id;
 
-  // 2. Fetch integration
+  // Fetch integration
   const integration = await fetchIntegrationWithTelemetry(
     client,
     integrationSlug,
@@ -74,7 +77,7 @@ export async function addAutoProvision(
     return 1;
   }
 
-  // 3. Select product (by slug, single auto-select, or interactive prompt in TTY)
+  // Select product (by slug, single auto-select, or interactive prompt in TTY)
   if (
     !options.productSlug &&
     integration.products.length > 1 &&
@@ -116,6 +119,22 @@ export async function addAutoProvision(
   const product = productResult.value;
   const installations = installationsResult.value;
 
+  const baseProps = {
+    integration_id: integration.id,
+    integration_slug: integration.slug,
+    integration_name: integration.name,
+    product_id: product.id,
+    product_slug: product.slug,
+    team_id: team.id,
+    source: 'cli',
+    is_auto_provision: true,
+  };
+
+  telemetry.trackMarketplaceEvent(
+    'marketplace_install_flow_started',
+    baseProps
+  );
+
   output.log(
     `Installing ${chalk.bold(product.name)} by ${chalk.bold(integration.name)} under ${chalk.bold(contextName)}`
   );
@@ -133,12 +152,16 @@ export async function addAutoProvision(
   if (!teamInstallation) {
     const policies = await promptForTermAcceptance(client, integration);
     if (!policies) {
+      telemetry.trackMarketplaceEvent('marketplace_install_flow_dropped', {
+        ...baseProps,
+        reason: 'policy_declined',
+      });
       return 1;
     }
     acceptedPolicies = policies;
   }
 
-  // 4. Validate metadata flags (if provided) BEFORE prompting for resource name
+  // Validate metadata flags (if provided) BEFORE prompting for resource name
   let metadata: Metadata;
   if (options.metadata?.length) {
     // Parse metadata from CLI flags
@@ -153,10 +176,18 @@ export async function addAutoProvision(
       for (const error of errors) {
         output.error(error);
       }
+      telemetry.trackMarketplaceEvent('marketplace_install_flow_dropped', {
+        ...baseProps,
+        reason: 'metadata_parse_error',
+      });
       return 1;
     }
     // Validate all required fields are present
     if (!validateAndPrintRequiredMetadata(parsed, product.metadataSchema)) {
+      telemetry.trackMarketplaceEvent('marketplace_install_flow_dropped', {
+        ...baseProps,
+        reason: 'metadata_validation_failed',
+      });
       return 1;
     }
     metadata = parsed;
@@ -165,10 +196,14 @@ export async function addAutoProvision(
     metadata = {};
   }
 
-  // 5. Resolve and validate resource name
+  // Resolve and validate resource name
   const nameResult = resolveResourceName(product.slug, resourceNameArg);
   if ('error' in nameResult) {
     output.error(nameResult.error);
+    telemetry.trackMarketplaceEvent('marketplace_install_flow_dropped', {
+      ...baseProps,
+      reason: 'resource_name_invalid',
+    });
     return 1;
   }
   const { resourceName } = nameResult;
@@ -176,7 +211,20 @@ export async function addAutoProvision(
   output.debug(`Collected metadata: ${JSON.stringify(metadata)}`);
   output.debug(`Resource name: ${resourceName}`);
 
-  // 6. Provision resource
+  // Track plan selection
+  telemetry.trackMarketplaceEvent('marketplace_checkout_plan_selected', {
+    ...baseProps,
+    billing_plan_id: options.billingPlanId ?? null,
+    plan_selection_method: options.billingPlanId
+      ? 'cli_flag'
+      : 'server_default',
+  });
+
+  // Provision resource
+  telemetry.trackMarketplaceEvent(
+    'marketplace_checkout_provisioning_started',
+    baseProps
+  );
   output.spinner('Provisioning resource...');
   let result: AutoProvisionResult;
   try {
@@ -191,16 +239,31 @@ export async function addAutoProvision(
     );
   } catch (error) {
     output.stopSpinner();
-    output.error((error as Error).message);
+    telemetry.trackMarketplaceEvent(
+      'marketplace_checkout_provisioning_failed',
+      {
+        ...baseProps,
+        error_message: errorToString(error),
+      }
+    );
+    output.error(errorToString(error));
     return 1;
   }
   output.stopSpinner();
   output.debug(`Auto-provision result: ${JSON.stringify(result, null, 2)}`);
 
-  // 7. Handle non-provisioned responses (metadata, unknown)
+  // Handle non-provisioned responses — pass through kind/reason from server
   if (result.kind !== 'provisioned') {
-    output.debug(`Fallback required - kind: ${result.kind}`);
-    output.debug(`Fallback URL from API: ${result.url}`);
+    const fallback = result as AutoProvisionFallback;
+    telemetry.trackMarketplaceEvent('marketplace_install_flow_web_fallback', {
+      ...baseProps,
+      reason: fallback.reason ?? fallback.kind,
+      auto_provision_result_kind: fallback.kind,
+      auto_provision_result_reason: fallback.reason,
+      auto_provision_error_message: fallback.error_message,
+    });
+    output.debug(`Fallback required - kind: ${fallback.kind}`);
+    output.debug(`Fallback URL from API: ${fallback.url}`);
 
     // Auto-detect project for browser URL
     const projectLink = await getLinkedProjectField(
@@ -213,7 +276,7 @@ export async function addAutoProvision(
     }
 
     output.log('Additional setup required. Opening browser...');
-    const url = new URL(result.url);
+    const url = new URL(fallback.url);
     url.searchParams.set('defaultResourceName', resourceName);
     url.searchParams.set('source', 'cli');
     if (Object.keys(metadata).length > 0) {
@@ -232,22 +295,51 @@ export async function addAutoProvision(
     return 1;
   }
 
-  // 8. Success!
-  output.debug(
-    `Provisioned resource: ${JSON.stringify(result.resource, null, 2)}`
+  // Success!
+  const provisioned = result as AutoProvisionedResponse;
+  telemetry.trackMarketplaceEvent(
+    'marketplace_checkout_provisioning_completed',
+    {
+      ...baseProps,
+      resource_id: provisioned.resource.id,
+    }
   );
-  output.debug(`Installation: ${JSON.stringify(result.installation, null, 2)}`);
-  output.debug(`Billing plan: ${JSON.stringify(result.billingPlan, null, 2)}`);
+  output.debug(
+    `Provisioned resource: ${JSON.stringify(provisioned.resource, null, 2)}`
+  );
+  output.debug(
+    `Installation: ${JSON.stringify(provisioned.installation, null, 2)}`
+  );
+  output.debug(
+    `Billing plan: ${JSON.stringify(provisioned.billingPlan, null, 2)}`
+  );
   output.success(
     `${product.name} successfully provisioned: ${chalk.bold(resourceName)}`
   );
 
-  // 9. Post-provision: dashboard URL, connect, env pull
+  // Post-provision: dashboard URL, connect, env pull
   return postProvisionSetup(
     client,
     resourceName,
-    result.resource.id,
+    provisioned.resource.id,
     contextName,
-    options
+    {
+      ...options,
+      onProjectConnected: (projectId: string) => {
+        telemetry.trackMarketplaceEvent('marketplace_project_connected', {
+          ...baseProps,
+          project_id: projectId,
+          resource_id: provisioned.resource.id,
+        });
+      },
+      onProjectConnectFailed: (projectId: string, error: Error) => {
+        telemetry.trackMarketplaceEvent('marketplace_project_connect_failed', {
+          ...baseProps,
+          project_id: projectId,
+          resource_id: provisioned.resource.id,
+          error_message: error.message,
+        });
+      },
+    }
   );
 }

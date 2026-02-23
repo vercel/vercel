@@ -16,6 +16,8 @@ export interface PostProvisionOptions {
   noConnect?: boolean;
   noEnvPull?: boolean;
   environments?: string[];
+  onProjectConnected?: (projectId: string) => void;
+  onProjectConnectFailed?: (projectId: string, error: Error) => void;
 }
 
 /**
@@ -89,6 +91,7 @@ export async function postProvisionSetup(
     );
   } catch (error) {
     output.stopSpinner();
+    options.onProjectConnectFailed?.(project.id, error as Error);
     output.error(`Failed to connect: ${(error as Error).message}`);
     return 1;
   }
@@ -97,6 +100,8 @@ export async function postProvisionSetup(
   output.log(
     `${chalk.bold(resourceName)} successfully connected to ${chalk.bold(project.name)}`
   );
+
+  options.onProjectConnected?.(project.id);
 
   if (!options.noEnvPull) {
     const pullExitCode = await pull(
