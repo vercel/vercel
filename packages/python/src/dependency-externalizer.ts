@@ -27,7 +27,7 @@ export const LAMBDA_SIZE_THRESHOLD_BYTES = 249 * 1024 * 1024;
 export const LAMBDA_PACKING_TARGET_BYTES = 245 * 1024 * 1024;
 
 // The /tmp size in MB we request from AWS when increased ephemeral storage is enabled.
-export const REQUESTED_TMP_SIZE_MB = 1024;
+export const REQUESTED_TMP_SIZE_MB = 2048;
 
 // Feature flag: when enabled, the builder requests 1024 MB of /tmp and allows
 // up to 1000 MB of total dependencies for runtime installation.
