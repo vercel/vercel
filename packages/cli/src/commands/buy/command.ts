@@ -92,11 +92,22 @@ export const proSubcommand = {
   aliases: [],
   description: 'Purchase a Vercel Pro subscription for your team',
   arguments: [],
-  options: [],
+  options: [
+    {
+      ...yesOption,
+      description: 'Skip the confirmation prompt',
+    },
+    formatOption,
+    jsonOption,
+  ],
   examples: [
     {
       name: 'Upgrade your team to Vercel Pro',
       value: `${packageName} buy pro`,
+    },
+    {
+      name: 'Upgrade without confirmation prompt',
+      value: `${packageName} buy pro --yes`,
     },
   ],
 } as const;
