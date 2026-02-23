@@ -5,6 +5,7 @@ import {
   NodejsLambda,
   debug,
   getNodeVersion,
+  getLambdaOptionsFromFunction,
   Span,
   type PrepareCache,
   type BuildV2,
@@ -137,20 +138,10 @@ export const build: BuildV2 = async args => {
     const introspectionResult = await introspectionPromise;
     await typescriptPromise;
 
-    const getFunctionConfigOverrides = (dest: string) => {
-      const functionConfig = args.config.functions?.[
-        dest
-      ] as NodejsLambdaOptions;
-      return {
-        regions: functionConfig?.regions,
-        maxDuration: functionConfig?.maxDuration,
-        memory: functionConfig?.memory,
-        architecture: functionConfig?.architecture,
-        supportsCancellation: functionConfig?.supportsCancellation,
-      };
-    };
-
-    const functionConfigOverrides = getFunctionConfigOverrides(entrypoint);
+    const functionConfigOverrides = await getLambdaOptionsFromFunction({
+      sourceFile: entrypoint,
+      config: args.config,
+    });
 
     const lambdaArgs: NodejsLambdaOptions = {
       runtime: nodeVersion.runtime,
