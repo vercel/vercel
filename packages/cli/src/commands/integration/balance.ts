@@ -62,11 +62,11 @@ export async function balance(client: Client) {
     output.error('Team not found.');
     return 1;
   }
+  client.config.currentTeam = team.id;
 
   const installation = await getBalanceInstallationId(
     client,
     integrationSlug,
-    team.id,
     telemetry
   );
   if (installation === undefined) {
@@ -74,20 +74,12 @@ export async function balance(client: Client) {
   }
   const installationId = installation.id;
 
-  const resources = await getResourcesForInstallation(
-    client,
-    installationId,
-    team
-  );
+  const resources = await getResourcesForInstallation(client, installationId);
   if (resources === undefined) {
     return 1;
   }
 
-  const prepaymentInfo = await getBalanceInformation(
-    client,
-    installationId,
-    team
-  );
+  const prepaymentInfo = await getBalanceInformation(client, installationId);
   if (prepaymentInfo === undefined) {
     return 1;
   }
@@ -111,17 +103,12 @@ export async function balance(client: Client) {
 async function getBalanceInstallationId(
   client: Client,
   integrationSlug: string,
-  teamId: string,
   telemetry: IntegrationBalanceTelemetryClient
 ) {
   let knownIntegrationSlug = false;
   output.spinner('Retrieving installation…', 500);
   try {
-    const installation = await getFirstConfiguration(
-      client,
-      integrationSlug,
-      teamId
-    );
+    const installation = await getFirstConfiguration(client, integrationSlug);
 
     if (!installation) {
       output.stopSpinner();
@@ -145,12 +132,11 @@ async function getBalanceInstallationId(
 
 async function getResourcesForInstallation(
   client: Client,
-  installationId: string,
-  team: { id: string }
+  installationId: string
 ) {
   output.spinner('Retrieving resources…', 500);
   try {
-    const resources = (await getResources(client, team.id)).filter(
+    const resources = (await getResources(client)).filter(
       resource =>
         resource.product?.integrationConfigurationId === installationId
     );
