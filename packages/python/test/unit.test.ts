@@ -1254,6 +1254,82 @@ describe('Django entrypoint discovery', () => {
     if (fs.existsSync(workPath)) fs.removeSync(workPath);
   });
 
+  it('resolves Django entrypoint from Procfile (web: gunicorn -c myconf.py myapp.wsgi)', async () => {
+    const workPath = path.join(
+      tmpdir(),
+      `python-django-procfile-gunicorn-config-${Date.now()}`
+    );
+    fs.mkdirSync(workPath, { recursive: true });
+
+    await writeFiles(workPath, {
+      Procfile: 'web: gunicorn -c myconf.py myapp.wsgi',
+      'myapp/wsgi.py': `application = lambda env, start: None`,
+    });
+
+    const result = await detectDjangoPythonEntrypoint(workPath, 'missing.py');
+    expect(result).toBe('myapp/wsgi.py');
+
+    if (fs.existsSync(workPath)) fs.removeSync(workPath);
+  });
+
+  it('resolves Django entrypoint from Procfile (web: gunicorn -c config, wsgi_app in config)', async () => {
+    const workPath = path.join(
+      tmpdir(),
+      `python-django-procfile-gunicorn-wsgi-app-${Date.now()}`
+    );
+    fs.mkdirSync(workPath, { recursive: true });
+
+    await writeFiles(workPath, {
+      Procfile: 'web: gunicorn -c gunicorn.conf.py',
+      'gunicorn.conf.py': 'wsgi_app = "myproject.wsgi:application"',
+      'myproject/wsgi.py': `application = lambda env, start: None`,
+    });
+
+    const result = await detectDjangoPythonEntrypoint(workPath, 'missing.py');
+    expect(result).toBe('myproject/wsgi.py');
+
+    if (fs.existsSync(workPath)) fs.removeSync(workPath);
+  });
+
+  it('resolves Django entrypoint from Procfile (web: gunicorn, default config gunicorn.conf.py with wsgi_app)', async () => {
+    const workPath = path.join(
+      tmpdir(),
+      `python-django-procfile-gunicorn-default-config-${Date.now()}`
+    );
+    fs.mkdirSync(workPath, { recursive: true });
+
+    await writeFiles(workPath, {
+      Procfile: 'web: gunicorn',
+      'gunicorn.conf.py': 'wsgi_app = "myproject.wsgi:application"',
+      'myproject/wsgi.py': `application = lambda env, start: None`,
+    });
+
+    const result = await detectDjangoPythonEntrypoint(workPath, 'missing.py');
+    expect(result).toBe('myproject/wsgi.py');
+
+    if (fs.existsSync(workPath)) fs.removeSync(workPath);
+  });
+
+  it('resolves Django entrypoint from Procfile (web: gunicorn -c config with app on command line; command line takes precedence)', async () => {
+    const workPath = path.join(
+      tmpdir(),
+      `python-django-procfile-gunicorn-cmdline-precedence-${Date.now()}`
+    );
+    fs.mkdirSync(workPath, { recursive: true });
+
+    await writeFiles(workPath, {
+      Procfile: 'web: gunicorn -c gunicorn.conf.py myapp.wsgi',
+      'gunicorn.conf.py': 'wsgi_app = "other.wsgi:application"',
+      'myapp/wsgi.py': `application = lambda env, start: None`,
+      'other/wsgi.py': `application = lambda env, start: None`,
+    });
+
+    const result = await detectDjangoPythonEntrypoint(workPath, 'missing.py');
+    expect(result).toBe('myapp/wsgi.py');
+
+    if (fs.existsSync(workPath)) fs.removeSync(workPath);
+  });
+
   it('resolves Django entrypoint from Procfile (web: uvicorn module:attr)', async () => {
     const workPath = path.join(
       tmpdir(),
@@ -1325,6 +1401,23 @@ describe('Django entrypoint discovery', () => {
 
     const result = await detectDjangoPythonEntrypoint(workPath, 'missing.py');
     expect(result).toBe('hello/wsgi.py');
+
+    if (fs.existsSync(workPath)) fs.removeSync(workPath);
+  });
+
+  it('skips Procfile when it has no web process line (no Django/WSGI)', async () => {
+    const workPath = path.join(
+      tmpdir(),
+      `python-django-procfile-no-web-${Date.now()}`
+    );
+    fs.mkdirSync(workPath, { recursive: true });
+
+    await writeFiles(workPath, {
+      Procfile: 'worker: python worker.py\nrelease: python migrate.py',
+    });
+
+    const result = await detectDjangoPythonEntrypoint(workPath, 'missing.py');
+    expect(result).toBeNull();
 
     if (fs.existsSync(workPath)) fs.removeSync(workPath);
   });
