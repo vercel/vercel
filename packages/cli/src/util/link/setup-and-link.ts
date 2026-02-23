@@ -60,6 +60,8 @@ export interface SetupAndLinkOptions {
   /** When true, avoid prompts and return action_required payload when scope/project choice is needed */
   nonInteractive?: boolean;
   pullEnv?: boolean;
+  /** When true, indicates the project is being created from v0 (grants V0Builder permissions) */
+  v0?: boolean;
 }
 
 export default async function setupAndLink(
@@ -74,6 +76,7 @@ export default async function setupAndLink(
     projectName = basename(path),
     nonInteractive = false,
     pullEnv = true,
+    v0,
   }: SetupAndLinkOptions
 ): Promise<ProjectLinkResult> {
   const { config } = client;
@@ -267,6 +270,7 @@ export default async function setupAndLink(
       ...settings,
       name: newProjectName,
       vercelAuth: vercelAuthSetting,
+      v0,
     });
 
     await linkFolderToProject(
