@@ -144,6 +144,17 @@ describe('dependency externalizer support', () => {
         LAMBDA_SIZE_THRESHOLD_BYTES
       );
     });
+    it('MAX_RUNTIME_DEPS_SIZE_BYTES is 1000 MB when VERCEL_PYTHON_INCREASED_EPHEMERAL_STORAGE is "1"', () => {
+      const originalEnv = process.env.VERCEL_PYTHON_INCREASED_EPHEMERAL_STORAGE;
+      process.env.VERCEL_PYTHON_INCREASED_EPHEMERAL_STORAGE = '1';
+      expect(MAX_RUNTIME_DEPS_SIZE_BYTES).toBe(1000 * 1024 * 1024);
+
+      if (originalEnv === undefined) {
+        delete process.env.VERCEL_PYTHON_INCREASED_EPHEMERAL_STORAGE;
+      } else {
+        process.env.VERCEL_PYTHON_INCREASED_EPHEMERAL_STORAGE = originalEnv;
+      }
+    });
   });
 
   describe('classifyPackages', () => {
