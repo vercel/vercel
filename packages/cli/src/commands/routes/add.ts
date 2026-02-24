@@ -526,7 +526,8 @@ export default async function add(client: Client, argv: string[]) {
       );
     } else if (error.code === 'routes_limit_exceeded') {
       output.error(
-        'Route limit reached (100 routes per project). Delete some routes before adding more.'
+        error.message ||
+          'Route limit reached. Delete some routes before adding more.'
       );
     } else if (error.status === 429) {
       output.error('Rate limited. Please wait a moment and try again.');
