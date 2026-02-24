@@ -23,9 +23,9 @@ impl crate::bindings::Guest for PythonAnalyzer {
     /// - A top-level 'application' callable (e.g., Django)
     /// - A top-level 'handler' class (e.g., BaseHTTPRequestHandler subclass)
     ///
-    /// Returns true if found, false otherwise.
-    /// Returns false for invalid Python syntax.
-    fn contains_app_or_handler(source: String) -> bool {
+    /// Returns the variable name (e.g. "app", "application", "handler") if found, None otherwise.
+    /// Returns None for invalid Python syntax.
+    fn contains_app_or_handler(source: String) -> Option<String> {
         contains_app_or_handler_impl(&source)
     }
 
