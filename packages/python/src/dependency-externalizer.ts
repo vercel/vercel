@@ -125,6 +125,8 @@ export class PythonDependencyExternalizer {
           `To resolve this, either:\n` +
           `  1. Remove the custom build/install command and let Vercel manage dependencies automatically\n` +
           `  2. Reduce your dependency footprint to fit within the ${limitMB} MB limit`,
+        link: 'https://vercel.com/docs/functions/runtimes/python#controlling-what-gets-bundled',
+        action: 'Learn More',
       });
     }
 
@@ -172,6 +174,8 @@ export class PythonDependencyExternalizer {
           `packages must fit within the ${ephemeralLimitMB} MB ephemeral storage available ` +
           `to Lambda functions. Consider removing unused dependencies or splitting your ` +
           `application into smaller functions.`,
+        link: 'https://vercel.com/docs/functions/runtimes/python#controlling-what-gets-bundled',
+        action: 'Learn More',
       });
     }
 
@@ -397,6 +401,8 @@ export class PythonDependencyExternalizer {
           `deferring public packages to runtime installation. This usually means your ` +
           `private packages or source code are too large. Consider reducing the size of ` +
           `private dependencies or splitting your application.`,
+        link: 'https://vercel.com/docs/functions/runtimes/python#controlling-what-gets-bundled',
+        action: 'Learn More',
       });
     }
   }
