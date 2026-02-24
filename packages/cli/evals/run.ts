@@ -11,6 +11,8 @@ import { existsSync, readdirSync } from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { config } from 'dotenv';
+import { destroy, getProjectModeVariantsFromEnv, setup } from './hooks';
+import type { EvalRunContext, EvalVariant, SetupResult } from './hooks';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -32,7 +34,9 @@ const populateOIDCToken = async () => {
   });
 
   if (pullExitCode !== 0) {
-    process.exit(pullExitCode);
+    throw new Error(
+      `Failed to populate OIDC token via "vc env pull -y" (exit code ${pullExitCode}).`
+    );
   }
 
   config({ path: join(__dirname, 'sandbox-project', '.env.local') });
@@ -77,7 +81,19 @@ async function main() {
     process.exit(0);
   }
 
-  await populateOIDCToken();
+  const sandboxProjectDir = join(__dirname, 'sandbox-project');
+  const variants: EvalVariant[] = getProjectModeVariantsFromEnv('auto');
+
+  try {
+    await populateOIDCToken();
+  } catch (err: any) {
+    const message =
+      err && typeof err.message === 'string'
+        ? err.message
+        : String(err ?? 'unknown error');
+    process.stderr.write(`Error populating OIDC token: ${message}\n`);
+    process.exit(1);
+  }
 
   const args = process.argv.slice(2);
   const isDryRun = args.includes('--dry');
@@ -95,21 +111,66 @@ async function main() {
     'Progress: each eval prints "Running <name>..." when it starts and "✓/✗ <name>..." when it finishes (can take several minutes per eval).\n\n'
   );
 
-  const agentEvalArgs = ['--yes', '@vercel/agent-eval@latest', ...args];
+  let overallExitCode = 0;
 
-  const child = spawn('npx', agentEvalArgs, {
-    cwd: __dirname,
-    stdio: 'inherit',
-    env: { ...process.env, FORCE_COLOR: '1' },
-  });
+  for (const variant of variants) {
+    const context: EvalRunContext = {
+      cwd: __dirname,
+      sandboxProjectDir,
+      projectMode: variant.projectMode,
+    };
 
-  const exitCode = await new Promise<number>(resolve => {
-    child.on('close', (code, signal) => {
-      resolve(code ?? (signal ? 1 : 0));
-    });
-  });
+    let setupResult: SetupResult | void;
 
-  process.exit(exitCode);
+    process.stdout.write(
+      `\n=== CLI eval variant "${variant.id}" (projectMode=${variant.projectMode}) ===\n`
+    );
+
+    try {
+      setupResult = await setup(context);
+
+      const agentEvalArgs = ['--yes', '@vercel/agent-eval@latest', ...args];
+
+      const child = spawn('npx', agentEvalArgs, {
+        cwd: __dirname,
+        stdio: 'inherit',
+        env: { ...process.env, FORCE_COLOR: '1' },
+      });
+
+      const exitCode = await new Promise<number>(resolve => {
+        child.on('close', (code, signal) => {
+          resolve(code ?? (signal ? 1 : 0));
+        });
+      });
+
+      if (exitCode !== 0) {
+        overallExitCode = exitCode;
+      }
+    } catch (err: any) {
+      const message =
+        err && typeof err.message === 'string'
+          ? err.message
+          : String(err ?? 'unknown error');
+      process.stderr.write(
+        `Error running CLI eval variant "${variant.id}": ${message}\n`
+      );
+      overallExitCode = 1;
+    } finally {
+      try {
+        await destroy(context, setupResult);
+      } catch (err: any) {
+        const message =
+          err && typeof err.message === 'string'
+            ? err.message
+            : String(err ?? 'unknown error');
+        process.stderr.write(
+          `Error during CLI evals teardown (destroy hook) for variant "${variant.id}": ${message}\n`
+        );
+      }
+    }
+  }
+
+  process.exit(overallExitCode);
 }
 
 main().catch(err => {
