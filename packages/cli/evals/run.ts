@@ -21,25 +21,55 @@ const EVALS_DIR = join(__dirname, 'evals');
 
 const populateOIDCToken = async () => {
   const pullArgs = ['env', 'pull', '-y'];
-  const pullChild = spawn('vc', pullArgs, {
-    cwd: join(__dirname, 'sandbox-project'),
-    stdio: 'inherit',
-    env: { ...process.env, FORCE_COLOR: '1' },
-  });
 
-  const pullExitCode = await new Promise<number>(resolve => {
-    pullChild.on('close', (code, signal) => {
-      resolve(code ?? (signal ? 1 : 0));
+  const runPull = (cmd: string) =>
+    new Promise<number>((resolve, reject) => {
+      const child = spawn(cmd, pullArgs, {
+        cwd: join(__dirname, 'sandbox-project'),
+        stdio: 'inherit',
+        env: { ...process.env, FORCE_COLOR: '1' },
+      });
+
+      child.on('error', err => {
+        reject(
+          new Error(
+            `Failed to start "${cmd} env pull -y": ${
+              (err as Error).message || String(err)
+            }`
+          )
+        );
+      });
+
+      child.on('close', (code, signal) => {
+        resolve(code ?? (signal ? 1 : 0));
+      });
     });
-  });
 
-  if (pullExitCode !== 0) {
-    throw new Error(
-      `Failed to populate OIDC token via "vc env pull -y" (exit code ${pullExitCode}).`
-    );
+  let lastError: Error | undefined;
+
+  for (const cmd of ['vc', 'vercel']) {
+    try {
+      const pullExitCode = await runPull(cmd);
+      if (pullExitCode === 0) {
+        config({ path: join(__dirname, 'sandbox-project', '.env.local') });
+        return;
+      }
+      lastError = new Error(
+        `"${cmd} env pull -y" exited with code ${pullExitCode}`
+      );
+    } catch (err: any) {
+      lastError =
+        err instanceof Error
+          ? err
+          : new Error(typeof err === 'string' ? err : String(err));
+    }
   }
 
-  config({ path: join(__dirname, 'sandbox-project', '.env.local') });
+  throw lastError
+    ? new Error(
+        `Failed to populate OIDC token via "vc/vercel env pull -y": ${lastError.message}`
+      )
+    : new Error('Failed to populate OIDC token via "vc/vercel env pull -y".');
 };
 
 /** Recursively discover eval dirs (have PROMPT.md + EVAL.ts + package.json). Returns relative paths e.g. "build", "env/ls", "env/add". */

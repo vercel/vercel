@@ -85,7 +85,6 @@ describe('CLI evals project-mode matrix', () => {
       { id: 'no-linked-project', projectMode: 'no-linked-project' },
     ]);
   });
-
   it('falls back to default when env contains only invalid modes', () => {
     process.env.CLI_EVAL_PROJECT_MODES = 'foo,bar';
     const variants = getProjectModeVariantsFromEnv('linked-project');
