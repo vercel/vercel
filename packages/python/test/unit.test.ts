@@ -1260,6 +1260,25 @@ describe('Django entrypoint discovery', () => {
     if (fs.existsSync(workPath)) fs.removeSync(workPath);
   });
 
+  it('uses variable name from WSGI_APPLICATION when it differs from "application"', async () => {
+    const workPath = path.join(
+      tmpdir(),
+      `python-django-wsgi-var-${Date.now()}`
+    );
+    fs.mkdirSync(workPath, { recursive: true });
+
+    await writeFiles(workPath, {
+      'manage.py': `os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'hello.settings')`,
+      'hello/settings.py': `WSGI_APPLICATION = 'hello.wsgi.wsgi_app'`,
+      'hello/wsgi.py': `wsgi_app = lambda env, start: None`,
+    });
+
+    const result = await detectDjangoPythonEntrypoint(workPath, 'missing.py');
+    expect(result).toEqual(['hello/wsgi.py', 'wsgi_app']);
+
+    if (fs.existsSync(workPath)) fs.removeSync(workPath);
+  });
+
   it('build() discovers Django entrypoint from WSGI_APPLICATION when configured entrypoint is missing', async () => {
     const workPath = path.join(tmpdir(), `python-django-build-${Date.now()}`);
     fs.mkdirSync(workPath, { recursive: true });
