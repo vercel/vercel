@@ -12,7 +12,7 @@
 // =============================================================================
 
 export {
-  containsAppOrHandler,
+  parseEntrypointVariable,
   getStringConstant,
   parseDjangoSettingsModule,
 } from './semantic/entrypoints';

@@ -20,16 +20,16 @@ import { importWasmModule } from '../wasm/load';
  *
  * @example
  * ```typescript
- * import { containsAppOrHandler } from '@vercel/python-analysis';
+ * import { parseEntrypointVariable } from '@vercel/python-analysis';
  *
- * const varName = await containsAppOrHandler(`
+ * const varName = await parseEntrypointVariable(`
  * from flask import Flask
  * app = Flask(__name__)
  * `);
  * console.log(varName); // "app"
  * ```
  */
-export async function containsAppOrHandler(
+export async function parseEntrypointVariable(
   source: string
 ): Promise<string | null> {
   // Skip parsing if file doesn't contain {app|application|[Hh]andler}
@@ -42,7 +42,7 @@ export async function containsAppOrHandler(
     return null;
   }
   const mod = await importWasmModule();
-  return mod.containsAppOrHandler(source) ?? null;
+  return mod.parseEntrypointVariable(source) ?? null;
 }
 
 /**

@@ -9,7 +9,7 @@ use ruff_python_ast::visitor::{walk_body, walk_expr, Visitor};
 use ruff_python_ast::{Expr, Stmt};
 use ruff_python_parser::parse_module;
 
-pub(crate) fn contains_app_or_handler_impl(source: &str) -> Option<String> {
+pub(crate) fn parse_entrypoint_variable_impl(source: &str) -> Option<String> {
     let parsed = match parse_module(source) {
         Ok(parsed) => parsed,
         Err(_) => return None, // Couldn't parse
@@ -206,7 +206,7 @@ mod tests {
 from flask import Flask
 app = Flask(__name__)
 "#;
-        assert_eq!(contains_app_or_handler_impl(source), Some("app".to_string()));
+        assert_eq!(parse_entrypoint_variable_impl(source), Some("app".to_string()));
     }
 
     #[test]
@@ -215,7 +215,7 @@ app = Flask(__name__)
 from fastapi import FastAPI
 app = FastAPI()
 "#;
-        assert_eq!(contains_app_or_handler_impl(source), Some("app".to_string()));
+        assert_eq!(parse_entrypoint_variable_impl(source), Some("app".to_string()));
     }
 
     #[test]
@@ -224,7 +224,7 @@ app = FastAPI()
 from sanic import Sanic
 app: Sanic = Sanic()
 "#;
-        assert_eq!(contains_app_or_handler_impl(source), Some("app".to_string()));
+        assert_eq!(parse_entrypoint_variable_impl(source), Some("app".to_string()));
     }
 
     #[test]
@@ -233,7 +233,7 @@ app: Sanic = Sanic()
 from django.core.wsgi import get_wsgi_application
 application = get_wsgi_application()
 "#;
-        assert_eq!(contains_app_or_handler_impl(source), Some("application".to_string()));
+        assert_eq!(parse_entrypoint_variable_impl(source), Some("application".to_string()));
     }
 
     #[test]
@@ -242,7 +242,7 @@ application = get_wsgi_application()
 def app(environ, start_response):
     pass
 "#;
-        assert_eq!(contains_app_or_handler_impl(source), Some("app".to_string()));
+        assert_eq!(parse_entrypoint_variable_impl(source), Some("app".to_string()));
     }
 
     #[test]
@@ -251,7 +251,7 @@ def app(environ, start_response):
 async def app(scope, receive, send):
     pass
 "#;
-        assert_eq!(contains_app_or_handler_impl(source), Some("app".to_string()));
+        assert_eq!(parse_entrypoint_variable_impl(source), Some("app".to_string()));
     }
 
     #[test]
@@ -259,7 +259,7 @@ async def app(scope, receive, send):
         let source = r#"
 from server import app
 "#;
-        assert_eq!(contains_app_or_handler_impl(source), Some("app".to_string()));
+        assert_eq!(parse_entrypoint_variable_impl(source), Some("app".to_string()));
     }
 
     #[test]
@@ -267,7 +267,7 @@ from server import app
         let source = r#"
 from server import application as app
 "#;
-        assert_eq!(contains_app_or_handler_impl(source), Some("app".to_string()));
+        assert_eq!(parse_entrypoint_variable_impl(source), Some("app".to_string()));
     }
 
     #[test]
@@ -277,7 +277,7 @@ from http.server import BaseHTTPRequestHandler
 class handler(BaseHTTPRequestHandler):
     pass
 "#;
-        assert_eq!(contains_app_or_handler_impl(source), Some("handler".to_string()));
+        assert_eq!(parse_entrypoint_variable_impl(source), Some("handler".to_string()));
     }
 
     #[test]
@@ -287,7 +287,7 @@ from http.server import BaseHTTPRequestHandler
 class Handler(BaseHTTPRequestHandler):
     pass
 "#;
-        assert_eq!(contains_app_or_handler_impl(source), Some("Handler".to_string()));
+        assert_eq!(parse_entrypoint_variable_impl(source), Some("Handler".to_string()));
     }
 
     #[test]
@@ -296,7 +296,7 @@ class Handler(BaseHTTPRequestHandler):
 def main():
     print("Hello")
 "#;
-        assert_eq!(contains_app_or_handler_impl(source), None);
+        assert_eq!(parse_entrypoint_variable_impl(source), None);
     }
 
     #[test]
@@ -304,7 +304,7 @@ def main():
         let source = r#"
 def invalid(
 "#;
-        assert_eq!(contains_app_or_handler_impl(source), None);
+        assert_eq!(parse_entrypoint_variable_impl(source), None);
     }
 
     #[test]
@@ -315,7 +315,7 @@ def create():
     app = Flask(__name__)
     return app
 "#;
-        assert_eq!(contains_app_or_handler_impl(source), None);
+        assert_eq!(parse_entrypoint_variable_impl(source), None);
     }
 
     // -------------------------------------------------------------------------

@@ -9,7 +9,7 @@ world python-analysis {
     ///
     /// Returns the variable name (e.g. "app", "application", "handler") if found, none otherwise.
     /// Returns none for invalid Python syntax.
-    export contains-app-or-handler: func(source: string) -> option<string>;
+    export parse-entrypoint-variable: func(source: string) -> option<string>;
 
     /// Extract the string value of a top-level constant with the given name.
     /// Only considers simple or annotated assignments at module level whose value is a string literal.

@@ -1,7 +1,7 @@
 import fs from 'fs';
 import { join } from 'path';
 import {
-  containsAppOrHandler,
+  parseEntrypointVariable,
   getStringConstant,
   parseDjangoSettingsModule,
 } from '@vercel/python-analysis';
@@ -21,7 +21,7 @@ export async function isPythonEntrypoint(
     const fsPath = (file as FileFsRef).fsPath;
     if (!fsPath) return false;
     const content = await fs.promises.readFile(fsPath, 'utf-8');
-    return (await containsAppOrHandler(content)) !== null;
+    return (await parseEntrypointVariable(content)) !== null;
   } catch (err) {
     debug(`Failed to check Python entrypoint: ${err}`);
     return false;
