@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Awaitable, Callable
-from typing import Any
+from typing import Any, cast
 
 ASGI = Callable[
     [
@@ -15,7 +15,11 @@ ASGI = Callable[
 
 
 def get_header(scope: dict[str, Any], name: str) -> str | None:
-    headers = scope.get("headers") or []
+    headers_object = scope.get("headers")
+    if headers_object is None:
+        return None
+
+    headers = cast("list[tuple[object, object]]", headers_object)
     target = name.lower().encode("latin1")
     try:
         for key, value in headers:
