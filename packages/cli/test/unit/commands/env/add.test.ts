@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach } from 'vitest';
+import { describe, expect, it, beforeEach, vi } from 'vitest';
 import env from '../../../../src/commands/env';
 import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
 import { client } from '../../../mocks/client';
@@ -513,6 +513,413 @@ describe('env add', () => {
             },
           ]);
         });
+      });
+    });
+
+    describe('non-interactive mode', () => {
+      it('outputs action_required when name is missing', async () => {
+        const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+          throw new Error('exit');
+        });
+        const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+        client.nonInteractive = true;
+        client.setArgv('env', 'add', '--non-interactive');
+        const exitCodePromise = env(client);
+
+        await expect(exitCodePromise).rejects.toThrow('exit');
+        expect(logSpy).toHaveBeenCalled();
+        const payload = JSON.parse(
+          logSpy.mock.calls[logSpy.mock.calls.length - 1][0]
+        );
+        expect(payload).toMatchObject({
+          status: 'action_required',
+          reason: 'missing_requirements',
+          missing: expect.arrayContaining(['missing_name']),
+          message: expect.stringMatching(/required|name|Example/),
+          next: expect.any(Array),
+        });
+        expect(payload.next.length).toBeGreaterThanOrEqual(1);
+        expect(payload.next[0].command).not.toMatch(/\u001b|\[\d+m/);
+        expect(payload.next[0].command).toMatch(/env add/);
+        expect(payload.next[0].command).toContain('--non-interactive');
+
+        exitSpy.mockRestore();
+        logSpy.mockRestore();
+      });
+
+      it('outputs JSON with link then add when not linked (non-interactive)', async () => {
+        const linkModule = await import('../../../../src/util/projects/link');
+        vi.spyOn(linkModule, 'getLinkedProject').mockResolvedValue({
+          status: 'not_linked',
+          org: null,
+          project: null,
+        });
+
+        const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+          throw new Error('exit');
+        });
+        const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+        client.nonInteractive = true;
+        client.stdin.isTTY = false;
+        client.setArgv(
+          'env',
+          'add',
+          'NOT_LINKED_VAR',
+          'preview',
+          '--yes',
+          '--cwd=../../../test-custom-deployment-id',
+          '--non-interactive'
+        );
+        const exitCodePromise = env(client);
+        setImmediate(() => client.stdin.emit('data', 'value-via-stdin'));
+
+        await expect(exitCodePromise).rejects.toThrow('exit');
+        expect(logSpy).toHaveBeenCalled();
+        const payload = JSON.parse(
+          logSpy.mock.calls[logSpy.mock.calls.length - 1][0]
+        );
+        expect(payload).toMatchObject({
+          status: 'error',
+          reason: 'not_linked',
+          message: expect.stringContaining("isn't linked"),
+          next: [
+            { command: expect.any(String) },
+            { command: expect.any(String) },
+          ],
+        });
+        expect(payload.next[0].command).toMatch(/link/);
+        expect(payload.next[0].command).toContain('--scope');
+        expect(payload.next[0].command).toContain('<scope>');
+        expect(payload.next[0].command).not.toMatch(/--value/);
+        expect(payload.next[1].command).toMatch(/env add/);
+        expect(payload.next[1].command).toContain('<gitbranch>');
+        expect(payload.next[1].command).toContain(
+          '--cwd=../../../test-custom-deployment-id'
+        );
+        expect(payload.next[1].command).toContain('--non-interactive');
+
+        exitSpy.mockRestore();
+        logSpy.mockRestore();
+        vi.restoreAllMocks();
+      });
+
+      it('when not linked, link next command does not include --value (env-add only)', async () => {
+        const linkModule = await import('../../../../src/util/projects/link');
+        vi.spyOn(linkModule, 'getLinkedProject').mockResolvedValue({
+          status: 'not_linked',
+          org: null,
+          project: null,
+        });
+        const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+          throw new Error('exit');
+        });
+        const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+        client.nonInteractive = true;
+        client.setArgv(
+          'env',
+          'add',
+          'VAR',
+          'preview',
+          '--value',
+          'secret',
+          '--yes',
+          '--cwd=/tmp',
+          '--non-interactive'
+        );
+        const exitCodePromise = env(client);
+
+        await expect(exitCodePromise).rejects.toThrow('exit');
+        const payload = JSON.parse(
+          logSpy.mock.calls[logSpy.mock.calls.length - 1][0]
+        );
+        expect(payload.next[0].command).toMatch(/link/);
+        expect(payload.next[0].command).not.toMatch(/--value|secret/);
+        expect(payload.next[1].command).toMatch(/env add/);
+        expect(payload.next[1].command).toContain('--value');
+        expect(payload.next[1].command).toContain('secret');
+
+        exitSpy.mockRestore();
+        logSpy.mockRestore();
+        vi.restoreAllMocks();
+      });
+
+      it('outputs action_required when name is missing and preserves --cwd in next command', async () => {
+        const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+          throw new Error('exit');
+        });
+        const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+        client.nonInteractive = true;
+        client.setArgv(
+          'env',
+          'add',
+          '--cwd=../../../test-custom-deployment-id',
+          '--non-interactive'
+        );
+        const exitCodePromise = env(client);
+
+        await expect(exitCodePromise).rejects.toThrow('exit');
+        const payload = JSON.parse(
+          logSpy.mock.calls[logSpy.mock.calls.length - 1][0]
+        );
+        expect(payload.next[0].command).toContain(
+          '--cwd=../../../test-custom-deployment-id'
+        );
+        expect(payload.next[0].command).toContain('--non-interactive');
+
+        exitSpy.mockRestore();
+        logSpy.mockRestore();
+      });
+
+      it('outputs action_required for sensitive public key without --yes (missing value reported first)', async () => {
+        const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+          throw new Error('exit');
+        });
+        const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+        client.nonInteractive = true;
+        client.setArgv(
+          'env',
+          'add',
+          'NEXT_PUBLIC_API_KEY',
+          'preview',
+          'branchName'
+        );
+        const exitCodePromise = env(client);
+
+        await expect(exitCodePromise).rejects.toThrow('exit');
+        expect(logSpy).toHaveBeenCalled();
+        const payload = JSON.parse(
+          logSpy.mock.calls[logSpy.mock.calls.length - 1][0]
+        );
+        // All missing args reported in one shot; value is missing so we get missing_requirements first
+        expect(payload).toMatchObject({
+          status: 'action_required',
+          reason: 'missing_requirements',
+          missing: expect.arrayContaining(['missing_value']),
+          message: expect.stringMatching(/required|--value|Example/),
+          next: expect.any(Array),
+        });
+
+        exitSpy.mockRestore();
+        logSpy.mockRestore();
+      });
+
+      it('outputs action_required when value would be prompted without stdin or --value', async () => {
+        const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+          throw new Error('exit');
+        });
+        const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+        client.nonInteractive = true;
+        client.setArgv('env', 'add', 'SOME_VAR', 'production');
+        const exitCodePromise = env(client);
+
+        await expect(exitCodePromise).rejects.toThrow('exit');
+        expect(logSpy).toHaveBeenCalled();
+        const payload = JSON.parse(
+          logSpy.mock.calls[logSpy.mock.calls.length - 1][0]
+        );
+        expect(payload).toMatchObject({
+          status: 'action_required',
+          reason: 'missing_requirements',
+          missing: expect.arrayContaining(['missing_value']),
+          message: expect.stringMatching(/--value|stdin|required|Example/),
+          next: expect.any(Array),
+        });
+
+        exitSpy.mockRestore();
+        logSpy.mockRestore();
+      });
+
+      it('missing_value next command does not duplicate --yes', async () => {
+        const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+          throw new Error('exit');
+        });
+        const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+        client.nonInteractive = true;
+        client.setArgv(
+          'env',
+          'add',
+          'test1',
+          'preview',
+          '--yes',
+          '--cwd=../../../test-custom-deployment-id',
+          '--non-interactive'
+        );
+        const exitCodePromise = env(client);
+
+        await expect(exitCodePromise).rejects.toThrow('exit');
+        const payload = JSON.parse(
+          logSpy.mock.calls[logSpy.mock.calls.length - 1][0]
+        );
+        expect(payload.reason).toBe('missing_requirements');
+        expect(payload.missing).toContain('missing_value');
+        const cmd = payload.next[0].command;
+        expect(cmd).not.toMatch(/--yes\s+--yes/);
+        expect(cmd).toContain('--yes');
+        expect(cmd).toContain('--value <value>');
+
+        exitSpy.mockRestore();
+        logSpy.mockRestore();
+      });
+
+      it('uses --value when provided and reaches next prompt (e.g. git_branch_required)', async () => {
+        const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+          throw new Error('exit');
+        });
+        const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+        client.nonInteractive = true;
+        client.setArgv(
+          'env',
+          'add',
+          'PREVIEW_VAR',
+          'preview',
+          '--value',
+          'my-secret-value',
+          '--yes'
+        );
+        const exitCodePromise = env(client);
+
+        await expect(exitCodePromise).rejects.toThrow('exit');
+        const payload = JSON.parse(
+          logSpy.mock.calls[logSpy.mock.calls.length - 1][0]
+        );
+        expect(payload.reason).toBe('git_branch_required');
+        expect(
+          payload.next.some(
+            (n: { command: string }) =>
+              n.command.includes('preview') && n.command.includes('<gitbranch>')
+          )
+        ).toBe(true);
+
+        exitSpy.mockRestore();
+        logSpy.mockRestore();
+      });
+
+      it('outputs action_required when preview target and git branch not passed (no third argument)', async () => {
+        const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+          throw new Error('exit');
+        });
+        const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+        client.nonInteractive = true;
+        client.stdin.isTTY = false;
+        client.setArgv('env', 'add', 'PREVIEW_VAR', 'preview', '--yes');
+        const exitCodePromise = env(client);
+        setImmediate(() => client.stdin.emit('data', 'value-via-stdin'));
+
+        await expect(exitCodePromise).rejects.toThrow('exit');
+        expect(logSpy).toHaveBeenCalled();
+        const payload = JSON.parse(
+          logSpy.mock.calls[logSpy.mock.calls.length - 1][0]
+        );
+        expect(payload).toMatchObject({
+          status: 'action_required',
+          reason: 'git_branch_required',
+          message: expect.stringMatching(/Git branch|third argument|Preview/),
+          next: expect.any(Array),
+        });
+        expect(payload.next.length).toBeGreaterThanOrEqual(1);
+        expect(
+          payload.next.some(
+            (n: { command: string }) =>
+              n.command.includes('preview') &&
+              (n.command.includes('<gitbranch>') ||
+                n.command.includes('--value'))
+          )
+        ).toBe(true);
+
+        exitSpy.mockRestore();
+        logSpy.mockRestore();
+      });
+
+      it('does not output git_branch_required when branch is passed as third argument for preview', async () => {
+        const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+          throw new Error('exit');
+        });
+        const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+        client.nonInteractive = true;
+        client.setArgv(
+          'env',
+          'add',
+          'PREVIEW_WITH_FLAG',
+          'preview',
+          'feat/test',
+          '--yes'
+        );
+        const exitCodePromise = env(client);
+
+        await expect(exitCodePromise).rejects.toThrow('exit');
+        expect(logSpy).toHaveBeenCalled();
+        const payload = JSON.parse(
+          logSpy.mock.calls[logSpy.mock.calls.length - 1][0]
+        );
+        expect(payload.reason).toBe('missing_requirements');
+        expect(payload.missing).toContain('missing_value');
+        expect(payload.missing).not.toContain('git_branch_required');
+
+        exitSpy.mockRestore();
+        logSpy.mockRestore();
+      });
+
+      it('outputs API errors (e.g. branch not found) as JSON in non-interactive mode', async () => {
+        const addEnvRecordModule = await import(
+          '../../../../src/util/env/add-env-record'
+        );
+        const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+          throw new Error('exit');
+        });
+        const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+        vi.spyOn(addEnvRecordModule, 'default').mockRejectedValue(
+          Object.assign(
+            new Error(
+              'Branch "branch" not found in the connected Git repository (400)'
+            ),
+            {
+              status: 400,
+              serverMessage:
+                'Branch "branch" not found in the connected Git repository',
+            }
+          )
+        );
+
+        client.nonInteractive = true;
+        client.setArgv(
+          'env',
+          'add',
+          'MY_VAR',
+          'preview',
+          'branch',
+          '--value',
+          'secret',
+          '--yes',
+          '--non-interactive'
+        );
+        client.cwd = setupUnitFixture('vercel-env-pull');
+
+        const exitCodePromise = env(client);
+
+        await expect(exitCodePromise).rejects.toThrow('exit');
+        const payload = JSON.parse(
+          logSpy.mock.calls[logSpy.mock.calls.length - 1][0]
+        );
+        expect(payload).toMatchObject({
+          status: 'error',
+          reason: 'branch_not_found',
+          message: expect.stringMatching(/Branch.*not found/),
+        });
+
+        vi.restoreAllMocks();
+        exitSpy.mockRestore();
+        logSpy.mockRestore();
       });
     });
   });

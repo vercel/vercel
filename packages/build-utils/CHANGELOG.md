@@ -1,5 +1,26 @@
 # @vercel/build-utils
 
+## 13.5.0
+
+### Minor Changes
+
+- Add django experimental framework. ([#15196](https://github.com/vercel/vercel/pull/15196))
+
+### Patch Changes
+
+- Updated dependencies [[`cb79f6f8080fddd3673a8911566085e0265b060b`](https://github.com/vercel/vercel/commit/cb79f6f8080fddd3673a8911566085e0265b060b)]:
+  - @vercel/python-analysis@0.7.0
+
+## 13.4.3
+
+### Patch Changes
+
+- [services] ([#15093](https://github.com/vercel/vercel/pull/15093))
+  - consolidate `workspace` and `entrypoint` from `experimentalServices` `vercel.json` schema
+  - make `framework` config in service optional -- infer framework from service workspace when not explicitly provided
+- Updated dependencies [[`fc56fb91b4dafabe0f68f86efeabbaf98b2642bc`](https://github.com/vercel/vercel/commit/fc56fb91b4dafabe0f68f86efeabbaf98b2642bc)]:
+  - @vercel/python-analysis@0.6.0
+
 ## 13.4.2
 
 ### Patch Changes

@@ -22,5 +22,8 @@
       "fetchOptions": { "redirect": "manual" },
       "mustContain": "oops 404"
     }
-  ]
+  ],
+  "env": {
+    "NEXT_BUILDER_INTEGRATION": "1"
+  }
 }

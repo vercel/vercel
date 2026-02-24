@@ -169,8 +169,8 @@ export const metricsCommand = {
       value: `${packageName} metrics -e incomingRequest --group-by httpStatus --since 6h`,
     },
     {
-      name: 'Function cold start analysis',
-      value: `${packageName} metrics -e functionExecution -m coldStartDurationMs -a avg --group-by route --since 1h`,
+      name: 'Function duration by route',
+      value: `${packageName} metrics -e functionExecution -m functionDurationMs -a avg --group-by route --since 1h`,
     },
     {
       name: 'AI Gateway costs by provider',

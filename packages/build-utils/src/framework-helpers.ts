@@ -16,6 +16,7 @@ export const BACKEND_FRAMEWORKS = [
 export const PYTHON_FRAMEWORKS = [
   'fastapi',
   'flask',
+  'django',
   'python', // Generic Python framework preset
 ] as const;
 

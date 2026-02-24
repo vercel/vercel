@@ -3,5 +3,8 @@
     "env": {
       "VERCEL_NEXT_BUNDLED_SERVER": "1"
     }
+  },
+  "env": {
+    "NEXT_BUILDER_INTEGRATION": "1"
   }
 }

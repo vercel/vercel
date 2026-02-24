@@ -62,6 +62,15 @@ export const addSubcommand = {
       description:
         'Environment to connect (can be repeated: production, preview, development). Defaults to all.',
     },
+    {
+      name: 'prefix',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      argument: 'PREFIX',
+      description:
+        'Prefix for environment variable names (e.g., --prefix NEON2_ creates NEON2_DATABASE_URL instead of DATABASE_URL)',
+    },
   ],
   examples: [
     {
@@ -117,6 +126,10 @@ export const addSubcommand = {
       value: `${packageName} integration add acme --no-env-pull`,
     },
     {
+      name: 'Install with a prefix for environment variable names',
+      value: `${packageName} integration add acme --prefix NEON2_`,
+    },
+    {
       name: 'Show available products for an integration',
       value: `${packageName} integration add acme --help`,
     },
@@ -146,20 +159,39 @@ export type IntegrationAddFlags = {
 export const openSubcommand = {
   name: 'open',
   aliases: [],
-  description: "Opens a marketplace integration's dashboard",
+  description:
+    "Opens a marketplace integration's or resource's dashboard via SSO",
   arguments: [
     {
       name: 'name',
       required: true,
     },
+    {
+      name: 'resource',
+      required: false,
+    },
   ],
-  options: [],
+  options: [formatOption],
   examples: [
     {
       name: "Open a marketplace integration's dashboard",
       value: [
         `${packageName} integration open <integration-name>`,
         `${packageName} integration open acme`,
+      ],
+    },
+    {
+      name: "Open a resource's dashboard within an integration",
+      value: [
+        `${packageName} integration open <integration-name> <resource-name>`,
+        `${packageName} integration open acme my-acme-store`,
+      ],
+    },
+    {
+      name: 'Get the SSO link as JSON',
+      value: [
+        `${packageName} integration open acme --format=json`,
+        `${packageName} integration open acme my-acme-store --format=json`,
       ],
     },
   ],
@@ -234,7 +266,7 @@ export const discoverSubcommand = {
     },
     {
       name: 'Discover marketplace integrations as JSON',
-      value: [`${packageName} integration discover --json`],
+      value: [`${packageName} integration discover --format=json`],
     },
   ],
 } as const;
@@ -250,7 +282,7 @@ export const balanceSubcommand = {
       required: true,
     },
   ],
-  options: [],
+  options: [formatOption],
   examples: [
     {
       name: 'Show the balance(s) & threshold(s) of a marketplace integration',
@@ -258,6 +290,10 @@ export const balanceSubcommand = {
         `${packageName} integration balance <integration-name>`,
         `${packageName} integration balance acme`,
       ],
+    },
+    {
+      name: 'Output as JSON',
+      value: `${packageName} integration balance acme --format=json`,
     },
   ],
 } as const;
@@ -278,6 +314,7 @@ export const removeSubcommand = {
       description:
         'Skip the confirmation prompt when uninstalling an integration',
     },
+    formatOption,
   ],
   examples: [
     {
@@ -286,6 +323,54 @@ export const removeSubcommand = {
         `${packageName} integration remove <integration>`,
         `${packageName} integration remove acme`,
       ],
+    },
+    {
+      name: 'Output as JSON',
+      value: `${packageName} integration remove acme --format=json --yes`,
+    },
+  ],
+} as const;
+
+export const guideSubcommand = {
+  name: 'guide',
+  aliases: [],
+  description:
+    'Show getting started guides and code snippets for a marketplace integration',
+  arguments: [
+    {
+      name: 'integration',
+      required: true,
+    },
+  ],
+  options: [
+    {
+      name: 'framework',
+      shorthand: 'f',
+      type: String,
+      deprecated: false,
+      argument: 'FRAMEWORK',
+      description:
+        'Select a framework guide without interactive prompt (e.g., nextjs, remix, astro, nuxtjs, sveltekit)',
+    },
+  ],
+  examples: [
+    {
+      name: 'Show guides for a single-product integration',
+      value: [
+        `${packageName} integration guide <integration-name>`,
+        `${packageName} integration guide neon`,
+      ],
+    },
+    {
+      name: 'Show guides for a specific product of a multi-product integration',
+      value: [
+        `${packageName} integration guide <integration>/<product>`,
+        `${packageName} integration guide aws/aws-dynamodb`,
+      ],
+    },
+    {
+      name: 'Show the Next.js guide without prompts (useful for CI/agents)',
+      value: `${packageName} integration guide neon --framework nextjs`,
     },
   ],
 } as const;
@@ -299,8 +384,9 @@ export const integrationCommand = {
   subcommands: [
     addSubcommand,
     balanceSubcommand,
-    listSubcommand,
     discoverSubcommand,
+    guideSubcommand,
+    listSubcommand,
     openSubcommand,
     removeSubcommand,
   ],

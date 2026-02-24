@@ -1,5 +1,5 @@
-import { packageName } from '../../util/pkg-name';
 import { yesOption } from '../../util/arg-common';
+import { packageName } from '../../util/pkg-name';
 
 export const listSubcommand = {
   name: 'list',
@@ -334,6 +334,15 @@ export const sdkKeysSubcommand = {
   examples: [],
 } as const;
 
+export const prepareSubcommand = {
+  name: 'prepare',
+  aliases: [],
+  description: 'Prepare flag definition fallbacks for the build',
+  arguments: [],
+  options: [],
+  examples: [],
+} as const;
+
 export const flagsCommand = {
   name: 'flags',
   aliases: [],
@@ -351,6 +360,7 @@ export const flagsCommand = {
     disableSubcommand,
     enableSubcommand,
     sdkKeysSubcommand,
+    prepareSubcommand,
   ],
   options: [],
   examples: [],

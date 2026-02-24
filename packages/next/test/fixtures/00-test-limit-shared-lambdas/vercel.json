@@ -162,5 +162,8 @@
       "status": 200,
       "mustContain": "index page"
     }
-  ]
+  ],
+  "env": {
+    "NEXT_BUILDER_INTEGRATION": "1"
+  }
 }
