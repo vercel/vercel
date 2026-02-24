@@ -10,6 +10,15 @@ function parsePyprojectName(pyprojectContent) {
   return nameMatch ? nameMatch[1] : null;
 }
 
+function parsePackageJsonName(packageJsonContent) {
+  try {
+    const parsed = JSON.parse(packageJsonContent);
+    return typeof parsed.name === 'string' ? parsed.name : null;
+  } catch {
+    return null;
+  }
+}
+
 function getPythonPackages(rootDir) {
   const pythonRoot = path.join(rootDir, 'python');
   if (!fs.existsSync(pythonRoot)) {
@@ -23,14 +32,24 @@ function getPythonPackages(rootDir) {
       const packageDir = entry.name;
       const projectDir = `python/${packageDir}`;
       const pyprojectPath = path.join(rootDir, projectDir, 'pyproject.toml');
+      const packageJsonPath = path.join(rootDir, projectDir, 'package.json');
 
       if (!fs.existsSync(pyprojectPath)) {
+        return null;
+      }
+
+      if (!fs.existsSync(packageJsonPath)) {
         return null;
       }
 
       const pyproject = fs.readFileSync(pyprojectPath, 'utf8');
       const packageName = parsePyprojectName(pyproject);
       if (!packageName) {
+        return null;
+      }
+      const nodePackageJson = fs.readFileSync(packageJsonPath, 'utf8');
+      const nodePackageName = parsePackageJsonName(nodePackageJson);
+      if (!nodePackageName) {
         return null;
       }
       const label = toLabel({ packageName, packageDir });
@@ -40,6 +59,7 @@ function getPythonPackages(rootDir) {
         packageDir,
         projectDir,
         packageName,
+        nodePackageName,
         label,
         title,
         project: projectDir,

@@ -2,23 +2,23 @@ import execa from 'execa';
 import path from 'path';
 import fs from 'fs-extra';
 import { TurboDryRun } from './types';
+const { getPythonPackages } = require('./get-python-packages.js');
 
 const rootDir = path.join(__dirname, '..');
 const ignoredPackages = ['api', 'examples'];
-const pythonWheelPackages = [
-  {
-    packageDir: 'vercel-runtime',
-    tag: '@vercel/python-runtime@*',
-    packagePath: 'python/vercel-runtime',
-    packageLabel: 'runtime',
-  },
-  {
-    packageDir: 'vercel-workers',
-    tag: '@vercel/python-workers@*',
-    packagePath: 'python/vercel-workers',
-    packageLabel: 'workers',
-  },
-] as const;
+const pythonWheelPackages = getPythonPackages(rootDir).map(
+  (pkg: {
+    packageDir: string;
+    projectDir: string;
+    label: string;
+    nodePackageName: string;
+  }) => ({
+    packageDir: pkg.packageDir,
+    tag: `${pkg.nodePackageName}@*`,
+    packagePath: pkg.projectDir,
+    packageLabel: pkg.label,
+  })
+);
 
 async function main() {
   const sha = await getSha();

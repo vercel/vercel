@@ -5,41 +5,44 @@
  *   - `pnpm ci:publish` via `utils/publish-runtimes.mjs`
  *   - `.github/workflows/release-python-package.yml`
  *
- * Add new entries to `PYTHON_PACKAGES` to onboard additional Python packages.
+ * Package discovery is based on `utils/get-python-packages.js`.
  */
 
 import { execFileSync } from 'node:child_process';
 import { readFileSync, rmSync, readdirSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { resolve, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, '..');
 const PYTHON_VERSIONS_PATH = 'packages/python/src/package-versions.ts';
+const require = createRequire(import.meta.url);
+const { getPythonPackages } = require('../utils/get-python-packages.js');
 
-const PYTHON_PACKAGES = [
-  {
-    name: 'vercel-runtime',
-    projectDir: 'python/vercel-runtime',
-    versionPin: {
-      path: PYTHON_VERSIONS_PATH,
-      exportName: 'VERCEL_RUNTIME_VERSION',
-    },
+function toVersionExportName(packageName) {
+  const normalized = packageName
+    .replace(/[^a-zA-Z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .toUpperCase();
+  return `${normalized}_VERSION`;
+}
+
+const PYTHON_PACKAGES = getPythonPackages(root).map(pkg => ({
+  name: pkg.packageName,
+  projectDir: pkg.projectDir,
+  versionPin: {
+    path: PYTHON_VERSIONS_PATH,
+    exportName: toVersionExportName(pkg.packageName),
   },
-  {
-    name: 'vercel-workers',
-    projectDir: 'python/vercel-workers',
-    versionPin: {
-      path: PYTHON_VERSIONS_PATH,
-      exportName: 'VERCEL_WORKERS_VERSION',
-    },
-  },
-].map(pkg => ({
-  ...pkg,
   pyprojectPath: `${pkg.projectDir}/pyproject.toml`,
   distDir: `${pkg.projectDir}/dist`,
   testsPath: `${pkg.projectDir}/tests`,
 }));
+
+if (PYTHON_PACKAGES.length === 0) {
+  throw new Error('No Python packages discovered under python/*/pyproject.toml');
+}
 const PYTHON_PACKAGE_NAMES = PYTHON_PACKAGES.map(pkg => pkg.name);
 
 const pythonPackageMap = new Map(PYTHON_PACKAGES.map(pkg => [pkg.name, pkg]));
