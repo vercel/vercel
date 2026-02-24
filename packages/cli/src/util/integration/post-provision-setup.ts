@@ -38,6 +38,16 @@ export function validateEnvironments(
   return { valid: true };
 }
 
+export interface PostProvisionSetupResult {
+  exitCode: number;
+  dashboardUrl: string;
+  project?: { id: string; name: string };
+  connected: boolean;
+  environments: string[];
+  envPulled: boolean;
+  connectError?: string;
+}
+
 /**
  * Handles post-provisioning setup: prints dashboard URL, auto-connects
  * resource to the linked project (all environments), and runs env pull.
@@ -51,22 +61,30 @@ export async function postProvisionSetup(
   resourceId: string,
   contextName: string,
   options: PostProvisionOptions = {}
-): Promise<number> {
+): Promise<PostProvisionSetupResult> {
   const dashboardUrl = `https://vercel.com/${contextName}/~/stores/integration/${resourceId}`;
   output.log(
     indent(`Dashboard: ${output.link(dashboardUrl, dashboardUrl)}`, 4)
   );
 
+  const baseResult: PostProvisionSetupResult = {
+    exitCode: 0,
+    dashboardUrl,
+    connected: false,
+    environments: [],
+    envPulled: false,
+  };
+
   if (options.noConnect) {
-    return 0;
+    return baseResult;
   }
 
   const linkedProject = await getLinkedProject(client);
   if (linkedProject.status === 'error') {
-    return linkedProject.exitCode;
+    return { ...baseResult, exitCode: linkedProject.exitCode };
   }
   if (linkedProject.status === 'not_linked') {
-    return 0;
+    return baseResult;
   }
 
   const { project } = linkedProject;
@@ -95,7 +113,13 @@ export async function postProvisionSetup(
     output.stopSpinner();
     options.onProjectConnectFailed?.(project.id, error as Error);
     output.error(`Failed to connect: ${(error as Error).message}`);
-    return 1;
+    return {
+      ...baseResult,
+      exitCode: 1,
+      project: { id: project.id, name: project.name },
+      environments,
+      connectError: (error as Error).message,
+    };
   }
   output.stopSpinner();
 
@@ -105,6 +129,7 @@ export async function postProvisionSetup(
 
   options.onProjectConnected?.(project.id);
 
+  let envPulled = false;
   if (!options.noEnvPull) {
     const pullExitCode = await pull(
       client,
@@ -115,10 +140,18 @@ export async function postProvisionSetup(
       output.warn(
         'Failed to pull environment variables. You can run `vercel env pull` manually.'
       );
+    } else {
+      envPulled = true;
     }
   }
 
-  return 0;
+  return {
+    ...baseResult,
+    project: { id: project.id, name: project.name },
+    connected: true,
+    environments,
+    envPulled,
+  };
 }
 
 /**

@@ -21,6 +21,7 @@ export const addSubcommand = {
       deprecated: false,
       argument: 'NAME',
     },
+    formatOption,
     {
       name: 'metadata',
       description:
@@ -137,6 +138,10 @@ export const addSubcommand = {
     {
       name: 'Install with a prefix for environment variable names',
       value: `${packageName} integration add acme --prefix NEON2_`,
+    },
+    {
+      name: 'Output as JSON',
+      value: `${packageName} integration add acme --format=json`,
     },
     {
       name: 'Show available products for an integration',

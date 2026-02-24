@@ -35,6 +35,7 @@ export interface AddAutoProvisionOptions extends PostProvisionOptions {
   billingPlanId?: string;
   installationId?: string;
   commandName?: 'integration add' | 'install';
+  asJson?: boolean;
 }
 
 export async function addAutoProvision(
@@ -57,6 +58,7 @@ export async function addAutoProvision(
   telemetry.trackCliOptionInstallationId(options.installationId);
   telemetry.trackCliOptionEnvironment(options.environments);
   telemetry.trackCliOptionPrefix(options.prefix);
+  telemetry.trackCliOptionFormat(options.asJson ? 'json' : undefined);
 
   // Get team context
   const { contextName, team } = await getScope(client);
@@ -382,7 +384,7 @@ export async function addAutoProvision(
   );
 
   // Post-provision: dashboard URL, connect, env pull
-  return postProvisionSetup(
+  const setupResult = await postProvisionSetup(
     client,
     resourceName,
     provisioned.resource.id,
@@ -406,4 +408,62 @@ export async function addAutoProvision(
       },
     }
   );
+
+  if (options.asJson) {
+    const warnings: string[] = [];
+    if (setupResult.connectError) {
+      warnings.push(
+        `Failed to connect to project: ${setupResult.connectError}`
+      );
+    }
+    if (setupResult.connected && !setupResult.envPulled && !options.noEnvPull) {
+      warnings.push(
+        'Failed to pull environment variables. You can run `vercel env pull` manually.'
+      );
+    }
+
+    const jsonOutput: Record<string, unknown> = {
+      resource: {
+        id: provisioned.resource.id,
+        name: provisioned.resource.name,
+        status: provisioned.resource.status,
+        externalResourceId: provisioned.resource.externalResourceId,
+      },
+      integration: {
+        id: provisioned.integration.id,
+        slug: provisioned.integration.slug,
+        name: provisioned.integration.name,
+      },
+      product: {
+        id: provisioned.product.id,
+        slug: provisioned.product.slug,
+        name: provisioned.product.name,
+      },
+      installation: {
+        id: provisioned.installation.id,
+      },
+      billingPlan: provisioned.billingPlan
+        ? {
+            id: provisioned.billingPlan.id,
+            name: provisioned.billingPlan.name,
+            type: provisioned.billingPlan.type,
+          }
+        : null,
+      dashboardUrl: setupResult.dashboardUrl,
+    };
+
+    if (setupResult.project) {
+      jsonOutput.project = setupResult.project;
+    }
+    jsonOutput.environments = setupResult.environments;
+    jsonOutput.envPulled = setupResult.envPulled;
+    jsonOutput.warnings = warnings;
+
+    client.stdout.write(`${JSON.stringify(jsonOutput, null, 2)}\n`);
+
+    // Partial failures (connect/env-pull) still return 0 when resource was provisioned
+    return setupResult.connectError ? 0 : setupResult.exitCode;
+  }
+
+  return setupResult.exitCode;
 }
