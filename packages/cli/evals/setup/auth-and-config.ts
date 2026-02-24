@@ -7,23 +7,33 @@ import type { Sandbox } from '@vercel/agent-eval';
  */
 export const setupAuthAndConfig = async (sandbox: Sandbox) => {
   const shellEscape = (s: string) => s.replace(/'/g, "'\\''");
+  const token = process.env.VERCEL_TOKEN;
+  const authConfig = token ? { token } : {};
+  const authJson = JSON.stringify(authConfig);
   const cliDataDir = '$HOME/.local/share/com.vercel.cli';
+  const vercelDir = '$HOME/.vercel';
+
   try {
-    const token = process.env.VERCEL_TOKEN;
-    const authConfig = token ? { token } : {};
-    const authJson = JSON.stringify(authConfig);
     await sandbox.runCommand('bash', [
       '-c',
       `mkdir -p "${cliDataDir}" && printf '%s' '${shellEscape(authJson)}' > "${cliDataDir}/auth.json"`,
     ]);
+    await sandbox.runCommand('bash', [
+      '-c',
+      `mkdir -p "${vercelDir}" && printf '%s' '${shellEscape(authJson)}' > "${vercelDir}/auth.json"`,
+    ]);
+    if (token) {
+      await sandbox.runCommand('bash', [
+        '-c',
+        `printf 'export VERCEL_TOKEN="%s"\\n' '${shellEscape(token)}' >> "$HOME/.bashrc"`,
+      ]);
+    }
   } catch (err) {
-    // Host may have no auth file (e.g. CI with only VERCEL_TOKEN)
+    // Host may have no auth (e.g. CI with only VERCEL_TOKEN)
   }
   try {
     const configJson = JSON.stringify({
-      telemetry: {
-        enabled: false,
-      },
+      telemetry: { enabled: false },
       currentTeam:
         process.env.CLI_EVAL_TEAM_ID ?? 'team_KhlEYrm473sP7ybEytVDlfyj',
     });
@@ -32,6 +42,6 @@ export const setupAuthAndConfig = async (sandbox: Sandbox) => {
       `mkdir -p "${cliDataDir}" && printf '%s' '${shellEscape(configJson)}' > "${cliDataDir}/config.json"`,
     ]);
   } catch (err) {
-    // Host may have no config.json yet
+    // Best-effort config write
   }
 };

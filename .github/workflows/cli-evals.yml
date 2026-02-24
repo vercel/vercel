@@ -10,7 +10,7 @@ on:
 jobs:
   evals:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 45
     # TODO: Remove continue-on-error when evals should block PR merge.
     continue-on-error: true
     # Evals use separate secrets (EVAL_*) so you can point to a dedicated evals team.

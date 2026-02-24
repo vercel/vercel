@@ -6,9 +6,9 @@ const config: ExperimentConfig = {
   agent: 'vercel-ai-gateway/claude-code',
   evals: ['_smoke'],
   runs: 1,
-  earlyExit: false, // Run all evals to completion so we get explicit pass/fail for each
+  earlyExit: false,
   timeout: 600,
-  sandbox: 'vercel',
+  sandbox: 'docker', // Use docker so VERCEL_TOKEN works in CI (vercel sandbox requires OIDC)
   setup: async sandbox => {
     await installCLI(sandbox);
     await setupAuthAndConfig(sandbox);
