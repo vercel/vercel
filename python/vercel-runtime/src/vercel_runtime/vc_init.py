@@ -24,6 +24,7 @@ from urllib.parse import urlsplit
 from vercel_runtime.headers import (
     clear_vercel_headers_context,
     decode_header_bytes,
+    normalize_event_header_pairs,
     normalize_event_headers,
     set_vercel_headers_from_asgi_pairs,
     set_vercel_headers_from_http_headers,
@@ -1361,7 +1362,14 @@ elif "app" in __vc_variables or "application" in __vc_variables:
         def vc_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
             payload = json.loads(event["body"])
 
-            headers = normalize_event_headers(payload.get("headers", {}))
+            header_pairs = normalize_event_header_pairs(
+                payload.get("headers", {})
+            )
+            headers: dict[str, str] = {}
+            headers_encoded: list[tuple[bytes, bytes]] = []
+            for key, value in header_pairs:
+                headers[key] = value
+                headers_encoded.append((key.lower().encode(), value.encode()))
 
             body = payload.get("body", b"")
             if payload.get("encoding") == "base64":
@@ -1375,10 +1383,6 @@ elif "app" in __vc_variables or "application" in __vc_variables:
             ) = _apply_service_route_prefix_to_target(payload["path"])
             path, query_str = _split_request_target(request_target)
             query = query_str.encode()
-
-            headers_encoded: list[list[bytes | list[bytes]]] = []
-            for k, v in headers.items():
-                headers_encoded.append([k.lower().encode(), v.encode()])
 
             scope: _ASGIScope = {
                 "server": (

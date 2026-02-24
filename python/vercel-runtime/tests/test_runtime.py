@@ -735,20 +735,25 @@ class TestLambdaASGI(_LambdaTestCase):
         self.assertEqual(result["statusCode"], 200)
 
     async def test_repeated_headers(self) -> None:
-        ep_abs, ep_rel, mod = _make_entrypoint("asgi_app.py", self.tmp_path)
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "asgi_repeated_headers.py",
+            self.tmp_path,
+        )
         result = await _invoke_lambda(
             entrypoint_abs=ep_abs,
             entrypoint_rel=ep_rel,
             module_name=mod,
             event=_lambda_event(
                 "GET",
-                "/hello",
+                "/headers",
                 headers={
                     "accept": ["text/html", "application/json"],
                 },
             ),
         )
         self.assertEqual(result["statusCode"], 200)
+        body = base64.b64decode(result["body"]).decode()
+        self.assertEqual(body, "text/html,application/json")
 
 
 class TestLambdaErrorPaths(_LambdaTestCase):

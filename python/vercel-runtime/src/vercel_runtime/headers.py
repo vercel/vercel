@@ -24,6 +24,58 @@ def _iter_header_items(headers: object) -> list[tuple[object, object]]:
     return []
 
 
+def _iter_event_header_pairs(
+    raw_headers: object,
+) -> list[tuple[str, str]]:
+    normalized: list[tuple[str, str]] = []
+    if not isinstance(raw_headers, Mapping):
+        return normalized
+
+    typed_headers = cast("Mapping[object, object]", raw_headers)
+    for key, value in typed_headers.items():
+        if key is None or value is None:
+            continue
+
+        key_str = str(key)
+        if isinstance(value, list):
+            value_list = cast("list[object]", value)
+            for item in value_list:
+                if item is None:
+                    continue
+                normalized.append((key_str, str(item)))
+        else:
+            normalized.append((key_str, str(value)))
+
+    return normalized
+
+
+def _normalize_internal_oidc_header(
+    headers: list[tuple[str, str]],
+) -> list[tuple[str, str]]:
+    has_public_oidc = any(
+        key.lower() == "x-vercel-oidc-token" for key, _ in headers
+    )
+    internal_oidc_token = next(
+        (
+            value
+            for key, value in headers
+            if key.lower() == "x-vercel-internal-oidc-token"
+        ),
+        None,
+    )
+
+    without_internal = [
+        (key, value)
+        for key, value in headers
+        if key.lower() != "x-vercel-internal-oidc-token"
+    ]
+
+    if not has_public_oidc and internal_oidc_token is not None:
+        without_internal.append(("x-vercel-oidc-token", internal_oidc_token))
+
+    return without_internal
+
+
 def set_headers(headers: Mapping[str, str] | None) -> None:
     _ = _cv_headers.set(headers)
 
@@ -73,32 +125,13 @@ def normalize_event_headers(
     raw_headers: object,
 ) -> dict[str, str]:
     normalized: dict[str, str] = {}
-    if isinstance(raw_headers, Mapping):
-        typed_headers = cast("Mapping[object, object]", raw_headers)
-        for key, value in typed_headers.items():
-            if key is None or value is None:
-                continue
-            if isinstance(value, list):
-                value_list = cast("list[object]", value)
-                if not value_list:
-                    continue
-                normalized[str(key)] = str(value_list[0])
-            else:
-                normalized[str(key)] = str(value)
-
-    has_public_oidc = any(
-        k.lower() == "x-vercel-oidc-token" for k in normalized
-    )
-    internal_oidc_key = next(
-        (k for k in normalized if k.lower() == "x-vercel-internal-oidc-token"),
-        None,
-    )
-    if not has_public_oidc and internal_oidc_key:
-        normalized["x-vercel-oidc-token"] = normalized[internal_oidc_key]
-
-    for key in [
-        k for k in normalized if k.lower() == "x-vercel-internal-oidc-token"
-    ]:
-        del normalized[key]
-
+    for key, value in normalize_event_header_pairs(raw_headers):
+        normalized[key] = value
     return normalized
+
+
+def normalize_event_header_pairs(
+    raw_headers: object,
+) -> list[tuple[str, str]]:
+    normalized_pairs = _iter_event_header_pairs(raw_headers)
+    return _normalize_internal_oidc_header(normalized_pairs)
