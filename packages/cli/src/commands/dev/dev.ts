@@ -30,6 +30,7 @@ import {
 import { displayDetectedServices } from '../../util/input/display-services';
 import { acquireDevLock, releaseDevLock } from '../../util/dev/dev-lock';
 import { isExperimentalSkipDevLinkEnabled } from '../../util/dev/experimental';
+import { resolveProjectCwd } from '../../util/projects/find-project-root';
 
 type Options = {
   '--listen': string;
@@ -45,6 +46,8 @@ export default async function dev(
   const [dir = '.'] = args;
   let cwd = resolve(dir);
   const listen = parseListen(opts['--listen'] || '3000');
+
+  cwd = await resolveProjectCwd(cwd);
 
   // retrieve dev command
   let link = await getLinkedProject(client, cwd);
