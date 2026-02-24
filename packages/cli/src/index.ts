@@ -77,7 +77,6 @@ import { checkTelemetryStatus } from './util/telemetry/check-status';
 import output from './output-manager';
 import { checkGuidanceStatus } from './util/guidance/check-status';
 import { determineAgent } from '@vercel/detect-agent';
-import { isExperimentalSkipDevLinkEnabled } from './util/dev/experimental';
 
 const VERCEL_DIR = getGlobalPathConfig();
 const VERCEL_CONFIG_PATH = configFiles.getConfigFilePath();
@@ -458,7 +457,10 @@ const main = async () => {
     subcommandsWithoutToken.push('guidance');
   }
 
-  if (isExperimentalSkipDevLinkEnabled()) {
+  if (
+    subcommand === 'dev' &&
+    (client.argv.includes('--local') || client.argv.includes('-L'))
+  ) {
     subcommandsWithoutToken.push('dev');
   }
 
