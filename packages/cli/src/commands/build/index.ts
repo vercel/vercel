@@ -591,6 +591,23 @@ async function doBuild(
     // these env vars are baked into the client bundle so they can be accessed in the client code.
     // User-defined env vars take precedence and won't be overwritten.
     if (detectedServices && detectedServices.length > 0) {
+      if (
+        typeof projectSettings.buildCommand === 'string' &&
+        projectSettings.buildCommand.trim()
+      ) {
+        output.warn(
+          'Project-level `buildCommand` is ignored when services are configured. Configure a service-level `buildCommand` in `experimentalServices.<service>.buildCommand`.'
+        );
+      }
+      if (
+        typeof projectSettings.installCommand === 'string' &&
+        projectSettings.installCommand.trim()
+      ) {
+        output.warn(
+          'Project-level `installCommand` is ignored when services are configured. Configure a service-level `installCommand` in `experimentalServices.<service>.installCommand`.'
+        );
+      }
+
       const serviceUrlEnvVars = getServiceUrlEnvVars({
         services: detectedServices,
         frameworkList,
@@ -853,8 +870,7 @@ async function doBuild(
         config: buildConfig,
         meta,
         span: builderSpan,
-        ...(typeof serviceRoutePrefix === 'string' ||
-        typeof serviceWorkspace === 'string'
+        ...(service
           ? {
               service: {
                 routePrefix:
@@ -864,7 +880,7 @@ async function doBuild(
                 workspace:
                   typeof serviceWorkspace === 'string'
                     ? serviceWorkspace
-                    : undefined,
+                    : service.workspace,
               },
             }
           : undefined),

@@ -81,8 +81,11 @@ export const build: BuildV3 = async ({
   entrypoint,
   meta = {},
   config,
+  service,
 }) => {
   const framework = config?.framework;
+  const isPythonFrameworkBuild = isPythonFramework(framework);
+  const isServiceBuild = Boolean(service);
   let spawnEnv: NodeJS.ProcessEnv | undefined;
   // Custom install command from dashboard/project settings, if any.
   let projectInstallCommand: string | undefined;
@@ -113,8 +116,9 @@ export const build: BuildV3 = async ({
     throw err;
   }
 
-  // For Python frameworks, also honor project install/build commands (vercel.json/dashboard)
-  if (isPythonFramework(framework)) {
+  // For Python framework and services builds, honor project install/build commands
+  // from vercel.json/dashboard.
+  if (isPythonFrameworkBuild || isServiceBuild) {
     const {
       cliType,
       lockfileVersion,
@@ -130,7 +134,10 @@ export const build: BuildV3 = async ({
       projectCreatedAt: config?.projectSettings?.createdAt,
     });
 
-    const installCommand = config?.projectSettings?.installCommand;
+    // In services mode, only honor service-level commands.
+    const installCommand = isServiceBuild
+      ? config?.installCommand
+      : config?.projectSettings?.installCommand;
     if (typeof installCommand === 'string') {
       const trimmed = installCommand.trim();
       if (trimmed) {
@@ -140,10 +147,11 @@ export const build: BuildV3 = async ({
       }
     }
 
-    const projectBuildCommand =
-      config?.projectSettings?.buildCommand ??
-      // fallback if provided directly on config (some callers set this)
-      (config as any)?.buildCommand;
+    const projectBuildCommand = isServiceBuild
+      ? config?.buildCommand
+      : (config?.projectSettings?.buildCommand ??
+        // fallback if provided directly on config (some callers set this)
+        (config as any)?.buildCommand);
     if (projectBuildCommand) {
       console.log(`Running "${projectBuildCommand}"`);
       await execCommand(projectBuildCommand, {

@@ -1,0 +1,9 @@
+{
+  "orgId": ".",
+  "projectId": ".",
+  "settings": {
+    "framework": "services",
+    "buildCommand": "echo project-build",
+    "installCommand": "echo project-install"
+  }
+}
