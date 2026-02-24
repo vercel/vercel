@@ -40,6 +40,7 @@ export async function detectServices(
   if (configError) {
     return {
       services: [],
+      source: 'configured',
       routes: { rewrites: [], defaults: [], crons: [], workers: [] },
       errors: [configError],
       warnings: [],
@@ -57,6 +58,7 @@ export async function detectServices(
     if (autoResult.errors.length > 0) {
       return {
         services: [],
+        source: 'auto-detected',
         routes: { rewrites: [], defaults: [], crons: [], workers: [] },
         errors: autoResult.errors,
         warnings: [],
@@ -72,6 +74,7 @@ export async function detectServices(
       const routes = generateServicesRoutes(result.services);
       return {
         services: result.services,
+        source: 'auto-detected',
         routes,
         errors: result.errors,
         warnings: [],
@@ -80,6 +83,7 @@ export async function detectServices(
 
     return {
       services: [],
+      source: 'auto-detected',
       routes: { rewrites: [], defaults: [], crons: [], workers: [] },
       errors: [
         {
@@ -104,6 +108,7 @@ export async function detectServices(
 
   return {
     services: result.services,
+    source: 'configured',
     routes,
     errors: result.errors,
     warnings: [],
