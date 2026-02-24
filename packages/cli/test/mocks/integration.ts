@@ -824,7 +824,11 @@ const resources: { stores: Resource[] } = {
       type: 'integration',
       name: 'store-acme-other-project',
       status: 'available',
-      product: { name: 'Acme', slug: 'acme' },
+      product: {
+        name: 'Acme',
+        slug: 'acme',
+        integrationConfigurationId: 'acme-first',
+      },
       projectsMetadata: [
         {
           id: 'spc_2',
@@ -862,7 +866,11 @@ const resources: { stores: Resource[] } = {
       type: 'integration',
       name: 'store-acme-no-projects',
       status: 'available',
-      product: { name: 'Acme', slug: 'acme' },
+      product: {
+        name: 'Acme',
+        slug: 'acme',
+        integrationConfigurationId: 'acme-first',
+      },
       projectsMetadata: [],
       externalResourceId: 'ext_store_4',
     },
@@ -1001,12 +1009,22 @@ const autoProvisionResponses: Record<
   },
   metadata: {
     kind: 'metadata',
+    reason: 'invalid_metadata_schema',
+    error_message: 'Metadata field "region" is required',
     url: 'https://vercel.com/acme/~/integrations/checkout/acme?productSlug=acme',
     integration: autoProvisionIntegration,
     product: autoProvisionProduct,
   },
   unknown: {
     kind: 'unknown',
+    reason: 'unexpected_error',
+    error_message: 'An unexpected error occurred during provisioning',
+    url: 'https://vercel.com/acme/~/integrations/checkout/acme?productSlug=acme',
+    integration: autoProvisionIntegration,
+    product: autoProvisionProduct,
+  },
+  install: {
+    kind: 'install',
     url: 'https://vercel.com/acme/~/integrations/checkout/acme?productSlug=acme',
     integration: autoProvisionIntegration,
     product: autoProvisionProduct,
@@ -1085,11 +1103,21 @@ export function useResources(returnError?: number) {
       return;
     }
 
-    const { teamId } = req.query;
+    const { teamId, integrationConfigurationId } = req.query;
 
     if (!teamId) {
       res.status(500);
       res.end();
+      return;
+    }
+
+    if (integrationConfigurationId) {
+      res.json({
+        stores: resources.stores.filter(
+          s =>
+            s.product?.integrationConfigurationId === integrationConfigurationId
+        ),
+      });
       return;
     }
 
@@ -1122,7 +1150,12 @@ export function useIntegrationDiscover(opts?: {
 
 export function useConfiguration() {
   client.scenario.get('/:version/integrations/configurations', (req, res) => {
-    const { integrationIdOrSlug } = req.query;
+    const { integrationIdOrSlug, teamId } = req.query;
+
+    if (!teamId) {
+      res.status(400).json({ error: 'teamId is required' });
+      return;
+    }
 
     if (integrationIdOrSlug === 'error') {
       res.status(500);
@@ -1260,6 +1293,8 @@ export function useIntegration({
     });
   });
 
+  const connectionRequestBodies: unknown[] = [];
+
   client.scenario.post(
     '/v1/storage/stores/:storeId/connections',
     (req, res) => {
@@ -1269,6 +1304,7 @@ export function useIntegration({
         return;
       }
 
+      connectionRequestBodies.push(req.body);
       res.status(200);
       res.end();
     }
@@ -1291,7 +1327,7 @@ export function useIntegration({
     }
   );
 
-  return { installRequestBodies };
+  return { installRequestBodies, connectionRequestBodies };
 }
 
 export function useAutoProvision(opts?: {
@@ -1351,7 +1387,7 @@ export function useAutoProvision(opts?: {
       const response =
         autoProvisionResponses[opts?.responseKey ?? 'provisioned'];
 
-      if (response.kind === 'metadata' || response.kind === 'unknown') {
+      if (response.kind !== 'provisioned') {
         // 422 responses for fallback cases
         res.status(422);
         res.json(response);

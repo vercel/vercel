@@ -1784,6 +1784,182 @@ describe('integration', () => {
         });
       });
 
+      describe('--prefix flag', () => {
+        let connectionRequestBodies: unknown[];
+
+        beforeEach(() => {
+          ({ connectionRequestBodies } = useIntegration({
+            withInstallation: true,
+            ownerId: team.id,
+          }));
+          usePreauthorization();
+        });
+
+        it('should pass envVarPrefix in connection request body', async () => {
+          useProject({
+            ...defaultProject,
+            id: 'vercel-integration-add',
+            name: 'vercel-integration-add',
+          });
+          const cwd = setupUnitFixture('vercel-integration-add');
+          client.cwd = cwd;
+          client.setArgv('integration', 'add', 'acme', '--prefix', 'NEON2_');
+          const exitCodePromise = integrationCommand(client);
+          await expect(client.stderr).toOutput(
+            `Installing Acme Product by Acme Integration under ${team.slug}`
+          );
+          await expect(client.stderr).toOutput(
+            'Choose your region (Use arrow keys)'
+          );
+          client.stdin.write('\n');
+          await expect(client.stderr).toOutput(
+            'Choose a billing plan (Use arrow keys)'
+          );
+          client.stdin.write('\n');
+          await expect(client.stderr).toOutput('Confirm selection? (Y/n)');
+          client.stdin.write('y\n');
+          await expect(client.stderr).toOutput(
+            'Acme Product successfully provisioned: acme-gray-apple'
+          );
+          await expect(client.stderr).toOutput(
+            'acme-gray-apple successfully connected to vercel-integration-add'
+          );
+          const exitCode = await exitCodePromise;
+          expect(exitCode).toEqual(0);
+          expect(connectionRequestBodies).toHaveLength(1);
+          expect(connectionRequestBodies[0]).toMatchObject({
+            envVarPrefix: 'NEON2_',
+          });
+        });
+
+        it('should not include envVarPrefix when --prefix is not provided', async () => {
+          useProject({
+            ...defaultProject,
+            id: 'vercel-integration-add',
+            name: 'vercel-integration-add',
+          });
+          const cwd = setupUnitFixture('vercel-integration-add');
+          client.cwd = cwd;
+          client.setArgv('integration', 'add', 'acme');
+          const exitCodePromise = integrationCommand(client);
+          await expect(client.stderr).toOutput(
+            `Installing Acme Product by Acme Integration under ${team.slug}`
+          );
+          await expect(client.stderr).toOutput(
+            'Choose your region (Use arrow keys)'
+          );
+          client.stdin.write('\n');
+          await expect(client.stderr).toOutput(
+            'Choose a billing plan (Use arrow keys)'
+          );
+          client.stdin.write('\n');
+          await expect(client.stderr).toOutput('Confirm selection? (Y/n)');
+          client.stdin.write('y\n');
+          await expect(client.stderr).toOutput(
+            'Acme Product successfully provisioned: acme-gray-apple'
+          );
+          await expect(client.stderr).toOutput(
+            'acme-gray-apple successfully connected to vercel-integration-add'
+          );
+          const exitCode = await exitCodePromise;
+          expect(exitCode).toEqual(0);
+          expect(connectionRequestBodies).toHaveLength(1);
+          expect(connectionRequestBodies[0]).not.toHaveProperty('envVarPrefix');
+        });
+
+        it('should track prefix telemetry when --prefix is used', async () => {
+          client.setArgv('integration', 'add', 'acme', '--prefix', 'NEON2_');
+          const exitCodePromise = integrationCommand(client);
+          await expect(client.stderr).toOutput(
+            `Installing Acme Product by Acme Integration under ${team.slug}`
+          );
+          await expect(client.stderr).toOutput(
+            'Choose your region (Use arrow keys)'
+          );
+          client.stdin.write('\n');
+          await expect(client.stderr).toOutput(
+            'Choose a billing plan (Use arrow keys)'
+          );
+          client.stdin.write('\n');
+          await expect(client.stderr).toOutput('Confirm selection? (Y/n)');
+          client.stdin.write('y\n');
+          await expect(client.stderr).toOutput(
+            'Acme Product successfully provisioned: acme-gray-apple'
+          );
+          const exitCode = await exitCodePromise;
+          expect(exitCode).toEqual(0);
+
+          expect(client.telemetryEventStore).toHaveTelemetryEvents([
+            {
+              key: 'subcommand:add',
+              value: 'add',
+            },
+            {
+              key: 'option:prefix',
+              value: '[REDACTED]',
+            },
+            {
+              key: 'argument:integration',
+              value: 'acme',
+            },
+          ]);
+        });
+
+        it('should reject --prefix that starts with a digit', async () => {
+          client.setArgv('integration', 'add', 'acme', '--prefix', '2NEON');
+          const exitCode = await integrationCommand(client);
+          await expect(client.stderr).toOutput(
+            'Invalid --prefix value. It must start with a letter and contain only letters, digits, and underscores.'
+          );
+          expect(exitCode).toEqual(1);
+        });
+
+        it('should reject --prefix that contains special characters', async () => {
+          client.setArgv('integration', 'add', 'acme', '--prefix', 'NEO-N');
+          const exitCode = await integrationCommand(client);
+          await expect(client.stderr).toOutput(
+            'Invalid --prefix value. It must start with a letter and contain only letters, digits, and underscores.'
+          );
+          expect(exitCode).toEqual(1);
+        });
+
+        it('should accept --prefix with valid identifier characters', async () => {
+          useProject({
+            ...defaultProject,
+            id: 'vercel-integration-add',
+            name: 'vercel-integration-add',
+          });
+          const cwd = setupUnitFixture('vercel-integration-add');
+          client.cwd = cwd;
+          client.setArgv(
+            'integration',
+            'add',
+            'acme',
+            '--prefix',
+            'My_Prefix2'
+          );
+          const exitCodePromise = integrationCommand(client);
+          await expect(client.stderr).toOutput(
+            `Installing Acme Product by Acme Integration under ${team.slug}`
+          );
+          await expect(client.stderr).toOutput(
+            'Choose your region (Use arrow keys)'
+          );
+          client.stdin.write('\n');
+          await expect(client.stderr).toOutput(
+            'Choose a billing plan (Use arrow keys)'
+          );
+          client.stdin.write('\n');
+          await expect(client.stderr).toOutput('Confirm selection? (Y/n)');
+          client.stdin.write('y\n');
+          await expect(client.stderr).toOutput(
+            'Acme Product successfully provisioned: acme-gray-apple'
+          );
+          const exitCode = await exitCodePromise;
+          expect(exitCode).toEqual(0);
+        });
+      });
+
       describe('--environment flag', () => {
         it('should list all VALID_ENVIRONMENTS in the help description', () => {
           const envOption = addSubcommand.options.find(

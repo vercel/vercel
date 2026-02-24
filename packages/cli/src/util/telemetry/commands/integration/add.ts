@@ -62,4 +62,20 @@ export class IntegrationAddTelemetryClient
       });
     }
   }
+
+  trackMarketplaceEvent(event: string, props: Record<string, unknown>) {
+    this.trackCommandOutput({
+      key: event,
+      value: JSON.stringify(props),
+    });
+  }
+
+  trackCliOptionPrefix(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'prefix',
+        value: this.redactedValue,
+      });
+    }
+  }
 }

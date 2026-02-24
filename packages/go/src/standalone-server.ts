@@ -104,8 +104,9 @@ export async function buildStandaloneServer({
     throw err;
   }
 
-  // Build the bootstrap wrapper that handles IPC protocol (vc-init.go)
+  // Build the bootstrap wrapper that handles IPC protocol (vc-init.go + vc-utils.go)
   const bootstrapSrc = join(__dirname, '../vc-init.go');
+  const utilsSrc = join(__dirname, '../vc-utils.go');
   debug(`Building bootstrap wrapper: ${bootstrapSrc} -> ${bootstrapPath}`);
 
   try {
@@ -113,8 +114,9 @@ export async function buildStandaloneServer({
     const bootstrapBuildDir = await getWriteableDirectory();
     const bootstrapGoFile = join(bootstrapBuildDir, 'main.go');
 
-    // Copy bootstrap source to temp directory
+    // Copy bootstrap source and shared utils to temp directory
     await copy(bootstrapSrc, bootstrapGoFile);
+    await copy(utilsSrc, join(bootstrapBuildDir, 'vc-utils.go'));
 
     // Initialize a minimal go.mod for the bootstrap
     const bootstrapGoMod = join(bootstrapBuildDir, 'go.mod');
@@ -177,7 +179,10 @@ export async function buildStandaloneServer({
 
 /**
  * Start a dev server for standalone Go server mode.
- * This runs `go run <target>` directly with the PORT environment variable.
+ * This runs a small Go dev wrapper (`vc-init-dev.go`) that:
+ * - starts the user server on an internal port
+ * - strips generated service route prefixes when configured
+ * - proxies traffic on the externally assigned dev port
  */
 export async function startStandaloneDevServer(
   opts: StartDevServerOptions,
@@ -198,13 +203,19 @@ export async function startStandaloneDevServer(
   const runTarget =
     resolvedEntrypoint === 'main.go' ? '.' : './' + dirname(resolvedEntrypoint);
 
+  const devWrapper = join(__dirname, '../vc-init-dev.go');
+  const devUtils = join(__dirname, '../vc-utils.go');
+
   debug(
-    `Starting standalone Go dev server: go run ${runTarget} (port ${port})`
+    `Starting standalone Go dev server wrapper: go run ${devWrapper} (target ${runTarget}, port ${port})`
   );
 
-  const child = spawn('go', ['run', runTarget], {
+  const child = spawn('go', ['run', '-tags', 'vcdev', devWrapper, devUtils], {
     cwd: workPath,
-    env,
+    env: {
+      ...env,
+      __VC_GO_DEV_RUN_TARGET: runTarget,
+    },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   child.stdout?.on('data', data => {
@@ -224,8 +235,29 @@ export async function startStandaloneDevServer(
     }
   });
 
-  // Give the server time to start
-  await new Promise(resolve => setTimeout(resolve, 2000));
+  // Give the wrapper a short startup window and fail fast if it exits early.
+  await new Promise<void>((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      cleanup();
+      resolve();
+    }, 2000);
+
+    const onExit = (code: number | null, signal: string | null) => {
+      cleanup();
+      reject(
+        new Error(
+          `Standalone Go dev server exited before startup completed (code: ${code}, signal: ${signal})`
+        )
+      );
+    };
+
+    const cleanup = () => {
+      clearTimeout(timeout);
+      child.removeListener('exit', onExit);
+    };
+
+    child.once('exit', onExit);
+  });
 
   return {
     port,
