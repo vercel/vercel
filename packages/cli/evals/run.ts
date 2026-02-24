@@ -172,12 +172,17 @@ async function main() {
     try {
       setupResult = await setup(context);
 
+      const agentEvalEnv = { ...process.env, FORCE_COLOR: '1' };
+      if (setupResult?.createdProjectId) {
+        agentEvalEnv.CLI_EVAL_PROJECT_ID = setupResult.createdProjectId;
+      }
+
       const agentEvalArgs = ['--yes', '@vercel/agent-eval@latest', ...args];
 
       const child = spawn('npx', agentEvalArgs, {
         cwd: __dirname,
         stdio: 'inherit',
-        env: { ...process.env, FORCE_COLOR: '1' },
+        env: agentEvalEnv,
       });
 
       const exitCode = await new Promise<number>(resolve => {

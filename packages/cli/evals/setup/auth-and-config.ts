@@ -1,17 +1,16 @@
-import {
-  readAuthConfigFile,
-  // @ts-ignore
-} from '../../src/util/config/files';
 import type { Sandbox } from '@vercel/agent-eval';
 
+/**
+ * Writes auth and config into the sandbox so the CLI can authenticate.
+ * Uses only process.env to avoid pulling in CLI src (and @vercel/client), which
+ * may not be built when agent-eval loads this in CI.
+ */
 export const setupAuthAndConfig = async (sandbox: Sandbox) => {
-  // Copy host's CLI global config (auth + config.json) into sandbox so CLI sees same token/team
   const shellEscape = (s: string) => s.replace(/'/g, "'\\''");
   const cliDataDir = '$HOME/.local/share/com.vercel.cli';
   try {
-    const authConfig = process.env.VERCEL_TOKEN
-      ? { token: process.env.VERCEL_TOKEN }
-      : readAuthConfigFile();
+    const token = process.env.VERCEL_TOKEN;
+    const authConfig = token ? { token } : {};
     const authJson = JSON.stringify(authConfig);
     await sandbox.runCommand('bash', [
       '-c',
