@@ -2,7 +2,9 @@
 
 Bare-bones evals infrastructure for the Vercel CLI using [@vercel/agent-eval](https://github.com/vercel-labs/agent-eval). Evals are colocated in `packages/cli/evals/` so CLI maintainers can own them. Scripts are in the CLI `package.json` (collocated with the `build` script).
 
-**Status:** Evals: **non-interactive** (prefer non-interactive flags for `vercel link`), **build** (run `vc build` on a minimal static site with non-interactive flags). The runner discovers evals in `evals/evals/` (dirs with PROMPT.md + EVAL.ts + package.json). If none are found it exits successfully; if any exist it runs `@vercel/agent-eval`. Add evals under `evals/evals/<name>/` when ready.
+**Status:** Evals: **non-interactive** (prefer non-interactive flags for `vercel link`), **build** (run `vc build` on a minimal static site), **env/** (all env evals in one directory: **env/ls**, **env/add**, **env/pull**, **env/update**, **env/remove**). The runner discovers evals recursively in `evals/evals/` (any dir with PROMPT.md + EVAL.ts + package.json). If none are found it exits successfully; if any exist it runs `@vercel/agent-eval`. Add evals under `evals/evals/<name>/` (or nested, e.g. `evals/evals/env/add/`).
+
+**Env evals and unique keys:** Evals that create env vars (env/add, env/update, env/remove) require a **unique variable name per run** (e.g. `EVAL_ADD_<timestamp>`, `EVAL_UPDATE_<timestamp>`, `EVAL_REMOVE_<timestamp>`) so concurrent or repeated runs do not overwrite the same variable. The prompt instructs the agent to choose such a key and write it to `env-key-used.txt`; the EVAL asserts the prefix.
 
 ## Structure
 
@@ -10,7 +12,7 @@ Bare-bones evals infrastructure for the Vercel CLI using [@vercel/agent-eval](ht
 packages/cli/
 ├── package.json      # Contains test:evals and test:evals:dry scripts
 ├── evals/
-│   ├── evals/        # Eval fixtures (add <name>/ with PROMPT.md, EVAL.ts, package.json)
+│   ├── evals/        # Eval fixtures (PROMPT.md + EVAL.ts + package.json; discovery is recursive, e.g. env/add, env/ls)
 │   ├── experiments/
 │   │   └── cli.ts
 │   ├── run.ts        # Discovers evals → 0 evals: exit 0; 1+: run agent-eval

@@ -94,6 +94,16 @@ export function formatDynamicExamples(
     `    ${chalk.cyan(`$ ${packageName} ${commandName} ${integrationSlug} --no-env-pull`)}`
   );
 
+  // Prefix
+  lines.push('');
+  lines.push(
+    `  ${chalk.dim('-')} Install with a prefix for environment variable names`
+  );
+  lines.push('');
+  lines.push(
+    `    ${chalk.cyan(`$ ${packageName} ${commandName} ${integrationSlug} --prefix NEON2_`)}`
+  );
+
   lines.push('');
 
   return lines.join('\n');
