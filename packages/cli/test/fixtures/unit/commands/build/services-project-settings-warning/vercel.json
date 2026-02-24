@@ -1,0 +1,10 @@
+{
+  "experimentalServices": {
+    "api": {
+      "entrypoint": "api/index.js",
+      "routePrefix": "/",
+      "buildCommand": "echo service-build",
+      "installCommand": "echo service-install"
+    }
+  }
+}

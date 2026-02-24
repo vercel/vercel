@@ -1027,6 +1027,22 @@ describe.skipIf(flakey)('build', () => {
     expect(contents.trim()).toEqual('3');
   });
 
+  it('should warn that project-level commands are ignored for services builds', async () => {
+    const cwd = fixture('services-project-settings-warning');
+    client.cwd = cwd;
+
+    const exitCodePromise = build(client);
+    await expect(client.stderr).toOutput(
+      '`buildCommand` is ignored when services are configured.'
+    );
+    await expect(client.stderr).toOutput(
+      '`installCommand` is ignored when services are configured.'
+    );
+
+    const exitCode = await exitCodePromise;
+    expect(exitCode).toEqual(0);
+  });
+
   it('should set VERCEL_PROJECT_SETTINGS_ environment variables', async () => {
     const cwd = fixture('project-settings-env-vars');
     const output = join(cwd, '.vercel/output');

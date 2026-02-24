@@ -33,6 +33,7 @@ import {
   isBunVersion,
 } from '@vercel/build-utils';
 import type {
+  BuildOptions,
   File,
   Files,
   Meta,
@@ -57,6 +58,7 @@ interface DownloadOptions {
   workPath: string;
   config: Config;
   meta: Meta;
+  service?: BuildOptions['service'];
   considerBuildCommand: boolean;
 }
 
@@ -71,6 +73,7 @@ async function downloadInstallAndBundle({
   workPath,
   config,
   meta,
+  service,
   considerBuildCommand,
 }: DownloadOptions) {
   const downloadedFiles = await download(files, workPath, meta);
@@ -98,7 +101,9 @@ async function downloadInstallAndBundle({
     projectCreatedAt: config.projectSettings?.createdAt,
   });
 
-  const installCommand = config.projectSettings?.installCommand;
+  const installCommand = service
+    ? config.installCommand
+    : config.projectSettings?.installCommand;
   if (typeof installCommand === 'string' && considerBuildCommand) {
     if (installCommand.trim()) {
       console.log(`Running "install" command: \`${installCommand}\`...`);
@@ -414,6 +419,7 @@ export const build = async ({
   repoRootPath,
   config = {},
   meta = {},
+  service,
   considerBuildCommand = false,
   entrypointCallback,
   checks = () => {},
@@ -428,6 +434,7 @@ export const build = async ({
   entrypointCallback?: () => Promise<string>;
   checks?: (project: { config: Config; isBun: boolean }) => void;
 }): Promise<BuildResultV3> => {
+  const shouldConsiderBuildCommand = considerBuildCommand || Boolean(service);
   const baseDir = repoRootPath || workPath;
   const awsLambdaHandler = getAWSLambdaHandler(entrypoint, config);
 
@@ -442,17 +449,20 @@ export const build = async ({
     workPath,
     config,
     meta,
-    considerBuildCommand,
+    service,
+    considerBuildCommand: shouldConsiderBuildCommand,
   });
 
   let entrypointPath = _entrypointPath;
 
-  const projectBuildCommand = config.projectSettings?.buildCommand;
+  const projectBuildCommand = service
+    ? config.buildCommand
+    : config.projectSettings?.buildCommand;
 
   // For traditional api-folder builds, the `build` script or project build command isn't used.
   // but we're reusing the node builder for hono and express, where they should be treated as the
   // primary builder
-  if (projectBuildCommand && considerBuildCommand) {
+  if (projectBuildCommand && shouldConsiderBuildCommand) {
     await execCommand(projectBuildCommand, {
       // Yarn v2 PnP mode may be activated, so force
       // "node-modules" linker style
@@ -464,7 +474,7 @@ export const build = async ({
       cwd: workPath,
     });
   } else {
-    const possibleScripts = considerBuildCommand
+    const possibleScripts = shouldConsiderBuildCommand
       ? ['vercel-build', 'now-build', 'build']
       : ['vercel-build', 'now-build'];
 

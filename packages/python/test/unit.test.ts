@@ -1776,6 +1776,105 @@ describe('custom install hooks', () => {
     );
   });
 
+  it('uses service-level build/install commands for services framework', async () => {
+    const mockExecCommand = vi.fn(async () => {});
+    const mockEnsureUvProject = vi.fn(async () => ({
+      projectDir: '/mock/project',
+      pyprojectPath: '/mock/project/pyproject.toml',
+      lockPath: '/mock/project/uv.lock',
+    }));
+
+    const realBuildUtils = await vi.importActual<
+      typeof import('@vercel/build-utils')
+    >('@vercel/build-utils');
+    vi.doMock('@vercel/build-utils', () => ({
+      ...realBuildUtils,
+      execCommand: mockExecCommand,
+    }));
+
+    const realInstall =
+      await vi.importActual<typeof import('../src/install')>('../src/install');
+    vi.doMock('../src/install', () => ({
+      ...realInstall,
+      ensureUvProject: mockEnsureUvProject,
+      getVenvSitePackagesDirs: vi.fn(async () => []),
+    }));
+
+    const realUtils =
+      await vi.importActual<typeof import('../src/utils')>('../src/utils');
+    vi.doMock('../src/utils', () => ({
+      ...realUtils,
+      ensureVenv: vi.fn(async () => {}),
+    }));
+
+    const realUv =
+      await vi.importActual<typeof import('../src/uv')>('../src/uv');
+    vi.doMock('../src/uv', () => ({
+      ...realUv,
+      getUvBinaryOrInstall: vi.fn(async () => '/mock/uv'),
+      UvRunner: createMockUvRunner(),
+    }));
+
+    // Import after mocks are configured
+    const { build: buildWithMocks } = await import('../src/index');
+
+    const workPath = path.join(tmpdir(), `python-service-hooks-${Date.now()}`);
+    fs.mkdirSync(workPath, { recursive: true });
+
+    const files = {
+      'handler.py': new FileBlob({ data: 'def handler(): pass' }),
+    } as Record<string, FileBlob>;
+
+    try {
+      await buildWithMocks({
+        workPath,
+        files,
+        entrypoint: 'handler.py',
+        meta: { isDev: false },
+        config: {
+          framework: 'services',
+          buildCommand: 'echo service-build',
+          installCommand: 'echo service-install',
+          projectSettings: {
+            buildCommand: 'echo project-build',
+            installCommand: 'echo project-install',
+          },
+        },
+        service: {
+          routePrefix: '/api',
+          workspace: '.',
+        },
+        repoRootPath: workPath,
+      });
+    } finally {
+      if (fs.existsSync(workPath)) fs.removeSync(workPath);
+    }
+
+    expect(mockEnsureUvProject).not.toHaveBeenCalled();
+    expect(mockExecCommand).toHaveBeenCalledWith(
+      'echo service-build',
+      expect.objectContaining({
+        cwd: workPath,
+        env: expect.any(Object),
+      })
+    );
+    expect(mockExecCommand).toHaveBeenCalledWith(
+      'echo service-install',
+      expect.objectContaining({
+        cwd: workPath,
+        env: expect.any(Object),
+      })
+    );
+    expect(mockExecCommand).not.toHaveBeenCalledWith(
+      'echo project-build',
+      expect.anything()
+    );
+    expect(mockExecCommand).not.toHaveBeenCalledWith(
+      'echo project-install',
+      expect.anything()
+    );
+  });
+
   it('uses pyproject.toml install script when no projectSettings.installCommand', async () => {
     const mockExecCommand = vi.fn(async () => {});
     const mockEnsureUvProject = vi.fn(async () => ({
