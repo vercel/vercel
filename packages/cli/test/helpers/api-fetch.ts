@@ -1,6 +1,3 @@
-import type { RequestInit } from 'node-fetch';
-import nodeFetch from 'node-fetch';
-
 export const apiFetch = (
   path: string,
   { headers, ...options }: RequestInit = {}
@@ -9,7 +6,7 @@ export const apiFetch = (
   if (process.env.VERCEL_TEAM_ID) {
     url.searchParams.set('teamId', process.env.VERCEL_TEAM_ID);
   }
-  return nodeFetch(url, {
+  return fetch(url, {
     headers: {
       Authorization: `Bearer ${process.env.VERCEL_TOKEN}`,
       ...(headers || {}),

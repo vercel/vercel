@@ -1,6 +1,5 @@
 import path from 'path';
 import { URL } from 'url';
-import nodeFetch from 'node-fetch';
 import express from 'express';
 import { createServer } from 'http';
 import { listen } from 'async-listen';
@@ -237,7 +236,7 @@ test.skip('should show prompts to set up project during first deploy', async () 
   const { href } = new URL(output.stdout);
 
   // Send a test request to the deployment
-  const response = await nodeFetch(href);
+  const response = await fetch(href);
   const text = await response.text();
   expect(text).toContain('<h1>custom hello</h1>');
 
@@ -263,7 +262,7 @@ test.skip('should show prompts to set up project during first deploy', async () 
       });
     });
 
-    const res2 = await nodeFetch(`http://localhost:${port}/`);
+    const res2 = await fetch(`http://localhost:${port}/`);
     const text2 = await res2.text();
     expect(text2).toContain('<h1>custom hello</h1>');
   } finally {
@@ -477,12 +476,12 @@ test('use `rootDirectory` from project when deploying', async () => {
 
   const { href } = new URL(secondResult.stdout);
 
-  const pageResponse1 = await nodeFetch(href);
+  const pageResponse1 = await fetch(href);
   expect(pageResponse1.status).toBe(200);
   expect(await pageResponse1.text()).toMatch(/I am a website/gm);
 
   // Ensures that the `now.json` file has been applied
-  const pageResponse2 = await nodeFetch(`${secondResult.stdout}/i-do-exist`);
+  const pageResponse2 = await fetch(`${secondResult.stdout}/i-do-exist`);
   expect(pageResponse2.status).toBe(200);
   expect(await pageResponse2.text()).toMatch(/I am a website/gm);
 
@@ -795,7 +794,7 @@ test('deploys with only now.json and README.md', async () => {
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
   const { host } = new URL(stdout);
-  const res = await nodeFetch(`https://${host}/README.md`);
+  const res = await fetch(`https://${host}/README.md`);
   const text = await res.text();
   expect(text).toMatch(/readme contents/);
 });
@@ -822,7 +821,7 @@ test('deploys with only vercel.json and README.md', async () => {
   );
 
   const { host } = new URL(stdout);
-  const res = await nodeFetch(`https://${host}/README.md`);
+  const res = await fetch(`https://${host}/README.md`);
   const text = await res.text();
   expect(text).toMatch(/readme contents/);
 });
@@ -922,14 +921,14 @@ test.skip('deploy pnpm twice using pnp and symlink=false', async () => {
   let { exitCode, stdout, stderr } = await firstDeploy;
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
-  let page = await nodeFetch(stdout);
+  let page = await fetch(stdout);
   let text = await page.text();
   expect(text).toBe('no cache\n');
 
   ({ exitCode, stdout, stderr } = await deploy());
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
-  page = await nodeFetch(stdout);
+  page = await fetch(stdout);
   text = await page.text();
 
   expect(text).toContain('cache exists\n');
@@ -1073,7 +1072,7 @@ test('[vc dev] should show prompts to set up project', async () => {
 
   // Ensure that `vc dev` also works
   try {
-    const response = await nodeFetch(`http://localhost:${port}/`);
+    const response = await fetch(`http://localhost:${port}/`);
     const text = await response.text();
     expect(text).toContain('<h1>custom hello</h1>');
   } finally {
@@ -1164,7 +1163,7 @@ test('[vc dev] should send the platform proxy request headers to frontend dev se
 
   // Ensure that `vc dev` also works
   try {
-    const response = await nodeFetch(`http://localhost:${port}/`);
+    const response = await fetch(`http://localhost:${port}/`);
     const body = await response.json();
     expect(body.headers['x-vercel-deployment-url']).toBe(`localhost:${port}`);
     expect(body.env.NOW_REGION).toBe('dev1');
@@ -1312,7 +1311,7 @@ test.skip('vercel.json configuration overrides in a new project prompt user and 
   const deployment = await vc;
   expect(deployment.exitCode, formatOutput(deployment)).toBe(0);
   // assert the command were executed
-  const page = await nodeFetch(deployment.stdout);
+  const page = await fetch(deployment.stdout);
   const text = await page.text();
   expect(text).toBe('1\n');
   // Since this test asserts that we can create a new project based on the folder name, delete it after the test
@@ -1348,7 +1347,7 @@ test('vercel.json configuration overrides in an existing project do not prompt u
   let deployment = await deploy(true);
 
   const { href } = new URL(deployment.stdout);
-  let page = await nodeFetch(href);
+  let page = await fetch(href);
   let text = await page.text();
   expect(text).toBe('0');
 
@@ -1367,7 +1366,7 @@ test('vercel.json configuration overrides in an existing project do not prompt u
   );
 
   deployment = await deploy();
-  page = await nodeFetch(deployment.stdout);
+  page = await fetch(deployment.stdout);
   text = await page.text();
   expect(text).toBe('1\n');
 
@@ -1400,7 +1399,7 @@ test('vercel.json configuration overrides in an existing project do not prompt u
   );
 
   deployment = await deploy();
-  page = await nodeFetch(deployment.stdout);
+  page = await fetch(deployment.stdout);
   text = await page.text();
   expect(text).toMatch(/Next\.js Test/);
 });
@@ -1465,7 +1464,7 @@ test.each([
     const { href } = new URL(output.stdout);
 
     // Send a test request to the deployment
-    const response = await nodeFetch(href);
+    const response = await fetch(href);
     expect(response.status).toBe(expectedStatus);
 
     const projectResponse = await apiFetch(`/projects/${projectName}`, {

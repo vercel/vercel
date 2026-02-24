@@ -2,7 +2,6 @@ import fs from 'fs-extra';
 import { join, resolve } from 'path';
 import type { ExecaChildProcess } from 'execa';
 import _execa, { type Options } from 'execa';
-import nodeFetch, { type RequestInit, type Response } from 'node-fetch';
 import retry from 'async-retry';
 import { satisfies } from 'semver';
 import stripAnsi from 'strip-ansi';
@@ -56,7 +55,7 @@ type FetchOptions = RequestInit & {
 export function fetchWithRetry(url: string, opts: FetchOptions = {}) {
   return retry(
     async () => {
-      const res = await nodeFetch(url, opts);
+      const res = await fetch(url, opts);
 
       if (res.status !== opts.status) {
         const text = await res.text();

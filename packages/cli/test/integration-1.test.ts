@@ -1,6 +1,5 @@
 import path from 'path';
 import { execCli } from './helpers/exec';
-import nodeFetch from 'node-fetch';
 import { apiFetch } from './helpers/api-fetch';
 import fs from 'fs-extra';
 import sleep from '../src/util/sleep';
@@ -14,6 +13,7 @@ import {
 import formatOutput from './helpers/format-output';
 import type { CLIProcess } from './helpers/types';
 import { randomBytes } from 'crypto';
+import { z } from 'zod';
 
 const TEST_TIMEOUT = 3 * 60 * 1000;
 jest.setTimeout(TEST_TIMEOUT);
@@ -187,7 +187,7 @@ test('default command should work with --cwd option', async () => {
 
   const url = stdout;
 
-  const deploymentResult = await nodeFetch(`${url}/README.md`);
+  const deploymentResult = await fetch(`${url}/README.md`);
   const body = await deploymentResult.text();
   expect(body).toEqual(
     'readme contents for deploy-default-with-conflicting-sub-directory'
@@ -216,7 +216,7 @@ test('should allow deploying a directory that was built with a target environmen
 
   const url = stdout;
 
-  const deploymentResult = await nodeFetch(`${url}/README.md`);
+  const deploymentResult = await fetch(`${url}/README.md`);
   const body = await deploymentResult.text();
   expect(body).toEqual(
     'readme contents for deploy-default-with-prebuilt-preview'
@@ -243,7 +243,7 @@ test('should allow deploying a directory that was prebuilt, but has no builds.js
 
   const url = stdout;
 
-  const deploymentResult = await nodeFetch(`${url}/README.md`);
+  const deploymentResult = await fetch(`${url}/README.md`);
   const body = await deploymentResult.text();
   expect(body).toEqual('readme contents for build-output-api-raw');
 });
@@ -289,7 +289,9 @@ test('[vc link] with vercel.json configuration overrides should create a valid d
 
   expect(resEnv.status).toBe(200);
 
-  const json = await resEnv.json();
+  const json = z
+    .object({ buildCommand: z.string() })
+    .parse(await resEnv.json());
 
   expect(json.buildCommand).toBe('mkdir public && echo "1" > public/index.txt');
 });
@@ -305,7 +307,7 @@ test('deploy using only now.json with `redirects` defined', async () => {
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   const url = stdout;
-  const res = await nodeFetch(`${url}/foo/bar`, { redirect: 'manual' });
+  const res = await fetch(`${url}/foo/bar`, { redirect: 'manual' });
   const location = res.headers.get('location');
   expect(location).toBe('https://example.com/foo/bar');
 });
@@ -328,18 +330,18 @@ test('deploy using --local-config flag v2', async () => {
   const { host } = new URL(stdout);
   expect(host).toMatch(/secondary/gm);
 
-  const testRes = await nodeFetch(`https://${host}/test-${team.slug}.html`);
+  const testRes = await fetch(`https://${host}/test-${team.slug}.html`);
   const testText = await testRes.text();
   expect(testText).toBe('<h1>hello test</h1>');
 
-  const anotherTestRes = await nodeFetch(`https://${host}/another-test`);
+  const anotherTestRes = await fetch(`https://${host}/another-test`);
   const anotherTestText = await anotherTestRes.text();
   expect(anotherTestText).toBe(testText);
 
-  const mainRes = await nodeFetch(`https://${host}/main-${team.slug}.html`);
+  const mainRes = await fetch(`https://${host}/main-${team.slug}.html`);
   expect(mainRes.status).toBe(404);
 
-  const anotherMainRes = await nodeFetch(`https://${host}/another-main`);
+  const anotherMainRes = await fetch(`https://${host}/another-main`);
   expect(anotherMainRes.status).toBe(404);
 });
 
@@ -450,11 +452,11 @@ test('deploy using --local-config flag above target', async () => {
 
   const { host } = new URL(stdout);
 
-  const testRes = await nodeFetch(`https://${host}/index.html`);
+  const testRes = await fetch(`https://${host}/index.html`);
   const testText = await testRes.text();
   expect(testText).toBe('<h1>hello index</h1>');
 
-  const anotherTestRes = await nodeFetch(`https://${host}/another.html`);
+  const anotherTestRes = await fetch(`https://${host}/another.html`);
   const anotherTestText = await anotherTestRes.text();
   expect(anotherTestText).toBe('<h1>hello another</h1>');
 
@@ -648,15 +650,19 @@ test.skip('deploy `api-env` fixture and test `vercel env` command', async () => 
     const { host } = new URL(stdout);
 
     const apiUrl = `https://${host}/api/get-env`;
-    const apiRes = await nodeFetch(apiUrl);
+    const apiRes = await fetch(apiUrl);
     expect(apiRes.status, apiUrl).toBe(200);
-    const apiJson = await apiRes.json();
+    const apiJson = z
+      .object({ [promptEnvVar]: z.string() })
+      .parse(await apiRes.json());
     expect(apiJson[promptEnvVar]).toBe('my plaintext value');
 
     const homeUrl = `https://${host}`;
-    const homeRes = await nodeFetch(homeUrl);
+    const homeRes = await fetch(homeUrl);
     expect(homeRes.status, homeUrl).toBe(200);
-    const homeJson = await homeRes.json();
+    const homeJson = z
+      .object({ [promptEnvVar]: z.string() })
+      .parse(await homeRes.json());
     expect(homeJson[promptEnvVar]).toBe('my plaintext value');
   }
 
@@ -667,18 +673,22 @@ test.skip('deploy `api-env` fixture and test `vercel env` command', async () => 
 
     const localhost = await getLocalhost(vc);
     const apiUrl = `${localhost[0]}/api/get-env`;
-    const apiRes = await nodeFetch(apiUrl);
+    const apiRes = await fetch(apiUrl);
 
     expect(apiRes.status).toBe(200);
 
-    const apiJson = await apiRes.json();
+    const apiJson = z
+      .object({ [promptEnvVar]: z.string() })
+      .parse(await apiRes.json());
 
     expect(apiJson[promptEnvVar]).toBe('my plaintext value');
 
     const homeUrl = localhost[0];
 
-    const homeRes = await nodeFetch(homeUrl);
-    const homeJson = await homeRes.json();
+    const homeRes = await fetch(homeUrl);
+    const homeJson = z
+      .object({ [promptEnvVar]: z.string() })
+      .parse(await homeRes.json());
     expect(homeJson[promptEnvVar]).toBe('my plaintext value');
 
     // sleep before kill, otherwise the dev process doesn't clean up and exit properly
@@ -696,16 +706,20 @@ test.skip('deploy `api-env` fixture and test `vercel env` command', async () => 
 
     const localhost = await getLocalhost(vc);
     const apiUrl = `${localhost[0]}/api/get-env`;
-    const apiRes = await nodeFetch(apiUrl);
+    const apiRes = await fetch(apiUrl);
     expect(apiRes.status).toBe(200);
 
-    const apiJson = await apiRes.json();
+    const apiJson = z
+      .object({ [promptEnvVar]: z.string() })
+      .parse(await apiRes.json());
     expect(apiJson[promptEnvVar]).toBe('my plaintext value');
     expect(apiJson[stdinEnvVar]).toBe('{"expect":"quotes"}');
 
     const homeUrl = localhost[0];
-    const homeRes = await nodeFetch(homeUrl);
-    const homeJson = await homeRes.json();
+    const homeRes = await fetch(homeUrl);
+    const homeJson = z
+      .object({ [promptEnvVar]: z.string() })
+      .parse(await homeRes.json());
     expect(homeJson[promptEnvVar]).toBe('my plaintext value');
     expect(homeJson[stdinEnvVar]).toBe('{"expect":"quotes"}');
 
@@ -768,11 +782,13 @@ test.skip('deploy `api-env` fixture and test `vercel env` command', async () => 
 
     const localhost = await getLocalhost(vc);
     const apiUrl = `${localhost[0]}/api/get-env`;
-    const apiRes = await nodeFetch(apiUrl);
+    const apiRes = await fetch(apiUrl);
 
     const localhostNoProtocol = localhost[0].slice('http://'.length);
 
-    const apiJson = await apiRes.json();
+    const apiJson = z
+      .object({ [promptEnvVar]: z.string() })
+      .parse(await apiRes.json());
     // environment variables are not set in dev
     expect(apiJson['VERCEL']).toBeUndefined();
     expect(apiJson['VERCEL_ENV']).toBeUndefined();
@@ -783,8 +799,10 @@ test.skip('deploy `api-env` fixture and test `vercel env` command', async () => 
     expect(apiJson['VERCEL_REGION']).toBe('dev1');
 
     const homeUrl = localhost[0];
-    const homeRes = await nodeFetch(homeUrl);
-    const homeJson = await homeRes.json();
+    const homeRes = await fetch(homeUrl);
+    const homeJson = z
+      .object({ [promptEnvVar]: z.string() })
+      .parse(await homeRes.json());
     expect(homeJson['VERCEL']).toBe('1');
     expect(homeJson['VERCEL_URL']).toBe(localhostNoProtocol);
     expect(homeJson['VERCEL_ENV']).toBe('development');

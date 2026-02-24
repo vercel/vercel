@@ -7,8 +7,6 @@ import semVer from 'semver';
 import { homedir } from 'os';
 import { runNpmInstall } from '@vercel/build-utils';
 import { execCli } from './helpers/exec';
-import type { RequestInfo } from 'node-fetch';
-import nodeFetch from 'node-fetch';
 import fs from 'fs-extra';
 import { logo } from '../src/util/pkg-name';
 import sleep from '../src/util/sleep';
@@ -24,6 +22,7 @@ import formatOutput from './helpers/format-output';
 import type { DeploymentLike } from './helpers/types';
 import { teamPromise, userPromise } from './helpers/get-account';
 import { apiFetch } from './helpers/api-fetch';
+import { z } from 'zod';
 
 const TEST_TIMEOUT = 3 * 60 * 1000;
 jest.setTimeout(TEST_TIMEOUT);
@@ -38,14 +37,14 @@ const pickUrl = (stdout: string) => {
   return lines[lines.length - 1];
 };
 
-const waitForDeployment = async (href: RequestInfo) => {
+const waitForDeployment = async (href: string | URL) => {
   console.log(`waiting for ${href} to become ready...`);
   const start = Date.now();
   const max = ms('4m');
 
   // eslint-disable-next-line
   while (true) {
-    const response = await nodeFetch(href, { redirect: 'manual' });
+    const response = await fetch(href, { redirect: 'manual' });
     const text = await response.text();
     if (
       response.status === 200 &&
@@ -124,7 +123,9 @@ test('deploy with metadata containing "=" in the value', async () => {
 
   const { host } = new URL(stdout);
   const res = await apiFetch(`/v12/now/deployments/get?url=${host}`);
-  const deployment = await res.json();
+  const deployment = z
+    .object({ meta: z.object({ someKey: z.string() }) })
+    .parse(await res.json());
   expect(deployment.meta.someKey).toBe('=');
 });
 
@@ -174,10 +175,10 @@ test.skip('ignore files specified in .nowignore', async () => {
   });
 
   const { host } = new URL(targetCall.stdout);
-  const ignoredFile = await nodeFetch(`https://${host}/ignored.txt`);
+  const ignoredFile = await fetch(`https://${host}/ignored.txt`);
   expect(ignoredFile.status).toBe(404);
 
-  const presentFile = await nodeFetch(`https://${host}/index.txt`);
+  const presentFile = await fetch(`https://${host}/index.txt`);
   expect(presentFile.status).toBe(200);
 });
 
@@ -192,10 +193,10 @@ test.skip('ignore files specified in .nowignore via allowlist', async () => {
   });
 
   const { host } = new URL(targetCall.stdout);
-  const ignoredFile = await nodeFetch(`https://${host}/ignored.txt`);
+  const ignoredFile = await fetch(`https://${host}/ignored.txt`);
   expect(ignoredFile.status).toBe(404);
 
-  const presentFile = await nodeFetch(`https://${host}/index.txt`);
+  const presentFile = await fetch(`https://${host}/index.txt`);
   expect(presentFile.status).toBe(200);
 });
 
@@ -317,7 +318,7 @@ test.skip('ensure we render a warning for deployments with no files', async () =
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   // Send a test request to the deployment
-  const res = await nodeFetch(href);
+  const res = await fetch(href);
   expect(res.status).toBe(404);
 });
 
@@ -364,7 +365,7 @@ test('ensure the `scope` property works with email', async () => {
   expect(host.split('-')[0]).toBe(session);
 
   // Send a test request to the deployment
-  const response = await nodeFetch(href);
+  const response = await fetch(href);
   const contentType = response.headers.get('content-type');
 
   expect(contentType).toBe('text/html; charset=utf-8');
@@ -394,7 +395,7 @@ test('ensure the `scope` property works with username', async () => {
   expect(host.split('-')[0]).toBe(session);
 
   // Send a test request to the deployment
-  const response = await nodeFetch(href);
+  const response = await fetch(href);
   const contentType = response.headers.get('content-type');
 
   expect(contentType).toBe('text/html; charset=utf-8');
@@ -495,7 +496,9 @@ test('create a staging deployment', async () => {
   const { host } = new URL(targetCall.stdout);
   const deployment = await apiFetch(
     `/v10/now/deployments/unknown?url=${host}`
-  ).then(resp => resp.json());
+  ).then(async resp =>
+    z.object({ target: z.string() }).parse(await resp.json())
+  );
   expect(deployment.target).toBe('staging');
 });
 
@@ -518,7 +521,9 @@ test('create a production deployment', async () => {
   const { host: targetHost } = new URL(targetCall.stdout);
   const targetDeployment = await apiFetch(
     `/v10/now/deployments/unknown?url=${targetHost}`
-  ).then(resp => resp.json());
+  ).then(async resp =>
+    z.object({ target: z.string() }).parse(await resp.json())
+  );
   expect(targetDeployment.target).toBe('production');
 
   const call = await execCli(binaryPath, [directory, '--prod', ...args]);
@@ -530,7 +535,9 @@ test('create a production deployment', async () => {
   const { host } = new URL(call.stdout);
   const deployment = await apiFetch(
     `/v10/now/deployments/unknown?url=${host}`
-  ).then(resp => resp.json());
+  ).then(async resp =>
+    z.object({ target: z.string() }).parse(await resp.json())
+  );
   expect(deployment.target).toBe('production');
 });
 
@@ -808,13 +815,15 @@ test('deploy a Lambda with 128MB of memory', async () => {
   expect(output.exitCode, formatOutput(output)).toBe(0);
 
   const { host: url } = new URL(output.stdout);
-  const response = await nodeFetch('https://' + url + '/api/memory');
+  const response = await fetch('https://' + url + '/api/memory');
 
   expect(response.status).toBe(200);
 
   // It won't be exactly 128MB,
   // so we just compare if it is lower than 450MB
-  const { memory } = await response.json();
+  const { memory } = z
+    .object({ memory: z.number() })
+    .parse(await response.json());
   expect(memory).toBe(128);
 });
 
@@ -839,12 +848,12 @@ test.skip('deploy a Lambda with 3 seconds of maxDuration', async () => {
 
   // Should time out
   url.pathname = '/api/wait-for/5';
-  const response1 = await nodeFetch(url.href);
+  const response1 = await fetch(url.href);
   expect(response1.status).toBe(504);
 
   // Should not time out
   url.pathname = '/api/wait-for/1';
-  const response2 = await nodeFetch(url.href);
+  const response2 = await fetch(url.href);
   expect(response2.status).toBe(200);
 });
 
@@ -875,7 +884,7 @@ test('deploy a Lambda with a specific runtime', async () => {
   expect(output.exitCode, formatOutput(output)).toBe(0);
 
   const url = new URL(output.stdout);
-  const res = await nodeFetch(`${url}/api/test`);
+  const res = await fetch(`${url}/api/test`);
   const text = await res.text();
   expect(text).toBe('Hello from PHP');
 });
@@ -909,7 +918,7 @@ test('use build-env', async () => {
   await waitForDeployment(href);
 
   // get the content
-  const response = await nodeFetch(href);
+  const response = await fetch(href);
   const content = await response.text();
   expect(content.trim()).toBe('bar');
 });
