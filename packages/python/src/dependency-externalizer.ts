@@ -38,6 +38,7 @@ interface PythonDependencyExternalizerOptions {
   projectName: string | undefined;
   noBuildCheckFailed: boolean;
   pythonPath: string;
+  hasCustomCommand: boolean;
 }
 
 export class PythonDependencyExternalizer {
@@ -49,6 +50,7 @@ export class PythonDependencyExternalizer {
   private projectName: string | undefined;
   private noBuildCheckFailed: boolean;
   private pythonPath: string;
+  private hasCustomCommand: boolean;
 
   // Populated by analyze()
   private allVendorFiles: Files = {};
@@ -64,6 +66,25 @@ export class PythonDependencyExternalizer {
     this.projectName = options.projectName;
     this.noBuildCheckFailed = options.noBuildCheckFailed;
     this.pythonPath = options.pythonPath;
+    this.hasCustomCommand = options.hasCustomCommand;
+  }
+
+  shouldEnableRuntimeInstall(): boolean {
+    if (this.hasCustomCommand) {
+      return false;
+    }
+    const pythonOnHiveEnabled =
+      process.env.VERCEL_PYTHON_ON_HIVE === '1' ||
+      process.env.VERCEL_PYTHON_ON_HIVE === 'true';
+    if (pythonOnHiveEnabled) {
+      return false;
+    } else if (
+      this.totalBundleSize > LAMBDA_SIZE_THRESHOLD_BYTES &&
+      this.uvLockPath !== null
+    ) {
+      return true;
+    }
+    return false;
   }
 
   /**
@@ -90,10 +111,22 @@ export class PythonDependencyExternalizer {
     const totalBundleSizeMB = (this.totalBundleSize / (1024 * 1024)).toFixed(2);
     debug(`Total bundle size: ${totalBundleSizeMB} MB`);
 
-    const overLambdaLimit = shouldEnableRuntimeInstall({
-      totalBundleSize: this.totalBundleSize,
-      uvLockPath: this.uvLockPath,
-    });
+    const overLambdaLimit = this.shouldEnableRuntimeInstall();
+
+    if (overLambdaLimit && this.hasCustomCommand) {
+      const limitMB = (LAMBDA_SIZE_THRESHOLD_BYTES / (1024 * 1024)).toFixed(0);
+      throw new NowBuildError({
+        code: 'LAMBDA_SIZE_EXCEEDED',
+        message:
+          `Total bundle size (${totalBundleSizeMB} MB) exceeds the Lambda size limit (${limitMB} MB).\n\n` +
+          `Runtime dependency installation is not available for projects that use a custom ` +
+          `build or install command, because custom commands may install dependencies that ` +
+          `are not tracked in uv.lock.\n\n` +
+          `To resolve this, either:\n` +
+          `  1. Remove the custom build/install command and let Vercel manage dependencies automatically\n` +
+          `  2. Reduce your dependency footprint to fit within the ${limitMB} MB limit`,
+      });
+    }
 
     return { overLambdaLimit, allVendorFiles: this.allVendorFiles };
   }
@@ -370,27 +403,6 @@ export class PythonDependencyExternalizer {
 }
 
 // Utility functions
-export function shouldEnableRuntimeInstall({
-  totalBundleSize,
-  uvLockPath,
-}: {
-  totalBundleSize: number;
-  uvLockPath: string | null;
-}): boolean {
-  const pythonOnHiveEnabled =
-    process.env.VERCEL_PYTHON_ON_HIVE === '1' ||
-    process.env.VERCEL_PYTHON_ON_HIVE === 'true';
-  if (pythonOnHiveEnabled) {
-    return false;
-  } else if (
-    totalBundleSize > LAMBDA_SIZE_THRESHOLD_BYTES &&
-    uvLockPath !== null
-  ) {
-    return true;
-  }
-  return false;
-}
-
 /**
  * Mirror packages from site-packages into the _vendor directory.
  *
