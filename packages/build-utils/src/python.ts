@@ -51,10 +51,10 @@ export async function getDjangoSettingsModule(
 }
 
 /**
- * For Django projects: resolve the WSGI application entrypoint by reading
+ * For Django projects: resolve the ASGI or WSGI application entrypoint by reading
  * DJANGO_SETTINGS_MODULE from manage.py, loading that settings file, and
- * returning the file path for WSGI_APPLICATION (e.g. 'myapp.wsgi.application'
- * -> 'myapp/wsgi.py'). Returns null if any step fails.
+ * returning the file path for ASGI_APPLICATION or WSGI_APPLICATION (e.g.
+ * 'myapp.asgi.application' -> 'myapp/asgi.py'). Returns null if any step fails.
  */
 export async function getDjangoEntrypoint(
   workPath: string
@@ -67,6 +67,16 @@ export async function getDjangoEntrypoint(
   );
   try {
     const settingsContent = await fs.promises.readFile(settingsPath, 'utf-8');
+    const asgiApplication = await getStringConstant(
+      settingsContent,
+      'ASGI_APPLICATION'
+    );
+    if (asgiApplication) {
+      const modulePath = asgiApplication.split('.').slice(0, -1).join('/');
+      const asgiPath = `${modulePath}.py`;
+      debug(`Django ASGI entrypoint from ${settingsModule}: ${asgiPath}`);
+      return asgiPath;
+    }
     const wsgiApplication = await getStringConstant(
       settingsContent,
       'WSGI_APPLICATION'
