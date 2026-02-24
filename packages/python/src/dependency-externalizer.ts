@@ -113,9 +113,14 @@ export class PythonDependencyExternalizer {
 
     const runtimeInstallEnabled = this.shouldEnableRuntimeInstall();
 
+    const pythonOnHiveEnabled =
+      process.env.VERCEL_PYTHON_ON_HIVE === '1' ||
+      process.env.VERCEL_PYTHON_ON_HIVE === 'true';
+
     if (
       this.totalBundleSize > LAMBDA_SIZE_THRESHOLD_BYTES &&
-      this.hasCustomCommand
+      this.hasCustomCommand &&
+      !pythonOnHiveEnabled
     ) {
       const limitMB = (LAMBDA_SIZE_THRESHOLD_BYTES / (1024 * 1024)).toFixed(0);
       throw new NowBuildError({
