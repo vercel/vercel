@@ -77,6 +77,7 @@ import { checkTelemetryStatus } from './util/telemetry/check-status';
 import output from './output-manager';
 import { checkGuidanceStatus } from './util/guidance/check-status';
 import { determineAgent } from '@vercel/detect-agent';
+import { isExperimentalSkipDevLinkEnabled } from './util/dev/experimental';
 
 const VERCEL_DIR = getGlobalPathConfig();
 const VERCEL_CONFIG_PATH = configFiles.getConfigFilePath();
@@ -353,13 +354,20 @@ const main = async () => {
   }
 
   // Shared API `Client` instance for all sub-commands to utilize.
-  // Non-interactive when: --non-interactive flag, or agent running without a TTY (so Cursor terminal stays interactive).
+  // Non-interactive when: --non-interactive is set, or agent is detected (and no TTY). Explicit --non-interactive=false overrides agent detection.
   const stdinIsTTY = process.stdin?.isTTY === true;
   const nonInteractiveFlag = parsedArgs.flags['--non-interactive'] === true;
-  const nonInteractive = nonInteractiveFlag || (isAgent && !stdinIsTTY);
+  const argv = process.argv;
+  const explicitNonInteractiveFalse =
+    argv.includes('--non-interactive=false') ||
+    (argv.includes('--non-interactive') &&
+      argv[argv.indexOf('--non-interactive') + 1] === 'false');
+  const nonInteractive = explicitNonInteractiveFalse
+    ? false
+    : nonInteractiveFlag || (isAgent && !stdinIsTTY);
 
   output.debug(
-    `Agent/TTY/nonInteractive: isAgent=${isAgent} agentName=${detectedAgent?.name ?? 'none'} stdin.isTTY=${String(process.stdin?.isTTY)} --non-interactive=${nonInteractiveFlag} => nonInteractive=${nonInteractive}`
+    `Agent/TTY/nonInteractive: isAgent=${isAgent} agentName=${detectedAgent?.name ?? 'none'} stdin.isTTY=${String(process.stdin?.isTTY)} --non-interactive=${nonInteractiveFlag} explicitFalse=${explicitNonInteractiveFalse} => nonInteractive=${nonInteractive}`
   );
 
   // Only load proxy-agent if proxy env vars are configured (saves ~60ms startup)
@@ -448,6 +456,10 @@ const main = async () => {
 
   if (process.env.FF_GUIDANCE_MODE) {
     subcommandsWithoutToken.push('guidance');
+  }
+
+  if (isExperimentalSkipDevLinkEnabled()) {
+    subcommandsWithoutToken.push('dev');
   }
 
   // Prompt for login if there is no current token

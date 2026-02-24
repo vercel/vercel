@@ -5,12 +5,6 @@
       "use": "@vercel/next",
       "config": {
         "functions": {
-          "app/dashboard/page.js": {
-            "maxDuration": 5,
-            "memory": 512,
-            "regions": ["iad1", "sfo1"],
-            "functionFailoverRegions": ["pdx1"]
-          },
           "app/**/*": {
             "maxDuration": 5,
             "memory": 512

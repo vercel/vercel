@@ -150,14 +150,24 @@ function main() {
     }
   }
 
-  if (Object.keys(versionExports).length === PYTHON_PACKAGES.length) {
+  const resolvedCount = Object.keys(versionExports).length;
+  if (resolvedCount < PYTHON_PACKAGES.length) {
+    const missing = PYTHON_PACKAGES.filter(
+      p => !(p.versionExportName in versionExports)
+    ).map(p => p.name);
+    console.warn(
+      `Warning: could not resolve versions for: ${missing.join(', ')}`
+    );
+  }
+
+  if (resolvedCount > 0) {
     const versionFileUpdated = syncVersionsInBuilderFile(versionExports);
     if (versionFileUpdated) {
       anyUpdated = true;
     }
   } else {
     console.log(
-      `Skipping ${VERSION_TS_PATH}: not all package versions could be resolved`
+      `Skipping ${VERSION_TS_PATH}: no package versions could be resolved`
     );
   }
 
