@@ -427,6 +427,13 @@ if os.path.exists(_runtime_config_path):
         _config = json.load(runtime_config_file)
     _project_dir = os.path.join(lambda_root, _config["projectDir"])
 
+    # -- Debug: dump runtime config --
+    _bundled = _config.get("bundledPackages", [])
+    _stderr(
+        f"[debug] Runtime config: projectDir={_config['projectDir']!r}, "
+        f"bundledPackages ({len(_bundled)}): {_bundled}"
+    )
+
     _deps_dir = "/tmp/_vc_deps"
     _site_packages = os.path.join(
         _deps_dir,
@@ -440,6 +447,57 @@ if os.path.exists(_runtime_config_path):
         # Cold start: install public dependencies using bundled uv
         _uv_path = os.path.join(_uv_dir, "uv")
 
+        # -- Debug: pre-install environment inspection --
+        _stderr(f"[debug] sys.executable = {sys.executable}")
+        _python_home = os.path.dirname(sys.executable)
+        _stderr(f"[debug] pyvenv.cfg home = {_python_home}")
+        _stderr(f"[debug] sys.path = {sys.path}")
+
+        # Check what the base Python's site-packages contains
+        _base_site = os.path.join(
+            _python_home,
+            "..",
+            "lib",
+            f"python{sys.version_info.major}.{sys.version_info.minor}",
+            "site-packages",
+        )
+        _base_site = os.path.normpath(_base_site)
+        if os.path.isdir(_base_site):
+            _base_dists = sorted(
+                d for d in os.listdir(_base_site) if d.endswith(".dist-info")
+            )
+            _stderr(
+                f"[debug] Base Python site-packages ({_base_site}): "
+                f"{len(_base_dists)} distributions"
+            )
+            if _base_dists:
+                _stderr(f"[debug]   packages: {_base_dists}")
+        else:
+            _stderr(
+                f"[debug] Base Python site-packages not found: {_base_site}"
+            )
+
+        # Check if there's a system site-packages via sysconfig
+        try:
+            import sysconfig as _sc
+
+            _stdlib_path = _sc.get_path("purelib")
+            _stderr(f"[debug] sysconfig purelib = {_stdlib_path}")
+            if _stdlib_path and os.path.isdir(_stdlib_path):
+                _sys_dists = sorted(
+                    d
+                    for d in os.listdir(_stdlib_path)
+                    if d.endswith(".dist-info")
+                )
+                _stderr(
+                    f"[debug] sysconfig site-packages: "
+                    f"{len(_sys_dists)} distributions"
+                )
+                if _sys_dists:
+                    _stderr(f"[debug]   packages: {_sys_dists}")
+        except Exception as _e:
+            _stderr(f"[debug] sysconfig inspection failed: {_e}")
+
         _stderr("Installing runtime dependencies...")
         _install_start = time.time()
 
@@ -450,8 +508,23 @@ if os.path.exists(_runtime_config_path):
             # Writing pyvenv.cfg directly avoids spawning a subprocess.
             os.makedirs(_site_packages, exist_ok=True)
             with open(os.path.join(_deps_dir, "pyvenv.cfg"), "w") as _f:
-                _f.write(f"home = {os.path.dirname(sys.executable)}\n")
+                _f.write(f"home = {_python_home}\n")
                 _f.write("include-system-site-packages = false\n")
+
+            # -- Debug: confirm venv is empty before install --
+            if os.path.isdir(_site_packages):
+                _pre_contents = os.listdir(_site_packages)
+                _stderr(
+                    f"[debug] Venv site-packages before install "
+                    f"({_site_packages}): {len(_pre_contents)} entries"
+                )
+                if _pre_contents:
+                    _stderr(f"[debug]   contents: {sorted(_pre_contents)}")
+            else:
+                _stderr(
+                    f"[debug] Venv site-packages dir does not exist: "
+                    f"{_site_packages}"
+                )
 
             # Use uv sync --inexact --frozen to install only the
             # missing public packages. --inexact avoids removing
@@ -473,22 +546,62 @@ if os.path.exists(_runtime_config_path):
             ]
             for _pkg in _config.get("bundledPackages", []):
                 _sync_cmd.extend(["--no-install-package", _pkg])
-            subprocess.run(
+
+            # -- Debug: log full command --
+            _stderr(f"[debug] uv sync command: {' '.join(_sync_cmd)}")
+            _stderr(f"[debug] uv sync cwd: {_project_dir}")
+
+            _sync_env = {
+                "PATH": os.environ.get("PATH", ""),
+                "VIRTUAL_ENV": _deps_dir,
+                "UV_PYTHON_DOWNLOADS": "never",
+            }
+            _stderr(f"[debug] uv sync env: {_sync_env}")
+
+            # Capture stdout/stderr so we get the full uv output in
+            # structured logs instead of relying on fd 2 inheritance.
+            _result = subprocess.run(
                 _sync_cmd,
                 check=True,
                 text=True,
                 cwd=_project_dir,
-                env={
-                    "PATH": os.environ.get("PATH", ""),
-                    "VIRTUAL_ENV": _deps_dir,
-                    "UV_PYTHON_DOWNLOADS": "never",
-                },
+                env=_sync_env,
+                capture_output=True,
             )
+            if _result.stdout:
+                _stderr(f"[debug] uv stdout:\n{_result.stdout.rstrip()}")
+            if _result.stderr:
+                _stderr(f"[debug] uv stderr:\n{_result.stderr.rstrip()}")
+
             _install_duration = time.time() - _install_start
             _stderr(
                 f"Runtime dependencies installed in {_install_duration:.2f}s"
             )
+
+            # -- Debug: post-install inspection --
+            if os.path.isdir(_site_packages):
+                _post_contents = os.listdir(_site_packages)
+                _post_dists = sorted(
+                    d for d in _post_contents if d.endswith(".dist-info")
+                )
+                _stderr(
+                    f"[debug] Venv site-packages after install: "
+                    f"{len(_post_contents)} entries, "
+                    f"{len(_post_dists)} distributions"
+                )
+                if _post_dists:
+                    _stderr(f"[debug]   installed dists: {_post_dists}")
+            else:
+                _stderr(
+                    f"[debug] Venv site-packages missing after install: "
+                    f"{_site_packages}"
+                )
         except subprocess.CalledProcessError as e:
+            _stderr(f"[debug] uv sync failed with exit code {e.returncode}")
+            if e.stdout:
+                _stderr(f"[debug] uv stdout:\n{e.stdout.rstrip()}")
+            if e.stderr:
+                _stderr(f"[debug] uv stderr:\n{e.stderr.rstrip()}")
             _fatal(
                 f"Runtime dependency installation failed.\n"
                 f"Command: {' '.join(e.cmd)}\n"
@@ -515,9 +628,13 @@ if os.path.exists(_runtime_config_path):
         except ValueError:
             pass
         sys.path.insert(0, _site_packages)
+        _stderr(f"[debug] sys.path after deps added: {sys.path}")
 
 # Import relative path
 # https://docs.python.org/3/library/importlib.html#importing-a-source-file-directly
+_stderr(f"[debug] Importing user module: {_entrypoint_rel}")
+_stderr(f"[debug] sys.path at import time: {sys.path}")
+_import_start = time.time()
 try:
     __vc_spec = util.spec_from_file_location(
         _entrypoint_modname,
@@ -529,8 +646,14 @@ try:
     sys.modules[_entrypoint_modname] = __vc_module
     __vc_spec.loader.exec_module(__vc_module)
     __vc_variables = dir(__vc_module)
+    _import_duration = time.time() - _import_start
+    _stderr(f"[debug] User module imported in {_import_duration:.2f}s")
+    _stderr(f"[debug] Module variables: {__vc_variables}")
 except Exception:
-    _stderr(f"Error importing {_entrypoint_rel}:")
+    _import_duration = time.time() - _import_start
+    _stderr(
+        f"Error importing {_entrypoint_rel} (after {_import_duration:.2f}s):"
+    )
     _stderr(traceback.format_exc())
     exit(1)
 
