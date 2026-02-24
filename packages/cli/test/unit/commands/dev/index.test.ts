@@ -163,4 +163,62 @@ describe('dev', () => {
       ]);
     });
   });
+
+  describe('VERCEL_EXPERIMENTAL_DEV_SKIP_LINK', () => {
+    beforeEach(() => {
+      vi.stubEnv('VERCEL_EXPERIMENTAL_DEV_SKIP_LINK', '1');
+      vi.stubEnv('VERCEL_USE_EXPERIMENTAL_SERVICES', '');
+    });
+
+    it('skips setupAndLink for unlinked project and starts dev server', async () => {
+      const unlinkedPath = '/user/name/code/unlinked-project';
+      vol.fromJSON({}, unlinkedPath);
+
+      client.setArgv('dev', unlinkedPath);
+      const exitCodePromise = dev(client);
+
+      await expect(exitCodePromise).resolves.toEqual(undefined);
+      await expect(client.stderr).toOutput('Project is not linked to Vercel.');
+    });
+
+    it('does not show skip message for linked projects', async () => {
+      client.setArgv('dev', projectPath);
+      const exitCodePromise = dev(client);
+
+      await expect(exitCodePromise).resolves.toEqual(undefined);
+      await expect(client.stderr).not.toOutput(
+        'Project is not linked to Vercel.',
+        100
+      );
+    });
+  });
+
+  describe('VERCEL_USE_EXPERIMENTAL_SERVICES enables skip dev link', () => {
+    beforeEach(() => {
+      vi.stubEnv('VERCEL_EXPERIMENTAL_DEV_SKIP_LINK', '');
+      vi.stubEnv('VERCEL_USE_EXPERIMENTAL_SERVICES', '1');
+    });
+
+    it('skips setupAndLink for unlinked project and starts dev server', async () => {
+      const unlinkedPath = '/user/name/code/unlinked-project';
+      vol.fromJSON({}, unlinkedPath);
+
+      client.setArgv('dev', unlinkedPath);
+      const exitCodePromise = dev(client);
+
+      await expect(exitCodePromise).resolves.toEqual(undefined);
+      await expect(client.stderr).toOutput('Project is not linked to Vercel.');
+    });
+
+    it('does not show skip message for linked projects', async () => {
+      client.setArgv('dev', projectPath);
+      const exitCodePromise = dev(client);
+
+      await expect(exitCodePromise).resolves.toEqual(undefined);
+      await expect(client.stderr).not.toOutput(
+        'Project is not linked to Vercel.',
+        100
+      );
+    });
+  });
 });

@@ -16,21 +16,34 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 // run.ts is in packages/cli/evals/, so evals fixtures are in packages/cli/evals/evals/
 const EVALS_DIR = join(__dirname, 'evals');
 
+/** Recursively discover eval dirs (have PROMPT.md + EVAL.ts + package.json). Returns relative paths e.g. "build", "env/ls", "env/add". */
 function discoverEvals(): string[] {
   if (!existsSync(EVALS_DIR)) return [];
-  const entries = readdirSync(EVALS_DIR, { withFileTypes: true });
-  const dirs = entries
-    .filter(e => e.isDirectory() && !e.name.startsWith('.'))
-    .filter(d => {
-      const p = join(EVALS_DIR, d.name);
-      return (
-        existsSync(join(p, 'PROMPT.md')) &&
-        existsSync(join(p, 'EVAL.ts')) &&
-        existsSync(join(p, 'package.json'))
-      );
-    })
-    .map(d => d.name);
-  return dirs;
+  const results: string[] = [];
+
+  function walk(dir: string, prefix: string): void {
+    const hasPrompt = existsSync(join(dir, 'PROMPT.md'));
+    const hasEval = existsSync(join(dir, 'EVAL.ts'));
+    const hasPkg = existsSync(join(dir, 'package.json'));
+    if (hasPrompt && hasEval && hasPkg) {
+      results.push(prefix);
+      return;
+    }
+    const entries = readdirSync(dir, { withFileTypes: true });
+    for (const e of entries) {
+      if (e.isDirectory() && !e.name.startsWith('.')) {
+        walk(join(dir, e.name), prefix ? `${prefix}/${e.name}` : e.name);
+      }
+    }
+  }
+
+  const topEntries = readdirSync(EVALS_DIR, { withFileTypes: true });
+  for (const e of topEntries) {
+    if (e.isDirectory() && !e.name.startsWith('.')) {
+      walk(join(EVALS_DIR, e.name), e.name);
+    }
+  }
+  return results;
 }
 
 async function main() {
@@ -51,6 +64,12 @@ async function main() {
     );
     process.exit(1);
   }
+
+  // Progress: print what will run so it's visible as the eval runs
+  process.stdout.write(`\nEvals to run: ${evals.join(', ')}\n`);
+  process.stdout.write(
+    'Progress: each eval prints "Running <name>..." when it starts and "✓/✗ <name>..." when it finishes (can take several minutes per eval).\n\n'
+  );
 
   const agentEvalArgs = ['--yes', '@vercel/agent-eval@latest', ...args];
 

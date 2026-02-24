@@ -18,6 +18,7 @@ export interface PostProvisionOptions {
   environments?: string[];
   onProjectConnected?: (projectId: string) => void;
   onProjectConnectFailed?: (projectId: string, error: Error) => void;
+  prefix?: string;
 }
 
 /**
@@ -87,7 +88,8 @@ export async function postProvisionSetup(
       client,
       project.id,
       resourceId,
-      environments
+      environments,
+      options.prefix ? { envVarPrefix: options.prefix } : undefined
     );
   } catch (error) {
     output.stopSpinner();
