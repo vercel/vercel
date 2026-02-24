@@ -33,7 +33,7 @@ function getCandidateEntrypointsInDirs(dirs: string[]) {
 
 export async function getPyprojectEntrypoint(
   workPath: string
-): Promise<string | null> {
+): Promise<[string, string | null] | null> {
   const pyprojectData = await readConfigFile<{
     project?: { scripts?: Record<string, unknown> };
   }>(join(workPath, 'pyproject.toml'));
@@ -52,6 +52,7 @@ export async function getPyprojectEntrypoint(
   const match = appScript.match(/([A-Za-z_][\w.]*)\s*:\s*([A-Za-z_][\w]*)/);
   if (!match) return null;
   const modulePath = match[1];
+  const varName = match[2];
   const relPath = modulePath.replace(/\./g, '/');
 
   // Prefer an existing file match if present; otherwise fall back to "<module>.py".
@@ -59,7 +60,7 @@ export async function getPyprojectEntrypoint(
     const fsFiles = await glob('**', workPath);
     const candidates = [`${relPath}.py`, `${relPath}/__init__.py`];
     for (const candidate of candidates) {
-      if (fsFiles[candidate]) return candidate;
+      if (fsFiles[candidate]) return [candidate, varName];
     }
     return null;
   } catch {
@@ -71,13 +72,13 @@ export async function getPyprojectEntrypoint(
 async function findValidEntrypoint(
   fsFiles: Record<string, FileFsRef>,
   candidates: string[]
-): Promise<string | null> {
+): Promise<[string, string | null] | null> {
   for (const candidate of candidates) {
     if (fsFiles[candidate]) {
       const isValid = await isPythonEntrypoint(fsFiles[candidate] as FileFsRef);
       if (isValid) {
         debug(`Detected Python entrypoint: ${candidate}`);
-        return candidate;
+        return [candidate, null];
       }
     }
   }
@@ -90,7 +91,7 @@ async function findValidEntrypoint(
 export async function detectGenericPythonEntrypoint(
   workPath: string,
   configuredEntrypoint: string
-): Promise<string | null> {
+): Promise<[string, string | null] | null> {
   const entry = configuredEntrypoint.endsWith('.py')
     ? configuredEntrypoint
     : `${configuredEntrypoint}.py`;
@@ -103,7 +104,7 @@ export async function detectGenericPythonEntrypoint(
       const isValid = await isPythonEntrypoint(fsFiles[entry] as FileFsRef);
       if (isValid) {
         debug(`Using configured Python entrypoint: ${entry}`);
-        return entry;
+        return [entry, null];
       }
     }
 
@@ -126,7 +127,7 @@ export async function detectGenericPythonEntrypoint(
 export async function detectDjangoPythonEntrypoint(
   workPath: string,
   configuredEntrypoint: string
-): Promise<string | null> {
+): Promise<[string, string | null] | null> {
   const entry = configuredEntrypoint.endsWith('.py')
     ? configuredEntrypoint
     : `${configuredEntrypoint}.py`;
@@ -139,7 +140,7 @@ export async function detectDjangoPythonEntrypoint(
       const isValid = await isPythonEntrypoint(fsFiles[entry] as FileFsRef);
       if (isValid) {
         debug(`Using configured Python entrypoint: ${entry}`);
-        return entry;
+        return [entry, null];
       }
     }
 
@@ -167,7 +168,7 @@ export async function detectDjangoPythonEntrypoint(
         const fullWsgiEntry = pathPosix.join(rootDir, wsgiEntry);
         if (fsFiles[fullWsgiEntry]) {
           debug(`Using Django WSGI entrypoint: ${fullWsgiEntry}`);
-          return fullWsgiEntry;
+          return [fullWsgiEntry, null];
         }
       }
     }
@@ -190,11 +191,11 @@ export async function detectPythonEntrypoint(
   framework: PythonFramework,
   workPath: string,
   configuredEntrypoint: string
-): Promise<string | null> {
-  const entrypoint =
+): Promise<[string, string | null] | null> {
+  const result =
     framework === 'django'
       ? await detectDjangoPythonEntrypoint(workPath, configuredEntrypoint)
       : await detectGenericPythonEntrypoint(workPath, configuredEntrypoint);
-  if (entrypoint) return entrypoint;
+  if (result) return result;
   return await getPyprojectEntrypoint(workPath);
 }

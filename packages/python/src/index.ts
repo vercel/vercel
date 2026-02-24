@@ -181,10 +181,11 @@ export const build: BuildV3 = async ({
       entrypoint
     );
     if (detected) {
+      const [detectedModule] = detected;
       debug(
-        `Resolved Python entrypoint to "${detected}" (configured "${entrypoint}" not found).`
+        `Resolved Python entrypoint to "${detectedModule}" (configured "${entrypoint}" not found).`
       );
-      entrypoint = detected;
+      entrypoint = detectedModule;
     } else {
       const searchedList = PYTHON_CANDIDATE_ENTRYPOINTS.join(', ');
       throw new NowBuildError({

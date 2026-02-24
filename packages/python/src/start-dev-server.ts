@@ -421,12 +421,12 @@ export const startDevServer: StartDevServer = async opts => {
   // Silence Node warnings and install cleanup handlers once
   if (!restoreWarnings) restoreWarnings = silenceNodeWarnings();
   installGlobalCleanupHandlers();
-  const entry = await detectPythonEntrypoint(
+  const detected = await detectPythonEntrypoint(
     framework as PythonFramework,
     workPath,
     rawEntrypoint
   );
-  if (!entry) {
+  if (!detected) {
     const searched = PYTHON_CANDIDATE_ENTRYPOINTS.join(', ');
     throw new NowBuildError({
       code: 'PYTHON_ENTRYPOINT_NOT_FOUND',
@@ -435,6 +435,7 @@ export const startDevServer: StartDevServer = async opts => {
       action: 'Learn More',
     });
   }
+  const [entry, _entryVariable] = detected;
 
   // Convert to module path, e.g. "src/app.py" -> "src.app"
   const modulePath = entry.replace(/\.py$/i, '').replace(/[\\/]/g, '.');

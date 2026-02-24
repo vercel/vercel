@@ -1140,7 +1140,7 @@ describe('Django entrypoint discovery', () => {
       workPath,
       'hello/world.py'
     );
-    expect(result).toBe('hello/world.py');
+    expect(result).toEqual(['hello/world.py', null]);
 
     if (fs.existsSync(workPath)) fs.removeSync(workPath);
   });
@@ -1156,7 +1156,7 @@ describe('Django entrypoint discovery', () => {
     });
 
     const result = await detectDjangoPythonEntrypoint(workPath, 'missing.py');
-    expect(result).toBe('hello/wsgi.py');
+    expect(result).toEqual(['hello/wsgi.py', null]);
 
     if (fs.existsSync(workPath)) fs.removeSync(workPath);
   });
@@ -1173,7 +1173,7 @@ describe('Django entrypoint discovery', () => {
     });
 
     const result = await detectDjangoPythonEntrypoint(workPath, 'missing.py');
-    expect(result).toBe('src/app.py');
+    expect(result).toEqual(['src/app.py', null]);
 
     if (fs.existsSync(workPath)) fs.removeSync(workPath);
   });
@@ -1193,7 +1193,7 @@ describe('Django entrypoint discovery', () => {
     // WSGI_APPLICATION value does not refer to a valid file
 
     const result = await detectDjangoPythonEntrypoint(workPath, 'missing.py');
-    expect(result).toBe('src/app.py');
+    expect(result).toEqual(['src/app.py', null]);
 
     if (fs.existsSync(workPath)) fs.removeSync(workPath);
   });
@@ -1213,7 +1213,7 @@ describe('Django entrypoint discovery', () => {
     });
 
     const result = await detectDjangoPythonEntrypoint(workPath, 'missing.py');
-    expect(result).toBe('mysite/config/wsgi.py');
+    expect(result).toEqual(['mysite/config/wsgi.py', null]);
 
     if (fs.existsSync(workPath)) fs.removeSync(workPath);
   });
