@@ -1969,7 +1969,13 @@ export async function getPageLambdaGroups({
       functionsConfigManifest &&
       functionsConfigManifest.functions[routeName]
     ) {
-      opts = functionsConfigManifest.functions[routeName];
+      // Exclude `regions` from the manifest. Next.js outputs `preferredRegion`
+      // as `regions` in the manifest, but for Node.js lambdas we only support
+      // regions via vercel.json functions config, not route-level config.
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { regions: _regions, ...manifestOpts } =
+        functionsConfigManifest.functions[routeName];
+      opts = manifestOpts;
     }
 
     if (config && config.functions) {
@@ -3640,6 +3646,7 @@ export type FunctionsConfigManifestV1 = {
     string,
     {
       maxDuration?: number | undefined;
+      regions?: string[];
       runtime?: 'nodejs';
       matchers?: Array<{
         regexp: string;

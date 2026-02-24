@@ -967,3 +967,33 @@ describe('vercel.json functions regions', () => {
     }
   });
 });
+
+describe('vercel.json functions regions with glob pattern', () => {
+  let buildResult;
+
+  beforeAll(async () => {
+    const result = await runBuildLambda(
+      path.join(__dirname, 'vercel-json-regions-glob')
+    );
+    buildResult = result.buildResult;
+  });
+
+  it('should match multiple routes with glob pattern', () => {
+    const lambdaOne = buildResult.output['api-one'];
+    expect(lambdaOne).toBeDefined();
+    expect(lambdaOne.type).toBe('Lambda');
+    expect(lambdaOne.regions).toEqual(['iad1']);
+
+    const lambdaTwo = buildResult.output['api-two'];
+    expect(lambdaTwo).toBeDefined();
+    expect(lambdaTwo.type).toBe('Lambda');
+    expect(lambdaTwo.regions).toEqual(['iad1']);
+  });
+
+  it('should not match routes outside the glob pattern', () => {
+    const output = buildResult.output['index'] || buildResult.output[''];
+    if (output && output.type === 'Lambda') {
+      expect(output.regions).toBeUndefined();
+    }
+  });
+});
