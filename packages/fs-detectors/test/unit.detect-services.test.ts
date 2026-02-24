@@ -111,8 +111,9 @@ describe('detectServices', () => {
         routePrefix: '/',
       });
       expect(result.errors).toEqual([]);
-      // Routes should be generated for configured services
-      expect(result.routes.defaults).toHaveLength(1);
+      // Node runtime now resolves to @vercel/backends, which owns routing.
+      expect(result.routes.rewrites).toHaveLength(0);
+      expect(result.routes.defaults).toHaveLength(0);
     });
 
     it('should resolve file entrypoint paths without explicit workspace', async () => {
@@ -191,10 +192,9 @@ describe('detectServices', () => {
         routePrefix: '/admin',
       });
 
-      // Non-root runtime services generate rewrites.
-      // The root Next.js service is a route-owning builder — it produces its
-      // own route table, so no synthetic routes are generated for it.
-      expect(result.routes.rewrites).toHaveLength(2);
+      // All services in this fixture use route-owning builders (Next.js and
+      // @vercel/backends), so no synthetic routes are generated.
+      expect(result.routes.rewrites).toHaveLength(0);
       expect(result.routes.defaults).toHaveLength(0);
     });
 
@@ -464,7 +464,7 @@ describe('detectServices', () => {
         workspace: '.',
         entrypoint: 'api/server',
       });
-      expect(result.services[0].builder.use).toBe('@vercel/node');
+      expect(result.services[0].builder.use).toBe('@vercel/backends');
       expect(result.services[0].builder.src).toBe('api/server');
     });
 

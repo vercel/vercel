@@ -1,0 +1,8 @@
+{
+  "name": "node-backends",
+  "type": "module",
+  "devDependencies": {
+    "@types/node": "20.11.17",
+    "typescript": "5.8.3"
+  }
+}

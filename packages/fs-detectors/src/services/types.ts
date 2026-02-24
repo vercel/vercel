@@ -74,7 +74,7 @@ export interface ServiceDetectionError {
 }
 
 export const RUNTIME_BUILDERS: Record<ServiceRuntime, string> = {
-  node: '@vercel/node',
+  node: '@vercel/backends',
   python: '@vercel/python',
   go: '@vercel/go',
   rust: '@vercel/rust',
