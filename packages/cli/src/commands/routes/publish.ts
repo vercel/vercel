@@ -96,15 +96,15 @@ export default async function publish(client: Client, argv: string[]) {
 
     return 0;
   } catch (e: unknown) {
-    const err = e as { message?: string; code?: string; status?: number };
-    if (err.code === 'feature_not_enabled') {
+    const error = e as { message?: string; code?: string; status?: number };
+    if (error.code === 'feature_not_enabled') {
       output.error(
         'Project-level routes are not enabled for this project. Please contact support.'
       );
-    } else if (err.status === 429) {
+    } else if (error.status === 429) {
       output.error('Rate limited. Please wait a moment and try again.');
     } else {
-      output.error(err.message || 'Failed to publish routes');
+      output.error(error.message || 'Failed to publish routes');
     }
     return 1;
   }

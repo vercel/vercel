@@ -31,7 +31,13 @@ describe('routes export', () => {
     client.setArgv('routes', 'export');
     const exitCode = await routes(client);
     expect(exitCode).toEqual(0);
-    // Output goes to stdout
+
+    const output = client.stdout.getFullOutput();
+    const parsed = JSON.parse(output);
+    expect(parsed).toHaveProperty('routes');
+    expect(Array.isArray(parsed.routes)).toBe(true);
+    expect(parsed.routes.length).toBeGreaterThan(0);
+    expect(parsed.routes[0]).toHaveProperty('src');
   });
 
   it('should export routes as vercel.ts format', async () => {
@@ -39,6 +45,13 @@ describe('routes export', () => {
     client.setArgv('routes', 'export', '--format', 'ts');
     const exitCode = await routes(client);
     expect(exitCode).toEqual(0);
+
+    const output = client.stdout.getFullOutput();
+    expect(output).toContain(
+      "import { defineConfig } from '@vercel/sdk/config'"
+    );
+    expect(output).toContain('export default defineConfig');
+    expect(output).toContain('routes:');
   });
 
   it('should error on invalid format', async () => {
@@ -51,9 +64,14 @@ describe('routes export', () => {
 
   it('should export a specific route by name', async () => {
     useRoutes(3);
-    client.setArgv('routes', 'export', 'Route 0');
+    client.setArgv('routes', 'export', 'Route 1');
     const exitCode = await routes(client);
     expect(exitCode).toEqual(0);
+
+    const output = client.stdout.getFullOutput();
+    const parsed = JSON.parse(output);
+    // Route 1 is enabled, so it should be in the output
+    expect(parsed.routes).toHaveLength(1);
   });
 
   it('should error when route not found', async () => {
@@ -70,5 +88,17 @@ describe('routes export', () => {
     const exitCode = await routes(client);
     expect(exitCode).toEqual(1);
     await expect(client.stderr).toOutput('No routes found');
+  });
+
+  it('should exclude disabled routes in json format', async () => {
+    useRoutes(4); // Route 0 has enabled: false (index % 3 === 0)
+    client.setArgv('routes', 'export');
+    const exitCode = await routes(client);
+    expect(exitCode).toEqual(0);
+
+    const output = client.stdout.getFullOutput();
+    const parsed = JSON.parse(output);
+    // Route 0 and Route 3 are disabled (index % 3 === 0), so only 2 enabled routes
+    expect(parsed.routes.length).toBeLessThan(4);
   });
 });

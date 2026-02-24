@@ -105,10 +105,6 @@ export default async function enable(client: Client, argv: string[]) {
       output.error(
         'Project-level routes are not enabled for this project. Please contact support.'
       );
-    } else if (error.code === 'routes_limit_exceeded') {
-      output.error(
-        'Route limit reached (100 routes per project). Delete some routes before adding more.'
-      );
     } else if (error.status === 429) {
       output.error('Rate limited. Please wait a moment and try again.');
     } else {

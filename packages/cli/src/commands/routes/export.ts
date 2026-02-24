@@ -93,47 +93,62 @@ export default async function exportRoutes(client: Client, argv: string[]) {
 
   // Fetch routes
   output.spinner('Fetching routes');
-  const { routes } = await getRoutes(client, project.id, { teamId });
 
-  if (routes.length === 0) {
-    output.error('No routes found in this project.');
-    return 1;
-  }
+  try {
+    const { routes } = await getRoutes(client, project.id, { teamId });
 
-  // Filter by name if specified
-  let routesToExport = routes;
-  if (routeName) {
-    const query = routeName.toLowerCase();
-    routesToExport = routes.filter(
-      r =>
-        r.name.toLowerCase() === query ||
-        r.name.toLowerCase().includes(query) ||
-        r.id === routeName
-    );
-
-    if (routesToExport.length === 0) {
-      output.error(
-        `No route found matching "${routeName}". Run ${getCommandName('routes list')} to see all routes.`
-      );
+    if (routes.length === 0) {
+      output.error('No routes found in this project.');
       return 1;
     }
+
+    // Filter by name if specified
+    let routesToExport = routes;
+    if (routeName) {
+      const query = routeName.toLowerCase();
+      routesToExport = routes.filter(
+        r =>
+          r.name.toLowerCase() === query ||
+          r.name.toLowerCase().includes(query) ||
+          r.id === routeName
+      );
+
+      if (routesToExport.length === 0) {
+        output.error(
+          `No route found matching "${routeName}". Run ${getCommandName('routes list')} to see all routes.`
+        );
+        return 1;
+      }
+    }
+
+    // Format and output
+    let result: string;
+    switch (format) {
+      case 'ts':
+        result = routesToVercelTs(routesToExport);
+        break;
+      case 'json':
+      default:
+        result = routesToVercelJson(routesToExport);
+        break;
+    }
+
+    // Write to stdout so it can be piped
+    output.stopSpinner();
+    client.stdout.write(result + '\n');
+
+    return 0;
+  } catch (e: unknown) {
+    const error = e as { message?: string; code?: string; status?: number };
+    if (error.code === 'feature_not_enabled') {
+      output.error(
+        'Project-level routes are not enabled for this project. Please contact support.'
+      );
+    } else if (error.status === 429) {
+      output.error('Rate limited. Please wait a moment and try again.');
+    } else {
+      output.error(error.message || 'Failed to export routes');
+    }
+    return 1;
   }
-
-  // Format and output
-  let result: string;
-  switch (format) {
-    case 'ts':
-      result = routesToVercelTs(routesToExport);
-      break;
-    case 'json':
-    default:
-      result = routesToVercelJson(routesToExport);
-      break;
-  }
-
-  // Write to stdout so it can be piped
-  output.stopSpinner();
-  client.stdout.write(result + '\n');
-
-  return 0;
 }

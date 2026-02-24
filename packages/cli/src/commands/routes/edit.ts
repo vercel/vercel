@@ -1203,7 +1203,7 @@ export default async function edit(client: Client, argv: string[]) {
   }
 
   // Populate env fields for $VAR references
-  populateRouteEnv(route.route as any);
+  populateRouteEnv(route.route);
 
   // Check if anything actually changed
   if (JSON.stringify(route) === JSON.stringify(originalRoute)) {
@@ -1251,10 +1251,6 @@ export default async function edit(client: Client, argv: string[]) {
     if (error.code === 'feature_not_enabled') {
       output.error(
         'Project-level routes are not enabled for this project. Please contact support.'
-      );
-    } else if (error.code === 'routes_limit_exceeded') {
-      output.error(
-        'Route limit reached (100 routes per project). Delete some routes before adding more.'
       );
     } else if (error.status === 429) {
       output.error('Rate limited. Please wait a moment and try again.');

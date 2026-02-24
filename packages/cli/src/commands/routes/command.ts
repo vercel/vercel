@@ -825,7 +825,7 @@ export const editSubcommand = {
 export const exportSubcommand = {
   name: 'export',
   aliases: [],
-  description: 'Export routing rules as vercel.json, vercel.ts, or raw JSON',
+  description: 'Export routing rules as vercel.json or vercel.ts format',
   arguments: [
     {
       name: 'name-or-id',

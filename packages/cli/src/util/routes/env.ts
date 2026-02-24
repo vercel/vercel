@@ -52,9 +52,8 @@ export function populateRouteEnv(route: {
     }
   }
 
-  if (routeEnv.size > 0) {
-    route.env = Array.from(routeEnv);
-  }
+  // Always set route.env — clear stale values when editing removes $VAR references
+  route.env = routeEnv.size > 0 ? Array.from(routeEnv) : undefined;
 
   // Per-transform env from args
   if (route.transforms) {
@@ -64,9 +63,8 @@ export function populateRouteEnv(route: {
           ? transform.args.join(' ')
           : transform.args;
         const names = extractEnvVarNames(argsStr);
-        if (names.length > 0) {
-          transform.env = names;
-        }
+        // Always set — clear stale values when args no longer reference env vars
+        transform.env = names.length > 0 ? names : undefined;
       }
     }
   }
