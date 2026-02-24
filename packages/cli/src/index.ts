@@ -462,6 +462,16 @@ const main = async () => {
     subcommandsWithoutToken.push('dev');
   }
 
+  // Check for VERCEL_TOKEN environment variable if --token flag not provided
+  // Track where the token came from for better error messages
+  let tokenSource: 'flag' | 'env' | undefined;
+  if (typeof parsedArgs.flags['--token'] === 'string') {
+    tokenSource = 'flag';
+  } else if (process.env.VERCEL_TOKEN) {
+    parsedArgs.flags['--token'] = process.env.VERCEL_TOKEN;
+    tokenSource = 'env';
+  }
+
   // Prompt for login if there is no current token
   if (
     (!authConfig || !authConfig.token) &&
@@ -492,16 +502,6 @@ const main = async () => {
       });
       return 1;
     }
-  }
-
-  // Check for VERCEL_TOKEN environment variable if --token flag not provided
-  // Track where the token came from for better error messages
-  let tokenSource: 'flag' | 'env' | undefined;
-  if (typeof parsedArgs.flags['--token'] === 'string') {
-    tokenSource = 'flag';
-  } else if (process.env.VERCEL_TOKEN) {
-    parsedArgs.flags['--token'] = process.env.VERCEL_TOKEN;
-    tokenSource = 'env';
   }
 
   if (
