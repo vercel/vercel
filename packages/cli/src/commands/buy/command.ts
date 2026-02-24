@@ -1,6 +1,8 @@
 import { packageName } from '../../util/pkg-name';
 import { yesOption, formatOption, jsonOption } from '../../util/arg-common';
 
+export type PlanSlug = 'pro' | 'v0-free' | 'v0-premium' | 'v0-team';
+
 export const SUPPORTED_CREDIT_TYPES = ['v0', 'gateway', 'agent'] as const;
 export type CreditType = (typeof SUPPORTED_CREDIT_TYPES)[number];
 
@@ -112,16 +114,47 @@ export const proSubcommand = {
   ],
 } as const;
 
+export const SUPPORTED_V0_PLANS = ['free', 'premium', 'team'] as const;
+export type V0Plan = (typeof SUPPORTED_V0_PLANS)[number];
+
+export const V0_PLAN_LABELS: Record<V0Plan, string> = {
+  free: 'v0 Free',
+  premium: 'v0 Premium',
+  team: 'v0 Team',
+};
+
+export const V0_PLAN_TO_SLUG: Record<V0Plan, PlanSlug> = {
+  free: 'v0-free',
+  premium: 'v0-premium',
+  team: 'v0-team',
+};
+
 export const v0Subcommand = {
   name: 'v0',
   aliases: [],
   description: 'Purchase a v0 subscription for your team',
-  arguments: [],
-  options: [],
+  arguments: [
+    {
+      name: 'plan',
+      required: true,
+    },
+  ],
+  options: [
+    {
+      ...yesOption,
+      description: 'Skip the confirmation prompt',
+    },
+    formatOption,
+    jsonOption,
+  ],
   examples: [
     {
-      name: 'Purchase v0 for your team',
-      value: `${packageName} buy v0`,
+      name: 'Purchase v0 Premium for your team',
+      value: `${packageName} buy v0 premium`,
+    },
+    {
+      name: 'Purchase v0 Team for your team',
+      value: `${packageName} buy v0 team`,
     },
   ],
 } as const;
@@ -172,8 +205,8 @@ export const buyCommand = {
       value: `${packageName} buy pro`,
     },
     {
-      name: 'Purchase v0',
-      value: `${packageName} buy v0`,
+      name: 'Purchase v0 Premium',
+      value: `${packageName} buy v0 premium`,
     },
     {
       name: 'Purchase a domain',

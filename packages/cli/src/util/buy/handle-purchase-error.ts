@@ -38,6 +38,23 @@ export function handlePurchaseError(err: unknown, teamSlug?: string): number {
       );
       return 1;
     }
+    if (err.code === 'plan_not_found') {
+      output.error(
+        'The requested plan was not found. Please check the plan name and try again.'
+      );
+      return 1;
+    }
+    if (err.code === 'invalid_plan') {
+      output.error(err.message || 'Your team is not eligible for this plan.');
+      return 1;
+    }
+    if (err.code === 'has_subscription') {
+      output.error(
+        err.message ||
+          'Your team already has an active subscription for this product.'
+      );
+      return 1;
+    }
     if (
       err.code === 'purchase_create_failed' ||
       err.code === 'purchase_confirm_failed' ||
