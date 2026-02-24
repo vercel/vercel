@@ -25,9 +25,9 @@ async function cleanupProjects() {
 const config: ExperimentConfig = {
   agent: 'vercel-ai-gateway/claude-code',
   evals: 'marketplace/*',
-  runs: 1, // Keep low to avoid many concurrent Docker containers (OOM / exit 137 in CI)
+  runs: 1,
   earlyExit: true,
-  timeout: 900, // 15 min per eval; marketplace install can be slow
+  timeout: 900,
   sandbox: 'docker',
   async setup(sandbox: Sandbox) {
     const token = process.env.VERCEL_TOKEN;
