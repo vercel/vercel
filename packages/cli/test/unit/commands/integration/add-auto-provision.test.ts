@@ -470,7 +470,7 @@ describe('integration add (auto-provision)', () => {
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);
       expect(openMock).toHaveBeenCalledWith(
-        expect.stringContaining('cmd=accept-terms')
+        expect.stringContaining('/~/integrations/accept-terms/acme')
       );
     });
 
@@ -502,7 +502,7 @@ describe('integration add (auto-provision)', () => {
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);
       expect(openMock).toHaveBeenCalledWith(
-        expect.stringContaining('cmd=accept-terms')
+        expect.stringContaining('/~/integrations/accept-terms/acme')
       );
     });
 
@@ -533,12 +533,13 @@ describe('integration add (auto-provision)', () => {
         client,
         { id: 'acme', slug: 'acme', name: 'Acme Integration' },
         t.id,
+        t.slug,
         100 // 100ms timeout — will expire almost immediately
       );
 
       expect(result).toBeNull();
       expect(openMock).toHaveBeenCalledWith(
-        expect.stringContaining('cmd=accept-terms')
+        expect.stringContaining('/~/integrations/accept-terms/acme')
       );
     });
 
@@ -594,8 +595,7 @@ describe('integration add (auto-provision)', () => {
 
       const calledUrl = openMock.mock.calls[0]?.[0] as string;
       const parsed = new URL(calledUrl);
-      expect(parsed.searchParams.get('cmd')).toEqual('accept-terms');
-      expect(parsed.searchParams.get('integrationId')).toEqual('acme');
+      expect(parsed.pathname).toContain('/~/integrations/accept-terms/acme');
       expect(parsed.searchParams.get('source')).toEqual('cli');
     });
 

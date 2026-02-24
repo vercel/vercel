@@ -12,11 +12,12 @@ export async function acceptTermsViaBrowser(
   client: Client,
   integration: Integration,
   teamId: string,
+  teamSlug: string,
   timeoutMs: number = DEFAULT_TIMEOUT_MS
 ): Promise<IntegrationInstallation | null> {
-  const url = new URL('https://vercel.com/api/marketplace/cli');
-  url.searchParams.set('cmd', 'accept-terms');
-  url.searchParams.set('integrationId', integration.id);
+  const url = new URL(
+    `https://vercel.com/${encodeURIComponent(teamSlug)}/~/integrations/accept-terms/${encodeURIComponent(integration.slug)}`
+  );
   url.searchParams.set('source', 'cli');
 
   output.log(

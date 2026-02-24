@@ -155,13 +155,15 @@ export async function addAutoProvision(
   );
 
   let acceptedPolicies: AcceptedPolicies = {};
+  let browserInstallationId: string | undefined;
   if (!teamInstallation) {
     if (client.isAgent || !client.stdin.isTTY) {
       // Browser flow: open browser for terms acceptance, poll for installation
       const browserInstallation = await acceptTermsViaBrowser(
         client,
         integration,
-        team.id
+        team.id,
+        contextName
       );
       if (!browserInstallation) {
         telemetry.trackMarketplaceEvent('marketplace_install_flow_dropped', {
@@ -170,7 +172,7 @@ export async function addAutoProvision(
         });
         return 1;
       }
-      // acceptedPolicies stays {} — installation already created with policies in browser
+      browserInstallationId = browserInstallation.id;
     } else {
       // Interactive TTY: keep existing prompt behavior
       const policies = await promptForTermAcceptance(client, integration);
@@ -259,7 +261,7 @@ export async function addAutoProvision(
       metadata,
       acceptedPolicies,
       options.billingPlanId,
-      options.installationId
+      browserInstallationId ?? options.installationId
     );
   } catch (error) {
     output.stopSpinner();
