@@ -47,7 +47,10 @@ import { build } from '../src/index';
 import { createVenvEnv, getVenvBinDir } from '../src/utils';
 import { UV_PYTHON_DOWNLOADS_MODE, getProtectedUvEnv } from '../src/uv';
 import { createPyprojectToml } from '../src/install';
-import { detectDjangoPythonEntrypoint } from '../src/entrypoint';
+import {
+  detectDjangoPythonEntrypoint,
+  getPyprojectEntrypoint,
+} from '../src/entrypoint';
 import { FileBlob } from '@vercel/build-utils';
 let warningMessages: string[];
 const originalConsoleWarn = console.warn;
@@ -1140,7 +1143,7 @@ describe('Django entrypoint discovery', () => {
       workPath,
       'hello/world.py'
     );
-    expect(result).toEqual(['hello/world.py', null]);
+    expect(result).toEqual(['hello/world.py', 'application']);
 
     if (fs.existsSync(workPath)) fs.removeSync(workPath);
   });
@@ -1156,7 +1159,46 @@ describe('Django entrypoint discovery', () => {
     });
 
     const result = await detectDjangoPythonEntrypoint(workPath, 'missing.py');
-    expect(result).toEqual(['hello/wsgi.py', null]);
+    expect(result).toEqual(['hello/wsgi.py', 'application']);
+
+    if (fs.existsSync(workPath)) fs.removeSync(workPath);
+  });
+
+  it('resolves Django entrypoint from ASGI_APPLICATION', async () => {
+    const workPath = path.join(tmpdir(), `python-django-asgi-${Date.now()}`);
+    fs.mkdirSync(workPath, { recursive: true });
+
+    await writeFiles(workPath, {
+      'manage.py': `os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'hello.settings')`,
+      'hello/settings.py': `ASGI_APPLICATION = 'hello.asgi.application'`,
+      'hello/asgi.py': `application = lambda scope, receive, send: None`,
+    });
+
+    const result = await detectDjangoPythonEntrypoint(workPath, 'missing.py');
+    expect(result).toEqual(['hello/asgi.py', 'application']);
+
+    if (fs.existsSync(workPath)) fs.removeSync(workPath);
+  });
+
+  it('prefers ASGI_APPLICATION over WSGI_APPLICATION', async () => {
+    const workPath = path.join(
+      tmpdir(),
+      `python-django-asgi-wsgi-${Date.now()}`
+    );
+    fs.mkdirSync(workPath, { recursive: true });
+
+    await writeFiles(workPath, {
+      'manage.py': `os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'hello.settings')`,
+      'hello/settings.py': [
+        `ASGI_APPLICATION = 'hello.asgi.application'`,
+        `WSGI_APPLICATION = 'hello.wsgi.application'`,
+      ].join('\n'),
+      'hello/asgi.py': `application = lambda scope, receive, send: None`,
+      'hello/wsgi.py': `application = lambda env, start: None`,
+    });
+
+    const result = await detectDjangoPythonEntrypoint(workPath, 'missing.py');
+    expect(result).toEqual(['hello/asgi.py', 'application']);
 
     if (fs.existsSync(workPath)) fs.removeSync(workPath);
   });
@@ -1173,7 +1215,7 @@ describe('Django entrypoint discovery', () => {
     });
 
     const result = await detectDjangoPythonEntrypoint(workPath, 'missing.py');
-    expect(result).toEqual(['src/app.py', null]);
+    expect(result).toEqual(['src/app.py', 'application']);
 
     if (fs.existsSync(workPath)) fs.removeSync(workPath);
   });
@@ -1193,7 +1235,7 @@ describe('Django entrypoint discovery', () => {
     // WSGI_APPLICATION value does not refer to a valid file
 
     const result = await detectDjangoPythonEntrypoint(workPath, 'missing.py');
-    expect(result).toEqual(['src/app.py', null]);
+    expect(result).toEqual(['src/app.py', 'application']);
 
     if (fs.existsSync(workPath)) fs.removeSync(workPath);
   });
@@ -1213,7 +1255,7 @@ describe('Django entrypoint discovery', () => {
     });
 
     const result = await detectDjangoPythonEntrypoint(workPath, 'missing.py');
-    expect(result).toEqual(['mysite/config/wsgi.py', null]);
+    expect(result).toEqual(['mysite/config/wsgi.py', 'application']);
 
     if (fs.existsSync(workPath)) fs.removeSync(workPath);
   });
@@ -1250,6 +1292,52 @@ describe('Django entrypoint discovery', () => {
     }
     const content = handler.data.toString();
     expect(content).toContain('os.path.join(_here, "hello/world.py")');
+
+    if (fs.existsSync(workPath)) fs.removeSync(workPath);
+  });
+});
+
+describe('getPyprojectEntrypoint - pyproject.toml [project.scripts] discovery', () => {
+  async function writeFiles(
+    workPath: string,
+    files: Record<string, string>
+  ): Promise<void> {
+    for (const [rel, content] of Object.entries(files)) {
+      const full = path.join(workPath, rel);
+      fs.mkdirSync(path.dirname(full), { recursive: true });
+      fs.writeFileSync(full, content);
+    }
+  }
+
+  it('returns [filePath, varName] when pyproject.toml has app script', async () => {
+    const workPath = path.join(tmpdir(), `python-pyproject-ep-${Date.now()}`);
+    fs.mkdirSync(workPath, { recursive: true });
+
+    await writeFiles(workPath, {
+      'pyproject.toml': '[project.scripts]\napp = "mymodule:myapp"\n',
+      'mymodule.py': 'from flask import Flask\nmyapp = Flask(__name__)\n',
+    });
+
+    const result = await getPyprojectEntrypoint(workPath);
+    expect(result).toEqual(['mymodule.py', 'myapp']);
+
+    if (fs.existsSync(workPath)) fs.removeSync(workPath);
+  });
+
+  it('returns null when pyproject.toml has no app script', async () => {
+    const workPath = path.join(
+      tmpdir(),
+      `python-pyproject-ep-noapp-${Date.now()}`
+    );
+    fs.mkdirSync(workPath, { recursive: true });
+
+    await writeFiles(workPath, {
+      'pyproject.toml': '[project.scripts]\nstart = "mymodule:main"\n',
+      'mymodule.py': 'def main(): pass\n',
+    });
+
+    const result = await getPyprojectEntrypoint(workPath);
+    expect(result).toBeNull();
 
     if (fs.existsSync(workPath)) fs.removeSync(workPath);
   });
