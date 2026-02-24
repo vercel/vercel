@@ -6,7 +6,6 @@ import {
   isDirectory,
   isPythonEntrypoint,
   getDjangoEntrypoint,
-  getProcfileWebEntrypoint,
 } from '@vercel/build-utils';
 import { readConfigFile } from '@vercel/build-utils';
 
@@ -141,18 +140,6 @@ export async function detectDjangoPythonEntrypoint(
       if (isValid) {
         debug(`Using configured Python entrypoint: ${entry}`);
         return entry;
-      }
-    }
-
-    // Look for an entrypoint via Procfile
-    const procfileEntry = await getProcfileWebEntrypoint(workPath);
-    if (procfileEntry && fsFiles[procfileEntry]) {
-      const isValid = await isPythonEntrypoint(
-        fsFiles[procfileEntry] as FileFsRef
-      );
-      if (isValid) {
-        debug(`Using Django entrypoint from Procfile: ${procfileEntry}`);
-        return procfileEntry;
       }
     }
 
