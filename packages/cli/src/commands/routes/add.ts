@@ -11,6 +11,7 @@ import {
 import addRoute from '../../util/routes/add-route';
 import getRouteVersions from '../../util/routes/get-route-versions';
 import { parseConditions } from '../../util/routes/parse-conditions';
+import { populateRouteEnv } from '../../util/routes/env';
 import stamp from '../../util/output/stamp';
 import { getCommandName } from '../../util/pkg-name';
 import { RoutesAddTelemetryClient } from '../../util/telemetry/commands/routes';
@@ -441,6 +442,9 @@ export default async function add(client: Client, argv: string[]) {
     },
   };
 
+  // --- Populate env fields for $VAR references ---
+  populateRouteEnv(routeInput.route);
+
   // --- Create the route ---
   const addStamp = stamp();
   output.spinner(`Adding route "${name}"`);
@@ -515,11 +519,17 @@ export default async function add(client: Client, argv: string[]) {
 
     return 0;
   } catch (e: unknown) {
-    const error = e as { message?: string; code?: string };
+    const error = e as { message?: string; code?: string; status?: number };
     if (error.code === 'feature_not_enabled') {
       output.error(
         'Project-level routes are not enabled for this project. Please contact support.'
       );
+    } else if (error.code === 'routes_limit_exceeded') {
+      output.error(
+        'Route limit reached (100 routes per project). Delete some routes before adding more.'
+      );
+    } else if (error.status === 429) {
+      output.error('Rate limited. Please wait a moment and try again.');
     } else {
       output.error(error.message || 'Failed to create route');
     }

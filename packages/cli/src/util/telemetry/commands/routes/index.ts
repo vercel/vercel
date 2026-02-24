@@ -66,6 +66,13 @@ export class RoutesTelemetryClient
     });
   }
 
+  trackCliSubcommandExport(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'export',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandEnable(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'enable',

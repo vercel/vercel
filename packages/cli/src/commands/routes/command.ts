@@ -822,6 +822,46 @@ export const editSubcommand = {
   ],
 } as const;
 
+export const exportSubcommand = {
+  name: 'export',
+  aliases: [],
+  description: 'Export routing rules as vercel.json, vercel.ts, or raw JSON',
+  arguments: [
+    {
+      name: 'name-or-id',
+      required: false,
+    },
+  ],
+  options: [
+    {
+      name: 'format',
+      description: 'Output format: json (default) or ts',
+      shorthand: null,
+      type: String,
+      argument: 'FORMAT',
+      deprecated: false,
+    },
+  ],
+  examples: [
+    {
+      name: 'Export as vercel.json format',
+      value: `${packageName} routes export`,
+    },
+    {
+      name: 'Export as vercel.ts format',
+      value: `${packageName} routes export --format ts`,
+    },
+    {
+      name: 'Export a specific route',
+      value: `${packageName} routes export "API Proxy"`,
+    },
+    {
+      name: 'Export to a file',
+      value: `${packageName} routes export > routes.json`,
+    },
+  ],
+} as const;
+
 export const routesCommand = {
   name: 'routes',
   aliases: [],
@@ -838,6 +878,7 @@ export const routesCommand = {
     enableSubcommand,
     disableSubcommand,
     reorderSubcommand,
+    exportSubcommand,
     publishSubcommand,
     restoreSubcommand,
     discardSubcommand,

@@ -14,6 +14,7 @@ import getRoutes from '../../util/routes/get-routes';
 import getRouteVersions from '../../util/routes/get-route-versions';
 import editRoute from '../../util/routes/edit-route';
 import { parseConditions } from '../../util/routes/parse-conditions';
+import { populateRouteEnv } from '../../util/routes/env';
 import stamp from '../../util/output/stamp';
 import { getCommandName } from '../../util/pkg-name';
 import {
@@ -1201,6 +1202,9 @@ export default async function edit(client: Client, argv: string[]) {
     }
   }
 
+  // Populate env fields for $VAR references
+  populateRouteEnv(route.route as any);
+
   // Check if anything actually changed
   if (JSON.stringify(route) === JSON.stringify(originalRoute)) {
     output.log('No changes made.');
@@ -1243,11 +1247,17 @@ export default async function edit(client: Client, argv: string[]) {
 
     return 0;
   } catch (e: unknown) {
-    const error = e as { message?: string; code?: string };
+    const error = e as { message?: string; code?: string; status?: number };
     if (error.code === 'feature_not_enabled') {
       output.error(
         'Project-level routes are not enabled for this project. Please contact support.'
       );
+    } else if (error.code === 'routes_limit_exceeded') {
+      output.error(
+        'Route limit reached (100 routes per project). Delete some routes before adding more.'
+      );
+    } else if (error.status === 429) {
+      output.error('Rate limited. Please wait a moment and try again.');
     } else {
       output.error(error.message || 'Failed to update route');
     }

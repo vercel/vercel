@@ -19,6 +19,7 @@ import {
   enableSubcommand,
   disableSubcommand,
   reorderSubcommand,
+  exportSubcommand,
   publishSubcommand,
   restoreSubcommand,
   discardSubcommand,
@@ -38,6 +39,7 @@ const COMMAND_CONFIG = {
   enable: getCommandAliases(enableSubcommand),
   disable: getCommandAliases(disableSubcommand),
   reorder: getCommandAliases(reorderSubcommand),
+  export: getCommandAliases(exportSubcommand),
   publish: getCommandAliases(publishSubcommand),
   restore: getCommandAliases(restoreSubcommand),
   'discard-staging': getCommandAliases(discardSubcommand),
@@ -157,6 +159,14 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandReorder(subcommandOriginal);
       return (await import('./reorder')).default(client, args);
+    case 'export':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('routes', subcommandOriginal);
+        printHelp(exportSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandExport(subcommandOriginal);
+      return (await import('./export')).default(client, args);
     case 'publish':
       if (needHelp) {
         telemetry.trackCliFlagHelp('routes', subcommandOriginal);

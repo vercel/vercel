@@ -135,7 +135,7 @@ export default async function list(client: Client, argv: string[]) {
   }
   output.spinner(spinnerMessage);
 
-  const { routes, version } = await getRoutes(client, project.id, {
+  const { routes, version, limit } = await getRoutes(client, project.id, {
     teamId,
     search,
     filter,
@@ -221,6 +221,17 @@ export default async function list(client: Client, argv: string[]) {
         output.print(formatRoutesTable(routes));
       }
       output.print('\n');
+    }
+
+    // Show routes usage when above 80% utilization
+    if (limit && limit.maxRoutes > 0) {
+      const utilization = limit.currentRoutes / limit.maxRoutes;
+      if (utilization >= 0.8) {
+        const usageColor = utilization >= 1 ? chalk.red : chalk.yellow;
+        output.print(
+          `  ${usageColor(`Routes Usage: ${limit.currentRoutes}/${limit.maxRoutes}`)}\n\n`
+        );
+      }
     }
   }
 
