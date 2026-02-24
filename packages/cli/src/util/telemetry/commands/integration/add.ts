@@ -63,6 +63,15 @@ export class IntegrationAddTelemetryClient
     }
   }
 
+  trackCliOptionInstallationId(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'installation-id',
+        value: this.redactedValue,
+      });
+    }
+  }
+
   trackMarketplaceEvent(event: string, props: Record<string, unknown>) {
     this.trackCommandOutput({
       key: event,

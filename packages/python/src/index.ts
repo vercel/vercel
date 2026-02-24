@@ -90,6 +90,10 @@ export const build: BuildV3 = async ({
   let spawnEnv: NodeJS.ProcessEnv | undefined;
   // Custom install command from dashboard/project settings, if any.
   let projectInstallCommand: string | undefined;
+  // Track whether a custom build or install command was used.
+  // When true, runtime dependency installation is disabled because
+  // custom commands may install dependencies not tracked in uv.lock.
+  let hasCustomCommand = false;
 
   debug(`workPath: ${workPath}`);
 
@@ -154,12 +158,16 @@ export const build: BuildV3 = async ({
         env: spawnEnv,
         cwd: workPath,
       });
+      hasCustomCommand = true;
     } else {
-      await runPyprojectScript(
+      const ranBuildScript = await runPyprojectScript(
         workPath,
         ['vercel-build', 'now-build', 'build'],
         spawnEnv
       );
+      if (ranBuildScript) {
+        hasCustomCommand = true;
+      }
     }
   }
 
@@ -337,6 +345,7 @@ export const build: BuildV3 = async ({
       cwd: workPath,
     });
     assumeDepsInstalled = true;
+    hasCustomCommand = true;
   } else {
     // Check and run a custom vercel install command from project manifest.
     // This will return `false` if no script was ran.
@@ -346,6 +355,9 @@ export const build: BuildV3 = async ({
       pythonEnv,
       /* useUserVirtualEnv */ false
     );
+    if (assumeDepsInstalled) {
+      hasCustomCommand = true;
+    }
   }
 
   let uv: UvRunner;
@@ -553,15 +565,16 @@ from vercel_runtime.vc_init import vc_handler
     projectName,
     noBuildCheckFailed,
     pythonPath: pythonVersion.pythonPath,
+    hasCustomCommand,
     additionalPrivatePackages: shouldInstallVercelWorkers
       ? ['vercel-workers', 'vercel_workers']
       : [],
   });
 
-  const { overLambdaLimit, allVendorFiles } =
+  const { runtimeInstallEnabled, allVendorFiles } =
     await depExternalizer.analyze(files);
 
-  if (overLambdaLimit) {
+  if (runtimeInstallEnabled) {
     await depExternalizer.generateBundle(files);
   } else {
     // Bundle all dependencies since we're not doing runtime installation

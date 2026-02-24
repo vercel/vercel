@@ -7,6 +7,7 @@ import getScope from '../../util/get-scope';
 import { autoProvisionResource } from '../../util/integration/auto-provision-resource';
 import { fetchIntegrationWithTelemetry } from '../../util/integration/fetch-integration';
 import { fetchInstallations } from '../../util/integration/fetch-installations';
+import { acceptTermsViaBrowser } from '../../util/integration/accept-terms-via-browser';
 import { promptForTermAcceptance } from '../../util/integration/prompt-for-terms';
 import { selectProduct } from '../../util/integration/select-product';
 import type {
@@ -32,6 +33,8 @@ export interface AddAutoProvisionOptions extends PostProvisionOptions {
   metadata?: string[];
   productSlug?: string;
   billingPlanId?: string;
+  installationId?: string;
+  commandName?: 'integration add' | 'install';
 }
 
 export async function addAutoProvision(
@@ -40,6 +43,7 @@ export async function addAutoProvision(
   resourceNameArg?: string,
   options: AddAutoProvisionOptions = {}
 ) {
+  const commandName = options.commandName ?? 'integration add';
   const telemetry = new IntegrationAddTelemetryClient({
     opts: {
       store: client.telemetryEventStore,
@@ -50,6 +54,7 @@ export async function addAutoProvision(
   telemetry.trackCliFlagNoConnect(options.noConnect);
   telemetry.trackCliFlagNoEnvPull(options.noEnvPull);
   telemetry.trackCliOptionPlan(options.billingPlanId);
+  telemetry.trackCliOptionInstallationId(options.installationId);
   telemetry.trackCliOptionEnvironment(options.environments);
   telemetry.trackCliOptionPrefix(options.prefix);
 
@@ -88,7 +93,7 @@ export async function addAutoProvision(
       .map(p => `  ${integrationSlug}/${p.slug}`)
       .join('\n');
     output.error(
-      `Integration "${integrationSlug}" has multiple products. Specify one with:\n\n${choices}\n\nExample: vercel integration add ${integrationSlug}/${integration.products[0].slug}`
+      `Integration "${integrationSlug}" has multiple products. Specify one with:\n\n${choices}\n\nExample: vercel ${commandName} ${integrationSlug}/${integration.products[0].slug}`
     );
     return 1;
   }
@@ -150,16 +155,36 @@ export async function addAutoProvision(
   );
 
   let acceptedPolicies: AcceptedPolicies = {};
+  let browserInstallationId: string | undefined;
   if (!teamInstallation) {
-    const policies = await promptForTermAcceptance(client, integration);
-    if (!policies) {
-      telemetry.trackMarketplaceEvent('marketplace_install_flow_dropped', {
-        ...baseProps,
-        reason: 'policy_declined',
-      });
-      return 1;
+    if (client.isAgent || !client.stdin.isTTY) {
+      // Browser flow: open browser for terms acceptance, poll for installation
+      const browserInstallation = await acceptTermsViaBrowser(
+        client,
+        integration,
+        team.id,
+        contextName
+      );
+      if (!browserInstallation) {
+        telemetry.trackMarketplaceEvent('marketplace_install_flow_dropped', {
+          ...baseProps,
+          reason: 'browser_terms_timeout',
+        });
+        return 1;
+      }
+      browserInstallationId = browserInstallation.id;
+    } else {
+      // Interactive TTY: keep existing prompt behavior
+      const policies = await promptForTermAcceptance(client, integration);
+      if (!policies) {
+        telemetry.trackMarketplaceEvent('marketplace_install_flow_dropped', {
+          ...baseProps,
+          reason: 'policy_declined',
+        });
+        return 1;
+      }
+      acceptedPolicies = policies;
     }
-    acceptedPolicies = policies;
   }
 
   // Validate metadata flags (if provided) BEFORE prompting for resource name
@@ -235,7 +260,8 @@ export async function addAutoProvision(
       resourceName,
       metadata,
       acceptedPolicies,
-      options.billingPlanId
+      options.billingPlanId,
+      browserInstallationId ?? options.installationId
     );
   } catch (error) {
     output.stopSpinner();
@@ -251,6 +277,44 @@ export async function addAutoProvision(
   }
   output.stopSpinner();
   output.debug(`Auto-provision result: ${JSON.stringify(result, null, 2)}`);
+
+  // Handle multiple installations
+  if (
+    result.kind === 'unknown' &&
+    result.reason === 'multiple_installations' &&
+    result.installations?.length
+  ) {
+    const installationsList = result.installations
+      .map(i => {
+        const parts = [i.id];
+        if (i.type) {
+          parts.push(`type=${i.type}`);
+        }
+        if (i.externalId) {
+          parts.push(`externalId=${i.externalId}`);
+        }
+        if (i.status) {
+          parts.push(`status=${i.status}`);
+        }
+        return parts.join(', ');
+      })
+      .map(line => `  - ${line}`)
+      .join('\n');
+    const slug = options.productSlug
+      ? `${integrationSlug}/${options.productSlug}`
+      : integrationSlug;
+    telemetry.trackMarketplaceEvent(
+      'marketplace_install_flow_multiple_installations',
+      {
+        ...baseProps,
+        installation_count: result.installations.length,
+      }
+    );
+    output.error(
+      `Multiple installations found for "${integrationSlug}":\n${installationsList}\n\nRe-run with --installation-id to select one, e.g.:\n  vercel ${commandName} ${slug} --installation-id ${result.installations[0].id}`
+    );
+    return 1;
+  }
 
   // Handle non-provisioned responses — pass through kind/reason from server
   if (result.kind !== 'provisioned') {

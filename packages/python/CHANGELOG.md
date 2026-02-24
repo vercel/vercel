@@ -1,5 +1,11 @@
 # @vercel/python
 
+## 6.16.1
+
+### Patch Changes
+
+- Disable runtime dependency installs for projects with custom build/install commands ([#15240](https://github.com/vercel/vercel/pull/15240))
+
 ## 6.16.0
 
 ### Minor Changes
