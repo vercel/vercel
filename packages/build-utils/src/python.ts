@@ -17,14 +17,24 @@ import FileFsRef from './file-fs-ref';
 export async function isPythonEntrypoint(
   file: FileFsRef | { fsPath?: string }
 ): Promise<boolean> {
+  return (await getGenericEntrypointVariable(file)) !== null;
+}
+
+/**
+ * Returns the entrypoint variable name for a Python entrypoint file,
+ * or null if the file is not a valid entrypoint.
+ */
+export async function getGenericEntrypointVariable(
+  file: FileFsRef | { fsPath?: string }
+): Promise<string | null> {
   try {
     const fsPath = (file as FileFsRef).fsPath;
-    if (!fsPath) return false;
+    if (!fsPath) return null;
     const content = await fs.promises.readFile(fsPath, 'utf-8');
-    return (await parseEntrypointVariable(content)) !== null;
+    return await parseEntrypointVariable(content);
   } catch (err) {
     debug(`Failed to check Python entrypoint: ${err}`);
-    return false;
+    return null;
   }
 }
 
@@ -53,12 +63,13 @@ export async function getDjangoSettingsModule(
 /**
  * For Django projects: resolve the ASGI or WSGI application entrypoint by reading
  * DJANGO_SETTINGS_MODULE from manage.py, loading that settings file, and
- * returning the file path for ASGI_APPLICATION or WSGI_APPLICATION (e.g.
- * 'myapp.asgi.application' -> 'myapp/asgi.py'). Returns null if any step fails.
+ * returning [modulePath, variableName] for ASGI_APPLICATION or WSGI_APPLICATION
+ * (e.g. 'myapp.wsgi.application' -> ['myapp/wsgi.py', 'application']).
+ * Returns null if any step fails.
  */
 export async function getDjangoEntrypoint(
   workPath: string
-): Promise<string | null> {
+): Promise<[string, string] | null> {
   const settingsModule = await getDjangoSettingsModule(workPath);
   if (!settingsModule) return null;
   const settingsPath = join(
@@ -72,20 +83,22 @@ export async function getDjangoEntrypoint(
       'ASGI_APPLICATION'
     );
     if (asgiApplication) {
-      const modulePath = asgiApplication.split('.').slice(0, -1).join('/');
-      const asgiPath = `${modulePath}.py`;
+      const parts = asgiApplication.split('.');
+      const varName = parts[parts.length - 1];
+      const asgiPath = `${parts.slice(0, -1).join('/')}.py`;
       debug(`Django ASGI entrypoint from ${settingsModule}: ${asgiPath}`);
-      return asgiPath;
+      return [asgiPath, varName];
     }
     const wsgiApplication = await getStringConstant(
       settingsContent,
       'WSGI_APPLICATION'
     );
     if (wsgiApplication) {
-      const modulePath = wsgiApplication.split('.').slice(0, -1).join('/');
-      const wsgiPath = `${modulePath}.py`;
+      const parts = wsgiApplication.split('.');
+      const varName = parts[parts.length - 1];
+      const wsgiPath = `${parts.slice(0, -1).join('/')}.py`;
       debug(`Django WSGI entrypoint from ${settingsModule}: ${wsgiPath}`);
-      return wsgiPath;
+      return [wsgiPath, varName];
     }
   } catch {
     debug(`Failed to read or parse settings file: ${settingsPath}`);

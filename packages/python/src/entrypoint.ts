@@ -4,7 +4,7 @@ import {
   glob,
   debug,
   isDirectory,
-  isPythonEntrypoint,
+  getGenericEntrypointVariable,
   getDjangoEntrypoint,
 } from '@vercel/build-utils';
 import { readConfigFile } from '@vercel/build-utils';
@@ -52,7 +52,7 @@ export async function getPyprojectEntrypoint(
   const match = appScript.match(/([A-Za-z_][\w.]*)\s*:\s*([A-Za-z_][\w]*)/);
   if (!match) return null;
   const modulePath = match[1];
-  const varName = match[2];
+  const entryVar = match[2];
   const relPath = modulePath.replace(/\./g, '/');
 
   // Prefer an existing file match if present; otherwise fall back to "<module>.py".
@@ -60,7 +60,7 @@ export async function getPyprojectEntrypoint(
     const fsFiles = await glob('**', workPath);
     const candidates = [`${relPath}.py`, `${relPath}/__init__.py`];
     for (const candidate of candidates) {
-      if (fsFiles[candidate]) return [candidate, varName];
+      if (fsFiles[candidate]) return [candidate, entryVar];
     }
     return null;
   } catch {
@@ -75,10 +75,12 @@ async function findValidEntrypoint(
 ): Promise<[string, string | null] | null> {
   for (const candidate of candidates) {
     if (fsFiles[candidate]) {
-      const isValid = await isPythonEntrypoint(fsFiles[candidate] as FileFsRef);
-      if (isValid) {
+      const entryVar = await getGenericEntrypointVariable(
+        fsFiles[candidate] as FileFsRef
+      );
+      if (entryVar) {
         debug(`Detected Python entrypoint: ${candidate}`);
-        return [candidate, null];
+        return [candidate, entryVar];
       }
     }
   }
@@ -101,10 +103,12 @@ export async function detectGenericPythonEntrypoint(
 
     // If the configured entrypoint exists and is valid, use it
     if (fsFiles[entry]) {
-      const isValid = await isPythonEntrypoint(fsFiles[entry] as FileFsRef);
-      if (isValid) {
+      const entryVar = await getGenericEntrypointVariable(
+        fsFiles[entry] as FileFsRef
+      );
+      if (entryVar) {
         debug(`Using configured Python entrypoint: ${entry}`);
-        return [entry, null];
+        return [entry, entryVar];
       }
     }
 
@@ -137,10 +141,12 @@ export async function detectDjangoPythonEntrypoint(
 
     // If the configured entrypoint exists and is valid, use it
     if (fsFiles[entry]) {
-      const isValid = await isPythonEntrypoint(fsFiles[entry] as FileFsRef);
-      if (isValid) {
+      const entryVar = await getGenericEntrypointVariable(
+        fsFiles[entry] as FileFsRef
+      );
+      if (entryVar) {
         debug(`Using configured Python entrypoint: ${entry}`);
-        return [entry, null];
+        return [entry, entryVar];
       }
     }
 
@@ -165,10 +171,11 @@ export async function detectDjangoPythonEntrypoint(
       const currPath = join(workPath, rootDir);
       const wsgiEntry = await getDjangoEntrypoint(currPath);
       if (wsgiEntry) {
-        const fullWsgiEntry = pathPosix.join(rootDir, wsgiEntry);
+        const [wsgiPath, wsgiVar] = wsgiEntry;
+        const fullWsgiEntry = pathPosix.join(rootDir, wsgiPath);
         if (fsFiles[fullWsgiEntry]) {
           debug(`Using Django WSGI entrypoint: ${fullWsgiEntry}`);
-          return [fullWsgiEntry, null];
+          return [fullWsgiEntry, wsgiVar];
         }
       }
     }
