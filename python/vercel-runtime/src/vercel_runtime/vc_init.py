@@ -55,6 +55,7 @@ _here = os.path.dirname(__file__)
 _entrypoint_rel = _must_getenv("__VC_HANDLER_ENTRYPOINT")
 _entrypoint_abs = _must_getenv("__VC_HANDLER_ENTRYPOINT_ABS")
 _entrypoint_modname = _must_getenv("__VC_HANDLER_MODULE_NAME")
+_entry_variable = os.environ.get("__VC_HANDLER_VARIABLE_NAME") or ""
 
 
 def _normalize_service_route_prefix(raw_prefix: str | None) -> str:
@@ -529,6 +530,19 @@ try:
     sys.modules[_entrypoint_modname] = __vc_module
     __vc_spec.loader.exec_module(__vc_module)
     __vc_variables = dir(__vc_module)
+    __vc_app_variable = (
+        _entry_variable
+        if _entry_variable and _entry_variable in __vc_variables
+        else "handler"
+        if "handler" in __vc_variables
+        else "Handler"
+        if "Handler" in __vc_variables
+        else "app"
+        if "app" in __vc_variables
+        else "application"
+        if "application" in __vc_variables
+        else None
+    )
 except Exception:
     _stderr(f"Error importing {_entrypoint_rel}:")
     _stderr(traceback.format_exc())
@@ -810,12 +824,8 @@ if "VERCEL_IPC_PATH" in os.environ:
                     }
                 )
 
-    if "handler" in __vc_variables or "Handler" in __vc_variables:
-        base = (
-            __vc_module.handler
-            if "handler" in __vc_variables
-            else __vc_module.Handler
-        )
+    if __vc_app_variable in ("handler", "Handler"):
+        base = getattr(__vc_module, __vc_app_variable)
         if not issubclass(base, BaseHTTPRequestHandler):
             _stderr("Handler must inherit from BaseHTTPRequestHandler")
             _stderr(
@@ -836,12 +846,8 @@ if "VERCEL_IPC_PATH" in os.environ:
                 method()
                 self.wfile.flush()
 
-    elif "app" in __vc_variables or "application" in __vc_variables:
-        app: Any = getattr(  # pyright: ignore[reportRedeclaration]
-            __vc_module,
-            "app",
-            getattr(__vc_module, "application", None),
-        )
+    elif __vc_app_variable is not None:
+        app: Any = getattr(__vc_module, __vc_app_variable)  # pyright: ignore[reportRedeclaration]
         if not inspect.iscoroutinefunction(
             app
         ) and not inspect.iscoroutinefunction(app.__call__):
@@ -1001,12 +1007,8 @@ if "VERCEL_IPC_PATH" in os.environ:
     )
     exit(1)
 
-if "handler" in __vc_variables or "Handler" in __vc_variables:
-    base = (
-        __vc_module.handler
-        if "handler" in __vc_variables
-        else __vc_module.Handler
-    )
+if __vc_app_variable in ("handler", "Handler"):
+    base = getattr(__vc_module, __vc_app_variable)
     if not issubclass(base, BaseHTTPRequestHandler):
         _stderr("Handler must inherit from BaseHTTPRequestHandler")
         _stderr(
@@ -1060,12 +1062,8 @@ if "handler" in __vc_variables or "Handler" in __vc_variables:
 
         return return_dict
 
-elif "app" in __vc_variables or "application" in __vc_variables:
-    app: Any = getattr(  # type: ignore[no-redef]
-        __vc_module,
-        "app",
-        getattr(__vc_module, "application", None),
-    )
+elif __vc_app_variable is not None:
+    app: Any = getattr(__vc_module, __vc_app_variable)  # type: ignore[no-redef]
     if not inspect.iscoroutinefunction(app) and not inspect.iscoroutinefunction(
         app.__call__
     ):
