@@ -60,12 +60,13 @@ function routesToVercelTs(rules: RoutingRule[]): string {
     return `    ${indented}`;
   });
 
+  const routesContent =
+    routeEntries.length > 0 ? `\n${routeEntries.join(',\n')},\n  ` : '';
+
   return `import { defineConfig } from '@vercel/sdk/config';
 
 export default defineConfig({
-  routes: [
-${routeEntries.join(',\n')},
-  ],
+  routes: [${routesContent}],
 });
 `;
 }
