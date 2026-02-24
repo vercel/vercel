@@ -39,11 +39,6 @@ interface AuthConfig {
    * Used to optimistically check if the token is still valid.
    */
   expiresAt?: number;
-  /**
-   * Indicates where the token was provided from when using external tokens.
-   * Only set when token is provided via `--token` flag or `VERCEL_TOKEN` env var.
-   */
-  tokenSource?: 'flag' | 'env';
 }
 
 export interface GlobalConfig {
@@ -58,6 +53,19 @@ export interface GlobalConfig {
   guidance?: {
     enabled?: boolean;
   };
+  /**
+   * OAuth tokens for AI agents, keyed by `${projectId}:${orgId}:${agentName}`.
+   * When an agent runs in a linked project, the CLI uses this token instead of
+   * the user token for API requests.
+   */
+  agentOAuth?: Record<string, AgentOAuthEntry>;
+}
+
+export interface AgentOAuthEntry {
+  token: string;
+  refreshToken?: string;
+  /** Unix timestamp (seconds) when the token expires */
+  expiresAt?: number;
 }
 
 type Billing = {

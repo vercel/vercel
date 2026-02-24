@@ -95,6 +95,14 @@ export function hasRefreshToken(
   return 'refreshToken' in authConfig;
 }
 
+/** When set, API requests use this token instead of authConfig (used for AI agent OAuth). */
+export interface AgentAuthConfig {
+  token: string;
+  refreshToken?: string;
+  expiresAt?: number;
+  _configKey: string;
+}
+
 export default class Client extends EventEmitter implements Stdio {
   argv: string[];
   apiUrl: string;
@@ -117,8 +125,8 @@ export default class Client extends EventEmitter implements Stdio {
   nonInteractive: boolean;
   /** Dangerously skip all permission prompts (--dangerously-skip-permissions flag) */
   dangerouslySkipPermissions: boolean;
-  /** Track if we've already logged the token source debug message */
-  private _loggedTokenSource: boolean = false;
+  /** When set (agent mode + linked project), all API requests use this token instead of authConfig */
+  agentAuthConfig?: AgentAuthConfig | null;
 
   constructor(opts: ClientOptions) {
     super();
@@ -187,28 +195,57 @@ export default class Client extends EventEmitter implements Stdio {
   /**
    * This method silently tries to refresh the access_token if it is expired.
    *
+   * When agentAuthConfig is set (agent mode), refreshes the agent token from
+   * config.agentOAuth if expired. Otherwise refreshes the user authConfig token.
+   *
    * If the refresh_token is also expired, it will not attempt to refresh it.
    * If there is any error during the refresh process, it will not throw an error.
    */
   private async ensureAuthorized(): Promise<void> {
+    // When using agent OAuth token, refresh it if expired
+    if (this.agentAuthConfig) {
+      const nowSeconds = Math.floor(Date.now() / 1000);
+      const expired =
+        typeof this.agentAuthConfig.expiresAt === 'number' &&
+        this.agentAuthConfig.expiresAt < nowSeconds;
+      if (
+        expired &&
+        this.agentAuthConfig.refreshToken &&
+        this.config.agentOAuth?.[this.agentAuthConfig._configKey]
+      ) {
+        const tokenResponse = await refreshTokenRequest({
+          refresh_token: this.agentAuthConfig.refreshToken,
+        });
+        const [tokensError, tokens] = await processTokenResponse(tokenResponse);
+        if (!tokensError && tokens) {
+          const newEntry = {
+            token: tokens.access_token,
+            expiresAt: nowSeconds + tokens.expires_in,
+            refreshToken:
+              tokens.refresh_token ?? this.agentAuthConfig.refreshToken,
+          };
+          this.agentAuthConfig = {
+            ...newEntry,
+            _configKey: this.agentAuthConfig._configKey,
+          };
+          this.updateConfig({
+            agentOAuth: {
+              ...this.config.agentOAuth,
+              [this.agentAuthConfig._configKey]: newEntry,
+            },
+          });
+          this.writeToConfigFile();
+          output.debug('Agent OAuth token refreshed successfully.');
+        }
+      }
+      return;
+    }
+
     const { authConfig } = this;
 
     // If we have a valid access token, do nothing
     if (isValidAccessToken(authConfig)) {
-      if (!this._loggedTokenSource) {
-        if (authConfig.tokenSource === 'flag') {
-          output.debug(
-            'Using token from `--token` argument, skipping token refresh.'
-          );
-        } else if (authConfig.tokenSource === 'env') {
-          output.debug(
-            'Using token from VERCEL_TOKEN environment variable, skipping token refresh.'
-          );
-        } else {
-          output.debug('Valid access token, skipping token refresh.');
-        }
-        this._loggedTokenSource = true;
-      }
+      output.debug('Valid access token, skipping token refresh.');
       return;
     }
 
@@ -360,8 +397,9 @@ export default class Client extends EventEmitter implements Stdio {
 
     await this.ensureAuthorized();
 
-    if (this.authConfig.token) {
-      headers.set('authorization', `Bearer ${this.authConfig.token}`);
+    const token = this.agentAuthConfig?.token ?? this.authConfig.token;
+    if (token) {
+      headers.set('authorization', `Bearer ${token}`);
     }
 
     let body;

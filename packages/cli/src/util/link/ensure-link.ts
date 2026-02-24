@@ -3,11 +3,11 @@ import setupAndLink from '../link/setup-and-link';
 import param from '../output/param';
 import { getCommandName, getCommandNamePlain } from '../pkg-name';
 import { getLinkedProject } from '../projects/link';
-import { resolveProjectCwd } from '../projects/find-project-root';
 import type { SetupAndLinkOptions } from '../link/setup-and-link';
 import type { ProjectLinked } from '@vercel-internals/types';
 import output from '../../output-manager';
 import { outputActionRequired, buildCommandWithYes } from '../agent-output';
+import { ensureAgentAuth } from '../agent-auth/ensure-agent-auth';
 
 /**
  * Checks if a project is already linked and if not, links the project and
@@ -31,8 +31,6 @@ export async function ensureLink(
   cwd: string,
   opts: SetupAndLinkOptions = {}
 ): Promise<ProjectLinked | number> {
-  cwd = await resolveProjectCwd(cwd);
-
   let { link } = opts;
   // All commands respect global --non-interactive; link can override via opts
   const nonInteractive = opts.nonInteractive ?? client.nonInteractive ?? false;
@@ -92,6 +90,19 @@ export async function ensureLink(
       process.exit(link.exitCode);
     }
     return link.exitCode;
+  }
+
+  // When an AI agent is running and project is linked, ensure agent OAuth token
+  // exists and use it for all subsequent API requests (not the user token).
+  if (client.isAgent && link.status === 'linked') {
+    const agentAuth = await ensureAgentAuth(client, link);
+    if (typeof agentAuth === 'number') {
+      if (nonInteractive) {
+        process.exit(agentAuth);
+      }
+      return agentAuth;
+    }
+    client.agentAuthConfig = agentAuth;
   }
 
   return link;
