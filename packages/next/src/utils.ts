@@ -1877,6 +1877,7 @@ export type LambdaGroup = {
   memory?: number;
   maxDuration?: number;
   regions?: string[];
+  functionFailoverRegions?: string[];
   supportsCancellation?: boolean;
   isAppRouter?: boolean;
   isAppRouteHandler?: boolean;
@@ -1961,6 +1962,7 @@ export async function getPageLambdaGroups({
       memory?: number;
       maxDuration?: number;
       regions?: string[];
+      functionFailoverRegions?: string[];
       experimentalTriggers?: NodejsLambda['experimentalTriggers'];
       supportsCancellation?: boolean;
     } = {};
@@ -2047,6 +2049,10 @@ export async function getPageLambdaGroups({
             group.maxDuration === opts.maxDuration &&
             group.memory === opts.memory &&
             compareRegions(group.regions, opts.regions) &&
+            compareRegions(
+              group.functionFailoverRegions,
+              opts.functionFailoverRegions
+            ) &&
             group.isPrerenders === isPrerenderRoute &&
             group.isExperimentalPPR === isExperimentalPPR &&
             JSON.stringify(group.experimentalTriggers) ===

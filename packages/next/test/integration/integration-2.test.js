@@ -951,6 +951,7 @@ describe('vercel.json functions regions', () => {
     expect(lambda).toBeDefined();
     expect(lambda.type).toBe('Lambda');
     expect(lambda.regions).toEqual(['iad1', 'sfo1']);
+    expect(lambda.functionFailoverRegions).toEqual(['dub1', 'hnd1']);
   });
 
   it('should ignore preferredRegion and regions from route config when no vercel.json functions config', () => {
@@ -958,6 +959,7 @@ describe('vercel.json functions regions', () => {
     expect(lambda).toBeDefined();
     expect(lambda.type).toBe('Lambda');
     expect(lambda.regions).toBeUndefined();
+    expect(lambda.functionFailoverRegions).toBeUndefined();
   });
 
   it('should not set regions on routes without any config', () => {
