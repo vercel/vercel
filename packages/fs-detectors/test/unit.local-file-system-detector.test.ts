@@ -4,16 +4,18 @@ import path from 'node:path';
 import net from 'node:net';
 import { LocalFileSystemDetector, DetectorFilesystem } from '../src';
 
-const tmpdir = path.join(os.tmpdir(), 'local-file-system-test');
-
 const dirs = ['', 'a', `a${path.sep}b`]; // root, single-nested, double-nested
 const files = ['foo', 'bar'];
 const filePaths = dirs.flatMap(dir => files.map(file => path.join(dir, file)));
-
-const localFileSystem = new LocalFileSystemDetector(tmpdir);
+let tmpdir!: string;
+let localFileSystem!: LocalFileSystemDetector;
 
 describe('LocalFileSystemDetector', () => {
   beforeAll(async () => {
+    tmpdir = await fs.mkdtemp(
+      path.join(os.tmpdir(), 'local-file-system-test-')
+    );
+    localFileSystem = new LocalFileSystemDetector(tmpdir);
     await Promise.all(
       dirs.map(dir => fs.mkdir(path.join(tmpdir, dir), { recursive: true }))
     );
