@@ -33,11 +33,16 @@ function getPythonPackages(rootDir) {
       if (!packageName) {
         return null;
       }
+      const label = toLabel({ packageName, packageDir });
+      const title = toTitle(label);
 
       return {
         packageDir,
         projectDir,
         packageName,
+        label,
+        title,
+        project: projectDir,
       };
     })
     .filter(Boolean)
@@ -51,25 +56,22 @@ function toLabel({ packageName, packageDir }) {
   return packageDir;
 }
 
-function getPythonTestMatrix(rootDir) {
-  return getPythonPackages(rootDir).map(pkg => ({
-    label: toLabel(pkg),
-    project: pkg.projectDir,
-  }));
+function toTitle(value) {
+  return value
+    .split(/[-_]/)
+    .filter(Boolean)
+    .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
 }
 
 function main() {
   const rootDir = path.resolve(__dirname, '..');
-  const packages = getPythonTestMatrix(rootDir);
-  if (packages.length === 0) {
-    throw new Error('No Python packages discovered in python/*');
-  }
+  const packages = getPythonPackages(rootDir);
   process.stdout.write(JSON.stringify(packages));
 }
 
 module.exports = {
   getPythonPackages,
-  getPythonTestMatrix,
 };
 
 if (require.main === module) {

@@ -21,7 +21,7 @@ jobs:
       - uses: actions/checkout@v4
       - id: discover
         run: |
-          PACKAGES=$(node utils/get-python-packages.js)
+          PACKAGES="$(node utils/get-python-packages.js)"
           echo "packages=$PACKAGES" >> "$GITHUB_OUTPUT"
           echo "Discovered Python packages: $PACKAGES"
 

@@ -201,12 +201,7 @@ jobs:
         run: |
           DEPLOYMENT_URL="${{ needs.setup.outputs.dplUrl }}"
 
-          PACKAGES_JSON="$(
-            node <<'NODE'
-            const { getPythonPackages } = require('./utils/get-python-packages');
-            process.stdout.write(JSON.stringify(getPythonPackages(process.cwd())));
-            NODE
-          )"
+          PACKAGES_JSON="$(node utils/get-python-packages.js)"
           if [ -z "$PACKAGES_JSON" ] || [ "$PACKAGES_JSON" = "[]" ]; then
             echo "No Python packages discovered; skipping wheel URL resolution."
             exit 0

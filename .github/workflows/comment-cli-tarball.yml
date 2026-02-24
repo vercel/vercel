@@ -30,7 +30,7 @@ jobs:
       - name: Discover Python packages
         id: discoverPythonPackages
         run: |
-          PACKAGES="$(node utils/get-python-packages.js --packages)"
+          PACKAGES="$(node utils/get-python-packages.js)"
           echo "packages=$PACKAGES" >> "$GITHUB_OUTPUT"
           echo "Discovered Python packages: $PACKAGES"
 
@@ -59,7 +59,8 @@ jobs:
               if (
                 !pkg ||
                 typeof pkg.packageDir !== 'string' ||
-                typeof pkg.packageName !== 'string'
+                typeof pkg.packageName !== 'string' ||
+                typeof pkg.title !== 'string'
               ) {
                 throw new Error(
                   `Invalid PYTHON_PACKAGES entry: ${JSON.stringify(pkg)}`
@@ -90,7 +91,7 @@ jobs:
             message += '}\n';
             message += '```\n';
 
-            for (const { packageDir, packageName } of pythonPackages) {
+            for (const { packageDir, packageName, title } of pythonPackages) {
               try {
                 const resp = await fetch(
                   `${deploymentUrl}/tarballs/${packageDir}-wheel.json`
@@ -107,7 +108,7 @@ jobs:
                 const wheelUrl = `${deploymentUrl}/tarballs/${filename}`;
                 const envVar = toPythonEnvVar(packageName);
 
-                message += `\n### Python ${packageName} Wheel\n\n`;
+                message += `\n### Python ${title} Wheel\n\n`;
                 message += `A \`${packageName}\` wheel was also built for this PR.\n`;
                 message += 'To use in your Python project builds, also set this environment variable:\n\n';
                 message += '```\n';
