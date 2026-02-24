@@ -2,6 +2,7 @@ import path from 'path';
 import fs, { ensureDirSync } from 'fs-extra';
 import XDGAppPaths from 'xdg-app-paths';
 import { getCachedTmpDir } from './get-tmp-dir';
+import testLogger from './test-logger';
 
 export default function getGlobalDir() {
   let globalDir: string;
@@ -13,8 +14,7 @@ export default function getGlobalDir() {
   }
 
   if (!fs.existsSync(globalDir)) {
-    // eslint-disable-next-line no-console
-    console.log('Creating global config directory ', globalDir);
+    testLogger('Creating global config directory ', globalDir);
     ensureDirSync(globalDir);
   }
 

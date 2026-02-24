@@ -1,4 +1,5 @@
 import execa from 'execa';
+import testLogger from './test-logger';
 
 const defaultOptions = {
   reject: false,
@@ -12,8 +13,7 @@ export function execCli(
   args: string[] = [],
   opts: execa.Options<string> & { token?: string | boolean } = {}
 ): execa.ExecaChildProcess<string> {
-  // eslint-disable-next-line no-console
-  console.log(`$ vercel ${args.join(' ')}`);
+  testLogger(`$ vercel ${args.join(' ')}`);
 
   if (!args.includes('--token') && opts.token !== false) {
     args.push(
