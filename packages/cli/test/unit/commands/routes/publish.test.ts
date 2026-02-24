@@ -75,15 +75,6 @@ describe('routes publish', () => {
     await expect(client.stderr).toOutput('Reordered (6 → 4)');
   });
 
-  it('should publish specific version with --yes', async () => {
-    useUpdateRouteVersion();
-    useRoutesWithDiffForPublish();
-    client.setArgv('routes', 'publish', 'staging-version', '--yes');
-    const exitCode = await routes(client);
-    expect(exitCode, 'exit code for "routes publish <id> --yes"').toEqual(0);
-    await expect(client.stderr).toOutput('Success!');
-  });
-
   it('should warn when no staging version exists', async () => {
     useUpdateRouteVersion({
       versions: [{ id: 'live-version', isLive: true }],
@@ -93,35 +84,6 @@ describe('routes publish', () => {
     const exitCode = await routes(client);
     expect(exitCode, 'exit code when no staging').toEqual(0);
     await expect(client.stderr).toOutput('No staged changes to publish');
-  });
-
-  it('should error when version not found', async () => {
-    useUpdateRouteVersion();
-    useRoutesWithDiffForPublish();
-    client.setArgv('routes', 'publish', 'nonexistent-version', '--yes');
-    const exitCode = await routes(client);
-    expect(exitCode, 'exit code for nonexistent version').toEqual(1);
-    await expect(client.stderr).toOutput(
-      'Version "nonexistent-version" not found'
-    );
-  });
-
-  it('should error when version is already live', async () => {
-    useUpdateRouteVersion();
-    useRoutesWithDiffForPublish();
-    client.setArgv('routes', 'publish', 'live-version', '--yes');
-    const exitCode = await routes(client);
-    expect(exitCode, 'exit code for live version').toEqual(1);
-    await expect(client.stderr).toOutput('is already live');
-  });
-
-  it('should error when version is not staging (previous version)', async () => {
-    useUpdateRouteVersion();
-    useRoutesWithDiffForPublish();
-    client.setArgv('routes', 'publish', 'previous-version', '--yes');
-    const exitCode = await routes(client);
-    expect(exitCode, 'exit code for previous version').toEqual(1);
-    await expect(client.stderr).toOutput('is not staged');
   });
 
   it('tracks subcommand invocation', async () => {

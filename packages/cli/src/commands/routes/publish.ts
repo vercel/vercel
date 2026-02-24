@@ -7,11 +7,9 @@ import {
   ensureProjectLink,
   confirmAction,
   printDiffSummary,
-  findVersionById,
 } from './shared';
 import getRouteVersions from '../../util/routes/get-route-versions';
 import updateRouteVersion from '../../util/routes/update-route-version';
-import type { RouteVersion } from '../../util/routes/types';
 import getRoutes from '../../util/routes/get-routes';
 import stamp from '../../util/output/stamp';
 import { getCommandName } from '../../util/pkg-name';
@@ -26,55 +24,18 @@ export default async function publish(client: Client, argv: string[]) {
   const { project, org } = link;
   const teamId = org.type === 'team' ? org.id : undefined;
 
-  const [versionIdentifier] = parsed.args;
-
   output.spinner(`Fetching route versions for ${chalk.bold(project.name)}`);
 
   const { versions } = await getRouteVersions(client, project.id, { teamId });
 
-  let version: RouteVersion | undefined;
-  if (versionIdentifier) {
-    const result = findVersionById(versions, versionIdentifier);
-    if (result.error) {
-      output.error(result.error);
-      return 1;
-    }
-    version = result.version;
-  } else {
-    version = versions.find(v => v.isStaging);
-    if (!version) {
-      output.warn(
-        `No staged changes to publish. Make changes first with ${chalk.cyan(
-          getCommandName('routes add')
-        )}.`
-      );
-      return 0;
-    }
-  }
-
-  // At this point version is guaranteed to be defined
-  // (both branches either assign it or return early)
+  const version = versions.find(v => v.isStaging);
   if (!version) {
-    output.error('No version found.');
-    return 1;
-  }
-
-  if (version.isLive) {
-    output.error(
-      `Version ${chalk.bold(version.id.slice(0, 12))} is already live.`
+    output.warn(
+      `No staged changes to publish. Make changes first with ${chalk.cyan(
+        getCommandName('routes add')
+      )}.`
     );
-    return 1;
-  }
-
-  if (!version.isStaging) {
-    output.error(
-      `Version ${chalk.bold(
-        version.id.slice(0, 12)
-      )} is not staged. Only staging versions can be published to production.\nUse ${chalk.cyan(
-        getCommandName('routes restore <version-id>')
-      )} to restore a previous version.`
-    );
-    return 1;
+    return 0;
   }
 
   // Fetch diff to show changes

@@ -377,12 +377,7 @@ export const publishSubcommand = {
   name: 'publish',
   aliases: [],
   description: 'Publish staged routing changes to production',
-  arguments: [
-    {
-      name: 'version-id',
-      required: false,
-    },
-  ],
+  arguments: [],
   options: [
     {
       ...yesOption,
@@ -393,10 +388,6 @@ export const publishSubcommand = {
     {
       name: 'Publish staged changes',
       value: `${packageName} routes publish`,
-    },
-    {
-      name: 'Publish a specific version',
-      value: `${packageName} routes publish <version-id>`,
     },
     {
       name: 'Publish without confirmation',
