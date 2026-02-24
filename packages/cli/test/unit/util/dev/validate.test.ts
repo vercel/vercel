@@ -26,7 +26,9 @@ describe('validateConfig', () => {
 
   it('should not error with maxDuration set to "max"', async () => {
     const config = {
-      functions: { 'api/user.go': { memory: 128, maxDuration: 'max' } },
+      functions: {
+        'api/user.go': { memory: 128, maxDuration: 'max' as const },
+      },
     };
     const error = validateConfig(config);
     expect(error).toBeNull();
