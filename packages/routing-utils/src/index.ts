@@ -297,7 +297,7 @@ export function getTransformedRoutes(
   const { cleanUrls, rewrites, redirects, headers, trailingSlash } =
     vercelConfig;
   const { routes: userRoutes = null } = vercelConfig;
-  let result: Route[] | null = null;
+  let routes: Route[] | null = null;
 
   if (typeof cleanUrls !== 'undefined') {
     const normalized = normalizeRoutes(
@@ -305,29 +305,29 @@ export function getTransformedRoutes(
     );
     if (normalized.error) {
       normalized.error.code = 'invalid_clean_urls';
-      return { routes: result, error: normalized.error };
+      return { routes, error: normalized.error };
     }
-    result = result || [];
-    result.push(...(normalized.routes || []));
+    routes = routes || [];
+    routes.push(...(normalized.routes || []));
   }
 
   if (typeof trailingSlash !== 'undefined') {
     const normalized = normalizeRoutes(convertTrailingSlash(trailingSlash));
     if (normalized.error) {
       normalized.error.code = 'invalid_trailing_slash';
-      return { routes: result, error: normalized.error };
+      return { routes, error: normalized.error };
     }
-    result = result || [];
-    result.push(...(normalized.routes || []));
+    routes = routes || [];
+    routes.push(...(normalized.routes || []));
   }
 
   if (userRoutes) {
     const normalized = normalizeRoutes(userRoutes);
     if (normalized.error) {
-      return { routes: result, error: normalized.error };
+      return { routes, error: normalized.error };
     }
-    result = result || [];
-    result.push(...(normalized.routes || []));
+    routes = routes || [];
+    routes.push(...(normalized.routes || []));
   }
 
   if (typeof redirects !== 'undefined') {
@@ -337,7 +337,7 @@ export function getTransformedRoutes(
       .find(notEmpty);
     if (regexErrorMessage) {
       return {
-        routes: result,
+        routes,
         error: createError(
           'invalid_redirect',
           regexErrorMessage,
@@ -351,7 +351,7 @@ export function getTransformedRoutes(
       .find(notEmpty);
     if (patternError) {
       return {
-        routes: result,
+        routes,
         error: createError(
           code,
           patternError.message,
@@ -363,7 +363,7 @@ export function getTransformedRoutes(
     const redirectErrorMessage = redirects.map(checkRedirect).find(notEmpty);
     if (redirectErrorMessage) {
       return {
-        routes: result,
+        routes,
         error: createError(
           code,
           redirectErrorMessage,
@@ -375,10 +375,10 @@ export function getTransformedRoutes(
     const normalized = normalizeRoutes(convertRedirects(redirects));
     if (normalized.error) {
       normalized.error.code = code;
-      return { routes: result, error: normalized.error };
+      return { routes, error: normalized.error };
     }
-    result = result || [];
-    result.push(...(normalized.routes || []));
+    routes = routes || [];
+    routes.push(...(normalized.routes || []));
   }
 
   if (typeof headers !== 'undefined') {
@@ -388,7 +388,7 @@ export function getTransformedRoutes(
       .find(notEmpty);
     if (regexErrorMessage) {
       return {
-        routes: result,
+        routes,
         error: createError(
           code,
           regexErrorMessage,
@@ -402,7 +402,7 @@ export function getTransformedRoutes(
       .find(notEmpty);
     if (patternError) {
       return {
-        routes: result,
+        routes,
         error: createError(
           code,
           patternError.message,
@@ -414,10 +414,10 @@ export function getTransformedRoutes(
     const normalized = normalizeRoutes(convertHeaders(headers));
     if (normalized.error) {
       normalized.error.code = code;
-      return { routes: result, error: normalized.error };
+      return { routes, error: normalized.error };
     }
-    result = result || [];
-    result.push(...(normalized.routes || []));
+    routes = routes || [];
+    routes.push(...(normalized.routes || []));
   }
 
   if (typeof rewrites !== 'undefined') {
@@ -427,7 +427,7 @@ export function getTransformedRoutes(
       .find(notEmpty);
     if (regexErrorMessage) {
       return {
-        routes: result,
+        routes,
         error: createError(
           code,
           regexErrorMessage,
@@ -441,7 +441,7 @@ export function getTransformedRoutes(
       .find(notEmpty);
     if (patternError) {
       return {
-        routes: result,
+        routes,
         error: createError(
           code,
           patternError.message,
@@ -453,12 +453,12 @@ export function getTransformedRoutes(
     const normalized = normalizeRoutes(convertRewrites(rewrites));
     if (normalized.error) {
       normalized.error.code = code;
-      return { routes: result, error: normalized.error };
+      return { routes, error: normalized.error };
     }
-    result = result || [];
-    result.push({ handle: 'filesystem' });
-    result.push(...(normalized.routes || []));
+    routes = routes || [];
+    routes.push({ handle: 'filesystem' });
+    routes.push(...(normalized.routes || []));
   }
 
-  return { routes: result, error: null };
+  return { routes, error: null };
 }
