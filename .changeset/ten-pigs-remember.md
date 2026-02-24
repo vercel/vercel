@@ -1,4 +1,0 @@
----
----
-
-Organize eval auth
