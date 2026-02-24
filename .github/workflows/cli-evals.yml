@@ -35,6 +35,7 @@ jobs:
         run: cd packages/cli && pnpm build
 
       - name: Run CLI evals
+        id: evals
         run: cd packages/cli && pnpm test:evals
         env:
           AI_GATEWAY_API_KEY: ${{ secrets.EVAL_AI_GATEWAY_API_KEY }}
@@ -43,3 +44,26 @@ jobs:
           VERCEL_PROJECT_ID: ${{ secrets.EVAL_PROJECT_ID }}
           CLI_EVAL_TEAM_ID: ${{ secrets.EVAL_TEAM_ID }}
           CLI_EVAL_PROJECT_ID: ${{ secrets.EVAL_PROJECT_ID }}
+
+      - name: Eval results detail (on failure)
+        if: failure() && steps.evals.outcome == 'failure'
+        run: |
+          echo "=== Eval results directory ==="
+          RESULTS_DIR="packages/cli/evals/results"
+          if [ -d "$RESULTS_DIR" ]; then
+            echo "Latest run:"
+            LATEST=$(ls -t "$RESULTS_DIR/cli" 2>/dev/null | head -1)
+            if [ -n "$LATEST" ]; then
+              echo "  $RESULTS_DIR/cli/$LATEST"
+              for f in "$RESULTS_DIR/cli/$LATEST"/*/summary.json "$RESULTS_DIR/cli/$LATEST"/*/run-*/outputs/eval.txt; do
+                if [ -f "$f" ]; then
+                  echo ""
+                  echo "--- $f ---"
+                  head -c 8000 "$f" | cat
+                  [ $(wc -c < "$f") -gt 8000 ] && echo "... (truncated)"
+                fi
+              done
+            fi
+          else
+            echo "No results directory found."
+          fi

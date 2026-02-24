@@ -26,6 +26,7 @@ import { addToGitIgnore } from '../link/add-to-gitignore';
 import type { RepoProjectConfig } from '../link/repo';
 import output from '../../output-manager';
 import pull from '../../commands/env/pull';
+import { resolveProjectCwd } from './find-project-root';
 
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
@@ -242,6 +243,8 @@ export async function getLinkedProject(
   client: Client,
   path = client.cwd
 ): Promise<ProjectLinkResult> {
+  path = await resolveProjectCwd(path);
+
   const VERCEL_ORG_ID = getPlatformEnv('ORG_ID');
   const VERCEL_PROJECT_ID = getPlatformEnv('PROJECT_ID');
   const shouldUseEnv = Boolean(VERCEL_ORG_ID && VERCEL_PROJECT_ID);

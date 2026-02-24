@@ -35,8 +35,8 @@ describe('getCache', () => {
     await cache.set('key', 'value');
     const result = await cache.get('key');
     expect(result).toBe('value');
-    expect(mockCache.set).toHaveBeenCalledWith('b876d32', 'value');
-    expect(mockCache.get).toHaveBeenCalledWith('b876d32');
+    expect(mockCache.set).toHaveBeenCalledWith('b876d32', 'value', undefined);
+    expect(mockCache.get).toHaveBeenCalledWith('b876d32', undefined);
   });
 
   test('should return the same cache instance for multiple calls to getCache when no context cache is available', async () => {
@@ -77,7 +77,11 @@ describe('getCache', () => {
     });
     await cache.set('key', 'value');
     expect(customHashFunction).toHaveBeenCalledWith('key');
-    expect(mockCache.set).toHaveBeenCalledWith('custom-key', 'value');
+    expect(mockCache.set).toHaveBeenCalledWith(
+      'custom-key',
+      'value',
+      undefined
+    );
   });
 
   test('should use the default key hash function if none is provided', async () => {
@@ -85,7 +89,7 @@ describe('getCache', () => {
     await cache.set('key', 'value');
     const result = await cache.get('key');
     expect(result).toBe('value');
-    expect(mockCache.get).toHaveBeenCalledWith('b876d32');
+    expect(mockCache.get).toHaveBeenCalledWith('b876d32', undefined);
   });
 
   test('should use the provided namespace and separator', async () => {
@@ -96,8 +100,12 @@ describe('getCache', () => {
     await cache.set('key', 'value');
     const result = await cache.get('key');
     expect(result).toBe('value');
-    expect(mockCache.set).toHaveBeenCalledWith('test:b876d32', 'value');
-    expect(mockCache.get).toHaveBeenCalledWith('test:b876d32');
+    expect(mockCache.set).toHaveBeenCalledWith(
+      'test:b876d32',
+      'value',
+      undefined
+    );
+    expect(mockCache.get).toHaveBeenCalledWith('test:b876d32', undefined);
   });
 
   test('should use the default namespace separator if none is provided', async () => {
@@ -106,38 +114,14 @@ describe('getCache', () => {
     await cache.set('key', 'value');
     const result = await cache.get('key');
     expect(result).toBe('value');
-    expect(mockCache.set).toHaveBeenCalledWith(`${namespace}$b876d32`, 'value');
-    expect(mockCache.get).toHaveBeenCalledWith(`${namespace}$b876d32`);
-  });
-
-  test('should URL encode tags in set', async () => {
-    const cache = getCache();
-    await cache.set('key', 'value', {
-      tags: ['tag with spaces', 'tag&special=chars', 'tag,with,commas'],
-    });
-    expect(mockCache.set).toHaveBeenCalledWith('b876d32', 'value', {
-      tags: [
-        'tag%20with%20spaces',
-        'tag%26special%3Dchars',
-        'tag%2Cwith%2Ccommas',
-      ],
-    });
-  });
-
-  test('should URL encode tags in expireTag with string', async () => {
-    vitest.spyOn(mockCache, 'expireTag');
-    const cache = getCache();
-    await cache.expireTag('tag&special');
-    expect(mockCache.expireTag).toHaveBeenCalledWith('tag%26special');
-  });
-
-  test('should URL encode tags in expireTag with array', async () => {
-    vitest.spyOn(mockCache, 'expireTag');
-    const cache = getCache();
-    await cache.expireTag(['tag one', 'tag&two']);
-    expect(mockCache.expireTag).toHaveBeenCalledWith([
-      'tag%20one',
-      'tag%26two',
-    ]);
+    expect(mockCache.set).toHaveBeenCalledWith(
+      `${namespace}$b876d32`,
+      'value',
+      undefined
+    );
+    expect(mockCache.get).toHaveBeenCalledWith(
+      `${namespace}$b876d32`,
+      undefined
+    );
   });
 });

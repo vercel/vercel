@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { formatDynamicExamples } from '../../../../src/util/integration/format-dynamic-examples';
 import { addSubcommand } from '../../../../src/commands/integration/command';
 import type { IntegrationProduct } from '../../../../src/util/integration/types';
@@ -31,6 +31,14 @@ const productWithSchema: IntegrationProduct[] = [
 ];
 
 describe('formatDynamicExamples', () => {
+  beforeEach(() => {
+    process.env.FF_AUTO_PROVISION_INSTALL = '1';
+  });
+
+  afterEach(() => {
+    delete process.env.FF_AUTO_PROVISION_INSTALL;
+  });
+
   it('should include an example for every addSubcommand option', () => {
     const output = stripAnsi(
       formatDynamicExamples('test-integration', productWithSchema)

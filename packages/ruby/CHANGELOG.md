@@ -1,5 +1,11 @@
 # @vercel/ruby
 
+## 2.3.2
+
+### Patch Changes
+
+- [services] strip services route prefix in ruby runtime by mounting the app at `SCRIPT_NAME` when service route prefix is auto configured ([#15099](https://github.com/vercel/vercel/pull/15099))
+
 ## 2.3.1
 
 ### Patch Changes
