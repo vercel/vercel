@@ -553,7 +553,7 @@ except Exception:
 
 if is_cron_service():
     try:
-        __vc_module.app = bootstrap_cron_service_app(__vc_module)
+        __vc_module.__dict__["app"] = bootstrap_cron_service_app(__vc_module)
         __vc_variables = dir(__vc_module)
     except Exception:
         _stderr("Error bootstrapping cron service app:")

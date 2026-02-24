@@ -23,6 +23,11 @@ def is_cron_service() -> bool:
 
 def bootstrap_cron_service_app(module: object) -> ASGI:
     entrypoint_abs = os.environ.get("__VC_HANDLER_ENTRYPOINT_ABS")
+    if not entrypoint_abs:
+        raise RuntimeError(
+            "Unable to bootstrap cron service. "
+            "The entrypoint absolute path is not set."
+        )
 
     if not has_main_guard(entrypoint_abs):
         raise RuntimeError(
