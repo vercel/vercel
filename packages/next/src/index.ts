@@ -1833,12 +1833,6 @@ export const build: BuildV2 = async buildOptions => {
       isApiLambda: boolean;
       lambdaIdentifier: string;
       lambdaCombinedBytes: number;
-      memory?: number;
-      maxDuration?: number;
-      regions?: string[];
-      functionFailoverRegions?: string[];
-      supportsCancellation?: boolean;
-      experimentalTriggers?: NodejsLambda['experimentalTriggers'];
     };
     const apiLambdaGroups: Array<LambdaGroup> = [];
     const pageLambdaGroups: Array<LambdaGroup> = [];
@@ -1970,12 +1964,6 @@ export const build: BuildV2 = async buildOptions => {
                   routeIsApi ? 'API' : 'PAGE'
                 }_LAMBDA_${lambdaGroupIndex}`
               ),
-              memory: group.memory,
-              maxDuration: group.maxDuration,
-              regions: group.regions,
-              functionFailoverRegions: group.functionFailoverRegions,
-              supportsCancellation: group.supportsCancellation,
-              experimentalTriggers: group.experimentalTriggers,
             };
           }
 
@@ -2369,12 +2357,6 @@ export const build: BuildV2 = async buildOptions => {
                 operationType,
                 runtime: nodeVersion.runtime,
                 nextVersion,
-                memory: group.memory,
-                maxDuration: group.maxDuration,
-                regions: group.regions,
-                functionFailoverRegions: group.functionFailoverRegions,
-                supportsCancellation: group.supportsCancellation,
-                experimentalTriggers: group.experimentalTriggers,
               });
           }
         )
