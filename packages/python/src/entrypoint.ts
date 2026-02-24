@@ -33,7 +33,7 @@ function getCandidateEntrypointsInDirs(dirs: string[]) {
 
 export async function getPyprojectEntrypoint(
   workPath: string
-): Promise<[string, string | null] | null> {
+): Promise<[string, string] | null> {
   const pyprojectData = await readConfigFile<{
     project?: { scripts?: Record<string, unknown> };
   }>(join(workPath, 'pyproject.toml'));
@@ -72,7 +72,7 @@ export async function getPyprojectEntrypoint(
 async function findValidEntrypoint(
   fsFiles: Record<string, FileFsRef>,
   candidates: string[]
-): Promise<[string, string | null] | null> {
+): Promise<[string, string] | null> {
   for (const candidate of candidates) {
     if (fsFiles[candidate]) {
       const entryVar = await getGenericEntrypointVariable(
@@ -93,7 +93,7 @@ async function findValidEntrypoint(
 export async function detectGenericPythonEntrypoint(
   workPath: string,
   configuredEntrypoint: string
-): Promise<[string, string | null] | null> {
+): Promise<[string, string] | null> {
   const entry = configuredEntrypoint.endsWith('.py')
     ? configuredEntrypoint
     : `${configuredEntrypoint}.py`;
@@ -131,7 +131,7 @@ export async function detectGenericPythonEntrypoint(
 export async function detectDjangoPythonEntrypoint(
   workPath: string,
   configuredEntrypoint: string
-): Promise<[string, string | null] | null> {
+): Promise<[string, string] | null> {
   const entry = configuredEntrypoint.endsWith('.py')
     ? configuredEntrypoint
     : `${configuredEntrypoint}.py`;
@@ -198,7 +198,7 @@ export async function detectPythonEntrypoint(
   framework: PythonFramework,
   workPath: string,
   configuredEntrypoint: string
-): Promise<[string, string | null] | null> {
+): Promise<[string, string] | null> {
   const result =
     framework === 'django'
       ? await detectDjangoPythonEntrypoint(workPath, configuredEntrypoint)
