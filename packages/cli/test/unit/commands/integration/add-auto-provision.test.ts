@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import open from 'open';
 import integrationCommand from '../../../../src/commands/integration';
+import install from '../../../../src/commands/install';
 import pull from '../../../../src/commands/env/pull';
 import { connectResourceToProject } from '../../../../src/util/integration-resource/connect-resource-to-project';
 import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
@@ -1574,6 +1575,253 @@ describe('integration add (auto-provision)', () => {
     });
   });
 
+  describe('--installation-id flag', () => {
+    it('should show error with installation list when multiple installations exist', async () => {
+      useAutoProvision({ responseKey: 'multiple_installations' });
+
+      client.setArgv('integration', 'add', 'acme');
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'Multiple installations found for "acme"'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(1);
+      const stderr = client.stderr.getFullOutput();
+      expect(stderr).toContain('icfg_marketplace_1');
+      expect(stderr).toContain('icfg_external_1');
+      expect(stderr).toContain('--installation-id');
+    });
+
+    it('should include externalId and status in the installation list', async () => {
+      useAutoProvision({ responseKey: 'multiple_installations' });
+
+      client.setArgv('integration', 'add', 'acme');
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'Multiple installations found for "acme"'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(1);
+      const stderr = client.stderr.getFullOutput();
+      expect(stderr).toContain('externalId=aws-account-123');
+      expect(stderr).toContain('status=active');
+    });
+
+    it('should provision successfully with --installation-id', async () => {
+      const { requestBodies } = useAutoProvision({
+        responseKey: 'multiple_installations',
+      });
+
+      client.setArgv(
+        'integration',
+        'add',
+        'acme',
+        '--installation-id',
+        'icfg_marketplace_1'
+      );
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'Acme Product successfully provisioned: acme-gray-apple'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+      expect(requestBodies[0]).toMatchObject({
+        installationId: 'icfg_marketplace_1',
+      });
+    });
+
+    it('should pass installationId in request body', async () => {
+      const { requestBodies } = useAutoProvision({
+        responseKey: 'provisioned',
+      });
+
+      client.setArgv(
+        'integration',
+        'add',
+        'acme',
+        '--installation-id',
+        'icfg_custom'
+      );
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'Acme Product successfully provisioned: acme-gray-apple'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+      expect(requestBodies[0]).toMatchObject({
+        installationId: 'icfg_custom',
+      });
+    });
+
+    it('should include product slug in the suggested command when using slash syntax', async () => {
+      useAutoProvision({ responseKey: 'multiple_installations' });
+
+      client.setArgv('integration', 'add', 'acme-two-products/acme-a');
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'vercel integration add acme-two-products/acme-a --installation-id'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(1);
+    });
+  });
+
+  describe('--installation-id FF gating', () => {
+    it('should not show --installation-id in --help when FF is off', async () => {
+      delete process.env.FF_AUTO_PROVISION_INSTALL;
+      client.setArgv('integration', 'add', '--help');
+      const exitCode = await integrationCommand(client);
+      expect(exitCode).toEqual(0);
+      const stderr = client.stderr.getFullOutput();
+      expect(stderr).not.toContain('--installation-id');
+    });
+
+    it('should show --installation-id in --help when FF is on', async () => {
+      process.env.FF_AUTO_PROVISION_INSTALL = '1';
+      client.setArgv('integration', 'add', '--help');
+      const exitCode = await integrationCommand(client);
+      expect(exitCode).toEqual(0);
+      const stderr = client.stderr.getFullOutput();
+      expect(stderr).toContain('--installation-id');
+    });
+
+    it('should reject --installation-id when FF is off', async () => {
+      delete process.env.FF_AUTO_PROVISION_INSTALL;
+      client.setArgv(
+        'integration',
+        'add',
+        'acme',
+        '--installation-id',
+        'icfg_123'
+      );
+      const exitCode = await integrationCommand(client);
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput(
+        'Unknown or unexpected option: --installation-id'
+      );
+    });
+  });
+
+  describe('--installation-id FF gating (vc install alias)', () => {
+    it('should not show --installation-id in vc install --help when FF is off', async () => {
+      delete process.env.FF_AUTO_PROVISION_INSTALL;
+      client.setArgv('install', '--help');
+      const exitCode = await install(client);
+      expect(exitCode).toEqual(0);
+      const stderr = client.stderr.getFullOutput();
+      expect(stderr).not.toContain('--installation-id');
+    });
+
+    it('should show --installation-id in vc install --help when FF is on', async () => {
+      process.env.FF_AUTO_PROVISION_INSTALL = '1';
+      client.setArgv('install', '--help');
+      const exitCode = await install(client);
+      expect(exitCode).toEqual(0);
+      const stderr = client.stderr.getFullOutput();
+      expect(stderr).toContain('--installation-id');
+    });
+
+    it('should reject --installation-id in vc install when FF is off', async () => {
+      delete process.env.FF_AUTO_PROVISION_INSTALL;
+      client.setArgv('install', 'acme', '--installation-id', 'icfg_123');
+      const exitCode = await install(client);
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput(
+        'Unknown or unexpected option: --installation-id'
+      );
+    });
+
+    it('should provision successfully via vc install with --installation-id', async () => {
+      process.env.FF_AUTO_PROVISION_INSTALL = '1';
+      const { requestBodies } = useAutoProvision({
+        responseKey: 'multiple_installations',
+      });
+
+      client.setArgv(
+        'install',
+        'acme',
+        '--installation-id',
+        'icfg_marketplace_1'
+      );
+      const exitCodePromise = install(client);
+
+      await expect(client.stderr).toOutput(
+        'Acme Product successfully provisioned: acme-gray-apple'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+      expect(requestBodies[0]).toMatchObject({
+        installationId: 'icfg_marketplace_1',
+      });
+    });
+  });
+
+  describe('command name in error messages', () => {
+    it('should use "vercel integration add" in multiple installations error via integration add', async () => {
+      useAutoProvision({ responseKey: 'multiple_installations' });
+
+      client.setArgv('integration', 'add', 'acme');
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'vercel integration add acme --installation-id'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(1);
+    });
+
+    it('should use "vercel install" in multiple installations error via vc install', async () => {
+      useAutoProvision({ responseKey: 'multiple_installations' });
+
+      client.setArgv('install', 'acme');
+      const exitCodePromise = install(client);
+
+      await expect(client.stderr).toOutput(
+        'vercel install acme --installation-id'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(1);
+      const stderr = client.stderr.getFullOutput();
+      expect(stderr).not.toContain('vercel integration add');
+    });
+
+    it('should use "vercel install" in multiple products error via vc install', async () => {
+      useAutoProvision({ responseKey: 'provisioned' });
+
+      client.setArgv('install', 'acme-two-products');
+      (client.stdin as any).isTTY = false;
+      const exitCode = await install(client);
+      expect(exitCode).toEqual(1);
+      const stderr = client.stderr.getFullOutput();
+      expect(stderr).toContain('vercel install acme-two-products/');
+      expect(stderr).not.toContain('vercel integration add');
+    });
+
+    it('should use "vercel integration add" in multiple products error via integration add', async () => {
+      useAutoProvision({ responseKey: 'provisioned' });
+
+      client.setArgv('integration', 'add', 'acme-two-products');
+      (client.stdin as any).isTTY = false;
+      const exitCode = await integrationCommand(client);
+      expect(exitCode).toEqual(1);
+      const stderr = client.stderr.getFullOutput();
+      expect(stderr).toContain('vercel integration add acme-two-products/');
+    });
+  });
+
   describe('--environment flag', () => {
     beforeEach(() => {
       useAutoProvision({ responseKey: 'provisioned' });
@@ -1606,7 +1854,8 @@ describe('integration add (auto-provision)', () => {
         client,
         'vercel-integration-add',
         'resource_123',
-        ['production']
+        ['production'],
+        undefined
       );
     });
 
@@ -1639,7 +1888,8 @@ describe('integration add (auto-provision)', () => {
         client,
         'vercel-integration-add',
         'resource_123',
-        ['production', 'preview']
+        ['production', 'preview'],
+        undefined
       );
     });
 
@@ -1672,7 +1922,8 @@ describe('integration add (auto-provision)', () => {
         client,
         'vercel-integration-add',
         'resource_123',
-        ['production']
+        ['production'],
+        undefined
       );
     });
 
@@ -1697,7 +1948,8 @@ describe('integration add (auto-provision)', () => {
         client,
         'vercel-integration-add',
         'resource_123',
-        ['production', 'preview', 'development']
+        ['production', 'preview', 'development'],
+        undefined
       );
     });
 
@@ -1722,7 +1974,8 @@ describe('integration add (auto-provision)', () => {
         client,
         'vercel-integration-add',
         'resource_123',
-        ['development']
+        ['development'],
+        undefined
       );
     });
 
@@ -1749,6 +2002,142 @@ describe('integration add (auto-provision)', () => {
       expect(exitCode).toEqual(1);
       await expect(client.stderr).toOutput(
         'Error: Invalid environment value: "staging", "test". Must be one of: production, preview, development'
+      );
+    });
+  });
+
+  describe('--prefix flag', () => {
+    beforeEach(() => {
+      useAutoProvision({ responseKey: 'provisioned' });
+    });
+
+    it('should pass prefix to connectResourceToProject', async () => {
+      useProject({
+        ...defaultProject,
+        id: 'vercel-integration-add',
+        name: 'vercel-integration-add',
+      });
+      const cwd = setupUnitFixture('vercel-integration-add');
+      client.cwd = cwd;
+      client.setArgv('integration', 'add', 'acme', '--prefix', 'NEON2_');
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'Acme Product successfully provisioned: acme-gray-apple'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+      expect(connectMock).toHaveBeenCalledWith(
+        client,
+        'vercel-integration-add',
+        'resource_123',
+        ['production', 'preview', 'development'],
+        { envVarPrefix: 'NEON2_' }
+      );
+    });
+
+    it('should not pass prefix to connectResourceToProject when not provided', async () => {
+      useProject({
+        ...defaultProject,
+        id: 'vercel-integration-add',
+        name: 'vercel-integration-add',
+      });
+      const cwd = setupUnitFixture('vercel-integration-add');
+      client.cwd = cwd;
+      client.setArgv('integration', 'add', 'acme');
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'Acme Product successfully provisioned: acme-gray-apple'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+      expect(connectMock).toHaveBeenCalledWith(
+        client,
+        'vercel-integration-add',
+        'resource_123',
+        ['production', 'preview', 'development'],
+        undefined
+      );
+    });
+
+    it('should track prefix telemetry when --prefix is used', async () => {
+      client.setArgv('integration', 'add', 'acme', '--prefix', 'NEON2_');
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'Acme Product successfully provisioned'
+      );
+
+      await exitCodePromise;
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'subcommand:add',
+          value: 'add',
+        },
+        {
+          key: 'option:prefix',
+          value: '[REDACTED]',
+        },
+        {
+          key: 'argument:integration',
+          value: 'acme',
+        },
+        {
+          key: 'output:marketplace_install_flow_started',
+          value: expect.stringContaining('"integration_slug":"acme"'),
+        },
+        {
+          key: 'output:marketplace_checkout_plan_selected',
+          value: expect.stringContaining(
+            '"plan_selection_method":"server_default"'
+          ),
+        },
+        {
+          key: 'output:marketplace_checkout_provisioning_started',
+          value: expect.stringContaining('"integration_slug":"acme"'),
+        },
+        {
+          key: 'output:marketplace_checkout_provisioning_completed',
+          value: expect.stringContaining('"resource_id":"resource_123"'),
+        },
+      ]);
+    });
+
+    it('should work with --prefix and --environment together', async () => {
+      useProject({
+        ...defaultProject,
+        id: 'vercel-integration-add',
+        name: 'vercel-integration-add',
+      });
+      const cwd = setupUnitFixture('vercel-integration-add');
+      client.cwd = cwd;
+      client.setArgv(
+        'integration',
+        'add',
+        'acme',
+        '--prefix',
+        'NEON2_',
+        '--environment',
+        'production'
+      );
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'Acme Product successfully provisioned: acme-gray-apple'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+      expect(connectMock).toHaveBeenCalledWith(
+        client,
+        'vercel-integration-add',
+        'resource_123',
+        ['production'],
+        { envVarPrefix: 'NEON2_' }
       );
     });
   });

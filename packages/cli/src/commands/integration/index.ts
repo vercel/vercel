@@ -77,19 +77,29 @@ export default async function main(client: Client) {
 
   switch (subcommand) {
     case 'add': {
+      const ffAutoProvision = process.env.FF_AUTO_PROVISION_INSTALL === '1';
+      const addCmd = ffAutoProvision
+        ? addSubcommand
+        : {
+            ...addSubcommand,
+            options: addSubcommand.options.filter(
+              o => o.name !== 'installation-id'
+            ),
+          };
+
       if (needHelp) {
         telemetry.trackCliFlagHelp('integration', subcommandOriginal);
 
         const printed = await printAddDynamicHelp(
           client,
           subArgs[0],
-          addSubcommand,
+          addCmd,
           cmd => printHelp(cmd),
           'integration add'
         );
 
         if (!printed) {
-          printHelp(addSubcommand);
+          printHelp(addCmd);
         }
 
         return 0;
@@ -105,7 +115,18 @@ export default async function main(client: Client) {
         printError(error);
         return 1;
       }
-      return add(client, addParsedArgs.args, addParsedArgs.flags);
+
+      if (!ffAutoProvision && addParsedArgs.flags['--installation-id']) {
+        output.error('Unknown or unexpected option: --installation-id');
+        return 1;
+      }
+
+      return add(
+        client,
+        addParsedArgs.args,
+        addParsedArgs.flags,
+        'integration add'
+      );
     }
     case 'list': {
       if (needHelp) {
