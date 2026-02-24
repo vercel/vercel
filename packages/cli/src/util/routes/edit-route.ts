@@ -22,6 +22,7 @@ interface EditRouteInput {
       continue?: boolean;
       caseSensitive?: boolean;
       check?: boolean;
+      env?: string[];
     };
   };
   /** If true, restores the route from production to staging */

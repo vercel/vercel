@@ -138,7 +138,7 @@ export interface Transform {
   type: TransformType;
   op: TransformOp;
   target: { key: string };
-  args?: string;
+  args?: string | string[];
   /** Environment variables referenced in args. The proxy only expands listed vars. */
   env?: string[];
 }
