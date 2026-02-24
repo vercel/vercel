@@ -24,6 +24,7 @@
     "vc": "pnpm vercel",
     "type-check": "tsc --noEmit",
     "test:evals": "tsx evals/run.ts",
+    "test:evals:smoke": "tsx evals/run.ts smoke --smoke",
     "test:evals:dry": "tsx evals/run.ts --dry"
   },
   "bin": {
