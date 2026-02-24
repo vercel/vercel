@@ -249,7 +249,7 @@ export default async function reorder(client: Client, argv: string[]) {
     } else if (error.code === 'routes_limit_exceeded') {
       output.error(
         error.message ||
-          'Route limit reached. Delete some routes before adding more.'
+          'Route limit reached. Delete some routes before making changes.'
       );
     } else if (error.status === 429) {
       output.error('Rate limited. Please wait a moment and try again.');

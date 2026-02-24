@@ -82,11 +82,11 @@ describe('routes export', () => {
     await expect(client.stderr).toOutput('No route found');
   });
 
-  it('should error when no routes exist', async () => {
+  it('should handle empty project gracefully', async () => {
     useRoutes(0);
     client.setArgv('routes', 'export');
     const exitCode = await routes(client);
-    expect(exitCode).toEqual(1);
+    expect(exitCode).toEqual(0);
     await expect(client.stderr).toOutput('No routes found');
   });
 

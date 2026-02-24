@@ -442,7 +442,7 @@ export default async function add(client: Client, argv: string[]) {
     },
   };
 
-  // --- Populate env fields for $VAR references ---
+  // Populate env fields for $VAR references
   populateRouteEnv(routeInput.route);
 
   // --- Create the route ---

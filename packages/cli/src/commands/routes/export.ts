@@ -55,7 +55,8 @@ function routesToVercelTs(rules: RoutingRule[]): string {
       .join('\n');
 
     if (r.description) {
-      return `    // ${r.description}\n    ${indented}`;
+      const safeDesc = r.description.replace(/\n/g, ' ');
+      return `    // ${safeDesc}\n    ${indented}`;
     }
     return `    ${indented}`;
   });
@@ -82,7 +83,7 @@ export default async function exportRoutes(client: Client, argv: string[]) {
   const teamId = org.type === 'team' ? org.id : undefined;
   const { args, flags } = parsed;
   const format = (flags['--format'] as string) || 'json';
-  const routeName = args[0];
+  const nameOrId = args[0];
 
   const validFormats = ['json', 'ts'];
   if (!validFormats.includes(format)) {
@@ -99,24 +100,26 @@ export default async function exportRoutes(client: Client, argv: string[]) {
     const { routes } = await getRoutes(client, project.id, { teamId });
 
     if (routes.length === 0) {
-      output.error('No routes found in this project.');
-      return 1;
+      output.log(
+        `No routes found. Create one with ${getCommandName('routes add')}.`
+      );
+      return 0;
     }
 
     // Filter by name if specified
     let routesToExport = routes;
-    if (routeName) {
-      const query = routeName.toLowerCase();
+    if (nameOrId) {
+      const query = nameOrId.toLowerCase();
       routesToExport = routes.filter(
         r =>
           r.name.toLowerCase() === query ||
           r.name.toLowerCase().includes(query) ||
-          r.id === routeName
+          r.id === nameOrId
       );
 
       if (routesToExport.length === 0) {
         output.error(
-          `No route found matching "${routeName}". Run ${getCommandName('routes list')} to see all routes.`
+          `No route found matching "${nameOrId}". Run ${getCommandName('routes list')} to see all routes.`
         );
         return 1;
       }
@@ -136,7 +139,7 @@ export default async function exportRoutes(client: Client, argv: string[]) {
 
     // Write to stdout so it can be piped
     output.stopSpinner();
-    client.stdout.write(result + '\n');
+    client.stdout.write(result.trimEnd() + '\n');
 
     return 0;
   } catch (e: unknown) {
