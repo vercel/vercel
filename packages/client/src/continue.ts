@@ -4,7 +4,7 @@ import fs from 'fs-extra';
 import type { Agent } from 'http';
 import type { Deployment, DeploymentEventType } from './types';
 import { checkDeploymentStatus } from './check-deployment-status';
-import { fetch, buildFileTree, createDebug, prepareFiles } from './utils';
+import { fetchApi, buildFileTree, createDebug, prepareFiles } from './utils';
 import { hashes, mapToObject, FilesMap } from './utils/hashes';
 import { isReady, isAliasAssigned } from './utils/ready-state';
 import { uploadFiles, UploadProgress } from './upload';
@@ -180,7 +180,7 @@ async function postContinue(options: {
   const debug = createDebug(options.debug);
 
   debug(`Calling continue deployment endpoint for ${options.deploymentId}`);
-  const response = await fetch(
+  const response = await fetchApi(
     `/deployments/${options.deploymentId}/continue${
       options.teamId ? `?teamId=${options.teamId}` : ''
     }`,

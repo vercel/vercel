@@ -324,7 +324,7 @@ interface FetchOpts extends RequestInit {
   userAgent?: string;
 }
 
-export const fetch = async (
+export const fetchApi = async (
   url: string,
   token: string,
   opts: FetchOpts = {},
