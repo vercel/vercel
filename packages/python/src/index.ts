@@ -551,10 +551,10 @@ from vercel_runtime.vc_init import vc_handler
     hasCustomCommand,
   });
 
-  const { overLambdaLimit, allVendorFiles } =
+  const { runtimeInstallEnabled, allVendorFiles } =
     await depExternalizer.analyze(files);
 
-  if (overLambdaLimit) {
+  if (runtimeInstallEnabled) {
     await depExternalizer.generateBundle(files);
   } else {
     // Bundle all dependencies since we're not doing runtime installation

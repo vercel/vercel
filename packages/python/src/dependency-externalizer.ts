@@ -93,7 +93,7 @@ export class PythonDependencyExternalizer {
    * Must be called before generateBundle().
    */
   async analyze(files: Files): Promise<{
-    overLambdaLimit: boolean;
+    runtimeInstallEnabled: boolean;
     allVendorFiles: Files;
   }> {
     this.allVendorFiles = await mirrorPackagesIntoVendor({
@@ -111,9 +111,12 @@ export class PythonDependencyExternalizer {
     const totalBundleSizeMB = (this.totalBundleSize / (1024 * 1024)).toFixed(2);
     debug(`Total bundle size: ${totalBundleSizeMB} MB`);
 
-    const overLambdaLimit = this.shouldEnableRuntimeInstall();
+    const runtimeInstallEnabled = this.shouldEnableRuntimeInstall();
 
-    if (overLambdaLimit && this.hasCustomCommand) {
+    if (
+      this.totalBundleSize > LAMBDA_SIZE_THRESHOLD_BYTES &&
+      this.hasCustomCommand
+    ) {
       const limitMB = (LAMBDA_SIZE_THRESHOLD_BYTES / (1024 * 1024)).toFixed(0);
       throw new NowBuildError({
         code: 'LAMBDA_SIZE_EXCEEDED',
@@ -130,7 +133,7 @@ export class PythonDependencyExternalizer {
       });
     }
 
-    return { overLambdaLimit, allVendorFiles: this.allVendorFiles };
+    return { runtimeInstallEnabled, allVendorFiles: this.allVendorFiles };
   }
 
   /**
