@@ -23,10 +23,7 @@ import {
 } from '../../util/agent-output';
 import type { DevTelemetryClient } from '../../util/telemetry/commands/dev';
 import { VERCEL_OIDC_TOKEN } from '../../util/env/constants';
-import {
-  tryDetectServices,
-  isExperimentalServicesEnabled,
-} from '../../util/projects/detect-services';
+import { tryDetectServices } from '../../util/projects/detect-services';
 import { displayDetectedServices } from '../../util/input/display-services';
 import { acquireDevLock, releaseDevLock } from '../../util/dev/dev-lock';
 import { resolveProjectCwd } from '../../util/projects/find-project-root';
@@ -129,16 +126,15 @@ export default async function dev(
   }
 
   let services: ResolvedService[] | undefined;
-  if (isExperimentalServicesEnabled()) {
-    const result = await tryDetectServices(cwd);
-    if (result && result.services.length > 0) {
-      displayDetectedServices(result.services);
-      services = result.services;
-    }
+  const servicesResult = await tryDetectServices(cwd);
+  const foundServices = servicesResult && servicesResult.services.length > 0;
+  if (foundServices) {
+    displayDetectedServices(servicesResult.services);
+    services = servicesResult.services;
   }
 
   let lockAcquired = false;
-  if (isExperimentalServicesEnabled()) {
+  if (foundServices) {
     const port = typeof listen[0] === 'number' ? listen[0] : 0;
     const lockResult = await acquireDevLock(cwd, port);
 
