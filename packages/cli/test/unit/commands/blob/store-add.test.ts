@@ -220,7 +220,7 @@ describe('blob store add', () => {
         'proj_123',
         'store_test123',
         ['production', 'preview', 'development'],
-        'org_123'
+        { accountId: 'org_123' }
       );
       expect(mockedOutput.success).toHaveBeenCalledWith(
         'Blob store created: test-store (store_test123)'
@@ -255,7 +255,7 @@ describe('blob store add', () => {
         'proj_123',
         'store_test123',
         ['production'],
-        'org_123'
+        { accountId: 'org_123' }
       );
     });
 

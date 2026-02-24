@@ -1,6 +1,6 @@
 {
   "name": "vercel",
-  "version": "50.22.1",
+  "version": "50.23.1",
   "type": "module",
   "preferGlobal": true,
   "license": "Apache-2.0",
@@ -24,6 +24,7 @@
     "vc": "pnpm vercel",
     "type-check": "tsc --noEmit",
     "test:evals": "tsx evals/run.ts",
+    "test:evals:smoke": "tsx evals/run.ts smoke --smoke",
     "test:evals:dry": "tsx evals/run.ts --dry"
   },
   "bin": {
