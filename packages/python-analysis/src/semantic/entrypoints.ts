@@ -61,9 +61,8 @@ export async function getStringConstant(
   return mod.getStringConstant(source, name) ?? null;
 }
 
-/** Regex to detect os.environ.setdefault('DJANGO_SETTINGS_MODULE', '...') so we can skip WASM when absent */
-const DJANGO_SETTINGS_MODULE_PATTERN_RE =
-  /os\.environ\.setdefault\s*\(\s*['"]DJANGO_SETTINGS_MODULE['"]\s*,\s*['"][^'"]*['"]\s*\)/;
+/** Simple check for DJANGO_SETTINGS_MODULE presence so we can skip WASM when absent */
+const DJANGO_SETTINGS_MODULE_PATTERN_RE = /DJANGO_SETTINGS_MODULE/;
 
 /**
  * Parse manage.py content for DJANGO_SETTINGS_MODULE (e.g. from
