@@ -1,5 +1,22 @@
 # vercel
 
+## 50.23.0
+
+### Minor Changes
+
+- [dev] allow to skip authentication and project linking for `vc dev` by setting `VERCEL_EXPERIMENTAL_DEV_SKIP_LINK` env var. ([#15122](https://github.com/vercel/vercel/pull/15122))
+
+- [services] detect project root to prevent accidental setup of a service as a standalone project. ([#15187](https://github.com/vercel/vercel/pull/15187))
+
+### Patch Changes
+
+- Fix re-authentication for teams with missing scope to use the device code flow instead of the deprecated SSO redirect flow. ([#15074](https://github.com/vercel/vercel/pull/15074))
+
+- Add CLI eval for vc env command ([#15118](https://github.com/vercel/vercel/pull/15118))
+
+- Updated dependencies []:
+  - @vercel/node@5.6.7
+
 ## 50.22.3
 
 ### Patch Changes
