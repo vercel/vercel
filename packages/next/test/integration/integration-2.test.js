@@ -860,3 +860,78 @@ describe('determinism', () => {
     });
   });
 });
+
+describe('preferredRegion', () => {
+  let buildResult;
+
+  beforeAll(async () => {
+    const result = await runBuildLambda(
+      path.join(__dirname, 'preferred-region')
+    );
+    buildResult = result.buildResult;
+  });
+
+  describe('edge runtime', () => {
+    it('should set regions to undefined for "home" when VERCEL_FUNCTION_REGIONS is not set', () => {
+      const edgeFunction = buildResult.output['edge-home'];
+      expect(edgeFunction).toBeDefined();
+      expect(edgeFunction.type).toBe('EdgeFunction');
+      expect(edgeFunction.regions).toBeUndefined();
+    });
+
+    it('should set regions to "all" for "global"', () => {
+      const edgeFunction = buildResult.output['edge-global'];
+      expect(edgeFunction).toBeDefined();
+      expect(edgeFunction.type).toBe('EdgeFunction');
+      expect(edgeFunction.regions).toBe('all');
+    });
+
+    it('should set regions to "auto" for "auto"', () => {
+      const edgeFunction = buildResult.output['edge-auto'];
+      expect(edgeFunction).toBeDefined();
+      expect(edgeFunction.type).toBe('EdgeFunction');
+      expect(edgeFunction.regions).toBe('auto');
+    });
+
+    it('should pass through specific region codes', () => {
+      const edgeFunction = buildResult.output['edge-specific'];
+      expect(edgeFunction).toBeDefined();
+      expect(edgeFunction.type).toBe('EdgeFunction');
+      expect(edgeFunction.regions).toEqual(['iad1', 'sfo1']);
+    });
+  });
+
+  describe('node runtime', () => {
+    // Note: preferredRegion for Node.js functions is not yet passed through
+    // to the Lambda's regions property. When this is implemented, these tests
+    // should be updated to assert the expected regions values.
+
+    it('should create Lambda for node runtime with home region', () => {
+      const lambda = buildResult.output['node-home'];
+      expect(lambda).toBeDefined();
+      expect(lambda.type).toBe('Lambda');
+      expect(lambda.regions).toBeUndefined();
+    });
+
+    it('should create Lambda for node runtime with global region', () => {
+      const lambda = buildResult.output['node-global'];
+      expect(lambda).toBeDefined();
+      expect(lambda.type).toBe('Lambda');
+      expect(lambda.regions).toBeUndefined();
+    });
+
+    it('should create Lambda for node runtime with auto region', () => {
+      const lambda = buildResult.output['node-auto'];
+      expect(lambda).toBeDefined();
+      expect(lambda.type).toBe('Lambda');
+      expect(lambda.regions).toBeUndefined();
+    });
+
+    it('should create Lambda for node runtime with specific regions', () => {
+      const lambda = buildResult.output['node-specific'];
+      expect(lambda).toBeDefined();
+      expect(lambda.type).toBe('Lambda');
+      expect(lambda.regions).toBeUndefined();
+    });
+  });
+});

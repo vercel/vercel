@@ -169,7 +169,7 @@ export default async function change(client: Client, argv: string[]) {
   if (newTeam.limited) {
     const samlEnabled = newTeam.saml?.connection?.state === 'active';
     await client.reauthenticate({
-      teamId: samlEnabled ? newTeam.id : null,
+      teamId: newTeam.id,
       scope: newTeam.slug,
       enforced: samlEnabled && newTeam.saml?.enforced === true,
     });

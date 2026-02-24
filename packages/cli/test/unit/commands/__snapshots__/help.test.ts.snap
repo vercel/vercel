@@ -3526,27 +3526,37 @@ exports[`help command > link help output snapshots > link help column width 40 1
 
   Options:
 
-  -p,  --project <NAME>          Specify a   
-                                 project name
-  -r,  --repo                    Link        
-                                 multiple    
-                                 projects    
-                                 based on Git
-                                 repository  
-                                 (alpha)     
-       --team <TEAM_ID_OR_SLUG>  Scope (team 
-                                 ID or slug) 
-                                 to link the 
-                                 project to  
-  -y,  --yes                     Skip        
-                                 questions   
-                                 when setting
-                                 up new      
-                                 project     
-                                 using       
-                                 default     
-                                 scope and   
-                                 settings    
+  -p,  --project <NAME_OR_ID>    Project  
+                                 name or  
+                                 ID to    
+                                 link to  
+                                 (required
+                                 for      
+                                 non-inte…
+  -r,  --repo                    Link     
+                                 multiple 
+                                 projects 
+                                 based on 
+                                 Git      
+                                 reposito…
+                                 (alpha)  
+       --team <TEAM_ID_OR_SLUG>  Scope:   
+                                 team ID  
+                                 or slug  
+                                 (use with
+                                 --project
+                                 for      
+                                 non-inte…
+  -y,  --yes                     Skip     
+                                 questions
+                                 when     
+                                 setting  
+                                 up new   
+                                 project  
+                                 using    
+                                 default  
+                                 scope and
+                                 settings 
 
 
   Global Options:
@@ -3607,6 +3617,10 @@ exports[`help command > link help output snapshots > link help column width 40 1
 
     $ vercel link --yes
 
+  - Non-interactive: link to an existing project (CI/agents)
+
+    $ vercel link --yes --team <team-id> --project <project-name-or-id>
+
   - Link a specific directory to a Vercel Project
 
     $ vercel link --cwd /path/to/project
@@ -3636,12 +3650,14 @@ exports[`help command > link help output snapshots > link help column width 80 1
 
   Options:
 
-  -p,  --project <NAME>          Specify a project name                              
-  -r,  --repo                    Link multiple projects based on Git repository      
-                                 (alpha)                                             
-       --team <TEAM_ID_OR_SLUG>  Scope (team ID or slug) to link the project to      
-  -y,  --yes                     Skip questions when setting up new project using    
-                                 default scope and settings                          
+  -p,  --project <NAME_OR_ID>    Project name or ID to link to (required for      
+                                 non-interactive)                                 
+  -r,  --repo                    Link multiple projects based on Git repository   
+                                 (alpha)                                          
+       --team <TEAM_ID_OR_SLUG>  Scope: team ID or slug (use with --project for   
+                                 non-interactive)                                 
+  -y,  --yes                     Skip questions when setting up new project using 
+                                 default scope and settings                       
 
 
   Global Options:
@@ -3669,6 +3685,10 @@ exports[`help command > link help output snapshots > link help column width 80 1
   - Link current directory with default options and skip questions
 
     $ vercel link --yes
+
+  - Non-interactive: link to an existing project (CI/agents)
+
+    $ vercel link --yes --team <team-id> --project <project-name-or-id>
 
   - Link a specific directory to a Vercel Project
 
@@ -3699,10 +3719,10 @@ exports[`help command > link help output snapshots > link help column width 120 
 
   Options:
 
-  -p,  --project <NAME>          Specify a project name                                                                      
-  -r,  --repo                    Link multiple projects based on Git repository (alpha)                                      
-       --team <TEAM_ID_OR_SLUG>  Scope (team ID or slug) to link the project to                                              
-  -y,  --yes                     Skip questions when setting up new project using default scope and settings                 
+  -p,  --project <NAME_OR_ID>    Project name or ID to link to (required for non-interactive)                             
+  -r,  --repo                    Link multiple projects based on Git repository (alpha)                                   
+       --team <TEAM_ID_OR_SLUG>  Scope: team ID or slug (use with --project for non-interactive)                          
+  -y,  --yes                     Skip questions when setting up new project using default scope and settings              
 
 
   Global Options:
@@ -3728,6 +3748,10 @@ exports[`help command > link help output snapshots > link help column width 120 
   - Link current directory with default options and skip questions
 
     $ vercel link --yes
+
+  - Non-interactive: link to an existing project (CI/agents)
+
+    $ vercel link --yes --team <team-id> --project <project-name-or-id>
 
   - Link a specific directory to a Vercel Project
 
