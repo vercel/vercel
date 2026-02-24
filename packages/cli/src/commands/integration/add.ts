@@ -137,7 +137,7 @@ export async function add(
 
   if (asJson) {
     output.error(
-      'The --format flag is only supported with auto-provision mode'
+      'The --format flag is not yet supported with the integration add command'
     );
     return 1;
   }
