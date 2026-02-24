@@ -376,6 +376,53 @@ describe('normalizeRoutes', () => {
     );
   });
 
+  test('fails if route has dest but missing src or source', () => {
+    assertError(
+      [
+        {
+          dest: '/foo',
+        },
+      ],
+      [
+        {
+          keyword: 'required',
+          dataPath: '[0]',
+          schemaPath: '#/items/anyOf/0/anyOf/0/required',
+          params: { missingProperty: '.src' },
+          message: "should have required property '.src'",
+        },
+        {
+          keyword: 'required',
+          dataPath: '[0]',
+          schemaPath: '#/items/anyOf/0/anyOf/1/required',
+          params: { missingProperty: '.source' },
+          message: "should have required property '.source'",
+        },
+        {
+          keyword: 'anyOf',
+          dataPath: '[0]',
+          schemaPath: '#/items/anyOf/0/anyOf',
+          params: {},
+          message: 'should match some schema in anyOf',
+        },
+        {
+          keyword: 'additionalProperties',
+          dataPath: '[0]',
+          schemaPath: '#/items/anyOf/1/additionalProperties',
+          params: { additionalProperty: 'dest' },
+          message: 'should NOT have additional properties',
+        },
+        {
+          keyword: 'anyOf',
+          dataPath: '[0]',
+          schemaPath: '#/items/anyOf',
+          params: {},
+          message: 'should match some schema in anyOf',
+        },
+      ]
+    );
+  });
+
   test('fails if methods is not array', () => {
     assertError(
       [
