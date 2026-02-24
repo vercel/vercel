@@ -170,6 +170,8 @@ export const build: BuildV3 = async ({
 
   let fsFiles = await glob('**', workPath);
 
+  let entrypointVariable: string | null = null;
+
   // Zero config entrypoint discovery
   if (
     isPythonFramework(framework) &&
@@ -181,11 +183,12 @@ export const build: BuildV3 = async ({
       entrypoint
     );
     if (detected) {
-      const [detectedModule] = detected;
+      const [detectedModule, detectedEntryVar] = detected;
       debug(
         `Resolved Python entrypoint to "${detectedModule}" (configured "${entrypoint}" not found).`
       );
       entrypoint = detectedModule;
+      entrypointVariable = detectedEntryVar;
     } else {
       const searchedList = PYTHON_CANDIDATE_ENTRYPOINTS.join(', ');
       throw new NowBuildError({
@@ -497,6 +500,7 @@ os.environ.update({
   "__VC_HANDLER_ENTRYPOINT": "${entrypointWithSuffix}",
   "__VC_HANDLER_ENTRYPOINT_ABS": os.path.join(_here, "${entrypointWithSuffix}"),
   "__VC_HANDLER_VENDOR_DIR": "${vendorDir}",
+  "__VC_HANDLER_VARIABLE_NAME": "${entrypointVariable ?? ''}",
 })
 
 _vendor_rel = '${vendorDir}'
