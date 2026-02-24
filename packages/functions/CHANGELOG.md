@@ -1,5 +1,11 @@
 # @vercel/functions
 
+## 3.4.3
+
+### Patch Changes
+
+- [functions] Revert "[functions] URL encode cache tags" ([#15213](https://github.com/vercel/vercel/pull/15213))
+
 ## 3.4.2
 
 ### Patch Changes
