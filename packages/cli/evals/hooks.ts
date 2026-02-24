@@ -114,6 +114,11 @@ export async function setup(
  * Destroy hook for CLI evals. Currently a no-op placeholder so future PRs can
  * clean up resources created during setup or eval execution.
  */
-export async function destroy(): Promise<void> {
+export async function destroy(
+  _context: EvalRunContext,
+  _setupResult: SetupResult | void
+): Promise<void> {
+  void _context;
+  void _setupResult;
   // Intentionally empty; reserved for future cleanup behavior.
 }

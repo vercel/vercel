@@ -65,6 +65,17 @@ const populateOIDCToken = async () => {
     }
   }
 
+  // If we have a VERCEL_TOKEN already, log a warning and continue without OIDC.
+  if (process.env.VERCEL_TOKEN) {
+    const message = lastError
+      ? lastError.message
+      : 'unknown error running "vc/vercel env pull -y"';
+    process.stderr.write(
+      `Warning: could not populate OIDC token via "vc/vercel env pull -y" (${message}). Continuing with VERCEL_TOKEN.\n`
+    );
+    return;
+  }
+
   throw lastError
     ? new Error(
         `Failed to populate OIDC token via "vc/vercel env pull -y": ${lastError.message}`
@@ -127,10 +138,12 @@ async function main() {
 
   const args = process.argv.slice(2);
   const isDryRun = args.includes('--dry');
-  const hasCreds = Boolean(process.env.VERCEL_OIDC_TOKEN);
+  const hasCreds = Boolean(
+    process.env.VERCEL_OIDC_TOKEN || process.env.VERCEL_TOKEN
+  );
   if (!isDryRun && !hasCreds) {
     process.stderr.write(
-      'Evals require AI_GATEWAY_API_KEY (e.g. from Vercel → AI Gateway → API Keys). Set it in .env or CI secrets (or use --dry to preview).\n'
+      'Evals require AI_GATEWAY_API_KEY and either VERCEL_OIDC_TOKEN or VERCEL_TOKEN (set in .env or CI secrets, or use --dry to preview).\n'
     );
     process.exit(1);
   }
