@@ -935,3 +935,35 @@ describe('preferredRegion', () => {
     });
   });
 });
+
+describe('vercel.json functions regions', () => {
+  let buildResult;
+
+  beforeAll(async () => {
+    const result = await runBuildLambda(
+      path.join(__dirname, 'vercel-json-regions')
+    );
+    buildResult = result.buildResult;
+  });
+
+  it('should use vercel.json functions regions over preferredRegion and regions from route config', () => {
+    const lambda = buildResult.output['api-route'];
+    expect(lambda).toBeDefined();
+    expect(lambda.type).toBe('Lambda');
+    expect(lambda.regions).toEqual(['iad1', 'sfo1']);
+  });
+
+  it('should ignore preferredRegion and regions from route config when no vercel.json functions config', () => {
+    const lambda = buildResult.output['no-override'];
+    expect(lambda).toBeDefined();
+    expect(lambda.type).toBe('Lambda');
+    expect(lambda.regions).toBeUndefined();
+  });
+
+  it('should not set regions on routes without any config', () => {
+    const output = buildResult.output['index'] || buildResult.output[''];
+    if (output && output.type === 'Lambda') {
+      expect(output.regions).toBeUndefined();
+    }
+  });
+});
