@@ -54,16 +54,25 @@ const config: ExperimentConfig = {
     // Sandbox uses node user (home /home/node). Write auth and env so CLI and agent can authenticate.
     if (runCmd && vercelToken) {
       try {
-        // CLI reads auth from ~/.vercel/auth.json (global path). Create it so vercel link --yes works.
+        const shellEscape = (s: string) => s.replace(/'/g, "'\\''");
         const authJson = JSON.stringify({ token: vercelToken });
+        // CLI reads auth from ~/.vercel/auth.json and/or XDG dir. Write both so link --yes works.
         await runCmd.call(sandbox, 'bash', [
           '-c',
-          `mkdir -p /home/node/.vercel && printf '%s' '${authJson.replace(/'/g, "'\\''")}' > /home/node/.vercel/auth.json`,
+          `mkdir -p /home/node/.vercel && printf '%s' '${shellEscape(authJson)}' > /home/node/.vercel/auth.json`,
         ]);
-        // Export in .bashrc for subprocesses (agent shells may source this)
         await runCmd.call(sandbox, 'bash', [
           '-c',
-          `printf 'export VERCEL_TOKEN="%s"\\n' '${vercelToken.replace(/'/g, "'\\''")}' >> /home/node/.bashrc`,
+          `mkdir -p /home/node/.local/share/com.vercel.cli && printf '%s' '${shellEscape(authJson)}' > /home/node/.local/share/com.vercel.cli/auth.json`,
+        ]);
+        // Export in .bashrc and .profile so agent subprocesses (including non-interactive) see the token.
+        await runCmd.call(sandbox, 'bash', [
+          '-c',
+          `printf 'export VERCEL_TOKEN=%s\\n' '${shellEscape(vercelToken)}' >> /home/node/.bashrc`,
+        ]);
+        await runCmd.call(sandbox, 'bash', [
+          '-c',
+          `printf 'export VERCEL_TOKEN=%s\\n' '${shellEscape(vercelToken)}' >> /home/node/.profile`,
         ]);
         await runCmd.call(sandbox, 'bash', [
           '-c',
@@ -130,7 +139,9 @@ const config: ExperimentConfig = {
 
 Docs are in \`docs/vercel-cli/\` (skill + references). Use \`vercel <command> -h\` for help.
 
-Use \`--yes\` and \`evals-setup.json\` for team/project IDs when linking.`;
+Use \`--yes\` and \`evals-setup.json\` for team/project IDs when linking.
+
+If \`vercel link\` reports no credentials, run \`source ~/.profile\` first (or \`source ~/.bashrc\`) so VERCEL_TOKEN is set, then retry.`;
 
     // Write all files
     await sandbox.writeFiles({
