@@ -37,7 +37,7 @@ exports.createRunBuildLambda = function (builder) {
       entrypoint,
       config: {
         ...build.config,
-        functions: nowJson.functions,
+        ...(nowJson.functions && { functions: nowJson.functions }),
       },
       workPath,
     });
