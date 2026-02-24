@@ -25,8 +25,6 @@ const PYTHON_PACKAGES = [
       path: PYTHON_VERSIONS_PATH,
       exportName: 'VERCEL_RUNTIME_VERSION',
     },
-    uvRunGroupArgs: ['--only-group=test'],
-    pytestArgs: ['-k', 'not test_cqa_'],
   },
   {
     name: 'vercel-workers',
@@ -35,8 +33,6 @@ const PYTHON_PACKAGES = [
       path: PYTHON_VERSIONS_PATH,
       exportName: 'VERCEL_WORKERS_VERSION',
     },
-    uvRunGroupArgs: ['--group=test'],
-    pytestArgs: ['-v', '--tb=short', '-k', 'not test_cqa_'],
   },
 ].map(pkg => ({
   ...pkg,
@@ -210,14 +206,17 @@ function publishPackage(pkg, { force }) {
 
   run('uv', [
     'run',
-    ...pkg.uvRunGroupArgs,
+    '--only-group=test',
     '--locked',
     '--isolated',
     `--project=${pkg.projectDir}`,
     '--with',
     wheelPath,
     'pytest',
-    ...pkg.pytestArgs,
+    '-v',
+    '--tb=short',
+    '-k',
+    'not test_cqa_',
     pkg.testsPath,
   ]);
 
