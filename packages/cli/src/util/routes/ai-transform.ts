@@ -8,14 +8,10 @@
  */
 import chalk from 'chalk';
 import output from '../../output-manager';
-import {
-  buildConditionValue,
-  type ConditionOperator,
-} from './parse-conditions';
+import { buildConditionValue } from './parse-conditions';
+import { REDIRECT_STATUS_CODES } from './interactive';
 import type { AddRouteInput, HasField, Transform, RoutingRule } from './types';
 import type { GeneratedRoute, CurrentRouteInput } from './generate-route';
-
-const REDIRECT_STATUS_CODES = [301, 302, 303, 307, 308];
 
 /**
  * Converts an AI-generated route to the CLI's AddRouteInput format.
@@ -30,20 +26,18 @@ export function generatedRouteToAddInput(
   let dest: string | undefined;
   let status: number | undefined;
 
-  // Convert conditions
   if (generated.conditions) {
     for (const c of generated.conditions) {
-      const operator = c.operator as ConditionOperator;
       const compiledValue =
         c.value !== undefined
-          ? buildConditionValue(operator, c.value)
+          ? buildConditionValue(c.operator, c.value)
           : undefined;
 
       const field: HasField =
         c.field === 'host'
           ? { type: 'host', value: compiledValue ?? c.value ?? '' }
           : {
-              type: c.field as 'header' | 'cookie' | 'query',
+              type: c.field,
               key: c.key ?? '',
               ...(compiledValue !== undefined && { value: compiledValue }),
             };
@@ -56,7 +50,6 @@ export function generatedRouteToAddInput(
     }
   }
 
-  // Convert actions
   for (const action of generated.actions) {
     switch (action.type) {
       case 'rewrite':
@@ -79,7 +72,7 @@ export function generatedRouteToAddInput(
             } else {
               transforms.push({
                 type: 'response.headers',
-                op: h.op as 'append' | 'delete',
+                op: h.op,
                 target: { key: h.key },
                 ...(h.op !== 'delete' && h.value && { args: h.value }),
               });
@@ -89,7 +82,7 @@ export function generatedRouteToAddInput(
           for (const h of action.headers) {
             transforms.push({
               type: 'request.headers',
-              op: h.op as 'set' | 'append' | 'delete',
+              op: h.op,
               target: { key: h.key },
               ...(h.op !== 'delete' && h.value && { args: h.value }),
             });
@@ -98,7 +91,7 @@ export function generatedRouteToAddInput(
           for (const h of action.headers) {
             transforms.push({
               type: 'request.query',
-              op: h.op as 'set' | 'append' | 'delete',
+              op: h.op,
               target: { key: h.key },
               ...(h.op !== 'delete' && h.value && { args: h.value }),
             });
@@ -115,8 +108,8 @@ export function generatedRouteToAddInput(
     srcSyntax: generated.pathCondition.syntax,
     route: {
       src: generated.pathCondition.value,
-      ...(dest && { dest }),
-      ...(status && { status }),
+      ...(dest !== undefined && { dest }),
+      ...(status !== undefined && { status }),
       ...(Object.keys(headers).length > 0 && { headers }),
       ...(transforms.length > 0 && { transforms }),
       ...(hasConditions.length > 0 && { has: hasConditions }),
@@ -299,13 +292,6 @@ export function routingRuleToCurrentRoute(
  * Prints a formatted preview of an AI-generated route.
  */
 export function printGeneratedRoutePreview(generated: GeneratedRoute): void {
-  const syntaxLabel =
-    generated.pathCondition.syntax === 'path-to-regexp'
-      ? 'Pattern'
-      : generated.pathCondition.syntax === 'equals'
-        ? 'Exact'
-        : 'Regex';
-
   output.print('\n');
   output.print(`  ${chalk.bold('Generated Route:')}\n`);
   output.print(`  ${chalk.cyan('Name:')}         ${generated.name}\n`);
@@ -313,10 +299,30 @@ export function printGeneratedRoutePreview(generated: GeneratedRoute): void {
     output.print(`  ${chalk.cyan('Description:')}  ${generated.description}\n`);
   }
   output.print(
-    `  ${chalk.cyan('Source:')}       ${generated.pathCondition.value} (${syntaxLabel})\n`
+    `  ${chalk.cyan('Source:')}       ${generated.pathCondition.value}\n`
   );
 
-  // Show primary action
+  if (generated.conditions && generated.conditions.length > 0) {
+    output.print(`  ${chalk.cyan('Conditions:')}\n`);
+    for (const c of generated.conditions) {
+      const prefix = c.missing ? 'does not have' : 'has';
+      const operatorLabel =
+        c.operator === 'eq'
+          ? 'equal to'
+          : c.operator === 'contains'
+            ? 'containing'
+            : c.operator === 're'
+              ? 'matching'
+              : '';
+      const key = c.key ? ` ${chalk.cyan(`"${c.key}"`)}` : '';
+      const value =
+        c.operator === 'exists' || !c.value
+          ? ''
+          : ` ${operatorLabel} ${chalk.cyan(`"${c.value}"`)}`;
+      output.print(`    ${chalk.gray(prefix)} ${c.field}${key}${value}\n`);
+    }
+  }
+
   for (const action of generated.actions) {
     if (action.type === 'rewrite' && action.dest) {
       output.print(
@@ -333,39 +339,6 @@ export function printGeneratedRoutePreview(generated: GeneratedRoute): void {
     }
   }
 
-  // Show conditions
-  const hasConditions = generated.conditions?.filter(c => !c.missing) ?? [];
-  const missingConditions = generated.conditions?.filter(c => c.missing) ?? [];
-
-  if (hasConditions.length > 0) {
-    output.print(`  ${chalk.cyan('Has:')}\n`);
-    for (const c of hasConditions) {
-      const key = c.key ? ` ${c.key}` : '';
-      const value =
-        c.operator === 'exists'
-          ? ' (exists)'
-          : c.value
-            ? ` ${c.operator}=${c.value}`
-            : '';
-      output.print(`    ${chalk.gray(`[${c.field}]`)}${key}${value}\n`);
-    }
-  }
-
-  if (missingConditions.length > 0) {
-    output.print(`  ${chalk.cyan('Missing:')}\n`);
-    for (const c of missingConditions) {
-      const key = c.key ? ` ${c.key}` : '';
-      const value =
-        c.operator === 'exists'
-          ? ' (exists)'
-          : c.value
-            ? ` ${c.operator}=${c.value}`
-            : '';
-      output.print(`    ${chalk.gray(`[${c.field}]`)}${key}${value}\n`);
-    }
-  }
-
-  // Show modify actions
   for (const action of generated.actions) {
     if (action.type === 'modify' && action.headers) {
       const label =

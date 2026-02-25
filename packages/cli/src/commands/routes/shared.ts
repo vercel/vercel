@@ -83,7 +83,7 @@ export function validateRequiredArgs(
 }
 
 /**
- * Formats a has/missing condition for display.
+ * Formats a has/does-not-have condition for display.
  * Output: [type] key = value  (or [type] value for host, or [type] key for existence checks)
  */
 export function formatCondition(condition: {

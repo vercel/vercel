@@ -21,23 +21,32 @@ export interface CurrentRouteInput {
   }>;
 }
 
+type GeneratedActionType = 'rewrite' | 'redirect' | 'set-status' | 'modify';
+type GeneratedModifySubType =
+  | 'response-headers'
+  | 'transform-request-header'
+  | 'transform-request-query';
+type GeneratedConditionOperator = 'eq' | 'contains' | 're' | 'exists';
+type GeneratedConditionField = 'header' | 'cookie' | 'query' | 'host';
+type GeneratedHeaderOp = 'set' | 'append' | 'delete';
+
 export interface GeneratedRoute {
   name: string;
   description: string;
   pathCondition: { value: string; syntax: SrcSyntax };
   conditions?: Array<{
-    field: string;
-    operator: string;
+    field: GeneratedConditionField;
+    operator: GeneratedConditionOperator;
     key?: string;
     value?: string;
     missing: boolean;
   }>;
   actions: Array<{
-    type: string;
-    subType?: string;
+    type: GeneratedActionType;
+    subType?: GeneratedModifySubType;
     dest?: string;
     status?: number;
-    headers?: Array<{ key: string; value?: string; op: string }>;
+    headers?: Array<{ key: string; value?: string; op: GeneratedHeaderOp }>;
   }>;
 }
 

@@ -1148,6 +1148,95 @@ describe('routes edit', () => {
 
       await expect(exitCodePromise).resolves.toEqual(0);
     });
+
+    it('should refine route via "Edit again with AI" loop', async () => {
+      useEditRoute();
+      useGenerateRoute({
+        route: {
+          name: 'Enabled Route',
+          description: 'Updated by AI',
+          pathCondition: { value: '/path-0/(.*)', syntax: 'regex' },
+          actions: [
+            { type: 'rewrite', dest: 'https://new-backend.internal/$1' },
+          ],
+        },
+      });
+
+      client.setArgv(
+        'routes',
+        'edit',
+        'Enabled Route',
+        '--ai',
+        'Change destination'
+      );
+      const exitCodePromise = routes(client);
+
+      // First generation preview
+      await expect(client.stderr).toOutput('Generated Route:');
+      await expect(client.stderr).toOutput('What would you like to do?');
+
+      // Select "Edit again with AI" — 2nd option
+      client.stdin.write('\x1B[B');
+      client.stdin.write('\n');
+
+      await expect(client.stderr).toOutput(
+        "Describe what you'd like to change:"
+      );
+      client.stdin.write('Also add a Cache-Control header\n');
+
+      // Second generation preview
+      await expect(client.stderr).toOutput('Generated Route:');
+      await expect(client.stderr).toOutput('What would you like to do?');
+
+      // Now confirm
+      client.stdin.write('\n');
+
+      await expect(client.stderr).toOutput('Updated');
+      await expect(exitCodePromise).resolves.toEqual(0);
+    });
+
+    it('should allow manual editing after AI generation', async () => {
+      useEditRoute();
+      useGenerateRoute({
+        route: {
+          name: 'Enabled Route',
+          description: 'Updated by AI',
+          pathCondition: { value: '/path-0/(.*)', syntax: 'regex' },
+          actions: [
+            { type: 'rewrite', dest: 'https://new-backend.internal/$1' },
+          ],
+        },
+      });
+
+      client.setArgv(
+        'routes',
+        'edit',
+        'Enabled Route',
+        '--ai',
+        'Change destination'
+      );
+      const exitCodePromise = routes(client);
+
+      await expect(client.stderr).toOutput('Generated Route:');
+      await expect(client.stderr).toOutput('What would you like to do?');
+
+      // Select "Edit manually" — 3rd option
+      client.stdin.write('\x1B[B');
+      client.stdin.write('\x1B[B');
+      client.stdin.write('\n');
+
+      // Should see the edit menu
+      await expect(client.stderr).toOutput('What would you like to edit?');
+
+      // Navigate to "Done - save changes" — last option (9th)
+      for (let i = 0; i < 8; i++) {
+        client.stdin.write('\x1B[B');
+      }
+      client.stdin.write('\n');
+
+      await expect(client.stderr).toOutput('Updated');
+      await expect(exitCodePromise).resolves.toEqual(0);
+    });
   });
 
   // ---------------------------------------------------------------------------

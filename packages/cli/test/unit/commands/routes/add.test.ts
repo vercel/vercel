@@ -2207,5 +2207,64 @@ describe('routes add', () => {
 
       await expect(exitCodePromise).resolves.toEqual(0);
     });
+
+    it('should refine route via "Edit with AI" loop', async () => {
+      useGenerateRoute();
+      useAddRoute({ hasStaging: true });
+
+      client.setArgv('routes', 'add', '--ai', 'Rewrite /api/* to backend');
+      const exitCodePromise = routes(client);
+
+      // First generation preview
+      await expect(client.stderr).toOutput('Generated Route:');
+      await expect(client.stderr).toOutput('What would you like to do?');
+
+      // Select "Edit with AI (describe changes)" — 2nd option
+      client.stdin.write('\x1B[B');
+      client.stdin.write('\n');
+
+      await expect(client.stderr).toOutput(
+        "Describe what you'd like to change:"
+      );
+      client.stdin.write('Also add a Cache-Control header\n');
+
+      // Second generation preview
+      await expect(client.stderr).toOutput('Generated Route:');
+      await expect(client.stderr).toOutput('What would you like to do?');
+
+      // Now create
+      client.stdin.write('\n');
+
+      await expect(client.stderr).toOutput('Created');
+      await expect(exitCodePromise).resolves.toEqual(0);
+    });
+
+    it('should allow manual editing after AI generation', async () => {
+      useGenerateRoute();
+      useAddRoute({ hasStaging: true });
+
+      client.setArgv('routes', 'add', '--ai', 'Rewrite /api/* to backend');
+      const exitCodePromise = routes(client);
+
+      await expect(client.stderr).toOutput('Generated Route:');
+      await expect(client.stderr).toOutput('What would you like to do?');
+
+      // Select "Edit manually" — 3rd option
+      client.stdin.write('\x1B[B');
+      client.stdin.write('\x1B[B');
+      client.stdin.write('\n');
+
+      // Should see the edit menu with pre-populated values
+      await expect(client.stderr).toOutput('What would you like to edit?');
+
+      // Navigate to "Done - save changes" — last option (9th)
+      for (let i = 0; i < 8; i++) {
+        client.stdin.write('\x1B[B');
+      }
+      client.stdin.write('\n');
+
+      await expect(client.stderr).toOutput('Created');
+      await expect(exitCodePromise).resolves.toEqual(0);
+    });
   });
 });

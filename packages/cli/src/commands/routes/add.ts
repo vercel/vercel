@@ -12,7 +12,10 @@ import addRoute from '../../util/routes/add-route';
 import getRouteVersions from '../../util/routes/get-route-versions';
 import { parseConditions } from '../../util/routes/parse-conditions';
 import { populateRouteEnv } from '../../util/routes/env';
-import generateRouteApi from '../../util/routes/generate-route';
+import generateRouteApi, {
+  type GenerateRouteResponse,
+  type GeneratedRoute,
+} from '../../util/routes/generate-route';
 import {
   generatedRouteToAddInput,
   generatedRouteToCurrentRoute,
@@ -37,13 +40,12 @@ import {
 } from '../../util/routes/interactive';
 import type {
   AddRouteInput,
+  EditableRoute,
   HasField,
   Transform,
   SrcSyntax,
   RoutePosition,
-  RoutingRule,
 } from '../../util/routes/types';
-import type { GeneratedRoute } from '../../util/routes/generate-route';
 
 /**
  * Adds a new route to the current project.
@@ -60,7 +62,6 @@ export default async function add(client: Client, argv: string[]) {
   const { args, flags } = parsed;
   const skipPrompts = flags['--yes'] as boolean | undefined;
 
-  // Initialize telemetry client
   const telemetry = new RoutesAddTelemetryClient({
     opts: { store: client.telemetryEventStore },
   });
@@ -186,6 +187,7 @@ export default async function add(client: Client, argv: string[]) {
       });
 
       if (mode === 'ai') {
+        telemetry.trackCliOptionAi('interactive');
         return await handleAIAdd(
           client,
           project.id,
@@ -313,7 +315,7 @@ export default async function add(client: Client, argv: string[]) {
   // --- Interactive mode: conditions first, then action selection loop ---
   if (!hasAnyAction && !skipPrompts) {
     const addConditions = await client.input.confirm(
-      'Add conditions (has/missing)?',
+      'Add conditions (has/does not have)?',
       false
     );
 
@@ -612,56 +614,76 @@ async function handleAIAdd(
   skipPrompts: boolean | undefined
 ): Promise<number> {
   // Check for existing staging version (for auto-promote logic)
-  const { default: getRouteVersions } = await import(
-    '../../util/routes/get-route-versions'
-  );
   const { versions } = await getRouteVersions(client, projectId, { teamId });
-  const existingStagingVersion = versions.find(
-    (v: { isStaging?: boolean }) => v.isStaging
-  );
+  const existingStagingVersion = versions.find(v => v.isStaging);
 
-  // Get the prompt
+  // Initial generation loop — retry on error unless --yes
   let prompt = aiPrompt;
-  if (!prompt) {
-    prompt = await client.input.text({
-      message: 'Describe the route you want to create:',
-      validate: val => {
-        if (!val) return 'A description is required';
-        if (val.length > 2000)
-          return 'Description must be 2000 characters or less';
-        return true;
-      },
-    });
-  }
-
-  // Generate the route
-  output.spinner('Generating route...');
-
   let currentGenerated;
-  try {
-    const result = await generateRouteApi(
-      client,
-      projectId,
-      { prompt },
-      { teamId }
-    );
-
-    if (result.error) {
-      output.error(result.error);
-      return 1;
+  for (;;) {
+    if (!prompt) {
+      prompt = await client.input.text({
+        message: 'Describe the route you want to create:',
+        validate: val => {
+          if (!val) return 'A description is required';
+          if (val.length > 2000)
+            return 'Description must be 2000 characters or less';
+          return true;
+        },
+      });
     }
-    if (!result.route) {
-      output.error(
-        'Could not generate a route from that description. Try rephrasing.'
+
+    output.spinner('Generating route...');
+
+    let errorMessage: string | undefined;
+    try {
+      const result = await generateRouteApi(
+        client,
+        projectId,
+        { prompt },
+        { teamId }
       );
+
+      if (result.error) {
+        errorMessage = result.error;
+      } else if (!result.route) {
+        errorMessage =
+          'Could not generate a route from that description. Try rephrasing.';
+      } else {
+        currentGenerated = result.route;
+      }
+    } catch (e: unknown) {
+      const error = e as { message?: string };
+      errorMessage = error.message || 'Failed to generate route';
+    }
+
+    if (currentGenerated) {
+      break;
+    }
+
+    output.error(errorMessage!);
+
+    // Non-interactive: exit immediately
+    if (skipPrompts) {
       return 1;
     }
 
-    currentGenerated = result.route;
-  } catch (e: unknown) {
-    const error = e as { message?: string };
-    output.error(error.message || 'Failed to generate route');
-    return 1;
+    // Interactive: offer retry
+    const retry = await client.input.select({
+      message: 'What would you like to do?',
+      choices: [
+        { name: 'Try again with a different description', value: 'retry' },
+        { name: 'Cancel', value: 'cancel' },
+      ],
+    });
+
+    if (retry === 'cancel') {
+      output.log('Cancelled.');
+      return 0;
+    }
+
+    // Clear prompt so it's re-prompted on next iteration
+    prompt = undefined;
   }
 
   printGeneratedRoutePreview(currentGenerated);
@@ -706,13 +728,18 @@ async function handleAIAdd(
     if (choice === 'ai-edit') {
       const editPrompt = await client.input.text({
         message: "Describe what you'd like to change:",
-        validate: val => (val ? true : 'A description is required'),
+        validate: val => {
+          if (!val) return 'A description is required';
+          if (val.length > 2000)
+            return 'Description must be 2000 characters or less';
+          return true;
+        },
       });
 
       output.spinner('Updating route...');
 
       try {
-        const editResult = await generateRouteApi(
+        const editResult: GenerateRouteResponse = await generateRouteApi(
           client,
           projectId,
           {
@@ -724,10 +751,14 @@ async function handleAIAdd(
 
         if (editResult.error) {
           output.error(editResult.error);
+          output.log('Keeping previous route:');
+          printGeneratedRoutePreview(currentGenerated);
           continue;
         }
         if (!editResult.route) {
           output.error('Could not apply changes. Try rephrasing.');
+          output.log('Keeping previous route:');
+          printGeneratedRoutePreview(currentGenerated);
           continue;
         }
 
@@ -736,35 +767,21 @@ async function handleAIAdd(
       } catch (e: unknown) {
         const error = e as { message?: string };
         output.error(error.message || 'Failed to update route');
+        output.log('Keeping previous route:');
+        printGeneratedRoutePreview(currentGenerated);
       }
       continue;
     }
 
     if (choice === 'manual') {
-      // Build a temporary RoutingRule for the interactive edit loop
       const routeInput = generatedRouteToAddInput(currentGenerated);
       const { runInteractiveEditLoop } = await import('./edit');
-      const tempRule: RoutingRule = {
-        id: '',
+      const tempRule: EditableRoute = {
         name: routeInput.name,
         description: routeInput.description,
         enabled: true,
         srcSyntax: routeInput.srcSyntax,
-        route: {
-          src: routeInput.route.src,
-          ...(routeInput.route.dest && { dest: routeInput.route.dest }),
-          ...(routeInput.route.status && { status: routeInput.route.status }),
-          ...(routeInput.route.headers && {
-            headers: routeInput.route.headers,
-          }),
-          ...(routeInput.route.has && { has: routeInput.route.has as any }),
-          ...(routeInput.route.missing && {
-            missing: routeInput.route.missing as any,
-          }),
-          ...(routeInput.route.transforms && {
-            transforms: routeInput.route.transforms,
-          }),
-        },
+        route: routeInput.route,
       };
 
       await runInteractiveEditLoop(client, tempRule);
@@ -774,20 +791,16 @@ async function handleAIAdd(
       output.spinner(`Adding route "${tempRule.name}"`);
 
       try {
-        const finalInput: AddRouteInput = {
-          name: tempRule.name,
-          description: tempRule.description,
-          srcSyntax: tempRule.srcSyntax,
-          route: tempRule.route,
-        };
-
         const { route, version } = await addRoute(
           client,
           projectId,
-          finalInput,
           {
-            teamId,
-          }
+            name: tempRule.name,
+            description: tempRule.description,
+            srcSyntax: tempRule.srcSyntax,
+            route: tempRule.route as AddRouteInput['route'],
+          },
+          { teamId }
         );
 
         output.log(

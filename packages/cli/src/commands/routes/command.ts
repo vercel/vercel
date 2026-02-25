@@ -299,7 +299,7 @@ export const addSubcommand = {
     {
       name: 'missing',
       description:
-        'Condition that must NOT match: type:key or type:key:value (repeatable)',
+        '"Does not have" condition: type:key or type:key:value (repeatable)',
       shorthand: null,
       type: [String],
       argument: 'CONDITION',
@@ -778,7 +778,7 @@ export const editSubcommand = {
     {
       name: 'missing',
       description:
-        'Add a missing condition: type:key or type:key:value (repeatable)',
+        'Add a "does not have" condition: type:key or type:key:value (repeatable)',
       shorthand: null,
       type: [String],
       argument: 'CONDITION',
@@ -787,7 +787,7 @@ export const editSubcommand = {
     // Clearing
     {
       name: 'clear-conditions',
-      description: 'Remove all has/missing conditions',
+      description: 'Remove all has/does-not-have conditions',
       shorthand: null,
       type: Boolean,
       deprecated: false,

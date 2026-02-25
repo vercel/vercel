@@ -334,7 +334,7 @@ function formatExpandedRoutes(routes: RoutingRule[]): string {
     }
 
     if (rule.route.missing && rule.route.missing.length > 0) {
-      lines.push(`     ${chalk.cyan('Missing conditions:')}`);
+      lines.push(`     ${chalk.cyan('Does not have conditions:')}`);
       for (const condition of rule.route.missing) {
         lines.push(`       ${formatCondition(condition)}`);
       }

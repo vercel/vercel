@@ -17,6 +17,7 @@ import { parseConditions } from '../../util/routes/parse-conditions';
 import { populateRouteEnv } from '../../util/routes/env';
 import generateRouteApi, {
   type GeneratedRoute,
+  type GenerateRouteResponse,
 } from '../../util/routes/generate-route';
 import {
   generatedRouteToAddInput,
@@ -43,6 +44,7 @@ import {
 } from '../../util/routes/interactive';
 import type {
   RoutingRule,
+  EditableRoute,
   HasField,
   Transform,
   SrcSyntax,
@@ -56,7 +58,7 @@ import type {
  * Determines the primary action type of a route based on its dest/status fields.
  */
 function getPrimaryActionType(
-  route: RoutingRule
+  route: EditableRoute
 ): 'rewrite' | 'redirect' | 'set-status' | null {
   const { dest, status } = route.route;
   if (dest && status && REDIRECT_STATUS_CODES.includes(status)) {
@@ -70,7 +72,7 @@ function getPrimaryActionType(
 /**
  * Returns a human-readable label for the primary action.
  */
-function getPrimaryActionLabel(route: RoutingRule): string {
+function getPrimaryActionLabel(route: EditableRoute): string {
   const actionType = getPrimaryActionType(route);
   switch (actionType) {
     case 'rewrite':
@@ -88,7 +90,7 @@ function getPrimaryActionLabel(route: RoutingRule): string {
  * Gets response headers from the route's headers object.
  */
 function getResponseHeaders(
-  route: RoutingRule
+  route: EditableRoute
 ): { key: string; value: string }[] {
   const headers = route.route.headers ?? {};
   return Object.entries(headers).map(([key, value]) => ({ key, value }));
@@ -97,7 +99,7 @@ function getResponseHeaders(
 /**
  * Gets transforms of a specific type from the route.
  */
-function getTransformsByType(route: RoutingRule, type: string): Transform[] {
+function getTransformsByType(route: EditableRoute, type: string): Transform[] {
   const transforms = (route.route.transforms ?? []) as Transform[];
   return transforms.filter(t => t.type === type);
 }
@@ -105,7 +107,7 @@ function getTransformsByType(route: RoutingRule, type: string): Transform[] {
 /**
  * Prints the current route configuration in detail.
  */
-function printRouteConfig(route: RoutingRule): void {
+function printRouteConfig(route: EditableRoute): void {
   output.print('\n');
   output.print(`  ${chalk.cyan('Name:')}         ${route.name}\n`);
   if (route.description) {
@@ -122,12 +124,7 @@ function printRouteConfig(route: RoutingRule): void {
   const actionLabel = getPrimaryActionLabel(route);
   output.print(`  ${chalk.cyan('Action:')}       ${actionLabel}\n`);
 
-  // Has conditions
-  const hasConds = (route.route.has ?? []) as Array<{
-    type: string;
-    key?: string;
-    value?: unknown;
-  }>;
+  const hasConds = route.route.has ?? [];
   if (hasConds.length > 0) {
     output.print(`\n  ${chalk.cyan('Has conditions:')}\n`);
     for (const c of hasConds) {
@@ -135,14 +132,9 @@ function printRouteConfig(route: RoutingRule): void {
     }
   }
 
-  // Missing conditions
-  const missingConds = (route.route.missing ?? []) as Array<{
-    type: string;
-    key?: string;
-    value?: unknown;
-  }>;
+  const missingConds = route.route.missing ?? [];
   if (missingConds.length > 0) {
-    output.print(`\n  ${chalk.cyan('Missing conditions:')}\n`);
+    output.print(`\n  ${chalk.cyan('Does not have conditions:')}\n`);
     for (const c of missingConds) {
       output.print(`    ${formatConditionDisplay(c)}\n`);
     }
@@ -185,7 +177,7 @@ function printRouteConfig(route: RoutingRule): void {
 /**
  * Deep-clones a routing rule so we can safely mutate it.
  */
-function cloneRoute(route: RoutingRule): RoutingRule {
+function cloneRoute(route: EditableRoute): EditableRoute {
   return JSON.parse(JSON.stringify(route));
 }
 
@@ -198,7 +190,7 @@ function cloneRoute(route: RoutingRule): RoutingRule {
  * Returns an error message if invalid, or null on success.
  */
 function applyFlagMutations(
-  route: RoutingRule,
+  route: EditableRoute,
   flags: Record<string, unknown>
 ): string | null {
   // Metadata
@@ -240,7 +232,7 @@ function applyFlagMutations(
 
   if (actionFlag) {
     // Explicit action type change
-    if (!VALID_ACTION_TYPES.includes(actionFlag as any)) {
+    if (!(VALID_ACTION_TYPES as readonly string[]).includes(actionFlag)) {
       return `Invalid action type: "${actionFlag}". Valid types: ${VALID_ACTION_TYPES.join(', ')}`;
     }
 
@@ -249,7 +241,7 @@ function applyFlagMutations(
         const dest = destFlag ? stripQuotes(destFlag) : undefined;
         if (!dest) return '--action rewrite requires --dest.';
         route.route.dest = dest;
-        delete (route.route as any).status;
+        delete route.route.status;
         break;
       }
       case 'redirect': {
@@ -268,7 +260,7 @@ function applyFlagMutations(
           return '--action set-status requires --status.';
         if (statusFlag < 100 || statusFlag > 599)
           return 'Status code must be between 100 and 599.';
-        delete (route.route as any).dest;
+        delete route.route.dest;
         route.route.status = statusFlag;
         break;
       }
@@ -282,17 +274,17 @@ function applyFlagMutations(
       route.route.status = statusFlag;
     }
     if (noDest) {
-      delete (route.route as any).dest;
+      delete route.route.dest;
     }
     if (noStatus) {
-      delete (route.route as any).status;
+      delete route.route.status;
     }
   }
 
   // Clear flags (applied before additive flags)
   if (flags['--clear-conditions']) {
-    (route.route as any).has = [];
-    (route.route as any).missing = [];
+    route.route.has = [];
+    route.route.missing = [];
   }
 
   if (flags['--clear-headers']) {
@@ -300,7 +292,7 @@ function applyFlagMutations(
   }
 
   if (flags['--clear-transforms']) {
-    (route.route as any).transforms = [];
+    route.route.transforms = [];
   }
 
   // Additive: response headers
@@ -318,8 +310,8 @@ function applyFlagMutations(
 
     // Append new transforms
     if (transforms.length > 0) {
-      const existing = ((route.route as any).transforms ?? []) as Transform[];
-      (route.route as any).transforms = [...existing, ...transforms];
+      const existing = (route.route.transforms ?? []) as Transform[];
+      route.route.transforms = [...existing, ...transforms];
     }
   } catch (e) {
     return `Invalid transform format. ${e instanceof Error ? e.message : ''}`;
@@ -332,14 +324,13 @@ function applyFlagMutations(
   try {
     if (hasFlags) {
       const newHas = parseConditions(hasFlags);
-      const existingHas = ((route.route as any).has ?? []) as HasField[];
-      (route.route as any).has = [...existingHas, ...newHas];
+      const existingHas = (route.route.has ?? []) as HasField[];
+      route.route.has = [...existingHas, ...newHas];
     }
     if (missingFlags) {
       const newMissing = parseConditions(missingFlags);
-      const existingMissing = ((route.route as any).missing ??
-        []) as HasField[];
-      (route.route as any).missing = [...existingMissing, ...newMissing];
+      const existingMissing = (route.route.missing ?? []) as HasField[];
+      route.route.missing = [...existingMissing, ...newMissing];
     }
   } catch (e) {
     return e instanceof Error ? e.message : 'Invalid condition format';
@@ -347,8 +338,7 @@ function applyFlagMutations(
 
   // Validate max conditions
   const totalConditions =
-    ((route.route as any).has ?? []).length +
-    ((route.route as any).missing ?? []).length;
+    (route.route.has ?? []).length + (route.route.missing ?? []).length;
   if (totalConditions > MAX_CONDITIONS) {
     return `Too many conditions: ${totalConditions}. Maximum is ${MAX_CONDITIONS}.`;
   }
@@ -357,7 +347,7 @@ function applyFlagMutations(
   const hasDest = !!route.route.dest;
   const hasStatus = !!route.route.status;
   const hasHeaders = Object.keys(route.route.headers ?? {}).length > 0;
-  const hasTransforms = ((route.route as any).transforms ?? []).length > 0;
+  const hasTransforms = (route.route.transforms ?? []).length > 0;
 
   if (!hasDest && !hasStatus && !hasHeaders && !hasTransforms) {
     return 'This edit would leave the route with no action. Add --action, headers, or transforms.';
@@ -371,17 +361,17 @@ function applyFlagMutations(
 // ---------------------------------------------------------------------------
 
 /**
- * Runs the interactive field-by-field edit menu on a RoutingRule.
+ * Runs the interactive field-by-field edit menu on an EditableRoute.
  * Mutates the route in-place. Returns when the user selects "Done"
  * and the route passes validation.
  */
 export async function runInteractiveEditLoop(
   client: Client,
-  route: RoutingRule
+  route: EditableRoute
 ): Promise<void> {
   for (;;) {
-    const hasConds = ((route.route as any).has ?? []).length;
-    const missingConds = ((route.route as any).missing ?? []).length;
+    const hasConds = (route.route.has ?? []).length;
+    const missingConds = (route.route.missing ?? []).length;
     const responseHeaders = getAllResponseHeaders(route).length;
     const requestHeaders = getTransformsByType(route, 'request.headers').length;
     const requestQuery = getTransformsByType(route, 'request.query').length;
@@ -484,7 +474,7 @@ export async function runInteractiveEditLoop(
       const hasDest = !!route.route.dest;
       const hasStatus = !!route.route.status;
       const hasHeaders = Object.keys(route.route.headers ?? {}).length > 0;
-      const hasTransforms = ((route.route as any).transforms ?? []).length > 0;
+      const hasTransforms = (route.route.transforms ?? []).length > 0;
 
       if (!hasDest && !hasStatus && !hasHeaders && !hasTransforms) {
         output.warn(
@@ -501,7 +491,7 @@ export async function runInteractiveEditLoop(
 // Interactive edit sub-menus
 // ---------------------------------------------------------------------------
 
-async function editName(client: Client, route: RoutingRule): Promise<void> {
+async function editName(client: Client, route: EditableRoute): Promise<void> {
   const name = await client.input.text({
     message: `Name (current: ${route.name}):`,
     validate: val => {
@@ -516,7 +506,7 @@ async function editName(client: Client, route: RoutingRule): Promise<void> {
 
 async function editDescription(
   client: Client,
-  route: RoutingRule
+  route: EditableRoute
 ): Promise<void> {
   const desc = await client.input.text({
     message: `Description${route.description ? ` (current: ${route.description})` : ''}:`,
@@ -528,7 +518,7 @@ async function editDescription(
   route.description = desc || undefined;
 }
 
-async function editSource(client: Client, route: RoutingRule): Promise<void> {
+async function editSource(client: Client, route: EditableRoute): Promise<void> {
   const syntaxChoice = await client.input.select({
     message: `Path syntax (current: ${route.srcSyntax ?? 'regex'}):`,
     choices: [
@@ -554,7 +544,7 @@ async function editSource(client: Client, route: RoutingRule): Promise<void> {
 
 async function editPrimaryAction(
   client: Client,
-  route: RoutingRule
+  route: EditableRoute
 ): Promise<void> {
   const currentType = getPrimaryActionType(route);
 
@@ -640,7 +630,7 @@ async function editPrimaryAction(
     case 'switch-rewrite': {
       await collectActionDetails(client, 'rewrite', flags);
       route.route.dest = flags['--dest'] as string;
-      delete (route.route as any).status;
+      delete route.route.status;
       break;
     }
     case 'switch-redirect': {
@@ -651,13 +641,13 @@ async function editPrimaryAction(
     }
     case 'switch-set-status': {
       await collectActionDetails(client, 'set-status', flags);
-      delete (route.route as any).dest;
+      delete route.route.dest;
       route.route.status = flags['--status'] as number;
       break;
     }
     case 'remove': {
-      delete (route.route as any).dest;
-      delete (route.route as any).status;
+      delete route.route.dest;
+      delete route.route.status;
       break;
     }
     // 'back' — do nothing
@@ -666,19 +656,11 @@ async function editPrimaryAction(
 
 async function editConditions(
   client: Client,
-  route: RoutingRule
+  route: EditableRoute
 ): Promise<void> {
   for (;;) {
-    const hasConds = ((route.route as any).has ?? []) as Array<{
-      type: string;
-      key?: string;
-      value?: unknown;
-    }>;
-    const missingConds = ((route.route as any).missing ?? []) as Array<{
-      type: string;
-      key?: string;
-      value?: unknown;
-    }>;
+    const hasConds = route.route.has ?? [];
+    const missingConds = route.route.missing ?? [];
 
     if (hasConds.length > 0 || missingConds.length > 0) {
       output.print('\n');
@@ -691,7 +673,7 @@ async function editConditions(
         });
       }
       if (missingConds.length > 0) {
-        output.print(`  ${chalk.cyan('Missing conditions:')}\n`);
+        output.print(`  ${chalk.cyan('Does not have conditions:')}\n`);
         missingConds.forEach((c, i) => {
           output.print(
             `    ${chalk.gray(`${hasConds.length + i + 1}.`)} ${formatConditionDisplay(c)}\n`
@@ -725,7 +707,7 @@ async function editConditions(
           kind: 'has' as const,
         })),
         ...missingConds.map((c, i) => ({
-          label: `[missing] ${formatConditionDisplay(c)}`,
+          label: `[does not have] ${formatConditionDisplay(c)}`,
           idx: i,
           kind: 'missing' as const,
         })),
@@ -746,10 +728,10 @@ async function editConditions(
         const selected = allConds[toRemove as number];
         if (selected.kind === 'has') {
           hasConds.splice(selected.idx, 1);
-          (route.route as any).has = hasConds;
+          route.route.has = hasConds;
         } else {
           missingConds.splice(selected.idx, 1);
-          (route.route as any).missing = missingConds;
+          route.route.missing = missingConds;
         }
       }
     }
@@ -760,10 +742,8 @@ async function editConditions(
       const { formatCondition: formatCond } = await import(
         '../../util/routes/parse-conditions'
       );
-      const existingHasStrings = hasConds.map((c: any) =>
-        formatCond(c as HasField)
-      );
-      const existingMissingStrings = missingConds.map((c: any) =>
+      const existingHasStrings = hasConds.map(c => formatCond(c as HasField));
+      const existingMissingStrings = missingConds.map(c =>
         formatCond(c as HasField)
       );
       const tempFlags: Record<string, unknown> = {
@@ -787,13 +767,13 @@ async function editConditions(
 
       if (newHas.length > 0) {
         const parsed = parseConditions(newHas);
-        const existing = ((route.route as any).has ?? []) as HasField[];
-        (route.route as any).has = [...existing, ...parsed];
+        const existing = (route.route.has ?? []) as HasField[];
+        route.route.has = [...existing, ...parsed];
       }
       if (newMissing.length > 0) {
         const parsed = parseConditions(newMissing);
-        const existing = ((route.route as any).missing ?? []) as HasField[];
-        (route.route as any).missing = [...existing, ...parsed];
+        const existing = (route.route.missing ?? []) as HasField[];
+        route.route.missing = [...existing, ...parsed];
       }
       break; // Return to main menu after adding
     }
@@ -816,7 +796,7 @@ interface ResponseHeaderItem {
  * Collects all response header operations from both the headers object
  * and the transforms array into a unified list.
  */
-function getAllResponseHeaders(route: RoutingRule): ResponseHeaderItem[] {
+function getAllResponseHeaders(route: EditableRoute): ResponseHeaderItem[] {
   const items: ResponseHeaderItem[] = [];
 
   // Set operations from headers object
@@ -825,7 +805,7 @@ function getAllResponseHeaders(route: RoutingRule): ResponseHeaderItem[] {
   }
 
   // Append/delete operations from transforms
-  const transforms = ((route.route as any).transforms ?? []) as Transform[];
+  const transforms = (route.route.transforms ?? []) as Transform[];
   for (const t of transforms) {
     if (t.type === 'response.headers') {
       items.push({
@@ -852,7 +832,7 @@ function formatResponseHeaderItem(item: ResponseHeaderItem): string {
 
 async function editResponseHeaders(
   client: Client,
-  route: RoutingRule
+  route: EditableRoute
 ): Promise<void> {
   for (;;) {
     const allHeaders = getAllResponseHeaders(route);
@@ -908,8 +888,7 @@ async function editResponseHeaders(
           route.route.headers = currentHeaders;
         } else {
           // Remove from transforms array — find the matching response.headers transform
-          const transforms = ((route.route as any).transforms ??
-            []) as Transform[];
+          const transforms = (route.route.transforms ?? []) as Transform[];
           const idx = transforms.findIndex(
             t =>
               t.type === 'response.headers' &&
@@ -920,7 +899,7 @@ async function editResponseHeaders(
           );
           if (idx !== -1) {
             transforms.splice(idx, 1);
-            (route.route as any).transforms = transforms;
+            route.route.transforms = transforms;
           }
         }
       }
@@ -950,7 +929,7 @@ async function editResponseHeaders(
       const deleteHeaders =
         (tempFlags['--delete-response-header'] as string[]) || [];
 
-      const existing = ((route.route as any).transforms ?? []) as Transform[];
+      const existing = (route.route.transforms ?? []) as Transform[];
       const newTransforms: Transform[] = [];
 
       for (const h of appendHeaders) {
@@ -973,7 +952,7 @@ async function editResponseHeaders(
       }
 
       if (newTransforms.length > 0) {
-        (route.route as any).transforms = [...existing, ...newTransforms];
+        route.route.transforms = [...existing, ...newTransforms];
       }
       break; // Return to main menu after adding
     }
@@ -982,7 +961,7 @@ async function editResponseHeaders(
 
 async function editTransformsByType(
   client: Client,
-  route: RoutingRule,
+  route: EditableRoute,
   transformType: 'request.headers' | 'request.query',
   headerType: 'request-header' | 'request-query'
 ): Promise<void> {
@@ -992,8 +971,7 @@ async function editTransformsByType(
     transformType === 'request.headers' ? 'request header' : 'query parameter';
 
   for (;;) {
-    const allTransforms = ((route.route as any).transforms ??
-      []) as Transform[];
+    const allTransforms = (route.route.transforms ?? []) as Transform[];
     const matching = allTransforms.filter(t => t.type === transformType);
 
     if (matching.length > 0) {
@@ -1048,7 +1026,7 @@ async function editTransformsByType(
 
         if (removeIdx !== -1) {
           allTransforms.splice(removeIdx, 1);
-          (route.route as any).transforms = allTransforms;
+          route.route.transforms = allTransforms;
         }
       }
     }
@@ -1062,7 +1040,7 @@ async function editTransformsByType(
       const { transforms } = collectHeadersAndTransforms(tfFlags);
 
       if (transforms.length > 0) {
-        (route.route as any).transforms = [...allTransforms, ...transforms];
+        route.route.transforms = [...allTransforms, ...transforms];
       }
       break; // Return to main menu after adding
     }
@@ -1280,6 +1258,7 @@ export default async function edit(client: Client, argv: string[]) {
     });
 
     if (editMode === 'ai') {
+      telemetry.trackCliOptionAi('interactive');
       return await handleAIEdit(
         client,
         project.id,
@@ -1358,49 +1337,75 @@ async function handleAIEdit(
   skipConfirmation: boolean | undefined,
   existingStagingVersion: { isStaging?: boolean } | undefined
 ): Promise<number> {
-  // Get the prompt
-  let prompt = aiPrompt;
-  if (!prompt) {
-    prompt = await client.input.text({
-      message: "Describe what you'd like to change:",
-      validate: val => {
-        if (!val) return 'A description is required';
-        if (val.length > 2000)
-          return 'Description must be 2000 characters or less';
-        return true;
-      },
-    });
-  }
-
   // Convert existing route to the /generate format
   const currentRoute = routingRuleToCurrentRoute(originalRoute);
 
-  // Generate the updated route
-  output.spinner('Generating updated route...');
-
+  // Initial generation loop — retry on error unless --yes
+  let prompt = aiPrompt;
   let currentGenerated;
-  try {
-    const result = await generateRouteApi(
-      client,
-      projectId,
-      { prompt, currentRoute },
-      { teamId }
-    );
-
-    if (result.error) {
-      output.error(result.error);
-      return 1;
-    }
-    if (!result.route) {
-      output.error('Could not apply changes. Try rephrasing.');
-      return 1;
+  for (;;) {
+    if (!prompt) {
+      prompt = await client.input.text({
+        message: "Describe what you'd like to change:",
+        validate: val => {
+          if (!val) return 'A description is required';
+          if (val.length > 2000)
+            return 'Description must be 2000 characters or less';
+          return true;
+        },
+      });
     }
 
-    currentGenerated = result.route;
-  } catch (e: unknown) {
-    const error = e as { message?: string };
-    output.error(error.message || 'Failed to generate updated route');
-    return 1;
+    output.spinner('Generating updated route...');
+
+    let errorMessage: string | undefined;
+    try {
+      const result = await generateRouteApi(
+        client,
+        projectId,
+        { prompt, currentRoute },
+        { teamId }
+      );
+
+      if (result.error) {
+        errorMessage = result.error;
+      } else if (!result.route) {
+        errorMessage = 'Could not apply changes. Try rephrasing.';
+      } else {
+        currentGenerated = result.route;
+      }
+    } catch (e: unknown) {
+      const error = e as { message?: string };
+      errorMessage = error.message || 'Failed to generate updated route';
+    }
+
+    if (currentGenerated) {
+      break;
+    }
+
+    output.error(errorMessage!);
+
+    // Non-interactive: exit immediately
+    if (skipConfirmation) {
+      return 1;
+    }
+
+    // Interactive: offer retry
+    const retry = await client.input.select({
+      message: 'What would you like to do?',
+      choices: [
+        { name: 'Try again with a different description', value: 'retry' },
+        { name: 'Cancel', value: 'cancel' },
+      ],
+    });
+
+    if (retry === 'cancel') {
+      output.log('No changes made.');
+      return 0;
+    }
+
+    // Clear prompt so it's re-prompted on next iteration
+    prompt = undefined;
   }
 
   printGeneratedRoutePreview(currentGenerated);
@@ -1447,13 +1452,18 @@ async function handleAIEdit(
     if (choice === 'ai-edit') {
       const editPrompt = await client.input.text({
         message: "Describe what you'd like to change:",
-        validate: val => (val ? true : 'A description is required'),
+        validate: val => {
+          if (!val) return 'A description is required';
+          if (val.length > 2000)
+            return 'Description must be 2000 characters or less';
+          return true;
+        },
       });
 
       output.spinner('Updating route...');
 
       try {
-        const editResult = await generateRouteApi(
+        const editResult: GenerateRouteResponse = await generateRouteApi(
           client,
           projectId,
           {
@@ -1465,10 +1475,14 @@ async function handleAIEdit(
 
         if (editResult.error) {
           output.error(editResult.error);
+          output.log('Keeping previous route:');
+          printGeneratedRoutePreview(currentGenerated);
           continue;
         }
         if (!editResult.route) {
           output.error('Could not apply changes. Try rephrasing.');
+          output.log('Keeping previous route:');
+          printGeneratedRoutePreview(currentGenerated);
           continue;
         }
 
@@ -1477,36 +1491,24 @@ async function handleAIEdit(
       } catch (e: unknown) {
         const error = e as { message?: string };
         output.error(error.message || 'Failed to update route');
+        output.log('Keeping previous route:');
+        printGeneratedRoutePreview(currentGenerated);
       }
       continue;
     }
 
     if (choice === 'manual') {
-      // Build a RoutingRule from the AI output for the interactive edit loop
+      // Build an EditableRoute from the AI output for the interactive edit loop
       const routeInput = generatedRouteToAddInput(currentGenerated);
       const manualRoute = cloneRoute(originalRoute);
       manualRoute.name = routeInput.name;
       manualRoute.description = routeInput.description;
       manualRoute.srcSyntax = routeInput.srcSyntax;
-      manualRoute.route = {
-        ...manualRoute.route,
-        src: routeInput.route.src,
-        dest: routeInput.route.dest,
-        status: routeInput.route.status,
-        headers: routeInput.route.headers,
-        has: routeInput.route.has as any,
-        missing: routeInput.route.missing as any,
-      };
-      if (routeInput.route.transforms) {
-        (manualRoute.route as any).transforms = routeInput.route.transforms;
-      } else {
-        delete (manualRoute.route as any).transforms;
-      }
+      manualRoute.route = routeInput.route;
 
       await runInteractiveEditLoop(client, manualRoute);
       populateRouteEnv(manualRoute.route);
 
-      // Send the update
       const editStamp = stamp();
       output.spinner(`Updating route "${manualRoute.name}"`);
       try {
