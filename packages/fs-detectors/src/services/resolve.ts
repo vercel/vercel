@@ -77,6 +77,7 @@ interface ResolveConfiguredServiceOptions {
   group?: string;
   resolvedEntrypoint?: ResolvedEntrypointPath;
   routePrefixSource?: RoutePrefixSource;
+  detectedFramework?: string;
 }
 function toWorkspaceRelativeEntrypoint(
   entrypoint: string,
@@ -321,6 +322,7 @@ export async function resolveConfiguredService(
     group,
     resolvedEntrypoint,
     routePrefixSource = 'configured',
+    detectedFramework,
   } = options;
   const type = config.type || 'web';
   const rawEntrypoint = config.entrypoint;
@@ -341,8 +343,10 @@ export async function resolveConfiguredService(
   const normalizedEntrypoint = resolvedEntrypointPath?.normalized;
   const entrypointIsDirectory = Boolean(resolvedEntrypointPath?.isDirectory);
 
+  const framework = config.framework ?? detectedFramework;
   const inferredRuntime = inferServiceRuntime({
     ...config,
+    framework,
     entrypoint: entrypointIsDirectory ? undefined : normalizedEntrypoint,
   });
   let workspace = '.';
@@ -380,11 +384,11 @@ export async function resolveConfiguredService(
   let builderSrc: string;
 
   if (config.framework) {
-    const framework = frameworksBySlug.get(config.framework);
-    builderUse = framework?.useRuntime?.use || '@vercel/static-build';
+    const detected = frameworksBySlug.get(config.framework);
+    builderUse = detected?.useRuntime?.use || '@vercel/static-build';
     // Prefer user-provided entrypoint over framework default
     builderSrc =
-      resolvedEntrypointFile || framework?.useRuntime?.src || 'package.json';
+      resolvedEntrypointFile || detected?.useRuntime?.src || 'package.json';
   } else if (config.builder) {
     builderUse = config.builder;
     builderSrc = resolvedEntrypointFile!;
@@ -433,8 +437,8 @@ export async function resolveConfiguredService(
   if (workspace && workspace !== '.') {
     builderConfig.workspace = workspace;
   }
-  if (config.framework) {
-    builderConfig.framework = config.framework;
+  if (framework) {
+    builderConfig.framework = framework;
   }
 
   return {
@@ -448,7 +452,7 @@ export async function resolveConfiguredService(
       type === 'web' && typeof routePrefix === 'string'
         ? routePrefixSource
         : undefined,
-    framework: config.framework,
+    framework,
     builder: {
       src: builderSrc,
       use: builderUse,
@@ -514,41 +518,52 @@ export async function resolveAllConfiguredServices(
       }
     }
 
-    let resolvedConfig = serviceConfig;
-
+    let detectedFramework: string | undefined;
     const shouldDetectFramework =
-      !serviceConfig.framework && Boolean(resolvedEntrypoint?.isDirectory);
+      !serviceConfig.framework && Boolean(resolvedEntrypoint);
+    let frameworkWorkspace: string | undefined;
 
-    if (shouldDetectFramework) {
-      const workspace = resolvedEntrypoint!.normalized;
+    if (resolvedEntrypoint?.isDirectory) {
+      frameworkWorkspace = resolvedEntrypoint.normalized;
+    } else if (resolvedEntrypoint?.normalized) {
+      const inferredRuntime = inferServiceRuntime({
+        ...serviceConfig,
+        entrypoint: resolvedEntrypoint.normalized,
+      });
+      frameworkWorkspace = await inferWorkspaceFromNearestManifest({
+        fs,
+        entrypoint: resolvedEntrypoint.normalized,
+        runtime: inferredRuntime,
+      });
+    }
+
+    if (shouldDetectFramework && frameworkWorkspace) {
       const { framework, error } = await detectFrameworkFromWorkspace({
         fs,
-        workspace,
+        workspace: frameworkWorkspace,
         serviceName: name,
       });
       if (error) {
         errors.push(error);
         continue;
       }
-      if (!framework) {
+      if (!framework && resolvedEntrypoint?.isDirectory) {
         errors.push({
           code: 'MISSING_SERVICE_FRAMEWORK',
-          message: `Service "${name}" uses directory entrypoint "${serviceConfig.entrypoint}" but no framework could be detected in "${workspace}". Specify "framework" explicitly or use a file entrypoint.`,
+          message: `Service "${name}" uses directory entrypoint "${serviceConfig.entrypoint}" but no framework could be detected in "${frameworkWorkspace}". Specify "framework" explicitly or use a file entrypoint.`,
           serviceName: name,
         });
         continue;
       }
-      resolvedConfig = {
-        ...serviceConfig,
-        framework,
-      };
+      detectedFramework = framework;
     }
 
     const service = await resolveConfiguredService({
       name,
-      config: resolvedConfig,
+      config: serviceConfig,
       fs,
       resolvedEntrypoint,
+      detectedFramework,
       routePrefixSource,
     });
 

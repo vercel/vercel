@@ -563,6 +563,39 @@ describe('detectServices', () => {
       expect(result.services[0].builder.src).toBe('apps/api/index.py');
     });
 
+    it('should auto-detect framework for file entrypoint and keep node backend builder', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            jsApi: {
+              entrypoint: 'services/js-api/index.js',
+              routePrefix: '/api/js',
+            },
+          },
+        }),
+        'services/js-api/package.json': JSON.stringify({
+          dependencies: {
+            express: 'latest',
+          },
+        }),
+        'services/js-api/index.js': 'const express = require("express");',
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      expect(result.services).toHaveLength(1);
+      expect(result.services[0]).toMatchObject({
+        name: 'jsApi',
+        type: 'web',
+        framework: 'express',
+        workspace: 'services/js-api',
+        entrypoint: 'index.js',
+        routePrefix: '/api/js',
+      });
+      expect(result.services[0].builder.use).toBe('@vercel/backends');
+      expect(result.services[0].builder.config?.framework).toBe('express');
+    });
+
     it('should default topic and consumer to "default" for workers', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': JSON.stringify({
