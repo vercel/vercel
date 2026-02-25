@@ -1,8 +1,7 @@
 import fs from 'fs-extra';
 import { join } from 'path';
-import type { Response } from 'node-fetch';
+import nodeFetch, { type Response } from 'node-fetch';
 import {
-  fetch,
   fixture,
   testFixture,
   testFixtureStdio,
@@ -191,21 +190,23 @@ test('[vercel dev] Middleware rewrites with same origin', async () => {
     dev.unref();
     await readyResolver;
 
-    let response = await fetch(
+    let response = await nodeFetch(
       `http://localhost:${port}?to=http://localhost:${port}`
     );
     validateResponseHeaders(response);
     expect(response.status).toBe(200);
     expect(await response.text()).toMatch(/<h1>Index<\/h1>/);
 
-    response = await fetch(
+    response = await nodeFetch(
       `http://localhost:${port}?to=http://127.0.0.1:${port}`
     );
     validateResponseHeaders(response);
     expect(response.status).toBe(200);
     expect(await response.text()).toMatch(/<h1>Index<\/h1>/);
 
-    response = await fetch(`http://localhost:${port}?to=http://[::1]:${port}`);
+    response = await nodeFetch(
+      `http://localhost:${port}?to=http://[::1]:${port}`
+    );
     validateResponseHeaders(response);
     expect(response.status).toBe(200);
     expect(await response.text()).toMatch(/<h1>Index<\/h1>/);
@@ -316,7 +317,7 @@ test(
       const originalVercelJson = await fs.readJSON(vercelJsonPath);
 
       try {
-        const originalResponse = await fetch(
+        const originalResponse = await nodeFetch(
           `http://localhost:${port}/index.txt`
         );
         validateResponseHeaders(originalResponse);
@@ -328,7 +329,7 @@ test(
           devCommand: 'serve -p $PORT overridden',
         });
 
-        const overriddenResponse = await fetch(
+        const overriddenResponse = await nodeFetch(
           `http://localhost:${port}/index.txt`
         );
         validateResponseHeaders(overriddenResponse);
