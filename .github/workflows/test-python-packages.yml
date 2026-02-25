@@ -1,0 +1,69 @@
+name: Python Packages Tests
+
+on:
+  pull_request:
+    paths:
+      - 'python/**'
+      - 'pyproject.toml'
+      - 'uv.lock'
+      - 'utils/get-python-packages.js'
+      - '.github/workflows/test-python-packages.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  setup:
+    name: Discover Python Packages
+    runs-on: ubuntu-latest
+    outputs:
+      packages: ${{ steps.discover.outputs.packages }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: discover
+        run: |
+          PACKAGES="$(node utils/get-python-packages.js)"
+          echo "packages=$PACKAGES" >> "$GITHUB_OUTPUT"
+          echo "Discovered Python packages: $PACKAGES"
+
+  test:
+    name: Test (${{ matrix.package.label }}, Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs:
+      - setup
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.12', '3.13', '3.14']
+        package: ${{ fromJson(needs.setup.outputs.packages) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - uses: astral-sh/setup-uv@eac588ad8def6316056a12d4907a9d4d84ff7a3b # v7.3.0
+        with:
+          version: '0.9.22'
+      - run: uv run --group=test --locked --project=${{ matrix.package.project }} pytest -v --tb=short ${{ matrix.package.project }}/tests
+
+  summary:
+    name: Summary (python-packages)
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    if: always()
+    needs:
+      - setup
+      - test
+    steps:
+      - name: Check All
+        run: |-
+          for status in ${{ join(needs.*.result, ' ') }}
+          do
+            if [ "$status" != "success" ] && [ "$status" != "skipped" ]
+            then
+              echo "Some checks failed"
+              exit 1
+            fi
+          done

@@ -29,4 +29,13 @@ export class UsageTelemetryClient
       this.trackCliFlag('json');
     }
   }
+
+  trackCliOptionBreakdown(breakdown: string | undefined) {
+    if (breakdown) {
+      this.trackCliOption({
+        option: 'breakdown',
+        value: breakdown,
+      });
+    }
+  }
 }

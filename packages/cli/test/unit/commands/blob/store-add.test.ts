@@ -64,7 +64,11 @@ describe('blob store add', () => {
       expect(client.fetch).toHaveBeenCalledWith('/v1/storage/stores/blob', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: 'my-test-store', region: 'iad1' }),
+        body: JSON.stringify({
+          name: 'my-test-store',
+          region: 'iad1',
+          access: 'public',
+        }),
         accountId: 'org_123',
       });
       expect(mockedOutput.debug).toHaveBeenCalledWith(
@@ -109,7 +113,11 @@ describe('blob store add', () => {
       expect(client.fetch).toHaveBeenCalledWith('/v1/storage/stores/blob', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: 'my-test-store', region: 'sfo1' }),
+        body: JSON.stringify({
+          name: 'my-test-store',
+          region: 'sfo1',
+          access: 'public',
+        }),
         accountId: 'org_123',
       });
       expect(mockedOutput.success).toHaveBeenCalledWith(
@@ -137,7 +145,11 @@ describe('blob store add', () => {
       expect(client.fetch).toHaveBeenCalledWith('/v1/storage/stores/blob', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: 'default-region-store', region: 'iad1' }),
+        body: JSON.stringify({
+          name: 'default-region-store',
+          region: 'iad1',
+          access: 'public',
+        }),
         accountId: 'org_123',
       });
 
@@ -176,7 +188,11 @@ describe('blob store add', () => {
       expect(client.fetch).toHaveBeenCalledWith('/v1/storage/stores/blob', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: 'test-store-name', region: 'iad1' }),
+        body: JSON.stringify({
+          name: 'test-store-name',
+          region: 'iad1',
+          access: 'public',
+        }),
         accountId: 'org_123',
       });
     });
@@ -204,7 +220,7 @@ describe('blob store add', () => {
         'proj_123',
         'store_test123',
         ['production', 'preview', 'development'],
-        'org_123'
+        { accountId: 'org_123' }
       );
       expect(mockedOutput.success).toHaveBeenCalledWith(
         'Blob store created: test-store (store_test123)'
@@ -239,7 +255,7 @@ describe('blob store add', () => {
         'proj_123',
         'store_test123',
         ['production'],
-        'org_123'
+        { accountId: 'org_123' }
       );
     });
 
@@ -256,7 +272,11 @@ describe('blob store add', () => {
       expect(client.fetch).toHaveBeenCalledWith('/v1/storage/stores/blob', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: 'standalone-store', region: 'iad1' }),
+        body: JSON.stringify({
+          name: 'standalone-store',
+          region: 'iad1',
+          access: 'public',
+        }),
         accountId: undefined,
       });
       expect(client.input.confirm).not.toHaveBeenCalled();
@@ -361,7 +381,11 @@ describe('blob store add', () => {
       expect(client.fetch).toHaveBeenCalledWith('/v1/storage/stores/blob', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: 'linked-store', region: 'iad1' }),
+        body: JSON.stringify({
+          name: 'linked-store',
+          region: 'iad1',
+          access: 'public',
+        }),
         accountId: 'org_123',
       });
     });
@@ -379,7 +403,11 @@ describe('blob store add', () => {
       expect(client.fetch).toHaveBeenCalledWith('/v1/storage/stores/blob', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: 'unlinked-store', region: 'iad1' }),
+        body: JSON.stringify({
+          name: 'unlinked-store',
+          region: 'iad1',
+          access: 'public',
+        }),
         accountId: undefined,
       });
     });

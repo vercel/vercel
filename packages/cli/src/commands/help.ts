@@ -267,6 +267,10 @@ export function buildSubcommandLines(
     })
   );
 
+  if (rows.length === 0) {
+    return null;
+  }
+
   table.push(...rows);
   return [
     `${INDENT}${chalk.dim('Commands')}:`,

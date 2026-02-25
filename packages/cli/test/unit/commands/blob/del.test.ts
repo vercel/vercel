@@ -38,6 +38,7 @@ describe('blob del', () => {
       expect(exitCode).toBe(0);
       expect(mockedBlob.del).toHaveBeenCalledWith(['test-file.txt'], {
         token: testToken,
+        ifMatch: undefined,
       });
       expect(mockedOutput.debug).toHaveBeenCalledWith('Deleting blob');
       expect(mockedOutput.spinner).toHaveBeenCalledWith('Deleting blob');
@@ -66,6 +67,7 @@ describe('blob del', () => {
         ['file1.txt', 'file2.txt', 'file3.txt'],
         {
           token: testToken,
+          ifMatch: undefined,
         }
       );
       expect(mockedOutput.success).toHaveBeenCalledWith('Blob deleted');
@@ -87,6 +89,7 @@ describe('blob del', () => {
       expect(exitCode).toBe(0);
       expect(mockedBlob.del).toHaveBeenCalledWith([blobUrl], {
         token: testToken,
+        ifMatch: undefined,
       });
     });
 
@@ -103,7 +106,52 @@ describe('blob del', () => {
       expect(exitCode).toBe(0);
       expect(mockedBlob.del).toHaveBeenCalledWith(args, {
         token: testToken,
+        ifMatch: undefined,
       });
+    });
+  });
+
+  describe('--if-match option', () => {
+    it('should pass --if-match to blob.del', async () => {
+      client.setArgv(
+        'blob',
+        'del',
+        '--if-match',
+        '"some-etag"',
+        'test-file.txt'
+      );
+
+      const exitCode = await del(
+        client,
+        ['--if-match', '"some-etag"', 'test-file.txt'],
+        testToken
+      );
+
+      expect(exitCode).toBe(0);
+      expect(mockedBlob.del).toHaveBeenCalledWith(['test-file.txt'], {
+        token: testToken,
+        ifMatch: '"some-etag"',
+      });
+    });
+
+    it('should track --if-match telemetry', async () => {
+      const exitCode = await del(
+        client,
+        ['--if-match', '"etag-value"', 'test-file.txt'],
+        testToken
+      );
+
+      expect(exitCode).toBe(0);
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'argument:urlsOrPathnames',
+          value: '[REDACTED]',
+        },
+        {
+          key: 'option:if-match',
+          value: '[REDACTED]',
+        },
+      ]);
     });
   });
 
