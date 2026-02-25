@@ -27,6 +27,10 @@ export const setupAuthAndConfig = async (sandbox: Sandbox) => {
         '-c',
         `printf 'export VERCEL_TOKEN="%s"\\n' '${shellEscape(token)}' >> "$HOME/.bashrc"`,
       ]);
+      await sandbox.runCommand('bash', [
+        '-c',
+        `printf 'export VERCEL_TOKEN="%s"\\n' '${shellEscape(token)}' >> "$HOME/.profile"`,
+      ]);
     }
   } catch (err) {
     // Host may have no auth (e.g. CI with only VERCEL_TOKEN)

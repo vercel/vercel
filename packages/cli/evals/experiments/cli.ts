@@ -2,6 +2,7 @@ import { existsSync, readFileSync, readdirSync } from 'fs';
 import { join, dirname, relative } from 'path';
 import { fileURLToPath } from 'url';
 import type { ExperimentConfig } from '@vercel/agent-eval';
+import { setupAuthAndConfig } from '../setup/auth-and-config';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SKILLS_DIR = join(__dirname, '../../../../skills/vercel-cli');
@@ -41,49 +42,27 @@ const config: ExperimentConfig = {
   setup: async sandbox => {
     const teamId = process.env.CLI_EVAL_TEAM_ID ?? '';
     const projectId = process.env.CLI_EVAL_PROJECT_ID ?? '';
-    const vercelToken = process.env.VERCEL_TOKEN ?? '';
 
-    // Set environment variables for agent detection and Vercel auth
-    // This enables non-interactive mode automatically via agent detection
+    await setupAuthAndConfig(sandbox);
+
     const runCmd =
       (sandbox as any).runCommand ||
       (sandbox as any).exec ||
       (sandbox as any).run ||
       null;
 
-    // Sandbox uses node user (home /home/node). Write auth and env so CLI and agent can authenticate.
-    if (runCmd && vercelToken) {
+    // Docker sandbox: enable non-interactive mode via agent detection
+    if (runCmd) {
       try {
-        const shellEscape = (s: string) => s.replace(/'/g, "'\\''");
-        const authJson = JSON.stringify({ token: vercelToken });
-        // CLI reads auth from ~/.vercel/auth.json and/or XDG dir. Write both so link --yes works.
         await runCmd.call(sandbox, 'bash', [
           '-c',
-          `mkdir -p /home/node/.vercel && printf '%s' '${shellEscape(authJson)}' > /home/node/.vercel/auth.json`,
+          'printf \'export AI_AGENT="claude-code"\\n\' >> "$HOME/.bashrc"',
         ]);
         await runCmd.call(sandbox, 'bash', [
           '-c',
-          `mkdir -p /home/node/.local/share/com.vercel.cli && printf '%s' '${shellEscape(authJson)}' > /home/node/.local/share/com.vercel.cli/auth.json`,
-        ]);
-        // Export in .bashrc and .profile so agent subprocesses (including non-interactive) see the token.
-        await runCmd.call(sandbox, 'bash', [
-          '-c',
-          `printf 'export VERCEL_TOKEN=%s\\n' '${shellEscape(vercelToken)}' >> /home/node/.bashrc`,
-        ]);
-        await runCmd.call(sandbox, 'bash', [
-          '-c',
-          `printf 'export VERCEL_TOKEN=%s\\n' '${shellEscape(vercelToken)}' >> /home/node/.profile`,
-        ]);
-        await runCmd.call(sandbox, 'bash', [
-          '-c',
-          'printf \'export AI_AGENT="claude-code"\\n\' >> /home/node/.bashrc',
-        ]);
-        await runCmd.call(sandbox, 'bash', [
-          '-c',
-          'printf \'export CLAUDE_CODE="1"\\n\' >> /home/node/.bashrc',
+          'printf \'export CLAUDE_CODE="1"\\n\' >> "$HOME/.bashrc"',
         ]);
       } catch (error: any) {
-        // Environment variable setup failed - continue anyway
         void error;
       }
     }
