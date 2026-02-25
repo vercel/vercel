@@ -12,5 +12,8 @@
         "redirect": "manual"
       }
     }
-  ]
+  ],
+  "env": {
+    "NEXT_BUILDER_INTEGRATION": "1"
+  }
 }

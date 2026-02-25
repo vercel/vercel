@@ -34,6 +34,11 @@ interface PythonAnalysisErrorProps {
    * Optional "action" to display before the `link`, such as "Learn More".
    */
   action?: string;
+  /**
+   * The raw content of the file that failed to parse, if available.
+   * Useful for diagnostic logging by callers.
+   */
+  fileContent?: string;
 }
 
 /**
@@ -47,13 +52,22 @@ export class PythonAnalysisError extends Error {
   public path?: string;
   public link?: string;
   public action?: string;
+  public fileContent?: string;
 
-  constructor({ message, code, path, link, action }: PythonAnalysisErrorProps) {
+  constructor({
+    message,
+    code,
+    path,
+    link,
+    action,
+    fileContent,
+  }: PythonAnalysisErrorProps) {
     super(message);
     this.name = 'PythonAnalysisError';
     this.code = code;
     this.path = path;
     this.link = link;
     this.action = action;
+    this.fileContent = fileContent;
   }
 }

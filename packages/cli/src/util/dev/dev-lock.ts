@@ -1,5 +1,5 @@
 import { join } from 'path';
-import { open, unlink, readFile } from 'fs/promises';
+import { mkdir, open, unlink, readFile } from 'fs/promises';
 import { unlinkSync, constants } from 'fs';
 import { VERCEL_DIR } from '../projects/link';
 import output from '../../output-manager';
@@ -60,7 +60,10 @@ export async function acquireDevLock(
   projectRoot: string,
   port: number
 ): Promise<DevLockResult> {
-  const lockPath = join(projectRoot, VERCEL_DIR, DEV_LOCK_FILE);
+  const vercelDir = join(projectRoot, VERCEL_DIR);
+  const lockPath = join(vercelDir, DEV_LOCK_FILE);
+
+  await mkdir(vercelDir, { recursive: true });
 
   const lockData: DevLockFile = {
     pid: process.pid,

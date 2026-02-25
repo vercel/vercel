@@ -16,34 +16,34 @@ pub(crate) fn contains_app_or_handler_impl(source: &str) -> bool {
     // Iterate over top-level statements
     for stmt in parsed.suite() {
         match stmt {
-            // Check for top-level assignment to 'app'
+            // Check for top-level assignment to 'app' or 'application'
             // e.g., app = Sanic() or app = Flask(__name__) or app = create_app()
             Stmt::Assign(assign) => {
                 for target in &assign.targets {
-                    if is_name_expr(target, "app") {
+                    if is_name_expr(target, "app") || is_name_expr(target, "application") {
                         return true;
                     }
                 }
             }
 
-            // Check for annotated assignment to 'app'
+            // Check for annotated assignment to 'app' or 'application'
             // e.g., app: Sanic = Sanic()
             Stmt::AnnAssign(ann_assign) => {
-                if is_name_expr(&ann_assign.target, "app") {
+                if is_name_expr(&ann_assign.target, "app") || is_name_expr(&ann_assign.target, "application") {
                     return true;
                 }
             }
 
-            // Check for function named 'app' (sync or async)
+            // Check for function named 'app' or 'application' (sync or async)
             // e.g., def app(environ, start_response): ...
             // e.g., async def app(scope, receive, send): ...
             Stmt::FunctionDef(func_def) => {
-                if func_def.name.as_str() == "app" {
+                if func_def.name.as_str() == "app" || func_def.name.as_str() == "application" {
                     return true;
                 }
             }
 
-            // Check for import of 'app'
+            // Check for import of 'app' or 'application'
             // e.g., from server import app
             // e.g., from server import application as app
             Stmt::ImportFrom(import_from) => {
@@ -55,7 +55,7 @@ pub(crate) fn contains_app_or_handler_impl(source: &str) -> bool {
                         .as_ref()
                         .map(|id| id.as_str())
                         .unwrap_or_else(|| alias.name.as_str());
-                    if imported_as == "app" {
+                    if imported_as == "app" || imported_as == "application" {
                         return true;
                     }
                 }

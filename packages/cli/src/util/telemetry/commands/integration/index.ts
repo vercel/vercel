@@ -47,4 +47,11 @@ export class IntegrationTelemetryClient
       value: actual,
     });
   }
+
+  trackCliSubcommandGuide(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'guide',
+      value: actual,
+    });
+  }
 }

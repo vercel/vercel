@@ -363,7 +363,7 @@ test(
       await testPath(
         500,
         '/',
-        /Route at index 0 has invalid `src` regular expression/m
+        /Route at index 0 has invalid `src`\/`source` regular expression/m
       );
     },
     { skipDeploy: true }

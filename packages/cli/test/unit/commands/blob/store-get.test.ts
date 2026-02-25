@@ -182,7 +182,7 @@ describe('blob store get', () => {
       expect(exitCode).toBe(0);
       expect(mockedOutput.print).toHaveBeenCalledWith(
         expect.stringContaining(
-          'Blob Store: Display Test Store (store_display_test_123)\nBilling State: Active\nSize: 2MB\nCreated At: 2022-01-01T00:00:00.000Z\nUpdated At: 2023-01-01T00:00:00.000Z'
+          'Blob Store: Display Test Store (store_display_test_123)\nBilling State: Active\nSize: 2MB\nAccess: Public\nCreated At: 2022-01-01T00:00:00.000Z\nUpdated At: 2023-01-01T00:00:00.000Z'
         )
       );
       expect(formatSpy).toHaveBeenCalledWith(

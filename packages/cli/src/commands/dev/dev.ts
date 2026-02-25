@@ -10,13 +10,17 @@ import type Client from '../../util/client';
 import { getLinkedProject } from '../../util/projects/link';
 import type { ProjectSettings } from '@vercel-internals/types';
 import setupAndLink from '../../util/link/setup-and-link';
-import { getCommandName } from '../../util/pkg-name';
+import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 import param from '../../util/output/param';
 import cmd from '../../util/output/cmd';
 import { OUTPUT_DIR } from '../../util/build/write-build-result';
 import { pullEnvRecords } from '../../util/env/get-env-records';
 import output from '../../output-manager';
 import { refreshOidcToken } from '../../util/env/refresh-oidc-token';
+import {
+  outputActionRequired,
+  buildCommandWithYes,
+} from '../../util/agent-output';
 import type { DevTelemetryClient } from '../../util/telemetry/commands/dev';
 import { VERCEL_OIDC_TOKEN } from '../../util/env/constants';
 import {
@@ -25,9 +29,11 @@ import {
 } from '../../util/projects/detect-services';
 import { displayDetectedServices } from '../../util/input/display-services';
 import { acquireDevLock, releaseDevLock } from '../../util/dev/dev-lock';
+import { resolveProjectCwd } from '../../util/projects/find-project-root';
 
 type Options = {
   '--listen': string;
+  '--local': boolean;
   '--yes': boolean;
 };
 
@@ -41,30 +47,60 @@ export default async function dev(
   let cwd = resolve(dir);
   const listen = parseListen(opts['--listen'] || '3000');
 
+  cwd = await resolveProjectCwd(cwd);
+
   // retrieve dev command
   let link = await getLinkedProject(client, cwd);
 
   if (link.status === 'not_linked' && !process.env.__VERCEL_SKIP_DEV_CMD) {
-    link = await setupAndLink(client, cwd, {
-      autoConfirm: opts['--yes'],
-      link,
-      successEmoji: 'link',
-      setupMsg: 'Set up and develop',
-    });
+    if (opts['--local']) {
+      output.warn(
+        'Running dev server in local mode without a project setup:\n' +
+          '  - Environment variables will not be pulled from Vercel\n' +
+          '  - Project settings are defined by local configuration\n\n' +
+          `To link your project, run ${getCommandName('dev')} without \`-L\` or \`--local\` or ${getCommandName('link')}.`
+      );
+    } else {
+      link = await setupAndLink(client, cwd, {
+        autoConfirm: opts['--yes'],
+        link,
+        successEmoji: 'link',
+        setupMsg: 'Set up and develop',
+        nonInteractive: client.nonInteractive,
+      });
 
-    if (link.status === 'not_linked') {
-      // User aborted project linking questions
-      return 0;
+      if (link.status === 'not_linked') {
+        // User aborted project linking questions
+        return 0;
+      }
     }
   }
 
   if (link.status === 'error') {
     if (link.reason === 'HEADLESS') {
-      output.error(
-        `Command ${getCommandName(
-          'dev'
-        )} requires confirmation. Use option ${param('--yes')} to confirm.`
-      );
+      if (client.nonInteractive) {
+        outputActionRequired(
+          client,
+          {
+            status: 'action_required',
+            reason: 'confirmation_required',
+            message: `Command ${getCommandNamePlain('dev')} requires confirmation. Use option --yes to confirm.`,
+            next: [
+              {
+                command: buildCommandWithYes(client.argv),
+                when: 'Confirm and run',
+              },
+            ],
+          },
+          link.exitCode
+        );
+      } else {
+        output.error(
+          `Command ${getCommandName(
+            'dev'
+          )} requires confirmation. Use option ${param('--yes')} to confirm.`
+        );
+      }
     }
     return link.exitCode;
   }

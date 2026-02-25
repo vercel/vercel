@@ -1,5 +1,57 @@
 # @vercel/fs-detectors
 
+## 5.8.10
+
+### Patch Changes
+
+- Fix service route-prefix stripping for standalone Go services in services mode. ([#15120](https://github.com/vercel/vercel/pull/15120))
+
+  This updates Go's executable bootstrap to strip generated service route prefixes in production and adds a Go dev wrapper (`vc_init_dev.go`) so standalone Go dev also strips generated service route prefixes before forwarding requests to the user app.
+
+  Update the `09-services-frontend-backend-go-zc` e2e fixture backend from Ruby/Sinatra to Go so it exercises Go services detection and routing in zero-config services mode.
+
+- [services] strip services route prefix in ruby runtime by mounting the app at `SCRIPT_NAME` when service route prefix is auto configured ([#15099](https://github.com/vercel/vercel/pull/15099))
+
+- Updated dependencies [[`cb79f6f8080fddd3673a8911566085e0265b060b`](https://github.com/vercel/vercel/commit/cb79f6f8080fddd3673a8911566085e0265b060b)]:
+  - @vercel/frameworks@3.19.0
+
+## 5.8.9
+
+### Patch Changes
+
+- [services] ([#15093](https://github.com/vercel/vercel/pull/15093))
+  - consolidate `workspace` and `entrypoint` from `experimentalServices` `vercel.json` schema
+  - make `framework` config in service optional -- infer framework from service workspace when not explicitly provided
+
+## 5.8.8
+
+### Patch Changes
+
+- Updated dependencies [[`d103a83aa1d6a283760709990907204f85a136b2`](https://github.com/vercel/vercel/commit/d103a83aa1d6a283760709990907204f85a136b2)]:
+  - @vercel/frameworks@3.18.0
+
+## 5.8.7
+
+### Patch Changes
+
+- [services] infer workspace from manifest: when workspace is not explicitly configured, infer from nearest manifest to entrypoint ([#14986](https://github.com/vercel/vercel/pull/14986))
+
+## 5.8.6
+
+### Patch Changes
+
+- Services routing improvements: ([#15018](https://github.com/vercel/vercel/pull/15018))
+
+  - Fix route ownership scoping so parent service catch-alls (e.g. Vite SPA fallback) don't capture sibling service prefixes
+  - Move shared ownership-guard helpers (`getOwnershipGuard`, `scopeRouteSourceToOwnership`) to `@vercel/routing-utils`
+  - Place runtime service function outputs under internal `/_svc/<service>/index` namespace to prevent filesystem path leakage
+  - Block `/_svc` as a reserved routePrefix in service validation
+  - Scope all builder-emitted routes (not just route-owning builders) to their service ownership before merging
+
+- Updated dependencies [[`3cd0b559f1815fdb13f7aa05114bae2b0b0b0e68`](https://github.com/vercel/vercel/commit/3cd0b559f1815fdb13f7aa05114bae2b0b0b0e68)]:
+  - @vercel/routing-utils@5.3.3
+  - @vercel/frameworks@3.17.1
+
 ## 5.8.5
 
 ### Patch Changes

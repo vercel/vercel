@@ -38,9 +38,19 @@ export const linkCommand = {
     },
     {
       name: 'project',
-      description: 'Specify a project name',
+      description:
+        'Project name or ID to link to (required for non-interactive)',
       shorthand: 'p',
-      argument: 'NAME',
+      argument: 'NAME_OR_ID',
+      type: String,
+      deprecated: false,
+    },
+    {
+      name: 'team',
+      description:
+        'Scope: team ID or slug (use with --project for non-interactive)',
+      shorthand: null,
+      argument: 'TEAM_ID_OR_SLUG',
       type: String,
       deprecated: false,
     },
@@ -59,6 +69,10 @@ export const linkCommand = {
     {
       name: 'Link current directory with default options and skip questions',
       value: `${packageName} link --yes`,
+    },
+    {
+      name: 'Non-interactive: link to an existing project (CI/agents)',
+      value: `${packageName} link --yes --team <team-id> --project <project-name-or-id>`,
     },
     {
       name: 'Link a specific directory to a Vercel Project',
