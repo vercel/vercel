@@ -6,7 +6,7 @@ const config: ExperimentConfig = {
   agent: 'vercel-ai-gateway/claude-code',
   evals: ['_smoke'],
   runs: 1,
-  earlyExit: false,
+  earlyExit: false, // Run all evals to completion so we get explicit pass/fail for each
   timeout: 600,
   sandbox: 'vercel',
   setup: async sandbox => {
