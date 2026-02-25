@@ -119,6 +119,8 @@ export interface BuildOptions {
    * multi-service project.
    */
   service?: {
+    /** Service name for route and output path scoping. */
+    name?: string;
     /** URL path prefix where the service is mounted (e.g., "/api"). */
     routePrefix?: string;
     /** Workspace directory for this service, relative to the project root. */

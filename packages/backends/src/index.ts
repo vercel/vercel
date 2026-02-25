@@ -149,15 +149,31 @@ export const build: BuildV2 = async args => {
         '1',
     });
 
+    const internalServiceFunctionPath =
+      typeof args.service?.name === 'string' && args.service.name !== ''
+        ? `/_svc/${args.service.name}/index`
+        : undefined;
+    const remapRouteDestination = <T extends { dest?: string }>(
+      route: T
+    ): T => {
+      if (!internalServiceFunctionPath || !route.dest) {
+        return route;
+      }
+      return {
+        ...route,
+        dest: internalServiceFunctionPath,
+      };
+    };
+
     // Build routes: filesystem handler, then introspected routes, then catch-all
     const routes = [
       {
         handle: 'filesystem',
       },
-      ...introspectionResult.routes,
+      ...introspectionResult.routes.map(remapRouteDestination),
       {
         src: '/(.*)',
-        dest: '/',
+        dest: internalServiceFunctionPath ?? '/',
       },
     ];
 

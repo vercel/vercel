@@ -46,7 +46,6 @@ import {
   detectFrameworkVersion,
   detectInstrumentation,
   LocalFileSystemDetector,
-  getInternalServiceFunctionPath,
 } from '@vercel/fs-detectors';
 import {
   appendRoutesToPhase,
@@ -854,10 +853,10 @@ async function doBuild(
         config: buildConfig,
         meta,
         span: builderSpan,
-        ...(typeof serviceRoutePrefix === 'string' ||
-        typeof serviceWorkspace === 'string'
+        ...(service
           ? {
               service: {
+                name: service.name,
                 routePrefix:
                   typeof serviceRoutePrefix === 'string'
                     ? serviceRoutePrefix
@@ -1009,25 +1008,6 @@ async function doBuild(
           owner: service,
           allServices: detectedServices,
         });
-
-        if (
-          service.type === 'web' &&
-          service.runtime === 'node' &&
-          build.use === '@vercel/backends'
-        ) {
-          const internalDestination = getInternalServiceFunctionPath(
-            service.name
-          );
-          buildResult.routes = (buildResult.routes as Route[]).map(route => {
-            if (!('src' in route) || typeof route.dest !== 'string') {
-              return route;
-            }
-            if (route.dest.startsWith('/_svc/')) {
-              return route;
-            }
-            return { ...route, dest: internalDestination };
-          });
-        }
       }
 
       // Store the build result to generate the final `config.json` after
