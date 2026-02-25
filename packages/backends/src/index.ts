@@ -149,9 +149,14 @@ export const build: BuildV2 = async args => {
         '1',
     });
 
+    const serviceName =
+      typeof args.config?.serviceName === 'string' &&
+      args.config.serviceName !== ''
+        ? args.config.serviceName
+        : undefined;
     const internalServiceFunctionPath =
-      typeof args.service?.name === 'string' && args.service.name !== ''
-        ? `/_svc/${args.service.name}/index`
+      typeof serviceName === 'string' && serviceName !== ''
+        ? `/_svc/${serviceName}/index`
         : undefined;
     const remapRouteDestination = <T extends { dest?: string }>(
       route: T
