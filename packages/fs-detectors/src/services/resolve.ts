@@ -296,7 +296,10 @@ export function validateServiceEntrypoint(
     !config.runtime &&
     !config.framework
   ) {
-    const runtime = inferServiceRuntime({ entrypoint: config.entrypoint });
+    const runtime = inferServiceRuntime({
+      ...config,
+      entrypoint: resolvedEntrypoint.normalized,
+    });
     if (!runtime) {
       const supported = Object.keys(ENTRYPOINT_EXTENSIONS).join(', ');
       return {
@@ -404,6 +407,11 @@ export async function resolveConfiguredService(
     builderUse = config.builder;
     builderSrc = resolvedEntrypointFile!;
   } else {
+    if (!inferredRuntime) {
+      throw new Error(
+        `Could not infer runtime for service "${name}" and no builder or framework were provided.`
+      );
+    }
     builderUse = getBuilderForRuntime(inferredRuntime!);
     builderSrc = resolvedEntrypointFile!;
   }
