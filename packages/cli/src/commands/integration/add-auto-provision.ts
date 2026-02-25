@@ -7,6 +7,7 @@ import getScope from '../../util/get-scope';
 import { autoProvisionResource } from '../../util/integration/auto-provision-resource';
 import { fetchIntegrationWithTelemetry } from '../../util/integration/fetch-integration';
 import { fetchInstallations } from '../../util/integration/fetch-installations';
+import { acceptTermsViaBrowser } from '../../util/integration/accept-terms-via-browser';
 import { promptForTermAcceptance } from '../../util/integration/prompt-for-terms';
 import { selectProduct } from '../../util/integration/select-product';
 import type {
@@ -154,16 +155,36 @@ export async function addAutoProvision(
   );
 
   let acceptedPolicies: AcceptedPolicies = {};
+  let browserInstallationId: string | undefined;
   if (!teamInstallation) {
-    const policies = await promptForTermAcceptance(client, integration);
-    if (!policies) {
-      telemetry.trackMarketplaceEvent('marketplace_install_flow_dropped', {
-        ...baseProps,
-        reason: 'policy_declined',
-      });
-      return 1;
+    if (client.isAgent || !client.stdin.isTTY) {
+      // Browser flow: open browser for terms acceptance, poll for installation
+      const browserInstallation = await acceptTermsViaBrowser(
+        client,
+        integration,
+        team.id,
+        contextName
+      );
+      if (!browserInstallation) {
+        telemetry.trackMarketplaceEvent('marketplace_install_flow_dropped', {
+          ...baseProps,
+          reason: 'browser_terms_timeout',
+        });
+        return 1;
+      }
+      browserInstallationId = browserInstallation.id;
+    } else {
+      // Interactive TTY: keep existing prompt behavior
+      const policies = await promptForTermAcceptance(client, integration);
+      if (!policies) {
+        telemetry.trackMarketplaceEvent('marketplace_install_flow_dropped', {
+          ...baseProps,
+          reason: 'policy_declined',
+        });
+        return 1;
+      }
+      acceptedPolicies = policies;
     }
-    acceptedPolicies = policies;
   }
 
   // Validate metadata flags (if provided) BEFORE prompting for resource name
@@ -240,7 +261,7 @@ export async function addAutoProvision(
       metadata,
       acceptedPolicies,
       options.billingPlanId,
-      options.installationId
+      browserInstallationId ?? options.installationId
     );
   } catch (error) {
     output.stopSpinner();

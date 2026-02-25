@@ -24,6 +24,7 @@ export { getServicesBuilders } from './services/get-services-builders';
 export type {
   DetectServicesOptions,
   DetectServicesResult,
+  DetectServicesSource,
   ResolvedService,
   Service,
   ServicesRoutes,
