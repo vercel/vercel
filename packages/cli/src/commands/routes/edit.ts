@@ -15,6 +15,15 @@ import getRouteVersions from '../../util/routes/get-route-versions';
 import editRoute from '../../util/routes/edit-route';
 import { parseConditions } from '../../util/routes/parse-conditions';
 import { populateRouteEnv } from '../../util/routes/env';
+import generateRouteApi, {
+  type GeneratedRoute,
+} from '../../util/routes/generate-route';
+import {
+  generatedRouteToAddInput,
+  generatedRouteToCurrentRoute,
+  routingRuleToCurrentRoute,
+  printGeneratedRoutePreview,
+} from '../../util/routes/ai-transform';
 import stamp from '../../util/output/stamp';
 import { getCommandName } from '../../util/pkg-name';
 import {
@@ -355,6 +364,137 @@ function applyFlagMutations(
   }
 
   return null;
+}
+
+// ---------------------------------------------------------------------------
+// Shared interactive edit loop — also used by `routes add` "Edit manually"
+// ---------------------------------------------------------------------------
+
+/**
+ * Runs the interactive field-by-field edit menu on a RoutingRule.
+ * Mutates the route in-place. Returns when the user selects "Done"
+ * and the route passes validation.
+ */
+export async function runInteractiveEditLoop(
+  client: Client,
+  route: RoutingRule
+): Promise<void> {
+  for (;;) {
+    const hasConds = ((route.route as any).has ?? []).length;
+    const missingConds = ((route.route as any).missing ?? []).length;
+    const responseHeaders = getAllResponseHeaders(route).length;
+    const requestHeaders = getTransformsByType(route, 'request.headers').length;
+    const requestQuery = getTransformsByType(route, 'request.query').length;
+
+    const syntaxLabel =
+      route.srcSyntax === 'path-to-regexp'
+        ? 'Pattern'
+        : route.srcSyntax === 'equals'
+          ? 'Exact'
+          : 'Regex';
+    const descriptionPreview = route.description
+      ? route.description.length > 40
+        ? route.description.slice(0, 40) + '...'
+        : route.description
+      : '';
+
+    const editChoices = [
+      { name: `Name (${route.name})`, value: 'name' },
+      {
+        name: descriptionPreview
+          ? `Description (${descriptionPreview})`
+          : 'Description',
+        value: 'description',
+      },
+      {
+        name: `Source (${syntaxLabel}: ${route.route.src})`,
+        value: 'source',
+      },
+      {
+        name: `Primary action (${getPrimaryActionLabel(route)})`,
+        value: 'action',
+      },
+      {
+        name: `Conditions (${hasConds} has, ${missingConds} missing)`,
+        value: 'conditions',
+      },
+      {
+        name: `Response Headers (${responseHeaders})`,
+        value: 'response-headers',
+      },
+      {
+        name: `Request Headers (${requestHeaders})`,
+        value: 'request-headers',
+      },
+      {
+        name: `Request Query (${requestQuery})`,
+        value: 'request-query',
+      },
+      { name: 'Done - save changes', value: 'done' },
+    ];
+
+    const choice = await client.input.select({
+      message: 'What would you like to edit?',
+      choices: editChoices,
+      pageSize: editChoices.length,
+      loop: false,
+    });
+
+    switch (choice) {
+      case 'name':
+        await editName(client, route);
+        break;
+      case 'description':
+        await editDescription(client, route);
+        break;
+      case 'source':
+        await editSource(client, route);
+        break;
+      case 'action':
+        await editPrimaryAction(client, route);
+        break;
+      case 'conditions':
+        await editConditions(client, route);
+        break;
+      case 'response-headers':
+        await editResponseHeaders(client, route);
+        break;
+      case 'request-headers':
+        await editTransformsByType(
+          client,
+          route,
+          'request.headers',
+          'request-header'
+        );
+        break;
+      case 'request-query':
+        await editTransformsByType(
+          client,
+          route,
+          'request.query',
+          'request-query'
+        );
+        break;
+      case 'done':
+        break;
+    }
+
+    if (choice === 'done') {
+      // Validate route has some action before saving
+      const hasDest = !!route.route.dest;
+      const hasStatus = !!route.route.status;
+      const hasHeaders = Object.keys(route.route.headers ?? {}).length > 0;
+      const hasTransforms = ((route.route as any).transforms ?? []).length > 0;
+
+      if (!hasDest && !hasStatus && !hasHeaders && !hasTransforms) {
+        output.warn(
+          'Route has no action (no destination, status, or headers). Add an action before saving.'
+        );
+        continue;
+      }
+      break;
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -1007,6 +1147,7 @@ export default async function edit(client: Client, argv: string[]) {
   );
   telemetry.trackCliOptionHas(flags['--has'] as [string] | undefined);
   telemetry.trackCliOptionMissing(flags['--missing'] as [string] | undefined);
+  telemetry.trackCliOptionAi(flags['--ai'] as string | undefined);
 
   if (!identifier) {
     output.error(
@@ -1038,6 +1179,55 @@ export default async function edit(client: Client, argv: string[]) {
       )} to see all routes.`
     );
     return 1;
+  }
+
+  // --- AI edit mode ---
+  const aiPrompt = flags['--ai'] as string | undefined;
+
+  if (aiPrompt) {
+    // Validate no conflicting flags
+    const conflictingFlags = [
+      '--name',
+      '--description',
+      '--src',
+      '--src-syntax',
+      '--action',
+      '--dest',
+      '--status',
+      '--no-dest',
+      '--no-status',
+      '--has',
+      '--missing',
+      '--set-response-header',
+      '--append-response-header',
+      '--delete-response-header',
+      '--set-request-header',
+      '--append-request-header',
+      '--delete-request-header',
+      '--set-request-query',
+      '--append-request-query',
+      '--delete-request-query',
+      '--clear-conditions',
+      '--clear-headers',
+      '--clear-transforms',
+    ];
+    const usedConflicts = conflictingFlags.filter(f => flags[f] !== undefined);
+    if (usedConflicts.length > 0) {
+      output.error(
+        `Cannot use --ai with ${usedConflicts.join(', ')}. Use --ai alone to describe changes.`
+      );
+      return 1;
+    }
+
+    return await handleAIEdit(
+      client,
+      project.id,
+      teamId,
+      originalRoute,
+      aiPrompt,
+      skipConfirmation,
+      existingStagingVersion
+    );
   }
 
   // Clone the route for mutation
@@ -1080,126 +1270,28 @@ export default async function edit(client: Client, argv: string[]) {
     output.log(`\nEditing route "${originalRoute.name}"`);
     printRouteConfig(route);
 
-    for (;;) {
-      const hasConds = ((route.route as any).has ?? []).length;
-      const missingConds = ((route.route as any).missing ?? []).length;
-      const responseHeaders = getAllResponseHeaders(route).length;
-      const requestHeaders = getTransformsByType(
-        route,
-        'request.headers'
-      ).length;
-      const requestQuery = getTransformsByType(route, 'request.query').length;
+    // Offer AI or manual editing
+    const editMode = await client.input.select({
+      message: 'How would you like to edit this route?',
+      choices: [
+        { name: 'Describe changes (AI-powered)', value: 'ai' },
+        { name: 'Edit manually (field by field)', value: 'manual' },
+      ],
+    });
 
-      const syntaxLabel =
-        route.srcSyntax === 'path-to-regexp'
-          ? 'Pattern'
-          : route.srcSyntax === 'equals'
-            ? 'Exact'
-            : 'Regex';
-      const descriptionPreview = route.description
-        ? route.description.length > 40
-          ? route.description.slice(0, 40) + '...'
-          : route.description
-        : '';
-
-      const editChoices = [
-        { name: `Name (${route.name})`, value: 'name' },
-        {
-          name: descriptionPreview
-            ? `Description (${descriptionPreview})`
-            : 'Description',
-          value: 'description',
-        },
-        {
-          name: `Source (${syntaxLabel}: ${route.route.src})`,
-          value: 'source',
-        },
-        {
-          name: `Primary action (${getPrimaryActionLabel(route)})`,
-          value: 'action',
-        },
-        {
-          name: `Conditions (${hasConds} has, ${missingConds} missing)`,
-          value: 'conditions',
-        },
-        {
-          name: `Response Headers (${responseHeaders})`,
-          value: 'response-headers',
-        },
-        {
-          name: `Request Headers (${requestHeaders})`,
-          value: 'request-headers',
-        },
-        {
-          name: `Request Query (${requestQuery})`,
-          value: 'request-query',
-        },
-        { name: 'Done - save changes', value: 'done' },
-      ];
-
-      const choice = await client.input.select({
-        message: 'What would you like to edit?',
-        choices: editChoices,
-        pageSize: editChoices.length,
-        loop: false,
-      });
-
-      switch (choice) {
-        case 'name':
-          await editName(client, route);
-          break;
-        case 'description':
-          await editDescription(client, route);
-          break;
-        case 'source':
-          await editSource(client, route);
-          break;
-        case 'action':
-          await editPrimaryAction(client, route);
-          break;
-        case 'conditions':
-          await editConditions(client, route);
-          break;
-        case 'response-headers':
-          await editResponseHeaders(client, route);
-          break;
-        case 'request-headers':
-          await editTransformsByType(
-            client,
-            route,
-            'request.headers',
-            'request-header'
-          );
-          break;
-        case 'request-query':
-          await editTransformsByType(
-            client,
-            route,
-            'request.query',
-            'request-query'
-          );
-          break;
-        case 'done':
-          break;
-      }
-
-      if (choice === 'done') {
-        // Validate route has some action before saving
-        const hasDest = !!route.route.dest;
-        const hasStatus = !!route.route.status;
-        const hasHeaders = Object.keys(route.route.headers ?? {}).length > 0;
-        const hasTransforms =
-          ((route.route as any).transforms ?? []).length > 0;
-
-        if (!hasDest && !hasStatus && !hasHeaders && !hasTransforms) {
-          output.warn(
-            'Route has no action (no destination, status, or headers). Add an action before saving.'
-          );
-          continue;
-        }
-        break;
-      }
+    if (editMode === 'ai') {
+      return await handleAIEdit(
+        client,
+        project.id,
+        teamId,
+        originalRoute,
+        undefined,
+        skipConfirmation,
+        existingStagingVersion
+      );
     }
+
+    await runInteractiveEditLoop(client, route);
   }
 
   // Populate env fields for $VAR references
@@ -1243,6 +1335,268 @@ export default async function edit(client: Client, argv: string[]) {
       version,
       !!existingStagingVersion,
       { teamId, skipPrompts: skipConfirmation }
+    );
+
+    return 0;
+  } catch (e: unknown) {
+    const error = e as { message?: string };
+    output.error(error.message || 'Failed to update route');
+    return 1;
+  }
+}
+
+/**
+ * Handles AI-powered route editing.
+ * If aiPrompt is provided, uses it directly. Otherwise prompts interactively.
+ */
+async function handleAIEdit(
+  client: Client,
+  projectId: string,
+  teamId: string | undefined,
+  originalRoute: RoutingRule,
+  aiPrompt: string | undefined,
+  skipConfirmation: boolean | undefined,
+  existingStagingVersion: { isStaging?: boolean } | undefined
+): Promise<number> {
+  // Get the prompt
+  let prompt = aiPrompt;
+  if (!prompt) {
+    prompt = await client.input.text({
+      message: "Describe what you'd like to change:",
+      validate: val => {
+        if (!val) return 'A description is required';
+        if (val.length > 2000)
+          return 'Description must be 2000 characters or less';
+        return true;
+      },
+    });
+  }
+
+  // Convert existing route to the /generate format
+  const currentRoute = routingRuleToCurrentRoute(originalRoute);
+
+  // Generate the updated route
+  output.spinner('Generating updated route...');
+
+  let currentGenerated;
+  try {
+    const result = await generateRouteApi(
+      client,
+      projectId,
+      { prompt, currentRoute },
+      { teamId }
+    );
+
+    if (result.error) {
+      output.error(result.error);
+      return 1;
+    }
+    if (!result.route) {
+      output.error('Could not apply changes. Try rephrasing.');
+      return 1;
+    }
+
+    currentGenerated = result.route;
+  } catch (e: unknown) {
+    const error = e as { message?: string };
+    output.error(error.message || 'Failed to generate updated route');
+    return 1;
+  }
+
+  printGeneratedRoutePreview(currentGenerated);
+
+  // If --yes, apply immediately
+  if (skipConfirmation) {
+    return await applyAIEdit(
+      client,
+      projectId,
+      teamId,
+      originalRoute,
+      currentGenerated,
+      existingStagingVersion,
+      skipConfirmation
+    );
+  }
+
+  // Interactive loop
+  for (;;) {
+    const choice = await client.input.select({
+      message: 'What would you like to do?',
+      choices: [
+        { name: 'Confirm changes', value: 'confirm' },
+        { name: 'Edit again with AI', value: 'ai-edit' },
+        { name: 'Edit manually', value: 'manual' },
+        { name: 'Discard', value: 'discard' },
+      ],
+      pageSize: 4,
+      loop: false,
+    });
+
+    if (choice === 'confirm') {
+      return await applyAIEdit(
+        client,
+        projectId,
+        teamId,
+        originalRoute,
+        currentGenerated,
+        existingStagingVersion,
+        skipConfirmation
+      );
+    }
+
+    if (choice === 'ai-edit') {
+      const editPrompt = await client.input.text({
+        message: "Describe what you'd like to change:",
+        validate: val => (val ? true : 'A description is required'),
+      });
+
+      output.spinner('Updating route...');
+
+      try {
+        const editResult = await generateRouteApi(
+          client,
+          projectId,
+          {
+            prompt: editPrompt,
+            currentRoute: generatedRouteToCurrentRoute(currentGenerated),
+          },
+          { teamId }
+        );
+
+        if (editResult.error) {
+          output.error(editResult.error);
+          continue;
+        }
+        if (!editResult.route) {
+          output.error('Could not apply changes. Try rephrasing.');
+          continue;
+        }
+
+        currentGenerated = editResult.route;
+        printGeneratedRoutePreview(currentGenerated);
+      } catch (e: unknown) {
+        const error = e as { message?: string };
+        output.error(error.message || 'Failed to update route');
+      }
+      continue;
+    }
+
+    if (choice === 'manual') {
+      // Build a RoutingRule from the AI output for the interactive edit loop
+      const routeInput = generatedRouteToAddInput(currentGenerated);
+      const manualRoute = cloneRoute(originalRoute);
+      manualRoute.name = routeInput.name;
+      manualRoute.description = routeInput.description;
+      manualRoute.srcSyntax = routeInput.srcSyntax;
+      manualRoute.route = {
+        ...manualRoute.route,
+        src: routeInput.route.src,
+        dest: routeInput.route.dest,
+        status: routeInput.route.status,
+        headers: routeInput.route.headers,
+        has: routeInput.route.has as any,
+        missing: routeInput.route.missing as any,
+      };
+      if (routeInput.route.transforms) {
+        (manualRoute.route as any).transforms = routeInput.route.transforms;
+      } else {
+        delete (manualRoute.route as any).transforms;
+      }
+
+      await runInteractiveEditLoop(client, manualRoute);
+      populateRouteEnv(manualRoute.route);
+
+      // Send the update
+      const editStamp = stamp();
+      output.spinner(`Updating route "${manualRoute.name}"`);
+      try {
+        const { version } = await editRoute(
+          client,
+          projectId,
+          originalRoute.id,
+          {
+            route: {
+              name: manualRoute.name,
+              description: manualRoute.description,
+              enabled: manualRoute.enabled,
+              srcSyntax: manualRoute.srcSyntax,
+              route: manualRoute.route,
+            },
+          },
+          { teamId }
+        );
+        output.log(
+          `${chalk.cyan('Updated')} route "${manualRoute.name}" ${chalk.gray(editStamp())}`
+        );
+        await offerAutoPromote(
+          client,
+          projectId,
+          version,
+          !!existingStagingVersion,
+          { teamId, skipPrompts: skipConfirmation }
+        );
+        return 0;
+      } catch (e: unknown) {
+        const error = e as { message?: string };
+        output.error(error.message || 'Failed to update route');
+        return 1;
+      }
+    }
+
+    // Discard
+    output.log('No changes made.');
+    return 0;
+  }
+}
+
+/**
+ * Applies an AI-generated edit to a route via PATCH.
+ */
+async function applyAIEdit(
+  client: Client,
+  projectId: string,
+  teamId: string | undefined,
+  originalRoute: RoutingRule,
+  generated: GeneratedRoute,
+  existingStagingVersion: { isStaging?: boolean } | undefined,
+  skipConfirmation: boolean | undefined
+): Promise<number> {
+  const routeInput = generatedRouteToAddInput(generated);
+  populateRouteEnv(routeInput.route);
+
+  const editStamp = stamp();
+  output.spinner(`Updating route "${routeInput.name}"`);
+
+  try {
+    const { version } = await editRoute(
+      client,
+      projectId,
+      originalRoute.id,
+      {
+        route: {
+          name: routeInput.name,
+          description: routeInput.description,
+          enabled: originalRoute.enabled,
+          srcSyntax: routeInput.srcSyntax,
+          route: routeInput.route,
+        },
+      },
+      { teamId }
+    );
+
+    output.log(
+      `${chalk.cyan('Updated')} route "${routeInput.name}" ${chalk.gray(editStamp())}`
+    );
+
+    await offerAutoPromote(
+      client,
+      projectId,
+      version,
+      !!existingStagingVersion,
+      {
+        teamId,
+        skipPrompts: skipConfirmation,
+      }
     );
 
     return 0;

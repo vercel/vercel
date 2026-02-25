@@ -12,6 +12,12 @@ import addRoute from '../../util/routes/add-route';
 import getRouteVersions from '../../util/routes/get-route-versions';
 import { parseConditions } from '../../util/routes/parse-conditions';
 import { populateRouteEnv } from '../../util/routes/env';
+import generateRouteApi from '../../util/routes/generate-route';
+import {
+  generatedRouteToAddInput,
+  generatedRouteToCurrentRoute,
+  printGeneratedRoutePreview,
+} from '../../util/routes/ai-transform';
 import stamp from '../../util/output/stamp';
 import { getCommandName } from '../../util/pkg-name';
 import { RoutesAddTelemetryClient } from '../../util/telemetry/commands/routes';
@@ -35,7 +41,9 @@ import type {
   Transform,
   SrcSyntax,
   RoutePosition,
+  RoutingRule,
 } from '../../util/routes/types';
+import type { GeneratedRoute } from '../../util/routes/generate-route';
 
 /**
  * Adds a new route to the current project.
@@ -100,6 +108,44 @@ export default async function add(client: Client, argv: string[]) {
   );
   telemetry.trackCliOptionHas(flags['--has'] as [string] | undefined);
   telemetry.trackCliOptionMissing(flags['--missing'] as [string] | undefined);
+  telemetry.trackCliOptionAi(flags['--ai'] as string | undefined);
+
+  // --- AI generation mode ---
+  const aiPrompt = flags['--ai'] as string | undefined;
+
+  if (aiPrompt) {
+    // Validate no conflicting flags
+    const conflictingFlags = [
+      '--src',
+      '--src-syntax',
+      '--action',
+      '--dest',
+      '--status',
+      '--has',
+      '--missing',
+      '--set-response-header',
+      '--append-response-header',
+      '--delete-response-header',
+      '--set-request-header',
+      '--append-request-header',
+      '--delete-request-header',
+      '--set-request-query',
+      '--append-request-query',
+      '--delete-request-query',
+      '--description',
+      '--disabled',
+      '--position',
+    ];
+    const usedConflicts = conflictingFlags.filter(f => flags[f] !== undefined);
+    if (usedConflicts.length > 0) {
+      output.error(
+        `Cannot use --ai with ${usedConflicts.join(', ')}. Use --ai alone to generate a route from a description.`
+      );
+      return 1;
+    }
+
+    return await handleAIAdd(client, project.id, teamId, aiPrompt, skipPrompts);
+  }
 
   // Check for existing staging version (for auto-promote logic)
   const { versions } = await getRouteVersions(client, project.id, { teamId });
@@ -121,6 +167,35 @@ export default async function add(client: Client, argv: string[]) {
     );
     return 1;
   } else {
+    // Offer AI or manual mode when fully interactive (no args, no flags)
+    const hasAnyFlags =
+      flags['--src'] !== undefined ||
+      flags['--dest'] !== undefined ||
+      flags['--status'] !== undefined;
+
+    if (!hasAnyFlags) {
+      const mode = await client.input.select({
+        message: 'How would you like to create this route?',
+        choices: [
+          {
+            name: 'Describe what you want (AI-powered)',
+            value: 'ai',
+          },
+          { name: 'Build manually (step by step)', value: 'manual' },
+        ],
+      });
+
+      if (mode === 'ai') {
+        return await handleAIAdd(
+          client,
+          project.id,
+          teamId,
+          undefined,
+          skipPrompts
+        );
+      }
+    }
+
     output.log('Add a new route\n');
     name = await client.input.text({
       message: 'Route name:',
@@ -512,6 +587,273 @@ export default async function add(client: Client, argv: string[]) {
     await offerAutoPromote(
       client,
       project.id,
+      version,
+      !!existingStagingVersion,
+      { teamId, skipPrompts }
+    );
+
+    return 0;
+  } catch (e: unknown) {
+    const error = e as { message?: string };
+    output.error(error.message || 'Failed to create route');
+    return 1;
+  }
+}
+
+/**
+ * Handles AI-powered route creation.
+ * If aiPrompt is provided, uses it directly. Otherwise prompts interactively.
+ */
+async function handleAIAdd(
+  client: Client,
+  projectId: string,
+  teamId: string | undefined,
+  aiPrompt: string | undefined,
+  skipPrompts: boolean | undefined
+): Promise<number> {
+  // Check for existing staging version (for auto-promote logic)
+  const { default: getRouteVersions } = await import(
+    '../../util/routes/get-route-versions'
+  );
+  const { versions } = await getRouteVersions(client, projectId, { teamId });
+  const existingStagingVersion = versions.find(
+    (v: { isStaging?: boolean }) => v.isStaging
+  );
+
+  // Get the prompt
+  let prompt = aiPrompt;
+  if (!prompt) {
+    prompt = await client.input.text({
+      message: 'Describe the route you want to create:',
+      validate: val => {
+        if (!val) return 'A description is required';
+        if (val.length > 2000)
+          return 'Description must be 2000 characters or less';
+        return true;
+      },
+    });
+  }
+
+  // Generate the route
+  output.spinner('Generating route...');
+
+  let currentGenerated;
+  try {
+    const result = await generateRouteApi(
+      client,
+      projectId,
+      { prompt },
+      { teamId }
+    );
+
+    if (result.error) {
+      output.error(result.error);
+      return 1;
+    }
+    if (!result.route) {
+      output.error(
+        'Could not generate a route from that description. Try rephrasing.'
+      );
+      return 1;
+    }
+
+    currentGenerated = result.route;
+  } catch (e: unknown) {
+    const error = e as { message?: string };
+    output.error(error.message || 'Failed to generate route');
+    return 1;
+  }
+
+  printGeneratedRoutePreview(currentGenerated);
+
+  // If --yes, create immediately
+  if (skipPrompts) {
+    return await createFromGenerated(
+      client,
+      projectId,
+      teamId,
+      currentGenerated,
+      existingStagingVersion,
+      skipPrompts
+    );
+  }
+
+  // Interactive loop: Create / Edit with AI / Edit manually / Discard
+  for (;;) {
+    const choice = await client.input.select({
+      message: 'What would you like to do?',
+      choices: [
+        { name: 'Create this route', value: 'create' },
+        { name: 'Edit with AI (describe changes)', value: 'ai-edit' },
+        { name: 'Edit manually', value: 'manual' },
+        { name: 'Discard', value: 'discard' },
+      ],
+      pageSize: 4,
+      loop: false,
+    });
+
+    if (choice === 'create') {
+      return await createFromGenerated(
+        client,
+        projectId,
+        teamId,
+        currentGenerated,
+        existingStagingVersion,
+        skipPrompts
+      );
+    }
+
+    if (choice === 'ai-edit') {
+      const editPrompt = await client.input.text({
+        message: "Describe what you'd like to change:",
+        validate: val => (val ? true : 'A description is required'),
+      });
+
+      output.spinner('Updating route...');
+
+      try {
+        const editResult = await generateRouteApi(
+          client,
+          projectId,
+          {
+            prompt: editPrompt,
+            currentRoute: generatedRouteToCurrentRoute(currentGenerated),
+          },
+          { teamId }
+        );
+
+        if (editResult.error) {
+          output.error(editResult.error);
+          continue;
+        }
+        if (!editResult.route) {
+          output.error('Could not apply changes. Try rephrasing.');
+          continue;
+        }
+
+        currentGenerated = editResult.route;
+        printGeneratedRoutePreview(currentGenerated);
+      } catch (e: unknown) {
+        const error = e as { message?: string };
+        output.error(error.message || 'Failed to update route');
+      }
+      continue;
+    }
+
+    if (choice === 'manual') {
+      // Build a temporary RoutingRule for the interactive edit loop
+      const routeInput = generatedRouteToAddInput(currentGenerated);
+      const { runInteractiveEditLoop } = await import('./edit');
+      const tempRule: RoutingRule = {
+        id: '',
+        name: routeInput.name,
+        description: routeInput.description,
+        enabled: true,
+        srcSyntax: routeInput.srcSyntax,
+        route: {
+          src: routeInput.route.src,
+          ...(routeInput.route.dest && { dest: routeInput.route.dest }),
+          ...(routeInput.route.status && { status: routeInput.route.status }),
+          ...(routeInput.route.headers && {
+            headers: routeInput.route.headers,
+          }),
+          ...(routeInput.route.has && { has: routeInput.route.has as any }),
+          ...(routeInput.route.missing && {
+            missing: routeInput.route.missing as any,
+          }),
+          ...(routeInput.route.transforms && {
+            transforms: routeInput.route.transforms,
+          }),
+        },
+      };
+
+      await runInteractiveEditLoop(client, tempRule);
+      populateRouteEnv(tempRule.route);
+
+      const addStamp = stamp();
+      output.spinner(`Adding route "${tempRule.name}"`);
+
+      try {
+        const finalInput: AddRouteInput = {
+          name: tempRule.name,
+          description: tempRule.description,
+          srcSyntax: tempRule.srcSyntax,
+          route: tempRule.route,
+        };
+
+        const { route, version } = await addRoute(
+          client,
+          projectId,
+          finalInput,
+          {
+            teamId,
+          }
+        );
+
+        output.log(
+          `${chalk.cyan('Created')} route "${route.name}" ${chalk.gray(addStamp())}`
+        );
+
+        output.print(`\n  ${chalk.bold('Route:')} ${route.name}\n`);
+        output.print(`  ${chalk.gray('ID:')} ${route.id}\n`);
+        output.print(`\n  ${chalk.bold('Staging version:')} ${version.id}\n`);
+
+        await offerAutoPromote(
+          client,
+          projectId,
+          version,
+          !!existingStagingVersion,
+          { teamId, skipPrompts }
+        );
+
+        return 0;
+      } catch (e: unknown) {
+        const error = e as { message?: string };
+        output.error(error.message || 'Failed to create route');
+        return 1;
+      }
+    }
+
+    // Discard
+    output.log('Discarded.');
+    return 0;
+  }
+}
+
+/**
+ * Creates a route from an AI-generated route object.
+ */
+async function createFromGenerated(
+  client: Client,
+  projectId: string,
+  teamId: string | undefined,
+  generated: GeneratedRoute,
+  existingStagingVersion: { isStaging?: boolean } | undefined,
+  skipPrompts: boolean | undefined
+): Promise<number> {
+  const routeInput = generatedRouteToAddInput(generated);
+  populateRouteEnv(routeInput.route);
+
+  const addStamp = stamp();
+  output.spinner(`Adding route "${routeInput.name}"`);
+
+  try {
+    const { route, version } = await addRoute(client, projectId, routeInput, {
+      teamId,
+    });
+
+    output.log(
+      `${chalk.cyan('Created')} route "${route.name}" ${chalk.gray(addStamp())}`
+    );
+
+    output.print(`\n  ${chalk.bold('Route:')} ${route.name}\n`);
+    output.print(`  ${chalk.gray('ID:')} ${route.id}\n`);
+
+    output.print(`\n  ${chalk.bold('Staging version:')} ${version.id}\n`);
+
+    await offerAutoPromote(
+      client,
+      projectId,
       version,
       !!existingStagingVersion,
       { teamId, skipPrompts }

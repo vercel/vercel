@@ -8,6 +8,7 @@ import {
   useEditRoute,
   useEditRouteComprehensive,
   useEditRouteWithApiError,
+  useGenerateRoute,
   capturedBodies,
 } from '../../../mocks/routes';
 import routes from '../../../../src/commands/routes';
@@ -1041,6 +1042,114 @@ describe('routes edit', () => {
     });
   });
 
+  describe('--ai flag', () => {
+    it('should edit a route with --ai and --yes', async () => {
+      useEditRoute();
+      useGenerateRoute({
+        route: {
+          name: 'Enabled Route',
+          description: 'Updated by AI',
+          pathCondition: { value: '/path-0/(.*)', syntax: 'regex' },
+          actions: [
+            {
+              type: 'rewrite',
+              dest: 'https://new-backend.internal/$1',
+            },
+          ],
+        },
+      });
+
+      client.setArgv(
+        'routes',
+        'edit',
+        'Enabled Route',
+        '--ai',
+        'Change destination to new-backend.internal',
+        '--yes'
+      );
+      const exitCodePromise = routes(client);
+
+      await expect(client.stderr).toOutput('Generating updated route');
+      await expect(client.stderr).toOutput('Generated Route:');
+      await expect(client.stderr).toOutput('Enabled Route');
+      await expect(client.stderr).toOutput('Updating route');
+      await expect(client.stderr).toOutput('Updated');
+
+      await expect(exitCodePromise).resolves.toEqual(0);
+    });
+
+    it('should show error when --ai is used with conflicting flags', async () => {
+      useEditRoute();
+
+      client.setArgv(
+        'routes',
+        'edit',
+        'Enabled Route',
+        '--ai',
+        'Change something',
+        '--dest',
+        '/new-dest'
+      );
+
+      const exitCodePromise = routes(client);
+
+      await expect(client.stderr).toOutput('Cannot use --ai with --dest');
+
+      await expect(exitCodePromise).resolves.toEqual(1);
+    });
+
+    it('should show error when generate API returns an error', async () => {
+      useEditRoute();
+      useGenerateRoute({ error: 'Could not understand the request' });
+
+      client.setArgv(
+        'routes',
+        'edit',
+        'Enabled Route',
+        '--ai',
+        'Do something weird',
+        '--yes'
+      );
+      const exitCodePromise = routes(client);
+
+      await expect(client.stderr).toOutput('Could not understand the request');
+
+      await expect(exitCodePromise).resolves.toEqual(1);
+    });
+
+    it('should discard changes interactively', async () => {
+      useEditRoute();
+      useGenerateRoute({
+        route: {
+          name: 'Enabled Route',
+          description: 'Updated',
+          pathCondition: { value: '/path-0/(.*)', syntax: 'regex' },
+          actions: [{ type: 'rewrite', dest: '/new-dest/$1' }],
+        },
+      });
+
+      client.setArgv(
+        'routes',
+        'edit',
+        'Enabled Route',
+        '--ai',
+        'Change destination'
+      );
+      const exitCodePromise = routes(client);
+
+      await expect(client.stderr).toOutput('What would you like to do?');
+      // Navigate to "Discard" (4th option)
+      client.stdin.write('\x1B[B'); // down
+      client.stdin.write('\x1B[B'); // down
+      client.stdin.write('\x1B[B'); // down
+      client.stdin.write('\n'); // select
+
+      await expect(client.stderr).toOutput('No changes made');
+
+      await expect(exitCodePromise).resolves.toEqual(0);
+    });
+  });
+
   // ---------------------------------------------------------------------------
   // Interactive mode tests
   // ---------------------------------------------------------------------------
@@ -1050,7 +1159,7 @@ describe('routes edit', () => {
       useEditRouteComprehensive();
 
       let selectCallCount = 0;
-      const selectResponses = ['name', 'done'];
+      const selectResponses = ['manual', 'name', 'done'];
       client.input.select = vi.fn().mockImplementation(() => {
         return Promise.resolve(selectResponses[selectCallCount++]);
       });
@@ -1068,7 +1177,7 @@ describe('routes edit', () => {
       useEditRouteComprehensive();
 
       let selectCallCount = 0;
-      const selectResponses = ['description', 'done'];
+      const selectResponses = ['manual', 'description', 'done'];
       client.input.select = vi.fn().mockImplementation(() => {
         return Promise.resolve(selectResponses[selectCallCount++]);
       });
@@ -1086,7 +1195,7 @@ describe('routes edit', () => {
       useEditRouteComprehensive();
 
       let selectCallCount = 0;
-      const selectResponses = ['source', 'equals', 'done'];
+      const selectResponses = ['manual', 'source', 'equals', 'done'];
       client.input.select = vi.fn().mockImplementation(() => {
         return Promise.resolve(selectResponses[selectCallCount++]);
       });
@@ -1105,7 +1214,7 @@ describe('routes edit', () => {
       useEditRouteComprehensive();
 
       let selectCallCount = 0;
-      const selectResponses = ['action', 'change-dest', 'done'];
+      const selectResponses = ['manual', 'action', 'change-dest', 'done'];
       client.input.select = vi.fn().mockImplementation(() => {
         return Promise.resolve(selectResponses[selectCallCount++]);
       });
@@ -1126,6 +1235,7 @@ describe('routes edit', () => {
 
       let selectCallCount = 0;
       const selectResponses = [
+        'manual',
         'conditions',
         'add',
         'has',
@@ -1152,7 +1262,14 @@ describe('routes edit', () => {
       useEditRouteComprehensive();
 
       let selectCallCount = 0;
-      const selectResponses = ['conditions', 'remove', 0, 'back', 'done'];
+      const selectResponses = [
+        'manual',
+        'conditions',
+        'remove',
+        0,
+        'back',
+        'done',
+      ];
       client.input.select = vi.fn().mockImplementation(() => {
         return Promise.resolve(selectResponses[selectCallCount++]);
       });
@@ -1171,6 +1288,7 @@ describe('routes edit', () => {
 
       let selectCallCount = 0;
       const selectResponses = [
+        'manual',
         'response-headers',
         'add',
         'set',
@@ -1200,7 +1318,14 @@ describe('routes edit', () => {
       useEditRouteComprehensive();
 
       let selectCallCount = 0;
-      const selectResponses = ['request-headers', 'add', 'set', 'back', 'done'];
+      const selectResponses = [
+        'manual',
+        'request-headers',
+        'add',
+        'set',
+        'back',
+        'done',
+      ];
       client.input.select = vi.fn().mockImplementation(() => {
         return Promise.resolve(selectResponses[selectCallCount++]);
       });
@@ -1221,7 +1346,14 @@ describe('routes edit', () => {
       useEditRouteComprehensive();
 
       let selectCallCount = 0;
-      const selectResponses = ['request-query', 'add', 'set', 'back', 'done'];
+      const selectResponses = [
+        'manual',
+        'request-query',
+        'add',
+        'set',
+        'back',
+        'done',
+      ];
       client.input.select = vi.fn().mockImplementation(() => {
         return Promise.resolve(selectResponses[selectCallCount++]);
       });
