@@ -1,0 +1,18 @@
+{
+  "main_menu": [
+    { "title": "Shop", "link": "/collections/all" },
+    { "title": "Best Sellers", "link": "/collections/best-sellers" },
+    { "title": "Bundles", "link": "/collections/bundles" },
+    { "title": "About", "link": "/pages/about" },
+    { "title": "FAQ", "link": "/pages/faq" },
+    { "title": "Blog", "link": "/blogs/news" },
+    { "title": "Contact", "link": "/pages/contact" }
+  ],
+  "footer_menu": [
+    { "title": "Shipping Policy", "link": "/policies/shipping-policy" },
+    { "title": "Return Policy", "link": "/policies/refund-policy" },
+    { "title": "Privacy Policy", "link": "/policies/privacy-policy" },
+    { "title": "Terms of Service", "link": "/policies/terms-of-service" },
+    { "title": "Contact", "link": "/pages/contact" }
+  ]
+}
