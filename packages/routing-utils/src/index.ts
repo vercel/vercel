@@ -301,26 +301,8 @@ export function getTransformedRoutes(
 ): NormalizedRoutes {
   const { cleanUrls, rewrites, redirects, headers, trailingSlash } =
     vercelConfig;
-  let { routes = null } = vercelConfig;
-  if (routes) {
-    const hasNewProperties =
-      typeof cleanUrls !== 'undefined' ||
-      typeof trailingSlash !== 'undefined' ||
-      typeof redirects !== 'undefined' ||
-      typeof headers !== 'undefined' ||
-      typeof rewrites !== 'undefined';
-
-    if (hasNewProperties) {
-      const error = createError(
-        'invalid_mixed_routes',
-        'If `rewrites`, `redirects`, `headers`, `cleanUrls` or `trailingSlash` are used, then `routes` cannot be present.',
-        'https://vercel.link/mix-routing-props',
-        'Learn More'
-      );
-      return { routes, error };
-    }
-    return normalizeRoutes(routes);
-  }
+  const { routes: userRoutes = null } = vercelConfig;
+  let routes: Route[] | null = null;
 
   if (typeof cleanUrls !== 'undefined') {
     const normalized = normalizeRoutes(
@@ -338,6 +320,15 @@ export function getTransformedRoutes(
     const normalized = normalizeRoutes(convertTrailingSlash(trailingSlash));
     if (normalized.error) {
       normalized.error.code = 'invalid_trailing_slash';
+      return { routes, error: normalized.error };
+    }
+    routes = routes || [];
+    routes.push(...(normalized.routes || []));
+  }
+
+  if (userRoutes) {
+    const normalized = normalizeRoutes(userRoutes);
+    if (normalized.error) {
       return { routes, error: normalized.error };
     }
     routes = routes || [];

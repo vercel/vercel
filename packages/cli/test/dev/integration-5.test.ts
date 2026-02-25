@@ -3,13 +3,13 @@ import ms from 'ms';
 import fs, { mkdirp } from 'fs-extra';
 import {
   sleep,
-  fetch,
   fixture,
   testFixture,
   testFixtureStdio,
   validateResponseHeaders,
 } from './utils';
 import assert from 'assert';
+import nodeFetch from 'node-fetch';
 
 test(
   '[vercel dev] temporary directory listing',
@@ -21,7 +21,7 @@ test(
 
       await sleep(ms('20s'));
 
-      const firstResponse = await fetch(`http://localhost:${port}`);
+      const firstResponse = await nodeFetch(`http://localhost:${port}`);
       validateResponseHeaders(firstResponse);
       const body = await firstResponse.text();
       // eslint-disable-next-line no-console
@@ -31,7 +31,7 @@ test(
       await fs.writeFile(join(directory, 'index.txt'), 'hello');
 
       for (let i = 0; i < 20; i++) {
-        const response = await fetch(`http://localhost:${port}`);
+        const response = await nodeFetch(`http://localhost:${port}`);
         validateResponseHeaders(response);
 
         if (response.status === 200) {
@@ -59,7 +59,7 @@ test('[vercel dev] add a `package.json` to trigger `@vercel/static-build`', asyn
     'trigger-static-build',
     async (_testPath: any, port: any) => {
       {
-        const response = await fetch(`http://localhost:${port}`);
+        const response = await nodeFetch(`http://localhost:${port}`);
         validateResponseHeaders(response);
         const body = await response.text();
         expect(body.trim()).toBe('hello:index.txt');
@@ -77,7 +77,7 @@ test('[vercel dev] add a `package.json` to trigger `@vercel/static-build`', asyn
       await sleep(ms('2s'));
 
       {
-        const response = await fetch(`http://localhost:${port}`);
+        const response = await nodeFetch(`http://localhost:${port}`);
         validateResponseHeaders(response);
         const body = await response.text();
         expect(body.trim()).toBe(rnd);
@@ -146,7 +146,7 @@ test('[vercel dev] render warning for empty cwd dir', async () => {
 
     // Issue a request to ensure a 404 response
     await sleep(ms('3s'));
-    const response = await fetch(`http://localhost:${port}`);
+    const response = await nodeFetch(`http://localhost:${port}`);
     validateResponseHeaders(response);
     expect(response.status).toBe(404);
   } finally {
@@ -180,7 +180,7 @@ test('[vercel dev] do not rebuild for changes in the output directory', async ()
       }
     }
 
-    const resp1 = await fetch(`http://localhost:${port}`);
+    const resp1 = await nodeFetch(`http://localhost:${port}`);
     const text1 = await resp1.text();
     expect(text1.trim()).toBe('hello first');
 
@@ -188,7 +188,7 @@ test('[vercel dev] do not rebuild for changes in the output directory', async ()
 
     await sleep(ms('3s'));
 
-    const resp2 = await fetch(`http://localhost:${port}`);
+    const resp2 = await nodeFetch(`http://localhost:${port}`);
     const text2 = await resp2.text();
     expect(text2.trim()).toBe('hello second');
   } finally {
@@ -397,7 +397,9 @@ test(
 
     try {
       {
-        const response = await fetch(`http://localhost:${port}/api/new-file`);
+        const response = await nodeFetch(
+          `http://localhost:${port}/api/new-file`
+        );
         validateResponseHeaders(response);
         expect(response.status).toBe(404);
       }
@@ -419,7 +421,9 @@ test(
       await sleep(ms('1s'));
 
       {
-        const response = await fetch(`http://localhost:${port}/api/new-file`);
+        const response = await nodeFetch(
+          `http://localhost:${port}/api/new-file`
+        );
         validateResponseHeaders(response);
         const body = await response.text();
         expect(body.trim()).toBe('from new file');
@@ -436,12 +440,12 @@ describe('[vercel dev] Express', () => {
     testFixtureStdio(
       'express-no-export',
       async (_testPath: any, port: any) => {
-        const res = await fetch(`http://localhost:${port}`);
+        const res = await nodeFetch(`http://localhost:${port}`);
         validateResponseHeaders(res);
         const json = await res.json();
         expect(json).toHaveProperty('message', 'Hello Express!');
 
-        const res2 = await fetch(`http://localhost:${port}/test.json`);
+        const res2 = await nodeFetch(`http://localhost:${port}/test.json`);
         validateResponseHeaders(res2);
         const json2 = await res2.json();
         expect(json2).toHaveProperty('message', 'Hello Express!');
@@ -457,7 +461,7 @@ describe('[vercel dev] ESM edge functions', () => {
     testFixtureStdio(
       'esm-js-edge-module',
       async (_testPath: any, port: any) => {
-        const res = await fetch(`http://localhost:${port}/api/data`);
+        const res = await nodeFetch(`http://localhost:${port}/api/data`);
         validateResponseHeaders(res);
         const json = await res.json();
         expect(json).toHaveProperty('isLeapYear');
@@ -471,7 +475,7 @@ describe('[vercel dev] ESM edge functions', () => {
     testFixtureStdio(
       'esm-ts-edge-module',
       async (_testPath: any, port: any) => {
-        const res = await fetch(`http://localhost:${port}/api/data`);
+        const res = await nodeFetch(`http://localhost:${port}/api/data`);
         validateResponseHeaders(res);
         const json = await res.json();
         expect(json).toHaveProperty('isLeapYear');
@@ -485,7 +489,7 @@ describe('[vercel dev] ESM edge functions', () => {
     testFixtureStdio(
       'esm-js-edge-no-module',
       async (_testPath: any, port: any) => {
-        const res = await fetch(`http://localhost:${port}/api/data`);
+        const res = await nodeFetch(`http://localhost:${port}/api/data`);
         validateResponseHeaders(res);
         const json = await res.json();
         expect(json).toHaveProperty('isLeapYear');
@@ -499,7 +503,7 @@ describe('[vercel dev] ESM edge functions', () => {
     testFixtureStdio(
       'esm-ts-edge-no-module',
       async (_testPath: any, port: any) => {
-        const res = await fetch(`http://localhost:${port}/api/data`);
+        const res = await nodeFetch(`http://localhost:${port}/api/data`);
         validateResponseHeaders(res);
         const json = await res.json();
         expect(json).toHaveProperty('isLeapYear');
@@ -515,7 +519,7 @@ describe('[vercel dev] ESM serverless functions', () => {
     testFixtureStdio(
       'esm-js-nodejs-module',
       async (_testPath: any, port: any) => {
-        const res = await fetch(`http://localhost:${port}/api/data`);
+        const res = await nodeFetch(`http://localhost:${port}/api/data`);
         validateResponseHeaders(res);
         const json = await res.json();
         expect(json).toHaveProperty('isLeapYear');
@@ -529,7 +533,7 @@ describe('[vercel dev] ESM serverless functions', () => {
     testFixtureStdio(
       'esm-ts-nodejs-module',
       async (_testPath: any, port: any) => {
-        const res = await fetch(`http://localhost:${port}/api/data`);
+        const res = await nodeFetch(`http://localhost:${port}/api/data`);
         validateResponseHeaders(res);
         const json = await res.json();
         expect(json).toHaveProperty('isLeapYear');
@@ -543,7 +547,7 @@ describe('[vercel dev] ESM serverless functions', () => {
     testFixtureStdio(
       'esm-js-nodejs-no-module',
       async (_testPath: any, port: any) => {
-        const res = await fetch(`http://localhost:${port}/api/data`);
+        const res = await nodeFetch(`http://localhost:${port}/api/data`);
         validateResponseHeaders(res);
         const json = await res.json();
         expect(json).toHaveProperty('isLeapYear');
@@ -557,7 +561,7 @@ describe('[vercel dev] ESM serverless functions', () => {
     testFixtureStdio(
       'esm-ts-nodejs-no-module',
       async (_testPath: any, port: any) => {
-        const res = await fetch(`http://localhost:${port}/api/data`);
+        const res = await nodeFetch(`http://localhost:${port}/api/data`);
         validateResponseHeaders(res);
         const json = await res.json();
         expect(json).toHaveProperty('isLeapYear');
@@ -571,7 +575,7 @@ describe('[vercel dev] ESM serverless functions', () => {
     testFixtureStdio(
       'vercel-ts-test',
       async (_testPath: any, port: number) => {
-        const res = await fetch(`http://localhost:${port}/api/test`);
+        const res = await nodeFetch(`http://localhost:${port}/api/test`);
         validateResponseHeaders(res);
         const text = await res.text();
         expect(text).toEqual('Hello, Batman!');
@@ -587,7 +591,7 @@ describe('[vercel dev] Hono', () => {
     testFixtureStdio(
       'hono-no-export',
       async (_testPath: any, port: number) => {
-        const res = await fetch(`http://localhost:${port}/test.json`);
+        const res = await nodeFetch(`http://localhost:${port}/test.json`);
         validateResponseHeaders(res);
         const json2 = await res.json();
         expect(json2).toHaveProperty('message', 'Hello Hono!');
