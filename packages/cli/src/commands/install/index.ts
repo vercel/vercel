@@ -32,7 +32,7 @@ export default async function install(client: Client) {
     : {
         ...installCommand,
         options: installCommand.options.filter(
-          o => o.name !== 'installation-id'
+          o => o.name !== 'installation-id' && o.name !== 'format'
         ),
       };
 
