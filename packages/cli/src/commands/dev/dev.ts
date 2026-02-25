@@ -29,11 +29,11 @@ import {
 } from '../../util/projects/detect-services';
 import { displayDetectedServices } from '../../util/input/display-services';
 import { acquireDevLock, releaseDevLock } from '../../util/dev/dev-lock';
-import { isExperimentalSkipDevLinkEnabled } from '../../util/dev/experimental';
 import { resolveProjectCwd } from '../../util/projects/find-project-root';
 
 type Options = {
   '--listen': string;
+  '--local': boolean;
   '--yes': boolean;
 };
 
@@ -53,9 +53,12 @@ export default async function dev(
   let link = await getLinkedProject(client, cwd);
 
   if (link.status === 'not_linked' && !process.env.__VERCEL_SKIP_DEV_CMD) {
-    if (isExperimentalSkipDevLinkEnabled()) {
-      output.log(
-        `Project is not linked to Vercel. Run ${getCommandName('link')} to sync environment variables and project settings.`
+    if (opts['--local']) {
+      output.warn(
+        'Running dev server in local mode without a project setup:\n' +
+          '  - Environment variables will not be pulled from Vercel\n' +
+          '  - Project settings are defined by local configuration\n\n' +
+          `To link your project, run ${getCommandName('dev')} without \`-L\` or \`--local\` or ${getCommandName('link')}.`
       );
     } else {
       link = await setupAndLink(client, cwd, {

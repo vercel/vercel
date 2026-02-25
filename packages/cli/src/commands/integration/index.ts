@@ -83,7 +83,7 @@ export default async function main(client: Client) {
         : {
             ...addSubcommand,
             options: addSubcommand.options.filter(
-              o => o.name !== 'installation-id'
+              o => o.name !== 'installation-id' && o.name !== 'format'
             ),
           };
 

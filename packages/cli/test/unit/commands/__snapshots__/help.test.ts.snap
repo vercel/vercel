@@ -1125,6 +1125,7 @@ exports[`help command > dev help output snapshots > dev --help > outputs help 1`
   Options:
 
   -l,  --listen <URI>  Specify a URI endpoint on which to listen [0.0.0.0:3000] 
+  -L,  --local         Start the dev server without linking to a Vercel project 
   -y,  --yes           Accept default value for all prompts                     
 
 
