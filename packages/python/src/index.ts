@@ -44,6 +44,7 @@ import {
   ensureVenv,
   createVenvEnv,
 } from './utils';
+import { runQuirks } from './quirks';
 
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
@@ -472,6 +473,15 @@ export const build: BuildV3 = async ({
   //   });
   // }
 
+  // Run quirks: detect dependencies that need special handling (e.g. prisma)
+  // and perform fix-up routines before bundling.
+  const quirksResult = await runQuirks({ venvPath, pythonEnv, workPath });
+
+  // Apply build-time env vars from quirks so subsequent build steps can use them
+  if (quirksResult.buildEnv) {
+    Object.assign(pythonEnv, quirksResult.buildEnv);
+  }
+
   debug('Entrypoint is', entrypoint);
   const moduleName = entrypoint.replace(/\//g, '.').replace(/\.py$/i, '');
   const vendorDir = resolveVendorDir();
@@ -541,6 +551,7 @@ from vercel_runtime.vc_init import vc_handler
 
   const lambdaEnv = {} as Record<string, string>;
   lambdaEnv.PYTHONPATH = vendorDir;
+  Object.assign(lambdaEnv, quirksResult.env);
 
   const globOptions: GlobOptions = {
     cwd: workPath,
@@ -563,6 +574,7 @@ from vercel_runtime.vc_init import vc_handler
     noBuildCheckFailed,
     pythonPath: pythonVersion.pythonPath,
     hasCustomCommand,
+    alwaysBundlePackages: quirksResult.alwaysBundlePackages,
   });
 
   const { runtimeInstallEnabled, allVendorFiles } =
