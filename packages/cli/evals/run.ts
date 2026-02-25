@@ -151,6 +151,25 @@ async function main() {
     process.exit(1);
   }
 
+  // When OIDC wasn't available we fell back to VERCEL_TOKEN; smoke uses the Vercel sandbox and requires OIDC, so skip it.
+  const usedOIDCFallback =
+    !process.env.VERCEL_OIDC_TOKEN && Boolean(process.env.VERCEL_TOKEN);
+  const flagArgs = args.filter(a => a.startsWith('-'));
+  const explicitExperimentArgs = args.filter(a => !a.startsWith('-'));
+  const experimentsToRun =
+    explicitExperimentArgs.length > 0
+      ? explicitExperimentArgs
+      : usedOIDCFallback
+        ? ['cc', 'cli', 'vercel-cli-cc']
+        : [];
+  const agentEvalArgsToPass =
+    experimentsToRun.length > 0 ? [...flagArgs, ...experimentsToRun] : args;
+  if (usedOIDCFallback && explicitExperimentArgs.length === 0) {
+    process.stderr.write(
+      'Skipping smoke experiment (requires OIDC). Running: cc, cli, vercel-cli-cc.\n'
+    );
+  }
+
   // Progress: print what will run so it's visible as the eval runs
   process.stdout.write(`\nEvals to run: ${evals.join(', ')}\n`);
   process.stdout.write(
@@ -180,7 +199,11 @@ async function main() {
         agentEvalEnv.CLI_EVAL_PROJECT_ID = setupResult.createdProjectId;
       }
 
-      const agentEvalArgs = ['--yes', '@vercel/agent-eval@latest', ...args];
+      const agentEvalArgs = [
+        '--yes',
+        '@vercel/agent-eval@latest',
+        ...agentEvalArgsToPass,
+      ];
 
       const child = spawn('npx', agentEvalArgs, {
         cwd: __dirname,
