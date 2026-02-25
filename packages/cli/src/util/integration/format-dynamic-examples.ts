@@ -113,7 +113,7 @@ export function formatDynamicExamples(
   );
 
   // Installation ID (only when auto-provision FF is enabled)
-  if (process.env.FF_AUTO_PROVISION_INSTALL === '1') {
+  if (process.env.FF_AUTO_PROVISION_INSTALL !== '0') {
     lines.push('');
     lines.push(`  ${chalk.dim('-')} Install using a specific installation`);
     lines.push('');
