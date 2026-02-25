@@ -8,15 +8,11 @@ import { getVercelDataDir } from './token-util';
 export interface AuthConfig {
   /** An `access_token` obtained using the OAuth Device Authorization flow. */
   token?: string;
-  /** A `refresh_token` obtained using the OAuth Device Authorization flow. */
-  refreshToken?: string;
   /**
    * The absolute time (seconds) when the token expires.
    * Used to optimistically check if the token is still valid.
    */
   expiresAt?: number;
-  /** Whether to skip writing this config to disk. */
-  skipWrite?: boolean;
 }
 
 /**
@@ -50,22 +46,6 @@ export function readAuthConfig(): AuthConfig | null {
   } catch (error) {
     return null;
   }
-}
-
-/**
- * Write the auth config to disk with proper permissions
- */
-export function writeAuthConfig(config: AuthConfig): void {
-  const authPath = getAuthConfigPath();
-  const authDir = path.dirname(authPath);
-
-  // Ensure directory exists with proper permissions
-  if (!fs.existsSync(authDir)) {
-    fs.mkdirSync(authDir, { mode: 0o770, recursive: true });
-  }
-
-  // Write file with restrictive permissions (owner read/write only)
-  fs.writeFileSync(authPath, JSON.stringify(config, null, 2), { mode: 0o600 });
 }
 
 /**
