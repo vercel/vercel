@@ -149,6 +149,7 @@ export {
   UNIFIED_BACKEND_BUILDER,
   BackendFramework,
   isBackendFramework,
+  isNodeBackendFramework,
   isBackendBuilder,
   isExperimentalBackendsEnabled,
   isExperimentalBackendsWithoutIntrospectionEnabled,
