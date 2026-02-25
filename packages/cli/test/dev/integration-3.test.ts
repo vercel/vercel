@@ -5,12 +5,12 @@ import {
   sleep,
   shouldSkip,
   fetchWithRetry,
-  fetch,
   fixture,
   testFixture,
   testFixtureStdio,
   validateResponseHeaders,
 } from './utils';
+import nodeFetch from 'node-fetch';
 
 // Angular has `engines: { node: "10.x" }` in its `package.json`
 test('[vercel dev] 02-angular-node', async () => {
@@ -218,7 +218,7 @@ test(
     '01-node',
     async (_testPath: any, port: any) => {
       {
-        const res = await fetch(`http://localhost:${port}////?foo=bar`, {
+        const res = await nodeFetch(`http://localhost:${port}////?foo=bar`, {
           redirect: 'manual',
         });
 
@@ -233,10 +233,13 @@ test(
       }
 
       {
-        const res = await fetch(`http://localhost:${port}///api////date.js`, {
-          method: 'POST',
-          redirect: 'manual',
-        });
+        const res = await nodeFetch(
+          `http://localhost:${port}///api////date.js`,
+          {
+            method: 'POST',
+            redirect: 'manual',
+          }
+        );
 
         validateResponseHeaders(res);
 

@@ -33,6 +33,7 @@ describe('detectServices', () => {
       const result = await detectServices({ fs });
 
       expect(result.services).toEqual([]);
+      expect(result.source).toBe('auto-detected');
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0].code).toBe('NO_SERVICES_CONFIGURED');
     });
@@ -103,6 +104,7 @@ describe('detectServices', () => {
       const result = await detectServices({ fs });
 
       expect(result.services).toHaveLength(1);
+      expect(result.source).toBe('configured');
       expect(result.services[0]).toMatchObject({
         name: 'api',
         type: 'web',

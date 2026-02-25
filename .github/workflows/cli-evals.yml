@@ -6,6 +6,9 @@ on:
   pull_request:
     paths:
       - 'packages/cli/evals/**'
+  schedule:
+    # Run hourly to track eval health over time.
+    - cron: '0 * * * *'
 
 jobs:
   evals:

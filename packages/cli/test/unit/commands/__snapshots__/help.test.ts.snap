@@ -1125,6 +1125,7 @@ exports[`help command > dev help output snapshots > dev --help > outputs help 1`
   Options:
 
   -l,  --listen <URI>  Specify a URI endpoint on which to listen [0.0.0.0:3000] 
+  -L,  --local         Start the dev server without linking to a Vercel project 
   -y,  --yes           Accept default value for all prompts                     
 
 
@@ -4216,6 +4217,10 @@ exports[`help command > project help output snapshots > project help column widt
                    scope        
   remove   name    Delete a     
                    project      
+  token    [name]  Get a        
+                   development  
+                   OIDC token   
+                   for a project
 
 
   Global Options:
@@ -4281,6 +4286,7 @@ exports[`help command > project help output snapshots > project help column widt
   inspect  [name]  Displays information related to a project            
   list             Show all projects in the selected scope              
   remove   name    Delete a project                                     
+  token    [name]  Get a development OIDC token for a project           
 
 
   Global Options:
@@ -4314,6 +4320,7 @@ exports[`help command > project help output snapshots > project help column widt
   inspect  [name]  Displays information related to a project                                                    
   list             Show all projects in the selected scope                                                      
   remove   name    Delete a project                                                                             
+  token    [name]  Get a development OIDC token for a project                                                   
 
 
   Global Options:

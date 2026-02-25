@@ -2505,6 +2505,8 @@ importers:
 
   python/vercel-runtime: {}
 
+  python/vercel-workers: {}
+
 packages:
 
   /@ai-sdk/anthropic@1.2.12(zod@3.25.76):

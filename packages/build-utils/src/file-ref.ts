@@ -1,5 +1,5 @@
 import assert from 'assert';
-import fetch from 'node-fetch';
+import nodeFetch from 'node-fetch';
 import multiStream from 'multistream';
 import retry from 'async-retry';
 import Sema from 'async-sema';
@@ -106,7 +106,7 @@ export default class FileRef implements FileBase {
     try {
       return await retry(
         async () => {
-          const resp = await fetch(url);
+          const resp = await nodeFetch(url);
           if (!resp.ok) {
             const error = new BailableError(
               `download: ${resp.status} ${resp.statusText} for ${url}`

@@ -77,7 +77,6 @@ import { checkTelemetryStatus } from './util/telemetry/check-status';
 import output from './output-manager';
 import { checkGuidanceStatus } from './util/guidance/check-status';
 import { determineAgent } from '@vercel/detect-agent';
-import { isExperimentalSkipDevLinkEnabled } from './util/dev/experimental';
 
 const VERCEL_DIR = getGlobalPathConfig();
 const VERCEL_CONFIG_PATH = configFiles.getConfigFilePath();
@@ -214,13 +213,11 @@ const main = async () => {
   // If empty, leave this code here for easy adding of beta commands later
   const betaCommands: string[] = ['api', 'curl', 'webhooks'];
   if (betaCommands.includes(targetOrSubcommand)) {
-    output.print(
-      `${chalk.grey(
-        `${getTitleName()} CLI ${pkg.version} | ${chalk.bold(targetOrSubcommand)} is in beta — https://vercel.com/feedback`
-      )}\n`
+    output.debug(
+      `${getTitleName()} CLI ${pkg.version} | ${targetOrSubcommand} is in beta — https://vercel.com/feedback`
     );
   } else {
-    output.print(`${chalk.grey(`${getTitleName()} CLI ${pkg.version}`)}\n`);
+    output.debug(`${getTitleName()} CLI ${pkg.version}`);
   }
 
   // Handle `--version` directly
@@ -458,7 +455,10 @@ const main = async () => {
     subcommandsWithoutToken.push('guidance');
   }
 
-  if (isExperimentalSkipDevLinkEnabled()) {
+  if (
+    subcommand === 'dev' &&
+    (client.argv.includes('--local') || client.argv.includes('-L'))
+  ) {
     subcommandsWithoutToken.push('dev');
   }
 
