@@ -1,25 +1,5 @@
 import path from 'path';
-import fs from 'fs';
 import os from 'os';
-import { VercelOidcTokenError } from './token-error';
-
-export function findRootDir(): string | null {
-  try {
-    let dir = process.cwd();
-    while (dir !== path.dirname(dir)) {
-      const pkgPath = path.join(dir, '.vercel');
-      if (fs.existsSync(pkgPath)) {
-        return dir;
-      }
-      dir = path.dirname(dir);
-    }
-  } catch (e) {
-    throw new VercelOidcTokenError(
-      'Token refresh only supported in node server environments'
-    );
-  }
-  return null;
-}
 
 export function getUserDataDir(): string | null {
   if (process.env.XDG_DATA_HOME) {

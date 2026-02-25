@@ -1,5 +1,4 @@
 import { getContext } from './get-context';
-import { VercelOidcTokenError } from './token-error';
 
 /**
  * Options for getting the Vercel OIDC token.
@@ -93,7 +92,7 @@ export async function getVercelOidcToken(
       message = `${message}\n${error.message}`;
     }
     if (message) {
-      throw new VercelOidcTokenError(message);
+      throw new Error(message);
     }
     throw error;
   }

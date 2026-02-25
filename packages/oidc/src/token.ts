@@ -1,13 +1,4 @@
-import { VercelOidcTokenError } from './token-error';
-import {
-  findProjectInfo,
-  getTokenPayload,
-  getVercelToken,
-  getVercelOidcToken,
-  isExpired,
-  loadToken,
-  saveToken,
-} from './token-util';
+import { execFile } from 'child_process';
 
 export interface RefreshTokenOptions {
   /**
@@ -31,44 +22,40 @@ export interface RefreshTokenOptions {
 export async function refreshToken(
   options?: RefreshTokenOptions
 ): Promise<void> {
-  // Resolve parameters with precedence: explicit params > project.json
-  let projectId: string | undefined = options?.project;
-  let teamId: string | undefined = options?.team;
+  const args = ['project', 'token'];
 
-  // If neither is provided, read from project.json
-  if (!projectId && !teamId) {
-    const projectInfo = findProjectInfo();
-    projectId = projectInfo.projectId;
-    teamId = projectInfo.teamId;
-  } else if (!projectId || !teamId) {
-    // If only one is provided, read project.json for the missing value
-    const projectInfo = findProjectInfo();
-    projectId = projectId ?? projectInfo.projectId;
-    teamId = teamId ?? projectInfo.teamId;
+  if (options?.project) {
+    args.push(options.project);
   }
 
-  if (!projectId) {
-    throw new VercelOidcTokenError(
-      'Failed to refresh OIDC token: No project specified. Try re-linking your project with `vc link`'
-    );
+  if (options?.team) {
+    args.push('--scope', options.team);
   }
 
-  let maybeToken = loadToken(projectId);
+  args.push('--yes');
 
-  if (
-    !maybeToken ||
-    isExpired(getTokenPayload(maybeToken.token), options?.expirationBufferMs)
-  ) {
-    const authToken = await getVercelToken({
-      expirationBufferMs: options?.expirationBufferMs,
+  const token = await execVercelCli(args);
+  process.env.VERCEL_OIDC_TOKEN = token.trim();
+}
+
+function execVercelCli(args: string[]): Promise<string> {
+  return new Promise((resolve, reject) => {
+    execFile('vercel', args, (error, stdout, stderr) => {
+      if (error) {
+        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+          reject(
+            new Error(
+              'Vercel CLI not found. Install it with `npm i -g vercel` and log in with `vercel login`.'
+            )
+          );
+          return;
+        }
+        reject(
+          new Error(`Failed to refresh OIDC token: ${stderr || error.message}`)
+        );
+        return;
+      }
+      resolve(stdout);
     });
-
-    maybeToken = await getVercelOidcToken(authToken, projectId, teamId);
-    if (!maybeToken) {
-      throw new VercelOidcTokenError('Failed to refresh OIDC token');
-    }
-    saveToken(maybeToken, projectId);
-  }
-  process.env.VERCEL_OIDC_TOKEN = maybeToken.token;
-  return;
+  });
 }
