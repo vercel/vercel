@@ -237,6 +237,30 @@ it('extractAndExecuteLambda throws with invalid code', async () => {
   ).rejects.toThrow();
 });
 
+it('maps service internal function output without leading slash', async () => {
+  const fixtureName = '01-express-index-ts-esm';
+  const fixtureSource = join(__dirname, 'fixtures', fixtureName);
+  const { workDir } = await getWorkDir(fixtureName, fixtureSource);
+
+  const result = (await build({
+    files: {},
+    workPath: workDir,
+    config: {
+      ...defaultConfig,
+      serviceName: 'js-api',
+    },
+    meta,
+    entrypoint: 'package.json',
+    repoRootPath: workDir,
+  })) as BuildResultV2Typical;
+
+  expect(
+    result.routes?.some(route => route.dest === '/_svc/js-api/index')
+  ).toBe(true);
+  expect(result.output['_svc/js-api/index']).toBeDefined();
+  expect(result.output['/_svc/js-api/index']).toBeUndefined();
+});
+
 const extractAndExecuteLambda = async (
   lambda: NodejsLambda,
   dir: string,

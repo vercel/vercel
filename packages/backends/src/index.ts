@@ -189,7 +189,12 @@ export const build: BuildV2 = async args => {
         if (route.dest === '/') {
           continue;
         }
-        output[route.dest] = lambda;
+        // Service internal function aliases must be emitted without a leading
+        // slash so route destination resolution can find the target function.
+        const outputPath = route.dest.startsWith('/_svc/')
+          ? route.dest.slice(1)
+          : route.dest;
+        output[outputPath] = lambda;
       }
     }
 
