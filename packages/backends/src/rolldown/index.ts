@@ -314,7 +314,9 @@ module.exports = requireFromContext('${pkgName}');
     ...args,
     localBuildFiles,
     files,
-    span: rolldownSpan ?? new Span({ name: 'vc.builder.backends.nft' }),
+    span: (
+      rolldownSpan ?? new Span({ name: 'vc.builder.backends.rolldown' })
+    ).child('vc.builder.backends.sourceCodeNft'),
     ignoreNodeModules: true,
     ignore: args.config.excludeFiles,
   });

@@ -16,8 +16,6 @@ export const nft = async (
     conditions?: string[];
   }
 ) => {
-  const nftSpan = args.span.child('vc.builder.backends.nft');
-
   const runNft = async () => {
     const ignorePatterns = [
       ...(args.ignoreNodeModules ? ['**/node_modules/**'] : []),
@@ -90,7 +88,7 @@ export const nft = async (
     }
   };
 
-  await nftSpan.trace(runNft);
+  await args.span.trace(runNft);
 };
 const isTypeScriptFile = (fsPath: string) => {
   return (
