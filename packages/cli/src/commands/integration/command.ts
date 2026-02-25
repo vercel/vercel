@@ -21,7 +21,6 @@ export const addSubcommand = {
       deprecated: false,
       argument: 'NAME',
     },
-    formatOption,
     {
       name: 'metadata',
       description:
@@ -81,6 +80,7 @@ export const addSubcommand = {
       description:
         'Installation ID to use when multiple installations exist for the integration',
     },
+    formatOption,
   ],
   examples: [
     {

@@ -16,8 +16,10 @@ import type {
   AutoProvisionFallback,
   AutoProvisionResult,
 } from '../../util/integration/types';
+import { buildSSOLink } from '../../util/integration/build-sso-link';
 import { resolveResourceName } from '../../util/integration/generate-resource-name';
 import {
+  ENV_PULL_FAILED_MESSAGE,
   getLinkedProjectField,
   postProvisionSetup,
   type PostProvisionOptions,
@@ -417,9 +419,7 @@ export async function addAutoProvision(
       );
     }
     if (setupResult.connected && !setupResult.envPulled && !options.noEnvPull) {
-      warnings.push(
-        'Failed to pull environment variables. You can run `vercel env pull` manually.'
-      );
+      warnings.push(ENV_PULL_FAILED_MESSAGE);
     }
 
     const jsonOutput: Record<string, unknown> = {
@@ -450,14 +450,19 @@ export async function addAutoProvision(
           }
         : null,
       dashboardUrl: setupResult.dashboardUrl,
+      ssoUrl: {
+        integration: buildSSOLink(team, provisioned.installation.id),
+        resource: buildSSOLink(
+          team,
+          provisioned.installation.id,
+          provisioned.resource.externalResourceId
+        ),
+      },
+      project: setupResult.project ?? null,
+      environments: setupResult.environments,
+      envPulled: setupResult.envPulled,
+      warnings,
     };
-
-    if (setupResult.project) {
-      jsonOutput.project = setupResult.project;
-    }
-    jsonOutput.environments = setupResult.environments;
-    jsonOutput.envPulled = setupResult.envPulled;
-    jsonOutput.warnings = warnings;
 
     client.stdout.write(`${JSON.stringify(jsonOutput, null, 2)}\n`);
 

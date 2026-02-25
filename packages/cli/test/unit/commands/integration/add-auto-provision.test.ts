@@ -2304,6 +2304,13 @@ describe('integration add (auto-provision)', () => {
       expect(jsonOutput.dashboardUrl).toContain(
         'stores/integration/resource_123'
       );
+      expect(jsonOutput.ssoUrl.integration).toContain(
+        'integrationConfigurationId=install_123'
+      );
+      expect(jsonOutput.ssoUrl.resource).toContain(
+        'resource_id=ext_resource_123'
+      );
+      expect(jsonOutput.project).toBeNull();
       expect(jsonOutput.environments).toEqual([]);
       expect(jsonOutput.envPulled).toBe(false);
       expect(jsonOutput.warnings).toEqual([]);

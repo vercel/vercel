@@ -12,6 +12,9 @@ export const VALID_ENVIRONMENTS = [
   'development',
 ] as const;
 
+export const ENV_PULL_FAILED_MESSAGE =
+  'Failed to pull environment variables. You can run `vercel env pull` manually.';
+
 export interface PostProvisionOptions {
   noConnect?: boolean;
   noEnvPull?: boolean;
@@ -137,9 +140,7 @@ export async function postProvisionSetup(
       'vercel-cli:integration:add'
     );
     if (pullExitCode !== 0) {
-      output.warn(
-        'Failed to pull environment variables. You can run `vercel env pull` manually.'
-      );
+      output.warn(ENV_PULL_FAILED_MESSAGE);
     } else {
       envPulled = true;
     }
