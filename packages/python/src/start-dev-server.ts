@@ -1,6 +1,6 @@
 import { spawn } from 'child_process';
-import { readFileSync, writeFileSync, mkdirSync } from 'fs';
-import { join, delimiter, dirname } from 'path';
+import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
+import { join, delimiter, dirname, basename } from 'path';
 import type { ChildProcess } from 'child_process';
 import type { PythonFramework, StartDevServer } from '@vercel/build-utils';
 import { debug, NowBuildError } from '@vercel/build-utils';
@@ -350,17 +350,42 @@ function installGlobalCleanupHandlers() {
   });
 }
 
-function createDevShim(workPath: string, modulePath: string): string | null {
+interface DevShimResult {
+  module: string;
+  extraPythonPath?: string;
+}
+
+function createDevShim(
+  workPath: string,
+  entry: string,
+  modulePath: string
+): DevShimResult | null {
   try {
     const vercelPythonDir = join(workPath, '.vercel', 'python');
     mkdirSync(vercelPythonDir, { recursive: true });
+
+    // If workPath is a Python package (has __init__.py), the user
+    // module may use relative imports. We need to treat the module name so that
+    // __package__ is set correctly (e.g. "main" -> "backend.main").
+    let qualifiedModule = modulePath;
+    let extraPythonPath: string | undefined;
+    if (existsSync(join(workPath, '__init__.py'))) {
+      const pkgName = basename(workPath);
+      qualifiedModule = `${pkgName}.${modulePath}`;
+      extraPythonPath = dirname(workPath);
+    }
+
+    const entryAbs = join(workPath, entry);
+
     const shimPath = join(vercelPythonDir, `${DEV_SHIM_MODULE}.py`);
     const templatePath = join(__dirname, '..', `${DEV_SHIM_MODULE}.py`);
     const template = readFileSync(templatePath, 'utf8');
-    const shimSource = template.replace(/__VC_DEV_MODULE_PATH__/g, modulePath);
+    const shimSource = template
+      .replace(/__VC_DEV_MODULE_NAME__/g, qualifiedModule)
+      .replace(/__VC_DEV_ENTRY_ABS__/g, entryAbs);
     writeFileSync(shimPath, shimSource, 'utf8');
     debug(`Prepared Python dev shim at ${shimPath}`);
-    return DEV_SHIM_MODULE;
+    return { module: DEV_SHIM_MODULE, extraPythonPath };
   } catch (err: any) {
     debug(`Failed to prepare dev shim: ${err?.message || err}`);
     return null;
@@ -575,18 +600,26 @@ export const startDevServer: StartDevServer = async opts => {
     env.PORT = `${port}`;
 
     // Spawn the actual server process
-    const devShimModule = createDevShim(workPath, modulePath);
+    const devShim = createDevShim(workPath, entry, modulePath);
 
     // Add .vercel/python to PYTHONPATH so the shim can be imported
-    if (devShimModule) {
+    if (devShim) {
       const vercelPythonDir = join(workPath, '.vercel', 'python');
+      const pathParts = [vercelPythonDir];
+
+      if (devShim.extraPythonPath) {
+        pathParts.push(devShim.extraPythonPath);
+      }
+
       const existingPythonPath = env.PYTHONPATH || '';
-      env.PYTHONPATH = existingPythonPath
-        ? `${vercelPythonDir}:${existingPythonPath}`
-        : vercelPythonDir;
+      if (existingPythonPath) {
+        pathParts.push(existingPythonPath);
+      }
+
+      env.PYTHONPATH = pathParts.join(delimiter);
     }
 
-    const moduleToRun = devShimModule || modulePath;
+    const moduleToRun = devShim?.module || modulePath;
     const pythonArgs = ['-u', '-m', moduleToRun];
     const argv = [...spawnArgsPrefix, ...pythonArgs];
     debug(
