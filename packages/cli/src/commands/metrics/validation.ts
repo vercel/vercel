@@ -1,4 +1,5 @@
 import type { ValidationResult, ValidatedResult } from './types';
+import type { MetricsAggregation } from './schema-data';
 import {
   getEventNames,
   getEvent,
@@ -39,10 +40,11 @@ export function validateAggregation(
   event: string,
   measure: string,
   aggregation: string
-): ValidationResult {
+): ValidatedResult<MetricsAggregation> {
   const aggs = getAggregations(event, measure);
-  if (aggs.includes(aggregation)) {
-    return { valid: true };
+  const found = aggs.find(agg => agg === aggregation);
+  if (found) {
+    return { valid: true, value: found };
   }
   return {
     valid: false,

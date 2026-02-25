@@ -6,6 +6,7 @@ import {
   formatSchemaListJson,
   formatErrorJson,
 } from '../../../../src/commands/metrics/output';
+import type { QueryMetadata } from '../../../../src/commands/metrics/types';
 
 describe('output', () => {
   describe('getRollupColumnName', () => {
@@ -22,7 +23,7 @@ describe('output', () => {
 
   describe('formatQueryJson', () => {
     it('should format full JSON response', () => {
-      const query = {
+      const query: QueryMetadata = {
         event: 'incomingRequest',
         measure: 'count',
         aggregation: 'sum',
@@ -45,7 +46,7 @@ describe('output', () => {
     });
 
     it('should handle missing optional fields', () => {
-      const query = {
+      const query: QueryMetadata = {
         event: 'test',
         measure: 'count',
         aggregation: 'sum',
@@ -55,7 +56,9 @@ describe('output', () => {
         endTime: '2025-01-15T11:00:00Z',
         granularity: { minutes: 1 } as const,
       };
-      const result = JSON.parse(formatQueryJson(query, { statistics: {} }));
+      const result = JSON.parse(
+        formatQueryJson(query, { summary: [], statistics: {} })
+      );
       expect(result.data).toEqual([]);
       expect(result.summary).toEqual([]);
     });

@@ -6,6 +6,7 @@ import { getRollupColumnName } from './output';
 import { toGranularityMsFromDuration } from './time-utils';
 import type {
   Granularity,
+  MetricsAggregation,
   MetricsDataRow,
   MetricsQueryResponse,
   Scope,
@@ -42,7 +43,7 @@ interface SummaryTableOptions {
   rows: SummaryTableRow[];
   groupByFields: string[];
   measureType: MeasureType;
-  aggregation: string;
+  aggregation: MetricsAggregation;
   periodStart: Date;
   periodEnd: Date;
 }
@@ -50,7 +51,7 @@ interface SummaryTableOptions {
 interface MetadataHeaderOptions {
   event: string;
   measure: string;
-  aggregation: string;
+  aggregation: MetricsAggregation;
   periodStart: string;
   periodEnd: string;
   granularity: Granularity;
@@ -65,7 +66,7 @@ interface MetadataHeaderOptions {
 export interface FormatTextOptions {
   event: string;
   measure: string;
-  aggregation: string;
+  aggregation: MetricsAggregation;
   groupBy: string[];
   filter?: string;
   scope: Scope;
@@ -80,6 +81,9 @@ export interface FormatTextOptions {
 // with user-visible values (which can contain common separators like "|" or ",").
 const GROUP_KEY_DELIMITER = '\u001f';
 const MAX_SPARKLINE_LENGTH = 120;
+
+type TableAlignment = 'l' | 'c' | 'r';
+type StatColumn = 'total' | 'avg' | 'min' | 'max';
 
 const COUNT_UNITS = new Set(['count', 'tokens', 'us dollars', 'dollars']);
 const DURATION_UNITS = new Set(['milliseconds', 'seconds']);
@@ -169,7 +173,7 @@ function formatUnitLabel(unit: string): string {
  */
 function isCountIntegerDisplay(
   measureType: MeasureType,
-  aggregation: string
+  aggregation: MetricsAggregation
 ): boolean {
   // Count + sum should read like totals (integers), while count-persecond /
   // count-percent stay decimal.
@@ -188,7 +192,7 @@ function isCountIntegerDisplay(
 function formatNumber(
   value: number,
   measureType: MeasureType,
-  aggregation: string,
+  aggregation: MetricsAggregation,
   opts?: { preserveFractionalCountSum?: boolean }
 ): string {
   if (isCountIntegerDisplay(measureType, aggregation)) {
@@ -201,7 +205,7 @@ function formatNumber(
 }
 
 /** Chooses summary statistic columns for a given measure type. */
-function getStatColumns(measureType: MeasureType): string[] {
+function getStatColumns(measureType: MeasureType): StatColumn[] {
   if (measureType === 'duration' || measureType === 'ratio') {
     return ['avg', 'min', 'max'];
   }
@@ -222,12 +226,51 @@ function toNumericValue(
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+function isNonNullNumber(value: number | null): value is number {
+  return value !== null;
+}
+
+function isPointWithValue(
+  point: TimeSeriesPoint
+): point is { timestamp: string; value: number } {
+  return point.value !== null;
+}
+
+function getOrCreate<K, V>(map: Map<K, V>, key: K, make: () => V): V {
+  const existing = map.get(key);
+  if (existing !== undefined) {
+    return existing;
+  }
+  const created = make();
+  map.set(key, created);
+  return created;
+}
+
+function getGroupFieldValue(row: MetricsDataRow, field: string): string {
+  const value = row[field];
+  return value == null || value === '' ? '(not set)' : String(value);
+}
+
+/**
+ * Canonicalizes API timestamps to ISO strings with millisecond precision.
+ * We build expected buckets via `toISOString()` (e.g. `...00.000Z`), while API
+ * rows may use equivalent forms like `...00Z`. Normalizing avoids false
+ * "missing" buckets caused by string-format differences.
+ */
+function normalizeTimestampToIso(timestamp: string): string | null {
+  const parsed = Date.parse(timestamp);
+  if (isNaN(parsed)) {
+    return null;
+  }
+  return new Date(parsed).toISOString();
+}
+
 /** Formats one summary statistic cell, including min/max timestamps. */
 function formatStatCell(
-  column: string,
+  column: StatColumn,
   stats: GroupStats,
   measureType: MeasureType,
-  aggregation: string,
+  aggregation: MetricsAggregation,
   periodStart: Date,
   periodEnd: Date
 ): string {
@@ -254,8 +297,6 @@ function formatStatCell(
       );
       return `${formatNumber(stats.max.value, measureType, aggregation)} at ${ts}`;
     }
-    default:
-      return '--';
   }
 }
 
@@ -403,33 +444,39 @@ export function extractGroupedSeries(
   const valueByGroup = new Map<string, Map<string, number | null>>();
 
   for (const row of data) {
-    const values = groupBy.map(field => {
-      const v = row[field];
-      return v == null || v === '' ? '(not set)' : String(v);
-    });
+    const values = groupBy.map(field => getGroupFieldValue(row, field));
     const key = toGroupKey(values);
-    if (!valueByGroup.has(key)) {
+    if (!groupValues.has(key)) {
       // Preserve first-seen ordering from API response so output order is stable.
       groups.push(key);
       groupValues.set(key, values);
-      valueByGroup.set(key, new Map());
     }
-    const timestamp = row.timestamp;
-    if (typeof timestamp !== 'string' || timestamp.length === 0) {
+    const groupMap = getOrCreate(valueByGroup, key, () => new Map());
+    const rawTimestamp = row.timestamp;
+    if (rawTimestamp.length === 0) {
+      continue;
+    }
+    const timestamp = normalizeTimestampToIso(rawTimestamp);
+    if (!timestamp) {
       continue;
     }
 
     const numeric = toNumericValue(row[rollupColumn]);
-    valueByGroup.get(key)!.set(timestamp, numeric);
+    groupMap.set(timestamp, numeric);
   }
 
   const series = new Map<string, TimeSeriesPoint[]>();
   for (const key of groups) {
-    const byTimestamp = valueByGroup.get(key)!;
+    const byTimestamp = valueByGroup.get(key);
+    if (!byTimestamp) {
+      continue;
+    }
     // Expand sparse API rows into complete series so every group aligns on time.
     const points = expectedTimestamps.map(timestamp => ({
       timestamp,
-      value: byTimestamp.has(timestamp) ? byTimestamp.get(timestamp)! : null,
+      value: byTimestamp.has(timestamp)
+        ? (byTimestamp.get(timestamp) ?? null)
+        : null,
     }));
     series.set(key, points);
   }
@@ -443,10 +490,7 @@ export function extractGroupedSeries(
  * If all points are missing, returns `allMissing=true` and zero placeholders.
  */
 export function computeGroupStats(points: TimeSeriesPoint[]): GroupStats {
-  const present = points.filter(point => point.value !== null) as Array<{
-    timestamp: string;
-    value: number;
-  }>;
+  const present = points.filter(isPointWithValue);
 
   if (present.length === 0) {
     return {
@@ -514,7 +558,7 @@ export function downsample(
       continue;
     }
 
-    const present = bucket.filter(value => value !== null) as Array<number>;
+    const present = bucket.filter(isNonNullNumber);
     const avg = present.reduce((sum, value) => sum + value, 0) / present.length;
     result.push(avg);
   }
@@ -534,7 +578,7 @@ export function generateSparkline(values: (number | null)[]): string {
     return '';
   }
 
-  const present = sampled.filter(value => value !== null) as number[];
+  const present = sampled.filter(isNonNullNumber);
   if (present.length === 0) {
     // Entire series missing: keep positional placeholders instead of empty output.
     return sampled.map(() => MISSING_CHAR).join('');
@@ -648,11 +692,9 @@ export function formatSummaryTable(opts: SummaryTableOptions): string {
   }
 
   const centeredColumns = new Set(['min', 'max']);
-  const align = header.map(col => (centeredColumns.has(col) ? 'c' : 'r')) as (
-    | 'l'
-    | 'c'
-    | 'r'
-  )[];
+  const align: TableAlignment[] = header.map(col =>
+    centeredColumns.has(col) ? 'c' : 'r'
+  );
   return indent(
     table(rows, {
       align,
@@ -671,20 +713,31 @@ export function formatSparklineSection(
   const lines = ['sparklines:'];
 
   if (groupRows.length === 0) {
-    if (sparklines.length > 0) {
-      lines.push(indent(sparklines[0], 2));
+    const sparkline = sparklines[0];
+    if (sparkline) {
+      lines.push(indent(sparkline, 2));
     }
     return lines.join('\n');
   }
 
+  const rowsWithSparklines = groupRows.map((groupValues, index) => ({
+    groupValues,
+    sparkline: sparklines[index] ?? '',
+  }));
+
   const rows = [
     [...groupByFields, 'sparkline'].map(name => chalk.bold(chalk.cyan(name))),
-    ...groupRows.map((groupValues, i) => [...groupValues, sparklines[i]]),
+    ...rowsWithSparklines.map(({ groupValues, sparkline }) => [
+      ...groupValues,
+      sparkline,
+    ]),
   ];
+  const align: TableAlignment[] = groupByFields.map(() => 'r');
+  align.push('l');
   lines.push(
     indent(
       table(rows, {
-        align: [...groupByFields.map<'r'>(() => 'r'), 'l'],
+        align,
         hsep: 2,
       }),
       2

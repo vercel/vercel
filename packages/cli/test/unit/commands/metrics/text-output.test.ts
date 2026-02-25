@@ -134,6 +134,31 @@ describe('text-output', () => {
       ]);
     });
 
+    it('should match API timestamps without milliseconds to expected buckets', () => {
+      const result = extractGroupedSeries(
+        [
+          { timestamp: '2026-02-19T10:00:00Z', count_sum: 10 },
+          { timestamp: '2026-02-19T10:05:00Z', count_sum: 20 },
+          { timestamp: '2026-02-19T10:10:00Z', count_sum: 30 },
+        ],
+        [],
+        'count_sum',
+        '2026-02-19T10:00:00.000Z',
+        '2026-02-19T10:15:00.000Z',
+        5 * 60 * 1000
+      );
+
+      expect(result.groups).toEqual(['']);
+      expect(result.series.get('')!.map(point => point.timestamp)).toEqual([
+        '2026-02-19T10:00:00.000Z',
+        '2026-02-19T10:05:00.000Z',
+        '2026-02-19T10:10:00.000Z',
+      ]);
+      expect(result.series.get('')!.map(point => point.value)).toEqual([
+        10, 20, 30,
+      ]);
+    });
+
     it('should compute stats excluding null values', () => {
       const stats = computeGroupStats([
         { timestamp: '2026-02-19T10:00:00.000Z', value: 10 },

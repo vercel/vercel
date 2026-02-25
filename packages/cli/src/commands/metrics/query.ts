@@ -27,7 +27,12 @@ import {
   toGranularityMsFromDuration,
 } from './time-utils';
 import type { MetricsTelemetryClient } from '../../util/telemetry/commands/metrics';
-import type { Scope, ValidationError, MetricsQueryResponse } from './types';
+import type {
+  Scope,
+  ValidationError,
+  MetricsQueryRequest,
+  MetricsQueryResponse,
+} from './types';
 import { getLinkedProject } from '../../util/projects/link';
 import getScope from '../../util/get-scope';
 import { isAPIError } from '../../util/errors-ts';
@@ -218,7 +223,8 @@ export default async function query(
   const event = requiredResult.value;
 
   // Compute aggregation after event is validated
-  const aggregation = aggregationFlag ?? getDefaultAggregation(event, measure);
+  const aggregationInput =
+    aggregationFlag ?? getDefaultAggregation(event, measure);
 
   // Validate event name
   const eventResult = validateEvent(event);
@@ -233,10 +239,11 @@ export default async function query(
   }
 
   // Validate aggregation
-  const aggResult = validateAggregation(event, measure, aggregation);
+  const aggResult = validateAggregation(event, measure, aggregationInput);
   if (!aggResult.valid) {
     return handleValidationError(aggResult, jsonOutput, client);
   }
+  const aggregation = aggResult.value;
 
   // Validate group-by dimensions
   const groupByResult = validateGroupBy(event, groupBy);
@@ -294,7 +301,7 @@ export default async function query(
 
   // Build request body
   const rollupColumn = getRollupColumnName(measure, aggregation);
-  const body = {
+  const body: MetricsQueryRequest = {
     reason: 'agent' as const,
     scope,
     event,

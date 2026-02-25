@@ -33,6 +33,10 @@ const VALUE_AGGREGATIONS = [
   'unique',
 ] as const;
 
+export type CountAggregation = (typeof COUNT_AGGREGATIONS)[number];
+export type ValueAggregation = (typeof VALUE_AGGREGATIONS)[number];
+export type MetricsAggregation = ValueAggregation;
+
 // Measures with "cannot be used in rollups" are excluded since the CLI only supports aggregated queries.
 export const SCHEMA = {
   aiGatewayRequest: {
@@ -829,7 +833,7 @@ export function getMeasures(eventName: string): MeasureSchema[] {
 export function getDefaultAggregation(
   eventName: string,
   measureName: string
-): string {
+): MetricsAggregation {
   if (measureName === 'count') return 'sum';
 
   const event = getEvent(eventName);
@@ -859,7 +863,7 @@ export function getDefaultAggregation(
 export function getAggregations(
   eventName: string,
   measureName: string
-): readonly string[] {
+): readonly MetricsAggregation[] {
   const event = getEvent(eventName);
   if (!event) {
     return [];
