@@ -40,14 +40,13 @@ beforeEach(() => {
   openMock.mockReset().mockResolvedValue(undefined as never);
   pullMock.mockClear();
   connectMock.mockClear();
-  // Enable auto-provision feature flag
-  process.env.FF_AUTO_PROVISION_INSTALL = '1';
   // Mock Math.random to get predictable resource names (gray-apple suffix)
   vi.spyOn(Math, 'random').mockReturnValue(0);
 });
 
 afterEach(() => {
   vi.restoreAllMocks();
+  delete process.env.FF_AUTO_PROVISION_INSTALL;
 });
 
 describe('integration add (auto-provision)', () => {
@@ -448,7 +447,7 @@ describe('integration add (auto-provision)', () => {
       const teams = useTeams('team_dummy');
       const t = Array.isArray(teams) ? teams[0] : teams.teams[0];
       client.config.currentTeam = t.id;
-      process.env.FF_AUTO_PROVISION_INSTALL = '1';
+
       useAutoProvision({
         responseKey: 'provisioned',
         withInstallation: false,
@@ -480,7 +479,7 @@ describe('integration add (auto-provision)', () => {
       const teams = useTeams('team_dummy');
       const t = Array.isArray(teams) ? teams[0] : teams.teams[0];
       client.config.currentTeam = t.id;
-      process.env.FF_AUTO_PROVISION_INSTALL = '1';
+
       useAutoProvision({
         responseKey: 'provisioned',
         withInstallation: false,
@@ -512,7 +511,7 @@ describe('integration add (auto-provision)', () => {
       const teams = useTeams('team_dummy');
       const t = Array.isArray(teams) ? teams[0] : teams.teams[0];
       client.config.currentTeam = t.id;
-      process.env.FF_AUTO_PROVISION_INSTALL = '1';
+
       // Never return an installation — simulates user not accepting in browser
       useAutoProvision({
         responseKey: 'provisioned',
@@ -550,7 +549,7 @@ describe('integration add (auto-provision)', () => {
       const teams = useTeams('team_dummy');
       const t = Array.isArray(teams) ? teams[0] : teams.teams[0];
       client.config.currentTeam = t.id;
-      process.env.FF_AUTO_PROVISION_INSTALL = '1';
+
       useAutoProvision({
         responseKey: 'provisioned',
         withInstallation: true,
@@ -577,7 +576,7 @@ describe('integration add (auto-provision)', () => {
       const teams = useTeams('team_dummy');
       const t = Array.isArray(teams) ? teams[0] : teams.teams[0];
       client.config.currentTeam = t.id;
-      process.env.FF_AUTO_PROVISION_INSTALL = '1';
+
       useAutoProvision({
         responseKey: 'provisioned',
         withInstallation: false,
@@ -1307,7 +1306,6 @@ describe('integration add (auto-provision)', () => {
       const teams = useTeams('team_dummy');
       const t = Array.isArray(teams) ? teams[0] : teams.teams[0];
       client.config.currentTeam = t.id;
-      process.env.FF_AUTO_PROVISION_INSTALL = '1';
 
       // Integration endpoint (needed to fetch integration)
       client.scenario.get(
@@ -1806,7 +1804,7 @@ describe('integration add (auto-provision)', () => {
 
   describe('--installation-id FF gating', () => {
     it('should not show --installation-id in --help when FF is off', async () => {
-      delete process.env.FF_AUTO_PROVISION_INSTALL;
+      process.env.FF_AUTO_PROVISION_INSTALL = '0';
       client.setArgv('integration', 'add', '--help');
       const exitCode = await integrationCommand(client);
       expect(exitCode).toEqual(0);
@@ -1815,7 +1813,7 @@ describe('integration add (auto-provision)', () => {
     });
 
     it('should show --installation-id in --help when FF is on', async () => {
-      process.env.FF_AUTO_PROVISION_INSTALL = '1';
+      delete process.env.FF_AUTO_PROVISION_INSTALL;
       client.setArgv('integration', 'add', '--help');
       const exitCode = await integrationCommand(client);
       expect(exitCode).toEqual(0);
@@ -1824,7 +1822,7 @@ describe('integration add (auto-provision)', () => {
     });
 
     it('should reject --installation-id when FF is off', async () => {
-      delete process.env.FF_AUTO_PROVISION_INSTALL;
+      process.env.FF_AUTO_PROVISION_INSTALL = '0';
       client.setArgv(
         'integration',
         'add',
@@ -1842,7 +1840,7 @@ describe('integration add (auto-provision)', () => {
 
   describe('--installation-id FF gating (vc install alias)', () => {
     it('should not show --installation-id in vc install --help when FF is off', async () => {
-      delete process.env.FF_AUTO_PROVISION_INSTALL;
+      process.env.FF_AUTO_PROVISION_INSTALL = '0';
       client.setArgv('install', '--help');
       const exitCode = await install(client);
       expect(exitCode).toEqual(0);
@@ -1851,7 +1849,7 @@ describe('integration add (auto-provision)', () => {
     });
 
     it('should show --installation-id in vc install --help when FF is on', async () => {
-      process.env.FF_AUTO_PROVISION_INSTALL = '1';
+      delete process.env.FF_AUTO_PROVISION_INSTALL;
       client.setArgv('install', '--help');
       const exitCode = await install(client);
       expect(exitCode).toEqual(0);
@@ -1860,7 +1858,7 @@ describe('integration add (auto-provision)', () => {
     });
 
     it('should reject --installation-id in vc install when FF is off', async () => {
-      delete process.env.FF_AUTO_PROVISION_INSTALL;
+      process.env.FF_AUTO_PROVISION_INSTALL = '0';
       client.setArgv('install', 'acme', '--installation-id', 'icfg_123');
       const exitCode = await install(client);
       expect(exitCode).toEqual(1);
@@ -1870,7 +1868,6 @@ describe('integration add (auto-provision)', () => {
     });
 
     it('should provision successfully via vc install with --installation-id', async () => {
-      process.env.FF_AUTO_PROVISION_INSTALL = '1';
       const { requestBodies } = useAutoProvision({
         responseKey: 'multiple_installations',
       });
