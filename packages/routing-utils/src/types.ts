@@ -86,6 +86,15 @@ export type RouteWithSrc = {
     cookie?: string;
   };
   /**
+   * Aliases for `src`, `dest`, and `status`. These provide consistency with the
+   * `rewrites`, `redirects`, and `headers` fields which use `source`, `destination`,
+   * and `statusCode`. During normalization, these are converted to their canonical
+   * forms (`src`, `dest`, `status`) and stripped from the route object.
+   */
+  source?: string;
+  destination?: string;
+  statusCode?: number;
+  /**
    * A middleware key within the `output` key under the build result.
    * Overrides a `middleware` definition.
    */
