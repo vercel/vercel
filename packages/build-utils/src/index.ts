@@ -7,7 +7,7 @@ import {
   getLambdaOptionsFromFunction,
   sanitizeConsumerName,
 } from './lambda';
-import { NodejsLambda } from './nodejs-lambda';
+import { NodejsLambda, type NodejsLambdaOptions } from './nodejs-lambda';
 import { Prerender } from './prerender';
 import download, {
   downloadFile,
@@ -61,6 +61,8 @@ import { getServiceUrlEnvVars } from './get-service-url-env-vars';
 import { cloneEnv } from './clone-env';
 import { hardLinkDir } from './hard-link-dir';
 import { validateNpmrc } from './validate-npmrc';
+
+export type { NodejsLambdaOptions };
 
 export {
   FileBlob,

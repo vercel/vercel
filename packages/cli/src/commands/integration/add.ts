@@ -39,6 +39,7 @@ import { IntegrationAddTelemetryClient } from '../../util/telemetry/commands/int
 import { createAuthorization } from '../../util/integration/create-authorization';
 import sleep from '../../util/sleep';
 import { fetchAuthorization } from '../../util/integration/fetch-authorization';
+import { validateJsonOutput } from '../../util/output-format';
 
 import type { IntegrationAddFlags } from './command';
 
@@ -61,6 +62,14 @@ export async function add(
     return 1;
   }
   const installationId = flags['--installation-id'];
+
+  const formatResult = validateJsonOutput(flags);
+  if (!formatResult.valid) {
+    output.error(formatResult.error);
+    return 1;
+  }
+  const asJson = formatResult.jsonOutput;
+
   const options: AddOptions = {
     noConnect: flags['--no-connect'],
     noEnvPull: flags['--no-env-pull'],
@@ -122,7 +131,15 @@ export async function add(
       environments: options.environments,
       prefix,
       commandName,
+      asJson,
     });
+  }
+
+  if (asJson) {
+    output.error(
+      'The --format flag is not yet supported with the integration add command'
+    );
+    return 1;
   }
 
   const telemetry = new IntegrationAddTelemetryClient({
@@ -734,5 +751,12 @@ async function provisionStorageProduct(
     `${product.name} successfully provisioned: ${chalk.bold(name)}`
   );
 
-  return postProvisionSetup(client, name, storeId, contextName, options);
+  const result = await postProvisionSetup(
+    client,
+    name,
+    storeId,
+    contextName,
+    options
+  );
+  return result.exitCode;
 }

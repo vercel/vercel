@@ -30,6 +30,12 @@
 /packages/cli/src/commands/integration/  @vercel/ci-cd @vercel/vercel-cli-approvers @vercel/marketplace
 /packages/cli/src/commands/integration-resource/ @vercel/ci-cd @vercel/vercel-cli-approvers @vercel/marketplace
 /packages/cli/src/commands/flags         @vercel/ci-cd @vercel/vercel-cli-approvers @vercel/flags
+/packages/cli/src/commands/login         @vercel/ci-cd @vercel/identity-and-access-management
+/packages/cli/src/commands/logout        @vercel/ci-cd @vercel/identity-and-access-management
+/packages/cli/src/commands/teams         @vercel/ci-cd @vercel/identity-and-access-management
+/packages/cli/src/util/login             @vercel/ci-cd @vercel/identity-and-access-management
+/packages/cli/src/util/teams             @vercel/ci-cd @vercel/identity-and-access-management
+/packages/cli/test/unit/util/login       @vercel/ci-cd @vercel/identity-and-access-management
 /packages/cli/src/util/integration/      @vercel/ci-cd @vercel/vercel-cli-approvers @vercel/marketplace
 /packages/cli/src/util/integration-resource/ @vercel/ci-cd @vercel/vercel-cli-approvers @vercel/marketplace
 /packages/cli/src/util/telemetry/commands/integration/ @vercel/ci-cd @vercel/vercel-cli-approvers @vercel/marketplace

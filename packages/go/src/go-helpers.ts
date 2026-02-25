@@ -1,7 +1,7 @@
 import { createHash } from 'crypto';
 import { extract } from 'tar';
 import execa from 'execa';
-import fetch from 'node-fetch';
+import nodeFetch from 'node-fetch';
 import {
   createWriteStream,
   mkdirp,
@@ -392,7 +392,7 @@ export async function createGo({
 async function download({ dest, version }: { dest: string; version: string }) {
   const { filename, url } = getGoUrl(version);
   console.log(`Downloading go: ${url}`);
-  const res = await fetch(url);
+  const res = await nodeFetch(url);
 
   if (!res.ok) {
     throw new Error(`Failed to download: ${url} (${res.status})`);
