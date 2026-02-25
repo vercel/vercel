@@ -55,7 +55,7 @@ jobs:
           BATCH_ID: daily-${{ github.repository }}-${{ github.run_id }}
           EXPERIMENTS: vercel-cli
         run: |
-          cd packages/cli && node ./evals/scripts/transform-agent-eval-to-canonical.ts \
+          cd packages/cli && node ./evals/scripts/transform-agent-eval-to-canonical.js \
             --results-dir ./evals/results \
             --product evals \
             --repo ${{ github.repository }} \
