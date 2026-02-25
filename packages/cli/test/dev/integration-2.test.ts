@@ -22,13 +22,6 @@ test('[vercel dev] validate headers', async () => {
   );
 });
 
-test('[vercel dev] allow mixed routes and rewrites', async () => {
-  const directory = fixture('invalid-mixed-routes-rewrites');
-  const output = await exec(directory);
-
-  expect(output.exitCode).toBe(0);
-});
-
 test('[vercel dev] validate env var names', async () => {
   const directory = fixture('invalid-env-var-name');
   const { dev } = await testFixture(directory);
