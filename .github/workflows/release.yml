@@ -25,6 +25,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GH_TOKEN_PULL_REQUESTS }}
+          fetch-depth: 2
 
       - name: Fetch git tags
         run: git fetch origin 'refs/tags/*:refs/tags/*'
