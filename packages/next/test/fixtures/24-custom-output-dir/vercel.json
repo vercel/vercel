@@ -35,5 +35,8 @@
       "status": 200,
       "mustContain": "\"slug\":\"third\""
     }
-  ]
+  ],
+  "env": {
+    "NEXT_BUILDER_INTEGRATION": "1"
+  }
 }

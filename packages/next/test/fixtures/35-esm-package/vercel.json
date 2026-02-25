@@ -17,5 +17,8 @@
       "status": 200,
       "mustContain": "John Doe"
     }
-  ]
+  ],
+  "env": {
+    "NEXT_BUILDER_INTEGRATION": "1"
+  }
 }

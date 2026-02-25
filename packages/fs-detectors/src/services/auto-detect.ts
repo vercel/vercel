@@ -19,6 +19,12 @@ const BACKEND_DIR = 'backend';
 const SERVICES_DIR = 'services';
 
 const FRONTEND_LOCATIONS = [FRONTEND_DIR, APPS_WEB_DIR];
+// Runtime frameworks, e.g. Python, Node, Ruby, etc. are currently marked experimental,
+// but service auto-detection should still consider them.
+const DETECTION_FRAMEWORKS = frameworkList.filter(
+  (framework: Framework) =>
+    !framework.experimental || framework.runtimeFramework
+);
 
 /**
  * Auto-detect services when experimentalServices is not configured.
@@ -154,7 +160,7 @@ async function detectServicesFrontendSubdir(
 
   services[serviceName] = {
     framework: frontendFramework.slug ?? undefined,
-    workspace: frontendLocation,
+    entrypoint: frontendLocation,
     routePrefix: '/',
   };
 
@@ -268,7 +274,8 @@ async function detectServiceInDir(
   const serviceFs = fs.chdir(dirPath);
   const frameworks = await detectFrameworks({
     fs: serviceFs,
-    frameworkList,
+    frameworkList: DETECTION_FRAMEWORKS,
+    useExperimentalFrameworks: true,
   });
 
   if (frameworks.length > 1) {
@@ -288,7 +295,7 @@ async function detectServiceInDir(
     return {
       service: {
         framework: framework.slug ?? undefined,
-        workspace: dirPath,
+        entrypoint: dirPath,
         routePrefix: `/_/${serviceName}`,
       },
     };

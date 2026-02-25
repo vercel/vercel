@@ -19,6 +19,11 @@ import {
 } from './types';
 export { appendRoutesToPhase } from './append';
 export { mergeRoutes } from './merge';
+export {
+  getOwnershipGuard,
+  normalizeRoutePrefix,
+  scopeRouteSourceToOwnership,
+} from './service-route-ownership';
 export * from './schemas';
 export { getCleanUrls, sourceToRegex } from './superstatic';
 export * from './types';

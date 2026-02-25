@@ -1,6 +1,11 @@
 {
   "version": 2,
-  "builds": [{ "src": "package.json", "use": "@vercel/next" }],
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next"
+    }
+  ],
   "probes": [
     {
       "path": "/_next/__NEXT_SCRIPT__(/)",
@@ -62,5 +67,8 @@
       "status": 200,
       "mustContain": "hi from final route"
     }
-  ]
+  ],
+  "env": {
+    "NEXT_BUILDER_INTEGRATION": "1"
+  }
 }

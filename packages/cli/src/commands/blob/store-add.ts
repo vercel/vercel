@@ -9,6 +9,7 @@ import { parseArguments } from '../../util/get-args';
 import { addStoreSubcommand } from './command';
 import { BlobAddStoreTelemetryClient } from '../../util/telemetry/commands/blob/store-add';
 import { printError } from '../../util/error';
+import { parseAccessFlag } from '../../util/blob/access';
 
 export default async function addStore(
   client: Client,
@@ -35,6 +36,10 @@ export default async function addStore(
     flags,
   } = parsedArgs;
 
+  const accessFlag = flags['--access'];
+  const access = parseAccessFlag(accessFlag);
+  if (!access) return 1;
+
   const region = flags['--region'] || 'iad1';
 
   let name = nameArg;
@@ -51,6 +56,7 @@ export default async function addStore(
   }
 
   telemetryClient.trackCliArgumentName(name);
+  telemetryClient.trackCliOptionAccess(accessFlag);
   telemetryClient.trackCliOptionRegion(flags['--region']);
 
   const link = await getLinkedProject(client);
@@ -62,9 +68,14 @@ export default async function addStore(
 
     output.spinner('Creating new blob store');
 
-    const requestBody: { name: string; region: string } = {
+    const requestBody: {
+      name: string;
+      region: string;
+      access: 'public' | 'private';
+    } = {
       name,
       region,
+      access,
     };
 
     const res = await client.fetch<{ store: { id: string; region?: string } }>(
@@ -114,7 +125,7 @@ export default async function addStore(
         link.project.id,
         storeId,
         environments,
-        link.org.id
+        { accountId: link.org.id }
       );
 
       output.success(

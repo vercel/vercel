@@ -167,11 +167,6 @@ const serviceConfigSchema = {
       minLength: 1,
       maxLength: 512,
     },
-    workspace: {
-      type: 'string',
-      minLength: 1,
-      maxLength: 512,
-    },
     routePrefix: {
       type: 'string',
       minLength: 1,

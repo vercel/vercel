@@ -187,5 +187,8 @@
         "x-vercel-cache": "PRERENDER"
       }
     }
-  ]
+  ],
+  "env": {
+    "NEXT_BUILDER_INTEGRATION": "1"
+  }
 }

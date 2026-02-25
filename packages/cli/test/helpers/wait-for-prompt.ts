@@ -13,7 +13,7 @@ function getPromptErrorDetails(
 export default async function waitForPrompt(
   cp: CLIProcess,
   rawAssertion: string | RegExp | ((chunk: string) => boolean),
-  timeout = 3000
+  timeout = 5000
 ) {
   let assertion: (chunk: string) => boolean;
   if (typeof rawAssertion === 'string') {
