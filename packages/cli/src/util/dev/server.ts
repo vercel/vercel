@@ -1,4 +1,4 @@
-import url, { URL } from 'url';
+import { URL } from 'url';
 import http from 'http';
 import fs from 'fs-extra';
 import ms from 'ms';
@@ -1009,7 +1009,7 @@ export default class DevServer {
       await this.startPromise;
 
       if (this.orchestrator) {
-        const pathname = url.parse(req.url || '/').pathname || '/';
+        const pathname = new URL(req.url || '/', 'http://localhost').pathname || '/';
         const service = this.orchestrator.getServiceForRoute(pathname);
         if (service) {
           const target = `http://${service.host}:${service.port}`;
@@ -1433,7 +1433,7 @@ export default class DevServer {
 
     // If there is a double-slash present in the URL,
     // then perform a redirect to make it "clean".
-    const parsed = url.parse(req.url || '/');
+    const parsed = new URL(req.url || '/', 'http://localhost');
     if (typeof parsed.pathname === 'string' && parsed.pathname.includes('//')) {
       let location = parsed.pathname.replace(/\/+/g, '/');
       if (parsed.search) {
@@ -1483,11 +1483,10 @@ export default class DevServer {
     const getReqUrl = (rr: RouteResult): string | undefined => {
       if (rr.dest) {
         if (rr.query) {
-          const destParsed = url.parse(rr.dest);
-          const destQuery = parseQueryString(destParsed.search);
+          const destParsed = new URL(rr.dest, 'http://localhost');
+          const destQuery = parseQueryString(destParsed.search || null);
           Object.assign(destQuery, rr.query);
-          destParsed.search = formatQueryString(destQuery);
-          return url.format(destParsed);
+          return destParsed.pathname + (formatQueryString(destQuery) || '');
         }
         return rr.dest;
       }
@@ -1552,7 +1551,7 @@ export default class DevServer {
           }
 
           const middlewareRes = await nodeFetch(
-            `http://127.0.0.1:${port}${parsed.path}`,
+            `http://127.0.0.1:${port}${parsed.pathname}${parsed.search}`,
             {
               headers: middlewareReqHeaders,
               method: req.method,
@@ -1644,9 +1643,9 @@ export default class DevServer {
               }
             } else {
               // Retain orginal pathname, but override query parameters from the rewrite
-              const rewriteUrlParsed = url.parse(beforeRewriteUrl);
-              rewriteUrlParsed.search = url.parse(rewritePath).search;
-              req.url = url.format(rewriteUrlParsed);
+              const rewriteUrlParsed = new URL(beforeRewriteUrl, 'http://localhost');
+              rewriteUrlParsed.search = new URL(rewritePath, 'http://localhost').search;
+              req.url = rewriteUrlParsed.pathname + rewriteUrlParsed.search;
             }
 
             debug(
@@ -1710,11 +1709,11 @@ export default class DevServer {
 
       if (routeResult.isDestUrl) {
         // Mix the `routes` result dest query params into the req path
-        const destParsed = url.parse(routeResult.dest);
-        const destQuery = parseQueryString(destParsed.search);
+        const destParsed = new URL(routeResult.dest);
+        const destQuery = parseQueryString(destParsed.search || null);
         Object.assign(destQuery, routeResult.query);
-        destParsed.search = formatQueryString(destQuery);
-        const destUrl = url.format(destParsed);
+        destParsed.search = formatQueryString(destQuery) || '';
+        const destUrl = destParsed.href;
 
         debug(`ProxyPass: ${destUrl}`);
         this.setResponseHeaders(res, requestId);
@@ -1890,12 +1889,12 @@ export default class DevServer {
         }
 
         this.setResponseHeaders(res, requestId);
-        const origUrl = url.parse(req.url || '/');
-        const origQuery = parseQueryString(origUrl.search);
+        const origUrl = new URL(req.url || '/', 'http://localhost');
+        const origQuery = parseQueryString(origUrl.search || null);
         origUrl.pathname = dest;
         Object.assign(origQuery, query);
-        origUrl.search = formatQueryString(origQuery);
-        req.url = url.format(origUrl);
+        origUrl.search = formatQueryString(origQuery) || '';
+        req.url = origUrl.pathname + origUrl.search;
         return proxyPass(req, res, upstream, this, requestId, false);
       }
 
@@ -1916,12 +1915,12 @@ export default class DevServer {
       Array.isArray(buildResult.routes) &&
       buildResult.routes.length > 0
     ) {
-      const origUrl = url.parse(req.url || '/');
-      const origQuery = parseQueryString(origUrl.search);
+      const origUrl = new URL(req.url || '/', 'http://localhost');
+      const origQuery = parseQueryString(origUrl.search || null);
       origUrl.pathname = dest;
       Object.assign(origQuery, query);
-      origUrl.search = formatQueryString(origQuery);
-      const newUrl = url.format(origUrl);
+      origUrl.search = formatQueryString(origQuery) || '';
+      const newUrl = origUrl.pathname + origUrl.search;
       debug(
         `Checking build result's ${buildResult.routes.length} \`routes\` to match ${newUrl}`
       );
@@ -2018,14 +2017,11 @@ export default class DevServer {
         );
 
         // Mix in the routing based query parameters
-        const origUrl = url.parse(req.url || '/');
-        const origQuery = parseQueryString(origUrl.search);
+        const origUrl = new URL(req.url || '/', 'http://localhost');
+        const origQuery = parseQueryString(origUrl.search || null);
         Object.assign(origQuery, query);
-        origUrl.search = formatQueryString(origQuery);
-        req.url = url.format({
-          pathname: origUrl.pathname,
-          search: origUrl.search,
-        });
+        origUrl.search = formatQueryString(origQuery) || '';
+        req.url = origUrl.pathname + origUrl.search;
 
         // Add the Vercel platform proxy request headers
         const headers = this.getProxyHeaders(req, requestId, false);
@@ -2133,14 +2129,11 @@ export default class DevServer {
         requestId = generateRequestId(this.podId, true);
 
         // Mix the `routes` result dest query params into the req path
-        const origUrl = url.parse(req.url || '/');
-        const origQuery = parseQueryString(origUrl.search);
+        const origUrl = new URL(req.url || '/', 'http://localhost');
+        const origQuery = parseQueryString(origUrl.search || null);
         Object.assign(origQuery, query);
-        origUrl.search = formatQueryString(origQuery);
-        const path = url.format({
-          pathname: origUrl.pathname,
-          search: origUrl.search,
-        });
+        origUrl.search = formatQueryString(origQuery) || '';
+        const path = origUrl.pathname + origUrl.search;
 
         const body = await rawBody(req);
         const payload: InvokePayload = {

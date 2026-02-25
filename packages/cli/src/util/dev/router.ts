@@ -1,4 +1,3 @@
-import url from 'url';
 import PCRE from 'pcre-to-regexp';
 
 import isURL from './is-url';
@@ -57,9 +56,10 @@ export async function devRouter(
   phase?: HandleValue | null
 ): Promise<RouteResult> {
   let result: RouteResult | undefined;
+  const _parsedReqUrl = new URL(reqUrl, 'http://localhost');
   // eslint-disable-next-line prefer-const
-  let { pathname: reqPathname, search: reqSearch } = url.parse(reqUrl);
-  reqPathname = reqPathname || '/';
+  let reqPathname = _parsedReqUrl.pathname || '/';
+  const reqSearch = _parsedReqUrl.search || null;
   const reqQuery = parseQueryString(reqSearch);
   const combinedHeaders: HttpHeadersConfig = { ...previousHeaders };
   let status: number | undefined;
@@ -132,8 +132,7 @@ export async function devRouter(
           phase !== 'hit' &&
           !isDestUrl
         ) {
-          let { pathname } = url.parse(destPath);
-          pathname = pathname || '/';
+          let pathname = new URL(destPath, 'http://localhost').pathname || '/';
           const hasDestFile = await devServer.hasFilesystem(
             pathname,
             vercelConfig
@@ -189,10 +188,10 @@ export async function devRouter(
           if (!destPath.startsWith('/')) {
             destPath = `/${destPath}`;
           }
+          const _parsedDestPath = new URL(destPath, 'http://localhost');
           // eslint-disable-next-line prefer-const
-          let { pathname: destPathname, search: destSearch } =
-            url.parse(destPath);
-          destPathname = destPathname || '/';
+          let destPathname = _parsedDestPath.pathname || '/';
+          const destSearch = _parsedDestPath.search || null;
           const destQuery = parseQueryString(destSearch);
           Object.assign(destQuery, reqQuery);
           result = {
