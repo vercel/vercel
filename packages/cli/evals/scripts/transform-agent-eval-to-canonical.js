@@ -1,10 +1,8 @@
 import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 
-type Args = Record<string, string>;
-
-function parseArgs(argv: string[]): Args {
-  const args: Args = {};
+function parseArgs(argv) {
+  const args = {};
   for (let i = 0; i < argv.length; i += 1) {
     const key = argv[i];
     if (!key.startsWith('--')) continue;
@@ -19,7 +17,7 @@ function parseArgs(argv: string[]): Args {
   return args;
 }
 
-function appendBypassQuery(url: string, bypassSecret: string): string {
+function appendBypassQuery(url, bypassSecret) {
   const parsed = new URL(url);
   if (!parsed.searchParams.has('x-vercel-protection-bypass')) {
     parsed.searchParams.set('x-vercel-protection-bypass', bypassSecret);
@@ -27,15 +25,15 @@ function appendBypassQuery(url: string, bypassSecret: string): string {
   return parsed.toString();
 }
 
-async function listDirectories(dir: string): Promise<string[]> {
+async function listDirectories(dir) {
   const entries = await readdir(dir, { withFileTypes: true });
   return entries.filter(item => item.isDirectory()).map(item => item.name);
 }
 
-async function listFilesRecursively(rootDir: string): Promise<string[]> {
-  const files: string[] = [];
+async function listFilesRecursively(rootDir) {
+  const files = [];
 
-  async function walk(dir: string) {
+  async function walk(dir) {
     const entries = await readdir(dir, { withFileTypes: true });
     for (const entry of entries) {
       const fullPath = path.join(dir, entry.name);
@@ -53,7 +51,7 @@ async function listFilesRecursively(rootDir: string): Promise<string[]> {
   return files;
 }
 
-function contentTypeFor(relativePath: string): string {
+function contentTypeFor(relativePath) {
   if (relativePath.endsWith('.json')) return 'application/json';
   if (relativePath.endsWith('.md')) return 'text/markdown';
   if (relativePath.endsWith('.jsonl')) return 'application/x-ndjson';
@@ -140,13 +138,13 @@ async function main() {
     const buffer = await readFile(fullPath);
     formData.append(
       'results_file',
-      new File([buffer as unknown as Uint8Array], relativePath, {
+      new File([buffer], relativePath, {
         type: contentTypeFor(relativePath),
       })
     );
   }
 
-  const headers: Record<string, string> = {
+  const headers = {
     Authorization: `Bearer ${args.token}`,
   };
   if (bypassSecret && (bypassVia === 'header' || bypassVia === 'both')) {
