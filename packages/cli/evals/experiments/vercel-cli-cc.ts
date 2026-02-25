@@ -25,7 +25,7 @@ async function cleanupProjects() {
 const config: ExperimentConfig = {
   agent: 'vercel-ai-gateway/claude-code',
   evals: 'marketplace/*',
-  runs: 1,
+  runs: 3,
   earlyExit: true,
   timeout: 900,
   sandbox: 'docker',

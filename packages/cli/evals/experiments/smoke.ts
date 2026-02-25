@@ -8,7 +8,7 @@ const config: ExperimentConfig = {
   runs: 1,
   earlyExit: false,
   timeout: 600,
-  sandbox: 'docker', // Use docker so VERCEL_TOKEN works in CI (vercel sandbox requires OIDC)
+  sandbox: 'vercel',
   setup: async sandbox => {
     await installCLI(sandbox);
     await setupAuthAndConfig(sandbox);
