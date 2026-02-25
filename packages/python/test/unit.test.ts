@@ -19,12 +19,21 @@ const tmpPythonDir = path.join(
 // For tests that exercise the build pipeline, we don't care about the actual
 // vendored dependencies, only that the build completes and the handler exists.
 // Mock out mirroring of site-packages so tests don't depend on a real venv.
+vi.mock('../src/utils', async () => {
+  const real =
+    await vi.importActual<typeof import('../src/utils')>('../src/utils');
+  return {
+    ...real,
+    ensureVenv: vi.fn(async () => {}),
+  };
+});
+
 vi.mock('../src/install', async () => {
   const real =
     await vi.importActual<typeof import('../src/install')>('../src/install');
   return {
     ...real,
-    mirrorSitePackagesIntoVendor: vi.fn(async () => ({})),
+    getVenvSitePackagesDirs: vi.fn(async () => []),
   };
 });
 
@@ -1469,6 +1478,7 @@ describe('.python-version file priority', () => {
       }),
     } as Record<string, FileBlob>;
 
+    // Should throw an error about invalid .python-version content
     await expect(
       build({
         workPath: mockWorkPath,
@@ -1478,7 +1488,7 @@ describe('.python-version file priority', () => {
         config: {},
         repoRootPath: mockWorkPath,
       })
-    ).rejects.toThrow(/could not parse \.python-version file/i);
+    ).rejects.toThrow('could not parse .python-version file');
   });
 });
 
@@ -1690,6 +1700,8 @@ describe('custom install hooks', () => {
     vi.doUnmock('execa');
     vi.doUnmock('@vercel/build-utils');
     vi.doUnmock('../src/install');
+    vi.doUnmock('../src/utils');
+    vi.doUnmock('../src/dependency-externalizer');
     vi.doUnmock('../src/index');
     vi.doUnmock('../src/uv');
   });
@@ -1715,7 +1727,14 @@ describe('custom install hooks', () => {
     vi.doMock('../src/install', () => ({
       ...realInstall,
       ensureUvProject: mockEnsureUvProject,
-      mirrorSitePackagesIntoVendor: vi.fn(async () => ({})),
+      getVenvSitePackagesDirs: vi.fn(async () => []),
+    }));
+
+    const realUtils =
+      await vi.importActual<typeof import('../src/utils')>('../src/utils');
+    vi.doMock('../src/utils', () => ({
+      ...realUtils,
+      ensureVenv: vi.fn(async () => {}),
     }));
 
     // Import after mocks are configured
@@ -1778,7 +1797,14 @@ describe('custom install hooks', () => {
     vi.doMock('../src/install', () => ({
       ...realInstall,
       ensureUvProject: mockEnsureUvProject,
-      mirrorSitePackagesIntoVendor: vi.fn(async () => ({})),
+      getVenvSitePackagesDirs: vi.fn(async () => []),
+    }));
+
+    const realUtils =
+      await vi.importActual<typeof import('../src/utils')>('../src/utils');
+    vi.doMock('../src/utils', () => ({
+      ...realUtils,
+      ensureVenv: vi.fn(async () => {}),
     }));
 
     // Import after mocks are configured
@@ -1853,7 +1879,14 @@ describe('custom install hooks', () => {
     vi.doMock('../src/install', () => ({
       ...realInstall,
       ensureUvProject: mockEnsureUvProject,
-      mirrorSitePackagesIntoVendor: vi.fn(async () => ({})),
+      getVenvSitePackagesDirs: vi.fn(async () => []),
+    }));
+
+    const realUtils =
+      await vi.importActual<typeof import('../src/utils')>('../src/utils');
+    vi.doMock('../src/utils', () => ({
+      ...realUtils,
+      ensureVenv: vi.fn(async () => {}),
     }));
 
     // Mock UvRunner to prevent actual uv sync commands

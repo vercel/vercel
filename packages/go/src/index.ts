@@ -920,7 +920,23 @@ export async function startDevServer(
   const child = spawn(executable, [], {
     cwd: tmp,
     env,
-    stdio: ['ignore', 'inherit', 'inherit', 'pipe'],
+    stdio: ['ignore', 'pipe', 'pipe', 'pipe'],
+  });
+  child.stdout?.on('data', data => {
+    const chunk = Buffer.isBuffer(data) ? data : Buffer.from(data);
+    if (opts.onStdout) {
+      opts.onStdout(chunk);
+    } else {
+      process.stdout.write(chunk.toString());
+    }
+  });
+  child.stderr?.on('data', data => {
+    const chunk = Buffer.isBuffer(data) ? data : Buffer.from(data);
+    if (opts.onStderr) {
+      opts.onStderr(chunk);
+    } else {
+      process.stderr.write(chunk.toString());
+    }
   });
 
   child.on('close', async () => {

@@ -1,7 +1,7 @@
 import fs from 'fs';
 import { promisify } from 'util';
 import { join, dirname, basename, parse } from 'path';
-import { VERCEL_RUNTIME_VERSION } from './runtime-version';
+import { VERCEL_RUNTIME_VERSION } from './package-versions';
 import {
   download,
   glob,
@@ -24,10 +24,11 @@ import {
 import {
   ensureUvProject,
   resolveVendorDir,
-  mirrorSitePackagesIntoVendor,
   installRequirementsFile,
   installRequirement,
 } from './install';
+import { PythonDependencyExternalizer } from './dependency-externalizer';
+import { detectInstallSource } from './install';
 import { UvRunner, getUvBinaryOrInstall } from './uv';
 import { readConfigFile } from '@vercel/build-utils';
 import {
@@ -82,9 +83,14 @@ export const build: BuildV3 = async ({
   config,
 }) => {
   const framework = config?.framework;
+
   let spawnEnv: NodeJS.ProcessEnv | undefined;
   // Custom install command from dashboard/project settings, if any.
   let projectInstallCommand: string | undefined;
+  // Track whether a custom build or install command was used.
+  // When true, runtime dependency installation is disabled because
+  // custom commands may install dependencies not tracked in uv.lock.
+  let hasCustomCommand = false;
 
   debug(`workPath: ${workPath}`);
 
@@ -149,12 +155,16 @@ export const build: BuildV3 = async ({
         env: spawnEnv,
         cwd: workPath,
       });
+      hasCustomCommand = true;
     } else {
-      await runPyprojectScript(
+      const ranBuildScript = await runPyprojectScript(
         workPath,
         ['vercel-build', 'now-build', 'build'],
         spawnEnv
       );
+      if (ranBuildScript) {
+        hasCustomCommand = true;
+      }
     }
   }
 
@@ -257,9 +267,17 @@ export const build: BuildV3 = async ({
     let lock: {
       _meta?: { requires?: { python_version?: string } };
     } = {};
+    const pipfileLockPath = join(pipfileLockDir, 'Pipfile.lock');
     try {
-      const json = await readFile(join(pipfileLockDir, 'Pipfile.lock'), 'utf8');
-      lock = JSON.parse(json);
+      const pipfileLockContent = await readFile(pipfileLockPath, 'utf8');
+      try {
+        lock = JSON.parse(pipfileLockContent);
+      } catch (err) {
+        console.log(
+          `Failed to parse "Pipfile.lock". File content:\n${pipfileLockContent}`
+        );
+        throw err;
+      }
     } catch (err) {
       throw new NowBuildError({
         code: 'INVALID_PIPFILE_LOCK',
@@ -324,6 +342,7 @@ export const build: BuildV3 = async ({
       cwd: workPath,
     });
     assumeDepsInstalled = true;
+    hasCustomCommand = true;
   } else {
     // Check and run a custom vercel install command from project manifest.
     // This will return `false` if no script was ran.
@@ -333,6 +352,9 @@ export const build: BuildV3 = async ({
       pythonEnv,
       /* useUserVirtualEnv */ false
     );
+    if (assumeDepsInstalled) {
+      hasCustomCommand = true;
+    }
   }
 
   let uv: UvRunner;
@@ -349,26 +371,71 @@ export const build: BuildV3 = async ({
     );
   }
 
+  // Track the lock file path and project info for package classification (used when runtime install is enabled)
+  let uvLockPath: string | null = null;
+  let uvProjectDir: string | null = null;
+  let projectName: string | undefined;
+  let noBuildCheckFailed = false;
+
   if (!assumeDepsInstalled) {
     // Default installation path: use uv to normalize manifests into a uv.lock and
     // sync dependencies into the virtualenv, including required runtime deps.
     // Ensure all installation paths are normalized into a pyproject.toml and uv.lock
     // for consistent installation logic and idempotency.
-    const { projectDir } = await ensureUvProject({
+    const { projectDir, lockPath, lockFileProvidedByUser } =
+      await ensureUvProject({
+        workPath,
+        entryDirectory,
+        repoRootPath,
+        pythonVersion: pythonVersion.version,
+        uv,
+        generateLockFile: true,
+        requireBinaryWheels: false,
+      });
+
+    uvLockPath = lockPath;
+    uvProjectDir = projectDir;
+
+    // Get the project name from python-analysis for package classification
+    const installInfo = await detectInstallSource({
       workPath,
       entryDirectory,
       repoRootPath,
-      pythonVersion: pythonVersion.version,
-      uv,
     });
+    projectName = installInfo.pythonPackage?.manifest?.data?.project?.name;
+
+    // For user-provided lock files, check if all packages have binary wheels
+    // available BEFORE running the actual sync. We track this result so we can
+    // error later if runtime dependency installation is needed (which requires
+    // all public packages to have pre-built wheels).
+    if (lockFileProvidedByUser) {
+      try {
+        await uv.sync({
+          venvPath,
+          projectDir,
+          frozen: true,
+          noBuild: true,
+        });
+      } catch (err) {
+        // Note the failure but don't error yet - we only need wheels
+        // if runtime dependency install is required (bundle > 250MB)
+        noBuildCheckFailed = true;
+        debug(
+          `--no-build check failed: ${err instanceof Error ? err.message : String(err)}`
+        );
+      }
+    }
 
     // `ensureUvProject` would have produced a `pyproject.toml` or `uv.lock`
     // so we can use `uv sync` to install dependencies into the active
     // virtual environment.
+    // Use --frozen for user-provided lock files (respects exact versions),
+    // --locked for generated lock files (validates consistency).
     await uv.sync({
       venvPath,
       projectDir,
-      locked: true,
+      frozen: lockFileProvidedByUser,
+      locked: !lockFileProvidedByUser,
     });
   }
 
@@ -391,6 +458,20 @@ export const build: BuildV3 = async ({
     projectDir: join(workPath, entryDirectory),
     args: ['install', runtimeDep],
   });
+
+  // Optional override used by CI/preview builds to test in-repo vercel-workers wheels.
+  // TODO: uncomment when we introduce the 'workers' service implementation
+  // const workersDep =
+  //   baseEnv.VERCEL_WORKERS_PYTHON ||
+  //   `vercel-workers==${VERCEL_WORKERS_VERSION}`;
+  // if (workersDep) {
+  //   debug(`Installing ${workersDep}`);
+  //   await uv.pip({
+  //     venvPath,
+  //     projectDir: join(workPath, entryDirectory),
+  //     args: ['install', workersDep],
+  //   });
+  // }
 
   debug('Entrypoint is', entrypoint);
   const moduleName = entrypoint.replace(/\//g, '.').replace(/\.py$/i, '');
@@ -472,12 +553,29 @@ from vercel_runtime.vc_init import vc_handler
 
   const files: Files = await glob('**', globOptions);
 
-  const vendorFiles = await mirrorSitePackagesIntoVendor({
+  // Bundle dependencies, using runtime installation for oversized bundles
+  const depExternalizer = new PythonDependencyExternalizer({
     venvPath,
-    vendorDirName: vendorDir,
+    vendorDir,
+    workPath,
+    uvLockPath,
+    uvProjectDir,
+    projectName,
+    noBuildCheckFailed,
+    pythonPath: pythonVersion.pythonPath,
+    hasCustomCommand,
   });
-  for (const [p, f] of Object.entries(vendorFiles)) {
-    files[p] = f;
+
+  const { runtimeInstallEnabled, allVendorFiles } =
+    await depExternalizer.analyze(files);
+
+  if (runtimeInstallEnabled) {
+    await depExternalizer.generateBundle(files);
+  } else {
+    // Bundle all dependencies since we're not doing runtime installation
+    for (const [p, f] of Object.entries(allVendorFiles)) {
+      files[p] = f;
+    }
   }
 
   // in order to allow the user to have `server.py`, we
@@ -509,19 +607,13 @@ export { startDevServer };
 
 export const shouldServe: ShouldServe = opts => {
   const framework = opts.config.framework;
-  if (framework === 'fastapi') {
+  if (isPythonFramework(framework)) {
     const requestPath = opts.requestPath.replace(/\/$/, '');
     // Don't override API routes if another builder already matched them
     if (requestPath.startsWith('api') && opts.hasMatched) {
       return false;
     }
     // Public assets are served by the static builder / default handler
-    return true;
-  } else if (framework === 'flask') {
-    const requestPath = opts.requestPath.replace(/\/$/, '');
-    if (requestPath.startsWith('api') && opts.hasMatched) {
-      return false;
-    }
     return true;
   }
   return defaultShouldServe(opts);

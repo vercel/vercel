@@ -26,6 +26,7 @@ import { addToGitIgnore } from '../link/add-to-gitignore';
 import type { RepoProjectConfig } from '../link/repo';
 import output from '../../output-manager';
 import pull from '../../commands/env/pull';
+import { resolveProjectCwd } from './find-project-root';
 
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
@@ -79,10 +80,15 @@ export async function getProjectLink(
   client: Client,
   path: string
 ): Promise<ProjectLink | null> {
-  return (
-    (await getProjectLinkFromRepoLink(client, path)) ||
-    (await getLinkFromDir(getVercelDirectory(path)))
-  );
+  // Prefer an explicit per-directory link (`.vercel/project.json`) over a
+  // repository-level link (`.vercel/repo.json`). This prevents scenarios where
+  // a freshly-created local link (e.g. after `vc link`) is ignored and the
+  // user is re-prompted to select a repo-linked project again.
+  const dirLink = await getLinkFromDir(getVercelDirectory(path));
+  if (dirLink) {
+    return dirLink;
+  }
+  return await getProjectLinkFromRepoLink(client, path);
 }
 
 async function getProjectLinkFromRepoLink(
@@ -237,6 +243,8 @@ export async function getLinkedProject(
   client: Client,
   path = client.cwd
 ): Promise<ProjectLinkResult> {
+  path = await resolveProjectCwd(path);
+
   const VERCEL_ORG_ID = getPlatformEnv('ORG_ID');
   const VERCEL_PROJECT_ID = getPlatformEnv('PROJECT_ID');
   const shouldUseEnv = Boolean(VERCEL_ORG_ID && VERCEL_PROJECT_ID);
@@ -274,7 +282,7 @@ export async function getLinkedProject(
       output.stopSpinner();
 
       if (err.missingToken || err.invalidToken) {
-        throw new InvalidToken();
+        throw new InvalidToken(client.authConfig.tokenSource);
       } else if (err.code === 'forbidden' || err.code === 'team_unauthorized') {
         throw new NowBuildError({
           message: `Could not retrieve Project Settings. To link your Project, remove the ${outputCode(

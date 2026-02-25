@@ -16,6 +16,26 @@ import {
   ROUTE_OWNING_BUILDERS,
 } from './types';
 
+export async function hasFile(
+  fs: DetectorFilesystem,
+  filePath: string
+): Promise<boolean> {
+  try {
+    return await fs.isFile(filePath);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Reserved internal namespace used by services routing/runtime plumbing.
+ */
+export const INTERNAL_SERVICE_PREFIX = '/_svc';
+
+export function getInternalServiceFunctionPath(serviceName: string): string {
+  return `${INTERNAL_SERVICE_PREFIX}/${serviceName}/index`;
+}
+
 export function getBuilderForRuntime(runtime: ServiceRuntime): string {
   const builder = RUNTIME_BUILDERS[runtime];
   if (!builder) {
@@ -45,9 +65,10 @@ export function isRouteOwningBuilder(service: ResolvedService): boolean {
  *
  * Priority (highest to lowest):
  * 1. Explicit runtime (user specified in config)
- * 2. Framework detection (fastapi → python, express → node)
- * 3. Builder detection (@vercel/python → python)
- * 4. Entrypoint extension (.py → python, .ts → node)
+ * 2. Runtime framework slug (ruby → ruby, go → go)
+ * 3. Framework detection (fastapi → python, express → node)
+ * 4. Builder detection (@vercel/python → python)
+ * 5. Entrypoint extension (.py → python, .ts → node)
  *
  * @returns The inferred runtime, or undefined if none can be determined.
  */
@@ -60,6 +81,11 @@ export function inferServiceRuntime(config: {
   // Explicit runtime takes priority
   if (config.runtime && config.runtime in RUNTIME_BUILDERS) {
     return config.runtime as ServiceRuntime;
+  }
+
+  // Runtime framework slug maps directly to runtime name.
+  if (config.framework && config.framework in RUNTIME_BUILDERS) {
+    return config.framework as ServiceRuntime;
   }
 
   // Infer from framework
