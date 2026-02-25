@@ -5,6 +5,15 @@
  * only Vercel Runtimes and `@vercel/build-utils`.
  */
 const { FileFsRef } = require('@vercel/build-utils');
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
+const crypto = require('crypto');
+
+// Threshold for writing zipBuffer to a temp file instead of sending via IPC.
+// JSON serialization of large Buffers causes OOM due to memory amplification
+// (each byte becomes a separate array element in the JSON representation).
+const ZIP_BUFFER_FILE_THRESHOLD = 256 * 1024 * 1024; // 256MB
 
 process.on('unhandledRejection', err => {
   // eslint-disable-next-line no-console
@@ -44,14 +53,38 @@ async function processMessage(message) {
   // structure to JSON" errors, so delete the property...
   delete result.childProcesses;
 
+  // Helper to handle zipBuffer - writes to temp file if too large for IPC
+  async function processLambdaOutput(output) {
+    const zipBuffer = await output.createZip();
+    // Delete files after creating zip to avoid OOM when serializing via IPC.
+    // The zipBuffer contains all file data, so files is no longer needed.
+    delete output.files;
+
+    // For large zip buffers, write to a temp file instead of sending via IPC.
+    // JSON serialization of large Buffers causes OOM because each byte becomes
+    // a separate array element (e.g., {"type":"Buffer","data":[1,2,3,...]}).
+    if (zipBuffer.length > ZIP_BUFFER_FILE_THRESHOLD) {
+      const tempDir = os.tmpdir();
+      const randomId = crypto.randomBytes(8).toString('hex');
+      const zipFilePath = path.join(
+        tempDir,
+        `vercel-dev-lambda-${randomId}.zip`
+      );
+      fs.writeFileSync(zipFilePath, zipBuffer);
+      output.zipBufferPath = zipFilePath;
+    } else {
+      output.zipBuffer = zipBuffer;
+    }
+  }
+
   if (builder.version === 3) {
     if (result.output.type === 'Lambda') {
-      result.output.zipBuffer = await result.output.createZip();
+      await processLambdaOutput(result.output);
     }
   } else {
     for (const output of Object.values(result.output)) {
       if (output.type === 'Lambda') {
-        output.zipBuffer = await output.createZip();
+        await processLambdaOutput(output);
       }
     }
   }
