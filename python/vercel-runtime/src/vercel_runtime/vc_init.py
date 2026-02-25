@@ -532,16 +532,15 @@ try:
     __vc_variables = dir(__vc_module)
     __vc_app_variable = (
         _entry_variable
-        if _entry_variable and _entry_variable in __vc_variables
-        else "handler"
-        if "handler" in __vc_variables
-        else "Handler"
-        if "Handler" in __vc_variables
-        else "app"
-        if "app" in __vc_variables
-        else "application"
-        if "application" in __vc_variables
-        else None
+        if _entry_variable in __vc_variables
+        else next(
+            (
+                v
+                for v in __vc_variables
+                if v.lower() == "handler" or v in ("app", "application")
+            ),
+            None,
+        )
     )
 except Exception:
     _stderr(f"Error importing {_entrypoint_rel}:")
@@ -824,7 +823,7 @@ if "VERCEL_IPC_PATH" in os.environ:
                     }
                 )
 
-    if __vc_app_variable in ("handler", "Handler"):
+    if __vc_app_variable and __vc_app_variable.lower() == "handler":
         base = getattr(__vc_module, __vc_app_variable)
         if not issubclass(base, BaseHTTPRequestHandler):
             _stderr("Handler must inherit from BaseHTTPRequestHandler")
@@ -1007,7 +1006,7 @@ if "VERCEL_IPC_PATH" in os.environ:
     )
     exit(1)
 
-if __vc_app_variable in ("handler", "Handler"):
+if __vc_app_variable and __vc_app_variable.lower() == "handler":
     base = getattr(__vc_module, __vc_app_variable)
     if not issubclass(base, BaseHTTPRequestHandler):
         _stderr("Handler must inherit from BaseHTTPRequestHandler")
