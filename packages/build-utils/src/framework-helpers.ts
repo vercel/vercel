@@ -54,6 +54,14 @@ export function isBackendFramework(
   return BACKEND_FRAMEWORKS.includes(framework as BackendFramework);
 }
 
+// TODO: Update isBackendFramework to include all backend frameworks, not just Node
+export function isNodeBackendFramework(
+  framework: string | null | undefined
+): framework is BackendFramework {
+  if (!framework) return false;
+  return BACKEND_FRAMEWORKS.includes(framework as BackendFramework);
+}
+
 export function isPythonFramework(
   framework: string | null | undefined
 ): framework is (typeof PYTHON_FRAMEWORKS)[number] {

@@ -22,6 +22,7 @@ import frameworkList from '@vercel/frameworks';
 import { detectFrameworks } from '../detect-framework';
 import type { DetectorFilesystem } from '../detectors/filesystem';
 import { normalizeRoutePrefix } from '@vercel/routing-utils';
+import { isNodeBackendFramework } from '@vercel/build-utils';
 
 const frameworksBySlug = new Map(frameworkList.map(f => [f.slug, f]));
 
@@ -383,12 +384,22 @@ export async function resolveConfiguredService(
   let builderUse: string;
   let builderSrc: string;
 
-  if (config.framework) {
-    const detected = frameworksBySlug.get(config.framework);
-    builderUse = detected?.useRuntime?.use || '@vercel/static-build';
+  const detectedFrameworkDefinition = framework
+    ? frameworksBySlug.get(framework)
+    : undefined;
+
+  if (framework) {
+    if (isNodeBackendFramework(framework)) {
+      builderUse = '@vercel/backends';
+    } else {
+      const detected = detectedFrameworkDefinition;
+      builderUse = detected?.useRuntime?.use || '@vercel/static-build';
+    }
     // Prefer user-provided entrypoint over framework default
     builderSrc =
-      resolvedEntrypointFile || detected?.useRuntime?.src || 'package.json';
+      resolvedEntrypointFile ||
+      detectedFrameworkDefinition?.useRuntime?.src ||
+      'package.json';
   } else if (config.builder) {
     builderUse = config.builder;
     builderSrc = resolvedEntrypointFile!;
