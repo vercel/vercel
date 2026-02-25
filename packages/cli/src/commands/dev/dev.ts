@@ -58,7 +58,7 @@ export default async function dev(
         'Running dev server in local mode without a project setup:\n' +
           '  - Environment variables will not be pulled from Vercel\n' +
           '  - Project settings are defined by local configuration\n\n' +
-          `To link your project, run ${getCommandName('dev')} or ${getCommandName('link')}.`
+          `To link your project, run ${getCommandName('dev')} without `-L` or `--local` or ${getCommandName('link')}.`
       );
     } else {
       link = await setupAndLink(client, cwd, {
