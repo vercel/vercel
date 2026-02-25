@@ -1,5 +1,17 @@
 # @vercel/next
 
+## 4.15.34
+
+### Patch Changes
+
+- Add support for funcitonFailoverRegions in next builder ([#15237](https://github.com/vercel/vercel/pull/15237))
+
+## 4.15.33
+
+### Patch Changes
+
+- Support regions in Next.js builder from vercel.json only ([#15230](https://github.com/vercel/vercel/pull/15230))
+
 ## 4.15.32
 
 ### Patch Changes

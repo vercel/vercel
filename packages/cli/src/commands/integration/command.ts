@@ -71,6 +71,16 @@ export const addSubcommand = {
       description:
         'Prefix for environment variable names (e.g., --prefix NEON2_ creates NEON2_DATABASE_URL instead of DATABASE_URL)',
     },
+    {
+      name: 'installation-id',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      argument: 'ID',
+      description:
+        'Installation ID to use when multiple installations exist for the integration',
+    },
+    formatOption,
   ],
   examples: [
     {
@@ -128,6 +138,10 @@ export const addSubcommand = {
     {
       name: 'Install with a prefix for environment variable names',
       value: `${packageName} integration add acme --prefix NEON2_`,
+    },
+    {
+      name: 'Output as JSON',
+      value: `${packageName} integration add acme --format=json`,
     },
     {
       name: 'Show available products for an integration',

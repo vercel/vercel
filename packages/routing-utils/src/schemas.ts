@@ -350,7 +350,6 @@ const transformsSchema = {
  */
 export const routesSchema = {
   type: 'array',
-  deprecated: true,
   description:
     'A list of routes objects used to rewrite paths to point towards other internal or external paths',
   example: [{ dest: 'https://docs.example.com', src: '/docs' }],
@@ -358,14 +357,22 @@ export const routesSchema = {
     anyOf: [
       {
         type: 'object',
-        required: ['src'],
+        anyOf: [{ required: ['src'] }, { required: ['source'] }],
         additionalProperties: false,
         properties: {
           src: {
             type: 'string',
             maxLength: 4096,
           },
+          source: {
+            type: 'string',
+            maxLength: 4096,
+          },
           dest: {
+            type: 'string',
+            maxLength: 4096,
+          },
+          destination: {
             type: 'string',
             maxLength: 4096,
           },
@@ -393,6 +400,7 @@ export const routesSchema = {
             type: 'boolean',
           },
           important: {
+            deprecated: true,
             type: 'boolean',
           },
           user: {
@@ -402,6 +410,7 @@ export const routesSchema = {
             type: 'boolean',
           },
           override: {
+            deprecated: true,
             type: 'boolean',
           },
           check: {
@@ -411,6 +420,11 @@ export const routesSchema = {
             type: 'boolean',
           },
           status: {
+            type: 'integer',
+            minimum: 100,
+            maximum: 999,
+          },
+          statusCode: {
             type: 'integer',
             minimum: 100,
             maximum: 999,
@@ -482,6 +496,7 @@ export const routesSchema = {
       },
       {
         type: 'object',
+        deprecated: true,
         required: ['handle'],
         additionalProperties: false,
         properties: {

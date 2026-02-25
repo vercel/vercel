@@ -3,7 +3,7 @@ import { generateQueryString } from './utils/query-string';
 import { isReady, isAliasAssigned } from './utils/ready-state';
 import { checkDeploymentStatus } from './check-deployment-status';
 import {
-  fetch,
+  fetchApi,
   prepareFiles,
   createDebug,
   getApiDeploymentsUrl,
@@ -47,7 +47,7 @@ async function* postDeployment(
 
   debug('Sending deployment creation API request');
   try {
-    const response = await fetch(
+    const response = await fetchApi(
       `${apiDeployments}${generateQueryString(clientOptions)}`,
       clientOptions.token,
       {

@@ -25,18 +25,51 @@ jobs:
           max_timeout: 360
           check_interval: 5
 
+      - uses: actions/checkout@v4
+
+      - name: Discover Python packages
+        id: discoverPythonPackages
+        run: |
+          PACKAGES="$(node utils/get-python-packages.js)"
+          echo "packages=$PACKAGES" >> "$GITHUB_OUTPUT"
+          echo "Discovered Python packages: $PACKAGES"
+
       - name: Comment PR with CLI tarball instructions
         uses: actions/github-script@v7
+        env:
+          PYTHON_PACKAGES: ${{ steps.discoverPythonPackages.outputs.packages }}
         with:
           script: |
             const deploymentUrl = '${{ steps.waitForDeployment.outputs.url }}';
             const prNumber = context.issue.number;
-            const prSha = '${{ github.event.pull_request.head.sha }}';
 
             // Validate deployment URL before posting
             if (!deploymentUrl || deploymentUrl === '') {
               console.log('No deployment URL available, skipping comment');
               return;
+            }
+
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const pythonPackages = JSON.parse(process.env.PYTHON_PACKAGES || '[]');
+            if (!Array.isArray(pythonPackages)) {
+              throw new Error('PYTHON_PACKAGES must be a JSON array');
+            }
+            for (const pkg of pythonPackages) {
+              if (
+                !pkg ||
+                typeof pkg.packageDir !== 'string' ||
+                typeof pkg.packageName !== 'string' ||
+                typeof pkg.title !== 'string'
+              ) {
+                throw new Error(
+                  `Invalid PYTHON_PACKAGES entry: ${JSON.stringify(pkg)}`
+                );
+              }
+            }
+
+            function toPythonEnvVar(packageName) {
+              return `${packageName.replace(/[^a-zA-Z0-9]/g, '_').toUpperCase()}_PYTHON`;
             }
 
             let message = '## 📦 CLI Tarball Ready\n\n';
@@ -58,27 +91,38 @@ jobs:
             message += '}\n';
             message += '```\n';
 
-            // Check if a Python runtime wheel was built
-            try {
-              const resp = await fetch(`${deploymentUrl}/tarballs/vercel-runtime-wheel.json`);
-              if (resp.ok) {
+            for (const { packageDir, packageName, title } of pythonPackages) {
+              try {
+                const resp = await fetch(
+                  `${deploymentUrl}/tarballs/${packageDir}-wheel.json`
+                );
+                if (!resp.ok) {
+                  continue;
+                }
+
                 const { filename } = await resp.json();
+                if (!filename) {
+                  continue;
+                }
+
                 const wheelUrl = `${deploymentUrl}/tarballs/${filename}`;
-                message += '\n### Python Runtime Wheel\n\n';
-                message += 'A Python runtime wheel was also built for this PR.\n';
+                const envVar = toPythonEnvVar(packageName);
+
+                message += `\n### Python ${title} Wheel\n\n`;
+                message += `A \`${packageName}\` wheel was also built for this PR.\n`;
                 message += 'To use in your Python project builds, also set this environment variable:\n\n';
                 message += '```\n';
-                message += `VERCEL_RUNTIME_PYTHON="vercel-runtime @ ${wheelUrl}"\n`;
+                message += `${envVar}="${packageName} @ ${wheelUrl}"\n`;
                 message += '```\n';
+              } catch {
+                // No wheel available for this package, skip.
               }
-            } catch {
-              // No wheel available, skip
             }
 
             // Find existing comment to update
             const { data: comments } = await github.rest.issues.listComments({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
+              owner,
+              repo,
               issue_number: prNumber,
             });
 
@@ -89,15 +133,15 @@ jobs:
 
             if (existingComment) {
               await github.rest.issues.updateComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
+                owner,
+                repo,
                 comment_id: existingComment.id,
                 body: message
               });
             } else {
               await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
+                owner,
+                repo,
                 issue_number: prNumber,
                 body: message
               });

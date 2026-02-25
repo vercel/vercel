@@ -1,5 +1,15 @@
 # @vercel/fs-detectors
 
+## 5.8.11
+
+### Patch Changes
+
+- [services] adds source information to detected services ([#15245](https://github.com/vercel/vercel/pull/15245))
+
+- Updated dependencies [[`0c961fce30d495620542066249dae447764d2eba`](https://github.com/vercel/vercel/commit/0c961fce30d495620542066249dae447764d2eba)]:
+  - @vercel/routing-utils@5.4.0
+  - @vercel/frameworks@3.19.0
+
 ## 5.8.10
 
 ### Patch Changes

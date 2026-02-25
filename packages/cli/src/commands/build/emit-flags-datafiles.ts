@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { NowBuildError } from '@vercel/build-utils';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import fetch from 'node-fetch';
+import nodeFetch from 'node-fetch';
 import output from '../../output-manager';
 import pkg from '../../util/pkg';
 
@@ -152,7 +152,7 @@ export async function emitFlagsDatafiles(
         headers['x-vercel-region'] = env.VERCEL_REGION;
       }
 
-      const res = await fetch(`${FLAGS_HOST}/v1/datafile`, { headers });
+      const res = await nodeFetch(`${FLAGS_HOST}/v1/datafile`, { headers });
 
       if (!res.ok) {
         throw new NowBuildError({
