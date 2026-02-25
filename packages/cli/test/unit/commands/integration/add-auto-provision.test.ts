@@ -40,6 +40,8 @@ beforeEach(() => {
   openMock.mockReset().mockResolvedValue(undefined as never);
   pullMock.mockClear();
   connectMock.mockClear();
+  // Explicitly enable auto-provision so tests pass regardless of flag default
+  process.env.FF_AUTO_PROVISION_INSTALL = '1';
   // Mock Math.random to get predictable resource names (gray-apple suffix)
   vi.spyOn(Math, 'random').mockReturnValue(0);
 });
@@ -1306,7 +1308,6 @@ describe('integration add (auto-provision)', () => {
       const teams = useTeams('team_dummy');
       const t = Array.isArray(teams) ? teams[0] : teams.teams[0];
       client.config.currentTeam = t.id;
-
       // Integration endpoint (needed to fetch integration)
       client.scenario.get(
         '/:version/integrations/integration/:slug',
