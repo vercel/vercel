@@ -6,4 +6,4 @@
 'vercel': patch
 ---
 
-Migrate from node-fetch to fetch directly in tests
+Rename fetch to nodeFetch when importing from node-fetch
