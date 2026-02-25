@@ -20,6 +20,8 @@ export default async function getOidcToken(client: Client, argv: string[]) {
   }
   const { args, flags } = parsedArgs;
 
+  client.nonInteractive = true;
+
   if (args.length > 1) {
     output.error(
       `Invalid number of arguments. Usage: ${chalk.cyan(
@@ -31,6 +33,7 @@ export default async function getOidcToken(client: Client, argv: string[]) {
   const [name] = args;
   const project = await getProjectByCwdOrLink({
     autoConfirm: Boolean(flags['--yes']),
+    nonInteractive: true,
     client,
     commandName: 'project token',
     projectNameOrId: name,
