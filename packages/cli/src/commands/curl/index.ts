@@ -25,6 +25,7 @@ export default async function curl(client: Client): Promise<number> {
   const result = await getDeploymentUrlAndToken(client, 'curl', path, {
     deploymentFlag,
     protectionBypassFlag,
+    autoConfirm: setup.yes,
   });
 
   if (typeof result === 'number') {

@@ -117,6 +117,8 @@ export default class Client extends EventEmitter implements Stdio {
   nonInteractive: boolean;
   /** Dangerously skip all permission prompts (--dangerously-skip-permissions flag) */
   dangerouslySkipPermissions: boolean;
+  /** Track if we've already logged the token source debug message */
+  private _loggedTokenSource: boolean = false;
 
   constructor(opts: ClientOptions) {
     super();
@@ -193,7 +195,20 @@ export default class Client extends EventEmitter implements Stdio {
 
     // If we have a valid access token, do nothing
     if (isValidAccessToken(authConfig)) {
-      output.debug('Valid access token, skipping token refresh.');
+      if (!this._loggedTokenSource) {
+        if (authConfig.tokenSource === 'flag') {
+          output.debug(
+            'Using token from `--token` argument, skipping token refresh.'
+          );
+        } else if (authConfig.tokenSource === 'env') {
+          output.debug(
+            'Using token from VERCEL_TOKEN environment variable, skipping token refresh.'
+          );
+        } else {
+          output.debug('Valid access token, skipping token refresh.');
+        }
+        this._loggedTokenSource = true;
+      }
       return;
     }
 

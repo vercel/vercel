@@ -84,5 +84,8 @@
       },
       "mustNotContain": "Dynamic Component"
     }
-  ]
+  ],
+  "env": {
+    "NEXT_BUILDER_INTEGRATION": "1"
+  }
 }

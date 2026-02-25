@@ -293,11 +293,11 @@ describe('normalizeRoutes', () => {
     assert.deepEqual(error?.code, 'invalid_route');
     assert.deepEqual(
       error?.message,
-      'Route at index 0 has invalid `src` regular expression "^/(broken]$".'
+      'Route at index 0 has invalid `src`/`source` regular expression "^/(broken]$".'
     );
   });
 
-  test('fails if route does not define `handle` or `src` property', () => {
+  test('fails if route does not define `handle`, `src`, or `source` property', () => {
     // @ts-expect-error - intentionally passing invalid property
     const input: Route[] = [{ fake: 'foo' }];
     const { error } = normalizeRoutes(input);
@@ -305,7 +305,7 @@ describe('normalizeRoutes', () => {
     assert.deepEqual(error?.code, 'invalid_route');
     assert.deepEqual(
       error?.message,
-      'Route at index 0 must define either `handle` or `src` property.'
+      'Route at index 0 must define either `handle`, `src`, or `source` property.'
     );
   });
 
@@ -357,6 +357,53 @@ describe('normalizeRoutes', () => {
           schemaPath: '#/items/anyOf/0/properties/dest/type',
           params: { type: 'string' },
           message: 'should be string',
+        },
+        {
+          keyword: 'additionalProperties',
+          dataPath: '[0]',
+          schemaPath: '#/items/anyOf/1/additionalProperties',
+          params: { additionalProperty: 'dest' },
+          message: 'should NOT have additional properties',
+        },
+        {
+          keyword: 'anyOf',
+          dataPath: '[0]',
+          schemaPath: '#/items/anyOf',
+          params: {},
+          message: 'should match some schema in anyOf',
+        },
+      ]
+    );
+  });
+
+  test('fails if route has dest but missing src or source', () => {
+    assertError(
+      [
+        {
+          dest: '/foo',
+        },
+      ],
+      [
+        {
+          keyword: 'required',
+          dataPath: '[0]',
+          schemaPath: '#/items/anyOf/0/anyOf/0/required',
+          params: { missingProperty: '.src' },
+          message: "should have required property '.src'",
+        },
+        {
+          keyword: 'required',
+          dataPath: '[0]',
+          schemaPath: '#/items/anyOf/0/anyOf/1/required',
+          params: { missingProperty: '.source' },
+          message: "should have required property '.source'",
+        },
+        {
+          keyword: 'anyOf',
+          dataPath: '[0]',
+          schemaPath: '#/items/anyOf/0/anyOf',
+          params: {},
+          message: 'should match some schema in anyOf',
         },
         {
           keyword: 'additionalProperties',
@@ -748,7 +795,7 @@ describe('normalizeRoutes', () => {
     assert.deepEqual(error?.code, 'invalid_route');
     assert.deepEqual(
       error?.message,
-      'Route at index 1 cannot define `dest` after `handle: hit`.'
+      'Route at index 1 cannot define `dest`/`destination` after `handle: hit`.'
     );
   });
 
@@ -787,7 +834,7 @@ describe('normalizeRoutes', () => {
     assert.deepEqual(error?.code, 'invalid_route');
     assert.deepEqual(
       error?.message,
-      'Route at index 1 cannot define `status` after `handle: hit`.'
+      'Route at index 1 cannot define `status`/`statusCode` after `handle: hit`.'
     );
   });
 

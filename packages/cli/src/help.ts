@@ -4,6 +4,10 @@ import chalk from 'chalk';
 const packageName = 'vercel';
 const logo = '▲';
 
+const metricsLine = process.env.FF_METRICS
+  ? '\n      metrics                          Queries observability metrics for your project or team'
+  : '';
+
 export const help = () => `
   ${chalk.bold(`${logo} ${packageName}`)} [options] <command | path>
 
@@ -26,6 +30,7 @@ export const help = () => `
       inspect              [id]        Displays information related to a deployment
       i | install          [name]      Install an integration from the Marketplace
       integration          [cmd]       Manages your Marketplace integrations
+      ir | integration-resource [cmd]  Manages your Marketplace integration resources
       link                 [path]      Link local directory to a Vercel Project
       ls | list            [app]       Lists deployments
       login                [email]     Logs into your account or creates a new one
@@ -46,7 +51,7 @@ export const help = () => `
       curl                 [path]      cURL requests to your linked project's deployment [beta]
       dns                  [name]      Manages your DNS records
       domains              [name]      Manages your domain names
-      logs                 [url]       Displays the logs for a deployment
+      logs                 [url]       Displays the logs for a deployment${metricsLine}
       microfrontends                   Manages your microfrontends
       projects                         Manages your Projects
       redirects            [cmd]       Manages redirects for your current Project

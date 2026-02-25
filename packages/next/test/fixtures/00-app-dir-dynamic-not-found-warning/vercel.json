@@ -17,5 +17,8 @@
     {
       "logMustNotContain": "WARNING: Unable to find source file"
     }
-  ]
+  ],
+  "env": {
+    "NEXT_BUILDER_INTEGRATION": "1"
+  }
 }

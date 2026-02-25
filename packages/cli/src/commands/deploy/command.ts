@@ -2,6 +2,141 @@ import { confirmOption, forceOption, yesOption } from '../../util/arg-common';
 
 export const deprecatedArchiveSplitTgz = 'split-tgz';
 
+export const initSubcommand = {
+  name: 'init',
+  aliases: [],
+  description: 'Create a manual deployment that can be continued later',
+  hidden: true as const,
+  arguments: [],
+  options: [
+    {
+      ...forceOption,
+      description: 'Force a new deployment even if nothing has changed',
+    },
+    {
+      name: 'with-cache',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Retain build cache when using "--force"',
+    },
+    {
+      name: 'public',
+      shorthand: 'p',
+      type: Boolean,
+      deprecated: false,
+      description: 'Deployment is public (`/_src`) is exposed)',
+    },
+    {
+      name: 'env',
+      shorthand: 'e',
+      type: [String],
+      argument: 'KEY=VALUE',
+      deprecated: false,
+      description:
+        'Specify environment variables during run-time (e.g. `-e KEY1=value1 -e KEY2=value2`)',
+    },
+    {
+      name: 'build-env',
+      shorthand: 'b',
+      type: [String],
+      argument: 'KEY=VALUE',
+      deprecated: false,
+      description:
+        'Specify environment variables during build-time (e.g. `-b KEY1=value1 -b KEY2=value2`)',
+    },
+    {
+      name: 'meta',
+      shorthand: 'm',
+      type: [String],
+      argument: 'KEY=VALUE',
+      deprecated: false,
+      description:
+        'Specify metadata for the deployment (e.g. `-m KEY1=value1 -m KEY2=value2`)',
+    },
+    {
+      name: 'regions',
+      shorthand: null,
+      type: String,
+      argument: 'REGION',
+      deprecated: false,
+      description: 'Set default regions to enable the deployment on',
+    },
+    {
+      name: 'prod',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description:
+        'Create a production deployment (shorthand for `--target=production`)',
+    },
+    {
+      name: 'archive',
+      shorthand: null,
+      type: String,
+      argument: 'FORMAT',
+      deprecated: false,
+      description:
+        'Compress the deployment code into an archive before uploading it',
+    },
+    {
+      name: 'skip-domain',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description:
+        'Disable the automatic promotion (aliasing) of the relevant domains to a new production deployment. You can use `vc promote` to complete the domain-assignment process later',
+    },
+    {
+      ...yesOption,
+      description: 'Use default options to skip all prompts',
+    },
+    {
+      name: 'target',
+      shorthand: null,
+      type: String,
+      argument: 'TARGET',
+      deprecated: false,
+      description: 'Specify the target deployment environment',
+    },
+    confirmOption,
+  ],
+  examples: [
+    {
+      name: 'Create a manual deployment',
+      value: 'vercel deploy init',
+    },
+    {
+      name: 'Create a manual production deployment',
+      value: 'vercel deploy init --prod',
+    },
+  ],
+} as const;
+
+export const continueSubcommand = {
+  name: 'continue',
+  aliases: [],
+  description: 'Continue a manual deployment by uploading build outputs',
+  hidden: true as const,
+  arguments: [],
+  options: [
+    {
+      name: 'id',
+      shorthand: null,
+      type: String,
+      argument: 'ID',
+      deprecated: false,
+      description: 'The deployment ID to continue (e.g. dpl_xxx)',
+    },
+  ],
+  examples: [
+    {
+      name: 'Continue a deployment by ID',
+      value: 'vercel deploy continue --id dpl_xxx',
+    },
+  ],
+} as const;
+
 export const deployCommand = {
   name: 'deploy',
   aliases: [],
@@ -13,6 +148,7 @@ export const deployCommand = {
       required: false,
     },
   ],
+  subcommands: [initSubcommand, continueSubcommand],
   options: [
     {
       ...forceOption,

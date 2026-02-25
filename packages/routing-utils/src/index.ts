@@ -20,6 +20,11 @@ import {
 } from './types';
 export { appendRoutesToPhase } from './append';
 export { mergeRoutes } from './merge';
+export {
+  getOwnershipGuard,
+  normalizeRoutePrefix,
+  scopeRouteSourceToOwnership,
+} from './service-route-ownership';
 export * from './schemas';
 export { getCleanUrls, sourceToRegex } from './superstatic';
 export * from './types';
@@ -140,12 +145,12 @@ export function normalizeRoutes(inputRoutes: Route[] | null): NormalizedRoutes {
       if (handleValue === 'hit') {
         if (route.dest) {
           errors.push(
-            `Route at index ${i} cannot define \`dest\` after \`handle: hit\`.`
+            `Route at index ${i} cannot define \`dest\`/\`destination\` after \`handle: hit\`.`
           );
         }
         if (route.status) {
           errors.push(
-            `Route at index ${i} cannot define \`status\` after \`handle: hit\`.`
+            `Route at index ${i} cannot define \`status\`/\`statusCode\` after \`handle: hit\`.`
           );
         }
         if (!route.continue) {
@@ -166,7 +171,7 @@ export function normalizeRoutes(inputRoutes: Route[] | null): NormalizedRoutes {
       }
     } else {
       errors.push(
-        `Route at index ${i} must define either \`handle\` or \`src\` property.`
+        `Route at index ${i} must define either \`handle\`, \`src\`, or \`source\` property.`
       );
     }
   });
@@ -193,7 +198,7 @@ function checkRegexSyntax(
   try {
     new RegExp(src);
   } catch (err) {
-    const prop = type === 'Route' ? 'src' : 'source';
+    const prop = type === 'Route' ? 'src`/`source' : 'source';
     return `${type} at index ${index} has invalid \`${prop}\` regular expression "${src}".`;
   }
   return null;

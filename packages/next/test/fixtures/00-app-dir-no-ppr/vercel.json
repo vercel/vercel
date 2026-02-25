@@ -517,5 +517,8 @@
         "next-router-prefetch": "1"
       }
     }
-  ]
+  ],
+  "env": {
+    "NEXT_BUILDER_INTEGRATION": "1"
+  }
 }

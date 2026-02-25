@@ -14,5 +14,8 @@
         "x-from-proxy": "true"
       }
     }
-  ]
+  ],
+  "env": {
+    "NEXT_BUILDER_INTEGRATION": "1"
+  }
 }
