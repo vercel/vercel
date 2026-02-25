@@ -1,5 +1,11 @@
 # @vercel/routing-utils
 
+## 5.4.0
+
+### Minor Changes
+
+- Undeprecate `routes` schema and add aliases for `src`, `dest`, and `status` ([#15010](https://github.com/vercel/vercel/pull/15010))
+
 ## 5.3.3
 
 ### Patch Changes

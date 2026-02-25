@@ -1,5 +1,22 @@
 # vercel
 
+## 50.24.0
+
+### Minor Changes
+
+- [dev] skip project setup for `vc dev` if `--local` or `-L` flag is passed. ([#15239](https://github.com/vercel/vercel/pull/15239))
+
+### Patch Changes
+
+- feat(cli): add --format=json support to `integration add` (auto-provision) ([#15250](https://github.com/vercel/vercel/pull/15250))
+
+- Updated dependencies []:
+  - @vercel/build-utils@13.5.0
+  - @vercel/next@4.15.34
+  - @vercel/redwood@2.4.9
+  - @vercel/rust@1.0.5
+  - @vercel/static-build@2.8.41
+
 ## 50.23.2
 
 ### Patch Changes
