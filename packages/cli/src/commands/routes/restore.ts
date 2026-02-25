@@ -129,16 +129,8 @@ export default async function restore(client: Client, argv: string[]) {
 
     return 0;
   } catch (e: unknown) {
-    const error = e as { message?: string; code?: string; status?: number };
-    if (error.code === 'feature_not_enabled') {
-      output.error(
-        'Project-level routes are not enabled for this project. Please contact support.'
-      );
-    } else if (error.status === 429) {
-      output.error('Rate limited. Please wait a moment and try again.');
-    } else {
-      output.error(error.message || 'Failed to restore version');
-    }
+    const error = e as { message?: string };
+    output.error(error.message || 'Failed to restore version');
     return 1;
   }
 }
