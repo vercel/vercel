@@ -40,7 +40,7 @@ export const createWebExportsHandler = (awaiter: Awaiter) => {
 
     return (req: IncomingMessage, res: ServerResponse) => {
       const method = req.method ?? 'GET';
-      handlerByMethod[method](req, res);
+      (handlerByMethod[method] ?? defaultHttpHandler)(req, res);
     };
   }
 
