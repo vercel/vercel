@@ -1,7 +1,10 @@
 from flask import Flask, jsonify, render_template_string, request
+from logging import getLogger
 
 from worker.broker import broker
 from worker.tasks import process_job
+
+logger = getLogger(__name__)
 
 app = Flask(__name__)
 
@@ -57,6 +60,7 @@ def enqueue():
     try:
         message = process_job.send(payload)
     except Exception as exc:
+        logger.error(f'Failed to enqueue job: {exc}')
         return jsonify({'ok': False, 'error': str(exc)}), 500
 
     return jsonify(

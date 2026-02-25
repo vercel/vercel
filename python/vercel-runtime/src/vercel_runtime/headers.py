@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import contextlib
-from collections.abc import Iterable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from contextvars import ContextVar
+from importlib import import_module
 from typing import cast
 
 _cv_headers: ContextVar[Mapping[str, str] | None] = ContextVar(
@@ -78,6 +79,9 @@ def _normalize_internal_oidc_header(
 
 def set_headers(headers: Mapping[str, str] | None) -> None:
     _ = _cv_headers.set(headers)
+    with contextlib.suppress(Exception):
+        from vercel.headers import set_headers as _set_vercel_sdk_headers
+        _set_vercel_sdk_headers(headers)
 
 
 def get_headers() -> Mapping[str, str] | None:
