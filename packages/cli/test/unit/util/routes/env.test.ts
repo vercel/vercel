@@ -4,6 +4,8 @@ import {
   populateRouteEnv,
 } from '../../../../src/util/routes/env';
 
+type RouteForEnv = Parameters<typeof populateRouteEnv>[0];
+
 describe('extractEnvVarNames', () => {
   it('should extract $VAR format', () => {
     expect(extractEnvVarNames('https://$BACKEND_HOST/api')).toEqual([
@@ -59,13 +61,13 @@ describe('extractEnvVarNames', () => {
 
 describe('populateRouteEnv', () => {
   it('should populate env from dest', () => {
-    const route = { dest: 'https://$BACKEND_HOST/api' };
+    const route: RouteForEnv = { dest: 'https://$BACKEND_HOST/api' };
     populateRouteEnv(route);
     expect(route.env).toEqual(['BACKEND_HOST']);
   });
 
   it('should populate env from headers values', () => {
-    const route = {
+    const route: RouteForEnv = {
       headers: {
         Authorization: 'Bearer $API_TOKEN',
         'X-Custom': 'static-value',
@@ -76,7 +78,7 @@ describe('populateRouteEnv', () => {
   });
 
   it('should combine env from dest and headers', () => {
-    const route = {
+    const route: RouteForEnv = {
       dest: 'https://$BACKEND_HOST/api',
       headers: { Authorization: 'Bearer $API_TOKEN' },
     };
@@ -86,7 +88,7 @@ describe('populateRouteEnv', () => {
   });
 
   it('should populate per-transform env from args', () => {
-    const route = {
+    const route: RouteForEnv = {
       transforms: [{ args: 'Bearer $API_TOKEN' }, { args: 'static-value' }],
     };
     populateRouteEnv(route);
@@ -95,8 +97,8 @@ describe('populateRouteEnv', () => {
   });
 
   it('should handle transform with array args', () => {
-    const route = {
-      transforms: [{ args: ['$VAR1', '$VAR2'] as string[] }],
+    const route: RouteForEnv = {
+      transforms: [{ args: ['$VAR1', '$VAR2'] }],
     };
     populateRouteEnv(route);
     expect(route.transforms![0].env).toContain('VAR1');
@@ -104,7 +106,7 @@ describe('populateRouteEnv', () => {
   });
 
   it('should not set env when no vars found', () => {
-    const route = {
+    const route: RouteForEnv = {
       dest: '/api/users',
       headers: { 'Cache-Control': 'no-cache' },
     };
@@ -113,7 +115,7 @@ describe('populateRouteEnv', () => {
   });
 
   it('should not extract lowercase path params from dest', () => {
-    const route = { dest: '/api/$path/users/$id' };
+    const route: RouteForEnv = { dest: '/api/$path/users/$id' };
     populateRouteEnv(route);
     expect(route.env).toBeUndefined();
   });
