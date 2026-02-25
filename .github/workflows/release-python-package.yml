@@ -1,0 +1,58 @@
+name: Release Python Package
+
+on:
+  workflow_dispatch:
+    inputs:
+      package:
+        description: 'Python package to publish ("all" or package name)'
+        required: true
+        default: all
+        type: string
+      force:
+        description: 'Force publish even if version has not changed'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    environment:
+      name: release
+
+    permissions:
+      id-token: write
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version-file: 'pyproject.toml'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@eac588ad8def6316056a12d4907a9d4d84ff7a3b # v7.3.0
+        with:
+          version: '0.9.22'
+
+      - name: Publish
+        env:
+          PACKAGE: ${{ inputs.package }}
+          FORCE: ${{ inputs.force }}
+        run: |
+          args=(--package="$PACKAGE")
+          if [ "$FORCE" = "true" ]; then
+            args+=(--force)
+          fi
+          node python/publish.mjs "${args[@]}"

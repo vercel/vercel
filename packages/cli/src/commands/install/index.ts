@@ -4,6 +4,7 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { help } from '../help';
 import { add } from '../integration/add';
+import { printAddDynamicHelp } from '../integration/add-help';
 import { addSubcommand } from '../integration/command';
 import { installCommand } from './command';
 import output from '../../output-manager';
@@ -25,11 +26,38 @@ export default async function install(client: Client) {
     },
   });
 
+  const ffAutoProvision = process.env.FF_AUTO_PROVISION_INSTALL === '1';
+  const cmd = ffAutoProvision
+    ? installCommand
+    : {
+        ...installCommand,
+        options: installCommand.options.filter(
+          o => o.name !== 'installation-id'
+        ),
+      };
+
   if (flags['--help']) {
     telemetry.trackCliFlagHelp('install');
-    output.print(help(installCommand, { columns: client.stderr.columns }));
+
+    const printed = await printAddDynamicHelp(
+      client,
+      args[1],
+      cmd,
+      c => output.print(help(c, { columns: client.stderr.columns })),
+      'install'
+    );
+
+    if (!printed) {
+      output.print(help(cmd, { columns: client.stderr.columns }));
+    }
+
     return 0;
   }
 
-  return add(client, args.slice(1), flags);
+  if (!ffAutoProvision && flags['--installation-id']) {
+    output.error('Unknown or unexpected option: --installation-id');
+    return 1;
+  }
+
+  return add(client, args.slice(1), flags, 'install');
 }

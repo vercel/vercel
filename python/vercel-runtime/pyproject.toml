@@ -1,6 +1,6 @@
 [project]
 name = "vercel-runtime"
-version = "0.5.0"
+version = "0.5.1"
 license = "Apache-2.0"
 license-files = [
   "src/vercel_runtime/_vendor/*/LICEN[CS]E*",
@@ -50,29 +50,16 @@ explicit_package_bases = true
 module = ["vercel_runtime._vendor.*"]
 ignore_errors = true
 
+[[tool.mypy.overrides]]
+module = ["tests.fixtures.*"]
+ignore_errors = true
+
 [tool.basedpyright]
 pythonVersion = "3.12"
 typeCheckingMode = "strict"
 include = ["src/vercel_runtime", "tests"]
-exclude = ["tests/fixtures"]
+exclude = ["src/vercel_runtime/_vendor", "tests/fixtures"]
 extraPaths = ["src"]
-
-[[tool.basedpyright.executionEnvironments]]
-root = "src/vercel_runtime/_vendor"
-reportMissingParameterType = false
-reportUnknownParameterType = false
-reportUnknownVariableType = false
-reportUnknownMemberType = false
-reportUnknownArgumentType = false
-
-[[tool.basedpyright.executionEnvironments]]
-root = "tests/fixtures"
-reportMissingParameterType = false
-reportUnknownParameterType = false
-reportUnknownVariableType = false
-reportUnknownMemberType = false
-reportUnknownArgumentType = false
-reportCallIssue = false
 
 [[tool.basedpyright.executionEnvironments]]
 root = "tests"

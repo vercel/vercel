@@ -33,8 +33,43 @@ describe('detectServices', () => {
       const result = await detectServices({ fs });
 
       expect(result.services).toEqual([]);
+      expect(result.source).toBe('auto-detected');
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0].code).toBe('NO_SERVICES_CONFIGURED');
+    });
+
+    it('should auto-detect a Ruby backend service in backend/', async () => {
+      const fs = new VirtualFilesystem({
+        'frontend/package.json': JSON.stringify({
+          dependencies: {
+            next: '15.0.0',
+          },
+        }),
+        'backend/Gemfile': 'source "https://rubygems.org"',
+        'backend/config.ru': 'run Sinatra::Application',
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      expect(result.services).toHaveLength(2);
+
+      const backend = result.services.find(s => s.name === 'backend');
+      expect(backend).toMatchObject({
+        name: 'backend',
+        workspace: 'backend',
+        framework: 'ruby',
+        runtime: 'ruby',
+        routePrefix: '/_/backend',
+        routePrefixSource: 'generated',
+      });
+
+      const backendRoute = findMatchingRoute(
+        result.routes.rewrites,
+        '/_/backend/ping'
+      );
+      expect(backendRoute).toMatchObject({
+        dest: '/_svc/backend/index',
+      });
     });
   });
 
@@ -69,6 +104,7 @@ describe('detectServices', () => {
       const result = await detectServices({ fs });
 
       expect(result.services).toHaveLength(1);
+      expect(result.source).toBe('configured');
       expect(result.services[0]).toMatchObject({
         name: 'api',
         type: 'web',

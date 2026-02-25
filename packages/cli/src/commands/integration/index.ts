@@ -25,12 +25,7 @@ import { openIntegration } from './open-integration';
 import { remove } from './remove-integration';
 import { discover } from './discover';
 import { guide } from './guide';
-import { fetchIntegration } from '../../util/integration/fetch-integration';
-import { formatProductHelp } from '../../util/integration/format-product-help';
-import { formatBillingPlansHelp } from '../../util/integration/format-billing-plans-help';
-import { formatDynamicExamples } from '../../util/integration/format-dynamic-examples';
-import { formatMetadataSchemaHelp } from '../../util/integration/format-schema-help';
-import { fetchBillingPlans } from '../../util/integration/fetch-billing-plans';
+import { printAddDynamicHelp } from './add-help';
 
 const COMMAND_CONFIG = {
   add: getCommandAliases(addSubcommand),
@@ -82,73 +77,31 @@ export default async function main(client: Client) {
 
   switch (subcommand) {
     case 'add': {
+      const ffAutoProvision = process.env.FF_AUTO_PROVISION_INSTALL === '1';
+      const addCmd = ffAutoProvision
+        ? addSubcommand
+        : {
+            ...addSubcommand,
+            options: addSubcommand.options.filter(
+              o => o.name !== 'installation-id'
+            ),
+          };
+
       if (needHelp) {
         telemetry.trackCliFlagHelp('integration', subcommandOriginal);
 
-        // Dynamic help: if an integration slug is provided, fetch and show integration-specific help
-        const rawArg = subArgs[0];
-        if (rawArg) {
-          // Strip product slug if slash syntax was used (e.g. "upstash/upstash-kv" → "upstash")
-          const integrationSlug = rawArg.split('/')[0];
-          const productSlug = rawArg.includes('/')
-            ? rawArg.split('/')[1]
-            : undefined;
-          try {
-            const integration = await fetchIntegration(client, integrationSlug);
-            const products = integration.products ?? [];
+        const printed = await printAddDynamicHelp(
+          client,
+          subArgs[0],
+          addCmd,
+          cmd => printHelp(cmd),
+          'integration add'
+        );
 
-            // Print help without static examples — we'll show dynamic ones instead
-            printHelp({ ...addSubcommand, examples: [] });
-            output.print(formatDynamicExamples(integrationSlug, products));
-
-            if (products.length > 1) {
-              output.print(formatProductHelp(integrationSlug, products));
-            }
-            // Show metadata schema for ALL products
-            for (const product of products) {
-              if (product.metadataSchema) {
-                // For single-product integrations, don't show product slug
-                // For multi-product integrations, show product slug for slash syntax
-                const metadataProductSlug =
-                  products.length > 1 ? product.slug : undefined;
-                output.print(
-                  formatMetadataSchemaHelp(
-                    product.metadataSchema,
-                    integrationSlug,
-                    metadataProductSlug
-                  )
-                );
-              }
-            }
-            // Show billing plans for each product (or just the specified one)
-            const productsToShow = productSlug
-              ? products.filter(p => p.slug === productSlug)
-              : products;
-            for (const product of productsToShow) {
-              try {
-                const { plans } = await fetchBillingPlans(
-                  client,
-                  integration,
-                  product,
-                  {}
-                );
-                output.print(formatBillingPlansHelp(product.name, plans));
-              } catch (err: unknown) {
-                output.debug(
-                  `Failed to fetch billing plans for ${product.slug}: ${err}`
-                );
-              }
-            }
-            return 0;
-          } catch (err: unknown) {
-            output.debug(
-              `Failed to fetch integration for dynamic help: ${err}`
-            );
-          }
+        if (!printed) {
+          printHelp(addCmd);
         }
 
-        // Fallback: no integration slug provided, or fetch failed — show static help
-        printHelp(addSubcommand);
         return 0;
       }
       telemetry.trackCliSubcommandAdd(subcommandOriginal);
@@ -162,7 +115,18 @@ export default async function main(client: Client) {
         printError(error);
         return 1;
       }
-      return add(client, addParsedArgs.args, addParsedArgs.flags);
+
+      if (!ffAutoProvision && addParsedArgs.flags['--installation-id']) {
+        output.error('Unknown or unexpected option: --installation-id');
+        return 1;
+      }
+
+      return add(
+        client,
+        addParsedArgs.args,
+        addParsedArgs.flags,
+        'integration add'
+      );
     }
     case 'list': {
       if (needHelp) {
@@ -198,7 +162,7 @@ export default async function main(client: Client) {
         return 0;
       }
       telemetry.trackCliSubcommandBalance(subcommandOriginal);
-      return balance(client, subArgs);
+      return balance(client);
     }
     case 'open': {
       if (needHelp) {

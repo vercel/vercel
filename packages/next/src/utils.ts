@@ -1872,18 +1872,6 @@ export function addLocaleOrDefault(
     : pathname;
 }
 
-function regionsArrayEqual(
-  a: string[] | undefined,
-  b: string[] | undefined
-): boolean {
-  if (a === b) return true;
-  if (!a || !b) return false;
-  if (a.length !== b.length) return false;
-  const sortedA = [...a].sort();
-  const sortedB = [...b].sort();
-  return sortedA.every((val, i) => val === sortedB[i]);
-}
-
 export type LambdaGroup = {
   pages: string[];
   memory?: number;
@@ -1904,6 +1892,18 @@ export type LambdaGroup = {
   pseudoLayerUncompressedBytes: number;
   experimentalTriggers?: NodejsLambda['experimentalTriggers'];
 };
+
+function compareRegions(
+  a: string[] | undefined,
+  b: string[] | undefined
+): boolean {
+  if (a === undefined && b === undefined) return true;
+  if (a === undefined || b === undefined) return false;
+  if (a.length !== b.length) return false;
+  const sortedA = [...a].sort();
+  const sortedB = [...b].sort();
+  return sortedA.every((val, idx) => val === sortedB[idx]);
+}
 
 export async function getPageLambdaGroups({
   entryPath,
@@ -1971,7 +1971,13 @@ export async function getPageLambdaGroups({
       functionsConfigManifest &&
       functionsConfigManifest.functions[routeName]
     ) {
-      opts = functionsConfigManifest.functions[routeName];
+      // Exclude `regions` from the manifest. Next.js outputs `preferredRegion`
+      // as `regions` in the manifest, but for Node.js lambdas we only support
+      // regions via vercel.json functions config, not route-level config.
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { regions: _regions, ...manifestOpts } =
+        functionsConfigManifest.functions[routeName];
+      opts = manifestOpts;
     }
 
     if (config && config.functions) {
@@ -2042,8 +2048,8 @@ export async function getPageLambdaGroups({
           const matches =
             group.maxDuration === opts.maxDuration &&
             group.memory === opts.memory &&
-            regionsArrayEqual(group.regions, opts.regions) &&
-            regionsArrayEqual(
+            compareRegions(group.regions, opts.regions) &&
+            compareRegions(
               group.functionFailoverRegions,
               opts.functionFailoverRegions
             ) &&
@@ -3646,6 +3652,7 @@ export type FunctionsConfigManifestV1 = {
     string,
     {
       maxDuration?: number | undefined;
+      regions?: string[];
       runtime?: 'nodejs';
       matchers?: Array<{
         regexp: string;

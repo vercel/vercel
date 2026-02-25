@@ -226,12 +226,22 @@ export interface AutoProvisionedResponse {
   billingPlan: BillingPlan | null;
 }
 
+export interface AutoProvisionInstallationInfo {
+  id: string;
+  type?: 'marketplace' | 'external';
+  externalId?: string;
+  status?: string;
+}
+
 export interface AutoProvisionFallback {
-  kind: 'metadata' | 'unknown';
+  kind: string;
+  reason?: string;
+  error_message?: string;
   url: string;
   integration: AutoProvisionIntegration;
   product: AutoProvisionProduct;
   installation?: { id: string };
+  installations?: AutoProvisionInstallationInfo[];
 }
 
 export type AutoProvisionResult =

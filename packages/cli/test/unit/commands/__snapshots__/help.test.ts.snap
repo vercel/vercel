@@ -1894,16 +1894,17 @@ exports[`help command > domains help output snapshots > domains transfer-in help
 
 exports[`help command > env help output snapshots > env add help output snapshots > env add help column width 120 1`] = `
 "
-  ▲ vercel env add name [environment] [options]
+  ▲ vercel env add name [environment] [git-branch] [options]
 
   Add an Environment Variable (see examples below)                                                                      
 
   Options:
 
-       --force      Force overwrites when a command would normally fail                                                      
-       --guidance   Receive command suggestions once command is complete                                                     
-       --sensitive  Add a sensitive Environment Variable                                                                     
-  -y,  --yes        Skip the confirmation prompt when adding an Environment Variable                                         
+       --force          Force overwrites when a command would normally fail                                                  
+       --guidance       Receive command suggestions once command is complete                                                 
+       --sensitive      Add a sensitive Environment Variable                                                                 
+       --value <VALUE>  Value for the variable (non-interactive). Otherwise use stdin or you will be prompted.               
+  -y,  --yes            Skip the confirmation prompt when adding an Environment Variable                                     
 
 
   Global Options:
@@ -1942,7 +1943,7 @@ exports[`help command > env help output snapshots > env add help output snapshot
 
   - Add a new Environment Variable for a specific Environment and Git Branch
 
-    $ vercel env add <name> <production | preview | development> <git-branch>
+    $ vercel env add <name> <production | preview | development> <gitbranch>
     $ vercel env add DB_PASS preview feat1
 
   - Add a new Environment Variable from stdin
@@ -1950,6 +1951,10 @@ exports[`help command > env help output snapshots > env add help output snapshot
     $ cat <file> | vercel env add <name> <production | preview | development>
     $ cat ~/.npmrc | vercel env add NPM_RC preview
     $ vercel env add API_URL production < url.txt
+
+  - Add with value as argument (non-interactive)
+
+    $ vercel env add API_TOKEN production --value "secret" --yes
 
 "
 `;
@@ -1963,63 +1968,63 @@ exports[`help command > env help output snapshots > env help column width 40 1`]
 
   Commands:
 
-  add     name [environment]          …
-                                      …
-                                      …
-                                      …
-                                      …
-                                      …
-                                      …
-  list    [environment] [git-branch]  …
-                                      …
-                                      …
-                                      …
-                                      …
-                                      a
-                                      …
-  pull    [filename]                  …
-                                      …
-                                      …
-                                      …
-                                      …
-                                      …
-                                      …
-                                      …
-                                      …
-                                      …
-                                      …
-                                      a
-                                      …
-                                      …
-  remove  name [environment]          …
-                                      …
-                                      …
-                                      …
-                                      …
-                                      …
-                                      …
-  run     command                     …
-                                      a
-                                      …
-                                      …
-                                      …
-                                      …
-                                      …
-                                      …
-                                      …
-                                      …
-                                      …
-  update  name [environment]          …
-                                      …
-                                      …
-                                      …
-                                      …
-                                      …
-                                      …
-                                      …
-                                      …
-                                      …
-                                      …
+  add     name [environment] [git-branch]  …
+                                           …
+                                           …
+                                           …
+                                           …
+                                           …
+                                           …
+  list    [environment] [git-branch]       …
+                                           …
+                                           …
+                                           …
+                                           …
+                                           a
+                                           …
+  pull    [filename]                       …
+                                           …
+                                           …
+                                           …
+                                           …
+                                           …
+                                           …
+                                           …
+                                           …
+                                           …
+                                           …
+                                           a
+                                           …
+                                           …
+  remove  name [environment]               …
+                                           …
+                                           …
+                                           …
+                                           …
+                                           …
+                                           …
+  run     command                          …
+                                           a
+                                           …
+                                           …
+                                           …
+                                           …
+                                           …
+                                           …
+                                           …
+                                           …
+                                           …
+  update  name [environment]               …
+                                           …
+                                           …
+                                           …
+                                           …
+                                           …
+                                           …
+                                           …
+                                           …
+                                           …
+                                           …
 
 
   Global Options:
@@ -2081,21 +2086,21 @@ exports[`help command > env help output snapshots > env help column width 80 1`]
 
   Commands:
 
-  add     name [environment]          Add an Environment Variable (see    
-                                      examples below)                     
-  list    [environment] [git-branch]  List all Environment Variables for a
-                                      Project                             
-  pull    [filename]                  Pull all Development Environment    
-                                      Variables from the cloud and write  
-                                      to a file [.env.local]              
-  remove  name [environment]          Remove an Environment Variable (see 
-                                      examples below)                     
-  run     command                     Run a command with environment      
-                                      variables from the linked Vercel    
-                                      project                             
-  update  name [environment]          Update the value of an existing     
-                                      Environment Variable (see examples  
-                                      below)                              
+  add     name [environment] [git-branch]  Add an Environment Variable (see
+                                           examples below)                 
+  list    [environment] [git-branch]       List all Environment Variables  
+                                           for a Project                   
+  pull    [filename]                       Pull all Development Environment
+                                           Variables from the cloud and    
+                                           write to a file [.env.local]    
+  remove  name [environment]               Remove an Environment Variable  
+                                           (see examples below)            
+  run     command                          Run a command with environment  
+                                           variables from the linked Vercel
+                                           project                         
+  update  name [environment]               Update the value of an existing 
+                                           Environment Variable (see       
+                                           examples below)                 
 
 
   Global Options:
@@ -2125,13 +2130,14 @@ exports[`help command > env help output snapshots > env help column width 120 1`
 
   Commands:
 
-  add     name [environment]          Add an Environment Variable (see examples below)                            
-  list    [environment] [git-branch]  List all Environment Variables for a Project                                
-  pull    [filename]                  Pull all Development Environment Variables from the cloud and write to a    
-                                      file [.env.local]                                                           
-  remove  name [environment]          Remove an Environment Variable (see examples below)                         
-  run     command                     Run a command with environment variables from the linked Vercel project     
-  update  name [environment]          Update the value of an existing Environment Variable (see examples below)   
+  add     name [environment] [git-branch]  Add an Environment Variable (see examples below)                        
+  list    [environment] [git-branch]       List all Environment Variables for a Project                            
+  pull    [filename]                       Pull all Development Environment Variables from the cloud and write to a
+                                           file [.env.local]                                                       
+  remove  name [environment]               Remove an Environment Variable (see examples below)                     
+  run     command                          Run a command with environment variables from the linked Vercel project 
+  update  name [environment]               Update the value of an existing Environment Variable (see examples      
+                                           below)                                                                  
 
 
   Global Options:
@@ -2873,9 +2879,14 @@ exports[`help command > inspect help output snapshots > inspect help column widt
 
 exports[`help command > integration help output snapshots > integration balance subcommand > integration balance subcommand help column width 120 1`] = `
 "
-  ▲ vercel integration balance integration
+  ▲ vercel integration balance integration [options]
 
   Shows the balances and thresholds of a specified marketplace integration                                              
+
+  Options:
+
+  -F,  --format <FORMAT>  Specify the output format (json)                                                              
+
 
   Global Options:
 
@@ -2897,6 +2908,10 @@ exports[`help command > integration help output snapshots > integration balance 
 
     $ vercel integration balance <integration-name>
     $ vercel integration balance acme
+
+  - Output as JSON
+
+    $ vercel integration balance acme --format=json
 
 "
 `;
@@ -2954,48 +2969,52 @@ exports[`help command > integration help output snapshots > integration help col
 
   Commands:
 
-  add       integration  Installs
-                         a       
-                         marketp…
-                         integra…
-  balance   integration  Shows   
-                         the     
-                         balances
-                         and     
-                         thresho…
-                         of a    
-                         specifi…
-                         marketp…
-                         integra…
-  discover               Discover
-                         availab…
-                         marketp…
-                         integra…
-  guide     integration  Show    
-                         getting 
-                         started 
-                         guides  
-                         and code
-                         snippets
-                         for a   
-                         marketp…
-                         integra…
-  list      [project]    List    
-                         resourc…
-                         from    
-                         marketp…
-                         integra…
-                         for the 
-                         current 
-                         project 
-  open      name         Opens a 
-                         marketp…
-                         integra…
-                         dashboa…
-  remove    integration  Uninsta…
-                         a       
-                         marketp…
-                         integra…
+  add       integration      Instal…
+                             a      
+                             market…
+                             integr…
+  balance   integration      Shows  
+                             the    
+                             balanc…
+                             and    
+                             thresh…
+                             of a   
+                             specif…
+                             market…
+                             integr…
+  discover                   Discov…
+                             availa…
+                             market…
+                             integr…
+  guide     integration      Show   
+                             getting
+                             started
+                             guides 
+                             and    
+                             code   
+                             snippe…
+                             for a  
+                             market…
+                             integr…
+  list      [project]        List   
+                             resour…
+                             from   
+                             market…
+                             integr…
+                             for the
+                             current
+                             project
+  open      name [resource]  Opens a
+                             market…
+                             integr…
+                             or     
+                             resour…
+                             dashbo…
+                             via SSO
+  remove    integration      Uninst…
+                             a      
+                             market…
+                             integr…
 
 
   Global Options:
@@ -3063,16 +3082,17 @@ exports[`help command > integration help output snapshots > integration help col
 
   Commands:
 
-  add       integration  Installs a marketplace integration              
-  balance   integration  Shows the balances and thresholds of a specified
-                         marketplace integration                         
-  discover               Discover available marketplace integrations     
-  guide     integration  Show getting started guides and code snippets   
-                         for a marketplace integration                   
-  list      [project]    List resources from marketplace integrations for
-                         the current project                             
-  open      name         Opens a marketplace integration's dashboard     
-  remove    integration  Uninstalls a marketplace integration            
+  add       integration      Installs a marketplace integration             
+  balance   integration      Shows the balances and thresholds of a         
+                             specified marketplace integration              
+  discover                   Discover available marketplace integrations    
+  guide     integration      Show getting started guides and code snippets  
+                             for a marketplace integration                  
+  list      [project]        List resources from marketplace integrations   
+                             for the current project                        
+  open      name [resource]  Opens a marketplace integration's or resource's
+                             dashboard via SSO                              
+  remove    integration      Uninstalls a marketplace integration           
 
 
   Global Options:
@@ -3108,13 +3128,13 @@ exports[`help command > integration help output snapshots > integration help col
 
   Commands:
 
-  add       integration  Installs a marketplace integration                                                      
-  balance   integration  Shows the balances and thresholds of a specified marketplace integration                
-  discover               Discover available marketplace integrations                                             
-  guide     integration  Show getting started guides and code snippets for a marketplace integration             
-  list      [project]    List resources from marketplace integrations for the current project                    
-  open      name         Opens a marketplace integration's dashboard                                             
-  remove    integration  Uninstalls a marketplace integration                                                    
+  add       integration      Installs a marketplace integration                                                     
+  balance   integration      Shows the balances and thresholds of a specified marketplace integration               
+  discover                   Discover available marketplace integrations                                            
+  guide     integration      Show getting started guides and code snippets for a marketplace integration            
+  list      [project]        List resources from marketplace integrations for the current project                   
+  open      name [resource]  Opens a marketplace integration's or resource's dashboard via SSO                      
+  remove    integration      Uninstalls a marketplace integration                                                   
 
 
   Global Options:
@@ -3221,8 +3241,8 @@ exports[`help command > integration-resource help output snapshots > integration
   - create threshold
 
     $ vercel integration-resource create-threshold <resource> <minimum> <spend> <limit> [options]
-    $ vercel integration-resource create-threshold my-acme-resource 100 50 2000
-    $ vercel integration-resource create-threshold my-acme-resource 100 50 2000 --yes
+    $ vercel integration-resource create-threshold my-acme-resource 50 100 2000
+    $ vercel integration-resource create-threshold my-acme-resource 50 100 2000 --yes
 
 "
 `;
@@ -3235,8 +3255,9 @@ exports[`help command > integration-resource help output snapshots > integration
 
   Options:
 
-  -a,  --all  Disconnects all projects from the specified resource                                                      
-  -y,  --yes  Skip the confirmation prompt when disconnecting a resource                                                
+  -a,  --all              Disconnects all projects from the specified resource                                          
+  -F,  --format <FORMAT>  Specify the output format (json)                                                              
+  -y,  --yes              Skip the confirmation prompt when disconnecting a resource                                    
 
 
   Global Options:
@@ -3270,6 +3291,10 @@ exports[`help command > integration-resource help output snapshots > integration
 
     $ vercel integration-resource disconnect <resource> <project>
     $ vercel integration-resource disconnect my-acme-resource my-project
+
+  - Output as JSON
+
+    $ vercel integration-resource disconnect my-acme-resource --format=json --yes
 
 "
 `;
@@ -3443,8 +3468,9 @@ exports[`help command > integration-resource help output snapshots > integration
 
   Options:
 
-  -a,  --disconnect-all  Disconnects all projects from the specified resource before deletion                           
-  -y,  --yes             Skip the confirmation prompt when deleting a resource                                          
+  -a,  --disconnect-all   Disconnects all projects from the specified resource before deletion                          
+  -F,  --format <FORMAT>  Specify the output format (json)                                                              
+  -y,  --yes              Skip the confirmation prompt when deleting a resource                                         
 
 
   Global Options:
@@ -3474,6 +3500,10 @@ exports[`help command > integration-resource help output snapshots > integration
     $ vercel integration-resource remove my-acme-resource --disconnect-all
     $ vercel integration-resource remove my-acme-resource -a
 
+  - Output as JSON
+
+    $ vercel integration-resource remove my-acme-resource --format=json --yes
+
 "
 `;
 
@@ -3496,27 +3526,37 @@ exports[`help command > link help output snapshots > link help column width 40 1
 
   Options:
 
-  -p,  --project <NAME>          Specify a   
-                                 project name
-  -r,  --repo                    Link        
-                                 multiple    
-                                 projects    
-                                 based on Git
-                                 repository  
-                                 (alpha)     
-       --team <TEAM_ID_OR_SLUG>  Scope (team 
-                                 ID or slug) 
-                                 to link the 
-                                 project to  
-  -y,  --yes                     Skip        
-                                 questions   
-                                 when setting
-                                 up new      
-                                 project     
-                                 using       
-                                 default     
-                                 scope and   
-                                 settings    
+  -p,  --project <NAME_OR_ID>    Project  
+                                 name or  
+                                 ID to    
+                                 link to  
+                                 (required
+                                 for      
+                                 non-inte…
+  -r,  --repo                    Link     
+                                 multiple 
+                                 projects 
+                                 based on 
+                                 Git      
+                                 reposito…
+                                 (alpha)  
+       --team <TEAM_ID_OR_SLUG>  Scope:   
+                                 team ID  
+                                 or slug  
+                                 (use with
+                                 --project
+                                 for      
+                                 non-inte…
+  -y,  --yes                     Skip     
+                                 questions
+                                 when     
+                                 setting  
+                                 up new   
+                                 project  
+                                 using    
+                                 default  
+                                 scope and
+                                 settings 
 
 
   Global Options:
@@ -3577,6 +3617,10 @@ exports[`help command > link help output snapshots > link help column width 40 1
 
     $ vercel link --yes
 
+  - Non-interactive: link to an existing project (CI/agents)
+
+    $ vercel link --yes --team <team-id> --project <project-name-or-id>
+
   - Link a specific directory to a Vercel Project
 
     $ vercel link --cwd /path/to/project
@@ -3606,12 +3650,14 @@ exports[`help command > link help output snapshots > link help column width 80 1
 
   Options:
 
-  -p,  --project <NAME>          Specify a project name                              
-  -r,  --repo                    Link multiple projects based on Git repository      
-                                 (alpha)                                             
-       --team <TEAM_ID_OR_SLUG>  Scope (team ID or slug) to link the project to      
-  -y,  --yes                     Skip questions when setting up new project using    
-                                 default scope and settings                          
+  -p,  --project <NAME_OR_ID>    Project name or ID to link to (required for      
+                                 non-interactive)                                 
+  -r,  --repo                    Link multiple projects based on Git repository   
+                                 (alpha)                                          
+       --team <TEAM_ID_OR_SLUG>  Scope: team ID or slug (use with --project for   
+                                 non-interactive)                                 
+  -y,  --yes                     Skip questions when setting up new project using 
+                                 default scope and settings                       
 
 
   Global Options:
@@ -3639,6 +3685,10 @@ exports[`help command > link help output snapshots > link help column width 80 1
   - Link current directory with default options and skip questions
 
     $ vercel link --yes
+
+  - Non-interactive: link to an existing project (CI/agents)
+
+    $ vercel link --yes --team <team-id> --project <project-name-or-id>
 
   - Link a specific directory to a Vercel Project
 
@@ -3669,10 +3719,10 @@ exports[`help command > link help output snapshots > link help column width 120 
 
   Options:
 
-  -p,  --project <NAME>          Specify a project name                                                                      
-  -r,  --repo                    Link multiple projects based on Git repository (alpha)                                      
-       --team <TEAM_ID_OR_SLUG>  Scope (team ID or slug) to link the project to                                              
-  -y,  --yes                     Skip questions when setting up new project using default scope and settings                 
+  -p,  --project <NAME_OR_ID>    Project name or ID to link to (required for non-interactive)                             
+  -r,  --repo                    Link multiple projects based on Git repository (alpha)                                   
+       --team <TEAM_ID_OR_SLUG>  Scope: team ID or slug (use with --project for non-interactive)                          
+  -y,  --yes                     Skip questions when setting up new project using default scope and settings              
 
 
   Global Options:
@@ -3698,6 +3748,10 @@ exports[`help command > link help output snapshots > link help column width 120 
   - Link current directory with default options and skip questions
 
     $ vercel link --yes
+
+  - Non-interactive: link to an existing project (CI/agents)
+
+    $ vercel link --yes --team <team-id> --project <project-name-or-id>
 
   - Link a specific directory to a Vercel Project
 

@@ -186,7 +186,8 @@ async def _invoke_lambda(
         raise RuntimeError(
             f"Lambda invoke failed (rc={proc.returncode}):\n{stderr_text}"
         )
-    return json.loads(result_data)
+    result: dict[str, Any] = json.loads(result_data)
+    return result
 
 
 def _http_request(

@@ -1,7 +1,7 @@
 import fs from 'fs';
 import { promisify } from 'util';
 import { join, dirname, basename, parse } from 'path';
-import { VERCEL_RUNTIME_VERSION } from './runtime-version';
+import { VERCEL_RUNTIME_VERSION } from './package-versions';
 import {
   download,
   glob,
@@ -83,9 +83,14 @@ export const build: BuildV3 = async ({
   config,
 }) => {
   const framework = config?.framework;
+
   let spawnEnv: NodeJS.ProcessEnv | undefined;
   // Custom install command from dashboard/project settings, if any.
   let projectInstallCommand: string | undefined;
+  // Track whether a custom build or install command was used.
+  // When true, runtime dependency installation is disabled because
+  // custom commands may install dependencies not tracked in uv.lock.
+  let hasCustomCommand = false;
 
   debug(`workPath: ${workPath}`);
 
@@ -150,12 +155,16 @@ export const build: BuildV3 = async ({
         env: spawnEnv,
         cwd: workPath,
       });
+      hasCustomCommand = true;
     } else {
-      await runPyprojectScript(
+      const ranBuildScript = await runPyprojectScript(
         workPath,
         ['vercel-build', 'now-build', 'build'],
         spawnEnv
       );
+      if (ranBuildScript) {
+        hasCustomCommand = true;
+      }
     }
   }
 
@@ -333,6 +342,7 @@ export const build: BuildV3 = async ({
       cwd: workPath,
     });
     assumeDepsInstalled = true;
+    hasCustomCommand = true;
   } else {
     // Check and run a custom vercel install command from project manifest.
     // This will return `false` if no script was ran.
@@ -342,6 +352,9 @@ export const build: BuildV3 = async ({
       pythonEnv,
       /* useUserVirtualEnv */ false
     );
+    if (assumeDepsInstalled) {
+      hasCustomCommand = true;
+    }
   }
 
   let uv: UvRunner;
@@ -446,6 +459,20 @@ export const build: BuildV3 = async ({
     args: ['install', runtimeDep],
   });
 
+  // Optional override used by CI/preview builds to test in-repo vercel-workers wheels.
+  // TODO: uncomment when we introduce the 'workers' service implementation
+  // const workersDep =
+  //   baseEnv.VERCEL_WORKERS_PYTHON ||
+  //   `vercel-workers==${VERCEL_WORKERS_VERSION}`;
+  // if (workersDep) {
+  //   debug(`Installing ${workersDep}`);
+  //   await uv.pip({
+  //     venvPath,
+  //     projectDir: join(workPath, entryDirectory),
+  //     args: ['install', workersDep],
+  //   });
+  // }
+
   debug('Entrypoint is', entrypoint);
   const moduleName = entrypoint.replace(/\//g, '.').replace(/\.py$/i, '');
   const vendorDir = resolveVendorDir();
@@ -536,12 +563,13 @@ from vercel_runtime.vc_init import vc_handler
     projectName,
     noBuildCheckFailed,
     pythonPath: pythonVersion.pythonPath,
+    hasCustomCommand,
   });
 
-  const { overLambdaLimit, allVendorFiles } =
+  const { runtimeInstallEnabled, allVendorFiles } =
     await depExternalizer.analyze(files);
 
-  if (overLambdaLimit) {
+  if (runtimeInstallEnabled) {
     await depExternalizer.generateBundle(files);
   } else {
     // Bundle all dependencies since we're not doing runtime installation
@@ -579,19 +607,13 @@ export { startDevServer };
 
 export const shouldServe: ShouldServe = opts => {
   const framework = opts.config.framework;
-  if (framework === 'fastapi') {
+  if (isPythonFramework(framework)) {
     const requestPath = opts.requestPath.replace(/\/$/, '');
     // Don't override API routes if another builder already matched them
     if (requestPath.startsWith('api') && opts.hasMatched) {
       return false;
     }
     // Public assets are served by the static builder / default handler
-    return true;
-  } else if (framework === 'flask') {
-    const requestPath = opts.requestPath.replace(/\/$/, '');
-    if (requestPath.startsWith('api') && opts.hasMatched) {
-      return false;
-    }
     return true;
   }
   return defaultShouldServe(opts);
