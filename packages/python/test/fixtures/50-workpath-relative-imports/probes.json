@@ -1,0 +1,17 @@
+{
+  "probes": [
+    {
+      "path": "/",
+      "status": 200,
+      "mustContain": "\"import_marker\":\"relative-import-ok\""
+    },
+    {
+      "path": "/api/relative/RANDOMNESS_PLACEHOLDER",
+      "status": 200,
+      "mustContain": "\"message\":\"hello RANDOMNESS_PLACEHOLDER from relative import\""
+    },
+    {
+      "logMustContain": "Using Python 3.12 from pyproject.toml"
+    }
+  ]
+}

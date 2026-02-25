@@ -1,0 +1,10 @@
+[project]
+name = "fixture-workpath-relative-imports"
+version = "0.0.1"
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi>=0.118,<1",
+]
+
+[project.scripts]
+app = "main:app"
