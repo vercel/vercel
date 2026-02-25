@@ -65,9 +65,10 @@ const populateOIDCToken = async () => {
     }
   }
 
-  // Smoke uses the Vercel sandbox and requires OIDC. Only fall back to VERCEL_TOKEN when not running smoke.
+  // Smoke uses the Vercel sandbox and requires OIDC. Only fall back to VERCEL_TOKEN
+  // when smoke is not explicitly requested (e.g. not running `pnpm test:evals smoke`).
   const args = process.argv.slice(2);
-  const runningSmoke = args.length === 0 || args.includes('smoke');
+  const runningSmoke = args.includes('smoke');
   if (process.env.VERCEL_TOKEN && !runningSmoke) {
     const message = lastError
       ? lastError.message
