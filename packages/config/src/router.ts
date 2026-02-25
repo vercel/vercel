@@ -1164,6 +1164,22 @@ export class Router {
    *    });
    */
   public route(config: Route): this {
+    if (config.src && config.source) {
+      throw new Error(
+        'Route cannot define both `src` and `source`. Use one or the other.'
+      );
+    }
+    if (config.dest && config.destination) {
+      throw new Error(
+        'Route cannot define both `dest` and `destination`. Use one or the other.'
+      );
+    }
+    if (config.status !== undefined && config.statusCode !== undefined) {
+      throw new Error(
+        'Route cannot define both `status` and `statusCode`. Use one or the other.'
+      );
+    }
+
     const src = config.src ?? config.source;
     if (!src) {
       throw new Error('Route must define either `src` or `source`.');
@@ -1174,11 +1190,11 @@ export class Router {
     config.src = src;
     delete config.source;
     if (config.destination !== undefined) {
-      config.dest = config.dest ?? config.destination;
+      config.dest = config.destination;
       delete config.destination;
     }
     if (config.statusCode !== undefined) {
-      config.status = config.status ?? config.statusCode;
+      config.status = config.statusCode;
       delete config.statusCode;
     }
 
