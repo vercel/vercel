@@ -65,8 +65,10 @@ const populateOIDCToken = async () => {
     }
   }
 
-  // If we have a VERCEL_TOKEN already, log a warning and continue without OIDC.
-  if (process.env.VERCEL_TOKEN) {
+  // Smoke uses the Vercel sandbox and requires OIDC. Only fall back to VERCEL_TOKEN when not running smoke.
+  const args = process.argv.slice(2);
+  const runningSmoke = args.length === 0 || args.includes('smoke');
+  if (process.env.VERCEL_TOKEN && !runningSmoke) {
     const message = lastError
       ? lastError.message
       : 'unknown error running "vc/vercel env pull -y"';
