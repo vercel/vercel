@@ -663,12 +663,10 @@ async function handleAIAdd(
 
     output.error(errorMessage!);
 
-    // Non-interactive: exit immediately
-    if (skipPrompts) {
+    if (skipPrompts || !client.stdin.isTTY) {
       return 1;
     }
 
-    // Interactive: offer retry
     const retry = await client.input.select({
       message: 'What would you like to do?',
       choices: [
@@ -700,7 +698,13 @@ async function handleAIAdd(
     );
   }
 
-  // Interactive loop: Create / Edit with AI / Edit manually / Discard
+  if (!client.stdin.isTTY) {
+    output.error(
+      `Cannot interactively confirm route creation in a non-TTY environment. Use ${getCommandName('routes add --ai "..." --yes')} to skip confirmation.`
+    );
+    return 1;
+  }
+
   for (;;) {
     const choice = await client.input.select({
       message: 'What would you like to do?',

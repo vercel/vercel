@@ -1385,12 +1385,10 @@ async function handleAIEdit(
 
     output.error(errorMessage!);
 
-    // Non-interactive: exit immediately
-    if (skipConfirmation) {
+    if (skipConfirmation || !client.stdin.isTTY) {
       return 1;
     }
 
-    // Interactive: offer retry
     const retry = await client.input.select({
       message: 'What would you like to do?',
       choices: [
@@ -1423,7 +1421,13 @@ async function handleAIEdit(
     );
   }
 
-  // Interactive loop
+  if (!client.stdin.isTTY) {
+    output.error(
+      `Cannot interactively confirm route changes in a non-TTY environment. Use ${getCommandName('routes edit <name-or-id> --ai "..." --yes')} to skip confirmation.`
+    );
+    return 1;
+  }
+
   for (;;) {
     const choice = await client.input.select({
       message: 'What would you like to do?',
