@@ -2,8 +2,10 @@
 //!
 //! Currently detects:
 //! - Top-level 'app' callables (Flask, FastAPI, Sanic, etc.)
+//! - Top-level 'application' callables (Django)
 //! - Top-level 'handler' classes (BaseHTTPRequestHandler subclasses)
 
+use ruff_python_ast::visitor::{walk_body, walk_expr, Visitor};
 use ruff_python_ast::{Expr, Stmt};
 use ruff_python_parser::parse_module;
 
@@ -77,10 +79,119 @@ pub(crate) fn contains_app_or_handler_impl(source: &str) -> bool {
     false
 }
 
+/// Extract the string value of a top-level constant with the given name.
+/// Only considers simple assignments (`NAME = "string"`) and annotated assignments
+/// (`NAME: str = "string"`) at module level. Returns the first matching string
+/// value, or None if not found or the value is not a string literal.
+pub(crate) fn get_string_constant_impl(source: &str, name: &str) -> Option<String> {
+    let parsed = match parse_module(source) {
+        Ok(parsed) => parsed,
+        Err(_) => return None,
+    };
+    for stmt in parsed.suite() {
+        match stmt {
+            Stmt::Assign(assign) => {
+                if assign.targets.len() == 1 && is_name_expr(&assign.targets[0], name) {
+                    if let Some(s) = expr_to_string_literal(&assign.value) {
+                        return Some(s);
+                    }
+                }
+            }
+            Stmt::AnnAssign(ann_assign) => {
+                if is_name_expr(&ann_assign.target, name) {
+                    if let Some(value) = &ann_assign.value {
+                        if let Some(s) = expr_to_string_literal(value) {
+                            return Some(s);
+                        }
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+    None
+}
+
 fn is_name_expr(expr: &Expr, name: &str) -> bool {
     match expr {
         Expr::Name(name_expr) => name_expr.id.as_str() == name,
         _ => false,
+    }
+}
+
+fn is_name_or_attribute_expr(expr: &Expr, path: &[&str]) -> bool {
+    match path {
+        [] => false,
+        [single] => matches!(expr, Expr::Name(n) if n.id.as_str() == *single),
+        _ => {
+            let (last, rest) = path.split_last().unwrap();
+            match expr {
+                Expr::Attribute(attr) if attr.attr.as_str() == *last => {
+                    is_name_or_attribute_expr(attr.value.as_ref(), rest)
+                }
+                _ => false,
+            }
+        }
+    }
+}
+
+/// Extract the default value from os.environ.setdefault('DJANGO_SETTINGS_MODULE', '...')
+/// by parsing the Python source and walking the AST. Returns the second argument
+/// (e.g. 'app.settings') only if exactly one such call exists; returns None if
+/// there are zero or more than one.
+pub(crate) fn parse_django_settings_module_impl(source: &str) -> Option<String> {
+    let parsed = match parse_module(source) {
+        Ok(parsed) => parsed,
+        Err(_) => return None,
+    };
+    let mut finder = DjangoSettingsFinder {
+        matches: Vec::new(),
+    };
+    walk_body(&mut finder, parsed.suite());
+    match finder.matches.len() {
+        1 => Some(finder.matches.into_iter().next().unwrap()),
+        _ => None,
+    }
+}
+
+/// Visitor that walks the AST and collects every DJANGO_SETTINGS_MODULE value
+/// from os.environ.setdefault('DJANGO_SETTINGS_MODULE', ...) calls.
+struct DjangoSettingsFinder {
+    matches: Vec<String>,
+}
+
+impl Visitor<'_> for DjangoSettingsFinder {
+    fn visit_expr(&mut self, expr: &Expr) {
+        if let Expr::Call(call) = expr {
+            if let Some(settings) = match_django_setdefault_call(call) {
+                self.matches.push(settings);
+            }
+        }
+        walk_expr(self, expr);
+    }
+}
+
+/// Check if this Call is os.environ.setdefault('DJANGO_SETTINGS_MODULE', <second>)
+/// and return the second argument as a string if it is a string literal.
+fn match_django_setdefault_call(call: &ruff_python_ast::ExprCall) -> Option<String> {
+    if !is_name_or_attribute_expr(call.func.as_ref(), &["os", "environ", "setdefault"]) {
+        return None;
+    }
+    let args = &call.arguments.args;
+    if args.len() < 2 {
+        return None;
+    }
+    let first_str = expr_to_string_literal(&args[0])?;
+    if first_str != "DJANGO_SETTINGS_MODULE" {
+        return None;
+    }
+    expr_to_string_literal(&args[1])
+}
+
+fn expr_to_string_literal(expr: &Expr) -> Option<String> {
+    match expr {
+        Expr::StringLiteral(string_lit) => Some(string_lit.value.to_str().to_string()),
+        _ => None,
     }
 }
 
@@ -195,5 +306,106 @@ def create():
     return app
 "#;
         assert!(!contains_app_or_handler_impl(source));
+    }
+
+    // -------------------------------------------------------------------------
+    // get_string_constant_impl
+    // -------------------------------------------------------------------------
+
+    #[test]
+    fn test_get_string_constant_simple() {
+        let source = r#"VERSION = "1.0.0""#;
+        assert_eq!(
+            get_string_constant_impl(source, "VERSION"),
+            Some("1.0.0".to_string())
+        );
+    }
+
+    #[test]
+    fn test_get_string_constant_annotated() {
+        let source = r#"APP_NAME: str = "myapp""#;
+        assert_eq!(
+            get_string_constant_impl(source, "APP_NAME"),
+            Some("myapp".to_string())
+        );
+    }
+
+    #[test]
+    fn test_get_string_constant_not_found() {
+        let source = r#"VERSION = "1.0.0""#;
+        assert_eq!(get_string_constant_impl(source, "OTHER"), None);
+    }
+
+    #[test]
+    fn test_get_string_constant_non_string_value() {
+        let source = r#"COUNT = 42"#;
+        assert_eq!(get_string_constant_impl(source, "COUNT"), None);
+    }
+
+    // -------------------------------------------------------------------------
+    // parse_django_settings_module_impl
+    // -------------------------------------------------------------------------
+
+    #[test]
+    fn test_parse_django_settings_module_in_main() {
+        let source = r#"
+#!/usr/bin/env python
+import os
+import sys
+
+def main():
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'hello.settings')
+    from django.core.management import execute_from_command_line
+    execute_from_command_line(sys.argv)
+
+if __name__ == '__main__':
+    main()
+"#;
+        assert_eq!(
+            parse_django_settings_module_impl(source),
+            Some("hello.settings".to_string())
+        );
+    }
+
+    #[test]
+    fn test_parse_django_settings_module_app_settings() {
+        let source = r#"os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'app.settings')"#;
+        assert_eq!(
+            parse_django_settings_module_impl(source),
+            Some("app.settings".to_string())
+        );
+    }
+
+    #[test]
+    fn test_parse_django_settings_module_double_quotes() {
+        let source = r#"os.environ.setdefault("DJANGO_SETTINGS_MODULE", "myproject.settings")"#;
+        assert_eq!(
+            parse_django_settings_module_impl(source),
+            Some("myproject.settings".to_string())
+        );
+    }
+
+    #[test]
+    fn test_parse_django_settings_module_not_found() {
+        let source = r#"
+import os
+print("hello")
+"#;
+        assert_eq!(parse_django_settings_module_impl(source), None);
+    }
+
+    #[test]
+    fn test_parse_django_settings_module_invalid_syntax() {
+        let source = r#"os.environ.setdefault('DJANGO_SETTINGS_MODULE', "#;
+        assert_eq!(parse_django_settings_module_impl(source), None);
+    }
+
+    #[test]
+    fn test_parse_django_settings_module_multiple_matches() {
+        let source = r#"
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'app.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'other.settings')
+"#;
+        assert_eq!(parse_django_settings_module_impl(source), None);
     }
 }
