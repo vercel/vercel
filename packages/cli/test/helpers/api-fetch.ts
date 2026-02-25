@@ -1,5 +1,5 @@
 import type { RequestInit } from 'node-fetch';
-import fetch from 'node-fetch';
+import nodeFetch from 'node-fetch';
 
 export const apiFetch = (
   path: string,
