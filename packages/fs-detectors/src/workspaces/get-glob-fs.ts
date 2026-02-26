@@ -86,7 +86,7 @@ export function getGlobFs(_fs: DetectorFilesystem): GlobFs {
         })
         .catch(err => cb(err));
     },
-    lstatSync(_path: string): Stats {
+    lstatSync(): Stats {
       throw new Error('Not Implemented');
     },
     promises: {
