@@ -1,5 +1,11 @@
 # @vercel/frameworks
 
+## 3.19.1
+
+### Patch Changes
+
+- Rename fetch to nodeFetch when importing from node-fetch ([#15232](https://github.com/vercel/vercel/pull/15232))
+
 ## 3.19.0
 
 ### Minor Changes
