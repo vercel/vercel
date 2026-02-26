@@ -1177,6 +1177,93 @@ elif "app" in __vc_variables or "application" in __vc_variables:
 
         from vercel_runtime._vendor.werkzeug.datastructures import Headers
 
+        # asyncio.Runner keeps a persistent event loop across run() calls.
+        # The lifespan task stays suspended (awaiting the shutdown signal)
+        # while successive HTTP requests are dispatched on the same loop.
+        _asgi_runner = asyncio.Runner()
+
+        # --- ASGI Lifespan Protocol ---
+        _lifespan_receive_queue: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
+        _lifespan_send_queue: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
+        _lifespan_task: asyncio.Task[None] | None = None
+        _lifespan_active = False
+
+        async def _lifespan_startup(asgi_app: Any) -> bool:
+            """Run the ASGI lifespan startup sequence.
+
+            Returns True when the app acknowledges startup, False otherwise.
+            The lifespan task remains suspended (awaiting the shutdown
+            signal) so it stays alive for the duration of the process.
+            """
+            scope: _ASGIScope = {
+                "type": "lifespan",
+                "asgi": {"version": "3.0", "spec_version": "2.0"},
+            }
+
+            async def receive() -> dict[str, Any]:
+                return await _lifespan_receive_queue.get()
+
+            async def send(message: dict[str, Any]) -> None:
+                await _lifespan_send_queue.put(message)
+
+            # Start the lifespan coroutine as a background task.
+            # Store in outer scope to prevent GC (event loop holds weak refs).
+            global _lifespan_task  # noqa: PLW0603
+            _lifespan_task = asyncio.create_task(asgi_app(scope, receive, send))
+
+            # Ask the app to start up.
+            await _lifespan_receive_queue.put({"type": "lifespan.startup"})
+
+            # Race: wait for the app to respond OR the task to finish
+            # (apps that don't support lifespan return immediately).
+            send_future = asyncio.create_task(_lifespan_send_queue.get())
+            done, pending = await asyncio.wait(
+                {send_future, _lifespan_task},
+                timeout=30,
+                return_when=asyncio.FIRST_COMPLETED,
+            )
+
+            if send_future not in done:
+                # App completed or timed out without responding.
+                for p in pending:
+                    p.cancel()
+                _lifespan_task = None
+                return False
+
+            msg = send_future.result()
+            if msg.get("type") == "lifespan.startup.complete":
+                return True
+            if msg.get("type") == "lifespan.startup.failed":
+                _stderr(
+                    "ASGI lifespan startup failed: " + msg.get("message", "")
+                )
+            _lifespan_task.cancel()
+            _lifespan_task = None
+            return False
+
+        try:
+            _lifespan_active = _asgi_runner.run(_lifespan_startup(app))
+        except BaseException:
+            # App doesn't support lifespan — proceed without it.
+            _lifespan_active = False
+
+        def _lifespan_shutdown() -> None:
+            if not _lifespan_active:
+                return
+
+            async def _do_shutdown() -> None:
+                await _lifespan_receive_queue.put({"type": "lifespan.shutdown"})
+                with contextlib.suppress(TimeoutError, asyncio.CancelledError):
+                    async with asyncio.timeout(10):
+                        await _lifespan_send_queue.get()
+
+            with contextlib.suppress(BaseException):
+                _asgi_runner.run(_do_shutdown())
+
+        atexit.register(_lifespan_shutdown)
+
+        # --- HTTP Request Handling ---
+
         class ASGICycleState(enum.Enum):
             REQUEST = enum.auto()
             RESPONSE = enum.auto()
@@ -1199,9 +1286,6 @@ elif "app" in __vc_variables or "application" in __vc_variables:
                 from the application.
                 """
                 self.app_queue = asyncio.Queue()
-                loop: asyncio.AbstractEventLoop | None = None
-                if _use_legacy_asyncio:
-                    loop = asyncio.new_event_loop()
                 self.put_message(
                     {
                         "type": "http.request",
@@ -1211,16 +1295,8 @@ elif "app" in __vc_variables or "application" in __vc_variables:
                 )
 
                 asgi_instance = app(self.scope, self.receive, self.send)
-
-                if _use_legacy_asyncio and loop is not None:
-                    asgi_task = loop.create_task(asgi_instance)
-                    loop.run_until_complete(asgi_task)
-                else:
-                    asyncio.run(self.run_asgi_instance(asgi_instance))
+                _asgi_runner.run(asgi_instance)
                 return self.response
-
-            async def run_asgi_instance(self, asgi_instance: Any) -> None:
-                await asgi_instance
 
             def put_message(self, message: dict[str, Any]) -> None:
                 self.app_queue.put_nowait(message)

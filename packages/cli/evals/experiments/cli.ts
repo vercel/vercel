@@ -2,6 +2,7 @@ import { existsSync, readFileSync, readdirSync } from 'fs';
 import { join, dirname, relative } from 'path';
 import { fileURLToPath } from 'url';
 import type { ExperimentConfig } from '@vercel/agent-eval';
+import { setupAuthAndConfig } from '../setup/auth-and-config';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SKILLS_DIR = join(__dirname, '../../../../skills/vercel-cli');
@@ -41,40 +42,27 @@ const config: ExperimentConfig = {
   setup: async sandbox => {
     const teamId = process.env.CLI_EVAL_TEAM_ID ?? '';
     const projectId = process.env.CLI_EVAL_PROJECT_ID ?? '';
-    const vercelToken = process.env.VERCEL_TOKEN ?? '';
 
-    // Set environment variables for agent detection and Vercel auth
-    // This enables non-interactive mode automatically via agent detection
+    await setupAuthAndConfig(sandbox);
+
     const runCmd =
       (sandbox as any).runCommand ||
       (sandbox as any).exec ||
       (sandbox as any).run ||
       null;
 
-    // Sandbox uses node user (home /home/node). Write auth and env so CLI and agent can authenticate.
-    if (runCmd && vercelToken) {
+    // Docker sandbox: enable non-interactive mode via agent detection
+    if (runCmd) {
       try {
-        // CLI reads auth from ~/.vercel/auth.json (global path). Create it so vercel link --yes works.
-        const authJson = JSON.stringify({ token: vercelToken });
         await runCmd.call(sandbox, 'bash', [
           '-c',
-          `mkdir -p /home/node/.vercel && printf '%s' '${authJson.replace(/'/g, "'\\''")}' > /home/node/.vercel/auth.json`,
-        ]);
-        // Export in .bashrc for subprocesses (agent shells may source this)
-        await runCmd.call(sandbox, 'bash', [
-          '-c',
-          `printf 'export VERCEL_TOKEN="%s"\\n' '${vercelToken.replace(/'/g, "'\\''")}' >> /home/node/.bashrc`,
+          'printf \'export AI_AGENT="claude-code"\\n\' >> "$HOME/.bashrc"',
         ]);
         await runCmd.call(sandbox, 'bash', [
           '-c',
-          'printf \'export AI_AGENT="claude-code"\\n\' >> /home/node/.bashrc',
-        ]);
-        await runCmd.call(sandbox, 'bash', [
-          '-c',
-          'printf \'export CLAUDE_CODE="1"\\n\' >> /home/node/.bashrc',
+          'printf \'export CLAUDE_CODE="1"\\n\' >> "$HOME/.bashrc"',
         ]);
       } catch (error: any) {
-        // Environment variable setup failed - continue anyway
         void error;
       }
     }
@@ -130,7 +118,9 @@ const config: ExperimentConfig = {
 
 Docs are in \`docs/vercel-cli/\` (skill + references). Use \`vercel <command> -h\` for help.
 
-Use \`--yes\` and \`evals-setup.json\` for team/project IDs when linking.`;
+Use \`--yes\` and \`evals-setup.json\` for team/project IDs when linking.
+
+If \`vercel link\` reports no credentials, run \`source ~/.profile\` first (or \`source ~/.bashrc\`) so VERCEL_TOKEN is set, then retry.`;
 
     // Write all files
     await sandbox.writeFiles({

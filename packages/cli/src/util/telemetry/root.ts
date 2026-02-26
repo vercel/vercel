@@ -47,6 +47,13 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
+  trackCliCommandBuy(actual: string) {
+    this.trackCliCommand({
+      command: 'buy',
+      value: actual,
+    });
+  }
+
   trackCliCommandCache(actual: string) {
     this.trackCliCommand({
       command: 'cache',
@@ -281,6 +288,13 @@ export class RootTelemetryClient extends TelemetryClient {
   trackCliCommandRedirects(actual: string) {
     this.trackCliCommand({
       command: 'redirects',
+      value: actual,
+    });
+  }
+
+  trackCliCommandRoutes(actual: string) {
+    this.trackCliCommand({
+      command: 'routes',
       value: actual,
     });
   }

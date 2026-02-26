@@ -56,13 +56,14 @@ describe('validation', () => {
     it('should pass for valid aggregation on count', () => {
       expect(validateAggregation('incomingRequest', 'count', 'sum')).toEqual({
         valid: true,
+        value: 'sum',
       });
     });
 
     it('should pass for p95 on duration measure', () => {
       expect(
         validateAggregation('incomingRequest', 'requestDurationMs', 'p95')
-      ).toEqual({ valid: true });
+      ).toEqual({ valid: true, value: 'p95' });
     });
 
     it('should fail for p95 on count measure', () => {

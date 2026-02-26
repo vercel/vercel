@@ -1,47 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import {
-  escapeCsvValue,
   getRollupColumnName,
-  formatCsv,
   formatQueryJson,
-  formatSchemaListCsv,
-  formatSchemaDetailCsv,
   formatSchemaDetailJson,
   formatSchemaListJson,
   formatErrorJson,
 } from '../../../../src/commands/metrics/output';
+import type { QueryMetadata } from '../../../../src/commands/metrics/types';
 
 describe('output', () => {
-  describe('escapeCsvValue', () => {
-    it('should return plain value as-is', () => {
-      expect(escapeCsvValue('hello')).toBe('hello');
-    });
-
-    it('should wrap value with comma in quotes', () => {
-      expect(escapeCsvValue('hello,world')).toBe('"hello,world"');
-    });
-
-    it('should escape double quotes', () => {
-      expect(escapeCsvValue('say "hi"')).toBe('"say ""hi"""');
-    });
-
-    it('should wrap value with newline in quotes', () => {
-      expect(escapeCsvValue('line1\nline2')).toBe('"line1\nline2"');
-    });
-
-    it('should return empty string for null', () => {
-      expect(escapeCsvValue(null)).toBe('');
-    });
-
-    it('should return empty string for undefined', () => {
-      expect(escapeCsvValue(undefined)).toBe('');
-    });
-
-    it('should convert numbers to string', () => {
-      expect(escapeCsvValue(42)).toBe('42');
-    });
-  });
-
   describe('getRollupColumnName', () => {
     it('should return default column name', () => {
       expect(getRollupColumnName('count', 'sum')).toBe('count_sum');
@@ -54,69 +21,9 @@ describe('output', () => {
     });
   });
 
-  describe('formatCsv', () => {
-    it('should format ungrouped data', () => {
-      const data = [
-        { timestamp: '2025-01-15T10:00:00Z', count_sum: 89 },
-        { timestamp: '2025-01-15T10:05:00Z', count_sum: 102 },
-      ];
-      const result = formatCsv(data, [], 'count_sum');
-      expect(result).toBe(
-        'timestamp,count_sum\n' +
-          '2025-01-15T10:00:00Z,89\n' +
-          '2025-01-15T10:05:00Z,102\n'
-      );
-    });
-
-    it('should format grouped data', () => {
-      const data = [
-        {
-          timestamp: '2025-01-15T10:00:00Z',
-          httpStatus: '200',
-          count_sum: 4520,
-        },
-        {
-          timestamp: '2025-01-15T10:00:00Z',
-          httpStatus: '500',
-          count_sum: 89,
-        },
-      ];
-      const result = formatCsv(data, ['httpStatus'], 'count_sum');
-      expect(result).toBe(
-        'timestamp,httpStatus,count_sum\n' +
-          '2025-01-15T10:00:00Z,200,4520\n' +
-          '2025-01-15T10:00:00Z,500,89\n'
-      );
-    });
-
-    it('should format empty data with header only', () => {
-      const result = formatCsv([], [], 'count_sum');
-      expect(result).toBe('timestamp,count_sum\n');
-    });
-
-    it('should handle null values', () => {
-      const data = [{ timestamp: '2025-01-15T10:00:00Z', count_sum: null }];
-      const result = formatCsv(data, [], 'count_sum');
-      expect(result).toBe('timestamp,count_sum\n2025-01-15T10:00:00Z,\n');
-    });
-
-    it('should include multiple group-by columns in order', () => {
-      const data = [
-        {
-          timestamp: '2025-01-15T10:00:00Z',
-          httpStatus: '200',
-          route: '/api/users',
-          count_sum: 100,
-        },
-      ];
-      const result = formatCsv(data, ['httpStatus', 'route'], 'count_sum');
-      expect(result).toContain('timestamp,httpStatus,route,count_sum\n');
-    });
-  });
-
   describe('formatQueryJson', () => {
     it('should format full JSON response', () => {
-      const query = {
+      const query: QueryMetadata = {
         event: 'incomingRequest',
         measure: 'count',
         aggregation: 'sum',
@@ -139,7 +46,7 @@ describe('output', () => {
     });
 
     it('should handle missing optional fields', () => {
-      const query = {
+      const query: QueryMetadata = {
         event: 'test',
         measure: 'count',
         aggregation: 'sum',
@@ -149,52 +56,11 @@ describe('output', () => {
         endTime: '2025-01-15T11:00:00Z',
         granularity: { minutes: 1 } as const,
       };
-      const result = JSON.parse(formatQueryJson(query, { statistics: {} }));
+      const result = JSON.parse(
+        formatQueryJson(query, { summary: [], statistics: {} })
+      );
       expect(result.data).toEqual([]);
       expect(result.summary).toEqual([]);
-    });
-  });
-
-  describe('formatSchemaListCsv', () => {
-    it('should format event list', () => {
-      const events = [
-        { name: 'incomingRequest', description: 'HTTP requests' },
-        {
-          name: 'functionExecution',
-          description: 'Function executions',
-        },
-      ];
-      const result = formatSchemaListCsv(events);
-      expect(result).toBe(
-        'event,description\n' +
-          'incomingRequest,HTTP requests\n' +
-          'functionExecution,Function executions\n'
-      );
-    });
-  });
-
-  describe('formatSchemaDetailCsv', () => {
-    it('should output two blocks separated by blank line', () => {
-      const event = {
-        name: 'test',
-        description: 'Test event',
-        dimensions: [
-          { name: 'dim1', label: 'Dimension 1', filterOnly: false },
-          { name: 'dim2', label: 'Dimension 2', filterOnly: true },
-        ],
-        measures: [
-          { name: 'count', label: 'Count', unit: 'count' },
-          { name: 'durationMs', label: 'Duration', unit: 'milliseconds' },
-        ],
-      };
-      const result = formatSchemaDetailCsv(event);
-      const blocks = result.split('\n\n');
-      expect(blocks).toHaveLength(2);
-      expect(blocks[0]).toContain('dimension,label,filterOnly');
-      expect(blocks[0]).toContain('dim1,Dimension 1,false');
-      expect(blocks[0]).toContain('dim2,Dimension 2,true');
-      expect(blocks[1]).toContain('measure,label,unit');
-      expect(blocks[1]).toContain('count,Count,count');
     });
   });
 
