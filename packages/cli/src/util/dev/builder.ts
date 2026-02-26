@@ -420,7 +420,7 @@ export async function executeBuild(
   // subclass type instances. At this point, the objects are still in their
   // serialized IPC form (Buffers as {type:'Buffer',data:[...]}, etc).
   const deserializedOutput = await deserializeBuildOutputs(
-    buildOutput as SerializedBuildOutputs
+    buildOutput as unknown as SerializedBuildOutputs
   );
   for (const [name, output] of Object.entries(deserializedOutput)) {
     buildOutput[name] = output;
