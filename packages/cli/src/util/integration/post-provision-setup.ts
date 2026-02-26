@@ -23,6 +23,7 @@ export interface PostProvisionOptions {
   onProjectConnectFailed?: (projectId: string, error: Error) => void;
   prefix?: string;
   integrationSlug?: string;
+  /** Resolved installation ID used for the dashboard deeplink URL. Not the same as the CLI `--installation-id` flag. */
   installationId?: string;
 }
 
