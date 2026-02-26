@@ -527,6 +527,23 @@ export function computeGroupStats(points: TimeSeriesPoint[]): GroupStats {
   };
 }
 
+/** Maximum display length for group values before ellipsizing. */
+const MAX_GROUP_VALUE_LENGTH = 60;
+
+/**
+ * Ellipsizes a string by keeping equal start/end portions and replacing the
+ * middle with a single `…` character.
+ *
+ * Example (maxLength=60):
+ *   "/very/long/path/..." → "/very/long/pa…nd/of/path"
+ */
+export function ellipsizeMiddle(str: string, maxLength: number): string {
+  if (str.length <= maxLength) return str;
+  const endLength = Math.floor((maxLength - 1) / 2);
+  const startLength = maxLength - 1 - endLength;
+  return `${str.slice(0, startLength)}…${str.slice(str.length - endLength)}`;
+}
+
 /**
  * Reduces long series to `maxLen` buckets.
  * Bucket rules:
@@ -668,7 +685,9 @@ export function formatSummaryTable(opts: SummaryTableOptions): string {
   const rows: string[][] = [header.map(name => chalk.bold(chalk.cyan(name)))];
 
   for (const row of opts.rows) {
-    const nextRow: string[] = [...row.groupValues];
+    const nextRow: string[] = row.groupValues.map(v =>
+      ellipsizeMiddle(v, MAX_GROUP_VALUE_LENGTH)
+    );
 
     if (row.stats.allMissing) {
       nextRow.push(...statColumns.map(() => '--'));
@@ -728,7 +747,7 @@ export function formatSparklineSection(
   const rows = [
     [...groupByFields, 'sparkline'].map(name => chalk.bold(chalk.cyan(name))),
     ...rowsWithSparklines.map(({ groupValues, sparkline }) => [
-      ...groupValues,
+      ...groupValues.map(v => ellipsizeMiddle(v, MAX_GROUP_VALUE_LENGTH)),
       sparkline,
     ]),
   ];

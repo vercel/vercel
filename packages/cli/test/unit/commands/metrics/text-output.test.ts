@@ -12,6 +12,7 @@ import {
   formatMetadataHeader,
   formatSparklineSection,
   formatText,
+  ellipsizeMiddle,
 } from '../../../../src/commands/metrics/text-output';
 import type {
   MetricsQueryResponse,
@@ -52,6 +53,40 @@ describe('text-output', () => {
       expect(formatDecimal(0.87)).toBe('0.87');
       expect(formatDecimal(0.042)).toBe('0.042');
       expect(formatDecimal(0.003)).toBe('0.003');
+    });
+  });
+
+  describe('ellipsizeMiddle', () => {
+    it('should return the string unchanged when within max length', () => {
+      expect(ellipsizeMiddle('short', 60)).toBe('short');
+      expect(ellipsizeMiddle('/api/status', 60)).toBe('/api/status');
+    });
+
+    it('should return the string unchanged when exactly at max length', () => {
+      const str = 'a'.repeat(60);
+      expect(ellipsizeMiddle(str, 60)).toBe(str);
+    });
+
+    it('should ellipsize long strings with equal start/end portions', () => {
+      const result = ellipsizeMiddle('a'.repeat(100), 60);
+      expect(result).toHaveLength(60);
+      expect(result).toContain('…');
+      // With maxLength=60: endLength=29, startLength=30
+      expect(result).toBe('a'.repeat(30) + '…' + 'a'.repeat(29));
+    });
+
+    it('should handle odd max length correctly', () => {
+      const result = ellipsizeMiddle('abcdefghij', 5);
+      // endLength=2, startLength=2
+      expect(result).toBe('ab…ij');
+      expect(result).toHaveLength(5);
+    });
+
+    it('should handle even max length correctly', () => {
+      const result = ellipsizeMiddle('abcdefghij', 6);
+      // endLength=2, startLength=3
+      expect(result).toBe('abc…ij');
+      expect(result).toHaveLength(6);
     });
   });
 
