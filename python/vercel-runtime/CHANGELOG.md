@@ -1,5 +1,11 @@
 # vercel-runtime
 
+## 0.5.2
+
+### Patch Changes
+
+- fix ASGI lifecycle events in non-IPC codepath ([#15268](https://github.com/vercel/vercel/pull/15268))
+
 ## 0.5.1
 
 ### Patch Changes

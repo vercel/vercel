@@ -407,15 +407,15 @@ describe('query', () => {
     });
   });
 
-  describe('CSV output', () => {
-    it('should output ungrouped CSV', async () => {
+  describe('text output', () => {
+    it('should output ungrouped text', async () => {
       client.scenario.post('/api/observability/metrics', (_req, res) => {
         res.json({
           data: [
-            { timestamp: '2025-01-15T10:00:00Z', value: 89 },
-            { timestamp: '2025-01-15T10:05:00Z', value: 102 },
+            { timestamp: '2025-01-15T10:00:00Z', count_sum: 89 },
+            { timestamp: '2025-01-15T10:05:00Z', count_sum: 102 },
           ],
-          summary: [{ value: 191 }],
+          summary: [{ count_sum: 191 }],
           statistics: { rowsRead: 100 },
         });
       });
@@ -426,22 +426,23 @@ describe('query', () => {
 
       expect(exitCode).toBe(0);
       const output = client.stdout.getFullOutput();
-      expect(output).toContain('timestamp,count_sum');
+      expect(output).toContain('> Metric:');
+      expect(output).toContain('sparklines:');
     });
 
-    it('should output grouped CSV', async () => {
+    it('should output grouped text', async () => {
       client.scenario.post('/api/observability/metrics', (_req, res) => {
         res.json({
           data: [
             {
               timestamp: '2025-01-15T10:00:00Z',
               httpStatus: '200',
-              value: 4520,
+              count_sum: 4520,
             },
             {
               timestamp: '2025-01-15T10:00:00Z',
               httpStatus: '500',
-              value: 89,
+              count_sum: 89,
             },
           ],
           summary: [],
@@ -462,10 +463,12 @@ describe('query', () => {
 
       expect(exitCode).toBe(0);
       const output = client.stdout.getFullOutput();
-      expect(output).toContain('timestamp,httpStatus,count_sum');
+      expect(output).toContain('httpStatus');
+      expect(output).toContain('sparklines:');
+      expect(output).toContain('> Groups:');
     });
 
-    it('should output header only for empty data', async () => {
+    it('should output no-data message for empty data', async () => {
       client.scenario.post('/api/observability/metrics', (_req, res) => {
         res.json({ data: [], summary: [], statistics: {} });
       });
@@ -476,7 +479,9 @@ describe('query', () => {
 
       expect(exitCode).toBe(0);
       const output = client.stdout.getFullOutput();
-      expect(output).toContain('timestamp,count_sum');
+      expect(output).toContain('> Metric:');
+      expect(output).toContain('No data');
+      expect(output).not.toContain('sparklines:');
     });
   });
 
