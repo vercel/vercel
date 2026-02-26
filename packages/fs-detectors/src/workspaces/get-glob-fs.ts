@@ -1,7 +1,5 @@
-import fs from 'fs';
+import type { Dirent, Stats } from 'fs';
 import { DetectorFilesystem } from '../detectors/filesystem';
-
-type GlobFs = typeof fs;
 
 function removeWindowsPrefix(path: string) {
   // on windows, this will return a path like
@@ -12,74 +10,91 @@ function removeWindowsPrefix(path: string) {
   return path.replace(/^[a-zA-Z]:/, '');
 }
 
+/**
+ * Subset of FSOption from path-scurry used by glob.
+ * Defined inline to avoid depending on path-scurry directly.
+ */
+interface GlobFs {
+  readdir: (
+    path: string,
+    options: { withFileTypes: true },
+    cb: (er: NodeJS.ErrnoException | null, entries?: Dirent[]) => void
+  ) => void;
+  lstatSync: (path: string) => Stats;
+  promises: {
+    lstat: (path: string) => Promise<Stats>;
+    [k: string]: unknown;
+  };
+  [k: string]: unknown;
+}
+
+function makeStats(isPathAFile: boolean): Stats {
+  return {
+    ino: 0,
+    mode: 0,
+    nlink: 0,
+    uid: 0,
+    gid: 0,
+    rdev: 0,
+    size: 0,
+    blksize: 0,
+    blocks: 0,
+    atimeMs: 0,
+    mtimeMs: 0,
+    ctimeMs: 0,
+    birthtimeMs: 0,
+    atime: new Date(),
+    mtime: new Date(),
+    ctime: new Date(),
+    birthtime: new Date(),
+    dev: 0,
+    isBlockDevice: () => false,
+    isCharacterDevice: () => false,
+    isDirectory: () => !isPathAFile,
+    isFIFO: () => false,
+    isFile: () => isPathAFile,
+    isSocket: () => false,
+    isSymbolicLink: () => false,
+  };
+}
+
 export function getGlobFs(_fs: DetectorFilesystem): GlobFs {
-  const readdir = (
-    path: fs.PathLike,
-    callback: (err: NodeJS.ErrnoException | null, files: string[]) => void
-  ): void => {
-    _fs
-      .readdir(removeWindowsPrefix(String(path)))
-      .then(stats =>
-        callback(
-          null,
-          stats.map(stat => stat.name)
-        )
-      )
-      .catch(err => callback(err, []));
-  };
-
-  const stat = (
-    path: fs.PathLike,
-    callback: (
-      err: NodeJS.ErrnoException | null,
-      stats: fs.Stats | null
-    ) => void
-  ): void => {
-    _fs
-      .isFile(removeWindowsPrefix(String(path)))
-      .then(isPathAFile => {
-        callback(null, {
-          ino: 0,
-          mode: 0,
-          nlink: 0,
-          uid: 0,
-          gid: 0,
-          rdev: 0,
-          size: 0,
-          blksize: 0,
-          blocks: 0,
-          atimeMs: 0,
-          mtimeMs: 0,
-          ctimeMs: 0,
-          birthtimeMs: 0,
-          atime: new Date(),
-          mtime: new Date(),
-          ctime: new Date(),
-          birthtime: new Date(),
-          dev: 0,
-          isBlockDevice: () => false,
-          isCharacterDevice: () => false,
-          isDirectory: () => !isPathAFile,
-          isFIFO: () => false,
-          isFile: () => isPathAFile,
-          isSocket: () => false,
-          isSymbolicLink: () => false,
-        });
-      })
-      .catch(err => callback(err, null));
-  };
-
-  return new Proxy(fs, {
-    get(_target, prop) {
-      switch (prop) {
-        case 'readdir':
-          return readdir;
-        case 'lstat':
-        case 'stat':
-          return stat;
-        default:
-          throw new Error('Not Implemented');
-      }
+  return {
+    readdir(
+      path: string,
+      _options: { withFileTypes: true },
+      cb: (er: NodeJS.ErrnoException | null, entries?: Dirent[]) => void
+    ): void {
+      _fs
+        .readdir(removeWindowsPrefix(path))
+        .then(stats => {
+          const dirents = stats.map(stat => {
+            return {
+              name: stat.name,
+              isFile: () => stat.type === 'file',
+              isDirectory: () => stat.type === 'dir',
+              isBlockDevice: () => false,
+              isCharacterDevice: () => false,
+              isFIFO: () => false,
+              isSocket: () => false,
+              isSymbolicLink: () => false,
+              path: removeWindowsPrefix(stat.path),
+              parentPath: removeWindowsPrefix(stat.path),
+            } as Dirent;
+          });
+          cb(null, dirents);
+        })
+        .catch(err => cb(err));
     },
-  });
+    lstatSync(_path: string): Stats {
+      throw new Error('Not Implemented');
+    },
+    promises: {
+      lstat(path: string): Promise<Stats> {
+        return _fs
+          .isFile(removeWindowsPrefix(path))
+          .then(isPathAFile => makeStats(isPathAFile));
+      },
+    },
+  };
 }
