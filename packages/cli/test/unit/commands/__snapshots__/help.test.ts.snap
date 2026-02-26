@@ -4217,6 +4217,10 @@ exports[`help command > project help output snapshots > project help column widt
                    scope        
   remove   name    Delete a     
                    project      
+  token    [name]  Get a        
+                   development  
+                   OIDC token   
+                   for a project
 
 
   Global Options:
@@ -4282,6 +4286,7 @@ exports[`help command > project help output snapshots > project help column widt
   inspect  [name]  Displays information related to a project            
   list             Show all projects in the selected scope              
   remove   name    Delete a project                                     
+  token    [name]  Get a development OIDC token for a project           
 
 
   Global Options:
@@ -4315,6 +4320,7 @@ exports[`help command > project help output snapshots > project help column widt
   inspect  [name]  Displays information related to a project                                                    
   list             Show all projects in the selected scope                                                      
   remove   name    Delete a project                                                                             
+  token    [name]  Get a development OIDC token for a project                                                   
 
 
   Global Options:

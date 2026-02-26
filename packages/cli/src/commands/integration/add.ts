@@ -120,7 +120,7 @@ export async function add(
   // to apply product-specific validation rules
 
   // Auto-provision: completely separate code path (self-contained telemetry)
-  if (process.env.FF_AUTO_PROVISION_INSTALL === '1') {
+  if (process.env.FF_AUTO_PROVISION_INSTALL !== '0') {
     return await addAutoProvision(client, integrationSlug, resourceNameArg, {
       productSlug,
       metadata: metadataFlags,

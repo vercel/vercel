@@ -31,10 +31,13 @@ beforeEach(() => {
   openMock.mockReset().mockResolvedValue(undefined as never);
   pullMock.mockClear();
   vi.spyOn(Math, 'random').mockReturnValue(0);
+  // Pin to legacy flow — auto-provision has its own test suite
+  process.env.FF_AUTO_PROVISION_INSTALL = '0';
 });
 
 afterEach(() => {
   vi.restoreAllMocks();
+  delete process.env.FF_AUTO_PROVISION_INSTALL;
 });
 
 describe('install', () => {

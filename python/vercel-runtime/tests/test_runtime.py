@@ -751,6 +751,25 @@ class TestLambdaASGI(_LambdaTestCase):
         self.assertEqual(result["statusCode"], 200)
 
 
+class TestLambdaASGILifespan(_LambdaTestCase):
+    """Lambda mode with ASGI lifespan protocol."""
+
+    async def test_lifespan_startup_runs_before_request(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "asgi_lifespan_app.py", self.tmp_path
+        )
+        result = await _invoke_lambda(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            event=_lambda_event("GET", "/"),
+        )
+        # The app returns 200 only if lifespan startup ran.
+        self.assertEqual(result["statusCode"], 200)
+        body = base64.b64decode(result["body"]).decode()
+        self.assertEqual(body, "started")
+
+
 class TestLambdaErrorPaths(_LambdaTestCase):
     """Legacy Lambda mode error paths."""
 
