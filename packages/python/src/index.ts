@@ -602,7 +602,6 @@ from vercel_runtime.vc_init import vc_handler
     .child('vc.builder.python.bundle')
     .trace(async bundleSpan => {
       const depAnalysis = await depExternalizer.analyze(files);
-      await depExternalizer.analyze(files);
 
       bundleSpan.setAttributes({
         'python.bundle.totalSizeBytes': String(depAnalysis.totalBundleSize),
