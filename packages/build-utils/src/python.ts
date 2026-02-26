@@ -115,7 +115,7 @@ export async function getDjangoEntrypoint(
  */
 export async function getProcfileWebEntrypoint(
   workPath: string
-): Promise<string | null> {
+): Promise<[string, string | null] | null> {
   try {
     const procfilePath = join(workPath, 'Procfile');
     const procfileContent = await fs.promises.readFile(procfilePath, 'utf-8');
@@ -134,9 +134,9 @@ export async function getProcfileWebEntrypoint(
 const PY_ID = '[A-Za-z_][A-Za-z0-9_]*';
 const APP_SPEC_PATTERN = `${PY_ID}(?:\\.${PY_ID})*(?::${PY_ID})?`;
 
-function moduleSpecToPath(appSpec: string): string {
-  const modulePath = appSpec.split(':')[0];
-  return `${modulePath.replace(/\./g, '/')}.py`;
+function moduleSpecToPath(appSpec: string): [string, string | null] {
+  const [modulePart, attr] = appSpec.split(':');
+  return [`${modulePart.replace(/\./g, '/')}.py`, attr ?? null];
 }
 
 /**
@@ -149,7 +149,7 @@ function moduleSpecToPath(appSpec: string): string {
 async function parseProcfileWebGunicorn(
   workPath: string,
   procfileContent: string
-): Promise<string | null> {
+): Promise<[string, string | null] | null> {
   const webGunicornMatch = procfileContent.match(/web:\s*gunicorn\s*(.*)/);
   if (!webGunicornMatch) return null;
   const args = webGunicornMatch[1].trim().split(/\s+/);
@@ -273,7 +273,9 @@ function getGunicornConfigPath(args: string[]): string {
  * Parse Procfile content for "web: uvicorn <module>" or "web: uvicorn <module>:<attr>".
  * Returns the corresponding .py path or null.
  */
-function parseProcfileWebUvicorn(procfileContent: string): string | null {
+function parseProcfileWebUvicorn(
+  procfileContent: string
+): [string, string | null] | null {
   const match = procfileContent.match(
     new RegExp(`web:\\s*uvicorn\\s+(${APP_SPEC_PATTERN})`)
   );
@@ -288,7 +290,7 @@ function parseProcfileWebUvicorn(procfileContent: string): string | null {
 async function parseProcfileWebUwsgiIni(
   workPath: string,
   procfileContent: string
-): Promise<string | null> {
+): Promise<[string, string | null] | null> {
   const uwsgiMatch = procfileContent.match(/web:\s*uwsgi\s+(\S+\.ini)/);
   if (!uwsgiMatch) return null;
   const iniPath = join(workPath, uwsgiMatch[1]);

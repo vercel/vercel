@@ -28,7 +28,7 @@ describe('Procfile web entrypoint discovery', () => {
     });
 
     const result = await getProcfileWebEntrypoint(workPath);
-    expect(result).toBe('myapp/wsgi.py');
+    expect(result).toEqual(['myapp/wsgi.py', 'application']);
 
     if (fs.existsSync(workPath)) fs.removeSync(workPath);
   });
@@ -45,7 +45,7 @@ describe('Procfile web entrypoint discovery', () => {
     });
 
     const result = await getProcfileWebEntrypoint(workPath);
-    expect(result).toBe('project/wsgi.py');
+    expect(result).toEqual(['project/wsgi.py', null]);
 
     if (fs.existsSync(workPath)) fs.removeSync(workPath);
   });
@@ -62,7 +62,7 @@ describe('Procfile web entrypoint discovery', () => {
     });
 
     const result = await getProcfileWebEntrypoint(workPath);
-    expect(result).toBe('myapp/wsgi.py');
+    expect(result).toEqual(['myapp/wsgi.py', null]);
 
     if (fs.existsSync(workPath)) fs.removeSync(workPath);
   });
@@ -80,7 +80,7 @@ describe('Procfile web entrypoint discovery', () => {
     });
 
     const result = await getProcfileWebEntrypoint(workPath);
-    expect(result).toBe('myproject/wsgi.py');
+    expect(result).toEqual(['myproject/wsgi.py', 'application']);
 
     if (fs.existsSync(workPath)) fs.removeSync(workPath);
   });
@@ -98,7 +98,7 @@ describe('Procfile web entrypoint discovery', () => {
     });
 
     const result = await getProcfileWebEntrypoint(workPath);
-    expect(result).toBe('myproject/wsgi.py');
+    expect(result).toEqual(['myproject/wsgi.py', 'application']);
 
     if (fs.existsSync(workPath)) fs.removeSync(workPath);
   });
@@ -116,7 +116,7 @@ describe('Procfile web entrypoint discovery', () => {
     });
 
     const result = await getProcfileWebEntrypoint(workPath);
-    expect(result).toBe('myapp/wsgi.py');
+    expect(result).toEqual(['myapp/wsgi.py', null]);
 
     if (fs.existsSync(workPath)) fs.removeSync(workPath);
   });
@@ -133,7 +133,7 @@ describe('Procfile web entrypoint discovery', () => {
     });
 
     const result = await getProcfileWebEntrypoint(workPath);
-    expect(result).toBe('myproject/asgi.py');
+    expect(result).toEqual(['myproject/asgi.py', 'application']);
 
     if (fs.existsSync(workPath)) fs.removeSync(workPath);
   });
@@ -150,7 +150,7 @@ describe('Procfile web entrypoint discovery', () => {
     });
 
     const result = await getProcfileWebEntrypoint(workPath);
-    expect(result).toBe('app/asgi.py');
+    expect(result).toEqual(['app/asgi.py', null]);
 
     if (fs.existsSync(workPath)) fs.removeSync(workPath);
   });
@@ -168,7 +168,7 @@ describe('Procfile web entrypoint discovery', () => {
     });
 
     const result = await getProcfileWebEntrypoint(workPath);
-    expect(result).toBe('myproject/wsgi.py');
+    expect(result).toEqual(['myproject/wsgi.py', 'application']);
 
     if (fs.existsSync(workPath)) fs.removeSync(workPath);
   });
@@ -185,7 +185,7 @@ describe('Procfile web entrypoint discovery', () => {
     });
 
     const result = await getProcfileWebEntrypoint(workPath);
-    expect(result).toBe('nonexistent/wsgi.py');
+    expect(result).toEqual(['nonexistent/wsgi.py', 'application']);
 
     if (fs.existsSync(workPath)) fs.removeSync(workPath);
   });
