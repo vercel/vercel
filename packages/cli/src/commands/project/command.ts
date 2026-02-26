@@ -35,7 +35,7 @@ export const inspectSubcommand = {
       required: false,
     },
   ],
-  options: [yesOption],
+  options: [jsonOption],
   examples: [
     {
       name: 'Inspect the linked project from the current directory',

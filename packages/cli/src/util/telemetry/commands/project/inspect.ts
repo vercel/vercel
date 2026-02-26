@@ -15,9 +15,9 @@ export class ProjectInspectTelemetryClient
     }
   }
 
-  trackCliFlagYes(yes: boolean | undefined) {
-    if (yes) {
-      this.trackCliFlag('yes');
+  trackCliFlagJson(json: boolean | undefined) {
+    if (json) {
+      this.trackCliFlag('json');
     }
   }
 }

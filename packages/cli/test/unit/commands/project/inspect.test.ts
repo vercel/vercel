@@ -135,4 +135,41 @@ describe('inspect', () => {
     line = await lines.next();
     expect(line.value).toEqual('');
   });
+
+  it('should output JSON when --json flag is provided', async () => {
+    useUser();
+    const teams = useTeams('team_dummy');
+    assert(Array.isArray(teams));
+    const [team] = teams;
+    const { project } = useProject({
+      ...defaultProject,
+      name: 'test_project',
+      accountId: team.id,
+      rootDirectory: 'src',
+      nodeVersion: '20.x',
+      framework: 'nextjs',
+      buildCommand: 'npm run build',
+      installCommand: 'npm install',
+    });
+
+    client.setArgv('project', 'inspect', project.name!, '--json');
+    const exitCode = await projects(client);
+
+    expect(exitCode).toEqual(0);
+    await expect(client.stdout).toOutput('"id"');
+    await expect(client.stdout).toOutput('"name"');
+    await expect(client.stdout).toOutput('"owner"');
+    await expect(client.stdout).toOutput('"framework"');
+  });
+
+  it('should error when project name is not found', async () => {
+    useUser();
+    useTeams('team_dummy');
+
+    client.setArgv('project', 'inspect', 'nonexistent-project');
+    const exitCode = await projects(client);
+
+    expect(exitCode).toEqual(1);
+    await expect(client.stderr).toOutput('Project not found');
+  });
 });

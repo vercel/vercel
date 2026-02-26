@@ -7,11 +7,14 @@ import { inspectSubcommand } from './command';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
-import getProjectByCwdOrLink from '../../util/projects/get-project-by-cwd-or-link';
 import { formatProject } from '../../util/projects/format-project';
 import stamp from '../../util/output/stamp';
 import getTeamById from '../../util/teams/get-team-by-id';
 import formatDate from '../../util/format-date';
+import { validateJsonOutput } from '../../util/output-format';
+import { getLinkedProject } from '../../util/projects/link';
+import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name';
+import { ProjectNotFound } from '../../util/errors-ts';
 import type Client from '../../util/client';
 
 export default async function inspect(
@@ -32,11 +35,11 @@ export default async function inspect(
     printError(error);
     return 1;
   }
-  const { args } = parsedArgs;
+  const { args, flags } = parsedArgs;
 
   const name = args[0];
   telemetry.trackCliArgumentName(name);
-  telemetry.trackCliFlagYes(parsedArgs.flags['--yes']);
+  telemetry.trackCliFlagJson(flags['--json']);
 
   if (args.length !== 0 && args.length !== 1) {
     output.error(
@@ -47,15 +50,63 @@ export default async function inspect(
     return 2;
   }
 
+  const formatResult = validateJsonOutput(flags);
+  if (!formatResult.valid) {
+    output.error(formatResult.error);
+    return 1;
+  }
+  const jsonOutput = formatResult.jsonOutput;
+
   const inspectStamp = stamp();
-  const project = await getProjectByCwdOrLink({
-    autoConfirm: parsedArgs.flags['--yes'],
-    client,
-    commandName: 'project inspect',
-    projectNameOrId: name,
-  });
+
+  let project;
+  if (name) {
+    const result = await getProjectByNameOrId(client, name);
+    if (result instanceof ProjectNotFound) {
+      output.error(`Project not found: ${name}`);
+      return 1;
+    }
+    project = result;
+  } else {
+    const link = await getLinkedProject(client, client.cwd);
+    if (link.status === 'not_linked') {
+      output.error(
+        `No project found in the current directory. Run ${chalk.cyan(getCommandName('link'))} to link a project, or provide a project name.`
+      );
+      return 1;
+    }
+    if (link.status === 'error') {
+      return link.exitCode;
+    }
+    project = link.project;
+  }
 
   const org = await getTeamById(client, project.accountId);
+
+  if (jsonOutput) {
+    const framework = frameworkList.find(f => f.slug === project.framework);
+    client.stdout.write(
+      `${JSON.stringify(
+        {
+          id: project.id,
+          name: project.name,
+          owner: org.name,
+          ownerSlug: org.slug,
+          createdAt: project.createdAt,
+          rootDirectory: project.rootDirectory ?? '.',
+          nodeVersion: project.nodeVersion,
+          framework: framework?.name ?? null,
+          buildCommand: project.buildCommand ?? null,
+          outputDirectory: project.outputDirectory ?? null,
+          installCommand: project.installCommand ?? null,
+        },
+        null,
+        2
+      )}\n`
+    );
+    return 0;
+  }
+
   const projectSlugLink = formatProject(org.slug, project.name);
 
   output.log(`Found Project ${projectSlugLink} ${chalk.gray(inspectStamp())}`);
