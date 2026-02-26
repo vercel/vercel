@@ -5,6 +5,7 @@
   "license": "Apache-2.0",
   "packageManager": "pnpm@8.3.1",
   "devDependencies": {
+    "@biomejs/biome": "2.4.4",
     "@changesets/cli": "2.27.8",
     "@svitejs/changesets-changelog-github-compact": "1.1.0",
     "@types/node": "20.11.0",
@@ -51,6 +52,7 @@
     "test-e2e": "node utils/gen.js && turbo --no-update-notifier run test-e2e",
     "test-dev": "node utils/gen.js && turbo --no-update-notifier run test-dev",
     "lint": "eslint . --cache --ext .ts,.js",
+    "biome:check": "biome check api internals packages test utils",
     "prettier-check": "prettier --check .",
     "prepare": "husky install",
     "pack": "cd utils && node -r ts-eager/register ./pack.ts",
