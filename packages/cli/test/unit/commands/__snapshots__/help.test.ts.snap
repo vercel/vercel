@@ -2966,7 +2966,10 @@ exports[`help command > integration help output snapshots > integration help col
 "
   ▲ vercel integration command
 
-  Manage marketplace integrations       
+  Manage marketplace integrations. To   
+  manage individual resources           
+  (disconnect, remove), see             
+  \`integration-resource\`.               
 
   Commands:
 
@@ -3016,6 +3019,13 @@ exports[`help command > integration help output snapshots > integration help col
                              a      
                              market…
                              integr…
+                             Resour…
+                             must be
+                             removed
+                             first  
+                             using  
+                             \`integ…
+                             remove…
 
 
   Global Options:
@@ -3079,7 +3089,8 @@ exports[`help command > integration help output snapshots > integration help col
 "
   ▲ vercel integration command
 
-  Manage marketplace integrations                                               
+  Manage marketplace integrations. To manage individual resources (disconnect,  
+  remove), see \`integration-resource\`.                                          
 
   Commands:
 
@@ -3093,7 +3104,9 @@ exports[`help command > integration help output snapshots > integration help col
                              for the current project                        
   open      name [resource]  Opens a marketplace integration's or resource's
                              dashboard via SSO                              
-  remove    integration      Uninstalls a marketplace integration           
+  remove    integration      Uninstalls a marketplace integration. Resources
+                             must be removed first using                    
+                             \`integration-resource remove\`.                 
 
 
   Global Options:
@@ -3125,7 +3138,7 @@ exports[`help command > integration help output snapshots > integration help col
 "
   ▲ vercel integration command
 
-  Manage marketplace integrations                                                                                       
+  Manage marketplace integrations. To manage individual resources (disconnect, remove), see \`integration-resource\`.     
 
   Commands:
 
@@ -3135,7 +3148,8 @@ exports[`help command > integration help output snapshots > integration help col
   guide     integration      Show getting started guides and code snippets for a marketplace integration            
   list      [project]        List resources from marketplace integrations for the current project                   
   open      name [resource]  Opens a marketplace integration's or resource's dashboard via SSO                      
-  remove    integration      Uninstalls a marketplace integration                                                   
+  remove    integration      Uninstalls a marketplace integration. Resources must be removed first using            
+                             \`integration-resource remove\`.                                                         
 
 
   Global Options:
