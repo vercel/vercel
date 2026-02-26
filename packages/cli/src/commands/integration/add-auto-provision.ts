@@ -406,6 +406,8 @@ export async function addAutoProvision(
     contextName,
     {
       ...options,
+      integrationSlug: integration.slug,
+      installationId: provisioned.installation.id,
       onProjectConnected: (projectId: string) => {
         telemetry.trackMarketplaceEvent('marketplace_project_connected', {
           ...baseProps,

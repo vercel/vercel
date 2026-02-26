@@ -22,6 +22,8 @@ export interface PostProvisionOptions {
   onProjectConnected?: (projectId: string) => void;
   onProjectConnectFailed?: (projectId: string, error: Error) => void;
   prefix?: string;
+  integrationSlug?: string;
+  installationId?: string;
 }
 
 /**
@@ -65,9 +67,15 @@ export async function postProvisionSetup(
   contextName: string,
   options: PostProvisionOptions = {}
 ): Promise<PostProvisionSetupResult> {
-  const dashboardUrl = `https://vercel.com/${contextName}/~/stores/integration/${resourceId}`;
+  const dashboardUrl =
+    options.integrationSlug && options.installationId
+      ? `https://vercel.com/d/dashboard/integrations/${options.integrationSlug}/${options.installationId}/resources/${resourceId}`
+      : `https://vercel.com/${contextName}/~/stores/integration/${resourceId}`;
   output.log(
-    indent(`Dashboard: ${output.link(dashboardUrl, dashboardUrl)}`, 4)
+    indent(
+      `Dashboard: ${output.link(dashboardUrl, dashboardUrl, { fallback: false })}`,
+      4
+    )
   );
 
   const baseResult: PostProvisionSetupResult = {

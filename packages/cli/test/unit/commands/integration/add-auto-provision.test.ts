@@ -2300,7 +2300,7 @@ describe('integration add (auto-provision)', () => {
       expect(jsonOutput.installation).toEqual({ id: 'install_123' });
       expect(jsonOutput.billingPlan).toBeNull();
       expect(jsonOutput.dashboardUrl).toContain(
-        'stores/integration/resource_123'
+        '/d/dashboard/integrations/acme/install_123/resources/resource_123'
       );
       expect(jsonOutput.ssoUrl.integration).toContain(
         'integrationConfigurationId=install_123'
