@@ -84,6 +84,15 @@ export const build: BuildV3 = async ({
 }) => {
   const framework = config?.framework;
 
+  // Parse "filepath:variable" syntax in entrypoint (from vercel.json builds src).
+  // e.g. "myapp/wsgi.py:application" -> entrypoint="myapp/wsgi.py", entrypointVariable="application"
+  let entrypointVariable: string | null = null;
+  const colonIdx = entrypoint.indexOf(':');
+  if (colonIdx !== -1) {
+    entrypointVariable = entrypoint.slice(colonIdx + 1) || null;
+    entrypoint = entrypoint.slice(0, colonIdx);
+  }
+
   let spawnEnv: NodeJS.ProcessEnv | undefined;
   // Custom install command from dashboard/project settings, if any.
   let projectInstallCommand: string | undefined;
@@ -169,8 +178,6 @@ export const build: BuildV3 = async ({
   }
 
   let fsFiles = await glob('**', workPath);
-
-  let entrypointVariable: string | null = null;
 
   // Zero config entrypoint discovery
   if (
