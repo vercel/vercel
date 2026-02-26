@@ -274,7 +274,7 @@ it('Should provide lambda info when limit is hit (shared lambdas)', async () => 
     'Max serverless function size was exceeded for 1 function'
   );
   expect(logs).toContain(
-    'Max serverless function size of 250 MB uncompressed reached'
+    'Max serverless function size of 240 MB uncompressed reached'
   );
   expect(logs).toContain(`Serverless Function's page: api/both.js`);
   expect(logs).toMatch(/Large Dependencies.*?Uncompressed size/);

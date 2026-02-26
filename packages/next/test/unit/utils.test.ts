@@ -450,10 +450,10 @@ describe('getMaxUncompressedLambdaSize', () => {
   });
 
   it.each(['provided.al2023', 'nodejs22.x'])(
-    'should return 250 MiB for %s runtime',
+    'should return 240 MiB for %s runtime',
     runtime => {
       const size = getMaxUncompressedLambdaSize(runtime);
-      expect(size).toBe(250 * 1024 * 1024);
+      expect(size).toBe(240 * 1024 * 1024);
     }
   );
 

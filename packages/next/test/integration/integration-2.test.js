@@ -175,7 +175,7 @@ it.skip('Should not exceed function limit for large dependencies (server build)'
   // this assertion is unstable as `next-server`'s size can change up and down
   // on canary so skipping to prevent random failures.
   // expect(logs).toContain(
-  //   'Warning: Max serverless function size of 50 MB compressed or 250 MB uncompressed almost reached'
+  //   'Warning: Max serverless function size of 50 MB compressed or 240 MB uncompressed almost reached'
   // );
 
   expect(logs).toContain('node_modules/chrome-aws-lambda/bin');
@@ -227,7 +227,7 @@ it.skip('Should not exceed function limit for large dependencies (shared lambda)
   expect(lambdas.size).toBe(3);
 
   expect(logs).toContain(
-    'Warning: Max serverless function size of 50 MB compressed or 250 MB uncompressed almost reached'
+    'Warning: Max serverless function size of 50 MB compressed or 240 MB uncompressed almost reached'
   );
   expect(logs).toContain('node_modules/chrome-aws-lambda/bin');
 });
@@ -255,7 +255,7 @@ it('Should provide lambda info when limit is hit (server build)', async () => {
     'Max serverless function size was exceeded for 2 functions'
   );
   expect(logs).toContain(
-    'Max serverless function size of 250 MB uncompressed reached'
+    'Max serverless function size of 240 MB uncompressed reached'
   );
   expect(logs).toContain(`Serverless Function's page: api/both.js`);
   expect(logs).toMatch(/Large Dependencies.*?Uncompressed size/);
@@ -285,7 +285,7 @@ it('Should provide lambda info when limit is hit for internal pages (server buil
   console.log = origLog;
 
   expect(logs).toContain(
-    'Max serverless function size of 250 MB uncompressed reached'
+    'Max serverless function size of 240 MB uncompressed reached'
   );
   // expect(logs).toContain(`Serverless Function's page: api/firebase.js`);
   expect(logs).toContain(`Serverless Function's page: api/chrome.js`);
@@ -320,7 +320,7 @@ it('Should provide lambda info when limit is hit (uncompressed)', async () => {
     'Max serverless function size was exceeded for 1 function'
   );
   expect(logs).toContain(
-    'Max serverless function size of 250 MB uncompressed reached'
+    'Max serverless function size of 240 MB uncompressed reached'
   );
   expect(logs).toContain(`Serverless Function's page: api/hello.js`);
   expect(logs).toMatch(/Large Dependencies.*?Uncompressed size/);
