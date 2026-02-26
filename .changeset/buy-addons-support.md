@@ -2,4 +2,4 @@
 'vercel': patch
 ---
 
-Support add-on purchasing in `vercel buy` CLI
+Support add-on and pro plan purchasing in `vercel buy` CLI
