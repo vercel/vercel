@@ -60,8 +60,7 @@ def _make_root_relative_import_entrypoint(
     """
     (tmp_path / "__init__.py").write_text("", encoding="utf-8")
     (tmp_path / "utils.py").write_text(
-        "def build_body(path: str) -> str:\n"
-        "    return f'relative:{path}'\n",
+        "def build_body(path: str) -> str:\n    return f'relative:{path}'\n",
         encoding="utf-8",
     )
     entrypoint = tmp_path / "main.py"

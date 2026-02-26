@@ -546,7 +546,7 @@ def _resolve_user_module_import_name() -> tuple[str, str | None]:
         package = types.ModuleType(package_name)
         package.__file__ = package_init
         package.__package__ = package_name
-        package.__path__ = [entrypoint_dir]  # type: ignore[attr-defined]
+        package.__path__ = [entrypoint_dir]
         package.__spec__ = util.spec_from_file_location(
             package_name,
             package_init,
