@@ -1,5 +1,15 @@
 # @vercel/fs-detectors
 
+## 5.8.12
+
+### Patch Changes
+
+- Support function overrides in backends builder ([#15214](https://github.com/vercel/vercel/pull/15214))
+
+- Updated dependencies [[`3d872692c601abeec98743d2af3a3ea19587e799`](https://github.com/vercel/vercel/commit/3d872692c601abeec98743d2af3a3ea19587e799), [`e64a85daec784b4fe571abe7405a80aca150007a`](https://github.com/vercel/vercel/commit/e64a85daec784b4fe571abe7405a80aca150007a), [`af6a651229cad4ddb7fcc15bd14d06355c2b77ee`](https://github.com/vercel/vercel/commit/af6a651229cad4ddb7fcc15bd14d06355c2b77ee)]:
+  - @vercel/frameworks@3.19.1
+  - @vercel/routing-utils@6.0.0
+
 ## 5.8.11
 
 ### Patch Changes

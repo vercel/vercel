@@ -1,0 +1,158 @@
+{
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    // Respect .gitignore for file exclusion
+    "useIgnoreFile": true,
+  },
+  "files": {
+    // Allowlist of directories to process (avoids examples/ which has its own biome.json)
+    "includes": [
+      "api/**",
+      "internals/**",
+      "packages/**",
+      "test/**",
+      "utils/**",
+      "*.js",
+      "*.ts",
+    ],
+  },
+  // Formatter settings match the existing Prettier configuration
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 80,
+  },
+  "javascript": {
+    "formatter": {
+      // Matches Prettier: singleQuote: true
+      "quoteStyle": "single",
+      // Matches Prettier: trailingComma: "es5"
+      "trailingCommas": "es5",
+      // Matches Prettier: arrowParens: "avoid"
+      "arrowParentheses": "asNeeded",
+    },
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": true,
+
+      "correctness": {
+        // Matches @typescript-eslint/no-unused-vars: 2
+        "noUnusedVariables": "error",
+        // No ESLint equivalent enabled — new Biome rule
+        "noUnusedImports": "error",
+        // Not enforced by ESLint — too noisy to enable now (277 hits)
+        "noUnusedFunctionParameters": "off",
+        // Not enforced by ESLint
+        "noInnerDeclarations": "off",
+      },
+
+      "suspicious": {
+        // Matches ESLint no-dupe-keys: 2
+        "noDuplicateObjectKeys": "error",
+        // Matches jest/no-focused-tests: 2
+        "noFocusedTests": "error",
+        // Matches jest/no-disabled-tests: 2
+        "noSkippedTests": "error",
+        // Matches @typescript-eslint/no-explicit-any: 0
+        "noExplicitAny": "off",
+        // Not enforced by ESLint
+        "noAssignInExpressions": "off",
+        // Not enforced by ESLint
+        "noImplicitAnyLet": "off",
+        // Matches @typescript-eslint/ban-ts-comment: 0
+        "noTsIgnore": "off",
+        // Not enforced by ESLint
+        "noDoubleEquals": "off",
+        // Not enforced by ESLint
+        "noGlobalIsNan": "off",
+        // Not enforced by ESLint
+        "noConfusingVoidType": "off",
+        // Not enforced by ESLint
+        "noPrototypeBuiltins": "off",
+        // Not enforced by ESLint
+        "noRedeclare": "off",
+      },
+
+      "style": {
+        // Globally off; overridden to "error" in packages/cli (see overrides)
+        "useConst": "off",
+        // Not enforced by ESLint — too noisy to enable now (786 hits)
+        "useNodejsImportProtocol": "off",
+        // Matches @typescript-eslint/no-non-null-assertion: 0
+        "noNonNullAssertion": "off",
+        // Not enforced by ESLint
+        "useTemplate": "off",
+        // Not enforced by ESLint
+        "useImportType": "off",
+      },
+
+      "complexity": {
+        // Not enforced by ESLint
+        "useArrowFunction": "off",
+        // Not enforced by ESLint
+        "useLiteralKeys": "off",
+        // Not enforced by ESLint
+        "useOptionalChain": "off",
+        // Not enforced by ESLint
+        "noCommaOperator": "off",
+        // Matches @typescript-eslint/ban-types: 0
+        "noBannedTypes": "off",
+        // Not enforced by ESLint
+        "noArguments": "off",
+        // Not enforced by ESLint
+        "noUselessUndefinedInitialization": "off",
+      },
+    },
+  },
+  "overrides": [
+    // Disable linting and formatting for generated code, fixtures, and vendored files
+    // (mirrors .eslintignore and .prettierignore)
+    {
+      "includes": [
+        "packages/*/dist/**",
+        "packages/**/test/fixtures/**",
+        "packages/**/test/fixtures-*/**",
+        "packages/**/test/dev/fixtures/**",
+        "packages/**/test/build-fixtures/**",
+        "packages/**/test/cache-fixtures/**",
+        "packages/cli/src/util/dev/templates/*.ts",
+        "packages/cli/@types/**",
+        "packages/cli/download/**",
+        "packages/cli/bin/**",
+        "packages/cli/link/**",
+        "packages/client/tests/fixtures/**",
+        "packages/client/lib/**",
+        "packages/node/src/bridge.ts",
+        "packages/hydrogen/edge-entry.js",
+        "packages/next/test/integration/middleware/**",
+        "packages/next/test/integration/middleware-eval/**",
+        "packages/middleware/src/entries.js",
+        "packages/gatsby-plugin-vercel-analytics/**",
+        "packages/functions/**/*.js",
+      ],
+      "linter": {
+        "enabled": false,
+      },
+      "formatter": {
+        "enabled": false,
+      },
+    },
+    // CLI package has stricter rules — matches ESLint override for packages/cli/**
+    {
+      "includes": ["packages/cli/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            // Matches ESLint prefer-const: "error" override for CLI
+            "useConst": "error",
+          },
+        },
+      },
+    },
+  ],
+}
