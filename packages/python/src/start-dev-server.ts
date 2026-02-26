@@ -592,10 +592,18 @@ export const startDevServer: StartDevServer = async opts => {
     debug(
       `Starting Python dev server (${framework}): ${spawnCommand} ${argv.join(' ')} [PORT=${port}]`
     );
+
+    // Pass terminal dimensions so libraries like Rich can format output
+    // correctly despite the process being detached from the controlling terminal.
+    if (process.stdout.columns) {
+      env.COLUMNS = `${process.stdout.columns}`;
+    }
+
     const child = spawn(spawnCommand, argv, {
       cwd: workPath,
       env,
-      stdio: ['inherit', 'pipe', 'pipe'],
+      stdio: ['ignore', 'pipe', 'pipe'],
+      detached: true,
     });
     childProcess = child;
 
