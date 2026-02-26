@@ -30,7 +30,7 @@
       // Matches Prettier: singleQuote: true
       "quoteStyle": "single",
       // Matches Prettier: trailingComma: "es5"
-      "trailingCommas": "all",
+      "trailingCommas": "es5",
       // Matches Prettier: arrowParens: "avoid"
       "arrowParentheses": "asNeeded"
     }
