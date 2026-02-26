@@ -96,15 +96,6 @@ export const metricsCommand = {
       argument: 'N',
     },
     {
-      name: 'order-by',
-      shorthand: null,
-      type: String,
-      deprecated: false,
-      description:
-        'Order results by rollup:asc|desc (default: rollup value desc)',
-      argument: 'ROLLUP',
-    },
-    {
       name: 'filter',
       shorthand: 'f',
       type: String,

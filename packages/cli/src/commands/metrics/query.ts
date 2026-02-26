@@ -192,7 +192,6 @@ export default async function query(
   const aggregationFlag = flags['--aggregation'];
   const groupBy = flags['--group-by'] ?? [];
   const limit = flags['--limit'];
-  const orderBy = flags['--order-by'];
   const filter = flags['--filter'];
   const since = flags['--since'];
   const until = flags['--until'];
@@ -206,7 +205,6 @@ export default async function query(
   telemetry.trackCliOptionAggregation(aggregationFlag);
   telemetry.trackCliOptionGroupBy(groupBy.length > 0 ? groupBy : undefined);
   telemetry.trackCliOptionLimit(limit);
-  telemetry.trackCliOptionOrderBy(orderBy);
   telemetry.trackCliOptionFilter(filter);
   telemetry.trackCliOptionSince(since);
   telemetry.trackCliOptionUntil(until);
@@ -312,7 +310,6 @@ export default async function query(
     ...(groupBy.length > 0 ? { groupBy } : {}),
     ...(filter ? { filter } : {}),
     limit: limit ?? 10,
-    ...(orderBy ? { orderBy } : {}),
   };
 
   // Make API call
