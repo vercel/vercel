@@ -1502,6 +1502,69 @@ describe('pyproject.toml entrypoint detection', () => {
   });
 });
 
+describe('filepath:variable syntax in vercel.json builds src', () => {
+  let workPath: string;
+
+  beforeEach(() => {
+    workPath = path.join(tmpdir(), `python-colon-syntax-${Date.now()}`);
+    fs.mkdirSync(workPath, { recursive: true });
+    makeMockPython('3.9');
+  });
+
+  afterEach(() => {
+    if (fs.existsSync(workPath)) fs.removeSync(workPath);
+  });
+
+  it('sets __VC_HANDLER_VARIABLE_NAME from "filepath:variable" in entrypoint', async () => {
+    const files = {
+      'myapp/wsgi.py': new FileBlob({
+        data: 'application = lambda env, start: None\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath,
+      files,
+      entrypoint: 'myapp/wsgi.py:application',
+      meta: { isDev: false },
+      config: {},
+      repoRootPath: workPath,
+    });
+
+    const handler = result.output.files?.['vc__handler__python.py'];
+    if (!handler || !('data' in handler)) {
+      throw new Error('handler bootstrap not found');
+    }
+    const content = handler.data.toString();
+    expect(content).toContain('"__VC_HANDLER_VARIABLE_NAME": "application"');
+    expect(content).toContain('os.path.join(_here, "myapp/wsgi.py")');
+  });
+
+  it('leaves __VC_HANDLER_VARIABLE_NAME empty when no variable is specified', async () => {
+    const files = {
+      'myapp/wsgi.py': new FileBlob({
+        data: 'application = lambda env, start: None\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath,
+      files,
+      entrypoint: 'myapp/wsgi.py',
+      meta: { isDev: false },
+      config: {},
+      repoRootPath: workPath,
+    });
+
+    const handler = result.output.files?.['vc__handler__python.py'];
+    if (!handler || !('data' in handler)) {
+      throw new Error('handler bootstrap not found');
+    }
+    const content = handler.data.toString();
+    expect(content).toContain('"__VC_HANDLER_VARIABLE_NAME": ""');
+  });
+});
+
 describe('python version fallback logging', () => {
   let mockWorkPath: string;
   let consoleLogSpy: MockInstance;
