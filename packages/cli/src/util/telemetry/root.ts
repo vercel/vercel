@@ -285,6 +285,13 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
+  trackCliCommandRoutes(actual: string) {
+    this.trackCliCommand({
+      command: 'routes',
+      value: actual,
+    });
+  }
+
   trackCliCommandRemove(actual: string) {
     this.trackCliCommand({
       command: 'remove',
