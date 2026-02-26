@@ -733,6 +733,10 @@ const main = async () => {
           telemetry.trackCliCommandBlob(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).blob;
           break;
+        case 'buy':
+          telemetry.trackCliCommandBuy(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).buy;
+          break;
         case 'init':
           telemetry.trackCliCommandInit(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).init;
