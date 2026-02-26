@@ -50,6 +50,8 @@ Until these are set and evals exist, the job fails with a clear message. See `.g
 
 **Ephemeral projects:** If `CLI_EVAL_PROJECT_ID` is not set, the runner creates an ephemeral project per eval run (using `VERCEL_TOKEN` and `CLI_EVAL_TEAM_ID`), links the sandbox to it, and deletes it after the run. To use a fixed project instead, set `CLI_EVAL_PROJECT_ID` (e.g. via `EVAL_PROJECT_ID` in CI).
 
+**Matrix (with/without skills):** By default the runner runs each eval twice: once with the CLI skills directory copied into the sandbox (`with-skills`) and once without (`without-skills`). Set `CLI_EVAL_SKILLS_MODES=with-skills` or `CLI_EVAL_SKILLS_MODES=without-skills` to run only one. Set `CLI_EVAL_PROJECT_MODES=linked-project,no-linked-project` to also vary project mode (cross product with skills).
+
 ## Getting credentials
 
 Same pattern as other CLI workflows: **VERCEL_TOKEN** (long-lived access token) for Vercel API/sandbox, plus **AI Gateway API key** for the agent.
