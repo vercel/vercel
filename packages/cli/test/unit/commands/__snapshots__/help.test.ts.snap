@@ -2959,6 +2959,10 @@ exports[`help command > integration help output snapshots > integration guide su
 
     $ vercel integration guide neon --framework nextjs
 
+  - Discover available integrations and product slugs
+
+    $ vercel integration discover
+
 "
 `;
 
