@@ -8,9 +8,10 @@ export const MIB = 1024 * KIB;
 export const EDGE_FUNCTION_SIZE_LIMIT = 4 * MIB;
 
 /**
- * The maximum size of an uncompressed function.
+ * The maximum size of an uncompressed function (250MB).
+ * It's 10 MiB smaller than the actual Lambda limit to leave room for other primitives that affect function size e.g. layers
  */
-export const DEFAULT_MAX_UNCOMPRESSED_LAMBDA_SIZE = 250 * MIB;
+export const DEFAULT_MAX_UNCOMPRESSED_LAMBDA_SIZE = 240 * MIB;
 
 /**
  * The maximum size of an uncompressed function using Bun. It's 100 MiB smaller
