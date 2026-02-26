@@ -36,7 +36,7 @@ describe('responseError()', () => {
     };
 
     const res = await fetch(url);
-    const formatted = await responseError(res as any, 'Failed to load data');
+    const formatted = await responseError(res, 'Failed to load data');
     expect(formatted.message).toEqual('Failed to load data (404)');
   });
 
@@ -46,7 +46,7 @@ describe('responseError()', () => {
     };
 
     const res = await fetch(url);
-    const formatted = await responseError(res as any);
+    const formatted = await responseError(res);
     expect(formatted.message).toEqual('Response Error (404)');
   });
 
@@ -56,7 +56,7 @@ describe('responseError()', () => {
     };
 
     const res = await fetch(url);
-    const formatted = await responseError(res as any);
+    const formatted = await responseError(res);
     expect(formatted.message).toEqual('Response Error (500)');
   });
 
@@ -70,7 +70,7 @@ describe('responseError()', () => {
     };
 
     const res = await fetch(url);
-    const formatted = await responseError(res as any);
+    const formatted = await responseError(res);
     expect(formatted.message).toEqual('The request is not correct (400)');
   });
 
@@ -80,7 +80,7 @@ describe('responseError()', () => {
     };
 
     const res = await fetch(url);
-    const formatted = await responseError(res as any, 'Failed to process data');
+    const formatted = await responseError(res, 'Failed to process data');
     expect(formatted.message).toEqual('Failed to process data (500)');
   });
 
@@ -92,7 +92,7 @@ describe('responseError()', () => {
     };
 
     const res = await fetch(url);
-    const formatted = await responseError(res as any, 'Failed to process data');
+    const formatted = await responseError(res, 'Failed to process data');
     expect(formatted.message).toEqual('Failed to process data (500)');
   });
 
@@ -102,10 +102,7 @@ describe('responseError()', () => {
     };
 
     const res = await fetch(url);
-    const formatted = await responseErrorMessage(
-      res as any,
-      'Not authenticated'
-    );
+    const formatted = await responseErrorMessage(res, 'Not authenticated');
     expect(formatted).toEqual('Not authenticated (403)');
   });
 
@@ -119,7 +116,7 @@ describe('responseError()', () => {
     };
 
     const res = await fetch(url);
-    const formatted = await responseErrorMessage(res as any);
+    const formatted = await responseErrorMessage(res);
     expect(formatted).toEqual('This is a test (403)');
   });
 
@@ -133,7 +130,7 @@ describe('responseError()', () => {
     };
 
     const res = await fetch(url);
-    const formatted = await responseErrorMessage(res as any);
+    const formatted = await responseErrorMessage(res);
     expect(formatted).toEqual('Response Error (500)');
   });
 
@@ -143,7 +140,7 @@ describe('responseError()', () => {
     };
 
     const res = await fetch(url);
-    const formatted = await responseError(res as any, 'Not authenticated');
+    const formatted = await responseError(res, 'Not authenticated');
     expect(formatted.message).toEqual('Not authenticated (403)');
   });
 
@@ -158,7 +155,7 @@ describe('responseError()', () => {
     };
 
     const res = await fetch(url);
-    const formatted = await responseError(res as any);
+    const formatted = await responseError(res);
     expect(formatted.message).toEqual('The request is not correct (403)');
     expect(formatted.additionalProperty).toEqual('test');
   });
@@ -175,7 +172,7 @@ describe('responseError()', () => {
     };
 
     const res = await fetch(url);
-    const formatted = await responseError(res as any);
+    const formatted = await responseError(res);
     expect(formatted.message).toEqual('You were rate limited (429)');
     expect(formatted.retryAfterMs).toEqual(20000);
   });
@@ -190,7 +187,7 @@ describe('responseError()', () => {
     };
 
     const res = await fetch(url);
-    const formatted = await responseError(res as any);
+    const formatted = await responseError(res);
     expect(formatted.message).toEqual('You were rate limited (429)');
     // We default to 0 in this case so callers still know to retry
     expect(formatted.retryAfterMs).toEqual(0);

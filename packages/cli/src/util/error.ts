@@ -1,4 +1,3 @@
-import type { Response } from 'node-fetch';
 import errorOutput from './output/error';
 import bytes from 'bytes';
 import type { APIError } from './errors-ts';
@@ -20,7 +19,7 @@ export async function responseError(
   fallbackMessage: string | null = null,
   parsedBody = {}
 ) {
-  let message = '';
+  let message: string = '';
   let bodyError;
 
   if (res.status >= 400 && res.status < 500) {
@@ -32,9 +31,14 @@ export async function responseError(
       body = parsedBody;
     }
 
+    const castBody = body as {
+      error?: { message?: string };
+      err?: { message?: string };
+    };
+
     // Some APIs wrongly return `err` instead of `error`
-    bodyError = body.error || body.err || {};
-    message = bodyError.message;
+    bodyError = castBody.error || castBody.err || {};
+    message = bodyError.message ?? '';
   }
 
   if (!message) {
@@ -50,7 +54,7 @@ export async function responseError(
   if (bodyError) {
     for (const field of Object.keys(bodyError)) {
       if (field !== 'message') {
-        err[field] = bodyError[field];
+        err[field] = bodyError[field as keyof typeof bodyError];
       }
     }
   }
@@ -70,7 +74,7 @@ export async function responseErrorMessage(
   res: Response,
   fallbackMessage: string | null = null
 ) {
-  let message;
+  let message: string | undefined;
 
   if (res.status >= 400 && res.status < 500) {
     let body;
@@ -81,8 +85,13 @@ export async function responseErrorMessage(
       body = {};
     }
 
+    const castBody = body as {
+      error?: { message?: string };
+      err?: { message?: string };
+    };
+
     // Some APIs wrongly return `err` instead of `error`
-    message = (body.error || body.err || {}).message;
+    message = (castBody.error || castBody.err || {}).message;
   }
 
   if (message == null) {
