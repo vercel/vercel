@@ -1,6 +1,7 @@
 import chalk from 'chalk';
 import { remove } from 'fs-extra';
 import { join, basename } from 'path';
+import { getGitConfigPath } from '../git-helpers';
 import type {
   ProjectLinkResult,
   ProjectSettings,
@@ -315,7 +316,9 @@ export async function connectGitRepository(
   org: Org
 ): Promise<void> {
   try {
-    const gitConfig = await parseGitConfig(join(path, '.git/config'));
+    const gitConfigPath =
+      getGitConfigPath({ cwd: path }) ?? join(path, '.git/config');
+    const gitConfig = await parseGitConfig(gitConfigPath);
 
     if (!gitConfig) {
       return;
