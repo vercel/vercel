@@ -16,6 +16,7 @@ import socket
 import sys
 import time
 import traceback
+import types
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from importlib import util
 from typing import TYPE_CHECKING, Any, Literal, Never, TextIO
@@ -518,15 +519,58 @@ if os.path.exists(_runtime_config_path):
 
 # Import relative path
 # https://docs.python.org/3/library/importlib.html#importing-a-source-file-directly
+
+
+def _resolve_user_module_import_name() -> tuple[str, str | None]:
+    """
+    Resolve the module name used to load the user entrypoint.
+
+    For root entrypoints like "main.py" in a package root (directory contains
+    "__init__.py"), importing as plain "main" breaks explicit relative imports
+    (e.g. "from .utils import ...") because there is no parent package.
+
+    In that case we create a synthetic package that points to the entrypoint
+    directory and import the module as "<synthetic>.main", while also aliasing
+    it back to the original module name for compatibility.
+    """
+    if "." in _entrypoint_modname:
+        return _entrypoint_modname, None
+
+    entrypoint_dir = os.path.dirname(_entrypoint_abs)
+    package_init = os.path.join(entrypoint_dir, "__init__.py")
+    if not os.path.isfile(package_init):
+        return _entrypoint_modname, None
+
+    package_name = "__vc_root_package__"
+    if package_name not in sys.modules:
+        package = types.ModuleType(package_name)
+        package.__file__ = package_init
+        package.__package__ = package_name
+        package.__path__ = [entrypoint_dir]  # type: ignore[attr-defined]
+        package.__spec__ = util.spec_from_file_location(
+            package_name,
+            package_init,
+            submodule_search_locations=[entrypoint_dir],
+        )
+        sys.modules[package_name] = package
+
+    return f"{package_name}.{_entrypoint_modname}", _entrypoint_modname
+
+
 try:
+    __vc_import_name, __vc_declared_module_alias = (
+        _resolve_user_module_import_name()
+    )
     __vc_spec = util.spec_from_file_location(
-        _entrypoint_modname,
+        __vc_import_name,
         _entrypoint_abs,
     )
     if __vc_spec is None or __vc_spec.loader is None:
         _fatal(f"Could not load module spec for {_entrypoint_rel}")
     __vc_module = util.module_from_spec(__vc_spec)
-    sys.modules[_entrypoint_modname] = __vc_module
+    sys.modules[__vc_import_name] = __vc_module
+    if __vc_declared_module_alias is not None:
+        sys.modules[__vc_declared_module_alias] = __vc_module
     __vc_spec.loader.exec_module(__vc_module)
     __vc_variables = dir(__vc_module)
 except Exception:

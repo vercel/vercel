@@ -47,6 +47,42 @@ def _make_entrypoint(
     return dst, fixture_name, fixture_name.removesuffix(".py")
 
 
+def _make_root_relative_import_entrypoint(
+    tmp_path: pathlib.Path,
+) -> tuple[pathlib.Path, str, str]:
+    """
+    Create a root entrypoint that relies on explicit relative imports.
+
+    Layout:
+      __init__.py
+      utils.py
+      main.py  (from .utils import build_body)
+    """
+    (tmp_path / "__init__.py").write_text("", encoding="utf-8")
+    (tmp_path / "utils.py").write_text(
+        "def build_body(path: str) -> str:\n"
+        "    return f'relative:{path}'\n",
+        encoding="utf-8",
+    )
+    entrypoint = tmp_path / "main.py"
+    entrypoint.write_text(
+        "from .utils import build_body\n"
+        "\n"
+        "async def app(scope, receive, send):\n"
+        "    if scope.get('type') != 'http':\n"
+        "        return\n"
+        "    body = build_body(scope.get('path', '/')).encode()\n"
+        "    await send({\n"
+        "        'type': 'http.response.start',\n"
+        "        'status': 200,\n"
+        "        'headers': [(b'content-type', b'text/plain')],\n"
+        "    })\n"
+        "    await send({'type': 'http.response.body', 'body': body})\n",
+        encoding="utf-8",
+    )
+    return entrypoint, "main.py", "main"
+
+
 def _coverage_active() -> bool:
     """Check if coverage collection is active in this process."""
     try:
@@ -467,6 +503,25 @@ class TestASGIApp(_RuntimeTestCase):
             sock.close()
             self.assertIn(b"200", data)
 
+    async def test_root_entrypoint_relative_import(self) -> None:
+        ep_abs, ep_rel, mod = _make_root_relative_import_entrypoint(
+            self.tmp_path
+        )
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            resp = await _http_get(port, "/relative")
+            self.assertEqual(resp.status, 200)
+            self.assertEqual(resp.read().decode(), "relative:/relative")
+
 
 class TestLogging(_RuntimeTestCase):
     """Tests for IPC log message forwarding."""
@@ -749,6 +804,20 @@ class TestLambdaASGI(_LambdaTestCase):
             ),
         )
         self.assertEqual(result["statusCode"], 200)
+
+    async def test_root_entrypoint_relative_import(self) -> None:
+        ep_abs, ep_rel, mod = _make_root_relative_import_entrypoint(
+            self.tmp_path
+        )
+        result = await _invoke_lambda(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            event=_lambda_event("GET", "/relative"),
+        )
+        self.assertEqual(result["statusCode"], 200)
+        body = base64.b64decode(result["body"]).decode()
+        self.assertEqual(body, "relative:/relative")
 
 
 class TestLambdaErrorPaths(_LambdaTestCase):
