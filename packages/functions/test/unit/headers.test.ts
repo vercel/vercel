@@ -3,6 +3,7 @@ import { expect, test, describe } from 'vitest';
 import {
   CITY_HEADER_NAME,
   COUNTRY_HEADER_NAME,
+  CONTINENT_HEADER_NAME,
   Geo,
   geolocation,
   IP_HEADER_NAME,
@@ -30,6 +31,7 @@ describe('`geolocation`', () => {
       city: undefined,
       flag: undefined,
       country: undefined,
+      continent: undefined,
       countryRegion: undefined,
       latitude: undefined,
       longitude: undefined,
@@ -43,6 +45,7 @@ describe('`geolocation`', () => {
       headers: {
         [CITY_HEADER_NAME]: 'Tel Aviv',
         [COUNTRY_HEADER_NAME]: 'IL',
+        [CONTINENT_HEADER_NAME]: 'AS',
         [LATITUDE_HEADER_NAME]: '32.109333',
         [LONGITUDE_HEADER_NAME]: '34.855499',
         [REGION_HEADER_NAME]: 'TA', // https://en.wikipedia.org/wiki/ISO_3166-2:IL
@@ -54,6 +57,7 @@ describe('`geolocation`', () => {
       city: 'Tel Aviv',
       flag: '🇮🇱',
       country: 'IL',
+      continent: 'AS',
       latitude: '32.109333',
       longitude: '34.855499',
       region: 'fra1',
@@ -67,6 +71,7 @@ describe('`geolocation`', () => {
       headers: {
         [CITY_HEADER_NAME]: 'Tokyo',
         [COUNTRY_HEADER_NAME]: 'JP',
+        [CONTINENT_HEADER_NAME]: 'AS',
         [LATITUDE_HEADER_NAME]: '37.1233',
         [LONGITUDE_HEADER_NAME]: '30.733399',
         [REGION_HEADER_NAME]: '13',
@@ -78,6 +83,7 @@ describe('`geolocation`', () => {
       city: 'Tokyo',
       flag: '🇯🇵',
       country: 'JP',
+      continent: 'AS',
       latitude: '37.1233',
       longitude: '30.733399',
       region: 'hnd1',
@@ -91,6 +97,7 @@ describe('`geolocation`', () => {
       headers: {
         [CITY_HEADER_NAME]: 'Tokyo',
         [COUNTRY_HEADER_NAME]: 'JP',
+        [CONTINENT_HEADER_NAME]: 'AS',
         [LATITUDE_HEADER_NAME]: '37.1233',
         [LONGITUDE_HEADER_NAME]: '30.733399',
         [REGION_HEADER_NAME]: '13',
@@ -101,6 +108,7 @@ describe('`geolocation`', () => {
       city: 'Tokyo',
       flag: '🇯🇵',
       country: 'JP',
+      continent: 'AS',
       latitude: '37.1233',
       longitude: '30.733399',
       region: 'dev1',
@@ -114,6 +122,7 @@ describe('`geolocation`', () => {
       headers: {
         [CITY_HEADER_NAME]: 'Tokyo',
         [COUNTRY_HEADER_NAME]: 'AAA',
+        [CONTINENT_HEADER_NAME]: 'AS',
         [LATITUDE_HEADER_NAME]: '37.1233',
         [LONGITUDE_HEADER_NAME]: '30.733399',
         [REGION_HEADER_NAME]: '13',
@@ -124,6 +133,7 @@ describe('`geolocation`', () => {
       city: 'Tokyo',
       flag: undefined,
       country: 'AAA',
+      continent: 'AS',
       latitude: '37.1233',
       longitude: '30.733399',
       region: 'dev1',
@@ -138,6 +148,7 @@ describe('`geolocation`', () => {
         // São Paulo
         [CITY_HEADER_NAME]: 'S%C3%A3o%20Paulo',
         [COUNTRY_HEADER_NAME]: 'BR',
+        [CONTINENT_HEADER_NAME]: 'SA',
         [LATITUDE_HEADER_NAME]: '-23.6283',
         [LONGITUDE_HEADER_NAME]: '-46.6409',
         [REGION_HEADER_NAME]: 'SP',
@@ -149,6 +160,7 @@ describe('`geolocation`', () => {
       city: 'São Paulo',
       flag: '🇧🇷',
       country: 'BR',
+      continent: 'SA',
       latitude: '-23.6283',
       longitude: '-46.6409',
       region: 'gru1',

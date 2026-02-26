@@ -7,6 +7,10 @@ export const CITY_HEADER_NAME = 'x-vercel-ip-city';
  */
 export const COUNTRY_HEADER_NAME = 'x-vercel-ip-country';
 /**
+ * Continent of the original client IP as calculated by Vercel Proxy.
+ */
+export const CONTINENT_HEADER_NAME = 'x-vercel-ip-continent';
+/**
  * Client IP as calculated by Vercel Proxy.
  */
 export const IP_HEADER_NAME = 'x-real-ip';
@@ -60,6 +64,9 @@ export interface Geo {
 
   /** The country that the request originated from. */
   country?: string;
+
+  /** The continent that the request originated from. */
+  continent?: string;
 
   /** The flag emoji for the country the request originated from. */
   flag?: string;
@@ -157,6 +164,7 @@ function getRegionFromRequestId(requestId?: string): string | undefined {
  * {
  *  "city": "New York",
  *  "country": "US",
+ *  "continent": "NA",
  *  "flag": "🇺🇸",
  *  "countryRegion": "NY",
  *  "region": "iad1",
@@ -182,6 +190,7 @@ export function geolocation(request: Request): Geo {
     // city name may be encoded to support multi-byte characters
     city: getHeaderWithDecode(request, CITY_HEADER_NAME),
     country: getHeader(request.headers, COUNTRY_HEADER_NAME),
+    continent: getHeader(request.headers, CONTINENT_HEADER_NAME),
     flag: getFlag(getHeader(request.headers, COUNTRY_HEADER_NAME)),
     countryRegion: getHeader(request.headers, REGION_HEADER_NAME),
     region: getRegionFromRequestId(
