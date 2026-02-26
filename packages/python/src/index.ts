@@ -13,6 +13,7 @@ import {
   scanParentDirs,
   getEnvForPackageManager,
   isPythonFramework,
+  getProcfileWebEntrypoint,
   type BuildOptions,
   type GlobOptions,
   type BuildV3,
@@ -197,6 +198,19 @@ export const build: BuildV3 = async ({
       entrypoint = detectedModule;
       entrypointVariable = detectedEntryVar;
     } else {
+      const procfileEntry = await getProcfileWebEntrypoint(workPath);
+      if (procfileEntry) {
+        const [procfilePath, procfileVar] = procfileEntry;
+        const suggestedSrc = procfileVar
+          ? `${procfilePath}:${procfileVar}`
+          : procfilePath;
+        throw new NowBuildError({
+          code: `${framework.toUpperCase()}_ENTRYPOINT_NOT_FOUND`,
+          message: `No ${framework} entrypoint found. A Procfile was detected at "${suggestedSrc}". Set the entrypoint explicitly in vercel.json: { "builds": [{ "src": "${suggestedSrc}", "use": "@vercel/python" }] }`,
+          link: `https://vercel.com/docs/frameworks/backend/${framework}#exporting-the-${framework}-application`,
+          action: 'Learn More',
+        });
+      }
       const searchedList = PYTHON_CANDIDATE_ENTRYPOINTS.join(', ');
       throw new NowBuildError({
         code: `${framework.toUpperCase()}_ENTRYPOINT_NOT_FOUND`,

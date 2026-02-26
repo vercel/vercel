@@ -1314,6 +1314,62 @@ describe('Django entrypoint discovery', () => {
 
     if (fs.existsSync(workPath)) fs.removeSync(workPath);
   });
+
+  it('build() throws a Procfile hint error when no entrypoint is found but Procfile is present', async () => {
+    const mockWorkPath = path.join(
+      tmpdir(),
+      `python-django-procfile-hint-${Date.now()}`
+    );
+    fs.mkdirSync(mockWorkPath, { recursive: true });
+    makeMockPython('3.9');
+
+    const files = {
+      Procfile: new FileBlob({ data: 'web: uvicorn myapp.asgi:app' }),
+    } as Record<string, FileBlob>;
+
+    await expect(
+      build({
+        workPath: mockWorkPath,
+        files,
+        entrypoint: 'main.py',
+        meta: { isDev: true },
+        config: { framework: 'django' },
+        repoRootPath: mockWorkPath,
+      })
+    ).rejects.toThrow(/Procfile.*myapp\/asgi\.py:app.*Set the entrypoint/i);
+
+    if (fs.existsSync(mockWorkPath)) {
+      fs.removeSync(mockWorkPath);
+    }
+  });
+
+  it('build() suggests file path without variable when Procfile has no explicit attr', async () => {
+    const mockWorkPath = path.join(
+      tmpdir(),
+      `python-django-procfile-hint-no-var-${Date.now()}`
+    );
+    fs.mkdirSync(mockWorkPath, { recursive: true });
+    makeMockPython('3.9');
+
+    const files = {
+      Procfile: new FileBlob({ data: 'web: gunicorn myapp.wsgi' }),
+    } as Record<string, FileBlob>;
+
+    await expect(
+      build({
+        workPath: mockWorkPath,
+        files,
+        entrypoint: 'main.py',
+        meta: { isDev: true },
+        config: { framework: 'django' },
+        repoRootPath: mockWorkPath,
+      })
+    ).rejects.toThrow(/Procfile.*"myapp\/wsgi\.py".*Set the entrypoint/i);
+
+    if (fs.existsSync(mockWorkPath)) {
+      fs.removeSync(mockWorkPath);
+    }
+  });
 });
 
 describe('getPyprojectEntrypoint - pyproject.toml [project.scripts] discovery', () => {
