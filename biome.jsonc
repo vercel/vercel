@@ -7,15 +7,23 @@
     "useIgnoreFile": true,
   },
   "files": {
-    // Allowlist of directories to process (avoids examples/ which has its own biome.json)
+    // Allowlist source directories, exclude examples/ (has its own biome.json)
+    // and test fixtures (contain intentionally broken files that cause parse errors).
     "includes": [
-      "api/**",
-      "internals/**",
-      "packages/**",
-      "test/**",
-      "utils/**",
+      "api/**/*.{js,ts,mjs,cjs,jsx,tsx,json,css}",
+      "internals/**/*.{js,ts,mjs,cjs,jsx,tsx,json,css}",
+      "packages/**/*.{js,ts,mjs,cjs,jsx,tsx,json,css}",
+      "!packages/**/test/fixtures/**",
+      "!packages/**/test/fixtures-*/**",
+      "!packages/**/test/dev/fixtures/**",
+      "!packages/**/test/build-fixtures/**",
+      "!packages/**/test/cache-fixtures/**",
+      "!packages/cli/types/**",
+      "test/**/*.{js,ts,mjs,cjs,jsx,tsx,json,css}",
+      "utils/**/*.{js,ts,mjs,cjs,jsx,tsx,json,css}",
       "*.js",
       "*.ts",
+      "*.mjs",
     ],
   },
   // Formatter settings match the existing Prettier configuration
@@ -35,10 +43,21 @@
       "arrowParentheses": "asNeeded",
     },
   },
+  // Disable import sorting — not enforced by ESLint
+  "assist": {
+    "actions": {
+      "source": {
+        "organizeImports": "off",
+      },
+    },
+  },
   "linter": {
     "enabled": true,
     "rules": {
       "recommended": true,
+
+      // Disable all a11y rules — not enforced by ESLint
+      "a11y": "off",
 
       "correctness": {
         // Matches @typescript-eslint/no-unused-vars: 2
@@ -49,6 +68,24 @@
         "noUnusedFunctionParameters": "off",
         // Not enforced by ESLint
         "noInnerDeclarations": "off",
+        // Not enforced by ESLint
+        "noInvalidUseBeforeDeclaration": "off",
+        // Not enforced by ESLint
+        "noSwitchDeclarations": "off",
+        // Not enforced by ESLint
+        "useValidTypeof": "off",
+        // Not enforced by ESLint
+        "useParseIntRadix": "off",
+        // Not enforced by ESLint
+        "noVoidTypeReturn": "off",
+        // Not enforced by ESLint
+        "noConstantCondition": "off",
+        // Not enforced by ESLint
+        "noUnreachable": "off",
+        // Not enforced by ESLint — CSS rule
+        "noUnknownMediaFeatureName": "off",
+        // Not enforced by ESLint — CSS rule
+        "noInvalidDirectionInLinearGradient": "off",
       },
 
       "suspicious": {
@@ -76,6 +113,34 @@
         "noPrototypeBuiltins": "off",
         // Not enforced by ESLint
         "noRedeclare": "off",
+        // Not enforced by ESLint
+        "useIterableCallbackReturn": "off",
+        // Not enforced by ESLint
+        "noRedundantUseStrict": "off",
+        // Not enforced by ESLint
+        "noShadowRestrictedNames": "off",
+        // Not enforced by ESLint
+        "noControlCharactersInRegex": "off",
+        // Not enforced by ESLint
+        "noThenProperty": "off",
+        // Not enforced by ESLint
+        "noTemplateCurlyInString": "off",
+        // Not enforced by ESLint
+        "noUselessEscapeInString": "off",
+        // Not enforced by ESLint
+        "noShorthandPropertyOverrides": "off",
+        // Not enforced by ESLint
+        "noConstEnum": "off",
+        // Not enforced by ESLint
+        "noArrayIndexKey": "off",
+        // Not enforced by ESLint
+        "useAdjacentOverloadSignatures": "off",
+        // Not enforced by ESLint
+        "noDuplicateParameters": "off",
+        // Not enforced by ESLint
+        "noDuplicateFontNames": "off",
+        // Not enforced by ESLint
+        "noNonNullAssertedOptionalChain": "off",
       },
 
       "style": {
@@ -89,6 +154,10 @@
         "useTemplate": "off",
         // Not enforced by ESLint
         "useImportType": "off",
+        // Not enforced by ESLint
+        "useShorthandFunctionType": "off",
+        // Not enforced by ESLint
+        "useExportType": "off",
       },
 
       "complexity": {
@@ -106,7 +175,39 @@
         "noArguments": "off",
         // Not enforced by ESLint
         "noUselessUndefinedInitialization": "off",
+        // Not enforced by ESLint
+        "noUselessEscapeInRegex": "off",
+        // Not enforced by ESLint
+        "useRegexLiterals": "off",
+        // Not enforced by ESLint
+        "noUselessContinue": "off",
+        // Not enforced by ESLint
+        "noImportantStyles": "off",
+        // Not enforced by ESLint
+        "noUselessLoneBlockStatements": "off",
+        // Not enforced by ESLint
+        "noUselessFragments": "off",
+        // Not enforced by ESLint
+        "noUselessSwitchCase": "off",
+        // Not enforced by ESLint
+        "noUselessCatch": "off",
+        // Not enforced by ESLint
+        "useFlatMap": "off",
+        // Not enforced by ESLint
+        "useDateNow": "off",
+        // Not enforced by ESLint
+        "noUselessTernary": "off",
+        // Not enforced by ESLint
+        "noUselessRename": "off",
+        // Not enforced by ESLint
+        "noUselessConstructor": "off",
       },
+
+      // Not enforced by ESLint
+      "performance": "off",
+
+      // Not enforced by ESLint
+      "security": "off",
     },
   },
   "overrides": [

@@ -123,62 +123,6 @@ export const build: BuildV3 = async ({
     throw err;
   }
 
-  // For Python frameworks, also honor project install/build commands (vercel.json/dashboard)
-  if (isPythonFramework(framework)) {
-    const {
-      cliType,
-      lockfileVersion,
-      packageJsonPackageManager,
-      turboSupportsCorepackHome,
-    } = await scanParentDirs(workPath, true);
-    spawnEnv = getEnvForPackageManager({
-      cliType,
-      lockfileVersion,
-      packageJsonPackageManager,
-      env: process.env,
-      turboSupportsCorepackHome,
-      projectCreatedAt: config?.projectSettings?.createdAt,
-    });
-
-    const installCommand = config?.projectSettings?.installCommand;
-    if (typeof installCommand === 'string') {
-      const trimmed = installCommand.trim();
-      if (trimmed) {
-        projectInstallCommand = trimmed;
-      } else {
-        console.log('Skipping "install" command...');
-      }
-    }
-
-    const projectBuildCommand =
-      config?.projectSettings?.buildCommand ??
-      // fallback if provided directly on config (some callers set this)
-      (config as any)?.buildCommand;
-    await builderSpan
-      .child(BUILDER_COMPILE_STEP, {
-        buildCommand: projectBuildCommand || undefined,
-      })
-      .trace(async () => {
-        if (projectBuildCommand) {
-          console.log(`Running "${projectBuildCommand}"`);
-          await execCommand(projectBuildCommand, {
-            env: spawnEnv,
-            cwd: workPath,
-          });
-          hasCustomCommand = true;
-        } else {
-          const ranBuildScript = await runPyprojectScript(
-            workPath,
-            ['vercel-build', 'now-build', 'build'],
-            spawnEnv
-          );
-          if (ranBuildScript) {
-            hasCustomCommand = true;
-          }
-        }
-      });
-  }
-
   let fsFiles = await glob('**', workPath);
 
   // Zero config entrypoint discovery
@@ -350,6 +294,34 @@ export const build: BuildV3 = async ({
     });
   });
 
+  // For Python frameworks, set up the env and extract the install command (vercel.json/dashboard)
+  if (isPythonFramework(framework)) {
+    const {
+      cliType,
+      lockfileVersion,
+      packageJsonPackageManager,
+      turboSupportsCorepackHome,
+    } = await scanParentDirs(workPath, true);
+    spawnEnv = getEnvForPackageManager({
+      cliType,
+      lockfileVersion,
+      packageJsonPackageManager,
+      env: process.env,
+      turboSupportsCorepackHome,
+      projectCreatedAt: config?.projectSettings?.createdAt,
+    });
+
+    const installCommand = config?.projectSettings?.installCommand;
+    if (typeof installCommand === 'string') {
+      const trimmed = installCommand.trim();
+      if (trimmed) {
+        projectInstallCommand = trimmed;
+      } else {
+        console.log('Skipping "install" command...');
+      }
+    }
+  }
+
   const baseEnv = spawnEnv || process.env;
   const pythonEnv = createVenvEnv(venvPath, baseEnv);
 
@@ -470,27 +442,54 @@ export const build: BuildV3 = async ({
           locked: !lockFileProvidedByUser,
         });
       }
-
-      // Ensure correct version of vercel-runtime is installed.
-      //
-      // We intentionally do not inject vercel-runtime into the manifest
-      // as that would result in surprising modifications in working
-      // directories when running `vercel build` locally.
-      //
-      // Note: running sync removes any package that is not in the lockfile or
-      // manifest, which means that it is NOT SAFE to re-run `uv sync` at any
-      // point after as that would effectively remove vercel-runtime from the
-      // bundle rendering the function inoperable.
-      const runtimeDep =
-        baseEnv.VERCEL_RUNTIME_PYTHON ||
-        `vercel-runtime==${VERCEL_RUNTIME_VERSION}`;
-      debug(`Installing ${runtimeDep}`);
-      await uv.pip({
-        venvPath,
-        projectDir: join(workPath, entryDirectory),
-        args: ['install', runtimeDep],
-      });
     });
+
+  // Run the project build command (if any) AFTER dependencies are installed.
+  if (isPythonFramework(framework)) {
+    const projectBuildCommand =
+      config?.projectSettings?.buildCommand ??
+      // fallback if provided directly on config (some callers set this)
+      (config as any)?.buildCommand;
+    await builderSpan
+      .child(BUILDER_COMPILE_STEP, {
+        buildCommand: projectBuildCommand || undefined,
+      })
+      .trace(async () => {
+        if (projectBuildCommand) {
+          console.log(`Running "${projectBuildCommand}"`);
+          await execCommand(projectBuildCommand, {
+            env: pythonEnv,
+            cwd: workPath,
+          });
+        } else {
+          await runPyprojectScript(
+            workPath,
+            ['vercel-build', 'now-build', 'build'],
+            pythonEnv
+          );
+        }
+      });
+  }
+
+  // Ensure correct version of vercel-runtime is installed.
+  //
+  // We intentionally do not inject vercel-runtime into the manifest
+  // as that would result in surprising modifications in working
+  // directories when running `vercel build` locally.
+  //
+  // Note: running sync removes any package that is not in the lockfile or
+  // manifest, which means that it is NOT SAFE to re-run `uv sync` at any
+  // point after as that would effectively remove vercel-runtime from the
+  // bundle rendering the function inoperable.
+  const runtimeDep =
+    baseEnv.VERCEL_RUNTIME_PYTHON ||
+    `vercel-runtime==${VERCEL_RUNTIME_VERSION}`;
+  debug(`Installing ${runtimeDep}`);
+  await uv.pip({
+    venvPath,
+    projectDir: join(workPath, entryDirectory),
+    args: ['install', runtimeDep],
+  });
 
   // Optional override used by CI/preview builds to test in-repo vercel-workers wheels.
   // TODO: uncomment when we introduce the 'workers' service implementation
