@@ -1244,6 +1244,10 @@ describe('routes edit', () => {
   // ---------------------------------------------------------------------------
 
   describe('interactive mode', () => {
+    // The array is the sequence of values returned by client.input.select
+    // across successive calls — not the options shown in a single menu.
+    // 'manual' answers the "How would you like to edit?" prompt (AI vs manual);
+    // the remaining values drive the field-editing menu.
     it('should edit name interactively', async () => {
       useEditRouteComprehensive();
 

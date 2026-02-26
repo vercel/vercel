@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   generatedRouteToAddInput,
-  generatedRouteToCurrentRoute,
+  convertRouteToCurrentRoute,
   routingRuleToCurrentRoute,
 } from '../../../../src/util/routes/ai-transform';
 import type { GeneratedRoute } from '../../../../src/util/routes/generate-route';
@@ -287,7 +287,7 @@ describe('ai-transform', () => {
     });
   });
 
-  describe('generatedRouteToCurrentRoute', () => {
+  describe('convertRouteToCurrentRoute', () => {
     it('should pass through pathCondition, conditions, and actions', () => {
       const generated: GeneratedRoute = {
         name: 'Test',
@@ -305,7 +305,7 @@ describe('ai-transform', () => {
         actions: [{ type: 'rewrite', dest: '/dest' }],
       };
 
-      const result = generatedRouteToCurrentRoute(generated);
+      const result = convertRouteToCurrentRoute(generated);
 
       expect(result.name).toBe('Test');
       expect(result.description).toBe('Desc');
@@ -325,7 +325,7 @@ describe('ai-transform', () => {
         actions: [{ type: 'rewrite', dest: '/dest' }],
       };
 
-      const result = generatedRouteToCurrentRoute(generated);
+      const result = convertRouteToCurrentRoute(generated);
 
       expect(result.description).toBeUndefined();
     });

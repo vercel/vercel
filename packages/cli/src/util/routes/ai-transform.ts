@@ -123,7 +123,7 @@ export function generatedRouteToAddInput(
  * used by the /generate endpoint's edit mode.
  * Used when the user picks "Edit with AI" after initial generation.
  */
-export function generatedRouteToCurrentRoute(
+export function convertRouteToCurrentRoute(
   generated: GeneratedRoute
 ): CurrentRouteInput {
   return {

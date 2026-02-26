@@ -18,9 +18,10 @@ import generateRouteApi, {
 } from '../../util/routes/generate-route';
 import {
   generatedRouteToAddInput,
-  generatedRouteToCurrentRoute,
+  convertRouteToCurrentRoute,
   printGeneratedRoutePreview,
 } from '../../util/routes/ai-transform';
+import { runInteractiveEditLoop } from './edit-interactive';
 import stamp from '../../util/output/stamp';
 import { getCommandName } from '../../util/pkg-name';
 import { RoutesAddTelemetryClient } from '../../util/telemetry/commands/routes';
@@ -617,7 +618,8 @@ async function handleAIAdd(
   const { versions } = await getRouteVersions(client, projectId, { teamId });
   const existingStagingVersion = versions.find(v => v.isStaging);
 
-  // Initial generation loop — retry on error unless --yes
+  // Retry loop: if generation fails, let the user rephrase their prompt.
+  // Breaks out on success; exits on --yes/non-TTY or user cancel.
   let prompt = aiPrompt;
   let currentGenerated;
   for (;;) {
@@ -748,7 +750,7 @@ async function handleAIAdd(
           projectId,
           {
             prompt: editPrompt,
-            currentRoute: generatedRouteToCurrentRoute(currentGenerated),
+            currentRoute: convertRouteToCurrentRoute(currentGenerated),
           },
           { teamId }
         );
@@ -779,7 +781,6 @@ async function handleAIAdd(
 
     if (choice === 'manual') {
       const routeInput = generatedRouteToAddInput(currentGenerated);
-      const { runInteractiveEditLoop } = await import('./edit');
       const tempRule: EditableRoute = {
         name: routeInput.name,
         description: routeInput.description,
