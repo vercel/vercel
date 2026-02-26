@@ -4,7 +4,7 @@
     "enabled": true,
     "clientKind": "git",
     // Respect .gitignore for file exclusion
-    "useIgnoreFile": true
+    "useIgnoreFile": true,
   },
   "files": {
     // Allowlist of directories to process (avoids examples/ which has its own biome.json)
@@ -15,15 +15,15 @@
       "test/**",
       "utils/**",
       "*.js",
-      "*.ts"
-    ]
+      "*.ts",
+    ],
   },
   // Formatter settings match the existing Prettier configuration
   "formatter": {
     "enabled": true,
     "indentStyle": "space",
     "indentWidth": 2,
-    "lineWidth": 80
+    "lineWidth": 80,
   },
   "javascript": {
     "formatter": {
@@ -32,8 +32,8 @@
       // Matches Prettier: trailingComma: "es5"
       "trailingCommas": "es5",
       // Matches Prettier: arrowParens: "avoid"
-      "arrowParentheses": "asNeeded"
-    }
+      "arrowParentheses": "asNeeded",
+    },
   },
   "linter": {
     "enabled": true,
@@ -48,7 +48,7 @@
         // Not enforced by ESLint — too noisy to enable now (277 hits)
         "noUnusedFunctionParameters": "off",
         // Not enforced by ESLint
-        "noInnerDeclarations": "off"
+        "noInnerDeclarations": "off",
       },
 
       "suspicious": {
@@ -75,7 +75,7 @@
         // Not enforced by ESLint
         "noPrototypeBuiltins": "off",
         // Not enforced by ESLint
-        "noRedeclare": "off"
+        "noRedeclare": "off",
       },
 
       "style": {
@@ -88,7 +88,7 @@
         // Not enforced by ESLint
         "useTemplate": "off",
         // Not enforced by ESLint
-        "useImportType": "off"
+        "useImportType": "off",
       },
 
       "complexity": {
@@ -105,9 +105,9 @@
         // Not enforced by ESLint
         "noArguments": "off",
         // Not enforced by ESLint
-        "noUselessUndefinedInitialization": "off"
-      }
-    }
+        "noUselessUndefinedInitialization": "off",
+      },
+    },
   },
   "overrides": [
     // Disable linting and formatting for generated code, fixtures, and vendored files
@@ -133,14 +133,14 @@
         "packages/next/test/integration/middleware-eval/**",
         "packages/middleware/src/entries.js",
         "packages/gatsby-plugin-vercel-analytics/**",
-        "packages/functions/**/*.js"
+        "packages/functions/**/*.js",
       ],
       "linter": {
-        "enabled": false
+        "enabled": false,
       },
       "formatter": {
-        "enabled": false
-      }
+        "enabled": false,
+      },
     },
     // CLI package has stricter rules — matches ESLint override for packages/cli/**
     {
@@ -149,10 +149,10 @@
         "rules": {
           "style": {
             // Matches ESLint prefer-const: "error" override for CLI
-            "useConst": "error"
-          }
-        }
-      }
-    }
-  ]
+            "useConst": "error",
+          },
+        },
+      },
+    },
+  ],
 }
