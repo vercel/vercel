@@ -21,11 +21,11 @@ import {
 } from './output';
 import { formatText } from './text-output';
 import {
-  resolveTimeRange,
   computeGranularity,
   roundTimeBoundaries,
   toGranularityMsFromDuration,
 } from './time-utils';
+import { resolveTimeRange } from '../../util/time-utils';
 import type { MetricsTelemetryClient } from '../../util/telemetry/commands/metrics';
 import type {
   Scope,
