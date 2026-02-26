@@ -7,9 +7,8 @@ const config: ExperimentConfig = {
   evals: ['_smoke'],
   runs: 1,
   earlyExit: true, // Run all evals to completion so we get explicit pass/fail for each
-  timeout: 600,
+  timeout: 300,
   sandbox: 'vercel',
-  copyFiles: 'all',
   setup: async sandbox => {
     await installCLI(sandbox);
     await setupAuthAndConfig(sandbox);

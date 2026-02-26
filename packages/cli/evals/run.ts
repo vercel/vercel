@@ -10,33 +10,12 @@ import { spawn } from 'child_process';
 import { existsSync, readdirSync } from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
-import { config } from 'dotenv';
+import * as oidc from '@vercel/oidc';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // run.ts is in packages/cli/evals/, so evals fixtures are in packages/cli/evals/evals/
 const EVALS_DIR = join(__dirname, 'evals');
-
-const populateOIDCToken = async () => {
-  const pullArgs = ['env', 'pull', '-y'];
-  const pullChild = spawn('vc', pullArgs, {
-    cwd: join(__dirname, 'sandbox-project'),
-    stdio: 'inherit',
-    env: { ...process.env, FORCE_COLOR: '1' },
-  });
-
-  const pullExitCode = await new Promise<number>(resolve => {
-    pullChild.on('close', (code, signal) => {
-      resolve(code ?? (signal ? 1 : 0));
-    });
-  });
-
-  if (pullExitCode !== 0) {
-    process.exit(pullExitCode);
-  }
-
-  config({ path: join(__dirname, 'sandbox-project', '.env.local') });
-};
 
 /** Recursively discover eval dirs (have PROMPT.md + EVAL.ts + package.json). Returns relative paths e.g. "build", "env/ls", "env/add". */
 function discoverEvals(): string[] {
@@ -77,11 +56,15 @@ async function main() {
     process.exit(0);
   }
 
-  await populateOIDCToken();
+  const vercelOidcToken = await oidc.getVercelOidcToken({
+    project: 'sandbox-project',
+    team: 'agentic-zero-conf',
+  });
+  const vercelToken = await oidc.getVercelToken();
 
   const args = process.argv.slice(2);
   const isDryRun = args.includes('--dry');
-  const hasCreds = Boolean(process.env.VERCEL_OIDC_TOKEN);
+  const hasCreds = Boolean(vercelOidcToken);
   if (!isDryRun && !hasCreds) {
     process.stderr.write(
       'Evals require AI_GATEWAY_API_KEY (e.g. from Vercel → AI Gateway → API Keys). Set it in .env or CI secrets (or use --dry to preview).\n'
@@ -95,12 +78,19 @@ async function main() {
     'Progress: each eval prints "Running <name>..." when it starts and "✓/✗ <name>..." when it finishes (can take several minutes per eval).\n\n'
   );
 
-  const agentEvalArgs = ['--yes', '@vercel/agent-eval@latest', ...args];
+  // const agentEvalBinary = '/Users/jeffsee/code/agent-eval/packages/agent-eval/dist/cli.js'
+  const agentEvalBinary = '@vercel/agent-eval@latest';
+  const agentEvalArgs = ['--yes', agentEvalBinary, ...args];
 
   const child = spawn('npx', agentEvalArgs, {
     cwd: __dirname,
     stdio: 'inherit',
-    env: { ...process.env, FORCE_COLOR: '1' },
+    env: {
+      ...process.env,
+      FORCE_COLOR: '1',
+      VERCEL_OIDC_TOKEN: vercelOidcToken,
+      VERCEL_TOKEN: vercelToken,
+    },
   });
 
   const exitCode = await new Promise<number>(resolve => {
