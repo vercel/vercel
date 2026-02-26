@@ -1,3 +1,0 @@
-{
-  "buildCommand": "python3 -c 'import fastapi'  # check installation"
-}
