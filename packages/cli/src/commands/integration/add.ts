@@ -120,7 +120,7 @@ export async function add(
   // to apply product-specific validation rules
 
   // Auto-provision: completely separate code path (self-contained telemetry)
-  if (process.env.FF_AUTO_PROVISION_INSTALL === '1') {
+  if (process.env.FF_AUTO_PROVISION_INSTALL !== '0') {
     return await addAutoProvision(client, integrationSlug, resourceNameArg, {
       productSlug,
       metadata: metadataFlags,
@@ -526,6 +526,7 @@ async function provisionResourceViaCLI(
       metadata,
       billingPlan,
       authorizationId,
+      integration.slug,
       contextName,
       options
     );
@@ -723,6 +724,7 @@ async function provisionStorageProduct(
   metadata: Metadata,
   billingPlan: BillingPlan,
   authorizationId: string,
+  integrationSlug: string,
   contextName: string,
   options: AddOptions = {}
 ) {
@@ -751,12 +753,10 @@ async function provisionStorageProduct(
     `${product.name} successfully provisioned: ${chalk.bold(name)}`
   );
 
-  const result = await postProvisionSetup(
-    client,
-    name,
-    storeId,
-    contextName,
-    options
-  );
+  const result = await postProvisionSetup(client, name, storeId, contextName, {
+    ...options,
+    integrationSlug,
+    installationId: installation.id,
+  });
   return result.exitCode;
 }

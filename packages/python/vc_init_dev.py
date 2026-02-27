@@ -5,7 +5,7 @@ import sys
 import os
 import inspect
 from os import path as _p
-from importlib import import_module
+from importlib import util as _importlib_util
 import mimetypes
 
 
@@ -72,8 +72,20 @@ def _strip_service_route_prefix(path_value):
 
 
 # ASGI/WSGI app detection
-USER_MODULE = "__VC_DEV_MODULE_PATH__"
-_mod = import_module(USER_MODULE)
+_MODULE_NAME = "__VC_DEV_MODULE_NAME__"
+_ENTRY_ABS = "__VC_DEV_ENTRY_ABS__"
+
+# Import user module by file path, matching vc_init.py's approach.
+# https://docs.python.org/3/library/importlib.html#importing-a-source-file-directly
+_spec = _importlib_util.spec_from_file_location(_MODULE_NAME, _ENTRY_ABS)
+if _spec is None or _spec.loader is None:
+    raise RuntimeError(
+        f"Could not load module spec for '{_MODULE_NAME}' at {_ENTRY_ABS}"
+    )
+_mod = _importlib_util.module_from_spec(_spec)
+sys.modules[_MODULE_NAME] = _mod
+_spec.loader.exec_module(_mod)
+
 _user_app_name = (
     "app"
     if hasattr(_mod, "app")
@@ -83,7 +95,7 @@ _user_app_name = (
 )
 if _user_app_name is None:
     raise RuntimeError(
-        f"Missing 'app' or 'application' in module '{USER_MODULE}'. "
+        f"Missing 'app' or 'application' in module '{_MODULE_NAME}'. "
         f"Define `app = ...` or `application = ...` in your entrypoint."
     )
 
@@ -137,7 +149,7 @@ def _detect_app_type(app_obj):
 
     print(
         _color(
-            f"Could not determine the application interface for '{USER_MODULE}:{_user_app_name}'\n"
+            f"Could not determine the application interface for '{_MODULE_NAME}:{_user_app_name}'\n"
             f"Expected either:\n"
             f"  - An ASGI app: async callable(scope, receive, send)\n"
             f"  - A WSGI app: callable(environ, start_response)",
