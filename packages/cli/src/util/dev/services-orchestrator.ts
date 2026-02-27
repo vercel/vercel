@@ -68,8 +68,11 @@ function createServiceLogger(
   const padding = ' '.repeat(maxNameLength - serviceName.length);
   const prefix = color(`[${serviceName}]`) + padding;
 
-  const createTransform = () => {
+  const createTransform = (streamLabel: string) => {
     let buffer = '';
+    const labelPrefix = output.debugEnabled
+      ? `${prefix} ${chalk.gray(`(${streamLabel})`)}`
+      : prefix;
     return new Transform({
       transform(
         chunk: Buffer,
@@ -82,7 +85,9 @@ function createServiceLogger(
         buffer = lines.pop() || '';
         // Output complete lines with prefix
         if (lines.length > 0) {
-          const prefixed = lines.map(line => `${prefix} ${line}`).join('\n');
+          const prefixed = lines
+            .map(line => `${labelPrefix} ${line}`)
+            .join('\n');
           callback(null, prefixed + '\n');
         } else {
           callback(null, '');
@@ -91,7 +96,7 @@ function createServiceLogger(
       flush(callback: TransformCallback) {
         // Output any remaining buffered content on close
         if (buffer) {
-          callback(null, `${prefix} ${buffer}\n`);
+          callback(null, `${labelPrefix} ${buffer}\n`);
         } else {
           callback(null, '');
         }
@@ -99,8 +104,8 @@ function createServiceLogger(
     });
   };
 
-  const stdout = createTransform();
-  const stderr = createTransform();
+  const stdout = createTransform('stdout');
+  const stderr = createTransform('stderr');
 
   stdout.pipe(process.stdout);
   stderr.pipe(process.stderr);
