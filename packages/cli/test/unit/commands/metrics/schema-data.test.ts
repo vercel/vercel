@@ -18,9 +18,7 @@ describe('schema-data', () => {
   it('should return correct event for known event', () => {
     const event = getEvent('incomingRequest');
     expect(event).toBeDefined();
-    expect(event!.description).toBe(
-      'All incoming HTTP requests to your deployments'
-    );
+    expect(event!.description).toBe('Edge Requests');
   });
 
   it('should return undefined for unknown event', () => {
@@ -127,9 +125,9 @@ describe('schema-data', () => {
     });
 
     it('should return avg for megabytes unit', () => {
-      expect(getDefaultAggregation('functionExecution', 'peakMemoryMb')).toBe(
-        'avg'
-      );
+      expect(
+        getDefaultAggregation('functionExecution', 'provisionedMemoryMb')
+      ).toBe('avg');
     });
 
     it('should return avg for ratio unit', () => {
@@ -142,6 +140,12 @@ describe('schema-data', () => {
       expect(getDefaultAggregation('aiGatewayRequest', 'inputTokens')).toBe(
         'sum'
       );
+    });
+
+    it('should return avg for seconds unit', () => {
+      expect(
+        getDefaultAggregation('aiGatewayRequest', 'videoDurationSeconds')
+      ).toBe('avg');
     });
 
     it('should return avg for percent unit', () => {
