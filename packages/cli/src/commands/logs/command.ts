@@ -117,7 +117,7 @@ export const logsCommand = {
       type: String,
       deprecated: false,
       description:
-        'Raw search query passed to the API (supports filter syntax)',
+        'Advanced search query (supports filter syntax, e.g. "status:500 error")',
     },
     {
       name: 'request-id',
@@ -179,7 +179,7 @@ export const logsCommand = {
       value: `${packageName} logs --query "timeout" --json | jq '.message'`,
     },
     {
-      name: 'Pass a raw search query with filters',
+      name: 'Use advanced search query with filters',
       value: `${packageName} logs --search "status:500 error" --json | jq '.message'`,
     },
     {
