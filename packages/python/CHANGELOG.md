@@ -1,5 +1,11 @@
 # @vercel/python
 
+## 6.18.1
+
+### Patch Changes
+
+- add litellm proxy support ([#15313](https://github.com/vercel/vercel/pull/15313))
+
 ## 6.18.0
 
 ### Minor Changes
