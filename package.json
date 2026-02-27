@@ -31,6 +31,7 @@
     "lint-staged": "9.2.5",
     "node-fetch": "2.6.7",
     "npm-package-arg": "6.1.0",
+    "prettier": "3.3.3",
     "source-map-support": "0.5.12",
     "syncpack": "13.0.4",
     "tmp-promise": "1.0.3",
@@ -61,11 +62,20 @@
     "type-check": "turbo type-check --concurrency=12 --output-logs=errors-only --summarize --continue"
   },
   "lint-staged": {
-    "./{*,{api,internals,packages,test,utils}/**/*}.{js,ts,json}": [
+    "./{*,{api,internals,packages,test,utils}/**/*}.{js,ts}": [
       "biome format --write --no-errors-on-unmatched",
-      "eslint --ext .js,.ts",
+      "eslint",
+      "git add"
+    ],
+    "./{*,{api,internals,packages,test,utils}/**/*}.json": [
+      "biome format --write --no-errors-on-unmatched",
       "git add"
     ]
+  },
+  "prettier": {
+    "trailingComma": "es5",
+    "singleQuote": true,
+    "arrowParens": "avoid"
   },
   "eslintConfig": {
     "root": true,
