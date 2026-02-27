@@ -216,7 +216,7 @@ describe('text-output', () => {
   describe('section formatters', () => {
     it('should render usage-style metadata fields', () => {
       const metadata = formatMetadataHeader({
-        event: 'incomingRequest',
+        event: 'edgeRequest',
         measure: 'requestDurationMs',
         aggregation: 'avg',
         periodStart: '2026-02-19T10:00:00.000Z',
@@ -273,7 +273,7 @@ describe('text-output', () => {
       };
 
       const output = formatText(response, {
-        event: 'incomingRequest',
+        event: 'edgeRequest',
         measure: 'count',
         aggregation: 'sum',
         groupBy: [],
@@ -292,7 +292,7 @@ describe('text-output', () => {
         .join('\n');
 
       expect(normalized).toMatchInlineSnapshot(`
-        "> Metric: incomingRequest / count sum
+        "> Metric: edgeRequest / count sum
         > Period: 2026-02-19 10:00 to 2026-02-19 10:15
         > Interval: 5m
         > Project: my-project (my-team)
@@ -378,7 +378,7 @@ describe('text-output', () => {
           statistics: {},
         },
         {
-          event: 'incomingRequest',
+          event: 'edgeRequest',
           measure: 'count',
           aggregation: 'sum',
           groupBy: [],
@@ -400,7 +400,7 @@ describe('text-output', () => {
           statistics: {},
         },
         {
-          event: 'incomingRequest',
+          event: 'edgeRequest',
           measure: 'count',
           aggregation: 'sum',
           groupBy: [],

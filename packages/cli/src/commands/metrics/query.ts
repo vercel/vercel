@@ -13,7 +13,7 @@ import {
   validateGroupBy,
   validateMutualExclusivity,
 } from './validation';
-import { getDefaultAggregation } from './schema-data';
+import { getDefaultAggregation, getQueryEngineEventName } from './schema-data';
 import {
   formatQueryJson,
   formatErrorJson,
@@ -304,7 +304,7 @@ export default async function query(
   const body: MetricsQueryRequest = {
     reason: 'agent' as const,
     scope,
-    event,
+    event: getQueryEngineEventName(event),
     rollups: { [rollupColumn]: { measure, aggregation } },
     startTime: rounded.start.toISOString(),
     endTime: rounded.end.toISOString(),

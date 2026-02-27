@@ -12,6 +12,8 @@ export interface MeasureSchema {
 
 export interface EventSchema {
   description: string;
+  /** If set, this name is sent to the query engine instead of the schema key. */
+  queryEngineEvent?: string;
   dimensions: DimensionSchema[];
   measures: MeasureSchema[];
 }
@@ -431,8 +433,9 @@ export const SCHEMA = {
       },
     ],
   },
-  incomingRequest: {
+  edgeRequest: {
     description: 'Edge Requests',
+    queryEngineEvent: 'incomingRequest',
     dimensions: [
       { name: 'asnId', label: 'AS Number', filterOnly: false },
       { name: 'asnName', label: 'AS Name', filterOnly: false },
@@ -781,6 +784,11 @@ export function getEventNames(): string[] {
 
 export function getEvent(name: string): EventSchema | undefined {
   return (SCHEMA as Record<string, EventSchema>)[name];
+}
+
+export function getQueryEngineEventName(name: string): string {
+  const event = getEvent(name);
+  return event?.queryEngineEvent ?? name;
 }
 
 export function getDimensions(eventName: string): DimensionSchema[] {
