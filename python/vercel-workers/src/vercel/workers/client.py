@@ -92,12 +92,14 @@ _subscriptions: list[_Subscription] = []
 @overload
 def subscribe(_func: WorkerCallable) -> WorkerCallable: ...
 
+
 @overload
 def subscribe(
     *,
     topic: str | tuple[str, Callable[[str | None], bool]] | None = None,
     consumer: str | None = None,
 ) -> Callable[[WorkerCallable], WorkerCallable]: ...
+
 
 def subscribe(
     _func: WorkerCallable | None = None,
@@ -122,6 +124,7 @@ def subscribe(
 
     topic_filter: Callable[[str | None], bool] | None
     if isinstance(topic, str):
+
         def topic_filter(t: str | None) -> bool:
             return t == topic
 
