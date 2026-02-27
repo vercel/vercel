@@ -25,12 +25,12 @@ const VALUE_AGGREGATIONS = [
   'avg',
   'min',
   'max',
+  'p50',
   'p75',
   'p90',
   'p95',
   'p99',
   'stddev',
-  'unique',
 ] as const;
 
 export type CountAggregation = (typeof COUNT_AGGREGATIONS)[number];
@@ -82,17 +82,17 @@ export const SCHEMA = {
       {
         name: 'cacheCreationInputTokens',
         label: 'Cache Creation Tokens',
-        unit: 'tokens',
+        unit: 'count',
       },
       {
         name: 'cachedInputTokens',
         label: 'Cached Input Tokens',
-        unit: 'tokens',
+        unit: 'count',
       },
       { name: 'cost', label: 'Cost', unit: 'US dollars' },
       { name: 'count', label: 'Count', unit: 'count' },
-      { name: 'inputTokens', label: 'Input Tokens', unit: 'tokens' },
-      { name: 'outputTokens', label: 'Output Tokens', unit: 'tokens' },
+      { name: 'inputTokens', label: 'Input Tokens', unit: 'count' },
+      { name: 'outputTokens', label: 'Output Tokens', unit: 'count' },
       {
         name: 'timeToFirstTokenMs',
         label: 'Time to First Token',
@@ -845,7 +845,6 @@ export function getDefaultAggregation(
   switch (measure.unit) {
     case 'count':
     case 'bytes':
-    case 'tokens':
     case 'US dollars':
       return 'sum';
     case 'milliseconds':

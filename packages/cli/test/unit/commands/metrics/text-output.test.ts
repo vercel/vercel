@@ -26,9 +26,9 @@ const projectScope: Scope = {
 
 describe('text-output', () => {
   describe('number formatting', () => {
-    it('should classify measure types from schema units', () => {
+    it('should classify measure types from schema units and fallback units', () => {
       expect(getMeasureType('count')).toBe('count');
-      expect(getMeasureType('tokens')).toBe('count');
+      expect(getMeasureType('unknown_unit')).toBe('ratio');
       expect(getMeasureType('US dollars')).toBe('count');
       expect(getMeasureType('milliseconds')).toBe('duration');
       expect(getMeasureType('bytes')).toBe('bytes');

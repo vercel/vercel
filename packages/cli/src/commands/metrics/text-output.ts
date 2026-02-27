@@ -85,7 +85,7 @@ const MAX_SPARKLINE_LENGTH = 120;
 type TableAlignment = 'l' | 'c' | 'r';
 type StatColumn = 'total' | 'avg' | 'min' | 'max';
 
-const COUNT_UNITS = new Set(['count', 'tokens', 'us dollars', 'dollars']);
+const COUNT_UNITS = new Set(['count', 'us dollars', 'dollars']);
 const DURATION_UNITS = new Set(['milliseconds', 'seconds']);
 const BYTES_UNITS = new Set([
   'bytes',
@@ -332,7 +332,7 @@ function buildExpectedTimestamps(
 
 /**
  * Classifies a schema unit into formatting behavior:
- * - `count`: count/tokens/USD-like values (integer totals for `sum`)
+ * - `count`: count/USD-like values (integer totals for `sum`)
  * - `duration`: time units (ms/s)
  * - `bytes`: storage/bandwidth-like units
  * - `ratio`: percentages/ratios and unknown units (safe decimal fallback)

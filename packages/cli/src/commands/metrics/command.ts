@@ -77,7 +77,7 @@ export const metricsCommand = {
       type: String,
       deprecated: false,
       description:
-        'Aggregation function (default: sum for counts/bytes/tokens, avg for durations/memory/ratios)',
+        'Aggregation function (default: sum for counts/bytes/currency, avg for durations/memory/ratios)',
       argument: 'FN',
     },
     {

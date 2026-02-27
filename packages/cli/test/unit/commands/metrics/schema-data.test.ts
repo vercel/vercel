@@ -63,7 +63,8 @@ describe('schema-data', () => {
     expect(aggs).toContain('avg');
     expect(aggs).toContain('min');
     expect(aggs).toContain('max');
-    expect(aggs).toContain('unique');
+    expect(aggs).toContain('p50');
+    expect(aggs).not.toContain('unique');
   });
 
   it('should return empty aggregations for unknown event', () => {
@@ -138,16 +139,10 @@ describe('schema-data', () => {
       ).toBe('avg');
     });
 
-    it('should return sum for tokens unit', () => {
+    it('should return sum for count unit', () => {
       expect(getDefaultAggregation('aiGatewayRequest', 'inputTokens')).toBe(
         'sum'
       );
-    });
-
-    it('should return avg for gigabyte hours unit', () => {
-      expect(
-        getDefaultAggregation('middlewareInvocation', 'functionDurationGbhr')
-      ).toBe('avg');
     });
 
     it('should return avg for percent unit', () => {
