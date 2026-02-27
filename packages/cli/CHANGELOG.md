@@ -1,5 +1,43 @@
 # vercel
 
+## 50.25.1
+
+### Patch Changes
+
+- Add `buy` command for purchasing Vercel products (credits, addons, pro, v0, domains) ([#15038](https://github.com/vercel/vercel/pull/15038))
+
+- Suggest `vercel integration guide` after successful provisioning, use deeplink format for dashboard URL, and mention `integration discover` in `integration guide` help ([#15293](https://github.com/vercel/vercel/pull/15293))
+
+- Support add-on purchasing in `vercel buy` CLI ([#15172](https://github.com/vercel/vercel/pull/15172))
+
+- Add `vercel buy pro` subcommand for purchasing Pro plan ([#15221](https://github.com/vercel/vercel/pull/15221))
+
+- fix(cli): improve agent discoverability of integration-resource commands ([#15275](https://github.com/vercel/vercel/pull/15275))
+
+  - Add `integration-resource` cross-references in `integration --help` and `integration remove --help`
+  - Emit structured JSON with resource names and next commands when `integration remove --format=json --yes` fails because resources still exist
+
+- Updated dependencies [[`3880e1028840aae6883211b79a1a30c7432580f3`](https://github.com/vercel/vercel/commit/3880e1028840aae6883211b79a1a30c7432580f3), [`90238372d2bd0df7b9c0b31331106c242179d526`](https://github.com/vercel/vercel/commit/90238372d2bd0df7b9c0b31331106c242179d526), [`0d4117901cfc24e19e4f81a860d7565f6aecafa6`](https://github.com/vercel/vercel/commit/0d4117901cfc24e19e4f81a860d7565f6aecafa6)]:
+  - @vercel/python@6.18.0
+  - @vercel/next@4.15.36
+  - @vercel/build-utils@13.6.1
+  - @vercel/backends@0.0.39
+  - @vercel/elysia@0.1.42
+  - @vercel/express@0.1.51
+  - @vercel/fastify@0.1.45
+  - @vercel/go@3.4.3
+  - @vercel/h3@0.1.51
+  - @vercel/hono@0.2.45
+  - @vercel/hydrogen@1.3.5
+  - @vercel/koa@0.1.25
+  - @vercel/nestjs@0.2.46
+  - @vercel/node@5.6.9
+  - @vercel/redwood@2.4.9
+  - @vercel/remix-builder@5.6.0
+  - @vercel/ruby@2.3.2
+  - @vercel/rust@1.0.5
+  - @vercel/static-build@2.8.43
+
 ## 50.25.0
 
 ### Minor Changes
