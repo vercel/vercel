@@ -2240,6 +2240,9 @@ export const frameworks = [
           path: 'Pipfile',
           matchContent: '[Dd]jango',
         },
+        {
+          path: 'manage.py',
+        },
       ],
     },
     settings: {
