@@ -1,1 +1,3 @@
-from litellm.proxy.proxy_server import app  # noqa: F401
+from litellm.proxy import proxy_server
+
+app = proxy_server.app
