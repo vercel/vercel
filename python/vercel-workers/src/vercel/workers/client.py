@@ -468,7 +468,7 @@ def send(
     base_path: str | None = None,
     content_type: str = "application/json",
     timeout: float | None = 10.0,
-    custom_headers: dict[str, str] | None = None,
+    headers: dict[str, str] | None = None,
 ) -> SendMessageResult:
     """
     Send a message to a Vercel Queue (synchronous).
@@ -494,7 +494,7 @@ def send(
             ``VERCEL_QUEUE_BASE_PATH`` or ``/api/v2/messages``.
         content_type: MIME type of the payload. Defaults to ``application/json``.
         timeout: Optional request timeout in seconds.
-        custom_headers: Custom headers to include in all requests.
+        headers: Additional headers to include in all requests.
 
     Returns:
         A dict containing the generated ``messageId``.
@@ -511,12 +511,10 @@ def send(
 
     auth_token = get_queue_token(token)
 
-    headers: dict[str, str] = {
+    headers = {
         "Authorization": f"Bearer {auth_token}",
         "Content-Type": content_type,
-    }
-    if custom_headers:
-        headers.update(custom_headers)
+    } | (headers or {})
     headers["Vqs-Queue-Name"] = queue_name
 
     deployment_id = deployment_id or os.environ.get("VERCEL_DEPLOYMENT_ID")
@@ -585,7 +583,7 @@ async def send_async(
     base_path: str | None = None,
     content_type: str = "application/json",
     timeout: float | None = 10.0,
-    custom_headers: dict[str, str] | None = None,
+    headers: dict[str, str] | None = None,
 ) -> SendMessageResult:
     """
     Asynchronous variant of :func:`send` that additionally supports resolving
@@ -604,7 +602,7 @@ async def send_async(
             ``VERCEL_QUEUE_BASE_PATH`` or ``/api/v2/messages``.
         content_type: MIME type of the payload. Defaults to ``application/json``.
         timeout: Optional request timeout in seconds.
-        custom_headers: Custom headers to include in all requests.
+        headers: Additional headers to include in all requests.
 
     Returns:
         A dict containing the generated ``messageId``.
@@ -614,12 +612,10 @@ async def send_async(
 
     auth_token = await get_queue_token_async(token)
 
-    headers: dict[str, str] = {
+    headers = {
         "Authorization": f"Bearer {auth_token}",
         "Content-Type": content_type,
-    }
-    if custom_headers:
-        headers.update(custom_headers)
+    } | (headers or {})
     headers["Vqs-Queue-Name"] = queue_name
 
     deployment_id = deployment_id or os.environ.get("VERCEL_DEPLOYMENT_ID")
