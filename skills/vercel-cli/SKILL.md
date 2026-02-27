@@ -44,7 +44,7 @@ Use this to route to the correct reference file:
 - **Projects or teams** → `references/projects-and-teams.md`
 - **Logs, debugging, or accessing preview deploys** → `references/monitoring-and-debugging.md`
 - **Blob storage** → `references/storage.md`
-- **Integrations (databases, storage, etc.)** → load the **marketplace** skill
+- **Integrations (databases, storage, etc.)** → `references/integrations.md`
 - **Access a preview deployment** → use `vercel curl` (see `references/monitoring-and-debugging.md`)
 - **CLI doesn't have a command for it** → use `vercel api` as a fallback (see `references/advanced.md`)
 - **Node.js backends (Express, Hono, etc.)** → `references/node-backends.md`
