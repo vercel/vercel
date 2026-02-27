@@ -38,11 +38,13 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     expect(res.status).toBe(200);
 
     const $ = cheerio.load(await res.text());
-    const srcset = $('img[alt="Vercel Logo"]').attr('srcset') || '';
-    const match = srcset.match(/\/_next\/static\/media\/vercel\.[^&\s"]+/);
-    expect(match).toBeTruthy();
+    const imgSrc = $('img[alt="Vercel Logo"]').attr('src');
+    expect(imgSrc).toBeTruthy();
 
-    const staticImagePath = match[0];
+    const imgUrl = new URL(imgSrc, ctx.deploymentUrl);
+    const staticImagePath = imgUrl.searchParams.get('url');
+    expect(staticImagePath).toMatch(/\/_next\/static\/media\/vercel\./);
+
     const imageRes = await fetch(
       `${ctx.deploymentUrl}/_next/image?url=${encodeURIComponent(staticImagePath)}&w=256&q=75`
     );
