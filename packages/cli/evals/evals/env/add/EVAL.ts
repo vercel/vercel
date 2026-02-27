@@ -15,9 +15,19 @@ function getEnvKeysFromProject(): string[] {
   return [...keys];
 }
 
+function getShellCommands(): string[] {
+  const results = JSON.parse(
+    readFileSync('__agent_eval__/results.json', 'utf-8')
+  ) as {
+    o11y?: { shellCommands?: Array<{ command: string }> };
+  };
+
+  return (results.o11y?.shellCommands ?? []).map(c => c.command);
+}
+
 /**
  * env add eval: agent adds an env var with a unique key using non-interactive flags,
- * and records the command and key in command-used.txt and env-key-used.txt.
+ * and records the key in env-key-used.txt. The CLI command is asserted from results.json.
  */
 test('project is linked', () => {
   expect(
@@ -26,20 +36,30 @@ test('project is linked', () => {
 });
 
 test('agent used vercel env add', () => {
-  expect(existsSync('command-used.txt')).toBe(true);
+  const commands = getShellCommands();
+  expect(commands.length).toBeGreaterThan(0);
 
-  const command = readFileSync('command-used.txt', 'utf-8').trim();
-  expect(command.length).toBeGreaterThan(0);
-  expect(command).toMatch(/\b(vercel|vc)\s+env\s+add\b/);
+  const envAddCommands = commands.filter(command =>
+    /\b(vercel|vc)\s+env\s+add\b/.test(command)
+  );
+  expect(envAddCommands.length).toBeGreaterThan(0);
 });
 
 test('agent used non-interactive flags', () => {
-  const command = readFileSync('command-used.txt', 'utf-8').trim();
-  const hasNonInteractive =
-    command.includes('--yes') ||
-    /\s-y(\s|$)/.test(command) ||
-    command.includes('--non-interactive') ||
-    command.includes('--value');
+  const commands = getShellCommands();
+  const envAddCommands = commands.filter(command =>
+    /\b(vercel|vc)\s+env\s+add\b/.test(command)
+  );
+  expect(envAddCommands.length).toBeGreaterThan(0);
+
+  const hasNonInteractive = envAddCommands.some(command => {
+    return (
+      command.includes('--yes') ||
+      /\s-y(\s|$)/.test(command) ||
+      command.includes('--non-interactive') ||
+      command.includes('--value')
+    );
+  });
   expect(hasNonInteractive).toBe(true);
 });
 

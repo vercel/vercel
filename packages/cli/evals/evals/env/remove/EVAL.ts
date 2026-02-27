@@ -15,9 +15,20 @@ function getEnvKeysFromProject(): string[] {
   return [...keys];
 }
 
+function getShellCommands(): string[] {
+  const results = JSON.parse(
+    readFileSync('__agent_eval__/results.json', 'utf-8')
+  ) as {
+    o11y?: { shellCommands?: Array<{ command: string }> };
+  };
+
+  return (results.o11y?.shellCommands ?? []).map(c => c.command);
+}
+
 /**
  * env remove eval: agent adds an env var with unique key, then removes it
- * using non-interactive flags, and records the remove command and key.
+ * using non-interactive flags, and records the key. The remove command is
+ * asserted from results.json.
  */
 test('project is linked', () => {
   expect(
@@ -26,19 +37,29 @@ test('project is linked', () => {
 });
 
 test('agent used vercel env remove', () => {
-  expect(existsSync('command-used.txt')).toBe(true);
+  const commands = getShellCommands();
+  expect(commands.length).toBeGreaterThan(0);
 
-  const command = readFileSync('command-used.txt', 'utf-8').trim();
-  expect(command.length).toBeGreaterThan(0);
-  expect(command).toMatch(/\b(vercel|vc)\s+env\s+(rm|remove)\b/);
+  const envRemoveCommands = commands.filter(command =>
+    /\b(vercel|vc)\s+env\s+(rm|remove)\b/.test(command)
+  );
+  expect(envRemoveCommands.length).toBeGreaterThan(0);
 });
 
 test('agent used non-interactive flags for remove', () => {
-  const command = readFileSync('command-used.txt', 'utf-8').trim();
-  const hasNonInteractive =
-    command.includes('--yes') ||
-    /\s-y(\s|$)/.test(command) ||
-    command.includes('--non-interactive');
+  const commands = getShellCommands();
+  const envRemoveCommands = commands.filter(command =>
+    /\b(vercel|vc)\s+env\s+(rm|remove)\b/.test(command)
+  );
+  expect(envRemoveCommands.length).toBeGreaterThan(0);
+
+  const hasNonInteractive = envRemoveCommands.some(command => {
+    return (
+      command.includes('--yes') ||
+      /\s-y(\s|$)/.test(command) ||
+      command.includes('--non-interactive')
+    );
+  });
   expect(hasNonInteractive).toBe(true);
 });
 
