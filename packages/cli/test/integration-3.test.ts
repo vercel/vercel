@@ -953,3 +953,11 @@ test('default command should prompt login with empty auth.json', async () => {
     'Error: No existing credentials found. Please run `vercel login` or pass "--token"'
   );
 });
+
+test('`flags prepare` should not require login', async () => {
+  const output = await execCli(binaryPath, ['-Q', '/tmp', 'flags', 'prepare'], {
+    token: false,
+    reject: false,
+  });
+  expect(output.stderr).not.toContain('No existing credentials found');
+});
