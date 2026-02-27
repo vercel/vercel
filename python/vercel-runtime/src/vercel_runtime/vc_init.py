@@ -41,7 +41,31 @@ def _stderr(message: str) -> None:
 
 def _fatal(message: str) -> Never:
     _stderr(message)
+    _send_unrecoverable_error(message)
     sys.exit(1)
+
+
+def _fatal_exc(label: str) -> Never:
+    """Report a fatal exception (with traceback) and exit."""
+    _fatal(f"{label}:\n{traceback.format_exc()}")
+
+
+def _send_unrecoverable_error(message: str) -> None:
+    """Send an ``unrecoverable-error`` IPC message to the functions runtime.
+
+    This is the only message type (besides ``server-started``) that the
+    functions runtime accepts before the handshake completes, so it is the
+    correct way to report fatal errors during module import.
+    """
+    send_message(
+        {
+            "type": "unrecoverable-error",
+            "payload": {
+                "exitCode": 1,
+                "message": message,
+            },
+        }
+    )
 
 
 def _must_getenv(varname: str) -> str:
@@ -374,6 +398,20 @@ def enqueue_or_send_message(msg: _IpcMessage) -> None:
             _original_stderr.write(decoded + "\n")
 
 
+def _flush_init_log_buf() -> None:
+    """Flush buffered init logs through IPC and mark the channel as ready.
+
+    Called once the ``server-started`` handshake is complete so the functions
+    runtime will accept ``log`` messages.
+    """
+    global _ipc_ready, _init_log_buf_bytes  # noqa: PLW0603
+    _ipc_ready = True
+    for m in _init_log_buf:
+        send_message(m)
+    _init_log_buf.clear()
+    _init_log_buf_bytes = 0
+
+
 def flush_init_log_buf_to_stderr() -> None:
     global _init_log_buf_bytes  # noqa: PLW0603
     try:
@@ -535,9 +573,7 @@ try:
     __vc_spec.loader.exec_module(__vc_module)
     __vc_variables = dir(__vc_module)
 except Exception:
-    _stderr(f"Error importing {_entrypoint_rel}:")
-    _stderr(traceback.format_exc())
-    exit(1)
+    _fatal_exc(f'could not import "{_entrypoint_rel}"')
 
 _use_legacy_asyncio = sys.version_info < (3, 10)
 
@@ -822,11 +858,10 @@ if "VERCEL_IPC_PATH" in os.environ:
             else __vc_module.Handler
         )
         if not issubclass(base, BaseHTTPRequestHandler):
-            _stderr("Handler must inherit from BaseHTTPRequestHandler")
-            _stderr(
+            _fatal(
+                "Handler must inherit from BaseHTTPRequestHandler\n"
                 "See the docs: https://vercel.com/docs/functions/serverless-functions/runtimes/python"
             )
-            exit(1)
 
         class Handler(BaseHandler, base):  # type: ignore[valid-type,misc]
             def handle_request(self) -> None:
@@ -970,12 +1005,7 @@ if "VERCEL_IPC_PATH" in os.environ:
                     },
                 }
             )
-
-            # Mark IPC as ready and flush any buffered init logs
-            _ipc_ready = True
-            for m in _init_log_buf:
-                send_message(m)
-            _init_log_buf.clear()
+            _flush_init_log_buf()
 
             # Run the server (blocking)
             server.run()
@@ -993,18 +1023,13 @@ if "VERCEL_IPC_PATH" in os.environ:
                 },
             }
         )
-        # Mark IPC as ready and flush any buffered init logs
-        _ipc_ready = True
-        for m in _init_log_buf:
-            send_message(m)
-        _init_log_buf.clear()
+        _flush_init_log_buf()
         server.serve_forever()  # type: ignore[attr-defined]
 
-    _stderr(f'Missing variable `handler` or `app` in file "{_entrypoint_rel}".')
-    _stderr(
+    _fatal(
+        f'Missing variable `handler` or `app` in file "{_entrypoint_rel}".\n'
         "See the docs: https://vercel.com/docs/functions/serverless-functions/runtimes/python"
     )
-    exit(1)
 
 if "handler" in __vc_variables or "Handler" in __vc_variables:
     base = (
@@ -1013,11 +1038,10 @@ if "handler" in __vc_variables or "Handler" in __vc_variables:
         else __vc_module.Handler
     )
     if not issubclass(base, BaseHTTPRequestHandler):
-        _stderr("Handler must inherit from BaseHTTPRequestHandler")
-        _stderr(
+        _fatal(
+            "Handler must inherit from BaseHTTPRequestHandler\n"
             "See the docs: https://vercel.com/docs/functions/serverless-functions/runtimes/python"
         )
-        exit(1)
 
     _stderr("using HTTP Handler")
     import _thread  # noqa: PLC2701
@@ -1438,11 +1462,8 @@ elif "app" in __vc_variables or "application" in __vc_variables:
             return response
 
 else:
-    _stderr(
+    _fatal(
         f"Missing variable `handler`, `app`, or `application` "
-        f'in file "{_entrypoint_rel}".'
-    )
-    _stderr(
+        f'in file "{_entrypoint_rel}".\n'
         "See the docs: https://vercel.com/docs/functions/serverless-functions/runtimes/python"
     )
-    exit(1)
