@@ -96,8 +96,7 @@ describe('schema-data', () => {
     expect(measureNames).toContain('functionDurationMs');
   });
 
-  it('should have empty measures for events with no rollup-able measures', () => {
-    // blobStoreState only has measures that cannot be used in rollups
+  it('should have empty measures for unknown events', () => {
     expect(getMeasures('blobStoreState')).toEqual([]);
     expect(getMeasures('dataCacheState')).toEqual([]);
   });

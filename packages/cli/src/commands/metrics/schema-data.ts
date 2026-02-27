@@ -101,48 +101,6 @@ export const SCHEMA = {
       { name: 'webSearchCallCount', label: 'Web Search Calls', unit: 'count' },
     ],
   },
-  analyticsEvent: {
-    description: 'Web Analytics custom event tracking',
-    dimensions: [
-      { name: 'browserName', label: 'Browser', filterOnly: false },
-      { name: 'country', label: 'Country', filterOnly: true },
-      { name: 'deploymentId', label: 'Deployment ID', filterOnly: true },
-      { name: 'deviceId', label: 'Device Id', filterOnly: true },
-      { name: 'deviceType', label: 'Device Type', filterOnly: true },
-      { name: 'environment', label: 'Environment', filterOnly: false },
-      { name: 'eventName', label: 'Analytics event name', filterOnly: true },
-      { name: 'osName', label: 'Operating System', filterOnly: false },
-      { name: 'projectId', label: 'Project', filterOnly: false },
-      {
-        name: 'referrerHostname',
-        label: 'Referrer Hostname',
-        filterOnly: false,
-      },
-      { name: 'requestPath', label: 'Request Path', filterOnly: false },
-    ],
-    measures: [{ name: 'count', label: 'Count', unit: 'count' }],
-  },
-  analyticsPageview: {
-    description: 'Web Analytics pageview tracking',
-    dimensions: [
-      { name: 'browserName', label: 'Browser', filterOnly: false },
-      { name: 'country', label: 'Country', filterOnly: true },
-      { name: 'deploymentId', label: 'Deployment ID', filterOnly: true },
-      { name: 'deviceId', label: 'Device Id', filterOnly: true },
-      { name: 'deviceType', label: 'Device Type', filterOnly: true },
-      { name: 'environment', label: 'Environment', filterOnly: false },
-      { name: 'osName', label: 'Operating System', filterOnly: false },
-      { name: 'projectId', label: 'Project', filterOnly: false },
-      {
-        name: 'referrerHostname',
-        label: 'Referrer Hostname',
-        filterOnly: false,
-      },
-      { name: 'requestPath', label: 'Request Path', filterOnly: false },
-      { name: 'route', label: 'Route', filterOnly: false },
-    ],
-    measures: [{ name: 'count', label: 'Count', unit: 'count' }],
-  },
   blobDataTransfer: {
     description: 'Blob store data transfer operations',
     dimensions: [
@@ -189,16 +147,6 @@ export const SCHEMA = {
       { name: 'storeName', label: 'Store', filterOnly: false },
     ],
     measures: [{ name: 'count', label: 'Count', unit: 'count' }],
-  },
-  blobStoreState: {
-    description: 'Blob store state metrics including size and object count',
-    dimensions: [
-      { name: 'environment', label: 'Environment', filterOnly: false },
-      { name: 'projectId', label: 'Project', filterOnly: false },
-      { name: 'storeId', label: 'Store ID', filterOnly: true },
-      { name: 'storeName', label: 'Store', filterOnly: false },
-    ],
-    measures: [],
   },
   blockedConnection: {
     description: 'Connections blocked by firewall rules',
@@ -271,15 +219,6 @@ export const SCHEMA = {
       { name: 'requestId', label: 'Request ID', filterOnly: true },
     ],
     measures: [{ name: 'count', label: 'Count', unit: 'count' }],
-  },
-  dataCacheState: {
-    description: 'Vercel Data Cache state metrics',
-    dimensions: [
-      { name: 'cacheApi', label: 'Cache API', filterOnly: true },
-      { name: 'environment', label: 'Environment', filterOnly: false },
-      { name: 'projectId', label: 'Project', filterOnly: false },
-    ],
-    measures: [],
   },
   firewallAction: {
     description: 'Firewall actions including blocks challenges and allows',
