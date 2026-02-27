@@ -68,7 +68,7 @@ test('env var exists on project with EVAL_ADD_ prefix', () => {
 
   const candidateKeys = new Set<string>();
   for (const command of commands) {
-    const match = command.match(/\benv\s+add\s+([A-Z0-9_]+)/);
+    const match = command.match(/\benv\s+add\s+([A-Za-z0-9_]+)/);
     if (match && match[1]) {
       candidateKeys.add(match[1]);
     }

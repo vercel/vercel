@@ -68,12 +68,12 @@ test('env var with EVAL_REMOVE_ prefix was removed from project', () => {
 
   const candidateKeys = new Set<string>();
   for (const command of commands) {
-    const addMatch = command.match(/\benv\s+add\s+([A-Z0-9_]+)/);
+    const addMatch = command.match(/\benv\s+add\s+([A-Za-z0-9_]+)/);
     if (addMatch && addMatch[1]) {
       candidateKeys.add(addMatch[1]);
     }
 
-    const removeMatch = command.match(/\benv\s+(rm|remove)\s+([A-Z0-9_]+)/);
+    const removeMatch = command.match(/\benv\s+(rm|remove)\s+([A-Za-z0-9_]+)/);
     if (removeMatch && removeMatch[2]) {
       candidateKeys.add(removeMatch[2]);
     }
