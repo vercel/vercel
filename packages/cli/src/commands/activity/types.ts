@@ -72,31 +72,31 @@ export default async function types(
   try {
     const response =
       await client.fetch<UserEventTypesResponse>('/v1/events/types');
+    const activeTypes = (response.types ?? []).filter(type => !type.deprecated);
 
     if (jsonOutput) {
       client.stdout.write(`${JSON.stringify(response, null, 2)}\n`);
       return 0;
     }
 
-    if (!response.types || response.types.length === 0) {
+    if (activeTypes.length === 0) {
       output.log('No activity event types found.');
       return 0;
     }
 
     const rows = [
-      [
-        chalk.bold(chalk.cyan('Name')),
-        chalk.bold(chalk.cyan('Description')),
-        chalk.bold(chalk.cyan('Deprecated')),
-      ],
-      ...response.types.map(eventType => [
+      [chalk.bold(chalk.cyan('Name')), chalk.bold(chalk.cyan('Description'))],
+      ...activeTypes.map(eventType => [
         eventType.name,
         eventType.description ?? '-',
-        eventType.deprecated ? 'Yes' : 'No',
       ]),
     ];
 
-    const tableOutput = table(rows, { hsep: 4 }).replace(/^/gm, '  ');
+    const tableOutput = table(rows, { hsep: 4 })
+      .split('\n')
+      .map(line => line.trimEnd())
+      .join('\n')
+      .replace(/^/gm, '  ');
     output.print(`\n${tableOutput}\n\n`);
 
     return 0;
