@@ -39,6 +39,9 @@ jobs:
     if: github.event_name == 'pull_request' && github.event.pull_request.title != 'Version Packages'
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Check out the PR commit directly instead of a merge commit.
+          ref: ${{ github.event.pull_request.head.sha }}
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}

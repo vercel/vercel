@@ -21,6 +21,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # Check out the PR commit directly instead of a merge commit.
+          # Empty on schedule/workflow_dispatch, which falls back to the default ref.
+          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
