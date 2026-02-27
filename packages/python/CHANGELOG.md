@@ -1,5 +1,18 @@
 # @vercel/python
 
+## 6.18.0
+
+### Minor Changes
+
+- Run Python build commands _after_ install commands and in the virtual env ([#15171](https://github.com/vercel/vercel/pull/15171))
+
+### Patch Changes
+
+- Add `prisma-client-py` support and the quirks system ([#15289](https://github.com/vercel/vercel/pull/15289))
+
+- Updated dependencies [[`3880e1028840aae6883211b79a1a30c7432580f3`](https://github.com/vercel/vercel/commit/3880e1028840aae6883211b79a1a30c7432580f3)]:
+  - @vercel/python-analysis@0.8.1
+
 ## 6.17.0
 
 ### Minor Changes

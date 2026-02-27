@@ -1,5 +1,12 @@
 # @vercel/elysia
 
+## 0.1.42
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.6.9
+
 ## 0.1.41
 
 ### Patch Changes

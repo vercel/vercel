@@ -391,6 +391,10 @@ export const guideSubcommand = {
       name: 'Show the Next.js guide without prompts (useful for CI/agents)',
       value: `${packageName} integration guide neon --framework nextjs`,
     },
+    {
+      name: 'Discover available integrations and product slugs',
+      value: `${packageName} integration discover`,
+    },
   ],
 } as const;
 

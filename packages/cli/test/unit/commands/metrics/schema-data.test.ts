@@ -16,11 +16,9 @@ describe('schema-data', () => {
   });
 
   it('should return correct event for known event', () => {
-    const event = getEvent('incomingRequest');
+    const event = getEvent('edgeRequest');
     expect(event).toBeDefined();
-    expect(event!.description).toBe(
-      'All incoming HTTP requests to your deployments'
-    );
+    expect(event!.description).toBe('Edge Requests');
   });
 
   it('should return undefined for unknown event', () => {
@@ -28,7 +26,7 @@ describe('schema-data', () => {
   });
 
   it('should return dimensions with correct shape', () => {
-    const dims = getDimensions('incomingRequest');
+    const dims = getDimensions('edgeRequest');
     expect(dims.length).toBeGreaterThan(0);
     for (const dim of dims) {
       expect(dim).toHaveProperty('name');
@@ -48,7 +46,7 @@ describe('schema-data', () => {
   });
 
   it('should return count aggregations for count measure', () => {
-    const aggs = getAggregations('incomingRequest', 'count');
+    const aggs = getAggregations('edgeRequest', 'count');
     expect(aggs).toContain('sum');
     expect(aggs).toContain('persecond');
     expect(aggs).toContain('percent');
@@ -57,13 +55,14 @@ describe('schema-data', () => {
   });
 
   it('should return value aggregations for non-count measure', () => {
-    const aggs = getAggregations('incomingRequest', 'requestDurationMs');
+    const aggs = getAggregations('edgeRequest', 'requestDurationMs');
     expect(aggs).toContain('sum');
     expect(aggs).toContain('p95');
     expect(aggs).toContain('avg');
     expect(aggs).toContain('min');
     expect(aggs).toContain('max');
-    expect(aggs).toContain('unique');
+    expect(aggs).toContain('p50');
+    expect(aggs).not.toContain('unique');
   });
 
   it('should return empty aggregations for unknown event', () => {
@@ -71,7 +70,7 @@ describe('schema-data', () => {
   });
 
   it('should return empty aggregations for unknown measure', () => {
-    expect(getAggregations('incomingRequest', 'bogus')).toEqual([]);
+    expect(getAggregations('edgeRequest', 'bogus')).toEqual([]);
   });
 
   it('should mark filter-only dimensions correctly', () => {
@@ -111,7 +110,7 @@ describe('schema-data', () => {
 
   describe('getDefaultAggregation', () => {
     it('should return sum for count measure', () => {
-      expect(getDefaultAggregation('incomingRequest', 'count')).toBe('sum');
+      expect(getDefaultAggregation('edgeRequest', 'count')).toBe('sum');
     });
 
     it('should return avg for milliseconds unit', () => {
@@ -121,15 +120,13 @@ describe('schema-data', () => {
     });
 
     it('should return sum for bytes unit', () => {
-      expect(getDefaultAggregation('incomingRequest', 'fdtOutBytes')).toBe(
-        'sum'
-      );
+      expect(getDefaultAggregation('edgeRequest', 'fdtOutBytes')).toBe('sum');
     });
 
     it('should return avg for megabytes unit', () => {
-      expect(getDefaultAggregation('functionExecution', 'peakMemoryMb')).toBe(
-        'avg'
-      );
+      expect(
+        getDefaultAggregation('functionExecution', 'provisionedMemoryMb')
+      ).toBe('avg');
     });
 
     it('should return avg for ratio unit', () => {
@@ -138,15 +135,15 @@ describe('schema-data', () => {
       ).toBe('avg');
     });
 
-    it('should return sum for tokens unit', () => {
+    it('should return sum for count unit', () => {
       expect(getDefaultAggregation('aiGatewayRequest', 'inputTokens')).toBe(
         'sum'
       );
     });
 
-    it('should return avg for gigabyte hours unit', () => {
+    it('should return avg for seconds unit', () => {
       expect(
-        getDefaultAggregation('middlewareInvocation', 'functionDurationGbhr')
+        getDefaultAggregation('aiGatewayRequest', 'videoDurationSeconds')
       ).toBe('avg');
     });
 
@@ -165,7 +162,7 @@ describe('schema-data', () => {
     });
 
     it('should return sum for unknown measure', () => {
-      expect(getDefaultAggregation('incomingRequest', 'bogus')).toBe('sum');
+      expect(getDefaultAggregation('edgeRequest', 'bogus')).toBe('sum');
     });
   });
 });
