@@ -1,19 +1,5 @@
-import { execSync } from 'child_process';
 import { readFileSync, existsSync } from 'fs';
 import { test, expect } from 'vitest';
-
-function getEnvKeysFromProject(): string[] {
-  const keys = new Set<string>();
-  for (const target of ['production', 'preview']) {
-    const out = execSync(`vercel env ls ${target} --format json`, {
-      encoding: 'utf-8',
-      cwd: process.cwd(),
-    });
-    const data = JSON.parse(out) as { envs?: Array<{ key: string }> };
-    for (const e of data.envs ?? []) keys.add(e.key);
-  }
-  return [...keys];
-}
 
 function getShellCommands(): string[] {
   const results = JSON.parse(
@@ -63,7 +49,7 @@ test('agent used non-interactive flags', () => {
   expect(hasNonInteractive).toBe(true);
 });
 
-test('env var exists on project with EVAL_ADD_ prefix', () => {
+test('agent used EVAL_ADD_ prefix for env var name', () => {
   const commands = getShellCommands();
 
   const candidateKeys = new Set<string>();
@@ -80,8 +66,5 @@ test('env var exists on project with EVAL_ADD_ prefix', () => {
 
   const evalAddKeys = [...candidateKeys].filter(key => /^EVAL_ADD_/.test(key));
   expect(evalAddKeys.length).toBeGreaterThan(0);
-
-  const projectKeys = getEnvKeysFromProject();
-  const hasMatchingKey = evalAddKeys.some(key => projectKeys.includes(key));
-  expect(hasMatchingKey).toBe(true);
+  // Do not assert key exists on project: evals run concurrently and env/remove may have deleted it.
 });
