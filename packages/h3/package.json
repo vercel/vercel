@@ -1,6 +1,6 @@
 {
   "name": "@vercel/h3",
-  "version": "0.1.50",
+  "version": "0.1.51",
   "license": "Apache-2.0",
   "main": "./dist/index.js",
   "homepage": "https://vercel.com/docs",

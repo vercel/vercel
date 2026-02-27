@@ -1,5 +1,11 @@
 # vercel-runtime
 
+## 0.5.3
+
+### Patch Changes
+
+- Add `prisma-client-py` support and the quirks system ([#15289](https://github.com/vercel/vercel/pull/15289))
+
 ## 0.5.2
 
 ### Patch Changes

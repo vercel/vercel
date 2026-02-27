@@ -4,6 +4,7 @@ import open from 'open';
 import output from '../../output-manager';
 import type Client from '../../util/client';
 import getScope from '../../util/get-scope';
+import indent from '../../util/output/indent';
 import { autoProvisionResource } from '../../util/integration/auto-provision-resource';
 import { fetchIntegrationWithTelemetry } from '../../util/integration/fetch-integration';
 import { fetchInstallations } from '../../util/integration/fetch-installations';
@@ -385,6 +386,18 @@ export async function addAutoProvision(
     `${product.name} successfully provisioned: ${chalk.bold(resourceName)}`
   );
 
+  const guideSlug =
+    integration.products.length > 1
+      ? `${integration.slug}/${product.slug}`
+      : integration.slug;
+  const guideCommand = `vercel integration guide ${guideSlug}`;
+  output.log(
+    indent(
+      `Guide: Run ${chalk.cyan(`\`${guideCommand}\``)} for getting started guides and code snippets`,
+      4
+    )
+  );
+
   // Post-provision: dashboard URL, connect, env pull
   const setupResult = await postProvisionSetup(
     client,
@@ -393,6 +406,8 @@ export async function addAutoProvision(
     contextName,
     {
       ...options,
+      integrationSlug: integration.slug,
+      installationId: provisioned.installation.id,
       onProjectConnected: (projectId: string) => {
         telemetry.trackMarketplaceEvent('marketplace_project_connected', {
           ...baseProps,
@@ -461,6 +476,7 @@ export async function addAutoProvision(
       project: setupResult.project ?? null,
       environments: setupResult.environments,
       envPulled: setupResult.envPulled,
+      guideCommand,
       warnings,
     };
 
