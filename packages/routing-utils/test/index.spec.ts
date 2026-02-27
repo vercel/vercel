@@ -236,6 +236,23 @@ describe('normalizeRoutes', () => {
     );
   });
 
+  test('getTransformedRoutes accepts schema-derived route types', () => {
+    const config: {
+      routes: Array<
+        | { src: string; source?: string; dest?: string; destination?: string }
+        | { src?: string; source: string; dest?: string; destination?: string }
+      >;
+    } = {
+      routes: [
+        { source: '/about', dest: '/about.html' },
+        { src: '/blog', destination: '/blog.html' },
+      ],
+    };
+
+    const { error } = getTransformedRoutes(config);
+    assert.strictEqual(error, null);
+  });
+
   test('getTransformedRoutes accepts routes with source alias', () => {
     const { error, routes } = getTransformedRoutes({
       routes: [
