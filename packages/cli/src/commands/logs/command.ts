@@ -180,7 +180,7 @@ export const logsCommand = {
     },
     {
       name: 'Use advanced search query with filters',
-      value: `${packageName} logs --search "status:500 error" --json | jq '.message'`,
+      value: `${packageName} logs --search 'status:500 error' --json | jq '.message'`,
     },
     {
       name: 'Display production logs only',
