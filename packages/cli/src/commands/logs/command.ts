@@ -112,6 +112,14 @@ export const logsCommand = {
       description: 'Full-text search query',
     },
     {
+      name: 'search',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description:
+        'Raw search query passed to the API (supports filter syntax)',
+    },
+    {
       name: 'request-id',
       shorthand: null,
       type: String,
@@ -169,6 +177,10 @@ export const logsCommand = {
     {
       name: 'Search logs and pipe to jq',
       value: `${packageName} logs --query "timeout" --json | jq '.message'`,
+    },
+    {
+      name: 'Pass a raw search query with filters',
+      value: `${packageName} logs --search "status:500 error" --json | jq '.message'`,
     },
     {
       name: 'Display production logs only',
