@@ -603,6 +603,7 @@ export const SCHEMA = {
       { name: 'isrReadUnits', label: 'Read Units', unit: 'count' },
       { name: 'isrWriteBytes', label: 'Write Bandwidth', unit: 'bytes' },
       { name: 'isrWriteUnits', label: 'Write Units', unit: 'count' },
+      { name: 'count', label: 'Count', unit: 'count' },
     ],
   },
   middlewareInvocation: {
