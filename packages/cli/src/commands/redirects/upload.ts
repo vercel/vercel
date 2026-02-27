@@ -143,7 +143,7 @@ export default async function upload(client: Client, argv: string[]) {
 
       try {
         redirects = JSON.parse(content);
-      } catch (err) {
+      } catch (_err) {
         output.error('Invalid JSON file format');
         return 1;
       }

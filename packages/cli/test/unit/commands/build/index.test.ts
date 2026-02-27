@@ -168,7 +168,7 @@ describe.skipIf(flakey)('build', () => {
     try {
       await fs.unlink(join(cwd, 'foo.html'));
       await fs.symlink(join(cwd, 'index.html'), join(cwd, 'foo.html'));
-    } catch (e) {
+    } catch (_e) {
       // eslint-disable-next-line no-console
       console.log('Symlinks not available, skipping test');
       return;

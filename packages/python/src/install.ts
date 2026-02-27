@@ -38,7 +38,7 @@ export async function isInstalled(
       }
     );
     return stdout.startsWith(cwd);
-  } catch (err) {
+  } catch (_err) {
     return false;
   }
 }
@@ -67,7 +67,7 @@ async function areRequirementsInstalled(
       }
     );
     return true;
-  } catch (err) {
+  } catch (_err) {
     return false;
   }
 }

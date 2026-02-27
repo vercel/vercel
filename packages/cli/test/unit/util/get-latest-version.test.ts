@@ -92,7 +92,8 @@ describe('get latest version', () => {
   });
 
   // this test is too flakey in its current form
-  // eslint-disable-next-line jest/no-disabled-tests
+  /* eslint-disable jest/no-disabled-tests */
+  // biome-ignore lint/suspicious/noSkippedTests: temporarily disabled
   it.skip('should not check twice', async () => {
     // 1. first call, no cache file
     let latest = getLatestVersion({

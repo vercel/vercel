@@ -18,6 +18,7 @@
       "!packages/**/test/dev/fixtures/**",
       "!packages/**/test/build-fixtures/**",
       "!packages/**/test/cache-fixtures/**",
+      "!packages/**/test/**/test-limit-exceeded*/**",
       "!packages/cli/types/**",
       "test/**/*.{js,ts,mjs,cjs,jsx,tsx,json,css}",
       "utils/**/*.{js,ts,mjs,cjs,jsx,tsx,json,css}",
