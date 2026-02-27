@@ -1126,12 +1126,9 @@ function getRouteResult(
       const hasApiBuild = apiBuilders.find(builder => {
         return builder.src?.startsWith('api/');
       });
-      // Skip for Next.js: it owns /api (Pages and App Router) and 404s
-      // unmatched paths. Adding a catch-all here would 404 dynamic routes
-      // like /api/blog/posts/[id] in production (see CLI-152).
+      // Skip for Next.js: it serves /api (Pages + App Router) and 404s unmatched
+      // paths; adding a catch-all here would 404 dynamic routes like /api/flow/[id]/next.
       if (typeof ignoreRuntimes === 'undefined' && hasApiBuild && !isNextjs) {
-        // This route is only necessary to hide the directory listing
-        // to avoid enumerating serverless function names.
         // But it causes issues in `vc dev` for frameworks that handle
         // their own functions such as redwood, so we ignore.
         rewriteRoutes.push({

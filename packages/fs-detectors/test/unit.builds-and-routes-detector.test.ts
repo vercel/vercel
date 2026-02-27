@@ -1238,7 +1238,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect((defaultRoutes[0] as Handler).handle).toBe('miss');
     expect((defaultRoutes[1] as Source).dest).toBe('/api/$1');
     expect(redirectRoutes).toStrictEqual([]);
-    // Next.js owns /api; we do not add catch-all 404 (CLI-152)
+    // Next.js owns /api; we do not add catch-all 404
     expect(rewriteRoutes.some(r => (r as Source).status === 404)).toBe(false);
     expect(errorRoutes).toStrictEqual([]);
   });
@@ -1267,7 +1267,7 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect((defaultRoutes[0] as Handler).handle).toBe('miss');
     expect((defaultRoutes[1] as Source).dest).toBe('/api/$1');
     expect(redirectRoutes).toStrictEqual([]);
-    // Next.js owns /api; we do not add catch-all 404 (CLI-152)
+    // Next.js owns /api; we do not add catch-all 404
     expect(rewriteRoutes.some(r => (r as Source).status === 404)).toBe(false);
     expect(errorRoutes).toStrictEqual([]);
   });
@@ -2674,7 +2674,7 @@ describe('Test `detectRoutes`', () => {
     const files = ['public/index.html', 'api/[endpoint].js'];
 
     const { defaultRoutes } = await invokeDetectBuildersAndThrow(files, pkg);
-    // Next.js owns /api; we do not add catch-all 404 (CLI-152)
+    // Next.js owns /api; we do not add catch-all 404
     expect(defaultRoutes.length).toBe(1);
   });
 
@@ -2955,7 +2955,7 @@ describe('Test `detectRoutes` with `featHandleMiss=true`', () => {
         check: true,
       },
     ]);
-    // Next.js owns /api; we do not add catch-all 404 (CLI-152)
+    // Next.js owns /api; we do not add catch-all 404
     expect(rewriteRoutes).toStrictEqual([
       {
         src: '^/api/([^/]+)$',
@@ -3372,7 +3372,7 @@ describe('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`', () 
       await invokeDetectBuildersAndThrow(files, pkg, options);
     testHeaders(redirectRoutes);
     expect(defaultRoutes).toStrictEqual([]);
-    // Next.js owns /api; we do not add catch-all 404 (CLI-152)
+    // Next.js owns /api; we do not add catch-all 404
     expect(rewriteRoutes).toStrictEqual([
       {
         src: '^/api/([^/]+)$',
