@@ -47,6 +47,8 @@ jobs:
           VERCEL_PROJECT_ID: ${{ secrets.EVAL_PROJECT_ID }}
           CLI_EVAL_TEAM_ID: ${{ secrets.EVAL_TEAM_ID }}
           CLI_EVAL_PROJECT_ID: ${{ secrets.EVAL_PROJECT_ID }}
+          # Run each eval with and without the CLI skills directory
+          CLI_EVAL_SKILLS_MODES: with-skills,without-skills
           # Limit memory pressure from concurrent Docker + Node (reduce OOM exit 137)
           NODE_OPTIONS: --max-old-space-size=4096
 

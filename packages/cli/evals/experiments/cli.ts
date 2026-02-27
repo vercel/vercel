@@ -95,34 +95,41 @@ const config: ExperimentConfig = {
     }
     // Note: If runCmd is not available, CLI installation will need to happen during eval
 
-    // Copy all skill files by iterating the skills directory (no hardcoded list)
+    // Copy skill files only when CLI_EVAL_WITH_SKILLS=1 (set by runner from matrix variant)
+    const withSkills = process.env.CLI_EVAL_WITH_SKILLS === '1';
     const skillFiles: Record<string, string> = {};
-    try {
-      if (existsSync(SKILLS_DIR)) {
-        const files = listSkillFiles(SKILLS_DIR);
-        for (const rel of files) {
-          try {
-            const full = join(SKILLS_DIR, rel);
-            skillFiles[`docs/vercel-cli/${rel}`] = readFileSync(full, 'utf-8');
-          } catch (error: any) {
-            void error;
+    if (withSkills) {
+      try {
+        if (existsSync(SKILLS_DIR)) {
+          const files = listSkillFiles(SKILLS_DIR);
+          for (const rel of files) {
+            try {
+              const full = join(SKILLS_DIR, rel);
+              skillFiles[`docs/vercel-cli/${rel}`] = readFileSync(
+                full,
+                'utf-8'
+              );
+            } catch (error: any) {
+              void error;
+            }
           }
         }
+      } catch (error: any) {
+        void error;
       }
-    } catch (error: any) {
-      void error;
     }
 
-    // Short README: point to skill docs and CLI help (rely on built-in CLI behavior)
+    const readmeBody = withSkills
+      ? 'Docs are in `docs/vercel-cli/` (skill + references). Use `vercel <command> -h` for help.'
+      : 'Use `vercel <command> -h` for help.';
     skillFiles['docs/README.md'] = `# Vercel CLI
 
-Docs are in \`docs/vercel-cli/\` (skill + references). Use \`vercel <command> -h\` for help.
+${readmeBody}
 
 Use \`--yes\` and \`evals-setup.json\` for team/project IDs when linking.
 
 If \`vercel link\` reports no credentials, run \`source ~/.profile\` first (or \`source ~/.bashrc\`) so VERCEL_TOKEN is set, then retry.`;
 
-    // Write all files
     await sandbox.writeFiles({
       'evals-setup.json': JSON.stringify({ teamId, projectId }, null, 2),
       ...skillFiles,

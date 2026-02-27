@@ -14,6 +14,7 @@ import { config } from 'dotenv';
 import {
   destroy,
   getAuthStateVariantsFromEnv,
+  getEvalVariants,
   getProjectModeVariantsFromEnv,
   setup,
 } from './hooks';
@@ -215,19 +216,23 @@ async function main() {
       cwd: __dirname,
       sandboxProjectDir,
       projectMode: variant.projectMode,
+      withSkills: variant.withSkills,
     };
 
-    let setupResult: SetupResult | void;
+    let setupResult: SetupResult | void = undefined;
 
     process.stdout.write(
-      `\n=== CLI eval variant "${variant.id}" (projectMode=${variant.projectMode}, authState=${variant.authState}) ===\n`
+      `\n=== CLI eval variant "${variant.id}" (projectMode=${variant.projectMode}, authState=${variant.authState}, withSkills=${variant.withSkills}) ===\n`
     );
 
     try {
       setupResult = await setup(context);
-
-      const agentEvalEnv = { ...process.env, FORCE_COLOR: '1' };
-      agentEvalEnv.CLI_EVAL_AUTH_STATE = variant.authState;
+      const agentEvalEnv: NodeJS.ProcessEnv = {
+        ...process.env,
+        FORCE_COLOR: '1',
+        CLI_EVAL_AUTH_STATE: variant.authState,
+        CLI_EVAL_WITH_SKILLS: variant.withSkills ? '1' : '0',
+      };
       if (setupResult?.createdProjectId) {
         agentEvalEnv.CLI_EVAL_PROJECT_ID = setupResult.createdProjectId;
       }

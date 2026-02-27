@@ -15,6 +15,7 @@ import {
   Redirect,
   Route,
   RouteApiError,
+  RouteInput,
   RouteWithHandle,
   RouteWithSrc,
 } from './types';
@@ -80,9 +81,11 @@ function convertRouteAliases(route: RouteWithSrc, index: number): void {
   }
 }
 
-export function normalizeRoutes(inputRoutes: Route[] | null): NormalizedRoutes {
+export function normalizeRoutes(
+  inputRoutes: RouteInput[] | null
+): NormalizedRoutes {
   if (!inputRoutes || inputRoutes.length === 0) {
-    return { routes: inputRoutes, error: null };
+    return { routes: inputRoutes as Route[] | null, error: null };
   }
 
   const routes: Route[] = [];
@@ -90,7 +93,7 @@ export function normalizeRoutes(inputRoutes: Route[] | null): NormalizedRoutes {
   const errors: string[] = [];
 
   inputRoutes.forEach((r, i) => {
-    const route = { ...r };
+    const route = { ...r } as Route;
     routes.push(route);
 
     // Convert aliases (source -> src, destination -> dest, statusCode -> status)
