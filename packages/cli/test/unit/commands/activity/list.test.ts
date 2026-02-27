@@ -85,6 +85,64 @@ describe('activity ls', () => {
     expect(client.stderr.getFullOutput()).toContain('Logged in from 127.0.0.1');
   });
 
+  it('shows full event description by default', async () => {
+    const longText =
+      'This event description is intentionally very long and should be shown in full by default to avoid hiding important details';
+
+    client.scenario.get('/v3/events', (_req, res) => {
+      res.json({
+        events: [
+          {
+            id: 'uev_long',
+            createdAt: 1700000000000,
+            text: longText,
+            type: 'firewall-bypass-created',
+            principalId: 'user_1',
+            principal: { type: 'user', username: 'jane' },
+          },
+        ],
+      });
+    });
+
+    client.setArgv('activity', 'ls');
+
+    const exitCode = await activity(client);
+
+    expect(exitCode).toBe(0);
+    const output = client.stderr.getFullOutput();
+    expect(output).toContain(longText);
+  });
+
+  it('uses event text as header and type as detail', async () => {
+    const longText =
+      'This event description is intentionally very long and should be shown fully in the header';
+
+    client.scenario.get('/v3/events', (_req, res) => {
+      res.json({
+        events: [
+          {
+            id: 'uev_long',
+            createdAt: 1700000000000,
+            text: longText,
+            type: 'firewall-bypass-created',
+            principalId: 'user_1',
+            principal: { type: 'user', username: 'jane' },
+          },
+        ],
+      });
+    });
+
+    client.setArgv('activity', 'ls');
+
+    const exitCode = await activity(client);
+
+    expect(exitCode).toBe(0);
+    const output = client.stderr.getFullOutput();
+    expect(output).toContain(`1. ${longText}`);
+    expect(output).toContain('Type: firewall-bypass-created');
+    expect(output).toContain('Actor: jane');
+  });
+
   it('supports repeatable and comma-separated --type filters', async () => {
     let requestQuery: any;
     client.scenario.get('/v3/events', (req, res) => {

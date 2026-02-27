@@ -1,7 +1,6 @@
 import ms from 'ms';
 import chalk from 'chalk';
 import type Client from '../../util/client';
-import table from '../../util/output/table';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
@@ -178,24 +177,19 @@ function formatText(text: string): string {
   return text.replace(/\s+/g, ' ').trim();
 }
 
-function printEventsTable(events: UserEventDTO[]) {
-  const rows = [
-    [
-      chalk.bold(chalk.cyan('Event')),
-      chalk.bold(chalk.cyan('Type')),
-      chalk.bold(chalk.cyan('Actor')),
-      chalk.bold(chalk.cyan('Age')),
-    ],
-    ...events.map(event => [
-      formatText(event.text),
-      event.type ?? '-',
-      formatActor(event),
-      chalk.gray(formatAge(event.createdAt)),
-    ]),
-  ];
+function printExpandedEvents(events: UserEventDTO[]) {
+  const lines = [''];
 
-  const tableOutput = table(rows, { hsep: 5 }).replace(/^/gm, '  ');
-  output.print(`\n${tableOutput}\n\n`);
+  events.forEach((event, index) => {
+    lines.push(`  ${chalk.bold(`${index + 1}. ${formatText(event.text)}`)}`);
+    lines.push(`     ${chalk.cyan('Type:')} ${event.type ?? '-'}`);
+    lines.push(`     ${chalk.cyan('Actor:')} ${formatActor(event)}`);
+    lines.push(`     ${chalk.cyan('Age:')} ${formatAge(event.createdAt)}`);
+    lines.push(`     ${chalk.cyan('ID:')} ${event.id}`);
+    lines.push('');
+  });
+
+  output.print(`${lines.join('\n')}\n`);
 }
 
 async function resolveScope(
@@ -401,7 +395,7 @@ export default async function list(
       return 0;
     }
 
-    printEventsTable(events);
+    printExpandedEvents(events);
 
     if (next !== null) {
       const commandFlags = getCommandFlags(flags, ['--next']);
