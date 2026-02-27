@@ -779,24 +779,8 @@ function checkUnusedFunctions(
       isOfficialRuntime('hono', frontendBuilder.use) ||
       isOfficialRuntime('backends', frontendBuilder.use))
   ) {
-    // Copied from builder entrypoint detection
-    const validFilenames = [
-      'app',
-      'index',
-      'server',
-      'src/app',
-      'src/index',
-      'src/server',
-    ];
-    const validExtensions = ['js', 'cjs', 'mjs', 'ts', 'cts', 'mts'];
-    const validEntrypoints = validFilenames.flatMap(filename =>
-      validExtensions.map(extension => `${filename}.${extension}`)
-    );
-    for (const fnKey of unusedFunctions.values()) {
-      if (validEntrypoints.includes(fnKey)) {
-        unusedFunctions.delete(fnKey);
-      }
-    }
+    // Skip for backends because function names aren't statically defined
+    return null;
   }
 
   if (unusedFunctions.size) {

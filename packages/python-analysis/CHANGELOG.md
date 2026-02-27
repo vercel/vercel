@@ -1,5 +1,11 @@
 # @vercel/python-analysis
 
+## 0.8.0
+
+### Minor Changes
+
+- Find entrypoints for django projects. ([#15167](https://github.com/vercel/vercel/pull/15167))
+
 ## 0.7.0
 
 ### Minor Changes

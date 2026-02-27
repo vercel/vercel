@@ -1,5 +1,24 @@
 # @vercel/build-utils
 
+## 13.6.0
+
+### Minor Changes
+
+- Find entrypoints for django projects. ([#15167](https://github.com/vercel/vercel/pull/15167))
+
+### Patch Changes
+
+- Rename fetch to nodeFetch in cases where it is an import from node-fetch ([#15234](https://github.com/vercel/vercel/pull/15234))
+
+- [@vercel/build-utils] fix uncaught exception in streamToBuffer when stream exceeds max Buffer size ([#15276](https://github.com/vercel/vercel/pull/15276))
+
+- Remove source and destination typo suggestions for routes schema ([#15014](https://github.com/vercel/vercel/pull/15014))
+
+- Support function overrides in backends builder ([#15214](https://github.com/vercel/vercel/pull/15214))
+
+- Updated dependencies [[`b3a96cc4f276ce8d16c695eabd499d3a17e73aa8`](https://github.com/vercel/vercel/commit/b3a96cc4f276ce8d16c695eabd499d3a17e73aa8)]:
+  - @vercel/python-analysis@0.8.0
+
 ## 13.5.0
 
 ### Minor Changes

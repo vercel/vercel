@@ -46,17 +46,22 @@ describe('validateConfig', () => {
     );
   });
 
-  it('should error with invalid routes due to additional property and offer suggestion', async () => {
+  it('should not error with routes using source and destination aliases', async () => {
     const error = validateConfig({
-      // @ts-ignore
+      // @ts-expect-error - testing runtime alias support (source/destination accepted by schema, converted to src/dest at runtime)
       routes: [{ source: '/(.*)', destination: '/api/index.js' }],
     });
-    expect(error!.message).toEqual(
-      'Invalid vercel.json - `routes[0]` should NOT have additional property `source`. Did you mean `src`?'
-    );
-    expect(error!.link).toEqual(
-      'https://vercel.com/docs/concepts/projects/project-configuration#routes'
-    );
+    expect(error).toBeNull();
+  });
+
+  it('should not error with routes using source, destination, and statusCode aliases', async () => {
+    const error = validateConfig({
+      routes: [
+        // @ts-expect-error - testing runtime alias support (source/destination/statusCode accepted by schema, converted at runtime)
+        { source: '/(.*)', destination: '/api/index.js', statusCode: 200 },
+      ],
+    });
+    expect(error).toBeNull();
   });
 
   it('should error with invalid routes array type', async () => {

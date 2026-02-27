@@ -1125,6 +1125,7 @@ exports[`help command > dev help output snapshots > dev --help > outputs help 1`
   Options:
 
   -l,  --listen <URI>  Specify a URI endpoint on which to listen [0.0.0.0:3000] 
+  -L,  --local         Start the dev server without linking to a Vercel project 
   -y,  --yes           Accept default value for all prompts                     
 
 
@@ -2958,6 +2959,10 @@ exports[`help command > integration help output snapshots > integration guide su
 
     $ vercel integration guide neon --framework nextjs
 
+  - Discover available integrations and product slugs
+
+    $ vercel integration discover
+
 "
 `;
 
@@ -2965,7 +2970,10 @@ exports[`help command > integration help output snapshots > integration help col
 "
   ▲ vercel integration command
 
-  Manage marketplace integrations       
+  Manage marketplace integrations. To   
+  manage individual resources           
+  (disconnect, remove), see             
+  \`integration-resource\`.               
 
   Commands:
 
@@ -3015,6 +3023,13 @@ exports[`help command > integration help output snapshots > integration help col
                              a      
                              market…
                              integr…
+                             Resour…
+                             must be
+                             removed
+                             first  
+                             using  
+                             \`integ…
+                             remove…
 
 
   Global Options:
@@ -3078,7 +3093,8 @@ exports[`help command > integration help output snapshots > integration help col
 "
   ▲ vercel integration command
 
-  Manage marketplace integrations                                               
+  Manage marketplace integrations. To manage individual resources (disconnect,  
+  remove), see \`integration-resource\`.                                          
 
   Commands:
 
@@ -3092,7 +3108,9 @@ exports[`help command > integration help output snapshots > integration help col
                              for the current project                        
   open      name [resource]  Opens a marketplace integration's or resource's
                              dashboard via SSO                              
-  remove    integration      Uninstalls a marketplace integration           
+  remove    integration      Uninstalls a marketplace integration. Resources
+                             must be removed first using                    
+                             \`integration-resource remove\`.                 
 
 
   Global Options:
@@ -3124,7 +3142,7 @@ exports[`help command > integration help output snapshots > integration help col
 "
   ▲ vercel integration command
 
-  Manage marketplace integrations                                                                                       
+  Manage marketplace integrations. To manage individual resources (disconnect, remove), see \`integration-resource\`.     
 
   Commands:
 
@@ -3134,7 +3152,8 @@ exports[`help command > integration help output snapshots > integration help col
   guide     integration      Show getting started guides and code snippets for a marketplace integration            
   list      [project]        List resources from marketplace integrations for the current project                   
   open      name [resource]  Opens a marketplace integration's or resource's dashboard via SSO                      
-  remove    integration      Uninstalls a marketplace integration                                                   
+  remove    integration      Uninstalls a marketplace integration. Resources must be removed first using            
+                             \`integration-resource remove\`.                                                         
 
 
   Global Options:
@@ -4216,6 +4235,10 @@ exports[`help command > project help output snapshots > project help column widt
                    scope        
   remove   name    Delete a     
                    project      
+  token    [name]  Get a        
+                   development  
+                   OIDC token   
+                   for a project
 
 
   Global Options:
@@ -4281,6 +4304,7 @@ exports[`help command > project help output snapshots > project help column widt
   inspect  [name]  Displays information related to a project            
   list             Show all projects in the selected scope              
   remove   name    Delete a project                                     
+  token    [name]  Get a development OIDC token for a project           
 
 
   Global Options:
@@ -4314,6 +4338,7 @@ exports[`help command > project help output snapshots > project help column widt
   inspect  [name]  Displays information related to a project                                                    
   list             Show all projects in the selected scope                                                      
   remove   name    Delete a project                                                                             
+  token    [name]  Get a development OIDC token for a project                                                   
 
 
   Global Options:

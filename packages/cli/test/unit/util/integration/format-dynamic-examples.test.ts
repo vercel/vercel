@@ -32,6 +32,7 @@ const productWithSchema: IntegrationProduct[] = [
 
 describe('formatDynamicExamples', () => {
   beforeEach(() => {
+    // Explicitly enable so tests pass regardless of flag default
     process.env.FF_AUTO_PROVISION_INSTALL = '1';
   });
 

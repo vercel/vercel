@@ -391,6 +391,7 @@ describe('detectServices with auto-detection', () => {
 
       expect(result.errors).toEqual([]);
       expect(result.warnings).toEqual([]);
+      expect(result.source).toBe('configured');
       expect(result.services).toHaveLength(1);
       expect(result.services[0].name).toBe('api');
       expect(result.services[0].routePrefix).toBe('/api');
@@ -476,6 +477,7 @@ describe('detectServices with auto-detection', () => {
 
       expect(result.errors).toEqual([]);
       expect(result.warnings).toHaveLength(0);
+      expect(result.source).toBe('auto-detected');
       expect(result.services).toHaveLength(1);
       expect(result.services[0]).toMatchObject({
         name: 'frontend',
@@ -498,6 +500,7 @@ describe('detectServices with auto-detection', () => {
 
       expect(result.errors).toEqual([]);
       expect(result.warnings).toHaveLength(0);
+      expect(result.source).toBe('auto-detected');
       expect(result.services).toHaveLength(1);
       expect(result.services[0]).toMatchObject({
         name: 'frontend',
@@ -522,6 +525,7 @@ describe('detectServices with auto-detection', () => {
 
       expect(result.errors).toEqual([]);
       expect(result.warnings).toHaveLength(0);
+      expect(result.source).toBe('auto-detected');
       expect(result.services).toHaveLength(2);
       const backend = result.services.find(
         service => service.name === 'backend'

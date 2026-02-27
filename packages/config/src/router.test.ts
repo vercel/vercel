@@ -1,5 +1,11 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { createRoutes, Router, deploymentEnv, matchers } from './router';
+import {
+  createRoutes,
+  Router,
+  deploymentEnv,
+  matchers,
+  type Route,
+} from './router';
 
 const { header, cookie, query, host } = matchers;
 import { cacheHeader } from 'pretty-cache-header';
@@ -542,6 +548,59 @@ describe('Router', () => {
       router.route(route);
 
       expect(route.transforms[0].env).toEqual(['REGION', 'DATACENTER']);
+    });
+  });
+
+  describe('route alias validation', () => {
+    it('should throw if both src and source are defined', () => {
+      expect(() => {
+        router.route({ src: '/foo', source: '/bar' });
+      }).toThrow('Route cannot define both `src` and `source`.');
+    });
+
+    it('should throw if both dest and destination are defined', () => {
+      expect(() => {
+        router.route({ src: '/foo', dest: '/bar', destination: '/baz' });
+      }).toThrow('Route cannot define both `dest` and `destination`.');
+    });
+
+    it('should throw if both status and statusCode are defined', () => {
+      expect(() => {
+        router.route({ src: '/foo', status: 301, statusCode: 302 });
+      }).toThrow('Route cannot define both `status` and `statusCode`.');
+    });
+
+    it('should accept source as an alias for src', () => {
+      router.route({ source: '/foo', dest: '/bar' });
+      const config = router.getConfig();
+      const route = config.routes?.find(
+        r => 'src' in r && r.src === '/foo'
+      ) as Route;
+      expect(route).toBeDefined();
+      expect(route.src).toBe('/foo');
+      expect(route.source).toBeUndefined();
+    });
+
+    it('should accept destination as an alias for dest', () => {
+      router.route({ src: '/foo', destination: '/bar' });
+      const config = router.getConfig();
+      const route = config.routes?.find(
+        r => 'src' in r && r.src === '/foo'
+      ) as Route;
+      expect(route).toBeDefined();
+      expect(route.dest).toBe('/bar');
+      expect(route.destination).toBeUndefined();
+    });
+
+    it('should accept statusCode as an alias for status', () => {
+      router.route({ src: '/foo', statusCode: 301 });
+      const config = router.getConfig();
+      const route = config.routes?.find(
+        r => 'src' in r && r.src === '/foo'
+      ) as Route;
+      expect(route).toBeDefined();
+      expect(route.status).toBe(301);
+      expect(route.statusCode).toBeUndefined();
     });
   });
 });

@@ -40,7 +40,7 @@ beforeEach(() => {
   openMock.mockReset().mockResolvedValue(undefined as never);
   pullMock.mockClear();
   connectMock.mockClear();
-  // Enable auto-provision feature flag
+  // Explicitly enable auto-provision so tests pass regardless of flag default
   process.env.FF_AUTO_PROVISION_INSTALL = '1';
   // Mock Math.random to get predictable resource names (gray-apple suffix)
   vi.spyOn(Math, 'random').mockReturnValue(0);
@@ -48,6 +48,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.restoreAllMocks();
+  delete process.env.FF_AUTO_PROVISION_INSTALL;
 });
 
 describe('integration add (auto-provision)', () => {
@@ -448,7 +449,7 @@ describe('integration add (auto-provision)', () => {
       const teams = useTeams('team_dummy');
       const t = Array.isArray(teams) ? teams[0] : teams.teams[0];
       client.config.currentTeam = t.id;
-      process.env.FF_AUTO_PROVISION_INSTALL = '1';
+
       useAutoProvision({
         responseKey: 'provisioned',
         withInstallation: false,
@@ -480,7 +481,7 @@ describe('integration add (auto-provision)', () => {
       const teams = useTeams('team_dummy');
       const t = Array.isArray(teams) ? teams[0] : teams.teams[0];
       client.config.currentTeam = t.id;
-      process.env.FF_AUTO_PROVISION_INSTALL = '1';
+
       useAutoProvision({
         responseKey: 'provisioned',
         withInstallation: false,
@@ -512,7 +513,7 @@ describe('integration add (auto-provision)', () => {
       const teams = useTeams('team_dummy');
       const t = Array.isArray(teams) ? teams[0] : teams.teams[0];
       client.config.currentTeam = t.id;
-      process.env.FF_AUTO_PROVISION_INSTALL = '1';
+
       // Never return an installation — simulates user not accepting in browser
       useAutoProvision({
         responseKey: 'provisioned',
@@ -550,7 +551,7 @@ describe('integration add (auto-provision)', () => {
       const teams = useTeams('team_dummy');
       const t = Array.isArray(teams) ? teams[0] : teams.teams[0];
       client.config.currentTeam = t.id;
-      process.env.FF_AUTO_PROVISION_INSTALL = '1';
+
       useAutoProvision({
         responseKey: 'provisioned',
         withInstallation: true,
@@ -577,7 +578,7 @@ describe('integration add (auto-provision)', () => {
       const teams = useTeams('team_dummy');
       const t = Array.isArray(teams) ? teams[0] : teams.teams[0];
       client.config.currentTeam = t.id;
-      process.env.FF_AUTO_PROVISION_INSTALL = '1';
+
       useAutoProvision({
         responseKey: 'provisioned',
         withInstallation: false,
@@ -1307,8 +1308,6 @@ describe('integration add (auto-provision)', () => {
       const teams = useTeams('team_dummy');
       const t = Array.isArray(teams) ? teams[0] : teams.teams[0];
       client.config.currentTeam = t.id;
-      process.env.FF_AUTO_PROVISION_INSTALL = '1';
-
       // Integration endpoint (needed to fetch integration)
       client.scenario.get(
         '/:version/integrations/integration/:slug',
@@ -1806,7 +1805,7 @@ describe('integration add (auto-provision)', () => {
 
   describe('--installation-id FF gating', () => {
     it('should not show --installation-id in --help when FF is off', async () => {
-      delete process.env.FF_AUTO_PROVISION_INSTALL;
+      process.env.FF_AUTO_PROVISION_INSTALL = '0';
       client.setArgv('integration', 'add', '--help');
       const exitCode = await integrationCommand(client);
       expect(exitCode).toEqual(0);
@@ -1815,7 +1814,7 @@ describe('integration add (auto-provision)', () => {
     });
 
     it('should show --installation-id in --help when FF is on', async () => {
-      process.env.FF_AUTO_PROVISION_INSTALL = '1';
+      delete process.env.FF_AUTO_PROVISION_INSTALL;
       client.setArgv('integration', 'add', '--help');
       const exitCode = await integrationCommand(client);
       expect(exitCode).toEqual(0);
@@ -1824,7 +1823,7 @@ describe('integration add (auto-provision)', () => {
     });
 
     it('should reject --installation-id when FF is off', async () => {
-      delete process.env.FF_AUTO_PROVISION_INSTALL;
+      process.env.FF_AUTO_PROVISION_INSTALL = '0';
       client.setArgv(
         'integration',
         'add',
@@ -1842,7 +1841,7 @@ describe('integration add (auto-provision)', () => {
 
   describe('--installation-id FF gating (vc install alias)', () => {
     it('should not show --installation-id in vc install --help when FF is off', async () => {
-      delete process.env.FF_AUTO_PROVISION_INSTALL;
+      process.env.FF_AUTO_PROVISION_INSTALL = '0';
       client.setArgv('install', '--help');
       const exitCode = await install(client);
       expect(exitCode).toEqual(0);
@@ -1851,7 +1850,7 @@ describe('integration add (auto-provision)', () => {
     });
 
     it('should show --installation-id in vc install --help when FF is on', async () => {
-      process.env.FF_AUTO_PROVISION_INSTALL = '1';
+      delete process.env.FF_AUTO_PROVISION_INSTALL;
       client.setArgv('install', '--help');
       const exitCode = await install(client);
       expect(exitCode).toEqual(0);
@@ -1860,7 +1859,7 @@ describe('integration add (auto-provision)', () => {
     });
 
     it('should reject --installation-id in vc install when FF is off', async () => {
-      delete process.env.FF_AUTO_PROVISION_INSTALL;
+      process.env.FF_AUTO_PROVISION_INSTALL = '0';
       client.setArgv('install', 'acme', '--installation-id', 'icfg_123');
       const exitCode = await install(client);
       expect(exitCode).toEqual(1);
@@ -1870,7 +1869,6 @@ describe('integration add (auto-provision)', () => {
     });
 
     it('should provision successfully via vc install with --installation-id', async () => {
-      process.env.FF_AUTO_PROVISION_INSTALL = '1';
       const { requestBodies } = useAutoProvision({
         responseKey: 'multiple_installations',
       });
@@ -2267,6 +2265,155 @@ describe('integration add (auto-provision)', () => {
         ['production'],
         { envVarPrefix: 'NEON2_' }
       );
+    });
+  });
+
+  describe('--format=json', () => {
+    beforeEach(() => {
+      useAutoProvision({ responseKey: 'provisioned' });
+      // Restore pull mock implementation (vi.restoreAllMocks in afterEach clears it)
+      pullMock.mockResolvedValue(0);
+    });
+
+    it('should output valid JSON to stdout on success without project', async () => {
+      client.setArgv('integration', 'add', 'acme', '--format=json');
+      const exitCode = await integrationCommand(client);
+
+      expect(exitCode).toEqual(0);
+      const jsonOutput = JSON.parse(client.stdout.getFullOutput());
+      expect(jsonOutput.resource).toEqual({
+        id: 'resource_123',
+        name: 'test-resource',
+        status: 'available',
+        externalResourceId: 'ext_resource_123',
+      });
+      expect(jsonOutput.integration).toEqual({
+        id: 'acme',
+        slug: 'acme',
+        name: 'Acme Integration',
+      });
+      expect(jsonOutput.product).toEqual({
+        id: 'acme-product',
+        slug: 'acme',
+        name: 'Acme Product',
+      });
+      expect(jsonOutput.installation).toEqual({ id: 'install_123' });
+      expect(jsonOutput.billingPlan).toBeNull();
+      expect(jsonOutput.dashboardUrl).toContain(
+        '/d/dashboard/integrations/acme/install_123/resources/resource_123'
+      );
+      expect(jsonOutput.ssoUrl.integration).toContain(
+        'integrationConfigurationId=install_123'
+      );
+      expect(jsonOutput.ssoUrl.resource).toContain(
+        'resource_id=ext_resource_123'
+      );
+      expect(jsonOutput.project).toBeNull();
+      expect(jsonOutput.environments).toEqual([]);
+      expect(jsonOutput.envPulled).toBe(false);
+      expect(jsonOutput.warnings).toEqual([]);
+    });
+
+    it('should include project and environments in JSON when connected', async () => {
+      useProject({
+        ...defaultProject,
+        id: 'vercel-integration-add',
+        name: 'vercel-integration-add',
+      });
+      const cwd = setupUnitFixture('vercel-integration-add');
+      client.cwd = cwd;
+      client.setArgv('integration', 'add', 'acme', '--format=json');
+      const exitCode = await integrationCommand(client);
+
+      expect(exitCode).toEqual(0);
+      const jsonOutput = JSON.parse(client.stdout.getFullOutput());
+      expect(jsonOutput.project).toEqual({
+        id: 'vercel-integration-add',
+        name: 'vercel-integration-add',
+      });
+      expect(jsonOutput.environments).toEqual([
+        'production',
+        'preview',
+        'development',
+      ]);
+      expect(jsonOutput.envPulled).toBe(true);
+      expect(jsonOutput.warnings).toEqual([]);
+    });
+
+    it('should output JSON with warnings when connect fails', async () => {
+      useProject({
+        ...defaultProject,
+        id: 'vercel-integration-add',
+        name: 'vercel-integration-add',
+      });
+      const cwd = setupUnitFixture('vercel-integration-add');
+      client.cwd = cwd;
+      connectMock.mockRejectedValueOnce(new Error('Connection refused'));
+      client.setArgv('integration', 'add', 'acme', '--format=json');
+      const exitCode = await integrationCommand(client);
+
+      // Exit code 0 because resource was provisioned (primary action succeeded)
+      expect(exitCode).toEqual(0);
+      const jsonOutput = JSON.parse(client.stdout.getFullOutput());
+      expect(jsonOutput.resource.id).toBe('resource_123');
+      expect(jsonOutput.warnings).toEqual([
+        'Failed to connect to project: Connection refused',
+      ]);
+    });
+
+    it('should output JSON with env pull warning when pull fails', async () => {
+      useProject({
+        ...defaultProject,
+        id: 'vercel-integration-add',
+        name: 'vercel-integration-add',
+      });
+      const cwd = setupUnitFixture('vercel-integration-add');
+      client.cwd = cwd;
+      pullMock.mockResolvedValue(1);
+      client.setArgv('integration', 'add', 'acme', '--format=json');
+      const exitCode = await integrationCommand(client);
+
+      expect(exitCode).toEqual(0);
+      const jsonOutput = JSON.parse(client.stdout.getFullOutput());
+      expect(jsonOutput.project).toEqual({
+        id: 'vercel-integration-add',
+        name: 'vercel-integration-add',
+      });
+      expect(jsonOutput.envPulled).toBe(false);
+      expect(jsonOutput.warnings).toContainEqual(
+        expect.stringContaining('Failed to pull environment variables')
+      );
+    });
+
+    it('should not output JSON to stdout on pre-provisioning error', async () => {
+      client.setArgv(
+        'integration',
+        'add',
+        'nonexistent-integration',
+        '--format=json'
+      );
+      const exitCode = await integrationCommand(client);
+
+      expect(exitCode).toEqual(1);
+      // stdout should be empty - no JSON
+      expect(client.stdout.getFullOutput()).toBe('');
+    });
+
+    it('should error on invalid --format value', async () => {
+      client.setArgv('integration', 'add', 'acme', '--format=xml');
+      const exitCode = await integrationCommand(client);
+
+      expect(exitCode).toEqual(1);
+      expect(client.stdout.getFullOutput()).toBe('');
+    });
+
+    it('should not output JSON when --format is not specified', async () => {
+      client.setArgv('integration', 'add', 'acme');
+      const exitCode = await integrationCommand(client);
+
+      expect(exitCode).toEqual(0);
+      // No JSON on stdout
+      expect(client.stdout.getFullOutput()).toBe('');
     });
   });
 });

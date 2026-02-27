@@ -102,8 +102,6 @@ const mapTypoToSuggestion: { [key: string]: { [key: string]: string } } = {
   redirects: { src: 'source', dest: 'destination', status: 'statusCode' },
   headers: { src: 'source', header: 'headers' },
   routes: {
-    source: 'src',
-    destination: 'dest',
     header: 'headers',
     method: 'methods',
   },

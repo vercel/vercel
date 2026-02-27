@@ -47,6 +47,7 @@ import {
   ensureVenv,
   createVenvEnv,
 } from './utils';
+import { runQuirks } from './quirks';
 
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
@@ -119,56 +120,6 @@ export const build: BuildV3 = async ({
   } catch (err) {
     console.log('Failed to create "setup.cfg" file');
     throw err;
-  }
-
-  // For Python frameworks, also honor project install/build commands (vercel.json/dashboard)
-  if (isPythonFramework(framework)) {
-    const {
-      cliType,
-      lockfileVersion,
-      packageJsonPackageManager,
-      turboSupportsCorepackHome,
-    } = await scanParentDirs(workPath, true);
-    spawnEnv = getEnvForPackageManager({
-      cliType,
-      lockfileVersion,
-      packageJsonPackageManager,
-      env: process.env,
-      turboSupportsCorepackHome,
-      projectCreatedAt: config?.projectSettings?.createdAt,
-    });
-
-    const installCommand = config?.projectSettings?.installCommand;
-    if (typeof installCommand === 'string') {
-      const trimmed = installCommand.trim();
-      if (trimmed) {
-        projectInstallCommand = trimmed;
-      } else {
-        console.log('Skipping "install" command...');
-      }
-    }
-
-    const projectBuildCommand =
-      config?.projectSettings?.buildCommand ??
-      // fallback if provided directly on config (some callers set this)
-      (config as any)?.buildCommand;
-    if (projectBuildCommand) {
-      console.log(`Running "${projectBuildCommand}"`);
-      await execCommand(projectBuildCommand, {
-        env: spawnEnv,
-        cwd: workPath,
-      });
-      hasCustomCommand = true;
-    } else {
-      const ranBuildScript = await runPyprojectScript(
-        workPath,
-        ['vercel-build', 'now-build', 'build'],
-        spawnEnv
-      );
-      if (ranBuildScript) {
-        hasCustomCommand = true;
-      }
-    }
   }
 
   let fsFiles = await glob('**', workPath);
@@ -329,6 +280,34 @@ export const build: BuildV3 = async ({
     venvPath,
   });
 
+  // For Python frameworks, set up the env and extract the install command (vercel.json/dashboard)
+  if (isPythonFramework(framework)) {
+    const {
+      cliType,
+      lockfileVersion,
+      packageJsonPackageManager,
+      turboSupportsCorepackHome,
+    } = await scanParentDirs(workPath, true);
+    spawnEnv = getEnvForPackageManager({
+      cliType,
+      lockfileVersion,
+      packageJsonPackageManager,
+      env: process.env,
+      turboSupportsCorepackHome,
+      projectCreatedAt: config?.projectSettings?.createdAt,
+    });
+
+    const installCommand = config?.projectSettings?.installCommand;
+    if (typeof installCommand === 'string') {
+      const trimmed = installCommand.trim();
+      if (trimmed) {
+        projectInstallCommand = trimmed;
+      } else {
+        console.log('Skipping "install" command...');
+      }
+    }
+  }
+
   const baseEnv = spawnEnv || process.env;
   const pythonEnv = createVenvEnv(venvPath, baseEnv);
 
@@ -442,6 +421,27 @@ export const build: BuildV3 = async ({
     });
   }
 
+  // Run the project build command (if any) AFTER dependencies are installed.
+  if (isPythonFramework(framework)) {
+    const projectBuildCommand =
+      config?.projectSettings?.buildCommand ??
+      // fallback if provided directly on config (some callers set this)
+      (config as any)?.buildCommand;
+    if (projectBuildCommand) {
+      console.log(`Running "${projectBuildCommand}"`);
+      await execCommand(projectBuildCommand, {
+        env: pythonEnv,
+        cwd: workPath,
+      });
+    } else {
+      await runPyprojectScript(
+        workPath,
+        ['vercel-build', 'now-build', 'build'],
+        pythonEnv
+      );
+    }
+  }
+
   // Ensure correct version of vercel-runtime is installed.
   //
   // We intentionally do not inject vercel-runtime into the manifest
@@ -473,6 +473,15 @@ export const build: BuildV3 = async ({
       projectDir: join(workPath, entryDirectory),
       args: ['install', workersDep],
     });
+  }
+
+  // Run quirks: detect dependencies that need special handling (e.g. prisma)
+  // and perform fix-up routines before bundling.
+  const quirksResult = await runQuirks({ venvPath, pythonEnv, workPath });
+
+  // Apply build-time env vars from quirks so subsequent build steps can use them
+  if (quirksResult.buildEnv) {
+    Object.assign(pythonEnv, quirksResult.buildEnv);
   }
 
   debug('Entrypoint is', entrypoint);
@@ -544,6 +553,7 @@ from vercel_runtime.vc_init import vc_handler
 
   const lambdaEnv = {} as Record<string, string>;
   lambdaEnv.PYTHONPATH = vendorDir;
+  Object.assign(lambdaEnv, quirksResult.env);
 
   const globOptions: GlobOptions = {
     cwd: workPath,
@@ -566,9 +576,12 @@ from vercel_runtime.vc_init import vc_handler
     noBuildCheckFailed,
     pythonPath: pythonVersion.pythonPath,
     hasCustomCommand,
-    additionalPrivatePackages: shouldInstallVercelWorkers
-      ? ['vercel-workers', 'vercel_workers']
-      : [],
+    alwaysBundlePackages: [
+      ...quirksResult.alwaysBundlePackages,
+      ...(shouldInstallVercelWorkers
+        ? ['vercel-workers', 'vercel_workers']
+        : []),
+    ],
   });
 
   const { runtimeInstallEnabled, allVendorFiles } =

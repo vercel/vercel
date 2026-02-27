@@ -1,5 +1,11 @@
 # @vercel/go
 
+## 3.4.3
+
+### Patch Changes
+
+- Rename fetch to nodeFetch in cases where it is an import from node-fetch ([#15234](https://github.com/vercel/vercel/pull/15234))
+
 ## 3.4.2
 
 ### Patch Changes

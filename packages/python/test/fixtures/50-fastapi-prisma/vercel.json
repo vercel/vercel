@@ -1,0 +1,5 @@
+{
+  "env": {
+    "DATABASE_URL": "file:///tmp/dev.db"
+  }
+}

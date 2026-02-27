@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.15.35
+
+### Patch Changes
+
+- Rename fetch to nodeFetch when importing from node-fetch ([#15232](https://github.com/vercel/vercel/pull/15232))
+
 ## 4.15.34
 
 ### Patch Changes

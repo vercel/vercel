@@ -7,12 +7,12 @@ import stripAnsi from 'strip-ansi';
 import { createServer } from 'http';
 import {
   exec,
-  fetch,
   fixture,
   testFixture,
   testFixtureStdio,
   validateResponseHeaders,
 } from './utils';
+import nodeFetch from 'node-fetch';
 
 test('[verdel dev] should support serverless functions', async () => {
   const dir = fixture('serverless-function');
@@ -20,7 +20,7 @@ test('[verdel dev] should support serverless functions', async () => {
 
   try {
     await readyResolver;
-    const res = await fetch(`http://localhost:${port}/api?foo=bar`);
+    const res = await nodeFetch(`http://localhost:${port}/api?foo=bar`);
     validateResponseHeaders(res);
     const payload = await res.json();
     expect(payload).toMatchObject({ url: '/api?foo=bar', method: 'GET' });
@@ -43,7 +43,7 @@ test('[vercel dev] should support edge functions', async () => {
 
     const body = { hello: 'world' };
 
-    const res = await fetch(`http://localhost:${port}/api/edge-success`, {
+    const res = await nodeFetch(`http://localhost:${port}/api/edge-success`, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
@@ -87,7 +87,7 @@ test('[vercel dev] edge functions support WebAssembly files', async () => {
       { number: 2, result: 3 },
       { number: 12, result: 13 },
     ]) {
-      const res = await fetch(
+      const res = await nodeFetch(
         `http://localhost:${port}/api/webassembly?number=${number}`
       );
       validateResponseHeaders(res);
@@ -114,7 +114,9 @@ test('[vercel dev] throws an error when an edge function has no response', async
   try {
     await readyResolver;
 
-    const res = await fetch(`http://localhost:${port}/api/edge-no-response`);
+    const res = await nodeFetch(
+      `http://localhost:${port}/api/edge-no-response`
+    );
     validateResponseHeaders(res);
 
     const { stdout } = await dev.kill();
@@ -138,13 +140,16 @@ test('[vercel dev] should support edge functions returning intentional 500 respo
 
     const body = { hello: 'world' };
 
-    const res = await fetch(`http://localhost:${port}/api/edge-500-response`, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify(body),
-    });
+    const res = await nodeFetch(
+      `http://localhost:${port}/api/edge-500-response`,
+      {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      }
+    );
     validateResponseHeaders(res);
 
     expect(await res.status).toBe(500);
@@ -163,13 +168,16 @@ test('[vercel dev] should handle runtime errors thrown in edge functions', async
   try {
     await readyResolver;
 
-    const res = await fetch(`http://localhost:${port}/api/edge-error-runtime`, {
-      method: 'GET',
-      headers: {
-        Accept:
-          'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-      },
-    });
+    const res = await nodeFetch(
+      `http://localhost:${port}/api/edge-error-runtime`,
+      {
+        method: 'GET',
+        headers: {
+          Accept:
+            'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        },
+      }
+    );
     validateResponseHeaders(res);
 
     const { stdout } = await dev.kill();
@@ -192,13 +200,16 @@ test('[vercel dev] should handle config errors thrown in edge functions', async 
   try {
     await readyResolver;
 
-    const res = await fetch(`http://localhost:${port}/api/edge-error-config`, {
-      method: 'GET',
-      headers: {
-        Accept:
-          'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-      },
-    });
+    const res = await nodeFetch(
+      `http://localhost:${port}/api/edge-error-config`,
+      {
+        method: 'GET',
+        headers: {
+          Accept:
+            'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        },
+      }
+    );
     validateResponseHeaders(res);
 
     const { stderr } = await dev.kill();
@@ -221,13 +232,16 @@ test('[vercel dev] should handle startup errors thrown in edge functions', async
   try {
     await readyResolver;
 
-    const res = await fetch(`http://localhost:${port}/api/edge-error-startup`, {
-      method: 'GET',
-      headers: {
-        Accept:
-          'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-      },
-    });
+    const res = await nodeFetch(
+      `http://localhost:${port}/api/edge-error-startup`,
+      {
+        method: 'GET',
+        headers: {
+          Accept:
+            'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        },
+      }
+    );
     validateResponseHeaders(res);
 
     const { stderr } = await dev.kill();
@@ -249,13 +263,16 @@ test('[vercel dev] should handle syntax errors thrown in edge functions', async 
   try {
     await readyResolver;
 
-    const res = await fetch(`http://localhost:${port}/api/edge-error-syntax`, {
-      method: 'GET',
-      headers: {
-        Accept:
-          'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-      },
-    });
+    const res = await nodeFetch(
+      `http://localhost:${port}/api/edge-error-syntax`,
+      {
+        method: 'GET',
+        headers: {
+          Accept:
+            'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        },
+      }
+    );
     validateResponseHeaders(res);
 
     const { stderr } = await dev.kill();
@@ -277,7 +294,7 @@ test('[vercel dev] should handle import errors thrown in edge functions', async 
   try {
     await readyResolver;
 
-    const res = await fetch(
+    const res = await nodeFetch(
       `http://localhost:${port}/api/edge-error-unknown-import`,
       {
         method: 'GET',
@@ -309,7 +326,7 @@ test('[vercel dev] should handle missing handler errors thrown in edge functions
   try {
     await readyResolver;
 
-    const res = await fetch(
+    const res = await nodeFetch(
       `http://localhost:${port}/api/edge-error-no-handler`,
       {
         method: 'GET',
@@ -344,7 +361,7 @@ test('[vercel dev] should handle invalid middleware config', async () => {
   try {
     await readyResolver;
 
-    const res = await fetch(`http://localhost:${port}/api/whatever`, {
+    const res = await nodeFetch(`http://localhost:${port}/api/whatever`, {
       method: 'GET',
       headers: {
         Accept:
@@ -376,7 +393,7 @@ test('[vercel dev] should support request body', async () => {
     const body = { hello: 'world' };
 
     // Test that `req.body` works in dev
-    let res = await fetch(`http://localhost:${port}/api/req-body`, {
+    let res = await nodeFetch(`http://localhost:${port}/api/req-body`, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
@@ -387,7 +404,7 @@ test('[vercel dev] should support request body', async () => {
     expect(await res.json()).toMatchObject({ body, readBody: body });
 
     // Test that `req` "data" events work in dev
-    res = await fetch(`http://localhost:${port}/api/data-events`, {
+    res = await nodeFetch(`http://localhost:${port}/api/data-events`, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
@@ -406,7 +423,9 @@ test('[vercel dev] should maintain query when invoking serverless function', asy
   try {
     await readyResolver;
 
-    const res = await fetch(`http://localhost:${port}/something?url-param=a`);
+    const res = await nodeFetch(
+      `http://localhost:${port}/something?url-param=a`
+    );
     validateResponseHeaders(res);
 
     const text = await res.text();
@@ -434,7 +453,7 @@ test('[vercel dev] should maintain query when proxy passing', async () => {
       throw new Error('Unexpected HTTP address');
     }
 
-    const res = await fetch(
+    const res = await nodeFetch(
       `http://localhost:${port}/${destAddr.port}?url-param=a`
     );
     validateResponseHeaders(res);
@@ -457,7 +476,7 @@ test('[vercel dev] should maintain query when dev server defines routes', async 
   try {
     await readyResolver;
 
-    const res = await fetch(`http://localhost:${port}/test?url-param=a`);
+    const res = await nodeFetch(`http://localhost:${port}/test?url-param=a`);
     validateResponseHeaders(res);
 
     const text = await res.text();
@@ -487,7 +506,7 @@ test('[vercel dev] should allow `cache-control` to be overwritten', async () => 
   try {
     await readyResolver;
 
-    const res = await fetch(
+    const res = await nodeFetch(
       `http://localhost:${port}/?name=cache-control&value=immutable`
     );
     expect(res.headers.get('cache-control')).toEqual('immutable');
@@ -503,7 +522,7 @@ test('[vercel dev] should send `etag` header for static files', async () => {
   try {
     await readyResolver;
 
-    const res = await fetch(`http://localhost:${port}/foo.txt`);
+    const res = await nodeFetch(`http://localhost:${port}/foo.txt`);
     const expected = 'd263af8ab880c0b97eb6c5c125b5d44f9e5addd9';
     expect(res.headers.get('etag')).toEqual(`"${expected}"`);
     const body = await res.text();
@@ -522,23 +541,23 @@ test.skip('[vercel dev] should frontend dev server and routes', async () => {
   try {
     await readyResolver;
 
-    let res = await fetch(`http://localhost:${port}/`);
+    let res = await nodeFetch(`http://localhost:${port}/`);
     validateResponseHeaders(res);
     const podId = res.headers.get('x-vercel-id')!.match(/:(\w+)-/)![1];
     let body = await res.text();
     expect(body).toContain('hello, this is the frontend');
 
-    res = await fetch(`http://localhost:${port}/api/users`);
+    res = await nodeFetch(`http://localhost:${port}/api/users`);
     validateResponseHeaders(res, podId);
     body = await res.text();
     expect(body).toEqual('users');
 
-    res = await fetch(`http://localhost:${port}/api/users/1`);
+    res = await nodeFetch(`http://localhost:${port}/api/users/1`);
     validateResponseHeaders(res, podId);
     body = await res.text();
     expect(body).toEqual('users/1');
 
-    res = await fetch(`http://localhost:${port}/api/welcome`);
+    res = await nodeFetch(`http://localhost:${port}/api/welcome`);
     validateResponseHeaders(res, podId);
     body = await res.text();
     expect(body).toEqual('hello and welcome');
@@ -554,7 +573,7 @@ test('[vercel dev] should support `@vercel/static` routing', async () => {
   try {
     await readyResolver;
 
-    const res = await fetch(`http://localhost:${port}/`);
+    const res = await nodeFetch(`http://localhost:${port}/`);
     expect(res.status).toEqual(200);
     const body = await res.text();
     expect(body.trim()).toEqual('<body>Hello!</body>');
@@ -570,7 +589,7 @@ test('[vercel dev] should support `@vercel/static-build` routing', async () => {
   try {
     await readyResolver;
 
-    const res = await fetch(`http://localhost:${port}/api/date`);
+    const res = await nodeFetch(`http://localhost:${port}/api/date`);
     expect(res.status).toEqual(200);
     const body = await res.text();
     expect(body).toMatch(/^The current date/);
@@ -587,25 +606,25 @@ test('[vercel dev] should support directory listing', async () => {
     await readyResolver;
 
     // Get directory listing
-    let res = await fetch(`http://localhost:${port}/`);
+    let res = await nodeFetch(`http://localhost:${port}/`);
     let body = await res.text();
     expect(res.status).toEqual(200);
     expect(body).toContain('Index of');
 
     // Get a file
-    res = await fetch(`http://localhost:${port}/file.txt`);
+    res = await nodeFetch(`http://localhost:${port}/file.txt`);
     body = await res.text();
     expect(res.status).toEqual(200);
     expect(body.trim()).toEqual('Hello from file!');
 
     // Invoke a lambda
-    res = await fetch(`http://localhost:${port}/lambda.js`);
+    res = await nodeFetch(`http://localhost:${port}/lambda.js`);
     body = await res.text();
     expect(res.status).toEqual(200);
     expect(body).toEqual('Hello from Lambda!');
 
     // Trigger a 404
-    res = await fetch(`http://localhost:${port}/does-not-exist`);
+    res = await nodeFetch(`http://localhost:${port}/does-not-exist`);
     expect(res.status).toEqual(404);
   } finally {
     await dev.kill();
@@ -620,7 +639,7 @@ test('[vercel dev] should respond with 404 listing with Accept header support', 
     await readyResolver;
 
     // HTML response
-    let res = await fetch(`http://localhost:${port}/does-not-exist`, {
+    let res = await nodeFetch(`http://localhost:${port}/does-not-exist`, {
       headers: {
         Accept: 'text/html',
       },
@@ -631,7 +650,7 @@ test('[vercel dev] should respond with 404 listing with Accept header support', 
     expect(body).toMatch(/^<!DOCTYPE html>/);
 
     // JSON response
-    res = await fetch(`http://localhost:${port}/does-not-exist`, {
+    res = await nodeFetch(`http://localhost:${port}/does-not-exist`, {
       headers: {
         Accept: 'application/json',
       },
@@ -644,7 +663,7 @@ test('[vercel dev] should respond with 404 listing with Accept header support', 
     );
 
     // Plain text response
-    res = await fetch(`http://localhost:${port}/does-not-exist`);
+    res = await nodeFetch(`http://localhost:${port}/does-not-exist`);
     expect(res.status).toEqual(404);
     body = await res.text();
     expect(res.headers.get('content-type')).toEqual(
@@ -663,11 +682,11 @@ test('[vercel dev] should support `public` directory with zero config', async ()
   try {
     await readyResolver;
 
-    let res = await fetch(`http://localhost:${port}/api/user`);
+    let res = await nodeFetch(`http://localhost:${port}/api/user`);
     let body = await res.text();
     expect(body).toEqual('hello:user');
 
-    res = await fetch(`http://localhost:${port}/`);
+    res = await nodeFetch(`http://localhost:${port}/`);
     body = await res.text();
     expect(body).toMatch(/^<h1>hello world<\/h1>/);
   } finally {
@@ -682,11 +701,11 @@ test('[vercel dev] should support static files with zero config', async () => {
   try {
     await readyResolver;
 
-    let res = await fetch(`http://localhost:${port}/api/user`);
+    let res = await nodeFetch(`http://localhost:${port}/api/user`);
     let body = await res.text();
     expect(body).toEqual('bye:user');
 
-    res = await fetch(`http://localhost:${port}/`);
+    res = await nodeFetch(`http://localhost:${port}/`);
     expect(res.headers.get('content-type')).toBe('text/html; charset=utf-8');
     body = await res.text();
     expect(body).toMatch(/^<h1>goodbye world<\/h1>/);
@@ -703,19 +722,19 @@ test('[vercel dev] should support custom 404 routes', async () => {
     await readyResolver;
 
     // Test custom 404 with static dest
-    let res = await fetch(`http://localhost:${port}/error.html`);
+    let res = await nodeFetch(`http://localhost:${port}/error.html`);
     expect(res.status).toEqual(404);
     let body = await res.text();
     expect(body.trim()).toEqual('<div>Custom 404 page</div>');
 
     // Test custom 404 with lambda dest
-    res = await fetch(`http://localhost:${port}/error.js`);
+    res = await nodeFetch(`http://localhost:${port}/error.js`);
     expect(res.status).toEqual(404);
     body = await res.text();
     expect(body).toEqual('Custom 404 Lambda\n');
 
     // Test regular 404 still works
-    res = await fetch(`http://localhost:${port}/does-not-exist`);
+    res = await nodeFetch(`http://localhost:${port}/does-not-exist`);
     expect(res.status).toEqual(404);
     body = await res.text();
     expect(body).toEqual('The page could not be found.\n\nNOT_FOUND\n');
@@ -746,7 +765,7 @@ test('[vercel dev] `vercel.json` should be invalidated if deleted', async () => 
 
     {
       // Env var should be set from `vercel.json`
-      const res = await fetch(`http://localhost:${port}/api`);
+      const res = await nodeFetch(`http://localhost:${port}/api`);
       const body = await res.json();
       expect(body.FOO).toBe('bar');
     }
@@ -755,7 +774,7 @@ test('[vercel dev] `vercel.json` should be invalidated if deleted', async () => 
       // Env var should not be set after `vercel.json` is deleted
       await fs.remove(configPath);
 
-      const res = await fetch(`http://localhost:${port}/api`);
+      const res = await nodeFetch(`http://localhost:${port}/api`);
       const body = await res.json();
       expect(body.FOO).toBe(undefined);
     }
@@ -776,7 +795,7 @@ test('[vercel dev] reflects changes to config and env without restart', async ()
 
     {
       // Node.js helpers should be available by default
-      const res = await fetch(`http://localhost:${port}/?foo=bar`);
+      const res = await nodeFetch(`http://localhost:${port}/?foo=bar`);
       const body = await res.json();
       expect(body.hasHelpers).toBe(true);
       expect(body.query.foo).toBe('bar');
@@ -797,7 +816,7 @@ test('[vercel dev] reflects changes to config and env without restart', async ()
       };
       await fs.writeJSON(configPath, config);
 
-      const res = await fetch(`http://localhost:${port}/?foo=bar`);
+      const res = await nodeFetch(`http://localhost:${port}/?foo=bar`);
       const body = await res.json();
       expect(body.hasHelpers).toBe(false);
       expect(body.query).toBe(undefined);
@@ -818,7 +837,7 @@ test('[vercel dev] reflects changes to config and env without restart', async ()
       };
       await fs.writeJSON(configPath, config);
 
-      const res = await fetch(`http://localhost:${port}/?foo=baz`);
+      const res = await nodeFetch(`http://localhost:${port}/?foo=baz`);
       const body = await res.json();
       expect(body.hasHelpers).toBe(true);
       expect(body.query.foo).toBe('baz');
@@ -836,7 +855,7 @@ test('[vercel dev] reflects changes to config and env without restart', async ()
       };
       await fs.writeJSON(configPath, config);
 
-      const res = await fetch(`http://localhost:${port}/?foo=baz`);
+      const res = await nodeFetch(`http://localhost:${port}/?foo=baz`);
       const body = await res.json();
       expect(body.hasHelpers).toBe(false);
       expect(body.query).toBe(undefined);
@@ -854,7 +873,7 @@ test('[vercel dev] reflects changes to config and env without restart', async ()
       };
       await fs.writeJSON(configPath, config);
 
-      const res = await fetch(`http://localhost:${port}/?foo=boo`);
+      const res = await nodeFetch(`http://localhost:${port}/?foo=boo`);
       const body = await res.json();
       expect(body.hasHelpers).toBe(true);
       expect(body.query.foo).toBe('boo');
@@ -885,7 +904,7 @@ test('[vercel dev] `@vercel/node` TypeScript should be resolved by default', asy
   try {
     await readyResolver;
 
-    const res = await fetch(`http://localhost:${port}/api/hello`);
+    const res = await nodeFetch(`http://localhost:${port}/api/hello`);
     const body = await res.text();
     expect(body).toBe('world');
   } finally {
