@@ -2,7 +2,12 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { describe, expect, it, vi } from 'vitest';
-import { destroy, getProjectModeVariantsFromEnv, setup } from './hooks';
+import {
+  destroy,
+  getAuthStateVariantsFromEnv,
+  getProjectModeVariantsFromEnv,
+  setup,
+} from './hooks';
 import type { EvalRunContext } from './hooks';
 
 function createSandboxDir(withLinkedProject: boolean): string {
@@ -91,6 +96,29 @@ describe('CLI evals project-mode matrix', () => {
     expect(variants).toEqual([
       { id: 'default', projectMode: 'linked-project' },
     ]);
+  });
+});
+
+describe('CLI evals auth-state matrix', () => {
+  it('getAuthStateVariantsFromEnv (experiment: no CLI_EVAL_AUTH_STATES) returns single default variant', () => {
+    delete process.env.CLI_EVAL_AUTH_STATES;
+    const variants = getAuthStateVariantsFromEnv('logged-in');
+    expect(variants).toEqual([{ id: 'default', authState: 'logged-in' }]);
+  });
+
+  it('getAuthStateVariantsFromEnv (experiment: logged-in,not-logged-in) returns both variants', () => {
+    process.env.CLI_EVAL_AUTH_STATES = 'logged-in,not-logged-in';
+    const variants = getAuthStateVariantsFromEnv('logged-in');
+    expect(variants).toEqual([
+      { id: 'logged-in', authState: 'logged-in' },
+      { id: 'not-logged-in', authState: 'not-logged-in' },
+    ]);
+  });
+
+  it('getAuthStateVariantsFromEnv (experiment: invalid states only) falls back to default', () => {
+    process.env.CLI_EVAL_AUTH_STATES = 'foo,bar';
+    const variants = getAuthStateVariantsFromEnv('logged-in');
+    expect(variants).toEqual([{ id: 'default', authState: 'logged-in' }]);
   });
 });
 

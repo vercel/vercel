@@ -3,6 +3,8 @@ import { join } from 'path';
 
 export type ProjectMode = 'auto' | 'linked-project' | 'no-linked-project';
 
+export type AuthState = 'logged-in' | 'not-logged-in';
+
 export interface EvalRunContext {
   /** Absolute path to the evals directory (packages/cli/evals). */
   cwd: string;
@@ -31,6 +33,13 @@ export interface EvalVariant {
   id: string;
   /** Project mode to apply for this variant. */
   projectMode: ProjectMode;
+}
+
+export interface AuthVariant {
+  /** Stable identifier used in logs and result tagging. */
+  id: string;
+  /** Auth state to apply for this variant. */
+  authState: AuthState;
 }
 
 /**
@@ -71,6 +80,45 @@ export function getProjectModeVariantsFromEnv(
 
   if (variants.length === 0) {
     return [{ id: 'default', projectMode: defaultMode }];
+  }
+
+  return variants;
+}
+
+/**
+ * Parse auth-state variants from CLI_EVAL_AUTH_STATES, or fall back to a
+ * single "default" variant using the provided default state.
+ *
+ * Example:
+ *   CLI_EVAL_AUTH_STATES=logged-in,not-logged-in
+ * becomes:
+ *   [{ id: 'logged-in', authState: 'logged-in' },
+ *    { id: 'not-logged-in', authState: 'not-logged-in' }]
+ */
+export function getAuthStateVariantsFromEnv(
+  defaultState: AuthState = 'logged-in'
+): AuthVariant[] {
+  const raw = process.env.CLI_EVAL_AUTH_STATES;
+  if (!raw) {
+    return [{ id: 'default', authState: defaultState }];
+  }
+
+  const parts = raw
+    .split(',')
+    .map(p => p.trim())
+    .filter(Boolean);
+
+  const validStates: AuthState[] = ['logged-in', 'not-logged-in'];
+  const variants: AuthVariant[] = [];
+
+  for (const part of parts) {
+    if ((validStates as string[]).includes(part)) {
+      variants.push({ id: part, authState: part as AuthState });
+    }
+  }
+
+  if (variants.length === 0) {
+    return [{ id: 'default', authState: defaultState }];
   }
 
   return variants;
