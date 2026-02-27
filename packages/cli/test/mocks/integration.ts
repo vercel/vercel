@@ -269,6 +269,9 @@ const integrations: Record<string, Integration> = {
     id: 'aws-apg',
     name: 'Aurora Postgres',
     slug: 'aws-apg',
+    capabilities: {
+      requiresBrowserInstall: true,
+    },
     products: [
       {
         id: 'aws-apg-product',

@@ -162,7 +162,14 @@ export async function addAutoProvision(
   let acceptedPolicies: AcceptedPolicies = {};
   let browserInstallationId: string | undefined;
   if (!teamInstallation) {
-    if (client.isAgent || !client.stdin.isTTY) {
+    if (
+      // AI agent mode — cannot interact with terminal prompts
+      client.isAgent ||
+      // Non-interactive terminal (CI/scripts) — no TTY for prompts
+      !client.stdin.isTTY ||
+      // Server declares browser install required (e.g. needs device fingerprint)
+      integration.capabilities?.requiresBrowserInstall
+    ) {
       // Browser flow: open browser for terms acceptance, poll for installation
       const browserInstallation = await acceptTermsViaBrowser(
         client,
