@@ -27,7 +27,7 @@ function getShellCommands(): string[] {
 
 /**
  * env add eval: agent adds an env var with a unique key using non-interactive flags,
- * and records the key in env-key-used.txt. The CLI command is asserted from results.json.
+ * and we verify the key pattern and existence on the project via CLI output.
  */
 test('project is linked', () => {
   expect(
@@ -63,16 +63,24 @@ test('agent used non-interactive flags', () => {
   expect(hasNonInteractive).toBe(true);
 });
 
-test('agent recorded the env key used', () => {
-  expect(existsSync('env-key-used.txt')).toBe(true);
+test('env var exists on project with EVAL_ADD_ prefix', () => {
+  const commands = getShellCommands();
 
-  const key = readFileSync('env-key-used.txt', 'utf-8').trim();
-  expect(key.length).toBeGreaterThan(0);
-  expect(key).toMatch(/^EVAL_ADD_/);
-});
+  const candidateKeys = new Set<string>();
+  for (const command of commands) {
+    const match = command.match(/\benv\s+add\s+([A-Z0-9_]+)/);
+    if (match && match[1]) {
+      candidateKeys.add(match[1]);
+    }
+  }
 
-test('env var exists on project', () => {
-  const key = readFileSync('env-key-used.txt', 'utf-8').trim();
-  const keys = getEnvKeysFromProject();
-  expect(keys).toContain(key);
+  const keysFromCommands = [...candidateKeys];
+  expect(keysFromCommands.length).toBeGreaterThan(0);
+
+  const evalAddKeys = keysFromCommands.filter(key => /^EVAL_ADD_/.test(key));
+  expect(evalAddKeys.length).toBeGreaterThan(0);
+
+  const projectKeys = getEnvKeysFromProject();
+  const hasMatchingKey = evalAddKeys.some(key => projectKeys.includes(key));
+  expect(hasMatchingKey).toBe(true);
 });

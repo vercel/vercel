@@ -27,8 +27,8 @@ function getShellCommands(): string[] {
 
 /**
  * env remove eval: agent adds an env var with unique key, then removes it
- * using non-interactive flags, and records the key. The remove command is
- * asserted from results.json.
+ * using non-interactive flags. The remove command and key usage are
+ * asserted from results.json and the env list.
  */
 test('project is linked', () => {
   expect(
@@ -63,16 +63,31 @@ test('agent used non-interactive flags for remove', () => {
   expect(hasNonInteractive).toBe(true);
 });
 
-test('agent recorded the env key used', () => {
-  expect(existsSync('env-key-used.txt')).toBe(true);
+test('env var with EVAL_REMOVE_ prefix was removed from project', () => {
+  const commands = getShellCommands();
 
-  const key = readFileSync('env-key-used.txt', 'utf-8').trim();
-  expect(key.length).toBeGreaterThan(0);
-  expect(key).toMatch(/^EVAL_REMOVE_/);
-});
+  const candidateKeys = new Set<string>();
+  for (const command of commands) {
+    const addMatch = command.match(/\benv\s+add\s+([A-Z0-9_]+)/);
+    if (addMatch && addMatch[1]) {
+      candidateKeys.add(addMatch[1]);
+    }
 
-test('env var was removed from project', () => {
-  const key = readFileSync('env-key-used.txt', 'utf-8').trim();
-  const keys = getEnvKeysFromProject();
-  expect(keys).not.toContain(key);
+    const removeMatch = command.match(/\benv\s+(rm|remove)\s+([A-Z0-9_]+)/);
+    if (removeMatch && removeMatch[2]) {
+      candidateKeys.add(removeMatch[2]);
+    }
+  }
+
+  const keysFromCommands = [...candidateKeys];
+  expect(keysFromCommands.length).toBeGreaterThan(0);
+
+  const evalRemoveKeys = keysFromCommands.filter(key =>
+    /^EVAL_REMOVE_/.test(key)
+  );
+  expect(evalRemoveKeys.length).toBeGreaterThan(0);
+
+  const projectKeys = getEnvKeysFromProject();
+  const stillPresent = evalRemoveKeys.some(key => projectKeys.includes(key));
+  expect(stillPresent).toBe(false);
 });

@@ -27,8 +27,8 @@ function getShellCommands(): string[] {
 
 /**
  * env update eval: agent adds an env var with unique key, then updates it
- * using non-interactive flags, and records the key. The update command is
- * asserted from results.json.
+ * using non-interactive flags. The update command and key usage are
+ * asserted from results.json and the env list.
  */
 test('project is linked', () => {
   expect(
@@ -64,16 +64,31 @@ test('agent used non-interactive flags for update', () => {
   expect(hasNonInteractive).toBe(true);
 });
 
-test('agent recorded the env key used', () => {
-  expect(existsSync('env-key-used.txt')).toBe(true);
+test('env var with EVAL_UPDATE_ prefix exists on project', () => {
+  const commands = getShellCommands();
 
-  const key = readFileSync('env-key-used.txt', 'utf-8').trim();
-  expect(key.length).toBeGreaterThan(0);
-  expect(key).toMatch(/^EVAL_UPDATE_/);
-});
+  const candidateKeys = new Set<string>();
+  for (const command of commands) {
+    const addMatch = command.match(/\benv\s+add\s+([A-Z0-9_]+)/);
+    if (addMatch && addMatch[1]) {
+      candidateKeys.add(addMatch[1]);
+    }
 
-test('env var still exists on project after update', () => {
-  const key = readFileSync('env-key-used.txt', 'utf-8').trim();
-  const keys = getEnvKeysFromProject();
-  expect(keys).toContain(key);
+    const updateMatch = command.match(/\benv\s+update\s+([A-Z0-9_]+)/);
+    if (updateMatch && updateMatch[1]) {
+      candidateKeys.add(updateMatch[1]);
+    }
+  }
+
+  const keysFromCommands = [...candidateKeys];
+  expect(keysFromCommands.length).toBeGreaterThan(0);
+
+  const evalUpdateKeys = keysFromCommands.filter(key =>
+    /^EVAL_UPDATE_/.test(key)
+  );
+  expect(evalUpdateKeys.length).toBeGreaterThan(0);
+
+  const projectKeys = getEnvKeysFromProject();
+  const hasMatchingKey = evalUpdateKeys.some(key => projectKeys.includes(key));
+  expect(hasMatchingKey).toBe(true);
 });
