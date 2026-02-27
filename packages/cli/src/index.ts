@@ -461,7 +461,7 @@ const main = async () => {
   ) {
     subcommandsWithoutToken.push('dev');
   }
-  
+
   if (subcommand === 'flags' && subSubCommand === 'prepare') {
     subcommandsWithoutToken.push('flags');
   }
