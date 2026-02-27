@@ -70,20 +70,20 @@ test('env var with EVAL_UPDATE_ prefix exists on project', () => {
   const candidateKeys = new Set<string>();
   for (const command of commands) {
     const addMatch = command.match(/\benv\s+add\s+([A-Za-z0-9_]+)/);
-    if (addMatch && addMatch[1]) {
+    if (addMatch?.[1]) {
       candidateKeys.add(addMatch[1]);
     }
-
     const updateMatch = command.match(/\benv\s+update\s+([A-Za-z0-9_]+)/);
-    if (updateMatch && updateMatch[1]) {
+    if (updateMatch?.[1]) {
       candidateKeys.add(updateMatch[1]);
+    }
+    const prefixMatches = command.matchAll(/EVAL_UPDATE_[A-Za-z0-9_]+/g);
+    for (const m of prefixMatches) {
+      candidateKeys.add(m[0]);
     }
   }
 
-  const keysFromCommands = [...candidateKeys];
-  expect(keysFromCommands.length).toBeGreaterThan(0);
-
-  const evalUpdateKeys = keysFromCommands.filter(key =>
+  const evalUpdateKeys = [...candidateKeys].filter(key =>
     /^EVAL_UPDATE_/.test(key)
   );
   expect(evalUpdateKeys.length).toBeGreaterThan(0);

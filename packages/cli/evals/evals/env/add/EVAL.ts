@@ -68,16 +68,17 @@ test('env var exists on project with EVAL_ADD_ prefix', () => {
 
   const candidateKeys = new Set<string>();
   for (const command of commands) {
-    const match = command.match(/\benv\s+add\s+([A-Za-z0-9_]+)/);
-    if (match && match[1]) {
-      candidateKeys.add(match[1]);
+    const positionalMatch = command.match(/\benv\s+add\s+([A-Za-z0-9_]+)/);
+    if (positionalMatch?.[1]) {
+      candidateKeys.add(positionalMatch[1]);
+    }
+    const prefixMatches = command.matchAll(/EVAL_ADD_[A-Za-z0-9_]+/g);
+    for (const m of prefixMatches) {
+      candidateKeys.add(m[0]);
     }
   }
 
-  const keysFromCommands = [...candidateKeys];
-  expect(keysFromCommands.length).toBeGreaterThan(0);
-
-  const evalAddKeys = keysFromCommands.filter(key => /^EVAL_ADD_/.test(key));
+  const evalAddKeys = [...candidateKeys].filter(key => /^EVAL_ADD_/.test(key));
   expect(evalAddKeys.length).toBeGreaterThan(0);
 
   const projectKeys = getEnvKeysFromProject();
