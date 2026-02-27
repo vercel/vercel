@@ -44,20 +44,35 @@ describe('activity ls', () => {
     mockTeamScope();
   });
 
-  it('prints parent help when no subcommand is provided', async () => {
-    mockedGetLinkedProject.mockImplementation(() => {
-      throw new Error('should not be called');
+  it('lists activity events by default without subcommand', async () => {
+    let requestQuery: any;
+    client.scenario.get('/v3/events', (req, res) => {
+      requestQuery = req.query;
+      res.json({
+        events: [
+          {
+            id: 'uev_1',
+            createdAt: 1700000000000,
+            text: 'Logged in from 127.0.0.1',
+            type: 'login',
+            principalId: 'user_1',
+            principal: { type: 'user', username: 'jane' },
+          },
+        ],
+      });
     });
 
     client.setArgv('activity');
 
     const exitCode = await activity(client);
 
-    expect(exitCode).toBe(2);
-    expect(client.stderr.getFullOutput()).toContain('activity ls');
+    expect(exitCode).toBe(0);
+    expect(requestQuery.projectIds).toBe('prj_activity');
+    expect(requestQuery.teamId).toBe('team_dummy');
+    expect(client.stderr.getFullOutput()).toContain('Logged in from 127.0.0.1');
   });
 
-  it('lists activity events with linked project auto-scoping', async () => {
+  it('lists activity events with explicit ls subcommand', async () => {
     let requestQuery: any;
     client.scenario.get('/v3/events', (req, res) => {
       requestQuery = req.query;

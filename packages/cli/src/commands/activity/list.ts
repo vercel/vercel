@@ -5,9 +5,8 @@ import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import output from '../../output-manager';
-import { listSubcommand } from './command';
+import { activityCommand } from './command';
 import { validateJsonOutput } from '../../util/output-format';
-import { validateLsArgs } from '../../util/validate-ls-args';
 import { parseTimeFlag } from '../../util/time-utils';
 import { ActivityLsTelemetryClient } from '../../util/telemetry/commands/activity/list';
 import { getLinkedProject } from '../../util/projects/link';
@@ -255,10 +254,7 @@ async function resolveScope(
   };
 }
 
-export default async function list(
-  client: Client,
-  argv: string[]
-): Promise<number> {
+export default async function list(client: Client): Promise<number> {
   const telemetry = new ActivityLsTelemetryClient({
     opts: {
       store: client.telemetryEventStore,
@@ -266,28 +262,18 @@ export default async function list(
   });
 
   let parsedArgs;
-  const flagsSpecification = getFlagsSpecification(listSubcommand.options);
+  const flagsSpecification = getFlagsSpecification(activityCommand.options);
   try {
-    parsedArgs = parseArguments(argv, flagsSpecification);
+    parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (err) {
     printError(err);
     return 1;
   }
 
-  const { args, flags } = parsedArgs as {
+  const { flags } = parsedArgs as {
     args: string[];
     flags: ListFlags;
   };
-
-  const argValidationResult = validateLsArgs({
-    commandName: 'activity ls',
-    args,
-    maxArgs: 0,
-    exitCode: 2,
-  });
-  if (argValidationResult !== 0) {
-    return argValidationResult;
-  }
 
   trackTelemetry(flags, telemetry);
 
@@ -401,7 +387,7 @@ export default async function list(
       const commandFlags = getCommandFlags(flags, ['--next']);
       output.log(
         `To display the next page, run ${getCommandName(
-          `activity ls${commandFlags} --next ${next}`
+          `activity${commandFlags} --next ${next}`
         )}`
       );
     }

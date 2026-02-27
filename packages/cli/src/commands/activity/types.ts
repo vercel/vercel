@@ -6,7 +6,6 @@ import { printError } from '../../util/error';
 import output from '../../output-manager';
 import table from '../../util/output/table';
 import { validateJsonOutput } from '../../util/output-format';
-import { validateLsArgs } from '../../util/validate-ls-args';
 import { typesSubcommand } from './command';
 import { ActivityTypesTelemetryClient } from '../../util/telemetry/commands/activity/types';
 import { isAPIError } from '../../util/errors-ts';
@@ -25,10 +24,7 @@ interface TypesFlags {
   '--format'?: string;
 }
 
-export default async function types(
-  client: Client,
-  argv: string[]
-): Promise<number> {
+export default async function types(client: Client): Promise<number> {
   const telemetry = new ActivityTypesTelemetryClient({
     opts: {
       store: client.telemetryEventStore,
@@ -38,26 +34,16 @@ export default async function types(
   let parsedArgs;
   const flagsSpecification = getFlagsSpecification(typesSubcommand.options);
   try {
-    parsedArgs = parseArguments(argv, flagsSpecification);
+    parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (err) {
     printError(err);
     return 1;
   }
 
-  const { args, flags } = parsedArgs as {
+  const { flags } = parsedArgs as {
     args: string[];
     flags: TypesFlags;
   };
-
-  const argValidationResult = validateLsArgs({
-    commandName: 'activity types',
-    args,
-    maxArgs: 0,
-    exitCode: 2,
-  });
-  if (argValidationResult !== 0) {
-    return argValidationResult;
-  }
 
   telemetry.trackCliOptionFormat(flags['--format']);
 

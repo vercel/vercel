@@ -4,8 +4,43 @@ import { formatOption, limitOption, nextOption } from '../../util/arg-common';
 export const listSubcommand = {
   name: 'ls',
   aliases: ['list'],
-  description: 'List activity events.',
+  description: '',
+  default: true,
+  hidden: true,
   arguments: [],
+  options: [],
+  examples: [],
+} as const;
+
+export const typesSubcommand = {
+  name: 'types',
+  aliases: [],
+  description: 'List available event types with descriptions.',
+  arguments: [],
+  options: [formatOption],
+  examples: [
+    {
+      name: 'List all event types',
+      value: `${packageName} activity types`,
+    },
+    {
+      name: 'Output JSON',
+      value: `${packageName} activity types --format json`,
+    },
+  ],
+} as const;
+
+export const activityCommand = {
+  name: 'activity',
+  aliases: [],
+  description: 'List user activity and audit events.',
+  arguments: [],
+  subcommands: [
+    // Hidden placeholder so the help synopsis renders [command] as optional
+    // (help.ts treats `command` as required unless a subcommand has `default: true`)
+    listSubcommand,
+    typesSubcommand,
+  ],
   options: [
     {
       name: 'type',
@@ -56,56 +91,23 @@ export const listSubcommand = {
   examples: [
     {
       name: 'List events for the linked project',
-      value: `${packageName} activity ls`,
+      value: `${packageName} activity`,
     },
     {
       name: 'Filter events by multiple types',
-      value: `${packageName} activity ls --type login --type deployment-created --since 7d`,
+      value: `${packageName} activity --type login --type deployment-created --since 7d`,
     },
     {
       name: 'Filter events by comma-separated types',
-      value: `${packageName} activity ls --type login,deployment-created --since 7d`,
+      value: `${packageName} activity --type login,deployment-created --since 7d`,
     },
     {
       name: 'List all team events',
-      value: `${packageName} activity ls --all --since 30d`,
+      value: `${packageName} activity --all --since 30d`,
     },
     {
       name: 'Output JSON',
-      value: `${packageName} activity ls --format json | jq '.events[]'`,
-    },
-  ],
-} as const;
-
-export const typesSubcommand = {
-  name: 'types',
-  aliases: [],
-  description: 'List available event types with descriptions.',
-  arguments: [],
-  options: [formatOption],
-  examples: [
-    {
-      name: 'List all event types',
-      value: `${packageName} activity types`,
-    },
-    {
-      name: 'Output JSON',
-      value: `${packageName} activity types --format json`,
-    },
-  ],
-} as const;
-
-export const activityCommand = {
-  name: 'activity',
-  aliases: [],
-  description: 'List user activity and audit events.',
-  arguments: [],
-  subcommands: [listSubcommand, typesSubcommand],
-  options: [],
-  examples: [
-    {
-      name: 'List activity events',
-      value: `${packageName} activity ls`,
+      value: `${packageName} activity --format json | jq '.events[]'`,
     },
     {
       name: 'List activity event types',
