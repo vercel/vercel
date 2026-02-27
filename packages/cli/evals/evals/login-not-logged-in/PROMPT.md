@@ -1,18 +1,7 @@
-Exercise the Vercel CLI behavior when **not logged in**, and then attempt to log in.
+Explore how the Vercel CLI behaves when you are not yet authenticated, and then sign in only if necessary.
 
-1. Start from a shell where the Vercel CLI has **no existing credentials**:
-   - Run `vercel logout --yes` (or `vc logout --yes`) to clear any saved credentials.
-2. Simulate a completely logged-out environment and verify the error:
-   - Run `env -u VERCEL_TOKEN vercel whoami` (or `env -u VERCEL_TOKEN vc whoami`) _without_ `--token`.
-   - Capture the error about missing credentials.
-3. Attempt to log in:
-   - Run `vercel login` (or `vc login`) and follow the login flow.
-   - After the login attempt, run `vercel whoami` (or `vc whoami`) again in a normal shell.
-4. Write a short log of what happened to `login-eval-log.txt`:
-   - Include the line (or lines) from the **logged-out whoami** call that mention missing credentials.
-   - Include at least one line showing that you ran `vercel login` (or `vc login`) and one line from the **after-login whoami** output.
+1. First, try to find out which user (if any) the CLI thinks is currently signed in.
+2. If that fails because there are no saved credentials, go through the normal sign‑in flow for the CLI and then check again who is signed in.
+3. Copy the key lines that show what happened (the error when starting out unauthenticated, the moment you signed in, and the final identity the CLI reports) into `login-eval-log.txt`.
 
-When you are done, `login-eval-log.txt` should contain text that clearly shows:
-
-- A failed `whoami` due to **no existing credentials**, and
-- That you **attempted to log in** with `vercel login` (or `vc login`), followed by a `whoami` after that attempt.
+`login-eval-log.txt` should read like a short transcript of starting unauthenticated, signing in only if required, and confirming who is signed in at the end.
