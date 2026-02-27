@@ -15,14 +15,12 @@ import {
   destroy,
   getAuthStateVariantsFromEnv,
   getEvalVariants,
-  getProjectModeVariantsFromEnv,
   setup,
 } from './hooks';
 import type {
   AuthVariant,
   EvalRunContext,
   EvalVariant,
-  ProjectMode,
   SetupResult,
 } from './hooks';
 
@@ -138,24 +136,22 @@ async function main() {
   }
 
   const sandboxProjectDir = join(__dirname, 'sandbox-project');
-  const projectVariants: EvalVariant[] = getProjectModeVariantsFromEnv('auto');
+  const baseVariants: EvalVariant[] = getEvalVariants('auto');
   const authVariants: AuthVariant[] = getAuthStateVariantsFromEnv('logged-in');
 
-  type CombinedVariant = {
-    id: string;
-    projectMode: ProjectMode;
+  type CombinedVariant = EvalVariant & {
     authState: AuthVariant['authState'];
   };
 
   const variants: CombinedVariant[] = [];
 
-  for (const projectVariant of projectVariants) {
+  for (const baseVariant of baseVariants) {
     for (const authVariant of authVariants) {
       const suffix =
         authVariant.id === 'default' ? '' : `+auth:${authVariant.id}`;
       variants.push({
-        id: projectVariant.id + suffix,
-        projectMode: projectVariant.projectMode,
+        ...baseVariant,
+        id: `${baseVariant.id}${suffix}`,
         authState: authVariant.authState,
       });
     }
