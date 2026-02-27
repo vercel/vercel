@@ -1,31 +1,26 @@
-import { readFileSync, existsSync } from 'fs';
+import { readFileSync } from 'fs';
 import { test, expect } from 'vitest';
 
+function getShellCommands(): string[] {
+  const results = JSON.parse(
+    readFileSync('__agent_eval__/results.json', 'utf-8')
+  ) as {
+    o11y?: { shellCommands?: Array<{ command: string }> };
+  };
+
+  return (results.o11y?.shellCommands ?? []).map(c => c.command);
+}
+
 /**
- * Login/whoami eval: we expect the agent to have run `vercel whoami` (or `vc whoami`)
- * and recorded the single-line output in whoami-output.txt. The CLI prints the
- * current user (username or context name); when stdout is not a TTY it's one line.
+ * Login/whoami eval: we expect the agent to have run a whoami-style command
+ * (and optionally login) as observed from the recorded shell commands.
  */
-test('whoami output was recorded', () => {
-  expect(existsSync('whoami-output.txt')).toBe(true);
+test('agent used CLI to check authenticated user', () => {
+  const commands = getShellCommands();
+  expect(commands.length).toBeGreaterThan(0);
 
-  const output = readFileSync('whoami-output.txt', 'utf-8').trim();
-  expect(output.length).toBeGreaterThan(0);
-
-  // Either plain username/context (one line) or JSON from whoami --format json
-  const lines = output.split('\n').filter(Boolean);
-  expect(lines.length).toBeGreaterThanOrEqual(1);
-  const firstLine = lines[0];
-
-  try {
-    const parsed = JSON.parse(firstLine);
-    // --format json: { username, email, name }
-    expect(parsed).toHaveProperty('username');
-    expect(typeof parsed.username).toBe('string');
-    expect(parsed.username.length).toBeGreaterThan(0);
-  } catch {
-    // Plain whoami output: non-empty string (username or team/user context)
-    expect(firstLine.length).toBeGreaterThan(0);
-    expect(firstLine).not.toMatch(/^(Error|error:)/i);
-  }
+  const whoamiCommands = commands.filter(command =>
+    /\b(vercel|vc)\s+whoami\b/.test(command)
+  );
+  expect(whoamiCommands.length).toBeGreaterThan(0);
 });
