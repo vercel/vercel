@@ -600,3 +600,35 @@ describe('[vercel dev] Hono', () => {
     )
   );
 });
+
+describe('Next.js with root api (CLI-152)', () => {
+  test(
+    '[vercel dev] dynamic App Router /api/posts/[id] works when root api/ exists',
+    testFixtureStdio(
+      'nextjs-with-root-api',
+      async (_testPath: any, port: number) => {
+        // Without CLI-152 fix, zero-config adds catch-all /api 404 and this returns 404
+        const dynamicRes = await nodeFetch(
+          `http://localhost:${port}/api/posts/5`
+        );
+        validateResponseHeaders(dynamicRes);
+        expect(dynamicRes.status).toBe(200);
+        const dynamicJson = await dynamicRes.json();
+        expect(dynamicJson).toEqual({
+          postId: '5',
+          source: 'app-router',
+        });
+
+        // Root api/legacy should still work
+        const legacyRes = await nodeFetch(
+          `http://localhost:${port}/api/legacy`
+        );
+        validateResponseHeaders(legacyRes);
+        expect(legacyRes.status).toBe(200);
+        const legacyJson = await legacyRes.json();
+        expect(legacyJson).toEqual({ source: 'legacy-api' });
+      },
+      { skipDeploy: true }
+    )
+  );
+});

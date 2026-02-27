@@ -1238,8 +1238,8 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect((defaultRoutes[0] as Handler).handle).toBe('miss');
     expect((defaultRoutes[1] as Source).dest).toBe('/api/$1');
     expect(redirectRoutes).toStrictEqual([]);
-    expect(rewriteRoutes.length).toBe(1);
-    expect((rewriteRoutes[0] as Source).status).toBe(404);
+    // Next.js owns /api; we do not add catch-all 404 (CLI-152)
+    expect(rewriteRoutes.some(r => (r as Source).status === 404)).toBe(false);
     expect(errorRoutes).toStrictEqual([]);
   });
 
@@ -1267,8 +1267,8 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect((defaultRoutes[0] as Handler).handle).toBe('miss');
     expect((defaultRoutes[1] as Source).dest).toBe('/api/$1');
     expect(redirectRoutes).toStrictEqual([]);
-    expect(rewriteRoutes.length).toBe(1);
-    expect((rewriteRoutes[0] as Source).status).toBe(404);
+    // Next.js owns /api; we do not add catch-all 404 (CLI-152)
+    expect(rewriteRoutes.some(r => (r as Source).status === 404)).toBe(false);
     expect(errorRoutes).toStrictEqual([]);
   });
 
@@ -2674,9 +2674,8 @@ describe('Test `detectRoutes`', () => {
     const files = ['public/index.html', 'api/[endpoint].js'];
 
     const { defaultRoutes } = await invokeDetectBuildersAndThrow(files, pkg);
-    expect(defaultRoutes[1].status).toBe(404);
-    expect(defaultRoutes[1].src).toBe('^/api(/.*)?$');
-    expect(defaultRoutes.length).toBe(2);
+    // Next.js owns /api; we do not add catch-all 404 (CLI-152)
+    expect(defaultRoutes.length).toBe(1);
   });
 
   it('works with static files', async () => {
@@ -2935,13 +2934,8 @@ describe('Test `detectRoutes` with `featHandleMiss=true`', () => {
   it('works with static files with api files', async () => {
     const featHandleMiss = true;
     const pkg = {
-      scripts: {
-        build: 'next build',
-      },
-      framework: {
-        slug: 'next',
-        version: '9.0.0',
-      },
+      scripts: { build: 'next build' },
+      devDependencies: { next: '9.0.0' },
     };
 
     const files = ['public/index.html', 'api/[endpoint].js'];
@@ -2961,15 +2955,12 @@ describe('Test `detectRoutes` with `featHandleMiss=true`', () => {
         check: true,
       },
     ]);
+    // Next.js owns /api; we do not add catch-all 404 (CLI-152)
     expect(rewriteRoutes).toStrictEqual([
       {
         src: '^/api/([^/]+)$',
         dest: '/api/[endpoint]?endpoint=$1',
         check: true,
-      },
-      {
-        status: 404,
-        src: '^/api(/.*)?$',
       },
     ]);
   });
@@ -3371,13 +3362,8 @@ describe('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`', () 
 
   it('works with static files with api files', async () => {
     const pkg = {
-      scripts: {
-        build: 'next build',
-      },
-      framework: {
-        slug: 'next',
-        version: '9.0.0',
-      },
+      scripts: { build: 'next build' },
+      devDependencies: { next: '9.0.0' },
     };
 
     const files = ['public/index.html', 'api/[endpoint].js'];
@@ -3386,15 +3372,12 @@ describe('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`', () 
       await invokeDetectBuildersAndThrow(files, pkg, options);
     testHeaders(redirectRoutes);
     expect(defaultRoutes).toStrictEqual([]);
+    // Next.js owns /api; we do not add catch-all 404 (CLI-152)
     expect(rewriteRoutes).toStrictEqual([
       {
         src: '^/api/([^/]+)$',
         dest: '/api/[endpoint]?endpoint=$1',
         check: true,
-      },
-      {
-        status: 404,
-        src: '^/api(/.*)?$',
       },
     ]);
   });
