@@ -8,9 +8,12 @@
  * https://docs.python.org/3/library/importlib.metadata.html
  */
 
-import { readdir, readFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { createReadStream } from 'node:fs';
+import { appendFile, readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { importWasmModule } from '../wasm/load';
+import { normalizePackageName } from './pep508';
 
 /** A file record from a RECORD file (analogous to importlib.metadata.PackagePath). */
 export interface PackagePath {
@@ -213,4 +216,93 @@ export async function scanDistributions(
   }
 
   return index;
+}
+
+/** Stream a file through sha256 and return the base64url digest + byte size. */
+function hashFile(filePath: string): Promise<{ hash: string; size: number }> {
+  return new Promise((resolve, reject) => {
+    const h = createHash('sha256');
+    let size = 0;
+    const stream = createReadStream(filePath);
+    stream.on('data', (chunk: Buffer) => {
+      size += chunk.length;
+      h.update(chunk);
+    });
+    stream.on('error', reject);
+    stream.on('end', () => {
+      resolve({ hash: h.digest('base64url'), size });
+    });
+  });
+}
+
+/**
+ * Append new file entries to a distribution's RECORD file.
+ *
+ * Finds the `.dist-info` directory for the given package, reads its RECORD,
+ * and appends any paths not already tracked. The caller is responsible for
+ * scanning directories and building the path list.
+ *
+ * @param sitePackagesDir - Absolute path to a site-packages directory
+ * @param packageName - Distribution name (matched via PEP 503 normalization)
+ * @param paths - File paths relative to site-packages to add
+ * @returns Count of new entries appended (skips paths already in RECORD)
+ * @throws If the dist-info directory or RECORD file is not found
+ */
+export async function extendDistRecord(
+  sitePackagesDir: string,
+  packageName: string,
+  paths: string[]
+): Promise<number> {
+  const normalizedTarget = normalizePackageName(packageName);
+
+  // Find the matching .dist-info directory
+  const entries = await readdir(sitePackagesDir);
+  const distInfoDirName = entries.find(e => {
+    if (!e.endsWith('.dist-info')) return false;
+    // The directory name format is "{name}-{version}.dist-info".
+    // Extract the name portion (everything before the last hyphen preceding a version).
+    const withoutSuffix = e.slice(0, -'.dist-info'.length);
+    const lastHyphen = withoutSuffix.lastIndexOf('-');
+    if (lastHyphen === -1) return false;
+    const dirName = withoutSuffix.slice(0, lastHyphen);
+    return normalizePackageName(dirName) === normalizedTarget;
+  });
+
+  if (!distInfoDirName) {
+    throw new Error(
+      `No .dist-info directory found for package "${packageName}" in ${sitePackagesDir}`
+    );
+  }
+
+  const recordPath = join(sitePackagesDir, distInfoDirName, 'RECORD');
+
+  let existingRecord: string;
+  try {
+    existingRecord = await readFile(recordPath, 'utf-8');
+  } catch {
+    throw new Error(`RECORD file not found in ${distInfoDirName}`);
+  }
+
+  // Parse existing paths into a Set for deduplication
+  const existingPaths = new Set(
+    existingRecord
+      .split('\n')
+      .filter(line => line.length > 0)
+      .map(line => line.split(',')[0])
+  );
+
+  const newEntries = paths.filter(p => !existingPaths.has(p));
+  if (newEntries.length > 0) {
+    const prefix =
+      existingRecord.length > 0 && !existingRecord.endsWith('\n') ? '\n' : '';
+    const lines: string[] = [];
+    for (const p of newEntries) {
+      const fullPath = join(sitePackagesDir, p);
+      const { hash, size } = await hashFile(fullPath);
+      lines.push(`${p},sha256=${hash},${size}`);
+    }
+    await appendFile(recordPath, prefix + lines.join('\n') + '\n');
+  }
+
+  return newEntries.length;
 }
