@@ -526,6 +526,7 @@ async function provisionResourceViaCLI(
       metadata,
       billingPlan,
       authorizationId,
+      integration.slug,
       contextName,
       options
     );
@@ -723,6 +724,7 @@ async function provisionStorageProduct(
   metadata: Metadata,
   billingPlan: BillingPlan,
   authorizationId: string,
+  integrationSlug: string,
   contextName: string,
   options: AddOptions = {}
 ) {
@@ -751,12 +753,10 @@ async function provisionStorageProduct(
     `${product.name} successfully provisioned: ${chalk.bold(name)}`
   );
 
-  const result = await postProvisionSetup(
-    client,
-    name,
-    storeId,
-    contextName,
-    options
-  );
+  const result = await postProvisionSetup(client, name, storeId, contextName, {
+    ...options,
+    integrationSlug,
+    installationId: installation.id,
+  });
   return result.exitCode;
 }

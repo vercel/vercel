@@ -516,6 +516,11 @@ if os.path.exists(_runtime_config_path):
             pass
         sys.path.insert(0, _site_packages)
 
+# Allow quirks to prepend directories to PATH (e.g. for bundled shims).
+_extra_path = os.environ.get("VERCEL_RUNTIME_ENV_PATH_PREPEND")
+if _extra_path:
+    os.environ["PATH"] = _extra_path + ":" + os.environ.get("PATH", "")
+
 # Import relative path
 # https://docs.python.org/3/library/importlib.html#importing-a-source-file-directly
 try:

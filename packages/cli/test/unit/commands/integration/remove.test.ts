@@ -315,6 +315,56 @@ describe('integration', () => {
           await expect(exitCodePromise).resolves.toEqual(1);
         });
 
+        it('should return structured JSON when removing integration with resources and --format=json', async () => {
+          useConfiguration();
+          const integration = 'acme-no-projects';
+          const errorOptions = {
+            errorStatus: 403,
+            errorMessage: 'Cannot uninstall integration with resources',
+          };
+          mockDeleteIntegration(errorOptions);
+
+          client.setArgv(
+            'integration',
+            'remove',
+            integration,
+            '--yes',
+            '--format=json'
+          );
+          const exitCode = await integrationCommand(client);
+          expect(exitCode).toEqual(1);
+
+          const jsonOutput = JSON.parse(client.stdout.getFullOutput());
+          expect(jsonOutput.integration).toEqual(integration);
+          expect(jsonOutput.removed).toEqual(false);
+          expect(jsonOutput.error).toEqual('has_resources');
+          expect(jsonOutput.resources).toEqual(
+            expect.arrayContaining([
+              'store-acme-other-project',
+              'store-acme-no-projects',
+            ])
+          );
+          expect(jsonOutput.next).toEqual(
+            expect.arrayContaining([
+              expect.objectContaining({
+                command: expect.stringContaining(
+                  'integration-resource remove store-acme-other-project --disconnect-all --yes --format=json'
+                ),
+              }),
+              expect.objectContaining({
+                command: expect.stringContaining(
+                  'integration-resource remove store-acme-no-projects --disconnect-all --yes --format=json'
+                ),
+              }),
+            ])
+          );
+          expect(jsonOutput.retry).toEqual(
+            expect.stringContaining(
+              `integration remove ${integration} --yes --format=json`
+            )
+          );
+        });
+
         it('should show agent approval warning when removing integration with resources as agent', async () => {
           useConfiguration();
           const integration = 'acme-no-projects';
