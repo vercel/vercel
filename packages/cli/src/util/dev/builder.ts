@@ -2,6 +2,7 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import ms from 'ms';
 import bytes from 'bytes';
+import { readFileSync, unlinkSync } from 'fs';
 import { delimiter, dirname, join } from 'path';
 import { fork, type ChildProcess } from 'child_process';
 import { createFunction } from '@vercel/fun';
@@ -114,7 +115,6 @@ async function deserializeOutput(
       // Convert the JSON-ified Buffer object back into an actual Buffer,
       // or read from temp file if it was too large for IPC
       if (obj.zipBufferPath) {
-        const { readFileSync, unlinkSync } = await import('fs');
         lambda.zipBuffer = readFileSync(obj.zipBufferPath);
         // Clean up the temp file after reading
         try {
