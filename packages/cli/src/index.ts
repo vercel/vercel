@@ -461,6 +461,10 @@ const main = async () => {
   ) {
     subcommandsWithoutToken.push('dev');
   }
+  
+  if (subcommand === 'flags' && subSubCommand === 'prepare') {
+    subcommandsWithoutToken.push('flags');
+  }
 
   // Prompt for login if there is no current token
   if (
