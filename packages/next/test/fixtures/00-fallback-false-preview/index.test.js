@@ -33,6 +33,25 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     Object.assign(ctx, info);
   });
 
+  it('should serve _next/image for static imported image with immutable cache', async () => {
+    const res = await fetch(`${ctx.deploymentUrl}/`);
+    expect(res.status).toBe(200);
+
+    const $ = cheerio.load(await res.text());
+    const srcset = $('img[alt="Vercel Logo"]').attr('srcset') || '';
+    const match = srcset.match(/\/_next\/static\/media\/vercel\.[^&\s"]+/);
+    expect(match).toBeTruthy();
+
+    const staticImagePath = match[0];
+    const imageRes = await fetch(
+      `${ctx.deploymentUrl}/_next/image?url=${encodeURIComponent(staticImagePath)}&w=256&q=75`
+    );
+    expect(imageRes.status).toBe(200);
+    expect(imageRes.headers.get('cache-control')).toMatch(
+      /public,\s*max-age=31536000,\s*immutable/
+    );
+  });
+
   it('should revalidate content properly from /blog', async () => {
     const dataRes = await fetch(
       `${ctx.deploymentUrl}/_next/data/build-TfctsWXpff2fKS/blog.json`
