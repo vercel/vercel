@@ -428,6 +428,17 @@ export function register(opts: Options = {}): Register {
       configFileName
     );
 
+    // Apply module defaults after extends resolution so that values
+    // inherited from base tsconfigs are respected. Previously these
+    // defaults were set in fixConfig() before parseJsonConfigFileContent,
+    // which caused them to override values from the extends chain.
+    if (configResult.options.module === undefined) {
+      configResult.options.module = ts.ModuleKind.NodeNext;
+      configResult.options.moduleResolution =
+        ts.ModuleResolutionKind.NodeNext;
+      configResult.options.strict = false;
+    }
+
     if (configFileName) {
       const configDiagnosticList = filterDiagnostics(
         configResult.errors,
@@ -503,14 +514,6 @@ export function fixConfig(
   // This is useful when no `tsconfig.json` is supplied.
   if (config.compilerOptions.esModuleInterop === undefined) {
     config.compilerOptions.esModuleInterop = true;
-  }
-
-  // nodenext will defer to the package.json#type field
-  // but still respect .mts and .cts files
-  if (config.compilerOptions.module === undefined) {
-    config.compilerOptions.module = 'NodeNext';
-    config.compilerOptions.moduleResolution = 'NodeNext';
-    config.compilerOptions.strict = false;
   }
 
   return config;
