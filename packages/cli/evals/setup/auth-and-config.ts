@@ -7,7 +7,7 @@ import type { Sandbox } from '@vercel/agent-eval';
  */
 export const setupAuthAndConfig = async (sandbox: Sandbox) => {
   const shellEscape = (s: string) => s.replace(/'/g, "'\\''");
-  const token = process.env.VERCEL_TOKEN;
+  const token = process.env.VERCEL_TOKEN ?? process.env.VERCEL_OIDC_TOKEN;
   const authConfig = token ? { token } : {};
   const authJson = JSON.stringify(authConfig);
   const cliDataDir = '$HOME/.local/share/com.vercel.cli';
