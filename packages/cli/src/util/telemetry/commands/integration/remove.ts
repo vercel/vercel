@@ -20,4 +20,10 @@ export class IntegrationRemoveTelemetryClient
       this.trackCliFlag('yes');
     }
   }
+
+  trackCliFlagCascade(v: boolean | undefined) {
+    if (v) {
+      this.trackCliFlag('cascade');
+    }
+  }
 }

@@ -1,9 +1,23 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import open from 'open';
 import integrationCommand from '../../../../src/commands/integration';
 import { client } from '../../../mocks/client';
 import { useConfiguration, useResources } from '../../../mocks/integration';
 import { type Team, useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
+
+vi.mock('open', () => {
+  return {
+    default: vi.fn(),
+  };
+});
+
+const openMock = vi.mocked(open);
+
+beforeEach(() => {
+  openMock.mockClear();
+  openMock.mockResolvedValue(undefined as any);
+});
 
 describe('integration', () => {
   describe('remove', () => {
@@ -56,6 +70,58 @@ describe('integration', () => {
         );
 
         await expect(exitCodePromise).resolves.toEqual(0);
+      });
+
+      it('opens integration settings for cascade uninstall and does not uninstall from CLI', async () => {
+        useConfiguration();
+        const integration = 'acme-no-projects';
+        let uninstallCalled = false;
+
+        client.scenario.post(
+          '/:version/integrations/installations/:integrationIdOrSlug/uninstall',
+          (_req, res) => {
+            uninstallCalled = true;
+            res.sendStatus(200);
+          }
+        );
+
+        client.setArgv('integration', 'remove', integration, '--cascade');
+        const exitCode = await integrationCommand(client);
+
+        expect(exitCode).toEqual(0);
+        expect(uninstallCalled).toEqual(false);
+        expect(openMock).toHaveBeenCalledWith(
+          `https://vercel.com/${encodeURIComponent(team.slug)}/~/integrations/${integration}/acme-first/settings?action=confirm_uninstall`
+        );
+        await expect(client.stderr).toOutput(
+          'Opening integration settings page to uninstall...'
+        );
+        await expect(client.stderr).toOutput('"Uninstall Integration"');
+        expect(client.stderr.getFullOutput()).not.toContain('Are you sure?');
+      });
+
+      it('tracks --cascade telemetry', async () => {
+        useConfiguration();
+        const integration = 'acme-no-projects';
+
+        client.setArgv('integration', 'remove', integration, '--cascade');
+        const exitCode = await integrationCommand(client);
+        expect(exitCode).toEqual(0);
+
+        expect(client.telemetryEventStore).toHaveTelemetryEvents([
+          {
+            key: 'subcommand:remove',
+            value: 'remove',
+          },
+          {
+            key: 'flag:cascade',
+            value: 'TRUE',
+          },
+          {
+            key: 'argument:integration',
+            value: integration,
+          },
+        ]);
       });
 
       it('exits gracefully when cancelling during confirmation for removing an integration', async () => {
@@ -187,6 +253,26 @@ describe('integration', () => {
         await expect(client.stderr).toOutput(
           'Error: --format=json requires --yes to skip confirmation prompts'
         );
+      });
+
+      it('should error when --format=json is used with --cascade', async () => {
+        useConfiguration();
+        const integration = 'acme-no-projects';
+
+        client.setArgv(
+          'integration',
+          'remove',
+          integration,
+          '--yes',
+          '--format=json',
+          '--cascade'
+        );
+        const exitCode = await integrationCommand(client);
+        expect(exitCode).toEqual(1);
+        await expect(client.stderr).toOutput(
+          'Error: --format=json cannot be used with --cascade'
+        );
+        expect(openMock).not.toHaveBeenCalled();
       });
 
       it('should track --format option in telemetry', async () => {

@@ -1,5 +1,6 @@
 import type { Team } from '@vercel-internals/types';
 import chalk from 'chalk';
+import open from 'open';
 import output from '../../output-manager';
 import type Client from '../../util/client';
 import { isAPIError } from '../../util/errors-ts';
@@ -40,9 +41,16 @@ export async function remove(client: Client) {
   const asJson = formatResult.jsonOutput;
 
   const skipConfirmation = !!parsedArguments.flags['--yes'];
+  const cascade = !!parsedArguments.flags['--cascade'];
 
   telemetry.trackCliFlagYes(skipConfirmation);
+  telemetry.trackCliFlagCascade(cascade);
   telemetry.trackCliOptionFormat(parsedArguments.flags['--format']);
+
+  if (asJson && cascade) {
+    output.error('--format=json cannot be used with --cascade');
+    return 1;
+  }
 
   if (asJson && !skipConfirmation) {
     output.error('--format=json requires --yes to skip confirmation prompts');
@@ -83,6 +91,26 @@ export async function remove(client: Client) {
     return 1;
   }
   telemetry.trackCliArgumentIntegration(integrationName, true);
+
+  if (cascade) {
+    const settingsUrl = buildIntegrationSettingsUrl(
+      team.slug,
+      integrationConfiguration.slug,
+      integrationConfiguration.id
+    );
+
+    output.log('Opening integration settings page to uninstall...');
+    output.log(
+      `In your browser, click ${chalk.bold('"Uninstall Integration"')} to continue with cascade deletion.`
+    );
+    output.log(`Visit this URL if the browser does not open: ${settingsUrl}`);
+
+    open(settingsUrl).catch((err: unknown) =>
+      output.debug(`Failed to open browser: ${err}`)
+    );
+
+    return 0;
+  }
 
   if (!skipConfirmation && !client.stdin.isTTY) {
     output.error(
@@ -198,6 +226,14 @@ export async function remove(client: Client) {
 
   output.success(`${chalk.bold(integrationName)} successfully removed.`);
   return 0;
+}
+
+function buildIntegrationSettingsUrl(
+  teamSlug: string,
+  integrationSlug: string,
+  configurationId: string
+): string {
+  return `https://vercel.com/${encodeURIComponent(teamSlug)}/~/integrations/${encodeURIComponent(integrationSlug)}/${encodeURIComponent(configurationId)}/settings?action=confirm_uninstall`;
 }
 
 async function confirmIntegrationRemoval(
