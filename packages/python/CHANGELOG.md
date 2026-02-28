@@ -1,5 +1,11 @@
 # @vercel/python
 
+## 6.19.0
+
+### Minor Changes
+
+- [python] setup logging in `vc_init_dev` to route records with level <= `WARNING` to `stdout` and with level >= `ERROR` to `stderr`. ([#15328](https://github.com/vercel/vercel/pull/15328))
+
 ## 6.18.1
 
 ### Patch Changes
