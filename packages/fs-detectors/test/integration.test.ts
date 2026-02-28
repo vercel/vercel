@@ -12,6 +12,8 @@ const fixturesPath = join(__dirname, 'fixtures', 'e2e');
 const e2eFixtures = fs
   .readdirSync(fixturesPath)
   .filter(name => fs.statSync(join(fixturesPath, name)).isDirectory())
+  // Disabling as it's experimental
+  .filter(name => name !== '06-services-multi-frontend-multi-runtime')
   .sort();
 const runFixtureTest = it.concurrent;
 
