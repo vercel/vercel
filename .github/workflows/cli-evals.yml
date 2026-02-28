@@ -52,6 +52,25 @@ jobs:
           # Limit memory pressure from concurrent Docker + Node (reduce OOM exit 137)
           NODE_OPTIONS: --max-old-space-size=4096
 
+      - name: Upload results folder to centralized evals app
+        env:
+          BATCH_ID: daily-${{ github.repository }}-${{ github.run_id }}
+          EXPERIMENTS: vercel-cli
+        run: |
+          cd packages/cli && node ./evals/scripts/transform-agent-eval-to-canonical.js \
+            --results-dir ./evals/results \
+            --product evals \
+            --repo ${{ github.repository }} \
+            --branch ${{ github.ref_name }} \
+            --commit-sha ${{ github.sha }} \
+            --run-type "${{ github.event_name == 'schedule' && 'cron' || 'manual' }}" \
+            --runner agent-eval \
+            --batch-id "$BATCH_ID" \
+            --ingest-url "${{ secrets.EVALS_INGEST_URL }}" \
+            --token "${{ secrets.EVALS_INGEST_TOKEN }}" \
+            --protection-bypass-secret "${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}" \
+            --bypass-via header
+
       - name: Eval results detail (on failure)
         if: failure() && steps.evals.outcome == 'failure'
         run: |
