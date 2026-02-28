@@ -11,11 +11,11 @@ func main() {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
 
-	r.GET("/", func(c *gin.Context) {
+	r.GET("/api/go", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"message": "Hello from Gin"})
 	})
 
-	r.GET("/ping", func(c *gin.Context) {
+	r.GET("/api/go/ping", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"message": "pong from Gin"})
 	})
 

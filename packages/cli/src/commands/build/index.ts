@@ -723,7 +723,9 @@ async function doBuild(
         ? servicesByBuilderSrc.get(build.src)
         : undefined;
       const stripServiceRoutePrefix =
-        !!service?.routePrefix && service.routePrefix !== '/';
+        !!service?.routePrefix &&
+        service?.routePrefix !== '/' &&
+        service?.routePrefixSource === 'generated';
 
       let buildWorkPath = workPath;
       let buildEntrypoint = build.src;
@@ -1008,45 +1010,9 @@ async function doBuild(
         });
       }
 
-      let mergedBuildResult: BuildResult | BuildOutputConfig = buildResult;
-      if ('buildOutputPath' in buildResult) {
-        // Read this builder's own Build Output API config directly. When
-        // multiple builders write into `.vercel/output`, a later filesystem
-        // merge can overwrite `config.json` from a sibling builder.
-        const buildOutputConfigPath = join(
-          buildResult.buildOutputPath,
-          'config.json'
-        );
-        const buildOutputConfig = await readJSONFile<BuildOutputConfig>(
-          buildOutputConfigPath
-        );
-        if (buildOutputConfig instanceof CantParseJSONFile) {
-          throw buildOutputConfig;
-        }
-
-        if (buildOutputConfig) {
-          if (buildOutputConfig.overrides) {
-            overrides.push(buildOutputConfig.overrides);
-          }
-          if (
-            hasDetectedServices &&
-            service &&
-            Array.isArray(buildOutputConfig.routes) &&
-            detectedServices
-          ) {
-            buildOutputConfig.routes = scopeRoutesToServiceOwnership({
-              routes: buildOutputConfig.routes as Route[],
-              owner: service,
-              allServices: detectedServices,
-            });
-          }
-          mergedBuildResult = buildOutputConfig;
-        }
-      }
-
       // Store the build result to generate the final `config.json` after
       // all builds have completed
-      buildResults.set(build, mergedBuildResult);
+      buildResults.set(build, buildResult);
 
       let buildOutputLength = 0;
       if ('output' in buildResult) {
@@ -1168,6 +1134,14 @@ async function doBuild(
 
     if (existingConfig.overrides) {
       overrides.push(existingConfig.overrides);
+    }
+    // Find the `Build` entry for this config file and update the build result
+    for (const [build, buildResult] of buildResults.entries()) {
+      if ('buildOutputPath' in buildResult) {
+        output.debug(`Using "config.json" for "${build.use}`);
+        buildResults.set(build, existingConfig);
+        break;
+      }
     }
   }
 
