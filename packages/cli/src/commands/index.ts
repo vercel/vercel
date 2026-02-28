@@ -2,6 +2,7 @@ import { aliasCommand } from './alias/command';
 import { apiCommand } from './api/command';
 import { bisectCommand } from './bisect/command';
 import { buildCommand } from './build/command';
+import { buyCommand } from './buy/command';
 import { cacheCommand } from './cache/command';
 import { certsCommand } from './certs/command';
 import { contractCommand } from './contract/command';
@@ -35,6 +36,7 @@ import { pullCommand } from './pull/command';
 import { redeployCommand } from './redeploy/command';
 import { redirectsCommand } from './redirects/command';
 import { removeCommand } from './remove/command';
+import { routesCommand } from './routes/command';
 import { rollbackCommand } from './rollback/command';
 import { rollingReleaseCommand } from './rolling-release/command';
 import { targetCommand } from './target/command';
@@ -54,6 +56,7 @@ const commandsStructs = [
   blobCommand,
   bisectCommand,
   buildCommand,
+  buyCommand,
   cacheCommand,
   certsCommand,
   contractCommand,
@@ -85,6 +88,7 @@ const commandsStructs = [
   redeployCommand,
   redirectsCommand,
   removeCommand,
+  routesCommand,
   rollbackCommand,
   rollingReleaseCommand,
   targetCommand,

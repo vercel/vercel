@@ -111,6 +111,9 @@ export interface Integration {
   products?: IntegrationProduct[];
   eulaDocUri?: string;
   privacyDocUri?: string;
+  capabilities?: {
+    requiresBrowserInstall?: boolean;
+  };
 }
 
 export interface IntegrationInstallation {

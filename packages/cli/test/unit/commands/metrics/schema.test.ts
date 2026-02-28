@@ -30,7 +30,7 @@ describe('schema', () => {
       expect(stderrOutput).toContain('Events found');
       expect(stderrOutput).toContain('Event');
       expect(stderrOutput).toContain('Description');
-      expect(stderrOutput).toContain('incomingRequest');
+      expect(stderrOutput).toContain('edgeRequest');
     });
 
     it('should output JSON list with --format=json', async () => {
@@ -49,13 +49,13 @@ describe('schema', () => {
 
   describe('event detail', () => {
     it('should output table detail for a known event', async () => {
-      client.setArgv('metrics', 'schema', '--event', 'incomingRequest');
+      client.setArgv('metrics', 'schema', '--event', 'edgeRequest');
 
       const exitCode = await schema(client, new MockTelemetry());
 
       expect(exitCode).toBe(0);
       const stderrOutput = client.stderr.getFullOutput();
-      expect(stderrOutput).toContain('Event: incomingRequest');
+      expect(stderrOutput).toContain('Event: edgeRequest');
       expect(stderrOutput).toContain('Dimension');
       expect(stderrOutput).toContain('Label');
       expect(stderrOutput).toContain('Groupable');
@@ -68,7 +68,7 @@ describe('schema', () => {
         'metrics',
         'schema',
         '--event',
-        'incomingRequest',
+        'edgeRequest',
         '--format=json'
       );
 
@@ -77,7 +77,7 @@ describe('schema', () => {
       expect(exitCode).toBe(0);
       const output = client.stdout.getFullOutput();
       const parsed = JSON.parse(output);
-      expect(parsed.event).toBe('incomingRequest');
+      expect(parsed.event).toBe('edgeRequest');
       expect(parsed.description).toBeDefined();
       expect(parsed.dimensions).toBeDefined();
       expect(parsed.measures).toBeDefined();
@@ -105,18 +105,18 @@ describe('schema', () => {
       const output = client.stdout.getFullOutput();
       const parsed = JSON.parse(output);
       expect(parsed.error.code).toBe('UNKNOWN_EVENT');
-      expect(parsed.error.allowedValues).toContain('incomingRequest');
+      expect(parsed.error.allowedValues).toContain('edgeRequest');
     });
   });
 
   describe('telemetry', () => {
     it('should track event option', async () => {
-      client.setArgv('metrics', 'schema', '--event', 'incomingRequest');
+      client.setArgv('metrics', 'schema', '--event', 'edgeRequest');
 
       await schema(client, new MockTelemetry());
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        { key: 'option:event', value: 'incomingRequest' },
+        { key: 'option:event', value: 'edgeRequest' },
       ]);
     });
 

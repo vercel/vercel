@@ -23,10 +23,12 @@ describe('progress()', () => {
     { current: 11, total: 10, expected: null },
     { current: -1, total: 10, expected: null },
     { current: 1, total: 0, expected: null },
-  ])(
-    '$current / $total -> "$expected"',
-    ({ current, total, opts, expected }) => {
-      expect(progress(current, total, opts)).toEqual(expected);
-    }
-  );
+  ])('$current / $total -> "$expected"', ({
+    current,
+    total,
+    opts,
+    expected,
+  }) => {
+    expect(progress(current, total, opts)).toEqual(expected);
+  });
 });
