@@ -84,6 +84,14 @@ function generateExample(
 }
 
 /**
+ * Whether a field uses a vercel-region control where the server handles region selection.
+ */
+export function isServerHandledRegion(prop: MetadataSchemaProperty): boolean {
+  const control = prop['ui:control'];
+  return control === 'vercel-region' || control === 'multi-vercel-region';
+}
+
+/**
  * Format metadata schema as help text for CLI display
  * @param schema The metadata schema to format
  * @param integrationName The integration slug/name
@@ -117,7 +125,10 @@ export function formatMetadataSchemaHelp(
     }
 
     const isRequired = required.has(key);
-    const requiredSuffix = isRequired ? chalk.red(' (required)') : '';
+    const requiredSuffix =
+      isRequired && !isServerHandledRegion(prop)
+        ? chalk.red(' (required)')
+        : '';
 
     const typeHint =
       prop.type === 'boolean'

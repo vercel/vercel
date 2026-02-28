@@ -315,7 +315,8 @@ export const balanceSubcommand = {
 export const removeSubcommand = {
   name: 'remove',
   aliases: [],
-  description: 'Uninstalls a marketplace integration',
+  description:
+    'Uninstalls a marketplace integration. Resources must be removed first using `integration-resource remove`.',
   arguments: [
     {
       name: 'integration',
@@ -337,6 +338,10 @@ export const removeSubcommand = {
         `${packageName} integration remove <integration>`,
         `${packageName} integration remove acme`,
       ],
+    },
+    {
+      name: 'Remove a resource before uninstalling',
+      value: `${packageName} integration-resource remove <resource-name> --disconnect-all --yes`,
     },
     {
       name: 'Output as JSON',
@@ -386,13 +391,18 @@ export const guideSubcommand = {
       name: 'Show the Next.js guide without prompts (useful for CI/agents)',
       value: `${packageName} integration guide neon --framework nextjs`,
     },
+    {
+      name: 'Discover available integrations and product slugs',
+      value: `${packageName} integration discover`,
+    },
   ],
 } as const;
 
 export const integrationCommand = {
   name: 'integration',
   aliases: [],
-  description: 'Manage marketplace integrations',
+  description:
+    'Manage marketplace integrations. To manage individual resources (disconnect, remove), see `integration-resource`.',
   options: [],
   arguments: [],
   subcommands: [

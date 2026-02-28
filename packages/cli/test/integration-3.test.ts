@@ -8,7 +8,7 @@ import { homedir } from 'os';
 import { runNpmInstall } from '@vercel/build-utils';
 import { execCli } from './helpers/exec';
 import type { RequestInfo } from 'node-fetch';
-import fetch from 'node-fetch';
+import nodeFetch from 'node-fetch';
 import fs from 'fs-extra';
 import { logo } from '../src/util/pkg-name';
 import sleep from '../src/util/sleep';
@@ -45,7 +45,7 @@ const waitForDeployment = async (href: RequestInfo) => {
 
   // eslint-disable-next-line
   while (true) {
-    const response = await fetch(href, { redirect: 'manual' });
+    const response = await nodeFetch(href, { redirect: 'manual' });
     const text = await response.text();
     if (
       response.status === 200 &&
@@ -174,10 +174,10 @@ test.skip('ignore files specified in .nowignore', async () => {
   });
 
   const { host } = new URL(targetCall.stdout);
-  const ignoredFile = await fetch(`https://${host}/ignored.txt`);
+  const ignoredFile = await nodeFetch(`https://${host}/ignored.txt`);
   expect(ignoredFile.status).toBe(404);
 
-  const presentFile = await fetch(`https://${host}/index.txt`);
+  const presentFile = await nodeFetch(`https://${host}/index.txt`);
   expect(presentFile.status).toBe(200);
 });
 
@@ -192,10 +192,10 @@ test.skip('ignore files specified in .nowignore via allowlist', async () => {
   });
 
   const { host } = new URL(targetCall.stdout);
-  const ignoredFile = await fetch(`https://${host}/ignored.txt`);
+  const ignoredFile = await nodeFetch(`https://${host}/ignored.txt`);
   expect(ignoredFile.status).toBe(404);
 
-  const presentFile = await fetch(`https://${host}/index.txt`);
+  const presentFile = await nodeFetch(`https://${host}/index.txt`);
   expect(presentFile.status).toBe(200);
 });
 
@@ -317,7 +317,7 @@ test.skip('ensure we render a warning for deployments with no files', async () =
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   // Send a test request to the deployment
-  const res = await fetch(href);
+  const res = await nodeFetch(href);
   expect(res.status).toBe(404);
 });
 
@@ -364,7 +364,7 @@ test('ensure the `scope` property works with email', async () => {
   expect(host.split('-')[0]).toBe(session);
 
   // Send a test request to the deployment
-  const response = await fetch(href);
+  const response = await nodeFetch(href);
   const contentType = response.headers.get('content-type');
 
   expect(contentType).toBe('text/html; charset=utf-8');
@@ -394,7 +394,7 @@ test('ensure the `scope` property works with username', async () => {
   expect(host.split('-')[0]).toBe(session);
 
   // Send a test request to the deployment
-  const response = await fetch(href);
+  const response = await nodeFetch(href);
   const contentType = response.headers.get('content-type');
 
   expect(contentType).toBe('text/html; charset=utf-8');
@@ -808,7 +808,7 @@ test('deploy a Lambda with 128MB of memory', async () => {
   expect(output.exitCode, formatOutput(output)).toBe(0);
 
   const { host: url } = new URL(output.stdout);
-  const response = await fetch('https://' + url + '/api/memory');
+  const response = await nodeFetch('https://' + url + '/api/memory');
 
   expect(response.status).toBe(200);
 
@@ -839,12 +839,12 @@ test.skip('deploy a Lambda with 3 seconds of maxDuration', async () => {
 
   // Should time out
   url.pathname = '/api/wait-for/5';
-  const response1 = await fetch(url.href);
+  const response1 = await nodeFetch(url.href);
   expect(response1.status).toBe(504);
 
   // Should not time out
   url.pathname = '/api/wait-for/1';
-  const response2 = await fetch(url.href);
+  const response2 = await nodeFetch(url.href);
   expect(response2.status).toBe(200);
 });
 
@@ -875,7 +875,7 @@ test('deploy a Lambda with a specific runtime', async () => {
   expect(output.exitCode, formatOutput(output)).toBe(0);
 
   const url = new URL(output.stdout);
-  const res = await fetch(`${url}/api/test`);
+  const res = await nodeFetch(`${url}/api/test`);
   const text = await res.text();
   expect(text).toBe('Hello from PHP');
 });
@@ -909,7 +909,7 @@ test('use build-env', async () => {
   await waitForDeployment(href);
 
   // get the content
-  const response = await fetch(href);
+  const response = await nodeFetch(href);
   const content = await response.text();
   expect(content.trim()).toBe('bar');
 });
