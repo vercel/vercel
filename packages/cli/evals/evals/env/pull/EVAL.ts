@@ -1,6 +1,16 @@
 import { readFileSync, existsSync } from 'fs';
 import { test, expect } from 'vitest';
 
+function getShellCommands(): string[] {
+  const results = JSON.parse(
+    readFileSync('__agent_eval__/results.json', 'utf-8')
+  ) as {
+    o11y?: { shellCommands?: Array<{ command: string }> };
+  };
+
+  return (results.o11y?.shellCommands ?? []).map(c => c.command);
+}
+
 /**
  * env pull eval: agent pulls env vars to a file and records the command.
  */
@@ -11,11 +21,13 @@ test('project is linked', () => {
 });
 
 test('agent used vercel env pull', () => {
-  expect(existsSync('command-used.txt')).toBe(true);
+  const commands = getShellCommands();
+  expect(commands.length).toBeGreaterThan(0);
 
-  const command = readFileSync('command-used.txt', 'utf-8').trim();
-  expect(command.length).toBeGreaterThan(0);
-  expect(command).toMatch(/\b(vercel|vc)\s+env\s+pull\b/);
+  const envPullCommands = commands.filter(command =>
+    /\b(vercel|vc)\s+env\s+pull\b/.test(command)
+  );
+  expect(envPullCommands.length).toBeGreaterThan(0);
 });
 
 test('an env file was created', () => {

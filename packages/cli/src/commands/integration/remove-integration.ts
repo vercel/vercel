@@ -113,10 +113,7 @@ export async function remove(client: Client) {
       error.status === 403 &&
       error.serverMessage.includes('resources')
     ) {
-      output.error(
-        `Cannot uninstall ${chalk.bold(integrationName)} because it still has resources.`
-      );
-
+      let resourceNames: string[] = [];
       try {
         const searchParams = new URLSearchParams();
         searchParams.set('teamId', team.id);
@@ -129,16 +126,44 @@ export async function remove(client: Client) {
           `/v1/storage/stores?${searchParams}`,
           { json: true }
         );
-        if (stores.length > 0) {
-          output.log('');
-          output.log('Resources that must be removed first:');
-          for (const resource of stores) {
-            output.log(`  ${chalk.gray('-')} ${resource.name}`);
-          }
-          output.log('');
-        }
+        resourceNames = stores.map(s => s.name);
       } catch {
         // Ignore errors fetching resources; the actionable guidance below is still useful.
+      }
+
+      if (asJson) {
+        output.stopSpinner();
+        client.stdout.write(
+          `${JSON.stringify(
+            {
+              integration: integrationName,
+              removed: false,
+              error: 'has_resources',
+              message: `Cannot uninstall ${integrationName} because it still has resources.`,
+              resources: resourceNames,
+              next: resourceNames.map(name => ({
+                command: `${packageName} integration-resource remove ${name} --disconnect-all --yes --format=json`,
+              })),
+              retry: `${packageName} integration remove ${integrationName} --yes --format=json`,
+            },
+            null,
+            2
+          )}\n`
+        );
+        return 1;
+      }
+
+      output.error(
+        `Cannot uninstall ${chalk.bold(integrationName)} because it still has resources.`
+      );
+
+      if (resourceNames.length > 0) {
+        output.log('');
+        output.log('Resources that must be removed first:');
+        for (const name of resourceNames) {
+          output.log(`  ${chalk.gray('-')} ${name}`);
+        }
+        output.log('');
       }
 
       if (client.isAgent) {

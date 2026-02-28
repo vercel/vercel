@@ -4,9 +4,11 @@ import open from 'open';
 import output from '../../output-manager';
 import type Client from '../../util/client';
 import getScope from '../../util/get-scope';
+import indent from '../../util/output/indent';
 import { autoProvisionResource } from '../../util/integration/auto-provision-resource';
 import { fetchIntegrationWithTelemetry } from '../../util/integration/fetch-integration';
 import { fetchInstallations } from '../../util/integration/fetch-installations';
+import { acceptTermsViaBrowser } from '../../util/integration/accept-terms-via-browser';
 import { promptForTermAcceptance } from '../../util/integration/prompt-for-terms';
 import { selectProduct } from '../../util/integration/select-product';
 import type {
@@ -15,8 +17,10 @@ import type {
   AutoProvisionFallback,
   AutoProvisionResult,
 } from '../../util/integration/types';
+import { buildSSOLink } from '../../util/integration/build-sso-link';
 import { resolveResourceName } from '../../util/integration/generate-resource-name';
 import {
+  ENV_PULL_FAILED_MESSAGE,
   getLinkedProjectField,
   postProvisionSetup,
   type PostProvisionOptions,
@@ -34,6 +38,7 @@ export interface AddAutoProvisionOptions extends PostProvisionOptions {
   billingPlanId?: string;
   installationId?: string;
   commandName?: 'integration add' | 'install';
+  asJson?: boolean;
 }
 
 export async function addAutoProvision(
@@ -56,6 +61,7 @@ export async function addAutoProvision(
   telemetry.trackCliOptionInstallationId(options.installationId);
   telemetry.trackCliOptionEnvironment(options.environments);
   telemetry.trackCliOptionPrefix(options.prefix);
+  telemetry.trackCliOptionFormat(options.asJson ? 'json' : undefined);
 
   // Get team context
   const { contextName, team } = await getScope(client);
@@ -154,16 +160,43 @@ export async function addAutoProvision(
   );
 
   let acceptedPolicies: AcceptedPolicies = {};
+  let browserInstallationId: string | undefined;
   if (!teamInstallation) {
-    const policies = await promptForTermAcceptance(client, integration);
-    if (!policies) {
-      telemetry.trackMarketplaceEvent('marketplace_install_flow_dropped', {
-        ...baseProps,
-        reason: 'policy_declined',
-      });
-      return 1;
+    if (
+      // AI agent mode — cannot interact with terminal prompts
+      client.isAgent ||
+      // Non-interactive terminal (CI/scripts) — no TTY for prompts
+      !client.stdin.isTTY ||
+      // Server declares browser install required (e.g. needs device fingerprint)
+      integration.capabilities?.requiresBrowserInstall
+    ) {
+      // Browser flow: open browser for terms acceptance, poll for installation
+      const browserInstallation = await acceptTermsViaBrowser(
+        client,
+        integration,
+        team.id,
+        contextName
+      );
+      if (!browserInstallation) {
+        telemetry.trackMarketplaceEvent('marketplace_install_flow_dropped', {
+          ...baseProps,
+          reason: 'browser_terms_timeout',
+        });
+        return 1;
+      }
+      browserInstallationId = browserInstallation.id;
+    } else {
+      // Interactive TTY: keep existing prompt behavior
+      const policies = await promptForTermAcceptance(client, integration);
+      if (!policies) {
+        telemetry.trackMarketplaceEvent('marketplace_install_flow_dropped', {
+          ...baseProps,
+          reason: 'policy_declined',
+        });
+        return 1;
+      }
+      acceptedPolicies = policies;
     }
-    acceptedPolicies = policies;
   }
 
   // Validate metadata flags (if provided) BEFORE prompting for resource name
@@ -240,7 +273,7 @@ export async function addAutoProvision(
       metadata,
       acceptedPolicies,
       options.billingPlanId,
-      options.installationId
+      browserInstallationId ?? options.installationId
     );
   } catch (error) {
     output.stopSpinner();
@@ -360,14 +393,28 @@ export async function addAutoProvision(
     `${product.name} successfully provisioned: ${chalk.bold(resourceName)}`
   );
 
+  const guideSlug =
+    integration.products.length > 1
+      ? `${integration.slug}/${product.slug}`
+      : integration.slug;
+  const guideCommand = `vercel integration guide ${guideSlug}`;
+  output.log(
+    indent(
+      `Guide: Run ${chalk.cyan(`\`${guideCommand}\``)} for getting started guides and code snippets`,
+      4
+    )
+  );
+
   // Post-provision: dashboard URL, connect, env pull
-  return postProvisionSetup(
+  const setupResult = await postProvisionSetup(
     client,
     resourceName,
     provisioned.resource.id,
     contextName,
     {
       ...options,
+      integrationSlug: integration.slug,
+      installationId: provisioned.installation.id,
       onProjectConnected: (projectId: string) => {
         telemetry.trackMarketplaceEvent('marketplace_project_connected', {
           ...baseProps,
@@ -385,4 +432,66 @@ export async function addAutoProvision(
       },
     }
   );
+
+  if (options.asJson) {
+    const warnings: string[] = [];
+    if (setupResult.connectError) {
+      warnings.push(
+        `Failed to connect to project: ${setupResult.connectError}`
+      );
+    }
+    if (setupResult.connected && !setupResult.envPulled && !options.noEnvPull) {
+      warnings.push(ENV_PULL_FAILED_MESSAGE);
+    }
+
+    const jsonOutput: Record<string, unknown> = {
+      resource: {
+        id: provisioned.resource.id,
+        name: provisioned.resource.name,
+        status: provisioned.resource.status,
+        externalResourceId: provisioned.resource.externalResourceId,
+      },
+      integration: {
+        id: provisioned.integration.id,
+        slug: provisioned.integration.slug,
+        name: provisioned.integration.name,
+      },
+      product: {
+        id: provisioned.product.id,
+        slug: provisioned.product.slug,
+        name: provisioned.product.name,
+      },
+      installation: {
+        id: provisioned.installation.id,
+      },
+      billingPlan: provisioned.billingPlan
+        ? {
+            id: provisioned.billingPlan.id,
+            name: provisioned.billingPlan.name,
+            type: provisioned.billingPlan.type,
+          }
+        : null,
+      dashboardUrl: setupResult.dashboardUrl,
+      ssoUrl: {
+        integration: buildSSOLink(team, provisioned.installation.id),
+        resource: buildSSOLink(
+          team,
+          provisioned.installation.id,
+          provisioned.resource.externalResourceId
+        ),
+      },
+      project: setupResult.project ?? null,
+      environments: setupResult.environments,
+      envPulled: setupResult.envPulled,
+      guideCommand,
+      warnings,
+    };
+
+    client.stdout.write(`${JSON.stringify(jsonOutput, null, 2)}\n`);
+
+    // Partial failures (connect/env-pull) still return 0 when resource was provisioned
+    return setupResult.connectError ? 0 : setupResult.exitCode;
+  }
+
+  return setupResult.exitCode;
 }

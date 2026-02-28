@@ -51,12 +51,12 @@ describe('help command', () => {
         line: ['a', '  ', '   ', 'b', 'c'],
         expected: 'a     b c',
       },
-    ])(
-      'should insert spaces between non-whitespace items only; $line',
-      ({ line, expected }) => {
-        expect(lineToString(line)).toBe(expected);
-      }
-    );
+    ])('should insert spaces between non-whitespace items only; $line', ({
+      line,
+      expected,
+    }) => {
+      expect(lineToString(line)).toBe(expected);
+    });
   });
 
   describe('outputArrayToString', () => {

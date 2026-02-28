@@ -3,7 +3,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import { tmpdir } from 'os';
 import {
-  shouldEnableRuntimeInstall,
+  PythonDependencyExternalizer,
   calculateBundleSize,
   lambdaKnapsack,
   LAMBDA_SIZE_THRESHOLD_BYTES,
@@ -28,64 +28,82 @@ describe('dependency externalizer support', () => {
     const oversized = LAMBDA_SIZE_THRESHOLD_BYTES + 1;
     const undersized = LAMBDA_SIZE_THRESHOLD_BYTES - 1;
 
+    function createExternalizer({
+      uvLockPath = '/path/to/uv.lock' as string | null,
+      hasCustomCommand = false,
+      totalBundleSize = 0,
+    } = {}) {
+      const ext = new PythonDependencyExternalizer({
+        venvPath: '/tmp/venv',
+        vendorDir: '_vendor',
+        workPath: '/tmp/work',
+        uvLockPath,
+        uvProjectDir: '/tmp/work',
+        projectName: 'test-project',
+        noBuildCheckFailed: false,
+        pythonPath: '/usr/bin/python3',
+        hasCustomCommand,
+      });
+      // Set the private totalBundleSize field for testing
+      (ext as any).totalBundleSize = totalBundleSize;
+      return ext;
+    }
+
     it('returns true when bundle exceeds threshold and uvLockPath is present', () => {
       delete process.env.VERCEL_PYTHON_ON_HIVE;
-      expect(
-        shouldEnableRuntimeInstall({
-          totalBundleSize: oversized,
-          uvLockPath: '/path/to/uv.lock',
-        })
-      ).toBe(true);
+      const ext = createExternalizer({ totalBundleSize: oversized });
+      expect(ext.shouldEnableRuntimeInstall()).toBe(true);
     });
 
     it('returns false when VERCEL_PYTHON_ON_HIVE is "1"', () => {
       process.env.VERCEL_PYTHON_ON_HIVE = '1';
-      expect(
-        shouldEnableRuntimeInstall({
-          totalBundleSize: oversized,
-          uvLockPath: '/path/to/uv.lock',
-        })
-      ).toBe(false);
+      const ext = createExternalizer({ totalBundleSize: oversized });
+      expect(ext.shouldEnableRuntimeInstall()).toBe(false);
     });
 
     it('returns false when VERCEL_PYTHON_ON_HIVE is "true"', () => {
       process.env.VERCEL_PYTHON_ON_HIVE = 'true';
-      expect(
-        shouldEnableRuntimeInstall({
-          totalBundleSize: oversized,
-          uvLockPath: '/path/to/uv.lock',
-        })
-      ).toBe(false);
+      const ext = createExternalizer({ totalBundleSize: oversized });
+      expect(ext.shouldEnableRuntimeInstall()).toBe(false);
     });
 
     it('returns true when VERCEL_PYTHON_ON_HIVE is an unrecognised value', () => {
       process.env.VERCEL_PYTHON_ON_HIVE = 'yes';
-      expect(
-        shouldEnableRuntimeInstall({
-          totalBundleSize: oversized,
-          uvLockPath: '/path/to/uv.lock',
-        })
-      ).toBe(true);
+      const ext = createExternalizer({ totalBundleSize: oversized });
+      expect(ext.shouldEnableRuntimeInstall()).toBe(true);
     });
 
     it('returns false when bundle is under threshold', () => {
       delete process.env.VERCEL_PYTHON_ON_HIVE;
-      expect(
-        shouldEnableRuntimeInstall({
-          totalBundleSize: undersized,
-          uvLockPath: '/path/to/uv.lock',
-        })
-      ).toBe(false);
+      const ext = createExternalizer({ totalBundleSize: undersized });
+      expect(ext.shouldEnableRuntimeInstall()).toBe(false);
     });
 
     it('returns false when uvLockPath is null', () => {
       delete process.env.VERCEL_PYTHON_ON_HIVE;
-      expect(
-        shouldEnableRuntimeInstall({
-          totalBundleSize: oversized,
-          uvLockPath: null,
-        })
-      ).toBe(false);
+      const ext = createExternalizer({
+        totalBundleSize: oversized,
+        uvLockPath: null,
+      });
+      expect(ext.shouldEnableRuntimeInstall()).toBe(false);
+    });
+
+    it('returns false when hasCustomCommand is true even with oversized bundle and uvLockPath', () => {
+      delete process.env.VERCEL_PYTHON_ON_HIVE;
+      const ext = createExternalizer({
+        totalBundleSize: oversized,
+        hasCustomCommand: true,
+      });
+      expect(ext.shouldEnableRuntimeInstall()).toBe(false);
+    });
+
+    it('returns false when hasCustomCommand is true and bundle is under threshold', () => {
+      delete process.env.VERCEL_PYTHON_ON_HIVE;
+      const ext = createExternalizer({
+        totalBundleSize: undersized,
+        hasCustomCommand: true,
+      });
+      expect(ext.shouldEnableRuntimeInstall()).toBe(false);
     });
   });
 

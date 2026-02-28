@@ -55,11 +55,19 @@ export interface ServicesRoutes {
 
 export interface DetectServicesResult {
   services: Service[];
+  /**
+   * Source of service definitions:
+   * - `configured`: loaded from explicit project configuration (currently `vercel.json#experimentalServices`)
+   * - `auto-detected`: inferred from project structure
+   */
+  source: DetectServicesSource;
   /** Routing rules derived from services */
   routes: ServicesRoutes;
   errors: ServiceDetectionError[];
   warnings: ServiceDetectionWarning[];
 }
+
+export type DetectServicesSource = 'configured' | 'auto-detected';
 
 export interface ServiceDetectionWarning {
   code: string;

@@ -459,10 +459,16 @@ export class ServicesOrchestrator {
       `Starting ${chalk.bold(service.name)} with ${chalk.cyan.bold(`"${devCommand}"`)}`
     );
 
+    // Pass terminal width so child frameworks can format output correctly.
+    if (process.stdout.columns) {
+      env.COLUMNS = `${process.stdout.columns}`;
+    }
+
     const child = spawnCommand(devCommand, {
       cwd: workspacePath,
       env,
-      stdio: ['inherit', 'pipe', 'pipe'],
+      stdio: ['ignore', 'pipe', 'pipe'],
+      detached: true,
     });
 
     if (!child.pid) {

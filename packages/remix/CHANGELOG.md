@@ -1,5 +1,11 @@
 # @vercel/remix-builder
 
+## 5.6.0
+
+### Minor Changes
+
+- [remix] Support future.v8_middleware option ([#15189](https://github.com/vercel/vercel/pull/15189))
+
 ## 5.5.10
 
 ### Patch Changes

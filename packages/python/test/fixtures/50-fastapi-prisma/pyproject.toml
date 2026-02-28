@@ -1,0 +1,5 @@
+[project]
+name = "fastapi-prisma-fixture"
+version = "0.0.0"
+requires-python = "~=3.13.0"
+dependencies = ["fastapi", "prisma"]

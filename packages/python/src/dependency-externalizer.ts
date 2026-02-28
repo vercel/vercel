@@ -38,6 +38,8 @@ interface PythonDependencyExternalizerOptions {
   projectName: string | undefined;
   noBuildCheckFailed: boolean;
   pythonPath: string;
+  hasCustomCommand: boolean;
+  alwaysBundlePackages?: string[];
 }
 
 export class PythonDependencyExternalizer {
@@ -49,6 +51,8 @@ export class PythonDependencyExternalizer {
   private projectName: string | undefined;
   private noBuildCheckFailed: boolean;
   private pythonPath: string;
+  private hasCustomCommand: boolean;
+  private alwaysBundlePackages: string[];
 
   // Populated by analyze()
   private allVendorFiles: Files = {};
@@ -64,6 +68,26 @@ export class PythonDependencyExternalizer {
     this.projectName = options.projectName;
     this.noBuildCheckFailed = options.noBuildCheckFailed;
     this.pythonPath = options.pythonPath;
+    this.hasCustomCommand = options.hasCustomCommand;
+    this.alwaysBundlePackages = options.alwaysBundlePackages ?? [];
+  }
+
+  shouldEnableRuntimeInstall(): boolean {
+    if (this.hasCustomCommand) {
+      return false;
+    }
+    const pythonOnHiveEnabled =
+      process.env.VERCEL_PYTHON_ON_HIVE === '1' ||
+      process.env.VERCEL_PYTHON_ON_HIVE === 'true';
+    if (pythonOnHiveEnabled) {
+      return false;
+    } else if (
+      this.totalBundleSize > LAMBDA_SIZE_THRESHOLD_BYTES &&
+      this.uvLockPath !== null
+    ) {
+      return true;
+    }
+    return false;
   }
 
   /**
@@ -72,7 +96,7 @@ export class PythonDependencyExternalizer {
    * Must be called before generateBundle().
    */
   async analyze(files: Files): Promise<{
-    overLambdaLimit: boolean;
+    runtimeInstallEnabled: boolean;
     allVendorFiles: Files;
   }> {
     this.allVendorFiles = await mirrorPackagesIntoVendor({
@@ -90,12 +114,34 @@ export class PythonDependencyExternalizer {
     const totalBundleSizeMB = (this.totalBundleSize / (1024 * 1024)).toFixed(2);
     debug(`Total bundle size: ${totalBundleSizeMB} MB`);
 
-    const overLambdaLimit = shouldEnableRuntimeInstall({
-      totalBundleSize: this.totalBundleSize,
-      uvLockPath: this.uvLockPath,
-    });
+    const runtimeInstallEnabled = this.shouldEnableRuntimeInstall();
 
-    return { overLambdaLimit, allVendorFiles: this.allVendorFiles };
+    const pythonOnHiveEnabled =
+      process.env.VERCEL_PYTHON_ON_HIVE === '1' ||
+      process.env.VERCEL_PYTHON_ON_HIVE === 'true';
+
+    if (
+      this.totalBundleSize > LAMBDA_SIZE_THRESHOLD_BYTES &&
+      this.hasCustomCommand &&
+      !pythonOnHiveEnabled
+    ) {
+      const limitMB = (LAMBDA_SIZE_THRESHOLD_BYTES / (1024 * 1024)).toFixed(0);
+      throw new NowBuildError({
+        code: 'LAMBDA_SIZE_EXCEEDED',
+        message:
+          `Total bundle size (${totalBundleSizeMB} MB) exceeds the Lambda size limit (${limitMB} MB).\n\n` +
+          `Runtime dependency installation is not available for projects that use a custom ` +
+          `build or install command, because custom commands may install dependencies that ` +
+          `are not tracked in uv.lock.\n\n` +
+          `To resolve this, either:\n` +
+          `  1. Remove the custom build/install command and let Vercel manage dependencies automatically\n` +
+          `  2. Reduce your dependency footprint to fit within the ${limitMB} MB limit`,
+        link: 'https://vercel.com/docs/functions/runtimes/python#controlling-what-gets-bundled',
+        action: 'Learn More',
+      });
+    }
+
+    return { runtimeInstallEnabled, allVendorFiles: this.allVendorFiles };
   }
 
   /**
@@ -139,6 +185,8 @@ export class PythonDependencyExternalizer {
           `packages must fit within the ${ephemeralLimitMB} MB ephemeral storage available ` +
           `to Lambda functions. Consider removing unused dependencies or splitting your ` +
           `application into smaller functions.`,
+        link: 'https://vercel.com/docs/functions/runtimes/python#controlling-what-gets-bundled',
+        action: 'Learn More',
       });
     }
 
@@ -224,10 +272,15 @@ export class PythonDependencyExternalizer {
 
     // Calculate fixed overhead: source files + private packages + vercel-runtime.
     // These are always bundled and not part of the knapsack.
+    // alwaysBundlePackages are included here so their files are copied into
+    // the vendor directory and counted toward the fixed overhead.  They also
+    // appear in bundledPackagesForConfig (below) so the runtime bootstrap
+    // knows to skip reinstalling them.
     const alwaysBundled = [
       ...classification.privatePackages,
       'vercel-runtime',
       'vercel_runtime',
+      ...this.alwaysBundlePackages,
     ];
     const alwaysBundledFiles = await mirrorPackagesIntoVendor({
       venvPath: this.venvPath,
@@ -289,9 +342,13 @@ export class PythonDependencyExternalizer {
     // The bundledPackages list for runtime config includes private packages
     // and any public packages we selected for bundling. These will be
     // passed as --no-install-package to uv sync at runtime.
+    // alwaysBundlePackages appear here (in addition to alwaysBundled above)
+    // so they are written to the runtime config and passed as
+    // --no-install-package to `uv sync` at cold start.
     const bundledPackagesForConfig = [
       ...classification.privatePackages,
       ...bundledPublic,
+      ...this.alwaysBundlePackages,
     ];
 
     // Write a runtime config marker so the bootstrap knows to run
@@ -364,33 +421,14 @@ export class PythonDependencyExternalizer {
           `deferring public packages to runtime installation. This usually means your ` +
           `private packages or source code are too large. Consider reducing the size of ` +
           `private dependencies or splitting your application.`,
+        link: 'https://vercel.com/docs/functions/runtimes/python#controlling-what-gets-bundled',
+        action: 'Learn More',
       });
     }
   }
 }
 
 // Utility functions
-export function shouldEnableRuntimeInstall({
-  totalBundleSize,
-  uvLockPath,
-}: {
-  totalBundleSize: number;
-  uvLockPath: string | null;
-}): boolean {
-  const pythonOnHiveEnabled =
-    process.env.VERCEL_PYTHON_ON_HIVE === '1' ||
-    process.env.VERCEL_PYTHON_ON_HIVE === 'true';
-  if (pythonOnHiveEnabled) {
-    return false;
-  } else if (
-    totalBundleSize > LAMBDA_SIZE_THRESHOLD_BYTES &&
-    uvLockPath !== null
-  ) {
-    return true;
-  }
-  return false;
-}
-
 /**
  * Mirror packages from site-packages into the _vendor directory.
  *

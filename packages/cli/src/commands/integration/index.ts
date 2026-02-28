@@ -77,13 +77,13 @@ export default async function main(client: Client) {
 
   switch (subcommand) {
     case 'add': {
-      const ffAutoProvision = process.env.FF_AUTO_PROVISION_INSTALL === '1';
+      const ffAutoProvision = process.env.FF_AUTO_PROVISION_INSTALL !== '0';
       const addCmd = ffAutoProvision
         ? addSubcommand
         : {
             ...addSubcommand,
             options: addSubcommand.options.filter(
-              o => o.name !== 'installation-id'
+              o => o.name !== 'installation-id' && o.name !== 'format'
             ),
           };
 

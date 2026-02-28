@@ -1,5 +1,23 @@
 # @vercel/next
 
+## 4.15.36
+
+### Patch Changes
+
+- Update Next.js adapter version ([#15296](https://github.com/vercel/vercel/pull/15296))
+
+## 4.15.35
+
+### Patch Changes
+
+- Rename fetch to nodeFetch when importing from node-fetch ([#15232](https://github.com/vercel/vercel/pull/15232))
+
+## 4.15.34
+
+### Patch Changes
+
+- Add support for funcitonFailoverRegions in next builder ([#15237](https://github.com/vercel/vercel/pull/15237))
+
 ## 4.15.33
 
 ### Patch Changes

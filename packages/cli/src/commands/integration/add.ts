@@ -39,6 +39,7 @@ import { IntegrationAddTelemetryClient } from '../../util/telemetry/commands/int
 import { createAuthorization } from '../../util/integration/create-authorization';
 import sleep from '../../util/sleep';
 import { fetchAuthorization } from '../../util/integration/fetch-authorization';
+import { validateJsonOutput } from '../../util/output-format';
 
 import type { IntegrationAddFlags } from './command';
 
@@ -61,6 +62,14 @@ export async function add(
     return 1;
   }
   const installationId = flags['--installation-id'];
+
+  const formatResult = validateJsonOutput(flags);
+  if (!formatResult.valid) {
+    output.error(formatResult.error);
+    return 1;
+  }
+  const asJson = formatResult.jsonOutput;
+
   const options: AddOptions = {
     noConnect: flags['--no-connect'],
     noEnvPull: flags['--no-env-pull'],
@@ -111,7 +120,7 @@ export async function add(
   // to apply product-specific validation rules
 
   // Auto-provision: completely separate code path (self-contained telemetry)
-  if (process.env.FF_AUTO_PROVISION_INSTALL === '1') {
+  if (process.env.FF_AUTO_PROVISION_INSTALL !== '0') {
     return await addAutoProvision(client, integrationSlug, resourceNameArg, {
       productSlug,
       metadata: metadataFlags,
@@ -122,7 +131,15 @@ export async function add(
       environments: options.environments,
       prefix,
       commandName,
+      asJson,
     });
+  }
+
+  if (asJson) {
+    output.error(
+      'The --format flag is not yet supported with the integration add command'
+    );
+    return 1;
   }
 
   const telemetry = new IntegrationAddTelemetryClient({
@@ -509,6 +526,7 @@ async function provisionResourceViaCLI(
       metadata,
       billingPlan,
       authorizationId,
+      integration.slug,
       contextName,
       options
     );
@@ -706,6 +724,7 @@ async function provisionStorageProduct(
   metadata: Metadata,
   billingPlan: BillingPlan,
   authorizationId: string,
+  integrationSlug: string,
   contextName: string,
   options: AddOptions = {}
 ) {
@@ -734,5 +753,10 @@ async function provisionStorageProduct(
     `${product.name} successfully provisioned: ${chalk.bold(name)}`
   );
 
-  return postProvisionSetup(client, name, storeId, contextName, options);
+  const result = await postProvisionSetup(client, name, storeId, contextName, {
+    ...options,
+    integrationSlug,
+    installationId: installation.id,
+  });
+  return result.exitCode;
 }
