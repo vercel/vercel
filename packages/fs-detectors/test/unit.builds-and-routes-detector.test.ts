@@ -1272,6 +1272,43 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(errorRoutes).toStrictEqual([]);
   });
 
+  it('api + non-Next frontend adds catch-all /api 404', async () => {
+    const pkg = {
+      scripts: { build: 'react-scripts build' },
+      dependencies: {
+        react: '17.0.0',
+        'react-dom': '17.0.0',
+        'react-scripts': '4.0.0',
+      },
+    };
+    const files = ['package.json', 'api/endpoint.js', 'src/index.js'];
+    const projectSettings = {
+      framework: 'create-react-app',
+      buildCommand: 'react-scripts build',
+    };
+
+    const { builders, rewriteRoutes } = await invokeDetectBuildersAndThrow(
+      files,
+      pkg,
+      {
+        projectSettings,
+        featHandleMiss,
+      }
+    );
+
+    expect(builders[0].use).toBe('@vercel/node');
+    expect(builders[0].src).toBe('api/endpoint.js');
+    expect(builders[1].use).toBe('@vercel/static-build');
+    expect(builders[1].config?.framework).toBe('create-react-app');
+    expect(builders.length).toBe(2);
+
+    // Non-Next frontend with root api/ gets catch-all to hide directory listing
+    const catchAll = rewriteRoutes.find(
+      r => (r as Source).src === '^/api(/.*)?$' && (r as Source).status === 404
+    );
+    expect(catchAll).toBeDefined();
+  });
+
   it('Using "Create React App" framework with `next` in dependencies should NOT autodetect Next.js for new projects', async () => {
     const pkg = {
       scripts: {

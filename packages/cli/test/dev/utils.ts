@@ -494,8 +494,8 @@ export function testFixtureStdio(
 
       dev.stderr.on('data', async data => {
         stderr += data;
-        // Check accumulated stderr in case "Ready! Available at" is split across chunks
-        if (stripAnsi(stderr).includes('Ready! Available at')) {
+
+        if (stripAnsi(data).includes('Ready! Available at')) {
           readyResolver.resolve(null);
         }
 
