@@ -40,7 +40,7 @@ beforeEach(() => {
   openMock.mockReset().mockResolvedValue(undefined as never);
   pullMock.mockClear();
   connectMock.mockClear();
-  // Enable auto-provision feature flag
+  // Explicitly enable auto-provision so tests pass regardless of flag default
   process.env.FF_AUTO_PROVISION_INSTALL = '1';
   // Mock Math.random to get predictable resource names (gray-apple suffix)
   vi.spyOn(Math, 'random').mockReturnValue(0);
@@ -48,6 +48,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.restoreAllMocks();
+  delete process.env.FF_AUTO_PROVISION_INSTALL;
 });
 
 describe('integration add (auto-provision)', () => {
@@ -448,7 +449,7 @@ describe('integration add (auto-provision)', () => {
       const teams = useTeams('team_dummy');
       const t = Array.isArray(teams) ? teams[0] : teams.teams[0];
       client.config.currentTeam = t.id;
-      process.env.FF_AUTO_PROVISION_INSTALL = '1';
+
       useAutoProvision({
         responseKey: 'provisioned',
         withInstallation: false,
@@ -480,7 +481,7 @@ describe('integration add (auto-provision)', () => {
       const teams = useTeams('team_dummy');
       const t = Array.isArray(teams) ? teams[0] : teams.teams[0];
       client.config.currentTeam = t.id;
-      process.env.FF_AUTO_PROVISION_INSTALL = '1';
+
       useAutoProvision({
         responseKey: 'provisioned',
         withInstallation: false,
@@ -506,13 +507,47 @@ describe('integration add (auto-provision)', () => {
       );
     });
 
+    it('should open browser for terms when integration has requiresBrowserInstall capability', async () => {
+      client.reset();
+      useUser();
+      const teams = useTeams('team_dummy');
+      const t = Array.isArray(teams) ? teams[0] : teams.teams[0];
+      client.config.currentTeam = t.id;
+
+      useAutoProvision({
+        responseKey: 'provisioned',
+        withInstallation: false,
+        installationAppearsAfterPolls: 1,
+      });
+
+      // TTY is true, isAgent is false — but requiresBrowserInstall should still trigger browser flow
+      client.stdin.isTTY = true;
+      client.isAgent = false;
+      client.setArgv('integration', 'add', 'aws-apg');
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'Waiting for terms acceptance in browser...'
+      );
+      await expect(client.stderr).toOutput('Terms accepted in browser.');
+      await expect(client.stderr).toOutput(
+        'Aurora Postgres successfully provisioned: aws-apg-gray-apple'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+      expect(openMock).toHaveBeenCalledWith(
+        expect.stringContaining('/~/integrations/accept-terms/aws-apg')
+      );
+    });
+
     it('should exit with code 1 on browser terms timeout', async () => {
       client.reset();
       useUser();
       const teams = useTeams('team_dummy');
       const t = Array.isArray(teams) ? teams[0] : teams.teams[0];
       client.config.currentTeam = t.id;
-      process.env.FF_AUTO_PROVISION_INSTALL = '1';
+
       // Never return an installation — simulates user not accepting in browser
       useAutoProvision({
         responseKey: 'provisioned',
@@ -550,7 +585,7 @@ describe('integration add (auto-provision)', () => {
       const teams = useTeams('team_dummy');
       const t = Array.isArray(teams) ? teams[0] : teams.teams[0];
       client.config.currentTeam = t.id;
-      process.env.FF_AUTO_PROVISION_INSTALL = '1';
+
       useAutoProvision({
         responseKey: 'provisioned',
         withInstallation: true,
@@ -577,7 +612,7 @@ describe('integration add (auto-provision)', () => {
       const teams = useTeams('team_dummy');
       const t = Array.isArray(teams) ? teams[0] : teams.teams[0];
       client.config.currentTeam = t.id;
-      process.env.FF_AUTO_PROVISION_INSTALL = '1';
+
       useAutoProvision({
         responseKey: 'provisioned',
         withInstallation: false,
@@ -616,10 +651,10 @@ describe('integration add (auto-provision)', () => {
     });
 
     it('should only prompt for addendum when integration has no privacy or EULA', async () => {
-      client.setArgv('integration', 'add', 'aws-apg');
+      client.setArgv('integration', 'add', 'acme-prepayment');
       const exitCodePromise = integrationCommand(client);
 
-      // Only the addendum prompt should appear (aws-apg has no eulaDocUri/privacyDocUri)
+      // Only the addendum prompt should appear (acme-prepayment has no eulaDocUri/privacyDocUri)
       await expect(client.stderr).toOutput(
         'Accept Vercel Marketplace End User Addendum?'
       );
@@ -627,7 +662,7 @@ describe('integration add (auto-provision)', () => {
 
       // Should go straight to provisioning without privacy/EULA prompts
       await expect(client.stderr).toOutput(
-        'Aurora Postgres successfully provisioned'
+        'Acme Product successfully provisioned'
       );
 
       const exitCode = await exitCodePromise;
@@ -1307,8 +1342,6 @@ describe('integration add (auto-provision)', () => {
       const teams = useTeams('team_dummy');
       const t = Array.isArray(teams) ? teams[0] : teams.teams[0];
       client.config.currentTeam = t.id;
-      process.env.FF_AUTO_PROVISION_INSTALL = '1';
-
       // Integration endpoint (needed to fetch integration)
       client.scenario.get(
         '/:version/integrations/integration/:slug',
@@ -1806,7 +1839,7 @@ describe('integration add (auto-provision)', () => {
 
   describe('--installation-id FF gating', () => {
     it('should not show --installation-id in --help when FF is off', async () => {
-      delete process.env.FF_AUTO_PROVISION_INSTALL;
+      process.env.FF_AUTO_PROVISION_INSTALL = '0';
       client.setArgv('integration', 'add', '--help');
       const exitCode = await integrationCommand(client);
       expect(exitCode).toEqual(0);
@@ -1815,7 +1848,7 @@ describe('integration add (auto-provision)', () => {
     });
 
     it('should show --installation-id in --help when FF is on', async () => {
-      process.env.FF_AUTO_PROVISION_INSTALL = '1';
+      delete process.env.FF_AUTO_PROVISION_INSTALL;
       client.setArgv('integration', 'add', '--help');
       const exitCode = await integrationCommand(client);
       expect(exitCode).toEqual(0);
@@ -1824,7 +1857,7 @@ describe('integration add (auto-provision)', () => {
     });
 
     it('should reject --installation-id when FF is off', async () => {
-      delete process.env.FF_AUTO_PROVISION_INSTALL;
+      process.env.FF_AUTO_PROVISION_INSTALL = '0';
       client.setArgv(
         'integration',
         'add',
@@ -1842,7 +1875,7 @@ describe('integration add (auto-provision)', () => {
 
   describe('--installation-id FF gating (vc install alias)', () => {
     it('should not show --installation-id in vc install --help when FF is off', async () => {
-      delete process.env.FF_AUTO_PROVISION_INSTALL;
+      process.env.FF_AUTO_PROVISION_INSTALL = '0';
       client.setArgv('install', '--help');
       const exitCode = await install(client);
       expect(exitCode).toEqual(0);
@@ -1851,7 +1884,7 @@ describe('integration add (auto-provision)', () => {
     });
 
     it('should show --installation-id in vc install --help when FF is on', async () => {
-      process.env.FF_AUTO_PROVISION_INSTALL = '1';
+      delete process.env.FF_AUTO_PROVISION_INSTALL;
       client.setArgv('install', '--help');
       const exitCode = await install(client);
       expect(exitCode).toEqual(0);
@@ -1860,7 +1893,7 @@ describe('integration add (auto-provision)', () => {
     });
 
     it('should reject --installation-id in vc install when FF is off', async () => {
-      delete process.env.FF_AUTO_PROVISION_INSTALL;
+      process.env.FF_AUTO_PROVISION_INSTALL = '0';
       client.setArgv('install', 'acme', '--installation-id', 'icfg_123');
       const exitCode = await install(client);
       expect(exitCode).toEqual(1);
@@ -1870,7 +1903,6 @@ describe('integration add (auto-provision)', () => {
     });
 
     it('should provision successfully via vc install with --installation-id', async () => {
-      process.env.FF_AUTO_PROVISION_INSTALL = '1';
       const { requestBodies } = useAutoProvision({
         responseKey: 'multiple_installations',
       });
@@ -2302,7 +2334,7 @@ describe('integration add (auto-provision)', () => {
       expect(jsonOutput.installation).toEqual({ id: 'install_123' });
       expect(jsonOutput.billingPlan).toBeNull();
       expect(jsonOutput.dashboardUrl).toContain(
-        'stores/integration/resource_123'
+        '/d/dashboard/integrations/acme/install_123/resources/resource_123'
       );
       expect(jsonOutput.ssoUrl.integration).toContain(
         'integrationConfigurationId=install_123'

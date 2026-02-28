@@ -1,6 +1,9 @@
-import { describe, it, expect } from 'vitest';
+import { createHash } from 'node:crypto';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { join } from 'node:path';
-import { scanDistributions } from '../src';
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { extendDistRecord, scanDistributions } from '../src';
 
 const FIXTURES_DIR = join(__dirname, 'fixtures', 'dist-metadata-site-packages');
 
@@ -151,5 +154,148 @@ describe('scanDistributions', () => {
     const index = await scanDistributions(FIXTURES_DIR);
     const flask = index.get('flask')!;
     expect(flask.origin).toBeUndefined();
+  });
+});
+
+describe('extendDistRecord', () => {
+  let tmpDir: string;
+
+  beforeEach(async () => {
+    tmpDir = join(
+      tmpdir(),
+      `vc-test-dist-record-${Math.floor(Math.random() * 1e6)}`
+    );
+    await mkdir(tmpDir, { recursive: true });
+  });
+
+  afterEach(async () => {
+    await rm(tmpDir, { recursive: true, force: true });
+  });
+
+  async function setupDistInfo(
+    name: string,
+    version: string,
+    recordContent: string
+  ) {
+    const distInfoDir = join(tmpDir, `${name}-${version}.dist-info`);
+    await mkdir(distInfoDir, { recursive: true });
+    await writeFile(join(distInfoDir, 'RECORD'), recordContent);
+    return distInfoDir;
+  }
+
+  /** Create a file under tmpDir and return its expected RECORD entry. */
+  async function createFile(relPath: string, content: string): Promise<string> {
+    const fullPath = join(tmpDir, relPath);
+    await mkdir(join(fullPath, '..'), { recursive: true });
+    const buf = Buffer.from(content);
+    await writeFile(fullPath, buf);
+    const hash = createHash('sha256').update(buf).digest('base64url');
+    return `${relPath},sha256=${hash},${buf.length}`;
+  }
+
+  it('appends new entries with sha256 and size to RECORD', async () => {
+    await setupDistInfo('mypkg', '1.0.0', 'mypkg/__init__.py,,\n');
+    const entry1 = await createFile('mypkg/data/file1.bin', 'content1');
+    const entry2 = await createFile('mypkg/data/file2.bin', 'content2');
+
+    const count = await extendDistRecord(tmpDir, 'mypkg', [
+      'mypkg/data/file1.bin',
+      'mypkg/data/file2.bin',
+    ]);
+
+    expect(count).toBe(2);
+    const record = await readFile(
+      join(tmpDir, 'mypkg-1.0.0.dist-info', 'RECORD'),
+      'utf-8'
+    );
+    expect(record).toContain(entry1);
+    expect(record).toContain(entry2);
+  });
+
+  it('skips paths already in RECORD', async () => {
+    await setupDistInfo(
+      'mypkg',
+      '1.0.0',
+      'mypkg/__init__.py,,\nmypkg/existing.py,,\n'
+    );
+    await createFile('mypkg/__init__.py', '');
+    await createFile('mypkg/existing.py', '');
+    const newEntry = await createFile('mypkg/new.py', 'new content');
+
+    const count = await extendDistRecord(tmpDir, 'mypkg', [
+      'mypkg/__init__.py',
+      'mypkg/existing.py',
+      'mypkg/new.py',
+    ]);
+
+    expect(count).toBe(1);
+    const record = await readFile(
+      join(tmpDir, 'mypkg-1.0.0.dist-info', 'RECORD'),
+      'utf-8'
+    );
+    expect(record).toContain(newEntry);
+  });
+
+  it('returns 0 when all paths are already tracked', async () => {
+    await setupDistInfo('mypkg', '1.0.0', 'mypkg/__init__.py,,\n');
+    await createFile('mypkg/__init__.py', '');
+
+    const count = await extendDistRecord(tmpDir, 'mypkg', [
+      'mypkg/__init__.py',
+    ]);
+
+    expect(count).toBe(0);
+  });
+
+  it('matches package name using PEP 503 normalization', async () => {
+    await setupDistInfo('My_Package', '2.0.0', 'my_package/__init__.py,,\n');
+    await createFile('my_package/extra.py', 'extra');
+
+    const count = await extendDistRecord(tmpDir, 'my-package', [
+      'my_package/extra.py',
+    ]);
+
+    expect(count).toBe(1);
+  });
+
+  it('throws when dist-info directory is not found', async () => {
+    await expect(
+      extendDistRecord(tmpDir, 'nonexistent', ['some/file.py'])
+    ).rejects.toThrow(/No .dist-info directory found/);
+  });
+
+  it('throws when RECORD file is missing', async () => {
+    const distInfoDir = join(tmpDir, 'mypkg-1.0.0.dist-info');
+    await mkdir(distInfoDir, { recursive: true });
+    // No RECORD file written
+
+    await expect(
+      extendDistRecord(tmpDir, 'mypkg', ['mypkg/file.py'])
+    ).rejects.toThrow(/RECORD file not found/);
+  });
+
+  it('handles RECORD without trailing newline', async () => {
+    await setupDistInfo('mypkg', '1.0.0', 'mypkg/__init__.py,,');
+    const newEntry = await createFile('mypkg/new.py', 'new');
+
+    const count = await extendDistRecord(tmpDir, 'mypkg', ['mypkg/new.py']);
+
+    expect(count).toBe(1);
+    const record = await readFile(
+      join(tmpDir, 'mypkg-1.0.0.dist-info', 'RECORD'),
+      'utf-8'
+    );
+    // The existing last line must not be corrupted
+    expect(record).toContain('mypkg/__init__.py,,\n');
+    expect(record).toContain(newEntry + '\n');
+  });
+
+  it('handles empty paths array', async () => {
+    await setupDistInfo('mypkg', '1.0.0', 'mypkg/__init__.py,,\n');
+    await createFile('mypkg/__init__.py', '');
+
+    const count = await extendDistRecord(tmpDir, 'mypkg', []);
+
+    expect(count).toBe(0);
   });
 });

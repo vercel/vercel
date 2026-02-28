@@ -28,7 +28,7 @@ export type {
   DirectUrlInfo,
 } from './manifest/dist-metadata';
 
-export { scanDistributions } from './manifest/dist-metadata';
+export { extendDistRecord, scanDistributions } from './manifest/dist-metadata';
 
 // =============================================================================
 // Package discovery (runtime + types)

@@ -39,14 +39,18 @@ When evals are added, agents in the sandbox can use the local CLI build (`dist/v
 
 The GitHub Action runs on **pull requests** that touch `packages/cli/**`. It runs `pnpm test:evals` from `packages/cli/`. Evals use **separate repo secrets** (EVAL\_\*) so you can point to a dedicated evals team:
 
-| GitHub secret             | Passed as env       | Purpose                               |
-| ------------------------- | ------------------- | ------------------------------------- |
-| `EVAL_AI_GATEWAY_API_KEY` | AI_GATEWAY_API_KEY  | Agent + classifier (required)         |
-| `EVAL_TOKEN`              | VERCEL_TOKEN        | Vercel API / sandbox (as in test.yml) |
-| `EVAL_TEAM_ID`            | CLI_EVAL_TEAM_ID    | Evals team ID                         |
-| `EVAL_PROJECT_ID`         | CLI_EVAL_PROJECT_ID | Evals project ID                      |
+| GitHub secret             | Passed as env       | Purpose                                |
+| ------------------------- | ------------------- | -------------------------------------- |
+| `EVAL_AI_GATEWAY_API_KEY` | AI_GATEWAY_API_KEY  | Agent + classifier (required)          |
+| `EVAL_TOKEN`              | VERCEL_TOKEN        | Vercel API / sandbox (as in test.yml)  |
+| `EVAL_TEAM_ID`            | CLI_EVAL_TEAM_ID    | Evals team ID                          |
+| `EVAL_PROJECT_ID`         | CLI_EVAL_PROJECT_ID | Evals project ID (optional; see below) |
 
 Until these are set and evals exist, the job fails with a clear message. See `.github/workflows/cli-evals.yml`.
+
+**Ephemeral projects:** If `CLI_EVAL_PROJECT_ID` is not set, the runner creates an ephemeral project per eval run (using `VERCEL_TOKEN` and `CLI_EVAL_TEAM_ID`), links the sandbox to it, and deletes it after the run. To use a fixed project instead, set `CLI_EVAL_PROJECT_ID` (e.g. via `EVAL_PROJECT_ID` in CI).
+
+**Matrix (with/without skills):** By default the runner runs each eval twice: once with the CLI skills directory copied into the sandbox (`with-skills`) and once without (`without-skills`). Set `CLI_EVAL_SKILLS_MODES=with-skills` or `CLI_EVAL_SKILLS_MODES=without-skills` to run only one. Set `CLI_EVAL_PROJECT_MODES=linked-project,no-linked-project` to also vary project mode (cross product with skills).
 
 ## Getting credentials
 

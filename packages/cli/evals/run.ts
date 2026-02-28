@@ -11,6 +11,9 @@ import { existsSync, readdirSync } from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import * as oidc from '@vercel/oidc';
+import { config } from 'dotenv';
+import { destroy, getEvalVariants, setup } from './hooks';
+import type { EvalRunContext, SetupResult } from './hooks';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -47,6 +50,8 @@ function discoverEvals(): string[] {
   return results;
 }
 
+const sandboxProjectDir = join(__dirname, 'sandbox-project');
+
 async function main() {
   const evals = discoverEvals();
   if (evals.length === 0) {
@@ -56,21 +61,52 @@ async function main() {
     process.exit(0);
   }
 
-  const vercelOidcToken = await oidc.getVercelOidcToken({
-    project: 'sandbox-project',
-    team: 'agentic-zero-conf',
-  });
-  const vercelToken = await oidc.getVercelToken();
+  let vercelOidcToken: string | undefined;
+  let vercelToken: string | undefined;
+  try {
+    vercelOidcToken = await oidc.getVercelOidcToken({
+      project: 'sandbox-project',
+      team: 'agentic-zero-conf',
+    });
+  } catch {
+    config({ path: join(sandboxProjectDir, '.env.local') });
+    vercelOidcToken = process.env.VERCEL_OIDC_TOKEN;
+  }
+  try {
+    vercelToken = await oidc.getVercelToken();
+  } catch {
+    vercelToken = process.env.VERCEL_TOKEN;
+  }
 
   const args = process.argv.slice(2);
   const isDryRun = args.includes('--dry');
-  const hasCreds = Boolean(vercelOidcToken);
+  const hasCreds = Boolean(vercelOidcToken ?? vercelToken);
   if (!isDryRun && !hasCreds) {
     process.stderr.write(
-      'Evals require AI_GATEWAY_API_KEY (e.g. from Vercel → AI Gateway → API Keys). Set it in .env or CI secrets (or use --dry to preview).\n'
+      'Evals require AI_GATEWAY_API_KEY and either VERCEL_OIDC_TOKEN or VERCEL_TOKEN (set in .env or CI secrets, or use --dry to preview).\n'
     );
     process.exit(1);
   }
+
+  // When OIDC wasn't available we fell back to VERCEL_TOKEN; smoke uses the Vercel sandbox and requires OIDC, so skip it.
+  const usedOIDCFallback = !vercelOidcToken && Boolean(vercelToken);
+  const flagArgs = args.filter(a => a.startsWith('-'));
+  const explicitExperimentArgs = args.filter(a => !a.startsWith('-'));
+  const experimentsToRun =
+    explicitExperimentArgs.length > 0
+      ? explicitExperimentArgs
+      : usedOIDCFallback
+        ? ['cc', 'cli', 'vercel-cli-cc']
+        : [];
+  const agentEvalArgsToPass =
+    experimentsToRun.length > 0 ? [...flagArgs, ...experimentsToRun] : args;
+  if (usedOIDCFallback && explicitExperimentArgs.length === 0) {
+    process.stderr.write(
+      'Skipping smoke experiment (requires OIDC). Running: cc, cli, vercel-cli-cc.\n'
+    );
+  }
+
+  const variants = getEvalVariants();
 
   // Progress: print what will run so it's visible as the eval runs
   process.stdout.write(`\nEvals to run: ${evals.join(', ')}\n`);
@@ -78,28 +114,82 @@ async function main() {
     'Progress: each eval prints "Running <name>..." when it starts and "✓/✗ <name>..." when it finishes (can take several minutes per eval).\n\n'
   );
 
-  // const agentEvalBinary = '/Users/jeffsee/code/agent-eval/packages/agent-eval/dist/cli.js'
-  const agentEvalBinary = '@vercel/agent-eval@latest';
-  const agentEvalArgs = ['--yes', agentEvalBinary, ...args];
+  let overallExitCode = 0;
 
-  const child = spawn('npx', agentEvalArgs, {
-    cwd: __dirname,
-    stdio: 'inherit',
-    env: {
-      ...process.env,
-      FORCE_COLOR: '1',
-      VERCEL_OIDC_TOKEN: vercelOidcToken,
-      VERCEL_TOKEN: vercelToken,
-    },
-  });
+  for (const variant of variants) {
+    const context: EvalRunContext = {
+      cwd: __dirname,
+      sandboxProjectDir,
+      projectMode: variant.projectMode,
+      withSkills: variant.withSkills,
+    };
 
-  const exitCode = await new Promise<number>(resolve => {
-    child.on('close', (code, signal) => {
-      resolve(code ?? (signal ? 1 : 0));
-    });
-  });
+    let setupResult: SetupResult | void = undefined;
 
-  process.exit(exitCode);
+    process.stdout.write(
+      `\n=== CLI eval variant "${variant.id}" (projectMode=${variant.projectMode}, withSkills=${variant.withSkills}) ===\n`
+    );
+
+    try {
+      setupResult = await setup(context);
+
+      const agentEvalEnv: NodeJS.ProcessEnv = {
+        ...process.env,
+        FORCE_COLOR: '1',
+        CLI_EVAL_WITH_SKILLS: variant.withSkills ? '1' : '0',
+        ...(vercelOidcToken ? { VERCEL_OIDC_TOKEN: vercelOidcToken } : {}),
+        ...(vercelToken ? { VERCEL_TOKEN: vercelToken } : {}),
+      };
+      if (setupResult?.createdProjectId) {
+        agentEvalEnv.CLI_EVAL_PROJECT_ID = setupResult.createdProjectId;
+      }
+
+      const agentEvalArgs = [
+        '--yes',
+        '@vercel/agent-eval@latest',
+        ...agentEvalArgsToPass,
+      ];
+
+      const child = spawn('npx', agentEvalArgs, {
+        cwd: __dirname,
+        stdio: 'inherit',
+        env: agentEvalEnv,
+      });
+
+      const exitCode = await new Promise<number>(resolve => {
+        child.on('close', (code, signal) => {
+          resolve(code ?? (signal ? 1 : 0));
+        });
+      });
+
+      if (exitCode !== 0) {
+        overallExitCode = exitCode;
+      }
+    } catch (err: any) {
+      const message =
+        err && typeof err.message === 'string'
+          ? err.message
+          : String(err ?? 'unknown error');
+      process.stderr.write(
+        `Error running CLI eval variant "${variant.id}": ${message}\n`
+      );
+      overallExitCode = 1;
+    } finally {
+      try {
+        await destroy(context, setupResult);
+      } catch (err: any) {
+        const message =
+          err && typeof err.message === 'string'
+            ? err.message
+            : String(err ?? 'unknown error');
+        process.stderr.write(
+          `Error during CLI evals teardown (destroy hook) for variant "${variant.id}": ${message}\n`
+        );
+      }
+    }
+  }
+
+  process.exit(overallExitCode);
 }
 
 main().catch(err => {

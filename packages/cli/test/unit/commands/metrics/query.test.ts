@@ -81,7 +81,7 @@ describe('query', () => {
       const output = client.stdout.getFullOutput();
       const parsed = JSON.parse(output);
       expect(parsed.error.code).toBe('UNKNOWN_EVENT');
-      expect(parsed.error.allowedValues).toContain('incomingRequest');
+      expect(parsed.error.allowedValues).toContain('edgeRequest');
     });
   });
 
@@ -92,7 +92,7 @@ describe('query', () => {
         'metrics',
         'query',
         '--event',
-        'incomingRequest',
+        'edgeRequest',
         '--measure',
         'bogus'
       );
@@ -113,7 +113,7 @@ describe('query', () => {
         'metrics',
         'query',
         '--event',
-        'incomingRequest',
+        'edgeRequest',
         '--measure',
         'count',
         '--aggregation',
@@ -137,7 +137,7 @@ describe('query', () => {
         res.json({ data: [], summary: [], statistics: {} });
       });
       mockLinkedProject();
-      client.setArgv('metrics', '--event', 'incomingRequest');
+      client.setArgv('metrics', '--event', 'edgeRequest');
 
       const exitCode = await query(client, new MockTelemetry());
 
@@ -182,7 +182,7 @@ describe('query', () => {
         'metrics',
         'query',
         '--event',
-        'incomingRequest',
+        'edgeRequest',
         '--measure',
         'fdtOutBytes'
       );
@@ -202,7 +202,7 @@ describe('query', () => {
         'metrics',
         'query',
         '--event',
-        'incomingRequest',
+        'edgeRequest',
         '--group-by',
         'bogus'
       );
@@ -243,7 +243,7 @@ describe('query', () => {
         res.json({ data: [], summary: [], statistics: {} });
       });
       mockLinkedProject();
-      client.setArgv('metrics', '--event', 'incomingRequest');
+      client.setArgv('metrics', '--event', 'edgeRequest');
 
       const exitCode = await query(client, new MockTelemetry());
 
@@ -266,7 +266,7 @@ describe('query', () => {
         'metrics',
         'query',
         '--event',
-        'incomingRequest',
+        'edgeRequest',
         '--project',
         'other-app'
       );
@@ -288,7 +288,7 @@ describe('query', () => {
         res.json({ data: [], summary: [], statistics: {} });
       });
       mockTeamScope('my-team');
-      client.setArgv('metrics', '--event', 'incomingRequest', '--all');
+      client.setArgv('metrics', '--event', 'edgeRequest', '--all');
 
       const exitCode = await query(client, new MockTelemetry());
 
@@ -304,7 +304,7 @@ describe('query', () => {
         'metrics',
         'query',
         '--event',
-        'incomingRequest',
+        'edgeRequest',
         '--all',
         '--project',
         'my-app'
@@ -324,7 +324,7 @@ describe('query', () => {
         org: null as any,
         project: null as any,
       });
-      client.setArgv('metrics', '--event', 'incomingRequest');
+      client.setArgv('metrics', '--event', 'edgeRequest');
 
       const exitCode = await query(client, new MockTelemetry());
 
@@ -337,7 +337,7 @@ describe('query', () => {
         status: 'error',
         exitCode: 1,
       });
-      client.setArgv('metrics', '--event', 'incomingRequest');
+      client.setArgv('metrics', '--event', 'edgeRequest');
 
       const exitCode = await query(client, new MockTelemetry());
 
@@ -350,7 +350,7 @@ describe('query', () => {
         team: null,
         user: { id: 'user_dummy' } as any,
       });
-      client.setArgv('metrics', '--event', 'incomingRequest', '--all');
+      client.setArgv('metrics', '--event', 'edgeRequest', '--all');
 
       const exitCode = await query(client, new MockTelemetry());
 
@@ -368,7 +368,7 @@ describe('query', () => {
         'metrics',
         'query',
         '--event',
-        'incomingRequest',
+        'edgeRequest',
         '--project',
         'my-app'
       );
@@ -391,7 +391,7 @@ describe('query', () => {
         'metrics',
         'query',
         '--event',
-        'incomingRequest',
+        'edgeRequest',
         '--project',
         'other-app'
       );
@@ -407,41 +407,42 @@ describe('query', () => {
     });
   });
 
-  describe('CSV output', () => {
-    it('should output ungrouped CSV', async () => {
+  describe('text output', () => {
+    it('should output ungrouped text', async () => {
       client.scenario.post('/api/observability/metrics', (_req, res) => {
         res.json({
           data: [
-            { timestamp: '2025-01-15T10:00:00Z', value: 89 },
-            { timestamp: '2025-01-15T10:05:00Z', value: 102 },
+            { timestamp: '2025-01-15T10:00:00Z', count_sum: 89 },
+            { timestamp: '2025-01-15T10:05:00Z', count_sum: 102 },
           ],
-          summary: [{ value: 191 }],
+          summary: [{ count_sum: 191 }],
           statistics: { rowsRead: 100 },
         });
       });
       mockLinkedProject();
-      client.setArgv('metrics', '--event', 'incomingRequest');
+      client.setArgv('metrics', '--event', 'edgeRequest');
 
       const exitCode = await query(client, new MockTelemetry());
 
       expect(exitCode).toBe(0);
       const output = client.stdout.getFullOutput();
-      expect(output).toContain('timestamp,count_sum');
+      expect(output).toContain('> Metric:');
+      expect(output).toContain('sparklines:');
     });
 
-    it('should output grouped CSV', async () => {
+    it('should output grouped text', async () => {
       client.scenario.post('/api/observability/metrics', (_req, res) => {
         res.json({
           data: [
             {
               timestamp: '2025-01-15T10:00:00Z',
               httpStatus: '200',
-              value: 4520,
+              count_sum: 4520,
             },
             {
               timestamp: '2025-01-15T10:00:00Z',
               httpStatus: '500',
-              value: 89,
+              count_sum: 89,
             },
           ],
           summary: [],
@@ -453,7 +454,7 @@ describe('query', () => {
         'metrics',
         'query',
         '--event',
-        'incomingRequest',
+        'edgeRequest',
         '--group-by',
         'httpStatus'
       );
@@ -462,21 +463,25 @@ describe('query', () => {
 
       expect(exitCode).toBe(0);
       const output = client.stdout.getFullOutput();
-      expect(output).toContain('timestamp,httpStatus,count_sum');
+      expect(output).toContain('httpStatus');
+      expect(output).toContain('sparklines:');
+      expect(output).toContain('> Groups:');
     });
 
-    it('should output header only for empty data', async () => {
+    it('should output no-data message for empty data', async () => {
       client.scenario.post('/api/observability/metrics', (_req, res) => {
         res.json({ data: [], summary: [], statistics: {} });
       });
       mockLinkedProject();
-      client.setArgv('metrics', '--event', 'incomingRequest');
+      client.setArgv('metrics', '--event', 'edgeRequest');
 
       const exitCode = await query(client, new MockTelemetry());
 
       expect(exitCode).toBe(0);
       const output = client.stdout.getFullOutput();
-      expect(output).toContain('timestamp,count_sum');
+      expect(output).toContain('> Metric:');
+      expect(output).toContain('No data');
+      expect(output).not.toContain('sparklines:');
     });
   });
 
@@ -494,7 +499,7 @@ describe('query', () => {
         'metrics',
         'query',
         '--event',
-        'incomingRequest',
+        'edgeRequest',
         '--format=json'
       );
 
@@ -503,7 +508,7 @@ describe('query', () => {
       expect(exitCode).toBe(0);
       const output = client.stdout.getFullOutput();
       const parsed = JSON.parse(output);
-      expect(parsed.query.event).toBe('incomingRequest');
+      expect(parsed.query.event).toBe('edgeRequest');
       expect(parsed.data).toHaveLength(1);
       expect(parsed.summary).toHaveLength(1);
       expect(parsed.statistics).toBeDefined();
@@ -522,7 +527,7 @@ describe('query', () => {
         'metrics',
         'query',
         '--event',
-        'incomingRequest',
+        'edgeRequest',
         '--limit',
         '50'
       );
@@ -531,30 +536,6 @@ describe('query', () => {
 
       expect(exitCode).toBe(0);
       expect(requestBody.limit).toBe(50);
-    });
-  });
-
-  describe('--order-by flag', () => {
-    it('should send order-by to API', async () => {
-      let requestBody: any;
-      client.scenario.post('/api/observability/metrics', (req, res) => {
-        requestBody = req.body;
-        res.json({ data: [], summary: [], statistics: {} });
-      });
-      mockLinkedProject();
-      client.setArgv(
-        'metrics',
-        'query',
-        '--event',
-        'incomingRequest',
-        '--order-by',
-        'value:asc'
-      );
-
-      const exitCode = await query(client, new MockTelemetry());
-
-      expect(exitCode).toBe(0);
-      expect(requestBody.orderBy).toBe('value:asc');
     });
   });
 
@@ -570,7 +551,7 @@ describe('query', () => {
         'metrics',
         'query',
         '--event',
-        'incomingRequest',
+        'edgeRequest',
         '--filter',
         'httpStatus ge 500'
       );
@@ -588,7 +569,7 @@ describe('query', () => {
         res.status(402).json({ error: { code: 'PAYMENT_REQUIRED' } });
       });
       mockLinkedProject();
-      client.setArgv('metrics', '--event', 'incomingRequest');
+      client.setArgv('metrics', '--event', 'edgeRequest');
 
       const exitCode = await query(client, new MockTelemetry());
 
@@ -603,7 +584,7 @@ describe('query', () => {
         res.status(403).json({ error: { code: 'FORBIDDEN' } });
       });
       mockLinkedProject();
-      client.setArgv('metrics', '--event', 'incomingRequest');
+      client.setArgv('metrics', '--event', 'edgeRequest');
 
       const exitCode = await query(client, new MockTelemetry());
 
@@ -616,7 +597,7 @@ describe('query', () => {
         res.status(500).json({ error: { code: 'INTERNAL_ERROR' } });
       });
       mockLinkedProject();
-      client.setArgv('metrics', '--event', 'incomingRequest');
+      client.setArgv('metrics', '--event', 'edgeRequest');
 
       const exitCode = await query(client, new MockTelemetry());
 
@@ -631,7 +612,7 @@ describe('query', () => {
           .json({ error: { code: 'BAD_REQUEST', message: 'Invalid query' } });
       });
       mockLinkedProject();
-      client.setArgv('metrics', '--event', 'incomingRequest');
+      client.setArgv('metrics', '--event', 'edgeRequest');
 
       const exitCode = await query(client, new MockTelemetry());
 
@@ -648,7 +629,7 @@ describe('query', () => {
         'metrics',
         'query',
         '--event',
-        'incomingRequest',
+        'edgeRequest',
         '--format=json'
       );
 
@@ -665,12 +646,12 @@ describe('query', () => {
     it('should track event option', async () => {
       mockApiSuccess();
       mockLinkedProject();
-      client.setArgv('metrics', '--event', 'incomingRequest');
+      client.setArgv('metrics', '--event', 'edgeRequest');
 
       await query(client, new MockTelemetry());
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        { key: 'option:event', value: 'incomingRequest' },
+        { key: 'option:event', value: 'edgeRequest' },
       ]);
     });
 
@@ -681,7 +662,7 @@ describe('query', () => {
         'metrics',
         'query',
         '--event',
-        'incomingRequest',
+        'edgeRequest',
         '--measure',
         'requestDurationMs'
       );
@@ -689,7 +670,7 @@ describe('query', () => {
       await query(client, new MockTelemetry());
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        { key: 'option:event', value: 'incomingRequest' },
+        { key: 'option:event', value: 'edgeRequest' },
         { key: 'option:measure', value: 'requestDurationMs' },
       ]);
     });
@@ -701,7 +682,7 @@ describe('query', () => {
         'metrics',
         'query',
         '--event',
-        'incomingRequest',
+        'edgeRequest',
         '--measure',
         'requestDurationMs',
         '--aggregation',
@@ -711,7 +692,7 @@ describe('query', () => {
       await query(client, new MockTelemetry());
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        { key: 'option:event', value: 'incomingRequest' },
+        { key: 'option:event', value: 'edgeRequest' },
         { key: 'option:measure', value: 'requestDurationMs' },
         { key: 'option:aggregation', value: 'p95' },
       ]);
@@ -724,7 +705,7 @@ describe('query', () => {
         'metrics',
         'query',
         '--event',
-        'incomingRequest',
+        'edgeRequest',
         '--group-by',
         'httpStatus'
       );
@@ -732,7 +713,7 @@ describe('query', () => {
       await query(client, new MockTelemetry());
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        { key: 'option:event', value: 'incomingRequest' },
+        { key: 'option:event', value: 'edgeRequest' },
         { key: 'option:group-by', value: 'httpStatus' },
       ]);
     });
@@ -744,7 +725,7 @@ describe('query', () => {
         'metrics',
         'query',
         '--event',
-        'incomingRequest',
+        'edgeRequest',
         '--limit',
         '50'
       );
@@ -752,7 +733,7 @@ describe('query', () => {
       await query(client, new MockTelemetry());
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        { key: 'option:event', value: 'incomingRequest' },
+        { key: 'option:event', value: 'edgeRequest' },
         { key: 'option:limit', value: '[REDACTED]' },
       ]);
     });
@@ -764,7 +745,7 @@ describe('query', () => {
         'metrics',
         'query',
         '--event',
-        'incomingRequest',
+        'edgeRequest',
         '--filter',
         'httpStatus ge 500'
       );
@@ -772,7 +753,7 @@ describe('query', () => {
       await query(client, new MockTelemetry());
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        { key: 'option:event', value: 'incomingRequest' },
+        { key: 'option:event', value: 'edgeRequest' },
         { key: 'option:filter', value: '[REDACTED]' },
       ]);
     });
@@ -780,12 +761,12 @@ describe('query', () => {
     it('should track --all flag', async () => {
       mockApiSuccess();
       mockTeamScope();
-      client.setArgv('metrics', '--event', 'incomingRequest', '--all');
+      client.setArgv('metrics', '--event', 'edgeRequest', '--all');
 
       await query(client, new MockTelemetry());
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        { key: 'option:event', value: 'incomingRequest' },
+        { key: 'option:event', value: 'edgeRequest' },
         { key: 'flag:all', value: 'TRUE' },
       ]);
     });
@@ -797,14 +778,14 @@ describe('query', () => {
         'metrics',
         'query',
         '--event',
-        'incomingRequest',
+        'edgeRequest',
         '--format=json'
       );
 
       await query(client, new MockTelemetry());
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        { key: 'option:event', value: 'incomingRequest' },
+        { key: 'option:event', value: 'edgeRequest' },
         { key: 'option:format', value: 'json' },
       ]);
     });
@@ -816,7 +797,7 @@ describe('query', () => {
         'metrics',
         'query',
         '--event',
-        'incomingRequest',
+        'edgeRequest',
         '--granularity',
         '5m'
       );
@@ -824,7 +805,7 @@ describe('query', () => {
       await query(client, new MockTelemetry());
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        { key: 'option:event', value: 'incomingRequest' },
+        { key: 'option:event', value: 'edgeRequest' },
         { key: 'option:granularity', value: '5m' },
       ]);
     });
@@ -836,7 +817,7 @@ describe('query', () => {
         'metrics',
         'query',
         '--event',
-        'incomingRequest',
+        'edgeRequest',
         '--project',
         'my-app'
       );
@@ -844,7 +825,7 @@ describe('query', () => {
       await query(client, new MockTelemetry());
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        { key: 'option:event', value: 'incomingRequest' },
+        { key: 'option:event', value: 'edgeRequest' },
         { key: 'option:project', value: '[REDACTED]' },
       ]);
     });
@@ -862,7 +843,7 @@ describe('query', () => {
         'metrics',
         'query',
         '--event',
-        'incomingRequest',
+        'edgeRequest',
         '--measure',
         'requestDurationMs',
         '--aggregation',
