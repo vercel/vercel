@@ -1,5 +1,16 @@
 # vercel
 
+## 50.25.3
+
+### Patch Changes
+
+- feat(cli): skip inline terms for integrations requiring browser install ([#15308](https://github.com/vercel/vercel/pull/15308))
+
+- evals outputs ([#15312](https://github.com/vercel/vercel/pull/15312))
+
+- Updated dependencies [[`61104b4d6f28ac8b84a237a2dfd4c16b9cc1fcac`](https://github.com/vercel/vercel/commit/61104b4d6f28ac8b84a237a2dfd4c16b9cc1fcac)]:
+  - @vercel/python@6.18.1
+
 ## 50.25.2
 
 ### Patch Changes

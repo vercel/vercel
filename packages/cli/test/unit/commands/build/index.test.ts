@@ -1571,6 +1571,28 @@ describe.skipIf(flakey)('build', () => {
     });
   });
 
+  it('should merge routes and overrides from multiple Build Output API builders', async () => {
+    const cwd = fixture('multi-build-output-config');
+    const output = join(cwd, '.vercel/output');
+
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toEqual(0);
+
+    const config = await fs.readJSON(join(output, 'config.json'));
+    expect(config).toMatchObject({
+      version: 3,
+      routes: expect.arrayContaining([
+        expect.objectContaining({ src: '^/first/?$', dest: '/first' }),
+        expect.objectContaining({ src: '^/second/?$', dest: '/second' }),
+      ]),
+      overrides: {
+        'static/first.txt': { path: 'static/first.txt' },
+        'static/second.txt': { path: 'static/second.txt' },
+      },
+    });
+  });
+
   it('should not apply framework `defaultRoutes` when build command outputs Build Output API', async () => {
     const cwd = fixture('build-output-api-with-api-dir');
     const output = join(cwd, '.vercel/output');
