@@ -63,7 +63,22 @@ export async function downloadFile(
   if (isSymbolicLink(mode)) {
     const target = await prepareSymlinkTarget(file, fsPath);
 
-    await symlink(target, fsPath);
+    try {
+      await symlink(target, fsPath);
+    } catch (err: any) {
+      if (err.code === 'EEXIST') {
+        // When using `--standalone` in a monorepo, multiple functions may
+        // try to write the same symlink to the shared output directory.
+        // If the existing symlink points to the same target, skip it.
+        const existingTarget = await readlink(fsPath);
+        if (existingTarget !== target) {
+          await remove(fsPath);
+          await symlink(target, fsPath);
+        }
+      } else {
+        throw err;
+      }
+    }
     return FileFsRef.fromFsPath({ mode, fsPath });
   }
 
