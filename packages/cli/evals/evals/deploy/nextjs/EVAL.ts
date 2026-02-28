@@ -9,10 +9,10 @@ test('creates a project by the name of the fixture folder', async () => {
   const projectInfo = await promisify(exec)(
     `vc project inspect ${fixtureFolder} --scope=agentic-zero-conf`
   );
-  expect(projectInfo).toContain('Next.js');
-  expect(projectInfo).toContain(fixtureFolder);
+  expect(projectInfo.stderr).toContain('Next.js');
+  expect(projectInfo.stderr).toContain(fixtureFolder);
   const deploymentInfo = await promisify(exec)(
     `vc list ${fixtureFolder} --scope=agentic-zero-conf`
   );
-  expect(deploymentInfo).toContain('Ready');
+  expect(deploymentInfo.stderr).toContain('Ready');
 });
