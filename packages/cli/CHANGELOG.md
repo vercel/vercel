@@ -1,5 +1,103 @@
 # vercel
 
+## 50.25.4
+
+### Patch Changes
+
+- feat(cli): add optional search query to `vercel integration discover` ([#15320](https://github.com/vercel/vercel/pull/15320))
+
+- [python] setup logging in `vc_init_dev` to route records with level <= `WARNING` to `stdout` and with level >= `ERROR` to `stderr`. ([#15328](https://github.com/vercel/vercel/pull/15328))
+
+- Enable service route-prefix auto stripping for explicitly configured ([#15327](https://github.com/vercel/vercel/pull/15327))
+  multi-service `vercel.json` setups across runtimes, matching generated-prefix
+  behavior during build and dev orchestration.
+
+- [services] fix multiple route-owning builders writing to build output API ([#15323](https://github.com/vercel/vercel/pull/15323))
+
+  Fix `vc build` services route merging when multiple builders return `buildOutputPath`.
+  Instead of reusing a single merged `.vercel/output/config.json` for the first matching build, `vc build` now reads each builder's own `config.json`,
+  scopes those routes to service ownership, and merges routes/overrides per builder. This prevents sibling service routes from being dropped and restores expected app-level 404 behavior.
+
+- Updated dependencies [[`b5483654e4c8a6c1128d2afd0eca2e081ff70403`](https://github.com/vercel/vercel/commit/b5483654e4c8a6c1128d2afd0eca2e081ff70403)]:
+  - @vercel/python@6.19.0
+
+## 50.25.3
+
+### Patch Changes
+
+- feat(cli): skip inline terms for integrations requiring browser install ([#15308](https://github.com/vercel/vercel/pull/15308))
+
+- evals outputs ([#15312](https://github.com/vercel/vercel/pull/15312))
+
+- Updated dependencies [[`61104b4d6f28ac8b84a237a2dfd4c16b9cc1fcac`](https://github.com/vercel/vercel/commit/61104b4d6f28ac8b84a237a2dfd4c16b9cc1fcac)]:
+  - @vercel/python@6.18.1
+
+## 50.25.2
+
+### Patch Changes
+
+- cli(metrics): align schema with query engine and rename incomingRequest to edgeRequest ([#15301](https://github.com/vercel/vercel/pull/15301))
+
+  - Remove `tokens` unit type (now `count`), drop `unique` aggregation, add `p50`
+  - Remove unsupported events: `analyticsEvent`, `analyticsPageview`, `blobStoreState`, `dataCacheState`
+  - Update dimensions, measures, and `filterOnly` flags across all events
+  - Rename `incomingRequest` to `edgeRequest` with query engine aliasing for agent understanding
+
+- Adding in skills matrix for evals ([#15280](https://github.com/vercel/vercel/pull/15280))
+
+- Ellipsize long group values in `metrics` text output to prevent excessively wide tables. Values exceeding 60 characters are truncated by keeping equal start/end portions with `…` in the middle. ([#15279](https://github.com/vercel/vercel/pull/15279))
+
+- fix(cli): stop showing region as required in help since server handles region selection ([#15194](https://github.com/vercel/vercel/pull/15194))
+
+- Remove `--order-by` flag from `metrics query` command; ordering is handled server-side. ([#15281](https://github.com/vercel/vercel/pull/15281))
+
+- fix: dev server OOM issues for large functions ([#15260](https://github.com/vercel/vercel/pull/15260))
+
+- Updated dependencies []:
+  - @vercel/build-utils@13.6.1
+  - @vercel/next@4.15.36
+  - @vercel/redwood@2.4.9
+  - @vercel/rust@1.0.5
+  - @vercel/static-build@2.8.43
+
+## 50.25.1
+
+### Patch Changes
+
+- Add `buy` command for purchasing Vercel products (credits, addons, pro, v0, domains) ([#15038](https://github.com/vercel/vercel/pull/15038))
+
+- Suggest `vercel integration guide` after successful provisioning, use deeplink format for dashboard URL, and mention `integration discover` in `integration guide` help ([#15293](https://github.com/vercel/vercel/pull/15293))
+
+- Support add-on purchasing in `vercel buy` CLI ([#15172](https://github.com/vercel/vercel/pull/15172))
+
+- Add `vercel buy pro` subcommand for purchasing Pro plan ([#15221](https://github.com/vercel/vercel/pull/15221))
+
+- fix(cli): improve agent discoverability of integration-resource commands ([#15275](https://github.com/vercel/vercel/pull/15275))
+
+  - Add `integration-resource` cross-references in `integration --help` and `integration remove --help`
+  - Emit structured JSON with resource names and next commands when `integration remove --format=json --yes` fails because resources still exist
+
+- Updated dependencies [[`3880e1028840aae6883211b79a1a30c7432580f3`](https://github.com/vercel/vercel/commit/3880e1028840aae6883211b79a1a30c7432580f3), [`90238372d2bd0df7b9c0b31331106c242179d526`](https://github.com/vercel/vercel/commit/90238372d2bd0df7b9c0b31331106c242179d526), [`0d4117901cfc24e19e4f81a860d7565f6aecafa6`](https://github.com/vercel/vercel/commit/0d4117901cfc24e19e4f81a860d7565f6aecafa6)]:
+  - @vercel/python@6.18.0
+  - @vercel/next@4.15.36
+  - @vercel/build-utils@13.6.1
+  - @vercel/backends@0.0.39
+  - @vercel/elysia@0.1.42
+  - @vercel/express@0.1.51
+  - @vercel/fastify@0.1.45
+  - @vercel/go@3.4.3
+  - @vercel/h3@0.1.51
+  - @vercel/hono@0.2.45
+  - @vercel/hydrogen@1.3.5
+  - @vercel/koa@0.1.25
+  - @vercel/nestjs@0.2.46
+  - @vercel/node@5.6.9
+  - @vercel/redwood@2.4.9
+  - @vercel/remix-builder@5.6.0
+  - @vercel/ruby@2.3.2
+  - @vercel/rust@1.0.5
+  - @vercel/static-build@2.8.43
+
 ## 50.25.0
 
 ### Minor Changes

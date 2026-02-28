@@ -4,12 +4,12 @@ from flask import jsonify
 app = Flask(__name__)
 
 
-@app.get('/api/py')
+@app.get('/')
 def api_root():
     return {'message': 'Hello from Flask'}
 
 
-@app.get('/api/py/ping')
+@app.get('/ping')
 def ping():
     return {'message': 'pong from Flask'}
 

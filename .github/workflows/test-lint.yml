@@ -51,11 +51,12 @@ jobs:
         run: npm i -g pnpm@8.3.1
       - run: pnpm install
       - run: pnpm run lint
-      - run: pnpm run prettier-check
-      # Non-blocking while we fix existing violations (~244 remaining).
+      - name: Biome format check (JS/TS/JSON)
+        run: pnpm run biome:format
+      # Non-blocking while we fix existing lint violations (~120 remaining).
       # Remove `|| true` once clean to make this a required check.
-      - name: Biome check (informational)
-        run: pnpm run biome:check || true
+      - name: Biome lint (informational)
+        run: pnpm run biome:lint || true
       - name: Check dependency versions
         run: pnpm exec syncpack lint
       - run: pnpm run build

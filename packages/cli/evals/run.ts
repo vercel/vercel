@@ -11,7 +11,7 @@ import { existsSync, readdirSync } from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { config } from 'dotenv';
-import { destroy, getProjectModeVariantsFromEnv, setup } from './hooks';
+import { destroy, getEvalVariants, setup } from './hooks';
 import type { EvalRunContext, EvalVariant, SetupResult } from './hooks';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -126,7 +126,7 @@ async function main() {
   }
 
   const sandboxProjectDir = join(__dirname, 'sandbox-project');
-  const variants: EvalVariant[] = getProjectModeVariantsFromEnv('auto');
+  const variants: EvalVariant[] = getEvalVariants('auto');
 
   try {
     await populateOIDCToken();
@@ -183,18 +183,23 @@ async function main() {
       cwd: __dirname,
       sandboxProjectDir,
       projectMode: variant.projectMode,
+      withSkills: variant.withSkills,
     };
 
-    let setupResult: SetupResult | void;
+    let setupResult: SetupResult | void = undefined;
 
     process.stdout.write(
-      `\n=== CLI eval variant "${variant.id}" (projectMode=${variant.projectMode}) ===\n`
+      `\n=== CLI eval variant "${variant.id}" (projectMode=${variant.projectMode}, withSkills=${variant.withSkills}) ===\n`
     );
 
     try {
       setupResult = await setup(context);
 
-      const agentEvalEnv = { ...process.env, FORCE_COLOR: '1' };
+      const agentEvalEnv: NodeJS.ProcessEnv = {
+        ...process.env,
+        FORCE_COLOR: '1',
+        CLI_EVAL_WITH_SKILLS: variant.withSkills ? '1' : '0',
+      };
       if (setupResult?.createdProjectId) {
         agentEvalEnv.CLI_EVAL_PROJECT_ID = setupResult.createdProjectId;
       }

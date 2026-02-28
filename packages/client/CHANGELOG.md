@@ -1,5 +1,20 @@
 # @vercel/client
 
+## 17.2.50
+
+### Patch Changes
+
+- Updated dependencies [[`b3b94f2335026634f4fa9fdfe0671677fa00000e`](https://github.com/vercel/vercel/commit/b3b94f2335026634f4fa9fdfe0671677fa00000e)]:
+  - @vercel/routing-utils@6.0.1
+  - @vercel/build-utils@13.6.1
+
+## 17.2.49
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/build-utils@13.6.1
+
 ## 17.2.48
 
 ### Patch Changes

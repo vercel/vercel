@@ -11,7 +11,7 @@ import {
 describe('validation', () => {
   describe('validateEvent', () => {
     it('should pass for known event', () => {
-      expect(validateEvent('incomingRequest')).toEqual({ valid: true });
+      expect(validateEvent('edgeRequest')).toEqual({ valid: true });
     });
 
     it('should fail for unknown event with available list', () => {
@@ -20,7 +20,7 @@ describe('validation', () => {
       if (!result.valid) {
         expect(result.code).toBe('UNKNOWN_EVENT');
         expect(result.message).toContain('"bogus"');
-        expect(result.allowedValues).toContain('incomingRequest');
+        expect(result.allowedValues).toContain('edgeRequest');
         expect(result.allowedValues).toContain('functionExecution');
       }
     });
@@ -28,24 +28,24 @@ describe('validation', () => {
 
   describe('validateMeasure', () => {
     it('should pass for valid measure', () => {
-      expect(validateMeasure('incomingRequest', 'count')).toEqual({
+      expect(validateMeasure('edgeRequest', 'count')).toEqual({
         valid: true,
       });
     });
 
     it('should pass for non-count measure', () => {
-      expect(validateMeasure('incomingRequest', 'requestDurationMs')).toEqual({
+      expect(validateMeasure('edgeRequest', 'requestDurationMs')).toEqual({
         valid: true,
       });
     });
 
     it('should fail for unknown measure with available list', () => {
-      const result = validateMeasure('incomingRequest', 'latency');
+      const result = validateMeasure('edgeRequest', 'latency');
       expect(result.valid).toBe(false);
       if (!result.valid) {
         expect(result.code).toBe('UNKNOWN_MEASURE');
         expect(result.message).toContain('"latency"');
-        expect(result.message).toContain('"incomingRequest"');
+        expect(result.message).toContain('"edgeRequest"');
         expect(result.allowedValues).toContain('count');
         expect(result.allowedValues).toContain('requestDurationMs');
       }
@@ -54,7 +54,7 @@ describe('validation', () => {
 
   describe('validateAggregation', () => {
     it('should pass for valid aggregation on count', () => {
-      expect(validateAggregation('incomingRequest', 'count', 'sum')).toEqual({
+      expect(validateAggregation('edgeRequest', 'count', 'sum')).toEqual({
         valid: true,
         value: 'sum',
       });
@@ -62,12 +62,12 @@ describe('validation', () => {
 
     it('should pass for p95 on duration measure', () => {
       expect(
-        validateAggregation('incomingRequest', 'requestDurationMs', 'p95')
+        validateAggregation('edgeRequest', 'requestDurationMs', 'p95')
       ).toEqual({ valid: true, value: 'p95' });
     });
 
     it('should fail for p95 on count measure', () => {
-      const result = validateAggregation('incomingRequest', 'count', 'p95');
+      const result = validateAggregation('edgeRequest', 'count', 'p95');
       expect(result.valid).toBe(false);
       if (!result.valid) {
         expect(result.code).toBe('INVALID_AGGREGATION');
@@ -80,7 +80,7 @@ describe('validation', () => {
 
     it('should fail for completely invalid aggregation', () => {
       const result = validateAggregation(
-        'incomingRequest',
+        'edgeRequest',
         'requestDurationMs',
         'bogus'
       );
@@ -95,13 +95,13 @@ describe('validation', () => {
 
   describe('validateGroupBy', () => {
     it('should pass for valid dimensions', () => {
-      expect(
-        validateGroupBy('incomingRequest', ['httpStatus', 'route'])
-      ).toEqual({ valid: true });
+      expect(validateGroupBy('edgeRequest', ['httpStatus', 'route'])).toEqual({
+        valid: true,
+      });
     });
 
     it('should fail for unknown dimension with available list', () => {
-      const result = validateGroupBy('incomingRequest', ['bogus']);
+      const result = validateGroupBy('edgeRequest', ['bogus']);
       expect(result.valid).toBe(false);
       if (!result.valid) {
         expect(result.code).toBe('UNKNOWN_DIMENSION');
@@ -121,7 +121,7 @@ describe('validation', () => {
     });
 
     it('should pass for empty dimensions', () => {
-      expect(validateGroupBy('incomingRequest', [])).toEqual({
+      expect(validateGroupBy('edgeRequest', [])).toEqual({
         valid: true,
       });
     });
@@ -159,9 +159,9 @@ describe('validation', () => {
 
   describe('validateRequiredEvent', () => {
     it('should pass when event is provided', () => {
-      expect(validateRequiredEvent('incomingRequest')).toEqual({
+      expect(validateRequiredEvent('edgeRequest')).toEqual({
         valid: true,
-        value: 'incomingRequest',
+        value: 'edgeRequest',
       });
     });
 
