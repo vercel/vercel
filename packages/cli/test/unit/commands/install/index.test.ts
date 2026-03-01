@@ -31,10 +31,13 @@ beforeEach(() => {
   openMock.mockReset().mockResolvedValue(undefined as never);
   pullMock.mockClear();
   vi.spyOn(Math, 'random').mockReturnValue(0);
+  // Pin to legacy flow — auto-provision has its own test suite
+  process.env.FF_AUTO_PROVISION_INSTALL = '0';
 });
 
 afterEach(() => {
   vi.restoreAllMocks();
+  delete process.env.FF_AUTO_PROVISION_INSTALL;
 });
 
 describe('install', () => {
@@ -52,6 +55,35 @@ describe('install', () => {
           value: command,
         },
       ]);
+    });
+
+    it('shows dynamic help with integration slug', async () => {
+      useUser();
+      const teams = useTeams('team_dummy');
+      const team = Array.isArray(teams) ? teams[0] : teams.teams[0];
+      client.config.currentTeam = team.id;
+      useIntegration({ withInstallation: true, ownerId: team.id });
+
+      client.setArgv('install', 'acme', '--help');
+      const exitCode = await install(client);
+      expect(exitCode).toEqual(0);
+
+      const output = client.getFullOutput();
+      // Dynamic examples should use "install" not "integration add"
+      expect(output).toContain('$ vercel install acme');
+      expect(output).not.toContain('$ vercel integration add');
+      // Should show metadata and billing plan info
+      expect(output).toContain('Metadata options for "acme"');
+      expect(output).toContain('Available billing plans for');
+    });
+
+    it('falls back to static help without a slug', async () => {
+      client.setArgv('install', '--help');
+      const exitCode = await install(client);
+      expect(exitCode).toEqual(0);
+
+      const output = client.getFullOutput();
+      expect(output).toContain('vercel install');
     });
   });
 
@@ -214,6 +246,48 @@ describe('install', () => {
       );
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(1);
+    });
+
+    it('forwards --prefix flag', async () => {
+      const { connectionRequestBodies } = useIntegration({
+        withInstallation: true,
+        ownerId: team.id,
+      });
+      usePreauthorization();
+      useProject({
+        ...defaultProject,
+        id: 'vercel-integration-add',
+        name: 'vercel-integration-add',
+      });
+      const cwd = setupUnitFixture('vercel-integration-add');
+      client.cwd = cwd;
+      client.setArgv('install', 'acme', '--prefix', 'NEON2_');
+      const exitCodePromise = install(client);
+      await expect(client.stderr).toOutput(
+        `Installing Acme Product by Acme Integration under ${team.slug}`
+      );
+      await expect(client.stderr).toOutput(
+        'Choose your region (Use arrow keys)'
+      );
+      client.stdin.write('\n');
+      await expect(client.stderr).toOutput(
+        'Choose a billing plan (Use arrow keys)'
+      );
+      client.stdin.write('\n');
+      await expect(client.stderr).toOutput('Confirm selection? (Y/n)');
+      client.stdin.write('y\n');
+      await expect(client.stderr).toOutput(
+        'Acme Product successfully provisioned: acme-gray-apple'
+      );
+      await expect(client.stderr).toOutput(
+        'acme-gray-apple successfully connected to vercel-integration-add'
+      );
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+      expect(connectionRequestBodies).toHaveLength(1);
+      expect(connectionRequestBodies[0]).toMatchObject({
+        envVarPrefix: 'NEON2_',
+      });
     });
 
     it('forwards --environment flag', async () => {

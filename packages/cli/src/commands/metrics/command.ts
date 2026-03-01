@@ -28,7 +28,7 @@ export const schemaSubcommand = {
     },
     {
       name: 'Schema as JSON for agents',
-      value: `${packageName} metrics schema -e incomingRequest --format=json`,
+      value: `${packageName} metrics schema -e edgeRequest --format=json`,
     },
   ],
 } as const;
@@ -59,8 +59,7 @@ export const metricsCommand = {
       shorthand: 'e',
       type: String,
       deprecated: false,
-      description:
-        'Event type to query (e.g., incomingRequest, functionExecution)',
+      description: 'Event type to query (e.g., edgeRequest, functionExecution)',
       argument: 'NAME',
     },
     {
@@ -77,7 +76,7 @@ export const metricsCommand = {
       type: String,
       deprecated: false,
       description:
-        'Aggregation function (default: sum for counts/bytes/tokens, avg for durations/memory/ratios)',
+        'Aggregation function (default: sum for counts/bytes/currency, avg for durations/memory/ratios)',
       argument: 'FN',
     },
     {
@@ -95,15 +94,6 @@ export const metricsCommand = {
       deprecated: false,
       description: 'Max groups per time bucket (default: 10)',
       argument: 'N',
-    },
-    {
-      name: 'order-by',
-      shorthand: null,
-      type: String,
-      deprecated: false,
-      description:
-        'Order results by rollup:asc|desc (default: rollup value desc)',
-      argument: 'ROLLUP',
     },
     {
       name: 'filter',
@@ -158,19 +148,15 @@ export const metricsCommand = {
   examples: [
     {
       name: '5xx errors by error code in the last hour',
-      value: `${packageName} metrics -e incomingRequest -f "httpStatus ge 500" --group-by errorCode --since 1h`,
+      value: `${packageName} metrics -e functionExecution -f "httpStatus ge 500" --group-by errorCode --since 1h`,
     },
     {
-      name: 'P95 latency by route over 24 hours',
-      value: `${packageName} metrics -e incomingRequest -m requestDurationMs -a p95 --group-by route --since 24h`,
+      name: 'Function invocations by HTTP status code',
+      value: `${packageName} metrics -e functionExecution --group-by httpStatus --since 6h`,
     },
     {
-      name: 'Traffic by HTTP status code',
-      value: `${packageName} metrics -e incomingRequest --group-by httpStatus --since 6h`,
-    },
-    {
-      name: 'Function cold start analysis',
-      value: `${packageName} metrics -e functionExecution -m coldStartDurationMs -a avg --group-by route --since 1h`,
+      name: 'Function duration by route',
+      value: `${packageName} metrics -e functionExecution -m functionDurationMs -a avg --group-by route --since 1h`,
     },
     {
       name: 'AI Gateway costs by provider',
@@ -185,16 +171,16 @@ export const metricsCommand = {
       value: `${packageName} metrics schema`,
     },
     {
-      name: 'Requests matching a path pattern',
-      value: `${packageName} metrics -e incomingRequest -f "contains(requestPath, '/api')" --group-by route --since 1h`,
+      name: 'Function executions matching a path pattern',
+      value: `${packageName} metrics -e functionExecution -f "contains(requestPath, '/api')" --group-by route --since 1h`,
     },
     {
       name: 'Show schema for an event',
-      value: `${packageName} metrics schema -e incomingRequest`,
+      value: `${packageName} metrics schema -e edgeRequest`,
     },
     {
-      name: 'Team-wide traffic by project',
-      value: `${packageName} metrics --all -e incomingRequest --group-by projectName --since 24h`,
+      name: 'Team-wide function executions by project',
+      value: `${packageName} metrics --all -e functionExecution --group-by projectId --since 24h`,
     },
   ],
 } as const;

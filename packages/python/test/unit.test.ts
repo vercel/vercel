@@ -19,12 +19,21 @@ const tmpPythonDir = path.join(
 // For tests that exercise the build pipeline, we don't care about the actual
 // vendored dependencies, only that the build completes and the handler exists.
 // Mock out mirroring of site-packages so tests don't depend on a real venv.
+vi.mock('../src/utils', async () => {
+  const real =
+    await vi.importActual<typeof import('../src/utils')>('../src/utils');
+  return {
+    ...real,
+    ensureVenv: vi.fn(async () => {}),
+  };
+});
+
 vi.mock('../src/install', async () => {
   const real =
     await vi.importActual<typeof import('../src/install')>('../src/install');
   return {
     ...real,
-    mirrorSitePackagesIntoVendor: vi.fn(async () => ({})),
+    getVenvSitePackagesDirs: vi.fn(async () => []),
   };
 });
 
@@ -34,10 +43,11 @@ import {
   DEFAULT_PYTHON_VERSION,
   resetInstalledPythonsCache,
 } from '../src/version';
-import { build, shouldEnableRuntimeInstall } from '../src/index';
+import { build } from '../src/index';
 import { createVenvEnv, getVenvBinDir } from '../src/utils';
 import { UV_PYTHON_DOWNLOADS_MODE, getProtectedUvEnv } from '../src/uv';
 import { createPyprojectToml } from '../src/install';
+import { detectDjangoPythonEntrypoint } from '../src/entrypoint';
 import { FileBlob } from '@vercel/build-utils';
 let warningMessages: string[];
 const originalConsoleWarn = console.warn;
@@ -1103,6 +1113,148 @@ describe('fastapi entrypoint discovery - positive cases', () => {
   });
 });
 
+describe('Django entrypoint discovery', () => {
+  async function writeFiles(
+    workPath: string,
+    files: Record<string, string>
+  ): Promise<void> {
+    for (const [rel, content] of Object.entries(files)) {
+      const full = path.join(workPath, rel);
+      fs.mkdirSync(path.dirname(full), { recursive: true });
+      fs.writeFileSync(full, content);
+    }
+  }
+
+  it('uses configured entrypoint when it exists and is valid', async () => {
+    const workPath = path.join(
+      tmpdir(),
+      `python-django-configured-${Date.now()}`
+    );
+    fs.mkdirSync(workPath, { recursive: true });
+
+    await writeFiles(workPath, {
+      'hello/world.py': `application = lambda env, start: None`,
+    });
+
+    const result = await detectDjangoPythonEntrypoint(
+      workPath,
+      'hello/world.py'
+    );
+    expect(result).toBe('hello/world.py');
+
+    if (fs.existsSync(workPath)) fs.removeSync(workPath);
+  });
+
+  it('resolves Django entrypoint from WSGI_APPLICATION (hello.wsgi.application -> hello/wsgi.py)', async () => {
+    const workPath = path.join(tmpdir(), `python-django-wsgi-${Date.now()}`);
+    fs.mkdirSync(workPath, { recursive: true });
+
+    await writeFiles(workPath, {
+      'manage.py': `os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'hello.settings')`,
+      'hello/settings.py': `WSGI_APPLICATION = 'hello.wsgi.application'`,
+      'hello/wsgi.py': `application = lambda env, start: None`,
+    });
+
+    const result = await detectDjangoPythonEntrypoint(workPath, 'missing.py');
+    expect(result).toBe('hello/wsgi.py');
+
+    if (fs.existsSync(workPath)) fs.removeSync(workPath);
+  });
+
+  it('falls back to candidate when manage.py is missing', async () => {
+    const workPath = path.join(
+      tmpdir(),
+      `python-django-fallback-${Date.now()}`
+    );
+    fs.mkdirSync(workPath, { recursive: true });
+
+    await writeFiles(workPath, {
+      'src/app.py': `application = lambda env, start: None`,
+    });
+
+    const result = await detectDjangoPythonEntrypoint(workPath, 'missing.py');
+    expect(result).toBe('src/app.py');
+
+    if (fs.existsSync(workPath)) fs.removeSync(workPath);
+  });
+
+  it('falls back to candidate when WSGI path is not on filesystem', async () => {
+    const workPath = path.join(
+      tmpdir(),
+      `python-django-wsgi-missing-${Date.now()}`
+    );
+    fs.mkdirSync(workPath, { recursive: true });
+
+    await writeFiles(workPath, {
+      'manage.py': `os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'hello.settings')`,
+      'hello/settings.py': `WSGI_APPLICATION = 'hello.wsgi.application'`,
+      'src/app.py': `application = lambda env, start: None`,
+    });
+    // WSGI_APPLICATION value does not refer to a valid file
+
+    const result = await detectDjangoPythonEntrypoint(workPath, 'missing.py');
+    expect(result).toBe('src/app.py');
+
+    if (fs.existsSync(workPath)) fs.removeSync(workPath);
+  });
+
+  it('resolves Django entrypoint from a subdirectory', async () => {
+    const workPath = path.join(
+      tmpdir(),
+      `python-django-root-dir-${Date.now()}`
+    );
+    fs.mkdirSync(workPath, { recursive: true });
+
+    // Django app lives under root dir "mysite"; no manage.py at workPath root
+    await writeFiles(workPath, {
+      'mysite/manage.py': `os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')`,
+      'mysite/config/settings.py': `WSGI_APPLICATION = 'config.wsgi.application'`,
+      'mysite/config/wsgi.py': `application = lambda env, start: None`,
+    });
+
+    const result = await detectDjangoPythonEntrypoint(workPath, 'missing.py');
+    expect(result).toBe('mysite/config/wsgi.py');
+
+    if (fs.existsSync(workPath)) fs.removeSync(workPath);
+  });
+
+  it('build() discovers Django entrypoint from WSGI_APPLICATION when configured entrypoint is missing', async () => {
+    const workPath = path.join(tmpdir(), `python-django-build-${Date.now()}`);
+    fs.mkdirSync(workPath, { recursive: true });
+    makeMockPython('3.9');
+
+    const files = {
+      'manage.py': new FileBlob({
+        data: "os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'hello.settings')\n",
+      }),
+      'hello/settings.py': new FileBlob({
+        data: "WSGI_APPLICATION = 'hello.world.application'\n",
+      }),
+      'hello/world.py': new FileBlob({
+        data: 'application = lambda env, start: None\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath,
+      files,
+      entrypoint: 'index.py',
+      meta: { isDev: true },
+      config: { framework: 'django' },
+      repoRootPath: workPath,
+    });
+
+    const handler = result.output.files?.['vc__handler__python.py'];
+    if (!handler || !('data' in handler)) {
+      throw new Error('handler bootstrap not found');
+    }
+    const content = handler.data.toString();
+    expect(content).toContain('os.path.join(_here, "hello/world.py")');
+
+    if (fs.existsSync(workPath)) fs.removeSync(workPath);
+  });
+});
+
 describe('pyproject.toml entrypoint detection', () => {
   beforeEach(() => {
     vi.resetModules();
@@ -1691,6 +1843,8 @@ describe('custom install hooks', () => {
     vi.doUnmock('execa');
     vi.doUnmock('@vercel/build-utils');
     vi.doUnmock('../src/install');
+    vi.doUnmock('../src/utils');
+    vi.doUnmock('../src/dependency-externalizer');
     vi.doUnmock('../src/index');
     vi.doUnmock('../src/uv');
   });
@@ -1716,7 +1870,14 @@ describe('custom install hooks', () => {
     vi.doMock('../src/install', () => ({
       ...realInstall,
       ensureUvProject: mockEnsureUvProject,
-      mirrorSitePackagesIntoVendor: vi.fn(async () => ({})),
+      getVenvSitePackagesDirs: vi.fn(async () => []),
+    }));
+
+    const realUtils =
+      await vi.importActual<typeof import('../src/utils')>('../src/utils');
+    vi.doMock('../src/utils', () => ({
+      ...realUtils,
+      ensureVenv: vi.fn(async () => {}),
     }));
 
     // Import after mocks are configured
@@ -1779,7 +1940,14 @@ describe('custom install hooks', () => {
     vi.doMock('../src/install', () => ({
       ...realInstall,
       ensureUvProject: mockEnsureUvProject,
-      mirrorSitePackagesIntoVendor: vi.fn(async () => ({})),
+      getVenvSitePackagesDirs: vi.fn(async () => []),
+    }));
+
+    const realUtils =
+      await vi.importActual<typeof import('../src/utils')>('../src/utils');
+    vi.doMock('../src/utils', () => ({
+      ...realUtils,
+      ensureVenv: vi.fn(async () => {}),
     }));
 
     // Import after mocks are configured
@@ -1854,7 +2022,14 @@ describe('custom install hooks', () => {
     vi.doMock('../src/install', () => ({
       ...realInstall,
       ensureUvProject: mockEnsureUvProject,
-      mirrorSitePackagesIntoVendor: vi.fn(async () => ({})),
+      getVenvSitePackagesDirs: vi.fn(async () => []),
+    }));
+
+    const realUtils =
+      await vi.importActual<typeof import('../src/utils')>('../src/utils');
+    vi.doMock('../src/utils', () => ({
+      ...realUtils,
+      ensureVenv: vi.fn(async () => {}),
     }));
 
     // Mock UvRunner to prevent actual uv sync commands
@@ -1966,295 +2141,6 @@ describe('UV_PYTHON_DOWNLOADS environment variable protection', () => {
       expect(env.PATH).toContain(getVenvBinDir(venvPath));
       expect(env.PATH).toContain('/usr/bin');
       expect(env.UV_PYTHON_DOWNLOADS).toBe(UV_PYTHON_DOWNLOADS_MODE);
-    });
-  });
-});
-
-// --------------------------------------------------------------------------
-// Runtime Dependency Installation Tests
-// --------------------------------------------------------------------------
-// These tests cover the new functionality for handling Python Lambda functions
-// that exceed the 250MB uncompressed size limit by deferring public dependency
-// installation to runtime.
-// --------------------------------------------------------------------------
-
-import {
-  calculateBundleSize,
-  LAMBDA_SIZE_THRESHOLD_BYTES,
-  LAMBDA_EPHEMERAL_STORAGE_BYTES,
-} from '../src/install';
-import {
-  classifyPackages,
-  generateRuntimeRequirements,
-  parseUvLock,
-} from '@vercel/python-analysis';
-import { FileFsRef } from '@vercel/build-utils';
-
-describe('runtime dependency installation support', () => {
-  describe('calculateBundleSize', () => {
-    it('calculates size from FileFsRef objects', async () => {
-      const tempDir = path.join(tmpdir(), `size-test-${Date.now()}`);
-      fs.mkdirSync(tempDir, { recursive: true });
-
-      // Create test files with known sizes
-      const file1Path = path.join(tempDir, 'file1.txt');
-      const file2Path = path.join(tempDir, 'file2.txt');
-      fs.writeFileSync(file1Path, 'a'.repeat(100)); // 100 bytes
-      fs.writeFileSync(file2Path, 'b'.repeat(200)); // 200 bytes
-
-      const files = {
-        'file1.txt': new FileFsRef({ fsPath: file1Path }),
-        'file2.txt': new FileFsRef({ fsPath: file2Path }),
-      };
-
-      try {
-        const size = await calculateBundleSize(files);
-        expect(size).toBe(300);
-      } finally {
-        fs.removeSync(tempDir);
-      }
-    });
-
-    it('calculates size from FileBlob objects', async () => {
-      const files = {
-        'file1.txt': new FileBlob({ data: 'a'.repeat(100) }),
-        'file2.txt': new FileBlob({ data: Buffer.from('b'.repeat(200)) }),
-      };
-
-      const size = await calculateBundleSize(files);
-      expect(size).toBe(300);
-    });
-
-    it('returns 0 for empty files object', async () => {
-      const size = await calculateBundleSize({});
-      expect(size).toBe(0);
-    });
-  });
-
-  describe('Lambda size constants', () => {
-    it('LAMBDA_SIZE_THRESHOLD_BYTES is 249 MB', () => {
-      expect(LAMBDA_SIZE_THRESHOLD_BYTES).toBe(249 * 1024 * 1024);
-    });
-
-    it('LAMBDA_EPHEMERAL_STORAGE_BYTES is 500 MB', () => {
-      expect(LAMBDA_EPHEMERAL_STORAGE_BYTES).toBe(500 * 1024 * 1024);
-    });
-
-    it('ephemeral storage limit is greater than the bundle size threshold', () => {
-      expect(LAMBDA_EPHEMERAL_STORAGE_BYTES).toBeGreaterThan(
-        LAMBDA_SIZE_THRESHOLD_BYTES
-      );
-    });
-  });
-
-  describe('shouldEnableRuntimeInstall', () => {
-    const originalEnv = process.env.VERCEL_PYTHON_ON_HIVE;
-
-    afterEach(() => {
-      if (originalEnv === undefined) {
-        delete process.env.VERCEL_PYTHON_ON_HIVE;
-      } else {
-        process.env.VERCEL_PYTHON_ON_HIVE = originalEnv;
-      }
-    });
-
-    const oversized = LAMBDA_SIZE_THRESHOLD_BYTES + 1;
-    const undersized = LAMBDA_SIZE_THRESHOLD_BYTES - 1;
-
-    it('returns true when bundle exceeds threshold and uvLockPath is present', () => {
-      delete process.env.VERCEL_PYTHON_ON_HIVE;
-      expect(
-        shouldEnableRuntimeInstall({
-          totalBundleSize: oversized,
-          uvLockPath: '/path/to/uv.lock',
-        })
-      ).toBe(true);
-    });
-
-    it('returns false when VERCEL_PYTHON_ON_HIVE is "1"', () => {
-      process.env.VERCEL_PYTHON_ON_HIVE = '1';
-      expect(
-        shouldEnableRuntimeInstall({
-          totalBundleSize: oversized,
-          uvLockPath: '/path/to/uv.lock',
-        })
-      ).toBe(false);
-    });
-
-    it('returns false when VERCEL_PYTHON_ON_HIVE is "true"', () => {
-      process.env.VERCEL_PYTHON_ON_HIVE = 'true';
-      expect(
-        shouldEnableRuntimeInstall({
-          totalBundleSize: oversized,
-          uvLockPath: '/path/to/uv.lock',
-        })
-      ).toBe(false);
-    });
-
-    it('returns true when VERCEL_PYTHON_ON_HIVE is an unrecognised value', () => {
-      process.env.VERCEL_PYTHON_ON_HIVE = 'yes';
-      expect(
-        shouldEnableRuntimeInstall({
-          totalBundleSize: oversized,
-          uvLockPath: '/path/to/uv.lock',
-        })
-      ).toBe(true);
-    });
-
-    it('returns false when bundle is under threshold', () => {
-      delete process.env.VERCEL_PYTHON_ON_HIVE;
-      expect(
-        shouldEnableRuntimeInstall({
-          totalBundleSize: undersized,
-          uvLockPath: '/path/to/uv.lock',
-        })
-      ).toBe(false);
-    });
-
-    it('returns false when uvLockPath is null', () => {
-      delete process.env.VERCEL_PYTHON_ON_HIVE;
-      expect(
-        shouldEnableRuntimeInstall({
-          totalBundleSize: oversized,
-          uvLockPath: null,
-        })
-      ).toBe(false);
-    });
-  });
-
-  describe('classifyPackages', () => {
-    it('classifies PyPI packages as public', () => {
-      const lockContent = `
-version = 1
-requires-python = ">=3.12"
-
-[[package]]
-name = "requests"
-version = "2.31.0"
-`;
-      const lockFile = parseUvLock(lockContent);
-      const result = classifyPackages({ lockFile });
-      expect(result.publicPackages).toContain('requests');
-      expect(result.privatePackages).not.toContain('requests');
-      expect(result.packageVersions['requests']).toBe('2.31.0');
-    });
-
-    it('classifies git source packages as private', () => {
-      const lockContent = `
-version = 1
-requires-python = ">=3.12"
-
-[[package]]
-name = "my-private-pkg"
-version = "1.0.0"
-
-[package.source]
-git = "https://github.com/myorg/private-pkg.git"
-`;
-      const lockFile = parseUvLock(lockContent);
-      const result = classifyPackages({ lockFile });
-      expect(result.privatePackages).toContain('my-private-pkg');
-      expect(result.publicPackages).not.toContain('my-private-pkg');
-    });
-
-    it('classifies path source packages as private', () => {
-      const lockContent = `
-version = 1
-requires-python = ">=3.12"
-
-[[package]]
-name = "local-pkg"
-version = "0.1.0"
-
-[package.source]
-path = "./packages/local-pkg"
-`;
-      const lockFile = parseUvLock(lockContent);
-      const result = classifyPackages({ lockFile });
-      expect(result.privatePackages).toContain('local-pkg');
-      expect(result.publicPackages).not.toContain('local-pkg');
-    });
-
-    it('classifies non-PyPI registry packages as private', () => {
-      const lockContent = `
-version = 1
-requires-python = ">=3.12"
-
-[[package]]
-name = "internal-pkg"
-version = "1.0.0"
-
-[package.source]
-registry = "https://private.pypi.mycompany.com/simple"
-`;
-      const lockFile = parseUvLock(lockContent);
-      const result = classifyPackages({ lockFile });
-      expect(result.privatePackages).toContain('internal-pkg');
-      expect(result.publicPackages).not.toContain('internal-pkg');
-    });
-
-    it('returns empty classification for empty lock file', () => {
-      const lockFile = { packages: [] };
-      const result = classifyPackages({ lockFile });
-      expect(result.privatePackages).toHaveLength(0);
-      expect(result.publicPackages).toHaveLength(0);
-    });
-
-    it('excludes specified packages from classification', () => {
-      const lockContent = `
-version = 1
-requires-python = ">=3.12"
-
-[[package]]
-name = "my-app"
-version = "0.1.0"
-
-[[package]]
-name = "requests"
-version = "2.31.0"
-`;
-      const lockFile = parseUvLock(lockContent);
-      const result = classifyPackages({
-        lockFile,
-        excludePackages: ['my-app'],
-      });
-      // my-app should be excluded entirely
-      expect(result.publicPackages).not.toContain('my-app');
-      expect(result.privatePackages).not.toContain('my-app');
-      expect(result.packageVersions['my-app']).toBeUndefined();
-      // requests should still be classified
-      expect(result.publicPackages).toContain('requests');
-    });
-  });
-
-  describe('generateRuntimeRequirements', () => {
-    it('generates requirements file content with versions', () => {
-      const classification = {
-        privatePackages: ['private-pkg'],
-        publicPackages: ['requests', 'flask'],
-        packageVersions: {
-          'private-pkg': '1.0.0',
-          requests: '2.31.0',
-          flask: '3.0.0',
-        },
-      };
-
-      const content = generateRuntimeRequirements(classification);
-      expect(content).toContain('requests==2.31.0');
-      expect(content).toContain('flask==3.0.0');
-      expect(content).not.toContain('private-pkg');
-    });
-
-    it('generates empty requirements for no public packages', () => {
-      const classification = {
-        privatePackages: ['private-pkg'],
-        publicPackages: [],
-        packageVersions: { 'private-pkg': '1.0.0' },
-      };
-
-      const content = generateRuntimeRequirements(classification);
-      expect(content).toContain('# Auto-generated');
-      expect(content).not.toContain('==');
     });
   });
 });

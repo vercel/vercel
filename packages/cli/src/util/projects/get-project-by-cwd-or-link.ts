@@ -6,12 +6,14 @@ import type { Project } from '@vercel-internals/types';
 
 export default async function getProjectByCwdOrLink({
   autoConfirm,
+  nonInteractive,
   client,
   commandName,
   cwd,
   projectNameOrId,
 }: {
   autoConfirm?: boolean;
+  nonInteractive?: boolean;
   client: Client;
   commandName: string;
   cwd?: string;
@@ -32,6 +34,7 @@ export default async function getProjectByCwdOrLink({
     cwd ?? client.cwd,
     {
       autoConfirm,
+      nonInteractive,
     }
   );
 

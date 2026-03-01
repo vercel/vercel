@@ -1,5 +1,40 @@
 # @vercel/router-sdk
 
+## 0.0.36
+
+### Patch Changes
+
+- Updated dependencies [[`b3b94f2335026634f4fa9fdfe0671677fa00000e`](https://github.com/vercel/vercel/commit/b3b94f2335026634f4fa9fdfe0671677fa00000e)]:
+  - @vercel/routing-utils@6.0.1
+
+## 0.0.35
+
+### Patch Changes
+
+- Updated dependencies [[`e64a85daec784b4fe571abe7405a80aca150007a`](https://github.com/vercel/vercel/commit/e64a85daec784b4fe571abe7405a80aca150007a), [`af6a651229cad4ddb7fcc15bd14d06355c2b77ee`](https://github.com/vercel/vercel/commit/af6a651229cad4ddb7fcc15bd14d06355c2b77ee)]:
+  - @vercel/routing-utils@6.0.0
+
+## 0.0.34
+
+### Patch Changes
+
+- Undeprecate `routes` to match new routing-utils ([#15016](https://github.com/vercel/vercel/pull/15016))
+
+- Updated dependencies [[`0c961fce30d495620542066249dae447764d2eba`](https://github.com/vercel/vercel/commit/0c961fce30d495620542066249dae447764d2eba)]:
+  - @vercel/routing-utils@5.4.0
+
+## 0.0.33
+
+### Patch Changes
+
+- Fix rewrite regexp conversion when header transforms are present ([#15134](https://github.com/vercel/vercel/pull/15134))
+
+## 0.0.32
+
+### Patch Changes
+
+- Add a new `matchers` export that exposes helpers to make matching against headers, query params, cookies, and host simpler to write. ([#15064](https://github.com/vercel/vercel/pull/15064))
+
 ## 0.0.31
 
 ### Patch Changes

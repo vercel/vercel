@@ -1,5 +1,35 @@
 # @vercel/static-build
 
+## 2.8.43
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.141
+
+## 2.8.42
+
+### Patch Changes
+
+- Rename fetch to nodeFetch in cases where it is an import from node-fetch ([#15234](https://github.com/vercel/vercel/pull/15234))
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.140
+
+## 2.8.41
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.139
+
+## 2.8.40
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/gatsby-plugin-vercel-builder@2.0.138
+
 ## 2.8.39
 
 ### Patch Changes

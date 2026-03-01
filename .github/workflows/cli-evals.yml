@@ -1,14 +1,19 @@
 name: CLI Evals
 
+# Runs on PRs only when evals change (to limit AI gateway cost). Also runnable manually via "Run workflow".
 on:
+  workflow_dispatch:
   pull_request:
     paths:
-      - 'packages/cli/**'
+      - 'packages/cli/evals/**'
+  schedule:
+    # Run hourly to track eval health over time.
+    - cron: '0 * * * *'
 
 jobs:
   evals:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     # TODO: Remove continue-on-error when evals should block PR merge.
     continue-on-error: true
     # Evals use separate secrets (EVAL_*) so you can point to a dedicated evals team.
@@ -33,6 +38,7 @@ jobs:
         run: cd packages/cli && pnpm build
 
       - name: Run CLI evals
+        id: evals
         run: cd packages/cli && pnpm test:evals
         env:
           AI_GATEWAY_API_KEY: ${{ secrets.EVAL_AI_GATEWAY_API_KEY }}
@@ -41,3 +47,49 @@ jobs:
           VERCEL_PROJECT_ID: ${{ secrets.EVAL_PROJECT_ID }}
           CLI_EVAL_TEAM_ID: ${{ secrets.EVAL_TEAM_ID }}
           CLI_EVAL_PROJECT_ID: ${{ secrets.EVAL_PROJECT_ID }}
+          # Run each eval with and without the CLI skills directory
+          CLI_EVAL_SKILLS_MODES: with-skills,without-skills
+          # Limit memory pressure from concurrent Docker + Node (reduce OOM exit 137)
+          NODE_OPTIONS: --max-old-space-size=4096
+
+      - name: Upload results folder to centralized evals app
+        env:
+          BATCH_ID: daily-${{ github.repository }}-${{ github.run_id }}
+          EXPERIMENTS: vercel-cli
+        run: |
+          cd packages/cli && node ./evals/scripts/transform-agent-eval-to-canonical.js \
+            --results-dir ./evals/results \
+            --product evals \
+            --repo ${{ github.repository }} \
+            --branch ${{ github.ref_name }} \
+            --commit-sha ${{ github.sha }} \
+            --run-type "${{ github.event_name == 'schedule' && 'cron' || 'manual' }}" \
+            --runner agent-eval \
+            --batch-id "$BATCH_ID" \
+            --ingest-url "${{ secrets.EVALS_INGEST_URL }}" \
+            --token "${{ secrets.EVALS_INGEST_TOKEN }}" \
+            --protection-bypass-secret "${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}" \
+            --bypass-via header
+
+      - name: Eval results detail (on failure)
+        if: failure() && steps.evals.outcome == 'failure'
+        run: |
+          echo "=== Eval results directory ==="
+          RESULTS_DIR="packages/cli/evals/results"
+          if [ -d "$RESULTS_DIR" ]; then
+            echo "Latest run:"
+            LATEST=$(ls -t "$RESULTS_DIR/cli" 2>/dev/null | head -1)
+            if [ -n "$LATEST" ]; then
+              echo "  $RESULTS_DIR/cli/$LATEST"
+              for f in "$RESULTS_DIR/cli/$LATEST"/*/summary.json "$RESULTS_DIR/cli/$LATEST"/*/run-*/outputs/eval.txt; do
+                if [ -f "$f" ]; then
+                  echo ""
+                  echo "--- $f ---"
+                  head -c 8000 "$f" | cat
+                  [ $(wc -c < "$f") -gt 8000 ] && echo "... (truncated)"
+                fi
+              done
+            fi
+          else
+            echo "No results directory found."
+          fi

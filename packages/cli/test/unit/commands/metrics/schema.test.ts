@@ -20,16 +20,17 @@ describe('schema', () => {
   });
 
   describe('event list', () => {
-    it('should output CSV list of events', async () => {
+    it('should output table list of events', async () => {
       client.setArgv('metrics', 'schema');
 
       const exitCode = await schema(client, new MockTelemetry());
 
       expect(exitCode).toBe(0);
-      const output = client.stdout.getFullOutput();
-      expect(output).toContain('event,description');
-      expect(output).toContain('incomingRequest');
-      expect(output).toContain('functionExecution');
+      const stderrOutput = client.stderr.getFullOutput();
+      expect(stderrOutput).toContain('Events found');
+      expect(stderrOutput).toContain('Event');
+      expect(stderrOutput).toContain('Description');
+      expect(stderrOutput).toContain('edgeRequest');
     });
 
     it('should output JSON list with --format=json', async () => {
@@ -41,23 +42,25 @@ describe('schema', () => {
       const output = client.stdout.getFullOutput();
       const parsed = JSON.parse(output);
       expect(Array.isArray(parsed)).toBe(true);
-      expect(parsed.length).toBe(24);
       expect(parsed[0]).toHaveProperty('name');
       expect(parsed[0]).toHaveProperty('description');
     });
   });
 
   describe('event detail', () => {
-    it('should output CSV detail for a known event', async () => {
-      client.setArgv('metrics', 'schema', '--event', 'incomingRequest');
+    it('should output table detail for a known event', async () => {
+      client.setArgv('metrics', 'schema', '--event', 'edgeRequest');
 
       const exitCode = await schema(client, new MockTelemetry());
 
       expect(exitCode).toBe(0);
-      const stdoutOutput = client.stdout.getFullOutput();
-      // Should have two blocks separated by blank line
-      expect(stdoutOutput).toContain('dimension,label,filterOnly');
-      expect(stdoutOutput).toContain('measure,label,unit');
+      const stderrOutput = client.stderr.getFullOutput();
+      expect(stderrOutput).toContain('Event: edgeRequest');
+      expect(stderrOutput).toContain('Dimension');
+      expect(stderrOutput).toContain('Label');
+      expect(stderrOutput).toContain('Groupable');
+      expect(stderrOutput).toContain('Measure');
+      expect(stderrOutput).toContain('Unit');
     });
 
     it('should output JSON detail with --format=json', async () => {
@@ -65,7 +68,7 @@ describe('schema', () => {
         'metrics',
         'schema',
         '--event',
-        'incomingRequest',
+        'edgeRequest',
         '--format=json'
       );
 
@@ -74,7 +77,7 @@ describe('schema', () => {
       expect(exitCode).toBe(0);
       const output = client.stdout.getFullOutput();
       const parsed = JSON.parse(output);
-      expect(parsed.event).toBe('incomingRequest');
+      expect(parsed.event).toBe('edgeRequest');
       expect(parsed.description).toBeDefined();
       expect(parsed.dimensions).toBeDefined();
       expect(parsed.measures).toBeDefined();
@@ -102,18 +105,18 @@ describe('schema', () => {
       const output = client.stdout.getFullOutput();
       const parsed = JSON.parse(output);
       expect(parsed.error.code).toBe('UNKNOWN_EVENT');
-      expect(parsed.error.allowedValues).toContain('incomingRequest');
+      expect(parsed.error.allowedValues).toContain('edgeRequest');
     });
   });
 
   describe('telemetry', () => {
     it('should track event option', async () => {
-      client.setArgv('metrics', 'schema', '--event', 'incomingRequest');
+      client.setArgv('metrics', 'schema', '--event', 'edgeRequest');
 
       await schema(client, new MockTelemetry());
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        { key: 'option:event', value: 'incomingRequest' },
+        { key: 'option:event', value: 'edgeRequest' },
       ]);
     });
 

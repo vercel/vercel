@@ -9,7 +9,8 @@ import type { IntegrationProduct } from './types';
  */
 export function formatDynamicExamples(
   integrationSlug: string,
-  products: IntegrationProduct[]
+  products: IntegrationProduct[],
+  commandName = 'integration add'
 ): string {
   const lines: string[] = [];
   lines.push('');
@@ -20,7 +21,7 @@ export function formatDynamicExamples(
   lines.push(`  ${chalk.dim('-')} Install ${integrationSlug}`);
   lines.push('');
   lines.push(
-    `    ${chalk.cyan(`$ ${packageName} integration add ${integrationSlug}`)}`
+    `    ${chalk.cyan(`$ ${packageName} ${commandName} ${integrationSlug}`)}`
   );
 
   // Slash syntax for multi-product
@@ -30,7 +31,7 @@ export function formatDynamicExamples(
     lines.push(`  ${chalk.dim('-')} Install a specific product`);
     lines.push('');
     lines.push(
-      `    ${chalk.cyan(`$ ${packageName} integration add ${integrationSlug}/${firstProduct.slug}`)}`
+      `    ${chalk.cyan(`$ ${packageName} ${commandName} ${integrationSlug}/${firstProduct.slug}`)}`
     );
   }
 
@@ -39,11 +40,15 @@ export function formatDynamicExamples(
   lines.push(`  ${chalk.dim('-')} Install with a custom resource name`);
   lines.push('');
   lines.push(
-    `    ${chalk.cyan(`$ ${packageName} integration add ${integrationSlug} --name my-resource`)}`
+    `    ${chalk.cyan(`$ ${packageName} ${commandName} ${integrationSlug} --name my-resource`)}`
   );
 
   // Metadata example — pick the first product with a schema and build a real example
-  const metadataExample = buildMetadataExample(integrationSlug, products);
+  const metadataExample = buildMetadataExample(
+    integrationSlug,
+    products,
+    commandName
+  );
   if (metadataExample) {
     lines.push('');
     lines.push(`  ${chalk.dim('-')} Install with metadata`);
@@ -56,7 +61,7 @@ export function formatDynamicExamples(
   lines.push(`  ${chalk.dim('-')} Install with a specific billing plan`);
   lines.push('');
   lines.push(
-    `    ${chalk.cyan(`$ ${packageName} integration add ${integrationSlug} --plan pro`)}`
+    `    ${chalk.cyan(`$ ${packageName} ${commandName} ${integrationSlug} --plan pro`)}`
   );
 
   // Environment
@@ -66,7 +71,7 @@ export function formatDynamicExamples(
   );
   lines.push('');
   lines.push(
-    `    ${chalk.cyan(`$ ${packageName} integration add ${integrationSlug} -e production -e preview`)}`
+    `    ${chalk.cyan(`$ ${packageName} ${commandName} ${integrationSlug} -e production -e preview`)}`
   );
 
   // No-connect
@@ -76,7 +81,7 @@ export function formatDynamicExamples(
   );
   lines.push('');
   lines.push(
-    `    ${chalk.cyan(`$ ${packageName} integration add ${integrationSlug} --no-connect`)}`
+    `    ${chalk.cyan(`$ ${packageName} ${commandName} ${integrationSlug} --no-connect`)}`
   );
 
   // No-env-pull
@@ -86,8 +91,36 @@ export function formatDynamicExamples(
   );
   lines.push('');
   lines.push(
-    `    ${chalk.cyan(`$ ${packageName} integration add ${integrationSlug} --no-env-pull`)}`
+    `    ${chalk.cyan(`$ ${packageName} ${commandName} ${integrationSlug} --no-env-pull`)}`
   );
+
+  // Prefix
+  lines.push('');
+  lines.push(
+    `  ${chalk.dim('-')} Install with a prefix for environment variable names`
+  );
+  lines.push('');
+  lines.push(
+    `    ${chalk.cyan(`$ ${packageName} ${commandName} ${integrationSlug} --prefix NEON2_`)}`
+  );
+
+  // JSON output
+  lines.push('');
+  lines.push(`  ${chalk.dim('-')} Output as JSON`);
+  lines.push('');
+  lines.push(
+    `    ${chalk.cyan(`$ ${packageName} ${commandName} ${integrationSlug} --format=json`)}`
+  );
+
+  // Installation ID (only when auto-provision FF is enabled)
+  if (process.env.FF_AUTO_PROVISION_INSTALL !== '0') {
+    lines.push('');
+    lines.push(`  ${chalk.dim('-')} Install using a specific installation`);
+    lines.push('');
+    lines.push(
+      `    ${chalk.cyan(`$ ${packageName} ${commandName} ${integrationSlug} --installation-id <id>`)}`
+    );
+  }
 
   lines.push('');
 
@@ -96,7 +129,8 @@ export function formatDynamicExamples(
 
 function buildMetadataExample(
   integrationSlug: string,
-  products: IntegrationProduct[]
+  products: IntegrationProduct[],
+  commandName: string
 ): string | undefined {
   // Find first product with a schema that has visible fields
   for (const product of products) {
@@ -132,7 +166,7 @@ function buildMetadataExample(
         products.length > 1
           ? `${integrationSlug}/${product.slug}`
           : integrationSlug;
-      return `${packageName} integration add ${slug} ${flags.join(' ')}`;
+      return `${packageName} ${commandName} ${slug} ${flags.join(' ')}`;
     }
   }
 

@@ -12,6 +12,8 @@ export interface MeasureSchema {
 
 export interface EventSchema {
   description: string;
+  /** If set, this name is sent to the query engine instead of the schema key. */
+  queryEngineEvent?: string;
   dimensions: DimensionSchema[];
   measures: MeasureSchema[];
 }
@@ -25,42 +27,46 @@ const VALUE_AGGREGATIONS = [
   'avg',
   'min',
   'max',
+  'p50',
   'p75',
   'p90',
   'p95',
   'p99',
   'stddev',
-  'unique',
 ] as const;
 
-// All 24 events from the observability query engine.
+export type CountAggregation = (typeof COUNT_AGGREGATIONS)[number];
+export type ValueAggregation = (typeof VALUE_AGGREGATIONS)[number];
+export type MetricsAggregation = ValueAggregation;
+
 // Measures with "cannot be used in rollups" are excluded since the CLI only supports aggregated queries.
 export const SCHEMA = {
   aiGatewayRequest: {
-    description: 'AI Gateway request events for tracking AI model API usage',
+    description: 'AI Gateway Requests',
     dimensions: [
       {
         name: 'aiGatewayModelId',
         label: 'AI Gateway Model ID',
-        filterOnly: false,
+        filterOnly: true,
       },
       { name: 'aiModel', label: 'AI Model', filterOnly: false },
       { name: 'aiModelType', label: 'AI Model Type', filterOnly: false },
       { name: 'aiProvider', label: 'AI Provider', filterOnly: false },
       {
-        name: 'cachedInputTokensCurrency',
-        label: 'Cached Input Tokens Currency',
+        name: 'cacheCreationInputTokensCurrency',
+        label: 'Cache Creation Input Tokens Currency',
         filterOnly: true,
       },
       {
-        name: 'cacheCreationInputTokensCurrency',
-        label: 'Cache Creation Input Tokens Currency',
+        name: 'cachedInputTokensCurrency',
+        label: 'Cached Input Tokens Currency',
         filterOnly: true,
       },
       { name: 'costCurrency', label: 'Currency', filterOnly: true },
       { name: 'deploymentId', label: 'Deployment ID', filterOnly: false },
       { name: 'environment', label: 'Environment', filterOnly: false },
       { name: 'httpStatus', label: 'HTTP Status', filterOnly: false },
+      { name: 'isByok', label: 'BYOK', filterOnly: false },
       { name: 'keyId', label: 'Key ID', filterOnly: true },
       { name: 'keyName', label: 'Key Name', filterOnly: true },
       {
@@ -69,7 +75,13 @@ export const SCHEMA = {
         filterOnly: true,
       },
       { name: 'projectId', label: 'Project', filterOnly: false },
-      { name: 'requestHostname', label: 'Request Hostname', filterOnly: false },
+      { name: 'projectName', label: 'Project', filterOnly: true },
+      {
+        name: 'videoAspectRatio',
+        label: 'Video Aspect Ratio',
+        filterOnly: false,
+      },
+      { name: 'videoResolution', label: 'Video Resolution', filterOnly: false },
     ],
     measures: [
       {
@@ -80,66 +92,31 @@ export const SCHEMA = {
       {
         name: 'cacheCreationInputTokens',
         label: 'Cache Creation Tokens',
-        unit: 'tokens',
+        unit: 'count',
       },
       {
         name: 'cachedInputTokens',
         label: 'Cached Input Tokens',
-        unit: 'tokens',
+        unit: 'count',
       },
       { name: 'cost', label: 'Cost', unit: 'US dollars' },
       { name: 'count', label: 'Count', unit: 'count' },
-      { name: 'inputTokens', label: 'Input Tokens', unit: 'tokens' },
-      { name: 'outputTokens', label: 'Output Tokens', unit: 'tokens' },
+      { name: 'inputTokens', label: 'Input Tokens', unit: 'count' },
+      { name: 'outputTokens', label: 'Output Tokens', unit: 'count' },
       {
         name: 'timeToFirstTokenMs',
         label: 'Time to First Token',
         unit: 'milliseconds',
       },
+      { name: 'videoCount', label: 'Video Count', unit: 'count' },
+      {
+        name: 'videoDurationSeconds',
+        label: 'Video Duration',
+        unit: 'seconds',
+      },
+      { name: 'videoFps', label: 'Video FPS', unit: 'count' },
       { name: 'webSearchCallCount', label: 'Web Search Calls', unit: 'count' },
     ],
-  },
-  analyticsEvent: {
-    description: 'Web Analytics custom event tracking',
-    dimensions: [
-      { name: 'browserName', label: 'Browser', filterOnly: false },
-      { name: 'country', label: 'Country', filterOnly: true },
-      { name: 'deploymentId', label: 'Deployment ID', filterOnly: true },
-      { name: 'deviceId', label: 'Device Id', filterOnly: true },
-      { name: 'deviceType', label: 'Device Type', filterOnly: true },
-      { name: 'environment', label: 'Environment', filterOnly: false },
-      { name: 'eventName', label: 'Analytics event name', filterOnly: true },
-      { name: 'osName', label: 'Operating System', filterOnly: false },
-      { name: 'projectId', label: 'Project', filterOnly: false },
-      {
-        name: 'referrerHostname',
-        label: 'Referrer Hostname',
-        filterOnly: false,
-      },
-      { name: 'requestPath', label: 'Request Path', filterOnly: false },
-    ],
-    measures: [{ name: 'count', label: 'Count', unit: 'count' }],
-  },
-  analyticsPageview: {
-    description: 'Web Analytics pageview tracking',
-    dimensions: [
-      { name: 'browserName', label: 'Browser', filterOnly: false },
-      { name: 'country', label: 'Country', filterOnly: true },
-      { name: 'deploymentId', label: 'Deployment ID', filterOnly: true },
-      { name: 'deviceId', label: 'Device Id', filterOnly: true },
-      { name: 'deviceType', label: 'Device Type', filterOnly: true },
-      { name: 'environment', label: 'Environment', filterOnly: false },
-      { name: 'osName', label: 'Operating System', filterOnly: false },
-      { name: 'projectId', label: 'Project', filterOnly: false },
-      {
-        name: 'referrerHostname',
-        label: 'Referrer Hostname',
-        filterOnly: false,
-      },
-      { name: 'requestPath', label: 'Request Path', filterOnly: false },
-      { name: 'route', label: 'Route', filterOnly: false },
-    ],
-    measures: [{ name: 'count', label: 'Count', unit: 'count' }],
   },
   blobDataTransfer: {
     description: 'Blob store data transfer operations',
@@ -155,22 +132,19 @@ export const SCHEMA = {
         label: 'Edge Network Region',
         filterOnly: false,
       },
-      { name: 'environment', label: 'Environment', filterOnly: false },
       { name: 'httpStatus', label: 'HTTP Status', filterOnly: false },
       { name: 'pathType', label: 'Path Type', filterOnly: false },
-      { name: 'projectId', label: 'Project', filterOnly: false },
       {
         name: 'referrerHostname',
         label: 'Referrer Hostname',
         filterOnly: false,
       },
       { name: 'referrerUrl', label: 'Referrer URL', filterOnly: false },
-      { name: 'requestHostname', label: 'Request Hostname', filterOnly: false },
       { name: 'requestId', label: 'Request ID', filterOnly: true },
       { name: 'requestMethod', label: 'Request Method', filterOnly: false },
       { name: 'requestPath', label: 'Request Path', filterOnly: false },
       { name: 'storeId', label: 'Store ID', filterOnly: true },
-      { name: 'storeName', label: 'Store', filterOnly: false },
+      { name: 'storeName', label: 'Store', filterOnly: true },
     ],
     measures: [
       { name: 'bdtOutBytes', label: 'Blob Data Transfer', unit: 'bytes' },
@@ -186,25 +160,13 @@ export const SCHEMA = {
         filterOnly: true,
       },
       { name: 'blobOperationType', label: 'Operation', filterOnly: true },
-      { name: 'environment', label: 'Environment', filterOnly: false },
-      { name: 'projectId', label: 'Project', filterOnly: false },
       { name: 'storeId', label: 'Store ID', filterOnly: true },
-      { name: 'storeName', label: 'Store', filterOnly: false },
+      { name: 'storeName', label: 'Store', filterOnly: true },
     ],
     measures: [{ name: 'count', label: 'Count', unit: 'count' }],
   },
-  blobStoreState: {
-    description: 'Blob store state metrics including size and object count',
-    dimensions: [
-      { name: 'environment', label: 'Environment', filterOnly: false },
-      { name: 'projectId', label: 'Project', filterOnly: false },
-      { name: 'storeId', label: 'Store ID', filterOnly: true },
-      { name: 'storeName', label: 'Store', filterOnly: false },
-    ],
-    measures: [],
-  },
   blockedConnection: {
-    description: 'Connections blocked by firewall rules',
+    description: 'Blocked Connections',
     dimensions: [
       { name: 'asnId', label: 'AS Number', filterOnly: false },
       { name: 'asnName', label: 'AS Name', filterOnly: false },
@@ -217,7 +179,7 @@ export const SCHEMA = {
         filterOnly: false,
       },
       { name: 'projectId', label: 'Project', filterOnly: false },
-      { name: 'projectName', label: 'Project', filterOnly: false },
+      { name: 'projectName', label: 'Project', filterOnly: true },
       { name: 'requestHostname', label: 'Request Hostname', filterOnly: false },
       { name: 'requestPath', label: 'Request Path', filterOnly: false },
       { name: 'route', label: 'Route', filterOnly: false },
@@ -227,7 +189,7 @@ export const SCHEMA = {
     measures: [{ name: 'count', label: 'Count', unit: 'count' }],
   },
   botIdCheck: {
-    description: 'Bot identification check results',
+    description: 'BotID Checks',
     dimensions: [
       { name: 'asnId', label: 'AS Number', filterOnly: false },
       { name: 'asnName', label: 'AS Name', filterOnly: false },
@@ -242,7 +204,7 @@ export const SCHEMA = {
         filterOnly: false,
       },
       { name: 'projectId', label: 'Project', filterOnly: false },
-      { name: 'projectName', label: 'Project', filterOnly: false },
+      { name: 'projectName', label: 'Project', filterOnly: true },
       { name: 'referrerUrl', label: 'Referrer URL', filterOnly: false },
       { name: 'requestHostname', label: 'Request Hostname', filterOnly: false },
       { name: 'requestPath', label: 'Request Path', filterOnly: false },
@@ -266,7 +228,7 @@ export const SCHEMA = {
       {
         name: 'entryRevalidateSeconds',
         label: 'Entry Revalidate Lifetime',
-        filterOnly: false,
+        filterOnly: true,
       },
       { name: 'environment', label: 'Environment', filterOnly: false },
       { name: 'projectId', label: 'Project', filterOnly: false },
@@ -275,17 +237,8 @@ export const SCHEMA = {
     ],
     measures: [{ name: 'count', label: 'Count', unit: 'count' }],
   },
-  dataCacheState: {
-    description: 'Vercel Data Cache state metrics',
-    dimensions: [
-      { name: 'cacheApi', label: 'Cache API', filterOnly: true },
-      { name: 'environment', label: 'Environment', filterOnly: false },
-      { name: 'projectId', label: 'Project', filterOnly: false },
-    ],
-    measures: [],
-  },
   firewallAction: {
-    description: 'Firewall actions including blocks challenges and allows',
+    description: 'Firewall Actions',
     dimensions: [
       { name: 'asnId', label: 'AS Number', filterOnly: false },
       { name: 'asnName', label: 'AS Name', filterOnly: false },
@@ -299,7 +252,7 @@ export const SCHEMA = {
         filterOnly: false,
       },
       { name: 'projectId', label: 'Project', filterOnly: false },
-      { name: 'projectName', label: 'Project', filterOnly: false },
+      { name: 'projectName', label: 'Project', filterOnly: true },
       { name: 'requestHostname', label: 'Request Hostname', filterOnly: false },
       { name: 'requestPath', label: 'Request Path', filterOnly: false },
       { name: 'route', label: 'Route', filterOnly: false },
@@ -309,9 +262,11 @@ export const SCHEMA = {
     measures: [{ name: 'count', label: 'Count', unit: 'count' }],
   },
   functionExecution: {
-    description: 'Serverless function execution details',
+    description: 'Function Executions',
     dimensions: [
       { name: 'cause', label: 'Cause', filterOnly: false },
+      { name: 'clientIp', label: 'IP Address', filterOnly: false },
+      { name: 'clientUserAgent', label: 'User Agent', filterOnly: false },
       { name: 'deploymentId', label: 'Deployment ID', filterOnly: false },
       {
         name: 'edgeNetworkRegion',
@@ -321,6 +276,11 @@ export const SCHEMA = {
       { name: 'environment', label: 'Environment', filterOnly: false },
       { name: 'errorCode', label: 'Error Code', filterOnly: false },
       { name: 'functionRegion', label: 'Function Region', filterOnly: false },
+      {
+        name: 'functionStartType',
+        label: 'Function Start Type',
+        filterOnly: false,
+      },
       { name: 'httpStatus', label: 'HTTP Status', filterOnly: false },
       {
         name: 'middlewareAction',
@@ -332,12 +292,9 @@ export const SCHEMA = {
         label: 'Middleware Action Target',
         filterOnly: false,
       },
-      { name: 'originHostname', label: 'Function Hostname', filterOnly: false },
-      { name: 'originPath', label: 'Function Path', filterOnly: false },
-      { name: 'originRoute', label: 'Function Route', filterOnly: false },
       { name: 'pathType', label: 'Path Type', filterOnly: false },
       { name: 'projectId', label: 'Project', filterOnly: false },
-      { name: 'projectName', label: 'Project', filterOnly: false },
+      { name: 'projectName', label: 'Project', filterOnly: true },
       { name: 'provider', label: 'Provider', filterOnly: true },
       {
         name: 'referrerHostname',
@@ -357,11 +314,6 @@ export const SCHEMA = {
       },
     ],
     measures: [
-      {
-        name: 'coldStartDurationMs',
-        label: 'Cold Start Duration',
-        unit: 'milliseconds',
-      },
       { name: 'count', label: 'Count', unit: 'count' },
       {
         name: 'fotInBytes',
@@ -378,8 +330,11 @@ export const SCHEMA = {
         label: 'Active CPU Time',
         unit: 'milliseconds',
       },
-      { name: 'functionDurationMs', label: 'Duration', unit: 'milliseconds' },
-      { name: 'peakMemoryMb', label: 'Peak Memory', unit: 'megabytes' },
+      {
+        name: 'functionDurationMs',
+        label: 'Duration',
+        unit: 'milliseconds',
+      },
       {
         name: 'provisionedMemoryMb',
         label: 'Provisioned Memory',
@@ -394,14 +349,9 @@ export const SCHEMA = {
     ],
   },
   imageTransformation: {
-    description: 'Successful image optimization operations',
+    description: 'Image Transformations',
     dimensions: [
       { name: 'deploymentId', label: 'Deployment ID', filterOnly: false },
-      {
-        name: 'edgeFunctionInvocation',
-        label: 'Edge Function Invocations',
-        filterOnly: true,
-      },
       { name: 'environment', label: 'Environment', filterOnly: false },
       { name: 'httpStatus', label: 'HTTP Status', filterOnly: false },
       {
@@ -413,8 +363,7 @@ export const SCHEMA = {
       { name: 'optimizedQuality', label: 'Quality', filterOnly: false },
       { name: 'optimizedWidthPixels', label: 'Width', filterOnly: false },
       { name: 'projectId', label: 'Project', filterOnly: false },
-      { name: 'projectName', label: 'Project', filterOnly: false },
-      { name: 'requestHostname', label: 'Request Hostname', filterOnly: false },
+      { name: 'projectName', label: 'Project', filterOnly: true },
       { name: 'sourceImage', label: 'Source Image', filterOnly: true },
       {
         name: 'sourceImageHash',
@@ -446,7 +395,7 @@ export const SCHEMA = {
     ],
   },
   imageTransformationFailure: {
-    description: 'Failed image optimization operations',
+    description: 'Image Transformation Failures',
     dimensions: [
       { name: 'deploymentId', label: 'Deployment ID', filterOnly: false },
       { name: 'environment', label: 'Environment', filterOnly: false },
@@ -462,8 +411,7 @@ export const SCHEMA = {
       { name: 'optimizedQuality', label: 'Quality', filterOnly: false },
       { name: 'optimizedWidthPixels', label: 'Width', filterOnly: false },
       { name: 'projectId', label: 'Project', filterOnly: false },
-      { name: 'projectName', label: 'Project', filterOnly: false },
-      { name: 'requestHostname', label: 'Request Hostname', filterOnly: false },
+      { name: 'projectName', label: 'Project', filterOnly: true },
       { name: 'sourceImage', label: 'Source Image', filterOnly: true },
       {
         name: 'sourceImageHostname',
@@ -476,10 +424,18 @@ export const SCHEMA = {
         filterOnly: true,
       },
     ],
-    measures: [{ name: 'count', label: 'Count', unit: 'count' }],
+    measures: [
+      { name: 'count', label: 'Count', unit: 'count' },
+      {
+        name: 'requestDurationMs',
+        label: 'Request Duration',
+        unit: 'milliseconds',
+      },
+    ],
   },
-  incomingRequest: {
-    description: 'All incoming HTTP requests to your deployments',
+  edgeRequest: {
+    description: 'Edge Requests',
+    queryEngineEvent: 'incomingRequest',
     dimensions: [
       { name: 'asnId', label: 'AS Number', filterOnly: false },
       { name: 'asnName', label: 'AS Name', filterOnly: false },
@@ -524,6 +480,11 @@ export const SCHEMA = {
         filterOnly: true,
       },
       {
+        name: 'microfrontendsDefaultAppProjectId',
+        label: 'Microfrontends Default App Project ID',
+        filterOnly: true,
+      },
+      {
         name: 'microfrontendsMatchedPath',
         label: 'Microfrontends Matched Path',
         filterOnly: false,
@@ -536,7 +497,7 @@ export const SCHEMA = {
       { name: 'pathType', label: 'Path Type', filterOnly: false },
       { name: 'pathTypeVariant', label: 'Path Type Variant', filterOnly: true },
       { name: 'projectId', label: 'Project', filterOnly: false },
-      { name: 'projectName', label: 'Project', filterOnly: false },
+      { name: 'projectName', label: 'Project', filterOnly: true },
       {
         name: 'redirectLocation',
         label: 'Redirect Location',
@@ -599,22 +560,25 @@ export const SCHEMA = {
         label: 'Fast Data Transfer (Total)',
         unit: 'bytes',
       },
-      { name: 'isrReadUnits', label: 'Read Units', unit: 'count' },
-      { name: 'isrWriteUnits', label: 'Write Units', unit: 'count' },
       {
         name: 'requestDurationMs',
-        label: 'Request Duration',
+        label: 'Edge Request Duration',
         unit: 'milliseconds',
       },
     ],
   },
   isrOperation: {
-    description: 'Incremental Static Regeneration operations',
+    description: 'ISR Operations',
     dimensions: [
       { name: 'cacheHitLevel', label: 'Cache Hit Level', filterOnly: true },
       { name: 'cacheHitState', label: 'Cache Hit State', filterOnly: true },
       { name: 'cacheResult', label: 'Cache Result', filterOnly: false },
       { name: 'deploymentId', label: 'Deployment ID', filterOnly: false },
+      {
+        name: 'edgeNetworkRegion',
+        label: 'Edge Network Region',
+        filterOnly: false,
+      },
       { name: 'environment', label: 'Environment', filterOnly: false },
       { name: 'errorCode', label: 'Error Code', filterOnly: false },
       { name: 'httpStatus', label: 'HTTP Status', filterOnly: false },
@@ -622,7 +586,7 @@ export const SCHEMA = {
       { name: 'isrCacheRegion', label: 'ISR Cache Region', filterOnly: false },
       { name: 'pathType', label: 'Path Type', filterOnly: false },
       { name: 'projectId', label: 'Project', filterOnly: false },
-      { name: 'projectName', label: 'Project', filterOnly: false },
+      { name: 'projectName', label: 'Project', filterOnly: true },
       {
         name: 'referrerHostname',
         label: 'Referrer Hostname',
@@ -635,20 +599,19 @@ export const SCHEMA = {
       { name: 'route', label: 'Route', filterOnly: false },
     ],
     measures: [
-      { name: 'count', label: 'Count', unit: 'count' },
       { name: 'isrReadBytes', label: 'Read Bandwidth', unit: 'bytes' },
       { name: 'isrReadUnits', label: 'Read Units', unit: 'count' },
       { name: 'isrWriteBytes', label: 'Write Bandwidth', unit: 'bytes' },
       { name: 'isrWriteUnits', label: 'Write Units', unit: 'count' },
+      { name: 'count', label: 'Count', unit: 'count' },
     ],
   },
   middlewareInvocation: {
-    description: 'Middleware function invocations',
+    description: 'Middleware Invocations',
     dimensions: [
       { name: 'clientIp', label: 'IP Address', filterOnly: false },
       { name: 'clientUserAgent', label: 'User Agent', filterOnly: false },
       { name: 'deploymentId', label: 'Deployment ID', filterOnly: false },
-      { name: 'durationMs', label: 'Duration', filterOnly: true },
       {
         name: 'edgeNetworkRegion',
         label: 'Edge Network Region',
@@ -678,7 +641,7 @@ export const SCHEMA = {
         filterOnly: false,
       },
       { name: 'projectId', label: 'Project', filterOnly: false },
-      { name: 'projectName', label: 'Project', filterOnly: false },
+      { name: 'projectName', label: 'Project', filterOnly: true },
       {
         name: 'referrerHostname',
         label: 'Referrer Hostname',
@@ -712,24 +675,12 @@ export const SCHEMA = {
         label: 'Active CPU Time',
         unit: 'milliseconds',
       },
-      {
-        name: 'functionDurationGbhr',
-        label: 'Duration (Gb-hrs)',
-        unit: 'gigabyte hours',
-      },
-      { name: 'peakMemoryMb', label: 'Peak Memory', unit: 'megabytes' },
-      {
-        name: 'provisionedMemoryMb',
-        label: 'Provisioned Memory',
-        unit: 'megabytes',
-      },
       { name: 'ttfbMs', label: 'Time to First Byte', unit: 'milliseconds' },
     ],
   },
   outgoingRequest: {
-    description: 'External API calls made from your functions',
+    description: 'External APIs',
     dimensions: [
-      { name: 'cacheApi', label: 'Cache API', filterOnly: true },
       { name: 'cacheHostname', label: 'Cache Hostname', filterOnly: true },
       { name: 'cachePath', label: 'Cache Path', filterOnly: true },
       { name: 'deploymentId', label: 'Deployment ID', filterOnly: false },
@@ -744,7 +695,7 @@ export const SCHEMA = {
       { name: 'originPath', label: 'Function Path', filterOnly: false },
       { name: 'originRoute', label: 'Function Route', filterOnly: false },
       { name: 'projectId', label: 'Project', filterOnly: false },
-      { name: 'projectName', label: 'Project', filterOnly: false },
+      { name: 'projectName', label: 'Project', filterOnly: true },
       {
         name: 'reason',
         label: 'Reason of failure for outgoing requests',
@@ -771,68 +722,6 @@ export const SCHEMA = {
       },
     ],
   },
-  prReview: {
-    description: 'Pull request review operations',
-    dimensions: [
-      { name: 'commitSha', label: 'Commit SHA', filterOnly: false },
-      { name: 'environment', label: 'Environment', filterOnly: false },
-      { name: 'projectId', label: 'Project', filterOnly: false },
-      {
-        name: 'pullRequestNumber',
-        label: 'Pull Request Number',
-        filterOnly: false,
-      },
-      { name: 'repositoryName', label: 'Repository Name', filterOnly: false },
-      { name: 'repositoryOwner', label: 'Repository Owner', filterOnly: false },
-      {
-        name: 'reviewConclusion',
-        label: 'Review Conclusion',
-        filterOnly: false,
-      },
-      { name: 'reviewStatus', label: 'Review Status', filterOnly: false },
-    ],
-    measures: [
-      { name: 'cost', label: 'Cost', unit: 'US dollars' },
-      { name: 'count', label: 'Count', unit: 'count' },
-      { name: 'filesRead', label: 'Files Read', unit: 'count' },
-      { name: 'reviewComments', label: 'Review Comments', unit: 'count' },
-      { name: 'reviewTimeSeconds', label: 'Review Time', unit: 'seconds' },
-      { name: 'timeWorkedSeconds', label: 'Time Worked', unit: 'seconds' },
-      { name: 'tokenCost', label: 'Token Cost', unit: 'count' },
-    ],
-  },
-  prReviewModelUsage: {
-    description: 'AI model usage for pull request reviews',
-    dimensions: [
-      { name: 'aiModel', label: 'AI Model', filterOnly: false },
-      { name: 'commitSha', label: 'Commit SHA', filterOnly: false },
-      { name: 'environment', label: 'Environment', filterOnly: false },
-      { name: 'projectId', label: 'Project', filterOnly: false },
-      {
-        name: 'pullRequestNumber',
-        label: 'Pull Request Number',
-        filterOnly: false,
-      },
-      { name: 'repositoryName', label: 'Repository Name', filterOnly: false },
-      { name: 'repositoryOwner', label: 'Repository Owner', filterOnly: false },
-    ],
-    measures: [
-      {
-        name: 'cacheCreationInputTokens',
-        label: 'Cache Creation Tokens',
-        unit: 'tokens',
-      },
-      {
-        name: 'cachedInputTokens',
-        label: 'Cached Input Tokens',
-        unit: 'tokens',
-      },
-      { name: 'count', label: 'Count', unit: 'count' },
-      { name: 'inputTokens', label: 'Input Tokens', unit: 'tokens' },
-      { name: 'outputTokens', label: 'Output Tokens', unit: 'tokens' },
-      { name: 'tokenCost', label: 'Token Cost', unit: 'count' },
-    ],
-  },
   queueOperation: {
     description: 'Queue operations for message processing',
     dimensions: [
@@ -841,103 +730,21 @@ export const SCHEMA = {
       { name: 'environment', label: 'Environment', filterOnly: false },
       { name: 'eventType', label: 'Queue Event Type', filterOnly: true },
       { name: 'messageId', label: 'Message ID', filterOnly: true },
-      { name: 'notificationUrl', label: 'Notification URL', filterOnly: true },
       { name: 'projectId', label: 'Project', filterOnly: false },
+      { name: 'projectName', label: 'Project', filterOnly: true },
       { name: 'queueName', label: 'Queue Name', filterOnly: true },
     ],
     measures: [{ name: 'count', label: 'Count', unit: 'count' }],
   },
-  reviewedPrComplete: {
-    description: 'Completed pull request review feedback',
-    dimensions: [
-      { name: 'environment', label: 'Environment', filterOnly: false },
-      { name: 'projectId', label: 'Project', filterOnly: false },
-      {
-        name: 'pullRequestNumber',
-        label: 'Pull Request Number',
-        filterOnly: false,
-      },
-      {
-        name: 'pullRequestState',
-        label: 'Pull Request State',
-        filterOnly: false,
-      },
-      { name: 'repositoryName', label: 'Repository Name', filterOnly: false },
-      { name: 'repositoryOwner', label: 'Repository Owner', filterOnly: false },
-    ],
-    measures: [
-      {
-        name: 'badReviewComments',
-        label: 'Bad Review Comments',
-        unit: 'count',
-      },
-      { name: 'count', label: 'Count', unit: 'count' },
-      {
-        name: 'feedbackAcceptedCount',
-        label: 'Feedback Accepted Count',
-        unit: 'count',
-      },
-      {
-        name: 'feedbackIgnoredCount',
-        label: 'Feedback Ignored Count',
-        unit: 'count',
-      },
-      {
-        name: 'goodReviewComments',
-        label: 'Good Review Comments',
-        unit: 'count',
-      },
-      {
-        name: 'negativeReviewCommentReactions',
-        label: 'Negative Review Comment Reactions',
-        unit: 'count',
-      },
-      {
-        name: 'negativeReviewCommentReplyThreads',
-        label: 'Negative Review Comment Reply Threads',
-        unit: 'count',
-      },
-      {
-        name: 'neutralReviewComments',
-        label: 'Neutral Review Comments',
-        unit: 'count',
-      },
-      {
-        name: 'positiveReviewCommentReactions',
-        label: 'Positive Review Comment Reactions',
-        unit: 'count',
-      },
-      {
-        name: 'positiveReviewCommentReplyThreads',
-        label: 'Positive Review Comment Reply Threads',
-        unit: 'count',
-      },
-      {
-        name: 'suggestionAcceptedCount',
-        label: 'Suggestion Accepted Count',
-        unit: 'count',
-      },
-      {
-        name: 'suggestionIgnoredCount',
-        label: 'Suggestion Ignored Count',
-        unit: 'count',
-      },
-      {
-        name: 'totalReviewComments',
-        label: 'Total Review Comments',
-        unit: 'count',
-      },
-    ],
-  },
   speedInsightsMetric: {
     description: 'Core Web Vitals and performance metrics',
     dimensions: [
-      { name: 'browserName', label: 'Browser', filterOnly: false },
+      { name: 'browserName', label: 'Browser', filterOnly: true },
       { name: 'country', label: 'Country', filterOnly: true },
       { name: 'deploymentId', label: 'Deployment ID', filterOnly: false },
       { name: 'deviceType', label: 'Device Type', filterOnly: true },
       { name: 'environment', label: 'Environment', filterOnly: false },
-      { name: 'osName', label: 'Operating System', filterOnly: false },
+      { name: 'osName', label: 'Operating System', filterOnly: true },
       { name: 'projectId', label: 'Project', filterOnly: false },
       { name: 'requestHostname', label: 'Request Hostname', filterOnly: false },
       { name: 'requestPath', label: 'Request Path', filterOnly: false },
@@ -954,10 +761,11 @@ export const SCHEMA = {
     ],
   },
   workflowOperation: {
-    description: 'Workflow execution operations',
+    description: 'Workflow Operations',
     dimensions: [
       { name: 'environment', label: 'Environment', filterOnly: false },
       { name: 'projectId', label: 'Project', filterOnly: false },
+      { name: 'projectName', label: 'Project', filterOnly: true },
       { name: 'stepRunId', label: 'Step Run ID', filterOnly: false },
       { name: 'workflowEventType', label: 'Event Type', filterOnly: false },
       { name: 'workflowName', label: 'Workflow Name', filterOnly: false },
@@ -979,6 +787,11 @@ export function getEvent(name: string): EventSchema | undefined {
   return (SCHEMA as Record<string, EventSchema>)[name];
 }
 
+export function getQueryEngineEventName(name: string): string {
+  const event = getEvent(name);
+  return event?.queryEngineEvent ?? name;
+}
+
 export function getDimensions(eventName: string): DimensionSchema[] {
   return getEvent(eventName)?.dimensions ?? [];
 }
@@ -990,7 +803,7 @@ export function getMeasures(eventName: string): MeasureSchema[] {
 export function getDefaultAggregation(
   eventName: string,
   measureName: string
-): string {
+): MetricsAggregation {
   if (measureName === 'count') return 'sum';
 
   const event = getEvent(eventName);
@@ -1002,7 +815,6 @@ export function getDefaultAggregation(
   switch (measure.unit) {
     case 'count':
     case 'bytes':
-    case 'tokens':
     case 'US dollars':
       return 'sum';
     case 'milliseconds':
@@ -1020,7 +832,7 @@ export function getDefaultAggregation(
 export function getAggregations(
   eventName: string,
   measureName: string
-): readonly string[] {
+): readonly MetricsAggregation[] {
   const event = getEvent(eventName);
   if (!event) {
     return [];

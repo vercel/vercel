@@ -1,6 +1,26 @@
 import { cacheHeader } from 'pretty-cache-header';
+import { sourceToRegex } from '@vercel/routing-utils';
 import { validateRegexPattern, parseCronExpression } from './utils/validation';
 import type { Redirect, Rewrite } from './types';
+
+/**
+ * Convert a destination string from path-to-regexp format to use capture group references.
+ * Replaces :paramName with $index based on the segments array.
+ */
+function convertDestination(destination: string, segments: string[]): string {
+  let result = destination;
+  segments.forEach((segment, index) => {
+    const patterns = [
+      new RegExp(`:${segment}\\*`, 'g'),
+      new RegExp(`:${segment}\\+`, 'g'),
+      new RegExp(`:${segment}(?![a-zA-Z0-9_])`, 'g'),
+    ];
+    for (const pattern of patterns) {
+      result = result.replace(pattern, `$${index + 1}`);
+    }
+  });
+  return result;
+}
 
 /**
  * Type utility to extract path parameter names from a route pattern string.
@@ -231,6 +251,34 @@ export interface Condition extends ConditionOperators {
   value?: string;
 }
 
+function createKeyedConditionHelper(type: 'header' | 'cookie' | 'query') {
+  return (key: string, value?: string | ConditionOperators): Condition => {
+    if (value === undefined) {
+      return { type, key };
+    }
+    if (typeof value === 'string') {
+      return { type, key, value };
+    }
+    return { type, key, ...value };
+  };
+}
+
+function createKeylessConditionHelper(type: 'host') {
+  return (value: string | ConditionOperators): Condition => {
+    if (typeof value === 'string') {
+      return { type, value };
+    }
+    return { type, ...value };
+  };
+}
+
+export const matchers = {
+  header: createKeyedConditionHelper('header'),
+  cookie: createKeyedConditionHelper('cookie'),
+  query: createKeyedConditionHelper('query'),
+  host: createKeylessConditionHelper('host'),
+};
+
 /**
  * Transform type specifies the scope of what the transform will apply to.
  * - 'request.query': Transform query parameters in the request
@@ -327,9 +375,13 @@ export interface Transform {
  */
 export interface Route {
   /** Pattern to match request paths using path-to-regexp syntax */
-  src: string;
+  src?: string;
+  /** Alias for `src`. A pattern that matches each incoming pathname (excluding querystring). */
+  source?: string;
   /** Optional destination for rewrite/redirect */
   dest?: string;
+  /** Alias for `dest`. An absolute pathname to an existing resource or an external URL. */
+  destination?: string;
   /** Array of HTTP methods to match. If not provided, matches all methods */
   methods?: string[];
   /** Array of transforms to apply */
@@ -340,6 +392,8 @@ export interface Route {
   missing?: Condition[];
   /** Status code for the response */
   status?: number;
+  /** Alias for `status`. An optional integer to override the status code of the response. */
+  statusCode?: number;
   /** Headers to set (alternative to using transforms) */
   headers?: Record<string, string>;
   /** Environment variables referenced in dest or transforms */
@@ -798,9 +852,13 @@ export class Router {
         }
       }
 
+      // Convert path-to-regexp patterns to regex for routes format
+      const { src: regexSrc, segments } = sourceToRegex(source);
+      const convertedDest = convertDestination(destination, segments);
+
       const route: Route = {
-        src: source,
-        dest: destination,
+        src: regexSrc,
+        dest: convertedDest,
         transforms,
       };
       if (has) route.has = has;
@@ -823,9 +881,13 @@ export class Router {
 
     if (destEnvVars.length > 0) {
       // Need Route format to include env field
+      // Convert path-to-regexp patterns to regex for routes format
+      const { src: regexSrc, segments } = sourceToRegex(source);
+      const convertedDest = convertDestination(destination, segments);
+
       const route: Route = {
-        src: source,
-        dest: destination,
+        src: regexSrc,
+        dest: convertedDest,
         env: destEnvVars,
       };
       if (has) route.has = has;
@@ -970,9 +1032,13 @@ export class Router {
         transforms.push(transform);
       }
 
+      // Convert path-to-regexp patterns to regex for routes format
+      const { src: regexSrc, segments } = sourceToRegex(source);
+      const convertedDest = convertDestination(destination, segments);
+
       const route: Route = {
-        src: source,
-        dest: destination,
+        src: regexSrc,
+        dest: convertedDest,
         status: statusCode || (permanent ? 308 : 307),
         transforms,
       };
@@ -994,9 +1060,13 @@ export class Router {
 
     if (destEnvVars.length > 0) {
       // Need Route format to include env field
+      // Convert path-to-regexp patterns to regex for routes format
+      const { src: regexSrc, segments } = sourceToRegex(source);
+      const convertedDest = convertDestination(destination, segments);
+
       const route: Route = {
-        src: source,
-        dest: destination,
+        src: regexSrc,
+        dest: convertedDest,
         status: statusCode || (permanent ? 308 : 307),
         env: destEnvVars,
       };
@@ -1094,11 +1164,43 @@ export class Router {
    *    });
    */
   public route(config: Route): this {
-    this.validateSourcePattern(config.src);
+    if (config.src && config.source) {
+      throw new Error(
+        'Route cannot define both `src` and `source`. Use one or the other.'
+      );
+    }
+    if (config.dest && config.destination) {
+      throw new Error(
+        'Route cannot define both `dest` and `destination`. Use one or the other.'
+      );
+    }
+    if (config.status !== undefined && config.statusCode !== undefined) {
+      throw new Error(
+        'Route cannot define both `status` and `statusCode`. Use one or the other.'
+      );
+    }
+
+    const src = config.src ?? config.source;
+    if (!src) {
+      throw new Error('Route must define either `src` or `source`.');
+    }
+    this.validateSourcePattern(src);
+
+    // Normalize aliases to canonical names (src/dest/status)
+    config.src = src;
+    delete config.source;
+    if (config.destination !== undefined) {
+      config.dest = config.destination;
+      delete config.destination;
+    }
+    if (config.statusCode !== undefined) {
+      config.status = config.statusCode;
+      delete config.statusCode;
+    }
 
     // Auto-extract env vars from each transform if not already specified
     if (config.transforms) {
-      const pathParams = this.extractPathParams(config.src);
+      const pathParams = this.extractPathParams(src);
       for (const transform of config.transforms) {
         if (!transform.env && transform.args) {
           const envVars = extractEnvVars(transform.args, pathParams);

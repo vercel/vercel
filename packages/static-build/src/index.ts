@@ -1,6 +1,6 @@
 import ms from 'ms';
 import path from 'path';
-import fetch from 'node-fetch';
+import nodeFetch from 'node-fetch';
 import getPort from 'get-port';
 import isPortReachable from 'is-port-reachable';
 import frameworks, { Framework } from '@vercel/frameworks';
@@ -294,7 +294,7 @@ async function fetchBinary(
   version: string,
   dest = '/usr/local/bin'
 ) {
-  const res = await fetch(url);
+  const res = await nodeFetch(url);
   if (res.status === 404) {
     throw new NowBuildError({
       code: 'STATIC_BUILD_BINARY_NOT_FOUND',

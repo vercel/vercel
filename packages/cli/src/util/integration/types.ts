@@ -50,6 +50,29 @@ export type StorageIntegrationProtocol = IntegrationProductProtocolBase & {
 
 export type VideoIntegrationProtocol = IntegrationProductProtocolBase;
 
+export interface IntegrationGuideStep {
+  title: string;
+  content: string;
+  actions?: { type: string }[];
+}
+
+export interface IntegrationGuide {
+  framework: string;
+  title: string;
+  steps: IntegrationGuideStep[];
+}
+
+export interface IntegrationSnippet {
+  name: string;
+  language: string;
+  content: string;
+}
+
+export interface IntegrationResourceLink {
+  title: string;
+  href: string;
+}
+
 export interface IntegrationProduct {
   id: string;
   slug: string;
@@ -61,6 +84,9 @@ export interface IntegrationProduct {
     video?: VideoIntegrationProtocol;
   };
   metadataSchema: MetadataSchema;
+  guides?: IntegrationGuide[];
+  snippets?: IntegrationSnippet[];
+  resourceLinks?: IntegrationResourceLink[];
 }
 
 export type InstallationType = 'marketplace' | 'external';
@@ -85,6 +111,9 @@ export interface Integration {
   products?: IntegrationProduct[];
   eulaDocUri?: string;
   privacyDocUri?: string;
+  capabilities?: {
+    requiresBrowserInstall?: boolean;
+  };
 }
 
 export interface IntegrationInstallation {
@@ -200,12 +229,22 @@ export interface AutoProvisionedResponse {
   billingPlan: BillingPlan | null;
 }
 
+export interface AutoProvisionInstallationInfo {
+  id: string;
+  type?: 'marketplace' | 'external';
+  externalId?: string;
+  status?: string;
+}
+
 export interface AutoProvisionFallback {
-  kind: 'metadata' | 'unknown';
+  kind: string;
+  reason?: string;
+  error_message?: string;
   url: string;
   integration: AutoProvisionIntegration;
   product: AutoProvisionProduct;
   installation?: { id: string };
+  installations?: AutoProvisionInstallationInfo[];
 }
 
 export type AutoProvisionResult =

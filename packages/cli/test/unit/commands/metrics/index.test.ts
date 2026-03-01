@@ -9,12 +9,12 @@ describe('metrics', () => {
   });
 
   describe('--help', () => {
-    it('should print help and return 2', async () => {
+    it('should print help and return 0', async () => {
       client.setArgv('metrics', '--help');
 
       const exitCode = await metrics(client);
 
-      expect(exitCode).toBe(2);
+      expect(exitCode).toBe(0);
       const output = client.stderr.getFullOutput();
       // Shows schema subcommand
       expect(output).toContain('schema');
@@ -41,8 +41,8 @@ describe('metrics', () => {
 
       // schema lists events, exit 0
       expect(exitCode).toBe(0);
-      const output = client.stdout.getFullOutput();
-      expect(output).toContain('event,description');
+      const stderrOutput = client.stderr.getFullOutput();
+      expect(stderrOutput).toContain('Events found');
     });
 
     it('should route to query as default subcommand', async () => {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { containsAppOrHandler } from '../src';
+import { containsAppOrHandler, parseDjangoSettingsModule } from '../src';
 
 describe('containsAppOrHandler', () => {
   describe('app detection', () => {
@@ -50,6 +50,22 @@ async def app(scope, receive, send):
       expect(await containsAppOrHandler(source)).toBe(true);
     });
 
+    it('detects Django WSGI application', async () => {
+      const source = `
+from django.core.wsgi import get_wsgi_application
+application = get_wsgi_application()
+`;
+      expect(await containsAppOrHandler(source)).toBe(true);
+    });
+
+    it('detects Django ASGI application', async () => {
+      const source = `
+from django.core.asgi import get_asgi_application
+application = get_asgi_application()
+`;
+      expect(await containsAppOrHandler(source)).toBe(true);
+    });
+
     it('detects imported app', async () => {
       const source = `
 from server import app
@@ -60,6 +76,20 @@ from server import app
     it('detects aliased import as app', async () => {
       const source = `
 from server import application as app
+`;
+      expect(await containsAppOrHandler(source)).toBe(true);
+    });
+
+    it('detects imported application', async () => {
+      const source = `
+from server import application as app
+`;
+      expect(await containsAppOrHandler(source)).toBe(true);
+    });
+
+    it('detects aliased import as application', async () => {
+      const source = `
+from server import callable as application
 `;
       expect(await containsAppOrHandler(source)).toBe(true);
     });
@@ -146,14 +176,6 @@ def invalid(
       expect(await containsAppOrHandler(source)).toBe(false);
     });
 
-    it('does not detect application variable (not app)', async () => {
-      const source = `
-from fastapi import FastAPI
-application = FastAPI()
-`;
-      expect(await containsAppOrHandler(source)).toBe(false);
-    });
-
     it('does not detect other class names', async () => {
       const source = `
 class MyHandler(BaseHTTPRequestHandler):
@@ -215,5 +237,47 @@ result = server.app.run()
 `;
       expect(await containsAppOrHandler(source)).toBe(false);
     });
+  });
+});
+
+describe('parseDjangoSettingsModule', () => {
+  it('extracts value from os.environ.setdefault in manage.py style', async () => {
+    const content = `
+def main():
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'hello.settings')
+    from django.core.management import execute_from_command_line
+    execute_from_command_line(sys.argv)
+`;
+    expect(await parseDjangoSettingsModule(content)).toBe('hello.settings');
+  });
+
+  it('extracts value with single-quoted string', async () => {
+    const content =
+      "os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'app.settings')";
+    expect(await parseDjangoSettingsModule(content)).toBe('app.settings');
+  });
+
+  it('extracts value with double-quoted string', async () => {
+    const content =
+      'os.environ.setdefault("DJANGO_SETTINGS_MODULE", "myproject.settings")';
+    expect(await parseDjangoSettingsModule(content)).toBe('myproject.settings');
+  });
+
+  it('returns null when pattern not present', async () => {
+    const content = 'import os\nprint("hello")\n';
+    expect(await parseDjangoSettingsModule(content)).toBeNull();
+  });
+
+  it('returns null for invalid Python syntax', async () => {
+    const content = "os.environ.setdefault('DJANGO_SETTINGS_MODULE', ";
+    expect(await parseDjangoSettingsModule(content)).toBeNull();
+  });
+
+  it('returns null when more than one setdefault call exists', async () => {
+    const content = `
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'app.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'other.settings')
+`;
+    expect(await parseDjangoSettingsModule(content)).toBeNull();
   });
 });

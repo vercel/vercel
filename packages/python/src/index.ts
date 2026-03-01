@@ -1,7 +1,7 @@
 import fs from 'fs';
 import { promisify } from 'util';
 import { join, dirname, basename, parse } from 'path';
-import { VERCEL_RUNTIME_VERSION } from './runtime-version';
+import { VERCEL_RUNTIME_VERSION } from './package-versions';
 import {
   download,
   glob,
@@ -24,27 +24,12 @@ import {
 import {
   ensureUvProject,
   resolveVendorDir,
-  mirrorSitePackagesIntoVendor,
-  mirrorPrivatePackagesIntoVendor,
   installRequirementsFile,
   installRequirement,
-  calculateBundleSize,
-  LAMBDA_SIZE_THRESHOLD_BYTES,
-  LAMBDA_EPHEMERAL_STORAGE_BYTES,
 } from './install';
-import {
-  classifyPackages,
-  generateRuntimeRequirements,
-  parseUvLock,
-  PythonAnalysisError,
-} from '@vercel/python-analysis';
+import { PythonDependencyExternalizer } from './dependency-externalizer';
 import { detectInstallSource } from './install';
-import {
-  UvRunner,
-  getUvBinaryOrInstall,
-  getUvBinaryForBundling,
-  UV_BUNDLE_DIR,
-} from './uv';
+import { UvRunner, getUvBinaryOrInstall } from './uv';
 import { readConfigFile } from '@vercel/build-utils';
 import {
   getSupportedPythonVersion,
@@ -59,6 +44,7 @@ import {
   ensureVenv,
   createVenvEnv,
 } from './utils';
+import { runQuirks } from './quirks';
 
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
@@ -67,27 +53,6 @@ import {
   PYTHON_CANDIDATE_ENTRYPOINTS,
   detectPythonEntrypoint,
 } from './entrypoint';
-
-export function shouldEnableRuntimeInstall({
-  totalBundleSize,
-  uvLockPath,
-}: {
-  totalBundleSize: number;
-  uvLockPath: string | null;
-}): boolean {
-  const pythonOnHiveEnabled =
-    process.env.VERCEL_PYTHON_ON_HIVE === '1' ||
-    process.env.VERCEL_PYTHON_ON_HIVE === 'true';
-  if (pythonOnHiveEnabled) {
-    return false;
-  } else if (
-    totalBundleSize > LAMBDA_SIZE_THRESHOLD_BYTES &&
-    uvLockPath !== null
-  ) {
-    return true;
-  }
-  return false;
-}
 
 export const version = 3;
 
@@ -119,9 +84,14 @@ export const build: BuildV3 = async ({
   config,
 }) => {
   const framework = config?.framework;
+
   let spawnEnv: NodeJS.ProcessEnv | undefined;
   // Custom install command from dashboard/project settings, if any.
   let projectInstallCommand: string | undefined;
+  // Track whether a custom build or install command was used.
+  // When true, runtime dependency installation is disabled because
+  // custom commands may install dependencies not tracked in uv.lock.
+  let hasCustomCommand = false;
 
   debug(`workPath: ${workPath}`);
 
@@ -147,52 +117,6 @@ export const build: BuildV3 = async ({
   } catch (err) {
     console.log('Failed to create "setup.cfg" file');
     throw err;
-  }
-
-  // For Python frameworks, also honor project install/build commands (vercel.json/dashboard)
-  if (isPythonFramework(framework)) {
-    const {
-      cliType,
-      lockfileVersion,
-      packageJsonPackageManager,
-      turboSupportsCorepackHome,
-    } = await scanParentDirs(workPath, true);
-    spawnEnv = getEnvForPackageManager({
-      cliType,
-      lockfileVersion,
-      packageJsonPackageManager,
-      env: process.env,
-      turboSupportsCorepackHome,
-      projectCreatedAt: config?.projectSettings?.createdAt,
-    });
-
-    const installCommand = config?.projectSettings?.installCommand;
-    if (typeof installCommand === 'string') {
-      const trimmed = installCommand.trim();
-      if (trimmed) {
-        projectInstallCommand = trimmed;
-      } else {
-        console.log('Skipping "install" command...');
-      }
-    }
-
-    const projectBuildCommand =
-      config?.projectSettings?.buildCommand ??
-      // fallback if provided directly on config (some callers set this)
-      (config as any)?.buildCommand;
-    if (projectBuildCommand) {
-      console.log(`Running "${projectBuildCommand}"`);
-      await execCommand(projectBuildCommand, {
-        env: spawnEnv,
-        cwd: workPath,
-      });
-    } else {
-      await runPyprojectScript(
-        workPath,
-        ['vercel-build', 'now-build', 'build'],
-        spawnEnv
-      );
-    }
   }
 
   let fsFiles = await glob('**', workPath);
@@ -353,6 +277,34 @@ export const build: BuildV3 = async ({
     venvPath,
   });
 
+  // For Python frameworks, set up the env and extract the install command (vercel.json/dashboard)
+  if (isPythonFramework(framework)) {
+    const {
+      cliType,
+      lockfileVersion,
+      packageJsonPackageManager,
+      turboSupportsCorepackHome,
+    } = await scanParentDirs(workPath, true);
+    spawnEnv = getEnvForPackageManager({
+      cliType,
+      lockfileVersion,
+      packageJsonPackageManager,
+      env: process.env,
+      turboSupportsCorepackHome,
+      projectCreatedAt: config?.projectSettings?.createdAt,
+    });
+
+    const installCommand = config?.projectSettings?.installCommand;
+    if (typeof installCommand === 'string') {
+      const trimmed = installCommand.trim();
+      if (trimmed) {
+        projectInstallCommand = trimmed;
+      } else {
+        console.log('Skipping "install" command...');
+      }
+    }
+  }
+
   const baseEnv = spawnEnv || process.env;
   const pythonEnv = createVenvEnv(venvPath, baseEnv);
 
@@ -369,6 +321,7 @@ export const build: BuildV3 = async ({
       cwd: workPath,
     });
     assumeDepsInstalled = true;
+    hasCustomCommand = true;
   } else {
     // Check and run a custom vercel install command from project manifest.
     // This will return `false` if no script was ran.
@@ -378,6 +331,9 @@ export const build: BuildV3 = async ({
       pythonEnv,
       /* useUserVirtualEnv */ false
     );
+    if (assumeDepsInstalled) {
+      hasCustomCommand = true;
+    }
   }
 
   let uv: UvRunner;
@@ -462,6 +418,27 @@ export const build: BuildV3 = async ({
     });
   }
 
+  // Run the project build command (if any) AFTER dependencies are installed.
+  if (isPythonFramework(framework)) {
+    const projectBuildCommand =
+      config?.projectSettings?.buildCommand ??
+      // fallback if provided directly on config (some callers set this)
+      (config as any)?.buildCommand;
+    if (projectBuildCommand) {
+      console.log(`Running "${projectBuildCommand}"`);
+      await execCommand(projectBuildCommand, {
+        env: pythonEnv,
+        cwd: workPath,
+      });
+    } else {
+      await runPyprojectScript(
+        workPath,
+        ['vercel-build', 'now-build', 'build'],
+        pythonEnv
+      );
+    }
+  }
+
   // Ensure correct version of vercel-runtime is installed.
   //
   // We intentionally do not inject vercel-runtime into the manifest
@@ -481,6 +458,29 @@ export const build: BuildV3 = async ({
     projectDir: join(workPath, entryDirectory),
     args: ['install', runtimeDep],
   });
+
+  // Optional override used by CI/preview builds to test in-repo vercel-workers wheels.
+  // TODO: uncomment when we introduce the 'workers' service implementation
+  // const workersDep =
+  //   baseEnv.VERCEL_WORKERS_PYTHON ||
+  //   `vercel-workers==${VERCEL_WORKERS_VERSION}`;
+  // if (workersDep) {
+  //   debug(`Installing ${workersDep}`);
+  //   await uv.pip({
+  //     venvPath,
+  //     projectDir: join(workPath, entryDirectory),
+  //     args: ['install', workersDep],
+  //   });
+  // }
+
+  // Run quirks: detect dependencies that need special handling (e.g. prisma)
+  // and perform fix-up routines before bundling.
+  const quirksResult = await runQuirks({ venvPath, pythonEnv, workPath });
+
+  // Apply build-time env vars from quirks so subsequent build steps can use them
+  if (quirksResult.buildEnv) {
+    Object.assign(pythonEnv, quirksResult.buildEnv);
+  }
 
   debug('Entrypoint is', entrypoint);
   const moduleName = entrypoint.replace(/\//g, '.').replace(/\.py$/i, '');
@@ -551,6 +551,7 @@ from vercel_runtime.vc_init import vc_handler
 
   const lambdaEnv = {} as Record<string, string>;
   lambdaEnv.PYTHONPATH = vendorDir;
+  Object.assign(lambdaEnv, quirksResult.env);
 
   const globOptions: GlobOptions = {
     cwd: workPath,
@@ -562,181 +563,25 @@ from vercel_runtime.vc_init import vc_handler
 
   const files: Files = await glob('**', globOptions);
 
-  // Bundle dependencies
-  const allVendorFiles = await mirrorSitePackagesIntoVendor({
+  // Bundle dependencies, using runtime installation for oversized bundles
+  const depExternalizer = new PythonDependencyExternalizer({
     venvPath,
-    vendorDirName: vendorDir,
-  });
-
-  // Calculate the total bundle size with all dependencies
-  const tempFilesForSizing: Files = { ...files };
-  for (const [p, f] of Object.entries(allVendorFiles)) {
-    tempFilesForSizing[p] = f;
-  }
-  const totalBundleSize = await calculateBundleSize(tempFilesForSizing);
-  const totalBundleSizeMB = (totalBundleSize / (1024 * 1024)).toFixed(2);
-  debug(`Total bundle size: ${totalBundleSizeMB} MB`);
-
-  // Determine if runtime dependency installation is needed
-  const runtimeInstallEnabled = shouldEnableRuntimeInstall({
-    totalBundleSize,
+    vendorDir,
+    workPath,
     uvLockPath,
+    uvProjectDir,
+    projectName,
+    noBuildCheckFailed,
+    pythonPath: pythonVersion.pythonPath,
+    hasCustomCommand,
+    alwaysBundlePackages: quirksResult.alwaysBundlePackages,
   });
 
-  if (runtimeInstallEnabled && uvLockPath && uvProjectDir) {
-    console.log(
-      `Bundle size (${totalBundleSizeMB} MB) exceeds limit. ` +
-        `Enabling runtime dependency installation.`
-    );
+  const { runtimeInstallEnabled, allVendorFiles } =
+    await depExternalizer.analyze(files);
 
-    // Verify total deps won't exceed Lambda ephemeral storage (512 MB)
-    if (totalBundleSize > LAMBDA_EPHEMERAL_STORAGE_BYTES) {
-      const ephemeralLimitMB = (
-        LAMBDA_EPHEMERAL_STORAGE_BYTES /
-        (1024 * 1024)
-      ).toFixed(0);
-      throw new NowBuildError({
-        code: 'LAMBDA_SIZE_EXCEEDED',
-        message:
-          `Total dependency size (${totalBundleSizeMB} MB) exceeds Lambda ephemeral storage ` +
-          `limit (${ephemeralLimitMB} MB). Even with runtime dependency installation, all ` +
-          `packages must fit within the ${ephemeralLimitMB} MB ephemeral storage available ` +
-          `to Lambda functions. Consider removing unused dependencies or splitting your ` +
-          `application into smaller functions.`,
-      });
-    }
-
-    // If the earlier --no-build check failed, we know some packages don't have pre-built wheels.
-    if (noBuildCheckFailed) {
-      throw new NowBuildError({
-        code: 'RUNTIME_DEPENDENCY_INSTALLATION_FAILED',
-        message:
-          `Bundle size exceeds the Lambda limit and requires runtime dependency installation, ` +
-          `but some packages in your uv.lock file do not have pre-built binary wheels available.\n` +
-          `Runtime dependency installation requires all public packages to have binary wheels.\n\n` +
-          `To fix this, either:\n` +
-          ` 1. Regenerate your lock file with: uv lock --upgrade --no-build, or\n` +
-          ` 2. Switch the problematic packages to ones that have pre-built wheels available`,
-      });
-    }
-
-    // Read and parse the uv.lock file
-    let lockContent: string;
-    try {
-      lockContent = await readFile(uvLockPath, 'utf8');
-    } catch (error: unknown) {
-      if (error instanceof Error) {
-        console.log(
-          `Failed to read uv.lock file at "${uvLockPath}": ${error.message}`
-        );
-      } else {
-        console.log(
-          `Failed to read uv.lock file at "${uvLockPath}": ${String(error)}`
-        );
-      }
-      throw new NowBuildError({
-        code: 'RUNTIME_DEPENDENCY_INSTALLATION_FAILED',
-        message: `Failed to read uv.lock file at "${uvLockPath}"`,
-      });
-    }
-    let lockFile: ReturnType<typeof parseUvLock>;
-    try {
-      lockFile = parseUvLock(lockContent, uvLockPath);
-    } catch (error: unknown) {
-      if (error instanceof PythonAnalysisError) {
-        if (error.fileContent) {
-          console.log(
-            `Failed to parse "${error.path}". File content:\n${error.fileContent}`
-          );
-        }
-        throw new NowBuildError({
-          code: error.code,
-          message: error.message,
-        });
-      }
-      throw error;
-    }
-
-    // Exclude the project name from runtime installation requirements.
-    const excludePackages: string[] = [];
-    if (projectName) {
-      excludePackages.push(projectName);
-      debug(
-        `Excluding project package "${projectName}" from runtime installation`
-      );
-    }
-
-    const classification = classifyPackages({
-      lockFile,
-      excludePackages,
-    });
-    debug(
-      `Package classification: ${classification.privatePackages.length} private, ` +
-        `${classification.publicPackages.length} public`
-    );
-
-    if (classification.publicPackages.length > 0) {
-      // Bundle only private packages and vercel-runtime
-      const privatePackagesWithRuntime = [
-        ...classification.privatePackages,
-        'vercel-runtime',
-        'vercel_runtime',
-      ];
-
-      const privateVendorFiles = await mirrorPrivatePackagesIntoVendor({
-        venvPath,
-        vendorDirName: vendorDir,
-        privatePackages: privatePackagesWithRuntime,
-      });
-
-      for (const [p, f] of Object.entries(privateVendorFiles)) {
-        files[p] = f;
-      }
-
-      // Everything else gets put into _runtime_requirements.txt for installation at runtime
-      const runtimeRequirementsContent =
-        generateRuntimeRequirements(classification);
-      const runtimeRequirementsPath = `${UV_BUNDLE_DIR}/_runtime_requirements.txt`;
-      files[runtimeRequirementsPath] = new FileBlob({
-        data: runtimeRequirementsContent,
-      });
-
-      // Skip uv bundling when running vercel build locally
-      if (process.env.VERCEL_BUILD_IMAGE) {
-        // Add the uv binary to the lambda zip
-        try {
-          const uvBinaryPath = await getUvBinaryForBundling(
-            pythonVersion.pythonPath
-          );
-
-          const uvBundleDir = join(workPath, UV_BUNDLE_DIR);
-          const uvLocalPath = join(uvBundleDir, 'uv');
-          await fs.promises.mkdir(uvBundleDir, { recursive: true });
-          await fs.promises.copyFile(uvBinaryPath, uvLocalPath);
-          await fs.promises.chmod(uvLocalPath, 0o755);
-
-          const uvBundlePath = `${UV_BUNDLE_DIR}/uv`;
-          files[uvBundlePath] = new FileFsRef({
-            fsPath: uvLocalPath,
-            mode: 0o100755, // Regular file + executable
-          });
-          debug(`Bundled uv binary from ${uvBinaryPath} to ${uvLocalPath}`);
-        } catch (err) {
-          throw new NowBuildError({
-            code: 'RUNTIME_DEPENDENCY_INSTALLATION_FAILED',
-            message: `Failed to bundle uv binary for runtime installation: ${
-              err instanceof Error ? err.message : String(err)
-            }`,
-          });
-        }
-      }
-    } else {
-      throw new NowBuildError({
-        code: 'RUNTIME_DEPENDENCY_INSTALLATION_FAILED',
-        message:
-          'Bundle size exceeds limit but no public packages found for runtime installation.',
-      });
-    }
+  if (runtimeInstallEnabled) {
+    await depExternalizer.generateBundle(files);
   } else {
     // Bundle all dependencies since we're not doing runtime installation
     for (const [p, f] of Object.entries(allVendorFiles)) {
@@ -758,23 +603,6 @@ from vercel_runtime.vc_init import vc_handler
     files['.sesskey'] = new FileBlob({ data: `"${SESSKEY}"` });
   }
 
-  // When runtime installation is enabled, verify the bundle without public deps fits within Lambda limits.
-  if (runtimeInstallEnabled) {
-    const finalBundleSize = await calculateBundleSize(files);
-    if (finalBundleSize > LAMBDA_SIZE_THRESHOLD_BYTES) {
-      const finalSizeMB = (finalBundleSize / (1024 * 1024)).toFixed(2);
-      const limitMB = (LAMBDA_SIZE_THRESHOLD_BYTES / (1024 * 1024)).toFixed(0);
-      throw new NowBuildError({
-        code: 'LAMBDA_SIZE_EXCEEDED',
-        message:
-          `Bundle size (${finalSizeMB} MB) exceeds Lambda limit (${limitMB} MB) even after ` +
-          `deferring public packages to runtime installation. This usually means your ` +
-          `private packages or source code are too large. Consider reducing the size of ` +
-          `private dependencies or splitting your application.`,
-      });
-    }
-  }
-
   const output = new Lambda({
     files,
     handler: `${handlerPyFilename}.vc_handler`,
@@ -790,19 +618,13 @@ export { startDevServer };
 
 export const shouldServe: ShouldServe = opts => {
   const framework = opts.config.framework;
-  if (framework === 'fastapi') {
+  if (isPythonFramework(framework)) {
     const requestPath = opts.requestPath.replace(/\/$/, '');
     // Don't override API routes if another builder already matched them
     if (requestPath.startsWith('api') && opts.hasMatched) {
       return false;
     }
     // Public assets are served by the static builder / default handler
-    return true;
-  } else if (framework === 'flask') {
-    const requestPath = opts.requestPath.replace(/\/$/, '');
-    if (requestPath.startsWith('api') && opts.hasMatched) {
-      return false;
-    }
     return true;
   }
   return defaultShouldServe(opts);

@@ -1,3 +1,6 @@
+import type { MetricsAggregation } from './schema-data';
+export type { MetricsAggregation } from './schema-data';
+
 export interface ProjectScope {
   type: 'project-with-slug';
   teamSlug: string;
@@ -16,12 +19,30 @@ export type Granularity =
   | { hours: number }
   | { days: number };
 
-export type MetricsDataRow = Record<string, string | number | null>;
+export type MetricsApiDataCell = string | number | null;
+export type MetricsSummaryDataCell = string | number | null;
+
+export type MetricsDataRow = { timestamp: string } & Record<
+  string,
+  MetricsApiDataCell
+>;
+
+export type MetricsSummaryRow = Record<string, MetricsSummaryDataCell>;
+
+export interface MetricsQueryStatistics {
+  rowsRead?: number;
+  bytesRead?: number;
+  dbTimeSeconds?: number;
+  engineTimeSeconds?: number;
+  queryTable?: string;
+  cacheEngineTimeSeconds?: number;
+  cacheDbTimeSeconds?: number;
+}
 
 export interface QueryMetadata {
   event: string;
   measure: string;
-  aggregation: string;
+  aggregation: MetricsAggregation;
   groupBy: string[];
   filter: string | undefined;
   startTime: string;
@@ -33,7 +54,7 @@ export interface MetricsQueryRequest {
   reason: 'agent';
   scope: Scope;
   event: string;
-  rollups: Record<string, { measure: string; aggregation: string }>;
+  rollups: Record<string, { measure: string; aggregation: MetricsAggregation }>;
   startTime: string;
   endTime: string;
   granularity: Granularity;
@@ -45,13 +66,8 @@ export interface MetricsQueryRequest {
 
 export interface MetricsQueryResponse {
   data?: MetricsDataRow[];
-  summary?: MetricsDataRow[];
-  statistics: {
-    rowsRead?: number;
-    bytesRead?: number;
-    dbTimeSeconds?: number;
-    engineTimeSeconds?: number;
-  };
+  summary: MetricsSummaryRow[];
+  statistics: MetricsQueryStatistics;
 }
 
 export type ValidationError = {

@@ -1,5 +1,56 @@
 # @vercel/fs-detectors
 
+## 5.8.13
+
+### Patch Changes
+
+- Updated dependencies [[`b3b94f2335026634f4fa9fdfe0671677fa00000e`](https://github.com/vercel/vercel/commit/b3b94f2335026634f4fa9fdfe0671677fa00000e)]:
+  - @vercel/routing-utils@6.0.1
+  - @vercel/frameworks@3.19.1
+
+## 5.8.12
+
+### Patch Changes
+
+- Support function overrides in backends builder ([#15214](https://github.com/vercel/vercel/pull/15214))
+
+- Updated dependencies [[`3d872692c601abeec98743d2af3a3ea19587e799`](https://github.com/vercel/vercel/commit/3d872692c601abeec98743d2af3a3ea19587e799), [`e64a85daec784b4fe571abe7405a80aca150007a`](https://github.com/vercel/vercel/commit/e64a85daec784b4fe571abe7405a80aca150007a), [`af6a651229cad4ddb7fcc15bd14d06355c2b77ee`](https://github.com/vercel/vercel/commit/af6a651229cad4ddb7fcc15bd14d06355c2b77ee)]:
+  - @vercel/frameworks@3.19.1
+  - @vercel/routing-utils@6.0.0
+
+## 5.8.11
+
+### Patch Changes
+
+- [services] adds source information to detected services ([#15245](https://github.com/vercel/vercel/pull/15245))
+
+- Updated dependencies [[`0c961fce30d495620542066249dae447764d2eba`](https://github.com/vercel/vercel/commit/0c961fce30d495620542066249dae447764d2eba)]:
+  - @vercel/routing-utils@5.4.0
+  - @vercel/frameworks@3.19.0
+
+## 5.8.10
+
+### Patch Changes
+
+- Fix service route-prefix stripping for standalone Go services in services mode. ([#15120](https://github.com/vercel/vercel/pull/15120))
+
+  This updates Go's executable bootstrap to strip generated service route prefixes in production and adds a Go dev wrapper (`vc_init_dev.go`) so standalone Go dev also strips generated service route prefixes before forwarding requests to the user app.
+
+  Update the `09-services-frontend-backend-go-zc` e2e fixture backend from Ruby/Sinatra to Go so it exercises Go services detection and routing in zero-config services mode.
+
+- [services] strip services route prefix in ruby runtime by mounting the app at `SCRIPT_NAME` when service route prefix is auto configured ([#15099](https://github.com/vercel/vercel/pull/15099))
+
+- Updated dependencies [[`cb79f6f8080fddd3673a8911566085e0265b060b`](https://github.com/vercel/vercel/commit/cb79f6f8080fddd3673a8911566085e0265b060b)]:
+  - @vercel/frameworks@3.19.0
+
+## 5.8.9
+
+### Patch Changes
+
+- [services] ([#15093](https://github.com/vercel/vercel/pull/15093))
+  - consolidate `workspace` and `entrypoint` from `experimentalServices` `vercel.json` schema
+  - make `framework` config in service optional -- infer framework from service workspace when not explicitly provided
+
 ## 5.8.8
 
 ### Patch Changes
