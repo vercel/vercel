@@ -875,6 +875,10 @@ const main = async () => {
           telemetry.trackCliCommandRollingRelease(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).rollingRelease;
           break;
+        case 'skills':
+          telemetry.trackCliCommandSkills(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).skills;
+          break;
         case 'target':
           telemetry.trackCliCommandTarget(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).target;
