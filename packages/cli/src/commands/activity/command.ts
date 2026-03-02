@@ -1,17 +1,6 @@
 import { packageName } from '../../util/pkg-name';
 import { formatOption, limitOption, nextOption } from '../../util/arg-common';
 
-export const listSubcommand = {
-  name: 'ls',
-  aliases: ['list'],
-  description: '',
-  default: true,
-  hidden: true,
-  arguments: [],
-  options: [],
-  examples: [],
-} as const;
-
 export const typesSubcommand = {
   name: 'types',
   aliases: [],
@@ -38,7 +27,16 @@ export const activityCommand = {
   subcommands: [
     // Hidden placeholder so the help synopsis renders [command] as optional
     // (help.ts treats `command` as required unless a subcommand has `default: true`)
-    listSubcommand,
+    {
+      name: 'ls',
+      aliases: ['list'],
+      description: '',
+      default: true,
+      hidden: true,
+      arguments: [],
+      options: [],
+      examples: [],
+    },
     typesSubcommand,
   ],
   options: [

@@ -7,7 +7,7 @@ describe('activity types', () => {
     client.reset();
   });
 
-  it('prints non-deprecated event types as a table', async () => {
+  it('prints event types as a table with deprecation status', async () => {
     client.scenario.get('/v1/events/types', (_req, res) => {
       res.json({
         types: [
@@ -33,7 +33,8 @@ describe('activity types', () => {
     expect(output).toContain('Name');
     expect(output).toContain('Description');
     expect(output).toContain('login');
-    expect(output).not.toContain('team-member-add');
+    expect(output).toContain('team-member-add');
+    expect(output).toContain('A team member was added (Deprecated)');
   });
 
   it('prints raw JSON output with --format=json including deprecated types', async () => {

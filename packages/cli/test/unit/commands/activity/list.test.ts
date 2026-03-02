@@ -228,6 +228,47 @@ describe('activity ls', () => {
     expect(mockedGetLinkedProject).not.toHaveBeenCalled();
   });
 
+  it('returns project lookup API errors when resolving --project', async () => {
+    client.scenario.get('/v9/projects/:projectNameOrId', (_req, res) => {
+      res.status(403).json({
+        error: {
+          code: 'forbidden',
+          message: 'Project access denied.',
+        },
+      });
+    });
+
+    client.setArgv('activity', 'ls', '--project', 'my-app');
+
+    const exitCode = await activity(client);
+
+    expect(exitCode).toBe(1);
+    expect(client.stderr.getFullOutput()).toContain('Project access denied.');
+  });
+
+  it('returns project lookup API errors as JSON with --format=json', async () => {
+    client.scenario.get('/v9/projects/:projectNameOrId', (_req, res) => {
+      res.status(403).json({
+        error: {
+          code: 'forbidden',
+          message: 'Project access denied.',
+        },
+      });
+    });
+
+    client.setArgv('activity', 'ls', '--project', 'my-app', '--format=json');
+
+    const exitCode = await activity(client);
+
+    expect(exitCode).toBe(1);
+    expect(JSON.parse(client.stdout.getFullOutput())).toEqual({
+      error: {
+        code: 'forbidden',
+        message: 'Project access denied.',
+      },
+    });
+  });
+
   it('uses team-wide scope for --all', async () => {
     let requestQuery: any;
     client.scenario.get('/v3/events', (req, res) => {

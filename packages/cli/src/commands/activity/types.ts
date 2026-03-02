@@ -7,7 +7,7 @@ import output from '../../output-manager';
 import table from '../../util/output/table';
 import { validateJsonOutput } from '../../util/output-format';
 import { typesSubcommand } from './command';
-import { ActivityTypesTelemetryClient } from '../../util/telemetry/commands/activity/types';
+import type { ActivityTelemetryClient } from '../../util/telemetry/commands/activity';
 import { isAPIError } from '../../util/errors-ts';
 
 interface UserEventType {
@@ -20,17 +20,14 @@ interface UserEventTypesResponse {
   types: UserEventType[];
 }
 
-interface TypesFlags {
-  '--format'?: string;
+function formatErrorJson(code: string, message: string): string {
+  return `${JSON.stringify({ error: { code, message } }, null, 2)}\n`;
 }
 
-export default async function types(client: Client): Promise<number> {
-  const telemetry = new ActivityTypesTelemetryClient({
-    opts: {
-      store: client.telemetryEventStore,
-    },
-  });
-
+export default async function types(
+  client: Client,
+  telemetry: ActivityTelemetryClient
+): Promise<number> {
   let parsedArgs;
   const flagsSpecification = getFlagsSpecification(typesSubcommand.options);
   try {
@@ -40,10 +37,7 @@ export default async function types(client: Client): Promise<number> {
     return 1;
   }
 
-  const { flags } = parsedArgs as {
-    args: string[];
-    flags: TypesFlags;
-  };
+  const flags = parsedArgs.flags as { '--format'?: string };
 
   telemetry.trackCliOptionFormat(flags['--format']);
 
@@ -55,26 +49,29 @@ export default async function types(client: Client): Promise<number> {
 
   const jsonOutput = formatResult.jsonOutput;
 
+  output.spinner('Fetching event types...');
   try {
     const response =
       await client.fetch<UserEventTypesResponse>('/v1/events/types');
-    const activeTypes = (response.types ?? []).filter(type => !type.deprecated);
+    const eventTypes = response.types ?? [];
 
     if (jsonOutput) {
       client.stdout.write(`${JSON.stringify(response, null, 2)}\n`);
       return 0;
     }
 
-    if (activeTypes.length === 0) {
+    if (eventTypes.length === 0) {
       output.log('No activity event types found.');
       return 0;
     }
 
     const rows = [
       [chalk.bold(chalk.cyan('Name')), chalk.bold(chalk.cyan('Description'))],
-      ...activeTypes.map(eventType => [
+      ...eventTypes.map(eventType => [
         eventType.name,
-        eventType.description ?? '-',
+        eventType.deprecated
+          ? `${eventType.description ?? '-'} (Deprecated)`
+          : (eventType.description ?? '-'),
       ]),
     ];
 
@@ -89,16 +86,27 @@ export default async function types(client: Client): Promise<number> {
   } catch (err) {
     if (isAPIError(err)) {
       if (err.status === 403) {
-        output.error(
-          'You do not have permission to list activity event types.'
-        );
+        const message =
+          'You do not have permission to list activity event types.';
+        if (jsonOutput) {
+          client.stdout.write(formatErrorJson('FORBIDDEN', message));
+        } else {
+          output.error(message);
+        }
         return 1;
       }
 
-      output.error(err.serverMessage || `API error (${err.status}).`);
+      const message = err.serverMessage || `API error (${err.status}).`;
+      if (jsonOutput) {
+        client.stdout.write(formatErrorJson(err.code || 'API_ERROR', message));
+      } else {
+        output.error(message);
+      }
       return 1;
     }
 
     throw err;
+  } finally {
+    output.stopSpinner();
   }
 }

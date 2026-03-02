@@ -7,10 +7,9 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { getCommandAliases } from '..';
 import output from '../../output-manager';
 import { ActivityTelemetryClient } from '../../util/telemetry/commands/activity';
-import { activityCommand, listSubcommand, typesSubcommand } from './command';
+import { activityCommand, typesSubcommand } from './command';
 
 const COMMAND_CONFIG = {
-  ls: getCommandAliases(listSubcommand),
   types: getCommandAliases(typesSubcommand),
 };
 
@@ -61,7 +60,7 @@ export default async function activity(client: Client): Promise<number> {
 
       telemetry.trackCliSubcommandTypes(subcommandOriginal);
       const typesFn = (await import('./types')).default;
-      return typesFn(client);
+      return typesFn(client, telemetry);
     }
     default: {
       if (needHelp) {
@@ -71,7 +70,7 @@ export default async function activity(client: Client): Promise<number> {
       }
       telemetry.trackCliSubcommandLs(subcommandOriginal);
       const listFn = (await import('./list')).default;
-      return listFn(client);
+      return listFn(client, telemetry);
     }
   }
 }
