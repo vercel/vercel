@@ -10,81 +10,15 @@ import { spawn } from 'child_process';
 import { existsSync, readdirSync } from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
+import * as oidc from '@vercel/oidc';
 import { config } from 'dotenv';
 import { destroy, getEvalVariants, setup } from './hooks';
-import type { EvalRunContext, EvalVariant, SetupResult } from './hooks';
+import type { EvalRunContext, SetupResult } from './hooks';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // run.ts is in packages/cli/evals/, so evals fixtures are in packages/cli/evals/evals/
 const EVALS_DIR = join(__dirname, 'evals');
-
-const populateOIDCToken = async () => {
-  const pullArgs = ['env', 'pull', '-y'];
-
-  const runPull = (cmd: string) =>
-    new Promise<number>((resolve, reject) => {
-      const child = spawn(cmd, pullArgs, {
-        cwd: join(__dirname, 'sandbox-project'),
-        stdio: 'inherit',
-        env: { ...process.env, FORCE_COLOR: '1' },
-      });
-
-      child.on('error', err => {
-        reject(
-          new Error(
-            `Failed to start "${cmd} env pull -y": ${
-              (err as Error).message || String(err)
-            }`
-          )
-        );
-      });
-
-      child.on('close', (code, signal) => {
-        resolve(code ?? (signal ? 1 : 0));
-      });
-    });
-
-  let lastError: Error | undefined;
-
-  for (const cmd of ['vc', 'vercel']) {
-    try {
-      const pullExitCode = await runPull(cmd);
-      if (pullExitCode === 0) {
-        config({ path: join(__dirname, 'sandbox-project', '.env.local') });
-        return;
-      }
-      lastError = new Error(
-        `"${cmd} env pull -y" exited with code ${pullExitCode}`
-      );
-    } catch (err: any) {
-      lastError =
-        err instanceof Error
-          ? err
-          : new Error(typeof err === 'string' ? err : String(err));
-    }
-  }
-
-  // Smoke uses the Vercel sandbox and requires OIDC. Only fall back to VERCEL_TOKEN
-  // when smoke is not explicitly requested (e.g. not running `pnpm test:evals smoke`).
-  const args = process.argv.slice(2);
-  const runningSmoke = args.includes('smoke');
-  if (process.env.VERCEL_TOKEN && !runningSmoke) {
-    const message = lastError
-      ? lastError.message
-      : 'unknown error running "vc/vercel env pull -y"';
-    process.stderr.write(
-      `Warning: could not populate OIDC token via "vc/vercel env pull -y" (${message}). Continuing with VERCEL_TOKEN.\n`
-    );
-    return;
-  }
-
-  throw lastError
-    ? new Error(
-        `Failed to populate OIDC token via "vc/vercel env pull -y": ${lastError.message}`
-      )
-    : new Error('Failed to populate OIDC token via "vc/vercel env pull -y".');
-};
 
 /** Recursively discover eval dirs (have PROMPT.md + EVAL.ts + package.json). Returns relative paths e.g. "build", "env/ls", "env/add". */
 function discoverEvals(): string[] {
@@ -116,6 +50,8 @@ function discoverEvals(): string[] {
   return results;
 }
 
+const sandboxProjectDir = join(__dirname, 'sandbox-project');
+
 async function main() {
   const evals = discoverEvals();
   if (evals.length === 0) {
@@ -125,25 +61,26 @@ async function main() {
     process.exit(0);
   }
 
-  const sandboxProjectDir = join(__dirname, 'sandbox-project');
-  const variants: EvalVariant[] = getEvalVariants('auto');
-
+  let vercelOidcToken: string | undefined;
+  let vercelToken: string | undefined;
   try {
-    await populateOIDCToken();
-  } catch (err: any) {
-    const message =
-      err && typeof err.message === 'string'
-        ? err.message
-        : String(err ?? 'unknown error');
-    process.stderr.write(`Error populating OIDC token: ${message}\n`);
-    process.exit(1);
+    vercelOidcToken = await oidc.getVercelOidcToken({
+      project: 'sandbox-project',
+      team: 'agentic-zero-conf',
+    });
+  } catch {
+    config({ path: join(sandboxProjectDir, '.env.local') });
+    vercelOidcToken = process.env.VERCEL_OIDC_TOKEN;
+  }
+  try {
+    vercelToken = await oidc.getVercelToken();
+  } catch {
+    vercelToken = process.env.VERCEL_TOKEN;
   }
 
   const args = process.argv.slice(2);
   const isDryRun = args.includes('--dry');
-  const hasCreds = Boolean(
-    process.env.VERCEL_OIDC_TOKEN || process.env.VERCEL_TOKEN
-  );
+  const hasCreds = Boolean(vercelOidcToken ?? vercelToken);
   if (!isDryRun && !hasCreds) {
     process.stderr.write(
       'Evals require AI_GATEWAY_API_KEY and either VERCEL_OIDC_TOKEN or VERCEL_TOKEN (set in .env or CI secrets, or use --dry to preview).\n'
@@ -152,8 +89,7 @@ async function main() {
   }
 
   // When OIDC wasn't available we fell back to VERCEL_TOKEN; smoke uses the Vercel sandbox and requires OIDC, so skip it.
-  const usedOIDCFallback =
-    !process.env.VERCEL_OIDC_TOKEN && Boolean(process.env.VERCEL_TOKEN);
+  const usedOIDCFallback = !vercelOidcToken && Boolean(vercelToken);
   const flagArgs = args.filter(a => a.startsWith('-'));
   const explicitExperimentArgs = args.filter(a => !a.startsWith('-'));
   const experimentsToRun =
@@ -169,6 +105,8 @@ async function main() {
       'Skipping smoke experiment (requires OIDC). Running: cc, cli, vercel-cli-cc.\n'
     );
   }
+
+  const variants = getEvalVariants();
 
   // Progress: print what will run so it's visible as the eval runs
   process.stdout.write(`\nEvals to run: ${evals.join(', ')}\n`);
@@ -199,6 +137,8 @@ async function main() {
         ...process.env,
         FORCE_COLOR: '1',
         CLI_EVAL_WITH_SKILLS: variant.withSkills ? '1' : '0',
+        ...(vercelOidcToken ? { VERCEL_OIDC_TOKEN: vercelOidcToken } : {}),
+        ...(vercelToken ? { VERCEL_TOKEN: vercelToken } : {}),
       };
       if (setupResult?.createdProjectId) {
         agentEvalEnv.CLI_EVAL_PROJECT_ID = setupResult.createdProjectId;
