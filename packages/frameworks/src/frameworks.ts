@@ -2242,6 +2242,7 @@ export const frameworks = [
         },
         {
           path: 'manage.py',
+          matchContent: 'DJANGO_SETTINGS_MODULE',
         },
       ],
     },
