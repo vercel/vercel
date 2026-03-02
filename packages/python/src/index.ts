@@ -21,7 +21,8 @@ import {
   BUILDER_COMPILE_STEP,
   type BuildOptions,
   type GlobOptions,
-  type BuildV3,
+  type BuildResultV2Typical,
+  type BuildV2,
   type Files,
   type ShouldServe,
   FileFsRef,
@@ -60,7 +61,7 @@ import {
   detectPythonEntrypoint,
 } from './entrypoint';
 
-export const version = 3;
+export const version = 2;
 
 export async function downloadFilesInWorkPath({
   entrypoint,
@@ -81,7 +82,7 @@ export async function downloadFilesInWorkPath({
   return workPath;
 }
 
-export const build: BuildV3 = async ({
+export const build: BuildV2 = async ({
   workPath,
   repoRootPath,
   files: originalFiles,
@@ -665,7 +666,79 @@ from vercel_runtime.vc_init import vc_handler
     supportsResponseStreaming: true,
   });
 
-  return { output };
+  const entrypointKey = entrypoint.replace(/\.py$/i, '');
+  let routes = [];
+  const result: BuildResultV2Typical = {
+    output: { [entrypointKey]: output },
+  };
+
+  // Check if the workflow package is installed - if so, we need to generate
+  // separate lambdas for the workflow and step handlers.
+  let hasWorkflow = false;
+  const workflowPackageName = 'vercel-workflow';
+  try {
+    await uv.pip({
+      venvPath,
+      projectDir: join(workPath, entryDirectory),
+      args: ['show', workflowPackageName],
+    });
+    hasWorkflow = true;
+    debug(`${workflowPackageName} is installed, workflow mode enabled`);
+  } catch {
+    debug(
+      `${workflowPackageName} not found, skipping workflow lambda generation`
+    );
+  }
+  if (hasWorkflow) {
+    const workflowFiles: Files = {
+      ...files,
+      [`${handlerPyFilename}.py`]: new FileBlob({
+        data: runtimeTrampoline({ workflowMode: 'full' }),
+      }),
+    };
+
+    const stepEntrypoint = '/.well-known/workflow/v1/step';
+    result.output[stepEntrypoint] = new Lambda({
+      files: workflowFiles,
+      handler: `${handlerPyFilename}.vc_handler`,
+      runtime: pythonVersion.runtime,
+      environment: lambdaEnv,
+      experimentalTriggers: [
+        {
+          type: 'queue/v1beta',
+          topic: '__wkf_step_*',
+          consumer: 'default',
+          maxDeliveries: 64,
+          retryAfterSeconds: 5,
+          initialDelaySeconds: 0,
+        },
+      ],
+    });
+    routes.push({ src: stepEntrypoint, dest: stepEntrypoint });
+
+    const flowEntrypoint = '/.well-known/workflow/v1/flow';
+    result.output[flowEntrypoint] = new Lambda({
+      files: workflowFiles,
+      handler: `${handlerPyFilename}.vc_handler`,
+      runtime: pythonVersion.runtime,
+      environment: lambdaEnv,
+      experimentalTriggers: [
+        {
+          type: 'queue/v1beta',
+          topic: '__wkf_workflow_*',
+          consumer: 'default',
+          maxDeliveries: 64,
+          retryAfterSeconds: 5,
+          initialDelaySeconds: 0,
+        },
+      ],
+    });
+    routes.push({ src: flowEntrypoint, dest: flowEntrypoint });
+  }
+
+  routes.push({ src: '/(.*)', dest: `/${entrypointKey}` });
+  result.routes = routes;
+  return result;
 };
 
 export { startDevServer };
