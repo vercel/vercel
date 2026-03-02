@@ -1,4 +1,5 @@
 import type Client from '../client';
+import pkg from '../pkg';
 import type { Metadata } from './types';
 
 export async function provisionStoreResource(
@@ -23,6 +24,7 @@ export async function provisionStoreResource(
         name,
         authorizationId,
         source: 'cli',
+        cliVersion: pkg.version,
       },
     }
   );

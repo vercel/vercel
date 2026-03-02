@@ -1,6 +1,7 @@
 import output from '../../output-manager';
 import type Client from '../client';
 import { APIError } from '../errors-ts';
+import pkg from '../pkg';
 import type {
   AcceptedPolicies,
   AutoProvisionFallback,
@@ -38,6 +39,7 @@ export async function autoProvisionResource(
     metadata,
     acceptedPolicies,
     source: 'cli',
+    cliVersion: pkg.version,
     ...(billingPlanId ? { billingPlanId } : {}),
     ...(installationId ? { installationId } : {}),
   };

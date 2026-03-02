@@ -40,6 +40,7 @@ import { createAuthorization } from '../../util/integration/create-authorization
 import sleep from '../../util/sleep';
 import { fetchAuthorization } from '../../util/integration/fetch-authorization';
 import { validateJsonOutput } from '../../util/output-format';
+import pkg from '../../util/pkg';
 
 import type { IntegrationAddFlags } from './command';
 
@@ -374,7 +375,7 @@ async function installMarketplaceIntegration(
     {
       method: 'POST',
       json: true,
-      body: { acceptedPolicies, source: 'cli' },
+      body: { acceptedPolicies, source: 'cli', cliVersion: pkg.version },
     }
   );
 }
