@@ -139,6 +139,15 @@ export class LogsTelemetryClient
     }
   }
 
+  trackCliOptionSearch(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'search',
+        value: this.redactedValue,
+      });
+    }
+  }
+
   trackCliOptionRequestId(v: string | undefined) {
     if (v) {
       this.trackCliOption({
