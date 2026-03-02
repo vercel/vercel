@@ -3038,6 +3038,12 @@ export const onPrerenderRoute =
         };
       }
 
+      const partialFallback =
+        isAppPathRoute &&
+        renderingMode === RenderingMode.PARTIALLY_STATIC &&
+        isFallback &&
+        Boolean(postponedState);
+
       // If this is a fallback page with PPR enabled, we should not have the
       // cache key vary based on the route parameters to ensure that we always
       // have a HIT for the fallback page.
@@ -3063,20 +3069,15 @@ export const onPrerenderRoute =
         }
         // We additionally vary based on if there's a postponed prerender
         // because if there isn't, then that means that we generated an
-        // empty shell, and producing an empty RSC shell would be a waste.
-        // If there is a postponed prerender, then the RSC shell would be
-        // non-empty, and it would be valuable to also generate an empty
-        // RSC shell.
+        // empty shell. For partial fallbacks when cache components are enabled,
+        // we still want to vary the HTML by params so the route shell can be
+        // cached per-param. Otherwise, keep the fallback shell shared across
+        // params.
         else if (postponedPrerender) {
-          htmlAllowQuery = [];
+          htmlAllowQuery =
+            partialFallback && isAppClientParamParsingEnabled ? allowQuery : [];
         }
       }
-
-      const partialFallback =
-        isAppPathRoute &&
-        renderingMode === RenderingMode.PARTIALLY_STATIC &&
-        isFallback &&
-        Boolean(postponedState);
 
       // If this is a static metadata file that should output FileRef instead of Prerender
       const staticMetadataFile = getSourceFileRefOfStaticMetadata(
