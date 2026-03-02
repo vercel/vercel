@@ -22,20 +22,33 @@ function listSkillFiles(dir: string, baseDir: string = dir): string[] {
   return files;
 }
 
-/** Evals to run when CLI_EVAL_EVALS is not set (e.g. when running this experiment directly). */
-const DEFAULT_EVALS = [
+/**
+ * Canonical set of CLI evals for this experiment.
+ *
+ * When new evals are added under evals/evals/, add them here so they are
+ * exercised and reported consistently.
+ */
+const ALL_EVALS: string[] = [
+  '_deploy',
   'build',
-  'non-interactive',
+  'curl/explicit',
+  'curl/implicit',
+  'env/add',
+  'env/ls',
+  'env/pull',
+  'env/remove',
+  'env/update',
+  'init',
   'login-whoami',
   'login-not-logged-in',
+  'marketplace/install-neon-postgres',
+  'marketplace/install-neon-postgres-minimal',
+  'non-interactive',
 ];
 
 /**
  * CLI evals experiment. Add eval fixtures under evals/ and configure
  * credentials (AI_GATEWAY_API_KEY, VERCEL_TOKEN, etc.) to run.
- *
- * When run via evals/run.ts, CLI_EVAL_EVALS is set to the full discovered list
- * so all variants run all evals. Otherwise uses DEFAULT_EVALS.
  *
  * Setup:
  * - Installs Vercel CLI globally
@@ -45,12 +58,7 @@ const DEFAULT_EVALS = [
  */
 const config: ExperimentConfig = {
   agent: 'vercel-ai-gateway/claude-code',
-  evals: (() => {
-    const fromEnv = process.env.CLI_EVAL_EVALS?.split(',')
-      .map(s => s.trim())
-      .filter(Boolean);
-    return fromEnv?.length ? fromEnv : DEFAULT_EVALS;
-  })(),
+  evals: ALL_EVALS,
   runs: 1,
   earlyExit: false, // Run all evals to completion so we get explicit pass/fail for each
   timeout: 900, // 15 min per eval (env can need link + env ls; build is long)
