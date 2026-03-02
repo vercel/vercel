@@ -416,7 +416,7 @@ export async function ensureRepoLink(
 
 /**
  * Adds additional projects to an existing `repo.json` file.
- * Requires that `repo.json` already exists (i.e., the repo has been linked
+ * Requires that `repo.json` already exists (i.e. the repo has been linked
  * with `vc link --repo`). Runs the same project discovery flow and merges
  * the resulting projects into the existing config, deduplicating by project ID.
  */
