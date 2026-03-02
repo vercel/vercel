@@ -34,8 +34,9 @@ jobs:
         run: pnpm install --no-frozen-lockfile
 
       - name: Build CLI
-        if: false # skip for now; enable when monorepo build works in CI
-        run: cd packages/cli && pnpm build
+        run: node utils/gen.js && node_modules/.bin/turbo run build --cache-dir=".turbo" --log-order=stream --filter=vercel...
+        env:
+          FORCE_COLOR: '1'
 
       - name: Run CLI evals
         id: evals

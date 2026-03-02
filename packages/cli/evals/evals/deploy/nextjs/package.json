@@ -1,0 +1,7 @@
+{
+  "name": "smoke",
+  "type": "module",
+  "devDependencies": {
+    "vitest": "^2.1.0"
+  }
+}

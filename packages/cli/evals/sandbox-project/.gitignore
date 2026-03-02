@@ -1,4 +1,5 @@
-!.vercel
-!.vercel/project.json
 .env
-.env*.local
+.env.*
+!.env.example
+.vercel
+!.vercel/project.json
