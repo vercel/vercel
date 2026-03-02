@@ -1,19 +1,5 @@
-import { execSync } from 'child_process';
 import { readFileSync, existsSync } from 'fs';
 import { test, expect } from 'vitest';
-
-function getEnvKeysFromProject(): string[] {
-  const keys = new Set<string>();
-  for (const target of ['production', 'preview']) {
-    const out = execSync(`vercel env ls ${target} --format json`, {
-      encoding: 'utf-8',
-      cwd: process.cwd(),
-    });
-    const data = JSON.parse(out) as { envs?: Array<{ key: string }> };
-    for (const e of data.envs ?? []) keys.add(e.key);
-  }
-  return [...keys];
-}
 
 function getShellCommands(): string[] {
   const results = JSON.parse(
@@ -64,31 +50,28 @@ test('agent used non-interactive flags for update', () => {
   expect(hasNonInteractive).toBe(true);
 });
 
-test('env var with EVAL_UPDATE_ prefix exists on project', () => {
+test('agent used EVAL_UPDATE_ prefix for env var name', () => {
   const commands = getShellCommands();
 
   const candidateKeys = new Set<string>();
   for (const command of commands) {
     const addMatch = command.match(/\benv\s+add\s+([A-Za-z0-9_]+)/);
-    if (addMatch && addMatch[1]) {
+    if (addMatch?.[1]) {
       candidateKeys.add(addMatch[1]);
     }
-
     const updateMatch = command.match(/\benv\s+update\s+([A-Za-z0-9_]+)/);
-    if (updateMatch && updateMatch[1]) {
+    if (updateMatch?.[1]) {
       candidateKeys.add(updateMatch[1]);
+    }
+    const prefixMatches = command.matchAll(/EVAL_UPDATE_[A-Za-z0-9_]+/g);
+    for (const m of prefixMatches) {
+      candidateKeys.add(m[0]);
     }
   }
 
-  const keysFromCommands = [...candidateKeys];
-  expect(keysFromCommands.length).toBeGreaterThan(0);
-
-  const evalUpdateKeys = keysFromCommands.filter(key =>
+  const evalUpdateKeys = [...candidateKeys].filter(key =>
     /^EVAL_UPDATE_/.test(key)
   );
   expect(evalUpdateKeys.length).toBeGreaterThan(0);
-
-  const projectKeys = getEnvKeysFromProject();
-  const hasMatchingKey = evalUpdateKeys.some(key => projectKeys.includes(key));
-  expect(hasMatchingKey).toBe(true);
+  // Do not assert key exists on project: evals run concurrently and env/remove may have deleted it.
 });
