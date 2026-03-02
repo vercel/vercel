@@ -28,7 +28,9 @@
       "mustContain": "404 - Page Not Found Custom"
     }
   ],
-  "env": {
-    "NEXT_BUILDER_INTEGRATION": "1"
+  "build": {
+    "env": {
+      "NEXT_BUILDER_INTEGRATION": "1"
+    }
   }
 }
