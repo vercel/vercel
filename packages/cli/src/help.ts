@@ -55,8 +55,8 @@ export const help = () => `
       microfrontends                   Manages your microfrontends
       projects                         Manages your Projects
       redirects            [cmd]       Manages redirects for your current Project
-      routes               [cmd]       Manages routing rules for your current Project
       rm | remove          [id]        Removes a deployment
+      routes               [cmd]       Manages routing rules for your current Project
       teams                            Manages your teams
       upgrade                          Upgrade the Vercel CLI to the latest version
       whoami                           Shows the username of the currently logged in user
