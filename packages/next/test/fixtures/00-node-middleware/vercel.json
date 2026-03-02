@@ -8,6 +8,7 @@
   ],
   "build": {
     "env": {
+      "NEXT_BUILDER_INTEGRATION": "1",
       "VERCEL_LAMBDA_OUTPUTS_AS_MIDDLEWARE": "1"
     }
   },
@@ -129,8 +130,5 @@
     {
       "logMustNotContain": "Unable to find source file for page middleware with"
     }
-  ],
-  "env": {
-    "NEXT_BUILDER_INTEGRATION": "1"
-  }
+  ]
 }
