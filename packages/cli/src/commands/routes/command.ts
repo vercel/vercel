@@ -910,5 +910,4 @@ export const routesCommand = {
   ],
   options: [],
   examples: [],
-  hidden: true, // TODO: Remove when all routes subcommands are complete
 } as const;
