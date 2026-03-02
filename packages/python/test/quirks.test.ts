@@ -9,9 +9,16 @@ vi.mock('execa', () => {
   return { default: fn, __esModule: true };
 });
 
-// Mock @vercel/build-utils debug
+// Mock @vercel/build-utils debug + NowBuildError
 vi.mock('@vercel/build-utils', () => ({
   debug: vi.fn(),
+  NowBuildError: class NowBuildError extends Error {
+    code: string;
+    constructor({ code, message }: { code: string; message: string }) {
+      super(message);
+      this.code = code;
+    }
+  },
 }));
 
 // Mock getVenvSitePackagesDirs and resolveVendorDir — avoids spawning Python
@@ -134,6 +141,191 @@ describe('runQuirks', () => {
 
     // Verify openssl shim was created
     expect(await fs.pathExists(path.join(cacheDir, 'openssl'))).toBe(true);
+  });
+
+  it('litellm quirk runs before prisma and propagates buildEnv', async () => {
+    // Create dist-info for both litellm and prisma-client-py
+    await fs.mkdirp(path.join(sitePackagesDir, 'prisma'));
+    const prismaDistInfo = path.join(
+      sitePackagesDir,
+      'prisma-0.13.0.dist-info'
+    );
+    await fs.mkdirp(prismaDistInfo);
+    await fs.writeFile(
+      path.join(prismaDistInfo, 'METADATA'),
+      'Metadata-Version: 2.1\nName: prisma\nVersion: 0.13.0\n'
+    );
+    await fs.writeFile(
+      path.join(prismaDistInfo, 'RECORD'),
+      'prisma/__init__.py,,\n'
+    );
+
+    const litellmDistInfo = path.join(
+      sitePackagesDir,
+      'litellm-1.0.0.dist-info'
+    );
+    await fs.mkdirp(litellmDistInfo);
+    await fs.writeFile(
+      path.join(litellmDistInfo, 'METADATA'),
+      'Metadata-Version: 2.1\nName: litellm\nVersion: 1.0.0\n'
+    );
+    await fs.writeFile(
+      path.join(litellmDistInfo, 'RECORD'),
+      'litellm/__init__.py,,\n'
+    );
+
+    // Create the litellm schema file
+    const schemaDir = path.join(sitePackagesDir, 'litellm', 'proxy');
+    await fs.mkdirp(schemaDir);
+    const schemaPath = path.join(schemaDir, 'schema.prisma');
+    await fs.writeFile(schemaPath, 'datasource db { provider = "sqlite" }');
+
+    // Pre-create the engine binary that prisma quirk expects after `prisma generate`
+    const cacheDir = path.join(sitePackagesDir, 'prisma', '__bincache__');
+    const binaryTarget =
+      process.arch === 'arm64'
+        ? 'query-engine-linux-arm64-openssl-3.0.x'
+        : 'query-engine-rhel-openssl-3.0.x';
+    const engineDir = path.join(cacheDir, 'node_modules', 'prisma');
+    await fs.mkdirp(engineDir);
+    await fs.writeFile(path.join(engineDir, binaryTarget), 'fake-engine');
+
+    // prisma quirk's run() calls execa
+    mockedExeca.mockResolvedValue(EXECA_OK);
+
+    // Save original PRISMA_SCHEMA_PATH to restore later
+    const origSchemaPath = process.env.PRISMA_SCHEMA_PATH;
+
+    try {
+      delete process.env.PRISMA_SCHEMA_PATH;
+      const result = await runQuirks(makeCtx());
+
+      // litellm quirk should have set PRISMA_SCHEMA_PATH in buildEnv
+      expect(result.buildEnv!.PRISMA_SCHEMA_PATH).toBe(schemaPath);
+      // And propagated it to process.env for prisma quirk to pick up
+      expect(process.env.PRISMA_SCHEMA_PATH).toBe(schemaPath);
+    } finally {
+      if (origSchemaPath !== undefined) {
+        process.env.PRISMA_SCHEMA_PATH = origSchemaPath;
+      } else {
+        delete process.env.PRISMA_SCHEMA_PATH;
+      }
+    }
+  });
+
+  describe('litellm CONFIG_FILE_PATH', () => {
+    async function installLitellm() {
+      const distInfo = path.join(sitePackagesDir, 'litellm-1.0.0.dist-info');
+      await fs.mkdirp(distInfo);
+      await fs.writeFile(
+        path.join(distInfo, 'METADATA'),
+        'Metadata-Version: 2.1\nName: litellm\nVersion: 1.0.0\n'
+      );
+      await fs.writeFile(
+        path.join(distInfo, 'RECORD'),
+        'litellm/__init__.py,,\n'
+      );
+    }
+
+    it('sets CONFIG_FILE_PATH when config file exists in workPath', async () => {
+      await installLitellm();
+      await fs.writeFile(
+        path.join(tmpDir, 'litellm_config.yaml'),
+        'model_list: []'
+      );
+
+      const origConfigPath = process.env.CONFIG_FILE_PATH;
+      try {
+        delete process.env.CONFIG_FILE_PATH;
+        const result = await runQuirks(makeCtx());
+
+        expect(result.buildEnv!.CONFIG_FILE_PATH).toBe(
+          path.join(tmpDir, 'litellm_config.yaml')
+        );
+        expect(result.env!.CONFIG_FILE_PATH).toBe(
+          '/var/task/litellm_config.yaml'
+        );
+      } finally {
+        if (origConfigPath !== undefined) {
+          process.env.CONFIG_FILE_PATH = origConfigPath;
+        } else {
+          delete process.env.CONFIG_FILE_PATH;
+        }
+      }
+    });
+
+    it('respects existing CONFIG_FILE_PATH env var', async () => {
+      await installLitellm();
+      await fs.writeFile(
+        path.join(tmpDir, 'litellm_config.yaml'),
+        'model_list: []'
+      );
+
+      const origConfigPath = process.env.CONFIG_FILE_PATH;
+      try {
+        process.env.CONFIG_FILE_PATH = '/custom/config.yaml';
+        const result = await runQuirks(makeCtx());
+
+        // Should not override the existing env var
+        expect(result.buildEnv!.CONFIG_FILE_PATH).toBeUndefined();
+        expect(result.env!.CONFIG_FILE_PATH).toBeUndefined();
+      } finally {
+        if (origConfigPath !== undefined) {
+          process.env.CONFIG_FILE_PATH = origConfigPath;
+        } else {
+          delete process.env.CONFIG_FILE_PATH;
+        }
+      }
+    });
+
+    it('does not set CONFIG_FILE_PATH when no config file exists', async () => {
+      await installLitellm();
+
+      const origConfigPath = process.env.CONFIG_FILE_PATH;
+      try {
+        delete process.env.CONFIG_FILE_PATH;
+        const result = await runQuirks(makeCtx());
+
+        expect(result.buildEnv!.CONFIG_FILE_PATH).toBeUndefined();
+        expect(result.env!.CONFIG_FILE_PATH).toBeUndefined();
+      } finally {
+        if (origConfigPath !== undefined) {
+          process.env.CONFIG_FILE_PATH = origConfigPath;
+        } else {
+          delete process.env.CONFIG_FILE_PATH;
+        }
+      }
+    });
+
+    it('picks first matching config candidate by priority', async () => {
+      await installLitellm();
+      // Create both litellm.yaml and litellm_config.yaml —
+      // litellm_config.yaml should win because it comes first in CONFIG_CANDIDATES
+      await fs.writeFile(path.join(tmpDir, 'litellm.yaml'), 'model_list: []');
+      await fs.writeFile(
+        path.join(tmpDir, 'litellm_config.yaml'),
+        'model_list: []'
+      );
+
+      const origConfigPath = process.env.CONFIG_FILE_PATH;
+      try {
+        delete process.env.CONFIG_FILE_PATH;
+        const result = await runQuirks(makeCtx());
+
+        expect(result.buildEnv!.CONFIG_FILE_PATH).toBe(
+          path.join(tmpDir, 'litellm_config.yaml')
+        );
+        expect(result.env!.CONFIG_FILE_PATH).toBe(
+          '/var/task/litellm_config.yaml'
+        );
+      } finally {
+        if (origConfigPath !== undefined) {
+          process.env.CONFIG_FILE_PATH = origConfigPath;
+        } else {
+          delete process.env.CONFIG_FILE_PATH;
+        }
+      }
+    });
   });
 });
 

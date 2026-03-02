@@ -1,5 +1,12 @@
 # @vercel/router-sdk
 
+## 0.0.36
+
+### Patch Changes
+
+- Updated dependencies [[`b3b94f2335026634f4fa9fdfe0671677fa00000e`](https://github.com/vercel/vercel/commit/b3b94f2335026634f4fa9fdfe0671677fa00000e)]:
+  - @vercel/routing-utils@6.0.1
+
 ## 0.0.35
 
 ### Patch Changes

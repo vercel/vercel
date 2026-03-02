@@ -15,9 +15,19 @@ function getEnvKeysFromProject(): string[] {
   return [...keys];
 }
 
+function getShellCommands(): string[] {
+  const results = JSON.parse(
+    readFileSync('__agent_eval__/results.json', 'utf-8')
+  ) as {
+    o11y?: { shellCommands?: Array<{ command: string }> };
+  };
+
+  return (results.o11y?.shellCommands ?? []).map(c => c.command);
+}
+
 /**
  * env add eval: agent adds an env var with a unique key using non-interactive flags,
- * and records the command and key in command-used.txt and env-key-used.txt.
+ * and we verify the key pattern and existence on the project via CLI output.
  */
 test('project is linked', () => {
   expect(
@@ -26,33 +36,51 @@ test('project is linked', () => {
 });
 
 test('agent used vercel env add', () => {
-  expect(existsSync('command-used.txt')).toBe(true);
+  const commands = getShellCommands();
+  expect(commands.length).toBeGreaterThan(0);
 
-  const command = readFileSync('command-used.txt', 'utf-8').trim();
-  expect(command.length).toBeGreaterThan(0);
-  expect(command).toMatch(/\b(vercel|vc)\s+env\s+add\b/);
+  const envAddCommands = commands.filter(command =>
+    /\b(vercel|vc)\s+env\s+add\b/.test(command)
+  );
+  expect(envAddCommands.length).toBeGreaterThan(0);
 });
 
 test('agent used non-interactive flags', () => {
-  const command = readFileSync('command-used.txt', 'utf-8').trim();
-  const hasNonInteractive =
-    command.includes('--yes') ||
-    /\s-y(\s|$)/.test(command) ||
-    command.includes('--non-interactive') ||
-    command.includes('--value');
+  const commands = getShellCommands();
+  const envAddCommands = commands.filter(command =>
+    /\b(vercel|vc)\s+env\s+add\b/.test(command)
+  );
+  expect(envAddCommands.length).toBeGreaterThan(0);
+
+  const hasNonInteractive = envAddCommands.some(command => {
+    return (
+      command.includes('--yes') ||
+      /\s-y(\s|$)/.test(command) ||
+      command.includes('--non-interactive') ||
+      command.includes('--value')
+    );
+  });
   expect(hasNonInteractive).toBe(true);
 });
 
-test('agent recorded the env key used', () => {
-  expect(existsSync('env-key-used.txt')).toBe(true);
+test('env var exists on project with EVAL_ADD_ prefix', () => {
+  const commands = getShellCommands();
 
-  const key = readFileSync('env-key-used.txt', 'utf-8').trim();
-  expect(key.length).toBeGreaterThan(0);
-  expect(key).toMatch(/^EVAL_ADD_/);
-});
+  const candidateKeys = new Set<string>();
+  for (const command of commands) {
+    const match = command.match(/\benv\s+add\s+([A-Za-z0-9_]+)/);
+    if (match && match[1]) {
+      candidateKeys.add(match[1]);
+    }
+  }
 
-test('env var exists on project', () => {
-  const key = readFileSync('env-key-used.txt', 'utf-8').trim();
-  const keys = getEnvKeysFromProject();
-  expect(keys).toContain(key);
+  const keysFromCommands = [...candidateKeys];
+  expect(keysFromCommands.length).toBeGreaterThan(0);
+
+  const evalAddKeys = keysFromCommands.filter(key => /^EVAL_ADD_/.test(key));
+  expect(evalAddKeys.length).toBeGreaterThan(0);
+
+  const projectKeys = getEnvKeysFromProject();
+  const hasMatchingKey = evalAddKeys.some(key => projectKeys.includes(key));
+  expect(hasMatchingKey).toBe(true);
 });

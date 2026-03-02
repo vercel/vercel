@@ -2,6 +2,7 @@ import assert from 'assert';
 import Ajv from 'ajv';
 import {
   Route,
+  RouteInput,
   normalizeRoutes,
   isHandler,
   routesSchema,
@@ -161,9 +162,9 @@ describe('normalizeRoutes', () => {
   });
 
   test('converts source to src in normalizeRoutes', () => {
-    const input = [
+    const input: RouteInput[] = [
       { source: '/about', destination: '/about.html' },
-    ] as unknown as Route[];
+    ];
     const { error, routes } = normalizeRoutes(input);
 
     assert.strictEqual(error, null);
@@ -179,9 +180,9 @@ describe('normalizeRoutes', () => {
   });
 
   test('converts statusCode to status in normalizeRoutes', () => {
-    const input = [
+    const input: RouteInput[] = [
       { source: '/old', destination: '/new', statusCode: 301 },
-    ] as unknown as Route[];
+    ];
     const { error, routes } = normalizeRoutes(input);
 
     assert.strictEqual(error, null);
@@ -199,7 +200,7 @@ describe('normalizeRoutes', () => {
   });
 
   test('fails if both src and source are defined', () => {
-    const input = [{ src: '/about', source: '/about' }] as unknown as Route[];
+    const input = [{ src: '/about', source: '/about' }] as RouteInput[];
     const { error } = normalizeRoutes(input);
 
     assert.deepEqual(error?.code, 'invalid_route');
@@ -210,9 +211,9 @@ describe('normalizeRoutes', () => {
   });
 
   test('fails if both dest and destination are defined', () => {
-    const input = [
+    const input: RouteInput[] = [
       { src: '/about', dest: '/about.html', destination: '/about.html' },
-    ] as unknown as Route[];
+    ];
     const { error } = normalizeRoutes(input);
 
     assert.deepEqual(error?.code, 'invalid_route');
@@ -223,9 +224,9 @@ describe('normalizeRoutes', () => {
   });
 
   test('fails if both status and statusCode are defined', () => {
-    const input = [
+    const input: RouteInput[] = [
       { src: '/old', dest: '/new', status: 301, statusCode: 301 },
-    ] as unknown as Route[];
+    ];
     const { error } = normalizeRoutes(input);
 
     assert.deepEqual(error?.code, 'invalid_route');
@@ -233,6 +234,25 @@ describe('normalizeRoutes', () => {
       error?.message,
       'Route at index 0 cannot define both `status` and `statusCode`. Please use only one.'
     );
+  });
+
+  test('getTransformedRoutes accepts routes with source alias', () => {
+    const { error, routes } = getTransformedRoutes({
+      routes: [
+        { source: '/about', destination: '/about.html' },
+        { src: '/blog', dest: '/blog.html' },
+      ],
+    });
+
+    assert.strictEqual(error, null);
+    assert.notStrictEqual(routes, null);
+
+    if (routes) {
+      const first = routes[0];
+      assert.strictEqual(first.src, '^/about$');
+      assert.strictEqual(first.dest, '/about.html');
+      assert.strictEqual((first as any).source, undefined);
+    }
   });
 
   test('returns if null', () => {

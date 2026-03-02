@@ -434,17 +434,17 @@ describe('validateConfig', () => {
     );
   });
 
-  it.each(['x86_64', 'arm64'] as const)(
-    'should not error with valid architecture: %s',
-    architecture => {
-      const error = validateConfig({
-        functions: {
-          'api/user.go': { architecture, memory: 128, maxDuration: 5 },
-        },
-      });
-      expect(error).toBeNull();
-    }
-  );
+  it.each([
+    'x86_64',
+    'arm64',
+  ] as const)('should not error with valid architecture: %s', architecture => {
+    const error = validateConfig({
+      functions: {
+        'api/user.go': { architecture, memory: 128, maxDuration: 5 },
+      },
+    });
+    expect(error).toBeNull();
+  });
 
   it('should error with invalid architecture', () => {
     const error = validateConfig({

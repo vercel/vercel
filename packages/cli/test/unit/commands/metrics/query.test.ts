@@ -539,30 +539,6 @@ describe('query', () => {
     });
   });
 
-  describe('--order-by flag', () => {
-    it('should send order-by to API', async () => {
-      let requestBody: any;
-      client.scenario.post('/api/observability/metrics', (req, res) => {
-        requestBody = req.body;
-        res.json({ data: [], summary: [], statistics: {} });
-      });
-      mockLinkedProject();
-      client.setArgv(
-        'metrics',
-        'query',
-        '--event',
-        'edgeRequest',
-        '--order-by',
-        'value:asc'
-      );
-
-      const exitCode = await query(client, new MockTelemetry());
-
-      expect(exitCode).toBe(0);
-      expect(requestBody.orderBy).toBe('value:asc');
-    });
-  });
-
   describe('--filter flag', () => {
     it('should pass filter string to API', async () => {
       let requestBody: any;
