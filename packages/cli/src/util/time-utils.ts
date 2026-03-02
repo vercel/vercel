@@ -17,10 +17,10 @@ export function parseTimeFlag(input: string): Date {
 }
 
 export function resolveTimeRange(
-  since?: string,
+  since: string = '1h',
   until?: string
 ): { startTime: Date; endTime: Date } {
-  const startTime = parseTimeFlag(since ?? '1h');
+  const startTime = parseTimeFlag(since);
   const endTime = until ? parseTimeFlag(until) : new Date();
   return { startTime, endTime };
 }
