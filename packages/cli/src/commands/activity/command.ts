@@ -22,7 +22,7 @@ export const typesSubcommand = {
 export const activityCommand = {
   name: 'activity',
   aliases: [],
-  description: 'List user activity and audit events.',
+  description: 'List user activity events.',
   arguments: [],
   subcommands: [
     // Hidden placeholder so the help synopsis renders [command] as optional
