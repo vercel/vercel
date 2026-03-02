@@ -157,6 +157,18 @@ async function main() {
     }
   }
 
+  // Debug: show full variant matrix (project mode × skills × auth state)
+  process.stdout.write('\nCLI eval variants matrix:\n');
+  if (variants.length === 0) {
+    process.stdout.write('  (no variants — nothing will run)\n');
+  } else {
+    for (const v of variants) {
+      process.stdout.write(
+        `  - id=${v.id}, projectMode=${v.projectMode}, authState=${v.authState}, withSkills=${v.withSkills}\n`
+      );
+    }
+  }
+
   try {
     await populateOIDCToken();
   } catch (err: any) {
@@ -196,6 +208,13 @@ async function main() {
         : [];
   const agentEvalArgsToPass =
     experimentsToRun.length > 0 ? [...flagArgs, ...experimentsToRun] : args;
+  process.stdout.write(
+    `\nCLI eval experiments to run: ${
+      experimentsToRun.length > 0
+        ? experimentsToRun.join(', ')
+        : '(from CLI args)'
+    }\n`
+  );
   if (usedOIDCFallback && explicitExperimentArgs.length === 0) {
     process.stderr.write(
       'Skipping smoke experiment (requires OIDC). Running: cli (all evals per variant).\n'
