@@ -10,7 +10,7 @@ export const skillsCommand = {
       name: 'json',
       shorthand: null,
       type: Boolean,
-      deprecated: true,
+      deprecated: false,
       description: 'Output results as JSON',
     },
     {

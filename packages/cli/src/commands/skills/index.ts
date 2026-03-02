@@ -11,14 +11,18 @@ import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { validateJsonOutput } from '../../util/output-format';
-import { help } from '../help';
-import { skillsCommand } from './command';
 import table from '../../util/output/table';
 import output from '../../output-manager';
+import { help } from '../help';
+import { skillsCommand } from './command';
 
 const SKILLS_API = 'https://skills.sh/api/search';
+const FETCH_TIMEOUT_MS = 10_000;
+const MIN_INSTALLS = 100;
+const MAX_RESULTS = 15;
+const MAX_FRAMEWORK_RESULTS = 5;
+const MAX_DEP_QUERIES = 5;
 
-// Dependencies worth searching for skills — curated to avoid noise
 const NOTABLE_DEPS = new Set([
   'prisma',
   '@prisma/client',
@@ -57,7 +61,6 @@ const NOTABLE_DEPS = new Set([
 ]);
 
 interface SkillResult {
-  id: string;
   skillId: string;
   name: string;
   installs: number;
@@ -65,20 +68,29 @@ interface SkillResult {
 }
 
 interface SearchResponse {
-  query: string;
   skills: SkillResult[];
-  count: number;
-  duration_ms: number;
 }
+
+type SearchTier = 'framework' | 'dependency';
 
 async function searchSkills(query: string): Promise<SkillResult[]> {
   try {
     const url = `${SKILLS_API}?q=${encodeURIComponent(query)}`;
-    const res = await fetch(url);
-    if (!res.ok) return [];
-    const data = (await res.json()) as SearchResponse;
-    return data.skills ?? [];
-  } catch {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+    try {
+      const res = await fetch(url, { signal: controller.signal });
+      if (!res.ok) {
+        output.debug(`Skills API returned ${res.status} for query "${query}"`);
+        return [];
+      }
+      const data = (await res.json()) as SearchResponse;
+      return data.skills ?? [];
+    } finally {
+      clearTimeout(timeout);
+    }
+  } catch (err) {
+    output.debug(`Skills search failed for "${query}": ${err}`);
     return [];
   }
 }
@@ -90,10 +102,10 @@ async function detectProjectFramework(
     const fs = new LocalFileSystemDetector(cwd);
     const detected = await detectFrameworks({ fs, frameworkList });
     if (detected.length > 0) {
-      return { name: detected[0].name, slug: detected[0].slug ?? '' };
+      return { name: detected[0].name, slug: detected[0].slug || '' };
     }
   } catch {
-    // Framework detection failed — not critical
+    // not critical
   }
   return null;
 }
@@ -110,7 +122,6 @@ async function readPackageDeps(
     };
     const depNames = Object.keys(allDeps);
     const notable = depNames.filter(d => NOTABLE_DEPS.has(d));
-
     const language = depNames.includes('typescript')
       ? 'typescript'
       : 'javascript';
@@ -118,6 +129,10 @@ async function readPackageDeps(
   } catch {
     return { deps: [], language: 'unknown' };
   }
+}
+
+function cleanDepName(dep: string): string {
+  return dep.replace(/^@/, '').replace(/\//g, '-');
 }
 
 function formatInstalls(n: number): string {
@@ -150,26 +165,47 @@ export default async function skills(client: Client) {
   }
   const asJson = formatResult.jsonOutput;
 
-  const query = parsedArgs.args[1]; // args[0] is 'skills'
+  const query = parsedArgs.args[1];
   const { cwd } = client;
 
-  if (query) {
-    // Direct search mode
-    output.spinner('Searching skills...');
-    const results = await searchSkills(query);
-    output.stopSpinner();
-    return displayResults(client, results, asJson, `Search: "${query}"`);
+  try {
+    if (query) {
+      return await directSearch(client, query, asJson);
+    }
+    return await autoDetect(client, cwd, asJson);
+  } catch (err) {
+    printError(err);
+    return 1;
   }
+}
 
-  // Auto-detect mode
+async function directSearch(
+  client: Client,
+  query: string,
+  asJson: boolean
+): Promise<number> {
+  output.spinner('Searching skills...');
+  const results = await searchSkills(query);
+  output.stopSpinner();
+
+  const filtered = results
+    .filter(s => s.installs >= MIN_INSTALLS)
+    .slice(0, MAX_RESULTS);
+
+  return displayResults(client, filtered, asJson, `Search: "${query}"`);
+}
+
+async function autoDetect(
+  client: Client,
+  cwd: string,
+  asJson: boolean
+): Promise<number> {
   output.spinner('Detecting project...');
 
-  const [framework, packageInfo] = await Promise.all([
+  const [framework, { deps, language }] = await Promise.all([
     detectProjectFramework(cwd),
     readPackageDeps(cwd),
   ]);
-
-  const { deps, language } = packageInfo;
 
   if (!framework && deps.length === 0) {
     output.stopSpinner();
@@ -191,44 +227,66 @@ export default async function skills(client: Client) {
   output.log(`Detected: ${chalk.bold(detectedParts.join(' + '))}`);
   output.spinner('Searching for relevant skills...');
 
-  // Build search queries from signals
-  const queries: { term: string; weight: number }[] = [];
+  const queries: { term: string; tier: SearchTier }[] = [];
   if (framework) {
-    queries.push({ term: framework.slug || framework.name, weight: 3 });
+    const slug = (framework.slug || framework.name)
+      .toLowerCase()
+      .replace(/-\d+$/, '');
+    queries.push({ term: slug, tier: 'framework' });
+    const base = slug.replace(/(kit|js)$/, '');
+    if (base && base !== slug) {
+      queries.push({ term: base, tier: 'framework' });
+    }
+    output.debug(`Framework queries: ${queries.map(q => q.term).join(', ')}`);
   }
-  for (const dep of deps.slice(0, 5)) {
-    // Limit to top 5 deps to avoid too many API calls
-    const cleanDep = dep.replace(/^@/, '').replace(/\//, '-');
-    queries.push({ term: cleanDep, weight: 2 });
+  for (const dep of deps.slice(0, MAX_DEP_QUERIES)) {
+    queries.push({ term: cleanDepName(dep), tier: 'dependency' });
   }
-  queries.push({ term: 'vercel', weight: 1 });
+  output.debug(
+    `Total queries: ${queries.map(q => `${q.term} (${q.tier})`).join(', ')}`
+  );
 
-  // Parallel search
   const searchResults = await Promise.allSettled(
     queries.map(async q => ({
-      weight: q.weight,
+      tier: q.tier,
       skills: await searchSkills(q.term),
     }))
   );
 
-  // Merge, deduplicate, and rank
-  const skillMap = new Map<string, SkillResult & { score: number }>();
+  const frameworkSkills = new Map<string, SkillResult>();
+  const depSkills = new Map<string, SkillResult>();
 
   for (const result of searchResults) {
     if (result.status !== 'fulfilled') continue;
-    const { weight, skills: resultSkills } = result.value;
+    const { tier, skills: resultSkills } = result.value;
+    const bucket = tier === 'framework' ? frameworkSkills : depSkills;
     for (const skill of resultSkills) {
-      const existing = skillMap.get(skill.skillId);
-      const score = skill.installs * weight;
-      if (!existing || score > existing.score) {
-        skillMap.set(skill.skillId, { ...skill, score });
+      if (skill.installs < MIN_INSTALLS) continue;
+      const existing = bucket.get(skill.skillId);
+      if (!existing || skill.installs > existing.installs) {
+        bucket.set(skill.skillId, skill);
       }
     }
   }
 
-  const ranked = Array.from(skillMap.values())
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 15);
+  const sortByInstalls = (a: SkillResult, b: SkillResult) =>
+    b.installs - a.installs;
+  const topFramework = Array.from(frameworkSkills.values())
+    .sort(sortByInstalls)
+    .slice(0, MAX_FRAMEWORK_RESULTS);
+
+  for (const fw of topFramework) {
+    depSkills.delete(fw.skillId);
+  }
+  const topDeps = Array.from(depSkills.values())
+    .sort(sortByInstalls)
+    .slice(0, MAX_RESULTS - topFramework.length);
+
+  const ranked = [...topFramework, ...topDeps];
+
+  output.debug(
+    `Results: ${topFramework.length} framework + ${topDeps.length} dependency skills`
+  );
 
   output.stopSpinner();
   return displayResults(
@@ -246,6 +304,7 @@ function displayResults(
   context: string
 ): number {
   if (asJson) {
+    output.stopSpinner();
     client.stdout.write(
       `${JSON.stringify({ context, skills: results }, null, 2)}\n`
     );
@@ -271,7 +330,7 @@ function displayResults(
 
   output.log(`\n${table(tableData, { hsep: 4 })}`);
   output.print(
-    `\n${chalk.gray('Install with:')} npx skills add <source> --skill <name>\n`
+    `\n${chalk.gray('Install now:')} npx skills add <source> --skill <name>\n`
   );
   output.print(`${chalk.gray('Learn more:')} https://skills.sh\n`);
   return 0;

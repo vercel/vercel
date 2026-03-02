@@ -1,0 +1,5 @@
+- [ ] Code clean up
+- [ ] Add tests
+- [ ] Check for any existing skills already installed
+- [ ] Allow user to select which skills to install and batch download them or skip entirely
+- [ ] Add option for repo-level vs global-level install (default: repo level)
