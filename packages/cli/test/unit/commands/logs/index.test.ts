@@ -587,6 +587,51 @@ describe('logs', () => {
     });
   });
 
+  describe('--search option', () => {
+    beforeEach(() => {
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'prj_logstest',
+        name: 'logs-test-project',
+      });
+    });
+
+    it('should pass raw search query to the API', async () => {
+      let receivedSearch: string | undefined;
+      client.scenario.get('/api/logs/request-logs', (req, res) => {
+        receivedSearch = req.query.search as string;
+        res.json({
+          rows: [createMockLog({ message: 'status:500 error' })],
+          hasMoreRows: false,
+        });
+      });
+
+      client.cwd = fixture('linked-project');
+      client.setArgv('logs', '--search', 'status:500 error');
+      const exitCode = await logs(client);
+
+      expect(exitCode).toEqual(0);
+      expect(receivedSearch).toEqual('status:500 error');
+    });
+
+    it('should track telemetry for --search option', async () => {
+      useRequestLogs([]);
+
+      client.cwd = fixture('linked-project');
+      client.setArgv('logs', '--search', 'status:500 error');
+      await logs(client);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'option:search',
+          value: '[REDACTED]',
+        },
+      ]);
+    });
+  });
+
   describe('--deployment option', () => {
     beforeEach(() => {
       useUser();
@@ -868,6 +913,22 @@ describe('logs', () => {
 
       expect(exitCode).toEqual(1);
       await expect(client.stderr).toOutput('Remove: --query');
+    });
+
+    it('should error when --follow is used with --search', async () => {
+      client.cwd = fixture('linked-project');
+      client.setArgv(
+        'logs',
+        '--follow',
+        '--deployment',
+        'dpl_test',
+        '--search',
+        'status:500 error'
+      );
+      const exitCode = await logs(client);
+
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput('Remove: --search');
     });
 
     it('should error when --follow is used with multiple incompatible flags', async () => {

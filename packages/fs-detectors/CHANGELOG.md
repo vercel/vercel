@@ -1,5 +1,11 @@
 # @vercel/fs-detectors
 
+## 5.8.14
+
+### Patch Changes
+
+- Fix `detectBuilders` so projects using experimental backends still add `@vercel/static` for `public/**/*` files. ([#15261](https://github.com/vercel/vercel/pull/15261))
+
 ## 5.8.13
 
 ### Patch Changes
