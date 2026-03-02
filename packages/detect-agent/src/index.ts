@@ -61,6 +61,16 @@ export async function determineAgent(): Promise<AgentResult> {
     }
   }
 
+  if (process.env.AGENT) {
+    const name = process.env.AGENT.trim();
+    if (name) {
+      return {
+        isAgent: true,
+        agent: { name: name as KnownAgentNames },
+      };
+    }
+  }
+
   if (process.env.CURSOR_TRACE_ID) {
     return { isAgent: true, agent: { name: CURSOR } };
   }
