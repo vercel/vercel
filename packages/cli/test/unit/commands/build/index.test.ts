@@ -10,7 +10,10 @@ import { useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
 import { execSync } from 'child_process';
 import { vi } from 'vitest';
-import { REGEX_NON_VERCEL_PLATFORM_FILES } from '@vercel/fs-detectors';
+import {
+  detectBuilders,
+  REGEX_NON_VERCEL_PLATFORM_FILES,
+} from '@vercel/fs-detectors';
 
 vi.setConfig({ testTimeout: 6 * 60 * 1000 });
 
@@ -1571,6 +1574,28 @@ describe.skipIf(flakey)('build', () => {
     });
   });
 
+  it('should merge routes and overrides from multiple Build Output API builders', async () => {
+    const cwd = fixture('multi-build-output-config');
+    const output = join(cwd, '.vercel/output');
+
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toEqual(0);
+
+    const config = await fs.readJSON(join(output, 'config.json'));
+    expect(config).toMatchObject({
+      version: 3,
+      routes: expect.arrayContaining([
+        expect.objectContaining({ src: '^/first/?$', dest: '/first' }),
+        expect.objectContaining({ src: '^/second/?$', dest: '/second' }),
+      ]),
+      overrides: {
+        'static/first.txt': { path: 'static/first.txt' },
+        'static/second.txt': { path: 'static/second.txt' },
+      },
+    });
+  });
+
   it('should not apply framework `defaultRoutes` when build command outputs Build Output API', async () => {
     const cwd = fixture('build-output-api-with-api-dir');
     const output = join(cwd, '.vercel/output');
@@ -1686,6 +1711,25 @@ describe.skipIf(flakey)('build', () => {
 
       const env = await fs.readJSON(join(output, 'static', 'env.json'));
       expect(Object.keys(env).includes('VERCEL_ANALYTICS_ID')).toEqual(true);
+    });
+  });
+
+  describe('Next.js with root api', () => {
+    it('should not add catch-all /api 404 so dynamic App Router routes work in production', async () => {
+      const files = ['package.json', 'pages/index.js', 'api/legacy.js'];
+      const pkg = {
+        scripts: { build: 'next build' },
+        devDependencies: { next: '13' },
+      };
+      const { rewriteRoutes } = await detectBuilders(files, pkg, {
+        featHandleMiss: true,
+        projectSettings: { framework: 'nextjs' },
+      });
+      const catchAllApi404 = rewriteRoutes?.find(
+        (r: { src?: string; status?: number }) =>
+          r.src === '^/api(/.*)?$' && r.status === 404
+      );
+      expect(catchAllApi404).toBeUndefined();
     });
   });
 

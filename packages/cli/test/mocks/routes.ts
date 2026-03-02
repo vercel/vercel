@@ -1205,3 +1205,50 @@ export function useRoutesForInspectDiff() {
     }
   );
 }
+
+export function useGenerateRoute(options?: {
+  error?: string;
+  route?: {
+    name: string;
+    description: string;
+    pathCondition: { value: string; syntax: string };
+    conditions?: Array<{
+      field: string;
+      operator: string;
+      key?: string;
+      value?: string;
+      missing: boolean;
+    }>;
+    actions: Array<{
+      type: string;
+      subType?: string;
+      dest?: string;
+      status?: number;
+      headers?: Array<{ key: string; value?: string; op: string }>;
+    }>;
+  };
+}) {
+  client.scenario.post(
+    '/v1/projects/:projectId/routes/generate',
+    (_req, res) => {
+      if (options?.error) {
+        res.json({ error: options.error });
+        return;
+      }
+
+      res.json({
+        route: options?.route ?? {
+          name: 'API Proxy',
+          description: 'Proxy API requests to backend',
+          pathCondition: { value: '/api/:path*', syntax: 'path-to-regexp' },
+          actions: [
+            {
+              type: 'rewrite',
+              dest: 'https://backend.internal/:path*',
+            },
+          ],
+        },
+      });
+    }
+  );
+}
