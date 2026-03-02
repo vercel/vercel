@@ -5,7 +5,7 @@ This includes cases where no refresh token is available.
 
 ## Hierarchy
 
-- [`Error`]( https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error )
+- [`Error`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error)
 
   ↳ **`RefreshAccessTokenFailedError`**
 
@@ -35,8 +35,8 @@ This includes cases where no refresh token is available.
 
 #### Parameters
 
-| Name | Type |
-| :------ | :------ |
+| Name     | Type      |
+| :------- | :-------- |
 | `cause?` | `unknown` |
 
 #### Overrides
@@ -61,7 +61,7 @@ Error.message
 
 node_modules/.pnpm/typescript@4.9.5/node_modules/typescript/lib/lib.es5.d.ts:1054
 
-___
+---
 
 ### name
 
@@ -75,7 +75,7 @@ Error.name
 
 [packages/oidc/src/auth-errors.ts:19](https://github.com/vercel/vercel/blob/main/packages/oidc/src/auth-errors.ts#L19)
 
-___
+---
 
 ### stack
 
@@ -89,11 +89,11 @@ Error.stack
 
 node_modules/.pnpm/typescript@4.9.5/node_modules/typescript/lib/lib.es5.d.ts:1055
 
-___
+---
 
 ### prepareStackTrace
 
-▪ `Static` `Optional` **prepareStackTrace**: (`err`: [`Error`]( https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error ), `stackTraces`: `CallSite`[]) => `any`
+▪ `Static` `Optional` **prepareStackTrace**: (`err`: [`Error`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error), `stackTraces`: `CallSite`[]) => `any`
 
 #### Type declaration
 
@@ -107,10 +107,10 @@ https://v8.dev/docs/stack-trace-api#customizing-stack-traces
 
 ##### Parameters
 
-| Name | Type |
-| :------ | :------ |
-| `err` | [`Error`]( https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error ) |
-| `stackTraces` | `CallSite`[] |
+| Name          | Type                                                                                              |
+| :------------ | :------------------------------------------------------------------------------------------------ |
+| `err`         | [`Error`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error) |
+| `stackTraces` | `CallSite`[]                                                                                      |
 
 ##### Returns
 
@@ -124,7 +124,7 @@ Error.prepareStackTrace
 
 node_modules/.pnpm/@types+node@20.11.0/node_modules/@types/node/globals.d.ts:28
 
-___
+---
 
 ### stackTraceLimit
 
@@ -148,10 +148,10 @@ Create .stack property on a target object
 
 #### Parameters
 
-| Name | Type |
-| :------ | :------ |
-| `targetObject` | `object` |
-| `constructorOpt?` | [`Function`]( https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function ) |
+| Name              | Type                                                                                                    |
+| :---------------- | :------------------------------------------------------------------------------------------------------ |
+| `targetObject`    | `object`                                                                                                |
+| `constructorOpt?` | [`Function`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function) |
 
 #### Returns
 
