@@ -185,17 +185,20 @@ async function main() {
     !process.env.VERCEL_OIDC_TOKEN && Boolean(process.env.VERCEL_TOKEN);
   const flagArgs = args.filter(a => a.startsWith('-'));
   const explicitExperimentArgs = args.filter(a => !a.startsWith('-'));
+  // When falling back to VERCEL_TOKEN, run only the "cli" experiment so each
+  // variant runs the full eval set. Otherwise (e.g. explicit experiment args)
+  // use the requested experiments.
   const experimentsToRun =
     explicitExperimentArgs.length > 0
       ? explicitExperimentArgs
       : usedOIDCFallback
-        ? ['cc', 'cli', 'vercel-cli-cc']
+        ? ['cli']
         : [];
   const agentEvalArgsToPass =
     experimentsToRun.length > 0 ? [...flagArgs, ...experimentsToRun] : args;
   if (usedOIDCFallback && explicitExperimentArgs.length === 0) {
     process.stderr.write(
-      'Skipping smoke experiment (requires OIDC). Running: cc, cli, vercel-cli-cc.\n'
+      'Skipping smoke experiment (requires OIDC). Running: cli (all evals per variant).\n'
     );
   }
 
