@@ -53,8 +53,8 @@ describe('activity ls', () => {
           {
             id: 'uev_1',
             createdAt: 1700000000000,
-            text: 'Logged in from 127.0.0.1',
-            type: 'login',
+            text: 'Deployed to production',
+            type: 'deployment',
             principalId: 'user_1',
             principal: { type: 'user', username: 'jane' },
           },
@@ -69,7 +69,7 @@ describe('activity ls', () => {
     expect(exitCode).toBe(0);
     expect(requestQuery.projectIds).toBe('prj_activity');
     expect(requestQuery.teamId).toBe('team_dummy');
-    expect(client.stderr.getFullOutput()).toContain('Logged in from 127.0.0.1');
+    expect(client.stderr.getFullOutput()).toContain('Deployed to production');
   });
 
   it('lists activity events with explicit ls subcommand', async () => {
@@ -81,8 +81,8 @@ describe('activity ls', () => {
           {
             id: 'uev_1',
             createdAt: 1700000000000,
-            text: 'Logged in from 127.0.0.1',
-            type: 'login',
+            text: 'Deployed to production',
+            type: 'deployment',
             principalId: 'user_1',
             principal: { type: 'user', username: 'jane' },
           },
@@ -97,7 +97,7 @@ describe('activity ls', () => {
     expect(exitCode).toBe(0);
     expect(requestQuery.projectIds).toBe('prj_activity');
     expect(requestQuery.teamId).toBe('team_dummy');
-    expect(client.stderr.getFullOutput()).toContain('Logged in from 127.0.0.1');
+    expect(client.stderr.getFullOutput()).toContain('Deployed to production');
   });
 
   it('shows full event description by default', async () => {
@@ -169,7 +169,7 @@ describe('activity ls', () => {
       'activity',
       'ls',
       '--type',
-      'login,deployment-created',
+      'deployment,project-created',
       '--type',
       'team-member-add'
     );
@@ -177,7 +177,9 @@ describe('activity ls', () => {
     const exitCode = await activity(client);
 
     expect(exitCode).toBe(0);
-    expect(requestQuery.types).toBe('login,deployment-created,team-member-add');
+    expect(requestQuery.types).toBe(
+      'deployment,project-created,team-member-add'
+    );
   });
 
   it('passes ISO date filters through as ISO strings', async () => {
@@ -307,21 +309,21 @@ describe('activity ls', () => {
             id: 'uev_1',
             createdAt: 3000,
             text: 'Event 1',
-            type: 'login',
+            type: 'deployment',
             principalId: 'user_1',
           },
           {
             id: 'uev_2',
             createdAt: 2000,
             text: 'Event 2',
-            type: 'login',
+            type: 'deployment',
             principalId: 'user_1',
           },
           {
             id: 'uev_3',
             createdAt: 1000,
             text: 'Event 3',
-            type: 'login',
+            type: 'deployment',
             principalId: 'user_1',
           },
         ],
@@ -348,7 +350,7 @@ describe('activity ls', () => {
             id: 'uev_1',
             createdAt: 3000,
             text: 'Event 1',
-            type: 'login',
+            type: 'deployment',
             principalId: 'user_1',
             payload: { ip: '127.0.0.1' },
           },
@@ -356,7 +358,7 @@ describe('activity ls', () => {
             id: 'uev_2',
             createdAt: 2000,
             text: 'Event 2',
-            type: 'login',
+            type: 'deployment',
             principalId: 'user_1',
             payload: { ip: '127.0.0.2' },
           },
@@ -378,7 +380,7 @@ describe('activity ls', () => {
           id: 'uev_1',
           createdAt: 3000,
           text: 'Event 1',
-          type: 'login',
+          type: 'deployment',
           principalId: 'user_1',
           payload: { ip: '127.0.0.1' },
         },

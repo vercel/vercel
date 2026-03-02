@@ -47,7 +47,7 @@ export const activityCommand = {
       argument: 'TYPE',
       deprecated: false,
       description:
-        'Filter by event type. Repeatable and comma-separated (e.g. --type login --type deployment-created or --type login,deployment-created).',
+        'Filter by event type. Repeatable and comma-separated (e.g. --type deployment --type project-created or --type deployment,project-created).',
     },
     {
       name: 'since',
@@ -93,11 +93,11 @@ export const activityCommand = {
     },
     {
       name: 'Filter events by multiple types',
-      value: `${packageName} activity --type login --type deployment-created --since 7d`,
+      value: `${packageName} activity --type deployment --type project-created --since 7d`,
     },
     {
       name: 'Filter events by comma-separated types',
-      value: `${packageName} activity --type login,deployment-created --since 7d`,
+      value: `${packageName} activity --type deployment,project-created --since 7d`,
     },
     {
       name: 'List all team events',
