@@ -299,7 +299,7 @@ export const addSubcommand = {
     {
       name: 'missing',
       description:
-        'Condition that must NOT match: type:key or type:key:value (repeatable)',
+        '"Does not have" condition: type:key or type:key:value (repeatable)',
       shorthand: null,
       type: [String],
       argument: 'CONDITION',
@@ -322,6 +322,15 @@ export const addSubcommand = {
       deprecated: false,
     },
     {
+      name: 'ai',
+      description:
+        'Generate route from a natural language description (AI-powered)',
+      shorthand: null,
+      type: String,
+      argument: 'PROMPT',
+      deprecated: false,
+    },
+    {
       name: 'position',
       description: 'Position: start, end, after:<id>, before:<id>',
       shorthand: null,
@@ -341,6 +350,10 @@ export const addSubcommand = {
     {
       name: 'Interactive mode',
       value: `${packageName} routes add`,
+    },
+    {
+      name: 'Create with AI',
+      value: `${packageName} routes add --ai "Rewrite /api/* to https://backend.internal/*"`,
     },
     {
       name: 'Add a rewrite',
@@ -765,7 +778,7 @@ export const editSubcommand = {
     {
       name: 'missing',
       description:
-        'Add a missing condition: type:key or type:key:value (repeatable)',
+        'Add a "does not have" condition: type:key or type:key:value (repeatable)',
       shorthand: null,
       type: [String],
       argument: 'CONDITION',
@@ -774,7 +787,7 @@ export const editSubcommand = {
     // Clearing
     {
       name: 'clear-conditions',
-      description: 'Remove all has/missing conditions',
+      description: 'Remove all has/does-not-have conditions',
       shorthand: null,
       type: Boolean,
       deprecated: false,
@@ -794,6 +807,14 @@ export const editSubcommand = {
       deprecated: false,
     },
     {
+      name: 'ai',
+      description: 'Describe changes using natural language (AI-powered)',
+      shorthand: null,
+      type: String,
+      argument: 'PROMPT',
+      deprecated: false,
+    },
+    {
       ...yesOption,
       description: 'Skip confirmation prompts',
     },
@@ -802,6 +823,10 @@ export const editSubcommand = {
     {
       name: 'Interactive mode',
       value: `${packageName} routes edit "API Proxy"`,
+    },
+    {
+      name: 'Edit with AI',
+      value: `${packageName} routes edit "API Proxy" --ai "Add CORS headers and change status to 308"`,
     },
     {
       name: 'Change destination',
