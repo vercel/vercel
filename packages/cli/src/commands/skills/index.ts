@@ -1,6 +1,7 @@
 import chalk from 'chalk';
-import { readFile } from 'fs/promises';
+import { access, readFile } from 'fs/promises';
 import { join } from 'path';
+import { homedir } from 'os';
 import { frameworkList } from '@vercel/frameworks';
 import {
   detectFrameworks,
@@ -135,6 +136,23 @@ function cleanDepName(dep: string): string {
   return dep.replace(/^@/, '').replace(/\//g, '-');
 }
 
+async function isSkillInstalled(name: string, cwd: string): Promise<boolean> {
+  const sanitized = name.toLowerCase().replace(/\s+/g, '-');
+  const dirs = [
+    join(cwd, '.agents', 'skills', sanitized),
+    join(homedir(), '.agents', 'skills', sanitized),
+  ];
+  for (const dir of dirs) {
+    try {
+      await access(dir);
+      return true;
+    } catch {
+      // not found
+    }
+  }
+  return false;
+}
+
 function formatInstalls(n: number): string {
   if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
   return String(n);
@@ -170,7 +188,7 @@ export default async function skills(client: Client) {
 
   try {
     if (query) {
-      return await directSearch(client, query, asJson);
+      return await directSearch(client, query, asJson, cwd);
     }
     return await autoDetect(client, cwd, asJson);
   } catch (err) {
@@ -182,7 +200,8 @@ export default async function skills(client: Client) {
 async function directSearch(
   client: Client,
   query: string,
-  asJson: boolean
+  asJson: boolean,
+  cwd: string
 ): Promise<number> {
   output.spinner('Searching skills...');
   const results = await searchSkills(query);
@@ -192,7 +211,7 @@ async function directSearch(
     .filter(s => s.installs >= MIN_INSTALLS)
     .slice(0, MAX_RESULTS);
 
-  return displayResults(client, filtered, asJson, `Search: "${query}"`);
+  return displayResults(client, filtered, asJson, `Search: "${query}"`, cwd);
 }
 
 async function autoDetect(
@@ -293,24 +312,18 @@ async function autoDetect(
     client,
     ranked,
     asJson,
-    `Detected: ${detectedParts.join(' + ')}`
+    `Detected: ${detectedParts.join(' + ')}`,
+    cwd
   );
 }
 
-function displayResults(
+async function displayResults(
   client: Client,
   results: SkillResult[],
   asJson: boolean,
-  context: string
-): number {
-  if (asJson) {
-    output.stopSpinner();
-    client.stdout.write(
-      `${JSON.stringify({ context, skills: results }, null, 2)}\n`
-    );
-    return 0;
-  }
-
+  context: string,
+  cwd: string
+): Promise<number> {
   if (results.length === 0) {
     output.log('No skills found.');
     output.log(
@@ -319,18 +332,35 @@ function displayResults(
     return 0;
   }
 
+  const installedChecks = await Promise.all(
+    results.map(s => isSkillInstalled(s.skillId, cwd))
+  );
+
+  if (asJson) {
+    output.stopSpinner();
+    const skillsWithStatus = results.map((s, i) => ({
+      ...s,
+      installed: installedChecks[i],
+    }));
+    client.stdout.write(
+      `${JSON.stringify({ context, skills: skillsWithStatus }, null, 2)}\n`
+    );
+    return 0;
+  }
+
   const tableData = [
-    ['Skill', 'Installs', 'Source'].map(h => chalk.bold(chalk.cyan(h))),
-    ...results.map(s => [
+    ['Skill', 'Installs', 'Source', ''].map(h => chalk.bold(chalk.cyan(h))),
+    ...results.map((s, i) => [
       s.skillId,
       formatInstalls(s.installs),
       chalk.gray(s.source),
+      installedChecks[i] ? chalk.green('installed') : '',
     ]),
   ];
 
   output.log(`\n${table(tableData, { hsep: 4 })}`);
   output.print(
-    `\n${chalk.gray('Install now:')} npx skills add <source> --skill <name>\n`
+    `\n${chalk.gray('Install:')} npx skills add <source> --skill <name>\n`
   );
   output.print(`${chalk.gray('Learn more:')} https://skills.sh\n`);
   return 0;
