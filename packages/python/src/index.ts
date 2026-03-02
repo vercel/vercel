@@ -527,7 +527,7 @@ export const build: BuildV3 = async ({
   const entrypointWithSuffix = `${entrypoint}${suffix}`;
   debug('Entrypoint with suffix is', entrypointWithSuffix);
 
-  const runtimeTrampoline = `
+  const runtimeTrampoline = (opts: { workflowMode: 'none' | 'full' }) => `
 import importlib
 import os
 import os.path
@@ -541,6 +541,7 @@ os.environ.update({
   "__VC_HANDLER_ENTRYPOINT": "${entrypointWithSuffix}",
   "__VC_HANDLER_ENTRYPOINT_ABS": os.path.join(_here, "${entrypointWithSuffix}"),
   "__VC_HANDLER_VENDOR_DIR": "${vendorDir}",
+  "__VC_HANDLER_WORKFLOW_MODE": "${opts.workflowMode}",
 })
 
 _vendor_rel = '${vendorDir}'
@@ -644,7 +645,9 @@ from vercel_runtime.vc_init import vc_handler
   // need our `server.py` to be called something else
   const handlerPyFilename = 'vc__handler__python';
 
-  files[`${handlerPyFilename}.py`] = new FileBlob({ data: runtimeTrampoline });
+  files[`${handlerPyFilename}.py`] = new FileBlob({
+    data: runtimeTrampoline({ workflowMode: 'none' }),
+  });
 
   // "fasthtml" framework requires a `.sesskey` file to exist,
   // otherwise it tries to create one at runtime, which fails

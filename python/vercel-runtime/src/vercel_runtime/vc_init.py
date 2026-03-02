@@ -93,6 +93,7 @@ _here = os.path.dirname(__file__)
 _entrypoint_rel = _must_getenv("__VC_HANDLER_ENTRYPOINT")
 _entrypoint_abs = _must_getenv("__VC_HANDLER_ENTRYPOINT_ABS")
 _entrypoint_modname = _must_getenv("__VC_HANDLER_MODULE_NAME")
+_workflow_mode = os.environ.get("__VC_HANDLER_WORKFLOW_MODE", "none")
 
 
 def _normalize_service_route_prefix(raw_prefix: str | None) -> str:
@@ -632,10 +633,16 @@ class ASGIMiddleware:
     - Extracts x-vercel-internal-* headers and removes them from downstream app
     - Sets request context into `storage` for logging/metrics
     - Emits handler-started and end IPC messages.
+    - Under workflow mode, only responds to workflow entrypoint paths
     """
 
     def __init__(self, app: _ASGIApp | Any) -> None:
         self.app = app
+        if _workflow_mode == "full":
+            from vercel.workflow.integrations import asgi
+            self.http_app = asgi.entrypoint
+        else:
+            self.http_app = app
 
     async def __call__(
         self,
@@ -737,7 +744,7 @@ class ASGIMiddleware:
         set_vercel_headers_from_asgi_pairs(new_headers)
 
         try:
-            await self.app(new_scope, receive, send)
+            await self.http_app(new_scope, receive, send)
         finally:
             clear_vercel_headers_context()
             storage.reset(token)
@@ -814,6 +821,15 @@ if "VERCEL_IPC_PATH" in os.environ:
         pass
 
     class BaseHandler(BaseHTTPRequestHandler):
+        def __init__(self, *args, **kwargs) -> None:
+            super().__init__(*args, **kwargs)
+            if _workflow_mode == "full":
+                from vercel.workflow.integrations import std
+
+                self._vc_handle_request = std.Handler(self)
+            else:
+                self._vc_handle_request = self.handle_request  # type: ignore[attr-defined]
+
         # Re-implementation of BaseHTTPRequestHandler's log_message method to
         # log to stdout instead of stderr.
         def log_message(self, format: str, *args: Any) -> None:
@@ -891,7 +907,7 @@ if "VERCEL_IPC_PATH" in os.environ:
             set_vercel_headers_from_http_headers(self.headers)
 
             try:
-                self.handle_request()  # type: ignore[attr-defined]
+                self._vc_handle_request()
             finally:
                 clear_vercel_headers_context()
                 storage.reset(token)
@@ -1104,7 +1120,23 @@ if "handler" in __vc_variables or "Handler" in __vc_variables:
     import http.client
     from http.server import HTTPServer
 
-    server = HTTPServer(("127.0.0.1", 0), base)  # type: ignore[assignment]
+    if _workflow_mode == "full":
+        from vercel.workflow.integrations import std
+
+        class WorkflowHandler(BaseHTTPRequestHandler):
+            def do_POST(self) -> None:
+                std.Handler(self)()
+
+        base = WorkflowHandler
+
+    class HttpHandler(base):
+        def parse_request(self) -> bool:
+            if not super().parse_request():
+                return False
+            set_vercel_headers_from_http_headers(self.headers)
+            return True
+
+    server = HTTPServer(("127.0.0.1", 0), HttpHandler)  # type: ignore[assignment]
     port = server.server_address[1]  # type: ignore[attr-defined]
 
     def vc_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
@@ -1238,9 +1270,15 @@ elif "app" in __vc_variables or "application" in __vc_variables:
                 if env_key not in ("HTTP_CONTENT_TYPE", "HTTP_CONTENT_LENGTH"):
                     environ[env_key] = value
 
+            if _workflow_mode == "full":
+                from vercel.workflow.integrations import wsgi
+
+                http_app = wsgi.entrypoint
+            else:
+                http_app = app
             set_vercel_headers_from_http_headers(raw_headers)
             try:
-                response = Response.from_app(app, environ)
+                response = Response.from_app(http_app, environ)
             finally:
                 clear_vercel_headers_context()
 
@@ -1385,7 +1423,7 @@ elif "app" in __vc_variables or "application" in __vc_variables:
                 )
 
                 asgi_instance = app(self.scope, self.receive, self.send)
-                _asgi_runner.run(asgi_instance)
+                _asgi_runner.run(asgi_instance, context=contextvars.copy_context())
                 return self.response
 
             def put_message(self, message: dict[str, Any]) -> None:
@@ -1514,7 +1552,13 @@ elif "app" in __vc_variables or "application" in __vc_variables:
             set_vercel_headers_from_http_headers(headers)
             try:
                 asgi_cycle = ASGICycle(scope)
-                response = asgi_cycle(app, body)
+                if _workflow_mode == "full":
+                    from vercel.workflow.integrations import asgi
+
+                    http_app = asgi.entrypoint
+                else:
+                    http_app = app
+                response = asgi_cycle(http_app, body)
                 return response
             finally:
                 clear_vercel_headers_context()
