@@ -4,6 +4,15 @@ Complete these steps in order. Each section builds on the last.
 
 ---
 
+## Optional Tooling — WordPress MCP
+
+- [ ] MCP server config is available at `.vscode/mcp.json`
+- [ ] Server: `wpcom-mcp`
+- [ ] Endpoint: `https://public-api.wordpress.com/wpcom/v2/mcp/v1`
+- [ ] Reload VS Code window after MCP config changes
+
+---
+
 ## Phase 1 — Hostinger Setup
 
 ### 1.1 Domain

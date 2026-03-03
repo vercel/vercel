@@ -1,0 +1,7 @@
+{
+  "servers": {
+    "wpcom-mcp": {
+      "url": "https://public-api.wordpress.com/wpcom/v2/mcp/v1"
+    }
+  }
+}

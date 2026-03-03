@@ -47,6 +47,15 @@ Money Press is built around three high-ROI product tiers:
 
 ---
 
+## Optional Tooling — WordPress MCP
+
+- MCP server config: `.vscode/mcp.json`
+- Server: `wpcom-mcp`
+- Endpoint: `https://public-api.wordpress.com/wpcom/v2/mcp/v1`
+- Reload VS Code window after MCP config changes
+
+---
+
 ## WooCommerce Setup Checklist
 
 ### 1. WordPress + WooCommerce Installation
