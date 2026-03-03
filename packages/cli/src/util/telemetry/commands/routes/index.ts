@@ -302,6 +302,15 @@ export class RoutesAddTelemetryClient
     }
   }
 
+  trackCliOptionAi(prompt: string | undefined) {
+    if (prompt) {
+      this.trackCliOption({
+        option: 'ai',
+        value: this.redactedValue,
+      });
+    }
+  }
+
   // Custom tracking methods (not part of interface, but useful)
   trackCliActionType(actionType: string) {
     this.trackCliOption({
@@ -516,6 +525,15 @@ export class RoutesEditTelemetryClient
   trackCliOptionMissing(conditions: [string] | undefined) {
     if (conditions && conditions.length > 0) {
       this.trackCliOption({ option: 'missing', value: this.redactedValue });
+    }
+  }
+
+  trackCliOptionAi(prompt: string | undefined) {
+    if (prompt) {
+      this.trackCliOption({
+        option: 'ai',
+        value: this.redactedValue,
+      });
     }
   }
 }

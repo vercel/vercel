@@ -367,7 +367,7 @@ function formatRouteDiff(
     diffConditions(lines, prodHas, stagingHas);
   }
 
-  // Missing conditions diff
+  // Does Not Have conditions diff
   const prodMissing = (production.route.missing ?? []) as Array<{
     type: string;
     key?: string;
@@ -381,7 +381,7 @@ function formatRouteDiff(
 
   if (prodMissing.length > 0 || stagingMissing.length > 0) {
     lines.push('');
-    lines.push(chalk.bold('  Missing Conditions'));
+    lines.push(chalk.bold('  Does Not Have Conditions'));
     diffConditions(lines, prodMissing, stagingMissing);
   }
 
@@ -575,7 +575,7 @@ function formatRouteDetails(rule: RoutingRule): string {
 
   if (rule.route.missing && rule.route.missing.length > 0) {
     lines.push('');
-    lines.push(chalk.bold('  Missing Conditions'));
+    lines.push(chalk.bold('  Does Not Have Conditions'));
     for (const condition of rule.route.missing) {
       lines.push(`  ${formatCondition(condition)}`);
     }
