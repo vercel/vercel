@@ -753,7 +753,7 @@ exports[`help command > certs help output snapshots > certs remove help output s
 `;
 
 exports[`help command > deploy help output snapshots > deploy help column width 40 1`] = `
-
+"
   ▲ vercel deploy [project-path] [options]
 
   Deploy your project to Vercel. The    
@@ -969,11 +969,11 @@ exports[`help command > deploy help output snapshots > deploy help column width 
 
     $ vercel > deployment-url.txt
 
-
+"
 `;
 
 exports[`help command > deploy help output snapshots > deploy help column width 80 1`] = `
-
+"
   ▲ vercel deploy [project-path] [options]
 
   Deploy your project to Vercel. The \`deploy\` command is the default command    
@@ -1051,11 +1051,11 @@ exports[`help command > deploy help output snapshots > deploy help column width 
 
     $ vercel > deployment-url.txt
 
-
+"
 `;
 
 exports[`help command > deploy help output snapshots > deploy help column width 120 1`] = `
-
+"
   ▲ vercel deploy [project-path] [options]
 
   Deploy your project to Vercel. The \`deploy\` command is the default command for the Vercel CLI, and can be omitted     
@@ -1120,7 +1120,7 @@ exports[`help command > deploy help output snapshots > deploy help column width 
 
     $ vercel > deployment-url.txt
 
-
+"
 `;
 
 exports[`help command > dev help output snapshots > dev --help > outputs help 1`] = `
