@@ -2,13 +2,12 @@
 
 import path from 'path';
 import fs from 'fs-extra';
-// @ts-expect-error Missing types for package
-import tmp from 'tmp-promise';
+import { dirSync, setGracefulCleanup } from 'tmp';
 import { afterAll } from 'vitest';
 
 // tmp is supposed to be able to clean up automatically, but this doesn't always work within jest.
 // So we attempt to use its built-in cleanup mechanisms, but tests should ideally do their own cleanup too.
-tmp.setGracefulCleanup();
+setGracefulCleanup();
 
 export async function generateFakeFiles(totalMB = 100, fileSizeInBytes = 5) {
   const totalFiles = Math.ceil((totalMB * 1024) / fileSizeInBytes);
@@ -26,12 +25,12 @@ export async function generateFakeFiles(totalMB = 100, fileSizeInBytes = 5) {
   return tempDir;
 }
 
-let tempRoot: ReturnType<typeof tmp.dirSync> | undefined;
+let tempRoot: { name: string; removeCallback: () => void } | undefined;
 let tempNumber = 0;
 
 export function setupTmpDir() {
   if (!tempRoot) {
-    tempRoot = tmp.dirSync({ unsafeCleanup: true }); // clean up even if files are left
+    tempRoot = dirSync({ unsafeCleanup: true }); // clean up even if files are left
   }
 
   const cwd = path.join(tempRoot.name, String(tempNumber++));

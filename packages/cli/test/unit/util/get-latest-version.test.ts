@@ -1,17 +1,16 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import fs from 'fs-extra';
 import sleep from '../../../src/util/sleep';
-// @ts-expect-error Missing types for package
-import tmp from 'tmp-promise';
+import { tmpNameSync, setGracefulCleanup } from 'tmp';
 import getLatestVersion from '../../../src/util/get-latest-version';
 import { join } from 'path';
 import { vi } from 'vitest';
 
-tmp.setGracefulCleanup();
+setGracefulCleanup();
 
 vi.setConfig({ testTimeout: 25000 });
 
-const cacheDir = tmp.tmpNameSync({
+const cacheDir = tmpNameSync({
   prefix: 'test-vercel-cli-get-latest-version-',
 });
 

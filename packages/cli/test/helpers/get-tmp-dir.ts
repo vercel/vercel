@@ -1,5 +1,4 @@
-// @ts-expect-error Missing types for package
-import tmp from 'tmp-promise';
+import { dirSync } from 'tmp';
 import type { TmpDir } from './types';
 
 const allTmpDirs: TmpDir[] = [];
@@ -10,7 +9,7 @@ export function getCachedTmpDir(): string {
     return cachedTmpDir.name;
   }
 
-  cachedTmpDir = tmp.dirSync({
+  cachedTmpDir = dirSync({
     // This ensures the directory gets
     // deleted even if it has contents
     unsafeCleanup: true,
@@ -21,7 +20,7 @@ export function getCachedTmpDir(): string {
 }
 
 export function getNewTmpDir(): string {
-  const tmpDir = tmp.dirSync({
+  const tmpDir = dirSync({
     // This ensures the directory gets
     // deleted even if it has contents
     unsafeCleanup: true,

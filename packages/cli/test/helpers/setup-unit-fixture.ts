@@ -2,15 +2,15 @@ import { afterAll } from 'vitest';
 import findUp from 'find-up';
 import fs from 'fs-extra';
 import path from 'path';
-// @ts-expect-error Missing types for package
 import tmp from 'tmp-promise';
+import { dirSync, setGracefulCleanup } from 'tmp';
 
 // tmp is supposed to be able to clean up automatically, but this doesn't always work within jest.
 // So we attempt to use its built-in cleanup mechanisms, but tests should ideally do their own cleanup too.
-tmp.setGracefulCleanup();
+setGracefulCleanup();
 
 let fixturesRoot: string | undefined;
-let tempRoot: ReturnType<typeof tmp.dirSync> | undefined;
+let tempRoot: { name: string; removeCallback: () => void } | undefined;
 let tempNumber = 0;
 
 /**
@@ -43,7 +43,7 @@ export function setupUnitFixture(fixtureName: string) {
 export function setupTmpDir(fixtureName?: string) {
   if (!tempRoot) {
     // Create a shared root temp directory for fixture files
-    tempRoot = tmp.dirSync({ unsafeCleanup: true }); // clean up even if files are left
+    tempRoot = dirSync({ unsafeCleanup: true }); // clean up even if files are left
   }
 
   const cwd = path.join(tempRoot.name, String(tempNumber++), fixtureName ?? '');
