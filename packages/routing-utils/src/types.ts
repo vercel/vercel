@@ -122,13 +122,18 @@ export type RouteWithHandle = {
 
 export type Route = RouteWithSrc | RouteWithHandle;
 
+export type RouteInput =
+  | RouteWithSrc
+  | (Omit<RouteWithSrc, 'src'> & { src?: undefined; source: string })
+  | RouteWithHandle;
+
 export type NormalizedRoutes = {
   routes: Route[] | null;
   error: RouteApiError | null;
 };
 
 export interface GetRoutesProps {
-  routes?: Route[];
+  routes?: RouteInput[];
   cleanUrls?: boolean;
   rewrites?: Rewrite[];
   redirects?: Redirect[];

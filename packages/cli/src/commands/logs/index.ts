@@ -245,6 +245,7 @@ export default async function logs(client: Client) {
   const limitOption = parsedArguments.flags['--limit'];
   const jsonOption = parsedArguments.flags['--json'];
   const queryOption = parsedArguments.flags['--query'];
+  const searchOption = parsedArguments.flags['--search'];
   const requestIdOption = parsedArguments.flags['--request-id'];
   const expandOption = parsedArguments.flags['--expand'];
   const branchFlagValue = parsedArguments.flags['--branch'];
@@ -269,6 +270,7 @@ export default async function logs(client: Client) {
   telemetry.trackCliFlagJson(jsonOption);
   telemetry.trackCliFlagFollow(followOption);
   telemetry.trackCliOptionQuery(queryOption);
+  telemetry.trackCliOptionSearch(searchOption);
   telemetry.trackCliOptionRequestId(requestIdOption);
   telemetry.trackCliFlagExpand(expandOption);
   telemetry.trackCliOptionBranch(branchFlagValue);
@@ -283,6 +285,7 @@ export default async function logs(client: Client) {
       { flag: '--until', value: untilOption },
       { flag: '--limit', value: limitOption },
       { flag: '--query', value: queryOption },
+      { flag: '--search', value: searchOption },
       { flag: '--request-id', value: requestIdOption },
     ];
 
@@ -516,7 +519,7 @@ export default async function logs(client: Client) {
       since: sinceOption,
       until: untilOption,
       limit,
-      search: queryOption,
+      search: searchOption ?? queryOption,
       requestId: requestIdOption,
       branch: branchOption,
     })) {

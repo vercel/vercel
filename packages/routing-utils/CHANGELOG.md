@@ -1,5 +1,11 @@
 # @vercel/routing-utils
 
+## 6.0.1
+
+### Patch Changes
+
+- Fix type error caused by `source` normalization in Routes ([#15292](https://github.com/vercel/vercel/pull/15292))
+
 ## 6.0.0
 
 ### Major Changes

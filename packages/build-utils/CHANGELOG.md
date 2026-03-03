@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 13.6.2
+
+### Patch Changes
+
+- add partialFallback flag to prerender output ([#14703](https://github.com/vercel/vercel/pull/14703))
+
 ## 13.6.1
 
 ### Patch Changes

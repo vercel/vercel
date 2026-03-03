@@ -123,6 +123,102 @@ describe('integration', () => {
       );
     });
 
+    describe('search term filtering', () => {
+      it('filters products by name', async () => {
+        useIntegrationDiscover();
+        client.setArgv('integration', 'discover', 'neon', '--json');
+        const exitCode = await integrationCommand(client);
+        expect(exitCode, 'exit code for "integrationCommand"').toEqual(0);
+
+        const output = JSON.parse(client.stdout.getFullOutput());
+        expect(output.products).toHaveLength(1);
+        expect(output.products[0].name).toBe('Neon Postgres');
+      });
+
+      it('filters products by provider', async () => {
+        useIntegrationDiscover();
+        client.setArgv('integration', 'discover', 'acme', '--json');
+        const exitCode = await integrationCommand(client);
+        expect(exitCode, 'exit code for "integrationCommand"').toEqual(0);
+
+        const output = JSON.parse(client.stdout.getFullOutput());
+        expect(output.products).toHaveLength(2);
+        expect(output.products.map((p: { name: string }) => p.name)).toEqual([
+          'Acme KV',
+          'Acme DB',
+        ]);
+      });
+
+      it('filters products by description', async () => {
+        useIntegrationDiscover();
+        client.setArgv('integration', 'discover', 'key-value', '--json');
+        const exitCode = await integrationCommand(client);
+        expect(exitCode, 'exit code for "integrationCommand"').toEqual(0);
+
+        const output = JSON.parse(client.stdout.getFullOutput());
+        expect(output.products).toHaveLength(1);
+        expect(output.products[0].name).toBe('Acme KV');
+      });
+
+      it('filters products by tag', async () => {
+        useIntegrationDiscover();
+        client.setArgv('integration', 'discover', 'postgres', '--json');
+        const exitCode = await integrationCommand(client);
+        expect(exitCode, 'exit code for "integrationCommand"').toEqual(0);
+
+        const output = JSON.parse(client.stdout.getFullOutput());
+        expect(output.products).toHaveLength(2);
+        expect(output.products.map((p: { name: string }) => p.name)).toEqual([
+          'Neon Postgres',
+          'Acme DB',
+        ]);
+      });
+
+      it('is case-insensitive', async () => {
+        useIntegrationDiscover();
+        client.setArgv('integration', 'discover', 'NEON', '--json');
+        const exitCode = await integrationCommand(client);
+        expect(exitCode, 'exit code for "integrationCommand"').toEqual(0);
+
+        const output = JSON.parse(client.stdout.getFullOutput());
+        expect(output.products).toHaveLength(1);
+        expect(output.products[0].name).toBe('Neon Postgres');
+      });
+
+      it('shows message when no products match the search term', async () => {
+        useIntegrationDiscover();
+        client.setArgv('integration', 'discover', 'nonexistent');
+        const exitCode = await integrationCommand(client);
+        expect(exitCode, 'exit code for "integrationCommand"').toEqual(0);
+
+        const stderr = client.stderr.getFullOutput();
+        expect(stderr).toContain(
+          'No marketplace products matching "nonexistent" found.'
+        );
+      });
+
+      it('returns all products when no search term is provided', async () => {
+        useIntegrationDiscover();
+        client.setArgv('integration', 'discover', '--json');
+        const exitCode = await integrationCommand(client);
+        expect(exitCode, 'exit code for "integrationCommand"').toEqual(0);
+
+        const output = JSON.parse(client.stdout.getFullOutput());
+        expect(output.products).toHaveLength(3);
+      });
+    });
+
+    it('errors when too many arguments are provided', async () => {
+      client.setArgv('integration', 'discover', 'arg1', 'arg2');
+      const exitCode = await integrationCommand(client);
+      expect(exitCode, 'exit code for "integrationCommand"').toEqual(1);
+
+      const stderr = client.stderr.getFullOutput();
+      expect(stderr).toContain(
+        'Invalid number of arguments. Usage: `vercel integration discover [query]`'
+      );
+    });
+
     it('accepts global debug flag before command', async () => {
       useIntegrationDiscover();
       client.setArgv('--debug', 'integration', 'discover', '--json');
@@ -140,6 +236,28 @@ describe('integration', () => {
         {
           key: 'subcommand:discover',
           value: 'discover',
+        },
+        {
+          key: 'flag:json',
+          value: 'TRUE',
+        },
+      ]);
+    });
+
+    it('tracks telemetry for search term argument', async () => {
+      useIntegrationDiscover();
+      client.setArgv('integration', 'discover', 'postgres', '--json');
+      const exitCode = await integrationCommand(client);
+      expect(exitCode, 'exit code for "integrationCommand"').toEqual(0);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'subcommand:discover',
+          value: 'discover',
+        },
+        {
+          key: 'argument:query',
+          value: '[REDACTED]',
         },
         {
           key: 'flag:json',
