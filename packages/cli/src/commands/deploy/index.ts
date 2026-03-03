@@ -1253,7 +1253,7 @@ async function handleDefaultDeploy(
       id: deployment.id,
       url: `https://${deployment.url}`,
       inspectorUrl: deployment.inspectorUrl ?? null,
-      deploymentApiUrl: `https://api.vercel.com/v13/deployments/${deployment.id}`,
+      deploymentApiUrl: `${client.apiUrl}/v13/deployments/${deployment.id}`,
     };
     client.stdout.write(`${JSON.stringify(jsonOutput, null, 2)}\n`);
     return 0;
