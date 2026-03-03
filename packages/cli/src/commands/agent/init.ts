@@ -5,7 +5,10 @@ import type Client from '../../util/client';
 import { printError } from '../../util/error';
 import output from '../../output-manager';
 
-const BEST_PRACTICES_CONTENT = `## Best practices for developing on Vercel
+const BEST_PRACTICES_START = '<!-- VERCEL BEST PRACTICES START -->';
+const BEST_PRACTICES_END = '<!-- VERCEL BEST PRACTICES END -->';
+
+const BEST_PRACTICES_BODY = `## Best practices for developing on Vercel
 
 These defaults are optimized for AI coding agents (and humans) working on apps that deploy to Vercel.
 
@@ -33,8 +36,9 @@ These defaults are optimized for AI coding agents (and humans) working on apps t
 - Enable Web Analytics + Speed Insights early (Vercel Agent can automate setup via PR).
 - Use Rolling Releases for gradual rollouts; keep rollback (\`vercel rollback\`) in your incident playbook.
 - Use AI Gateway + AI SDK for model routing, budgets, usage monitoring, and provider failover.
-- For durable agent loops or untrusted code: use Workflow (pause/resume/state) + Sandbox; use Vercel MCP for secure infra access.
-`;
+- For durable agent loops or untrusted code: use Workflow (pause/resume/state) + Sandbox; use Vercel MCP for secure infra access.`;
+
+const BEST_PRACTICES_CONTENT = `${BEST_PRACTICES_START}\n${BEST_PRACTICES_BODY}\n${BEST_PRACTICES_END}\n`;
 
 export default async function agentInit(
   client: Client,
@@ -49,21 +53,22 @@ export default async function agentInit(
     // File doesn't exist
   }
 
-  if (
+  const hasMarkers =
     existing !== null &&
-    existing.includes('## Best practices for developing on Vercel')
-  ) {
-    output.log(
-      `Vercel best practices already present in ${chalk.bold('AGENTS.md')}`
-    );
-    return 0;
-  }
+    existing.includes(BEST_PRACTICES_START) &&
+    existing.includes(BEST_PRACTICES_END);
+
+  const action = hasMarkers
+    ? 'update'
+    : existing !== null
+      ? 'append'
+      : 'create';
+  const promptMessage = hasMarkers
+    ? `We're going to update Vercel best practices in your ${chalk.bold('AGENTS.md')}. Proceed?`
+    : `We're going to add Vercel best practices to your ${chalk.bold('AGENTS.md')}. Proceed?`;
 
   if (!yes && client.stdin.isTTY) {
-    const confirmed = await client.input.confirm(
-      `We're going to add Vercel best practices to your ${chalk.bold('AGENTS.md')}. Proceed?`,
-      true
-    );
+    const confirmed = await client.input.confirm(promptMessage, true);
     if (!confirmed) {
       output.log('Canceled');
       return 0;
@@ -78,8 +83,22 @@ export default async function agentInit(
   output.spinner('Writing Vercel best practices to AGENTS.md');
 
   try {
-    if (existing !== null) {
-      const separator = existing.endsWith('\n') ? '\n' : '\n\n';
+    if (action === 'update') {
+      const startIdx = existing!.indexOf(BEST_PRACTICES_START);
+      const endIdx =
+        existing!.indexOf(BEST_PRACTICES_END) + BEST_PRACTICES_END.length;
+      const trailingNewline = existing![endIdx] === '\n' ? 1 : 0;
+      const updated =
+        existing!.slice(0, startIdx) +
+        BEST_PRACTICES_CONTENT +
+        existing!.slice(endIdx + trailingNewline);
+      await writeFile(filePath, updated, 'utf-8');
+      output.stopSpinner();
+      output.success(
+        `Updated Vercel best practices in ${chalk.bold('AGENTS.md')}`
+      );
+    } else if (action === 'append') {
+      const separator = existing!.endsWith('\n') ? '\n' : '\n\n';
       await writeFile(
         filePath,
         existing + separator + BEST_PRACTICES_CONTENT,

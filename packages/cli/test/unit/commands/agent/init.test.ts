@@ -50,7 +50,9 @@ describe('agent init', () => {
       expect(exitCode).toBe(0);
 
       const content = await fs.readFile(join(cwd, 'AGENTS.md'), 'utf-8');
+      expect(content).toContain('<!-- VERCEL BEST PRACTICES START -->');
       expect(content).toContain('## Best practices for developing on Vercel');
+      expect(content).toContain('<!-- VERCEL BEST PRACTICES END -->');
     });
 
     it('should create AGENTS.md without prompt in non-TTY mode with --yes', async () => {
@@ -63,7 +65,9 @@ describe('agent init', () => {
       await expect(client.stderr).toOutput('Created AGENTS.md');
 
       const content = await fs.readFile(join(cwd, 'AGENTS.md'), 'utf-8');
+      expect(content).toContain('<!-- VERCEL BEST PRACTICES START -->');
       expect(content).toContain('## Best practices for developing on Vercel');
+      expect(content).toContain('<!-- VERCEL BEST PRACTICES END -->');
     });
 
     it('should error in non-TTY mode without --yes', async () => {
@@ -99,26 +103,39 @@ describe('agent init', () => {
 
       const content = await fs.readFile(join(cwd, 'AGENTS.md'), 'utf-8');
       expect(content).toContain('# My Project Agents');
+      expect(content).toContain('<!-- VERCEL BEST PRACTICES START -->');
       expect(content).toContain('## Best practices for developing on Vercel');
+      expect(content).toContain('<!-- VERCEL BEST PRACTICES END -->');
     });
   });
 
-  describe('when AGENTS.md already has best practices', () => {
-    it('should skip and return 0', async () => {
+  describe('when AGENTS.md already has best practices markers', () => {
+    it('should replace the existing best practices section', async () => {
       const existingContent =
-        '# Agents\n\n## Best practices for developing on Vercel\n\nAlready here.\n';
+        '# Agents\n\n<!-- VERCEL BEST PRACTICES START -->\nOld content here.\n<!-- VERCEL BEST PRACTICES END -->\n';
       await fs.writeFile(join(cwd, 'AGENTS.md'), existingContent);
 
       client.setArgv('agent', 'init');
-      const exitCode = await agent(client);
-      expect(exitCode).toBe(0);
+      const exitCodePromise = agent(client);
 
       await expect(client.stderr).toOutput(
-        'Vercel best practices already present in AGENTS.md'
+        'update Vercel best practices in your AGENTS.md'
+      );
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput(
+        'Updated Vercel best practices in AGENTS.md'
       );
 
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toBe(0);
+
       const content = await fs.readFile(join(cwd, 'AGENTS.md'), 'utf-8');
-      expect(content).toBe(existingContent);
+      expect(content).toContain('# Agents');
+      expect(content).not.toContain('Old content here.');
+      expect(content).toContain('## Best practices for developing on Vercel');
+      expect(content).toContain('<!-- VERCEL BEST PRACTICES START -->');
+      expect(content).toContain('<!-- VERCEL BEST PRACTICES END -->');
     });
   });
 
@@ -152,7 +169,9 @@ describe('agent init', () => {
       await expect(client.stderr).toOutput('Created AGENTS.md');
 
       const content = await fs.readFile(join(cwd, 'AGENTS.md'), 'utf-8');
+      expect(content).toContain('<!-- VERCEL BEST PRACTICES START -->');
       expect(content).toContain('## Best practices for developing on Vercel');
+      expect(content).toContain('<!-- VERCEL BEST PRACTICES END -->');
     });
   });
 
