@@ -2,6 +2,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import chalk from 'chalk';
 import type Client from '../../util/client';
+import { printError } from '../../util/error';
 import output from '../../output-manager';
 
 const BEST_PRACTICES_CONTENT = `## Best practices for developing on Vercel
@@ -35,7 +36,10 @@ These defaults are optimized for AI coding agents (and humans) working on apps t
 - For durable agent loops or untrusted code: use Workflow (pause/resume/state) + Sandbox; use Vercel MCP for secure infra access.
 `;
 
-export default async function agentInit(client: Client): Promise<number> {
+export default async function agentInit(
+  client: Client,
+  yes?: boolean
+): Promise<number> {
   const filePath = join(client.cwd, 'AGENTS.md');
 
   let existing: string | null = null;
@@ -55,7 +59,7 @@ export default async function agentInit(client: Client): Promise<number> {
     return 0;
   }
 
-  if (client.stdin.isTTY) {
+  if (!yes && client.stdin.isTTY) {
     const confirmed = await client.input.confirm(
       `We're going to add Vercel best practices to your ${chalk.bold('AGENTS.md')}. Proceed?`,
       true
@@ -64,27 +68,38 @@ export default async function agentInit(client: Client): Promise<number> {
       output.log('Canceled');
       return 0;
     }
+  } else if (!yes && !client.stdin.isTTY) {
+    output.error(
+      'Missing required flag --yes. Use --yes to skip confirmation, or run interactively in a terminal.'
+    );
+    return 1;
   }
 
   output.spinner('Writing Vercel best practices to AGENTS.md');
 
-  if (existing !== null) {
-    const separator = existing.endsWith('\n') ? '\n' : '\n\n';
-    await writeFile(
-      filePath,
-      existing + separator + BEST_PRACTICES_CONTENT,
-      'utf-8'
-    );
+  try {
+    if (existing !== null) {
+      const separator = existing.endsWith('\n') ? '\n' : '\n\n';
+      await writeFile(
+        filePath,
+        existing + separator + BEST_PRACTICES_CONTENT,
+        'utf-8'
+      );
+      output.stopSpinner();
+      output.success(
+        `Appended Vercel best practices to ${chalk.bold('AGENTS.md')}`
+      );
+    } else {
+      await writeFile(filePath, BEST_PRACTICES_CONTENT, 'utf-8');
+      output.stopSpinner();
+      output.success(
+        `Created ${chalk.bold('AGENTS.md')} with Vercel best practices`
+      );
+    }
+  } catch (error) {
     output.stopSpinner();
-    output.success(
-      `Appended Vercel best practices to ${chalk.bold('AGENTS.md')}`
-    );
-  } else {
-    await writeFile(filePath, BEST_PRACTICES_CONTENT, 'utf-8');
-    output.stopSpinner();
-    output.success(
-      `Created ${chalk.bold('AGENTS.md')} with Vercel best practices`
-    );
+    printError(error);
+    return 1;
   }
 
   output.log(chalk.dim('Run vercel deploy to ship your project'));

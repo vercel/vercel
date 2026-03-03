@@ -34,8 +34,17 @@ export default async function agent(client: Client): Promise<number> {
 
   const subcommand = parsedArgs.args[1];
 
+  telemetry.trackCliArgumentInit(subcommand);
+
   if (!subcommand || subcommand === 'init') {
-    return agentInit(client);
+    const yes = parsedArgs.flags['--yes'] ?? false;
+    telemetry.trackCliFlagYes(yes);
+    try {
+      return await agentInit(client, yes);
+    } catch (error) {
+      printError(error);
+      return 1;
+    }
   }
 
   output.error(`Unknown subcommand: ${subcommand}`);

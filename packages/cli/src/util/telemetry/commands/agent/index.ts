@@ -14,4 +14,10 @@ export class AgentTelemetryClient
       });
     }
   }
+
+  trackCliFlagYes(value: boolean | undefined) {
+    if (value) {
+      this.trackCliFlag('yes');
+    }
+  }
 }
