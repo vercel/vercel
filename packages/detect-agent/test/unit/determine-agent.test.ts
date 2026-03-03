@@ -348,7 +348,7 @@ describe('determineAgent', () => {
       });
     });
 
-    it('CURSOR_TRACE_ID takes priority over other agents (except AI_AGENT)', async () => {
+    it('CURSOR_TRACE_ID takes priority over other agents (except AI_AGENT and AGENT)', async () => {
       vi.stubEnv('CURSOR_TRACE_ID', 'some-uuid');
       vi.stubEnv('CURSOR_AGENT', '1');
       vi.stubEnv('GEMINI_CLI', '1');
