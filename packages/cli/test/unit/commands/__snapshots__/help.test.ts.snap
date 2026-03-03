@@ -753,7 +753,7 @@ exports[`help command > certs help output snapshots > certs remove help output s
 `;
 
 exports[`help command > deploy help output snapshots > deploy help column width 40 1`] = `
-"
+
   ▲ vercel deploy [project-path] [options]
 
   Deploy your project to Vercel. The    
@@ -800,6 +800,11 @@ exports[`help command > deploy help output snapshots > deploy help column width 
                                 nothing 
                                 has     
                                 changed 
+  -F,  --format <FORMAT>        Specify 
+                                the     
+                                output  
+                                format  
+                                (json)  
        --guidance               Receive 
                                 command 
                                 suggest…
@@ -964,11 +969,11 @@ exports[`help command > deploy help output snapshots > deploy help column width 
 
     $ vercel > deployment-url.txt
 
-"
+
 `;
 
 exports[`help command > deploy help output snapshots > deploy help column width 80 1`] = `
-"
+
   ▲ vercel deploy [project-path] [options]
 
   Deploy your project to Vercel. The \`deploy\` command is the default command    
@@ -985,6 +990,7 @@ exports[`help command > deploy help output snapshots > deploy help column width 
                                 (e.g. \`-e KEY1=value1 -e KEY2=value2\`)          
   -f,  --force                  Force a new deployment even if nothing has      
                                 changed                                         
+  -F,  --format <FORMAT>        Specify the output format (json)                
        --guidance               Receive command suggestions once deployment is  
                                 complete                                        
   -l,  --logs                   Print the build logs                            
@@ -1045,11 +1051,11 @@ exports[`help command > deploy help output snapshots > deploy help column width 
 
     $ vercel > deployment-url.txt
 
-"
+
 `;
 
 exports[`help command > deploy help output snapshots > deploy help column width 120 1`] = `
-"
+
   ▲ vercel deploy [project-path] [options]
 
   Deploy your project to Vercel. The \`deploy\` command is the default command for the Vercel CLI, and can be omitted     
@@ -1061,6 +1067,7 @@ exports[`help command > deploy help output snapshots > deploy help column width 
   -b,  --build-env <KEY=VALUE>  Specify environment variables during build-time (e.g. \`-b KEY1=value1 -b KEY2=value2\`)  
   -e,  --env <KEY=VALUE>        Specify environment variables during run-time (e.g. \`-e KEY1=value1 -e KEY2=value2\`)    
   -f,  --force                  Force a new deployment even if nothing has changed                                      
+  -F,  --format <FORMAT>        Specify the output format (json)                                                        
        --guidance               Receive command suggestions once deployment is complete                                 
   -l,  --logs                   Print the build logs                                                                    
   -m,  --meta <KEY=VALUE>       Specify metadata for the deployment (e.g. \`-m KEY1=value1 -m KEY2=value2\`)              
@@ -1113,7 +1120,7 @@ exports[`help command > deploy help output snapshots > deploy help column width 
 
     $ vercel > deployment-url.txt
 
-"
+
 `;
 
 exports[`help command > dev help output snapshots > dev --help > outputs help 1`] = `
