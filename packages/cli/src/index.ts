@@ -722,6 +722,10 @@ const main = async () => {
           telemetry.trackCliCommandAlias(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).alias;
           break;
+        case 'activity':
+          telemetry.trackCliCommandActivity(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).activity;
+          break;
         case 'api':
           telemetry.trackCliCommandApi(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).api;

@@ -1,5 +1,11 @@
 # @vercel/routing-utils
 
+## 6.0.2
+
+### Patch Changes
+
+- Fix typo in routes type ([#15318](https://github.com/vercel/vercel/pull/15318))
+
 ## 6.0.1
 
 ### Patch Changes

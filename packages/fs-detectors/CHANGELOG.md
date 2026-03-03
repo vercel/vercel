@@ -1,5 +1,27 @@
 # @vercel/fs-detectors
 
+## 5.8.16
+
+### Patch Changes
+
+- [services] run framework detection with file entrypoints ([#15358](https://github.com/vercel/vercel/pull/15358))
+
+- Updated dependencies [[`91e367532050b0c1f17c49df701017f85f4dc85a`](https://github.com/vercel/vercel/commit/91e367532050b0c1f17c49df701017f85f4dc85a), [`e6c736fb74bedb975caad76d4c1f1e589a1c6cc9`](https://github.com/vercel/vercel/commit/e6c736fb74bedb975caad76d4c1f1e589a1c6cc9), [`fac0a516914491cf662068e37cd00f50400e3b58`](https://github.com/vercel/vercel/commit/fac0a516914491cf662068e37cd00f50400e3b58)]:
+  - @vercel/frameworks@3.20.0
+  - @vercel/routing-utils@6.0.2
+
+## 5.8.15
+
+### Patch Changes
+
+- Fix App Router dynamic API routes returning 404 in production. When a project has both Next.js (App Router) and a root `api/` folder, zero-config added a catch-all `^/api(/.*)?# @vercel/fs-detectors → 404 in the filesystem phase, which runs before the rewrite phase where Next.js routes live. So requests like `/api/flow/hello/next`or`/api/blog/posts/5`matched the catch-all and never reached the Next.js route. When Next.js is the frontend we no longer add that rewrite so those routes are handled by Next.js. (Locally, only`next dev`worked;`vc dev` had the same 404.) ([#15297](https://github.com/vercel/vercel/pull/15297))
+
+## 5.8.14
+
+### Patch Changes
+
+- Fix `detectBuilders` so projects using experimental backends still add `@vercel/static` for `public/**/*` files. ([#15261](https://github.com/vercel/vercel/pull/15261))
+
 ## 5.8.13
 
 ### Patch Changes
