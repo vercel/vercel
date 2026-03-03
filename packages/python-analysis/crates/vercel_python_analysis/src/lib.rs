@@ -10,11 +10,13 @@ bindings::export!(PythonAnalyzer with_types_in bindings);
 
 struct PythonAnalyzer;
 
-use crate::bindings::{DistMetadata, DirectUrlInfo, RecordEntry};
+use crate::bindings::{DistMetadata, DirectUrlInfo, RecordEntry, StringConstantOrImport};
 use crate::entrypoint::{
     contains_app_or_handler_impl,
     get_string_constant_impl,
+    get_string_constant_or_import_impl,
     parse_django_settings_module_impl,
+    StringConstantOrImport as StringConstantOrImportImpl,
 };
 
 impl crate::bindings::Guest for PythonAnalyzer {
@@ -31,10 +33,22 @@ impl crate::bindings::Guest for PythonAnalyzer {
 
     /// Extract the string value of a top-level constant with the given name.
     /// Only considers simple assignments (`NAME = "string"`) and annotated assignments
-    /// (`NAME: str = "string"`) at module level. Returns the first matching string
-    /// value, or None if not found or the value is not a string literal.
+    /// (`NAME: str = "string"`) at module level. If multiple assignments exist, the last
+    /// one is used. Returns None if not found or the value is not a string literal.
     fn get_string_constant(source: String, name: String) -> Option<String> {
         get_string_constant_impl(&source, &name)
+    }
+
+    /// Like `get_string_constant`, but when no direct assignment is found, returns
+    /// relative sibling module paths from which the constant may be imported.
+    fn get_string_constant_or_import(
+        source: String,
+        name: String,
+    ) -> Option<StringConstantOrImport> {
+        get_string_constant_or_import_impl(&source, &name).map(|r| match r {
+            StringConstantOrImportImpl::Value(s) => StringConstantOrImport::Value(s),
+            StringConstantOrImportImpl::Imports(paths) => StringConstantOrImport::Imports(paths),
+        })
     }
 
     /// Extract the default value from `os.environ.setdefault('DJANGO_SETTINGS_MODULE', '...')`

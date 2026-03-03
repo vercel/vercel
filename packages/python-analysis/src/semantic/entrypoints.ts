@@ -46,8 +46,8 @@ export async function containsAppOrHandler(source: string): Promise<boolean> {
 /**
  * Extract the string value of a top-level constant with the given name.
  * Only considers simple assignments (NAME = "string") and annotated assignments
- * (NAME: str = "string") at module level. Returns the first matching string
- * value, or null if not found or the value is not a string literal.
+ * (NAME: str = "string") at module level. If multiple assignments exist, the last
+ * one is used. Returns null if not found or the value is not a string literal.
  *
  * @param source - Python source code
  * @param name - Constant name (e.g. "VERSION", "APP_NAME")
@@ -59,6 +59,45 @@ export async function getStringConstant(
 ): Promise<string | null> {
   const mod = await importWasmModule();
   return mod.getStringConstant(source, name) ?? null;
+}
+
+/**
+ * Result of `getStringConstantOrImport`: either a directly-assigned string
+ * value, or a list of sibling module names to follow.
+ */
+export type StringConstantOrImport =
+  | { type: 'value'; value: string }
+  | { type: 'imports'; imports: string[] };
+
+/**
+ * Like `getStringConstant`, but when no direct assignment is found, returns
+ * the sibling module names (e.g. `"base"`, `"common"`) from which the constant
+ * may be imported instead. If multiple statements match, the last one is used.
+ *
+ * Priority:
+ * 1. Direct string assignment → `{ type: 'value', value: string }`
+ * 2. Explicit named sibling import (`from .base import NAME`) →
+ *    `{ type: 'imports', imports: ['base'] }`
+ * 3. Wildcard sibling imports (`from .base import *`) →
+ *    `{ type: 'imports', imports: ['common', 'base', …] }`
+ *
+ * Non-relative and bare-package imports are ignored.
+ * Returns `null` if nothing is found.
+ *
+ * @param source - Python source code
+ * @param name - Constant name (e.g. "WSGI_APPLICATION")
+ */
+export async function getStringConstantOrImport(
+  source: string,
+  name: string
+): Promise<StringConstantOrImport | null> {
+  const mod = await importWasmModule();
+  const result = mod.getStringConstantOrImport(source, name);
+  if (!result) return null;
+  if (result.tag === 'value') {
+    return { type: 'value', value: result.val as string };
+  }
+  return { type: 'imports', imports: result.val as string[] };
 }
 
 /** Simple check for DJANGO_SETTINGS_MODULE presence so we can skip WASM when absent */

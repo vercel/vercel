@@ -1,8 +1,9 @@
 import fs from 'fs';
-import { join } from 'path';
+import { dirname, join } from 'path';
 import {
   containsAppOrHandler,
   getStringConstant,
+  getStringConstantOrImport,
   parseDjangoSettingsModule,
 } from '@vercel/python-analysis';
 import debug from './debug';
@@ -55,6 +56,9 @@ export async function getDjangoSettingsModule(
  * DJANGO_SETTINGS_MODULE from manage.py, loading that settings file, and
  * returning the file path for ASGI_APPLICATION or WSGI_APPLICATION (e.g.
  * 'myapp.asgi.application' -> 'myapp/asgi.py'). Returns null if any step fails.
+ *
+ * When the settings file does not define the application constant directly,
+ * sibling imports are followed one level deep.
  */
 export async function getDjangoEntrypoint(
   workPath: string
@@ -65,30 +69,42 @@ export async function getDjangoEntrypoint(
     workPath,
     `${settingsModule.replace(/\./g, '/')}.py`
   );
+  let settingsContent: string;
   try {
-    const settingsContent = await fs.promises.readFile(settingsPath, 'utf-8');
-    const asgiApplication = await getStringConstant(
-      settingsContent,
-      'ASGI_APPLICATION'
-    );
-    if (asgiApplication) {
-      const modulePath = asgiApplication.split('.').slice(0, -1).join('/');
-      const asgiPath = `${modulePath}.py`;
-      debug(`Django ASGI entrypoint from ${settingsModule}: ${asgiPath}`);
-      return asgiPath;
-    }
-    const wsgiApplication = await getStringConstant(
-      settingsContent,
-      'WSGI_APPLICATION'
-    );
-    if (wsgiApplication) {
-      const modulePath = wsgiApplication.split('.').slice(0, -1).join('/');
-      const wsgiPath = `${modulePath}.py`;
-      debug(`Django WSGI entrypoint from ${settingsModule}: ${wsgiPath}`);
-      return wsgiPath;
-    }
+    settingsContent = await fs.promises.readFile(settingsPath, 'utf-8');
   } catch {
-    debug(`Failed to read or parse settings file: ${settingsPath}`);
+    debug(`Failed to read settings file: ${settingsPath}`);
+    return null;
   }
+
+  for (const appKey of ['ASGI_APPLICATION', 'WSGI_APPLICATION'] as const) {
+    const result = await getStringConstantOrImport(settingsContent, appKey);
+    if (!result) continue;
+
+    if (result.type === 'value') {
+      const appPath = `${result.value.split('.').slice(0, -1).join('/')}.py`;
+      debug(`Django ${appKey} entrypoint from ${settingsModule}: ${appPath}`);
+      return appPath;
+    }
+
+    // Follow sibling imports one level deep.
+    for (const siblingName of result.imports) {
+      const siblingPath = join(dirname(settingsPath), `${siblingName}.py`);
+      try {
+        const siblingContent = await fs.promises.readFile(siblingPath, 'utf-8');
+        const value = await getStringConstant(siblingContent, appKey);
+        if (value) {
+          const appPath = `${value.split('.').slice(0, -1).join('/')}.py`;
+          debug(
+            `Django ${appKey} entrypoint from ${settingsModule}/${siblingName}: ${appPath}`
+          );
+          return appPath;
+        }
+      } catch {
+        debug(`Failed to read sibling settings: ${siblingPath}`);
+      }
+    }
+  }
+
   return null;
 }

@@ -14,8 +14,11 @@
 export {
   containsAppOrHandler,
   getStringConstant,
+  getStringConstantOrImport,
   parseDjangoSettingsModule,
 } from './semantic/entrypoints';
+
+export type { StringConstantOrImport } from './semantic/entrypoints';
 
 // =============================================================================
 // Installed package analysis (WASM-based .dist-info parsing)
