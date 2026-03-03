@@ -186,6 +186,7 @@ export default async function skills(client: Client) {
   }
 
   telemetry.trackCliFlagJson(parsedArgs.flags['--json']);
+  telemetry.trackCliFlagYes(parsedArgs.flags['--yes']);
   telemetry.trackCliArgumentQuery(parsedArgs.args[1]);
 
   const formatResult = validateJsonOutput(parsedArgs.flags);
@@ -354,8 +355,13 @@ async function autoDetect(
 
   let toInstall: SkillResult[];
 
-  if (!client.stdin.isTTY || yes) {
+  if (yes) {
     toInstall = installable;
+  } else if (!client.stdin.isTTY) {
+    output.error(
+      'Confirmation required. Use `--yes` to skip the confirmation prompt.'
+    );
+    return 1;
   } else {
     const selected = await client.input.checkbox<SkillResult>({
       message: 'Select skills to install',
