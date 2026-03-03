@@ -1,8 +1,8 @@
 /// <reference types="@types/node" />
 
-import { exec } from 'child_process';
-import { promisify } from 'util';
-import path from 'path';
+import { exec } from 'node:child_process';
+import { promisify } from 'node:util';
+import path from 'node:path';
 
 const execAsync = promisify(exec);
 const test = process.platform === 'win32' ? it.skip : it;
