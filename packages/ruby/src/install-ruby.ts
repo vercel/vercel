@@ -11,18 +11,6 @@ class RubyVersion extends Version {}
 
 const allOptions: RubyVersion[] = [
   new RubyVersion({
-    major: 4,
-    minor: 0,
-    range: '4.0.x',
-    runtime: 'ruby4.0',
-  }),
-  new RubyVersion({
-    major: 3,
-    minor: 5,
-    range: '3.5.x',
-    runtime: 'ruby3.5',
-  }),
-  new RubyVersion({
     major: 3,
     minor: 4,
     range: '3.4.x',
