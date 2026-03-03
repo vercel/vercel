@@ -453,11 +453,12 @@ export const startDevServer: StartDevServer = async opts => {
   // Silence Node warnings and install cleanup handlers once
   if (!restoreWarnings) restoreWarnings = silenceNodeWarnings();
   installGlobalCleanupHandlers();
-  const entry = await detectPythonEntrypoint(
+  const detected = await detectPythonEntrypoint(
     framework as PythonFramework,
     workPath,
     rawEntrypoint
   );
+  const entry = detected?.entrypoint;
   if (!entry) {
     const searched = PYTHON_CANDIDATE_ENTRYPOINTS.join(', ');
     throw new NowBuildError({

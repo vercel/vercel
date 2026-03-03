@@ -9,6 +9,11 @@ import {
 } from '@vercel/build-utils';
 import { readConfigFile } from '@vercel/build-utils';
 
+export interface DetectedPythonEntrypoint {
+  entrypoint?: string;
+  settings?: string;
+}
+
 export const PYTHON_ENTRYPOINT_FILENAMES = [
   'app',
   'index',
@@ -90,7 +95,7 @@ async function findValidEntrypoint(
 export async function detectGenericPythonEntrypoint(
   workPath: string,
   configuredEntrypoint: string
-): Promise<string | null> {
+): Promise<DetectedPythonEntrypoint | null> {
   const entry = configuredEntrypoint.endsWith('.py')
     ? configuredEntrypoint
     : `${configuredEntrypoint}.py`;
@@ -103,7 +108,7 @@ export async function detectGenericPythonEntrypoint(
       const isValid = await isPythonEntrypoint(fsFiles[entry] as FileFsRef);
       if (isValid) {
         debug(`Using configured Python entrypoint: ${entry}`);
-        return entry;
+        return { entrypoint: entry };
       }
     }
 
@@ -111,7 +116,8 @@ export async function detectGenericPythonEntrypoint(
     const candidates = PYTHON_CANDIDATE_ENTRYPOINTS.filter(
       (c: string) => !!fsFiles[c]
     );
-    return findValidEntrypoint(fsFiles, candidates);
+    const found = await findValidEntrypoint(fsFiles, candidates);
+    return found ? { entrypoint: found } : null;
   } catch {
     debug('Failed to discover Python entrypoint');
     return null;
@@ -126,7 +132,7 @@ export async function detectGenericPythonEntrypoint(
 export async function detectDjangoPythonEntrypoint(
   workPath: string,
   configuredEntrypoint: string
-): Promise<string | null> {
+): Promise<DetectedPythonEntrypoint | null> {
   const entry = configuredEntrypoint.endsWith('.py')
     ? configuredEntrypoint
     : `${configuredEntrypoint}.py`;
@@ -139,7 +145,7 @@ export async function detectDjangoPythonEntrypoint(
       const isValid = await isPythonEntrypoint(fsFiles[entry] as FileFsRef);
       if (isValid) {
         debug(`Using configured Python entrypoint: ${entry}`);
-        return entry;
+        return { entrypoint: entry };
       }
     }
 
@@ -162,12 +168,12 @@ export async function detectDjangoPythonEntrypoint(
     // Try workPath and immediate subdirectories.
     for (const rootDir of rootDirs) {
       const currPath = join(workPath, rootDir);
-      const wsgiEntry = await getDjangoEntrypoint(currPath);
-      if (wsgiEntry) {
-        const fullWsgiEntry = pathPosix.join(rootDir, wsgiEntry);
+      const django = await getDjangoEntrypoint(currPath);
+      if (django) {
+        const fullWsgiEntry = pathPosix.join(rootDir, django.entrypoint);
         if (fsFiles[fullWsgiEntry]) {
           debug(`Using Django WSGI entrypoint: ${fullWsgiEntry}`);
-          return fullWsgiEntry;
+          return { entrypoint: fullWsgiEntry, settings: django.settings };
         }
       }
     }
@@ -176,7 +182,8 @@ export async function detectDjangoPythonEntrypoint(
     // Look in all immediate subdirectories, not just those specified in PYTHON_ENTRYPOINT_DIRS.
     const baseCandidates = getCandidateEntrypointsInDirs(rootDirs);
     const candidates = baseCandidates.filter((c: string) => !!fsFiles[c]);
-    return findValidEntrypoint(fsFiles, candidates);
+    const found = await findValidEntrypoint(fsFiles, candidates);
+    return found ? { entrypoint: found } : null;
   } catch {
     debug('Failed to discover Django Python entrypoint');
     return null;
@@ -190,11 +197,12 @@ export async function detectPythonEntrypoint(
   framework: PythonFramework,
   workPath: string,
   configuredEntrypoint: string
-): Promise<string | null> {
-  const entrypoint =
+): Promise<DetectedPythonEntrypoint | null> {
+  const result =
     framework === 'django'
       ? await detectDjangoPythonEntrypoint(workPath, configuredEntrypoint)
       : await detectGenericPythonEntrypoint(workPath, configuredEntrypoint);
-  if (entrypoint) return entrypoint;
-  return await getPyprojectEntrypoint(workPath);
+  if (result) return result;
+  const pyprojectEntry = await getPyprojectEntrypoint(workPath);
+  return pyprojectEntry ? { entrypoint: pyprojectEntry } : null;
 }
