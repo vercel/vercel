@@ -24,7 +24,7 @@ describe('output', () => {
   describe('formatQueryJson', () => {
     it('should format full JSON response', () => {
       const query: QueryMetadata = {
-        event: 'incomingRequest',
+        event: 'edgeRequest',
         measure: 'count',
         aggregation: 'sum',
         groupBy: [],

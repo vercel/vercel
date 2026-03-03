@@ -507,6 +507,40 @@ describe('integration add (auto-provision)', () => {
       );
     });
 
+    it('should open browser for terms when integration has requiresBrowserInstall capability', async () => {
+      client.reset();
+      useUser();
+      const teams = useTeams('team_dummy');
+      const t = Array.isArray(teams) ? teams[0] : teams.teams[0];
+      client.config.currentTeam = t.id;
+
+      useAutoProvision({
+        responseKey: 'provisioned',
+        withInstallation: false,
+        installationAppearsAfterPolls: 1,
+      });
+
+      // TTY is true, isAgent is false — but requiresBrowserInstall should still trigger browser flow
+      client.stdin.isTTY = true;
+      client.isAgent = false;
+      client.setArgv('integration', 'add', 'aws-apg');
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'Waiting for terms acceptance in browser...'
+      );
+      await expect(client.stderr).toOutput('Terms accepted in browser.');
+      await expect(client.stderr).toOutput(
+        'Aurora Postgres successfully provisioned: aws-apg-gray-apple'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+      expect(openMock).toHaveBeenCalledWith(
+        expect.stringContaining('/~/integrations/accept-terms/aws-apg')
+      );
+    });
+
     it('should exit with code 1 on browser terms timeout', async () => {
       client.reset();
       useUser();
@@ -617,10 +651,10 @@ describe('integration add (auto-provision)', () => {
     });
 
     it('should only prompt for addendum when integration has no privacy or EULA', async () => {
-      client.setArgv('integration', 'add', 'aws-apg');
+      client.setArgv('integration', 'add', 'acme-prepayment');
       const exitCodePromise = integrationCommand(client);
 
-      // Only the addendum prompt should appear (aws-apg has no eulaDocUri/privacyDocUri)
+      // Only the addendum prompt should appear (acme-prepayment has no eulaDocUri/privacyDocUri)
       await expect(client.stderr).toOutput(
         'Accept Vercel Marketplace End User Addendum?'
       );
@@ -628,7 +662,7 @@ describe('integration add (auto-provision)', () => {
 
       // Should go straight to provisioning without privacy/EULA prompts
       await expect(client.stderr).toOutput(
-        'Aurora Postgres successfully provisioned'
+        'Acme Product successfully provisioned'
       );
 
       const exitCode = await exitCodePromise;

@@ -4,6 +4,8 @@ import {
   scanDistributions,
 } from '@vercel/python-analysis';
 import { getVenvSitePackagesDirs } from '../install';
+import { matplotlibQuirk } from './matplotlib';
+import { litellmQuirk } from './litellm';
 import { prismaQuirk } from './prisma';
 
 export interface QuirkContext {
@@ -30,7 +32,7 @@ export interface Quirk {
   run(ctx: QuirkContext): Promise<QuirkResult>;
 }
 
-const quirks: Quirk[] = [prismaQuirk];
+const quirks: Quirk[] = [litellmQuirk, prismaQuirk, matplotlibQuirk];
 
 /**
  * Topologically sort activated quirks based on runsBefore/runsAfter edges.

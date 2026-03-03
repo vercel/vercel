@@ -658,6 +658,69 @@ it('should support exposeErrBody correctly', async () => {
   );
 });
 
+it('should support partialFallback correctly', async () => {
+  const prerenderWithTrue = new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    partialFallback: true,
+  });
+  expect(prerenderWithTrue.partialFallback).toBe(true);
+
+  const prerenderWithFalse = new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    partialFallback: false,
+  });
+  expect(prerenderWithFalse.partialFallback).toBeUndefined();
+
+  const prerenderWithUndefined = new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    partialFallback: undefined,
+  });
+  expect(prerenderWithUndefined.partialFallback).toBeUndefined();
+
+  const prerenderWithoutProperty = new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+  });
+  expect(prerenderWithoutProperty.partialFallback).toBeUndefined();
+
+  expect(() => {
+    new Prerender({
+      expiration: 1,
+      fallback: null,
+      group: 1,
+      bypassToken: 'some-long-bypass-token-to-make-it-work',
+      // @ts-expect-error testing invalid field
+      partialFallback: 'true',
+    });
+  }).toThrowError(
+    `The \`partialFallback\` argument for \`Prerender\` must be a boolean.`
+  );
+
+  expect(() => {
+    new Prerender({
+      expiration: 1,
+      fallback: null,
+      group: 1,
+      bypassToken: 'some-long-bypass-token-to-make-it-work',
+      // @ts-expect-error testing invalid field
+      partialFallback: 1,
+    });
+  }).toThrowError(
+    `The \`partialFallback\` argument for \`Prerender\` must be a boolean.`
+  );
+});
+
 it('should support experimentalStreamingLambdaPath correctly', async () => {
   new Prerender({
     expiration: 1,

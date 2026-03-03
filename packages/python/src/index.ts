@@ -420,6 +420,7 @@ export const build: BuildV3 = async ({
               projectDir,
               frozen: true,
               noBuild: true,
+              noInstallProject: true,
             });
           } catch (err) {
             // Note the failure but don't error yet - we only need wheels
