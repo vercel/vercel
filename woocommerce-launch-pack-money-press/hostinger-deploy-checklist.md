@@ -2,6 +2,8 @@
 
 Complete these steps in order. Each section builds on the last.
 
+**Scope lock:** This checklist applies only to the facetea WordPress/WooCommerce store. Do not use these steps for the Sweat Tee's Shopify store.
+
 ---
 
 ## Optional Tooling — WordPress MCP

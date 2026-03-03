@@ -5,6 +5,12 @@
 **Niche:** Finance-meets-streetwear — apparel, accessories, digital products, and wealth-mindset goods
 **Status:** Launch Ready
 
+## Store Boundary (Do Not Combine)
+
+- This pack is only for the **facetea.com** WordPress/WooCommerce store.
+- Do not import any files from `shopify-launch-pack-sweat-tees/` into this store.
+- Keep WooCommerce products, policies, navigation, and domain config separated from the Shopify store.
+
 ---
 
 ## What's Included

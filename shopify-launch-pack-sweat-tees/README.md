@@ -2,6 +2,12 @@
 
 This folder contains a complete launch-ready content and import pack for your storefront.
 
+## Store Boundary (Do Not Combine)
+
+- This pack is only for the **Sweat Tee's** Shopify store.
+- Do not import any files from `woocommerce-launch-pack-money-press/` into Shopify.
+- Keep Shopify products, policies, navigation, and domains separated from the WordPress/WooCommerce store.
+
 ## What's Included
 
 - `import/products.csv` → Product import file (8 products, variants, tags, SEO, pricing placeholders)
@@ -93,3 +99,4 @@ Create 3 posts in **Content → Blog posts** and paste:
 - This pack is production-ready but includes placeholders where your final legal/business details are required.
 - Replace all `cdn.example.com` image URLs before launch.
 - Confirm product pricing, SKU naming, and inventory counts before publishing.
+- Use this pack only for the Shopify storefront (Sweat Tee's).
