@@ -1,0 +1,59 @@
+{
+  "menus": {
+    "main_menu": {
+      "name": "Main Menu",
+      "location": "primary",
+      "items": [
+        {
+          "label": "Shop",
+          "url": "/shop",
+          "children": [
+            { "label": "All Products", "url": "/shop" },
+            { "label": "Best Sellers", "url": "/product-category/best-sellers" },
+            { "label": "Apparel", "url": "/product-category/apparel" },
+            { "label": "Accessories", "url": "/product-category/accessories" },
+            { "label": "Digital Products", "url": "/product-category/digital-products" },
+            { "label": "Bundles", "url": "/product-category/bundles" }
+          ]
+        },
+        {
+          "label": "Best Sellers",
+          "url": "/product-category/best-sellers"
+        },
+        {
+          "label": "Bundles",
+          "url": "/product-category/bundles"
+        },
+        {
+          "label": "Digital",
+          "url": "/product-category/digital-products"
+        },
+        {
+          "label": "About",
+          "url": "/about"
+        },
+        {
+          "label": "Blog",
+          "url": "/blog"
+        },
+        {
+          "label": "Contact",
+          "url": "/contact"
+        }
+      ]
+    },
+    "footer_menu": {
+      "name": "Footer Menu",
+      "location": "footer",
+      "items": [
+        { "label": "Shipping Policy", "url": "/shipping-policy" },
+        { "label": "Return Policy", "url": "/return-policy" },
+        { "label": "Privacy Policy", "url": "/privacy-policy" },
+        { "label": "Terms of Service", "url": "/terms-of-service" },
+        { "label": "FAQ", "url": "/faq" },
+        { "label": "Contact", "url": "/contact" }
+      ]
+    }
+  },
+  "note": "In WooCommerce: go to Appearance > Menus. Create two menus using the names and structure above. Assign 'Main Menu' to the Primary Navigation location and 'Footer Menu' to the Footer Navigation location. Product category URLs use the /product-category/ prefix by default in WooCommerce. Adjust slugs to match your actual category slugs if customized."
+}

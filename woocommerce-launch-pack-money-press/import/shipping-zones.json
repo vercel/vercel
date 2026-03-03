@@ -1,0 +1,170 @@
+{
+  "_comment": "Money Press — WooCommerce Shipping Zones. Import via WP-CLI or the WooCommerce REST API. Matches the shipping policy in content/policies/shipping-policy.md.",
+  "shipping_zones": [
+    {
+      "name": "United States (Domestic)",
+      "order": 1,
+      "locations": [
+        {
+          "code": "US",
+          "type": "country"
+        }
+      ],
+      "shipping_methods": [
+        {
+          "method_id": "free_shipping",
+          "method_title": "Free Shipping",
+          "enabled": true,
+          "settings": {
+            "title": "Free Shipping (Orders $75+)",
+            "requires": "min_amount",
+            "min_amount": "75.00",
+            "ignore_discounts": "no"
+          }
+        },
+        {
+          "method_id": "flat_rate",
+          "method_title": "Standard Shipping",
+          "enabled": true,
+          "settings": {
+            "title": "Standard Shipping (3–7 Business Days)",
+            "cost": "5.99",
+            "class_costs": "",
+            "no_class_cost": "",
+            "type": "order"
+          }
+        },
+        {
+          "method_id": "flat_rate",
+          "method_title": "Expedited Shipping",
+          "enabled": true,
+          "settings": {
+            "title": "Expedited Shipping (2–3 Business Days)",
+            "cost": "14.99",
+            "class_costs": "",
+            "no_class_cost": "",
+            "type": "order"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Canada",
+      "order": 2,
+      "locations": [
+        {
+          "code": "CA",
+          "type": "country"
+        }
+      ],
+      "shipping_methods": [
+        {
+          "method_id": "flat_rate",
+          "method_title": "International Standard",
+          "enabled": true,
+          "settings": {
+            "title": "Canada Standard Shipping (7–21 Business Days)",
+            "cost": "18.99",
+            "class_costs": "",
+            "no_class_cost": "",
+            "type": "order"
+          }
+        }
+      ]
+    },
+    {
+      "name": "International (Select Countries)",
+      "order": 3,
+      "locations": [
+        { "code": "GB", "type": "country" },
+        { "code": "AU", "type": "country" },
+        { "code": "DE", "type": "country" },
+        { "code": "FR", "type": "country" },
+        { "code": "NL", "type": "country" },
+        { "code": "SE", "type": "country" },
+        { "code": "NO", "type": "country" },
+        { "code": "DK", "type": "country" },
+        { "code": "JP", "type": "country" },
+        { "code": "NZ", "type": "country" }
+      ],
+      "shipping_methods": [
+        {
+          "method_id": "flat_rate",
+          "method_title": "International Standard",
+          "enabled": true,
+          "settings": {
+            "title": "International Shipping (7–21 Business Days)",
+            "cost": "24.99",
+            "class_costs": "",
+            "no_class_cost": "",
+            "type": "order"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Digital Products (Worldwide)",
+      "order": 4,
+      "_comment": "Apply this zone to digital/downloadable products using shipping classes. Set cost to 0.",
+      "locations": [
+        {
+          "code": "continent:AF",
+          "type": "continent"
+        },
+        {
+          "code": "continent:AN",
+          "type": "continent"
+        },
+        {
+          "code": "continent:AS",
+          "type": "continent"
+        },
+        {
+          "code": "continent:EU",
+          "type": "continent"
+        },
+        {
+          "code": "continent:NA",
+          "type": "continent"
+        },
+        {
+          "code": "continent:OC",
+          "type": "continent"
+        },
+        {
+          "code": "continent:SA",
+          "type": "continent"
+        }
+      ],
+      "shipping_methods": [
+        {
+          "method_id": "flat_rate",
+          "method_title": "Digital Delivery",
+          "enabled": true,
+          "settings": {
+            "title": "Instant Digital Delivery",
+            "cost": "0",
+            "type": "order"
+          }
+        }
+      ]
+    }
+  ],
+  "shipping_classes": [
+    {
+      "name": "Digital Products",
+      "slug": "digital",
+      "description": "Downloadable products — no physical shipping required"
+    },
+    {
+      "name": "Standard Apparel",
+      "slug": "apparel",
+      "description": "Hoodies, tees, crewnecks"
+    },
+    {
+      "name": "Accessories",
+      "slug": "accessories",
+      "description": "Caps, wallets, pins, stickers"
+    }
+  ]
+}

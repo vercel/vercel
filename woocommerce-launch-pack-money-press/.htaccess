@@ -1,0 +1,107 @@
+# BEGIN WordPress
+# Hostinger uses LiteSpeed — this block handles WordPress permalinks
+<IfModule mod_rewrite.c>
+RewriteEngine On
+RewriteBase /
+RewriteRule ^index\.php$ - [L]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule . /index.php [L]
+</IfModule>
+# END WordPress
+
+# -----------------------------------------------
+# SECURITY
+# -----------------------------------------------
+
+# Block access to wp-config.php
+<Files wp-config.php>
+    order allow,deny
+    deny from all
+</Files>
+
+# Block access to xmlrpc.php (prevents brute force and DDoS via XML-RPC)
+<Files xmlrpc.php>
+    order allow,deny
+    deny from all
+</Files>
+
+# Block access to sensitive files
+<FilesMatch "(^#.*#|\.(bak|conf|dist|fla|inc|ini|log|psd|sh|sql|swo|swp|swpx|thumb|tpl|orig)|~)$">
+    order allow,deny
+    deny from all
+    satisfy all
+</FilesMatch>
+
+# Disable directory browsing
+Options -Indexes
+
+# Block access to hidden files (.git, .env, etc.)
+<IfModule mod_rewrite.c>
+    RewriteCond %{SCRIPT_FILENAME} -d [OR]
+    RewriteCond %{SCRIPT_FILENAME} -f
+    RewriteRule "(^|/)\." - [F]
+</IfModule>
+
+# -----------------------------------------------
+# PERFORMANCE — BROWSER CACHING
+# -----------------------------------------------
+
+<IfModule mod_expires.c>
+    ExpiresActive On
+
+    # Images
+    ExpiresByType image/jpeg                    "access plus 1 year"
+    ExpiresByType image/png                     "access plus 1 year"
+    ExpiresByType image/gif                     "access plus 1 year"
+    ExpiresByType image/webp                    "access plus 1 year"
+    ExpiresByType image/svg+xml                 "access plus 1 year"
+    ExpiresByType image/x-icon                  "access plus 1 year"
+
+    # Fonts
+    ExpiresByType font/ttf                      "access plus 1 year"
+    ExpiresByType font/woff                     "access plus 1 year"
+    ExpiresByType font/woff2                    "access plus 1 year"
+    ExpiresByType application/font-woff         "access plus 1 year"
+
+    # CSS and JavaScript
+    ExpiresByType text/css                      "access plus 1 month"
+    ExpiresByType application/javascript        "access plus 1 month"
+    ExpiresByType text/javascript               "access plus 1 month"
+
+    # HTML and data
+    ExpiresByType text/html                     "access plus 0 seconds"
+    ExpiresByType application/json              "access plus 0 seconds"
+    ExpiresByType application/xml               "access plus 0 seconds"
+</IfModule>
+
+# -----------------------------------------------
+# PERFORMANCE — GZIP COMPRESSION
+# -----------------------------------------------
+
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css
+    AddOutputFilterByType DEFLATE application/xml application/xhtml+xml application/rss+xml
+    AddOutputFilterByType DEFLATE application/javascript application/x-javascript text/javascript
+    AddOutputFilterByType DEFLATE application/json
+    AddOutputFilterByType DEFLATE image/svg+xml
+</IfModule>
+
+# -----------------------------------------------
+# WOOCOMMERCE — PROTECT UPLOADS FROM PHP EXECUTION
+# -----------------------------------------------
+
+<IfModule mod_rewrite.c>
+    RewriteRule ^wp-content/uploads/.*\.php$ - [F]
+</IfModule>
+
+# -----------------------------------------------
+# HTTPS REDIRECT (enable after SSL is active on Hostinger)
+# -----------------------------------------------
+
+# Uncomment the lines below only after your SSL certificate is installed in hPanel
+# <IfModule mod_rewrite.c>
+#     RewriteEngine On
+#     RewriteCond %{HTTPS} off
+#     RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+# </IfModule>

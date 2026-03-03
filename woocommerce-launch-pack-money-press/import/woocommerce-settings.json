@@ -1,0 +1,137 @@
+{
+  "_comment": "Money Press — WooCommerce store settings. These map directly to WooCommerce → Settings in the WordPress admin. Configure each section manually using these values.",
+  "general": {
+    "woocommerce_store_address": "ENTER YOUR STREET ADDRESS",
+    "woocommerce_store_address_2": "",
+    "woocommerce_store_city": "ENTER YOUR CITY",
+    "woocommerce_default_country": "US:CA",
+    "woocommerce_store_postcode": "ENTER YOUR ZIP CODE",
+    "woocommerce_allowed_countries": "specific",
+    "woocommerce_specific_allowed_countries": ["US", "CA", "GB", "AU", "DE", "FR", "NL", "SE", "NO", "DK", "JP", "NZ"],
+    "woocommerce_ship_to_countries": "specific",
+    "woocommerce_specific_ship_to_countries": ["US", "CA", "GB", "AU", "DE", "FR", "NL", "SE", "NO", "DK", "JP", "NZ"],
+    "woocommerce_default_customer_address": "geolocation",
+    "woocommerce_calc_taxes": "yes",
+    "woocommerce_enable_coupons": "yes",
+    "woocommerce_calc_discounts_sequentially": "no",
+    "woocommerce_currency": "USD",
+    "woocommerce_currency_pos": "left",
+    "woocommerce_price_thousand_sep": ",",
+    "woocommerce_price_decimal_sep": ".",
+    "woocommerce_price_num_decimals": "2"
+  },
+  "products": {
+    "woocommerce_shop_page_display": "products",
+    "woocommerce_category_archive_display": "products",
+    "woocommerce_default_catalog_orderby": "popularity",
+    "woocommerce_enable_reviews": "yes",
+    "woocommerce_review_rating_verification_required": "yes",
+    "woocommerce_review_rating_verification_label": "yes",
+    "woocommerce_enable_rating": "yes",
+    "woocommerce_manage_stock": "yes",
+    "woocommerce_hold_stock_minutes": "60",
+    "woocommerce_notify_low_stock": "yes",
+    "woocommerce_notify_no_stock": "yes",
+    "woocommerce_notify_low_stock_amount": "5",
+    "woocommerce_notify_no_stock_amount": "0",
+    "woocommerce_stock_email_recipient": "support@facetea.com",
+    "woocommerce_hide_out_of_stock_items": "no",
+    "woocommerce_weight_unit": "lbs",
+    "woocommerce_dimension_unit": "in",
+    "woocommerce_enable_reviews": "yes",
+    "woocommerce_downloads_require_login": "no",
+    "woocommerce_downloads_grant_access_after_payment": "yes",
+    "woocommerce_downloads_add_hash_to_filename": "yes"
+  },
+  "tax": {
+    "woocommerce_calc_taxes": "yes",
+    "woocommerce_prices_include_tax": "no",
+    "woocommerce_tax_based_on": "shipping",
+    "woocommerce_shipping_tax_class": "inherit",
+    "woocommerce_tax_round_at_subtotal": "no",
+    "woocommerce_tax_display_shop": "excl",
+    "woocommerce_tax_display_cart": "excl",
+    "woocommerce_price_display_suffix": "",
+    "woocommerce_tax_total_display": "single",
+    "_note": "Tax rates are set per-state. For US: go to WooCommerce → Settings → Tax → Standard Rates and import by state. California rate is 7.25% base; local rates vary. Use a plugin like TaxJar or Avalara for automated multi-state compliance."
+  },
+  "checkout": {
+    "woocommerce_enable_guest_checkout": "yes",
+    "woocommerce_enable_checkout_login_reminder": "yes",
+    "woocommerce_enable_signup_and_login_from_checkout": "yes",
+    "woocommerce_enable_myaccount_registration": "yes",
+    "woocommerce_registration_generate_username": "yes",
+    "woocommerce_registration_generate_password": "no",
+    "woocommerce_checkout_privacy_policy_text": "Your personal data will be used to process your order, support your experience throughout this website, and for other purposes described in our [privacy_policy].",
+    "woocommerce_terms_page_id": "SET_TO_YOUR_TERMS_PAGE_ID",
+    "woocommerce_force_ssl_checkout": "yes",
+    "woocommerce_unforce_ssl_checkout": "no"
+  },
+  "email": {
+    "woocommerce_email_from_name": "Money Press",
+    "woocommerce_email_from_address": "support@facetea.com",
+    "woocommerce_email_header_image": "",
+    "woocommerce_email_footer_text": "Money Press | Built To Stack | {site_url}",
+    "woocommerce_email_base_color": "#000000",
+    "woocommerce_email_background_color": "#f7f7f7",
+    "woocommerce_email_body_background_color": "#ffffff",
+    "woocommerce_email_text_color": "#1a1a1a"
+  },
+  "accounts_and_privacy": {
+    "woocommerce_allow_bulk_remove_personal_data": "yes",
+    "woocommerce_erasure_request_removes_order_data": "no",
+    "woocommerce_erasure_request_removes_download_data": "no",
+    "woocommerce_allow_tracking": "no",
+    "woocommerce_registration_privacy_policy_text": "Your personal data will be used to support your experience throughout this website. See our [privacy_policy]."
+  },
+  "pages": {
+    "_note": "Create these pages in WordPress → Pages, then assign them here in WooCommerce → Settings → Advanced → Page setup.",
+    "woocommerce_shop_page_id": "SET_AFTER_PAGE_CREATION",
+    "woocommerce_cart_page_id": "SET_AFTER_PAGE_CREATION",
+    "woocommerce_checkout_page_id": "SET_AFTER_PAGE_CREATION",
+    "woocommerce_myaccount_page_id": "SET_AFTER_PAGE_CREATION",
+    "woocommerce_terms_page_id": "SET_AFTER_PAGE_CREATION"
+  },
+  "recommended_plugins": [
+    {
+      "name": "WooCommerce Payments or Stripe for WooCommerce",
+      "purpose": "Accept credit cards, Apple Pay, Google Pay",
+      "slug": "woocommerce-gateway-stripe"
+    },
+    {
+      "name": "WooCommerce PayPal Payments",
+      "purpose": "Accept PayPal and Pay Later",
+      "slug": "woocommerce-paypal-payments"
+    },
+    {
+      "name": "LiteSpeed Cache",
+      "purpose": "Full-page caching — pre-installed on Hostinger LiteSpeed servers",
+      "slug": "litespeed-cache"
+    },
+    {
+      "name": "WooCommerce PDF Invoices & Packing Slips",
+      "purpose": "Auto-attach invoice PDF to order emails",
+      "slug": "woocommerce-pdf-invoices-packing-slips"
+    },
+    {
+      "name": "Wordfence Security",
+      "purpose": "Firewall + malware scanner",
+      "slug": "wordfence"
+    },
+    {
+      "name": "UpdraftPlus",
+      "purpose": "Automated backups to Google Drive or Dropbox",
+      "slug": "updraftplus"
+    },
+    {
+      "name": "WP Mail SMTP",
+      "purpose": "Reliable transactional email via SMTP — use Hostinger's email or SendGrid",
+      "slug": "wp-mail-smtp"
+    },
+    {
+      "name": "Yoast SEO",
+      "purpose": "SEO meta, sitemaps, structured data",
+      "slug": "wordpress-seo"
+    }
+  ]
+}
