@@ -1782,5 +1782,26 @@ describe('deploy', () => {
       const exitCode = await deploy(client);
       expect(exitCode).toEqual(1);
     });
+
+    it('should output only valid JSON to stdout when piped (non-TTY)', async () => {
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', '--json');
+      // Simulate piped stdout (non-TTY) like `vc deploy --json | jq`
+      client.stdout.isTTY = false;
+      const exitCode = await deploy(client);
+      expect(exitCode).toEqual(0);
+
+      const stdoutOutput = client.stdout.getFullOutput();
+      // Should be valid JSON parseable by jq
+      const json = JSON.parse(stdoutOutput);
+      expect(json).toEqual({
+        id: deploymentId,
+        url: `https://${deploymentUrl}`,
+        inspectorUrl,
+        readyState: 'READY',
+        target: 'production',
+        deploymentApiUrl: `${client.apiUrl}/v13/deployments/${deploymentId}`,
+      });
+    });
   });
 });

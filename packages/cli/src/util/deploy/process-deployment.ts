@@ -51,6 +51,7 @@ export default async function processDeployment({
   withFullLogs,
   agent,
   manual,
+  jsonOutput,
   ...args
 }: {
   now: Now;
@@ -74,6 +75,7 @@ export default async function processDeployment({
   agent?: Agent;
   bulkRedirectsPath?: string | null;
   manual?: boolean;
+  jsonOutput?: boolean;
 }) {
   const {
     now,
@@ -216,7 +218,7 @@ export default async function processDeployment({
           ) + `\n`
         );
 
-        if (quiet || process.env.FORCE_TTY === '1') {
+        if (!jsonOutput && (quiet || process.env.FORCE_TTY === '1')) {
           process.stdout.write(`https://${event.payload.url}`);
         }
 
