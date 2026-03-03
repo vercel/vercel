@@ -1,4 +1,0 @@
----
----
-
-Add CI doctor
