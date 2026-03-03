@@ -4,6 +4,7 @@ describe('index', () => {
   it('outputs a map of what aliases our commands use', () => {
     expect(commands).toEqual(
       new Map([
+        ['agent', 'agent'],
         ['alias', 'alias'],
         ['aliases', 'alias'],
         ['api', 'api'],
