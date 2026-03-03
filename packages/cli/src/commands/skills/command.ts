@@ -1,4 +1,5 @@
 import { packageName } from '../../util/pkg-name';
+import { yesOption } from '../../util/arg-common';
 
 export const skillsCommand = {
   name: 'skills',
@@ -21,6 +22,7 @@ export const skillsCommand = {
       deprecated: false,
       description: 'Specify output format (json)',
     },
+    yesOption,
   ],
   examples: [
     {
