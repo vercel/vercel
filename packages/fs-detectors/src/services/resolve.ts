@@ -150,15 +150,24 @@ async function detectFrameworkFromWorkspace({
   fs,
   workspace,
   serviceName,
+  runtime,
 }: {
   fs: DetectorFilesystem;
   workspace: string;
   serviceName: string;
+  runtime?: ServiceRuntime;
 }): Promise<{ framework?: string; error?: ServiceDetectionError }> {
   const serviceFs = workspace === '.' ? fs : fs.chdir(workspace);
+  const frameworkCandidates = runtime
+    ? frameworkList.filter(
+        framework =>
+          framework.slug != null &&
+          inferServiceRuntime({ framework: framework.slug }) === runtime
+      )
+    : frameworkList;
   const frameworks = await detectFrameworks({
     fs: serviceFs,
-    frameworkList,
+    frameworkList: frameworkCandidates,
   });
 
   if (frameworks.length > 1) {
@@ -517,31 +526,61 @@ export async function resolveAllConfiguredServices(
     let resolvedConfig = serviceConfig;
 
     const shouldDetectFramework =
-      !serviceConfig.framework && Boolean(resolvedEntrypoint?.isDirectory);
+      !serviceConfig.framework && Boolean(resolvedEntrypoint);
 
-    if (shouldDetectFramework) {
-      const workspace = resolvedEntrypoint!.normalized;
-      const { framework, error } = await detectFrameworkFromWorkspace({
-        fs,
-        workspace,
-        serviceName: name,
-      });
-      if (error) {
-        errors.push(error);
-        continue;
-      }
-      if (!framework) {
-        errors.push({
-          code: 'MISSING_SERVICE_FRAMEWORK',
-          message: `Service "${name}" uses directory entrypoint "${serviceConfig.entrypoint}" but no framework could be detected in "${workspace}". Specify "framework" explicitly or use a file entrypoint.`,
+    if (shouldDetectFramework && resolvedEntrypoint) {
+      if (resolvedEntrypoint.isDirectory) {
+        const workspace = resolvedEntrypoint.normalized;
+        const { framework, error } = await detectFrameworkFromWorkspace({
+          fs,
+          workspace,
           serviceName: name,
         });
-        continue;
+        if (error) {
+          errors.push(error);
+          continue;
+        }
+        if (!framework) {
+          errors.push({
+            code: 'MISSING_SERVICE_FRAMEWORK',
+            message: `Service "${name}" uses directory entrypoint "${serviceConfig.entrypoint}" but no framework could be detected in "${workspace}". Specify "framework" explicitly or use a file entrypoint.`,
+            serviceName: name,
+          });
+          continue;
+        }
+        resolvedConfig = {
+          ...resolvedConfig,
+          framework,
+        };
+      } else {
+        const inferredRuntime = inferServiceRuntime({
+          ...serviceConfig,
+          entrypoint: resolvedEntrypoint.normalized,
+        });
+
+        if (inferredRuntime) {
+          const inferredWorkspace = await inferWorkspaceFromNearestManifest({
+            fs,
+            entrypoint: resolvedEntrypoint.normalized,
+            runtime: inferredRuntime,
+          });
+          const workspace =
+            inferredWorkspace ??
+            posixPath.dirname(resolvedEntrypoint.normalized);
+          const detection = await detectFrameworkFromWorkspace({
+            fs,
+            workspace,
+            serviceName: name,
+            runtime: inferredRuntime,
+          });
+          if (detection.framework) {
+            resolvedConfig = {
+              ...resolvedConfig,
+              framework: detection.framework,
+            };
+          }
+        }
       }
-      resolvedConfig = {
-        ...serviceConfig,
-        framework,
-      };
     }
 
     const service = await resolveConfiguredService({
