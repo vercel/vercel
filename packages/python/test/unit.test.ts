@@ -2080,9 +2080,7 @@ describe('custom install hooks', () => {
 
 describe('worker services dependency installation', () => {
   async function buildWithPipSpy(
-    options: {
-      hasWorkerServices?: boolean;
-    } = {}
+    options: { hasWorkerServices?: boolean } = {}
   ) {
     const pipCalls: string[][] = [];
 
