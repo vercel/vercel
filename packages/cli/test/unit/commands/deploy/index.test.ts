@@ -1696,6 +1696,7 @@ describe('deploy', () => {
           url: deploymentUrl,
           inspectorUrl,
           readyState: 'READY',
+          target: 'production',
         });
       });
       client.scenario.get(`/v13/deployments/${deploymentId}`, (req, res) => {
@@ -1708,6 +1709,7 @@ describe('deploy', () => {
           url: deploymentUrl,
           inspectorUrl,
           readyState: 'READY',
+          target: 'production',
           aliasAssigned: true,
           alias: [],
         });
@@ -1727,7 +1729,9 @@ describe('deploy', () => {
         id: deploymentId,
         url: `https://${deploymentUrl}`,
         inspectorUrl,
-        deploymentApiUrl: `https://api.vercel.com/v13/deployments/${deploymentId}`,
+        readyState: 'READY',
+        target: 'production',
+        deploymentApiUrl: `${client.apiUrl}/v13/deployments/${deploymentId}`,
       });
     });
 
@@ -1744,7 +1748,9 @@ describe('deploy', () => {
         id: deploymentId,
         url: `https://${deploymentUrl}`,
         inspectorUrl,
-        deploymentApiUrl: `https://api.vercel.com/v13/deployments/${deploymentId}`,
+        readyState: 'READY',
+        target: 'production',
+        deploymentApiUrl: `${client.apiUrl}/v13/deployments/${deploymentId}`,
       });
     });
 

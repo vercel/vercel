@@ -1253,6 +1253,8 @@ async function handleDefaultDeploy(
       id: deployment.id,
       url: `https://${deployment.url}`,
       inspectorUrl: deployment.inspectorUrl ?? null,
+      readyState: deployment.readyState,
+      target: deployment.target ?? null,
       deploymentApiUrl: `${client.apiUrl}/v13/deployments/${deployment.id}`,
     };
     client.stdout.write(`${JSON.stringify(jsonOutput, null, 2)}\n`);
