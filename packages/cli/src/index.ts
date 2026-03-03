@@ -212,12 +212,13 @@ const main = async () => {
 
   // If empty, leave this code here for easy adding of beta commands later
   const betaCommands: string[] = ['api', 'curl', 'webhooks'];
+  const out = process.env.VERCEL === '1' ? output.print : output.debug;
   if (betaCommands.includes(targetOrSubcommand)) {
-    output.debug(
+    out(
       `${getTitleName()} CLI ${pkg.version} | ${targetOrSubcommand} is in beta — https://vercel.com/feedback`
     );
   } else {
-    output.debug(`${getTitleName()} CLI ${pkg.version}`);
+    out(`${getTitleName()} CLI ${pkg.version}`);
   }
 
   // Handle `--version` directly
