@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.15.38
+
+### Patch Changes
+
+- Update Next.js adapter version ([#15360](https://github.com/vercel/vercel/pull/15360))
+
 ## 4.15.37
 
 ### Patch Changes

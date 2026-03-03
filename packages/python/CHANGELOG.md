@@ -1,5 +1,17 @@
 # @vercel/python
 
+## 6.20.0
+
+### Minor Changes
+
+- Add traces to python builder. ([#15282](https://github.com/vercel/vercel/pull/15282))
+
+### Patch Changes
+
+- Add no install project flag to the predeploy uv sync command ([#15341](https://github.com/vercel/vercel/pull/15341))
+
+- Move the matplotlib env var to quirks. ([#15305](https://github.com/vercel/vercel/pull/15305))
+
 ## 6.19.0
 
 ### Minor Changes
