@@ -2084,6 +2084,23 @@ describe('worker services dependency installation', () => {
   ) {
     const pipCalls: string[][] = [];
 
+    const realInstall =
+      await vi.importActual<typeof import('../src/install')>('../src/install');
+    vi.doMock('../src/install', () => ({
+      ...realInstall,
+      // Keep this suite focused on dependency install behavior and avoid
+      // probing a real venv python binary during quirk scanning.
+      getVenvSitePackagesDirs: vi.fn(async () => []),
+    }));
+
+    const realUtils =
+      await vi.importActual<typeof import('../src/utils')>('../src/utils');
+    vi.doMock('../src/utils', () => ({
+      ...realUtils,
+      // Avoid creating a real virtualenv in unit tests.
+      ensureVenv: vi.fn(async () => {}),
+    }));
+
     const realUv =
       await vi.importActual<typeof import('../src/uv')>('../src/uv');
     vi.doMock('../src/uv', () => ({
@@ -2160,6 +2177,7 @@ describe('worker services dependency installation', () => {
     vi.doUnmock('../src/dependency-externalizer');
     vi.doUnmock('../src/install');
     vi.doUnmock('../src/index');
+    vi.doUnmock('../src/utils');
     vi.doUnmock('../src/uv');
   });
 
