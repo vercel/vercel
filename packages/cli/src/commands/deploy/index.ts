@@ -436,6 +436,7 @@ async function handleInitDeployment(
       withFullLogs: false,
       autoAssignCustomDomains,
       manual: true,
+      jsonOutput: asJson,
     };
 
     if (!localConfig.builds || localConfig.builds.length === 0) {
@@ -1056,6 +1057,7 @@ async function handleDefaultDeploy(
       withFullLogs,
       autoAssignCustomDomains,
       agentName: client.agentName,
+      jsonOutput: asJson,
     };
 
     if (!localConfig.builds || localConfig.builds.length === 0) {

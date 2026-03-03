@@ -55,6 +55,7 @@ export interface CreateOptions {
   autoAssignCustomDomains?: boolean;
   agentName?: string;
   manual?: boolean;
+  jsonOutput?: boolean;
 }
 
 export interface RemoveOptions {
@@ -132,6 +133,7 @@ export default class Now {
       autoAssignCustomDomains,
       agentName,
       manual,
+      jsonOutput = false,
     }: CreateOptions,
     org: Org,
     isSettingUpProject: boolean,
@@ -183,6 +185,7 @@ export default class Now {
       withFullLogs,
       bulkRedirectsPath: nowConfig.bulkRedirectsPath,
       manual,
+      jsonOutput,
     });
 
     if (deployment && deployment.warnings) {
