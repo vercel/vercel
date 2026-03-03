@@ -436,7 +436,6 @@ async function handleInitDeployment(
       withFullLogs: false,
       autoAssignCustomDomains,
       manual: true,
-      jsonOutput: asJson,
     };
 
     if (!localConfig.builds || localConfig.builds.length === 0) {
