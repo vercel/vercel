@@ -27,7 +27,10 @@ import {
   installRequirementsFile,
   installRequirement,
 } from './install';
-import { PythonDependencyExternalizer } from './dependency-externalizer';
+import {
+  PythonDependencyExternalizer,
+  REQUESTED_TMP_SIZE_MB,
+} from './dependency-externalizer';
 import { detectInstallSource } from './install';
 import { UvRunner, getUvBinaryOrInstall } from './uv';
 import { readConfigFile } from '@vercel/build-utils';
@@ -610,6 +613,11 @@ from vercel_runtime.vc_init import vc_handler
     runtime: pythonVersion.runtime,
     environment: lambdaEnv,
     supportsResponseStreaming: true,
+    ephemeralStorageSize:
+      depExternalizer.needsExtraEphemeralStorage &&
+      process.env.VERCEL_PYTHON_INCREASED_EPHEMERAL_STORAGE === '1'
+        ? REQUESTED_TMP_SIZE_MB
+        : undefined,
   });
 
   return { output };

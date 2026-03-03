@@ -102,6 +102,12 @@ export interface LambdaOptionsBase {
    * When true, the Function runtime will not automatically instrument fetch calls.
    */
   shouldDisableAutomaticFetchInstrumentation?: boolean;
+
+  /**
+   * Ephemeral storage size in MB for the Lambda function's /tmp directory.
+   * AWS allows values from 512 to 10240. When not set, AWS defaults to 512 MB.
+   */
+  ephemeralStorageSize?: number;
 }
 
 export interface LambdaOptionsWithFiles extends LambdaOptionsBase {
@@ -201,6 +207,12 @@ export class Lambda {
    */
   shouldDisableAutomaticFetchInstrumentation?: boolean;
 
+  /**
+   * Ephemeral storage size in MB for the Lambda function's /tmp directory.
+   * AWS allows values from 512 to 10240. When not set, AWS defaults to 512 MB.
+   */
+  ephemeralStorageSize?: number;
+
   constructor(opts: LambdaOptions) {
     const {
       handler,
@@ -222,6 +234,7 @@ export class Lambda {
       experimentalTriggers,
       supportsCancellation,
       shouldDisableAutomaticFetchInstrumentation,
+      ephemeralStorageSize,
     } = opts;
     if ('files' in opts) {
       assert(typeof opts.files === 'object', '"files" must be an object');
@@ -449,6 +462,7 @@ export class Lambda {
     this.supportsCancellation = supportsCancellation;
     this.shouldDisableAutomaticFetchInstrumentation =
       shouldDisableAutomaticFetchInstrumentation;
+    this.ephemeralStorageSize = ephemeralStorageSize;
   }
 
   async createZip(): Promise<Buffer> {

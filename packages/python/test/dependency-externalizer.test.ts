@@ -1,4 +1,4 @@
-import { afterEach, describe, it, expect } from 'vitest';
+import { afterEach, describe, it, expect, vi } from 'vitest';
 import fs from 'fs-extra';
 import path from 'path';
 import { tmpdir } from 'os';
@@ -8,7 +8,7 @@ import {
   lambdaKnapsack,
   LAMBDA_SIZE_THRESHOLD_BYTES,
   LAMBDA_PACKING_TARGET_BYTES,
-  LAMBDA_EPHEMERAL_STORAGE_BYTES,
+  MAX_RUNTIME_DEPS_SIZE_BYTES,
 } from '../src/dependency-externalizer';
 import { classifyPackages, parseUvLock } from '@vercel/python-analysis';
 import { FileFsRef, FileBlob } from '@vercel/build-utils';
@@ -152,14 +152,33 @@ describe('dependency externalizer support', () => {
       expect(LAMBDA_SIZE_THRESHOLD_BYTES).toBe(249 * 1024 * 1024);
     });
 
-    it('LAMBDA_EPHEMERAL_STORAGE_BYTES is 500 MB', () => {
-      expect(LAMBDA_EPHEMERAL_STORAGE_BYTES).toBe(500 * 1024 * 1024);
+    it('MAX_RUNTIME_DEPS_SIZE_BYTES is 500 MB by default', () => {
+      // Without VERCEL_PYTHON_INCREASED_EPHEMERAL_STORAGE, limit is 500 MB
+      expect(MAX_RUNTIME_DEPS_SIZE_BYTES).toBe(500 * 1024 * 1024);
     });
 
     it('ephemeral storage limit is greater than the bundle size threshold', () => {
-      expect(LAMBDA_EPHEMERAL_STORAGE_BYTES).toBeGreaterThan(
+      expect(MAX_RUNTIME_DEPS_SIZE_BYTES).toBeGreaterThan(
         LAMBDA_SIZE_THRESHOLD_BYTES
       );
+    });
+    it('MAX_RUNTIME_DEPS_SIZE_BYTES is 1000 MB when VERCEL_PYTHON_INCREASED_EPHEMERAL_STORAGE is "1"', async () => {
+      const originalEnv = process.env.VERCEL_PYTHON_INCREASED_EPHEMERAL_STORAGE;
+      process.env.VERCEL_PYTHON_INCREASED_EPHEMERAL_STORAGE = '1';
+
+      // MAX_RUNTIME_DEPS_SIZE_BYTES is evaluated at module load time, so we
+      // must reset the module registry and re-import to pick up the new env.
+      vi.resetModules();
+      const { MAX_RUNTIME_DEPS_SIZE_BYTES: reloadedMax } = await import(
+        '../src/dependency-externalizer'
+      );
+      expect(reloadedMax).toBe(1000 * 1024 * 1024);
+
+      if (originalEnv === undefined) {
+        delete process.env.VERCEL_PYTHON_INCREASED_EPHEMERAL_STORAGE;
+      } else {
+        process.env.VERCEL_PYTHON_INCREASED_EPHEMERAL_STORAGE = originalEnv;
+      }
     });
   });
 
