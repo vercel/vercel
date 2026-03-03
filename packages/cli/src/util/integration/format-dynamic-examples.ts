@@ -94,6 +94,34 @@ export function formatDynamicExamples(
     `    ${chalk.cyan(`$ ${packageName} ${commandName} ${integrationSlug} --no-env-pull`)}`
   );
 
+  // Prefix
+  lines.push('');
+  lines.push(
+    `  ${chalk.dim('-')} Install with a prefix for environment variable names`
+  );
+  lines.push('');
+  lines.push(
+    `    ${chalk.cyan(`$ ${packageName} ${commandName} ${integrationSlug} --prefix NEON2_`)}`
+  );
+
+  // JSON output
+  lines.push('');
+  lines.push(`  ${chalk.dim('-')} Output as JSON`);
+  lines.push('');
+  lines.push(
+    `    ${chalk.cyan(`$ ${packageName} ${commandName} ${integrationSlug} --format=json`)}`
+  );
+
+  // Installation ID (only when auto-provision FF is enabled)
+  if (process.env.FF_AUTO_PROVISION_INSTALL !== '0') {
+    lines.push('');
+    lines.push(`  ${chalk.dim('-')} Install using a specific installation`);
+    lines.push('');
+    lines.push(
+      `    ${chalk.cyan(`$ ${packageName} ${commandName} ${integrationSlug} --installation-id <id>`)}`
+    );
+  }
+
   lines.push('');
 
   return lines.join('\n');

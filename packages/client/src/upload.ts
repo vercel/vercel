@@ -6,7 +6,7 @@ import retry from 'async-retry';
 import { Sema } from 'async-sema';
 
 import { DeploymentFile, FilesMap } from './utils/hashes';
-import { fetch, API_FILES, createDebug } from './utils';
+import { fetchApi, API_FILES, createDebug } from './utils';
 import { DeploymentError } from './errors';
 import { deploy } from './deploy';
 import type { Agent } from 'http';
@@ -200,7 +200,7 @@ export async function* uploadFiles(options: {
         abortControllers.add(abortController);
 
         try {
-          const res = await fetch(
+          const res = await fetchApi(
             API_FILES,
             options.token,
             {

@@ -1,4 +1,4 @@
-import fetch from 'node-fetch';
+import nodeFetch from 'node-fetch';
 import type Client from '../../util/client';
 
 export default async function flush(_client: Client, args: string[]) {
@@ -9,7 +9,7 @@ export default async function flush(_client: Client, args: string[]) {
   try {
     // Use node-fetch directly instead of client.fetch because the client's
     // HTTP agent may be HTTPS-only, but the bridge URL can be http:// in tests.
-    const res = await fetch(url, {
+    const res = await nodeFetch(url, {
       method: 'POST',
       headers,
       body: JSON.stringify(body),

@@ -50,4 +50,13 @@ export class EnvUpdateTelemetryClient
       this.trackCliFlag('yes');
     }
   }
+
+  trackCliOptionValue(value: string | undefined) {
+    if (value) {
+      this.trackCliOption({
+        option: 'value',
+        value: this.redactedValue,
+      });
+    }
+  }
 }

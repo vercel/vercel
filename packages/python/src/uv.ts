@@ -96,8 +96,10 @@ export class UvRunner {
     locked?: boolean;
     frozen?: boolean;
     noBuild?: boolean;
+    noInstallProject?: boolean;
   }): Promise<void> {
-    const { venvPath, projectDir, locked, frozen, noBuild } = options;
+    const { venvPath, projectDir, locked, frozen, noBuild, noInstallProject } =
+      options;
     const args = ['sync', '--active', '--no-dev', '--link-mode', 'copy'];
     if (frozen) {
       args.push('--frozen');
@@ -106,6 +108,9 @@ export class UvRunner {
     }
     if (noBuild) {
       args.push('--no-build');
+    }
+    if (noInstallProject) {
+      args.push('--no-install-project');
     }
     args.push('--no-editable');
     await this.runUvCmd(args, projectDir, venvPath);

@@ -4,7 +4,6 @@ import { resolve, extname } from 'path';
 import { createServer, request } from 'http';
 import { listen } from 'async-listen';
 import { once } from 'node:events';
-import { fetch } from 'undici';
 import { promisify } from 'util';
 import { setTimeout } from 'timers/promises';
 

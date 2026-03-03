@@ -1,5 +1,70 @@
 # @vercel/python
 
+## 6.19.0
+
+### Minor Changes
+
+- [python] setup logging in `vc_init_dev` to route records with level <= `WARNING` to `stdout` and with level >= `ERROR` to `stderr`. ([#15328](https://github.com/vercel/vercel/pull/15328))
+
+## 6.18.1
+
+### Patch Changes
+
+- add litellm proxy support ([#15313](https://github.com/vercel/vercel/pull/15313))
+
+## 6.18.0
+
+### Minor Changes
+
+- Run Python build commands _after_ install commands and in the virtual env ([#15171](https://github.com/vercel/vercel/pull/15171))
+
+### Patch Changes
+
+- Add `prisma-client-py` support and the quirks system ([#15289](https://github.com/vercel/vercel/pull/15289))
+
+- Updated dependencies [[`3880e1028840aae6883211b79a1a30c7432580f3`](https://github.com/vercel/vercel/commit/3880e1028840aae6883211b79a1a30c7432580f3)]:
+  - @vercel/python-analysis@0.8.1
+
+## 6.17.0
+
+### Minor Changes
+
+- Find entrypoints for django projects. ([#15167](https://github.com/vercel/vercel/pull/15167))
+
+### Patch Changes
+
+- Rename fetch to nodeFetch when importing from node-fetch ([#15232](https://github.com/vercel/vercel/pull/15232))
+
+- [services] fix dev server hang when FastAPI CLI is used ([#15274](https://github.com/vercel/vercel/pull/15274))
+
+- [python] fix dev server crash on relative imports ([#15269](https://github.com/vercel/vercel/pull/15269))
+
+- Updated dependencies [[`b3a96cc4f276ce8d16c695eabd499d3a17e73aa8`](https://github.com/vercel/vercel/commit/b3a96cc4f276ce8d16c695eabd499d3a17e73aa8)]:
+  - @vercel/python-analysis@0.8.0
+
+## 6.16.1
+
+### Patch Changes
+
+- Disable runtime dependency installs for projects with custom build/install commands ([#15240](https://github.com/vercel/vercel/pull/15240))
+
+## 6.16.0
+
+### Minor Changes
+
+- [python] add support for running generic ASGI/WSGI applications to vc dev ([#15174](https://github.com/vercel/vercel/pull/15174))
+
+### Patch Changes
+
+- Updated dependencies [[`cb79f6f8080fddd3673a8911566085e0265b060b`](https://github.com/vercel/vercel/commit/cb79f6f8080fddd3673a8911566085e0265b060b)]:
+  - @vercel/python-analysis@0.7.0
+
+## 6.15.1
+
+### Patch Changes
+
+- Check if file exists before mirroring into vendor ([#15181](https://github.com/vercel/vercel/pull/15181))
+
 ## 6.15.0
 
 ### Minor Changes

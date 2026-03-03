@@ -1,7 +1,7 @@
 import fs from 'fs';
 import { promisify } from 'util';
 import { join, dirname, basename, parse } from 'path';
-import { VERCEL_RUNTIME_VERSION } from './runtime-version';
+import { VERCEL_RUNTIME_VERSION } from './package-versions';
 import {
   download,
   glob,
@@ -44,6 +44,7 @@ import {
   ensureVenv,
   createVenvEnv,
 } from './utils';
+import { runQuirks } from './quirks';
 
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
@@ -83,9 +84,14 @@ export const build: BuildV3 = async ({
   config,
 }) => {
   const framework = config?.framework;
+
   let spawnEnv: NodeJS.ProcessEnv | undefined;
   // Custom install command from dashboard/project settings, if any.
   let projectInstallCommand: string | undefined;
+  // Track whether a custom build or install command was used.
+  // When true, runtime dependency installation is disabled because
+  // custom commands may install dependencies not tracked in uv.lock.
+  let hasCustomCommand = false;
 
   debug(`workPath: ${workPath}`);
 
@@ -111,52 +117,6 @@ export const build: BuildV3 = async ({
   } catch (err) {
     console.log('Failed to create "setup.cfg" file');
     throw err;
-  }
-
-  // For Python frameworks, also honor project install/build commands (vercel.json/dashboard)
-  if (isPythonFramework(framework)) {
-    const {
-      cliType,
-      lockfileVersion,
-      packageJsonPackageManager,
-      turboSupportsCorepackHome,
-    } = await scanParentDirs(workPath, true);
-    spawnEnv = getEnvForPackageManager({
-      cliType,
-      lockfileVersion,
-      packageJsonPackageManager,
-      env: process.env,
-      turboSupportsCorepackHome,
-      projectCreatedAt: config?.projectSettings?.createdAt,
-    });
-
-    const installCommand = config?.projectSettings?.installCommand;
-    if (typeof installCommand === 'string') {
-      const trimmed = installCommand.trim();
-      if (trimmed) {
-        projectInstallCommand = trimmed;
-      } else {
-        console.log('Skipping "install" command...');
-      }
-    }
-
-    const projectBuildCommand =
-      config?.projectSettings?.buildCommand ??
-      // fallback if provided directly on config (some callers set this)
-      (config as any)?.buildCommand;
-    if (projectBuildCommand) {
-      console.log(`Running "${projectBuildCommand}"`);
-      await execCommand(projectBuildCommand, {
-        env: spawnEnv,
-        cwd: workPath,
-      });
-    } else {
-      await runPyprojectScript(
-        workPath,
-        ['vercel-build', 'now-build', 'build'],
-        spawnEnv
-      );
-    }
   }
 
   let fsFiles = await glob('**', workPath);
@@ -317,6 +277,34 @@ export const build: BuildV3 = async ({
     venvPath,
   });
 
+  // For Python frameworks, set up the env and extract the install command (vercel.json/dashboard)
+  if (isPythonFramework(framework)) {
+    const {
+      cliType,
+      lockfileVersion,
+      packageJsonPackageManager,
+      turboSupportsCorepackHome,
+    } = await scanParentDirs(workPath, true);
+    spawnEnv = getEnvForPackageManager({
+      cliType,
+      lockfileVersion,
+      packageJsonPackageManager,
+      env: process.env,
+      turboSupportsCorepackHome,
+      projectCreatedAt: config?.projectSettings?.createdAt,
+    });
+
+    const installCommand = config?.projectSettings?.installCommand;
+    if (typeof installCommand === 'string') {
+      const trimmed = installCommand.trim();
+      if (trimmed) {
+        projectInstallCommand = trimmed;
+      } else {
+        console.log('Skipping "install" command...');
+      }
+    }
+  }
+
   const baseEnv = spawnEnv || process.env;
   const pythonEnv = createVenvEnv(venvPath, baseEnv);
 
@@ -333,6 +321,7 @@ export const build: BuildV3 = async ({
       cwd: workPath,
     });
     assumeDepsInstalled = true;
+    hasCustomCommand = true;
   } else {
     // Check and run a custom vercel install command from project manifest.
     // This will return `false` if no script was ran.
@@ -342,6 +331,9 @@ export const build: BuildV3 = async ({
       pythonEnv,
       /* useUserVirtualEnv */ false
     );
+    if (assumeDepsInstalled) {
+      hasCustomCommand = true;
+    }
   }
 
   let uv: UvRunner;
@@ -402,6 +394,7 @@ export const build: BuildV3 = async ({
           projectDir,
           frozen: true,
           noBuild: true,
+          noInstallProject: true,
         });
       } catch (err) {
         // Note the failure but don't error yet - we only need wheels
@@ -426,6 +419,27 @@ export const build: BuildV3 = async ({
     });
   }
 
+  // Run the project build command (if any) AFTER dependencies are installed.
+  if (isPythonFramework(framework)) {
+    const projectBuildCommand =
+      config?.projectSettings?.buildCommand ??
+      // fallback if provided directly on config (some callers set this)
+      (config as any)?.buildCommand;
+    if (projectBuildCommand) {
+      console.log(`Running "${projectBuildCommand}"`);
+      await execCommand(projectBuildCommand, {
+        env: pythonEnv,
+        cwd: workPath,
+      });
+    } else {
+      await runPyprojectScript(
+        workPath,
+        ['vercel-build', 'now-build', 'build'],
+        pythonEnv
+      );
+    }
+  }
+
   // Ensure correct version of vercel-runtime is installed.
   //
   // We intentionally do not inject vercel-runtime into the manifest
@@ -445,6 +459,29 @@ export const build: BuildV3 = async ({
     projectDir: join(workPath, entryDirectory),
     args: ['install', runtimeDep],
   });
+
+  // Optional override used by CI/preview builds to test in-repo vercel-workers wheels.
+  // TODO: uncomment when we introduce the 'workers' service implementation
+  // const workersDep =
+  //   baseEnv.VERCEL_WORKERS_PYTHON ||
+  //   `vercel-workers==${VERCEL_WORKERS_VERSION}`;
+  // if (workersDep) {
+  //   debug(`Installing ${workersDep}`);
+  //   await uv.pip({
+  //     venvPath,
+  //     projectDir: join(workPath, entryDirectory),
+  //     args: ['install', workersDep],
+  //   });
+  // }
+
+  // Run quirks: detect dependencies that need special handling (e.g. prisma)
+  // and perform fix-up routines before bundling.
+  const quirksResult = await runQuirks({ venvPath, pythonEnv, workPath });
+
+  // Apply build-time env vars from quirks so subsequent build steps can use them
+  if (quirksResult.buildEnv) {
+    Object.assign(pythonEnv, quirksResult.buildEnv);
+  }
 
   debug('Entrypoint is', entrypoint);
   const moduleName = entrypoint.replace(/\//g, '.').replace(/\.py$/i, '');
@@ -515,6 +552,7 @@ from vercel_runtime.vc_init import vc_handler
 
   const lambdaEnv = {} as Record<string, string>;
   lambdaEnv.PYTHONPATH = vendorDir;
+  Object.assign(lambdaEnv, quirksResult.env);
 
   const globOptions: GlobOptions = {
     cwd: workPath,
@@ -536,12 +574,14 @@ from vercel_runtime.vc_init import vc_handler
     projectName,
     noBuildCheckFailed,
     pythonPath: pythonVersion.pythonPath,
+    hasCustomCommand,
+    alwaysBundlePackages: quirksResult.alwaysBundlePackages,
   });
 
-  const { overLambdaLimit, allVendorFiles } =
+  const { runtimeInstallEnabled, allVendorFiles } =
     await depExternalizer.analyze(files);
 
-  if (overLambdaLimit) {
+  if (runtimeInstallEnabled) {
     await depExternalizer.generateBundle(files);
   } else {
     // Bundle all dependencies since we're not doing runtime installation
@@ -579,19 +619,13 @@ export { startDevServer };
 
 export const shouldServe: ShouldServe = opts => {
   const framework = opts.config.framework;
-  if (framework === 'fastapi') {
+  if (isPythonFramework(framework)) {
     const requestPath = opts.requestPath.replace(/\/$/, '');
     // Don't override API routes if another builder already matched them
     if (requestPath.startsWith('api') && opts.hasMatched) {
       return false;
     }
     // Public assets are served by the static builder / default handler
-    return true;
-  } else if (framework === 'flask') {
-    const requestPath = opts.requestPath.replace(/\/$/, '');
-    if (requestPath.startsWith('api') && opts.hasMatched) {
-      return false;
-    }
     return true;
   }
   return defaultShouldServe(opts);

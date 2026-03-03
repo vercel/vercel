@@ -15,7 +15,9 @@ import {
   Redirect,
   Route,
   RouteApiError,
+  RouteInput,
   RouteWithHandle,
+  RouteWithSrc,
 } from './types';
 export { appendRoutesToPhase } from './append';
 export { mergeRoutes } from './merge';
@@ -47,9 +49,43 @@ export function isValidHandleValue(handle: string): handle is HandleValue {
   return validHandleValues.has(handle);
 }
 
-export function normalizeRoutes(inputRoutes: Route[] | null): NormalizedRoutes {
+function convertRouteAliases(route: RouteWithSrc, index: number): void {
+  if (route.source !== undefined) {
+    if (route.src !== undefined) {
+      throw new Error(
+        `Route at index ${index} cannot define both \`src\` and \`source\`. Please use only one.`
+      );
+    }
+    route.src = route.source;
+    delete route.source;
+  }
+
+  if (route.destination !== undefined) {
+    if (route.dest !== undefined) {
+      throw new Error(
+        `Route at index ${index} cannot define both \`dest\` and \`destination\`. Please use only one.`
+      );
+    }
+    route.dest = route.destination;
+    delete route.destination;
+  }
+
+  if (route.statusCode !== undefined) {
+    if (route.status !== undefined) {
+      throw new Error(
+        `Route at index ${index} cannot define both \`status\` and \`statusCode\`. Please use only one.`
+      );
+    }
+    route.status = route.statusCode;
+    delete route.statusCode;
+  }
+}
+
+export function normalizeRoutes(
+  inputRoutes: RouteInput[] | null
+): NormalizedRoutes {
   if (!inputRoutes || inputRoutes.length === 0) {
-    return { routes: inputRoutes, error: null };
+    return { routes: inputRoutes as Route[] | null, error: null };
   }
 
   const routes: Route[] = [];
@@ -57,8 +93,18 @@ export function normalizeRoutes(inputRoutes: Route[] | null): NormalizedRoutes {
   const errors: string[] = [];
 
   inputRoutes.forEach((r, i) => {
-    const route = { ...r };
+    const route = { ...r } as Route;
     routes.push(route);
+
+    // Convert aliases (source -> src, destination -> dest, statusCode -> status)
+    if (!isHandler(route)) {
+      try {
+        convertRouteAliases(route as RouteWithSrc, i);
+      } catch (err: any) {
+        errors.push(err.message);
+      }
+    }
+
     const keys = Object.keys(route);
     if (isHandler(route)) {
       const { handle } = route;
@@ -102,12 +148,12 @@ export function normalizeRoutes(inputRoutes: Route[] | null): NormalizedRoutes {
       if (handleValue === 'hit') {
         if (route.dest) {
           errors.push(
-            `Route at index ${i} cannot define \`dest\` after \`handle: hit\`.`
+            `Route at index ${i} cannot define \`dest\`/\`destination\` after \`handle: hit\`.`
           );
         }
         if (route.status) {
           errors.push(
-            `Route at index ${i} cannot define \`status\` after \`handle: hit\`.`
+            `Route at index ${i} cannot define \`status\`/\`statusCode\` after \`handle: hit\`.`
           );
         }
         if (!route.continue) {
@@ -128,7 +174,7 @@ export function normalizeRoutes(inputRoutes: Route[] | null): NormalizedRoutes {
       }
     } else {
       errors.push(
-        `Route at index ${i} must define either \`handle\` or \`src\` property.`
+        `Route at index ${i} must define either \`src\` or \`source\` property.`
       );
     }
   });
@@ -155,7 +201,7 @@ function checkRegexSyntax(
   try {
     new RegExp(src);
   } catch (err) {
-    const prop = type === 'Route' ? 'src' : 'source';
+    const prop = type === 'Route' ? 'src`/`source' : 'source';
     return `${type} at index ${index} has invalid \`${prop}\` regular expression "${src}".`;
   }
   return null;
@@ -258,26 +304,8 @@ export function getTransformedRoutes(
 ): NormalizedRoutes {
   const { cleanUrls, rewrites, redirects, headers, trailingSlash } =
     vercelConfig;
-  let { routes = null } = vercelConfig;
-  if (routes) {
-    const hasNewProperties =
-      typeof cleanUrls !== 'undefined' ||
-      typeof trailingSlash !== 'undefined' ||
-      typeof redirects !== 'undefined' ||
-      typeof headers !== 'undefined' ||
-      typeof rewrites !== 'undefined';
-
-    if (hasNewProperties) {
-      const error = createError(
-        'invalid_mixed_routes',
-        'If `rewrites`, `redirects`, `headers`, `cleanUrls` or `trailingSlash` are used, then `routes` cannot be present.',
-        'https://vercel.link/mix-routing-props',
-        'Learn More'
-      );
-      return { routes, error };
-    }
-    return normalizeRoutes(routes);
-  }
+  const { routes: userRoutes = null } = vercelConfig;
+  let routes: Route[] | null = null;
 
   if (typeof cleanUrls !== 'undefined') {
     const normalized = normalizeRoutes(
@@ -295,6 +323,15 @@ export function getTransformedRoutes(
     const normalized = normalizeRoutes(convertTrailingSlash(trailingSlash));
     if (normalized.error) {
       normalized.error.code = 'invalid_trailing_slash';
+      return { routes, error: normalized.error };
+    }
+    routes = routes || [];
+    routes.push(...(normalized.routes || []));
+  }
+
+  if (userRoutes) {
+    const normalized = normalizeRoutes(userRoutes);
+    if (normalized.error) {
       return { routes, error: normalized.error };
     }
     routes = routes || [];

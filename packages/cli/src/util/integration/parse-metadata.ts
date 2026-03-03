@@ -1,5 +1,9 @@
 import output from '../../output-manager';
-import { getAllOptionValues, isHiddenOnCreate } from './format-schema-help';
+import {
+  getAllOptionValues,
+  isServerHandledRegion,
+  isHiddenOnCreate,
+} from './format-schema-help';
 import type { Metadata, MetadataSchema } from './types';
 
 export interface ParseMetadataResult {
@@ -28,8 +32,8 @@ export function parseMetadataFlags(
       continue;
     }
 
-    const key = item.slice(0, eqIndex);
-    const value = item.slice(eqIndex + 1);
+    const key = item.slice(0, eqIndex).trim();
+    const value = item.slice(eqIndex + 1).trim();
 
     const propSchema = schema.properties[key];
     if (!propSchema) {
@@ -69,7 +73,10 @@ export function parseMetadataFlags(
       }
       metadata[key] = num;
     } else if (propSchema.type === 'array') {
-      const items = value.split(',').map(v => v.trim());
+      const items = value
+        .split(',')
+        .map(v => v.trim())
+        .filter(v => v.length > 0);
       const itemType = propSchema.items?.type;
 
       if (itemType === 'number') {
@@ -144,6 +151,8 @@ export function parseMetadataFlags(
 
 /**
  * Validate that all required metadata fields are provided.
+ * Region fields (vercel-region / multi-vercel-region) are always skipped
+ * because the server handles region selection automatically.
  */
 export function validateRequiredMetadata(
   metadata: Metadata,
@@ -157,6 +166,11 @@ export function validateRequiredMetadata(
 
     // Skip hidden fields (they use defaults server-side)
     if (propSchema && isHiddenOnCreate(propSchema)) {
+      continue;
+    }
+
+    // Skip vercel-region fields (server handles region selection)
+    if (propSchema && isServerHandledRegion(propSchema)) {
       continue;
     }
 
