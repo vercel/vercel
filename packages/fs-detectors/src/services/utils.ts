@@ -61,6 +61,49 @@ export function isRouteOwningBuilder(service: ResolvedService): boolean {
 }
 
 /**
+ * Infer runtime from a framework slug.
+ *
+ * Examples:
+ * - `python` -> `python`
+ * - `fastapi` -> `python`
+ * - `express` -> `node`
+ */
+export function inferRuntimeFromFramework(
+  framework: string | null | undefined
+): ServiceRuntime | undefined {
+  if (!framework) {
+    return undefined;
+  }
+
+  // Runtime framework slug maps directly to runtime name.
+  if (framework in RUNTIME_BUILDERS) {
+    return framework as ServiceRuntime;
+  }
+
+  if (isPythonFramework(framework)) {
+    return 'python';
+  }
+  if (isBackendFramework(framework)) {
+    return 'node';
+  }
+
+  return undefined;
+}
+
+export function filterFrameworksByRuntime<T extends { slug?: string | null }>(
+  frameworks: readonly T[],
+  runtime?: ServiceRuntime
+): T[] {
+  if (!runtime) {
+    return [...frameworks];
+  }
+
+  return frameworks.filter(
+    framework => inferRuntimeFromFramework(framework.slug) === runtime
+  );
+}
+
+/**
  * Infer runtime from available service configuration.
  *
  * Priority (highest to lowest):
@@ -83,17 +126,9 @@ export function inferServiceRuntime(config: {
     return config.runtime as ServiceRuntime;
   }
 
-  // Runtime framework slug maps directly to runtime name.
-  if (config.framework && config.framework in RUNTIME_BUILDERS) {
-    return config.framework as ServiceRuntime;
-  }
-
-  // Infer from framework
-  if (isPythonFramework(config.framework)) {
-    return 'python';
-  }
-  if (isBackendFramework(config.framework)) {
-    return 'node';
+  const frameworkRuntime = inferRuntimeFromFramework(config.framework);
+  if (frameworkRuntime) {
+    return frameworkRuntime;
   }
 
   // Infer from builder

@@ -13,8 +13,10 @@ import {
   RUNTIME_MANIFESTS,
 } from './types';
 import {
+  filterFrameworksByRuntime,
   getBuilderForRuntime,
   hasFile,
+  inferRuntimeFromFramework,
   inferServiceRuntime,
   INTERNAL_SERVICE_PREFIX,
 } from './utils';
@@ -158,13 +160,7 @@ async function detectFrameworkFromWorkspace({
   runtime?: ServiceRuntime;
 }): Promise<{ framework?: string; error?: ServiceDetectionError }> {
   const serviceFs = workspace === '.' ? fs : fs.chdir(workspace);
-  const frameworkCandidates = runtime
-    ? frameworkList.filter(
-        framework =>
-          framework.slug != null &&
-          inferServiceRuntime({ framework: framework.slug }) === runtime
-      )
-    : frameworkList;
+  const frameworkCandidates = filterFrameworksByRuntime(frameworkList, runtime);
   const frameworks = await detectFrameworks({
     fs: serviceFs,
     frameworkList: frameworkCandidates,
@@ -268,6 +264,16 @@ export function validateServiceConfig(
       message: `Service "${name}" has invalid framework "${config.framework}".`,
       serviceName: name,
     };
+  }
+  if (config.runtime && config.framework) {
+    const frameworkRuntime = inferRuntimeFromFramework(config.framework);
+    if (frameworkRuntime && frameworkRuntime !== config.runtime) {
+      return {
+        code: 'RUNTIME_FRAMEWORK_MISMATCH',
+        message: `Service "${name}" has conflicting runtime/framework: runtime "${config.runtime}" is incompatible with framework "${config.framework}" (runtime "${frameworkRuntime}").`,
+        serviceName: name,
+      };
+    }
   }
 
   const hasFramework = Boolean(config.framework);
@@ -525,10 +531,7 @@ export async function resolveAllConfiguredServices(
 
     let resolvedConfig = serviceConfig;
 
-    const shouldDetectFramework =
-      !serviceConfig.framework && Boolean(resolvedEntrypoint);
-
-    if (shouldDetectFramework && resolvedEntrypoint) {
+    if (!serviceConfig.framework && resolvedEntrypoint) {
       if (resolvedEntrypoint.isDirectory) {
         const workspace = resolvedEntrypoint.normalized;
         const { framework, error } = await detectFrameworkFromWorkspace({
