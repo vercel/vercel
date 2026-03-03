@@ -6,6 +6,7 @@
 
 // Non-priority commands - bundled together
 export { default as agent } from './commands/agent';
+export { default as activity } from './commands/activity';
 export { default as alias } from './commands/alias';
 export { default as api } from './commands/api';
 export { default as bisect } from './commands/bisect';

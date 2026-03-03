@@ -417,9 +417,6 @@ _uv_dir = os.path.join(lambda_root, "_uv")
 _runtime_config_path = os.path.join(_uv_dir, "_runtime_config.json")
 
 if os.path.exists(_runtime_config_path):
-    # Ensure writable config dir for libraries like Matplotlib on Lambda.
-    os.environ.setdefault("MPLCONFIGDIR", "/tmp")
-
     import site
     import subprocess
 

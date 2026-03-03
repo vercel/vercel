@@ -2241,7 +2241,9 @@ export const frameworks = [
           matchContent: '[Dd]jango',
         },
         {
+          // a default django project will create a manage.py which sets DJANGO_SETTINGS_MODULE
           path: 'manage.py',
+          matchContent: 'DJANGO_SETTINGS_MODULE',
         },
       ],
     },

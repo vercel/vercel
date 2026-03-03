@@ -7,6 +7,7 @@ describe('index', () => {
         ['agent', 'agent'],
         ['alias', 'alias'],
         ['aliases', 'alias'],
+        ['activity', 'activity'],
         ['api', 'api'],
         ['bisect', 'bisect'],
         ['blob', 'blob'],
