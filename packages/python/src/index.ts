@@ -1,7 +1,10 @@
 import fs from 'fs';
 import { promisify } from 'util';
 import { join, dirname, basename, parse } from 'path';
-import { VERCEL_RUNTIME_VERSION } from './package-versions';
+import {
+  VERCEL_RUNTIME_VERSION,
+  VERCEL_WORKERS_VERSION,
+} from './package-versions';
 import {
   download,
   glob,
@@ -89,7 +92,7 @@ export const build: BuildV3 = async ({
 }) => {
   const builderSpan = parentSpan ?? new Span({ name: 'vc.builder' });
   const framework = config?.framework;
-
+  const shouldInstallVercelWorkers = config?.hasWorkerServices === true;
   let spawnEnv: NodeJS.ProcessEnv | undefined;
   // Custom install command from dashboard/project settings, if any.
   let projectInstallCommand: string | undefined;
@@ -493,19 +496,18 @@ export const build: BuildV3 = async ({
     args: ['install', runtimeDep],
   });
 
-  // Optional override used by CI/preview builds to test in-repo vercel-workers wheels.
-  // TODO: uncomment when we introduce the 'workers' service implementation
-  // const workersDep =
-  //   baseEnv.VERCEL_WORKERS_PYTHON ||
-  //   `vercel-workers==${VERCEL_WORKERS_VERSION}`;
-  // if (workersDep) {
-  //   debug(`Installing ${workersDep}`);
-  //   await uv.pip({
-  //     venvPath,
-  //     projectDir: join(workPath, entryDirectory),
-  //     args: ['install', workersDep],
-  //   });
-  // }
+  if (shouldInstallVercelWorkers) {
+    // Optional override used by CI/preview builds to test in-repo vercel-workers wheels.
+    const workersDep =
+      baseEnv.VERCEL_WORKERS_PYTHON ||
+      `vercel-workers==${VERCEL_WORKERS_VERSION}`;
+    debug(`Installing ${workersDep}`);
+    await uv.pip({
+      venvPath,
+      projectDir: join(workPath, entryDirectory),
+      args: ['install', workersDep],
+    });
+  }
 
   // Run quirks: detect dependencies that need special handling (e.g. prisma)
   // and perform fix-up routines before bundling.
@@ -608,7 +610,12 @@ from vercel_runtime.vc_init import vc_handler
     noBuildCheckFailed,
     pythonPath: pythonVersion.pythonPath,
     hasCustomCommand,
-    alwaysBundlePackages: quirksResult.alwaysBundlePackages,
+    alwaysBundlePackages: [
+      ...quirksResult.alwaysBundlePackages,
+      ...(shouldInstallVercelWorkers
+        ? ['vercel-workers', 'vercel_workers']
+        : []),
+    ],
   });
 
   await builderSpan
