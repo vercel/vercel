@@ -33,7 +33,8 @@ const mockSkillsResponse = {
 };
 
 describe('skills', () => {
-  let fetchSpy: ReturnType<typeof vi.spyOn>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let fetchSpy: any;
 
   beforeEach(() => {
     client.reset();
