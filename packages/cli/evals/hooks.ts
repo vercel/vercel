@@ -3,6 +3,8 @@ import { join } from 'path';
 
 export type ProjectMode = 'auto' | 'linked-project' | 'no-linked-project';
 
+export type AuthState = 'logged-in' | 'not-logged-in';
+
 export interface EvalRunContext {
   /** Absolute path to the evals directory (packages/cli/evals). */
   cwd: string;
@@ -15,6 +17,8 @@ export interface EvalRunContext {
    * - 'no-linked-project': run without a linked project
    */
   projectMode: ProjectMode;
+  /** When true, experiments that support it (e.g. cli) copy the skills directory into the sandbox. */
+  withSkills: boolean;
 }
 
 export interface SetupResult {
@@ -31,6 +35,21 @@ export interface EvalVariant {
   id: string;
   /** Project mode to apply for this variant. */
   projectMode: ProjectMode;
+  /** When true, experiments that support it (e.g. cli) copy the skills directory into the sandbox. */
+  withSkills: boolean;
+}
+
+/** Project-mode-only variant (used to build full EvalVariant with getEvalVariants). */
+export interface ProjectModeVariant {
+  id: string;
+  projectMode: ProjectMode;
+}
+
+export interface AuthVariant {
+  /** Stable identifier used in logs and result tagging. */
+  id: string;
+  /** Auth state to apply for this variant. */
+  authState: AuthState;
 }
 
 /**
@@ -45,7 +64,7 @@ export interface EvalVariant {
  */
 export function getProjectModeVariantsFromEnv(
   defaultMode: ProjectMode = 'auto'
-): EvalVariant[] {
+): ProjectModeVariant[] {
   const raw = process.env.CLI_EVAL_PROJECT_MODES;
   if (!raw) {
     return [{ id: 'default', projectMode: defaultMode }];
@@ -61,7 +80,7 @@ export function getProjectModeVariantsFromEnv(
     'linked-project',
     'no-linked-project',
   ];
-  const variants: EvalVariant[] = [];
+  const variants: ProjectModeVariant[] = [];
 
   for (const part of parts) {
     if ((validModes as string[]).includes(part)) {
@@ -71,6 +90,117 @@ export function getProjectModeVariantsFromEnv(
 
   if (variants.length === 0) {
     return [{ id: 'default', projectMode: defaultMode }];
+  }
+
+  return variants;
+}
+
+/** Skills dimension variant: whether to copy the skills directory into the sandbox. */
+export interface SkillsVariant {
+  id: string;
+  withSkills: boolean;
+}
+
+/**
+ * Parse skills variants from CLI_EVAL_SKILLS_MODES. Default is both
+ * with-skills and without-skills so the matrix runs evals with and without
+ * the skills directory. Set to a single value to run only one (e.g.
+ * CLI_EVAL_SKILLS_MODES=with-skills).
+ *
+ * Example (default): both variants.
+ * Example: CLI_EVAL_SKILLS_MODES=with-skills → single variant with skills only.
+ */
+export function getSkillsVariantsFromEnv(): SkillsVariant[] {
+  const raw = process.env.CLI_EVAL_SKILLS_MODES;
+  if (!raw) {
+    return [
+      { id: 'with-skills', withSkills: true },
+      { id: 'without-skills', withSkills: false },
+    ];
+  }
+
+  const parts = raw
+    .split(',')
+    .map(p => p.trim())
+    .filter(Boolean);
+
+  const valid: SkillsVariant[] = [];
+  if (parts.includes('with-skills'))
+    valid.push({ id: 'with-skills', withSkills: true });
+  if (parts.includes('without-skills'))
+    valid.push({ id: 'without-skills', withSkills: false });
+
+  if (valid.length === 0) {
+    return [
+      { id: 'with-skills', withSkills: true },
+      { id: 'without-skills', withSkills: false },
+    ];
+  }
+
+  return valid;
+}
+
+/**
+ * Return the full eval matrix: cross product of project-mode variants × skills variants.
+ * Use this in the runner to get all (projectMode, withSkills) combinations.
+ *
+ * Example (defaults): one variant { id: 'default-with-skills', projectMode: 'auto', withSkills: true }.
+ * Example (CLI_EVAL_SKILLS_MODES=with-skills,without-skills): two variants, default-with-skills and default-without-skills.
+ */
+export function getEvalVariants(
+  defaultProjectMode: ProjectMode = 'auto'
+): EvalVariant[] {
+  const projectModeVariants = getProjectModeVariantsFromEnv(defaultProjectMode);
+  const skillsVariants = getSkillsVariantsFromEnv();
+  const variants: EvalVariant[] = [];
+
+  for (const pm of projectModeVariants) {
+    for (const sk of skillsVariants) {
+      variants.push({
+        id: `${pm.id}-${sk.id}`,
+        projectMode: pm.projectMode,
+        withSkills: sk.withSkills,
+      });
+    }
+  }
+
+  return variants;
+}
+
+/**
+ * Parse auth-state variants from CLI_EVAL_AUTH_STATES, or fall back to a
+ * single "default" variant using the provided default state.
+ *
+ * Example:
+ *   CLI_EVAL_AUTH_STATES=logged-in,not-logged-in
+ * becomes:
+ *   [{ id: 'logged-in', authState: 'logged-in' },
+ *    { id: 'not-logged-in', authState: 'not-logged-in' }]
+ */
+export function getAuthStateVariantsFromEnv(
+  defaultState: AuthState = 'logged-in'
+): AuthVariant[] {
+  const raw = process.env.CLI_EVAL_AUTH_STATES;
+  if (!raw) {
+    return [{ id: 'default', authState: defaultState }];
+  }
+
+  const parts = raw
+    .split(',')
+    .map(p => p.trim())
+    .filter(Boolean);
+
+  const validStates: AuthState[] = ['logged-in', 'not-logged-in'];
+  const variants: AuthVariant[] = [];
+
+  for (const part of parts) {
+    if ((validStates as string[]).includes(part)) {
+      variants.push({ id: part, authState: part as AuthState });
+    }
+  }
+
+  if (variants.length === 0) {
+    return [{ id: 'default', authState: defaultState }];
   }
 
   return variants;

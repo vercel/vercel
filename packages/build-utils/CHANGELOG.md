@@ -1,5 +1,18 @@
 # @vercel/build-utils
 
+## 13.6.2
+
+### Patch Changes
+
+- add partialFallback flag to prerender output ([#14703](https://github.com/vercel/vercel/pull/14703))
+
+## 13.6.1
+
+### Patch Changes
+
+- Updated dependencies [[`3880e1028840aae6883211b79a1a30c7432580f3`](https://github.com/vercel/vercel/commit/3880e1028840aae6883211b79a1a30c7432580f3)]:
+  - @vercel/python-analysis@0.8.1
+
 ## 13.6.0
 
 ### Minor Changes

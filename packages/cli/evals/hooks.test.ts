@@ -2,7 +2,14 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { describe, expect, it, vi } from 'vitest';
-import { destroy, getProjectModeVariantsFromEnv, setup } from './hooks';
+import {
+  destroy,
+  getAuthStateVariantsFromEnv,
+  getEvalVariants,
+  getProjectModeVariantsFromEnv,
+  getSkillsVariantsFromEnv,
+  setup,
+} from './hooks';
 import type { EvalRunContext } from './hooks';
 
 function createSandboxDir(withLinkedProject: boolean): string {
@@ -22,6 +29,7 @@ describe('CLI evals setup/destroy hooks', () => {
       cwd: sandbox,
       sandboxProjectDir: sandbox,
       projectMode: 'auto',
+      withSkills: true,
     };
 
     const result = await setup(context);
@@ -42,6 +50,7 @@ describe('CLI evals setup/destroy hooks', () => {
       cwd: sandbox,
       sandboxProjectDir: sandbox,
       projectMode: 'auto',
+      withSkills: true,
     };
 
     const result = await setup(context);
@@ -62,6 +71,7 @@ describe('CLI evals setup/destroy hooks', () => {
       cwd: sandbox,
       sandboxProjectDir: sandbox,
       projectMode: 'linked-project',
+      withSkills: true,
     };
 
     await expect(setup(context)).rejects.toThrow(/expected a linked project/i);
@@ -94,6 +104,56 @@ describe('CLI evals project-mode matrix', () => {
   });
 });
 
+describe('CLI evals auth-state matrix', () => {
+  it('getAuthStateVariantsFromEnv (experiment: no CLI_EVAL_AUTH_STATES) returns single default variant', () => {
+    delete process.env.CLI_EVAL_AUTH_STATES;
+    const variants = getAuthStateVariantsFromEnv('logged-in');
+    expect(variants).toEqual([{ id: 'default', authState: 'logged-in' }]);
+  });
+
+  it('getAuthStateVariantsFromEnv (experiment: logged-in,not-logged-in) returns both variants', () => {
+    process.env.CLI_EVAL_AUTH_STATES = 'logged-in,not-logged-in';
+    const variants = getAuthStateVariantsFromEnv('logged-in');
+    expect(variants).toEqual([
+      { id: 'logged-in', authState: 'logged-in' },
+      { id: 'not-logged-in', authState: 'not-logged-in' },
+    ]);
+  });
+
+  it('getAuthStateVariantsFromEnv (experiment: invalid states only) falls back to default', () => {
+    process.env.CLI_EVAL_AUTH_STATES = 'foo,bar';
+    const variants = getAuthStateVariantsFromEnv('logged-in');
+    expect(variants).toEqual([{ id: 'default', authState: 'logged-in' }]);
+  });
+});
+
+describe('CLI evals skills matrix', () => {
+  it('getSkillsVariantsFromEnv (default) returns with-skills and without-skills', () => {
+    delete process.env.CLI_EVAL_SKILLS_MODES;
+    const variants = getSkillsVariantsFromEnv();
+    expect(variants).toEqual([
+      { id: 'with-skills', withSkills: true },
+      { id: 'without-skills', withSkills: false },
+    ]);
+  });
+
+  it('getSkillsVariantsFromEnv (CLI_EVAL_SKILLS_MODES=with-skills) returns single variant', () => {
+    process.env.CLI_EVAL_SKILLS_MODES = 'with-skills';
+    const variants = getSkillsVariantsFromEnv();
+    expect(variants).toEqual([{ id: 'with-skills', withSkills: true }]);
+  });
+
+  it('getEvalVariants (default) returns cross product: default-with-skills, default-without-skills', () => {
+    delete process.env.CLI_EVAL_PROJECT_MODES;
+    delete process.env.CLI_EVAL_SKILLS_MODES;
+    const variants = getEvalVariants('auto');
+    expect(variants).toEqual([
+      { id: 'default-with-skills', projectMode: 'auto', withSkills: true },
+      { id: 'default-without-skills', projectMode: 'auto', withSkills: false },
+    ]);
+  });
+});
+
 describe('CLI evals project cleanup', () => {
   it('destroy (variant: SetupResult with createdProjectId) calls DELETE /v9/projects/:id', async () => {
     const originalFetch = (globalThis as any).fetch;
@@ -116,6 +176,7 @@ describe('CLI evals project cleanup', () => {
       cwd: sandbox,
       sandboxProjectDir: sandbox,
       projectMode: 'linked-project',
+      withSkills: true,
     };
 
     await destroy(context, {

@@ -1,6 +1,6 @@
 {
   "name": "@vercel/python-runtime",
-  "version": "0.5.2",
+  "version": "0.5.3",
   "private": true,
   "description": "Python runtime for Vercel Functions"
 }

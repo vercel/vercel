@@ -2,7 +2,11 @@ import { describe, expect, it, beforeEach } from 'vitest';
 import { client } from '../../../mocks/client';
 import routes from '../../../../src/commands/routes';
 import { useUser } from '../../../mocks/user';
-import { useAddRoute, usePromoteRouteVersion } from '../../../mocks/routes';
+import {
+  useAddRoute,
+  usePromoteRouteVersion,
+  useGenerateRoute,
+} from '../../../mocks/routes';
 import { useProject, defaultProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
 import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
@@ -2087,6 +2091,180 @@ describe('routes add', () => {
       // Default syntax is regex, so /test becomes the regex source
       expect(body.route.route.src).toContain('test');
       expect(body.route.route.dest).toBe('/handler');
+    });
+  });
+
+  describe('--ai flag', () => {
+    it('should generate and create a route with --ai and --yes', async () => {
+      useGenerateRoute();
+      useAddRoute();
+
+      client.setArgv(
+        'routes',
+        'add',
+        '--ai',
+        'Rewrite /api/* to https://backend.internal/*',
+        '--yes'
+      );
+      const exitCodePromise = routes(client);
+
+      await expect(client.stderr).toOutput('Generating route');
+      await expect(client.stderr).toOutput('Generated Route:');
+      await expect(client.stderr).toOutput('API Proxy');
+      await expect(client.stderr).toOutput('Adding route');
+      await expect(client.stderr).toOutput('Created');
+
+      await expect(exitCodePromise).resolves.toEqual(0);
+    });
+
+    it('should show error when --ai is used with conflicting flags', async () => {
+      client.setArgv(
+        'routes',
+        'add',
+        '--ai',
+        'Rewrite all traffic',
+        '--src',
+        '/api/*'
+      );
+
+      const exitCodePromise = routes(client);
+
+      await expect(client.stderr).toOutput('Cannot use --ai with --src');
+
+      await expect(exitCodePromise).resolves.toEqual(1);
+    });
+
+    it('should show error when generate API returns an error', async () => {
+      useGenerateRoute({ error: 'Invalid prompt' });
+      useAddRoute();
+
+      client.setArgv('routes', 'add', '--ai', 'Do something invalid', '--yes');
+      const exitCodePromise = routes(client);
+
+      await expect(client.stderr).toOutput('Invalid prompt');
+
+      await expect(exitCodePromise).resolves.toEqual(1);
+    });
+
+    it('should create route interactively after AI generation', async () => {
+      useGenerateRoute();
+      useAddRoute({ hasStaging: true });
+
+      client.setArgv('routes', 'add', '--ai', 'Rewrite /api/* to backend');
+      const exitCodePromise = routes(client);
+
+      await expect(client.stderr).toOutput('Generated Route:');
+      await expect(client.stderr).toOutput('What would you like to do?');
+      client.stdin.write('\n'); // select "Create this route" (default)
+
+      await expect(client.stderr).toOutput('Created');
+
+      await expect(exitCodePromise).resolves.toEqual(0);
+    });
+
+    it('should discard route when user chooses discard', async () => {
+      useGenerateRoute();
+      useAddRoute();
+
+      client.setArgv('routes', 'add', '--ai', 'Rewrite /api/* to backend');
+      const exitCodePromise = routes(client);
+
+      await expect(client.stderr).toOutput('What would you like to do?');
+      // Navigate to "Discard" (4th option)
+      client.stdin.write('\x1B[B'); // down
+      client.stdin.write('\x1B[B'); // down
+      client.stdin.write('\x1B[B'); // down
+      client.stdin.write('\n'); // select
+
+      await expect(client.stderr).toOutput('Discarded');
+
+      await expect(exitCodePromise).resolves.toEqual(0);
+    });
+
+    it('should generate a redirect route', async () => {
+      useGenerateRoute({
+        route: {
+          name: 'Blog Redirect',
+          description: 'Redirect old blog URLs',
+          pathCondition: { value: '/blog', syntax: 'equals' },
+          actions: [{ type: 'redirect', dest: '/articles', status: 301 }],
+        },
+      });
+      useAddRoute();
+
+      client.setArgv(
+        'routes',
+        'add',
+        '--ai',
+        'Redirect /blog to /articles with 301',
+        '--yes'
+      );
+      const exitCodePromise = routes(client);
+
+      await expect(client.stderr).toOutput('Blog Redirect');
+      await expect(client.stderr).toOutput('Redirect');
+      await expect(client.stderr).toOutput('Created');
+
+      await expect(exitCodePromise).resolves.toEqual(0);
+    });
+
+    it('should refine route via "Edit with AI" loop', async () => {
+      useGenerateRoute();
+      useAddRoute({ hasStaging: true });
+
+      client.setArgv('routes', 'add', '--ai', 'Rewrite /api/* to backend');
+      const exitCodePromise = routes(client);
+
+      // First generation preview
+      await expect(client.stderr).toOutput('Generated Route:');
+      await expect(client.stderr).toOutput('What would you like to do?');
+
+      // Select "Edit with AI (describe changes)" — 2nd option
+      client.stdin.write('\x1B[B');
+      client.stdin.write('\n');
+
+      await expect(client.stderr).toOutput(
+        "Describe what you'd like to change:"
+      );
+      client.stdin.write('Also add a Cache-Control header\n');
+
+      // Second generation preview
+      await expect(client.stderr).toOutput('Generated Route:');
+      await expect(client.stderr).toOutput('What would you like to do?');
+
+      // Now create
+      client.stdin.write('\n');
+
+      await expect(client.stderr).toOutput('Created');
+      await expect(exitCodePromise).resolves.toEqual(0);
+    });
+
+    it('should allow manual editing after AI generation', async () => {
+      useGenerateRoute();
+      useAddRoute({ hasStaging: true });
+
+      client.setArgv('routes', 'add', '--ai', 'Rewrite /api/* to backend');
+      const exitCodePromise = routes(client);
+
+      await expect(client.stderr).toOutput('Generated Route:');
+      await expect(client.stderr).toOutput('What would you like to do?');
+
+      // Select "Edit manually" — 3rd option
+      client.stdin.write('\x1B[B');
+      client.stdin.write('\x1B[B');
+      client.stdin.write('\n');
+
+      // Should see the edit menu with pre-populated values
+      await expect(client.stderr).toOutput('What would you like to edit?');
+
+      // Navigate to "Done - save changes" — last option (9th)
+      for (let i = 0; i < 8; i++) {
+        client.stdin.write('\x1B[B');
+      }
+      client.stdin.write('\n');
+
+      await expect(client.stderr).toOutput('Created');
+      await expect(exitCodePromise).resolves.toEqual(0);
     });
   });
 });

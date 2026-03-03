@@ -2,7 +2,7 @@
 
 Bare-bones evals infrastructure for the Vercel CLI using [@vercel/agent-eval](https://github.com/vercel-labs/agent-eval). Evals are colocated in `packages/cli/evals/` so CLI maintainers can own them. Scripts are in the CLI `package.json` (collocated with the `build` script).
 
-**Status:** Evals: **non-interactive** (prefer non-interactive flags for `vercel link`), **build** (run `vc build` on a minimal static site), **env/** (all env evals in one directory: **env/ls**, **env/add**, **env/pull**, **env/update**, **env/remove**). The runner discovers evals recursively in `evals/evals/` (any dir with PROMPT.md + EVAL.ts + package.json). If none are found it exits successfully; if any exist it runs `@vercel/agent-eval`. Add evals under `evals/evals/<name>/` (or nested, e.g. `evals/evals/env/add/`).
+**Status:** Evals: **non-interactive** (prefer non-interactive flags for `vercel link`), **build** (run `vc build` on a minimal static site), **login-whoami** (verify CLI is logged in and `vercel whoami` returns the current user), **login-not-logged-in** (exercise the CLI behavior when no credentials are present and the user attempts to log in), **env/** (all env evals in one directory: **env/ls**, **env/add**, **env/pull**, **env/update**, **env/remove**). The runner discovers evals recursively in `evals/evals/` (any dir with PROMPT.md + EVAL.ts + package.json). If none are found it exits successfully; if any exist it runs `@vercel/agent-eval`. Add evals under `evals/evals/<name>/` (or nested, e.g. `evals/evals/env/add/`).
 
 **Env evals and unique keys:** Evals that create env vars (env/add, env/update, env/remove) require a **unique variable name per run** (e.g. `EVAL_ADD_<timestamp>`, `EVAL_UPDATE_<timestamp>`, `EVAL_REMOVE_<timestamp>`) so concurrent or repeated runs do not overwrite the same variable. The prompt instructs the agent to choose such a key and write it to `env-key-used.txt`; the EVAL asserts the prefix.
 
@@ -28,6 +28,10 @@ From `packages/cli/`:
 - **`pnpm test:evals:dry`** — Preview what would run (no API calls, no credentials needed).
 - **`pnpm test:evals`** — Run evals (requires credentials; add evals first).
 
+To run a specific auth-state matrix locally, you can set:
+
+- `CLI_EVAL_AUTH_STATES=logged-in,not-logged-in` — run evals twice, once for each auth state (propagated as `CLI_EVAL_AUTH_STATE` for eval code).
+
 ## Using Local CLI Build
 
 When evals are added, agents in the sandbox can use the local CLI build (`dist/vc.js`) instead of installing from npm. Configure this in experiment setup or sandbox environment:
@@ -49,6 +53,8 @@ The GitHub Action runs on **pull requests** that touch `packages/cli/**`. It run
 Until these are set and evals exist, the job fails with a clear message. See `.github/workflows/cli-evals.yml`.
 
 **Ephemeral projects:** If `CLI_EVAL_PROJECT_ID` is not set, the runner creates an ephemeral project per eval run (using `VERCEL_TOKEN` and `CLI_EVAL_TEAM_ID`), links the sandbox to it, and deletes it after the run. To use a fixed project instead, set `CLI_EVAL_PROJECT_ID` (e.g. via `EVAL_PROJECT_ID` in CI).
+
+**Matrix (with/without skills):** By default the runner runs each eval twice: once with the CLI skills directory copied into the sandbox (`with-skills`) and once without (`without-skills`). Set `CLI_EVAL_SKILLS_MODES=with-skills` or `CLI_EVAL_SKILLS_MODES=without-skills` to run only one. Set `CLI_EVAL_PROJECT_MODES=linked-project,no-linked-project` to also vary project mode (cross product with skills).
 
 ## Getting credentials
 

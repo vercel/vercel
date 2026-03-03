@@ -26,6 +26,8 @@ jobs:
           check_interval: 5
 
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Discover Python packages
         id: discoverPythonPackages

@@ -53,7 +53,8 @@
     "test-dev": "node utils/gen.js && turbo --no-update-notifier run test-dev",
     "lint": "eslint . --cache --ext .ts,.js",
     "biome:check": "biome check api internals packages test utils",
-    "prettier-check": "prettier --check .",
+    "biome:format": "biome format api internals packages test utils",
+    "biome:lint": "biome lint api internals packages test utils",
     "prepare": "husky install",
     "pack": "cd utils && node -r ts-eager/register ./pack.ts",
     "ci:version": "changeset version && node utils/sync-python-version.js && uv lock && pnpm install --no-frozen-lockfile",
@@ -62,12 +63,12 @@
   },
   "lint-staged": {
     "./{*,{api,internals,packages,test,utils}/**/*}.{js,ts}": [
-      "prettier --write",
+      "biome format --write --no-errors-on-unmatched",
       "eslint",
       "git add"
     ],
-    "*.{json,md}": [
-      "prettier --write",
+    "./{*,{api,internals,packages,test,utils}/**/*}.json": [
+      "biome format --write --no-errors-on-unmatched",
       "git add"
     ]
   },
