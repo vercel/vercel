@@ -14,6 +14,8 @@ import {
   createStoreSubcommand,
   deleteStoreSubcommand,
   getStoreInfoSubcommand,
+  listStoresSubcommand,
+  emptyStoreSubcommand,
 } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
@@ -26,6 +28,8 @@ import copy from './copy';
 import addStore from './store-add';
 import removeStore from './store-remove';
 import getStore from './store-get';
+import listStores from './store-list';
+import emptyStore from './store-empty';
 import { printError } from '../../util/error';
 import { getBlobRWToken } from '../../util/blob/token';
 
@@ -38,6 +42,8 @@ const COMMAND_CONFIG = {
   'create-store': getCommandAliases(createStoreSubcommand),
   'delete-store': getCommandAliases(deleteStoreSubcommand),
   'get-store': getCommandAliases(getStoreInfoSubcommand),
+  'list-stores': getCommandAliases(listStoresSubcommand),
+  'empty-store': getCommandAliases(emptyStoreSubcommand),
 };
 
 export default async function main(client: Client) {
@@ -176,11 +182,6 @@ export default async function main(client: Client) {
 
       telemetry.trackCliSubcommandDeleteStore(subcommandOriginal);
 
-      if (!token.success) {
-        printError(token.error);
-        return 1;
-      }
-
       return removeStore(client, args, token);
     case 'get-store':
       if (needHelp) {
@@ -191,12 +192,32 @@ export default async function main(client: Client) {
 
       telemetry.trackCliSubcommandGetStore(subcommandOriginal);
 
+      return getStore(client, args, token);
+    case 'list-stores':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('blob', subcommandOriginal);
+        printHelp(listStoresSubcommand);
+        return 2;
+      }
+
+      telemetry.trackCliSubcommandListStores(subcommandOriginal);
+
+      return listStores(client, args);
+    case 'empty-store':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('blob', subcommandOriginal);
+        printHelp(emptyStoreSubcommand);
+        return 2;
+      }
+
+      telemetry.trackCliSubcommandEmptyStore(subcommandOriginal);
+
       if (!token.success) {
         printError(token.error);
         return 1;
       }
 
-      return getStore(client, args, token);
+      return emptyStore(client, args, token.token, token);
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
       output.print(help(blobCommand, { columns: client.stderr.columns }));

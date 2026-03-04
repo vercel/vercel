@@ -28,6 +28,8 @@ const accessOption = {
   choices: ['public', 'private'],
 } as const;
 
+import { yesOption } from '../../util/arg-common';
+
 export const listSubcommand = {
   name: 'list',
   aliases: ['ls'],
@@ -345,6 +347,15 @@ export const deleteStoreSubcommand = {
   examples: [],
 } as const;
 
+export const emptyStoreSubcommand = {
+  name: 'empty-store',
+  aliases: [],
+  description: 'Delete all blobs in a Blob store',
+  arguments: [],
+  options: [yesOption],
+  examples: [],
+} as const;
+
 export const getStoreInfoSubcommand = {
   name: 'get-store',
   aliases: [],
@@ -355,6 +366,15 @@ export const getStoreInfoSubcommand = {
       required: false,
     },
   ],
+  options: [],
+  examples: [],
+} as const;
+
+export const listStoresSubcommand = {
+  name: 'list-stores',
+  aliases: ['ls-stores'],
+  description: 'List all Blob stores',
+  arguments: [],
   options: [],
   examples: [],
 } as const;
@@ -373,6 +393,8 @@ export const blobCommand = {
     createStoreSubcommand,
     deleteStoreSubcommand,
     getStoreInfoSubcommand,
+    listStoresSubcommand,
+    emptyStoreSubcommand,
   ],
   options: [
     {
