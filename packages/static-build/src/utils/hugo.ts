@@ -1,4 +1,4 @@
-import fetch from 'node-fetch';
+import nodeFetch from 'node-fetch';
 import { NowBuildError } from '@vercel/build-utils';
 
 export async function getHugoUrl(
@@ -34,7 +34,7 @@ export async function getHugoUrl(
   }
 
   const checksumsUrl = `https://github.com/gohugoio/hugo/releases/download/v${version}/hugo_${version}_checksums.txt`;
-  const checksumsRes = await fetch(checksumsUrl);
+  const checksumsRes = await nodeFetch(checksumsUrl);
   if (checksumsRes.status === 404) {
     throw new NowBuildError({
       code: 'STATIC_BUILD_BINARY_NOT_FOUND',

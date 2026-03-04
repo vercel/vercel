@@ -2,7 +2,7 @@ import qs from 'querystring';
 import { parse as parseUrl } from 'url';
 import retry from 'async-retry';
 import ms from 'ms';
-import fetch, { Headers } from 'node-fetch';
+import nodeFetch, { Headers } from 'node-fetch';
 import bytes from 'bytes';
 import chalk from 'chalk';
 import ua from './ua';
@@ -55,6 +55,7 @@ export interface CreateOptions {
   autoAssignCustomDomains?: boolean;
   agentName?: string;
   manual?: boolean;
+  jsonOutput?: boolean;
 }
 
 export interface RemoveOptions {
@@ -132,6 +133,7 @@ export default class Now {
       autoAssignCustomDomains,
       agentName,
       manual,
+      jsonOutput = false,
     }: CreateOptions,
     org: Org,
     isSettingUpProject: boolean,
@@ -183,6 +185,7 @@ export default class Now {
       withFullLogs,
       bulkRedirectsPath: nowConfig.bulkRedirectsPath,
       manual,
+      jsonOutput,
     });
 
     if (deployment && deployment.warnings) {
@@ -377,7 +380,7 @@ export default class Now {
 
     const res = await output.time(
       `${opts.method || 'GET'} ${this._apiUrl}${_url} ${opts.body || ''}`,
-      fetch(`${this._apiUrl}${_url}`, { ...opts, body })
+      nodeFetch(`${this._apiUrl}${_url}`, { ...opts, body })
     );
     printIndications(res);
     return res;

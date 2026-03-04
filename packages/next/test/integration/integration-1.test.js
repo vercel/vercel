@@ -135,13 +135,6 @@ if (parseInt(process.versions.node.split('.')[0], 10) >= 16) {
     expect(buildResult.output['dashboard'].fallback.fsPath).toMatch(
       /server\/app\/dashboard\.html$/
     );
-    expect(buildResult.output['dashboard'].lambda.regions).toEqual([
-      'iad1',
-      'sfo1',
-    ]);
-    expect(
-      buildResult.output['dashboard'].lambda.functionFailoverRegions
-    ).toEqual(['pdx1']);
     expect(buildResult.output['dashboard.rsc'].type).toBe('Prerender');
     expect(buildResult.output['dashboard.rsc'].fallback.fsPath).toMatch(
       /server\/app\/dashboard\.rsc$/

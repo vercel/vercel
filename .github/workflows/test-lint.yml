@@ -39,6 +39,9 @@ jobs:
     if: github.event_name == 'pull_request' && github.event.pull_request.title != 'Version Packages'
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Check out the PR commit directly instead of a merge commit.
+          ref: ${{ github.event.pull_request.head.sha }}
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -51,13 +54,69 @@ jobs:
         run: npm i -g pnpm@8.3.1
       - run: pnpm install
       - run: pnpm run lint
-      - run: pnpm run prettier-check
+      - name: Biome format check (JS/TS/JSON)
+        run: pnpm run biome:format
+      - name: Biome lint
+        run: pnpm run biome:lint
       - name: Check dependency versions
         run: pnpm exec syncpack lint
       - run: pnpm run build
       - run: pnpm run type-check
       - name: Ensure clean git workspace
         run: git diff --name-only --exit-code
+
+  lint-actions:
+    name: Lint GitHub Actions
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Deliberately run against merge commit *here* because
+          # github actions are sourced from the merge commits and I
+          # don't think we can override that.
+          ref:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install pyyaml
+      - name: Enforce actions/checkout ref
+        shell: python
+        run: |
+          import glob, sys, yaml
+
+          errors = []
+          for path in sorted(glob.glob(".github/workflows/*.yml")):
+              with open(path) as f:
+                  workflow = yaml.safe_load(f)
+              if not isinstance(workflow, dict):
+                  continue
+              triggers = workflow.get(True) or {}  # 'on' parses as True in YAML
+              if isinstance(triggers, list):
+                  if "pull_request" not in triggers:
+                      continue
+              elif isinstance(triggers, dict):
+                  if "pull_request" not in triggers:
+                      continue
+              else:
+                  continue
+              for job_name, job in workflow.get("jobs", {}).items():
+                  for i, step in enumerate(job.get("steps") or []):
+                      uses = step.get("uses", "")
+                      if not uses.startswith("actions/checkout"):
+                          continue
+                      with_block = step.get("with") or {}
+                      if "ref" not in with_block:
+                          errors.append(
+                              f"  {path}: job '{job_name}', step {i + 1} "
+                              f"uses {uses} without a 'ref'"
+                          )
+
+          if errors:
+              print("actions/checkout steps missing 'ref':")
+              print("\n".join(errors))
+              sys.exit(1)
+          print("All actions/checkout steps have a 'ref' specified.")
 
   summary:
     name: Summary (lint)
@@ -67,6 +126,7 @@ jobs:
     needs:
       - enforce-changeset
       - lint
+      - lint-actions
     steps:
       - name: Check All
         run: |-

@@ -1002,7 +1002,7 @@ export async function serverBuild({
               await fs.readFile(`${serverComponentFile}.nft.json`, 'utf8')
             );
             scTrace.files.forEach((file: string) => files.push(file));
-          } catch (err) {
+          } catch (_err) {
             /* non-fatal for now */
           }
         }
@@ -1425,10 +1425,10 @@ export async function serverBuild({
         ),
         operationType,
         memory: group.memory,
-        runtime: nodeVersion.runtime,
-        maxDuration: group.maxDuration,
         regions: group.regions,
         functionFailoverRegions: group.functionFailoverRegions,
+        runtime: nodeVersion.runtime,
+        maxDuration: group.maxDuration,
         supportsCancellation: group.supportsCancellation,
         isStreaming: group.isStreaming,
         nextVersion,

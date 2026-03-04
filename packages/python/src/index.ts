@@ -16,6 +16,9 @@ import {
   scanParentDirs,
   getEnvForPackageManager,
   isPythonFramework,
+  Span,
+  BUILDER_INSTALLER_STEP,
+  BUILDER_COMPILE_STEP,
   type BuildOptions,
   type GlobOptions,
   type BuildV3,
@@ -47,6 +50,7 @@ import {
   ensureVenv,
   createVenvEnv,
 } from './utils';
+import { runQuirks } from './quirks';
 
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
@@ -84,12 +88,18 @@ export const build: BuildV3 = async ({
   entrypoint,
   meta = {},
   config,
+  span: parentSpan,
 }) => {
+  const builderSpan = parentSpan ?? new Span({ name: 'vc.builder' });
   const framework = config?.framework;
   const shouldInstallVercelWorkers = config?.hasWorkerServices === true;
   let spawnEnv: NodeJS.ProcessEnv | undefined;
   // Custom install command from dashboard/project settings, if any.
   let projectInstallCommand: string | undefined;
+  // Track whether a custom build or install command was used.
+  // When true, runtime dependency installation is disabled because
+  // custom commands may install dependencies not tracked in uv.lock.
+  let hasCustomCommand = false;
 
   debug(`workPath: ${workPath}`);
 
@@ -115,52 +125,6 @@ export const build: BuildV3 = async ({
   } catch (err) {
     console.log('Failed to create "setup.cfg" file');
     throw err;
-  }
-
-  // For Python frameworks, also honor project install/build commands (vercel.json/dashboard)
-  if (isPythonFramework(framework)) {
-    const {
-      cliType,
-      lockfileVersion,
-      packageJsonPackageManager,
-      turboSupportsCorepackHome,
-    } = await scanParentDirs(workPath, true);
-    spawnEnv = getEnvForPackageManager({
-      cliType,
-      lockfileVersion,
-      packageJsonPackageManager,
-      env: process.env,
-      turboSupportsCorepackHome,
-      projectCreatedAt: config?.projectSettings?.createdAt,
-    });
-
-    const installCommand = config?.projectSettings?.installCommand;
-    if (typeof installCommand === 'string') {
-      const trimmed = installCommand.trim();
-      if (trimmed) {
-        projectInstallCommand = trimmed;
-      } else {
-        console.log('Skipping "install" command...');
-      }
-    }
-
-    const projectBuildCommand =
-      config?.projectSettings?.buildCommand ??
-      // fallback if provided directly on config (some callers set this)
-      (config as any)?.buildCommand;
-    if (projectBuildCommand) {
-      console.log(`Running "${projectBuildCommand}"`);
-      await execCommand(projectBuildCommand, {
-        env: spawnEnv,
-        cwd: workPath,
-      });
-    } else {
-      await runPyprojectScript(
-        workPath,
-        ['vercel-build', 'now-build', 'build'],
-        spawnEnv
-      );
-    }
   }
 
   let fsFiles = await glob('**', workPath);
@@ -215,81 +179,92 @@ export const build: BuildV3 = async ({
   });
 
   // Determine Python version from .python-version, pyproject.toml, or Pipfile.lock if present.
-  let declaredPythonVersion:
-    | {
-        version: string;
-        source: 'Pipfile.lock' | 'pyproject.toml' | '.python-version';
-      }
-    | undefined;
+  const { pythonVersion, declaredPythonVersion } = await builderSpan
+    .child('vc.builder.python.version')
+    .trace(async versionSpan => {
+      let declared:
+        | {
+            version: string;
+            source: 'Pipfile.lock' | 'pyproject.toml' | '.python-version';
+          }
+        | undefined;
 
-  // .python-version is the highest priority because its what uv will use to select dependencies
-  if (pythonVersionFileDir) {
-    try {
-      const content = await readFile(
-        join(pythonVersionFileDir, '.python-version'),
-        'utf8'
-      );
-      const version = parsePythonVersionFile(content);
-      if (version) {
-        declaredPythonVersion = { version, source: '.python-version' };
-        debug(`Found Python version ${version} in .python-version`);
+      // .python-version is the highest priority because its what uv will use to select dependencies
+      if (pythonVersionFileDir) {
+        try {
+          const content = await readFile(
+            join(pythonVersionFileDir, '.python-version'),
+            'utf8'
+          );
+          const version = parsePythonVersionFile(content);
+          if (version) {
+            declared = { version, source: '.python-version' };
+            debug(`Found Python version ${version} in .python-version`);
+          }
+        } catch (err) {
+          debug('Failed to read .python-version file', err);
+        }
       }
-    } catch (err) {
-      debug('Failed to read .python-version file', err);
-    }
-  }
 
-  if (!declaredPythonVersion && pyprojectDir) {
-    let requiresPython: string | undefined;
-    try {
-      const pyproject = await readConfigFile<{
-        project?: { ['requires-python']?: string };
-      }>(join(pyprojectDir, 'pyproject.toml'));
-      requiresPython = pyproject?.project?.['requires-python'];
-    } catch (err) {
-      debug('Failed to parse pyproject.toml', err);
-    }
-    if (typeof requiresPython === 'string' && requiresPython.trim()) {
-      declaredPythonVersion = {
-        version: requiresPython.trim(),
-        source: 'pyproject.toml',
-      };
-      debug(`Found requires-python "${requiresPython}" in pyproject.toml`);
-    }
-  }
-
-  if (!declaredPythonVersion && pipfileLockDir) {
-    let lock: {
-      _meta?: { requires?: { python_version?: string } };
-    } = {};
-    const pipfileLockPath = join(pipfileLockDir, 'Pipfile.lock');
-    try {
-      const pipfileLockContent = await readFile(pipfileLockPath, 'utf8');
-      try {
-        lock = JSON.parse(pipfileLockContent);
-      } catch (err) {
-        console.log(
-          `Failed to parse "Pipfile.lock". File content:\n${pipfileLockContent}`
-        );
-        throw err;
+      if (!declared && pyprojectDir) {
+        let requiresPython: string | undefined;
+        try {
+          const pyproject = await readConfigFile<{
+            project?: { ['requires-python']?: string };
+          }>(join(pyprojectDir, 'pyproject.toml'));
+          requiresPython = pyproject?.project?.['requires-python'];
+        } catch (err) {
+          debug('Failed to parse pyproject.toml', err);
+        }
+        if (typeof requiresPython === 'string' && requiresPython.trim()) {
+          declared = {
+            version: requiresPython.trim(),
+            source: 'pyproject.toml',
+          };
+          debug(`Found requires-python "${requiresPython}" in pyproject.toml`);
+        }
       }
-    } catch (err) {
-      throw new NowBuildError({
-        code: 'INVALID_PIPFILE_LOCK',
-        message: 'Unable to parse Pipfile.lock',
+
+      if (!declared && pipfileLockDir) {
+        let lock: {
+          _meta?: { requires?: { python_version?: string } };
+        } = {};
+        const pipfileLockPath = join(pipfileLockDir, 'Pipfile.lock');
+        try {
+          const pipfileLockContent = await readFile(pipfileLockPath, 'utf8');
+          try {
+            lock = JSON.parse(pipfileLockContent);
+          } catch (err) {
+            console.log(
+              `Failed to parse "Pipfile.lock". File content:\n${pipfileLockContent}`
+            );
+            throw err;
+          }
+        } catch (_err) {
+          throw new NowBuildError({
+            code: 'INVALID_PIPFILE_LOCK',
+            message: 'Unable to parse Pipfile.lock',
+          });
+        }
+        const pyFromLock = lock?._meta?.requires?.python_version;
+        if (pyFromLock) {
+          declared = { version: pyFromLock, source: 'Pipfile.lock' };
+          debug(`Found Python version ${pyFromLock} in Pipfile.lock`);
+        }
+      }
+
+      const resolved = getSupportedPythonVersion({
+        isDev: meta.isDev,
+        declaredPythonVersion: declared,
       });
-    }
-    const pyFromLock = lock?._meta?.requires?.python_version;
-    if (pyFromLock) {
-      declaredPythonVersion = { version: pyFromLock, source: 'Pipfile.lock' };
-      debug(`Found Python version ${pyFromLock} in Pipfile.lock`);
-    }
-  }
 
-  const pythonVersion = getSupportedPythonVersion({
-    isDev: meta.isDev,
-    declaredPythonVersion,
-  });
+      versionSpan.setAttributes({
+        'python.version': resolved.version,
+        'python.versionSource': declared?.source,
+      });
+
+      return { pythonVersion: resolved, declaredPythonVersion: declared };
+    });
 
   // Write a .python-version file on behalf of the user when:
   // no .python-version file exists and the required version in pyproject.toml
@@ -316,10 +291,40 @@ export const build: BuildV3 = async ({
   // Create a virtual environment under ".vercel/python/.venv" so dependencies
   // can be installed via `uv sync` and then vendored into the Lambda bundle.
   const venvPath = join(workPath, '.vercel', 'python', '.venv');
-  await ensureVenv({
-    pythonPath: pythonVersion.pythonPath,
-    venvPath,
+  await builderSpan.child('vc.builder.python.venv').trace(async () => {
+    await ensureVenv({
+      pythonPath: pythonVersion.pythonPath,
+      venvPath,
+    });
   });
+
+  // For Python frameworks, set up the env and extract the install command (vercel.json/dashboard)
+  if (isPythonFramework(framework)) {
+    const {
+      cliType,
+      lockfileVersion,
+      packageJsonPackageManager,
+      turboSupportsCorepackHome,
+    } = await scanParentDirs(workPath, true);
+    spawnEnv = getEnvForPackageManager({
+      cliType,
+      lockfileVersion,
+      packageJsonPackageManager,
+      env: process.env,
+      turboSupportsCorepackHome,
+      projectCreatedAt: config?.projectSettings?.createdAt,
+    });
+
+    const installCommand = config?.projectSettings?.installCommand;
+    if (typeof installCommand === 'string') {
+      const trimmed = installCommand.trim();
+      if (trimmed) {
+        projectInstallCommand = trimmed;
+      } else {
+        console.log('Skipping "install" command...');
+      }
+    }
+  }
 
   const baseEnv = spawnEnv || process.env;
   const pythonEnv = createVenvEnv(venvPath, baseEnv);
@@ -330,23 +335,6 @@ export const build: BuildV3 = async ({
   // the default dependency installation: run the command inside the build
   // virtualenv
   let assumeDepsInstalled = false;
-  if (projectInstallCommand) {
-    console.log(`Running "install" command: \`${projectInstallCommand}\`...`);
-    await execCommand(projectInstallCommand, {
-      env: pythonEnv,
-      cwd: workPath,
-    });
-    assumeDepsInstalled = true;
-  } else {
-    // Check and run a custom vercel install command from project manifest.
-    // This will return `false` if no script was ran.
-    assumeDepsInstalled = await runPyprojectScript(
-      workPath,
-      ['vercel-install', 'now-install', 'install'],
-      pythonEnv,
-      /* useUserVirtualEnv */ false
-    );
-  }
 
   let uv: UvRunner;
   try {
@@ -368,66 +356,124 @@ export const build: BuildV3 = async ({
   let projectName: string | undefined;
   let noBuildCheckFailed = false;
 
-  if (!assumeDepsInstalled) {
-    // Default installation path: use uv to normalize manifests into a uv.lock and
-    // sync dependencies into the virtualenv, including required runtime deps.
-    // Ensure all installation paths are normalized into a pyproject.toml and uv.lock
-    // for consistent installation logic and idempotency.
-    const { projectDir, lockPath, lockFileProvidedByUser } =
-      await ensureUvProject({
-        workPath,
-        entryDirectory,
-        repoRootPath,
-        pythonVersion: pythonVersion.version,
-        uv,
-        generateLockFile: true,
-        requireBinaryWheels: false,
-      });
+  await builderSpan
+    .child(BUILDER_INSTALLER_STEP, {
+      installCommand: projectInstallCommand || undefined,
+    })
+    .trace(async () => {
+      if (projectInstallCommand) {
+        console.log(
+          `Running "install" command: \`${projectInstallCommand}\`...`
+        );
+        await execCommand(projectInstallCommand, {
+          env: pythonEnv,
+          cwd: workPath,
+        });
+        assumeDepsInstalled = true;
+        hasCustomCommand = true;
+      } else {
+        // Check and run a custom vercel install command from project manifest.
+        // This will return `false` if no script was ran.
+        assumeDepsInstalled = await runPyprojectScript(
+          workPath,
+          ['vercel-install', 'now-install', 'install'],
+          pythonEnv,
+          /* useUserVirtualEnv */ false
+        );
+        if (assumeDepsInstalled) {
+          hasCustomCommand = true;
+        }
+      }
 
-    uvLockPath = lockPath;
-    uvProjectDir = projectDir;
+      if (!assumeDepsInstalled) {
+        // Default installation path: use uv to normalize manifests into a uv.lock and
+        // sync dependencies into the virtualenv, including required runtime deps.
+        // Ensure all installation paths are normalized into a pyproject.toml and uv.lock
+        // for consistent installation logic and idempotency.
+        const { projectDir, lockPath, lockFileProvidedByUser } =
+          await ensureUvProject({
+            workPath,
+            entryDirectory,
+            repoRootPath,
+            pythonVersion: pythonVersion.version,
+            uv,
+            generateLockFile: true,
+            requireBinaryWheels: false,
+          });
 
-    // Get the project name from python-analysis for package classification
-    const installInfo = await detectInstallSource({
-      workPath,
-      entryDirectory,
-      repoRootPath,
-    });
-    projectName = installInfo.pythonPackage?.manifest?.data?.project?.name;
+        uvLockPath = lockPath;
+        uvProjectDir = projectDir;
 
-    // For user-provided lock files, check if all packages have binary wheels
-    // available BEFORE running the actual sync. We track this result so we can
-    // error later if runtime dependency installation is needed (which requires
-    // all public packages to have pre-built wheels).
-    if (lockFileProvidedByUser) {
-      try {
+        // Get the project name from python-analysis for package classification
+        const installInfo = await detectInstallSource({
+          workPath,
+          entryDirectory,
+          repoRootPath,
+        });
+        projectName = installInfo.pythonPackage?.manifest?.data?.project?.name;
+
+        // For user-provided lock files, check if all packages have binary wheels
+        // available BEFORE running the actual sync. We track this result so we can
+        // error later if runtime dependency installation is needed (which requires
+        // all public packages to have pre-built wheels).
+        if (lockFileProvidedByUser) {
+          try {
+            await uv.sync({
+              venvPath,
+              projectDir,
+              frozen: true,
+              noBuild: true,
+              noInstallProject: true,
+            });
+          } catch (err) {
+            // Note the failure but don't error yet - we only need wheels
+            // if runtime dependency install is required (bundle > 250MB)
+            noBuildCheckFailed = true;
+            debug(
+              `--no-build check failed: ${err instanceof Error ? err.message : String(err)}`
+            );
+          }
+        }
+
+        // `ensureUvProject` would have produced a `pyproject.toml` or `uv.lock`
+        // so we can use `uv sync` to install dependencies into the active
+        // virtual environment.
+        // Use --frozen for user-provided lock files (respects exact versions),
+        // --locked for generated lock files (validates consistency).
         await uv.sync({
           venvPath,
           projectDir,
-          frozen: true,
-          noBuild: true,
+          frozen: lockFileProvidedByUser,
+          locked: !lockFileProvidedByUser,
         });
-      } catch (err) {
-        // Note the failure but don't error yet - we only need wheels
-        // if runtime dependency install is required (bundle > 250MB)
-        noBuildCheckFailed = true;
-        debug(
-          `--no-build check failed: ${err instanceof Error ? err.message : String(err)}`
-        );
       }
-    }
-
-    // `ensureUvProject` would have produced a `pyproject.toml` or `uv.lock`
-    // so we can use `uv sync` to install dependencies into the active
-    // virtual environment.
-    // Use --frozen for user-provided lock files (respects exact versions),
-    // --locked for generated lock files (validates consistency).
-    await uv.sync({
-      venvPath,
-      projectDir,
-      frozen: lockFileProvidedByUser,
-      locked: !lockFileProvidedByUser,
     });
+
+  // Run the project build command (if any) AFTER dependencies are installed.
+  if (isPythonFramework(framework)) {
+    const projectBuildCommand =
+      config?.projectSettings?.buildCommand ??
+      // fallback if provided directly on config (some callers set this)
+      (config as any)?.buildCommand;
+    await builderSpan
+      .child(BUILDER_COMPILE_STEP, {
+        buildCommand: projectBuildCommand || undefined,
+      })
+      .trace(async () => {
+        if (projectBuildCommand) {
+          console.log(`Running "${projectBuildCommand}"`);
+          await execCommand(projectBuildCommand, {
+            env: pythonEnv,
+            cwd: workPath,
+          });
+        } else {
+          await runPyprojectScript(
+            workPath,
+            ['vercel-build', 'now-build', 'build'],
+            pythonEnv
+          );
+        }
+      });
   }
 
   // Ensure correct version of vercel-runtime is installed.
@@ -463,6 +509,14 @@ export const build: BuildV3 = async ({
     });
   }
 
+  // Run quirks: detect dependencies that need special handling (e.g. prisma)
+  // and perform fix-up routines before bundling.
+  const quirksResult = await runQuirks({ venvPath, pythonEnv, workPath });
+
+  // Apply build-time env vars from quirks so subsequent build steps can use them
+  if (quirksResult.buildEnv) {
+    Object.assign(pythonEnv, quirksResult.buildEnv);
+  }
   debug('Entrypoint is', entrypoint);
   const moduleName = entrypoint.replace(/\//g, '.').replace(/\.py$/i, '');
   const vendorDir = resolveVendorDir();
@@ -532,6 +586,7 @@ from vercel_runtime.vc_init import vc_handler
 
   const lambdaEnv = {} as Record<string, string>;
   lambdaEnv.PYTHONPATH = vendorDir;
+  Object.assign(lambdaEnv, quirksResult.env);
 
   const globOptions: GlobOptions = {
     cwd: workPath,
@@ -553,22 +608,36 @@ from vercel_runtime.vc_init import vc_handler
     projectName,
     noBuildCheckFailed,
     pythonPath: pythonVersion.pythonPath,
-    additionalPrivatePackages: shouldInstallVercelWorkers
-      ? ['vercel-workers', 'vercel_workers']
-      : [],
+    hasCustomCommand,
+    alwaysBundlePackages: [
+      ...quirksResult.alwaysBundlePackages,
+      ...(shouldInstallVercelWorkers
+        ? ['vercel-workers', 'vercel_workers']
+        : []),
+    ],
   });
 
-  const { overLambdaLimit, allVendorFiles } =
-    await depExternalizer.analyze(files);
+  await builderSpan
+    .child('vc.builder.python.bundle')
+    .trace(async bundleSpan => {
+      const depAnalysis = await depExternalizer.analyze(files);
 
-  if (overLambdaLimit) {
-    await depExternalizer.generateBundle(files);
-  } else {
-    // Bundle all dependencies since we're not doing runtime installation
-    for (const [p, f] of Object.entries(allVendorFiles)) {
-      files[p] = f;
-    }
-  }
+      bundleSpan.setAttributes({
+        'python.bundle.totalSizeBytes': String(depAnalysis.totalBundleSize),
+        'python.bundle.runtimeInstallEnabled': String(
+          depAnalysis.runtimeInstallEnabled
+        ),
+      });
+
+      if (depAnalysis.runtimeInstallEnabled) {
+        await depExternalizer.generateBundle(files);
+      } else {
+        // Bundle all dependencies since we're not doing runtime installation
+        for (const [p, f] of Object.entries(depAnalysis.allVendorFiles)) {
+          files[p] = f;
+        }
+      }
+    });
 
   // in order to allow the user to have `server.py`, we
   // need our `server.py` to be called something else
@@ -599,19 +668,13 @@ export { startDevServer };
 
 export const shouldServe: ShouldServe = opts => {
   const framework = opts.config.framework;
-  if (framework === 'fastapi') {
+  if (isPythonFramework(framework)) {
     const requestPath = opts.requestPath.replace(/\/$/, '');
     // Don't override API routes if another builder already matched them
     if (requestPath.startsWith('api') && opts.hasMatched) {
       return false;
     }
     // Public assets are served by the static builder / default handler
-    return true;
-  } else if (framework === 'flask') {
-    const requestPath = opts.requestPath.replace(/\/$/, '');
-    if (requestPath.startsWith('api') && opts.hasMatched) {
-      return false;
-    }
     return true;
   }
   return defaultShouldServe(opts);

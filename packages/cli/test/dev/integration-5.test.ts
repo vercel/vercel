@@ -3,13 +3,13 @@ import ms from 'ms';
 import fs, { mkdirp } from 'fs-extra';
 import {
   sleep,
-  fetch,
   fixture,
   testFixture,
   testFixtureStdio,
   validateResponseHeaders,
 } from './utils';
 import assert from 'assert';
+import nodeFetch from 'node-fetch';
 
 test(
   '[vercel dev] temporary directory listing',
@@ -21,7 +21,7 @@ test(
 
       await sleep(ms('20s'));
 
-      const firstResponse = await fetch(`http://localhost:${port}`);
+      const firstResponse = await nodeFetch(`http://localhost:${port}`);
       validateResponseHeaders(firstResponse);
       const body = await firstResponse.text();
       // eslint-disable-next-line no-console
@@ -31,7 +31,7 @@ test(
       await fs.writeFile(join(directory, 'index.txt'), 'hello');
 
       for (let i = 0; i < 20; i++) {
-        const response = await fetch(`http://localhost:${port}`);
+        const response = await nodeFetch(`http://localhost:${port}`);
         validateResponseHeaders(response);
 
         if (response.status === 200) {
@@ -59,7 +59,7 @@ test('[vercel dev] add a `package.json` to trigger `@vercel/static-build`', asyn
     'trigger-static-build',
     async (_testPath: any, port: any) => {
       {
-        const response = await fetch(`http://localhost:${port}`);
+        const response = await nodeFetch(`http://localhost:${port}`);
         validateResponseHeaders(response);
         const body = await response.text();
         expect(body.trim()).toBe('hello:index.txt');
@@ -77,7 +77,7 @@ test('[vercel dev] add a `package.json` to trigger `@vercel/static-build`', asyn
       await sleep(ms('2s'));
 
       {
-        const response = await fetch(`http://localhost:${port}`);
+        const response = await nodeFetch(`http://localhost:${port}`);
         validateResponseHeaders(response);
         const body = await response.text();
         expect(body.trim()).toBe(rnd);
@@ -146,7 +146,7 @@ test('[vercel dev] render warning for empty cwd dir', async () => {
 
     // Issue a request to ensure a 404 response
     await sleep(ms('3s'));
-    const response = await fetch(`http://localhost:${port}`);
+    const response = await nodeFetch(`http://localhost:${port}`);
     validateResponseHeaders(response);
     expect(response.status).toBe(404);
   } finally {
@@ -180,7 +180,7 @@ test('[vercel dev] do not rebuild for changes in the output directory', async ()
       }
     }
 
-    const resp1 = await fetch(`http://localhost:${port}`);
+    const resp1 = await nodeFetch(`http://localhost:${port}`);
     const text1 = await resp1.text();
     expect(text1.trim()).toBe('hello first');
 
@@ -188,7 +188,7 @@ test('[vercel dev] do not rebuild for changes in the output directory', async ()
 
     await sleep(ms('3s'));
 
-    const resp2 = await fetch(`http://localhost:${port}`);
+    const resp2 = await nodeFetch(`http://localhost:${port}`);
     const text2 = await resp2.text();
     expect(text2.trim()).toBe('hello second');
   } finally {
@@ -363,7 +363,7 @@ test(
       await testPath(
         500,
         '/',
-        /Route at index 0 has invalid `src` regular expression/m
+        /Route at index 0 has invalid `src`\/`source` regular expression/m
       );
     },
     { skipDeploy: true }
@@ -397,7 +397,9 @@ test(
 
     try {
       {
-        const response = await fetch(`http://localhost:${port}/api/new-file`);
+        const response = await nodeFetch(
+          `http://localhost:${port}/api/new-file`
+        );
         validateResponseHeaders(response);
         expect(response.status).toBe(404);
       }
@@ -419,7 +421,9 @@ test(
       await sleep(ms('1s'));
 
       {
-        const response = await fetch(`http://localhost:${port}/api/new-file`);
+        const response = await nodeFetch(
+          `http://localhost:${port}/api/new-file`
+        );
         validateResponseHeaders(response);
         const body = await response.text();
         expect(body.trim()).toBe('from new file');
@@ -436,12 +440,12 @@ describe('[vercel dev] Express', () => {
     testFixtureStdio(
       'express-no-export',
       async (_testPath: any, port: any) => {
-        const res = await fetch(`http://localhost:${port}`);
+        const res = await nodeFetch(`http://localhost:${port}`);
         validateResponseHeaders(res);
         const json = await res.json();
         expect(json).toHaveProperty('message', 'Hello Express!');
 
-        const res2 = await fetch(`http://localhost:${port}/test.json`);
+        const res2 = await nodeFetch(`http://localhost:${port}/test.json`);
         validateResponseHeaders(res2);
         const json2 = await res2.json();
         expect(json2).toHaveProperty('message', 'Hello Express!');
@@ -457,7 +461,7 @@ describe('[vercel dev] ESM edge functions', () => {
     testFixtureStdio(
       'esm-js-edge-module',
       async (_testPath: any, port: any) => {
-        const res = await fetch(`http://localhost:${port}/api/data`);
+        const res = await nodeFetch(`http://localhost:${port}/api/data`);
         validateResponseHeaders(res);
         const json = await res.json();
         expect(json).toHaveProperty('isLeapYear');
@@ -471,7 +475,7 @@ describe('[vercel dev] ESM edge functions', () => {
     testFixtureStdio(
       'esm-ts-edge-module',
       async (_testPath: any, port: any) => {
-        const res = await fetch(`http://localhost:${port}/api/data`);
+        const res = await nodeFetch(`http://localhost:${port}/api/data`);
         validateResponseHeaders(res);
         const json = await res.json();
         expect(json).toHaveProperty('isLeapYear');
@@ -485,7 +489,7 @@ describe('[vercel dev] ESM edge functions', () => {
     testFixtureStdio(
       'esm-js-edge-no-module',
       async (_testPath: any, port: any) => {
-        const res = await fetch(`http://localhost:${port}/api/data`);
+        const res = await nodeFetch(`http://localhost:${port}/api/data`);
         validateResponseHeaders(res);
         const json = await res.json();
         expect(json).toHaveProperty('isLeapYear');
@@ -499,7 +503,7 @@ describe('[vercel dev] ESM edge functions', () => {
     testFixtureStdio(
       'esm-ts-edge-no-module',
       async (_testPath: any, port: any) => {
-        const res = await fetch(`http://localhost:${port}/api/data`);
+        const res = await nodeFetch(`http://localhost:${port}/api/data`);
         validateResponseHeaders(res);
         const json = await res.json();
         expect(json).toHaveProperty('isLeapYear');
@@ -515,7 +519,7 @@ describe('[vercel dev] ESM serverless functions', () => {
     testFixtureStdio(
       'esm-js-nodejs-module',
       async (_testPath: any, port: any) => {
-        const res = await fetch(`http://localhost:${port}/api/data`);
+        const res = await nodeFetch(`http://localhost:${port}/api/data`);
         validateResponseHeaders(res);
         const json = await res.json();
         expect(json).toHaveProperty('isLeapYear');
@@ -529,7 +533,7 @@ describe('[vercel dev] ESM serverless functions', () => {
     testFixtureStdio(
       'esm-ts-nodejs-module',
       async (_testPath: any, port: any) => {
-        const res = await fetch(`http://localhost:${port}/api/data`);
+        const res = await nodeFetch(`http://localhost:${port}/api/data`);
         validateResponseHeaders(res);
         const json = await res.json();
         expect(json).toHaveProperty('isLeapYear');
@@ -543,7 +547,7 @@ describe('[vercel dev] ESM serverless functions', () => {
     testFixtureStdio(
       'esm-js-nodejs-no-module',
       async (_testPath: any, port: any) => {
-        const res = await fetch(`http://localhost:${port}/api/data`);
+        const res = await nodeFetch(`http://localhost:${port}/api/data`);
         validateResponseHeaders(res);
         const json = await res.json();
         expect(json).toHaveProperty('isLeapYear');
@@ -557,7 +561,7 @@ describe('[vercel dev] ESM serverless functions', () => {
     testFixtureStdio(
       'esm-ts-nodejs-no-module',
       async (_testPath: any, port: any) => {
-        const res = await fetch(`http://localhost:${port}/api/data`);
+        const res = await nodeFetch(`http://localhost:${port}/api/data`);
         validateResponseHeaders(res);
         const json = await res.json();
         expect(json).toHaveProperty('isLeapYear');
@@ -571,7 +575,7 @@ describe('[vercel dev] ESM serverless functions', () => {
     testFixtureStdio(
       'vercel-ts-test',
       async (_testPath: any, port: number) => {
-        const res = await fetch(`http://localhost:${port}/api/test`);
+        const res = await nodeFetch(`http://localhost:${port}/api/test`);
         validateResponseHeaders(res);
         const text = await res.text();
         expect(text).toEqual('Hello, Batman!');
@@ -587,7 +591,7 @@ describe('[vercel dev] Hono', () => {
     testFixtureStdio(
       'hono-no-export',
       async (_testPath: any, port: number) => {
-        const res = await fetch(`http://localhost:${port}/test.json`);
+        const res = await nodeFetch(`http://localhost:${port}/test.json`);
         validateResponseHeaders(res);
         const json2 = await res.json();
         expect(json2).toHaveProperty('message', 'Hello Hono!');
@@ -595,4 +599,298 @@ describe('[vercel dev] Hono', () => {
       { skipDeploy: true }
     )
   );
+});
+
+describe('[vercel dev] Multi-service with experimentalServices', () => {
+  test('[vercel dev] explicit config with Next.js + 2 Python services', async () => {
+    const dir = fixture('services-explicit-config');
+    const { dev, port, readyResolver } = await testFixture(
+      dir,
+      {
+        skipNpmInstall: true,
+        env: {
+          VERCEL_USE_EXPERIMENTAL_SERVICES: '1',
+          VERCEL_USE_EXPERIMENTAL_FRAMEWORKS: '1',
+        },
+      },
+      ['--local']
+    );
+
+    try {
+      await readyResolver;
+
+      // FastAPI service
+      const fastapiRes = await nodeFetch(
+        `http://localhost:${port}/api/fastapi/`
+      );
+      expect(fastapiRes.status).toBe(200);
+      const fastapiJson = await fastapiRes.json();
+      expect(fastapiJson).toHaveProperty('framework', 'fastapi');
+      expect(fastapiJson).toHaveProperty('service', 'service-fastapi');
+
+      // Flask service
+      const flaskRes = await nodeFetch(`http://localhost:${port}/api/flask/`);
+      expect(flaskRes.status).toBe(200);
+      const flaskJson = await flaskRes.json();
+      expect(flaskJson).toHaveProperty('framework', 'flask');
+      expect(flaskJson).toHaveProperty('service', 'service-flask');
+
+      // Next.js frontend
+      const frontendRes = await nodeFetch(`http://localhost:${port}/`);
+      expect(frontendRes.status).toBe(200);
+      const frontendHtml = await frontendRes.text();
+      expect(frontendHtml).toContain('Frontend - Explicit Config (Next.js)');
+    } finally {
+      await dev.kill();
+    }
+  });
+});
+
+describe('[vercel dev] Multi-service auto-detection', () => {
+  test('[vercel dev] auto-detect: frontend at root + backend/', async () => {
+    const dir = fixture('services-zc-root-backend');
+    const { dev, port, readyResolver } = await testFixture(
+      dir,
+      {
+        skipNpmInstall: true,
+        env: {
+          VERCEL_USE_EXPERIMENTAL_SERVICES: '1',
+          VERCEL_USE_EXPERIMENTAL_FRAMEWORKS: '1',
+        },
+      },
+      ['--local']
+    );
+
+    try {
+      await readyResolver;
+
+      // Backend service is routed to /_/backend
+      const backendRes = await nodeFetch(`http://localhost:${port}/_/backend/`);
+      validateResponseHeaders(backendRes);
+      const backendJson = await backendRes.json();
+      expect(backendJson).toHaveProperty(
+        'message',
+        'Hello from auto-detected backend!'
+      );
+      expect(backendJson).toHaveProperty('service', 'backend');
+
+      // Test another backend endpoint
+      const statusRes = await nodeFetch(
+        `http://localhost:${port}/_/backend/status`
+      );
+      validateResponseHeaders(statusRes);
+      const statusJson = await statusRes.json();
+      expect(statusJson).toHaveProperty('status', 'ok');
+
+      // Frontend at root
+      const frontendRes = await nodeFetch(`http://localhost:${port}/`);
+      validateResponseHeaders(frontendRes);
+      const frontendHtml = await frontendRes.text();
+      expect(frontendHtml).toContain('<h1>Auto-Detected Frontend at Root</h1>');
+    } finally {
+      await dev.kill();
+    }
+  });
+
+  test('[vercel dev] auto-detect: frontend/ + backend/', async () => {
+    const dir = fixture('services-zc-frontend-backend');
+    const { dev, port, readyResolver } = await testFixture(
+      dir,
+      {
+        skipNpmInstall: true,
+        env: {
+          VERCEL_USE_EXPERIMENTAL_SERVICES: '1',
+          VERCEL_USE_EXPERIMENTAL_FRAMEWORKS: '1',
+        },
+      },
+      ['--local']
+    );
+
+    try {
+      await readyResolver;
+
+      // Backend service is routed to /_/backend
+      const backendRes = await nodeFetch(`http://localhost:${port}/_/backend/`);
+      validateResponseHeaders(backendRes);
+      const backendJson = await backendRes.json();
+      expect(backendJson).toHaveProperty(
+        'message',
+        'Hello from backend service!'
+      );
+      expect(backendJson).toHaveProperty('service', 'backend');
+
+      // Test another backend endpoint
+      const dataRes = await nodeFetch(
+        `http://localhost:${port}/_/backend/data`
+      );
+      validateResponseHeaders(dataRes);
+      const dataJson = await dataRes.json();
+      expect(dataJson).toHaveProperty('items');
+      expect(dataJson.items).toHaveLength(3);
+
+      // Frontend service at root
+      const frontendRes = await nodeFetch(`http://localhost:${port}/`);
+      validateResponseHeaders(frontendRes);
+      const frontendHtml = await frontendRes.text();
+      expect(frontendHtml).toContain(
+        '<h1>Frontend in frontend/ directory</h1>'
+      );
+    } finally {
+      await dev.kill();
+    }
+  });
+
+  test('[vercel dev] auto-detect: frontend/ + services/', async () => {
+    const dir = fixture('services-zc-frontend-services');
+    const { dev, port, readyResolver } = await testFixture(
+      dir,
+      {
+        skipNpmInstall: true,
+        env: {
+          VERCEL_USE_EXPERIMENTAL_SERVICES: '1',
+          VERCEL_USE_EXPERIMENTAL_FRAMEWORKS: '1',
+        },
+      },
+      ['--local']
+    );
+
+    try {
+      await readyResolver;
+
+      // FastAPI service
+      const fastapiRes = await nodeFetch(
+        `http://localhost:${port}/_/service-fastapi/`
+      );
+      expect(fastapiRes.status).toBe(200);
+      const fastapiJson = await fastapiRes.json();
+      expect(fastapiJson).toHaveProperty('framework', 'fastapi');
+      expect(fastapiJson).toHaveProperty('service', 'service-fastapi');
+
+      // Flask service
+      const flaskRes = await nodeFetch(
+        `http://localhost:${port}/_/service-flask/`
+      );
+      expect(flaskRes.status).toBe(200);
+      const flaskJson = await flaskRes.json();
+      expect(flaskJson).toHaveProperty('framework', 'flask');
+      expect(flaskJson).toHaveProperty('service', 'service-flask');
+
+      // Frontend service at root
+      const frontendRes = await nodeFetch(`http://localhost:${port}/`);
+      expect(frontendRes.status).toBe(200);
+      const frontendHtml = await frontendRes.text();
+      expect(frontendHtml).toContain(
+        '<h1>Frontend with services/ directory</h1>'
+      );
+    } finally {
+      await dev.kill();
+    }
+  });
+
+  test('[vercel dev] auto-detect: apps/web/ + services/ (monorepo)', async () => {
+    const dir = fixture('services-zc-apps-services');
+    const { dev, port, readyResolver } = await testFixture(
+      dir,
+      {
+        skipNpmInstall: true,
+        env: {
+          VERCEL_USE_EXPERIMENTAL_SERVICES: '1',
+          VERCEL_USE_EXPERIMENTAL_FRAMEWORKS: '1',
+        },
+      },
+      ['--local']
+    );
+
+    try {
+      await readyResolver;
+
+      // FastAPI service
+      const fastapiRes = await nodeFetch(
+        `http://localhost:${port}/_/service-fastapi/`
+      );
+      expect(fastapiRes.status).toBe(200);
+      const fastapiJson = await fastapiRes.json();
+      expect(fastapiJson).toHaveProperty('framework', 'fastapi');
+      expect(fastapiJson).toHaveProperty('service', 'service-fastapi');
+
+      // Flask service
+      const flaskRes = await nodeFetch(
+        `http://localhost:${port}/_/service-flask/`
+      );
+      expect(flaskRes.status).toBe(200);
+      const flaskJson = await flaskRes.json();
+      expect(flaskJson).toHaveProperty('framework', 'flask');
+      expect(flaskJson).toHaveProperty('service', 'service-flask');
+
+      // Frontend service at root (from apps/web)
+      const frontendRes = await nodeFetch(`http://localhost:${port}/`);
+      expect(frontendRes.status).toBe(200);
+      const frontendHtml = await frontendRes.text();
+      expect(frontendHtml).toContain(
+        '<h1>Frontend in apps/web/ (monorepo)</h1>'
+      );
+    } finally {
+      await dev.kill();
+    }
+  });
+
+  test('[vercel dev] auto-detect: service-to-service communication', async () => {
+    const dir = fixture('services-zc-service-to-service');
+    const { dev, port, readyResolver } = await testFixture(
+      dir,
+      {
+        skipNpmInstall: true,
+        env: {
+          VERCEL_USE_EXPERIMENTAL_SERVICES: '1',
+          VERCEL_USE_EXPERIMENTAL_FRAMEWORKS: '1',
+        },
+      },
+      ['--local']
+    );
+
+    try {
+      await readyResolver;
+
+      // Service B responds independently
+      const serviceBRes = await nodeFetch(
+        `http://localhost:${port}/_/service-b/`
+      );
+      expect(serviceBRes.status).toBe(200);
+      const serviceBJson = await serviceBRes.json();
+      expect(serviceBJson).toHaveProperty('service', 'service-b');
+      expect(serviceBJson).toHaveProperty('message', 'Hello from service-b');
+
+      // Service A responds independently
+      const serviceARes = await nodeFetch(
+        `http://localhost:${port}/_/service-a/`
+      );
+      expect(serviceARes.status).toBe(200);
+      const serviceAJson = await serviceARes.json();
+      expect(serviceAJson).toHaveProperty('service', 'service-a');
+
+      // Service A calls Service B (service-to-service communication)
+      const callRes = await nodeFetch(
+        `http://localhost:${port}/_/service-a/call-service-b`
+      );
+      expect(callRes.status).toBe(200);
+      const callJson = await callRes.json();
+      expect(callJson).toHaveProperty('service', 'service-a');
+      expect(callJson).toHaveProperty('from_service_b');
+      expect(callJson.from_service_b).toHaveProperty('service', 'service-b');
+      expect(callJson.from_service_b).toHaveProperty(
+        'message',
+        'Hello from service-b'
+      );
+
+      // Frontend loads and received service URL env vars
+      const frontendRes = await nodeFetch(`http://localhost:${port}/`);
+      expect(frontendRes.status).toBe(200);
+      const frontendHtml = await frontendRes.text();
+      expect(frontendHtml).toContain('<h1>Service Dashboard</h1>');
+      expect(frontendHtml).toContain('/_/service-a');
+      expect(frontendHtml).toContain('/_/service-b');
+    } finally {
+      await dev.kill();
+    }
+  });
 });

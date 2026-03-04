@@ -28,6 +28,7 @@ from vercel_runtime.crons import (
 from vercel_runtime.headers import (
     clear_vercel_headers_context,
     decode_header_bytes,
+    normalize_event_header_pairs,
     normalize_event_headers,
     set_vercel_headers_from_asgi_pairs,
     set_vercel_headers_from_http_headers,
@@ -58,7 +59,31 @@ def _stderr(message: str) -> None:
 
 def _fatal(message: str) -> Never:
     _stderr(message)
+    _send_unrecoverable_error(message)
     sys.exit(1)
+
+
+def _fatal_exc(label: str) -> Never:
+    """Report a fatal exception (with traceback) and exit."""
+    _fatal(f"{label}:\n{traceback.format_exc()}")
+
+
+def _send_unrecoverable_error(message: str) -> None:
+    """Send an ``unrecoverable-error`` IPC message to the functions runtime.
+
+    This is the only message type (besides ``server-started``) that the
+    functions runtime accepts before the handshake completes, so it is the
+    correct way to report fatal errors during module import.
+    """
+    send_message(
+        {
+            "type": "unrecoverable-error",
+            "payload": {
+                "exitCode": 1,
+                "message": message,
+            },
+        }
+    )
 
 
 def _must_getenv(varname: str) -> str:
@@ -391,6 +416,20 @@ def enqueue_or_send_message(msg: _IpcMessage) -> None:
             _original_stderr.write(decoded + "\n")
 
 
+def _flush_init_log_buf() -> None:
+    """Flush buffered init logs through IPC and mark the channel as ready.
+
+    Called once the ``server-started`` handshake is complete so the functions
+    runtime will accept ``log`` messages.
+    """
+    global _ipc_ready, _init_log_buf_bytes  # noqa: PLW0603
+    _ipc_ready = True
+    for m in _init_log_buf:
+        send_message(m)
+    _init_log_buf.clear()
+    _init_log_buf_bytes = 0
+
+
 def flush_init_log_buf_to_stderr() -> None:
     global _init_log_buf_bytes  # noqa: PLW0603
     try:
@@ -434,9 +473,6 @@ _uv_dir = os.path.join(lambda_root, "_uv")
 _runtime_config_path = os.path.join(_uv_dir, "_runtime_config.json")
 
 if os.path.exists(_runtime_config_path):
-    # Ensure writable config dir for libraries like Matplotlib on Lambda.
-    os.environ.setdefault("MPLCONFIGDIR", "/tmp")
-
     import site
     import subprocess
 
@@ -533,6 +569,11 @@ if os.path.exists(_runtime_config_path):
             pass
         sys.path.insert(0, _site_packages)
 
+# Allow quirks to prepend directories to PATH (e.g. for bundled shims).
+_extra_path = os.environ.get("VERCEL_RUNTIME_ENV_PATH_PREPEND")
+if _extra_path:
+    os.environ["PATH"] = _extra_path + ":" + os.environ.get("PATH", "")
+
 # Import relative path
 # https://docs.python.org/3/library/importlib.html#importing-a-source-file-directly
 try:
@@ -547,18 +588,7 @@ try:
     __vc_spec.loader.exec_module(__vc_module)
     __vc_variables = dir(__vc_module)
 except Exception:
-    _stderr(f"Error importing {_entrypoint_rel}:")
-    _stderr(traceback.format_exc())
-    exit(1)
-
-if is_cron_service():
-    try:
-        __vc_module.__dict__["app"] = bootstrap_cron_service_app(__vc_module)
-        __vc_variables = dir(__vc_module)
-    except Exception:
-        _stderr("Error bootstrapping cron service app:")
-        _stderr(traceback.format_exc())
-        exit(1)
+    _fatal_exc(f'could not import "{_entrypoint_rel}"')
 
 if is_worker_service():
     if "handler" not in __vc_variables and "Handler" not in __vc_variables:
@@ -579,6 +609,15 @@ if is_worker_service():
             _stderr("Error bootstrapping worker service app:")
             _stderr(traceback.format_exc())
             exit(1)
+
+if is_cron_service():
+    try:
+        __vc_module.__dict__["app"] = bootstrap_cron_service_app(__vc_module)
+        __vc_variables = dir(__vc_module)
+    except Exception:
+        _stderr("Error bootstrapping cron service app:")
+        _stderr(traceback.format_exc())
+        exit(1)
 
 _use_legacy_asyncio = sys.version_info < (3, 10)
 
@@ -888,11 +927,10 @@ if "VERCEL_IPC_PATH" in os.environ:
             else __vc_module.Handler
         )
         if not issubclass(base, BaseHTTPRequestHandler):
-            _stderr("Handler must inherit from BaseHTTPRequestHandler")
-            _stderr(
+            _fatal(
+                "Handler must inherit from BaseHTTPRequestHandler\n"
                 "See the docs: https://vercel.com/docs/functions/serverless-functions/runtimes/python"
             )
-            exit(1)
 
         class Handler(BaseHandler, base):  # type: ignore[valid-type,misc]
             def handle_request(self) -> None:
@@ -1036,12 +1074,7 @@ if "VERCEL_IPC_PATH" in os.environ:
                     },
                 }
             )
-
-            # Mark IPC as ready and flush any buffered init logs
-            _ipc_ready = True
-            for m in _init_log_buf:
-                send_message(m)
-            _init_log_buf.clear()
+            _flush_init_log_buf()
 
             # Run the server (blocking)
             server.run()
@@ -1059,18 +1092,13 @@ if "VERCEL_IPC_PATH" in os.environ:
                 },
             }
         )
-        # Mark IPC as ready and flush any buffered init logs
-        _ipc_ready = True
-        for m in _init_log_buf:
-            send_message(m)
-        _init_log_buf.clear()
+        _flush_init_log_buf()
         server.serve_forever()  # type: ignore[attr-defined]
 
-    _stderr(f'Missing variable `handler` or `app` in file "{_entrypoint_rel}".')
-    _stderr(
+    _fatal(
+        f'Missing variable `handler` or `app` in file "{_entrypoint_rel}".\n'
         "See the docs: https://vercel.com/docs/functions/serverless-functions/runtimes/python"
     )
-    exit(1)
 
 if "handler" in __vc_variables or "Handler" in __vc_variables:
     base = (
@@ -1079,11 +1107,10 @@ if "handler" in __vc_variables or "Handler" in __vc_variables:
         else __vc_module.Handler
     )
     if not issubclass(base, BaseHTTPRequestHandler):
-        _stderr("Handler must inherit from BaseHTTPRequestHandler")
-        _stderr(
+        _fatal(
+            "Handler must inherit from BaseHTTPRequestHandler\n"
             "See the docs: https://vercel.com/docs/functions/serverless-functions/runtimes/python"
         )
-        exit(1)
 
     _stderr("using HTTP Handler")
     import _thread  # noqa: PLC2701
@@ -1253,6 +1280,93 @@ elif "app" in __vc_variables or "application" in __vc_variables:
 
         from vercel_runtime._vendor.werkzeug.datastructures import Headers
 
+        # asyncio.Runner keeps a persistent event loop across run() calls.
+        # The lifespan task stays suspended (awaiting the shutdown signal)
+        # while successive HTTP requests are dispatched on the same loop.
+        _asgi_runner = asyncio.Runner()
+
+        # --- ASGI Lifespan Protocol ---
+        _lifespan_receive_queue: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
+        _lifespan_send_queue: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
+        _lifespan_task: asyncio.Task[None] | None = None
+        _lifespan_active = False
+
+        async def _lifespan_startup(asgi_app: Any) -> bool:
+            """Run the ASGI lifespan startup sequence.
+
+            Returns True when the app acknowledges startup, False otherwise.
+            The lifespan task remains suspended (awaiting the shutdown
+            signal) so it stays alive for the duration of the process.
+            """
+            scope: _ASGIScope = {
+                "type": "lifespan",
+                "asgi": {"version": "3.0", "spec_version": "2.0"},
+            }
+
+            async def receive() -> dict[str, Any]:
+                return await _lifespan_receive_queue.get()
+
+            async def send(message: dict[str, Any]) -> None:
+                await _lifespan_send_queue.put(message)
+
+            # Start the lifespan coroutine as a background task.
+            # Store in outer scope to prevent GC (event loop holds weak refs).
+            global _lifespan_task  # noqa: PLW0603
+            _lifespan_task = asyncio.create_task(asgi_app(scope, receive, send))
+
+            # Ask the app to start up.
+            await _lifespan_receive_queue.put({"type": "lifespan.startup"})
+
+            # Race: wait for the app to respond OR the task to finish
+            # (apps that don't support lifespan return immediately).
+            send_future = asyncio.create_task(_lifespan_send_queue.get())
+            done, pending = await asyncio.wait(
+                {send_future, _lifespan_task},
+                timeout=30,
+                return_when=asyncio.FIRST_COMPLETED,
+            )
+
+            if send_future not in done:
+                # App completed or timed out without responding.
+                for p in pending:
+                    p.cancel()
+                _lifespan_task = None
+                return False
+
+            msg = send_future.result()
+            if msg.get("type") == "lifespan.startup.complete":
+                return True
+            if msg.get("type") == "lifespan.startup.failed":
+                _stderr(
+                    "ASGI lifespan startup failed: " + msg.get("message", "")
+                )
+            _lifespan_task.cancel()
+            _lifespan_task = None
+            return False
+
+        try:
+            _lifespan_active = _asgi_runner.run(_lifespan_startup(app))
+        except BaseException:
+            # App doesn't support lifespan — proceed without it.
+            _lifespan_active = False
+
+        def _lifespan_shutdown() -> None:
+            if not _lifespan_active:
+                return
+
+            async def _do_shutdown() -> None:
+                await _lifespan_receive_queue.put({"type": "lifespan.shutdown"})
+                with contextlib.suppress(TimeoutError, asyncio.CancelledError):
+                    async with asyncio.timeout(10):
+                        await _lifespan_send_queue.get()
+
+            with contextlib.suppress(BaseException):
+                _asgi_runner.run(_do_shutdown())
+
+        atexit.register(_lifespan_shutdown)
+
+        # --- HTTP Request Handling ---
+
         class ASGICycleState(enum.Enum):
             REQUEST = enum.auto()
             RESPONSE = enum.auto()
@@ -1275,9 +1389,6 @@ elif "app" in __vc_variables or "application" in __vc_variables:
                 from the application.
                 """
                 self.app_queue = asyncio.Queue()
-                loop: asyncio.AbstractEventLoop | None = None
-                if _use_legacy_asyncio:
-                    loop = asyncio.new_event_loop()
                 self.put_message(
                     {
                         "type": "http.request",
@@ -1287,16 +1398,8 @@ elif "app" in __vc_variables or "application" in __vc_variables:
                 )
 
                 asgi_instance = app(self.scope, self.receive, self.send)
-
-                if _use_legacy_asyncio and loop is not None:
-                    asgi_task = loop.create_task(asgi_instance)
-                    loop.run_until_complete(asgi_task)
-                else:
-                    asyncio.run(self.run_asgi_instance(asgi_instance))
+                _asgi_runner.run(asgi_instance)
                 return self.response
-
-            async def run_asgi_instance(self, asgi_instance: Any) -> None:
-                await asgi_instance
 
             def put_message(self, message: dict[str, Any]) -> None:
                 self.app_queue.put_nowait(message)
@@ -1374,7 +1477,14 @@ elif "app" in __vc_variables or "application" in __vc_variables:
         def vc_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
             payload = json.loads(event["body"])
 
-            headers = normalize_event_headers(payload.get("headers", {}))
+            header_pairs = normalize_event_header_pairs(
+                payload.get("headers", {})
+            )
+            headers: dict[str, str] = {}
+            headers_encoded: list[tuple[bytes, bytes]] = []
+            for key, value in header_pairs:
+                headers[key] = value
+                headers_encoded.append((key.lower().encode(), value.encode()))
 
             body = payload.get("body", b"")
             if payload.get("encoding") == "base64":
@@ -1388,10 +1498,6 @@ elif "app" in __vc_variables or "application" in __vc_variables:
             ) = _apply_service_route_prefix_to_target(payload["path"])
             path, query_str = _split_request_target(request_target)
             query = query_str.encode()
-
-            headers_encoded: list[list[bytes | list[bytes]]] = []
-            for k, v in headers.items():
-                headers_encoded.append([k.lower().encode(), v.encode()])
 
             scope: _ASGIScope = {
                 "server": (
@@ -1427,11 +1533,8 @@ elif "app" in __vc_variables or "application" in __vc_variables:
                 clear_vercel_headers_context()
 
 else:
-    _stderr(
+    _fatal(
         f"Missing variable `handler`, `app`, or `application` "
-        f'in file "{_entrypoint_rel}".'
-    )
-    _stderr(
+        f'in file "{_entrypoint_rel}".\n'
         "See the docs: https://vercel.com/docs/functions/serverless-functions/runtimes/python"
     )
-    exit(1)

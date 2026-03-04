@@ -5,45 +5,44 @@
  *   - `pnpm ci:publish` via `utils/publish-runtimes.mjs`
  *   - `.github/workflows/release-python-package.yml`
  *
- * Add new entries to `PYTHON_PACKAGES` to onboard additional Python packages.
+ * Package discovery is based on `utils/get-python-packages.js`.
  */
 
 import { execFileSync } from 'node:child_process';
 import { readFileSync, rmSync, readdirSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { resolve, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, '..');
 const PYTHON_VERSIONS_PATH = 'packages/python/src/package-versions.ts';
+const require = createRequire(import.meta.url);
+const { getPythonPackages } = require('../utils/get-python-packages.js');
 
-const PYTHON_PACKAGES = [
-  {
-    name: 'vercel-workers',
-    projectDir: 'python/vercel-workers',
-    versionPin: {
-      path: PYTHON_VERSIONS_PATH,
-      exportName: 'VERCEL_WORKERS_VERSION',
-    },
-    uvRunGroupArgs: ['--group=test'],
-    pytestArgs: ['-v', '--tb=short', '-k', 'not test_cqa_'],
+function toVersionExportName(packageName) {
+  const normalized = packageName
+    .replace(/[^a-zA-Z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .toUpperCase();
+  return `${normalized}_VERSION`;
+}
+
+const PYTHON_PACKAGES = getPythonPackages(root).map(pkg => ({
+  name: pkg.packageName,
+  projectDir: pkg.projectDir,
+  versionPin: {
+    path: PYTHON_VERSIONS_PATH,
+    exportName: toVersionExportName(pkg.packageName),
   },
-  {
-    name: 'vercel-runtime',
-    projectDir: 'python/vercel-runtime',
-    versionPin: {
-      path: PYTHON_VERSIONS_PATH,
-      exportName: 'VERCEL_RUNTIME_VERSION',
-    },
-    uvRunGroupArgs: ['--only-group=test'],
-    pytestArgs: ['-k', 'not test_cqa_'],
-  },
-].map(pkg => ({
-  ...pkg,
   pyprojectPath: `${pkg.projectDir}/pyproject.toml`,
   distDir: `${pkg.projectDir}/dist`,
   testsPath: `${pkg.projectDir}/tests`,
 }));
+
+if (PYTHON_PACKAGES.length === 0) {
+  throw new Error('No Python packages discovered under python/*/pyproject.toml');
+}
 const PYTHON_PACKAGE_NAMES = PYTHON_PACKAGES.map(pkg => pkg.name);
 
 const pythonPackageMap = new Map(PYTHON_PACKAGES.map(pkg => [pkg.name, pkg]));
@@ -127,8 +126,7 @@ function run(cmd, args) {
     execFileSync(cmd, args, { stdio: 'inherit', cwd: root });
   } catch (err) {
     const code = err.status ?? 1;
-    console.error(`command failed with exit code ${code}: ${cmdline}`);
-    process.exit(code);
+    throw new Error(`command failed with exit code ${code}: ${cmdline}`);
   }
 }
 
@@ -211,14 +209,17 @@ function publishPackage(pkg, { force }) {
 
   run('uv', [
     'run',
-    ...pkg.uvRunGroupArgs,
+    '--only-group=test',
     '--locked',
     '--isolated',
     `--project=${pkg.projectDir}`,
     '--with',
     wheelPath,
     'pytest',
-    ...pkg.pytestArgs,
+    '-v',
+    '--tb=short',
+    '-k',
+    'not test_cqa_',
     pkg.testsPath,
   ]);
 
@@ -232,8 +233,21 @@ function main() {
   const { force, packageNames } = parseArgs(process.argv.slice(2));
   const selectedPackages = packageNames.map(name => pythonPackageMap.get(name));
 
+  const failures = [];
   for (const pkg of selectedPackages) {
-    publishPackage(pkg, { force });
+    try {
+      publishPackage(pkg, { force });
+    } catch (err) {
+      console.error(`\nFailed to publish ${pkg.name}: ${err.message}\n`);
+      failures.push(pkg.name);
+    }
+  }
+
+  if (failures.length > 0) {
+    console.error(
+      `Publication failed for: ${failures.join(', ')} (${failures.length}/${selectedPackages.length} packages)`
+    );
+    process.exit(1);
   }
 }
 

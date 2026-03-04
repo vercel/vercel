@@ -47,4 +47,12 @@ jobs:
           version: '0.9.22'
 
       - name: Publish
-        run: node python/publish.mjs --package="${{ inputs.package }}" ${{ inputs.force == true && '--force' || '' }}
+        env:
+          PACKAGE: ${{ inputs.package }}
+          FORCE: ${{ inputs.force }}
+        run: |
+          args=(--package="$PACKAGE")
+          if [ "$FORCE" = "true" ]; then
+            args+=(--force)
+          fi
+          node python/publish.mjs "${args[@]}"

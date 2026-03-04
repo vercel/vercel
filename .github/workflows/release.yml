@@ -25,6 +25,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GH_TOKEN_PULL_REQUESTS }}
+          # Necessary for the publish step to work since it uses HEAD^ to determine if the version has changed
+          fetch-depth: 2
 
       - name: Fetch git tags
         run: git fetch origin 'refs/tags/*:refs/tags/*'

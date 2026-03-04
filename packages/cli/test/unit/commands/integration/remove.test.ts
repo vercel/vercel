@@ -89,7 +89,7 @@ describe('integration', () => {
           `No integration ${integration} found.`
         );
 
-        await expect(exitCodePromise).resolves.toEqual(0);
+        await expect(exitCodePromise).resolves.toEqual(1);
       });
     });
 
@@ -301,7 +301,91 @@ describe('integration', () => {
           await expect(client.stderr).toOutput('Uninstalling integration…');
 
           await expect(client.stderr).toOutput(
-            `Error: Failed to remove ${integration}: ${errorOptions.errorMessage} (${errorOptions.errorStatus})`
+            `Cannot uninstall ${integration} because it still has resources.`
+          );
+          await expect(client.stderr).toOutput(
+            'Resources that must be removed first:'
+          );
+          await expect(client.stderr).toOutput('store-acme-other-project');
+          await expect(client.stderr).toOutput('store-acme-no-projects');
+          await expect(client.stderr).toOutput(
+            `integration remove ${integration}`
+          );
+
+          await expect(exitCodePromise).resolves.toEqual(1);
+        });
+
+        it('should return structured JSON when removing integration with resources and --format=json', async () => {
+          useConfiguration();
+          const integration = 'acme-no-projects';
+          const errorOptions = {
+            errorStatus: 403,
+            errorMessage: 'Cannot uninstall integration with resources',
+          };
+          mockDeleteIntegration(errorOptions);
+
+          client.setArgv(
+            'integration',
+            'remove',
+            integration,
+            '--yes',
+            '--format=json'
+          );
+          const exitCode = await integrationCommand(client);
+          expect(exitCode).toEqual(1);
+
+          const jsonOutput = JSON.parse(client.stdout.getFullOutput());
+          expect(jsonOutput.integration).toEqual(integration);
+          expect(jsonOutput.removed).toEqual(false);
+          expect(jsonOutput.error).toEqual('has_resources');
+          expect(jsonOutput.resources).toEqual(
+            expect.arrayContaining([
+              'store-acme-other-project',
+              'store-acme-no-projects',
+            ])
+          );
+          expect(jsonOutput.next).toEqual(
+            expect.arrayContaining([
+              expect.objectContaining({
+                command: expect.stringContaining(
+                  'integration-resource remove store-acme-other-project --disconnect-all --yes --format=json'
+                ),
+              }),
+              expect.objectContaining({
+                command: expect.stringContaining(
+                  'integration-resource remove store-acme-no-projects --disconnect-all --yes --format=json'
+                ),
+              }),
+            ])
+          );
+          expect(jsonOutput.retry).toEqual(
+            expect.stringContaining(
+              `integration remove ${integration} --yes --format=json`
+            )
+          );
+        });
+
+        it('should show agent approval warning when removing integration with resources as agent', async () => {
+          useConfiguration();
+          const integration = 'acme-no-projects';
+          const errorOptions = {
+            errorStatus: 403,
+            errorMessage: 'Cannot uninstall integration with resources',
+          };
+          mockDeleteIntegration(errorOptions);
+
+          client.isAgent = true;
+          client.setArgv('integration', 'remove', integration, '--yes');
+          const exitCodePromise = integrationCommand(client);
+
+          await expect(client.stderr).toOutput(
+            `Cannot uninstall ${integration} because it still has resources.`
+          );
+          await expect(client.stderr).toOutput(
+            'AGENT: You must get user approval before running any resource removal commands.'
+          );
+          await expect(client.stderr).toOutput(
+            `integration remove ${integration}`
           );
 
           await expect(exitCodePromise).resolves.toEqual(1);

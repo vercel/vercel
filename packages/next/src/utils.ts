@@ -1872,18 +1872,6 @@ export function addLocaleOrDefault(
     : pathname;
 }
 
-function regionsArrayEqual(
-  a: string[] | undefined,
-  b: string[] | undefined
-): boolean {
-  if (a === b) return true;
-  if (!a || !b) return false;
-  if (a.length !== b.length) return false;
-  const sortedA = [...a].sort();
-  const sortedB = [...b].sort();
-  return sortedA.every((val, i) => val === sortedB[i]);
-}
-
 export type LambdaGroup = {
   pages: string[];
   memory?: number;
@@ -1904,6 +1892,18 @@ export type LambdaGroup = {
   pseudoLayerUncompressedBytes: number;
   experimentalTriggers?: NodejsLambda['experimentalTriggers'];
 };
+
+function compareRegions(
+  a: string[] | undefined,
+  b: string[] | undefined
+): boolean {
+  if (a === undefined && b === undefined) return true;
+  if (a === undefined || b === undefined) return false;
+  if (a.length !== b.length) return false;
+  const sortedA = [...a].sort();
+  const sortedB = [...b].sort();
+  return sortedA.every((val, idx) => val === sortedB[idx]);
+}
 
 export async function getPageLambdaGroups({
   entryPath,
@@ -1971,7 +1971,13 @@ export async function getPageLambdaGroups({
       functionsConfigManifest &&
       functionsConfigManifest.functions[routeName]
     ) {
-      opts = functionsConfigManifest.functions[routeName];
+      // Exclude `regions` from the manifest. Next.js outputs `preferredRegion`
+      // as `regions` in the manifest, but for Node.js lambdas we only support
+      // regions via vercel.json functions config, not route-level config.
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { regions: _regions, ...manifestOpts } =
+        functionsConfigManifest.functions[routeName];
+      opts = manifestOpts;
     }
 
     if (config && config.functions) {
@@ -2042,8 +2048,8 @@ export async function getPageLambdaGroups({
           const matches =
             group.maxDuration === opts.maxDuration &&
             group.memory === opts.memory &&
-            regionsArrayEqual(group.regions, opts.regions) &&
-            regionsArrayEqual(
+            compareRegions(group.regions, opts.regions) &&
+            compareRegions(
               group.functionFailoverRegions,
               opts.functionFailoverRegions
             ) &&
@@ -3032,6 +3038,12 @@ export const onPrerenderRoute =
         };
       }
 
+      const partialFallback =
+        isAppPathRoute &&
+        renderingMode === RenderingMode.PARTIALLY_STATIC &&
+        isFallback &&
+        Boolean(postponedState);
+
       // If this is a fallback page with PPR enabled, we should not have the
       // cache key vary based on the route parameters to ensure that we always
       // have a HIT for the fallback page.
@@ -3057,12 +3069,13 @@ export const onPrerenderRoute =
         }
         // We additionally vary based on if there's a postponed prerender
         // because if there isn't, then that means that we generated an
-        // empty shell, and producing an empty RSC shell would be a waste.
-        // If there is a postponed prerender, then the RSC shell would be
-        // non-empty, and it would be valuable to also generate an empty
-        // RSC shell.
+        // empty shell. For partial fallbacks when cache components are enabled,
+        // we still want to vary the HTML by params so the route shell can be
+        // cached per-param. Otherwise, keep the fallback shell shared across
+        // params.
         else if (postponedPrerender) {
-          htmlAllowQuery = [];
+          htmlAllowQuery =
+            partialFallback && isAppClientParamParsingEnabled ? allowQuery : [];
         }
       }
 
@@ -3096,6 +3109,7 @@ export const onPrerenderRoute =
           experimentalStreamingLambdaPath,
           chain,
           allowHeader,
+          partialFallback: partialFallback || undefined,
 
           ...(isNotFound
             ? {
@@ -3145,6 +3159,7 @@ export const onPrerenderRoute =
           bypassToken: prerenderManifest.bypassToken,
           experimentalBypassFor,
           allowHeader,
+          partialFallback: undefined,
 
           ...(isNotFound
             ? {
@@ -3249,6 +3264,7 @@ export const onPrerenderRoute =
               bypassToken: prerenderManifest.bypassToken,
               experimentalBypassFor,
               allowHeader,
+              partialFallback: undefined,
               chain: {
                 outputPath: normalizePathData(outputPathData),
                 headers: routesManifest.ppr.chain.headers,
@@ -3376,6 +3392,7 @@ export const onPrerenderRoute =
                 // Use the same prerender group as the JSON/data prerender.
                 group: prerenderGroup,
                 allowHeader,
+                partialFallback: undefined,
 
                 // These routes are always only static, so they should not
                 // permit any bypass unless it's for preview
@@ -3646,6 +3663,7 @@ export type FunctionsConfigManifestV1 = {
     string,
     {
       maxDuration?: number | undefined;
+      regions?: string[];
       runtime?: 'nodejs';
       matchers?: Array<{
         regexp: string;
@@ -4674,7 +4692,7 @@ export async function getServerActionMetaRoutes(
     }
 
     return routes;
-  } catch (error) {
+  } catch (_error) {
     // If manifest doesn't exist or can't be read, return empty routes
     return [];
   }

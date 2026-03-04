@@ -1,6 +1,6 @@
 import ms from 'ms';
 import path from 'path';
-import fetch from 'node-fetch';
+import nodeFetch from 'node-fetch';
 import getPort from 'get-port';
 import isPortReachable from 'is-port-reachable';
 import frameworks, { Framework } from '@vercel/frameworks';
@@ -87,7 +87,7 @@ function validateDistDir(distDir: string, workPath: string) {
       try {
         const vercelJson = JSON.parse(readFileSync(vercelJsonPath, 'utf8'));
         buildCommandExists = vercelJson.buildCommand !== undefined;
-      } catch (e) {
+      } catch (_e) {
         // Ignore JSON parse errors, fallback to default messaging
       }
     }
@@ -294,7 +294,7 @@ async function fetchBinary(
   version: string,
   dest = '/usr/local/bin'
 ) {
-  const res = await fetch(url);
+  const res = await nodeFetch(url);
   if (res.status === 404) {
     throw new NowBuildError({
       code: 'STATIC_BUILD_BINARY_NOT_FOUND',
@@ -712,7 +712,7 @@ export const build: BuildV2 = async ({
         // for this builder.
         try {
           await checkForPort(devPort, DEV_SERVER_PORT_BIND_TIMEOUT);
-        } catch (err) {
+        } catch (_err) {
           throw new Error(
             `Failed to detect a server running on port ${devPort}.\nDetails: https://err.sh/vercel/vercel/now-static-build-failed-to-detect-a-server`
           );

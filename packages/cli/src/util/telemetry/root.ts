@@ -12,9 +12,23 @@ export class RootTelemetryClient extends TelemetryClient {
     }
   }
 
+  trackCliCommandAgent(actual: string) {
+    this.trackCliCommand({
+      command: 'agent',
+      value: actual,
+    });
+  }
+
   trackCliCommandAlias(actual: string) {
     this.trackCliCommand({
       command: 'alias',
+      value: actual,
+    });
+  }
+
+  trackCliCommandActivity(actual: string) {
+    this.trackCliCommand({
+      command: 'activity',
       value: actual,
     });
   }
@@ -43,6 +57,13 @@ export class RootTelemetryClient extends TelemetryClient {
   trackCliCommandBuild(actual: string) {
     this.trackCliCommand({
       command: 'build',
+      value: actual,
+    });
+  }
+
+  trackCliCommandBuy(actual: string) {
+    this.trackCliCommand({
+      command: 'buy',
       value: actual,
     });
   }
@@ -281,6 +302,13 @@ export class RootTelemetryClient extends TelemetryClient {
   trackCliCommandRedirects(actual: string) {
     this.trackCliCommand({
       command: 'redirects',
+      value: actual,
+    });
+  }
+
+  trackCliCommandRoutes(actual: string) {
+    this.trackCliCommand({
+      command: 'routes',
       value: actual,
     });
   }

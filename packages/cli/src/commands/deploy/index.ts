@@ -81,6 +81,7 @@ import { ensureLink } from '../../util/link/ensure-link';
 import { UploadErrorMissingArchive } from '../../util/deploy/process-deployment';
 import { displayBuildLogsUntilFinalError } from '../../util/logs';
 import { determineAgent } from '@vercel/detect-agent';
+import { validateJsonOutput } from '../../util/output-format';
 
 const COMMAND_CONFIG = {
   init: getCommandAliases(initSubcommand),
@@ -245,6 +246,9 @@ async function handleInitDeployment(
     );
   }
 
+  const cliMeta = parseMeta(parsedArguments.flags['--meta']);
+  const isV0 = cliMeta.v0 === 'true';
+
   const link = await ensureLink('deploy', client, cwd, {
     autoConfirm,
     setupMsg: 'Set up and deploy',
@@ -253,6 +257,7 @@ async function handleInitDeployment(
       nowConfig: localConfig,
       paths,
     }),
+    v0: isV0,
   });
   if (typeof link === 'number') {
     return link;
@@ -351,11 +356,7 @@ async function handleInitDeployment(
     }
   }
 
-  const meta = Object.assign(
-    {},
-    parseMeta(localConfig.meta),
-    parseMeta(parsedArguments.flags['--meta'])
-  );
+  const meta = Object.assign({}, parseMeta(localConfig.meta), cliMeta);
 
   const gitMetadata = await createGitMeta(cwd, project);
 
@@ -670,6 +671,15 @@ async function handleDefaultDeploy(
   telemetryClient.trackCliFlagGuidance(parsedArguments.flags['--guidance']);
   telemetryClient.trackCliFlagForce(parsedArguments.flags['--force']);
   telemetryClient.trackCliFlagWithCache(parsedArguments.flags['--with-cache']);
+  telemetryClient.trackCliFlagJson(parsedArguments.flags['--json']);
+  telemetryClient.trackCliOptionFormat(parsedArguments.flags['--format']);
+
+  const formatResult = validateJsonOutput(parsedArguments.flags);
+  if (!formatResult.valid) {
+    output.error(formatResult.error);
+    return 1;
+  }
+  const asJson = formatResult.jsonOutput;
 
   if ('--confirm' in parsedArguments.flags) {
     telemetryClient.trackCliFlagConfirm(parsedArguments.flags['--confirm']);
@@ -792,6 +802,9 @@ async function handleDefaultDeploy(
     );
   }
 
+  const cliMeta = parseMeta(parsedArguments.flags['--meta']);
+  const isV0 = cliMeta.v0 === 'true';
+
   const link = await ensureLink('deploy', client, cwd, {
     autoConfirm,
     setupMsg: 'Set up and deploy',
@@ -800,6 +813,7 @@ async function handleDefaultDeploy(
       nowConfig: localConfig,
       paths,
     }),
+    v0: isV0,
   });
   if (typeof link === 'number') {
     return link;
@@ -956,11 +970,7 @@ async function handleDefaultDeploy(
   }
 
   // #region Meta
-  const meta = Object.assign(
-    {},
-    parseMeta(localConfig.meta),
-    parseMeta(parsedArguments.flags['--meta'])
-  );
+  const meta = Object.assign({}, parseMeta(localConfig.meta), cliMeta);
 
   const gitMetadata = await createGitMeta(cwd, project);
   // #endregion
@@ -1046,6 +1056,7 @@ async function handleDefaultDeploy(
       withFullLogs,
       autoAssignCustomDomains,
       agentName: client.agentName,
+      jsonOutput: asJson,
     };
 
     if (!localConfig.builds || localConfig.builds.length === 0) {
@@ -1235,6 +1246,20 @@ async function handleDefaultDeploy(
 
     printError(err);
     return 1;
+  }
+
+  if (asJson) {
+    output.stopSpinner();
+    const jsonOutput = {
+      id: deployment.id,
+      url: `https://${deployment.url}`,
+      inspectorUrl: deployment.inspectorUrl ?? null,
+      readyState: deployment.readyState,
+      target: deployment.target ?? null,
+      deploymentApiUrl: `${client.apiUrl}/v13/deployments/${deployment.id}`,
+    };
+    client.stdout.write(`${JSON.stringify(jsonOutput, null, 2)}\n`);
+    return 0;
   }
 
   const { isAgent } = await determineAgent();

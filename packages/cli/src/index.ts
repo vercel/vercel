@@ -212,14 +212,13 @@ const main = async () => {
 
   // If empty, leave this code here for easy adding of beta commands later
   const betaCommands: string[] = ['api', 'curl', 'webhooks'];
-  if (betaCommands.includes(targetOrSubcommand)) {
-    output.print(
-      `${chalk.grey(
-        `${getTitleName()} CLI ${pkg.version} | ${chalk.bold(targetOrSubcommand)} is in beta — https://vercel.com/feedback`
-      )}\n`
-    );
+  const msg = betaCommands.includes(targetOrSubcommand)
+    ? `${getTitleName()} CLI ${pkg.version} | ${targetOrSubcommand} is in beta — https://vercel.com/feedback`
+    : `${getTitleName()} CLI ${pkg.version}`;
+  if (process.env.VERCEL === '1') {
+    output.print(`${msg}\n`);
   } else {
-    output.print(`${chalk.grey(`${getTitleName()} CLI ${pkg.version}`)}\n`);
+    output.debug(msg);
   }
 
   // Handle `--version` directly
@@ -347,19 +346,26 @@ const main = async () => {
 
   try {
     new URL(apiUrl);
-  } catch (err: unknown) {
+  } catch (_err: unknown) {
     output.error(`Please provide a valid URL instead of ${highlight(apiUrl)}.`);
     return 1;
   }
 
   // Shared API `Client` instance for all sub-commands to utilize.
-  // Non-interactive when: --non-interactive flag, or agent running without a TTY (so Cursor terminal stays interactive).
+  // Non-interactive when: --non-interactive is set, or agent is detected (and no TTY). Explicit --non-interactive=false overrides agent detection.
   const stdinIsTTY = process.stdin?.isTTY === true;
   const nonInteractiveFlag = parsedArgs.flags['--non-interactive'] === true;
-  const nonInteractive = nonInteractiveFlag || (isAgent && !stdinIsTTY);
+  const argv = process.argv;
+  const explicitNonInteractiveFalse =
+    argv.includes('--non-interactive=false') ||
+    (argv.includes('--non-interactive') &&
+      argv[argv.indexOf('--non-interactive') + 1] === 'false');
+  const nonInteractive = explicitNonInteractiveFalse
+    ? false
+    : nonInteractiveFlag || (isAgent && !stdinIsTTY);
 
   output.debug(
-    `Agent/TTY/nonInteractive: isAgent=${isAgent} agentName=${detectedAgent?.name ?? 'none'} stdin.isTTY=${String(process.stdin?.isTTY)} --non-interactive=${nonInteractiveFlag} => nonInteractive=${nonInteractive}`
+    `Agent/TTY/nonInteractive: isAgent=${isAgent} agentName=${detectedAgent?.name ?? 'none'} stdin.isTTY=${String(process.stdin?.isTTY)} --non-interactive=${nonInteractiveFlag} explicitFalse=${explicitNonInteractiveFalse} => nonInteractive=${nonInteractive}`
   );
 
   // Only load proxy-agent if proxy env vars are configured (saves ~60ms startup)
@@ -437,6 +443,7 @@ const main = async () => {
   }
 
   const subcommandsWithoutToken = [
+    'agent',
     'login',
     'logout',
     'help',
@@ -448,6 +455,13 @@ const main = async () => {
 
   if (process.env.FF_GUIDANCE_MODE) {
     subcommandsWithoutToken.push('guidance');
+  }
+
+  if (
+    subcommand === 'dev' &&
+    (client.argv.includes('--local') || client.argv.includes('-L'))
+  ) {
+    subcommandsWithoutToken.push('dev');
   }
 
   // Prompt for login if there is no current token
@@ -705,9 +719,17 @@ const main = async () => {
           break;
 
         // Non-priority commands - loaded from bulk bundle
+        case 'agent':
+          telemetry.trackCliCommandAgent(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).agent;
+          break;
         case 'alias':
           telemetry.trackCliCommandAlias(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).alias;
+          break;
+        case 'activity':
+          telemetry.trackCliCommandActivity(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).activity;
           break;
         case 'api':
           telemetry.trackCliCommandApi(userSuppliedSubCommand);
@@ -720,6 +742,10 @@ const main = async () => {
         case 'blob':
           telemetry.trackCliCommandBlob(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).blob;
+          break;
+        case 'buy':
+          telemetry.trackCliCommandBuy(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).buy;
           break;
         case 'init':
           telemetry.trackCliCommandInit(userSuppliedSubCommand);
@@ -840,6 +866,10 @@ const main = async () => {
         case 'redirects':
           telemetry.trackCliCommandRedirects(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).redirects;
+          break;
+        case 'routes':
+          telemetry.trackCliCommandRoutes(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).routes;
           break;
         case 'remove':
           telemetry.trackCliCommandRemove(userSuppliedSubCommand);
