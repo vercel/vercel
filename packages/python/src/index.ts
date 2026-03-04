@@ -36,6 +36,7 @@ import {
 import { PythonDependencyExternalizer } from './dependency-externalizer';
 import { UvRunner, getUvBinaryOrInstall } from './uv';
 import { resolvePythonVersion, pythonVersionString } from './version';
+import { generateProjectManifest } from './diagnostics';
 import { startDevServer } from './start-dev-server';
 import { runPyprojectScript, ensureVenv, createVenvEnv } from './utils';
 import { runQuirks } from './quirks';
@@ -690,6 +691,23 @@ from vercel_runtime.vc_init import vc_handler
     supportsResponseStreaming: true,
   });
 
+  // Write project manifest for diagnostics (best-effort, never fails the build).
+  // Requires uv.lock to resolve versions and dependency graph.
+  if (uvLockPath) {
+    try {
+      await generateProjectManifest({
+        workPath,
+        pythonPackage,
+        pythonVersion,
+        uvLockPath,
+      });
+    } catch (err) {
+      debug(
+        `Failed to write project manifest: ${err instanceof Error ? err.message : String(err)}`
+      );
+    }
+  }
+
   return { output };
 };
 
@@ -732,6 +750,8 @@ export const defaultShouldServe: ShouldServe = ({
 function hasProp(obj: { [path: string]: FileFsRef }, key: string): boolean {
   return Object.hasOwnProperty.call(obj, key);
 }
+
+export { diagnostics } from './diagnostics';
 
 // internal only - expect breaking changes if other packages depend on these exports
 export { installRequirement, installRequirementsFile };

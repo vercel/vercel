@@ -124,6 +124,8 @@ export {
 
 // PyProject types (from source of truth)
 export type {
+  DependencyGroupEntry,
+  DependencyGroupInclude,
   License,
   LicenseObject,
   Person,
@@ -183,6 +185,9 @@ export type {
   HashDigest,
   NormalizedRequirement,
 } from './manifest/requirement/types';
+
+// PEP 508 parsing and formatting
+export { parsePep508 } from './manifest/pep508';
 
 // =============================================================================
 // Python specifier types (no schemas - internal types)
