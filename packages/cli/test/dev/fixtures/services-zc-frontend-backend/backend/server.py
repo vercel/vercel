@@ -9,3 +9,8 @@ def root():
         "message": "Hello from backend service!",
         "service": "backend",
     }
+
+
+@app.get("/data")
+def data():
+    return {"items": ["a", "b", "c"]}

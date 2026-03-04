@@ -9,3 +9,8 @@ def root():
         "message": "Hello from auto-detected backend!",
         "service": "backend",
     }
+
+
+@app.get("/status")
+def status():
+    return {"status": "ok"}
