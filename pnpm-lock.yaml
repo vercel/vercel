@@ -1716,8 +1716,8 @@ importers:
         version: 1.1.1
     devDependencies:
       '@next-community/adapter-vercel':
-        specifier: 0.0.1-beta.11
-        version: 0.0.1-beta.11(next@16.1.6)
+        specifier: 0.0.1-beta.12
+        version: 0.0.1-beta.12(next@16.1.6)
       '@types/aws-lambda':
         specifier: 8.10.19
         version: 8.10.19
@@ -6547,8 +6547,8 @@ packages:
       '@tybys/wasm-util': 0.10.1
     optional: true
 
-  /@next-community/adapter-vercel@0.0.1-beta.11(next@16.1.6):
-    resolution: {integrity: sha512-4q+Yu31FZpuhiNvJ4OVSZpslumO5dTOymjSDfieGMGNrYCOkpbRgQGyJnLtPvLQcJ7Ku7mx2LH9cgPZ1C23CCQ==}
+  /@next-community/adapter-vercel@0.0.1-beta.12(next@16.1.6):
+    resolution: {integrity: sha512-pvINuPgfGWKA8YquGl3xwRp6aDnKvZDrlu3ZtbsnUiTt/CKPTgBmWJ1jpE4OCLSCM+frQUOl2FEZzUSdSUcs1A==}
     engines: {node: '>= 20.6.0'}
     peerDependencies:
       next: '>= 16.1.1-canary.18'
