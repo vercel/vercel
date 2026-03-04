@@ -359,6 +359,15 @@ export const getStoreInfoSubcommand = {
   examples: [],
 } as const;
 
+export const listStoresSubcommand = {
+  name: 'list-stores',
+  aliases: ['ls-stores'],
+  description: 'List all Blob stores',
+  arguments: [],
+  options: [],
+  examples: [],
+} as const;
+
 export const blobCommand = {
   name: 'blob',
   aliases: [],
@@ -373,6 +382,7 @@ export const blobCommand = {
     createStoreSubcommand,
     deleteStoreSubcommand,
     getStoreInfoSubcommand,
+    listStoresSubcommand,
   ],
   options: [
     {
