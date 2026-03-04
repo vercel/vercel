@@ -359,16 +359,6 @@ export const getStoreInfoSubcommand = {
   examples: [],
 } as const;
 
-export const storeSubcommand = {
-  name: 'store',
-  aliases: [],
-  description: 'Manage or create a Blob store',
-  arguments: [],
-  subcommands: [addStoreSubcommand, removeStoreSubcommand, getStoreSubcommand],
-  options: [],
-  examples: [],
-} as const;
-
 export const blobCommand = {
   name: 'blob',
   aliases: [],
@@ -383,7 +373,6 @@ export const blobCommand = {
     createStoreSubcommand,
     deleteStoreSubcommand,
     getStoreInfoSubcommand,
-    storeSubcommand,
   ],
   options: [
     {
