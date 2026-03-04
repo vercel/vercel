@@ -176,11 +176,6 @@ export default async function main(client: Client) {
 
       telemetry.trackCliSubcommandDeleteStore(subcommandOriginal);
 
-      if (!token.success) {
-        printError(token.error);
-        return 1;
-      }
-
       return removeStore(client, args, token);
     case 'get-store':
       if (needHelp) {
@@ -190,11 +185,6 @@ export default async function main(client: Client) {
       }
 
       telemetry.trackCliSubcommandGetStore(subcommandOriginal);
-
-      if (!token.success) {
-        printError(token.error);
-        return 1;
-      }
 
       return getStore(client, args, token);
     default:

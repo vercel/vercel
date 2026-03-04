@@ -3,6 +3,7 @@ import { client } from '../../../mocks/client';
 import addStore from '../../../../src/commands/blob/store-add';
 import * as linkModule from '../../../../src/util/projects/link';
 import * as connectResourceModule from '../../../../src/util/integration-resource/connect-resource-to-project';
+import * as envPullModule from '../../../../src/commands/env/pull';
 import output from '../../../../src/output-manager';
 
 // Mock the external dependencies
@@ -11,11 +12,13 @@ vi.mock(
   '../../../../src/util/integration-resource/connect-resource-to-project'
 );
 vi.mock('../../../../src/output-manager');
+vi.mock('../../../../src/commands/env/pull');
 
 const mockedGetLinkedProject = vi.mocked(linkModule.getLinkedProject);
 const mockedConnectResourceToProject = vi.mocked(
   connectResourceModule.connectResourceToProject
 );
+const mockedEnvPullCommandLogic = vi.mocked(envPullModule.envPullCommandLogic);
 const mockedOutput = vi.mocked(output);
 
 describe('blob store add', () => {
@@ -28,6 +31,9 @@ describe('blob store add', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     client.reset();
+
+    // Mock output.link to return the URL text
+    mockedOutput.link.mockImplementation((text: string) => text);
 
     // Default successful mocks
     client.fetch = vi.fn().mockResolvedValue({
@@ -52,6 +58,7 @@ describe('blob store add', () => {
     });
 
     mockedConnectResourceToProject.mockResolvedValue(undefined);
+    mockedEnvPullCommandLogic.mockResolvedValue(undefined);
   });
 
   describe('successful store creation', () => {
@@ -60,15 +67,15 @@ describe('blob store add', () => {
         'blob',
         'store',
         'add',
-        'my-test-store',
         '--access',
-        'public'
+        'public',
+        'my-test-store'
       );
 
       const exitCode = await addStore(client, [
-        'my-test-store',
         '--access',
         'public',
+        'my-test-store',
       ]);
 
       expect(exitCode).toBe(0);
@@ -92,6 +99,14 @@ describe('blob store add', () => {
       expect(mockedOutput.success).toHaveBeenCalledWith(
         'Blob store created: my-test-store (store_test123)'
       );
+      expect(mockedOutput.log).toHaveBeenCalledWith(
+        expect.stringContaining('Access: public. Learn more:')
+      );
+      expect(mockedOutput.log).toHaveBeenCalledWith(
+        expect.stringContaining(
+          'https://vercel.com/docs/vercel-blob/public-storage'
+        )
+      );
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -105,27 +120,67 @@ describe('blob store add', () => {
       ]);
     });
 
+    it('should show private access docs link for private stores', async () => {
+      client.setArgv(
+        'blob',
+        'store',
+        'add',
+        '--access',
+        'private',
+        'my-private-store'
+      );
+
+      const exitCode = await addStore(client, [
+        '--access',
+        'private',
+        'my-private-store',
+      ]);
+
+      expect(exitCode).toBe(0);
+      expect(client.fetch).toHaveBeenCalledWith('/v1/storage/stores/blob', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: 'my-private-store',
+          region: 'iad1',
+          access: 'private',
+        }),
+        accountId: 'org_123',
+      });
+      expect(mockedOutput.success).toHaveBeenCalledWith(
+        'Blob store created: my-private-store (store_test123)'
+      );
+      expect(mockedOutput.log).toHaveBeenCalledWith(
+        expect.stringContaining('Access: private. Learn more:')
+      );
+      expect(mockedOutput.log).toHaveBeenCalledWith(
+        expect.stringContaining(
+          'https://vercel.com/docs/vercel-blob/private-storage'
+        )
+      );
+    });
+
     it('should create store with specified region and track telemetry', async () => {
       client.setArgv(
         'blob',
         'store',
         'add',
+        '--access',
+        'public',
         'my-test-store',
         '--region',
-        'sfo1',
-        '--access',
-        'public'
+        'sfo1'
       );
       client.fetch = vi.fn().mockResolvedValue({
         store: { id: 'store_test123', region: 'sfo1' },
       });
 
       const exitCode = await addStore(client, [
+        '--access',
+        'public',
         'my-test-store',
         '--region',
         'sfo1',
-        '--access',
-        'public',
       ]);
 
       expect(exitCode).toBe(0);
@@ -164,15 +219,15 @@ describe('blob store add', () => {
         'blob',
         'store',
         'add',
-        'default-region-store',
         '--access',
-        'public'
+        'public',
+        'default-region-store'
       );
 
       const exitCode = await addStore(client, [
-        'default-region-store',
         '--access',
         'public',
+        'default-region-store',
       ]);
 
       expect(exitCode).toBe(0);
@@ -204,18 +259,18 @@ describe('blob store add', () => {
         'blob',
         'store',
         'add',
-        'region-display-store',
         '--access',
-        'public'
+        'public',
+        'region-display-store'
       );
       client.fetch = vi.fn().mockResolvedValue({
         store: { id: 'store_test123', region: 'iad1' },
       });
 
       const exitCode = await addStore(client, [
-        'region-display-store',
         '--access',
         'public',
+        'region-display-store',
       ]);
 
       expect(exitCode).toBe(0);
@@ -249,18 +304,10 @@ describe('blob store add', () => {
 
   describe('project linking', () => {
     it('should link store to project when confirmed', async () => {
-      client.setArgv(
-        'blob',
-        'store',
-        'add',
-        'test-store',
-        '--access',
-        'public'
-      );
       const exitCode = await addStore(client, [
-        'test-store',
         '--access',
         'public',
+        'test-store',
       ]);
 
       expect(exitCode).toBe(0);
@@ -281,30 +328,35 @@ describe('blob store add', () => {
         'proj_123',
         'store_test123',
         ['production', 'preview', 'development'],
-        { accountId: 'org_123' }
+        'org_123'
       );
       expect(mockedOutput.success).toHaveBeenCalledWith(
         'Blob store created: test-store (store_test123)'
       );
       expect(mockedOutput.success).toHaveBeenCalledWith(
-        'Blob store test-store linked to my-project. Make sure to pull the new environment variables using `vercel env pull`'
+        'Blob store test-store linked to my-project'
+      );
+
+      // Should auto-pull env vars after linking
+      expect(mockedEnvPullCommandLogic).toHaveBeenCalledWith(
+        client,
+        '.env.local',
+        true,
+        'development',
+        expect.objectContaining({ status: 'linked' }),
+        undefined,
+        client.cwd,
+        'vercel-cli:blob:store-add'
       );
     });
 
     it('should not link store when user declines', async () => {
       client.input.confirm = vi.fn().mockResolvedValue(false);
-      client.setArgv(
-        'blob',
-        'store',
-        'add',
-        'test-store',
-        '--access',
-        'public'
-      );
+
       const exitCode = await addStore(client, [
-        'test-store',
         '--access',
         'public',
+        'test-store',
       ]);
 
       expect(exitCode).toBe(0);
@@ -314,22 +366,16 @@ describe('blob store add', () => {
       );
       expect(client.input.checkbox).not.toHaveBeenCalled();
       expect(mockedConnectResourceToProject).not.toHaveBeenCalled();
+      expect(mockedEnvPullCommandLogic).not.toHaveBeenCalled();
     });
 
     it('should handle linking with selected environments', async () => {
       client.input.checkbox = vi.fn().mockResolvedValue(['production']);
-      client.setArgv(
-        'blob',
-        'store',
-        'add',
-        'prod-store',
-        '--access',
-        'public'
-      );
+
       const exitCode = await addStore(client, [
-        'prod-store',
         '--access',
         'public',
+        'prod-store',
       ]);
 
       expect(exitCode).toBe(0);
@@ -338,7 +384,7 @@ describe('blob store add', () => {
         'proj_123',
         'store_test123',
         ['production'],
-        { accountId: 'org_123' }
+        'org_123'
       );
     });
 
@@ -350,9 +396,9 @@ describe('blob store add', () => {
       });
 
       const exitCode = await addStore(client, [
-        'standalone-store',
         '--access',
         'public',
+        'standalone-store',
       ]);
 
       expect(exitCode).toBe(0);
@@ -368,6 +414,7 @@ describe('blob store add', () => {
       });
       expect(client.input.confirm).not.toHaveBeenCalled();
       expect(mockedConnectResourceToProject).not.toHaveBeenCalled();
+      expect(mockedEnvPullCommandLogic).not.toHaveBeenCalled();
     });
   });
 
@@ -384,14 +431,60 @@ describe('blob store add', () => {
       expect(exitCode).toBe(1);
     });
 
+    it('should return 1 when --access flag is missing in non-TTY', async () => {
+      (client.stdin as any).isTTY = false;
+      const exitCode = await addStore(client, ['test-store']);
+
+      expect(exitCode).toBe(1);
+      expect(mockedOutput.error).toHaveBeenCalledWith(
+        "Missing required --access flag. Must be 'public' or 'private'."
+      );
+    });
+
+    it('should prompt for access type when --access flag is missing in TTY', async () => {
+      const selectMock = vi.fn().mockResolvedValue('private');
+      client.input.select = selectMock;
+
+      const exitCode = await addStore(client, ['test-store']);
+
+      expect(exitCode).toBe(0);
+      expect(selectMock).toHaveBeenCalledWith({
+        message: 'Choose the access type for the blob store',
+        choices: [
+          {
+            name: 'Private',
+            value: 'private',
+            description:
+              'For sensitive documents, user content, and apps with custom auth. https://vercel.com/docs/vercel-blob/private-storage',
+          },
+          {
+            name: 'Public',
+            value: 'public',
+            description:
+              'For images, videos, large media, and public assets. https://vercel.com/docs/vercel-blob/public-storage',
+          },
+        ],
+      });
+      expect(client.fetch).toHaveBeenCalledWith('/v1/storage/stores/blob', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: 'test-store',
+          region: 'iad1',
+          access: 'private',
+        }),
+        accountId: 'org_123',
+      });
+    });
+
     it('should return 1 when store creation fails', async () => {
       const apiError = new Error('Store creation failed');
       client.fetch = vi.fn().mockRejectedValue(apiError);
 
       const exitCode = await addStore(client, [
-        'test-store',
         '--access',
         'public',
+        'test-store',
       ]);
 
       expect(exitCode).toBe(1);
@@ -406,9 +499,9 @@ describe('blob store add', () => {
       client.fetch = vi.fn().mockRejectedValue(apiError);
 
       const exitCode = await addStore(client, [
-        'failing-store',
         '--access',
         'public',
+        'failing-store',
       ]);
 
       expect(exitCode).toBe(1);
@@ -421,7 +514,7 @@ describe('blob store add', () => {
 
       // This should still succeed even if linking fails
       await expect(
-        addStore(client, ['test-store', '--access', 'public'])
+        addStore(client, ['--access', 'public', 'test-store'])
       ).rejects.toThrow('Linking failed');
 
       // Store should still be created successfully
@@ -435,9 +528,9 @@ describe('blob store add', () => {
   describe('telemetry tracking', () => {
     it('should track name argument when provided', async () => {
       const exitCode = await addStore(client, [
-        'telemetry-test-store',
         '--access',
         'public',
+        'telemetry-test-store',
       ]);
 
       expect(exitCode).toBe(0);
@@ -488,9 +581,9 @@ describe('blob store add', () => {
   describe('API call behavior', () => {
     it('should include accountId when project is linked', async () => {
       const exitCode = await addStore(client, [
-        'linked-store',
         '--access',
         'public',
+        'linked-store',
       ]);
 
       expect(exitCode).toBe(0);
@@ -514,9 +607,9 @@ describe('blob store add', () => {
       });
 
       const exitCode = await addStore(client, [
-        'unlinked-store',
         '--access',
         'public',
+        'unlinked-store',
       ]);
 
       expect(exitCode).toBe(0);
@@ -538,9 +631,9 @@ describe('blob store add', () => {
       });
 
       const exitCode = await addStore(client, [
-        'custom-store',
         '--access',
         'public',
+        'custom-store',
       ]);
 
       expect(exitCode).toBe(0);
@@ -586,9 +679,9 @@ describe('blob store add', () => {
       });
 
       const exitCode = await addStore(client, [
-        'confirmation-test',
         '--access',
         'public',
+        'confirmation-test',
       ]);
 
       expect(exitCode).toBe(0);
@@ -602,9 +695,9 @@ describe('blob store add', () => {
   describe('spinner and output behavior', () => {
     it('should show spinner during store creation and stop on success', async () => {
       const exitCode = await addStore(client, [
-        'spinner-test',
         '--access',
         'public',
+        'spinner-test',
       ]);
 
       expect(exitCode).toBe(0);
@@ -619,9 +712,9 @@ describe('blob store add', () => {
 
     it('should show linking spinner when connecting to project', async () => {
       const exitCode = await addStore(client, [
-        'link-spinner-test',
         '--access',
         'public',
+        'link-spinner-test',
       ]);
 
       expect(exitCode).toBe(0);
@@ -635,9 +728,9 @@ describe('blob store add', () => {
       client.fetch = vi.fn().mockRejectedValue(apiError);
 
       const exitCode = await addStore(client, [
-        'error-test',
         '--access',
         'public',
+        'error-test',
       ]);
 
       expect(exitCode).toBe(1);
