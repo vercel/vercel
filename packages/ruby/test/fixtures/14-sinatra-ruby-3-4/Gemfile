@@ -2,8 +2,6 @@
 
 source 'https://rubygems.org'
 
-ruby '~> 3.4.0'
-
 gem 'sinatra', '~> 4.0'
 gem 'rack', '~> 3.0'
 gem 'rackup', '~> 2.0'

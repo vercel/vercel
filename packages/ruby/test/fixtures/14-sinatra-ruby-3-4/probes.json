@@ -9,6 +9,11 @@
       "path": "/health",
       "status": 200,
       "mustContain": "\"status\":\"ok\""
+    },
+    {
+      "path": "/health",
+      "status": 200,
+      "mustContain": "\"ruby\":\"3.4"
     }
   ]
 }

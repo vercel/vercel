@@ -6,6 +6,7 @@ import { Meta, debug, NowBuildError, Version } from '@vercel/build-utils';
 import { spawnSync } from 'child_process';
 import { tmpdir } from 'os';
 import { getMiseBinaryOrInstall, installRubyViaMise } from './mise';
+import type { DeclaredRubyVersion } from './version';
 
 class RubyVersion extends Version {}
 
@@ -113,9 +114,17 @@ function makeLocalRubyEnv({
   };
 }
 
-interface DeclaredRubyVersion {
-  version: string;
-  source: '.ruby-version' | '.tool-versions' | 'mise.toml' | 'Gemfile';
+function parseMajorMinor(
+  version: string
+): { major: number; minor: number } | null {
+  const match = version.match(/(\d+)\.(\d+)/);
+  if (!match) return null;
+
+  const major = Number(match[1]);
+  const minor = Number(match[2]);
+  if (Number.isNaN(major) || Number.isNaN(minor)) return null;
+
+  return { major, minor };
 }
 
 async function getRubyPath(
@@ -147,15 +156,13 @@ async function getRubyPath(
     });
   }
 
-  // Priority 1: .ruby-version or .tool-versions file
+  // Priority 1: .ruby-version, .tool-versions, or mise.toml file
   if (declaredVersion) {
     const { version, source } = declaredVersion;
-    // Extract major.minor from the declared version (e.g. "3.4.1" -> 3, 4)
-    const parts = version.split('.');
-    const declaredMajor = Number(parts[0]);
-    const declaredMinor = Number(parts[1]);
+    const parsedVersion = parseMajorMinor(version);
 
-    if (!Number.isNaN(declaredMajor) && !Number.isNaN(declaredMinor)) {
+    if (parsedVersion) {
+      const { major: declaredMajor, minor: declaredMinor } = parsedVersion;
       const matchedOption = allOptions.find(
         o => o.major === declaredMajor && o.minor === declaredMinor
       );
@@ -394,5 +401,3 @@ function isInstalled({ major, minor }: RubyVersion): boolean {
     Boolean(which.sync(join(gemHome, 'bin/gem'), { nothrow: true }))
   );
 }
-
-export type { DeclaredRubyVersion };
