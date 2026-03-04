@@ -1,7 +1,6 @@
-import os
 from fastapi import FastAPI
 
-app = FastAPI(root_path=os.getenv("VERCEL_SERVICE_ROUTE_PREFIX"))
+app = FastAPI()
 
 
 @app.get('/')

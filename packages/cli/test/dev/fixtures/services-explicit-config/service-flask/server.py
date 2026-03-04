@@ -1,10 +1,8 @@
-import os
-from flask import Blueprint, Flask, jsonify
+from flask import Flask, jsonify
 
-bp = Blueprint("bp", __name__, url_prefix=os.getenv("VERCEL_SERVICE_ROUTE_PREFIX"))
+app = Flask(__name__)
 
-
-@bp.route("/")
+@app.route("/")
 def root():
     return jsonify(
         {
@@ -12,7 +10,3 @@ def root():
             "service": "service-flask",
         }
     )
-
-
-app = Flask(__name__)
-app.register_blueprint(bp)
