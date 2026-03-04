@@ -217,6 +217,7 @@ export function resolvePythonVersion({
       allBuilds,
       defaultBuild,
       majorMinorOnly: true,
+      legacyTildeEquals: true,
     });
 
     source = result.source;

@@ -1714,3 +1714,164 @@ describe('selectPythonVersion with majorMinorOnly', () => {
     expect(result.invalidConstraint).toBeDefined();
   });
 });
+
+describe('selectPythonVersion with legacyTildeEquals', () => {
+  const availableBuilds: PythonBuild[] = [
+    makeBuild({ version: { major: 3, minor: 10 } }),
+    makeBuild({ version: { major: 3, minor: 11 } }),
+    makeBuild({ version: { major: 3, minor: 12 } }),
+    makeBuild({ version: { major: 3, minor: 13 } }),
+    makeBuild({ version: { major: 3, minor: 14 } }),
+  ];
+
+  const allBuilds = availableBuilds;
+  const defaultBuild = availableBuilds[2]; // 3.12
+
+  function selectLegacy(constraints: PythonConstraint[]) {
+    return selectPythonVersion({
+      constraints,
+      availableBuilds,
+      allBuilds,
+      defaultBuild,
+      majorMinorOnly: true,
+      legacyTildeEquals: true,
+    });
+  }
+
+  it('~=X.Y pins to exactly X.Y (historical behavior)', () => {
+    const result = selectLegacy([
+      makeConstraint(
+        [
+          makeRequest({
+            version: {
+              constraint: [{ operator: '~=', version: '3.10', prefix: '' }],
+            },
+          }),
+        ],
+        'pyproject.toml'
+      ),
+    ]);
+    // Historical: ~=3.10 → ==3.10.* → pins to 3.10
+    expect(result.build.version).toEqual({ major: 3, minor: 10 });
+  });
+
+  it('~=X.Y does not match higher minor versions', () => {
+    const result = selectLegacy([
+      makeConstraint(
+        [
+          makeRequest({
+            version: {
+              constraint: [{ operator: '~=', version: '3.15', prefix: '' }],
+            },
+          }),
+        ],
+        'pyproject.toml'
+      ),
+    ]);
+    // 3.15 not in available or all builds → invalidConstraint
+    expect(result.invalidConstraint).toBeDefined();
+  });
+
+  it('~=X.Y.Z is unaffected (still becomes ==X.Y.* via majorMinorOnly)', () => {
+    const result = selectLegacy([
+      makeConstraint(
+        [
+          makeRequest({
+            version: {
+              constraint: [{ operator: '~=', version: '3.11.5', prefix: '' }],
+            },
+          }),
+        ],
+        'pyproject.toml'
+      ),
+    ]);
+    // 3-part ~= is handled by majorMinorOnly, not legacyTildeEquals
+    expect(result.build.version).toEqual({ major: 3, minor: 11 });
+  });
+
+  it('without legacyTildeEquals, ~=X.Y uses PEP 440 semantics', () => {
+    const result = selectPythonVersion({
+      constraints: [
+        makeConstraint(
+          [
+            makeRequest({
+              version: {
+                constraint: [{ operator: '~=', version: '3.10', prefix: '' }],
+              },
+            }),
+          ],
+          'pyproject.toml'
+        ),
+      ],
+      availableBuilds,
+      allBuilds,
+      defaultBuild,
+      majorMinorOnly: true,
+      // legacyTildeEquals NOT set
+    });
+    // PEP 440: ~=3.10 → >=3.10, <4.0 → matches all; first is 3.10
+    expect(result.build.version).toEqual({ major: 3, minor: 10 });
+  });
+
+  it('without legacyTildeEquals, ~=3.13 selects 3.14 (PEP 440)', () => {
+    // Put 3.12 first (as default) to show the difference
+    const reorderedBuilds: PythonBuild[] = [
+      makeBuild({ version: { major: 3, minor: 12 } }), // default, first
+      makeBuild({ version: { major: 3, minor: 14 } }),
+      makeBuild({ version: { major: 3, minor: 13 } }),
+      makeBuild({ version: { major: 3, minor: 11 } }),
+      makeBuild({ version: { major: 3, minor: 10 } }),
+    ];
+    const result = selectPythonVersion({
+      constraints: [
+        makeConstraint(
+          [
+            makeRequest({
+              version: {
+                constraint: [{ operator: '~=', version: '3.13', prefix: '' }],
+              },
+            }),
+          ],
+          'pyproject.toml'
+        ),
+      ],
+      availableBuilds: reorderedBuilds,
+      allBuilds: reorderedBuilds,
+      defaultBuild: reorderedBuilds[0],
+      majorMinorOnly: true,
+    });
+    // PEP 440: ~=3.13 → >=3.13, <4.0 → 3.12 fails, 3.14 matches first
+    expect(result.build.version).toEqual({ major: 3, minor: 14 });
+  });
+
+  it('with legacyTildeEquals, ~=3.13 selects exactly 3.13', () => {
+    const reorderedBuilds: PythonBuild[] = [
+      makeBuild({ version: { major: 3, minor: 12 } }),
+      makeBuild({ version: { major: 3, minor: 14 } }),
+      makeBuild({ version: { major: 3, minor: 13 } }),
+      makeBuild({ version: { major: 3, minor: 11 } }),
+      makeBuild({ version: { major: 3, minor: 10 } }),
+    ];
+    const result = selectPythonVersion({
+      constraints: [
+        makeConstraint(
+          [
+            makeRequest({
+              version: {
+                constraint: [{ operator: '~=', version: '3.13', prefix: '' }],
+              },
+            }),
+          ],
+          'pyproject.toml'
+        ),
+      ],
+      availableBuilds: reorderedBuilds,
+      allBuilds: reorderedBuilds,
+      defaultBuild: reorderedBuilds[0],
+      majorMinorOnly: true,
+      legacyTildeEquals: true,
+    });
+    // Legacy: ~=3.13 → ==3.13.* → pins to 3.13
+    expect(result.build.version).toEqual({ major: 3, minor: 13 });
+  });
+});

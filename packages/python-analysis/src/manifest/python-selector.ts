@@ -143,12 +143,20 @@ export function selectPythonVersion({
   allBuilds,
   defaultBuild,
   majorMinorOnly,
+  legacyTildeEquals,
 }: {
   constraints?: PythonConstraint[];
   availableBuilds: PythonBuild[];
   allBuilds: PythonBuild[];
   defaultBuild: PythonBuild;
   majorMinorOnly?: boolean;
+  /**
+   * When true, treat 2-part compatible-release specifiers (`~=X.Y`) as
+   * pinning to exactly that minor version (`==X.Y.*`) rather than the
+   * PEP 440 correct `>=X.Y, <(X+1).0`.  This preserves the historical
+   * behaviour of the Python builder prior to the python-analysis migration.
+   */
+  legacyTildeEquals?: boolean;
 }): PythonVersionSelectionResult {
   const source = constraints?.[0]?.source;
 
@@ -156,12 +164,19 @@ export function selectPythonVersion({
     return { build: defaultBuild };
   }
 
-  const effectiveConstraints = majorMinorOnly
+  let effectiveConstraints = majorMinorOnly
     ? constraints.map(c => ({
         ...c,
         request: c.request.map(truncatePatchVersionsInRequest),
       }))
     : constraints;
+
+  if (legacyTildeEquals) {
+    effectiveConstraints = effectiveConstraints.map(c => ({
+      ...c,
+      request: c.request.map(legacyTildeEqualsTransform),
+    }));
+  }
 
   // First pass: try against available builds
   const result = selectPython(effectiveConstraints, availableBuilds);
@@ -287,6 +302,34 @@ function truncatePatchConstraint(c: Pep440Constraint): Pep440Constraint | null {
     default:
       return c;
   }
+}
+
+/**
+ * Transform 2-part `~=X.Y` into `==X.Y.*` to match the historical builder
+ * behaviour where `~=3.10` was interpreted as `>=3.10, <3.11` (i.e., pinned
+ * to the minor version) rather than the PEP 440 correct `>=3.10, <4.0`.
+ *
+ * 3-part `~=X.Y.Z` is unaffected — `truncatePatchConstraint` already
+ * converts it to `==X.Y.*`.
+ */
+function legacyTildeEqualsTransform(req: PythonRequest): PythonRequest {
+  if (!req.version?.constraint || req.version.constraint.length === 0) {
+    return req;
+  }
+
+  const newConstraints = req.version.constraint.map((c): Pep440Constraint => {
+    if (c.operator !== '~=') return c;
+    const parts = c.version.split('.');
+    if (parts.length === 2) {
+      return { operator: '==', version: c.version, prefix: '.*' };
+    }
+    return c;
+  });
+
+  return {
+    ...req,
+    version: { ...req.version, constraint: newConstraints },
+  };
 }
 
 /**
