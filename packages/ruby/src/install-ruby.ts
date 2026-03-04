@@ -1,6 +1,6 @@
 import execa from 'execa';
 import which from 'which';
-import { dirname, join } from 'path';
+import { delimiter, dirname, join } from 'path';
 import { intersects } from 'semver';
 import { Meta, debug, NowBuildError, Version } from '@vercel/build-utils';
 import { spawnSync } from 'child_process';
@@ -45,6 +45,19 @@ const allOptions: RubyVersion[] = [
     discontinueDate: new Date('2021-11-30'),
   }),
 ];
+
+function ensureBinaryDirOnPath(binaryPath: string): void {
+  const binDir = dirname(binaryPath);
+  const currentPath = process.env.PATH || '';
+  const parts = currentPath.split(delimiter).filter(Boolean);
+  if (parts.includes(binDir)) {
+    return;
+  }
+
+  process.env.PATH = currentPath
+    ? `${binDir}${delimiter}${currentPath}`
+    : binDir;
+}
 
 function getLatestRubyVersion(): RubyVersion {
   const selection = allOptions.find(isInstalled);
@@ -348,6 +361,9 @@ async function installViaMise(
   vendorPath: string;
 }> {
   const misePath = await getMiseBinaryOrInstall();
+  // Ruby installed via mise includes a rubygems plugin that shells out to `mise`.
+  // Ensure the binary is discoverable during subsequent gem/bundler operations.
+  ensureBinaryDirOnPath(misePath);
   const { rubyPath, gemPath } = await installRubyViaMise(misePath, version);
 
   const gemHome = join(
