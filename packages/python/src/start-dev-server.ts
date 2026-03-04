@@ -464,7 +464,7 @@ export const startDevServer: StartDevServer = async opts => {
   if (!entry) {
     const hookResult = await runFrameworkHook(framework, {
       pythonEnv: env,
-      projectDir: workPath,
+      projectDir: join(workPath, detected?.baseDir ?? ''),
       entrypoint: rawEntrypoint,
       detected: detected ?? undefined,
     });
