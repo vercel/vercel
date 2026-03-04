@@ -166,26 +166,11 @@ export async function detectDjangoPythonEntrypoint(
       ),
     ];
 
-    // Look for an entrypoint via manage.py -> settings.py -> WSGI_APPLICATION:
-    // Try workPath and immediate subdirectories.
+    // Look for a Django manage.py in workPath and immediate subdirectories.
     for (const rootDir of rootDirs) {
       const currPath = join(workPath, rootDir);
       const django = await getDjangoEntrypoint(currPath);
       if (django) {
-        if (django.entrypoint) {
-          const fullWsgiEntry = pathPosix.join(rootDir, django.entrypoint);
-          if (fsFiles[fullWsgiEntry]) {
-            debug(`Using Django WSGI entrypoint: ${fullWsgiEntry}`);
-            return {
-              entrypoint: fullWsgiEntry,
-              settings: django.settings,
-              baseDir: rootDir,
-            };
-          }
-          debug(
-            `Django settings module found but entrypoint ${fullWsgiEntry} not on disk`
-          );
-        }
         return { settings: django.settings, baseDir: rootDir };
       }
     }

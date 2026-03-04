@@ -1156,22 +1156,42 @@ describe('Django entrypoint discovery', () => {
     if (fs.existsSync(workPath)) fs.removeSync(workPath);
   });
 
-  it('resolves Django entrypoint from WSGI_APPLICATION (hello.wsgi.application -> hello/wsgi.py)', async () => {
+  it('build() resolves Django entrypoint from WSGI_APPLICATION (hello.wsgi.application -> hello/wsgi.py)', async () => {
+    vi.mocked(getDjangoSettings).mockResolvedValueOnce({
+      WSGI_APPLICATION: 'hello.wsgi.application',
+    });
     const workPath = path.join(tmpdir(), `python-django-wsgi-${Date.now()}`);
     fs.mkdirSync(workPath, { recursive: true });
+    makeMockPython('3.9');
 
-    await writeFiles(workPath, {
-      'manage.py': `os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'hello.settings')`,
-      'hello/settings.py': `WSGI_APPLICATION = 'hello.wsgi.application'`,
-      'hello/wsgi.py': `application = lambda env, start: None`,
+    const files = {
+      'manage.py': new FileBlob({
+        data: "os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'hello.settings')\n",
+      }),
+      'hello/settings.py': new FileBlob({
+        data: "WSGI_APPLICATION = 'hello.wsgi.application'\n",
+      }),
+      'hello/wsgi.py': new FileBlob({
+        data: 'application = lambda env, start: None\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath,
+      files,
+      entrypoint: 'index.py',
+      meta: { isDev: true },
+      config: { framework: 'django' },
+      repoRootPath: workPath,
     });
 
-    const result = await detectDjangoPythonEntrypoint(workPath, 'missing.py');
-    expect(result).toEqual({
-      entrypoint: 'hello/wsgi.py',
-      settings: 'hello.settings',
-      baseDir: '',
-    });
+    const handler = result.output.files?.['vc__handler__python.py'];
+    if (!handler || !('data' in handler)) {
+      throw new Error('handler bootstrap not found');
+    }
+    expect(handler.data.toString()).toContain(
+      'os.path.join(_here, "hello/wsgi.py")'
+    );
 
     if (fs.existsSync(workPath)) fs.removeSync(workPath);
   });
@@ -1182,56 +1202,114 @@ describe('Django entrypoint discovery', () => {
       `python-django-fallback-${Date.now()}`
     );
     fs.mkdirSync(workPath, { recursive: true });
+    makeMockPython('3.9');
 
-    await writeFiles(workPath, {
-      'src/app.py': `application = lambda env, start: None`,
+    const files = {
+      'src/app.py': new FileBlob({
+        data: 'application = lambda env, start: None\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath,
+      files,
+      entrypoint: 'index.py',
+      meta: { isDev: true },
+      config: { framework: 'django' },
+      repoRootPath: workPath,
     });
 
-    const result = await detectDjangoPythonEntrypoint(workPath, 'missing.py');
-    expect(result).toEqual({ entrypoint: 'src/app.py' });
+    const handler = result.output.files?.['vc__handler__python.py'];
+    if (!handler || !('data' in handler)) {
+      throw new Error('handler bootstrap not found');
+    }
+    expect(handler.data.toString()).toContain(
+      'os.path.join(_here, "src/app.py")'
+    );
 
     if (fs.existsSync(workPath)) fs.removeSync(workPath);
   });
 
-  it('returns settings module even when WSGI path is not on filesystem', async () => {
+  it('build() returns settings module even when WSGI path is not in files', async () => {
+    vi.mocked(getDjangoSettings).mockResolvedValueOnce({
+      WSGI_APPLICATION: 'hello.wsgi.application',
+    });
     const workPath = path.join(
       tmpdir(),
       `python-django-wsgi-missing-${Date.now()}`
     );
     fs.mkdirSync(workPath, { recursive: true });
+    makeMockPython('3.9');
 
-    await writeFiles(workPath, {
-      'manage.py': `os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'hello.settings')`,
-      'hello/settings.py': `WSGI_APPLICATION = 'hello.wsgi.application'`,
-      'src/app.py': `application = lambda env, start: None`,
+    const files = {
+      'manage.py': new FileBlob({
+        data: "os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'hello.settings')\n",
+      }),
+      'hello/settings.py': new FileBlob({
+        data: "WSGI_APPLICATION = 'hello.wsgi.application'\n",
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath,
+      files,
+      entrypoint: 'index.py',
+      meta: { isDev: true },
+      config: { framework: 'django' },
+      repoRootPath: workPath,
     });
 
-    const result = await detectDjangoPythonEntrypoint(workPath, 'missing.py');
-    expect(result).toEqual({ settings: 'hello.settings', baseDir: '' });
+    const handler = result.output.files?.['vc__handler__python.py'];
+    if (!handler || !('data' in handler)) {
+      throw new Error('handler bootstrap not found');
+    }
+    expect(handler.data.toString()).toContain(
+      'os.path.join(_here, "hello/wsgi.py")'
+    );
 
     if (fs.existsSync(workPath)) fs.removeSync(workPath);
   });
 
-  it('resolves Django entrypoint from a subdirectory', async () => {
+  it('build() resolves Django entrypoint from a subdirectory', async () => {
+    vi.mocked(getDjangoSettings).mockResolvedValueOnce({
+      WSGI_APPLICATION: 'config.wsgi.application',
+    });
     const workPath = path.join(
       tmpdir(),
       `python-django-root-dir-${Date.now()}`
     );
     fs.mkdirSync(workPath, { recursive: true });
+    makeMockPython('3.9');
 
     // Django app lives under root dir "mysite"; no manage.py at workPath root
-    await writeFiles(workPath, {
-      'mysite/manage.py': `os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')`,
-      'mysite/config/settings.py': `WSGI_APPLICATION = 'config.wsgi.application'`,
-      'mysite/config/wsgi.py': `application = lambda env, start: None`,
+    const files = {
+      'mysite/manage.py': new FileBlob({
+        data: "os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')\n",
+      }),
+      'mysite/config/settings.py': new FileBlob({
+        data: "WSGI_APPLICATION = 'config.wsgi.application'\n",
+      }),
+      'mysite/config/wsgi.py': new FileBlob({
+        data: 'application = lambda env, start: None\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath,
+      files,
+      entrypoint: 'index.py',
+      meta: { isDev: true },
+      config: { framework: 'django' },
+      repoRootPath: workPath,
     });
 
-    const result = await detectDjangoPythonEntrypoint(workPath, 'missing.py');
-    expect(result).toEqual({
-      entrypoint: 'mysite/config/wsgi.py',
-      settings: 'config.settings',
-      baseDir: 'mysite',
-    });
+    const handler = result.output.files?.['vc__handler__python.py'];
+    if (!handler || !('data' in handler)) {
+      throw new Error('handler bootstrap not found');
+    }
+    expect(handler.data.toString()).toContain(
+      'os.path.join(_here, "mysite/config/wsgi.py")'
+    );
 
     if (fs.existsSync(workPath)) fs.removeSync(workPath);
   });

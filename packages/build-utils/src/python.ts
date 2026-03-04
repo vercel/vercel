@@ -2,7 +2,6 @@ import fs from 'fs';
 import { join } from 'path';
 import {
   containsAppOrHandler,
-  getStringConstant,
   parseDjangoSettingsModule,
 } from '@vercel/python-analysis';
 import debug from './debug';
@@ -60,40 +59,13 @@ export async function getDjangoSettingsModule(
  */
 export async function getDjangoEntrypoint(
   workPath: string
-): Promise<{ entrypoint?: string; settings: string } | null> {
+): Promise<{ settings: string } | null> {
   const settingsModule = await getDjangoSettingsModule(workPath);
   if (!settingsModule) return null;
   const settingsPath = join(
     workPath,
     `${settingsModule.replace(/\./g, '/')}.py`
   );
-  try {
-    const settingsContent = await fs.promises.readFile(settingsPath, 'utf-8');
-    const asgiApplication = await getStringConstant(
-      settingsContent,
-      'ASGI_APPLICATION'
-    );
-    if (asgiApplication) {
-      const modulePath = asgiApplication.split('.').slice(0, -1).join('/');
-      const asgiPath = `${modulePath}.py`;
-      debug(`Django ASGI entrypoint from ${settingsModule}: ${asgiPath}`);
-      return { entrypoint: asgiPath, settings: settingsModule };
-    }
-    const wsgiApplication = await getStringConstant(
-      settingsContent,
-      'WSGI_APPLICATION'
-    );
-    if (wsgiApplication) {
-      const modulePath = wsgiApplication.split('.').slice(0, -1).join('/');
-      const wsgiPath = `${modulePath}.py`;
-      debug(`Django WSGI entrypoint from ${settingsModule}: ${wsgiPath}`);
-      return { entrypoint: wsgiPath, settings: settingsModule };
-    }
-    debug(
-      `Django settings module ${settingsModule} has no ASGI_APPLICATION or WSGI_APPLICATION`
-    );
-  } catch {
-    debug(`Failed to read or parse settings file: ${settingsPath}`);
-  }
+  if (!fs.existsSync(settingsPath)) return null;
   return { settings: settingsModule };
 }

@@ -91,15 +91,18 @@ const frameworkHooks: Partial<Record<PythonFramework, FrameworkHook>> = {
     debug(`Django settings: ${JSON.stringify(settings)}`);
     if (!settings) return;
 
+    const baseDir = detected?.baseDir ?? '';
     const asgiApp = settings['ASGI_APPLICATION'];
     if (typeof asgiApp === 'string') {
-      const entrypoint = `${asgiApp.split('.').slice(0, -1).join('/')}.py`;
+      const rel = `${asgiApp.split('.').slice(0, -1).join('/')}.py`;
+      const entrypoint = baseDir ? `${baseDir}/${rel}` : rel;
       debug(`Django hook: ASGI entrypoint: ${entrypoint}`);
       return { entrypoint };
     }
     const wsgiApp = settings['WSGI_APPLICATION'];
     if (typeof wsgiApp === 'string') {
-      const entrypoint = `${wsgiApp.split('.').slice(0, -1).join('/')}.py`;
+      const rel = `${wsgiApp.split('.').slice(0, -1).join('/')}.py`;
+      const entrypoint = baseDir ? `${baseDir}/${rel}` : rel;
       debug(`Django hook: WSGI entrypoint: ${entrypoint}`);
       return { entrypoint };
     }
