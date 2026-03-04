@@ -1,3 +1,4 @@
+import { agentCommand } from './agent/command';
 import { activityCommand } from './activity/command';
 import { aliasCommand } from './alias/command';
 import { apiCommand } from './api/command';
@@ -52,6 +53,7 @@ import type { Command } from './help';
 import output from '../output-manager';
 
 const commandsStructs = [
+  agentCommand,
   aliasCommand,
   activityCommand,
   apiCommand,
