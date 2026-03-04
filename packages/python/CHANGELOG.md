@@ -1,5 +1,11 @@
 # @vercel/python
 
+## 6.20.1
+
+### Patch Changes
+
+- Add background worker service support for Python (Dramatiq/Celery) and propagate vercel headers context to worker handlers. ([#15361](https://github.com/vercel/vercel/pull/15361))
+
 ## 6.20.0
 
 ### Minor Changes
