@@ -5,6 +5,7 @@ from collections.abc import Iterable, Mapping
 from importlib import import_module
 from typing import cast
 
+
 def _iter_header_items(headers: object) -> list[tuple[object, object]]:
     if isinstance(headers, Mapping):
         mapping_headers = cast("Mapping[object, object]", headers)
