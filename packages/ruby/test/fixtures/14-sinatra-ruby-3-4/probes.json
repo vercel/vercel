@@ -1,0 +1,19 @@
+{
+  "probes": [
+    {
+      "path": "/",
+      "status": 200,
+      "mustContain": "Hello from Sinatra Ruby 3.4"
+    },
+    {
+      "path": "/health",
+      "status": 200,
+      "mustContain": "\"status\":\"ok\""
+    },
+    {
+      "path": "/health",
+      "status": 200,
+      "mustContain": "\"ruby\":\"3.4"
+    }
+  ]
+}

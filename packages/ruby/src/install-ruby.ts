@@ -1,14 +1,23 @@
 import execa from 'execa';
 import which from 'which';
-import { join } from 'path';
+import { delimiter, dirname, join } from 'path';
 import { intersects } from 'semver';
 import { Meta, debug, NowBuildError, Version } from '@vercel/build-utils';
 import { spawnSync } from 'child_process';
 import { tmpdir } from 'os';
+import { getMiseBinaryOrInstall, installRubyViaMise } from './mise';
+import { formatCommandError } from './command-error';
+import type { DeclaredRubyVersion } from './version';
 
 class RubyVersion extends Version {}
 
 const allOptions: RubyVersion[] = [
+  new RubyVersion({
+    major: 3,
+    minor: 4,
+    range: '3.4.x',
+    runtime: 'ruby3.4',
+  }),
   new RubyVersion({
     major: 3,
     minor: 3,
@@ -36,6 +45,19 @@ const allOptions: RubyVersion[] = [
     discontinueDate: new Date('2021-11-30'),
   }),
 ];
+
+function ensureBinaryDirOnPath(binaryPath: string): void {
+  const binDir = dirname(binaryPath);
+  const currentPath = process.env.PATH || '';
+  const parts = currentPath.split(delimiter).filter(Boolean);
+  if (parts.includes(binDir)) {
+    return;
+  }
+
+  process.env.PATH = currentPath
+    ? `${binDir}${delimiter}${currentPath}`
+    : binDir;
+}
 
 function getLatestRubyVersion(): RubyVersion {
   const selection = allOptions.find(isInstalled);
@@ -106,8 +128,26 @@ function makeLocalRubyEnv({
   };
 }
 
-function getRubyPath(meta: Meta, gemfileContents: string) {
+function parseMajorMinor(
+  version: string
+): { major: number; minor: number } | null {
+  const match = version.match(/(\d+)\.(\d+)/);
+  if (!match) return null;
+
+  const major = Number(match[1]);
+  const minor = Number(match[2]);
+  if (Number.isNaN(major) || Number.isNaN(minor)) return null;
+
+  return { major, minor };
+}
+
+async function getRubyPath(
+  meta: Meta,
+  gemfileContents: string,
+  declaredVersion?: DeclaredRubyVersion
+) {
   let selection: RubyVersion | null = null;
+  let hasDeclaredVersionSelection = false;
   try {
     selection = getLatestRubyVersion();
   } catch {
@@ -128,31 +168,105 @@ function getRubyPath(meta: Meta, gemfileContents: string) {
       message:
         'Unable to find any supported Ruby versions (local). Ensure ruby and gem are on PATH.',
     });
-  } else if (gemfileContents) {
+  }
+
+  // Priority 1: .ruby-version, .tool-versions, or mise.toml file
+  if (declaredVersion) {
+    const { version, source } = declaredVersion;
+    const parsedVersion = parseMajorMinor(version);
+
+    if (parsedVersion) {
+      const { major: declaredMajor, minor: declaredMinor } = parsedVersion;
+      const matchedOption = allOptions.find(
+        o => o.major === declaredMajor && o.minor === declaredMinor
+      );
+
+      if (matchedOption) {
+        if (matchedOption.state === 'discontinued') {
+          throw new NowBuildError({
+            code: 'RUBY_DISCONTINUED_VERSION',
+            link: 'http://vercel.link/ruby-version',
+            message: `Ruby version "${version}" from ${source} is discontinued and must be upgraded.`,
+          });
+        }
+
+        hasDeclaredVersionSelection = true;
+        if (isInstalled(matchedOption)) {
+          // Pre-installed — use directly
+          console.log(
+            `Using Ruby ${matchedOption.major}.${matchedOption.minor} from ${source}`
+          );
+          selection = matchedOption;
+        } else {
+          // Not pre-installed — install via mise
+          console.log(
+            `Ruby ${matchedOption.major}.${matchedOption.minor} (from ${source}) is not pre-installed, installing via mise...`
+          );
+          return installViaMise(matchedOption, version);
+        }
+      } else {
+        console.warn(
+          `Warning: Ruby version "${version}" from ${source} is not supported. Supported: ${allOptions
+            .filter(o => o.state !== 'discontinued')
+            .map(o => `${o.major}.${o.minor}`)
+            .join(', ')}`
+        );
+      }
+    } else {
+      console.warn(
+        `Warning: Could not parse Ruby version "${version}" from ${source}, ignoring.`
+      );
+    }
+  }
+
+  // Priority 2: Gemfile ruby directive (only when no explicit declared version was selected)
+  if (!hasDeclaredVersionSelection && gemfileContents) {
+    if (!selection?.state || selection.state === 'discontinued') {
+      // Reset selection for Gemfile parsing
+      try {
+        selection = getLatestRubyVersion();
+      } catch {
+        selection = null;
+      }
+    }
+
     const line = gemfileContents
       .split('\n')
       .find(line => line.startsWith('ruby'));
     if (line) {
       const strVersion = line.slice(4).trim().slice(1, -1).replace(/~>\s*/, '');
-      const found = allOptions.some(o => {
-        // The array is already in order so return the first
-        // match which will be the newest version.
-        selection = o;
-        return intersects(o.range, strVersion);
-      });
-      if (!found) {
+      const matchedGemfileOption = allOptions.find(option =>
+        intersects(option.range, strVersion)
+      );
+      if (!matchedGemfileOption) {
         throw new NowBuildError({
           code: 'RUBY_INVALID_VERSION',
           message: `Found \`Gemfile\` with invalid Ruby version: \`${line}.\``,
           link: 'http://vercel.link/ruby-version',
         });
       }
+      selection = matchedGemfileOption;
 
       if (
         !selection ||
         selection.state === 'discontinued' ||
         !isInstalled(selection)
       ) {
+        // If the selected version is active but not pre-installed, install via mise
+        if (
+          selection &&
+          selection.state !== 'discontinued' &&
+          !isInstalled(selection)
+        ) {
+          console.log(
+            `Ruby ${selection.major}.${selection.minor} (from Gemfile) is not pre-installed, installing via mise...`
+          );
+          return installViaMise(
+            selection,
+            `${selection.major}.${selection.minor}`
+          );
+        }
+
         const sys = resolveSystemRuby();
         if (sys) {
           const sysRange = `${sys.major}.${sys.minor}.x`;
@@ -193,6 +307,15 @@ function getRubyPath(meta: Meta, gemfileContents: string) {
 
   if (selection) {
     const { major, minor, runtime } = selection;
+
+    // If the selected version is not pre-installed, install via mise
+    if (!isInstalled(selection) && selection.state !== 'discontinued') {
+      console.log(
+        `Ruby ${major}.${minor} is not pre-installed, installing via mise...`
+      );
+      return installViaMise(selection, `${major}.${minor}`);
+    }
+
     const gemHome = '/ruby' + major + minor;
     const result = {
       major,
@@ -222,20 +345,130 @@ function getRubyPath(meta: Meta, gemfileContents: string) {
   });
 }
 
+/**
+ * Install a Ruby version via mise and return the path information
+ * needed for the build.
+ */
+async function installViaMise(
+  option: RubyVersion,
+  version: string
+): Promise<{
+  major: number;
+  gemHome: string;
+  runtime: string;
+  rubyPath: string;
+  gemPath: string;
+  vendorPath: string;
+}> {
+  const misePath = await getMiseBinaryOrInstall();
+  // Ruby installed via mise includes a rubygems plugin that shells out to `mise`.
+  // Ensure the binary is discoverable during subsequent gem/bundler operations.
+  ensureBinaryDirOnPath(misePath);
+  const { rubyPath, gemPath } = await installRubyViaMise(misePath, version);
+
+  const gemHome = join(
+    tmpdir(),
+    `vercel-ruby-${option.major}${option.minor}-${process.pid}`
+  );
+
+  return {
+    major: option.major,
+    gemHome,
+    runtime: option.runtime,
+    rubyPath,
+    gemPath,
+    vendorPath: `vendor/bundle/ruby/${option.major}.${option.minor}.0`,
+  };
+}
+
+async function findBundlerPath({
+  gemHome,
+  gemPath,
+}: {
+  gemHome: string;
+  gemPath: string;
+}): Promise<string | null> {
+  const candidates = [
+    join(gemHome, 'bin', 'bundler'),
+    join(gemHome, 'bin', 'bundle'),
+    join(dirname(gemPath), 'bundler'),
+    join(dirname(gemPath), 'bundle'),
+  ];
+
+  const seen = new Set<string>();
+  for (const candidate of candidates) {
+    if (seen.has(candidate)) continue;
+    seen.add(candidate);
+
+    try {
+      const res = await execa(candidate, ['--version'], {
+        stdio: 'pipe',
+        env: {
+          GEM_HOME: gemHome,
+        },
+        reject: false,
+      });
+      if (res.exitCode === 0) {
+        return candidate;
+      }
+    } catch {
+      // Candidate executable doesn't exist or can't run.
+      debug(`bundler executable not found at "${candidate}"`);
+    }
+  }
+
+  return null;
+}
+
 // downloads and installs `bundler` (respecting
 // process.env.GEM_HOME), and returns
 // the absolute path to it
-export async function installBundler(meta: Meta, gemfileContents: string) {
+export async function installBundler(
+  meta: Meta,
+  gemfileContents: string,
+  declaredVersion?: DeclaredRubyVersion
+) {
   const { gemHome, rubyPath, gemPath, vendorPath, runtime, major } =
-    getRubyPath(meta, gemfileContents);
+    await getRubyPath(meta, gemfileContents, declaredVersion);
 
   debug('installing bundler...');
-  await execa(gemPath, ['install', 'bundler', '--no-document'], {
-    stdio: 'pipe',
-    env: {
-      GEM_HOME: gemHome,
-    },
-  });
+  try {
+    await execa(gemPath, ['install', 'bundler', '--no-document'], {
+      stdio: 'pipe',
+      env: {
+        GEM_HOME: gemHome,
+      },
+    });
+  } catch (err) {
+    const fallbackBundlerPath = await findBundlerPath({ gemHome, gemPath });
+    if (fallbackBundlerPath) {
+      console.warn(
+        `Warning: Failed to install bundler with gem; falling back to existing bundler at "${fallbackBundlerPath}".`
+      );
+      debug(`bundler install failed:\n${formatCommandError(err)}`);
+      return {
+        major,
+        gemHome,
+        rubyPath,
+        gemPath,
+        vendorPath,
+        runtime,
+        bundlerPath: fallbackBundlerPath,
+      };
+    }
+
+    throw new Error(
+      `Failed to install bundler via gem:\n${formatCommandError(err)}`
+    );
+  }
+
+  const bundlerPath = await findBundlerPath({ gemHome, gemPath });
+  if (!bundlerPath) {
+    throw new Error(
+      `Bundler install completed but no runnable bundler executable was found.\n` +
+        `Checked GEM_HOME "${gemHome}" and Ruby bin directory "${dirname(gemPath)}".`
+    );
+  }
 
   return {
     major,
@@ -244,7 +477,7 @@ export async function installBundler(meta: Meta, gemfileContents: string) {
     gemPath,
     vendorPath,
     runtime,
-    bundlerPath: join(gemHome, 'bin', 'bundler'),
+    bundlerPath,
   };
 }
 

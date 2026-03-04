@@ -24,6 +24,7 @@ import {
   type ShouldServe,
 } from '@vercel/build-utils';
 import { installBundler } from './install-ruby';
+import { getDeclaredRubyVersion } from './version';
 
 async function matchPaths(
   configPatterns: string | string[] | undefined,
@@ -189,8 +190,12 @@ export const build: BuildV3 = async ({
   const gemfileContents = gemfilePath
     ? await readFile(gemfilePath, 'utf8')
     : '';
+  const declaredRubyVersion = await getDeclaredRubyVersion({
+    workPath,
+    entrypointFsDirname,
+  });
   const { gemHome, bundlerPath, vendorPath, runtime, rubyPath, major } =
-    await installBundler(meta, gemfileContents);
+    await installBundler(meta, gemfileContents, declaredRubyVersion);
 
   process.env.GEM_HOME = gemHome;
 
@@ -240,7 +245,7 @@ export const build: BuildV3 = async ({
   // try to remove gem cache to slim bundle size
   try {
     await remove(join(vendorDir, 'cache'));
-  } catch (e) {
+  } catch {
     // don't do anything here
   }
 
