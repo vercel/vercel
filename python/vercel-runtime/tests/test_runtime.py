@@ -27,6 +27,7 @@ from tests._n1_mock import (
     LogMessage,
     N1Mock,
     ServerStartedMessage,
+    UnrecoverableErrorMessage,
     create_n1_mock,
 )
 
@@ -546,6 +547,11 @@ class TestErrorPaths(_RuntimeTestCase):
             module_name=mod,
             ipc_socket_path=self.n1.socket_path,
         ) as proc:
+            msg = await self.n1.wait_for_message(
+                UnrecoverableErrorMessage, timeout=10.0
+            )
+            self.assertEqual(msg.payload.exit_code, 1)
+            self.assertIn("Missing variable", msg.payload.message)
             async with asyncio.timeout(10.0):
                 returncode = await proc.wait()
             self.assertEqual(returncode, 1)
@@ -560,6 +566,14 @@ class TestErrorPaths(_RuntimeTestCase):
             module_name=mod,
             ipc_socket_path=self.n1.socket_path,
         ) as proc:
+            msg = await self.n1.wait_for_message(
+                UnrecoverableErrorMessage, timeout=10.0
+            )
+            self.assertEqual(msg.payload.exit_code, 1)
+            self.assertIn(
+                "Handler must inherit from BaseHTTPRequestHandler",
+                msg.payload.message,
+            )
             async with asyncio.timeout(10.0):
                 returncode = await proc.wait()
             self.assertEqual(returncode, 1)
@@ -594,11 +608,17 @@ class TestErrorPaths(_RuntimeTestCase):
             module_name="nonexistent",
             ipc_socket_path=self.n1.socket_path,
         ) as proc:
+            msg = await self.n1.wait_for_message(
+                UnrecoverableErrorMessage, timeout=10.0
+            )
+            self.assertEqual(msg.payload.exit_code, 1)
+            self.assertIn("could not import", msg.payload.message)
+            self.assertIn("nonexistent.py", msg.payload.message)
             async with asyncio.timeout(10.0):
                 returncode = await proc.wait()
             self.assertEqual(returncode, 1)
             stderr = await _read_stderr(proc)
-            self.assertIn("Error importing", stderr)
+            self.assertIn("could not import", stderr)
 
 
 class _LambdaTestCase(unittest.IsolatedAsyncioTestCase):
@@ -735,20 +755,25 @@ class TestLambdaASGI(_LambdaTestCase):
         self.assertEqual(result["statusCode"], 200)
 
     async def test_repeated_headers(self) -> None:
-        ep_abs, ep_rel, mod = _make_entrypoint("asgi_app.py", self.tmp_path)
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "asgi_repeated_headers.py",
+            self.tmp_path,
+        )
         result = await _invoke_lambda(
             entrypoint_abs=ep_abs,
             entrypoint_rel=ep_rel,
             module_name=mod,
             event=_lambda_event(
                 "GET",
-                "/hello",
+                "/headers",
                 headers={
                     "accept": ["text/html", "application/json"],
                 },
             ),
         )
         self.assertEqual(result["statusCode"], 200)
+        body = base64.b64decode(result["body"]).decode()
+        self.assertEqual(body, "text/html,application/json")
 
 
 class TestLambdaASGILifespan(_LambdaTestCase):

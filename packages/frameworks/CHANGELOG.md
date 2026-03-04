@@ -1,5 +1,13 @@
 # @vercel/frameworks
 
+## 3.20.0
+
+### Minor Changes
+
+- Add a content filter for manage.py for django framework detection. ([#15348](https://github.com/vercel/vercel/pull/15348))
+
+- Detect django framework when manage.py is found. ([#15314](https://github.com/vercel/vercel/pull/15314))
+
 ## 3.19.1
 
 ### Patch Changes

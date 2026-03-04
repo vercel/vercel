@@ -1,3 +1,4 @@
+import { activityCommand } from './activity/command';
 import { aliasCommand } from './alias/command';
 import { apiCommand } from './api/command';
 import { bisectCommand } from './bisect/command';
@@ -52,6 +53,7 @@ import output from '../output-manager';
 
 const commandsStructs = [
   aliasCommand,
+  activityCommand,
   apiCommand,
   blobCommand,
   bisectCommand,

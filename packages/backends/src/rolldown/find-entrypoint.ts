@@ -59,7 +59,7 @@ export const findEntrypoint = async (
       try {
         await readFile(entrypointPath, 'utf-8');
         return entrypoint;
-      } catch (e) {
+      } catch (_e) {
         continue;
       }
     }

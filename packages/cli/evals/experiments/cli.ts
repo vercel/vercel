@@ -23,6 +23,30 @@ function listSkillFiles(dir: string, baseDir: string = dir): string[] {
 }
 
 /**
+ * Canonical set of CLI evals for this experiment.
+ *
+ * When new evals are added under evals/evals/, add them here so they are
+ * exercised and reported consistently.
+ */
+const ALL_EVALS: string[] = [
+  '_deploy',
+  'build',
+  'curl/explicit',
+  'curl/implicit',
+  'env/add',
+  'env/ls',
+  'env/pull',
+  'env/remove',
+  'env/update',
+  'init',
+  'login-whoami',
+  'login-not-logged-in',
+  'marketplace/install-neon-postgres',
+  'marketplace/install-neon-postgres-minimal',
+  'non-interactive',
+];
+
+/**
  * CLI evals experiment. Add eval fixtures under evals/ and configure
  * credentials (AI_GATEWAY_API_KEY, VERCEL_TOKEN, etc.) to run.
  *
@@ -34,7 +58,7 @@ function listSkillFiles(dir: string, baseDir: string = dir): string[] {
  */
 const config: ExperimentConfig = {
   agent: 'vercel-ai-gateway/claude-code',
-  evals: ['build', 'non-interactive'],
+  evals: ALL_EVALS,
   runs: 1,
   earlyExit: false, // Run all evals to completion so we get explicit pass/fail for each
   timeout: 900, // 15 min per eval (env can need link + env ls; build is long)

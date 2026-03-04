@@ -48,7 +48,7 @@ export function getBodyParser(body: Buffer, contentType: string | undefined) {
       try {
         const str = body.toString();
         return str ? JSON.parse(str) : {};
-      } catch (error) {
+      } catch (_error) {
         throw new ApiError(400, 'Invalid JSON');
       }
     }

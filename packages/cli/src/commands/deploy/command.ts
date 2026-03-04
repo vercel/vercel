@@ -1,4 +1,10 @@
-import { confirmOption, forceOption, yesOption } from '../../util/arg-common';
+import {
+  confirmOption,
+  forceOption,
+  formatOption,
+  jsonOption,
+  yesOption,
+} from '../../util/arg-common';
 
 export const deprecatedArchiveSplitTgz = 'split-tgz';
 
@@ -288,6 +294,8 @@ export const deployCommand = {
       deprecated: false,
       description: 'Specify the target deployment environment',
     },
+    formatOption,
+    jsonOption,
     confirmOption,
   ],
   examples: [
