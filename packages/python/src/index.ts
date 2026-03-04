@@ -240,7 +240,7 @@ export const build: BuildV3 = async ({
             );
             throw err;
           }
-        } catch (err) {
+        } catch (_err) {
           throw new NowBuildError({
             code: 'INVALID_PIPFILE_LOCK',
             message: 'Unable to parse Pipfile.lock',

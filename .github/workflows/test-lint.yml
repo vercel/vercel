@@ -56,10 +56,8 @@ jobs:
       - run: pnpm run lint
       - name: Biome format check (JS/TS/JSON)
         run: pnpm run biome:format
-      # Non-blocking while we fix existing lint violations (~120 remaining).
-      # Remove `|| true` once clean to make this a required check.
-      - name: Biome lint (informational)
-        run: pnpm run biome:lint || true
+      - name: Biome lint
+        run: pnpm run biome:lint
       - name: Check dependency versions
         run: pnpm exec syncpack lint
       - run: pnpm run build

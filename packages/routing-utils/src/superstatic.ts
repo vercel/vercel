@@ -159,7 +159,7 @@ export function convertRedirects(
         route.missing = r.missing;
       }
       return route;
-    } catch (e) {
+    } catch (_e) {
       throw new Error(`Failed to parse redirect: ${JSON.stringify(r)}`);
     }
   });
@@ -198,7 +198,7 @@ export function convertRewrites(
         route.status = r.statusCode;
       }
       return route;
-    } catch (e) {
+    } catch (_e) {
       throw new Error(`Failed to parse rewrite: ${JSON.stringify(r)}`);
     }
   });
@@ -484,7 +484,7 @@ function safelyCompile(
       // to safely compiling to handle edge cases if path-to-regexp compile
       // fails
       return compile(value, { validate: false })(indexes);
-    } catch (e) {
+    } catch (_e) {
       // non-fatal, we continue to safely compile
     }
   }
