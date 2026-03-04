@@ -39,6 +39,13 @@ interface PythonDependencyExternalizerOptions {
   noBuildCheckFailed: boolean;
   pythonPath: string;
   hasCustomCommand: boolean;
+  alwaysBundlePackages?: string[];
+}
+
+interface DependencyAnalysis {
+  runtimeInstallEnabled: boolean;
+  allVendorFiles: Files;
+  totalBundleSize: number;
 }
 
 export class PythonDependencyExternalizer {
@@ -51,6 +58,7 @@ export class PythonDependencyExternalizer {
   private noBuildCheckFailed: boolean;
   private pythonPath: string;
   private hasCustomCommand: boolean;
+  private alwaysBundlePackages: string[];
 
   // Populated by analyze()
   private allVendorFiles: Files = {};
@@ -67,6 +75,7 @@ export class PythonDependencyExternalizer {
     this.noBuildCheckFailed = options.noBuildCheckFailed;
     this.pythonPath = options.pythonPath;
     this.hasCustomCommand = options.hasCustomCommand;
+    this.alwaysBundlePackages = options.alwaysBundlePackages ?? [];
   }
 
   shouldEnableRuntimeInstall(): boolean {
@@ -92,10 +101,7 @@ export class PythonDependencyExternalizer {
    * and determine whether runtime installation is needed.
    * Must be called before generateBundle().
    */
-  async analyze(files: Files): Promise<{
-    runtimeInstallEnabled: boolean;
-    allVendorFiles: Files;
-  }> {
+  async analyze(files: Files): Promise<DependencyAnalysis> {
     this.allVendorFiles = await mirrorPackagesIntoVendor({
       venvPath: this.venvPath,
       vendorDirName: this.vendorDir,
@@ -138,7 +144,11 @@ export class PythonDependencyExternalizer {
       });
     }
 
-    return { runtimeInstallEnabled, allVendorFiles: this.allVendorFiles };
+    return {
+      runtimeInstallEnabled,
+      allVendorFiles: this.allVendorFiles,
+      totalBundleSize: this.totalBundleSize,
+    };
   }
 
   /**
@@ -269,10 +279,15 @@ export class PythonDependencyExternalizer {
 
     // Calculate fixed overhead: source files + private packages + vercel-runtime.
     // These are always bundled and not part of the knapsack.
+    // alwaysBundlePackages are included here so their files are copied into
+    // the vendor directory and counted toward the fixed overhead.  They also
+    // appear in bundledPackagesForConfig (below) so the runtime bootstrap
+    // knows to skip reinstalling them.
     const alwaysBundled = [
       ...classification.privatePackages,
       'vercel-runtime',
       'vercel_runtime',
+      ...this.alwaysBundlePackages,
     ];
     const alwaysBundledFiles = await mirrorPackagesIntoVendor({
       venvPath: this.venvPath,
@@ -334,9 +349,13 @@ export class PythonDependencyExternalizer {
     // The bundledPackages list for runtime config includes private packages
     // and any public packages we selected for bundling. These will be
     // passed as --no-install-package to uv sync at runtime.
+    // alwaysBundlePackages appear here (in addition to alwaysBundled above)
+    // so they are written to the runtime config and passed as
+    // --no-install-package to `uv sync` at cold start.
     const bundledPackagesForConfig = [
       ...classification.privatePackages,
       ...bundledPublic,
+      ...this.alwaysBundlePackages,
     ];
 
     // Write a runtime config marker so the bootstrap knows to run

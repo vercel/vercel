@@ -800,6 +800,11 @@ exports[`help command > deploy help output snapshots > deploy help column width 
                                 nothing 
                                 has     
                                 changed 
+  -F,  --format <FORMAT>        Specify 
+                                the     
+                                output  
+                                format  
+                                (json)  
        --guidance               Receive 
                                 command 
                                 suggest…
@@ -985,6 +990,7 @@ exports[`help command > deploy help output snapshots > deploy help column width 
                                 (e.g. \`-e KEY1=value1 -e KEY2=value2\`)          
   -f,  --force                  Force a new deployment even if nothing has      
                                 changed                                         
+  -F,  --format <FORMAT>        Specify the output format (json)                
        --guidance               Receive command suggestions once deployment is  
                                 complete                                        
   -l,  --logs                   Print the build logs                            
@@ -1061,6 +1067,7 @@ exports[`help command > deploy help output snapshots > deploy help column width 
   -b,  --build-env <KEY=VALUE>  Specify environment variables during build-time (e.g. \`-b KEY1=value1 -b KEY2=value2\`)  
   -e,  --env <KEY=VALUE>        Specify environment variables during run-time (e.g. \`-e KEY1=value1 -e KEY2=value2\`)    
   -f,  --force                  Force a new deployment even if nothing has changed                                      
+  -F,  --format <FORMAT>        Specify the output format (json)                                                        
        --guidance               Receive command suggestions once deployment is complete                                 
   -l,  --logs                   Print the build logs                                                                    
   -m,  --meta <KEY=VALUE>       Specify metadata for the deployment (e.g. \`-m KEY1=value1 -m KEY2=value2\`)              
@@ -2917,6 +2924,49 @@ exports[`help command > integration help output snapshots > integration balance 
 "
 `;
 
+exports[`help command > integration help output snapshots > integration discover subcommand > integration discover subcommand help column width 120 1`] = `
+"
+  ▲ vercel integration discover [query] [options]
+
+  Discover available marketplace integrations                                                                           
+
+  Options:
+
+  -F,  --format <FORMAT>  Specify the output format (json)                                                              
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+       --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - Discover marketplace integrations
+
+    $ vercel integration discover
+
+  - Search for integrations matching a query
+
+    $ vercel integration discover postgres
+    $ vercel integration discover aws
+
+  - Discover marketplace integrations as JSON
+
+    $ vercel integration discover --format=json
+
+"
+`;
+
 exports[`help command > integration help output snapshots > integration guide subcommand > integration guide subcommand help column width 120 1`] = `
 "
   ▲ vercel integration guide integration [options]
@@ -2959,6 +3009,10 @@ exports[`help command > integration help output snapshots > integration guide su
 
     $ vercel integration guide neon --framework nextjs
 
+  - Discover available integrations and product slugs
+
+    $ vercel integration discover
+
 "
 `;
 
@@ -2966,7 +3020,10 @@ exports[`help command > integration help output snapshots > integration help col
 "
   ▲ vercel integration command
 
-  Manage marketplace integrations       
+  Manage marketplace integrations. To   
+  manage individual resources           
+  (disconnect, remove), see             
+  \`integration-resource\`.               
 
   Commands:
 
@@ -2983,7 +3040,7 @@ exports[`help command > integration help output snapshots > integration help col
                              specif…
                              market…
                              integr…
-  discover                   Discov…
+  discover  [query]          Discov…
                              availa…
                              market…
                              integr…
@@ -3016,6 +3073,13 @@ exports[`help command > integration help output snapshots > integration help col
                              a      
                              market…
                              integr…
+                             Resour…
+                             must be
+                             removed
+                             first  
+                             using  
+                             \`integ…
+                             remove…
 
 
   Global Options:
@@ -3079,21 +3143,24 @@ exports[`help command > integration help output snapshots > integration help col
 "
   ▲ vercel integration command
 
-  Manage marketplace integrations                                               
+  Manage marketplace integrations. To manage individual resources (disconnect,  
+  remove), see \`integration-resource\`.                                          
 
   Commands:
 
   add       integration      Installs a marketplace integration             
   balance   integration      Shows the balances and thresholds of a         
                              specified marketplace integration              
-  discover                   Discover available marketplace integrations    
+  discover  [query]          Discover available marketplace integrations    
   guide     integration      Show getting started guides and code snippets  
                              for a marketplace integration                  
   list      [project]        List resources from marketplace integrations   
                              for the current project                        
   open      name [resource]  Opens a marketplace integration's or resource's
                              dashboard via SSO                              
-  remove    integration      Uninstalls a marketplace integration           
+  remove    integration      Uninstalls a marketplace integration. Resources
+                             must be removed first using                    
+                             \`integration-resource remove\`.                 
 
 
   Global Options:
@@ -3125,17 +3192,18 @@ exports[`help command > integration help output snapshots > integration help col
 "
   ▲ vercel integration command
 
-  Manage marketplace integrations                                                                                       
+  Manage marketplace integrations. To manage individual resources (disconnect, remove), see \`integration-resource\`.     
 
   Commands:
 
   add       integration      Installs a marketplace integration                                                     
   balance   integration      Shows the balances and thresholds of a specified marketplace integration               
-  discover                   Discover available marketplace integrations                                            
+  discover  [query]          Discover available marketplace integrations                                            
   guide     integration      Show getting started guides and code snippets for a marketplace integration            
   list      [project]        List resources from marketplace integrations for the current project                   
   open      name [resource]  Opens a marketplace integration's or resource's dashboard via SSO                      
-  remove    integration      Uninstalls a marketplace integration                                                   
+  remove    integration      Uninstalls a marketplace integration. Resources must be removed first using            
+                             \`integration-resource remove\`.                                                         
 
 
   Global Options:

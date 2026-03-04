@@ -4,8 +4,10 @@
 import sys
 import os
 import inspect
+import logging
+import logging.config
 from os import path as _p
-from importlib import import_module
+from importlib import util as _importlib_util
 import mimetypes
 
 
@@ -21,6 +23,175 @@ def _color(text: str, code: str) -> str:
     if _NO_COLOR:
         return text
     return f"{code}{text}{_RESET}"
+
+
+# Configure logging to output DEBUG-WARNING to the stdout
+# and ERROR-CRITICAL to the stderr.
+
+
+# We need a custom filter for the stdout stream
+# so it won't print anything higher than WARNING.
+class _MaxLevelFilter(logging.Filter):
+    def __init__(self, max_level):
+        super().__init__()
+        self.max_level = max_level
+
+    def filter(self, record):
+        return record.levelno <= self.max_level
+
+
+def _build_log_config(loggers, _filter_ref=None) -> dict:
+    if _filter_ref is None:
+        _filter_ref = "vc_init_dev._MaxLevelFilter"
+
+    return {
+        "version": 1,
+        "disable_existing_loggers": False,
+        "filters": {
+            "max_warning": {
+                "()": _filter_ref,
+                "max_level": logging.WARNING,
+            }
+        },
+        "handlers": {
+            "stdout": {
+                "class": "logging.StreamHandler",
+                "stream": "ext://sys.stdout",
+                "filters": ["max_warning"],
+            },
+            "stderr": {
+                "class": "logging.StreamHandler",
+                "stream": "ext://sys.stderr",
+                "level": "ERROR",
+            },
+        },
+        "loggers": loggers,
+        "root": {
+            "handlers": ["stdout", "stderr"],
+            "level": "INFO",
+        },
+    }
+
+
+def _setup_server_log_routing(logger_name=None):
+    loggers = {}
+
+    if logger_name:
+        loggers[logger_name] = {
+            "handlers": ["stdout", "stderr"],
+            "level": "INFO",
+            "propagate": False,
+        }
+
+    logging.config.dictConfig(
+        _build_log_config(
+            loggers=loggers,
+            _filter_ref=_MaxLevelFilter,
+        ),
+    )
+
+
+def _build_uvicorn_log_config(default_fmt=None, access_fmt=None) -> dict:
+    try:
+        from uvicorn.config import LOGGING_CONFIG  # type: ignore
+
+        uvicorn_fmts = LOGGING_CONFIG["formatters"]
+    except ImportError:
+        uvicorn_fmts = {
+            "default": {
+                "()": "uvicorn.logging.DefaultFormatter",
+                "fmt": "%(levelprefix)s %(message)s",
+                "use_colors": None,
+            },
+            "access": {
+                "()": "uvicorn.logging.AccessFormatter",
+                "fmt": '%(levelprefix)s %(client_addr)s - "%(request_line)s" %(status_code)s',
+            },
+        }
+
+    cfg = _build_log_config(
+        loggers={
+            "uvicorn": {
+                "handlers": ["stdout", "stderr"],
+                "level": "INFO",
+                "propagate": False,
+            },
+            "uvicorn.error": {"level": "INFO"},
+            "uvicorn.access": {
+                "handlers": ["access"],
+                "level": "INFO",
+                "propagate": False,
+            },
+        },
+    )
+
+    if default_fmt is None:
+        default_fmt = {**uvicorn_fmts["default"], "use_colors": not _NO_COLOR}
+
+    if access_fmt is None:
+        access_fmt = {**uvicorn_fmts["access"], "use_colors": not _NO_COLOR}
+
+    cfg["formatters"] = {"default": default_fmt, "access": access_fmt}
+    cfg["handlers"]["stdout"]["formatter"] = "default"
+    cfg["handlers"]["stderr"]["formatter"] = "default"
+    cfg["handlers"]["access"] = {
+        "class": "logging.StreamHandler",
+        "stream": "ext://sys.stdout",
+        "formatter": "access",
+    }
+
+    return cfg
+
+
+def _build_hypercorn_log_config():
+    return _build_log_config(
+        loggers={
+            "hypercorn.error": {
+                "handlers": ["stdout", "stderr"],
+                "level": "INFO",
+                "propagate": False,
+            },
+            "hypercorn.access": {
+                "handlers": ["stdout"],
+                "level": "INFO",
+                "propagate": False,
+            },
+        },
+    )
+
+
+def _patch_fastapi_cli_log_config():
+    try:
+        import fastapi_cli.utils.cli as _fcli  # type: ignore
+        import fastapi_cli.cli as _fcli_cli  # type: ignore
+
+        _orig_get_config = _fcli.get_uvicorn_log_config  # to ensure it's there
+        _fcli_cli.get_uvicorn_log_config  # to ensure it's there
+    except (ImportError, AttributeError):
+        return
+
+    def _get_routed_config():
+        orig = _orig_get_config()
+        return _build_uvicorn_log_config(
+            default_fmt={
+                "()": "fastapi_cli.utils.cli.CustomFormatter",
+                "fmt": orig["formatters"]["default"].get(
+                    "fmt", "%(levelprefix)s %(message)s"
+                ),
+                "use_colors": orig["formatters"]["default"].get("use_colors"),
+            },
+            access_fmt={
+                "()": "fastapi_cli.utils.cli.CustomFormatter",
+                "fmt": orig["formatters"]["access"].get(
+                    "fmt",
+                    "%(levelprefix)s %(client_addr)s - '%(request_line)s' %(status_code)s",
+                ),
+            },
+        )
+
+    _fcli.get_uvicorn_log_config = _get_routed_config
+    # we need to patch the local binding as well
+    _fcli_cli.get_uvicorn_log_config = _get_routed_config
 
 
 def _normalize_service_route_prefix(raw_prefix):
@@ -71,9 +242,26 @@ def _strip_service_route_prefix(path_value):
     return path_value, ""
 
 
+# Pre-configure the root logger before user module import so that any log
+# calls emitted at import time are routed to stdout/stderr correctly.
+_setup_server_log_routing()
+
+
 # ASGI/WSGI app detection
-USER_MODULE = "__VC_DEV_MODULE_PATH__"
-_mod = import_module(USER_MODULE)
+_MODULE_NAME = "__VC_DEV_MODULE_NAME__"
+_ENTRY_ABS = "__VC_DEV_ENTRY_ABS__"
+
+# Import user module by file path, matching vc_init.py's approach.
+# https://docs.python.org/3/library/importlib.html#importing-a-source-file-directly
+_spec = _importlib_util.spec_from_file_location(_MODULE_NAME, _ENTRY_ABS)
+if _spec is None or _spec.loader is None:
+    raise RuntimeError(
+        f"Could not load module spec for '{_MODULE_NAME}' at {_ENTRY_ABS}"
+    )
+_mod = _importlib_util.module_from_spec(_spec)
+sys.modules[_MODULE_NAME] = _mod
+_spec.loader.exec_module(_mod)
+
 _user_app_name = (
     "app"
     if hasattr(_mod, "app")
@@ -83,7 +271,7 @@ _user_app_name = (
 )
 if _user_app_name is None:
     raise RuntimeError(
-        f"Missing 'app' or 'application' in module '{USER_MODULE}'. "
+        f"Missing 'app' or 'application' in module '{_MODULE_NAME}'. "
         f"Define `app = ...` or `application = ...` in your entrypoint."
     )
 
@@ -137,7 +325,7 @@ def _detect_app_type(app_obj):
 
     print(
         _color(
-            f"Could not determine the application interface for '{USER_MODULE}:{_user_app_name}'\n"
+            f"Could not determine the application interface for '{_MODULE_NAME}:{_user_app_name}'\n"
             f"Expected either:\n"
             f"  - An ASGI app: async callable(scope, receive, send)\n"
             f"  - A WSGI app: callable(environ, start_response)",
@@ -343,7 +531,8 @@ if __name__ == "__main__":
         try:
             from werkzeug.serving import run_simple  # type: ignore
 
-            run_simple(host, port, wsgi_app, use_reloader=True)
+            _setup_server_log_routing("werkzeug")
+            run_simple(host, port, wsgi_app, use_reloader=True, threaded=True)
         except Exception:
             print(
                 _color(
@@ -364,6 +553,7 @@ if __name__ == "__main__":
             fastapi_dev = None
 
         if fastapi_dev is not None:
+            _patch_fastapi_cli_log_config()
             fastapi_dev(
                 entrypoint="vc_init_dev:asgi_app", host=host, port=port, reload=True
             )
@@ -378,6 +568,7 @@ if __name__ == "__main__":
                 port=port,
                 use_colors=True,
                 reload=True,
+                log_config=_build_uvicorn_log_config(),
             )
         except Exception:
             try:
@@ -387,6 +578,8 @@ if __name__ == "__main__":
 
                 config = Config()
                 config.bind = [f"{host}:{port}"]
+                config.use_reloader = True
+                config.logconfig_dict = _build_hypercorn_log_config()
 
                 async def _run():
                     await serve(asgi_app, config)

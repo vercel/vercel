@@ -11,7 +11,11 @@
 // AST Analysis (WASM-based Python parser using ruff_python_ast)
 // =============================================================================
 
-export { containsAppOrHandler } from './semantic/entrypoints';
+export {
+  containsAppOrHandler,
+  getStringConstant,
+  parseDjangoSettingsModule,
+} from './semantic/entrypoints';
 
 // =============================================================================
 // Installed package analysis (WASM-based .dist-info parsing)
@@ -24,7 +28,7 @@ export type {
   DirectUrlInfo,
 } from './manifest/dist-metadata';
 
-export { scanDistributions } from './manifest/dist-metadata';
+export { extendDistRecord, scanDistributions } from './manifest/dist-metadata';
 
 // =============================================================================
 // Package discovery (runtime + types)

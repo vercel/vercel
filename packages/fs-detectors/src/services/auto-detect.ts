@@ -143,6 +143,9 @@ async function detectServicesAtRoot(
   if (backendResult.error) {
     return { services: null, errors: [backendResult.error] };
   }
+  if (Object.keys(backendResult.services).length === 0) {
+    return { services: null, errors: [] };
+  }
   Object.assign(services, backendResult.services);
 
   return { services, errors: [] };

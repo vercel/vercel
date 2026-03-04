@@ -721,6 +721,10 @@ const main = async () => {
           telemetry.trackCliCommandAlias(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).alias;
           break;
+        case 'activity':
+          telemetry.trackCliCommandActivity(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).activity;
+          break;
         case 'api':
           telemetry.trackCliCommandApi(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).api;
@@ -732,6 +736,10 @@ const main = async () => {
         case 'blob':
           telemetry.trackCliCommandBlob(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).blob;
+          break;
+        case 'buy':
+          telemetry.trackCliCommandBuy(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).buy;
           break;
         case 'init':
           telemetry.trackCliCommandInit(userSuppliedSubCommand);
@@ -852,6 +860,10 @@ const main = async () => {
         case 'redirects':
           telemetry.trackCliCommandRedirects(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).redirects;
+          break;
+        case 'routes':
+          telemetry.trackCliCommandRoutes(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).routes;
           break;
         case 'remove':
           telemetry.trackCliCommandRemove(userSuppliedSubCommand);

@@ -46,7 +46,9 @@ import {
 import { build } from '../src/index';
 import { createVenvEnv, getVenvBinDir } from '../src/utils';
 import { UV_PYTHON_DOWNLOADS_MODE, getProtectedUvEnv } from '../src/uv';
+import { VERCEL_WORKERS_VERSION } from '../src/package-versions';
 import { createPyprojectToml } from '../src/install';
+import { detectDjangoPythonEntrypoint } from '../src/entrypoint';
 import { FileBlob } from '@vercel/build-utils';
 let warningMessages: string[];
 const originalConsoleWarn = console.warn;
@@ -1112,6 +1114,148 @@ describe('fastapi entrypoint discovery - positive cases', () => {
   });
 });
 
+describe('Django entrypoint discovery', () => {
+  async function writeFiles(
+    workPath: string,
+    files: Record<string, string>
+  ): Promise<void> {
+    for (const [rel, content] of Object.entries(files)) {
+      const full = path.join(workPath, rel);
+      fs.mkdirSync(path.dirname(full), { recursive: true });
+      fs.writeFileSync(full, content);
+    }
+  }
+
+  it('uses configured entrypoint when it exists and is valid', async () => {
+    const workPath = path.join(
+      tmpdir(),
+      `python-django-configured-${Date.now()}`
+    );
+    fs.mkdirSync(workPath, { recursive: true });
+
+    await writeFiles(workPath, {
+      'hello/world.py': `application = lambda env, start: None`,
+    });
+
+    const result = await detectDjangoPythonEntrypoint(
+      workPath,
+      'hello/world.py'
+    );
+    expect(result).toBe('hello/world.py');
+
+    if (fs.existsSync(workPath)) fs.removeSync(workPath);
+  });
+
+  it('resolves Django entrypoint from WSGI_APPLICATION (hello.wsgi.application -> hello/wsgi.py)', async () => {
+    const workPath = path.join(tmpdir(), `python-django-wsgi-${Date.now()}`);
+    fs.mkdirSync(workPath, { recursive: true });
+
+    await writeFiles(workPath, {
+      'manage.py': `os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'hello.settings')`,
+      'hello/settings.py': `WSGI_APPLICATION = 'hello.wsgi.application'`,
+      'hello/wsgi.py': `application = lambda env, start: None`,
+    });
+
+    const result = await detectDjangoPythonEntrypoint(workPath, 'missing.py');
+    expect(result).toBe('hello/wsgi.py');
+
+    if (fs.existsSync(workPath)) fs.removeSync(workPath);
+  });
+
+  it('falls back to candidate when manage.py is missing', async () => {
+    const workPath = path.join(
+      tmpdir(),
+      `python-django-fallback-${Date.now()}`
+    );
+    fs.mkdirSync(workPath, { recursive: true });
+
+    await writeFiles(workPath, {
+      'src/app.py': `application = lambda env, start: None`,
+    });
+
+    const result = await detectDjangoPythonEntrypoint(workPath, 'missing.py');
+    expect(result).toBe('src/app.py');
+
+    if (fs.existsSync(workPath)) fs.removeSync(workPath);
+  });
+
+  it('falls back to candidate when WSGI path is not on filesystem', async () => {
+    const workPath = path.join(
+      tmpdir(),
+      `python-django-wsgi-missing-${Date.now()}`
+    );
+    fs.mkdirSync(workPath, { recursive: true });
+
+    await writeFiles(workPath, {
+      'manage.py': `os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'hello.settings')`,
+      'hello/settings.py': `WSGI_APPLICATION = 'hello.wsgi.application'`,
+      'src/app.py': `application = lambda env, start: None`,
+    });
+    // WSGI_APPLICATION value does not refer to a valid file
+
+    const result = await detectDjangoPythonEntrypoint(workPath, 'missing.py');
+    expect(result).toBe('src/app.py');
+
+    if (fs.existsSync(workPath)) fs.removeSync(workPath);
+  });
+
+  it('resolves Django entrypoint from a subdirectory', async () => {
+    const workPath = path.join(
+      tmpdir(),
+      `python-django-root-dir-${Date.now()}`
+    );
+    fs.mkdirSync(workPath, { recursive: true });
+
+    // Django app lives under root dir "mysite"; no manage.py at workPath root
+    await writeFiles(workPath, {
+      'mysite/manage.py': `os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')`,
+      'mysite/config/settings.py': `WSGI_APPLICATION = 'config.wsgi.application'`,
+      'mysite/config/wsgi.py': `application = lambda env, start: None`,
+    });
+
+    const result = await detectDjangoPythonEntrypoint(workPath, 'missing.py');
+    expect(result).toBe('mysite/config/wsgi.py');
+
+    if (fs.existsSync(workPath)) fs.removeSync(workPath);
+  });
+
+  it('build() discovers Django entrypoint from WSGI_APPLICATION when configured entrypoint is missing', async () => {
+    const workPath = path.join(tmpdir(), `python-django-build-${Date.now()}`);
+    fs.mkdirSync(workPath, { recursive: true });
+    makeMockPython('3.9');
+
+    const files = {
+      'manage.py': new FileBlob({
+        data: "os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'hello.settings')\n",
+      }),
+      'hello/settings.py': new FileBlob({
+        data: "WSGI_APPLICATION = 'hello.world.application'\n",
+      }),
+      'hello/world.py': new FileBlob({
+        data: 'application = lambda env, start: None\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath,
+      files,
+      entrypoint: 'index.py',
+      meta: { isDev: true },
+      config: { framework: 'django' },
+      repoRootPath: workPath,
+    });
+
+    const handler = result.output.files?.['vc__handler__python.py'];
+    if (!handler || !('data' in handler)) {
+      throw new Error('handler bootstrap not found');
+    }
+    const content = handler.data.toString();
+    expect(content).toContain('os.path.join(_here, "hello/world.py")');
+
+    if (fs.existsSync(workPath)) fs.removeSync(workPath);
+  });
+});
+
 describe('pyproject.toml entrypoint detection', () => {
   beforeEach(() => {
     vi.resetModules();
@@ -1931,6 +2075,136 @@ describe('custom install hooks', () => {
     expect(mockUvSync).toHaveBeenCalled();
     // execCommand should not have been called for install or build
     expect(mockExecCommand).not.toHaveBeenCalled();
+  });
+});
+
+describe('worker services dependency installation', () => {
+  async function buildWithPipSpy(
+    options: { hasWorkerServices?: boolean } = {}
+  ) {
+    const pipCalls: string[][] = [];
+
+    const realInstall =
+      await vi.importActual<typeof import('../src/install')>('../src/install');
+    vi.doMock('../src/install', () => ({
+      ...realInstall,
+      // Keep this suite focused on dependency install behavior and avoid
+      // probing a real venv python binary during quirk scanning.
+      getVenvSitePackagesDirs: vi.fn(async () => []),
+    }));
+
+    const realUtils =
+      await vi.importActual<typeof import('../src/utils')>('../src/utils');
+    vi.doMock('../src/utils', () => ({
+      ...realUtils,
+      // Avoid creating a real virtualenv in unit tests.
+      ensureVenv: vi.fn(async () => {}),
+    }));
+
+    const realUv =
+      await vi.importActual<typeof import('../src/uv')>('../src/uv');
+    vi.doMock('../src/uv', () => ({
+      ...realUv,
+      UvRunner: class {
+        constructor() {}
+        getPath() {
+          return '/mock/uv';
+        }
+        listInstalledPythons() {
+          return new Set(mockInstalledVersions);
+        }
+        async sync() {}
+        async lock() {}
+        async pip(options: { args: string[] }) {
+          pipCalls.push(options.args);
+        }
+      },
+    }));
+
+    // Worker dependency installation happens before dependency externalization.
+    // Mock externalization to keep this test focused on install behavior.
+    vi.doMock('../src/dependency-externalizer', () => ({
+      PythonDependencyExternalizer: class {
+        constructor() {}
+        async analyze() {
+          return { overLambdaLimit: false, allVendorFiles: {} };
+        }
+        async generateBundle() {}
+      },
+    }));
+
+    const { build: buildWithMocks } = await import('../src/index');
+
+    const workPath = path.join(
+      tmpdir(),
+      `python-worker-services-install-${Date.now()}`
+    );
+    fs.mkdirSync(workPath, { recursive: true });
+
+    const files = {
+      'handler.py': new FileBlob({ data: 'def handler(): pass' }),
+    } as Record<string, FileBlob>;
+
+    try {
+      await buildWithMocks({
+        workPath,
+        files,
+        entrypoint: 'handler.py',
+        meta: { isDev: false },
+        config: {
+          framework: 'services',
+          ...(options.hasWorkerServices === true
+            ? { hasWorkerServices: true }
+            : {}),
+        },
+        repoRootPath: workPath,
+      });
+    } finally {
+      if (fs.existsSync(workPath)) fs.removeSync(workPath);
+    }
+
+    return pipCalls;
+  }
+
+  beforeEach(() => {
+    vi.resetModules();
+    makeMockPython('3.12');
+    delete process.env.VERCEL_WORKERS_PYTHON;
+  });
+
+  afterEach(() => {
+    delete process.env.VERCEL_WORKERS_PYTHON;
+    vi.doUnmock('../src/dependency-externalizer');
+    vi.doUnmock('../src/install');
+    vi.doUnmock('../src/index');
+    vi.doUnmock('../src/utils');
+    vi.doUnmock('../src/uv');
+  });
+
+  it('installs vercel-workers when worker services are enabled', async () => {
+    const pipCalls = await buildWithPipSpy({ hasWorkerServices: true });
+    const workersDep = `vercel-workers==${VERCEL_WORKERS_VERSION}`;
+    expect(pipCalls.some(args => args.includes(workersDep))).toBe(true);
+  });
+
+  it('does not install vercel-workers when worker services are not enabled', async () => {
+    const pipCalls = await buildWithPipSpy();
+    expect(
+      pipCalls.some(args =>
+        args.some(arg => arg.startsWith('vercel-workers=='))
+      )
+    ).toBe(false);
+  });
+
+  it('uses VERCEL_WORKERS_PYTHON override when provided', async () => {
+    process.env.VERCEL_WORKERS_PYTHON =
+      'vercel-workers @ file:///tmp/vercel-workers.whl';
+    const pipCalls = await buildWithPipSpy({ hasWorkerServices: true });
+    expect(
+      pipCalls.some(args =>
+        args.includes('vercel-workers @ file:///tmp/vercel-workers.whl')
+      )
+    ).toBe(true);
   });
 });
 

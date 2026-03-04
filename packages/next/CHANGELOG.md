@@ -1,5 +1,29 @@
 # @vercel/next
 
+## 4.15.38
+
+### Patch Changes
+
+- Update Next.js adapter version ([#15360](https://github.com/vercel/vercel/pull/15360))
+
+## 4.15.37
+
+### Patch Changes
+
+- add partialFallback flag to prerender output ([#14703](https://github.com/vercel/vercel/pull/14703))
+
+## 4.15.36
+
+### Patch Changes
+
+- Update Next.js adapter version ([#15296](https://github.com/vercel/vercel/pull/15296))
+
+## 4.15.35
+
+### Patch Changes
+
+- Rename fetch to nodeFetch when importing from node-fetch ([#15232](https://github.com/vercel/vercel/pull/15232))
+
 ## 4.15.34
 
 ### Patch Changes
