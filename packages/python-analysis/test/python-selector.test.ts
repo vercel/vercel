@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   selectPython,
+  selectPythonVersion,
   pythonVersionToString,
   pep440ConstraintsToString,
   implementationsMatch,
@@ -50,7 +51,7 @@ function makeConstraint(
   request: PythonRequest[],
   source: string
 ): PythonConstraint {
-  return { request, source };
+  return { request, source, prettySource: source };
 }
 
 describe('pythonVersionToString', () => {
@@ -106,9 +107,9 @@ describe('pep440ConstraintsToString', () => {
   it('handles constraint with prefix', () => {
     expect(
       pep440ConstraintsToString([
-        { operator: '==', version: '3.12', prefix: '!' },
+        { operator: '==', version: '3.11', prefix: '.*' },
       ])
-    ).toBe('==!3.12');
+    ).toBe('==3.11.*');
   });
 });
 
@@ -1459,5 +1460,257 @@ describe('PythonBuild', () => {
         'cpython-3.12+custom-linux-x86_64-gnu'
       );
     });
+  });
+});
+
+describe('selectPythonVersion with majorMinorOnly', () => {
+  const availableBuilds: PythonBuild[] = [
+    makeBuild({ version: { major: 3, minor: 10 } }),
+    makeBuild({ version: { major: 3, minor: 11 } }),
+    makeBuild({ version: { major: 3, minor: 12 } }),
+    makeBuild({ version: { major: 3, minor: 13 } }),
+  ];
+
+  const allBuilds = availableBuilds;
+  const defaultBuild = availableBuilds[2]; // 3.12
+
+  function selectMajorMinor(constraints: PythonConstraint[]) {
+    return selectPythonVersion({
+      constraints,
+      availableBuilds,
+      allBuilds,
+      defaultBuild,
+      majorMinorOnly: true,
+    });
+  }
+
+  it('==X.Y.Z becomes ==X.Y.* prefix match', () => {
+    const result = selectMajorMinor([
+      makeConstraint(
+        [
+          makeRequest({
+            version: {
+              constraint: [{ operator: '==', version: '3.11.4', prefix: '' }],
+            },
+          }),
+        ],
+        '.python-version'
+      ),
+    ]);
+    expect(result.build.version).toEqual({ major: 3, minor: 11 });
+  });
+
+  it('!=X.Y.Z is dropped (trivially satisfied)', () => {
+    const result = selectMajorMinor([
+      makeConstraint(
+        [
+          makeRequest({
+            version: {
+              constraint: [
+                { operator: '>=', version: '3.12', prefix: '' },
+                { operator: '!=', version: '3.12.4', prefix: '' },
+              ],
+            },
+          }),
+        ],
+        '.python-version'
+      ),
+    ]);
+    // != is dropped, so >=3.12 matches 3.12
+    expect(result.build.version).toEqual({ major: 3, minor: 12 });
+  });
+
+  it('~=X.Y.Z becomes ==X.Y.* prefix match', () => {
+    const result = selectMajorMinor([
+      makeConstraint(
+        [
+          makeRequest({
+            version: {
+              constraint: [{ operator: '~=', version: '3.10.1', prefix: '' }],
+            },
+          }),
+        ],
+        '.python-version'
+      ),
+    ]);
+    expect(result.build.version).toEqual({ major: 3, minor: 10 });
+  });
+
+  it('>=X.Y.Z becomes >=X.Y', () => {
+    const result = selectMajorMinor([
+      makeConstraint(
+        [
+          makeRequest({
+            version: {
+              constraint: [{ operator: '>=', version: '3.10.1', prefix: '' }],
+            },
+          }),
+        ],
+        '.python-version'
+      ),
+    ]);
+    // >=3.10 matches all; first available is 3.10
+    expect(result.build.version).toEqual({ major: 3, minor: 10 });
+  });
+
+  it('<=X.Y.Z becomes <=X.Y', () => {
+    const result = selectMajorMinor([
+      makeConstraint(
+        [
+          makeRequest({
+            version: {
+              constraint: [{ operator: '<=', version: '3.11.4', prefix: '' }],
+            },
+          }),
+        ],
+        '.python-version'
+      ),
+    ]);
+    // <=3.11 matches 3.10 and 3.11; first available is 3.10
+    expect(result.build.version).toEqual({ major: 3, minor: 10 });
+  });
+
+  it('>X.Y.Z (Z>0) becomes >=X.Y (widening)', () => {
+    const result = selectMajorMinor([
+      makeConstraint(
+        [
+          makeRequest({
+            version: {
+              constraint: [{ operator: '>', version: '3.10.1', prefix: '' }],
+            },
+          }),
+        ],
+        '.python-version'
+      ),
+    ]);
+    // >3.10.1 widens to >=3.10, so 3.10 matches
+    expect(result.build.version).toEqual({ major: 3, minor: 10 });
+  });
+
+  it('>X.Y.0 stays >X.Y (no widening)', () => {
+    const result = selectMajorMinor([
+      makeConstraint(
+        [
+          makeRequest({
+            version: {
+              constraint: [{ operator: '>', version: '3.10.0', prefix: '' }],
+            },
+          }),
+        ],
+        '.python-version'
+      ),
+    ]);
+    // >3.10 does NOT match 3.10, first match is 3.11
+    expect(result.build.version).toEqual({ major: 3, minor: 11 });
+  });
+
+  it('<X.Y.Z (Z>0) becomes <=X.Y (widening)', () => {
+    const result = selectMajorMinor([
+      makeConstraint(
+        [
+          makeRequest({
+            version: {
+              constraint: [{ operator: '<', version: '3.12.1', prefix: '' }],
+            },
+          }),
+        ],
+        '.python-version'
+      ),
+    ]);
+    // <3.12.1 widens to <=3.12, so 3.10, 3.11, 3.12 match; first is 3.10
+    expect(result.build.version).toEqual({ major: 3, minor: 10 });
+  });
+
+  it('<X.Y.0 stays <X.Y (no widening)', () => {
+    const result = selectMajorMinor([
+      makeConstraint(
+        [
+          makeRequest({
+            version: {
+              constraint: [{ operator: '<', version: '3.12.0', prefix: '' }],
+            },
+          }),
+        ],
+        '.python-version'
+      ),
+    ]);
+    // <3.12 matches 3.10, 3.11; first is 3.10
+    expect(result.build.version).toEqual({ major: 3, minor: 10 });
+    // And does NOT match 3.12
+    const result2 = selectMajorMinor([
+      makeConstraint(
+        [
+          makeRequest({
+            version: {
+              constraint: [
+                { operator: '<', version: '3.12.0', prefix: '' },
+                { operator: '>=', version: '3.12', prefix: '' },
+              ],
+            },
+          }),
+        ],
+        '.python-version'
+      ),
+    ]);
+    expect(result2.invalidConstraint).toBeDefined();
+  });
+
+  it('=== is left unchanged', () => {
+    // === is arbitrary equality, not transformed
+    const result = selectMajorMinor([
+      makeConstraint(
+        [
+          makeRequest({
+            version: {
+              constraint: [
+                { operator: '===', version: '3.12.99-custom', prefix: '' },
+              ],
+            },
+          }),
+        ],
+        '.python-version'
+      ),
+    ]);
+    // Won't match any build, falls through to invalidConstraint
+    expect(result.invalidConstraint).toBeDefined();
+  });
+
+  it('constraints with only major.minor are not modified', () => {
+    const result = selectMajorMinor([
+      makeConstraint(
+        [
+          makeRequest({
+            version: {
+              constraint: [{ operator: '==', version: '3.12', prefix: '' }],
+            },
+          }),
+        ],
+        '.python-version'
+      ),
+    ]);
+    expect(result.build.version).toEqual({ major: 3, minor: 12 });
+  });
+
+  it('works without majorMinorOnly (no transformation)', () => {
+    // Without majorMinorOnly, ==3.11.4 should not match 3.11 (no patch on build)
+    const result = selectPythonVersion({
+      constraints: [
+        makeConstraint(
+          [
+            makeRequest({
+              version: {
+                constraint: [{ operator: '==', version: '3.11.4', prefix: '' }],
+              },
+            }),
+          ],
+          '.python-version'
+        ),
+      ],
+      availableBuilds,
+      allBuilds,
+      defaultBuild,
+    });
+    // 3.11.4 != 3.11, so falls through
+    expect(result.invalidConstraint).toBeDefined();
   });
 });

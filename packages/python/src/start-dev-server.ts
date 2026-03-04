@@ -19,7 +19,11 @@ import {
   getVenvBinDir,
 } from './utils';
 import { findUvBinary, getProtectedUvEnv } from './uv';
-import { detectInstallSource, type ManifestType } from './install';
+import {
+  discoverPackage,
+  detectInstallSource,
+  type ManifestType,
+} from './install';
 import { stringifyManifest } from '@vercel/python-analysis';
 
 const DEV_SERVER_STARTUP_TIMEOUT = 10_000;
@@ -121,13 +125,16 @@ async function syncDependencies({
   onStdout,
   onStderr,
 }: SyncDependenciesOptions): Promise<void> {
-  const installInfo = await detectInstallSource({
-    workPath,
-    entryDirectory: '.',
+  const pythonPackage = await discoverPackage({
+    entrypointDir: workPath,
+    rootDir: workPath,
   });
 
-  let { manifestType, manifestPath } = installInfo;
-  const manifest = installInfo.pythonPackage?.manifest;
+  const installInfo = detectInstallSource(pythonPackage, workPath);
+
+  const { manifestType } = installInfo;
+  let { manifestPath } = installInfo;
+  const manifest = pythonPackage.manifest;
 
   if (!manifestType || !manifestPath) {
     debug('No Python project manifest found, skipping dependency sync');
