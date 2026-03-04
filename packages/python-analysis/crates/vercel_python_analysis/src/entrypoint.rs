@@ -79,6 +79,54 @@ pub(crate) fn contains_app_or_handler_impl(source: &str) -> bool {
     false
 }
 
+/// Check if a top-level callable with the given name exists in Python source.
+///
+/// Returns true if found, false otherwise.
+/// Returns false for invalid Python syntax.
+pub(crate) fn contains_top_level_callable_impl(source: &str, name: &str) -> bool {
+    let parsed = match parse_module(source) {
+        Ok(parsed) => parsed,
+        Err(_) => return false,
+    };
+
+    for stmt in parsed.suite() {
+        match stmt {
+            Stmt::FunctionDef(func_def) => {
+                if func_def.name.as_str() == name {
+                    return true;
+                }
+            }
+            Stmt::Assign(assign) => {
+                for target in &assign.targets {
+                    if is_name_expr(target, name) {
+                        return true;
+                    }
+                }
+            }
+            Stmt::AnnAssign(ann_assign) => {
+                if is_name_expr(&ann_assign.target, name) {
+                    return true;
+                }
+            }
+            Stmt::ImportFrom(import_from) => {
+                for alias in &import_from.names {
+                    let imported_as = alias
+                        .asname
+                        .as_ref()
+                        .map(|id| id.as_str())
+                        .unwrap_or_else(|| alias.name.as_str());
+                    if imported_as == name {
+                        return true;
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+
+    false
+}
+
 /// Extract the string value of a top-level constant with the given name.
 /// Only considers simple assignments (`NAME = "string"`) and annotated assignments
 /// (`NAME: str = "string"`) at module level. Returns the first matching string
@@ -306,6 +354,70 @@ def create():
     return app
 "#;
         assert!(!contains_app_or_handler_impl(source));
+    }
+
+    // -------------------------------------------------------------------------
+    // contains_top_level_callable_impl
+    // -------------------------------------------------------------------------
+
+    #[test]
+    fn test_contains_top_level_callable_function() {
+        let source = r#"
+def cleanup():
+    pass
+"#;
+        assert!(contains_top_level_callable_impl(source, "cleanup"));
+        assert!(!contains_top_level_callable_impl(source, "other"));
+    }
+
+    #[test]
+    fn test_contains_top_level_callable_async_function() {
+        let source = r#"
+async def cleanup():
+    pass
+"#;
+        assert!(contains_top_level_callable_impl(source, "cleanup"));
+    }
+
+    #[test]
+    fn test_contains_top_level_callable_assignment() {
+        let source = r#"
+cleanup = make_handler()
+"#;
+        assert!(contains_top_level_callable_impl(source, "cleanup"));
+    }
+
+    #[test]
+    fn test_contains_top_level_callable_import() {
+        let source = r#"
+from tasks import cleanup
+"#;
+        assert!(contains_top_level_callable_impl(source, "cleanup"));
+    }
+
+    #[test]
+    fn test_contains_top_level_callable_import_aliased() {
+        let source = r#"
+from tasks import do_cleanup as cleanup
+"#;
+        assert!(contains_top_level_callable_impl(source, "cleanup"));
+        assert!(!contains_top_level_callable_impl(source, "do_cleanup"));
+    }
+
+    #[test]
+    fn test_contains_top_level_callable_nested_not_found() {
+        let source = r#"
+def outer():
+    def cleanup():
+        pass
+"#;
+        assert!(!contains_top_level_callable_impl(source, "cleanup"));
+    }
+
+    #[test]
+    fn test_contains_top_level_callable_invalid_syntax() {
+        let source = r#"def cleanup("#;
+        assert!(!contains_top_level_callable_impl(source, "cleanup"));
     }
 
     // -------------------------------------------------------------------------

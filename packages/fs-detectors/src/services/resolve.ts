@@ -27,6 +27,26 @@ import { normalizeRoutePrefix } from '@vercel/routing-utils';
 
 const frameworksBySlug = new Map(frameworkList.map(f => [f.slug, f]));
 
+/**
+ * Match a Python `module:attr` entrypoint (e.g. `backend.jobs.scheduled:cleanup`).
+ * Kept inline to avoid coupling fs-detectors to a Python-specific package.
+ * Real verification would happen at the build time.
+ */
+const PYTHON_MODULE_ATTR_RE =
+  /^([A-Za-z_][\w]*(?:\.[A-Za-z_][\w]*)*):([A-Za-z_][\w]*)$/;
+
+function parsePyModuleAttrEntrypoint(entrypoint: string): {
+  attrName: string;
+  filePath: string;
+} | null {
+  const match = PYTHON_MODULE_ATTR_RE.exec(entrypoint);
+  if (!match) return null;
+  return {
+    attrName: match[2],
+    filePath: match[1].replace(/\./g, '/') + '.py',
+  };
+}
+
 const SERVICE_NAME_REGEX = /^[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$/;
 interface ResolvedEntrypointPath {
   normalized: string;
@@ -302,14 +322,19 @@ export function validateServiceEntrypoint(
   config: ExperimentalServiceConfig,
   resolvedEntrypoint: ResolvedEntrypointPath
 ): ServiceDetectionError | null {
-  // File entrypoints without builder/runtime/framework must have a supported extension
+  // File entrypoints without builder/runtime/framework must have a supported extension.
+  // Use the resolved path (e.g. "jobs/cleanup.py") for runtime inference so that
+  // module:function entrypoints (e.g. "jobs.cleanup:handler") resolve correctly
+  // via their underlying file extension.
   if (
     !resolvedEntrypoint.isDirectory &&
     !config.builder &&
     !config.runtime &&
     !config.framework
   ) {
-    const runtime = inferServiceRuntime({ entrypoint: config.entrypoint });
+    const runtime = inferServiceRuntime({
+      entrypoint: resolvedEntrypoint.normalized,
+    });
     if (!runtime) {
       const supported = Object.keys(ENTRYPOINT_EXTENSIONS).join(', ');
       return {
@@ -339,12 +364,21 @@ export async function resolveConfiguredService(
   } = options;
   const type = config.type || 'web';
   const rawEntrypoint = config.entrypoint;
+
+  const moduleAttrParsed =
+    typeof rawEntrypoint === 'string' && type === 'cron'
+      ? parsePyModuleAttrEntrypoint(rawEntrypoint)
+      : null;
+
   let resolvedEntrypointPath = resolvedEntrypoint;
   if (!resolvedEntrypointPath && typeof rawEntrypoint === 'string') {
+    const entrypointToResolve = moduleAttrParsed
+      ? moduleAttrParsed.filePath
+      : rawEntrypoint;
     const resolved = await resolveEntrypointPath({
       fs,
       serviceName: name,
-      entrypoint: rawEntrypoint,
+      entrypoint: entrypointToResolve,
     });
     resolvedEntrypointPath = resolved.entrypoint;
   }
@@ -451,6 +485,9 @@ export async function resolveConfiguredService(
   if (config.framework) {
     builderConfig.framework = config.framework;
   }
+  if (moduleAttrParsed) {
+    builderConfig.handlerFunction = moduleAttrParsed.attrName;
+  }
 
   return {
     name,
@@ -473,6 +510,7 @@ export async function resolveConfiguredService(
     buildCommand: config.buildCommand,
     installCommand: config.installCommand,
     schedule: config.schedule,
+    handlerFunction: moduleAttrParsed?.attrName,
     topic,
     consumer,
   };
@@ -504,11 +542,19 @@ export async function resolveAllConfiguredServices(
     }
 
     let resolvedEntrypoint: ResolvedEntrypointPath | undefined;
+    const serviceType = serviceConfig.type || 'web';
     if (typeof serviceConfig.entrypoint === 'string') {
+      const moduleAttr =
+        serviceType === 'cron'
+          ? parsePyModuleAttrEntrypoint(serviceConfig.entrypoint)
+          : null;
+      const entrypointToResolve = moduleAttr
+        ? moduleAttr.filePath
+        : serviceConfig.entrypoint;
       const resolvedPath = await resolveEntrypointPath({
         fs,
         serviceName: name,
-        entrypoint: serviceConfig.entrypoint,
+        entrypoint: entrypointToResolve,
       });
       if (resolvedPath.error) {
         errors.push(resolvedPath.error);

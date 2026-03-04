@@ -14,6 +14,7 @@ use crate::bindings::{DistMetadata, DirectUrlInfo, RecordEntry};
 use crate::entrypoint::{
     contains_app_or_handler_impl,
     get_string_constant_impl,
+    contains_top_level_callable_impl,
     parse_django_settings_module_impl,
 };
 
@@ -27,6 +28,14 @@ impl crate::bindings::Guest for PythonAnalyzer {
     /// Returns false for invalid Python syntax.
     fn contains_app_or_handler(source: String) -> bool {
         contains_app_or_handler_impl(&source)
+    }
+
+    /// Check if a top-level callable with the given name exists in Python source.
+    ///
+    /// Returns true if found, false otherwise.
+    /// Returns false for invalid Python syntax.
+    fn contains_top_level_callable(source: String, name: String) -> bool {
+        contains_top_level_callable_impl(&source, &name)
     }
 
     /// Extract the string value of a top-level constant with the given name.
