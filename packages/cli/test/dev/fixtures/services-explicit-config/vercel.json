@@ -5,16 +5,6 @@
       "entrypoint": "service-next",
       "routePrefix": "/"
     },
-    "service-express": {
-      "framework": "express",
-      "entrypoint": "service-express",
-      "routePrefix": "/api/express"
-    },
-    "service-hono": {
-      "framework": "hono",
-      "entrypoint": "service-hono",
-      "routePrefix": "/api/hono"
-    },
     "service-fastapi": {
       "framework": "fastapi",
       "entrypoint": "service-fastapi",

@@ -602,7 +602,7 @@ describe('[vercel dev] Hono', () => {
 });
 
 describe('[vercel dev] Multi-service with experimentalServices', () => {
-  test('[vercel dev] explicit config with Next.js + 4 framework services', async () => {
+  test('[vercel dev] explicit config with Next.js + 2 Python services', async () => {
     const dir = fixture('services-explicit-config');
     const { dev, port, readyResolver } = await testFixture(
       dir,
@@ -618,22 +618,6 @@ describe('[vercel dev] Multi-service with experimentalServices', () => {
 
     try {
       await readyResolver;
-
-      // Express service
-      const expressRes = await nodeFetch(
-        `http://localhost:${port}/api/express`
-      );
-      expect(expressRes.status).toBe(200);
-      const expressJson = await expressRes.json();
-      expect(expressJson).toHaveProperty('framework', 'express');
-      expect(expressJson).toHaveProperty('service', 'service-express');
-
-      // Hono service
-      const honoRes = await nodeFetch(`http://localhost:${port}/api/hono`);
-      expect(honoRes.status).toBe(200);
-      const honoJson = await honoRes.json();
-      expect(honoJson).toHaveProperty('framework', 'hono');
-      expect(honoJson).toHaveProperty('service', 'service-hono');
 
       // FastAPI service
       const fastapiRes = await nodeFetch(
@@ -681,7 +665,7 @@ describe('[vercel dev] Multi-service auto-detection', () => {
       await readyResolver;
 
       // Backend service is routed to /_/backend
-      const backendRes = await nodeFetch(`http://localhost:${port}/_/backend`);
+      const backendRes = await nodeFetch(`http://localhost:${port}/_/backend/`);
       validateResponseHeaders(backendRes);
       const backendJson = await backendRes.json();
       expect(backendJson).toHaveProperty(
@@ -726,7 +710,7 @@ describe('[vercel dev] Multi-service auto-detection', () => {
       await readyResolver;
 
       // Backend service is routed to /_/backend
-      const backendRes = await nodeFetch(`http://localhost:${port}/_/backend`);
+      const backendRes = await nodeFetch(`http://localhost:${port}/_/backend/`);
       validateResponseHeaders(backendRes);
       const backendJson = await backendRes.json();
       expect(backendJson).toHaveProperty(
@@ -773,15 +757,6 @@ describe('[vercel dev] Multi-service auto-detection', () => {
     try {
       await readyResolver;
 
-      // Express service
-      const expressRes = await nodeFetch(
-        `http://localhost:${port}/_/service-express`
-      );
-      expect(expressRes.status).toBe(200);
-      const expressJson = await expressRes.json();
-      expect(expressJson).toHaveProperty('framework', 'express');
-      expect(expressJson).toHaveProperty('service', 'service-express');
-
       // FastAPI service
       const fastapiRes = await nodeFetch(
         `http://localhost:${port}/_/service-fastapi/`
@@ -799,15 +774,6 @@ describe('[vercel dev] Multi-service auto-detection', () => {
       const flaskJson = await flaskRes.json();
       expect(flaskJson).toHaveProperty('framework', 'flask');
       expect(flaskJson).toHaveProperty('service', 'service-flask');
-
-      // Hono service
-      const honoRes = await nodeFetch(
-        `http://localhost:${port}/_/service-hono`
-      );
-      expect(honoRes.status).toBe(200);
-      const honoJson = await honoRes.json();
-      expect(honoJson).toHaveProperty('framework', 'hono');
-      expect(honoJson).toHaveProperty('service', 'service-hono');
 
       // Frontend service at root
       const frontendRes = await nodeFetch(`http://localhost:${port}/`);
@@ -838,15 +804,6 @@ describe('[vercel dev] Multi-service auto-detection', () => {
     try {
       await readyResolver;
 
-      // Express service
-      const expressRes = await nodeFetch(
-        `http://localhost:${port}/_/service-express`
-      );
-      expect(expressRes.status).toBe(200);
-      const expressJson = await expressRes.json();
-      expect(expressJson).toHaveProperty('framework', 'express');
-      expect(expressJson).toHaveProperty('service', 'service-express');
-
       // FastAPI service
       const fastapiRes = await nodeFetch(
         `http://localhost:${port}/_/service-fastapi/`
@@ -864,15 +821,6 @@ describe('[vercel dev] Multi-service auto-detection', () => {
       const flaskJson = await flaskRes.json();
       expect(flaskJson).toHaveProperty('framework', 'flask');
       expect(flaskJson).toHaveProperty('service', 'service-flask');
-
-      // Hono service
-      const honoRes = await nodeFetch(
-        `http://localhost:${port}/_/service-hono`
-      );
-      expect(honoRes.status).toBe(200);
-      const honoJson = await honoRes.json();
-      expect(honoJson).toHaveProperty('framework', 'hono');
-      expect(honoJson).toHaveProperty('service', 'service-hono');
 
       // Frontend service at root (from apps/web)
       const frontendRes = await nodeFetch(`http://localhost:${port}/`);

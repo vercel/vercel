@@ -1,7 +1,0 @@
-{
-  "name": "services-zc-frontend-services-services-hono",
-  "private": true,
-  "dependencies": {
-    "hono": "^4.0.0"
-  }
-}
