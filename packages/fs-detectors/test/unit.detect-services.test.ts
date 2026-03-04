@@ -896,6 +896,7 @@ describe('detectServices', () => {
             },
           },
         }),
+        'cron/cleanup.ts': 'export default async () => {}',
       });
       const result = await detectServices({ fs });
 
