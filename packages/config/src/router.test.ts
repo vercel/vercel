@@ -218,7 +218,7 @@ describe('Router', () => {
         expect(header('x-user-role', { inc: ['admin', 'moderator'] })).toEqual({
           type: 'header',
           key: 'x-user-role',
-          inc: ['admin', 'moderator'],
+          value: { inc: ['admin', 'moderator'] },
         });
       });
 
@@ -226,47 +226,47 @@ describe('Router', () => {
         expect(header('x-version', { eq: 2 })).toEqual({
           type: 'header',
           key: 'x-version',
-          eq: 2,
+          value: { eq: 2 },
         });
         expect(header('x-version', { neq: 'beta' })).toEqual({
           type: 'header',
           key: 'x-version',
-          neq: 'beta',
+          value: { neq: 'beta' },
         });
         expect(header('x-version', { gte: 2 })).toEqual({
           type: 'header',
           key: 'x-version',
-          gte: 2,
+          value: { gte: 2 },
         });
         expect(header('x-version', { gt: 1 })).toEqual({
           type: 'header',
           key: 'x-version',
-          gt: 1,
+          value: { gt: 1 },
         });
         expect(header('x-version', { lt: 5 })).toEqual({
           type: 'header',
           key: 'x-version',
-          lt: 5,
+          value: { lt: 5 },
         });
         expect(header('x-version', { lte: 5 })).toEqual({
           type: 'header',
           key: 'x-version',
-          lte: 5,
+          value: { lte: 5 },
         });
         expect(header('x-auth', { pre: 'Bearer ' })).toEqual({
           type: 'header',
           key: 'x-auth',
-          pre: 'Bearer ',
+          value: { pre: 'Bearer ' },
         });
         expect(header('x-auth', { suf: '-token' })).toEqual({
           type: 'header',
           key: 'x-auth',
-          suf: '-token',
+          value: { suf: '-token' },
         });
         expect(header('x-role', { ninc: ['guest'] })).toEqual({
           type: 'header',
           key: 'x-role',
-          ninc: ['guest'],
+          value: { ninc: ['guest'] },
         });
       });
     });
@@ -291,7 +291,7 @@ describe('Router', () => {
         expect(cookie('session', { pre: 'secure-' })).toEqual({
           type: 'cookie',
           key: 'session',
-          pre: 'secure-',
+          value: { pre: 'secure-' },
         });
       });
     });
@@ -316,7 +316,7 @@ describe('Router', () => {
         expect(query('page', { gte: 1 })).toEqual({
           type: 'query',
           key: 'page',
-          gte: 1,
+          value: { gte: 1 },
         });
       });
     });
@@ -332,7 +332,7 @@ describe('Router', () => {
       it('should create a host operator condition', () => {
         expect(host({ suf: '.example.com' })).toEqual({
           type: 'host',
-          suf: '.example.com',
+          value: { suf: '.example.com' },
         });
       });
     });
@@ -354,8 +354,8 @@ describe('Router', () => {
           source: '/admin/(.*)',
           destination: 'https://admin.backend.com/$1',
           has: [
-            { type: 'header', key: 'x-user-role', inc: ['admin', 'moderator'] },
-            { type: 'cookie', key: 'session', pre: 'secure-' },
+            { type: 'header', key: 'x-user-role', value: { inc: ['admin', 'moderator'] } },
+            { type: 'cookie', key: 'session', value: { pre: 'secure-' } },
           ],
           missing: [{ type: 'header', key: 'x-legacy-auth' }],
         });
@@ -365,15 +365,15 @@ describe('Router', () => {
         const rewrite = router.rewrite('/api/(.*)', 'https://backend.com/$1', {
           has: [
             header('authorization', { pre: 'Bearer ' }),
-            { type: 'header', key: 'x-api-version', gte: 2 },
+            { type: 'header', key: 'x-api-version', value: { gte: 2 } },
           ],
         });
         expect(rewrite).toEqual({
           source: '/api/(.*)',
           destination: 'https://backend.com/$1',
           has: [
-            { type: 'header', key: 'authorization', pre: 'Bearer ' },
-            { type: 'header', key: 'x-api-version', gte: 2 },
+            { type: 'header', key: 'authorization', value: { pre: 'Bearer ' } },
+            { type: 'header', key: 'x-api-version', value: { gte: 2 } },
           ],
         });
       });

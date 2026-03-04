@@ -177,15 +177,14 @@ export interface CacheOptions {
  * - 'cookie': Match if a specific cookie is present (or missing).
  * - 'host':   Match if the incoming host matches a given pattern.
  * - 'query':  Match if a query parameter is present (or missing).
- * - 'path':   Match if the path matches a given pattern.
  */
-export type ConditionType = 'header' | 'cookie' | 'host' | 'query' | 'path';
+export type ConditionType = 'header' | 'cookie' | 'host' | 'query';
 
 /**
- * Conditional matching operators for has/missing conditions.
- * These can be used with the value field to perform advanced matching.
+ * Object form of a matchable value with comparison operators.
+ * Matches the MatchableValue type from routing-utils.
  */
-export interface ConditionOperators {
+export interface MatchableValueObject {
   /** Check equality on a value (exact match) */
   eq?: string | number;
   /** Check inequality on a value (not equal) */
@@ -198,6 +197,8 @@ export interface ConditionOperators {
   pre?: string;
   /** Check if value ends with a suffix */
   suf?: string;
+  /** Check if value matches a regular expression */
+  re?: string;
   /** Check if value is greater than (numeric comparison) */
   gt?: number;
   /** Check if value is greater than or equal to */
@@ -207,6 +208,11 @@ export interface ConditionOperators {
   /** Check if value is less than or equal to */
   lte?: number;
 }
+
+/**
+ * A value that can be matched against: either a simple string or an object with operators.
+ */
+export type MatchableValue = string | MatchableValueObject;
 
 /**
  * Used to define "has" or "missing" conditions with advanced matching operators.
@@ -221,11 +227,11 @@ export interface ConditionOperators {
  *
  * @example
  * // Header with conditional operators
- * { type: 'header', key: 'x-user-role', inc: ['admin', 'moderator'] }
+ * { type: 'header', key: 'x-user-role', value: { inc: ['admin', 'moderator'] } }
  *
  * @example
  * // Cookie with prefix matching
- * { type: 'cookie', key: 'session', pre: 'prod-' }
+ * { type: 'cookie', key: 'session', value: { pre: 'prod-' } }
  *
  * @example
  * // Host matching
@@ -233,42 +239,41 @@ export interface ConditionOperators {
  *
  * @example
  * // Query parameter with numeric comparison
- * { type: 'query', key: 'version', gte: 2 }
- *
- * @example
- * // Path pattern matching
- * { type: 'path', value: '^/api/v[0-9]+/.*' }
+ * { type: 'query', key: 'version', value: { gte: 2 } }
  */
-export interface Condition extends ConditionOperators {
-  type: ConditionType;
-  /** The key to match. Not used for 'host' or 'path' types. */
-  key?: string;
-  /**
-   * Simple string/regex pattern to match against.
-   * For 'host' and 'path' types, this is the only matching option.
-   * For other types, you can use value OR the conditional operators (eq, neq, etc).
-   */
-  value?: string;
-}
+/**
+ * Condition for matching in redirects, rewrites, and headers.
+ * Matches the HasField type from routing-utils.
+ */
+export type Condition =
+  | {
+      type: 'host';
+      value: MatchableValue;
+    }
+  | {
+      type: 'header' | 'cookie' | 'query';
+      key: string;
+      value?: MatchableValue;
+    };
 
 function createKeyedConditionHelper(type: 'header' | 'cookie' | 'query') {
-  return (key: string, value?: string | ConditionOperators): Condition => {
+  return (key: string, value?: string | MatchableValueObject): Condition => {
     if (value === undefined) {
       return { type, key };
     }
     if (typeof value === 'string') {
       return { type, key, value };
     }
-    return { type, key, ...value };
+    return { type, key, value };
   };
 }
 
 function createKeylessConditionHelper(type: 'host') {
-  return (value: string | ConditionOperators): Condition => {
+  return (value: string | MatchableValueObject): Condition => {
     if (typeof value === 'string') {
       return { type, value };
     }
-    return { type, ...value };
+    return { type, value };
   };
 }
 

@@ -270,7 +270,12 @@ function generateTypes(schema: JSONSchema): string {
         output.push(jsdoc);
       }
       const optional = !imagesProp.required?.includes(key) ? '?' : '';
-      const propType = convertSchemaType(propSchema as JSONSchema, 1);
+      let propType = convertSchemaType(propSchema as JSONSchema, 1);
+      // Fix array-of-union types: wrap union in parentheses for array items
+      if (key === 'formats' && propType.includes('|') && propType.endsWith('[]')) {
+        const inner = propType.slice(0, -2);
+        propType = `(${inner})[]`;
+      }
       output.push(`  ${key}${optional}: ${propType};`);
     }
     output.push('}');
@@ -305,12 +310,10 @@ export interface Header {
 }
 
 /**
- * Condition for matching in redirects, rewrites, and headers
+ * Object form of a matchable value with comparison operators.
+ * Matches the MatchableValue type from routing-utils.
  */
-export interface Condition {
-  type: 'header' | 'cookie' | 'host' | 'query' | 'path';
-  key?: string;
-  value?: string | number;
+export interface MatchableValueObject {
   eq?: string | number;
   neq?: string;
   inc?: string[];
@@ -323,6 +326,26 @@ export interface Condition {
   lt?: number;
   lte?: number;
 }
+
+/**
+ * A value that can be matched against: either a simple string or an object with operators.
+ */
+export type MatchableValue = string | MatchableValueObject;
+
+/**
+ * Condition for matching in redirects, rewrites, and headers.
+ * Matches the HasField type from routing-utils.
+ */
+export type Condition =
+  | {
+      type: 'host';
+      value: MatchableValue;
+    }
+  | {
+      type: 'header' | 'cookie' | 'query';
+      key: string;
+      value?: MatchableValue;
+    };
 
 /**
  * Redirect matching vercel.json schema
@@ -344,6 +367,7 @@ export interface Redirect {
 export interface Rewrite {
   source: string;
   destination: string;
+  statusCode?: number;
   has?: Condition[];
   missing?: Condition[];
   respectOriginCacheControl?: boolean;

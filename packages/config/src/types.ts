@@ -196,7 +196,7 @@ export interface ImageConfig {
   contentSecurityPolicy?: string;
   dangerouslyAllowSVG?: boolean;
   domains?: string[];
-  formats?: 'image/avif' | 'image/webp' | 'image/jpeg' | 'image/png'[];
+  formats?: ('image/avif' | 'image/webp' | 'image/jpeg' | 'image/png')[];
   localPatterns?: {
     pathname?: string;
     search?: string;
@@ -222,12 +222,10 @@ export interface Header {
 }
 
 /**
- * Condition for matching in redirects, rewrites, and headers
+ * Object form of a matchable value with comparison operators.
+ * Matches the MatchableValue type from routing-utils.
  */
-export interface Condition {
-  type: 'header' | 'cookie' | 'host' | 'query' | 'path';
-  key?: string;
-  value?: string | number;
+export interface MatchableValueObject {
   eq?: string | number;
   neq?: string;
   inc?: string[];
@@ -240,6 +238,26 @@ export interface Condition {
   lt?: number;
   lte?: number;
 }
+
+/**
+ * A value that can be matched against: either a simple string or an object with operators.
+ */
+export type MatchableValue = string | MatchableValueObject;
+
+/**
+ * Condition for matching in redirects, rewrites, and headers.
+ * Matches the HasField type from routing-utils.
+ */
+export type Condition =
+  | {
+      type: 'host';
+      value: MatchableValue;
+    }
+  | {
+      type: 'header' | 'cookie' | 'query';
+      key: string;
+      value?: MatchableValue;
+    };
 
 /**
  * Redirect matching vercel.json schema
@@ -261,6 +279,7 @@ export interface Redirect {
 export interface Rewrite {
   source: string;
   destination: string;
+  statusCode?: number;
   has?: Condition[];
   missing?: Condition[];
   respectOriginCacheControl?: boolean;
