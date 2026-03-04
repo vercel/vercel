@@ -594,7 +594,7 @@ async function nukePID(
   // kill the process
   try {
     process.kill(pid, signal);
-  } catch (e) {
+  } catch (_e) {
     // process does not exist
 
     // eslint-disable-next-line no-console
@@ -607,7 +607,7 @@ async function nukePID(
   try {
     // check if killed
     process.kill(pid, 0);
-  } catch (e) {
+  } catch (_e) {
     // eslint-disable-next-line no-console
     console.log(`pid ${pid} is not running`);
     return;

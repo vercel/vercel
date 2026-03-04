@@ -1,5 +1,13 @@
 # @vercel/fs-detectors
 
+## 5.8.17
+
+### Patch Changes
+
+- [fs-detectors] skip auto-detection for root-only projects ([#15364](https://github.com/vercel/vercel/pull/15364))
+
+- Add background worker service support for Python (Dramatiq/Celery) and propagate vercel headers context to worker handlers. ([#15361](https://github.com/vercel/vercel/pull/15361))
+
 ## 5.8.16
 
 ### Patch Changes

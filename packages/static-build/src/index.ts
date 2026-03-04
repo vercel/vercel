@@ -87,7 +87,7 @@ function validateDistDir(distDir: string, workPath: string) {
       try {
         const vercelJson = JSON.parse(readFileSync(vercelJsonPath, 'utf8'));
         buildCommandExists = vercelJson.buildCommand !== undefined;
-      } catch (e) {
+      } catch (_e) {
         // Ignore JSON parse errors, fallback to default messaging
       }
     }
@@ -712,7 +712,7 @@ export const build: BuildV2 = async ({
         // for this builder.
         try {
           await checkForPort(devPort, DEV_SERVER_PORT_BIND_TIMEOUT);
-        } catch (err) {
+        } catch (_err) {
           throw new Error(
             `Failed to detect a server running on port ${devPort}.\nDetails: https://err.sh/vercel/vercel/now-static-build-failed-to-detect-a-server`
           );
