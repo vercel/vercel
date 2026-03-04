@@ -58,7 +58,23 @@ interface FrameworkHookContext {
   detected: DetectedPythonEntrypoint | undefined;
 }
 
-type FrameworkHook = (ctx: FrameworkHookContext) => Promise<void>;
+interface FrameworkHookResult {
+  entrypoint?: string;
+}
+
+type FrameworkHook = (
+  ctx: FrameworkHookContext
+) => Promise<FrameworkHookResult | void>;
+
+export async function runFrameworkHook(
+  framework: string | undefined,
+  ctx: FrameworkHookContext
+): Promise<FrameworkHookResult | void> {
+  const hook = framework
+    ? frameworkHooks[framework as PythonFramework]
+    : undefined;
+  return hook?.(ctx);
+}
 
 const frameworkHooks: Partial<Record<PythonFramework, FrameworkHook>> = {
   django: async ({ pythonEnv, projectDir, detected }) => {
@@ -67,9 +83,26 @@ const frameworkHooks: Partial<Record<PythonFramework, FrameworkHook>> = {
       debug('Django hook: no settings module detected, skipping');
       return;
     }
-    const cwd = detected?.baseDir ?? projectDir;
-    const settings = await getDjangoSettings(settingsModule, cwd, pythonEnv);
+    const settings = await getDjangoSettings(
+      settingsModule,
+      projectDir,
+      pythonEnv
+    );
     debug(`Django settings: ${JSON.stringify(settings)}`);
+    if (!settings) return;
+
+    const asgiApp = settings['ASGI_APPLICATION'];
+    if (typeof asgiApp === 'string') {
+      const entrypoint = `${asgiApp.split('.').slice(0, -1).join('/')}.py`;
+      debug(`Django hook: ASGI entrypoint: ${entrypoint}`);
+      return { entrypoint };
+    }
+    const wsgiApp = settings['WSGI_APPLICATION'];
+    if (typeof wsgiApp === 'string') {
+      const entrypoint = `${wsgiApp.split('.').slice(0, -1).join('/')}.py`;
+      debug(`Django hook: WSGI entrypoint: ${entrypoint}`);
+      return { entrypoint };
+    }
   },
 };
 
@@ -142,24 +175,26 @@ export const build: BuildV3 = async ({
 
   // Zero config entrypoint discovery
   let detected: DetectedPythonEntrypoint | undefined;
+  let entrypointNotFound: NowBuildError | undefined;
   if (
     isPythonFramework(framework) &&
+    // XXX: we might want to detect anyway for django!
     (!fsFiles[entrypoint] || !entrypoint.endsWith('.py'))
   ) {
-    const result = await detectPythonEntrypoint(
-      config.framework as PythonFramework,
-      workPath,
-      entrypoint
-    );
-    if (result?.entrypoint) {
+    detected =
+      (await detectPythonEntrypoint(
+        config.framework as PythonFramework,
+        workPath,
+        entrypoint
+      )) ?? undefined;
+    if (detected?.entrypoint) {
       debug(
-        `Resolved Python entrypoint to "${result.entrypoint}" (configured "${entrypoint}" not found).`
+        `Resolved Python entrypoint to "${detected.entrypoint}" (configured "${entrypoint}" not found).`
       );
-      detected = result;
-      entrypoint = result.entrypoint;
+      entrypoint = detected.entrypoint;
     } else {
       const searchedList = PYTHON_CANDIDATE_ENTRYPOINTS.join(', ');
-      throw new NowBuildError({
+      entrypointNotFound = new NowBuildError({
         code: `${framework.toUpperCase()}_ENTRYPOINT_NOT_FOUND`,
         message: `No ${framework} entrypoint found. Add an 'app' script in pyproject.toml or define an entrypoint in one of: ${searchedList}.`,
         link: `https://vercel.com/docs/frameworks/backend/${framework}#exporting-the-${framework}-application`,
@@ -168,7 +203,11 @@ export const build: BuildV3 = async ({
     }
   }
 
-  const entryDirectory = dirname(entrypoint);
+  if (entrypointNotFound && detected?.baseDir === undefined) {
+    throw entrypointNotFound;
+  }
+
+  const entryDirectory = detected?.baseDir ?? dirname(entrypoint);
 
   const entrypointAbsDir = join(workPath, entryDirectory);
   const rootDir = repoRootPath ?? workPath;
@@ -393,16 +432,19 @@ export const build: BuildV3 = async ({
   }
 
   // Run per-framework post-build hooks (e.g. collectstatic for Django).
-  if (isPythonFramework(framework)) {
-    const hook = frameworkHooks[framework as PythonFramework];
-    if (hook) {
-      await hook({
-        pythonEnv,
-        projectDir: join(workPath, entryDirectory),
-        entrypoint,
-        detected,
-      });
-    }
+  const hookResult = await runFrameworkHook(framework, {
+    pythonEnv,
+    projectDir: join(workPath, entryDirectory),
+    entrypoint,
+    detected,
+  });
+  if (entrypointNotFound && hookResult?.entrypoint) {
+    entrypoint = hookResult.entrypoint;
+    entrypointNotFound = undefined;
+  }
+
+  if (entrypointNotFound) {
+    throw entrypointNotFound;
   }
 
   // Ensure correct version of vercel-runtime is installed.

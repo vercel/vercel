@@ -60,7 +60,7 @@ export async function getDjangoSettingsModule(
  */
 export async function getDjangoEntrypoint(
   workPath: string
-): Promise<{ entrypoint: string; settings: string } | null> {
+): Promise<{ entrypoint?: string; settings: string } | null> {
   const settingsModule = await getDjangoSettingsModule(workPath);
   if (!settingsModule) return null;
   const settingsPath = join(
@@ -89,8 +89,11 @@ export async function getDjangoEntrypoint(
       debug(`Django WSGI entrypoint from ${settingsModule}: ${wsgiPath}`);
       return { entrypoint: wsgiPath, settings: settingsModule };
     }
+    debug(
+      `Django settings module ${settingsModule} has no ASGI_APPLICATION or WSGI_APPLICATION`
+    );
   } catch {
     debug(`Failed to read or parse settings file: ${settingsPath}`);
   }
-  return null;
+  return { settings: settingsModule };
 }

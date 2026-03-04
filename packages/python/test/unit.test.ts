@@ -1170,7 +1170,7 @@ describe('Django entrypoint discovery', () => {
     expect(result).toEqual({
       entrypoint: 'hello/wsgi.py',
       settings: 'hello.settings',
-      baseDir: workPath,
+      baseDir: '',
     });
 
     if (fs.existsSync(workPath)) fs.removeSync(workPath);
@@ -1193,7 +1193,7 @@ describe('Django entrypoint discovery', () => {
     if (fs.existsSync(workPath)) fs.removeSync(workPath);
   });
 
-  it('falls back to candidate when WSGI path is not on filesystem', async () => {
+  it('returns settings module even when WSGI path is not on filesystem', async () => {
     const workPath = path.join(
       tmpdir(),
       `python-django-wsgi-missing-${Date.now()}`
@@ -1205,10 +1205,9 @@ describe('Django entrypoint discovery', () => {
       'hello/settings.py': `WSGI_APPLICATION = 'hello.wsgi.application'`,
       'src/app.py': `application = lambda env, start: None`,
     });
-    // WSGI_APPLICATION value does not refer to a valid file
 
     const result = await detectDjangoPythonEntrypoint(workPath, 'missing.py');
-    expect(result).toEqual({ entrypoint: 'src/app.py' });
+    expect(result).toEqual({ settings: 'hello.settings', baseDir: '' });
 
     if (fs.existsSync(workPath)) fs.removeSync(workPath);
   });
@@ -1231,7 +1230,7 @@ describe('Django entrypoint discovery', () => {
     expect(result).toEqual({
       entrypoint: 'mysite/config/wsgi.py',
       settings: 'config.settings',
-      baseDir: path.join(workPath, 'mysite'),
+      baseDir: 'mysite',
     });
 
     if (fs.existsSync(workPath)) fs.removeSync(workPath);
@@ -1239,7 +1238,7 @@ describe('Django entrypoint discovery', () => {
 
   it('build() discovers Django entrypoint from WSGI_APPLICATION when configured entrypoint is missing', async () => {
     vi.mocked(getDjangoSettings).mockResolvedValueOnce({
-      WSGI_APPLICATION: 'hello.wsgi.application',
+      WSGI_APPLICATION: 'hello.world.application',
     });
     const workPath = path.join(tmpdir(), `python-django-build-${Date.now()}`);
     fs.mkdirSync(workPath, { recursive: true });

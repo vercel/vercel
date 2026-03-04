@@ -10,6 +10,7 @@ import {
   PYTHON_CANDIDATE_ENTRYPOINTS,
   detectPythonEntrypoint,
 } from './entrypoint';
+import { runFrameworkHook } from './index';
 import { getDefaultPythonVersion } from './version';
 import {
   isInVirtualEnv,
@@ -458,7 +459,17 @@ export const startDevServer: StartDevServer = async opts => {
     workPath,
     rawEntrypoint
   );
-  const entry = detected?.entrypoint;
+  const env = { ...process.env, ...(meta.env || {}) } as NodeJS.ProcessEnv;
+  let entry = detected?.entrypoint;
+  if (!entry) {
+    const hookResult = await runFrameworkHook(framework, {
+      pythonEnv: env,
+      projectDir: workPath,
+      entrypoint: rawEntrypoint,
+      detected: detected ?? undefined,
+    });
+    entry = hookResult?.entrypoint;
+  }
   if (!entry) {
     const searched = PYTHON_CANDIDATE_ENTRYPOINTS.join(', ');
     throw new NowBuildError({
@@ -471,8 +482,6 @@ export const startDevServer: StartDevServer = async opts => {
 
   // Convert to module path, e.g. "src/app.py" -> "src.app"
   const modulePath = entry.replace(/\.py$/i, '').replace(/[\\/]/g, '.');
-
-  const env = { ...process.env, ...(meta.env || {}) } as NodeJS.ProcessEnv;
 
   // Check for an existing persistent server
   const serverKey = `${workPath}::${entry}::${framework}`;

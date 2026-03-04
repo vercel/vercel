@@ -155,6 +155,7 @@ export async function detectDjangoPythonEntrypoint(
       cwd: workPath,
       includeDirectories: true,
     });
+    // XXX: is this sorted? what if multiple match??
     const rootDirs = [
       '',
       ...Object.keys(rootGlobs).filter(
@@ -171,15 +172,21 @@ export async function detectDjangoPythonEntrypoint(
       const currPath = join(workPath, rootDir);
       const django = await getDjangoEntrypoint(currPath);
       if (django) {
-        const fullWsgiEntry = pathPosix.join(rootDir, django.entrypoint);
-        if (fsFiles[fullWsgiEntry]) {
-          debug(`Using Django WSGI entrypoint: ${fullWsgiEntry}`);
-          return {
-            entrypoint: fullWsgiEntry,
-            settings: django.settings,
-            baseDir: currPath,
-          };
+        if (django.entrypoint) {
+          const fullWsgiEntry = pathPosix.join(rootDir, django.entrypoint);
+          if (fsFiles[fullWsgiEntry]) {
+            debug(`Using Django WSGI entrypoint: ${fullWsgiEntry}`);
+            return {
+              entrypoint: fullWsgiEntry,
+              settings: django.settings,
+              baseDir: rootDir,
+            };
+          }
+          debug(
+            `Django settings module found but entrypoint ${fullWsgiEntry} not on disk`
+          );
         }
+        return { settings: django.settings, baseDir: rootDir };
       }
     }
 
