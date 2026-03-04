@@ -136,15 +136,6 @@ export const putSubcommand = {
       description: 'Overwrite the file if it already exists (default: false)',
       argument: 'Boolean',
     },
-    {
-      name: 'force',
-      shorthand: 'f',
-      type: Boolean,
-      deprecated: true,
-      description:
-        'Overwrite the file if it already exists (deprecated, use --allow-overwrite)',
-      argument: 'Boolean',
-    },
     ifMatchOption,
   ],
   examples: [],
