@@ -145,7 +145,6 @@ afterAll(async () => {
 });
 
 // https://linear.app/vercel/issue/ZERO-2555/fix-or-skip-assign-a-domain-to-a-project-test
-/* eslint-disable jest/no-disabled-tests */
 // biome-ignore lint/suspicious/noSkippedTests: temporarily disabled
 test.skip('assign a domain to a project', async () => {
   const team = await teamPromise;
@@ -188,7 +187,6 @@ test('ensure `github` and `scope` are not sent to the API', async () => {
 });
 
 // TODO: fix: --public does not make deployments public
-/* eslint-disable jest/no-disabled-tests */
 // biome-ignore lint/suspicious/noSkippedTests: temporarily disabled
 test.skip('should show prompts to set up project during first deploy', async () => {
   const dir = await setupE2EFixture('project-link-deploy');
@@ -898,7 +896,6 @@ test.skip(
 );
 
 // TODO: fix: --public does not make deployments public
-/* eslint-disable jest/no-disabled-tests */
 // biome-ignore lint/suspicious/noSkippedTests: temporarily disabled
 test.skip('deploy pnpm twice using pnp and symlink=false', async () => {
   const directory = path.join(__dirname, 'fixtures/unit/pnpm-pnp-symlink');
@@ -1257,7 +1254,6 @@ test('[vc build] should not include .vercel when zeroConfig is true and outputDi
 });
 
 // TODO: fix: --public does not make deployments public
-/* eslint-disable jest/no-disabled-tests */
 // biome-ignore lint/suspicious/noSkippedTests: temporarily disabled
 test.skip('vercel.json configuration overrides in a new project prompt user and merges settings correctly', async () => {
   let directory = await setupE2EFixture(

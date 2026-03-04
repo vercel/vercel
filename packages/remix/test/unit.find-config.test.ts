@@ -5,7 +5,6 @@ import { describe, it, expect } from 'vitest';
 const fixture = (name: string) => join(__dirname, 'fixtures-legacy', name);
 
 // Skipping because it doesn't run yet on Node 22
-/* eslint-disable jest/no-disabled-tests */
 // biome-ignore lint/suspicious/noSkippedTests: temporarily disabled
 describe.skip('findConfig()', () => {
   it.each([

@@ -252,6 +252,20 @@
           "style": {
             // Matches ESLint prefer-const: "error" override for CLI
             "useConst": "error",
+            // Matches ESLint @typescript-eslint/consistent-type-imports: "error" override for CLI
+            "useImportType": "error",
+          },
+        },
+      },
+    },
+    // no-console only applies to CLI source code, not tests/scripts/evals
+    {
+      "includes": ["packages/cli/src/**"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            // Matches ESLint no-console: 2 override for CLI
+            "noConsole": "error",
           },
         },
       },
