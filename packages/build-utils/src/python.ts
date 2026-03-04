@@ -44,8 +44,10 @@ export async function getDjangoSettingsModule(
       debug(`Django DJANGO_SETTINGS_MODULE from manage.py: ${value}`);
       return value;
     }
-  } catch {
-    debug('manage.py not found or unreadable, skipping Django settings module');
+  } catch (err) {
+    debug(
+      `manage.py not found or unreadable, skipping Django settings module: ${err}`
+    );
   }
   return null;
 }

@@ -39,15 +39,39 @@ import { resolvePythonVersion, pythonVersionString } from './version';
 import { startDevServer } from './start-dev-server';
 import { runPyprojectScript, ensureVenv, createVenvEnv } from './utils';
 import { runQuirks } from './quirks';
+import { getDjangoSettings } from './django';
 
 const writeFile = fs.promises.writeFile;
 
 import {
   PYTHON_CANDIDATE_ENTRYPOINTS,
   detectPythonEntrypoint,
+  type DetectedPythonEntrypoint,
 } from './entrypoint';
 
 export const version = 3;
+
+interface FrameworkHookContext {
+  pythonEnv: NodeJS.ProcessEnv;
+  projectDir: string;
+  entrypoint: string;
+  detected: DetectedPythonEntrypoint | undefined;
+}
+
+type FrameworkHook = (ctx: FrameworkHookContext) => Promise<void>;
+
+const frameworkHooks: Partial<Record<PythonFramework, FrameworkHook>> = {
+  django: async ({ pythonEnv, projectDir, detected }) => {
+    const settingsModule = detected?.settings;
+    if (!settingsModule) {
+      debug('Django hook: no settings module detected, skipping');
+      return;
+    }
+    const cwd = detected?.baseDir ?? projectDir;
+    const settings = await getDjangoSettings(settingsModule, cwd, pythonEnv);
+    debug(`Django settings: ${JSON.stringify(settings)}`);
+  },
+};
 
 export async function downloadFilesInWorkPath({
   entrypoint,
@@ -117,20 +141,22 @@ export const build: BuildV3 = async ({
   let fsFiles = await glob('**', workPath);
 
   // Zero config entrypoint discovery
+  let detected: DetectedPythonEntrypoint | undefined;
   if (
     isPythonFramework(framework) &&
     (!fsFiles[entrypoint] || !entrypoint.endsWith('.py'))
   ) {
-    const detected = await detectPythonEntrypoint(
+    const result = await detectPythonEntrypoint(
       config.framework as PythonFramework,
       workPath,
       entrypoint
     );
-    if (detected?.entrypoint) {
+    if (result?.entrypoint) {
       debug(
-        `Resolved Python entrypoint to "${detected.entrypoint}" (configured "${entrypoint}" not found).`
+        `Resolved Python entrypoint to "${result.entrypoint}" (configured "${entrypoint}" not found).`
       );
-      entrypoint = detected.entrypoint;
+      detected = result;
+      entrypoint = result.entrypoint;
     } else {
       const searchedList = PYTHON_CANDIDATE_ENTRYPOINTS.join(', ');
       throw new NowBuildError({
@@ -364,6 +390,19 @@ export const build: BuildV3 = async ({
           );
         }
       });
+  }
+
+  // Run per-framework post-build hooks (e.g. collectstatic for Django).
+  if (isPythonFramework(framework)) {
+    const hook = frameworkHooks[framework as PythonFramework];
+    if (hook) {
+      await hook({
+        pythonEnv,
+        projectDir: join(workPath, entryDirectory),
+        entrypoint,
+        detected,
+      });
+    }
   }
 
   // Ensure correct version of vercel-runtime is installed.

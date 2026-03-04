@@ -37,6 +37,10 @@ vi.mock('../src/install', async () => {
   };
 });
 
+vi.mock('../src/django', () => ({
+  getDjangoSettings: vi.fn(async () => null),
+}));
+
 // Imports after mocks are set up (vitest hoists vi.mock calls)
 import {
   resolvePythonVersion,
@@ -50,6 +54,7 @@ import { UV_PYTHON_DOWNLOADS_MODE, getProtectedUvEnv } from '../src/uv';
 import { VERCEL_WORKERS_VERSION } from '../src/package-versions';
 import { createPyprojectToml } from '../src/install';
 import { detectDjangoPythonEntrypoint } from '../src/entrypoint';
+import { getDjangoSettings } from '../src/django';
 import { FileBlob } from '@vercel/build-utils';
 
 /**
@@ -1165,6 +1170,7 @@ describe('Django entrypoint discovery', () => {
     expect(result).toEqual({
       entrypoint: 'hello/wsgi.py',
       settings: 'hello.settings',
+      baseDir: workPath,
     });
 
     if (fs.existsSync(workPath)) fs.removeSync(workPath);
@@ -1225,12 +1231,16 @@ describe('Django entrypoint discovery', () => {
     expect(result).toEqual({
       entrypoint: 'mysite/config/wsgi.py',
       settings: 'config.settings',
+      baseDir: path.join(workPath, 'mysite'),
     });
 
     if (fs.existsSync(workPath)) fs.removeSync(workPath);
   });
 
   it('build() discovers Django entrypoint from WSGI_APPLICATION when configured entrypoint is missing', async () => {
+    vi.mocked(getDjangoSettings).mockResolvedValueOnce({
+      WSGI_APPLICATION: 'hello.wsgi.application',
+    });
     const workPath = path.join(tmpdir(), `python-django-build-${Date.now()}`);
     fs.mkdirSync(workPath, { recursive: true });
     makeMockPython('3.9');

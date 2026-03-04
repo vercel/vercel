@@ -12,6 +12,7 @@ import { readConfigFile } from '@vercel/build-utils';
 export interface DetectedPythonEntrypoint {
   entrypoint?: string;
   settings?: string;
+  baseDir?: string; // directory containing manage.py, if detected via Django path
 }
 
 export const PYTHON_ENTRYPOINT_FILENAMES = [
@@ -173,7 +174,11 @@ export async function detectDjangoPythonEntrypoint(
         const fullWsgiEntry = pathPosix.join(rootDir, django.entrypoint);
         if (fsFiles[fullWsgiEntry]) {
           debug(`Using Django WSGI entrypoint: ${fullWsgiEntry}`);
-          return { entrypoint: fullWsgiEntry, settings: django.settings };
+          return {
+            entrypoint: fullWsgiEntry,
+            settings: django.settings,
+            baseDir: currPath,
+          };
         }
       }
     }
