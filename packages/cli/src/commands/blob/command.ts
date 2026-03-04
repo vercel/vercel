@@ -23,7 +23,7 @@ const accessOption = {
   shorthand: 'a',
   type: String,
   deprecated: false,
-  description: 'Access level for the blob: public or private (default: public)',
+  description: 'Access level for the blob: public or private (required)',
   argument: 'String',
   choices: ['public', 'private'],
 } as const;
