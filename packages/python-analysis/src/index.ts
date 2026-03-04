@@ -13,7 +13,6 @@
 
 export {
   containsAppOrHandler,
-  getStringConstant,
   parseDjangoSettingsModule,
 } from './semantic/entrypoints';
 
