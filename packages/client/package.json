@@ -47,7 +47,7 @@
     "async-sema": "3.0.0",
     "fs-extra": "8.0.1",
     "ignore": "4.0.6",
-    "minimatch": "5.0.1",
+    "minimatch": "3.1.4",
     "ms": "2.1.2",
     "node-fetch": "2.6.7",
     "querystring": "^0.2.0",
