@@ -435,6 +435,32 @@ export const startDevServer: StartDevServer = async opts => {
 
   const framework = config?.framework;
 
+  // Check for an existing persistent server
+  const serverKey = `${workPath}::${framework}`;
+  const existing = PERSISTENT_SERVERS.get(serverKey);
+  if (existing) {
+    return {
+      port: existing.port,
+      pid: existing.pid,
+      shutdown: async () => {
+        // no-op so CLI does not kill persistent server per request
+      },
+    };
+  }
+
+  // Check for a pending start operation before spawning a new server
+  {
+    const pending = PENDING_STARTS.get(serverKey);
+    if (pending) {
+      const { port, pid } = await pending;
+      return {
+        port,
+        pid,
+        shutdown: async () => {},
+      };
+    }
+  }
+
   // No framework is defined, so most likely this is 'handler' class-based
   // serverless functions that should be served directly using vercel-runtime
   // instead of dev server.
@@ -465,32 +491,6 @@ export const startDevServer: StartDevServer = async opts => {
   const modulePath = entry.replace(/\.py$/i, '').replace(/[\\/]/g, '.');
 
   const env = { ...process.env, ...(meta.env || {}) } as NodeJS.ProcessEnv;
-
-  // Check for an existing persistent server
-  const serverKey = `${workPath}::${entry}::${framework}`;
-  const existing = PERSISTENT_SERVERS.get(serverKey);
-  if (existing) {
-    return {
-      port: existing.port,
-      pid: existing.pid,
-      shutdown: async () => {
-        // no-op so CLI does not kill persistent server per request
-      },
-    };
-  }
-
-  // Check for a pending start operation before spawning a new server
-  {
-    const pending = PENDING_STARTS.get(serverKey);
-    if (pending) {
-      const { port, pid } = await pending;
-      return {
-        port,
-        pid,
-        shutdown: async () => {},
-      };
-    }
-  }
 
   // Track child process and listeners
   let childProcess: ChildProcess | null = null;
