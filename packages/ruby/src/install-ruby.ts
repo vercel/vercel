@@ -1,11 +1,12 @@
 import execa from 'execa';
 import which from 'which';
-import { join } from 'path';
+import { dirname, join } from 'path';
 import { intersects } from 'semver';
 import { Meta, debug, NowBuildError, Version } from '@vercel/build-utils';
 import { spawnSync } from 'child_process';
 import { tmpdir } from 'os';
 import { getMiseBinaryOrInstall, installRubyViaMise } from './mise';
+import { formatCommandError } from './command-error';
 import type { DeclaredRubyVersion } from './version';
 
 class RubyVersion extends Version {}
@@ -364,6 +365,45 @@ async function installViaMise(
   };
 }
 
+async function findBundlerPath({
+  gemHome,
+  gemPath,
+}: {
+  gemHome: string;
+  gemPath: string;
+}): Promise<string | null> {
+  const candidates = [
+    join(gemHome, 'bin', 'bundler'),
+    join(gemHome, 'bin', 'bundle'),
+    join(dirname(gemPath), 'bundler'),
+    join(dirname(gemPath), 'bundle'),
+  ];
+
+  const seen = new Set<string>();
+  for (const candidate of candidates) {
+    if (seen.has(candidate)) continue;
+    seen.add(candidate);
+
+    try {
+      const res = await execa(candidate, ['--version'], {
+        stdio: 'pipe',
+        env: {
+          GEM_HOME: gemHome,
+        },
+        reject: false,
+      });
+      if (res.exitCode === 0) {
+        return candidate;
+      }
+    } catch {
+      // Candidate executable doesn't exist or can't run.
+      debug(`bundler executable not found at "${candidate}"`);
+    }
+  }
+
+  return null;
+}
+
 // downloads and installs `bundler` (respecting
 // process.env.GEM_HOME), and returns
 // the absolute path to it
@@ -376,12 +416,43 @@ export async function installBundler(
     await getRubyPath(meta, gemfileContents, declaredVersion);
 
   debug('installing bundler...');
-  await execa(gemPath, ['install', 'bundler', '--no-document'], {
-    stdio: 'pipe',
-    env: {
-      GEM_HOME: gemHome,
-    },
-  });
+  try {
+    await execa(gemPath, ['install', 'bundler', '--no-document'], {
+      stdio: 'pipe',
+      env: {
+        GEM_HOME: gemHome,
+      },
+    });
+  } catch (err) {
+    const fallbackBundlerPath = await findBundlerPath({ gemHome, gemPath });
+    if (fallbackBundlerPath) {
+      console.warn(
+        `Warning: Failed to install bundler with gem; falling back to existing bundler at "${fallbackBundlerPath}".`
+      );
+      debug(`bundler install failed:\n${formatCommandError(err)}`);
+      return {
+        major,
+        gemHome,
+        rubyPath,
+        gemPath,
+        vendorPath,
+        runtime,
+        bundlerPath: fallbackBundlerPath,
+      };
+    }
+
+    throw new Error(
+      `Failed to install bundler via gem:\n${formatCommandError(err)}`
+    );
+  }
+
+  const bundlerPath = await findBundlerPath({ gemHome, gemPath });
+  if (!bundlerPath) {
+    throw new Error(
+      `Bundler install completed but no runnable bundler executable was found.\n` +
+        `Checked GEM_HOME "${gemHome}" and Ruby bin directory "${dirname(gemPath)}".`
+    );
+  }
 
   return {
     major,
@@ -390,7 +461,7 @@ export async function installBundler(
     gemPath,
     vendorPath,
     runtime,
-    bundlerPath: join(gemHome, 'bin', 'bundler'),
+    bundlerPath,
   };
 }
 
