@@ -169,7 +169,6 @@ export async function detectDjangoPythonEntrypoint(
       cwd: workPath,
       includeDirectories: true,
     });
-    // XXX: is this sorted? what if multiple match??
     const rootDirs = [
       '',
       ...Object.keys(rootGlobs).filter(
