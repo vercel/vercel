@@ -1,0 +1,8 @@
+[project]
+name = "services-worker-django-tasks"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+  "django>=6.0",
+  "vercel-workers==0.0.10"
+]
