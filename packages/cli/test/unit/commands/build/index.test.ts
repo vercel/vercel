@@ -1617,6 +1617,42 @@ describe.skipIf(flakey)('build', () => {
     });
   });
 
+  it('should emit flags-definitions module when VERCEL_EXPERIMENTAL_EMBED_FLAG_DEFINITIONS=1', async () => {
+    const cwd = fixture('static');
+    const definitionsDir = join(
+      cwd,
+      'node_modules',
+      '@vercel',
+      'flags-definitions'
+    );
+
+    client.cwd = cwd;
+    client.setArgv('build', '--yes');
+    const prev = process.env.VERCEL_EXPERIMENTAL_EMBED_FLAG_DEFINITIONS;
+    try {
+      process.env.VERCEL_EXPERIMENTAL_EMBED_FLAG_DEFINITIONS = '1';
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      expect(fs.existsSync(join(definitionsDir, 'index.js'))).toBe(true);
+      expect(fs.existsSync(join(definitionsDir, 'index.d.ts'))).toBe(true);
+      expect(fs.existsSync(join(definitionsDir, 'package.json'))).toBe(true);
+      const pkg = await fs.readJSON(join(definitionsDir, 'package.json'));
+      expect(pkg.name).toBe('@vercel/flags-definitions');
+      const indexJs = await fs.readFile(
+        join(definitionsDir, 'index.js'),
+        'utf8'
+      );
+      expect(indexJs).toContain('export function get(hashedSdkKey)');
+    } finally {
+      if (prev !== undefined) {
+        process.env.VERCEL_EXPERIMENTAL_EMBED_FLAG_DEFINITIONS = prev;
+      } else {
+        delete process.env.VERCEL_EXPERIMENTAL_EMBED_FLAG_DEFINITIONS;
+      }
+    }
+  });
+
   it('should not apply framework `defaultRoutes` when build command outputs Build Output API', async () => {
     const cwd = fixture('build-output-api-with-api-dir');
     const output = join(cwd, '.vercel/output');
