@@ -96,8 +96,6 @@ function convertSchemaType(schema: JSONSchema, depth = 0): string {
   if (schema.type === 'array') {
     if (schema.items) {
       const itemType = convertSchemaType(schema.items, depth);
-      // Wrap in parens if items is a union (oneOf/anyOf/multi-value enum)
-      // to avoid precedence issues like 'a' | 'b'[] or {x} | {y}[]
       const isUnion =
         schema.items.oneOf ||
         schema.items.anyOf ||
@@ -182,13 +180,6 @@ function convertSchemaType(schema: JSONSchema, depth = 0): string {
   }
 }
 
-/**
- * Generate routing types (MatchableValue, Condition, Header, Redirect, Rewrite, HeaderRule, RouteType)
- * from the schema's has/redirects/rewrites/headers definitions.
- *
- * We can't just use convertSchemaType here because we need named types that reference
- * each other (e.g. Condition references MatchableValue, Redirect references Condition[]).
- */
 function generateRoutingTypes(schema: JSONSchema): string[] {
   const output: string[] = [];
 
@@ -199,7 +190,6 @@ function generateRoutingTypes(schema: JSONSchema): string[] {
 
   if (!hasVariants) return output;
 
-  // MatchableValue — extract from the host variant's value field schema
   const hostVariant = hasVariants.find(
     (v: any) => v.properties?.type?.enum?.[0] === 'host'
   );
@@ -214,7 +204,6 @@ function generateRoutingTypes(schema: JSONSchema): string[] {
     output.push('');
   }
 
-  // Condition — discriminated union from has variants, referencing MatchableValue
   output.push(
     `/**\n * Condition for matching in redirects, rewrites, and headers\n */`
   );
@@ -244,8 +233,6 @@ function generateRoutingTypes(schema: JSONSchema): string[] {
   );
   output.push('');
 
-  // Header, Redirect, Rewrite, HeaderRule — generated from their schema definitions
-  // with special-cased fields to reference named types instead of inlining
   const typeOverrides: Record<string, string> = {
     has: 'Condition[]',
     missing: 'Condition[]',
@@ -436,8 +423,6 @@ function generateTypes(schema: JSONSchema): string {
     output.push('');
   }
 
-  // Generate routing types (MatchableValue, Condition, Header, Redirect, Rewrite, HeaderRule)
-  // from the schema's has/redirects/rewrites/headers definitions
   output.push(...generateRoutingTypes(schema));
 
   // Generate other helper types
