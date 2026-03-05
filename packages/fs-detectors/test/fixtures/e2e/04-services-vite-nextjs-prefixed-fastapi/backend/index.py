@@ -4,12 +4,12 @@ from fastapi.responses import JSONResponse
 app = FastAPI()
 
 
-@app.get('/backend')
+@app.get('/')
 def api_root():
     return {'message': 'Hello from FastAPI'}
 
 
-@app.get('/backend/health')
+@app.get('/health')
 def health():
     return {'status': 'ok'}
 

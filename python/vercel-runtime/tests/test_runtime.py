@@ -27,6 +27,7 @@ from tests._n1_mock import (
     LogMessage,
     N1Mock,
     ServerStartedMessage,
+    UnrecoverableErrorMessage,
     create_n1_mock,
 )
 
@@ -72,6 +73,7 @@ async def _run_runtime(
     entrypoint_rel: str,
     module_name: str,
     ipc_socket_path: str,
+    extra_env: dict[str, str] | None = None,
 ) -> AsyncIterator[asyncio.subprocess.Process]:
     env = {
         **_base_env(),
@@ -80,6 +82,8 @@ async def _run_runtime(
         "__VC_HANDLER_MODULE_NAME": module_name,
         "VERCEL_IPC_PATH": ipc_socket_path,
     }
+    if extra_env:
+        env.update(extra_env)
     cmd = [sys.executable]
     if _coverage_active():
         cmd.append(str(_COV_WRAPPER))
@@ -468,6 +472,73 @@ class TestASGIApp(_RuntimeTestCase):
             self.assertIn(b"200", data)
 
 
+class TestCronService(_RuntimeTestCase):
+    """Tests for cron service bootstrap behavior."""
+
+    async def test_cron_secret_is_enforced_by_wrapper(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "cron_dunder_main.py", self.tmp_path
+        )
+        marker_path = self.tmp_path / "cron-auth.marker"
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+            extra_env={
+                "VERCEL_SERVICE_TYPE": "cron",
+                "CRON_SECRET": "super-secret",
+                "CRON_MARKER_FILE": str(marker_path),
+            },
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            resp = await _http_get(port, "/run")
+            self.assertEqual(resp.status, 401)
+            self.assertEqual(resp.read().decode(), '{"error":"unauthorized"}')
+
+            resp = await _http_get(
+                port,
+                "/run",
+                headers={"authorization": "Bearer super-secret"},
+            )
+            self.assertEqual(resp.status, 200)
+            self.assertEqual(resp.read().decode(), '{"ok":true}')
+            self.assertTrue(marker_path.exists())
+            self.assertEqual(marker_path.read_text(), "ran")
+
+    async def test_bootstraps_dunder_main_entrypoint_for_cron_service(
+        self,
+    ) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "cron_dunder_main.py", self.tmp_path
+        )
+        marker_path = self.tmp_path / "cron-dunder-main.marker"
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+            extra_env={
+                "VERCEL_SERVICE_TYPE": "cron",
+                "CRON_MARKER_FILE": str(marker_path),
+            },
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            resp = await _http_get(port, "/run")
+            self.assertEqual(resp.status, 200)
+            self.assertEqual(resp.read().decode(), '{"ok":true}')
+            self.assertTrue(marker_path.exists())
+            self.assertEqual(marker_path.read_text(), "ran")
+
+
 class TestLogging(_RuntimeTestCase):
     """Tests for IPC log message forwarding."""
 
@@ -546,9 +617,31 @@ class TestErrorPaths(_RuntimeTestCase):
             module_name=mod,
             ipc_socket_path=self.n1.socket_path,
         ) as proc:
+            msg = await self.n1.wait_for_message(
+                UnrecoverableErrorMessage, timeout=10.0
+            )
+            self.assertEqual(msg.payload.exit_code, 1)
+            self.assertIn("Missing variable", msg.payload.message)
             async with asyncio.timeout(10.0):
                 returncode = await proc.wait()
             self.assertEqual(returncode, 1)
+
+    async def test_missing_cron_entrypoint_exits(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "missing_export.py", self.tmp_path
+        )
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+            extra_env={"VERCEL_SERVICE_TYPE": "cron"},
+        ) as proc:
+            async with asyncio.timeout(10.0):
+                returncode = await proc.wait()
+            self.assertEqual(returncode, 1)
+            stderr = await _read_stderr(proc)
+            self.assertIn("Error bootstrapping cron service app:", stderr)
 
     async def test_bad_handler_subclass_exits(
         self,
@@ -560,6 +653,14 @@ class TestErrorPaths(_RuntimeTestCase):
             module_name=mod,
             ipc_socket_path=self.n1.socket_path,
         ) as proc:
+            msg = await self.n1.wait_for_message(
+                UnrecoverableErrorMessage, timeout=10.0
+            )
+            self.assertEqual(msg.payload.exit_code, 1)
+            self.assertIn(
+                "Handler must inherit from BaseHTTPRequestHandler",
+                msg.payload.message,
+            )
             async with asyncio.timeout(10.0):
                 returncode = await proc.wait()
             self.assertEqual(returncode, 1)
@@ -594,11 +695,17 @@ class TestErrorPaths(_RuntimeTestCase):
             module_name="nonexistent",
             ipc_socket_path=self.n1.socket_path,
         ) as proc:
+            msg = await self.n1.wait_for_message(
+                UnrecoverableErrorMessage, timeout=10.0
+            )
+            self.assertEqual(msg.payload.exit_code, 1)
+            self.assertIn("could not import", msg.payload.message)
+            self.assertIn("nonexistent.py", msg.payload.message)
             async with asyncio.timeout(10.0):
                 returncode = await proc.wait()
             self.assertEqual(returncode, 1)
             stderr = await _read_stderr(proc)
-            self.assertIn("Error importing", stderr)
+            self.assertIn("could not import", stderr)
 
 
 class _LambdaTestCase(unittest.IsolatedAsyncioTestCase):
@@ -735,20 +842,25 @@ class TestLambdaASGI(_LambdaTestCase):
         self.assertEqual(result["statusCode"], 200)
 
     async def test_repeated_headers(self) -> None:
-        ep_abs, ep_rel, mod = _make_entrypoint("asgi_app.py", self.tmp_path)
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "asgi_repeated_headers.py",
+            self.tmp_path,
+        )
         result = await _invoke_lambda(
             entrypoint_abs=ep_abs,
             entrypoint_rel=ep_rel,
             module_name=mod,
             event=_lambda_event(
                 "GET",
-                "/hello",
+                "/headers",
                 headers={
                     "accept": ["text/html", "application/json"],
                 },
             ),
         )
         self.assertEqual(result["statusCode"], 200)
+        body = base64.b64decode(result["body"]).decode()
+        self.assertEqual(body, "text/html,application/json")
 
 
 class TestLambdaASGILifespan(_LambdaTestCase):

@@ -252,10 +252,13 @@ function getEnvironmentMessage(isDev: boolean): string {
 
 export async function testFixture(
   directory: string,
-  opts: Options<null> = {},
+  opts: Options<null> & { skipNpmInstall?: boolean } = {},
   args: string[] = []
 ) {
-  await runNpmInstall(directory);
+  const { skipNpmInstall, ...execaOpts } = opts;
+  if (!skipNpmInstall) {
+    await runNpmInstall(directory);
+  }
 
   const token = await fetchCachedToken();
 
@@ -283,8 +286,8 @@ export async function testFixture(
       reject: false,
       shell: true,
       stdio: 'pipe',
-      ...opts,
-      env: { ...opts.env, __VERCEL_SKIP_DEV_CMD: '1' },
+      ...execaOpts,
+      env: { ...execaOpts.env, __VERCEL_SKIP_DEV_CMD: '1' },
     }
   );
 
@@ -310,6 +313,8 @@ export async function testFixture(
     stderr += data;
 
     if (stripAnsi(stderr).includes('Ready! Available at')) {
+      readyResolver.resolve(null);
+    } else if (stripAnsi(stderr).includes('Available at:')) {
       readyResolver.resolve(null);
     }
   });
@@ -589,7 +594,7 @@ async function nukePID(
   // kill the process
   try {
     process.kill(pid, signal);
-  } catch (e) {
+  } catch (_e) {
     // process does not exist
 
     // eslint-disable-next-line no-console
@@ -602,7 +607,7 @@ async function nukePID(
   try {
     // check if killed
     process.kill(pid, 0);
-  } catch (e) {
+  } catch (_e) {
     // eslint-disable-next-line no-console
     console.log(`pid ${pid} is not running`);
     return;

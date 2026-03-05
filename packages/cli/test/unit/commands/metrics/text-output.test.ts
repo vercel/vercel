@@ -12,6 +12,7 @@ import {
   formatMetadataHeader,
   formatSparklineSection,
   formatText,
+  ellipsizeMiddle,
 } from '../../../../src/commands/metrics/text-output';
 import type {
   MetricsQueryResponse,
@@ -26,9 +27,9 @@ const projectScope: Scope = {
 
 describe('text-output', () => {
   describe('number formatting', () => {
-    it('should classify measure types from schema units', () => {
+    it('should classify measure types from schema units and fallback units', () => {
       expect(getMeasureType('count')).toBe('count');
-      expect(getMeasureType('tokens')).toBe('count');
+      expect(getMeasureType('unknown_unit')).toBe('ratio');
       expect(getMeasureType('US dollars')).toBe('count');
       expect(getMeasureType('milliseconds')).toBe('duration');
       expect(getMeasureType('bytes')).toBe('bytes');
@@ -52,6 +53,40 @@ describe('text-output', () => {
       expect(formatDecimal(0.87)).toBe('0.87');
       expect(formatDecimal(0.042)).toBe('0.042');
       expect(formatDecimal(0.003)).toBe('0.003');
+    });
+  });
+
+  describe('ellipsizeMiddle', () => {
+    it('should return the string unchanged when within max length', () => {
+      expect(ellipsizeMiddle('short', 60)).toBe('short');
+      expect(ellipsizeMiddle('/api/status', 60)).toBe('/api/status');
+    });
+
+    it('should return the string unchanged when exactly at max length', () => {
+      const str = 'a'.repeat(60);
+      expect(ellipsizeMiddle(str, 60)).toBe(str);
+    });
+
+    it('should ellipsize long strings with equal start/end portions', () => {
+      const result = ellipsizeMiddle('a'.repeat(100), 60);
+      expect(result).toHaveLength(60);
+      expect(result).toContain('…');
+      // With maxLength=60: endLength=29, startLength=30
+      expect(result).toBe('a'.repeat(30) + '…' + 'a'.repeat(29));
+    });
+
+    it('should handle odd max length correctly', () => {
+      const result = ellipsizeMiddle('abcdefghij', 5);
+      // endLength=2, startLength=2
+      expect(result).toBe('ab…ij');
+      expect(result).toHaveLength(5);
+    });
+
+    it('should handle even max length correctly', () => {
+      const result = ellipsizeMiddle('abcdefghij', 6);
+      // endLength=2, startLength=3
+      expect(result).toBe('abc…ij');
+      expect(result).toHaveLength(6);
     });
   });
 
@@ -216,7 +251,7 @@ describe('text-output', () => {
   describe('section formatters', () => {
     it('should render usage-style metadata fields', () => {
       const metadata = formatMetadataHeader({
-        event: 'incomingRequest',
+        event: 'edgeRequest',
         measure: 'requestDurationMs',
         aggregation: 'avg',
         periodStart: '2026-02-19T10:00:00.000Z',
@@ -273,7 +308,7 @@ describe('text-output', () => {
       };
 
       const output = formatText(response, {
-        event: 'incomingRequest',
+        event: 'edgeRequest',
         measure: 'count',
         aggregation: 'sum',
         groupBy: [],
@@ -292,7 +327,7 @@ describe('text-output', () => {
         .join('\n');
 
       expect(normalized).toMatchInlineSnapshot(`
-        "> Metric: incomingRequest / count sum
+        "> Metric: edgeRequest / count sum
         > Period: 2026-02-19 10:00 to 2026-02-19 10:15
         > Interval: 5m
         > Project: my-project (my-team)
@@ -378,7 +413,7 @@ describe('text-output', () => {
           statistics: {},
         },
         {
-          event: 'incomingRequest',
+          event: 'edgeRequest',
           measure: 'count',
           aggregation: 'sum',
           groupBy: [],
@@ -400,7 +435,7 @@ describe('text-output', () => {
           statistics: {},
         },
         {
-          event: 'incomingRequest',
+          event: 'edgeRequest',
           measure: 'count',
           aggregation: 'sum',
           groupBy: [],

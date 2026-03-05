@@ -43,13 +43,6 @@ const appError = {
   app_error: true,
 };
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const infrastructureError = {
-  title: 'An internal error occurred with Vercel.',
-  subtitle: 'This is an error with the platform itself, not the application.',
-  app_error: false,
-};
-
 const pageNotFoundError = {
   title: 'The page could not be found.',
   subtitle: 'The page could not be found in the application.',

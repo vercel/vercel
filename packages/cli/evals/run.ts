@@ -11,8 +11,18 @@ import { existsSync, readdirSync } from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { config } from 'dotenv';
-import { destroy, getProjectModeVariantsFromEnv, setup } from './hooks';
-import type { EvalRunContext, EvalVariant, SetupResult } from './hooks';
+import {
+  destroy,
+  getAuthStateVariantsFromEnv,
+  getEvalVariants,
+  setup,
+} from './hooks';
+import type {
+  AuthVariant,
+  EvalRunContext,
+  EvalVariant,
+  SetupResult,
+} from './hooks';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -126,7 +136,38 @@ async function main() {
   }
 
   const sandboxProjectDir = join(__dirname, 'sandbox-project');
-  const variants: EvalVariant[] = getProjectModeVariantsFromEnv('auto');
+  const baseVariants: EvalVariant[] = getEvalVariants('auto');
+  const authVariants: AuthVariant[] = getAuthStateVariantsFromEnv('logged-in');
+
+  type CombinedVariant = EvalVariant & {
+    authState: AuthVariant['authState'];
+  };
+
+  const variants: CombinedVariant[] = [];
+
+  for (const baseVariant of baseVariants) {
+    for (const authVariant of authVariants) {
+      const suffix =
+        authVariant.id === 'default' ? '' : `+auth:${authVariant.id}`;
+      variants.push({
+        ...baseVariant,
+        id: `${baseVariant.id}${suffix}`,
+        authState: authVariant.authState,
+      });
+    }
+  }
+
+  // Debug: show full variant matrix (project mode × skills × auth state)
+  process.stdout.write('\nCLI eval variants matrix:\n');
+  if (variants.length === 0) {
+    process.stdout.write('  (no variants — nothing will run)\n');
+  } else {
+    for (const v of variants) {
+      process.stdout.write(
+        `  - id=${v.id}, projectMode=${v.projectMode}, authState=${v.authState}, withSkills=${v.withSkills}\n`
+      );
+    }
+  }
 
   try {
     await populateOIDCToken();
@@ -156,17 +197,27 @@ async function main() {
     !process.env.VERCEL_OIDC_TOKEN && Boolean(process.env.VERCEL_TOKEN);
   const flagArgs = args.filter(a => a.startsWith('-'));
   const explicitExperimentArgs = args.filter(a => !a.startsWith('-'));
+  // When falling back to VERCEL_TOKEN, run only the "cli" experiment so each
+  // variant runs the full eval set. Otherwise (e.g. explicit experiment args)
+  // use the requested experiments.
   const experimentsToRun =
     explicitExperimentArgs.length > 0
       ? explicitExperimentArgs
       : usedOIDCFallback
-        ? ['cc', 'cli', 'vercel-cli-cc']
+        ? ['cli']
         : [];
   const agentEvalArgsToPass =
     experimentsToRun.length > 0 ? [...flagArgs, ...experimentsToRun] : args;
+  process.stdout.write(
+    `\nCLI eval experiments to run: ${
+      experimentsToRun.length > 0
+        ? experimentsToRun.join(', ')
+        : '(from CLI args)'
+    }\n`
+  );
   if (usedOIDCFallback && explicitExperimentArgs.length === 0) {
     process.stderr.write(
-      'Skipping smoke experiment (requires OIDC). Running: cc, cli, vercel-cli-cc.\n'
+      'Skipping smoke experiment (requires OIDC). Running: cli (all evals per variant).\n'
     );
   }
 
@@ -183,18 +234,25 @@ async function main() {
       cwd: __dirname,
       sandboxProjectDir,
       projectMode: variant.projectMode,
+      withSkills: variant.withSkills,
     };
 
-    let setupResult: SetupResult | void;
+    let setupResult: SetupResult | void = undefined;
 
     process.stdout.write(
-      `\n=== CLI eval variant "${variant.id}" (projectMode=${variant.projectMode}) ===\n`
+      `\n=== CLI eval variant "${variant.id}" (projectMode=${variant.projectMode}, authState=${variant.authState}, withSkills=${variant.withSkills}) ===\n`
     );
 
     try {
       setupResult = await setup(context);
 
-      const agentEvalEnv = { ...process.env, FORCE_COLOR: '1' };
+      const agentEvalEnv: NodeJS.ProcessEnv = {
+        ...process.env,
+        FORCE_COLOR: '1',
+        CLI_EVAL_AUTH_STATE: variant.authState,
+        CLI_EVAL_WITH_SKILLS: variant.withSkills ? '1' : '0',
+        CLI_EVAL_EVALS: evals.join(','),
+      };
       if (setupResult?.createdProjectId) {
         agentEvalEnv.CLI_EVAL_PROJECT_ID = setupResult.createdProjectId;
       }

@@ -90,7 +90,8 @@ it('Should build the serverless-no-config example', async () => {
   ).toBeFalsy();
 });
 
-// eslint-disable-next-line jest/no-disabled-tests
+/* eslint-disable jest/no-disabled-tests */
+// biome-ignore lint/suspicious/noSkippedTests: temporarily disabled
 it.skip('Should invoke build command with serverless-no-config', async () => {
   const {
     workPath,
@@ -127,7 +128,8 @@ it.skip('Should invoke build command with serverless-no-config', async () => {
   ).toBeFalsy();
 });
 
-// eslint-disable-next-line jest/no-disabled-tests
+/* eslint-disable jest/no-disabled-tests */
+// biome-ignore lint/suspicious/noSkippedTests: temporarily disabled
 it.skip('Should not exceed function limit for large dependencies (server build)', async () => {
   let logs = '';
 
@@ -181,7 +183,8 @@ it.skip('Should not exceed function limit for large dependencies (server build)'
   expect(logs).toContain('node_modules/chrome-aws-lambda/bin');
 });
 
-// eslint-disable-next-line jest/no-disabled-tests
+/* eslint-disable jest/no-disabled-tests */
+// biome-ignore lint/suspicious/noSkippedTests: temporarily disabled
 it.skip('Should not exceed function limit for large dependencies (shared lambda)', async () => {
   let logs = '';
 

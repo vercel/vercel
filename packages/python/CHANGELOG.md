@@ -1,5 +1,35 @@
 # @vercel/python
 
+## 6.20.1
+
+### Patch Changes
+
+- Add background worker service support for Python (Dramatiq/Celery) and propagate vercel headers context to worker handlers. ([#15361](https://github.com/vercel/vercel/pull/15361))
+
+## 6.20.0
+
+### Minor Changes
+
+- Add traces to python builder. ([#15282](https://github.com/vercel/vercel/pull/15282))
+
+### Patch Changes
+
+- Add no install project flag to the predeploy uv sync command ([#15341](https://github.com/vercel/vercel/pull/15341))
+
+- Move the matplotlib env var to quirks. ([#15305](https://github.com/vercel/vercel/pull/15305))
+
+## 6.19.0
+
+### Minor Changes
+
+- [python] setup logging in `vc_init_dev` to route records with level <= `WARNING` to `stdout` and with level >= `ERROR` to `stderr`. ([#15328](https://github.com/vercel/vercel/pull/15328))
+
+## 6.18.1
+
+### Patch Changes
+
+- add litellm proxy support ([#15313](https://github.com/vercel/vercel/pull/15313))
+
 ## 6.18.0
 
 ### Minor Changes

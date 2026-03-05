@@ -145,7 +145,8 @@ afterAll(async () => {
 });
 
 // https://linear.app/vercel/issue/ZERO-2555/fix-or-skip-assign-a-domain-to-a-project-test
-// eslint-disable-next-line jest/no-disabled-tests
+/* eslint-disable jest/no-disabled-tests */
+// biome-ignore lint/suspicious/noSkippedTests: temporarily disabled
 test.skip('assign a domain to a project', async () => {
   const team = await teamPromise;
   const domain = `project-domain.${team.slug}.vercel.app`;
@@ -187,7 +188,8 @@ test('ensure `github` and `scope` are not sent to the API', async () => {
 });
 
 // TODO: fix: --public does not make deployments public
-// eslint-disable-next-line jest/no-disabled-tests
+/* eslint-disable jest/no-disabled-tests */
+// biome-ignore lint/suspicious/noSkippedTests: temporarily disabled
 test.skip('should show prompts to set up project during first deploy', async () => {
   const dir = await setupE2EFixture('project-link-deploy');
   const projectName = `project-link-deploy-${
@@ -896,7 +898,8 @@ test.skip(
 );
 
 // TODO: fix: --public does not make deployments public
-// eslint-disable-next-line jest/no-disabled-tests
+/* eslint-disable jest/no-disabled-tests */
+// biome-ignore lint/suspicious/noSkippedTests: temporarily disabled
 test.skip('deploy pnpm twice using pnp and symlink=false', async () => {
   const directory = path.join(__dirname, 'fixtures/unit/pnpm-pnp-symlink');
 
@@ -1254,7 +1257,8 @@ test('[vc build] should not include .vercel when zeroConfig is true and outputDi
 });
 
 // TODO: fix: --public does not make deployments public
-// eslint-disable-next-line jest/no-disabled-tests
+/* eslint-disable jest/no-disabled-tests */
+// biome-ignore lint/suspicious/noSkippedTests: temporarily disabled
 test.skip('vercel.json configuration overrides in a new project prompt user and merges settings correctly', async () => {
   let directory = await setupE2EFixture(
     'vercel-json-configuration-overrides-merging-prompts'
@@ -1414,63 +1418,63 @@ test.each([
     vercelAuth: 'standard',
     expectedStatus: 401,
   },
-] as const)(
-  '[vc deploy] should allow a project to be created with Vercel Auth disabled or enabled with prompts - vercelAuth: %s',
-  async ({ vercelAuth, expectedStatus }) => {
-    const dir = await setupE2EFixture('project-vercel-auth');
-    const projectName = `project-vercel-auth-${
-      Math.random().toString(36).split('.')[1]
-    }`;
+] as const)('[vc deploy] should allow a project to be created with Vercel Auth disabled or enabled with prompts - vercelAuth: %s', async ({
+  vercelAuth,
+  expectedStatus,
+}) => {
+  const dir = await setupE2EFixture('project-vercel-auth');
+  const projectName = `project-vercel-auth-${
+    Math.random().toString(36).split('.')[1]
+  }`;
 
-    // remove previously linked project if it exists
-    await remove(path.join(dir, '.vercel'));
+  // remove previously linked project if it exists
+  await remove(path.join(dir, '.vercel'));
 
-    const now = execCli(binaryPath, [dir], {
-      env: {
-        FORCE_TTY: '1',
-      },
-    });
+  const now = execCli(binaryPath, [dir], {
+    env: {
+      FORCE_TTY: '1',
+    },
+  });
 
-    await setupProject(
-      now,
-      projectName,
-      {
-        buildCommand: `mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html`,
-        outputDirectory: 'o',
-      },
-      {
-        vercelAuth,
-      }
-    );
+  await setupProject(
+    now,
+    projectName,
+    {
+      buildCommand: `mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html`,
+      outputDirectory: 'o',
+    },
+    {
+      vercelAuth,
+    }
+  );
 
-    const output = await now;
+  const output = await now;
 
-    // Ensure the exit code is right
-    expect(output.exitCode, formatOutput(output)).toBe(0);
+  // Ensure the exit code is right
+  expect(output.exitCode, formatOutput(output)).toBe(0);
 
-    // Ensure .gitignore is created
-    const gitignore = await readFile(path.join(dir, '.gitignore'), 'utf8');
-    expect(gitignore).toBe('.vercel\n');
+  // Ensure .gitignore is created
+  const gitignore = await readFile(path.join(dir, '.gitignore'), 'utf8');
+  expect(gitignore).toBe('.vercel\n');
 
-    // Ensure .vercel/project.json and .vercel/README.txt are created
-    expect(
-      fs.existsSync(path.join(dir, '.vercel', 'project.json')),
-      'project.json'
-    ).toBe(true);
-    expect(
-      fs.existsSync(path.join(dir, '.vercel', 'README.txt')),
-      'README.txt'
-    ).toBe(true);
+  // Ensure .vercel/project.json and .vercel/README.txt are created
+  expect(
+    fs.existsSync(path.join(dir, '.vercel', 'project.json')),
+    'project.json'
+  ).toBe(true);
+  expect(
+    fs.existsSync(path.join(dir, '.vercel', 'README.txt')),
+    'README.txt'
+  ).toBe(true);
 
-    const { href } = new URL(output.stdout);
+  const { href } = new URL(output.stdout);
 
-    // Send a test request to the deployment
-    const response = await nodeFetch(href);
-    expect(response.status).toBe(expectedStatus);
+  // Send a test request to the deployment
+  const response = await nodeFetch(href);
+  expect(response.status).toBe(expectedStatus);
 
-    const projectResponse = await apiFetch(`/projects/${projectName}`, {
-      method: 'DELETE',
-    });
-    expect(projectResponse.status).toBe(204);
-  }
-);
+  const projectResponse = await apiFetch(`/projects/${projectName}`, {
+    method: 'DELETE',
+  });
+  expect(projectResponse.status).toBe(204);
+});

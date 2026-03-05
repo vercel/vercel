@@ -579,7 +579,7 @@ async function checkTurboSupportsCorepack(
   if (turboConfigPath) {
     try {
       turboJson = json5.parse(await fs.readFile(turboConfigPath, 'utf8'));
-    } catch (err) {
+    } catch (_err) {
       console.warn(
         `WARNING: Failed to parse ${path.basename(turboConfigPath)}`
       );

@@ -147,7 +147,8 @@ test('output the version', async () => {
 });
 
 // https://linear.app/vercel/issue/ZERO-2736/turn-login-with-unregistered-user-test-in-a-unit-test
-// eslint-disable-next-line jest/no-disabled-tests
+/* eslint-disable jest/no-disabled-tests */
+// biome-ignore lint/suspicious/noSkippedTests: temporarily disabled
 test.skip('login with unregistered user', async () => {
   const { stdout, stderr, exitCode } = await execCli(
     binaryPath,
@@ -164,7 +165,8 @@ test.skip('login with unregistered user', async () => {
 });
 
 // TODO: fix: --public does not make deployments public
-// eslint-disable-next-line jest/no-disabled-tests
+/* eslint-disable jest/no-disabled-tests */
+// biome-ignore lint/suspicious/noSkippedTests: temporarily disabled
 test.skip('ignore files specified in .nowignore', async () => {
   const directory = await setupE2EFixture('nowignore');
 
@@ -182,7 +184,8 @@ test.skip('ignore files specified in .nowignore', async () => {
 });
 
 // TODO: fix: --public does not make deployments public
-// eslint-disable-next-line jest/no-disabled-tests
+/* eslint-disable jest/no-disabled-tests */
+// biome-ignore lint/suspicious/noSkippedTests: temporarily disabled
 test.skip('ignore files specified in .nowignore via allowlist', async () => {
   const directory = await setupE2EFixture('nowignore-allowlist');
 
@@ -213,7 +216,8 @@ test('list the scopes', async () => {
 });
 
 // https://linear.app/vercel/issue/ZERO-2555/fix-assign-a-domain-to-a-project-test
-// eslint-disable-next-line jest/no-disabled-tests
+/* eslint-disable jest/no-disabled-tests */
+// biome-ignore lint/suspicious/noSkippedTests: temporarily disabled
 test.skip('domains inspect', async () => {
   const team = await teamPromise;
   const domainName = `inspect-${team.slug}-${Math.random()
@@ -264,7 +268,8 @@ test.skip('domains inspect', async () => {
 });
 
 // Unblocking CI for incident fix
-// eslint-disable-next-line jest/no-disabled-tests
+/* eslint-disable jest/no-disabled-tests */
+// biome-ignore lint/suspicious/noSkippedTests: temporarily disabled
 test.skip('try to transfer-in a domain with "--code" option', async () => {
   const { stderr, stdout, exitCode } = await execCli(binaryPath, [
     'domains',
@@ -293,7 +298,8 @@ test('try to move an invalid domain', async () => {
 });
 
 // TODO: fix: --public does not make deployments public
-// eslint-disable-next-line jest/no-disabled-tests
+/* eslint-disable jest/no-disabled-tests */
+// biome-ignore lint/suspicious/noSkippedTests: temporarily disabled
 test.skip('ensure we render a warning for deployments with no files', async () => {
   const directory = await setupE2EFixture('empty-directory');
 
@@ -828,7 +834,8 @@ test('fail to deploy a Lambda with an incorrect value for of memory', async () =
 });
 
 // TODO: This test is flaky, possibly due to the recent SIGTERM changes which now issue 500s
-// eslint-disable-next-line jest/no-disabled-tests
+/* eslint-disable jest/no-disabled-tests */
+// biome-ignore lint/suspicious/noSkippedTests: temporarily disabled
 test.skip('deploy a Lambda with 3 seconds of maxDuration', async () => {
   const directory = await setupE2EFixture('lambda-with-3-second-timeout');
   const output = await execCli(binaryPath, [directory, '--yes']);

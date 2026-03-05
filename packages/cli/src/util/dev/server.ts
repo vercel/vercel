@@ -45,6 +45,8 @@ import {
   detectBuilders,
   detectApiDirectory,
   detectApiExtensions,
+  getInternalServiceCronPathPrefix,
+  getInternalServiceWorkerPathPrefix,
   isOfficialRuntime,
   type Service,
 } from '@vercel/fs-detectors';
@@ -177,6 +179,16 @@ export default class DevServer {
   private startPromise: Promise<void> | null;
 
   private envValues: Record<string, string>;
+
+  private shouldUseServicesOrchestrator(): boolean {
+    if (!this.services || this.services.length === 0) {
+      return false;
+    }
+    if (this.services.length > 1) {
+      return true;
+    }
+    return this.services[0].type !== 'web';
+  }
 
   constructor(cwd: string, options: DevServerOptions) {
     this.cwd = cwd;
@@ -921,9 +933,9 @@ export default class DevServer {
     const vercelConfig = await this.getVercelConfig();
 
     let devCommandPromise: Promise<void> | undefined;
-    if (this.services && this.services.length > 1) {
+    if (this.shouldUseServicesOrchestrator()) {
       this.orchestrator = new ServicesOrchestrator({
-        services: this.services,
+        services: this.services || [],
         cwd: this.cwd,
         repoRoot: this.repoRoot,
         env: this.envConfigs.allEnv,
@@ -939,8 +951,14 @@ export default class DevServer {
       }
 
       output.print(`${chalk.cyan('>')} Available at:\n`);
-      for (const service of this.services) {
-        const serviceUrl = `${addressFormatted}${service.routePrefix === '/' ? '' : service.routePrefix}`;
+      for (const service of this.services || []) {
+        let servicePath = service.routePrefix || '/';
+        if (service.type === 'worker') {
+          servicePath = getInternalServiceWorkerPathPrefix(service.name);
+        } else if (service.type === 'cron') {
+          servicePath = getInternalServiceCronPathPrefix(service.name);
+        }
+        const serviceUrl = `${addressFormatted}${servicePath === '/' ? '' : servicePath}`;
         output.print(`  ${chalk.bold(service.name)}: ${link(serviceUrl)}\n`);
       }
     } else {
@@ -2312,7 +2330,7 @@ export default class DevServer {
 
   async runDevCommand(forceRestart: boolean = false) {
     // In multi-service setup, all services are managed by orchestrator
-    if (this.services && this.services.length > 1) {
+    if (this.shouldUseServicesOrchestrator()) {
       return;
     }
 
