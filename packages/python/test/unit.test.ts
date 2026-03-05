@@ -2105,7 +2105,6 @@ describe('worker services dependency installation', () => {
       // Avoid creating a real virtualenv in unit tests.
       ensureVenv: vi.fn(async () => {}),
     }));
-
     const realUv =
       await vi.importActual<typeof import('../src/uv')>('../src/uv');
     vi.doMock('../src/uv', () => ({
