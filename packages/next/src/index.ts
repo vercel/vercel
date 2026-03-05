@@ -124,7 +124,7 @@ async function readPackageJson(entryPath: string): Promise<PackageJson> {
 
   try {
     return JSON.parse(await readFile(packagePath, 'utf8'));
-  } catch (err) {
+  } catch (_err) {
     debug('package.json not found in entry');
     return {};
   }
@@ -721,7 +721,7 @@ export const build: BuildV2 = async buildOptions => {
         'utf8'
       );
       escapedBuildId = escapeStringRegexp(buildId);
-    } catch (err) {
+    } catch (_err) {
       throw new NowBuildError({
         code: 'NOW_NEXT_NO_BUILD_ID',
         message:

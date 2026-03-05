@@ -168,7 +168,7 @@ describe.skipIf(flakey)('build', () => {
     try {
       await fs.unlink(join(cwd, 'foo.html'));
       await fs.symlink(join(cwd, 'index.html'), join(cwd, 'foo.html'));
-    } catch (e) {
+    } catch (_e) {
       // eslint-disable-next-line no-console
       console.log('Symlinks not available, skipping test');
       return;
@@ -1111,6 +1111,27 @@ describe.skipIf(flakey)('build', () => {
         schedule: '0 0 * * *',
       },
     ]);
+  });
+
+  it('should include cron services in build output crons', async () => {
+    const cwd = fixture('with-services-cron');
+    const output = join(cwd, '.vercel', 'output');
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toBe(0);
+
+    const config = await fs.readJSON(join(output, 'config.json'));
+    expect(config).toHaveProperty('crons', [
+      {
+        path: '/_svc/cleanup/crons/api/cron/cron',
+        schedule: '0 0 * * *',
+      },
+    ]);
+    expect(config.routes).toContainEqual({
+      src: '^/_svc/cleanup/crons/api/cron/cron$',
+      dest: '/_svc/cleanup/index',
+      check: true,
+    });
   });
 
   it('should fail build when CRON_SECRET contains invalid HTTP header characters', async () => {

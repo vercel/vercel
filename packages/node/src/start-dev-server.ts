@@ -270,7 +270,7 @@ export const startDevServer: StartDevServer = async opts => {
       if (runtime === 'bun') {
         try {
           process.kill(pid, 'SIGTERM');
-        } catch (err) {
+        } catch (_err) {
           // The process might have already exited, for example, if the application
           // handler threw an error. Try terminating the process to be sure.
           await treeKill(pid);

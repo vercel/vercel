@@ -156,11 +156,11 @@ export const frameworks = [
         const nowRoutes = JSON.parse(content);
         try {
           await unlink(nowRoutesPath);
-        } catch (err) {
+        } catch (_err) {
           // do nothing if deleting the file fails
         }
         return nowRoutes;
-      } catch (err) {
+      } catch (_err) {
         // if the file doesn't exist, we implement gatsby's recommendations
         // https://www.gatsbyjs.org/docs/caching
 
@@ -2241,7 +2241,9 @@ export const frameworks = [
           matchContent: '[Dd]jango',
         },
         {
+          // a default django project will create a manage.py which sets DJANGO_SETTINGS_MODULE
           path: 'manage.py',
+          matchContent: 'DJANGO_SETTINGS_MODULE',
         },
       ],
     },

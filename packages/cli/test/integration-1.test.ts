@@ -461,7 +461,8 @@ test('deploy using --local-config flag above target', async () => {
   expect(host).toMatch(/root-level/gm);
 });
 
-// eslint-disable-next-line jest/no-disabled-tests
+/* eslint-disable jest/no-disabled-tests */
+// biome-ignore lint/suspicious/noSkippedTests: temporarily disabled
 test.skip('deploy `api-env` fixture and test `vercel env` command', async () => {
   const target = await setupE2EFixture('api-env');
   // Randomness is required so that tests can run in

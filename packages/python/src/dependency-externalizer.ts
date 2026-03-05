@@ -42,6 +42,12 @@ interface PythonDependencyExternalizerOptions {
   alwaysBundlePackages?: string[];
 }
 
+interface DependencyAnalysis {
+  runtimeInstallEnabled: boolean;
+  allVendorFiles: Files;
+  totalBundleSize: number;
+}
+
 export class PythonDependencyExternalizer {
   private venvPath: string;
   private vendorDir: string;
@@ -95,10 +101,7 @@ export class PythonDependencyExternalizer {
    * and determine whether runtime installation is needed.
    * Must be called before generateBundle().
    */
-  async analyze(files: Files): Promise<{
-    runtimeInstallEnabled: boolean;
-    allVendorFiles: Files;
-  }> {
+  async analyze(files: Files): Promise<DependencyAnalysis> {
     this.allVendorFiles = await mirrorPackagesIntoVendor({
       venvPath: this.venvPath,
       vendorDirName: this.vendorDir,
@@ -141,7 +144,11 @@ export class PythonDependencyExternalizer {
       });
     }
 
-    return { runtimeInstallEnabled, allVendorFiles: this.allVendorFiles };
+    return {
+      runtimeInstallEnabled,
+      allVendorFiles: this.allVendorFiles,
+      totalBundleSize: this.totalBundleSize,
+    };
   }
 
   /**

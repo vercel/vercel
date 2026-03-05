@@ -96,7 +96,7 @@ export async function determineAgent(): Promise<AgentResult> {
   try {
     await access(DEVIN_LOCAL_PATH, constants.F_OK);
     return { isAgent: true, agent: { name: DEVIN } };
-  } catch (error) {
+  } catch (_error) {
     // noop
   }
 

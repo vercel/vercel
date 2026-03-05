@@ -1,5 +1,66 @@
 # vercel
 
+## 50.27.1
+
+### Patch Changes
+
+- Updated dependencies [[`3ab1ffcd41f7359f3955954abb59a9c157df0b07`](https://github.com/vercel/vercel/commit/3ab1ffcd41f7359f3955954abb59a9c157df0b07)]:
+  - @vercel/next@4.15.41
+
+## 50.27.0
+
+### Minor Changes
+
+- Add `vercel agent init` command that generates an AGENTS.md file with Vercel deployment best practices ([#15356](https://github.com/vercel/vercel/pull/15356))
+
+### Patch Changes
+
+- print vercel CLI version on VERCEL=1 ([#15359](https://github.com/vercel/vercel/pull/15359))
+
+- Updated dependencies [[`62700e88d527e3a3be2b317b805f778f3bf97f86`](https://github.com/vercel/vercel/commit/62700e88d527e3a3be2b317b805f778f3bf97f86)]:
+  - @vercel/next@4.15.40
+
+## 50.26.1
+
+### Patch Changes
+
+- Fix `vc deploy --json` to output only valid JSON to stdout when piped ([#15363](https://github.com/vercel/vercel/pull/15363))
+
+- [fs-detectors] skip auto-detection for root-only projects ([#15364](https://github.com/vercel/vercel/pull/15364))
+
+- Add background worker service support for Python (Dramatiq/Celery) and propagate vercel headers context to worker handlers. ([#15361](https://github.com/vercel/vercel/pull/15361))
+
+- Updated dependencies [[`6d7057b5d55915ee0317355d7a6e022bce57d314`](https://github.com/vercel/vercel/commit/6d7057b5d55915ee0317355d7a6e022bce57d314), [`456ebe9189077b7ac3fb599f348f6d04eea654b7`](https://github.com/vercel/vercel/commit/456ebe9189077b7ac3fb599f348f6d04eea654b7)]:
+  - @vercel/next@4.15.39
+  - @vercel/python@6.20.1
+  - @vercel/static-build@2.8.44
+
+## 50.26.0
+
+### Minor Changes
+
+- feat(cli): add `activity` command to list activity events ([#15307](https://github.com/vercel/vercel/pull/15307))
+
+  - New `vercel activity` command to list user/team activity events from the Events API
+  - Supports filtering by event type (`--type`), time range (`--since`/`--until`), and project (`--project`)
+  - `activity types` subcommand to list available event types
+  - Auto-scopes to linked project; `--all` for team-wide events
+  - Pagination via `--limit`/`--next` and JSON output via `--format json`
+
+- Add --json flag to `vc deploy` for machine-readable output ([#15355](https://github.com/vercel/vercel/pull/15355))
+
+### Patch Changes
+
+- evals for auth ([#15310](https://github.com/vercel/vercel/pull/15310))
+
+- Updated dependencies [[`5a29c7d82b8db011197381c14e430cb9a91ed1b1`](https://github.com/vercel/vercel/commit/5a29c7d82b8db011197381c14e430cb9a91ed1b1), [`2bff98408f54b33f9acd849370d676cde0042096`](https://github.com/vercel/vercel/commit/2bff98408f54b33f9acd849370d676cde0042096), [`c596221d9e0828ba96d598232bb59235f7576568`](https://github.com/vercel/vercel/commit/c596221d9e0828ba96d598232bb59235f7576568), [`200cd3840b3ef953941cfffd4969a3fd44178938`](https://github.com/vercel/vercel/commit/200cd3840b3ef953941cfffd4969a3fd44178938)]:
+  - @vercel/next@4.15.38
+  - @vercel/python@6.20.0
+  - @vercel/static-build@2.8.44
+  - @vercel/build-utils@13.6.2
+  - @vercel/redwood@2.4.9
+  - @vercel/rust@1.0.5
+
 ## 50.25.6
 
 ### Patch Changes

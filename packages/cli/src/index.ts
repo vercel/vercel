@@ -212,12 +212,13 @@ const main = async () => {
 
   // If empty, leave this code here for easy adding of beta commands later
   const betaCommands: string[] = ['api', 'curl', 'webhooks'];
-  if (betaCommands.includes(targetOrSubcommand)) {
-    output.debug(
-      `${getTitleName()} CLI ${pkg.version} | ${targetOrSubcommand} is in beta — https://vercel.com/feedback`
-    );
+  const msg = betaCommands.includes(targetOrSubcommand)
+    ? `${getTitleName()} CLI ${pkg.version} | ${targetOrSubcommand} is in beta — https://vercel.com/feedback`
+    : `${getTitleName()} CLI ${pkg.version}`;
+  if (process.env.VERCEL === '1') {
+    output.print(`${msg}\n`);
   } else {
-    output.debug(`${getTitleName()} CLI ${pkg.version}`);
+    output.debug(msg);
   }
 
   // Handle `--version` directly
@@ -345,7 +346,7 @@ const main = async () => {
 
   try {
     new URL(apiUrl);
-  } catch (err: unknown) {
+  } catch (_err: unknown) {
     output.error(`Please provide a valid URL instead of ${highlight(apiUrl)}.`);
     return 1;
   }
@@ -442,6 +443,7 @@ const main = async () => {
   }
 
   const subcommandsWithoutToken = [
+    'agent',
     'login',
     'logout',
     'help',
@@ -717,9 +719,17 @@ const main = async () => {
           break;
 
         // Non-priority commands - loaded from bulk bundle
+        case 'agent':
+          telemetry.trackCliCommandAgent(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).agent;
+          break;
         case 'alias':
           telemetry.trackCliCommandAlias(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).alias;
+          break;
+        case 'activity':
+          telemetry.trackCliCommandActivity(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).activity;
           break;
         case 'api':
           telemetry.trackCliCommandApi(userSuppliedSubCommand);
