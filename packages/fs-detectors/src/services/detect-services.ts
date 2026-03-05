@@ -239,7 +239,11 @@ export function generateServicesRoutes(
   const cronServices = services.filter(s => s.type === 'cron');
   for (const service of cronServices) {
     const cronEntrypoint = service.entrypoint || service.builder.src || 'index';
-    const cronPath = getInternalServiceCronPath(service.name, cronEntrypoint);
+    const cronPath = getInternalServiceCronPath(
+      service.name,
+      cronEntrypoint,
+      service.handlerFunction || 'cron'
+    );
     const functionPath = getInternalServiceFunctionPath(service.name);
     crons.push({
       src: `^${escapeRegex(cronPath)}$`,

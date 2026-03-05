@@ -40,6 +40,7 @@ import { startDevServer } from './start-dev-server';
 import { runPyprojectScript, ensureVenv, createVenvEnv } from './utils';
 import { runQuirks } from './quirks';
 import { getDjangoSettings } from './django';
+import { containsTopLevelCallable } from '@vercel/python-analysis';
 
 const writeFile = fs.promises.writeFile;
 
@@ -488,12 +489,35 @@ export const build: BuildV3 = async ({
   }
   debug('Entrypoint is', entrypoint);
   const moduleName = entrypoint.replace(/\//g, '.').replace(/\.py$/i, '');
+  const handlerFunction =
+    typeof config?.handlerFunction === 'string'
+      ? config.handlerFunction
+      : undefined;
+
+  if (handlerFunction) {
+    const entrypointPath = join(workPath, entrypoint);
+    const source = await fs.promises.readFile(entrypointPath, 'utf-8');
+    const found = await containsTopLevelCallable(source, handlerFunction);
+    if (!found) {
+      throw new NowBuildError({
+        code: 'PYTHON_HANDLER_NOT_FOUND',
+        message:
+          `Handler function "${handlerFunction}" not found in ${entrypoint}. ` +
+          `Ensure it is defined at the module's top level.`,
+      });
+    }
+  }
+
   const vendorDir = resolveVendorDir();
 
   // Since `vercel dev` renames source files, we must reference the original
   const suffix = meta.isDev && !entrypoint.endsWith('.py') ? '.py' : '';
   const entrypointWithSuffix = `${entrypoint}${suffix}`;
   debug('Entrypoint with suffix is', entrypointWithSuffix);
+
+  const handlerFuncEnvLine = handlerFunction
+    ? `\n  "__VC_HANDLER_FUNC_NAME": "${handlerFunction}",`
+    : '';
 
   const runtimeTrampoline = `
 import importlib
@@ -508,7 +532,7 @@ os.environ.update({
   "__VC_HANDLER_MODULE_NAME": "${moduleName}",
   "__VC_HANDLER_ENTRYPOINT": "${entrypointWithSuffix}",
   "__VC_HANDLER_ENTRYPOINT_ABS": os.path.join(_here, "${entrypointWithSuffix}"),
-  "__VC_HANDLER_VENDOR_DIR": "${vendorDir}",
+  "__VC_HANDLER_VENDOR_DIR": "${vendorDir}",${handlerFuncEnvLine}
 })
 
 _vendor_rel = '${vendorDir}'

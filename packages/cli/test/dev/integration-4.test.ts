@@ -107,7 +107,6 @@ test(
 );
 
 // Skipping because it doesn't run yet on Node 22
-// eslint-disable-next-line jest/no-disabled-tests
 test.skip(
   '[vercel dev] 40-mixed-modules',
   testFixtureStdio('40-mixed-modules', async (testPath: any) => {

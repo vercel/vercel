@@ -167,7 +167,6 @@ function extractInterceptionRouteInformation(
 }
 
 // Identify /[param]/ in route string
-// eslint-disable-next-line no-useless-escape
 const TEST_DYNAMIC_ROUTE = /\/\[[^\/]+?\](?=\/|$)/;
 
 export function isDynamicRoute(

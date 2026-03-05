@@ -251,7 +251,6 @@ export type StartDevServerResult = StartDevServerSuccess | null;
  * Credit to Iain Reid, MIT license.
  * Source: https://gist.github.com/iainreid820/5c1cc527fe6b5b7dba41fec7fe54bf6e
  */
-// eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace PackageJson {
   /**
    * An author or contributor
@@ -563,6 +562,8 @@ export interface Service {
   routePrefixSource?: 'configured' | 'generated';
   /* cron service config */
   schedule?: string;
+  /* optional handler for cron service in format of {module}:{callable} */
+  handlerFunction?: string;
   /* worker service config */
   topic?: string;
   consumer?: string;

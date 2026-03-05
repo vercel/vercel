@@ -930,7 +930,6 @@ test(
 );
 
 // This looks like a cdn or proxy issue we're experiencing right now
-// eslint-disable-next-line jest/no-disabled-tests
 test.skip(
   '[vercel dev] validate routes that use custom 404 page',
   testFixtureStdio('routes-custom-404', async (testPath: any) => {
@@ -983,7 +982,6 @@ test(
   testFixtureStdio('handle-miss-querystring', async (testPath: any) => {
     await testPath(200, '/', 'Index Page');
     if (process.env.CI && process.platform === 'darwin') {
-      // eslint-disable-next-line no-console
       console.log('Skipping since GH Actions hangs for some reason');
     } else {
       await testPath(200, '/echo/first/second', 'a=first,b=second');

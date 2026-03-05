@@ -11,6 +11,16 @@ world python-analysis {
     /// Returns false for invalid Python syntax.
     export contains-app-or-handler: func(source: string) -> bool;
 
+    /// Extract the string value of a top-level constant with the given name.
+    /// Only considers simple or annotated assignments at module level whose value is a string literal.
+    export get-string-constant: func(source: string, name: string) -> option<string>;
+
+    /// Check if a top-level callable with the given name exists in Python source.
+    ///
+    /// Returns true if found, false otherwise.
+    /// Returns false for invalid Python syntax.
+    export contains-top-level-callable: func(source: string, name: string) -> bool;
+
     // =========================================================================
     // Installed package distribution metadata parsing
     // =========================================================================

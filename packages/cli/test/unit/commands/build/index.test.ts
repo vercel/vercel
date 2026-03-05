@@ -169,7 +169,6 @@ describe.skipIf(flakey)('build', () => {
       await fs.unlink(join(cwd, 'foo.html'));
       await fs.symlink(join(cwd, 'index.html'), join(cwd, 'foo.html'));
     } catch (_e) {
-      // eslint-disable-next-line no-console
       console.log('Symlinks not available, skipping test');
       return;
     }
@@ -796,7 +795,6 @@ describe.skipIf(flakey)('build', () => {
 
   it('should error when "functions" has runtime that emits discontinued "nodejs12.x"', async () => {
     if (process.platform === 'win32') {
-      // eslint-disable-next-line no-console
       console.log('Skipping test on Windows');
       return;
     }
@@ -1012,7 +1010,6 @@ describe.skipIf(flakey)('build', () => {
   it('should apply project settings overrides from "vercel.json"', async () => {
     if (process.platform === 'win32') {
       // this test runs a build command with `mkdir -p` which is unsupported on Windows
-      // eslint-disable-next-line no-console
       console.log('Skipping test on Windows');
       return;
     }
@@ -1707,7 +1704,6 @@ describe.skipIf(flakey)('build', () => {
 
   it('should create symlinks for duplicate references to Lambda / EdgeFunction instances', async () => {
     if (process.platform === 'win32') {
-      // eslint-disable-next-line no-console
       console.log('Skipping test on Windows');
       return;
     }
