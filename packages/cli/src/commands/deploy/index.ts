@@ -518,7 +518,7 @@ async function handleInitDeployment(
     if (asJson) {
       output.stopSpinner();
       client.stdout.write(
-        `${JSON.stringify(buildDeploymentJson(deployment, client.apiUrl), null, 2)}\n`
+        `${JSON.stringify(getDeploymentOutputJson(deployment, client.apiUrl), null, 2)}\n`
       );
       return 0;
     }
@@ -1270,7 +1270,7 @@ async function handleDefaultDeploy(
   if (asJson) {
     output.stopSpinner();
     client.stdout.write(
-      `${JSON.stringify(buildDeploymentJson(deployment, client.apiUrl), null, 2)}\n`
+      `${JSON.stringify(getDeploymentOutputJson(deployment, client.apiUrl), null, 2)}\n`
     );
     return 0;
   }
@@ -1538,7 +1538,7 @@ async function handleContinueDeployment({
   }
 }
 
-function buildDeploymentJson(
+function getDeploymentOutputJson(
   deployment: {
     id: string;
     url: string;
