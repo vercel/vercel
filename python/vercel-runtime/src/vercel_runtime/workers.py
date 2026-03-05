@@ -25,6 +25,7 @@ def _import_optional_module(module_name: str) -> object | None:
 
 CELERY_AVAILABLE = _has_module("celery")
 DRAMATIQ_AVAILABLE = _has_module("dramatiq")
+DJANGO_TASKS_AVAILABLE = _has_module("django.tasks")
 VERCEL_WORKERS_AVAILABLE = _has_module("vercel.workers")
 
 
@@ -172,6 +173,37 @@ def _bootstrap_celery_worker_app(module: object) -> object | None:
     return get_adapter_app_fn(celery_app)
 
 
+def _bootstrap_django_worker_app(module: object) -> object | None:
+    if not DJANGO_TASKS_AVAILABLE:
+        return None
+
+    vercel_django = _import_optional_module("vercel.workers.django")
+    if vercel_django is None:
+        if not VERCEL_WORKERS_AVAILABLE:
+            raise RuntimeError(
+                "Django tasks worker service detected, but "
+                '"vercel-workers" is not installed. '
+                'Install "vercel-workers==0.0.10" and '
+                "configure "
+                '"vercel.workers.django.VercelQueuesBackend" '
+                "as your Django tasks backend."
+            )
+        raise RuntimeError(
+            "could not import Django tasks adapter from vercel-workers"
+        )
+
+    get_asgi_app = getattr(vercel_django, "get_asgi_app", None)
+    if not callable(get_asgi_app):
+        raise RuntimeError(
+            "could not resolve Django tasks ASGI adapter from vercel-workers"
+        )
+    get_asgi_app_fn = cast(
+        "Callable[[], object]",
+        get_asgi_app,
+    )
+    return get_asgi_app_fn()
+
+
 def _bootstrap_generic_worker_app() -> object | None:
     if not VERCEL_WORKERS_AVAILABLE:
         return None
@@ -219,6 +251,14 @@ def bootstrap_worker_service_app(module: object) -> object:
         except Exception as exc:
             raise RuntimeError("Dramatiq worker bootstrap failed.") from exc
 
+    if DJANGO_TASKS_AVAILABLE:
+        try:
+            app = _bootstrap_django_worker_app(module)
+            if app is not None:
+                return app
+        except Exception as exc:
+            raise RuntimeError("Django tasks worker bootstrap failed.") from exc
+
     app = _bootstrap_generic_worker_app()
     if app is not None:
         return app
@@ -234,5 +274,5 @@ def bootstrap_worker_service_app(module: object) -> object:
     raise RuntimeError(
         "Unable to bootstrap worker service. "
         "Export an ASGI/WSGI app, or configure "
-        "Celery/Dramatiq via vercel-workers."
+        "Celery/Dramatiq/Django via vercel-workers."
     )
