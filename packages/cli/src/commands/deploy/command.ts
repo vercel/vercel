@@ -105,6 +105,8 @@ export const initSubcommand = {
       deprecated: false,
       description: 'Specify the target deployment environment',
     },
+    formatOption,
+    jsonOption,
     confirmOption,
   ],
   examples: [
