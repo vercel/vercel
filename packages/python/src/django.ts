@@ -1,5 +1,10 @@
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import execa from 'execa';
 import { debug } from '@vercel/build-utils';
+
+const scriptPath = join(__dirname, '..', 'vc_django_settings.py');
+const script = readFileSync(scriptPath, 'utf-8');
 
 /**
  * Dynamically discover Django settings by running manage.py with a patched
@@ -11,34 +16,8 @@ export async function getDjangoSettings(
   projectDir: string,
   env: NodeJS.ProcessEnv
 ): Promise<Record<string, unknown> | null> {
-  const code = `
-import os, sys, json, runpy
-import django.core.management
-
-class _Escape(Exception):
-    pass
-
-def _stop(*a, **kw):
-    raise _Escape
-django.core.management.execute_from_command_line = _stop
-
-sys.argv = ["manage.py"]
-try:
-    runpy.run_path("manage.py", run_name="__main__")
-except _Escape:
-    pass
-
-settings_module = os.environ.get("DJANGO_SETTINGS_MODULE")
-if not settings_module:
-    print(json.dumps(None))
-else:
-    import importlib
-    mod = importlib.import_module(settings_module)
-    settings = {k: getattr(mod, k) for k in dir(mod) if k.isupper()}
-    print(json.dumps(settings, default=str))
-`.trim();
   try {
-    const { stdout } = await execa('python', ['-c', code], {
+    const { stdout } = await execa('python', ['-c', script], {
       env,
       cwd: projectDir,
     });
