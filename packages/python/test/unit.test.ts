@@ -115,7 +115,6 @@ function createMockUvRunner(options?: {
   onLock?: () => void;
 }) {
   return class MockUvRunner {
-    constructor() {}
     getPath() {
       return '/mock/uv';
     }
@@ -2110,7 +2109,6 @@ describe('worker services dependency installation', () => {
     vi.doMock('../src/uv', () => ({
       ...realUv,
       UvRunner: class {
-        constructor() {}
         getPath() {
           return '/mock/uv';
         }
@@ -2129,7 +2127,6 @@ describe('worker services dependency installation', () => {
     // Mock externalization to keep this test focused on install behavior.
     vi.doMock('../src/dependency-externalizer', () => ({
       PythonDependencyExternalizer: class {
-        constructor() {}
         async analyze() {
           return { overLambdaLimit: false, allVendorFiles: {} };
         }

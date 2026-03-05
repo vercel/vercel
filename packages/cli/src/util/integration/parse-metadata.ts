@@ -51,7 +51,6 @@ export function parseMetadataFlags(
         errors.push(
           `Metadata "${key}" must be "true" or "false", got: "${value}"`
         );
-        continue;
       }
     } else if (propSchema.type === 'number') {
       if (value === '') {

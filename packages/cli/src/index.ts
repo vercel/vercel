@@ -833,6 +833,9 @@ const main = async () => {
           telemetry.trackCliCommandLogs(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).logs;
           break;
+        case 'list-aliases':
+          func = (await import('./commands-bulk.js')).listAliases;
+          break;
         case 'metrics':
           if (process.env.FF_METRICS) {
             telemetry.trackCliCommandMetrics(userSuppliedSubCommand);

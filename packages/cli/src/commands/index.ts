@@ -24,6 +24,7 @@ import { installCommand } from './install/command';
 import { integrationResourceCommand } from './integration-resource/command';
 import { integrationCommand } from './integration/command';
 import { linkCommand } from './link/command';
+import { listAliasesCommand } from './list-aliases/command';
 import { listCommand } from './list/command';
 import { loginCommand } from './login/command';
 import { logoutCommand } from './logout/command';
@@ -52,7 +53,7 @@ import { webhooksCommand } from './webhooks/command';
 import type { Command } from './help';
 import output from '../output-manager';
 
-const commandsStructs = [
+export const commandsStructs: Pick<Command, 'name' | 'aliases'>[] = [
   agentCommand,
   aliasCommand,
   activityCommand,
@@ -79,6 +80,7 @@ const commandsStructs = [
   integrationCommand,
   integrationResourceCommand,
   linkCommand,
+  listAliasesCommand,
   listCommand,
   loginCommand,
   logoutCommand,

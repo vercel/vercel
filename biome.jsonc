@@ -62,17 +62,17 @@
       "correctness": {
         "noUnusedVariables": "error",
         "noUnusedImports": "error",
+        "noInnerDeclarations": "error",
+        "noInvalidUseBeforeDeclaration": "error",
+        "noConstantCondition": "error",
+        "noVoidTypeReturn": "error",
+        "noUnreachable": "error",
         // Too noisy to enable now (277 hits)
         "noUnusedFunctionParameters": "off",
         // Disabled — too many existing violations
-        "noInnerDeclarations": "off",
-        "noInvalidUseBeforeDeclaration": "off",
         "noSwitchDeclarations": "off",
         "useValidTypeof": "off",
         "useParseIntRadix": "off",
-        "noVoidTypeReturn": "off",
-        "noConstantCondition": "off",
-        "noUnreachable": "off",
         // CSS rules — not applicable
         "noUnknownMediaFeatureName": "off",
         "noInvalidDirectionInLinearGradient": "off",
@@ -82,6 +82,16 @@
         "noDuplicateObjectKeys": "error",
         "noFocusedTests": "error",
         "noSkippedTests": "error",
+        "noRedeclare": "error",
+        "noRedundantUseStrict": "error",
+        "noUselessEscapeInString": "error",
+        "noConstEnum": "error",
+        "noArrayIndexKey": "error",
+        "useAdjacentOverloadSignatures": "error",
+        "noDuplicateParameters": "error",
+        "noShadowRestrictedNames": "error",
+        "noThenProperty": "error",
+        "noTemplateCurlyInString": "error",
         // Intentionally allowed across the codebase
         "noExplicitAny": "off",
         "noTsIgnore": "off",
@@ -92,19 +102,10 @@
         "noGlobalIsNan": "off",
         "noConfusingVoidType": "off",
         "noPrototypeBuiltins": "off",
-        "noRedeclare": "off",
         "useIterableCallbackReturn": "off",
-        "noRedundantUseStrict": "off",
-        "noShadowRestrictedNames": "off",
         "noControlCharactersInRegex": "off",
-        "noThenProperty": "off",
-        "noTemplateCurlyInString": "off",
-        "noUselessEscapeInString": "off",
+        // CSS rules — not applicable
         "noShorthandPropertyOverrides": "off",
-        "noConstEnum": "off",
-        "noArrayIndexKey": "off",
-        "useAdjacentOverloadSignatures": "off",
-        "noDuplicateParameters": "off",
         "noDuplicateFontNames": "off",
         "noNonNullAssertedOptionalChain": "off",
       },
@@ -112,49 +113,52 @@
       "style": {
         // Globally off; overridden to "error" in packages/cli (see overrides)
         "useConst": "off",
+        "useImportType": "off",
+        "useShorthandFunctionType": "error",
+        "useExportType": "error",
         // Too noisy to enable now (786 hits)
         "useNodejsImportProtocol": "off",
         // Intentionally allowed across the codebase
         "noNonNullAssertion": "off",
         // Disabled — too many existing violations
         "useTemplate": "off",
-        // Globally off; overridden to "error" in packages/cli (see overrides)
-        "useImportType": "off",
-        "useShorthandFunctionType": "off",
-        "useExportType": "off",
       },
 
       "complexity": {
+        "noCommaOperator": "error",
+        "noArguments": "error",
+        "noUselessLoneBlockStatements": "error",
+        "noUselessCatch": "error",
+        "useDateNow": "error",
+        "useFlatMap": "error",
+        "noUselessTernary": "error",
+        "noUselessRename": "error",
+        "noUselessEscapeInRegex": "error",
+        "noUselessSwitchCase": "error",
+        "noUselessContinue": "error",
+        "noUselessFragments": "error",
+        "noUselessConstructor": "error",
+        // Intentionally allowed across the codebase
+        "noBannedTypes": "off",
         // Disabled — too many existing violations
         "useArrowFunction": "off",
         "useLiteralKeys": "off",
         "useOptionalChain": "off",
-        "noCommaOperator": "off",
-        // Intentionally allowed across the codebase
-        "noBannedTypes": "off",
-        // Disabled — too many existing violations
-        "noArguments": "off",
         "noUselessUndefinedInitialization": "off",
-        "noUselessEscapeInRegex": "off",
         "useRegexLiterals": "off",
-        "noUselessContinue": "off",
+        // CSS rules — not applicable
         "noImportantStyles": "off",
-        "noUselessLoneBlockStatements": "off",
-        "noUselessFragments": "off",
-        "noUselessSwitchCase": "off",
-        "noUselessCatch": "off",
-        "useFlatMap": "off",
-        "useDateNow": "off",
-        "noUselessTernary": "off",
-        "noUselessRename": "off",
-        "noUselessConstructor": "off",
       },
 
       // Not relevant for this codebase (server-side Node.js)
       "performance": "off",
 
-      // Disabled — too many existing violations
-      "security": "off",
+      "security": {
+        "noDangerouslySetInnerHtml": "error",
+        "noDangerouslySetInnerHtmlWithChildren": "error",
+        // Disabled — too many existing violations
+        "noGlobalEval": "off",
+      },
     },
   },
   "overrides": [

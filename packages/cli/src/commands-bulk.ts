@@ -30,6 +30,7 @@ export { default as integrationResource } from './commands/integration-resource'
 export { default as login } from './commands/login';
 export { default as logout } from './commands/logout';
 export { default as logs } from './commands/logs';
+export { default as listAliases } from './commands/list-aliases';
 export { default as mcp } from './commands/mcp';
 export { default as metrics } from './commands/metrics';
 export { default as microfrontends } from './commands/microfrontends';
