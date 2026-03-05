@@ -20,6 +20,7 @@ export const PYTHON_FRAMEWORKS = [
   'starlette',
   'bottle',
   'falcon',
+  'sanic',
   'python', // Generic Python framework preset
 ] as const;
 

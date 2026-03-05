@@ -2440,6 +2440,61 @@ export const frameworks = [
     ],
   },
   {
+    name: 'Sanic',
+    slug: 'sanic',
+    experimental: true,
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/sanic.svg',
+    tagline:
+      'Sanic is a Python web server and framework that allows fast HTTP responses via asynchronous request handling.',
+    description: 'A Sanic app served via the Python Runtime.',
+    website: 'https://sanic.dev',
+    supersedes: ['python'],
+    useRuntime: { src: 'index.py', use: '@vercel/python' },
+    ignoreRuntimes: ['@vercel/python'],
+    detectors: {
+      some: [
+        {
+          path: 'requirements.txt',
+          matchContent: '[Ss]anic',
+        },
+        {
+          path: 'pyproject.toml',
+          matchContent: '[Ss]anic',
+        },
+        {
+          path: 'Pipfile',
+          matchContent: '[Ss]anic',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: '`pip install -r requirements.txt`',
+      },
+      buildCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      devCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      outputDirectory: {
+        value: 'N/A',
+      },
+    },
+    getOutputDirName: async () => 'public',
+    defaultRoutes: [
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        dest: '/',
+      },
+    ],
+  },
+  {
     name: 'Sanity (v3)',
     slug: 'sanity-v3',
     demo: 'https://sanity-studio-template.vercel.app',
