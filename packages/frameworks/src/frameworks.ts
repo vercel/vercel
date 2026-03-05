@@ -2275,6 +2275,61 @@ export const frameworks = [
     ],
   },
   {
+    name: 'Starlette',
+    slug: 'starlette',
+    experimental: true,
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/starlette.svg',
+    tagline:
+      'Starlette is a lightweight ASGI framework/toolkit for building async web services in Python.',
+    description: 'A Starlette app served via the Python Runtime.',
+    website: 'https://starlette.dev',
+    supersedes: ['python'],
+    useRuntime: { src: 'index.py', use: '@vercel/python' },
+    ignoreRuntimes: ['@vercel/python'],
+    detectors: {
+      some: [
+        {
+          path: 'requirements.txt',
+          matchContent: '[Ss]tarlette',
+        },
+        {
+          path: 'pyproject.toml',
+          matchContent: '[Ss]tarlette',
+        },
+        {
+          path: 'Pipfile',
+          matchContent: '[Ss]tarlette',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: '`pip install -r requirements.txt`',
+      },
+      buildCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      devCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      outputDirectory: {
+        value: 'N/A',
+      },
+    },
+    getOutputDirName: async () => 'public',
+    defaultRoutes: [
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        dest: '/',
+      },
+    ],
+  },
+  {
     name: 'Sanity (v3)',
     slug: 'sanity-v3',
     demo: 'https://sanity-studio-template.vercel.app',
