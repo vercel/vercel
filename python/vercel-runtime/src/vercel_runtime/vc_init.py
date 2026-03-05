@@ -33,6 +33,12 @@ from vercel_runtime.headers import (
     set_vercel_headers_from_asgi_pairs,
     set_vercel_headers_from_http_headers,
 )
+from vercel_runtime.telemetry import (
+    RootSpanContext,
+    init_tracing,
+    reset_telemetry,
+    set_telemetry,
+)
 from vercel_runtime.workers import (
     bootstrap_worker_service_app,
     is_celery_app,
@@ -453,7 +459,6 @@ def flush_init_log_buf_to_stderr() -> None:
 
 atexit.register(flush_init_log_buf_to_stderr)
 
-
 if "VERCEL_IPC_PATH" in os.environ:
     with contextlib.suppress(Exception):
         ipc_sock.connect(os.getenv("VERCEL_IPC_PATH", ""))
@@ -463,6 +468,11 @@ if "VERCEL_IPC_PATH" in os.environ:
                 ipc_sock.sendall((json.dumps(message) + "\0").encode())
 
         setup_logging(send_message, storage)
+
+
+def _report_spans(data: dict[str, Any]) -> None:
+    """Send OTel spans to the Rust runtime over IPC."""
+    send_message({"type": "otel-spans", "payload": data})
 
 
 # Runtime dependency installation for large Lambda functions
@@ -619,6 +629,10 @@ if is_cron_service():
         _stderr(traceback.format_exc())
         exit(1)
 
+# Set up tracing after user code is imported so user-installed
+# opentelemetry packages are available on sys.path.
+init_tracing()
+
 _use_legacy_asyncio = sys.version_info < (3, 10)
 
 
@@ -686,6 +700,8 @@ class ASGIMiddleware:
         invocation_id = "0"
         request_id = 0
         internal_oidc_token = ""
+        trace_id: str | None = None
+        span_id: str | None = None
 
         for raw_k, raw_v in headers_list:
             key_bytes = raw_k if isinstance(raw_k, bytes) else raw_k.encode()
@@ -698,10 +714,11 @@ class ASGIMiddleware:
             if key == "x-vercel-internal-request-id":
                 request_id = int(val) if val.isdigit() else 0
                 continue
-            if key in (
-                "x-vercel-internal-span-id",
-                "x-vercel-internal-trace-id",
-            ):
+            if key == "x-vercel-internal-trace-id":
+                trace_id = val
+                continue
+            if key == "x-vercel-internal-span-id":
+                span_id = val
                 continue
             if key == "x-vercel-internal-oidc-token":
                 internal_oidc_token = val
@@ -747,12 +764,23 @@ class ASGIMiddleware:
                 "requestId": request_id,
             }
         )
+        telemetry_token = set_telemetry(
+            {
+                "reportSpans": _report_spans,
+                "rootSpanContext": RootSpanContext(
+                    traceId=trace_id, spanId=span_id
+                )
+                if trace_id and span_id
+                else None,
+            }
+        )
         set_vercel_headers_from_asgi_pairs(new_headers)
 
         try:
             await self.app(new_scope, receive, send)
         finally:
             clear_vercel_headers_context()
+            reset_telemetry(telemetry_token)
             storage.reset(token)
             send_message(
                 {
@@ -866,6 +894,8 @@ if "VERCEL_IPC_PATH" in os.environ:
                 "0",
             )
             request_id = int(raw_request_id) if raw_request_id.isdigit() else 0
+            trace_id = self.headers.get("x-vercel-internal-trace-id")
+            span_id = self.headers.get("x-vercel-internal-span-id")
             del self.headers["x-vercel-internal-invocation-id"]
             del self.headers["x-vercel-internal-request-id"]
             del self.headers["x-vercel-internal-span-id"]
@@ -901,12 +931,23 @@ if "VERCEL_IPC_PATH" in os.environ:
                     "requestId": request_id,
                 }
             )
+            telemetry_token = set_telemetry(
+                {
+                    "reportSpans": _report_spans,
+                    "rootSpanContext": RootSpanContext(
+                        traceId=trace_id, spanId=span_id
+                    )
+                    if trace_id and span_id
+                    else None,
+                }
+            )
             set_vercel_headers_from_http_headers(self.headers)
 
             try:
                 self.handle_request()  # type: ignore[attr-defined]
             finally:
                 clear_vercel_headers_context()
+                reset_telemetry(telemetry_token)
                 storage.reset(token)
                 send_message(
                     {
