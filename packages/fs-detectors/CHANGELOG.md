@@ -1,5 +1,11 @@
 # @vercel/fs-detectors
 
+## 5.8.18
+
+### Patch Changes
+
+- [services] adds support for python cron worker services ([#15175](https://github.com/vercel/vercel/pull/15175))
+
 ## 5.8.17
 
 ### Patch Changes

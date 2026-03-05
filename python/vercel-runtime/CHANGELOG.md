@@ -1,5 +1,11 @@
 # vercel-runtime
 
+## 0.5.6
+
+### Patch Changes
+
+- [services] adds support for python cron worker services ([#15175](https://github.com/vercel/vercel/pull/15175))
+
 ## 0.5.5
 
 ### Patch Changes
