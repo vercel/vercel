@@ -243,7 +243,7 @@ export async function offerAutoPromote(
     }
   } else if (hadExistingStagingVersion) {
     output.warn(
-      `There are other staged changes. Review with ${chalk.cyan(getCommandName('routes list --staging'))} before promoting.`
+      `There are other staged changes. Review with ${chalk.cyan(getCommandName('routes list --diff'))} before promoting.`
     );
   }
 }
