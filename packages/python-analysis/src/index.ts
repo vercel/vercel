@@ -11,10 +11,7 @@
 // AST Analysis (WASM-based Python parser using ruff_python_ast)
 // =============================================================================
 
-export {
-  containsAppOrHandler,
-  parseDjangoSettingsModule,
-} from './semantic/entrypoints';
+export { containsAppOrHandler } from './semantic/entrypoints';
 
 // =============================================================================
 // Installed package analysis (WASM-based .dist-info parsing)

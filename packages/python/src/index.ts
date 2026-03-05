@@ -78,16 +78,11 @@ export async function runFrameworkHook(
 
 const frameworkHooks: Partial<Record<PythonFramework, FrameworkHook>> = {
   django: async ({ pythonEnv, projectDir, detected }) => {
-    const settingsModule = detected?.settings;
-    if (!settingsModule) {
-      debug('Django hook: no settings module detected, skipping');
+    if (detected?.baseDir === undefined) {
+      debug('Django hook: no manage.py detected, skipping');
       return;
     }
-    const settings = await getDjangoSettings(
-      settingsModule,
-      projectDir,
-      pythonEnv
-    );
+    const settings = await getDjangoSettings(projectDir, pythonEnv);
     debug(`Django settings: ${JSON.stringify(settings)}`);
     if (!settings) return;
 

@@ -1,3 +1,4 @@
+import fs from 'fs';
 import { join, posix as pathPosix } from 'path';
 import type { FileFsRef, PythonFramework } from '@vercel/build-utils';
 import {
@@ -5,13 +6,11 @@ import {
   debug,
   isDirectory,
   isPythonEntrypoint,
-  getDjangoEntrypoint,
 } from '@vercel/build-utils';
 import { readConfigFile } from '@vercel/build-utils';
 
 export interface DetectedPythonEntrypoint {
   entrypoint?: string;
-  settings?: string;
   baseDir?: string; // directory containing manage.py, if detected via Django path
 }
 
@@ -88,6 +87,21 @@ async function findValidEntrypoint(
     }
   }
   return null;
+}
+
+/**
+ * Check if manage.py exists in workPath and references DJANGO_SETTINGS_MODULE.
+ */
+async function checkDjangoManage(workPath: string): Promise<boolean> {
+  const managePath = join(workPath, 'manage.py');
+  try {
+    const content = await fs.promises.readFile(managePath, 'utf-8');
+    if (!content.includes('DJANGO_SETTINGS_MODULE')) return false;
+    debug(`Found Django manage.py with DJANGO_SETTINGS_MODULE at ${workPath}`);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -169,9 +183,9 @@ export async function detectDjangoPythonEntrypoint(
     // Look for a Django manage.py in workPath and immediate subdirectories.
     for (const rootDir of rootDirs) {
       const currPath = join(workPath, rootDir);
-      const django = await getDjangoEntrypoint(currPath);
-      if (django) {
-        return { settings: django.settings, baseDir: rootDir };
+      const isDjango = await checkDjangoManage(currPath);
+      if (isDjango) {
+        return { baseDir: rootDir };
       }
     }
 
