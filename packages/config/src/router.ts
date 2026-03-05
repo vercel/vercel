@@ -1,12 +1,7 @@
 import { cacheHeader } from 'pretty-cache-header';
 import { sourceToRegex } from '@vercel/routing-utils';
 import { validateRegexPattern, parseCronExpression } from './utils/validation';
-import type {
-  Condition,
-  MatchableValueObject,
-  Redirect,
-  Rewrite,
-} from './types';
+import type { Redirect, Rewrite } from './types';
 
 /**
  * Convert a destination string from path-to-regexp format to use capture group references.
@@ -176,24 +171,104 @@ export interface CacheOptions {
   staleIfError?: TimeString;
 }
 
+/**
+ * Condition type for matching in redirects, headers, and rewrites.
+ * - 'header': Match if a specific HTTP header key/value is present (or missing).
+ * - 'cookie': Match if a specific cookie is present (or missing).
+ * - 'host':   Match if the incoming host matches a given pattern.
+ * - 'query':  Match if a query parameter is present (or missing).
+ * - 'path':   Match if the path matches a given pattern.
+ */
+export type ConditionType = 'header' | 'cookie' | 'host' | 'query' | 'path';
+
+/**
+ * Conditional matching operators for has/missing conditions.
+ * These can be used with the value field to perform advanced matching.
+ */
+export interface ConditionOperators {
+  /** Check equality on a value (exact match) */
+  eq?: string | number;
+  /** Check inequality on a value (not equal) */
+  neq?: string;
+  /** Check inclusion in an array of values (value is one of) */
+  inc?: string[];
+  /** Check non-inclusion in an array of values (value is not one of) */
+  ninc?: string[];
+  /** Check if value starts with a prefix */
+  pre?: string;
+  /** Check if value ends with a suffix */
+  suf?: string;
+  /** Check if value is greater than (numeric comparison) */
+  gt?: number;
+  /** Check if value is greater than or equal to */
+  gte?: number;
+  /** Check if value is less than (numeric comparison) */
+  lt?: number;
+  /** Check if value is less than or equal to */
+  lte?: number;
+}
+
+/**
+ * Used to define "has" or "missing" conditions with advanced matching operators.
+ *
+ * @example
+ * // Simple header presence check
+ * { type: 'header', key: 'x-api-key' }
+ *
+ * @example
+ * // Header with exact value match
+ * { type: 'header', key: 'x-api-version', value: 'v2' }
+ *
+ * @example
+ * // Header with conditional operators
+ * { type: 'header', key: 'x-user-role', inc: ['admin', 'moderator'] }
+ *
+ * @example
+ * // Cookie with prefix matching
+ * { type: 'cookie', key: 'session', pre: 'prod-' }
+ *
+ * @example
+ * // Host matching
+ * { type: 'host', value: 'api.example.com' }
+ *
+ * @example
+ * // Query parameter with numeric comparison
+ * { type: 'query', key: 'version', gte: 2 }
+ *
+ * @example
+ * // Path pattern matching
+ * { type: 'path', value: '^/api/v[0-9]+/.*' }
+ */
+export interface Condition extends ConditionOperators {
+  type: ConditionType;
+  /** The key to match. Not used for 'host' or 'path' types. */
+  key?: string;
+  /**
+   * Simple string/regex pattern to match against.
+   * For 'host' and 'path' types, this is the only matching option.
+   * For other types, you can use value OR the conditional operators (eq, neq, etc).
+   */
+  value?: string;
+}
+
 function createKeyedConditionHelper(type: 'header' | 'cookie' | 'query') {
-  return (key: string, value?: string | MatchableValueObject): Condition => {
+  return (key: string, value?: string | ConditionOperators): Condition => {
     if (value === undefined) {
       return { type, key };
     }
     if (typeof value === 'string') {
       return { type, key, value };
     }
-    return { type, key, value };
+    return { type, key, ...value };
   };
 }
 
 function createKeylessConditionHelper(type: 'host') {
-  return (value: string | MatchableValueObject): Condition => {
+  return (value: string | ConditionOperators): Condition => {
     if (typeof value === 'string') {
       return { type, value };
     }
-    return { type, value };
+    return { type, ...value };
   };
 }
 
