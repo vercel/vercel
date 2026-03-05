@@ -517,15 +517,9 @@ async function handleInitDeployment(
 
     if (asJson) {
       output.stopSpinner();
-      const jsonOutput = {
-        id: deployment.id,
-        url: `https://${deployment.url}`,
-        inspectorUrl: deployment.inspectorUrl ?? null,
-        readyState: deployment.readyState,
-        target: deployment.target ?? null,
-        deploymentApiUrl: `${client.apiUrl}/v13/deployments/${deployment.id}`,
-      };
-      client.stdout.write(`${JSON.stringify(jsonOutput, null, 2)}\n`);
+      client.stdout.write(
+        `${JSON.stringify(buildDeploymentJson(deployment, client.apiUrl), null, 2)}\n`
+      );
       return 0;
     }
 
@@ -1275,15 +1269,9 @@ async function handleDefaultDeploy(
 
   if (asJson) {
     output.stopSpinner();
-    const jsonOutput = {
-      id: deployment.id,
-      url: `https://${deployment.url}`,
-      inspectorUrl: deployment.inspectorUrl ?? null,
-      readyState: deployment.readyState,
-      target: deployment.target ?? null,
-      deploymentApiUrl: `${client.apiUrl}/v13/deployments/${deployment.id}`,
-    };
-    client.stdout.write(`${JSON.stringify(jsonOutput, null, 2)}\n`);
+    client.stdout.write(
+      `${JSON.stringify(buildDeploymentJson(deployment, client.apiUrl), null, 2)}\n`
+    );
     return 0;
   }
 
@@ -1548,4 +1536,24 @@ async function handleContinueDeployment({
     }
     return 1;
   }
+}
+
+function buildDeploymentJson(
+  deployment: {
+    id: string;
+    url: string;
+    inspectorUrl?: string | null;
+    readyState: string;
+    target?: string | null;
+  },
+  apiUrl: string
+) {
+  return {
+    id: deployment.id,
+    url: `https://${deployment.url}`,
+    inspectorUrl: deployment.inspectorUrl ?? null,
+    readyState: deployment.readyState,
+    target: deployment.target ?? null,
+    deploymentApiUrl: `${apiUrl}/v13/deployments/${deployment.id}`,
+  };
 }
