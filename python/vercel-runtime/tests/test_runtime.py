@@ -13,6 +13,7 @@ import shutil
 import socket
 import sys
 import tempfile
+import time
 import unittest
 from typing import TYPE_CHECKING, Any
 
@@ -352,6 +353,53 @@ class TestHTTPHandler(_RuntimeTestCase):
             sock.close()
             self.assertIn(b"400", data)
 
+    async def test_wait_until_delays_end_and_logs_errors(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "wait_until_http_handler.py",
+            self.tmp_path,
+        )
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            started_at = time.monotonic()
+            resp = await _http_get(port, "/")
+            self.assertEqual(resp.status, 200)
+            self.assertEqual(resp.read().decode(), "ok")
+
+            await self.n1.wait_for_message(HandlerStartedMessage, timeout=5.0)
+            log = await self.n1.wait_for_message(LogMessage, timeout=5.0)
+            end = await self.n1.wait_for_message(EndMessage, timeout=5.0)
+
+            elapsed = time.monotonic() - started_at
+            self.assertGreaterEqual(elapsed, 0.18)
+            self.assertIn(
+                "wait-until-http-finished",
+                base64.b64decode(log.payload.message).decode(),
+            )
+            self.assertEqual(end.payload.context.request_id, 42)
+
+            resp = await _http_get(port, "/error")
+            self.assertEqual(resp.status, 200)
+            resp.read()
+
+            await self.n1.wait_for_message(HandlerStartedMessage, timeout=5.0)
+            error_log = await self.n1.wait_for_message(
+                LogMessage, timeout=5.0
+            )
+            await self.n1.wait_for_message(EndMessage, timeout=5.0)
+            decoded = base64.b64decode(error_log.payload.message).decode()
+            self.assertEqual(error_log.payload.level, "error")
+            self.assertIn("Side Effect (via waitUntil) failed", decoded)
+            self.assertIn("wait-until-http-error", decoded)
+
 
 class TestWSGIApp(_RuntimeTestCase):
     """Tests for WSGI app entrypoints."""
@@ -470,6 +518,52 @@ class TestASGIApp(_RuntimeTestCase):
             data = sock.recv(4096)
             sock.close()
             self.assertIn(b"200", data)
+
+    async def test_wait_until_delays_end_and_logs_errors(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "wait_until_asgi_app.py",
+            self.tmp_path,
+        )
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            started_at = time.monotonic()
+            resp = await _http_get(port, "/")
+            self.assertEqual(resp.status, 200)
+            self.assertEqual(resp.read().decode(), "ok")
+
+            await self.n1.wait_for_message(HandlerStartedMessage, timeout=5.0)
+            log = await self.n1.wait_for_message(LogMessage, timeout=5.0)
+            await self.n1.wait_for_message(EndMessage, timeout=5.0)
+
+            elapsed = time.monotonic() - started_at
+            self.assertGreaterEqual(elapsed, 0.18)
+            self.assertIn(
+                "wait-until-asgi-finished",
+                base64.b64decode(log.payload.message).decode(),
+            )
+
+            resp = await _http_get(port, "/error")
+            self.assertEqual(resp.status, 200)
+            resp.read()
+
+            await self.n1.wait_for_message(HandlerStartedMessage, timeout=5.0)
+            error_log = await self.n1.wait_for_message(
+                LogMessage, timeout=5.0
+            )
+            await self.n1.wait_for_message(EndMessage, timeout=5.0)
+            decoded = base64.b64decode(error_log.payload.message).decode()
+            self.assertEqual(error_log.payload.level, "error")
+            self.assertIn("Side Effect (via waitUntil) failed", decoded)
+            self.assertIn("wait-until-asgi-error", decoded)
 
 
 class TestCronService(_RuntimeTestCase):

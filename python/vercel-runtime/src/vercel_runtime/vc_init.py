@@ -42,6 +42,19 @@ from vercel_runtime.workers import (
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
 
+if __package__ in (None, ""):
+    from wait_until import (  # type: ignore[import-not-found]
+        _WaitUntilState,
+        _reset_wait_until_state,
+        _set_wait_until_state,
+    )
+else:
+    from .wait_until import (
+        _WaitUntilState,
+        _reset_wait_until_state,
+        _set_wait_until_state,
+    )
+
 type _IpcMessage = dict[str, Any]
 type _ASGIScope = dict[str, Any]
 type _ASGIReceive = Callable[[], Awaitable[dict[str, Any]]]
@@ -741,6 +754,8 @@ class ASGIMiddleware:
             }
         )
 
+        wait_until_state = _WaitUntilState()
+        wait_until_token = _set_wait_until_state(wait_until_state)
         token = storage.set(
             {
                 "invocationId": invocation_id,
@@ -752,6 +767,8 @@ class ASGIMiddleware:
         try:
             await self.app(new_scope, receive, send)
         finally:
+            await wait_until_state.wait()
+            _reset_wait_until_state(wait_until_token)
             clear_vercel_headers_context()
             storage.reset(token)
             send_message(
@@ -895,6 +912,8 @@ if "VERCEL_IPC_PATH" in os.environ:
                 }
             )
 
+            wait_until_state = _WaitUntilState()
+            wait_until_token = _set_wait_until_state(wait_until_state)
             token = storage.set(
                 {
                     "invocationId": invocation_id,
@@ -906,6 +925,8 @@ if "VERCEL_IPC_PATH" in os.environ:
             try:
                 self.handle_request()  # type: ignore[attr-defined]
             finally:
+                wait_until_state.wait_sync()
+                _reset_wait_until_state(wait_until_token)
                 clear_vercel_headers_context()
                 storage.reset(token)
                 send_message(

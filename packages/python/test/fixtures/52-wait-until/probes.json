@@ -1,0 +1,35 @@
+{
+  "probes": [
+    {
+      "path": "/api?action=enqueue&ns=RANDOMNESS_PLACEHOLDER&token=one",
+      "status": 200,
+      "mustContain": "\"status\": \"queued\""
+    },
+    {
+      "path": "/api?action=status&ns=RANDOMNESS_PLACEHOLDER&token=one",
+      "status": 200,
+      "mustContain": "\"exists\": false"
+    },
+    {
+      "delay": 1300
+    },
+    {
+      "path": "/api?action=status&ns=RANDOMNESS_PLACEHOLDER&token=one",
+      "status": 200,
+      "mustContain": "\"exists\": true",
+      "retries": 5,
+      "retryDelay": 500
+    },
+    {
+      "path": "/api?action=error&token=boom-RANDOMNESS_PLACEHOLDER",
+      "status": 200,
+      "mustContain": "\"status\": \"queued-error\""
+    },
+    {
+      "logMustContain": "waitUntil fixture error for token boom-RANDOMNESS_PLACEHOLDER"
+    },
+    {
+      "logMustContain": "Using python version: 3.12"
+    }
+  ]
+}
