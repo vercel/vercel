@@ -85,8 +85,11 @@ export {
 // Python selection (runtime + types)
 // =============================================================================
 
-export type { PythonSelectionResult } from './manifest/python-selector';
-export { selectPython } from './manifest/python-selector';
+export type {
+  PythonSelectionResult,
+  PythonVersionSelectionResult,
+} from './manifest/python-selector';
+export { selectPython, selectPythonVersion } from './manifest/python-selector';
 
 // =============================================================================
 // Errors

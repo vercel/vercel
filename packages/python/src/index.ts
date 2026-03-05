@@ -1,5 +1,4 @@
 import fs from 'fs';
-import { promisify } from 'util';
 import { join, dirname, basename, parse } from 'path';
 import {
   VERCEL_RUNTIME_VERSION,
@@ -28,32 +27,20 @@ import {
   PythonFramework,
 } from '@vercel/build-utils';
 import {
+  discoverPackage,
   ensureUvProject,
   resolveVendorDir,
   installRequirementsFile,
   installRequirement,
 } from './install';
 import { PythonDependencyExternalizer } from './dependency-externalizer';
-import { detectInstallSource } from './install';
 import { UvRunner, getUvBinaryOrInstall } from './uv';
-import { readConfigFile } from '@vercel/build-utils';
-import {
-  getSupportedPythonVersion,
-  DEFAULT_PYTHON_VERSION,
-  parseVersionTuple,
-  compareTuples,
-} from './version';
+import { resolvePythonVersion, pythonVersionString } from './version';
 import { startDevServer } from './start-dev-server';
-import {
-  runPyprojectScript,
-  findDir,
-  ensureVenv,
-  createVenvEnv,
-} from './utils';
+import { runPyprojectScript, ensureVenv, createVenvEnv } from './utils';
 import { runQuirks } from './quirks';
 
-const readFile = promisify(fs.readFile);
-const writeFile = promisify(fs.writeFile);
+const writeFile = fs.promises.writeFile;
 
 import {
   PYTHON_CANDIDATE_ENTRYPOINTS,
@@ -157,132 +144,40 @@ export const build: BuildV3 = async ({
 
   const entryDirectory = dirname(entrypoint);
 
-  const pyprojectDir = findDir({
-    file: 'pyproject.toml',
-    entryDirectory,
-    workPath,
-    fsFiles,
-  });
+  const entrypointAbsDir = join(workPath, entryDirectory);
+  const rootDir = repoRootPath ?? workPath;
 
-  const pipfileLockDir = findDir({
-    file: 'Pipfile.lock',
-    entryDirectory,
-    workPath,
-    fsFiles,
-  });
+  const pythonPackage = await builderSpan
+    .child('vc.builder.python.discover')
+    .trace(() =>
+      discoverPackage({
+        entrypointDir: entrypointAbsDir,
+        rootDir,
+      })
+    );
 
-  const pythonVersionFileDir = findDir({
-    file: '.python-version',
-    entryDirectory,
-    workPath,
-    fsFiles,
-  });
-
-  // Determine Python version from .python-version, pyproject.toml, or Pipfile.lock if present.
-  const { pythonVersion, declaredPythonVersion } = await builderSpan
+  const { pythonVersion, pinVersionFilePath } = await builderSpan
     .child('vc.builder.python.version')
-    .trace(async versionSpan => {
-      let declared:
-        | {
-            version: string;
-            source: 'Pipfile.lock' | 'pyproject.toml' | '.python-version';
-          }
-        | undefined;
-
-      // .python-version is the highest priority because its what uv will use to select dependencies
-      if (pythonVersionFileDir) {
-        try {
-          const content = await readFile(
-            join(pythonVersionFileDir, '.python-version'),
-            'utf8'
-          );
-          const version = parsePythonVersionFile(content);
-          if (version) {
-            declared = { version, source: '.python-version' };
-            debug(`Found Python version ${version} in .python-version`);
-          }
-        } catch (err) {
-          debug('Failed to read .python-version file', err);
-        }
-      }
-
-      if (!declared && pyprojectDir) {
-        let requiresPython: string | undefined;
-        try {
-          const pyproject = await readConfigFile<{
-            project?: { ['requires-python']?: string };
-          }>(join(pyprojectDir, 'pyproject.toml'));
-          requiresPython = pyproject?.project?.['requires-python'];
-        } catch (err) {
-          debug('Failed to parse pyproject.toml', err);
-        }
-        if (typeof requiresPython === 'string' && requiresPython.trim()) {
-          declared = {
-            version: requiresPython.trim(),
-            source: 'pyproject.toml',
-          };
-          debug(`Found requires-python "${requiresPython}" in pyproject.toml`);
-        }
-      }
-
-      if (!declared && pipfileLockDir) {
-        let lock: {
-          _meta?: { requires?: { python_version?: string } };
-        } = {};
-        const pipfileLockPath = join(pipfileLockDir, 'Pipfile.lock');
-        try {
-          const pipfileLockContent = await readFile(pipfileLockPath, 'utf8');
-          try {
-            lock = JSON.parse(pipfileLockContent);
-          } catch (err) {
-            console.log(
-              `Failed to parse "Pipfile.lock". File content:\n${pipfileLockContent}`
-            );
-            throw err;
-          }
-        } catch (_err) {
-          throw new NowBuildError({
-            code: 'INVALID_PIPFILE_LOCK',
-            message: 'Unable to parse Pipfile.lock',
-          });
-        }
-        const pyFromLock = lock?._meta?.requires?.python_version;
-        if (pyFromLock) {
-          declared = { version: pyFromLock, source: 'Pipfile.lock' };
-          debug(`Found Python version ${pyFromLock} in Pipfile.lock`);
-        }
-      }
-
-      const resolved = getSupportedPythonVersion({
+    .trace(versionSpan => {
+      const resolution = resolvePythonVersion({
         isDev: meta.isDev,
-        declaredPythonVersion: declared,
+        pythonPackage,
+        rootDir,
       });
-
       versionSpan.setAttributes({
-        'python.version': resolved.version,
-        'python.versionSource': declared?.source,
+        'python.version': pythonVersionString(resolution.pythonVersion),
+        'python.versionSource': resolution.versionSource,
       });
-
-      return { pythonVersion: resolved, declaredPythonVersion: declared };
+      return resolution;
     });
 
-  // Write a .python-version file on behalf of the user when:
-  // no .python-version file exists and the required version in pyproject.toml
-  // is <= DEFAULT_PYTHON_VERSION
-  const selectedVersionTuple = parseVersionTuple(pythonVersion.version);
-  const defaultVersionTuple = parseVersionTuple(DEFAULT_PYTHON_VERSION);
-  if (
-    !pythonVersionFileDir &&
-    pyprojectDir &&
-    declaredPythonVersion?.source === 'pyproject.toml' &&
-    selectedVersionTuple &&
-    defaultVersionTuple &&
-    compareTuples(selectedVersionTuple, defaultVersionTuple) <= 0
-  ) {
-    const pythonVersionFilePath = join(pyprojectDir, '.python-version');
-    await writeFile(pythonVersionFilePath, `${pythonVersion.version}\n`);
+  if (pinVersionFilePath) {
     console.log(
-      `Writing .python-version file with version ${pythonVersion.version}`
+      `Writing .python-version file with version ${pythonVersionString(pythonVersion)}`
+    );
+    await writeFile(
+      pinVersionFilePath,
+      `${pythonVersionString(pythonVersion)}\n`
     );
   }
 
@@ -393,9 +288,9 @@ export const build: BuildV3 = async ({
         const { projectDir, lockPath, lockFileProvidedByUser } =
           await ensureUvProject({
             workPath,
-            entryDirectory,
-            repoRootPath,
-            pythonVersion: pythonVersion.version,
+            rootDir,
+            pythonPackage,
+            pythonVersion: pythonVersionString(pythonVersion),
             uv,
             generateLockFile: true,
             requireBinaryWheels: false,
@@ -404,13 +299,8 @@ export const build: BuildV3 = async ({
         uvLockPath = lockPath;
         uvProjectDir = projectDir;
 
-        // Get the project name from python-analysis for package classification
-        const installInfo = await detectInstallSource({
-          workPath,
-          entryDirectory,
-          repoRootPath,
-        });
-        projectName = installInfo.pythonPackage?.manifest?.data?.project?.name;
+        // Get the project name from the already-discovered package info
+        projectName = pythonPackage?.manifest?.data?.project?.name;
 
         // For user-provided lock files, check if all packages have binary wheels
         // available BEFORE running the actual sync. We track this result so we can
@@ -611,7 +501,7 @@ from vercel_runtime.vc_init import vc_handler
     pythonPath: pythonVersion.pythonPath,
     hasCustomCommand,
     alwaysBundlePackages: [
-      ...quirksResult.alwaysBundlePackages,
+      ...(quirksResult.alwaysBundlePackages ?? []),
       ...(shouldInstallVercelWorkers
         ? ['vercel-workers', 'vercel_workers']
         : []),
@@ -703,18 +593,6 @@ export const defaultShouldServe: ShouldServe = ({
 
 function hasProp(obj: { [path: string]: FileFsRef }, key: string): boolean {
   return Object.hasOwnProperty.call(obj, key);
-}
-
-// Parses a .python-version file and returns the first non-empty, non-comment line.
-// Supports both exact versions (e.g. "3.12") and version specifiers (e.g. ">=3.12").
-function parsePythonVersionFile(content: string): string | undefined {
-  const lines = content.split('\n');
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith('#')) continue;
-    return trimmed;
-  }
-  return undefined;
 }
 
 // internal only - expect breaking changes if other packages depend on these exports

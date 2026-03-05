@@ -354,18 +354,27 @@ export function convertPipfileLockToPyprojectToml(
   const sources: Record<string, DependencySource[]> = {};
   const pyproject: PyProjectToml = {};
 
+  const pythonVersion = pipfileLock._meta?.requires?.python_version;
+
   // Process default (main) packages
   const deps: string[] = [];
   for (const dep of pipfileLockDepsToRequirements(pipfileLock.default || {})) {
     deps.push(formatPep508(dep));
     addDepSource(sources, dep);
   }
-  if (deps.length > 0) {
-    pyproject.project = {
+
+  if (deps.length > 0 || pythonVersion) {
+    const project: Record<string, unknown> = {
       name: 'app',
       version: '0.1.0',
-      dependencies: deps,
     };
+    if (pythonVersion) {
+      project['requires-python'] = `==${pythonVersion}.*`;
+    }
+    if (deps.length > 0) {
+      project.dependencies = deps;
+    }
+    pyproject.project = project as PyProjectToml['project'];
   }
 
   // Process develop (dev) packages
