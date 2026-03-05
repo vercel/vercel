@@ -390,7 +390,6 @@ function replaceSegments(
   delete (parsedDestination as any).path;
   delete (parsedDestination as any).search;
   delete (parsedDestination as any).host;
-  // eslint-disable-next-line prefer-const
   let { pathname, hash, query, hostname, ...rest } = parsedDestination;
   pathname = unescapeSegments(pathname || '');
   hash = unescapeSegments(hash || '');

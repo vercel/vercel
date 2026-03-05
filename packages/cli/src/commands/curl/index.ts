@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 import { spawn } from 'child_process';
 import type Client from '../../util/client';
 import { curlCommand } from './command';

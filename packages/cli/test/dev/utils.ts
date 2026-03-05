@@ -121,7 +121,6 @@ function printOutput(fixture: string, stdout: string, stderr: string) {
     return nr === 0 ? '╭' : nr === lines.length - 1 ? '╰' : '│';
   };
 
-  // eslint-disable-next-line no-console
   console.log(
     lines.map((line, index) => ` ${getPrefix(index)} ${line}`).join('\n')
   );
@@ -129,7 +128,6 @@ function printOutput(fixture: string, stdout: string, stderr: string) {
 
 export function shouldSkip(name: string, versions: string) {
   if (!satisfies(process.version, versions)) {
-    // eslint-disable-next-line no-console
     console.log(`Skipping "${name}" because it requires "${versions}".`);
     return true;
   }
@@ -155,7 +153,6 @@ export function validateResponseHeaders(res: Response, podId?: string) {
 export async function exec(directory: string, args: string[] = []) {
   const token = await fetchCachedToken();
 
-  // eslint-disable-next-line no-console
   console.log(
     `exec() ${binaryPath} dev ${directory} -t ***${
       process.env.VERCEL_TEAM_ID ? ' --scope ***' : ''
@@ -210,7 +207,6 @@ export async function testPath(
   const res = await fetchWithRetry(url, opts);
   const msg = `Testing response from ${fetchOpts.method || 'GET'} ${url}`;
 
-  // eslint-disable-next-line no-console
   console.log(msg);
   expect(res.status, getEnvironmentMessage(isDev)).toBe(status);
   validateResponseHeaders(res);
@@ -262,7 +258,6 @@ export async function testFixture(
 
   const token = await fetchCachedToken();
 
-  // eslint-disable-next-line no-console
   console.log(
     `testFixture() ${binaryPath} dev ${directory} -t ***${
       process.env.VERCEL_TEAM_ID ? ' --scope ***' : ''
@@ -326,7 +321,6 @@ export async function testFixture(
     devTimer = setTimeout(async () => {
       const pids = Object.keys(await ps(dev.pid!)).join(', ');
 
-      // eslint-disable-next-line no-console
       console.error(
         `Test ${directory} exited with code ${code}, but has timed out closing stdio\n` +
           (pids
@@ -452,7 +446,6 @@ export function testFixtureStdio(
     try {
       let printedOutput = false;
 
-      // eslint-disable-next-line no-console
       console.log(
         `testFixtureStdio() ${binaryPath} dev -l ${port} -t ***${
           process.env.VERCEL_TEAM_ID ? ' --scope ***' : ''
@@ -574,7 +567,6 @@ async function ps(parentPid: number, pids: Record<string, Array<number>> = {}) {
     }
   } catch (err) {
     const error = err as Error;
-    // eslint-disable-next-line no-console
     console.log(`Failed to get processes: ${error.toString()}`);
   }
   return pids;
@@ -586,7 +578,6 @@ async function nukePID(
   retries: number = 10
 ) {
   if (retries === 0) {
-    // eslint-disable-next-line no-console
     console.log(`pid ${pid} won't die, giving up`);
     return;
   }
@@ -597,7 +588,6 @@ async function nukePID(
   } catch (_e) {
     // process does not exist
 
-    // eslint-disable-next-line no-console
     console.log(`pid ${pid} is not running`);
     return;
   }
@@ -608,12 +598,10 @@ async function nukePID(
     // check if killed
     process.kill(pid, 0);
   } catch (_e) {
-    // eslint-disable-next-line no-console
     console.log(`pid ${pid} is not running`);
     return;
   }
 
-  // eslint-disable-next-line no-console
   console.log(`pid ${pid} didn't exit, sending SIGKILL (retries ${retries})`);
   await nukePID(pid, 'SIGKILL', retries - 1);
 }
@@ -630,7 +618,6 @@ async function nukeProcessTree(pid: number, signal?: string) {
     [pid]: [],
   });
 
-  // eslint-disable-next-line no-console
   console.log(`Nuking pids: ${Object.keys(pids).join(', ')}`);
   await Promise.all(Object.keys(pids).map(pid => nukePID(Number(pid), signal)));
 }
@@ -641,9 +628,7 @@ beforeEach(() => {
 
 afterEach(async () => {
   await Promise.all(
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     Array.from(processList).map(async ([_procId, proc]) => {
-      // eslint-disable-next-line no-console
       console.log(`killing process ${proc.pid} "${proc.spawnargs.join(' ')}"`);
 
       try {
@@ -653,7 +638,6 @@ afterEach(async () => {
 
         // Was already killed
         if (error.code !== 'ESRCH') {
-          // eslint-disable-next-line no-console
           console.error('Failed to kill process', proc.pid, error);
         }
       }

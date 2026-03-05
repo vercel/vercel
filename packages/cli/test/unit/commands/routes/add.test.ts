@@ -1895,7 +1895,6 @@ describe('routes add', () => {
 
       await expect(routes(client)).resolves.toEqual(0);
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const body = capturedBody as any;
       // Raw pattern should be sent as-is (not compiled to regex)
       expect(body.route.route.src).toBe('/api/:version/users/:id');
@@ -1958,7 +1957,6 @@ describe('routes add', () => {
 
       await expect(routes(client)).resolves.toEqual(0);
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const body = capturedBody as any;
       // Raw path should be sent as-is (not escaped to regex)
       expect(body.route.route.src).toBe('/about');
@@ -2019,7 +2017,6 @@ describe('routes add', () => {
 
       await expect(routes(client)).resolves.toEqual(0);
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const body = capturedBody as any;
       // Regex pattern sent as-is
       expect(body.route.route.src).toBe('^/api/(.*)$');
@@ -2084,7 +2081,6 @@ describe('routes add', () => {
 
       await expect(routes(client)).resolves.toEqual(0);
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const body = capturedBody as any;
       // The route name should be "add", not undefined
       expect(body.route.name).toBe('add');

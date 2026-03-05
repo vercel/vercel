@@ -100,14 +100,12 @@ async function main() {
   const resultsDir = path.resolve(args['results-dir']);
   const topLevelDirs = await listDirectories(resultsDir);
   if (topLevelDirs.length === 0) {
-    // eslint-disable-next-line no-console
     console.log('Results directory is empty; nothing to upload.');
     return;
   }
 
   const allFiles = await listFilesRecursively(resultsDir);
   if (allFiles.length === 0) {
-    // eslint-disable-next-line no-console
     console.log('No files in results directory; nothing to upload.');
     return;
   }
@@ -162,14 +160,12 @@ async function main() {
     throw new Error(`Batch upload failed: ${response.status} ${responseBody}`);
   }
 
-  // eslint-disable-next-line no-console
   console.log(
     `Uploaded batch ${args['batch-id']} with ${allFiles.length} file(s): ${responseBody}`
   );
 }
 
 main().catch(error => {
-  // eslint-disable-next-line no-console
   console.error(error);
   process.exitCode = 1;
 });

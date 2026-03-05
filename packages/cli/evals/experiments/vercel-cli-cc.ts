@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 import type { ExperimentConfig, Sandbox } from '@vercel/agent-eval';
 import { Vercel } from '@vercel/sdk';
 

@@ -51,7 +51,7 @@ const pageNotFoundError = {
 
 export function generateErrorMessage(
   statusCode: number,
-  errorCode: string // eslint-disable-line @typescript-eslint/no-unused-vars
+  errorCode: string
 ): ErrorMessage {
   if (statusCode === 404) {
     return pageNotFoundError;
