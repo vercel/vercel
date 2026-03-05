@@ -169,6 +169,16 @@ async function handleInitDeployment(
     return 1;
   }
 
+  telemetryClient.trackCliFlagJson(parsedArguments.flags['--json']);
+  telemetryClient.trackCliOptionFormat(parsedArguments.flags['--format']);
+
+  const formatResult = validateJsonOutput(parsedArguments.flags);
+  if (!formatResult.valid) {
+    output.error(formatResult.error);
+    return 1;
+  }
+  const asJson = formatResult.jsonOutput;
+
   // Strip 'deploy' and 'init' from args
   let args = parsedArguments.args;
   if (args[0] === 'deploy') args = args.slice(1);
@@ -436,6 +446,7 @@ async function handleInitDeployment(
       withFullLogs: false,
       autoAssignCustomDomains,
       manual: true,
+      jsonOutput: asJson,
     };
 
     if (!localConfig.builds || localConfig.builds.length === 0) {
@@ -502,6 +513,14 @@ async function handleInitDeployment(
     if (deployment === null) {
       error('Uploading failed. Please try again.');
       return 1;
+    }
+
+    if (asJson) {
+      output.stopSpinner();
+      client.stdout.write(
+        `${JSON.stringify(getDeploymentOutputJson(deployment, client.apiUrl), null, 2)}\n`
+      );
+      return 0;
     }
 
     return printDeploymentStatus(deployment, deployStamp, noWait, false, true);
@@ -1250,15 +1269,9 @@ async function handleDefaultDeploy(
 
   if (asJson) {
     output.stopSpinner();
-    const jsonOutput = {
-      id: deployment.id,
-      url: `https://${deployment.url}`,
-      inspectorUrl: deployment.inspectorUrl ?? null,
-      readyState: deployment.readyState,
-      target: deployment.target ?? null,
-      deploymentApiUrl: `${client.apiUrl}/v13/deployments/${deployment.id}`,
-    };
-    client.stdout.write(`${JSON.stringify(jsonOutput, null, 2)}\n`);
+    client.stdout.write(
+      `${JSON.stringify(getDeploymentOutputJson(deployment, client.apiUrl), null, 2)}\n`
+    );
     return 0;
   }
 
@@ -1523,4 +1536,24 @@ async function handleContinueDeployment({
     }
     return 1;
   }
+}
+
+function getDeploymentOutputJson(
+  deployment: {
+    id: string;
+    url: string;
+    inspectorUrl?: string | null;
+    readyState: string;
+    target?: string | null;
+  },
+  apiUrl: string
+) {
+  return {
+    id: deployment.id,
+    url: `https://${deployment.url}`,
+    inspectorUrl: deployment.inspectorUrl ?? null,
+    readyState: deployment.readyState,
+    target: deployment.target ?? null,
+    deploymentApiUrl: `${apiUrl}/v13/deployments/${deployment.id}`,
+  };
 }
