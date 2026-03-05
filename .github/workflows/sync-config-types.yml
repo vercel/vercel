@@ -1,0 +1,37 @@
+name: Sync @vercel/config types
+
+on:
+  pull_request:
+    paths:
+      - 'packages/config/scripts/generate-types.ts'
+      - 'packages/config/src/types.ts'
+
+jobs:
+  sync-types:
+    name: Regenerate types from schema
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          token: ${{ secrets.GH_TOKEN_PULL_REQUESTS }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - run: corepack enable pnpm
+      - run: pnpm install --filter @vercel/config...
+
+      - name: Regenerate types
+        run: pnpm --filter @vercel/config generate-types
+
+      - name: Commit if changed
+        run: |
+          git diff --quiet packages/config/src/types.ts && exit 0
+          git config user.email 'infra+release@vercel.com'
+          git config user.name 'vercel-release-bot'
+          git add packages/config/src/types.ts
+          git commit -m 'Regenerate @vercel/config types from schema'
+          git push
