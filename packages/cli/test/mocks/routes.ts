@@ -1152,7 +1152,6 @@ export function useRoutesForInspectDiff() {
     const versionId = req.query.versionId as string;
     const search = req.query.q as string;
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let routes: any[] =
       versionId === 'prod-version-id'
         ? [...productionRoutes]

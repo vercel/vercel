@@ -614,17 +614,11 @@ export default class DevServer {
 
       let {
         builders,
-        // eslint-disable-next-line prefer-const
         warnings,
-        // eslint-disable-next-line prefer-const
         errors,
-        // eslint-disable-next-line prefer-const
         defaultRoutes,
-        // eslint-disable-next-line prefer-const
         redirectRoutes,
-        // eslint-disable-next-line prefer-const
         rewriteRoutes,
-        // eslint-disable-next-line prefer-const
         errorRoutes,
       } = await detectBuilders(files, pkg, {
         tag: 'latest',
@@ -1886,7 +1880,6 @@ export default class DevServer {
         get() {
           return statusCode;
         },
-        /* eslint-disable @typescript-eslint/no-unused-vars */
         set(_: number) {
           /* ignore */
         },
@@ -2104,7 +2097,6 @@ export default class DevServer {
       }`
     );
 
-    /* eslint-disable no-case-declarations */
     switch (asset.type) {
       case 'FileFsRef':
         this.setResponseHeaders(res, requestId);

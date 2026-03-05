@@ -57,7 +57,6 @@ export async function devRouter(
   phase?: HandleValue | null
 ): Promise<RouteResult> {
   let result: RouteResult | undefined;
-  // eslint-disable-next-line prefer-const
   let { pathname: reqPathname, search: reqSearch } = url.parse(reqUrl);
   reqPathname = reqPathname || '/';
   const reqQuery = parseQueryString(reqSearch);
@@ -189,7 +188,6 @@ export async function devRouter(
           if (!destPath.startsWith('/')) {
             destPath = `/${destPath}`;
           }
-          // eslint-disable-next-line prefer-const
           let { pathname: destPathname, search: destSearch } =
             url.parse(destPath);
           destPathname = destPathname || '/';

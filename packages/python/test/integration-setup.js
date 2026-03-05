@@ -29,11 +29,9 @@ module.exports = function setupTests(groupIndex) {
     console.log('testing group', groupIndex, chunkedFixtures);
   }
 
-  // eslint-disable-next-line no-restricted-syntax
   for (const fixture of chunkedFixtures) {
     const errMsg = testsThatFailToBuild.get(fixture);
     if (errMsg) {
-      // eslint-disable-next-line no-loop-func
       it(`should fail to build ${fixture}`, async () => {
         try {
           await testDeployment(path.join(fixturesPath, fixture));
@@ -43,9 +41,8 @@ module.exports = function setupTests(groupIndex) {
           expect(err.deployment.errorMessage).toContain(errMsg);
         }
       });
-      continue; //eslint-disable-line
+      continue;
     }
-    // eslint-disable-next-line no-loop-func
     it(`should build ${fixture}`, async () => {
       await expect(
         testDeployment(path.join(fixturesPath, fixture))

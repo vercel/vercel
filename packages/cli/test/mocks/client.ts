@@ -165,7 +165,6 @@ function setupMockServer(mockClient: MockClient): Express {
   // catch requests that were not intercepted
   app.use((req, res) => {
     const message = `[Vercel API Mock] \`${req.method} ${req.path}\` was not handled.`;
-    // eslint-disable-next-line no-console
     console.warn(message);
     res.status(500).json({
       error: {
@@ -177,7 +176,6 @@ function setupMockServer(mockClient: MockClient): Express {
 
   // global error handling must be last
   // @ts-ignore - this signature is actually valid
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   app.use((error, _req, res, _next) => {
     res.status(500).json({
       error: {

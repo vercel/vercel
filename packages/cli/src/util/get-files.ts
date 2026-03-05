@@ -151,7 +151,6 @@ async function explode(
 
     if (s.isDirectory()) {
       const all = await fs.readdir(file);
-      /* eslint-disable no-use-before-define */
       const recursive = many(all.map(subdir => asAbsolute(subdir, file)));
       return recursive as any as Promise<string | null>;
       /* eslint-enable no-use-before-define */
