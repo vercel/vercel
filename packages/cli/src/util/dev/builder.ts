@@ -1,5 +1,4 @@
 /* disable this rule _here_ to avoid conflict with ongoing changes */
-/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import ms from 'ms';
 import bytes from 'bytes';
 import { readFileSync, unlinkSync } from 'fs';
@@ -520,7 +519,6 @@ export async function getBuildMatches(
   const buildersWithPkgs = await importBuilders(builderSpecs, cwd);
 
   for (const buildConfig of builds) {
-    // eslint-disable-next-line prefer-const
     let { src = '**', use, config = {} } = buildConfig;
 
     if (!use) {

@@ -666,16 +666,14 @@ export const build: BuildV2 = async buildOptions => {
   const hasIsr404Page =
     typeof prerenderManifest.staticRoutes[
       routesManifest?.i18n
-        ? // eslint-disable-next-line @typescript-eslint/no-non-null-asserted-optional-chain
-          path.join('/', routesManifest?.i18n!.defaultLocale!, '/404')
+        ? path.join('/', routesManifest?.i18n!.defaultLocale!, '/404')
         : '/404'
     ]?.initialRevalidate === 'number';
 
   const hasIsr500Page =
     typeof prerenderManifest.staticRoutes[
       routesManifest?.i18n
-        ? // eslint-disable-next-line @typescript-eslint/no-non-null-asserted-optional-chain
-          path.join('/', routesManifest?.i18n!.defaultLocale!, '/500')
+        ? path.join('/', routesManifest?.i18n!.defaultLocale!, '/500')
         : '/500'
     ]?.initialRevalidate === 'number';
 
@@ -2091,7 +2089,6 @@ export const build: BuildV2 = async buildOptions => {
               files: launcherFiles,
               layers: [
                 Object.keys(pageTraces[page] || {}).reduce((prev, cur) => {
-                  // eslint-disable-next-line @typescript-eslint/no-non-null-asserted-optional-chain
                   prev[cur] = tracedPseudoLayer?.pseudoLayer[cur]!;
                   return prev;
                 }, {} as PseudoLayer),
@@ -2733,7 +2730,6 @@ export const build: BuildV2 = async buildOptions => {
       ...pageLambdaRoutes.filter(route => {
         // filter out any SSG pages as they are already present in output
         if ('headers' in route) {
-          // eslint-disable-next-line @typescript-eslint/no-non-null-asserted-optional-chain
           let page = route.headers?.['x-nextjs-page']!;
           page = page === '/index' ? '/' : page;
 

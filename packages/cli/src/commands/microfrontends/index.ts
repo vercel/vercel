@@ -35,7 +35,6 @@ export default async function main(client: Client) {
     return 1;
   }
 
-  // eslint-disable-next-line prefer-const
   const { subcommand, subcommandOriginal } = getSubcommand(
     parsedArgs.args.slice(1),
     COMMAND_CONFIG

@@ -19,7 +19,6 @@ const send = (res: ServerResponse, statusCode: number, body: JSONValue) => {
 describe('responseError()', () => {
   let url: string;
   let server: Server;
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   let handler = (_req: IncomingMessage, _res: ServerResponse) => {};
 
   beforeAll(async () => {
