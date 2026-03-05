@@ -140,23 +140,3 @@ export async function runPyprojectScript(
   // No command string was provided for the found script name
   return false;
 }
-
-export function findDir({
-  file,
-  entryDirectory,
-  workPath,
-  fsFiles,
-}: {
-  file: string;
-  entryDirectory: string;
-  workPath: string;
-  fsFiles: Record<string, any>;
-}): string | null {
-  if (fsFiles[join(entryDirectory, file)]) {
-    return join(workPath, entryDirectory);
-  }
-  if (fsFiles[file]) {
-    return workPath;
-  }
-  return null;
-}

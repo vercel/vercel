@@ -329,7 +329,7 @@ describe('discoverPythonPackage', () => {
       expect(result.requiresPython).toBeDefined();
       expect(result.requiresPython?.length).toBeGreaterThan(0);
       const constraint = result.requiresPython?.find(c =>
-        c.source.includes('requires-python')
+        c.source.includes('pyproject.toml')
       );
       expect(constraint).toBeDefined();
     });
