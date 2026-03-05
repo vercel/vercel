@@ -17,8 +17,8 @@ import sys
 import time
 import traceback
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from importlib import util
-from typing import TYPE_CHECKING, Any, Literal, Never, TextIO
+from importlib import import_module, util
+from typing import TYPE_CHECKING, Any, Literal, Never, Protocol, TextIO, cast
 from urllib.parse import urlsplit
 
 from vercel_runtime.crons import (
@@ -41,19 +41,43 @@ from vercel_runtime.workers import (
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
+    from contextvars import Token
 
-if __package__ in (None, ""):
-    from wait_until import (  # type: ignore[import-not-found]
-        _WaitUntilState,
-        _reset_wait_until_state,
-        _set_wait_until_state,
-    )
-else:
-    from .wait_until import (
-        _WaitUntilState,
-        _reset_wait_until_state,
-        _set_wait_until_state,
-    )
+    class _WaitUntilModule(Protocol):
+        WaitUntilState: type[Any]
+
+        def set_wait_until_state(self, state: Any) -> Token[Any]: ...
+
+        def reset_wait_until_state(self, token: Token[Any]) -> None: ...
+
+
+def _load_wait_until_module() -> _WaitUntilModule:
+    try:
+        return cast(
+            "_WaitUntilModule",
+            import_module("vercel_runtime.wait_until"),
+        )
+    except ModuleNotFoundError:
+        wait_until_path = os.path.join(
+            os.path.dirname(__file__),
+            "wait_until.py",
+        )
+        spec = util.spec_from_file_location(
+            "vercel_runtime.wait_until",
+            wait_until_path,
+        )
+        if spec is None or spec.loader is None:
+            raise
+        module = util.module_from_spec(spec)
+        sys.modules.setdefault("vercel_runtime.wait_until", module)
+        spec.loader.exec_module(module)
+        return cast("_WaitUntilModule", module)
+
+
+_wait_until = _load_wait_until_module()
+WaitUntilState = _wait_until.WaitUntilState
+reset_wait_until_state = _wait_until.reset_wait_until_state
+set_wait_until_state = _wait_until.set_wait_until_state
 
 type _IpcMessage = dict[str, Any]
 type _ASGIScope = dict[str, Any]
@@ -754,8 +778,8 @@ class ASGIMiddleware:
             }
         )
 
-        wait_until_state = _WaitUntilState()
-        wait_until_token = _set_wait_until_state(wait_until_state)
+        wait_until_state = WaitUntilState()
+        wait_until_token = set_wait_until_state(wait_until_state)
         token = storage.set(
             {
                 "invocationId": invocation_id,
@@ -768,7 +792,7 @@ class ASGIMiddleware:
             await self.app(new_scope, receive, send)
         finally:
             await wait_until_state.wait()
-            _reset_wait_until_state(wait_until_token)
+            reset_wait_until_state(wait_until_token)
             clear_vercel_headers_context()
             storage.reset(token)
             send_message(
@@ -912,8 +936,8 @@ if "VERCEL_IPC_PATH" in os.environ:
                 }
             )
 
-            wait_until_state = _WaitUntilState()
-            wait_until_token = _set_wait_until_state(wait_until_state)
+            wait_until_state = WaitUntilState()
+            wait_until_token = set_wait_until_state(wait_until_state)
             token = storage.set(
                 {
                     "invocationId": invocation_id,
@@ -926,7 +950,7 @@ if "VERCEL_IPC_PATH" in os.environ:
                 self.handle_request()  # type: ignore[attr-defined]
             finally:
                 wait_until_state.wait_sync()
-                _reset_wait_until_state(wait_until_token)
+                reset_wait_until_state(wait_until_token)
                 clear_vercel_headers_context()
                 storage.reset(token)
                 send_message(

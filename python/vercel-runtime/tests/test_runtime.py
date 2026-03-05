@@ -242,6 +242,25 @@ async def _read_stderr(
     return (await proc.stderr.read()).decode()
 
 
+async def _wait_for_log_message_containing(
+    n1: N1Mock,
+    needle: str,
+    *,
+    timeout: float,
+) -> LogMessage:
+    deadline = time.monotonic() + timeout
+    while True:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise TimeoutError(
+                f"Timed out waiting for log containing {needle!r}"
+            )
+        log = await n1.wait_for_message(LogMessage, timeout=remaining)
+        decoded = base64.b64decode(log.payload.message).decode()
+        if needle in decoded:
+            return log
+
+
 class _RuntimeTestCase(unittest.IsolatedAsyncioTestCase):
     """Base providing ``self.tmp_path`` and ``self.n1``."""
 
@@ -375,7 +394,11 @@ class TestHTTPHandler(_RuntimeTestCase):
             self.assertEqual(resp.read().decode(), "ok")
 
             await self.n1.wait_for_message(HandlerStartedMessage, timeout=5.0)
-            log = await self.n1.wait_for_message(LogMessage, timeout=5.0)
+            log = await _wait_for_log_message_containing(
+                self.n1,
+                "wait-until-http-finished",
+                timeout=5.0,
+            )
             end = await self.n1.wait_for_message(EndMessage, timeout=5.0)
 
             elapsed = time.monotonic() - started_at
@@ -391,8 +414,10 @@ class TestHTTPHandler(_RuntimeTestCase):
             resp.read()
 
             await self.n1.wait_for_message(HandlerStartedMessage, timeout=5.0)
-            error_log = await self.n1.wait_for_message(
-                LogMessage, timeout=5.0
+            error_log = await _wait_for_log_message_containing(
+                self.n1,
+                "wait-until-http-error",
+                timeout=5.0,
             )
             await self.n1.wait_for_message(EndMessage, timeout=5.0)
             decoded = base64.b64decode(error_log.payload.message).decode()
@@ -541,7 +566,11 @@ class TestASGIApp(_RuntimeTestCase):
             self.assertEqual(resp.read().decode(), "ok")
 
             await self.n1.wait_for_message(HandlerStartedMessage, timeout=5.0)
-            log = await self.n1.wait_for_message(LogMessage, timeout=5.0)
+            log = await _wait_for_log_message_containing(
+                self.n1,
+                "wait-until-asgi-finished",
+                timeout=5.0,
+            )
             await self.n1.wait_for_message(EndMessage, timeout=5.0)
 
             elapsed = time.monotonic() - started_at
@@ -556,8 +585,10 @@ class TestASGIApp(_RuntimeTestCase):
             resp.read()
 
             await self.n1.wait_for_message(HandlerStartedMessage, timeout=5.0)
-            error_log = await self.n1.wait_for_message(
-                LogMessage, timeout=5.0
+            error_log = await _wait_for_log_message_containing(
+                self.n1,
+                "wait-until-asgi-error",
+                timeout=5.0,
             )
             await self.n1.wait_for_message(EndMessage, timeout=5.0)
             decoded = base64.b64decode(error_log.payload.message).decode()

@@ -13,15 +13,13 @@ if TYPE_CHECKING:
 type WaitUntilWork = Awaitable[Any] | Callable[[], Any]
 
 _logger = logging.getLogger(__name__)
-_wait_until_state: contextvars.ContextVar[_WaitUntilState | None] = (
-    contextvars.ContextVar(
-        "vercel_runtime_wait_until_state",
-        default=None,
-    )
-)
 
 
-class _WaitUntilState:
+async def _await_awaitable(work: Awaitable[Any]) -> None:
+    await work
+
+
+class WaitUntilState:
     def __init__(self) -> None:
         self._lock = threading.Lock()
         self._pending = 0
@@ -38,11 +36,7 @@ class _WaitUntilState:
             loop = None
 
         if loop is not None:
-            context.run(
-                lambda: loop.create_task(
-                    self._run_async_work(work),
-                )
-            )
+            context.run(lambda: loop.create_task(self._run_async_work(work)))
             return
 
         thread = threading.Thread(
@@ -95,11 +89,19 @@ class _WaitUntilState:
         try:
             result = work() if callable(work) else work
             if inspect.isawaitable(result):
-                asyncio.run(result)
+                asyncio.run(_await_awaitable(result))
         except Exception:
             _logger.exception("Side Effect (via waitUntil) failed")
         finally:
             self._mark_finished()
+
+
+_wait_until_state: contextvars.ContextVar[WaitUntilState | None] = (
+    contextvars.ContextVar(
+        "vercel_runtime_wait_until_state",
+        default=None,
+    )
+)
 
 
 def wait_until(work: WaitUntilWork) -> None:
@@ -111,17 +113,26 @@ def wait_until(work: WaitUntilWork) -> None:
     state.submit(work)
 
 
-def waitUntil(work: WaitUntilWork) -> None:
+def waitUntil(work: WaitUntilWork) -> None:  # noqa: N802
     wait_until(work)
 
 
-def _set_wait_until_state(
-    state: _WaitUntilState,
-) -> contextvars.Token[_WaitUntilState | None]:
+def set_wait_until_state(
+    state: WaitUntilState,
+) -> contextvars.Token[WaitUntilState | None]:
     return _wait_until_state.set(state)
 
 
-def _reset_wait_until_state(
-    token: contextvars.Token[_WaitUntilState | None],
+def reset_wait_until_state(
+    token: contextvars.Token[WaitUntilState | None],
 ) -> None:
     _wait_until_state.reset(token)
+
+
+__all__ = [
+    "WaitUntilState",
+    "reset_wait_until_state",
+    "set_wait_until_state",
+    "waitUntil",
+    "wait_until",
+]
