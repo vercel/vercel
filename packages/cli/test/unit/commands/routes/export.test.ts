@@ -48,9 +48,9 @@ describe('routes export', () => {
 
     const output = client.stdout.getFullOutput();
     expect(output).toContain(
-      "import { defineConfig } from '@vercel/sdk/config'"
+      "import type { VercelConfig } from '@vercel/config/v1'"
     );
-    expect(output).toContain('export default defineConfig');
+    expect(output).toContain('export const config: VercelConfig');
     expect(output).toContain('routes:');
   });
 
