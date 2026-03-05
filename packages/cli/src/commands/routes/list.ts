@@ -6,6 +6,7 @@ import { listSubcommand } from './command';
 import {
   parseSubcommandArgs,
   ensureProjectLink,
+  findVersionById,
   formatCondition,
   formatTransform,
 } from './shared';
@@ -34,10 +35,8 @@ export default async function list(client: Client, argv: string[]) {
   const teamId = org.type === 'team' ? org.id : undefined;
   const search = flags['--search'] as string | undefined;
   const filter = flags['--filter'] as RouteType | undefined;
-  const page = flags['--page'] as number | undefined;
-  const perPage = flags['--per-page'] as number | undefined;
-  const staging = flags['--staging'] as boolean | undefined;
-  const versionIdFlag = flags['--version'] as string | undefined;
+  const production = flags['--production'] as boolean | undefined;
+  const versionIdFlag = flags['--version-id'] as string | undefined;
   const diffFlag = flags['--diff'] as boolean | undefined;
   const expand = flags['--expand'] as boolean | undefined;
 
@@ -57,18 +56,44 @@ export default async function list(client: Client, argv: string[]) {
     }
   }
 
-  // Check for conflicting flags early
-  if (staging && versionIdFlag) {
-    output.error('Cannot use both --staging and --version flags together');
+  if (production && versionIdFlag) {
+    output.error(
+      'Cannot use both --production and --version-id flags together'
+    );
+    return 1;
+  }
+
+  if (production && diffFlag) {
+    output.error(
+      'Cannot use both --production and --diff flags together. --diff compares staged changes against production.'
+    );
     return 1;
   }
 
   let versionId: string | undefined;
   let versionName: string | undefined;
-
   let useDiff = false;
 
-  if (staging) {
+  if (production) {
+    output.spinner('Fetching production version');
+    const { versions } = await getRouteVersions(client, project.id, {
+      teamId,
+    });
+    const productionVersion = versions.find(v => !v.isStaging);
+
+    if (!productionVersion) {
+      output.error(
+        `No production version found for ${chalk.bold(project.name)}.`
+      );
+      return 1;
+    }
+
+    versionId = productionVersion.id;
+    versionName = productionVersion.id;
+  }
+
+  if (diffFlag && !versionIdFlag) {
+    // --diff without --version-id: diff staging against production
     output.spinner('Fetching staging version');
     const { versions } = await getRouteVersions(client, project.id, {
       teamId,
@@ -77,20 +102,16 @@ export default async function list(client: Client, argv: string[]) {
 
     if (!stagingVersion) {
       output.error(
-        `No staging version found for ${chalk.bold(project.name)}. Run ${chalk.cyan(
-          getCommandName('routes list-versions')
-        )} to see available versions.`
+        `No staged changes to diff. Run ${chalk.cyan(
+          getCommandName('routes add')
+        )} or ${chalk.cyan(getCommandName('routes edit'))} to make changes.`
       );
       return 1;
     }
 
     versionId = stagingVersion.id;
     versionName = stagingVersion.id;
-
-    // Enable diff mode when viewing staging without search/filter/page
-    if (!search && !filter && !page) {
-      useDiff = diffFlag !== false; // Default to diff unless explicitly disabled
-    }
+    useDiff = true;
   }
 
   if (versionIdFlag) {
@@ -98,27 +119,19 @@ export default async function list(client: Client, argv: string[]) {
     const { versions } = await getRouteVersions(client, project.id, {
       teamId,
     });
-    const version = versions.find(v => v.id === versionIdFlag);
+    const result = findVersionById(versions, versionIdFlag);
 
-    if (!version) {
-      output.error(
-        `Version "${versionIdFlag}" not found. Run ${chalk.cyan(
-          getCommandName('routes list-versions')
-        )} to see available versions.`
-      );
+    if (result.error || !result.version) {
+      output.error(result.error ?? 'Version not found');
       return 1;
     }
 
-    versionId = version.id;
-    versionName = version.id;
-  }
+    versionId = result.version.id;
+    versionName = result.version.id;
 
-  // If --diff flag is explicitly set without --staging, show error
-  if (diffFlag && !staging && !versionIdFlag) {
-    output.error(
-      'The --diff flag requires --staging or --version to compare against production'
-    );
-    return 1;
+    if (diffFlag) {
+      useDiff = true;
+    }
   }
 
   const lsStamp = stamp();
@@ -139,8 +152,6 @@ export default async function list(client: Client, argv: string[]) {
     teamId,
     search,
     filter,
-    page,
-    perPage,
     versionId,
     diff: useDiff,
   });
