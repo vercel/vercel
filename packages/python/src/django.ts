@@ -3,7 +3,7 @@ import { join } from 'path';
 import execa from 'execa';
 import { debug } from '@vercel/build-utils';
 
-const scriptPath = join(__dirname, '..', 'vc_django_settings.py');
+const scriptPath = join(__dirname, '..', 'templates', 'vc_django_settings.py');
 const script = readFileSync(scriptPath, 'utf-8');
 
 /**

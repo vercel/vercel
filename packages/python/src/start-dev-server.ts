@@ -386,7 +386,12 @@ function createDevShim(
     const entryAbs = join(workPath, entry);
 
     const shimPath = join(vercelPythonDir, `${DEV_SHIM_MODULE}.py`);
-    const templatePath = join(__dirname, '..', `${DEV_SHIM_MODULE}.py`);
+    const templatePath = join(
+      __dirname,
+      '..',
+      'templates',
+      `${DEV_SHIM_MODULE}.py`
+    );
     const template = readFileSync(templatePath, 'utf8');
     const shimSource = template
       .replace(/__VC_DEV_MODULE_NAME__/g, qualifiedModule)
