@@ -44,6 +44,26 @@ export async function containsAppOrHandler(source: string): Promise<boolean> {
 }
 
 /**
+ * Check if a top-level callable with the given name exists in Python source.
+ *
+ * Returns true if found, false otherwise.
+ * Returns false for invalid Python syntax.
+ *
+ * @param source - The Python source code to analyze
+ * @param name - The callable name to look for (e.g. "cleanup")
+ */
+export async function containsTopLevelCallable(
+  source: string,
+  name: string
+): Promise<boolean> {
+  if (!source.includes(name)) {
+    return false;
+  }
+  const mod = await importWasmModule();
+  return mod.containsTopLevelCallable(source, name);
+}
+
+/**
  * Extract the string value of a top-level constant with the given name.
  * Only considers simple assignments (NAME = "string") and annotated assignments
  * (NAME: str = "string") at module level. Returns the first matching string

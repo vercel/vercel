@@ -562,6 +562,8 @@ export interface Service {
   routePrefixSource?: 'configured' | 'generated';
   /* cron service config */
   schedule?: string;
+  /* optional handler for cron service in format of {module}:{callable} */
+  handlerFunction?: string;
   /* worker service config */
   topic?: string;
   consumer?: string;
