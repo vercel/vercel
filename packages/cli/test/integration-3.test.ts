@@ -955,9 +955,43 @@ test('default command should prompt login with empty auth.json', async () => {
 });
 
 test('`flags prepare` should not require login', async () => {
-  const output = await execCli(binaryPath, ['-Q', '/tmp', 'flags', 'prepare'], {
+  const cwd = getNewTmpDir();
+  const output = await execCli(binaryPath, ['flags', 'prepare'], {
+    cwd,
     token: false,
     reject: false,
   });
+  // Command actually completes (progresses past auth), not just absence of error
+  expect(output.exitCode, formatOutput(output)).toBe(0);
   expect(output.stderr).not.toContain('No existing credentials found');
+  // Module is emitted to the filesystem
+  const definitionsDir = path.join(
+    cwd,
+    'node_modules',
+    '@vercel',
+    'flags-definitions'
+  );
+  expect(fs.existsSync(path.join(definitionsDir, 'index.js'))).toBe(true);
+  expect(fs.existsSync(path.join(definitionsDir, 'index.d.ts'))).toBe(true);
+  expect(fs.existsSync(path.join(definitionsDir, 'package.json'))).toBe(true);
+});
+
+test('`flags prepare` happy path emits flags-definitions module', async () => {
+  const cwd = getNewTmpDir();
+  const output = await execCli(binaryPath, ['flags', 'prepare'], {
+    cwd,
+    reject: false,
+  });
+  expect(output.exitCode, formatOutput(output)).toBe(0);
+  const definitionsDir = path.join(
+    cwd,
+    'node_modules',
+    '@vercel',
+    'flags-definitions'
+  );
+  expect(fs.existsSync(path.join(definitionsDir, 'index.js'))).toBe(true);
+  expect(fs.existsSync(path.join(definitionsDir, 'index.d.ts'))).toBe(true);
+  const pkg = await fs.readJSON(path.join(definitionsDir, 'package.json'));
+  expect(pkg.name).toBe('@vercel/flags-definitions');
+  expect(pkg.version).toBeDefined();
 });
