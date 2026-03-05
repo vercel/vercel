@@ -19,6 +19,7 @@ export const PYTHON_FRAMEWORKS = [
   'django',
   'starlette',
   'bottle',
+  'falcon',
   'python', // Generic Python framework preset
 ] as const;
 

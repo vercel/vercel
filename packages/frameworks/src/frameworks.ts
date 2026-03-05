@@ -2385,6 +2385,61 @@ export const frameworks = [
     ],
   },
   {
+    name: 'Falcon',
+    slug: 'falcon',
+    experimental: true,
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/falcon.svg',
+    tagline:
+      'Falcon is a minimalist WSGI/ASGI framework for building reliable, high-performance REST APIs in Python.',
+    description: 'A Falcon app served via the Python Runtime.',
+    website: 'https://falconframework.org',
+    supersedes: ['python'],
+    useRuntime: { src: 'index.py', use: '@vercel/python' },
+    ignoreRuntimes: ['@vercel/python'],
+    detectors: {
+      some: [
+        {
+          path: 'requirements.txt',
+          matchContent: '[Ff]alcon',
+        },
+        {
+          path: 'pyproject.toml',
+          matchContent: '[Ff]alcon',
+        },
+        {
+          path: 'Pipfile',
+          matchContent: '[Ff]alcon',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: '`pip install -r requirements.txt`',
+      },
+      buildCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      devCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      outputDirectory: {
+        value: 'N/A',
+      },
+    },
+    getOutputDirName: async () => 'public',
+    defaultRoutes: [
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        dest: '/',
+      },
+    ],
+  },
+  {
     name: 'Sanity (v3)',
     slug: 'sanity-v3',
     demo: 'https://sanity-studio-template.vercel.app',
