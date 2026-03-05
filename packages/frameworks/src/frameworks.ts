@@ -2330,6 +2330,61 @@ export const frameworks = [
     ],
   },
   {
+    name: 'Bottle',
+    slug: 'bottle',
+    experimental: true,
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/bottle.svg',
+    tagline:
+      'Bottle is a fast, simple and lightweight WSGI micro web-framework for Python.',
+    description: 'A Bottle app served via the Python Runtime.',
+    website: 'https://bottlepy.org',
+    supersedes: ['python'],
+    useRuntime: { src: 'index.py', use: '@vercel/python' },
+    ignoreRuntimes: ['@vercel/python'],
+    detectors: {
+      some: [
+        {
+          path: 'requirements.txt',
+          matchContent: '[Bb]ottle',
+        },
+        {
+          path: 'pyproject.toml',
+          matchContent: '[Bb]ottle',
+        },
+        {
+          path: 'Pipfile',
+          matchContent: '[Bb]ottle',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: '`pip install -r requirements.txt`',
+      },
+      buildCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      devCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      outputDirectory: {
+        value: 'N/A',
+      },
+    },
+    getOutputDirName: async () => 'public',
+    defaultRoutes: [
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        dest: '/',
+      },
+    ],
+  },
+  {
     name: 'Sanity (v3)',
     slug: 'sanity-v3',
     demo: 'https://sanity-studio-template.vercel.app',
