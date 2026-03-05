@@ -179,7 +179,6 @@ describe('successful builds', async () => {
     ); // copying fixture and running npm install so it takes a while
   }
 
-  /* eslint-disable jest/no-disabled-tests */
   // biome-ignore lint/suspicious/noSkippedTests: temporarily disabled
   it.skip(`builds workflow-server`, async () => {
     const workPath = resolve(process.env.HOME!, 'code/workflow-server');

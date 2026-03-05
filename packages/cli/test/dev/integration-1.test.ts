@@ -533,7 +533,6 @@ test('[vercel dev] should send `etag` header for static files', async () => {
 });
 
 // https://linear.app/vercel/issue/ZERO-3240/unskip-random-test-failures
-/* eslint-disable jest/no-disabled-tests */
 // biome-ignore lint/suspicious/noSkippedTests: temporarily disabled
 test.skip('[vercel dev] should frontend dev server and routes', async () => {
   const dir = fixture('dev-server-and-routes');

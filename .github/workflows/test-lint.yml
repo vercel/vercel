@@ -53,11 +53,10 @@ jobs:
       - name: install pnpm@8.3.1
         run: npm i -g pnpm@8.3.1
       - run: pnpm install
-      - run: pnpm run lint
+      - name: Biome lint
+        run: pnpm run lint
       - name: Biome format check (JS/TS/JSON)
         run: pnpm run biome:format
-      - name: Biome lint
-        run: pnpm run biome:lint
       - name: Check dependency versions
         run: pnpm exec syncpack lint
       - run: pnpm run build

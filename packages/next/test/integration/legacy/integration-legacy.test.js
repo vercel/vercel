@@ -230,7 +230,6 @@ it('Should build the serverless-config-monorepo-present example', async () => {
 });
 
 // https://linear.app/vercel/issue/ZERO-3238/unskip-tests-failing-due-to-node-16-removal
-/* eslint-disable jest/no-disabled-tests */
 // biome-ignore lint/suspicious/noSkippedTests: temporarily disabled
 it.skip('Should opt-out of shared lambdas when routes are detected', async () => {
   const {

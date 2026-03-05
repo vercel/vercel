@@ -96,7 +96,6 @@ it('should only match supported node versions, otherwise throw an error', async 
 });
 
 // https://linear.app/vercel/issue/ZERO-3238/unskip-tests-failing-due-to-node-16-removal
-/* eslint-disable jest/no-disabled-tests */
 // biome-ignore lint/suspicious/noSkippedTests: temporarily disabled
 it.skip('should match all semver ranges', async () => {
   // See https://docs.npmjs.com/files/package.json#engines

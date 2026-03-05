@@ -345,7 +345,7 @@ export default class DevServer {
             filesRemovedArray
           ).catch((err: Error) => {
             output.warn(`An error occurred while rebuilding \`${match.src}\`:`);
-            // eslint-disable-next-line no-console
+            // biome-ignore lint/suspicious/noConsole: intentional console usage
             console.error(err.stack);
           });
         } else {
@@ -1388,7 +1388,7 @@ export default class DevServer {
       const vercelConfig = await this.getVercelConfig();
       await this.serveProjectAsNowV2(req, res, requestId, vercelConfig);
     } catch (err: unknown) {
-      // eslint-disable-next-line no-console
+      // biome-ignore lint/suspicious/noConsole: intentional console usage
       console.error(err);
 
       if (isError(err) && typeof err.stack === 'string') {
@@ -2182,7 +2182,7 @@ export default class DevServer {
             body: JSON.stringify(payload),
           });
         } catch (err) {
-          // eslint-disable-next-line no-console
+          // biome-ignore lint/suspicious/noConsole: intentional console usage
           console.error(err);
           await this.sendError(
             req,
