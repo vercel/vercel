@@ -12,13 +12,21 @@ from vercel import wait_until
 logger = logging.getLogger(__name__)
 
 
-def _token_path(ns: str, token: str) -> str:
-    return os.path.join("/tmp", "vercel-python-wait-until", ns, token)
+def _state_dir(ns: str) -> str:
+    return os.path.join("/tmp", "vercel-python-wait-until", ns)
 
 
-async def _background_write(ns: str, token: str) -> None:
+def _token_path(ns: str, state: str, token: str) -> str:
+    return os.path.join(
+        _state_dir(ns),
+        state,
+        token,
+    )
+
+
+async def _background_write_ok(ns: str, token: str) -> None:
     await asyncio.sleep(1.0)
-    path = _token_path(ns, token)
+    path = _token_path(ns, "ok", token)
     await asyncio.to_thread(
         os.makedirs, os.path.dirname(path), exist_ok=True
     )
@@ -26,9 +34,14 @@ async def _background_write(ns: str, token: str) -> None:
     logger.info("waitUntil wrote token %s", token)
 
 
-async def _background_error(token: str) -> None:
+async def _background_write_error(ns: str, token: str) -> None:
     await asyncio.sleep(0.2)
     message = f"waitUntil fixture error for token {token}"
+    error_path = _token_path(ns, "error", token)
+    await asyncio.to_thread(
+        os.makedirs, os.path.dirname(error_path), exist_ok=True
+    )
+    await asyncio.to_thread(Path(error_path).write_text, token)
     print(message, flush=True)
     logger.error(message)
     raise RuntimeError(message)
@@ -42,11 +55,12 @@ class handler(BaseHTTPRequestHandler):
         ns = params.get("ns", ["default"])[0]
         token = params.get("token", ["default"])[0]
 
-        if action == "enqueue":
-            wait_until(_background_write(ns, token))
+        if action == "enqueue-ok":
+            wait_until(_background_write_ok(ns, token))
             self._send_json(
                 {
                     "status": "queued",
+                    "action": action,
                     "ns": ns,
                     "token": token,
                 }
@@ -54,23 +68,32 @@ class handler(BaseHTTPRequestHandler):
             return
 
         if action == "status":
-            path = _token_path(ns, token)
-            exists = os.path.exists(path)
+            ok_exists = os.path.exists(_token_path(ns, "ok", token))
+            error_exists = os.path.exists(_token_path(ns, "error", token))
             self._send_json(
                 {
-                    "status": "done" if exists else "pending",
-                    "exists": exists,
+                    "status": (
+                        "ok"
+                        if ok_exists
+                        else "error"
+                        if error_exists
+                        else "pending"
+                    ),
+                    "ok": ok_exists,
+                    "error": error_exists,
                     "ns": ns,
                     "token": token,
                 }
             )
             return
 
-        if action == "error":
-            wait_until(_background_error(token))
+        if action == "enqueue-error":
+            wait_until(_background_write_error(ns, token))
             self._send_json(
                 {
-                    "status": "queued-error",
+                    "status": "queued",
+                    "action": action,
+                    "ns": ns,
                     "token": token,
                 }
             )
@@ -79,9 +102,9 @@ class handler(BaseHTTPRequestHandler):
         self._send_json(
             {
                 "usage": [
-                    "/api?action=enqueue&ns=<ns>&token=<token>",
+                    "/api?action=enqueue-ok&ns=<ns>&token=<token>",
+                    "/api?action=enqueue-error&ns=<ns>&token=<token>",
                     "/api?action=status&ns=<ns>&token=<token>",
-                    "/api?action=error&token=<token>",
                 ]
             }
         )
