@@ -12,6 +12,16 @@ import getScope from '../../util/get-scope';
 import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name';
 import { ProjectNotFound, isAPIError } from '../../util/errors-ts';
 import type { AlertsTelemetryClient } from '../../util/telemetry/commands/alerts';
+import {
+  type ValidationError,
+  type ValidationResult,
+  type ValidatedResult,
+  normalizeRepeatableStringFilters,
+  validateAllProjectMutualExclusivity,
+  validateOptionalIntegerRange,
+  validateTimeBound,
+  validateTimeOrder,
+} from '../../util/command-validation';
 
 interface ListFlags {
   '--type'?: string[];
@@ -81,33 +91,45 @@ function writeJsonError(client: Client, code: string, message: string): number {
 }
 
 function normalizeTypeFilters(typeFilters: string[] | undefined): string[] {
-  if (!typeFilters || typeFilters.length === 0) {
-    return [];
-  }
-
-  const normalized = typeFilters
-    .flatMap(filter => filter.split(','))
-    .map(filter => filter.trim())
-    .filter(Boolean);
-
-  return [...new Set(normalized)];
+  return normalizeRepeatableStringFilters(typeFilters);
 }
 
 function validateMutualExclusivity(
   all: boolean | undefined,
   project: string | undefined
-): string | undefined {
-  if (all && project) {
-    return 'Cannot specify both --all and --project. Use one or the other.';
-  }
-  return undefined;
+): ValidationResult {
+  return validateAllProjectMutualExclusivity(all, project);
 }
 
-function resolveTimeRange(flags: ListFlags): { from?: string; to?: string } {
-  return {
-    from: flags['--since'],
-    to: flags['--until'],
-  };
+function validateLimit(
+  limit: number | undefined
+): ValidatedResult<number | undefined> {
+  return validateOptionalIntegerRange(limit, {
+    flag: '--limit',
+    min: 1,
+    max: 1000,
+  });
+}
+
+function outputError(
+  client: Client,
+  jsonOutput: boolean,
+  code: string,
+  message: string
+): number {
+  if (jsonOutput) {
+    return writeJsonError(client, code, message);
+  }
+  output.error(message);
+  return 1;
+}
+
+function handleValidationError(
+  client: Client,
+  jsonOutput: boolean,
+  result: ValidationError
+): number {
+  return outputError(client, jsonOutput, result.code, result.message);
 }
 
 function getDefaultRange(): { from: string; to: string } {
@@ -336,13 +358,35 @@ export default async function list(
   telemetry.trackCliOptionLimit(flags['--limit']);
   telemetry.trackCliOptionFormat(flags['--format']);
 
-  const mutualError = validateMutualExclusivity(
+  const limitResult = validateLimit(flags['--limit']);
+  if (!limitResult.valid) {
+    return handleValidationError(client, jsonOutput, limitResult);
+  }
+
+  const mutualResult = validateMutualExclusivity(
     flags['--all'],
     flags['--project']
   );
-  if (mutualError) {
-    output.error(mutualError);
-    return 1;
+  if (!mutualResult.valid) {
+    return handleValidationError(client, jsonOutput, mutualResult);
+  }
+
+  const sinceResult = validateTimeBound(flags['--since']);
+  if (!sinceResult.valid) {
+    return handleValidationError(client, jsonOutput, sinceResult);
+  }
+
+  const untilResult = validateTimeBound(flags['--until']);
+  if (!untilResult.valid) {
+    return handleValidationError(client, jsonOutput, untilResult);
+  }
+
+  const timeOrderResult = validateTimeOrder(
+    sinceResult.value,
+    untilResult.value
+  );
+  if (!timeOrderResult.valid) {
+    return handleValidationError(client, jsonOutput, timeOrderResult);
   }
 
   const scope = await resolveScope(client, {
@@ -353,27 +397,25 @@ export default async function list(
     return scope;
   }
 
-  const resolvedTimeRange = resolveTimeRange(flags);
-
   const query = new URLSearchParams({
     teamId: scope.teamId,
   });
   if (scope.projectId) {
     query.set('projectId', scope.projectId);
   }
-  if (flags['--limit']) {
-    query.set('limit', String(flags['--limit']));
+  if (limitResult.value) {
+    query.set('limit', String(limitResult.value));
   }
   for (const type of types) {
     query.append('types', type);
   }
-  if (resolvedTimeRange.from) {
-    query.set('from', resolvedTimeRange.from);
+  if (sinceResult.value) {
+    query.set('from', sinceResult.value.toISOString());
   }
-  if (resolvedTimeRange.to) {
-    query.set('to', resolvedTimeRange.to);
+  if (untilResult.value) {
+    query.set('to', untilResult.value.toISOString());
   }
-  if (!resolvedTimeRange.from && !resolvedTimeRange.to) {
+  if (!sinceResult.value && !untilResult.value) {
     const defaultRange = getDefaultRange();
     query.set('from', defaultRange.from);
     query.set('to', defaultRange.to);

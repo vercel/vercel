@@ -204,4 +204,41 @@ describe('alerts', () => {
       'Cannot specify both --all and --project'
     );
   });
+
+  it('returns error when --since is after --until', async () => {
+    client.setArgv(
+      'alerts',
+      '--since',
+      '2026-03-05T00:00:00.000Z',
+      '--until',
+      '2026-03-04T00:00:00.000Z'
+    );
+
+    const exitCode = await alerts(client);
+
+    expect(exitCode).toBe(1);
+    expect(client.stderr.getFullOutput()).toContain(
+      '`--since` must be earlier than `--until`.'
+    );
+  });
+
+  it('returns error for invalid --since format', async () => {
+    client.setArgv('alerts', '--since', 'not-a-date');
+
+    const exitCode = await alerts(client);
+
+    expect(exitCode).toBe(1);
+    expect(client.stderr.getFullOutput()).toContain('Invalid time format');
+  });
+
+  it('returns error for out-of-range --limit', async () => {
+    client.setArgv('alerts', '--limit', '1001');
+
+    const exitCode = await alerts(client);
+
+    expect(exitCode).toBe(1);
+    expect(client.stderr.getFullOutput()).toContain(
+      '`--limit` must be an integer between 1 and 1000.'
+    );
+  });
 });
