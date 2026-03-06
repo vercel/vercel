@@ -34,8 +34,6 @@ export default async function create(client: Client, argv: string[]) {
   const { args, flags: opts } = parsedArgs;
   let [url] = args;
 
-  telemetry.trackCliArgumentUrl(url);
-
   // --- Collect URL ---
   if (!url) {
     if (client.nonInteractive) {
@@ -122,6 +120,7 @@ export default async function create(client: Client, argv: string[]) {
     events = eventFlags;
   }
 
+  telemetry.trackCliArgumentUrl(url);
   telemetry.trackCliOptionEvent(events);
   telemetry.trackCliOptionProject(projectIds);
 
