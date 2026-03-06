@@ -105,7 +105,7 @@ export default async function create(client: Client, argv: string[]) {
         name: event,
         value: event,
       })),
-      validate: (selected: string[]) => {
+      validate: (selected: readonly unknown[]) => {
         if (selected.length === 0) return 'At least one event is required';
         return true;
       },
