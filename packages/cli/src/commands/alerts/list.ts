@@ -1,4 +1,6 @@
 import type Client from '../../util/client';
+import ms from 'ms';
+import table from '../../util/output/table';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
@@ -27,6 +29,21 @@ interface AlertsScope {
 
 interface AlertGroupAlert {
   title?: string;
+  ai?: {
+    title?: string;
+    tilte?: string;
+  };
+  startedAt?: string | number;
+  activatedAt?: string | number;
+  resolvedAt?: string | number;
+  route?: string;
+  path?: string;
+  requestPath?: string;
+  dimensions?: {
+    route?: string;
+    path?: string;
+    requestPath?: string;
+  };
 }
 
 interface AlertGroup {
@@ -34,6 +51,24 @@ interface AlertGroup {
   type: string;
   status: string;
   title?: string;
+  recordedStartedAt?: string | number;
+  ai?: {
+    activityId?: string;
+    title?: string;
+    tilte?: string;
+    currentSummary?: string;
+  };
+  startedAt?: string | number;
+  activatedAt?: string | number;
+  resolvedAt?: string | number;
+  route?: string;
+  path?: string;
+  requestPath?: string;
+  dimensions?: {
+    route?: string;
+    path?: string;
+    requestPath?: string;
+  };
   alerts?: AlertGroupAlert[];
 }
 
@@ -144,7 +179,97 @@ async function resolveScope(
 }
 
 function getGroupTitle(group: AlertGroup): string {
-  return group.title || group.alerts?.[0]?.title || 'Alert group';
+  return (
+    group.ai?.title ||
+    group.ai?.tilte ||
+    group.alerts?.[0]?.ai?.title ||
+    group.alerts?.[0]?.ai?.tilte ||
+    group.title ||
+    group.alerts?.[0]?.title ||
+    'Alert group'
+  );
+}
+
+function parseDateInput(value?: string | number): Date | undefined {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+
+  if (typeof value === 'number') {
+    const epochMs = value < 1_000_000_000_000 ? value * 1000 : value;
+    const date = new Date(epochMs);
+    return Number.isNaN(date.getTime()) ? undefined : date;
+  }
+
+  const numeric = Number(value);
+  if (!Number.isNaN(numeric) && value.trim() !== '') {
+    const epochMs = numeric < 1_000_000_000_000 ? numeric * 1000 : numeric;
+    const date = new Date(epochMs);
+    return Number.isNaN(date.getTime()) ? undefined : date;
+  }
+
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? undefined : date;
+}
+
+function formatDateForDisplay(value?: string | number): string {
+  const date = parseDateInput(value);
+  if (!date) {
+    return '-';
+  }
+
+  return date.toLocaleString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+    timeZoneName: 'short',
+  });
+}
+
+function getStartedAt(group: AlertGroup): string {
+  return formatDateForDisplay(
+    group.recordedStartedAt ||
+      group.startedAt ||
+      group.activatedAt ||
+      group.alerts?.[0]?.startedAt ||
+      group.alerts?.[0]?.activatedAt
+  );
+}
+
+function getStatus(group: AlertGroup): string {
+  const normalizedStatus = (group.status || '').toLowerCase();
+  if (normalizedStatus === 'active') {
+    return 'active';
+  }
+
+  if (normalizedStatus === 'resolved') {
+    const startedAt = parseDateInput(
+      group.recordedStartedAt || group.startedAt || group.alerts?.[0]?.startedAt
+    );
+    const resolvedAt = parseDateInput(
+      group.resolvedAt || group.alerts?.[0]?.resolvedAt
+    );
+
+    if (
+      startedAt &&
+      resolvedAt &&
+      resolvedAt.getTime() >= startedAt.getTime()
+    ) {
+      return `resolved after ${ms(resolvedAt.getTime() - startedAt.getTime())}`;
+    }
+
+    return 'resolved';
+  }
+
+  return group.status || '-';
+}
+
+function getAlertsCount(group: AlertGroup): string {
+  return String(group.alerts?.length ?? 0);
 }
 
 function printGroups(groups: AlertGroup[]) {
@@ -153,13 +278,23 @@ function printGroups(groups: AlertGroup[]) {
     return;
   }
 
-  output.print('');
-  for (const group of groups) {
-    output.log(
-      `${group.status}  ${group.type}  ${getGroupTitle(group)} (${group.id})`
-    );
-  }
-  output.print('');
+  const rows = [
+    ['Title', 'StartedAt', 'Type', 'Status', 'Alerts'],
+    ...groups.map(group => [
+      getGroupTitle(group),
+      getStartedAt(group),
+      group.type || '-',
+      getStatus(group),
+      getAlertsCount(group),
+    ]),
+  ];
+
+  const tableOutput = table(rows, { hsep: 3 })
+    .split('\n')
+    .map(line => line.trimEnd())
+    .join('\n')
+    .replace(/^/gm, '  ');
+  output.print(`\n${tableOutput}\n`);
 }
 
 export default async function list(client: Client): Promise<number> {

@@ -66,7 +66,9 @@ describe('alerts', () => {
           id: 'ag_1',
           type: 'usage_anomaly',
           status: 'active',
-          alerts: [{ title: 'Spike in requests' }],
+          recordedStartedAt: '2026-03-06T00:00:00.000Z',
+          startedAt: '2026-03-06T00:00:00.000Z',
+          alerts: [{ title: 'Spike in requests', route: '/api/logs' }],
         },
       ]);
     });
@@ -78,7 +80,57 @@ describe('alerts', () => {
     expect(exitCode).toBe(0);
     expect(requestQuery.teamId).toBe('team_dummy');
     expect(requestQuery.projectId).toBe('prj_alerts');
+    expect(client.stderr.getFullOutput()).toContain('Title');
+    expect(client.stderr.getFullOutput()).toContain('StartedAt');
+    expect(client.stderr.getFullOutput()).toContain('Status');
+    expect(client.stderr.getFullOutput()).toContain('Alerts');
     expect(client.stderr.getFullOutput()).toContain('Spike in requests');
+    expect(client.stderr.getFullOutput()).toContain('Mar');
+    expect(client.stderr.getFullOutput()).toContain('2026');
+  });
+
+  it('renders resolved status as duration since startedAt', async () => {
+    client.scenario.get('/alerts/v3/groups', (_req, res) => {
+      res.json([
+        {
+          id: 'ag_2',
+          type: 'error_anomaly',
+          status: 'resolved',
+          startedAt: '2026-03-06T00:00:00.000Z',
+          resolvedAt: '2026-03-06T01:30:00.000Z',
+          alerts: [{ title: '5xx on /api/logs', route: '/api/logs' }],
+        },
+      ]);
+    });
+
+    client.setArgv('alerts');
+
+    const exitCode = await alerts(client);
+
+    expect(exitCode).toBe(0);
+    expect(client.stderr.getFullOutput()).toContain('resolved after');
+  });
+
+  it('prefers ai title when available', async () => {
+    client.scenario.get('/alerts/v3/groups', (_req, res) => {
+      res.json([
+        {
+          id: 'ag_3',
+          type: 'error_anomaly',
+          status: 'active',
+          title: 'Fallback title',
+          ai: { title: 'AI generated title' },
+        },
+      ]);
+    });
+
+    client.setArgv('alerts');
+
+    const exitCode = await alerts(client);
+
+    expect(exitCode).toBe(0);
+    expect(client.stderr.getFullOutput()).toContain('AI generated title');
+    expect(client.stderr.getFullOutput()).not.toContain('Fallback title');
   });
 
   it('supports --all and does not set projectId', async () => {
