@@ -9,22 +9,18 @@ function isRouteWithSrc(route: Route): route is RouteWithSrc {
   return !('handle' in route) && typeof route.src === 'string';
 }
 
-function getHostConditionSignature(has: HasField | undefined): string | null {
-  if (!has || has.length === 0) {
+function getHostConditionKey(has: HasField | undefined): string | null {
+  if (!has?.length) {
     return null;
   }
 
-  const hostConditions = has.filter(
-    condition => condition.type === 'host'
-  ) as Array<{
-    type: 'host';
-    value: string | number | Record<string, unknown>;
-  }>;
-  if (hostConditions.length === 0 || hostConditions.length !== has.length) {
+  // We only suppress when a route is purely host-conditioned. If a user route
+  // adds extra conditions (headers/cookies/query), it is not equivalent.
+  if (!has.every(condition => condition.type === 'host')) {
     return null;
   }
 
-  return hostConditions
+  return has
     .map(condition => serializeMatchableValue(condition.value))
     .sort()
     .join('|');
@@ -49,22 +45,28 @@ function serializeMatchableValue(
   return entries.join(';');
 }
 
-function getRouteHostSourceSignature(route: Route): string | null {
+function getRouteHostSourceKey(route: Route): string | null {
   if (!isRouteWithSrc(route)) {
     return null;
   }
 
-  const hostSignature = getHostConditionSignature(route.has);
-  if (!hostSignature) {
+  const hostKey = getHostConditionKey(route.has);
+  if (!hostKey) {
     return null;
   }
 
-  return `${route.src}::${hostSignature}`;
+  return `${route.src}::${hostKey}`;
 }
 
 /**
- * User-defined routes should override auto-generated service host routes for
- * the same host/source pair.
+ * Why this exists:
+ * - Auto-generated service subdomain routes are inserted in the `null` phase.
+ * - User `rewrites` are usually in the `filesystem` phase.
+ * - Phase order wins over simple array ordering, so "put user routes first"
+ *   does not reliably give user routes precedence.
+ *
+ * To preserve intuitive override behavior, we drop an auto route only when the
+ * user already defines an equivalent host+src match.
  */
 export function suppressAutoHostRoutesByUserRoutes({
   autoHostRoutes,
@@ -74,20 +76,18 @@ export function suppressAutoHostRoutesByUserRoutes({
     return null;
   }
 
-  const userHostSourceSignatures = new Set<string>();
-  for (const route of userRoutes || []) {
-    const signature = getRouteHostSourceSignature(route);
-    if (signature) {
-      userHostSourceSignatures.add(signature);
-    }
-  }
+  const userRouteKeys = new Set(
+    (userRoutes || [])
+      .map(route => getRouteHostSourceKey(route))
+      .filter((key): key is string => Boolean(key))
+  );
 
   const filtered = autoHostRoutes.filter(route => {
-    const signature = getRouteHostSourceSignature(route);
-    if (!signature) {
+    const key = getRouteHostSourceKey(route);
+    if (!key) {
       return true;
     }
-    return !userHostSourceSignatures.has(signature);
+    return !userRouteKeys.has(key);
   });
 
   return filtered.length > 0 ? filtered : null;

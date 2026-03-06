@@ -348,63 +348,6 @@ describe('validateConfig', () => {
     expect(error!.link).toEqual('https://vercel.link/functions-and-builds');
   });
 
-  describe('experimentalServices subdomain routing validation', () => {
-    it('should allow web service with subdomain and no routePrefix', () => {
-      const error = validateConfig({
-        experimentalServices: {
-          api: {
-            entrypoint: 'api/index.ts',
-            subdomain: 'api',
-          } as any,
-        },
-      });
-      expect(error).toBeNull();
-    });
-
-    it('should error when web service has no routePrefix or subdomain', () => {
-      const error = validateConfig({
-        experimentalServices: {
-          api: {
-            entrypoint: 'api/index.ts',
-          },
-        },
-      });
-      expect(error?.code).toBe('MISSING_SERVICE_ROUTE_TARGET');
-      expect(error?.message).toBe(
-        'Web service "api" must define at least one of "routePrefix" or "subdomain".'
-      );
-    });
-
-    it('should error when subdomain is invalid', () => {
-      const error = validateConfig({
-        experimentalServices: {
-          api: {
-            entrypoint: 'api/index.ts',
-            subdomain: 'api.example.com',
-          } as any,
-        },
-      });
-      expect(error?.code).toBe('INVALID_SERVICE_SUBDOMAIN');
-    });
-
-    it('should error when non-web service defines subdomain routing', () => {
-      const error = validateConfig({
-        experimentalServices: {
-          cleanup: {
-            type: 'cron',
-            entrypoint: 'cron/cleanup.ts',
-            schedule: '0 0 * * *',
-            subdomain: 'jobs',
-          } as any,
-        },
-      });
-      expect(error?.code).toBe('INVALID_SERVICE_HOST_CONFIG');
-      expect(error?.message).toBe(
-        'Cron service "cleanup" cannot have "subdomain". Only web services can use subdomain routing.'
-      );
-    });
-  });
-
   it('should error when crons have missing schedule', () => {
     const error = validateConfig({
       // @ts-ignore
