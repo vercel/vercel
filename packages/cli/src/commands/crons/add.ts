@@ -1,5 +1,5 @@
 import { resolve } from 'path';
-import { readFile, writeFile } from 'fs/promises';
+import { access, readFile, writeFile } from 'fs/promises';
 import chalk from 'chalk';
 import type Client from '../../util/client';
 import { getCommandName } from '../../util/pkg-name';
@@ -9,6 +9,7 @@ import { addSubcommand } from './command';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
+import { VERCEL_CONFIG_EXTENSIONS } from '../../util/compile-vercel-config';
 
 interface CronEntry {
   path: string;
@@ -175,8 +176,22 @@ export default async function add(client: Client, argv: string[]) {
     return 1;
   }
 
+  // Check for non-JSON config files (vercel.ts, vercel.mjs, etc.)
+  for (const ext of VERCEL_CONFIG_EXTENSIONS) {
+    const altPath = resolve(client.cwd, `vercel.${ext}`);
+    try {
+      await access(altPath);
+      output.error(
+        `Found ${chalk.cyan(`vercel.${ext}`)} — ${getCommandName('crons add')} only supports ${chalk.cyan('vercel.json')}. Add cron jobs directly to your ${chalk.cyan(`vercel.${ext}`)} file instead.`
+      );
+      return 1;
+    } catch {
+      // File doesn't exist, continue
+    }
+  }
+
   // Read existing vercel.json or create one
-  const configPath = resolve(process.cwd(), 'vercel.json');
+  const configPath = resolve(client.cwd, 'vercel.json');
   let config: Record<string, unknown>;
 
   try {

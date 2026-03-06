@@ -88,9 +88,9 @@ export default async function ls(client: Client, argv: string[]) {
   const isDisabled = projectData.crons?.disabledAt != null;
 
   // Read local vercel.json to find crons configured but not yet deployed
-  const localConfig = readLocalConfig();
+  const localConfig = readLocalConfig(client.cwd);
   const localCrons: LocalCron[] = Array.isArray(localConfig?.crons)
-    ? localConfig.crons
+    ? (localConfig!.crons as LocalCron[])
     : [];
   const deployedByPath = new Map(definitions.map(d => [d.path, d]));
   const undeployedCrons: LocalCron[] = [];

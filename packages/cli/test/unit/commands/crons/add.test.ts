@@ -183,6 +183,32 @@ describe('crons add', () => {
   });
 
   describe('error handling', () => {
+    it.each([
+      'ts',
+      'mts',
+      'js',
+      'mjs',
+      'cjs',
+    ])('fails when vercel.%s exists', async ext => {
+      await writeFile(
+        resolve(cwd, `vercel.${ext}`),
+        'export default {}',
+        'utf-8'
+      );
+
+      client.setArgv(
+        'crons',
+        'add',
+        '--path',
+        '/api/cron',
+        '--schedule',
+        '0 0 * * *'
+      );
+      const exitCode = await crons(client);
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput('only supports');
+    });
+
     it('fails on malformed vercel.json', async () => {
       await writeFile(resolve(cwd, 'vercel.json'), '{invalid json', 'utf-8');
 
