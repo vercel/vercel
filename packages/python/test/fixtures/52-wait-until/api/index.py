@@ -29,6 +29,7 @@ async def _background_write(ns: str, token: str) -> None:
 async def _background_error(token: str) -> None:
     await asyncio.sleep(0.2)
     message = f"waitUntil fixture error for token {token}"
+    print(message, flush=True)
     logger.error(message)
     raise RuntimeError(message)
 
