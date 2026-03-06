@@ -1,5 +1,5 @@
 import fs from 'fs';
-import { join, dirname, basename, parse } from 'path';
+import { join, dirname, basename, parse, relative } from 'path';
 import {
   VERCEL_RUNTIME_VERSION,
   VERCEL_WORKERS_VERSION,
@@ -42,6 +42,10 @@ import { runPyprojectScript, ensureVenv, createVenvEnv } from './utils';
 import { runQuirks } from './quirks';
 import { getDjangoSettings } from './django';
 import { containsTopLevelCallable } from '@vercel/python-analysis';
+import {
+  runDjangoCollectStatic,
+  type DjangoCollectStaticResult,
+} from './django-static';
 
 const writeFile = fs.promises.writeFile;
 
@@ -449,6 +453,20 @@ export const build: BuildV3 = async ({
     throw entrypointNotFound;
   }
 
+  // For Django projects, run collectstatic and wire up CDN static file serving.
+  // Write directly to .vercel/output/static/ — @vercel/static only scans files
+  // before builders run, so public/ wouldn't be picked up if created here.
+  let djangoStatic: DjangoCollectStaticResult | null = null;
+  if (framework === 'django') {
+    const outputStaticDir = join(workPath, '.vercel', 'output', 'static');
+    djangoStatic = await runDjangoCollectStatic(
+      venvPath,
+      workPath,
+      pythonEnv,
+      outputStaticDir
+    );
+  }
+
   // Ensure correct version of vercel-runtime is installed.
   //
   // We intentionally do not inject vercel-runtime into the manifest
@@ -580,6 +598,16 @@ from vercel_runtime.vc_init import vc_handler
     '**/package-lock.json',
   ];
 
+  // Exclude source static dirs from the Lambda bundle — the CDN serves them.
+  if (djangoStatic) {
+    for (const absDir of djangoStatic.staticSourceDirs) {
+      const rel = relative(workPath, absDir);
+      if (!rel.startsWith('..')) {
+        predefinedExcludes.push(`${rel}/**`);
+      }
+    }
+  }
+
   const lambdaEnv = {} as Record<string, string>;
   lambdaEnv.PYTHONPATH = vendorDir;
   Object.assign(lambdaEnv, quirksResult.env);
@@ -593,6 +621,15 @@ from vercel_runtime.vc_init import vc_handler
   };
 
   const files: Files = await glob('**', globOptions);
+
+  // Re-inject staticfiles.json into the Lambda bundle if a manifest storage
+  // backend is in use. The CDN serves static assets; only the manifest is
+  // needed at runtime so Django can resolve hashed filenames for {% static %}.
+  if (djangoStatic?.manifestRelPath) {
+    files[djangoStatic.manifestRelPath] = new FileFsRef({
+      fsPath: join(workPath, djangoStatic.manifestRelPath),
+    });
+  }
 
   // Bundle dependencies, using runtime installation for oversized bundles
   const depExternalizer = new PythonDependencyExternalizer({
