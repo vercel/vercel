@@ -164,7 +164,7 @@ afterEach(() => {
 });
 
 describe('prepareCache()', () => {
-  it('caches the builder virtualenv and uv cache under .vercel/python', async () => {
+  it('caches the builder virtualenv and uv cache under .vercel/python, excluding bytecode caches', async () => {
     const workPath = path.join(
       tmpdir(),
       `vc-python-cache-${Math.floor(Math.random() * 1e6)}`
@@ -179,7 +179,22 @@ describe('prepareCache()', () => {
       ''
     );
     await fs.outputFile(
+      path.join(workPath, '.vercel/python/.venv/lib/site.pyc'),
+      ''
+    );
+    await fs.outputFile(
+      path.join(
+        workPath,
+        '.vercel/python/.venv/lib/__pycache__/site.cpython-312.pyc'
+      ),
+      ''
+    );
+    await fs.outputFile(
       path.join(workPath, '.vercel/python/cache/uv/wheels/example.whl'),
+      ''
+    );
+    await fs.outputFile(
+      path.join(workPath, '.vercel/python/cache/uv/archive/foo.pyc'),
       ''
     );
     await fs.outputFile(path.join(workPath, 'app.py'), 'print("hello")\n');
@@ -196,6 +211,11 @@ describe('prepareCache()', () => {
       expect(files['.vercel/python/.venv/pyvenv.cfg']).toBeDefined();
       expect(files['.vercel/python/.venv/bin/python']).toBeDefined();
       expect(files['.vercel/python/cache/uv/wheels/example.whl']).toBeDefined();
+      expect(files['.vercel/python/.venv/lib/site.pyc']).toBeUndefined();
+      expect(
+        files['.vercel/python/.venv/lib/__pycache__/site.cpython-312.pyc']
+      ).toBeUndefined();
+      expect(files['.vercel/python/cache/uv/archive/foo.pyc']).toBeUndefined();
       expect(files['app.py']).toBeUndefined();
     } finally {
       await fs.remove(workPath);

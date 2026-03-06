@@ -25,7 +25,6 @@ import {
   type ShouldServe,
   FileFsRef,
   PythonFramework,
-  defaultCachePathGlob,
   type PrepareCache,
 } from '@vercel/build-utils';
 import {
@@ -683,6 +682,7 @@ export const prepareCache: PrepareCache = async ({
 }) => {
   const cacheFiles: Files = {};
   const root = repoRootPath || workPath;
+  const ignore = ['**/*.pyc', '**/__pycache__/**'];
 
   const configV3 = await readBuildOutputV3Config(workPath);
   if (configV3?.cache && Array.isArray(configV3.cache)) {
@@ -692,9 +692,14 @@ export const prepareCache: PrepareCache = async ({
     return cacheFiles;
   }
 
-  Object.assign(cacheFiles, await glob(defaultCachePathGlob, root));
-  Object.assign(cacheFiles, await glob('**/.vercel/python/.venv/**', root));
-  Object.assign(cacheFiles, await glob('**/.vercel/python/cache/uv/**', root));
+  Object.assign(
+    cacheFiles,
+    await glob('**/.vercel/python/.venv/**', { cwd: root, ignore })
+  );
+  Object.assign(
+    cacheFiles,
+    await glob('**/.vercel/python/cache/uv/**', { cwd: root, ignore })
+  );
 
   return cacheFiles;
 };
