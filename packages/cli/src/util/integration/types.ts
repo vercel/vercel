@@ -236,10 +236,17 @@ export interface AutoProvisionInstallationInfo {
   status?: string;
 }
 
+export interface AutoProvisionValidationField {
+  message: string;
+  key: string;
+}
+
 export interface AutoProvisionFallback {
   kind: string;
   reason?: string;
   error_message?: string;
+  validationError?: string;
+  validationFields?: AutoProvisionValidationField[];
   url: string;
   integration: AutoProvisionIntegration;
   product: AutoProvisionProduct;

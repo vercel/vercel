@@ -328,6 +328,29 @@ export async function addAutoProvision(
     return 1;
   }
 
+  // Handle metadata validation errors — show the error instead of opening the browser
+  if (result.kind === 'metadata') {
+    const fallback = result as AutoProvisionFallback;
+    telemetry.trackMarketplaceEvent('marketplace_install_flow_metadata_error', {
+      ...baseProps,
+      reason: fallback.reason ?? fallback.kind,
+      auto_provision_result_kind: fallback.kind,
+      auto_provision_result_reason: fallback.reason,
+      auto_provision_error_message:
+        fallback.validationError ?? fallback.error_message,
+    });
+
+    const errorMessage =
+      fallback.validationError ??
+      fallback.error_message ??
+      'Metadata validation failed';
+    output.error(errorMessage);
+    output.log(
+      `Use ${chalk.cyan('--metadata KEY=VALUE')} to provide the required metadata fields.`
+    );
+    return 1;
+  }
+
   // Handle non-provisioned responses — pass through kind/reason from server
   if (result.kind !== 'provisioned') {
     const fallback = result as AutoProvisionFallback;

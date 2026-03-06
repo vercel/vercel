@@ -671,8 +671,8 @@ describe('integration add (auto-provision)', () => {
   });
 
   describe('fallback to browser', () => {
-    it('should open browser for metadata fallback with source and defaultResourceName', async () => {
-      useAutoProvision({ responseKey: 'metadata' });
+    it('should open browser for install fallback with source and defaultResourceName', async () => {
+      useAutoProvision({ responseKey: 'install' });
 
       client.setArgv('integration', 'add', 'acme');
       const exitCodePromise = integrationCommand(client);
@@ -723,7 +723,7 @@ describe('integration add (auto-provision)', () => {
     });
 
     it('should forward --metadata to browser fallback URL', async () => {
-      useAutoProvision({ responseKey: 'metadata' });
+      useAutoProvision({ responseKey: 'install' });
 
       client.setArgv(
         'integration',
@@ -748,7 +748,7 @@ describe('integration add (auto-provision)', () => {
     });
 
     it('should forward --metadata to browser URL with slash syntax, --name, and --metadata together', async () => {
-      useAutoProvision({ responseKey: 'metadata' });
+      useAutoProvision({ responseKey: 'install' });
 
       client.setArgv(
         'integration',
@@ -839,9 +839,9 @@ describe('integration add (auto-provision)', () => {
     });
 
     it('should forward --metadata to browser URL after term acceptance falls back', async () => {
-      // No installation, auto-provision returns metadata fallback
+      // No installation, auto-provision returns install fallback
       useAutoProvision({
-        responseKey: 'metadata',
+        responseKey: 'install',
         withInstallation: false,
       });
 
@@ -881,7 +881,7 @@ describe('integration add (auto-provision)', () => {
 
     it('should not include metadata in URL after term acceptance falls back without --metadata', async () => {
       useAutoProvision({
-        responseKey: 'metadata',
+        responseKey: 'install',
         withInstallation: false,
       });
 
@@ -910,7 +910,7 @@ describe('integration add (auto-provision)', () => {
     });
 
     it('should include all three URL params (projectSlug, defaultResourceName, source) when project is linked', async () => {
-      useAutoProvision({ responseKey: 'metadata' });
+      useAutoProvision({ responseKey: 'install' });
       useProject({
         ...defaultProject,
         id: 'vercel-integration-add',
@@ -942,7 +942,7 @@ describe('integration add (auto-provision)', () => {
     });
 
     it('should not include projectSlug in URL with --no-connect', async () => {
-      useAutoProvision({ responseKey: 'metadata' });
+      useAutoProvision({ responseKey: 'install' });
       useProject({
         ...defaultProject,
         id: 'vercel-integration-add',
@@ -974,7 +974,7 @@ describe('integration add (auto-provision)', () => {
     });
 
     it('should include custom --name in URL when fallback to browser without project', async () => {
-      useAutoProvision({ responseKey: 'metadata' });
+      useAutoProvision({ responseKey: 'install' });
 
       client.setArgv('integration', 'add', 'acme', '--name', 'my-custom-db');
       const exitCodePromise = integrationCommand(client);
@@ -995,7 +995,7 @@ describe('integration add (auto-provision)', () => {
     });
 
     it('should include custom --name and projectSlug in URL when project is linked', async () => {
-      useAutoProvision({ responseKey: 'metadata' });
+      useAutoProvision({ responseKey: 'install' });
       useProject({
         ...defaultProject,
         id: 'vercel-integration-add',
@@ -1026,7 +1026,7 @@ describe('integration add (auto-provision)', () => {
     });
 
     it('should not include projectSlug with --no-connect and custom --name', async () => {
-      useAutoProvision({ responseKey: 'metadata' });
+      useAutoProvision({ responseKey: 'install' });
       useProject({
         ...defaultProject,
         id: 'vercel-integration-add',
@@ -1061,6 +1061,54 @@ describe('integration add (auto-provision)', () => {
       expect(openMock).toHaveBeenCalledWith(
         expect.stringMatching(/source=cli/)
       );
+    });
+  });
+
+  describe('metadata validation errors', () => {
+    it('should surface validation error instead of opening browser when kind is metadata', async () => {
+      useAutoProvision({ responseKey: 'metadata' });
+
+      client.setArgv('integration', 'add', 'acme');
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        "Failed to validate metadata: metadata should have required property 'region'"
+      );
+      await expect(client.stderr).toOutput(
+        'Use --metadata KEY=VALUE to provide the required metadata fields.'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(1);
+      // Should NOT open the browser
+      expect(openMock).not.toHaveBeenCalled();
+
+      expect(client.telemetryEventStore.readonlyEvents).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            key: 'output:marketplace_install_flow_metadata_error',
+            value: expect.stringContaining('"reason"'),
+          }),
+        ])
+      );
+    });
+
+    it('should show error_message when validationError is absent', async () => {
+      useAutoProvision({ responseKey: 'metadata_no_validation' });
+
+      client.setArgv('integration', 'add', 'acme');
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'Metadata field "region" is required'
+      );
+      await expect(client.stderr).toOutput(
+        'Use --metadata KEY=VALUE to provide the required metadata fields.'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(1);
+      expect(openMock).not.toHaveBeenCalled();
     });
   });
 
@@ -1208,7 +1256,7 @@ describe('integration add (auto-provision)', () => {
     });
 
     it('should include planId in fallback URL when --plan is provided', async () => {
-      useAutoProvision({ responseKey: 'metadata' });
+      useAutoProvision({ responseKey: 'install' });
 
       client.setArgv('integration', 'add', 'acme', '--plan', 'pro');
       const exitCodePromise = integrationCommand(client);
@@ -1228,7 +1276,7 @@ describe('integration add (auto-provision)', () => {
     });
 
     it('should not include planId in fallback URL when --plan is not provided', async () => {
-      useAutoProvision({ responseKey: 'metadata' });
+      useAutoProvision({ responseKey: 'install' });
 
       client.setArgv('integration', 'add', 'acme');
       const exitCodePromise = integrationCommand(client);

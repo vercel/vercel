@@ -1014,6 +1014,19 @@ const autoProvisionResponses: Record<
     kind: 'metadata',
     reason: 'invalid_metadata_schema',
     error_message: 'Metadata field "region" is required',
+    validationError:
+      "Failed to validate metadata: metadata should have required property 'region'",
+    validationFields: [
+      { message: "should have required property 'region'", key: 'required' },
+    ],
+    url: 'https://vercel.com/acme/~/integrations/checkout/acme?productSlug=acme',
+    integration: autoProvisionIntegration,
+    product: autoProvisionProduct,
+  },
+  metadata_no_validation: {
+    kind: 'metadata',
+    reason: 'invalid_metadata_schema',
+    error_message: 'Metadata field "region" is required',
     url: 'https://vercel.com/acme/~/integrations/checkout/acme?productSlug=acme',
     integration: autoProvisionIntegration,
     product: autoProvisionProduct,
