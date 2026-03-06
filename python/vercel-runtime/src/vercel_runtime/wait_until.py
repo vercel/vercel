@@ -50,6 +50,10 @@ class WaitUntilState:
         await asyncio.to_thread(self.wait_sync)
 
     def wait_sync(self) -> None:
+        # Loop because new work can be submitted between ``_done`` being
+        # set (in ``_mark_finished``) and the lock being acquired here.
+        # Re-checking under the lock guarantees we only return once all
+        # pending work has truly completed.
         while True:
             self._done.wait()
             with self._lock:
@@ -78,6 +82,15 @@ class WaitUntilState:
             self._mark_finished()
 
     async def _resolve_async_work(self, work: WaitUntilWork) -> Any:
+        """Normalize *work* into an awaitable without executing it.
+
+        - Awaitables (coroutine objects) are returned as-is so the caller
+          can ``await`` them directly.
+        - Coroutine functions are called to produce a coroutine, again
+          returned unawaited.
+        - Sync callables are dispatched to a thread; the thread result is
+          returned (which may itself be awaitable, handled by the caller).
+        """
         if inspect.isawaitable(work):
             return work
 
@@ -121,10 +134,6 @@ def wait_until(
     state.submit(work)
 
 
-def waitUntil(work: WaitUntilTarget) -> None:  # noqa: N802
-    wait_until(work)
-
-
 def set_wait_until_state(
     state: WaitUntilState,
 ) -> contextvars.Token[WaitUntilState | None]:
@@ -141,6 +150,5 @@ __all__ = [
     "WaitUntilState",
     "reset_wait_until_state",
     "set_wait_until_state",
-    "waitUntil",
     "wait_until",
 ]
