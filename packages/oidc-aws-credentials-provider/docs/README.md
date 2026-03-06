@@ -27,23 +27,24 @@ import { awsCredentialsProvider } from '@vercel/functions/oidc';
 
 const s3Client = new s3.S3Client({
   credentials: awsCredentialsProvider({
-    roleArn: "arn:aws:iam::1234567890:role/RoleA",
-    clientConfig: { region: "us-west-2" },
+    roleArn: 'arn:aws:iam::1234567890:role/RoleA',
+    clientConfig: { region: 'us-west-2' },
     clientPlugins: [addFooHeadersPlugin],
     roleAssumerWithWebIdentity: customRoleAssumer,
-    roleSessionName: "session_123",
-    providerId: "graph.facebook.com",
-    policyArns: [{ arn: "arn:aws:iam::1234567890:policy/SomePolicy" }],
-    policy: "{\"Statement\": [{\"Effect\": \"Allow\", \"Action\": \"s3:ListBucket\", \"Resource\": \"*\"}]}",
-    durationSeconds: 7200
+    roleSessionName: 'session_123',
+    providerId: 'graph.facebook.com',
+    policyArns: [{ arn: 'arn:aws:iam::1234567890:policy/SomePolicy' }],
+    policy:
+      '{"Statement": [{"Effect": "Allow", "Action": "s3:ListBucket", "Resource": "*"}]}',
+    durationSeconds: 7200,
   }),
 });
 ```
 
 #### Parameters
 
-| Name | Type | Description |
-| :------ | :------ | :------ |
+| Name   | Type                                                                     | Description                |
+| :----- | :----------------------------------------------------------------------- | :------------------------- |
 | `init` | [`AwsCredentialsProviderInit`](interfaces/AwsCredentialsProviderInit.md) | The initialization object. |
 
 #### Returns
