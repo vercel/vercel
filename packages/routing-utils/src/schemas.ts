@@ -284,6 +284,7 @@ const transformsSchema = {
             },
           },
         },
+        // biome-ignore lint/suspicious/noThenProperty: JSON Schema if/then keyword
         then: {
           required: ['args'],
         },
@@ -307,6 +308,7 @@ const transformsSchema = {
             },
           ],
         },
+        // biome-ignore lint/suspicious/noThenProperty: JSON Schema if/then keyword
         then: {
           properties: {
             target: {
@@ -315,6 +317,7 @@ const transformsSchema = {
                   if: {
                     type: 'string',
                   },
+                  // biome-ignore lint/suspicious/noThenProperty: JSON Schema if/then keyword
                   then: {
                     pattern: '^[a-zA-Z0-9_-]+$',
                   },
