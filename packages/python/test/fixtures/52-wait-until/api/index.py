@@ -1,8 +1,9 @@
+import asyncio
 import json
 import logging
 import os
-import time
 from http.server import BaseHTTPRequestHandler
+from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 from vercel import wait_until
@@ -15,18 +16,21 @@ def _token_path(ns: str, token: str) -> str:
     return os.path.join("/tmp", "vercel-python-wait-until", ns, token)
 
 
-def _background_write(ns: str, token: str) -> None:
-    time.sleep(1.0)
+async def _background_write(ns: str, token: str) -> None:
+    await asyncio.sleep(1.0)
     path = _token_path(ns, token)
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, "w") as f:
-        f.write(token)
+    await asyncio.to_thread(
+        os.makedirs, os.path.dirname(path), exist_ok=True
+    )
+    await asyncio.to_thread(Path(path).write_text, token)
     logger.info("waitUntil wrote token %s", token)
 
 
-def _background_error(token: str) -> None:
-    time.sleep(0.2)
-    raise RuntimeError(f"waitUntil fixture error for token {token}")
+async def _background_error(token: str) -> None:
+    await asyncio.sleep(0.2)
+    message = f"waitUntil fixture error for token {token}"
+    logger.error(message)
+    raise RuntimeError(message)
 
 
 class handler(BaseHTTPRequestHandler):
@@ -38,7 +42,7 @@ class handler(BaseHTTPRequestHandler):
         token = params.get("token", ["default"])[0]
 
         if action == "enqueue":
-            wait_until(lambda: _background_write(ns, token))
+            wait_until(_background_write(ns, token))
             self._send_json(
                 {
                     "status": "queued",
@@ -62,7 +66,7 @@ class handler(BaseHTTPRequestHandler):
             return
 
         if action == "error":
-            wait_until(lambda: _background_error(token))
+            wait_until(_background_error(token))
             self._send_json(
                 {
                     "status": "queued-error",

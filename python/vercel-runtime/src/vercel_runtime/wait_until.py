@@ -11,6 +11,7 @@ if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
 
 type WaitUntilWork = Awaitable[Any] | Callable[[], Any]
+type WaitUntilTarget = Awaitable[Any] | Callable[..., Any]
 
 _logger = logging.getLogger(__name__)
 
@@ -104,7 +105,14 @@ _wait_until_state: contextvars.ContextVar[WaitUntilState | None] = (
 )
 
 
-def wait_until(work: WaitUntilWork) -> None:
+def wait_until(
+    work: WaitUntilTarget,
+) -> None:
+    if not inspect.isawaitable(work) and not callable(work):
+        raise TypeError(
+            "wait_until() expects an awaitable or zero-argument callable"
+        )
+
     state = _wait_until_state.get()
     if state is None:
         _logger.warning("wait_until() called outside of an active request")
@@ -113,7 +121,7 @@ def wait_until(work: WaitUntilWork) -> None:
     state.submit(work)
 
 
-def waitUntil(work: WaitUntilWork) -> None:  # noqa: N802
+def waitUntil(work: WaitUntilTarget) -> None:  # noqa: N802
     wait_until(work)
 
 
