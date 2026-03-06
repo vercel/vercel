@@ -93,6 +93,7 @@ import { treeKill } from '../tree-kill';
 import { ServicesOrchestrator } from './services-orchestrator';
 import { applyOverriddenHeaders, nodeHeadersToFetchHeaders } from './headers';
 import { formatQueryString, parseQueryString } from './parse-query-string';
+import { suppressAutoHostRoutesByUserRoutes } from '../build/service-host-route-precedence';
 import {
   errorToString,
   isErrnoException,
@@ -612,15 +613,7 @@ export default class DevServer {
         relative(this.cwd, f)
       );
 
-      let {
-        builders,
-        warnings,
-        errors,
-        defaultRoutes,
-        redirectRoutes,
-        rewriteRoutes,
-        errorRoutes,
-      } = await detectBuilders(files, pkg, {
+      const detectedBuilders = await detectBuilders(files, pkg, {
         tag: 'latest',
         functions: vercelConfig.functions,
         projectSettings: projectSettings || this.projectSettings,
@@ -629,6 +622,20 @@ export default class DevServer {
         trailingSlash,
         workPath: this.cwd,
       });
+      let {
+        builders,
+        warnings,
+        errors,
+        defaultRoutes,
+        redirectRoutes,
+        rewriteRoutes,
+        errorRoutes,
+      } = detectedBuilders;
+      const hostRewriteRoutes = (
+        detectedBuilders as typeof detectedBuilders & {
+          hostRewriteRoutes?: Route[] | null;
+        }
+      ).hostRewriteRoutes;
 
       if (errors) {
         output.error(errors[0].message);
@@ -654,6 +661,14 @@ export default class DevServer {
 
       let routes: Route[] = [];
       routes.push(...(redirectRoutes || []));
+      routes = appendRoutesToPhase({
+        routes,
+        newRoutes: suppressAutoHostRoutesByUserRoutes({
+          autoHostRoutes: hostRewriteRoutes,
+          userRoutes: vercelConfig.routes,
+        }),
+        phase: null,
+      });
       routes.push(
         ...appendRoutesToPhase({
           routes: vercelConfig.routes,

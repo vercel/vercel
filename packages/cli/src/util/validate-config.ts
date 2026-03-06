@@ -16,6 +16,10 @@ import {
 } from '@vercel/build-utils';
 import { fileNameSymbol } from '@vercel/client';
 
+const DNS_LABEL_RE = /^(?!-)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/i;
+const FQDN_RE =
+  /^(?=.{1,253}$)(?:(?!-)[a-z0-9-]{1,63}(?<!-)\.)+(?!-)[a-z0-9-]{2,63}(?<!-)$/i;
+
 const imagesSchema = {
   type: 'object',
   additionalProperties: false,
@@ -172,6 +176,16 @@ const serviceConfigSchema = {
       minLength: 1,
       maxLength: 512,
     },
+    subdomain: {
+      type: 'string',
+      minLength: 1,
+      maxLength: 63,
+    },
+    host: {
+      type: 'string',
+      minLength: 1,
+      maxLength: 253,
+    },
     framework: {
       type: 'string',
       minLength: 1,
@@ -306,6 +320,74 @@ const vercelConfigSchema = {
 const ajv = new Ajv();
 const validate = ajv.compile(vercelConfigSchema);
 
+function validateExperimentalServicesConfig(
+  config: VercelConfig
+): NowBuildError | null {
+  const services = config.experimentalServices;
+  if (!services || typeof services !== 'object') {
+    return null;
+  }
+
+  for (const [name, rawConfig] of Object.entries(services)) {
+    if (!rawConfig || typeof rawConfig !== 'object') {
+      continue;
+    }
+
+    const serviceConfig = rawConfig as Record<string, unknown>;
+    const serviceType =
+      serviceConfig.type === 'cron' || serviceConfig.type === 'worker'
+        ? serviceConfig.type
+        : 'web';
+    const routePrefix =
+      typeof serviceConfig.routePrefix === 'string'
+        ? serviceConfig.routePrefix
+        : undefined;
+    const subdomain =
+      typeof serviceConfig.subdomain === 'string'
+        ? serviceConfig.subdomain
+        : undefined;
+    const host =
+      typeof serviceConfig.host === 'string' ? serviceConfig.host : undefined;
+
+    if (subdomain && host) {
+      return new NowBuildError({
+        code: 'SERVICE_SUBDOMAIN_AND_HOST',
+        message: `Service "${name}" cannot define both "subdomain" and "host". Choose one.`,
+      });
+    }
+
+    if (subdomain && !DNS_LABEL_RE.test(subdomain)) {
+      return new NowBuildError({
+        code: 'INVALID_SERVICE_SUBDOMAIN',
+        message: `Service "${name}" has invalid "subdomain" value "${subdomain}". Use a single DNS label such as "api".`,
+      });
+    }
+
+    if (host && !FQDN_RE.test(host)) {
+      return new NowBuildError({
+        code: 'INVALID_SERVICE_HOST',
+        message: `Service "${name}" has invalid "host" value "${host}". Use a fully-qualified domain name such as "api.example.com".`,
+      });
+    }
+
+    if (serviceType !== 'web' && (subdomain || host)) {
+      return new NowBuildError({
+        code: 'INVALID_SERVICE_HOST_CONFIG',
+        message: `${serviceType === 'worker' ? 'Worker' : 'Cron'} service "${name}" cannot have "subdomain" or "host". Only web services can use host-based routing.`,
+      });
+    }
+
+    if (serviceType === 'web' && !routePrefix && !subdomain && !host) {
+      return new NowBuildError({
+        code: 'MISSING_SERVICE_ROUTE_TARGET',
+        message: `Web service "${name}" must define at least one of "routePrefix", "subdomain", or "host".`,
+      });
+    }
+  }
+
+  return null;
+}
+
 export function validateConfig(config: VercelConfig): NowBuildError | null {
   if (!validate(config)) {
     if (validate.errors && validate.errors[0]) {
@@ -348,6 +430,11 @@ export function validateConfig(config: VercelConfig): NowBuildError | null {
       message:
         'The `experimentalServiceGroups` property requires `experimentalServices` to be defined. Service groups reference services by name.',
     });
+  }
+
+  const serviceConfigError = validateExperimentalServicesConfig(config);
+  if (serviceConfigError) {
+    return serviceConfigError;
   }
 
   return null;

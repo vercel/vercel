@@ -1,24 +1,29 @@
 import type { Route } from '@vercel/routing-utils';
 import type {
-  ExperimentalServiceConfig,
+  ExperimentalServiceConfig as BuildUtilsExperimentalServiceConfig,
   ExperimentalServiceGroups,
-  ExperimentalServices,
   ServiceRuntime,
   ServiceType,
-  Service,
+  Service as BuildUtilsService,
   Builder,
 } from '@vercel/build-utils';
 import type { DetectorFilesystem } from '../detectors/filesystem';
 
-export type {
-  ExperimentalServiceConfig,
-  ExperimentalServiceGroups,
-  ExperimentalServices,
-  ServiceRuntime,
-  ServiceType,
-  Service,
-  Builder,
-};
+export type { ExperimentalServiceGroups, ServiceRuntime, ServiceType, Builder };
+
+export interface ExperimentalServiceConfig
+  extends BuildUtilsExperimentalServiceConfig {
+  subdomain?: string;
+  host?: string;
+}
+
+export interface Service extends BuildUtilsService {
+  handlerFunction?: string;
+  subdomain?: string;
+  host?: string;
+}
+
+export type ExperimentalServices = Record<string, ExperimentalServiceConfig>;
 
 /**
  * @deprecated Use `Service` instead
@@ -35,6 +40,8 @@ export interface DetectServicesOptions {
 }
 
 export interface ServicesRoutes {
+  /** Host-based rewrite routes for subdomain/host mounted web services */
+  hostRewrites: Route[];
   /** Rewrite routes for non-root web services (prefix-based) */
   rewrites: Route[];
   /** Default routes (catch-all for root web service) */

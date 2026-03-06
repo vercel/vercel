@@ -1,4 +1,4 @@
-import type { Route } from '@vercel/routing-utils';
+import type { HasField, Route } from '@vercel/routing-utils';
 import {
   getOwnershipGuard,
   normalizeRoutePrefix,
@@ -20,6 +20,11 @@ import {
 } from './utils';
 import { resolveAllConfiguredServices } from './resolve';
 import { autoDetectServices } from './auto-detect';
+
+const PREVIEW_DOMAIN_MISSING: HasField = [
+  { type: 'host', value: { suf: '.vercel.app' } },
+  { type: 'host', value: { suf: '.vercel.dev' } },
+];
 
 /**
  * Detect and resolve services within a project.
@@ -43,7 +48,13 @@ export async function detectServices(
     return {
       services: [],
       source: 'configured',
-      routes: { rewrites: [], defaults: [], crons: [], workers: [] },
+      routes: {
+        hostRewrites: [],
+        rewrites: [],
+        defaults: [],
+        crons: [],
+        workers: [],
+      },
       errors: [configError],
       warnings: [],
     };
@@ -61,7 +72,13 @@ export async function detectServices(
       return {
         services: [],
         source: 'auto-detected',
-        routes: { rewrites: [], defaults: [], crons: [], workers: [] },
+        routes: {
+          hostRewrites: [],
+          rewrites: [],
+          defaults: [],
+          crons: [],
+          workers: [],
+        },
         errors: autoResult.errors,
         warnings: [],
       };
@@ -86,7 +103,13 @@ export async function detectServices(
     return {
       services: [],
       source: 'auto-detected',
-      routes: { rewrites: [], defaults: [], crons: [], workers: [] },
+      routes: {
+        hostRewrites: [],
+        rewrites: [],
+        defaults: [],
+        crons: [],
+        workers: [],
+      },
       errors: [
         {
           code: 'NO_SERVICES_CONFIGURED',
@@ -148,6 +171,7 @@ export async function detectServices(
 export function generateServicesRoutes(
   services: ResolvedService[]
 ): ServicesRoutes {
+  const hostRewrites: Route[] = [];
   const rewrites: Route[] = [];
   const defaults: Route[] = [];
   const crons: Route[] = [];
@@ -168,6 +192,26 @@ export function generateServicesRoutes(
     const { routePrefix } = service;
     const normalizedPrefix = routePrefix.slice(1); // Strip leading /
     const ownershipGuard = getOwnershipGuard(routePrefix, allWebPrefixes);
+    const hostCondition = getHostCondition(service);
+
+    if (hostCondition && routePrefix !== '/') {
+      const normalizedRoutePrefix = normalizeRoutePrefix(routePrefix);
+      const escapedPrefix = escapeRegex(normalizedRoutePrefix.slice(1));
+      hostRewrites.push({
+        src: '^/$',
+        dest: normalizedRoutePrefix,
+        has: hostCondition,
+        missing: PREVIEW_DOMAIN_MISSING,
+        check: true,
+      });
+      hostRewrites.push({
+        src: `^/(?!${escapedPrefix}(?:/|$))(.*)$`,
+        dest: `${normalizedRoutePrefix}/$1`,
+        has: hostCondition,
+        missing: PREVIEW_DOMAIN_MISSING,
+        check: true,
+      });
+    }
 
     // Route-owning builders (e.g., Next.js, @vercel/backends) produce their
     // own route tables. Skip synthetic route generation for them.
@@ -251,7 +295,7 @@ export function generateServicesRoutes(
       check: true,
     });
   }
-  return { rewrites, defaults, crons, workers };
+  return { hostRewrites, rewrites, defaults, crons, workers };
 }
 
 function escapeRegex(str: string): string {
@@ -267,4 +311,17 @@ function getWebRoutePrefixes(services: ResolvedService[]): string[] {
     unique.add(normalizeRoutePrefix(service.routePrefix));
   }
   return Array.from(unique);
+}
+
+function getHostCondition(service: ResolvedService): HasField | undefined {
+  if (service.type !== 'web') {
+    return undefined;
+  }
+  if (typeof service.subdomain === 'string' && service.subdomain.length > 0) {
+    return [{ type: 'host', value: { pre: `${service.subdomain}.` } }];
+  }
+  if (typeof service.host === 'string' && service.host.length > 0) {
+    return [{ type: 'host', value: { eq: service.host } }];
+  }
+  return undefined;
 }
