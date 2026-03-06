@@ -10,6 +10,7 @@ import {
   PYTHON_CANDIDATE_ENTRYPOINTS,
   detectPythonEntrypoint,
 } from './entrypoint';
+import { runFrameworkHook } from './index';
 import { getDefaultPythonVersion } from './version';
 import {
   isInVirtualEnv,
@@ -385,7 +386,12 @@ function createDevShim(
     const entryAbs = join(workPath, entry);
 
     const shimPath = join(vercelPythonDir, `${DEV_SHIM_MODULE}.py`);
-    const templatePath = join(__dirname, '..', `${DEV_SHIM_MODULE}.py`);
+    const templatePath = join(
+      __dirname,
+      '..',
+      'templates',
+      `${DEV_SHIM_MODULE}.py`
+    );
     const template = readFileSync(templatePath, 'utf8');
     const shimSource = template
       .replace(/__VC_DEV_MODULE_NAME__/g, qualifiedModule)
@@ -479,11 +485,22 @@ export const startDevServer: StartDevServer = async opts => {
   // Silence Node warnings and install cleanup handlers once
   if (!restoreWarnings) restoreWarnings = silenceNodeWarnings();
   installGlobalCleanupHandlers();
-  const entry = await detectPythonEntrypoint(
+  const detected = await detectPythonEntrypoint(
     framework as PythonFramework,
     workPath,
     rawEntrypoint
   );
+  const env = { ...process.env, ...(meta.env || {}) } as NodeJS.ProcessEnv;
+  let entry = detected?.entrypoint;
+  if (!entry) {
+    const hookResult = await runFrameworkHook(framework, {
+      pythonEnv: env,
+      projectDir: join(workPath, detected?.baseDir ?? ''),
+      entrypoint: rawEntrypoint,
+      detected: detected ?? undefined,
+    });
+    entry = hookResult?.entrypoint;
+  }
   if (!entry) {
     const searched = PYTHON_CANDIDATE_ENTRYPOINTS.join(', ');
     throw new NowBuildError({
@@ -496,8 +513,6 @@ export const startDevServer: StartDevServer = async opts => {
 
   // Convert to module path, e.g. "src/app.py" -> "src.app"
   const modulePath = entry.replace(/\.py$/i, '').replace(/[\\/]/g, '.');
-
-  const env = { ...process.env, ...(meta.env || {}) } as NodeJS.ProcessEnv;
 
   // Track child process and listeners
   let childProcess: ChildProcess | null = null;

@@ -15,7 +15,6 @@ export {
   containsAppOrHandler,
   containsTopLevelCallable,
   getStringConstant,
-  parseDjangoSettingsModule,
 } from './semantic/entrypoints';
 
 // =============================================================================
