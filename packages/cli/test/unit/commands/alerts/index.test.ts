@@ -53,7 +53,6 @@ describe('alerts', () => {
     expect(client.stderr.getFullOutput()).toContain(
       'List alerts for a project or team'
     );
-    expect(client.stderr.getFullOutput()).toContain('schema');
     expect(client.stderr.getFullOutput()).toContain('--project');
   });
 
@@ -204,59 +203,5 @@ describe('alerts', () => {
     expect(client.stderr.getFullOutput()).toContain(
       'Cannot specify both --all and --project'
     );
-  });
-
-  it('shows schema with available type filters', async () => {
-    let requestQuery: any;
-    client.scenario.get('/alerts/v2/types', (req, res) => {
-      requestQuery = req.query;
-      res.json([
-        {
-          id: 'function_invocations',
-          type: 'usage_anomaly',
-          title: 'Function Invocations',
-          unit: 'Invocations',
-        },
-        {
-          id: '5xx',
-          type: 'error_anomaly',
-          title: '5xx status codes',
-          unit: 'Requests',
-        },
-      ]);
-    });
-
-    client.setArgv('alerts', 'schema');
-
-    const exitCode = await alerts(client);
-
-    expect(exitCode).toBe(0);
-    expect(requestQuery.teamId).toBe('team_dummy');
-    expect(client.stderr.getFullOutput()).toContain(
-      'Filter values for --type: usage_anomaly, error_anomaly'
-    );
-    expect(client.stderr.getFullOutput()).toContain('function_invocations');
-  });
-
-  it('outputs schema json with --format=json', async () => {
-    client.scenario.get('/alerts/v2/types', (_req, res) => {
-      res.json([
-        {
-          id: 'function_invocations',
-          type: 'usage_anomaly',
-          title: 'Function Invocations',
-          unit: 'Invocations',
-        },
-      ]);
-    });
-
-    client.setArgv('alerts', 'schema', '--format=json');
-
-    const exitCode = await alerts(client);
-
-    expect(exitCode).toBe(0);
-    const stdout = JSON.parse(client.stdout.getFullOutput());
-    expect(stdout.types).toEqual(['usage_anomaly']);
-    expect(stdout.filters).toHaveLength(1);
   });
 });

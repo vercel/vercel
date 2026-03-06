@@ -1,24 +1,6 @@
 import { formatOption, limitOption } from '../../util/arg-common';
 import { packageName } from '../../util/pkg-name';
 
-export const schemaSubcommand = {
-  name: 'schema',
-  aliases: [],
-  description: 'List available alert filter types and metric IDs.',
-  arguments: [],
-  options: [formatOption],
-  examples: [
-    {
-      name: 'List alert types and settings',
-      value: `${packageName} alerts schema`,
-    },
-    {
-      name: 'Output JSON schema',
-      value: `${packageName} alerts schema --format json`,
-    },
-  ],
-} as const;
-
 export const alertsCommand = {
   name: 'alerts',
   aliases: [],
@@ -35,7 +17,6 @@ export const alertsCommand = {
       options: [],
       examples: [],
     },
-    schemaSubcommand,
   ],
   options: [
     {
