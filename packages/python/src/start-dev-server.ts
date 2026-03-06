@@ -19,7 +19,7 @@ import {
   getVenvPythonBin,
   getVenvBinDir,
 } from './utils';
-import { findUvBinary, getProtectedUvEnv } from './uv';
+import { findUvBinary, getProtectedUvEnv, getUvCacheDir } from './uv';
 import {
   discoverPackage,
   detectInstallSource,
@@ -259,7 +259,7 @@ async function runSync({
     debug(`Running "${spawnCmd} ${spawnArgs.join(' ')}" in ${projectDir}...`);
     const child = spawn(spawnCmd, spawnArgs, {
       cwd: projectDir,
-      env: getProtectedUvEnv(env),
+      env: getProtectedUvEnv(env, getUvCacheDir(workPath)),
       stdio: ['inherit', 'pipe', 'pipe'],
     });
 
@@ -425,7 +425,13 @@ async function getMultiServicePythonRunner(
 
   // Create a per-service .venv, so deps are managed separately.
   const venvPath = join(workPath, '.venv');
-  await ensureVenv({ pythonPath: systemPython, venvPath, uvPath, quiet: true });
+  await ensureVenv({
+    pythonPath: systemPython,
+    venvPath,
+    uvPath,
+    uvCacheDir: getUvCacheDir(workPath),
+    quiet: true,
+  });
   debug(`Created virtualenv at ${venvPath} for multi-service dev`);
 
   const pythonBin = getVenvPythonBin(venvPath);
