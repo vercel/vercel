@@ -191,6 +191,7 @@ describe('webhooks create', () => {
 
       // Should show validation error and re-prompt
       await expect(client.stderr).toOutput('Invalid URL');
+      client.stdin.write('\x15'); // Ctrl+U to clear stale input
       client.stdin.write('https://example.com/webhook\n');
 
       const exitCode = await exitCodePromise;
