@@ -11,13 +11,14 @@ import { getLinkedProject } from '../../util/projects/link';
 import getScope from '../../util/get-scope';
 import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name';
 import { ProjectNotFound, isAPIError } from '../../util/errors-ts';
+import type { AlertsTelemetryClient } from '../../util/telemetry/commands/alerts';
 
 interface ListFlags {
   '--type'?: string[];
   '--project'?: string;
   '--all'?: boolean;
-  '--from'?: string;
-  '--to'?: string;
+  '--since'?: string;
+  '--until'?: string;
   '--limit'?: number;
   '--format'?: string;
 }
@@ -100,6 +101,13 @@ function validateMutualExclusivity(
     return 'Cannot specify both --all and --project. Use one or the other.';
   }
   return undefined;
+}
+
+function resolveTimeRange(flags: ListFlags): { from?: string; to?: string } {
+  return {
+    from: flags['--since'],
+    to: flags['--until'],
+  };
 }
 
 function getDefaultRange(): { from: string; to: string } {
@@ -297,7 +305,10 @@ function printGroups(groups: AlertGroup[]) {
   output.print(`\n${tableOutput}\n`);
 }
 
-export default async function list(client: Client): Promise<number> {
+export default async function list(
+  client: Client,
+  telemetry: AlertsTelemetryClient
+): Promise<number> {
   const flagsSpecification = getFlagsSpecification(alertsCommand.options);
 
   let parsedArgs;
@@ -316,6 +327,15 @@ export default async function list(client: Client): Promise<number> {
   }
   const jsonOutput = formatResult.jsonOutput;
 
+  const types = normalizeTypeFilters(flags['--type']);
+  telemetry.trackCliOptionType(types.length > 0 ? types : undefined);
+  telemetry.trackCliOptionSince(flags['--since']);
+  telemetry.trackCliOptionUntil(flags['--until']);
+  telemetry.trackCliOptionProject(flags['--project']);
+  telemetry.trackCliFlagAll(flags['--all']);
+  telemetry.trackCliOptionLimit(flags['--limit']);
+  telemetry.trackCliOptionFormat(flags['--format']);
+
   const mutualError = validateMutualExclusivity(
     flags['--all'],
     flags['--project']
@@ -333,6 +353,8 @@ export default async function list(client: Client): Promise<number> {
     return scope;
   }
 
+  const resolvedTimeRange = resolveTimeRange(flags);
+
   const query = new URLSearchParams({
     teamId: scope.teamId,
   });
@@ -342,16 +364,16 @@ export default async function list(client: Client): Promise<number> {
   if (flags['--limit']) {
     query.set('limit', String(flags['--limit']));
   }
-  for (const type of normalizeTypeFilters(flags['--type'])) {
+  for (const type of types) {
     query.append('types', type);
   }
-  if (flags['--from']) {
-    query.set('from', flags['--from']);
+  if (resolvedTimeRange.from) {
+    query.set('from', resolvedTimeRange.from);
   }
-  if (flags['--to']) {
-    query.set('to', flags['--to']);
+  if (resolvedTimeRange.to) {
+    query.set('to', resolvedTimeRange.to);
   }
-  if (!flags['--from'] && !flags['--to']) {
+  if (!resolvedTimeRange.from && !resolvedTimeRange.to) {
     const defaultRange = getDefaultRange();
     query.set('from', defaultRange.from);
     query.set('to', defaultRange.to);

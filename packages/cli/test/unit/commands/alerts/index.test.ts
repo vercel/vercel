@@ -150,7 +150,7 @@ describe('alerts', () => {
     expect(requestQuery.to).toBeDefined();
   });
 
-  it('supports explicit --from and --to range', async () => {
+  it('supports explicit --since and --until range', async () => {
     let requestQuery: any;
     client.scenario.get('/alerts/v3/groups', (req, res) => {
       requestQuery = req.query;
@@ -159,9 +159,9 @@ describe('alerts', () => {
 
     client.setArgv(
       'alerts',
-      '--from',
+      '--since',
       '2026-03-03T00:00:00.000Z',
-      '--to',
+      '--until',
       '2026-03-04T00:00:00.000Z'
     );
 

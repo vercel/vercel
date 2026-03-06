@@ -1,23 +1,23 @@
 import { formatOption, limitOption } from '../../util/arg-common';
 import { packageName } from '../../util/pkg-name';
 
+export const listSubcommand = {
+  name: 'ls',
+  aliases: ['list'],
+  description: '',
+  default: true,
+  hidden: true,
+  arguments: [],
+  options: [],
+  examples: [],
+} as const;
+
 export const alertsCommand = {
   name: 'alerts',
   aliases: [],
   description: 'List alerts for a project or team.',
   arguments: [],
-  subcommands: [
-    {
-      name: 'ls',
-      aliases: ['list'],
-      description: '',
-      default: true,
-      hidden: true,
-      arguments: [],
-      options: [],
-      examples: [],
-    },
-  ],
+  subcommands: [listSubcommand],
   options: [
     {
       name: 'type',
@@ -46,7 +46,7 @@ export const alertsCommand = {
         'Show team-wide alerts (ignore linked project auto-scoping).',
     },
     {
-      name: 'from',
+      name: 'since',
       shorthand: null,
       type: String,
       argument: 'ISO_DATE',
@@ -55,7 +55,7 @@ export const alertsCommand = {
         'Start of time range (ISO-8601). Defaults to 24 hours ago if not provided.',
     },
     {
-      name: 'to',
+      name: 'until',
       shorthand: null,
       type: String,
       argument: 'ISO_DATE',
@@ -84,7 +84,7 @@ export const alertsCommand = {
     },
     {
       name: 'Custom time range',
-      value: `${packageName} alerts --from 2026-03-01T00:00:00.000Z --to 2026-03-02T00:00:00.000Z`,
+      value: `${packageName} alerts --since 2026-03-01T00:00:00.000Z --until 2026-03-02T00:00:00.000Z`,
     },
   ],
 } as const;
