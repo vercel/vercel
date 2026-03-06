@@ -11,7 +11,10 @@ import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { isAPIError } from '../../util/errors-ts';
-import { validateWebhookEvents } from '../../util/webhooks/get-webhook-events';
+import {
+  getWebhookEvents,
+  validateWebhookEvents,
+} from '../../util/webhooks/get-webhook-events';
 
 export default async function create(client: Client, argv: string[]) {
   const telemetry = new WebhooksCreateTelemetryClient({
@@ -29,53 +32,95 @@ export default async function create(client: Client, argv: string[]) {
     return 1;
   }
   const { args, flags: opts } = parsedArgs;
-  const [url] = args;
+  let [url] = args;
 
-  telemetry.trackCliArgumentUrl(url);
-
+  // --- Collect URL ---
   if (!url) {
-    output.error(
-      `${getCommandName(`webhooks create <url>`)} expects one argument`
-    );
-    return 1;
-  }
-
-  // Validate URL format
-  try {
-    const urlObj = new URL(url);
-    if (!['http:', 'https:'].includes(urlObj.protocol)) {
-      output.error('Webhook URL must use http or https protocol');
+    if (client.nonInteractive) {
+      output.error(
+        `${getCommandName(`webhooks create <url>`)} expects one argument`
+      );
       return 1;
     }
-  } catch {
-    output.error(`Invalid URL: ${url}`);
-    return 1;
+    url = await client.input.text({
+      message: 'Webhook URL:',
+      validate: (val: string) => {
+        if (!val) return 'URL is required';
+        try {
+          const urlObj = new URL(val);
+          if (!['http:', 'https:'].includes(urlObj.protocol)) {
+            return 'Webhook URL must use http or https protocol';
+          }
+        } catch {
+          return 'Invalid URL';
+        }
+        return true;
+      },
+    });
+  } else {
+    // Validate URL format when provided as argument
+    try {
+      const urlObj = new URL(url);
+      if (!['http:', 'https:'].includes(urlObj.protocol)) {
+        output.error('Webhook URL must use http or https protocol');
+        return 1;
+      }
+    } catch {
+      output.error(`Invalid URL: ${url}`);
+      return 1;
+    }
   }
 
-  const events = opts['--event'] as string[] | undefined;
+  // --- Collect events ---
   const projectIds = opts['--project'] as string[] | undefined;
+  const eventFlags = opts['--event'] as string[] | undefined;
+  let events: string[];
 
-  if (!events || events.length === 0) {
-    output.error(
-      `At least one event is required. Use ${chalk.cyan('--event <event>')} to specify events.`
-    );
-    output.log(
-      `Example: ${getCommandName(
-        'webhooks create https://example.com/webhook --event deployment.created'
-      )}`
-    );
-    return 1;
+  if (!eventFlags || eventFlags.length === 0) {
+    if (client.nonInteractive) {
+      output.error(
+        `At least one event is required. Use ${chalk.cyan('--event <event>')} to specify events.`
+      );
+      output.log(
+        `Example: ${getCommandName(
+          'webhooks create https://example.com/webhook --event deployment.created'
+        )}`
+      );
+      return 1;
+    }
+
+    const availableEvents = await getWebhookEvents();
+    if (availableEvents.length === 0) {
+      output.error(
+        'Could not fetch available webhook events. Please specify events using --event flags.'
+      );
+      return 1;
+    }
+
+    events = await client.input.checkbox<string>({
+      message: 'Select events:',
+      choices: availableEvents.map(event => ({
+        name: event,
+        value: event,
+      })),
+      validate: (selected: readonly unknown[]) => {
+        if (selected.length === 0) return 'At least one event is required';
+        return true;
+      },
+    });
+  } else {
+    // Validate events against the OpenAPI spec
+    const invalidEvents = await validateWebhookEvents(eventFlags);
+    if (invalidEvents.length > 0) {
+      output.error(
+        `Invalid event type${invalidEvents.length > 1 ? 's' : ''}: ${invalidEvents.join(', ')}`
+      );
+      return 1;
+    }
+    events = eventFlags;
   }
 
-  // Validate events against the OpenAPI spec
-  const invalidEvents = await validateWebhookEvents(events);
-  if (invalidEvents.length > 0) {
-    output.error(
-      `Invalid event type${invalidEvents.length > 1 ? 's' : ''}: ${invalidEvents.join(', ')}`
-    );
-    return 1;
-  }
-
+  telemetry.trackCliArgumentUrl(url);
   telemetry.trackCliOptionEvent(events);
   telemetry.trackCliOptionProject(projectIds);
 
@@ -97,14 +142,14 @@ export default async function create(client: Client, argv: string[]) {
     );
     output.print('\n');
     output.print(chalk.bold('  Webhook Details\n\n'));
-    output.print(`    ${chalk.cyan('ID')}\t\t${webhook.id}\n`);
-    output.print(`    ${chalk.cyan('URL')}\t\t${webhook.url}\n`);
+    output.print(`    ${chalk.cyan('ID'.padEnd(10))}${webhook.id}\n`);
+    output.print(`    ${chalk.cyan('URL'.padEnd(10))}${webhook.url}\n`);
     output.print(
-      `    ${chalk.cyan('Events')}\t\t${webhook.events.join(', ')}\n`
+      `    ${chalk.cyan('Events'.padEnd(10))}${webhook.events.join(', ')}\n`
     );
     if (webhook.projectIds && webhook.projectIds.length > 0) {
       output.print(
-        `    ${chalk.cyan('Projects')}\t${webhook.projectIds.join(', ')}\n`
+        `    ${chalk.cyan('Projects'.padEnd(10))}${webhook.projectIds.join(', ')}\n`
       );
     }
     output.print('\n');
