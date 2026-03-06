@@ -123,8 +123,6 @@ export interface BuildOptions {
     routePrefix?: string;
     /** Optional subdomain this service is mounted on (e.g., "api"). */
     subdomain?: string;
-    /** Optional fully-qualified hostname this service is mounted on. */
-    host?: string;
     /** Workspace directory for this service, relative to the project root. */
     workspace?: string;
   };
@@ -565,7 +563,6 @@ export interface Service {
   routePrefix?: string;
   routePrefixSource?: 'configured' | 'generated';
   subdomain?: string;
-  host?: string;
   /* cron service config */
   schedule?: string;
   /* optional handler for cron service in format of {module}:{callable} */
@@ -781,8 +778,6 @@ export interface ExperimentalServiceConfig {
   routePrefix?: string;
   /** Subdomain this service should respond to (web services only). */
   subdomain?: string;
-  /** Fully-qualified hostname this service should respond to (web services only). */
-  host?: string;
 
   /* Cron service config */
   /** Cron schedule expression (e.g., "0 0 * * *") */

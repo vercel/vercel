@@ -17,8 +17,6 @@ import {
 import { fileNameSymbol } from '@vercel/client';
 
 const DNS_LABEL_RE = /^(?!-)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/i;
-const FQDN_RE =
-  /^(?=.{1,253}$)(?:(?!-)[a-z0-9-]{1,63}(?<!-)\.)+(?!-)[a-z0-9-]{2,63}(?<!-)$/i;
 
 const imagesSchema = {
   type: 'object',
@@ -181,11 +179,6 @@ const serviceConfigSchema = {
       minLength: 1,
       maxLength: 63,
     },
-    host: {
-      type: 'string',
-      minLength: 1,
-      maxLength: 253,
-    },
     framework: {
       type: 'string',
       minLength: 1,
@@ -346,15 +339,6 @@ function validateExperimentalServicesConfig(
       typeof serviceConfig.subdomain === 'string'
         ? serviceConfig.subdomain
         : undefined;
-    const host =
-      typeof serviceConfig.host === 'string' ? serviceConfig.host : undefined;
-
-    if (subdomain && host) {
-      return new NowBuildError({
-        code: 'SERVICE_SUBDOMAIN_AND_HOST',
-        message: `Service "${name}" cannot define both "subdomain" and "host". Choose one.`,
-      });
-    }
 
     if (subdomain && !DNS_LABEL_RE.test(subdomain)) {
       return new NowBuildError({
@@ -363,24 +347,17 @@ function validateExperimentalServicesConfig(
       });
     }
 
-    if (host && !FQDN_RE.test(host)) {
-      return new NowBuildError({
-        code: 'INVALID_SERVICE_HOST',
-        message: `Service "${name}" has invalid "host" value "${host}". Use a fully-qualified domain name such as "api.example.com".`,
-      });
-    }
-
-    if (serviceType !== 'web' && (subdomain || host)) {
+    if (serviceType !== 'web' && subdomain) {
       return new NowBuildError({
         code: 'INVALID_SERVICE_HOST_CONFIG',
-        message: `${serviceType === 'worker' ? 'Worker' : 'Cron'} service "${name}" cannot have "subdomain" or "host". Only web services can use host-based routing.`,
+        message: `${serviceType === 'worker' ? 'Worker' : 'Cron'} service "${name}" cannot have "subdomain". Only web services can use subdomain routing.`,
       });
     }
 
-    if (serviceType === 'web' && !routePrefix && !subdomain && !host) {
+    if (serviceType === 'web' && !routePrefix && !subdomain) {
       return new NowBuildError({
         code: 'MISSING_SERVICE_ROUTE_TARGET',
-        message: `Web service "${name}" must define at least one of "routePrefix", "subdomain", or "host".`,
+        message: `Web service "${name}" must define at least one of "routePrefix" or "subdomain".`,
       });
     }
   }

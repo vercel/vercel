@@ -14,13 +14,11 @@ export type { ExperimentalServiceGroups, ServiceRuntime, ServiceType, Builder };
 export interface ExperimentalServiceConfig
   extends BuildUtilsExperimentalServiceConfig {
   subdomain?: string;
-  host?: string;
 }
 
 export interface Service extends BuildUtilsService {
   handlerFunction?: string;
   subdomain?: string;
-  host?: string;
 }
 
 export type ExperimentalServices = Record<string, ExperimentalServiceConfig>;
@@ -40,7 +38,7 @@ export interface DetectServicesOptions {
 }
 
 export interface ServicesRoutes {
-  /** Host-based rewrite routes for subdomain/host mounted web services */
+  /** Host-based rewrite routes for subdomain-mounted web services */
   hostRewrites: Route[];
   /** Rewrite routes for non-root web services (prefix-based) */
   rewrites: Route[];

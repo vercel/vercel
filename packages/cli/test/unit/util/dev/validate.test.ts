@@ -348,7 +348,7 @@ describe('validateConfig', () => {
     expect(error!.link).toEqual('https://vercel.link/functions-and-builds');
   });
 
-  describe('experimentalServices host routing validation', () => {
+  describe('experimentalServices subdomain routing validation', () => {
     it('should allow web service with subdomain and no routePrefix', () => {
       const error = validateConfig({
         experimentalServices: {
@@ -361,19 +361,7 @@ describe('validateConfig', () => {
       expect(error).toBeNull();
     });
 
-    it('should allow web service with host and no routePrefix', () => {
-      const error = validateConfig({
-        experimentalServices: {
-          backend: {
-            entrypoint: 'api/index.ts',
-            host: 'api.example.com',
-          } as any,
-        },
-      });
-      expect(error).toBeNull();
-    });
-
-    it('should error when web service has no routePrefix, subdomain, or host', () => {
+    it('should error when web service has no routePrefix or subdomain', () => {
       const error = validateConfig({
         experimentalServices: {
           api: {
@@ -383,23 +371,7 @@ describe('validateConfig', () => {
       });
       expect(error?.code).toBe('MISSING_SERVICE_ROUTE_TARGET');
       expect(error?.message).toBe(
-        'Web service "api" must define at least one of "routePrefix", "subdomain", or "host".'
-      );
-    });
-
-    it('should error when both subdomain and host are provided', () => {
-      const error = validateConfig({
-        experimentalServices: {
-          api: {
-            entrypoint: 'api/index.ts',
-            subdomain: 'api',
-            host: 'api.example.com',
-          } as any,
-        },
-      });
-      expect(error?.code).toBe('SERVICE_SUBDOMAIN_AND_HOST');
-      expect(error?.message).toBe(
-        'Service "api" cannot define both "subdomain" and "host". Choose one.'
+        'Web service "api" must define at least one of "routePrefix" or "subdomain".'
       );
     });
 
@@ -415,19 +387,7 @@ describe('validateConfig', () => {
       expect(error?.code).toBe('INVALID_SERVICE_SUBDOMAIN');
     });
 
-    it('should error when host is invalid', () => {
-      const error = validateConfig({
-        experimentalServices: {
-          api: {
-            entrypoint: 'api/index.ts',
-            host: 'localhost',
-          } as any,
-        },
-      });
-      expect(error?.code).toBe('INVALID_SERVICE_HOST');
-    });
-
-    it('should error when non-web service defines host routing', () => {
+    it('should error when non-web service defines subdomain routing', () => {
       const error = validateConfig({
         experimentalServices: {
           cleanup: {
@@ -440,7 +400,7 @@ describe('validateConfig', () => {
       });
       expect(error?.code).toBe('INVALID_SERVICE_HOST_CONFIG');
       expect(error?.message).toBe(
-        'Cron service "cleanup" cannot have "subdomain" or "host". Only web services can use host-based routing.'
+        'Cron service "cleanup" cannot have "subdomain". Only web services can use subdomain routing.'
       );
     });
   });

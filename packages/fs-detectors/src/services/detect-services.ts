@@ -7,7 +7,7 @@ import {
 import {
   type DetectServicesOptions,
   type DetectServicesResult,
-  type ResolvedService,
+  type Service,
   type ServicesRoutes,
 } from './types';
 import {
@@ -29,7 +29,7 @@ const PREVIEW_DOMAIN_MISSING: HasField = [
 /**
  * Detect and resolve services within a project.
  *
- * Reads vercel.json and resolves `experimentalServices` into ResolvedService objects.
+ * Reads vercel.json and resolves `experimentalServices` into Service objects.
  * Returns an error if no services are configured.
  */
 export async function detectServices(
@@ -168,9 +168,7 @@ export async function detectServices(
  *   Internal cron callback routes under `/_svc/{serviceName}/crons/{entry}/{handler}`
  *   that rewrite to `/_svc/{serviceName}/index`.
  */
-export function generateServicesRoutes(
-  services: ResolvedService[]
-): ServicesRoutes {
+export function generateServicesRoutes(services: Service[]): ServicesRoutes {
   const hostRewrites: Route[] = [];
   const rewrites: Route[] = [];
   const defaults: Route[] = [];
@@ -181,7 +179,7 @@ export function generateServicesRoutes(
   // so more specific routes match before broader ones.
   const sortedWebServices = services
     .filter(
-      (s): s is ResolvedService & { routePrefix: string } =>
+      (s): s is Service & { routePrefix: string } =>
         s.type === 'web' && typeof s.routePrefix === 'string'
     )
     .sort((a, b) => b.routePrefix.length - a.routePrefix.length);
@@ -302,7 +300,7 @@ function escapeRegex(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-function getWebRoutePrefixes(services: ResolvedService[]): string[] {
+function getWebRoutePrefixes(services: Service[]): string[] {
   const unique = new Set<string>();
   for (const service of services) {
     if (service.type !== 'web' || typeof service.routePrefix !== 'string') {
@@ -313,15 +311,12 @@ function getWebRoutePrefixes(services: ResolvedService[]): string[] {
   return Array.from(unique);
 }
 
-function getHostCondition(service: ResolvedService): HasField | undefined {
+function getHostCondition(service: Service): HasField | undefined {
   if (service.type !== 'web') {
     return undefined;
   }
   if (typeof service.subdomain === 'string' && service.subdomain.length > 0) {
     return [{ type: 'host', value: { pre: `${service.subdomain}.` } }];
-  }
-  if (typeof service.host === 'string' && service.host.length > 0) {
-    return [{ type: 'host', value: { eq: service.host } }];
   }
   return undefined;
 }

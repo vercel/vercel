@@ -808,54 +808,7 @@ describe('detectServices', () => {
       });
     });
 
-    it('should derive routePrefix from host using /_/serviceName', async () => {
-      const fs = new VirtualFilesystem({
-        'vercel.json': JSON.stringify({
-          experimentalServices: {
-            backend: {
-              entrypoint: 'api/index.ts',
-              host: 'api.example.com',
-            },
-          },
-        }),
-        'api/index.ts': 'export default {}',
-      });
-      const result = await detectServices({ fs });
-
-      expect(result.errors).toEqual([]);
-      expect(result.services).toHaveLength(1);
-      expect(result.services[0]).toMatchObject({
-        name: 'backend',
-        routePrefix: '/_/backend',
-        routePrefixSource: 'generated',
-        host: 'api.example.com',
-      });
-    });
-
-    it('should error when subdomain and host are both set', async () => {
-      const fs = new VirtualFilesystem({
-        'vercel.json': JSON.stringify({
-          experimentalServices: {
-            api: {
-              entrypoint: 'api/index.ts',
-              subdomain: 'api',
-              host: 'api.example.com',
-            },
-          },
-        }),
-        'api/index.ts': 'export default {}',
-      });
-      const result = await detectServices({ fs });
-
-      expect(result.services).toEqual([]);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0]).toMatchObject({
-        code: 'SUBDOMAIN_AND_HOST_CONFLICT',
-        serviceName: 'api',
-      });
-    });
-
-    it('should error when non-web service defines host routing', async () => {
+    it('should error when non-web service defines subdomain routing', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': JSON.stringify({
           experimentalServices: {
@@ -1502,43 +1455,6 @@ describe('detectServices', () => {
         src: '^/(?!_/api(?:/|$))(.*)$',
         dest: '/_/api/$1',
         has: [{ type: 'host', value: { pre: 'api.' } }],
-        missing: [
-          { type: 'host', value: { suf: '.vercel.app' } },
-          { type: 'host', value: { suf: '.vercel.dev' } },
-        ],
-        check: true,
-      });
-    });
-
-    it('should generate host-based rewrites for host-mounted service', async () => {
-      const fs = new VirtualFilesystem({
-        'vercel.json': JSON.stringify({
-          experimentalServices: {
-            backend: {
-              entrypoint: 'api/index.go',
-              host: 'api.example.com',
-            },
-          },
-        }),
-        'api/index.go': 'package main',
-      });
-      const result = await detectServices({ fs });
-
-      expect(result.errors).toEqual([]);
-      expect(result.routes.hostRewrites).toContainEqual({
-        src: '^/$',
-        dest: '/_/backend',
-        has: [{ type: 'host', value: { eq: 'api.example.com' } }],
-        missing: [
-          { type: 'host', value: { suf: '.vercel.app' } },
-          { type: 'host', value: { suf: '.vercel.dev' } },
-        ],
-        check: true,
-      });
-      expect(result.routes.hostRewrites).toContainEqual({
-        src: '^/(?!_/backend(?:/|$))(.*)$',
-        dest: '/_/backend/$1',
-        has: [{ type: 'host', value: { eq: 'api.example.com' } }],
         missing: [
           { type: 'host', value: { suf: '.vercel.app' } },
           { type: 'host', value: { suf: '.vercel.dev' } },
