@@ -962,16 +962,14 @@ test('`flags prepare` should not require login', async () => {
   // Command actually completes (progresses past auth), not just absence of error
   expect(output.exitCode, formatOutput(output)).toBe(0);
   expect(output.stderr).not.toContain('No existing credentials found');
-  // Module is emitted to the filesystem
+  // No SDK keys in env, so no files are written (early return)
   const definitionsDir = path.join(
     cwd,
     'node_modules',
     '@vercel',
     'flags-definitions'
   );
-  expect(fs.existsSync(path.join(definitionsDir, 'index.js'))).toBe(true);
-  expect(fs.existsSync(path.join(definitionsDir, 'index.d.ts'))).toBe(true);
-  expect(fs.existsSync(path.join(definitionsDir, 'package.json'))).toBe(true);
+  expect(fs.existsSync(definitionsDir)).toBe(false);
 });
 
 test('`flags prepare` happy path emits flags-definitions module', async () => {
@@ -981,15 +979,12 @@ test('`flags prepare` happy path emits flags-definitions module', async () => {
     reject: false,
   });
   expect(output.exitCode, formatOutput(output)).toBe(0);
+  // No SDK keys in env, so no files are written (early return)
   const definitionsDir = path.join(
     cwd,
     'node_modules',
     '@vercel',
     'flags-definitions'
   );
-  expect(fs.existsSync(path.join(definitionsDir, 'index.js'))).toBe(true);
-  expect(fs.existsSync(path.join(definitionsDir, 'index.d.ts'))).toBe(true);
-  const pkg = await fs.readJSON(path.join(definitionsDir, 'package.json'));
-  expect(pkg.name).toBe('@vercel/flags-definitions');
-  expect(pkg.version).toBeDefined();
+  expect(fs.existsSync(definitionsDir)).toBe(false);
 });

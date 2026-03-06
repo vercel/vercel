@@ -48,6 +48,7 @@
     "jose": "5.9.6",
     "luxon": "^3.4.0",
     "proxy-agent": "6.4.0",
+    "@vercel/prepare-flags-definitions": "^0.1.0",
     "@vercel/backends": "workspace:*",
     "@vercel/elysia": "workspace:*",
     "@vercel/express": "workspace:*",
