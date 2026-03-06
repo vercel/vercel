@@ -6,6 +6,13 @@ export class CronsTelemetryClient
   extends TelemetryClient
   implements TelemetryMethods<typeof cronsCommand>
 {
+  trackCliSubcommandAdd(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'add',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandList(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'list',

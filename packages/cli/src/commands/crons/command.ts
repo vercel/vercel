@@ -1,6 +1,41 @@
 import { packageName } from '../../util/pkg-name';
 import { formatOption } from '../../util/arg-common';
 
+export const addSubcommand = {
+  name: 'add',
+  aliases: [],
+  description: 'Add a cron job to vercel.json',
+  arguments: [],
+  options: [
+    {
+      name: 'path',
+      shorthand: null,
+      type: String,
+      argument: 'PATH',
+      deprecated: false,
+      description: 'The API route path for the cron job (must start with /)',
+    },
+    {
+      name: 'schedule',
+      shorthand: null,
+      type: String,
+      argument: 'EXPRESSION',
+      deprecated: false,
+      description: 'The cron schedule expression (e.g. "0 10 * * *")',
+    },
+  ],
+  examples: [
+    {
+      name: 'Add a cron job interactively',
+      value: `${packageName} crons add`,
+    },
+    {
+      name: 'Add a cron job with flags',
+      value: `${packageName} crons add --path /api/cron --schedule "0 10 * * *"`,
+    },
+  ],
+} as const;
+
 export const listSubcommand = {
   name: 'list',
   aliases: ['ls'],
@@ -44,7 +79,7 @@ export const cronsCommand = {
   aliases: ['cron'],
   description: 'Manage cron jobs for a project',
   arguments: [],
-  subcommands: [listSubcommand, runSubcommand],
+  subcommands: [addSubcommand, listSubcommand, runSubcommand],
   options: [],
   examples: [],
 } as const;

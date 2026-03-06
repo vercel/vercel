@@ -2,15 +2,22 @@ import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
 import { printError } from '../../util/error';
+import add from './add';
 import ls from './ls';
 import run from './run';
-import { cronsCommand, listSubcommand, runSubcommand } from './command';
+import {
+  cronsCommand,
+  addSubcommand,
+  listSubcommand,
+  runSubcommand,
+} from './command';
 import { type Command, help } from '../help';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { CronsTelemetryClient } from '../../util/telemetry/commands/crons';
 import output from '../../output-manager';
 
 const COMMAND_CONFIG = {
+  add: ['add'],
   ls: ['ls', 'list'],
   run: ['run'],
 };
@@ -54,6 +61,13 @@ export default async function main(client: Client) {
   }
 
   switch (subcommand) {
+    case 'add':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('crons', subcommandOriginal);
+        return printHelp(addSubcommand);
+      }
+      telemetry.trackCliSubcommandAdd(subcommandOriginal);
+      return add(client, args);
     case 'run':
       if (needHelp) {
         telemetry.trackCliFlagHelp('crons', subcommandOriginal);

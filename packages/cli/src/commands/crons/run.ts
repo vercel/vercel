@@ -9,6 +9,7 @@ import { runSubcommand } from './command';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
+import { isAPIError } from '../../util/errors-ts';
 import type { CronJobDefinition } from './types';
 
 export default async function run(client: Client, argv: string[]) {
@@ -85,8 +86,11 @@ export default async function run(client: Client, argv: string[]) {
       return 1;
     }
 
+    output.stopSpinner();
+
     if (definitions.length === 1) {
       cronPath = definitions[0].path;
+      output.log(`Auto-selected ${chalk.bold(cronPath)} (only cron job)`);
     } else {
       cronPath = await client.input.select({
         message: 'Which cron job would you like to run?',
@@ -112,16 +116,28 @@ export default async function run(client: Client, argv: string[]) {
   const teamId = link.org.type === 'team' ? link.org.id : undefined;
   const qs = teamId ? `?teamId=${encodeURIComponent(teamId)}` : '';
 
-  const result = await client.fetch<{ invocationAt: number }>(
-    `/v1/projects/${encodeURIComponent(project.id)}/crons/run${qs}`,
-    {
-      method: 'POST',
-      body: JSON.stringify({
-        path: cronDef.path,
-        schedule: cronDef.schedule,
-      }),
+  let result: { invocationAt: number };
+  try {
+    result = await client.fetch<{ invocationAt: number }>(
+      `/v1/projects/${encodeURIComponent(project.id)}/crons/run${qs}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          path: cronDef.path,
+          schedule: cronDef.schedule,
+        }),
+      }
+    );
+  } catch (err: unknown) {
+    if (isAPIError(err)) {
+      output.error(
+        `Failed to trigger cron job ${chalk.bold(cronPath)}: ${err.message}`
+      );
+      return 1;
     }
-  );
+    throw err;
+  }
 
   output.log(
     `Cron job ${chalk.bold(cronPath)} triggered ${chalk.gray(runStamp())}`

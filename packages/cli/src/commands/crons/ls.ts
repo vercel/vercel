@@ -12,7 +12,13 @@ import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { validateLsArgs } from '../../util/validate-ls-args';
+import { readLocalConfig } from '../../util/config/files';
 import type { CronJobDefinition } from './types';
+
+interface LocalCron {
+  path: string;
+  schedule: string;
+}
 
 export default async function ls(client: Client, argv: string[]) {
   const telemetry = new CronsLsTelemetryClient({
@@ -81,6 +87,23 @@ export default async function ls(client: Client, argv: string[]) {
   const definitions = projectData.crons?.definitions ?? [];
   const isDisabled = projectData.crons?.disabledAt != null;
 
+  // Read local vercel.json to find crons configured but not yet deployed
+  const localConfig = readLocalConfig();
+  const localCrons: LocalCron[] = Array.isArray(localConfig?.crons)
+    ? localConfig.crons
+    : [];
+  const deployedByPath = new Map(definitions.map(d => [d.path, d]));
+  const undeployedCrons: LocalCron[] = [];
+  const modifiedCrons: { local: LocalCron; deployed: CronJobDefinition }[] = [];
+  for (const local of localCrons) {
+    const deployed = deployedByPath.get(local.path);
+    if (!deployed) {
+      undeployedCrons.push(local);
+    } else if (deployed.schedule !== local.schedule) {
+      modifiedCrons.push({ local, deployed });
+    }
+  }
+
   if (asJson) {
     output.stopSpinner();
     const jsonOutput = {
@@ -89,21 +112,54 @@ export default async function ls(client: Client, argv: string[]) {
         schedule: cron.schedule,
         host: cron.host,
       })),
+      undeployed: undeployedCrons.map(cron => ({
+        path: cron.path,
+        schedule: cron.schedule,
+      })),
+      modified: modifiedCrons.map(({ local, deployed }) => ({
+        path: local.path,
+        localSchedule: local.schedule,
+        deployedSchedule: deployed.schedule,
+      })),
       enabled: !isDisabled,
     };
     client.stdout.write(`${JSON.stringify(jsonOutput, null, 2)}\n`);
-  } else if (definitions.length === 0) {
+  } else if (
+    definitions.length === 0 &&
+    undeployedCrons.length === 0 &&
+    modifiedCrons.length === 0
+  ) {
     output.log(
       `No cron jobs found for ${chalk.bold(`${org.slug}/${project.name}`)} ${chalk.gray(lsStamp())}`
     );
   } else {
-    output.log(
-      `${definitions.length} cron ${definitions.length === 1 ? 'job' : 'jobs'} found for ${chalk.bold(`${org.slug}/${project.name}`)}${isDisabled ? chalk.yellow(' (disabled)') : ''} ${chalk.gray(lsStamp())}`
-    );
-    output.print(
-      formatCronsTable(definitions).replace(/^(.*)/gm, `${' '.repeat(1)}$1`)
-    );
-    output.print('\n\n');
+    const totalDeployed = definitions.length;
+    if (totalDeployed > 0) {
+      output.log(
+        `${totalDeployed} cron ${totalDeployed === 1 ? 'job' : 'jobs'} found for ${chalk.bold(`${org.slug}/${project.name}`)}${isDisabled ? chalk.yellow(' (disabled)') : ''} ${chalk.gray(lsStamp())}`
+      );
+      output.print(
+        formatCronsTable(definitions).replace(/^(.*)/gm, `${' '.repeat(1)}$1`)
+      );
+      output.print('\n\n');
+    }
+
+    if (undeployedCrons.length > 0 || modifiedCrons.length > 0) {
+      const pendingCount = undeployedCrons.length + modifiedCrons.length;
+      output.log(
+        `${pendingCount} local ${pendingCount === 1 ? 'change' : 'changes'} pending deploy`
+      );
+      output.print(
+        formatPendingCronsTable(undeployedCrons, modifiedCrons).replace(
+          /^(.*)/gm,
+          `${' '.repeat(1)}$1`
+        )
+      );
+      output.print('\n\n');
+      output.warn(
+        `Run ${getCommandName('deploy --prod')} to apply local changes.`
+      );
+    }
   }
 
   return 0;
@@ -116,4 +172,28 @@ function formatCronsTable(definitions: CronJobDefinition[]) {
   ]);
 
   return formatTable(['Path', 'Schedule'], ['l', 'l'], [{ rows }]);
+}
+
+function formatPendingCronsTable(
+  undeployed: LocalCron[],
+  modified: { local: LocalCron; deployed: CronJobDefinition }[]
+) {
+  const rows: string[][] = [
+    ...modified.map(({ local, deployed }) => [
+      chalk.bold(local.path),
+      `${chalk.dim(deployed.schedule)} → ${local.schedule}`,
+      chalk.yellow('modified'),
+    ]),
+    ...undeployed.map(cron => [
+      chalk.dim(cron.path),
+      chalk.dim(cron.schedule),
+      chalk.yellow('not deployed'),
+    ]),
+  ];
+
+  return formatTable(
+    ['Path', 'Schedule', 'Status'],
+    ['l', 'l', 'l'],
+    [{ rows }]
+  );
 }
