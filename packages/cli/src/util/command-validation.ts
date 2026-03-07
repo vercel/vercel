@@ -147,3 +147,33 @@ export function writeJsonError(
 ): void {
   client.stdout.write(formatJsonError(code, message));
 }
+
+export function outputError(
+  client: Client,
+  jsonOutput: boolean,
+  code: string,
+  message: string,
+  writeTextError: (message: string) => void
+): number {
+  if (jsonOutput) {
+    writeJsonError(client, code, message);
+  } else {
+    writeTextError(message);
+  }
+  return 1;
+}
+
+export function handleValidationError(
+  result: ValidationError,
+  jsonOutput: boolean,
+  client: Client,
+  writeTextError: (message: string) => void
+): number {
+  return outputError(
+    client,
+    jsonOutput,
+    result.code,
+    result.message,
+    writeTextError
+  );
+}

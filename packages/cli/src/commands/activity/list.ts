@@ -15,14 +15,14 @@ import { ProjectNotFound, isAPIError } from '../../util/errors-ts';
 import { getCommandName } from '../../util/pkg-name';
 import getCommandFlags from '../../util/get-command-flags';
 import {
-  type ValidationError,
   type ValidatedResult,
   normalizeRepeatableStringFilters,
   validateAllProjectMutualExclusivity,
   validateIntegerRangeWithDefault,
   validateTimeBound,
   validateTimeOrder,
-  writeJsonError,
+  outputError,
+  handleValidationError,
 } from '../../util/command-validation';
 
 interface Principal {
@@ -104,28 +104,6 @@ function validateNext(
   return { valid: true, value: date };
 }
 
-function outputError(
-  client: Client,
-  jsonOutput: boolean,
-  code: string,
-  message: string
-): number {
-  if (jsonOutput) {
-    writeJsonError(client, code, message);
-  } else {
-    output.error(message);
-  }
-  return 1;
-}
-
-function handleValidationError(
-  result: ValidationError,
-  jsonOutput: boolean,
-  client: Client
-): number {
-  return outputError(client, jsonOutput, result.code, result.message);
-}
-
 function handleApiError(
   err: { status: number; code?: string; serverMessage?: string },
   jsonOutput: boolean,
@@ -136,7 +114,8 @@ function handleApiError(
       client,
       jsonOutput,
       'FORBIDDEN',
-      'You do not have permission to list activity events. Required permissions: Event: List or OwnEvent: List.'
+      'You do not have permission to list activity events. Required permissions: Event: List or OwnEvent: List.',
+      output.error
     );
   }
 
@@ -144,7 +123,8 @@ function handleApiError(
     client,
     jsonOutput,
     err.code || 'API_ERROR',
-    err.serverMessage || `API error (${err.status}).`
+    err.serverMessage || `API error (${err.status}).`,
+    output.error
   );
 }
 
@@ -246,7 +226,7 @@ function resolveValidatedInputs(
     defaultValue: 20,
   });
   if (!limitResult.valid) {
-    return handleValidationError(limitResult, jsonOutput, client);
+    return handleValidationError(limitResult, jsonOutput, client, output.error);
   }
 
   const mutualResult = validateAllProjectMutualExclusivity(
@@ -254,24 +234,34 @@ function resolveValidatedInputs(
     flags['--project']
   );
   if (!mutualResult.valid) {
-    return handleValidationError(mutualResult, jsonOutput, client);
+    return handleValidationError(
+      mutualResult,
+      jsonOutput,
+      client,
+      output.error
+    );
   }
 
   const sinceResult = validateTimeBound(flags['--since']);
   if (!sinceResult.valid) {
-    return handleValidationError(sinceResult, jsonOutput, client);
+    return handleValidationError(sinceResult, jsonOutput, client, output.error);
   }
 
   const nextResult = validateNext(flags['--next']);
   if (!nextResult.valid) {
-    return handleValidationError(nextResult, jsonOutput, client);
+    return handleValidationError(nextResult, jsonOutput, client, output.error);
   }
 
   let until: Date | undefined = nextResult.value;
   if (!until) {
     const untilResult = validateTimeBound(flags['--until']);
     if (!untilResult.valid) {
-      return handleValidationError(untilResult, jsonOutput, client);
+      return handleValidationError(
+        untilResult,
+        jsonOutput,
+        client,
+        output.error
+      );
     }
     until = untilResult.value;
   }
@@ -279,7 +269,12 @@ function resolveValidatedInputs(
   const since = sinceResult.value;
   const timeOrderResult = validateTimeOrder(since, until);
   if (!timeOrderResult.valid) {
-    return handleValidationError(timeOrderResult, jsonOutput, client);
+    return handleValidationError(
+      timeOrderResult,
+      jsonOutput,
+      client,
+      output.error
+    );
   }
 
   return {
@@ -301,7 +296,8 @@ async function resolveScope(
         client,
         opts.jsonOutput,
         'NO_TEAM',
-        'No team context found. Run `vercel switch` to select a team, or use `vercel link` in a project directory.'
+        'No team context found. Run `vercel switch` to select a team, or use `vercel link` in a project directory.',
+        output.error
       );
     }
 
@@ -328,7 +324,8 @@ async function resolveScope(
           err.serverMessage ||
             (err.status === 403
               ? `You do not have permission to access project "${opts.project}" in team "${team.slug}".`
-              : `API error (${err.status}).`)
+              : `API error (${err.status}).`),
+          output.error
         );
       }
       throw err;
@@ -339,7 +336,8 @@ async function resolveScope(
         client,
         opts.jsonOutput,
         'PROJECT_NOT_FOUND',
-        `Project "${opts.project}" was not found in team "${team.slug}".`
+        `Project "${opts.project}" was not found in team "${team.slug}".`,
+        output.error
       );
     }
 
@@ -360,7 +358,8 @@ async function resolveScope(
       client,
       opts.jsonOutput,
       'NOT_LINKED',
-      'No linked project found. Run `vercel link` to link a project, or use --project <name> or --all.'
+      'No linked project found. Run `vercel link` to link a project, or use --project <name> or --all.',
+      output.error
     );
   }
 

@@ -37,13 +37,19 @@ interface AlertsScope {
   projectId?: string;
 }
 
+type ValidatedInputs = {
+  limit: number | undefined;
+  types: string[];
+  since: Date | undefined;
+  until: Date | undefined;
+};
+
 interface Ai {
-  activityId?: string;
+  activityId: string;
   version?: number;
   keyFindings?: string[];
   currentSummary?: string;
   title?: string;
-  tilte?: string;
   level?: string;
 }
 
@@ -62,7 +68,6 @@ interface Alert {
   title?: string;
   ai?: Ai;
   data?: Record<string, unknown>;
-  activatedAt?: string | number;
   route?: string;
   path?: string;
   requestPath?: string;
@@ -109,6 +114,21 @@ function handleValidationError(
   result: ValidationError
 ): number {
   return outputError(client, jsonOutput, result.code, result.message);
+}
+
+function handleApiError(
+  err: { status: number; code?: string; serverMessage?: string },
+  jsonOutput: boolean,
+  client: Client
+): number {
+  const message =
+    err.status === 401 || err.status === 403
+      ? 'You do not have access to alerts in this scope. Pass --token <TOKEN> and --scope <team-slug> with Alerts read access.'
+      : err.status >= 500
+        ? `The alerts endpoint failed on the server (${err.status}). Re-run with --debug and share the x-vercel-id from the failed request.`
+        : err.serverMessage || `API error (${err.status}).`;
+
+  return outputError(client, jsonOutput, err.code || 'API_ERROR', message);
 }
 
 function getDefaultRange(): { from: string; to: string } {
@@ -188,39 +208,20 @@ async function resolveScope(
 }
 
 function getGroupTitle(group: AlertGroup): string {
-  return (
-    group.ai?.title ||
-    group.ai?.tilte ||
-    group.alerts?.[0]?.ai?.title ||
-    group.alerts?.[0]?.ai?.tilte ||
-    group.alerts?.[0]?.title ||
-    'Alert group'
-  );
+  return group.ai?.title || 'Alert group';
 }
 
-function parseDateInput(value?: string | number): Date | undefined {
-  if (value === undefined || value === null) {
+function parseDateInput(value?: number): Date | undefined {
+  if (value === undefined) {
     return undefined;
   }
 
-  if (typeof value === 'number') {
-    const epochMs = value < 1_000_000_000_000 ? value * 1000 : value;
-    const date = new Date(epochMs);
-    return Number.isNaN(date.getTime()) ? undefined : date;
-  }
-
-  const numeric = Number(value);
-  if (!Number.isNaN(numeric) && value.trim() !== '') {
-    const epochMs = numeric < 1_000_000_000_000 ? numeric * 1000 : numeric;
-    const date = new Date(epochMs);
-    return Number.isNaN(date.getTime()) ? undefined : date;
-  }
-
-  const date = new Date(value);
+  const epochMs = value < 1_000_000_000_000 ? value * 1000 : value;
+  const date = new Date(epochMs);
   return Number.isNaN(date.getTime()) ? undefined : date;
 }
 
-function formatDateForDisplay(value?: string | number): string {
+function formatDateForDisplay(value?: number): string {
   const date = parseDateInput(value);
   if (!date) {
     return '-';
@@ -240,9 +241,7 @@ function formatDateForDisplay(value?: string | number): string {
 
 function getStartedAt(group: AlertGroup): string {
   return formatDateForDisplay(
-    group.recordedStartedAt ||
-      group.alerts?.[0]?.startedAt ||
-      group.alerts?.[0]?.activatedAt
+    group.recordedStartedAt || group.alerts?.[0]?.startedAt
   );
 }
 
@@ -287,14 +286,6 @@ function printGroups(groups: AlertGroup[]) {
     return;
   }
 
-  for (const group of groups) {
-    if (group.ai) {
-      output.debug(
-        `group ${group.id} ai: ${JSON.stringify(group.ai, null, 2)}`
-      );
-    }
-  }
-
   const rows = [
     ['Title', 'StartedAt', 'Type', 'Status', 'Alerts'],
     ...groups.map(group => [
@@ -314,29 +305,11 @@ function printGroups(groups: AlertGroup[]) {
   output.print(`\n${tableOutput}\n`);
 }
 
-export default async function list(
-  client: Client,
+function trackTelemetry(
+  flags: ListFlags,
+  types: string[],
   telemetry: AlertsTelemetryClient
-): Promise<number> {
-  const flagsSpecification = getFlagsSpecification(alertsCommand.options);
-
-  let parsedArgs;
-  try {
-    parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
-  } catch (err) {
-    printError(err);
-    return 1;
-  }
-
-  const flags = parsedArgs.flags as ListFlags;
-  const formatResult = validateJsonOutput(flags);
-  if (!formatResult.valid) {
-    output.error(formatResult.error);
-    return 1;
-  }
-  const jsonOutput = formatResult.jsonOutput;
-
-  const types = normalizeRepeatableStringFilters(flags['--type']);
+) {
   telemetry.trackCliOptionType(types.length > 0 ? types : undefined);
   telemetry.trackCliOptionSince(flags['--since']);
   telemetry.trackCliOptionUntil(flags['--until']);
@@ -344,6 +317,26 @@ export default async function list(
   telemetry.trackCliFlagAll(flags['--all']);
   telemetry.trackCliOptionLimit(flags['--limit']);
   telemetry.trackCliOptionFormat(flags['--format']);
+}
+
+function parseFlags(client: Client): ListFlags | number {
+  const flagsSpecification = getFlagsSpecification(alertsCommand.options);
+
+  try {
+    const parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
+    return parsedArgs.flags as ListFlags;
+  } catch (err) {
+    printError(err);
+    return 1;
+  }
+}
+
+function resolveValidatedInputs(
+  flags: ListFlags,
+  client: Client,
+  jsonOutput: boolean
+): ValidatedInputs | number {
+  const types = normalizeRepeatableStringFilters(flags['--type']);
 
   const limitResult = validateOptionalIntegerRange(flags['--limit'], {
     flag: '--limit',
@@ -380,6 +373,69 @@ export default async function list(
     return handleValidationError(client, jsonOutput, timeOrderResult);
   }
 
+  return {
+    limit: limitResult.value,
+    types,
+    since: sinceResult.value,
+    until: untilResult.value,
+  };
+}
+
+function buildAlertsQuery(
+  scope: AlertsScope,
+  inputs: ValidatedInputs
+): URLSearchParams {
+  const query = new URLSearchParams({
+    teamId: scope.teamId,
+  });
+
+  if (scope.projectId) {
+    query.set('projectId', scope.projectId);
+  }
+  if (inputs.limit) {
+    query.set('limit', String(inputs.limit));
+  }
+  for (const type of inputs.types) {
+    query.append('types', type);
+  }
+  if (inputs.since) {
+    query.set('from', inputs.since.toISOString());
+  }
+  if (inputs.until) {
+    query.set('to', inputs.until.toISOString());
+  }
+  if (!inputs.since && !inputs.until) {
+    const defaultRange = getDefaultRange();
+    query.set('from', defaultRange.from);
+    query.set('to', defaultRange.to);
+  }
+
+  return query;
+}
+
+export default async function list(
+  client: Client,
+  telemetry: AlertsTelemetryClient
+): Promise<number> {
+  const flags = parseFlags(client);
+  if (typeof flags === 'number') {
+    return flags;
+  }
+  const formatResult = validateJsonOutput(flags);
+  if (!formatResult.valid) {
+    output.error(formatResult.error);
+    return 1;
+  }
+  const jsonOutput = formatResult.jsonOutput;
+
+  const types = normalizeRepeatableStringFilters(flags['--type']);
+  trackTelemetry(flags, types, telemetry);
+
+  const validatedInputs = resolveValidatedInputs(flags, client, jsonOutput);
+  if (typeof validatedInputs === 'number') {
+    return validatedInputs;
+  }
+
   const scope = await resolveScope(client, {
     project: flags['--project'],
     all: flags['--all'],
@@ -388,33 +444,12 @@ export default async function list(
     return scope;
   }
 
-  const query = new URLSearchParams({
-    teamId: scope.teamId,
-  });
-  if (scope.projectId) {
-    query.set('projectId', scope.projectId);
-  }
-  if (limitResult.value) {
-    query.set('limit', String(limitResult.value));
-  }
-  for (const type of types) {
-    query.append('types', type);
-  }
-  if (sinceResult.value) {
-    query.set('from', sinceResult.value.toISOString());
-  }
-  if (untilResult.value) {
-    query.set('to', untilResult.value.toISOString());
-  }
-  if (!sinceResult.value && !untilResult.value) {
-    const defaultRange = getDefaultRange();
-    query.set('from', defaultRange.from);
-    query.set('to', defaultRange.to);
-  }
+  const query = buildAlertsQuery(scope, validatedInputs);
 
   const requestPath = `/alerts/v3/groups?${query.toString()}`;
   output.debug(`Fetching alerts from ${requestPath}`);
 
+  output.spinner('Fetching alerts...');
   try {
     const groups = await client.fetch<AlertGroup[]>(requestPath);
 
@@ -426,27 +461,13 @@ export default async function list(
     return 0;
   } catch (err) {
     if (isAPIError(err)) {
-      const message =
-        err.status === 401 || err.status === 403
-          ? 'You do not have access to alerts in this scope. Pass --token <TOKEN> and --scope <team-slug> with Alerts read access.'
-          : err.status >= 500
-            ? `The alerts endpoint failed on the server (${err.status}). Re-run with --debug and share the x-vercel-id from the failed request.`
-            : err.serverMessage || `API error (${err.status}).`;
-      if (jsonOutput) {
-        writeJsonError(client, err.code || 'API_ERROR', message);
-        return 1;
-      }
-      output.error(message);
-      return 1;
+      return handleApiError(err, jsonOutput, client);
     }
 
     output.debug(err);
     const message = `Failed to fetch alerts: ${(err as Error).message || String(err)}`;
-    if (jsonOutput) {
-      writeJsonError(client, 'UNEXPECTED_ERROR', message);
-      return 1;
-    }
-    output.error(message);
-    return 1;
+    return outputError(client, jsonOutput, 'UNEXPECTED_ERROR', message);
+  } finally {
+    output.stopSpinner();
   }
 }
