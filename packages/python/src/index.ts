@@ -459,11 +459,13 @@ export const build: BuildV3 = async ({
   let djangoStatic: DjangoCollectStaticResult | null = null;
   if (framework === 'django') {
     const outputStaticDir = join(workPath, '.vercel', 'output', 'static');
+    const djangoSettings = await getDjangoSettings(workPath, pythonEnv);
     djangoStatic = await runDjangoCollectStatic(
       venvPath,
       workPath,
       pythonEnv,
-      outputStaticDir
+      outputStaticDir,
+      djangoSettings
     );
   }
 

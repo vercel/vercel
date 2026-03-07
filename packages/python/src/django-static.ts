@@ -4,40 +4,8 @@ import execa from 'execa';
 import { debug, getDjangoSettingsModule } from '@vercel/build-utils';
 import { getVenvPythonBin } from './utils';
 
-export interface DjangoStaticSettings {
-  staticUrl: string;
-  staticRoot: string | null;
-  staticfilesStorage: string;
-  whitenoiseUseFinders: boolean;
-  staticSourceDirs: string[];
-  isDjangoStorages: boolean;
-  hasManifestStorage: boolean;
-}
-
-// Fast settings extraction — no django.setup(), just a direct module import.
-// Returns only the keys that are explicitly set; TypeScript fills in defaults.
-const SETTINGS_SCRIPT = `
-import sys, json, importlib
-
-settings_module = sys.argv[1]
-keys = json.loads(sys.argv[2])
-
-mod = importlib.import_module(settings_module)
-result = {k: getattr(mod, k) for k in keys if hasattr(mod, k)}
-# Stringify non-JSON-serialisable values (e.g. pathlib.Path in STATIC_ROOT)
-print(json.dumps(result, default=str))
-`.trim();
-
-const SETTINGS_KEYS = [
-  'STATIC_URL',
-  'STATIC_ROOT',
-  'STATICFILES_STORAGE', // Django < 4.2
-  'STORAGES', // Django 4.2+
-  'WHITENOISE_USE_FINDERS',
-];
-
-// Slower finders extraction — requires django.setup() for the app registry.
-// Non-fatal if it fails; caller falls back to an empty source-dirs list.
+// Requires django.setup() for the app registry.
+// Non-fatal if it fails; caller falls back to an empty list.
 const FINDERS_SCRIPT = `
 import sys, json, os
 import django
@@ -60,67 +28,23 @@ for finder in get_finders():
 print(json.dumps(list(dict.fromkeys(filter(None, dirs)))))
 `.trim();
 
-/**
- * Extract Django static settings by importing the settings module directly
- * (no django.setup()). Also runs the finders script to discover source static
- * dirs; finders failure is non-fatal — staticSourceDirs will be empty.
- *
- * Returns null if the settings script itself fails (e.g. Django not installed,
- * bad import) — caller should warn and skip static handling.
- */
-export async function getDjangoStaticSettings(
+async function getStaticSourceDirs(
   pythonPath: string,
   settingsModule: string,
   workPath: string,
   env: NodeJS.ProcessEnv
-): Promise<DjangoStaticSettings | null> {
-  // Run both scripts concurrently; finders failure is non-fatal.
-  const [settingsResult, findersResult] = await Promise.allSettled([
-    execa(
+): Promise<string[]> {
+  try {
+    const result = await execa(
       pythonPath,
-      ['-c', SETTINGS_SCRIPT, settingsModule, JSON.stringify(SETTINGS_KEYS)],
+      ['-c', FINDERS_SCRIPT, settingsModule],
       { env, cwd: workPath }
-    ),
-    execa(pythonPath, ['-c', FINDERS_SCRIPT, settingsModule], {
-      env,
-      cwd: workPath,
-    }),
-  ]);
-
-  if (settingsResult.status === 'rejected') {
-    debug(`Failed to extract Django static settings: ${settingsResult.reason}`);
-    return null;
-  }
-
-  if (findersResult.status === 'rejected') {
-    debug(
-      `Failed to extract Django static source dirs: ${findersResult.reason}`
     );
+    return JSON.parse(result.stdout.trim());
+  } catch (err) {
+    debug(`Failed to extract Django static source dirs: ${err}`);
+    return [];
   }
-
-  const raw = JSON.parse(settingsResult.value.stdout.trim());
-
-  // Resolve storage backend: STORAGES (Django 4.2+) takes precedence over
-  // the legacy STATICFILES_STORAGE setting.
-  const storage: string =
-    raw.STORAGES?.staticfiles?.BACKEND ??
-    raw.STATICFILES_STORAGE ??
-    'django.contrib.staticfiles.storage.StaticFilesStorage';
-
-  const staticSourceDirs: string[] =
-    findersResult.status === 'fulfilled'
-      ? JSON.parse(findersResult.value.stdout.trim())
-      : [];
-
-  return {
-    staticUrl: raw.STATIC_URL ?? '/static/',
-    staticRoot: raw.STATIC_ROOT != null ? String(raw.STATIC_ROOT) : null,
-    staticfilesStorage: storage,
-    whitenoiseUseFinders: raw.WHITENOISE_USE_FINDERS === true,
-    staticSourceDirs,
-    isDjangoStorages: storage.includes('storages.'),
-    hasManifestStorage: storage.includes('ManifestStaticFilesStorage'),
-  };
 }
 
 export interface DjangoCollectStaticResult {
@@ -136,12 +60,11 @@ export interface DjangoCollectStaticResult {
 /**
  * Run Django's collectstatic during the Vercel build:
  *
- * 1. Extract static settings from the project's Django configuration.
- * 2. Write a temporary settings shim that redirects STATIC_ROOT to
+ * 1. Write a temporary settings shim that redirects STATIC_ROOT to
  *    `public/<STATIC_URL path>/` so the CDN can serve the files.
- * 3. Run `manage.py collectstatic --noinput` with the shim.
- * 4. Delete the shim.
- * 5. If the storage backend writes a manifest (`staticfiles.json`), copy it
+ * 2. Run `manage.py collectstatic --noinput` with the shim.
+ * 3. Delete the shim.
+ * 4. If the storage backend writes a manifest (`staticfiles.json`), copy it
  *    to the user's original STATIC_ROOT so Lambda can read it at runtime.
  *
  * Special cases:
@@ -154,29 +77,44 @@ export async function runDjangoCollectStatic(
   venvPath: string,
   workPath: string,
   env: NodeJS.ProcessEnv,
-  outputStaticDir: string
+  outputStaticDir: string,
+  djangoSettings: Record<string, unknown> | null
 ): Promise<DjangoCollectStaticResult | null> {
+  if (!djangoSettings) {
+    debug('No Django settings available, skipping collectstatic');
+    return null;
+  }
+
   const settingsModule = await getDjangoSettingsModule(workPath);
   if (!settingsModule) {
     debug('No Django settings module found, skipping collectstatic');
     return null;
   }
 
+  // Resolve storage backend: STORAGES (Django 4.2+) takes precedence over
+  // the legacy STATICFILES_STORAGE setting.
+  const storages = djangoSettings['STORAGES'] as
+    | { staticfiles?: { BACKEND?: string } }
+    | undefined;
+  const storage: string =
+    storages?.staticfiles?.BACKEND ??
+    (djangoSettings['STATICFILES_STORAGE'] as string | undefined) ??
+    'django.contrib.staticfiles.storage.StaticFilesStorage';
+
+  const staticUrl =
+    (djangoSettings['STATIC_URL'] as string | undefined) ?? '/static/';
+  const staticRoot =
+    djangoSettings['STATIC_ROOT'] != null
+      ? String(djangoSettings['STATIC_ROOT'])
+      : null;
+  const whitenoiseUseFinders =
+    djangoSettings['WHITENOISE_USE_FINDERS'] === true;
+
   const pythonPath = getVenvPythonBin(venvPath);
-  const settings = await getDjangoStaticSettings(
-    pythonPath,
-    settingsModule,
-    workPath,
-    env
-  );
-  if (!settings) {
-    debug('Failed to extract Django static settings, skipping collectstatic');
-    return null;
-  }
 
   // django-storages: run collectstatic with the user's real settings so it
   // uploads to S3/GCS/etc. No CDN bundling or manifest work needed.
-  if (settings.isDjangoStorages) {
+  if (storage.includes('storages.')) {
     console.log(
       'django-storages detected — running collectstatic with original settings'
     );
@@ -188,14 +126,21 @@ export async function runDjangoCollectStatic(
   }
 
   // No local static strategy configured — warn and skip.
-  if (!settings.staticRoot && !settings.whitenoiseUseFinders) {
+  if (!staticRoot && !whitenoiseUseFinders) {
     debug('No collectstatic strategy configured — skipping collectstatic');
     return null;
   }
 
+  const staticSourceDirs = await getStaticSourceDirs(
+    pythonPath,
+    settingsModule,
+    workPath,
+    env
+  );
+
   // Strip leading/trailing slashes from STATIC_URL to get the CDN sub-path.
   // e.g. '/static/' -> 'static', '/app/static/' -> 'app/static'
-  const staticUrlPath = settings.staticUrl.replace(/^\/|\/$/g, '') || 'static';
+  const staticUrlPath = staticUrl.replace(/^\/|\/$/g, '') || 'static';
 
   // Write a temporary settings shim that overrides STATIC_ROOT to point
   // directly at the Vercel Build Output static directory. Bypasses the
@@ -207,7 +152,7 @@ export async function runDjangoCollectStatic(
     `from ${settingsModule} import *`,
     `STATIC_ROOT = ${JSON.stringify(staticOutputDir)}`,
   ];
-  if (settings.whitenoiseUseFinders) {
+  if (whitenoiseUseFinders) {
     shimLines.push(`WHITENOISE_USE_FINDERS = False`);
   }
   await fs.promises.writeFile(shimPath, shimLines.join('\n') + '\n');
@@ -229,10 +174,10 @@ export async function runDjangoCollectStatic(
   // CDN output back to the user's original STATIC_ROOT so the Lambda can read
   // it at runtime for {% static %} resolution.
   let manifestRelPath: string | null = null;
-  if (settings.hasManifestStorage && settings.staticRoot) {
+  if (storage.includes('ManifestStaticFilesStorage') && staticRoot) {
     const manifestSrc = join(staticOutputDir, 'staticfiles.json');
     // staticRoot may be relative (e.g. 'staticfiles') or absolute.
-    const resolvedStaticRoot = resolve(workPath, settings.staticRoot);
+    const resolvedStaticRoot = resolve(workPath, staticRoot);
     const manifestDest = join(resolvedStaticRoot, 'staticfiles.json');
     await fs.promises.mkdir(resolvedStaticRoot, { recursive: true });
     await fs.promises.copyFile(manifestSrc, manifestDest);
@@ -241,7 +186,7 @@ export async function runDjangoCollectStatic(
   }
 
   return {
-    staticSourceDirs: settings.staticSourceDirs,
+    staticSourceDirs,
     manifestRelPath,
   };
 }
