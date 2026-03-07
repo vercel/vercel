@@ -1,4 +1,5 @@
 import { parseTimeFlag } from './time-utils';
+import type Client from './client';
 
 export type ValidationError = {
   valid: false;
@@ -133,4 +134,16 @@ export function validateOptionalIntegerRange(
   }
 
   return { valid: true, value };
+}
+
+export function formatJsonError(code: string, message: string): string {
+  return `${JSON.stringify({ error: { code, message } }, null, 2)}\n`;
+}
+
+export function writeJsonError(
+  client: Client,
+  code: string,
+  message: string
+): void {
+  client.stdout.write(formatJsonError(code, message));
 }

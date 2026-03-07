@@ -16,13 +16,13 @@ import { getCommandName } from '../../util/pkg-name';
 import getCommandFlags from '../../util/get-command-flags';
 import {
   type ValidationError,
-  type ValidationResult,
   type ValidatedResult,
   normalizeRepeatableStringFilters,
   validateAllProjectMutualExclusivity,
   validateIntegerRangeWithDefault,
   validateTimeBound,
   validateTimeOrder,
+  writeJsonError,
 } from '../../util/command-validation';
 
 interface Principal {
@@ -76,22 +76,6 @@ type PaginatedEvents = {
   next: number | null;
 };
 
-function validateLimit(limit: number | undefined): ValidatedResult<number> {
-  return validateIntegerRangeWithDefault(limit, {
-    flag: '--limit',
-    min: 1,
-    max: 100,
-    defaultValue: 20,
-  });
-}
-
-function validateMutualExclusivity(
-  all: boolean | undefined,
-  project: string | undefined
-): ValidationResult {
-  return validateAllProjectMutualExclusivity(all, project);
-}
-
 function validateNext(
   next: number | undefined
 ): ValidatedResult<Date | undefined> {
@@ -120,14 +104,6 @@ function validateNext(
   return { valid: true, value: date };
 }
 
-function normalizeTypeFilters(typeFilters: string[] | undefined): string[] {
-  return normalizeRepeatableStringFilters(typeFilters);
-}
-
-function formatErrorJson(code: string, message: string): string {
-  return `${JSON.stringify({ error: { code, message } }, null, 2)}\n`;
-}
-
 function outputError(
   client: Client,
   jsonOutput: boolean,
@@ -135,7 +111,7 @@ function outputError(
   message: string
 ): number {
   if (jsonOutput) {
-    client.stdout.write(formatErrorJson(code, message));
+    writeJsonError(client, code, message);
   } else {
     output.error(message);
   }
@@ -263,12 +239,17 @@ function resolveValidatedInputs(
   client: Client,
   normalizedTypes: string[]
 ): ValidatedInputs | number {
-  const limitResult = validateLimit(flags['--limit']);
+  const limitResult = validateIntegerRangeWithDefault(flags['--limit'], {
+    flag: '--limit',
+    min: 1,
+    max: 100,
+    defaultValue: 20,
+  });
   if (!limitResult.valid) {
     return handleValidationError(limitResult, jsonOutput, client);
   }
 
-  const mutualResult = validateMutualExclusivity(
+  const mutualResult = validateAllProjectMutualExclusivity(
     flags['--all'],
     flags['--project']
   );
@@ -468,7 +449,7 @@ export default async function list(
   }
   const jsonOutput = formatResult.jsonOutput;
 
-  const normalizedTypes = normalizeTypeFilters(flags['--type']);
+  const normalizedTypes = normalizeRepeatableStringFilters(flags['--type']);
   trackTelemetry(flags, normalizedTypes, telemetry);
 
   const validatedInputs = resolveValidatedInputs(

@@ -14,8 +14,7 @@ import { ProjectNotFound, isAPIError } from '../../util/errors-ts';
 import type { AlertsTelemetryClient } from '../../util/telemetry/commands/alerts';
 import {
   type ValidationError,
-  type ValidationResult,
-  type ValidatedResult,
+  writeJsonError,
   normalizeRepeatableStringFilters,
   validateAllProjectMutualExclusivity,
   validateOptionalIntegerRange,
@@ -38,15 +37,32 @@ interface AlertsScope {
   projectId?: string;
 }
 
-interface AlertGroupAlert {
+interface Ai {
+  activityId?: string;
+  version?: number;
+  keyFindings?: string[];
+  currentSummary?: string;
   title?: string;
-  ai?: {
-    title?: string;
-    tilte?: string;
-  };
-  startedAt?: string | number;
+  tilte?: string;
+  level?: string;
+}
+
+interface Alert {
+  id: string;
+  teamId: string;
+  projectId: string;
+  type: string;
+  pipe: string;
+  status: string;
+  level: string;
+  startedAt: number;
+  resolvedAt?: number;
+  recordedStartedAt: number;
+  recordedResolvedAt?: number;
+  title?: string;
+  ai?: Ai;
+  data?: Record<string, unknown>;
   activatedAt?: string | number;
-  resolvedAt?: string | number;
   route?: string;
   path?: string;
   requestPath?: string;
@@ -58,57 +74,19 @@ interface AlertGroupAlert {
 }
 
 interface AlertGroup {
+  teamId: string;
+  projectId: string;
   id: string;
+  pipe: string;
+  level: string;
   type: string;
   status: string;
-  title?: string;
-  recordedStartedAt?: string | number;
-  ai?: {
-    activityId?: string;
-    title?: string;
-    tilte?: string;
-    currentSummary?: string;
-  };
-  startedAt?: string | number;
-  activatedAt?: string | number;
-  resolvedAt?: string | number;
-  route?: string;
-  path?: string;
-  requestPath?: string;
-  dimensions?: {
-    route?: string;
-    path?: string;
-    requestPath?: string;
-  };
-  alerts?: AlertGroupAlert[];
-}
-
-function writeJsonError(client: Client, code: string, message: string): number {
-  client.stdout.write(
-    `${JSON.stringify({ error: { code, message } }, null, 2)}\n`
-  );
-  return 1;
-}
-
-function normalizeTypeFilters(typeFilters: string[] | undefined): string[] {
-  return normalizeRepeatableStringFilters(typeFilters);
-}
-
-function validateMutualExclusivity(
-  all: boolean | undefined,
-  project: string | undefined
-): ValidationResult {
-  return validateAllProjectMutualExclusivity(all, project);
-}
-
-function validateLimit(
-  limit: number | undefined
-): ValidatedResult<number | undefined> {
-  return validateOptionalIntegerRange(limit, {
-    flag: '--limit',
-    min: 1,
-    max: 1000,
-  });
+  recordedStartedAt: number;
+  updatedAt?: number;
+  validatedAt?: number;
+  relatedGroupIds?: string[];
+  ai?: Ai;
+  alerts: Alert[];
 }
 
 function outputError(
@@ -118,7 +96,8 @@ function outputError(
   message: string
 ): number {
   if (jsonOutput) {
-    return writeJsonError(client, code, message);
+    writeJsonError(client, code, message);
+    return 1;
   }
   output.error(message);
   return 1;
@@ -214,7 +193,6 @@ function getGroupTitle(group: AlertGroup): string {
     group.ai?.tilte ||
     group.alerts?.[0]?.ai?.title ||
     group.alerts?.[0]?.ai?.tilte ||
-    group.title ||
     group.alerts?.[0]?.title ||
     'Alert group'
   );
@@ -263,8 +241,6 @@ function formatDateForDisplay(value?: string | number): string {
 function getStartedAt(group: AlertGroup): string {
   return formatDateForDisplay(
     group.recordedStartedAt ||
-      group.startedAt ||
-      group.activatedAt ||
       group.alerts?.[0]?.startedAt ||
       group.alerts?.[0]?.activatedAt
   );
@@ -277,12 +253,15 @@ function getStatus(group: AlertGroup): string {
   }
 
   if (normalizedStatus === 'resolved') {
-    const startedAt = parseDateInput(
-      group.recordedStartedAt || group.startedAt || group.alerts?.[0]?.startedAt
-    );
-    const resolvedAt = parseDateInput(
-      group.resolvedAt || group.alerts?.[0]?.resolvedAt
-    );
+    const startedAt = parseDateInput(group.recordedStartedAt);
+    const resolvedCandidates = group.alerts
+      .map(alert => parseDateInput(alert.resolvedAt))
+      .filter((d): d is Date => Boolean(d))
+      .map(d => d.getTime());
+    const resolvedAt =
+      resolvedCandidates.length > 0
+        ? new Date(Math.max(...resolvedCandidates))
+        : undefined;
 
     if (
       startedAt &&
@@ -306,6 +285,14 @@ function printGroups(groups: AlertGroup[]) {
   if (groups.length === 0) {
     output.log('No alerts found.');
     return;
+  }
+
+  for (const group of groups) {
+    if (group.ai) {
+      output.debug(
+        `group ${group.id} ai: ${JSON.stringify(group.ai, null, 2)}`
+      );
+    }
   }
 
   const rows = [
@@ -349,7 +336,7 @@ export default async function list(
   }
   const jsonOutput = formatResult.jsonOutput;
 
-  const types = normalizeTypeFilters(flags['--type']);
+  const types = normalizeRepeatableStringFilters(flags['--type']);
   telemetry.trackCliOptionType(types.length > 0 ? types : undefined);
   telemetry.trackCliOptionSince(flags['--since']);
   telemetry.trackCliOptionUntil(flags['--until']);
@@ -358,12 +345,16 @@ export default async function list(
   telemetry.trackCliOptionLimit(flags['--limit']);
   telemetry.trackCliOptionFormat(flags['--format']);
 
-  const limitResult = validateLimit(flags['--limit']);
+  const limitResult = validateOptionalIntegerRange(flags['--limit'], {
+    flag: '--limit',
+    min: 1,
+    max: 1000,
+  });
   if (!limitResult.valid) {
     return handleValidationError(client, jsonOutput, limitResult);
   }
 
-  const mutualResult = validateMutualExclusivity(
+  const mutualResult = validateAllProjectMutualExclusivity(
     flags['--all'],
     flags['--project']
   );
@@ -442,7 +433,8 @@ export default async function list(
             ? `The alerts endpoint failed on the server (${err.status}). Re-run with --debug and share the x-vercel-id from the failed request.`
             : err.serverMessage || `API error (${err.status}).`;
       if (jsonOutput) {
-        return writeJsonError(client, err.code || 'API_ERROR', message);
+        writeJsonError(client, err.code || 'API_ERROR', message);
+        return 1;
       }
       output.error(message);
       return 1;
@@ -451,7 +443,8 @@ export default async function list(
     output.debug(err);
     const message = `Failed to fetch alerts: ${(err as Error).message || String(err)}`;
     if (jsonOutput) {
-      return writeJsonError(client, 'UNEXPECTED_ERROR', message);
+      writeJsonError(client, 'UNEXPECTED_ERROR', message);
+      return 1;
     }
     output.error(message);
     return 1;
