@@ -14,7 +14,7 @@ import {
   generateCurlCommand,
 } from './request-builder';
 import { OpenApiCache } from '../../util/openapi';
-import { API_BASE_URL, STREAMING_ENDPOINT_PATTERNS } from './constants';
+import { API_BASE_URL, STREAMING_ENDPOINTS } from './constants';
 import {
   colorizeMethod,
   colorizeMethodPadded,
@@ -367,8 +367,15 @@ async function handleResponse(
 }
 
 function isStreamingEndpoint(url: string): boolean {
-  const path = url.split('?')[0];
-  return STREAMING_ENDPOINT_PATTERNS.some(pattern => pattern.test(path));
+  const urlPath = url.split('?')[0];
+  const urlSegments = urlPath.split('/');
+  return STREAMING_ENDPOINTS.some(pattern => {
+    const patternSegments = pattern.split('/');
+    if (urlSegments.length !== patternSegments.length) return false;
+    return patternSegments.every(
+      (seg, i) => seg === '*' || seg === urlSegments[i]
+    );
+  });
 }
 
 async function handleStreamingResponse(
