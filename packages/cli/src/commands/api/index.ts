@@ -1,4 +1,5 @@
 import chalk from 'chalk';
+import split from 'split2';
 import type Client from '../../util/client';
 import type { Response } from 'node-fetch';
 import { parseArguments } from '../../util/get-args';
@@ -13,7 +14,7 @@ import {
   generateCurlCommand,
 } from './request-builder';
 import { OpenApiCache } from '../../util/openapi';
-import { API_BASE_URL } from './constants';
+import { API_BASE_URL, STREAMING_ENDPOINT_PATTERNS } from './constants';
 import {
   colorizeMethod,
   colorizeMethodPadded,
@@ -152,6 +153,7 @@ export default async function api(client: Client): Promise<number> {
   telemetryClient.trackCliOptionHeader(flags['--header']);
   telemetryClient.trackCliOptionInput(flags['--input']);
   if (flags['--paginate']) telemetryClient.trackCliFlagPaginate(true);
+  if (flags['--stream']) telemetryClient.trackCliFlagStream(true);
   if (flags['--include']) telemetryClient.trackCliFlagInclude(true);
   if (flags['--silent']) telemetryClient.trackCliFlagSilent(true);
   if (flags['--verbose']) telemetryClient.trackCliFlagVerbose(true);
@@ -223,7 +225,13 @@ async function executeApiRequest(
     }
   }
 
-  // Execute request (handles pagination if needed)
+  // Validate mutually exclusive flags
+  if (flags['--stream'] && flags['--paginate']) {
+    output.error('Cannot use --stream with --paginate');
+    return 1;
+  }
+
+  // Execute request (handles pagination or streaming if needed)
   if (flags['--paginate']) {
     return executePaginatedRequest(client, requestConfig, flags);
   }
@@ -252,6 +260,10 @@ async function executeSingleRequest(
       headers: config.headers,
       json: false, // Get raw response
     });
+
+    if (flags['--stream'] || isStreamingEndpoint(config.url)) {
+      return handleStreamingResponse(client, response, flags);
+    }
 
     return handleResponse(client, response, flags);
   } catch (err) {
@@ -352,6 +364,65 @@ async function handleResponse(
   client.stdout.write(text);
 
   return response.ok ? 0 : 1;
+}
+
+function isStreamingEndpoint(url: string): boolean {
+  const path = url.split('?')[0];
+  return STREAMING_ENDPOINT_PATTERNS.some(pattern => pattern.test(path));
+}
+
+async function handleStreamingResponse(
+  client: Client,
+  response: Response,
+  flags: ParsedFlags
+): Promise<number> {
+  // Include headers if requested
+  if (flags['--include']) {
+    outputHeaders(client, response);
+  }
+
+  // Silent mode: drain the stream without output
+  if (flags['--silent']) {
+    return new Promise<number>((resolve, reject) => {
+      response.body.on('end', () => resolve(0));
+      response.body.on('error', reject);
+      response.body.resume();
+    });
+  }
+
+  return new Promise<number>((resolve, reject) => {
+    const stream = response.body.pipe(split());
+    let finished = false;
+
+    function finish(err?: unknown) {
+      if (finished) return;
+      finished = true;
+      if (err) {
+        reject(err);
+      } else {
+        resolve(0);
+      }
+    }
+
+    stream.on('data', (line: string) => {
+      if (!line.trim()) return;
+
+      if (flags['--raw']) {
+        client.stdout.write(line + '\n');
+      } else {
+        try {
+          const parsed = JSON.parse(line);
+          client.stdout.write(JSON.stringify(parsed, null, 2) + '\n');
+        } catch {
+          client.stdout.write(line + '\n');
+        }
+      }
+    });
+
+    stream.on('end', () => finish());
+    stream.on('error', (err: Error) => finish(err));
+    response.body.on('error', (err: Error) => finish(err));
+  });
 }
 
 function outputHeaders(client: Client, response: Response): void {

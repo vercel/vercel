@@ -244,6 +244,155 @@ describe('api', () => {
     });
   });
 
+  describe('--stream flag', () => {
+    it('streams NDJSON response line by line', async () => {
+      client.scenario.get('/v1/stream-test', (_req, res) => {
+        res.setHeader('content-type', 'application/json');
+        res.write('{"line":1}\n');
+        res.write('{"line":2}\n');
+        res.write('{"line":3}\n');
+        res.end();
+      });
+
+      client.setArgv('api', '/v1/stream-test', '--stream');
+      const exitCode = await api(client);
+
+      expect(exitCode).toEqual(0);
+      const output = client.stdout.getFullOutput();
+      expect(output).toContain('"line": 1');
+      expect(output).toContain('"line": 2');
+      expect(output).toContain('"line": 3');
+    });
+
+    it('streams raw output with --stream --raw', async () => {
+      client.scenario.get('/v1/stream-raw', (_req, res) => {
+        res.setHeader('content-type', 'application/json');
+        res.write('{"line":1}\n');
+        res.write('{"line":2}\n');
+        res.end();
+      });
+
+      client.setArgv('api', '/v1/stream-raw', '--stream', '--raw');
+      const exitCode = await api(client);
+
+      expect(exitCode).toEqual(0);
+      const output = client.stdout.getFullOutput();
+      expect(output).toContain('{"line":1}');
+      expect(output).toContain('{"line":2}');
+    });
+
+    it('includes headers with --stream --include', async () => {
+      client.scenario.get('/v1/stream-include', (_req, res) => {
+        res.setHeader('x-custom', 'test-value');
+        res.write('{"data":"hello"}\n');
+        res.end();
+      });
+
+      client.setArgv('api', '/v1/stream-include', '--stream', '--include');
+      const exitCode = await api(client);
+
+      expect(exitCode).toEqual(0);
+      const output = client.stdout.getFullOutput();
+      expect(output).toContain('HTTP');
+      expect(output).toContain('200');
+      expect(output).toContain('"data": "hello"');
+    });
+
+    it('suppresses output with --stream --silent', async () => {
+      client.scenario.get('/v1/stream-silent', (_req, res) => {
+        res.write('{"data":"hello"}\n');
+        res.end();
+      });
+
+      client.setArgv('api', '/v1/stream-silent', '--stream', '--silent');
+      const exitCode = await api(client);
+
+      expect(exitCode).toEqual(0);
+      expect(client.stdout.getFullOutput()).toBe('');
+    });
+
+    it('handles plain text streaming', async () => {
+      client.scenario.get('/v1/stream-text', (_req, res) => {
+        res.setHeader('content-type', 'text/plain');
+        res.write('line one\n');
+        res.write('line two\n');
+        res.end();
+      });
+
+      client.setArgv('api', '/v1/stream-text', '--stream');
+      const exitCode = await api(client);
+
+      expect(exitCode).toEqual(0);
+      const output = client.stdout.getFullOutput();
+      expect(output).toContain('line one');
+      expect(output).toContain('line two');
+    });
+
+    it('rejects --stream with --paginate', async () => {
+      client.setArgv('api', '/v1/test', '--stream', '--paginate');
+      const exitCode = await api(client);
+
+      expect(exitCode).toEqual(1);
+      expect(client.getFullOutput()).toContain(
+        'Cannot use --stream with --paginate'
+      );
+    });
+
+    it('auto-streams known streaming endpoints without --stream flag', async () => {
+      client.scenario.get(
+        '/v1/projects/:projectId/deployments/:deploymentId/runtime-logs',
+        (_req, res) => {
+          res.setHeader('content-type', 'application/json');
+          res.write('{"message":"log line 1"}\n');
+          res.write('{"message":"log line 2"}\n');
+          res.end();
+        }
+      );
+
+      client.setArgv(
+        'api',
+        '/v1/projects/prj_123/deployments/dpl_456/runtime-logs'
+      );
+      const exitCode = await api(client);
+
+      expect(exitCode).toEqual(0);
+      const output = client.stdout.getFullOutput();
+      expect(output).toContain('"message": "log line 1"');
+      expect(output).toContain('"message": "log line 2"');
+    });
+
+    it('auto-streams deployment events endpoint', async () => {
+      client.scenario.get(
+        '/v3/now/deployments/:deploymentId/events',
+        (_req, res) => {
+          res.setHeader('content-type', 'application/json');
+          res.write('{"type":"command","text":"build"}\n');
+          res.end();
+        }
+      );
+
+      client.setArgv('api', '/v3/now/deployments/dpl_abc/events');
+      const exitCode = await api(client);
+
+      expect(exitCode).toEqual(0);
+      const output = client.stdout.getFullOutput();
+      expect(output).toContain('"type": "command"');
+    });
+
+    it('does not auto-stream non-streaming endpoints', async () => {
+      client.scenario.get('/v9/projects', (_req, res) => {
+        res.json({ projects: [{ id: 'prj_1' }] });
+      });
+
+      client.setArgv('api', '/v9/projects');
+      const exitCode = await api(client);
+
+      expect(exitCode).toEqual(0);
+      const output = client.stdout.getFullOutput();
+      expect(output).toContain('"id": "prj_1"');
+    });
+  });
+
   describe('telemetry', () => {
     it('tracks endpoint with normalized IDs', async () => {
       client.scenario.get('/v13/deployments/dpl_abc123', (_req, res) => {

@@ -90,6 +90,14 @@ export const apiCommand = {
       description: 'Fetch all pages of results',
     },
     {
+      name: 'stream',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description:
+        'Stream the response body line by line (for streaming/NDJSON endpoints)',
+    },
+    {
       name: 'include',
       shorthand: 'i',
       type: Boolean,

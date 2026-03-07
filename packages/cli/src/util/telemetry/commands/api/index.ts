@@ -74,6 +74,12 @@ export class ApiTelemetryClient
     }
   }
 
+  trackCliFlagStream(value: boolean | undefined) {
+    if (value) {
+      this.trackCliFlag('stream');
+    }
+  }
+
   trackCliFlagInclude(value: boolean | undefined) {
     if (value) {
       this.trackCliFlag('include');

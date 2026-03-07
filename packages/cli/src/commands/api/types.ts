@@ -30,6 +30,7 @@ export interface ParsedFlags {
   '--header'?: string[];
   '--input'?: string;
   '--paginate'?: boolean;
+  '--stream'?: boolean;
   '--include'?: boolean;
   '--silent'?: boolean;
   '--verbose'?: boolean;
