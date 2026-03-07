@@ -45,8 +45,6 @@ import {
   detectBuilders,
   detectApiDirectory,
   detectApiExtensions,
-  getInternalServiceCronPathPrefix,
-  getInternalServiceWorkerPathPrefix,
   isOfficialRuntime,
   type Service,
 } from '@vercel/fs-detectors';
@@ -172,6 +170,16 @@ export default class DevServer {
   private projectSettings?: ProjectSettings;
   private services?: Service[];
   private orchestrator?: ServicesOrchestrator;
+  private queuesMessages = new Map<
+    string,
+    {
+      payload: Buffer;
+      contentType: string;
+      queueName: string;
+      createdAt: string;
+      ticket: string;
+    }
+  >();
 
   private vercelConfigWarning: boolean;
   private getVercelConfigPromise: Promise<VercelConfig> | null;
@@ -957,12 +965,8 @@ export default class DevServer {
 
       output.print(`${chalk.cyan('>')} Available at:\n`);
       for (const service of this.services || []) {
-        let servicePath = service.routePrefix || '/';
-        if (service.type === 'worker') {
-          servicePath = getInternalServiceWorkerPathPrefix(service.name);
-        } else if (service.type === 'cron') {
-          servicePath = getInternalServiceCronPathPrefix(service.name);
-        }
+        if (service.type !== 'web') continue;
+        const servicePath = service.routePrefix || '/';
         const serviceUrl = `${addressFormatted}${servicePath === '/' ? '' : servicePath}`;
         output.print(`  ${chalk.bold(service.name)}: ${link(serviceUrl)}\n`);
       }
@@ -1442,6 +1446,150 @@ export default class DevServer {
   };
 
   /**
+   * Handle /_svc/_queues/* routes for the lightweight dev queue proxy, that
+   * mimics the Vercel Queues API so workers can be used in vc dev
+   * unchanged.
+   */
+  private handleQueuesRoute = async (
+    req: http.IncomingMessage,
+    res: http.ServerResponse,
+    pathname: string
+  ) => {
+    const { debug } = output;
+
+    // POST api/v2/messages - enqueue a message
+    if (req.method === 'POST' && pathname === `/_svc/_queues/api/v2/messages`) {
+      const queueName = (req.headers['vqs-queue-name'] as string) || 'default';
+      const contentType =
+        (req.headers['content-type'] as string) || 'application/json';
+      const payload = await rawBody(req);
+      const messageId = randomBytes(16).toString('hex');
+      const ticket = randomBytes(16).toString('hex');
+
+      this.queuesMessages.set(messageId, {
+        payload,
+        contentType,
+        queueName,
+        createdAt: new Date().toISOString(),
+        ticket,
+      });
+
+      debug(`queues: stored message ${messageId} for queue "${queueName}"`);
+
+      if (this.orchestrator && this.services) {
+        const workerService = this.services.find(
+          s => s.type === 'worker' && s.topic === queueName
+        );
+        if (workerService) {
+          const upstream = this.orchestrator.getServiceOrigin(
+            workerService.name
+          );
+          if (upstream) {
+            debug(
+              `queues: dispatching CloudEvent to worker "${workerService.name}" at ${upstream}`
+            );
+            const cloudEvent = JSON.stringify({
+              type: 'com.vercel.queue.v1beta',
+              specversion: '1.0',
+              source: 'vc-dev',
+              id: messageId,
+              data: {
+                queueName,
+                consumerGroup: workerService.consumer || 'default',
+                messageId,
+              },
+            });
+
+            // don't wait for the processing, all handled async
+            nodeFetch(`${upstream}/`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/cloudevents+json' },
+              body: cloudEvent,
+            }).catch(err => {
+              debug(
+                `queues: failed to dispatch CloudEvent to "${workerService.name}": ${err}`
+              );
+            });
+          }
+        } else {
+          debug(
+            `queues: no worker service found for topic "${queueName}", message stored but not dispatched`
+          );
+        }
+      }
+
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ messageId }));
+      return;
+    }
+
+    // GET/DELETE/PATCH /api/v2/messages/:messageId - handle message
+    const messageMatch = pathname.match(
+      /^\/_svc\/_queue\/api\/v2\/messages\/([a-f0-9]+)$/
+    );
+    if (!messageMatch) {
+      res.writeHead(404);
+      res.end('Not Found');
+      return;
+    }
+    const messageId = messageMatch[1];
+
+    if (req.method === 'GET') {
+      const msg = this.queuesMessages.get(messageId);
+      if (!msg) {
+        res.writeHead(404);
+        res.end('Message not found');
+        return;
+      }
+
+      debug(`queues: delivering message ${messageId}`);
+
+      // built-in http doesn't build multipart, so quickly construct it ourselves
+      // in a format that clients expect
+      const boundary = `----vcdevboundary${randomBytes(8).toString('hex')}`;
+      const partHeaders = [
+        `Vqs-Delivery-Count: 1`,
+        `Vqs-Timestamp: ${msg.createdAt}`,
+        `Vqs-Ticket: ${msg.ticket}`,
+        `Content-Type: ${msg.contentType}`,
+      ].join('\r\n');
+
+      const body = Buffer.concat([
+        Buffer.from(`--${boundary}\r\n${partHeaders}\r\n\r\n`),
+        msg.payload,
+        Buffer.from(`\r\n--${boundary}--\r\n`),
+      ]);
+
+      res.writeHead(200, {
+        'Content-Type': `multipart/mixed; boundary=${boundary}`,
+        'Content-Length': body.length,
+      });
+      res.end(body);
+      return;
+    }
+
+    if (req.method === 'DELETE') {
+      debug(`queues: ACK message ${messageId}`);
+      this.queuesMessages.delete(messageId);
+      res.writeHead(204);
+      res.end();
+      return;
+    }
+
+    // doesn't really do anything, because we don't have re-delivery in dev queue,
+    // so it's just an API for change_visibility from vercel-workers
+    if (req.method === 'PATCH') {
+      debug(`queues: change visibility for ${messageId}`);
+      res.writeHead(200);
+      res.end();
+      return;
+    }
+
+    res.writeHead(405);
+    res.end('Method Not Allowed');
+  };
+
+  /**
    * Serve project directory as a v2 deployment.
    */
   serveProjectAsNowV2 = async (
@@ -1472,6 +1620,15 @@ export default class DevServer {
 
       debug(`Rewriting URL from "${req.url}" to "${location}"`);
       req.url = location;
+    }
+
+    // Handle /_svc/_queues/* routes for the dev queue proxy
+    if (callLevel === 0 && this.orchestrator) {
+      const pathname = parsed.pathname || '/';
+      if (pathname.startsWith('/_svc/_queues/')) {
+        await this.handleQueuesRoute(req, res, pathname);
+        return;
+      }
     }
 
     // With multi-service setup, try to route to the appropriate service first
