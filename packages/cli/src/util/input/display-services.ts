@@ -64,11 +64,11 @@ interface ServiceDescriptionInfo {
 }
 
 function getServiceDescriptionInfo(service: Service): ServiceDescriptionInfo {
-  // Cron services aren't framework apps, so we'll just show type + runtime
-  // e.g. [Cron/Python]
-  if (service.type === 'cron') {
-    const typeLabel = 'Cron';
-    const typeColorFn = chalk.yellow;
+  // Cron and worker services aren't framework apps, so we'll just show type + runtime for them
+  // e.g. [Cron/Python] or [Worker/Python]
+  if (service.type === 'cron' || service.type === 'worker') {
+    const typeLabel = service.type === 'cron' ? 'Cron' : 'Worker';
+    const typeColorFn = service.type === 'cron' ? chalk.yellow : chalk.magenta;
     if (service.runtime) {
       const runtimeName =
         service.runtime.charAt(0).toUpperCase() + service.runtime.slice(1);
@@ -119,7 +119,7 @@ function getServiceTarget(service: Service): string {
 export function displayDetectedServices(services: Service[]): void {
   output.print(`Multiple services detected. Project Settings:\n`);
 
-  const outputOrder: Record<string, number> = { web: 0, cron: 1 };
+  const outputOrder: Record<string, number> = { web: 0, cron: 1, worker: 2 };
   const sorted = [...services].sort(
     (a, b) => (outputOrder[a.type] ?? 3) - (outputOrder[b.type] ?? 3)
   );

@@ -639,10 +639,13 @@ export const startDevServer: StartDevServer = async opts => {
   const env = { ...process.env, ...(meta.env || {}) } as NodeJS.ProcessEnv;
   const serviceType = env.VERCEL_SERVICE_TYPE;
 
-  // For cron services, use the raw entrypoint directly, because
+  // For cron/worker services, use the raw entrypoint directly, because
   // they don't export app/application so standard detection would skip them.
   let entry: string | undefined;
-  if (serviceType === 'cron' && rawEntrypoint?.endsWith('.py')) {
+  if (
+    (serviceType === 'cron' || serviceType === 'worker') &&
+    rawEntrypoint?.endsWith('.py')
+  ) {
     entry = rawEntrypoint;
   } else {
     const detected = await detectPythonEntrypoint(
