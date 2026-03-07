@@ -12,6 +12,7 @@ from vercel_runtime._vendor.uvicorn.config import (
     LOGGING_CONFIG as UVICORN_LOGGING_CONFIG,
 )
 from vercel_runtime._vendor.werkzeug.serving import run_simple
+from vercel_runtime.crons import bootstrap_cron_service_app, is_cron_service
 from vercel_runtime.resolver import detect_app_type, import_module, resolve_app
 from vercel_runtime.routing import (
     apply_service_route_prefix_to_asgi_scope,
@@ -118,12 +119,14 @@ def _build_uvicorn_log_config(
     if default_fmt is None:
         default_fmt = {
             **uvicorn_fmts["default"],
+            "()": "vercel_runtime._vendor.uvicorn.logging.DefaultFormatter",
             "use_colors": not _NO_COLOR,
         }
 
     if access_fmt is None:
         access_fmt = {
             **uvicorn_fmts["access"],
+            "()": "vercel_runtime._vendor.uvicorn.logging.AccessFormatter",
             "use_colors": not _NO_COLOR,
         }
 
@@ -351,22 +354,24 @@ def _start_wsgi(host: str, port: int) -> None:
 
 
 def _start_asgi(host: str, port: int) -> None:
-    # Prefer user-installed fastapi-cli when available
-    try:
-        from fastapi_cli.cli import (  # noqa: PLC0415  # pyright: ignore[reportMissingImports]
-            dev as fastapi_dev,  # pyright: ignore[reportUnknownVariableType]
-        )
+    # Prefer user-installed fastapi-cli for web services;
+    # cron services go straight to uvicorn.
+    if not is_cron_service():
+        try:
+            from fastapi_cli.cli import (  # noqa: PLC0415  # pyright: ignore[reportMissingImports]
+                dev as fastapi_dev,  # pyright: ignore[reportUnknownVariableType]
+            )
 
-        _patch_fastapi_cli_log_config()
-        fastapi_dev(
-            entrypoint="vercel_runtime.dev:asgi_app",
-            host=host,
-            port=port,
-            reload=True,
-        )
-        sys.exit(0)
-    except (ImportError, AttributeError):
-        pass
+            _patch_fastapi_cli_log_config()
+            fastapi_dev(
+                entrypoint="vercel_runtime.dev:asgi_app",
+                host=host,
+                port=port,
+                reload=True,
+            )
+            sys.exit(0)
+        except (ImportError, AttributeError):
+            pass
 
     vendored_uvicorn.run(
         "vercel_runtime.dev:asgi_app",
@@ -387,6 +392,11 @@ def _setup_apps() -> None:
     _setup_server_log_routing()
 
     mod = import_module(module_name, entry_abs)
+
+    if is_cron_service():
+        _asgi_user_app = bootstrap_cron_service_app(mod)
+        return
+
     app_name, user_app = resolve_app(mod, module_name)
     try:
         result = detect_app_type(user_app, module_name, app_name)
