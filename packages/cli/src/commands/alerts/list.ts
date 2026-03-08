@@ -13,8 +13,8 @@ import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name'
 import { ProjectNotFound, isAPIError } from '../../util/errors-ts';
 import type { AlertsTelemetryClient } from '../../util/telemetry/commands/alerts';
 import {
-  type ValidationError,
-  writeJsonError,
+  outputError,
+  handleValidationError,
   normalizeRepeatableStringFilters,
   validateAllProjectMutualExclusivity,
   validateOptionalIntegerRange,
@@ -94,28 +94,6 @@ interface AlertGroup {
   alerts: Alert[];
 }
 
-function outputError(
-  client: Client,
-  jsonOutput: boolean,
-  code: string,
-  message: string
-): number {
-  if (jsonOutput) {
-    writeJsonError(client, code, message);
-    return 1;
-  }
-  output.error(message);
-  return 1;
-}
-
-function handleValidationError(
-  client: Client,
-  jsonOutput: boolean,
-  result: ValidationError
-): number {
-  return outputError(client, jsonOutput, result.code, result.message);
-}
-
 function handleApiError(
   err: { status: number; code?: string; serverMessage?: string },
   jsonOutput: boolean,
@@ -128,7 +106,13 @@ function handleApiError(
         ? `The alerts endpoint failed on the server (${err.status}). Re-run with --debug and share the x-vercel-id from the failed request.`
         : err.serverMessage || `API error (${err.status}).`;
 
-  return outputError(client, jsonOutput, err.code || 'API_ERROR', message);
+  return outputError(
+    client,
+    jsonOutput,
+    err.code || 'API_ERROR',
+    message,
+    output.error
+  );
 }
 
 function getDefaultRange(): { from: string; to: string } {
@@ -245,6 +229,19 @@ function getStartedAt(group: AlertGroup): string {
   );
 }
 
+function getGroupResolvedAt(group: AlertGroup): Date | undefined {
+  const resolvedTimes = group.alerts
+    .map(alert => parseDateInput(alert.resolvedAt))
+    .filter((d): d is Date => Boolean(d))
+    .map(d => d.getTime());
+
+  if (resolvedTimes.length > 0) {
+    return new Date(Math.max(...resolvedTimes));
+  }
+
+  return parseDateInput(group.recordedStartedAt);
+}
+
 function getStatus(group: AlertGroup): string {
   const normalizedStatus = (group.status || '').toLowerCase();
   if (normalizedStatus === 'active') {
@@ -253,14 +250,7 @@ function getStatus(group: AlertGroup): string {
 
   if (normalizedStatus === 'resolved') {
     const startedAt = parseDateInput(group.recordedStartedAt);
-    const resolvedCandidates = group.alerts
-      .map(alert => parseDateInput(alert.resolvedAt))
-      .filter((d): d is Date => Boolean(d))
-      .map(d => d.getTime());
-    const resolvedAt =
-      resolvedCandidates.length > 0
-        ? new Date(Math.max(...resolvedCandidates))
-        : undefined;
+    const resolvedAt = getGroupResolvedAt(group);
 
     if (
       startedAt &&
@@ -344,7 +334,7 @@ function resolveValidatedInputs(
     max: 1000,
   });
   if (!limitResult.valid) {
-    return handleValidationError(client, jsonOutput, limitResult);
+    return handleValidationError(limitResult, jsonOutput, client, output.error);
   }
 
   const mutualResult = validateAllProjectMutualExclusivity(
@@ -352,17 +342,22 @@ function resolveValidatedInputs(
     flags['--project']
   );
   if (!mutualResult.valid) {
-    return handleValidationError(client, jsonOutput, mutualResult);
+    return handleValidationError(
+      mutualResult,
+      jsonOutput,
+      client,
+      output.error
+    );
   }
 
   const sinceResult = validateTimeBound(flags['--since']);
   if (!sinceResult.valid) {
-    return handleValidationError(client, jsonOutput, sinceResult);
+    return handleValidationError(sinceResult, jsonOutput, client, output.error);
   }
 
   const untilResult = validateTimeBound(flags['--until']);
   if (!untilResult.valid) {
-    return handleValidationError(client, jsonOutput, untilResult);
+    return handleValidationError(untilResult, jsonOutput, client, output.error);
   }
 
   const timeOrderResult = validateTimeOrder(
@@ -370,7 +365,12 @@ function resolveValidatedInputs(
     untilResult.value
   );
   if (!timeOrderResult.valid) {
-    return handleValidationError(client, jsonOutput, timeOrderResult);
+    return handleValidationError(
+      timeOrderResult,
+      jsonOutput,
+      client,
+      output.error
+    );
   }
 
   return {
@@ -466,7 +466,13 @@ export default async function list(
 
     output.debug(err);
     const message = `Failed to fetch alerts: ${(err as Error).message || String(err)}`;
-    return outputError(client, jsonOutput, 'UNEXPECTED_ERROR', message);
+    return outputError(
+      client,
+      jsonOutput,
+      'UNEXPECTED_ERROR',
+      message,
+      output.error
+    );
   } finally {
     output.stopSpinner();
   }
