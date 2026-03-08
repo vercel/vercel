@@ -55,9 +55,10 @@ export interface BuildMatch extends BuildConfig {
   buildProcess?: ChildProcess;
 }
 
-export interface HttpHandler {
-  (req: http.IncomingMessage, res: http.ServerResponse): void;
-}
+export type HttpHandler = (
+  req: http.IncomingMessage,
+  res: http.ServerResponse
+) => void;
 
 export interface BuilderInputs {
   [path: string]: FileFsRef;

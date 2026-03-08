@@ -8,10 +8,8 @@ import getScope from '../../util/get-scope';
 
 export default async function v0(client: Client, argv: string[]) {
   const flagsSpecification = getFlagsSpecification(v0Subcommand.options);
-  let parsedArgs;
   try {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    parsedArgs = parseArguments(argv, flagsSpecification);
+    parseArguments(argv, flagsSpecification);
   } catch (error) {
     printError(error);
     return 1;

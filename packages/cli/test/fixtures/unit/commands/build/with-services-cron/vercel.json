@@ -1,0 +1,9 @@
+{
+  "experimentalServices": {
+    "cleanup": {
+      "type": "cron",
+      "entrypoint": "api/cron.js",
+      "schedule": "0 0 * * *"
+    }
+  }
+}

@@ -21,6 +21,10 @@ from importlib import util
 from typing import TYPE_CHECKING, Any, Literal, Never, TextIO
 from urllib.parse import urlsplit
 
+from vercel_runtime.crons import (
+    bootstrap_cron_service_app,
+    is_cron_service,
+)
 from vercel_runtime.headers import (
     clear_vercel_headers_context,
     decode_header_bytes,
@@ -605,6 +609,15 @@ if is_worker_service():
             _stderr("Error bootstrapping worker service app:")
             _stderr(traceback.format_exc())
             exit(1)
+
+if is_cron_service():
+    try:
+        __vc_module.__dict__["app"] = bootstrap_cron_service_app(__vc_module)
+        __vc_variables = dir(__vc_module)
+    except Exception:
+        _stderr("Error bootstrapping cron service app:")
+        _stderr(traceback.format_exc())
+        exit(1)
 
 _use_legacy_asyncio = sys.version_info < (3, 10)
 

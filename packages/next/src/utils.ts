@@ -677,7 +677,7 @@ export async function getDynamicRoutes({
     if (typeof getRouteRegex !== 'function') {
       getRouteRegex = undefined;
     }
-  } catch (_) {} // eslint-disable-line no-empty
+  } catch (_) {}
 
   if (!getRouteRegex || !getSortedRoutes) {
     try {
@@ -689,7 +689,7 @@ export async function getDynamicRoutes({
       if (typeof getRouteRegex !== 'function') {
         getRouteRegex = undefined;
       }
-    } catch (_) {} // eslint-disable-line no-empty
+    } catch (_) {}
   }
 
   if (!getRouteRegex || !getSortedRoutes) {
@@ -1142,7 +1142,7 @@ export type NextRequiredServerFilesManifest = {
 /**
  * The rendering mode for a route.
  */
-export const enum RenderingMode {
+export enum RenderingMode {
   /**
    * `STATIC` rendering mode will output a fully static HTML page or error if
    * anything dynamic is used.
@@ -1974,7 +1974,6 @@ export async function getPageLambdaGroups({
       // Exclude `regions` from the manifest. Next.js outputs `preferredRegion`
       // as `regions` in the manifest, but for Node.js lambdas we only support
       // regions via vercel.json functions config, not route-level config.
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { regions: _regions, ...manifestOpts } =
         functionsConfigManifest.functions[routeName];
       opts = manifestOpts;
@@ -3038,6 +3037,12 @@ export const onPrerenderRoute =
         };
       }
 
+      const partialFallback =
+        isAppPathRoute &&
+        renderingMode === RenderingMode.PARTIALLY_STATIC &&
+        isFallback &&
+        Boolean(postponedState);
+
       // If this is a fallback page with PPR enabled, we should not have the
       // cache key vary based on the route parameters to ensure that we always
       // have a HIT for the fallback page.
@@ -3063,20 +3068,15 @@ export const onPrerenderRoute =
         }
         // We additionally vary based on if there's a postponed prerender
         // because if there isn't, then that means that we generated an
-        // empty shell, and producing an empty RSC shell would be a waste.
-        // If there is a postponed prerender, then the RSC shell would be
-        // non-empty, and it would be valuable to also generate an empty
-        // RSC shell.
+        // empty shell. For partial fallbacks when cache components are enabled,
+        // we still want to vary the HTML by params so the route shell can be
+        // cached per-param. Otherwise, keep the fallback shell shared across
+        // params.
         else if (postponedPrerender) {
-          htmlAllowQuery = [];
+          htmlAllowQuery =
+            partialFallback && isAppClientParamParsingEnabled ? allowQuery : [];
         }
       }
-
-      const partialFallback =
-        isAppPathRoute &&
-        renderingMode === RenderingMode.PARTIALLY_STATIC &&
-        isFallback &&
-        Boolean(postponedState);
 
       // If this is a static metadata file that should output FileRef instead of Prerender
       const staticMetadataFile = getSourceFileRefOfStaticMetadata(
@@ -3650,7 +3650,7 @@ export {
   normalizePackageJson,
   getNextConfig,
   getImagesConfig,
-  stringMap,
+  type stringMap,
   normalizePage,
   isDynamicRoute,
   getSourceFilePathFromPage,
@@ -4691,7 +4691,7 @@ export async function getServerActionMetaRoutes(
     }
 
     return routes;
-  } catch (error) {
+  } catch (_error) {
     // If manifest doesn't exist or can't be read, return empty routes
     return [];
   }

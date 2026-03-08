@@ -25,30 +25,14 @@ export const listSubcommand = {
       deprecated: false,
     },
     {
-      name: 'page',
-      description: 'Page number to display',
-      shorthand: null,
-      type: Number,
-      argument: 'NUMBER',
-      deprecated: false,
-    },
-    {
-      name: 'per-page',
-      description: 'Number of routes per page (default: 50)',
-      shorthand: null,
-      type: Number,
-      argument: 'NUMBER',
-      deprecated: false,
-    },
-    {
-      name: 'staging',
-      description: 'List routes from the staging version',
+      name: 'production',
+      description: 'List routes from the live production version',
       shorthand: null,
       type: Boolean,
       deprecated: false,
     },
     {
-      name: 'version',
+      name: 'version-id',
       description: 'List routes from a specific version ID',
       shorthand: null,
       type: String,
@@ -57,7 +41,8 @@ export const listSubcommand = {
     },
     {
       name: 'diff',
-      description: 'Show diff between staging and production',
+      description:
+        'Compare staged changes against production. Use with --version-id to compare a specific version.',
       shorthand: null,
       type: Boolean,
       deprecated: false,
@@ -84,8 +69,12 @@ export const listSubcommand = {
       value: `${packageName} routes list --filter rewrite`,
     },
     {
-      name: 'Show staging changes',
-      value: `${packageName} routes list --staging --diff`,
+      name: 'Show staged changes',
+      value: `${packageName} routes list --diff`,
+    },
+    {
+      name: 'Show live production routes',
+      value: `${packageName} routes list --production`,
     },
     {
       name: 'Show expanded details',
@@ -134,7 +123,7 @@ export const inspectSubcommand = {
   options: [
     {
       name: 'diff',
-      description: 'Show changes between staging and production for this route',
+      description: 'Compare staged changes against production for this route',
       shorthand: null,
       type: Boolean,
       deprecated: false,
@@ -910,5 +899,4 @@ export const routesCommand = {
   ],
   options: [],
   examples: [],
-  hidden: true, // TODO: Remove when all routes subcommands are complete
 } as const;

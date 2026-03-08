@@ -16,9 +16,9 @@ const crypto = require('crypto');
 const ZIP_BUFFER_FILE_THRESHOLD = 256 * 1024 * 1024; // 256MB
 
 process.on('unhandledRejection', err => {
-  // eslint-disable-next-line no-console
+  // biome-ignore lint/suspicious/noConsole: intentional console usage
   console.error('Exiting builder due to build error:');
-  // eslint-disable-next-line no-console
+  // biome-ignore lint/suspicious/noConsole: intentional console usage
   console.error(err);
   process.exit(1);
 });

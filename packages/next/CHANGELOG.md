@@ -1,5 +1,17 @@
 # @vercel/next
 
+## 4.15.41
+
+### Patch Changes
+
+- Update Next.js adapter version ([#15382](https://github.com/vercel/vercel/pull/15382))
+
+## 4.15.40
+
+### Patch Changes
+
+- vary fallback `allowQuery` by params for partial fallback shells ([#15338](https://github.com/vercel/vercel/pull/15338))
+
 ## 4.15.39
 
 ### Patch Changes

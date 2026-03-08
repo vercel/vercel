@@ -168,8 +168,7 @@ describe.skipIf(flakey)('build', () => {
     try {
       await fs.unlink(join(cwd, 'foo.html'));
       await fs.symlink(join(cwd, 'index.html'), join(cwd, 'foo.html'));
-    } catch (e) {
-      // eslint-disable-next-line no-console
+    } catch (_e) {
       console.log('Symlinks not available, skipping test');
       return;
     }
@@ -796,7 +795,6 @@ describe.skipIf(flakey)('build', () => {
 
   it('should error when "functions" has runtime that emits discontinued "nodejs12.x"', async () => {
     if (process.platform === 'win32') {
-      // eslint-disable-next-line no-console
       console.log('Skipping test on Windows');
       return;
     }
@@ -1012,7 +1010,6 @@ describe.skipIf(flakey)('build', () => {
   it('should apply project settings overrides from "vercel.json"', async () => {
     if (process.platform === 'win32') {
       // this test runs a build command with `mkdir -p` which is unsupported on Windows
-      // eslint-disable-next-line no-console
       console.log('Skipping test on Windows');
       return;
     }
@@ -1111,6 +1108,27 @@ describe.skipIf(flakey)('build', () => {
         schedule: '0 0 * * *',
       },
     ]);
+  });
+
+  it('should include cron services in build output crons', async () => {
+    const cwd = fixture('with-services-cron');
+    const output = join(cwd, '.vercel', 'output');
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toBe(0);
+
+    const config = await fs.readJSON(join(output, 'config.json'));
+    expect(config).toHaveProperty('crons', [
+      {
+        path: '/_svc/cleanup/crons/api/cron/cron',
+        schedule: '0 0 * * *',
+      },
+    ]);
+    expect(config.routes).toContainEqual({
+      src: '^/_svc/cleanup/crons/api/cron/cron$',
+      dest: '/_svc/cleanup/index',
+      check: true,
+    });
   });
 
   it('should fail build when CRON_SECRET contains invalid HTTP header characters', async () => {
@@ -1596,6 +1614,42 @@ describe.skipIf(flakey)('build', () => {
     });
   });
 
+  it('should emit flags-definitions module when VERCEL_EXPERIMENTAL_EMBED_FLAG_DEFINITIONS=1', async () => {
+    const cwd = fixture('static');
+    const definitionsDir = join(
+      cwd,
+      'node_modules',
+      '@vercel',
+      'flags-definitions'
+    );
+
+    client.cwd = cwd;
+    client.setArgv('build', '--yes');
+    const prev = process.env.VERCEL_EXPERIMENTAL_EMBED_FLAG_DEFINITIONS;
+    try {
+      process.env.VERCEL_EXPERIMENTAL_EMBED_FLAG_DEFINITIONS = '1';
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      expect(fs.existsSync(join(definitionsDir, 'index.js'))).toBe(true);
+      expect(fs.existsSync(join(definitionsDir, 'index.d.ts'))).toBe(true);
+      expect(fs.existsSync(join(definitionsDir, 'package.json'))).toBe(true);
+      const pkg = await fs.readJSON(join(definitionsDir, 'package.json'));
+      expect(pkg.name).toBe('@vercel/flags-definitions');
+      const indexJs = await fs.readFile(
+        join(definitionsDir, 'index.js'),
+        'utf8'
+      );
+      expect(indexJs).toContain('export function get(hashedSdkKey)');
+    } finally {
+      if (prev !== undefined) {
+        process.env.VERCEL_EXPERIMENTAL_EMBED_FLAG_DEFINITIONS = prev;
+      } else {
+        delete process.env.VERCEL_EXPERIMENTAL_EMBED_FLAG_DEFINITIONS;
+      }
+    }
+  });
+
   it('should not apply framework `defaultRoutes` when build command outputs Build Output API', async () => {
     const cwd = fixture('build-output-api-with-api-dir');
     const output = join(cwd, '.vercel/output');
@@ -1650,7 +1704,6 @@ describe.skipIf(flakey)('build', () => {
 
   it('should create symlinks for duplicate references to Lambda / EdgeFunction instances', async () => {
     if (process.platform === 'win32') {
-      // eslint-disable-next-line no-console
       console.log('Skipping test on Windows');
       return;
     }

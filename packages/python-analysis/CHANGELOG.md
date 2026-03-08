@@ -1,5 +1,11 @@
 # @vercel/python-analysis
 
+## 0.8.2
+
+### Patch Changes
+
+- Consolidate Python version resolution into `python-analysis` ([#15368](https://github.com/vercel/vercel/pull/15368))
+
 ## 0.8.1
 
 ### Patch Changes

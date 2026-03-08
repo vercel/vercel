@@ -1,5 +1,4 @@
 import fs from 'fs';
-import { promisify } from 'util';
 import { join, dirname, basename, parse } from 'path';
 import {
   VERCEL_RUNTIME_VERSION,
@@ -26,41 +25,86 @@ import {
   type ShouldServe,
   FileFsRef,
   PythonFramework,
+  type PrepareCache,
 } from '@vercel/build-utils';
 import {
+  discoverPackage,
   ensureUvProject,
   resolveVendorDir,
   installRequirementsFile,
   installRequirement,
 } from './install';
 import { PythonDependencyExternalizer } from './dependency-externalizer';
-import { detectInstallSource } from './install';
-import { UvRunner, getUvBinaryOrInstall } from './uv';
-import { readConfigFile } from '@vercel/build-utils';
-import {
-  getSupportedPythonVersion,
-  DEFAULT_PYTHON_VERSION,
-  parseVersionTuple,
-  compareTuples,
-} from './version';
+import { UvRunner, getUvBinaryOrInstall, getUvCacheDir } from './uv';
+import { resolvePythonVersion, pythonVersionString } from './version';
 import { startDevServer } from './start-dev-server';
-import {
-  runPyprojectScript,
-  findDir,
-  ensureVenv,
-  createVenvEnv,
-} from './utils';
+import { runPyprojectScript, ensureVenv, createVenvEnv } from './utils';
 import { runQuirks } from './quirks';
+import { getDjangoSettings } from './django';
+import { containsTopLevelCallable } from '@vercel/python-analysis';
 
-const readFile = promisify(fs.readFile);
-const writeFile = promisify(fs.writeFile);
+const writeFile = fs.promises.writeFile;
 
 import {
   PYTHON_CANDIDATE_ENTRYPOINTS,
   detectPythonEntrypoint,
+  type DetectedPythonEntrypoint,
 } from './entrypoint';
 
 export const version = 3;
+
+interface FrameworkHookContext {
+  pythonEnv: NodeJS.ProcessEnv;
+  projectDir: string;
+  entrypoint: string;
+  detected: DetectedPythonEntrypoint | undefined;
+}
+
+interface FrameworkHookResult {
+  entrypoint?: string;
+}
+
+type FrameworkHook = (
+  ctx: FrameworkHookContext
+) => Promise<FrameworkHookResult | void>;
+
+export async function runFrameworkHook(
+  framework: string | undefined,
+  ctx: FrameworkHookContext
+): Promise<FrameworkHookResult | void> {
+  const hook = framework
+    ? frameworkHooks[framework as PythonFramework]
+    : undefined;
+  return hook?.(ctx);
+}
+
+const frameworkHooks: Partial<Record<PythonFramework, FrameworkHook>> = {
+  django: async ({ pythonEnv, projectDir, detected }) => {
+    if (detected?.baseDir === undefined) {
+      debug('Django hook: no manage.py detected, skipping');
+      return;
+    }
+    const settings = await getDjangoSettings(projectDir, pythonEnv);
+    debug(`Django settings: ${JSON.stringify(settings)}`);
+    if (!settings) return;
+
+    const baseDir = detected?.baseDir ?? '';
+    const asgiApp = settings['ASGI_APPLICATION'];
+    if (typeof asgiApp === 'string') {
+      const rel = `${asgiApp.split('.').slice(0, -1).join('/')}.py`;
+      const entrypoint = baseDir ? `${baseDir}/${rel}` : rel;
+      debug(`Django hook: ASGI entrypoint: ${entrypoint}`);
+      return { entrypoint };
+    }
+    const wsgiApp = settings['WSGI_APPLICATION'];
+    if (typeof wsgiApp === 'string') {
+      const rel = `${wsgiApp.split('.').slice(0, -1).join('/')}.py`;
+      const entrypoint = baseDir ? `${baseDir}/${rel}` : rel;
+      debug(`Django hook: WSGI entrypoint: ${entrypoint}`);
+      return { entrypoint };
+    }
+  },
+};
 
 export async function downloadFilesInWorkPath({
   entrypoint,
@@ -130,23 +174,27 @@ export const build: BuildV3 = async ({
   let fsFiles = await glob('**', workPath);
 
   // Zero config entrypoint discovery
+  let detected: DetectedPythonEntrypoint | undefined;
+  let entrypointNotFound: NowBuildError | undefined;
   if (
     isPythonFramework(framework) &&
+    // XXX: we might want to detect anyway for django!
     (!fsFiles[entrypoint] || !entrypoint.endsWith('.py'))
   ) {
-    const detected = await detectPythonEntrypoint(
-      config.framework as PythonFramework,
-      workPath,
-      entrypoint
-    );
-    if (detected) {
+    detected =
+      (await detectPythonEntrypoint(
+        config.framework as PythonFramework,
+        workPath,
+        entrypoint
+      )) ?? undefined;
+    if (detected?.entrypoint) {
       debug(
-        `Resolved Python entrypoint to "${detected}" (configured "${entrypoint}" not found).`
+        `Resolved Python entrypoint to "${detected.entrypoint}" (configured "${entrypoint}" not found).`
       );
-      entrypoint = detected;
+      entrypoint = detected.entrypoint;
     } else {
       const searchedList = PYTHON_CANDIDATE_ENTRYPOINTS.join(', ');
-      throw new NowBuildError({
+      entrypointNotFound = new NowBuildError({
         code: `${framework.toUpperCase()}_ENTRYPOINT_NOT_FOUND`,
         message: `No ${framework} entrypoint found. Add an 'app' script in pyproject.toml or define an entrypoint in one of: ${searchedList}.`,
         link: `https://vercel.com/docs/frameworks/backend/${framework}#exporting-the-${framework}-application`,
@@ -155,134 +203,46 @@ export const build: BuildV3 = async ({
     }
   }
 
-  const entryDirectory = dirname(entrypoint);
+  if (entrypointNotFound && detected?.baseDir === undefined) {
+    throw entrypointNotFound;
+  }
 
-  const pyprojectDir = findDir({
-    file: 'pyproject.toml',
-    entryDirectory,
-    workPath,
-    fsFiles,
-  });
+  const entryDirectory = detected?.baseDir ?? dirname(entrypoint);
 
-  const pipfileLockDir = findDir({
-    file: 'Pipfile.lock',
-    entryDirectory,
-    workPath,
-    fsFiles,
-  });
+  const entrypointAbsDir = join(workPath, entryDirectory);
+  const rootDir = repoRootPath ?? workPath;
 
-  const pythonVersionFileDir = findDir({
-    file: '.python-version',
-    entryDirectory,
-    workPath,
-    fsFiles,
-  });
+  const pythonPackage = await builderSpan
+    .child('vc.builder.python.discover')
+    .trace(() =>
+      discoverPackage({
+        entrypointDir: entrypointAbsDir,
+        rootDir,
+      })
+    );
 
-  // Determine Python version from .python-version, pyproject.toml, or Pipfile.lock if present.
-  const { pythonVersion, declaredPythonVersion } = await builderSpan
+  const { pythonVersion, pinVersionFilePath } = await builderSpan
     .child('vc.builder.python.version')
-    .trace(async versionSpan => {
-      let declared:
-        | {
-            version: string;
-            source: 'Pipfile.lock' | 'pyproject.toml' | '.python-version';
-          }
-        | undefined;
-
-      // .python-version is the highest priority because its what uv will use to select dependencies
-      if (pythonVersionFileDir) {
-        try {
-          const content = await readFile(
-            join(pythonVersionFileDir, '.python-version'),
-            'utf8'
-          );
-          const version = parsePythonVersionFile(content);
-          if (version) {
-            declared = { version, source: '.python-version' };
-            debug(`Found Python version ${version} in .python-version`);
-          }
-        } catch (err) {
-          debug('Failed to read .python-version file', err);
-        }
-      }
-
-      if (!declared && pyprojectDir) {
-        let requiresPython: string | undefined;
-        try {
-          const pyproject = await readConfigFile<{
-            project?: { ['requires-python']?: string };
-          }>(join(pyprojectDir, 'pyproject.toml'));
-          requiresPython = pyproject?.project?.['requires-python'];
-        } catch (err) {
-          debug('Failed to parse pyproject.toml', err);
-        }
-        if (typeof requiresPython === 'string' && requiresPython.trim()) {
-          declared = {
-            version: requiresPython.trim(),
-            source: 'pyproject.toml',
-          };
-          debug(`Found requires-python "${requiresPython}" in pyproject.toml`);
-        }
-      }
-
-      if (!declared && pipfileLockDir) {
-        let lock: {
-          _meta?: { requires?: { python_version?: string } };
-        } = {};
-        const pipfileLockPath = join(pipfileLockDir, 'Pipfile.lock');
-        try {
-          const pipfileLockContent = await readFile(pipfileLockPath, 'utf8');
-          try {
-            lock = JSON.parse(pipfileLockContent);
-          } catch (err) {
-            console.log(
-              `Failed to parse "Pipfile.lock". File content:\n${pipfileLockContent}`
-            );
-            throw err;
-          }
-        } catch (err) {
-          throw new NowBuildError({
-            code: 'INVALID_PIPFILE_LOCK',
-            message: 'Unable to parse Pipfile.lock',
-          });
-        }
-        const pyFromLock = lock?._meta?.requires?.python_version;
-        if (pyFromLock) {
-          declared = { version: pyFromLock, source: 'Pipfile.lock' };
-          debug(`Found Python version ${pyFromLock} in Pipfile.lock`);
-        }
-      }
-
-      const resolved = getSupportedPythonVersion({
+    .trace(versionSpan => {
+      const resolution = resolvePythonVersion({
         isDev: meta.isDev,
-        declaredPythonVersion: declared,
+        pythonPackage,
+        rootDir,
       });
-
       versionSpan.setAttributes({
-        'python.version': resolved.version,
-        'python.versionSource': declared?.source,
+        'python.version': pythonVersionString(resolution.pythonVersion),
+        'python.versionSource': resolution.versionSource,
       });
-
-      return { pythonVersion: resolved, declaredPythonVersion: declared };
+      return resolution;
     });
 
-  // Write a .python-version file on behalf of the user when:
-  // no .python-version file exists and the required version in pyproject.toml
-  // is <= DEFAULT_PYTHON_VERSION
-  const selectedVersionTuple = parseVersionTuple(pythonVersion.version);
-  const defaultVersionTuple = parseVersionTuple(DEFAULT_PYTHON_VERSION);
-  if (
-    !pythonVersionFileDir &&
-    pyprojectDir &&
-    declaredPythonVersion?.source === 'pyproject.toml' &&
-    selectedVersionTuple &&
-    defaultVersionTuple &&
-    compareTuples(selectedVersionTuple, defaultVersionTuple) <= 0
-  ) {
-    const pythonVersionFilePath = join(pyprojectDir, '.python-version');
-    await writeFile(pythonVersionFilePath, `${pythonVersion.version}\n`);
+  if (pinVersionFilePath) {
     console.log(
-      `Writing .python-version file with version ${pythonVersion.version}`
+      `Writing .python-version file with version ${pythonVersionString(pythonVersion)}`
+    );
+    await writeFile(
+      pinVersionFilePath,
+      `${pythonVersionString(pythonVersion)}\n`
     );
   }
 
@@ -291,10 +251,12 @@ export const build: BuildV3 = async ({
   // Create a virtual environment under ".vercel/python/.venv" so dependencies
   // can be installed via `uv sync` and then vendored into the Lambda bundle.
   const venvPath = join(workPath, '.vercel', 'python', '.venv');
+  const uvCacheDir = getUvCacheDir(workPath);
   await builderSpan.child('vc.builder.python.venv').trace(async () => {
     await ensureVenv({
       pythonPath: pythonVersion.pythonPath,
       venvPath,
+      uvCacheDir,
     });
   });
 
@@ -327,7 +289,7 @@ export const build: BuildV3 = async ({
   }
 
   const baseEnv = spawnEnv || process.env;
-  const pythonEnv = createVenvEnv(venvPath, baseEnv);
+  const pythonEnv = createVenvEnv(venvPath, baseEnv, uvCacheDir);
 
   pythonEnv.VERCEL_PYTHON_VENV_PATH = venvPath;
 
@@ -340,7 +302,7 @@ export const build: BuildV3 = async ({
   try {
     const uvPath = await getUvBinaryOrInstall(pythonVersion.pythonPath);
     console.log(`Using uv at "${uvPath}"`);
-    uv = new UvRunner(uvPath);
+    uv = new UvRunner(uvPath, uvCacheDir);
   } catch (err) {
     console.log('Failed to install or locate uv');
     throw new Error(
@@ -393,9 +355,9 @@ export const build: BuildV3 = async ({
         const { projectDir, lockPath, lockFileProvidedByUser } =
           await ensureUvProject({
             workPath,
-            entryDirectory,
-            repoRootPath,
-            pythonVersion: pythonVersion.version,
+            rootDir,
+            pythonPackage,
+            pythonVersion: pythonVersionString(pythonVersion),
             uv,
             generateLockFile: true,
             requireBinaryWheels: false,
@@ -404,13 +366,8 @@ export const build: BuildV3 = async ({
         uvLockPath = lockPath;
         uvProjectDir = projectDir;
 
-        // Get the project name from python-analysis for package classification
-        const installInfo = await detectInstallSource({
-          workPath,
-          entryDirectory,
-          repoRootPath,
-        });
-        projectName = installInfo.pythonPackage?.manifest?.data?.project?.name;
+        // Get the project name from the already-discovered package info
+        projectName = pythonPackage?.manifest?.data?.project?.name;
 
         // For user-provided lock files, check if all packages have binary wheels
         // available BEFORE running the actual sync. We track this result so we can
@@ -476,6 +433,22 @@ export const build: BuildV3 = async ({
       });
   }
 
+  // Run per-framework post-build hooks (e.g. collectstatic for Django).
+  const hookResult = await runFrameworkHook(framework, {
+    pythonEnv,
+    projectDir: join(workPath, entryDirectory),
+    entrypoint,
+    detected,
+  });
+  if (entrypointNotFound && hookResult?.entrypoint) {
+    entrypoint = hookResult.entrypoint;
+    entrypointNotFound = undefined;
+  }
+
+  if (entrypointNotFound) {
+    throw entrypointNotFound;
+  }
+
   // Ensure correct version of vercel-runtime is installed.
   //
   // We intentionally do not inject vercel-runtime into the manifest
@@ -517,15 +490,37 @@ export const build: BuildV3 = async ({
   if (quirksResult.buildEnv) {
     Object.assign(pythonEnv, quirksResult.buildEnv);
   }
-
   debug('Entrypoint is', entrypoint);
   const moduleName = entrypoint.replace(/\//g, '.').replace(/\.py$/i, '');
+  const handlerFunction =
+    typeof config?.handlerFunction === 'string'
+      ? config.handlerFunction
+      : undefined;
+
+  if (handlerFunction) {
+    const entrypointPath = join(workPath, entrypoint);
+    const source = await fs.promises.readFile(entrypointPath, 'utf-8');
+    const found = await containsTopLevelCallable(source, handlerFunction);
+    if (!found) {
+      throw new NowBuildError({
+        code: 'PYTHON_HANDLER_NOT_FOUND',
+        message:
+          `Handler function "${handlerFunction}" not found in ${entrypoint}. ` +
+          `Ensure it is defined at the module's top level.`,
+      });
+    }
+  }
+
   const vendorDir = resolveVendorDir();
 
   // Since `vercel dev` renames source files, we must reference the original
   const suffix = meta.isDev && !entrypoint.endsWith('.py') ? '.py' : '';
   const entrypointWithSuffix = `${entrypoint}${suffix}`;
   debug('Entrypoint with suffix is', entrypointWithSuffix);
+
+  const handlerFuncEnvLine = handlerFunction
+    ? `\n  "__VC_HANDLER_FUNC_NAME": "${handlerFunction}",`
+    : '';
 
   const runtimeTrampoline = `
 import importlib
@@ -540,7 +535,7 @@ os.environ.update({
   "__VC_HANDLER_MODULE_NAME": "${moduleName}",
   "__VC_HANDLER_ENTRYPOINT": "${entrypointWithSuffix}",
   "__VC_HANDLER_ENTRYPOINT_ABS": os.path.join(_here, "${entrypointWithSuffix}"),
-  "__VC_HANDLER_VENDOR_DIR": "${vendorDir}",
+  "__VC_HANDLER_VENDOR_DIR": "${vendorDir}",${handlerFuncEnvLine}
 })
 
 _vendor_rel = '${vendorDir}'
@@ -611,7 +606,7 @@ from vercel_runtime.vc_init import vc_handler
     pythonPath: pythonVersion.pythonPath,
     hasCustomCommand,
     alwaysBundlePackages: [
-      ...quirksResult.alwaysBundlePackages,
+      ...(quirksResult.alwaysBundlePackages ?? []),
       ...(shouldInstallVercelWorkers
         ? ['vercel-workers', 'vercel_workers']
         : []),
@@ -667,6 +662,48 @@ from vercel_runtime.vc_init import vc_handler
 
 export { startDevServer };
 
+async function readBuildOutputV3Config(
+  workPath: string
+): Promise<{ cache?: string[] } | undefined> {
+  try {
+    const configPath = join(workPath, '.vercel', 'output', 'config.json');
+    return JSON.parse(await fs.promises.readFile(configPath, 'utf8'));
+  } catch (err: any) {
+    if (err.code !== 'ENOENT') {
+      throw err;
+    }
+  }
+  return undefined;
+}
+
+export const prepareCache: PrepareCache = async ({
+  repoRootPath,
+  workPath,
+}) => {
+  const cacheFiles: Files = {};
+  const root = repoRootPath || workPath;
+  const ignore = ['**/*.pyc', '**/__pycache__/**'];
+
+  const configV3 = await readBuildOutputV3Config(workPath);
+  if (configV3?.cache && Array.isArray(configV3.cache)) {
+    for (const cacheGlob of configV3.cache) {
+      Object.assign(cacheFiles, await glob(cacheGlob, workPath));
+    }
+    return cacheFiles;
+  }
+
+  Object.assign(
+    cacheFiles,
+    await glob('**/.vercel/python/.venv/**', { cwd: root, ignore })
+  );
+  Object.assign(
+    cacheFiles,
+    await glob('**/.vercel/python/cache/uv/**', { cwd: root, ignore })
+  );
+
+  return cacheFiles;
+};
+
 export const shouldServe: ShouldServe = opts => {
   const framework = opts.config.framework;
   if (isPythonFramework(framework)) {
@@ -703,18 +740,6 @@ export const defaultShouldServe: ShouldServe = ({
 
 function hasProp(obj: { [path: string]: FileFsRef }, key: string): boolean {
   return Object.hasOwnProperty.call(obj, key);
-}
-
-// Parses a .python-version file and returns the first non-empty, non-comment line.
-// Supports both exact versions (e.g. "3.12") and version specifiers (e.g. ">=3.12").
-function parsePythonVersionFile(content: string): string | undefined {
-  const lines = content.split('\n');
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith('#')) continue;
-    return trimmed;
-  }
-  return undefined;
 }
 
 // internal only - expect breaking changes if other packages depend on these exports
