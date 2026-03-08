@@ -46,6 +46,14 @@ export const alertsCommand = {
         'Show team-wide alerts (ignore linked project auto-scoping).',
     },
     {
+      name: 'ai',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description:
+        'Print AI-focused sections (title, resolved time, summary, key findings) instead of table output.',
+    },
+    {
       name: 'since',
       shorthand: null,
       type: String,

@@ -57,6 +57,12 @@ export class AlertsTelemetryClient
     }
   }
 
+  trackCliFlagAi(v: boolean | undefined) {
+    if (v) {
+      this.trackCliFlag('ai');
+    }
+  }
+
   trackCliOptionLimit(v: number | undefined) {
     if (typeof v === 'number') {
       this.trackCliOption({

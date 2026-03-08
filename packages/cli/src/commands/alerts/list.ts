@@ -26,6 +26,7 @@ interface ListFlags {
   '--type'?: string[];
   '--project'?: string;
   '--all'?: boolean;
+  '--ai'?: boolean;
   '--since'?: string;
   '--until'?: string;
   '--limit'?: number;
@@ -266,6 +267,15 @@ function getStatus(group: AlertGroup): string {
   return group.status || '-';
 }
 
+function getResolvedAt(group: AlertGroup): string {
+  const normalizedStatus = (group.status || '').toLowerCase();
+  if (normalizedStatus === 'active') {
+    return 'active';
+  }
+
+  return formatDateForDisplay(getGroupResolvedAt(group)?.getTime());
+}
+
 function getAlertsCount(group: AlertGroup): string {
   return String(group.alerts?.length ?? 0);
 }
@@ -295,6 +305,36 @@ function printGroups(groups: AlertGroup[]) {
   output.print(`\n${tableOutput}\n`);
 }
 
+function printAiSections(groups: AlertGroup[]) {
+  if (groups.length === 0) {
+    output.log('No alerts found.');
+    return;
+  }
+
+  const rendered = groups
+    .map(group => {
+      const title = getGroupTitle(group);
+      const summary = group.ai?.currentSummary || 'N/A';
+      const findings = group.ai?.keyFindings?.filter(Boolean) ?? [];
+      const findingsOutput =
+        findings.length > 0
+          ? findings.map(finding => `  - ${finding}`).join('\n')
+          : '  - N/A';
+
+      return [
+        title,
+        '='.repeat(title.length),
+        `ResolvedAt: ${getResolvedAt(group)}`,
+        `Summary: ${summary}`,
+        'Key Findings:',
+        findingsOutput,
+      ].join('\n');
+    })
+    .join('\n\n');
+
+  output.print(`\n${rendered}\n`);
+}
+
 function trackTelemetry(
   flags: ListFlags,
   types: string[],
@@ -305,6 +345,7 @@ function trackTelemetry(
   telemetry.trackCliOptionUntil(flags['--until']);
   telemetry.trackCliOptionProject(flags['--project']);
   telemetry.trackCliFlagAll(flags['--all']);
+  telemetry.trackCliFlagAi(flags['--ai']);
   telemetry.trackCliOptionLimit(flags['--limit']);
   telemetry.trackCliOptionFormat(flags['--format']);
 }
@@ -456,7 +497,11 @@ export default async function list(
     if (jsonOutput) {
       client.stdout.write(`${JSON.stringify({ groups }, null, 2)}\n`);
     } else {
-      printGroups(groups);
+      if (flags['--ai']) {
+        printAiSections(groups);
+      } else {
+        printGroups(groups);
+      }
     }
     return 0;
   } catch (err) {
