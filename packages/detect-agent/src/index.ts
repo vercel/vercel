@@ -10,6 +10,7 @@ const DEVIN = 'devin' as const;
 const REPLIT = 'replit' as const;
 const GEMINI = 'gemini' as const;
 const CODEX = 'codex' as const;
+const ANTIGRAVITY = 'antigravity' as const;
 const AUGMENT_CLI = 'augment-cli' as const;
 const OPENCODE = 'opencode' as const;
 
@@ -21,6 +22,7 @@ export type KnownAgentNames =
   | typeof REPLIT
   | typeof GEMINI
   | typeof CODEX
+  | typeof ANTIGRAVITY
   | typeof AUGMENT_CLI
   | typeof OPENCODE;
 
@@ -46,6 +48,7 @@ export const KNOWN_AGENTS = {
   REPLIT,
   GEMINI,
   CODEX,
+  ANTIGRAVITY,
   AUGMENT_CLI,
   OPENCODE,
 } as const;
@@ -79,6 +82,10 @@ export async function determineAgent(): Promise<AgentResult> {
     process.env.CODEX_THREAD_ID
   ) {
     return { isAgent: true, agent: { name: CODEX } };
+  }
+
+  if (process.env.ANTIGRAVITY_AGENT) {
+    return { isAgent: true, agent: { name: ANTIGRAVITY } };
   }
 
   if (process.env.AUGMENT_AGENT) {
