@@ -6,8 +6,6 @@ import semVer from 'semver';
 import { homedir } from 'os';
 import { runNpmInstall } from '@vercel/build-utils';
 import { execCli } from './helpers/exec';
-import type { RequestInfo } from 'node-fetch';
-import nodeFetch from 'node-fetch';
 import fs from 'fs-extra';
 import { logo } from '../src/util/pkg-name';
 import sleep from '../src/util/sleep';
@@ -28,6 +26,8 @@ const TEST_TIMEOUT = 3 * 60 * 1000;
 jest.setTimeout(TEST_TIMEOUT);
 
 const binaryPath = path.resolve(__dirname, `../scripts/start.js`);
+type RequestInfo = string | URL | Request;
+const nodeFetch = fetch;
 
 const deployHelpMessage = `${logo} vercel [options] <command | path>`;
 const session = Math.random().toString(36).split('.')[1];

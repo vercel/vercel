@@ -1,6 +1,5 @@
 import path from 'path';
 import { execCli } from './helpers/exec';
-import nodeFetch from 'node-fetch';
 import { apiFetch } from './helpers/api-fetch';
 import fs from 'fs-extra';
 import sleep from '../src/util/sleep';
@@ -19,6 +18,7 @@ const TEST_TIMEOUT = 3 * 60 * 1000;
 jest.setTimeout(TEST_TIMEOUT);
 
 const binaryPath = path.resolve(__dirname, '../scripts/start.js');
+const nodeFetch = fetch;
 
 async function vcLink(projectPath: string) {
   const { exitCode, stdout, stderr } = await execCli(

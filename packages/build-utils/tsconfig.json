@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "lib": ["ES2021", "DOM", "DOM.Iterable"],
     "outDir": "./dist",
     "types": ["node"]
   },

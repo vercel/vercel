@@ -2,15 +2,10 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import login from '../../../../src/commands/login';
 import { client } from '../../../mocks/client';
 import { vi } from 'vitest';
-import _fetch, { Headers, type Response } from 'node-fetch';
 import * as oauth from '../../../../src/util/oauth';
 import { randomUUID } from 'node:crypto';
 
-const fetch = vi.mocked(_fetch);
-vi.mock('node-fetch', async () => ({
-  ...(await vi.importActual('node-fetch')),
-  default: vi.fn(),
-}));
+const fetch = vi.fn();
 
 vi.mock('open', () => {
   return {
@@ -38,6 +33,7 @@ function simulateTokenPolling(pollCount: number, finalResponse: Response) {
 
 beforeEach(() => {
   vi.resetAllMocks();
+  vi.stubGlobal('fetch', fetch);
 });
 
 describe('login', () => {
@@ -102,7 +98,6 @@ describe('login', () => {
     );
 
     expect(
-      // TODO: Drop `Headers` wrapper when `node-fetch` is dropped
       new Headers(fetch.mock.calls[0][1]?.headers).get('user-agent'),
       'Passing the correct user agent so the user can verify'
     ).toBe(oauth.userAgent);

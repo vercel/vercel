@@ -503,7 +503,7 @@ async function fetchTgzUrl(url) {
   for (let i = 0; i < 500; i += 1) {
     const resp = await fetch(url);
     if (resp.status === 200) {
-      const buffer = await resp.buffer();
+      const buffer = Buffer.from(await resp.arrayBuffer());
       if (buffer[0] === 0x1f) {
         // tgz beginning
         return;

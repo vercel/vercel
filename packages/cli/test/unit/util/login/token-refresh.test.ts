@@ -1,16 +1,15 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import { randomUUID } from 'node:crypto';
-import _fetch, { Request, Response } from 'node-fetch';
-
 import whoami from '../../../../src/commands/whoami';
 import { Chance } from 'chance';
 
-const fetch = vi.mocked(_fetch);
-vi.mock('node-fetch', async () => ({
-  ...(await vi.importActual('node-fetch')),
-  default: vi.fn(),
-}));
+const fetch = vi.fn();
+
+beforeEach(() => {
+  fetch.mockReset();
+  vi.stubGlobal('fetch', fetch);
+});
 
 describe('OAuth Token Refresh', () => {
   it('should refresh the token when it is expired', async () => {
@@ -79,9 +78,6 @@ describe('OAuth Token Refresh', () => {
 
     const name = Chance().name();
 
-    const exitCode = await whoami(client);
-    expect(exitCode).toBe(0);
-
     fetch.mockImplementation(init => {
       const url = init instanceof Request ? init.url : init.toString();
 
@@ -93,6 +89,9 @@ describe('OAuth Token Refresh', () => {
       }
       throw new Error(`Unexpected URL: ${url}`);
     });
+
+    const exitCode = await whoami(client);
+    expect(exitCode).toBe(0);
 
     expect(client.stderr).toOutput(name);
     expect(client.authConfig.token).toBeUndefined();

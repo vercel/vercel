@@ -13,12 +13,6 @@ import retry, {
   type RetryFunction,
   type Options as RetryOptions,
 } from 'async-retry';
-import fetch, {
-  type BodyInit,
-  Headers,
-  type RequestInit,
-  type Response,
-} from 'node-fetch';
 import ua from './ua';
 import responseError from './response-error';
 import printIndications from './print-indications';
@@ -37,7 +31,8 @@ import type {
 import { sharedPromise } from './promise';
 import { APIError } from './errors-ts';
 import { normalizeError } from '@vercel/error-utils';
-import type { Agent } from 'http';
+import type { FetchBody, FetchDispatcher } from './fetch';
+import { fetchWithNodeCompat } from './fetch';
 import sleep from './sleep';
 import type * as tty from 'tty';
 import output from '../output-manager';
@@ -48,7 +43,7 @@ const isSAMLError = (v: any): v is SAMLError => {
 };
 
 export interface FetchOptions extends Omit<RequestInit, 'body'> {
-  body?: BodyInit | JSONObject;
+  body?: FetchBody | JSONObject;
   json?: boolean;
   retry?: RetryOptions;
   useCurrentTeam?: boolean;
@@ -62,7 +57,7 @@ export interface ClientOptions extends Stdio {
   config: GlobalConfig;
   localConfig?: VercelConfig;
   localConfigPath?: string;
-  agent?: Agent;
+  agent?: FetchDispatcher;
   telemetryEventStore: TelemetryEventStore;
   /** Whether the CLI is being run by an AI agent */
   isAgent?: boolean;
@@ -103,7 +98,7 @@ export default class Client extends EventEmitter implements Stdio {
   stdout: tty.WriteStream;
   stderr: tty.WriteStream;
   config: GlobalConfig;
-  agent?: Agent;
+  agent?: FetchDispatcher;
   localConfig?: VercelConfig;
   localConfigPath?: string;
   requestIdCounter: number;
@@ -372,6 +367,14 @@ export default class Client extends EventEmitter implements Stdio {
       body = opts.body;
     }
 
+    const {
+      accountId: _accountId,
+      json: _json,
+      retry: _retry,
+      useCurrentTeam: _useCurrentTeam,
+      ...requestInit
+    } = opts;
+
     const requestId = this.requestIdCounter++;
     return output.time(
       res => {
@@ -383,7 +386,12 @@ export default class Client extends EventEmitter implements Stdio {
           return `#${requestId} → ${opts.method || 'GET'} ${url.href}`;
         }
       },
-      fetch(url, { agent: this.agent, ...opts, headers, body })
+      fetchWithNodeCompat(url, {
+        ...requestInit,
+        body,
+        dispatcher: this.agent,
+        headers,
+      })
     );
   }
 

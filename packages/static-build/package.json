@@ -32,7 +32,6 @@
     "@types/jest": "27.4.1",
     "@types/ms": "0.7.31",
     "@types/node": "20.11.0",
-    "@types/node-fetch": "2.5.4",
     "@types/promise-timeout": "1.3.0",
     "@types/semver": "7.3.13",
     "@vercel/build-utils": "workspace:*",
@@ -46,7 +45,6 @@
     "is-port-reachable": "2.0.1",
     "jest-junit": "16.0.0",
     "ms": "2.1.2",
-    "node-fetch": "2.6.7",
     "rc9": "1.2.0",
     "semver": "7.5.2",
     "tree-kill": "1.2.2"

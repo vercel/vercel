@@ -1,5 +1,4 @@
 import { FilesMap } from './hashes';
-import nodeFetch, { RequestInit } from 'node-fetch';
 import { join, sep, relative, basename } from 'path';
 import { URL } from 'url';
 import ignore from 'ignore';
@@ -13,6 +12,11 @@ import {
   findConfig as findMicrofrontendsConfig,
   inferMicrofrontendsLocation,
 } from '@vercel/microfrontends/microfrontends/utils';
+import {
+  type FetchDispatcher,
+  type FetchBody,
+  fetchWithNodeCompat,
+} from '../fetch';
 
 type Ignore = ReturnType<typeof ignore>;
 
@@ -315,12 +319,15 @@ function clearRelative(str: string) {
   return str.replace(/(\n|^)\.\//g, '$1');
 }
 
-interface FetchOpts extends RequestInit {
+interface FetchOpts extends Omit<RequestInit, 'body'> {
   apiUrl?: string;
   method?: string;
   teamId?: string;
   headers?: { [key: string]: any };
   userAgent?: string;
+  agent?: FetchDispatcher;
+  dispatcher?: FetchDispatcher;
+  body?: FetchBody;
 }
 
 export const fetchApi = async (
@@ -361,7 +368,11 @@ export const fetchApi = async (
 
   debug(`${opts.method || 'GET'} ${url}`);
   time = Date.now();
-  const res = await nodeFetch(url, opts);
+  const { agent, dispatcher, ...requestInit } = opts;
+  const res = await fetchWithNodeCompat(url, {
+    ...requestInit,
+    dispatcher: dispatcher || agent,
+  });
   debug(`DONE in ${Date.now() - time}ms: ${opts.method || 'GET'} ${url}`);
   semaphore.release();
 

@@ -1,4 +1,3 @@
-import type { Agent } from 'http';
 import type {
   Builder,
   BuilderFunctions,
@@ -9,6 +8,7 @@ import type {
   ExperimentalServiceGroups,
 } from '@vercel/build-utils';
 import type { Header, Route, Redirect, Rewrite } from '@vercel/routing-utils';
+import type { FetchDispatcher } from './fetch';
 
 export { DeploymentEventType } from './utils';
 
@@ -35,7 +35,7 @@ export interface VercelClientOptions {
   isDirectory?: boolean;
   skipAutoDetectionConfirmation?: boolean;
   archive?: ArchiveFormat;
-  agent?: Agent;
+  agent?: FetchDispatcher;
   projectName?: string;
   /**
    * Path to a file containing bulk redirects (relative to the project root).

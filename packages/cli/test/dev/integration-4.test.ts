@@ -1,12 +1,12 @@
 import fs from 'fs-extra';
 import { join } from 'path';
-import nodeFetch, { type Response } from 'node-fetch';
 import {
   fixture,
   testFixture,
   testFixtureStdio,
   validateResponseHeaders,
 } from './utils';
+const nodeFetch = fetch;
 
 test(
   '[vercel dev] 25-nextjs-src-dir',

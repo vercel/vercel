@@ -2,12 +2,13 @@ import fs from 'fs-extra';
 import { join, resolve } from 'path';
 import type { ExecaChildProcess } from 'execa';
 import _execa, { type Options } from 'execa';
-import nodeFetch, { type RequestInit, type Response } from 'node-fetch';
 import retry from 'async-retry';
 import { satisfies } from 'semver';
 import stripAnsi from 'strip-ansi';
 import { fetchCachedToken } from '../../../../test/lib/deployment/now-deploy';
 import { spawnSync, execFileSync } from 'child_process';
+
+const nodeFetch = fetch;
 
 jest.setTimeout(10 * 60 * 1000);
 
@@ -198,9 +199,7 @@ export async function testPath(
   const opts: FetchOptions = {
     retries: isCI ? 5 : 0,
     ...fetchOpts,
-    // @ts-expect-error - this value is part of a hack to work around
-    // https://github.com/node-fetch/node-fetch/issues/417#issuecomment-587233352
-    redirect: 'manual-dont-change',
+    redirect: 'manual',
     status,
   };
   const url = `${origin}${path}`;
@@ -227,13 +226,7 @@ export async function testPath(
 
   if (expectedHeaders) {
     Object.entries(expectedHeaders).forEach(([key, expectedValue]) => {
-      let actualValue = res.headers.get(key);
-      if (key.toLowerCase() === 'location' && actualValue === '//') {
-        // HACK: `node-fetch` has strange behavior for location header so fix it
-        // with `manual-dont-change` opt and convert double slash to single.
-        // See https://github.com/node-fetch/node-fetch/issues/417#issuecomment-587233352
-        actualValue = '/';
-      }
+      const actualValue = res.headers.get(key);
       expect(actualValue, getEnvironmentMessage(isDev)).toBe(expectedValue);
     });
   }

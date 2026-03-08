@@ -10,7 +10,7 @@ import {
   testFixtureStdio,
   validateResponseHeaders,
 } from './utils';
-import nodeFetch from 'node-fetch';
+const nodeFetch = fetch;
 
 // Angular has `engines: { node: "10.x" }` in its `package.json`
 test('[vercel dev] 02-angular-node', async () => {

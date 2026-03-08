@@ -1,7 +1,6 @@
 import { createHash } from 'crypto';
 import { extract } from 'tar';
 import execa from 'execa';
-import nodeFetch from 'node-fetch';
 import {
   createWriteStream,
   mkdirp,
@@ -13,12 +12,13 @@ import {
 import { delimiter, dirname, join } from 'path';
 import stringArgv from 'string-argv';
 import { cloneEnv, debug } from '@vercel/build-utils';
-import { pipeline } from 'stream';
+import { Readable, pipeline } from 'stream';
 import { promisify } from 'util';
 import { tmpdir } from 'os';
 import yauzl from 'yauzl-promise';
 import XDGAppPaths from 'xdg-app-paths';
 import type { Env } from '@vercel/build-utils';
+import type { ReadableStream as NodeWebReadableStream } from 'node:stream/web';
 
 const streamPipeline = promisify(pipeline);
 
@@ -392,7 +392,7 @@ export async function createGo({
 async function download({ dest, version }: { dest: string; version: string }) {
   const { filename, url } = getGoUrl(version);
   console.log(`Downloading go: ${url}`);
-  const res = await nodeFetch(url);
+  const res = await fetch(url);
 
   if (!res.ok) {
     throw new Error(`Failed to download: ${url} (${res.status})`);
@@ -406,7 +406,13 @@ async function download({ dest, version }: { dest: string; version: string }) {
   if (/\.zip$/.test(filename)) {
     const zipFile = join(tmpdir(), filename);
     try {
-      await streamPipeline(res.body, createWriteStream(zipFile));
+      if (!res.body) {
+        throw new Error(`Failed to download: ${url} (empty response body)`);
+      }
+      await streamPipeline(
+        Readable.fromWeb(res.body as NodeWebReadableStream),
+        createWriteStream(zipFile)
+      );
       const zip = await yauzl.open(zipFile);
       let entry = await zip.readEntry();
       while (entry) {
@@ -435,8 +441,12 @@ async function download({ dest, version }: { dest: string; version: string }) {
     return;
   }
 
+  if (!res.body) {
+    throw new Error(`Failed to download: ${url} (empty response body)`);
+  }
+
   await new Promise((resolve, reject) => {
-    res.body
+    Readable.fromWeb(res.body as NodeWebReadableStream)
       .on('error', reject)
       .pipe(extract({ cwd: dest, strip: 1 }))
       .on('error', reject)

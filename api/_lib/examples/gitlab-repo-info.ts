@@ -1,5 +1,3 @@
-import nodeFetch from 'node-fetch';
-
 interface Repo {
   repo: string;
   owner: {
@@ -14,7 +12,7 @@ interface Repo {
  * @param {object} repo parsed by the `parse-github-url` package
  */
 export async function getGitLabRepoInfo(repo: Repo) {
-  const response = await nodeFetch(
+  const response = await fetch(
     `https://gitlab.com/api/v4/projects/${encodeURIComponent(repo.repo)}`
   );
 

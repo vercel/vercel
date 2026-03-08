@@ -1,4 +1,3 @@
-import nodeFetch, { type Response } from 'node-fetch';
 import ua from './ua';
 import { hostname } from 'os';
 
@@ -38,7 +37,7 @@ export async function as(): Promise<AuthorizationServerMetadata> {
  * @see https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationRequest
  */
 async function discoveryEndpointRequest(issuer: URL): Promise<Response> {
-  return await nodeFetch(new URL('.well-known/openid-configuration', issuer), {
+  return await fetch(new URL('.well-known/openid-configuration', issuer), {
     headers: { 'Content-Type': 'application/json', 'user-agent': userAgent },
   });
 }
@@ -97,7 +96,7 @@ async function processDiscoveryEndpointResponse(
  * @see https://datatracker.ietf.org/doc/html/rfc8628#section-3.1
  */
 export async function deviceAuthorizationRequest(): Promise<Response> {
-  return await nodeFetch((await as()).device_authorization_endpoint, {
+  return await fetch((await as()).device_authorization_endpoint, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
@@ -204,7 +203,7 @@ export async function deviceAccessTokenRequest(options: {
   try {
     return [
       null,
-      await nodeFetch((await as()).token_endpoint, {
+      await fetch((await as()).token_endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
@@ -215,9 +214,6 @@ export async function deviceAccessTokenRequest(options: {
           grant_type: 'urn:ietf:params:oauth:grant-type:device_code',
           ...options,
         }),
-        // TODO: Drop `node-fetch` and just use `signal`
-        timeout: 10 * 1000,
-        // @ts-expect-error: Signal is part of `fetch` spec, should drop `node-fetch`
         signal: AbortSignal.timeout(10 * 1000),
       }),
     ];
@@ -285,7 +281,7 @@ export async function processTokenResponse(
 export async function revocationRequest(options: {
   token: string;
 }): Promise<Response> {
-  return await nodeFetch((await as()).revocation_endpoint, {
+  return await fetch((await as()).revocation_endpoint, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
@@ -317,7 +313,7 @@ export async function processRevocationResponse(
 export async function refreshTokenRequest(options: {
   refresh_token: string;
 }): Promise<Response> {
-  return await nodeFetch((await as()).token_endpoint, {
+  return await fetch((await as()).token_endpoint, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
@@ -408,7 +404,7 @@ function canParseURL(url: string) {
  * @see https://datatracker.ietf.org/doc/html/rfc7662#section-2.1
  */
 export async function inspectTokenRequest(token: string): Promise<Response> {
-  return nodeFetch((await as()).introspection_endpoint, {
+  return fetch((await as()).introspection_endpoint, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',

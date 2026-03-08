@@ -1,7 +1,6 @@
 import { join } from 'path';
 import fs from 'fs-extra';
 
-import type { Agent } from 'http';
 import type { Deployment, DeploymentEventType } from './types';
 import { checkDeploymentStatus } from './check-deployment-status';
 import { fetchApi, buildFileTree, createDebug, prepareFiles } from './utils';
@@ -9,6 +8,7 @@ import { hashes, mapToObject, FilesMap } from './utils/hashes';
 import { isReady, isAliasAssigned } from './utils/ready-state';
 import { uploadFiles, UploadProgress } from './upload';
 import { DeploymentError } from './errors';
+import type { FetchDispatcher } from './fetch';
 
 /**
  * Continues a manual deployment by uploading build outputs and calling the
@@ -16,7 +16,7 @@ import { DeploymentError } from './errors';
  * events early.
  */
 export async function* continueDeployment(options: {
-  agent?: Agent;
+  agent?: FetchDispatcher;
   apiUrl?: string;
   debug?: boolean;
   deploymentId: string;
@@ -162,7 +162,7 @@ export async function* continueDeployment(options: {
 }
 
 async function postContinue(options: {
-  agent?: Agent;
+  agent?: FetchDispatcher;
   apiUrl?: string;
   debug?: boolean;
   deploymentId: string;

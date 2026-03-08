@@ -1,20 +1,19 @@
-import http from 'http';
-import https from 'https';
 import { Readable } from 'stream';
 import { EventEmitter } from 'node:events';
 import retry from 'async-retry';
 import { Sema } from 'async-sema';
+import { Agent } from 'undici';
 
 import { DeploymentFile, FilesMap } from './utils/hashes';
 import { fetchApi, API_FILES, createDebug } from './utils';
 import { DeploymentError } from './errors';
 import { deploy } from './deploy';
-import type { Agent } from 'http';
 import type {
   VercelClientOptions,
   DeploymentOptions,
   DeploymentEventType,
 } from './types';
+import type { FetchDispatcher } from './fetch';
 
 const isClientNetworkError = (err: Error) => {
   if (err.message) {
@@ -122,7 +121,7 @@ export async function* upload(
  * Uploads files to the /v2/files endpoint with retry and fault tolerance.
  */
 export async function* uploadFiles(options: {
-  agent?: Agent;
+  agent?: FetchDispatcher;
   apiUrl?: string;
   debug?: boolean;
   files: FilesMap;
@@ -138,9 +137,7 @@ export async function* uploadFiles(options: {
   debug('Building an upload list...');
 
   const semaphore = new Sema(50, { capacity: 50 });
-  const defaultAgent = options.apiUrl?.startsWith('https://')
-    ? new https.Agent({ keepAlive: true })
-    : new http.Agent({ keepAlive: true });
+  const defaultAgent = new Agent();
   const abortControllers = new Set<AbortController>();
   let aborted = false;
 
@@ -216,7 +213,6 @@ export async function* uploadFiles(options: {
               teamId: options.teamId,
               apiUrl: options.apiUrl,
               userAgent: options.userAgent,
-              // @ts-expect-error: typescript is getting confused with the signal types from node (web & server) and node-fetch (server only)
               signal: abortController.signal,
             },
             options.debug

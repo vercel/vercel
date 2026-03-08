@@ -3,7 +3,6 @@ import { client } from '../../../mocks/client';
 import { setupTmpDir } from '../../../helpers/setup-unit-fixture';
 import type { FetchOptions } from '../../../../src/util/client';
 import fs from 'fs-extra';
-import { Response } from 'node-fetch';
 import { join } from 'path';
 import { beforeEach, describe, it, expect, vi } from 'vitest';
 import type { MockInstance } from 'vitest';
@@ -31,7 +30,7 @@ beforeEach(() => {
       ]);
     }
     if (url2.pathname === '/v2/download/astro.tar.gz') {
-      return new Response(fs.createReadStream(mockPath), {
+      return new Response(fs.readFileSync(mockPath), {
         status: 200,
       });
     }

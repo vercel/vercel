@@ -13,6 +13,7 @@ import didYouMean from '../../util/did-you-mean';
 import { getCommandName } from '../../util/pkg-name';
 import output from '../../output-manager';
 import type { InitTelemetryClient } from '../../util/telemetry/commands/init';
+import { toNodeReadableStream } from '../../util/fetch';
 
 type Options = {
   '--debug': boolean;
@@ -144,11 +145,16 @@ async function extractExample(
       }
 
       await new Promise((resolve, reject) => {
+        const body = toNodeReadableStream(res.body);
+        if (!body) {
+          reject(new Error(`Empty response body for ${name}.tar.gz`));
+          return;
+        }
         const extractor = tar.extract(folder);
-        res.body.on('error', reject);
+        body.on('error', reject);
         extractor.on('error', reject);
         extractor.on('finish', resolve);
-        res.body.pipe(extractor);
+        body.pipe(extractor);
       });
 
       const successLog = `Initialized "${chalk.bold(

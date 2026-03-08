@@ -13,7 +13,6 @@ import {
 import { isErrorLike } from '@vercel/error-utils';
 import bytes from 'bytes';
 import chalk from 'chalk';
-import type { Agent } from 'http';
 import type Now from '../../util';
 import { emoji, prependEmoji } from '../emoji';
 import { displayBuildLogs, type BuildLog, parseLogLines } from '../logs';
@@ -24,6 +23,7 @@ import eraseLines from '../output/erase-lines';
 import getProjectByNameOrId from '../projects/get-project-by-id-or-name';
 import type { ProjectNotFound } from '../errors-ts';
 import printEvents from '../events';
+import type { FetchDispatcher } from '../fetch';
 
 function printInspectUrl(
   inspectorUrl: string | null | undefined,
@@ -72,7 +72,7 @@ export default async function processDeployment({
   rootDirectory?: string | null;
   noWait?: boolean;
   withFullLogs?: boolean;
-  agent?: Agent;
+  agent?: FetchDispatcher;
   bulkRedirectsPath?: string | null;
   manual?: boolean;
   jsonOutput?: boolean;

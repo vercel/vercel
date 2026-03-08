@@ -1,15 +1,11 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import reauthenticate from '../../../../src/util/login/reauthenticate';
 import { client } from '../../../mocks/client';
-import _fetch, { type Response } from 'node-fetch';
 import * as oauth from '../../../../src/util/oauth';
 import { randomUUID } from 'node:crypto';
 
-const fetch = vi.mocked(_fetch);
-vi.mock('node-fetch', async () => ({
-  ...(await vi.importActual('node-fetch')),
-  default: vi.fn(),
-}));
+const fetch = vi.fn();
+vi.stubGlobal('fetch', fetch);
 
 function mockResponse(data: unknown, ok = true): Response {
   return {
@@ -46,6 +42,7 @@ beforeAll(async () => {
 
 beforeEach(() => {
   vi.resetAllMocks();
+  vi.stubGlobal('fetch', fetch);
 });
 
 describe('reauthenticate', () => {

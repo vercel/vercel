@@ -12,6 +12,7 @@ import getScope from './get-scope';
 
 import type { BuildLog } from './logs';
 import output from '../output-manager';
+import { toNodeReadableStream } from './fetch';
 
 export interface FindOpts {
   direction: 'forward' | 'backward';
@@ -60,12 +61,14 @@ async function printEvents(
       try {
         const eventsRes = await client.fetch(eventsUrl, {
           json: false,
-          // @ts-expect-error: typescript is getting confused with the signal types from node (web & server) and node-fetch (server only)
           signal: abortController?.signal,
         });
 
         if (eventsRes.ok) {
-          const readable = eventsRes.body;
+          const readable = toNodeReadableStream(eventsRes.body);
+          if (!readable) {
+            throw new Error('Deployment events response body is empty');
+          }
 
           // handle the event stream and make the promise get rejected
           // if errors occur so we can retry

@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { Headers } from 'node-fetch';
 import { applyOverriddenHeaders } from '../../../../src/util/dev/headers';
 
 describe('applyOverriddenHeaders', () => {

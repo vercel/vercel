@@ -1,6 +1,4 @@
 import { createServer } from 'http';
-import { Headers } from 'node-fetch';
-import type { HeadersInit } from 'node-fetch';
 import {
   toOutgoingHeaders,
   mergeIntoServerResponse,
@@ -9,9 +7,10 @@ import {
 import type { Server } from 'http';
 import type Client from '../client';
 import output from '../../output-manager';
+import { toNodeReadableStream } from '../fetch';
 
 const toHeaders = buildToHeaders({
-  Headers: Headers as unknown as typeof globalThis.Headers,
+  Headers,
 });
 
 export function createProxy(client: Client): Server {
@@ -21,7 +20,7 @@ export function createProxy(client: Client): Server {
       const headers = toHeaders(req.headers);
       headers.delete('host');
       const fetchRes = await client.fetch(req.url || '/', {
-        headers: headers as unknown as HeadersInit,
+        headers,
         method: req.method,
         body: req.method === 'GET' || req.method === 'HEAD' ? undefined : req,
         useCurrentTeam: false,
@@ -40,7 +39,12 @@ export function createProxy(client: Client): Server {
       delete outgoingHeaders['content-length'];
 
       mergeIntoServerResponse(outgoingHeaders, res);
-      fetchRes.body.pipe(res);
+      const nodeBody = toNodeReadableStream(fetchRes.body);
+      if (nodeBody) {
+        nodeBody.pipe(res);
+      } else {
+        res.end();
+      }
     } catch (err: unknown) {
       output.prettyError(err);
       if (!res.headersSent) {

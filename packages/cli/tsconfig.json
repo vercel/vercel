@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
     "allowJs": true,
+    "lib": ["ES2021", "DOM", "DOM.Iterable"],
     "module": "es2022",
     "noImplicitReturns": false,
     "noUnusedLocals": false,

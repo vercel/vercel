@@ -71,8 +71,7 @@ export default async function put(
   telemetryClient.trackCliFlagForce(force);
   telemetryClient.trackCliOptionIfMatch(ifMatch);
 
-  // ReadableStream works for both stdin and ReadStream
-  let putBody: ReadableStream;
+  let putBody: Parameters<typeof blob.put>[1];
   let pathname: string;
 
   if (!filePath) {

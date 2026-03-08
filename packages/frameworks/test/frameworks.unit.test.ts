@@ -3,7 +3,6 @@ import assert from 'assert';
 import { join } from 'path';
 import { existsSync } from 'fs';
 import { isString } from 'util';
-import nodeFetch from 'node-fetch';
 import { URL, URLSearchParams } from 'url';
 import frameworkList from '../src/frameworks';
 
@@ -209,7 +208,7 @@ const Schema = {
 async function getDeployment(host: string) {
   const query = new URLSearchParams();
   query.set('url', host);
-  const res = await nodeFetch(
+  const res = await fetch(
     `https://api.vercel.com/v11/deployments/get?${query}`
   );
   const body = await res.json();

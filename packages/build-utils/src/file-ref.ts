@@ -1,8 +1,9 @@
 import assert from 'assert';
-import nodeFetch from 'node-fetch';
 import multiStream from 'multistream';
 import retry from 'async-retry';
 import Sema from 'async-sema';
+import { Readable } from 'node:stream';
+import type { ReadableStream as NodeWebReadableStream } from 'node:stream/web';
 import { FileBase } from './types';
 
 interface FileRefOptions {
@@ -106,7 +107,7 @@ export default class FileRef implements FileBase {
     try {
       return await retry(
         async () => {
-          const resp = await nodeFetch(url);
+          const resp = await fetch(url);
           if (!resp.ok) {
             const error = new BailableError(
               `download: ${resp.status} ${resp.statusText} for ${url}`
@@ -114,7 +115,10 @@ export default class FileRef implements FileBase {
             if (resp.status === 403) error.bail = true;
             throw error;
           }
-          return resp.body;
+          if (!resp.body) {
+            throw new Error(`download: empty body for ${url}`);
+          }
+          return Readable.fromWeb(resp.body as NodeWebReadableStream);
         },
         { factor: 1, retries: 3 }
       );

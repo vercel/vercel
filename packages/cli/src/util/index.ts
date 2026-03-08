@@ -2,7 +2,6 @@ import qs from 'querystring';
 import { parse as parseUrl } from 'url';
 import retry from 'async-retry';
 import ms from 'ms';
-import nodeFetch, { Headers } from 'node-fetch';
 import bytes from 'bytes';
 import chalk from 'chalk';
 import ua from './ua';
@@ -18,6 +17,7 @@ import { type FetchOptions, isJSONObject } from './client';
 import type { ArchiveFormat, Dictionary } from '@vercel/client';
 import output from '../output-manager';
 import sleep from './sleep';
+import { fetchWithNodeCompat } from './fetch';
 
 export interface NowOptions {
   client: Client;
@@ -378,9 +378,15 @@ export default class Now {
       body = opts.body;
     }
 
+    const { json: _json, retry: _retry, ...requestInit } = opts;
+
     const res = await output.time(
       `${opts.method || 'GET'} ${this._apiUrl}${_url} ${opts.body || ''}`,
-      nodeFetch(`${this._apiUrl}${_url}`, { ...opts, body })
+      fetchWithNodeCompat(`${this._apiUrl}${_url}`, {
+        ...requestInit,
+        body,
+        headers: opts.headers,
+      })
     );
     printIndications(res);
     return res;

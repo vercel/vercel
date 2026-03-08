@@ -1,6 +1,5 @@
 import ms from 'ms';
 import path from 'path';
-import nodeFetch from 'node-fetch';
 import getPort from 'get-port';
 import isPortReachable from 'is-port-reachable';
 import frameworks, { Framework } from '@vercel/frameworks';
@@ -12,6 +11,8 @@ import {
 } from 'child_process';
 import { existsSync, readFileSync, statSync, readdirSync, mkdirSync } from 'fs';
 import { cpus } from 'os';
+import { Readable } from 'stream';
+import type { ReadableStream as NodeWebReadableStream } from 'node:stream/web';
 import {
   BuildV2,
   Files,
@@ -294,7 +295,7 @@ async function fetchBinary(
   version: string,
   dest = '/usr/local/bin'
 ) {
-  const res = await nodeFetch(url);
+  const res = await fetch(url);
   if (res.status === 404) {
     throw new NowBuildError({
       code: 'STATIC_BUILD_BINARY_NOT_FOUND',
@@ -305,7 +306,10 @@ async function fetchBinary(
   const cp = spawn('tar', ['-zx', '-C', dest], {
     stdio: ['pipe', 'ignore', 'ignore'],
   });
-  res.body.pipe(cp.stdin);
+  if (!res.body) {
+    throw new Error(`Download response for ${framework} was empty`);
+  }
+  Readable.fromWeb(res.body as NodeWebReadableStream).pipe(cp.stdin);
   const [exitCode] = await once(cp, 'exit');
   if (exitCode !== 0) {
     throw new Error(

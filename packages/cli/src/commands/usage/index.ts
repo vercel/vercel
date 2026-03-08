@@ -1,6 +1,5 @@
 import chalk from 'chalk';
 import jsonlines from 'jsonlines';
-import type { Response } from 'node-fetch';
 import { parseArguments } from '../../util/get-args';
 import { printError } from '../../util/error';
 import type Client from '../../util/client';
@@ -12,6 +11,7 @@ import { UsageTelemetryClient } from '../../util/telemetry/commands/usage';
 import { validateJsonOutput } from '../../util/output-format';
 import output from '../../output-manager';
 import { isErrnoException } from '@vercel/error-utils';
+import { toNodeReadableStream } from '../../util/fetch';
 import type { FocusCharge } from '../../util/billing/focus-charge';
 import type {
   BreakdownPeriod,
@@ -217,8 +217,14 @@ async function processCharges(
   let pricingUnit = 'MIUs';
 
   await new Promise<void>((resolve, reject) => {
+    const body = toNodeReadableStream(response.body);
+    if (!body) {
+      reject(new Error('Usage response body is empty'));
+      return;
+    }
+
     // gzip compression is assumed
-    const stream = response.body!.pipe(jsonlines.parse());
+    const stream = body.pipe(jsonlines.parse());
 
     stream.on('data', (charge: FocusCharge) => {
       chargeCount++;
@@ -289,7 +295,7 @@ async function processCharges(
 
     stream.on('end', resolve);
     stream.on('error', reject);
-    response.body!.on('error', reject);
+    body.on('error', reject);
   });
 
   return {

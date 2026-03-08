@@ -66,7 +66,6 @@ import { getCommandName, getTitleName } from './util/pkg-name';
 import login from './commands/login';
 import type { AuthConfig, GlobalConfig } from '@vercel-internals/types';
 import type { VercelConfig } from '@vercel/client';
-import { Agent as HttpsAgent } from 'https';
 import box from './util/output/box';
 import { execExtension } from './util/extension/exec';
 import { TelemetryEventStore } from './util/telemetry';
@@ -76,6 +75,7 @@ import { checkTelemetryStatus } from './util/telemetry/check-status';
 import output from './output-manager';
 import { checkGuidanceStatus } from './util/guidance/check-status';
 import { determineAgent } from '@vercel/detect-agent';
+import { Agent as UndiciAgent, ProxyAgent } from 'undici';
 
 const VERCEL_DIR = getGlobalPathConfig();
 const VERCEL_CONFIG_PATH = configFiles.getConfigFilePath();
@@ -93,6 +93,19 @@ function hasProxyConfig(): boolean {
     'ALL_PROXY',
     'all_proxy',
   ].some(v => process.env[v]);
+}
+
+function getProxyDispatcher() {
+  const allProxy = process.env.all_proxy || process.env.ALL_PROXY;
+  const httpProxy = process.env.http_proxy || process.env.HTTP_PROXY;
+  const httpsProxy = process.env.https_proxy || process.env.HTTPS_PROXY;
+  const proxyUrl = httpsProxy || httpProxy || allProxy;
+
+  if (!proxyUrl) {
+    return new UndiciAgent();
+  }
+
+  return new ProxyAgent(proxyUrl);
 }
 
 /*
@@ -367,10 +380,7 @@ const main = async () => {
     `Agent/TTY/nonInteractive: isAgent=${isAgent} agentName=${detectedAgent?.name ?? 'none'} stdin.isTTY=${String(process.stdin?.isTTY)} --non-interactive=${nonInteractiveFlag} explicitFalse=${explicitNonInteractiveFalse} => nonInteractive=${nonInteractive}`
   );
 
-  // Only load proxy-agent if proxy env vars are configured (saves ~60ms startup)
-  const agent = hasProxyConfig()
-    ? new (await import('proxy-agent')).ProxyAgent({ keepAlive: true })
-    : new HttpsAgent({ keepAlive: true });
+  const agent = hasProxyConfig() ? getProxyDispatcher() : new UndiciAgent();
 
   client = new Client({
     agent,

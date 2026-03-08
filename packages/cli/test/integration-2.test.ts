@@ -1,6 +1,5 @@
 import path from 'path';
 import { URL } from 'url';
-import nodeFetch from 'node-fetch';
 import express from 'express';
 import { createServer } from 'http';
 import { listen } from 'async-listen';
@@ -27,6 +26,7 @@ const binaryPath = path.resolve(__dirname, `../scripts/start.js`);
 const example = (name: string) =>
   path.join(__dirname, '..', '..', '..', 'examples', name);
 const session = Math.random().toString(36).split('.')[1];
+const nodeFetch = fetch;
 
 async function setupProject(
   process: CLIProcess,

@@ -7,13 +7,7 @@ vi.mock('node:fs/promises', async () => {
   return memfs.fs.promises;
 });
 
-import _fetch, { type Response } from 'node-fetch';
-
-const fetch = vi.mocked(_fetch);
-vi.mock('node-fetch', async () => ({
-  ...(await vi.importActual('node-fetch')),
-  default: vi.fn(),
-}));
+const fetch = vi.fn();
 
 import { emitFlagsDatafiles } from '../../../../src/commands/build/emit-flags-datafiles';
 
@@ -32,6 +26,7 @@ function mockFetchResponse(data: unknown, ok = true): Response {
 
 beforeEach(() => {
   vi.resetAllMocks();
+  vi.stubGlobal('fetch', fetch);
   vol.reset();
 });
 
