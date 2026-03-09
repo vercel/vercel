@@ -4133,7 +4133,6 @@ export const frameworks = [
   {
     name: 'Python',
     slug: 'python',
-    experimental: true,
     runtimeFramework: true,
     logo: 'https://api-frameworks.vercel.sh/framework-logos/python.svg',
     tagline:
