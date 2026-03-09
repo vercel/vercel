@@ -6,33 +6,18 @@ import { getCommandName } from '../../util/pkg-name';
 
 const MCP_ENDPOINT = 'https://mcp.vercel.com';
 
-const AVAILABLE_CLIENTS = [
-  'Claude Code',
-  'Claude.ai and Claude for desktop',
-  'Cursor',
-  'VS Code with Copilot',
-] as const;
+export interface McpOptions {
+  project?: boolean;
+  clients?: string[];
+}
 
 function getAvailableClients(): string[] {
-  return [...AVAILABLE_CLIENTS];
-}
-
-function parseClientsFlag(value: string | undefined): string[] {
-  if (!value || !value.trim()) return [];
-  return value
-    .split(',')
-    .map(s => s.trim())
-    .filter(Boolean);
-}
-
-/** Resolve a user-provided client name to the canonical name, or null if no match */
-function resolveClientName(input: string): string | null {
-  const lower = input.toLowerCase();
-  return (
-    AVAILABLE_CLIENTS.find(
-      c => c.toLowerCase() === lower || c.toLowerCase().includes(lower)
-    ) ?? null
-  );
+  return [
+    'Claude Code',
+    'Claude.ai and Claude for desktop',
+    'Cursor',
+    'VS Code with Copilot',
+  ];
 }
 
 function safeExecSync(
@@ -74,21 +59,36 @@ async function getProjectSpecificUrl(
   }
 }
 
-export type McpOptions = {
-  project?: boolean;
-  clients?: string;
-};
-
 export default async function mcp(client: Client, opts: McpOptions = {}) {
-  output.print('🚀 Vercel MCP Setup — Automated\n');
-
   const isProjectSpecific = opts.project ?? client.argv.includes('--project');
 
+  if (!client.nonInteractive) {
+    output.print('🚀 Vercel MCP Setup — Automated\n');
+  }
+
   if (isProjectSpecific) {
-    output.print('🔗 Setting up project-specific MCP access...\n');
+    if (!client.nonInteractive) {
+      output.print('🔗 Setting up project-specific MCP access...\n');
+    }
 
     const projectInfo = await getProjectSpecificUrl(client);
     if (!projectInfo) {
+      if (client.nonInteractive) {
+        const jsonOutput = {
+          status: 'error' as const,
+          reason: 'not_linked',
+          message:
+            'No linked project found. Link your project first for project-specific MCP.',
+          next: [
+            {
+              command: getCommandName('link'),
+              when: 'To link a project for project-specific MCP',
+            },
+          ],
+        };
+        client.stdout.write(`${JSON.stringify(jsonOutput, null, 2)}\n`);
+        return 1;
+      }
       output.print(
         '❌ No linked project found. Please link your project first:\n'
       );
@@ -96,39 +96,21 @@ export default async function mcp(client: Client, opts: McpOptions = {}) {
       return 1;
     }
 
-    output.print(`✅ Project-specific URL: ${projectInfo.url}\n`);
-    output.print(
-      'This URL will automatically provide project and team context.\n\n'
-    );
+    if (!client.nonInteractive) {
+      output.print(`✅ Project-specific URL: ${projectInfo.url}\n`);
+      output.print(
+        'This URL will automatically provide project and team context.\n\n'
+      );
+    }
   }
 
   const availableClients = getAvailableClients();
   let selectedClients: string[];
 
-  if (client.nonInteractive) {
-    const clientsArg = parseClientsFlag(opts.clients);
-    if (clientsArg.length === 0) {
-      output.error(
-        `In non-interactive mode --clients is required. Example: ${getCommandName(
-          'mcp --clients Cursor'
-        )}`
-      );
-      output.print(`Available clients: ${availableClients.join(', ')}\n`);
-      return 1;
-    }
-    const resolved = clientsArg
-      .map(resolveClientName)
-      .filter((c): c is string => c !== null);
-    const invalid = clientsArg.filter(name => !resolveClientName(name));
-    if (invalid.length > 0) {
-      output.error(
-        `Unknown client(s): ${invalid.join(', ')}. Available: ${availableClients.join(', ')}`
-      );
-      return 1;
-    }
-    selectedClients = [...new Set(resolved)];
+  if (client.nonInteractive && opts.clients && opts.clients.length > 0) {
+    selectedClients = opts.clients;
   } else {
-    const chosen = await client.input.checkbox({
+    selectedClients = await client.input.checkbox({
       message: 'Select MCP clients to set up:',
       choices: availableClients.map((name: string) => ({
         name,
@@ -136,19 +118,24 @@ export default async function mcp(client: Client, opts: McpOptions = {}) {
         short: name,
       })),
     });
-    selectedClients = Array.isArray(chosen) ? chosen : [];
   }
 
-  if (selectedClients.length === 0) {
-    output.print('\nNo clients selected. Exiting.\n');
+  if (!Array.isArray(selectedClients) || selectedClients.length === 0) {
+    if (!client.nonInteractive) {
+      output.print('\nNo clients selected. Exiting.\n');
+    }
     return 0;
   }
 
   const summary: string[] = [];
-  output.print('\nStarting setup...\n');
+  if (!client.nonInteractive) {
+    output.print('\nStarting setup...\n');
+  }
 
   for (const clientName of selectedClients) {
-    output.print(`🔧 Setting up ${clientName}...\n`);
+    if (!client.nonInteractive) {
+      output.print(`🔧 Setting up ${clientName}...\n`);
+    }
 
     if (clientName === 'Claude Code') {
       const mcpUrl = isProjectSpecific
@@ -165,48 +152,60 @@ export default async function mcp(client: Client, opts: McpOptions = {}) {
       if (typeof result === 'object' && 'error' in result) {
         if (result.stderr?.includes('already exists')) {
           summary.push('✅ Claude Code: Vercel MCP already configured');
-          output.print('ℹ️  Vercel MCP is already configured in Claude Code\n');
-          output.print('─'.repeat(50) + '\n');
+          if (!client.nonInteractive) {
+            output.print(
+              'ℹ️  Vercel MCP is already configured in Claude Code\n'
+            );
+            output.print('─'.repeat(50) + '\n');
+          }
         } else {
           summary.push('❌ Claude Code: Failed to add MCP server');
-          output.print('💡 Manual setup required:\n');
-          output.print(
-            `   claude mcp add --transport http ${mcpName} ${mcpUrl}\n`
-          );
-          output.print(
-            '   # Or use the /mcp command in Claude Code to authenticate\n'
-          );
-          output.print('─'.repeat(50) + '\n');
+          if (!client.nonInteractive) {
+            output.print('💡 Manual setup required:\n');
+            output.print(
+              `   claude mcp add --transport http ${mcpName} ${mcpUrl}\n`
+            );
+            output.print(
+              '   # Or use the /mcp command in Claude Code to authenticate\n'
+            );
+            output.print('─'.repeat(50) + '\n');
+          }
         }
       } else {
         summary.push('✅ Claude Code: Vercel MCP added successfully');
-        output.print('✅ Successfully added Vercel MCP to Claude Code\n');
-        output.print(
-          'ℹ️ You may need to authenticate using the /mcp command in Claude Code\n'
-        );
-        output.print('─'.repeat(50) + '\n');
+        if (!client.nonInteractive) {
+          output.print('✅ Successfully added Vercel MCP to Claude Code\n');
+          output.print(
+            'ℹ️ You may need to authenticate using the /mcp command in Claude Code\n'
+          );
+          output.print('─'.repeat(50) + '\n');
+        }
       }
     } else if (clientName === 'Claude.ai and Claude for desktop') {
-      output.print(
-        '💡 Manual setup required for Claude.ai and Claude for desktop\n'
-      );
-      output.print('   1. Open Settings in the sidebar\n');
-      output.print(
-        '   2. Navigate to Connectors and select Add custom connector\n'
-      );
-      output.print('   3. Configure the connector:\n');
-      if (isProjectSpecific) {
-        const projectInfo = await getProjectSpecificUrl(client);
-        const projectName = projectInfo?.projectName || 'project';
-        output.print(`      • Name: Vercel ${projectName}\n`);
-        output.print(`      • URL: ${projectInfo?.url}\n`);
-      } else {
-        output.print('      • Name: Vercel\n');
-        output.print(`      • URL: ${MCP_ENDPOINT}\n`);
+      if (!client.nonInteractive) {
+        output.print(
+          '💡 Manual setup required for Claude.ai and Claude for desktop\n'
+        );
+        output.print('   1. Open Settings in the sidebar\n');
+        output.print(
+          '   2. Navigate to Connectors and select Add custom connector\n'
+        );
+        output.print('   3. Configure the connector:\n');
+        if (isProjectSpecific) {
+          const projectInfo = await getProjectSpecificUrl(client);
+          const projectName = projectInfo?.projectName || 'project';
+          output.print(`      • Name: Vercel ${projectName}\n`);
+          output.print(`      • URL: ${projectInfo?.url}\n`);
+        } else {
+          output.print('      • Name: Vercel\n');
+          output.print(`      • URL: ${MCP_ENDPOINT}\n`);
+        }
+        output.print('   4. Complete the authentication flow\n');
       }
-      output.print('   4. Complete the authentication flow\n');
       summary.push('ℹ️  Claude.ai/Desktop: Manual setup required');
-      output.print('─'.repeat(50) + '\n');
+      if (!client.nonInteractive) {
+        output.print('─'.repeat(50) + '\n');
+      }
     } else if (clientName === 'Cursor') {
       // Check if Cursor is installed
       const cursorCheck = safeExecSync(
@@ -218,11 +217,15 @@ export default async function mcp(client: Client, opts: McpOptions = {}) {
       );
 
       if (typeof cursorCheck === 'object' && 'error' in cursorCheck) {
-        output.print('⚠️ Cursor not detected. Please install Cursor first.\n');
-        output.print('   Download from: https://cursor.sh\n');
-        output.print('\n');
+        if (!client.nonInteractive) {
+          output.print('⚠️ Cursor not detected. Please install Cursor first.\n');
+          output.print('   Download from: https://cursor.sh\n');
+          output.print('\n');
+        }
         summary.push('⚠️ Cursor: Not installed');
-        output.print('─'.repeat(50) + '\n');
+        if (!client.nonInteractive) {
+          output.print('─'.repeat(50) + '\n');
+        }
         continue;
       }
 
@@ -279,8 +282,10 @@ export default async function mcp(client: Client, opts: McpOptions = {}) {
 
       if (cursorAlreadyConfigured) {
         summary.push('✅ Cursor: Vercel MCP already configured');
-        output.print('ℹ️  Vercel MCP is already configured in Cursor\n');
-        output.print('─'.repeat(50) + '\n');
+        if (!client.nonInteractive) {
+          output.print('ℹ️  Vercel MCP is already configured in Cursor\n');
+          output.print('─'.repeat(50) + '\n');
+        }
         continue;
       }
 
@@ -304,22 +309,26 @@ export default async function mcp(client: Client, opts: McpOptions = {}) {
         }
 
         summary.push('✅ Cursor: One-click installer opened');
-        output.print('ℹ️  Follow the prompts in Cursor to complete setup\n');
+        if (!client.nonInteractive) {
+          output.print('ℹ️  Follow the prompts in Cursor to complete setup\n');
+        }
       } catch (_error) {
         summary.push('⚠️ Cursor: Deep link may not have worked');
-        output.print('⚠️ Could not open Cursor automatically\n');
-        output.print('💡 Manual setup:\n');
-        output.print('   1. Open Cursor\n');
-        output.print('   2. Go to Settings (Cmd+, / Ctrl+,)\n');
-        output.print('   3. Navigate to MCP section\n');
-        output.print('   4. Click "Add Server"\n');
-        output.print('   5. Enter the following details:\n');
-        output.print(`      • Name: ${serverName}\n`);
-        output.print(`      • URL: ${mcpUrl}\n`);
-        output.print(
-          '   6. Click "Add" and follow the authorization prompts\n'
-        );
-        output.print('─'.repeat(50) + '\n');
+        if (!client.nonInteractive) {
+          output.print('⚠️ Could not open Cursor automatically\n');
+          output.print('💡 Manual setup:\n');
+          output.print('   1. Open Cursor\n');
+          output.print('   2. Go to Settings (Cmd+, / Ctrl+,)\n');
+          output.print('   3. Navigate to MCP section\n');
+          output.print('   4. Click "Add Server"\n');
+          output.print('   5. Enter the following details:\n');
+          output.print(`      • Name: ${serverName}\n`);
+          output.print(`      • URL: ${mcpUrl}\n`);
+          output.print(
+            '   6. Click "Add" and follow the authorization prompts\n'
+          );
+          output.print('─'.repeat(50) + '\n');
+        }
       }
     } else if (clientName === 'VS Code with Copilot') {
       // Check if GitHub Copilot is installed
@@ -328,17 +337,19 @@ export default async function mcp(client: Client, opts: McpOptions = {}) {
       );
 
       if (typeof copilotCheck === 'object' && 'error' in copilotCheck) {
-        output.print(
-          '⚠️ GitHub Copilot not detected. MCP functionality may be limited.\n'
-        );
-        output.print('   1. Open VS Code\n');
-        output.print('   2. Go to Extensions (Cmd+Shift+X / Ctrl+Shift+X)\n');
-        output.print('   3. Search for "GitHub Copilot"\n');
-        output.print(
-          '   4. Install and authenticate with your GitHub account\n'
-        );
-        output.print('   5. Restart VS Code\n');
-        output.print('\n');
+        if (!client.nonInteractive) {
+          output.print(
+            '⚠️ GitHub Copilot not detected. MCP functionality may be limited.\n'
+          );
+          output.print('   1. Open VS Code\n');
+          output.print('   2. Go to Extensions (Cmd+Shift+X / Ctrl+Shift+X)\n');
+          output.print('   3. Search for "GitHub Copilot"\n');
+          output.print(
+            '   4. Install and authenticate with your GitHub account\n'
+          );
+          output.print('   5. Restart VS Code\n');
+          output.print('\n');
+        }
       }
 
       const mcpUrl = isProjectSpecific
@@ -394,8 +405,10 @@ export default async function mcp(client: Client, opts: McpOptions = {}) {
 
       if (vscodeAlreadyConfigured) {
         summary.push('✅ VS Code: Vercel MCP already configured');
-        output.print('ℹ️  Vercel MCP is already configured in VS Code\n');
-        output.print('─'.repeat(50) + '\n');
+        if (!client.nonInteractive) {
+          output.print('ℹ️  Vercel MCP is already configured in VS Code\n');
+          output.print('─'.repeat(50) + '\n');
+        }
         continue;
       }
 
@@ -418,27 +431,47 @@ export default async function mcp(client: Client, opts: McpOptions = {}) {
         }
 
         summary.push('✅ VS Code: One-click installer opened');
-        output.print('ℹ️  Follow the prompts in VS Code to complete setup\n');
+        if (!client.nonInteractive) {
+          output.print('ℹ️  Follow the prompts in VS Code to complete setup\n');
+        }
       } catch (_error) {
         summary.push('❌ VS Code: Failed to open one-click installer');
-        output.print('💡 Manual setup instructions:\n');
-        output.print('   1. Open VS Code\n');
-        output.print(
-          '   2. Press Cmd+Shift+P (Mac) or Ctrl+Shift+P (Windows/Linux)\n'
-        );
-        output.print('   3. Type "MCP: Add Server" and press Enter\n');
-        output.print('   4. Select HTTP\n');
-        output.print('   5. Enter the following details:\n');
-        output.print(`      • URL: ${mcpUrl}\n`);
-        output.print(`      • Name: ${serverName}\n`);
-        output.print(
-          '   6. Select Global or Workspace depending on your needs\n'
-        );
-        output.print('   7. Click Add\n');
-        output.print('   8. Follow the authorization steps\n');
-        output.print('─'.repeat(50) + '\n');
+        if (!client.nonInteractive) {
+          output.print('💡 Manual setup instructions:\n');
+          output.print('   1. Open VS Code\n');
+          output.print(
+            '   2. Press Cmd+Shift+P (Mac) or Ctrl+Shift+P (Windows/Linux)\n'
+          );
+          output.print('   3. Type "MCP: Add Server" and press Enter\n');
+          output.print('   4. Select HTTP\n');
+          output.print('   5. Enter the following details:\n');
+          output.print(`      • URL: ${mcpUrl}\n`);
+          output.print(`      • Name: ${serverName}\n`);
+          output.print(
+            '   6. Select Global or Workspace depending on your needs\n'
+          );
+          output.print('   7. Click Add\n');
+          output.print('   8. Follow the authorization steps\n');
+          output.print('─'.repeat(50) + '\n');
+        }
       }
     }
+  }
+
+  if (client.nonInteractive) {
+    const jsonOutput: Record<string, unknown> = {
+      status: 'ok',
+      summary,
+      hint: 'Restart your MCP client(s) to apply changes.',
+      next: [
+        {
+          command: getCommandName('link'),
+          when: 'To link a project for project-specific MCP (optional)',
+        },
+      ],
+    };
+    client.stdout.write(`${JSON.stringify(jsonOutput, null, 2)}\n`);
+    return 0;
   }
 
   output.print('📊 Setup Summary\n');

@@ -3,6 +3,7 @@ import type Client from '../../util/client';
 import output from '../../output-manager';
 import { addSubcommand } from './command';
 import { parseSubcommandArgs, ensureProjectLink, isValidUrl } from './shared';
+import { getCommandName } from '../../util/pkg-name';
 import putRedirects from '../../util/redirects/put-redirects';
 import updateRedirectVersion from '../../util/redirects/update-redirect-version';
 import getRedirectVersions from '../../util/redirects/get-redirect-versions';
@@ -25,7 +26,14 @@ export default async function add(client: Client, argv: string[]) {
   const existingStagingVersion = versions.find(v => v.isStaging);
 
   const { args, flags } = parsed;
-  const skipPrompts = flags['--yes'];
+  const skipPrompts = flags['--yes'] || client.nonInteractive;
+
+  if (client.nonInteractive && (!args[0] || !args[1])) {
+    output.error(
+      `In non-interactive mode source and destination are required. Use: ${getCommandName('redirects add <source> <destination> [--status=307] --yes')}`
+    );
+    return 1;
+  }
 
   let source: string;
   if (args[0]) {
@@ -197,6 +205,40 @@ export default async function add(client: Client, argv: string[]) {
     teamId,
     versionName
   );
+
+  if (client.nonInteractive) {
+    output.stopSpinner();
+    const testUrl = alias
+      ? source.startsWith('/')
+        ? `https://${alias}${source}`
+        : `https://${alias}`
+      : undefined;
+    const jsonOutput: Record<string, unknown> = {
+      status: 'ok',
+      redirect: {
+        source,
+        destination,
+        statusCode,
+        caseSensitive,
+        preserveQueryParams,
+      },
+      version: { id: version.id, name: version.name || version.id },
+      ...(alias && { alias, testUrl }),
+      ...(!existingStagingVersion && {
+        next: [
+          {
+            command: getCommandName('redirects publish'),
+            when: 'To promote this version to production',
+          },
+        ],
+      }),
+      ...(existingStagingVersion && {
+        hint: `Review staged changes with ${getCommandName('redirects list --staging')} before promoting.`,
+      }),
+    };
+    client.stdout.write(`${JSON.stringify(jsonOutput, null, 2)}\n`);
+    return 0;
+  }
 
   output.log(`${chalk.cyan('✓')} Redirect added ${chalk.gray(addStamp())}`);
 

@@ -158,6 +158,44 @@ describe('redirects remove', () => {
       await expect(exitCodePromise).resolves.toEqual(1);
     });
   });
+
+  describe('client.nonInteractive', () => {
+    it('should error when --yes not provided in non-interactive mode', async () => {
+      mockGetVersions();
+      mockGetRedirects();
+
+      client.nonInteractive = true;
+      client.setArgv('redirects', 'remove', '/old-path');
+      const exitCodePromise = redirects(client);
+
+      await expect(client.stderr).toOutput(
+        'In non-interactive mode use --yes to confirm removal'
+      );
+      await expect(exitCodePromise).resolves.toEqual(1);
+
+      client.nonInteractive = false;
+    });
+
+    it('should output JSON only on success when non-interactive with --yes', async () => {
+      mockGetVersions();
+      mockGetRedirects();
+      mockDeleteRedirects();
+
+      client.nonInteractive = true;
+      client.setArgv('redirects', 'remove', '/old-path', '--yes');
+      const exitCode = await redirects(client);
+
+      expect(exitCode).toEqual(0);
+      const out = client.stdout.getFullOutput();
+      const json = JSON.parse(out);
+      expect(json.status).toEqual('ok');
+      expect(json.removed).toEqual({ source: '/old-path' });
+      expect(json.next).toBeDefined();
+      expect(json.next[0].command).toContain('redirects publish');
+
+      client.nonInteractive = false;
+    });
+  });
 });
 
 function mockGetVersions(options?: { hasStaging?: boolean }): void {
