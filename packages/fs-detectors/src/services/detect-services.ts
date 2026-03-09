@@ -257,9 +257,6 @@ export function generateServicesRoutes(services: Service[]): ServicesRoutes {
         });
       }
     } else {
-      // Non-static services without an inferred runtime are expected to provide
-      // their own routing (Next.js, @vercel/backends, Build Output API builders, etc.).
-      continue;
     }
   }
 

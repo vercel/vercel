@@ -131,7 +131,6 @@ export default async function exportRoutes(client: Client, argv: string[]) {
       case 'ts':
         result = routesToVercelTs(routesToExport);
         break;
-      case 'json':
       default:
         result = routesToVercelJson(routesToExport);
         break;

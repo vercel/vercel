@@ -823,7 +823,7 @@ export default class DevServer {
         ([name, value]) =>
           typeof value === 'string' &&
           value.startsWith('@') &&
-          !hasOwnProperty(localEnv, name)
+          !hasProp(localEnv, name)
       )
       .map(([name]) => name);
 
@@ -2443,7 +2443,7 @@ function proxyPass(
   requestId: string,
   ignorePath: boolean = true
 ): void {
-  return devServer.proxy.web(
+  devServer.proxy.web(
     req,
     res,
     { target: dest, ignorePath },
@@ -2502,7 +2502,7 @@ function generateRequestId(podId: string, isInvoke = false): string {
   ].join('-')}`;
 }
 
-function hasOwnProperty(obj: any, prop: string) {
+function hasProp(obj: any, prop: string) {
   return Object.prototype.hasOwnProperty.call(obj, prop);
 }
 

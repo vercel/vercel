@@ -558,7 +558,7 @@ async function doBuild(
     output.warn(
       'Due to `builds` existing in your configuration file, the Build and Development Settings defined in your Project Settings will not apply. Learn More: https://vercel.link/unused-build-settings'
     );
-    builds = builds.map(b => expandBuild(files, b)).flat();
+    builds = builds.flatMap(b => expandBuild(files, b));
   } else {
     // Zero config
     isZeroConfig = true;

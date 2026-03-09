@@ -692,7 +692,7 @@ describe('deploy', () => {
     client.setArgv('deploy');
     const exitCodePromise = deploy(client);
     await expect(client.stderr).toOutput(
-      'WARN! Node.js Version "10.x" is discontinued and must be upgraded. Please set "engines": { "node": "24.x" } in your `package.json` file to use Node.js 24.'
+      'WARNING! Node.js Version "10.x" is discontinued and must be upgraded. Please set "engines": { "node": "24.x" } in your `package.json` file to use Node.js 24.'
     );
     const exitCode = await exitCodePromise;
     expect(exitCode, 'exit code for "deploy"').toEqual(0);

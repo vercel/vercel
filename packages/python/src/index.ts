@@ -25,6 +25,7 @@ import {
   type ShouldServe,
   FileFsRef,
   PythonFramework,
+  type PrepareCache,
 } from '@vercel/build-utils';
 import {
   discoverPackage,
@@ -34,11 +35,12 @@ import {
   installRequirement,
 } from './install';
 import { PythonDependencyExternalizer } from './dependency-externalizer';
-import { UvRunner, getUvBinaryOrInstall } from './uv';
+import { UvRunner, getUvBinaryOrInstall, getUvCacheDir } from './uv';
 import { resolvePythonVersion, pythonVersionString } from './version';
 import { startDevServer } from './start-dev-server';
 import { runPyprojectScript, ensureVenv, createVenvEnv } from './utils';
 import { runQuirks } from './quirks';
+import { getDjangoSettings } from './django';
 import { containsTopLevelCallable } from '@vercel/python-analysis';
 
 const writeFile = fs.promises.writeFile;
@@ -46,9 +48,63 @@ const writeFile = fs.promises.writeFile;
 import {
   PYTHON_CANDIDATE_ENTRYPOINTS,
   detectPythonEntrypoint,
+  type DetectedPythonEntrypoint,
 } from './entrypoint';
 
 export const version = 3;
+
+interface FrameworkHookContext {
+  pythonEnv: NodeJS.ProcessEnv;
+  projectDir: string;
+  entrypoint: string;
+  detected: DetectedPythonEntrypoint | undefined;
+}
+
+interface FrameworkHookResult {
+  entrypoint?: string;
+}
+
+type FrameworkHook = (
+  ctx: FrameworkHookContext
+) => Promise<FrameworkHookResult | void>;
+
+export async function runFrameworkHook(
+  framework: string | undefined,
+  ctx: FrameworkHookContext
+): Promise<FrameworkHookResult | void> {
+  const hook = framework
+    ? frameworkHooks[framework as PythonFramework]
+    : undefined;
+  return hook?.(ctx);
+}
+
+const frameworkHooks: Partial<Record<PythonFramework, FrameworkHook>> = {
+  django: async ({ pythonEnv, projectDir, detected }) => {
+    if (detected?.baseDir === undefined) {
+      debug('Django hook: no manage.py detected, skipping');
+      return;
+    }
+    const settings = await getDjangoSettings(projectDir, pythonEnv);
+    debug(`Django settings: ${JSON.stringify(settings)}`);
+    if (!settings) return;
+
+    const baseDir = detected?.baseDir ?? '';
+    const asgiApp = settings['ASGI_APPLICATION'];
+    if (typeof asgiApp === 'string') {
+      const rel = `${asgiApp.split('.').slice(0, -1).join('/')}.py`;
+      const entrypoint = baseDir ? `${baseDir}/${rel}` : rel;
+      debug(`Django hook: ASGI entrypoint: ${entrypoint}`);
+      return { entrypoint };
+    }
+    const wsgiApp = settings['WSGI_APPLICATION'];
+    if (typeof wsgiApp === 'string') {
+      const rel = `${wsgiApp.split('.').slice(0, -1).join('/')}.py`;
+      const entrypoint = baseDir ? `${baseDir}/${rel}` : rel;
+      debug(`Django hook: WSGI entrypoint: ${entrypoint}`);
+      return { entrypoint };
+    }
+  },
+};
 
 export async function downloadFilesInWorkPath({
   entrypoint,
@@ -118,23 +174,27 @@ export const build: BuildV3 = async ({
   let fsFiles = await glob('**', workPath);
 
   // Zero config entrypoint discovery
+  let detected: DetectedPythonEntrypoint | undefined;
+  let entrypointNotFound: NowBuildError | undefined;
   if (
     isPythonFramework(framework) &&
+    // XXX: we might want to detect anyway for django!
     (!fsFiles[entrypoint] || !entrypoint.endsWith('.py'))
   ) {
-    const detected = await detectPythonEntrypoint(
-      config.framework as PythonFramework,
-      workPath,
-      entrypoint
-    );
-    if (detected) {
+    detected =
+      (await detectPythonEntrypoint(
+        config.framework as PythonFramework,
+        workPath,
+        entrypoint
+      )) ?? undefined;
+    if (detected?.entrypoint) {
       debug(
-        `Resolved Python entrypoint to "${detected}" (configured "${entrypoint}" not found).`
+        `Resolved Python entrypoint to "${detected.entrypoint}" (configured "${entrypoint}" not found).`
       );
-      entrypoint = detected;
+      entrypoint = detected.entrypoint;
     } else {
       const searchedList = PYTHON_CANDIDATE_ENTRYPOINTS.join(', ');
-      throw new NowBuildError({
+      entrypointNotFound = new NowBuildError({
         code: `${framework.toUpperCase()}_ENTRYPOINT_NOT_FOUND`,
         message: `No ${framework} entrypoint found. Add an 'app' script in pyproject.toml or define an entrypoint in one of: ${searchedList}.`,
         link: `https://vercel.com/docs/frameworks/backend/${framework}#exporting-the-${framework}-application`,
@@ -143,7 +203,11 @@ export const build: BuildV3 = async ({
     }
   }
 
-  const entryDirectory = dirname(entrypoint);
+  if (entrypointNotFound && detected?.baseDir === undefined) {
+    throw entrypointNotFound;
+  }
+
+  const entryDirectory = detected?.baseDir ?? dirname(entrypoint);
 
   const entrypointAbsDir = join(workPath, entryDirectory);
   const rootDir = repoRootPath ?? workPath;
@@ -187,10 +251,12 @@ export const build: BuildV3 = async ({
   // Create a virtual environment under ".vercel/python/.venv" so dependencies
   // can be installed via `uv sync` and then vendored into the Lambda bundle.
   const venvPath = join(workPath, '.vercel', 'python', '.venv');
+  const uvCacheDir = getUvCacheDir(workPath);
   await builderSpan.child('vc.builder.python.venv').trace(async () => {
     await ensureVenv({
       pythonPath: pythonVersion.pythonPath,
       venvPath,
+      uvCacheDir,
     });
   });
 
@@ -223,7 +289,7 @@ export const build: BuildV3 = async ({
   }
 
   const baseEnv = spawnEnv || process.env;
-  const pythonEnv = createVenvEnv(venvPath, baseEnv);
+  const pythonEnv = createVenvEnv(venvPath, baseEnv, uvCacheDir);
 
   pythonEnv.VERCEL_PYTHON_VENV_PATH = venvPath;
 
@@ -236,7 +302,7 @@ export const build: BuildV3 = async ({
   try {
     const uvPath = await getUvBinaryOrInstall(pythonVersion.pythonPath);
     console.log(`Using uv at "${uvPath}"`);
-    uv = new UvRunner(uvPath);
+    uv = new UvRunner(uvPath, uvCacheDir);
   } catch (err) {
     console.log('Failed to install or locate uv');
     throw new Error(
@@ -365,6 +431,22 @@ export const build: BuildV3 = async ({
           );
         }
       });
+  }
+
+  // Run per-framework post-build hooks (e.g. collectstatic for Django).
+  const hookResult = await runFrameworkHook(framework, {
+    pythonEnv,
+    projectDir: join(workPath, entryDirectory),
+    entrypoint,
+    detected,
+  });
+  if (entrypointNotFound && hookResult?.entrypoint) {
+    entrypoint = hookResult.entrypoint;
+    entrypointNotFound = undefined;
+  }
+
+  if (entrypointNotFound) {
+    throw entrypointNotFound;
   }
 
   // Ensure correct version of vercel-runtime is installed.
@@ -579,6 +661,48 @@ from vercel_runtime.vc_init import vc_handler
 };
 
 export { startDevServer };
+
+async function readBuildOutputV3Config(
+  workPath: string
+): Promise<{ cache?: string[] } | undefined> {
+  try {
+    const configPath = join(workPath, '.vercel', 'output', 'config.json');
+    return JSON.parse(await fs.promises.readFile(configPath, 'utf8'));
+  } catch (err: any) {
+    if (err.code !== 'ENOENT') {
+      throw err;
+    }
+  }
+  return undefined;
+}
+
+export const prepareCache: PrepareCache = async ({
+  repoRootPath,
+  workPath,
+}) => {
+  const cacheFiles: Files = {};
+  const root = repoRootPath || workPath;
+  const ignore = ['**/*.pyc', '**/__pycache__/**'];
+
+  const configV3 = await readBuildOutputV3Config(workPath);
+  if (configV3?.cache && Array.isArray(configV3.cache)) {
+    for (const cacheGlob of configV3.cache) {
+      Object.assign(cacheFiles, await glob(cacheGlob, workPath));
+    }
+    return cacheFiles;
+  }
+
+  Object.assign(
+    cacheFiles,
+    await glob('**/.vercel/python/.venv/**', { cwd: root, ignore })
+  );
+  Object.assign(
+    cacheFiles,
+    await glob('**/.vercel/python/cache/uv/**', { cwd: root, ignore })
+  );
+
+  return cacheFiles;
+};
 
 export const shouldServe: ShouldServe = opts => {
   const framework = opts.config.framework;
