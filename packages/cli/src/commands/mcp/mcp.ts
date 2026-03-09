@@ -119,9 +119,21 @@ export default async function mcp(client: Client, opts: McpOptions = {}) {
   }
 
   if (!Array.isArray(selectedClients) || selectedClients.length === 0) {
-    if (!client.nonInteractive) {
-      output.print('\nNo clients selected. Exiting.\n');
+    if (client.nonInteractive) {
+      client.stdout.write(
+        `${JSON.stringify(
+          {
+            status: 'ok',
+            summary: [],
+            message: 'No clients selected.',
+          },
+          null,
+          2
+        )}\n`
+      );
+      return 0;
     }
+    output.print('\nNo clients selected. Exiting.\n');
     return 0;
   }
 
