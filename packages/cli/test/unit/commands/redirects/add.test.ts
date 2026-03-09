@@ -476,63 +476,6 @@ describe('redirects add', () => {
       await expect(exitCodePromise).resolves.toEqual(1);
     });
   });
-
-  describe('client.nonInteractive', () => {
-    it('should error when source or destination missing in non-interactive mode', async () => {
-      mockGetVersions();
-      client.nonInteractive = true;
-
-      client.setArgv('redirects', 'add');
-      const exitCodePromise = redirects(client);
-
-      await expect(client.stderr).toOutput(
-        'In non-interactive mode source and destination are required'
-      );
-      await expect(exitCodePromise).resolves.toEqual(1);
-
-      client.nonInteractive = false;
-    });
-
-    it('should error when only source provided in non-interactive mode', async () => {
-      mockGetVersions();
-      client.nonInteractive = true;
-
-      client.setArgv('redirects', 'add', '/old-path');
-      const exitCodePromise = redirects(client);
-
-      await expect(client.stderr).toOutput(
-        'In non-interactive mode source and destination are required'
-      );
-      await expect(exitCodePromise).resolves.toEqual(1);
-
-      client.nonInteractive = false;
-    });
-
-    it('should output JSON only on success when non-interactive with full args', async () => {
-      mockGetVersions();
-      mockPutRedirects();
-
-      client.nonInteractive = true;
-      client.setArgv('redirects', 'add', '/old-path', '/new-path', '--yes');
-      const exitCode = await redirects(client);
-
-      expect(exitCode).toEqual(0);
-      const out = client.stdout.getFullOutput();
-      const json = JSON.parse(out);
-      expect(json.status).toEqual('ok');
-      expect(json.redirect).toEqual({
-        source: '/old-path',
-        destination: '/new-path',
-        statusCode: 307,
-        caseSensitive: false,
-        preserveQueryParams: false,
-      });
-      expect(json.next).toBeDefined();
-      expect(json.next[0].command).toContain('redirects publish');
-
-      client.nonInteractive = false;
-    });
-  });
 });
 
 function mockGetVersions(options?: { hasStaging?: boolean }): void {

@@ -8,7 +8,6 @@ import {
   validateRequiredArgs,
   confirmAction,
 } from './shared';
-import { getCommandName } from '../../util/pkg-name';
 import deleteRedirects from '../../util/redirects/delete-redirects';
 import getRedirects from '../../util/redirects/get-redirects';
 import getRedirectVersions from '../../util/redirects/get-redirect-versions';
@@ -49,13 +48,6 @@ export default async function remove(client: Client, argv: string[]) {
     return 1;
   }
 
-  if (client.nonInteractive && !parsed.flags['--yes']) {
-    output.error(
-      `In non-interactive mode use --yes to confirm removal. Use: ${getCommandName('redirects remove <source> --yes')}`
-    );
-    return 1;
-  }
-
   output.print(`\n  ${chalk.bold('Removing redirect:')}\n`);
   output.print(
     `    ${chalk.cyan(redirectToRemove.source)} → ${chalk.cyan(redirectToRemove.destination)}\n`
@@ -85,34 +77,6 @@ export default async function remove(client: Client, argv: string[]) {
     [source],
     teamId
   );
-
-  if (client.nonInteractive) {
-    output.stopSpinner();
-    const testUrl = alias
-      ? source.startsWith('/')
-        ? `https://${alias}${source}`
-        : `https://${alias}`
-      : undefined;
-    const jsonOutput: Record<string, unknown> = {
-      status: 'ok',
-      removed: { source },
-      version: { id: version.id, name: version.name || version.id },
-      ...(alias && { alias, testUrl }),
-      ...(!existingStagingVersion && {
-        next: [
-          {
-            command: getCommandName('redirects publish'),
-            when: 'To promote this version to production',
-          },
-        ],
-      }),
-      ...(existingStagingVersion && {
-        hint: `Review staged changes with ${getCommandName('redirects list --staging')} before promoting.`,
-      }),
-    };
-    client.stdout.write(`${JSON.stringify(jsonOutput, null, 2)}\n`);
-    return 0;
-  }
 
   output.log(
     `${chalk.cyan('✓')} Redirect removed ${chalk.gray(removeStamp())}`

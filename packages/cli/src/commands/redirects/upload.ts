@@ -6,7 +6,6 @@ import type Client from '../../util/client';
 import output from '../../output-manager';
 import { uploadSubcommand } from './command';
 import { parseSubcommandArgs, ensureProjectLink } from './shared';
-import { getCommandName } from '../../util/pkg-name';
 import stamp from '../../util/output/stamp';
 import getRedirectVersions from '../../util/redirects/get-redirect-versions';
 import updateRedirectVersion from '../../util/redirects/update-redirect-version';
@@ -44,15 +43,7 @@ export default async function upload(client: Client, argv: string[]) {
   const teamId = org.type === 'team' ? org.id : undefined;
 
   const { args, flags } = parsed;
-  const skipPrompts = flags['--yes'] || false;
-
-  if (client.nonInteractive && !skipPrompts) {
-    output.error(
-      `In non-interactive mode use --yes to confirm upload. Use: ${getCommandName('redirects upload <file> --yes')}`
-    );
-    return 1;
-  }
-
+  const skipPrompts = flags['--yes'];
   const overwrite = flags['--overwrite'] || false;
 
   const filePath = args[0];
@@ -183,37 +174,6 @@ export default async function upload(client: Client, argv: string[]) {
       });
     }
 
-    if (client.nonInteractive) {
-      output.stopSpinner();
-      const jsonOutput: Record<string, unknown> = {
-        status: 'ok',
-        version: {
-          id: result.version.id,
-          name: result.version.name || result.version.id,
-          ...(result.version.redirectCount !== undefined && {
-            redirectCount: result.version.redirectCount,
-          }),
-        },
-        ...(result.alias && {
-          alias: result.alias,
-          testUrl: `https://${result.alias}`,
-        }),
-        ...(!existingStagingVersion && {
-          next: [
-            {
-              command: getCommandName('redirects publish'),
-              when: 'To promote this version to production',
-            },
-          ],
-        }),
-        ...(existingStagingVersion && {
-          hint: `Review staged changes with ${getCommandName('redirects list --staging')} before promoting.`,
-        }),
-      };
-      client.stdout.write(`${JSON.stringify(jsonOutput, null, 2)}\n`);
-      return 0;
-    }
-
     output.log(
       `${chalk.cyan('✓')} Redirects uploaded ${chalk.gray(uploadStamp())}`
     );
@@ -316,7 +276,7 @@ export default async function upload(client: Client, argv: string[]) {
       output.warn(
         `There are other staged changes. Please review all changes with ${chalk.cyan('vercel redirects list --staging')} before promoting to production.`
       );
-    } else if (!skipPrompts && !client.nonInteractive) {
+    } else if (!skipPrompts) {
       const shouldPromote = await client.input.confirm(
         'This is the only staged change. Do you want to promote it to production now?',
         false
@@ -338,10 +298,6 @@ export default async function upload(client: Client, argv: string[]) {
           `${chalk.cyan('✓')} Version promoted to production ${chalk.gray(promoteStamp())}`
         );
       }
-    } else if (!existingStagingVersion && client.nonInteractive) {
-      output.print(
-        `  Run ${chalk.cyan('vercel redirects publish')} to promote this version to production.\n\n`
-      );
     }
 
     return 0;
