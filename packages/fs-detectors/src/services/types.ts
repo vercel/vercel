@@ -2,6 +2,7 @@ import type { Route } from '@vercel/routing-utils';
 import type {
   ExperimentalServiceConfig,
   ExperimentalServiceGroups,
+  ExperimentalServices,
   ServiceRuntime,
   ServiceType,
   Service,
@@ -12,13 +13,12 @@ import type { DetectorFilesystem } from '../detectors/filesystem';
 export type {
   ExperimentalServiceConfig,
   ExperimentalServiceGroups,
+  ExperimentalServices,
   ServiceRuntime,
   ServiceType,
   Service,
   Builder,
 };
-
-export type ExperimentalServices = Record<string, ExperimentalServiceConfig>;
 
 /**
  * @deprecated Use `Service` instead
