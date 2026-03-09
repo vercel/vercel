@@ -55,44 +55,36 @@ interface Ai {
 }
 
 interface Alert {
-  id: string;
-  teamId: string;
-  projectId: string;
+  id?: string;
+  teamId?: string;
+  projectId?: string;
   type: string;
-  pipe: string;
+  pipe?: string;
   status: string;
-  level: string;
+  level?: string;
   startedAt: number;
   resolvedAt?: number;
-  recordedStartedAt: number;
+  recordedStartedAt?: number;
   recordedResolvedAt?: number;
-  title?: string;
   ai?: Ai;
   data?: Record<string, unknown>;
-  route?: string;
-  path?: string;
-  requestPath?: string;
-  dimensions?: {
-    route?: string;
-    path?: string;
-    requestPath?: string;
-  };
 }
 
 interface AlertGroup {
   teamId: string;
   projectId: string;
   id: string;
-  pipe: string;
-  level: string;
-  type: string;
-  status: string;
-  recordedStartedAt: number;
+  pipe?: string;
+  level?: string;
+  type?: string;
+  status?: string;
+  recordedStartedAt?: number;
   updatedAt?: number;
   validatedAt?: number;
+  version?: number;
   relatedGroupIds?: string[];
   ai?: Ai;
-  alerts: Alert[];
+  alerts?: Alert[];
 }
 
 function handleApiError(
@@ -225,13 +217,18 @@ function formatDateForDisplay(value?: number): string {
 }
 
 function getStartedAt(group: AlertGroup): string {
-  return formatDateForDisplay(
-    group.recordedStartedAt || group.alerts?.[0]?.startedAt
+  return formatDateForDisplay(getGroupStartedAt(group)?.getTime());
+}
+
+function getGroupStartedAt(group: AlertGroup): Date | undefined {
+  return (
+    parseDateInput(group.recordedStartedAt) ||
+    parseDateInput(group.alerts?.[0]?.startedAt)
   );
 }
 
 function getGroupResolvedAt(group: AlertGroup): Date | undefined {
-  const resolvedTimes = group.alerts
+  const resolvedTimes = (group.alerts ?? [])
     .map(alert => parseDateInput(alert.resolvedAt))
     .filter((d): d is Date => Boolean(d))
     .map(d => d.getTime());
@@ -240,7 +237,7 @@ function getGroupResolvedAt(group: AlertGroup): Date | undefined {
     return new Date(Math.max(...resolvedTimes));
   }
 
-  return parseDateInput(group.recordedStartedAt);
+  return getGroupStartedAt(group);
 }
 
 function getStatus(group: AlertGroup): string {
@@ -250,7 +247,7 @@ function getStatus(group: AlertGroup): string {
   }
 
   if (normalizedStatus === 'resolved') {
-    const startedAt = parseDateInput(group.recordedStartedAt);
+    const startedAt = getGroupStartedAt(group);
     const resolvedAt = getGroupResolvedAt(group);
 
     if (

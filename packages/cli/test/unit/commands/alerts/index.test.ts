@@ -65,9 +65,15 @@ describe('alerts', () => {
           id: 'ag_1',
           type: 'usage_anomaly',
           status: 'active',
-          recordedStartedAt: '2026-03-06T00:00:00.000Z',
-          startedAt: '2026-03-06T00:00:00.000Z',
-          alerts: [{ title: 'Spike in requests', route: '/api/logs' }],
+          ai: { title: 'Spike in requests' },
+          recordedStartedAt: 1772755200000,
+          alerts: [
+            {
+              startedAt: 1772755200000,
+              status: 'active',
+              type: 'usage_anomaly',
+            },
+          ],
         },
       ]);
     });
@@ -95,9 +101,15 @@ describe('alerts', () => {
           id: 'ag_2',
           type: 'error_anomaly',
           status: 'resolved',
-          startedAt: '2026-03-06T00:00:00.000Z',
-          resolvedAt: '2026-03-06T01:30:00.000Z',
-          alerts: [{ title: '5xx on /api/logs', route: '/api/logs' }],
+          recordedStartedAt: 1772755200000,
+          alerts: [
+            {
+              title: '5xx on /api/logs',
+              route: '/api/logs',
+              startedAt: 1772755200000,
+              resolvedAt: 1772760600000,
+            },
+          ],
         },
       ]);
     });
