@@ -450,6 +450,7 @@ const main = async () => {
     'build',
     'telemetry',
     'upgrade',
+    'skills',
   ];
 
   if (process.env.FF_GUIDANCE_MODE) {
@@ -892,6 +893,10 @@ const main = async () => {
         case 'rolling-release':
           telemetry.trackCliCommandRollingRelease(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).rollingRelease;
+          break;
+        case 'skills':
+          telemetry.trackCliCommandSkills(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).skills;
           break;
         case 'target':
           telemetry.trackCliCommandTarget(userSuppliedSubCommand);
