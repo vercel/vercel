@@ -6,12 +6,17 @@ import { printError } from '../../util/error';
 import { getLinkedProject } from '../../util/projects/link';
 import { getCommandName } from '../../util/pkg-name';
 import { getFlag } from '../../util/flags/get-flags';
+import { formatVariantForDisplay } from '../../util/flags/resolve-variant';
 import { updateFlag } from '../../util/flags/update-flag';
 import { getFlagDashboardUrl } from '../../util/flags/dashboard-url';
 import output from '../../output-manager';
 import { FlagsEnableTelemetryClient } from '../../util/telemetry/commands/flags/enable';
 import { enableSubcommand } from './command';
-import type { FlagEnvironmentConfig } from '../../util/flags/types';
+import type {
+  Flag,
+  FlagEnvironmentConfig,
+  FlagVariant,
+} from '../../util/flags/types';
 
 const VALID_ENVIRONMENTS = ['production', 'preview', 'development'];
 
@@ -37,6 +42,9 @@ export default async function enable(
   const { args, flags } = parsedArgs;
   const [flagArg] = args;
   let environment = flags['--environment'] as string | undefined;
+  const message = normalizeOptionalInput(
+    flags['--message'] as string | undefined
+  );
 
   if (!flagArg) {
     output.error('Please provide a flag slug or ID to enable');
@@ -48,6 +56,7 @@ export default async function enable(
 
   telemetryClient.trackCliArgumentFlag(flagArg);
   telemetryClient.trackCliOptionEnvironment(environment);
+  telemetryClient.trackCliOptionMessage(message);
 
   const link = await getLinkedProject(client);
   if (link.status === 'error') {
@@ -96,8 +105,15 @@ export default async function enable(
 
     // If environment not specified, prompt for it
     if (!environment) {
-      const availableEnvs = Object.keys(flag.environments).filter(env =>
-        VALID_ENVIRONMENTS.includes(env)
+      if (!client.stdin.isTTY) {
+        output.error(
+          'Missing required flag --environment. Use --environment <ENV>, or run interactively in a terminal.'
+        );
+        return 1;
+      }
+
+      const availableEnvs = VALID_ENVIRONMENTS.filter(env =>
+        Object.prototype.hasOwnProperty.call(flag.environments, env)
       );
 
       if (availableEnvs.length === 0) {
@@ -133,25 +149,42 @@ export default async function enable(
       return 1;
     }
 
-    if (envConfig.active) {
+    const { onVariant } = getBooleanVariants(flag);
+
+    if (
+      !envConfig.active &&
+      envConfig.pausedOutcome?.variantId === onVariant.id
+    ) {
       output.warn(
         `Flag ${chalk.bold(flag.slug)} is already enabled in ${environment}`
       );
       return 0;
     }
 
-    // Build the update request - merge with existing config to preserve required fields
     const updatedEnvConfig: FlagEnvironmentConfig = {
       ...envConfig,
-      active: true,
+      active: false,
+      pausedOutcome: {
+        type: 'variant',
+        variantId: onVariant.id,
+      },
+      fallthrough: {
+        type: 'variant',
+        variantId: onVariant.id,
+      },
     };
+    const updateMessage = await resolveEnableMessage(
+      client,
+      environment,
+      message
+    );
 
     output.spinner(`Enabling flag in ${environment}...`);
     await updateFlag(client, project.id, flagArg, {
       environments: {
         [environment]: updatedEnvConfig,
       },
-      message: `Enabled in ${environment} via CLI`,
+      message: updateMessage,
     });
     output.stopSpinner();
 
@@ -159,7 +192,7 @@ export default async function enable(
       `Feature flag ${chalk.bold(flag.slug)} has been enabled in ${chalk.bold(environment)}`
     );
     output.log(
-      `  ${chalk.dim('The flag will now evaluate rules and serve variants based on its configuration.')}`
+      `  ${chalk.dim('Serving variant:')} ${formatVariantForDisplay(onVariant)}`
     );
   } catch (err) {
     output.stopSpinner();
@@ -168,4 +201,49 @@ export default async function enable(
   }
 
   return 0;
+}
+
+function normalizeOptionalInput(input: string | undefined): string | undefined {
+  const value = input?.trim();
+  return value ? value : undefined;
+}
+
+function getDefaultEnableMessage(environment: string): string {
+  return `Enabled for ${environment} via CLI`;
+}
+
+function getBooleanVariants(flag: Flag): {
+  onVariant: FlagVariant;
+} {
+  const onVariant = flag.variants.find(variant => variant.value === true);
+
+  if (!onVariant) {
+    throw new Error(
+      `Flag ${chalk.bold(flag.slug)} is missing the standard boolean variants`
+    );
+  }
+
+  return { onVariant };
+}
+
+async function resolveEnableMessage(
+  client: Client,
+  environment: string,
+  message: string | undefined
+): Promise<string> {
+  if (message !== undefined) {
+    return message;
+  }
+
+  const defaultMessage = getDefaultEnableMessage(environment);
+  if (!client.stdin.isTTY) {
+    return defaultMessage;
+  }
+
+  const response = await client.input.text({
+    message: 'Enter a message for this update:',
+    default: defaultMessage,
+  });
+
+  return normalizeOptionalInput(response) || defaultMessage;
 }

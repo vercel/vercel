@@ -1,3 +1,4 @@
+import chalk from 'chalk';
 import type { FlagVariant } from './types';
 
 export interface ResolveVariantResult {
@@ -6,28 +7,29 @@ export interface ResolveVariantResult {
 }
 
 /**
- * Formats a variant for display in error messages and prompts.
- * Shows the ID, value, and label if available.
+ * Formats a variant value for display.
+ */
+export function formatVariantValue(value: FlagVariant['value']): string {
+  return JSON.stringify(value);
+}
+
+/**
+ * Formats a variant for display in prompts and messages.
+ * Shows the value first, followed by the label if available.
  */
 export function formatVariantForDisplay(variant: FlagVariant): string {
-  const parts = [variant.id];
-  parts.push(`value: ${JSON.stringify(variant.value)}`);
+  const parts = [formatVariantValue(variant.value)];
   if (variant.label) {
-    parts.push(`label: "${variant.label}"`);
+    parts.push(variant.label);
   }
-  return parts.join(', ');
+  return parts.join(' ');
 }
 
 /**
  * Formats a list of variants for error messages.
  */
 export function formatAvailableVariants(variants: FlagVariant[]): string {
-  return variants
-    .map(v => {
-      const label = v.label ? ` (${v.label})` : '';
-      return `  - ${JSON.stringify(v.value)}${label}`;
-    })
-    .join('\n');
+  return variants.map(v => `  - ${formatAvailableVariant(v)}`).join('\n');
 }
 
 /**
@@ -123,4 +125,22 @@ function valuesMatch(
   }
 
   return false;
+}
+
+function formatAvailableVariant(variant: FlagVariant): string {
+  const value = formatStyledVariantValue(variant.value);
+  if (!variant.label) {
+    return value;
+  }
+
+  return `${value} ${chalk.dim(variant.label)}`;
+}
+
+function formatStyledVariantValue(value: FlagVariant['value']): string {
+  const formattedValue = formatVariantValue(value);
+  if (typeof value !== 'string') {
+    return chalk.bold(formattedValue);
+  }
+
+  return `"${chalk.bold(formattedValue.slice(1, -1))}"`;
 }

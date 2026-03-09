@@ -7,7 +7,10 @@ import { getLinkedProject } from '../../util/projects/link';
 import { getCommandName } from '../../util/pkg-name';
 import { getFlag } from '../../util/flags/get-flags';
 import { updateFlag } from '../../util/flags/update-flag';
-import { resolveVariant } from '../../util/flags/resolve-variant';
+import {
+  formatVariantForDisplay,
+  resolveVariant,
+} from '../../util/flags/resolve-variant';
 import { getFlagDashboardUrl } from '../../util/flags/dashboard-url';
 import output from '../../output-manager';
 import { FlagsDisableTelemetryClient } from '../../util/telemetry/commands/flags/disable';
@@ -38,6 +41,9 @@ export default async function disable(
   const [flagArg] = args;
   let environment = flags['--environment'] as string | undefined;
   const variantId = flags['--variant'] as string | undefined;
+  const message = normalizeOptionalInput(
+    flags['--message'] as string | undefined
+  );
 
   if (!flagArg) {
     output.error('Please provide a flag slug or ID to disable');
@@ -50,6 +56,7 @@ export default async function disable(
   telemetryClient.trackCliArgumentFlag(flagArg);
   telemetryClient.trackCliOptionEnvironment(environment);
   telemetryClient.trackCliOptionVariant(variantId);
+  telemetryClient.trackCliOptionMessage(message);
 
   const link = await getLinkedProject(client);
   if (link.status === 'error') {
@@ -98,8 +105,15 @@ export default async function disable(
 
     // If environment not specified, prompt for it
     if (!environment) {
-      const availableEnvs = Object.keys(flag.environments).filter(env =>
-        VALID_ENVIRONMENTS.includes(env)
+      if (!client.stdin.isTTY) {
+        output.error(
+          'Missing required flag --environment. Use --environment <ENV>, or run interactively in a terminal.'
+        );
+        return 1;
+      }
+
+      const availableEnvs = VALID_ENVIRONMENTS.filter(env =>
+        Object.prototype.hasOwnProperty.call(flag.environments, env)
       );
 
       if (availableEnvs.length === 0) {
@@ -135,15 +149,9 @@ export default async function disable(
       return 1;
     }
 
-    if (!envConfig.active) {
-      output.warn(
-        `Flag ${chalk.bold(flag.slug)} is already disabled in ${environment}`
-      );
-      return 0;
-    }
-
-    // Determine which variant to serve while disabled
+    const defaultDisabledVariantId = getDefaultDisabledVariantId(flag);
     let selectedVariantId = variantId;
+
     if (selectedVariantId) {
       // Resolve the variant from user input (can be ID, value, or label)
       const result = resolveVariant(selectedVariantId, flag.variants);
@@ -152,53 +160,54 @@ export default async function disable(
         return 1;
       }
       selectedVariantId = result.variant!.id;
-    } else if (flag.variants.length === 1) {
-      // Only one variant available, use it
-      selectedVariantId = flag.variants[0].id;
-    } else if (flag.kind === 'boolean') {
-      // For boolean flags, default to the false variant (the "off" value)
-      const falseVariant = flag.variants.find(v => v.value === false);
-      selectedVariantId = falseVariant?.id ?? flag.variants[0].id;
     } else {
-      // Multiple variants available for non-boolean flags, prompt user to select
-      selectedVariantId = await client.input.select({
-        message: 'Select which variant to serve while the flag is disabled:',
-        choices: flag.variants.map(v => ({
-          name: `${v.id} (${chalk.yellow(JSON.stringify(v.value))})${v.label ? ` - ${v.label}` : ''}`,
-          value: v.id,
-        })),
-      });
+      selectedVariantId = defaultDisabledVariantId;
+    }
+
+    if (
+      !envConfig.active &&
+      envConfig.pausedOutcome?.variantId === selectedVariantId
+    ) {
+      output.warn(
+        `Flag ${chalk.bold(flag.slug)} is already disabled in ${environment}`
+      );
+      return 0;
     }
 
     const updatedEnvConfig = {
+      ...envConfig,
       active: false,
-      fallthrough: envConfig.fallthrough,
-      rules: envConfig.rules,
+      fallthrough: {
+        type: 'variant' as const,
+        variantId: selectedVariantId,
+      },
       pausedOutcome: {
         type: 'variant' as const,
         variantId: selectedVariantId,
       },
     };
+    const updateMessage = await resolveDisableMessage(
+      client,
+      environment,
+      message
+    );
 
     output.spinner(`Disabling flag in ${environment}...`);
     await updateFlag(client, project.id, flagArg, {
       environments: {
         [environment]: updatedEnvConfig,
       },
-      message: `Disabled in ${environment} via CLI`,
+      message: updateMessage,
     });
     output.stopSpinner();
 
     const variant = flag.variants.find(v => v.id === selectedVariantId);
-    const variantValue = variant
-      ? JSON.stringify(variant.value)
-      : selectedVariantId;
 
     output.success(
       `Feature flag ${chalk.bold(flag.slug)} has been disabled in ${chalk.bold(environment)}`
     );
     output.log(
-      `  ${chalk.dim('Serving variant:')} ${selectedVariantId} (${chalk.yellow(variantValue)})`
+      `  ${chalk.dim('Serving variant:')} ${variant ? formatVariantForDisplay(variant) : selectedVariantId}`
     );
   } catch (err) {
     output.stopSpinner();
@@ -207,4 +216,50 @@ export default async function disable(
   }
 
   return 0;
+}
+
+function normalizeOptionalInput(input: string | undefined): string | undefined {
+  const value = input?.trim();
+  return value ? value : undefined;
+}
+
+function getDefaultDisableMessage(environment: string): string {
+  return `Disabled for ${environment} via CLI`;
+}
+
+function getDefaultDisabledVariantId(flag: {
+  slug: string;
+  variants: Array<{ id: string; value: string | number | boolean }>;
+}): string {
+  const falseVariant = flag.variants.find(variant => variant.value === false);
+
+  if (!falseVariant) {
+    throw new Error(
+      `Flag ${chalk.bold(flag.slug)} is missing the standard boolean variants`
+    );
+  }
+
+  return falseVariant.id;
+}
+
+async function resolveDisableMessage(
+  client: Client,
+  environment: string,
+  message: string | undefined
+): Promise<string> {
+  if (message !== undefined) {
+    return message;
+  }
+
+  const defaultMessage = getDefaultDisableMessage(environment);
+  if (!client.stdin.isTTY) {
+    return defaultMessage;
+  }
+
+  const response = await client.input.text({
+    message: 'Enter a message for this update:',
+    default: defaultMessage,
+  });
+
+  return normalizeOptionalInput(response) || defaultMessage;
 }

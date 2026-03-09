@@ -1,3 +1,5 @@
+import chalk from 'chalk';
+import stripAnsi from 'strip-ansi';
 import { describe, expect, it } from 'vitest';
 import {
   resolveVariant,
@@ -151,29 +153,32 @@ describe('resolve-variant', () => {
   describe('formatVariantForDisplay', () => {
     it('formats variant with label', () => {
       const result = formatVariantForDisplay(booleanVariants[0]);
-      expect(result).toContain('variant_abc123');
-      expect(result).toContain('value: true');
-      expect(result).toContain('label: "Enabled"');
+      expect(result).toBe('true Enabled');
     });
 
     it('formats variant without label', () => {
       const result = formatVariantForDisplay(stringVariants[2]);
-      expect(result).toContain('variant_str3');
-      expect(result).toContain('value: "off"');
-      expect(result).not.toContain('label');
+      expect(result).toBe('"off"');
     });
   });
 
   describe('formatAvailableVariants', () => {
     it('formats list of variants with labels', () => {
       const result = formatAvailableVariants(booleanVariants);
-      expect(result).toContain('- true (Enabled)');
-      expect(result).toContain('- false (Disabled)');
+      expect(stripAnsi(result)).toContain('- true Enabled');
+      expect(stripAnsi(result)).toContain('- false Disabled');
+      expect(result).toContain(
+        `- ${chalk.bold('true')} ${chalk.dim('Enabled')}`
+      );
+      expect(result).toContain(
+        `- ${chalk.bold('false')} ${chalk.dim('Disabled')}`
+      );
     });
 
     it('formats list of variants without labels', () => {
       const result = formatAvailableVariants([stringVariants[2]]);
-      expect(result).toContain('- "off"');
+      expect(stripAnsi(result)).toContain('- "off"');
+      expect(result).toContain(`- "${chalk.bold('off')}"`);
       expect(result).not.toContain('(');
     });
   });
