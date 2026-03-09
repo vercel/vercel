@@ -1,0 +1,34 @@
+import type Client from '../../util/client';
+import type { JSONObject } from '@vercel-internals/types';
+import output from '../../output-manager';
+import { readFileSync } from 'fs';
+
+export default async function configSetProject(
+  client: Client,
+  args: string[],
+  flags: { '--file'?: string; '--format'?: string }
+): Promise<number> {
+  const projectId = args[0];
+  if (!projectId) {
+    output.error('Usage: vercel observability config set-project <project-id>');
+    return 1;
+  }
+  let body: unknown;
+  if (flags['--file']) {
+    body = JSON.parse(readFileSync(flags['--file'], 'utf-8'));
+  } else {
+    const chunks: Buffer[] = [];
+    for await (const chunk of process.stdin) chunks.push(chunk);
+    body = JSON.parse(Buffer.concat(chunks).toString());
+  }
+  const data = await client.fetch<unknown>(
+    `/v1/observability/manage/configuration/projects/${encodeURIComponent(projectId)}`,
+    { method: 'PUT', body: body as JSONObject }
+  );
+  if (flags['--format'] === 'json') {
+    output.print(JSON.stringify(data, null, 2));
+    return 0;
+  }
+  output.log('Project configuration updated.');
+  return 0;
+}

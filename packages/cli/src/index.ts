@@ -778,6 +778,10 @@ const main = async () => {
           telemetry.trackCliCommandDomains(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).domains;
           break;
+        case 'analytics':
+          telemetry.trackCliCommandAnalytics(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).analytics;
+          break;
         case 'flags':
           telemetry.trackCliCommandFlags(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).flags;
@@ -849,6 +853,11 @@ const main = async () => {
         case 'open':
           telemetry.trackCliCommandOpen(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).open;
+          break;
+        case 'observability':
+        case 'o11y':
+          telemetry.trackCliCommandObservability(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).observability;
           break;
         case 'project':
           telemetry.trackCliCommandProject(userSuppliedSubCommand);

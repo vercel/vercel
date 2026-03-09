@@ -57,6 +57,25 @@ pnpm test-unit
 
 Make sure all the tests pass before making changes.
 
+#### Troubleshooting: "Cannot find native binding" during build
+
+If `pnpm build` fails in `@vercel/backends` with an error like:
+
+```
+Error: Cannot find native binding. ... Please try `npm i` again after removing both package-lock.json and node_modules directory.
+[cause]: Error: Cannot find module '@rolldown/binding-darwin-arm64'
+```
+
+the build tool (`tsdown`) uses `rolldown`, which relies on optional platform-specific native bindings. Sometimes these optional dependencies are not installed or linked correctly (see [npm/cli#4828](https://github.com/npm/cli/issues/4828)). Try a clean install:
+
+```bash
+rm -rf node_modules
+pnpm install
+pnpm build
+```
+
+Use the same Node version as the rest of the team (see `engines` in root `package.json` or CI). If it still fails, ensure you're using `pnpm` (not npm) and that no `.npmrc` or environment is skipping optional dependencies.
+
 #### Running Vercel CLI Changes
 
 You can use `pnpm vercel` from the `cli` package to invoke Vercel CLI with local changes:

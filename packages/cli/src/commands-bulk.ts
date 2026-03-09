@@ -8,6 +8,7 @@
 export { default as agent } from './commands/agent';
 export { default as activity } from './commands/activity';
 export { default as alias } from './commands/alias';
+export { default as analytics } from './commands/analytics';
 export { default as api } from './commands/api';
 export { default as bisect } from './commands/bisect';
 export { default as blob } from './commands/blob';
@@ -34,6 +35,7 @@ export { default as mcp } from './commands/mcp';
 export { default as metrics } from './commands/metrics';
 export { default as microfrontends } from './commands/microfrontends';
 export { default as open } from './commands/open';
+export { default as observability } from './commands/observability';
 export { default as project } from './commands/project';
 export { default as promote } from './commands/promote';
 export { default as pull } from './commands/pull';

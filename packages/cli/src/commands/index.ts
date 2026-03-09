@@ -1,6 +1,7 @@
 import { agentCommand } from './agent/command';
 import { activityCommand } from './activity/command';
 import { aliasCommand } from './alias/command';
+import { analyticsCommand } from './analytics/command';
 import { apiCommand } from './api/command';
 import { bisectCommand } from './bisect/command';
 import { buildCommand } from './build/command';
@@ -32,6 +33,7 @@ import { mcpCommand } from './mcp/command';
 import { metricsCommand } from './metrics/command';
 import { microfrontendsCommand } from './microfrontends/command';
 import { openCommand } from './open/command';
+import { observabilityCommand } from './observability/command';
 import { projectCommand } from './project/command';
 import { promoteCommand } from './promote/command';
 import { pullCommand } from './pull/command';
@@ -56,6 +58,7 @@ const commandsStructs = [
   agentCommand,
   aliasCommand,
   activityCommand,
+  analyticsCommand,
   apiCommand,
   blobCommand,
   bisectCommand,
@@ -86,6 +89,7 @@ const commandsStructs = [
   mcpCommand,
   microfrontendsCommand,
   openCommand,
+  observabilityCommand,
   projectCommand,
   promoteCommand,
   pullCommand,

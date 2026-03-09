@@ -51,6 +51,8 @@ export const help = () => `
       curl                 [path]      cURL requests to your linked project's deployment [beta]
       dns                  [name]      Manages your DNS records
       domains              [name]      Manages your domain names
+      analytics            [cmd]       Web Analytics, Speed Insights, and monitoring alerts
+      observability        [cmd]       Observability config, notebooks, funnels, and queries
       logs                 [url]       Displays the logs for a deployment${metricsLine}
       microfrontends                   Manages your microfrontends
       projects                         Manages your Projects
