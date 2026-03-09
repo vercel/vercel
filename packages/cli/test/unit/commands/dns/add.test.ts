@@ -28,6 +28,31 @@ describe('dns add', () => {
     });
   });
 
+  describe('non-interactive mode', () => {
+    it('errors when only domain is provided (no record details)', async () => {
+      client.nonInteractive = true;
+      client.setArgv('dns', 'add', 'example.com');
+      const exitCode = await dns(client);
+      expect(exitCode).toBe(1);
+      await expect(client.stderr).toOutput(
+        'In non-interactive mode full record details are required. Use:'
+      );
+    });
+
+    it('succeeds when full record details are provided', async () => {
+      client.nonInteractive = true;
+      client.scenario.post(`/v3/domains/:domain?/records`, (_req, res) => {
+        res.json({ uid: 'rec_123' });
+      });
+      client.setArgv('dns', 'add', 'example.com', 'www', 'A', '1.2.3.4');
+      const exitCode = await dns(client);
+      expect(exitCode).toBe(0);
+      await expect(client.stderr).toOutput(
+        'Success! DNS record for domain example.com (rec_123) created'
+      );
+    });
+  });
+
   it('tracks arguments', async () => {
     const recordId = '1';
     client.scenario.get(`/v5/domains/records/${recordId}`, (_req, res) => {

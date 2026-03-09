@@ -44,6 +44,21 @@ export default async function add(client: Client, argv: string[]) {
   const { domain, data: argData } = parsedParams;
   const valueArgs = args.slice(3); // domain, name, type, ...valueArgs
 
+  if (client.nonInteractive && !argData) {
+    output.error(
+      'In non-interactive mode full record details are required. Use: ' +
+        `${getCommandName('dns add <domain> <name> <type> <value>')}`
+    );
+    output.print(
+      'Examples:\n' +
+        `  ${getCommandName('dns add zeit.rocks api A 198.51.100.100')}\n` +
+        `  ${getCommandName("dns add zeit.rocks '@' MX mail.zeit.rocks 10")}\n` +
+        `  ${getCommandName("dns add zeit.rocks '@' SRV 10 0 389 zeit.party")}\n` +
+        `  ${getCommandName('dns --help')} for more.\n`
+    );
+    return 1;
+  }
+
   const telemetryClient = new DnsAddTelemetryClient({
     opts: {
       store: client.telemetryEventStore,
