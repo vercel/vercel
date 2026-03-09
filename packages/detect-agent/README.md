@@ -31,6 +31,7 @@ This package can detect the following AI agents and development environments:
 - **Devin** (Cognition Labs)
 - **Gemini CLI** (Google)
 - **Codex** (OpenAI)
+- **Antigravity** (Google DeepMind)
 - **Replit** (online IDE)
 
 ## The AI_AGENT Standard
