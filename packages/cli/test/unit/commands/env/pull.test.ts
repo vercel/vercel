@@ -350,6 +350,45 @@ describe('env pull', () => {
     expect(pulledEnv).toContain('SPECIAL_FLAG="1"');
   });
 
+  it('should preserve local env vars when a remote variable was deleted', async () => {
+    useUser();
+    useTeams('team_dummy');
+    useProject(
+      {
+        ...defaultProject,
+        id: 'vercel-env-pull',
+        name: 'vercel-env-pull',
+      },
+      envs.filter(envVar => envVar.key !== 'SPECIAL_FLAG')
+    );
+    const cwd = setupUnitFixture('vercel-env-pull');
+    client.cwd = cwd;
+    await fs.writeFile(
+      path.join(cwd, '.env.local'),
+      'LOCAL_ONLY=value\nSPECIAL_FLAG=1\n',
+      'utf8'
+    );
+
+    client.setArgv('env', 'pull');
+    const pullPromise = env(client);
+
+    await expect(client.stderr).toOutput(
+      'Downloading `development` Environment Variables for'
+    );
+    await expect(client.stderr).toOutput('> No changes found.');
+
+    await expect(pullPromise).resolves.toEqual(0);
+
+    expect(client.stderr.getFullOutput()).not.toContain(
+      'Apply these changes to ".env.local"?'
+    );
+    expect(client.stderr.getFullOutput()).not.toContain('- SPECIAL_FLAG');
+
+    const pulledEnv = await fs.readFile(path.join(cwd, '.env.local'), 'utf8');
+    expect(pulledEnv).toContain('LOCAL_ONLY="value"');
+    expect(pulledEnv).toContain('SPECIAL_FLAG="1"');
+  });
+
   it('should show a delta string', async () => {
     const cwd = setupUnitFixture('vercel-env-pull-delta');
     client.cwd = cwd;
