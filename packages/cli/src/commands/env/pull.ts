@@ -256,6 +256,7 @@ export async function envPullCommandLogic(
 
   if (
     requiresConfirmation &&
+    deltaString !== '' &&
     !(await client.input.confirm(
       `Apply these changes to ${param(filename)}?`,
       false

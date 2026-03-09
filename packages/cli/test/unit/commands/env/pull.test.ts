@@ -436,6 +436,29 @@ describe('env pull', () => {
     await expect(pullPromise).resolves.toEqual(0);
   });
 
+  it('should not prompt for confirmation when no changes were found', async () => {
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      id: 'env-pull-delta-no-changes',
+      name: 'env-pull-delta-no-changes',
+    });
+    client.cwd = setupUnitFixture('vercel-env-pull-delta-no-changes');
+    client.input.confirm = vi.fn().mockResolvedValue(true);
+
+    client.setArgv('env', 'pull');
+    const pullPromise = env(client);
+
+    await expect(client.stderr).toOutput('> No changes found.');
+    await expect(client.stderr).toOutput(
+      'Updated .env.local file and added it to .gitignore'
+    );
+    await expect(pullPromise).resolves.toEqual(0);
+
+    expect(client.input.confirm).not.toHaveBeenCalled();
+  });
+
   it('should correctly render delta string when env variable has quotes', async () => {
     const cwd = setupUnitFixture('vercel-env-pull-delta-quotes');
     client.cwd = cwd;
