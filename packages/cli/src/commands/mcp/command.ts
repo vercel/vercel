@@ -14,6 +14,14 @@ export const mcpCommand = {
       type: Boolean,
       deprecated: false,
     },
+    {
+      name: 'clients',
+      description:
+        'Comma-separated list of clients to set up (required in non-interactive mode). Options: Claude Code, Claude.ai and Claude for desktop, Cursor, VS Code with Copilot',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+    },
   ],
   examples: [
     {
@@ -23,6 +31,14 @@ export const mcpCommand = {
     {
       name: 'Set up project-specific MCP access',
       value: `${packageName} mcp --project`,
+    },
+    {
+      name: 'Non-interactive: set up Cursor only',
+      value: `${packageName} mcp --clients Cursor`,
+    },
+    {
+      name: 'Non-interactive: set up multiple clients',
+      value: `${packageName} mcp --clients "Claude Code,Cursor"`,
     },
   ],
 } as const;

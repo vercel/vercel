@@ -2,16 +2,37 @@ import output from '../../output-manager';
 import type Client from '../../util/client';
 import { execSync } from 'child_process';
 import { getLinkedProject } from '../../util/projects/link';
+import { getCommandName } from '../../util/pkg-name';
 
 const MCP_ENDPOINT = 'https://mcp.vercel.com';
 
+const AVAILABLE_CLIENTS = [
+  'Claude Code',
+  'Claude.ai and Claude for desktop',
+  'Cursor',
+  'VS Code with Copilot',
+] as const;
+
 function getAvailableClients(): string[] {
-  return [
-    'Claude Code',
-    'Claude.ai and Claude for desktop',
-    'Cursor',
-    'VS Code with Copilot',
-  ];
+  return [...AVAILABLE_CLIENTS];
+}
+
+function parseClientsFlag(value: string | undefined): string[] {
+  if (!value || !value.trim()) return [];
+  return value
+    .split(',')
+    .map(s => s.trim())
+    .filter(Boolean);
+}
+
+/** Resolve a user-provided client name to the canonical name, or null if no match */
+function resolveClientName(input: string): string | null {
+  const lower = input.toLowerCase();
+  return (
+    AVAILABLE_CLIENTS.find(
+      c => c.toLowerCase() === lower || c.toLowerCase().includes(lower)
+    ) ?? null
+  );
 }
 
 function safeExecSync(
@@ -53,11 +74,15 @@ async function getProjectSpecificUrl(
   }
 }
 
-export default async function mcp(client: Client) {
+export type McpOptions = {
+  project?: boolean;
+  clients?: string;
+};
+
+export default async function mcp(client: Client, opts: McpOptions = {}) {
   output.print('🚀 Vercel MCP Setup — Automated\n');
 
-  // Check if --project flag is used
-  const isProjectSpecific = client.argv.includes('--project');
+  const isProjectSpecific = opts.project ?? client.argv.includes('--project');
 
   if (isProjectSpecific) {
     output.print('🔗 Setting up project-specific MCP access...\n');
@@ -78,17 +103,43 @@ export default async function mcp(client: Client) {
   }
 
   const availableClients = getAvailableClients();
+  let selectedClients: string[];
 
-  const selectedClients = await client.input.checkbox({
-    message: 'Select MCP clients to set up:',
-    choices: availableClients.map((name: string) => ({
-      name,
-      value: name,
-      short: name,
-    })),
-  });
+  if (client.nonInteractive) {
+    const clientsArg = parseClientsFlag(opts.clients);
+    if (clientsArg.length === 0) {
+      output.error(
+        `In non-interactive mode --clients is required. Example: ${getCommandName(
+          'mcp --clients Cursor'
+        )}`
+      );
+      output.print(`Available clients: ${availableClients.join(', ')}\n`);
+      return 1;
+    }
+    const resolved = clientsArg
+      .map(resolveClientName)
+      .filter((c): c is string => c !== null);
+    const invalid = clientsArg.filter(name => !resolveClientName(name));
+    if (invalid.length > 0) {
+      output.error(
+        `Unknown client(s): ${invalid.join(', ')}. Available: ${availableClients.join(', ')}`
+      );
+      return 1;
+    }
+    selectedClients = [...new Set(resolved)];
+  } else {
+    const chosen = await client.input.checkbox({
+      message: 'Select MCP clients to set up:',
+      choices: availableClients.map((name: string) => ({
+        name,
+        value: name,
+        short: name,
+      })),
+    });
+    selectedClients = Array.isArray(chosen) ? chosen : [];
+  }
 
-  if (!Array.isArray(selectedClients) || selectedClients.length === 0) {
+  if (selectedClients.length === 0) {
     output.print('\nNo clients selected. Exiting.\n');
     return 0;
   }

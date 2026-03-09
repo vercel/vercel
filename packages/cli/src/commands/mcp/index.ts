@@ -29,7 +29,10 @@ export default async function main(client: Client) {
   }
 
   try {
-    return await mcp(client);
+    return await mcp(client, {
+      project: !!parsedArgs.flags['--project'],
+      clients: parsedArgs.flags['--clients'] as string | undefined,
+    });
   } catch (err: unknown) {
     output.prettyError(err);
     return 1;
