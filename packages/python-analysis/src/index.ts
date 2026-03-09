@@ -204,3 +204,12 @@ export {
   PythonVersionRequest,
   UnknownPythonImplementation,
 } from './manifest/python-specifiers';
+
+// =============================================================================
+// .python-version file serialization
+// =============================================================================
+
+export {
+  serializePythonRequest,
+  writePythonVersionFile,
+} from './manifest/uv-python-version-parser';
