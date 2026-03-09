@@ -615,7 +615,7 @@ async function doBuild(
     ).hostRewriteRoutes;
     zeroConfigRoutes = appendRoutesToPhase({
       routes: zeroConfigRoutes,
-      newRoutes: detectedHostRewriteRoutes,
+      newRoutes: detectedHostRewriteRoutes ?? null,
       phase: null,
     });
     zeroConfigRoutes.push(

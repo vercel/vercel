@@ -662,7 +662,7 @@ export default class DevServer {
       routes.push(...(redirectRoutes || []));
       routes = appendRoutesToPhase({
         routes,
-        newRoutes: hostRewriteRoutes,
+        newRoutes: hostRewriteRoutes ?? null,
         phase: null,
       });
       routes.push(
