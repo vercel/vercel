@@ -92,7 +92,7 @@ export default async function teams(client: Client) {
         return 2;
       }
       telemetry.trackCliSubcommandAdd(subcommandOriginal);
-      return add(client);
+      return add(client, args);
     }
     case 'invite': {
       if (needHelp) {

@@ -62,6 +62,15 @@ export default async function invite(
   }
   const { args: emails } = parsedArgs;
 
+  if (client.nonInteractive && emails.length === 0) {
+    output.error(
+      `In non-interactive mode at least one email is required. Example: ${getCommandName(
+        'teams invite email@example.com'
+      )}`
+    );
+    return 1;
+  }
+
   output.spinner('Fetching teams');
   const teams = await getTeams(client);
   const currentTeam = teams.find(team => team.id === currentTeamId);

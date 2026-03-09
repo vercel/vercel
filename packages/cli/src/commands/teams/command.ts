@@ -6,8 +6,34 @@ export const addSubcommand = {
   aliases: ['create'],
   description: 'Create a new team',
   arguments: [],
-  options: [],
-  examples: [],
+  options: [
+    {
+      name: 'slug',
+      shorthand: null,
+      type: String,
+      description:
+        'Team URL slug (e.g. acme for vercel.com/acme); required in non-interactive mode',
+      deprecated: false,
+    },
+    {
+      name: 'name',
+      shorthand: null,
+      type: String,
+      description:
+        'Display name for the team; required in non-interactive mode',
+      deprecated: false,
+    },
+  ],
+  examples: [
+    {
+      name: 'Create a team (interactive)',
+      value: `${packageName} teams add`,
+    },
+    {
+      name: 'Create a team non-interactively',
+      value: `${packageName} teams add --slug acme --name "Acme Corp"`,
+    },
+  ],
 } as const;
 
 export const listSubcommand = {
@@ -67,7 +93,7 @@ export const inviteSubcommand = {
       value: `${packageName} teams invite`,
     },
     {
-      name: 'Invite multiple members simultaneously',
+      name: 'Invite multiple members (required in non-interactive mode)',
       value: `${packageName} teams invite abc@vercel.com xyz@vercel.com`,
     },
   ],

@@ -30,6 +30,30 @@ describe('teams invite', () => {
     });
   });
 
+  describe('non-interactive mode', () => {
+    it('errors when no email is provided', async () => {
+      client.nonInteractive = true;
+      client.config = { currentTeam: currentTeamId };
+      client.setArgv('teams', 'invite');
+      const exitCode = await teams(client);
+      expect(exitCode).toBe(1);
+      await expect(client.stderr).toOutput(
+        'In non-interactive mode at least one email is required'
+      );
+    });
+
+    it('succeeds when emails are provided', async () => {
+      client.nonInteractive = true;
+      client.config = { currentTeam: currentTeamId };
+      client.scenario.post(`/teams/${currentTeamId}/members`, (_req, res) => {
+        return res.json({ username: 'person1' });
+      });
+      client.setArgv('teams', 'invite', 'me@example.com');
+      const exitCode = await teams(client);
+      expect(exitCode).toBe(0);
+    });
+  });
+
   describe('[email]', () => {
     beforeEach(() => {
       client.config = {
