@@ -95,11 +95,7 @@ export function printFlagDetails({
       const hasCustomConfiguration = hasCustomConfigurationEnabled(envConfig);
       const envSummary = hasCustomConfiguration
         ? 'custom'
-        : formatEnvironmentOutcome(
-            envConfig.fallthrough,
-            flag.variants,
-            envConfig.pausedOutcome?.variantId || 'active'
-          );
+        : formatEnvironmentOutcome(envConfig.fallthrough, flag.variants);
 
       output.print(`    ${chalk.bold(envName)}: ${envSummary}\n`);
 

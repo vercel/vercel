@@ -23,7 +23,10 @@ describe('flags open', () => {
     openMock.mockClear();
     openMock.mockResolvedValue(undefined as never);
     useUser();
-    teamSlug = useTeams('team_dummy')[0].slug;
+    const teamsResult = useTeams('team_dummy');
+    teamSlug = Array.isArray(teamsResult)
+      ? teamsResult[0].slug
+      : teamsResult.teams[0].slug;
     useProject({
       ...defaultProject,
       id: 'vercel-flags-test',
