@@ -814,11 +814,16 @@ if "VERCEL_IPC_PATH" in os.environ:
                 self.wfile.flush()
 
     elif "app" in __vc_variables or "application" in __vc_variables:
-        app_name, app = resolve_app(__vc_module, _entrypoint_modname)
-        app_type = detect_app_type(app, _entrypoint_modname, app_name)[0]
-        if app_type == "wsgi":
+        app_name, app_obj = resolve_app(__vc_module, _entrypoint_modname)
+        detection_result = detect_app_type(
+            app_obj,
+            _entrypoint_modname,
+            app_name,
+        )
+        if detection_result[0] == "wsgi":
             from io import BytesIO
 
+            wsgi_user_app = detection_result[1]
             string_types = (str,)
 
             def wsgi_encoding_dance(
@@ -884,7 +889,7 @@ if "VERCEL_IPC_PATH" in os.environ:
                         return self.wfile.write
 
                     # Call the application
-                    response = app(env, start_response)
+                    response = wsgi_user_app(env, start_response)
                     try:
                         for data in response:
                             if data:
@@ -892,14 +897,15 @@ if "VERCEL_IPC_PATH" in os.environ:
                                 self.wfile.flush()
                     finally:
                         if hasattr(response, "close"):
-                            response.close()
+                            response.close()  # pyright: ignore[reportUnknownMemberType,reportAttributeAccessIssue]
 
         else:
             # ASGI: Run with Uvicorn for proper lifespan
             # and protocol handling
             from vercel_runtime._vendor import uvicorn
 
-            asgi_app = ASGIMiddleware(app)
+            asgi_user_app = detection_result[1]
+            asgi_app = ASGIMiddleware(asgi_user_app)
 
             # Pre-bind a socket to obtain an ephemeral port for IPC announcement
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -1012,15 +1018,20 @@ if "handler" in __vc_variables or "Handler" in __vc_variables:
         return return_dict
 
 elif "app" in __vc_variables or "application" in __vc_variables:
-    app_name, app = resolve_app(__vc_module, _entrypoint_modname)
-    app_type = detect_app_type(app, _entrypoint_modname, app_name)[0]
-    if app_type == "wsgi":
+    app_name, app_obj = resolve_app(__vc_module, _entrypoint_modname)
+    detection_result = detect_app_type(
+        app_obj,
+        _entrypoint_modname,
+        app_name,
+    )
+    if detection_result[0] == "wsgi":
         _stderr("using Web Server Gateway Interface (WSGI)")
         from io import BytesIO
 
         from vercel_runtime._vendor.werkzeug.datastructures import Headers
         from vercel_runtime._vendor.werkzeug.wrappers import Response
 
+        wsgi_user_app = detection_result[1]
         string_types = (str,)
 
         _default_charset = sys.getdefaultencoding()
@@ -1101,7 +1112,7 @@ elif "app" in __vc_variables or "application" in __vc_variables:
 
             set_vercel_headers_from_http_headers(raw_headers)
             try:
-                response = Response.from_app(app, environ)
+                response = Response.from_app(wsgi_user_app, environ)
             finally:
                 clear_vercel_headers_context()
 
@@ -1127,6 +1138,8 @@ elif "app" in __vc_variables or "application" in __vc_variables:
         import enum
 
         from vercel_runtime._vendor.werkzeug.datastructures import Headers
+
+        asgi_user_app = detection_result[1]
 
         # asyncio.Runner keeps a persistent event loop across run() calls.
         # The lifespan task stays suspended (awaiting the shutdown signal)
@@ -1193,7 +1206,9 @@ elif "app" in __vc_variables or "application" in __vc_variables:
             return False
 
         try:
-            _lifespan_active = _asgi_runner.run(_lifespan_startup(app))
+            _lifespan_active = _asgi_runner.run(
+                _lifespan_startup(asgi_user_app)
+            )
         except BaseException:
             # App doesn't support lifespan — proceed without it.
             _lifespan_active = False
@@ -1375,7 +1390,7 @@ elif "app" in __vc_variables or "application" in __vc_variables:
             set_vercel_headers_from_http_headers(headers)
             try:
                 asgi_cycle = ASGICycle(scope)
-                response = asgi_cycle(app, body)
+                response = asgi_cycle(asgi_user_app, body)
                 return response
             finally:
                 clear_vercel_headers_context()
