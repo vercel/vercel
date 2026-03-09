@@ -1,5 +1,6 @@
 import { parseTimeFlag } from './time-utils';
 import type Client from './client';
+import output from '../output-manager';
 
 export type ValidationError = {
   valid: false;
@@ -152,13 +153,12 @@ export function outputError(
   client: Client,
   jsonOutput: boolean,
   code: string,
-  message: string,
-  writeTextError: (message: string) => void
+  message: string
 ): number {
   if (jsonOutput) {
     writeJsonError(client, code, message);
   } else {
-    writeTextError(message);
+    output.error(message);
   }
   return 1;
 }
@@ -166,14 +166,7 @@ export function outputError(
 export function handleValidationError(
   result: ValidationError,
   jsonOutput: boolean,
-  client: Client,
-  writeTextError: (message: string) => void
+  client: Client
 ): number {
-  return outputError(
-    client,
-    jsonOutput,
-    result.code,
-    result.message,
-    writeTextError
-  );
+  return outputError(client, jsonOutput, result.code, result.message);
 }

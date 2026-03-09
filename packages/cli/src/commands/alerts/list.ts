@@ -1,5 +1,6 @@
 import type Client from '../../util/client';
 import ms from 'ms';
+import chalk from 'chalk';
 import table from '../../util/output/table';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
@@ -99,13 +100,7 @@ function handleApiError(
         ? `The alerts endpoint failed on the server (${err.status}). Re-run with --debug and share the x-vercel-id from the failed request.`
         : err.serverMessage || `API error (${err.status}).`;
 
-  return outputError(
-    client,
-    jsonOutput,
-    err.code || 'API_ERROR',
-    message,
-    output.error
-  );
+  return outputError(client, jsonOutput, err.code || 'API_ERROR', message);
 }
 
 function getDefaultRange(): { from: string; to: string } {
@@ -283,10 +278,14 @@ function printGroups(groups: AlertGroup[]) {
     return;
   }
 
+  const headers = ['Title', 'Started At', 'Type', 'Status', 'Alerts'].map(h =>
+    chalk.cyan(h)
+  );
+
   const rows = [
-    ['Title', 'StartedAt', 'Type', 'Status', 'Alerts'],
+    headers,
     ...groups.map(group => [
-      getGroupTitle(group),
+      chalk.bold(getGroupTitle(group)),
       getStartedAt(group),
       group.type || '-',
       getStatus(group),
@@ -309,7 +308,7 @@ function printAiSections(groups: AlertGroup[]) {
   }
 
   const rendered = groups
-    .map(group => {
+    .map((group, index) => {
       const title = getGroupTitle(group);
       const summary = group.ai?.currentSummary || 'N/A';
       const findings = group.ai?.keyFindings?.filter(Boolean) ?? [];
@@ -319,11 +318,10 @@ function printAiSections(groups: AlertGroup[]) {
           : '  - N/A';
 
       return [
-        title,
-        '='.repeat(title.length),
-        `ResolvedAt: ${getResolvedAt(group)}`,
-        `Summary: ${summary}`,
-        'Key Findings:',
+        chalk.bold(`${index + 1}. ${title}`),
+        `   ${chalk.cyan('Resolved At:')} ${getResolvedAt(group)}`,
+        `   ${chalk.cyan('Summary:')} ${summary}`,
+        `   ${chalk.cyan('Key Findings:')}`,
         findingsOutput,
       ].join('\n');
     })
@@ -369,10 +367,10 @@ function resolveValidatedInputs(
   const limitResult = validateOptionalIntegerRange(flags['--limit'], {
     flag: '--limit',
     min: 1,
-    max: 1000,
+    max: 100,
   });
   if (!limitResult.valid) {
-    return handleValidationError(limitResult, jsonOutput, client, output.error);
+    return handleValidationError(limitResult, jsonOutput, client);
   }
 
   const mutualResult = validateAllProjectMutualExclusivity(
@@ -380,22 +378,17 @@ function resolveValidatedInputs(
     flags['--project']
   );
   if (!mutualResult.valid) {
-    return handleValidationError(
-      mutualResult,
-      jsonOutput,
-      client,
-      output.error
-    );
+    return handleValidationError(mutualResult, jsonOutput, client);
   }
 
   const sinceResult = validateTimeBound(flags['--since']);
   if (!sinceResult.valid) {
-    return handleValidationError(sinceResult, jsonOutput, client, output.error);
+    return handleValidationError(sinceResult, jsonOutput, client);
   }
 
   const untilResult = validateTimeBound(flags['--until']);
   if (!untilResult.valid) {
-    return handleValidationError(untilResult, jsonOutput, client, output.error);
+    return handleValidationError(untilResult, jsonOutput, client);
   }
 
   const timeOrderResult = validateTimeOrder(
@@ -403,12 +396,7 @@ function resolveValidatedInputs(
     untilResult.value
   );
   if (!timeOrderResult.valid) {
-    return handleValidationError(
-      timeOrderResult,
-      jsonOutput,
-      client,
-      output.error
-    );
+    return handleValidationError(timeOrderResult, jsonOutput, client);
   }
 
   return {
@@ -508,13 +496,7 @@ export default async function list(
 
     output.debug(err);
     const message = `Failed to fetch alerts: ${(err as Error).message || String(err)}`;
-    return outputError(
-      client,
-      jsonOutput,
-      'UNEXPECTED_ERROR',
-      message,
-      output.error
-    );
+    return outputError(client, jsonOutput, 'UNEXPECTED_ERROR', message);
   } finally {
     output.stopSpinner();
   }
