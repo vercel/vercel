@@ -63,7 +63,6 @@ import { cleanupCorepack, initCorepack } from '../../util/build/corepack';
 import { importBuilders } from '../../util/build/import-builders';
 import { setMonorepoDefaultSettings } from '../../util/build/monorepo';
 import { scrubArgv } from '../../util/build/scrub-argv';
-import { suppressAutoSubdomainRoutesByUserRoutes } from '../../util/build/service-subdomain-route-precedence';
 import { scopeRoutesToServiceOwnership } from '../../util/build/service-route-ownership';
 import { sortBuilders } from '../../util/build/sort-builders';
 import {
@@ -614,13 +613,9 @@ async function doBuild(
         hostRewriteRoutes?: Route[] | null;
       }
     ).hostRewriteRoutes;
-    const hostRewriteRoutes = suppressAutoSubdomainRoutesByUserRoutes({
-      autoSubdomainRoutes: detectedHostRewriteRoutes,
-      userRoutes: routesResult.routes,
-    });
     zeroConfigRoutes = appendRoutesToPhase({
       routes: zeroConfigRoutes,
-      newRoutes: hostRewriteRoutes,
+      newRoutes: detectedHostRewriteRoutes,
       phase: null,
     });
     zeroConfigRoutes.push(
