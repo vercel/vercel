@@ -3,6 +3,7 @@ import type Client from '../../util/client';
 import { execSync } from 'child_process';
 import { getLinkedProject } from '../../util/projects/link';
 import { getCommandName } from '../../util/pkg-name';
+import { outputAgentError } from '../../util/agent-output';
 
 const MCP_ENDPOINT = 'https://mcp.vercel.com';
 
@@ -74,20 +75,17 @@ export default async function mcp(client: Client, opts: McpOptions = {}) {
     const projectInfo = await getProjectSpecificUrl(client);
     if (!projectInfo) {
       if (client.nonInteractive) {
-        const jsonOutput = {
-          status: 'error' as const,
-          reason: 'not_linked',
-          message:
-            'No linked project found. Link your project first for project-specific MCP.',
-          next: [
-            {
-              command: getCommandName('link'),
-              when: 'To link a project for project-specific MCP',
-            },
-          ],
-        };
-        client.stdout.write(`${JSON.stringify(jsonOutput, null, 2)}\n`);
-        return 1;
+        outputAgentError(
+          client,
+          {
+            status: 'error',
+            reason: 'not_linked',
+            message:
+              'No linked project found. Link your project first for project-specific MCP.',
+            next: [{ command: getCommandName('link') }],
+          },
+          1
+        );
       }
       output.print(
         '❌ No linked project found. Please link your project first:\n'

@@ -6,6 +6,7 @@ import { mcpCommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
 import { getCommandName } from '../../util/pkg-name';
+import { outputAgentError } from '../../util/agent-output';
 import mcp from './mcp';
 
 const VALID_CLIENTS = [
@@ -51,17 +52,42 @@ export default async function main(client: Client) {
 
   if (client.nonInteractive) {
     if (clients.length === 0) {
-      output.error(
-        `In non-interactive mode --clients is required. Use: ${getCommandName('mcp --clients "Cursor,VS Code with Copilot"')}`
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'missing_clients',
+          message:
+            'In non-interactive mode --clients is required. Specify a comma-separated list of MCP clients to set up.',
+          next: [
+            {
+              command: getCommandName(
+                'mcp --clients "Cursor,VS Code with Copilot"'
+              ),
+            },
+          ],
+        },
+        1
       );
-      return 1;
     }
     const invalid = clients.filter(c => !VALID_CLIENTS.some(v => v === c));
     if (invalid.length > 0) {
-      output.error(
-        `Invalid client(s): ${invalid.join(', ')}. Valid options: ${VALID_CLIENTS.join(', ')}.`
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'invalid_clients',
+          message: `Invalid client(s): ${invalid.join(', ')}. Valid options: ${VALID_CLIENTS.join(', ')}.`,
+          next: [
+            {
+              command: getCommandName(
+                'mcp --clients "Cursor,VS Code with Copilot"'
+              ),
+            },
+          ],
+        },
+        1
       );
-      return 1;
     }
   }
 
