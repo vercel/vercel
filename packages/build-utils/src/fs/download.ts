@@ -69,6 +69,7 @@ export async function downloadFile(
       if (err.code === 'EEXIST') {
         // When using `--standalone` in a monorepo, multiple functions may
         // try to write the same symlink to the shared output directory.
+        // This is by design, as we want to share the same symlink across all functions.
         // If the existing symlink points to the same target, skip it.
         const existingTarget = await readlink(fsPath);
         if (existingTarget !== target) {
