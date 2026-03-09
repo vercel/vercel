@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'vitest';
 import type { Route } from '@vercel/routing-utils';
-import { suppressAutoHostRoutesByUserRoutes } from '../../../../src/util/build/service-host-route-precedence';
+import { suppressAutoSubdomainRoutesByUserRoutes } from '../../../../src/util/build/service-subdomain-route-precedence';
 
-describe('suppressAutoHostRoutesByUserRoutes()', () => {
+describe('suppressAutoSubdomainRoutesByUserRoutes()', () => {
   test('suppresses auto route when user route has same src and host', () => {
     const autoHostRoutes: Route[] = [
       {
@@ -26,8 +26,8 @@ describe('suppressAutoHostRoutesByUserRoutes()', () => {
       },
     ];
 
-    const result = suppressAutoHostRoutesByUserRoutes({
-      autoHostRoutes,
+    const result = suppressAutoSubdomainRoutesByUserRoutes({
+      autoSubdomainRoutes: autoHostRoutes,
       userRoutes,
     });
 
@@ -51,8 +51,8 @@ describe('suppressAutoHostRoutesByUserRoutes()', () => {
       },
     ];
 
-    const result = suppressAutoHostRoutesByUserRoutes({
-      autoHostRoutes,
+    const result = suppressAutoSubdomainRoutesByUserRoutes({
+      autoSubdomainRoutes: autoHostRoutes,
       userRoutes,
     });
 
@@ -79,8 +79,8 @@ describe('suppressAutoHostRoutesByUserRoutes()', () => {
       },
     ];
 
-    const result = suppressAutoHostRoutesByUserRoutes({
-      autoHostRoutes,
+    const result = suppressAutoSubdomainRoutesByUserRoutes({
+      autoSubdomainRoutes: autoHostRoutes,
       userRoutes,
     });
 
@@ -104,8 +104,8 @@ describe('suppressAutoHostRoutesByUserRoutes()', () => {
       },
     ];
 
-    const result = suppressAutoHostRoutesByUserRoutes({
-      autoHostRoutes,
+    const result = suppressAutoSubdomainRoutesByUserRoutes({
+      autoSubdomainRoutes: autoHostRoutes,
       userRoutes,
     });
 

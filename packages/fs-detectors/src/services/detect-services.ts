@@ -21,6 +21,7 @@ import {
 import { resolveAllConfiguredServices } from './resolve';
 import { autoDetectServices } from './auto-detect';
 
+// don't apply subdomain rewrites on preview urls
 const PREVIEW_DOMAIN_MISSING: HasField = [
   { type: 'host', value: { suf: '.vercel.app' } },
   { type: 'host', value: { suf: '.vercel.dev' } },

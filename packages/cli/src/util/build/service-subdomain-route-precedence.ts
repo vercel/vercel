@@ -1,7 +1,7 @@
 import type { HasField, Route, RouteWithSrc } from '@vercel/routing-utils';
 
-interface ServiceHostRoutePrecedenceOptions {
-  autoHostRoutes: Route[] | null | undefined;
+interface ServiceSubdomainRoutePrecedenceOptions {
+  autoSubdomainRoutes: Route[] | null | undefined;
   userRoutes: Route[] | null | undefined;
 }
 
@@ -45,7 +45,7 @@ function serializeMatchableValue(
   return entries.join(';');
 }
 
-function getRouteHostSourceKey(route: Route): string | null {
+function getRouteSubdomainSourceKey(route: Route): string | null {
   if (!isRouteWithSrc(route)) {
     return null;
   }
@@ -59,31 +59,28 @@ function getRouteHostSourceKey(route: Route): string | null {
 }
 
 /**
- * Why this exists:
- * - Auto-generated service subdomain routes are inserted in the `null` phase.
- * - User `rewrites` are usually in the `filesystem` phase.
- * - Phase order wins over simple array ordering, so "put user routes first"
- *   does not reliably give user routes precedence.
+ * Auto-generated service subdomain routes are inserted in the `null` phase.
+ * User `rewrites` are inserted in the `filesystem` phase.
  *
  * To preserve intuitive override behavior, we drop an auto route only when the
  * user already defines an equivalent host+src match.
  */
-export function suppressAutoHostRoutesByUserRoutes({
-  autoHostRoutes,
+export function suppressAutoSubdomainRoutesByUserRoutes({
+  autoSubdomainRoutes,
   userRoutes,
-}: ServiceHostRoutePrecedenceOptions): Route[] | null {
-  if (!autoHostRoutes || autoHostRoutes.length === 0) {
+}: ServiceSubdomainRoutePrecedenceOptions): Route[] | null {
+  if (!autoSubdomainRoutes || autoSubdomainRoutes.length === 0) {
     return null;
   }
 
   const userRouteKeys = new Set(
     (userRoutes || [])
-      .map(route => getRouteHostSourceKey(route))
+      .map(route => getRouteSubdomainSourceKey(route))
       .filter((key): key is string => Boolean(key))
   );
 
-  const filtered = autoHostRoutes.filter(route => {
-    const key = getRouteHostSourceKey(route);
+  const filtered = autoSubdomainRoutes.filter(route => {
+    const key = getRouteSubdomainSourceKey(route);
     if (!key) {
       return true;
     }

@@ -93,7 +93,7 @@ import { treeKill } from '../tree-kill';
 import { ServicesOrchestrator } from './services-orchestrator';
 import { applyOverriddenHeaders, nodeHeadersToFetchHeaders } from './headers';
 import { formatQueryString, parseQueryString } from './parse-query-string';
-import { suppressAutoHostRoutesByUserRoutes } from '../build/service-host-route-precedence';
+import { suppressAutoSubdomainRoutesByUserRoutes } from '../build/service-subdomain-route-precedence';
 import {
   errorToString,
   isErrnoException,
@@ -663,8 +663,8 @@ export default class DevServer {
       routes.push(...(redirectRoutes || []));
       routes = appendRoutesToPhase({
         routes,
-        newRoutes: suppressAutoHostRoutesByUserRoutes({
-          autoHostRoutes: hostRewriteRoutes,
+        newRoutes: suppressAutoSubdomainRoutesByUserRoutes({
+          autoSubdomainRoutes: hostRewriteRoutes,
           userRoutes: vercelConfig.routes,
         }),
         phase: null,
