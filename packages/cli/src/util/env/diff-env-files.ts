@@ -37,6 +37,7 @@ function findChanges(
 } {
   const added = [];
   const changed = [];
+  const remainingKeys = new Set(Object.keys(oldEnv));
 
   for (const key of Object.keys(newEnv)) {
     if (oldEnv[key] === undefined) {
@@ -44,9 +45,9 @@ function findChanges(
     } else if (oldEnv[key] !== newEnv[key]) {
       changed.push(key);
     }
-    delete oldEnv[key];
+    remainingKeys.delete(key);
   }
-  const removed = Object.keys(oldEnv);
+  const removed = Array.from(remainingKeys);
 
   return {
     added,
@@ -62,7 +63,7 @@ export function buildDeltaString(
   const { added, changed, removed } = findChanges(oldEnv, newEnv);
 
   let deltaString = '';
-  deltaString += chalk.green(addDeltaSection('+', changed, true));
+  deltaString += chalk.yellow(addDeltaSection('M', changed));
   deltaString += chalk.green(addDeltaSection('+', added));
   deltaString += chalk.red(addDeltaSection('-', removed));
 
@@ -71,16 +72,12 @@ export function buildDeltaString(
     : deltaString;
 }
 
-function addDeltaSection(
-  prefix: string,
-  arr: string[],
-  changed: boolean = false
-): string {
+function addDeltaSection(prefix: string, arr: string[]): string {
   if (arr.length === 0) return '';
   return (
     arr
       .sort()
-      .map(item => `${prefix} ${item}${changed ? ' (Updated)' : ''}`)
+      .map(item => `${prefix} ${item}`)
       .join('\n') + '\n'
   );
 }
