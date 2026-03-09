@@ -187,6 +187,21 @@ function logsSpanMultipleDays(logs: RequestLogEntry[]): boolean {
   return logs.some(log => new Date(log.timestamp).toDateString() !== firstDay);
 }
 
+function isAnyFilterOptionEnabled(flags: {
+  environment?: string;
+  level?: string | string[];
+  statusCode?: string;
+  source?: string | string[];
+  since?: string;
+  until?: string;
+  limit?: number;
+  query?: string;
+  search?: string;
+  requestId?: string;
+}): boolean {
+  return Object.values(flags).some(v => v !== undefined);
+}
+
 function parseLevels(levels?: string | string[]): string[] {
   if (!levels) return [];
   if (typeof levels === 'string') return [levels];
@@ -254,19 +269,21 @@ export default async function logs(client: Client) {
   // unless --no-follow is explicitly set or filtering flags are used
   const followFlagValue = parsedArguments.flags['--follow'];
   const noFollowFlagValue = parsedArguments.flags['--no-follow'];
-  const hasFilteringFlags =
-    environmentOption !== undefined ||
-    levelOption !== undefined ||
-    statusCodeOption !== undefined ||
-    sourceOption !== undefined ||
-    sinceOption !== undefined ||
-    untilOption !== undefined ||
-    limitOption !== undefined ||
-    queryOption !== undefined ||
-    searchOption !== undefined ||
-    requestIdOption !== undefined;
   const followOption =
-    deploymentOption && !noFollowFlagValue && !hasFilteringFlags
+    deploymentOption &&
+    !noFollowFlagValue &&
+    !isAnyFilterOptionEnabled({
+      environment: environmentOption,
+      level: levelOption,
+      statusCode: statusCodeOption,
+      source: sourceOption,
+      since: sinceOption,
+      until: untilOption,
+      limit: limitOption,
+      query: queryOption,
+      search: searchOption,
+      requestId: requestIdOption,
+    })
       ? true
       : followFlagValue;
 
