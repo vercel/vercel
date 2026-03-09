@@ -43,7 +43,6 @@ const ALL_EVALS: string[] = [
   'login-not-logged-in',
   'marketplace/find-postgres-integration',
   'marketplace/install-neon-postgres',
-  'marketplace/install-neon-postgres-minimal',
   'marketplace/metadata-discovery',
   'marketplace/multi-product-install',
   'non-interactive',
