@@ -1142,7 +1142,7 @@ export type NextRequiredServerFilesManifest = {
 /**
  * The rendering mode for a route.
  */
-export const enum RenderingMode {
+export enum RenderingMode {
   /**
    * `STATIC` rendering mode will output a fully static HTML page or error if
    * anything dynamic is used.
@@ -3650,7 +3650,7 @@ export {
   normalizePackageJson,
   getNextConfig,
   getImagesConfig,
-  stringMap,
+  type stringMap,
   normalizePage,
   isDynamicRoute,
   getSourceFilePathFromPage,

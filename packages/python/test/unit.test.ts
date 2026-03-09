@@ -48,9 +48,13 @@ import {
   resetInstalledPythonsCache,
 } from '../src/version';
 import type { PythonConstraint, PythonPackage } from '@vercel/python-analysis';
-import { build } from '../src/index';
+import { build, prepareCache } from '../src/index';
 import { createVenvEnv, getVenvBinDir } from '../src/utils';
-import { UV_PYTHON_DOWNLOADS_MODE, getProtectedUvEnv } from '../src/uv';
+import {
+  UV_PYTHON_DOWNLOADS_MODE,
+  getProtectedUvEnv,
+  getUvCacheDir,
+} from '../src/uv';
 import { VERCEL_WORKERS_VERSION } from '../src/package-versions';
 import { createPyprojectToml } from '../src/install';
 import { detectDjangoPythonEntrypoint } from '../src/entrypoint';
@@ -120,7 +124,6 @@ function createMockUvRunner(options?: {
   onLock?: () => void;
 }) {
   return class MockUvRunner {
-    constructor() {}
     getPath() {
       return '/mock/uv';
     }
@@ -158,6 +161,98 @@ afterEach(() => {
   if (fs.existsSync(tmpPythonDir)) {
     fs.removeSync(tmpPythonDir);
   }
+});
+
+describe('prepareCache()', () => {
+  it('caches the builder virtualenv and uv cache under .vercel/python, excluding bytecode caches', async () => {
+    const workPath = path.join(
+      tmpdir(),
+      `vc-python-cache-${Math.floor(Math.random() * 1e6)}`
+    );
+
+    await fs.outputFile(
+      path.join(workPath, '.vercel/python/.venv/pyvenv.cfg'),
+      'home = /usr/bin\n'
+    );
+    await fs.outputFile(
+      path.join(workPath, '.vercel/python/.venv/bin/python'),
+      ''
+    );
+    await fs.outputFile(
+      path.join(workPath, '.vercel/python/.venv/lib/site.pyc'),
+      ''
+    );
+    await fs.outputFile(
+      path.join(
+        workPath,
+        '.vercel/python/.venv/lib/__pycache__/site.cpython-312.pyc'
+      ),
+      ''
+    );
+    await fs.outputFile(
+      path.join(workPath, '.vercel/python/cache/uv/wheels/example.whl'),
+      ''
+    );
+    await fs.outputFile(
+      path.join(workPath, '.vercel/python/cache/uv/archive/foo.pyc'),
+      ''
+    );
+    await fs.outputFile(path.join(workPath, 'app.py'), 'print("hello")\n');
+
+    try {
+      const files = await prepareCache({
+        files: {},
+        entrypoint: 'app.py',
+        config: {},
+        workPath,
+        repoRootPath: workPath,
+      });
+
+      expect(files['.vercel/python/.venv/pyvenv.cfg']).toBeDefined();
+      expect(files['.vercel/python/.venv/bin/python']).toBeDefined();
+      expect(files['.vercel/python/cache/uv/wheels/example.whl']).toBeDefined();
+      expect(files['.vercel/python/.venv/lib/site.pyc']).toBeUndefined();
+      expect(
+        files['.vercel/python/.venv/lib/__pycache__/site.cpython-312.pyc']
+      ).toBeUndefined();
+      expect(files['.vercel/python/cache/uv/archive/foo.pyc']).toBeUndefined();
+      expect(files['app.py']).toBeUndefined();
+    } finally {
+      await fs.remove(workPath);
+    }
+  });
+
+  it('uses Build Output API v3 cache globs when config.json is present', async () => {
+    const workPath = path.join(
+      tmpdir(),
+      `vc-python-build-output-cache-${Math.floor(Math.random() * 1e6)}`
+    );
+
+    await fs.outputJson(path.join(workPath, '.vercel/output/config.json'), {
+      cache: ['custom-cache/**'],
+    });
+    await fs.outputFile(path.join(workPath, 'custom-cache/result.txt'), '1\n');
+    await fs.outputFile(
+      path.join(workPath, '.vercel/python/.venv/pyvenv.cfg'),
+      'home = /usr/bin\n'
+    );
+
+    try {
+      const files = await prepareCache({
+        files: {},
+        entrypoint: 'app.py',
+        config: {},
+        workPath,
+        repoRootPath: workPath,
+      });
+
+      expect(Object.keys(files).sort()).toStrictEqual([
+        'custom-cache/result.txt',
+      ]);
+    } finally {
+      await fs.remove(workPath);
+    }
+  });
 });
 
 it('should only match supported versions, otherwise throw an error', () => {
@@ -2344,7 +2439,6 @@ describe('worker services dependency installation', () => {
     vi.doMock('../src/uv', () => ({
       ...realUv,
       UvRunner: class {
-        constructor() {}
         getPath() {
           return '/mock/uv';
         }
@@ -2363,7 +2457,6 @@ describe('worker services dependency installation', () => {
     // Mock externalization to keep this test focused on install behavior.
     vi.doMock('../src/dependency-externalizer', () => ({
       PythonDependencyExternalizer: class {
-        constructor() {}
         async analyze() {
           return { overLambdaLimit: false, allVendorFiles: {} };
         }
@@ -2497,19 +2590,27 @@ describe('UV_PYTHON_DOWNLOADS environment variable protection', () => {
       expect(env.HOME).toBe('/home/user');
       expect(env.UV_PYTHON_DOWNLOADS).toBe(UV_PYTHON_DOWNLOADS_MODE);
     });
+
+    it('sets UV_CACHE_DIR when provided', () => {
+      const cacheDir = '/tmp/project/.vercel/python/cache/uv';
+      const env = getProtectedUvEnv({}, cacheDir);
+      expect(env.UV_CACHE_DIR).toBe(cacheDir);
+    });
   });
 
   describe('createVenvEnv', () => {
-    it('sets VIRTUAL_ENV and PATH correctly while protecting UV_PYTHON_DOWNLOADS', () => {
+    it('sets VIRTUAL_ENV and PATH correctly while protecting uv env', () => {
       process.env.UV_PYTHON_DOWNLOADS = 'manual';
       process.env.PATH = '/usr/bin';
       const venvPath = '/path/to/venv';
-      const env = createVenvEnv(venvPath);
+      const cacheDir = getUvCacheDir('/repo');
+      const env = createVenvEnv(venvPath, process.env, cacheDir);
 
       expect(env.VIRTUAL_ENV).toBe(venvPath);
       expect(env.PATH).toContain(getVenvBinDir(venvPath));
       expect(env.PATH).toContain('/usr/bin');
       expect(env.UV_PYTHON_DOWNLOADS).toBe(UV_PYTHON_DOWNLOADS_MODE);
+      expect(env.UV_CACHE_DIR).toBe(cacheDir);
     });
   });
 });

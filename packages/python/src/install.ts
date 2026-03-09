@@ -12,7 +12,12 @@ import {
   type PythonPackage,
 } from '@vercel/python-analysis';
 import { getVenvPythonBin } from './utils';
-import { UvRunner, filterUnsafeUvPipArgs, getProtectedUvEnv } from './uv';
+import {
+  UvRunner,
+  filterUnsafeUvPipArgs,
+  getProtectedUvEnv,
+  getUvCacheDir,
+} from './uv';
 import { DEFAULT_PYTHON_VERSION_STRING } from './version';
 
 const makeDependencyCheckCode = (dependency: string) => `
@@ -400,7 +405,7 @@ async function pipInstall(
     try {
       await execa(uvPath!, uvArgs, {
         cwd: workPath,
-        env: getProtectedUvEnv(),
+        env: getProtectedUvEnv(process.env, getUvCacheDir(workPath)),
       });
       return;
     } catch (err) {
