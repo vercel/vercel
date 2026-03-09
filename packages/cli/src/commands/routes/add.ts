@@ -24,6 +24,7 @@ import {
 import { runInteractiveEditLoop } from './edit-interactive';
 import stamp from '../../util/output/stamp';
 import { getCommandName } from '../../util/pkg-name';
+import { outputAgentError } from '../../util/agent-output';
 import { RoutesAddTelemetryClient } from '../../util/telemetry/commands/routes';
 import {
   MAX_NAME_LENGTH,
@@ -61,7 +62,8 @@ export default async function add(client: Client, argv: string[]) {
   const { project, org } = link;
   const teamId = org.type === 'team' ? org.id : undefined;
   const { args, flags } = parsed;
-  const skipPrompts = flags['--yes'] as boolean | undefined;
+  const skipPrompts =
+    (flags['--yes'] as boolean | undefined) || client.nonInteractive;
 
   const telemetry = new RoutesAddTelemetryClient({
     opts: { store: client.telemetryEventStore },
@@ -115,6 +117,31 @@ export default async function add(client: Client, argv: string[]) {
   // --- AI generation mode ---
   const aiPrompt = flags['--ai'] as string | undefined;
 
+  if (client.nonInteractive && !aiPrompt && !flags['--src']) {
+    outputAgentError(
+      client,
+      {
+        status: 'error',
+        reason: 'missing_arguments',
+        message:
+          'In non-interactive mode provide either full route flags (name, --src, --action, etc.) or --ai "description" to generate a route.',
+        next: [
+          {
+            command: getCommandName(
+              'routes add "Route Name" --src "/path" --action rewrite --dest "/dest" --yes'
+            ),
+          },
+          {
+            command: getCommandName(
+              'routes add --ai "Describe your route" --yes'
+            ),
+          },
+        ],
+      },
+      1
+    );
+  }
+
   if (aiPrompt) {
     // Validate no conflicting flags
     const conflictingFlags = [
@@ -164,6 +191,25 @@ export default async function add(client: Client, argv: string[]) {
     }
     name = nameArg;
   } else if (skipPrompts) {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'missing_arguments',
+          message:
+            'In non-interactive mode route name is required. Provide name as first argument.',
+          next: [
+            {
+              command: getCommandName(
+                'routes add "Route Name" --src "/path" --action rewrite --dest "/dest" --yes'
+              ),
+            },
+          ],
+        },
+        1
+      );
+    }
     output.error(
       `Route name is required when using --yes. Usage: ${getCommandName('routes add "Route Name" --src "/path" --action rewrite --dest "/destination" --yes')}`
     );
@@ -229,6 +275,25 @@ export default async function add(client: Client, argv: string[]) {
   if (flags['--src']) {
     src = stripQuotes(flags['--src'] as string);
   } else if (skipPrompts) {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'missing_arguments',
+          message:
+            'In non-interactive mode --src is required. Provide the path pattern.',
+          next: [
+            {
+              command: getCommandName(
+                'routes add "Route Name" --src "/path" --action rewrite --dest "/dest" --yes'
+              ),
+            },
+          ],
+        },
+        1
+      );
+    }
     output.error(
       `Source path is required when using --yes. Usage: ${getCommandName('routes add "Name" --src "/path" --action rewrite --dest "/dest" --yes')}`
     );
@@ -307,6 +372,25 @@ export default async function add(client: Client, argv: string[]) {
 
   // Require at least one action when using --yes
   if (!hasAnyAction && skipPrompts) {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'missing_arguments',
+          message:
+            'In non-interactive mode at least one action is required. Use --action with --dest or --status, or header/transform flags.',
+          next: [
+            {
+              command: getCommandName(
+                'routes add "Route Name" --src "/path" --action rewrite --dest "/dest" --yes'
+              ),
+            },
+          ],
+        },
+        1
+      );
+    }
     output.error(
       'At least one action is required when using --yes. Use --action with --dest/--status, or header/transform flags.'
     );
@@ -532,6 +616,42 @@ export default async function add(client: Client, argv: string[]) {
       teamId,
       position,
     });
+
+    if (client.nonInteractive) {
+      output.stopSpinner();
+      const testUrl =
+        version.alias && src.startsWith('/')
+          ? `https://${version.alias}${syntax === 'equals' ? src : '/'}`
+          : undefined;
+      const jsonOutput: Record<string, unknown> = {
+        status: 'ok',
+        route: {
+          id: route.id,
+          name: route.name,
+          src,
+          ...(finalDest && { dest: finalDest }),
+          ...(finalStatus && { status: finalStatus }),
+        },
+        version: {
+          id: version.id,
+          ...(version.alias && { alias: version.alias }),
+        },
+        ...(testUrl && { testUrl }),
+        ...(!existingStagingVersion && {
+          next: [
+            {
+              command: getCommandName('routes publish'),
+              when: 'To promote this version to production',
+            },
+          ],
+        }),
+        ...(existingStagingVersion && {
+          hint: `Review staged changes with ${getCommandName('routes list --diff')} before promoting.`,
+        }),
+      };
+      client.stdout.write(`${JSON.stringify(jsonOutput, null, 2)}\n`);
+      return 0;
+    }
 
     output.log(
       `${chalk.cyan('Created')} route "${name}" ${chalk.gray(addStamp())}`
@@ -859,6 +979,40 @@ async function createFromGenerated(
     const { route, version } = await addRoute(client, projectId, routeInput, {
       teamId,
     });
+
+    if (client.nonInteractive) {
+      output.stopSpinner();
+      const testUrl =
+        version.alias && routeInput.route.src?.startsWith('/')
+          ? `https://${version.alias}/`
+          : undefined;
+      const jsonOutput: Record<string, unknown> = {
+        status: 'ok',
+        route: {
+          id: route.id,
+          name: route.name,
+          src: routeInput.route.src,
+        },
+        version: {
+          id: version.id,
+          ...(version.alias && { alias: version.alias }),
+        },
+        ...(testUrl && { testUrl }),
+        ...(!existingStagingVersion && {
+          next: [
+            {
+              command: getCommandName('routes publish'),
+              when: 'To promote this version to production',
+            },
+          ],
+        }),
+        ...(existingStagingVersion && {
+          hint: `Review staged changes with ${getCommandName('routes list --diff')} before promoting.`,
+        }),
+      };
+      client.stdout.write(`${JSON.stringify(jsonOutput, null, 2)}\n`);
+      return 0;
+    }
 
     output.log(
       `${chalk.cyan('Created')} route "${route.name}" ${chalk.gray(addStamp())}`
