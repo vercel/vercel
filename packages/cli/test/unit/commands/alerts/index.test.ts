@@ -86,7 +86,7 @@ describe('alerts', () => {
     expect(requestQuery.teamId).toBe('team_dummy');
     expect(requestQuery.projectId).toBe('prj_alerts');
     expect(client.stderr.getFullOutput()).toContain('Title');
-    expect(client.stderr.getFullOutput()).toContain('StartedAt');
+    expect(client.stderr.getFullOutput()).toContain('Started At');
     expect(client.stderr.getFullOutput()).toContain('Status');
     expect(client.stderr.getFullOutput()).toContain('Alerts');
     expect(client.stderr.getFullOutput()).toContain('Spike in requests');
@@ -250,7 +250,7 @@ describe('alerts', () => {
 
     expect(exitCode).toBe(1);
     expect(client.stderr.getFullOutput()).toContain(
-      '`--limit` must be an integer between 1 and 1000.'
+      '`--limit` must be an integer between 1 and 100.'
     );
   });
 });
