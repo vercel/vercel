@@ -1,5 +1,12 @@
 # @vercel/backends
 
+## 0.0.43
+
+### Patch Changes
+
+- Updated dependencies [[`768300b7bfb247613908984d8d86974434ee5473`](https://github.com/vercel/vercel/commit/768300b7bfb247613908984d8d86974434ee5473)]:
+  - @vercel/build-utils@13.7.1
+
 ## 0.0.42
 
 ### Patch Changes

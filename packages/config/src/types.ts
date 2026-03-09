@@ -579,6 +579,10 @@ export interface VercelConfig {
        */
       routePrefix?: string;
       /**
+       * Subdomain for host-based routing (web services only).
+       */
+      subdomain?: string;
+      /**
        * Framework to use.
        */
       framework?: string;

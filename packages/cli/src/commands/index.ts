@@ -42,6 +42,7 @@ import { removeCommand } from './remove/command';
 import { routesCommand } from './routes/command';
 import { rollbackCommand } from './rollback/command';
 import { rollingReleaseCommand } from './rolling-release/command';
+import { skillsCommand } from './skills/command';
 import { targetCommand } from './target/command';
 import { teamsCommand } from './teams/command';
 import { telemetryCommand } from './telemetry/command';
@@ -97,6 +98,7 @@ const commandsStructs = [
   routesCommand,
   rollbackCommand,
   rollingReleaseCommand,
+  skillsCommand,
   targetCommand,
   teamsCommand,
   telemetryCommand,
