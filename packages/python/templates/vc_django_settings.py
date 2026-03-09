@@ -33,4 +33,5 @@ else:
 
     mod = importlib.import_module(settings_module)
     settings = {k: getattr(mod, k) for k in dir(mod) if k.isupper()}
+    settings["__DJANGO_SETTINGS_MODULE"] = settings_module
     print(json.dumps(settings, default=str))
