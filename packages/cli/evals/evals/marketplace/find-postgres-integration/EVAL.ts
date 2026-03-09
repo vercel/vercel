@@ -1,5 +1,5 @@
 import { test, expect } from 'vitest';
-import { readFileSync } from 'fs';
+import { readFileSync, existsSync } from 'fs';
 
 function getShellCommands(): { command: string; success: boolean }[] {
   const results = JSON.parse(
@@ -24,4 +24,14 @@ test('agent used a discovery command (list or discover)', () => {
     )
   );
   expect(discoveryCommands.length).toBeGreaterThan(0);
+});
+
+test('agent found at least one postgres integration and wrote results', () => {
+  expect(existsSync('postgres-integrations.txt')).toBe(true);
+  const content = readFileSync('postgres-integrations.txt', 'utf-8')
+    .toLowerCase()
+    .trim();
+  expect(content.length).toBeGreaterThan(0);
+  // Neon is the primary PostgreSQL integration on Vercel
+  expect(content).toContain('neon');
 });

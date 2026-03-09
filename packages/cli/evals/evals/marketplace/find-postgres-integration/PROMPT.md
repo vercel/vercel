@@ -1,5 +1,7 @@
 Find PostgreSQL database integrations available in the Vercel marketplace using the CLI. List the names of any PostgreSQL-compatible integrations you find.
 
+Write your findings to a file called `postgres-integrations.txt` with one integration name per line (e.g., "neon", "supabase").
+
 Important context:
 
 - You are already authenticated with Vercel CLI via the VERCEL_TOKEN environment variable. Do NOT run `vercel login` - it is not needed.
