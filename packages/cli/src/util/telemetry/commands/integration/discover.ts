@@ -11,4 +11,13 @@ export class IntegrationDiscoverTelemetryClient
       this.trackCliFlag('json');
     }
   }
+
+  trackCliArgumentQuery(v: string | undefined) {
+    if (v) {
+      this.trackCliArgument({
+        arg: 'query',
+        value: this.redactedValue,
+      });
+    }
+  }
 }

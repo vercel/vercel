@@ -1,5 +1,35 @@
 # @vercel/next
 
+## 4.15.41
+
+### Patch Changes
+
+- Update Next.js adapter version ([#15382](https://github.com/vercel/vercel/pull/15382))
+
+## 4.15.40
+
+### Patch Changes
+
+- vary fallback `allowQuery` by params for partial fallback shells ([#15338](https://github.com/vercel/vercel/pull/15338))
+
+## 4.15.39
+
+### Patch Changes
+
+- Update Next.js adapter version ([#15366](https://github.com/vercel/vercel/pull/15366))
+
+## 4.15.38
+
+### Patch Changes
+
+- Update Next.js adapter version ([#15360](https://github.com/vercel/vercel/pull/15360))
+
+## 4.15.37
+
+### Patch Changes
+
+- add partialFallback flag to prerender output ([#14703](https://github.com/vercel/vercel/pull/14703))
+
 ## 4.15.36
 
 ### Patch Changes

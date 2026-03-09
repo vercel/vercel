@@ -93,6 +93,29 @@ describe('runQuirks', () => {
     expect(mockedExeca).not.toHaveBeenCalled();
   });
 
+  it('sets MPLCONFIGDIR when matplotlib is installed', async () => {
+    const distInfoDir = path.join(
+      sitePackagesDir,
+      'matplotlib-3.9.0.dist-info'
+    );
+    await fs.mkdirp(distInfoDir);
+    await fs.writeFile(
+      path.join(distInfoDir, 'METADATA'),
+      'Metadata-Version: 2.1\nName: matplotlib\nVersion: 3.9.0\n'
+    );
+    await fs.writeFile(
+      path.join(distInfoDir, 'RECORD'),
+      'matplotlib/__init__.py,,\n'
+    );
+
+    const result = await runQuirks(makeCtx());
+
+    expect(result.env).toMatchObject({ MPLCONFIGDIR: '/tmp' });
+    expect(result.buildEnv).toEqual({});
+    expect(result.alwaysBundlePackages).toEqual([]);
+    expect(mockedExeca).not.toHaveBeenCalled();
+  });
+
   it('runs quirk and merges result when dependency is installed', async () => {
     // Create prisma dist-info so scanDistributions detects it
     await fs.mkdirp(path.join(sitePackagesDir, 'prisma'));

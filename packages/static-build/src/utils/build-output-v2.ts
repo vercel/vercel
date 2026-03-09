@@ -85,7 +85,7 @@ export async function readBuildOutputDirectory({
           const project = new Project();
           const config = getConfig(project, middleware.file.fsPath);
           return config?.regions;
-        } catch (err) {
+        } catch (_err) {
           return undefined;
         }
       })(),

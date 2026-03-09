@@ -62,9 +62,7 @@ beforeAll(async () => {
     const team = await teamPromise;
     await prepareE2EFixtures(team.slug, binaryPath);
   } catch (err) {
-    // eslint-disable-next-line no-console
     console.log('Failed test suite `beforeAll`');
-    // eslint-disable-next-line no-console
     console.log(err);
 
     // force test suite to actually stop
@@ -77,7 +75,6 @@ afterAll(async () => {
 
   const allTmpDirs = listTmpDirs();
   for (const tmpDir of allTmpDirs) {
-    // eslint-disable-next-line no-console
     console.log('Removing temp dir: ', tmpDir.name);
     tmpDir.removeCallback();
   }
@@ -461,7 +458,7 @@ test('deploy using --local-config flag above target', async () => {
   expect(host).toMatch(/root-level/gm);
 });
 
-// eslint-disable-next-line jest/no-disabled-tests
+// biome-ignore lint/suspicious/noSkippedTests: temporarily disabled
 test.skip('deploy `api-env` fixture and test `vercel env` command', async () => {
   const target = await setupE2EFixture('api-env');
   // Randomness is required so that tests can run in
@@ -732,7 +729,6 @@ test.skip('deploy `api-env` fixture and test `vercel env` command', async () => 
 
     expect(res.status).toBe(200);
     if (res.status === 200) {
-      // eslint-disable-next-line no-console
       console.log(
         `Set autoExposeSystemEnvs=true for project ${link.projectId}`
       );

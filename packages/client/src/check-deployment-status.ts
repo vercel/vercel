@@ -62,7 +62,6 @@ export function parseRetryAfterMs(response: any): number | null {
   }
 }
 
-/* eslint-disable */
 export async function* checkDeploymentStatus(
   deployment: Deployment,
   clientOptions: VercelClientOptions

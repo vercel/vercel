@@ -3,7 +3,6 @@
   "vcs": {
     "enabled": true,
     "clientKind": "git",
-    // Respect .gitignore for file exclusion
     "useIgnoreFile": true,
   },
   "files": {
@@ -18,6 +17,7 @@
       "!packages/**/test/dev/fixtures/**",
       "!packages/**/test/build-fixtures/**",
       "!packages/**/test/cache-fixtures/**",
+      "!packages/**/test/**/test-limit-exceeded*/**",
       "!packages/cli/types/**",
       "test/**/*.{js,ts,mjs,cjs,jsx,tsx,json,css}",
       "utils/**/*.{js,ts,mjs,cjs,jsx,tsx,json,css}",
@@ -43,7 +43,7 @@
       "arrowParentheses": "asNeeded",
     },
   },
-  // Disable import sorting — not enforced by ESLint
+  // Disable import sorting to avoid churn
   "assist": {
     "actions": {
       "source": {
@@ -56,163 +56,113 @@
     "rules": {
       "recommended": true,
 
-      // Disable all a11y rules — not enforced by ESLint
+      // Not relevant for this codebase (no browser UI)
       "a11y": "off",
 
       "correctness": {
-        // Matches @typescript-eslint/no-unused-vars: 2
         "noUnusedVariables": "error",
-        // No ESLint equivalent enabled — new Biome rule
         "noUnusedImports": "error",
-        // Not enforced by ESLint — too noisy to enable now (277 hits)
+        "noInnerDeclarations": "error",
+        "noInvalidUseBeforeDeclaration": "error",
+        "noConstantCondition": "error",
+        "noVoidTypeReturn": "error",
+        "noUnreachable": "error",
+        // Too noisy to enable now (277 hits)
         "noUnusedFunctionParameters": "off",
-        // Not enforced by ESLint
-        "noInnerDeclarations": "off",
-        // Not enforced by ESLint
-        "noInvalidUseBeforeDeclaration": "off",
-        // Not enforced by ESLint
+        // Disabled — too many existing violations
         "noSwitchDeclarations": "off",
-        // Not enforced by ESLint
         "useValidTypeof": "off",
-        // Not enforced by ESLint
         "useParseIntRadix": "off",
-        // Not enforced by ESLint
-        "noVoidTypeReturn": "off",
-        // Not enforced by ESLint
-        "noConstantCondition": "off",
-        // Not enforced by ESLint
-        "noUnreachable": "off",
-        // Not enforced by ESLint — CSS rule
+        // CSS rules — not applicable
         "noUnknownMediaFeatureName": "off",
-        // Not enforced by ESLint — CSS rule
         "noInvalidDirectionInLinearGradient": "off",
       },
 
       "suspicious": {
-        // Matches ESLint no-dupe-keys: 2
         "noDuplicateObjectKeys": "error",
-        // Matches jest/no-focused-tests: 2
         "noFocusedTests": "error",
-        // Matches jest/no-disabled-tests: 2
         "noSkippedTests": "error",
-        // Matches @typescript-eslint/no-explicit-any: 0
+        "noRedeclare": "error",
+        "noRedundantUseStrict": "error",
+        "noUselessEscapeInString": "error",
+        "noConstEnum": "error",
+        "noArrayIndexKey": "error",
+        "useAdjacentOverloadSignatures": "error",
+        "noDuplicateParameters": "error",
+        "noShadowRestrictedNames": "error",
+        "noThenProperty": "error",
+        "noTemplateCurlyInString": "error",
+        // Intentionally allowed across the codebase
         "noExplicitAny": "off",
-        // Not enforced by ESLint
-        "noAssignInExpressions": "off",
-        // Not enforced by ESLint
-        "noImplicitAnyLet": "off",
-        // Matches @typescript-eslint/ban-ts-comment: 0
         "noTsIgnore": "off",
-        // Not enforced by ESLint
+        // Disabled — too many existing violations
+        "noAssignInExpressions": "off",
+        "noImplicitAnyLet": "off",
         "noDoubleEquals": "off",
-        // Not enforced by ESLint
         "noGlobalIsNan": "off",
-        // Not enforced by ESLint
         "noConfusingVoidType": "off",
-        // Not enforced by ESLint
         "noPrototypeBuiltins": "off",
-        // Not enforced by ESLint
-        "noRedeclare": "off",
-        // Not enforced by ESLint
         "useIterableCallbackReturn": "off",
-        // Not enforced by ESLint
-        "noRedundantUseStrict": "off",
-        // Not enforced by ESLint
-        "noShadowRestrictedNames": "off",
-        // Not enforced by ESLint
         "noControlCharactersInRegex": "off",
-        // Not enforced by ESLint
-        "noThenProperty": "off",
-        // Not enforced by ESLint
-        "noTemplateCurlyInString": "off",
-        // Not enforced by ESLint
-        "noUselessEscapeInString": "off",
-        // Not enforced by ESLint
+        // CSS rules — not applicable
         "noShorthandPropertyOverrides": "off",
-        // Not enforced by ESLint
-        "noConstEnum": "off",
-        // Not enforced by ESLint
-        "noArrayIndexKey": "off",
-        // Not enforced by ESLint
-        "useAdjacentOverloadSignatures": "off",
-        // Not enforced by ESLint
-        "noDuplicateParameters": "off",
-        // Not enforced by ESLint
         "noDuplicateFontNames": "off",
-        // Not enforced by ESLint
         "noNonNullAssertedOptionalChain": "off",
       },
 
       "style": {
         // Globally off; overridden to "error" in packages/cli (see overrides)
         "useConst": "off",
-        // Not enforced by ESLint — too noisy to enable now (786 hits)
-        "useNodejsImportProtocol": "off",
-        // Matches @typescript-eslint/no-non-null-assertion: 0
-        "noNonNullAssertion": "off",
-        // Not enforced by ESLint
-        "useTemplate": "off",
-        // Not enforced by ESLint
         "useImportType": "off",
-        // Not enforced by ESLint
-        "useShorthandFunctionType": "off",
-        // Not enforced by ESLint
-        "useExportType": "off",
+        "useShorthandFunctionType": "error",
+        "useExportType": "error",
+        // Too noisy to enable now (786 hits)
+        "useNodejsImportProtocol": "off",
+        // Intentionally allowed across the codebase
+        "noNonNullAssertion": "off",
+        // Disabled — too many existing violations
+        "useTemplate": "off",
       },
 
       "complexity": {
-        // Not enforced by ESLint
-        "useArrowFunction": "off",
-        // Not enforced by ESLint
-        "useLiteralKeys": "off",
-        // Not enforced by ESLint
-        "useOptionalChain": "off",
-        // Not enforced by ESLint
-        "noCommaOperator": "off",
-        // Matches @typescript-eslint/ban-types: 0
+        "noCommaOperator": "error",
+        "noArguments": "error",
+        "noUselessLoneBlockStatements": "error",
+        "noUselessCatch": "error",
+        "useDateNow": "error",
+        "useFlatMap": "error",
+        "noUselessTernary": "error",
+        "noUselessRename": "error",
+        "noUselessEscapeInRegex": "error",
+        "noUselessSwitchCase": "error",
+        "noUselessContinue": "error",
+        "noUselessFragments": "error",
+        "noUselessConstructor": "error",
+        // Intentionally allowed across the codebase
         "noBannedTypes": "off",
-        // Not enforced by ESLint
-        "noArguments": "off",
-        // Not enforced by ESLint
+        // Disabled — too many existing violations
+        "useArrowFunction": "off",
+        "useLiteralKeys": "off",
+        "useOptionalChain": "off",
         "noUselessUndefinedInitialization": "off",
-        // Not enforced by ESLint
-        "noUselessEscapeInRegex": "off",
-        // Not enforced by ESLint
         "useRegexLiterals": "off",
-        // Not enforced by ESLint
-        "noUselessContinue": "off",
-        // Not enforced by ESLint
+        // CSS rules — not applicable
         "noImportantStyles": "off",
-        // Not enforced by ESLint
-        "noUselessLoneBlockStatements": "off",
-        // Not enforced by ESLint
-        "noUselessFragments": "off",
-        // Not enforced by ESLint
-        "noUselessSwitchCase": "off",
-        // Not enforced by ESLint
-        "noUselessCatch": "off",
-        // Not enforced by ESLint
-        "useFlatMap": "off",
-        // Not enforced by ESLint
-        "useDateNow": "off",
-        // Not enforced by ESLint
-        "noUselessTernary": "off",
-        // Not enforced by ESLint
-        "noUselessRename": "off",
-        // Not enforced by ESLint
-        "noUselessConstructor": "off",
       },
 
-      // Not enforced by ESLint
+      // Not relevant for this codebase (server-side Node.js)
       "performance": "off",
 
-      // Not enforced by ESLint
-      "security": "off",
+      "security": {
+        "noDangerouslySetInnerHtml": "error",
+        "noDangerouslySetInnerHtmlWithChildren": "error",
+        // Disabled — too many existing violations
+        "noGlobalEval": "off",
+      },
     },
   },
   "overrides": [
     // Disable linting and formatting for generated code, fixtures, and vendored files
-    // (mirrors .eslintignore and .prettierignore)
     {
       "includes": [
         "packages/*/dist/**",
@@ -243,14 +193,25 @@
         "enabled": false,
       },
     },
-    // CLI package has stricter rules — matches ESLint override for packages/cli/**
+    // CLI package has stricter rules
     {
       "includes": ["packages/cli/**"],
       "linter": {
         "rules": {
           "style": {
-            // Matches ESLint prefer-const: "error" override for CLI
             "useConst": "error",
+            "useImportType": "error",
+          },
+        },
+      },
+    },
+    // no-console only applies to CLI source code, not tests/scripts/evals
+    {
+      "includes": ["packages/cli/src/**"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noConsole": "error",
           },
         },
       },

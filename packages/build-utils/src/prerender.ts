@@ -18,6 +18,7 @@ interface PrerenderOptions {
   experimentalStreamingLambdaPath?: string;
   chain?: Chain;
   exposeErrBody?: boolean;
+  partialFallback?: boolean;
 }
 
 export class Prerender {
@@ -47,6 +48,7 @@ export class Prerender {
   public experimentalStreamingLambdaPath?: string;
   public chain?: Chain;
   public exposeErrBody?: boolean;
+  public partialFallback?: boolean;
 
   constructor({
     expiration,
@@ -65,6 +67,7 @@ export class Prerender {
     experimentalStreamingLambdaPath,
     chain,
     exposeErrBody,
+    partialFallback,
   }: PrerenderOptions) {
     this.type = 'Prerender';
     this.expiration = expiration;
@@ -242,6 +245,17 @@ export class Prerender {
     ) {
       throw new Error(
         `The \`exposeErrBody\` argument for \`Prerender\` must be a boolean.`
+      );
+    }
+
+    if (partialFallback === true) {
+      this.partialFallback = true;
+    } else if (
+      typeof partialFallback !== 'boolean' &&
+      typeof partialFallback !== 'undefined'
+    ) {
+      throw new Error(
+        `The \`partialFallback\` argument for \`Prerender\` must be a boolean.`
       );
     }
   }

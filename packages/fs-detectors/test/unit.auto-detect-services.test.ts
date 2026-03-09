@@ -30,7 +30,7 @@ describe('autoDetectServices', () => {
       });
     });
 
-    it('should detect only Next.js at root with no backend', async () => {
+    it('should return null for root-only Next.js with no backend', async () => {
       const fs = new VirtualFilesystem({
         'package.json': JSON.stringify({
           dependencies: {
@@ -42,12 +42,7 @@ describe('autoDetectServices', () => {
       const result = await autoDetectServices({ fs });
 
       expect(result.errors).toEqual([]);
-      expect(result.services).not.toBeNull();
-      expect(result.services!.frontend).toMatchObject({
-        framework: 'nextjs',
-        routePrefix: '/',
-      });
-      expect(result.services!.backend).toBeUndefined();
+      expect(result.services).toBeNull();
     });
 
     it('should not add backend service if backend/ dir exists but has no framework', async () => {
@@ -63,12 +58,7 @@ describe('autoDetectServices', () => {
       const result = await autoDetectServices({ fs });
 
       expect(result.errors).toEqual([]);
-      expect(result.services).not.toBeNull();
-      expect(result.services!.frontend).toMatchObject({
-        framework: 'nextjs',
-        routePrefix: '/',
-      });
-      expect(result.services!.backend).toBeUndefined();
+      expect(result.services).toBeNull();
     });
   });
 
@@ -461,7 +451,7 @@ describe('detectServices with auto-detection', () => {
   });
 
   describe('auto-detection fallback', () => {
-    it('should auto-detect services when no experimentalServices configured', async () => {
+    it('should return no services for root-only project without experimentalServices', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': JSON.stringify({
           buildCommand: 'npm run build',
@@ -475,19 +465,18 @@ describe('detectServices with auto-detection', () => {
 
       const result = await detectServices({ fs });
 
-      expect(result.errors).toEqual([]);
-      expect(result.warnings).toHaveLength(0);
       expect(result.source).toBe('auto-detected');
-      expect(result.services).toHaveLength(1);
-      expect(result.services[0]).toMatchObject({
-        name: 'frontend',
-        framework: 'nextjs',
-        routePrefix: '/',
-      });
-      expect(result.services[0].routePrefixSource).toBe('generated');
+      expect(result.services).toHaveLength(0);
+      expect(result.errors).toEqual([
+        {
+          code: 'NO_SERVICES_CONFIGURED',
+          message:
+            'No services configured. Add `experimentalServices` to vercel.json.',
+        },
+      ]);
     });
 
-    it('should auto-detect services when vercel.json does not exist', async () => {
+    it('should return no services for root-only project without vercel.json', async () => {
       const fs = new VirtualFilesystem({
         'package.json': JSON.stringify({
           dependencies: {
@@ -498,16 +487,15 @@ describe('detectServices with auto-detection', () => {
 
       const result = await detectServices({ fs });
 
-      expect(result.errors).toEqual([]);
-      expect(result.warnings).toHaveLength(0);
       expect(result.source).toBe('auto-detected');
-      expect(result.services).toHaveLength(1);
-      expect(result.services[0]).toMatchObject({
-        name: 'frontend',
-        framework: 'nextjs',
-        routePrefix: '/',
-      });
-      expect(result.services[0].routePrefixSource).toBe('generated');
+      expect(result.services).toHaveLength(0);
+      expect(result.errors).toEqual([
+        {
+          code: 'NO_SERVICES_CONFIGURED',
+          message:
+            'No services configured. Add `experimentalServices` to vercel.json.',
+        },
+      ]);
     });
 
     it('should mark prefixed auto-detected services as generated', async () => {

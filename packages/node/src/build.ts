@@ -62,8 +62,7 @@ interface DownloadOptions {
 
 const require_ = createRequire(__filename);
 
-// eslint-disable-next-line no-useless-escape
-const libPathRegEx = /^node_modules|[\/\\]node_modules[\/\\]/;
+const libPathRegEx = /^node_modules|[/\\]node_modules[/\\]/;
 
 async function downloadInstallAndBundle({
   files,

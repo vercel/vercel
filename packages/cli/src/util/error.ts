@@ -28,7 +28,7 @@ export async function responseError(
 
     try {
       body = await res.json();
-    } catch (err) {
+    } catch (_err) {
       body = parsedBody;
     }
 
@@ -77,7 +77,7 @@ export async function responseErrorMessage(
 
     try {
       body = await res.json();
-    } catch (err) {
+    } catch (_err) {
       body = {};
     }
 

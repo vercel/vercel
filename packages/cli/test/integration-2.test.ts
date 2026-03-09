@@ -120,9 +120,7 @@ beforeAll(async () => {
     const team = await teamPromise;
     await prepareE2EFixtures(team.slug, binaryPath);
   } catch (err) {
-    // eslint-disable-next-line no-console
     console.log('Failed test suite `beforeAll`');
-    // eslint-disable-next-line no-console
     console.log(err);
 
     // force test suite to actually stop
@@ -145,7 +143,7 @@ afterAll(async () => {
 });
 
 // https://linear.app/vercel/issue/ZERO-2555/fix-or-skip-assign-a-domain-to-a-project-test
-// eslint-disable-next-line jest/no-disabled-tests
+// biome-ignore lint/suspicious/noSkippedTests: temporarily disabled
 test.skip('assign a domain to a project', async () => {
   const team = await teamPromise;
   const domain = `project-domain.${team.slug}.vercel.app`;
@@ -187,7 +185,7 @@ test('ensure `github` and `scope` are not sent to the API', async () => {
 });
 
 // TODO: fix: --public does not make deployments public
-// eslint-disable-next-line jest/no-disabled-tests
+// biome-ignore lint/suspicious/noSkippedTests: temporarily disabled
 test.skip('should show prompts to set up project during first deploy', async () => {
   const dir = await setupE2EFixture('project-link-deploy');
   const projectName = `project-link-deploy-${
@@ -851,7 +849,6 @@ test('`vc --debug project ls` should output the projects listing', async () => {
   expect(stderr).toContain('> Projects found under');
 });
 
-// eslint-disable-next-line jest/no-disabled-tests
 test.skip(
   'deploy gatsby twice and print cached directories',
   async () => {
@@ -896,7 +893,7 @@ test.skip(
 );
 
 // TODO: fix: --public does not make deployments public
-// eslint-disable-next-line jest/no-disabled-tests
+// biome-ignore lint/suspicious/noSkippedTests: temporarily disabled
 test.skip('deploy pnpm twice using pnp and symlink=false', async () => {
   const directory = path.join(__dirname, 'fixtures/unit/pnpm-pnp-symlink');
 
@@ -1254,7 +1251,7 @@ test('[vc build] should not include .vercel when zeroConfig is true and outputDi
 });
 
 // TODO: fix: --public does not make deployments public
-// eslint-disable-next-line jest/no-disabled-tests
+// biome-ignore lint/suspicious/noSkippedTests: temporarily disabled
 test.skip('vercel.json configuration overrides in a new project prompt user and merges settings correctly', async () => {
   let directory = await setupE2EFixture(
     'vercel-json-configuration-overrides-merging-prompts'
