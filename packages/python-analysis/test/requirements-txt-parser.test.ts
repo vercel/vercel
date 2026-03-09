@@ -1669,6 +1669,60 @@ django>=4.0
   });
 });
 
+describe('complex environment markers', () => {
+  it('parses markers with multiple or conditions in parentheses', () => {
+    const content = `
+greenlet==3.3.0 ; python_version == "3.12" and (platform_machine == "aarch64" or platform_machine == "ppc64le" or platform_machine == "x86_64" or platform_machine == "amd64" or platform_machine == "AMD64" or platform_machine == "win32" or platform_machine == "WIN32")
+`;
+    const result = parseRequirementsFile(content);
+    expect(result.requirements).toHaveLength(1);
+    expect(result.requirements[0].name).toBe('greenlet');
+    expect(result.requirements[0].version).toBe('==3.3.0');
+    expect(result.requirements[0].markers).toBeDefined();
+  });
+
+  it('parses markers with multiple chained or operators', () => {
+    const content = `
+package==1.0.0 ; sys_platform == "linux" or sys_platform == "darwin" or sys_platform == "win32"
+`;
+    const result = parseRequirementsFile(content);
+    expect(result.requirements).toHaveLength(1);
+    expect(result.requirements[0].name).toBe('package');
+    expect(result.requirements[0].markers).toBeDefined();
+  });
+
+  it('parses markers with multiple chained and operators', () => {
+    const content = `
+package==1.0.0 ; python_version >= "3.8" and python_version < "4.0" and sys_platform == "linux"
+`;
+    const result = parseRequirementsFile(content);
+    expect(result.requirements).toHaveLength(1);
+    expect(result.requirements[0].name).toBe('package');
+    expect(result.requirements[0].markers).toBeDefined();
+  });
+
+  it('parses markers with mixed and/or and nested parentheses', () => {
+    const content = `
+package==1.0.0 ; (python_version >= "3.8" and python_version < "4.0") or (python_version >= "2.7" and python_version < "3.0")
+`;
+    const result = parseRequirementsFile(content);
+    expect(result.requirements).toHaveLength(1);
+    expect(result.requirements[0].name).toBe('package');
+    expect(result.requirements[0].markers).toBeDefined();
+  });
+
+  it('parses poetry-generated markers with multiple platform conditions', () => {
+    const content = `
+cryptography==44.0.0 ; python_version >= "3.9" and (platform_machine == "aarch64" or platform_machine == "ppc64le" or platform_machine == "s390x" or platform_machine == "x86_64" or platform_machine == "AMD64")
+`;
+    const result = parseRequirementsFile(content);
+    expect(result.requirements).toHaveLength(1);
+    expect(result.requirements[0].name).toBe('cryptography');
+    expect(result.requirements[0].version).toBe('==44.0.0');
+    expect(result.requirements[0].markers).toBeDefined();
+  });
+});
+
 describe('inline comment stripping on option values', () => {
   it('strips comments from --index-url value', () => {
     const content = `
