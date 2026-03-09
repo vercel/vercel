@@ -251,11 +251,24 @@ export default async function logs(client: Client) {
   const branchFlagValue = parsedArguments.flags['--branch'];
 
   // Implicit --follow when deployment is specified (for backwards compatibility)
-  // unless --no-follow is explicitly set
+  // unless --no-follow is explicitly set or filtering flags are used
   const followFlagValue = parsedArguments.flags['--follow'];
   const noFollowFlagValue = parsedArguments.flags['--no-follow'];
+  const hasFilteringFlags =
+    environmentOption !== undefined ||
+    levelOption !== undefined ||
+    statusCodeOption !== undefined ||
+    sourceOption !== undefined ||
+    sinceOption !== undefined ||
+    untilOption !== undefined ||
+    limitOption !== undefined ||
+    queryOption !== undefined ||
+    searchOption !== undefined ||
+    requestIdOption !== undefined;
   const followOption =
-    deploymentOption && !noFollowFlagValue ? true : followFlagValue;
+    deploymentOption && !noFollowFlagValue && !hasFilteringFlags
+      ? true
+      : followFlagValue;
 
   telemetry.trackCliArgumentUrlOrDeploymentId(deploymentArgument);
   telemetry.trackCliOptionProject(projectOption);

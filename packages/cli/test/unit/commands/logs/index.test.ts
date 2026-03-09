@@ -664,6 +664,27 @@ describe('logs', () => {
       expect(receivedDeploymentId).toEqual(deployment.id);
     });
 
+    it('should disable implicit --follow when --since is used with --deployment', async () => {
+      const user = useUser();
+      const deployment = useDeployment({ creator: user });
+
+      let receivedDeploymentId: string | undefined;
+      client.scenario.get('/api/logs/request-logs', (req, res) => {
+        receivedDeploymentId = req.query.deploymentId as string;
+        res.json({
+          rows: [createMockLog({ deploymentId: deployment.id })],
+          hasMoreRows: false,
+        });
+      });
+
+      client.cwd = fixture('linked-project');
+      client.setArgv('logs', '--deployment', deployment.id, '--since', '1h');
+      const exitCode = await logs(client);
+
+      expect(exitCode).toEqual(0);
+      expect(receivedDeploymentId).toEqual(deployment.id);
+    });
+
     it('should track telemetry for --deployment option', async () => {
       const user = useUser();
       const deployment = useDeployment({ creator: user });
@@ -766,6 +787,112 @@ describe('logs', () => {
       const exitCode = await logs(client);
 
       expect(exitCode).toEqual(0);
+    });
+
+    it('should disable implicit --follow when --since is used with positional deployment', async () => {
+      const user = useUser();
+      const deployment = useDeployment({ creator: user });
+
+      let receivedDeploymentId: string | undefined;
+      client.scenario.get('/api/logs/request-logs', (req, res) => {
+        receivedDeploymentId = req.query.deploymentId as string;
+        res.json({
+          rows: [createMockLog({ deploymentId: deployment.id })],
+          hasMoreRows: false,
+        });
+      });
+
+      client.cwd = fixture('linked-project');
+      client.setArgv('logs', deployment.id, '--since', '1h');
+      const exitCode = await logs(client);
+
+      expect(exitCode).toEqual(0);
+      expect(receivedDeploymentId).toEqual(deployment.id);
+    });
+
+    it('should disable implicit --follow when --until is used with positional deployment', async () => {
+      const user = useUser();
+      const deployment = useDeployment({ creator: user });
+
+      let receivedDeploymentId: string | undefined;
+      client.scenario.get('/api/logs/request-logs', (req, res) => {
+        receivedDeploymentId = req.query.deploymentId as string;
+        res.json({
+          rows: [createMockLog({ deploymentId: deployment.id })],
+          hasMoreRows: false,
+        });
+      });
+
+      client.cwd = fixture('linked-project');
+      client.setArgv('logs', deployment.id, '--until', '30m');
+      const exitCode = await logs(client);
+
+      expect(exitCode).toEqual(0);
+      expect(receivedDeploymentId).toEqual(deployment.id);
+    });
+
+    it('should disable implicit --follow when --since and --until are used with URL positional argument', async () => {
+      const user = useUser();
+      const deployment = useDeployment({ creator: user });
+
+      client.scenario.get(`/v13/deployments/${deployment.url}`, (_req, res) => {
+        res.json(deployment);
+      });
+
+      let receivedDeploymentId: string | undefined;
+      client.scenario.get('/api/logs/request-logs', (req, res) => {
+        receivedDeploymentId = req.query.deploymentId as string;
+        res.json({
+          rows: [createMockLog({ deploymentId: deployment.id })],
+          hasMoreRows: false,
+        });
+      });
+
+      client.cwd = fixture('linked-project');
+      client.setArgv(
+        'logs',
+        `https://${deployment.url}`,
+        '--since',
+        '2026-03-09T10:13:50Z',
+        '--until',
+        '2026-03-09T10:15:00Z'
+      );
+      const exitCode = await logs(client);
+
+      expect(exitCode).toEqual(0);
+      expect(receivedDeploymentId).toEqual(deployment.id);
+    });
+
+    it('should disable implicit --follow when --level is used with positional deployment', async () => {
+      const user = useUser();
+      const deployment = useDeployment({ creator: user });
+
+      client.scenario.get('/api/logs/request-logs', (req, res) => {
+        res.json({
+          rows: [
+            createMockLog({ deploymentId: deployment.id, level: 'error' }),
+          ],
+          hasMoreRows: false,
+        });
+      });
+
+      client.cwd = fixture('linked-project');
+      client.setArgv('logs', deployment.id, '--level', 'error');
+      const exitCode = await logs(client);
+
+      expect(exitCode).toEqual(0);
+    });
+
+    it('should still error when explicit --follow is used with filtering flags', async () => {
+      const user = useUser();
+      const deployment = useDeployment({ creator: user });
+
+      client.cwd = fixture('linked-project');
+      client.setArgv('logs', deployment.id, '--follow', '--since', '1h');
+      const exitCode = await logs(client);
+
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput('Remove: --since');
     });
 
     it('should prioritize positional argument over --deployment flag', async () => {
