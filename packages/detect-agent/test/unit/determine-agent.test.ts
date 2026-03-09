@@ -12,6 +12,8 @@ describe('determineAgent', () => {
     vi.stubEnv('CURSOR_AGENT', '');
     vi.stubEnv('GEMINI_CLI', '');
     vi.stubEnv('CODEX_SANDBOX', '');
+    vi.stubEnv('CODEX_CI', '');
+    vi.stubEnv('CODEX_THREAD_ID', '');
     vi.stubEnv('AUGMENT_AGENT', '');
     vi.stubEnv('OPENCODE_CLIENT', '');
     vi.stubEnv('CLAUDECODE', '');
@@ -127,6 +129,34 @@ describe('determineAgent', () => {
     describe('CODEX_SANDBOX set', () => {
       beforeEach(() => {
         vi.stubEnv('CODEX_SANDBOX', 'seatbelt');
+      });
+
+      it('detects codex', async () => {
+        const result = await determineAgent();
+        expect(result).toEqual({
+          isAgent: true,
+          agent: { name: KNOWN_AGENTS.CODEX },
+        });
+      });
+    });
+
+    describe('CODEX_CI set', () => {
+      beforeEach(() => {
+        vi.stubEnv('CODEX_CI', '1');
+      });
+
+      it('detects codex', async () => {
+        const result = await determineAgent();
+        expect(result).toEqual({
+          isAgent: true,
+          agent: { name: KNOWN_AGENTS.CODEX },
+        });
+      });
+    });
+
+    describe('CODEX_THREAD_ID set', () => {
+      beforeEach(() => {
+        vi.stubEnv('CODEX_THREAD_ID', 'thread-123');
       });
 
       it('detects codex', async () => {
