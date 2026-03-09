@@ -1,25 +1,22 @@
 import type { Route } from '@vercel/routing-utils';
 import type {
-  ExperimentalServiceConfig as BuildUtilsExperimentalServiceConfig,
+  ExperimentalServiceConfig,
   ExperimentalServiceGroups,
   ServiceRuntime,
   ServiceType,
-  Service as BuildUtilsService,
+  Service,
   Builder,
 } from '@vercel/build-utils';
 import type { DetectorFilesystem } from '../detectors/filesystem';
 
-export type { ExperimentalServiceGroups, ServiceRuntime, ServiceType, Builder };
-
-export interface ExperimentalServiceConfig
-  extends BuildUtilsExperimentalServiceConfig {
-  subdomain?: string;
-}
-
-export interface Service extends BuildUtilsService {
-  handlerFunction?: string;
-  subdomain?: string;
-}
+export type {
+  ExperimentalServiceConfig,
+  ExperimentalServiceGroups,
+  ServiceRuntime,
+  ServiceType,
+  Service,
+  Builder,
+};
 
 export type ExperimentalServices = Record<string, ExperimentalServiceConfig>;
 
