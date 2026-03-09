@@ -15,6 +15,7 @@ export { default as buy } from './commands/buy';
 export { default as cache } from './commands/cache';
 export { default as contract } from './commands/contract';
 export { default as certs } from './commands/certs';
+export { default as crons } from './commands/crons';
 export { default as curl } from './commands/curl';
 export { default as dns } from './commands/dns';
 export { default as domains } from './commands/domains';
