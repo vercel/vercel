@@ -210,7 +210,7 @@ const main = async () => {
   const subSubCommand = parsedArgs.args[3];
 
   // If empty, leave this code here for easy adding of beta commands later
-  const betaCommands: string[] = ['api', 'curl', 'webhooks'];
+  const betaCommands: string[] = ['api', 'crons', 'curl', 'webhooks'];
   const msg = betaCommands.includes(targetOrSubcommand)
     ? `${getTitleName()} CLI ${pkg.version} | ${targetOrSubcommand} is in beta — https://vercel.com/feedback`
     : `${getTitleName()} CLI ${pkg.version}`;
@@ -765,6 +765,11 @@ const main = async () => {
         case 'certs':
           telemetry.trackCliCommandCerts(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).certs;
+          break;
+        case 'crons':
+        case 'cron':
+          telemetry.trackCliCommandCrons(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).crons;
           break;
         case 'curl':
           telemetry.trackCliCommandCurl(userSuppliedSubCommand);

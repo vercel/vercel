@@ -172,6 +172,11 @@ const serviceConfigSchema = {
       minLength: 1,
       maxLength: 512,
     },
+    subdomain: {
+      type: 'string',
+      minLength: 1,
+      maxLength: 63,
+    },
     framework: {
       type: 'string',
       minLength: 1,
