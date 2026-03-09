@@ -111,15 +111,17 @@ function getDefaultRange(): { from: string; to: string } {
 
 async function resolveScope(
   client: Client,
-  opts: { project?: string; all?: boolean }
+  opts: { project?: string; all?: boolean; jsonOutput: boolean }
 ): Promise<AlertsScope | number> {
   if (opts.all || opts.project) {
     const { team } = await getScope(client);
     if (!team) {
-      output.error(
+      return outputError(
+        client,
+        opts.jsonOutput,
+        'NO_TEAM',
         'No team context found. Run `vercel switch` to select a team, or use `vercel link` in a project directory.'
       );
-      return 1;
     }
 
     if (opts.all) {
@@ -137,22 +139,26 @@ async function resolveScope(
       );
     } catch (err) {
       if (isAPIError(err)) {
-        output.error(
+        return outputError(
+          client,
+          opts.jsonOutput,
+          err.code || 'API_ERROR',
           err.serverMessage ||
             (err.status === 403
               ? `You do not have permission to access project "${opts.project}" in team "${team.slug}".`
               : `API error (${err.status}).`)
         );
-        return 1;
       }
       throw err;
     }
 
     if (projectResult instanceof ProjectNotFound) {
-      output.error(
+      return outputError(
+        client,
+        opts.jsonOutput,
+        'PROJECT_NOT_FOUND',
         `Project "${opts.project}" was not found in team "${team.slug}".`
       );
-      return 1;
     }
 
     return {
@@ -167,10 +173,12 @@ async function resolveScope(
   }
 
   if (linkedProject.status === 'not_linked') {
-    output.error(
+    return outputError(
+      client,
+      opts.jsonOutput,
+      'NOT_LINKED',
       'No linked project found. Run `vercel link` to link a project, or use --project <name> or --all.'
     );
-    return 1;
   }
 
   return {
@@ -465,6 +473,7 @@ export default async function list(
   const scope = await resolveScope(client, {
     project: flags['--project'],
     all: flags['--all'],
+    jsonOutput,
   });
   if (typeof scope === 'number') {
     return scope;
