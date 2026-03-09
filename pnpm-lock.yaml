@@ -2094,8 +2094,8 @@ importers:
         specifier: 10.1.1
         version: 10.1.1
       pip-requirements-js:
-        specifier: github:Twixes/pip-requirements-js#e0b1ce18bcea0749805701644f2134f8fabf0e3f
-        version: github.com/Twixes/pip-requirements-js/e0b1ce18bcea0749805701644f2134f8fabf0e3f
+        specifier: 1.0.3
+        version: 1.0.3
       smol-toml:
         specifier: 1.5.2
         version: 1.5.2
@@ -17540,6 +17540,12 @@ packages:
       ohm-js: 17.2.1
     dev: true
 
+  /pip-requirements-js@1.0.3:
+    resolution: {integrity: sha512-1O9Bx0mPOZht3tW4LuxOA46qkD8A1AGymWXz3UwIMqGQgiTiOaFptsCf+9IE67qcbBrg8KHG6l8ePF7CoFRW/A==}
+    dependencies:
+      ohm-js: 17.2.1
+    dev: false
+
   /pirates@4.0.7:
     resolution: {integrity: sha512-TfySrs/5nm8fQJDcBDuUng3VOUKsd7S+zqvbOTiGXHfxX4wK31ard+hoNuvkicM/2YFzlpDgABOevKSsB4G/FA==}
     engines: {node: '>= 6'}
@@ -21272,14 +21278,4 @@ packages:
 
   /zod@4.1.11:
     resolution: {integrity: sha512-WPsqwxITS2tzx1bzhIKsEs19ABD5vmCVa4xBo2tq/SrV4RNZtfws1EnCWQXM6yh8bD08a1idvkB5MZSBiZsjwg==}
-    dev: false
-
-  github.com/Twixes/pip-requirements-js/e0b1ce18bcea0749805701644f2134f8fabf0e3f:
-    resolution: {tarball: https://codeload.github.com/Twixes/pip-requirements-js/tar.gz/e0b1ce18bcea0749805701644f2134f8fabf0e3f}
-    name: pip-requirements-js
-    version: 1.0.2
-    prepare: true
-    requiresBuild: true
-    dependencies:
-      ohm-js: 17.2.1
     dev: false
