@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 13.7.1
+
+### Patch Changes
+
+- [services] adds support for subdomai configuration in experimentalServices ([#15401](https://github.com/vercel/vercel/pull/15401))
+
 ## 13.7.0
 
 ### Minor Changes
