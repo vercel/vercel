@@ -58,6 +58,44 @@ pywin32>=300 ; sys_platform == "win32"
     expect(result.requirements[0].markers).toBeDefined();
   });
 
+  it('parses packages with nested and/or environment markers', () => {
+    const content = `
+greenlet==3.3.0 ; python_version == "3.12" and (platform_machine == "aarch64" or platform_machine == "ppc64le" or platform_machine == "x86_64" or platform_machine == "amd64" or platform_machine == "AMD64" or platform_machine == "win32" or platform_machine == "WIN32")
+`;
+    const result = parseRequirementsFile(content);
+    expect(result.requirements).toEqual([
+      {
+        name: 'greenlet',
+        version: '==3.3.0',
+        markers:
+          'python_version == "3.12" and (platform_machine == "aarch64" or platform_machine == "ppc64le" or platform_machine == "x86_64" or platform_machine == "amd64" or platform_machine == "AMD64" or platform_machine == "win32" or platform_machine == "WIN32")',
+      },
+    ]);
+  });
+
+  it('preserves hashes for packages with nested and/or environment markers', () => {
+    const content = `
+greenlet==3.3.0 ; python_version == "3.12" and (platform_machine == "aarch64" or platform_machine == "ppc64le" or platform_machine == "x86_64" or platform_machine == "amd64" or platform_machine == "AMD64" or platform_machine == "win32" or platform_machine == "WIN32") --hash=sha256:abc123
+`;
+    const result = parseRequirementsFile(content);
+    expect(result.requirements).toEqual([
+      {
+        name: 'greenlet',
+        version: '==3.3.0',
+        markers:
+          'python_version == "3.12" and (platform_machine == "aarch64" or platform_machine == "ppc64le" or platform_machine == "x86_64" or platform_machine == "amd64" or platform_machine == "AMD64" or platform_machine == "win32" or platform_machine == "WIN32")',
+        hashes: ['sha256:abc123'],
+      },
+    ]);
+  });
+
+  it('still rejects invalid grouped environment markers', () => {
+    const content = `
+greenlet==3.3.0 ; python_version == "3.12" and (platform_machine == "aarch64" or platform_machine == "ppc64le"
+`;
+    expect(() => parseRequirementsFile(content)).toThrow();
+  });
+
   it('parses URL-based requirements', () => {
     const content = `
 mypackage @ https://github.com/user/repo/archive/v1.0.0.zip
@@ -646,6 +684,16 @@ pywin32>=300 ; sys_platform == "win32"
     expect(result.project?.dependencies?.[0]).toContain('pywin32');
     expect(result.project?.dependencies?.[0]).toContain('>=300');
     expect(result.project?.dependencies?.[0]).toContain(';');
+  });
+
+  it('converts nested and/or environment markers without parse errors', () => {
+    const content = `
+greenlet==3.3.0 ; python_version == "3.12" and (platform_machine == "aarch64" or platform_machine == "ppc64le" or platform_machine == "x86_64" or platform_machine == "amd64" or platform_machine == "AMD64" or platform_machine == "win32" or platform_machine == "WIN32")
+`;
+    const result = convertRequirementsToPyprojectToml(content);
+    expect(result.project?.dependencies).toEqual([
+      'greenlet==3.3.0 ; python_version == "3.12" and (platform_machine == "aarch64" or platform_machine == "ppc64le" or platform_machine == "x86_64" or platform_machine == "amd64" or platform_machine == "AMD64" or platform_machine == "win32" or platform_machine == "WIN32")',
+    ]);
   });
 
   it('strips --hash when converting to pyproject.toml', () => {
