@@ -14,6 +14,7 @@ describe('determineAgent', () => {
     vi.stubEnv('CODEX_SANDBOX', '');
     vi.stubEnv('CODEX_CI', '');
     vi.stubEnv('CODEX_THREAD_ID', '');
+    vi.stubEnv('ANTIGRAVITY_AGENT', '');
     vi.stubEnv('AUGMENT_AGENT', '');
     vi.stubEnv('OPENCODE_CLIENT', '');
     vi.stubEnv('CLAUDECODE', '');
@@ -169,6 +170,29 @@ describe('determineAgent', () => {
     });
   });
 
+  describe('antigravity detection', () => {
+    describe('ANTIGRAVITY_AGENT not set', () => {
+      it('returns no agent', async () => {
+        const result = await determineAgent();
+        expect(result).toEqual({ isAgent: false });
+      });
+    });
+
+    describe('ANTIGRAVITY_AGENT set', () => {
+      beforeEach(() => {
+        vi.stubEnv('ANTIGRAVITY_AGENT', '1');
+      });
+
+      it('detects antigravity', async () => {
+        const result = await determineAgent();
+        expect(result).toEqual({
+          isAgent: true,
+          agent: { name: KNOWN_AGENTS.ANTIGRAVITY },
+        });
+      });
+    });
+  });
+
   describe('augment cli detection', () => {
     describe('AUGMENT_AGENT not set', () => {
       it('returns no agent', async () => {
@@ -309,6 +333,7 @@ describe('determineAgent', () => {
       vi.stubEnv('CURSOR_AGENT', '1');
       vi.stubEnv('GEMINI_CLI', '1');
       vi.stubEnv('CODEX_SANDBOX', 'seatbelt');
+      vi.stubEnv('ANTIGRAVITY_AGENT', '1');
       vi.stubEnv('AUGMENT_AGENT', '1');
       vi.stubEnv('OPENCODE_CLIENT', 'opencode');
       vi.stubEnv('CLAUDE_CODE', '1');
@@ -331,6 +356,7 @@ describe('determineAgent', () => {
       vi.stubEnv('CURSOR_AGENT', '1');
       vi.stubEnv('GEMINI_CLI', '1');
       vi.stubEnv('CODEX_SANDBOX', 'seatbelt');
+      vi.stubEnv('ANTIGRAVITY_AGENT', '1');
       vi.stubEnv('AUGMENT_AGENT', '1');
       vi.stubEnv('OPENCODE_CLIENT', 'opencode');
       vi.stubEnv('CLAUDE_CODE', '1');
@@ -352,6 +378,7 @@ describe('determineAgent', () => {
       vi.stubEnv('CURSOR_AGENT', '1');
       vi.stubEnv('GEMINI_CLI', '1');
       vi.stubEnv('CODEX_SANDBOX', 'seatbelt');
+      vi.stubEnv('ANTIGRAVITY_AGENT', '1');
       vi.stubEnv('AUGMENT_AGENT', '1');
       vi.stubEnv('OPENCODE_CLIENT', 'opencode');
       vi.stubEnv('CLAUDE_CODE', '1');
