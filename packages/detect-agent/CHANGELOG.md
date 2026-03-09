@@ -1,5 +1,13 @@
 # @vercel/detect-agent
 
+## 1.1.1
+
+### Patch Changes
+
+- Add Antigravity agent detection via `ANTIGRAVITY_AGENT` environment variable ([#15413](https://github.com/vercel/vercel/pull/15413))
+
+- Detect Codex when `CODEX_CI` or `CODEX_THREAD_ID` is present. ([#15412](https://github.com/vercel/vercel/pull/15412))
+
 ## 1.1.0
 
 ### Minor Changes

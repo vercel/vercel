@@ -1,5 +1,13 @@
 # vercel-runtime
 
+## 0.6.0
+
+### Minor Changes
+
+- [python] add support for Python worker services with Django tasks ([#15396](https://github.com/vercel/vercel/pull/15396))
+
+- [python] add support for module-based entrypoints for cron jobs ([#15393](https://github.com/vercel/vercel/pull/15393))
+
 ## 0.5.6
 
 ### Patch Changes
