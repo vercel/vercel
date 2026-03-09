@@ -1,5 +1,11 @@
 # @vercel/router-sdk
 
+## 0.0.38
+
+### Patch Changes
+
+- Fix type generation ([#15386](https://github.com/vercel/vercel/pull/15386))
+
 ## 0.0.37
 
 ### Patch Changes
