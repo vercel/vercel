@@ -6,7 +6,6 @@ import type {
 import output from '../../output-manager';
 import table from '../output/table';
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 const chalk = require('chalk');
 
 const frameworksBySlug = new Map(frameworkList.map(f => [f.slug, f]));
@@ -92,7 +91,6 @@ function getServiceTarget(service: ResolvedService): string {
       return `schedule: ${service.schedule ?? 'none'}`;
     case 'worker':
       return `topic: ${service.topic ?? 'none'}`;
-    case 'web':
     default:
       return service.routePrefix
         ? formatRoutePrefix(service.routePrefix)

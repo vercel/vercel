@@ -96,7 +96,6 @@ export default async function invite(
         let userInfo = null;
 
         try {
-          // eslint-disable-next-line no-await-in-loop
           const res = await inviteUserToTeam(client, currentTeam.id, email);
           userInfo = res.username;
         } catch (err: unknown) {
@@ -127,7 +126,6 @@ export default async function invite(
   do {
     email = '';
     try {
-      // eslint-disable-next-line no-await-in-loop
       email = await client.input.text({
         message: `- ${inviteUserPrefix}`,
         validate: validateEmail,
@@ -142,7 +140,6 @@ export default async function invite(
       elapsed = stamp();
       output.spinner(inviteUserPrefix + email);
       try {
-        // eslint-disable-next-line no-await-in-loop
         const { username } = await inviteUserToTeam(
           client,
           currentTeam.id,

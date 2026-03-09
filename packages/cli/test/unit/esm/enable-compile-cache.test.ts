@@ -100,6 +100,7 @@ describe('enableCompileCache pattern', () => {
         } catch {
           // Swallowed
         }
+        // biome-ignore lint/correctness/noUnreachable: intentionally testing that inner catch swallows errors
       } catch {
         errorSwallowed = false;
       }

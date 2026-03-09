@@ -240,7 +240,7 @@ export const build: BuildV3 = async ({
   // try to remove gem cache to slim bundle size
   try {
     await remove(join(vendorDir, 'cache'));
-  } catch (e) {
+  } catch (_e) {
     // don't do anything here
   }
 

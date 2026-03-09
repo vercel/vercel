@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 import ms from 'ms';
 import path from 'path';
 import { once } from 'node:events';
@@ -43,7 +42,6 @@ const waitForDeployment = async (href: RequestInfo) => {
   const start = Date.now();
   const max = ms('4m');
 
-  // eslint-disable-next-line
   while (true) {
     const response = await nodeFetch(href, { redirect: 'manual' });
     const text = await response.text();
@@ -147,7 +145,7 @@ test('output the version', async () => {
 });
 
 // https://linear.app/vercel/issue/ZERO-2736/turn-login-with-unregistered-user-test-in-a-unit-test
-// eslint-disable-next-line jest/no-disabled-tests
+// biome-ignore lint/suspicious/noSkippedTests: temporarily disabled
 test.skip('login with unregistered user', async () => {
   const { stdout, stderr, exitCode } = await execCli(
     binaryPath,
@@ -164,7 +162,7 @@ test.skip('login with unregistered user', async () => {
 });
 
 // TODO: fix: --public does not make deployments public
-// eslint-disable-next-line jest/no-disabled-tests
+// biome-ignore lint/suspicious/noSkippedTests: temporarily disabled
 test.skip('ignore files specified in .nowignore', async () => {
   const directory = await setupE2EFixture('nowignore');
 
@@ -182,7 +180,7 @@ test.skip('ignore files specified in .nowignore', async () => {
 });
 
 // TODO: fix: --public does not make deployments public
-// eslint-disable-next-line jest/no-disabled-tests
+// biome-ignore lint/suspicious/noSkippedTests: temporarily disabled
 test.skip('ignore files specified in .nowignore via allowlist', async () => {
   const directory = await setupE2EFixture('nowignore-allowlist');
 
@@ -213,7 +211,7 @@ test('list the scopes', async () => {
 });
 
 // https://linear.app/vercel/issue/ZERO-2555/fix-assign-a-domain-to-a-project-test
-// eslint-disable-next-line jest/no-disabled-tests
+// biome-ignore lint/suspicious/noSkippedTests: temporarily disabled
 test.skip('domains inspect', async () => {
   const team = await teamPromise;
   const domainName = `inspect-${team.slug}-${Math.random()
@@ -264,7 +262,7 @@ test.skip('domains inspect', async () => {
 });
 
 // Unblocking CI for incident fix
-// eslint-disable-next-line jest/no-disabled-tests
+// biome-ignore lint/suspicious/noSkippedTests: temporarily disabled
 test.skip('try to transfer-in a domain with "--code" option', async () => {
   const { stderr, stdout, exitCode } = await execCli(binaryPath, [
     'domains',
@@ -293,7 +291,7 @@ test('try to move an invalid domain', async () => {
 });
 
 // TODO: fix: --public does not make deployments public
-// eslint-disable-next-line jest/no-disabled-tests
+// biome-ignore lint/suspicious/noSkippedTests: temporarily disabled
 test.skip('ensure we render a warning for deployments with no files', async () => {
   const directory = await setupE2EFixture('empty-directory');
 
@@ -828,7 +826,7 @@ test('fail to deploy a Lambda with an incorrect value for of memory', async () =
 });
 
 // TODO: This test is flaky, possibly due to the recent SIGTERM changes which now issue 500s
-// eslint-disable-next-line jest/no-disabled-tests
+// biome-ignore lint/suspicious/noSkippedTests: temporarily disabled
 test.skip('deploy a Lambda with 3 seconds of maxDuration', async () => {
   const directory = await setupE2EFixture('lambda-with-3-second-timeout');
   const output = await execCli(binaryPath, [directory, '--yes']);
@@ -952,4 +950,46 @@ test('default command should prompt login with empty auth.json', async () => {
   expect(output.stderr).toContain(
     'Error: No existing credentials found. Please run `vercel login` or pass "--token"'
   );
+});
+
+test('`flags prepare` should not require login', async () => {
+  const cwd = getNewTmpDir();
+  const output = await execCli(binaryPath, ['flags', 'prepare'], {
+    cwd,
+    token: false,
+    reject: false,
+  });
+  // Command actually completes (progresses past auth), not just absence of error
+  expect(output.exitCode, formatOutput(output)).toBe(0);
+  expect(output.stderr).not.toContain('No existing credentials found');
+  // Module is emitted to the filesystem
+  const definitionsDir = path.join(
+    cwd,
+    'node_modules',
+    '@vercel',
+    'flags-definitions'
+  );
+  expect(fs.existsSync(path.join(definitionsDir, 'index.js'))).toBe(true);
+  expect(fs.existsSync(path.join(definitionsDir, 'index.d.ts'))).toBe(true);
+  expect(fs.existsSync(path.join(definitionsDir, 'package.json'))).toBe(true);
+});
+
+test('`flags prepare` happy path emits flags-definitions module', async () => {
+  const cwd = getNewTmpDir();
+  const output = await execCli(binaryPath, ['flags', 'prepare'], {
+    cwd,
+    reject: false,
+  });
+  expect(output.exitCode, formatOutput(output)).toBe(0);
+  const definitionsDir = path.join(
+    cwd,
+    'node_modules',
+    '@vercel',
+    'flags-definitions'
+  );
+  expect(fs.existsSync(path.join(definitionsDir, 'index.js'))).toBe(true);
+  expect(fs.existsSync(path.join(definitionsDir, 'index.d.ts'))).toBe(true);
+  const pkg = await fs.readJSON(path.join(definitionsDir, 'package.json'));
+  expect(pkg.name).toBe('@vercel/flags-definitions');
+  expect(pkg.version).toBeDefined();
 });

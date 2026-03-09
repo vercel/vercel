@@ -60,7 +60,7 @@ export const build: BuildV3 = async args => {
     if (expressVersion) {
       version = expressVersion;
     }
-  } catch (e) {
+  } catch (_e) {
     // ignore
   }
   res.output.framework = {

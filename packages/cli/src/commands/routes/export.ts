@@ -64,11 +64,11 @@ function routesToVercelTs(rules: RoutingRule[]): string {
   const routesContent =
     routeEntries.length > 0 ? `\n${routeEntries.join(',\n')},\n  ` : '';
 
-  return `import { defineConfig } from '@vercel/sdk/config';
+  return `import type { VercelConfig } from '@vercel/config/v1';
 
-export default defineConfig({
+export const config: VercelConfig = {
   routes: [${routesContent}],
-});
+};
 `;
 }
 
@@ -131,7 +131,6 @@ export default async function exportRoutes(client: Client, argv: string[]) {
       case 'ts':
         result = routesToVercelTs(routesToExport);
         break;
-      case 'json':
       default:
         result = routesToVercelJson(routesToExport);
         break;

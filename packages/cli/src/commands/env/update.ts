@@ -55,7 +55,6 @@ export default async function update(client: Client, argv: string[]) {
   const valueFromFlag =
     typeof opts['--value'] === 'string' ? opts['--value'] : undefined;
   const stdInput = await readStandardInput(client.stdin);
-  // eslint-disable-next-line prefer-const
   let [envName, envTargetArg, envGitBranch] = args;
 
   const telemetryClient = new EnvUpdateTelemetryClient({

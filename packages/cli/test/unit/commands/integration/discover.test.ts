@@ -80,7 +80,7 @@ describe('integration', () => {
 
       const stderr = client.stderr.getFullOutput();
       expect(stderr).toContain(
-        'WARN! Failed to fetch integration categories. Continuing without categories: Response Error (404)'
+        'WARNING! Failed to fetch integration categories. Continuing without categories: Response Error (404)'
       );
 
       const output = JSON.parse(client.stdout.getFullOutput());

@@ -13,8 +13,10 @@ import {
   RUNTIME_MANIFESTS,
 } from './types';
 import {
+  filterFrameworksByRuntime,
   getBuilderForRuntime,
   hasFile,
+  inferRuntimeFromFramework,
   inferServiceRuntime,
   INTERNAL_SERVICE_PREFIX,
 } from './utils';
@@ -24,6 +26,26 @@ import type { DetectorFilesystem } from '../detectors/filesystem';
 import { normalizeRoutePrefix } from '@vercel/routing-utils';
 
 const frameworksBySlug = new Map(frameworkList.map(f => [f.slug, f]));
+
+/**
+ * Match a Python `module:attr` entrypoint (e.g. `backend.jobs.scheduled:cleanup`).
+ * Kept inline to avoid coupling fs-detectors to a Python-specific package.
+ * Real verification would happen at the build time.
+ */
+const PYTHON_MODULE_ATTR_RE =
+  /^([A-Za-z_][\w]*(?:\.[A-Za-z_][\w]*)*):([A-Za-z_][\w]*)$/;
+
+function parsePyModuleAttrEntrypoint(entrypoint: string): {
+  attrName: string;
+  filePath: string;
+} | null {
+  const match = PYTHON_MODULE_ATTR_RE.exec(entrypoint);
+  if (!match) return null;
+  return {
+    attrName: match[2],
+    filePath: match[1].replace(/\./g, '/') + '.py',
+  };
+}
 
 const SERVICE_NAME_REGEX = /^[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$/;
 interface ResolvedEntrypointPath {
@@ -150,15 +172,18 @@ async function detectFrameworkFromWorkspace({
   fs,
   workspace,
   serviceName,
+  runtime,
 }: {
   fs: DetectorFilesystem;
   workspace: string;
   serviceName: string;
+  runtime?: ServiceRuntime;
 }): Promise<{ framework?: string; error?: ServiceDetectionError }> {
   const serviceFs = workspace === '.' ? fs : fs.chdir(workspace);
+  const frameworkCandidates = filterFrameworksByRuntime(frameworkList, runtime);
   const frameworks = await detectFrameworks({
     fs: serviceFs,
-    frameworkList,
+    frameworkList: frameworkCandidates,
   });
 
   if (frameworks.length > 1) {
@@ -260,6 +285,16 @@ export function validateServiceConfig(
       serviceName: name,
     };
   }
+  if (config.runtime && config.framework) {
+    const frameworkRuntime = inferRuntimeFromFramework(config.framework);
+    if (frameworkRuntime && frameworkRuntime !== config.runtime) {
+      return {
+        code: 'RUNTIME_FRAMEWORK_MISMATCH',
+        message: `Service "${name}" has conflicting runtime/framework: runtime "${config.runtime}" is incompatible with framework "${config.framework}" (runtime "${frameworkRuntime}").`,
+        serviceName: name,
+      };
+    }
+  }
 
   const hasFramework = Boolean(config.framework);
   const hasBuilderOrRuntime = Boolean(config.builder || config.runtime);
@@ -287,14 +322,19 @@ export function validateServiceEntrypoint(
   config: ExperimentalServiceConfig,
   resolvedEntrypoint: ResolvedEntrypointPath
 ): ServiceDetectionError | null {
-  // File entrypoints without builder/runtime/framework must have a supported extension
+  // File entrypoints without builder/runtime/framework must have a supported extension.
+  // Use the resolved path (e.g. "jobs/cleanup.py") for runtime inference so that
+  // module:function entrypoints (e.g. "jobs.cleanup:handler") resolve correctly
+  // via their underlying file extension.
   if (
     !resolvedEntrypoint.isDirectory &&
     !config.builder &&
     !config.runtime &&
     !config.framework
   ) {
-    const runtime = inferServiceRuntime({ entrypoint: config.entrypoint });
+    const runtime = inferServiceRuntime({
+      entrypoint: resolvedEntrypoint.normalized,
+    });
     if (!runtime) {
       const supported = Object.keys(ENTRYPOINT_EXTENSIONS).join(', ');
       return {
@@ -324,12 +364,21 @@ export async function resolveConfiguredService(
   } = options;
   const type = config.type || 'web';
   const rawEntrypoint = config.entrypoint;
+
+  const moduleAttrParsed =
+    typeof rawEntrypoint === 'string' && type === 'cron'
+      ? parsePyModuleAttrEntrypoint(rawEntrypoint)
+      : null;
+
   let resolvedEntrypointPath = resolvedEntrypoint;
   if (!resolvedEntrypointPath && typeof rawEntrypoint === 'string') {
+    const entrypointToResolve = moduleAttrParsed
+      ? moduleAttrParsed.filePath
+      : rawEntrypoint;
     const resolved = await resolveEntrypointPath({
       fs,
       serviceName: name,
-      entrypoint: rawEntrypoint,
+      entrypoint: entrypointToResolve,
     });
     resolvedEntrypointPath = resolved.entrypoint;
   }
@@ -436,6 +485,9 @@ export async function resolveConfiguredService(
   if (config.framework) {
     builderConfig.framework = config.framework;
   }
+  if (moduleAttrParsed) {
+    builderConfig.handlerFunction = moduleAttrParsed.attrName;
+  }
 
   return {
     name,
@@ -458,6 +510,7 @@ export async function resolveConfiguredService(
     buildCommand: config.buildCommand,
     installCommand: config.installCommand,
     schedule: config.schedule,
+    handlerFunction: moduleAttrParsed?.attrName,
     topic,
     consumer,
   };
@@ -489,11 +542,19 @@ export async function resolveAllConfiguredServices(
     }
 
     let resolvedEntrypoint: ResolvedEntrypointPath | undefined;
+    const serviceType = serviceConfig.type || 'web';
     if (typeof serviceConfig.entrypoint === 'string') {
+      const moduleAttr =
+        serviceType === 'cron'
+          ? parsePyModuleAttrEntrypoint(serviceConfig.entrypoint)
+          : null;
+      const entrypointToResolve = moduleAttr
+        ? moduleAttr.filePath
+        : serviceConfig.entrypoint;
       const resolvedPath = await resolveEntrypointPath({
         fs,
         serviceName: name,
-        entrypoint: serviceConfig.entrypoint,
+        entrypoint: entrypointToResolve,
       });
       if (resolvedPath.error) {
         errors.push(resolvedPath.error);
@@ -516,32 +577,59 @@ export async function resolveAllConfiguredServices(
 
     let resolvedConfig = serviceConfig;
 
-    const shouldDetectFramework =
-      !serviceConfig.framework && Boolean(resolvedEntrypoint?.isDirectory);
-
-    if (shouldDetectFramework) {
-      const workspace = resolvedEntrypoint!.normalized;
-      const { framework, error } = await detectFrameworkFromWorkspace({
-        fs,
-        workspace,
-        serviceName: name,
-      });
-      if (error) {
-        errors.push(error);
-        continue;
-      }
-      if (!framework) {
-        errors.push({
-          code: 'MISSING_SERVICE_FRAMEWORK',
-          message: `Service "${name}" uses directory entrypoint "${serviceConfig.entrypoint}" but no framework could be detected in "${workspace}". Specify "framework" explicitly or use a file entrypoint.`,
+    if (!serviceConfig.framework && resolvedEntrypoint) {
+      if (resolvedEntrypoint.isDirectory) {
+        const workspace = resolvedEntrypoint.normalized;
+        const { framework, error } = await detectFrameworkFromWorkspace({
+          fs,
+          workspace,
           serviceName: name,
         });
-        continue;
+        if (error) {
+          errors.push(error);
+          continue;
+        }
+        if (!framework) {
+          errors.push({
+            code: 'MISSING_SERVICE_FRAMEWORK',
+            message: `Service "${name}" uses directory entrypoint "${serviceConfig.entrypoint}" but no framework could be detected in "${workspace}". Specify "framework" explicitly or use a file entrypoint.`,
+            serviceName: name,
+          });
+          continue;
+        }
+        resolvedConfig = {
+          ...resolvedConfig,
+          framework,
+        };
+      } else {
+        const inferredRuntime = inferServiceRuntime({
+          ...serviceConfig,
+          entrypoint: resolvedEntrypoint.normalized,
+        });
+
+        if (inferredRuntime) {
+          const inferredWorkspace = await inferWorkspaceFromNearestManifest({
+            fs,
+            entrypoint: resolvedEntrypoint.normalized,
+            runtime: inferredRuntime,
+          });
+          const workspace =
+            inferredWorkspace ??
+            posixPath.dirname(resolvedEntrypoint.normalized);
+          const detection = await detectFrameworkFromWorkspace({
+            fs,
+            workspace,
+            serviceName: name,
+            runtime: inferredRuntime,
+          });
+          if (detection.framework) {
+            resolvedConfig = {
+              ...resolvedConfig,
+              framework: detection.framework,
+            };
+          }
+        }
       }
-      resolvedConfig = {
-        ...serviceConfig,
-        framework,
-      };
     }
 
     const service = await resolveConfiguredService({

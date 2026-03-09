@@ -1,5 +1,13 @@
 # vercel-workers
 
+## 0.0.12
+
+### Patch Changes
+
+- [python] workers: add headers to send APIs ([#15304](https://github.com/vercel/vercel/pull/15304))
+
+- [python] workers: allow topic filter in subscribe() ([#15306](https://github.com/vercel/vercel/pull/15306))
+
 ## 0.0.11
 
 ### Patch Changes

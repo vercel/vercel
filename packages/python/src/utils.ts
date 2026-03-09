@@ -44,10 +44,11 @@ export function useVirtualEnv(
 
 export function createVenvEnv(
   venvPath: string,
-  baseEnv: NodeJS.ProcessEnv = process.env
+  baseEnv: NodeJS.ProcessEnv = process.env,
+  uvCacheDir?: string
 ): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = {
-    ...getProtectedUvEnv(baseEnv),
+    ...getProtectedUvEnv(baseEnv, uvCacheDir),
     VIRTUAL_ENV: venvPath,
   };
   const binDir = getVenvBinDir(venvPath);
@@ -60,11 +61,13 @@ export async function ensureVenv({
   pythonPath,
   venvPath,
   uvPath,
+  uvCacheDir,
   quiet,
 }: {
   pythonPath: string;
   venvPath: string;
   uvPath?: string | null;
+  uvCacheDir?: string;
   quiet?: boolean;
 }) {
   const marker = join(venvPath, 'pyvenv.cfg');
@@ -79,7 +82,9 @@ export async function ensureVenv({
     console.log(`Creating virtual environment at "${venvPath}"...`);
   }
   if (uvPath) {
-    await execa(uvPath, ['venv', venvPath]);
+    await execa(uvPath, ['venv', venvPath], {
+      env: getProtectedUvEnv(process.env, uvCacheDir),
+    });
   } else {
     await execa(pythonPath, ['-m', 'venv', venvPath]);
   }
@@ -139,24 +144,4 @@ export async function runPyprojectScript(
 
   // No command string was provided for the found script name
   return false;
-}
-
-export function findDir({
-  file,
-  entryDirectory,
-  workPath,
-  fsFiles,
-}: {
-  file: string;
-  entryDirectory: string;
-  workPath: string;
-  fsFiles: Record<string, any>;
-}): string | null {
-  if (fsFiles[join(entryDirectory, file)]) {
-    return join(workPath, entryDirectory);
-  }
-  if (fsFiles[file]) {
-    return workPath;
-  }
-  return null;
 }

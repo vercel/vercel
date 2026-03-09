@@ -42,13 +42,11 @@ export interface ServicesRoutes {
   /**
    * Internal routes for cron services.
    * These route `/_svc/{serviceName}/crons/{entry}/{handler}` to the cron function.
-   * TODO: Implement
    */
   crons: Route[];
   /**
    * Internal routes for worker services.
    * These route `/_svc/{serviceName}/workers/{entry}/{handler}` to the worker function.
-   * TODO: Implement
    */
   workers: Route[];
 }

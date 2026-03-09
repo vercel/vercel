@@ -33,7 +33,7 @@ export async function getBlobRWToken(
     if (rwToken) {
       return { token: rwToken, success: true };
     }
-  } catch (err) {
+  } catch (_err) {
     // continue with token hierarchy
   }
 
@@ -50,7 +50,7 @@ export async function getBlobRWToken(
     if (env?.BLOB_READ_WRITE_TOKEN) {
       return { token: env.BLOB_READ_WRITE_TOKEN, success: true };
     }
-  } catch (error) {
+  } catch (_error) {
     // continue with token hierarchy
   }
 

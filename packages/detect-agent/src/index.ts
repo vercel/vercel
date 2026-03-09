@@ -73,7 +73,11 @@ export async function determineAgent(): Promise<AgentResult> {
     return { isAgent: true, agent: { name: GEMINI } };
   }
 
-  if (process.env.CODEX_SANDBOX) {
+  if (
+    process.env.CODEX_SANDBOX ||
+    process.env.CODEX_CI ||
+    process.env.CODEX_THREAD_ID
+  ) {
     return { isAgent: true, agent: { name: CODEX } };
   }
 
@@ -96,7 +100,7 @@ export async function determineAgent(): Promise<AgentResult> {
   try {
     await access(DEVIN_LOCAL_PATH, constants.F_OK);
     return { isAgent: true, agent: { name: DEVIN } };
-  } catch (error) {
+  } catch (_error) {
     // noop
   }
 

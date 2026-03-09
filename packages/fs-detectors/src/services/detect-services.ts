@@ -11,7 +11,9 @@ import {
   type ServicesRoutes,
 } from './types';
 import {
+  getInternalServiceCronPath,
   getInternalServiceFunctionPath,
+  getInternalServiceWorkerPath,
   isRouteOwningBuilder,
   isStaticBuild,
   readVercelConfig,
@@ -135,7 +137,13 @@ export async function detectServices(
  * Builders that provide their own routing (`@vercel/next`, `@vercel/backends`,
  * Build Output API builders, etc.) are not given synthetic routes here.
  *
- * - Cron/Worker services: TODO - internal routes under `/_svc/`
+ * - Worker services:
+ *   Internal queue callback routes under `/_svc/{serviceName}/workers/{entry}/{handler}`
+ *   that rewrite to `/_svc/{serviceName}/index`.
+ *
+ * - Cron services:
+ *   Internal cron callback routes under `/_svc/{serviceName}/crons/{entry}/{handler}`
+ *   that rewrite to `/_svc/{serviceName}/index`.
  */
 export function generateServicesRoutes(
   services: ResolvedService[]
@@ -206,13 +214,45 @@ export function generateServicesRoutes(
         });
       }
     } else {
-      // Non-static services without an inferred runtime are expected to provide
-      // their own routing (Next.js, @vercel/backends, Build Output API builders, etc.).
-      continue;
     }
   }
 
+  const workerServices = services.filter(s => s.type === 'worker');
+  for (const service of workerServices) {
+    const workerEntrypoint =
+      service.entrypoint || service.builder.src || 'index';
+    const workerPath = getInternalServiceWorkerPath(
+      service.name,
+      workerEntrypoint
+    );
+    const functionPath = getInternalServiceFunctionPath(service.name);
+    workers.push({
+      src: `^${escapeRegex(workerPath)}$`,
+      dest: functionPath,
+      check: true,
+    });
+  }
+
+  const cronServices = services.filter(s => s.type === 'cron');
+  for (const service of cronServices) {
+    const cronEntrypoint = service.entrypoint || service.builder.src || 'index';
+    const cronPath = getInternalServiceCronPath(
+      service.name,
+      cronEntrypoint,
+      service.handlerFunction || 'cron'
+    );
+    const functionPath = getInternalServiceFunctionPath(service.name);
+    crons.push({
+      src: `^${escapeRegex(cronPath)}$`,
+      dest: functionPath,
+      check: true,
+    });
+  }
   return { rewrites, defaults, crons, workers };
+}
+
+function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 function getWebRoutePrefixes(services: ResolvedService[]): string[] {

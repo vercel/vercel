@@ -1,5 +1,23 @@
 # vercel-runtime
 
+## 0.5.6
+
+### Patch Changes
+
+- [services] adds support for python cron worker services ([#15175](https://github.com/vercel/vercel/pull/15175))
+
+## 0.5.5
+
+### Patch Changes
+
+- Report fatal init errors via IPC `unrecoverable-error` message ([#15319](https://github.com/vercel/vercel/pull/15319))
+
+## 0.5.4
+
+### Patch Changes
+
+- Move the matplotlib env var to quirks. ([#15305](https://github.com/vercel/vercel/pull/15305))
+
 ## 0.5.3
 
 ### Patch Changes

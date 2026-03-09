@@ -95,7 +95,6 @@ class FileFsRef implements FileBase {
   toStream(): NodeJS.ReadableStream {
     let flag = false;
 
-    // eslint-disable-next-line consistent-return
     return multiStream(cb => {
       if (flag) return cb(null, null);
       flag = true;

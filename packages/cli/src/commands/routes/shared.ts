@@ -83,7 +83,7 @@ export function validateRequiredArgs(
 }
 
 /**
- * Formats a has/missing condition for display.
+ * Formats a has/does-not-have condition for display.
  * Output: [type] key = value  (or [type] value for host, or [type] key for existence checks)
  */
 export function formatCondition(condition: {
@@ -243,7 +243,7 @@ export async function offerAutoPromote(
     }
   } else if (hadExistingStagingVersion) {
     output.warn(
-      `There are other staged changes. Review with ${chalk.cyan(getCommandName('routes list --staging'))} before promoting.`
+      `There are other staged changes. Review with ${chalk.cyan(getCommandName('routes list --diff'))} before promoting.`
     );
   }
 }

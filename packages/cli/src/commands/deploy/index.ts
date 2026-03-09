@@ -81,6 +81,7 @@ import { ensureLink } from '../../util/link/ensure-link';
 import { UploadErrorMissingArchive } from '../../util/deploy/process-deployment';
 import { displayBuildLogsUntilFinalError } from '../../util/logs';
 import { determineAgent } from '@vercel/detect-agent';
+import { validateJsonOutput } from '../../util/output-format';
 
 const COMMAND_CONFIG = {
   init: getCommandAliases(initSubcommand),
@@ -167,6 +168,16 @@ async function handleInitDeployment(
     printError(error);
     return 1;
   }
+
+  telemetryClient.trackCliFlagJson(parsedArguments.flags['--json']);
+  telemetryClient.trackCliOptionFormat(parsedArguments.flags['--format']);
+
+  const formatResult = validateJsonOutput(parsedArguments.flags);
+  if (!formatResult.valid) {
+    output.error(formatResult.error);
+    return 1;
+  }
+  const asJson = formatResult.jsonOutput;
 
   // Strip 'deploy' and 'init' from args
   let args = parsedArguments.args;
@@ -435,6 +446,7 @@ async function handleInitDeployment(
       withFullLogs: false,
       autoAssignCustomDomains,
       manual: true,
+      jsonOutput: asJson,
     };
 
     if (!localConfig.builds || localConfig.builds.length === 0) {
@@ -501,6 +513,14 @@ async function handleInitDeployment(
     if (deployment === null) {
       error('Uploading failed. Please try again.');
       return 1;
+    }
+
+    if (asJson) {
+      output.stopSpinner();
+      client.stdout.write(
+        `${JSON.stringify(getDeploymentOutputJson(deployment, client.apiUrl), null, 2)}\n`
+      );
+      return 0;
     }
 
     return printDeploymentStatus(deployment, deployStamp, noWait, false, true);
@@ -670,6 +690,15 @@ async function handleDefaultDeploy(
   telemetryClient.trackCliFlagGuidance(parsedArguments.flags['--guidance']);
   telemetryClient.trackCliFlagForce(parsedArguments.flags['--force']);
   telemetryClient.trackCliFlagWithCache(parsedArguments.flags['--with-cache']);
+  telemetryClient.trackCliFlagJson(parsedArguments.flags['--json']);
+  telemetryClient.trackCliOptionFormat(parsedArguments.flags['--format']);
+
+  const formatResult = validateJsonOutput(parsedArguments.flags);
+  if (!formatResult.valid) {
+    output.error(formatResult.error);
+    return 1;
+  }
+  const asJson = formatResult.jsonOutput;
 
   if ('--confirm' in parsedArguments.flags) {
     telemetryClient.trackCliFlagConfirm(parsedArguments.flags['--confirm']);
@@ -1003,7 +1032,7 @@ async function handleDefaultDeploy(
   const deployStamp = stamp();
   let deployment = null;
   const noWait = !!parsedArguments.flags['--no-wait'];
-  const withFullLogs = parsedArguments.flags['--logs'] ? true : false;
+  const withFullLogs = !!parsedArguments.flags['--logs'];
 
   const localConfigurationOverrides = pickOverrides(localConfig);
 
@@ -1046,6 +1075,7 @@ async function handleDefaultDeploy(
       withFullLogs,
       autoAssignCustomDomains,
       agentName: client.agentName,
+      jsonOutput: asJson,
     };
 
     if (!localConfig.builds || localConfig.builds.length === 0) {
@@ -1235,6 +1265,14 @@ async function handleDefaultDeploy(
 
     printError(err);
     return 1;
+  }
+
+  if (asJson) {
+    output.stopSpinner();
+    client.stdout.write(
+      `${JSON.stringify(getDeploymentOutputJson(deployment, client.apiUrl), null, 2)}\n`
+    );
+    return 0;
   }
 
   const { isAgent } = await determineAgent();
@@ -1498,4 +1536,24 @@ async function handleContinueDeployment({
     }
     return 1;
   }
+}
+
+function getDeploymentOutputJson(
+  deployment: {
+    id: string;
+    url: string;
+    inspectorUrl?: string | null;
+    readyState: string;
+    target?: string | null;
+  },
+  apiUrl: string
+) {
+  return {
+    id: deployment.id,
+    url: `https://${deployment.url}`,
+    inspectorUrl: deployment.inspectorUrl ?? null,
+    readyState: deployment.readyState,
+    target: deployment.target ?? null,
+    deploymentApiUrl: `${apiUrl}/v13/deployments/${deployment.id}`,
+  };
 }

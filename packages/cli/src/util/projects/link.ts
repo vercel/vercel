@@ -422,7 +422,7 @@ export async function linkFolderToProject(
           'Failed to pull environment variables. You can run `vc env pull` manually.'
         );
       }
-    } catch (error) {
+    } catch (_error) {
       output.error(
         'Failed to pull environment variables. You can run `vc env pull` manually.'
       );
