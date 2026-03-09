@@ -2,4 +2,4 @@
 '@vercel/python-analysis': patch
 ---
 
-Fix parsing of `requirements.txt` environment markers that combine `and` and `or` expressions with parentheses.
+Update `pip-requirements-js` to include fixes for grouped `requirements.txt` environment markers and add regression coverage for Poetry-style marker expressions.

@@ -68,7 +68,7 @@ greenlet==3.3.0 ; python_version == "3.12" and (platform_machine == "aarch64" or
         name: 'greenlet',
         version: '==3.3.0',
         markers:
-          'python_version == "3.12" and (platform_machine == "aarch64" or platform_machine == "ppc64le" or platform_machine == "x86_64" or platform_machine == "amd64" or platform_machine == "AMD64" or platform_machine == "win32" or platform_machine == "WIN32")',
+          '(python_version == "3.12") and ((platform_machine == "aarch64") or ((platform_machine == "ppc64le") or ((platform_machine == "x86_64") or ((platform_machine == "amd64") or ((platform_machine == "AMD64") or ((platform_machine == "win32") or (platform_machine == "WIN32")))))))',
       },
     ]);
   });
@@ -83,7 +83,7 @@ greenlet==3.3.0 ; python_version == "3.12" and (platform_machine == "aarch64" or
         name: 'greenlet',
         version: '==3.3.0',
         markers:
-          'python_version == "3.12" and (platform_machine == "aarch64" or platform_machine == "ppc64le" or platform_machine == "x86_64" or platform_machine == "amd64" or platform_machine == "AMD64" or platform_machine == "win32" or platform_machine == "WIN32")',
+          '(python_version == "3.12") and ((platform_machine == "aarch64") or ((platform_machine == "ppc64le") or ((platform_machine == "x86_64") or ((platform_machine == "amd64") or ((platform_machine == "AMD64") or ((platform_machine == "win32") or (platform_machine == "WIN32")))))))',
         hashes: ['sha256:abc123'],
       },
     ]);
@@ -692,7 +692,7 @@ greenlet==3.3.0 ; python_version == "3.12" and (platform_machine == "aarch64" or
 `;
     const result = convertRequirementsToPyprojectToml(content);
     expect(result.project?.dependencies).toEqual([
-      'greenlet==3.3.0 ; python_version == "3.12" and (platform_machine == "aarch64" or platform_machine == "ppc64le" or platform_machine == "x86_64" or platform_machine == "amd64" or platform_machine == "AMD64" or platform_machine == "win32" or platform_machine == "WIN32")',
+      'greenlet==3.3.0 ; (python_version == "3.12") and ((platform_machine == "aarch64") or ((platform_machine == "ppc64le") or ((platform_machine == "x86_64") or ((platform_machine == "amd64") or ((platform_machine == "AMD64") or ((platform_machine == "win32") or (platform_machine == "WIN32")))))))',
     ]);
   });
 

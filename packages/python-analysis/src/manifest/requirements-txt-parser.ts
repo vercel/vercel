@@ -362,17 +362,6 @@ function stripInlineHashes(line: string): string {
 }
 
 /**
- * Strip an inline comment introduced by " #" while leaving URL fragments intact.
- */
-function stripInlineComment(line: string): string {
-  const commentIdx = line.indexOf(' #');
-  if (commentIdx === -1) {
-    return line.trim();
-  }
-  return line.slice(0, commentIdx).trim();
-}
-
-/**
  * Extract all --hash values from a requirement line.
  * Returns an array of hash strings in the format "algorithm:value".
  */
@@ -411,204 +400,6 @@ function extractArgValue(line: string, option: string): string | null {
   }
 
   return value || null;
-}
-
-/**
- * Split a requirement line into the requirement spec and optional environment marker.
- */
-function splitRequirementMarker(line: string): {
-  requirement: string;
-  markers?: string;
-} {
-  let inSingleQuote = false;
-  let inDoubleQuote = false;
-
-  for (let i = 0; i < line.length; i++) {
-    const char = line[i];
-    if (char === "'" && !inDoubleQuote) {
-      inSingleQuote = !inSingleQuote;
-      continue;
-    }
-    if (char === '"' && !inSingleQuote) {
-      inDoubleQuote = !inDoubleQuote;
-      continue;
-    }
-    if (char === ';' && !inSingleQuote && !inDoubleQuote) {
-      const requirement = line.slice(0, i).trim();
-      const markers = line.slice(i + 1).trim();
-      return {
-        requirement,
-        markers: markers || undefined,
-      };
-    }
-  }
-
-  return {
-    requirement: line.trim(),
-  };
-}
-
-function hasBalancedParentheses(input: string): boolean {
-  let depth = 0;
-  let inSingleQuote = false;
-  let inDoubleQuote = false;
-
-  for (const char of input) {
-    if (char === "'" && !inDoubleQuote) {
-      inSingleQuote = !inSingleQuote;
-      continue;
-    }
-    if (char === '"' && !inSingleQuote) {
-      inDoubleQuote = !inDoubleQuote;
-      continue;
-    }
-    if (inSingleQuote || inDoubleQuote) {
-      continue;
-    }
-    if (char === '(') {
-      depth++;
-    } else if (char === ')') {
-      depth--;
-      if (depth < 0) {
-        return false;
-      }
-    }
-  }
-
-  return depth === 0;
-}
-
-function shouldFallbackToManualRequirementParsing(line: string): boolean {
-  const { markers } = splitRequirementMarker(stripInlineComment(line));
-  return (
-    markers != null && /[()]/.test(markers) && hasBalancedParentheses(markers)
-  );
-}
-
-/**
- * Normalize a standard named requirement line without relying on pip-requirements-js.
- *
- * Supports:
- * - name
- * - name[extras]
- * - name>=1.0,<2.0
- * - name[extras] @ url
- * - any of the above with environment markers
- */
-function normalizeNamedRequirement(
-  rawLine: string
-): NormalizedRequirement | null {
-  const line = stripInlineComment(rawLine);
-  const { requirement, markers } = splitRequirementMarker(line);
-
-  const match = requirement.match(
-    /^([a-zA-Z0-9][a-zA-Z0-9._-]*)(?:\[([^\]]+)\])?\s*(.*)$/
-  );
-  if (!match) {
-    return null;
-  }
-
-  const [, name, extrasRaw, remainderRaw] = match;
-  const remainder = remainderRaw.trim();
-  const normalized: NormalizedRequirement = { name };
-
-  if (extrasRaw) {
-    const extras = extrasRaw
-      .split(',')
-      .map(extra => extra.trim())
-      .filter(Boolean);
-    if (extras.length > 0) {
-      normalized.extras = extras;
-    }
-  }
-
-  if (markers) {
-    normalized.markers = markers;
-  }
-
-  if (remainder.startsWith('@')) {
-    const url = remainder.slice(1).trim();
-    if (!url) {
-      return null;
-    }
-    normalized.url = url;
-
-    if (isGitUrl(url)) {
-      const parsed = parseGitUrl(url);
-      if (parsed) {
-        const source: DependencySource = {
-          git: parsed.url,
-        };
-        if (parsed.ref) {
-          source.rev = parsed.ref;
-        }
-        if (parsed.editable) {
-          source.editable = true;
-        }
-        normalized.source = source;
-      }
-    }
-  } else if (remainder) {
-    normalized.version = remainder;
-  }
-
-  return normalized;
-}
-
-function getLogicalRequirementsLines(fileContent: string): string[] {
-  const lines = fileContent.split(/\r?\n/);
-  const logicalLines: string[] = [];
-
-  for (let i = 0; i < lines.length; i++) {
-    const trimmed = lines[i].trim();
-    if (trimmed === '' || trimmed.startsWith('#')) {
-      continue;
-    }
-
-    let fullLine = trimmed;
-    while (fullLine.endsWith('\\') && i + 1 < lines.length) {
-      i++;
-      fullLine = fullLine.slice(0, -1) + lines[i].trim();
-    }
-
-    logicalLines.push(fullLine);
-  }
-
-  return logicalLines;
-}
-
-function parseRequirementsWithFallback(cleanedContent: string): {
-  requirements: Requirement[];
-  manualRequirements: NormalizedRequirement[];
-} {
-  try {
-    return {
-      requirements: parsePipRequirementsFile(cleanedContent),
-      manualRequirements: [],
-    };
-  } catch {
-    const requirements: Requirement[] = [];
-    const manualRequirements: NormalizedRequirement[] = [];
-
-    for (const line of getLogicalRequirementsLines(cleanedContent)) {
-      try {
-        requirements.push(...parsePipRequirementsFile(line));
-      } catch (lineError) {
-        if (!shouldFallbackToManualRequirementParsing(line)) {
-          throw lineError;
-        }
-
-        const normalized = normalizeNamedRequirement(line);
-        if (!normalized) {
-          throw lineError;
-        }
-
-        manualRequirements.push(normalized);
-      }
-    }
-
-    return { requirements, manualRequirements };
-  }
 }
 
 /**
@@ -974,8 +765,7 @@ function parseRequirementsFileInternal(
   // Build a map from requirement name to hashes from the original content
   const hashMap = buildHashMap(fileContent);
 
-  const { requirements, manualRequirements } =
-    parseRequirementsWithFallback(cleanedContent);
+  const requirements = parsePipRequirementsFile(cleanedContent);
   const normalized: NormalizedRequirement[] = [];
 
   // Collect all pip options (will be merged with referenced files)
@@ -1008,14 +798,6 @@ function parseRequirementsFileInternal(
       }
       normalized.push(norm);
     }
-  }
-
-  for (const req of manualRequirements) {
-    const hashes = hashMap.get(req.name.toLowerCase());
-    if (hashes && hashes.length > 0) {
-      req.hashes = hashes;
-    }
-    normalized.push(req);
   }
 
   // Process bare file path and URL requirements that pip-requirements-js can't parse
