@@ -7,6 +7,8 @@ import { getVenvPythonBin } from './utils';
 export interface DjangoCollectStaticResult {
   /** Absolute paths of source static dirs to exclude from the Lambda bundle. */
   staticSourceDirs: string[];
+  /** Absolute path of STATIC_ROOT to exclude from the Lambda bundle. */
+  staticRoot: string | null;
   /**
    * workPath-relative path to `staticfiles.json` to inject into the Lambda
    * bundle, or null if the storage backend doesn't use a manifest.
@@ -151,6 +153,7 @@ export async function runDjangoCollectStatic(
 
   return {
     staticSourceDirs,
+    staticRoot: staticRoot ? resolve(workPath, staticRoot) : null,
     manifestRelPath,
   };
 }

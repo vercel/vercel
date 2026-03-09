@@ -600,9 +600,13 @@ from vercel_runtime.vc_init import vc_handler
     '**/package-lock.json',
   ];
 
-  // Exclude source static dirs from the Lambda bundle — the CDN serves them.
+  // Exclude source static dirs and STATIC_ROOT from the Lambda bundle.
   if (djangoStatic) {
-    for (const absDir of djangoStatic.staticSourceDirs) {
+    const dirsToExclude = [
+      ...djangoStatic.staticSourceDirs,
+      ...(djangoStatic.staticRoot ? [djangoStatic.staticRoot] : []),
+    ];
+    for (const absDir of dirsToExclude) {
       const rel = relative(workPath, absDir);
       if (!rel.startsWith('..')) {
         predefinedExcludes.push(`${rel}/**`);
