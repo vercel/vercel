@@ -15,12 +15,103 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import param from '../../util/output/param';
 import { addSubcommand } from './command';
+import { isAPIError } from '../../util/errors-ts';
 
 const validateSlug = (value: string) => /^[a-z]+[a-z0-9_-]*$/.test(value);
+
 const validateName = (value: string) => /^[ a-zA-Z0-9_-]+$/.test(value);
 
 const teamUrlPrefix = 'Team URL'.padEnd(14) + chalk.gray('vercel.com/');
 const teamNamePrefix = 'Team Name'.padEnd(14);
+
+/** Timeout for create-team API call so we don't spin forever on a hung request */
+const CREATE_TEAM_TIMEOUT_MS = 30_000;
+
+const TIMEOUT_HINT =
+  'The request took too long and was cancelled. ' +
+  'The team URL may already be taken, or the server may be slow. ' +
+  'Try a different slug (e.g. your-company-name) or try again later. ' +
+  'Run with `--debug` to see where the request is getting stuck.';
+
+function createTeamWithTimeout(
+  client: Client,
+  slug: string
+): Promise<Awaited<ReturnType<typeof createTeam>>> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(
+    () => controller.abort(),
+    CREATE_TEAM_TIMEOUT_MS
+  );
+  output.debug(
+    `Creating team with slug "${slug}" (timeout: ${CREATE_TEAM_TIMEOUT_MS / 1000}s, apiUrl: ${client.apiUrl})`
+  );
+  const promise = createTeam(client, { slug }, { signal: controller.signal })
+    .then(result => {
+      clearTimeout(timeoutId);
+      return result;
+    })
+    .catch(err => {
+      clearTimeout(timeoutId);
+      throw err;
+    });
+  // Fallback: if fetch doesn't honor AbortSignal, still reject after timeout
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) =>
+      setTimeout(
+        () => reject(new Error('Request timed out.')),
+        CREATE_TEAM_TIMEOUT_MS + 500
+      )
+    ),
+  ]);
+}
+
+function formatCreateTeamError(err: unknown, slug: string): string {
+  const isAbort =
+    isError(err) && (err as Error & { name?: string }).name === 'AbortError';
+  const isTimeoutMsg = isError(err) && err.message === 'Request timed out.';
+  if (isAbort || isTimeoutMsg) {
+    return TIMEOUT_HINT;
+  }
+  if (isAPIError(err) && err.status === 429) {
+    const retryMs = (err as { retryAfterMs?: number }).retryAfterMs;
+    const retrySec =
+      typeof retryMs === 'number' && retryMs >= 0
+        ? Math.ceil(retryMs / 1000)
+        : 0;
+    const formatWait = (sec: number): string => {
+      if (sec < 60) return `${sec} seconds`;
+      if (sec < 3600) return `${sec} seconds (${Math.ceil(sec / 60)} minutes)`;
+      return `${sec} seconds (${(sec / 3600).toFixed(1)} hours)`;
+    };
+    const waitHint =
+      retrySec > 0
+        ? ` Try again in ${formatWait(retrySec)}.`
+        : ' Wait a minute or two, then try again.';
+    return (
+      'Rate limited (429 Too Many Requests). ' +
+      'The Vercel API limits how often you can create teams.' +
+      waitHint +
+      ' (The API sends when the rate limit window resets, often a fixed time like the next hour or midnight UTC.) ' +
+      'Dashboard: https://vercel.com/account.'
+    );
+  }
+  if (isAPIError(err) && err.status === 400) {
+    const msg = (err.serverMessage || err.message || '').toLowerCase();
+    const slugHint =
+      msg.includes('slug') || msg.includes('cannot be used')
+        ? `That team URL (${chalk.cyan(`vercel.com/${slug}`)}) is not available. It may already be taken. `
+        : '';
+    const paymentHint = msg.includes('payment')
+      ? 'A payment method is required to create a team. '
+      : '';
+    const prefix = slugHint || paymentHint;
+    return prefix
+      ? `${prefix}${prefix.trim() ? '\n' : ''}${err.serverMessage || err.message}`
+      : err.serverMessage || err.message;
+  }
+  return errorToString(err);
+}
 
 export default async function add(
   client: Client,
@@ -70,10 +161,10 @@ export default async function add(
     output.spinner(teamUrlPrefix + slug);
     let team;
     try {
-      team = await createTeam(client, { slug });
+      team = await createTeamWithTimeout(client, slug);
     } catch (err: unknown) {
       output.stopSpinner();
-      output.error(errorToString(err));
+      output.error(formatCreateTeamError(err, slug));
       return 1;
     }
     output.stopSpinner();
@@ -126,11 +217,13 @@ export default async function add(
     output.spinner(teamUrlPrefix + slug);
 
     try {
-      team = await createTeam(client, { slug: slug! });
+      team = await createTeamWithTimeout(client, slug!);
     } catch (err: unknown) {
       output.stopSpinner();
       output.print(eraseLines(2));
-      output.error(errorToString(err));
+      output.error(formatCreateTeamError(err, slug!));
+      // Clear failed slug so next prompt doesn't default to it and cause a loop
+      slug = undefined;
     }
   } while (!team);
 

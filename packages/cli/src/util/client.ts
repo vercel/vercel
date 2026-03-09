@@ -53,6 +53,8 @@ export interface FetchOptions extends Omit<RequestInit, 'body'> {
   retry?: RetryOptions;
   useCurrentTeam?: boolean;
   accountId?: string;
+  /** When true, 429 responses are returned immediately instead of waiting for Retry-After and retrying */
+  bailOn429?: boolean;
 }
 
 export interface ClientOptions extends Stdio {
@@ -409,6 +411,8 @@ export default class Client extends EventEmitter implements Stdio {
             // there's no sense in retrying
             return bail(normalizeError(reauthError));
           }
+        } else if (res.status === 429 && opts.bailOn429) {
+          return bail(error);
         } else if (typeof error.retryAfterMs === 'number') {
           // Respect the Retry-After header and then try again below.
           // This covers 429 responses which would otherwise bail out
