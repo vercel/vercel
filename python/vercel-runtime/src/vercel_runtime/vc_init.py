@@ -348,6 +348,27 @@ if "VERCEL_IPC_PATH" in os.environ:
         setup_logging(send_message, storage)
 
 
+# --- EFS mount diagnostics ---
+_efs_mount = os.environ.get("PYTHON_PACKAGES_MOUNT_PATH", "")
+_efs_available = bool(_efs_mount) and os.path.isdir(_efs_mount)
+_python_ver = f"{sys.version_info.major}.{sys.version_info.minor}"
+
+try:
+    _stderr(f"[efs-diag] python version: {_python_ver}")
+    _stderr(f"[efs-diag] PYTHON_PACKAGES_MOUNT_PATH={_efs_mount!r}")
+    _stderr(f"[efs-diag] efs mount available: {_efs_available}")
+    if _efs_available:
+        _stderr(f"[efs-diag] mount contents: {os.listdir(_efs_mount)}")
+        _efs_stat = os.statvfs(_efs_mount)
+        _efs_free_gb = (_efs_stat.f_bavail * _efs_stat.f_frsize) / (1024**3)
+        _stderr(f"[efs-diag] efs free space: {_efs_free_gb:.2f} GB")
+    _tmp_stat = os.statvfs("/tmp")
+    _tmp_free_mb = (_tmp_stat.f_bavail * _tmp_stat.f_frsize) / (1024**2)
+    _stderr(f"[efs-diag] /tmp free space: {_tmp_free_mb:.0f} MB")
+    _stderr(f"[efs-diag] sys.path (pre-install): {sys.path}")
+except Exception as _diag_err:
+    _stderr(f"[efs-diag] diagnostics error (non-fatal): {_diag_err}")
+
 # Runtime dependency installation for large Lambda functions
 # The _uv directory is at the Lambda root, two levels up from this file
 # (this file is at /var/task/_vendor/vercel_runtime/vc_init.py)
@@ -363,14 +384,20 @@ if os.path.exists(_runtime_config_path):
         _config = json.load(runtime_config_file)
     _project_dir = os.path.join(lambda_root, _config["projectDir"])
 
-    _deps_dir = "/tmp/_vc_deps"
+    if _efs_available:
+        _deps_dir = os.path.join(_efs_mount, _python_ver)
+        _stderr(f"[efs] installing dependencies to EFS: {_deps_dir}")
+    else:
+        _deps_dir = "/tmp/_vc_deps"
     _site_packages = os.path.join(
         _deps_dir,
         "lib",
-        f"python{sys.version_info.major}.{sys.version_info.minor}",
+        f"python{_python_ver}",
         "site-packages",
     )
-    _marker = os.path.join(_deps_dir, ".installed")
+    # Marker stays in /tmp so each Lambda instance runs uv sync on cold start.
+    # uv sync is fast when packages already exist on EFS.
+    _marker = os.path.join("/tmp/_vc_deps", ".installed")
 
     if not os.path.exists(_marker):
         # Cold start: install public dependencies using bundled uv
@@ -436,7 +463,25 @@ if os.path.exists(_runtime_config_path):
                 f" failed with unexpected error: {e}"
             )
 
+        # Post-install diagnostics
+        try:
+            _stderr(f"[efs-diag] install target: {_deps_dir}")
+            _stderr(
+                f"[efs-diag] site-packages exists: {os.path.isdir(_site_packages)}"
+            )
+            if os.path.isdir(_site_packages):
+                _pkgs = os.listdir(_site_packages)
+                _stderr(
+                    f"[efs-diag] packages installed ({len(_pkgs)}): {_pkgs[:30]}"
+                )
+            _stderr(f"[efs-diag] sys.path (post-install): {sys.path}")
+        except Exception as _diag_err:
+            _stderr(
+                f"[efs-diag] post-install diagnostics error (non-fatal): {_diag_err}"
+            )
+
         # Mark installation complete for warm starts
+        os.makedirs("/tmp/_vc_deps", exist_ok=True)
         open(_marker, "w").close()
     else:
         _stderr("Using cached runtime dependencies")
