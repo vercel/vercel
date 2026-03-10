@@ -1,14 +1,15 @@
-package main
+package api
 
 import (
 	"embed"
+	"encoding/json"
 	"io/fs"
 	"net/http"
 	"os"
 	"runtime"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/go-chi/chi/v5"
 )
 
 //go:embed assets/*
@@ -35,57 +36,51 @@ type ItemResponse struct {
 	Timestamp string   `json:"timestamp"`
 }
 
-func main() {
-	gin.SetMode(gin.ReleaseMode)
-	r := gin.New()
-	r.Use(gin.Recovery())
-
+func Run() error {
 	assetFS, err := fs.Sub(assets, "assets")
 	if err != nil {
-		panic(err)
+		return err
 	}
 
-	r.StaticFS("/static", http.FS(assetFS))
+	r := chi.NewRouter()
+	r.Handle("/static/*", http.StripPrefix("/static/", http.FileServer(http.FS(assetFS))))
 
-	r.GET("/", func(c *gin.Context) {
-		c.Data(
-			http.StatusOK,
-			"text/html; charset=utf-8",
-			[]byte("<html><body>framework:gin version:"+runtime.Version()+" randomness:RANDOMNESS_PLACEHOLDER</body></html>"),
-		)
+	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = w.Write([]byte("<html><body>framework:chi version:" + runtime.Version() + " randomness:RANDOMNESS_PLACEHOLDER</body></html>"))
 	})
 
-	r.GET("/api/data", func(c *gin.Context) {
+	r.Get("/api/data", func(w http.ResponseWriter, r *http.Request) {
 		items := []DataItem{
 			{ID: 1, Name: "Sample Item 1", Value: 100},
 			{ID: 2, Name: "Sample Item 2", Value: 200},
 			{ID: 3, Name: "Sample Item 3", Value: 300},
 		}
 
-		c.JSON(http.StatusOK, DataResponse{
+		writeJSON(w, http.StatusOK, DataResponse{
 			Data:      items,
 			Total:     len(items),
-			Framework: "gin",
+			Framework: "chi",
 			Version:   runtime.Version(),
 			Timestamp: time.Now().UTC().Format(time.RFC3339),
 		})
 	})
 
-	r.GET("/api/items/:id", func(c *gin.Context) {
-		c.JSON(http.StatusOK, ItemResponse{
+	r.Get("/api/items/{id}", func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(w, http.StatusOK, ItemResponse{
 			Item: DataItem{
 				ID:    1,
-				Name:  "Sample Item " + c.Param("id"),
+				Name:  "Sample Item " + chi.URLParam(r, "id"),
 				Value: 100,
 			},
-			Framework: "gin",
+			Framework: "chi",
 			Version:   runtime.Version(),
 			Timestamp: time.Now().UTC().Format(time.RFC3339),
 		})
 	})
 
-	r.NoRoute(func(c *gin.Context) {
-		c.String(http.StatusNotFound, "not found:gin")
+	r.NotFound(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "not found:chi", http.StatusNotFound)
 	})
 
 	port := os.Getenv("PORT")
@@ -93,5 +88,11 @@ func main() {
 		port = "3000"
 	}
 
-	_ = r.Run(":" + port)
+	return http.ListenAndServe(":"+port, r)
+}
+
+func writeJSON(w http.ResponseWriter, status int, payload any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(payload)
 }
