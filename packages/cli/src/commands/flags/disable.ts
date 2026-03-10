@@ -12,7 +12,10 @@ import {
   resolveVariant,
 } from '../../util/flags/resolve-variant';
 import { getFlagDashboardUrl } from '../../util/flags/dashboard-url';
-import { normalizeOptionalInput } from '../../util/flags/normalize-optional-input';
+import {
+  normalizeOptionalInput,
+  resolveOptionalInput,
+} from '../../util/flags/normalize-optional-input';
 import output from '../../output-manager';
 import { FlagsDisableTelemetryClient } from '../../util/telemetry/commands/flags/disable';
 import { disableSubcommand } from './command';
@@ -87,7 +90,7 @@ export default async function disable(
       return 1;
     }
 
-    // Only boolean flags can be force-disabled via CLI
+    // Only boolean flags can be enabled/disabled via CLI
     if (flag.kind !== 'boolean') {
       const dashboardUrl = getFlagDashboardUrl(
         link.org.slug,
@@ -98,15 +101,9 @@ export default async function disable(
         `The ${getCommandName('flags disable')} command only works with boolean flags.`
       );
       output.log(
-        `Flag ${chalk.bold(flag.slug)} is a ${chalk.cyan(flag.kind)} flag. Update a specific variant instead:`
+        `Flag ${chalk.bold(flag.slug)} is a ${chalk.cyan(flag.kind)} flag. You can update it on the dashboard:`
       );
-      output.log(
-        `  ${getCommandName(`flags update ${flag.slug} --variant <VARIANT> --value <VALUE>`)}`
-      );
-      output.log(
-        `See available variants with ${getCommandName(`flags inspect ${flag.slug}`)}`
-      );
-      output.log(`Open in the dashboard: ${chalk.cyan(dashboardUrl)}`);
+      output.log(`  ${chalk.cyan(dashboardUrl)}`);
       return 0;
     }
 
@@ -193,10 +190,11 @@ export default async function disable(
         variantId: selectedVariantId,
       },
     };
-    const updateMessage = await resolveDisableMessage(
+    const updateMessage = await resolveOptionalInput(
       client,
-      environment,
-      message
+      message,
+      getDefaultDisableMessage(environment),
+      'Enter a message for this update:'
     );
 
     output.spinner(`Disabling flag in ${environment}...`);
@@ -242,26 +240,4 @@ function getDefaultDisabledVariantId(flag: {
   }
 
   return falseVariant.id;
-}
-
-async function resolveDisableMessage(
-  client: Client,
-  environment: string,
-  message: string | undefined
-): Promise<string> {
-  if (message !== undefined) {
-    return message;
-  }
-
-  const defaultMessage = getDefaultDisableMessage(environment);
-  if (!client.stdin.isTTY) {
-    return defaultMessage;
-  }
-
-  const response = await client.input.text({
-    message: 'Enter a message for this update:',
-    default: defaultMessage,
-  });
-
-  return normalizeOptionalInput(response) || defaultMessage;
 }

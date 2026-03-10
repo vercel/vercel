@@ -454,11 +454,7 @@ describe('flags disable', () => {
     expect(output).toContain('only works with boolean flags');
     // Should identify the flag type
     expect(output).toContain('string');
-    expect(output).toContain('Update a specific variant instead');
-    expect(output).toContain(
-      `vercel flags update ${testFlags[1].slug} --variant <VARIANT> --value <VALUE>`
-    );
-    expect(output).toContain(`vercel flags inspect ${testFlags[1].slug}`);
+    expect(output).toContain('You can update it on the dashboard');
     // Should show dashboard link
     expect(output).toContain('https://vercel.com/');
     expect(output).toContain(testFlags[1].slug);

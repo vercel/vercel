@@ -12,7 +12,10 @@ import {
   resolveVariant,
 } from '../../util/flags/resolve-variant';
 import { updateFlag } from '../../util/flags/update-flag';
-import { normalizeOptionalInput } from '../../util/flags/normalize-optional-input';
+import {
+  normalizeOptionalInput,
+  resolveOptionalInput,
+} from '../../util/flags/normalize-optional-input';
 import output from '../../output-manager';
 import { FlagsUpdateTelemetryClient } from '../../util/telemetry/commands/flags/update';
 import { updateSubcommand } from './command';
@@ -120,7 +123,12 @@ export default async function update(
       return 0;
     }
 
-    const updateMessage = await resolveUpdateMessage(client, message);
+    const updateMessage = await resolveOptionalInput(
+      client,
+      message,
+      DEFAULT_UPDATE_MESSAGE,
+      'Enter a message for this update:'
+    );
 
     output.spinner('Updating flag...');
     await updateFlag(
@@ -270,26 +278,6 @@ async function promptForVariantLabelUpdate(
   });
 
   return normalizeOptionalInput(labelResponse);
-}
-
-async function resolveUpdateMessage(
-  client: Client,
-  message: string | undefined
-): Promise<string | undefined> {
-  if (message !== undefined) {
-    return message;
-  }
-
-  if (!client.stdin.isTTY) {
-    return DEFAULT_UPDATE_MESSAGE;
-  }
-
-  const messageResponse = await client.input.text({
-    message: 'Enter a message for this update:',
-    default: DEFAULT_UPDATE_MESSAGE,
-  });
-
-  return normalizeOptionalInput(messageResponse) || DEFAULT_UPDATE_MESSAGE;
 }
 
 function applyVariantUpdates(
