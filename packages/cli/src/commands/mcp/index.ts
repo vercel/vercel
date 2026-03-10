@@ -18,7 +18,6 @@ function buildSuggestedMcpCommand(
   // args[0] should be 'mcp'
   const preserved: string[] = [];
   let hasNonInteractive = false;
-  let seenClients = false;
 
   for (let i = 1; i < args.length; i++) {
     const arg = args[i];
@@ -27,16 +26,17 @@ function buildSuggestedMcpCommand(
       continue;
     }
     if (arg === '--clients') {
-      seenClients = true;
+      // Skip the existing clients value (and any immediate non-flag tokens
+      // that are part of the same, unquoted value) so we can replace it with
+      // a canonical, quoted --clients argument in the suggestion.
       i++;
+      while (i < args.length && !args[i].startsWith('-')) {
+        i++;
+      }
+      i--;
       continue;
     }
     if (arg.startsWith('--clients=')) {
-      continue;
-    }
-    if (seenClients) {
-      // Skip any tokens after an unquoted --clients value to avoid
-      // carrying partial client names into the suggestion.
       continue;
     }
     preserved.push(arg);
