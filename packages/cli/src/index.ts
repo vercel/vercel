@@ -736,14 +736,9 @@ const main = async () => {
           func = (await import('./commands-bulk.js')).activity;
           break;
         case 'alerts':
-          if (process.env.FF_ALERTS) {
-            telemetry.trackCliCommandAlerts(userSuppliedSubCommand);
-            func = (await import('./commands-bulk.js')).alerts;
-            break;
-          } else {
-            func = null;
-            break;
-          }
+          telemetry.trackCliCommandAlerts(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).alerts;
+          break;
         case 'api':
           telemetry.trackCliCommandApi(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).api;
