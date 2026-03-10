@@ -40,12 +40,12 @@ import { resolvePythonVersion, pythonVersionString } from './version';
 import { startDevServer } from './start-dev-server';
 import { runPyprojectScript, ensureVenv, createVenvEnv } from './utils';
 import { runQuirks } from './quirks';
-import { getDjangoSettings } from './django';
-import { containsTopLevelCallable } from '@vercel/python-analysis';
 import {
+  getDjangoSettings,
   runDjangoCollectStatic,
   type DjangoCollectStaticResult,
-} from './django-static';
+} from './django';
+import { containsTopLevelCallable } from '@vercel/python-analysis';
 
 const writeFile = fs.promises.writeFile;
 
