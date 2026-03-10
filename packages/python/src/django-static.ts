@@ -57,20 +57,6 @@ export async function runDjangoCollectStatic(
     (djangoSettings['STATICFILES_STORAGE'] as string | undefined) ??
     'django.contrib.staticfiles.storage.StaticFilesStorage';
 
-  // When django-storages is the storage backend
-  // Run collectstatic with the user's real settings, it will upload to S3/GCS/etc.
-  // No CDN bundling or manifest work needed.
-  if (storageBackend.startsWith('storages.backends.')) {
-    console.log(
-      'django-storages detected — running collectstatic with original settings'
-    );
-    await execa(pythonPath, ['manage.py', 'collectstatic', '--noinput'], {
-      env: { ...env, DJANGO_SETTINGS_MODULE: settingsModule },
-      cwd: workPath,
-    });
-    return null;
-  }
-
   const staticUrl =
     (djangoSettings['STATIC_URL'] as string | undefined) ?? '/static/';
   const staticRoot =
@@ -79,12 +65,6 @@ export async function runDjangoCollectStatic(
       : null;
   const whitenoiseUseFinders =
     djangoSettings['WHITENOISE_USE_FINDERS'] === true;
-
-  // No local static strategy configured — warn and skip.
-  if (!staticRoot && !whitenoiseUseFinders) {
-    debug('No collectstatic strategy configured — skipping collectstatic');
-    return null;
-  }
 
   // Get the static file directories.
   // Each installed app may have a 'static' subdirectory.
@@ -100,6 +80,30 @@ export async function runDjangoCollectStatic(
     // TODO: Deal with optional prefixes in STATICFILES_DIRS.
     ...staticfilesDirs.map(d => (Array.isArray(d) ? d[1] : d)),
   ].filter(d => fs.existsSync(d));
+
+  // When django-storages is the storage backend
+  // Run collectstatic with the user's real settings, it will upload to S3/GCS/etc.
+  // No CDN bundling or manifest work needed.
+  if (storageBackend.startsWith('storages.backends.')) {
+    console.log(
+      'django-storages detected — running collectstatic with original settings'
+    );
+    await execa(pythonPath, ['manage.py', 'collectstatic', '--noinput'], {
+      env: { ...env, DJANGO_SETTINGS_MODULE: settingsModule },
+      cwd: workPath,
+    });
+    return {
+      staticSourceDirs,
+      staticRoot: staticRoot ? resolve(workPath, staticRoot) : null,
+      manifestRelPath: null,
+    };
+  }
+
+  // No local static strategy configured — warn and skip.
+  if (!staticRoot && !whitenoiseUseFinders) {
+    debug('No collectstatic strategy configured — skipping collectstatic');
+    return null;
+  }
 
   // Strip leading/trailing slashes from STATIC_URL to get the CDN sub-path.
   // e.g. '/static/' -> 'static', '/app/static/' -> 'app/static'
