@@ -8,6 +8,7 @@ import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import formatTable from '../../util/format-table';
 import { validateJsonOutput } from '../../util/output-format';
+import { getCommandName } from '../../util/pkg-name';
 import output from '../../output-manager';
 import { WebhooksLsTelemetryClient } from '../../util/telemetry/commands/webhooks/ls';
 import { listSubcommand } from './command';
@@ -51,28 +52,41 @@ export default async function ls(client: Client, argv: string[]) {
     output.error(formatResult.error);
     return 1;
   }
-  const asJson = formatResult.jsonOutput;
+  const asJson = formatResult.jsonOutput || client.nonInteractive;
 
   const { contextName } = await getScope(client);
 
   const lsStamp = stamp();
 
-  output.spinner(`Fetching Webhooks under ${chalk.bold(contextName)}`);
+  if (!client.nonInteractive) {
+    output.spinner(`Fetching Webhooks under ${chalk.bold(contextName)}`);
+  }
 
   const { webhooks } = await getWebhooks(client);
 
   if (asJson) {
     output.stopSpinner();
-    const jsonOutput = {
-      webhooks: webhooks.map(webhook => ({
-        id: webhook.id,
-        url: webhook.url,
-        events: webhook.events,
-        projectIds: webhook.projectIds,
-        createdAt: webhook.createdAt,
-        updatedAt: webhook.updatedAt,
-      })),
-    };
+    const webhooksList = webhooks.map(webhook => ({
+      id: webhook.id,
+      url: webhook.url,
+      events: webhook.events,
+      projectIds: webhook.projectIds,
+      createdAt: webhook.createdAt,
+      updatedAt: webhook.updatedAt,
+    }));
+    const jsonOutput = client.nonInteractive
+      ? {
+          status: 'ok' as const,
+          webhooks: webhooksList,
+          message: `${webhooks.length} webhook(s) found.`,
+          next: [
+            {
+              command: getCommandName('webhooks get <id>'),
+              when: 'Inspect a webhook',
+            },
+          ],
+        }
+      : { webhooks: webhooksList };
     client.stdout.write(`${JSON.stringify(jsonOutput, null, 2)}\n`);
   } else {
     output.log(

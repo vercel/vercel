@@ -6,6 +6,7 @@ import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import param from '../../util/output/param';
 import { getCommandName } from '../../util/pkg-name';
+import { buildCommandWithYes, outputAgentError } from '../../util/agent-output';
 import output from '../../output-manager';
 import { WebhooksRmTelemetryClient } from '../../util/telemetry/commands/webhooks/rm';
 import { removeSubcommand } from './command';
@@ -36,8 +37,37 @@ export default async function rm(client: Client, argv: string[]) {
   telemetry.trackCliFlagYes(opts['--yes']);
 
   if (!webhookId) {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'missing_id',
+          message: 'Webhook ID is required. Provide ID as the first argument.',
+          next: [
+            { command: getCommandName('webhooks ls') },
+            { command: getCommandName('webhooks rm <id> --yes') },
+          ],
+        },
+        1
+      );
+    }
     output.error(`${getCommandName(`webhooks rm <id>`)} expects one argument`);
     return 1;
+  }
+
+  const skipConfirmation = opts['--yes'] || false;
+  if (client.nonInteractive && !skipConfirmation) {
+    outputAgentError(
+      client,
+      {
+        status: 'error',
+        reason: 'confirmation_required',
+        message: 'Removing a webhook requires confirmation. Re-run with --yes.',
+        next: [{ command: buildCommandWithYes(client.argv) }],
+      },
+      1
+    );
   }
 
   const { contextName } = await getScope(client);
@@ -52,12 +82,27 @@ export default async function rm(client: Client, argv: string[]) {
   }
 
   // Verify the webhook exists before asking for confirmation
-  output.spinner(`Fetching webhook ${webhookId}`);
+  if (!client.nonInteractive) {
+    output.spinner(`Fetching webhook ${webhookId}`);
+  }
   let webhook;
   try {
     webhook = await getWebhook(client, webhookId);
   } catch (err: unknown) {
+    output.stopSpinner();
     if (isAPIError(err) && err.status === 404) {
+      if (client.nonInteractive) {
+        outputAgentError(
+          client,
+          {
+            status: 'error',
+            reason: 'webhook_not_found',
+            message: `Webhook not found: ${webhookId}.`,
+            next: [{ command: getCommandName('webhooks ls') }],
+          },
+          1
+        );
+      }
       output.error(`Webhook not found: ${webhookId}`);
       output.log(`Run ${getCommandName(`webhooks ls`)} to see your webhooks.`);
       return 1;
@@ -67,7 +112,6 @@ export default async function rm(client: Client, argv: string[]) {
 
   output.stopSpinner();
 
-  const skipConfirmation = opts['--yes'] || false;
   if (
     !skipConfirmation &&
     !(await client.input.confirm(
@@ -75,19 +119,49 @@ export default async function rm(client: Client, argv: string[]) {
       false
     ))
   ) {
-    output.log('Canceled');
+    if (!client.nonInteractive) output.log('Canceled');
     return 0;
   }
 
   const removeStamp = stamp();
-  output.spinner(`Removing webhook under ${chalk.bold(contextName)}`);
+  if (!client.nonInteractive) {
+    output.spinner(`Removing webhook under ${chalk.bold(contextName)}`);
+  }
 
   try {
     await deleteWebhook(client, webhookId);
+    output.stopSpinner();
+    if (client.nonInteractive) {
+      client.stdout.write(
+        `${JSON.stringify(
+          {
+            status: 'ok',
+            webhook: { id: webhookId, url: webhook.url },
+            message: `Webhook ${webhookId} removed.`,
+          },
+          null,
+          2
+        )}\n`
+      );
+      return 0;
+    }
     output.success(`Webhook ${chalk.bold(webhookId)} removed ${removeStamp()}`);
     return 0;
   } catch (err: unknown) {
+    output.stopSpinner();
     if (isAPIError(err) && err.status === 404) {
+      if (client.nonInteractive) {
+        outputAgentError(
+          client,
+          {
+            status: 'error',
+            reason: 'webhook_not_found',
+            message: `Webhook not found: ${webhookId}.`,
+            next: [{ command: getCommandName('webhooks ls') }],
+          },
+          1
+        );
+      }
       output.error(`Webhook not found: ${webhookId}`);
       return 1;
     }

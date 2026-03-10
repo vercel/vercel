@@ -4,6 +4,7 @@ import createWebhook from '../../util/webhooks/create-webhook';
 import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import { getCommandName } from '../../util/pkg-name';
+import { outputAgentError } from '../../util/agent-output';
 import output from '../../output-manager';
 import { WebhooksCreateTelemetryClient } from '../../util/telemetry/commands/webhooks/create';
 import { createSubcommand } from './command';
@@ -37,10 +38,21 @@ export default async function create(client: Client, argv: string[]) {
   // --- Collect URL ---
   if (!url) {
     if (client.nonInteractive) {
-      output.error(
-        `${getCommandName(`webhooks create <url>`)} expects one argument`
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'missing_url',
+          message:
+            'Webhook URL is required. Provide URL as the first argument.',
+          next: [
+            {
+              command: getCommandName('webhooks create <url> --event <event>'),
+            },
+          ],
+        },
+        1
       );
-      return 1;
     }
     url = await client.input.text({
       message: 'Webhook URL:',
@@ -78,15 +90,21 @@ export default async function create(client: Client, argv: string[]) {
 
   if (!eventFlags || eventFlags.length === 0) {
     if (client.nonInteractive) {
-      output.error(
-        `At least one event is required. Use ${chalk.cyan('--event <event>')} to specify events.`
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'missing_events',
+          message:
+            'At least one event is required. Use --event <event> (can be repeated).',
+          next: [
+            {
+              command: getCommandName(`webhooks create ${url} --event <event>`),
+            },
+          ],
+        },
+        1
       );
-      output.log(
-        `Example: ${getCommandName(
-          'webhooks create https://example.com/webhook --event deployment.created'
-        )}`
-      );
-      return 1;
     }
 
     const availableEvents = await getWebhookEvents();
@@ -128,7 +146,9 @@ export default async function create(client: Client, argv: string[]) {
 
   const createStamp = stamp();
 
-  output.spinner(`Creating webhook under ${chalk.bold(contextName)}`);
+  if (!client.nonInteractive) {
+    output.spinner(`Creating webhook under ${chalk.bold(contextName)}`);
+  }
 
   try {
     const webhook = await createWebhook(client, {
@@ -137,6 +157,31 @@ export default async function create(client: Client, argv: string[]) {
       projectIds,
     });
 
+    if (client.nonInteractive) {
+      const json: Record<string, unknown> = {
+        status: 'ok',
+        webhook: {
+          id: webhook.id,
+          url: webhook.url,
+          events: webhook.events,
+          ...(webhook.projectIds?.length
+            ? { projectIds: webhook.projectIds }
+            : {}),
+        },
+        message: `Webhook ${webhook.id} created.`,
+        next: [
+          {
+            command: getCommandName(`webhooks get ${webhook.id}`),
+            when: 'Inspect the webhook',
+          },
+        ],
+      };
+      if (webhook.secret) json.secret = webhook.secret;
+      client.stdout.write(`${JSON.stringify(json, null, 2)}\n`);
+      return 0;
+    }
+
+    output.stopSpinner();
     output.success(
       `Webhook created: ${chalk.bold(webhook.id)} ${createStamp()}`
     );
@@ -160,7 +205,35 @@ export default async function create(client: Client, argv: string[]) {
 
     return 0;
   } catch (err: unknown) {
+    output.stopSpinner();
     if (isAPIError(err)) {
+      if (client.nonInteractive) {
+        const reason =
+          err.code === 'invalid_url'
+            ? 'invalid_url'
+            : err.code === 'invalid_event'
+              ? 'invalid_event'
+              : 'api_error';
+        outputAgentError(
+          client,
+          {
+            status: 'error',
+            reason,
+            message: err.message,
+            next:
+              reason === 'invalid_event'
+                ? [
+                    {
+                      command: getCommandName(
+                        'webhooks create <url> --event <event>'
+                      ),
+                    },
+                  ]
+                : undefined,
+          },
+          1
+        );
+      }
       if (err.code === 'invalid_url') {
         output.error(`Invalid webhook URL: ${url}`);
         return 1;
