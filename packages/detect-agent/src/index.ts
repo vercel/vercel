@@ -6,6 +6,7 @@ const DEVIN_LOCAL_PATH = '/opt/.devin';
 const CURSOR = 'cursor' as const;
 const CURSOR_CLI = 'cursor-cli' as const;
 const CLAUDE = 'claude' as const;
+const COWORK = 'cowork' as const;
 const DEVIN = 'devin' as const;
 const REPLIT = 'replit' as const;
 const GEMINI = 'gemini' as const;
@@ -18,6 +19,7 @@ export type KnownAgentNames =
   | typeof CURSOR
   | typeof CURSOR_CLI
   | typeof CLAUDE
+  | typeof COWORK
   | typeof DEVIN
   | typeof REPLIT
   | typeof GEMINI
@@ -44,6 +46,7 @@ export const KNOWN_AGENTS = {
   CURSOR,
   CURSOR_CLI,
   CLAUDE,
+  COWORK,
   DEVIN,
   REPLIT,
   GEMINI,
@@ -97,6 +100,9 @@ export async function determineAgent(): Promise<AgentResult> {
   }
 
   if (process.env.CLAUDECODE || process.env.CLAUDE_CODE) {
+    if (process.env.CLAUDE_CODE_IS_COWORK) {
+      return { isAgent: true, agent: { name: COWORK } };
+    }
     return { isAgent: true, agent: { name: CLAUDE } };
   }
 
