@@ -48,6 +48,8 @@ function parsePyModuleAttrEntrypoint(entrypoint: string): {
 }
 
 const SERVICE_NAME_REGEX = /^[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$/;
+const DNS_LABEL_RE = /^(?!-)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/i;
+
 interface ResolvedEntrypointPath {
   normalized: string;
   isDirectory: boolean;
@@ -236,10 +238,21 @@ export function validateServiceConfig(
     };
   }
   const serviceType = config.type || 'web';
-  if (serviceType === 'web' && !config.routePrefix) {
+  const hasRoutePrefix = typeof config.routePrefix === 'string';
+  const hasSubdomain = typeof config.subdomain === 'string';
+
+  if (hasSubdomain && !DNS_LABEL_RE.test(config.subdomain!)) {
+    return {
+      code: 'INVALID_SUBDOMAIN',
+      message: `Web service "${name}" has invalid subdomain "${config.subdomain}". Use a single DNS label such as "api".`,
+      serviceName: name,
+    };
+  }
+
+  if (serviceType === 'web' && !hasRoutePrefix && !hasSubdomain) {
     return {
       code: 'MISSING_ROUTE_PREFIX',
-      message: `Web service "${name}" must specify "routePrefix".`,
+      message: `Web service "${name}" must specify at least one of "routePrefix" or "subdomain".`,
       serviceName: name,
     };
   }
@@ -261,6 +274,13 @@ export function validateServiceConfig(
     return {
       code: 'INVALID_ROUTE_PREFIX',
       message: `${serviceType === 'worker' ? 'Worker' : 'Cron'} service "${name}" cannot have "routePrefix". Only web services should specify "routePrefix".`,
+      serviceName: name,
+    };
+  }
+  if ((serviceType === 'worker' || serviceType === 'cron') && hasSubdomain) {
+    return {
+      code: 'INVALID_HOST_ROUTING_CONFIG',
+      message: `${serviceType === 'worker' ? 'Worker' : 'Cron'} service "${name}" cannot have "subdomain". Only web services should specify subdomain routing.`,
       serviceName: name,
     };
   }
@@ -442,12 +462,24 @@ export async function resolveConfiguredService(
     builderSrc = resolvedEntrypointFile!;
   }
 
-  // routePrefix is required for web services; normalize to always start with /
+  const normalizedSubdomain =
+    type === 'web' && typeof config.subdomain === 'string'
+      ? config.subdomain.toLowerCase()
+      : undefined;
+  const defaultRoutePrefix =
+    type === 'web' && normalizedSubdomain ? `/_/${name}` : undefined;
+  // routePrefix defaults to /_/serviceName for subdomain-mounted web services.
   const routePrefix =
-    type === 'web' && config.routePrefix
-      ? config.routePrefix.startsWith('/')
-        ? config.routePrefix
-        : `/${config.routePrefix}`
+    type === 'web' && (config.routePrefix || defaultRoutePrefix)
+      ? (config.routePrefix || defaultRoutePrefix)!.startsWith('/')
+        ? (config.routePrefix || defaultRoutePrefix)!
+        : `/${config.routePrefix || defaultRoutePrefix}`
+      : undefined;
+  const resolvedRoutePrefixSource =
+    type === 'web' && typeof routePrefix === 'string'
+      ? config.routePrefix
+        ? routePrefixSource
+        : 'generated'
       : undefined;
 
   // Ensure builder.src is fully qualified for non-root workspaces.
@@ -496,10 +528,8 @@ export async function resolveConfiguredService(
     workspace,
     entrypoint: resolvedEntrypointFile,
     routePrefix,
-    routePrefixSource:
-      type === 'web' && typeof routePrefix === 'string'
-        ? routePrefixSource
-        : undefined,
+    routePrefixSource: resolvedRoutePrefixSource,
+    subdomain: normalizedSubdomain,
     framework: config.framework,
     builder: {
       src: builderSrc,
