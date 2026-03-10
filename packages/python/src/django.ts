@@ -29,12 +29,12 @@ export async function getDjangoSettings(
     });
     const parsed = JSON.parse(stdout) as {
       settings_module: string;
-      djangoSettings: Record<string, unknown>;
+      django_settings: Record<string, unknown>;
     } | null;
     if (!parsed) return null;
     return {
       settingsModule: parsed.settings_module,
-      settings: parsed.settings,
+      djangoSettings: parsed.django_settings,
     };
   } catch (err) {
     debug(`Django hook: failed to discover settings from manage.py: ${err}`);

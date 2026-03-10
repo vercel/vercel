@@ -60,12 +60,18 @@ export const version = 3;
 interface FrameworkHookContext {
   pythonEnv: NodeJS.ProcessEnv;
   projectDir: string;
+  workPath: string;
+  venvPath: string;
   entrypoint: string;
   detected: DetectedPythonEntrypoint | undefined;
 }
 
 interface FrameworkHookResult {
   entrypoint?: string;
+}
+
+interface DjangoFrameworkHookResult extends FrameworkHookResult {
+  djangoStatic: DjangoCollectStaticResult | null;
 }
 
 type FrameworkHook = (
@@ -83,7 +89,13 @@ export async function runFrameworkHook(
 }
 
 const frameworkHooks: Partial<Record<PythonFramework, FrameworkHook>> = {
-  django: async ({ pythonEnv, projectDir, detected }) => {
+  django: async ({
+    pythonEnv,
+    projectDir,
+    workPath,
+    venvPath,
+    detected,
+  }): Promise<DjangoFrameworkHookResult | void> => {
     if (detected?.baseDir === undefined) {
       debug('Django hook: no manage.py detected, skipping');
       return;
@@ -91,23 +103,34 @@ const frameworkHooks: Partial<Record<PythonFramework, FrameworkHook>> = {
     const settingsResult = await getDjangoSettings(projectDir, pythonEnv);
     debug(`Django settings: ${JSON.stringify(settingsResult)}`);
     if (!settingsResult) return;
-    const { settings } = settingsResult;
+    const { djangoSettings, settingsModule } = settingsResult;
 
+    let entrypoint: string | undefined;
     const baseDir = detected?.baseDir ?? '';
-    const asgiApp = settings['ASGI_APPLICATION'];
+    const asgiApp = djangoSettings['ASGI_APPLICATION'];
     if (typeof asgiApp === 'string') {
       const rel = `${asgiApp.split('.').slice(0, -1).join('/')}.py`;
-      const entrypoint = baseDir ? `${baseDir}/${rel}` : rel;
+      entrypoint = baseDir ? `${baseDir}/${rel}` : rel;
       debug(`Django hook: ASGI entrypoint: ${entrypoint}`);
-      return { entrypoint };
+    } else {
+      const wsgiApp = djangoSettings['WSGI_APPLICATION'];
+      if (typeof wsgiApp === 'string') {
+        const rel = `${wsgiApp.split('.').slice(0, -1).join('/')}.py`;
+        entrypoint = baseDir ? `${baseDir}/${rel}` : rel;
+        debug(`Django hook: WSGI entrypoint: ${entrypoint}`);
+      }
     }
-    const wsgiApp = settings['WSGI_APPLICATION'];
-    if (typeof wsgiApp === 'string') {
-      const rel = `${wsgiApp.split('.').slice(0, -1).join('/')}.py`;
-      const entrypoint = baseDir ? `${baseDir}/${rel}` : rel;
-      debug(`Django hook: WSGI entrypoint: ${entrypoint}`);
-      return { entrypoint };
-    }
+
+    const outputStaticDir = join(workPath, '.vercel', 'output', 'static');
+    const djangoStatic = await runDjangoCollectStatic(
+      venvPath,
+      workPath,
+      pythonEnv,
+      outputStaticDir,
+      settingsModule,
+      djangoSettings
+    );
+    return { entrypoint, djangoStatic };
   },
 };
 
@@ -438,10 +461,12 @@ export const build: BuildV3 = async ({
       });
   }
 
-  // Run per-framework post-build hooks (e.g. collectstatic for Django).
+  // Run per-framework hooks (e.g. entrypoint detection and collectstatic for Django).
   const hookResult = await runFrameworkHook(framework, {
     pythonEnv,
     projectDir: join(workPath, entryDirectory),
+    workPath,
+    venvPath,
     entrypoint,
     detected,
   });
@@ -454,25 +479,8 @@ export const build: BuildV3 = async ({
     throw entrypointNotFound;
   }
 
-  // For Django projects, run collectstatic and wire up CDN static file serving.
-  let djangoStatic: DjangoCollectStaticResult | null = null;
-  if (framework === 'django') {
-    const outputStaticDir = join(workPath, '.vercel', 'output', 'static');
-    const settingsResult = await getDjangoSettings(workPath, pythonEnv);
-    if (!settingsResult) {
-      debug('No Django settings available, skipping collectstatic');
-    } else {
-      const { settingsModule, djangoSettings } = settingsResult;
-      djangoStatic = await runDjangoCollectStatic(
-        venvPath,
-        workPath,
-        pythonEnv,
-        outputStaticDir,
-        settingsModule,
-        djangoSettings
-      );
-    }
-  }
+  const djangoStatic: DjangoCollectStaticResult | null =
+    (hookResult as DjangoFrameworkHookResult | undefined)?.djangoStatic ?? null;
 
   // Ensure correct version of vercel-runtime is installed.
   //
