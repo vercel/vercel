@@ -105,23 +105,30 @@ describe('resolve-variant', () => {
       });
     });
 
-    describe('resolution by label', () => {
-      it('resolves variant by label (case-insensitive)', () => {
+    describe('label handling', () => {
+      it('does not resolve variant by label', () => {
         const result = resolveVariant('Enabled', booleanVariants);
-        expect(result.error).toBeNull();
-        expect(result.variant?.id).toBe('variant_abc123');
+        expect(result.variant).toBeNull();
+        expect(result.error).toContain('Variant "Enabled" not found');
+        expect(result.error).toContain(
+          'You can specify a variant by its ID or value.'
+        );
       });
 
-      it('resolves variant by label with different case', () => {
+      it('does not resolve variant by label with different case', () => {
         const result = resolveVariant('enabled', booleanVariants);
-        expect(result.error).toBeNull();
-        expect(result.variant?.id).toBe('variant_abc123');
+        expect(result.variant).toBeNull();
+        expect(result.error).toContain('Variant "enabled" not found');
+        expect(result.error).toContain('Enabled');
+        expect(result.error).toContain('Disabled');
       });
 
-      it('resolves "Control Group" label', () => {
+      it('shows labels in available variants when a label-like selector is used', () => {
         const result = resolveVariant('Control Group', stringVariants);
-        expect(result.error).toBeNull();
-        expect(result.variant?.id).toBe('variant_str1');
+        expect(result.variant).toBeNull();
+        expect(result.error).toContain('Variant "Control Group" not found');
+        expect(result.error).toContain('Control Group');
+        expect(result.error).toContain('Variant A');
       });
     });
 
@@ -138,7 +145,7 @@ describe('resolve-variant', () => {
       it('includes helpful message in error', () => {
         const result = resolveVariant('bad-value', stringVariants);
         expect(result.error).toContain(
-          'You can specify a variant by its value'
+          'You can specify a variant by its ID or value.'
         );
       });
 
