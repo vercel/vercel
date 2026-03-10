@@ -1,4 +1,4 @@
-module serverful-chi-go126
+module chi-server-go126
 
 go 1.26
 

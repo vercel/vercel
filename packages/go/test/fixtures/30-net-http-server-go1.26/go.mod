@@ -1,3 +1,3 @@
-module serverful-net-http-go126
+module net-http-server-go126
 
 go 1.26
