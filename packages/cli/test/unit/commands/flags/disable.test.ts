@@ -328,7 +328,6 @@ describe('flags disable', () => {
     expect(output).toContain(chalk.dim('Off'));
     expect(testFlags[0].environments.production).toMatchObject({
       pausedOutcome: { type: 'variant', variantId: 'abc123xyz' },
-      fallthrough: { type: 'variant', variantId: 'abc123xyz' },
     });
   });
 
@@ -355,7 +354,6 @@ describe('flags disable', () => {
     expect(output).toContain(chalk.dim('Disabled'));
     expect(testFlags[0].environments.production).toMatchObject({
       pausedOutcome: { type: 'variant', variantId: 'random_id_1' },
-      fallthrough: { type: 'variant', variantId: 'random_id_1' },
     });
   });
 
@@ -382,7 +380,6 @@ describe('flags disable', () => {
     expect(output).toContain(chalk.dim('Disabled'));
     expect(testFlags[0].environments.production).toMatchObject({
       pausedOutcome: { type: 'variant', variantId: 'uuid_style_id_1' },
-      fallthrough: { type: 'variant', variantId: 'uuid_style_id_1' },
     });
   });
 
@@ -593,7 +590,89 @@ describe('flags disable', () => {
     expect(testFlags[0].environments.production).toMatchObject({
       active: false,
       pausedOutcome: { type: 'variant', variantId: 'off' },
-      fallthrough: { type: 'variant', variantId: 'off' },
+      fallthrough: { type: 'variant', variantId: 'on' },
+    });
+  });
+
+  it('preserves custom rules, targets, and fallthrough when disabling a flag', async () => {
+    (client.stdin as any).isTTY = false;
+    testFlags[0].environments.production = {
+      active: true,
+      pausedOutcome: { type: 'variant', variantId: 'off' },
+      fallthrough: {
+        type: 'split',
+        base: {
+          type: 'entity',
+          kind: 'user',
+          attribute: 'userId',
+        },
+        weights: {
+          off: 10,
+          on: 90,
+        },
+        defaultVariantId: 'off',
+      },
+      rules: [
+        {
+          id: 'rule_custom',
+          conditions: [
+            {
+              lhs: { type: 'entity', kind: 'user', attribute: 'plan' },
+              cmp: 'eq',
+              rhs: 'pro',
+            },
+          ],
+          outcome: { type: 'variant', variantId: 'on' },
+        },
+      ],
+      targets: {
+        on: {
+          user: {
+            userId: [{ value: 'user_456' }],
+          },
+        },
+      },
+    };
+    client.setArgv(
+      'flags',
+      'disable',
+      testFlags[0].slug,
+      '--environment',
+      'production'
+    );
+
+    const exitCode = await flags(client);
+
+    expect(exitCode).toEqual(0);
+    expect(testFlags[0].environments.production).toMatchObject({
+      active: false,
+      pausedOutcome: { type: 'variant', variantId: 'off' },
+      fallthrough: {
+        type: 'split',
+        base: {
+          type: 'entity',
+          kind: 'user',
+          attribute: 'userId',
+        },
+        weights: {
+          off: 10,
+          on: 90,
+        },
+        defaultVariantId: 'off',
+      },
+      rules: [
+        {
+          id: 'rule_custom',
+          outcome: { type: 'variant', variantId: 'on' },
+        },
+      ],
+      targets: {
+        on: {
+          user: {
+            userId: [{ value: 'user_456' }],
+          },
+        },
+      },
     });
   });
 

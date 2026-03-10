@@ -217,7 +217,7 @@ describe('flags enable', () => {
     expect(testFlags[0].environments.production).toMatchObject({
       active: false,
       pausedOutcome: { type: 'variant', variantId: 'on' },
-      fallthrough: { type: 'variant', variantId: 'on' },
+      fallthrough: { type: 'variant', variantId: 'off' },
     });
   });
 
@@ -266,6 +266,88 @@ describe('flags enable', () => {
       active: false,
       pausedOutcome: { type: 'variant', variantId: 'on' },
       fallthrough: { type: 'variant', variantId: 'on' },
+    });
+  });
+
+  it('preserves custom rules, targets, and fallthrough when enabling a flag', async () => {
+    (client.stdin as any).isTTY = false;
+    testFlags[0].environments.production = {
+      active: true,
+      pausedOutcome: { type: 'variant', variantId: 'off' },
+      fallthrough: {
+        type: 'split',
+        base: {
+          type: 'entity',
+          kind: 'user',
+          attribute: 'userId',
+        },
+        weights: {
+          off: 25,
+          on: 75,
+        },
+        defaultVariantId: 'off',
+      },
+      rules: [
+        {
+          id: 'rule_custom',
+          conditions: [
+            {
+              lhs: { type: 'entity', kind: 'user', attribute: 'plan' },
+              cmp: 'eq',
+              rhs: 'enterprise',
+            },
+          ],
+          outcome: { type: 'variant', variantId: 'on' },
+        },
+      ],
+      targets: {
+        on: {
+          user: {
+            userId: [{ value: 'user_123' }],
+          },
+        },
+      },
+    };
+    client.setArgv(
+      'flags',
+      'enable',
+      testFlags[0].slug,
+      '--environment',
+      'production'
+    );
+
+    const exitCode = await flags(client);
+
+    expect(exitCode).toEqual(0);
+    expect(testFlags[0].environments.production).toMatchObject({
+      active: false,
+      pausedOutcome: { type: 'variant', variantId: 'on' },
+      fallthrough: {
+        type: 'split',
+        base: {
+          type: 'entity',
+          kind: 'user',
+          attribute: 'userId',
+        },
+        weights: {
+          off: 25,
+          on: 75,
+        },
+        defaultVariantId: 'off',
+      },
+      rules: [
+        {
+          id: 'rule_custom',
+          outcome: { type: 'variant', variantId: 'on' },
+        },
+      ],
+      targets: {
+        on: {
+          user: {
+            userId: [{ value: 'user_123' }],
+          },
+        },
+      },
     });
   });
 

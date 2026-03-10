@@ -16,11 +16,7 @@ import {
 import output from '../../output-manager';
 import { FlagsEnableTelemetryClient } from '../../util/telemetry/commands/flags/enable';
 import { enableSubcommand } from './command';
-import type {
-  Flag,
-  FlagEnvironmentConfig,
-  FlagVariant,
-} from '../../util/flags/types';
+import type { Flag, FlagVariant } from '../../util/flags/types';
 
 const VALID_ENVIRONMENTS = ['production', 'preview', 'development'];
 
@@ -165,17 +161,10 @@ export default async function enable(
       return 0;
     }
 
-    const updatedEnvConfig: FlagEnvironmentConfig = {
-      ...envConfig,
-      active: false,
-      pausedOutcome: {
-        type: 'variant',
-        variantId: onVariant.id,
-      },
-      fallthrough: {
-        type: 'variant',
-        variantId: onVariant.id,
-      },
+    envConfig.active = false;
+    envConfig.pausedOutcome = {
+      type: 'variant',
+      variantId: onVariant.id,
     };
     const updateMessage = await resolveOptionalInput(
       client,
@@ -187,7 +176,7 @@ export default async function enable(
     output.spinner(`Enabling flag in ${environment}...`);
     await updateFlag(client, project.id, flagArg, {
       environments: {
-        [environment]: updatedEnvConfig,
+        [environment]: envConfig,
       },
       message: updateMessage,
     });

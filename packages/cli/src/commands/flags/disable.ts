@@ -178,17 +178,10 @@ export default async function disable(
       return 0;
     }
 
-    const updatedEnvConfig = {
-      ...envConfig,
-      active: false,
-      fallthrough: {
-        type: 'variant' as const,
-        variantId: selectedVariantId,
-      },
-      pausedOutcome: {
-        type: 'variant' as const,
-        variantId: selectedVariantId,
-      },
+    envConfig.active = false;
+    envConfig.pausedOutcome = {
+      type: 'variant' as const,
+      variantId: selectedVariantId,
     };
     const updateMessage = await resolveOptionalInput(
       client,
@@ -200,7 +193,7 @@ export default async function disable(
     output.spinner(`Disabling flag in ${environment}...`);
     await updateFlag(client, project.id, flagArg, {
       environments: {
-        [environment]: updatedEnvConfig,
+        [environment]: envConfig,
       },
       message: updateMessage,
     });
