@@ -26,6 +26,9 @@ import { getLinkedProject } from '../../util/projects/link';
 import getSubcommand from '../../util/get-subcommand';
 import { getCommandAliases } from '..';
 import getInvalidSubcommand from '../../util/get-invalid-subcommand';
+import { outputAgentError } from '../../util/agent-output';
+import { packageName } from '../../util/pkg-name';
+import { isAPIError } from '../../util/errors-ts';
 
 const COMMAND_CONFIG = {
   configure: getCommandAliases(configureSubcommand),
@@ -35,6 +38,46 @@ const COMMAND_CONFIG = {
   complete: getCommandAliases(completeSubcommand),
   fetch: getCommandAliases(fetchSubcommand),
 };
+
+function buildDeploymentSuggestionCommands(
+  client: Client,
+  subcmd: 'start' | 'abort' | 'approve' | 'complete'
+): { listCommand: string; subcommandCommand: string } {
+  const args = client.argv.slice(2);
+  const preservedParts: string[] = [];
+  let hasNonInteractive = false;
+  // args[0] = 'rolling-release', args[1] = subcmd
+  for (let i = 2; i < args.length; i++) {
+    const arg = args[i];
+    if (arg === '--non-interactive') {
+      hasNonInteractive = true;
+      continue;
+    }
+    if (arg.startsWith('cwd=')) {
+      const cwdPath = arg.slice(4);
+      if (cwdPath) {
+        preservedParts.push('--cwd', cwdPath);
+      }
+      continue;
+    }
+    preservedParts.push(arg);
+  }
+  const preservedSuffix = preservedParts.join(' ');
+  const listCommand = preservedSuffix
+    ? `${packageName} ls ${preservedSuffix}`
+    : `${packageName} ls`;
+  const base = preservedSuffix
+    ? `${packageName} rolling-release ${subcmd} ${preservedSuffix}`
+    : `${packageName} rolling-release ${subcmd}`;
+  const defaultSuffix =
+    subcmd === 'approve'
+      ? '--dpl dpl_123 --currentStageIndex=0'
+      : '--dpl dpl_123';
+  const subcommandCommand = hasNonInteractive
+    ? `${base} ${defaultSuffix} --non-interactive`
+    : `${base} ${defaultSuffix}`;
+  return { listCommand, subcommandCommand };
+}
 
 export default async function rollingRelease(client: Client): Promise<number> {
   const telemetry = new RollingReleaseTelemetryClient({
@@ -74,6 +117,19 @@ export default async function rollingRelease(client: Client): Promise<number> {
       return link.exitCode;
     }
     if (link.status === 'not_linked') {
+      if (client.nonInteractive) {
+        outputAgentError(
+          client,
+          {
+            status: 'error',
+            reason: 'not_linked',
+            message:
+              'No project found for rolling releases. Link your project first.',
+            next: [{ command: `${packageName} link` }],
+          },
+          1
+        );
+      }
       output.error(
         'No project found. Please run `vc link` to link your project first.'
       );
@@ -140,16 +196,59 @@ export default async function rollingRelease(client: Client): Promise<number> {
         );
         const dpl = subcommandFlags.flags['--dpl'];
         if (dpl === undefined) {
+          if (client.nonInteractive) {
+            const { listCommand, subcommandCommand } =
+              buildDeploymentSuggestionCommands(client, 'start');
+
+            outputAgentError(
+              client,
+              {
+                status: 'error',
+                reason: 'missing_flags',
+                message:
+                  'Starting a rolling release in non-interactive mode requires the --dpl flag.',
+                next: [
+                  { command: listCommand },
+                  { command: subcommandCommand },
+                ],
+              },
+              1
+            );
+          }
           output.error('starting a rolling release requires --dpl option.');
-          break;
+          return 1;
         }
-        await startRollingRelease({
-          client,
-          dpl,
-          projectId: project.id,
-          teamId: project.accountId,
-          yes: subcommandFlags.flags['--yes'] ?? false,
-        });
+        try {
+          await startRollingRelease({
+            client,
+            dpl,
+            projectId: project.id,
+            teamId: project.accountId,
+            yes: subcommandFlags.flags['--yes'] ?? false,
+          });
+        } catch (err: unknown) {
+          if (client.nonInteractive && isAPIError(err)) {
+            const { listCommand, subcommandCommand } =
+              buildDeploymentSuggestionCommands(client, 'start');
+            outputAgentError(
+              client,
+              {
+                status: 'error',
+                reason: 'api_error',
+                message:
+                  err.message ||
+                  'Starting the rolling release failed for this deployment.',
+                next: [
+                  { command: listCommand },
+                  { command: subcommandCommand },
+                ],
+              },
+              1
+            );
+            return 1;
+          }
+          throw err;
+        }
         break;
       }
       case 'approve': {
@@ -166,14 +265,67 @@ export default async function rollingRelease(client: Client): Promise<number> {
         const currentStageIndex = subcommandFlags.flags['--currentStageIndex'];
         const activeStageIndex = parseInt(currentStageIndex ?? '');
         if (!dpl) {
+          if (client.nonInteractive) {
+            const { listCommand, subcommandCommand } =
+              buildDeploymentSuggestionCommands(client, 'approve');
+            outputAgentError(
+              client,
+              {
+                status: 'error',
+                reason: 'missing_flags',
+                message:
+                  'Approving a rolling release in non-interactive mode requires --dpl and --currentStageIndex.',
+                next: [
+                  { command: listCommand },
+                  { command: subcommandCommand },
+                ],
+              },
+              1
+            );
+          }
           output.error('Missing required flag --dpl');
           return 1;
         }
         if (currentStageIndex === undefined) {
+          if (client.nonInteractive) {
+            const { listCommand, subcommandCommand } =
+              buildDeploymentSuggestionCommands(client, 'approve');
+            outputAgentError(
+              client,
+              {
+                status: 'error',
+                reason: 'missing_flags',
+                message:
+                  'Approving a rolling release in non-interactive mode requires --currentStageIndex.',
+                next: [
+                  { command: listCommand },
+                  { command: subcommandCommand },
+                ],
+              },
+              1
+            );
+          }
           output.error('Missing required flag --currentStageIndex');
           return 1;
         }
         if (isNaN(activeStageIndex)) {
+          if (client.nonInteractive) {
+            const { listCommand, subcommandCommand } =
+              buildDeploymentSuggestionCommands(client, 'approve');
+            outputAgentError(
+              client,
+              {
+                status: 'error',
+                reason: 'invalid_flag',
+                message: '--currentStageIndex must be a valid number.',
+                next: [
+                  { command: listCommand },
+                  { command: subcommandCommand },
+                ],
+              },
+              1
+            );
+          }
           output.error('--currentStageIndex must be a valid number.');
           return 1;
         }
@@ -198,15 +350,57 @@ export default async function rollingRelease(client: Client): Promise<number> {
         );
         const dpl = subcommandFlags.flags['--dpl'];
         if (!dpl) {
+          if (client.nonInteractive) {
+            const { listCommand, subcommandCommand } =
+              buildDeploymentSuggestionCommands(client, 'abort');
+            outputAgentError(
+              client,
+              {
+                status: 'error',
+                reason: 'missing_flags',
+                message:
+                  'Aborting a rolling release in non-interactive mode requires the --dpl flag.',
+                next: [
+                  { command: listCommand },
+                  { command: subcommandCommand },
+                ],
+              },
+              1
+            );
+          }
           output.error('Missing required flag --dpl');
           return 1;
         }
-        await abortRollingRelease({
-          client,
-          projectId: project.id,
-          teamId: org.id,
-          dpl,
-        });
+        try {
+          await abortRollingRelease({
+            client,
+            projectId: project.id,
+            teamId: org.id,
+            dpl,
+          });
+        } catch (err: unknown) {
+          if (client.nonInteractive && isAPIError(err)) {
+            const { listCommand, subcommandCommand } =
+              buildDeploymentSuggestionCommands(client, 'abort');
+            outputAgentError(
+              client,
+              {
+                status: 'error',
+                reason: 'api_error',
+                message:
+                  err.message ||
+                  'Aborting the rolling release failed for this deployment.',
+                next: [
+                  { command: listCommand },
+                  { command: subcommandCommand },
+                ],
+              },
+              1
+            );
+            return 1;
+          }
+          throw err;
+        }
         break;
       }
       case 'complete': {
@@ -221,6 +415,24 @@ export default async function rollingRelease(client: Client): Promise<number> {
         );
         const dpl = subcommandFlags.flags['--dpl'];
         if (!dpl) {
+          if (client.nonInteractive) {
+            const { listCommand, subcommandCommand } =
+              buildDeploymentSuggestionCommands(client, 'complete');
+            outputAgentError(
+              client,
+              {
+                status: 'error',
+                reason: 'missing_flags',
+                message:
+                  'Completing a rolling release in non-interactive mode requires the --dpl flag.',
+                next: [
+                  { command: listCommand },
+                  { command: subcommandCommand },
+                ],
+              },
+              1
+            );
+          }
           output.error('Missing required flag --dpl');
           return 1;
         }
@@ -258,6 +470,17 @@ export default async function rollingRelease(client: Client): Promise<number> {
 
     return 0;
   } catch (err: unknown) {
+    if (client.nonInteractive && isAPIError(err)) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'api_error',
+          message: err.message || 'Rolling release command failed.',
+        },
+        1
+      );
+    }
     printError(err);
     return 1;
   }
