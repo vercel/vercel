@@ -1,5 +1,6 @@
 import type Client from '../../util/client';
 import type { Command } from '../help';
+import type { MetadataSchema } from '../../util/integration/types';
 import output from '../../output-manager';
 import { fetchIntegration } from '../../util/integration/fetch-integration';
 import { formatProductHelp } from '../../util/integration/format-product-help';
@@ -7,6 +8,31 @@ import { formatBillingPlansHelp } from '../../util/integration/format-billing-pl
 import { formatDynamicExamples } from '../../util/integration/format-dynamic-examples';
 import { formatMetadataSchemaHelp } from '../../util/integration/format-schema-help';
 import { fetchBillingPlans } from '../../util/integration/fetch-billing-plans';
+
+/**
+ * Merges integration-level metadata schema (e.g. org name, region) with
+ * product-level metadata schema (e.g. platform) into a single schema.
+ * Installation-level fields appear first, followed by product-level fields.
+ */
+function mergeMetadataSchemas(
+  productSchema?: MetadataSchema,
+  integrationSchema?: MetadataSchema
+): MetadataSchema | undefined {
+  if (!productSchema && !integrationSchema) return undefined;
+  if (!integrationSchema) return productSchema;
+  if (!productSchema) return integrationSchema;
+  return {
+    type: 'object',
+    properties: {
+      ...integrationSchema.properties,
+      ...productSchema.properties,
+    },
+    required: [
+      ...(integrationSchema.required ?? []),
+      ...(productSchema.required ?? []),
+    ],
+  };
+}
 
 /**
  * Prints dynamic, integration-specific help for the `integration add` / `install` command.
@@ -40,16 +66,22 @@ export async function printAddDynamicHelp(
       output.print(formatProductHelp(integrationSlug, products, commandName));
     }
 
-    // Show metadata schema for ALL products
+    // Show metadata schema for ALL products (and integration-level schema)
     for (const product of products) {
-      if (product.metadataSchema) {
+      // Merge integration-level metadata (e.g. org name, region) with
+      // product-level metadata (e.g. platform) so all fields appear in --help
+      const mergedSchema = mergeMetadataSchemas(
+        product.metadataSchema,
+        integration.metadataSchema
+      );
+      if (mergedSchema) {
         // For single-product integrations, don't show product slug
         // For multi-product integrations, show product slug for slash syntax
         const metadataProductSlug =
           products.length > 1 ? product.slug : undefined;
         output.print(
           formatMetadataSchemaHelp(
-            product.metadataSchema,
+            mergedSchema,
             integrationSlug,
             metadataProductSlug
           )
