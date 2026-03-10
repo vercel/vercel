@@ -16,6 +16,7 @@ import type {
   AutoProvisionedResponse,
   AutoProvisionFallback,
   AutoProvisionResult,
+  MetadataSchema,
 } from '../../util/integration/types';
 import { buildSSOLink } from '../../util/integration/build-sso-link';
 import { resolveResourceName } from '../../util/integration/generate-resource-name';
@@ -199,16 +200,34 @@ export async function addAutoProvision(
     }
   }
 
-  // Validate metadata flags (if provided) BEFORE prompting for resource name
+  // Validate metadata flags (if provided) BEFORE prompting for resource name.
+  // For integrations with an installation-level metadataSchema (e.g. Sentry with
+  // name/region), we accept both product and installation keys via -m flags, then
+  // split them into separate fields for the API. This avoids key conflicts if a
+  // partner uses the same key name in both schemas.
+  const integrationSchemaProps = integration.metadataSchema?.properties ?? {};
+  const productSchemaProps = product.metadataSchema.properties;
+  const mergedParsingSchema: MetadataSchema = {
+    type: 'object',
+    properties: {
+      ...integrationSchemaProps,
+      ...productSchemaProps,
+    },
+    required: [
+      ...(integration.metadataSchema?.required ?? []),
+      ...(product.metadataSchema.required ?? []),
+    ],
+  };
   let metadata: Metadata;
+  let installationMetadata: Metadata = {};
   if (options.metadata?.length) {
-    // Parse metadata from CLI flags
+    // Parse metadata from CLI flags against merged schema (accepts all keys)
     output.debug(
       `Parsing metadata from flags: ${JSON.stringify(options.metadata)}`
     );
     const { metadata: parsed, errors } = parseMetadataFlags(
       options.metadata,
-      product.metadataSchema
+      mergedParsingSchema
     );
     if (errors.length) {
       for (const error of errors) {
@@ -220,14 +239,34 @@ export async function addAutoProvision(
       });
       return 1;
     }
-    if (!validateAndPrintRequiredMetadata(parsed, product.metadataSchema)) {
+    // Validate required fields against the merged schema (both product + installation required)
+    if (!validateAndPrintRequiredMetadata(parsed, mergedParsingSchema)) {
       telemetry.trackMarketplaceEvent('marketplace_install_flow_dropped', {
         ...baseProps,
         reason: 'metadata_validation_failed',
       });
       return 1;
     }
-    metadata = parsed;
+
+    // Split parsed metadata into product vs installation buckets.
+    // Keys in both schemas go to product metadata (the more common case).
+    const productMeta: Metadata = {};
+    const installMeta: Metadata = {};
+    for (const [key, value] of Object.entries(parsed)) {
+      if (value === undefined) continue;
+      const inProduct = key in productSchemaProps;
+      const inInstallation = key in integrationSchemaProps;
+      if (inProduct) {
+        productMeta[key] = value;
+      } else if (inInstallation) {
+        installMeta[key] = value;
+      } else {
+        // Key was accepted by merged schema but somehow not in either — include in product
+        productMeta[key] = value;
+      }
+    }
+    metadata = productMeta;
+    installationMetadata = installMeta;
   } else {
     // No --metadata flags: pass {} and let server fill defaults (API PR #58905)
     metadata = {};
@@ -273,7 +312,8 @@ export async function addAutoProvision(
       metadata,
       acceptedPolicies,
       options.billingPlanId,
-      browserInstallationId ?? options.installationId
+      browserInstallationId ?? options.installationId,
+      installationMetadata
     );
   } catch (error) {
     output.stopSpinner();

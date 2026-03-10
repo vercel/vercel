@@ -2517,4 +2517,90 @@ describe('integration add (auto-provision)', () => {
       expect(client.stdout.getFullOutput()).toBe('');
     });
   });
+
+  describe('installation-level metadata (Sentry-like)', () => {
+    let requestBodies: ReturnType<typeof useAutoProvision>['requestBodies'];
+
+    beforeEach(() => {
+      ({ requestBodies } = useAutoProvision({ responseKey: 'provisioned' }));
+    });
+
+    it('should split -m flags into product and installation metadata', async () => {
+      client.setArgv(
+        'integration',
+        'add',
+        'acme-install-meta',
+        '-m',
+        'platform=nextjs',
+        '-m',
+        'name=my-org',
+        '-m',
+        'install-region=us'
+      );
+      const exitCode = await integrationCommand(client);
+      expect(exitCode).toEqual(0);
+
+      // Verify the API request separates metadata correctly
+      expect(requestBodies).toHaveLength(1);
+      const body = requestBodies[0] as Record<string, unknown>;
+      // Product metadata: only platform
+      expect(body.metadata).toEqual({ platform: 'nextjs' });
+      // Installation metadata: name + install-region
+      expect(body.installationMetadata).toEqual({
+        name: 'my-org',
+        'install-region': 'us',
+      });
+    });
+
+    it('should omit installationMetadata from request when no installation keys provided', async () => {
+      client.setArgv(
+        'integration',
+        'add',
+        'acme-install-meta',
+        '-m',
+        'platform=nextjs',
+        '-m',
+        'name=my-org',
+        '-m',
+        'install-region=us'
+      );
+      const exitCode = await integrationCommand(client);
+      expect(exitCode).toEqual(0);
+
+      // When installationMetadata is non-empty, it should be included
+      const body = requestBodies[0] as Record<string, unknown>;
+      expect(body).toHaveProperty('installationMetadata');
+    });
+
+    it('should validate installation-level required fields', async () => {
+      // Only provide product metadata, omit required installation fields (name, install-region)
+      client.setArgv(
+        'integration',
+        'add',
+        'acme-install-meta',
+        '-m',
+        'platform=nextjs'
+      );
+      const exitCodePromise = integrationCommand(client);
+
+      // Should fail validation because name and install-region are required
+      await expect(client.stderr).toOutput('Required metadata missing');
+      expect(await exitCodePromise).toEqual(1);
+
+      // No API request should have been made
+      expect(requestBodies).toHaveLength(0);
+    });
+
+    it('should not send installationMetadata when integration has no metadataSchema', async () => {
+      // Use regular acme integration (no integration-level metadataSchema)
+      client.setArgv('integration', 'add', 'acme', '-m', 'region=us-east-1');
+      const exitCode = await integrationCommand(client);
+      expect(exitCode).toEqual(0);
+
+      // All metadata goes to product, no installationMetadata field
+      const body = requestBodies[0] as Record<string, unknown>;
+      expect(body.metadata).toEqual({ region: 'us-east-1' });
+      expect(body).not.toHaveProperty('installationMetadata');
+    });
+  });
 });
