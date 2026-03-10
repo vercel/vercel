@@ -454,8 +454,6 @@ export const build: BuildV3 = async ({
   }
 
   // For Django projects, run collectstatic and wire up CDN static file serving.
-  // Write directly to .vercel/output/static/ — @vercel/static only scans files
-  // before builders run, so public/ wouldn't be picked up if created here.
   let djangoStatic: DjangoCollectStaticResult | null = null;
   if (framework === 'django') {
     const outputStaticDir = join(workPath, '.vercel', 'output', 'static');
