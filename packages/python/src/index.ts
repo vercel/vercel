@@ -88,9 +88,10 @@ const frameworkHooks: Partial<Record<PythonFramework, FrameworkHook>> = {
       debug('Django hook: no manage.py detected, skipping');
       return;
     }
-    const settings = await getDjangoSettings(projectDir, pythonEnv);
-    debug(`Django settings: ${JSON.stringify(settings)}`);
-    if (!settings) return;
+    const settingsResult = await getDjangoSettings(projectDir, pythonEnv);
+    debug(`Django settings: ${JSON.stringify(settingsResult)}`);
+    if (!settingsResult) return;
+    const { settings } = settingsResult;
 
     const baseDir = detected?.baseDir ?? '';
     const asgiApp = settings['ASGI_APPLICATION'];
@@ -457,14 +458,20 @@ export const build: BuildV3 = async ({
   let djangoStatic: DjangoCollectStaticResult | null = null;
   if (framework === 'django') {
     const outputStaticDir = join(workPath, '.vercel', 'output', 'static');
-    const djangoSettings = await getDjangoSettings(workPath, pythonEnv);
-    djangoStatic = await runDjangoCollectStatic(
-      venvPath,
-      workPath,
-      pythonEnv,
-      outputStaticDir,
-      djangoSettings
-    );
+    const settingsResult = await getDjangoSettings(workPath, pythonEnv);
+    if (!settingsResult) {
+      debug('No Django settings available, skipping collectstatic');
+    } else {
+      const { settingsModule, djangoSettings } = settingsResult;
+      djangoStatic = await runDjangoCollectStatic(
+        venvPath,
+        workPath,
+        pythonEnv,
+        outputStaticDir,
+        settingsModule,
+        djangoSettings
+      );
+    }
   }
 
   // Ensure correct version of vercel-runtime is installed.

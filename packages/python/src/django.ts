@@ -7,6 +7,11 @@ import { getVenvPythonBin } from './utils';
 const scriptPath = join(__dirname, '..', 'templates', 'vc_django_settings.py');
 const script = fs.readFileSync(scriptPath, 'utf-8');
 
+export interface DjangoSettingsResult {
+  settingsModule: string;
+  djangoSettings: Record<string, unknown>;
+}
+
 /**
  * Dynamically discover Django settings by running manage.py with a patched
  * `execute_from_command_line`. This lets manage.py set DJANGO_SETTINGS_MODULE
@@ -16,13 +21,21 @@ const script = fs.readFileSync(scriptPath, 'utf-8');
 export async function getDjangoSettings(
   projectDir: string,
   env: NodeJS.ProcessEnv
-): Promise<Record<string, unknown> | null> {
+): Promise<DjangoSettingsResult | null> {
   try {
     const { stdout } = await execa('python', ['-c', script], {
       env,
       cwd: projectDir,
     });
-    return JSON.parse(stdout);
+    const parsed = JSON.parse(stdout) as {
+      settings_module: string;
+      djangoSettings: Record<string, unknown>;
+    } | null;
+    if (!parsed) return null;
+    return {
+      settingsModule: parsed.settings_module,
+      settings: parsed.settings,
+    };
   } catch (err) {
     debug(`Django hook: failed to discover settings from manage.py: ${err}`);
     return null;
@@ -62,15 +75,10 @@ export async function runDjangoCollectStatic(
   workPath: string,
   env: NodeJS.ProcessEnv,
   outputStaticDir: string,
-  djangoSettings: Record<string, unknown> | null
+  settingsModule: string,
+  djangoSettings: Record<string, unknown>
 ): Promise<DjangoCollectStaticResult | null> {
-  if (!djangoSettings) {
-    debug('No Django settings available, skipping collectstatic');
-    return null;
-  }
-
   const pythonPath = getVenvPythonBin(venvPath);
-  const settingsModule = djangoSettings['__DJANGO_SETTINGS_MODULE'] as string;
 
   // Resolve storage backend
   // First check STORAGES (Django 4.2+) then the legacy STATICFILES_STORAGE setting.
