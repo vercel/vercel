@@ -12,10 +12,14 @@ describe('determineAgent', () => {
     vi.stubEnv('CURSOR_AGENT', '');
     vi.stubEnv('GEMINI_CLI', '');
     vi.stubEnv('CODEX_SANDBOX', '');
+    vi.stubEnv('CODEX_CI', '');
+    vi.stubEnv('CODEX_THREAD_ID', '');
+    vi.stubEnv('ANTIGRAVITY_AGENT', '');
     vi.stubEnv('AUGMENT_AGENT', '');
     vi.stubEnv('OPENCODE_CLIENT', '');
     vi.stubEnv('CLAUDECODE', '');
     vi.stubEnv('CLAUDE_CODE', '');
+    vi.stubEnv('CLAUDE_CODE_IS_COWORK', '');
     vi.stubEnv('REPL_ID', '');
     vi.stubEnv('COPILOT_MODEL', '');
     vi.stubEnv('COPILOT_ALLOW_ALL', '');
@@ -192,6 +196,80 @@ describe('determineAgent', () => {
         });
       });
     });
+
+    describe('CODEX_CI set', () => {
+      beforeEach(() => {
+        vi.stubEnv('CODEX_CI', '1');
+      });
+
+      it('detects codex', async () => {
+        const result = await determineAgent();
+        expect(result).toEqual({
+          isAgent: true,
+          agent: { name: KNOWN_AGENTS.CODEX },
+        });
+      });
+    });
+
+    describe('CODEX_THREAD_ID set', () => {
+      beforeEach(() => {
+        vi.stubEnv('CODEX_THREAD_ID', 'thread-123');
+      });
+
+      it('detects codex', async () => {
+        const result = await determineAgent();
+        expect(result).toEqual({
+          isAgent: true,
+          agent: { name: KNOWN_AGENTS.CODEX },
+        });
+      });
+    });
+  });
+
+  describe('antigravity detection', () => {
+    describe('ANTIGRAVITY_AGENT not set', () => {
+      it('returns no agent', async () => {
+        const result = await determineAgent();
+        expect(result).toEqual({ isAgent: false });
+      });
+    });
+
+    describe('ANTIGRAVITY_AGENT set', () => {
+      beforeEach(() => {
+        vi.stubEnv('ANTIGRAVITY_AGENT', '1');
+      });
+
+      it('detects antigravity', async () => {
+        const result = await determineAgent();
+        expect(result).toEqual({
+          isAgent: true,
+          agent: { name: KNOWN_AGENTS.ANTIGRAVITY },
+        });
+      });
+    });
+  });
+
+  describe('antigravity detection', () => {
+    describe('ANTIGRAVITY_AGENT not set', () => {
+      it('returns no agent', async () => {
+        const result = await determineAgent();
+        expect(result).toEqual({ isAgent: false });
+      });
+    });
+
+    describe('ANTIGRAVITY_AGENT set', () => {
+      beforeEach(() => {
+        vi.stubEnv('ANTIGRAVITY_AGENT', '1');
+      });
+
+      it('detects antigravity', async () => {
+        const result = await determineAgent();
+        expect(result).toEqual({
+          isAgent: true,
+          agent: { name: KNOWN_AGENTS.ANTIGRAVITY },
+        });
+      });
+    });
   });
 
   describe('augment cli detection', () => {
@@ -277,6 +355,63 @@ describe('determineAgent', () => {
     });
   });
 
+  describe('cowork detection', () => {
+    describe('CLAUDE_CODE_IS_COWORK not set', () => {
+      beforeEach(() => {
+        vi.stubEnv('CLAUDECODE', '1');
+      });
+
+      it('detects claude', async () => {
+        const result = await determineAgent();
+        expect(result).toEqual({
+          isAgent: true,
+          agent: { name: KNOWN_AGENTS.CLAUDE },
+        });
+      });
+    });
+
+    describe('CLAUDE_CODE_IS_COWORK set with CLAUDECODE', () => {
+      beforeEach(() => {
+        vi.stubEnv('CLAUDECODE', '1');
+        vi.stubEnv('CLAUDE_CODE_IS_COWORK', '1');
+      });
+
+      it('detects cowork', async () => {
+        const result = await determineAgent();
+        expect(result).toEqual({
+          isAgent: true,
+          agent: { name: KNOWN_AGENTS.COWORK },
+        });
+      });
+    });
+
+    describe('CLAUDE_CODE_IS_COWORK set with CLAUDE_CODE', () => {
+      beforeEach(() => {
+        vi.stubEnv('CLAUDE_CODE', '1');
+        vi.stubEnv('CLAUDE_CODE_IS_COWORK', '1');
+      });
+
+      it('detects cowork', async () => {
+        const result = await determineAgent();
+        expect(result).toEqual({
+          isAgent: true,
+          agent: { name: KNOWN_AGENTS.COWORK },
+        });
+      });
+    });
+
+    describe('CLAUDE_CODE_IS_COWORK set without CLAUDECODE or CLAUDE_CODE', () => {
+      beforeEach(() => {
+        vi.stubEnv('CLAUDE_CODE_IS_COWORK', '1');
+      });
+
+      it('returns no agent', async () => {
+        const result = await determineAgent();
+        expect(result).toEqual({ isAgent: false });
+      });
+    });
+  });
+
   describe('devin detection', () => {
     describe('/opt/.devin does not exist', () => {
       it('returns no agent', async () => {
@@ -334,6 +469,7 @@ describe('determineAgent', () => {
       vi.stubEnv('CURSOR_AGENT', '1');
       vi.stubEnv('GEMINI_CLI', '1');
       vi.stubEnv('CODEX_SANDBOX', 'seatbelt');
+      vi.stubEnv('ANTIGRAVITY_AGENT', '1');
       vi.stubEnv('AUGMENT_AGENT', '1');
       vi.stubEnv('OPENCODE_CLIENT', 'opencode');
       vi.stubEnv('CLAUDE_CODE', '1');
@@ -359,11 +495,14 @@ describe('determineAgent', () => {
       vi.stubEnv('CURSOR_AGENT', '1');
       vi.stubEnv('GEMINI_CLI', '1');
       vi.stubEnv('CODEX_SANDBOX', 'seatbelt');
+      vi.stubEnv('ANTIGRAVITY_AGENT', '1');
       vi.stubEnv('AUGMENT_AGENT', '1');
       vi.stubEnv('OPENCODE_CLIENT', 'opencode');
       vi.stubEnv('CLAUDE_CODE', '1');
       vi.stubEnv('REPL_ID', '1');
       vi.stubEnv('COPILOT_MODEL', 'gpt-5');
+      vi.stubEnv('COPILOT_ALLOW_ALL', 'true');
+      vi.stubEnv('COPILOT_GITHUB_TOKEN', 'ghp_xxx');
       mockFs({
         '/opt/.devin': mockFs.directory({
           mode: 0o755,
@@ -381,11 +520,14 @@ describe('determineAgent', () => {
       vi.stubEnv('CURSOR_AGENT', '1');
       vi.stubEnv('GEMINI_CLI', '1');
       vi.stubEnv('CODEX_SANDBOX', 'seatbelt');
+      vi.stubEnv('ANTIGRAVITY_AGENT', '1');
       vi.stubEnv('AUGMENT_AGENT', '1');
       vi.stubEnv('OPENCODE_CLIENT', 'opencode');
       vi.stubEnv('CLAUDE_CODE', '1');
       vi.stubEnv('REPL_ID', '1');
       vi.stubEnv('COPILOT_MODEL', 'gpt-5');
+      vi.stubEnv('COPILOT_ALLOW_ALL', 'true');
+      vi.stubEnv('COPILOT_GITHUB_TOKEN', 'ghp_xxx');
       mockFs({
         '/opt/.devin': mockFs.directory({
           mode: 0o755,

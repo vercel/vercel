@@ -612,15 +612,7 @@ export default class DevServer {
         relative(this.cwd, f)
       );
 
-      let {
-        builders,
-        warnings,
-        errors,
-        defaultRoutes,
-        redirectRoutes,
-        rewriteRoutes,
-        errorRoutes,
-      } = await detectBuilders(files, pkg, {
+      const detectedBuilders = await detectBuilders(files, pkg, {
         tag: 'latest',
         functions: vercelConfig.functions,
         projectSettings: projectSettings || this.projectSettings,
@@ -629,6 +621,20 @@ export default class DevServer {
         trailingSlash,
         workPath: this.cwd,
       });
+      let {
+        builders,
+        warnings,
+        errors,
+        defaultRoutes,
+        redirectRoutes,
+        rewriteRoutes,
+        errorRoutes,
+      } = detectedBuilders;
+      const hostRewriteRoutes = (
+        detectedBuilders as typeof detectedBuilders & {
+          hostRewriteRoutes?: Route[] | null;
+        }
+      ).hostRewriteRoutes;
 
       if (errors) {
         output.error(errors[0].message);
@@ -654,6 +660,11 @@ export default class DevServer {
 
       let routes: Route[] = [];
       routes.push(...(redirectRoutes || []));
+      routes = appendRoutesToPhase({
+        routes,
+        newRoutes: hostRewriteRoutes ?? null,
+        phase: null,
+      });
       routes.push(
         ...appendRoutesToPhase({
           routes: vercelConfig.routes,

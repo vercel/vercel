@@ -6,10 +6,12 @@ const DEVIN_LOCAL_PATH = '/opt/.devin';
 const CURSOR = 'cursor' as const;
 const CURSOR_CLI = 'cursor-cli' as const;
 const CLAUDE = 'claude' as const;
+const COWORK = 'cowork' as const;
 const DEVIN = 'devin' as const;
 const REPLIT = 'replit' as const;
 const GEMINI = 'gemini' as const;
 const CODEX = 'codex' as const;
+const ANTIGRAVITY = 'antigravity' as const;
 const AUGMENT_CLI = 'augment-cli' as const;
 const OPENCODE = 'opencode' as const;
 const GITHUB_COPILOT = 'github-copilot' as const;
@@ -19,10 +21,12 @@ export type KnownAgentNames =
   | typeof CURSOR
   | typeof CURSOR_CLI
   | typeof CLAUDE
+  | typeof COWORK
   | typeof DEVIN
   | typeof REPLIT
   | typeof GEMINI
   | typeof CODEX
+  | typeof ANTIGRAVITY
   | typeof AUGMENT_CLI
   | typeof OPENCODE
   | typeof GITHUB_COPILOT;
@@ -45,10 +49,12 @@ export const KNOWN_AGENTS = {
   CURSOR,
   CURSOR_CLI,
   CLAUDE,
+  COWORK,
   DEVIN,
   REPLIT,
   GEMINI,
   CODEX,
+  ANTIGRAVITY,
   AUGMENT_CLI,
   OPENCODE,
   GITHUB_COPILOT,
@@ -84,8 +90,16 @@ export async function determineAgent(): Promise<AgentResult> {
     return { isAgent: true, agent: { name: GEMINI } };
   }
 
-  if (process.env.CODEX_SANDBOX) {
+  if (
+    process.env.CODEX_SANDBOX ||
+    process.env.CODEX_CI ||
+    process.env.CODEX_THREAD_ID
+  ) {
     return { isAgent: true, agent: { name: CODEX } };
+  }
+
+  if (process.env.ANTIGRAVITY_AGENT) {
+    return { isAgent: true, agent: { name: ANTIGRAVITY } };
   }
 
   if (process.env.AUGMENT_AGENT) {
@@ -97,6 +111,9 @@ export async function determineAgent(): Promise<AgentResult> {
   }
 
   if (process.env.CLAUDECODE || process.env.CLAUDE_CODE) {
+    if (process.env.CLAUDE_CODE_IS_COWORK) {
+      return { isAgent: true, agent: { name: COWORK } };
+    }
     return { isAgent: true, agent: { name: CLAUDE } };
   }
 

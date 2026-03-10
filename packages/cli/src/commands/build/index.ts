@@ -608,6 +608,16 @@ async function doBuild(
     }
 
     zeroConfigRoutes.push(...(detectedBuilders.redirectRoutes || []));
+    const detectedHostRewriteRoutes = (
+      detectedBuilders as typeof detectedBuilders & {
+        hostRewriteRoutes?: Route[] | null;
+      }
+    ).hostRewriteRoutes;
+    zeroConfigRoutes = appendRoutesToPhase({
+      routes: zeroConfigRoutes,
+      newRoutes: detectedHostRewriteRoutes ?? null,
+      phase: null,
+    });
     zeroConfigRoutes.push(
       ...appendRoutesToPhase({
         routes: [],

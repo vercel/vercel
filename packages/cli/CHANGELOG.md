@@ -1,5 +1,126 @@
 # vercel
 
+## 50.31.0
+
+### Minor Changes
+
+- Support `maxDuration: 'max'` to allow the backend to resolve the maximum duration based on account plan type ([#15217](https://github.com/vercel/vercel/pull/15217))
+
+### Patch Changes
+
+- Updated dependencies [[`b5542a65e3f1b0e1d1a4b93b89ef7b14d1abfab6`](https://github.com/vercel/vercel/commit/b5542a65e3f1b0e1d1a4b93b89ef7b14d1abfab6), [`8a3558f680d592b4ea47ac7e48c99145d6368941`](https://github.com/vercel/vercel/commit/8a3558f680d592b4ea47ac7e48c99145d6368941)]:
+  - @vercel/build-utils@13.8.0
+  - @vercel/next@4.16.0
+  - @vercel/remix-builder@5.7.0
+  - @vercel/static-build@2.9.0
+  - @vercel/backends@0.0.45
+  - @vercel/elysia@0.1.48
+  - @vercel/express@0.1.57
+  - @vercel/fastify@0.1.51
+  - @vercel/go@3.4.4
+  - @vercel/h3@0.1.57
+  - @vercel/hono@0.2.51
+  - @vercel/hydrogen@1.3.6
+  - @vercel/koa@0.1.31
+  - @vercel/nestjs@0.2.52
+  - @vercel/node@5.6.15
+  - @vercel/python@6.22.0
+  - @vercel/redwood@2.4.10
+  - @vercel/ruby@2.3.2
+  - @vercel/rust@1.0.5
+
+## 50.30.1
+
+### Patch Changes
+
+- Detect Claude Code in `vercel agent init` and write to CLAUDE.md instead of AGENTS.md; update best practices content ([#15423](https://github.com/vercel/vercel/pull/15423))
+
+- Add a new `vc alerts` command behind `FF_ALERTS` to list observability alerts from the vercel-alerts API. ([#15389](https://github.com/vercel/vercel/pull/15389))
+
+- Updated dependencies [[`25843696c2813a62a424516b96e5977897ad2ab1`](https://github.com/vercel/vercel/commit/25843696c2813a62a424516b96e5977897ad2ab1), [`b4b3de24d2999d88944a1c5d16f9d54887ef5929`](https://github.com/vercel/vercel/commit/b4b3de24d2999d88944a1c5d16f9d54887ef5929)]:
+  - @vercel/python@6.22.0
+  - @vercel/go@3.4.4
+  - @vercel/build-utils@13.7.2
+  - @vercel/backends@0.0.44
+  - @vercel/elysia@0.1.47
+  - @vercel/express@0.1.56
+  - @vercel/fastify@0.1.50
+  - @vercel/h3@0.1.56
+  - @vercel/hono@0.2.50
+  - @vercel/hydrogen@1.3.5
+  - @vercel/koa@0.1.30
+  - @vercel/nestjs@0.2.51
+  - @vercel/next@4.15.42
+  - @vercel/node@5.6.14
+  - @vercel/redwood@2.4.9
+  - @vercel/remix-builder@5.6.0
+  - @vercel/ruby@2.3.2
+  - @vercel/rust@1.0.5
+  - @vercel/static-build@2.8.48
+
+## 50.30.0
+
+### Minor Changes
+
+- Add `vercel crons` command with `ls`, `run`, and `add` subcommands for managing cron jobs ([#15408](https://github.com/vercel/vercel/pull/15408))
+
+### Patch Changes
+
+- Add `vercel skills` command with auto-detection and search ([#15357](https://github.com/vercel/vercel/pull/15357))
+
+- [services] adds support for subdomai configuration in experimentalServices ([#15401](https://github.com/vercel/vercel/pull/15401))
+
+- Updated dependencies [[`768300b7bfb247613908984d8d86974434ee5473`](https://github.com/vercel/vercel/commit/768300b7bfb247613908984d8d86974434ee5473)]:
+  - @vercel/build-utils@13.7.1
+  - @vercel/backends@0.0.43
+  - @vercel/elysia@0.1.46
+  - @vercel/express@0.1.55
+  - @vercel/fastify@0.1.49
+  - @vercel/go@3.4.3
+  - @vercel/h3@0.1.55
+  - @vercel/hono@0.2.49
+  - @vercel/hydrogen@1.3.5
+  - @vercel/koa@0.1.29
+  - @vercel/nestjs@0.2.50
+  - @vercel/next@4.15.42
+  - @vercel/node@5.6.13
+  - @vercel/python@6.21.0
+  - @vercel/redwood@2.4.9
+  - @vercel/remix-builder@5.6.0
+  - @vercel/ruby@2.3.2
+  - @vercel/rust@1.0.5
+  - @vercel/static-build@2.8.47
+
+## 50.29.0
+
+### Minor Changes
+
+- Add interactive mode to `webhooks create` and change warning prefix from `WARN!` to `WARNING!` ([#15406](https://github.com/vercel/vercel/pull/15406))
+
+### Patch Changes
+
+- Updated dependencies [[`32e8ba5f593fdeddeb63d241d7806d6c12fffe76`](https://github.com/vercel/vercel/commit/32e8ba5f593fdeddeb63d241d7806d6c12fffe76), [`83e804013528fc54de31082960ae31f58339bd71`](https://github.com/vercel/vercel/commit/83e804013528fc54de31082960ae31f58339bd71), [`0f1fa86770a35d0192d64d36cb46d932e1d2a12a`](https://github.com/vercel/vercel/commit/0f1fa86770a35d0192d64d36cb46d932e1d2a12a), [`813f3d324404237e3806530b465625ea33816370`](https://github.com/vercel/vercel/commit/813f3d324404237e3806530b465625ea33816370), [`0a78892b1e155eb4b587a8b84c4e6814f750697f`](https://github.com/vercel/vercel/commit/0a78892b1e155eb4b587a8b84c4e6814f750697f), [`9a973a704b7350e19d0c3ac8e110ce55eea795b2`](https://github.com/vercel/vercel/commit/9a973a704b7350e19d0c3ac8e110ce55eea795b2), [`c6f5ac6c11fb7f431b5fb634a7fb321b10c829af`](https://github.com/vercel/vercel/commit/c6f5ac6c11fb7f431b5fb634a7fb321b10c829af), [`921314f958c4ec85adb09e020310a5becb7f866c`](https://github.com/vercel/vercel/commit/921314f958c4ec85adb09e020310a5becb7f866c)]:
+  - @vercel/next@4.15.42
+  - @vercel/build-utils@13.7.0
+  - @vercel/python@6.21.0
+  - @vercel/detect-agent@1.1.1
+  - @vercel/static-build@2.8.46
+  - @vercel/backends@0.0.42
+  - @vercel/elysia@0.1.45
+  - @vercel/express@0.1.54
+  - @vercel/fastify@0.1.48
+  - @vercel/go@3.4.3
+  - @vercel/h3@0.1.54
+  - @vercel/hono@0.2.48
+  - @vercel/hydrogen@1.3.5
+  - @vercel/koa@0.1.28
+  - @vercel/nestjs@0.2.49
+  - @vercel/node@5.6.12
+  - @vercel/redwood@2.4.9
+  - @vercel/remix-builder@5.6.0
+  - @vercel/ruby@2.3.2
+  - @vercel/rust@1.0.5
+
 ## 50.28.0
 
 ### Minor Changes

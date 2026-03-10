@@ -1,5 +1,6 @@
 import type { ValidationResult, ValidatedResult } from './types';
 import type { MetricsAggregation } from './schema-data';
+import { validateAllProjectMutualExclusivity } from '../../util/command-validation';
 import {
   getEventNames,
   getEvent,
@@ -86,14 +87,7 @@ export function validateMutualExclusivity(
   all: boolean | undefined,
   project: string | undefined
 ): ValidationResult {
-  if (all && project) {
-    return {
-      valid: false,
-      code: 'MUTUAL_EXCLUSIVITY',
-      message: 'Cannot specify both --all and --project. Use one or the other.',
-    };
-  }
-  return { valid: true };
+  return validateAllProjectMutualExclusivity(all, project);
 }
 
 export function validateRequiredEvent(

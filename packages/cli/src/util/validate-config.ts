@@ -172,6 +172,11 @@ const serviceConfigSchema = {
       minLength: 1,
       maxLength: 512,
     },
+    subdomain: {
+      type: 'string',
+      minLength: 1,
+      maxLength: 63,
+    },
     framework: {
       type: 'string',
       minLength: 1,
@@ -203,9 +208,10 @@ const serviceConfigSchema = {
       maximum: 10240,
     },
     maxDuration: {
-      type: 'integer',
-      minimum: 1,
-      maximum: 900,
+      oneOf: [
+        { type: 'integer', minimum: 1, maximum: 900 },
+        { type: 'string', enum: ['max'] },
+      ],
     },
     includeFiles: {
       oneOf: [

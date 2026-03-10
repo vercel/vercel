@@ -1,5 +1,27 @@
 # @vercel/fs-detectors
 
+## 5.10.0
+
+### Minor Changes
+
+- Support `maxDuration: 'max'` to allow the backend to resolve the maximum duration based on account plan type ([#15217](https://github.com/vercel/vercel/pull/15217))
+
+## 5.9.1
+
+### Patch Changes
+
+- [services] adds support for subdomai configuration in experimentalServices ([#15401](https://github.com/vercel/vercel/pull/15401))
+
+## 5.9.0
+
+### Minor Changes
+
+- [python] add support for module-based entrypoints for cron jobs ([#15393](https://github.com/vercel/vercel/pull/15393))
+
+### Patch Changes
+
+- [python] add support for Python worker services with Django tasks ([#15396](https://github.com/vercel/vercel/pull/15396))
+
 ## 5.8.18
 
 ### Patch Changes

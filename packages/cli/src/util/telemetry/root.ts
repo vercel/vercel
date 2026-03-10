@@ -33,6 +33,13 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
+  trackCliCommandAlerts(actual: string) {
+    this.trackCliCommand({
+      command: 'alerts',
+      value: actual,
+    });
+  }
+
   trackCliCommandApi(actual: string) {
     this.trackCliCommand({
       command: 'api',
@@ -85,6 +92,13 @@ export class RootTelemetryClient extends TelemetryClient {
   trackCliCommandContract(actual: string) {
     this.trackCliCommand({
       command: 'contract',
+      value: actual,
+    });
+  }
+
+  trackCliCommandCrons(actual: string) {
+    this.trackCliCommand({
+      command: 'crons',
       value: actual,
     });
   }
@@ -316,6 +330,13 @@ export class RootTelemetryClient extends TelemetryClient {
   trackCliCommandRemove(actual: string) {
     this.trackCliCommand({
       command: 'remove',
+      value: actual,
+    });
+  }
+
+  trackCliCommandSkills(actual: string) {
+    this.trackCliCommand({
+      command: 'skills',
       value: actual,
     });
   }
