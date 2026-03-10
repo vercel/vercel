@@ -14,7 +14,6 @@ const CODEX = 'codex' as const;
 const ANTIGRAVITY = 'antigravity' as const;
 const AUGMENT_CLI = 'augment-cli' as const;
 const OPENCODE = 'opencode' as const;
-const ANTIGRAVITY = 'antigravity' as const;
 
 export type KnownAgentNames =
   | typeof CURSOR
@@ -27,8 +26,7 @@ export type KnownAgentNames =
   | typeof CODEX
   | typeof ANTIGRAVITY
   | typeof AUGMENT_CLI
-  | typeof OPENCODE
-  | typeof ANTIGRAVITY;
+  | typeof OPENCODE;
 
 export interface KnownAgentDetails {
   name: KnownAgentNames;
@@ -56,7 +54,6 @@ export const KNOWN_AGENTS = {
   ANTIGRAVITY,
   AUGMENT_CLI,
   OPENCODE,
-  ANTIGRAVITY,
 } as const;
 
 export async function determineAgent(): Promise<AgentResult> {
