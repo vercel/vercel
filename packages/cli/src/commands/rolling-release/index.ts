@@ -53,10 +53,17 @@ function buildDeploymentSuggestionCommands(
       hasNonInteractive = true;
       continue;
     }
-    if (arg.startsWith('cwd=')) {
-      const cwdPath = arg.slice(4);
+    if (arg.startsWith('--cwd=')) {
+      const cwdPath = arg.slice(6);
       if (cwdPath) {
         preservedParts.push('--cwd', cwdPath);
+      }
+      continue;
+    }
+    if (arg === '--cwd') {
+      if (i + 1 < args.length) {
+        preservedParts.push('--cwd', args[i + 1]);
+        i++;
       }
       continue;
     }
