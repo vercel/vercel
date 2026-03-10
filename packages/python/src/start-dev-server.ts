@@ -600,6 +600,7 @@ export const startDevServer: StartDevServer = async opts => {
     rawEntrypoint
   );
   const env = { ...process.env, ...(meta.env || {}) } as NodeJS.ProcessEnv;
+  env.__VC_WAIT_UNTIL_TIMEOUT = String(config?.maxDuration ?? 30);
   let entry = detected?.entrypoint;
   if (!entry) {
     const hookResult = await runFrameworkHook(framework, {
