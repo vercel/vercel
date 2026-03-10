@@ -33,11 +33,9 @@ function findChanges(
 ): {
   added: string[];
   changed: string[];
-  removed: string[];
 } {
   const added = [];
   const changed = [];
-  const remainingKeys = new Set(Object.keys(oldEnv));
 
   for (const key of Object.keys(newEnv)) {
     if (oldEnv[key] === undefined) {
@@ -45,14 +43,11 @@ function findChanges(
     } else if (oldEnv[key] !== newEnv[key]) {
       changed.push(key);
     }
-    remainingKeys.delete(key);
   }
-  const removed = Array.from(remainingKeys);
 
   return {
     added,
     changed,
-    removed,
   };
 }
 
@@ -60,12 +55,11 @@ export function buildDeltaString(
   oldEnv: Dictionary<string | undefined>,
   newEnv: Dictionary<string | undefined>
 ): string {
-  const { added, changed, removed } = findChanges(oldEnv, newEnv);
+  const { added, changed } = findChanges(oldEnv, newEnv);
 
   let deltaString = '';
   deltaString += chalk.yellow(addDeltaSection('M', changed));
   deltaString += chalk.green(addDeltaSection('+', added));
-  deltaString += chalk.red(addDeltaSection('-', removed));
 
   return deltaString
     ? chalk.gray('Changes:\n') + deltaString + '\n'
