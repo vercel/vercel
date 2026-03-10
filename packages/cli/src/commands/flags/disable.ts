@@ -129,7 +129,8 @@ export default async function disable(
         message: 'Select an environment to disable the flag in:',
         choices: availableEnvs.map(env => {
           const config = flag.environments[env];
-          const status = config?.active
+          const isActive = config?.active ?? false;
+          const status = isActive
             ? chalk.green('active')
             : chalk.yellow('paused');
           return {

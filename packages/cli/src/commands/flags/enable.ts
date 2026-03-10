@@ -125,7 +125,8 @@ export default async function enable(
         message: 'Select an environment to enable the flag in:',
         choices: availableEnvs.map(env => {
           const config = flag.environments[env];
-          const status = config?.active
+          const isActive = config?.active ?? false;
+          const status = isActive
             ? chalk.green('active')
             : chalk.yellow('paused');
           return {
