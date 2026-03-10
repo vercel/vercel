@@ -8,6 +8,7 @@ import { buyCommand } from './buy/command';
 import { cacheCommand } from './cache/command';
 import { certsCommand } from './certs/command';
 import { contractCommand } from './contract/command';
+import { cronsCommand } from './crons/command';
 import { curlCommand } from './curl/command';
 import { deployCommand } from './deploy/command';
 import { devCommand } from './dev/command';
@@ -41,6 +42,7 @@ import { removeCommand } from './remove/command';
 import { routesCommand } from './routes/command';
 import { rollbackCommand } from './rollback/command';
 import { rollingReleaseCommand } from './rolling-release/command';
+import { skillsCommand } from './skills/command';
 import { targetCommand } from './target/command';
 import { teamsCommand } from './teams/command';
 import { telemetryCommand } from './telemetry/command';
@@ -64,6 +66,7 @@ const commandsStructs = [
   cacheCommand,
   certsCommand,
   contractCommand,
+  cronsCommand,
   curlCommand,
   deployCommand,
   devCommand,
@@ -95,6 +98,7 @@ const commandsStructs = [
   routesCommand,
   rollbackCommand,
   rollingReleaseCommand,
+  skillsCommand,
   targetCommand,
   teamsCommand,
   telemetryCommand,
