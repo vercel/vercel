@@ -1,5 +1,24 @@
 # @vercel/router-sdk
 
+## 0.0.39
+
+### Patch Changes
+
+- [services] adds support for subdomai configuration in experimentalServices ([#15401](https://github.com/vercel/vercel/pull/15401))
+
+## 0.0.38
+
+### Patch Changes
+
+- Fix type generation ([#15386](https://github.com/vercel/vercel/pull/15386))
+
+## 0.0.37
+
+### Patch Changes
+
+- Updated dependencies [[`e6c736fb74bedb975caad76d4c1f1e589a1c6cc9`](https://github.com/vercel/vercel/commit/e6c736fb74bedb975caad76d4c1f1e589a1c6cc9)]:
+  - @vercel/routing-utils@6.0.2
+
 ## 0.0.36
 
 ### Patch Changes

@@ -35,6 +35,8 @@ export interface DetectServicesOptions {
 }
 
 export interface ServicesRoutes {
+  /** Host-based rewrite routes for subdomain-mounted web services */
+  hostRewrites: Route[];
   /** Rewrite routes for non-root web services (prefix-based) */
   rewrites: Route[];
   /** Default routes (catch-all for root web service) */
@@ -42,13 +44,11 @@ export interface ServicesRoutes {
   /**
    * Internal routes for cron services.
    * These route `/_svc/{serviceName}/crons/{entry}/{handler}` to the cron function.
-   * TODO: Implement
    */
   crons: Route[];
   /**
    * Internal routes for worker services.
    * These route `/_svc/{serviceName}/workers/{entry}/{handler}` to the worker function.
-   * TODO: Implement
    */
   workers: Route[];
 }

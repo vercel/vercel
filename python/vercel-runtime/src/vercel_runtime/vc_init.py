@@ -8,7 +8,6 @@ import contextlib
 import contextvars
 import functools
 import http
-import inspect
 import json
 import logging
 import os
@@ -17,9 +16,35 @@ import sys
 import time
 import traceback
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from importlib import util
 from typing import TYPE_CHECKING, Any, Literal, Never, TextIO
-from urllib.parse import urlsplit
+
+from vercel_runtime.crons import (
+    bootstrap_cron_service_app,
+    is_cron_service,
+)
+from vercel_runtime.headers import (
+    clear_vercel_headers_context,
+    decode_header_bytes,
+    normalize_event_header_pairs,
+    normalize_event_headers,
+    set_vercel_headers_from_asgi_pairs,
+    set_vercel_headers_from_http_headers,
+)
+from vercel_runtime.resolver import (
+    detect_app_type,
+    import_module,
+    resolve_app,
+)
+from vercel_runtime.routing import (
+    apply_service_route_prefix_to_asgi_scope,
+    apply_service_route_prefix_to_target,
+    split_request_target,
+)
+from vercel_runtime.workers import (
+    bootstrap_worker_service_app,
+    is_celery_app,
+    is_worker_service,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
@@ -41,7 +66,31 @@ def _stderr(message: str) -> None:
 
 def _fatal(message: str) -> Never:
     _stderr(message)
+    _send_unrecoverable_error(message)
     sys.exit(1)
+
+
+def _fatal_exc(label: str) -> Never:
+    """Report a fatal exception (with traceback) and exit."""
+    _fatal(f"{label}:\n{traceback.format_exc()}")
+
+
+def _send_unrecoverable_error(message: str) -> None:
+    """Send an ``unrecoverable-error`` IPC message to the functions runtime.
+
+    This is the only message type (besides ``server-started``) that the
+    functions runtime accepts before the handshake completes, so it is the
+    correct way to report fatal errors during module import.
+    """
+    send_message(
+        {
+            "type": "unrecoverable-error",
+            "payload": {
+                "exitCode": 1,
+                "message": message,
+            },
+        }
+    )
 
 
 def _must_getenv(varname: str) -> str:
@@ -55,130 +104,6 @@ _here = os.path.dirname(__file__)
 _entrypoint_rel = _must_getenv("__VC_HANDLER_ENTRYPOINT")
 _entrypoint_abs = _must_getenv("__VC_HANDLER_ENTRYPOINT_ABS")
 _entrypoint_modname = _must_getenv("__VC_HANDLER_MODULE_NAME")
-
-
-def _normalize_service_route_prefix(raw_prefix: str | None) -> str:
-    """
-    Normalize a configured service prefix into canonical mount-path form.
-
-    Returns an empty string when unset/blank/root ("/"), otherwise:
-      - always starts with "/"
-      - has no trailing slash
-    """
-    if not raw_prefix:
-        return ""
-
-    prefix = raw_prefix.strip()
-    if not prefix:
-        return ""
-
-    if not prefix.startswith("/"):
-        prefix = f"/{prefix}"
-
-    # Treat "/" as an unset mount prefix.
-    return "" if prefix == "/" else prefix.rstrip("/")
-
-
-def _is_service_route_prefix_strip_enabled() -> bool:
-    """
-    Return whether service-prefix stripping is explicitly enabled.
-
-    Stripping is gated behind a dedicated env var so manually configured
-    route prefixes can be preserved by default.
-    """
-    raw = os.environ.get("VERCEL_SERVICE_ROUTE_PREFIX_STRIP")
-    if not raw:
-        return False
-    return raw.lower() in ("1", "true")
-
-
-_service_route_prefix = (
-    _normalize_service_route_prefix(
-        os.environ.get("VERCEL_SERVICE_ROUTE_PREFIX")
-    )
-    if _is_service_route_prefix_strip_enabled()
-    else ""
-)
-
-
-def _split_request_target(target: str) -> tuple[str, str]:
-    """
-    Split an HTTP request-target into (path, query).
-
-    Supports:
-      - origin-form: "/a/b?x=1"
-      - absolute-form: "https://example.com/a/b?x=1"
-      - asterisk-form: "*"
-    """
-    if not target:
-        return "/", ""
-
-    parsed = urlsplit(target)
-    path = parsed.path
-    query = parsed.query
-
-    # Absolute-form request-target (RFC 7230 section 5.3.2).
-    if parsed.scheme in ("http", "https") and parsed.netloc:
-        return path or "/", query
-
-    # Asterisk-form request-target (RFC 7230 section 5.3.4).
-    if path == "*":
-        return "*", query
-
-    if not path:
-        path = "/"
-    elif not path.startswith("/"):
-        path = f"/{path}"
-
-    return path, query
-
-
-def _strip_service_route_prefix(path: str) -> tuple[str, str]:
-    """
-    Strip the configured service route prefix from a request path.
-
-    Returns a tuple of:
-      - stripped path passed to the user app
-      - matched mount prefix (empty string when no prefix matched)
-
-    Example with prefix "/_/backend":
-      "/_/backend/ping" -> ("/ping", "/_/backend")
-      "/foo"            -> ("/foo", "")
-    """
-    if path == "*":
-        return path, ""
-    if not path:
-        path = "/"
-    elif not path.startswith("/"):
-        path = f"/{path}"
-
-    prefix = _service_route_prefix
-    if not prefix:
-        return path, ""
-
-    if path == prefix:
-        return "/", prefix
-
-    if path.startswith(f"{prefix}/"):
-        stripped = path[len(prefix) :]
-        return stripped if stripped else "/", prefix
-
-    return path, ""
-
-
-def _apply_service_route_prefix_to_target(target: str) -> tuple[str, str]:
-    """
-    Apply service-prefix stripping to a full request target.
-
-    Returns:
-      - updated request target (path + optional query)
-      - matched mount prefix for framework metadata (or "")
-    """
-    path, query = _split_request_target(target)
-    path, root_path = _strip_service_route_prefix(path)
-    if query:
-        return f"{path}?{query}", root_path
-    return path, root_path
 
 
 def setup_logging(
@@ -374,6 +299,20 @@ def enqueue_or_send_message(msg: _IpcMessage) -> None:
             _original_stderr.write(decoded + "\n")
 
 
+def _flush_init_log_buf() -> None:
+    """Flush buffered init logs through IPC and mark the channel as ready.
+
+    Called once the ``server-started`` handshake is complete so the functions
+    runtime will accept ``log`` messages.
+    """
+    global _ipc_ready, _init_log_buf_bytes  # noqa: PLW0603
+    _ipc_ready = True
+    for m in _init_log_buf:
+        send_message(m)
+    _init_log_buf.clear()
+    _init_log_buf_bytes = 0
+
+
 def flush_init_log_buf_to_stderr() -> None:
     global _init_log_buf_bytes  # noqa: PLW0603
     try:
@@ -417,9 +356,6 @@ _uv_dir = os.path.join(lambda_root, "_uv")
 _runtime_config_path = os.path.join(_uv_dir, "_runtime_config.json")
 
 if os.path.exists(_runtime_config_path):
-    # Ensure writable config dir for libraries like Matplotlib on Lambda.
-    os.environ.setdefault("MPLCONFIGDIR", "/tmp")
-
     import site
     import subprocess
 
@@ -521,23 +457,40 @@ _extra_path = os.environ.get("VERCEL_RUNTIME_ENV_PATH_PREPEND")
 if _extra_path:
     os.environ["PATH"] = _extra_path + ":" + os.environ.get("PATH", "")
 
-# Import relative path
-# https://docs.python.org/3/library/importlib.html#importing-a-source-file-directly
 try:
-    __vc_spec = util.spec_from_file_location(
-        _entrypoint_modname,
-        _entrypoint_abs,
-    )
-    if __vc_spec is None or __vc_spec.loader is None:
-        _fatal(f"Could not load module spec for {_entrypoint_rel}")
-    __vc_module = util.module_from_spec(__vc_spec)
-    sys.modules[_entrypoint_modname] = __vc_module
-    __vc_spec.loader.exec_module(__vc_module)
+    __vc_module = import_module(_entrypoint_modname, _entrypoint_abs)
     __vc_variables = dir(__vc_module)
 except Exception:
-    _stderr(f"Error importing {_entrypoint_rel}:")
-    _stderr(traceback.format_exc())
-    exit(1)
+    _fatal_exc(f'could not import "{_entrypoint_rel}"')
+
+if is_worker_service():
+    if "handler" not in __vc_variables and "Handler" not in __vc_variables:
+        should_bootstrap_worker_app = (
+            "app" not in __vc_variables
+            or is_celery_app(getattr(__vc_module, "app", None))
+        )
+    else:
+        should_bootstrap_worker_app = False
+
+    if should_bootstrap_worker_app:
+        try:
+            __vc_module.__dict__["app"] = bootstrap_worker_service_app(
+                __vc_module
+            )
+            __vc_variables = dir(__vc_module)
+        except Exception:
+            _stderr("Error bootstrapping worker service app:")
+            _stderr(traceback.format_exc())
+            exit(1)
+
+if is_cron_service():
+    try:
+        __vc_module.__dict__["app"] = bootstrap_cron_service_app(__vc_module)
+        __vc_variables = dir(__vc_module)
+    except Exception:
+        _stderr("Error bootstrapping cron service app:")
+        _stderr(traceback.format_exc())
+        exit(1)
 
 _use_legacy_asyncio = sys.version_info < (3, 10)
 
@@ -602,19 +555,16 @@ class ASGIMiddleware:
         headers_list: list[tuple[bytes | str, bytes | str]] = (
             scope.get("headers", []) or []
         )
-        new_headers: list[tuple[bytes | str, bytes | str]] = []
+        new_headers: list[tuple[bytes, bytes]] = []
         invocation_id = "0"
         request_id = 0
+        internal_oidc_token = ""
 
-        def _b2s(b: bytes | str) -> str:
-            try:
-                return b.decode() if isinstance(b, bytes) else b
-            except Exception:
-                return ""
-
-        for k, v in headers_list:
-            key = _b2s(k).lower()
-            val = _b2s(v)
+        for raw_k, raw_v in headers_list:
+            key_bytes = raw_k if isinstance(raw_k, bytes) else raw_k.encode()
+            val_bytes = raw_v if isinstance(raw_v, bytes) else raw_v.encode()
+            key = decode_header_bytes(key_bytes).lower()
+            val = decode_header_bytes(val_bytes)
             if key == "x-vercel-internal-invocation-id":
                 invocation_id = val
                 continue
@@ -626,16 +576,24 @@ class ASGIMiddleware:
                 "x-vercel-internal-trace-id",
             ):
                 continue
-            new_headers.append((k, v))
+            if key == "x-vercel-internal-oidc-token":
+                internal_oidc_token = val
+                continue
+            new_headers.append((key_bytes, val_bytes))
+
+        if internal_oidc_token:
+            has_oidc_header = any(
+                decode_header_bytes(k).lower() == "x-vercel-oidc-token"
+                for k, _ in new_headers
+            )
+            if not has_oidc_header:
+                new_headers.append(
+                    (b"x-vercel-oidc-token", internal_oidc_token.encode())
+                )
 
         new_scope = dict(scope)
         new_scope["headers"] = new_headers
-        request_path = scope.get("path") or "/"
-        stripped_path, root_path = _strip_service_route_prefix(request_path)
-        if root_path:
-            new_scope["path"] = stripped_path
-            new_scope["raw_path"] = stripped_path.encode()
-            new_scope["root_path"] = root_path
+        apply_service_route_prefix_to_asgi_scope(new_scope)
 
         # Announce handler start and set context for logging/metrics
         send_message(
@@ -657,10 +615,12 @@ class ASGIMiddleware:
                 "requestId": request_id,
             }
         )
+        set_vercel_headers_from_asgi_pairs(new_headers)
 
         try:
             await self.app(new_scope, receive, send)
         finally:
+            clear_vercel_headers_context()
             storage.reset(token)
             send_message(
                 {
@@ -756,7 +716,7 @@ if "VERCEL_IPC_PATH" in os.environ:
             if not self.parse_request():
                 return
 
-            if _split_request_target(self.path)[0] == "/_vercel/ping":
+            if split_request_target(self.path)[0] == "/_vercel/ping":
                 self.send_response(200)
                 self.end_headers()
                 return
@@ -764,7 +724,7 @@ if "VERCEL_IPC_PATH" in os.environ:
             (
                 self.path,
                 self._vc_service_root_path,
-            ) = _apply_service_route_prefix_to_target(self.path)
+            ) = apply_service_route_prefix_to_target(self.path)
             invocation_id = self.headers.get(
                 "x-vercel-internal-invocation-id",
                 "0",
@@ -778,6 +738,17 @@ if "VERCEL_IPC_PATH" in os.environ:
             del self.headers["x-vercel-internal-request-id"]
             del self.headers["x-vercel-internal-span-id"]
             del self.headers["x-vercel-internal-trace-id"]
+            internal_oidc_token = self.headers.get(
+                "x-vercel-internal-oidc-token"
+            )
+            if (
+                isinstance(internal_oidc_token, str)
+                and internal_oidc_token
+                and not self.headers.get("x-vercel-oidc-token")
+            ):
+                self.headers["x-vercel-oidc-token"] = internal_oidc_token
+            with contextlib.suppress(Exception):
+                del self.headers["x-vercel-internal-oidc-token"]
 
             send_message(
                 {
@@ -798,10 +769,12 @@ if "VERCEL_IPC_PATH" in os.environ:
                     "requestId": request_id,
                 }
             )
+            set_vercel_headers_from_http_headers(self.headers)
 
             try:
                 self.handle_request()  # type: ignore[attr-defined]
             finally:
+                clear_vercel_headers_context()
                 storage.reset(token)
                 send_message(
                     {
@@ -822,11 +795,10 @@ if "VERCEL_IPC_PATH" in os.environ:
             else __vc_module.Handler
         )
         if not issubclass(base, BaseHTTPRequestHandler):
-            _stderr("Handler must inherit from BaseHTTPRequestHandler")
-            _stderr(
+            _fatal(
+                "Handler must inherit from BaseHTTPRequestHandler\n"
                 "See the docs: https://vercel.com/docs/functions/serverless-functions/runtimes/python"
             )
-            exit(1)
 
         class Handler(BaseHandler, base):  # type: ignore[valid-type,misc]
             def handle_request(self) -> None:
@@ -842,16 +814,16 @@ if "VERCEL_IPC_PATH" in os.environ:
                 self.wfile.flush()
 
     elif "app" in __vc_variables or "application" in __vc_variables:
-        app: Any = getattr(  # pyright: ignore[reportRedeclaration]
-            __vc_module,
-            "app",
-            getattr(__vc_module, "application", None),
+        app_name, app_obj = resolve_app(__vc_module, _entrypoint_modname)
+        detection_result = detect_app_type(
+            app_obj,
+            _entrypoint_modname,
+            app_name,
         )
-        if not inspect.iscoroutinefunction(
-            app
-        ) and not inspect.iscoroutinefunction(app.__call__):
+        if detection_result[0] == "wsgi":
             from io import BytesIO
 
+            wsgi_user_app = detection_result[1]
             string_types = (str,)
 
             def wsgi_encoding_dance(
@@ -866,7 +838,7 @@ if "VERCEL_IPC_PATH" in os.environ:
             class Handler(BaseHandler):  # type: ignore[no-redef]
                 def handle_request(self) -> None:
                     # Prepare WSGI environment
-                    path, query = _split_request_target(self.path)
+                    path, query = split_request_target(self.path)
                     service_root_path: str = getattr(
                         self,
                         "_vc_service_root_path",
@@ -917,7 +889,7 @@ if "VERCEL_IPC_PATH" in os.environ:
                         return self.wfile.write
 
                     # Call the application
-                    response = app(env, start_response)
+                    response = wsgi_user_app(env, start_response)
                     try:
                         for data in response:
                             if data:
@@ -925,24 +897,15 @@ if "VERCEL_IPC_PATH" in os.environ:
                                 self.wfile.flush()
                     finally:
                         if hasattr(response, "close"):
-                            response.close()
+                            response.close()  # pyright: ignore[reportUnknownMemberType,reportAttributeAccessIssue]
 
         else:
             # ASGI: Run with Uvicorn for proper lifespan
             # and protocol handling
             from vercel_runtime._vendor import uvicorn
 
-            # Prefer a callable app.asgi when available;
-            # some frameworks expose a boolean here
-            user_app_candidate = getattr(
-                app,
-                "asgi",
-                None,
-            )
-            user_app = (
-                user_app_candidate if callable(user_app_candidate) else app
-            )
-            asgi_app = ASGIMiddleware(user_app)
+            asgi_user_app = detection_result[1]
+            asgi_app = ASGIMiddleware(asgi_user_app)
 
             # Pre-bind a socket to obtain an ephemeral port for IPC announcement
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -970,12 +933,7 @@ if "VERCEL_IPC_PATH" in os.environ:
                     },
                 }
             )
-
-            # Mark IPC as ready and flush any buffered init logs
-            _ipc_ready = True
-            for m in _init_log_buf:
-                send_message(m)
-            _init_log_buf.clear()
+            _flush_init_log_buf()
 
             # Run the server (blocking)
             server.run()
@@ -993,18 +951,13 @@ if "VERCEL_IPC_PATH" in os.environ:
                 },
             }
         )
-        # Mark IPC as ready and flush any buffered init logs
-        _ipc_ready = True
-        for m in _init_log_buf:
-            send_message(m)
-        _init_log_buf.clear()
+        _flush_init_log_buf()
         server.serve_forever()  # type: ignore[attr-defined]
 
-    _stderr(f'Missing variable `handler` or `app` in file "{_entrypoint_rel}".')
-    _stderr(
+    _fatal(
+        f'Missing variable `handler` or `app` in file "{_entrypoint_rel}".\n'
         "See the docs: https://vercel.com/docs/functions/serverless-functions/runtimes/python"
     )
-    exit(1)
 
 if "handler" in __vc_variables or "Handler" in __vc_variables:
     base = (
@@ -1013,11 +966,10 @@ if "handler" in __vc_variables or "Handler" in __vc_variables:
         else __vc_module.Handler
     )
     if not issubclass(base, BaseHTTPRequestHandler):
-        _stderr("Handler must inherit from BaseHTTPRequestHandler")
-        _stderr(
+        _fatal(
+            "Handler must inherit from BaseHTTPRequestHandler\n"
             "See the docs: https://vercel.com/docs/functions/serverless-functions/runtimes/python"
         )
-        exit(1)
 
     _stderr("using HTTP Handler")
     import _thread  # noqa: PLC2701
@@ -1031,8 +983,8 @@ if "handler" in __vc_variables or "Handler" in __vc_variables:
         _thread.start_new_thread(server.handle_request, ())  # type: ignore[attr-defined]
 
         payload = json.loads(event["body"])
-        path, _ = _apply_service_route_prefix_to_target(payload["path"])
-        headers = payload["headers"]
+        path, _ = apply_service_route_prefix_to_target(payload["path"])
+        headers = normalize_event_headers(payload.get("headers", {}))
         method = payload["method"]
         encoding = payload.get("encoding")
         body = payload.get("body")
@@ -1066,20 +1018,20 @@ if "handler" in __vc_variables or "Handler" in __vc_variables:
         return return_dict
 
 elif "app" in __vc_variables or "application" in __vc_variables:
-    app: Any = getattr(  # type: ignore[no-redef]
-        __vc_module,
-        "app",
-        getattr(__vc_module, "application", None),
+    app_name, app_obj = resolve_app(__vc_module, _entrypoint_modname)
+    detection_result = detect_app_type(
+        app_obj,
+        _entrypoint_modname,
+        app_name,
     )
-    if not inspect.iscoroutinefunction(app) and not inspect.iscoroutinefunction(
-        app.__call__
-    ):
+    if detection_result[0] == "wsgi":
         _stderr("using Web Server Gateway Interface (WSGI)")
         from io import BytesIO
 
         from vercel_runtime._vendor.werkzeug.datastructures import Headers
         from vercel_runtime._vendor.werkzeug.wrappers import Response
 
+        wsgi_user_app = detection_result[1]
         string_types = (str,)
 
         _default_charset = sys.getdefaultencoding()
@@ -1109,7 +1061,8 @@ elif "app" in __vc_variables or "application" in __vc_variables:
         def vc_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
             payload = json.loads(event["body"])
 
-            headers = Headers(payload.get("headers", {}))
+            raw_headers = normalize_event_headers(payload.get("headers", {}))
+            headers = Headers(raw_headers)
 
             body: Any = payload.get("body", "")
             if body and payload.get("encoding") == "base64":
@@ -1120,8 +1073,8 @@ elif "app" in __vc_variables or "application" in __vc_variables:
             (
                 request_target,
                 service_root_path,
-            ) = _apply_service_route_prefix_to_target(payload["path"])
-            path, query = _split_request_target(request_target)
+            ) = apply_service_route_prefix_to_target(payload["path"])
+            path, query = split_request_target(request_target)
 
             environ: dict[str, Any] = {
                 "CONTENT_LENGTH": str(len(body)),
@@ -1157,7 +1110,11 @@ elif "app" in __vc_variables or "application" in __vc_variables:
                 if env_key not in ("HTTP_CONTENT_TYPE", "HTTP_CONTENT_LENGTH"):
                     environ[env_key] = value
 
-            response = Response.from_app(app, environ)
+            set_vercel_headers_from_http_headers(raw_headers)
+            try:
+                response = Response.from_app(wsgi_user_app, environ)
+            finally:
+                clear_vercel_headers_context()
 
             return_dict: dict[str, Any] = {
                 "statusCode": response.status_code,
@@ -1181,6 +1138,8 @@ elif "app" in __vc_variables or "application" in __vc_variables:
         import enum
 
         from vercel_runtime._vendor.werkzeug.datastructures import Headers
+
+        asgi_user_app = detection_result[1]
 
         # asyncio.Runner keeps a persistent event loop across run() calls.
         # The lifespan task stays suspended (awaiting the shutdown signal)
@@ -1247,7 +1206,9 @@ elif "app" in __vc_variables or "application" in __vc_variables:
             return False
 
         try:
-            _lifespan_active = _asgi_runner.run(_lifespan_startup(app))
+            _lifespan_active = _asgi_runner.run(
+                _lifespan_startup(asgi_user_app)
+            )
         except BaseException:
             # App doesn't support lifespan — proceed without it.
             _lifespan_active = False
@@ -1379,7 +1340,14 @@ elif "app" in __vc_variables or "application" in __vc_variables:
         def vc_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
             payload = json.loads(event["body"])
 
-            headers = payload.get("headers", {})
+            header_pairs = normalize_event_header_pairs(
+                payload.get("headers", {})
+            )
+            headers: dict[str, str] = {}
+            headers_encoded: list[tuple[bytes, bytes]] = []
+            for key, value in header_pairs:
+                headers[key] = value
+                headers_encoded.append((key.lower().encode(), value.encode()))
 
             body = payload.get("body", b"")
             if payload.get("encoding") == "base64":
@@ -1390,23 +1358,9 @@ elif "app" in __vc_variables or "application" in __vc_variables:
             (
                 request_target,
                 service_root_path,
-            ) = _apply_service_route_prefix_to_target(payload["path"])
-            path, query_str = _split_request_target(request_target)
+            ) = apply_service_route_prefix_to_target(payload["path"])
+            path, query_str = split_request_target(request_target)
             query = query_str.encode()
-
-            headers_encoded: list[list[bytes | list[bytes]]] = []
-            headers_typed: dict[str, str | list[str]] = headers
-            for k, v in headers_typed.items():
-                # Cope with repeated headers in the encoding.
-                if isinstance(v, list):
-                    headers_encoded.append(
-                        [
-                            k.lower().encode(),
-                            [i.encode() for i in v],
-                        ]
-                    )
-                else:
-                    headers_encoded.append([k.lower().encode(), v.encode()])
 
             scope: _ASGIScope = {
                 "server": (
@@ -1433,16 +1387,17 @@ elif "app" in __vc_variables or "application" in __vc_variables:
                 "raw_path": path.encode(),
             }
 
-            asgi_cycle = ASGICycle(scope)
-            response = asgi_cycle(app, body)
-            return response
+            set_vercel_headers_from_http_headers(headers)
+            try:
+                asgi_cycle = ASGICycle(scope)
+                response = asgi_cycle(asgi_user_app, body)
+                return response
+            finally:
+                clear_vercel_headers_context()
 
 else:
-    _stderr(
+    _fatal(
         f"Missing variable `handler`, `app`, or `application` "
-        f'in file "{_entrypoint_rel}".'
-    )
-    _stderr(
+        f'in file "{_entrypoint_rel}".\n'
         "See the docs: https://vercel.com/docs/functions/serverless-functions/runtimes/python"
     )
-    exit(1)

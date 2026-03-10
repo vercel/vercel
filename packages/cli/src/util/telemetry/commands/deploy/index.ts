@@ -156,6 +156,19 @@ export class DeployTelemetryClient
       this.trackCliFlag('yes');
     }
   }
+  trackCliFlagJson(flag: boolean | undefined) {
+    if (flag) {
+      this.trackCliFlag('json');
+    }
+  }
+  trackCliOptionFormat(format: string | undefined) {
+    if (format) {
+      this.trackCliOption({
+        option: 'format',
+        value: format,
+      });
+    }
+  }
 
   trackDeploymentId(id: string | undefined) {
     if (id) {

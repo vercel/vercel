@@ -15,9 +15,7 @@ const e2eFixtures = fs
   .sort();
 const runFixtureTest = it.concurrent;
 
-// eslint-disable-next-line no-restricted-syntax
 for (const fixture of e2eFixtures) {
-  // eslint-disable-next-line no-loop-func
   runFixtureTest(`Test e2e fixture "${fixture}"`, async () => {
     const deployment = await testDeployment(join(fixturesPath, fixture));
     expect(deployment).toBeDefined();

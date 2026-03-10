@@ -31,7 +31,7 @@ export const readConfigFile = (): GlobalConfig => {
 // writes whatever's in `stuff` to "global config" file, atomically
 export const writeToConfigFile = (stuff: GlobalConfig): void => {
   try {
-    return writeJSON.sync(CONFIG_FILE_PATH, stuff, { indent: 2 });
+    writeJSON.sync(CONFIG_FILE_PATH, stuff, { indent: 2 });
   } catch (err: unknown) {
     if (isErrnoException(err)) {
       if (isErrnoException(err) && err.code === 'EPERM') {
@@ -123,23 +123,22 @@ export function readLocalConfig(
   }
 
   try {
-    try {
-      accessSync(target, constants.F_OK);
-      config = loadJSON.sync(target);
-    } catch {
-      // File doesn't exist, config remains undefined
-    }
+    accessSync(target, constants.F_OK);
+    config = loadJSON.sync(target);
   } catch (err: unknown) {
-    if (isError(err) && err.name === 'JSONError') {
+    if (isErrnoException(err) && err.code === 'ENOENT') {
+      // File doesn't exist, config remains undefined
+    } else if (isError(err) && err.name === 'JSONError') {
       output.error(err.message);
+      process.exit(1);
     } else if (isErrnoException(err)) {
       const code = err.code ? ` (${err.code})` : '';
-
       output.error(`Failed to read config file: ${target}${code}`);
+      process.exit(1);
     } else {
       output.prettyError(err);
+      process.exit(1);
     }
-    process.exit(1);
   }
 
   if (!config) {

@@ -6,7 +6,7 @@ try {
   process.cwd();
 } catch (err: unknown) {
   if (isError(err) && err.message.includes('uv_cwd')) {
-    // eslint-disable-next-line no-console
+    // biome-ignore lint/suspicious/noConsole: intentional console usage
     console.error('Error: The current working directory does not exist.');
     process.exit(1);
   }
@@ -17,9 +17,8 @@ try {
     'DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.',
   ];
 
-  // eslint-disable-next-line no-console
+  // biome-ignore lint/suspicious/noConsole: intentional console usage
   const originalError = console.error;
-  // eslint-disable-next-line no-console
   console.error = (msg: unknown) => {
     const isSilencedError = SILENCED_ERRORS.some(
       error => typeof msg === 'string' && msg.includes(error)
@@ -211,18 +210,19 @@ const main = async () => {
   const subSubCommand = parsedArgs.args[3];
 
   // If empty, leave this code here for easy adding of beta commands later
-  const betaCommands: string[] = ['api', 'curl', 'webhooks'];
-  if (betaCommands.includes(targetOrSubcommand)) {
-    output.debug(
-      `${getTitleName()} CLI ${pkg.version} | ${targetOrSubcommand} is in beta — https://vercel.com/feedback`
-    );
+  const betaCommands: string[] = ['api', 'crons', 'curl', 'webhooks'];
+  const msg = betaCommands.includes(targetOrSubcommand)
+    ? `${getTitleName()} CLI ${pkg.version} | ${targetOrSubcommand} is in beta — https://vercel.com/feedback`
+    : `${getTitleName()} CLI ${pkg.version}`;
+  if (process.env.VERCEL === '1') {
+    output.print(`${msg}\n`);
   } else {
-    output.debug(`${getTitleName()} CLI ${pkg.version}`);
+    output.debug(msg);
   }
 
   // Handle `--version` directly
   if (!targetOrSubcommand && parsedArgs.flags['--version']) {
-    // eslint-disable-next-line no-console
+    // biome-ignore lint/suspicious/noConsole: intentional console usage
     console.log(pkg.version);
     return 0;
   }
@@ -345,7 +345,7 @@ const main = async () => {
 
   try {
     new URL(apiUrl);
-  } catch (err: unknown) {
+  } catch (_err: unknown) {
     output.error(`Please provide a valid URL instead of ${highlight(apiUrl)}.`);
     return 1;
   }
@@ -442,6 +442,7 @@ const main = async () => {
   }
 
   const subcommandsWithoutToken = [
+    'agent',
     'login',
     'logout',
     'help',
@@ -449,6 +450,7 @@ const main = async () => {
     'build',
     'telemetry',
     'upgrade',
+    'skills',
   ];
 
   if (process.env.FF_GUIDANCE_MODE) {
@@ -460,6 +462,10 @@ const main = async () => {
     (client.argv.includes('--local') || client.argv.includes('-L'))
   ) {
     subcommandsWithoutToken.push('dev');
+  }
+
+  if (subcommand === 'flags' && subSubCommand === 'prepare') {
+    subcommandsWithoutToken.push('flags');
   }
 
   // Prompt for login if there is no current token
@@ -717,10 +723,27 @@ const main = async () => {
           break;
 
         // Non-priority commands - loaded from bulk bundle
+        case 'agent':
+          telemetry.trackCliCommandAgent(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).agent;
+          break;
         case 'alias':
           telemetry.trackCliCommandAlias(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).alias;
           break;
+        case 'activity':
+          telemetry.trackCliCommandActivity(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).activity;
+          break;
+        case 'alerts':
+          if (process.env.FF_ALERTS) {
+            telemetry.trackCliCommandAlerts(userSuppliedSubCommand);
+            func = (await import('./commands-bulk.js')).alerts;
+            break;
+          } else {
+            func = null;
+            break;
+          }
         case 'api':
           telemetry.trackCliCommandApi(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).api;
@@ -752,6 +775,11 @@ const main = async () => {
         case 'certs':
           telemetry.trackCliCommandCerts(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).certs;
+          break;
+        case 'crons':
+        case 'cron':
+          telemetry.trackCliCommandCrons(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).crons;
           break;
         case 'curl':
           telemetry.trackCliCommandCurl(userSuppliedSubCommand);
@@ -874,6 +902,10 @@ const main = async () => {
         case 'rolling-release':
           telemetry.trackCliCommandRollingRelease(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).rollingRelease;
+          break;
+        case 'skills':
+          telemetry.trackCliCommandSkills(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).skills;
           break;
         case 'target':
           telemetry.trackCliCommandTarget(userSuppliedSubCommand);

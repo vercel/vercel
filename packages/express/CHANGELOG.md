@@ -1,5 +1,37 @@
 # @vercel/express
 
+## 0.1.55
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.6.13
+  - @vercel/cervel@0.0.30
+
+## 0.1.54
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.6.12
+  - @vercel/cervel@0.0.29
+
+## 0.1.53
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.6.11
+  - @vercel/cervel@0.0.28
+
+## 0.1.52
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.6.10
+  - @vercel/cervel@0.0.27
+
 ## 0.1.51
 
 ### Patch Changes

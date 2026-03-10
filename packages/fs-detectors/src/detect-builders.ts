@@ -116,6 +116,7 @@ export async function detectBuilders(
   builders: Builder[] | null;
   errors: ErrorResponse[] | null;
   warnings: ErrorResponse[];
+  hostRewriteRoutes?: Route[] | null;
   defaultRoutes: Route[] | null;
   redirectRoutes: Route[] | null;
   rewriteRoutes: Route[] | null;
@@ -367,12 +368,13 @@ export async function detectBuilders(
   if (frontendBuilder) {
     // Add @vercel/static build for public files for server-based frameworks
     // so that files in `public/` are served from the root path, e.g. `/logo.svg`.
-    // This applies to Express, Hono, Go, and Python-based server frameworks.
+    // This applies to Express, Hono, Go, Python, and experimental backends.
     if (
-      frontendBuilder?.use === '@vercel/express' ||
-      frontendBuilder?.use === '@vercel/hono' ||
-      frontendBuilder?.use === '@vercel/python' ||
-      frontendBuilder?.use === '@vercel/go'
+      isOfficialRuntime('express', frontendBuilder?.use) ||
+      isOfficialRuntime('hono', frontendBuilder?.use) ||
+      isOfficialRuntime('python', frontendBuilder?.use) ||
+      isOfficialRuntime('go', frontendBuilder?.use) ||
+      isOfficialRuntime('backends', frontendBuilder?.use)
     ) {
       builders.push({
         src: 'public/**/*',
@@ -1127,9 +1129,9 @@ function getRouteResult(
       const hasApiBuild = apiBuilders.find(builder => {
         return builder.src?.startsWith('api/');
       });
-      if (typeof ignoreRuntimes === 'undefined' && hasApiBuild) {
-        // This route is only necessary to hide the directory listing
-        // to avoid enumerating serverless function names.
+      // Skip for Next.js: it serves /api (Pages + App Router) and 404s unmatched
+      // paths; adding a catch-all here would 404 dynamic routes like /api/flow/[id]/next.
+      if (typeof ignoreRuntimes === 'undefined' && hasApiBuild && !isNextjs) {
         // But it causes issues in `vc dev` for frameworks that handle
         // their own functions such as redwood, so we ignore.
         rewriteRoutes.push({
@@ -1140,7 +1142,7 @@ function getRouteResult(
     } else {
       defaultRoutes.push(...apiRoutes);
 
-      if (apiRoutes.length) {
+      if (apiRoutes.length && !isNextjs) {
         defaultRoutes.push({
           status: 404,
           src: '^/api(/.*)?$',

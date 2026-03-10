@@ -1,5 +1,19 @@
 # @vercel/python-analysis
 
+## 0.9.0
+
+### Minor Changes
+
+- [python] add support for module-based entrypoints for cron jobs ([#15393](https://github.com/vercel/vercel/pull/15393))
+
+- For the django frontend, dynamically load settings.py instead of parsing it ([#15367](https://github.com/vercel/vercel/pull/15367))
+
+## 0.8.2
+
+### Patch Changes
+
+- Consolidate Python version resolution into `python-analysis` ([#15368](https://github.com/vercel/vercel/pull/15368))
+
 ## 0.8.1
 
 ### Patch Changes

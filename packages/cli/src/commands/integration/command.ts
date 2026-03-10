@@ -271,12 +271,24 @@ export const discoverSubcommand = {
   name: 'discover',
   aliases: [],
   description: 'Discover available marketplace integrations',
-  arguments: [],
+  arguments: [
+    {
+      name: 'query',
+      required: false,
+    },
+  ],
   options: [formatOption, jsonOption],
   examples: [
     {
       name: 'Discover marketplace integrations',
       value: [`${packageName} integration discover`],
+    },
+    {
+      name: 'Search for integrations matching a query',
+      value: [
+        `${packageName} integration discover postgres`,
+        `${packageName} integration discover aws`,
+      ],
     },
     {
       name: 'Discover marketplace integrations as JSON',
