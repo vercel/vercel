@@ -425,6 +425,39 @@ class TestHTTPHandler(_RuntimeTestCase):
             self.assertIn("Side Effect (via waitUntil) failed", decoded)
             self.assertIn("wait-until-http-error", decoded)
 
+    async def test_wait_until_timeout_warns_and_does_not_block_end(
+        self,
+    ) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "wait_until_http_handler.py",
+            self.tmp_path,
+        )
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+            extra_env={"__VC_WAIT_UNTIL_TIMEOUT": "0.1"},
+        ) as proc:
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            started_at = time.monotonic()
+            resp = await _http_get(port, "/slow")
+            self.assertEqual(resp.status, 200)
+            self.assertEqual(resp.read().decode(), "ok")
+
+            await self.n1.wait_for_message(HandlerStartedMessage, timeout=5.0)
+            await self.n1.wait_for_message(EndMessage, timeout=1.0)
+            elapsed = time.monotonic() - started_at
+            self.assertLess(elapsed, 0.4)
+
+        stderr = await _read_stderr(proc)
+        self.assertIn("still running after 0.1s", stderr)
+        self.assertIn("long-running waitUntil() promise", stderr)
+
 
 class TestWSGIApp(_RuntimeTestCase):
     """Tests for WSGI app entrypoints."""
@@ -595,6 +628,39 @@ class TestASGIApp(_RuntimeTestCase):
             self.assertEqual(error_log.payload.level, "error")
             self.assertIn("Side Effect (via waitUntil) failed", decoded)
             self.assertIn("wait-until-asgi-error", decoded)
+
+    async def test_wait_until_timeout_warns_and_does_not_block_end(
+        self,
+    ) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "wait_until_asgi_app.py",
+            self.tmp_path,
+        )
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+            extra_env={"__VC_WAIT_UNTIL_TIMEOUT": "0.1"},
+        ) as proc:
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            started_at = time.monotonic()
+            resp = await _http_get(port, "/slow")
+            self.assertEqual(resp.status, 200)
+            self.assertEqual(resp.read().decode(), "ok")
+
+            await self.n1.wait_for_message(HandlerStartedMessage, timeout=5.0)
+            await self.n1.wait_for_message(EndMessage, timeout=1.0)
+            elapsed = time.monotonic() - started_at
+            self.assertLess(elapsed, 0.4)
+
+        stderr = await _read_stderr(proc)
+        self.assertIn("still running after 0.1s", stderr)
+        self.assertIn("long-running waitUntil() promise", stderr)
 
 
 class TestCronService(_RuntimeTestCase):

@@ -9,6 +9,8 @@ class handler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:
         if self.path == "/error":
             wait_until(_raise_background_error)
+        elif self.path == "/slow":
+            wait_until(_slow_background_log)
         else:
             wait_until(_log_background_finished)
 
@@ -26,3 +28,8 @@ def _log_background_finished() -> None:
 def _raise_background_error() -> None:
     time.sleep(0.1)
     raise RuntimeError("wait-until-http-error")
+
+
+def _slow_background_log() -> None:
+    time.sleep(0.5)
+    logging.info("wait-until-http-slow-finished")

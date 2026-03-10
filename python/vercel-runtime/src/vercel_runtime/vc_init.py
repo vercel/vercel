@@ -32,7 +32,7 @@ from vercel_runtime.headers import (
 )
 from vercel_runtime.resolver import (
     detect_app_type,
-    import_module as import_path_module,
+    import_module,
     resolve_app,
 )
 from vercel_runtime.routing import (
@@ -40,11 +40,7 @@ from vercel_runtime.routing import (
     apply_service_route_prefix_to_target,
     split_request_target,
 )
-from vercel_runtime.wait_until import (
-    WaitUntilState,
-    reset_wait_until_state,
-    set_wait_until_state,
-)
+from vercel_runtime.wait_until import WaitUntilState
 from vercel_runtime.workers import (
     bootstrap_worker_service_app,
     is_celery_app,
@@ -463,7 +459,7 @@ if _extra_path:
     os.environ["PATH"] = _extra_path + ":" + os.environ.get("PATH", "")
 
 try:
-    __vc_module = import_path_module(_entrypoint_modname, _entrypoint_abs)
+    __vc_module = import_module(_entrypoint_modname, _entrypoint_abs)
     __vc_variables = dir(__vc_module)
 except Exception:
     _fatal_exc(f'could not import "{_entrypoint_rel}"')
@@ -615,7 +611,7 @@ class ASGIMiddleware:
         )
 
         wait_until_state = WaitUntilState()
-        wait_until_token = set_wait_until_state(wait_until_state)
+        wait_until_token = wait_until_state.activate()
         token = storage.set(
             {
                 "invocationId": invocation_id,
@@ -627,8 +623,8 @@ class ASGIMiddleware:
         try:
             await self.app(new_scope, receive, send)
         finally:
-            await wait_until_state.wait()
-            reset_wait_until_state(wait_until_token)
+            await wait_until_state.drain(_entrypoint_rel, _stderr)
+            wait_until_token.deactivate()
             clear_vercel_headers_context()
             storage.reset(token)
             send_message(
@@ -773,7 +769,7 @@ if "VERCEL_IPC_PATH" in os.environ:
             )
 
             wait_until_state = WaitUntilState()
-            wait_until_token = set_wait_until_state(wait_until_state)
+            wait_until_token = wait_until_state.activate()
             token = storage.set(
                 {
                     "invocationId": invocation_id,
@@ -785,8 +781,8 @@ if "VERCEL_IPC_PATH" in os.environ:
             try:
                 self.handle_request()  # type: ignore[attr-defined]
             finally:
-                wait_until_state.wait_sync()
-                reset_wait_until_state(wait_until_token)
+                wait_until_state.drain_sync(_entrypoint_rel, _stderr)
+                wait_until_token.deactivate()
                 clear_vercel_headers_context()
                 storage.reset(token)
                 send_message(

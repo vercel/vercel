@@ -10,6 +10,8 @@ async def app(scope, receive, send):
 
     if scope["path"] == "/error":
         wait_until(_background_error())
+    elif scope["path"] == "/slow":
+        wait_until(_slow_background_log())
     else:
         wait_until(_background_log())
 
@@ -37,3 +39,8 @@ async def _background_log() -> None:
 async def _background_error() -> None:
     await asyncio.sleep(0.1)
     raise RuntimeError("wait-until-asgi-error")
+
+
+async def _slow_background_log() -> None:
+    await asyncio.sleep(0.5)
+    logging.info("wait-until-asgi-slow-finished")
