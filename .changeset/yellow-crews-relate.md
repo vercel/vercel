@@ -2,4 +2,4 @@
 '@vercel/frameworks': minor
 ---
 
-Make the generic "python" framework not experimental
+Make the generic "python" framework and the Django framework not experimental
