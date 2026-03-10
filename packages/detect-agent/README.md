@@ -31,6 +31,7 @@ This package can detect the following AI agents and development environments:
 - **Devin** (Cognition Labs)
 - **Gemini CLI** (Google)
 - **Codex** (OpenAI)
+- **GitHub Copilot** (via `AI_AGENT=github-copilot|github-copilot-cli`, `COPILOT_MODEL`, `COPILOT_ALLOW_ALL`, or `COPILOT_GITHUB_TOKEN`)
 - **Replit** (online IDE)
 
 ## The AI_AGENT Standard
