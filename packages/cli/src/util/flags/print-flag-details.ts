@@ -244,7 +244,7 @@ function formatEnvironmentOutcome(
 function formatEnvironmentVariantSummary(
   variant: FlagVariant | undefined,
   fallback: string
-) {
+): string {
   if (!variant) {
     return chalk.bold(fallback);
   }

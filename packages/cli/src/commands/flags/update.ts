@@ -12,6 +12,7 @@ import {
   resolveVariant,
 } from '../../util/flags/resolve-variant';
 import { updateFlag } from '../../util/flags/update-flag';
+import { normalizeOptionalInput } from '../../util/flags/normalize-optional-input';
 import output from '../../output-manager';
 import { FlagsUpdateTelemetryClient } from '../../util/telemetry/commands/flags/update';
 import { updateSubcommand } from './command';
@@ -150,11 +151,6 @@ export default async function update(
   }
 
   return 0;
-}
-
-function normalizeOptionalInput(input: string | undefined): string | undefined {
-  const value = input?.trim();
-  return value ? value : undefined;
 }
 
 async function collectVariantUpdate(

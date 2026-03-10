@@ -9,6 +9,7 @@ import { getFlag } from '../../util/flags/get-flags';
 import { formatVariantForDisplay } from '../../util/flags/resolve-variant';
 import { updateFlag } from '../../util/flags/update-flag';
 import { getFlagDashboardUrl } from '../../util/flags/dashboard-url';
+import { normalizeOptionalInput } from '../../util/flags/normalize-optional-input';
 import output from '../../output-manager';
 import { FlagsEnableTelemetryClient } from '../../util/telemetry/commands/flags/enable';
 import { enableSubcommand } from './command';
@@ -86,7 +87,7 @@ export default async function enable(
       return 1;
     }
 
-    // Only boolean flags can be enabled/disabled via CLI
+    // Only boolean flags can be force-enabled via CLI
     if (flag.kind !== 'boolean') {
       const dashboardUrl = getFlagDashboardUrl(
         link.org.slug,
@@ -97,9 +98,15 @@ export default async function enable(
         `The ${getCommandName('flags enable')} command only works with boolean flags.`
       );
       output.log(
-        `Flag ${chalk.bold(flag.slug)} is a ${chalk.cyan(flag.kind)} flag. You can update it on the dashboard:`
+        `Flag ${chalk.bold(flag.slug)} is a ${chalk.cyan(flag.kind)} flag. Update a specific variant instead:`
       );
-      output.log(`  ${chalk.cyan(dashboardUrl)}`);
+      output.log(
+        `  ${getCommandName(`flags update ${flag.slug} --variant <VARIANT> --value <VALUE>`)}`
+      );
+      output.log(
+        `See available variants with ${getCommandName(`flags inspect ${flag.slug}`)}`
+      );
+      output.log(`Open in the dashboard: ${chalk.cyan(dashboardUrl)}`);
       return 0;
     }
 
@@ -201,11 +208,6 @@ export default async function enable(
   }
 
   return 0;
-}
-
-function normalizeOptionalInput(input: string | undefined): string | undefined {
-  const value = input?.trim();
-  return value ? value : undefined;
 }
 
 function getDefaultEnableMessage(environment: string): string {
