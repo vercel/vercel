@@ -5,6 +5,7 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { getLinkedProject } from '../../util/projects/link';
 import { getCommandName } from '../../util/pkg-name';
+import { outputAgentError } from '../../util/agent-output';
 import { getFlag } from '../../util/flags/get-flags';
 import { updateFlag } from '../../util/flags/update-flag';
 import { resolveVariant } from '../../util/flags/resolve-variant';
@@ -40,11 +41,49 @@ export default async function disable(
   const variantId = flags['--variant'] as string | undefined;
 
   if (!flagArg) {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'missing_flag',
+          message: 'Please provide a flag slug or ID to disable.',
+          next: [
+            {
+              command: getCommandName(
+                'flags disable <flag> --environment <env>'
+              ),
+            },
+          ],
+        },
+        1
+      );
+    }
     output.error('Please provide a flag slug or ID to disable');
     output.log(
       `Example: ${getCommandName('flags disable my-feature --environment production')}`
     );
     return 1;
+  }
+
+  if (client.nonInteractive && !environment) {
+    outputAgentError(
+      client,
+      {
+        status: 'error',
+        reason: 'missing_environment',
+        message:
+          'Please provide --environment (production, preview, or development).',
+        next: [
+          {
+            command: getCommandName(
+              `flags disable ${flagArg} --environment <env>`
+            ),
+          },
+        ],
+      },
+      1
+    );
   }
 
   telemetryClient.trackCliArgumentFlag(flagArg);
@@ -55,6 +94,18 @@ export default async function disable(
   if (link.status === 'error') {
     return link.exitCode;
   } else if (link.status === 'not_linked') {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'not_linked',
+          message: 'Your codebase is not linked to a project. Run link first.',
+          next: [{ command: getCommandName('link') }],
+        },
+        1
+      );
+    }
     output.error(
       `Your codebase isn't linked to a project on Vercel. Run ${getCommandName('link')} to begin.`
     );
@@ -67,12 +118,25 @@ export default async function disable(
   const { project } = link;
 
   try {
-    // Fetch the flag
-    output.spinner('Fetching flag...');
+    if (!client.nonInteractive) {
+      output.spinner('Fetching flag...');
+    }
     const flag = await getFlag(client, project.id, flagArg);
     output.stopSpinner();
 
     if (flag.state === 'archived') {
+      if (client.nonInteractive) {
+        outputAgentError(
+          client,
+          {
+            status: 'error',
+            reason: 'flag_archived',
+            message: `Flag ${flag.slug} is archived and cannot be disabled.`,
+            next: [],
+          },
+          1
+        );
+      }
       output.error(
         `Flag ${chalk.bold(flag.slug)} is archived and cannot be disabled`
       );
@@ -86,6 +150,18 @@ export default async function disable(
         project.name,
         flag.slug
       );
+      if (client.nonInteractive) {
+        outputAgentError(
+          client,
+          {
+            status: 'error',
+            reason: 'not_boolean_flag',
+            message: `The flags disable command only works with boolean flags. Flag ${flag.slug} is ${flag.kind}.`,
+            next: [],
+          },
+          1
+        );
+      }
       output.warn(
         `The ${getCommandName('flags disable')} command only works with boolean flags.`
       );
@@ -103,6 +179,18 @@ export default async function disable(
       );
 
       if (availableEnvs.length === 0) {
+        if (client.nonInteractive) {
+          outputAgentError(
+            client,
+            {
+              status: 'error',
+              reason: 'no_environments',
+              message: 'No valid environments found for this flag.',
+              next: [],
+            },
+            1
+          );
+        }
         output.error('No valid environments found for this flag');
         return 1;
       }
@@ -148,6 +236,24 @@ export default async function disable(
       // Resolve the variant from user input (can be ID, value, or label)
       const result = resolveVariant(selectedVariantId, flag.variants);
       if (result.error) {
+        if (client.nonInteractive) {
+          outputAgentError(
+            client,
+            {
+              status: 'error',
+              reason: 'invalid_variant',
+              message: result.error,
+              next: [
+                {
+                  command: getCommandName(
+                    `flags disable ${flagArg} -e ${environment} --variant <id|value|label>`
+                  ),
+                },
+              ],
+            },
+            1
+          );
+        }
         output.error(result.error);
         return 1;
       }
@@ -161,6 +267,25 @@ export default async function disable(
       selectedVariantId = falseVariant?.id ?? flag.variants[0].id;
     } else {
       // Multiple variants available for non-boolean flags, prompt user to select
+      if (client.nonInteractive) {
+        outputAgentError(
+          client,
+          {
+            status: 'error',
+            reason: 'variant_required',
+            message:
+              'Multiple variants available. Specify --variant (variant ID, value, or label).',
+            next: [
+              {
+                command: getCommandName(
+                  `flags disable ${flagArg} -e ${environment} --variant <id|value|label>`
+                ),
+              },
+            ],
+          },
+          1
+        );
+      }
       selectedVariantId = await client.input.select({
         message: 'Select which variant to serve while the flag is disabled:',
         choices: flag.variants.map(v => ({
@@ -180,7 +305,9 @@ export default async function disable(
       },
     };
 
-    output.spinner(`Disabling flag in ${environment}...`);
+    if (!client.nonInteractive) {
+      output.spinner(`Disabling flag in ${environment}...`);
+    }
     await updateFlag(client, project.id, flagArg, {
       environments: {
         [environment]: updatedEnvConfig,
@@ -193,6 +320,24 @@ export default async function disable(
     const variantValue = variant
       ? JSON.stringify(variant.value)
       : selectedVariantId;
+
+    if (client.nonInteractive) {
+      client.stdout.write(
+        `${JSON.stringify(
+          {
+            status: 'ok',
+            flag: { slug: flag.slug },
+            environment,
+            variantId: selectedVariantId,
+            variantValue: variant?.value,
+            message: `Feature flag ${flag.slug} has been disabled in ${environment}.`,
+          },
+          null,
+          2
+        )}\n`
+      );
+      return 0;
+    }
 
     output.success(
       `Feature flag ${chalk.bold(flag.slug)} has been disabled in ${chalk.bold(environment)}`

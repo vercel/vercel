@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach } from 'vitest';
+import { describe, expect, it, beforeEach, vi, afterEach } from 'vitest';
 import flags from '../../../../src/commands/flags';
 import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
 import { client } from '../../../mocks/client';
@@ -139,5 +139,74 @@ describe('flags rm', () => {
     const exitCode = await flags(client);
     expect(exitCode).toEqual(1);
     expect(client.stderr.getFullOutput()).toContain('Flag not found');
+  });
+
+  describe('non-interactive mode', () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('outputs error JSON when flag argument is missing', async () => {
+      vi.spyOn(process, 'exit').mockImplementation(() => {
+        throw new Error('exit');
+      });
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+      client.nonInteractive = true;
+      client.setArgv('flags', 'rm', '--non-interactive');
+      const exitCodePromise = flags(client);
+
+      await expect(exitCodePromise).rejects.toThrow('exit');
+      expect(logSpy).toHaveBeenCalled();
+      const payload = JSON.parse(
+        logSpy.mock.calls[logSpy.mock.calls.length - 1][0]
+      );
+      expect(payload).toMatchObject({
+        status: 'error',
+        reason: 'missing_flag',
+        message: expect.stringMatching(/flag|slug|ID/),
+        next: expect.any(Array),
+      });
+    });
+
+    it('outputs error JSON when --yes is missing', async () => {
+      testFlags[0].state = 'archived';
+      vi.spyOn(process, 'exit').mockImplementation(() => {
+        throw new Error('exit');
+      });
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+      client.nonInteractive = true;
+      client.setArgv('flags', 'rm', testFlags[0].slug);
+      const exitCodePromise = flags(client);
+
+      await expect(exitCodePromise).rejects.toThrow('exit');
+      expect(logSpy).toHaveBeenCalled();
+      const payload = JSON.parse(
+        logSpy.mock.calls[logSpy.mock.calls.length - 1][0]
+      );
+      expect(payload).toMatchObject({
+        status: 'error',
+        reason: 'confirmation_required',
+        message: expect.stringMatching(/confirmation|--yes/),
+        next: expect.any(Array),
+      });
+    });
+
+    it('outputs success JSON when flag and --yes provided (archived flag)', async () => {
+      testFlags[0].state = 'archived';
+      const slug = testFlags[0].slug;
+      client.nonInteractive = true;
+      client.setArgv('flags', 'rm', slug, '--yes');
+      const exitCode = await flags(client);
+      expect(exitCode).toEqual(0);
+      const stdout = client.stdout.getFullOutput();
+      const payload = JSON.parse(stdout);
+      expect(payload).toMatchObject({
+        status: 'ok',
+        flag: { slug },
+        message: expect.stringMatching(/deleted/),
+      });
+    });
   });
 });

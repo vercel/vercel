@@ -5,6 +5,7 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { getLinkedProject } from '../../util/projects/link';
 import { getCommandName } from '../../util/pkg-name';
+import { outputAgentError } from '../../util/agent-output';
 import { getFlag } from '../../util/flags/get-flags';
 import { updateFlag } from '../../util/flags/update-flag';
 import { getFlagDashboardUrl } from '../../util/flags/dashboard-url';
@@ -39,11 +40,49 @@ export default async function enable(
   let environment = flags['--environment'] as string | undefined;
 
   if (!flagArg) {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'missing_flag',
+          message: 'Please provide a flag slug or ID to enable.',
+          next: [
+            {
+              command: getCommandName(
+                'flags enable <flag> --environment <env>'
+              ),
+            },
+          ],
+        },
+        1
+      );
+    }
     output.error('Please provide a flag slug or ID to enable');
     output.log(
       `Example: ${getCommandName('flags enable my-feature --environment production')}`
     );
     return 1;
+  }
+
+  if (client.nonInteractive && !environment) {
+    outputAgentError(
+      client,
+      {
+        status: 'error',
+        reason: 'missing_environment',
+        message:
+          'Please provide --environment (production, preview, or development).',
+        next: [
+          {
+            command: getCommandName(
+              `flags enable ${flagArg} --environment <env>`
+            ),
+          },
+        ],
+      },
+      1
+    );
   }
 
   telemetryClient.trackCliArgumentFlag(flagArg);
@@ -53,6 +92,18 @@ export default async function enable(
   if (link.status === 'error') {
     return link.exitCode;
   } else if (link.status === 'not_linked') {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'not_linked',
+          message: 'Your codebase is not linked to a project. Run link first.',
+          next: [{ command: getCommandName('link') }],
+        },
+        1
+      );
+    }
     output.error(
       `Your codebase isn't linked to a project on Vercel. Run ${getCommandName('link')} to begin.`
     );
@@ -65,12 +116,25 @@ export default async function enable(
   const { project } = link;
 
   try {
-    // Fetch the flag
-    output.spinner('Fetching flag...');
+    if (!client.nonInteractive) {
+      output.spinner('Fetching flag...');
+    }
     const flag = await getFlag(client, project.id, flagArg);
     output.stopSpinner();
 
     if (flag.state === 'archived') {
+      if (client.nonInteractive) {
+        outputAgentError(
+          client,
+          {
+            status: 'error',
+            reason: 'flag_archived',
+            message: `Flag ${flag.slug} is archived and cannot be enabled.`,
+            next: [],
+          },
+          1
+        );
+      }
       output.error(
         `Flag ${chalk.bold(flag.slug)} is archived and cannot be enabled`
       );
@@ -84,6 +148,18 @@ export default async function enable(
         project.name,
         flag.slug
       );
+      if (client.nonInteractive) {
+        outputAgentError(
+          client,
+          {
+            status: 'error',
+            reason: 'not_boolean_flag',
+            message: `The flags enable command only works with boolean flags. Flag ${flag.slug} is ${flag.kind}.`,
+            next: [],
+          },
+          1
+        );
+      }
       output.warn(
         `The ${getCommandName('flags enable')} command only works with boolean flags.`
       );
@@ -101,6 +177,18 @@ export default async function enable(
       );
 
       if (availableEnvs.length === 0) {
+        if (client.nonInteractive) {
+          outputAgentError(
+            client,
+            {
+              status: 'error',
+              reason: 'no_environments',
+              message: 'No valid environments found for this flag.',
+              next: [],
+            },
+            1
+          );
+        }
         output.error('No valid environments found for this flag');
         return 1;
       }
@@ -134,6 +222,21 @@ export default async function enable(
     }
 
     if (envConfig.active) {
+      if (client.nonInteractive) {
+        client.stdout.write(
+          `${JSON.stringify(
+            {
+              status: 'ok',
+              flag: { slug: flag.slug },
+              environment,
+              message: 'Flag is already enabled in this environment.',
+            },
+            null,
+            2
+          )}\n`
+        );
+        return 0;
+      }
       output.warn(
         `Flag ${chalk.bold(flag.slug)} is already enabled in ${environment}`
       );
@@ -146,7 +249,9 @@ export default async function enable(
       active: true,
     };
 
-    output.spinner(`Enabling flag in ${environment}...`);
+    if (!client.nonInteractive) {
+      output.spinner(`Enabling flag in ${environment}...`);
+    }
     await updateFlag(client, project.id, flagArg, {
       environments: {
         [environment]: updatedEnvConfig,
@@ -154,6 +259,22 @@ export default async function enable(
       message: `Enabled in ${environment} via CLI`,
     });
     output.stopSpinner();
+
+    if (client.nonInteractive) {
+      client.stdout.write(
+        `${JSON.stringify(
+          {
+            status: 'ok',
+            flag: { slug: flag.slug },
+            environment,
+            message: `Feature flag ${flag.slug} has been enabled in ${environment}.`,
+          },
+          null,
+          2
+        )}\n`
+      );
+      return 0;
+    }
 
     output.success(
       `Feature flag ${chalk.bold(flag.slug)} has been enabled in ${chalk.bold(environment)}`

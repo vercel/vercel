@@ -5,6 +5,7 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { getLinkedProject } from '../../util/projects/link';
 import { getCommandName } from '../../util/pkg-name';
+import { buildCommandWithYes, outputAgentError } from '../../util/agent-output';
 import { getSdkKeys, deleteSdkKey } from '../../util/flags/sdk-keys';
 import output from '../../output-manager';
 import { FlagsSdkKeysRmTelemetryClient } from '../../util/telemetry/commands/flags/sdk-keys';
@@ -42,10 +43,36 @@ export default async function sdkKeysRm(
   if (link.status === 'error') {
     return link.exitCode;
   } else if (link.status === 'not_linked') {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'not_linked',
+          message: 'Your codebase is not linked to a project. Run link first.',
+          next: [{ command: getCommandName('link') }],
+        },
+        1
+      );
+    }
     output.error(
       `Your codebase isn't linked to a project on Vercel. Run ${getCommandName('link')} to begin.`
     );
     return 1;
+  }
+
+  if (client.nonInteractive && !skipConfirmation) {
+    outputAgentError(
+      client,
+      {
+        status: 'error',
+        reason: 'confirmation_required',
+        message:
+          'Deleting an SDK key requires confirmation. Re-run with --yes.',
+        next: [{ command: buildCommandWithYes(client.argv) }],
+      },
+      1
+    );
   }
 
   client.config.currentTeam =
@@ -54,13 +81,35 @@ export default async function sdkKeysRm(
   const { project } = link;
 
   try {
-    // If no hash key provided, let user select from existing keys
+    // If no hash key provided, let user select from existing keys (or error in non-interactive)
     if (!hashKey) {
+      if (client.nonInteractive) {
+        outputAgentError(
+          client,
+          {
+            status: 'error',
+            reason: 'missing_key',
+            message:
+              'Please provide the SDK key hash to delete. Run "vercel flags sdk-keys ls" to list keys.',
+            next: [
+              { command: getCommandName('flags sdk-keys ls') },
+              { command: getCommandName('flags sdk-keys rm <hashKey> --yes') },
+            ],
+          },
+          1
+        );
+      }
       output.spinner('Fetching SDK keys...');
       const keys = await getSdkKeys(client, project.id);
       output.stopSpinner();
 
       if (keys.length === 0) {
+        if (client.nonInteractive) {
+          client.stdout.write(
+            `${JSON.stringify({ status: 'ok', message: 'No SDK keys found.', keys: [] }, null, 2)}\n`
+          );
+          return 0;
+        }
         output.log('No SDK keys found');
         return 0;
       }
@@ -82,14 +131,31 @@ export default async function sdkKeysRm(
       );
 
       if (!confirmed) {
-        output.log('Aborted');
+        if (!client.nonInteractive) output.log('Aborted');
         return 0;
       }
     }
 
-    output.spinner('Deleting SDK key...');
+    if (!client.nonInteractive) {
+      output.spinner('Deleting SDK key...');
+    }
     await deleteSdkKey(client, project.id, hashKey);
     output.stopSpinner();
+
+    if (client.nonInteractive) {
+      client.stdout.write(
+        `${JSON.stringify(
+          {
+            status: 'ok',
+            key: { hashKey: hashKey.slice(0, 12) + '...' },
+            message: 'SDK key has been deleted.',
+          },
+          null,
+          2
+        )}\n`
+      );
+      return 0;
+    }
 
     output.success(
       `SDK key ${chalk.bold(hashKey.slice(0, 12) + '...')} has been deleted`

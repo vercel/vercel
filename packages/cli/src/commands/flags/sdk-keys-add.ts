@@ -5,6 +5,7 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { getLinkedProject } from '../../util/projects/link';
 import { getCommandName } from '../../util/pkg-name';
+import { outputAgentError } from '../../util/agent-output';
 import { createSdkKey } from '../../util/flags/sdk-keys';
 import output from '../../output-manager';
 import { FlagsSdkKeysAddTelemetryClient } from '../../util/telemetry/commands/flags/sdk-keys';
@@ -48,10 +49,62 @@ export default async function sdkKeysAdd(
   if (link.status === 'error') {
     return link.exitCode;
   } else if (link.status === 'not_linked') {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'not_linked',
+          message: 'Your codebase is not linked to a project. Run link first.',
+          next: [{ command: getCommandName('link') }],
+        },
+        1
+      );
+    }
     output.error(
       `Your codebase isn't linked to a project on Vercel. Run ${getCommandName('link')} to begin.`
     );
     return 1;
+  }
+
+  if (client.nonInteractive) {
+    if (!sdkKeyType) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'missing_type',
+          message: 'Please provide --type (server, client, or mobile).',
+          next: [
+            {
+              command: getCommandName(
+                'flags sdk-keys add --type <type> --environment <env>'
+              ),
+            },
+          ],
+        },
+        1
+      );
+    }
+    if (!environment) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'missing_environment',
+          message:
+            'Please provide --environment (production, preview, or development).',
+          next: [
+            {
+              command: getCommandName(
+                `flags sdk-keys add --type ${sdkKeyType ?? 'server'} --environment <env>`
+              ),
+            },
+          ],
+        },
+        1
+      );
+    }
   }
 
   client.config.currentTeam =
@@ -60,7 +113,7 @@ export default async function sdkKeysAdd(
   const { project } = link;
 
   // Prompt for type if not provided
-  if (!sdkKeyType) {
+  if (!sdkKeyType && !client.nonInteractive) {
     sdkKeyType = await client.input.select({
       message: 'Select the SDK key type:',
       choices: [
@@ -77,7 +130,7 @@ export default async function sdkKeysAdd(
     });
   }
 
-  if (!VALID_TYPES.includes(sdkKeyType)) {
+  if (sdkKeyType === undefined || !VALID_TYPES.includes(sdkKeyType)) {
     output.error(
       `Invalid type: ${sdkKeyType}. Must be one of: ${VALID_TYPES.join(', ')}`
     );
@@ -85,7 +138,7 @@ export default async function sdkKeysAdd(
   }
 
   // Prompt for environment if not provided
-  if (!environment) {
+  if (!environment && !client.nonInteractive) {
     environment = await client.input.select({
       message: 'Select the environment:',
       choices: VALID_ENVIRONMENTS.map(env => ({
@@ -95,7 +148,7 @@ export default async function sdkKeysAdd(
     });
   }
 
-  if (!VALID_ENVIRONMENTS.includes(environment)) {
+  if (environment === undefined || !VALID_ENVIRONMENTS.includes(environment)) {
     output.error(
       `Invalid environment: ${environment}. Must be one of: ${VALID_ENVIRONMENTS.join(', ')}`
     );
@@ -115,15 +168,34 @@ export default async function sdkKeysAdd(
   }
 
   const request: CreateSdkKeyRequest = {
-    sdkKeyType,
-    environment,
+    sdkKeyType: sdkKeyType as 'server' | 'client' | 'mobile',
+    environment: environment as string,
     label: finalLabel,
   };
 
   try {
-    output.spinner('Creating SDK key...');
+    if (!client.nonInteractive) {
+      output.spinner('Creating SDK key...');
+    }
     const key = await createSdkKey(client, project.id, request);
     output.stopSpinner();
+
+    if (client.nonInteractive) {
+      const json: Record<string, unknown> = {
+        status: 'ok',
+        key: {
+          hashKey: key.hashKey,
+          type: key.type,
+          environment: key.environment,
+          ...(key.label ? { label: key.label } : {}),
+        },
+        message: 'SDK key created successfully.',
+      };
+      if (key.keyValue) json.keyValue = key.keyValue;
+      if (key.connectionString) json.connectionString = key.connectionString;
+      client.stdout.write(`${JSON.stringify(json, null, 2)}\n`);
+      return 0;
+    }
 
     output.success('SDK key created successfully');
     output.print('\n');
