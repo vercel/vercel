@@ -1,4 +1,12 @@
-Install the Neon Postgres integration using the Vercel CLI and create a database resource named "my-test-db". Link the resource to the current project. Use the free tier if plan options are presented. Complete this without any interactive prompts.
+Using only the Vercel CLI, discover and report the following information:
+
+1. What products does Upstash offer? List each product's slug.
+2. What configuration options (metadata) does the Neon integration accept? List each option with its valid values.
+3. What billing plans are available for Upstash Redis?
+
+Do NOT use web searches or external documentation — only use what the CLI itself can tell you.
+
+Print your answers clearly at the end.
 
 Important context:
 

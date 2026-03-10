@@ -1,4 +1,4 @@
-Install the Neon Postgres integration using the Vercel CLI and create a database resource named "my-test-db". Link the resource to the current project. Use the free tier if plan options are presented. Complete this without any interactive prompts.
+Install an Upstash Redis cache using the Vercel CLI. Upstash offers multiple products — make sure to select Redis specifically. Name the resource "eval-upstash-redis". Link it to the current project. Complete this without any interactive prompts.
 
 Important context:
 
