@@ -586,6 +586,27 @@ describe('Test `detectBuilders`', () => {
     expect(errors[0].code).toBe('invalid_function_duration');
   });
 
+  it('valid function maxDuration set to "max"', async () => {
+    const pkg = {
+      scripts: { build: 'next build' },
+      dependencies: { next: '9.0.0' },
+    };
+    const functions = {
+      'pages/api/teams/**': { maxDuration: 'max' as const },
+    };
+    const files = [
+      'package.json',
+      'pages/index.js',
+      'pages/api/teams/members.ts',
+    ];
+    const { builders, errors } = await invokeDetectBuilders(files, pkg, {
+      functions,
+    });
+
+    expect(errors).toHaveLength(0);
+    expect(builders.length).toBe(1);
+  });
+
   it('invalid function memory', async () => {
     const functions = { 'pages/index.ts': { memory: 127 } };
     const files = ['pages/index.ts'];

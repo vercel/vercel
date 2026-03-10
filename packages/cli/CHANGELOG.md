@@ -1,5 +1,63 @@
 # vercel
 
+## 50.31.0
+
+### Minor Changes
+
+- Support `maxDuration: 'max'` to allow the backend to resolve the maximum duration based on account plan type ([#15217](https://github.com/vercel/vercel/pull/15217))
+
+### Patch Changes
+
+- Updated dependencies [[`b5542a65e3f1b0e1d1a4b93b89ef7b14d1abfab6`](https://github.com/vercel/vercel/commit/b5542a65e3f1b0e1d1a4b93b89ef7b14d1abfab6), [`8a3558f680d592b4ea47ac7e48c99145d6368941`](https://github.com/vercel/vercel/commit/8a3558f680d592b4ea47ac7e48c99145d6368941)]:
+  - @vercel/build-utils@13.8.0
+  - @vercel/next@4.16.0
+  - @vercel/remix-builder@5.7.0
+  - @vercel/static-build@2.9.0
+  - @vercel/backends@0.0.45
+  - @vercel/elysia@0.1.48
+  - @vercel/express@0.1.57
+  - @vercel/fastify@0.1.51
+  - @vercel/go@3.4.4
+  - @vercel/h3@0.1.57
+  - @vercel/hono@0.2.51
+  - @vercel/hydrogen@1.3.6
+  - @vercel/koa@0.1.31
+  - @vercel/nestjs@0.2.52
+  - @vercel/node@5.6.15
+  - @vercel/python@6.22.0
+  - @vercel/redwood@2.4.10
+  - @vercel/ruby@2.3.2
+  - @vercel/rust@1.0.5
+
+## 50.30.1
+
+### Patch Changes
+
+- Detect Claude Code in `vercel agent init` and write to CLAUDE.md instead of AGENTS.md; update best practices content ([#15423](https://github.com/vercel/vercel/pull/15423))
+
+- Add a new `vc alerts` command behind `FF_ALERTS` to list observability alerts from the vercel-alerts API. ([#15389](https://github.com/vercel/vercel/pull/15389))
+
+- Updated dependencies [[`25843696c2813a62a424516b96e5977897ad2ab1`](https://github.com/vercel/vercel/commit/25843696c2813a62a424516b96e5977897ad2ab1), [`b4b3de24d2999d88944a1c5d16f9d54887ef5929`](https://github.com/vercel/vercel/commit/b4b3de24d2999d88944a1c5d16f9d54887ef5929)]:
+  - @vercel/python@6.22.0
+  - @vercel/go@3.4.4
+  - @vercel/build-utils@13.7.2
+  - @vercel/backends@0.0.44
+  - @vercel/elysia@0.1.47
+  - @vercel/express@0.1.56
+  - @vercel/fastify@0.1.50
+  - @vercel/h3@0.1.56
+  - @vercel/hono@0.2.50
+  - @vercel/hydrogen@1.3.5
+  - @vercel/koa@0.1.30
+  - @vercel/nestjs@0.2.51
+  - @vercel/next@4.15.42
+  - @vercel/node@5.6.14
+  - @vercel/redwood@2.4.9
+  - @vercel/remix-builder@5.6.0
+  - @vercel/ruby@2.3.2
+  - @vercel/rust@1.0.5
+  - @vercel/static-build@2.8.48
+
 ## 50.30.0
 
 ### Minor Changes
