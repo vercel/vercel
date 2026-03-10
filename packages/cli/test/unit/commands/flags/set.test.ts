@@ -214,6 +214,21 @@ describe('flags set', () => {
     ]);
   });
 
+  it('errors when the flag argument is missing', async () => {
+    (client.stdin as any).isTTY = false;
+    client.setArgv('flags', 'set');
+
+    const exitCodePromise = flags(client);
+
+    await expect(client.stderr).toOutput(
+      'Please provide a flag slug or ID to set'
+    );
+    await expect(client.stderr).toOutput(
+      'flags set my-feature --environment production --variant true'
+    );
+    expect(await exitCodePromise).toEqual(1);
+  });
+
   it('sets a string variant by value', async () => {
     (client.stdin as any).isTTY = false;
     client.setArgv(
@@ -264,6 +279,59 @@ describe('flags set', () => {
       active: false,
       pausedOutcome: { type: 'variant', variantId: 'large' },
       fallthrough: { type: 'variant', variantId: 'large' },
+    });
+  });
+
+  it('sets a number variant by value', async () => {
+    (client.stdin as any).isTTY = false;
+    client.setArgv(
+      'flags',
+      'set',
+      testFlags[2].slug,
+      '--environment',
+      'preview',
+      '--variant',
+      '20'
+    );
+
+    const exitCode = await flags(client);
+
+    expect(exitCode).toEqual(0);
+    expect(stripAnsi(client.stderr.getFullOutput())).toContain(
+      'Serving variant: 20 Large'
+    );
+    expect((testFlags[2] as Flag & { message?: string }).message).toEqual(
+      'Set variant for preview via CLI'
+    );
+    expect(testFlags[2].environments.preview).toMatchObject({
+      active: false,
+      pausedOutcome: { type: 'variant', variantId: 'large' },
+      fallthrough: { type: 'variant', variantId: 'large' },
+    });
+  });
+
+  it('sets a flag by ID', async () => {
+    (client.stdin as any).isTTY = false;
+    client.setArgv(
+      'flags',
+      'set',
+      testFlags[1].id,
+      '--environment',
+      'production',
+      '--variant',
+      'treatment'
+    );
+
+    const exitCode = await flags(client);
+
+    expect(exitCode).toEqual(0);
+    expect(stripAnsi(client.stderr.getFullOutput())).toContain(
+      'Feature flag welcome-message has been set in production'
+    );
+    expect(testFlags[1].environments.production).toMatchObject({
+      active: false,
+      pausedOutcome: { type: 'variant', variantId: 'variant-a' },
+      fallthrough: { type: 'variant', variantId: 'variant-a' },
     });
   });
 
@@ -400,6 +468,24 @@ describe('flags set', () => {
     );
   });
 
+  it('errors when the environment is invalid', async () => {
+    (client.stdin as any).isTTY = false;
+    client.setArgv(
+      'flags',
+      'set',
+      testFlags[1].slug,
+      '--environment',
+      'staging',
+      '--variant',
+      'control'
+    );
+
+    const exitCodePromise = flags(client);
+
+    await expect(client.stderr).toOutput('Invalid environment: staging');
+    expect(await exitCodePromise).toEqual(1);
+  });
+
   it('does not resolve explicit variants by label', async () => {
     (client.stdin as any).isTTY = false;
     client.setArgv(
@@ -421,6 +507,11 @@ describe('flags set', () => {
   });
 
   it('warns when the environment is already serving the selected variant', async () => {
+    const originalEnvironment = JSON.parse(
+      JSON.stringify(testFlags[1].environments.development)
+    );
+    const originalMessage = (testFlags[1] as Flag & { message?: string })
+      .message;
     (client.stdin as any).isTTY = false;
     client.setArgv(
       'flags',
@@ -437,6 +528,10 @@ describe('flags set', () => {
     expect(exitCode).toEqual(0);
     expect(stripAnsi(client.stderr.getFullOutput())).toContain(
       'already serving "control" Control in development'
+    );
+    expect(testFlags[1].environments.development).toEqual(originalEnvironment);
+    expect((testFlags[1] as Flag & { message?: string }).message).toEqual(
+      originalMessage
     );
   });
 
@@ -478,6 +573,43 @@ describe('flags set', () => {
     expect(exitCode).toEqual(0);
     expect((testFlags[2] as Flag & { message?: string }).message).toEqual(
       'Pin production bucket size'
+    );
+  });
+
+  it('errors when the project is not linked', async () => {
+    const cwd = setupUnitFixture('vercel-pull-unlinked');
+    client.cwd = cwd;
+    (client.stdin as any).isTTY = false;
+    client.setArgv(
+      'flags',
+      'set',
+      testFlags[1].slug,
+      '--environment',
+      'production',
+      '--variant',
+      'control'
+    );
+
+    const exitCodePromise = flags(client);
+
+    await expect(client.stderr).toOutput(
+      "Your codebase isn't linked to a project on Vercel"
+    );
+    expect(await exitCodePromise).toEqual(1);
+  });
+
+  it('falls back to the default revision message when interactive input is blank', async () => {
+    selectMock
+      .mockResolvedValueOnce('preview')
+      .mockResolvedValueOnce('variant-a');
+    textMock.mockResolvedValueOnce('   ');
+    client.setArgv('flags', 'set', testFlags[1].slug);
+
+    const exitCode = await flags(client);
+
+    expect(exitCode).toEqual(0);
+    expect((testFlags[1] as Flag & { message?: string }).message).toEqual(
+      'Set variant for preview via CLI'
     );
   });
 
