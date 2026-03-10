@@ -125,12 +125,11 @@ export async function detectBuilders(
   errorRoutes: Route[] | null;
   services?: Service[];
 }> {
-  const { experimentalServices, projectSettings = {} } = options;
+  const { experimentalServices: services, projectSettings = {} } = options;
   const { framework } = projectSettings;
-  const hasExperimentalServicesConfig =
-    experimentalServices != null && typeof experimentalServices === 'object';
+  const hasServicesConfig = services != null && typeof services === 'object';
 
-  if (hasExperimentalServicesConfig || framework === 'services') {
+  if (hasServicesConfig || framework === 'services') {
     return getServicesBuilders({
       workPath: options.workPath,
     });
