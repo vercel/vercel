@@ -686,7 +686,8 @@ function validateFunctions({ functions = {} }: Options) {
     ) {
       return {
         code: 'invalid_function_duration',
-        message: 'Functions must have a duration between 1 and 900.',
+        message:
+          'Functions must have a maxDuration between 1 and 900, or "max".',
       };
     }
 

@@ -94,7 +94,7 @@ export const functionsSchema = {
         },
         maxDuration: {
           oneOf: [
-            { type: 'number', minimum: 1, maximum: 900 },
+            { type: 'integer', minimum: 1, maximum: 900 },
             { type: 'string', enum: ['max'] },
           ],
         },

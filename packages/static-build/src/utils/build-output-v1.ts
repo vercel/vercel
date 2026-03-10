@@ -248,7 +248,7 @@ function parseFunctionConfig(data: Record<string, unknown>) {
   }
 
   if (typeof data.maxDuration === 'number' || data.maxDuration === 'max') {
-    config.maxDuration = data.maxDuration as number | 'max';
+    config.maxDuration = data.maxDuration;
   }
 
   // In case of a custom runtime, a custom handler has to be provided.
