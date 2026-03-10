@@ -16,9 +16,7 @@ import sys
 import time
 import traceback
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from importlib import util
-import importlib
-from typing import TYPE_CHECKING, Any, Literal, Never, Protocol, TextIO, cast
+from typing import TYPE_CHECKING, Any, Literal, Never, TextIO
 
 from vercel_runtime.crons import (
     bootstrap_cron_service_app,
@@ -42,6 +40,11 @@ from vercel_runtime.routing import (
     apply_service_route_prefix_to_target,
     split_request_target,
 )
+from vercel_runtime.wait_until import (
+    WaitUntilState,
+    reset_wait_until_state,
+    set_wait_until_state,
+)
 from vercel_runtime.workers import (
     bootstrap_worker_service_app,
     is_celery_app,
@@ -50,43 +53,6 @@ from vercel_runtime.workers import (
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
-    from contextvars import Token
-
-    class _WaitUntilModule(Protocol):
-        WaitUntilState: type[Any]
-
-        def set_wait_until_state(self, state: Any) -> Token[Any]: ...
-
-        def reset_wait_until_state(self, token: Token[Any]) -> None: ...
-
-
-def _load_wait_until_module() -> _WaitUntilModule:
-    try:
-        return cast(
-            "_WaitUntilModule",
-            importlib.import_module("vercel_runtime.wait_until"),
-        )
-    except ModuleNotFoundError:
-        wait_until_path = os.path.join(
-            os.path.dirname(__file__),
-            "wait_until.py",
-        )
-        spec = util.spec_from_file_location(
-            "vercel_runtime.wait_until",
-            wait_until_path,
-        )
-        if spec is None or spec.loader is None:
-            raise
-        module = util.module_from_spec(spec)
-        sys.modules.setdefault("vercel_runtime.wait_until", module)
-        spec.loader.exec_module(module)
-        return cast("_WaitUntilModule", module)
-
-
-_wait_until = _load_wait_until_module()
-WaitUntilState = _wait_until.WaitUntilState
-reset_wait_until_state = _wait_until.reset_wait_until_state
-set_wait_until_state = _wait_until.set_wait_until_state
 
 type _IpcMessage = dict[str, Any]
 type _ASGIScope = dict[str, Any]
