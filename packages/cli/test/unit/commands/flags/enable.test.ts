@@ -507,7 +507,11 @@ describe('flags enable', () => {
     expect(output).toContain('only works with boolean flags');
     // Should identify the flag type
     expect(output).toContain('string');
-    expect(output).toContain('You can update it on the dashboard');
+    expect(output).toContain('Set a specific variant instead');
+    expect(output).toContain(
+      `vercel flags set ${testFlags[1].slug} --environment <ENV> --variant <VARIANT>`
+    );
+    expect(output).toContain(`vercel flags inspect ${testFlags[1].slug}`);
     // Should show dashboard link
     expect(output).toContain('https://vercel.com/');
     expect(output).toContain(testFlags[1].slug);

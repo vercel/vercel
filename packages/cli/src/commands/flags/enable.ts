@@ -9,16 +9,17 @@ import { getFlag } from '../../util/flags/get-flags';
 import { formatVariantForDisplay } from '../../util/flags/resolve-variant';
 import { updateFlag } from '../../util/flags/update-flag';
 import { getFlagDashboardUrl } from '../../util/flags/dashboard-url';
+import { normalizeOptionalInput } from '../../util/flags/normalize-optional-input';
 import {
-  normalizeOptionalInput,
-  resolveOptionalInput,
-} from '../../util/flags/normalize-optional-input';
+  buildPausedEnvironmentConfig,
+  getBooleanVariant,
+  isPausingEnvironmentToVariant,
+  resolveFlagEnvironment,
+  resolveFlagUpdateMessage,
+} from '../../util/flags/environment-variant';
 import output from '../../output-manager';
 import { FlagsEnableTelemetryClient } from '../../util/telemetry/commands/flags/enable';
 import { enableSubcommand } from './command';
-import type { Flag, FlagVariant } from '../../util/flags/types';
-
-const VALID_ENVIRONMENTS = ['production', 'preview', 'development'];
 
 export default async function enable(
   client: Client,
@@ -97,86 +98,45 @@ export default async function enable(
         `The ${getCommandName('flags enable')} command only works with boolean flags.`
       );
       output.log(
-        `Flag ${chalk.bold(flag.slug)} is a ${chalk.cyan(flag.kind)} flag. You can update it on the dashboard:`
+        `Flag ${chalk.bold(flag.slug)} is a ${chalk.cyan(flag.kind)} flag. Set a specific variant instead:`
       );
-      output.log(`  ${chalk.cyan(dashboardUrl)}`);
+      output.log(
+        `  ${getCommandName(`flags set ${flag.slug} --environment <ENV> --variant <VARIANT>`)}`
+      );
+      output.log(
+        `See available variants with ${getCommandName(`flags inspect ${flag.slug}`)}`
+      );
+      output.log(`Open in the dashboard: ${chalk.cyan(dashboardUrl)}`);
       return 0;
     }
 
-    // If environment not specified, prompt for it
-    if (!environment) {
-      if (!client.stdin.isTTY) {
-        output.error(
-          'Missing required flag --environment. Use --environment <ENV>, or run interactively in a terminal.'
-        );
-        return 1;
-      }
-
-      const availableEnvs = VALID_ENVIRONMENTS.filter(env =>
-        Object.prototype.hasOwnProperty.call(flag.environments, env)
-      );
-
-      if (availableEnvs.length === 0) {
-        output.error('No valid environments found for this flag');
-        return 1;
-      }
-
-      environment = await client.input.select({
-        message: 'Select an environment to enable the flag in:',
-        choices: availableEnvs.map(env => {
-          const config = flag.environments[env];
-          const status = config?.active
-            ? chalk.green('active')
-            : chalk.yellow('paused');
-          return {
-            name: `${env} (${status})`,
-            value: env,
-          };
-        }),
-      });
-    }
-
-    if (!VALID_ENVIRONMENTS.includes(environment)) {
-      output.error(
-        `Invalid environment: ${environment}. Must be one of: ${VALID_ENVIRONMENTS.join(', ')}`
-      );
-      return 1;
-    }
+    environment = await resolveFlagEnvironment(
+      client,
+      flag,
+      environment,
+      'Select an environment to enable the flag in:'
+    );
 
     const envConfig = flag.environments[environment];
-    if (!envConfig) {
-      output.error(`Environment ${environment} not found for this flag`);
-      return 1;
-    }
+    const onVariant = getBooleanVariant(flag, true);
 
-    const { onVariant } = getBooleanVariants(flag);
-
-    if (
-      !envConfig.active &&
-      envConfig.pausedOutcome?.variantId === onVariant.id
-    ) {
+    if (isPausingEnvironmentToVariant(envConfig, onVariant.id)) {
       output.warn(
         `Flag ${chalk.bold(flag.slug)} is already enabled in ${environment}`
       );
       return 0;
     }
 
-    envConfig.active = false;
-    envConfig.pausedOutcome = {
-      type: 'variant',
-      variantId: onVariant.id,
-    };
-    const updateMessage = await resolveOptionalInput(
+    const updateMessage = await resolveFlagUpdateMessage(
       client,
       message,
-      getDefaultEnableMessage(environment),
-      'Enter a message for this update:'
+      getDefaultEnableMessage(environment)
     );
 
     output.spinner(`Enabling flag in ${environment}...`);
     await updateFlag(client, project.id, flagArg, {
       environments: {
-        [environment]: envConfig,
+        [environment]: buildPausedEnvironmentConfig(envConfig, onVariant.id),
       },
       message: updateMessage,
     });
@@ -199,18 +159,4 @@ export default async function enable(
 
 function getDefaultEnableMessage(environment: string): string {
   return `Enabled for ${environment} via CLI`;
-}
-
-function getBooleanVariants(flag: Flag): {
-  onVariant: FlagVariant;
-} {
-  const onVariant = flag.variants.find(variant => variant.value === true);
-
-  if (!onVariant) {
-    throw new Error(
-      `Flag ${chalk.bold(flag.slug)} is missing the standard boolean variants`
-    );
-  }
-
-  return { onVariant };
 }
