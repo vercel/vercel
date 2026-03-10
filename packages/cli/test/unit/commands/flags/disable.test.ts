@@ -1,3 +1,5 @@
+import chalk from 'chalk';
+import stripAnsi from 'strip-ansi';
 import { describe, expect, it, beforeEach, vi } from 'vitest';
 import flags from '../../../../src/commands/flags';
 import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
@@ -205,9 +207,9 @@ describe('flags disable', () => {
     );
     const exitCode = await flags(client);
     expect(exitCode).toEqual(0);
-    expect(client.stderr.getFullOutput()).toContain(
-      'Serving variant: false Off'
-    );
+    const output = client.stderr.getFullOutput();
+    expect(stripAnsi(output)).toContain('Serving variant: false Off');
+    expect(output).toContain(chalk.dim('Off'));
     expect((testFlags[0] as Flag & { message?: string }).message).toEqual(
       'Disabled for production via CLI'
     );
@@ -321,9 +323,9 @@ describe('flags disable', () => {
     );
     const exitCode = await flags(client);
     expect(exitCode).toEqual(0);
-    expect(client.stderr.getFullOutput()).toContain(
-      'Serving variant: false Off'
-    );
+    const output = client.stderr.getFullOutput();
+    expect(stripAnsi(output)).toContain('Serving variant: false Off');
+    expect(output).toContain(chalk.dim('Off'));
     expect(testFlags[0].environments.production).toMatchObject({
       pausedOutcome: { type: 'variant', variantId: 'abc123xyz' },
       fallthrough: { type: 'variant', variantId: 'abc123xyz' },
@@ -348,9 +350,9 @@ describe('flags disable', () => {
     );
     const exitCode = await flags(client);
     expect(exitCode).toEqual(0);
-    expect(client.stderr.getFullOutput()).toContain(
-      'Serving variant: false Disabled'
-    );
+    const output = client.stderr.getFullOutput();
+    expect(stripAnsi(output)).toContain('Serving variant: false Disabled');
+    expect(output).toContain(chalk.dim('Disabled'));
     expect(testFlags[0].environments.production).toMatchObject({
       pausedOutcome: { type: 'variant', variantId: 'random_id_1' },
       fallthrough: { type: 'variant', variantId: 'random_id_1' },
@@ -375,9 +377,9 @@ describe('flags disable', () => {
     );
     const exitCode = await flags(client);
     expect(exitCode).toEqual(0);
-    expect(client.stderr.getFullOutput()).toContain(
-      'Serving variant: false Disabled'
-    );
+    const output = client.stderr.getFullOutput();
+    expect(stripAnsi(output)).toContain('Serving variant: false Disabled');
+    expect(output).toContain(chalk.dim('Disabled'));
     expect(testFlags[0].environments.production).toMatchObject({
       pausedOutcome: { type: 'variant', variantId: 'uuid_style_id_1' },
       fallthrough: { type: 'variant', variantId: 'uuid_style_id_1' },
@@ -427,9 +429,9 @@ describe('flags disable', () => {
         message: expect.stringContaining('variant'),
       })
     );
-    expect(client.stderr.getFullOutput()).toContain(
-      'Serving variant: false Off'
-    );
+    const output = client.stderr.getFullOutput();
+    expect(stripAnsi(output)).toContain('Serving variant: false Off');
+    expect(output).toContain(chalk.dim('Off'));
     expect(testFlags[0].environments.production).toMatchObject({
       pausedOutcome: { type: 'variant', variantId: 'off' },
       fallthrough: { type: 'variant', variantId: 'off' },

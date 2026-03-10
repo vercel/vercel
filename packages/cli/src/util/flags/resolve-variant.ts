@@ -20,7 +20,7 @@ export function formatVariantValue(value: FlagVariant['value']): string {
 export function formatVariantForDisplay(variant: FlagVariant): string {
   const parts = [formatVariantValue(variant.value)];
   if (variant.label) {
-    parts.push(variant.label);
+    parts.push(chalk.dim(variant.label));
   }
   return parts.join(' ');
 }

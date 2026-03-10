@@ -153,7 +153,8 @@ describe('resolve-variant', () => {
   describe('formatVariantForDisplay', () => {
     it('formats variant with label', () => {
       const result = formatVariantForDisplay(booleanVariants[0]);
-      expect(result).toBe('true Enabled');
+      expect(stripAnsi(result)).toBe('true Enabled');
+      expect(result).toBe(`true ${chalk.dim('Enabled')}`);
     });
 
     it('formats variant without label', () => {

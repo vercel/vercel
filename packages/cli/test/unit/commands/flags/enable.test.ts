@@ -1,3 +1,5 @@
+import chalk from 'chalk';
+import stripAnsi from 'strip-ansi';
 import { describe, expect, it, beforeEach, vi } from 'vitest';
 import flags from '../../../../src/commands/flags';
 import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
@@ -205,8 +207,10 @@ describe('flags enable', () => {
     );
     const exitCode = await flags(client);
     expect(exitCode).toEqual(0);
-    expect(client.stderr.getFullOutput()).toContain('has been enabled');
-    expect(client.stderr.getFullOutput()).toContain('Serving variant: true On');
+    const output = client.stderr.getFullOutput();
+    expect(output).toContain('has been enabled');
+    expect(stripAnsi(output)).toContain('Serving variant: true On');
+    expect(output).toContain(chalk.dim('On'));
     expect((testFlags[0] as Flag & { message?: string }).message).toEqual(
       'Enabled for production via CLI'
     );
