@@ -5,16 +5,53 @@ import { help } from '../help';
 import { mcpCommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
-import { getCommandName } from '../../util/pkg-name';
+import { packageName } from '../../util/pkg-name';
 import { outputAgentError } from '../../util/agent-output';
 import mcp from './mcp';
+import { MCP_CLIENT_DISPLAY_NAMES } from './constants';
 
-const VALID_CLIENTS = [
-  'Claude Code',
-  'Claude.ai and Claude for desktop',
-  'Cursor',
-  'VS Code with Copilot',
-];
+function buildSuggestedMcpCommand(
+  client: Client,
+  clientsValue: string
+): string {
+  const args = client.argv.slice(2);
+  // args[0] should be 'mcp'
+  const preserved: string[] = [];
+  let hasNonInteractive = false;
+  let seenClients = false;
+
+  for (let i = 1; i < args.length; i++) {
+    const arg = args[i];
+    if (arg === '--non-interactive') {
+      hasNonInteractive = true;
+      continue;
+    }
+    if (arg === '--clients') {
+      seenClients = true;
+      i++;
+      continue;
+    }
+    if (arg.startsWith('--clients=')) {
+      continue;
+    }
+    if (seenClients) {
+      // Skip any tokens after an unquoted --clients value to avoid
+      // carrying partial client names into the suggestion.
+      continue;
+    }
+    preserved.push(arg);
+  }
+
+  // Always quote the clients value with single quotes so it is copy-pastable
+  const singleQuotedClients = `'${clientsValue}'`;
+  preserved.push('--clients', singleQuotedClients);
+  if (hasNonInteractive) {
+    preserved.push('--non-interactive');
+  }
+
+  const suffix = preserved.join(' ');
+  return suffix ? `${packageName} mcp ${suffix}` : `${packageName} mcp`;
+}
 
 function parseAndValidateClients(clientsFlag: string | undefined): string[] {
   if (!clientsFlag || !clientsFlag.trim()) return [];
@@ -24,7 +61,7 @@ function parseAndValidateClients(clientsFlag: string | undefined): string[] {
     .filter(Boolean);
   const normalized = requested.map(name => {
     const lower = name.toLowerCase();
-    const match = VALID_CLIENTS.find(c => c.toLowerCase() === lower);
+    const match = MCP_CLIENT_DISPLAY_NAMES.find(c => c.toLowerCase() === lower);
     return match ?? name;
   });
   return [...new Set(normalized)];
@@ -61,33 +98,41 @@ export default async function main(client: Client) {
             'In non-interactive mode --clients is required. Specify a comma-separated list of MCP clients to set up.',
           next: [
             {
-              command: getCommandName(
-                'mcp --clients "Cursor,VS Code with Copilot"'
+              command: buildSuggestedMcpCommand(
+                client,
+                'Cursor,VS Code with Copilot'
               ),
             },
           ],
         },
         1
       );
+      return 1;
     }
-    const invalid = clients.filter(c => !VALID_CLIENTS.some(v => v === c));
+    const invalid = clients.filter(
+      c => !MCP_CLIENT_DISPLAY_NAMES.some(v => v === c)
+    );
     if (invalid.length > 0) {
       outputAgentError(
         client,
         {
           status: 'error',
           reason: 'invalid_clients',
-          message: `Invalid client(s): ${invalid.join(', ')}. Valid options: ${VALID_CLIENTS.join(', ')}.`,
+          message: `Invalid client(s): ${invalid.join(
+            ', '
+          )}. Valid options: ${MCP_CLIENT_DISPLAY_NAMES.join(', ')}.`,
           next: [
             {
-              command: getCommandName(
-                'mcp --clients "Cursor,VS Code with Copilot"'
+              command: buildSuggestedMcpCommand(
+                client,
+                'Cursor,VS Code with Copilot'
               ),
             },
           ],
         },
         1
       );
+      return 1;
     }
   }
 

@@ -318,8 +318,8 @@ export default class Client extends EventEmitter implements Stdio {
       return true;
     }
 
-    // Check if we have a TTY for interactive prompts
-    if (!this.stdin.isTTY) {
+    // Check if we can prompt (TTY and not --non-interactive)
+    if (!this.stdin.isTTY || this.nonInteractive) {
       output.error(
         `DELETE operations require confirmation. Use ${bold('--dangerously-skip-permissions')} to skip confirmation in non-interactive mode.`
       );

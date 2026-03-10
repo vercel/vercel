@@ -2,7 +2,7 @@ import output from '../../output-manager';
 import type Client from '../../util/client';
 import { execSync } from 'child_process';
 import { getLinkedProject } from '../../util/projects/link';
-import { getCommandName } from '../../util/pkg-name';
+import { packageName } from '../../util/pkg-name';
 import { outputAgentError } from '../../util/agent-output';
 
 const MCP_ENDPOINT = 'https://mcp.vercel.com';
@@ -82,7 +82,7 @@ export default async function mcp(client: Client, opts: McpOptions = {}) {
             reason: 'not_linked',
             message:
               'No linked project found. Link your project first for project-specific MCP.',
-            next: [{ command: getCommandName('link') }],
+            next: [{ command: `${packageName} link` }],
           },
           1
         );
@@ -475,7 +475,7 @@ export default async function mcp(client: Client, opts: McpOptions = {}) {
       hint: 'Restart your MCP client(s) to apply changes.',
       next: [
         {
-          command: getCommandName('link'),
+          command: `${packageName} link`,
           when: 'To link a project for project-specific MCP (optional)',
         },
       ],
