@@ -6,7 +6,7 @@ import param from '../../util/output/param';
 import chars from '../../util/output/chars';
 import eraseLines from '../../util/output/erase-lines';
 import getUser from '../../util/get-user';
-import { getCommandName } from '../../util/pkg-name';
+import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 import { email as regexEmail } from '../../util/input/regexes';
 import getTeams from '../../util/teams/get-teams';
 import inviteUserToTeam from '../../util/teams/invite-user-to-team';
@@ -18,6 +18,10 @@ import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { inviteSubcommand } from './command';
+import {
+  outputActionRequired,
+  outputAgentError,
+} from '../../util/agent-output';
 
 const validateEmail = (data: string) =>
   regexEmail.test(data.trim()) || data.length === 0;
@@ -57,16 +61,45 @@ export default async function invite(
   try {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'invalid_arguments',
+          message: error instanceof Error ? error.message : String(error),
+        },
+        1
+      );
+    }
     printError(error);
     return 1;
   }
   const { args: emails } = parsedArgs;
 
   if (client.nonInteractive && emails.length === 0) {
-    output.error(
-      `In non-interactive mode at least one email is required. Example: ${getCommandName(
-        'teams invite email@example.com'
-      )}`
+    const fullArgs = client.argv.slice(2);
+    const inviteIdx = fullArgs.indexOf('invite');
+    const afterInvite = inviteIdx >= 0 ? fullArgs.slice(inviteIdx + 1) : [];
+    const flagParts = afterInvite.filter(a => a.startsWith('-'));
+    const cmd = getCommandNamePlain(
+      `teams invite user@example.com ${flagParts.join(' ')}`.trim()
+    );
+    outputActionRequired(
+      client,
+      {
+        status: 'action_required',
+        reason: 'missing_arguments',
+        action: 'missing_arguments',
+        message: `In non-interactive mode at least one email is required. Run: ${cmd}`,
+        next: [
+          {
+            command: cmd,
+            when: 'to invite teammates (replace user@example.com)',
+          },
+        ],
+      },
+      1
     );
     return 1;
   }
@@ -87,6 +120,19 @@ export default async function invite(
     )}.\nPlease select a team scope using ${getCommandName(
       `switch`
     )} or use ${cmd('--scope')}`;
+    if (client.nonInteractive) {
+      const switchCmd = getCommandNamePlain('switch <team>');
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'team_scope_required',
+          message: `Team scope is required for teams invite. Run ${switchCmd} or use --scope.`,
+          next: [{ command: switchCmd }],
+        },
+        1
+      );
+    }
     output.error(err);
     return 1;
   }
@@ -109,6 +155,31 @@ export default async function invite(
           userInfo = res.username;
         } catch (err: unknown) {
           if (isAPIError(err) && err.code === 'user_not_found') {
+            if (client.nonInteractive) {
+              const fullArgs = client.argv.slice(2);
+              const inviteIdx = fullArgs.indexOf('invite');
+              const afterInvite =
+                inviteIdx >= 0 ? fullArgs.slice(inviteIdx + 1) : [];
+              // Drop email positionals; keep flags only for suggestion template
+              const flagParts = afterInvite.filter(a => a.startsWith('-'));
+              const retryCmd = getCommandNamePlain(
+                `teams invite user@example.com ${flagParts.join(' ')}`.trim()
+              );
+              outputAgentError(
+                client,
+                {
+                  status: 'error',
+                  reason: 'user_not_found',
+                  message: `No user exists with the email address "${email}".`,
+                  next: [
+                    {
+                      command: retryCmd,
+                    },
+                  ],
+                },
+                1
+              );
+            }
             output.error(`No user exists with the email address "${email}".`);
             return 1;
           }

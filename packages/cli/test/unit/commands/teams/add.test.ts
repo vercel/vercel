@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach } from 'vitest';
+import { describe, expect, it, beforeEach, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import teams from '../../../../src/commands/teams';
 import { useUser } from '../../../mocks/user';
@@ -93,32 +93,71 @@ describe('teams add', () => {
       await expect(client.stderr).toOutput('vercel.com/acme');
     });
 
-    it('errors when --slug is missing in non-interactive mode', async () => {
+    it('outputs action_required JSON when --slug is missing in non-interactive mode', async () => {
       client.nonInteractive = true;
+      const logSpy = vi
+        .spyOn(console, 'log')
+        .mockImplementation(() => undefined as unknown as void);
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {
+        throw new Error('exit');
+      }) as () => never);
+
       client.setArgv('teams', 'add', '--name', 'Acme Corp');
-      const exitCode = await teams(client);
-      expect(exitCode).toBe(1);
-      await expect(client.stderr).toOutput(
-        'In non-interactive mode "--slug" is required'
-      );
+      await expect(teams(client)).rejects.toThrow('exit');
+
+      const payload = JSON.parse(logSpy.mock.calls[0][0] as string);
+      expect(payload.status).toBe('action_required');
+      expect(payload.reason).toBe('missing_arguments');
+      expect(payload.message).toContain('--slug');
+      expect(payload.next[0].command).toContain('teams add');
+      expect(payload.next[0].command).toContain('<slug>');
+
+      logSpy.mockRestore();
+      exitSpy.mockRestore();
+      client.nonInteractive = false;
     });
 
-    it('errors when --name is missing in non-interactive mode', async () => {
+    it('outputs action_required JSON when --name is missing in non-interactive mode', async () => {
       client.nonInteractive = true;
+      const logSpy = vi
+        .spyOn(console, 'log')
+        .mockImplementation(() => undefined as unknown as void);
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {
+        throw new Error('exit');
+      }) as () => never);
+
       client.setArgv('teams', 'add', '--slug', 'acme');
-      const exitCode = await teams(client);
-      expect(exitCode).toBe(1);
-      await expect(client.stderr).toOutput(
-        'In non-interactive mode "--name" is required'
-      );
+      await expect(teams(client)).rejects.toThrow('exit');
+
+      const payload = JSON.parse(logSpy.mock.calls[0][0] as string);
+      expect(payload.status).toBe('action_required');
+      expect(payload.message).toContain('--name');
+
+      logSpy.mockRestore();
+      exitSpy.mockRestore();
+      client.nonInteractive = false;
     });
 
-    it('errors when --slug is invalid in non-interactive mode', async () => {
+    it('outputs error JSON when --slug is invalid in non-interactive mode', async () => {
       client.nonInteractive = true;
+      const logSpy = vi
+        .spyOn(console, 'log')
+        .mockImplementation(() => undefined as unknown as void);
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {
+        throw new Error('exit');
+      }) as () => never);
+
       client.setArgv('teams', 'add', '--slug', '123invalid', '--name', 'Acme');
-      const exitCode = await teams(client);
-      expect(exitCode).toBe(1);
-      await expect(client.stderr).toOutput('Invalid "--slug"');
+      await expect(teams(client)).rejects.toThrow('exit');
+
+      const payload = JSON.parse(logSpy.mock.calls[0][0] as string);
+      expect(payload.status).toBe('error');
+      expect(payload.reason).toBe('invalid_slug');
+      expect(payload.message).toContain('--slug');
+
+      logSpy.mockRestore();
+      exitSpy.mockRestore();
+      client.nonInteractive = false;
     });
   });
 });

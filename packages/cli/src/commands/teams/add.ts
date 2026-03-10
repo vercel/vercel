@@ -4,7 +4,7 @@ import eraseLines from '../../util/output/erase-lines';
 import chars from '../../util/output/chars';
 import invite from './invite';
 import { writeToConfigFile } from '../../util/config/files';
-import { getCommandName } from '../../util/pkg-name';
+import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 import type Client from '../../util/client';
 import createTeam from '../../util/teams/create-team';
 import patchTeam from '../../util/teams/patch-team';
@@ -16,6 +16,10 @@ import { printError } from '../../util/error';
 import param from '../../util/output/param';
 import { addSubcommand } from './command';
 import { isAPIError } from '../../util/errors-ts';
+import {
+  outputActionRequired,
+  outputAgentError,
+} from '../../util/agent-output';
 
 const validateSlug = (value: string) => /^[a-z]+[a-z0-9_-]*$/.test(value);
 
@@ -122,6 +126,17 @@ export default async function add(
   try {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'invalid_arguments',
+          message: error instanceof Error ? error.message : String(error),
+        },
+        1
+      );
+    }
     printError(error);
     return 1;
   }
@@ -134,27 +149,71 @@ export default async function add(
     if (!slugFlag || !slugFlag.trim()) missing.push('--slug');
     if (!nameFlag || !nameFlag.trim()) missing.push('--name');
     if (missing.length > 0) {
+      const fullArgs = client.argv.slice(2);
+      const addIdx = fullArgs.indexOf('add');
+      const afterAdd = addIdx >= 0 ? fullArgs.slice(addIdx + 1) : [];
+      const flagParts = afterAdd.filter(a => a.startsWith('-'));
+      const cmd = getCommandNamePlain(
+        `teams add --slug <slug> --name "<name>" ${flagParts.join(' ')}`.trim()
+      );
       const required = missing.map(p => param(p)).join(' and ');
       const verb = missing.length === 1 ? 'is' : 'are';
-      output.error(
-        `In non-interactive mode ${required} ${verb} required. Example: ${getCommandName(
-          'teams add --slug acme --name "Acme Corp"'
-        )}`
+      outputActionRequired(
+        client,
+        {
+          status: 'action_required',
+          reason: 'missing_arguments',
+          action: 'missing_arguments',
+          message: `In non-interactive mode ${required} ${verb} required. Run: ${cmd}`,
+          next: [
+            {
+              command: cmd,
+              when: 'to create a team non-interactively',
+            },
+          ],
+        },
+        1
       );
-      return 1;
     }
     const slug = (slugFlag as string).trim().toLowerCase();
     const name = (nameFlag as string).trim();
     if (!validateSlug(slug)) {
-      output.error(
-        `Invalid ${param('--slug')}: must start with a letter and contain only lowercase letters, numbers, hyphens, and underscores (e.g. ${param('acme')})`
-      );
+      const msg = `Invalid ${param('--slug')}: must start with a letter and contain only lowercase letters, numbers, hyphens, and underscores (e.g. ${param('acme')})`;
+      if (client.nonInteractive) {
+        outputAgentError(
+          client,
+          {
+            status: 'error',
+            reason: 'invalid_slug',
+            message: msg,
+            next: [
+              {
+                command: getCommandNamePlain(
+                  'teams add --slug acme --name "<name>"'
+                ),
+              },
+            ],
+          },
+          1
+        );
+      }
+      output.error(msg);
       return 1;
     }
     if (!validateName(name)) {
-      output.error(
-        `Invalid ${param('--name')}: only letters, numbers, spaces, hyphens, and underscores allowed`
-      );
+      const msg = `Invalid ${param('--name')}: only letters, numbers, spaces, hyphens, and underscores allowed`;
+      if (client.nonInteractive) {
+        outputAgentError(
+          client,
+          {
+            status: 'error',
+            reason: 'invalid_name',
+            message: msg,
+          },
+          1
+        );
+      }
+      output.error(msg);
       return 1;
     }
 
