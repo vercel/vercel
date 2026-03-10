@@ -1,4 +1,6 @@
-Install the Neon Postgres integration using the Vercel CLI and create a database resource named "my-test-db". Link the resource to the current project. Use the free tier if plan options are presented. Complete this without any interactive prompts.
+Find PostgreSQL database integrations available in the Vercel marketplace using the CLI. List the names of any PostgreSQL-compatible integrations you find.
+
+Write your findings to a file called `postgres-integrations.txt` with one integration name per line (e.g., "neon", "supabase").
 
 Important context:
 

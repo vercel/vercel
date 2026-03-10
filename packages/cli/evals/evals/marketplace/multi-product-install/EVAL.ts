@@ -2,7 +2,6 @@ import { test, expect, beforeAll, afterAll } from 'vitest';
 import { readFileSync } from 'fs';
 import { homedir } from 'os';
 import { join } from 'path';
-import { Vercel } from '@vercel/sdk';
 
 function getToken(): string {
   const home = homedir();
@@ -34,22 +33,26 @@ function getProjectConfig(): { projectId: string; orgId: string } {
   return JSON.parse(readFileSync('.vercel/project.json', 'utf-8'));
 }
 
+function getShellCommands(): { command: string; success: boolean }[] {
+  const results = JSON.parse(
+    readFileSync('__agent_eval__/results.json', 'utf-8')
+  );
+  return results.o11y?.shellCommands ?? [];
+}
+
 let token: string;
 let projectId: string;
 let orgId: string;
-let vercel: Vercel;
 let headers: Record<string, string>;
 
 beforeAll(() => {
   token = getToken();
   ({ projectId, orgId } = getProjectConfig());
-  vercel = new Vercel({ bearerToken: token });
   headers = { Authorization: `Bearer ${token}` };
 });
 
 afterAll(async () => {
-  // Clean up Neon stores created during the eval so they don't leak.
-  // Runs before the runner's destroy() deletes the ephemeral project.
+  // Clean up Upstash stores created during the eval.
   if (!token || !projectId) return;
   try {
     const res = await fetch(
@@ -78,8 +81,15 @@ afterAll(async () => {
   }
 }, 60_000);
 
-test('neon integration is installed with resource "my-test-db"', async () => {
-  // The SDK doesn't expose /v1/storage/stores, so we use fetch directly
+test('agent used the slash syntax upstash/redis', () => {
+  const commands = getShellCommands();
+  const slashCommands = commands.filter(c =>
+    /\bupstash\/redis\b/.test(c.command)
+  );
+  expect(slashCommands.length).toBeGreaterThan(0);
+});
+
+test('upstash redis resource "eval-upstash-redis" exists', async () => {
   const res = await fetch(
     `https://api.vercel.com/v1/storage/stores?projectId=${projectId}&teamId=${orgId}`,
     { headers }
@@ -89,23 +99,10 @@ test('neon integration is installed with resource "my-test-db"', async () => {
   const data = (await res.json()) as {
     stores?: { name?: string; provider?: string }[];
   };
-  const neonStore = (data.stores ?? []).find(
-    s => s.name === 'my-test-db' || s.provider?.toLowerCase().includes('neon')
+  const upstashStore = (data.stores ?? []).find(
+    s =>
+      s.name === 'eval-upstash-redis' ||
+      s.provider?.toLowerCase().includes('upstash')
   );
-  expect(neonStore).toBeDefined();
-});
-
-test('DATABASE_URL env var exists for development', async () => {
-  const result = await vercel.projects.filterProjectEnvs({
-    idOrName: projectId,
-    teamId: orgId,
-  });
-
-  // filterProjectEnvs returns a union; variants 2 & 3 have `envs`, variant 1 is a single env
-  const envs: { key: string }[] =
-    'envs' in result
-      ? (result as { envs: { key: string }[] }).envs
-      : [result as unknown as { key: string }];
-  const dbUrl = envs.find(e => e.key === 'DATABASE_URL');
-  expect(dbUrl).toBeDefined();
+  expect(upstashStore).toBeDefined();
 });
