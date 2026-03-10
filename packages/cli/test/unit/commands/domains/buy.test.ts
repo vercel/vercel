@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import domains from '../../../../src/commands/domains';
 import { client } from '../../../mocks/client';
 import { useUser } from '../../../mocks/user';
@@ -15,6 +15,108 @@ describe('domains buy', () => {
 
   afterAll(() => {
     process.env.CI = origCI;
+  });
+
+  describe('--non-interactive', () => {
+    it('outputs error JSON with missing_domain when no domain provided', async () => {
+      client.setArgv('domains', 'buy', '--non-interactive');
+      (client as { nonInteractive: boolean }).nonInteractive = true;
+
+      const exitSpy = vi
+        .spyOn(process, 'exit')
+        .mockImplementation((code?: number) => {
+          throw new Error(`process.exit(${code})`);
+        });
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+      await expect(domains(client)).rejects.toThrow('process.exit(1)');
+
+      expect(logSpy).toHaveBeenCalledTimes(1);
+      const payload = JSON.parse(logSpy.mock.calls[0][0]);
+      expect(payload.status).toBe('error');
+      expect(payload.reason).toBe('missing_domain');
+      expect(payload.message).toContain('Domain name is required');
+      expect(payload.next).toBeDefined();
+      expect(payload.next[0].command).toContain('domains buy');
+      expect(exitSpy).toHaveBeenCalledWith(1);
+
+      exitSpy.mockRestore();
+      logSpy.mockRestore();
+      (client as { nonInteractive: boolean }).nonInteractive = false;
+    });
+
+    it('outputs error JSON with invalid_domain when subdomain is provided', async () => {
+      useUser();
+      client.setArgv('domains', 'buy', 'sub.example.com', '--non-interactive');
+      (client as { nonInteractive: boolean }).nonInteractive = true;
+
+      const exitSpy = vi
+        .spyOn(process, 'exit')
+        .mockImplementation((code?: number) => {
+          throw new Error(`process.exit(${code})`);
+        });
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+      await expect(domains(client)).rejects.toThrow('process.exit(1)');
+
+      expect(logSpy).toHaveBeenCalledTimes(1);
+      const payload = JSON.parse(logSpy.mock.calls[0][0]);
+      expect(payload.status).toBe('error');
+      expect(payload.reason).toBe('invalid_domain');
+      expect(payload.message).toContain('sub.example.com');
+      expect(payload.next).toBeDefined();
+      expect(exitSpy).toHaveBeenCalledWith(1);
+
+      exitSpy.mockRestore();
+      logSpy.mockRestore();
+      (client as { nonInteractive: boolean }).nonInteractive = false;
+    });
+
+    it('outputs error JSON with interactive_required when domain is available', async () => {
+      useUser();
+      client.scenario.get(
+        '/v1/registrar/domains/example.com/price',
+        (_req, res) => {
+          return res.json({
+            purchasePrice: 100,
+            renewalPrice: 100,
+            transferPrice: null,
+            years: 1,
+          });
+        }
+      );
+      client.scenario.get(
+        '/v1/registrar/domains/example.com/availability',
+        (_req, res) => {
+          return res.json({ available: true });
+        }
+      );
+
+      client.setArgv('domains', 'buy', 'example.com', '--non-interactive');
+      (client as { nonInteractive: boolean }).nonInteractive = true;
+
+      const exitSpy = vi
+        .spyOn(process, 'exit')
+        .mockImplementation((code?: number) => {
+          throw new Error(`process.exit(${code})`);
+        });
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+      await expect(domains(client)).rejects.toThrow('process.exit(1)');
+
+      expect(logSpy).toHaveBeenCalledTimes(1);
+      const payload = JSON.parse(logSpy.mock.calls[0][0]);
+      expect(payload.status).toBe('error');
+      expect(payload.reason).toBe('interactive_required');
+      expect(payload.message).toContain('interactive mode');
+      expect(payload.next).toBeDefined();
+      expect(payload.next[0].command).toContain('domains buy example.com');
+      expect(exitSpy).toHaveBeenCalledWith(1);
+
+      exitSpy.mockRestore();
+      logSpy.mockRestore();
+      (client as { nonInteractive: boolean }).nonInteractive = false;
+    });
   });
 
   it('should track subcommand usage', async () => {

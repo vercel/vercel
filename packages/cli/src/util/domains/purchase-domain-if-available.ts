@@ -25,8 +25,16 @@ export default async function purchaseDomainIfAvailable(
 
   if (available) {
     if (!isTTY) {
-      // If we can't prompty and the domain is available, we should fail
+      // If we can't prompt and the domain is available, we should fail
       return new ERRORS.DomainNotFound(domain);
+    }
+
+    if (client.nonInteractive) {
+      // Do not prompt to purchase in non-interactive mode; treat as domain not found
+      output.debug(
+        `Domain ${domain} is available but purchase skipped (non-interactive)`
+      );
+      return false;
     }
 
     output.debug(`Domain ${domain} is available to be purchased`);
