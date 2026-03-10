@@ -521,14 +521,17 @@ describe('env add', () => {
         const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
           throw new Error('exit');
         });
+        const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
         client.nonInteractive = true;
         client.setArgv('env', 'add', '--non-interactive');
         const exitCodePromise = env(client);
 
         await expect(exitCodePromise).rejects.toThrow('exit');
-        const outputJson = client.stdout.getFullOutput();
-        const payload = JSON.parse(outputJson);
+        expect(logSpy).toHaveBeenCalled();
+        const payload = JSON.parse(
+          logSpy.mock.calls[logSpy.mock.calls.length - 1][0]
+        );
         expect(payload).toMatchObject({
           status: 'action_required',
           reason: 'missing_requirements',
@@ -542,6 +545,7 @@ describe('env add', () => {
         expect(payload.next[0].command).toContain('--non-interactive');
 
         exitSpy.mockRestore();
+        logSpy.mockRestore();
       });
 
       it('outputs JSON with link then add when not linked (non-interactive)', async () => {
@@ -555,6 +559,7 @@ describe('env add', () => {
         const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
           throw new Error('exit');
         });
+        const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
         client.nonInteractive = true;
         client.stdin.isTTY = false;
@@ -571,8 +576,10 @@ describe('env add', () => {
         setImmediate(() => client.stdin.emit('data', 'value-via-stdin'));
 
         await expect(exitCodePromise).rejects.toThrow('exit');
-        const outputJson = client.stdout.getFullOutput();
-        const payload = JSON.parse(outputJson);
+        expect(logSpy).toHaveBeenCalled();
+        const payload = JSON.parse(
+          logSpy.mock.calls[logSpy.mock.calls.length - 1][0]
+        );
         expect(payload).toMatchObject({
           status: 'error',
           reason: 'not_linked',
@@ -594,6 +601,7 @@ describe('env add', () => {
         expect(payload.next[1].command).toContain('--non-interactive');
 
         exitSpy.mockRestore();
+        logSpy.mockRestore();
         vi.restoreAllMocks();
       });
 
@@ -607,6 +615,7 @@ describe('env add', () => {
         const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
           throw new Error('exit');
         });
+        const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
         client.nonInteractive = true;
         client.setArgv(
@@ -623,8 +632,9 @@ describe('env add', () => {
         const exitCodePromise = env(client);
 
         await expect(exitCodePromise).rejects.toThrow('exit');
-        const outputJson = client.stdout.getFullOutput();
-        const payload = JSON.parse(outputJson);
+        const payload = JSON.parse(
+          logSpy.mock.calls[logSpy.mock.calls.length - 1][0]
+        );
         expect(payload.next[0].command).toMatch(/link/);
         expect(payload.next[0].command).not.toMatch(/--value|secret/);
         expect(payload.next[1].command).toMatch(/env add/);
@@ -632,6 +642,7 @@ describe('env add', () => {
         expect(payload.next[1].command).toContain('secret');
 
         exitSpy.mockRestore();
+        logSpy.mockRestore();
         vi.restoreAllMocks();
       });
 
@@ -639,6 +650,7 @@ describe('env add', () => {
         const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
           throw new Error('exit');
         });
+        const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
         client.nonInteractive = true;
         client.setArgv(
@@ -650,20 +662,23 @@ describe('env add', () => {
         const exitCodePromise = env(client);
 
         await expect(exitCodePromise).rejects.toThrow('exit');
-        const outputJson = client.stdout.getFullOutput();
-        const payload = JSON.parse(outputJson);
+        const payload = JSON.parse(
+          logSpy.mock.calls[logSpy.mock.calls.length - 1][0]
+        );
         expect(payload.next[0].command).toContain(
           '--cwd=../../../test-custom-deployment-id'
         );
         expect(payload.next[0].command).toContain('--non-interactive');
 
         exitSpy.mockRestore();
+        logSpy.mockRestore();
       });
 
       it('outputs action_required for sensitive public key without --yes (missing value reported first)', async () => {
         const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
           throw new Error('exit');
         });
+        const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
         client.nonInteractive = true;
         client.setArgv(
@@ -676,8 +691,10 @@ describe('env add', () => {
         const exitCodePromise = env(client);
 
         await expect(exitCodePromise).rejects.toThrow('exit');
-        const outputJson = client.stdout.getFullOutput();
-        const payload = JSON.parse(outputJson);
+        expect(logSpy).toHaveBeenCalled();
+        const payload = JSON.parse(
+          logSpy.mock.calls[logSpy.mock.calls.length - 1][0]
+        );
         // All missing args reported in one shot; value is missing so we get missing_requirements first
         expect(payload).toMatchObject({
           status: 'action_required',
@@ -688,20 +705,24 @@ describe('env add', () => {
         });
 
         exitSpy.mockRestore();
+        logSpy.mockRestore();
       });
 
       it('outputs action_required when value would be prompted without stdin or --value', async () => {
         const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
           throw new Error('exit');
         });
+        const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
         client.nonInteractive = true;
         client.setArgv('env', 'add', 'SOME_VAR', 'production');
         const exitCodePromise = env(client);
 
         await expect(exitCodePromise).rejects.toThrow('exit');
-        const outputJson = client.stdout.getFullOutput();
-        const payload = JSON.parse(outputJson);
+        expect(logSpy).toHaveBeenCalled();
+        const payload = JSON.parse(
+          logSpy.mock.calls[logSpy.mock.calls.length - 1][0]
+        );
         expect(payload).toMatchObject({
           status: 'action_required',
           reason: 'missing_requirements',
@@ -711,12 +732,14 @@ describe('env add', () => {
         });
 
         exitSpy.mockRestore();
+        logSpy.mockRestore();
       });
 
       it('missing_value next command does not duplicate --yes', async () => {
         const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
           throw new Error('exit');
         });
+        const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
         client.nonInteractive = true;
         client.setArgv(
@@ -731,8 +754,9 @@ describe('env add', () => {
         const exitCodePromise = env(client);
 
         await expect(exitCodePromise).rejects.toThrow('exit');
-        const outputJson = client.stdout.getFullOutput();
-        const payload = JSON.parse(outputJson);
+        const payload = JSON.parse(
+          logSpy.mock.calls[logSpy.mock.calls.length - 1][0]
+        );
         expect(payload.reason).toBe('missing_requirements');
         expect(payload.missing).toContain('missing_value');
         const cmd = payload.next[0].command;
@@ -741,12 +765,14 @@ describe('env add', () => {
         expect(cmd).toContain('--value <value>');
 
         exitSpy.mockRestore();
+        logSpy.mockRestore();
       });
 
       it('uses --value when provided and reaches next prompt (e.g. git_branch_required)', async () => {
         const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
           throw new Error('exit');
         });
+        const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
         client.nonInteractive = true;
         client.setArgv(
@@ -761,8 +787,9 @@ describe('env add', () => {
         const exitCodePromise = env(client);
 
         await expect(exitCodePromise).rejects.toThrow('exit');
-        const outputJson = client.stdout.getFullOutput();
-        const payload = JSON.parse(outputJson);
+        const payload = JSON.parse(
+          logSpy.mock.calls[logSpy.mock.calls.length - 1][0]
+        );
         expect(payload.reason).toBe('git_branch_required');
         expect(
           payload.next.some(
@@ -772,12 +799,14 @@ describe('env add', () => {
         ).toBe(true);
 
         exitSpy.mockRestore();
+        logSpy.mockRestore();
       });
 
       it('outputs action_required when preview target and git branch not passed (no third argument)', async () => {
         const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
           throw new Error('exit');
         });
+        const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
         client.nonInteractive = true;
         client.stdin.isTTY = false;
@@ -786,8 +815,10 @@ describe('env add', () => {
         setImmediate(() => client.stdin.emit('data', 'value-via-stdin'));
 
         await expect(exitCodePromise).rejects.toThrow('exit');
-        const outputJson = client.stdout.getFullOutput();
-        const payload = JSON.parse(outputJson);
+        expect(logSpy).toHaveBeenCalled();
+        const payload = JSON.parse(
+          logSpy.mock.calls[logSpy.mock.calls.length - 1][0]
+        );
         expect(payload).toMatchObject({
           status: 'action_required',
           reason: 'git_branch_required',
@@ -805,12 +836,14 @@ describe('env add', () => {
         ).toBe(true);
 
         exitSpy.mockRestore();
+        logSpy.mockRestore();
       });
 
       it('does not output git_branch_required when branch is passed as third argument for preview', async () => {
         const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
           throw new Error('exit');
         });
+        const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
         client.nonInteractive = true;
         client.setArgv(
@@ -824,13 +857,16 @@ describe('env add', () => {
         const exitCodePromise = env(client);
 
         await expect(exitCodePromise).rejects.toThrow('exit');
-        const outputJson = client.stdout.getFullOutput();
-        const payload = JSON.parse(outputJson);
+        expect(logSpy).toHaveBeenCalled();
+        const payload = JSON.parse(
+          logSpy.mock.calls[logSpy.mock.calls.length - 1][0]
+        );
         expect(payload.reason).toBe('missing_requirements');
         expect(payload.missing).toContain('missing_value');
         expect(payload.missing).not.toContain('git_branch_required');
 
         exitSpy.mockRestore();
+        logSpy.mockRestore();
       });
 
       it('outputs API errors (e.g. branch not found) as JSON in non-interactive mode', async () => {
@@ -840,6 +876,7 @@ describe('env add', () => {
         const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
           throw new Error('exit');
         });
+        const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
         vi.spyOn(addEnvRecordModule, 'default').mockRejectedValue(
           Object.assign(
@@ -871,8 +908,9 @@ describe('env add', () => {
         const exitCodePromise = env(client);
 
         await expect(exitCodePromise).rejects.toThrow('exit');
-        const outputJson = client.stdout.getFullOutput();
-        const payload = JSON.parse(outputJson);
+        const payload = JSON.parse(
+          logSpy.mock.calls[logSpy.mock.calls.length - 1][0]
+        );
         expect(payload).toMatchObject({
           status: 'error',
           reason: 'branch_not_found',
@@ -881,6 +919,7 @@ describe('env add', () => {
 
         vi.restoreAllMocks();
         exitSpy.mockRestore();
+        logSpy.mockRestore();
       });
     });
   });

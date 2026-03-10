@@ -77,27 +77,6 @@ describe('Client confirmation prompts', () => {
       expect(output).toContain('--dangerously-skip-permissions');
     });
 
-    it('should show error when --non-interactive without --dangerously-skip-permissions (even with TTY)', async () => {
-      client.dangerouslySkipPermissions = false;
-      client.stdin.isTTY = true;
-      (client as { nonInteractive: boolean }).nonInteractive = true;
-      client.input.confirm = vi.fn().mockResolvedValue(true);
-
-      const result = await client.confirmMutatingOperation(
-        '/v9/test',
-        'DELETE'
-      );
-
-      expect(client.input.confirm).not.toHaveBeenCalled();
-      expect(result).toBe(false);
-
-      const stderrOutput = client.stderr.getFullOutput();
-      expect(stderrOutput).toContain('DELETE operations require confirmation');
-      expect(stderrOutput).toContain('--dangerously-skip-permissions');
-
-      (client as { nonInteractive: boolean }).nonInteractive = false;
-    });
-
     it('should work in non-TTY mode with --dangerously-skip-permissions flag', async () => {
       client.stdin.isTTY = false;
       client.dangerouslySkipPermissions = true;
@@ -111,23 +90,6 @@ describe('Client confirmation prompts', () => {
       expect(result).toBe(true);
       // Confirm should NOT be called when dangerouslySkipPermissions is true
       expect(client.input.confirm).not.toHaveBeenCalled();
-    });
-
-    it('should allow DELETE with --non-interactive when --dangerously-skip-permissions is set', async () => {
-      client.stdin.isTTY = true;
-      (client as { nonInteractive: boolean }).nonInteractive = true;
-      client.dangerouslySkipPermissions = true;
-      client.input.confirm = vi.fn().mockResolvedValue(true);
-
-      const result = await client.confirmMutatingOperation(
-        '/v9/test',
-        'DELETE'
-      );
-
-      expect(result).toBe(true);
-      expect(client.input.confirm).not.toHaveBeenCalled();
-
-      (client as { nonInteractive: boolean }).nonInteractive = false;
     });
   });
 

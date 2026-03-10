@@ -56,11 +56,12 @@ describe('target ls', () => {
         .mockImplementation((code?: number) => {
           throw new Error(`process.exit(${code})`);
         });
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
       await expect(target(client)).rejects.toThrow('process.exit(1)');
 
-      const outputJson = client.stdout.getFullOutput();
-      const payload = JSON.parse(outputJson);
+      expect(logSpy).toHaveBeenCalledTimes(1);
+      const payload = JSON.parse(logSpy.mock.calls[0][0]);
       expect(payload.status).toBe('action_required');
       expect(payload.reason).toBe('missing_scope');
       expect(payload.message).toContain('--scope');
@@ -70,6 +71,7 @@ describe('target ls', () => {
       expect(exitSpy).toHaveBeenCalledWith(1);
 
       exitSpy.mockRestore();
+      logSpy.mockRestore();
       (client as { nonInteractive: boolean }).nonInteractive = false;
     });
   });

@@ -20,19 +20,17 @@ describe('pull', () => {
       client.setArgv('pull', '--non-interactive');
       (client as { nonInteractive: boolean }).nonInteractive = true;
 
-      const logSpy = vi
-        .spyOn(console, 'log')
-        .mockImplementation(() => undefined as unknown as void);
       const exitSpy = vi
         .spyOn(process, 'exit')
         .mockImplementation((code?: number) => {
           throw new Error(`process.exit(${code})`);
         });
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
       await expect(pull(client)).rejects.toThrow('process.exit(1)');
 
-      const output = client.stdout.getFullOutput();
-      const payload = JSON.parse(output);
+      expect(logSpy).toHaveBeenCalledTimes(1);
+      const payload = JSON.parse(logSpy.mock.calls[0][0]);
       expect(payload.status).toBe('action_required');
       expect(payload.reason).toBe('missing_scope');
       expect(payload.message).toContain('--scope');
@@ -41,8 +39,8 @@ describe('pull', () => {
       expect(payload.choices.length).toBeGreaterThanOrEqual(2);
       expect(exitSpy).toHaveBeenCalledWith(1);
 
-      logSpy.mockRestore();
       exitSpy.mockRestore();
+      logSpy.mockRestore();
       (client as { nonInteractive: boolean }).nonInteractive = false;
     });
   });
@@ -290,9 +288,6 @@ describe('pull', () => {
       accountId: 'team_dummy',
     });
     client.cwd = path.join(cwd, 'dashboard');
-    // Ensure any existing .vercel config from the fixture doesn't cause
-    // "Project Settings are invalid" errors when linking.
-    await fs.remove(path.join(client.cwd, '.vercel'));
     client.setArgv('pull');
     const exitCodePromise = pull(client);
     await expect(client.stderr).toOutput(
