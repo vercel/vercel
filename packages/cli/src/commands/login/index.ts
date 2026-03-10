@@ -79,17 +79,15 @@ export default async function login(
   }
 
   // Non-interactive mode: don't start an interactive device-code flow.
-  // Instead, instruct the user to generate a passcode in the browser and
-  // run `vc login --passcode <passcode>` as a follow-up command.
+  // Passcode-based login is not yet available; the user must run login interactively.
   if (
     client.nonInteractive &&
     options.shouldParseArgs &&
     parsedArgs &&
     parsedArgs.args.slice(1).length === 0
   ) {
-    const cmd = `${packageName} login --passcode <passcode>`;
-    const verificationUri = 'https://vercel.com/login/generate';
-    const message = `Visit ${verificationUri} to generate a login passcode, then run '${cmd}'.`;
+    const loginCmd = `${packageName} login`;
+    const message = `You must run the following command to log in: \`${loginCmd}\`. Run it without --non-interactive to complete sign-in in your browser.`;
 
     // Plain text for humans (stdout/stderr via output manager)
     output.print(`${message}\n`);
@@ -99,11 +97,12 @@ export default async function login(
       client,
       {
         status: 'action_required',
-        reason: 'login_passcode_required',
-        action: 'login_passcode_required',
+        reason: 'login_required',
+        action: 'login_required',
         message,
-        verification_uri: verificationUri,
-        next: [{ command: cmd }],
+        hint: `Run this command to log in: ${loginCmd}`,
+        verification_uri: 'https://vercel.com/login',
+        next: [{ command: loginCmd, when: 'to log in' }],
       },
       1
     );

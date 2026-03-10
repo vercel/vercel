@@ -51,12 +51,16 @@ describe('login', () => {
     const [[output]] = logSpy.mock.calls;
     const payload = JSON.parse(output as string);
     expect(payload.status).toBe('action_required');
-    expect(payload.reason).toBe('login_passcode_required');
-    expect(payload.action).toBe('login_passcode_required');
-    expect(payload.message).toContain('generate a login passcode');
-    expect(payload.verification_uri).toBe('https://vercel.com/login/generate');
+    expect(payload.reason).toBe('login_required');
+    expect(payload.action).toBe('login_required');
+    expect(payload.message).toContain('You must run');
+    expect(payload.message).toContain('to log in');
+    expect(payload.hint).toContain('Run this command to log in');
+    expect(payload.verification_uri).toBe('https://vercel.com/login');
     expect(Array.isArray(payload.next)).toBe(true);
-    expect(payload.next[0].command).toContain('login --passcode');
+    expect(payload.next[0].command).toContain('login');
+    expect(payload.next[0].command).not.toContain('--non-interactive');
+    expect(payload.next[0].when).toBe('to log in');
 
     logSpy.mockRestore();
     exitSpy.mockRestore();
