@@ -62,6 +62,7 @@ import stamp from '../../util/output/stamp';
 import { parseEnv } from '../../util/parse-env';
 import parseMeta from '../../util/parse-meta';
 import { getCommandName } from '../../util/pkg-name';
+import { outputAgentError } from '../../util/agent-output';
 import { pickOverrides } from '../../util/projects/project-settings';
 import validatePaths, {
   validateRootDirectory,
@@ -177,7 +178,7 @@ async function handleInitDeployment(
     output.error(formatResult.error);
     return 1;
   }
-  const asJson = formatResult.jsonOutput;
+  const asJson = formatResult.jsonOutput || client.nonInteractive;
 
   // Strip 'deploy' and 'init' from args
   let args = parsedArguments.args;
@@ -490,14 +491,44 @@ async function handleInitDeployment(
     );
 
     if (deployment instanceof NotDomainOwner) {
+      if (client.nonInteractive) {
+        client.stdout.write(
+          `${JSON.stringify(
+            {
+              status: 'error',
+              reason: 'not_domain_owner',
+              message: deployment.message,
+              next: [{ command: getCommandName('deploy') }],
+            },
+            null,
+            2
+          )}\n`
+        );
+      }
       output.error(deployment.message);
       return 1;
     }
 
     if (deployment instanceof Error) {
-      output.error(
+      const msg =
         deployment.message ||
-          'An unexpected error occurred while deploying your project',
+        'An unexpected error occurred while deploying your project';
+      if (client.nonInteractive) {
+        client.stdout.write(
+          `${JSON.stringify(
+            {
+              status: 'error',
+              reason: 'deploy_failed',
+              message: msg,
+              next: [{ command: getCommandName('deploy') }],
+            },
+            null,
+            2
+          )}\n`
+        );
+      }
+      output.error(
+        msg,
         undefined,
         'https://vercel.link/help',
         'Contact Support'
@@ -506,20 +537,92 @@ async function handleInitDeployment(
     }
 
     if (deployment.readyState === 'CANCELED') {
+      if (client.nonInteractive) {
+        client.stdout.write(
+          `${JSON.stringify(
+            {
+              status: 'error',
+              reason: 'deployment_canceled',
+              message: 'The deployment has been canceled.',
+              next: [{ command: getCommandName('deploy') }],
+            },
+            null,
+            2
+          )}\n`
+        );
+      }
       output.print('The deployment has been canceled.\n');
       return 1;
     }
 
+    if (deployment.checksConclusion === 'failed') {
+      const { checks } = await getDeploymentChecks(client, deployment.id);
+      const counters = new Map<string, number>();
+      checks.forEach(c => {
+        counters.set(c.conclusion, (counters.get(c.conclusion) ?? 0) + 1);
+      });
+
+      const counterList = Array.from(counters)
+        .map(([name, no]) => `${no} ${name}`)
+        .join(', ');
+      if (client.nonInteractive) {
+        client.stdout.write(
+          `${JSON.stringify(
+            {
+              status: 'error',
+              reason: 'checks_failed',
+              message: `Running Checks: ${counterList}`,
+              next: [{ command: getCommandName(`inspect ${deployment.url}`) }],
+            },
+            null,
+            2
+          )}\n`
+        );
+      }
+      output.error(`Running Checks: ${counterList}`);
+      return 1;
+    }
+
     if (deployment === null) {
+      if (client.nonInteractive) {
+        client.stdout.write(
+          `${JSON.stringify(
+            {
+              status: 'error',
+              reason: 'upload_failed',
+              message: 'Uploading failed. Please try again.',
+              next: [{ command: getCommandName('deploy') }],
+            },
+            null,
+            2
+          )}\n`
+        );
+      }
       error('Uploading failed. Please try again.');
       return 1;
     }
 
     if (asJson) {
       output.stopSpinner();
-      client.stdout.write(
-        `${JSON.stringify(getDeploymentOutputJson(deployment, client.apiUrl), null, 2)}\n`
-      );
+      const deploymentJson = getDeploymentOutputJson(deployment, client.apiUrl);
+      const payload = client.nonInteractive
+        ? {
+            status: 'ok' as const,
+            deployment: deploymentJson,
+            message: `Deployment ${deployment.url} ready.`,
+            next: [
+              {
+                command: getCommandName(`inspect ${deployment.url}`),
+                when: 'Inspect deployment',
+              },
+              {
+                command: getCommandName('deploy --prod'),
+                when: 'Promote to production',
+              },
+            ],
+          }
+        : deploymentJson;
+      client.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
       return 0;
     }
 
@@ -586,6 +689,21 @@ async function handleContinueSubcommand(client: Client): Promise<number> {
   const idFlag = parsedArguments.flags['--id'];
 
   if (!idFlag) {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'missing_id',
+          message:
+            'Missing required --id flag. Provide the deployment ID to continue.',
+          next: [
+            { command: getCommandName('deploy continue --id <deployment-id>') },
+          ],
+        },
+        1
+      );
+    }
     output.error(
       `Missing required ${param('--id')} flag. Usage: ${getCommandName('deploy continue --id <deployment-id>')}`
     );
@@ -634,6 +752,22 @@ async function handleContinueSubcommand(client: Client): Promise<number> {
 
   const prebuiltExists = await fs.pathExists(vercelOutputDir);
   if (!prebuiltExists) {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'prebuilt_not_found',
+          message:
+            'No prebuilt output found in ".vercel/output". Run build first.',
+          next: [
+            { command: getCommandName('build') },
+            { command: getCommandName(`deploy continue --id ${idFlag}`) },
+          ],
+        },
+        1
+      );
+    }
     output.error(
       `No prebuilt output found in ".vercel/output". Run ${getCommandName(
         'build'
@@ -698,7 +832,7 @@ async function handleDefaultDeploy(
     output.error(formatResult.error);
     return 1;
   }
-  const asJson = formatResult.jsonOutput;
+  const asJson = formatResult.jsonOutput || client.nonInteractive;
 
   if ('--confirm' in parsedArguments.flags) {
     telemetryClient.trackCliFlagConfirm(parsedArguments.flags['--confirm']);
@@ -765,7 +899,7 @@ async function handleDefaultDeploy(
   const quiet = !client.stdout.isTTY;
 
   let { path: cwd } = pathValidation;
-  const autoConfirm = parsedArguments.flags['--yes'];
+  const autoConfirm = parsedArguments.flags['--yes'] || client.nonInteractive;
   // #endregion
 
   // #region Warning on flags
@@ -1123,14 +1257,44 @@ async function handleDefaultDeploy(
     }
 
     if (deployment instanceof NotDomainOwner) {
+      if (client.nonInteractive) {
+        client.stdout.write(
+          `${JSON.stringify(
+            {
+              status: 'error',
+              reason: 'not_domain_owner',
+              message: deployment.message,
+              next: [{ command: getCommandName('deploy') }],
+            },
+            null,
+            2
+          )}\n`
+        );
+      }
       output.error(deployment.message);
       return 1;
     }
 
     if (deployment instanceof Error) {
-      output.error(
+      const msg =
         deployment.message ||
-          'An unexpected error occurred while deploying your project',
+        'An unexpected error occurred while deploying your project';
+      if (client.nonInteractive) {
+        client.stdout.write(
+          `${JSON.stringify(
+            {
+              status: 'error',
+              reason: 'deploy_failed',
+              message: msg,
+              next: [{ command: getCommandName('deploy') }],
+            },
+            null,
+            2
+          )}\n`
+        );
+      }
+      output.error(
+        msg,
         undefined,
         'https://vercel.link/help',
         'Contact Support'
@@ -1139,6 +1303,20 @@ async function handleDefaultDeploy(
     }
 
     if (deployment.readyState === 'CANCELED') {
+      if (client.nonInteractive) {
+        client.stdout.write(
+          `${JSON.stringify(
+            {
+              status: 'error',
+              reason: 'deployment_canceled',
+              message: 'The deployment has been canceled.',
+              next: [{ command: getCommandName('deploy') }],
+            },
+            null,
+            2
+          )}\n`
+        );
+      }
       output.print('The deployment has been canceled.\n');
       return 1;
     }
@@ -1153,6 +1331,20 @@ async function handleDefaultDeploy(
       const counterList = Array.from(counters)
         .map(([name, no]) => `${no} ${name}`)
         .join(', ');
+      if (client.nonInteractive) {
+        client.stdout.write(
+          `${JSON.stringify(
+            {
+              status: 'error',
+              reason: 'checks_failed',
+              message: `Running Checks: ${counterList}`,
+              next: [{ command: getCommandName(`inspect ${deployment.url}`) }],
+            },
+            null,
+            2
+          )}\n`
+        );
+      }
       output.error(`Running Checks: ${counterList}`);
       return 1;
     }
@@ -1162,6 +1354,20 @@ async function handleDefaultDeploy(
     }
 
     if (deployment === null) {
+      if (client.nonInteractive) {
+        client.stdout.write(
+          `${JSON.stringify(
+            {
+              status: 'error',
+              reason: 'upload_failed',
+              message: 'Uploading failed. Please try again.',
+              next: [{ command: getCommandName('deploy') }],
+            },
+            null,
+            2
+          )}\n`
+        );
+      }
       error('Uploading failed. Please try again.');
       return 1;
     }
@@ -1171,11 +1377,39 @@ async function handleDefaultDeploy(
     }
 
     if (err instanceof UploadErrorMissingArchive) {
+      if (client.nonInteractive) {
+        client.stdout.write(
+          `${JSON.stringify(
+            {
+              status: 'error',
+              reason: 'missing_archive',
+              message: err.message,
+              next: [{ command: getCommandName('deploy') }],
+            },
+            null,
+            2
+          )}\n`
+        );
+      }
       output.prettyError(err);
       return 1;
     }
 
     if (err instanceof NotDomainOwner) {
+      if (client.nonInteractive) {
+        client.stdout.write(
+          `${JSON.stringify(
+            {
+              status: 'error',
+              reason: 'not_domain_owner',
+              message: err.message,
+              next: [{ command: getCommandName('deploy') }],
+            },
+            null,
+            2
+          )}\n`
+        );
+      }
       output.error(err.message);
       return 1;
     }
@@ -1222,11 +1456,41 @@ async function handleDefaultDeploy(
       err instanceof ConflictingPathSegment ||
       err instanceof ConflictingConfigFiles
     ) {
+      if (client.nonInteractive) {
+        client.stdout.write(
+          `${JSON.stringify(
+            {
+              status: 'error',
+              reason: 'deploy_failed',
+              message: err instanceof Error ? err.message : String(err),
+              next: [{ command: getCommandName('deploy') }],
+            },
+            null,
+            2
+          )}\n`
+        );
+      }
       handleCreateDeployError(err, localConfig);
       return 1;
     }
 
     if (err instanceof BuildError) {
+      if (client.nonInteractive) {
+        client.stdout.write(
+          `${JSON.stringify(
+            {
+              status: 'error',
+              reason: 'build_error',
+              message: err.message,
+              next: now?.url
+                ? [{ command: getCommandName(`inspect ${now.url} --logs`) }]
+                : [{ command: getCommandName('deploy') }],
+            },
+            null,
+            2
+          )}\n`
+        );
+      }
       if (withFullLogs === false) {
         try {
           if (now.url) {
@@ -1242,14 +1506,16 @@ async function handleDefaultDeploy(
             );
           }
         } catch (_) {
-          output.log(
-            `To check build logs run: ${getCommandName(
-              `inspect ${now.url} --logs`
-            )}`
-          );
-          output.log(
-            `Or inspect them in your browser at https://${now.url}/_logs`
-          );
+          if (!client.nonInteractive) {
+            output.log(
+              `To check build logs run: ${getCommandName(
+                `inspect ${now.url} --logs`
+              )}`
+            );
+            output.log(
+              `Or inspect them in your browser at https://${now.url}/_logs`
+            );
+          }
         }
       }
 
@@ -1259,19 +1525,63 @@ async function handleDefaultDeploy(
     if (isAPIError(err) && err.code === 'size_limit_exceeded') {
       const { sizeLimit = 0 } = err;
       const message = `File size limit exceeded (${bytes(sizeLimit)})`;
+      if (client.nonInteractive) {
+        client.stdout.write(
+          `${JSON.stringify(
+            {
+              status: 'error',
+              reason: 'size_limit_exceeded',
+              message,
+              next: [{ command: getCommandName('deploy') }],
+            },
+            null,
+            2
+          )}\n`
+        );
+      }
       error(message);
       return 1;
     }
 
+    if (client.nonInteractive) {
+      client.stdout.write(
+        `${JSON.stringify(
+          {
+            status: 'error',
+            reason: 'deploy_failed',
+            message: err instanceof Error ? err.message : String(err),
+            next: [{ command: getCommandName('deploy') }],
+          },
+          null,
+          2
+        )}\n`
+      );
+    }
     printError(err);
     return 1;
   }
 
   if (asJson) {
     output.stopSpinner();
-    client.stdout.write(
-      `${JSON.stringify(getDeploymentOutputJson(deployment, client.apiUrl), null, 2)}\n`
-    );
+    const deploymentJson = getDeploymentOutputJson(deployment, client.apiUrl);
+    const payload = client.nonInteractive
+      ? {
+          status: 'ok' as const,
+          deployment: deploymentJson,
+          message: `Deployment ${deployment.url} ready.`,
+          next: [
+            {
+              command: getCommandName(`inspect ${deployment.url}`),
+              when: 'Inspect deployment',
+            },
+            {
+              command: getCommandName(`deploy --prod`),
+              when: 'Promote to production',
+            },
+          ],
+        }
+      : deploymentJson;
+    client.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
     return 0;
   }
 

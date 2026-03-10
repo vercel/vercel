@@ -53,6 +53,32 @@ describe('deploy', () => {
       logSpy.mockRestore();
       (client as { nonInteractive: boolean }).nonInteractive = false;
     });
+
+    it('outputs error JSON when deploy continue is missing --id', async () => {
+      vi.spyOn(process, 'exit').mockImplementation((code?: number) => {
+        throw new Error('exit');
+      });
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+      (client as { nonInteractive: boolean }).nonInteractive = true;
+      client.setArgv('deploy', 'continue');
+      const exitCodePromise = deploy(client);
+
+      await expect(exitCodePromise).rejects.toThrow('exit');
+      expect(logSpy).toHaveBeenCalled();
+      const payload = JSON.parse(
+        logSpy.mock.calls[logSpy.mock.calls.length - 1][0]
+      );
+      expect(payload).toMatchObject({
+        status: 'error',
+        reason: 'missing_id',
+        message: expect.stringMatching(/--id|required/),
+        next: expect.any(Array),
+      });
+
+      vi.restoreAllMocks();
+      (client as { nonInteractive: boolean }).nonInteractive = false;
+    });
   });
 
   describe('--help', () => {
