@@ -1,5 +1,6 @@
 import { agentCommand } from './agent/command';
 import { activityCommand } from './activity/command';
+import { alertsCommand } from './alerts/command';
 import { aliasCommand } from './alias/command';
 import { apiCommand } from './api/command';
 import { bisectCommand } from './bisect/command';
@@ -116,6 +117,10 @@ if (process.env.FF_GUIDANCE_MODE) {
 
 if (process.env.FF_METRICS) {
   commandsStructs.push(metricsCommand);
+}
+
+if (process.env.FF_ALERTS) {
+  commandsStructs.push(alertsCommand);
 }
 
 export function getCommandAliases(command: Pick<Command, 'name' | 'aliases'>) {
