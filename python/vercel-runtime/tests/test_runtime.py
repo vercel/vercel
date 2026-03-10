@@ -437,7 +437,7 @@ class TestHTTPHandler(_RuntimeTestCase):
             entrypoint_rel=ep_rel,
             module_name=mod,
             ipc_socket_path=self.n1.socket_path,
-            extra_env={"__VC_WAIT_UNTIL_TIMEOUT": "0.1"},
+            extra_env={"VERCEL_WAIT_UNTIL_TIMEOUT": "0.1"},
         ) as proc:
             ss = await self.n1.wait_for_message(
                 ServerStartedMessage, timeout=10.0
@@ -641,7 +641,7 @@ class TestASGIApp(_RuntimeTestCase):
             entrypoint_rel=ep_rel,
             module_name=mod,
             ipc_socket_path=self.n1.socket_path,
-            extra_env={"__VC_WAIT_UNTIL_TIMEOUT": "0.1"},
+            extra_env={"VERCEL_WAIT_UNTIL_TIMEOUT": "0.1"},
         ) as proc:
             ss = await self.n1.wait_for_message(
                 ServerStartedMessage, timeout=10.0

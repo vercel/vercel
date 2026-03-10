@@ -22,7 +22,7 @@ _DEFAULT_TIMEOUT: float = 30.0
 
 def get_timeout() -> float:
     """Return the wait_until timeout from the environment or the default."""
-    raw = os.environ.get("__VC_WAIT_UNTIL_TIMEOUT")
+    raw = os.environ.get("VERCEL_WAIT_UNTIL_TIMEOUT")
     if raw is None:
         return _DEFAULT_TIMEOUT
     try:

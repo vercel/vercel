@@ -582,7 +582,7 @@ from vercel_runtime.vc_init import vc_handler
 
   const lambdaEnv = {} as Record<string, string>;
   lambdaEnv.PYTHONPATH = vendorDir;
-  lambdaEnv.__VC_WAIT_UNTIL_TIMEOUT = String(config.maxDuration ?? 30);
+  lambdaEnv.VERCEL_WAIT_UNTIL_TIMEOUT = String(config.maxDuration ?? 30);
   Object.assign(lambdaEnv, quirksResult.env);
 
   const globOptions: GlobOptions = {
