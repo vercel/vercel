@@ -1,10 +1,25 @@
-import { parseCronExpression } from '@vercel/config/v1';
+interface CronFields {
+  minute: string;
+  hour: string;
+  dayOfMonth: string;
+  month: string;
+  dayOfWeek: string;
+}
+
+// A small cron field parser.
+// This is intentionally "re-implemented" here instead of
+// using parseCronFields from @vercel/config to avoid using extra dependency in the CLI
+// and exporting undesired stuff from @vercel/config.
+export function parseCronFields(expression: string): CronFields | null {
+  const parts = expression.trim().split(/\s+/);
+  if (parts.length !== 5) return null;
+  const [minute, hour, dayOfMonth, month, dayOfWeek] = parts;
+  return { minute, hour, dayOfMonth, month, dayOfWeek };
+}
 
 // Expand a single cron field into the full set of matching integer
 // values within [min, max].  Handles *, ranges (1-5), steps (0-30/10),
 // and comma-separated lists (1,15,30).
-// We need this, because parseCronExpression from  @vercel/config
-// doesn't expand fields by its own.
 export function expandCronField(
   field: string,
   min: number,
@@ -71,10 +86,8 @@ export function getNextCronDelay(
   expression: string,
   now: Date = new Date()
 ): number | null {
-  let parsed;
-  try {
-    parsed = parseCronExpression(expression);
-  } catch {
+  const parsed = parseCronFields(expression);
+  if (!parsed) {
     return null;
   }
 

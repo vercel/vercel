@@ -2,7 +2,56 @@ import { describe, expect, it } from 'vitest';
 import {
   expandCronField,
   getNextCronDelay,
+  parseCronFields,
 } from '../../../../src/util/dev/cron';
+
+describe('parseCronFields', () => {
+  it('parses a valid 5-field expression', () => {
+    expect(parseCronFields('*/15 0 1,15 * 1-5')).toEqual({
+      minute: '*/15',
+      hour: '0',
+      dayOfMonth: '1,15',
+      month: '*',
+      dayOfWeek: '1-5',
+    });
+  });
+
+  it('returns null for too few fields', () => {
+    expect(parseCronFields('* * *')).toBeNull();
+  });
+
+  it('returns null for too many fields', () => {
+    expect(parseCronFields('* * * * * *')).toBeNull();
+  });
+
+  it('returns null for empty string', () => {
+    expect(parseCronFields('')).toBeNull();
+  });
+
+  it('returns null for random text', () => {
+    expect(parseCronFields('not a cron')).toBeNull();
+  });
+
+  it('handles multiple spaces between fields', () => {
+    expect(parseCronFields('*   * *   * *')).toEqual({
+      minute: '*',
+      hour: '*',
+      dayOfMonth: '*',
+      month: '*',
+      dayOfWeek: '*',
+    });
+  });
+
+  it('handles leading and trailing whitespace', () => {
+    expect(parseCronFields('  */15 0 1 * 1-5  ')).toEqual({
+      minute: '*/15',
+      hour: '0',
+      dayOfMonth: '1',
+      month: '*',
+      dayOfWeek: '1-5',
+    });
+  });
+});
 
 describe('expandCronField', () => {
   it('expands wildcard to full range', () => {
