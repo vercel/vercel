@@ -20,6 +20,7 @@ exports[`help command > alias help output snapshots > alias help column width 40
   set     deployment alias  Create 
                             a new  
                             alias  
+                            (defau…
 
 
   Global Options:
@@ -97,7 +98,7 @@ exports[`help command > alias help output snapshots > alias help column width 80
 
   list                      Show all aliases                               
   remove  alias             Remove an alias using its hostname             
-  set     deployment alias  Create a new alias                             
+  set     deployment alias  Create a new alias (default)                   
 
 
   Global Options:
@@ -143,7 +144,7 @@ exports[`help command > alias help output snapshots > alias help column width 12
 
   list                      Show all aliases                                                                       
   remove  alias             Remove an alias using its hostname                                                     
-  set     deployment alias  Create a new alias                                                                     
+  set     deployment alias  Create a new alias (default)                                                           
 
 
   Global Options:
@@ -1219,6 +1220,7 @@ exports[`help command > dns help output snapshots > dns help column width 40 1`]
                            entr…
                            for a
                            doma…
+                           (def…
   remove  id               Remo…
                            a DNS
                            entry
@@ -1321,7 +1323,7 @@ exports[`help command > dns help output snapshots > dns help column width 80 1`]
   add     domain details   Add a new DNS entry (see below for examples) 
   import  domain zonefile  Import a DNS zone file (see below for        
                            examples)                                    
-  list    domain           List all DNS entries for a domain            
+  list    domain           List all DNS entries for a domain (default)  
   remove  id               Remove a DNS entry using its ID              
 
 
@@ -1386,7 +1388,7 @@ exports[`help command > dns help output snapshots > dns help column width 120 1`
 
   add     domain details   Add a new DNS entry (see below for examples)                                         
   import  domain zonefile  Import a DNS zone file (see below for examples)                                      
-  list    domain           List all DNS entries for a domain                                                    
+  list    domain           List all DNS entries for a domain (default)                                          
   remove  id               Remove a DNS entry using its ID                                                      
 
 
@@ -1591,6 +1593,7 @@ exports[`help command > domains help output snapshots > domains help column widt
                                    dom…
                                    in a
                                    list
+                                   (de…
   inspect      domain              Dis…
                                    inf…
                                    rel…
@@ -1697,7 +1700,7 @@ exports[`help command > domains help output snapshots > domains help column widt
 
   Commands:
 
-  list                             Show all domains in a list                  
+  list                             Show all domains in a list (default)        
   inspect      domain              Displays information related to a domain    
   add          domain project      Add a domain name that you already own to a 
                                    Vercel Team                                 
@@ -1736,7 +1739,7 @@ exports[`help command > domains help output snapshots > domains help column widt
 
   Commands:
 
-  list                             Show all domains in a list                                                          
+  list                             Show all domains in a list (default)                                                
   inspect      domain              Displays information related to a domain                                            
   add          domain project      Add a domain name that you already own to a Vercel Team                             
   buy          domain              Purchase a new domain name                                                          
@@ -4283,6 +4286,7 @@ exports[`help command > project help output snapshots > project help column widt
                    projects in  
                    the selected 
                    scope        
+                   (default)    
   remove   name    Delete a     
                    project      
   token    [name]  Get a        
@@ -4352,7 +4356,7 @@ exports[`help command > project help output snapshots > project help column widt
 
   add      name    Add a new project                                    
   inspect  [name]  Displays information related to a project            
-  list             Show all projects in the selected scope              
+  list             Show all projects in the selected scope (default)    
   remove   name    Delete a project                                     
   token    [name]  Get a development OIDC token for a project           
 
@@ -4386,7 +4390,7 @@ exports[`help command > project help output snapshots > project help column widt
 
   add      name    Add a new project                                                                            
   inspect  [name]  Displays information related to a project                                                    
-  list             Show all projects in the selected scope                                                      
+  list             Show all projects in the selected scope (default)                                            
   remove   name    Delete a project                                                                             
   token    [name]  Get a development OIDC token for a project                                                   
 

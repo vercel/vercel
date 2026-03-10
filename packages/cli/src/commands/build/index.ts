@@ -558,7 +558,7 @@ async function doBuild(
     output.warn(
       'Due to `builds` existing in your configuration file, the Build and Development Settings defined in your Project Settings will not apply. Learn More: https://vercel.link/unused-build-settings'
     );
-    builds = builds.map(b => expandBuild(files, b)).flat();
+    builds = builds.flatMap(b => expandBuild(files, b));
   } else {
     // Zero config
     isZeroConfig = true;
@@ -608,6 +608,16 @@ async function doBuild(
     }
 
     zeroConfigRoutes.push(...(detectedBuilders.redirectRoutes || []));
+    const detectedHostRewriteRoutes = (
+      detectedBuilders as typeof detectedBuilders & {
+        hostRewriteRoutes?: Route[] | null;
+      }
+    ).hostRewriteRoutes;
+    zeroConfigRoutes = appendRoutesToPhase({
+      routes: zeroConfigRoutes,
+      newRoutes: detectedHostRewriteRoutes ?? null,
+      phase: null,
+    });
     zeroConfigRoutes.push(
       ...appendRoutesToPhase({
         routes: [],

@@ -27,7 +27,29 @@ import { normalizeRoutePrefix } from '@vercel/routing-utils';
 
 const frameworksBySlug = new Map(frameworkList.map(f => [f.slug, f]));
 
+/**
+ * Match a Python `module:attr` entrypoint (e.g. `backend.jobs.scheduled:cleanup`).
+ * Kept inline to avoid coupling fs-detectors to a Python-specific package.
+ * Real verification would happen at the build time.
+ */
+const PYTHON_MODULE_ATTR_RE =
+  /^([A-Za-z_][\w]*(?:\.[A-Za-z_][\w]*)*):([A-Za-z_][\w]*)$/;
+
+function parsePyModuleAttrEntrypoint(entrypoint: string): {
+  attrName: string;
+  filePath: string;
+} | null {
+  const match = PYTHON_MODULE_ATTR_RE.exec(entrypoint);
+  if (!match) return null;
+  return {
+    attrName: match[2],
+    filePath: match[1].replace(/\./g, '/') + '.py',
+  };
+}
+
 const SERVICE_NAME_REGEX = /^[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$/;
+const DNS_LABEL_RE = /^(?!-)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/i;
+
 interface ResolvedEntrypointPath {
   normalized: string;
   isDirectory: boolean;
@@ -216,10 +238,21 @@ export function validateServiceConfig(
     };
   }
   const serviceType = config.type || 'web';
-  if (serviceType === 'web' && !config.routePrefix) {
+  const hasRoutePrefix = typeof config.routePrefix === 'string';
+  const hasSubdomain = typeof config.subdomain === 'string';
+
+  if (hasSubdomain && !DNS_LABEL_RE.test(config.subdomain!)) {
+    return {
+      code: 'INVALID_SUBDOMAIN',
+      message: `Web service "${name}" has invalid subdomain "${config.subdomain}". Use a single DNS label such as "api".`,
+      serviceName: name,
+    };
+  }
+
+  if (serviceType === 'web' && !hasRoutePrefix && !hasSubdomain) {
     return {
       code: 'MISSING_ROUTE_PREFIX',
-      message: `Web service "${name}" must specify "routePrefix".`,
+      message: `Web service "${name}" must specify at least one of "routePrefix" or "subdomain".`,
       serviceName: name,
     };
   }
@@ -241,6 +274,13 @@ export function validateServiceConfig(
     return {
       code: 'INVALID_ROUTE_PREFIX',
       message: `${serviceType === 'worker' ? 'Worker' : 'Cron'} service "${name}" cannot have "routePrefix". Only web services should specify "routePrefix".`,
+      serviceName: name,
+    };
+  }
+  if ((serviceType === 'worker' || serviceType === 'cron') && hasSubdomain) {
+    return {
+      code: 'INVALID_HOST_ROUTING_CONFIG',
+      message: `${serviceType === 'worker' ? 'Worker' : 'Cron'} service "${name}" cannot have "subdomain". Only web services should specify subdomain routing.`,
       serviceName: name,
     };
   }
@@ -302,14 +342,19 @@ export function validateServiceEntrypoint(
   config: ExperimentalServiceConfig,
   resolvedEntrypoint: ResolvedEntrypointPath
 ): ServiceDetectionError | null {
-  // File entrypoints without builder/runtime/framework must have a supported extension
+  // File entrypoints without builder/runtime/framework must have a supported extension.
+  // Use the resolved path (e.g. "jobs/cleanup.py") for runtime inference so that
+  // module:function entrypoints (e.g. "jobs.cleanup:handler") resolve correctly
+  // via their underlying file extension.
   if (
     !resolvedEntrypoint.isDirectory &&
     !config.builder &&
     !config.runtime &&
     !config.framework
   ) {
-    const runtime = inferServiceRuntime({ entrypoint: config.entrypoint });
+    const runtime = inferServiceRuntime({
+      entrypoint: resolvedEntrypoint.normalized,
+    });
     if (!runtime) {
       const supported = Object.keys(ENTRYPOINT_EXTENSIONS).join(', ');
       return {
@@ -339,12 +384,21 @@ export async function resolveConfiguredService(
   } = options;
   const type = config.type || 'web';
   const rawEntrypoint = config.entrypoint;
+
+  const moduleAttrParsed =
+    typeof rawEntrypoint === 'string' && type === 'cron'
+      ? parsePyModuleAttrEntrypoint(rawEntrypoint)
+      : null;
+
   let resolvedEntrypointPath = resolvedEntrypoint;
   if (!resolvedEntrypointPath && typeof rawEntrypoint === 'string') {
+    const entrypointToResolve = moduleAttrParsed
+      ? moduleAttrParsed.filePath
+      : rawEntrypoint;
     const resolved = await resolveEntrypointPath({
       fs,
       serviceName: name,
-      entrypoint: rawEntrypoint,
+      entrypoint: entrypointToResolve,
     });
     resolvedEntrypointPath = resolved.entrypoint;
   }
@@ -408,12 +462,24 @@ export async function resolveConfiguredService(
     builderSrc = resolvedEntrypointFile!;
   }
 
-  // routePrefix is required for web services; normalize to always start with /
+  const normalizedSubdomain =
+    type === 'web' && typeof config.subdomain === 'string'
+      ? config.subdomain.toLowerCase()
+      : undefined;
+  const defaultRoutePrefix =
+    type === 'web' && normalizedSubdomain ? `/_/${name}` : undefined;
+  // routePrefix defaults to /_/serviceName for subdomain-mounted web services.
   const routePrefix =
-    type === 'web' && config.routePrefix
-      ? config.routePrefix.startsWith('/')
-        ? config.routePrefix
-        : `/${config.routePrefix}`
+    type === 'web' && (config.routePrefix || defaultRoutePrefix)
+      ? (config.routePrefix || defaultRoutePrefix)!.startsWith('/')
+        ? (config.routePrefix || defaultRoutePrefix)!
+        : `/${config.routePrefix || defaultRoutePrefix}`
+      : undefined;
+  const resolvedRoutePrefixSource =
+    type === 'web' && typeof routePrefix === 'string'
+      ? config.routePrefix
+        ? routePrefixSource
+        : 'generated'
       : undefined;
 
   // Ensure builder.src is fully qualified for non-root workspaces.
@@ -451,6 +517,9 @@ export async function resolveConfiguredService(
   if (config.framework) {
     builderConfig.framework = config.framework;
   }
+  if (moduleAttrParsed) {
+    builderConfig.handlerFunction = moduleAttrParsed.attrName;
+  }
 
   return {
     name,
@@ -459,10 +528,8 @@ export async function resolveConfiguredService(
     workspace,
     entrypoint: resolvedEntrypointFile,
     routePrefix,
-    routePrefixSource:
-      type === 'web' && typeof routePrefix === 'string'
-        ? routePrefixSource
-        : undefined,
+    routePrefixSource: resolvedRoutePrefixSource,
+    subdomain: normalizedSubdomain,
     framework: config.framework,
     builder: {
       src: builderSrc,
@@ -473,6 +540,7 @@ export async function resolveConfiguredService(
     buildCommand: config.buildCommand,
     installCommand: config.installCommand,
     schedule: config.schedule,
+    handlerFunction: moduleAttrParsed?.attrName,
     topic,
     consumer,
   };
@@ -504,11 +572,19 @@ export async function resolveAllConfiguredServices(
     }
 
     let resolvedEntrypoint: ResolvedEntrypointPath | undefined;
+    const serviceType = serviceConfig.type || 'web';
     if (typeof serviceConfig.entrypoint === 'string') {
+      const moduleAttr =
+        serviceType === 'cron'
+          ? parsePyModuleAttrEntrypoint(serviceConfig.entrypoint)
+          : null;
+      const entrypointToResolve = moduleAttr
+        ? moduleAttr.filePath
+        : serviceConfig.entrypoint;
       const resolvedPath = await resolveEntrypointPath({
         fs,
         serviceName: name,
-        entrypoint: serviceConfig.entrypoint,
+        entrypoint: entrypointToResolve,
       });
       if (resolvedPath.error) {
         errors.push(resolvedPath.error);

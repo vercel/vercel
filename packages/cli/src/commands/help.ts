@@ -250,7 +250,9 @@ export function buildSubcommandLines(
       nameCell,
       argsCell,
       {
-        content: command.description,
+        content: command.default
+          ? `${command.description} ${chalk.bold('(default)')}`
+          : command.description,
         wordWrap: true,
       },
     ]);

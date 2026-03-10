@@ -107,7 +107,7 @@ export default class Now {
     path: string,
     {
       // Legacy
-      nowConfig: nowConfig = {},
+      nowConfig = {},
 
       // Latest
       name,

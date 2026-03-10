@@ -167,7 +167,7 @@ function extractInterceptionRouteInformation(
 }
 
 // Identify /[param]/ in route string
-const TEST_DYNAMIC_ROUTE = /\/\[[^\/]+?\](?=\/|$)/;
+const TEST_DYNAMIC_ROUTE = /\/\[[^/]+?\](?=\/|$)/;
 
 export function isDynamicRoute(
   route: string,
