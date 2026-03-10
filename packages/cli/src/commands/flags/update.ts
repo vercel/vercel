@@ -234,7 +234,7 @@ async function resolveSelectedVariant(
   const selectedVariantId = await client.input.select({
     message: 'Select a variant to update:',
     choices: flag.variants.map(variant => ({
-      name: `${formatVariantForDisplay(variant)} ${chalk.dim(`[id: ${variant.id}]`)}`,
+      name: formatVariantForDisplay(variant),
       value: variant.id,
     })),
   });

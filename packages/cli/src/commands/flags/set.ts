@@ -96,7 +96,11 @@ export default async function set(
       client,
       flag,
       environment,
-      'Select an environment to set the variant in:'
+      'Select an environment to set the variant in:',
+      {
+        showEnvironmentDetails: true,
+        decorateChoices: false,
+      }
     );
     const selectedVariant = await resolveVariantToSet(
       client,
@@ -167,7 +171,7 @@ async function resolveVariantToSet(
   const selectedVariantId = await client.input.select({
     message: 'Select a variant to serve:',
     choices: flag.variants.map(variant => ({
-      name: `${formatVariantForDisplay(variant)} ${chalk.dim(`[id: ${variant.id}]`)}`,
+      name: formatVariantForDisplay(variant),
       value: variant.id,
     })),
   });

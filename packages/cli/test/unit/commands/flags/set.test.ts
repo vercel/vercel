@@ -338,6 +338,11 @@ describe('flags set', () => {
         message: 'Select an environment to set the variant in:',
       })
     );
+    expect(selectMock.mock.calls[0][0].choices).toEqual([
+      { name: 'production', value: 'production' },
+      { name: 'preview', value: 'preview' },
+      { name: 'development', value: 'development' },
+    ]);
     expect(selectMock).toHaveBeenNthCalledWith(
       2,
       expect.objectContaining({
@@ -350,6 +355,14 @@ describe('flags set', () => {
         default: 'Set variant for preview via CLI',
       })
     );
+    const output = stripAnsi(client.stderr.getFullOutput());
+    expect(output).toContain('Environments:');
+    expect(output).toContain('production: Control');
+    expect(output).toContain('preview: Control');
+    expect(output).toContain('development: Control');
+    expect(output).not.toContain('production (');
+    expect(output).not.toContain('preview (');
+    expect(output).not.toContain('development (');
     expect(testFlags[1].environments.preview).toMatchObject({
       active: false,
       pausedOutcome: { type: 'variant', variantId: 'variant-a' },
@@ -478,18 +491,16 @@ describe('flags set', () => {
 
     expect(exitCode).toEqual(0);
     const variantChoices = selectMock.mock.calls[1][0].choices;
-    expect(variantChoices).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          value: 'default',
-          name: expect.stringContaining('Control'),
-        }),
-        expect.objectContaining({
-          value: 'variant-a',
-          name: expect.stringContaining('Treatment'),
-        }),
-      ])
-    );
+    expect(variantChoices).toEqual([
+      {
+        value: 'default',
+        name: '"control" Control',
+      },
+      {
+        value: 'variant-a',
+        name: '"treatment" Treatment',
+      },
+    ]);
     expect(client.stderr.getFullOutput()).toContain(chalk.dim('Treatment'));
   });
 });

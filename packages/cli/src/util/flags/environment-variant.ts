@@ -2,15 +2,22 @@ import chalk from 'chalk';
 import type Client from '../client';
 import { STANDARD_ENVIRONMENTS } from '../target/standard-environments';
 import { normalizeOptionalInput } from './normalize-optional-input';
+import { printFlagEnvironmentDetails } from './print-flag-details';
 import type { Flag, FlagEnvironmentConfig, FlagVariant } from './types';
 
 type StandardEnvironment = (typeof STANDARD_ENVIRONMENTS)[number];
+
+interface ResolveFlagEnvironmentOptions {
+  showEnvironmentDetails?: boolean;
+  decorateChoices?: boolean;
+}
 
 export async function resolveFlagEnvironment(
   client: Client,
   flag: Flag,
   environment: string | undefined,
-  promptMessage: string
+  promptMessage: string,
+  options: ResolveFlagEnvironmentOptions = {}
 ): Promise<string> {
   let nextEnvironment = environment;
 
@@ -29,15 +36,18 @@ export async function resolveFlagEnvironment(
       throw new Error('No valid environments found for this flag');
     }
 
+    if (options.showEnvironmentDetails) {
+      printFlagEnvironmentDetails(flag, undefined, availableEnvironments);
+    }
+
     nextEnvironment = await client.input.select({
       message: promptMessage,
       choices: availableEnvironments.map(env => {
-        const config = flag.environments[env];
-        const status = config?.active
-          ? chalk.green('active')
-          : chalk.yellow('paused');
         return {
-          name: `${env} (${status})`,
+          name:
+            options.decorateChoices === false
+              ? env
+              : formatEnvironmentChoiceLabel(env, flag.environments[env]),
           value: env,
         };
       }),
@@ -55,6 +65,16 @@ export async function resolveFlagEnvironment(
   }
 
   return nextEnvironment;
+}
+
+function formatEnvironmentChoiceLabel(
+  envName: string,
+  envConfig: FlagEnvironmentConfig | undefined
+): string {
+  const status = envConfig?.active
+    ? chalk.green('active')
+    : chalk.yellow('paused');
+  return `${envName} (${status})`;
 }
 
 export function isOverridingEnvironmentToVariant(

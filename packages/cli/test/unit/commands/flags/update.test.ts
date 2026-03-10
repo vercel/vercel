@@ -435,6 +435,15 @@ describe('flags update', () => {
     const exitCode = await flags(client);
 
     expect(exitCode).toEqual(0);
+    expect(selectMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'Select a variant to update:',
+        choices: [
+          { name: '"control" Control', value: 'default' },
+          { name: '"variant-a" Variant A', value: 'variant-a' },
+        ],
+      })
+    );
     expect(testFlags[1].variants[0]).toMatchObject({
       id: 'default',
       value: 'welcome-back',
