@@ -58,21 +58,23 @@ describe('open', () => {
       client.setArgv('open', '--non-interactive');
       (client as { nonInteractive: boolean }).nonInteractive = true;
 
+      const logSpy = vi
+        .spyOn(console, 'log')
+        .mockImplementation(() => undefined as unknown as void);
       const exitSpy = vi
         .spyOn(process, 'exit')
         .mockImplementation((code?: number) => {
           throw new Error(`process.exit(${code})`);
         });
-      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
       await expect(openCommand(client)).rejects.toThrow('process.exit(1)');
-      expect(logSpy).toHaveBeenCalled();
-      const output = logSpy.mock.calls.map(c => c[0]).join('\n');
+
+      const output = client.stdout.getFullOutput();
       expect(output).toContain('action_required');
       expect(output).toContain('missing_scope');
 
-      exitSpy.mockRestore();
       logSpy.mockRestore();
+      exitSpy.mockRestore();
       (client as { nonInteractive: boolean }).nonInteractive = false;
     });
   });
