@@ -93,6 +93,7 @@ import {
 import readJSONFile from '../../util/read-json-file';
 import { BuildTelemetryClient } from '../../util/telemetry/commands/build';
 import { validateConfig } from '../../util/validate-config';
+import ua from '../../util/ua';
 import { validateCronSecret } from '../../util/validate-cron-secret';
 import {
   compileVercelConfig,
@@ -532,7 +533,7 @@ async function doBuild(
     await prepareFlagsDefinitions({
       cwd,
       env: process.env as Record<string, string | undefined>,
-      version: cliPkg.version,
+      userAgentSuffix: ua,
       output,
     });
   }
