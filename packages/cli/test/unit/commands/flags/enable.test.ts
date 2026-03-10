@@ -491,7 +491,7 @@ describe('flags enable', () => {
     expect(client.stderr.getFullOutput()).toContain('archived');
   });
 
-  it('warns for non-boolean flags with helpful message', async () => {
+  it('warns for non-boolean flags with variants and interactive set guidance', async () => {
     // testFlags[1] is a string flag
     client.setArgv(
       'flags',
@@ -509,8 +509,12 @@ describe('flags enable', () => {
     expect(output).toContain('string');
     expect(output).toContain('Set a specific variant instead');
     expect(output).toContain(
-      `vercel flags set ${testFlags[1].slug} --environment <ENV> --variant <VARIANT>`
+      `vercel flags set ${testFlags[1].slug} --environment production`
     );
+    expect(output).not.toContain('--variant <VARIANT>');
+    expect(output).toContain('Available variants:');
+    expect(output).toContain('"control" Control');
+    expect(output).toContain('"variant-a" Variant A');
     expect(output).toContain(`vercel flags inspect ${testFlags[1].slug}`);
     // Should show dashboard link
     expect(output).toContain('https://vercel.com/');

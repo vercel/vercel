@@ -8,7 +8,7 @@ import { getCommandName } from '../../util/pkg-name';
 import { getFlag } from '../../util/flags/get-flags';
 import { formatVariantForDisplay } from '../../util/flags/resolve-variant';
 import { updateFlag } from '../../util/flags/update-flag';
-import { getFlagDashboardUrl } from '../../util/flags/dashboard-url';
+import { logNonBooleanFlagGuidance } from '../../util/flags/log-non-boolean-guidance';
 import { normalizeOptionalInput } from '../../util/flags/normalize-optional-input';
 import {
   buildPausedEnvironmentConfig,
@@ -89,24 +89,13 @@ export default async function enable(
 
     // Only boolean flags can be enabled/disabled via CLI
     if (flag.kind !== 'boolean') {
-      const dashboardUrl = getFlagDashboardUrl(
-        link.org.slug,
-        project.name,
-        flag.slug
-      );
-      output.warn(
-        `The ${getCommandName('flags enable')} command only works with boolean flags.`
-      );
-      output.log(
-        `Flag ${chalk.bold(flag.slug)} is a ${chalk.cyan(flag.kind)} flag. Set a specific variant instead:`
-      );
-      output.log(
-        `  ${getCommandName(`flags set ${flag.slug} --environment <ENV> --variant <VARIANT>`)}`
-      );
-      output.log(
-        `See available variants with ${getCommandName(`flags inspect ${flag.slug}`)}`
-      );
-      output.log(`Open in the dashboard: ${chalk.cyan(dashboardUrl)}`);
+      logNonBooleanFlagGuidance(flag, {
+        attemptedSubcommand: 'enable',
+        environment,
+        isInteractive: client.stdin.isTTY,
+        teamSlug: link.org.slug,
+        projectName: project.name,
+      });
       return 0;
     }
 

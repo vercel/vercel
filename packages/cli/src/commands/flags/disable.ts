@@ -11,7 +11,7 @@ import {
   formatVariantForDisplay,
   resolveVariant,
 } from '../../util/flags/resolve-variant';
-import { getFlagDashboardUrl } from '../../util/flags/dashboard-url';
+import { logNonBooleanFlagGuidance } from '../../util/flags/log-non-boolean-guidance';
 import { normalizeOptionalInput } from '../../util/flags/normalize-optional-input';
 import {
   buildPausedEnvironmentConfig,
@@ -94,24 +94,13 @@ export default async function disable(
 
     // Only boolean flags can be enabled/disabled via CLI
     if (flag.kind !== 'boolean') {
-      const dashboardUrl = getFlagDashboardUrl(
-        link.org.slug,
-        project.name,
-        flag.slug
-      );
-      output.warn(
-        `The ${getCommandName('flags disable')} command only works with boolean flags.`
-      );
-      output.log(
-        `Flag ${chalk.bold(flag.slug)} is a ${chalk.cyan(flag.kind)} flag. Set a specific variant instead:`
-      );
-      output.log(
-        `  ${getCommandName(`flags set ${flag.slug} --environment <ENV> --variant <VARIANT>`)}`
-      );
-      output.log(
-        `See available variants with ${getCommandName(`flags inspect ${flag.slug}`)}`
-      );
-      output.log(`Open in the dashboard: ${chalk.cyan(dashboardUrl)}`);
+      logNonBooleanFlagGuidance(flag, {
+        attemptedSubcommand: 'disable',
+        environment,
+        isInteractive: client.stdin.isTTY,
+        teamSlug: link.org.slug,
+        projectName: project.name,
+      });
       return 0;
     }
 
