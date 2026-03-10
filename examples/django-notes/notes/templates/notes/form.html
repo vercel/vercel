@@ -1,0 +1,49 @@
+{% extends "notes/base.html" %}
+
+{% block title %}{{ action }} Note{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>{{ action }} Note</h1>
+        {% if note %}
+            <p class="subtitle">Editing "{{ note.title }}"</p>
+        {% endif %}
+    </div>
+    <a href="{% if note %}{% url 'note_detail' note.pk %}{% else %}{% url 'note_list' %}{% endif %}"
+       class="btn">Cancel</a>
+</div>
+
+<div class="form-card">
+    {% if form.errors %}
+        <div class="form-errors">
+            {% for field in form %}
+                {% for error in field.errors %}
+                    <div>{{ field.label }}: {{ error }}</div>
+                {% endfor %}
+            {% endfor %}
+            {% for error in form.non_field_errors %}
+                <div>{{ error }}</div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <form method="post">
+        {% csrf_token %}
+
+        <div class="form-field">
+            <label for="{{ form.title.id_for_label }}">Title</label>
+            {{ form.title }}
+        </div>
+
+        <div class="form-field">
+            <label for="{{ form.body.id_for_label }}">Body</label>
+            {{ form.body }}
+        </div>
+
+        <div class="btn-group" style="margin-top: 1.5rem;">
+            <button type="submit" class="btn btn-primary">{{ action }} Note</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

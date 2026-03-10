@@ -1,0 +1,34 @@
+{% extends "notes/base.html" %}
+
+{% block title %}All Notes{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>All Notes</h1>
+        <p class="subtitle">{{ notes.count }} note{{ notes.count|pluralize }}</p>
+    </div>
+    <a href="{% url 'note_create' %}" class="btn btn-primary">+ New Note</a>
+</div>
+
+{% if notes %}
+    <div class="card-grid">
+        {% for note in notes %}
+            <a href="{% url 'note_detail' note.pk %}" class="card-link">
+                <div class="card">
+                    <h3>{{ note.title }}</h3>
+                    <p>{{ note.body|truncatechars:100 }}</p>
+                    <p style="margin-top: 0.75rem; font-size: 0.75rem; color: #444444;">
+                        {{ note.created_at|date:"M j, Y" }}
+                    </p>
+                </div>
+            </a>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="empty-state">
+        <p>No notes yet.</p>
+    </div>
+{% endif %}
+
+{% endblock %}

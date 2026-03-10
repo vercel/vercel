@@ -1,0 +1,35 @@
+{% extends "notes/base.html" %}
+
+{% block title %}{{ note.title }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>{{ note.title }}</h1>
+        <p class="note-meta">
+            Created {{ note.created_at|date:"M j, Y, g:i a" }}
+            {% if note.updated_at != note.created_at %}
+                &middot; Updated {{ note.updated_at|date:"M j, Y, g:i a" }}
+            {% endif %}
+        </p>
+    </div>
+    <div class="btn-group">
+        <a href="{% url 'note_edit' note.pk %}" class="btn">Edit</a>
+        <a href="{% url 'note_list' %}" class="btn">← All Notes</a>
+    </div>
+</div>
+
+<div class="card" style="max-width: 680px;">
+    <p class="note-body">{{ note.body }}</p>
+</div>
+
+<hr class="divider">
+
+<form method="post" action="{% url 'note_delete' note.pk %}">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-danger"
+            onclick="return confirm('Delete this note?')">
+        Delete note
+    </button>
+</form>
+{% endblock %}
