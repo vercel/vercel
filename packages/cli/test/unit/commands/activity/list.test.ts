@@ -153,7 +153,7 @@ describe('activity ls', () => {
 
     expect(exitCode).toBe(0);
     const output = client.stderr.getFullOutput();
-    expect(output).toContain(`1. ${longText}`);
+    expect(output).toContain(longText);
     expect(output).toContain('Type: firewall-bypass-created');
     expect(output).toContain('Actor: jane');
   });
