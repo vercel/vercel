@@ -59,6 +59,7 @@ import {
 } from '@vercel/routing-utils';
 
 import output from '../../output-manager';
+import { outputAgentError } from '../../util/agent-output';
 import { cleanupCorepack, initCorepack } from '../../util/build/corepack';
 import { importBuilders } from '../../util/build/import-builders';
 import { setMonorepoDefaultSettings } from '../../util/build/monorepo';
@@ -254,6 +255,26 @@ export default async function main(client: Client): Promise<number> {
   while (!project?.settings) {
     let confirmed = yes;
     if (!confirmed) {
+      if (client.nonInteractive) {
+        outputAgentError(
+          client,
+          {
+            status: 'error',
+            reason: 'project_settings_required',
+            message:
+              'No project settings found locally. Run pull to retrieve them, or re-run with --yes to pull automatically.',
+            next: [
+              {
+                command: cli.getCommandName(
+                  `pull --yes --environment ${target}`
+                ),
+              },
+              { command: cli.getCommandName(`build --yes`) },
+            ],
+          },
+          1
+        );
+      }
       if (!isTTY) {
         output.print(
           `No Project Settings found locally. Run ${cli.getCommandName(
@@ -271,7 +292,8 @@ export default async function main(client: Client): Promise<number> {
       );
     }
     if (!confirmed) {
-      output.print(`Canceled. No Project Settings retrieved.\n`);
+      if (!client.nonInteractive)
+        output.print(`Canceled. No Project Settings retrieved.\n`);
       return 0;
     }
     const { argv: originalArgv } = client;
@@ -316,7 +338,7 @@ export default async function main(client: Client): Promise<number> {
     cliVersion: cliPkg.version,
   };
 
-  if (!process.env.VERCEL_BUILD_IMAGE) {
+  if (!process.env.VERCEL_BUILD_IMAGE && !client.nonInteractive) {
     output.warn(
       'Build not running on Vercel. System environment variables will not be available.'
     );
@@ -370,8 +392,52 @@ export default async function main(client: Client): Promise<number> {
       await rootSpan.stop();
     }
 
+    if (client.nonInteractive) {
+      const relOutputDir = relative(cwd, outputDir);
+      client.stdout.write(
+        `${JSON.stringify(
+          {
+            status: 'ok',
+            outputDir: outputDir,
+            outputDirRelative: relOutputDir.startsWith('..')
+              ? outputDir
+              : relOutputDir,
+            target,
+            message: 'Build completed successfully.',
+            next: [
+              {
+                command: cli.getCommandName('deploy'),
+                when: 'Deploy the build output',
+              },
+            ],
+          },
+          null,
+          2
+        )}\n`
+      );
+    }
     return 0;
   } catch (err: any) {
+    if (client.nonInteractive) {
+      client.stdout.write(
+        `${JSON.stringify(
+          {
+            status: 'error',
+            reason: 'build_failed',
+            message: err?.message ?? String(err),
+            next: [
+              {
+                command: cli.getCommandName('pull --yes'),
+                when: 'Ensure project settings are present',
+              },
+              { command: cli.getCommandName('build --yes') },
+            ],
+          },
+          null,
+          2
+        )}\n`
+      );
+    }
     output.prettyError(err);
 
     // Write error to `builds.json` file
@@ -1284,14 +1350,16 @@ async function doBuild(
   await writeFlagsJSON(buildResults.values(), outputDir);
 
   const relOutputDir = relative(cwd, outputDir);
-  output.print(
-    `${prependEmoji(
-      `Build Completed in ${chalk.bold(
-        relOutputDir.startsWith('..') ? outputDir : relOutputDir
-      )} ${chalk.gray(buildStamp())}`,
-      emoji('success')
-    )}\n`
-  );
+  if (!client.nonInteractive) {
+    output.print(
+      `${prependEmoji(
+        `Build Completed in ${chalk.bold(
+          relOutputDir.startsWith('..') ? outputDir : relOutputDir
+        )} ${chalk.gray(buildStamp())}`,
+        emoji('success')
+      )}\n`
+    );
+  }
 
   // Analyze .vc-config.json files if environment variable is set
   if (process.env.VERCEL_ANALYZE_BUILD_OUTPUT === '1') {

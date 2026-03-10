@@ -2153,4 +2153,73 @@ fs.writeFileSync(
       expect(exitCode).toEqual(0);
     });
   });
+
+  describe('non-interactive mode', () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('outputs error JSON when project settings missing and --yes not set', async () => {
+      const projectSettingsModule = await import(
+        '../../../../src/util/projects/project-settings'
+      );
+      vi.spyOn(projectSettingsModule, 'readProjectSettings').mockResolvedValue(
+        null
+      );
+      vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+        throw new Error('exit');
+      }) as () => never);
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+      const cwd = fixture('static');
+      client.cwd = cwd;
+      client.nonInteractive = true;
+      client.setArgv('build');
+
+      const exitCodePromise = build(client);
+
+      await expect(exitCodePromise).rejects.toThrow('exit');
+      expect(logSpy).toHaveBeenCalled();
+      const payload = JSON.parse(
+        logSpy.mock.calls[logSpy.mock.calls.length - 1][0]
+      );
+      expect(payload).toMatchObject({
+        status: 'error',
+        reason: 'project_settings_required',
+        message: expect.stringMatching(/project settings|pull/),
+        next: expect.any(Array),
+      });
+      expect(
+        payload.next.some((n: { command: string }) =>
+          n.command.includes('pull')
+        )
+      ).toBe(true);
+    });
+
+    it('outputs success JSON when build completes', async () => {
+      const cwd = fixture('static');
+      const outputDir = join(cwd, '.vercel/output');
+      client.cwd = cwd;
+      client.nonInteractive = true;
+      client.setArgv('build');
+
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      const stdout = client.stdout.getFullOutput();
+      const payload = JSON.parse(stdout);
+      expect(payload).toMatchObject({
+        status: 'ok',
+        outputDir,
+        target: 'preview',
+        message: expect.stringMatching(/completed/),
+        next: expect.any(Array),
+      });
+      expect(
+        payload.next.some((n: { command: string }) =>
+          n.command.includes('deploy')
+        )
+      ).toBe(true);
+    });
+  });
 });
