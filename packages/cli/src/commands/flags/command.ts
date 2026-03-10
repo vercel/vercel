@@ -59,9 +59,9 @@ export const inspectSubcommand = {
   ],
 } as const;
 
-export const addSubcommand = {
-  name: 'add',
-  aliases: [],
+export const createSubcommand = {
+  name: 'create',
+  aliases: ['add'],
   description: 'Create a new feature flag',
   arguments: [
     {
@@ -90,11 +90,11 @@ export const addSubcommand = {
   examples: [
     {
       name: 'Create a boolean feature flag',
-      value: `${packageName} flags add my-feature`,
+      value: `${packageName} flags create my-feature`,
     },
     {
       name: 'Create a string feature flag with description',
-      value: `${packageName} flags add my-feature --kind string --description "My feature flag"`,
+      value: `${packageName} flags create my-feature --kind string --description "My feature flag"`,
     },
   ],
 } as const;
@@ -354,7 +354,7 @@ export const flagsCommand = {
   subcommands: [
     listSubcommand,
     inspectSubcommand,
-    addSubcommand,
+    createSubcommand,
     removeSubcommand,
     archiveSubcommand,
     disableSubcommand,
