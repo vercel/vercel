@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.15.42
+
+### Patch Changes
+
+- Revert "[next] vary fallback allowQuery for partial fallback shells" ([#15418](https://github.com/vercel/vercel/pull/15418))
+
 ## 4.15.41
 
 ### Patch Changes
