@@ -3,6 +3,7 @@ import type {
   RouteWithHandle as Handler,
   RouteWithSrc as Source,
 } from '@vercel/routing-utils';
+import { join } from 'path';
 import type { PackageJson } from '@vercel/build-utils';
 import {
   detectBuilders,
@@ -92,6 +93,66 @@ function createReplaceLocation(redirectRoutes: Route[] | null) {
 }
 
 describe('Test `detectBuilders`', () => {
+  it('should use services builders when experimentalServices is configured without the services framework', async () => {
+    const workPath = join(
+      __dirname,
+      'fixtures',
+      'e2e',
+      '11-services-python-cron'
+    );
+    const { builders, defaultRoutes, rewriteRoutes, services, errors } =
+      await detectBuilders([], undefined, {
+        experimentalServices: {
+          web: {
+            framework: 'fastapi',
+            entrypoint: 'server.py',
+            routePrefix: '/',
+          },
+          cleanup: {
+            type: 'cron',
+            entrypoint: 'jobs/cleanup.py',
+            schedule: '0 0 * * *',
+          },
+        },
+        projectSettings: {
+          framework: null,
+        },
+        workPath,
+      });
+
+    expect(errors).toBeNull();
+    expect(services).toHaveLength(2);
+    expect(builders).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          src: 'server.py',
+          use: '@vercel/python',
+        }),
+        expect.objectContaining({
+          src: 'jobs/cleanup.py',
+          use: '@vercel/python',
+        }),
+      ])
+    );
+    expect(defaultRoutes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          dest: '/_svc/web/index',
+          check: true,
+        }),
+      ])
+    );
+    expect(rewriteRoutes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          src: '^/_svc/cleanup/crons/jobs/cleanup/cron$',
+          dest: '/_svc/cleanup/index',
+          check: true,
+        }),
+      ])
+    );
+  });
+
   it('should never select now.json src', async () => {
     const files = ['docs/index.md', 'mkdocs.yml', 'now.json'];
     const { builders } = await invokeDetectBuildersAndThrow(files, null, {
