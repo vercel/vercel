@@ -8,6 +8,8 @@ import { printError } from '../../util/error';
 import output from '../../output-manager';
 import { LoginTelemetryClient } from '../../util/telemetry/commands/login';
 import { login as future } from './future';
+import { outputActionRequired } from '../../util/agent-output';
+import { packageName } from '../../util/pkg-name';
 
 export default async function login(
   client: Client,
@@ -74,6 +76,37 @@ export default async function login(
         `Read more in our ${output.link('changelog', 'https://vercel.com/changelog/new-vercel-cli-login-flow')}.\n`
       );
     }
+  }
+
+  // Non-interactive mode: don't start an interactive device-code flow.
+  // Instead, instruct the user to generate a passcode in the browser and
+  // run `vc login --passcode <passcode>` as a follow-up command.
+  if (
+    client.nonInteractive &&
+    options.shouldParseArgs &&
+    parsedArgs &&
+    parsedArgs.args.slice(1).length === 0
+  ) {
+    const cmd = `${packageName} login --passcode <passcode>`;
+    const verificationUri = 'https://vercel.com/login/generate';
+    const message = `Visit ${verificationUri} to generate a login passcode, then run '${cmd}'.`;
+
+    // Plain text for humans (stdout/stderr via output manager)
+    output.print(`${message}\n`);
+
+    // Structured payload for agents
+    outputActionRequired(
+      client,
+      {
+        status: 'action_required',
+        reason: 'login_passcode_required',
+        action: 'login_passcode_required',
+        message,
+        verification_uri: verificationUri,
+        next: [{ command: cmd }],
+      },
+      1
+    );
   }
 
   telemetry.trackState('started');
