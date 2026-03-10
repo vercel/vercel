@@ -334,6 +334,22 @@ async function installVercelRuntime({
       ? localRuntimeDir
       : `vercel-runtime==${VERCEL_RUNTIME_VERSION}`);
 
+  // Skip install if the exact pypi version is already present,
+  // local dev builds and explicitly specified version
+  // always reinstall to pick up possible source changes
+  if (!isLocalDev && !env.VERCEL_RUNTIME_PYTHON) {
+    const distInfo = join(
+      targetDir,
+      `vercel_runtime-${VERCEL_RUNTIME_VERSION}.dist-info`
+    );
+    if (existsSync(distInfo)) {
+      debug(
+        `vercel-runtime ${VERCEL_RUNTIME_VERSION} already installed, skipping`
+      );
+      return;
+    }
+  }
+
   debug(
     `Installing vercel-runtime into ${targetDir} (type: ${isLocalDev ? 'local' : 'pypi'}, source: ${runtimeDep})`
   );
