@@ -117,14 +117,13 @@ describe('selectOrg', () => {
         .mockImplementation((code?: number) => {
           throw new Error(`process.exit(${code})`);
         });
-      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
       await expect(selectOrg(client, 'Which scope?', false)).rejects.toThrow(
         'process.exit(1)'
       );
 
-      expect(logSpy).toHaveBeenCalledTimes(1);
-      const payload = JSON.parse(logSpy.mock.calls[0][0]);
+      const outputJson = client.stdout.getFullOutput();
+      const payload = JSON.parse(outputJson);
       expect(isActionRequiredPayload(payload)).toBe(true);
       expect(payload.status).toBe('action_required');
       expect(payload.reason).toBe('missing_scope');
@@ -136,7 +135,6 @@ describe('selectOrg', () => {
       expect(exitSpy).toHaveBeenCalledWith(1);
 
       exitSpy.mockRestore();
-      logSpy.mockRestore();
     });
 
     it('returns org when --scope flag is present in argv (non-interactive, no currentTeam)', async () => {
@@ -145,7 +143,6 @@ describe('selectOrg', () => {
         .mockImplementation((code?: number) => {
           throw new Error(`process.exit(${code})`);
         });
-      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
       client.setArgv('deploy', '--scope', firstTeam.slug);
 
@@ -156,11 +153,9 @@ describe('selectOrg', () => {
         slug: firstTeam.slug,
       });
 
-      expect(logSpy).not.toHaveBeenCalled();
       expect(exitSpy).not.toHaveBeenCalled();
 
       exitSpy.mockRestore();
-      logSpy.mockRestore();
     });
 
     it('outputs action_required and exits even with single scope (no defaulting)', async () => {
@@ -175,19 +170,18 @@ describe('selectOrg', () => {
         .mockImplementation((code?: number) => {
           throw new Error(`process.exit(${code})`);
         });
-      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
       await expect(selectOrg(client, 'Which scope?', false)).rejects.toThrow(
         'process.exit(1)'
       );
 
-      const payload = JSON.parse(logSpy.mock.calls[0][0]);
+      const outputJson = client.stdout.getFullOutput();
+      const payload = JSON.parse(outputJson);
       expect(isActionRequiredPayload(payload)).toBe(true);
       expect(payload.choices.length).toBe(1);
       expect(exitSpy).toHaveBeenCalledWith(1);
 
       exitSpy.mockRestore();
-      logSpy.mockRestore();
     });
 
     it('returns org when --scope/--team was passed (currentTeam set)', async () => {
