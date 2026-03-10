@@ -282,12 +282,7 @@ export function outputActionRequired(
     enriched.hint =
       'Run one of the commands in next[] to complete without prompting.';
   }
-  const json = JSON.stringify(enriched, null, 2);
-  // Keep console.log for existing tests while also writing to stdout
-  // so agents can capture structured JSON output consistently.
-  // biome-ignore lint/suspicious/noConsole: intentional structured JSON output
-  console.log(json);
-  client.stdout.write(`${json}\n`);
+  client.stdout.write(`${JSON.stringify(enriched, null, 2)}\n`);
   process.exit(exitCode);
 }
 
@@ -304,10 +299,6 @@ export function outputAgentError(
   if (!client.nonInteractive) {
     return;
   }
-  const json = JSON.stringify(payload, null, 2);
-  // Keep console.log for existing tests while also writing to stdout.
-  // biome-ignore lint/suspicious/noConsole: intentional structured JSON output
-  console.log(json);
-  client.stdout.write(`${json}\n`);
+  client.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
   process.exit(exitCode);
 }
