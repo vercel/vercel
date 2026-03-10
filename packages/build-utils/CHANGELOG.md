@@ -1,5 +1,15 @@
 # @vercel/build-utils
 
+## 13.8.0
+
+### Minor Changes
+
+- Support `maxDuration: 'max'` to allow the backend to resolve the maximum duration based on account plan type ([#15217](https://github.com/vercel/vercel/pull/15217))
+
+### Patch Changes
+
+- Fix EEXIST error when using `--standalone` flag in monorepos by handling pre-existing symlinks in the shared output directory. ([#15322](https://github.com/vercel/vercel/pull/15322))
+
 ## 13.7.2
 
 ### Patch Changes
