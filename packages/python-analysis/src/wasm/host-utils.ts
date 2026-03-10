@@ -2,7 +2,7 @@
  * Host-side implementation of the `vercel:python-analysis/host-utils` WIT interface.
  */
 import { AsyncLocalStorage } from 'node:async_hooks';
-import { normalize } from 'node:path';
+import { normalize } from 'node:path/posix';
 import { domainToUnicode as nodeDomainToUnicode } from 'url';
 
 /**
