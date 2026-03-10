@@ -1,7 +1,49 @@
 package vercel:python-analysis;
 
+interface host-utils {
+    /// IDNA domain-to-ASCII conversion (WHATWG URL Standard).
+    /// Normalizes a domain name to ASCII using UTS #46 rules.
+    domain-to-ascii: func(domain: string) -> result<string, string>;
+
+    /// IDNA domain-to-Unicode conversion (WHATWG URL Standard).
+    /// Converts a domain name to its Unicode display form with full UTS #46
+    /// case folding and normalization.
+    /// Returns the best-effort result (even on error) and a separate error flag.
+    domain-to-unicode: func(domain: string) -> tuple<string, bool>;
+
+    /// Unicode NFC normalization (canonical decomposition + canonical composition).
+    nfc-normalize: func(s: string) -> string;
+
+    /// Unicode NFD normalization (canonical decomposition).
+    nfd-normalize: func(s: string) -> string;
+
+    /// Unicode NFKC normalization (compatibility decomposition + canonical composition).
+    nfkc-normalize: func(s: string) -> string;
+
+    /// Unicode NFKD normalization (compatibility decomposition).
+    nfkd-normalize: func(s: string) -> string;
+
+    /// Validate a regex pattern. Returns ok if valid, error message if invalid.
+    /// The caller converts Rust regex syntax to JS syntax before calling
+    /// (e.g. `(?P<name>...)` → `(?<name>...)`).
+    regex-new: func(pattern: string) -> result<_, string>;
+
+    /// Find all regex matches with named capture groups.
+    /// Pattern is in JS regex syntax (converted from Rust syntax by the caller).
+    /// Returns JSON: `[{"overall":[start,end],"named":{"group":[start,end],...}},...]`
+    /// with UTF-8 byte offsets.
+    regex-find-all: func(pattern: string, text: string) -> string;
+}
+
+/// Import-only world used by the host-bridge crate to generate bindings
+/// for the host-utils imports without pulling in the full export surface.
+world host-bridge {
+    import host-utils;
+}
+
 /// Semantic analysis of Python source code
 world python-analysis {
+    import host-utils;
     /// Check if Python source code contains or exports:
     /// - A top-level 'app' callable (e.g., Flask, FastAPI, Sanic apps)
     /// - A top-level 'application' callable (e.g., Django)
@@ -91,4 +133,50 @@ world python-analysis {
 
     /// Normalize a package name per PEP 503.
     export normalize-package-name: func(name: string) -> string;
+
+    // =========================================================================
+    // Requirements.txt parsing
+    // =========================================================================
+
+    /// Parsed VCS (Git) URL information.
+    record parsed-vcs-info {
+        /// Repository URL (without git+ prefix, @ref, or #fragment).
+        url: string,
+        /// Requested revision (branch, tag, or commit hash).
+        rev: option<string>,
+        /// Package name from #egg=name fragment.
+        egg: option<string>,
+    }
+
+    /// A single parsed requirement entry from requirements.txt.
+    record parsed-req-entry {
+        name: option<string>,
+        pep508: string,
+        extras: list<string>,
+        markers: option<string>,
+        version-spec: option<string>,
+        url: option<string>,
+        hashes: list<string>,
+        editable: bool,
+        /// Parsed VCS info if this is a git+ URL.
+        vcs: option<parsed-vcs-info>,
+        /// The URL/path as originally written by the user (before resolution).
+        given-url: option<string>,
+    }
+
+    /// Full parsed requirements.txt result.
+    record parsed-requirements-txt {
+        requirements: list<parsed-req-entry>,
+        editables: list<parsed-req-entry>,
+        requirement-files: list<string>,
+        constraint-files: list<string>,
+        index-url: option<string>,
+        extra-index-urls: list<string>,
+        find-links: list<string>,
+        no-index: bool,
+    }
+
+    /// Parse requirements.txt content into structured data.
+    /// `working-dir` is used to resolve relative paths to file:// URLs.
+    export parse-requirements-txt: func(content: string, working-dir: option<string>) -> result<parsed-requirements-txt, string>;
 }

@@ -45,6 +45,7 @@
     "minimatch": "10.1.1",
     "pip-requirements-js": "1.0.3",
     "smol-toml": "1.5.2",
+    "lru-cache": "11.1.0",
     "zod": "3.22.4"
   },
   "devDependencies": {

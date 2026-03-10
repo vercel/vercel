@@ -1,0 +1,7 @@
+# Stub unicode_names2: eliminates ~820 KB of Unicode name lookup tables from .rodata.
+# Only ruff_python_parser uses this (for Python's \N{...} escape), which is
+# irrelevant for dependency/entrypoint analysis.
+[package]
+name = "unicode_names2"
+version = "1.3.0"
+edition = "2024"

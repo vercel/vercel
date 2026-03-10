@@ -1,4 +1,4 @@
-// Patched uv-fs: stripped to only the two functions needed by uv-pep508
+// Stubbed uv-fs: stripped to only the two functions needed by uv-pep508
 // (normalize_url_path, normalize_absolute_path).
 // Everything else has been removed for wasm32-wasip2.
 

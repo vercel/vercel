@@ -3,18 +3,18 @@
 mod bindings {
     include!(env!("WIT_BINDINGS"));
 }
-mod entrypoint;
 mod dist_metadata;
+mod entrypoint;
 
 bindings::export!(PythonAnalyzer with_types_in bindings);
 
 struct PythonAnalyzer;
 
-use crate::bindings::{DistMetadata, DirectUrlInfo, RecordEntry};
+use crate::bindings::{
+    DirectUrlInfo, DistMetadata, ParsedReqEntry, ParsedRequirementsTxt, ParsedVcsInfo, RecordEntry,
+};
 use crate::entrypoint::{
-    contains_app_or_handler_impl,
-    contains_top_level_callable_impl,
-    get_string_constant_impl,
+    contains_app_or_handler_impl, contains_top_level_callable_impl, get_string_constant_impl,
 };
 
 impl crate::bindings::Guest for PythonAnalyzer {
@@ -59,5 +59,44 @@ impl crate::bindings::Guest for PythonAnalyzer {
 
     fn normalize_package_name(name: String) -> String {
         dist_metadata::normalize::normalize(&name)
+    }
+
+    fn parse_requirements_txt(
+        content: String,
+        working_dir: Option<String>,
+    ) -> Result<ParsedRequirementsTxt, String> {
+        let wd = working_dir.unwrap_or_else(|| "/".to_string());
+        let working_dir = std::path::Path::new(&wd);
+        let parsed = uv_requirements_txt_lite::parse_requirements_txt(&content, working_dir)?;
+
+        fn convert_entry(e: uv_requirements_txt_lite::ParsedEntry) -> ParsedReqEntry {
+            ParsedReqEntry {
+                name: e.name,
+                pep508: e.pep508,
+                extras: e.extras,
+                markers: e.markers,
+                version_spec: e.version_spec,
+                url: e.url,
+                hashes: e.hashes,
+                editable: e.editable,
+                vcs: e.vcs.map(|v| ParsedVcsInfo {
+                    url: v.url,
+                    rev: v.rev,
+                    egg: v.egg,
+                }),
+                given_url: e.given_url,
+            }
+        }
+
+        Ok(ParsedRequirementsTxt {
+            requirements: parsed.requirements.into_iter().map(convert_entry).collect(),
+            editables: parsed.editables.into_iter().map(convert_entry).collect(),
+            requirement_files: parsed.requirement_files,
+            constraint_files: parsed.constraint_files,
+            index_url: parsed.index_url,
+            extra_index_urls: parsed.extra_index_urls,
+            find_links: parsed.find_links,
+            no_index: parsed.no_index,
+        })
     }
 }

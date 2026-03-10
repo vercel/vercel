@@ -2090,6 +2090,9 @@ importers:
       js-yaml:
         specifier: 4.1.1
         version: 4.1.1
+      lru-cache:
+        specifier: 11.1.0
+        version: 11.1.0
       minimatch:
         specifier: 10.1.1
         version: 10.1.1
@@ -13035,7 +13038,7 @@ packages:
       eslint-import-resolver-webpack:
         optional: true
     dependencies:
-      '@typescript-eslint/parser': 5.62.0(eslint@8.35.0)(typescript@4.9.4)
+      '@typescript-eslint/parser': 5.62.0(eslint@8.35.0)(typescript@4.9.5)
       debug: 3.2.7
       eslint: 8.35.0
       eslint-import-resolver-node: 0.3.9
@@ -13066,7 +13069,7 @@ packages:
         optional: true
     dependencies:
       '@rtsao/scc': 1.1.0
-      '@typescript-eslint/parser': 5.62.0(eslint@8.35.0)(typescript@4.9.4)
+      '@typescript-eslint/parser': 5.62.0(eslint@8.35.0)(typescript@4.9.5)
       array-includes: 3.1.8
       array.prototype.findlastindex: 1.2.6
       array.prototype.flat: 1.3.3
@@ -13170,7 +13173,7 @@ packages:
         optional: true
     dependencies:
       eslint: 8.35.0
-      eslint-plugin-jest: 27.9.0(@typescript-eslint/eslint-plugin@5.62.0)(eslint@8.35.0)(jest@29.5.0)(typescript@4.9.4)
+      eslint-plugin-jest: 27.9.0(@typescript-eslint/eslint-plugin@5.62.0)(eslint@8.35.0)(jest@29.5.0)(typescript@4.9.5)
     dev: true
 
   /eslint-plugin-react-hooks@4.6.2(eslint@8.35.0):
@@ -16238,8 +16241,8 @@ packages:
     resolution: {integrity: sha512-JNAzZcXrCt42VGLuYz0zfAzDfAvJWW6AfYlDBQyDV5DClI2m5sAmK+OIO7s59XfsRsWHp02jAJrRadPRGTt6SQ==}
     dev: true
 
-  /lru-cache@11.2.2:
-    resolution: {integrity: sha512-F9ODfyqML2coTIsQpSkRHnLSZMtkU8Q+mSfcaIyKwy58u+8k5nvAYeiNhsyMARvzNcXJ9QfWVrcPsC9e9rAxtg==}
+  /lru-cache@11.1.0:
+    resolution: {integrity: sha512-QIXZUBJUx+2zHUdQujWejBkcD9+cs94tLn0+YL8UrCh+D5sCXZ4c7LaEH48pNwRY3MLDgqUFyhlCyjJPf1WP0A==}
     engines: {node: 20 || >=22}
 
   /lru-cache@4.1.5:
@@ -17411,7 +17414,7 @@ packages:
     resolution: {integrity: sha512-oWyT4gICAu+kaA7QWk/jvCHWarMKNs6pXOGWKDTr7cw4IGcUbW+PeTfbaQiLGheFRpjo6O9J0PmyMfQPjH71oA==}
     engines: {node: 20 || >=22}
     dependencies:
-      lru-cache: 11.2.2
+      lru-cache: 11.1.0
       minipass: 7.1.2
 
   /path-to-regexp@0.1.10:

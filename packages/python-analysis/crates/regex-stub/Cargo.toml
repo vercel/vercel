@@ -1,0 +1,26 @@
+[package]
+name = "regex"
+version = "1.10.6"
+edition = "2024"
+
+[dependencies]
+host-bridge = { path = "../host-bridge" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+regex-upstream = { package = "regex", git = "https://github.com/rust-lang/regex", tag = "1.10.6", optional = true }
+
+[[test]]
+name = "api"
+harness = false
+
+[dev-dependencies]
+wasm-test-support = { path = "../wasm-test-support" }
+
+[features]
+default = ["std"]
+std = []
+unicode = []
+unicode-perl = []
+perf = []
+perf-inline = []
+upstream = ["dep:regex-upstream"]

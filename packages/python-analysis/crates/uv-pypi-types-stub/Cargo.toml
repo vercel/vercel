@@ -1,0 +1,21 @@
+# Stubbed uv-pypi-types: stripped to only Metadata23, DirectUrl, and supporting types.
+# Eliminates regex, rkyv, jiff, petgraph, toml_edit, tracing, and most uv-* crate deps.
+[package]
+name = "uv-pypi-types"
+version = "0.0.20"
+edition.workspace = true
+rust-version.workspace = true
+
+[lib]
+doctest = false
+
+[dependencies]
+indexmap = { version = "2", features = ["serde"] }
+serde = { version = "1", features = ["derive"] }
+thiserror = "2"
+
+[features]
+default = []
+# no-op: keeps dependents that request these features happy
+rkyv = []
+schemars = []

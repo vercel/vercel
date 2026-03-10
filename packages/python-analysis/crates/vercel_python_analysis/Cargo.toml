@@ -13,6 +13,7 @@ ruff_python_parser = { git = "https://github.com/astral-sh/ruff", rev = "22f240d
 wit-bindgen.workspace = true
 uv-pypi-types.workspace = true
 uv-normalize.workspace = true
+uv-requirements-txt-lite = { path = "../uv-requirements-txt-lite" }
 csv.workspace = true
 serde.workspace = true
 serde_json.workspace = true
