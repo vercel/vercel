@@ -1,4 +1,4 @@
-import { test, expect, afterAll } from 'vitest';
+import { test, expect, beforeAll, afterAll } from 'vitest';
 import { readFileSync } from 'fs';
 import { homedir } from 'os';
 import { join } from 'path';
@@ -40,12 +40,20 @@ function getShellCommands(): { command: string; success: boolean }[] {
   return results.o11y?.shellCommands ?? [];
 }
 
-const token = getToken();
-const { projectId, orgId } = getProjectConfig();
-const headers = { Authorization: `Bearer ${token}` };
+let token: string;
+let projectId: string;
+let orgId: string;
+let headers: Record<string, string>;
+
+beforeAll(() => {
+  token = getToken();
+  ({ projectId, orgId } = getProjectConfig());
+  headers = { Authorization: `Bearer ${token}` };
+});
 
 afterAll(async () => {
   // Clean up Upstash stores created during the eval.
+  if (!token || !projectId) return;
   try {
     const res = await fetch(
       `https://api.vercel.com/v1/storage/stores?projectId=${projectId}&teamId=${orgId}`,

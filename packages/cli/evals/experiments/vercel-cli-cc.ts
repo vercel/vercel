@@ -9,6 +9,10 @@ const config: ExperimentConfig = {
   timeout: 900,
   sandbox: 'docker',
   async setup(sandbox) {
+    if (!process.env.VERCEL_TOKEN) {
+      throw new Error('VERCEL_TOKEN is required for marketplace evals.');
+    }
+
     await setupAuthAndConfig(sandbox);
 
     await sandbox.runCommand('npm', ['install', '-g', 'vercel@latest']);

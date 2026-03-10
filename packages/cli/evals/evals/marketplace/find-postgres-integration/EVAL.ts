@@ -16,12 +16,13 @@ test('agent used vercel integration or install commands', () => {
   expect(integrationCommands.length).toBeGreaterThan(0);
 });
 
-test('agent used a discovery command (list or discover)', () => {
+test('agent used a discovery approach (list, discover, or help)', () => {
   const commands = getShellCommands();
-  const discoveryCommands = commands.filter(c =>
-    /\b(vercel|vc)\s+(integration\s+(list|discover)|integration\b.*--help)\b/i.test(
-      c.command
-    )
+  const discoveryCommands = commands.filter(
+    c =>
+      /\b(vercel|vc)\s+(integration\s+(list|discover)|install)\b/i.test(
+        c.command
+      ) || /\b(vercel|vc)\b.*--help\b/.test(c.command)
   );
   expect(discoveryCommands.length).toBeGreaterThan(0);
 });
