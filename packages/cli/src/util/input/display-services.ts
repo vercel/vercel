@@ -99,6 +99,8 @@ function getServiceTarget(service: Service): string {
   switch (service.type) {
     case 'cron':
       return `schedule: ${service.schedule ?? 'none'}`;
+    case 'worker':
+      return `topic: ${service.topic ?? 'none'}`;
     default:
       return service.routePrefix
         ? formatRoutePrefix(service.routePrefix)
