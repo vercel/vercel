@@ -385,127 +385,133 @@ if os.path.exists(_runtime_config_path):
     _project_dir = os.path.join(lambda_root, _config["projectDir"])
 
     if _efs_available:
+        # EFS mode: skip uv sync, just add pre-populated EFS packages to sys.path
         _deps_dir = os.path.join(_efs_mount, _python_ver)
-        _stderr(f"[efs] installing dependencies to EFS: {_deps_dir}")
-    else:
-        _deps_dir = "/tmp/_vc_deps"
-    _site_packages = os.path.join(
-        _deps_dir,
-        "lib",
-        f"python{_python_ver}",
-        "site-packages",
-    )
-    # Marker stays in /tmp so each Lambda instance runs uv sync on cold start.
-    # uv sync is fast when packages already exist on EFS.
-    _marker = os.path.join("/tmp/_vc_deps", ".installed")
+        _site_packages = os.path.join(
+            _deps_dir,
+            "lib",
+            f"python{_python_ver}",
+            "site-packages",
+        )
+        _stderr(
+            f"[efs] skipping uv sync, using pre-populated EFS: {_site_packages}"
+        )
 
-    if not os.path.exists(_marker):
-        # Cold start: install public dependencies using bundled uv
-        _uv_path = os.path.join(_uv_dir, "uv")
+        if os.path.isdir(_site_packages):
+            site.addsitedir(_site_packages)
+            try:
+                while _site_packages in sys.path:
+                    sys.path.remove(_site_packages)
+            except ValueError:
+                pass
+            sys.path.insert(0, _site_packages)
+            _stderr(f"[efs] added to sys.path: {_site_packages}")
 
-        _stderr("Installing runtime dependencies...")
-        _install_start = time.time()
-
-        try:
-            os.makedirs(_deps_dir, exist_ok=True)
-            if _efs_available:
-                os.makedirs(os.path.join(_deps_dir, ".tmp"), exist_ok=True)
-
-            # Create a minimal PEP 405 venv skeleton for uv sync.
-            # Writing pyvenv.cfg directly avoids spawning a subprocess.
-            os.makedirs(_site_packages, exist_ok=True)
-            with open(os.path.join(_deps_dir, "pyvenv.cfg"), "w") as _f:
-                _f.write(f"home = {os.path.dirname(sys.executable)}\n")
-                _f.write("include-system-site-packages = false\n")
-
-            # Use uv sync --inexact --frozen to install only the
-            # missing public packages. --inexact avoids removing
-            # packages already present in _vendor (bundled deps).
-            _sync_cmd = [
-                _uv_path,
-                "sync",
-                "--inexact",
-                "--active",
-                "--frozen",
-                "--no-dev",
-                "--no-editable",
-                "--no-install-project",
-                "--no-build",
-                "--no-cache",
-                "--no-progress",
-                "--link-mode",
-                "copy",
-            ]
-            for _pkg in _config.get("bundledPackages", []):
-                _sync_cmd.extend(["--no-install-package", _pkg])
-            subprocess.run(
-                _sync_cmd,
-                check=True,
-                text=True,
-                cwd=_project_dir,
-                env={
-                    "PATH": os.environ.get("PATH", ""),
-                    "VIRTUAL_ENV": _deps_dir,
-                    "UV_PYTHON_DOWNLOADS": "never",
-                    # When using EFS, redirect uv's temp directory to EFS
-                    # to avoid filling up /tmp (512 MB) during wheel
-                    # download/extraction.
-                    **(
-                        {"TMPDIR": os.path.join(_deps_dir, ".tmp")}
-                        if _efs_available
-                        else {}
-                    ),
-                },
-            )
-            _install_duration = time.time() - _install_start
-            _stderr(
-                f"Runtime dependencies installed in {_install_duration:.2f}s"
-            )
-        except subprocess.CalledProcessError as e:
-            _fatal(
-                f"Runtime dependency installation failed.\n"
-                f"Command: {' '.join(e.cmd)}\n"
-                f"Exit code: {e.returncode}"
-            )
-        except Exception as e:
-            _fatal(
-                f"Runtime dependency installation"
-                f" failed with unexpected error: {e}"
-            )
-
-        # Post-install diagnostics
-        try:
-            _stderr(f"[efs-diag] install target: {_deps_dir}")
-            _stderr(
-                f"[efs-diag] site-packages exists: {os.path.isdir(_site_packages)}"
-            )
-            if os.path.isdir(_site_packages):
+            try:
                 _pkgs = os.listdir(_site_packages)
                 _stderr(
-                    f"[efs-diag] packages installed ({len(_pkgs)}): {_pkgs[:30]}"
+                    f"[efs-diag] packages on EFS ({len(_pkgs)}): {_pkgs[:30]}"
                 )
-            _stderr(f"[efs-diag] sys.path (post-install): {sys.path}")
-        except Exception as _diag_err:
+            except Exception as _diag_err:
+                _stderr(
+                    f"[efs-diag] could not list packages (non-fatal): {_diag_err}"
+                )
+        else:
             _stderr(
-                f"[efs-diag] post-install diagnostics error (non-fatal): {_diag_err}"
+                f"[efs] warning: site-packages not found at {_site_packages}"
             )
 
-        # Mark installation complete for warm starts
-        os.makedirs("/tmp/_vc_deps", exist_ok=True)
-        open(_marker, "w").close()
+        _stderr(f"[efs-diag] sys.path (final): {sys.path}")
     else:
-        _stderr("Using cached runtime dependencies")
+        # Non-EFS: install dependencies to /tmp using uv sync (existing behavior)
+        _deps_dir = "/tmp/_vc_deps"
+        _site_packages = os.path.join(
+            _deps_dir,
+            "lib",
+            f"python{_python_ver}",
+            "site-packages",
+        )
+        _marker = os.path.join(_deps_dir, ".installed")
 
-    # Add runtime-installed deps to path (must come before user code import)
-    if os.path.isdir(_site_packages):
-        site.addsitedir(_site_packages)
-        # Move to front of path so these packages take precedence
-        try:
-            while _site_packages in sys.path:
-                sys.path.remove(_site_packages)
-        except ValueError:
-            pass
-        sys.path.insert(0, _site_packages)
+        if not os.path.exists(_marker):
+            # Cold start: install public dependencies using bundled uv
+            _uv_path = os.path.join(_uv_dir, "uv")
+
+            _stderr("Installing runtime dependencies...")
+            _install_start = time.time()
+
+            try:
+                os.makedirs(_deps_dir, exist_ok=True)
+
+                # Create a minimal PEP 405 venv skeleton for uv sync.
+                # Writing pyvenv.cfg directly avoids spawning a subprocess.
+                os.makedirs(_site_packages, exist_ok=True)
+                with open(os.path.join(_deps_dir, "pyvenv.cfg"), "w") as _f:
+                    _f.write(f"home = {os.path.dirname(sys.executable)}\n")
+                    _f.write("include-system-site-packages = false\n")
+
+                # Use uv sync --inexact --frozen to install only the
+                # missing public packages. --inexact avoids removing
+                # packages already present in _vendor (bundled deps).
+                _sync_cmd = [
+                    _uv_path,
+                    "sync",
+                    "--inexact",
+                    "--active",
+                    "--frozen",
+                    "--no-dev",
+                    "--no-editable",
+                    "--no-install-project",
+                    "--no-build",
+                    "--no-cache",
+                    "--no-progress",
+                    "--link-mode",
+                    "copy",
+                ]
+                for _pkg in _config.get("bundledPackages", []):
+                    _sync_cmd.extend(["--no-install-package", _pkg])
+                subprocess.run(
+                    _sync_cmd,
+                    check=True,
+                    text=True,
+                    cwd=_project_dir,
+                    env={
+                        "PATH": os.environ.get("PATH", ""),
+                        "VIRTUAL_ENV": _deps_dir,
+                        "UV_PYTHON_DOWNLOADS": "never",
+                    },
+                )
+                _install_duration = time.time() - _install_start
+                _stderr(
+                    f"Runtime dependencies installed in {_install_duration:.2f}s"
+                )
+            except subprocess.CalledProcessError as e:
+                _fatal(
+                    f"Runtime dependency installation failed.\n"
+                    f"Command: {' '.join(e.cmd)}\n"
+                    f"Exit code: {e.returncode}"
+                )
+            except Exception as e:
+                _fatal(
+                    f"Runtime dependency installation"
+                    f" failed with unexpected error: {e}"
+                )
+
+            # Mark installation complete for warm starts
+            open(_marker, "w").close()
+        else:
+            _stderr("Using cached runtime dependencies")
+
+        # Add runtime-installed deps to path (must come before user code import)
+        if os.path.isdir(_site_packages):
+            site.addsitedir(_site_packages)
+            # Move to front of path so these packages take precedence
+            try:
+                while _site_packages in sys.path:
+                    sys.path.remove(_site_packages)
+            except ValueError:
+                pass
+            sys.path.insert(0, _site_packages)
 
 # Allow quirks to prepend directories to PATH (e.g. for bundled shims).
 _extra_path = os.environ.get("VERCEL_RUNTIME_ENV_PATH_PREPEND")
