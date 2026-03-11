@@ -8,11 +8,10 @@ import { useUser } from '../../../mocks/user';
 import { useFlags } from '../../../mocks/flags';
 import type { Flag } from '../../../../src/util/flags/types';
 
-describe('flags add', () => {
+describe('flags create', () => {
   let createdFlags: Flag[];
   const textMock = vi.fn();
   const confirmMock = vi.fn();
-
   beforeEach(() => {
     createdFlags = [];
     useUser();
@@ -35,7 +34,7 @@ describe('flags add', () => {
   describe('--help', () => {
     it('tracks telemetry', async () => {
       const command = 'flags';
-      const subcommand = 'add';
+      const subcommand = 'create';
 
       client.setArgv(command, subcommand, '--help');
       const exitCodePromise = flags(client);
@@ -50,13 +49,33 @@ describe('flags add', () => {
     });
   });
 
-  it('tracks `add` subcommand', async () => {
+  it('tracks `create` subcommand', async () => {
+    client.setArgv('flags', 'create', 'new-feature');
+    const exitCode = await flags(client);
+    expect(exitCode).toEqual(0);
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      {
+        key: 'subcommand:create',
+        value: 'create',
+      },
+      {
+        key: 'argument:slug',
+        value: '[REDACTED]',
+      },
+      {
+        key: 'option:kind',
+        value: 'boolean',
+      },
+    ]);
+  });
+
+  it('supports `add` as an alias for `create`', async () => {
     client.setArgv('flags', 'add', 'new-feature');
     const exitCode = await flags(client);
     expect(exitCode).toEqual(0);
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
       {
-        key: 'subcommand:add',
+        key: 'subcommand:create',
         value: 'add',
       },
       {
@@ -71,7 +90,7 @@ describe('flags add', () => {
   });
 
   it('creates a flag successfully', async () => {
-    client.setArgv('flags', 'add', 'new-feature');
+    client.setArgv('flags', 'create', 'new-feature');
     const exitCode = await flags(client);
     expect(exitCode).toEqual(0);
   });
@@ -134,7 +153,7 @@ describe('flags add', () => {
     it('tracks `kind` option', async () => {
       client.setArgv(
         'flags',
-        'add',
+        'create',
         'new-feature',
         '--kind',
         'string',
@@ -145,8 +164,8 @@ describe('flags add', () => {
       expect(exitCode).toEqual(0);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
-          key: 'subcommand:add',
-          value: 'add',
+          key: 'subcommand:create',
+          value: 'create',
         },
         {
           key: 'argument:slug',
@@ -164,7 +183,7 @@ describe('flags add', () => {
     it('tracks `description` option', async () => {
       client.setArgv(
         'flags',
-        'add',
+        'create',
         'new-feature',
         '--description',
         'My feature'
@@ -173,8 +192,8 @@ describe('flags add', () => {
       expect(exitCode).toEqual(0);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
-          key: 'subcommand:add',
-          value: 'add',
+          key: 'subcommand:create',
+          value: 'create',
         },
         {
           key: 'argument:slug',
@@ -193,13 +212,13 @@ describe('flags add', () => {
   });
 
   it('errors without slug argument', async () => {
-    client.setArgv('flags', 'add');
+    client.setArgv('flags', 'create');
     const exitCode = await flags(client);
     expect(exitCode).toEqual(1);
   });
 
   it('errors with invalid kind', async () => {
-    client.setArgv('flags', 'add', 'new-feature', '--kind', 'invalid');
+    client.setArgv('flags', 'create', 'new-feature', '--kind', 'invalid');
     const exitCode = await flags(client);
     expect(exitCode).toEqual(1);
     expect(client.stderr.getFullOutput()).toContain('Invalid kind');

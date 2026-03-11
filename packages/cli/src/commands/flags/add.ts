@@ -8,8 +8,8 @@ import { getLinkedProject } from '../../util/projects/link';
 import { getCommandName } from '../../util/pkg-name';
 import { createFlag } from '../../util/flags/create-flag';
 import output from '../../output-manager';
-import { FlagsAddTelemetryClient } from '../../util/telemetry/commands/flags/add';
-import { addSubcommand } from './command';
+import { FlagsCreateTelemetryClient } from '../../util/telemetry/commands/flags/add';
+import { createSubcommand } from './command';
 import { formatProject } from '../../util/projects/format-project';
 import { printFlagDetails } from '../../util/flags/print-flag-details';
 import type {
@@ -30,18 +30,18 @@ function variantId(size = 21): string {
   return id;
 }
 
-export default async function add(
+export default async function create(
   client: Client,
   argv: string[]
 ): Promise<number> {
-  const telemetryClient = new FlagsAddTelemetryClient({
+  const telemetryClient = new FlagsCreateTelemetryClient({
     opts: {
       store: client.telemetryEventStore,
     },
   });
 
   let parsedArgs;
-  const flagsSpecification = getFlagsSpecification(addSubcommand.options);
+  const flagsSpecification = getFlagsSpecification(createSubcommand.options);
   try {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
@@ -54,7 +54,7 @@ export default async function add(
 
   if (!slug) {
     output.error('Please provide a slug for the feature flag');
-    output.log(`Example: ${getCommandName('flags add my-feature')}`);
+    output.log(`Example: ${getCommandName('flags create my-feature')}`);
     return 1;
   }
 

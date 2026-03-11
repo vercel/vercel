@@ -9,8 +9,8 @@ import { getCommandAliases } from '..';
 import { FlagsTelemetryClient } from '../../util/telemetry/commands/flags';
 import ls from './ls';
 import inspect from './inspect';
+import create from './add';
 import openFlag from './open';
-import add from './add';
 import update from './update';
 import set from './set';
 import rm from './rm';
@@ -22,8 +22,8 @@ import {
   flagsCommand,
   listSubcommand,
   inspectSubcommand,
+  createSubcommand,
   openSubcommand,
-  addSubcommand,
   updateSubcommand,
   setSubcommand,
   removeSubcommand,
@@ -38,8 +38,8 @@ import emitDatafiles from './emit-datafiles';
 const COMMAND_CONFIG = {
   ls: getCommandAliases(listSubcommand),
   inspect: getCommandAliases(inspectSubcommand),
+  create: getCommandAliases(createSubcommand),
   open: getCommandAliases(openSubcommand),
-  add: getCommandAliases(addSubcommand),
   update: getCommandAliases(updateSubcommand),
   set: getCommandAliases(setSubcommand),
   rm: getCommandAliases(removeSubcommand),
@@ -113,14 +113,14 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandOpen(subcommandOriginal);
       return openFlag(client, args);
-    case 'add':
+    case 'create':
       if (needHelp) {
         telemetry.trackCliFlagHelp('flags', subcommandOriginal);
-        printHelp(addSubcommand);
+        printHelp(createSubcommand);
         return 2;
       }
-      telemetry.trackCliSubcommandAdd(subcommandOriginal);
-      return add(client, args);
+      telemetry.trackCliSubcommandCreate(subcommandOriginal);
+      return create(client, args);
     case 'update':
       if (needHelp) {
         telemetry.trackCliFlagHelp('flags', subcommandOriginal);

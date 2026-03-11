@@ -59,32 +59,9 @@ export const inspectSubcommand = {
   ],
 } as const;
 
-export const openSubcommand = {
-  name: 'open',
-  aliases: [],
-  description: 'Open feature flags in the Vercel dashboard',
-  arguments: [
-    {
-      name: 'flag',
-      required: false,
-    },
-  ],
-  options: [],
-  examples: [
-    {
-      name: 'Open the project feature flags dashboard',
-      value: `${packageName} flags open`,
-    },
-    {
-      name: 'Open a specific feature flag',
-      value: `${packageName} flags open my-feature-flag`,
-    },
-  ],
-} as const;
-
-export const addSubcommand = {
-  name: 'add',
-  aliases: [],
+export const createSubcommand = {
+  name: 'create',
+  aliases: ['add'],
   description: 'Create a new feature flag',
   arguments: [
     {
@@ -122,15 +99,38 @@ export const addSubcommand = {
   examples: [
     {
       name: 'Create a boolean feature flag',
-      value: `${packageName} flags add my-feature`,
+      value: `${packageName} flags create my-feature`,
     },
     {
       name: 'Create a string feature flag with description',
-      value: `${packageName} flags add my-feature --kind string --description "My feature flag"`,
+      value: `${packageName} flags create my-feature --kind string --description "My feature flag"`,
     },
     {
       name: 'Create a string feature flag with explicit variants',
       value: `${packageName} flags add my-feature --kind string --variant control="Welcome back" --variant treatment="New onboarding"`,
+    },
+  ],
+} as const;
+
+export const openSubcommand = {
+  name: 'open',
+  aliases: [],
+  description: 'Open feature flags in the Vercel dashboard',
+  arguments: [
+    {
+      name: 'flag',
+      required: false,
+    },
+  ],
+  options: [],
+  examples: [
+    {
+      name: 'Open the project feature flags dashboard',
+      value: `${packageName} flags open`,
+    },
+    {
+      name: 'Open a specific feature flag',
+      value: `${packageName} flags open my-feature-flag`,
     },
   ],
 } as const;
@@ -530,8 +530,8 @@ export const flagsCommand = {
   subcommands: [
     listSubcommand,
     inspectSubcommand,
+    createSubcommand,
     openSubcommand,
-    addSubcommand,
     updateSubcommand,
     setSubcommand,
     removeSubcommand,
