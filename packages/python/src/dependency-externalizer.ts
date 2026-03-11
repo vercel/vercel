@@ -22,8 +22,8 @@ const readFile = promisify(fs.readFile);
 
 // AWS Lambda uncompressed size limit is 250MB, but we use 249MB to leave a small buffer
 export const LAMBDA_SIZE_THRESHOLD_BYTES = 249 * 1024 * 1024;
-// Pack Lambda up to 245MB to leave a buffer
-export const LAMBDA_PACKING_TARGET_BYTES = 245 * 1024 * 1024;
+// Pack Lambda up to 240MB to leave a buffer
+export const LAMBDA_PACKING_TARGET_BYTES = 240 * 1024 * 1024;
 
 // AWS Lambda ephemeral storage (/tmp) is 512MB. Use 500MB to leave a buffer
 // for runtime overhead (.pyc generation, uv cache, metadata, etc.)
