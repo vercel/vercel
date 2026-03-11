@@ -403,6 +403,19 @@ export const build: BuildV3 = async ({
   // and perform fix-up routines before bundling.
   const quirksResult = await runQuirks({ venvPath, pythonEnv, workPath });
 
+  // Install any additional packages requested by quirks (e.g. OTel exporter).
+  // Uses `uv pip install` (not `uv sync`) to avoid removing non-manifest packages.
+  if (quirksResult.additionalPackages?.length) {
+    debug(
+      `Installing quirk-requested packages: ${quirksResult.additionalPackages.join(', ')}`
+    );
+    await uv.pip({
+      venvPath,
+      projectDir: join(workPath, entryDirectory),
+      args: ['install', ...quirksResult.additionalPackages],
+    });
+  }
+
   // Apply build-time env vars from quirks so subsequent build steps can use them
   if (quirksResult.buildEnv) {
     Object.assign(pythonEnv, quirksResult.buildEnv);
