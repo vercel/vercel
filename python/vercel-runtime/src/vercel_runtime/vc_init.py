@@ -348,82 +348,54 @@ if "VERCEL_IPC_PATH" in os.environ:
         setup_logging(send_message, storage)
 
 
-# --- EFS mount diagnostics ---
+# --- EFS fast path ---
+# When an EFS mount is available, skip all runtime dependency installation
+# and just add the pre-populated EFS site-packages to sys.path. This avoids
+# importing subprocess, reading config files, and expensive NFS operations
+# like site.addsitedir() which scans directories for .pth files.
 _efs_mount = os.environ.get("PYTHON_PACKAGES_MOUNT_PATH", "")
 _efs_available = bool(_efs_mount) and os.path.isdir(_efs_mount)
 _python_ver = f"{sys.version_info.major}.{sys.version_info.minor}"
 
-try:
-    _stderr(f"[efs-diag] python version: {_python_ver}")
-    _stderr(f"[efs-diag] PYTHON_PACKAGES_MOUNT_PATH={_efs_mount!r}")
-    _stderr(f"[efs-diag] efs mount available: {_efs_available}")
-    if _efs_available:
-        _stderr(f"[efs-diag] mount contents: {os.listdir(_efs_mount)}")
-        _efs_stat = os.statvfs(_efs_mount)
-        _efs_free_gb = (_efs_stat.f_bavail * _efs_stat.f_frsize) / (1024**3)
-        _stderr(f"[efs-diag] efs free space: {_efs_free_gb:.2f} GB")
-    _tmp_stat = os.statvfs("/tmp")
-    _tmp_free_mb = (_tmp_stat.f_bavail * _tmp_stat.f_frsize) / (1024**2)
-    _stderr(f"[efs-diag] /tmp free space: {_tmp_free_mb:.0f} MB")
-    _stderr(f"[efs-diag] sys.path (pre-install): {sys.path}")
-except Exception as _diag_err:
-    _stderr(f"[efs-diag] diagnostics error (non-fatal): {_diag_err}")
+if _efs_available:
+    _site_packages = os.path.join(
+        _efs_mount,
+        _python_ver,
+        "lib",
+        f"python{_python_ver}",
+        "site-packages",
+    )
+    if os.path.isdir(_site_packages):
+        sys.path.insert(0, _site_packages)
 
-# Runtime dependency installation for large Lambda functions
-# The _uv directory is at the Lambda root, two levels up from this file
-# (this file is at /var/task/_vendor/vercel_runtime/vc_init.py)
-lambda_root = os.path.normpath(os.path.join(_here, "..", ".."))
-_uv_dir = os.path.join(lambda_root, "_uv")
-_runtime_config_path = os.path.join(_uv_dir, "_runtime_config.json")
-
-if os.path.exists(_runtime_config_path):
-    import site
-    import subprocess
-
-    with open(_runtime_config_path) as runtime_config_file:
-        _config = json.load(runtime_config_file)
-    _project_dir = os.path.join(lambda_root, _config["projectDir"])
-
-    if _efs_available:
-        # EFS mode: skip uv sync, just add pre-populated EFS packages to sys.path
-        _deps_dir = os.path.join(_efs_mount, _python_ver)
-        _site_packages = os.path.join(
-            _deps_dir,
-            "lib",
-            f"python{_python_ver}",
-            "site-packages",
-        )
-        _stderr(
-            f"[efs] skipping uv sync, using pre-populated EFS: {_site_packages}"
-        )
-
-        if os.path.isdir(_site_packages):
-            site.addsitedir(_site_packages)
-            try:
-                while _site_packages in sys.path:
-                    sys.path.remove(_site_packages)
-            except ValueError:
-                pass
-            sys.path.insert(0, _site_packages)
-            _stderr(f"[efs] added to sys.path: {_site_packages}")
-
-            try:
+    # Verbose diagnostics only when explicitly requested
+    if os.environ.get("VERCEL_EFS_DEBUG"):
+        try:
+            _stderr(f"[efs] site-packages: {_site_packages}")
+            _stderr(f"[efs] exists: {os.path.isdir(_site_packages)}")
+            if os.path.isdir(_site_packages):
                 _pkgs = os.listdir(_site_packages)
-                _stderr(
-                    f"[efs-diag] packages on EFS ({len(_pkgs)}): {_pkgs[:30]}"
-                )
-            except Exception as _diag_err:
-                _stderr(
-                    f"[efs-diag] could not list packages (non-fatal): {_diag_err}"
-                )
-        else:
-            _stderr(
-                f"[efs] warning: site-packages not found at {_site_packages}"
-            )
+                _stderr(f"[efs] packages ({len(_pkgs)}): {_pkgs[:30]}")
+            _stderr(f"[efs] sys.path: {sys.path}")
+        except Exception as _diag_err:
+            _stderr(f"[efs] diagnostics error (non-fatal): {_diag_err}")
 
-        _stderr(f"[efs-diag] sys.path (final): {sys.path}")
-    else:
-        # Non-EFS: install dependencies to /tmp using uv sync (existing behavior)
+else:
+    # Runtime dependency installation for large Lambda functions
+    # The _uv directory is at the Lambda root, two levels up from this file
+    # (this file is at /var/task/_vendor/vercel_runtime/vc_init.py)
+    lambda_root = os.path.normpath(os.path.join(_here, "..", ".."))
+    _uv_dir = os.path.join(lambda_root, "_uv")
+    _runtime_config_path = os.path.join(_uv_dir, "_runtime_config.json")
+
+    if os.path.exists(_runtime_config_path):
+        import site
+        import subprocess
+
+        with open(_runtime_config_path) as runtime_config_file:
+            _config = json.load(runtime_config_file)
+        _project_dir = os.path.join(lambda_root, _config["projectDir"])
+
         _deps_dir = "/tmp/_vc_deps"
         _site_packages = os.path.join(
             _deps_dir,
