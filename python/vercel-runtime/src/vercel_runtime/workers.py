@@ -28,9 +28,7 @@ DRAMATIQ_AVAILABLE = _has_module("dramatiq")
 DJANGO_TASKS_AVAILABLE = _has_module("django.tasks")
 VERCEL_WORKERS_AVAILABLE = _has_module("vercel.workers")
 
-VERCEL_HAS_WORKER_SERVICES_ENV = "VERCEL_HAS_WORKER_SERVICES"
-CELERY_BROKER_URL_ENV = "CELERY_BROKER_URL"
-DEFAULT_CELERY_BROKER_URL = "vercel://"
+VERCEL_CELERY_BROKER_URL = "vercel://"
 
 
 def is_worker_service() -> bool:
@@ -39,23 +37,23 @@ def is_worker_service() -> bool:
 
 
 def has_worker_services() -> bool:
-    value = os.environ.get(VERCEL_HAS_WORKER_SERVICES_ENV) or ""
-    return value.strip().lower() in {"1", "true", "yes", "on"}
+    value = os.environ.get("VERCEL_HAS_WORKER_SERVICES") or ""
+    return value.strip().lower() in {"1", "true"}
 
 
 def _uses_vercel_celery_broker(broker_url: str | None) -> bool:
     if broker_url is None:
         return False
     normalized = broker_url.strip().lower()
-    return normalized.startswith(DEFAULT_CELERY_BROKER_URL)
+    return normalized.startswith(VERCEL_CELERY_BROKER_URL)
 
 
 def prepare_celery_environment() -> None:
     has_worker_svcs = has_worker_services()
-    if has_worker_svcs and CELERY_BROKER_URL_ENV not in os.environ:
-        os.environ[CELERY_BROKER_URL_ENV] = DEFAULT_CELERY_BROKER_URL
+    if has_worker_svcs and "CELERY_BROKER_URL" not in os.environ:
+        os.environ["CELERY_BROKER_URL"] = VERCEL_CELERY_BROKER_URL
 
-    broker_url = os.environ.get(CELERY_BROKER_URL_ENV)
+    broker_url = os.environ.get("CELERY_BROKER_URL")
     if not has_worker_svcs and not _uses_vercel_celery_broker(broker_url):
         return
 

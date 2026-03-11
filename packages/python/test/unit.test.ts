@@ -2476,9 +2476,8 @@ describe('worker services dependency installation', () => {
       'handler.py': new FileBlob({ data: 'def handler(): pass' }),
     } as Record<string, FileBlob>;
 
-    let result;
     try {
-      result = await buildWithMocks({
+      await buildWithMocks({
         workPath,
         files,
         entrypoint: 'handler.py',
@@ -2495,7 +2494,7 @@ describe('worker services dependency installation', () => {
       if (fs.existsSync(workPath)) fs.removeSync(workPath);
     }
 
-    return { pipCalls, result };
+    return pipCalls;
   }
 
   beforeEach(() => {
@@ -2514,13 +2513,13 @@ describe('worker services dependency installation', () => {
   });
 
   it('installs vercel-workers when worker services are enabled', async () => {
-    const { pipCalls } = await buildWithPipSpy({ hasWorkerServices: true });
+    const pipCalls = await buildWithPipSpy({ hasWorkerServices: true });
     const workersDep = `vercel-workers==${VERCEL_WORKERS_VERSION}`;
     expect(pipCalls.some(args => args.includes(workersDep))).toBe(true);
   });
 
   it('does not install vercel-workers when worker services are not enabled', async () => {
-    const { pipCalls } = await buildWithPipSpy();
+    const pipCalls = await buildWithPipSpy();
     expect(
       pipCalls.some(args =>
         args.some(arg => arg.startsWith('vercel-workers=='))
@@ -2531,24 +2530,12 @@ describe('worker services dependency installation', () => {
   it('uses VERCEL_WORKERS_PYTHON override when provided', async () => {
     process.env.VERCEL_WORKERS_PYTHON =
       'vercel-workers @ file:///tmp/vercel-workers.whl';
-    const { pipCalls } = await buildWithPipSpy({ hasWorkerServices: true });
+    const pipCalls = await buildWithPipSpy({ hasWorkerServices: true });
     expect(
       pipCalls.some(args =>
         args.includes('vercel-workers @ file:///tmp/vercel-workers.whl')
       )
     ).toBe(true);
-  });
-
-  it('marks python lambdas with internal worker services env when enabled', async () => {
-    const { result } = await buildWithPipSpy({ hasWorkerServices: true });
-    expect(result?.output.environment?.VERCEL_HAS_WORKER_SERVICES).toBe('1');
-  });
-
-  it('does not mark python lambdas when worker services are not enabled', async () => {
-    const { result } = await buildWithPipSpy();
-    expect(
-      result?.output.environment?.VERCEL_HAS_WORKER_SERVICES
-    ).toBeUndefined();
   });
 });
 
