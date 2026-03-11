@@ -25,7 +25,6 @@ import {
   type ShouldServe,
   FileFsRef,
   PythonFramework,
-  type PrepareCache,
 } from '@vercel/build-utils';
 import {
   discoverPackage,
@@ -35,7 +34,7 @@ import {
   installRequirement,
 } from './install';
 import { PythonDependencyExternalizer } from './dependency-externalizer';
-import { UvRunner, getUvBinaryOrInstall, getUvCacheDir } from './uv';
+import { UvRunner, getUvBinaryOrInstall } from './uv';
 import { resolvePythonVersion, pythonVersionString } from './version';
 import { startDevServer } from './start-dev-server';
 import { runPyprojectScript, ensureVenv, createVenvEnv } from './utils';
@@ -251,12 +250,10 @@ export const build: BuildV3 = async ({
   // Create a virtual environment under ".vercel/python/.venv" so dependencies
   // can be installed via `uv sync` and then vendored into the Lambda bundle.
   const venvPath = join(workPath, '.vercel', 'python', '.venv');
-  const uvCacheDir = getUvCacheDir(workPath);
   await builderSpan.child('vc.builder.python.venv').trace(async () => {
     await ensureVenv({
       pythonPath: pythonVersion.pythonPath,
       venvPath,
-      uvCacheDir,
     });
   });
 
@@ -289,7 +286,7 @@ export const build: BuildV3 = async ({
   }
 
   const baseEnv = spawnEnv || process.env;
-  const pythonEnv = createVenvEnv(venvPath, baseEnv, uvCacheDir);
+  const pythonEnv = createVenvEnv(venvPath, baseEnv);
 
   pythonEnv.VERCEL_PYTHON_VENV_PATH = venvPath;
 
@@ -302,7 +299,7 @@ export const build: BuildV3 = async ({
   try {
     const uvPath = await getUvBinaryOrInstall(pythonVersion.pythonPath);
     console.log(`Using uv at "${uvPath}"`);
-    uv = new UvRunner(uvPath, uvCacheDir);
+    uv = new UvRunner(uvPath);
   } catch (err) {
     console.log('Failed to install or locate uv');
     throw new Error(
@@ -661,48 +658,6 @@ from vercel_runtime.vc_init import vc_handler
 };
 
 export { startDevServer };
-
-async function readBuildOutputV3Config(
-  workPath: string
-): Promise<{ cache?: string[] } | undefined> {
-  try {
-    const configPath = join(workPath, '.vercel', 'output', 'config.json');
-    return JSON.parse(await fs.promises.readFile(configPath, 'utf8'));
-  } catch (err: any) {
-    if (err.code !== 'ENOENT') {
-      throw err;
-    }
-  }
-  return undefined;
-}
-
-export const prepareCache: PrepareCache = async ({
-  repoRootPath,
-  workPath,
-}) => {
-  const cacheFiles: Files = {};
-  const root = repoRootPath || workPath;
-  const ignore = ['**/*.pyc', '**/__pycache__/**'];
-
-  const configV3 = await readBuildOutputV3Config(workPath);
-  if (configV3?.cache && Array.isArray(configV3.cache)) {
-    for (const cacheGlob of configV3.cache) {
-      Object.assign(cacheFiles, await glob(cacheGlob, workPath));
-    }
-    return cacheFiles;
-  }
-
-  Object.assign(
-    cacheFiles,
-    await glob('**/.vercel/python/.venv/**', { cwd: root, ignore })
-  );
-  Object.assign(
-    cacheFiles,
-    await glob('**/.vercel/python/cache/uv/**', { cwd: root, ignore })
-  );
-
-  return cacheFiles;
-};
 
 export const shouldServe: ShouldServe = opts => {
   const framework = opts.config.framework;
