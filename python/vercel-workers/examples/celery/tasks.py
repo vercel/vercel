@@ -1,12 +1,19 @@
 from __future__ import annotations
 
-from vercel.workers.celery import Celery
+import os
+
+from celery import Celery
 
 # This queue name MUST match the Vercel Queues topic you configure in vercel.json.
 QUEUE_NAME = "celery"
 
-# Create a Celery app that publishes tasks into Vercel Queues.
-app = Celery("celery-example", queue_name=QUEUE_NAME)
+# On Vercel and in `vercel dev`, CELERY_BROKER_URL defaults to `vercel://`.
+# Outside Vercel, point it at your local broker (for example Redis).
+app = Celery(
+    "celery-example",
+    broker=os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0"),
+)
+app.conf.task_default_queue = QUEUE_NAME
 
 
 @app.task(bind=True, name="tasks.add")

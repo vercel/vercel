@@ -28,10 +28,45 @@ DRAMATIQ_AVAILABLE = _has_module("dramatiq")
 DJANGO_TASKS_AVAILABLE = _has_module("django.tasks")
 VERCEL_WORKERS_AVAILABLE = _has_module("vercel.workers")
 
+VERCEL_HAS_WORKER_SERVICES_ENV = "VERCEL_HAS_WORKER_SERVICES"
+CELERY_BROKER_URL_ENV = "CELERY_BROKER_URL"
+DEFAULT_CELERY_BROKER_URL = "vercel://"
+
 
 def is_worker_service() -> bool:
     svc_type = os.environ.get("VERCEL_SERVICE_TYPE") or ""
     return svc_type.strip().lower() == "worker"
+
+
+def has_worker_services() -> bool:
+    value = os.environ.get(VERCEL_HAS_WORKER_SERVICES_ENV) or ""
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _uses_vercel_celery_broker(broker_url: str | None) -> bool:
+    if broker_url is None:
+        return False
+    normalized = broker_url.strip().lower()
+    return normalized.startswith(DEFAULT_CELERY_BROKER_URL)
+
+
+def prepare_celery_environment() -> None:
+    has_worker_svcs = has_worker_services()
+    if has_worker_svcs and CELERY_BROKER_URL_ENV not in os.environ:
+        os.environ[CELERY_BROKER_URL_ENV] = DEFAULT_CELERY_BROKER_URL
+
+    broker_url = os.environ.get(CELERY_BROKER_URL_ENV)
+    if not has_worker_svcs and not _uses_vercel_celery_broker(broker_url):
+        return
+
+    transport_mod = _import_optional_module("vercel.workers.celery.transport")
+    if transport_mod is None:
+        return
+
+    install_alias = getattr(transport_mod, "install_kombu_transport_alias", None)
+    if callable(install_alias):
+        install_alias_fn = cast("Callable[[str], None]", install_alias)
+        install_alias_fn("vercel")
 
 
 def is_celery_app(candidate: object) -> bool:
@@ -134,26 +169,14 @@ def _bootstrap_celery_worker_app(module: object) -> object | None:
     if celery_app is None:
         return None
 
-    get_asgi_app = getattr(celery_app, "get_asgi_app", None)
-    if callable(get_asgi_app):
-        with contextlib.suppress(Exception):
-            get_asgi_app_fn = cast(
-                "Callable[[], object]",
-                get_asgi_app,
-            )
-            wrapped_app = get_asgi_app_fn()
-            if wrapped_app is not None:
-                return wrapped_app
-
     vercel_celery = _import_optional_module("vercel.workers.celery")
     if vercel_celery is None:
         if not VERCEL_WORKERS_AVAILABLE:
             raise RuntimeError(
                 "Celery worker service detected, but "
                 '"vercel-workers" is not installed. '
-                'Install "vercel-workers==0.0.10" and use '
-                '"from vercel.workers.celery import Celery"'
-                ", or expose "
+                'Install "vercel-workers==0.0.10" and export a Celery app, '
+                "or expose "
                 '"app = vercel.workers.celery'
                 '.get_asgi_app(celery_app)".'
             )

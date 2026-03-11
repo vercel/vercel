@@ -17,6 +17,7 @@ from vercel_runtime.routing import (
     apply_service_route_prefix_to_asgi_scope,
     strip_service_route_prefix,
 )
+from vercel_runtime.workers import prepare_celery_environment
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
@@ -385,6 +386,7 @@ def _setup_apps() -> None:
     entry_abs = os.environ["VERCEL_DEV_ENTRY_ABS"]
 
     _setup_server_log_routing()
+    prepare_celery_environment()
 
     mod = import_module(module_name, entry_abs)
     app_name, user_app = resolve_app(mod, module_name)

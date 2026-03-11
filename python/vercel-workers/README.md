@@ -21,6 +21,11 @@ pip install "vercel-workers[dramatiq]"
 pip install "vercel-workers[django]"
 ```
 
+For Celery, the recommended setup is to configure `CELERY_BROKER_URL` and use
+the standard `celery.Celery` app. On Vercel and in `vercel dev`, Python
+services with worker services default `CELERY_BROKER_URL` to `vercel://`
+without overriding a user-defined value.
+
 ## Worker Service deployment shape
 
 `vercel.json`
@@ -49,8 +54,10 @@ For worker services, `worker.py` should expose worker definitions (for example a
 ## Examples
 
 - `examples/basic`: FastAPI producer + `@subscribe` worker service
-- `examples/celery`: Celery adapter + worker service
+- `examples/celery`: Celery + worker service
 - `examples/dramatiq`: Dramatiq adapter + worker service
 - `examples/django`: Django tasks backend + queue callback route at `/api/queue/callback`
 
 When running outside Vercel, set `VERCEL_QUEUE_TOKEN` (and optionally `VERCEL_QUEUE_BASE_URL`).
+For Celery outside Vercel, also point `CELERY_BROKER_URL` at your local broker
+(for example Redis) unless you are running against Vercel Queues directly.

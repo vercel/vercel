@@ -583,6 +583,9 @@ from vercel_runtime.vc_init import vc_handler
   const lambdaEnv = {} as Record<string, string>;
   lambdaEnv.PYTHONPATH = vendorDir;
   Object.assign(lambdaEnv, quirksResult.env);
+  if (shouldInstallVercelWorkers) {
+    lambdaEnv.VERCEL_HAS_WORKER_SERVICES = '1';
+  }
 
   const globOptions: GlobOptions = {
     cwd: workPath,

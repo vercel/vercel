@@ -166,6 +166,7 @@ export class ServicesOrchestrator {
   private maxNameLength: number;
   private proxyOrigin: string;
   private pythonServiceCount: number;
+  private hasWorkerServices: boolean;
 
   constructor(options: ServicesOrchestratorOptions) {
     this.services = options.services;
@@ -177,6 +178,7 @@ export class ServicesOrchestrator {
     this.pythonServiceCount = options.services.filter(
       s => s.runtime === 'python'
     ).length;
+    this.hasWorkerServices = options.services.some(s => s.type === 'worker');
   }
 
   async startAll(): Promise<void> {
@@ -329,6 +331,13 @@ export class ServicesOrchestrator {
       serviceUrlEnvVars
     );
     env.VERCEL_SERVICE_TYPE = service.type;
+    if (
+      this.hasWorkerServices &&
+      service.runtime === 'python' &&
+      env.VERCEL_HAS_WORKER_SERVICES === undefined
+    ) {
+      env.VERCEL_HAS_WORKER_SERVICES = '1';
+    }
 
     if (service.routePrefix && service.routePrefix !== '/') {
       env.VERCEL_SERVICE_ROUTE_PREFIX = service.routePrefix;
