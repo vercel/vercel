@@ -587,6 +587,9 @@ describe('env pull', () => {
       );
 
       await expect(pullPromise).resolves.toEqual(0);
+
+      const pulledEnv = await fs.readFile(path.join(cwd, '.env.local'), 'utf8');
+      expect(parse(pulledEnv)['NEW_VAR']).toEqual('"testvalue"');
     } finally {
       client.setArgv('env', 'rm', 'NEW_VAR', '--yes');
       await env(client);

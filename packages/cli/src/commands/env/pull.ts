@@ -229,13 +229,14 @@ export async function envPullCommandLogic(
   let deltaString = '';
   let oldEnv;
   const downloadedEnv = getDownloadedEnv(records);
+  const comparableDownloadedEnv = getComparableDownloadedEnv(downloadedEnv);
 
   if (exists) {
     oldEnv = await createEnvObject(fullPath);
     if (oldEnv) {
       deltaString = buildDeltaString(oldEnv, {
         ...oldEnv,
-        ...downloadedEnv,
+        ...comparableDownloadedEnv,
       });
     }
   }
@@ -305,13 +306,24 @@ function escapeValue(value: string | undefined) {
 }
 
 function getDownloadedEnv(records: Record<string, string | undefined>) {
+  return Object.fromEntries(
+    Object.entries(records).filter(
+      ([key]) => !VARIABLES_TO_IGNORE.includes(key)
+    )
+  ) as Record<string, string | undefined>;
+}
+
+function getComparableDownloadedEnv(
+  downloadedEnv: Record<string, string | undefined>
+) {
   // Removes any double quotes from values, if they exist.
   // We need this because double quotes are stripped from the local .env file
   // (by createEnvObject), so we strip them here too to ensure consistent
   // comparison between local and remote values.
   return Object.fromEntries(
-    Object.entries(records)
-      .filter(([key]) => !VARIABLES_TO_IGNORE.includes(key))
-      .map(([key, value]) => [key, value?.replace(/"/g, '')])
+    Object.entries(downloadedEnv).map(([key, value]) => [
+      key,
+      value?.replace(/"/g, ''),
+    ])
   ) as Record<string, string | undefined>;
 }
