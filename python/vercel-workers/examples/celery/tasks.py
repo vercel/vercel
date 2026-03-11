@@ -8,7 +8,7 @@ from celery import Celery
 QUEUE_NAME = "celery"
 
 # On Vercel and in `vercel dev`, CELERY_BROKER_URL defaults to `vercel://`.
-# Outside Vercel, point it at your local broker (for example Redis).
+# Locally, you may point it to a separate broker, e.g. Redis.
 app = Celery(
     "celery-example",
     broker=os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0"),

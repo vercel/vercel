@@ -26,9 +26,6 @@ def root():
 
 @app.post("/enqueue/add")
 def enqueue_add(body: EnqueueRequest):
-    # On Vercel and in `vercel dev`, `CELERY_BROKER_URL` defaults to `vercel://`.
-    # Outside Vercel, configure your own broker (for example Redis) via
-    # `CELERY_BROKER_URL`.
     async_result = add.delay(body.x, body.y)
     return {"queued": True, "taskId": async_result.id, "queue": QUEUE_NAME}
 
