@@ -2,7 +2,7 @@
 # pyright: reportUnknownParameterType=false, reportUnknownMemberType=false
 # pyright: reportUnknownArgumentType=false
 # mypy: ignore-errors
-"""Vercel span exporter for OpenTelemetry.
+"""Vercel span exporter and propagator for OpenTelemetry.
 
 This module is only imported when the opentelemetry SDK is installed by
 the user application.  All type-checking errors from the optional
@@ -15,16 +15,29 @@ import logging
 from typing import TYPE_CHECKING
 
 from google.protobuf.json_format import MessageToDict
+from opentelemetry.context import Context, get_current
 from opentelemetry.exporter.otlp.proto.common._internal.trace_encoder import (
     encode_spans,
 )
+from opentelemetry.propagators.composite import CompositePropagator
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import (
     SimpleSpanProcessor,
     SpanExporter,
     SpanExportResult,
 )
-from opentelemetry.trace import get_tracer_provider, set_tracer_provider
+from opentelemetry.trace import (
+    SpanContext,
+    TraceFlags,
+    get_tracer_provider,
+    set_span_in_context,
+    set_tracer_provider,
+)
+from opentelemetry.trace.propagation import (
+    get_global_textmap,
+    set_global_textmap,
+)
+from opentelemetry.trace.span import NonRecordingSpan
 
 try:
     from opentelemetry.sdk.trace import ReadableSpan
@@ -36,7 +49,72 @@ from vercel_runtime.telemetry import get_telemetry
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
+    from opentelemetry.propagators.textmap import (
+        CarrierT,
+        Getter,
+        Setter,
+    )
+
 _logger = logging.getLogger(__name__)
+
+
+class VercelRuntimePropagator:
+    """Propagates the root span context from the Vercel telemetry extension.
+
+    Mirrors the JS ``VercelRuntimePropagator`` in ``@vercel/otel``: on
+    ``extract`` it reads ``rootSpanContext`` from the Vercel telemetry
+    context and sets it as the remote parent span context so that all
+    subsequent spans are parented correctly.
+    """
+
+    def fields(self) -> list[str]:
+        return []
+
+    def inject(
+        self,
+        carrier: CarrierT,
+        context: Context | None = None,
+        setter: Setter[CarrierT] | None = None,
+    ) -> None:
+        pass
+
+    def extract(
+        self,
+        carrier: CarrierT,
+        context: Context | None = None,
+        getter: Getter[CarrierT] | None = None,
+    ) -> Context:
+        if context is None:
+            context = get_current()
+
+        telemetry = get_telemetry()
+        if telemetry is None:
+            _logger.debug("vercel telemetry extension not found")
+            return context
+
+        root_span_context = telemetry.get("rootSpanContext")
+        if root_span_context is None:
+            return context
+
+        trace_id = root_span_context.get("traceId", "")
+        span_id = root_span_context.get("spanId", "")
+        if not trace_id or not span_id:
+            return context
+
+        trace_flags = root_span_context.get("traceFlags", TraceFlags.SAMPLED)
+
+        _logger.debug(
+            "extracted root SpanContext from Vercel request context: %s",
+            root_span_context,
+        )
+
+        span_context = SpanContext(
+            trace_id=int(trace_id, 16),
+            span_id=int(span_id, 16),
+            is_remote=True,
+            trace_flags=TraceFlags(trace_flags),
+        )
+        return set_span_in_context(NonRecordingSpan(span_context), context)
 
 
 class VercelSpanExporter(SpanExporter):
@@ -65,11 +143,15 @@ class VercelSpanExporter(SpanExporter):
 
 
 def init_tracing() -> None:
-    """Set up the Vercel span exporter.
+    """Set up the Vercel span exporter and propagator.
 
     If a TracerProvider is already configured, the exporter is added to
     it.  Otherwise a new TracerProvider is created and set as the global
     provider.
+
+    The ``VercelRuntimePropagator`` is prepended to the global text-map
+    propagator so that the root span context from the Vercel runtime is
+    used as the parent for all subsequent spans.
     """
     processor = SimpleSpanProcessor(VercelSpanExporter())
 
@@ -80,3 +162,8 @@ def init_tracing() -> None:
         provider = TracerProvider()
         provider.add_span_processor(processor)
         set_tracer_provider(provider)
+
+    current_propagator = get_global_textmap()
+    set_global_textmap(
+        CompositePropagator([VercelRuntimePropagator(), current_propagator])
+    )
