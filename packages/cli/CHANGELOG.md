@@ -1,5 +1,20 @@
 # vercel
 
+## 50.31.1
+
+### Patch Changes
+
+- [cli] Add missing help snapshot test for `integration remove` subcommand ([#15447](https://github.com/vercel/vercel/pull/15447))
+
+- Improve `vercel env pull` so local-only environment variables are preserved and planned changes are previewed before confirmation. ([#15420](https://github.com/vercel/vercel/pull/15420))
+
+- Add cleanup and new marketplace evals: resource cleanup via afterAll hooks, simplified experiment config, and three new evals (find-postgres-integration, multi-product-install, metadata-discovery) ([#15425](https://github.com/vercel/vercel/pull/15425))
+
+- Updated dependencies [[`5be46133da69676de8ae9fda71948767b945cdfc`](https://github.com/vercel/vercel/commit/5be46133da69676de8ae9fda71948767b945cdfc), [`57258b16ce76eac2b595c1bc249863feaa4587da`](https://github.com/vercel/vercel/commit/57258b16ce76eac2b595c1bc249863feaa4587da)]:
+  - @vercel/detect-agent@1.2.0
+  - @vercel/next@4.16.1
+  - @vercel/static-build@2.9.0
+
 ## 50.31.0
 
 ### Minor Changes
