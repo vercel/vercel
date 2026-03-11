@@ -19,6 +19,7 @@ except Exception as e:
 
 DEFAULT_BROKER_ALIAS = "vercel"
 
+
 def install_kombu_transport_alias(alias: str = DEFAULT_BROKER_ALIAS) -> None:
     """
     Register the Kombu transport alias for this package.
