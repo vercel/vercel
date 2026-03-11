@@ -1,5 +1,11 @@
 # @vercel/detect-agent
 
+## 1.2.0
+
+### Minor Changes
+
+- Add `cowork` as a distinct agent name to differentiate Claude Cowork from Claude Code via the `CLAUDE_CODE_IS_COWORK` environment variable. ([#15441](https://github.com/vercel/vercel/pull/15441))
+
 ## 1.1.1
 
 ### Patch Changes
