@@ -679,13 +679,15 @@ function validateFunctions({ functions = {} }: Options) {
 
     if (
       func.maxDuration !== undefined &&
+      func.maxDuration !== 'max' &&
       (func.maxDuration < 1 ||
         func.maxDuration > 900 ||
         !Number.isInteger(func.maxDuration))
     ) {
       return {
         code: 'invalid_function_duration',
-        message: 'Functions must have a duration between 1 and 900.',
+        message:
+          'Functions must have a maxDuration between 1 and 900, or "max".',
       };
     }
 

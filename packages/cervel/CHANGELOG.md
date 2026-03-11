@@ -1,5 +1,12 @@
 # @vercel/cervel
 
+## 0.0.32
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/backends@0.0.45
+
 ## 0.0.31
 
 ### Patch Changes
