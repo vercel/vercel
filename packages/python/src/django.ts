@@ -134,7 +134,9 @@ export async function runDjangoCollectStatic(
 
   // No local static strategy configured — warn and skip.
   if (!staticRoot && !whitenoiseUseFinders) {
-    debug('No collectstatic strategy configured — skipping collectstatic');
+    console.log(
+      'No collectstatic strategy configured — skipping collectstatic'
+    );
     return null;
   }
 
