@@ -313,6 +313,13 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
+  trackCliCommandShare(actual: string) {
+    this.trackCliCommand({
+      command: 'share',
+      value: actual,
+    });
+  }
+
   trackCliCommandRedeploy(actual: string) {
     this.trackCliCommand({
       command: 'redeploy',
