@@ -97,7 +97,7 @@ export default async function disable(
       logNonBooleanFlagGuidance(flag, {
         attemptedSubcommand: 'disable',
         environment,
-        isInteractive: client.stdin.isTTY,
+        isInteractive: Boolean(client.stdin.isTTY),
         teamSlug: link.org.slug,
         projectName: project.name,
       });

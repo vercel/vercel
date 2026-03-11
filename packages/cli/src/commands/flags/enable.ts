@@ -92,7 +92,7 @@ export default async function enable(
       logNonBooleanFlagGuidance(flag, {
         attemptedSubcommand: 'enable',
         environment,
-        isInteractive: client.stdin.isTTY,
+        isInteractive: Boolean(client.stdin.isTTY),
         teamSlug: link.org.slug,
         projectName: project.name,
       });
