@@ -631,7 +631,11 @@ if is_cron_service():
 
 # Set up tracing after user code is imported so user-installed
 # opentelemetry packages are available on sys.path.
-init_tracing()
+try:
+    init_tracing()
+except Exception as err:
+    _stderr(f"could not initialize opentelemetry tracing: {err}")
+
 
 _use_legacy_asyncio = sys.version_info < (3, 10)
 

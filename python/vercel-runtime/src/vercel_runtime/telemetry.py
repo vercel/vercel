@@ -40,10 +40,18 @@ def reset_telemetry(
 
 def init_tracing() -> None:
     """Set up the Vercel span exporter if opentelemetry is installed."""
+    import importlib.util
+
     try:
-        from vercel_runtime._tracing import (  # pyright: ignore[reportMissingModuleSource]
-            init_tracing as _init,
-        )
-    except ImportError:
+        found = importlib.util.find_spec("opentelemetry.sdk.trace")
+    except (ModuleNotFoundError, ValueError):
+        found = None
+
+    if found is None:
         return
+
+    from vercel_runtime._tracing import (  # pyright: ignore[reportMissingModuleSource]
+        init_tracing as _init,
+    )
+
     _init()
