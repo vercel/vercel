@@ -141,7 +141,7 @@ function updateExamples(github, newVersion, branch) {
       'user.email',
       'infra+release@vercel.com',
     ]);
-    exec('git', ['config', '--global', 'user.name', 'vercel-release-bot']);
+    exec('git', ['config', '--global', 'user.name', 'vercel-cli-release-bot']);
     exec('git', ['checkout', 'main']);
     exec('git', ['checkout', '-b', branch]);
     exec('git', ['add', '-A']);
