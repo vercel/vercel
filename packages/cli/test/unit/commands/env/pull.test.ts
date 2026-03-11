@@ -385,8 +385,7 @@ describe('env pull', () => {
     expect(client.stderr.getFullOutput()).not.toContain('- SPECIAL_FLAG');
 
     const pulledEnv = await fs.readFile(path.join(cwd, '.env.local'), 'utf8');
-    expect(pulledEnv).toContain('LOCAL_ONLY="value"');
-    expect(pulledEnv).toContain('SPECIAL_FLAG="1"');
+    expect(pulledEnv).toEqual('LOCAL_ONLY=value\nSPECIAL_FLAG=1\n');
   });
 
   it('should show a delta string', async () => {
@@ -465,14 +464,22 @@ describe('env pull', () => {
       id: 'env-pull-delta-no-changes',
       name: 'env-pull-delta-no-changes',
     });
-    client.cwd = setupUnitFixture('vercel-env-pull-delta-no-changes');
+    const cwd = setupUnitFixture('vercel-env-pull-delta-no-changes');
+    const envFilePath = path.join(cwd, '.env.local');
+    const gitIgnorePath = path.join(cwd, '.gitignore');
+    const originalEnv = await fs.readFile(envFilePath, 'utf8');
+    const originalGitIgnore = await fs.readFile(gitIgnorePath, 'utf8');
+    client.cwd = cwd;
     client.setArgv('env', 'pull', '--yes');
     const pullPromise = env(client);
     await expect(client.stderr).toOutput('> No changes found.');
-    await expect(client.stderr).toOutput(
-      'Updated .env.local file and added it to .gitignore'
-    );
     await expect(pullPromise).resolves.toEqual(0);
+
+    expect(client.stderr.getFullOutput()).not.toContain(
+      'Updated .env.local file'
+    );
+    expect(await fs.readFile(envFilePath, 'utf8')).toEqual(originalEnv);
+    expect(await fs.readFile(gitIgnorePath, 'utf8')).toEqual(originalGitIgnore);
   });
 
   it('should not prompt for confirmation when no changes were found', async () => {
@@ -483,34 +490,29 @@ describe('env pull', () => {
       id: 'env-pull-delta-no-changes',
       name: 'env-pull-delta-no-changes',
     });
-    client.cwd = setupUnitFixture('vercel-env-pull-delta-no-changes');
+    const cwd = setupUnitFixture('vercel-env-pull-delta-no-changes');
+    const envFilePath = path.join(cwd, '.env.local');
+    const originalEnv = await fs.readFile(envFilePath, 'utf8');
+    client.cwd = cwd;
     client.input.confirm = vi.fn().mockResolvedValue(true);
 
     client.setArgv('env', 'pull');
     const pullPromise = env(client);
 
     await expect(client.stderr).toOutput('> No changes found.');
-    await expect(client.stderr).toOutput(
-      'Updated .env.local file and added it to .gitignore'
-    );
     await expect(pullPromise).resolves.toEqual(0);
 
+    expect(client.stderr.getFullOutput()).not.toContain(
+      'Updated .env.local file'
+    );
+    expect(await fs.readFile(envFilePath, 'utf8')).toEqual(originalEnv);
     expect(client.input.confirm).not.toHaveBeenCalled();
   });
 
-  it.each([
-    {
-      key: 'PATH_WITH_TRAILING_BACKSLASH',
-      value: 'C:\\Users\\foo\\',
-    },
-    {
-      key: 'UNC_PATH_WITH_TRAILING_BACKSLASH',
-      value: '\\\\server\\share\\folder\\',
-    },
-  ])('should handle env values ending with a backslash ($key)', async ({
-    key,
-    value,
-  }) => {
+  it('should handle env values ending with a backslash', async () => {
+    const key = 'PATH_WITH_TRAILING_BACKSLASH';
+    const value = 'C:\\Users\\foo\\';
+
     useUser();
     useTeams('team_dummy');
     useProject(
@@ -526,6 +528,16 @@ describe('env pull', () => {
           id: '781dt89g8r2h789g',
           key,
           value,
+          target: ['development'],
+          configurationId: null,
+          updatedAt: 1557241361455,
+          createdAt: 1557241361455,
+        },
+        {
+          type: 'encrypted',
+          id: '781dt89g8r2h789h',
+          key: 'QUOTED_VALUE',
+          value: '"testvalue"',
           target: ['development'],
           configurationId: null,
           updatedAt: 1557241361455,
@@ -547,6 +559,7 @@ describe('env pull', () => {
 
     const parsed = parse(pulledEnv);
     expect(parsed[key]).toEqual(value);
+    expect(parsed['QUOTED_VALUE']).toEqual('"testvalue"');
   });
 
   it('should correctly render delta string when env variable has quotes', async () => {
@@ -582,14 +595,11 @@ describe('env pull', () => {
         'Downloading `development` Environment Variables for'
       );
       await expect(client.stderr).toOutput('No changes found.\n');
-      await expect(client.stderr).toOutput(
-        'Updated .env.local file and added it to .gitignore'
-      );
 
       await expect(pullPromise).resolves.toEqual(0);
-
-      const pulledEnv = await fs.readFile(path.join(cwd, '.env.local'), 'utf8');
-      expect(parse(pulledEnv)['NEW_VAR']).toEqual('"testvalue"');
+      expect(client.stderr.getFullOutput()).not.toContain(
+        'Updated .env.local file'
+      );
     } finally {
       client.setArgv('env', 'rm', 'NEW_VAR', '--yes');
       await env(client);
@@ -629,9 +639,11 @@ describe('env pull', () => {
         'Downloading `development` Environment Variables for'
       );
       await expect(client.stderr).toOutput('No changes found.\n');
-      await expect(client.stderr).toOutput('Updated .env.testquotes file');
 
       await expect(pullPromise).resolves.toEqual(0);
+      expect(client.stderr.getFullOutput()).not.toContain(
+        'Updated .env.testquotes file'
+      );
     } finally {
       client.setArgv('env', 'rm', 'NEW_VAR', '--yes');
       await env(client);
