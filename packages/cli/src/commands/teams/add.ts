@@ -20,6 +20,7 @@ import {
   outputActionRequired,
   outputAgentError,
 } from '../../util/agent-output';
+import { getSameSubcommandSuggestionFlags } from '../../util/arg-common';
 
 const validateSlug = (value: string) => /^[a-z]+[a-z0-9_-]*$/.test(value);
 
@@ -117,6 +118,65 @@ function formatCreateTeamError(err: unknown, slug: string): string {
   return errorToString(err);
 }
 
+/** Plain-text variant for non-interactive JSON (no chalk). */
+function formatCreateTeamErrorPlain(err: unknown, slug: string): string {
+  const isAbort =
+    isError(err) && (err as Error & { name?: string }).name === 'AbortError';
+  const isTimeoutMsg = isError(err) && err.message === 'Request timed out.';
+  if (isAbort || isTimeoutMsg) {
+    return TIMEOUT_HINT;
+  }
+  if (isAPIError(err) && err.status === 429) {
+    return formatCreateTeamError(err, slug);
+  }
+  if (isAPIError(err) && err.status === 400) {
+    const msg = (err.serverMessage || err.message || '').toLowerCase();
+    const slugHint =
+      msg.includes('slug') || msg.includes('cannot be used')
+        ? `That team URL (vercel.com/${slug}) is not available. It may already be taken. `
+        : '';
+    const paymentHint = msg.includes('payment')
+      ? 'A payment method is required to create a team. '
+      : '';
+    const prefix = slugHint || paymentHint;
+    return prefix
+      ? `${prefix}${prefix.trim() ? '\n' : ''}${err.serverMessage || err.message}`
+      : err.serverMessage || err.message;
+  }
+  return errorToString(err);
+}
+
+/** Shell command to open a URL in the default browser (cross-platform). */
+function openUrlInBrowserCommand(url: string): string {
+  if (process.platform === 'win32') {
+    return `start ${url}`;
+  }
+  if (process.platform === 'darwin') {
+    return `open '${url}'`;
+  }
+  return `xdg-open '${url}'`;
+}
+
+const VERCEL_ACCOUNT_BILLING_URL = 'https://vercel.com/account/billing';
+
+function createTeamErrorReason(err: unknown): string {
+  if (isAPIError(err) && err.status === 400) {
+    const msg = (err.serverMessage || err.message || '').toLowerCase();
+    if (msg.includes('payment')) return 'payment_required';
+    if (msg.includes('slug') || msg.includes('cannot be used'))
+      return 'slug_unavailable';
+  }
+  if (isAPIError(err) && err.status === 429) return 'rate_limited';
+  if (
+    isError(err) &&
+    ((err as Error & { name?: string }).name === 'AbortError' ||
+      err.message === 'Request timed out.')
+  ) {
+    return 'timeout';
+  }
+  return 'team_creation_failed';
+}
+
 export default async function add(
   client: Client,
   argv: string[] = []
@@ -152,11 +212,14 @@ export default async function add(
       const fullArgs = client.argv.slice(2);
       const addIdx = fullArgs.indexOf('add');
       const afterAdd = addIdx >= 0 ? fullArgs.slice(addIdx + 1) : [];
-      const flagParts = afterAdd.filter(a => a.startsWith('-'));
+      // Same subcommand (teams add): preserve --slug/--name and globals so
+      // the user can re-run with placeholders filled without retyping flags.
+      const flagParts = getSameSubcommandSuggestionFlags(afterAdd);
       const cmd = getCommandNamePlain(
-        `teams add --slug <slug> --name "<name>" ${flagParts.join(' ')}`.trim()
+        `teams add --slug <slug> --name <name> ${flagParts.join(' ')}`.trim()
       );
-      const required = missing.map(p => param(p)).join(' and ');
+      // Plain text only—no param()/chalk in JSON message
+      const requiredPlain = missing.join(' and ');
       const verb = missing.length === 1 ? 'is' : 'are';
       outputActionRequired(
         client,
@@ -164,7 +227,7 @@ export default async function add(
           status: 'action_required',
           reason: 'missing_arguments',
           action: 'missing_arguments',
-          message: `In non-interactive mode ${required} ${verb} required. Run: ${cmd}`,
+          message: `In non-interactive mode ${requiredPlain} ${verb} required. Run: ${cmd}`,
           next: [
             {
               command: cmd,
@@ -179,17 +242,19 @@ export default async function add(
     const name = (nameFlag as string).trim();
     if (!validateSlug(slug)) {
       const msg = `Invalid ${param('--slug')}: must start with a letter and contain only lowercase letters, numbers, hyphens, and underscores (e.g. ${param('acme')})`;
+      const msgPlain =
+        'Invalid --slug: must start with a letter and contain only lowercase letters, numbers, hyphens, and underscores (e.g. acme)';
       if (client.nonInteractive) {
         outputAgentError(
           client,
           {
             status: 'error',
             reason: 'invalid_slug',
-            message: msg,
+            message: msgPlain,
             next: [
               {
                 command: getCommandNamePlain(
-                  'teams add --slug acme --name "<name>"'
+                  'teams add --slug <slug> --name <name>'
                 ),
               },
             ],
@@ -202,13 +267,15 @@ export default async function add(
     }
     if (!validateName(name)) {
       const msg = `Invalid ${param('--name')}: only letters, numbers, spaces, hyphens, and underscores allowed`;
+      const msgPlain =
+        'Invalid --name: only letters, numbers, spaces, hyphens, and underscores allowed';
       if (client.nonInteractive) {
         outputAgentError(
           client,
           {
             status: 'error',
             reason: 'invalid_name',
-            message: msg,
+            message: msgPlain,
           },
           1
         );
@@ -223,6 +290,28 @@ export default async function add(
       team = await createTeamWithTimeout(client, slug);
     } catch (err: unknown) {
       output.stopSpinner();
+      if (client.nonInteractive) {
+        let message = formatCreateTeamErrorPlain(err, slug);
+        const reason = createTeamErrorReason(err);
+        const next: Array<{ command: string; when?: string }> = [];
+        if (reason === 'payment_required') {
+          message += ` Add a payment method at ${VERCEL_ACCOUNT_BILLING_URL}, then retry.`;
+          next.push({
+            command: openUrlInBrowserCommand(VERCEL_ACCOUNT_BILLING_URL),
+            when: 'To open the billing page in your browser',
+          });
+        }
+        outputAgentError(
+          client,
+          {
+            status: 'error',
+            reason,
+            message,
+            ...(next.length > 0 && { next }),
+          },
+          1
+        );
+      }
       output.error(formatCreateTeamError(err, slug));
       return 1;
     }
@@ -234,6 +323,17 @@ export default async function add(
       team = Object.assign(team, res);
     } catch (err: unknown) {
       output.stopSpinner();
+      if (client.nonInteractive) {
+        outputAgentError(
+          client,
+          {
+            status: 'error',
+            reason: 'team_update_failed',
+            message: errorToString(err),
+          },
+          1
+        );
+      }
       output.error(errorToString(err));
       return 1;
     }

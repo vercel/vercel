@@ -124,9 +124,12 @@ describe('teams switch', () => {
   });
 
   describe('non-interactive mode', () => {
-    it('outputs action_required JSON when slug is omitted', async () => {
+    it('outputs action_required JSON when slug is omitted even if currentTeam is stale', async () => {
       useUser();
       useTeam();
+      // Stale currentTeam (not in teams list) would previously yield
+      // current_team_invalid before missing slug was detected.
+      client.config.currentTeam = 'stale-team-id-not-in-list';
       client.nonInteractive = true;
       const logSpy = vi
         .spyOn(console, 'log')
@@ -147,6 +150,82 @@ describe('teams switch', () => {
           n.command.includes('teams switch')
         )
       ).toBe(true);
+
+      logSpy.mockRestore();
+      exitSpy.mockRestore();
+      client.nonInteractive = false;
+      client.config.currentTeam = undefined;
+    });
+
+    it('outputs current_team_invalid with teams list and login in next when currentTeam is stale', async () => {
+      useUser();
+      const team = useTeam();
+      client.config.currentTeam = 'stale-team-id-not-in-list';
+      client.nonInteractive = true;
+      const logSpy = vi
+        .spyOn(console, 'log')
+        .mockImplementation(() => undefined as unknown as void);
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {
+        throw new Error('exit');
+      }) as () => never);
+
+      client.setArgv('teams', 'switch', team.slug, '--non-interactive');
+      await expect(teams(client)).rejects.toThrow('exit');
+
+      const payload = JSON.parse(logSpy.mock.calls[0][0] as string);
+      expect(payload.status).toBe('error');
+      expect(payload.reason).toBe('current_team_invalid');
+      const listNext = payload.next.find((n: { command: string }) =>
+        n.command.includes('teams list')
+      );
+      expect(listNext).toBeDefined();
+      expect(listNext.command).toContain('--non-interactive');
+      const loginNext = payload.next.find(
+        (n: { command: string }) =>
+          n.command.includes('login') && !n.command.includes('teams')
+      );
+      expect(loginNext).toBeDefined();
+      expect(loginNext.command).toContain('login');
+      expect(loginNext.command).toContain('--non-interactive');
+
+      logSpy.mockRestore();
+      exitSpy.mockRestore();
+      client.nonInteractive = false;
+      client.config.currentTeam = undefined;
+    });
+
+    it('preserves global flags in next when slug omitted with --cwd', async () => {
+      useUser();
+      useTeam();
+      client.nonInteractive = true;
+      const logSpy = vi
+        .spyOn(console, 'log')
+        .mockImplementation(() => undefined as unknown as void);
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {
+        throw new Error('exit');
+      }) as () => never);
+
+      client.setArgv(
+        'teams',
+        'switch',
+        '--non-interactive',
+        '--cwd',
+        '/tmp/proj'
+      );
+      await expect(teams(client)).rejects.toThrow('exit');
+
+      const payload = JSON.parse(logSpy.mock.calls[0][0] as string);
+      expect(payload.reason).toBe('missing_arguments');
+      const switchNext = payload.next.find((n: { command: string }) =>
+        n.command.includes('teams switch')
+      );
+      expect(switchNext.command).toContain('--cwd');
+      expect(switchNext.command).toContain('/tmp/proj');
+      const listNext = payload.next.find((n: { command: string }) =>
+        n.command.includes('teams list')
+      );
+      expect(listNext.command).toContain('--cwd');
+      expect(listNext.command).toContain('/tmp/proj');
 
       logSpy.mockRestore();
       exitSpy.mockRestore();

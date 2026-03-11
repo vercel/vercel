@@ -49,7 +49,7 @@ describe('teams invite', () => {
       expect(payload.reason).toBe('missing_arguments');
       expect(payload.message).toContain('email');
       expect(payload.next[0].command).toContain('teams invite');
-      expect(payload.next[0].command).toContain('user@example.com');
+      expect(payload.next[0].command).toContain('<email>');
 
       logSpy.mockRestore();
       exitSpy.mockRestore();
@@ -65,6 +65,41 @@ describe('teams invite', () => {
       client.setArgv('teams', 'invite', 'me@example.com');
       const exitCode = await teams(client);
       expect(exitCode).toBe(0);
+    });
+
+    it('outputs team_scope_required with global flags in next when no team scope', async () => {
+      client.nonInteractive = true;
+      // No currentTeam so invite cannot determine which team to invite to
+      client.config = {};
+      const logSpy = vi
+        .spyOn(console, 'log')
+        .mockImplementation(() => undefined as unknown as void);
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {
+        throw new Error('exit');
+      }) as () => never);
+
+      client.setArgv(
+        'teams',
+        'invite',
+        'me@example.com',
+        '--non-interactive',
+        '--cwd',
+        '/tmp/proj'
+      );
+      await expect(teams(client)).rejects.toThrow('exit');
+
+      const payload = JSON.parse(logSpy.mock.calls[0][0] as string);
+      expect(payload.status).toBe('error');
+      expect(payload.reason).toBe('team_scope_required');
+      expect(payload.next[0].command).toContain('teams switch');
+      expect(payload.next[0].command).toContain('<slug>');
+      expect(payload.next[0].command).toContain('--cwd');
+      expect(payload.next[0].command).toContain('/tmp/proj');
+      expect(payload.next[0].command).toContain('--non-interactive');
+
+      logSpy.mockRestore();
+      exitSpy.mockRestore();
+      client.nonInteractive = false;
     });
 
     it('outputs error JSON when API returns user_not_found', async () => {

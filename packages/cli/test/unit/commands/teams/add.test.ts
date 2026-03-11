@@ -159,5 +159,39 @@ describe('teams add', () => {
       exitSpy.mockRestore();
       client.nonInteractive = false;
     });
+
+    it('outputs error JSON when API requires payment in non-interactive mode', async () => {
+      client.nonInteractive = true;
+      client.scenario.post(`/teams`, (req, res) => {
+        res.statusCode = 400;
+        return res.json({
+          message:
+            'A payment method is required to create a team, please try again.',
+        });
+      });
+      const logSpy = vi
+        .spyOn(console, 'log')
+        .mockImplementation(() => undefined as unknown as void);
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {
+        throw new Error('exit');
+      }) as () => never);
+
+      client.setArgv('teams', 'add', '--slug', 'acme', '--name', 'Acme Corp');
+      await expect(teams(client)).rejects.toThrow('exit');
+
+      const payload = JSON.parse(logSpy.mock.calls[0][0] as string);
+      expect(payload.status).toBe('error');
+      expect(payload.reason).toBe('payment_required');
+      expect(payload.message).toContain('payment');
+      expect(payload.message).toContain('vercel.com/account/billing');
+      expect(payload.next).toBeDefined();
+      expect(payload.next.length).toBeGreaterThan(0);
+      expect(payload.next[0].command).toContain('vercel.com/account/billing');
+      expect(/open |start |xdg-open /.test(payload.next[0].command)).toBe(true);
+
+      logSpy.mockRestore();
+      exitSpy.mockRestore();
+      client.nonInteractive = false;
+    });
   });
 });

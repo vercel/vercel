@@ -17,6 +17,16 @@ import {
   outputActionRequired,
   outputAgentError,
 } from '../../util/agent-output';
+import {
+  getGlobalFlagsOnlyFromArgs,
+  getSameSubcommandSuggestionFlags,
+} from '../../util/arg-common';
+
+/** Append global argv flags (--cwd, --non-interactive, etc.) so agents can re-run with same context. */
+function withGlobalFlags(client: Client, commandTemplate: string): string {
+  const flags = getGlobalFlagsOnlyFromArgs(client.argv.slice(2));
+  return getCommandNamePlain(`${commandTemplate} ${flags.join(' ')}`.trim());
+}
 
 const updateCurrentTeam = (config: GlobalConfig, team?: Team) => {
   if (team) {
@@ -52,6 +62,45 @@ export default async function change(client: Client, argv: string[]) {
     args: [desiredSlug],
   } = parsedArgs;
 
+  // Non-interactive requires a slug (or username) as first positional. Handle
+  // this before fetching teams so a stale currentTeam does not surface as
+  // current_team_invalid when the real issue is a missing required argument.
+  if (client.nonInteractive && !desiredSlug) {
+    const fullArgs = client.argv.slice(2);
+    const switchIdx = fullArgs.findIndex(a => a === 'switch' || a === 'change');
+    const afterSwitch =
+      switchIdx >= 0 ? fullArgs.slice(switchIdx + 1) : fullArgs;
+    const afterPositional =
+      afterSwitch.length > 0 && !afterSwitch[0].startsWith('-')
+        ? afterSwitch.slice(1)
+        : afterSwitch;
+    const flagTail = getSameSubcommandSuggestionFlags(afterPositional);
+    const cmd = getCommandNamePlain(
+      `teams switch <slug> ${flagTail.join(' ')}`.trim()
+    );
+    outputActionRequired(
+      client,
+      {
+        status: 'action_required',
+        reason: 'missing_arguments',
+        action: 'missing_arguments',
+        message: `In non-interactive mode a team slug (or username for personal scope) is required. Run: ${cmd}`,
+        next: [
+          {
+            command: cmd,
+            when: 'to switch scope (replace <slug> with team slug)',
+          },
+          {
+            command: withGlobalFlags(client, 'teams list'),
+            when: 'to list teams and slugs',
+          },
+        ],
+      },
+      1
+    );
+    return 1;
+  }
+
   const { config, telemetryEventStore } = client;
   const telemetry = new TeamsSwitchTelemetryClient({
     opts: {
@@ -79,7 +128,12 @@ export default async function change(client: Client, argv: string[]) {
             'You are not a member of the current team anymore. Switch to a valid team or personal scope.',
           next: [
             {
-              command: getCommandNamePlain('teams list'),
+              command: withGlobalFlags(client, 'teams list'),
+              when: 'to list teams and slugs you can switch to',
+            },
+            {
+              command: withGlobalFlags(client, 'login'),
+              when: 'to re-authenticate if your session or team membership changed',
             },
           ],
         },
@@ -152,11 +206,12 @@ export default async function change(client: Client, argv: string[]) {
       );
       const afterSwitch =
         switchIdx >= 0 ? fullArgs.slice(switchIdx + 1) : fullArgs;
-      // Drop positional slug if present; keep flags (e.g. --cwd, --scope)
-      const flagTail =
+      // Drop positional slug if present; only global flags in suggestion
+      const afterPositional =
         afterSwitch.length > 0 && !afterSwitch[0].startsWith('-')
           ? afterSwitch.slice(1)
           : afterSwitch;
+      const flagTail = getSameSubcommandSuggestionFlags(afterPositional);
       const cmd = getCommandNamePlain(
         `teams switch <slug> ${flagTail.join(' ')}`.trim()
       );
@@ -170,10 +225,10 @@ export default async function change(client: Client, argv: string[]) {
           next: [
             {
               command: cmd,
-              when: 'to switch scope (replace <slug> with team slug or username)',
+              when: 'to switch scope (replace <slug> with team slug)',
             },
             {
-              command: getCommandNamePlain('teams list'),
+              command: withGlobalFlags(client, 'teams list'),
               when: 'to list teams and slugs',
             },
           ],
@@ -248,7 +303,7 @@ export default async function change(client: Client, argv: string[]) {
           message: `You do not have permission to access scope "${desiredSlug}".`,
           next: [
             {
-              command: getCommandNamePlain('teams list'),
+              command: withGlobalFlags(client, 'teams list'),
             },
           ],
         },

@@ -22,6 +22,16 @@ import {
   outputActionRequired,
   outputAgentError,
 } from '../../util/agent-output';
+import {
+  getGlobalFlagsOnlyFromArgs,
+  getSameSubcommandSuggestionFlags,
+} from '../../util/arg-common';
+
+/** Append global argv flags (--cwd, --non-interactive, etc.) so agents can re-run with same context. */
+function withGlobalFlags(client: Client, commandTemplate: string): string {
+  const flags = getGlobalFlagsOnlyFromArgs(client.argv.slice(2));
+  return getCommandNamePlain(`${commandTemplate} ${flags.join(' ')}`.trim());
+}
 
 const validateEmail = (data: string) =>
   regexEmail.test(data.trim()) || data.length === 0;
@@ -81,9 +91,10 @@ export default async function invite(
     const fullArgs = client.argv.slice(2);
     const inviteIdx = fullArgs.indexOf('invite');
     const afterInvite = inviteIdx >= 0 ? fullArgs.slice(inviteIdx + 1) : [];
-    const flagParts = afterInvite.filter(a => a.startsWith('-'));
+    // Same subcommand (teams invite): keep any flags the user passed.
+    const flagParts = getSameSubcommandSuggestionFlags(afterInvite);
     const cmd = getCommandNamePlain(
-      `teams invite user@example.com ${flagParts.join(' ')}`.trim()
+      `teams invite <email> ${flagParts.join(' ')}`.trim()
     );
     outputActionRequired(
       client,
@@ -95,7 +106,7 @@ export default async function invite(
         next: [
           {
             command: cmd,
-            when: 'to invite teammates (replace user@example.com)',
+            when: 'to invite teammates (replace <email> with a teammate email)',
           },
         ],
       },
@@ -121,14 +132,19 @@ export default async function invite(
       `switch`
     )} or use ${cmd('--scope')}`;
     if (client.nonInteractive) {
-      const switchCmd = getCommandNamePlain('switch <team>');
+      const switchCmd = withGlobalFlags(client, 'teams switch <slug>');
       outputAgentError(
         client,
         {
           status: 'error',
           reason: 'team_scope_required',
           message: `Team scope is required for teams invite. Run ${switchCmd} or use --scope.`,
-          next: [{ command: switchCmd }],
+          next: [
+            {
+              command: switchCmd,
+              when: 'to select a team scope (replace <slug> with your team slug)',
+            },
+          ],
         },
         1
       );
@@ -160,10 +176,9 @@ export default async function invite(
               const inviteIdx = fullArgs.indexOf('invite');
               const afterInvite =
                 inviteIdx >= 0 ? fullArgs.slice(inviteIdx + 1) : [];
-              // Drop email positionals; keep flags only for suggestion template
-              const flagParts = afterInvite.filter(a => a.startsWith('-'));
+              const flagParts = getSameSubcommandSuggestionFlags(afterInvite);
               const retryCmd = getCommandNamePlain(
-                `teams invite user@example.com ${flagParts.join(' ')}`.trim()
+                `teams invite <email> ${flagParts.join(' ')}`.trim()
               );
               outputAgentError(
                 client,
