@@ -1,13 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock(
-  '@inquirer/search',
-  () => ({
-    default: vi.fn(),
-  }),
-  { virtual: true }
-);
-
 import share from '../../../../src/commands/share';
 import { client } from '../../../mocks/client';
 import { useDeployment } from '../../../mocks/deployment';
