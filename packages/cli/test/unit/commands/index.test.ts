@@ -5,6 +5,7 @@ describe('index', () => {
     expect(commands).toEqual(
       new Map([
         ['agent', 'agent'],
+        ['alerts', 'alerts'],
         ['alias', 'alias'],
         ['aliases', 'alias'],
         ['activity', 'activity'],
@@ -63,6 +64,7 @@ describe('index', () => {
         ['rolling-release', 'rolling-release'],
         ['routes', 'routes'],
         ['rr', 'rolling-release'],
+        ['skills', 'skills'],
         ['switch', 'teams'],
         ['target', 'target'],
         ['targets', 'target'],

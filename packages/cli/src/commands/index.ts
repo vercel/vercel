@@ -1,5 +1,6 @@
 import { agentCommand } from './agent/command';
 import { activityCommand } from './activity/command';
+import { alertsCommand } from './alerts/command';
 import { aliasCommand } from './alias/command';
 import { apiCommand } from './api/command';
 import { bisectCommand } from './bisect/command';
@@ -42,6 +43,7 @@ import { removeCommand } from './remove/command';
 import { routesCommand } from './routes/command';
 import { rollbackCommand } from './rollback/command';
 import { rollingReleaseCommand } from './rolling-release/command';
+import { skillsCommand } from './skills/command';
 import { targetCommand } from './target/command';
 import { teamsCommand } from './teams/command';
 import { telemetryCommand } from './telemetry/command';
@@ -55,6 +57,7 @@ import output from '../output-manager';
 
 const commandsStructs = [
   agentCommand,
+  alertsCommand,
   aliasCommand,
   activityCommand,
   apiCommand,
@@ -97,6 +100,7 @@ const commandsStructs = [
   routesCommand,
   rollbackCommand,
   rollingReleaseCommand,
+  skillsCommand,
   targetCommand,
   teamsCommand,
   telemetryCommand,

@@ -1,7 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import login from '../../../../src/commands/login';
 import { client } from '../../../mocks/client';
-import { vi } from 'vitest';
 
 vi.setConfig({ testTimeout: 10000 });
 
@@ -31,5 +30,40 @@ describe('login', () => {
     );
     const exitCode = await exitCodePromise;
     expect(exitCode, 'exit code for "login"').toEqual(2);
+  });
+
+  it('outputs action_required in non-interactive mode with no args', async () => {
+    client.setArgv('login');
+    (client as { nonInteractive: boolean }).nonInteractive = true;
+
+    const logSpy = vi
+      .spyOn(console, 'log')
+      .mockImplementation(() => undefined as unknown as void);
+    const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {
+      throw new Error('exit');
+    }) as () => never);
+
+    await expect(login(client, { shouldParseArgs: true })).rejects.toThrow(
+      'exit'
+    );
+
+    expect(logSpy).toHaveBeenCalled();
+    const [[output]] = logSpy.mock.calls;
+    const payload = JSON.parse(output as string);
+    expect(payload.status).toBe('action_required');
+    expect(payload.reason).toBe('login_required');
+    expect(payload.action).toBe('login_required');
+    expect(payload.message).toContain('You must run');
+    expect(payload.message).toContain('to log in');
+    expect(payload.hint).toContain('Run this command to log in');
+    expect(payload.verification_uri).toBe('https://vercel.com/login');
+    expect(Array.isArray(payload.next)).toBe(true);
+    expect(payload.next[0].command).toContain('login');
+    expect(payload.next[0].command).not.toContain('--non-interactive');
+    expect(payload.next[0].when).toBe('to log in');
+
+    logSpy.mockRestore();
+    exitSpy.mockRestore();
+    (client as { nonInteractive: boolean }).nonInteractive = false;
   });
 });

@@ -7,6 +7,7 @@
 // Non-priority commands - bundled together
 export { default as agent } from './commands/agent';
 export { default as activity } from './commands/activity';
+export { default as alerts } from './commands/alerts';
 export { default as alias } from './commands/alias';
 export { default as api } from './commands/api';
 export { default as bisect } from './commands/bisect';
@@ -44,6 +45,7 @@ export { default as remove } from './commands/remove';
 export { default as rollback } from './commands/rollback';
 export { default as rollingRelease } from './commands/rolling-release';
 export { default as routes } from './commands/routes';
+export { default as skills } from './commands/skills';
 export { default as target } from './commands/target';
 export { default as teams } from './commands/teams';
 export { default as telemetry } from './commands/telemetry';

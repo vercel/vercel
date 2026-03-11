@@ -4,6 +4,10 @@ import fs, { readlink } from 'fs-extra';
 import { strict as assert, strictEqual } from 'assert';
 import { download, glob, FileBlob } from '../src';
 
+// File mode constants (octal) used by FileBlob to indicate file type
+const S_IFREG = 33188; // 0o100644 - regular file
+const S_IFLNK = 41453; // 0o120755 - symbolic link (data = link target path)
+
 describe('download()', () => {
   let warningMessages: string[];
   const originalConsoleWarn = console.warn;
@@ -153,6 +157,96 @@ describe('download()', () => {
     expect(warningMessages).toEqual([
       'Warning: file "linkdir/file.txt" is within a symlinked directory "linkdir" and will be ignored',
     ]);
+  });
+
+  it('should not fail when symlink already exists with same target', async () => {
+    if (process.platform === 'win32') {
+      console.log('Skipping test on windows');
+      return;
+    }
+
+    const files = {
+      'a.txt': new FileBlob({
+        mode: S_IFREG,
+        contentType: undefined,
+        data: 'a text',
+      }),
+      'link.txt': new FileBlob({
+        mode: S_IFLNK,
+        contentType: undefined,
+        data: 'a.txt', // symlink target
+      }),
+    };
+
+    const outDir = path.join(__dirname, 'symlinks-out');
+    await fs.remove(outDir);
+
+    // Download once - creates the symlink
+    await download(files, outDir);
+
+    // Download again to the same directory - should not fail with EEXIST
+    await download(files, outDir);
+
+    const linkStat = await fs.lstat(path.join(outDir, 'link.txt'));
+    assert(linkStat.isSymbolicLink());
+
+    const linkTarget = await readlink(path.join(outDir, 'link.txt'));
+    strictEqual(linkTarget, 'a.txt');
+  });
+
+  it('should replace symlink when target differs', async () => {
+    if (process.platform === 'win32') {
+      console.log('Skipping test on windows');
+      return;
+    }
+
+    const outDir = path.join(__dirname, 'symlinks-out');
+    await fs.remove(outDir);
+
+    const files1 = {
+      'a.txt': new FileBlob({
+        mode: S_IFREG,
+        contentType: undefined,
+        data: 'a text',
+      }),
+      'b.txt': new FileBlob({
+        mode: S_IFREG,
+        contentType: undefined,
+        data: 'b text',
+      }),
+      'link.txt': new FileBlob({
+        mode: S_IFLNK,
+        contentType: undefined,
+        data: 'a.txt', // symlink target
+      }),
+    };
+
+    // Download with link pointing to a.txt
+    await download(files1, outDir);
+
+    const files2 = {
+      'a.txt': new FileBlob({
+        mode: S_IFREG,
+        contentType: undefined,
+        data: 'a text',
+      }),
+      'b.txt': new FileBlob({
+        mode: S_IFREG,
+        contentType: undefined,
+        data: 'b text',
+      }),
+      'link.txt': new FileBlob({
+        mode: S_IFLNK,
+        contentType: undefined,
+        data: 'b.txt', // symlink target changed
+      }),
+    };
+
+    // Download again with link pointing to b.txt - should replace
+    await download(files2, outDir);
+
+    const linkTarget = await readlink(path.join(outDir, 'link.txt'));
+    strictEqual(linkTarget, 'b.txt');
   });
 
   it('should create empty directory entries', async () => {
