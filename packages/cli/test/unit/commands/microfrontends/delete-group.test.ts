@@ -126,47 +126,38 @@ describe('microfrontends delete-group', () => {
     });
   });
 
-  describe('with --yes flag', () => {
-    it('deletes a group without confirmation', async () => {
+  describe('with --group flag', () => {
+    it('deletes a group after typing name to confirm', async () => {
       const mocks = setupMocks();
-      client.setArgv(
-        'microfrontends',
-        'delete-group',
-        '--group=My Group',
-        '--yes'
-      );
+      client.setArgv('microfrontends', 'delete-group', '--group=My Group');
 
-      const exitCode = await microfrontends(client);
+      const exitCodePromise = microfrontends(client);
 
-      expect(exitCode).toBe(0);
+      await expect(client.stderr).toOutput('to confirm deletion:');
+      client.stdin.write('My Group\n');
+
+      expect(await exitCodePromise).toBe(0);
       expect(mocks.getDeleteCalled()).toBe(true);
       expect(mocks.getDeleteGroupId()).toBe('group_1');
     });
 
     it('finds group by ID', async () => {
       const mocks = setupMocks();
-      client.setArgv(
-        'microfrontends',
-        'delete-group',
-        '--group=group_2',
-        '--yes'
-      );
+      client.setArgv('microfrontends', 'delete-group', '--group=group_2');
 
-      const exitCode = await microfrontends(client);
+      const exitCodePromise = microfrontends(client);
 
-      expect(exitCode).toBe(0);
+      await expect(client.stderr).toOutput('to confirm deletion:');
+      client.stdin.write('Other Group\n');
+
+      expect(await exitCodePromise).toBe(0);
       expect(mocks.getDeleteCalled()).toBe(true);
       expect(mocks.getDeleteGroupId()).toBe('group_2');
     });
 
     it('errors when group not found', async () => {
       setupMocks();
-      client.setArgv(
-        'microfrontends',
-        'delete-group',
-        '--group=Nonexistent',
-        '--yes'
-      );
+      client.setArgv('microfrontends', 'delete-group', '--group=Nonexistent');
 
       const exitCodePromise = microfrontends(client);
 
@@ -186,12 +177,7 @@ describe('microfrontends delete-group', () => {
           maxMicrofrontendsPerGroup: 20,
         },
       });
-      client.setArgv(
-        'microfrontends',
-        'delete-group',
-        '--group=My Group',
-        '--yes'
-      );
+      client.setArgv('microfrontends', 'delete-group', '--group=My Group');
 
       const exitCodePromise = microfrontends(client);
 
@@ -209,14 +195,12 @@ describe('microfrontends delete-group', () => {
           res.status(403).json({ error: { code: 'forbidden' } });
         },
       });
-      client.setArgv(
-        'microfrontends',
-        'delete-group',
-        '--group=My Group',
-        '--yes'
-      );
+      client.setArgv('microfrontends', 'delete-group', '--group=My Group');
 
       const exitCodePromise = microfrontends(client);
+
+      await expect(client.stderr).toOutput('to confirm deletion:');
+      client.stdin.write('My Group\n');
 
       await expect(client.stderr).toOutput(
         'Error: You must be an Owner to create or modify microfrontends groups.'
@@ -363,7 +347,7 @@ describe('microfrontends delete-group', () => {
       (client.stdin as any).isTTY = true;
     });
 
-    it('errors without --yes flag', async () => {
+    it('errors requiring interactive mode', async () => {
       setupMocks();
       client.setArgv('microfrontends', 'delete-group', '--group=My Group');
       (client.stdin as any).isTTY = false;
@@ -371,7 +355,7 @@ describe('microfrontends delete-group', () => {
       const exitCodePromise = microfrontends(client);
 
       await expect(client.stderr).toOutput(
-        'Error: Confirmation required. Use --yes to skip confirmation in non-interactive mode.'
+        'Error: This command must be run interactively to confirm deletion.'
       );
       expect(await exitCodePromise).toBe(1);
       (client.stdin as any).isTTY = true;

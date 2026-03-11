@@ -89,7 +89,12 @@ export const removeFromGroupSubcommand = {
   description:
     'Remove the current project from its microfrontends group so it is no longer part of the composed application',
   arguments: [],
-  options: [],
+  options: [
+    {
+      ...yesOption,
+      description: 'Skip project linking confirmation',
+    },
+  ],
   examples: [
     {
       name: 'Remove current project from its group interactively',
@@ -105,6 +110,10 @@ export const deleteGroupSubcommand = {
     'Delete a microfrontends group and all of its settings. This action is not reversible.',
   arguments: [],
   options: [
+    {
+      ...yesOption,
+      description: 'Skip project linking confirmation',
+    },
     {
       name: 'group',
       shorthand: null,

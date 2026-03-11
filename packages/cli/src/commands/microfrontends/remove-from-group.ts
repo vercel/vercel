@@ -12,17 +12,21 @@ import { isAPIError } from '../../util/errors-ts';
 import type { MicrofrontendsGroupsResponse } from './types';
 
 export default async function removeFromGroup(client: Client): Promise<number> {
+  let parsedArgs;
   const flagsSpecification = getFlagsSpecification(
     removeFromGroupSubcommand.options
   );
   try {
-    parseArguments(client.argv.slice(2), flagsSpecification);
+    parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (error) {
     printError(error);
     return 1;
   }
 
-  const link = await ensureLink('microfrontends', client, client.cwd);
+  const autoConfirm = !!parsedArgs.flags['--yes'];
+  const link = await ensureLink('microfrontends', client, client.cwd, {
+    autoConfirm,
+  });
   if (typeof link === 'number') {
     return link;
   }

@@ -119,14 +119,19 @@ describe('microfrontends remove-from-group', () => {
     });
   });
 
-  describe('with --yes flag', () => {
-    it('removes project from group without confirmation', async () => {
+  describe('with confirmation', () => {
+    it('removes project from group after confirmation', async () => {
       const mocks = setupMocks();
-      client.setArgv('microfrontends', 'remove-from-group', '--yes');
+      client.setArgv('microfrontends', 'remove-from-group');
 
-      const exitCode = await microfrontends(client);
+      const exitCodePromise = microfrontends(client);
 
-      expect(exitCode).toBe(0);
+      await expect(client.stderr).toOutput(
+        'Remove "child-project" from "My Group"?'
+      );
+      client.stdin.write('y\n');
+
+      expect(await exitCodePromise).toBe(0);
       expect(mocks.getPatchCalled()).toBe(true);
       expect(mocks.getPatchBody()).toEqual({ enabled: false });
     });
@@ -138,7 +143,7 @@ describe('microfrontends remove-from-group', () => {
         linkedProjectId: 'proj_unlinked',
         linkedProjectName: 'unlinked-project',
       });
-      client.setArgv('microfrontends', 'remove-from-group', '--yes');
+      client.setArgv('microfrontends', 'remove-from-group');
 
       const exitCodePromise = microfrontends(client);
 
@@ -155,7 +160,7 @@ describe('microfrontends remove-from-group', () => {
         linkedProjectId: 'proj_default',
         linkedProjectName: 'default-app',
       });
-      client.setArgv('microfrontends', 'remove-from-group', '--yes');
+      client.setArgv('microfrontends', 'remove-from-group');
 
       const exitCodePromise = microfrontends(client);
 
@@ -186,13 +191,21 @@ describe('microfrontends remove-from-group', () => {
           ],
         },
       });
-      client.setArgv('microfrontends', 'remove-from-group', '--yes');
+      client.setArgv('microfrontends', 'remove-from-group');
 
       const exitCodePromise = microfrontends(client);
 
       await expect(client.stderr).toOutput(
         'The microfrontends.json configuration still contains an entry for "child-project"'
       );
+      await expect(client.stderr).toOutput('still referenced in');
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput(
+        'Remove "child-project" from "My Group"?'
+      );
+      client.stdin.write('y\n');
+
       await expect(client.stderr).toOutput(
         'Remember to remove "child-project" from your microfrontends.json configuration.'
       );
@@ -207,9 +220,14 @@ describe('microfrontends remove-from-group', () => {
           res.status(403).json({ error: { code: 'forbidden' } });
         },
       });
-      client.setArgv('microfrontends', 'remove-from-group', '--yes');
+      client.setArgv('microfrontends', 'remove-from-group');
 
       const exitCodePromise = microfrontends(client);
+
+      await expect(client.stderr).toOutput(
+        'Remove "child-project" from "My Group"?'
+      );
+      client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
         'Error: You must be an Owner to create or modify microfrontends groups.'
@@ -252,7 +270,7 @@ describe('microfrontends remove-from-group', () => {
   });
 
   describe('non-TTY', () => {
-    it('errors without --yes flag', async () => {
+    it('errors requiring interactive mode', async () => {
       setupMocks();
       client.setArgv('microfrontends', 'remove-from-group');
       (client.stdin as any).isTTY = false;
@@ -260,7 +278,7 @@ describe('microfrontends remove-from-group', () => {
       const exitCodePromise = microfrontends(client);
 
       await expect(client.stderr).toOutput(
-        'Error: Confirmation required. Use --yes to skip confirmation in non-interactive mode.'
+        'Error: This command must be run interactively to confirm removal.'
       );
       expect(await exitCodePromise).toBe(1);
       (client.stdin as any).isTTY = true;

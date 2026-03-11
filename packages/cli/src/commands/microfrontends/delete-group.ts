@@ -26,7 +26,10 @@ export default async function deleteGroup(client: Client): Promise<number> {
     return 1;
   }
 
-  const link = await ensureLink('microfrontends', client, client.cwd);
+  const autoConfirm = !!parsedArgs.flags['--yes'];
+  const link = await ensureLink('microfrontends', client, client.cwd, {
+    autoConfirm,
+  });
   if (typeof link === 'number') {
     return link;
   }
