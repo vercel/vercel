@@ -376,8 +376,8 @@ version = "2.31.0"
   });
 
   describe('LAMBDA_PACKING_TARGET_BYTES', () => {
-    it('defaults to 245 MB', () => {
-      expect(LAMBDA_PACKING_TARGET_BYTES).toBe(245 * 1024 * 1024);
+    it('defaults to 240 MB', () => {
+      expect(LAMBDA_PACKING_TARGET_BYTES).toBe(240 * 1024 * 1024);
     });
 
     it('is less than LAMBDA_SIZE_THRESHOLD_BYTES', () => {
