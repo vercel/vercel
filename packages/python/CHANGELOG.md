@@ -1,5 +1,11 @@
 # @vercel/python
 
+## 6.22.1
+
+### Patch Changes
+
+- Revert the prepareCache python implementation. ([#15470](https://github.com/vercel/vercel/pull/15470))
+
 ## 6.22.0
 
 ### Minor Changes
