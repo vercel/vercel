@@ -18,7 +18,7 @@ import type {
   MicrofrontendsGroupResponse,
   MicrofrontendsGroupsResponse,
 } from './types';
-import { validateRoutePath, validateRoutingPath } from './utils';
+import { validateDefaultRoute, validateRoutingPath } from './utils';
 
 const MAX_GROUP_NAME_LENGTH = 48;
 
@@ -34,10 +34,7 @@ export default async function createGroup(client: Client): Promise<number> {
     return 1;
   }
 
-  const autoConfirm = !!parsedArgs.flags['--yes'];
-  const link = await ensureLink('microfrontends', client, client.cwd, {
-    autoConfirm,
-  });
+  const link = await ensureLink('microfrontends', client, client.cwd);
   if (typeof link === 'number') {
     return link;
   }
@@ -77,10 +74,14 @@ export default async function createGroup(client: Client): Promise<number> {
   const { groups, maxMicrofrontendsGroupsPerTeam, maxMicrofrontendsPerGroup } =
     groupsResponse;
 
+  const plan = team.billing.plan;
+  const isProTrialPlan =
+    team.billing.plan === 'pro' && team.billing.status === 'trialing';
+  const isLimitedPlan = isProTrialPlan || plan === 'hobby';
+
   if (groups.length >= maxMicrofrontendsGroupsPerTeam) {
-    const plan = team.billing.plan;
-    if (plan === 'hobby' || plan === 'trial') {
-      const planName = plan === 'hobby' ? 'Hobby' : 'Trial';
+    if (isLimitedPlan) {
+      const planName = isProTrialPlan ? 'Pro Trial' : 'Hobby';
       const url = `https://vercel.com/${teamSlug}/~/settings/billing`;
       output.log(
         `You've reached the microfrontends group limit for ${planName}. Upgrade to Pro to create more groups.`
@@ -99,12 +100,10 @@ export default async function createGroup(client: Client): Promise<number> {
     0
   );
   const freeProjects = 2;
-  const plan = team.billing.plan;
-  const isLimitedPlan = plan === 'hobby' || plan === 'trial';
 
   // A new group requires at least 1 project, so check early before prompting
   if (isLimitedPlan && existingMfeProjectCount + 1 > freeProjects) {
-    const planName = plan === 'hobby' ? 'Hobby' : 'Trial';
+    const planName = isProTrialPlan ? 'Pro Trial' : 'Hobby';
     const url = `https://vercel.com/${teamSlug}/~/settings/billing`;
     output.log(
       `You've reached the microfrontends project limit for ${planName}. Upgrade to Pro to add more projects.`
@@ -248,7 +247,7 @@ export default async function createGroup(client: Client): Promise<number> {
 
   let defaultRoute: string;
   if (defaultRouteFlag) {
-    const validation = validateRoutePath(defaultRouteFlag);
+    const validation = validateDefaultRoute(defaultRouteFlag);
     if (validation !== true) {
       output.error(validation);
       return 1;
@@ -264,7 +263,7 @@ export default async function createGroup(client: Client): Promise<number> {
   for (const project of otherProjects) {
     const route = await client.input.text({
       message: `Default route for "${project.name}":`,
-      validate: validateRoutePath,
+      validate: validateDefaultRoute,
     });
     otherApplications.push({ projectId: project.id, defaultRoute: route });
   }
@@ -306,7 +305,7 @@ export default async function createGroup(client: Client): Promise<number> {
   output.log('');
   if (totalAfter <= freeProjects) {
     output.log(
-      `This group is within the free tier and will not add charges to ${chalk.bold(teamSlug)}'s bill.`
+      `This group is within the free tier, so no project fee will be charged to ${chalk.bold(teamSlug)}'s bill. Request fees still apply for microfrontends routed requests.`
     );
   } else {
     const newPaidProjects = Math.min(

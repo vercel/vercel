@@ -26,10 +26,7 @@ export default async function deleteGroup(client: Client): Promise<number> {
     return 1;
   }
 
-  const autoConfirm = !!parsedArgs.flags['--yes'];
-  const link = await ensureLink('microfrontends', client, client.cwd, {
-    autoConfirm,
-  });
+  const link = await ensureLink('microfrontends', client, client.cwd);
   if (typeof link === 'number') {
     return link;
   }
@@ -140,28 +137,24 @@ export default async function deleteGroup(client: Client): Promise<number> {
   output.log(chalk.red('This action is not reversible.'));
   output.log('');
 
-  if (!autoConfirm) {
-    if (!client.stdin.isTTY) {
-      output.error(
-        'Confirmation required. Use --yes to skip confirmation in non-interactive mode.'
-      );
-      return 1;
-    }
+  if (!client.stdin.isTTY) {
+    output.error('This command must be run interactively to confirm deletion.');
+    return 1;
+  }
 
-    const typedName = await client.input.text({
-      message: `Type ${chalk.bold(groupName)} to confirm deletion:`,
-      validate: (val: string) => {
-        if (val !== groupName) {
-          return `You must type "${groupName}" to confirm.`;
-        }
-        return true;
-      },
-    });
+  const typedName = await client.input.text({
+    message: `Type ${chalk.bold(groupName)} to confirm deletion:`,
+    validate: (val: string) => {
+      if (val !== groupName) {
+        return `You must type "${groupName}" to confirm.`;
+      }
+      return true;
+    },
+  });
 
-    if (typedName !== groupName) {
-      output.log('Aborted.');
-      return 0;
-    }
+  if (typedName !== groupName) {
+    output.log('Aborted.');
+    return 0;
   }
 
   const deleteStamp = stamp();

@@ -12,21 +12,17 @@ import { isAPIError } from '../../util/errors-ts';
 import type { MicrofrontendsGroupsResponse } from './types';
 
 export default async function removeFromGroup(client: Client): Promise<number> {
-  let parsedArgs;
   const flagsSpecification = getFlagsSpecification(
     removeFromGroupSubcommand.options
   );
   try {
-    parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
+    parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (error) {
     printError(error);
     return 1;
   }
 
-  const autoConfirm = !!parsedArgs.flags['--yes'];
-  const link = await ensureLink('microfrontends', client, client.cwd, {
-    autoConfirm,
-  });
+  const link = await ensureLink('microfrontends', client, client.cwd);
   if (typeof link === 'number') {
     return link;
   }
@@ -84,37 +80,48 @@ export default async function removeFromGroup(client: Client): Promise<number> {
     `After removal, "${project.name}" will no longer be a child app in the group and will not be part of the composed application.`
   );
 
-  // Warn if the microfrontends.json config still references this project
+  // Warn and confirm if the microfrontends.json config still references this project
   const config = projectGroup.config;
-  if (config?.applications?.[project.name]) {
+  const isReferencedInConfig = !!config?.applications?.[project.name];
+  if (isReferencedInConfig) {
     output.log('');
     output.warn(
-      `The microfrontends.json configuration still contains an entry for "${project.name}". You will need to remove it from the configuration after this operation.`
+      `The microfrontends.json configuration still contains an entry for "${project.name}".`
     );
-    output.log(
-      chalk.dim(
-        `  Related config to remove:\n${JSON.stringify({ [project.name]: config.applications[project.name] }, null, 2).replace(/^/gm, '  ')}`
-      )
+    output.warn(
+      `Removing this project will cause other microfrontends projects in the group to fail deploying until the configuration is updated.`
     );
+
+    if (!client.stdin.isTTY) {
+      output.error(
+        'Cannot remove a project that is still referenced in microfrontends.json in non-interactive mode.'
+      );
+      return 1;
+    }
+    output.log('');
+    const configConfirmed = await client.input.confirm(
+      `Remove "${project.name}" even though it is still referenced in microfrontends.json?`,
+      false
+    );
+    if (!configConfirmed) {
+      output.log('Aborted.');
+      return 0;
+    }
   }
 
   output.log('');
 
-  if (!autoConfirm) {
-    if (!client.stdin.isTTY) {
-      output.error(
-        'Confirmation required. Use --yes to skip confirmation in non-interactive mode.'
-      );
-      return 1;
-    }
-    const confirmed = await client.input.confirm(
-      `Remove "${project.name}" from "${projectGroup.group.name}"?`,
-      false
-    );
-    if (!confirmed) {
-      output.log('Aborted.');
-      return 0;
-    }
+  if (!client.stdin.isTTY) {
+    output.error('This command must be run interactively to confirm removal.');
+    return 1;
+  }
+  const confirmed = await client.input.confirm(
+    `Remove "${project.name}" from "${projectGroup.group.name}"?`,
+    false
+  );
+  if (!confirmed) {
+    output.log('Aborted.');
+    return 0;
   }
 
   const removeStamp = stamp();
@@ -130,7 +137,7 @@ export default async function removeFromGroup(client: Client): Promise<number> {
         },
       }
     );
-  } catch (error: unknown) {
+  } catch (error) {
     output.stopSpinner();
     if (isAPIError(error) && error.status === 403) {
       output.error(
@@ -147,7 +154,7 @@ export default async function removeFromGroup(client: Client): Promise<number> {
   output.success(
     `Project "${project.name}" removed from group "${projectGroup.group.name}" ${chalk.gray(removeStamp())}`
   );
-  if (config?.applications?.[project.name]) {
+  if (isReferencedInConfig) {
     output.log(
       `Remember to remove "${project.name}" from your microfrontends.json configuration.`
     );

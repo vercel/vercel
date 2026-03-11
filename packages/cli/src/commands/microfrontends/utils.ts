@@ -5,7 +5,7 @@
  * Returns `true` if valid, or an error message string if invalid.
  * This signature is compatible with `client.input.text({ validate })`.
  */
-export function validateRoutePath(path: string): true | string {
+export function validateDefaultRoute(path: string): true | string {
   if (!path || !path.startsWith('/')) {
     return 'Route must start with /';
   }

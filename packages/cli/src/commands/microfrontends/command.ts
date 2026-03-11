@@ -9,10 +9,6 @@ export const createGroupSubcommand = {
   arguments: [],
   options: [
     {
-      ...yesOption,
-      description: 'Skip project linking confirmation',
-    },
-    {
       name: 'name',
       shorthand: null,
       type: String,
@@ -57,13 +53,9 @@ export const addToGroupSubcommand = {
   name: 'add-to-group',
   aliases: [],
   description:
-    'Add the current project to a microfrontends group so it can be independently deployed as part of a cohesive application',
+    'Add the current project to a microfrontends group so it can be independently deployed as part of the microfrontends group',
   arguments: [],
   options: [
-    {
-      ...yesOption,
-      description: 'Skip project linking confirmation',
-    },
     {
       name: 'group',
       shorthand: null,
@@ -97,20 +89,11 @@ export const removeFromGroupSubcommand = {
   description:
     'Remove the current project from its microfrontends group so it is no longer part of the composed application',
   arguments: [],
-  options: [
-    {
-      ...yesOption,
-      description: 'Skip confirmation prompt',
-    },
-  ],
+  options: [],
   examples: [
     {
       name: 'Remove current project from its group interactively',
       value: `${packageName} microfrontends remove-from-group`,
-    },
-    {
-      name: 'Remove current project from its group without confirmation',
-      value: `${packageName} mf remove-from-group --yes`,
     },
   ],
 } as const;
@@ -122,10 +105,6 @@ export const deleteGroupSubcommand = {
     'Delete a microfrontends group and all of its settings. This action is not reversible.',
   arguments: [],
   options: [
-    {
-      ...yesOption,
-      description: 'Skip confirmation prompts',
-    },
     {
       name: 'group',
       shorthand: null,
@@ -141,7 +120,7 @@ export const deleteGroupSubcommand = {
     },
     {
       name: 'Delete a microfrontends group with flags',
-      value: `${packageName} mf delete-group --group="My Group" --yes`,
+      value: `${packageName} mf delete-group --group="My Group"`,
     },
   ],
 } as const;

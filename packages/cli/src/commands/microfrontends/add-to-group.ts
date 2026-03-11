@@ -13,7 +13,7 @@ import type {
   MicrofrontendsGroupResponse,
   MicrofrontendsGroupsResponse,
 } from './types';
-import { validateRoutePath } from './utils';
+import { validateDefaultRoute } from './utils';
 
 export default async function addToGroup(client: Client): Promise<number> {
   let parsedArgs;
@@ -27,10 +27,7 @@ export default async function addToGroup(client: Client): Promise<number> {
     return 1;
   }
 
-  const autoConfirm = !!parsedArgs.flags['--yes'];
-  const link = await ensureLink('microfrontends', client, client.cwd, {
-    autoConfirm,
-  });
+  const link = await ensureLink('microfrontends', client, client.cwd);
   if (typeof link === 'number') {
     return link;
   }
@@ -85,10 +82,12 @@ export default async function addToGroup(client: Client): Promise<number> {
   const freeProjects = 2;
   const totalAfter = existingMfeProjectCount + 1;
   const plan = team.billing.plan;
-  const isLimitedPlan = plan === 'hobby' || plan === 'trial';
+  const isProTrialPlan =
+    team.billing.plan === 'pro' && team.billing.status === 'trialing';
+  const isLimitedPlan = isProTrialPlan || plan === 'hobby';
 
   if (isLimitedPlan && totalAfter > freeProjects) {
-    const planName = plan === 'hobby' ? 'Hobby' : 'Trial';
+    const planName = isProTrialPlan ? 'Pro Trial' : 'Hobby';
     const url = `https://vercel.com/${teamSlug}/~/settings/billing`;
     output.log(
       `You've reached the microfrontends project limit for ${planName}. Upgrade to Pro to add more projects.`
@@ -133,9 +132,8 @@ export default async function addToGroup(client: Client): Promise<number> {
   }
 
   if (selectedGroup.projects.length >= maxMicrofrontendsPerGroup) {
-    const plan = team.billing.plan;
-    if (plan === 'hobby' || plan === 'trial') {
-      const planName = plan === 'hobby' ? 'Hobby' : 'Trial';
+    if (isLimitedPlan) {
+      const planName = isProTrialPlan ? 'Pro Trial' : 'Hobby';
       const url = `https://vercel.com/${teamSlug}/~/settings/billing`;
       output.log(
         `You've reached the microfrontends project limit for ${planName}. Upgrade to Pro to add more projects.`
@@ -151,7 +149,7 @@ export default async function addToGroup(client: Client): Promise<number> {
 
   let defaultRoute: string | undefined;
   if (defaultRouteFlag) {
-    const validation = validateRoutePath(defaultRouteFlag);
+    const validation = validateDefaultRoute(defaultRouteFlag);
     if (validation !== true) {
       output.error(validation);
       return 1;
@@ -163,7 +161,7 @@ export default async function addToGroup(client: Client): Promise<number> {
     );
     defaultRoute = await client.input.text({
       message: 'Default route (e.g. /docs):',
-      validate: validateRoutePath,
+      validate: validateDefaultRoute,
     });
   }
 
@@ -191,7 +189,7 @@ export default async function addToGroup(client: Client): Promise<number> {
   output.log('');
   if (totalAfter <= freeProjects) {
     output.log(
-      `Adding "${project.name}" is within the free tier and will not add charges to ${chalk.bold(teamSlug)}'s bill.`
+      `Adding "${project.name}" is within the free tier, so no project fee will be charged to ${chalk.bold(teamSlug)}'s bill. Request fees still apply for microfrontends routed requests.`
     );
   } else {
     output.log(
