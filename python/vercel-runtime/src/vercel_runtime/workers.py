@@ -48,6 +48,15 @@ def _uses_vercel_celery_broker(broker_url: str | None) -> bool:
     return normalized.startswith(VERCEL_CELERY_BROKER_URL)
 
 
+def _install_vercel_celery_transport_alias() -> None:
+    with contextlib.suppress(Exception):
+        from vercel.workers.celery.transport import (  # type: ignore[import-untyped]  # noqa: PLC0415  # pyright: ignore[reportMissingImports]
+            install_kombu_transport_alias,
+        )
+
+        install_kombu_transport_alias("vercel")
+
+
 def prepare_celery_environment() -> None:
     has_worker_svcs = has_worker_services()
     if has_worker_svcs and "CELERY_BROKER_URL" not in os.environ:
@@ -57,11 +66,7 @@ def prepare_celery_environment() -> None:
     if not has_worker_svcs and not _uses_vercel_celery_broker(broker_url):
         return
 
-    with contextlib.suppress(Exception):
-        from vercel.workers.celery.transport import (  # type: ignore[import-untyped]  # noqa: PLC0415  # pyright: ignore[reportMissingImports]
-            install_kombu_transport_alias,
-        )
-        install_kombu_transport_alias("vercel")
+    _install_vercel_celery_transport_alias()
 
 
 def is_celery_app(candidate: object) -> bool:
