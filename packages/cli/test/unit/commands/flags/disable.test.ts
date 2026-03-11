@@ -357,7 +357,7 @@ describe('flags disable', () => {
     });
   });
 
-  it('resolves variant by label', async () => {
+  it('does not resolve explicit variants by label', async () => {
     // Change variant IDs to random strings (like real API)
     testFlags[0].variants = [
       { id: 'uuid_style_id_1', value: false, label: 'Disabled' },
@@ -374,13 +374,10 @@ describe('flags disable', () => {
       'Disabled'
     );
     const exitCode = await flags(client);
-    expect(exitCode).toEqual(0);
-    const output = client.stderr.getFullOutput();
-    expect(stripAnsi(output)).toContain('Serving variant: false Disabled');
-    expect(output).toContain(chalk.dim('Disabled'));
-    expect(testFlags[0].environments.production).toMatchObject({
-      pausedOutcome: { type: 'variant', variantId: 'uuid_style_id_1' },
-    });
+    expect(exitCode).toEqual(1);
+    expect(client.stderr.getFullOutput()).toContain(
+      'You can specify a variant by its ID or value.'
+    );
   });
 
   it('shows helpful error with available variants when not found', async () => {
@@ -435,8 +432,9 @@ describe('flags disable', () => {
     });
   });
 
-  it('warns for non-boolean flags with helpful message', async () => {
+  it('warns for non-boolean flags with variants and non-interactive set guidance', async () => {
     // testFlags[1] is a string flag
+    (client.stdin as any).isTTY = false;
     client.setArgv(
       'flags',
       'disable',
@@ -451,7 +449,14 @@ describe('flags disable', () => {
     expect(output).toContain('only works with boolean flags');
     // Should identify the flag type
     expect(output).toContain('string');
-    expect(output).toContain('You can update it on the dashboard');
+    expect(output).toContain('Set a specific variant instead');
+    expect(output).toContain(
+      `vercel flags set ${testFlags[1].slug} --environment production --variant <VARIANT>`
+    );
+    expect(output).toContain('Available variants:');
+    expect(output).toContain('"control" Control');
+    expect(output).toContain('"variant-a" Variant A');
+    expect(output).toContain(`vercel flags inspect ${testFlags[1].slug}`);
     // Should show dashboard link
     expect(output).toContain('https://vercel.com/');
     expect(output).toContain(testFlags[1].slug);

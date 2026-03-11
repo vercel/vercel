@@ -11,16 +11,18 @@ import {
   formatVariantForDisplay,
   resolveVariant,
 } from '../../util/flags/resolve-variant';
-import { getFlagDashboardUrl } from '../../util/flags/dashboard-url';
+import { logNonBooleanFlagGuidance } from '../../util/flags/log-non-boolean-guidance';
+import { normalizeOptionalInput } from '../../util/flags/normalize-optional-input';
 import {
-  normalizeOptionalInput,
-  resolveOptionalInput,
-} from '../../util/flags/normalize-optional-input';
+  buildPausedEnvironmentConfig,
+  getBooleanVariant,
+  isPausingEnvironmentToVariant,
+  resolveFlagEnvironment,
+  resolveFlagUpdateMessage,
+} from '../../util/flags/environment-variant';
 import output from '../../output-manager';
 import { FlagsDisableTelemetryClient } from '../../util/telemetry/commands/flags/disable';
 import { disableSubcommand } from './command';
-
-const VALID_ENVIRONMENTS = ['production', 'preview', 'development'];
 
 export default async function disable(
   client: Client,
@@ -92,121 +94,66 @@ export default async function disable(
 
     // Only boolean flags can be enabled/disabled via CLI
     if (flag.kind !== 'boolean') {
-      const dashboardUrl = getFlagDashboardUrl(
-        link.org.slug,
-        project.name,
-        flag.slug
-      );
-      output.warn(
-        `The ${getCommandName('flags disable')} command only works with boolean flags.`
-      );
-      output.log(
-        `Flag ${chalk.bold(flag.slug)} is a ${chalk.cyan(flag.kind)} flag. You can update it on the dashboard:`
-      );
-      output.log(`  ${chalk.cyan(dashboardUrl)}`);
+      logNonBooleanFlagGuidance(flag, {
+        attemptedSubcommand: 'disable',
+        environment,
+        isInteractive: Boolean(client.stdin.isTTY),
+        teamSlug: link.org.slug,
+        projectName: project.name,
+      });
       return 0;
     }
 
-    // If environment not specified, prompt for it
-    if (!environment) {
-      if (!client.stdin.isTTY) {
-        output.error(
-          'Missing required flag --environment. Use --environment <ENV>, or run interactively in a terminal.'
-        );
-        return 1;
-      }
-
-      const availableEnvs = VALID_ENVIRONMENTS.filter(env =>
-        Object.prototype.hasOwnProperty.call(flag.environments, env)
-      );
-
-      if (availableEnvs.length === 0) {
-        output.error('No valid environments found for this flag');
-        return 1;
-      }
-
-      environment = await client.input.select({
-        message: 'Select an environment to disable the flag in:',
-        choices: availableEnvs.map(env => {
-          const config = flag.environments[env];
-          const isActive = config?.active ?? false;
-          const status = isActive
-            ? chalk.green('active')
-            : chalk.yellow('paused');
-          return {
-            name: `${env} (${status})`,
-            value: env,
-          };
-        }),
-      });
-    }
-
-    if (!VALID_ENVIRONMENTS.includes(environment)) {
-      output.error(
-        `Invalid environment: ${environment}. Must be one of: ${VALID_ENVIRONMENTS.join(', ')}`
-      );
-      return 1;
-    }
+    environment = await resolveFlagEnvironment(
+      client,
+      flag,
+      environment,
+      'Select an environment to disable the flag in:'
+    );
 
     const envConfig = flag.environments[environment];
-    if (!envConfig) {
-      output.error(`Environment ${environment} not found for this flag`);
-      return 1;
-    }
+    let selectedVariant = getBooleanVariant(flag, false);
 
-    const defaultDisabledVariantId = getDefaultDisabledVariantId(flag);
-    let selectedVariantId = variantId;
-
-    if (selectedVariantId) {
-      // Resolve the variant from user input (can be ID, value, or label)
-      const result = resolveVariant(selectedVariantId, flag.variants);
+    if (variantId) {
+      const result = resolveVariant(variantId, flag.variants);
       if (result.error) {
         output.error(result.error);
         return 1;
       }
-      selectedVariantId = result.variant!.id;
-    } else {
-      selectedVariantId = defaultDisabledVariantId;
+
+      selectedVariant = result.variant!;
     }
 
-    if (
-      !envConfig.active &&
-      envConfig.pausedOutcome?.variantId === selectedVariantId
-    ) {
+    if (isPausingEnvironmentToVariant(envConfig, selectedVariant.id)) {
       output.warn(
         `Flag ${chalk.bold(flag.slug)} is already disabled in ${environment}`
       );
       return 0;
     }
 
-    envConfig.active = false;
-    envConfig.pausedOutcome = {
-      type: 'variant' as const,
-      variantId: selectedVariantId,
-    };
-    const updateMessage = await resolveOptionalInput(
+    const updateMessage = await resolveFlagUpdateMessage(
       client,
       message,
-      getDefaultDisableMessage(environment),
-      'Enter a message for this update:'
+      getDefaultDisableMessage(environment)
     );
 
     output.spinner(`Disabling flag in ${environment}...`);
     await updateFlag(client, project.id, flagArg, {
       environments: {
-        [environment]: envConfig,
+        [environment]: buildPausedEnvironmentConfig(
+          envConfig,
+          selectedVariant.id
+        ),
       },
       message: updateMessage,
     });
     output.stopSpinner();
 
-    const variant = flag.variants.find(v => v.id === selectedVariantId);
-
     output.success(
       `Feature flag ${chalk.bold(flag.slug)} has been disabled in ${chalk.bold(environment)}`
     );
     output.log(
-      `  ${chalk.dim('Serving variant:')} ${variant ? formatVariantForDisplay(variant) : selectedVariantId}`
+      `  ${chalk.dim('Serving variant:')} ${formatVariantForDisplay(selectedVariant)}`
     );
   } catch (err) {
     output.stopSpinner();
@@ -219,19 +166,4 @@ export default async function disable(
 
 function getDefaultDisableMessage(environment: string): string {
   return `Disabled for ${environment} via CLI`;
-}
-
-function getDefaultDisabledVariantId(flag: {
-  slug: string;
-  variants: Array<{ id: string; value: string | number | boolean }>;
-}): string {
-  const falseVariant = flag.variants.find(variant => variant.value === false);
-
-  if (!falseVariant) {
-    throw new Error(
-      `Flag ${chalk.bold(flag.slug)} is missing the standard boolean variants`
-    );
-  }
-
-  return falseVariant.id;
 }

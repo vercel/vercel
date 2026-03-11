@@ -65,22 +65,15 @@ export function printFlagDetails({
     }
   }
 
-  const envOrder = ['production', 'preview', 'development'];
-  const sortedEnvs = Object.entries(flag.environments).sort(([a], [b]) => {
-    const aIndex = envOrder.indexOf(a);
-    const bIndex = envOrder.indexOf(b);
+  printFlagEnvironmentDetails(flag, settings);
+}
 
-    if (aIndex === -1 && bIndex === -1) {
-      return a.localeCompare(b);
-    }
-    if (aIndex === -1) {
-      return 1;
-    }
-    if (bIndex === -1) {
-      return -1;
-    }
-    return aIndex - bIndex;
-  });
+export function printFlagEnvironmentDetails(
+  flag: Flag,
+  settings?: FlagSettings,
+  environments?: string[]
+) {
+  const sortedEnvs = getSortedEnvironmentEntries(flag, environments);
 
   output.print(`\n  ${chalk.dim('Environments:')}\n`);
   for (const [envName, envConfig] of sortedEnvs) {
@@ -184,6 +177,33 @@ export function printFlagDetails({
   output.print('\n');
 }
 
+function getSortedEnvironmentEntries(
+  flag: Flag,
+  environments?: string[]
+): [string, FlagEnvironmentConfig][] {
+  const envOrder = ['production', 'preview', 'development'];
+  const selectedEnvironments = environments ? new Set(environments) : undefined;
+
+  return Object.entries(flag.environments)
+    .filter(([envName]) =>
+      selectedEnvironments ? selectedEnvironments.has(envName) : true
+    )
+    .sort(([a], [b]) => {
+      const aIndex = envOrder.indexOf(a);
+      const bIndex = envOrder.indexOf(b);
+
+      if (aIndex === -1 && bIndex === -1) {
+        return a.localeCompare(b);
+      }
+      if (aIndex === -1) {
+        return 1;
+      }
+      if (bIndex === -1) {
+        return -1;
+      }
+      return aIndex - bIndex;
+    });
+}
 function resolveTargetingLabel(
   settings: FlagSettings | undefined,
   entityKind: string,

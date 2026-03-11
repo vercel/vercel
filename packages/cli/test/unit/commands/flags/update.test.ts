@@ -1,3 +1,4 @@
+import chalk from 'chalk';
 import { describe, expect, it, beforeEach, vi } from 'vitest';
 import flags from '../../../../src/commands/flags';
 import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
@@ -368,7 +369,7 @@ describe('flags update', () => {
     );
   });
 
-  it('resolves selectors by label', async () => {
+  it('does not resolve explicit selectors by label', async () => {
     (client.stdin as any).isTTY = false;
     client.setArgv(
       'flags',
@@ -384,12 +385,10 @@ describe('flags update', () => {
 
     const exitCode = await flags(client);
 
-    expect(exitCode).toEqual(0);
-    expect(testFlags[1].variants[0]).toMatchObject({
-      id: 'default',
-      value: 'welcome-back',
-      label: 'Welcome back',
-    });
+    expect(exitCode).toEqual(1);
+    expect(client.stderr.getFullOutput()).toContain(
+      'You can specify a variant by its ID or value.'
+    );
   });
 
   it('prompts for missing value and label when variant is provided', async () => {
@@ -437,6 +436,21 @@ describe('flags update', () => {
     const exitCode = await flags(client);
 
     expect(exitCode).toEqual(0);
+    expect(selectMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'Select a variant to update:',
+        choices: [
+          {
+            name: `"control" Control ${chalk.dim('[id: default]')}`,
+            value: 'default',
+          },
+          {
+            name: `"variant-a" Variant A ${chalk.dim('[id: variant-a]')}`,
+            value: 'variant-a',
+          },
+        ],
+      })
+    );
     expect(testFlags[1].variants[0]).toMatchObject({
       id: 'default',
       value: 'welcome-back',
