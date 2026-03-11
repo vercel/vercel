@@ -1,5 +1,15 @@
 # @vercel/python
 
+## 6.23.0
+
+### Minor Changes
+
+- Run Django's `collectstatic` during Vercel builds, serving static files from the CDN and excluding them from the Lambda bundle. ([#15391](https://github.com/vercel/vercel/pull/15391))
+
+### Patch Changes
+
+- Leave 10mb of space for src code before packing lambda. ([#15475](https://github.com/vercel/vercel/pull/15475))
+
 ## 6.22.1
 
 ### Patch Changes
