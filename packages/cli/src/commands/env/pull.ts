@@ -17,7 +17,6 @@ import {
 } from '../../util/env/diff-env-files';
 import { isErrnoException } from '@vercel/error-utils';
 import { addToGitIgnore } from '../../util/link/add-to-gitignore';
-import JSONparse from 'json-parse-better-errors';
 import { formatProject } from '../../util/projects/format-project';
 import type { ProjectLinked } from '@vercel-internals/types';
 import output from '../../output-manager';
@@ -306,17 +305,13 @@ function escapeValue(value: string | undefined) {
 }
 
 function getDownloadedEnv(records: Record<string, string | undefined>) {
-  // Removes any double quotes from `records`, if they exist.
-  // We need this because double quotes are stripped from the local .env file,
-  // but `records` is already in the form of a JSON object that doesn't filter
-  // double quotes.
-  return JSONparse(
-    JSON.stringify(
-      Object.fromEntries(
-        Object.entries(records).filter(
-          ([key]) => !VARIABLES_TO_IGNORE.includes(key)
-        )
-      )
-    ).replace(/\\"/g, '')
+  // Removes any double quotes from values, if they exist.
+  // We need this because double quotes are stripped from the local .env file
+  // (by createEnvObject), so we strip them here too to ensure consistent
+  // comparison between local and remote values.
+  return Object.fromEntries(
+    Object.entries(records)
+      .filter(([key]) => !VARIABLES_TO_IGNORE.includes(key))
+      .map(([key, value]) => [key, value?.replace(/"/g, '')])
   ) as Record<string, string | undefined>;
 }

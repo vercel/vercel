@@ -2,10 +2,11 @@ import assert from 'assert';
 import { describe, expect, it, vi } from 'vitest';
 import fs from 'fs-extra';
 import path from 'path';
+import { parse } from 'dotenv';
 import pull from '../../../../src/commands/pull';
 import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
 import { client } from '../../../mocks/client';
-import { defaultProject, useProject } from '../../../mocks/project';
+import { defaultProject, envs, useProject } from '../../../mocks/project';
 import { useTeams, createTeam } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
 
@@ -91,6 +92,46 @@ describe('pull', () => {
     );
     const devFileHasDevEnv = rawDevEnv.toString().includes('SPECIAL_FLAG');
     expect(devFileHasDevEnv).toBeTruthy();
+  });
+
+  it('should handle preview env values ending with a backslash', async () => {
+    const cwd = setupUnitFixture('vercel-pull-next');
+    useUser();
+    const teams = useTeams('team_dummy');
+    assert(Array.isArray(teams));
+    useProject(
+      {
+        ...defaultProject,
+        id: 'vercel-pull-next',
+        name: 'vercel-pull-next',
+      },
+      [
+        ...envs,
+        {
+          type: 'encrypted',
+          id: '781dt89g8r2h789g',
+          key: 'PATH_WITH_BACKSLASH',
+          value: 'C:\\Users\\foo\\',
+          target: ['preview'],
+          configurationId: null,
+          updatedAt: 1557241361455,
+          createdAt: 1557241361455,
+        },
+      ]
+    );
+    client.setArgv('pull', '--environment=preview', '--yes', cwd);
+    const exitCodePromise = pull(client);
+    await expect(client.stderr).toOutput(
+      `Downloading \`preview\` Environment Variables for ${teams[0].slug}/vercel-pull-next`
+    );
+    await expect(exitCodePromise).resolves.toEqual(0);
+
+    const rawPreviewEnv = await fs.readFile(
+      path.join(cwd, '.vercel', '.env.preview.local'),
+      'utf8'
+    );
+    const parsedPreviewEnv = parse(rawPreviewEnv);
+    expect(parsedPreviewEnv['PATH_WITH_BACKSLASH']).toEqual('C:\\Users\\foo\\');
   });
 
   it('should fail with message to pull without a link and without --env', async () => {
