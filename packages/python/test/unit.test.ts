@@ -39,6 +39,7 @@ vi.mock('../src/install', async () => {
 
 vi.mock('../src/django', () => ({
   getDjangoSettings: vi.fn(async () => null),
+  runDjangoCollectStatic: vi.fn(async () => null),
 }));
 
 // Imports after mocks are set up (vitest hoists vi.mock calls)
@@ -1253,7 +1254,8 @@ describe('Django entrypoint discovery', () => {
 
   it('build() resolves Django entrypoint from WSGI_APPLICATION (hello.wsgi.application -> hello/wsgi.py)', async () => {
     vi.mocked(getDjangoSettings).mockResolvedValueOnce({
-      WSGI_APPLICATION: 'hello.wsgi.application',
+      settingsModule: 'hello.settings',
+      djangoSettings: { WSGI_APPLICATION: 'hello.wsgi.application' },
     });
     const workPath = path.join(tmpdir(), `python-django-wsgi-${Date.now()}`);
     fs.mkdirSync(workPath, { recursive: true });
@@ -1327,7 +1329,8 @@ describe('Django entrypoint discovery', () => {
 
   it('build() returns settings module even when WSGI path is not in files', async () => {
     vi.mocked(getDjangoSettings).mockResolvedValueOnce({
-      WSGI_APPLICATION: 'hello.wsgi.application',
+      settingsModule: 'hello.settings',
+      djangoSettings: { WSGI_APPLICATION: 'hello.wsgi.application' },
     });
     const workPath = path.join(
       tmpdir(),
@@ -1367,7 +1370,8 @@ describe('Django entrypoint discovery', () => {
 
   it('build() resolves Django entrypoint from a subdirectory', async () => {
     vi.mocked(getDjangoSettings).mockResolvedValueOnce({
-      WSGI_APPLICATION: 'config.wsgi.application',
+      settingsModule: 'config.settings',
+      djangoSettings: { WSGI_APPLICATION: 'config.wsgi.application' },
     });
     const workPath = path.join(
       tmpdir(),
@@ -1411,7 +1415,8 @@ describe('Django entrypoint discovery', () => {
 
   it('build() discovers Django entrypoint from WSGI_APPLICATION when configured entrypoint is missing', async () => {
     vi.mocked(getDjangoSettings).mockResolvedValueOnce({
-      WSGI_APPLICATION: 'hello.world.application',
+      settingsModule: 'hello.settings',
+      djangoSettings: { WSGI_APPLICATION: 'hello.world.application' },
     });
     const workPath = path.join(tmpdir(), `python-django-build-${Date.now()}`);
     fs.mkdirSync(workPath, { recursive: true });
