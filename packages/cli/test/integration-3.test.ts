@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 import ms from 'ms';
 import path from 'path';
 import { once } from 'node:events';
@@ -43,7 +42,6 @@ const waitForDeployment = async (href: RequestInfo) => {
   const start = Date.now();
   const max = ms('4m');
 
-  // eslint-disable-next-line
   while (true) {
     const response = await nodeFetch(href, { redirect: 'manual' });
     const text = await response.text();

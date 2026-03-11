@@ -23,7 +23,7 @@ jobs:
         with:
           fetch-depth: 0
           ref: main
-          token: ${{ secrets.GH_TOKEN_PULL_REQUESTS }}
+          token: ${{ secrets.VERCEL_CLI_RELEASE_BOT_TOKEN }}
       - run: git fetch origin ${{ github.event.pull_request.head.sha }}:pr-${{ github.event.pull_request.number }}
       - run: git checkout pr-${{ github.event.pull_request.number }}
       - name: install pnpm@8.3.1
@@ -55,8 +55,8 @@ jobs:
       - run: pnpm install
       - name: Biome lint
         run: pnpm run lint
-      - name: Biome format check (JS/TS/JSON)
-        run: pnpm run biome:format
+      - name: Biome format check
+        run: pnpm run format:check
       - name: Check dependency versions
         run: pnpm exec syncpack lint
       - run: pnpm run build

@@ -120,9 +120,7 @@ beforeAll(async () => {
     const team = await teamPromise;
     await prepareE2EFixtures(team.slug, binaryPath);
   } catch (err) {
-    // eslint-disable-next-line no-console
     console.log('Failed test suite `beforeAll`');
-    // eslint-disable-next-line no-console
     console.log(err);
 
     // force test suite to actually stop
@@ -851,7 +849,6 @@ test('`vc --debug project ls` should output the projects listing', async () => {
   expect(stderr).toContain('> Projects found under');
 });
 
-// eslint-disable-next-line jest/no-disabled-tests
 test.skip(
   'deploy gatsby twice and print cached directories',
   async () => {

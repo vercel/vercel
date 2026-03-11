@@ -1032,7 +1032,7 @@ async function handleDefaultDeploy(
   const deployStamp = stamp();
   let deployment = null;
   const noWait = !!parsedArguments.flags['--no-wait'];
-  const withFullLogs = parsedArguments.flags['--logs'] ? true : false;
+  const withFullLogs = !!parsedArguments.flags['--logs'];
 
   const localConfigurationOverrides = pickOverrides(localConfig);
 

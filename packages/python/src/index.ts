@@ -1,5 +1,5 @@
 import fs from 'fs';
-import { join, dirname, basename, parse } from 'path';
+import { join, dirname, basename, parse, relative } from 'path';
 import {
   VERCEL_RUNTIME_VERSION,
   VERCEL_WORKERS_VERSION,
@@ -39,15 +39,99 @@ import { resolvePythonVersion, pythonVersionString } from './version';
 import { startDevServer } from './start-dev-server';
 import { runPyprojectScript, ensureVenv, createVenvEnv } from './utils';
 import { runQuirks } from './quirks';
+import {
+  getDjangoSettings,
+  runDjangoCollectStatic,
+  type DjangoCollectStaticResult,
+} from './django';
+import { containsTopLevelCallable } from '@vercel/python-analysis';
 
 const writeFile = fs.promises.writeFile;
 
 import {
   PYTHON_CANDIDATE_ENTRYPOINTS,
   detectPythonEntrypoint,
+  type DetectedPythonEntrypoint,
 } from './entrypoint';
 
 export const version = 3;
+
+interface FrameworkHookContext {
+  pythonEnv: NodeJS.ProcessEnv;
+  projectDir: string;
+  workPath: string;
+  venvPath: string;
+  entrypoint: string;
+  detected: DetectedPythonEntrypoint | undefined;
+}
+
+interface FrameworkHookResult {
+  entrypoint?: string;
+}
+
+interface DjangoFrameworkHookResult extends FrameworkHookResult {
+  djangoStatic: DjangoCollectStaticResult | null;
+}
+
+type FrameworkHook = (
+  ctx: FrameworkHookContext
+) => Promise<FrameworkHookResult | void>;
+
+export async function runFrameworkHook(
+  framework: string | undefined,
+  ctx: FrameworkHookContext
+): Promise<FrameworkHookResult | void> {
+  const hook = framework
+    ? frameworkHooks[framework as PythonFramework]
+    : undefined;
+  return hook?.(ctx);
+}
+
+const frameworkHooks: Partial<Record<PythonFramework, FrameworkHook>> = {
+  django: async ({
+    pythonEnv,
+    projectDir,
+    workPath,
+    venvPath,
+    detected,
+  }): Promise<DjangoFrameworkHookResult | void> => {
+    if (detected?.baseDir === undefined) {
+      debug('Django hook: no manage.py detected, skipping');
+      return;
+    }
+    const settingsResult = await getDjangoSettings(projectDir, pythonEnv);
+    debug(`Django settings: ${JSON.stringify(settingsResult)}`);
+    if (!settingsResult) return;
+    const { djangoSettings, settingsModule } = settingsResult;
+
+    let entrypoint: string | undefined;
+    const baseDir = detected?.baseDir ?? '';
+    const asgiApp = djangoSettings['ASGI_APPLICATION'];
+    if (typeof asgiApp === 'string') {
+      const rel = `${asgiApp.split('.').slice(0, -1).join('/')}.py`;
+      entrypoint = baseDir ? `${baseDir}/${rel}` : rel;
+      debug(`Django hook: ASGI entrypoint: ${entrypoint}`);
+    } else {
+      const wsgiApp = djangoSettings['WSGI_APPLICATION'];
+      if (typeof wsgiApp === 'string') {
+        const rel = `${wsgiApp.split('.').slice(0, -1).join('/')}.py`;
+        entrypoint = baseDir ? `${baseDir}/${rel}` : rel;
+        debug(`Django hook: WSGI entrypoint: ${entrypoint}`);
+      }
+    }
+
+    const outputStaticDir = join(workPath, '.vercel', 'output', 'static');
+    const djangoStatic = await runDjangoCollectStatic(
+      venvPath,
+      workPath,
+      pythonEnv,
+      outputStaticDir,
+      settingsModule,
+      djangoSettings
+    );
+    return { entrypoint, djangoStatic };
+  },
+};
 
 export async function downloadFilesInWorkPath({
   entrypoint,
@@ -117,23 +201,27 @@ export const build: BuildV3 = async ({
   let fsFiles = await glob('**', workPath);
 
   // Zero config entrypoint discovery
+  let detected: DetectedPythonEntrypoint | undefined;
+  let entrypointNotFound: NowBuildError | undefined;
   if (
     isPythonFramework(framework) &&
+    // XXX: we might want to detect anyway for django!
     (!fsFiles[entrypoint] || !entrypoint.endsWith('.py'))
   ) {
-    const detected = await detectPythonEntrypoint(
-      config.framework as PythonFramework,
-      workPath,
-      entrypoint
-    );
-    if (detected) {
+    detected =
+      (await detectPythonEntrypoint(
+        config.framework as PythonFramework,
+        workPath,
+        entrypoint
+      )) ?? undefined;
+    if (detected?.entrypoint) {
       debug(
-        `Resolved Python entrypoint to "${detected}" (configured "${entrypoint}" not found).`
+        `Resolved Python entrypoint to "${detected.entrypoint}" (configured "${entrypoint}" not found).`
       );
-      entrypoint = detected;
+      entrypoint = detected.entrypoint;
     } else {
       const searchedList = PYTHON_CANDIDATE_ENTRYPOINTS.join(', ');
-      throw new NowBuildError({
+      entrypointNotFound = new NowBuildError({
         code: `${framework.toUpperCase()}_ENTRYPOINT_NOT_FOUND`,
         message: `No ${framework} entrypoint found. Add an 'app' script in pyproject.toml or define an entrypoint in one of: ${searchedList}.`,
         link: `https://vercel.com/docs/frameworks/backend/${framework}#exporting-the-${framework}-application`,
@@ -142,7 +230,11 @@ export const build: BuildV3 = async ({
     }
   }
 
-  const entryDirectory = dirname(entrypoint);
+  if (entrypointNotFound && detected?.baseDir === undefined) {
+    throw entrypointNotFound;
+  }
+
+  const entryDirectory = detected?.baseDir ?? dirname(entrypoint);
 
   const entrypointAbsDir = join(workPath, entryDirectory);
   const rootDir = repoRootPath ?? workPath;
@@ -366,6 +458,27 @@ export const build: BuildV3 = async ({
       });
   }
 
+  // Run per-framework hooks (e.g. entrypoint detection and collectstatic for Django).
+  const hookResult = await runFrameworkHook(framework, {
+    pythonEnv,
+    projectDir: join(workPath, entryDirectory),
+    workPath,
+    venvPath,
+    entrypoint,
+    detected,
+  });
+  if (entrypointNotFound && hookResult?.entrypoint) {
+    entrypoint = hookResult.entrypoint;
+    entrypointNotFound = undefined;
+  }
+
+  if (entrypointNotFound) {
+    throw entrypointNotFound;
+  }
+
+  const djangoStatic: DjangoCollectStaticResult | null =
+    (hookResult as DjangoFrameworkHookResult | undefined)?.djangoStatic ?? null;
+
   // Ensure correct version of vercel-runtime is installed.
   //
   // We intentionally do not inject vercel-runtime into the manifest
@@ -422,12 +535,35 @@ export const build: BuildV3 = async ({
   }
   debug('Entrypoint is', entrypoint);
   const moduleName = entrypoint.replace(/\//g, '.').replace(/\.py$/i, '');
+  const handlerFunction =
+    typeof config?.handlerFunction === 'string'
+      ? config.handlerFunction
+      : undefined;
+
+  if (handlerFunction) {
+    const entrypointPath = join(workPath, entrypoint);
+    const source = await fs.promises.readFile(entrypointPath, 'utf-8');
+    const found = await containsTopLevelCallable(source, handlerFunction);
+    if (!found) {
+      throw new NowBuildError({
+        code: 'PYTHON_HANDLER_NOT_FOUND',
+        message:
+          `Handler function "${handlerFunction}" not found in ${entrypoint}. ` +
+          `Ensure it is defined at the module's top level.`,
+      });
+    }
+  }
+
   const vendorDir = resolveVendorDir();
 
   // Since `vercel dev` renames source files, we must reference the original
   const suffix = meta.isDev && !entrypoint.endsWith('.py') ? '.py' : '';
   const entrypointWithSuffix = `${entrypoint}${suffix}`;
   debug('Entrypoint with suffix is', entrypointWithSuffix);
+
+  const handlerFuncEnvLine = handlerFunction
+    ? `\n  "__VC_HANDLER_FUNC_NAME": "${handlerFunction}",`
+    : '';
 
   const runtimeTrampoline = `
 import importlib
@@ -442,7 +578,7 @@ os.environ.update({
   "__VC_HANDLER_MODULE_NAME": "${moduleName}",
   "__VC_HANDLER_ENTRYPOINT": "${entrypointWithSuffix}",
   "__VC_HANDLER_ENTRYPOINT_ABS": os.path.join(_here, "${entrypointWithSuffix}"),
-  "__VC_HANDLER_VENDOR_DIR": "${vendorDir}",
+  "__VC_HANDLER_VENDOR_DIR": "${vendorDir}",${handlerFuncEnvLine}
 })
 
 _vendor_rel = '${vendorDir}'
@@ -487,6 +623,20 @@ from vercel_runtime.vc_init import vc_handler
     '**/package-lock.json',
   ];
 
+  // Exclude source static dirs and STATIC_ROOT from the Lambda bundle.
+  if (djangoStatic) {
+    const dirsToExclude = [
+      ...djangoStatic.staticSourceDirs,
+      ...(djangoStatic.staticRoot ? [djangoStatic.staticRoot] : []),
+    ];
+    for (const absDir of dirsToExclude) {
+      const rel = relative(workPath, absDir);
+      if (!rel.startsWith('..')) {
+        predefinedExcludes.push(`${rel}/**`);
+      }
+    }
+  }
+
   const lambdaEnv = {} as Record<string, string>;
   lambdaEnv.PYTHONPATH = vendorDir;
   Object.assign(lambdaEnv, quirksResult.env);
@@ -500,6 +650,15 @@ from vercel_runtime.vc_init import vc_handler
   };
 
   const files: Files = await glob('**', globOptions);
+
+  // Re-inject staticfiles.json into the Lambda bundle if a manifest storage
+  // backend is in use. The CDN serves static assets; only the manifest is
+  // needed at runtime so Django can resolve hashed filenames for {% static %}.
+  if (djangoStatic?.manifestRelPath) {
+    files[djangoStatic.manifestRelPath] = new FileFsRef({
+      fsPath: join(workPath, djangoStatic.manifestRelPath),
+    });
+  }
 
   // Bundle dependencies, using runtime installation for oversized bundles
   const depExternalizer = new PythonDependencyExternalizer({

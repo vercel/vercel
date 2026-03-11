@@ -13,7 +13,9 @@ describe('extractEnvVarNames', () => {
     ]);
   });
 
+  // biome-ignore lint/suspicious/noTemplateCurlyInString: testing literal ${VAR} extraction
   it('should extract ${VAR} format', () => {
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: testing literal ${VAR} extraction
     expect(extractEnvVarNames('https://${BACKEND_HOST}/api')).toEqual([
       'BACKEND_HOST',
     ]);

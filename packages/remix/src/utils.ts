@@ -88,7 +88,7 @@ export const require_ = createRequire(__filename);
 export interface ResolvedNodeRouteConfig {
   runtime: 'nodejs';
   regions?: string[];
-  maxDuration?: number;
+  maxDuration?: number | 'max';
   memory?: number;
 }
 

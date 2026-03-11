@@ -1,3 +1,4 @@
+// biome-ignore lint/suspicious/noShadowRestrictedNames: Next.js custom error page convention
 function Error() {
   return 'custom error';
 }

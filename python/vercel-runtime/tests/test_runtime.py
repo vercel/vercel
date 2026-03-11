@@ -538,6 +538,68 @@ class TestCronService(_RuntimeTestCase):
             self.assertTrue(marker_path.exists())
             self.assertEqual(marker_path.read_text(), "ran")
 
+    async def test_bootstraps_sync_handler_function_for_cron_service(
+        self,
+    ) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "cron_sync_handler.py",
+            self.tmp_path,
+        )
+        marker_path = self.tmp_path / "cron-sync-handler.marker"
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+            extra_env={
+                "VERCEL_SERVICE_TYPE": "cron",
+                "CRON_MARKER_FILE": str(marker_path),
+                "__VC_HANDLER_FUNC_NAME": "sync_handler",
+            },
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage,
+                timeout=10.0,
+            )
+            port = ss.payload.http_port
+
+            resp = await _http_get(port, "/run")
+            self.assertEqual(resp.status, 200)
+            self.assertEqual(resp.read().decode(), '{"ok":true}')
+            self.assertTrue(marker_path.exists())
+            self.assertEqual(marker_path.read_text(), "ran-sync")
+
+    async def test_bootstraps_async_handler_function_for_cron_service(
+        self,
+    ) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "cron_async_handler.py",
+            self.tmp_path,
+        )
+        marker_path = self.tmp_path / "cron-async-handler.marker"
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+            extra_env={
+                "VERCEL_SERVICE_TYPE": "cron",
+                "CRON_MARKER_FILE": str(marker_path),
+                "__VC_HANDLER_FUNC_NAME": "async_handler",
+            },
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage,
+                timeout=10.0,
+            )
+            port = ss.payload.http_port
+
+            resp = await _http_get(port, "/run")
+            self.assertEqual(resp.status, 200)
+            self.assertEqual(resp.read().decode(), '{"ok":true}')
+            self.assertTrue(marker_path.exists())
+            self.assertEqual(marker_path.read_text(), "ran-async")
+
 
 class TestLogging(_RuntimeTestCase):
     """Tests for IPC log message forwarding."""

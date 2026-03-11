@@ -37,6 +37,11 @@ vi.mock('../src/install', async () => {
   };
 });
 
+vi.mock('../src/django', () => ({
+  getDjangoSettings: vi.fn(async () => null),
+  runDjangoCollectStatic: vi.fn(async () => null),
+}));
+
 // Imports after mocks are set up (vitest hoists vi.mock calls)
 import {
   resolvePythonVersion,
@@ -50,6 +55,7 @@ import { UV_PYTHON_DOWNLOADS_MODE, getProtectedUvEnv } from '../src/uv';
 import { VERCEL_WORKERS_VERSION } from '../src/package-versions';
 import { createPyprojectToml } from '../src/install';
 import { detectDjangoPythonEntrypoint } from '../src/entrypoint';
+import { getDjangoSettings } from '../src/django';
 import { FileBlob } from '@vercel/build-utils';
 
 /**
@@ -115,7 +121,6 @@ function createMockUvRunner(options?: {
   onLock?: () => void;
 }) {
   return class MockUvRunner {
-    constructor() {}
     getPath() {
       return '/mock/uv';
     }
@@ -1146,23 +1151,48 @@ describe('Django entrypoint discovery', () => {
       workPath,
       'hello/world.py'
     );
-    expect(result).toBe('hello/world.py');
+    expect(result).toEqual({ entrypoint: 'hello/world.py' });
 
     if (fs.existsSync(workPath)) fs.removeSync(workPath);
   });
 
-  it('resolves Django entrypoint from WSGI_APPLICATION (hello.wsgi.application -> hello/wsgi.py)', async () => {
+  it('build() resolves Django entrypoint from WSGI_APPLICATION (hello.wsgi.application -> hello/wsgi.py)', async () => {
+    vi.mocked(getDjangoSettings).mockResolvedValueOnce({
+      settingsModule: 'hello.settings',
+      djangoSettings: { WSGI_APPLICATION: 'hello.wsgi.application' },
+    });
     const workPath = path.join(tmpdir(), `python-django-wsgi-${Date.now()}`);
     fs.mkdirSync(workPath, { recursive: true });
+    makeMockPython('3.9');
 
-    await writeFiles(workPath, {
-      'manage.py': `os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'hello.settings')`,
-      'hello/settings.py': `WSGI_APPLICATION = 'hello.wsgi.application'`,
-      'hello/wsgi.py': `application = lambda env, start: None`,
+    const files = {
+      'manage.py': new FileBlob({
+        data: "os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'hello.settings')\n",
+      }),
+      'hello/settings.py': new FileBlob({
+        data: "WSGI_APPLICATION = 'hello.wsgi.application'\n",
+      }),
+      'hello/wsgi.py': new FileBlob({
+        data: 'application = lambda env, start: None\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath,
+      files,
+      entrypoint: 'index.py',
+      meta: { isDev: true },
+      config: { framework: 'django' },
+      repoRootPath: workPath,
     });
 
-    const result = await detectDjangoPythonEntrypoint(workPath, 'missing.py');
-    expect(result).toBe('hello/wsgi.py');
+    const handler = result.output.files?.['vc__handler__python.py'];
+    if (!handler || !('data' in handler)) {
+      throw new Error('handler bootstrap not found');
+    }
+    expect(handler.data.toString()).toContain(
+      'os.path.join(_here, "hello/wsgi.py")'
+    );
 
     if (fs.existsSync(workPath)) fs.removeSync(workPath);
   });
@@ -1173,58 +1203,125 @@ describe('Django entrypoint discovery', () => {
       `python-django-fallback-${Date.now()}`
     );
     fs.mkdirSync(workPath, { recursive: true });
+    makeMockPython('3.9');
 
-    await writeFiles(workPath, {
-      'src/app.py': `application = lambda env, start: None`,
+    const files = {
+      'src/app.py': new FileBlob({
+        data: 'application = lambda env, start: None\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath,
+      files,
+      entrypoint: 'index.py',
+      meta: { isDev: true },
+      config: { framework: 'django' },
+      repoRootPath: workPath,
     });
 
-    const result = await detectDjangoPythonEntrypoint(workPath, 'missing.py');
-    expect(result).toBe('src/app.py');
+    const handler = result.output.files?.['vc__handler__python.py'];
+    if (!handler || !('data' in handler)) {
+      throw new Error('handler bootstrap not found');
+    }
+    expect(handler.data.toString()).toContain(
+      'os.path.join(_here, "src/app.py")'
+    );
 
     if (fs.existsSync(workPath)) fs.removeSync(workPath);
   });
 
-  it('falls back to candidate when WSGI path is not on filesystem', async () => {
+  it('build() returns settings module even when WSGI path is not in files', async () => {
+    vi.mocked(getDjangoSettings).mockResolvedValueOnce({
+      settingsModule: 'hello.settings',
+      djangoSettings: { WSGI_APPLICATION: 'hello.wsgi.application' },
+    });
     const workPath = path.join(
       tmpdir(),
       `python-django-wsgi-missing-${Date.now()}`
     );
     fs.mkdirSync(workPath, { recursive: true });
+    makeMockPython('3.9');
 
-    await writeFiles(workPath, {
-      'manage.py': `os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'hello.settings')`,
-      'hello/settings.py': `WSGI_APPLICATION = 'hello.wsgi.application'`,
-      'src/app.py': `application = lambda env, start: None`,
+    const files = {
+      'manage.py': new FileBlob({
+        data: "os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'hello.settings')\n",
+      }),
+      'hello/settings.py': new FileBlob({
+        data: "WSGI_APPLICATION = 'hello.wsgi.application'\n",
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath,
+      files,
+      entrypoint: 'index.py',
+      meta: { isDev: true },
+      config: { framework: 'django' },
+      repoRootPath: workPath,
     });
-    // WSGI_APPLICATION value does not refer to a valid file
 
-    const result = await detectDjangoPythonEntrypoint(workPath, 'missing.py');
-    expect(result).toBe('src/app.py');
+    const handler = result.output.files?.['vc__handler__python.py'];
+    if (!handler || !('data' in handler)) {
+      throw new Error('handler bootstrap not found');
+    }
+    expect(handler.data.toString()).toContain(
+      'os.path.join(_here, "hello/wsgi.py")'
+    );
 
     if (fs.existsSync(workPath)) fs.removeSync(workPath);
   });
 
-  it('resolves Django entrypoint from a subdirectory', async () => {
+  it('build() resolves Django entrypoint from a subdirectory', async () => {
+    vi.mocked(getDjangoSettings).mockResolvedValueOnce({
+      settingsModule: 'config.settings',
+      djangoSettings: { WSGI_APPLICATION: 'config.wsgi.application' },
+    });
     const workPath = path.join(
       tmpdir(),
       `python-django-root-dir-${Date.now()}`
     );
     fs.mkdirSync(workPath, { recursive: true });
+    makeMockPython('3.9');
 
     // Django app lives under root dir "mysite"; no manage.py at workPath root
-    await writeFiles(workPath, {
-      'mysite/manage.py': `os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')`,
-      'mysite/config/settings.py': `WSGI_APPLICATION = 'config.wsgi.application'`,
-      'mysite/config/wsgi.py': `application = lambda env, start: None`,
+    const files = {
+      'mysite/manage.py': new FileBlob({
+        data: "os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')\n",
+      }),
+      'mysite/config/settings.py': new FileBlob({
+        data: "WSGI_APPLICATION = 'config.wsgi.application'\n",
+      }),
+      'mysite/config/wsgi.py': new FileBlob({
+        data: 'application = lambda env, start: None\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath,
+      files,
+      entrypoint: 'index.py',
+      meta: { isDev: true },
+      config: { framework: 'django' },
+      repoRootPath: workPath,
     });
 
-    const result = await detectDjangoPythonEntrypoint(workPath, 'missing.py');
-    expect(result).toBe('mysite/config/wsgi.py');
+    const handler = result.output.files?.['vc__handler__python.py'];
+    if (!handler || !('data' in handler)) {
+      throw new Error('handler bootstrap not found');
+    }
+    expect(handler.data.toString()).toContain(
+      'os.path.join(_here, "mysite/config/wsgi.py")'
+    );
 
     if (fs.existsSync(workPath)) fs.removeSync(workPath);
   });
 
   it('build() discovers Django entrypoint from WSGI_APPLICATION when configured entrypoint is missing', async () => {
+    vi.mocked(getDjangoSettings).mockResolvedValueOnce({
+      settingsModule: 'hello.settings',
+      djangoSettings: { WSGI_APPLICATION: 'hello.world.application' },
+    });
     const workPath = path.join(tmpdir(), `python-django-build-${Date.now()}`);
     fs.mkdirSync(workPath, { recursive: true });
     makeMockPython('3.9');
@@ -1398,6 +1495,147 @@ describe('pyproject.toml entrypoint detection', () => {
     expect(content.includes('backend/server/__init__.py')).toBe(true);
 
     if (fs.existsSync(workPath)) fs.removeSync(workPath);
+  });
+});
+
+describe('handlerFunction validation', () => {
+  let mockWorkPath: string;
+
+  beforeEach(() => {
+    mockWorkPath = path.join(tmpdir(), `python-handler-func-${Date.now()}`);
+    fs.mkdirSync(mockWorkPath, { recursive: true });
+    makeMockPython('3.11');
+  });
+
+  afterEach(() => {
+    if (fs.existsSync(mockWorkPath)) {
+      fs.removeSync(mockWorkPath);
+    }
+  });
+
+  it('builds successfully when handlerFunction exists as a top-level function', async () => {
+    const files = {
+      'jobs/cleanup.py': new FileBlob({
+        data: 'def sync_handler():\n    print("done")\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "x"\nversion = "0.0.1"\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'jobs/cleanup.py',
+      meta: { isDev: false },
+      config: { handlerFunction: 'sync_handler' },
+      repoRootPath: mockWorkPath,
+    });
+
+    const handler = result.output.files?.['vc__handler__python.py'];
+    if (!handler || !('data' in handler)) {
+      throw new Error('handler bootstrap not found');
+    }
+    const content = handler.data.toString();
+    expect(content).toContain('__VC_HANDLER_FUNC_NAME');
+    expect(content).toContain('sync_handler');
+  });
+
+  it('builds successfully when handlerFunction exists as an async function', async () => {
+    const files = {
+      'jobs/cleanup.py': new FileBlob({
+        data: 'async def async_handler():\n    print("done")\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "x"\nversion = "0.0.1"\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'jobs/cleanup.py',
+      meta: { isDev: false },
+      config: { handlerFunction: 'async_handler' },
+      repoRootPath: mockWorkPath,
+    });
+
+    const handler = result.output.files?.['vc__handler__python.py'];
+    if (!handler || !('data' in handler)) {
+      throw new Error('handler bootstrap not found');
+    }
+    const content = handler.data.toString();
+    expect(content).toContain('__VC_HANDLER_FUNC_NAME');
+    expect(content).toContain('async_handler');
+  });
+
+  it('throws PYTHON_HANDLER_NOT_FOUND when handlerFunction does not exist', async () => {
+    const files = {
+      'jobs/cleanup.py': new FileBlob({
+        data: 'def other_func():\n    pass\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "x"\nversion = "0.0.1"\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    await expect(
+      build({
+        workPath: mockWorkPath,
+        files,
+        entrypoint: 'jobs/cleanup.py',
+        meta: { isDev: false },
+        config: { handlerFunction: 'nonexistent_handler' },
+        repoRootPath: mockWorkPath,
+      })
+    ).rejects.toThrow(/Handler function "nonexistent_handler" not found/);
+  });
+
+  it('throws when handlerFunction is nested inside another function', async () => {
+    const files = {
+      'jobs/cleanup.py': new FileBlob({
+        data: 'def outer():\n    def cleanup():\n        pass\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "x"\nversion = "0.0.1"\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    await expect(
+      build({
+        workPath: mockWorkPath,
+        files,
+        entrypoint: 'jobs/cleanup.py',
+        meta: { isDev: false },
+        config: { handlerFunction: 'cleanup' },
+        repoRootPath: mockWorkPath,
+      })
+    ).rejects.toThrow(/Handler function "cleanup" not found/);
+  });
+
+  it('does not set __VC_HANDLER_FUNC_NAME when handlerFunction is not configured', async () => {
+    const files = {
+      'handler.py': new FileBlob({ data: 'def handler(): pass' }),
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "x"\nversion = "0.0.1"\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'handler.py',
+      meta: { isDev: false },
+      config: {},
+      repoRootPath: mockWorkPath,
+    });
+
+    const handler = result.output.files?.['vc__handler__python.py'];
+    if (!handler || !('data' in handler)) {
+      throw new Error('handler bootstrap not found');
+    }
+    const content = handler.data.toString();
+    expect(content).not.toContain('__VC_HANDLER_FUNC_NAME');
   });
 });
 
@@ -2110,7 +2348,6 @@ describe('worker services dependency installation', () => {
     vi.doMock('../src/uv', () => ({
       ...realUv,
       UvRunner: class {
-        constructor() {}
         getPath() {
           return '/mock/uv';
         }
@@ -2129,7 +2366,6 @@ describe('worker services dependency installation', () => {
     // Mock externalization to keep this test focused on install behavior.
     vi.doMock('../src/dependency-externalizer', () => ({
       PythonDependencyExternalizer: class {
-        constructor() {}
         async analyze() {
           return { overLambdaLimit: false, allVendorFiles: {} };
         }

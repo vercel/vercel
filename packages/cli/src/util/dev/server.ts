@@ -612,21 +612,7 @@ export default class DevServer {
         relative(this.cwd, f)
       );
 
-      let {
-        builders,
-        // eslint-disable-next-line prefer-const
-        warnings,
-        // eslint-disable-next-line prefer-const
-        errors,
-        // eslint-disable-next-line prefer-const
-        defaultRoutes,
-        // eslint-disable-next-line prefer-const
-        redirectRoutes,
-        // eslint-disable-next-line prefer-const
-        rewriteRoutes,
-        // eslint-disable-next-line prefer-const
-        errorRoutes,
-      } = await detectBuilders(files, pkg, {
+      const detectedBuilders = await detectBuilders(files, pkg, {
         tag: 'latest',
         functions: vercelConfig.functions,
         projectSettings: projectSettings || this.projectSettings,
@@ -635,6 +621,20 @@ export default class DevServer {
         trailingSlash,
         workPath: this.cwd,
       });
+      let {
+        builders,
+        warnings,
+        errors,
+        defaultRoutes,
+        redirectRoutes,
+        rewriteRoutes,
+        errorRoutes,
+      } = detectedBuilders;
+      const hostRewriteRoutes = (
+        detectedBuilders as typeof detectedBuilders & {
+          hostRewriteRoutes?: Route[] | null;
+        }
+      ).hostRewriteRoutes;
 
       if (errors) {
         output.error(errors[0].message);
@@ -660,6 +660,11 @@ export default class DevServer {
 
       let routes: Route[] = [];
       routes.push(...(redirectRoutes || []));
+      routes = appendRoutesToPhase({
+        routes,
+        newRoutes: hostRewriteRoutes ?? null,
+        phase: null,
+      });
       routes.push(
         ...appendRoutesToPhase({
           routes: vercelConfig.routes,
@@ -818,7 +823,7 @@ export default class DevServer {
         ([name, value]) =>
           typeof value === 'string' &&
           value.startsWith('@') &&
-          !hasOwnProperty(localEnv, name)
+          !hasProp(localEnv, name)
       )
       .map(([name]) => name);
 
@@ -1886,7 +1891,6 @@ export default class DevServer {
         get() {
           return statusCode;
         },
-        /* eslint-disable @typescript-eslint/no-unused-vars */
         set(_: number) {
           /* ignore */
         },
@@ -2104,7 +2108,6 @@ export default class DevServer {
       }`
     );
 
-    /* eslint-disable no-case-declarations */
     switch (asset.type) {
       case 'FileFsRef':
         this.setResponseHeaders(res, requestId);
@@ -2440,7 +2443,7 @@ function proxyPass(
   requestId: string,
   ignorePath: boolean = true
 ): void {
-  return devServer.proxy.web(
+  devServer.proxy.web(
     req,
     res,
     { target: dest, ignorePath },
@@ -2499,7 +2502,7 @@ function generateRequestId(podId: string, isInvoke = false): string {
   ].join('-')}`;
 }
 
-function hasOwnProperty(obj: any, prop: string) {
+function hasProp(obj: any, prop: string) {
   return Object.prototype.hasOwnProperty.call(obj, prop);
 }
 
