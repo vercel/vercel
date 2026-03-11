@@ -175,15 +175,18 @@ export async function envPullCommandLogic(
   const fullPath = resolve(cwd, filename);
   const head = tryReadHeadSync(fullPath, Buffer.byteLength(CONTENTS_PREFIX));
   const exists = typeof head !== 'undefined';
-  const requiresConfirmation =
-    exists &&
-    head !== CONTENTS_PREFIX &&
-    !skipConfirmation &&
-    !client.nonInteractive;
+  const isCliManagedFile = head === CONTENTS_PREFIX;
+  const isUserManagedExistingFile = exists && !isCliManagedFile;
+  const shouldConfirmChanges =
+    isUserManagedExistingFile && !skipConfirmation && !client.nonInteractive;
 
-  if (head === CONTENTS_PREFIX) {
+  if (isCliManagedFile) {
     output.log(`Overwriting existing ${chalk.bold(filename)} file`);
-  } else if (exists && !skipConfirmation && client.nonInteractive) {
+  } else if (
+    isUserManagedExistingFile &&
+    !skipConfirmation &&
+    client.nonInteractive
+  ) {
     outputActionRequired(client, {
       status: 'action_required',
       reason: 'env_file_exists',
@@ -226,38 +229,28 @@ export async function envPullCommandLogic(
     })
   ).env;
 
-  let deltaString = '';
   let oldEnv;
-  const downloadedEnv = getDownloadedEnv(records);
-
   if (exists) {
     oldEnv = await createEnvObject(fullPath);
   }
 
-  const envToWrite = oldEnv
-    ? {
-        ...oldEnv,
-        ...downloadedEnv,
-      }
-    : downloadedEnv;
-  const comparableEnvToWrite = getComparableEnv(envToWrite);
+  const { envToWrite, deltaString, hasChanges } = prepareEnvPullState(
+    oldEnv,
+    records
+  );
 
-  if (oldEnv) {
-    deltaString = buildDeltaString(oldEnv, comparableEnvToWrite);
-  }
-
-  if (deltaString) {
+  if (hasChanges) {
     output.print('\n' + deltaString);
   } else if (oldEnv && exists) {
     output.log('No changes found.');
-    if (head !== CONTENTS_PREFIX) {
+    if (isUserManagedExistingFile) {
       return;
     }
   }
 
   if (
-    requiresConfirmation &&
-    deltaString !== '' &&
+    shouldConfirmChanges &&
+    hasChanges &&
     !(await client.input.confirm(
       `Apply these changes to ${param(filename)}?`,
       false
@@ -314,7 +307,7 @@ function getDownloadedEnv(records: Record<string, string | undefined>) {
   ) as Record<string, string | undefined>;
 }
 
-function getComparableEnv(env: Record<string, string | undefined>) {
+function normalizeEnvForComparison(env: Record<string, string | undefined>) {
   // Removes any double quotes from values, if they exist.
   // We need this because double quotes are stripped from parsed local env
   // files (by createEnvObject), so we strip them here too to ensure
@@ -322,4 +315,28 @@ function getComparableEnv(env: Record<string, string | undefined>) {
   return Object.fromEntries(
     Object.entries(env).map(([key, value]) => [key, value?.replace(/"/g, '')])
   ) as Record<string, string | undefined>;
+}
+
+function prepareEnvPullState(
+  oldEnv: Record<string, string | undefined> | undefined,
+  records: Record<string, string | undefined>
+) {
+  const downloadedEnv = getDownloadedEnv(records);
+  const envToWrite = oldEnv
+    ? {
+        ...oldEnv,
+        ...downloadedEnv,
+      }
+    : downloadedEnv;
+  const normalizedEnvToWrite = normalizeEnvForComparison(envToWrite);
+  const deltaString = oldEnv
+    ? buildDeltaString(oldEnv, normalizedEnvToWrite)
+    : '';
+  const hasChanges = deltaString.length > 0;
+
+  return {
+    envToWrite,
+    deltaString,
+    hasChanges,
+  };
 }
