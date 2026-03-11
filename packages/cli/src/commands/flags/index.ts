@@ -9,7 +9,9 @@ import { getCommandAliases } from '..';
 import { FlagsTelemetryClient } from '../../util/telemetry/commands/flags';
 import ls from './ls';
 import inspect from './inspect';
+import openFlag from './open';
 import add from './add';
+import update from './update';
 import rm from './rm';
 import archive from './archive';
 import disable from './disable';
@@ -19,7 +21,9 @@ import {
   flagsCommand,
   listSubcommand,
   inspectSubcommand,
+  openSubcommand,
   addSubcommand,
+  updateSubcommand,
   removeSubcommand,
   archiveSubcommand,
   disableSubcommand,
@@ -32,7 +36,9 @@ import emitDatafiles from './emit-datafiles';
 const COMMAND_CONFIG = {
   ls: getCommandAliases(listSubcommand),
   inspect: getCommandAliases(inspectSubcommand),
+  open: getCommandAliases(openSubcommand),
   add: getCommandAliases(addSubcommand),
+  update: getCommandAliases(updateSubcommand),
   rm: getCommandAliases(removeSubcommand),
   archive: getCommandAliases(archiveSubcommand),
   disable: getCommandAliases(disableSubcommand),
@@ -96,6 +102,14 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandInspect(subcommandOriginal);
       return inspect(client, args);
+    case 'open':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('flags', subcommandOriginal);
+        printHelp(openSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandOpen(subcommandOriginal);
+      return openFlag(client, args);
     case 'add':
       if (needHelp) {
         telemetry.trackCliFlagHelp('flags', subcommandOriginal);
@@ -104,6 +118,14 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandAdd(subcommandOriginal);
       return add(client, args);
+    case 'update':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('flags', subcommandOriginal);
+        printHelp(updateSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandUpdate(subcommandOriginal);
+      return update(client, args);
     case 'rm':
       if (needHelp) {
         telemetry.trackCliFlagHelp('flags', subcommandOriginal);

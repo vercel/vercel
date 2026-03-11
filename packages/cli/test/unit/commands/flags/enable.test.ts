@@ -1,3 +1,5 @@
+import chalk from 'chalk';
+import stripAnsi from 'strip-ansi';
 import { describe, expect, it, beforeEach, vi } from 'vitest';
 import flags from '../../../../src/commands/flags';
 import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
@@ -94,6 +96,7 @@ function createTestFlags(): Flag[] {
 
 describe('flags enable', () => {
   const selectMock = vi.fn();
+  const textMock = vi.fn();
   let testFlags: Flag[];
 
   beforeEach(() => {
@@ -109,7 +112,10 @@ describe('flags enable', () => {
     const cwd = setupUnitFixture('commands/flags/vercel-flags-test');
     client.cwd = cwd;
     client.input.select = selectMock;
+    client.input.text = textMock;
     selectMock.mockReset();
+    textMock.mockReset();
+    textMock.mockResolvedValue('');
   });
 
   describe('--help', () => {
@@ -131,6 +137,7 @@ describe('flags enable', () => {
   });
 
   it('tracks `enable` subcommand', async () => {
+    (client.stdin as any).isTTY = false;
     client.setArgv(
       'flags',
       'enable',
@@ -156,7 +163,41 @@ describe('flags enable', () => {
     ]);
   });
 
+  it('tracks the message option', async () => {
+    (client.stdin as any).isTTY = false;
+    client.setArgv(
+      'flags',
+      'enable',
+      testFlags[0].slug,
+      '--environment',
+      'production',
+      '--message',
+      'Resume production rollout'
+    );
+    const exitCode = await flags(client);
+    expect(exitCode).toEqual(0);
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      {
+        key: 'subcommand:enable',
+        value: 'enable',
+      },
+      {
+        key: 'argument:flag',
+        value: '[REDACTED]',
+      },
+      {
+        key: 'option:environment',
+        value: 'production',
+      },
+      {
+        key: 'option:message',
+        value: '[REDACTED]',
+      },
+    ]);
+  });
+
   it('enables a flag successfully', async () => {
+    (client.stdin as any).isTTY = false;
     client.setArgv(
       'flags',
       'enable',
@@ -166,7 +207,18 @@ describe('flags enable', () => {
     );
     const exitCode = await flags(client);
     expect(exitCode).toEqual(0);
-    expect(client.stderr.getFullOutput()).toContain('has been enabled');
+    const output = client.stderr.getFullOutput();
+    expect(output).toContain('has been enabled');
+    expect(stripAnsi(output)).toContain('Serving variant: true On');
+    expect(output).toContain(chalk.dim('On'));
+    expect((testFlags[0] as Flag & { message?: string }).message).toEqual(
+      'Enabled for production via CLI'
+    );
+    expect(testFlags[0].environments.production).toMatchObject({
+      active: false,
+      pausedOutcome: { type: 'variant', variantId: 'on' },
+      fallthrough: { type: 'variant', variantId: 'off' },
+    });
   });
 
   it('errors without flag argument', async () => {
@@ -176,7 +228,15 @@ describe('flags enable', () => {
   });
 
   it('warns when flag is already enabled', async () => {
-    // preview environment is already active: true
+    testFlags[0].environments.preview.active = false;
+    testFlags[0].environments.preview.pausedOutcome = {
+      type: 'variant',
+      variantId: 'on',
+    };
+    testFlags[0].environments.preview.fallthrough = {
+      type: 'variant',
+      variantId: 'on',
+    };
     client.setArgv(
       'flags',
       'enable',
@@ -189,6 +249,108 @@ describe('flags enable', () => {
     expect(client.stderr.getFullOutput()).toContain('already enabled');
   });
 
+  it('enables an actively targeted environment by forcing the on variant', async () => {
+    (client.stdin as any).isTTY = false;
+    client.setArgv(
+      'flags',
+      'enable',
+      testFlags[0].slug,
+      '--environment',
+      'preview'
+    );
+
+    const exitCode = await flags(client);
+
+    expect(exitCode).toEqual(0);
+    expect(testFlags[0].environments.preview).toMatchObject({
+      active: false,
+      pausedOutcome: { type: 'variant', variantId: 'on' },
+      fallthrough: { type: 'variant', variantId: 'on' },
+    });
+  });
+
+  it('preserves custom rules, targets, and fallthrough when enabling a flag', async () => {
+    (client.stdin as any).isTTY = false;
+    testFlags[0].environments.production = {
+      active: true,
+      pausedOutcome: { type: 'variant', variantId: 'off' },
+      fallthrough: {
+        type: 'split',
+        base: {
+          type: 'entity',
+          kind: 'user',
+          attribute: 'userId',
+        },
+        weights: {
+          off: 25,
+          on: 75,
+        },
+        defaultVariantId: 'off',
+      },
+      rules: [
+        {
+          id: 'rule_custom',
+          conditions: [
+            {
+              lhs: { type: 'entity', kind: 'user', attribute: 'plan' },
+              cmp: 'eq',
+              rhs: 'enterprise',
+            },
+          ],
+          outcome: { type: 'variant', variantId: 'on' },
+        },
+      ],
+      targets: {
+        on: {
+          user: {
+            userId: [{ value: 'user_123' }],
+          },
+        },
+      },
+    };
+    client.setArgv(
+      'flags',
+      'enable',
+      testFlags[0].slug,
+      '--environment',
+      'production'
+    );
+
+    const exitCode = await flags(client);
+
+    expect(exitCode).toEqual(0);
+    expect(testFlags[0].environments.production).toMatchObject({
+      active: false,
+      pausedOutcome: { type: 'variant', variantId: 'on' },
+      fallthrough: {
+        type: 'split',
+        base: {
+          type: 'entity',
+          kind: 'user',
+          attribute: 'userId',
+        },
+        weights: {
+          off: 25,
+          on: 75,
+        },
+        defaultVariantId: 'off',
+      },
+      rules: [
+        {
+          id: 'rule_custom',
+          outcome: { type: 'variant', variantId: 'on' },
+        },
+      ],
+      targets: {
+        on: {
+          user: {
+            userId: [{ value: 'user_123' }],
+          },
+        },
+      },
+    });
+  });
+
   it('prompts for environment when not specified', async () => {
     selectMock.mockResolvedValueOnce('production');
     client.setArgv('flags', 'enable', testFlags[0].slug);
@@ -197,7 +359,78 @@ describe('flags enable', () => {
     expect(selectMock).toHaveBeenCalledWith(
       expect.objectContaining({
         message: 'Select an environment to enable the flag in:',
+        choices: expect.arrayContaining([
+          expect.objectContaining({ value: 'production' }),
+          expect.objectContaining({ value: 'preview' }),
+          expect.objectContaining({ value: 'development' }),
+        ]),
       })
+    );
+    const selectCall = selectMock.mock.calls[0][0];
+    expect(
+      selectCall.choices.map((choice: { value: string }) => choice.value)
+    ).toEqual(['production', 'preview', 'development']);
+    expect(textMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'Enter a message for this update:',
+        default: 'Enabled for production via CLI',
+      })
+    );
+  });
+
+  it('errors in non-interactive mode when environment is missing', async () => {
+    (client.stdin as any).isTTY = false;
+    client.setArgv('flags', 'enable', testFlags[0].slug);
+
+    const exitCode = await flags(client);
+
+    expect(exitCode).toEqual(1);
+    expect(client.stderr.getFullOutput()).toContain(
+      'Missing required flag --environment'
+    );
+    expect(selectMock).not.toHaveBeenCalled();
+  });
+
+  it('sends a custom revision message', async () => {
+    (client.stdin as any).isTTY = false;
+    client.setArgv(
+      'flags',
+      'enable',
+      testFlags[0].slug,
+      '--environment',
+      'production',
+      '--message',
+      'Resume production rollout'
+    );
+
+    const exitCode = await flags(client);
+
+    expect(exitCode).toEqual(0);
+    expect((testFlags[0] as Flag & { message?: string }).message).toEqual(
+      'Resume production rollout'
+    );
+  });
+
+  it('uses the default message when the interactive prompt is accepted', async () => {
+    client.setArgv(
+      'flags',
+      'enable',
+      testFlags[0].slug,
+      '--environment',
+      'production'
+    );
+
+    const exitCode = await flags(client);
+
+    expect(exitCode).toEqual(0);
+    expect(textMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'Enter a message for this update:',
+        default: 'Enabled for production via CLI',
+      })
+    );
+    expect((testFlags[0] as Flag & { message?: string }).message).toEqual(
+      'Enabled for production via CLI'
     );
   });
 
@@ -212,6 +445,34 @@ describe('flags enable', () => {
     const exitCode = await flags(client);
     expect(exitCode).toEqual(1);
     expect(client.stderr.getFullOutput()).toContain('Invalid environment');
+  });
+
+  it('redacts telemetry for invalid environment values', async () => {
+    client.setArgv(
+      'flags',
+      'enable',
+      testFlags[0].slug,
+      '--environment',
+      'invalid'
+    );
+
+    const exitCode = await flags(client);
+
+    expect(exitCode).toEqual(1);
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      {
+        key: 'subcommand:enable',
+        value: 'enable',
+      },
+      {
+        key: 'argument:flag',
+        value: '[REDACTED]',
+      },
+      {
+        key: 'option:environment',
+        value: '[REDACTED]',
+      },
+    ]);
   });
 
   it('errors when flag is archived', async () => {
@@ -241,11 +502,12 @@ describe('flags enable', () => {
     );
     const exitCode = await flags(client);
     expect(exitCode).toEqual(0);
-    const output = client.stderr.getFullOutput();
+    const output = stripAnsi(client.stderr.getFullOutput());
     // Should show warning about boolean-only
     expect(output).toContain('only works with boolean flags');
     // Should identify the flag type
     expect(output).toContain('string');
+    expect(output).toContain('You can update it on the dashboard');
     // Should show dashboard link
     expect(output).toContain('https://vercel.com/');
     expect(output).toContain(testFlags[1].slug);

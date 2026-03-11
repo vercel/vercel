@@ -59,6 +59,29 @@ export const inspectSubcommand = {
   ],
 } as const;
 
+export const openSubcommand = {
+  name: 'open',
+  aliases: [],
+  description: 'Open feature flags in the Vercel dashboard',
+  arguments: [
+    {
+      name: 'flag',
+      required: false,
+    },
+  ],
+  options: [],
+  examples: [
+    {
+      name: 'Open the project feature flags dashboard',
+      value: `${packageName} flags open`,
+    },
+    {
+      name: 'Open a specific feature flag',
+      value: `${packageName} flags open my-feature-flag`,
+    },
+  ],
+} as const;
+
 export const addSubcommand = {
   name: 'add',
   aliases: [],
@@ -86,6 +109,15 @@ export const addSubcommand = {
       description: 'Description of the feature flag',
       argument: 'TEXT',
     },
+    {
+      name: 'variant',
+      shorthand: 'v',
+      type: [String],
+      deprecated: false,
+      description:
+        'Variant definition as VALUE[=LABEL] (can be repeated for string and number flags)',
+      argument: 'VALUE[=LABEL]',
+    },
   ],
   examples: [
     {
@@ -95,6 +127,70 @@ export const addSubcommand = {
     {
       name: 'Create a string feature flag with description',
       value: `${packageName} flags add my-feature --kind string --description "My feature flag"`,
+    },
+    {
+      name: 'Create a string feature flag with explicit variants',
+      value: `${packageName} flags add my-feature --kind string --variant control="Welcome back" --variant treatment="New onboarding"`,
+    },
+  ],
+} as const;
+
+export const updateSubcommand = {
+  name: 'update',
+  aliases: [],
+  description: 'Update an existing feature flag',
+  arguments: [
+    {
+      name: 'flag',
+      required: true,
+    },
+  ],
+  options: [
+    {
+      name: 'variant',
+      shorthand: 'v',
+      type: String,
+      deprecated: false,
+      description: 'Variant name or ID to update',
+      argument: 'VARIANT',
+    },
+    {
+      name: 'value',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'New variant value',
+      argument: 'VALUE',
+    },
+    {
+      name: 'label',
+      shorthand: 'l',
+      type: String,
+      deprecated: false,
+      description: 'New variant label',
+      argument: 'LABEL',
+    },
+    {
+      name: 'message',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Optional revision message for the update',
+      argument: 'TEXT',
+    },
+  ],
+  examples: [
+    {
+      name: 'Update a string variant value and label',
+      value: `${packageName} flags update my-feature --variant control --value welcome-back --label "Welcome back"`,
+    },
+    {
+      name: 'Update a variant with a revision message',
+      value: `${packageName} flags update my-feature --variant control --label "Control" --message "Rename control variant"`,
+    },
+    {
+      name: 'Rename a boolean variant label',
+      value: `${packageName} flags update my-feature --variant false --label "Disabled"`,
     },
   ],
 } as const;
@@ -183,6 +279,14 @@ export const disableSubcommand = {
       description: 'The variant ID to serve while the flag is disabled',
       argument: 'VARIANT',
     },
+    {
+      name: 'message',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Optional revision message for the update',
+      argument: 'TEXT',
+    },
   ],
   examples: [
     {
@@ -192,6 +296,10 @@ export const disableSubcommand = {
     {
       name: 'Disable a flag with a specific variant',
       value: `${packageName} flags disable my-feature -e production --variant off`,
+    },
+    {
+      name: 'Disable a flag with a revision message',
+      value: `${packageName} flags disable my-feature -e production --message "Pause rollout in production"`,
     },
   ],
 } as const;
@@ -216,11 +324,23 @@ export const enableSubcommand = {
         'The environment to enable the flag in (production, preview, or development)',
       argument: 'ENV',
     },
+    {
+      name: 'message',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Optional revision message for the update',
+      argument: 'TEXT',
+    },
   ],
   examples: [
     {
       name: 'Enable a flag in production',
       value: `${packageName} flags enable my-feature --environment production`,
+    },
+    {
+      name: 'Enable a flag with a revision message',
+      value: `${packageName} flags enable my-feature --environment production --message "Resume production rollout"`,
     },
   ],
 } as const;
@@ -354,7 +474,9 @@ export const flagsCommand = {
   subcommands: [
     listSubcommand,
     inspectSubcommand,
+    openSubcommand,
     addSubcommand,
+    updateSubcommand,
     removeSubcommand,
     archiveSubcommand,
     disableSubcommand,

@@ -20,9 +20,23 @@ export class FlagsTelemetryClient
     });
   }
 
+  trackCliSubcommandOpen(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'open',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandAdd(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'add',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandUpdate(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'update',
       value: actual,
     });
   }

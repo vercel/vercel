@@ -1,3 +1,5 @@
+import chalk from 'chalk';
+import stripAnsi from 'strip-ansi';
 import { describe, expect, it, beforeEach, vi } from 'vitest';
 import flags from '../../../../src/commands/flags';
 import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
@@ -94,6 +96,7 @@ function createTestFlags(): Flag[] {
 
 describe('flags disable', () => {
   const selectMock = vi.fn();
+  const textMock = vi.fn();
   let testFlags: Flag[];
 
   beforeEach(() => {
@@ -109,7 +112,10 @@ describe('flags disable', () => {
     const cwd = setupUnitFixture('commands/flags/vercel-flags-test');
     client.cwd = cwd;
     client.input.select = selectMock;
+    client.input.text = textMock;
     selectMock.mockReset();
+    textMock.mockReset();
+    textMock.mockResolvedValue('');
   });
 
   describe('--help', () => {
@@ -131,6 +137,7 @@ describe('flags disable', () => {
   });
 
   it('tracks `disable` subcommand', async () => {
+    (client.stdin as any).isTTY = false;
     client.setArgv(
       'flags',
       'disable',
@@ -156,7 +163,41 @@ describe('flags disable', () => {
     ]);
   });
 
+  it('tracks the message option', async () => {
+    (client.stdin as any).isTTY = false;
+    client.setArgv(
+      'flags',
+      'disable',
+      testFlags[0].slug,
+      '--environment',
+      'production',
+      '--message',
+      'Pause production rollout'
+    );
+    const exitCode = await flags(client);
+    expect(exitCode).toEqual(0);
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      {
+        key: 'subcommand:disable',
+        value: 'disable',
+      },
+      {
+        key: 'argument:flag',
+        value: '[REDACTED]',
+      },
+      {
+        key: 'option:environment',
+        value: 'production',
+      },
+      {
+        key: 'option:message',
+        value: '[REDACTED]',
+      },
+    ]);
+  });
+
   it('disables a flag successfully', async () => {
+    (client.stdin as any).isTTY = false;
     client.setArgv(
       'flags',
       'disable',
@@ -166,6 +207,17 @@ describe('flags disable', () => {
     );
     const exitCode = await flags(client);
     expect(exitCode).toEqual(0);
+    const output = client.stderr.getFullOutput();
+    expect(stripAnsi(output)).toContain('Serving variant: false Off');
+    expect(output).toContain(chalk.dim('Off'));
+    expect((testFlags[0] as Flag & { message?: string }).message).toEqual(
+      'Disabled for production via CLI'
+    );
+    expect(testFlags[0].environments.production).toMatchObject({
+      active: false,
+      pausedOutcome: { type: 'variant', variantId: 'off' },
+      fallthrough: { type: 'variant', variantId: 'off' },
+    });
   });
 
   describe('--variant', () => {
@@ -225,6 +277,34 @@ describe('flags disable', () => {
     );
   });
 
+  it('redacts telemetry for invalid environment values', async () => {
+    client.setArgv(
+      'flags',
+      'disable',
+      testFlags[0].slug,
+      '--environment',
+      'invalid'
+    );
+
+    const exitCode = await flags(client);
+
+    expect(exitCode).toEqual(1);
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      {
+        key: 'subcommand:disable',
+        value: 'disable',
+      },
+      {
+        key: 'argument:flag',
+        value: '[REDACTED]',
+      },
+      {
+        key: 'option:environment',
+        value: '[REDACTED]',
+      },
+    ]);
+  });
+
   it('resolves variant by value (true/false)', async () => {
     // Change variant IDs to random strings (like real API)
     testFlags[0].variants = [
@@ -243,8 +323,12 @@ describe('flags disable', () => {
     );
     const exitCode = await flags(client);
     expect(exitCode).toEqual(0);
-    // Should show the resolved variant ID in output
-    expect(client.stderr.getFullOutput()).toContain('abc123xyz');
+    const output = client.stderr.getFullOutput();
+    expect(stripAnsi(output)).toContain('Serving variant: false Off');
+    expect(output).toContain(chalk.dim('Off'));
+    expect(testFlags[0].environments.production).toMatchObject({
+      pausedOutcome: { type: 'variant', variantId: 'abc123xyz' },
+    });
   });
 
   it('resolves variant by "true"/"false" keywords', async () => {
@@ -265,8 +349,12 @@ describe('flags disable', () => {
     );
     const exitCode = await flags(client);
     expect(exitCode).toEqual(0);
-    // Should resolve "false" to the false variant
-    expect(client.stderr.getFullOutput()).toContain('random_id_1');
+    const output = client.stderr.getFullOutput();
+    expect(stripAnsi(output)).toContain('Serving variant: false Disabled');
+    expect(output).toContain(chalk.dim('Disabled'));
+    expect(testFlags[0].environments.production).toMatchObject({
+      pausedOutcome: { type: 'variant', variantId: 'random_id_1' },
+    });
   });
 
   it('resolves variant by label', async () => {
@@ -287,8 +375,12 @@ describe('flags disable', () => {
     );
     const exitCode = await flags(client);
     expect(exitCode).toEqual(0);
-    // Should resolve "Disabled" label to the correct variant
-    expect(client.stderr.getFullOutput()).toContain('uuid_style_id_1');
+    const output = client.stderr.getFullOutput();
+    expect(stripAnsi(output)).toContain('Serving variant: false Disabled');
+    expect(output).toContain(chalk.dim('Disabled'));
+    expect(testFlags[0].environments.production).toMatchObject({
+      pausedOutcome: { type: 'variant', variantId: 'uuid_style_id_1' },
+    });
   });
 
   it('shows helpful error with available variants when not found', async () => {
@@ -334,8 +426,13 @@ describe('flags disable', () => {
         message: expect.stringContaining('variant'),
       })
     );
-    // Should show the 'off' variant (value: false) was selected
-    expect(client.stderr.getFullOutput()).toContain('off');
+    const output = client.stderr.getFullOutput();
+    expect(stripAnsi(output)).toContain('Serving variant: false Off');
+    expect(output).toContain(chalk.dim('Off'));
+    expect(testFlags[0].environments.production).toMatchObject({
+      pausedOutcome: { type: 'variant', variantId: 'off' },
+      fallthrough: { type: 'variant', variantId: 'off' },
+    });
   });
 
   it('warns for non-boolean flags with helpful message', async () => {
@@ -349,11 +446,12 @@ describe('flags disable', () => {
     );
     const exitCode = await flags(client);
     expect(exitCode).toEqual(0);
-    const output = client.stderr.getFullOutput();
+    const output = stripAnsi(client.stderr.getFullOutput());
     // Should show warning about boolean-only
     expect(output).toContain('only works with boolean flags');
     // Should identify the flag type
     expect(output).toContain('string');
+    expect(output).toContain('You can update it on the dashboard');
     // Should show dashboard link
     expect(output).toContain('https://vercel.com/');
     expect(output).toContain(testFlags[1].slug);
@@ -367,13 +465,92 @@ describe('flags disable', () => {
     expect(selectMock).toHaveBeenCalledWith(
       expect.objectContaining({
         message: 'Select an environment to disable the flag in:',
+        choices: expect.arrayContaining([
+          expect.objectContaining({ value: 'production' }),
+          expect.objectContaining({ value: 'preview' }),
+          expect.objectContaining({ value: 'development' }),
+        ]),
+      })
+    );
+    const selectCall = selectMock.mock.calls[0][0];
+    expect(
+      selectCall.choices.map((choice: { value: string }) => choice.value)
+    ).toEqual(['production', 'preview', 'development']);
+    expect(textMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'Enter a message for this update:',
+        default: 'Disabled for production via CLI',
       })
     );
   });
 
+  it('errors in non-interactive mode when environment is missing', async () => {
+    (client.stdin as any).isTTY = false;
+    client.setArgv('flags', 'disable', testFlags[0].slug);
+
+    const exitCode = await flags(client);
+
+    expect(exitCode).toEqual(1);
+    expect(client.stderr.getFullOutput()).toContain(
+      'Missing required flag --environment'
+    );
+    expect(selectMock).not.toHaveBeenCalled();
+  });
+
+  it('sends a custom revision message', async () => {
+    (client.stdin as any).isTTY = false;
+    client.setArgv(
+      'flags',
+      'disable',
+      testFlags[0].slug,
+      '--environment',
+      'production',
+      '--message',
+      'Pause production rollout'
+    );
+
+    const exitCode = await flags(client);
+
+    expect(exitCode).toEqual(0);
+    expect((testFlags[0] as Flag & { message?: string }).message).toEqual(
+      'Pause production rollout'
+    );
+  });
+
+  it('uses the default message when the interactive prompt is accepted', async () => {
+    client.setArgv(
+      'flags',
+      'disable',
+      testFlags[0].slug,
+      '--environment',
+      'production'
+    );
+
+    const exitCode = await flags(client);
+
+    expect(exitCode).toEqual(0);
+    expect(textMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'Enter a message for this update:',
+        default: 'Disabled for production via CLI',
+      })
+    );
+    expect((testFlags[0] as Flag & { message?: string }).message).toEqual(
+      'Disabled for production via CLI'
+    );
+  });
+
   it('warns when flag is already disabled in environment', async () => {
-    // Set production to already disabled (mock uses testFlags reference)
+    // Set production to already disabled with the off variant
     testFlags[0].environments.production.active = false;
+    testFlags[0].environments.production.pausedOutcome = {
+      type: 'variant',
+      variantId: 'off',
+    };
+    testFlags[0].environments.production.fallthrough = {
+      type: 'variant',
+      variantId: 'off',
+    };
 
     client.setArgv(
       'flags',
@@ -385,6 +562,118 @@ describe('flags disable', () => {
     const exitCode = await flags(client);
     expect(exitCode).toEqual(0);
     expect(client.stderr.getFullOutput()).toContain('already disabled');
+  });
+
+  it('disables a forced-on environment by switching it to the off variant', async () => {
+    (client.stdin as any).isTTY = false;
+    testFlags[0].environments.production.active = false;
+    testFlags[0].environments.production.pausedOutcome = {
+      type: 'variant',
+      variantId: 'on',
+    };
+    testFlags[0].environments.production.fallthrough = {
+      type: 'variant',
+      variantId: 'on',
+    };
+
+    client.setArgv(
+      'flags',
+      'disable',
+      testFlags[0].slug,
+      '--environment',
+      'production'
+    );
+
+    const exitCode = await flags(client);
+
+    expect(exitCode).toEqual(0);
+    expect(testFlags[0].environments.production).toMatchObject({
+      active: false,
+      pausedOutcome: { type: 'variant', variantId: 'off' },
+      fallthrough: { type: 'variant', variantId: 'on' },
+    });
+  });
+
+  it('preserves custom rules, targets, and fallthrough when disabling a flag', async () => {
+    (client.stdin as any).isTTY = false;
+    testFlags[0].environments.production = {
+      active: true,
+      pausedOutcome: { type: 'variant', variantId: 'off' },
+      fallthrough: {
+        type: 'split',
+        base: {
+          type: 'entity',
+          kind: 'user',
+          attribute: 'userId',
+        },
+        weights: {
+          off: 10,
+          on: 90,
+        },
+        defaultVariantId: 'off',
+      },
+      rules: [
+        {
+          id: 'rule_custom',
+          conditions: [
+            {
+              lhs: { type: 'entity', kind: 'user', attribute: 'plan' },
+              cmp: 'eq',
+              rhs: 'pro',
+            },
+          ],
+          outcome: { type: 'variant', variantId: 'on' },
+        },
+      ],
+      targets: {
+        on: {
+          user: {
+            userId: [{ value: 'user_456' }],
+          },
+        },
+      },
+    };
+    client.setArgv(
+      'flags',
+      'disable',
+      testFlags[0].slug,
+      '--environment',
+      'production'
+    );
+
+    const exitCode = await flags(client);
+
+    expect(exitCode).toEqual(0);
+    expect(testFlags[0].environments.production).toMatchObject({
+      active: false,
+      pausedOutcome: { type: 'variant', variantId: 'off' },
+      fallthrough: {
+        type: 'split',
+        base: {
+          type: 'entity',
+          kind: 'user',
+          attribute: 'userId',
+        },
+        weights: {
+          off: 10,
+          on: 90,
+        },
+        defaultVariantId: 'off',
+      },
+      rules: [
+        {
+          id: 'rule_custom',
+          outcome: { type: 'variant', variantId: 'on' },
+        },
+      ],
+      targets: {
+        on: {
+          user: {
+            userId: [{ value: 'user_456' }],
+          },
+        },
+      },
+    });
   });
 
   it('errors when flag is archived', async () => {
