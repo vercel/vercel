@@ -20,6 +20,7 @@ from opentelemetry.context import Context, get_current
 from opentelemetry.exporter.otlp.proto.common._internal.trace_encoder import (
     encode_spans,
 )
+from opentelemetry.propagate import get_global_textmap, set_global_textmap
 from opentelemetry.propagators.composite import CompositePropagator
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
@@ -34,10 +35,6 @@ from opentelemetry.trace import (
     get_tracer_provider,
     set_span_in_context,
     set_tracer_provider,
-)
-from opentelemetry.trace.propagation import (
-    get_global_textmap,
-    set_global_textmap,
 )
 from opentelemetry.trace.span import NonRecordingSpan
 
