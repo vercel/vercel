@@ -12,6 +12,7 @@ dependency are suppressed at the file level.
 from __future__ import annotations
 
 import logging
+import os
 from typing import TYPE_CHECKING
 
 from google.protobuf.json_format import MessageToDict
@@ -20,6 +21,7 @@ from opentelemetry.exporter.otlp.proto.common._internal.trace_encoder import (
     encode_spans,
 )
 from opentelemetry.propagators.composite import CompositePropagator
+from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import (
     SimpleSpanProcessor,
@@ -159,7 +161,29 @@ def init_tracing() -> None:
     if isinstance(current_provider, TracerProvider):
         current_provider.add_span_processor(processor)
     else:
-        provider = TracerProvider()
+        resource = Resource.create(
+            {
+                k: v
+                for k, v in {
+                    "service.name": os.environ.get(
+                        "VERCEL_PROJECT_ID", "python"
+                    ),
+                    "env": os.environ.get("VERCEL_ENV"),
+                    "vercel.region": os.environ.get("VERCEL_REGION"),
+                    "vercel.runtime": "python",
+                    "vercel.sha": os.environ.get("VERCEL_GIT_COMMIT_SHA"),
+                    "vercel.host": os.environ.get("VERCEL_URL"),
+                    "vercel.branch_host": os.environ.get("VERCEL_BRANCH_URL"),
+                    "vercel.deployment_id": os.environ.get(
+                        "VERCEL_DEPLOYMENT_ID"
+                    ),
+                    "service.version": os.environ.get("VERCEL_DEPLOYMENT_ID"),
+                    "vercel.project_id": os.environ.get("VERCEL_PROJECT_ID"),
+                }.items()
+                if v is not None
+            }
+        )
+        provider = TracerProvider(resource=resource)
         provider.add_span_processor(processor)
         set_tracer_provider(provider)
 
