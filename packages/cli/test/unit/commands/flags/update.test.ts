@@ -369,7 +369,7 @@ describe('flags update', () => {
     );
   });
 
-  it('resolves selectors by label', async () => {
+  it('does not resolve explicit selectors by label', async () => {
     (client.stdin as any).isTTY = false;
     client.setArgv(
       'flags',
@@ -385,12 +385,10 @@ describe('flags update', () => {
 
     const exitCode = await flags(client);
 
-    expect(exitCode).toEqual(0);
-    expect(testFlags[1].variants[0]).toMatchObject({
-      id: 'default',
-      value: 'welcome-back',
-      label: 'Welcome back',
-    });
+    expect(exitCode).toEqual(1);
+    expect(client.stderr.getFullOutput()).toContain(
+      'You can specify a variant by its ID or value.'
+    );
   });
 
   it('prompts for missing value and label when variant is provided', async () => {
