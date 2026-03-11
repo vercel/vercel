@@ -1,5 +1,14 @@
 # vercel
 
+## 50.31.3
+
+### Patch Changes
+
+- Revert "Env pull local changes preview" ([#15460](https://github.com/vercel/vercel/pull/15460))
+
+- Updated dependencies [[`f453bdf2e22943d8d4e001ef152dd69897d8622f`](https://github.com/vercel/vercel/commit/f453bdf2e22943d8d4e001ef152dd69897d8622f)]:
+  - @vercel/detect-agent@1.2.1
+
 ## 50.31.2
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # @vercel/detect-agent
 
+## 1.2.1
+
+### Patch Changes
+
+- Add GitHub Copilot detection support by recognizing `AI_AGENT=github-copilot|github-copilot-cli` and fallback Copilot CLI environment variables (`COPILOT_MODEL`, `COPILOT_ALLOW_ALL`, and `COPILOT_GITHUB_TOKEN`). ([#15449](https://github.com/vercel/vercel/pull/15449))
+
 ## 1.2.0
 
 ### Minor Changes
