@@ -1,17 +1,8 @@
 # Django Notes
 
-A simple note-taking app built with [Django](https://www.djangoproject.com/) that can be deployed to Vercel.
+A simple note taking app that can be deployed to Vercel.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/vercel/vercel/tree/main/examples/django-notes&template=django-notes)
-
-## Features
-
-Demonstrates core [Django](https://docs.djangoproject.com/) features:
-
-- **Models & migrations** — define a `Note` model and manage the schema with `makemigrations` and `migrate`
-- **ModelForm** — generate and validate a form directly from the model
-- **Function-based views** — handle GET and POST using `render`, `redirect`, and `get_object_or_404`
-- **Templates** — share a common layout with `{% extends %}` and link pages with `{% url %}`
+This example demonstrates a full-stack [Django](https://docs.djangoproject.com/) project, using Django's built-in ORM, forms, and template engine to handle both the backend data layer and frontend rendering in a single framework.
 
 ## Getting Started
 
@@ -58,6 +49,8 @@ From the [Vercel dashboard](https://vercel.com/dashboard), go to your project's 
 vercel env pull .env.local
 uv run manage.py migrate
 ```
+
+Note: this example's `manage.py` will load `.env.local` if it exists.
 
 **4. Deploy**
 
