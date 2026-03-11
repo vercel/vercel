@@ -106,29 +106,22 @@ describe('resolve-variant', () => {
     });
 
     describe('label handling', () => {
-      it('does not resolve variant by label', () => {
+      it('resolves variant by label', () => {
         const result = resolveVariant('Enabled', booleanVariants);
-        expect(result.variant).toBeNull();
-        expect(result.error).toContain('Variant "Enabled" not found');
-        expect(result.error).toContain(
-          'You can specify a variant by its ID or value.'
-        );
+        expect(result.error).toBeNull();
+        expect(result.variant?.id).toBe('variant_abc123');
       });
 
-      it('does not resolve variant by label with different case', () => {
+      it('resolves variant by label with different case', () => {
         const result = resolveVariant('enabled', booleanVariants);
-        expect(result.variant).toBeNull();
-        expect(result.error).toContain('Variant "enabled" not found');
-        expect(result.error).toContain('Enabled');
-        expect(result.error).toContain('Disabled');
+        expect(result.error).toBeNull();
+        expect(result.variant?.id).toBe('variant_abc123');
       });
 
-      it('shows labels in available variants when a label-like selector is used', () => {
+      it('resolves string variants by label', () => {
         const result = resolveVariant('Control Group', stringVariants);
-        expect(result.variant).toBeNull();
-        expect(result.error).toContain('Variant "Control Group" not found');
-        expect(result.error).toContain('Control Group');
-        expect(result.error).toContain('Variant A');
+        expect(result.error).toBeNull();
+        expect(result.variant?.id).toBe('variant_str1');
       });
     });
 
@@ -145,7 +138,7 @@ describe('resolve-variant', () => {
       it('includes helpful message in error', () => {
         const result = resolveVariant('bad-value', stringVariants);
         expect(result.error).toContain(
-          'You can specify a variant by its ID or value.'
+          'You can specify a variant by its value (e.g., "true", "false") or label.'
         );
       });
 

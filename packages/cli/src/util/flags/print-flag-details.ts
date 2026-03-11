@@ -204,7 +204,6 @@ function getSortedEnvironmentEntries(
       return aIndex - bIndex;
     });
 }
-
 function resolveTargetingLabel(
   settings: FlagSettings | undefined,
   entityKind: string,

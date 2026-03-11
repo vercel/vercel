@@ -357,7 +357,7 @@ describe('flags disable', () => {
     });
   });
 
-  it('does not resolve explicit variants by label', async () => {
+  it('resolves explicit variants by label', async () => {
     // Change variant IDs to random strings (like real API)
     testFlags[0].variants = [
       { id: 'uuid_style_id_1', value: false, label: 'Disabled' },
@@ -374,10 +374,13 @@ describe('flags disable', () => {
       'Disabled'
     );
     const exitCode = await flags(client);
-    expect(exitCode).toEqual(1);
-    expect(client.stderr.getFullOutput()).toContain(
-      'You can specify a variant by its ID or value.'
-    );
+    expect(exitCode).toEqual(0);
+    const output = client.stderr.getFullOutput();
+    expect(stripAnsi(output)).toContain('Serving variant: false Disabled');
+    expect(output).toContain(chalk.dim('Disabled'));
+    expect(testFlags[0].environments.production).toMatchObject({
+      pausedOutcome: { type: 'variant', variantId: 'uuid_style_id_1' },
+    });
   });
 
   it('shows helpful error with available variants when not found', async () => {

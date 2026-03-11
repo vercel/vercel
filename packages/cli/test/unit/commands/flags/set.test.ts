@@ -486,7 +486,7 @@ describe('flags set', () => {
     expect(await exitCodePromise).toEqual(1);
   });
 
-  it('does not resolve explicit variants by label', async () => {
+  it('resolves explicit variants by label', async () => {
     (client.stdin as any).isTTY = false;
     client.setArgv(
       'flags',
@@ -500,10 +500,12 @@ describe('flags set', () => {
 
     const exitCode = await flags(client);
 
-    expect(exitCode).toEqual(1);
-    expect(client.stderr.getFullOutput()).toContain(
-      'You can specify a variant by its ID or value.'
-    );
+    expect(exitCode).toEqual(0);
+    expect(testFlags[1].environments.production).toMatchObject({
+      active: false,
+      pausedOutcome: { type: 'variant', variantId: 'variant-a' },
+      fallthrough: { type: 'variant', variantId: 'variant-a' },
+    });
   });
 
   it('warns when the environment is already serving the selected variant', async () => {

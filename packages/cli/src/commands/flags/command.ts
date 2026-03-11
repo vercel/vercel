@@ -151,7 +151,7 @@ export const updateSubcommand = {
       shorthand: 'v',
       type: String,
       deprecated: false,
-      description: 'Variant ID or value to update',
+      description: 'Variant label, value, or ID to update',
       argument: 'VARIANT',
     },
     {
@@ -220,7 +220,7 @@ export const setSubcommand = {
       shorthand: 'v',
       type: String,
       deprecated: false,
-      description: 'The variant ID or value to serve',
+      description: 'The variant label, value, or ID to serve',
       argument: 'VARIANT',
     },
     {

@@ -47,7 +47,6 @@ export class FlagsTelemetryClient
       value: actual,
     });
   }
-
   trackCliSubcommandRemove(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'rm',

@@ -38,11 +38,9 @@ export function formatAvailableVariants(variants: FlagVariant[]): string {
  * Resolution order:
  * 1. Exact match on variant ID
  * 2. Match on variant value (supports true/false, string values, numbers, etc.)
+ * 3. Case-insensitive match on variant label
  *
- * Labels are intentionally excluded because they are presentation-oriented and
- * may not be unique across variants.
- *
- * @param input - The user-provided variant identifier (ID or value)
+ * @param input - The user-provided variant identifier (ID, value, or label)
  * @param variants - The available variants for the flag
  * @returns The resolved variant or null with an error message
  */
@@ -70,9 +68,16 @@ export function resolveVariant(
     return { variant: byValue, error: null };
   }
 
+  // 3. Try case-insensitive match on label
+  const inputLower = input.toLowerCase();
+  const byLabel = variants.find(v => v.label?.toLowerCase() === inputLower);
+  if (byLabel) {
+    return { variant: byLabel, error: null };
+  }
+
   // No match found - return helpful error
   const availableList = formatAvailableVariants(variants);
-  const error = `Variant "${input}" not found.\n\nAvailable variants:\n${availableList}\n\nYou can specify a variant by its ID or value.`;
+  const error = `Variant "${input}" not found.\n\nAvailable variants:\n${availableList}\n\nYou can specify a variant by its value (e.g., "true", "false") or label.`;
 
   return { variant: null, error };
 }

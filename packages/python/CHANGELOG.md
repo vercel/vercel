@@ -1,5 +1,35 @@
 # @vercel/python
 
+## 6.22.0
+
+### Minor Changes
+
+- [python] move vc_init_dev into vercel-runtime ([#15419](https://github.com/vercel/vercel/pull/15419))
+
+### Patch Changes
+
+- Updated dependencies [[`a67131396956632b060895afe44b26bb99941817`](https://github.com/vercel/vercel/commit/a67131396956632b060895afe44b26bb99941817)]:
+  - @vercel/python-analysis@0.9.1
+
+## 6.21.0
+
+### Minor Changes
+
+- [python] add support for module-based entrypoints for cron jobs ([#15393](https://github.com/vercel/vercel/pull/15393))
+
+- Avoid doing entry point detection on every request to a python dev server ([#15365](https://github.com/vercel/vercel/pull/15365))
+
+- For the django frontend, dynamically load settings.py instead of parsing it ([#15367](https://github.com/vercel/vercel/pull/15367))
+
+### Patch Changes
+
+- speed up python entrypoint detection ([#15402](https://github.com/vercel/vercel/pull/15402))
+
+- Add Python builder cache preparation for Build Output API v3 cache globs, the builder virtualenv, and the repo-local uv cache. ([#15407](https://github.com/vercel/vercel/pull/15407))
+
+- Updated dependencies [[`83e804013528fc54de31082960ae31f58339bd71`](https://github.com/vercel/vercel/commit/83e804013528fc54de31082960ae31f58339bd71), [`921314f958c4ec85adb09e020310a5becb7f866c`](https://github.com/vercel/vercel/commit/921314f958c4ec85adb09e020310a5becb7f866c)]:
+  - @vercel/python-analysis@0.9.0
+
 ## 6.20.2
 
 ### Patch Changes

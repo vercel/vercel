@@ -784,6 +784,54 @@ describe('detectServices', () => {
       expect(result.errors[0].serviceName).toBe('api');
     });
 
+    it('should derive routePrefix from subdomain using /_/serviceName', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            api: {
+              entrypoint: 'api/index.ts',
+              subdomain: 'api',
+            },
+          },
+        }),
+        'api/index.ts': 'export default {}',
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      expect(result.services).toHaveLength(1);
+      expect(result.services[0]).toMatchObject({
+        name: 'api',
+        routePrefix: '/_/api',
+        routePrefixSource: 'generated',
+        subdomain: 'api',
+      });
+    });
+
+    it('should error when non-web service defines subdomain routing', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            cleanup: {
+              type: 'cron',
+              entrypoint: 'cron/cleanup.ts',
+              schedule: '0 0 * * *',
+              subdomain: 'jobs',
+            },
+          },
+        }),
+        'cron/cleanup.ts': 'export default async () => {}',
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.services).toEqual([]);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]).toMatchObject({
+        code: 'INVALID_HOST_ROUTING_CONFIG',
+        serviceName: 'cleanup',
+      });
+    });
+
     it.each([
       '/_svc',
       '/_svc/api',
@@ -1369,6 +1417,88 @@ describe('detectServices', () => {
       expect(result.routes.defaults).toContainEqual({
         src: '^(?!/admin(?:/|$))(?!/api(?:/|$))(?:/(.*))',
         dest: '/index.html',
+      });
+    });
+
+    it('should generate host-based rewrites for subdomain-mounted service', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            api: {
+              entrypoint: 'api/index.go',
+              subdomain: 'api',
+            },
+          },
+        }),
+        'api/index.go': 'package main',
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      expect(result.services[0]).toMatchObject({
+        routePrefix: '/_/api',
+        routePrefixSource: 'generated',
+        subdomain: 'api',
+      });
+
+      expect(result.routes.hostRewrites).toContainEqual({
+        src: '^/$',
+        dest: '/_/api',
+        has: [{ type: 'host', value: { pre: 'api.' } }],
+        missing: [
+          { type: 'host', value: { suf: '.vercel.app' } },
+          { type: 'host', value: { suf: '.vercel.dev' } },
+        ],
+        check: true,
+      });
+      expect(result.routes.hostRewrites).toContainEqual({
+        src: '^/(?!_/api(?:/|$))(.*)$',
+        dest: '/_/api/$1',
+        has: [{ type: 'host', value: { pre: 'api.' } }],
+        missing: [
+          { type: 'host', value: { suf: '.vercel.app' } },
+          { type: 'host', value: { suf: '.vercel.dev' } },
+        ],
+        check: true,
+      });
+    });
+
+    it('should generate host-based rewrites for route-owning builders', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            frontend: {
+              framework: 'nextjs',
+              entrypoint: 'apps/web',
+              subdomain: 'app',
+            },
+          },
+        }),
+        'apps/web/package.json': JSON.stringify({
+          dependencies: { next: '15.0.0' },
+        }),
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      expect(result.services[0]).toMatchObject({
+        routePrefix: '/_/frontend',
+        routePrefixSource: 'generated',
+        subdomain: 'app',
+      });
+      // Route-owning services still need host routing, but should not get
+      // synthetic path-based rewrites/defaults from service detection.
+      expect(result.routes.rewrites).toEqual([]);
+      expect(result.routes.defaults).toEqual([]);
+      expect(result.routes.hostRewrites).toContainEqual({
+        src: '^/$',
+        dest: '/_/frontend',
+        has: [{ type: 'host', value: { pre: 'app.' } }],
+        missing: [
+          { type: 'host', value: { suf: '.vercel.app' } },
+          { type: 'host', value: { suf: '.vercel.dev' } },
+        ],
+        check: true,
       });
     });
   });
