@@ -408,6 +408,8 @@ if os.path.exists(_runtime_config_path):
 
         try:
             os.makedirs(_deps_dir, exist_ok=True)
+            if _efs_available:
+                os.makedirs(os.path.join(_deps_dir, ".tmp"), exist_ok=True)
 
             # Create a minimal PEP 405 venv skeleton for uv sync.
             # Writing pyvenv.cfg directly avoids spawning a subprocess.
@@ -445,6 +447,14 @@ if os.path.exists(_runtime_config_path):
                     "PATH": os.environ.get("PATH", ""),
                     "VIRTUAL_ENV": _deps_dir,
                     "UV_PYTHON_DOWNLOADS": "never",
+                    # When using EFS, redirect uv's temp directory to EFS
+                    # to avoid filling up /tmp (512 MB) during wheel
+                    # download/extraction.
+                    **(
+                        {"TMPDIR": os.path.join(_deps_dir, ".tmp")}
+                        if _efs_available
+                        else {}
+                    ),
                 },
             )
             _install_duration = time.time() - _install_start
