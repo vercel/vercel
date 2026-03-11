@@ -53,4 +53,15 @@ describe('mcp', () => {
       (client as { nonInteractive: boolean }).nonInteractive = false;
     });
   });
+
+  describe('interactive mode', () => {
+    it('returns 1 and errors when --clients contains invalid names', async () => {
+      client.setArgv('mcp', '--clients', 'Foo');
+      (client as { nonInteractive: boolean }).nonInteractive = false;
+
+      const exitCode = await mcpCommand(client);
+      expect(exitCode).toBe(1);
+      await expect(client.stderr).toOutput('Invalid client(s): Foo');
+    });
+  });
 });

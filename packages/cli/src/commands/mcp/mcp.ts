@@ -105,8 +105,39 @@ export default async function mcp(client: Client, opts: McpOptions = {}) {
   const availableClients = getAvailableClients();
   let selectedClients: string[];
 
-  if (client.nonInteractive && opts.clients && opts.clients.length > 0) {
+  // --clients is honored in both interactive and non-interactive mode when
+  // provided and valid (non-interactive still requires it; see index.ts).
+  if (opts.clients && opts.clients.length > 0) {
+    const invalid = opts.clients.filter(
+      name => !availableClients.includes(name)
+    );
+    if (invalid.length > 0) {
+      if (client.nonInteractive) {
+        outputAgentError(
+          client,
+          {
+            status: 'error',
+            reason: 'invalid_clients',
+            message: `Invalid client(s): ${invalid.join(
+              ', '
+            )}. Valid options: ${availableClients.join(', ')}.`,
+          },
+          1
+        );
+      }
+      output.error(
+        `Invalid client(s): ${invalid.join(
+          ', '
+        )}. Valid options: ${availableClients.join(', ')}.`
+      );
+      return 1;
+    }
     selectedClients = opts.clients;
+    if (!client.nonInteractive) {
+      output.print(
+        `Using clients from --clients: ${selectedClients.join(', ')}\n\n`
+      );
+    }
   } else {
     selectedClients = await client.input.checkbox({
       message: 'Select MCP clients to set up:',
