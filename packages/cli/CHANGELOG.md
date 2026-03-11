@@ -1,5 +1,17 @@
 # vercel
 
+## 50.31.2
+
+### Patch Changes
+
+- Remove `FF_ALERTS` feature flag and make the `vc alerts` command available by default. Remove numbered list output from `vc activity` and `vc alerts` commands and normalize padding between them. ([#15438](https://github.com/vercel/vercel/pull/15438))
+
+- Introduce `vercel flags create` as the canonical command for creating feature flags while keeping `vercel flags add` working as an alias. ([#15437](https://github.com/vercel/vercel/pull/15437))
+
+- Add `vercel flags set` for changing the served variant in an environment, tighten explicit variant selection to ID-or-value-only matching, and improve boolean shortcut guidance for non-boolean flags. ([#15436](https://github.com/vercel/vercel/pull/15436))
+
+- Improve the `vercel flags` workflow with new `flags open` and `flags update` commands, richer string/number variant creation, and more detailed `flags inspect` and creation output that shows the exact variants and environment behavior. Boolean flags now default to development-only on creation, and the `enable`, `disable`, `archive`, and `rm` flows have clearer confirmations, default messages, and non-interactive guidance for scripts and agents. ([#15417](https://github.com/vercel/vercel/pull/15417))
+
 ## 50.31.1
 
 ### Patch Changes
