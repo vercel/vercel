@@ -14,6 +14,8 @@ const CODEX = 'codex' as const;
 const ANTIGRAVITY = 'antigravity' as const;
 const AUGMENT_CLI = 'augment-cli' as const;
 const OPENCODE = 'opencode' as const;
+const GITHUB_COPILOT = 'github-copilot' as const;
+const GITHUB_COPILOT_CLI = 'github-copilot-cli' as const;
 
 export type KnownAgentNames =
   | typeof CURSOR
@@ -26,7 +28,8 @@ export type KnownAgentNames =
   | typeof CODEX
   | typeof ANTIGRAVITY
   | typeof AUGMENT_CLI
-  | typeof OPENCODE;
+  | typeof OPENCODE
+  | typeof GITHUB_COPILOT;
 
 export interface KnownAgentDetails {
   name: KnownAgentNames;
@@ -54,12 +57,20 @@ export const KNOWN_AGENTS = {
   ANTIGRAVITY,
   AUGMENT_CLI,
   OPENCODE,
+  GITHUB_COPILOT,
 } as const;
 
 export async function determineAgent(): Promise<AgentResult> {
   if (process.env.AI_AGENT) {
     const name = process.env.AI_AGENT.trim();
     if (name) {
+      if (name === GITHUB_COPILOT || name === GITHUB_COPILOT_CLI) {
+        return {
+          isAgent: true,
+          agent: { name: GITHUB_COPILOT },
+        };
+      }
+
       return {
         isAgent: true,
         agent: { name: name as KnownAgentNames },
@@ -108,6 +119,14 @@ export async function determineAgent(): Promise<AgentResult> {
 
   if (process.env.REPL_ID) {
     return { isAgent: true, agent: { name: REPLIT } };
+  }
+
+  if (
+    process.env.COPILOT_MODEL ||
+    process.env.COPILOT_ALLOW_ALL ||
+    process.env.COPILOT_GITHUB_TOKEN
+  ) {
+    return { isAgent: true, agent: { name: GITHUB_COPILOT } };
   }
 
   try {

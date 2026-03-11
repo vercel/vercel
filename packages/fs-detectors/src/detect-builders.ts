@@ -8,6 +8,7 @@ import type {
   Builder,
   Config,
   BuilderFunctions,
+  ExperimentalServices,
   ProjectSettings,
   Service,
 } from '@vercel/build-utils';
@@ -49,6 +50,7 @@ export interface ErrorResponse {
 export interface Options {
   tag?: string;
   functions?: BuilderFunctions;
+  experimentalServices?: ExperimentalServices;
   ignoreBuildScript?: boolean;
   projectSettings?: ProjectSettings;
   cleanUrls?: boolean;
@@ -123,10 +125,11 @@ export async function detectBuilders(
   errorRoutes: Route[] | null;
   services?: Service[];
 }> {
-  const { projectSettings = {} } = options;
+  const { experimentalServices: services, projectSettings = {} } = options;
   const { framework } = projectSettings;
+  const hasServicesConfig = services != null && typeof services === 'object';
 
-  if (framework === 'services') {
+  if (hasServicesConfig || framework === 'services') {
     return getServicesBuilders({
       workPath: options.workPath,
     });

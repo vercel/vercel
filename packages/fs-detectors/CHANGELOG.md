@@ -1,5 +1,11 @@
 # @vercel/fs-detectors
 
+## 5.10.2
+
+### Patch Changes
+
+- [experimental-services] build using `experimentalServices` regardless of framework setting ([#15451](https://github.com/vercel/vercel/pull/15451))
+
 ## 5.10.1
 
 ### Patch Changes
