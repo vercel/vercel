@@ -25,9 +25,10 @@ export const LAMBDA_SIZE_THRESHOLD_BYTES = 249 * 1024 * 1024;
 // Pack Lambda up to 245MB to leave a buffer
 export const LAMBDA_PACKING_TARGET_BYTES = 245 * 1024 * 1024;
 
-// AWS Lambda ephemeral storage (/tmp) is 512MB. Use 500MB to leave a buffer
-// for runtime overhead (.pyc generation, uv cache, metadata, etc.)
-export const LAMBDA_EPHEMERAL_STORAGE_BYTES = 500 * 1024 * 1024;
+// AWS Lambda ephemeral storage (/tmp) is 512MB. When EFS is available,
+// packages are installed there instead. Temporarily raised to 4GB for
+// EFS testing — revert to 500 * 1024 * 1024 when done.
+export const LAMBDA_EPHEMERAL_STORAGE_BYTES = 8000 * 1024 * 1024;
 
 interface PythonDependencyExternalizerOptions {
   venvPath: string;
