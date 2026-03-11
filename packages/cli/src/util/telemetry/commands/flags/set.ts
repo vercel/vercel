@@ -1,13 +1,13 @@
 import { TelemetryClient } from '../..';
 import { STANDARD_ENVIRONMENTS } from '../../../target/standard-environments';
-import type { disableSubcommand } from '../../../../commands/flags/command';
+import type { setSubcommand } from '../../../../commands/flags/command';
 import type { TelemetryMethods } from '../../types';
 
 type StandardEnvironment = (typeof STANDARD_ENVIRONMENTS)[number];
 
-export class FlagsDisableTelemetryClient
+export class FlagsSetTelemetryClient
   extends TelemetryClient
-  implements TelemetryMethods<typeof disableSubcommand>
+  implements TelemetryMethods<typeof setSubcommand>
 {
   trackCliArgumentFlag(flag: string | undefined) {
     if (flag) {

@@ -171,14 +171,12 @@ function formatEventText(text: string): string {
 function printExpandedEvents(events: UserEventDTO[]) {
   const lines = [''];
 
-  events.forEach((event, index) => {
-    lines.push(
-      `  ${chalk.bold(`${index + 1}. ${formatEventText(event.text)}`)}`
-    );
-    lines.push(`     ${chalk.cyan('Type:')} ${event.type ?? '-'}`);
-    lines.push(`     ${chalk.cyan('Actor:')} ${formatActor(event)}`);
-    lines.push(`     ${chalk.cyan('Age:')} ${formatAge(event.createdAt)}`);
-    lines.push(`     ${chalk.cyan('ID:')} ${event.id}`);
+  events.forEach(event => {
+    lines.push(chalk.bold(formatEventText(event.text)));
+    lines.push(`   ${chalk.cyan('Type:')} ${event.type ?? '-'}`);
+    lines.push(`   ${chalk.cyan('Actor:')} ${formatActor(event)}`);
+    lines.push(`   ${chalk.cyan('Age:')} ${formatAge(event.createdAt)}`);
+    lines.push(`   ${chalk.cyan('ID:')} ${event.id}`);
     lines.push('');
   });
 
