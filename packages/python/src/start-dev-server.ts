@@ -26,6 +26,7 @@ import {
   type ManifestType,
 } from './install';
 import { stringifyManifest } from '@vercel/python-analysis';
+import { VERCEL_RUNTIME_VERSION } from './package-versions';
 
 const DEV_SERVER_STARTUP_TIMEOUT = 10_000;
 
@@ -294,6 +295,109 @@ async function runSync({
   });
 }
 
+interface InstallVercelRuntimeOptions {
+  workPath: string;
+  uvPath: string | null;
+  pythonBin: string;
+  env: NodeJS.ProcessEnv;
+  onStdout?: (buf: Buffer) => void;
+  onStderr?: (buf: Buffer) => void;
+}
+
+async function installVercelRuntime({
+  workPath,
+  uvPath,
+  pythonBin,
+  env,
+  onStdout,
+  onStderr,
+}: InstallVercelRuntimeOptions): Promise<void> {
+  const targetDir = join(workPath, '.vercel', 'python');
+  mkdirSync(targetDir, { recursive: true });
+
+  // Check if we're running from a dev build
+  // so that we can use the local version instead
+  // of installing from pypi
+  const localRuntimeDir = join(
+    __dirname,
+    '..',
+    '..',
+    '..',
+    'python',
+    'vercel-runtime'
+  );
+  const isLocalDev = existsSync(join(localRuntimeDir, 'pyproject.toml'));
+
+  const runtimeDep =
+    env.VERCEL_RUNTIME_PYTHON ||
+    (isLocalDev
+      ? localRuntimeDir
+      : `vercel-runtime==${VERCEL_RUNTIME_VERSION}`);
+
+  // Skip install if the exact pypi version is already present,
+  // local dev builds and explicitly specified version
+  // always reinstall to pick up possible source changes
+  if (!isLocalDev && !env.VERCEL_RUNTIME_PYTHON) {
+    const distInfo = join(
+      targetDir,
+      `vercel_runtime-${VERCEL_RUNTIME_VERSION}.dist-info`
+    );
+    if (existsSync(distInfo)) {
+      debug(
+        `vercel-runtime ${VERCEL_RUNTIME_VERSION} already installed, skipping`
+      );
+      return;
+    }
+  }
+
+  debug(
+    `Installing vercel-runtime into ${targetDir} (type: ${isLocalDev ? 'local' : 'pypi'}, source: ${runtimeDep})`
+  );
+
+  const pip = uvPath
+    ? { cmd: uvPath, prefix: ['pip', 'install'] }
+    : { cmd: pythonBin, prefix: ['-m', 'pip', 'install'] };
+
+  const spawnArgs = [...pip.prefix, '--target', targetDir, runtimeDep];
+
+  await new Promise<void>((resolve, reject) => {
+    const child = spawn(pip.cmd, spawnArgs, {
+      cwd: workPath,
+      env: getProtectedUvEnv(env),
+      stdio: ['inherit', 'pipe', 'pipe'],
+    });
+
+    child.stdout?.on('data', (data: Buffer) => {
+      if (onStdout) {
+        onStdout(data);
+      } else {
+        debug(data.toString());
+      }
+    });
+
+    child.stderr?.on('data', (data: Buffer) => {
+      if (onStderr) {
+        onStderr(data);
+      } else {
+        debug(data.toString());
+      }
+    });
+
+    child.on('error', reject);
+    child.on('exit', (code, signal) => {
+      if (code === 0) {
+        resolve();
+      } else {
+        reject(
+          new Error(
+            `Installing vercel-runtime failed with code ${code}, signal ${signal}`
+          )
+        );
+      }
+    });
+  });
+}
+
 // Persistent dev servers keyed by workPath + modulePath so background tasks
 // can continue after HTTP response. Reused across requests in `vercel dev`.
 // This is necessary for background tasks to continue after HTTP response.
@@ -425,12 +529,7 @@ async function getMultiServicePythonRunner(
 
   // Create a per-service .venv, so deps are managed separately.
   const venvPath = join(workPath, '.venv');
-  await ensureVenv({
-    pythonPath: systemPython,
-    venvPath,
-    uvPath,
-    quiet: true,
-  });
+  await ensureVenv({ pythonPath: systemPython, venvPath, uvPath, quiet: true });
   debug(`Created virtualenv at ${venvPath} for multi-service dev`);
 
   const pythonBin = getVenvPythonBin(venvPath);
@@ -622,6 +721,15 @@ export const startDevServer: StartDevServer = async opts => {
         onStderr,
       });
     }
+
+    // vercel-runtime is a separate dependency that we need to install into .vercel/python/
+    // so the dev shim can import it without messing with project's manifest (and possibly uv)
+    await installVercelRuntime({
+      workPath,
+      uvPath,
+      pythonBin: spawnCommand,
+      env,
+    });
 
     const port = typeof meta.port === 'number' ? meta.port : await getPort();
     env.PORT = `${port}`;
