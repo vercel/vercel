@@ -1298,7 +1298,22 @@ async function handleDefaultDeploy(
             );
           }
         } catch (_) {
-          if (!asJson) {
+          if (asJson) {
+            output.stopSpinner();
+            client.stdout.write(
+              `${JSON.stringify(
+                {
+                  error: {
+                    name: 'BUILD_ERROR',
+                    message: err.message,
+                  },
+                  url: `https://${now.url}`,
+                },
+                null,
+                2
+              )}\n`
+            );
+          } else {
             output.log(
               `To check build logs run: ${getCommandName(
                 `inspect ${now.url} --logs`
