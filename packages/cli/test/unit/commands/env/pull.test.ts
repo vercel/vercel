@@ -498,6 +498,46 @@ describe('env pull', () => {
     expect(client.input.confirm).not.toHaveBeenCalled();
   });
 
+  it('should handle env values containing backslashes', async () => {
+    useUser();
+    useTeams('team_dummy');
+    useProject(
+      {
+        ...defaultProject,
+        id: 'vercel-env-pull',
+        name: 'vercel-env-pull',
+      },
+      [
+        ...envs,
+        {
+          type: 'encrypted',
+          id: '781dt89g8r2h789g',
+          key: 'PATH_WITH_BACKSLASH',
+          value: 'C:\\Users\\foo\\',
+          target: ['development'],
+          configurationId: null,
+          updatedAt: 1557241361455,
+          createdAt: 1557241361455,
+        },
+      ]
+    );
+    const cwd = setupUnitFixture('vercel-env-pull');
+    client.cwd = cwd;
+    client.setArgv('env', 'pull', '--yes');
+    const exitCodePromise = env(client);
+    await expect(client.stderr).toOutput(
+      'Downloading `development` Environment Variables for'
+    );
+    await expect(client.stderr).toOutput(
+      'Created .env.local file and added it to .gitignore'
+    );
+    const exitCode = await exitCodePromise;
+    expect(exitCode).toEqual(0);
+
+    const pulledEnv = await fs.readFile(path.join(cwd, '.env.local'), 'utf8');
+    expect(pulledEnv).toContain('PATH_WITH_BACKSLASH="C:\\Users\\foo\\"');
+  });
+
   it('should correctly render delta string when env variable has quotes', async () => {
     const cwd = setupUnitFixture('vercel-env-pull-delta-quotes');
     client.cwd = cwd;
