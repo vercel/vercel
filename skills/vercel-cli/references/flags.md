@@ -77,7 +77,7 @@ vercel flags rm my-feature --yes                          # delete (must be arch
 
 ## SDK Keys
 
-SDK keys authenticate your application when evaluating flags. The full key value is only shown at creation time. Keys have a type: `server`, `client`, or `mobile`.
+SDK keys authenticate your application when evaluating flags. The full key value is only shown at creation time.
 
 ```bash
 vercel flags sdk-keys ls                                  # list SDK keys
