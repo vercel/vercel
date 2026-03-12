@@ -1,0 +1,9 @@
+{
+  "probes": [
+    {
+      "path": "/ping",
+      "status": 200,
+      "mustContain": "\"source\":\"workspace-member\""
+    }
+  ]
+}

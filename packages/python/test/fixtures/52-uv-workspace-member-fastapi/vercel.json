@@ -1,0 +1,13 @@
+{
+  "uploadNowJson": true,
+  "projectSettings": {
+    "framework": "services"
+  },
+  "experimentalServices": {
+    "api": {
+      "framework": "fastapi",
+      "entrypoint": "services/api/main.py",
+      "routePrefix": "/"
+    }
+  }
+}

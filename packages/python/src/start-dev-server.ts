@@ -135,7 +135,7 @@ async function syncDependencies({
   const installInfo = detectInstallSource(pythonPackage, workPath);
 
   const { manifestType } = installInfo;
-  let { manifestPath } = installInfo;
+  let { manifestPath, projectDir } = installInfo;
   const manifest = pythonPackage.manifest;
 
   if (!manifestType || !manifestPath) {
@@ -151,6 +151,7 @@ async function syncDependencies({
     const content = stringifyManifest(manifest.data);
     writeFileSync(tempPyproject, content, 'utf8');
     manifestPath = tempPyproject;
+    projectDir = syncDir;
     debug(
       `Wrote converted ${manifest.origin.kind} manifest to ${tempPyproject}`
     );
@@ -179,6 +180,7 @@ async function syncDependencies({
     await runSync({
       manifestType,
       manifestPath,
+      projectDir: projectDir ?? dirname(manifestPath),
       uvPath,
       pythonBin,
       env,
@@ -202,6 +204,7 @@ async function syncDependencies({
 interface RunSyncOptions {
   manifestType: ManifestType;
   manifestPath: string;
+  projectDir: string;
   uvPath: string | null;
   pythonBin: string;
   env: NodeJS.ProcessEnv;
@@ -212,14 +215,13 @@ interface RunSyncOptions {
 async function runSync({
   manifestType,
   manifestPath,
+  projectDir,
   uvPath,
   pythonBin,
   env,
   onStdout,
   onStderr,
 }: RunSyncOptions): Promise<void> {
-  const projectDir = dirname(manifestPath);
-
   const pip = uvPath
     ? { cmd: uvPath, prefix: ['pip', 'install'] }
     : { cmd: pythonBin, prefix: ['-m', 'pip', 'install'] };

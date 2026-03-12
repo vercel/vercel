@@ -47,7 +47,11 @@ import {
   DEFAULT_PYTHON_VERSION_STRING,
   resetInstalledPythonsCache,
 } from '../src/version';
-import type { PythonConstraint, PythonPackage } from '@vercel/python-analysis';
+import {
+  PythonLockFileKind,
+  type PythonConstraint,
+  type PythonPackage,
+} from '@vercel/python-analysis';
 import { build, prepareCache } from '../src/index';
 import { createVenvEnv, getVenvBinDir } from '../src/utils';
 import {
@@ -56,7 +60,7 @@ import {
   getUvCacheDir,
 } from '../src/uv';
 import { VERCEL_WORKERS_VERSION } from '../src/package-versions';
-import { createPyprojectToml } from '../src/install';
+import { createPyprojectToml, detectInstallSource } from '../src/install';
 import { detectDjangoPythonEntrypoint } from '../src/entrypoint';
 import { getDjangoSettings } from '../src/django';
 import { FileBlob } from '@vercel/build-utils';
@@ -991,6 +995,35 @@ describe('python version selection from uv.lock and pyproject.toml', () => {
 });
 
 describe('uv workspace lockfile resolution (workspace root above workPath)', () => {
+  it('syncs workspace-member installs from the member directory', () => {
+    const installSource = detectInstallSource(
+      {
+        manifest: {
+          path: path.join('services', 'api', 'pyproject.toml'),
+          data: {
+            project: {
+              name: 'workspace-api',
+              version: '0.0.1',
+            },
+          },
+        },
+        workspaceLockFile: {
+          kind: PythonLockFileKind.UvLock,
+          path: 'uv.lock',
+        },
+        requiresPython: [],
+      } as PythonPackage,
+      '/repo'
+    );
+
+    expect(installSource.manifestType).toBe('uv.lock');
+    expect(installSource.manifestPath).toBe('/repo/uv.lock');
+    expect(installSource.projectDir).toBe('/repo/services/api');
+    expect(installSource.pyprojectPath).toBe(
+      '/repo/services/api/pyproject.toml'
+    );
+  });
+
   it('succeeds when uv writes uv.lock at the workspace root instead of the member directory', async () => {
     const repoRoot = path.join(
       tmpdir(),

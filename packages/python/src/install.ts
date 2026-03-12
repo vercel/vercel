@@ -155,6 +155,8 @@ export type ManifestType = 'uv.lock' | 'pylock.toml' | 'pyproject.toml' | null;
 export interface InstallSourceInfo {
   manifestPath: string | null;
   manifestType: ManifestType;
+  projectDir: string | null;
+  pyprojectPath: string | null;
   /** The discovered package info from python-analysis. */
   pythonPackage: PythonPackage;
 }
@@ -166,10 +168,28 @@ export function detectInstallSource(
   // Determine effective manifest type based on lock file and manifest presence
   let manifestType: ManifestType = null;
   let manifestPath: string | null = null;
+  let projectDir: string | null = null;
+  let pyprojectPath: string | null = null;
+
+  const manifest = pythonPackage.manifest;
+  const manifestProjectDir = manifest
+    ? join(rootDir, dirname(manifest.path))
+    : null;
+  let manifestPyprojectPath: string | null = null;
+  if (manifest && manifestProjectDir) {
+    manifestPyprojectPath = manifest.origin
+      ? join(manifestProjectDir, 'pyproject.toml')
+      : join(rootDir, manifest.path);
+  }
+
+  const manifestLockFile = manifest?.lockFile;
+  const workspaceLockFile =
+    manifest && !manifest.origin && !manifestLockFile
+      ? pythonPackage.workspaceLockFile
+      : undefined;
 
   // Check for lock file first (highest priority)
-  const lockFile =
-    pythonPackage.manifest?.lockFile ?? pythonPackage.workspaceLockFile;
+  const lockFile = manifestLockFile ?? workspaceLockFile;
   if (lockFile) {
     if (lockFile.kind === PythonLockFileKind.UvLock) {
       manifestType = 'uv.lock';
@@ -178,13 +198,30 @@ export function detectInstallSource(
       manifestType = 'pylock.toml';
       manifestPath = join(rootDir, lockFile.path);
     }
-  } else if (pythonPackage.manifest) {
+    if (workspaceLockFile && manifestProjectDir) {
+      // A workspace lockfile pins the entire workspace, but installs still need
+      // to run from the entrypoint member's own project directory.
+      projectDir = manifestProjectDir;
+      pyprojectPath = manifestPyprojectPath;
+    } else if (manifestPath) {
+      projectDir = dirname(manifestPath);
+      pyprojectPath = join(projectDir, 'pyproject.toml');
+    }
+  } else if (manifest) {
     // No lock file, but have a manifest (native or converted)
     manifestType = 'pyproject.toml';
-    manifestPath = join(rootDir, pythonPackage.manifest.path);
+    manifestPath = join(rootDir, manifest.path);
+    projectDir = manifestProjectDir;
+    pyprojectPath = manifestPyprojectPath ?? manifestPath;
   }
 
-  return { manifestPath, manifestType, pythonPackage };
+  return {
+    manifestPath,
+    manifestType,
+    projectDir,
+    pyprojectPath,
+    pythonPackage,
+  };
 }
 
 export async function createPyprojectToml({
@@ -242,7 +279,8 @@ export async function ensureUvProject({
   generateLockFile = false,
   requireBinaryWheels = false,
 }: EnsureUvProjectParams): Promise<UvProjectInfo> {
-  const { manifestType } = detectInstallSource(pythonPackage, rootDir);
+  const installSource = detectInstallSource(pythonPackage, rootDir);
+  const { manifestType } = installSource;
   const manifest = pythonPackage.manifest;
 
   let projectDir: string;
@@ -262,9 +300,9 @@ export async function ensureUvProject({
       );
     }
     lockPath = join(rootDir, lockFile.path);
-    // Project dir is where the lock file is located
-    projectDir = dirname(lockPath);
-    pyprojectPath = join(projectDir, 'pyproject.toml');
+    projectDir = installSource.projectDir ?? dirname(lockPath);
+    pyprojectPath =
+      installSource.pyprojectPath ?? join(projectDir, 'pyproject.toml');
 
     if (!fs.existsSync(pyprojectPath)) {
       throw new Error(
