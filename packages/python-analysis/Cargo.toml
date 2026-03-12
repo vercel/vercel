@@ -28,3 +28,11 @@ lto = true
 codegen-units = 1
 panic = "abort"
 strip = true
+
+[profile.analysis]
+inherits = "release"
+opt-level = "z"
+lto = false
+codegen-units = 1
+strip = false
+debug = "line-tables-only"
