@@ -7,13 +7,24 @@ import deleteDNSRecordById from '../../util/dns/delete-dns-record-by-id';
 import getDNSRecordById from '../../util/dns/get-dns-record-by-id';
 import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
-import { getCommandName } from '../../util/pkg-name';
+import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 import output from '../../output-manager';
 import { DnsRmTelemetryClient } from '../../util/telemetry/commands/dns/rm';
 import { removeSubcommand } from './command';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
+import {
+  buildCommandWithYes,
+  outputActionRequired,
+  outputAgentError,
+} from '../../util/agent-output';
+import { getGlobalFlagsOnlyFromArgs } from '../../util/arg-common';
+
+function withGlobalFlags(client: Client, commandTemplate: string): string {
+  const flags = getGlobalFlagsOnlyFromArgs(client.argv.slice(2));
+  return getCommandNamePlain(`${commandTemplate} ${flags.join(' ')}`.trim());
+}
 
 export default async function rm(client: Client, argv: string[]) {
   let parsedArgs;
@@ -21,6 +32,17 @@ export default async function rm(client: Client, argv: string[]) {
   try {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'invalid_arguments',
+          message: err instanceof Error ? err.message : String(err),
+        },
+        1
+      );
+    }
     printError(err);
     return 1;
   }
@@ -35,6 +57,25 @@ export default async function rm(client: Client, argv: string[]) {
 
   const [recordId] = args;
   if (args.length !== 1) {
+    if (client.nonInteractive) {
+      const cmd = withGlobalFlags(client, 'dns rm <id> --yes');
+      outputActionRequired(
+        client,
+        {
+          status: 'action_required',
+          reason: 'missing_arguments',
+          action: 'missing_arguments',
+          message: `Invalid number of arguments. Run: ${cmd}`,
+          next: [
+            {
+              command: cmd,
+              when: 'to remove a DNS record by id (use dns ls to find ids)',
+            },
+          ],
+        },
+        1
+      );
+    }
     output.error(
       `Invalid number of arguments. Usage: ${chalk.cyan(
         `${getCommandName('dns rm <id>')}`
@@ -49,12 +90,51 @@ export default async function rm(client: Client, argv: string[]) {
   const record = await getDNSRecordById(client, recordId);
 
   if (!record) {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'dns_record_not_found',
+          message: 'DNS record not found.',
+          next: [
+            {
+              command: withGlobalFlags(client, 'dns ls'),
+              when: 'to list DNS records and ids',
+            },
+          ],
+        },
+        1
+      );
+    }
     output.error('DNS record not found');
     return 1;
   }
 
   const { domain: domainName } = record;
   const skipConfirmation = flags['--yes'];
+
+  if (client.nonInteractive && !skipConfirmation) {
+    outputActionRequired(
+      client,
+      {
+        status: 'action_required',
+        reason: 'confirmation_required',
+        action: 'confirmation_required',
+        message:
+          'In non-interactive mode --yes is required to remove a DNS record.',
+        next: [
+          {
+            command: buildCommandWithYes(client.argv),
+            when: 'to confirm removal',
+          },
+        ],
+      },
+      1
+    );
+    return 1;
+  }
+
   const yes =
     skipConfirmation ||
     (await readConfirmation(

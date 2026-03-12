@@ -20,6 +20,12 @@ import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { validateLsArgs } from '../../util/validate-ls-args';
+import {
+  outputActionRequired,
+  outputAgentError,
+} from '../../util/agent-output';
+import { getGlobalFlagsOnlyFromArgs } from '../../util/arg-common';
+import { getCommandNamePlain } from '../../util/pkg-name';
 
 export default async function ls(client: Client, argv: string[]) {
   let parsedArgs;
@@ -27,10 +33,45 @@ export default async function ls(client: Client, argv: string[]) {
   try {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'invalid_arguments',
+          message: err instanceof Error ? err.message : String(err),
+        },
+        1
+      );
+    }
     printError(err);
     return 1;
   }
   const { args, flags: opts } = parsedArgs;
+
+  if (client.nonInteractive && args.length > 1) {
+    const flags = getGlobalFlagsOnlyFromArgs(client.argv.slice(2));
+    const cmd = getCommandNamePlain(
+      `dns ls [domain] ${flags.join(' ')}`.trim()
+    );
+    outputActionRequired(
+      client,
+      {
+        status: 'action_required',
+        reason: 'missing_arguments',
+        action: 'missing_arguments',
+        message: `Invalid number of arguments. Run: ${cmd}`,
+        next: [
+          {
+            command: cmd,
+            when: 'to list DNS records (optional single domain)',
+          },
+        ],
+      },
+      1
+    );
+    return 1;
+  }
 
   const validationResult = validateLsArgs({
     commandName: 'dns ls [domain]',
@@ -74,6 +115,20 @@ export default async function ls(client: Client, argv: string[]) {
       ...paginationOptions
     );
     if (data instanceof DomainNotFound) {
+      if (client.nonInteractive) {
+        const flags = getGlobalFlagsOnlyFromArgs(client.argv.slice(2));
+        const cmd = getCommandNamePlain(`dns ls ${flags.join(' ')}`.trim());
+        outputAgentError(
+          client,
+          {
+            status: 'error',
+            reason: 'domain_not_found',
+            message: `The domain ${domainName} can't be found under ${contextName}.`,
+            next: [{ command: cmd, when: 'to list available DNS records' }],
+          },
+          1
+        );
+      }
       output.error(
         `The domain ${domainName} can't be found under ${chalk.bold(
           contextName

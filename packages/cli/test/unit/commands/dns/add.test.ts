@@ -1,4 +1,4 @@
-import { describe, beforeEach, expect, it } from 'vitest';
+import { describe, beforeEach, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import dns from '../../../../src/commands/dns';
 import { useUser } from '../../../mocks/user';
@@ -31,12 +31,26 @@ describe('dns add', () => {
   describe('non-interactive mode', () => {
     it('errors when only domain is provided (no record details)', async () => {
       client.nonInteractive = true;
+      const logSpy = vi
+        .spyOn(console, 'log')
+        .mockImplementation(() => undefined as unknown as void);
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {
+        throw new Error('exit');
+      }) as () => never);
+
       client.setArgv('dns', 'add', 'example.com');
-      const exitCode = await dns(client);
-      expect(exitCode).toBe(1);
-      await expect(client.stderr).toOutput(
-        'In non-interactive mode full record details are required. Use:'
-      );
+      await expect(dns(client)).rejects.toThrow('exit');
+
+      const payload = JSON.parse(logSpy.mock.calls[0][0] as string);
+      expect(payload.status).toBe('action_required');
+      expect(payload.reason).toBe('missing_arguments');
+      expect(payload.message).toContain('full record details');
+      expect(payload.next[0].command).toContain('dns add');
+      expect(payload.next[0].command).toContain('<domain>');
+
+      logSpy.mockRestore();
+      exitSpy.mockRestore();
+      client.nonInteractive = false;
     });
 
     it('succeeds when full record details are provided', async () => {
