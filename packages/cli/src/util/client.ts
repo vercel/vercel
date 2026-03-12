@@ -440,7 +440,7 @@ export default class Client extends EventEmitter implements Stdio {
         ? { teamId, ...(teamName ? { teamSlug: teamName } : {}) }
         : {}),
       message: `Confirmation required: "vercel ${command}" requires write permissions${scopeInfo}.`,
-      description: `The command "vercel ${command}" makes non-GET API requests and requires explicit user approval when running as an agent.`,
+      description: `The command "vercel ${command}" requires write privileges which require user approval.`,
       prompt:
         'Use a yes/no confirmation prompt to ask the user if they want to proceed with this operation. Do not proceed without explicit user approval.',
       resolution:
