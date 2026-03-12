@@ -60,6 +60,7 @@
     "@vercel/nestjs": "workspace:*",
     "@vercel/next": "workspace:*",
     "@vercel/node": "workspace:*",
+    "@vercel/prepare-flags-definitions": "0.1.0",
     "@vercel/python": "workspace:*",
     "@vercel/redwood": "workspace:*",
     "@vercel/remix-builder": "workspace:*",
