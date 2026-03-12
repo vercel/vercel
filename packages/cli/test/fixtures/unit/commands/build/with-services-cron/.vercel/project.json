@@ -2,6 +2,7 @@
   "orgId": ".",
   "projectId": ".",
   "settings": {
-    "framework": "services"
+    "framework": null,
+    "installCommand": ""
   }
 }

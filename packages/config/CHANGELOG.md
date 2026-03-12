@@ -1,5 +1,11 @@
 # @vercel/router-sdk
 
+## 0.0.39
+
+### Patch Changes
+
+- [services] adds support for subdomai configuration in experimentalServices ([#15401](https://github.com/vercel/vercel/pull/15401))
+
 ## 0.0.38
 
 ### Patch Changes
