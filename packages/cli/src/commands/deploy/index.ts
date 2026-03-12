@@ -506,7 +506,21 @@ async function handleInitDeployment(
     }
 
     if (deployment.readyState === 'CANCELED') {
-      output.print('The deployment has been canceled.\n');
+      if (asJson) {
+        output.stopSpinner();
+        client.stdout.write(
+          `${JSON.stringify(
+            getDeploymentOutputJson(deployment, client.apiUrl, {
+              name: 'DEPLOYMENT_CANCELED',
+              message: 'The deployment has been canceled.',
+            }),
+            null,
+            2
+          )}\n`
+        );
+      } else {
+        output.print('The deployment has been canceled.\n');
+      }
       return 1;
     }
 
@@ -1139,7 +1153,21 @@ async function handleDefaultDeploy(
     }
 
     if (deployment.readyState === 'CANCELED') {
-      output.print('The deployment has been canceled.\n');
+      if (asJson) {
+        output.stopSpinner();
+        client.stdout.write(
+          `${JSON.stringify(
+            getDeploymentOutputJson(deployment, client.apiUrl, {
+              name: 'DEPLOYMENT_CANCELED',
+              message: 'The deployment has been canceled.',
+            }),
+            null,
+            2
+          )}\n`
+        );
+      } else {
+        output.print('The deployment has been canceled.\n');
+      }
       return 1;
     }
 
@@ -1153,7 +1181,22 @@ async function handleDefaultDeploy(
       const counterList = Array.from(counters)
         .map(([name, no]) => `${no} ${name}`)
         .join(', ');
-      output.error(`Running Checks: ${counterList}`);
+
+      if (asJson) {
+        output.stopSpinner();
+        client.stdout.write(
+          `${JSON.stringify(
+            getDeploymentOutputJson(deployment, client.apiUrl, {
+              name: 'CHECKS_FAILED',
+              message: `Running Checks: ${counterList}`,
+            }),
+            null,
+            2
+          )}\n`
+        );
+      } else {
+        output.error(`Running Checks: ${counterList}`);
+      }
       return 1;
     }
 
@@ -1227,14 +1270,27 @@ async function handleDefaultDeploy(
     }
 
     if (err instanceof BuildError) {
-      if (withFullLogs === false) {
+      if (now.url) {
         try {
-          if (now.url) {
-            const failedDeployment = await getDeployment(
-              client,
-              contextName,
-              now.url
+          const failedDeployment = await getDeployment(
+            client,
+            contextName,
+            now.url
+          );
+
+          if (asJson) {
+            output.stopSpinner();
+            client.stdout.write(
+              `${JSON.stringify(
+                getDeploymentOutputJson(failedDeployment, client.apiUrl, {
+                  name: 'BUILD_ERROR',
+                  message: err.message,
+                }),
+                null,
+                2
+              )}\n`
             );
+          } else if (withFullLogs === false) {
             await displayBuildLogsUntilFinalError(
               client,
               failedDeployment,
@@ -1242,14 +1298,31 @@ async function handleDefaultDeploy(
             );
           }
         } catch (_) {
-          output.log(
-            `To check build logs run: ${getCommandName(
-              `inspect ${now.url} --logs`
-            )}`
-          );
-          output.log(
-            `Or inspect them in your browser at https://${now.url}/_logs`
-          );
+          if (asJson) {
+            output.stopSpinner();
+            client.stdout.write(
+              `${JSON.stringify(
+                {
+                  error: {
+                    name: 'BUILD_ERROR',
+                    message: err.message,
+                  },
+                  url: `https://${now.url}`,
+                },
+                null,
+                2
+              )}\n`
+            );
+          } else {
+            output.log(
+              `To check build logs run: ${getCommandName(
+                `inspect ${now.url} --logs`
+              )}`
+            );
+            output.log(
+              `Or inspect them in your browser at https://${now.url}/_logs`
+            );
+          }
         }
       }
 
@@ -1546,7 +1619,8 @@ function getDeploymentOutputJson(
     readyState: string;
     target?: string | null;
   },
-  apiUrl: string
+  apiUrl: string,
+  error?: { name: string; message: string }
 ) {
   return {
     id: deployment.id,
@@ -1555,5 +1629,6 @@ function getDeploymentOutputJson(
     readyState: deployment.readyState,
     target: deployment.target ?? null,
     deploymentApiUrl: `${apiUrl}/v13/deployments/${deployment.id}`,
+    ...(error ? { error } : {}),
   };
 }
