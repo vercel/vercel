@@ -32,8 +32,6 @@ Finally, [connect your Git repository to Vercel](https://vercel.com/docs/git) an
 
 For details on how to use Vercel CLI, check out our [documentation](https://vercel.com/docs/cli).
 
-For contributors: **[Non-interactive mode best practices](docs/non-interactive-mode.md)** — structured JSON, plain command strings, global flags in `next[]`, and testing patterns.
-
 ## Local Development
 
 To develop Vercel CLI, first check out the source code, install dependencies, and build all packages:
