@@ -156,6 +156,7 @@ describe('activity ls', () => {
     expect(output).toContain(longText);
     expect(output).toContain('Type: firewall-bypass-created');
     expect(output).toContain('Actor: jane');
+    expect(output).toContain('Timestamp: 2023-11-14T22:13:20.000Z');
   });
 
   it('supports repeatable and comma-separated --type filters', async () => {
