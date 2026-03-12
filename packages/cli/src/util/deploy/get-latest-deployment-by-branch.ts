@@ -8,7 +8,13 @@ export interface BranchDeployment {
 }
 
 interface DeploymentResponse {
-  deployments: Array<{ uid: string; url: string; state?: string }>;
+  deployments: Array<{
+    id?: string;
+    uid?: string;
+    readyState?: string;
+    state?: string;
+    url: string;
+  }>;
 }
 
 export async function getLatestDeploymentByBranch(
@@ -42,10 +48,16 @@ export async function getLatestDeploymentByBranch(
     );
 
     if (deployments.length > 0) {
+      const deployment = deployments[0];
+      const id = deployment.uid ?? deployment.id;
+      if (!id) {
+        continue;
+      }
+
       return {
-        id: deployments[0].uid,
-        readyState: deployments[0].state,
-        url: deployments[0].url,
+        id,
+        readyState: deployment.state ?? deployment.readyState,
+        url: deployment.url,
       };
     }
   }
