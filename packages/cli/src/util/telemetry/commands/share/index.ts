@@ -6,6 +6,12 @@ export class ShareTelemetryClient
   extends TelemetryClient
   implements TelemetryMethods<typeof shareCommand>
 {
+  trackCliFlagYes(value: boolean | undefined) {
+    if (value) {
+      this.trackCliFlag('yes');
+    }
+  }
+
   trackCliArgumentUrlOrDeploymentId(value: string | undefined) {
     if (value) {
       this.trackCliArgument({

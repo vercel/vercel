@@ -57,7 +57,7 @@ describe('share', () => {
       });
     });
 
-    client.setArgv('share', `https://${deployment.url}`);
+    client.setArgv('share', `https://${deployment.url}`, '--yes');
     const exitCode = await share(client);
 
     expect(exitCode).toBe(0);
@@ -68,6 +68,10 @@ describe('share', () => {
       {
         key: 'argument:deploymentIdOrHost',
         value: '[REDACTED]',
+      },
+      {
+        key: 'flag:yes',
+        value: 'TRUE',
       },
     ]);
   });
@@ -90,7 +94,7 @@ describe('share', () => {
       });
     });
 
-    client.setArgv('share', deployment.id, '--ttl', '1h');
+    client.setArgv('share', deployment.id, '--ttl', '1h', '--yes');
     const exitCode = await share(client);
 
     expect(exitCode).toBe(0);
@@ -103,10 +107,47 @@ describe('share', () => {
         value: '[REDACTED]',
       },
       {
+        key: 'flag:yes',
+        value: 'TRUE',
+      },
+      {
         key: 'option:ttl',
         value: '[REDACTED]',
       },
     ]);
+  });
+
+  it('asks for approval before creating a share URL', async () => {
+    client.cwd = setupTmpDir();
+    const user = useUser();
+    const deployment = useDeployment({ creator: user });
+    const confirmMock = vi
+      .spyOn(client.input, 'confirm')
+      .mockResolvedValue(true as never);
+
+    client.scenario.patch('/v1/aliases/:id/protection-bypass', (req, res) => {
+      expect(req.params.id).toBe(deployment.id);
+      res.json({
+        protectionBypass: {
+          prompted_token: {},
+        },
+      });
+    });
+
+    client.setArgv('share', `https://${deployment.url}`);
+    const exitCode = await share(client);
+
+    expect(exitCode).toBe(0);
+    expect(confirmMock).toHaveBeenCalledWith(
+      'Are you sure you want to continue?',
+      false
+    );
+    await expect(client.stderr).toOutput(
+      `This will create a shareable link that bypasses deployment protection for https://${deployment.url}.`
+    );
+    expect(client.stdout.getFullOutput()).toBe(
+      `https://${deployment.url}/?_vercel_share=prompted_token\n`
+    );
   });
 
   it('uses the current branch deployment when no argument is provided', async () => {
@@ -140,13 +181,45 @@ describe('share', () => {
       });
     });
 
-    client.setArgv('share');
+    client.setArgv('share', '--yes');
     const exitCode = await share(client);
 
     expect(exitCode).toBe(0);
     expect(client.stdout.getFullOutput()).toBe(
       `https://${deployment.url}/?_vercel_share=branch_token\n`
     );
+  });
+
+  describe('--non-interactive', () => {
+    it('outputs action_required JSON and exits when approval is required', async () => {
+      client.cwd = setupTmpDir();
+      const user = useUser();
+      const deployment = useDeployment({ creator: user });
+      client.setArgv('share', `https://${deployment.url}`);
+      (client as { nonInteractive: boolean }).nonInteractive = true;
+      client.stdin.isTTY = false;
+
+      const exitSpy = vi
+        .spyOn(process, 'exit')
+        .mockImplementation((code?: number) => {
+          throw new Error(`process.exit(${code})`);
+        });
+
+      await expect(share(client)).rejects.toThrow('process.exit(1)');
+      expect(client.stdout.getFullOutput()).toContain(
+        '"status": "action_required"'
+      );
+      expect(client.stdout.getFullOutput()).toContain(
+        '"reason": "confirmation_required"'
+      );
+      expect(client.stdout.getFullOutput()).toContain(
+        `vercel share https://${deployment.url} --yes`
+      );
+
+      exitSpy.mockRestore();
+      (client as { nonInteractive: boolean }).nonInteractive = false;
+      client.stdin.isTTY = true;
+    });
   });
 
   it('errors when no linked project exists for the branch-based default', async () => {

@@ -1,4 +1,5 @@
 import { packageName } from '../../util/pkg-name';
+import { yesOption } from '../../util/arg-common';
 
 export const shareCommand = {
   name: 'share',
@@ -11,6 +12,10 @@ export const shareCommand = {
     },
   ],
   options: [
+    {
+      ...yesOption,
+      description: 'Skip the approval prompt before creating the share link',
+    },
     {
       name: 'ttl',
       shorthand: null,

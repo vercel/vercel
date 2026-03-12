@@ -13,10 +13,14 @@ import {
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import getScope from '../../util/get-scope';
-import { getCommandName } from '../../util/pkg-name';
+import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 import { getLinkedProject } from '../../util/projects/link';
 import { ShareTelemetryClient } from '../../util/telemetry/commands/share';
 import { getLatestDeploymentByBranch } from '../../util/deploy/get-latest-deployment-by-branch';
+import {
+  buildCommandWithYes,
+  outputActionRequired,
+} from '../../util/agent-output';
 import toHost from '../../util/to-host';
 import output from '../../output-manager';
 import { help } from '../help';
@@ -63,6 +67,7 @@ export default async function share(client: Client): Promise<number> {
   }
 
   telemetry.trackCliArgumentUrlOrDeploymentId(target);
+  telemetry.trackCliFlagYes(parsedArguments.flags['--yes']);
   telemetry.trackCliOptionTtl(parsedArguments.flags['--ttl']);
 
   const ttl = parseTTL(parsedArguments.flags['--ttl']);
@@ -190,7 +195,66 @@ export default async function share(client: Client): Promise<number> {
     baseUrl = `https://${branchDeployment.url}`;
   }
 
+  const approved = await confirmShareCreation(
+    client,
+    baseUrl,
+    Boolean(parsedArguments.flags['--yes'])
+  );
+  if (!approved) {
+    return 0;
+  }
+
   return await createShareUrl(client, deploymentId, baseUrl, ttl, accountId);
+}
+
+async function confirmShareCreation(
+  client: Client,
+  baseUrl: string,
+  autoConfirm: boolean
+): Promise<boolean> {
+  if (autoConfirm) {
+    return true;
+  }
+
+  if (!client.stdin.isTTY) {
+    if (client.nonInteractive) {
+      outputActionRequired(
+        client,
+        {
+          status: 'action_required',
+          reason: 'confirmation_required',
+          message: `Command ${getCommandNamePlain('share')} requires confirmation. Use option --yes to confirm.`,
+          next: [
+            {
+              command: buildCommandWithYes(client.argv),
+              when: 'Confirm and run',
+            },
+          ],
+        },
+        1
+      );
+    } else {
+      output.error(
+        'Confirmation required. Use `--yes` to skip the confirmation prompt in non-interactive mode.'
+      );
+    }
+    return false;
+  }
+
+  output.log(
+    `This will create a shareable link that bypasses deployment protection for ${baseUrl}.`
+  );
+
+  const confirmed = await client.input.confirm(
+    'Are you sure you want to continue?',
+    false
+  );
+
+  if (!confirmed) {
+    output.log('Canceled');
+  }
+
+  return confirmed;
 }
 
 async function inferAccountId(
