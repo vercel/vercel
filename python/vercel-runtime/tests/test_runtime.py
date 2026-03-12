@@ -372,92 +372,6 @@ class TestHTTPHandler(_RuntimeTestCase):
             sock.close()
             self.assertIn(b"400", data)
 
-    async def test_wait_until_delays_end_and_logs_errors(self) -> None:
-        ep_abs, ep_rel, mod = _make_entrypoint(
-            "wait_until_http_handler.py",
-            self.tmp_path,
-        )
-        async with _run_runtime(
-            entrypoint_abs=ep_abs,
-            entrypoint_rel=ep_rel,
-            module_name=mod,
-            ipc_socket_path=self.n1.socket_path,
-        ):
-            ss = await self.n1.wait_for_message(
-                ServerStartedMessage, timeout=10.0
-            )
-            port = ss.payload.http_port
-
-            started_at = time.monotonic()
-            resp = await _http_get(port, "/")
-            self.assertEqual(resp.status, 200)
-            self.assertEqual(resp.read().decode(), "ok")
-
-            await self.n1.wait_for_message(HandlerStartedMessage, timeout=5.0)
-            log = await _wait_for_log_message_containing(
-                self.n1,
-                "wait-until-http-finished",
-                timeout=5.0,
-            )
-            end = await self.n1.wait_for_message(EndMessage, timeout=5.0)
-
-            elapsed = time.monotonic() - started_at
-            self.assertGreaterEqual(elapsed, 0.18)
-            self.assertIn(
-                "wait-until-http-finished",
-                base64.b64decode(log.payload.message).decode(),
-            )
-            self.assertEqual(end.payload.context.request_id, 42)
-
-            resp = await _http_get(port, "/error")
-            self.assertEqual(resp.status, 200)
-            resp.read()
-
-            await self.n1.wait_for_message(HandlerStartedMessage, timeout=5.0)
-            error_log = await _wait_for_log_message_containing(
-                self.n1,
-                "wait-until-http-error",
-                timeout=5.0,
-            )
-            await self.n1.wait_for_message(EndMessage, timeout=5.0)
-            decoded = base64.b64decode(error_log.payload.message).decode()
-            self.assertEqual(error_log.payload.level, "error")
-            self.assertIn("Side Effect (via waitUntil) failed", decoded)
-            self.assertIn("wait-until-http-error", decoded)
-
-    async def test_wait_until_timeout_warns_and_does_not_block_end(
-        self,
-    ) -> None:
-        ep_abs, ep_rel, mod = _make_entrypoint(
-            "wait_until_http_handler.py",
-            self.tmp_path,
-        )
-        async with _run_runtime(
-            entrypoint_abs=ep_abs,
-            entrypoint_rel=ep_rel,
-            module_name=mod,
-            ipc_socket_path=self.n1.socket_path,
-            extra_env={"VERCEL_WAIT_UNTIL_TIMEOUT": "0.1"},
-        ) as proc:
-            ss = await self.n1.wait_for_message(
-                ServerStartedMessage, timeout=10.0
-            )
-            port = ss.payload.http_port
-
-            started_at = time.monotonic()
-            resp = await _http_get(port, "/slow")
-            self.assertEqual(resp.status, 200)
-            self.assertEqual(resp.read().decode(), "ok")
-
-            await self.n1.wait_for_message(HandlerStartedMessage, timeout=5.0)
-            await self.n1.wait_for_message(EndMessage, timeout=1.0)
-            elapsed = time.monotonic() - started_at
-            self.assertLess(elapsed, 0.4)
-
-        stderr = await _read_stderr(proc)
-        self.assertIn("still running after 0.1s", stderr)
-        self.assertIn("long-running waitUntil() promise", stderr)
-
 
 class TestWSGIApp(_RuntimeTestCase):
     """Tests for WSGI app entrypoints."""
@@ -577,9 +491,9 @@ class TestASGIApp(_RuntimeTestCase):
             sock.close()
             self.assertIn(b"200", data)
 
-    async def test_wait_until_delays_end_and_logs_errors(self) -> None:
+    async def test_background_tasks_delay_end_and_log_errors(self) -> None:
         ep_abs, ep_rel, mod = _make_entrypoint(
-            "wait_until_asgi_app.py",
+            "background_tasks_asgi_app.py",
             self.tmp_path,
         )
         async with _run_runtime(
@@ -601,7 +515,7 @@ class TestASGIApp(_RuntimeTestCase):
             await self.n1.wait_for_message(HandlerStartedMessage, timeout=5.0)
             log = await _wait_for_log_message_containing(
                 self.n1,
-                "wait-until-asgi-finished",
+                "background-task-asgi-finished",
                 timeout=5.0,
             )
             await self.n1.wait_for_message(EndMessage, timeout=5.0)
@@ -609,7 +523,7 @@ class TestASGIApp(_RuntimeTestCase):
             elapsed = time.monotonic() - started_at
             self.assertGreaterEqual(elapsed, 0.18)
             self.assertIn(
-                "wait-until-asgi-finished",
+                "background-task-asgi-finished",
                 base64.b64decode(log.payload.message).decode(),
             )
 
@@ -620,20 +534,22 @@ class TestASGIApp(_RuntimeTestCase):
             await self.n1.wait_for_message(HandlerStartedMessage, timeout=5.0)
             error_log = await _wait_for_log_message_containing(
                 self.n1,
-                "wait-until-asgi-error",
+                "background-task-asgi-error",
                 timeout=5.0,
             )
             await self.n1.wait_for_message(EndMessage, timeout=5.0)
             decoded = base64.b64decode(error_log.payload.message).decode()
             self.assertEqual(error_log.payload.level, "error")
-            self.assertIn("Side Effect (via waitUntil) failed", decoded)
-            self.assertIn("wait-until-asgi-error", decoded)
+            self.assertIn(
+                "Side Effect (via asyncio.create_task) failed", decoded
+            )
+            self.assertIn("background-task-asgi-error", decoded)
 
-    async def test_wait_until_timeout_warns_and_does_not_block_end(
+    async def test_background_tasks_timeout_warns_and_does_not_block_end(
         self,
     ) -> None:
         ep_abs, ep_rel, mod = _make_entrypoint(
-            "wait_until_asgi_app.py",
+            "background_tasks_asgi_app.py",
             self.tmp_path,
         )
         async with _run_runtime(
@@ -659,8 +575,8 @@ class TestASGIApp(_RuntimeTestCase):
             self.assertLess(elapsed, 0.4)
 
         stderr = await _read_stderr(proc)
-        self.assertIn("still running after 0.1s", stderr)
-        self.assertIn("long-running waitUntil() promise", stderr)
+        self.assertIn("still running background tasks after 0.1s", stderr)
+        self.assertIn("long-running asyncio.create_task() call", stderr)
 
 
 class TestCronService(_RuntimeTestCase):

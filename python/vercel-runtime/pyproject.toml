@@ -119,6 +119,7 @@ extend-ignore = [
     "N802",    # do_GET is BaseHTTPRequestHandler convention
     "T201",    # print is used intentionally in fixtures
     "PLC0415", # conditional imports in fixtures are fine
+    "RUF006",  # fire-and-forget create_task is the tested pattern
 ]
 
 [tool.pytest.ini_options]

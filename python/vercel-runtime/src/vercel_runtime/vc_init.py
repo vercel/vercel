@@ -18,6 +18,10 @@ import traceback
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import TYPE_CHECKING, Any, Literal, Never, TextIO
 
+from vercel_runtime.background_tasks import (
+    BackgroundTaskScope,
+    install_task_factory,
+)
 from vercel_runtime.crons import (
     bootstrap_cron_service_app,
     is_cron_service,
@@ -40,20 +44,14 @@ from vercel_runtime.routing import (
     apply_service_route_prefix_to_target,
     split_request_target,
 )
-from vercel_runtime.wait_until import WaitUntilState
 from vercel_runtime.workers import (
     bootstrap_worker_service_app,
     is_celery_app,
     is_worker_service,
 )
 
-try:
-    from vercel.wait_until import callback_context  # type: ignore[import-not-found]  # noqa: I001  # pyright: ignore[reportMissingImports]
-except ImportError:
-    callback_context = None  # pyright: ignore[reportAssignmentType]
-
 if TYPE_CHECKING:
-    from collections.abc import Awaitable, Callable, Iterator
+    from collections.abc import Awaitable, Callable
 
 type _IpcMessage = dict[str, Any]
 type _ASGIScope = dict[str, Any]
@@ -110,24 +108,6 @@ _here = os.path.dirname(__file__)
 _entrypoint_rel = _must_getenv("__VC_HANDLER_ENTRYPOINT")
 _entrypoint_abs = _must_getenv("__VC_HANDLER_ENTRYPOINT_ABS")
 _entrypoint_modname = _must_getenv("__VC_HANDLER_MODULE_NAME")
-
-
-@contextlib.contextmanager
-def _vercel_wait_until_bridge(
-    submit: Callable[..., None],
-) -> Iterator[None]:
-    """Bridge ``vercel-runtime``'s wait_until into the ``vercel`` SDK.
-
-    If the ``vercel`` package is installed, its ``callback_context``
-    is used to inject the *submit* function so that user code calling
-    ``from vercel import wait_until`` routes work through the runtime.
-    When ``vercel`` is not installed the bridge is a no-op.
-    """
-    if callback_context is not None:
-        with callback_context(submit):
-            yield
-    else:
-        yield
 
 
 def setup_logging(
@@ -546,6 +526,7 @@ class ASGIMiddleware:
 
     def __init__(self, app: _ASGIApp | Any) -> None:
         self.app = app
+        self._factory_installed = False
 
     async def __call__(
         self,
@@ -633,8 +614,12 @@ class ASGIMiddleware:
             }
         )
 
-        wait_until_state = WaitUntilState()
-        wait_until_token = wait_until_state.activate()
+        if not self._factory_installed:
+            install_task_factory(asyncio.get_running_loop())
+            self._factory_installed = True
+
+        bg_scope = BackgroundTaskScope()
+        bg_scope.activate()
         token = storage.set(
             {
                 "invocationId": invocation_id,
@@ -643,25 +628,24 @@ class ASGIMiddleware:
         )
         set_vercel_headers_from_asgi_pairs(new_headers)
 
-        with _vercel_wait_until_bridge(wait_until_state.submit):
-            try:
-                await self.app(new_scope, receive, send)
-            finally:
-                await wait_until_state.drain(_entrypoint_rel, _stderr)
-                wait_until_token.deactivate()
-                clear_vercel_headers_context()
-                storage.reset(token)
-                send_message(
-                    {
-                        "type": "end",
-                        "payload": {
-                            "context": {
-                                "invocationId": invocation_id,
-                                "requestId": request_id,
-                            }
-                        },
-                    }
-                )
+        try:
+            await self.app(new_scope, receive, send)
+        finally:
+            await bg_scope.drain(_entrypoint_rel, _stderr)
+            bg_scope.deactivate()
+            clear_vercel_headers_context()
+            storage.reset(token)
+            send_message(
+                {
+                    "type": "end",
+                    "payload": {
+                        "context": {
+                            "invocationId": invocation_id,
+                            "requestId": request_id,
+                        }
+                    },
+                }
+            )
 
 
 if "VERCEL_IPC_PATH" in os.environ:
@@ -792,8 +776,6 @@ if "VERCEL_IPC_PATH" in os.environ:
                 }
             )
 
-            wait_until_state = WaitUntilState()
-            wait_until_token = wait_until_state.activate()
             token = storage.set(
                 {
                     "invocationId": invocation_id,
@@ -802,25 +784,22 @@ if "VERCEL_IPC_PATH" in os.environ:
             )
             set_vercel_headers_from_http_headers(self.headers)
 
-            with _vercel_wait_until_bridge(wait_until_state.submit):
-                try:
-                    self.handle_request()  # type: ignore[attr-defined]
-                finally:
-                    wait_until_state.drain_sync(_entrypoint_rel, _stderr)
-                    wait_until_token.deactivate()
-                    clear_vercel_headers_context()
-                    storage.reset(token)
-                    send_message(
-                        {
-                            "type": "end",
-                            "payload": {
-                                "context": {
-                                    "invocationId": invocation_id,
-                                    "requestId": request_id,
-                                }
-                            },
-                        }
-                    )
+            try:
+                self.handle_request()  # type: ignore[attr-defined]
+            finally:
+                clear_vercel_headers_context()
+                storage.reset(token)
+                send_message(
+                    {
+                        "type": "end",
+                        "payload": {
+                            "context": {
+                                "invocationId": invocation_id,
+                                "requestId": request_id,
+                            }
+                        },
+                    }
+                )
 
     if "handler" in __vc_variables or "Handler" in __vc_variables:
         base = (

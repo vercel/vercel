@@ -1,19 +1,17 @@
 import asyncio
 import logging
 
-from vercel_runtime.wait_until import wait_until
-
 
 async def app(scope, receive, send):
     if scope["type"] != "http":
         return
 
     if scope["path"] == "/error":
-        wait_until(_background_error())
+        _task = asyncio.create_task(_background_error())
     elif scope["path"] == "/slow":
-        wait_until(_slow_background_log())
+        _task = asyncio.create_task(_slow_background_log())
     else:
-        wait_until(_background_log())
+        _task = asyncio.create_task(_background_log())
 
     await send(
         {
@@ -33,14 +31,14 @@ async def app(scope, receive, send):
 
 async def _background_log() -> None:
     await asyncio.sleep(0.2)
-    logging.info("wait-until-asgi-finished")
+    logging.info("background-task-asgi-finished")
 
 
 async def _background_error() -> None:
     await asyncio.sleep(0.1)
-    raise RuntimeError("wait-until-asgi-error")
+    raise RuntimeError("background-task-asgi-error")
 
 
 async def _slow_background_log() -> None:
     await asyncio.sleep(0.5)
-    logging.info("wait-until-asgi-slow-finished")
+    logging.info("background-task-asgi-slow-finished")
