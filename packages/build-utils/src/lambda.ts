@@ -54,7 +54,7 @@ export function sanitizeConsumerName(functionPath: string): string {
 
 export type LambdaOptions = LambdaOptionsWithFiles | LambdaOptionsWithZipBuffer;
 
-export type LambdaExecutableRuntimeLanguages = 'rust' | 'go';
+export type LambdaExecutableRuntimeLanguages = 'rust' | 'go' | 'dotnet';
 export type LambdaArchitecture = 'x86_64' | 'arm64';
 
 export interface LambdaOptionsBase {
@@ -243,8 +243,10 @@ export class Lambda {
 
     if (runtimeLanguage !== undefined) {
       assert(
-        runtimeLanguage === 'rust' || runtimeLanguage === 'go',
-        '"runtimeLanguage" is invalid. Valid options: "rust", "go"'
+        runtimeLanguage === 'rust' ||
+          runtimeLanguage === 'go' ||
+          runtimeLanguage === 'dotnet',
+        '"runtimeLanguage" is invalid. Valid options: "rust", "go", "dotnet"'
       );
     }
 
