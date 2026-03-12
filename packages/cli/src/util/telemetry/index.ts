@@ -261,6 +261,10 @@ export class TelemetryEventStore {
     }
   }
 
+  get hasUserId() {
+    return this.userId !== 'NO_USER_ID';
+  }
+
   get readonlyEvents() {
     return Array.from(this.events);
   }
