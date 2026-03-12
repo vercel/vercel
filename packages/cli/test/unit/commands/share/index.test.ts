@@ -158,7 +158,7 @@ describe('share', () => {
 
     expect(exitCode).toBe(1);
     await expect(client.stderr).toOutput(
-      'No linked project found. Run vercel link or pass a deployment URL or ID.'
+      'No linked project found. Run `vercel link` or pass a deployment URL or ID.'
     );
   });
 
