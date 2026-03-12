@@ -80,15 +80,10 @@ export async function getProjectLink(
   client: Client,
   path: string
 ): Promise<ProjectLink | null> {
-  // Prefer an explicit per-directory link (`.vercel/project.json`) over a
-  // repository-level link (`.vercel/repo.json`). This prevents scenarios where
-  // a freshly-created local link (e.g. after `vc link`) is ignored and the
-  // user is re-prompted to select a repo-linked project again.
-  const dirLink = await getLinkFromDir(getVercelDirectory(path));
-  if (dirLink) {
-    return dirLink;
-  }
-  return await getProjectLinkFromRepoLink(client, path);
+  return (
+    (await getProjectLinkFromRepoLink(client, path)) ||
+    (await getLinkFromDir(getVercelDirectory(path)))
+  );
 }
 
 async function getProjectLinkFromRepoLink(
@@ -152,9 +147,11 @@ export async function getLinkFromDir<T = ProjectLink>(
     const link: T = JSON.parse(json);
 
     if (!ajv.validate(linkSchema, link)) {
-      throw new Error(
-        `Project Settings are invalid. To link your project again, remove the ${dir} directory.`
-      );
+      // The file exists but doesn't contain valid project link data
+      // (e.g. a settings-only file written for repo-linked projects).
+      // Return `null` so that callers can fall through to other link
+      // resolution strategies such as `repo.json`.
+      return null;
     }
 
     return link;
