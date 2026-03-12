@@ -1,27 +1,8 @@
 package vercel:python-analysis;
 
 interface host-utils {
-    /// IDNA domain-to-ASCII conversion (WHATWG URL Standard).
-    /// Normalizes a domain name to ASCII using UTS #46 rules.
-    domain-to-ascii: func(domain: string) -> result<string, string>;
-
-    /// IDNA domain-to-Unicode conversion (WHATWG URL Standard).
-    /// Converts a domain name to its Unicode display form with full UTS #46
-    /// case folding and normalization.
-    /// Returns the best-effort result (even on error) and a separate error flag.
-    domain-to-unicode: func(domain: string) -> tuple<string, bool>;
-
-    /// Unicode NFC normalization (canonical decomposition + canonical composition).
-    nfc-normalize: func(s: string) -> string;
-
-    /// Unicode NFD normalization (canonical decomposition).
-    nfd-normalize: func(s: string) -> string;
-
-    /// Unicode NFKC normalization (compatibility decomposition + canonical composition).
-    nfkc-normalize: func(s: string) -> string;
-
-    /// Unicode NFKD normalization (compatibility decomposition).
-    nfkd-normalize: func(s: string) -> string;
+    /// Read a file to a UTF-8 string (for requirements.txt `-r`/`-c` recursion).
+    read-file: func(path: string) -> result<string, string>;
 }
 
 /// Import-only world used by the host-bridge crate to generate bindings
@@ -122,4 +103,48 @@ world python-analysis {
 
     /// Normalize a package name per PEP 503.
     export normalize-package-name: func(name: string) -> string;
+
+    // =========================================================================
+    // Requirements.txt parsing
+    // =========================================================================
+
+    /// Parsed VCS (Git) URL information.
+    record parsed-vcs-info {
+        /// Repository URL (without git+ prefix, @ref, or #fragment).
+        url: string,
+        /// Requested revision (branch, tag, or commit hash).
+        rev: option<string>,
+    }
+
+    /// A single parsed requirement entry from requirements.txt.
+    record parsed-req-entry {
+        name: option<string>,
+        pep508: string,
+        extras: list<string>,
+        markers: option<string>,
+        version-spec: option<string>,
+        url: option<string>,
+        hashes: list<string>,
+        editable: bool,
+        /// Parsed VCS info if this is a git+ URL.
+        vcs: option<parsed-vcs-info>,
+        /// The URL/path as originally written by the user (before resolution).
+        given-url: option<string>,
+    }
+
+    /// Full parsed requirements.txt result.
+    record parsed-requirements-txt {
+        requirements: list<parsed-req-entry>,
+        editables: list<parsed-req-entry>,
+        index-url: option<string>,
+        extra-index-urls: list<string>,
+        find-links: list<string>,
+        no-index: bool,
+    }
+
+    /// Parse requirements.txt content into structured data.
+    /// `working-dir` is used to resolve relative paths to file:// URLs.
+    /// `filename` is the name of the file being parsed (used in error messages);
+    /// defaults to "requirements.txt" if not provided.
+    export parse-requirements-txt: func(content: string, working-dir: option<string>, filename: option<string>) -> result<parsed-requirements-txt, string>;
 }
