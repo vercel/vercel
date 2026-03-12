@@ -1,5 +1,13 @@
 # vercel
 
+## 50.32.4
+
+### Patch Changes
+
+- Show ISO timestamp instead of relative age in `vercel activity` output ([#15488](https://github.com/vercel/vercel/pull/15488))
+
+- Adding in non-interactive mode for rolling releases ([#15427](https://github.com/vercel/vercel/pull/15427))
+
 ## 50.32.3
 
 ### Patch Changes
