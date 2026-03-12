@@ -1615,14 +1615,9 @@ describe.skipIf(flakey)('build', () => {
   });
 
   describe('flags-definitions', () => {
-    let prevEmbed: string | undefined;
-    let prevSdkKey: string | undefined;
-
     beforeEach(() => {
-      prevEmbed = process.env.VERCEL_EXPERIMENTAL_EMBED_FLAG_DEFINITIONS;
-      prevSdkKey = process.env.FLAGS;
-      process.env.VERCEL_EXPERIMENTAL_EMBED_FLAG_DEFINITIONS = '1';
-      process.env.FLAGS = 'vf_test_fake_sdk_key_for_testing';
+      vi.stubEnv('VERCEL_EXPERIMENTAL_EMBED_FLAG_DEFINITIONS', '1');
+      vi.stubEnv('FLAGS', 'vf_test_fake_sdk_key_for_testing');
 
       vi.spyOn(globalThis, 'fetch').mockImplementation(async input => {
         const url = typeof input === 'string' ? input : input.toString();
@@ -1638,16 +1633,7 @@ describe.skipIf(flakey)('build', () => {
 
     afterEach(() => {
       vi.restoreAllMocks();
-      if (prevEmbed !== undefined) {
-        process.env.VERCEL_EXPERIMENTAL_EMBED_FLAG_DEFINITIONS = prevEmbed;
-      } else {
-        delete process.env.VERCEL_EXPERIMENTAL_EMBED_FLAG_DEFINITIONS;
-      }
-      if (prevSdkKey !== undefined) {
-        process.env.FLAGS = prevSdkKey;
-      } else {
-        delete process.env.FLAGS;
-      }
+      vi.unstubAllEnvs();
     });
 
     it('should emit flags-definitions module when VERCEL_EXPERIMENTAL_EMBED_FLAG_DEFINITIONS=1', async () => {
