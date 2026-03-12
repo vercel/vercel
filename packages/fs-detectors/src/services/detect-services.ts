@@ -186,6 +186,8 @@ export function generateServicesRoutes(services: Service[]): ServicesRoutes {
     .sort((a, b) => b.routePrefix.length - a.routePrefix.length);
 
   const allWebPrefixes = getWebRoutePrefixes(sortedWebServices);
+  const explicitHostPrefixGuard =
+    getExplicitHostPrefixNegativeLookahead(allWebPrefixes);
 
   for (const service of sortedWebServices) {
     const { routePrefix } = service;
@@ -195,7 +197,6 @@ export function generateServicesRoutes(services: Service[]): ServicesRoutes {
 
     if (hostCondition && routePrefix !== '/') {
       const normalizedRoutePrefix = normalizeRoutePrefix(routePrefix);
-      const escapedPrefix = escapeRegex(normalizedRoutePrefix.slice(1));
       hostRewrites.push({
         src: '^/$',
         dest: normalizedRoutePrefix,
@@ -204,7 +205,9 @@ export function generateServicesRoutes(services: Service[]): ServicesRoutes {
         check: true,
       });
       hostRewrites.push({
-        src: `^/(?!${escapedPrefix}(?:/|$))(.*)$`,
+        // Preserve explicit service prefixes so canonical paths like /_/api
+        // keep routing to their target service even on another service's host.
+        src: `^/${explicitHostPrefixGuard}(.*)$`,
         dest: `${normalizedRoutePrefix}/$1`,
         has: hostCondition,
         missing: PREVIEW_DOMAIN_MISSING,
@@ -307,6 +310,22 @@ function getWebRoutePrefixes(services: Service[]): string[] {
     unique.add(normalizeRoutePrefix(service.routePrefix));
   }
   return Array.from(unique);
+}
+
+function getExplicitHostPrefixNegativeLookahead(
+  routePrefixes: string[]
+): string {
+  const explicitPrefixes = routePrefixes
+    .map(normalizeRoutePrefix)
+    .filter(prefix => prefix !== '/')
+    .sort((a, b) => b.length - a.length)
+    .map(prefix => escapeRegex(prefix.slice(1)));
+
+  if (explicitPrefixes.length === 0) {
+    return '';
+  }
+
+  return `(?!${explicitPrefixes.map(prefix => `${prefix}(?:/|$)`).join('|')})`;
 }
 
 function getHostCondition(service: Service): HasField | undefined {
