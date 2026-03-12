@@ -1614,20 +1614,54 @@ describe.skipIf(flakey)('build', () => {
     });
   });
 
-  it('should emit flags-definitions module when VERCEL_EXPERIMENTAL_EMBED_FLAG_DEFINITIONS=1', async () => {
-    const cwd = fixture('static');
-    const definitionsDir = join(
-      cwd,
-      'node_modules',
-      '@vercel',
-      'flags-definitions'
-    );
+  describe('flags-definitions', () => {
+    let prevEmbed: string | undefined;
+    let prevSdkKey: string | undefined;
 
-    client.cwd = cwd;
-    client.setArgv('build', '--yes');
-    const prev = process.env.VERCEL_EXPERIMENTAL_EMBED_FLAG_DEFINITIONS;
-    try {
+    beforeEach(() => {
+      prevEmbed = process.env.VERCEL_EXPERIMENTAL_EMBED_FLAG_DEFINITIONS;
+      prevSdkKey = process.env.FLAGS;
       process.env.VERCEL_EXPERIMENTAL_EMBED_FLAG_DEFINITIONS = '1';
+      process.env.FLAGS = 'vf_test_fake_sdk_key_for_testing';
+
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async input => {
+        const url = typeof input === 'string' ? input : input.toString();
+        if (url === 'https://flags.vercel.com/v1/datafile') {
+          return new Response(JSON.stringify({ flags: [] }), {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          });
+        }
+        throw new Error(`Unexpected fetch call: ${url}`);
+      });
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+      if (prevEmbed !== undefined) {
+        process.env.VERCEL_EXPERIMENTAL_EMBED_FLAG_DEFINITIONS = prevEmbed;
+      } else {
+        delete process.env.VERCEL_EXPERIMENTAL_EMBED_FLAG_DEFINITIONS;
+      }
+      if (prevSdkKey !== undefined) {
+        process.env.FLAGS = prevSdkKey;
+      } else {
+        delete process.env.FLAGS;
+      }
+    });
+
+    it('should emit flags-definitions module when VERCEL_EXPERIMENTAL_EMBED_FLAG_DEFINITIONS=1', async () => {
+      const cwd = fixture('static');
+      const definitionsDir = join(
+        cwd,
+        'node_modules',
+        '@vercel',
+        'flags-definitions'
+      );
+
+      client.cwd = cwd;
+      client.setArgv('build', '--yes');
+
       const exitCode = await build(client);
       expect(exitCode).toEqual(0);
 
@@ -1641,13 +1675,7 @@ describe.skipIf(flakey)('build', () => {
         'utf8'
       );
       expect(indexJs).toContain('export function get(hashedSdkKey)');
-    } finally {
-      if (prev !== undefined) {
-        process.env.VERCEL_EXPERIMENTAL_EMBED_FLAG_DEFINITIONS = prev;
-      } else {
-        delete process.env.VERCEL_EXPERIMENTAL_EMBED_FLAG_DEFINITIONS;
-      }
-    }
+    });
   });
 
   it('should not apply framework `defaultRoutes` when build command outputs Build Output API', async () => {
