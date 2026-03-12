@@ -2,7 +2,7 @@
 description: Investigates failed CI workflows to identify root causes and patterns, creating issues with diagnostic information
 on:
   workflow_run:
-    workflows: ['test-e2e', 'test'] # Monitor the CI workflow specifically
+    workflows: ['E2E Tests', 'Unit Tests'] # Monitor the CI workflow specifically
     types:
       - completed
     # This will trigger only when the CI workflow completes with failure
