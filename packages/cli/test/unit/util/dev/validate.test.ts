@@ -25,11 +25,12 @@ describe('validateConfig', () => {
   });
 
   it('should not error with maxDuration set to "max"', async () => {
+    // Runtime allows maxDuration "max"; VercelConfig types expect number only.
     const config = {
       functions: {
         'api/user.go': { memory: 128, maxDuration: 'max' as const },
       },
-    };
+    } as unknown as Parameters<typeof validateConfig>[0];
     const error = validateConfig(config);
     expect(error).toBeNull();
   });
