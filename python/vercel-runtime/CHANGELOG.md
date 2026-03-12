@@ -1,5 +1,11 @@
 # vercel-runtime
 
+## 0.8.0
+
+### Minor Changes
+
+- Fix error when running dev server on a django project. ([#15483](https://github.com/vercel/vercel/pull/15483))
+
 ## 0.7.0
 
 ### Minor Changes
