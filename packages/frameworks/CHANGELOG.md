@@ -1,5 +1,11 @@
 # @vercel/frameworks
 
+## 3.21.1
+
+### Patch Changes
+
+- [go] remove experimental flag on "go" frameworks preset ([#15435](https://github.com/vercel/vercel/pull/15435))
+
 ## 3.21.0
 
 ### Minor Changes
