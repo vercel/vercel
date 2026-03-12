@@ -526,7 +526,6 @@ class ASGIMiddleware:
 
     def __init__(self, app: _ASGIApp | Any) -> None:
         self.app = app
-        self._factory_installed = False
 
     async def __call__(
         self,
@@ -614,9 +613,7 @@ class ASGIMiddleware:
             }
         )
 
-        if not self._factory_installed:
-            install_task_factory(asyncio.get_running_loop())
-            self._factory_installed = True
+        install_task_factory(asyncio.get_running_loop())
 
         bg_scope = BackgroundTaskScope()
         bg_scope.activate()

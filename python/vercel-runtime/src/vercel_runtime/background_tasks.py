@@ -5,36 +5,23 @@ import contextvars
 import logging
 import os
 import time
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
 _logger = logging.getLogger(__name__)
 
-_DEFAULT_TIMEOUT: float = 30.0
-
-
-def get_timeout() -> float:
-    """Return the background-task drain timeout from the environment."""
-    raw = os.environ.get("VERCEL_WAIT_UNTIL_TIMEOUT")
-    if raw is None:
-        return _DEFAULT_TIMEOUT
-    try:
-        timeout = float(raw)
-    except ValueError:
-        return _DEFAULT_TIMEOUT
-    return timeout if timeout >= 0 else _DEFAULT_TIMEOUT
+_TIMEOUT: float = 30.0
 
 
 def _warn_timeout(
-    timeout: float,
     entrypoint: str,
     stderr: Callable[[str], None],
 ) -> None:
     stderr(
         f"The function `{os.path.basename(entrypoint)}` is still "
-        f"running background tasks after {timeout}s.\n"
+        f"running background tasks after {_TIMEOUT}s.\n"
         "(hint: do you have a long-running asyncio.create_task() call?)"
     )
 
@@ -52,21 +39,19 @@ def install_task_factory(loop: asyncio.AbstractEventLoop) -> None:
     :class:`BackgroundTaskScope` active in the current context (if any).
     Tasks created outside a request context (e.g. by uvicorn internals
     or the ASGI lifespan) are left untracked.
+
+    This function is idempotent: if a factory is already installed on
+    *loop* the call is a no-op.
     """
-    original_factory = loop.get_task_factory()
+    if loop.get_task_factory() is not None:
+        return
 
     def _tracking_factory(
         loop: asyncio.AbstractEventLoop,
         coro: object,
         **kwargs: Any,
     ) -> asyncio.Task[Any]:
-        if original_factory is not None:
-            task: asyncio.Task[Any] = cast(
-                "asyncio.Task[Any]",
-                original_factory(loop, coro, **kwargs),  # type: ignore[arg-type]
-            )
-        else:
-            task = asyncio.Task(coro, loop=loop, **kwargs)  # type: ignore[arg-type]
+        task: asyncio.Task[Any] = asyncio.Task(coro, loop=loop, **kwargs)  # type: ignore[arg-type]
 
         tasks_set = _request_tasks.get()
         if tasks_set is not None:
@@ -106,14 +91,13 @@ class BackgroundTaskScope:
         if not pending:
             return
 
-        timeout = get_timeout()
-        deadline = time.monotonic() + timeout
+        deadline = time.monotonic() + _TIMEOUT
 
         # Loop to catch tasks spawned by other tasks (nested create_task).
         while pending:
             remaining = deadline - time.monotonic()
             if remaining <= 0:
-                _warn_timeout(timeout, entrypoint, stderr)
+                _warn_timeout(entrypoint, stderr)
                 return
 
             done, _ = await asyncio.wait(pending, timeout=remaining)
@@ -155,6 +139,5 @@ class BackgroundTaskScope:
 
 __all__ = [
     "BackgroundTaskScope",
-    "get_timeout",
     "install_task_factory",
 ]
