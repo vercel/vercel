@@ -57,6 +57,7 @@ import output from '../output-manager';
 
 const commandsStructs = [
   agentCommand,
+  alertsCommand,
   aliasCommand,
   activityCommand,
   apiCommand,
@@ -117,10 +118,6 @@ if (process.env.FF_GUIDANCE_MODE) {
 
 if (process.env.FF_METRICS) {
   commandsStructs.push(metricsCommand);
-}
-
-if (process.env.FF_ALERTS) {
-  commandsStructs.push(alertsCommand);
 }
 
 export function getCommandAliases(command: Pick<Command, 'name' | 'aliases'>) {

@@ -529,12 +529,7 @@ async function getMultiServicePythonRunner(
 
   // Create a per-service .venv, so deps are managed separately.
   const venvPath = join(workPath, '.venv');
-  await ensureVenv({
-    pythonPath: systemPython,
-    venvPath,
-    uvPath,
-    quiet: true,
-  });
+  await ensureVenv({ pythonPath: systemPython, venvPath, uvPath, quiet: true });
   debug(`Created virtualenv at ${venvPath} for multi-service dev`);
 
   const pythonBin = getVenvPythonBin(venvPath);

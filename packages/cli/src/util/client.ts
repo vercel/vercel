@@ -357,6 +357,9 @@ export default class Client extends EventEmitter implements Stdio {
 
     const headers = new Headers(opts.headers);
     headers.set('user-agent', ua);
+    if (this.agentName) {
+      headers.set('x-ai-agent', this.agentName);
+    }
 
     await this.ensureAuthorized();
 

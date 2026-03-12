@@ -316,7 +316,7 @@ function printAiSections(groups: AlertGroup[]) {
   }
 
   const rendered = groups
-    .map((group, index) => {
+    .map(group => {
       const title = getGroupTitle(group);
       const summary = group.ai?.currentSummary || 'N/A';
       const findings = group.ai?.keyFindings?.filter(Boolean) ?? [];
@@ -326,7 +326,7 @@ function printAiSections(groups: AlertGroup[]) {
           : '  - N/A';
 
       return [
-        chalk.bold(`${index + 1}. ${title}`),
+        chalk.bold(title),
         `   ${chalk.cyan('Resolved At:')} ${getResolvedAt(group)}`,
         `   ${chalk.cyan('Summary:')} ${summary}`,
         `   ${chalk.cyan('Key Findings:')}`,

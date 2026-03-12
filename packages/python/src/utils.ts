@@ -44,11 +44,10 @@ export function useVirtualEnv(
 
 export function createVenvEnv(
   venvPath: string,
-  baseEnv: NodeJS.ProcessEnv = process.env,
-  uvCacheDir?: string
+  baseEnv: NodeJS.ProcessEnv = process.env
 ): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = {
-    ...getProtectedUvEnv(baseEnv, uvCacheDir),
+    ...getProtectedUvEnv(baseEnv),
     VIRTUAL_ENV: venvPath,
   };
   const binDir = getVenvBinDir(venvPath);
@@ -61,13 +60,11 @@ export async function ensureVenv({
   pythonPath,
   venvPath,
   uvPath,
-  uvCacheDir,
   quiet,
 }: {
   pythonPath: string;
   venvPath: string;
   uvPath?: string | null;
-  uvCacheDir?: string;
   quiet?: boolean;
 }) {
   const marker = join(venvPath, 'pyvenv.cfg');
@@ -82,9 +79,7 @@ export async function ensureVenv({
     console.log(`Creating virtual environment at "${venvPath}"...`);
   }
   if (uvPath) {
-    await execa(uvPath, ['venv', venvPath], {
-      env: getProtectedUvEnv(process.env, uvCacheDir),
-    });
+    await execa(uvPath, ['venv', venvPath]);
   } else {
     await execa(pythonPath, ['-m', 'venv', venvPath]);
   }

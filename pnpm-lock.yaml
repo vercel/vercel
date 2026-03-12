@@ -1501,8 +1501,8 @@ importers:
         specifier: 0.3.1
         version: 0.3.1
       tar:
-        specifier: 7.5.7
-        version: 7.5.7
+        specifier: 7.5.11
+        version: 7.5.11
       typescript:
         specifier: 4.9.5
         version: 4.9.5
@@ -1701,8 +1701,8 @@ importers:
         version: 1.1.1
     devDependencies:
       '@next-community/adapter-vercel':
-        specifier: 0.0.1-beta.13
-        version: 0.0.1-beta.13(next@16.1.6)
+        specifier: 0.0.1-beta.14
+        version: 0.0.1-beta.14(next@16.1.6)
       '@types/aws-lambda':
         specifier: 8.10.19
         version: 8.10.19
@@ -6391,7 +6391,7 @@ packages:
       node-fetch: 2.6.9
       nopt: 8.1.0
       semver: 7.7.3
-      tar: 7.5.7
+      tar: 7.5.11
     transitivePeerDependencies:
       - encoding
       - supports-color
@@ -6470,8 +6470,8 @@ packages:
       '@tybys/wasm-util': 0.10.1
     optional: true
 
-  /@next-community/adapter-vercel@0.0.1-beta.13(next@16.1.6):
-    resolution: {integrity: sha512-klZhR/9LjXLvlt5n1wqJxM7xwd4c3VCflZzuBnFkd1fkMPUF49oXjHHyqsgG+Y1FQpwLuwqpymZLHRRiADsxfg==}
+  /@next-community/adapter-vercel@0.0.1-beta.14(next@16.1.6):
+    resolution: {integrity: sha512-K6KgP4cUztLGld0rIVdZFT8HpGNb1wfVsfWT2a6sVu37SVbC3NU0E45ghQBOvI6X3/ED5ly5tqtaplBe4qiiJg==}
     engines: {node: '>= 20.6.0'}
     peerDependencies:
       next: '>= 16.1.1-canary.18'
@@ -19487,6 +19487,16 @@ packages:
       - react-native-b4a
     dev: true
 
+  /tar@7.5.11:
+    resolution: {integrity: sha512-ChjMH33/KetonMTAtpYdgUFr0tbz69Fp2v7zWxQfYZX4g5ZN2nOBXm1R2xyA+lMIKrLKIoKAwFj93jE/avX9cQ==}
+    engines: {node: '>=18'}
+    dependencies:
+      '@isaacs/fs-minipass': 4.0.1
+      chownr: 3.0.0
+      minipass: 7.1.2
+      minizlib: 3.1.0
+      yallist: 5.0.0
+
   /tar@7.5.7:
     resolution: {integrity: sha512-fov56fJiRuThVFXD6o6/Q354S7pnWMJIVlDBYijsTNx6jKSE4pvrDTs6lUnmGvNyfJwFQQwWy3owKz1ucIhveQ==}
     engines: {node: '>=18'}
@@ -19496,6 +19506,7 @@ packages:
       minipass: 7.1.2
       minizlib: 3.1.0
       yallist: 5.0.0
+    dev: false
 
   /teeny-request@7.0.1:
     resolution: {integrity: sha512-sasJmQ37klOlplL4Ia/786M5YlOcoLGQyq2TE4WHSRupbAuDaQW0PfVxV4MtdBtRJ4ngzS+1qim8zP6Zp35qCw==}

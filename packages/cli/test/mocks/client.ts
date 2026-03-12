@@ -224,6 +224,28 @@ export class MockClient extends Client {
     this.stdout = new MockStream();
     this.stdout.setEncoding('utf8');
     this.stdout.end = () => this.stdout;
+    // Mirror JSON written to stdout into console.log so existing
+    // tests that spy on console.log still see the structured payload,
+    // while the real CLI only writes once to stdout.
+    const originalStdoutWrite = this.stdout.write.bind(this.stdout);
+    this.stdout.write = ((chunk: unknown, encoding?: unknown, cb?: unknown) => {
+      const str =
+        typeof chunk === 'string'
+          ? chunk
+          : Buffer.isBuffer(chunk)
+            ? chunk.toString('utf8')
+            : String(chunk);
+      const trimmed = str.trim();
+      if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+        // biome-ignore lint/suspicious/noConsole: intentional test-only mirroring
+        console.log(trimmed);
+      }
+      return originalStdoutWrite(
+        chunk,
+        encoding as BufferEncoding | undefined,
+        cb as ((error: Error | null | undefined) => void) | undefined
+      );
+    }) as typeof this.stdout.write;
     this.stdout.pause();
 
     this.stderr = new MockStream();

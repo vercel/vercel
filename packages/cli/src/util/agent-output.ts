@@ -282,8 +282,7 @@ export function outputActionRequired(
     enriched.hint =
       'Run one of the commands in next[] to complete without prompting.';
   }
-  // biome-ignore lint/suspicious/noConsole: intentional console usage
-  console.log(JSON.stringify(enriched, null, 2));
+  client.stdout.write(`${JSON.stringify(enriched, null, 2)}\n`);
   process.exit(exitCode);
 }
 
@@ -300,7 +299,6 @@ export function outputAgentError(
   if (!client.nonInteractive) {
     return;
   }
-  // biome-ignore lint/suspicious/noConsole: intentional console usage
-  console.log(JSON.stringify(payload, null, 2));
+  client.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
   process.exit(exitCode);
 }
