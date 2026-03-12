@@ -73,7 +73,7 @@ export const config: VercelConfig = {
 }
 
 export default async function exportRoutes(client: Client, argv: string[]) {
-  const parsed = await parseSubcommandArgs(argv, exportSubcommand);
+  const parsed = await parseSubcommandArgs(argv, exportSubcommand, client);
   if (typeof parsed === 'number') return parsed;
 
   const link = await ensureProjectLink(client);

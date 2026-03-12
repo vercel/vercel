@@ -15,7 +15,7 @@ import stamp from '../../util/output/stamp';
 import { getCommandName } from '../../util/pkg-name';
 
 export default async function publish(client: Client, argv: string[]) {
-  const parsed = await parseSubcommandArgs(argv, publishSubcommand);
+  const parsed = await parseSubcommandArgs(argv, publishSubcommand, client);
   if (typeof parsed === 'number') return parsed;
 
   const link = await ensureProjectLink(client);

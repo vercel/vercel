@@ -4,8 +4,10 @@ import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { getLinkedProject } from '../../util/projects/link';
-import { getCommandName } from '../../util/pkg-name';
+import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 import output from '../../output-manager';
+import { outputAgentError } from '../../util/agent-output';
+import { getGlobalFlagsOnlyFromArgs } from '../../util/arg-common';
 import type { Command } from '../help';
 import {
   getRouteTypeLabel,
@@ -21,7 +23,8 @@ export interface ParsedSubcommand {
 
 export async function parseSubcommandArgs(
   argv: string[],
-  command: Command
+  command: Command,
+  client?: Client
 ): Promise<ParsedSubcommand | number> {
   let parsedArgs;
   const flagsSpecification = getFlagsSpecification(command.options);
@@ -30,6 +33,22 @@ export async function parseSubcommandArgs(
     // @ts-expect-error - TypeScript complains about the flags specification type
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
+    if (client?.nonInteractive) {
+      const flags = getGlobalFlagsOnlyFromArgs(client.argv.slice(2));
+      const cmd = getCommandNamePlain(
+        `routes ${command.name} ${flags.join(' ')}`.trim()
+      );
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'invalid_arguments',
+          message: err instanceof Error ? err.message : String(err),
+          next: [{ command: cmd, when: 'fix flags and retry' }],
+        },
+        1
+      );
+    }
     printError(err);
     return 1;
   }
@@ -43,6 +62,27 @@ export async function ensureProjectLink(client: Client) {
   if (link.status === 'error') {
     return link.exitCode;
   } else if (link.status === 'not_linked') {
+    if (client.nonInteractive) {
+      const flags = getGlobalFlagsOnlyFromArgs(client.argv.slice(2));
+      const cmd = getCommandNamePlain(`link ${flags.join(' ')}`.trim());
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'not_linked',
+          userActionRequired: true,
+          message:
+            'Your codebase is not linked to a Vercel project. Run link first, then retry routes commands.',
+          next: [
+            {
+              command: cmd,
+              when: 'to link this directory to a project',
+            },
+          ],
+        },
+        1
+      );
+    }
     output.error(
       `Your codebase isn't linked to a project on Vercel. Run ${getCommandName('link')} to begin.`
     );

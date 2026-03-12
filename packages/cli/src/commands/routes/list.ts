@@ -24,7 +24,7 @@ import {
 } from '../../util/routes/types';
 
 export default async function list(client: Client, argv: string[]) {
-  const parsed = await parseSubcommandArgs(argv, listSubcommand);
+  const parsed = await parseSubcommandArgs(argv, listSubcommand, client);
   if (typeof parsed === 'number') return parsed;
 
   const link = await ensureProjectLink(client);

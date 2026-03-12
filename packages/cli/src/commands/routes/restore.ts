@@ -17,7 +17,7 @@ import stamp from '../../util/output/stamp';
 import { getCommandName } from '../../util/pkg-name';
 
 export default async function restore(client: Client, argv: string[]) {
-  const parsed = await parseSubcommandArgs(argv, restoreSubcommand);
+  const parsed = await parseSubcommandArgs(argv, restoreSubcommand, client);
   if (typeof parsed === 'number') return parsed;
 
   const error = validateRequiredArgs(parsed.args, ['version-id']);

@@ -12,15 +12,22 @@ import {
 import getRoutes from '../../util/routes/get-routes';
 import getRouteVersions from '../../util/routes/get-route-versions';
 import stamp from '../../util/output/stamp';
-import { getCommandName } from '../../util/pkg-name';
+import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
+import { outputAgentError } from '../../util/agent-output';
+import { getGlobalFlagsOnlyFromArgs } from '../../util/arg-common';
 import {
   getRouteTypeLabel,
   getSrcSyntaxLabel,
   type RoutingRule,
 } from '../../util/routes/types';
 
+function withGlobalFlags(client: Client, commandTemplate: string): string {
+  const flags = getGlobalFlagsOnlyFromArgs(client.argv.slice(2));
+  return getCommandNamePlain(`${commandTemplate} ${flags.join(' ')}`.trim());
+}
+
 export default async function inspect(client: Client, argv: string[]) {
-  const parsed = await parseSubcommandArgs(argv, inspectSubcommand);
+  const parsed = await parseSubcommandArgs(argv, inspectSubcommand, client);
   if (typeof parsed === 'number') return parsed;
 
   const link = await ensureProjectLink(client);
@@ -34,6 +41,28 @@ export default async function inspect(client: Client, argv: string[]) {
   const identifier = args[0] === 'inspect' ? args[1] : args[0];
 
   if (!identifier) {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'missing_arguments',
+          message:
+            'Route name or ID is required. Pass a single route name or ID as the first argument after inspect.',
+          next: [
+            {
+              command: withGlobalFlags(client, 'routes inspect <name-or-id>'),
+              when: 'replace <name-or-id> with route name or ID from routes list',
+            },
+            {
+              command: withGlobalFlags(client, 'routes list'),
+              when: 'to list routes and copy an exact name or id',
+            },
+          ],
+        },
+        1
+      );
+    }
     output.error(
       `Missing route name or ID. Usage: ${chalk.cyan(getCommandName('routes inspect <name-or-id>'))}`
     );
@@ -62,6 +91,23 @@ export default async function inspect(client: Client, argv: string[]) {
   if (exactMatch) {
     route = exactMatch;
   } else if (routes.length === 0) {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'not_found',
+          message: `No route found matching "${identifier}".`,
+          next: [
+            {
+              command: withGlobalFlags(client, 'routes list'),
+              when: 'to list routes and pick an exact name or id',
+            },
+          ],
+        },
+        1
+      );
+    }
     output.error(
       `No route found matching "${identifier}". Run ${chalk.cyan(
         getCommandName('routes list')
@@ -71,7 +117,28 @@ export default async function inspect(client: Client, argv: string[]) {
   } else if (routes.length === 1) {
     route = routes[0];
   } else {
-    // Multiple matches - let user select
+    // Multiple matches - let user select (non-interactive must not prompt)
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'ambiguous_route',
+          message: `Multiple routes match "${identifier}" (${routes.length} matches). Pass an exact route name or ID; non-interactive mode cannot prompt for a choice.`,
+          next: [
+            {
+              command: withGlobalFlags(client, 'routes list'),
+              when: 'to see route names and ids, then inspect with a unique id',
+            },
+            {
+              command: withGlobalFlags(client, 'routes inspect <name-or-id>'),
+              when: 'retry with a single unique name or id',
+            },
+          ],
+        },
+        1
+      );
+    }
     output.log(
       `Found ${routes.length} routes matching "${identifier}" ${chalk.gray(inspectStamp())}`
     );

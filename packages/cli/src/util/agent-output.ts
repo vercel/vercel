@@ -11,6 +11,11 @@ export interface ActionRequiredPayload {
   reason?: string;
   action?: string;
   message: string;
+  /**
+   * When true, a human must act (e.g. login in TTY, approve in browser).
+   * Agents should surface this to the user instead of retrying alone.
+   */
+  userActionRequired?: boolean;
   /** Hint for agents: run one of the commands in next[] to complete without prompting. */
   hint?: string;
   verification_uri?: string;
@@ -41,7 +46,14 @@ export interface AgentErrorPayload {
   status: 'error';
   reason: string;
   message: string;
-  next?: Array<{ command: string }>;
+  /**
+   * When true, a human must act before the command can succeed (e.g. login, link).
+   * Optional so purely programmatic errors stay unflagged.
+   */
+  userActionRequired?: boolean;
+  /** Optional extra context for agents (plain text, no ANSI). */
+  hint?: string;
+  next?: Array<{ command: string; when?: string }>;
 }
 
 /**

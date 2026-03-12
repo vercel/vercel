@@ -16,7 +16,7 @@ import stamp from '../../util/output/stamp';
 import { getCommandName } from '../../util/pkg-name';
 
 export default async function reorder(client: Client, argv: string[]) {
-  const parsed = await parseSubcommandArgs(argv, reorderSubcommand);
+  const parsed = await parseSubcommandArgs(argv, reorderSubcommand, client);
   if (typeof parsed === 'number') return parsed;
 
   const link = await ensureProjectLink(client);

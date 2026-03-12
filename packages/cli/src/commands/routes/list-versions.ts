@@ -10,7 +10,11 @@ import formatTable from '../../util/format-table';
 import type { RouteVersion } from '../../util/routes/types';
 
 export default async function listVersions(client: Client, argv: string[]) {
-  const parsed = await parseSubcommandArgs(argv, listVersionsSubcommand);
+  const parsed = await parseSubcommandArgs(
+    argv,
+    listVersionsSubcommand,
+    client
+  );
   if (typeof parsed === 'number') return parsed;
 
   const link = await ensureProjectLink(client);

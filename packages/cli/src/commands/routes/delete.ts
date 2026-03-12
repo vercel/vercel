@@ -16,7 +16,7 @@ import { getCommandName } from '../../util/pkg-name';
 import { getRouteTypeLabel } from '../../util/routes/types';
 
 export default async function deleteRoute(client: Client, argv: string[]) {
-  const parsed = await parseSubcommandArgs(argv, deleteSubcommand);
+  const parsed = await parseSubcommandArgs(argv, deleteSubcommand, client);
   if (typeof parsed === 'number') return parsed;
 
   const link = await ensureProjectLink(client);

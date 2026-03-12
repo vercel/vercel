@@ -34,7 +34,7 @@ import { hasAnyTransformFlags } from '../../util/routes/interactive';
 import type { RoutingRule } from '../../util/routes/types';
 
 export default async function edit(client: Client, argv: string[]) {
-  const parsed = await parseSubcommandArgs(argv, editSubcommand);
+  const parsed = await parseSubcommandArgs(argv, editSubcommand, client);
   if (typeof parsed === 'number') return parsed;
 
   const link = await ensureProjectLink(client);

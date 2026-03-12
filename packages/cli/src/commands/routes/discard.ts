@@ -15,7 +15,7 @@ import stamp from '../../util/output/stamp';
 import { getCommandName } from '../../util/pkg-name';
 
 export default async function discard(client: Client, argv: string[]) {
-  const parsed = await parseSubcommandArgs(argv, discardSubcommand);
+  const parsed = await parseSubcommandArgs(argv, discardSubcommand, client);
   if (typeof parsed === 'number') return parsed;
 
   const link = await ensureProjectLink(client);

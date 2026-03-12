@@ -2,6 +2,7 @@ import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import {
   isActionRequiredPayload,
   outputActionRequired,
+  outputAgentError,
   buildCommandWithScope,
   buildCommandWithYes,
   enrichActionRequiredWithInvokingCommand,
@@ -245,5 +246,56 @@ describe('enrichActionRequiredWithInvokingCommand', () => {
     const out = enrichActionRequiredWithInvokingCommand(payload, []);
     expect(out).toBe(payload);
     expect(out.next).toHaveLength(1);
+  });
+});
+
+describe('outputAgentError', () => {
+  it('writes JSON including hint to stdout and exits when nonInteractive', () => {
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const exitSpy = vi
+      .spyOn(process, 'exit')
+      .mockImplementation((() => undefined) as never);
+
+    const client = { nonInteractive: true } as Client;
+    outputAgentError(client, {
+      status: 'error',
+      reason: 'no_credentials',
+      message: 'No credentials.',
+      userActionRequired: true,
+      hint: 'Use --token or VERCEL_TOKEN.',
+      next: [{ command: 'vercel login', when: 'TTY only' }],
+    });
+
+    expect(logSpy).toHaveBeenCalledTimes(1);
+    const written = JSON.parse(logSpy.mock.calls[0][0] as string);
+    expect(written.status).toBe('error');
+    expect(written.reason).toBe('no_credentials');
+    expect(written.userActionRequired).toBe(true);
+    expect(written.hint).toBe('Use --token or VERCEL_TOKEN.');
+    expect(written.next).toHaveLength(1);
+    expect(exitSpy).toHaveBeenCalledWith(1);
+
+    logSpy.mockRestore();
+    exitSpy.mockRestore();
+  });
+
+  it('does nothing when not nonInteractive', () => {
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {
+      throw new Error('should not exit');
+    }) as never);
+
+    const client = { nonInteractive: false } as Client;
+    outputAgentError(client, {
+      status: 'error',
+      reason: 'no_credentials',
+      message: 'No credentials.',
+    });
+
+    expect(logSpy).not.toHaveBeenCalled();
+    expect(exitSpy).not.toHaveBeenCalled();
+
+    logSpy.mockRestore();
+    exitSpy.mockRestore();
   });
 });
