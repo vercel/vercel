@@ -12,6 +12,7 @@ rust-version = "1.90"
 [workspace.dependencies]
 wit-bindgen = { version = "0.51", features = ["macros"] }
 wit-bindgen-rust = { version = "0.51" }
+wit-parser = { version = "0.244", default-features = false }
 uv-pypi-types = { git = "https://github.com/astral-sh/uv", rev = "35d1e90961c1c2bd238ee6b015f970c0cf97f5d5" }
 uv-normalize = { git = "https://github.com/astral-sh/uv", rev = "35d1e90961c1c2bd238ee6b015f970c0cf97f5d5" }
 csv = "1.3.0"
