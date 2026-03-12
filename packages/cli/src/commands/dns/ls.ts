@@ -52,7 +52,7 @@ export default async function ls(client: Client, argv: string[]) {
   if (client.nonInteractive && args.length > 1) {
     const flags = getGlobalFlagsOnlyFromArgs(client.argv.slice(2));
     const cmd = getCommandNamePlain(
-      `dns ls [domain] ${flags.join(' ')}`.trim()
+      `dns ls <domain> ${flags.join(' ')}`.trim()
     );
     outputActionRequired(
       client,
@@ -74,7 +74,7 @@ export default async function ls(client: Client, argv: string[]) {
   }
 
   const validationResult = validateLsArgs({
-    commandName: 'dns ls [domain]',
+    commandName: 'dns ls <domain>',
     args: args,
     maxArgs: 1,
     exitCode: 1,
