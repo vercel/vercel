@@ -1,5 +1,24 @@
 # vercel
 
+## 50.32.3
+
+### Patch Changes
+
+- Adding in noninteractive mode for login ([#15446](https://github.com/vercel/vercel/pull/15446))
+
+- adding in non-interactive mode for mcp ([#15426](https://github.com/vercel/vercel/pull/15426))
+
+- Updated dependencies [[`3af5407a5737ae431310ffd114119752fc5a2355`](https://github.com/vercel/vercel/commit/3af5407a5737ae431310ffd114119752fc5a2355), [`b22731536f46d3f617a79e4faf923431d957a277`](https://github.com/vercel/vercel/commit/b22731536f46d3f617a79e4faf923431d957a277)]:
+  - @vercel/python@6.23.0
+  - @vercel/static-build@2.9.0
+
+## 50.32.2
+
+### Patch Changes
+
+- Updated dependencies [[`3330d15d4f3ca9eaeaf6d3b9484d05780e5b9975`](https://github.com/vercel/vercel/commit/3330d15d4f3ca9eaeaf6d3b9484d05780e5b9975)]:
+  - @vercel/python@6.22.1
+
 ## 50.32.1
 
 ### Patch Changes

@@ -4335,7 +4335,6 @@ export const frameworks = [
   {
     name: 'Go',
     slug: 'go',
-    experimental: true,
     runtimeFramework: true,
     logo: 'https://api-frameworks.vercel.sh/framework-logos/go.svg',
     tagline: 'An open-source programming language supported by Google.',
