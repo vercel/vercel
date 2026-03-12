@@ -387,6 +387,8 @@ const main = async () => {
     isAgent,
     agentName: detectedAgent?.name,
     nonInteractive,
+    withAgentConfirmation:
+      parsedArgs.flags['--with-agent-confirmation'] === true,
   });
 
   // The `--cwd` flag is respected for all sub-commands
@@ -950,6 +952,12 @@ const main = async () => {
       if (func.default) {
         func = func.default;
       }
+
+      // Set the command name for agent confirmation messages
+      const fullCommandName = subSubCommand
+        ? `${targetCommand} ${subSubCommand}`
+        : targetCommand;
+      client.commandName = fullCommandName;
 
       exitCode = await func(client);
     }
