@@ -80,10 +80,15 @@ export async function getProjectLink(
   path: string,
   projectName?: string
 ): Promise<ProjectLink | null> {
-  return (
-    (await getProjectLinkFromRepoLink(client, path, projectName)) ||
-    (await getLinkFromDir(getVercelDirectory(path)))
-  );
+  // Prefer an explicit per-directory link (`.vercel/project.json`) over a
+  // repository-level link (`.vercel/repo.json`). This prevents scenarios where
+  // a freshly-created local link (e.g. after `vc link`) is ignored and the
+  // user is re-prompted to select a repo-linked project again.
+  const dirLink = await getLinkFromDir(getVercelDirectory(path));
+  if (dirLink) {
+    return dirLink;
+  }
+  return await getProjectLinkFromRepoLink(client, path, projectName);
 }
 
 async function getProjectLinkFromRepoLink(
@@ -292,7 +297,7 @@ export async function getLinkedProject(
 
     output.print(
       prependEmoji(
-        'Your Project was either deleted, transferred to a new Team, or you don’t have access to it anymore.\n',
+        "Your Project was either deleted, transferred to a new Team, or you don't have access to it anymore.\n",
         emoji('warning')
       )
     );
@@ -302,10 +307,23 @@ export async function getLinkedProject(
   return { status: 'linked', org, project, repoRoot: link.repoRoot };
 }
 
+const VERCEL_DIR_README_CONTENT = `> Why do I have a folder named ".vercel" in my project?
+The ".vercel" folder is created when you link a directory to a Vercel project.
+
+> What does the "project.json" file contain?
+The "project.json" file contains:
+- The ID of the Vercel project that you linked ("projectId")
+- The ID of the user or team your Vercel project is owned by ("orgId")
+
+> Should I commit the ".vercel" folder?
+No, you should not share the ".vercel" folder with anyone.
+Upon creation, it will be automatically added to your ".gitignore" file.
+`;
+
 export async function writeReadme(path: string) {
   await writeFile(
     join(path, VERCEL_DIR, VERCEL_DIR_README),
-    await readFile(join(__dirname, 'VERCEL_DIR_README.txt'), 'utf8')
+    VERCEL_DIR_README_CONTENT
   );
 }
 
@@ -317,7 +335,7 @@ export async function linkFolderToProject(
   orgSlug: string,
   successEmoji: EmojiLabel = 'link',
   autoConfirm: boolean = false,
-  shouldPullEnv: boolean = true
+  pullEnv: boolean = true
 ) {
   // if the project is already linked, we skip linking
   if (await hasProjectLink(client, projectLink, path)) {
@@ -359,7 +377,12 @@ export async function linkFolderToProject(
     ) + '\n'
   );
 
-  if (!shouldPullEnv) {
+  if (!pullEnv) {
+    return;
+  }
+
+  // Skip env pull in non-TTY environments (CI)
+  if (!client.stdin.isTTY) {
     return;
   }
 
@@ -383,7 +406,7 @@ export async function linkFolderToProject(
           'Failed to pull environment variables. You can run `vc env pull` manually.'
         );
       }
-    } catch (error) {
+    } catch (_error) {
       output.error(
         'Failed to pull environment variables. You can run `vc env pull` manually.'
       );
