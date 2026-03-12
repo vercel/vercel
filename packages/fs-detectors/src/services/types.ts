@@ -5,6 +5,7 @@ import type {
   ExperimentalServices,
   ServiceRuntime,
   ServiceType,
+  Service,
   Builder,
 } from '@vercel/build-utils';
 import type { DetectorFilesystem } from '../detectors/filesystem';
@@ -15,34 +16,14 @@ export type {
   ExperimentalServices,
   ServiceRuntime,
   ServiceType,
+  Service,
   Builder,
 };
 
-export interface ResolvedService {
-  name: string;
-  type: ServiceType;
-  /** Service group name if this service belongs to a group */
-  group?: string;
-  /* build config */
-  workspace: string;
-  entrypoint?: string;
-  framework?: string;
-  builder: Builder;
-  buildCommand?: string;
-  installCommand?: string;
-  runtime?: string;
-  /**
-   * URL path prefix for routing requests to this service.
-   * Required for web services; requests matching this prefix are routed to this service.
-   * Root services use "/" as the catch-all.
-   */
-  routePrefix?: string;
-  /* Cron service config */
-  schedule?: string;
-  /* Worker service config */
-  topic?: string;
-  consumer?: string;
-}
+/**
+ * @deprecated Use `Service` instead
+ */
+export type ResolvedService = Service;
 
 export interface DetectServicesOptions {
   fs: DetectorFilesystem;
@@ -54,6 +35,8 @@ export interface DetectServicesOptions {
 }
 
 export interface ServicesRoutes {
+  /** Host-based rewrite routes for subdomain-mounted web services */
+  hostRewrites: Route[];
   /** Rewrite routes for non-root web services (prefix-based) */
   rewrites: Route[];
   /** Default routes (catch-all for root web service) */
@@ -61,24 +44,30 @@ export interface ServicesRoutes {
   /**
    * Internal routes for cron services.
    * These route `/_svc/{serviceName}/crons/{entry}/{handler}` to the cron function.
-   * TODO: Implement
    */
   crons: Route[];
   /**
    * Internal routes for worker services.
    * These route `/_svc/{serviceName}/workers/{entry}/{handler}` to the worker function.
-   * TODO: Implement
    */
   workers: Route[];
 }
 
 export interface DetectServicesResult {
-  services: ResolvedService[];
+  services: Service[];
+  /**
+   * Source of service definitions:
+   * - `configured`: loaded from explicit project configuration (currently `vercel.json#experimentalServices`)
+   * - `auto-detected`: inferred from project structure
+   */
+  source: DetectServicesSource;
   /** Routing rules derived from services */
   routes: ServicesRoutes;
   errors: ServiceDetectionError[];
   warnings: ServiceDetectionWarning[];
 }
+
+export type DetectServicesSource = 'configured' | 'auto-detected';
 
 export interface ServiceDetectionWarning {
   code: string;
@@ -98,6 +87,21 @@ export const RUNTIME_BUILDERS: Record<ServiceRuntime, string> = {
   go: '@vercel/go',
   rust: '@vercel/rust',
   ruby: '@vercel/ruby',
+};
+
+export const RUNTIME_MANIFESTS: Partial<Record<ServiceRuntime, string[]>> = {
+  node: ['package.json'],
+  python: [
+    'pyproject.toml',
+    'requirements.txt',
+    'Pipfile',
+    'pylock.yml',
+    'uv.lock',
+    'setup.py',
+  ],
+  go: ['go.mod'],
+  ruby: ['Gemfile'],
+  rust: ['Cargo.toml'],
 };
 
 export const ENTRYPOINT_EXTENSIONS: Record<string, ServiceRuntime> = {
@@ -120,4 +124,21 @@ export const ENTRYPOINT_EXTENSIONS: Record<string, ServiceRuntime> = {
 export const STATIC_BUILDERS = new Set([
   '@vercel/static-build',
   '@vercel/static',
+]);
+
+/**
+ * Builders that produce their own full route table with handle phases
+ * (filesystem, miss, rewrite, hit, error).
+ *
+ * In services mode we generally avoid generating synthetic catch-all routes
+ * for builders that provide their own routing. At service-detection time we
+ * only have the builder "use" string (not the loaded module), so this is an
+ * explicit allow-list for known route-table builders.
+ *
+ * NOTE: This is an explicit positive set because we can't check
+ * `builder.version` at service detection time.
+ */
+export const ROUTE_OWNING_BUILDERS = new Set([
+  '@vercel/next',
+  '@vercel/backends',
 ]);

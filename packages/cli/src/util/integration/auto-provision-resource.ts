@@ -15,9 +15,7 @@ function isAutoProvisionFallback(
     typeof error === 'object' &&
     error !== null &&
     'kind' in error &&
-    ['install', 'metadata', 'unknown'].includes(
-      (error as { kind: unknown }).kind as string
-    ) &&
+    (error as { kind: unknown }).kind !== 'provisioned' &&
     'url' in error &&
     'integration' in error &&
     'product' in error
@@ -30,7 +28,9 @@ export async function autoProvisionResource(
   productSlug: string,
   name: string,
   metadata: Metadata,
-  acceptedPolicies: AcceptedPolicies
+  acceptedPolicies: AcceptedPolicies,
+  billingPlanId?: string,
+  installationId?: string
 ): Promise<AutoProvisionResult> {
   const endpoint = `/v1/integrations/integration/${encodeURIComponent(integrationSlug)}/marketplace/auto-provision/${encodeURIComponent(productSlug)}`;
   const body = {
@@ -38,6 +38,8 @@ export async function autoProvisionResource(
     metadata,
     acceptedPolicies,
     source: 'cli',
+    ...(billingPlanId ? { billingPlanId } : {}),
+    ...(installationId ? { installationId } : {}),
   };
   output.debug(`Auto-provision request: POST ${endpoint}`);
   output.debug(`Auto-provision body: ${JSON.stringify(body, null, 2)}`);

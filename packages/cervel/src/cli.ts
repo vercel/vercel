@@ -6,15 +6,19 @@ export const main = async () => {
   const options = parseArgs(args);
   const { cwd, out, ...rest } = options.values;
   const [command, entrypoint] = options.positionals;
+
+  const workPath = cwd;
+  const repoRootPath = cwd;
+
   if (command === 'build') {
-    const { tsPromise } = await build({
-      cwd,
+    await build({
+      workPath,
+      repoRootPath,
       out,
       entrypoint,
     });
-    await tsPromise;
   } else {
-    await serve({ cwd, rest });
+    await serve({ workPath, rest });
   }
 };
 

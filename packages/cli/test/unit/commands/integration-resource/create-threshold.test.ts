@@ -38,7 +38,7 @@ describe('integration-resource', () => {
         await expect(client.stderr).toOutput(
           `The resource ${resourceName} was not found.`
         );
-        await expect(exitCodePromise).resolves.toEqual(0);
+        await expect(exitCodePromise).resolves.toEqual(1);
       });
 
       describe('resource-level threshold', () => {
@@ -242,6 +242,35 @@ describe('integration-resource', () => {
             `Success! Threshold for resource ${resourceName} created successfully.`
           );
           await expect(exitCodePromise).resolves.toEqual(0);
+        });
+
+        it('should round floating-point cents correctly with Math.round', async () => {
+          usePrepayment('acme-empty');
+
+          const resourceName = 'store-acme-prepayment';
+
+          client.setArgv(
+            'integration-resource',
+            'create-threshold',
+            resourceName,
+            '5.75',
+            '10.99',
+            '1000.50',
+            '--yes'
+          );
+          const exitCodePromise = integrationResourceCommand(client);
+
+          await expect(client.stderr).toOutput(
+            `Success! Threshold for resource ${resourceName} created successfully.`
+          );
+          await expect(exitCodePromise).resolves.toEqual(0);
+
+          // Without Math.round, 5.75 * 100 = 574.9999999999999
+          // With Math.round, it correctly becomes 575
+          const body = lastResourceThresholdBody as Record<string, unknown>;
+          expect(body).toHaveProperty('minimumAmountInCents', 575);
+          expect(body).toHaveProperty('purchaseAmountInCents', 1099);
+          expect(body).toHaveProperty('maximumAmountPerPeriodInCents', 100050);
         });
       });
 
@@ -502,6 +531,39 @@ describe('integration-resource', () => {
           );
           await expect(exitCodePromise).resolves.toEqual(0);
         });
+
+        it('should send a bare JSON array (not wrapped in { items }) to the batch endpoint', async () => {
+          usePrepayment('acme-empty');
+
+          const resourceName = 'store-acme-prepayment-installation';
+
+          client.setArgv(
+            'integration-resource',
+            'create-threshold',
+            resourceName,
+            '10',
+            '100',
+            '10000',
+            '--yes'
+          );
+          const exitCodePromise = integrationResourceCommand(client);
+
+          await expect(client.stderr).toOutput(
+            'Success! Threshold for installation Acme Prepayment created successfully.'
+          );
+          await expect(exitCodePromise).resolves.toEqual(0);
+
+          // The batch endpoint expects a bare array, not { items: [...] }
+          expect(Array.isArray(lastInstallationThresholdBody)).toBe(true);
+          expect(lastInstallationThresholdBody).toHaveLength(1);
+          const item = (
+            lastInstallationThresholdBody as Array<unknown>
+          )[0] as Record<string, unknown>;
+          expect(item).toHaveProperty('minimumAmountInCents', 1000);
+          expect(item).toHaveProperty('purchaseAmountInCents', 10000);
+          expect(item).toHaveProperty('maximumAmountPerPeriodInCents', 1000000);
+          expect(item).not.toHaveProperty('items');
+        });
       });
     });
 
@@ -560,7 +622,7 @@ describe('integration-resource', () => {
           );
           const exitCodePromise = integrationResourceCommand(client);
           await expect(client.stderr).toOutput(
-            'Error: Minimum is an invalid number format. Spend must be a positive number (ex. "5.75")'
+            'Error: Minimum is an invalid number format. Minimum must be a positive number (ex. "5.75")'
           );
           await expect(exitCodePromise).resolves.toEqual(1);
         });
@@ -764,20 +826,26 @@ describe('integration-resource', () => {
   });
 });
 
+let lastResourceThresholdBody: unknown;
+
 function mockUpdateThreshold() {
   client.scenario.post(
     '/:version/integrations/installations/:installationId/resources/:resourceId/billing/threshold',
-    (_req, res) => {
+    (req, res) => {
+      lastResourceThresholdBody = req.body;
       res.status(204);
       res.end();
     }
   );
 }
 
+let lastInstallationThresholdBody: unknown;
+
 function mockUpdateInstallationThreshold() {
   client.scenario.post(
     '/:version/integrations/installations/:installationId/billing/threshold/batch',
-    (_req, res) => {
+    (req, res) => {
+      lastInstallationThresholdBody = req.body;
       res.status(204);
       res.end();
     }

@@ -1,5 +1,192 @@
 # @vercel/build-utils
 
+## 13.8.0
+
+### Minor Changes
+
+- Support `maxDuration: 'max'` to allow the backend to resolve the maximum duration based on account plan type ([#15217](https://github.com/vercel/vercel/pull/15217))
+
+### Patch Changes
+
+- Fix EEXIST error when using `--standalone` flag in monorepos by handling pre-existing symlinks in the shared output directory. ([#15322](https://github.com/vercel/vercel/pull/15322))
+
+## 13.7.2
+
+### Patch Changes
+
+- Updated dependencies [[`a67131396956632b060895afe44b26bb99941817`](https://github.com/vercel/vercel/commit/a67131396956632b060895afe44b26bb99941817)]:
+  - @vercel/python-analysis@0.9.1
+
+## 13.7.1
+
+### Patch Changes
+
+- [services] adds support for subdomai configuration in experimentalServices ([#15401](https://github.com/vercel/vercel/pull/15401))
+
+## 13.7.0
+
+### Minor Changes
+
+- [python] add support for module-based entrypoints for cron jobs ([#15393](https://github.com/vercel/vercel/pull/15393))
+
+- For the django frontend, dynamically load settings.py instead of parsing it ([#15367](https://github.com/vercel/vercel/pull/15367))
+
+### Patch Changes
+
+- Updated dependencies [[`83e804013528fc54de31082960ae31f58339bd71`](https://github.com/vercel/vercel/commit/83e804013528fc54de31082960ae31f58339bd71), [`921314f958c4ec85adb09e020310a5becb7f866c`](https://github.com/vercel/vercel/commit/921314f958c4ec85adb09e020310a5becb7f866c)]:
+  - @vercel/python-analysis@0.9.0
+
+## 13.6.3
+
+### Patch Changes
+
+- Updated dependencies [[`d1c4d7052033aaf7b3f2044aa24484cb143b9348`](https://github.com/vercel/vercel/commit/d1c4d7052033aaf7b3f2044aa24484cb143b9348)]:
+  - @vercel/python-analysis@0.8.2
+
+## 13.6.2
+
+### Patch Changes
+
+- add partialFallback flag to prerender output ([#14703](https://github.com/vercel/vercel/pull/14703))
+
+## 13.6.1
+
+### Patch Changes
+
+- Updated dependencies [[`3880e1028840aae6883211b79a1a30c7432580f3`](https://github.com/vercel/vercel/commit/3880e1028840aae6883211b79a1a30c7432580f3)]:
+  - @vercel/python-analysis@0.8.1
+
+## 13.6.0
+
+### Minor Changes
+
+- Find entrypoints for django projects. ([#15167](https://github.com/vercel/vercel/pull/15167))
+
+### Patch Changes
+
+- Rename fetch to nodeFetch in cases where it is an import from node-fetch ([#15234](https://github.com/vercel/vercel/pull/15234))
+
+- [@vercel/build-utils] fix uncaught exception in streamToBuffer when stream exceeds max Buffer size ([#15276](https://github.com/vercel/vercel/pull/15276))
+
+- Remove source and destination typo suggestions for routes schema ([#15014](https://github.com/vercel/vercel/pull/15014))
+
+- Support function overrides in backends builder ([#15214](https://github.com/vercel/vercel/pull/15214))
+
+- Updated dependencies [[`b3a96cc4f276ce8d16c695eabd499d3a17e73aa8`](https://github.com/vercel/vercel/commit/b3a96cc4f276ce8d16c695eabd499d3a17e73aa8)]:
+  - @vercel/python-analysis@0.8.0
+
+## 13.5.0
+
+### Minor Changes
+
+- Add django experimental framework. ([#15196](https://github.com/vercel/vercel/pull/15196))
+
+### Patch Changes
+
+- Updated dependencies [[`cb79f6f8080fddd3673a8911566085e0265b060b`](https://github.com/vercel/vercel/commit/cb79f6f8080fddd3673a8911566085e0265b060b)]:
+  - @vercel/python-analysis@0.7.0
+
+## 13.4.3
+
+### Patch Changes
+
+- [services] ([#15093](https://github.com/vercel/vercel/pull/15093))
+  - consolidate `workspace` and `entrypoint` from `experimentalServices` `vercel.json` schema
+  - make `framework` config in service optional -- infer framework from service workspace when not explicitly provided
+- Updated dependencies [[`fc56fb91b4dafabe0f68f86efeabbaf98b2642bc`](https://github.com/vercel/vercel/commit/fc56fb91b4dafabe0f68f86efeabbaf98b2642bc)]:
+  - @vercel/python-analysis@0.6.0
+
+## 13.4.2
+
+### Patch Changes
+
+- Updated dependencies [[`88353afe588b95709af20ba2b82ba83d8a60f90c`](https://github.com/vercel/vercel/commit/88353afe588b95709af20ba2b82ba83d8a60f90c)]:
+  - @vercel/python-analysis@0.5.0
+
+## 13.4.1
+
+### Patch Changes
+
+- Add support for `functions[*].functionFailoverRegions` in `vercel.json` and build output config generation. ([#14969](https://github.com/vercel/vercel/pull/14969))
+
+  This enables per-function failover region configuration instead of only top-level defaults for all functions.
+
+## 13.4.0
+
+### Minor Changes
+
+- [services] synchronize dependencies in dev mode for JS/TS and Python services ([#14987](https://github.com/vercel/vercel/pull/14987))
+
+- [services] inject service URLs into web services as local paths ([#15024](https://github.com/vercel/vercel/pull/15024))
+
+### Patch Changes
+
+- Add new expirementalTrigger format for queues v2beta ([#14970](https://github.com/vercel/vercel/pull/14970))
+
+- Updated dependencies [[`a960cf23a42ff1a570c808ee9567670c24422f98`](https://github.com/vercel/vercel/commit/a960cf23a42ff1a570c808ee9567670c24422f98)]:
+  - @vercel/python-analysis@0.4.1
+
+## 13.3.5
+
+### Patch Changes
+
+- Add service configuration to BuildOptions ([#14918](https://github.com/vercel/vercel/pull/14918))
+
+- Updated dependencies [[`9b8f974bbb64fb857b068428b0c2fdccee6ad83c`](https://github.com/vercel/vercel/commit/9b8f974bbb64fb857b068428b0c2fdccee6ad83c)]:
+  - @vercel/python-analysis@0.4.0
+
+## 13.3.4
+
+### Patch Changes
+
+- Add support for `regions` in `vercel.json` function-level configuration. ([#14963](https://github.com/vercel/vercel/pull/14963))
+
+  Matching function `regions` are now parsed from `functions` config, written into lambda output config, and documented in config types so they override top-level deployment regions for that function.
+
+- [services] set framework prefixed env var urls to relative path ([#14958](https://github.com/vercel/vercel/pull/14958))
+
+## 13.3.3
+
+### Patch Changes
+
+- Updated dependencies [[`2d61173cd73860fedc23edc0552c86d0e21fccd3`](https://github.com/vercel/vercel/commit/2d61173cd73860fedc23edc0552c86d0e21fccd3)]:
+  - @vercel/python-analysis@0.3.2
+
+## 13.3.2
+
+### Patch Changes
+
+- Improve memory efficiency in `FileBlob.fromStream()` by avoiding unnecessary buffer copies when chunks are already Buffers ([#14701](https://github.com/vercel/vercel/pull/14701))
+
+- [services] build time service url env vars ([#14893](https://github.com/vercel/vercel/pull/14893))
+
+- Updated dependencies [[`7a747344dfb778a650da2ee5f7fba8c974098b42`](https://github.com/vercel/vercel/commit/7a747344dfb778a650da2ee5f7fba8c974098b42)]:
+  - @vercel/python-analysis@0.3.1
+
+## 13.3.1
+
+### Patch Changes
+
+- Replace Python-based AST parser with WASM-based `@vercel/python-analysis` for detecting Python entrypoints. This eliminates the need for a Python runtime when analyzing Python files for WSGI/ASGI application patterns. ([#14843](https://github.com/vercel/vercel/pull/14843))
+
+## 13.3.0
+
+### Minor Changes
+
+- Add multi-service support for `vercel dev`. When `VERCEL_USE_EXPERIMENTAL_SERVICES=1` is set, the CLI auto-detects different multi-service layouts and orchestrates dev servers for each service through a single proxy server. ([#14805](https://github.com/vercel/vercel/pull/14805))
+
+### Patch Changes
+
+- [services] add `services` to `config.json` ([#14847](https://github.com/vercel/vercel/pull/14847))
+
+## 13.2.17
+
+### Patch Changes
+
+- Add `exposeErrBody` optional boolean property to Prerender object ([#14845](https://github.com/vercel/vercel/pull/14845))
+
+- Move backends builder detection to detectBuilders phase ([#14830](https://github.com/vercel/vercel/pull/14830))
+
 ## 13.2.16
 
 ### Patch Changes

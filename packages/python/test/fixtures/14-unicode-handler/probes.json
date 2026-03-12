@@ -11,6 +11,9 @@
       "responseHeaders": {
         "content-type": "application/json"
       }
+    },
+    {
+      "logMustContain": "Using python version: 3.12"
     }
   ]
 }

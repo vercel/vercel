@@ -63,7 +63,6 @@ module.exports = function setupTests(groupIndex) {
     '22-docusaurus-2-build-fail',
   ];
 
-  // eslint-disable-next-line no-restricted-syntax
   for (const fixture of fixtures) {
     if (fixturesToSkip.includes(fixture)) {
       continue;
@@ -71,7 +70,6 @@ module.exports = function setupTests(groupIndex) {
 
     const errMsg = testsThatFailToBuild.get(fixture);
     if (errMsg) {
-      // eslint-disable-next-line no-loop-func
       it(`should fail to build ${fixture}`, async () => {
         try {
           await testDeployment(path.join(fixturesPath, fixture));
@@ -81,7 +79,7 @@ module.exports = function setupTests(groupIndex) {
           expect(err.deployment.errorMessage).toBe(errMsg);
         }
       });
-      continue; //eslint-disable-line
+      continue;
     }
     it(`should build ${fixture}`, async () => {
       await expect(

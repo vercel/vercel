@@ -1,0 +1,15 @@
+{
+  "probes": [
+    {
+      "logMustContain": "Using Python 3.13 from .python-version"
+    },
+    {
+      "path": "/api/version",
+      "mustContain": "\"major\":3"
+    },
+    {
+      "path": "/api/version",
+      "mustContain": "\"minor\":13"
+    }
+  ]
+}

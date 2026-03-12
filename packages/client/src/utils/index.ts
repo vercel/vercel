@@ -65,7 +65,6 @@ export async function parseVercelConfig(
 
     return JSON.parse(jsonString);
   } catch (e) {
-    // eslint-disable-next-line no-console
     console.error(e);
 
     return {};
@@ -75,7 +74,7 @@ export async function parseVercelConfig(
 const maybeRead = async function <T>(path: string, default_: T) {
   try {
     return await readFile(path, 'utf8');
-  } catch (err) {
+  } catch (_err) {
     return default_;
   }
 };
@@ -324,7 +323,7 @@ interface FetchOpts extends RequestInit {
   userAgent?: string;
 }
 
-export const fetch = async (
+export const fetchApi = async (
   url: string,
   token: string,
   opts: FetchOpts = {},

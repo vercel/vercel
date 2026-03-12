@@ -263,6 +263,7 @@ type RoutesManifestOld = {
         fallback: (Rewrite & RoutesManifestRegex)[];
       };
   headers?: (Header & RoutesManifestRegex)[];
+  onMatchHeaders?: (Header & RoutesManifestRegex)[];
   dynamicRoutes: RoutesManifestRoute[];
   staticRoutes: RoutesManifestRoute[];
   version: 1 | 2 | 3;
@@ -676,7 +677,7 @@ export async function getDynamicRoutes({
     if (typeof getRouteRegex !== 'function') {
       getRouteRegex = undefined;
     }
-  } catch (_) {} // eslint-disable-line no-empty
+  } catch (_) {}
 
   if (!getRouteRegex || !getSortedRoutes) {
     try {
@@ -688,7 +689,7 @@ export async function getDynamicRoutes({
       if (typeof getRouteRegex !== 'function') {
         getRouteRegex = undefined;
       }
-    } catch (_) {} // eslint-disable-line no-empty
+    } catch (_) {}
   }
 
   if (!getRouteRegex || !getSortedRoutes) {
@@ -1118,6 +1119,9 @@ export async function createLambdaFromPseudoLayers({
 // https://github.com/vercel/next.js/blob/6169e786020b63e101cc09285e1277e278cd34b8/packages/next/src/server/config-shared.ts#L1588
 export type NextConfigRuntime = {
   pageExtensions: string[];
+  // experimental.cacheComponents has been moved out of experimental
+  // at https://github.com/vercel/next.js/pull/85035
+  cacheComponents?: boolean;
   experimental?: {
     cacheComponents?: boolean;
     clientParamParsingOrigins?: string[];
@@ -1138,7 +1142,7 @@ export type NextRequiredServerFilesManifest = {
 /**
  * The rendering mode for a route.
  */
-export const enum RenderingMode {
+export enum RenderingMode {
   /**
    * `STATIC` rendering mode will output a fully static HTML page or error if
    * anything dynamic is used.
@@ -1871,7 +1875,9 @@ export function addLocaleOrDefault(
 export type LambdaGroup = {
   pages: string[];
   memory?: number;
-  maxDuration?: number;
+  maxDuration?: number | 'max';
+  regions?: string[];
+  functionFailoverRegions?: string[];
   supportsCancellation?: boolean;
   isAppRouter?: boolean;
   isAppRouteHandler?: boolean;
@@ -1886,6 +1892,18 @@ export type LambdaGroup = {
   pseudoLayerUncompressedBytes: number;
   experimentalTriggers?: NodejsLambda['experimentalTriggers'];
 };
+
+function compareRegions(
+  a: string[] | undefined,
+  b: string[] | undefined
+): boolean {
+  if (a === undefined && b === undefined) return true;
+  if (a === undefined || b === undefined) return false;
+  if (a.length !== b.length) return false;
+  const sortedA = [...a].sort();
+  const sortedB = [...b].sort();
+  return sortedA.every((val, idx) => val === sortedB[idx]);
+}
 
 export async function getPageLambdaGroups({
   entryPath,
@@ -1942,7 +1960,9 @@ export async function getPageLambdaGroups({
     let opts: {
       architecture?: NodejsLambda['architecture'];
       memory?: number;
-      maxDuration?: number;
+      maxDuration?: number | 'max';
+      regions?: string[];
+      functionFailoverRegions?: string[];
       experimentalTriggers?: NodejsLambda['experimentalTriggers'];
       supportsCancellation?: boolean;
     } = {};
@@ -1951,7 +1971,12 @@ export async function getPageLambdaGroups({
       functionsConfigManifest &&
       functionsConfigManifest.functions[routeName]
     ) {
-      opts = functionsConfigManifest.functions[routeName];
+      // Exclude `regions` from the manifest. Next.js outputs `preferredRegion`
+      // as `regions` in the manifest, but for Node.js lambdas we only support
+      // regions via vercel.json functions config, not route-level config.
+      const { regions: _regions, ...manifestOpts } =
+        functionsConfigManifest.functions[routeName];
+      opts = manifestOpts;
     }
 
     if (config && config.functions) {
@@ -2022,6 +2047,11 @@ export async function getPageLambdaGroups({
           const matches =
             group.maxDuration === opts.maxDuration &&
             group.memory === opts.memory &&
+            compareRegions(group.regions, opts.regions) &&
+            compareRegions(
+              group.functionFailoverRegions,
+              opts.functionFailoverRegions
+            ) &&
             group.isPrerenders === isPrerenderRoute &&
             group.isExperimentalPPR === isExperimentalPPR &&
             JSON.stringify(group.experimentalTriggers) ===
@@ -2725,7 +2755,9 @@ export const onPrerenderRoute =
       !isBlocking &&
       (!isNotFound || static404Page) &&
       dataRoute &&
-      (!isAppClientParamParsingEnabled || prefetchDataRoute)
+      // When this is an App route, either isAppClientParamParsingEnabled is disabled
+      // or there's a prefetchDataRoute
+      (!isAppPathRoute || !isAppClientParamParsingEnabled || prefetchDataRoute)
     ) {
       const basePath =
         isAppPathRoute && !isOmittedOrNotFound && appDir ? appDir : pagesDir;
@@ -3039,6 +3071,12 @@ export const onPrerenderRoute =
         }
       }
 
+      const partialFallback =
+        isAppPathRoute &&
+        renderingMode === RenderingMode.PARTIALLY_STATIC &&
+        isFallback &&
+        Boolean(postponedState);
+
       // If this is a static metadata file that should output FileRef instead of Prerender
       const staticMetadataFile = getSourceFileRefOfStaticMetadata(
         routeKey,
@@ -3069,6 +3107,7 @@ export const onPrerenderRoute =
           experimentalStreamingLambdaPath,
           chain,
           allowHeader,
+          partialFallback: partialFallback || undefined,
 
           ...(isNotFound
             ? {
@@ -3118,6 +3157,7 @@ export const onPrerenderRoute =
           bypassToken: prerenderManifest.bypassToken,
           experimentalBypassFor,
           allowHeader,
+          partialFallback: undefined,
 
           ...(isNotFound
             ? {
@@ -3170,66 +3210,75 @@ export const onPrerenderRoute =
           routesManifest?.rsc?.dynamicRSCPrerender &&
           routesManifest?.ppr?.chain?.headers
         ) {
-          let contentType = rscContentTypeHeader;
-          if (postponedState) {
-            contentType = `application/x-nextjs-pre-render; state-length=${postponedState.length}; origin=${JSON.stringify(
-              rscContentTypeHeader
-            )}`;
-          }
+          const shouldSkipDynamicRsc =
+            Boolean(prefetchDataRoute) && !postponedState;
+          if (shouldSkipDynamicRsc) {
+            // Ensure the data route is still registered using the static
+            // prerender (with fallback) so the .rsc build output is uploaded.
+            prerenders[normalizePathData(outputPathData)] = prerender;
+          } else {
+            let contentType = rscContentTypeHeader;
+            if (postponedState) {
+              contentType = `application/x-nextjs-pre-render; state-length=${postponedState.length}; origin=${JSON.stringify(
+                rscContentTypeHeader
+              )}`;
+            }
 
-          // If client param parsing is enabled, we follow the same logic as the
-          // HTML allowQuery as it's already going to vary based on if there's a
-          // static shell generated or if there's fallback root params. If there
-          // are fallback root params, and we can serve a fallback, then we
-          // should follow the same logic for the dynamic RSC routes.
-          //
-          // If client param parsing is not enabled, we have to use the
-          // allowQuery because the RSC payloads will contain dynamic segment
-          // values.
-          const rdcRSCAllowQuery = isAppClientParamParsingEnabled
-            ? htmlAllowQuery
-            : allowQuery;
+            // If client param parsing is enabled, we follow the same logic as the
+            // HTML allowQuery as it's already going to vary based on if there's a
+            // static shell generated or if there's fallback root params. If there
+            // are fallback root params, and we can serve a fallback, then we
+            // should follow the same logic for the dynamic RSC routes.
+            //
+            // If client param parsing is not enabled, we have to use the
+            // allowQuery because the RSC payloads will contain dynamic segment
+            // values.
+            const rdcRSCAllowQuery = isAppClientParamParsingEnabled
+              ? htmlAllowQuery
+              : allowQuery;
 
-          // Use the fallback value for the RSC route if the route doesn't
-          // vary based on the route parameters and there's an actual postponed
-          // state to fallback to.
-          let fallback: FileBlob | null = null;
-          if (
-            rdcRSCAllowQuery &&
-            rdcRSCAllowQuery.length === 0 &&
-            postponedState
-          ) {
-            fallback = new FileBlob({
-              data: postponedState,
-              contentType,
+            // Use the fallback value for the RSC route if the route doesn't
+            // vary based on the route parameters and there's an actual postponed
+            // state to fallback to.
+            let fallback: FileBlob | null = null;
+            if (
+              rdcRSCAllowQuery &&
+              rdcRSCAllowQuery.length === 0 &&
+              postponedState
+            ) {
+              fallback = new FileBlob({
+                data: postponedState,
+                contentType,
+              });
+            }
+
+            prerenders[normalizePathData(outputPathData)] = new Prerender({
+              expiration: initialRevalidate,
+              staleExpiration: initialExpire,
+              lambda,
+              allowQuery: rdcRSCAllowQuery,
+              fallback,
+              group: prerenderGroup,
+              bypassToken: prerenderManifest.bypassToken,
+              experimentalBypassFor,
+              allowHeader,
+              partialFallback: undefined,
+              chain: {
+                outputPath: normalizePathData(outputPathData),
+                headers: routesManifest.ppr.chain.headers,
+              },
+              ...(isNotFound ? { initialStatus: 404 } : {}),
+              initialHeaders: {
+                ...initialHeaders,
+                'content-type': contentType,
+                // Dynamic RSC requests cannot be cached, so we explicity set it
+                // here to ensure that the response is not cached by the browser.
+                'cache-control':
+                  'private, no-store, no-cache, max-age=0, must-revalidate',
+                vary: rscVaryHeader,
+              },
             });
           }
-
-          prerenders[normalizePathData(outputPathData)] = new Prerender({
-            expiration: initialRevalidate,
-            staleExpiration: initialExpire,
-            lambda,
-            allowQuery: rdcRSCAllowQuery,
-            fallback,
-            group: prerenderGroup,
-            bypassToken: prerenderManifest.bypassToken,
-            experimentalBypassFor,
-            allowHeader,
-            chain: {
-              outputPath: normalizePathData(outputPathData),
-              headers: routesManifest.ppr.chain.headers,
-            },
-            ...(isNotFound ? { initialStatus: 404 } : {}),
-            initialHeaders: {
-              ...initialHeaders,
-              'content-type': contentType,
-              // Dynamic RSC requests cannot be cached, so we explicity set it
-              // here to ensure that the response is not cached by the browser.
-              'cache-control':
-                'private, no-store, no-cache, max-age=0, must-revalidate',
-              vary: rscVaryHeader,
-            },
-          });
         }
       }
 
@@ -3341,6 +3390,7 @@ export const onPrerenderRoute =
                 // Use the same prerender group as the JSON/data prerender.
                 group: prerenderGroup,
                 allowHeader,
+                partialFallback: undefined,
 
                 // These routes are always only static, so they should not
                 // permit any bypass unless it's for preview
@@ -3599,7 +3649,7 @@ export {
   normalizePackageJson,
   getNextConfig,
   getImagesConfig,
-  stringMap,
+  type stringMap,
   normalizePage,
   isDynamicRoute,
   getSourceFilePathFromPage,
@@ -3610,7 +3660,8 @@ export type FunctionsConfigManifestV1 = {
   functions: Record<
     string,
     {
-      maxDuration?: number | undefined;
+      maxDuration?: number | 'max' | undefined;
+      regions?: string[];
       runtime?: 'nodejs';
       matchers?: Array<{
         regexp: string;
@@ -4639,7 +4690,7 @@ export async function getServerActionMetaRoutes(
     }
 
     return routes;
-  } catch (error) {
+  } catch (_error) {
     // If manifest doesn't exist or can't be read, return empty routes
     return [];
   }

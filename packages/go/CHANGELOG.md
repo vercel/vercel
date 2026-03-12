@@ -1,5 +1,53 @@
 # @vercel/go
 
+## 3.4.4
+
+### Patch Changes
+
+- [go] versions 1.26 + 1.25 ([#15432](https://github.com/vercel/vercel/pull/15432))
+
+## 3.4.3
+
+### Patch Changes
+
+- Rename fetch to nodeFetch in cases where it is an import from node-fetch ([#15234](https://github.com/vercel/vercel/pull/15234))
+
+## 3.4.2
+
+### Patch Changes
+
+- Fix service route-prefix stripping for standalone Go services in services mode. ([#15120](https://github.com/vercel/vercel/pull/15120))
+
+  This updates Go's executable bootstrap to strip generated service route prefixes in production and adds a Go dev wrapper (`vc_init_dev.go`) so standalone Go dev also strips generated service route prefixes before forwarding requests to the user app.
+
+  Update the `09-services-frontend-backend-go-zc` e2e fixture backend from Ruby/Sinatra to Go so it exercises Go services detection and routing in zero-config services mode.
+
+## 3.4.1
+
+### Patch Changes
+
+- Forward Go and Ruby dev server output through `startDevServer` stdout/stderr callbacks so service logs are correctly prefixed in multi-service `vercel dev`. ([#14989](https://github.com/vercel/vercel/pull/14989))
+
+## 3.4.0
+
+### Minor Changes
+
+- Add experimental Go runtime framework preset. ([#14865](https://github.com/vercel/vercel/pull/14865))
+
+  This adds support for deploying standalone Go HTTP servers (using `package main` with `func main()`) in addition to the existing serverless function pattern. The preset supports:
+
+  - `main.go` at project root (simple projects)
+  - `cmd/api/main.go` (API servers)
+  - `cmd/server/main.go` (HTTP servers)
+
+  The Go application must listen on the port specified by the `PORT` environment variable.
+
+## 3.3.5
+
+### Patch Changes
+
+- Update deprecated tar package ([#14877](https://github.com/vercel/vercel/pull/14877))
+
 ## 3.3.4
 
 ### Patch Changes

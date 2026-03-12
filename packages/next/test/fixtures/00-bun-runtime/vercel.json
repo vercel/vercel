@@ -14,5 +14,10 @@
       "path": "/",
       "mustContain": "\"runtime\":\"bun\""
     }
-  ]
+  ],
+  "build": {
+    "env": {
+      "NEXT_BUILDER_INTEGRATION": "1"
+    }
+  }
 }

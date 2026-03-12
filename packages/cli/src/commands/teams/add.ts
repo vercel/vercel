@@ -29,7 +29,6 @@ export default async function add(client: Client): Promise<number> {
   );
   do {
     try {
-      // eslint-disable-next-line no-await-in-loop
       slug = await client.input.text({
         message: `- ${teamUrlPrefix}`,
         validate: validateSlug,
@@ -48,7 +47,6 @@ export default async function add(client: Client): Promise<number> {
     output.spinner(teamUrlPrefix + slug);
 
     try {
-      // eslint-disable-next-line no-await-in-loop
       team = await createTeam(client, { slug });
     } catch (err: unknown) {
       output.stopSpinner();

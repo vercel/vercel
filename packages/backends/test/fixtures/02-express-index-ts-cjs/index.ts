@@ -1,6 +1,12 @@
 import express from "express";
+import { join } from "node:path";
+import fs from "node:fs";
 
 const app = express();
+
+const info = fs.readFileSync(join(__dirname, 'info.md'), 'utf8');
+console.log('reading...');
+console.log({ info });
 
 app.get("/", (req, res) => res.send("Hello World"));
 

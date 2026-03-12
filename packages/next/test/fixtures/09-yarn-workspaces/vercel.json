@@ -11,5 +11,10 @@
     {
       "logMustContain": "WARNING: your application is being opted out of @vercel/next's optimized lambdas mode due to legacy routes"
     }
-  ]
+  ],
+  "build": {
+    "env": {
+      "NEXT_BUILDER_INTEGRATION": "1"
+    }
+  }
 }

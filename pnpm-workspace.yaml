@@ -4,3 +4,4 @@ packages:
   - 'examples'
   - 'internals/*'
   - 'python/vercel-runtime'
+  - 'python/vercel-workers'

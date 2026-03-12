@@ -62,8 +62,7 @@ interface DownloadOptions {
 
 const require_ = createRequire(__filename);
 
-// eslint-disable-next-line no-useless-escape
-const libPathRegEx = /^node_modules|[\/\\]node_modules[\/\\]/;
+const libPathRegEx = /^node_modules|[/\\]node_modules[/\\]/;
 
 async function downloadInstallAndBundle({
   files,
@@ -145,8 +144,7 @@ async function compile(
   config: Config,
   meta: Meta,
   nodeVersion: NodeVersion,
-  isEdgeFunction: boolean,
-  useTypescript5 = false
+  isEdgeFunction: boolean
 ): Promise<{
   preparedFiles: Files;
   shouldAddSourcemapSupport: boolean;
@@ -188,7 +186,6 @@ async function compile(
         project: path, // Resolve tsconfig.json from entrypoint dir
         files: true, // Include all files such as global `.d.ts`
         nodeVersionMajor: nodeVersion.major,
-        useTypescript5,
       });
     }
     const { code, map } = tsCompile(source, path);
@@ -514,8 +511,6 @@ export const build = async ({
     isBun: isBunVersion(nodeVersion),
   });
 
-  // Opt backend builders to use typescript5
-  const useTypescript5 = considerBuildCommand;
   debug('Tracing input files...');
   const traceTime = Date.now();
   const { preparedFiles, shouldAddSourcemapSupport } = await compile(
@@ -525,8 +520,7 @@ export const build = async ({
     config,
     meta,
     nodeVersion,
-    isEdgeFunction,
-    useTypescript5
+    isEdgeFunction
   );
   debug(`Trace complete [${Date.now() - traceTime}ms]`);
 

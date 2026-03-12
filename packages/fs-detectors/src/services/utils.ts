@@ -7,9 +7,70 @@ import type {
   ServiceRuntime,
   ExperimentalServices,
   ServiceDetectionError,
+  ResolvedService,
 } from './types';
-import { RUNTIME_BUILDERS, ENTRYPOINT_EXTENSIONS } from './types';
+import {
+  RUNTIME_BUILDERS,
+  ENTRYPOINT_EXTENSIONS,
+  STATIC_BUILDERS,
+  ROUTE_OWNING_BUILDERS,
+} from './types';
 
+export async function hasFile(
+  fs: DetectorFilesystem,
+  filePath: string
+): Promise<boolean> {
+  try {
+    return await fs.isFile(filePath);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Reserved internal namespace used by services routing/runtime plumbing.
+ */
+export const INTERNAL_SERVICE_PREFIX = '/_svc';
+
+export function getInternalServiceFunctionPath(serviceName: string): string {
+  return `${INTERNAL_SERVICE_PREFIX}/${serviceName}/index`;
+}
+
+function normalizeInternalServiceEntrypoint(entrypoint: string): string {
+  const normalized = entrypoint
+    .replace(/\\/g, '/')
+    .replace(/^\/+/, '')
+    .replace(/\.[^/.]+$/, '');
+  return normalized || 'index';
+}
+
+export function getInternalServiceWorkerPathPrefix(
+  serviceName: string
+): string {
+  return `${INTERNAL_SERVICE_PREFIX}/${serviceName}/workers`;
+}
+
+export function getInternalServiceCronPathPrefix(serviceName: string): string {
+  return `${INTERNAL_SERVICE_PREFIX}/${serviceName}/crons`;
+}
+
+export function getInternalServiceWorkerPath(
+  serviceName: string,
+  entrypoint: string,
+  handler = 'worker'
+): string {
+  const normalizedEntrypoint = normalizeInternalServiceEntrypoint(entrypoint);
+  return `${getInternalServiceWorkerPathPrefix(serviceName)}/${normalizedEntrypoint}/${handler}`;
+}
+
+export function getInternalServiceCronPath(
+  serviceName: string,
+  entrypoint: string,
+  handler = 'cron'
+): string {
+  const normalizedEntrypoint = normalizeInternalServiceEntrypoint(entrypoint);
+  return `${getInternalServiceCronPathPrefix(serviceName)}/${normalizedEntrypoint}/${handler}`;
+}
 export function getBuilderForRuntime(runtime: ServiceRuntime): string {
   const builder = RUNTIME_BUILDERS[runtime];
   if (!builder) {
@@ -18,14 +79,74 @@ export function getBuilderForRuntime(runtime: ServiceRuntime): string {
   return builder;
 }
 
+export function isStaticBuild(service: ResolvedService): boolean {
+  return STATIC_BUILDERS.has(service.builder.use);
+}
+
+/**
+ * Determines if a service uses a "route-owning" builder.
+ *
+ * Route-owning builders (e.g., `@vercel/next`, `@vercel/backends`) produce
+ * their own full route table with handle phases (filesystem, miss, rewrite,
+ * hit, error). The services system should NOT generate synthetic catch-all
+ * rewrites for them — instead, we rely on the builder's own `routes[]`.
+ */
+export function isRouteOwningBuilder(service: ResolvedService): boolean {
+  return ROUTE_OWNING_BUILDERS.has(service.builder.use);
+}
+
+/**
+ * Infer runtime from a framework slug.
+ *
+ * Examples:
+ * - `python` -> `python`
+ * - `fastapi` -> `python`
+ * - `express` -> `node`
+ */
+export function inferRuntimeFromFramework(
+  framework: string | null | undefined
+): ServiceRuntime | undefined {
+  if (!framework) {
+    return undefined;
+  }
+
+  // Runtime framework slug maps directly to runtime name.
+  if (framework in RUNTIME_BUILDERS) {
+    return framework as ServiceRuntime;
+  }
+
+  if (isPythonFramework(framework)) {
+    return 'python';
+  }
+  if (isBackendFramework(framework)) {
+    return 'node';
+  }
+
+  return undefined;
+}
+
+export function filterFrameworksByRuntime<T extends { slug?: string | null }>(
+  frameworks: readonly T[],
+  runtime?: ServiceRuntime
+): T[] {
+  if (!runtime) {
+    return [...frameworks];
+  }
+
+  return frameworks.filter(
+    framework => inferRuntimeFromFramework(framework.slug) === runtime
+  );
+}
+
 /**
  * Infer runtime from available service configuration.
  *
  * Priority (highest to lowest):
  * 1. Explicit runtime (user specified in config)
- * 2. Framework detection (fastapi → python, express → node)
- * 3. Builder detection (@vercel/python → python)
- * 4. Entrypoint extension (.py → python, .ts → node)
+ * 2. Runtime framework slug (ruby → ruby, go → go)
+ * 3. Framework detection (fastapi → python, express → node)
+ * 4. Builder detection (@vercel/python → python)
+ * 5. Entrypoint extension (.py → python, .ts → node)
  *
  * @returns The inferred runtime, or undefined if none can be determined.
  */
@@ -40,12 +161,9 @@ export function inferServiceRuntime(config: {
     return config.runtime as ServiceRuntime;
   }
 
-  // Infer from framework
-  if (isPythonFramework(config.framework)) {
-    return 'python';
-  }
-  if (isBackendFramework(config.framework)) {
-    return 'node';
+  const frameworkRuntime = inferRuntimeFromFramework(config.framework);
+  if (frameworkRuntime) {
+    return frameworkRuntime;
   }
 
   // Infer from builder

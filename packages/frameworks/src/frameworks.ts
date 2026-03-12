@@ -156,11 +156,11 @@ export const frameworks = [
         const nowRoutes = JSON.parse(content);
         try {
           await unlink(nowRoutesPath);
-        } catch (err) {
+        } catch (_err) {
           // do nothing if deleting the file fails
         }
         return nowRoutes;
-      } catch (err) {
+      } catch (_err) {
         // if the file doesn't exist, we implement gatsby's recommendations
         // https://www.gatsbyjs.org/docs/caching
 
@@ -1098,6 +1098,7 @@ export const frameworks = [
       'SvelteKit is a framework for building web applications of all sizes.',
     description: 'A SvelteKit legacy app optimized Edge-first.',
     website: 'https://kit.svelte.dev',
+    supersedes: ['vite'],
     sort: 99,
     envPrefix: 'VITE_',
     detectors: {
@@ -1139,6 +1140,7 @@ export const frameworks = [
       'SvelteKit is a framework for building web applications of all sizes.',
     description: 'A SvelteKit app optimized Edge-first.',
     website: 'https://kit.svelte.dev',
+    supersedes: ['vite'],
     detectors: {
       every: [
         {
@@ -2209,6 +2211,65 @@ export const frameworks = [
       {
         src: '/(.*)',
         dest: '/main',
+      },
+    ],
+  },
+  {
+    name: 'Django',
+    slug: 'django',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/django.svg',
+    tagline:
+      'Django is a high-level Python web framework that encourages rapid development and clean, pragmatic design. ',
+    description: 'A Django project served via the Python Runtime.',
+    website: 'https://www.djangoproject.com',
+    supersedes: ['python'],
+    useRuntime: { src: 'index.py', use: '@vercel/python' },
+    ignoreRuntimes: ['@vercel/python'],
+    detectors: {
+      some: [
+        {
+          path: 'requirements.txt',
+          matchContent: '[Dd]jango',
+        },
+        {
+          path: 'pyproject.toml',
+          matchContent: '[Dd]jango',
+        },
+        {
+          path: 'Pipfile',
+          matchContent: '[Dd]jango',
+        },
+        {
+          // a default django project will create a manage.py which sets DJANGO_SETTINGS_MODULE
+          path: 'manage.py',
+          matchContent: 'DJANGO_SETTINGS_MODULE',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: '`pip install -r requirements.txt`',
+      },
+      buildCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      devCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      outputDirectory: {
+        value: 'N/A',
+      },
+    },
+    getOutputDirName: async () => 'public',
+    defaultRoutes: [
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        dest: '/',
       },
     ],
   },
@@ -4071,7 +4132,6 @@ export const frameworks = [
   {
     name: 'Python',
     slug: 'python',
-    experimental: true,
     runtimeFramework: true,
     logo: 'https://api-frameworks.vercel.sh/framework-logos/python.svg',
     tagline:
@@ -4273,6 +4333,61 @@ export const frameworks = [
     ],
   },
   {
+    name: 'Go',
+    slug: 'go',
+    runtimeFramework: true,
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/go.svg',
+    tagline: 'An open-source programming language supported by Google.',
+    description: 'A generic Go application deployed as a serverless function.',
+    website: 'https://go.dev',
+    useRuntime: { src: 'index.go', use: '@vercel/go' },
+    ignoreRuntimes: ['@vercel/go'],
+    detectors: {
+      every: [
+        {
+          path: 'go.mod',
+        },
+      ],
+      some: [
+        {
+          path: 'main.go',
+        },
+        {
+          path: 'cmd/api/main.go',
+        },
+        {
+          path: 'cmd/server/main.go',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: '`go mod download`',
+      },
+      buildCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      devCommand: {
+        placeholder: '`go run .` or `go run ./cmd/api`',
+        value: null,
+      },
+      outputDirectory: {
+        value: 'N/A',
+      },
+    },
+    getOutputDirName: async () => 'public',
+    defaultRoutes: [
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        dest: '/',
+      },
+    ],
+  },
+  {
     name: 'Services',
     slug: 'services',
     experimental: true,
@@ -4282,7 +4397,6 @@ export const frameworks = [
     description:
       'Multiple services deployed as serverless functions within your project.',
     website: 'https://vercel.com',
-    detectors: {},
     settings: {
       installCommand: {
         placeholder: 'None',

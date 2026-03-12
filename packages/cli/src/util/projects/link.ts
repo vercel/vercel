@@ -26,6 +26,7 @@ import { addToGitIgnore } from '../link/add-to-gitignore';
 import type { RepoProjectConfig } from '../link/repo';
 import output from '../../output-manager';
 import pull from '../../commands/env/pull';
+import { resolveProjectCwd } from './find-project-root';
 
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
@@ -128,9 +129,23 @@ async function getProjectLinkFromRepoLink(
     }
   }
   if (project) {
+    // Prefer project-level orgId, fall back to top-level for backwards compat
+    const orgId = project.orgId ?? repoLink.repoConfig.orgId;
+    if (!orgId) {
+      const projectInfo = [
+        project.name ? `name: "${project.name}"` : '',
+        project.directory ? `directory: "${project.directory}"` : '',
+      ]
+        .filter(Boolean)
+        .join(', ');
+      const details = projectInfo ? ` Project: { ${projectInfo} }.` : '';
+      throw new Error(
+        `Could not determine org ID from repo.json config at "${repoLink.repoConfigPath}".${details} Please re-link the repository.`
+      );
+    }
     return {
       repoRoot: repoLink.rootPath,
-      orgId: repoLink.repoConfig.orgId,
+      orgId,
       projectId: project.id,
       projectRootDirectory: project.directory,
     };
@@ -204,11 +219,22 @@ async function hasProjectLink(
 
   // linked via `repo.json`?
   const repoLink = await getRepoLink(client, path);
-  if (
-    repoLink?.repoConfig?.orgId === projectLink.orgId &&
-    repoLink.repoConfig.projects.find(p => p.id === projectLink.projectId)
-  ) {
-    return true;
+  if (repoLink?.repoConfig) {
+    const matchingProject = repoLink.repoConfig.projects.find(
+      p => p.id === projectLink.projectId
+    );
+    if (matchingProject) {
+      // Prefer project-level orgId, fall back to top-level for backwards compat
+      const orgId = matchingProject.orgId ?? repoLink.repoConfig.orgId;
+      if (!orgId) {
+        throw new Error(
+          `Invalid "repo.json": missing "orgId" for project "${matchingProject.id}" and no top-level "orgId" is defined.`
+        );
+      }
+      if (orgId === projectLink.orgId) {
+        return true;
+      }
+    }
   }
 
   // if the project is already linked, we skip linking
@@ -229,6 +255,8 @@ export async function getLinkedProject(
   path = client.cwd,
   projectName?: string
 ): Promise<ProjectLinkResult> {
+  path = await resolveProjectCwd(path);
+
   const VERCEL_ORG_ID = getPlatformEnv('ORG_ID');
   const VERCEL_PROJECT_ID = getPlatformEnv('PROJECT_ID');
   const shouldUseEnv = Boolean(VERCEL_ORG_ID && VERCEL_PROJECT_ID);
@@ -266,7 +294,7 @@ export async function getLinkedProject(
       output.stopSpinner();
 
       if (err.missingToken || err.invalidToken) {
-        throw new InvalidToken();
+        throw new InvalidToken(client.authConfig.tokenSource);
       } else if (err.code === 'forbidden' || err.code === 'team_unauthorized') {
         throw new NowBuildError({
           message: `Could not retrieve Project Settings. To link your Project, remove the ${outputCode(

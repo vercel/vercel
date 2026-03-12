@@ -9,6 +9,10 @@ import {
   type AuthConfig,
 } from './auth-config';
 import { refreshTokenRequest, processTokenResponse } from './oauth';
+import {
+  AccessTokenMissingError,
+  RefreshAccessTokenFailedError,
+} from './auth-errors';
 
 export function getVercelDataDir(): string | null {
   const vercelFolder = 'com.vercel.cli';
@@ -19,20 +23,31 @@ export function getVercelDataDir(): string | null {
   return path.join(dataDir, vercelFolder);
 }
 
-export async function getVercelCliToken(): Promise<string | null> {
+export interface GetVercelTokenOptions {
+  /**
+   * Optional time buffer in milliseconds before token expiry to consider it expired.
+   * When provided, the token will be refreshed if it expires within this buffer time.
+   * @default 0
+   */
+  expirationBufferMs?: number;
+}
+
+export async function getVercelToken(
+  options?: GetVercelTokenOptions
+): Promise<string> {
   const authConfig = readAuthConfig();
-  if (!authConfig) {
-    return null;
+  if (!authConfig?.token) {
+    throw new AccessTokenMissingError();
   }
 
-  if (isValidAccessToken(authConfig)) {
-    return authConfig.token || null;
+  if (isValidAccessToken(authConfig, options?.expirationBufferMs)) {
+    return authConfig.token;
   }
 
   if (!authConfig.refreshToken) {
-    // No refresh token available, clear auth and return null
+    // No refresh token available, clear auth and throw
     writeAuthConfig({});
-    return null;
+    throw new RefreshAccessTokenFailedError('No refresh token available');
   }
 
   try {
@@ -45,7 +60,7 @@ export async function getVercelCliToken(): Promise<string | null> {
     if (tokensError || !tokens) {
       // Refresh failed - clear auth
       writeAuthConfig({});
-      return null;
+      throw new RefreshAccessTokenFailedError(tokensError);
     }
 
     // Update auth config with new tokens
@@ -59,11 +74,18 @@ export async function getVercelCliToken(): Promise<string | null> {
     }
 
     writeAuthConfig(updatedConfig);
-    return updatedConfig.token ?? null;
+    // Token is guaranteed to be defined since we just set it from tokens.access_token
+    return updatedConfig.token!;
   } catch (error) {
     // Network error or other failure - clear auth
     writeAuthConfig({});
-    return null;
+    if (
+      error instanceof AccessTokenMissingError ||
+      error instanceof RefreshAccessTokenFailedError
+    ) {
+      throw error;
+    }
+    throw new RefreshAccessTokenFailedError(error);
   }
 }
 
@@ -183,6 +205,6 @@ export function getTokenPayload(token: string): TokenPayload {
   return JSON.parse(Buffer.from(padded, 'base64').toString('utf8'));
 }
 
-export function isExpired(token: TokenPayload): boolean {
-  return token.exp * 1000 < Date.now();
+export function isExpired(token: TokenPayload, bufferMs = 0): boolean {
+  return token.exp * 1000 < Date.now() + bufferMs;
 }

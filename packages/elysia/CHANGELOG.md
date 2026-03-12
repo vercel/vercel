@@ -1,5 +1,153 @@
 # @vercel/elysia
 
+## 0.1.48
+
+### Patch Changes
+
+- Updated dependencies [[`8a3558f680d592b4ea47ac7e48c99145d6368941`](https://github.com/vercel/vercel/commit/8a3558f680d592b4ea47ac7e48c99145d6368941)]:
+  - @vercel/static-config@3.2.0
+  - @vercel/node@5.6.15
+
+## 0.1.47
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.6.14
+
+## 0.1.46
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.6.13
+
+## 0.1.45
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.6.12
+
+## 0.1.44
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.6.11
+
+## 0.1.43
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.6.10
+
+## 0.1.42
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.6.9
+
+## 0.1.41
+
+### Patch Changes
+
+- Updated dependencies [[`3d872692c601abeec98743d2af3a3ea19587e799`](https://github.com/vercel/vercel/commit/3d872692c601abeec98743d2af3a3ea19587e799)]:
+  - @vercel/node@5.6.8
+
+## 0.1.40
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.6.7
+
+## 0.1.39
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.6.6
+
+## 0.1.38
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.6.5
+
+## 0.1.37
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.6.4
+
+## 0.1.36
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.6.3
+
+## 0.1.35
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.6.2
+
+## 0.1.34
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.6.1
+
+## 0.1.33
+
+### Patch Changes
+
+- Updated dependencies [[`2edb2843d99bdfa4bf4697826a5f6eeedccdef78`](https://github.com/vercel/vercel/commit/2edb2843d99bdfa4bf4697826a5f6eeedccdef78)]:
+  - @vercel/node@5.6.0
+
+## 0.1.32
+
+### Patch Changes
+
+- Updated dependencies [[`f708ca65bccf6942bcd8501f34101e659aa256d6`](https://github.com/vercel/vercel/commit/f708ca65bccf6942bcd8501f34101e659aa256d6)]:
+  - @vercel/node@5.5.33
+
+## 0.1.31
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.5.32
+
+## 0.1.30
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.5.31
+
+## 0.1.29
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.5.30
+
+## 0.1.28
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.5.29
+
 ## 0.1.27
 
 ### Patch Changes
