@@ -1,0 +1,74 @@
+commit 08dcbecc6cf9734c1681dc468bbe81a1091b1d65
+Author: dnwpark <dnwpark@protonmail.com>
+Date:   Thu Mar 12 16:07:28 2026 -0700
+
+    [python] Fix error when running dev server on a django project. (#15483)
+    
+    When starting a WSGI app using `vercel dev`, `BaseWSGIServer.__init__`
+    will attempt to get the version via `importlib.metadata.version`.
+    However, since `django` does not depend on `werkzeug` there is no
+    `.dist-info` to look up a version.
+    
+    `vercel dev` uses a vendored copy of `werkzeug`, but that does not
+    provide a `.dist-info`. Instead of using `importlib`, this PR adds a
+    function to read `vendor.txt` and extract the specific version used.
+
+diff --git a/.changeset/tasty-rings-unite.md b/.changeset/tasty-rings-unite.md
+new file mode 100644
+index 000000000..c14e778ab
+--- /dev/null
++++ b/.changeset/tasty-rings-unite.md
+@@ -0,0 +1,5 @@
++---
++'@vercel/python-runtime': minor
++---
++
++Fix error when running dev server on a django project.
+diff --git a/python/vercel-runtime/src/vercel_runtime/_vendor/werkzeug/serving.py b/python/vercel-runtime/src/vercel_runtime/_vendor/werkzeug/serving.py
+index f231bf3bf..df5cd9e88 100644
+--- a/python/vercel-runtime/src/vercel_runtime/_vendor/werkzeug/serving.py
++++ b/python/vercel-runtime/src/vercel_runtime/_vendor/werkzeug/serving.py
+@@ -17,6 +17,7 @@ from __future__ import annotations
+ import errno
+ import io
+ import os
++import re
+ import selectors
+ import socket
+ import socketserver
+@@ -27,6 +28,7 @@ from datetime import timedelta
+ from datetime import timezone
+ from http.server import BaseHTTPRequestHandler
+ from http.server import HTTPServer
++from pathlib import Path
+ from urllib.parse import unquote
+ from urllib.parse import urlsplit
+ 
+@@ -55,6 +57,16 @@ except ImportError:
+     ssl = _SslDummy()  # type: ignore
+     connection_dropped_errors = (ConnectionError, socket.timeout)
+ 
++def _vendored_versions() -> dict[str, str]:
++    vendor_txt = Path(__file__).parent.parent / "vendor.txt"
++    try:
++        return dict(
++            re.findall(r"^(\S+)==(\S+)", vendor_txt.read_text(), re.MULTILINE)
++        )
++    except Exception:
++        return {}
++
++
+ _log_add_style = True
+ 
+ if os.name == "nt":
+@@ -807,9 +819,7 @@ class BaseWSGIServer(HTTPServer):
+         else:
+             self.ssl_context = None
+ 
+-        import importlib.metadata
+-
+-        self._server_version = f"Werkzeug/{importlib.metadata.version('werkzeug')}"
++        self._server_version = f"Werkzeug/{_vendored_versions().get('werkzeug', 'unknown')}"
+ 
+     def log(self, type: str, message: str, *args: t.Any) -> None:
+         _log(type, message, *args)

@@ -139,6 +139,7 @@ exclude_lines = [
 
 [tool.vendoring]
 destination = "src/vercel_runtime/_vendor/"
+patches-dir = "patches/"
 requirements = "src/vercel_runtime/_vendor/vendor.txt"
 namespace = "vercel_runtime._vendor"
 protected-files = ["__init__.py", "vendor.txt"]
