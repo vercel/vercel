@@ -11,5 +11,5 @@ Runtime dependencies (uvicorn, werkzeug) are vendored into
 To re-sync after editing `src/vercel_runtime/_vendor/vendor.txt`:
 
 ```sh
-./vendor.sh
+./python/vercel-runtime/scripts/vendor.sh
 ```
