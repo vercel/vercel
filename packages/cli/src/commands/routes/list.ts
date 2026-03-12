@@ -9,7 +9,9 @@ import {
   findVersionById,
   formatCondition,
   formatTransform,
+  withGlobalFlags,
 } from './shared';
+import { outputAgentError } from '../../util/agent-output';
 import getRoutes from '../../util/routes/get-routes';
 import getRouteVersions from '../../util/routes/get-route-versions';
 import stamp from '../../util/output/stamp';
@@ -49,24 +51,49 @@ export default async function list(client: Client, argv: string[]) {
       'transform',
     ];
     if (!validFilters.includes(filter)) {
-      output.error(
-        `Invalid filter type "${filter}". Valid types: ${validFilters.join(', ')}`
-      );
+      const msg = `Invalid filter type "${filter}". Valid types: ${validFilters.join(', ')}`;
+      if (client.nonInteractive) {
+        outputAgentError(client, {
+          status: 'error',
+          reason: 'invalid_arguments',
+          message: msg,
+          next: [{ command: withGlobalFlags(client, 'routes list') }],
+        });
+        process.exit(1);
+      }
+      output.error(msg);
       return 1;
     }
   }
 
   if (production && versionIdFlag) {
-    output.error(
-      'Cannot use both --production and --version-id flags together'
-    );
+    const msg = 'Cannot use both --production and --version-id flags together';
+    if (client.nonInteractive) {
+      outputAgentError(client, {
+        status: 'error',
+        reason: 'invalid_arguments',
+        message: msg,
+        next: [{ command: withGlobalFlags(client, 'routes list') }],
+      });
+      process.exit(1);
+    }
+    output.error(msg);
     return 1;
   }
 
   if (production && diffFlag) {
-    output.error(
-      'Cannot use both --production and --diff flags together. --diff compares staged changes against production.'
-    );
+    const msg =
+      'Cannot use both --production and --diff flags together. --diff compares staged changes against production.';
+    if (client.nonInteractive) {
+      outputAgentError(client, {
+        status: 'error',
+        reason: 'invalid_arguments',
+        message: msg,
+        next: [{ command: withGlobalFlags(client, 'routes list --diff') }],
+      });
+      process.exit(1);
+    }
+    output.error(msg);
     return 1;
   }
 
@@ -82,6 +109,16 @@ export default async function list(client: Client, argv: string[]) {
     const productionVersion = versions.find(v => !v.isStaging);
 
     if (!productionVersion) {
+      const msg = `No production version found for ${project.name}.`;
+      if (client.nonInteractive) {
+        outputAgentError(client, {
+          status: 'error',
+          reason: 'not_found',
+          message: msg,
+          next: [{ command: withGlobalFlags(client, 'routes list') }],
+        });
+        process.exit(1);
+      }
       output.error(
         `No production version found for ${chalk.bold(project.name)}.`
       );
@@ -101,6 +138,19 @@ export default async function list(client: Client, argv: string[]) {
     const stagingVersion = versions.find(v => v.isStaging);
 
     if (!stagingVersion) {
+      const msg = `No staged changes to diff. Run ${getCommandName('routes add')} or ${getCommandName('routes edit')} to make changes.`;
+      if (client.nonInteractive) {
+        outputAgentError(client, {
+          status: 'error',
+          reason: 'not_found',
+          message: msg,
+          next: [
+            { command: withGlobalFlags(client, 'routes list') },
+            { command: withGlobalFlags(client, 'routes add') },
+          ],
+        });
+        process.exit(1);
+      }
       output.error(
         `No staged changes to diff. Run ${chalk.cyan(
           getCommandName('routes add')
@@ -122,7 +172,17 @@ export default async function list(client: Client, argv: string[]) {
     const result = findVersionById(versions, versionIdFlag);
 
     if (result.error || !result.version) {
-      output.error(result.error ?? 'Version not found');
+      const msg = result.error ?? 'Version not found';
+      if (client.nonInteractive) {
+        outputAgentError(client, {
+          status: 'error',
+          reason: 'not_found',
+          message: msg,
+          next: [{ command: withGlobalFlags(client, 'routes list-versions') }],
+        });
+        process.exit(1);
+      }
+      output.error(msg);
       return 1;
     }
 

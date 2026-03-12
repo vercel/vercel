@@ -3,7 +3,12 @@ import ms from 'ms';
 import type Client from '../../util/client';
 import output from '../../output-manager';
 import { listVersionsSubcommand } from './command';
-import { parseSubcommandArgs, ensureProjectLink } from './shared';
+import {
+  parseSubcommandArgs,
+  ensureProjectLink,
+  withGlobalFlags,
+} from './shared';
+import { outputAgentError } from '../../util/agent-output';
 import getRouteVersions from '../../util/routes/get-route-versions';
 import stamp from '../../util/output/stamp';
 import formatTable from '../../util/format-table';
@@ -28,6 +33,22 @@ export default async function listVersions(client: Client, argv: string[]) {
   // Validate count
   if (count !== undefined) {
     if (count < 1 || count > 100) {
+      if (client.nonInteractive) {
+        outputAgentError(client, {
+          status: 'error',
+          reason: 'invalid_arguments',
+          message: 'Count must be between 1 and 100',
+          next: [
+            {
+              command: withGlobalFlags(
+                client,
+                'routes list-versions --count 20'
+              ),
+            },
+          ],
+        });
+        process.exit(1);
+      }
       output.error('Count must be between 1 and 100');
       return 1;
     }

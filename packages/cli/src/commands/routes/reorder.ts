@@ -8,7 +8,10 @@ import {
   resolveRoute,
   parsePosition,
   offerAutoPromote,
+  withGlobalFlags,
+  shellQuoteRouteIdentifierForSuggestion,
 } from './shared';
+import { outputAgentError } from '../../util/agent-output';
 import getRoutes from '../../util/routes/get-routes';
 import getRouteVersions from '../../util/routes/get-route-versions';
 import stageRoutes from '../../util/routes/stage-routes';
@@ -29,6 +32,26 @@ export default async function reorder(client: Client, argv: string[]) {
   const identifier = args[0];
 
   if (!identifier) {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'missing_arguments',
+          message: 'Route name or ID and position are required.',
+          next: [
+            {
+              command: withGlobalFlags(
+                client,
+                'routes reorder <name-or-id> --position <pos> --yes'
+              ),
+              when: 'replace placeholders; --first/--last or numeric position',
+            },
+          ],
+        },
+        1
+      );
+    }
     output.error(
       `Route name or ID is required. Usage: ${getCommandName('routes reorder <name-or-id> --position <pos>')}`
     );
@@ -45,11 +68,33 @@ export default async function reorder(client: Client, argv: string[]) {
   output.stopSpinner();
 
   if (routes.length === 0) {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'not_found',
+          message: 'No routes found in this project.',
+        },
+        1
+      );
+    }
     output.error('No routes found in this project.');
     return 1;
   }
 
   if (routes.length === 1) {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'invalid_arguments',
+          message: 'Cannot reorder when there is only one route.',
+        },
+        1
+      );
+    }
     output.error('Cannot reorder when there is only one route.');
     return 1;
   }
@@ -57,6 +102,23 @@ export default async function reorder(client: Client, argv: string[]) {
   // Resolve the route
   const route = await resolveRoute(client, routes, identifier);
   if (!route) {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'not_found',
+          message: `No route found matching "${identifier}".`,
+          next: [
+            {
+              command: withGlobalFlags(client, 'routes list'),
+              when: 'list routes',
+            },
+          ],
+        },
+        1
+      );
+    }
     output.error(
       `No route found matching "${identifier}". Run ${chalk.cyan(
         getCommandName('routes list')
@@ -90,7 +152,45 @@ export default async function reorder(client: Client, argv: string[]) {
       const num = parseInt(positionFlag, 10);
       if (!isNaN(num) && String(num) === positionFlag) {
         if (num < 1) {
-          output.error('Position must be 1 or greater.');
+          const msg =
+            'Position must be 1 or greater. Positions are 1-based (e.g. --position 1 for first). Use --first or --last instead of 0.';
+          if (client.nonInteractive) {
+            outputAgentError(
+              client,
+              {
+                status: 'error',
+                reason: 'invalid_arguments',
+                message: msg,
+                next: [
+                  {
+                    command: withGlobalFlags(
+                      client,
+                      `routes reorder ${shellQuoteRouteIdentifierForSuggestion(identifier)} --first --yes`
+                    ),
+                    when: 'move to first position',
+                  },
+                  {
+                    command: withGlobalFlags(
+                      client,
+                      `routes reorder ${shellQuoteRouteIdentifierForSuggestion(identifier)} --position 1 --yes`
+                    ),
+                    when: 'same as first (1-based index)',
+                  },
+                  {
+                    command: withGlobalFlags(
+                      client,
+                      `routes reorder ${shellQuoteRouteIdentifierForSuggestion(identifier)} --last --yes`
+                    ),
+                    when: 'move to last position',
+                  },
+                ],
+                hint: 'Numeric --position uses 1-based indices; there is no position 0.',
+              },
+              1
+            );
+            return 1;
+          }
+          output.error(msg);
           return 1;
         }
         // 1-based to 0-based; num > routes.length means "last"
@@ -140,6 +240,27 @@ export default async function reorder(client: Client, argv: string[]) {
     }
   } else {
     // Interactive mode: show current routes and ask for position
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'missing_arguments',
+          message:
+            'Target position is required. Use --position <n|first|last|after:id|before:id> or --first / --last.',
+          next: [
+            {
+              command: withGlobalFlags(
+                client,
+                `routes reorder ${shellQuoteRouteIdentifierForSuggestion(identifier)} --position <pos> --yes`
+              ),
+              when: 'replace <pos> with numeric position or first/last',
+            },
+          ],
+        },
+        1
+      );
+    }
     output.print('\n');
     output.log('Current route order:');
     for (let i = 0; i < routes.length; i++) {
@@ -199,6 +320,27 @@ export default async function reorder(client: Client, argv: string[]) {
 
   // Confirm
   if (!skipConfirmation) {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'confirmation_required',
+          message:
+            'Reorder requires confirmation. Pass --yes in non-interactive mode.',
+          next: [
+            {
+              command: withGlobalFlags(
+                client,
+                `routes reorder ${shellQuoteRouteIdentifierForSuggestion(identifier)} --position ${finalPosition} --yes`
+              ),
+              when: 're-run with --yes',
+            },
+          ],
+        },
+        1
+      );
+    }
     const confirmed = await client.input.confirm(
       `Move "${route.name}" from position ${currentPosition} to position ${finalPosition}?`,
       true

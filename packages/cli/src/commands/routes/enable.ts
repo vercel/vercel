@@ -7,7 +7,9 @@ import {
   ensureProjectLink,
   resolveRoute,
   offerAutoPromote,
+  withGlobalFlags,
 } from './shared';
+import { outputAgentError } from '../../util/agent-output';
 import getRoutes from '../../util/routes/get-routes';
 import getRouteVersions from '../../util/routes/get-route-versions';
 import editRoute from '../../util/routes/edit-route';
@@ -27,6 +29,27 @@ export default async function enable(client: Client, argv: string[]) {
   const identifier = args[0];
 
   if (!identifier) {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'missing_arguments',
+          message: 'Route name or ID is required.',
+          next: [
+            {
+              command: withGlobalFlags(client, 'routes enable <name-or-id>'),
+              when: 'replace <name-or-id>',
+            },
+            {
+              command: withGlobalFlags(client, 'routes list'),
+              when: 'list routes',
+            },
+          ],
+        },
+        1
+      );
+    }
     output.error(
       `Route name or ID is required. Usage: ${getCommandName('routes enable <name-or-id>')}`
     );
@@ -43,6 +66,23 @@ export default async function enable(client: Client, argv: string[]) {
   output.stopSpinner();
 
   if (routes.length === 0) {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'not_found',
+          message: 'No routes found in this project.',
+          next: [
+            {
+              command: withGlobalFlags(client, 'routes add --help'),
+              when: 'add routes first',
+            },
+          ],
+        },
+        1
+      );
+    }
     output.error('No routes found in this project.');
     return 1;
   }
@@ -50,6 +90,23 @@ export default async function enable(client: Client, argv: string[]) {
   // Resolve the route
   const route = await resolveRoute(client, routes, identifier);
   if (!route) {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'not_found',
+          message: `No route found matching "${identifier}".`,
+          next: [
+            {
+              command: withGlobalFlags(client, 'routes list'),
+              when: 'list routes',
+            },
+          ],
+        },
+        1
+      );
+    }
     output.error(
       `No route found matching "${identifier}". Run ${chalk.cyan(
         getCommandName('routes list')
@@ -101,6 +158,17 @@ export default async function enable(client: Client, argv: string[]) {
     return 0;
   } catch (e: unknown) {
     const error = e as { message?: string };
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'api_error',
+          message: error.message || 'Failed to enable route',
+        },
+        1
+      );
+    }
     output.error(error.message || 'Failed to enable route');
     return 1;
   }

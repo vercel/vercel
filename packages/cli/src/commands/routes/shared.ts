@@ -6,7 +6,7 @@ import { printError } from '../../util/error';
 import { getLinkedProject } from '../../util/projects/link';
 import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 import output from '../../output-manager';
-import { outputAgentError } from '../../util/agent-output';
+import { outputAgentError, buildCommandWithYes } from '../../util/agent-output';
 import { getGlobalFlagsOnlyFromArgs } from '../../util/arg-common';
 import type { Command } from '../help';
 import {
@@ -19,6 +19,37 @@ import {
 export interface ParsedSubcommand {
   args: string[];
   flags: { [key: string]: any };
+}
+
+/**
+ * Plain suggested command with global flags from argv (--cwd, --non-interactive, etc.).
+ */
+export function withGlobalFlags(
+  client: Client,
+  commandTemplate: string
+): string {
+  const flags = getGlobalFlagsOnlyFromArgs(client.argv.slice(2));
+  return getCommandNamePlain(`${commandTemplate} ${flags.join(' ')}`.trim());
+}
+
+/**
+ * Shell-escape route identifier for suggested `next` commands. Uses single
+ * quotes when the name contains spaces so the suggested command is valid in the shell.
+ * Falls back to double quotes only if the identifier contains a single quote.
+ */
+export function shellQuoteRouteIdentifierForSuggestion(
+  identifier: string
+): string {
+  if (!identifier.includes(' ')) {
+    return identifier;
+  }
+  if (!identifier.includes("'")) {
+    return `'${identifier}'`;
+  }
+  if (!identifier.includes('"')) {
+    return `"${identifier}"`;
+  }
+  return `"${identifier.replace(/"/g, '\\"')}"`;
 }
 
 export async function parseSubcommandArgs(
@@ -34,20 +65,67 @@ export async function parseSubcommandArgs(
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
     if (client?.nonInteractive) {
+      const rawMessage = err instanceof Error ? err.message : String(err);
       const flags = getGlobalFlagsOnlyFromArgs(client.argv.slice(2));
-      const cmd = getCommandNamePlain(
-        `routes ${command.name} ${flags.join(' ')}`.trim()
-      );
+      let message = rawMessage;
+      let next: Array<{ command: string; when?: string }> = [
+        {
+          command: getCommandNamePlain(
+            `routes ${command.name} ${flags.join(' ')}`.trim()
+          ),
+          when: 'fix flags and retry',
+        },
+      ];
+
+      // --ai is a string flag; `arg` errors with "option requires argument: --ai"
+      // when the user passes `--ai` with no description. Give a concrete fix.
+      const aiIdx = argv.indexOf('--ai');
+      const aiMissingValue =
+        aiIdx !== -1 &&
+        (aiIdx === argv.length - 1 ||
+          (argv[aiIdx + 1] !== undefined && argv[aiIdx + 1].startsWith('-')));
+      const isAiArgError =
+        aiMissingValue ||
+        /option requires argument.*--ai|--ai.*requires argument/i.test(
+          rawMessage
+        );
+
+      if (isAiArgError && (command.name === 'add' || command.name === 'edit')) {
+        message =
+          command.name === 'add'
+            ? '--ai requires a description. Example: routes add --ai <description> --yes --non-interactive. Replace <description> with your text; use shell quotes if it contains spaces (e.g. --ai "Redirect /old to /new").'
+            : '--ai requires a description. Example: routes edit <name-or-id> --ai <description> --yes --non-interactive. Replace placeholders; use shell quotes for <description> if it contains spaces.';
+        next = [
+          {
+            command: withGlobalFlags(
+              client,
+              command.name === 'add'
+                ? `routes add --ai <description> --yes`
+                : `routes edit <name-or-id> --ai <description> --yes`
+            ),
+            when: 'replace <description> with your text (quote it in the shell if it contains spaces), then run',
+          },
+          {
+            command: getCommandNamePlain(
+              `routes ${command.name} --help ${flags.join(' ')}`.trim()
+            ),
+            when: 'see all flags',
+          },
+        ];
+      }
+
       outputAgentError(
         client,
         {
           status: 'error',
           reason: 'invalid_arguments',
-          message: err instanceof Error ? err.message : String(err),
-          next: [{ command: cmd, when: 'fix flags and retry' }],
+          message,
+          next,
         },
         1
       );
+      // Avoid printError if process.exit was mocked (tests).
+      return 1;
     }
     printError(err);
     return 1;
@@ -102,6 +180,23 @@ export async function confirmAction(
   details?: string
 ): Promise<boolean> {
   if (skipConfirmation) return true;
+
+  if (client.nonInteractive) {
+    outputAgentError(client, {
+      status: 'error',
+      reason: 'confirmation_required',
+      message: `${message} Re-run with --yes to confirm.`,
+      next: [
+        {
+          command: buildCommandWithYes(client.argv),
+          when: 're-run with --yes to confirm',
+        },
+      ],
+    });
+    process.exit(1);
+    // If process.exit is mocked (tests), avoid falling through to confirm().
+    return false;
+  }
 
   if (details) {
     output.print(`  ${details}\n`);
@@ -367,6 +462,25 @@ export async function resolveRoute(
     return matches[0];
   }
 
+  // Multiple matches — non-interactive cannot prompt
+  if (client.nonInteractive) {
+    outputAgentError(
+      client,
+      {
+        status: 'error',
+        reason: 'ambiguous_route',
+        message: `Multiple routes match "${identifier}" (${matches.length} matches). Pass an exact route name or ID.`,
+        next: [
+          {
+            command: withGlobalFlags(client, 'routes list'),
+            when: 'list routes to get exact id',
+          },
+        ],
+      },
+      1
+    );
+  }
+
   // Multiple matches — interactive disambiguation
   const selectedId = await client.input.select({
     message: `Multiple routes match "${identifier}". Select one:`,
@@ -394,6 +508,23 @@ export async function resolveRoutes(
   for (const identifier of identifiers) {
     const route = await resolveRoute(client, routes, identifier);
     if (!route) {
+      if (client.nonInteractive) {
+        outputAgentError(
+          client,
+          {
+            status: 'error',
+            reason: 'not_found',
+            message: `No route found matching "${identifier}".`,
+            next: [
+              {
+                command: withGlobalFlags(client, 'routes list'),
+                when: 'list routes',
+              },
+            ],
+          },
+          1
+        );
+      }
       output.error(
         `No route found matching "${identifier}". Run ${chalk.cyan(
           getCommandName('routes list')

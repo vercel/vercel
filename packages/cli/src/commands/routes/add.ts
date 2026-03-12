@@ -56,6 +56,70 @@ function withGlobalFlags(client: Client, commandTemplate: string): string {
 }
 
 /**
+ * Shell-quote a token if it contains spaces or special chars.
+ */
+function shellQuoteArg(value: string): string {
+  if (/[\s"'\\]/.test(value)) {
+    return `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
+  }
+  return value;
+}
+
+/**
+ * Build a routes add command string using provided parsed args/flags and
+ * placeholders only for missing required pieces, then append global flags from argv.
+ */
+function buildRoutesAddFullFlagsSuggestion(
+  client: Client,
+  parsed: { args: string[]; flags: { [key: string]: unknown } }
+): string {
+  const { args, flags } = parsed;
+  const parts: string[] = ['routes', 'add'];
+
+  // Positional name: first arg may be subcommand name depending on parser
+  let nameArg = args[0];
+  if (nameArg === 'add' && args[1] && !args[1].startsWith('-')) {
+    nameArg = args[1];
+  }
+  if (nameArg && !nameArg.startsWith('-')) {
+    parts.push(shellQuoteArg(nameArg));
+  } else {
+    parts.push('<name>');
+  }
+
+  if (flags['--src']) {
+    parts.push('--src', shellQuoteArg(String(flags['--src'])));
+  } else {
+    parts.push('--src', '<path>');
+  }
+
+  if (flags['--src-syntax']) {
+    parts.push('--src-syntax', String(flags['--src-syntax']));
+  }
+
+  if (flags['--action']) {
+    parts.push('--action', String(flags['--action']));
+  } else {
+    parts.push('--action', 'rewrite');
+  }
+
+  const action = flags['--action'] as string | undefined;
+  if (flags['--dest']) {
+    parts.push('--dest', shellQuoteArg(String(flags['--dest'])));
+  } else if (!action || action === 'rewrite' || action === 'redirect') {
+    parts.push('--dest', '<dest>');
+  }
+
+  if (flags['--status'] !== undefined && flags['--status'] !== null) {
+    parts.push('--status', String(flags['--status']));
+  }
+
+  // --yes is not a global flag; append so non-interactive suggestion is runnable.
+  parts.push('--yes');
+  return withGlobalFlags(client, parts.join(' '));
+}
+
+/**
  * Adds a new route to the current project.
  */
 export default async function add(client: Client, argv: string[]) {
@@ -126,13 +190,15 @@ export default async function add(client: Client, argv: string[]) {
   if (client.nonInteractive && !aiPrompt && !flags['--src']) {
     // Non-interactive paths: (1) full flags, or (2) --ai PROMPT --yes which creates
     // without prompts when generation succeeds (handleAIAdd retries once on failure).
+    // Second next command reuses name/action/etc. from argv; placeholders only for missing.
+    const fullFlagsCmd = buildRoutesAddFullFlagsSuggestion(client, parsed);
     outputAgentError(
       client,
       {
         status: 'error',
         reason: 'missing_arguments',
         message:
-          'In non-interactive mode pass either full route flags (name, --src, --action, --dest, --yes) or --ai <description> with --yes to generate and create in one shot. Run vercel routes add --help for options.',
+          'In non-interactive mode pass either full route flags (name, --src, --action, --dest, --yes) or --ai <description> with --yes. For --src use a URL path pattern that starts with a forward slash / (e.g. /about, /api/:path*). With --src-syntax regex you may use a regex such as ^/api/.*. Run vercel routes add --help for options.',
         next: [
           {
             command: withGlobalFlags(
@@ -142,14 +208,11 @@ export default async function add(client: Client, argv: string[]) {
             when: 'AI generates the route and creates it without prompts when generation succeeds (replace <description>)',
           },
           {
-            command: withGlobalFlags(
-              client,
-              'routes add <name> --src <path> --action rewrite --dest <dest> --yes'
-            ),
-            when: 'explicit flags only (replace placeholders; add --src-syntax if needed)',
+            command: fullFlagsCmd,
+            when: 'add missing --src/--dest (or other placeholders) to this command',
           },
         ],
-        hint: 'Requires a CLI with the routes command. --ai --yes is non-interactive when the API returns a route; if it fails twice, use full flags or rephrase.',
+        hint: 'Requires a CLI with the routes command. --src is a URL path: leading character must be / (forward slash). --ai --yes is non-interactive when the API returns a route; if it fails twice, use full flags or rephrase.',
       },
       1
     );
@@ -186,7 +249,14 @@ export default async function add(client: Client, argv: string[]) {
       return 1;
     }
 
-    return await handleAIAdd(client, project.id, teamId, aiPrompt, skipPrompts);
+    return await handleAIAdd(
+      client,
+      project.id,
+      teamId,
+      aiPrompt,
+      skipPrompts,
+      parsed
+    );
   }
 
   // Check for existing staging version (for auto-promote logic)
@@ -205,6 +275,7 @@ export default async function add(client: Client, argv: string[]) {
     name = nameArg;
   } else if (skipPrompts) {
     if (client.nonInteractive) {
+      const fullFlagsCmd = buildRoutesAddFullFlagsSuggestion(client, parsed);
       outputAgentError(
         client,
         {
@@ -214,11 +285,8 @@ export default async function add(client: Client, argv: string[]) {
             'In non-interactive mode route name is required as the first argument.',
           next: [
             {
-              command: withGlobalFlags(
-                client,
-                'routes add <name> --src <path> --action rewrite --dest <dest> --yes'
-              ),
-              when: 'replace <name> and path/dest placeholders',
+              command: fullFlagsCmd,
+              when: 'replace <name> and any remaining placeholders',
             },
           ],
         },
@@ -255,7 +323,8 @@ export default async function add(client: Client, argv: string[]) {
           project.id,
           teamId,
           undefined,
-          skipPrompts
+          skipPrompts,
+          parsed
         );
       }
     }
@@ -297,14 +366,11 @@ export default async function add(client: Client, argv: string[]) {
           status: 'error',
           reason: 'missing_arguments',
           message:
-            'In non-interactive mode --src is required. Provide the path pattern.',
+            'In non-interactive mode --src is required. It must be a URL path pattern starting with forward slash / (e.g. /old-page, /api/:path*). Not a Windows path and not backslash. Use --src-syntax regex only if you need a regex pattern.',
           next: [
             {
-              command: withGlobalFlags(
-                client,
-                'routes add <name> --src <path> --action rewrite --dest <dest> --yes'
-              ),
-              when: 'include --src with path pattern',
+              command: buildRoutesAddFullFlagsSuggestion(client, parsed),
+              when: 'set --src to a path starting with /',
             },
           ],
         },
@@ -348,9 +414,31 @@ export default async function add(client: Client, argv: string[]) {
     });
   }
 
-  // Validate path starts with / for non-regex syntax
+  // Validate path starts with / for non-regex syntax (URL path, not filesystem backslash)
   if (syntax !== 'regex' && !src.startsWith('/')) {
-    output.error('Path must start with / and be a valid URL path');
+    const pathMsg =
+      '--src must start with a forward slash / (URL path root). Examples: /about, /api/:path*. Backslash \\ is wrong. If you need a regex, pass --src-syntax regex and a pattern like ^/api/.*';
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'invalid_arguments',
+          message: pathMsg,
+          next: [
+            {
+              command: buildRoutesAddFullFlagsSuggestion(client, parsed),
+              when: 'prefix --src with / or use --src-syntax regex',
+            },
+          ],
+          hint: 'Route source is matched against request URL paths; they always begin with /.',
+        },
+        1
+      );
+    }
+    output.error(
+      'Path must start with / (forward slash). Use --src-syntax regex for regex patterns.'
+    );
     return 1;
   }
 
@@ -364,6 +452,23 @@ export default async function add(client: Client, argv: string[]) {
   // In flag-based mode, --action is required when --dest or --status is provided
   const actionError = validateActionFlags(actionFlag, dest, status);
   if (actionError) {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'invalid_arguments',
+          message: actionError,
+          next: [
+            {
+              command: buildRoutesAddFullFlagsSuggestion(client, parsed),
+              when: 'fix flags per message (e.g. add --dest for rewrite, --status for redirect)',
+            },
+          ],
+        },
+        1
+      );
+    }
     output.error(actionError);
     return 1;
   }
@@ -399,10 +504,7 @@ export default async function add(client: Client, argv: string[]) {
             'In non-interactive mode at least one action is required. Use --action with --dest or --status, or header/transform flags.',
           next: [
             {
-              command: withGlobalFlags(
-                client,
-                'routes add <name> --src <path> --action rewrite --dest <dest> --yes'
-              ),
+              command: buildRoutesAddFullFlagsSuggestion(client, parsed),
               when: 'example rewrite action; adjust --action/--dest/--status as needed',
             },
           ],
@@ -768,7 +870,8 @@ async function handleAIAdd(
   projectId: string,
   teamId: string | undefined,
   aiPrompt: string | undefined,
-  skipPrompts: boolean | undefined
+  skipPrompts: boolean | undefined,
+  parsedForSuggestion?: { args: string[]; flags: { [key: string]: unknown } }
 ): Promise<number> {
   // Check for existing staging version (for auto-promote logic)
   const { versions } = await getRouteVersions(client, projectId, { teamId });
@@ -846,10 +949,12 @@ async function handleAIAdd(
               when: 'retry with a clearer description (replace <description>)',
             },
             {
-              command: withGlobalFlags(
-                client,
-                'routes add <name> --src <path> --action rewrite --dest <dest> --yes'
-              ),
+              command: parsedForSuggestion
+                ? buildRoutesAddFullFlagsSuggestion(client, parsedForSuggestion)
+                : withGlobalFlags(
+                    client,
+                    'routes add <name> --src <path> --action rewrite --dest <dest> --yes'
+                  ),
               when: 'add with explicit flags if AI keeps failing',
             },
           ],
@@ -906,10 +1011,12 @@ async function handleAIAdd(
             'Route creation from AI preview requires a TTY to confirm, or use full flags with --yes non-interactively.',
           next: [
             {
-              command: withGlobalFlags(
-                client,
-                'routes add <name> --src <path> --action rewrite --dest <dest> --yes'
-              ),
+              command: parsedForSuggestion
+                ? buildRoutesAddFullFlagsSuggestion(client, parsedForSuggestion)
+                : withGlobalFlags(
+                    client,
+                    'routes add <name> --src <path> --action rewrite --dest <dest> --yes'
+                  ),
               when: 'non-interactive add without AI preview',
             },
           ],

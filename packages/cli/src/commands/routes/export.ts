@@ -1,7 +1,12 @@
 import type Client from '../../util/client';
 import output from '../../output-manager';
 import { exportSubcommand } from './command';
-import { parseSubcommandArgs, ensureProjectLink } from './shared';
+import {
+  parseSubcommandArgs,
+  ensureProjectLink,
+  withGlobalFlags,
+} from './shared';
+import { outputAgentError } from '../../util/agent-output';
 import getRoutes from '../../util/routes/get-routes';
 import { getCommandName } from '../../util/pkg-name';
 import type { RoutingRule } from '../../util/routes/types';
@@ -87,9 +92,21 @@ export default async function exportRoutes(client: Client, argv: string[]) {
 
   const validFormats = ['json', 'ts'];
   if (!validFormats.includes(format)) {
-    output.error(
-      `Invalid format: "${format}". Valid formats: ${validFormats.join(', ')}. Usage: ${getCommandName('routes export --format json')}`
-    );
+    const msg = `Invalid format: "${format}". Valid formats: ${validFormats.join(', ')}. Usage: ${getCommandName('routes export --format json')}`;
+    if (client.nonInteractive) {
+      outputAgentError(client, {
+        status: 'error',
+        reason: 'invalid_arguments',
+        message: msg,
+        next: [
+          {
+            command: withGlobalFlags(client, 'routes export --format json'),
+          },
+        ],
+      });
+      process.exit(1);
+    }
+    output.error(msg);
     return 1;
   }
 
@@ -118,9 +135,17 @@ export default async function exportRoutes(client: Client, argv: string[]) {
       );
 
       if (routesToExport.length === 0) {
-        output.error(
-          `No route found matching "${nameOrId}". Run ${getCommandName('routes list')} to see all routes.`
-        );
+        const msg = `No route found matching "${nameOrId}". Run ${getCommandName('routes list')} to see all routes.`;
+        if (client.nonInteractive) {
+          outputAgentError(client, {
+            status: 'error',
+            reason: 'not_found',
+            message: msg,
+            next: [{ command: withGlobalFlags(client, 'routes list') }],
+          });
+          process.exit(1);
+        }
+        output.error(msg);
         return 1;
       }
     }
@@ -143,7 +168,17 @@ export default async function exportRoutes(client: Client, argv: string[]) {
     return 0;
   } catch (e: unknown) {
     const error = e as { message?: string };
-    output.error(error.message || 'Failed to export routes');
+    const msg = error.message || 'Failed to export routes';
+    if (client.nonInteractive) {
+      outputAgentError(client, {
+        status: 'error',
+        reason: 'api_error',
+        message: msg,
+        next: [{ command: withGlobalFlags(client, 'routes export') }],
+      });
+      process.exit(1);
+    }
+    output.error(msg);
     return 1;
   }
 }

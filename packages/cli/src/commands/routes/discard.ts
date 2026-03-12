@@ -7,12 +7,14 @@ import {
   ensureProjectLink,
   confirmAction,
   printDiffSummary,
+  withGlobalFlags,
 } from './shared';
 import getRouteVersions from '../../util/routes/get-route-versions';
 import updateRouteVersion from '../../util/routes/update-route-version';
 import getRoutes from '../../util/routes/get-routes';
 import stamp from '../../util/output/stamp';
 import { getCommandName } from '../../util/pkg-name';
+import { outputAgentError } from '../../util/agent-output';
 
 export default async function discard(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, discardSubcommand, client);
@@ -88,7 +90,18 @@ export default async function discard(client: Client, argv: string[]) {
     return 0;
   } catch (e: unknown) {
     const error = e as { message?: string };
-    output.error(error.message || 'Failed to discard staged changes');
+    const msg = error.message || 'Failed to discard staged changes';
+    if (client.nonInteractive) {
+      outputAgentError(client, {
+        status: 'error',
+        reason: 'api_error',
+        message: msg,
+        next: [{ command: withGlobalFlags(client, 'routes discard --yes') }],
+      });
+      process.exit(1);
+      return 1;
+    }
+    output.error(msg);
     return 1;
   }
 }
