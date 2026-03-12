@@ -470,7 +470,8 @@ interface DevShimResult {
 function createDevShim(
   workPath: string,
   entry: string,
-  modulePath: string
+  modulePath: string,
+  framework: string
 ): DevShimResult | null {
   try {
     const vercelPythonDir = join(workPath, '.vercel', 'python');
@@ -499,7 +500,8 @@ function createDevShim(
     const template = readFileSync(templatePath, 'utf8');
     const shimSource = template
       .replace(/__VC_DEV_MODULE_NAME__/g, qualifiedModule)
-      .replace(/__VC_DEV_ENTRY_ABS__/g, entryAbs);
+      .replace(/__VC_DEV_ENTRY_ABS__/g, entryAbs)
+      .replace(/__VC_DEV_FRAMEWORK__/g, framework);
     writeFileSync(shimPath, shimSource, 'utf8');
     debug(`Prepared Python dev shim at ${shimPath}`);
     return { module: DEV_SHIM_MODULE, extraPythonPath };
@@ -736,7 +738,7 @@ export const startDevServer: StartDevServer = async opts => {
     env.PORT = `${port}`;
 
     // Spawn the actual server process
-    const devShim = createDevShim(workPath, entry, modulePath);
+    const devShim = createDevShim(workPath, entry, modulePath, framework);
 
     // Add .vercel/python to PYTHONPATH so the shim can be imported
     if (devShim) {
