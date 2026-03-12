@@ -584,6 +584,7 @@ const main = async () => {
 
     try {
       user = await getUser(client);
+      telemetryEventStore.updateUserId(user.id);
     } catch (err: unknown) {
       if (err instanceof Error) {
         output.debug(err.stack || err.toString());
