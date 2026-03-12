@@ -1,4 +1,4 @@
-const fetch = require('node-fetch');
+const nodeFetch = require('node-fetch');
 const retryBailByDefault = require('./retry-bail-by-default.js');
 
 const ABSOLUTE_URL_PATTERN = /^https?:\/\//i;
@@ -13,7 +13,7 @@ async function fetchRetry(url, ...rest) {
       try {
         const requestIds = [];
         for (let i = 60; i >= 0; i--) {
-          const res = await fetch(url, ...rest);
+          const res = await nodeFetch(url, ...rest);
 
           if (res.status === 401) {
             const clonedRes = res.clone();

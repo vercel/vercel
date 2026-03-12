@@ -1,5 +1,20 @@
 # @vercel/react-router
 
+## 1.2.6
+
+### Patch Changes
+
+- Updated dependencies [[`8a3558f680d592b4ea47ac7e48c99145d6368941`](https://github.com/vercel/vercel/commit/8a3558f680d592b4ea47ac7e48c99145d6368941)]:
+  - @vercel/static-config@3.2.0
+
+## 1.2.5
+
+### Patch Changes
+
+- Add syncpack to enforce @types/node version consistency across the monorepo. ([#14665](https://github.com/vercel/vercel/pull/14665))
+
+  Update @types/node to 20.11.0 and fix type compatibility issues.
+
 ## 1.2.4
 
 ### Patch Changes

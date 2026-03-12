@@ -110,7 +110,6 @@ async function extractAndExecuteCode(
     });
 
     fakeLambdaProcess.on('error', error => {
-      // eslint-disable-next-line no-console
       console.error(error);
       reject(error);
     });
@@ -159,18 +158,19 @@ describe('monorepo builds with VERCEL_BUILD_MONOREPO_SUPPORT', () => {
   afterEach(() => {
     delete process.env.VERCEL_BUILD_MONOREPO_SUPPORT;
     delete process.env.VERCEL_EXPERIMENTAL_BACKENDS;
+    delete process.env.TURBO_FORCE;
   });
 
   it.skipIf(process.platform === 'win32').each([
-    { experimentalBackends: true, expectedBuilder: '@vercel/hono' },
+    { experimentalBackends: true, expectedBuilder: '@vercel/backends' },
     {
       experimentalBackends: true,
-      expectedBuilder: '@vercel/hono',
+      expectedBuilder: '@vercel/backends',
       vercelBuildOverride: true,
     },
     {
       experimentalBackends: true,
-      expectedBuilder: '@vercel/hono',
+      expectedBuilder: '@vercel/backends',
       vercelOutputDirectoryOverride: true,
     },
   ])(
@@ -228,6 +228,7 @@ describe('monorepo builds with VERCEL_BUILD_MONOREPO_SUPPORT', () => {
 
       // Enable monorepo support
       process.env.VERCEL_BUILD_MONOREPO_SUPPORT = '1';
+      process.env.TURBO_FORCE = '1'; // Force execution, ignore cache
       if (experimentalBackends) {
         process.env.VERCEL_EXPERIMENTAL_BACKENDS = '1';
       }
@@ -242,6 +243,9 @@ describe('monorepo builds with VERCEL_BUILD_MONOREPO_SUPPORT', () => {
       // Verify the build output exists
       const outputExists = await fs.pathExists(output);
       expect(outputExists).toBe(true);
+
+      const config = await fs.readJSON(join(output, 'config.json'));
+      expect(config.routes.find((r: any) => r.dest === '/echo')).toBeDefined();
 
       // Check that functions were created
       const functionsDir = join(output, 'functions');

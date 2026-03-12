@@ -67,6 +67,25 @@ describe('withRelatedProject', () => {
     ).toBe('https://feature-branch');
   });
 
+  test('returns defaultHost when VERCEL_ENV is preview but project has no branch or customEnvironment', () => {
+    process.env.VERCEL_ENV = 'preview';
+    const mockProjects: VercelRelatedProjects = [
+      {
+        project: { id: '123', name: 'test-project' },
+        production: { url: 'test-project.vercel.app', alias: 'test.com' },
+        preview: {},
+      },
+    ];
+    (relatedProjects as jest.Mock).mockReturnValue(mockProjects);
+
+    expect(
+      withRelatedProject({
+        projectName: 'test-project',
+        defaultHost: 'https://default.com',
+      })
+    ).toBe('https://default.com');
+  });
+
   test('returns production alias URL when VERCEL_ENV is production and alias is present', () => {
     process.env.VERCEL_ENV = 'production';
     const mockProjects: VercelRelatedProjects = [
@@ -141,5 +160,48 @@ describe('withRelatedProject', () => {
         defaultHost: 'https://default.com',
       })
     ).toBe('https://default.com');
+  });
+
+  test('returns preview customEnvironment URL when VERCEL_ENV is preview and customEnvironment is set', () => {
+    process.env.VERCEL_ENV = 'preview';
+    const mockProjects: VercelRelatedProjects = [
+      {
+        project: { id: '123', name: 'test-project' },
+        production: { url: 'test-project.vercel.app', alias: 'test.com' },
+        preview: {
+          customEnvironment: 'my-project-git-staging.vercel.sh',
+        },
+      },
+    ];
+    (relatedProjects as jest.Mock).mockReturnValue(mockProjects);
+
+    expect(
+      withRelatedProject({
+        projectName: 'test-project',
+        defaultHost: 'https://default.com',
+      })
+    ).toBe('https://my-project-git-staging.vercel.sh');
+  });
+
+  test('prefers customEnvironment over branch when both are set in preview', () => {
+    process.env.VERCEL_ENV = 'preview';
+    const mockProjects: VercelRelatedProjects = [
+      {
+        project: { id: '123', name: 'test-project' },
+        production: { url: 'test-project.vercel.app', alias: 'test.com' },
+        preview: {
+          branch: 'feature-branch',
+          customEnvironment: 'my-project-git-staging.vercel.sh',
+        },
+      },
+    ];
+    (relatedProjects as jest.Mock).mockReturnValue(mockProjects);
+
+    expect(
+      withRelatedProject({
+        projectName: 'test-project',
+        defaultHost: 'https://default.com',
+      })
+    ).toBe('https://my-project-git-staging.vercel.sh');
   });
 });

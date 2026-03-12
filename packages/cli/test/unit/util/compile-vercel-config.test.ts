@@ -1,6 +1,7 @@
 import { join } from 'path';
 import { writeFile, remove } from 'fs-extra';
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import type { VercelConfig } from '@vercel/client';
 import {
   compileVercelConfig,
   normalizeConfig,
@@ -15,7 +16,7 @@ describe('normalizeConfig', () => {
         { source: '/simple', destination: '/dest' },
         { src: '/complex', dest: '/dest', transforms: [] },
       ],
-    };
+    } as VercelConfig;
 
     const result = normalizeConfig(config);
 
@@ -46,7 +47,7 @@ describe('normalizeConfig', () => {
         { src: '/a', dest: '/b' },
         { src: '/c', dest: '/d' },
       ],
-    };
+    } as unknown as VercelConfig;
 
     const result = normalizeConfig(config);
 
@@ -69,7 +70,7 @@ describe('normalizeConfig', () => {
         },
         { src: '/other', dest: '/dest' },
       ],
-    };
+    } as VercelConfig;
 
     const result = normalizeConfig(config);
 
@@ -101,7 +102,7 @@ describe('normalizeConfig', () => {
         },
         { src: '/other', dest: '/dest' },
       ],
-    };
+    } as VercelConfig;
 
     const result = normalizeConfig(config);
 
@@ -125,16 +126,16 @@ describe('normalizeConfig', () => {
     const config = {
       redirects: [
         { source: '/old', destination: '/new', permanent: true },
-        { src: '/complex', dest: '/dest', redirect: true, status: 308 },
+        { src: '/complex', dest: '/dest', status: 308 },
       ],
-    };
+    } as VercelConfig;
 
     const result = normalizeConfig(config);
 
     expect(result.redirects).toBeUndefined();
     expect(result.routes).toEqual([
-      { src: '/old', dest: '/new', redirect: true, status: 308 },
-      { src: '/complex', dest: '/dest', redirect: true, status: 308 },
+      { src: '/old', dest: '/new', status: 308 },
+      { src: '/complex', dest: '/dest', status: 308 },
     ]);
   });
 
@@ -148,6 +149,17 @@ describe('normalizeConfig', () => {
 
     expect(result.routes).toEqual([{ src: '/a', dest: '/b' }]);
     expect(result.rewrites).toEqual([{ source: '/c', destination: '/d' }]);
+  });
+
+  it('should throw helpful error when rewrites with transforms conflict with redirects', () => {
+    const config = {
+      rewrites: [{ src: '/with-transform', dest: '/dest', transforms: [] }],
+      redirects: [{ source: '/old', destination: '/new', permanent: true }],
+    } as unknown as VercelConfig;
+
+    expect(() => normalizeConfig(config)).toThrow(
+      /Move everything into the `routes` array/
+    );
   });
 
   it('should handle empty config', () => {
@@ -167,13 +179,101 @@ describe('normalizeConfig', () => {
       framework: 'nextjs',
       buildCommand: 'npm run build',
       rewrites: [{ src: '/a', dest: '/b' }],
-    };
+    } as unknown as VercelConfig;
 
     const result = normalizeConfig(config);
 
     expect(result.framework).toBe('nextjs');
     expect(result.buildCommand).toBe('npm run build');
     expect(result.routes).toEqual([{ src: '/a', dest: '/b' }]);
+  });
+
+  it('should normalize mixed Route and Redirect formats in routes array', () => {
+    // This simulates: routes.rewrite() with transforms (Route format) + routes.redirect() without transforms (Redirect format)
+    const config = {
+      routes: [
+        {
+          src: '/test-header',
+          dest: 'https://httpbin.org/headers',
+          requestHeaders: { authorization: 'Bearer token' },
+        },
+        {
+          source: '/test-build',
+          destination: 'https://httpbin.org/headers',
+          permanent: false,
+        },
+      ],
+    } as unknown as VercelConfig;
+
+    const result = normalizeConfig(config);
+
+    expect(result.routes).toEqual([
+      {
+        src: '/test-header',
+        dest: 'https://httpbin.org/headers',
+        requestHeaders: { authorization: 'Bearer token' },
+      },
+      {
+        src: '/test-build',
+        dest: 'https://httpbin.org/headers',
+        status: 307,
+      },
+    ]);
+  });
+
+  it('should normalize Rewrite format items in routes array', () => {
+    const config = {
+      routes: [
+        { src: '/route-format', dest: '/dest' },
+        { source: '/rewrite-format', destination: '/dest' },
+      ],
+    } as VercelConfig;
+
+    const result = normalizeConfig(config);
+
+    expect(result.routes).toEqual([
+      { src: '/route-format', dest: '/dest' },
+      { src: '/rewrite-format', dest: '/dest' },
+    ]);
+  });
+
+  it('should normalize redirects in routes array', () => {
+    const config = {
+      routes: [
+        {
+          source: '/old',
+          destination: '/new',
+          statusCode: 301,
+          permanent: true,
+        },
+      ],
+    } as unknown as VercelConfig;
+
+    const result = normalizeConfig(config);
+
+    expect(result.routes).toEqual([{ src: '/old', dest: '/new', status: 301 }]);
+  });
+
+  it('should normalize headers in routes array', () => {
+    const config = {
+      routes: [
+        { src: '/api', dest: '/dest' },
+        {
+          source: '/path',
+          headers: [
+            { key: 'X-Custom', value: 'hello' },
+            { key: 'X-Other', value: 'world' },
+          ],
+        },
+      ],
+    } as unknown as VercelConfig;
+
+    const result = normalizeConfig(config);
+
+    expect(result.routes).toEqual([
+      { src: '/api', dest: '/dest' },
+      { src: '/path', headers: { 'X-Custom': 'hello', 'X-Other': 'world' } },
+    ]);
   });
 });
 
@@ -212,7 +312,6 @@ describe('compileVercelConfig', () => {
     expect(result.wasCompiled).toBe(true);
     expect(result.configPath).toBe(join(tmpDir, VERCEL_DIR, 'vercel.json'));
 
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const compiledConfig = require(result.configPath!);
     expect(compiledConfig).toEqual({
       headers: [
@@ -259,7 +358,6 @@ describe('compileVercelConfig', () => {
     expect(result.wasCompiled).toBe(true);
     expect(result.configPath).toBe(join(tmpDir, VERCEL_DIR, 'vercel.json'));
 
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const compiledConfig = require(result.configPath!);
     expect(compiledConfig).toEqual({
       rewrites: [
@@ -269,5 +367,49 @@ describe('compileVercelConfig', () => {
         },
       ],
     });
+  });
+
+  it('should not merge routes and rewrites even if both contain transforms', async () => {
+    const vercelTsPath = join(tmpDir, 'vercel.ts');
+    const vercelTsContent = `
+      export default {
+        routes: [
+          {
+            src: '/api/(.*)',
+            dest: 'https://backend.example.com/$1',
+            headers: { 'x-custom': 'value' }
+          }
+        ],
+        rewrites: [
+          {
+            src: '/other/(.*)',
+            dest: 'https://other.example.com/$1',
+            headers: { 'x-other': 'value' }
+          }
+        ]
+      };
+    `;
+    await writeFile(vercelTsPath, vercelTsContent);
+
+    const result = await compileVercelConfig(tmpDir);
+
+    expect(result.wasCompiled).toBe(true);
+
+    const compiledConfig = require(result.configPath!);
+
+    expect(compiledConfig.routes).toEqual([
+      {
+        src: '/api/(.*)',
+        dest: 'https://backend.example.com/$1',
+        headers: { 'x-custom': 'value' },
+      },
+    ]);
+    expect(compiledConfig.rewrites).toEqual([
+      {
+        src: '/other/(.*)',
+        dest: 'https://other.example.com/$1',
+        headers: { 'x-other': 'value' },
+      },
+    ]);
   });
 });

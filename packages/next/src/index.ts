@@ -111,6 +111,8 @@ const BEFORE_FILES_CONTINUE_NEXT_VERSION = 'v10.2.3-canary.1';
 const REDIRECTS_NO_STATIC_NEXT_VERSION = 'v11.0.2-canary.15';
 // related PR: https://github.com/vercel/next.js/pull/84643
 const IS_APP_CLIENT_SEGMENT_CACHE_ENABLED_VERSION = 'v16.0.0';
+// this version is minimum our Vercel adapter expects to match
+const MINIMUM_NEXT_ADAPTER_VERSION = 'v16.2.0-canary.28';
 
 export const MAX_AGE_ONE_YEAR = 31536000;
 
@@ -122,7 +124,7 @@ async function readPackageJson(entryPath: string): Promise<PackageJson> {
 
   try {
     return JSON.parse(await readFile(packagePath, 'utf8'));
-  } catch (err) {
+  } catch (_err) {
     debug('package.json not found in entry');
     return {};
   }
@@ -508,6 +510,16 @@ export const build: BuildV2 = async buildOptions => {
     env.NODE_ENV = 'production';
   }
 
+  if (
+    // integration tests expect outputs object
+    !process.env.NEXT_BUILDER_INTEGRATION &&
+    process.env.NEXT_ENABLE_ADAPTER === '1' &&
+    semver.gte(nextVersion, MINIMUM_NEXT_ADAPTER_VERSION)
+  ) {
+    env.NEXT_ADAPTER_PATH = path.join(__dirname, 'adapter/index.js');
+    env.NEXT_ADAPTER_VERCEL_CONFIG = JSON.stringify(config);
+  }
+
   const shouldRunCompileStep =
     Boolean(buildCommand) || Boolean(buildScriptName);
 
@@ -578,7 +590,7 @@ export const build: BuildV2 = async buildOptions => {
 
   if (buildOutputVersion) {
     return {
-      buildOutputPath: path.join(outputDirectory, 'output'),
+      buildOutputPath: path.join(entryPath, outputDirectory, 'output'),
       buildOutputVersion,
     } as BuildResultBuildOutput;
   }
@@ -654,16 +666,14 @@ export const build: BuildV2 = async buildOptions => {
   const hasIsr404Page =
     typeof prerenderManifest.staticRoutes[
       routesManifest?.i18n
-        ? // eslint-disable-next-line @typescript-eslint/no-non-null-asserted-optional-chain
-          path.join('/', routesManifest?.i18n!.defaultLocale!, '/404')
+        ? path.join('/', routesManifest?.i18n!.defaultLocale!, '/404')
         : '/404'
     ]?.initialRevalidate === 'number';
 
   const hasIsr500Page =
     typeof prerenderManifest.staticRoutes[
       routesManifest?.i18n
-        ? // eslint-disable-next-line @typescript-eslint/no-non-null-asserted-optional-chain
-          path.join('/', routesManifest?.i18n!.defaultLocale!, '/500')
+        ? path.join('/', routesManifest?.i18n!.defaultLocale!, '/500')
         : '/500'
     ]?.initialRevalidate === 'number';
 
@@ -689,6 +699,7 @@ export const build: BuildV2 = async buildOptions => {
   );
 
   const headers: Route[] = [];
+  const onMatchHeaders: Route[] = [];
   const beforeFilesRewrites: Route[] = [];
   const afterFilesRewrites: Route[] = [];
   const fallbackRewrites: Route[] = [];
@@ -708,7 +719,7 @@ export const build: BuildV2 = async buildOptions => {
         'utf8'
       );
       escapedBuildId = escapeStringRegexp(buildId);
-    } catch (err) {
+    } catch (_err) {
       throw new NowBuildError({
         code: 'NOW_NEXT_NO_BUILD_ID',
         message:
@@ -764,6 +775,9 @@ export const build: BuildV2 = async buildOptions => {
         if (routesManifest.headers) {
           headers.push(...convertHeaders(routesManifest.headers));
         }
+        if (routesManifest.onMatchHeaders) {
+          onMatchHeaders.push(...convertHeaders(routesManifest.onMatchHeaders));
+        }
 
         // This applies the _next match prevention for redirects and
         // also allows matching the trailingSlash setting automatically
@@ -801,6 +815,9 @@ export const build: BuildV2 = async buildOptions => {
           );
           headers.forEach((r, i) =>
             updateRouteSrc(r, i, routesManifest.headers || [])
+          );
+          onMatchHeaders.forEach((r, i) =>
+            updateRouteSrc(r, i, routesManifest.onMatchHeaders || [])
           );
         }
 
@@ -1099,6 +1116,7 @@ export const build: BuildV2 = async buildOptions => {
           continue: true,
           important: true,
         },
+        ...onMatchHeaders,
 
         // error handling
         ...(output[path.posix.join('./', entryDirectory, '404')] ||
@@ -1508,14 +1526,16 @@ export const build: BuildV2 = async buildOptions => {
         requiredServerFilesManifest.config.experimental?.ppr ===
           'incremental' ||
         requiredServerFilesManifest.config.experimental?.cacheComponents ===
-          true
+          true ||
+        requiredServerFilesManifest?.config?.cacheComponents === true
       : false;
 
     // When this is true, then it means all routes are PPR enabled.
     const isAppFullPPREnabled = requiredServerFilesManifest
       ? requiredServerFilesManifest?.config.experimental?.ppr === true ||
         requiredServerFilesManifest.config.experimental?.cacheComponents ===
-          true
+          true ||
+        requiredServerFilesManifest?.config?.cacheComponents === true
       : false;
 
     const isAppClientSegmentCacheEnabled =
@@ -1566,6 +1586,7 @@ export const build: BuildV2 = async buildOptions => {
         isCorrectLocaleAPIRoutes,
         pagesDir,
         headers,
+        onMatchHeaders,
         beforeFilesRewrites,
         afterFilesRewrites,
         fallbackRewrites,
@@ -2042,7 +2063,8 @@ export const build: BuildV2 = async buildOptions => {
           let lambdaOptions: {
             architecture?: NodejsLambda['architecture'];
             memory?: number;
-            maxDuration?: number;
+            maxDuration?: number | 'max';
+            regions?: string[];
             experimentalTriggers?: TriggerEvent[];
             supportsCancellation?: boolean;
           } = {};
@@ -2067,7 +2089,6 @@ export const build: BuildV2 = async buildOptions => {
               files: launcherFiles,
               layers: [
                 Object.keys(pageTraces[page] || {}).reduce((prev, cur) => {
-                  // eslint-disable-next-line @typescript-eslint/no-non-null-asserted-optional-chain
                   prev[cur] = tracedPseudoLayer?.pseudoLayer[cur]!;
                   return prev;
                 }, {} as PseudoLayer),
@@ -2709,7 +2730,6 @@ export const build: BuildV2 = async buildOptions => {
       ...pageLambdaRoutes.filter(route => {
         // filter out any SSG pages as they are already present in output
         if ('headers' in route) {
-          // eslint-disable-next-line @typescript-eslint/no-non-null-asserted-optional-chain
           let page = route.headers?.['x-nextjs-page']!;
           page = page === '/index' ? '/' : page;
 
@@ -2834,6 +2854,7 @@ export const build: BuildV2 = async buildOptions => {
         continue: true,
         important: true,
       },
+      ...onMatchHeaders,
 
       // error handling
       ...(isLegacy

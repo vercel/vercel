@@ -1,6 +1,6 @@
 import ms from 'ms';
 import path from 'path';
-import fetch from 'node-fetch';
+import nodeFetch from 'node-fetch';
 import getPort from 'get-port';
 import isPortReachable from 'is-port-reachable';
 import frameworks, { Framework } from '@vercel/frameworks';
@@ -87,7 +87,7 @@ function validateDistDir(distDir: string, workPath: string) {
       try {
         const vercelJson = JSON.parse(readFileSync(vercelJsonPath, 'utf8'));
         buildCommandExists = vercelJson.buildCommand !== undefined;
-      } catch (e) {
+      } catch (_e) {
         // Ignore JSON parse errors, fallback to default messaging
       }
     }
@@ -294,7 +294,7 @@ async function fetchBinary(
   version: string,
   dest = '/usr/local/bin'
 ) {
-  const res = await fetch(url);
+  const res = await nodeFetch(url);
   if (res.status === 404) {
     throw new NowBuildError({
       code: 'STATIC_BUILD_BINARY_NOT_FOUND',
@@ -355,8 +355,14 @@ export const build: BuildV2 = async ({
 }) => {
   await download(files, workPath, meta);
 
-  const mountpoint = path.dirname(entrypoint);
-  const entrypointDir = path.join(workPath, mountpoint);
+  // Use routePrefix as mountpoint for services to mount static files at the correct path
+  // e.g., routePrefix="/admin" mounts files at "admin/" so they're served at /admin/*
+  // Strip leading slash from routePrefix to create valid mountpoint
+  const routePrefix = config.routePrefix as string | undefined;
+  const mountpoint = routePrefix
+    ? routePrefix.replace(/^\//, '') || '.'
+    : path.dirname(entrypoint);
+  const entrypointDir = path.join(workPath, path.dirname(entrypoint));
 
   let distPath = path.join(
     workPath,
@@ -383,6 +389,7 @@ export const build: BuildV2 = async ({
     let isNpmInstall = false;
     let isBundleInstall = false;
     let isPipInstall = false;
+    let pipTargetDir: string | undefined;
     let output: Files = {};
     let images: ImagesConfig | undefined;
     const routes: Route[] = [];
@@ -572,13 +579,16 @@ export const build: BuildV2 = async ({
         if (existsSync(requirementsPath)) {
           debug('Detected requirements.txt');
           printInstall();
-          await runPipInstall(
+          const pipResult = await runPipInstall(
             workPath,
             ['-r', requirementsPath],
             undefined,
             meta
           );
-          isPipInstall = true;
+          if (pipResult.installed) {
+            pipTargetDir = pipResult.targetDir;
+            isPipInstall = true;
+          }
         }
         if (pkg) {
           await runNpmInstall(
@@ -626,11 +636,20 @@ export const build: BuildV2 = async ({
       if (rubyVersion.status === 0 && typeof rubyVersion.stdout === 'string') {
         gemHome = path.join(dir, rubyVersion.stdout.trim());
         debug(`Set GEM_HOME="${gemHome}" because a Gemfile was found`);
+        // Add gem executable bin directory to PATH (where `bundle install` places executables)
+        const gemBin = path.join(gemHome, 'bin');
+        pathList.push(gemBin);
+        debug(`Added "${gemBin}" to PATH env because a Gemfile was found`);
       }
     }
 
-    if (isPipInstall) {
-      // TODO: Add bins to PATH once we implement pip caching
+    if (isPipInstall && pipTargetDir) {
+      // Add pip bin directory to PATH for CLI commands (e.g., `mkdocs` instead of `python3 -m mkdocs`)
+      const pipBinDir = path.join(pipTargetDir, 'bin');
+      pathList.push(pipBinDir);
+      debug(
+        `Added "${pipBinDir}" to PATH env because a requirements.txt was found`
+      );
     }
 
     if (spawnEnv.PATH) {
@@ -638,10 +657,23 @@ export const build: BuildV2 = async ({
       pathList.push(spawnEnv.PATH);
     }
 
+    // Set up PYTHONPATH so Python can find packages installed via pip
+    let pythonPath: string | undefined;
+    if (isPipInstall && pipTargetDir) {
+      const existingPythonPath = process.env.PYTHONPATH;
+      pythonPath = existingPythonPath
+        ? `${pipTargetDir}${path.delimiter}${existingPythonPath}`
+        : pipTargetDir;
+      debug(
+        `Set PYTHONPATH="${pythonPath}" because a requirements.txt was found`
+      );
+    }
+
     const cliEnv = {
       ...process.env,
       PATH: pathList.join(path.delimiter),
       GEM_HOME: gemHome,
+      ...(pythonPath && { PYTHONPATH: pythonPath }),
     };
 
     if (
@@ -680,7 +712,7 @@ export const build: BuildV2 = async ({
         // for this builder.
         try {
           await checkForPort(devPort, DEV_SERVER_PORT_BIND_TIMEOUT);
-        } catch (err) {
+        } catch (_err) {
           throw new Error(
             `Failed to detect a server running on port ${devPort}.\nDetails: https://err.sh/vercel/vercel/now-static-build-failed-to-detect-a-server`
           );

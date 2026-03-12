@@ -39,6 +39,15 @@ export class EnvAddTelemetryClient
     }
   }
 
+  trackCliOptionValue(value: string | undefined) {
+    if (value) {
+      this.trackCliOption({
+        option: 'value',
+        value: this.redactedValue,
+      });
+    }
+  }
+
   trackCliFlagSensitive(sensitive: boolean | undefined) {
     if (sensitive) {
       this.trackCliFlag('sensitive');
@@ -54,6 +63,12 @@ export class EnvAddTelemetryClient
   trackCliFlagGuidance(guidance: boolean | undefined) {
     if (guidance) {
       this.trackCliFlag('guidance');
+    }
+  }
+
+  trackCliFlagYes(yes: boolean | undefined) {
+    if (yes) {
+      this.trackCliFlag('yes');
     }
   }
 }

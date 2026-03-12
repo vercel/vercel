@@ -6,6 +6,7 @@ import type {
   PythonRequest,
   PythonVariant,
   PythonVersion,
+  PythonVersionRequest,
 } from './python-specifiers';
 import { PythonImplementation } from './python-specifiers';
 
@@ -84,7 +85,9 @@ export function selectPython(
 
     // If some constraints have matches but no build satisfies all, they don't overlap
     if (constraintsWithMatches.length > 1) {
-      const sources = constraintsWithMatches.map(i => constraints[i].source);
+      const sources = constraintsWithMatches.map(
+        i => constraints[i].prettySource
+      );
       warnings.push(
         `Python version constraints may not overlap: ${sources.join(', ')}`
       );
@@ -92,7 +95,9 @@ export function selectPython(
   }
 
   // Build the error message
-  const constraintDescriptions = constraints.map(c => c.source).join(', ');
+  const constraintDescriptions = constraints
+    .map(c => c.prettySource)
+    .join(', ');
   errors.push(
     `No Python build satisfies all constraints: ${constraintDescriptions}`
   );
@@ -101,6 +106,229 @@ export function selectPython(
     build: null,
     errors,
     warnings: warnings.length > 0 ? warnings : undefined,
+  };
+}
+
+/**
+ * Result of the higher-level selectPythonVersion function.
+ */
+export interface PythonVersionSelectionResult {
+  /** The selected build. Falls back to defaultBuild if no constraints match. */
+  build: PythonBuild;
+  /** Source file where the constraint originated (e.g. "pyproject.toml"). */
+  source?: string;
+  /** Diagnostic indicating the constraint was found but the build isn't in availableBuilds. */
+  notAvailable?: {
+    build: PythonBuild;
+    /** The version string of the unavailable build. */
+    version: string;
+  };
+  /** Diagnostic indicating no build matches the constraint at all. */
+  invalidConstraint?: {
+    /** Human-readable version string from the constraint. */
+    versionString: string;
+  };
+}
+
+/**
+ * Higher-level Python version selection with two-pass matching and diagnostics.
+ *
+ * First tries to match constraints against availableBuilds. If no match,
+ * tries against allBuilds to produce diagnostic information. Falls back
+ * to defaultBuild if no constraints are provided or no match is found.
+ */
+export function selectPythonVersion({
+  constraints,
+  availableBuilds,
+  allBuilds,
+  defaultBuild,
+  majorMinorOnly,
+  legacyTildeEquals,
+}: {
+  constraints?: PythonConstraint[];
+  availableBuilds: PythonBuild[];
+  allBuilds: PythonBuild[];
+  defaultBuild: PythonBuild;
+  majorMinorOnly?: boolean;
+  /**
+   * When true, treat 2-part compatible-release specifiers (`~=X.Y`) as
+   * pinning to exactly that minor version (`==X.Y.*`) rather than the
+   * PEP 440 correct `>=X.Y, <(X+1).0`.  This preserves the historical
+   * behaviour of the Python builder prior to the python-analysis migration.
+   */
+  legacyTildeEquals?: boolean;
+}): PythonVersionSelectionResult {
+  const source = constraints?.[0]?.source;
+
+  if (!constraints || constraints.length === 0) {
+    return { build: defaultBuild };
+  }
+
+  let effectiveConstraints = majorMinorOnly
+    ? constraints.map(c => ({
+        ...c,
+        request: c.request.map(truncatePatchVersionsInRequest),
+      }))
+    : constraints;
+
+  if (legacyTildeEquals) {
+    effectiveConstraints = effectiveConstraints.map(c => ({
+      ...c,
+      request: c.request.map(legacyTildeEqualsTransform),
+    }));
+  }
+
+  // First pass: try against available builds
+  const result = selectPython(effectiveConstraints, availableBuilds);
+  if (result.build) {
+    return { build: result.build, source };
+  }
+
+  // Second pass: try against all builds for diagnostics
+  const allResult = selectPython(effectiveConstraints, allBuilds);
+  if (allResult.build) {
+    const version = pythonVersionToString(allResult.build.version);
+    return {
+      build: defaultBuild,
+      source,
+      notAvailable: { build: allResult.build, version },
+    };
+  }
+
+  // No match at all — extract version string for error message
+  const versionString = extractConstraintVersionString(constraints);
+  return {
+    build: defaultBuild,
+    source,
+    invalidConstraint: { versionString },
+  };
+}
+
+/**
+ * Extract a human-readable version string from PythonConstraint objects
+ * for use in warning/error messages.
+ */
+function extractConstraintVersionString(
+  constraints: PythonConstraint[]
+): string {
+  for (const c of constraints) {
+    for (const req of c.request) {
+      if (req.version?.constraint && req.version.constraint.length > 0) {
+        const specs = req.version.constraint;
+        if (
+          specs.length === 1 &&
+          specs[0].operator === '==' &&
+          (!specs[0].prefix || specs[0].prefix === '.*')
+        ) {
+          return specs[0].version;
+        }
+        return pep440ConstraintsToString(specs);
+      }
+    }
+  }
+  return 'unknown';
+}
+
+/**
+ * Truncate patch versions in a PythonRequest's version constraints.
+ * Used by `majorMinorOnly` to transform constraints for major.minor-only matching.
+ */
+function truncatePatchVersionsInRequest(req: PythonRequest): PythonRequest {
+  if (!req.version?.constraint || req.version.constraint.length === 0) {
+    return req;
+  }
+
+  const newConstraints: Pep440Constraint[] = [];
+  for (const c of req.version.constraint) {
+    const result = truncatePatchConstraint(c);
+    if (result !== null) {
+      newConstraints.push(result);
+    }
+  }
+
+  const newVersion: PythonVersionRequest = {
+    ...req.version,
+    constraint: newConstraints,
+  };
+  return { ...req, version: newVersion };
+}
+
+/**
+ * Truncate a single PEP 440 constraint to major.minor level.
+ * Returns null if the constraint should be dropped entirely.
+ *
+ * Transformation rules for constraints with 3+ dot-separated version parts:
+ * - `==X.Y.Z` -> `==X.Y.*` (prefix match)
+ * - `!=X.Y.Z` -> dropped (trivially satisfied)
+ * - `~=X.Y.Z` -> `==X.Y.*` (compatible release at minor level)
+ * - `>=X.Y.Z` -> `>=X.Y` (drop patch)
+ * - `<=X.Y.Z` -> `<=X.Y` (drop patch)
+ * - `>X.Y.Z`  -> `>=X.Y` when Z>0, `>X.Y` when Z==0
+ * - `<X.Y.Z`  -> `<=X.Y` when Z>0, `<X.Y` when Z==0
+ */
+function truncatePatchConstraint(c: Pep440Constraint): Pep440Constraint | null {
+  // Skip arbitrary equality
+  if (c.operator === '===') {
+    return c;
+  }
+
+  const parts = c.version.split('.');
+  if (parts.length < 3) {
+    return c;
+  }
+
+  const majorMinor = parts.slice(0, 2).join('.');
+  const patch = parseInt(parts[2], 10);
+
+  switch (c.operator) {
+    case '==':
+      return { operator: '==', version: majorMinor, prefix: '.*' };
+    case '!=':
+      return null; // drop: X.Y != X.Y.Z is trivially true
+    case '~=':
+      return { operator: '==', version: majorMinor, prefix: '.*' };
+    case '>=':
+      return { operator: '>=', version: majorMinor, prefix: '' };
+    case '<=':
+      return { operator: '<=', version: majorMinor, prefix: '' };
+    case '>':
+      return patch === 0
+        ? { operator: '>', version: majorMinor, prefix: '' }
+        : { operator: '>=', version: majorMinor, prefix: '' };
+    case '<':
+      return patch === 0
+        ? { operator: '<', version: majorMinor, prefix: '' }
+        : { operator: '<=', version: majorMinor, prefix: '' };
+    default:
+      return c;
+  }
+}
+
+/**
+ * Transform 2-part `~=X.Y` into `==X.Y.*` to match the historical builder
+ * behaviour where `~=3.10` was interpreted as `>=3.10, <3.11` (i.e., pinned
+ * to the minor version) rather than the PEP 440 correct `>=3.10, <4.0`.
+ *
+ * 3-part `~=X.Y.Z` is unaffected — `truncatePatchConstraint` already
+ * converts it to `==X.Y.*`.
+ */
+function legacyTildeEqualsTransform(req: PythonRequest): PythonRequest {
+  if (!req.version?.constraint || req.version.constraint.length === 0) {
+    return req;
+  }
+
+  const newConstraints = req.version.constraint.map((c): Pep440Constraint => {
+    if (c.operator !== '~=') return c;
+    const parts = c.version.split('.');
+    if (parts.length === 2) {
+      return { operator: '==', version: c.version, prefix: '.*' };
+    }
+    return c;
+  });
+
+  return {
+    ...req,
+    version: { ...req.version, constraint: newConstraints },
   };
 }
 
@@ -142,7 +370,9 @@ export function pythonVersionToString(version: PythonVersion): string {
 export function pep440ConstraintsToString(
   constraints: Pep440Constraint[]
 ): string {
-  return constraints.map(c => `${c.operator}${c.prefix}${c.version}`).join(',');
+  return constraints
+    .map(c => `${c.operator}${c.version}${c.prefix ?? ''}`)
+    .join(',');
 }
 
 /**

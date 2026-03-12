@@ -114,7 +114,10 @@ export async function pullCommandLogic(
   environment: string,
   flags: PullCommandFlags
 ): Promise<number> {
-  const link = await ensureLink('pull', client, cwd, { autoConfirm });
+  const link = await ensureLink('pull', client, cwd, {
+    autoConfirm,
+    pullEnv: false,
+  });
   if (typeof link === 'number') {
     return link;
   }

@@ -19,12 +19,12 @@ export default async function rm(client: Client, argv: string[]) {
   let parsedArgs;
   const flagsSpecification = getFlagsSpecification(removeSubcommand.options);
   try {
-    parsedArgs = parseArguments(argv, flagsSpecification, { permissive: true });
+    parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
     printError(err);
     return 1;
   }
-  const { args } = parsedArgs;
+  const { args, flags } = parsedArgs;
   const { telemetryEventStore } = client;
   const telemetry = new DnsRmTelemetryClient({
     opts: {
@@ -44,6 +44,7 @@ export default async function rm(client: Client, argv: string[]) {
   }
 
   telemetry.trackCliArgumentId(recordId);
+  telemetry.trackCliFlagYes(flags['--yes']);
 
   const record = await getDNSRecordById(client, recordId);
 
@@ -53,12 +54,15 @@ export default async function rm(client: Client, argv: string[]) {
   }
 
   const { domain: domainName } = record;
-  const yes = await readConfirmation(
-    client,
-    'The following record will be removed permanently',
-    domainName,
-    record
-  );
+  const skipConfirmation = flags['--yes'];
+  const yes =
+    skipConfirmation ||
+    (await readConfirmation(
+      client,
+      'The following record will be removed permanently',
+      domainName,
+      record
+    ));
 
   if (!yes) {
     output.error(`User canceled.`);

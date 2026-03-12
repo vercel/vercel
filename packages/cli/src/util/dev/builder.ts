@@ -1,7 +1,7 @@
 /* disable this rule _here_ to avoid conflict with ongoing changes */
-/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import ms from 'ms';
 import bytes from 'bytes';
+import { readFileSync, unlinkSync } from 'fs';
 import { delimiter, dirname, join } from 'path';
 import { fork, type ChildProcess } from 'child_process';
 import { createFunction } from '@vercel/fun';
@@ -9,12 +9,12 @@ import {
   type Builder,
   type BuildOptions,
   type Env,
-  type File,
   Lambda,
   FileBlob,
   FileFsRef,
   normalizePath,
   isBackendFramework,
+  isPythonFramework,
 } from '@vercel/build-utils';
 import { isStaticRuntime } from '@vercel/fs-detectors';
 import plural from 'pluralize';
@@ -37,7 +37,7 @@ import type {
   EnvConfigs,
   BuiltLambda,
 } from './types';
-import { normalizeRoutes } from '@vercel/routing-utils';
+import { normalizeRoutes, type Route } from '@vercel/routing-utils';
 import getUpdateCommand from '../get-update-command';
 import { getTitleName } from '../pkg-name';
 import { importBuilders } from '../build/import-builders';
@@ -47,9 +47,123 @@ interface BuildMessage {
   type: string;
 }
 
+/** JSON-ified Buffer as serialized by Node.js IPC */
+interface SerializedBuffer {
+  type: 'Buffer';
+  data: number[];
+}
+
+/**
+ * JSON-ified Lambda object received over IPC from the builder worker.
+ * Buffer objects are serialized as { type: 'Buffer', data: number[] }.
+ * Large zipBuffers may be written to temp files and sent as zipBufferPath instead.
+ */
+interface SerializedLambda {
+  type: 'Lambda';
+  zipBuffer?: SerializedBuffer;
+  zipBufferPath?: string;
+  [key: string]: unknown;
+}
+
+/** JSON-ified FileBlob received over IPC */
+interface SerializedFileBlob {
+  type: 'FileBlob';
+  data: SerializedBuffer;
+  [key: string]: unknown;
+}
+
+/** JSON-ified FileFsRef received over IPC */
+interface SerializedFileFsRef {
+  type: 'FileFsRef';
+  [key: string]: unknown;
+}
+
+/** Union of all serialized output types received over IPC */
+type SerializedOutput =
+  | SerializedLambda
+  | SerializedFileBlob
+  | SerializedFileFsRef;
+
+/** Serialized build outputs received over IPC (before deserialization) */
+type SerializedBuildOutputs = Record<string, SerializedOutput>;
+
+/**
+ * Deserialize a single output object from its IPC-serialized form.
+ * Converts JSON-ified Buffers back to real Buffers and reads temp files for large zipBuffers.
+ */
+async function deserializeOutput(
+  obj: SerializedOutput
+): Promise<BuilderOutput> {
+  switch (obj.type) {
+    case 'FileFsRef': {
+      return Object.assign(Object.create(FileFsRef.prototype), obj);
+    }
+    case 'FileBlob': {
+      const fileBlob: FileBlob = Object.assign(
+        Object.create(FileBlob.prototype),
+        obj
+      );
+      fileBlob.data = Buffer.from(obj.data.data);
+      return fileBlob;
+    }
+    case 'Lambda': {
+      const lambda: BuiltLambda = Object.assign(
+        Object.create(Lambda.prototype),
+        obj
+      );
+      // Convert the JSON-ified Buffer object back into an actual Buffer,
+      // or read from temp file if it was too large for IPC
+      if (obj.zipBufferPath) {
+        lambda.zipBuffer = readFileSync(obj.zipBufferPath);
+        // Clean up the temp file after reading
+        try {
+          unlinkSync(obj.zipBufferPath);
+        } catch {
+          // Ignore cleanup errors
+        }
+      } else if (obj.zipBuffer) {
+        lambda.zipBuffer = Buffer.from(obj.zipBuffer.data);
+      }
+      return lambda;
+    }
+  }
+}
+
+/**
+ * Deserialize all build outputs from their IPC-serialized form.
+ */
+async function deserializeBuildOutputs(
+  serialized: SerializedBuildOutputs
+): Promise<BuilderOutputs> {
+  const result: BuilderOutputs = {};
+  for (const [name, obj] of Object.entries(serialized)) {
+    result[name] = await deserializeOutput(obj);
+  }
+  return result;
+}
+
+/** Serialized BuildResult received over IPC */
+interface SerializedBuildResult {
+  output: SerializedBuildOutputs;
+  routes: Route[];
+  watch: string[];
+  distPath?: string;
+}
+
+/** Serialized BuildResultV3 received over IPC */
+interface SerializedBuildResultV3 {
+  output: SerializedLambda;
+  routes: Route[];
+  watch: string[];
+  distPath?: string;
+}
+
 interface BuildMessageResult extends BuildMessage {
   type: 'buildResult';
-  result?: BuilderOutputs | BuildResult;
+  result?:
+    | SerializedBuildOutputs
+    | SerializedBuildResult
+    | SerializedBuildResultV3;
   error?: object;
 }
 
@@ -138,6 +252,8 @@ export async function executeBuild(
     buildProcess = await createBuildProcess(match, envConfigs, workPath);
   }
 
+  const serviceRoutePrefix = config.routePrefix;
+  const serviceWorkspace = config.workspace;
   const buildOptions: BuildOptions = {
     files,
     entrypoint,
@@ -155,6 +271,21 @@ export async function executeBuild(
       env: { ...envConfigs.runEnv },
       buildEnv: { ...envConfigs.buildEnv },
     },
+    ...(typeof serviceRoutePrefix === 'string' ||
+    typeof serviceWorkspace === 'string'
+      ? {
+          service: {
+            routePrefix:
+              typeof serviceRoutePrefix === 'string'
+                ? serviceRoutePrefix
+                : undefined,
+            workspace:
+              typeof serviceWorkspace === 'string'
+                ? serviceWorkspace
+                : undefined,
+          },
+        }
+      : undefined),
   };
 
   let buildResultOrOutputs;
@@ -285,31 +416,13 @@ export async function executeBuild(
   }
 
   // Convert the JSON-ified output map back into their corresponding `File`
-  // subclass type instances.
-  for (const name of Object.keys(buildOutput)) {
-    const obj = buildOutput[name] as File | Lambda;
-    let lambda: BuiltLambda;
-    let fileRef: FileFsRef;
-    let fileBlob: FileBlob;
-    switch (obj.type) {
-      case 'FileFsRef':
-        fileRef = Object.assign(Object.create(FileFsRef.prototype), obj);
-        buildOutput[name] = fileRef;
-        break;
-      case 'FileBlob':
-        fileBlob = Object.assign(Object.create(FileBlob.prototype), obj);
-        fileBlob.data = Buffer.from((obj as any).data.data);
-        buildOutput[name] = fileBlob;
-        break;
-      case 'Lambda':
-        lambda = Object.assign(Object.create(Lambda.prototype), obj);
-        // Convert the JSON-ified Buffer object back into an actual Buffer
-        lambda.zipBuffer = Buffer.from((obj as any).zipBuffer.data);
-        buildOutput[name] = lambda;
-        break;
-      default:
-        throw new Error(`Unknown file type: ${obj.type}`);
-    }
+  // subclass type instances. At this point, the objects are still in their
+  // serialized IPC form (Buffers as {type:'Buffer',data:[...]}, etc).
+  const deserializedOutput = await deserializeBuildOutputs(
+    buildOutput as unknown as SerializedBuildOutputs
+  );
+  for (const [name, output] of Object.entries(deserializedOutput)) {
+    buildOutput[name] = output;
   }
 
   // The `watch` array must not have "./" prefix, so if the builder returned
@@ -406,7 +519,6 @@ export async function getBuildMatches(
   const buildersWithPkgs = await importBuilders(builderSpecs, cwd);
 
   for (const buildConfig of builds) {
-    // eslint-disable-next-line prefer-const
     let { src = '**', use, config = {} } = buildConfig;
 
     if (!use) {
@@ -429,27 +541,20 @@ export async function getBuildMatches(
       src = 'package.json';
     }
 
+    // The Python builder will handle the actual entrypoint discovery, we just need to
+    // point it to a manifest file that exists.
     if (
-      buildConfig.config?.framework === 'fastapi' ||
-      buildConfig.config?.framework === 'flask'
+      buildConfig.config?.framework &&
+      isPythonFramework(buildConfig.config?.framework)
     ) {
-      // Mirror @vercel/python's entrypoint candidates
-      const candidateDirs = ['', 'src', 'app', 'api'];
-      const candidateNames = ['app', 'index', 'server', 'main'];
-      const candidates: string[] = [];
-      for (const name of candidateNames) {
-        for (const dir of candidateDirs) {
-          candidates.push(dir ? `${dir}/${name}.py` : `${name}.py`);
-        }
-      }
-      if (!fileList.includes(src)) {
-        const existing = candidates.filter(p => fileList.includes(p));
-        if (existing.length > 0) {
-          src = existing[0];
-        } else if (fileList.includes('pyproject.toml')) {
-          // Builder will resolve entrypoint from pyproject.toml;
-          src = 'pyproject.toml';
-        }
+      const pythonManifestFiles = [
+        'pyproject.toml',
+        'requirements.txt',
+        'Pipfile',
+      ];
+      const existing = pythonManifestFiles.filter(p => fileList.includes(p));
+      if (existing.length > 0) {
+        src = existing[0];
       }
     }
 

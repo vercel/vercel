@@ -8,12 +8,36 @@
  */
 
 // =============================================================================
+// AST Analysis (WASM-based Python parser using ruff_python_ast)
+// =============================================================================
+
+export {
+  containsAppOrHandler,
+  containsTopLevelCallable,
+  getStringConstant,
+} from './semantic/entrypoints';
+
+// =============================================================================
+// Installed package analysis (WASM-based .dist-info parsing)
+// =============================================================================
+
+export type {
+  Distribution,
+  DistributionIndex,
+  PackagePath,
+  DirectUrlInfo,
+} from './manifest/dist-metadata';
+
+export { extendDistRecord, scanDistributions } from './manifest/dist-metadata';
+
+// =============================================================================
 // Package discovery (runtime + types)
 // =============================================================================
 
 export type {
   PythonConfig,
   PythonConfigs,
+  PythonLockFile,
   PythonManifest,
   PythonManifestOrigin,
   PythonPackage,
@@ -23,16 +47,49 @@ export type {
 export {
   discoverPythonPackage,
   PythonConfigKind,
+  PythonLockFileKind,
   PythonManifestConvertedKind,
   PythonManifestKind,
 } from './manifest/package';
 
 // =============================================================================
+// Manifest serialization utilities
+// =============================================================================
+
+export {
+  createMinimalManifest,
+  stringifyManifest,
+  type CreateMinimalManifestOptions,
+} from './manifest/serialize';
+
+// =============================================================================
+// uv.lock parsing and package classification
+// =============================================================================
+
+export type {
+  ClassifyPackagesOptions,
+  PackageClassification,
+  UvLockFile,
+  UvLockPackage,
+  UvLockPackageSource,
+} from './manifest/uv-lock-parser';
+
+export {
+  classifyPackages,
+  isPrivatePackageSource,
+  normalizePackageName,
+  parseUvLock,
+} from './manifest/uv-lock-parser';
+
+// =============================================================================
 // Python selection (runtime + types)
 // =============================================================================
 
-export type { PythonSelectionResult } from './manifest/python-selector';
-export { selectPython } from './manifest/python-selector';
+export type {
+  PythonSelectionResult,
+  PythonVersionSelectionResult,
+} from './manifest/python-selector';
+export { selectPython, selectPythonVersion } from './manifest/python-selector';
 
 // =============================================================================
 // Errors

@@ -12,6 +12,7 @@ import {
   runNpmInstall,
   runPackageJsonScript,
   scanParentDirs,
+  findPackageJson,
   Prerender,
 } from '../src';
 import type { Files } from '../src';
@@ -95,7 +96,7 @@ it('should only match supported node versions, otherwise throw an error', async 
 });
 
 // https://linear.app/vercel/issue/ZERO-3238/unskip-tests-failing-due-to-node-16-removal
-// eslint-disable-next-line jest/no-disabled-tests
+// biome-ignore lint/suspicious/noSkippedTests: temporarily disabled
 it.skip('should match all semver ranges', async () => {
   // See https://docs.npmjs.com/files/package.json#engines
   expect(await getSupportedNodeVersion('16.0.0')).toHaveProperty('major', 16);
@@ -140,7 +141,7 @@ it('should only nodejs24.x', async () => {
 it('should not allow nodejs18.x when not available', async () => {
   // Simulates AL2023 build-container
   await expect(getSupportedNodeVersion('18.x', true, [20])).rejects.toThrow(
-    'Found invalid Node.js Version: "18.x". Please set Node.js Version to 20.x in your Project Settings to use Node.js 20.'
+    'Found invalid or discontinued Node.js Version: "18.x". Please set Node.js Version to 20.x in your Project Settings to use Node.js 20.'
   );
 });
 
@@ -594,6 +595,132 @@ it('should support passQuery correctly', async () => {
   );
 });
 
+it('should support exposeErrBody correctly', async () => {
+  const prerenderWithTrue = new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    exposeErrBody: true,
+  });
+  expect(prerenderWithTrue.exposeErrBody).toBe(true);
+
+  const prerenderWithFalse = new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    exposeErrBody: false,
+  });
+  expect(prerenderWithFalse.exposeErrBody).toBeUndefined();
+
+  const prerenderWithUndefined = new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    exposeErrBody: undefined,
+  });
+  expect(prerenderWithUndefined.exposeErrBody).toBeUndefined();
+
+  const prerenderWithoutProperty = new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+  });
+  expect(prerenderWithoutProperty.exposeErrBody).toBeUndefined();
+
+  expect(() => {
+    new Prerender({
+      expiration: 1,
+      fallback: null,
+      group: 1,
+      bypassToken: 'some-long-bypass-token-to-make-it-work',
+      // @ts-expect-error testing invalid field
+      exposeErrBody: 'true',
+    });
+  }).toThrowError(
+    `The \`exposeErrBody\` argument for \`Prerender\` must be a boolean.`
+  );
+
+  expect(() => {
+    new Prerender({
+      expiration: 1,
+      fallback: null,
+      group: 1,
+      bypassToken: 'some-long-bypass-token-to-make-it-work',
+      // @ts-expect-error testing invalid field
+      exposeErrBody: 1,
+    });
+  }).toThrowError(
+    `The \`exposeErrBody\` argument for \`Prerender\` must be a boolean.`
+  );
+});
+
+it('should support partialFallback correctly', async () => {
+  const prerenderWithTrue = new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    partialFallback: true,
+  });
+  expect(prerenderWithTrue.partialFallback).toBe(true);
+
+  const prerenderWithFalse = new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    partialFallback: false,
+  });
+  expect(prerenderWithFalse.partialFallback).toBeUndefined();
+
+  const prerenderWithUndefined = new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+    partialFallback: undefined,
+  });
+  expect(prerenderWithUndefined.partialFallback).toBeUndefined();
+
+  const prerenderWithoutProperty = new Prerender({
+    expiration: 1,
+    fallback: null,
+    group: 1,
+    bypassToken: 'some-long-bypass-token-to-make-it-work',
+  });
+  expect(prerenderWithoutProperty.partialFallback).toBeUndefined();
+
+  expect(() => {
+    new Prerender({
+      expiration: 1,
+      fallback: null,
+      group: 1,
+      bypassToken: 'some-long-bypass-token-to-make-it-work',
+      // @ts-expect-error testing invalid field
+      partialFallback: 'true',
+    });
+  }).toThrowError(
+    `The \`partialFallback\` argument for \`Prerender\` must be a boolean.`
+  );
+
+  expect(() => {
+    new Prerender({
+      expiration: 1,
+      fallback: null,
+      group: 1,
+      bypassToken: 'some-long-bypass-token-to-make-it-work',
+      // @ts-expect-error testing invalid field
+      partialFallback: 1,
+    });
+  }).toThrowError(
+    `The \`partialFallback\` argument for \`Prerender\` must be a boolean.`
+  );
+});
+
 it('should support experimentalStreamingLambdaPath correctly', async () => {
   new Prerender({
     expiration: 1,
@@ -997,6 +1124,46 @@ it('should detect `packageManager` in pnpm monorepo', async () => {
   } finally {
     delete process.env.ENABLE_EXPERIMENTAL_COREPACK;
   }
+});
+
+describe('findPackageJson', () => {
+  it('should find package.json and return path without reading contents', async () => {
+    const fixture = path.join(__dirname, 'fixtures', '20-npm-7');
+    const result = await findPackageJson(fixture, false);
+    expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
+    expect(result.packageJson).toBeUndefined();
+  });
+
+  it('should find package.json and read contents when readPackageJson is true', async () => {
+    const fixture = path.join(__dirname, 'fixtures', '20-npm-7');
+    const result = await findPackageJson(fixture, true);
+    expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
+    expect(result.packageJson).toBeDefined();
+    expect(result.packageJson?.name).toBeDefined();
+  });
+
+  it('should traverse up directories to find package.json', async () => {
+    const base = path.join(__dirname, 'fixtures', '21-npm-workspaces');
+    const fixture = path.join(base, 'a');
+    const result = await findPackageJson(fixture, true);
+    expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
+    expect(result.packageJson).toBeDefined();
+  });
+
+  it('should respect the base parameter boundary', async () => {
+    const base = path.join(__dirname, 'fixtures', '23-pnpm-workspaces');
+    const fixture = path.join(base, 'c');
+    const result = await findPackageJson(fixture, true, base);
+    expect(result.packageJsonPath).toEqual(path.join(fixture, 'package.json'));
+    expect(result.packageJson).toBeDefined();
+  });
+
+  it('should return undefined when no package.json is found', async () => {
+    // Use a directory that definitely has no package.json
+    const result = await findPackageJson('/tmp', false, '/tmp');
+    expect(result.packageJsonPath).toBeUndefined();
+    expect(result.packageJson).toBeUndefined();
+  });
 });
 
 it('should retry npm install when peer deps invalid and npm@8 on node@16', async () => {

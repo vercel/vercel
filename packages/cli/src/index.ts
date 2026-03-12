@@ -6,7 +6,7 @@ try {
   process.cwd();
 } catch (err: unknown) {
   if (isError(err) && err.message.includes('uv_cwd')) {
-    // eslint-disable-next-line no-console
+    // biome-ignore lint/suspicious/noConsole: intentional console usage
     console.error('Error: The current working directory does not exist.');
     process.exit(1);
   }
@@ -17,9 +17,8 @@ try {
     'DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.',
   ];
 
-  // eslint-disable-next-line no-console
+  // biome-ignore lint/suspicious/noConsole: intentional console usage
   const originalError = console.error;
-  // eslint-disable-next-line no-console
   console.error = (msg: unknown) => {
     const isSilencedError = SILENCED_ERRORS.some(
       error => typeof msg === 'string' && msg.includes(error)
@@ -67,7 +66,7 @@ import { getCommandName, getTitleName } from './util/pkg-name';
 import login from './commands/login';
 import type { AuthConfig, GlobalConfig } from '@vercel-internals/types';
 import type { VercelConfig } from '@vercel/client';
-import { ProxyAgent } from 'proxy-agent';
+import { Agent as HttpsAgent } from 'https';
 import box from './util/output/box';
 import { execExtension } from './util/extension/exec';
 import { TelemetryEventStore } from './util/telemetry';
@@ -83,6 +82,18 @@ const VERCEL_CONFIG_PATH = configFiles.getConfigFilePath();
 const VERCEL_AUTH_CONFIG_PATH = configFiles.getAuthConfigFilePath();
 
 const GLOBAL_COMMANDS = new Set(['help']);
+
+// Check if proxy environment variables are configured
+function hasProxyConfig(): boolean {
+  return [
+    'HTTP_PROXY',
+    'HTTPS_PROXY',
+    'http_proxy',
+    'https_proxy',
+    'ALL_PROXY',
+    'all_proxy',
+  ].some(v => process.env[v]);
+}
 
 /*
   By default, node throws EPIPE errors if process.stdout is being written to
@@ -146,7 +157,11 @@ const main = async () => {
   try {
     parsedArgs = parseArguments(
       process.argv,
-      { '--version': Boolean, '-v': '--version' },
+      {
+        '--version': Boolean,
+        '-v': '--version',
+        '--non-interactive': Boolean,
+      },
       { permissive: true }
     );
     const isDebugging = parsedArgs.flags['--debug'];
@@ -195,22 +210,19 @@ const main = async () => {
   const subSubCommand = parsedArgs.args[3];
 
   // If empty, leave this code here for easy adding of beta commands later
-  const betaCommands: string[] = ['curl'];
-  if (betaCommands.includes(targetOrSubcommand)) {
-    output.print(
-      `${chalk.grey(
-        `${getTitleName()} CLI ${
-          pkg.version
-        } ${targetOrSubcommand} (beta) — https://vercel.com/feedback`
-      )}\n`
-    );
+  const betaCommands: string[] = ['api', 'crons', 'curl', 'webhooks'];
+  const msg = betaCommands.includes(targetOrSubcommand)
+    ? `${getTitleName()} CLI ${pkg.version} | ${targetOrSubcommand} is in beta — https://vercel.com/feedback`
+    : `${getTitleName()} CLI ${pkg.version}`;
+  if (process.env.VERCEL === '1') {
+    output.print(`${msg}\n`);
   } else {
-    output.print(`${chalk.grey(`${getTitleName()} CLI ${pkg.version}`)}\n`);
+    output.debug(msg);
   }
 
   // Handle `--version` directly
   if (!targetOrSubcommand && parsedArgs.flags['--version']) {
-    // eslint-disable-next-line no-console
+    // biome-ignore lint/suspicious/noConsole: intentional console usage
     console.log(pkg.version);
     return 0;
   }
@@ -308,8 +320,8 @@ const main = async () => {
     },
   });
 
-  const { agent } = await determineAgent();
-  telemetry.trackAgenticUse(agent?.name);
+  const { isAgent, agent: detectedAgent } = await determineAgent();
+  telemetry.trackAgenticUse(detectedAgent?.name);
   telemetry.trackCPUs();
   telemetry.trackPlatform();
   telemetry.trackArch();
@@ -333,14 +345,35 @@ const main = async () => {
 
   try {
     new URL(apiUrl);
-  } catch (err: unknown) {
+  } catch (_err: unknown) {
     output.error(`Please provide a valid URL instead of ${highlight(apiUrl)}.`);
     return 1;
   }
 
-  // Shared API `Client` instance for all sub-commands to utilize
+  // Shared API `Client` instance for all sub-commands to utilize.
+  // Non-interactive when: --non-interactive is set, or agent is detected (and no TTY). Explicit --non-interactive=false overrides agent detection.
+  const stdinIsTTY = process.stdin?.isTTY === true;
+  const nonInteractiveFlag = parsedArgs.flags['--non-interactive'] === true;
+  const argv = process.argv;
+  const explicitNonInteractiveFalse =
+    argv.includes('--non-interactive=false') ||
+    (argv.includes('--non-interactive') &&
+      argv[argv.indexOf('--non-interactive') + 1] === 'false');
+  const nonInteractive = explicitNonInteractiveFalse
+    ? false
+    : nonInteractiveFlag || (isAgent && !stdinIsTTY);
+
+  output.debug(
+    `Agent/TTY/nonInteractive: isAgent=${isAgent} agentName=${detectedAgent?.name ?? 'none'} stdin.isTTY=${String(process.stdin?.isTTY)} --non-interactive=${nonInteractiveFlag} explicitFalse=${explicitNonInteractiveFalse} => nonInteractive=${nonInteractive}`
+  );
+
+  // Only load proxy-agent if proxy env vars are configured (saves ~60ms startup)
+  const agent = hasProxyConfig()
+    ? new (await import('proxy-agent')).ProxyAgent({ keepAlive: true })
+    : new HttpsAgent({ keepAlive: true });
+
   client = new Client({
-    agent: new ProxyAgent({ keepAlive: true }),
+    agent,
     apiUrl,
     stdin: process.stdin,
     stdout: process.stdout,
@@ -351,6 +384,9 @@ const main = async () => {
     localConfigPath,
     argv: process.argv,
     telemetryEventStore,
+    isAgent,
+    agentName: detectedAgent?.name,
+    nonInteractive,
   });
 
   // The `--cwd` flag is respected for all sub-commands
@@ -406,6 +442,7 @@ const main = async () => {
   }
 
   const subcommandsWithoutToken = [
+    'agent',
     'login',
     'logout',
     'help',
@@ -413,10 +450,22 @@ const main = async () => {
     'build',
     'telemetry',
     'upgrade',
+    'skills',
   ];
 
   if (process.env.FF_GUIDANCE_MODE) {
     subcommandsWithoutToken.push('guidance');
+  }
+
+  if (
+    subcommand === 'dev' &&
+    (client.argv.includes('--local') || client.argv.includes('-L'))
+  ) {
+    subcommandsWithoutToken.push('dev');
+  }
+
+  if (subcommand === 'flags' && subSubCommand === 'prepare') {
+    subcommandsWithoutToken.push('flags');
   }
 
   // Prompt for login if there is no current token
@@ -449,6 +498,16 @@ const main = async () => {
       });
       return 1;
     }
+  }
+
+  // Check for VERCEL_TOKEN environment variable if --token flag not provided
+  // Track where the token came from for better error messages
+  let tokenSource: 'flag' | 'env' | undefined;
+  if (typeof parsedArgs.flags['--token'] === 'string') {
+    tokenSource = 'flag';
+  } else if (process.env.VERCEL_TOKEN) {
+    parsedArgs.flags['--token'] = process.env.VERCEL_TOKEN;
+    tokenSource = 'env';
   }
 
   if (
@@ -492,7 +551,7 @@ const main = async () => {
       return 1;
     }
 
-    client.authConfig = { token, skipWrite: true };
+    client.authConfig = { token, skipWrite: true, tokenSource };
 
     // Don't use team from config if `--token` was set
     if (client.config && client.config.currentTeam) {
@@ -636,63 +695,111 @@ const main = async () => {
     if (subcommand) {
       let func: any;
       switch (targetCommand) {
-        case 'alias':
-          telemetry.trackCliCommandAlias(userSuppliedSubCommand);
-          func = require('./commands/alias').default;
-          break;
-        case 'bisect':
-          telemetry.trackCliCommandBisect(userSuppliedSubCommand);
-          func = require('./commands/bisect').default;
-          break;
-        case 'blob':
-          telemetry.trackCliCommandBlob(userSuppliedSubCommand);
-          func = require('./commands/blob').default;
-          break;
-        case 'build':
-          telemetry.trackCliCommandBuild(userSuppliedSubCommand);
-          func = require('./commands/build').default;
-          break;
-        case 'cache':
-          telemetry.trackCliCommandCache(userSuppliedSubCommand);
-          func = require('./commands/cache').default;
-          break;
-        case 'certs':
-          telemetry.trackCliCommandCerts(userSuppliedSubCommand);
-          func = require('./commands/certs').default;
-          break;
-        case 'curl':
-          telemetry.trackCliCommandCurl(userSuppliedSubCommand);
-          func = require('./commands/curl').default;
-          break;
+        // Priority commands - separate bundles for fast loading
         case 'deploy':
           telemetry.trackCliCommandDeploy(userSuppliedSubCommand);
           telemetry.trackCliDefaultDeploy(defaultDeploy);
-          func = require('./commands/deploy').default;
+          func = (await import('./commands/deploy/index.js')).default;
           break;
         case 'dev':
           telemetry.trackCliCommandDev(userSuppliedSubCommand);
-          func = require('./commands/dev').default;
-          break;
-        case 'dns':
-          telemetry.trackCliCommandDns(userSuppliedSubCommand);
-          func = require('./commands/dns').default;
-          break;
-        case 'domains':
-          telemetry.trackCliCommandDomains(userSuppliedSubCommand);
-          func = require('./commands/domains').default;
+          func = (await import('./commands/dev/index.js')).default;
           break;
         case 'env':
           telemetry.trackCliCommandEnv(userSuppliedSubCommand);
-          func = require('./commands/env').default;
+          func = (await import('./commands/env/index.js')).default;
+          break;
+        case 'build':
+          telemetry.trackCliCommandBuild(userSuppliedSubCommand);
+          func = (await import('./commands/build/index.js')).default;
+          break;
+        case 'list':
+          telemetry.trackCliCommandList(userSuppliedSubCommand);
+          func = (await import('./commands/list/index.js')).default;
+          break;
+        case 'link':
+          telemetry.trackCliCommandLink(userSuppliedSubCommand);
+          func = (await import('./commands/link/index.js')).default;
+          break;
+
+        // Non-priority commands - loaded from bulk bundle
+        case 'agent':
+          telemetry.trackCliCommandAgent(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).agent;
+          break;
+        case 'alias':
+          telemetry.trackCliCommandAlias(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).alias;
+          break;
+        case 'activity':
+          telemetry.trackCliCommandActivity(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).activity;
+          break;
+        case 'alerts':
+          telemetry.trackCliCommandAlerts(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).alerts;
+          break;
+        case 'api':
+          telemetry.trackCliCommandApi(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).api;
+          break;
+        case 'bisect':
+          telemetry.trackCliCommandBisect(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).bisect;
+          break;
+        case 'blob':
+          telemetry.trackCliCommandBlob(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).blob;
+          break;
+        case 'buy':
+          telemetry.trackCliCommandBuy(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).buy;
+          break;
+        case 'init':
+          telemetry.trackCliCommandInit(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).init;
+          break;
+        case 'cache':
+          telemetry.trackCliCommandCache(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).cache;
+          break;
+        case 'contract':
+          telemetry.trackCliCommandContract(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).contract;
+          break;
+        case 'certs':
+          telemetry.trackCliCommandCerts(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).certs;
+          break;
+        case 'crons':
+        case 'cron':
+          telemetry.trackCliCommandCrons(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).crons;
+          break;
+        case 'curl':
+          telemetry.trackCliCommandCurl(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).curl;
+          break;
+        case 'dns':
+          telemetry.trackCliCommandDns(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).dns;
+          break;
+        case 'domains':
+          telemetry.trackCliCommandDomains(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).domains;
+          break;
+        case 'flags':
+          telemetry.trackCliCommandFlags(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).flags;
           break;
         case 'git':
           telemetry.trackCliCommandGit(userSuppliedSubCommand);
-          func = require('./commands/git').default;
+          func = (await import('./commands-bulk.js')).git;
           break;
         case 'guidance':
           if (process.env.FF_GUIDANCE_MODE) {
             telemetry.trackCliCommandGuidance(userSuppliedSubCommand);
-            func = require('./commands/guidance').default;
+            func = (await import('./commands-bulk.js')).guidance;
             break;
           } else {
             func = null;
@@ -700,113 +807,128 @@ const main = async () => {
           }
         case 'httpstat':
           telemetry.trackCliCommandHttpstat(userSuppliedSubCommand);
-          func = require('./commands/httpstat').default;
-          break;
-        case 'init':
-          telemetry.trackCliCommandInit(userSuppliedSubCommand);
-          func = require('./commands/init').default;
-          break;
-        case 'inspect':
-          telemetry.trackCliCommandInspect(userSuppliedSubCommand);
-          func = require('./commands/inspect').default;
+          func = (await import('./commands-bulk.js')).httpstat;
           break;
         case 'install':
           telemetry.trackCliCommandInstall(userSuppliedSubCommand);
-          func = require('./commands/install').default;
+          func = (await import('./commands-bulk.js')).install;
           break;
         case 'integration':
           telemetry.trackCliCommandIntegration(userSuppliedSubCommand);
-          func = require('./commands/integration').default;
+          func = (await import('./commands-bulk.js')).integration;
           break;
         case 'integration-resource':
           telemetry.trackCliCommandIntegrationResource(userSuppliedSubCommand);
-          func = require('./commands/integration-resource').default;
-          break;
-        case 'link':
-          telemetry.trackCliCommandLink(userSuppliedSubCommand);
-          func = require('./commands/link').default;
-          break;
-        case 'list':
-          telemetry.trackCliCommandList(userSuppliedSubCommand);
-          func = require('./commands/list').default;
-          break;
-        case 'logs':
-          telemetry.trackCliCommandLogs(userSuppliedSubCommand);
-          func = require('./commands/logs').default;
+          func = (await import('./commands-bulk.js')).integrationResource;
           break;
         case 'mcp':
-          func = require('./commands/mcp').default;
+          func = (await import('./commands-bulk.js')).mcp;
+          break;
+        case 'logout':
+          telemetry.trackCliCommandLogout(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).logout;
           break;
         case 'login':
           telemetry.trackCliCommandLogin(userSuppliedSubCommand);
           func = (c: Client) =>
-            require('./commands/login').default(c, { shouldParseArgs: true });
+            import('./commands-bulk.js').then(m =>
+              m.login(c, { shouldParseArgs: true })
+            );
           break;
-        case 'logout':
-          telemetry.trackCliCommandLogout(userSuppliedSubCommand);
-          func = require('./commands/logout').default;
+        case 'inspect':
+          telemetry.trackCliCommandInspect(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).inspect;
           break;
+        case 'logs':
+          telemetry.trackCliCommandLogs(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).logs;
+          break;
+        case 'metrics':
+          if (process.env.FF_METRICS) {
+            telemetry.trackCliCommandMetrics(userSuppliedSubCommand);
+            func = (await import('./commands-bulk.js')).metrics;
+            break;
+          } else {
+            func = null;
+            break;
+          }
         case 'microfrontends':
           telemetry.trackCliCommandMicrofrontends(userSuppliedSubCommand);
-          func = require('./commands/microfrontends').default;
+          func = (await import('./commands-bulk.js')).microfrontends;
           break;
         case 'open':
           telemetry.trackCliCommandOpen(userSuppliedSubCommand);
-          func = require('./commands/open').default;
+          func = (await import('./commands-bulk.js')).open;
           break;
         case 'project':
           telemetry.trackCliCommandProject(userSuppliedSubCommand);
-          func = require('./commands/project').default;
+          func = (await import('./commands-bulk.js')).project;
           break;
         case 'promote':
           telemetry.trackCliCommandPromote(userSuppliedSubCommand);
-          func = require('./commands/promote').default;
+          func = (await import('./commands-bulk.js')).promote;
           break;
         case 'pull':
           telemetry.trackCliCommandPull(userSuppliedSubCommand);
-          func = require('./commands/pull').default;
+          func = (await import('./commands-bulk.js')).pull;
           break;
         case 'redeploy':
           telemetry.trackCliCommandRedeploy(userSuppliedSubCommand);
-          func = require('./commands/redeploy').default;
+          func = (await import('./commands-bulk.js')).redeploy;
           break;
         case 'redirects':
           telemetry.trackCliCommandRedirects(userSuppliedSubCommand);
-          func = require('./commands/redirects').default;
+          func = (await import('./commands-bulk.js')).redirects;
+          break;
+        case 'routes':
+          telemetry.trackCliCommandRoutes(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).routes;
           break;
         case 'remove':
           telemetry.trackCliCommandRemove(userSuppliedSubCommand);
-          func = require('./commands/remove').default;
+          func = (await import('./commands-bulk.js')).remove;
           break;
         case 'rollback':
           telemetry.trackCliCommandRollback(userSuppliedSubCommand);
-          func = require('./commands/rollback').default;
+          func = (await import('./commands-bulk.js')).rollback;
           break;
         case 'rr':
         case 'release':
         case 'rolling-release':
           telemetry.trackCliCommandRollingRelease(userSuppliedSubCommand);
-          func = require('./commands/rolling-release').default;
+          func = (await import('./commands-bulk.js')).rollingRelease;
+          break;
+        case 'skills':
+          telemetry.trackCliCommandSkills(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).skills;
           break;
         case 'target':
           telemetry.trackCliCommandTarget(userSuppliedSubCommand);
-          func = require('./commands/target').default;
+          func = (await import('./commands-bulk.js')).target;
           break;
         case 'teams':
           telemetry.trackCliCommandTeams(userSuppliedSubCommand);
-          func = require('./commands/teams').default;
+          func = (await import('./commands-bulk.js')).teams;
           break;
         case 'telemetry':
           telemetry.trackCliCommandTelemetry(userSuppliedSubCommand);
-          func = require('./commands/telemetry').default;
+          func = (await import('./commands-bulk.js')).telemetry;
           break;
         case 'upgrade':
           telemetry.trackCliCommandUpgrade(userSuppliedSubCommand);
-          func = require('./commands/upgrade').default;
+          func = (await import('./commands-bulk.js')).upgrade;
+          break;
+        case 'webhooks':
+          telemetry.trackCliCommandWebhooks(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).webhooks;
+          break;
+        case 'usage':
+          telemetry.trackCliCommandUsage(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).usage;
           break;
         case 'whoami':
           telemetry.trackCliCommandWhoami(userSuppliedSubCommand);
-          func = require('./commands/whoami').default;
+          func = (await import('./commands-bulk.js')).whoami;
           break;
         default:
           func = null;
@@ -907,39 +1029,76 @@ const main = async () => {
 
 main()
   .then(async exitCode => {
-    // Print update information, if available
-    if (isTTY && !process.env.NO_UPDATE_NOTIFIER) {
-      // Check if an update is available. If so, `latest` will contain a string
-      // of the latest version, otherwise `undefined`.
+    const shouldCheckForUpdates =
+      !process.env.NO_UPDATE_NOTIFIER && !process.env.VERCEL;
+
+    if (shouldCheckForUpdates) {
       const latest = getLatestVersion({
         pkg,
       });
       if (latest) {
-        const changelog = 'https://github.com/vercel/vercel/releases';
-        const errorMsg =
-          exitCode && exitCode !== 2
-            ? chalk.magenta(
-                `\n\nThe latest update ${chalk.italic(
-                  'may'
-                )} fix any errors that occurred.`
-              )
-            : '';
-        output.print(
-          box(
-            `Update available! ${chalk.gray(`v${pkg.version}`)} ≫ ${chalk.green(
-              `v${latest}`
-            )}
+        const changelog = `https://github.com/vercel/vercel/releases/tag/vercel%40${latest}`;
+
+        if (isTTY) {
+          // Interactive mode: prompt user to update now
+          const errorMsg =
+            exitCode && exitCode !== 2
+              ? chalk.magenta(
+                  ` The latest update ${chalk.italic(
+                    'may'
+                  )} fix any errors that occurred.`
+                )
+              : '';
+
+          output.print(
+            `\nUpdate available for Vercel CLI (${chalk.gray(
+              `v${pkg.version}`
+            )} → ${chalk.green(`v${latest}`)})${errorMsg}\n`
+          );
+          output.print(
+            `Changelog: ${output.link(changelog, changelog, { fallback: false })}\n`
+          );
+
+          try {
+            const shouldUpgrade = await client.input.confirm(
+              'Would you like to upgrade now?',
+              true
+            );
+
+            if (shouldUpgrade) {
+              const upgradeExitCode = await executeUpgrade();
+              process.exitCode = upgradeExitCode;
+              return;
+            }
+          } catch (err: unknown) {
+            if (
+              err instanceof Error &&
+              err.message.includes('User force closed the prompt')
+            ) {
+              // User pressed Ctrl+C to dismiss the prompt
+            } else {
+              throw err;
+            }
+          }
+        } else {
+          const errorMsg =
+            exitCode && exitCode !== 2
+              ? chalk.magenta(
+                  `\n\nThe latest update ${chalk.italic(
+                    'may'
+                  )} fix any errors that occurred.`
+                )
+              : '';
+          output.print(
+            box(
+              `Update available! ${chalk.gray(`v${pkg.version}`)} ≫ ${chalk.green(
+                `v${latest}`
+              )}
 Changelog: ${output.link(changelog, changelog, { fallback: false })}
 Run ${chalk.cyan(cmd(await getUpdateCommand()))} to update.${errorMsg}`
-          )
-        );
-        output.print('\n');
-
-        // Prompt user to upgrade now
-        if (await client.input.confirm('Upgrade now?', true)) {
-          const upgradeExitCode = await executeUpgrade();
-          process.exitCode = upgradeExitCode;
-          return;
+            )
+          );
+          output.print('\n');
         }
       }
     }

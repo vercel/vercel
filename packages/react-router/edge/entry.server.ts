@@ -54,7 +54,7 @@ export async function handleRequest(
     );
   }
 
-  return new Response(body, {
+  return new Response(body as any, {
     headers: responseHeaders,
     status: responseStatusCode,
   });

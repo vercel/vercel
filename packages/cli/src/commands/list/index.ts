@@ -12,7 +12,7 @@ import { isValidName } from '../../util/is-valid-name';
 import getCommandFlags from '../../util/get-command-flags';
 import { getCommandName } from '../../util/pkg-name';
 import type Client from '../../util/client';
-import { ensureLink } from '../../util/link/ensure-link';
+import { getLinkedProject } from '../../util/projects/link';
 import getScope from '../../util/get-scope';
 import { ProjectNotFound } from '../../util/errors-ts';
 import { isErrnoException } from '@vercel/error-utils';
@@ -26,6 +26,7 @@ import { formatProject } from '../../util/projects/format-project';
 import { formatEnvironment } from '../../util/target/format-environment';
 import { ListTelemetryClient } from '../../util/telemetry/commands/list';
 import { validateLsArgs } from '../../util/validate-ls-args';
+import { validateJsonOutput } from '../../util/output-format';
 import type {
   Deployment,
   PaginationOptions,
@@ -81,11 +82,20 @@ export default async function list(client: Client) {
     return validationResult;
   }
 
+  const formatResult = validateJsonOutput(parsedArgs.flags);
+  if (!formatResult.valid) {
+    error(formatResult.error);
+    return 1;
+  }
+  const asJson = formatResult.jsonOutput;
+
+  telemetry.trackCliFlagAll(parsedArgs.flags['--all']);
   telemetry.trackCliFlagProd(parsedArgs.flags['--prod']);
   telemetry.trackCliFlagYes(parsedArgs.flags['--yes']);
   telemetry.trackCliOptionEnvironment(parsedArgs.flags['--environment']);
   telemetry.trackCliOptionMeta(parsedArgs.flags['--meta']);
   telemetry.trackCliOptionNext(parsedArgs.flags['--next']);
+  telemetry.trackCliOptionFormat(parsedArgs.flags['--format']);
   telemetry.trackCliOptionPolicy(parsedArgs.flags['--policy']);
   telemetry.trackCliOptionStatus(parsedArgs.flags['--status']);
 
@@ -95,7 +105,6 @@ export default async function list(client: Client) {
     parsedArgs.flags['--yes'] = parsedArgs.flags['--confirm'];
   }
 
-  const autoConfirm = !!parsedArgs.flags['--yes'];
   const meta = parseMeta(parsedArgs.flags['--meta']);
   const policy = parsePolicy(parsedArgs.flags['--policy']);
 
@@ -131,12 +140,20 @@ export default async function list(client: Client) {
     status = statusValues.join(',');
   }
 
-  let project: Project;
+  let project: Project | undefined;
   let pagination: PaginationOptions | undefined;
   let contextName = '';
   let app: string | undefined = parsedArgs.args[1];
   const deployments: Deployment[] = [];
   let singleDeployment = false;
+  const allFlag = parsedArgs.flags['--all'];
+  let showAllProjects = false;
+
+  // Validate that --all and app argument are not used together
+  if (allFlag && app) {
+    error('Cannot use --all flag with a project argument');
+    return 1;
+  }
 
   if (app) {
     if (!isValidName(app)) {
@@ -185,13 +202,22 @@ export default async function list(client: Client) {
       return 1;
     }
     project = p;
+  } else if (allFlag) {
+    // Explicit --all flag: show all deployments
+    showAllProjects = true;
   } else {
-    const link = await ensureLink('list', client, client.cwd, {
-      autoConfirm,
-    });
-    if (typeof link === 'number') return link;
-    project = link.project;
-    client.config.currentTeam = link.org.id;
+    // No app argument and no --all flag: try to get linked project
+    const link = await getLinkedProject(client, client.cwd);
+    if (link.status === 'error') {
+      return link.exitCode;
+    }
+    if (link.status === 'linked') {
+      project = link.project;
+      client.config.currentTeam = link.org.id;
+    } else {
+      // Not linked - default to showing all deployments
+      showAllProjects = true;
+    }
   }
 
   if (!contextName) {
@@ -215,15 +241,22 @@ export default async function list(client: Client) {
     return 1;
   }
 
-  const projectSlugLink = formatProject(contextName, project.name);
+  const projectSlugLink = project
+    ? formatProject(contextName, project.name)
+    : null;
 
   if (!singleDeployment) {
-    spinner(`Fetching deployments in ${chalk.bold(contextName)}`);
+    if (!asJson) {
+      spinner(`Fetching deployments in ${chalk.bold(contextName)}`);
+    }
     const start = Date.now();
 
     debug('Fetching deployments');
 
-    const query = new URLSearchParams({ limit: '20', projectId: project.id });
+    const query = new URLSearchParams({ limit: '20' });
+    if (project) {
+      query.set('projectId', project.id);
+    }
     for (const [k, v] of Object.entries(meta)) {
       query.set(`meta-${k}`, v);
     }
@@ -254,18 +287,60 @@ export default async function list(client: Client) {
 
     // we don't output the table headers if we have no deployments
     if (!deployments.length) {
-      log('No deployments found.');
+      if (asJson) {
+        const jsonOutput = { deployments: [], pagination };
+        client.stdout.write(`${JSON.stringify(jsonOutput, null, 2)}\n`);
+      } else {
+        log('No deployments found.');
+      }
       return 0;
     }
 
-    log(
-      `${
-        target === 'production' ? 'Production deployments' : 'Deployments'
-      } for ${projectSlugLink} ${elapsed(Date.now() - start)}`
-    );
+    if (!asJson) {
+      const deploymentsLabel =
+        target === 'production' ? 'Production deployments' : 'Deployments';
+      if (showAllProjects) {
+        log(`${deploymentsLabel} ${elapsed(Date.now() - start)}`);
+      } else {
+        log(
+          `${deploymentsLabel} for ${projectSlugLink} ${elapsed(Date.now() - start)}`
+        );
+      }
+    }
   }
 
-  const headers = ['Age', 'Deployment', 'Status', 'Environment'];
+  if (asJson) {
+    const jsonOutput = {
+      deployments: deployments.sort(sortByCreatedAt).map(dep => ({
+        id: dep.id,
+        url: dep.url,
+        name: dep.name,
+        state: dep.readyState,
+        target: dep.target,
+        customEnvironment: dep.customEnvironment
+          ? {
+              id: dep.customEnvironment.id,
+              slug: dep.customEnvironment.slug,
+            }
+          : undefined,
+        createdAt: dep.createdAt,
+        buildingAt: dep.buildingAt,
+        ready: dep.ready,
+        creator: dep.creator
+          ? {
+              uid: dep.creator.uid,
+              username: dep.creator.username,
+            }
+          : undefined,
+        meta: dep.meta,
+      })),
+      pagination,
+    };
+    client.stdout.write(`${JSON.stringify(jsonOutput, null, 2)}\n`);
+    return 0;
+  }
+
+  const headers = ['Age', 'Project', 'Deployment', 'Status', 'Environment'];
   const showPolicy = Object.keys(policy).length > 0;
   // Exclude username & duration if we're showing retention policies so that the table fits more comfortably
   if (!showPolicy) headers.push('Duration', 'Username');
@@ -292,9 +367,10 @@ export default async function list(client: Client) {
             dep.customEnvironment?.id || dep.target || 'preview';
           return [
             chalk.gray(createdAt),
+            formatProject(contextName, dep.name),
             `https://${dep.url}`,
             stateString(dep.readyState || ''),
-            formatEnvironment(contextName, project.name, {
+            formatEnvironment(contextName, dep.name, {
               id: targetSlug,
               slug: targetName,
             }),
@@ -326,6 +402,8 @@ export default async function list(client: Client) {
       )}`
     );
   }
+
+  return 0;
 }
 
 export function getDeploymentDuration(dep: Deployment): string {

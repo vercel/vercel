@@ -182,7 +182,7 @@ describe('blob store get', () => {
       expect(exitCode).toBe(0);
       expect(mockedOutput.print).toHaveBeenCalledWith(
         expect.stringContaining(
-          'Blob Store: Display Test Store (store_display_test_123)\nBilling State: Active\nSize: 2MB\nCreated At: 2022-01-01T00:00:00.000Z\nUpdated At: 2023-01-01T00:00:00.000Z'
+          'Blob Store: Display Test Store (store_display_test_123)\nBilling State: Active\nSize: 2MB\nAccess: Public\nCreated At: 2022-01-01T00:00:00.000Z\nUpdated At: 2023-01-01T00:00:00.000Z'
         )
       );
       expect(formatSpy).toHaveBeenCalledWith(
@@ -247,31 +247,27 @@ describe('blob store get', () => {
       { size: 1073741824, expected: '1GB' },
     ];
 
-    it.each(sizeCases)(
-      'should format different store sizes correctly',
-      async ({ size, expected }) => {
-        client.fetch = vi.fn().mockResolvedValue({
-          store: {
-            id: 'store_size_test_123',
-            name: 'Size Test Store',
-            createdAt: Date.now(),
-            updatedAt: Date.now(),
-            billingState: 'active',
-            size,
-          },
-        });
+    it.each(sizeCases)('should format different store sizes correctly', async ({
+      size,
+      expected,
+    }) => {
+      client.fetch = vi.fn().mockResolvedValue({
+        store: {
+          id: 'store_size_test_123',
+          name: 'Size Test Store',
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+          billingState: 'active',
+          size,
+        },
+      });
 
-        const exitCode = await getStore(
-          client,
-          ['store_size_test_123'],
-          noToken
-        );
-        expect(exitCode).toBe(0);
-        expect(mockedOutput.print).toHaveBeenCalledWith(
-          expect.stringContaining(`Size: ${expected}`)
-        );
-      }
-    );
+      const exitCode = await getStore(client, ['store_size_test_123'], noToken);
+      expect(exitCode).toBe(0);
+      expect(mockedOutput.print).toHaveBeenCalledWith(
+        expect.stringContaining(`Size: ${expected}`)
+      );
+    });
   });
 
   describe('store ID validation and detection', () => {

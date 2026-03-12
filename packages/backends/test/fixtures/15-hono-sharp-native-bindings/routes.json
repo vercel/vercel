@@ -1,0 +1,23 @@
+[
+  {
+    "handle": "filesystem"
+  },
+  {
+    "src": "^(?:\\/image)(?:\\/$)?$",
+    "dest": "/image",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "src": "^(?:\\/resize)(?:\\/$)?$",
+    "dest": "/resize",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "src": "/(.*)",
+    "dest": "/"
+  }
+]

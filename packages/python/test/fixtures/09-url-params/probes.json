@@ -13,6 +13,9 @@
       "responseHeaders": {
         "content-type": "text/html; charset=utf-8"
       }
+    },
+    {
+      "logMustContain": "Using python version: 3.12"
     }
   ]
 }

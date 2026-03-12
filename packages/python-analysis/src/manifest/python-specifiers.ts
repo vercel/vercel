@@ -163,8 +163,10 @@ export interface PythonVersionRequest {
 export interface PythonConstraint {
   /** The Python version request(s) that define this constraint. */
   request: PythonRequest[];
-  /** Human-readable description of where this constraint came from. */
+  /** Config file name where this constraint originated (e.g. "pyproject.toml", ".python-version"). */
   source: string;
+  /** Human-readable description of where this constraint came from. */
+  prettySource: string;
 }
 
 export type PythonVersion = {

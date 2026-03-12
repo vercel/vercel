@@ -1,15 +1,19 @@
-import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import fs from 'fs-extra';
 import { join } from 'path';
 import { getWriteableDirectory } from '@vercel/build-utils';
 import build from '../../../../src/commands/build';
+import cliPkg from '../../../../src/util/pkg';
 import { client } from '../../../mocks/client';
 import { defaultProject, useProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
 import { execSync } from 'child_process';
 import { vi } from 'vitest';
-import { REGEX_NON_VERCEL_PLATFORM_FILES } from '@vercel/fs-detectors';
+import {
+  detectBuilders,
+  REGEX_NON_VERCEL_PLATFORM_FILES,
+} from '@vercel/fs-detectors';
 
 vi.setConfig({ testTimeout: 6 * 60 * 1000 });
 
@@ -63,6 +67,7 @@ describe.skipIf(flakey)('build', () => {
         },
       ],
     });
+    expect(builds.cliVersion).toEqual(cliPkg.version);
 
     // "static" directory contains static files
     const files = await fs.readdir(join(output, 'static'));
@@ -163,8 +168,7 @@ describe.skipIf(flakey)('build', () => {
     try {
       await fs.unlink(join(cwd, 'foo.html'));
       await fs.symlink(join(cwd, 'index.html'), join(cwd, 'foo.html'));
-    } catch (e) {
-      // eslint-disable-next-line no-console
+    } catch (_e) {
       console.log('Symlinks not available, skipping test');
       return;
     }
@@ -791,7 +795,6 @@ describe.skipIf(flakey)('build', () => {
 
   it('should error when "functions" has runtime that emits discontinued "nodejs12.x"', async () => {
     if (process.platform === 'win32') {
-      // eslint-disable-next-line no-console
       console.log('Skipping test on Windows');
       return;
     }
@@ -908,36 +911,38 @@ describe.skipIf(flakey)('build', () => {
       version: '1.6.0',
       expected: false,
     },
-  ])(
-    'with instrumentation $dependency',
-    ({ fixtureName, dependency, version, expected }) => {
-      it(`should ${expected ? 'set' : 'not set'} VERCEL_TRACING_DISABLE_AUTOMATIC_FETCH_INSTRUMENTATION if ${dependency} version ${version} or higher is detected`, async () => {
-        const cwd = fixture(fixtureName);
-        const output = join(cwd, '.vercel/output');
-        client.cwd = cwd;
-        const exitCode = await build(client);
-        expect(exitCode).toEqual(0);
+  ])('with instrumentation $dependency', ({
+    fixtureName,
+    dependency,
+    version,
+    expected,
+  }) => {
+    it(`should ${expected ? 'set' : 'not set'} VERCEL_TRACING_DISABLE_AUTOMATIC_FETCH_INSTRUMENTATION if ${dependency} version ${version} or higher is detected`, async () => {
+      const cwd = fixture(fixtureName);
+      const output = join(cwd, '.vercel/output');
+      client.cwd = cwd;
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
 
-        const env = await fs.readJSON(join(output, 'static', 'env.json'));
-        expect(
-          Object.keys(env).includes(
-            'VERCEL_TRACING_DISABLE_AUTOMATIC_FETCH_INSTRUMENTATION'
-          )
-        ).toEqual(expected);
+      const env = await fs.readJSON(join(output, 'static', 'env.json'));
+      expect(
+        Object.keys(env).includes(
+          'VERCEL_TRACING_DISABLE_AUTOMATIC_FETCH_INSTRUMENTATION'
+        )
+      ).toEqual(expected);
 
-        // "functions/api" directory has output Functions
-        const functions = await fs.readdir(join(output, 'functions/api'));
-        expect(functions.sort()).toEqual(['index.func']);
+      // "functions/api" directory has output Functions
+      const functions = await fs.readdir(join(output, 'functions/api'));
+      expect(functions.sort()).toEqual(['index.func']);
 
-        const vcConfig = await fs.readJSON(
-          join(output, 'functions/api/index.func/.vc-config.json')
-        );
-        expect(vcConfig.shouldDisableAutomaticFetchInstrumentation).toBe(
-          expected
-        );
-      });
-    }
-  );
+      const vcConfig = await fs.readJSON(
+        join(output, 'functions/api/index.func/.vc-config.json')
+      );
+      expect(vcConfig.shouldDisableAutomaticFetchInstrumentation).toBe(
+        expected
+      );
+    });
+  });
 
   it('should load environment variables from `.vercel/.env.preview.local`', async () => {
     const cwd = fixture('env-from-vc-pull');
@@ -992,6 +997,8 @@ describe.skipIf(flakey)('build', () => {
     expect(vcConfig).toMatchObject({
       handler: 'api/memory.js',
       memory: 128,
+      regions: ['sfo1'],
+      functionFailoverRegions: ['dub1'],
       environment: {},
       launcherType: 'Nodejs',
       shouldAddHelpers: true,
@@ -1003,7 +1010,6 @@ describe.skipIf(flakey)('build', () => {
   it('should apply project settings overrides from "vercel.json"', async () => {
     if (process.platform === 'win32') {
       // this test runs a build command with `mkdir -p` which is unsupported on Windows
-      // eslint-disable-next-line no-console
       console.log('Skipping test on Windows');
       return;
     }
@@ -1102,6 +1108,27 @@ describe.skipIf(flakey)('build', () => {
         schedule: '0 0 * * *',
       },
     ]);
+  });
+
+  it('should include cron services in build output crons without the services framework setting', async () => {
+    const cwd = fixture('with-services-cron');
+    const output = join(cwd, '.vercel', 'output');
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toBe(0);
+
+    const config = await fs.readJSON(join(output, 'config.json'));
+    expect(config).toHaveProperty('crons', [
+      {
+        path: '/_svc/cleanup/crons/api/cron/cron',
+        schedule: '0 0 * * *',
+      },
+    ]);
+    expect(config.routes).toContainEqual({
+      src: '^/_svc/cleanup/crons/api/cron/cron$',
+      dest: '/_svc/cleanup/index',
+      check: true,
+    });
   });
 
   it('should fail build when CRON_SECRET contains invalid HTTP header characters', async () => {
@@ -1565,6 +1592,64 @@ describe.skipIf(flakey)('build', () => {
     });
   });
 
+  it('should merge routes and overrides from multiple Build Output API builders', async () => {
+    const cwd = fixture('multi-build-output-config');
+    const output = join(cwd, '.vercel/output');
+
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toEqual(0);
+
+    const config = await fs.readJSON(join(output, 'config.json'));
+    expect(config).toMatchObject({
+      version: 3,
+      routes: expect.arrayContaining([
+        expect.objectContaining({ src: '^/first/?$', dest: '/first' }),
+        expect.objectContaining({ src: '^/second/?$', dest: '/second' }),
+      ]),
+      overrides: {
+        'static/first.txt': { path: 'static/first.txt' },
+        'static/second.txt': { path: 'static/second.txt' },
+      },
+    });
+  });
+
+  it('should emit flags-definitions module when VERCEL_EXPERIMENTAL_EMBED_FLAG_DEFINITIONS=1', async () => {
+    const cwd = fixture('static');
+    const definitionsDir = join(
+      cwd,
+      'node_modules',
+      '@vercel',
+      'flags-definitions'
+    );
+
+    client.cwd = cwd;
+    client.setArgv('build', '--yes');
+    const prev = process.env.VERCEL_EXPERIMENTAL_EMBED_FLAG_DEFINITIONS;
+    try {
+      process.env.VERCEL_EXPERIMENTAL_EMBED_FLAG_DEFINITIONS = '1';
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      expect(fs.existsSync(join(definitionsDir, 'index.js'))).toBe(true);
+      expect(fs.existsSync(join(definitionsDir, 'index.d.ts'))).toBe(true);
+      expect(fs.existsSync(join(definitionsDir, 'package.json'))).toBe(true);
+      const pkg = await fs.readJSON(join(definitionsDir, 'package.json'));
+      expect(pkg.name).toBe('@vercel/flags-definitions');
+      const indexJs = await fs.readFile(
+        join(definitionsDir, 'index.js'),
+        'utf8'
+      );
+      expect(indexJs).toContain('export function get(hashedSdkKey)');
+    } finally {
+      if (prev !== undefined) {
+        process.env.VERCEL_EXPERIMENTAL_EMBED_FLAG_DEFINITIONS = prev;
+      } else {
+        delete process.env.VERCEL_EXPERIMENTAL_EMBED_FLAG_DEFINITIONS;
+      }
+    }
+  });
+
   it('should not apply framework `defaultRoutes` when build command outputs Build Output API', async () => {
     const cwd = fixture('build-output-api-with-api-dir');
     const output = join(cwd, '.vercel/output');
@@ -1619,7 +1704,6 @@ describe.skipIf(flakey)('build', () => {
 
   it('should create symlinks for duplicate references to Lambda / EdgeFunction instances', async () => {
     if (process.platform === 'win32') {
-      // eslint-disable-next-line no-console
       console.log('Skipping test on Windows');
       return;
     }
@@ -1680,6 +1764,25 @@ describe.skipIf(flakey)('build', () => {
 
       const env = await fs.readJSON(join(output, 'static', 'env.json'));
       expect(Object.keys(env).includes('VERCEL_ANALYTICS_ID')).toEqual(true);
+    });
+  });
+
+  describe('Next.js with root api', () => {
+    it('should not add catch-all /api 404 so dynamic App Router routes work in production', async () => {
+      const files = ['package.json', 'pages/index.js', 'api/legacy.js'];
+      const pkg = {
+        scripts: { build: 'next build' },
+        devDependencies: { next: '13' },
+      };
+      const { rewriteRoutes } = await detectBuilders(files, pkg, {
+        featHandleMiss: true,
+        projectSettings: { framework: 'nextjs' },
+      });
+      const catchAllApi404 = rewriteRoutes?.find(
+        (r: { src?: string; status?: number }) =>
+          r.src === '^/api(/.*)?$' && r.status === 404
+      );
+      expect(catchAllApi404).toBeUndefined();
     });
   });
 
@@ -1752,71 +1855,28 @@ describe.skipIf(flakey)('build', () => {
     });
   });
 
-  it('should reject deploymentId with dpl_ prefix in config.json', async () => {
-    const cwd = fixture('static');
-    const output = join(cwd, '.vercel/output');
+  describe('deploymentId validation', () => {
+    const staticFixture = fixture('static');
+    const generatedFiles = ['build.mjs', 'package.json', 'vercel.json'];
 
-    // Create a build script that creates config.json with invalid deploymentId
-    // This simulates a builder using Build Output API that creates an invalid config.json
-    const buildScript = join(cwd, 'build.mjs');
-    await fs.writeFile(
-      buildScript,
-      `import fs from 'fs';
-import { join } from 'path';
-
-const outputDir = join(process.cwd(), '.vercel', 'output');
-fs.mkdirSync(outputDir, { recursive: true });
-fs.writeFileSync(
-  join(outputDir, 'config.json'),
-  JSON.stringify({
-    version: 3,
-    deploymentId: 'dpl_invalid123',
-  }, null, 2)
-);
-`
-    );
-
-    // Create package.json with build script
-    await fs.writeJSON(join(cwd, 'package.json'), {
-      scripts: {
-        build: 'node build.mjs',
-      },
+    afterEach(async () => {
+      // Clean up generated files from the static fixture
+      await Promise.all(
+        generatedFiles.map(file =>
+          fs.remove(join(staticFixture, file)).catch(() => {})
+        )
+      );
     });
 
-    // Create vercel.json to use the build script
-    await fs.writeJSON(join(cwd, 'vercel.json'), {
-      builds: [
-        {
-          src: 'package.json',
-          use: '@vercel/static-build',
-        },
-      ],
-    });
+    it('should allow deploymentId without dpl_ prefix in config.json', async () => {
+      const cwd = fixture('static');
 
-    client.cwd = cwd;
-    const exitCode = await build(client);
-    expect(exitCode).toEqual(1);
-
-    await expect(client.stderr).toOutput(
-      'cannot start with the "dpl_" prefix. Please choose a different deploymentId in your config'
-    );
-
-    const builds = await fs.readJSON(join(output, 'builds.json'));
-    expect(builds.error).toMatchObject({
-      code: 'INVALID_DEPLOYMENT_ID',
-      message: expect.stringContaining('cannot start with the "dpl_" prefix'),
-    });
-  });
-
-  it('should allow deploymentId without dpl_ prefix in config.json', async () => {
-    const cwd = fixture('static');
-
-    // Create a build script that creates config.json with valid deploymentId
-    // This simulates a builder using Build Output API that creates a valid config.json
-    const buildScript = join(cwd, 'build.mjs');
-    await fs.writeFile(
-      buildScript,
-      `import fs from 'fs';
+      // Create a build script that creates config.json with valid deploymentId
+      // This simulates a builder using Build Output API that creates a valid config.json
+      const buildScript = join(cwd, 'build.mjs');
+      await fs.writeFile(
+        buildScript,
+        `import fs from 'fs';
 import { join } from 'path';
 
 const outputDir = join(process.cwd(), '.vercel', 'output');
@@ -1829,38 +1889,38 @@ fs.writeFileSync(
   }, null, 2)
 );
 `
-    );
+      );
 
-    // Create package.json with build script
-    await fs.writeJSON(join(cwd, 'package.json'), {
-      scripts: {
-        build: 'node build.mjs',
-      },
-    });
-
-    // Create vercel.json to use the build script
-    await fs.writeJSON(join(cwd, 'vercel.json'), {
-      builds: [
-        {
-          src: 'package.json',
-          use: '@vercel/static-build',
+      // Create package.json with build script
+      await fs.writeJSON(join(cwd, 'package.json'), {
+        scripts: {
+          build: 'node build.mjs',
         },
-      ],
+      });
+
+      // Create vercel.json to use the build script
+      await fs.writeJSON(join(cwd, 'vercel.json'), {
+        builds: [
+          {
+            src: 'package.json',
+            use: '@vercel/static-build',
+          },
+        ],
+      });
+
+      client.cwd = cwd;
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
     });
 
-    client.cwd = cwd;
-    const exitCode = await build(client);
-    expect(exitCode).toEqual(0);
-  });
+    it('should reject deploymentId with invalid characters (spaces) in config.json', async () => {
+      const cwd = fixture('static');
+      const output = join(cwd, '.vercel/output');
 
-  it('should reject deploymentId with invalid characters (spaces) in config.json', async () => {
-    const cwd = fixture('static');
-    const output = join(cwd, '.vercel/output');
-
-    const buildScript = join(cwd, 'build.mjs');
-    await fs.writeFile(
-      buildScript,
-      `import fs from 'fs';
+      const buildScript = join(cwd, 'build.mjs');
+      await fs.writeFile(
+        buildScript,
+        `import fs from 'fs';
 import { join } from 'path';
 
 const outputDir = join(process.cwd(), '.vercel', 'output');
@@ -1873,46 +1933,46 @@ fs.writeFileSync(
   }, null, 2)
 );
 `
-    );
+      );
 
-    await fs.writeJSON(join(cwd, 'package.json'), {
-      scripts: {
-        build: 'node build.mjs',
-      },
-    });
-
-    await fs.writeJSON(join(cwd, 'vercel.json'), {
-      builds: [
-        {
-          src: 'package.json',
-          use: '@vercel/static-build',
+      await fs.writeJSON(join(cwd, 'package.json'), {
+        scripts: {
+          build: 'node build.mjs',
         },
-      ],
+      });
+
+      await fs.writeJSON(join(cwd, 'vercel.json'), {
+        builds: [
+          {
+            src: 'package.json',
+            use: '@vercel/static-build',
+          },
+        ],
+      });
+
+      client.cwd = cwd;
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(1);
+
+      await expect(client.stderr).toOutput(
+        'contains invalid characters. Only alphanumeric characters'
+      );
+
+      const builds = await fs.readJSON(join(output, 'builds.json'));
+      expect(builds.error).toMatchObject({
+        code: 'INVALID_DEPLOYMENT_ID',
+        message: expect.stringContaining('contains invalid characters'),
+      });
     });
 
-    client.cwd = cwd;
-    const exitCode = await build(client);
-    expect(exitCode).toEqual(1);
+    it('should reject deploymentId with invalid characters (question mark) in config.json', async () => {
+      const cwd = fixture('static');
+      const output = join(cwd, '.vercel/output');
 
-    await expect(client.stderr).toOutput(
-      'contains invalid characters. Only alphanumeric characters'
-    );
-
-    const builds = await fs.readJSON(join(output, 'builds.json'));
-    expect(builds.error).toMatchObject({
-      code: 'INVALID_DEPLOYMENT_ID',
-      message: expect.stringContaining('contains invalid characters'),
-    });
-  });
-
-  it('should reject deploymentId with invalid characters (question mark) in config.json', async () => {
-    const cwd = fixture('static');
-    const output = join(cwd, '.vercel/output');
-
-    const buildScript = join(cwd, 'build.mjs');
-    await fs.writeFile(
-      buildScript,
-      `import fs from 'fs';
+      const buildScript = join(cwd, 'build.mjs');
+      await fs.writeFile(
+        buildScript,
+        `import fs from 'fs';
 import { join } from 'path';
 
 const outputDir = join(process.cwd(), '.vercel', 'output');
@@ -1925,41 +1985,41 @@ fs.writeFileSync(
   }, null, 2)
 );
 `
-    );
+      );
 
-    await fs.writeJSON(join(cwd, 'package.json'), {
-      scripts: {
-        build: 'node build.mjs',
-      },
-    });
-
-    await fs.writeJSON(join(cwd, 'vercel.json'), {
-      builds: [
-        {
-          src: 'package.json',
-          use: '@vercel/static-build',
+      await fs.writeJSON(join(cwd, 'package.json'), {
+        scripts: {
+          build: 'node build.mjs',
         },
-      ],
+      });
+
+      await fs.writeJSON(join(cwd, 'vercel.json'), {
+        builds: [
+          {
+            src: 'package.json',
+            use: '@vercel/static-build',
+          },
+        ],
+      });
+
+      client.cwd = cwd;
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(1);
+
+      const builds = await fs.readJSON(join(output, 'builds.json'));
+      expect(builds.error).toMatchObject({
+        code: 'INVALID_DEPLOYMENT_ID',
+        message: expect.stringContaining('contains invalid characters'),
+      });
     });
 
-    client.cwd = cwd;
-    const exitCode = await build(client);
-    expect(exitCode).toEqual(1);
+    it('should allow deploymentId with valid characters (base62 + hyphen + underscore) in config.json', async () => {
+      const cwd = fixture('static');
 
-    const builds = await fs.readJSON(join(output, 'builds.json'));
-    expect(builds.error).toMatchObject({
-      code: 'INVALID_DEPLOYMENT_ID',
-      message: expect.stringContaining('contains invalid characters'),
-    });
-  });
-
-  it('should allow deploymentId with valid characters (base62 + hyphen + underscore) in config.json', async () => {
-    const cwd = fixture('static');
-
-    const buildScript = join(cwd, 'build.mjs');
-    await fs.writeFile(
-      buildScript,
-      `import fs from 'fs';
+      const buildScript = join(cwd, 'build.mjs');
+      await fs.writeFile(
+        buildScript,
+        `import fs from 'fs';
 import { join } from 'path';
 
 const outputDir = join(process.cwd(), '.vercel', 'output');
@@ -1972,37 +2032,37 @@ fs.writeFileSync(
   }, null, 2)
 );
 `
-    );
+      );
 
-    await fs.writeJSON(join(cwd, 'package.json'), {
-      scripts: {
-        build: 'node build.mjs',
-      },
-    });
-
-    await fs.writeJSON(join(cwd, 'vercel.json'), {
-      builds: [
-        {
-          src: 'package.json',
-          use: '@vercel/static-build',
+      await fs.writeJSON(join(cwd, 'package.json'), {
+        scripts: {
+          build: 'node build.mjs',
         },
-      ],
+      });
+
+      await fs.writeJSON(join(cwd, 'vercel.json'), {
+        builds: [
+          {
+            src: 'package.json',
+            use: '@vercel/static-build',
+          },
+        ],
+      });
+
+      client.cwd = cwd;
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
     });
 
-    client.cwd = cwd;
-    const exitCode = await build(client);
-    expect(exitCode).toEqual(0);
-  });
+    it('should reject deploymentId longer than 32 characters in config.json', async () => {
+      const cwd = fixture('static');
+      const output = join(cwd, '.vercel/output');
 
-  it('should reject deploymentId longer than 32 characters in config.json', async () => {
-    const cwd = fixture('static');
-    const output = join(cwd, '.vercel/output');
-
-    // Create a build script that creates config.json with deploymentId > 32 chars
-    const buildScript = join(cwd, 'build.mjs');
-    await fs.writeFile(
-      buildScript,
-      `import fs from 'fs';
+      // Create a build script that creates config.json with deploymentId > 32 chars
+      const buildScript = join(cwd, 'build.mjs');
+      await fs.writeFile(
+        buildScript,
+        `import fs from 'fs';
 import { join } from 'path';
 
 const outputDir = join(process.cwd(), '.vercel', 'output');
@@ -2015,48 +2075,48 @@ fs.writeFileSync(
   }, null, 2)
 );
 `
-    );
+      );
 
-    // Create package.json with build script
-    await fs.writeJSON(join(cwd, 'package.json'), {
-      scripts: {
-        build: 'node build.mjs',
-      },
-    });
-
-    // Create vercel.json to use the build script
-    await fs.writeJSON(join(cwd, 'vercel.json'), {
-      builds: [
-        {
-          src: 'package.json',
-          use: '@vercel/static-build',
+      // Create package.json with build script
+      await fs.writeJSON(join(cwd, 'package.json'), {
+        scripts: {
+          build: 'node build.mjs',
         },
-      ],
+      });
+
+      // Create vercel.json to use the build script
+      await fs.writeJSON(join(cwd, 'vercel.json'), {
+        builds: [
+          {
+            src: 'package.json',
+            use: '@vercel/static-build',
+          },
+        ],
+      });
+
+      client.cwd = cwd;
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(1);
+
+      await expect(client.stderr).toOutput(
+        'must be 32 characters or less. Please choose a shorter deploymentId in your config'
+      );
+
+      const builds = await fs.readJSON(join(output, 'builds.json'));
+      expect(builds.error).toMatchObject({
+        code: 'INVALID_DEPLOYMENT_ID',
+        message: expect.stringContaining('must be 32 characters or less'),
+      });
     });
 
-    client.cwd = cwd;
-    const exitCode = await build(client);
-    expect(exitCode).toEqual(1);
+    it('should allow deploymentId with exactly 32 characters in config.json', async () => {
+      const cwd = fixture('static');
 
-    await expect(client.stderr).toOutput(
-      'must be 32 characters or less. Please choose a shorter deploymentId in your config'
-    );
-
-    const builds = await fs.readJSON(join(output, 'builds.json'));
-    expect(builds.error).toMatchObject({
-      code: 'INVALID_DEPLOYMENT_ID',
-      message: expect.stringContaining('must be 32 characters or less'),
-    });
-  });
-
-  it('should allow deploymentId with exactly 32 characters in config.json', async () => {
-    const cwd = fixture('static');
-
-    // Create a build script that creates config.json with exactly 32 character deploymentId
-    const buildScript = join(cwd, 'build.mjs');
-    await fs.writeFile(
-      buildScript,
-      `import fs from 'fs';
+      // Create a build script that creates config.json with exactly 32 character deploymentId
+      const buildScript = join(cwd, 'build.mjs');
+      await fs.writeFile(
+        buildScript,
+        `import fs from 'fs';
 import { join } from 'path';
 
 const outputDir = join(process.cwd(), '.vercel', 'output');
@@ -2069,27 +2129,28 @@ fs.writeFileSync(
   }, null, 2)
 );
 `
-    );
+      );
 
-    // Create package.json with build script
-    await fs.writeJSON(join(cwd, 'package.json'), {
-      scripts: {
-        build: 'node build.mjs',
-      },
-    });
-
-    // Create vercel.json to use the build script
-    await fs.writeJSON(join(cwd, 'vercel.json'), {
-      builds: [
-        {
-          src: 'package.json',
-          use: '@vercel/static-build',
+      // Create package.json with build script
+      await fs.writeJSON(join(cwd, 'package.json'), {
+        scripts: {
+          build: 'node build.mjs',
         },
-      ],
-    });
+      });
 
-    client.cwd = cwd;
-    const exitCode = await build(client);
-    expect(exitCode).toEqual(0);
+      // Create vercel.json to use the build script
+      await fs.writeJSON(join(cwd, 'vercel.json'), {
+        builds: [
+          {
+            src: 'package.json',
+            use: '@vercel/static-build',
+          },
+        ],
+      });
+
+      client.cwd = cwd;
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+    });
   });
 });

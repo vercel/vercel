@@ -3,7 +3,7 @@ import assert from 'assert';
 import { join } from 'path';
 import { existsSync } from 'fs';
 import { isString } from 'util';
-import fetch from 'node-fetch';
+import nodeFetch from 'node-fetch';
 import { URL, URLSearchParams } from 'url';
 import frameworkList from '../src/frameworks';
 
@@ -201,6 +201,7 @@ const Schema = {
       defaultVersion: { type: 'string' },
       supersedes: { type: 'array', items: { type: 'string' } },
       experimental: { type: 'boolean' },
+      runtimeFramework: { type: 'boolean' },
     },
   },
 };
@@ -208,7 +209,7 @@ const Schema = {
 async function getDeployment(host: string) {
   const query = new URLSearchParams();
   query.set('url', host);
-  const res = await fetch(
+  const res = await nodeFetch(
     `https://api.vercel.com/v11/deployments/get?${query}`
   );
   const body = await res.json();
@@ -233,6 +234,7 @@ describe('frameworks', () => {
 
     const result = frameworkList
       .filter(f => !f.experimental) // Skip experimental frameworks
+      .filter(f => !f.runtimeFramework) // Skip runtime frameworks (e.g. Python, Go)
       .map(f => f.slug)
       .filter(isString)
       .filter(slug => !skipExamples.includes(slug))
