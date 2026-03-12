@@ -250,6 +250,15 @@ export default async function main(client: Client): Promise<number> {
   // Read project settings, and pull them from Vercel if necessary
   const vercelDir = join(cwd, projectRootDirectory, VERCEL_DIR);
   let project = await readProjectSettings(vercelDir);
+
+  // If the project is not linked (no repo link or directory link found) but a
+  // settings-only `project.json` exists (written for repo-linked projects
+  // without `projectId`/`orgId`), ignore it. The project needs to be
+  // re-linked before building.
+  if (!link && project?.settings && !project?.projectId) {
+    project = null;
+  }
+
   const isTTY = process.stdin.isTTY;
   while (!project?.settings) {
     let confirmed = yes;

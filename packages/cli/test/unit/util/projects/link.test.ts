@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { join } from 'path';
 import { mkdirp, writeJSON } from 'fs-extra';
 import { getLinkedProject } from '../../../../src/util/projects/link';
@@ -204,58 +204,60 @@ describe('getLinkedProject', () => {
     expect(link.repoRoot).toEqual(cwd);
   });
 
-  it('should prefer `project.json` over `repo.json` when both exist', async () => {
-    const repoRoot = setupTmpDir('project-link-precedence');
-    const cwd = join(repoRoot, 'apps', 'docs');
+  it('should fall through to `repo.json` when `project.json` has settings but no projectId/orgId', async () => {
+    // Simulates the scenario after `vc build` writes a settings-only
+    // `project.json` for a repo-linked project. On subsequent runs,
+    // `getProjectLink()` should skip the invalid per-directory file and
+    // resolve the link via `repo.json` instead.
+    const repoRoot = setupTmpDir('repo-link-settings-only');
+    const cwd = join(repoRoot, 'apps', 'my-app');
 
-    // Repo-level link that would normally require disambiguation.
+    // Repo-level link at the repo root.
     await mkdirp(join(repoRoot, '.vercel'));
     await writeJSON(join(repoRoot, '.vercel', 'repo.json'), {
       remoteName: 'origin',
       projects: [
         {
-          id: 'repo-proj-1',
-          name: 'repo-proj-1',
-          directory: '.',
-          orgId: 'team_dummy',
-        },
-        {
-          id: 'repo-proj-2',
-          name: 'repo-proj-2',
-          directory: '.',
+          id: 'repo-proj-abc',
+          name: 'my-app',
+          directory: 'apps/my-app',
           orgId: 'team_dummy',
         },
       ],
     });
 
-    // Explicit directory-level link should win.
+    // Settings-only project.json (no projectId/orgId) as written by
+    // `writeProjectSettings()` when `isRepoLinked` is true.
     await mkdirp(join(cwd, '.vercel'));
     await writeJSON(join(cwd, '.vercel', 'project.json'), {
-      orgId: 'team_dummy',
-      projectId: 'project-json-project',
-      projectName: 'project-json-project',
+      settings: {
+        createdAt: 1770822175969,
+        framework: 'nextjs',
+        devCommand: null,
+        installCommand: '',
+        buildCommand: null,
+        outputDirectory: null,
+        rootDirectory: 'apps/my-app',
+        directoryListing: false,
+        nodeVersion: '20.x',
+      },
     });
 
     useUser();
     useTeams('team_dummy');
     useProject({
       ...defaultProject,
-      id: 'project-json-project',
-      name: 'project-json-project',
+      id: 'repo-proj-abc',
+      name: 'my-app',
     });
 
-    const selectSpy = vi.spyOn(client.input, 'select');
     const link = await getLinkedProject(client, cwd);
-
-    // If repo.json was consulted, we'd have prompted to disambiguate.
-    expect(selectSpy).not.toHaveBeenCalled();
-    selectSpy.mockRestore();
 
     if (link.status !== 'linked') {
       throw new Error('Expected to be linked');
     }
-    expect(link.project.id).toEqual('project-json-project');
-    expect(link.repoRoot).toBeUndefined();
+    expect(link.project.id).toEqual('repo-proj-abc');
+    expect(link.repoRoot).toEqual(repoRoot);
   });
 
   it('should return link with legacy `repo.json` (top-level orgId)', async () => {
