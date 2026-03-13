@@ -7,7 +7,6 @@ import { getLinkedProject } from '../../util/projects/link';
 import { getCommandName } from '../../util/pkg-name';
 import {
   buildCommandWithGlobalFlags,
-  buildCommandWithYes,
   outputAgentError,
 } from '../../util/agent-output';
 import { AGENT_REASON, AGENT_STATUS } from '../../util/agent-output-constants';
@@ -58,6 +57,7 @@ export default async function sdkKeysRm(
           next: [
             {
               command: buildCommandWithGlobalFlags(client.argv, 'link'),
+              when: 'link the project',
             },
           ],
         },
@@ -71,28 +71,13 @@ export default async function sdkKeysRm(
     return 1;
   }
 
-  if (client.nonInteractive && !skipConfirmation) {
-    outputAgentError(
-      client,
-      {
-        status: AGENT_STATUS.ERROR,
-        reason: AGENT_REASON.CONFIRMATION_REQUIRED,
-        message:
-          'Deleting an SDK key requires confirmation. Re-run with --yes.',
-        next: [{ command: buildCommandWithYes(client.argv) }],
-      },
-      1
-    );
-    return 1;
-  }
-
   client.config.currentTeam =
     link.org.type === 'team' ? link.org.id : undefined;
 
   const { project } = link;
 
   try {
-    // If no hash key provided, let user select from existing keys (or error in non-interactive)
+    // If no hash key provided, let user select from existing keys
     if (!hashKey) {
       if (client.nonInteractive) {
         outputAgentError(
@@ -101,19 +86,21 @@ export default async function sdkKeysRm(
             status: AGENT_STATUS.ERROR,
             reason: AGENT_REASON.MISSING_ARGUMENTS,
             message:
-              'Please provide the SDK key hash to delete. Run "vercel flags sdk-keys ls" to list keys.',
+              'Please provide the SDK key hash to delete. Run `vercel flags sdk-keys ls` to list keys.',
             next: [
+              {
+                command: buildCommandWithGlobalFlags(
+                  client.argv,
+                  'flags sdk-keys rm <hashKey>'
+                ),
+                when: 'delete an SDK key by hash',
+              },
               {
                 command: buildCommandWithGlobalFlags(
                   client.argv,
                   'flags sdk-keys ls'
                 ),
-              },
-              {
-                command: buildCommandWithGlobalFlags(
-                  client.argv,
-                  'flags sdk-keys rm <hashKey> --yes'
-                ),
+                when: 'list SDK keys to find the hash',
               },
             ],
           },
@@ -126,12 +113,6 @@ export default async function sdkKeysRm(
       output.stopSpinner();
 
       if (keys.length === 0) {
-        if (client.nonInteractive) {
-          client.stdout.write(
-            `${JSON.stringify({ status: 'ok', message: 'No SDK keys found.', keys: [] }, null, 2)}\n`
-          );
-          return 0;
-        }
         output.log('No SDK keys found');
         return 0;
       }
@@ -145,39 +126,43 @@ export default async function sdkKeysRm(
       });
     }
 
-    // Confirm deletion
+    // Confirm deletion (require --yes in non-interactive)
     if (!skipConfirmation) {
+      if (client.nonInteractive) {
+        outputAgentError(
+          client,
+          {
+            status: AGENT_STATUS.ERROR,
+            reason: AGENT_REASON.CONFIRMATION_REQUIRED,
+            message: `Confirm deletion of SDK key ${hashKey.slice(0, 12)}... by adding --yes.`,
+            next: [
+              {
+                command: buildCommandWithGlobalFlags(
+                  client.argv,
+                  `flags sdk-keys rm ${hashKey} --yes`
+                ),
+                when: 'confirm and delete the SDK key',
+              },
+            ],
+          },
+          1
+        );
+        return 1;
+      }
       const confirmed = await client.input.confirm(
         `Are you sure you want to delete SDK key ${chalk.bold(hashKey.slice(0, 12) + '...')}?`,
         false
       );
 
       if (!confirmed) {
-        if (!client.nonInteractive) output.log('Aborted');
+        output.log('Aborted');
         return 0;
       }
     }
 
-    if (!client.nonInteractive) {
-      output.spinner('Deleting SDK key...');
-    }
+    output.spinner('Deleting SDK key...');
     await deleteSdkKey(client, project.id, hashKey);
     output.stopSpinner();
-
-    if (client.nonInteractive) {
-      client.stdout.write(
-        `${JSON.stringify(
-          {
-            status: 'ok',
-            key: { hashKey: hashKey.slice(0, 12) + '...' },
-            message: 'SDK key has been deleted.',
-          },
-          null,
-          2
-        )}\n`
-      );
-      return 0;
-    }
 
     output.success(
       `SDK key ${chalk.bold(hashKey.slice(0, 12) + '...')} has been deleted`

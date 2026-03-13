@@ -6,11 +6,6 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { getLinkedProject } from '../../util/projects/link';
 import { getCommandName } from '../../util/pkg-name';
-import {
-  buildCommandWithGlobalFlags,
-  outputAgentError,
-} from '../../util/agent-output';
-import { AGENT_REASON, AGENT_STATUS } from '../../util/agent-output-constants';
 import { createFlag } from '../../util/flags/create-flag';
 import output from '../../output-manager';
 import { FlagsCreateTelemetryClient } from '../../util/telemetry/commands/flags/add';
@@ -58,26 +53,6 @@ export default async function create(
   const [slug] = args;
 
   if (!slug) {
-    if (client.nonInteractive) {
-      outputAgentError(
-        client,
-        {
-          status: AGENT_STATUS.ERROR,
-          reason: AGENT_REASON.MISSING_ARGUMENTS,
-          message: 'Please provide a slug for the feature flag.',
-          next: [
-            {
-              command: buildCommandWithGlobalFlags(
-                client.argv,
-                'flags add <slug>'
-              ),
-            },
-          ],
-        },
-        1
-      );
-      return 1;
-    }
     output.error('Please provide a slug for the feature flag');
     output.log(`Example: ${getCommandName('flags create my-feature')}`);
     return 1;
@@ -93,26 +68,6 @@ export default async function create(
   telemetryClient.trackCliOptionDescription(description);
 
   if (kind !== 'boolean' && kind !== 'string' && kind !== 'number') {
-    if (client.nonInteractive) {
-      outputAgentError(
-        client,
-        {
-          status: AGENT_STATUS.ERROR,
-          reason: AGENT_REASON.INVALID_ARGUMENTS,
-          message: `Invalid kind: ${kind}. Must be one of: boolean, string, number.`,
-          next: [
-            {
-              command: buildCommandWithGlobalFlags(
-                client.argv,
-                `flags add ${slug} --kind <boolean|string|number>`
-              ),
-            },
-          ],
-        },
-        1
-      );
-      return 1;
-    }
     output.error(
       `Invalid kind: ${kind}. Must be one of: boolean, string, number`
     );
@@ -123,23 +78,6 @@ export default async function create(
   if (link.status === 'error') {
     return link.exitCode;
   } else if (link.status === 'not_linked') {
-    if (client.nonInteractive) {
-      outputAgentError(
-        client,
-        {
-          status: AGENT_STATUS.ERROR,
-          reason: AGENT_REASON.NOT_LINKED,
-          message: 'Your codebase is not linked to a project. Run link first.',
-          next: [
-            {
-              command: buildCommandWithGlobalFlags(client.argv, 'link'),
-            },
-          ],
-        },
-        1
-      );
-      return 1;
-    }
     output.error(
       `Your codebase isn't linked to a project on Vercel. Run ${getCommandName('link')} to begin.`
     );
@@ -181,34 +119,9 @@ export default async function create(
   };
 
   try {
-    if (!client.nonInteractive) {
-      output.spinner('Creating feature flag...');
-    }
+    output.spinner('Creating feature flag...');
     const flag = await createFlag(client, project.id, request);
     output.stopSpinner();
-
-    if (client.nonInteractive) {
-      client.stdout.write(
-        `${JSON.stringify(
-          {
-            status: 'ok',
-            flag: { id: flag.id, slug: flag.slug, kind: flag.kind },
-            next: [
-              {
-                command: buildCommandWithGlobalFlags(
-                  client.argv,
-                  `flags inspect ${flag.slug}`
-                ),
-                when: 'Inspect the new flag',
-              },
-            ],
-          },
-          null,
-          2
-        )}\n`
-      );
-      return 0;
-    }
 
     output.success(
       `Feature flag ${chalk.bold(flag.slug)} created successfully`

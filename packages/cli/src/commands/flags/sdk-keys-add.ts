@@ -63,6 +63,7 @@ export default async function sdkKeysAdd(
           next: [
             {
               command: buildCommandWithGlobalFlags(client.argv, 'link'),
+              when: 'link the project',
             },
           ],
         },
@@ -76,57 +77,38 @@ export default async function sdkKeysAdd(
     return 1;
   }
 
-  if (client.nonInteractive) {
-    if (!sdkKeyType) {
-      outputAgentError(
-        client,
-        {
-          status: AGENT_STATUS.ERROR,
-          reason: AGENT_REASON.MISSING_ARGUMENTS,
-          message: 'Please provide --type (server, client, or mobile).',
-          next: [
-            {
-              command: buildCommandWithGlobalFlags(
-                client.argv,
-                'flags sdk-keys add --type <type> --environment <env>'
-              ),
-            },
-          ],
-        },
-        1
-      );
-      return 1;
-    }
-    if (!environment) {
-      outputAgentError(
-        client,
-        {
-          status: AGENT_STATUS.ERROR,
-          reason: AGENT_REASON.MISSING_ARGUMENTS,
-          message:
-            'Please provide --environment (production, preview, or development).',
-          next: [
-            {
-              command: buildCommandWithGlobalFlags(
-                client.argv,
-                `flags sdk-keys add --type ${sdkKeyType ?? 'server'} --environment <env>`
-              ),
-            },
-          ],
-        },
-        1
-      );
-      return 1;
-    }
-  }
-
   client.config.currentTeam =
     link.org.type === 'team' ? link.org.id : undefined;
 
   const { project } = link;
 
   // Prompt for type if not provided
-  if (!sdkKeyType && !client.nonInteractive) {
+  if (!sdkKeyType) {
+    if (client.nonInteractive) {
+      const envPart = environment
+        ? `--environment ${environment}`
+        : '--environment <production|preview|development>';
+      outputAgentError(
+        client,
+        {
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.MISSING_ARGUMENTS,
+          message:
+            'Please provide --type (server, client, or mobile) for the SDK key.',
+          next: [
+            {
+              command: buildCommandWithGlobalFlags(
+                client.argv,
+                `flags sdk-keys add --type <server|client|mobile> ${envPart}`
+              ),
+              when: 'create an SDK key with a specific type',
+            },
+          ],
+        },
+        1
+      );
+      return 1;
+    }
     sdkKeyType = await client.input.select({
       message: 'Select the SDK key type:',
       choices: [
@@ -143,7 +125,31 @@ export default async function sdkKeysAdd(
     });
   }
 
-  if (sdkKeyType === undefined || !VALID_TYPES.includes(sdkKeyType)) {
+  if (!VALID_TYPES.includes(sdkKeyType)) {
+    if (client.nonInteractive) {
+      const envPart = environment
+        ? `--environment ${environment}`
+        : '--environment <production|preview|development>';
+      outputAgentError(
+        client,
+        {
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.INVALID_ARGUMENTS,
+          message: `Invalid type: ${sdkKeyType}. Must be one of: ${VALID_TYPES.join(', ')}`,
+          next: [
+            {
+              command: buildCommandWithGlobalFlags(
+                client.argv,
+                `flags sdk-keys add --type <server|client|mobile> ${envPart}`
+              ),
+              when: 'use a valid type (server, client, or mobile)',
+            },
+          ],
+        },
+        1
+      );
+      return 1;
+    }
     output.error(
       `Invalid type: ${sdkKeyType}. Must be one of: ${VALID_TYPES.join(', ')}`
     );
@@ -151,7 +157,29 @@ export default async function sdkKeysAdd(
   }
 
   // Prompt for environment if not provided
-  if (!environment && !client.nonInteractive) {
+  if (!environment) {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.MISSING_ARGUMENTS,
+          message:
+            'Please provide --environment (production, preview, or development) for the SDK key.',
+          next: [
+            {
+              command: buildCommandWithGlobalFlags(
+                client.argv,
+                `flags sdk-keys add --type ${sdkKeyType} --environment <production|preview|development>`
+              ),
+              when: 'create an SDK key for a specific environment',
+            },
+          ],
+        },
+        1
+      );
+      return 1;
+    }
     environment = await client.input.select({
       message: 'Select the environment:',
       choices: VALID_ENVIRONMENTS.map(env => ({
@@ -161,16 +189,37 @@ export default async function sdkKeysAdd(
     });
   }
 
-  if (environment === undefined || !VALID_ENVIRONMENTS.includes(environment)) {
+  if (!VALID_ENVIRONMENTS.includes(environment)) {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.INVALID_ARGUMENTS,
+          message: `Invalid environment: ${environment}. Must be one of: ${VALID_ENVIRONMENTS.join(', ')}`,
+          next: [
+            {
+              command: buildCommandWithGlobalFlags(
+                client.argv,
+                `flags sdk-keys add --type ${sdkKeyType} --environment <production|preview|development>`
+              ),
+              when: 'use a valid environment (production, preview, or development)',
+            },
+          ],
+        },
+        1
+      );
+      return 1;
+    }
     output.error(
       `Invalid environment: ${environment}. Must be one of: ${VALID_ENVIRONMENTS.join(', ')}`
     );
     return 1;
   }
 
-  // Optionally prompt for label
+  // Optionally prompt for label (skip in non-interactive)
   let finalLabel = label;
-  if (!finalLabel && client.stdin.isTTY) {
+  if (!finalLabel && client.stdin.isTTY && !client.nonInteractive) {
     finalLabel = await client.input.text({
       message:
         'Enter an optional label for this SDK key (press Enter to skip):',
@@ -181,34 +230,15 @@ export default async function sdkKeysAdd(
   }
 
   const request: CreateSdkKeyRequest = {
-    sdkKeyType: sdkKeyType as 'server' | 'client' | 'mobile',
-    environment: environment as string,
+    sdkKeyType,
+    environment,
     label: finalLabel,
   };
 
   try {
-    if (!client.nonInteractive) {
-      output.spinner('Creating SDK key...');
-    }
+    output.spinner('Creating SDK key...');
     const key = await createSdkKey(client, project.id, request);
     output.stopSpinner();
-
-    if (client.nonInteractive) {
-      const json: Record<string, unknown> = {
-        status: 'ok',
-        key: {
-          hashKey: key.hashKey,
-          type: key.type,
-          environment: key.environment,
-          ...(key.label ? { label: key.label } : {}),
-        },
-        message: 'SDK key created successfully.',
-      };
-      if (key.keyValue) json.keyValue = key.keyValue;
-      if (key.connectionString) json.connectionString = key.connectionString;
-      client.stdout.write(`${JSON.stringify(json, null, 2)}\n`);
-      return 0;
-    }
 
     output.success('SDK key created successfully');
     output.print('\n');

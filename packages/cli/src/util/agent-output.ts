@@ -11,8 +11,6 @@ export interface ActionRequiredPayload {
   reason?: string;
   action?: string;
   message: string;
-  /** When true, the user must perform an action (e.g. log in); the agent should not substitute or automate. */
-  userActionRequired?: boolean;
   /** Hint for agents: run one of the commands in next[] to complete without prompting. */
   hint?: string;
   verification_uri?: string;
@@ -44,95 +42,10 @@ export interface AgentErrorPayload {
   reason: string;
   message: string;
   next?: Array<{ command: string; when?: string }>;
-}
-
-/** Global CLI flag names (long form) that take a value; used when extracting from argv. */
-const GLOBAL_FLAGS_TAKING_VALUE = new Set([
-  '--cwd',
-  '--local-config',
-  '-A',
-  '--global-config',
-  '-Q',
-  '--scope',
-  '-S',
-  '--token',
-  '-t',
-  '--team',
-  '-T',
-  '--api',
-]);
-
-/** Global CLI flags to preserve in suggested "next" commands (long and short). */
-const GLOBAL_FLAG_NAMES = new Set([
-  '--help',
-  '-h',
-  '--version',
-  '-v',
-  '--cwd',
-  '--local-config',
-  '-A',
-  '--global-config',
-  '-Q',
-  '--debug',
-  '-d',
-  '--no-color',
-  '--non-interactive',
-  '--scope',
-  '-S',
-  '--token',
-  '-t',
-  '--team',
-  '-T',
-  '--api',
-  '--yes',
-  '-y',
-]);
-
-/**
- * Extracts global CLI flags from argv (e.g. --cwd, --non-interactive, --yes)
- * for appending to suggested "next" commands so they are copy-pastable with the same context.
- */
-export function getGlobalFlagsFromArgv(argv: string[]): string[] {
-  const args = argv.slice(2);
-  const out: string[] = [];
-  for (let i = 0; i < args.length; i++) {
-    const a = args[i];
-    if (!a.startsWith('-')) continue;
-    const name = a.split('=')[0];
-    if (!GLOBAL_FLAG_NAMES.has(name)) continue;
-    out.push(a);
-    if (
-      GLOBAL_FLAGS_TAKING_VALUE.has(name) &&
-      !a.includes('=') &&
-      i + 1 < args.length
-    ) {
-      i++;
-      out.push(args[i]);
-    }
-  }
-  return out;
-}
-
-/**
- * Builds a suggested command string by appending global flags from argv to the template.
- * Use for "next" commands so the agent gets a copy-pastable command with --cwd, --non-interactive, etc.
- * Omits flags that already appear in the template to avoid duplicates.
- */
-export function buildCommandWithGlobalFlags(
-  argv: string[],
-  commandTemplate: string,
-  pkgName: string = packageName
-): string {
-  const base = `${pkgName} ${commandTemplate}`;
-  const globalFlags = getGlobalFlagsFromArgv(argv);
-  if (globalFlags.length === 0) return base;
-  const templateLower = base.toLowerCase();
-  const deduped = globalFlags.filter(flag => {
-    const name = flag.split('=')[0];
-    return !templateLower.includes(name);
-  });
-  if (deduped.length === 0) return base;
-  return `${base} ${deduped.join(' ')}`;
+  /** Optional extra context for agents (plain text, no ANSI). */
+  hint?: string;
+  /** When true, a human must act before the command can succeed. */
+  userActionRequired?: boolean;
 }
 
 /**
@@ -147,6 +60,89 @@ export function buildCommandWithYes(
   const hasYes = args.some(a => a === '--yes' || a === '-y');
   const out = hasYes ? [...args] : [...args, '--yes'];
   return `${pkgName} ${out.join(' ')}`;
+}
+
+/** Global flags that should be preserved in suggested "next" commands (e.g. --cwd, --non-interactive). */
+const GLOBAL_FLAG_NAMES = new Set([
+  '--cwd',
+  '--config',
+  '--yes',
+  '-y',
+  '--non-interactive',
+  '--scope',
+  '--team',
+  '-S',
+  '-T',
+  '--token',
+]);
+
+/**
+ * Returns global flag args from argv so suggested commands can include them (e.g. --cwd, --non-interactive).
+ */
+export function getGlobalFlagsFromArgv(argv: string[]): string[] {
+  const args = argv.slice(2);
+  const out: string[] = [];
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    const name = arg.startsWith('--') ? arg.split('=')[0] : arg;
+    if (GLOBAL_FLAG_NAMES.has(name)) {
+      out.push(arg);
+      if (
+        !arg.includes('=') &&
+        i + 1 < args.length &&
+        !args[i + 1].startsWith('-')
+      ) {
+        out.push(args[i + 1]);
+        i++;
+      }
+    }
+  }
+  return out;
+}
+
+/**
+ * Options for buildCommandWithGlobalFlags.
+ * excludeFlags: flag names to omit from the suggested command (e.g. ['--non-interactive'] for login).
+ */
+export interface BuildCommandWithGlobalFlagsOptions {
+  excludeFlags?: string[];
+}
+
+/**
+ * Builds a suggested command string from a template and appends global flags from argv
+ * (e.g. --cwd, --non-interactive) so the next command can be run with the same context.
+ * Use excludeFlags to omit flags that must not appear (e.g. --non-interactive for login).
+ */
+export function buildCommandWithGlobalFlags(
+  argv: string[],
+  commandTemplate: string,
+  pkgName: string = packageName,
+  options?: BuildCommandWithGlobalFlagsOptions
+): string {
+  let preserved = getGlobalFlagsFromArgv(argv);
+  if (options?.excludeFlags?.length) {
+    const exclude = new Set(options.excludeFlags);
+    const out: string[] = [];
+    for (let i = 0; i < preserved.length; i++) {
+      const arg = preserved[i];
+      const name = arg.startsWith('--') ? arg.split('=')[0] : arg;
+      if (exclude.has(name)) {
+        if (
+          !arg.includes('=') &&
+          i + 1 < preserved.length &&
+          !preserved[i + 1].startsWith('-')
+        ) {
+          i++;
+        }
+        continue;
+      }
+      out.push(arg);
+    }
+    preserved = out;
+  }
+  const base = `${pkgName} ${commandTemplate}`;
+  if (preserved.length === 0) return base;
+  return `${base} ${preserved.join(' ')}`;
 }
 
 /**

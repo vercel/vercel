@@ -62,13 +62,7 @@ import * as ERRORS from './util/errors-ts';
 import { APIError } from './util/errors-ts';
 import getUpdateCommand from './util/get-update-command';
 import { executeUpgrade } from './util/upgrade';
-import {
-  getCommandName,
-  getCommandNamePlain,
-  getTitleName,
-} from './util/pkg-name';
-import { outputActionRequired } from './util/agent-output';
-import { AGENT_REASON } from './util/agent-output-constants';
+import { getCommandName, getTitleName } from './util/pkg-name';
 import login from './commands/login';
 import type { AuthConfig, GlobalConfig } from '@vercel-internals/types';
 import type { VercelConfig } from '@vercel/client';
@@ -82,6 +76,10 @@ import { checkTelemetryStatus } from './util/telemetry/check-status';
 import output from './output-manager';
 import { checkGuidanceStatus } from './util/guidance/check-status';
 import { determineAgent } from '@vercel/detect-agent';
+import {
+  buildCommandWithGlobalFlags,
+  outputActionRequired,
+} from './util/agent-output';
 
 const VERCEL_DIR = getGlobalPathConfig();
 const VERCEL_CONFIG_PATH = configFiles.getConfigFilePath();
@@ -488,17 +486,24 @@ const main = async () => {
         client,
         {
           status: 'action_required',
-          reason: AGENT_REASON.LOGIN_REQUIRED,
-          message:
-            'No existing credentials found. The user must run the login command to authenticate.',
+          reason: 'login_required',
+          action: 'login_required',
           userActionRequired: true,
+          message:
+            'No credentials found. A user must log in before running this command.',
           next: [
             {
-              command: getCommandNamePlain('login'),
-              when: 'user must run this command to log in',
+              command: buildCommandWithGlobalFlags(
+                client.argv,
+                'login',
+                undefined,
+                {
+                  excludeFlags: ['--non-interactive'],
+                }
+              ),
+              when: 'to log in',
             },
           ],
-          hint: 'The user needs to run the login command.',
         },
         1
       );
@@ -611,6 +616,7 @@ const main = async () => {
 
     try {
       user = await getUser(client);
+      telemetryEventStore.updateUserId(user.id);
     } catch (err: unknown) {
       if (err instanceof Error) {
         output.debug(err.stack || err.toString());
@@ -1049,6 +1055,14 @@ const main = async () => {
   }
 
   telemetryEventStore.updateTeamId(client.config.currentTeam);
+  if (!telemetryEventStore.hasUserId) {
+    try {
+      const user = await getUser(client);
+      telemetryEventStore.updateUserId(user.id);
+    } catch {
+      // best-effort for telemetry
+    }
+  }
   await telemetryEventStore.save();
 
   return exitCode;

@@ -58,6 +58,9 @@ export default async function disable(
 
   if (!flagArg) {
     if (client.nonInteractive) {
+      const envPart = environment
+        ? `--environment ${environment}`
+        : '--environment <production|preview|development>';
       outputAgentError(
         client,
         {
@@ -68,8 +71,9 @@ export default async function disable(
             {
               command: buildCommandWithGlobalFlags(
                 client.argv,
-                'flags disable <flag> --environment <env>'
+                `flags disable <flag> ${envPart}`
               ),
+              when: 'disable a feature flag by slug or ID',
             },
           ],
         },
@@ -80,28 +84,6 @@ export default async function disable(
     output.error('Please provide a flag slug or ID to disable');
     output.log(
       `Example: ${getCommandName('flags disable my-feature --environment production')}`
-    );
-    return 1;
-  }
-
-  if (client.nonInteractive && !environment) {
-    outputAgentError(
-      client,
-      {
-        status: AGENT_STATUS.ERROR,
-        reason: AGENT_REASON.MISSING_ARGUMENTS,
-        message:
-          'Please provide --environment (production, preview, or development).',
-        next: [
-          {
-            command: buildCommandWithGlobalFlags(
-              client.argv,
-              `flags disable ${flagArg} --environment <env>`
-            ),
-          },
-        ],
-      },
-      1
     );
     return 1;
   }
@@ -125,6 +107,7 @@ export default async function disable(
           next: [
             {
               command: buildCommandWithGlobalFlags(client.argv, 'link'),
+              when: 'link the project',
             },
           ],
         },
@@ -144,26 +127,12 @@ export default async function disable(
   const { project } = link;
 
   try {
-    if (!client.nonInteractive) {
-      output.spinner('Fetching flag...');
-    }
+    // Fetch the flag
+    output.spinner('Fetching flag...');
     const flag = await getFlag(client, project.id, flagArg);
     output.stopSpinner();
 
     if (flag.state === 'archived') {
-      if (client.nonInteractive) {
-        outputAgentError(
-          client,
-          {
-            status: 'error',
-            reason: 'flag_archived',
-            message: `Flag ${flag.slug} is archived and cannot be disabled.`,
-            next: [],
-          },
-          1
-        );
-        return 1;
-      }
       output.error(
         `Flag ${chalk.bold(flag.slug)} is archived and cannot be disabled`
       );
@@ -172,19 +141,6 @@ export default async function disable(
 
     // Only boolean flags can be enabled/disabled via CLI
     if (flag.kind !== 'boolean') {
-      if (client.nonInteractive) {
-        outputAgentError(
-          client,
-          {
-            status: AGENT_STATUS.ERROR,
-            reason: 'not_boolean_flag',
-            message: `The flags disable command only works with boolean flags. Flag ${flag.slug} is ${flag.kind}.`,
-            next: [],
-          },
-          1
-        );
-        return 1;
-      }
       logNonBooleanFlagGuidance(flag, {
         attemptedSubcommand: 'disable',
         environment,
@@ -193,6 +149,29 @@ export default async function disable(
         projectName: project.name,
       });
       return 0;
+    }
+
+    if (!environment && client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.MISSING_ARGUMENTS,
+          message:
+            'Please provide --environment (production, preview, or development) to disable the flag in.',
+          next: [
+            {
+              command: buildCommandWithGlobalFlags(
+                client.argv,
+                `flags disable ${flagArg} --environment <production|preview|development>`
+              ),
+              when: 'disable the flag in a specific environment',
+            },
+          ],
+        },
+        1
+      );
+      return 1;
     }
 
     environment = await resolveFlagEnvironment(
@@ -208,26 +187,6 @@ export default async function disable(
     if (variantId) {
       const result = resolveVariant(variantId, flag.variants);
       if (result.error) {
-        if (client.nonInteractive) {
-          outputAgentError(
-            client,
-            {
-              status: AGENT_STATUS.ERROR,
-              reason: 'invalid_variant',
-              message: result.error,
-              next: [
-                {
-                  command: buildCommandWithGlobalFlags(
-                    client.argv,
-                    `flags disable ${flagArg} -e ${environment} --variant <id|value|label>`
-                  ),
-                },
-              ],
-            },
-            1
-          );
-          return 1;
-        }
         output.error(result.error);
         return 1;
       }
@@ -236,21 +195,6 @@ export default async function disable(
     }
 
     if (isPausingEnvironmentToVariant(envConfig, selectedVariant.id)) {
-      if (client.nonInteractive) {
-        client.stdout.write(
-          `${JSON.stringify(
-            {
-              status: 'ok',
-              flag: { slug: flag.slug },
-              environment,
-              message: 'Flag is already disabled in this environment.',
-            },
-            null,
-            2
-          )}\n`
-        );
-        return 0;
-      }
       output.warn(
         `Flag ${chalk.bold(flag.slug)} is already disabled in ${environment}`
       );
@@ -263,9 +207,7 @@ export default async function disable(
       getDefaultDisableMessage(environment)
     );
 
-    if (!client.nonInteractive) {
-      output.spinner(`Disabling flag in ${environment}...`);
-    }
+    output.spinner(`Disabling flag in ${environment}...`);
     await updateFlag(client, project.id, flagArg, {
       environments: {
         [environment]: buildPausedEnvironmentConfig(
@@ -277,24 +219,6 @@ export default async function disable(
     });
     output.stopSpinner();
 
-    if (client.nonInteractive) {
-      client.stdout.write(
-        `${JSON.stringify(
-          {
-            status: 'ok',
-            flag: { slug: flag.slug },
-            environment,
-            variantId: selectedVariant.id,
-            variantValue: selectedVariant.value,
-            message: `Feature flag ${flag.slug} has been disabled in ${environment}.`,
-          },
-          null,
-          2
-        )}\n`
-      );
-      return 0;
-    }
-
     output.success(
       `Feature flag ${chalk.bold(flag.slug)} has been disabled in ${chalk.bold(environment)}`
     );
@@ -303,24 +227,21 @@ export default async function disable(
     );
   } catch (err) {
     output.stopSpinner();
-    if (
-      client.nonInteractive &&
-      err instanceof Error &&
-      err.message.includes('Invalid environment')
-    ) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (client.nonInteractive && message.startsWith('Invalid environment:')) {
       outputAgentError(
         client,
         {
           status: AGENT_STATUS.ERROR,
           reason: AGENT_REASON.INVALID_ARGUMENTS,
-          message: err.message,
+          message,
           next: [
             {
               command: buildCommandWithGlobalFlags(
                 client.argv,
                 `flags disable ${flagArg} --environment <production|preview|development>`
               ),
-              when: 'use a valid environment: production, preview, or development',
+              when: 'use a valid environment (production, preview, or development)',
             },
           ],
         },

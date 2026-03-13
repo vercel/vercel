@@ -2,11 +2,6 @@ import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
-import {
-  buildCommandWithGlobalFlags,
-  outputAgentError,
-} from '../../util/agent-output';
-import { AGENT_REASON, AGENT_STATUS } from '../../util/agent-output-constants';
 import { getLinkedProject } from '../../util/projects/link';
 import { getCommandName } from '../../util/pkg-name';
 import { getFlag, getFlagSettings } from '../../util/flags/get-flags';
@@ -31,27 +26,6 @@ export default async function inspect(
   try {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
-    if (client.nonInteractive) {
-      outputAgentError(
-        client,
-        {
-          status: AGENT_STATUS.ERROR,
-          reason: AGENT_REASON.INVALID_ARGUMENTS,
-          message: err instanceof Error ? err.message : String(err),
-          next: [
-            {
-              command: buildCommandWithGlobalFlags(
-                client.argv,
-                'flags inspect <flag>'
-              ),
-              when: 'inspect a feature flag by slug or ID',
-            },
-          ],
-        },
-        1
-      );
-      return 1;
-    }
     printError(err);
     return 1;
   }
@@ -60,27 +34,6 @@ export default async function inspect(
   const [flagArg] = args;
 
   if (!flagArg) {
-    if (client.nonInteractive) {
-      outputAgentError(
-        client,
-        {
-          status: AGENT_STATUS.ERROR,
-          reason: AGENT_REASON.MISSING_ARGUMENTS,
-          message: 'Missing required argument: flag.',
-          next: [
-            {
-              command: buildCommandWithGlobalFlags(
-                client.argv,
-                'flags inspect <flag>'
-              ),
-              when: 'inspect a feature flag by slug or ID',
-            },
-          ],
-        },
-        1
-      );
-      return 1;
-    }
     output.error(
       `Missing required argument: flag. Usage: ${getCommandName('flags inspect <flag>')}`
     );
@@ -93,24 +46,6 @@ export default async function inspect(
   if (link.status === 'error') {
     return link.exitCode;
   } else if (link.status === 'not_linked') {
-    if (client.nonInteractive) {
-      outputAgentError(
-        client,
-        {
-          status: AGENT_STATUS.ERROR,
-          reason: AGENT_REASON.NOT_LINKED,
-          message: 'Your codebase is not linked to a project. Run link first.',
-          next: [
-            {
-              command: buildCommandWithGlobalFlags(client.argv, 'link'),
-              when: 'link the project',
-            },
-          ],
-        },
-        1
-      );
-      return 1;
-    }
     output.error(
       `Your codebase isn't linked to a project on Vercel. Run ${getCommandName('link')} to begin.`
     );
@@ -136,24 +71,6 @@ export default async function inspect(
       projectName: project.name,
     });
   } catch (err) {
-    if (client.nonInteractive) {
-      outputAgentError(
-        client,
-        {
-          status: AGENT_STATUS.ERROR,
-          reason: AGENT_REASON.NOT_FOUND,
-          message: err instanceof Error ? err.message : String(err),
-          next: [
-            {
-              command: buildCommandWithGlobalFlags(client.argv, 'flags ls'),
-              when: 'list flags to see valid slugs/IDs',
-            },
-          ],
-        },
-        1
-      );
-      return 1;
-    }
     printError(err);
     return 1;
   }
