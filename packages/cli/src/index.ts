@@ -490,6 +490,7 @@ const main = async () => {
           status: 'action_required',
           reason: 'login_required',
           action: 'login_required',
+          userActionRequired: true,
           message:
             'No credentials found. A user must log in before running this command.',
           hint: `Run this command to log in (without --non-interactive so the user can complete sign-in in the browser): ${loginCmd}`,
