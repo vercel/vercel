@@ -1,5 +1,11 @@
 # @vercel/python-analysis
 
+## 0.9.1
+
+### Patch Changes
+
+- Update `pip-requirements-js` to include fixes for grouped `requirements.txt` environment markers and add regression coverage for Poetry-style marker expressions. ([#15422](https://github.com/vercel/vercel/pull/15422))
+
 ## 0.9.0
 
 ### Minor Changes

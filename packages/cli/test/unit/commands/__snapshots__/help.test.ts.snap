@@ -3283,6 +3283,50 @@ exports[`help command > integration help output snapshots > integration list sub
 "
 `;
 
+exports[`help command > integration help output snapshots > integration remove subcommand > integration remove subcommand help column width 120 1`] = `
+"
+  ▲ vercel integration remove integration [options]
+
+  Uninstalls a marketplace integration. Resources must be removed first using \`integration-resource remove\`.            
+
+  Options:
+
+  -F,  --format <FORMAT>  Specify the output format (json)                                                              
+  -y,  --yes              Skip the confirmation prompt when uninstalling an integration                                 
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+       --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - Uninstall an integration
+
+    $ vercel integration remove <integration>
+    $ vercel integration remove acme
+
+  - Remove a resource before uninstalling
+
+    $ vercel integration-resource remove <resource-name> --disconnect-all --yes
+
+  - Output as JSON
+
+    $ vercel integration remove acme --format=json --yes
+
+"
+`;
+
 exports[`help command > integration-resource help output snapshots > integration-resource create-threshold subcommand > integration-resource create-threshold subcommand help column width 120 1`] = `
 "
   ▲ vercel integration-resource create-threshold resource minimum spend limit [options]
@@ -5621,9 +5665,15 @@ exports[`help command > target help output snapshots > target list help output s
 
 exports[`help command > teams help output snapshots > teams add help output snapshots > teams add help column width 120 1`] = `
 "
-  ▲ vercel teams add
+  ▲ vercel teams add [options]
 
   Create a new team                                                                                                     
+
+  Options:
+
+   --name  Display name for the team; required in non-interactive mode                                                   
+   --slug  Team URL slug (e.g. acme for vercel.com/acme); required in non-interactive mode                               
+
 
   Global Options:
 
@@ -5638,6 +5688,16 @@ exports[`help command > teams help output snapshots > teams add help output snap
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
 
+
+  Examples:
+
+  - Create a team (interactive)
+
+    $ vercel teams add
+
+  - Create a team non-interactively
+
+    $ vercel teams add --slug acme --name "Acme Corp"
 
 "
 `;
@@ -5804,7 +5864,7 @@ exports[`help command > teams help output snapshots > teams invite help output s
 
     $ vercel teams invite
 
-  - Invite multiple members simultaneously
+  - Invite multiple members (required in non-interactive mode)
 
     $ vercel teams invite abc@vercel.com xyz@vercel.com
 

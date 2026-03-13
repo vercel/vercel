@@ -102,6 +102,44 @@ describe('Lambda', () => {
     }
   });
 
+  describe('maxDuration', () => {
+    const files: Files = {};
+
+    it('should accept a numeric maxDuration', () => {
+      const lambda = new Lambda({
+        files,
+        handler: 'index.handler',
+        runtime: 'nodejs22.x',
+        maxDuration: 60,
+      });
+
+      expect(lambda.maxDuration).toBe(60);
+    });
+
+    it('should accept maxDuration: "max"', () => {
+      const lambda = new Lambda({
+        files,
+        handler: 'index.handler',
+        runtime: 'nodejs22.x',
+        maxDuration: 'max',
+      });
+
+      expect(lambda.maxDuration).toBe('max');
+    });
+
+    it('should throw error for invalid string maxDuration', () => {
+      expect(
+        () =>
+          new Lambda({
+            files,
+            handler: 'index.handler',
+            runtime: 'nodejs22.x',
+            maxDuration: 'invalid' as any,
+          })
+      ).toThrow('"maxDuration" is not a number or "max"');
+    });
+  });
+
   describe('TriggerEvent', () => {
     const files: Files = {};
 

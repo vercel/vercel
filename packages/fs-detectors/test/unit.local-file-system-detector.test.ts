@@ -4,16 +4,18 @@ import path from 'node:path';
 import net from 'node:net';
 import { LocalFileSystemDetector, DetectorFilesystem } from '../src';
 
-const tmpdir = path.join(os.tmpdir(), 'local-file-system-test');
-
 const dirs = ['', 'a', `a${path.sep}b`]; // root, single-nested, double-nested
 const files = ['foo', 'bar'];
 const filePaths = dirs.flatMap(dir => files.map(file => path.join(dir, file)));
-
-const localFileSystem = new LocalFileSystemDetector(tmpdir);
+let tmpdir!: string;
+let localFileSystem!: LocalFileSystemDetector;
 
 describe('LocalFileSystemDetector', () => {
   beforeAll(async () => {
+    tmpdir = await fs.mkdtemp(
+      path.join(os.tmpdir(), 'local-file-system-test-')
+    );
+    localFileSystem = new LocalFileSystemDetector(tmpdir);
     await Promise.all(
       dirs.map(dir => fs.mkdir(path.join(tmpdir, dir), { recursive: true }))
     );
@@ -77,22 +79,31 @@ describe('LocalFileSystemDetector', () => {
       return;
     }
 
-    const socketdir = path.join(os.tmpdir(), 'socket-dir');
+    const socketdir = await fs.mkdtemp(path.join(os.tmpdir(), 'socket-dir-'));
     const socketFileSystem = new LocalFileSystemDetector(socketdir);
     const server = net.createServer();
+    const socketPath = path.join(socketdir, 'socket');
 
     try {
-      fs.mkdir(socketdir, { recursive: true });
-      await new Promise<void>(resolve => {
-        server.listen(path.join(socketdir, 'socket'), () => resolve());
+      await new Promise<void>((resolve, reject) => {
+        server.once('error', reject);
+        server.listen(socketPath, () => resolve());
       });
-      const readdirResults = await socketFileSystem.readdir(socketdir);
+      const readdirResults = await socketFileSystem.readdir('');
       expect(readdirResults).toEqual([]);
     } finally {
+      if (server.listening) {
+        await new Promise<void>((resolve, reject) => {
+          server.close(err => {
+            if (err) {
+              reject(err);
+            } else {
+              resolve();
+            }
+          });
+        });
+      }
       await fs.rm(socketdir, { recursive: true, force: true });
-      await new Promise<void>(resolve => {
-        server.close(() => resolve());
-      });
     }
   });
 

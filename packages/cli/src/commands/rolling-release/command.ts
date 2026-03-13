@@ -80,6 +80,10 @@ export const startSubcommand = {
       name: 'Start a rolling release using URL',
       value: `${packageName} rr start --dpl=https://example.vercel.app`,
     },
+    {
+      name: 'Non-interactive (e.g. preview deployment): use --yes to promote',
+      value: `${packageName} rr start --dpl=dpl_123 --yes`,
+    },
   ],
   options: [
     {

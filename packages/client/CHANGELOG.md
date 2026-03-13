@@ -1,5 +1,27 @@
 # @vercel/client
 
+## 17.2.58
+
+### Patch Changes
+
+- Fix bulkRedirectsPath with --prebuilt to support directories ([#15484](https://github.com/vercel/vercel/pull/15484))
+
+  When using `bulkRedirectsPath` with `--prebuilt` deployments, the path can now point to either a file or a directory containing redirect files. Previously, only single files were supported, causing deployments to fail with "No files found at path" when using a directory.
+
+## 17.2.57
+
+### Patch Changes
+
+- Updated dependencies [[`b5542a65e3f1b0e1d1a4b93b89ef7b14d1abfab6`](https://github.com/vercel/vercel/commit/b5542a65e3f1b0e1d1a4b93b89ef7b14d1abfab6), [`8a3558f680d592b4ea47ac7e48c99145d6368941`](https://github.com/vercel/vercel/commit/8a3558f680d592b4ea47ac7e48c99145d6368941)]:
+  - @vercel/build-utils@13.8.0
+
+## 17.2.56
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/build-utils@13.7.2
+
 ## 17.2.55
 
 ### Patch Changes
