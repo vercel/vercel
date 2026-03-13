@@ -159,6 +159,9 @@ export const build: BuildV2 = async args => {
 
     const lambda = new NodejsLambda(lambdaArgs);
 
+    const serviceRoutePrefix = normalizeServiceRoutePrefix(
+      args.config?.routePrefix ?? args.service?.routePrefix
+    );
     const serviceName =
       typeof args.config?.serviceName === 'string' &&
       args.config.serviceName !== ''
@@ -169,14 +172,18 @@ export const build: BuildV2 = async args => {
         ? `/_svc/${serviceName}/index`
         : undefined;
     const internalServiceOutputPath = internalServiceFunctionPath?.slice(1);
-    const remapRouteDestination = <T extends { dest?: string }>(
+    const remapRouteDestination = <T extends { src?: string; dest?: string }>(
       route: T
     ): T => {
+      const prefixedRoute = maybePrefixServiceRouteSource(
+        route,
+        serviceRoutePrefix
+      );
       if (!internalServiceFunctionPath || !route.dest) {
-        return route;
+        return prefixedRoute;
       }
       return {
-        ...route,
+        ...prefixedRoute,
         dest: internalServiceFunctionPath,
       };
     };
@@ -188,7 +195,7 @@ export const build: BuildV2 = async args => {
       },
       ...introspectionResult.routes.map(remapRouteDestination),
       {
-        src: '/(.*)',
+        src: getServiceCatchallSource(serviceRoutePrefix),
         dest: internalServiceFunctionPath ?? '/',
       },
     ];
@@ -223,3 +230,78 @@ export const prepareCache: PrepareCache = ({ repoRootPath, workPath }) => {
 
 const normalizeArray = (value: any) =>
   Array.isArray(value) ? value : value ? [value] : [];
+
+const normalizeServiceRoutePrefix = (routePrefix: unknown) => {
+  if (
+    typeof routePrefix !== 'string' ||
+    routePrefix === '' ||
+    routePrefix === '.'
+  ) {
+    return undefined;
+  }
+
+  let normalized = routePrefix.startsWith('/')
+    ? routePrefix
+    : `/${routePrefix}`;
+  if (normalized !== '/' && normalized.endsWith('/')) {
+    normalized = normalized.slice(0, -1);
+  }
+  return normalized === '/' ? undefined : normalized;
+};
+
+const maybePrefixServiceRouteSource = <
+  T extends { src?: string; dest?: string },
+>(
+  route: T,
+  routePrefix?: string
+): T => {
+  if (
+    !routePrefix ||
+    typeof route.dest !== 'string' ||
+    !route.dest.startsWith('/')
+  ) {
+    return route;
+  }
+
+  return {
+    ...route,
+    src: getPrefixedRouteSource(route.src, route.dest, routePrefix),
+  };
+};
+
+const getPrefixedRouteSource = (
+  routeSource: string | undefined,
+  routePath: string,
+  routePrefix: string
+) => {
+  if (!routeSource) {
+    return routeSource;
+  }
+
+  if (routePath === routePrefix || routePath.startsWith(`${routePrefix}/`)) {
+    return routeSource;
+  }
+
+  const escapedRoutePrefix = toRegexSource(routePrefix);
+  if (routeSource.startsWith('^(?:')) {
+    return `^(?:${escapedRoutePrefix}${routeSource.slice(4)}`;
+  }
+  if (routeSource.startsWith('^')) {
+    return `^${escapedRoutePrefix}${routeSource.slice(1)}`;
+  }
+  return `${escapedRoutePrefix}${routeSource}`;
+};
+
+const getServiceCatchallSource = (routePrefix?: string) => {
+  if (!routePrefix) {
+    return '/(.*)';
+  }
+
+  return `^${escapeForRegex(routePrefix)}(?:/(.*))?$`;
+};
+
+const escapeForRegex = (value: string) =>
+  value.replace(/[|\\{}()[\]^$+*?.]/g, '\\$&');
+
+const toRegexSource = (value: string) =>
+  escapeForRegex(value).replaceAll('/', '\\/');

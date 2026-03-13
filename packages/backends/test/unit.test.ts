@@ -7,6 +7,7 @@ import { build } from '../src/index';
 import { join, resolve } from 'node:path';
 import execa from 'execa';
 import { describe, expect, it } from 'vitest';
+import { pathToRegexp } from 'path-to-regexp';
 import {
   readdir,
   readFile,
@@ -259,6 +260,77 @@ it('maps service internal function output without leading slash', async () => {
   ).toBe(true);
   expect(result.output['_svc/js-api/index']).toBeDefined();
   expect(result.output['/_svc/js-api/index']).toBeUndefined();
+}, 30000);
+
+it('prefixes emitted service route sources with routePrefix', async () => {
+  const fixtureName = '01-express-index-ts-esm';
+  const fixtureSource = join(__dirname, 'fixtures', fixtureName);
+  const { workDir } = await getWorkDir(fixtureName, fixtureSource);
+
+  const result = (await build({
+    files: {},
+    workPath: workDir,
+    config: {
+      ...defaultConfig,
+      routePrefix: 'api/js',
+      serviceName: 'js-api',
+    },
+    meta,
+    entrypoint: 'package.json',
+    repoRootPath: workDir,
+  })) as BuildResultV2Typical;
+
+  expect(result.routes).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        src: pathToRegexp('/api/js/user/:id').regexp.source,
+        dest: '/_svc/js-api/index',
+        methods: ['GET'],
+      }),
+      expect.objectContaining({
+        src: '^/api/js(?:/(.*))?$',
+        dest: '/_svc/js-api/index',
+      }),
+    ])
+  );
+}, 30000);
+
+it('does not double-prefix routes already authored with routePrefix', async () => {
+  const fixtureName = '04-hono-index-ts-esm';
+  const fixtureSource = join(__dirname, 'fixtures', fixtureName);
+  const { workDir } = await getWorkDir(fixtureName, fixtureSource);
+
+  const result = (await build({
+    files: {},
+    workPath: workDir,
+    config: {
+      ...defaultConfig,
+      routePrefix: 'api',
+      serviceName: 'hono-api',
+    },
+    meta,
+    entrypoint: 'package.json',
+    repoRootPath: workDir,
+  })) as BuildResultV2Typical;
+
+  expect(result.routes).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        src: pathToRegexp('/api/data').regexp.source,
+        dest: '/_svc/hono-api/index',
+        methods: ['GET'],
+      }),
+      expect.objectContaining({
+        src: pathToRegexp('/api/user/:id').regexp.source,
+        dest: '/_svc/hono-api/index',
+        methods: ['GET'],
+      }),
+      expect.objectContaining({
+        src: '^/api(?:/(.*))?$',
+        dest: '/_svc/hono-api/index',
+      }),
+    ])
+  );
 }, 30000);
 
 it('does not rewrite non-service route outputs', async () => {
