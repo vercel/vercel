@@ -1,0 +1,11 @@
+[package]
+name = "host-bridge"
+version = "0.1.0"
+edition = { workspace = true }
+
+[dependencies]
+wit-bindgen = { workspace = true }
+
+[build-dependencies]
+wit-bindgen-rust = { workspace = true }
+wit-parser = { workspace = true }
