@@ -40,7 +40,8 @@ describe('dependency externalizer support', () => {
         uvLockPath,
         uvProjectDir: '/tmp/work',
         projectName: 'test-project',
-        noBuildCheckFailed: false,
+        pythonMajor: 3,
+        pythonMinor: 12,
         pythonPath: '/usr/bin/python3',
         hasCustomCommand,
       });

@@ -169,4 +169,24 @@ world python-analysis {
     /// `filename` is the name of the file being parsed (used in error messages);
     /// defaults to "requirements.txt" if not provided.
     export parse-requirements-txt: func(content: string, working-dir: option<string>, filename: option<string>) -> result<parsed-requirements-txt, string>;
+
+    // =========================================================================
+    // Wheel compatibility checking
+    // =========================================================================
+
+    /// Check if a wheel filename is compatible with a given platform.
+    ///
+    /// `wheel-filename` is the wheel filename (e.g. "numpy-1.26.4-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl").
+    /// `os-name` is one of "manylinux", "musllinux", "macos", "windows".
+    /// `arch-name` is e.g. "x86_64", "aarch64".
+    /// `os-major`/`os-minor` is the glibc version (for Linux) or macOS version.
+    export is-wheel-compatible: func(
+        wheel-filename: string,
+        python-major: u8,
+        python-minor: u8,
+        os-name: string,
+        arch-name: string,
+        os-major: u16,
+        os-minor: u16,
+    ) -> result<bool, string>;
 }
