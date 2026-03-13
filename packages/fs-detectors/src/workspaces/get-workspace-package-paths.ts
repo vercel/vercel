@@ -1,6 +1,6 @@
 import _path from 'path';
 import yaml from 'js-yaml';
-import glob from 'glob';
+import { glob } from 'glob';
 import json5 from 'json5';
 import { DetectorFilesystem } from '../detectors/filesystem';
 import { Workspace } from './get-workspaces';
@@ -79,21 +79,11 @@ async function getPackagePaths(
 ): Promise<string[]> {
   return (
     await Promise.all(
-      packages.map(
-        packageGlob =>
-          new Promise<string[]>((resolve, reject) => {
-            glob(
-              normalizePath(posixPath.join(packageGlob, 'package.json')),
-              {
-                cwd: '/',
-                fs: getGlobFs(fs),
-              },
-              (err, matches) => {
-                if (err) reject(err);
-                else resolve(matches);
-              }
-            );
-          })
+      packages.map(packageGlob =>
+        glob(normalizePath(posixPath.join(packageGlob, 'package.json')), {
+          cwd: '/',
+          fs: getGlobFs(fs),
+        })
       )
     )
   ).flat();
