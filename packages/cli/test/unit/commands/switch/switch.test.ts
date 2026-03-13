@@ -82,5 +82,27 @@ describe('switch', () => {
       const exitCode = await exitCodePromise;
       expect(exitCode, 'exit code for "switch"').toEqual(1);
     });
+
+    it('should prefer team when slug matches both personal username and team slug', async () => {
+      const user = useUser({ version: 'northstar' });
+      const matchingTeam = {
+        id: 'team_matching',
+        slug: user.username,
+        name: 'Matching Team',
+        creatorId: 'creator-id',
+        created: '2017-04-29T17:21:54.514Z',
+        avatar: null,
+      };
+      client.scenario.get('/v1/teams', (_req: any, res: any) => {
+        res.json({ teams: [matchingTeam] });
+      });
+
+      const exitCodePromise = teamsSwitch(client, [user.username]);
+      const exitCode = await exitCodePromise;
+      expect(exitCode, 'exit code for "switch"').toEqual(0);
+      await expect(client.stderr).toOutput(
+        `The team Matching Team (${user.username}) is now active!`
+      );
+    });
   });
 });
