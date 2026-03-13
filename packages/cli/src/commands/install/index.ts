@@ -26,13 +26,13 @@ export default async function install(client: Client) {
     },
   });
 
-  const ffAutoProvision = process.env.FF_AUTO_PROVISION_INSTALL === '1';
+  const ffAutoProvision = process.env.FF_AUTO_PROVISION_INSTALL !== '0';
   const cmd = ffAutoProvision
     ? installCommand
     : {
         ...installCommand,
         options: installCommand.options.filter(
-          o => o.name !== 'installation-id'
+          o => o.name !== 'installation-id' && o.name !== 'format'
         ),
       };
 

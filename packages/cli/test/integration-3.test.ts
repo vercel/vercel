@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 import ms from 'ms';
 import path from 'path';
 import { once } from 'node:events';
@@ -8,7 +7,7 @@ import { homedir } from 'os';
 import { runNpmInstall } from '@vercel/build-utils';
 import { execCli } from './helpers/exec';
 import type { RequestInfo } from 'node-fetch';
-import fetch from 'node-fetch';
+import nodeFetch from 'node-fetch';
 import fs from 'fs-extra';
 import { logo } from '../src/util/pkg-name';
 import sleep from '../src/util/sleep';
@@ -43,9 +42,8 @@ const waitForDeployment = async (href: RequestInfo) => {
   const start = Date.now();
   const max = ms('4m');
 
-  // eslint-disable-next-line
   while (true) {
-    const response = await fetch(href, { redirect: 'manual' });
+    const response = await nodeFetch(href, { redirect: 'manual' });
     const text = await response.text();
     if (
       response.status === 200 &&
@@ -147,7 +145,7 @@ test('output the version', async () => {
 });
 
 // https://linear.app/vercel/issue/ZERO-2736/turn-login-with-unregistered-user-test-in-a-unit-test
-// eslint-disable-next-line jest/no-disabled-tests
+// biome-ignore lint/suspicious/noSkippedTests: temporarily disabled
 test.skip('login with unregistered user', async () => {
   const { stdout, stderr, exitCode } = await execCli(
     binaryPath,
@@ -164,7 +162,7 @@ test.skip('login with unregistered user', async () => {
 });
 
 // TODO: fix: --public does not make deployments public
-// eslint-disable-next-line jest/no-disabled-tests
+// biome-ignore lint/suspicious/noSkippedTests: temporarily disabled
 test.skip('ignore files specified in .nowignore', async () => {
   const directory = await setupE2EFixture('nowignore');
 
@@ -174,15 +172,15 @@ test.skip('ignore files specified in .nowignore', async () => {
   });
 
   const { host } = new URL(targetCall.stdout);
-  const ignoredFile = await fetch(`https://${host}/ignored.txt`);
+  const ignoredFile = await nodeFetch(`https://${host}/ignored.txt`);
   expect(ignoredFile.status).toBe(404);
 
-  const presentFile = await fetch(`https://${host}/index.txt`);
+  const presentFile = await nodeFetch(`https://${host}/index.txt`);
   expect(presentFile.status).toBe(200);
 });
 
 // TODO: fix: --public does not make deployments public
-// eslint-disable-next-line jest/no-disabled-tests
+// biome-ignore lint/suspicious/noSkippedTests: temporarily disabled
 test.skip('ignore files specified in .nowignore via allowlist', async () => {
   const directory = await setupE2EFixture('nowignore-allowlist');
 
@@ -192,10 +190,10 @@ test.skip('ignore files specified in .nowignore via allowlist', async () => {
   });
 
   const { host } = new URL(targetCall.stdout);
-  const ignoredFile = await fetch(`https://${host}/ignored.txt`);
+  const ignoredFile = await nodeFetch(`https://${host}/ignored.txt`);
   expect(ignoredFile.status).toBe(404);
 
-  const presentFile = await fetch(`https://${host}/index.txt`);
+  const presentFile = await nodeFetch(`https://${host}/index.txt`);
   expect(presentFile.status).toBe(200);
 });
 
@@ -213,7 +211,7 @@ test('list the scopes', async () => {
 });
 
 // https://linear.app/vercel/issue/ZERO-2555/fix-assign-a-domain-to-a-project-test
-// eslint-disable-next-line jest/no-disabled-tests
+// biome-ignore lint/suspicious/noSkippedTests: temporarily disabled
 test.skip('domains inspect', async () => {
   const team = await teamPromise;
   const domainName = `inspect-${team.slug}-${Math.random()
@@ -264,7 +262,7 @@ test.skip('domains inspect', async () => {
 });
 
 // Unblocking CI for incident fix
-// eslint-disable-next-line jest/no-disabled-tests
+// biome-ignore lint/suspicious/noSkippedTests: temporarily disabled
 test.skip('try to transfer-in a domain with "--code" option', async () => {
   const { stderr, stdout, exitCode } = await execCli(binaryPath, [
     'domains',
@@ -293,7 +291,7 @@ test('try to move an invalid domain', async () => {
 });
 
 // TODO: fix: --public does not make deployments public
-// eslint-disable-next-line jest/no-disabled-tests
+// biome-ignore lint/suspicious/noSkippedTests: temporarily disabled
 test.skip('ensure we render a warning for deployments with no files', async () => {
   const directory = await setupE2EFixture('empty-directory');
 
@@ -317,7 +315,7 @@ test.skip('ensure we render a warning for deployments with no files', async () =
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   // Send a test request to the deployment
-  const res = await fetch(href);
+  const res = await nodeFetch(href);
   expect(res.status).toBe(404);
 });
 
@@ -364,7 +362,7 @@ test('ensure the `scope` property works with email', async () => {
   expect(host.split('-')[0]).toBe(session);
 
   // Send a test request to the deployment
-  const response = await fetch(href);
+  const response = await nodeFetch(href);
   const contentType = response.headers.get('content-type');
 
   expect(contentType).toBe('text/html; charset=utf-8');
@@ -394,7 +392,7 @@ test('ensure the `scope` property works with username', async () => {
   expect(host.split('-')[0]).toBe(session);
 
   // Send a test request to the deployment
-  const response = await fetch(href);
+  const response = await nodeFetch(href);
   const contentType = response.headers.get('content-type');
 
   expect(contentType).toBe('text/html; charset=utf-8');
@@ -808,7 +806,7 @@ test('deploy a Lambda with 128MB of memory', async () => {
   expect(output.exitCode, formatOutput(output)).toBe(0);
 
   const { host: url } = new URL(output.stdout);
-  const response = await fetch('https://' + url + '/api/memory');
+  const response = await nodeFetch('https://' + url + '/api/memory');
 
   expect(response.status).toBe(200);
 
@@ -828,7 +826,7 @@ test('fail to deploy a Lambda with an incorrect value for of memory', async () =
 });
 
 // TODO: This test is flaky, possibly due to the recent SIGTERM changes which now issue 500s
-// eslint-disable-next-line jest/no-disabled-tests
+// biome-ignore lint/suspicious/noSkippedTests: temporarily disabled
 test.skip('deploy a Lambda with 3 seconds of maxDuration', async () => {
   const directory = await setupE2EFixture('lambda-with-3-second-timeout');
   const output = await execCli(binaryPath, [directory, '--yes']);
@@ -839,12 +837,12 @@ test.skip('deploy a Lambda with 3 seconds of maxDuration', async () => {
 
   // Should time out
   url.pathname = '/api/wait-for/5';
-  const response1 = await fetch(url.href);
+  const response1 = await nodeFetch(url.href);
   expect(response1.status).toBe(504);
 
   // Should not time out
   url.pathname = '/api/wait-for/1';
-  const response2 = await fetch(url.href);
+  const response2 = await nodeFetch(url.href);
   expect(response2.status).toBe(200);
 });
 
@@ -875,7 +873,7 @@ test('deploy a Lambda with a specific runtime', async () => {
   expect(output.exitCode, formatOutput(output)).toBe(0);
 
   const url = new URL(output.stdout);
-  const res = await fetch(`${url}/api/test`);
+  const res = await nodeFetch(`${url}/api/test`);
   const text = await res.text();
   expect(text).toBe('Hello from PHP');
 });
@@ -909,7 +907,7 @@ test('use build-env', async () => {
   await waitForDeployment(href);
 
   // get the content
-  const response = await fetch(href);
+  const response = await nodeFetch(href);
   const content = await response.text();
   expect(content.trim()).toBe('bar');
 });
@@ -952,4 +950,46 @@ test('default command should prompt login with empty auth.json', async () => {
   expect(output.stderr).toContain(
     'Error: No existing credentials found. Please run `vercel login` or pass "--token"'
   );
+});
+
+test('`flags prepare` should not require login', async () => {
+  const cwd = getNewTmpDir();
+  const output = await execCli(binaryPath, ['flags', 'prepare'], {
+    cwd,
+    token: false,
+    reject: false,
+  });
+  // Command actually completes (progresses past auth), not just absence of error
+  expect(output.exitCode, formatOutput(output)).toBe(0);
+  expect(output.stderr).not.toContain('No existing credentials found');
+  // Module is emitted to the filesystem
+  const definitionsDir = path.join(
+    cwd,
+    'node_modules',
+    '@vercel',
+    'flags-definitions'
+  );
+  expect(fs.existsSync(path.join(definitionsDir, 'index.js'))).toBe(true);
+  expect(fs.existsSync(path.join(definitionsDir, 'index.d.ts'))).toBe(true);
+  expect(fs.existsSync(path.join(definitionsDir, 'package.json'))).toBe(true);
+});
+
+test('`flags prepare` happy path emits flags-definitions module', async () => {
+  const cwd = getNewTmpDir();
+  const output = await execCli(binaryPath, ['flags', 'prepare'], {
+    cwd,
+    reject: false,
+  });
+  expect(output.exitCode, formatOutput(output)).toBe(0);
+  const definitionsDir = path.join(
+    cwd,
+    'node_modules',
+    '@vercel',
+    'flags-definitions'
+  );
+  expect(fs.existsSync(path.join(definitionsDir, 'index.js'))).toBe(true);
+  expect(fs.existsSync(path.join(definitionsDir, 'index.d.ts'))).toBe(true);
+  const pkg = await fs.readJSON(path.join(definitionsDir, 'package.json'));
+  expect(pkg.name).toBe('@vercel/flags-definitions');
+  expect(pkg.version).toBeDefined();
 });

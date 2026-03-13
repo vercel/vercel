@@ -1,13 +1,13 @@
+import fs from 'fs';
 import { join, posix as pathPosix } from 'path';
-import type { FileFsRef, PythonFramework } from '@vercel/build-utils';
-import {
-  glob,
-  debug,
-  isDirectory,
-  isPythonEntrypoint,
-  getDjangoEntrypoint,
-} from '@vercel/build-utils';
+import type { PythonFramework } from '@vercel/build-utils';
+import { debug, isPythonEntrypoint } from '@vercel/build-utils';
 import { readConfigFile } from '@vercel/build-utils';
+
+export interface DetectedPythonEntrypoint {
+  entrypoint?: string;
+  baseDir?: string; // directory containing manage.py, if detected via Django path
+}
 
 export const PYTHON_ENTRYPOINT_FILENAMES = [
   'app',
@@ -29,6 +29,24 @@ function getCandidateEntrypointsInDirs(dirs: string[]) {
       pathPosix.join(dir, `${filename}.py`)
     )
   );
+}
+
+async function fileExists(filePath: string): Promise<boolean> {
+  try {
+    const stat = await fs.promises.stat(filePath);
+    return stat.isFile();
+  } catch {
+    return false;
+  }
+}
+
+async function checkEntrypoint(
+  workPath: string,
+  relPath: string
+): Promise<boolean> {
+  const absPath = join(workPath, relPath);
+  if (!(await fileExists(absPath))) return false;
+  return isPythonEntrypoint({ fsPath: absPath });
 }
 
 export async function getPyprojectEntrypoint(
@@ -55,33 +73,56 @@ export async function getPyprojectEntrypoint(
   const relPath = modulePath.replace(/\./g, '/');
 
   // Prefer an existing file match if present; otherwise fall back to "<module>.py".
-  try {
-    const fsFiles = await glob('**', workPath);
-    const candidates = [`${relPath}.py`, `${relPath}/__init__.py`];
-    for (const candidate of candidates) {
-      if (fsFiles[candidate]) return candidate;
-    }
-    return null;
-  } catch {
-    debug('Failed to discover Python entrypoint from pyproject.toml');
-    return null;
+  const candidates = [`${relPath}.py`, `${relPath}/__init__.py`];
+  for (const candidate of candidates) {
+    if (await fileExists(join(workPath, candidate))) return candidate;
   }
+  return null;
 }
 
 async function findValidEntrypoint(
-  fsFiles: Record<string, FileFsRef>,
+  workPath: string,
   candidates: string[]
 ): Promise<string | null> {
   for (const candidate of candidates) {
-    if (fsFiles[candidate]) {
-      const isValid = await isPythonEntrypoint(fsFiles[candidate] as FileFsRef);
-      if (isValid) {
-        debug(`Detected Python entrypoint: ${candidate}`);
-        return candidate;
-      }
+    if (await checkEntrypoint(workPath, candidate)) {
+      debug(`Detected Python entrypoint: ${candidate}`);
+      return candidate;
     }
   }
   return null;
+}
+
+/**
+ * Check if manage.py exists in workPath and references DJANGO_SETTINGS_MODULE.
+ */
+async function checkDjangoManage(workPath: string): Promise<boolean> {
+  const managePath = join(workPath, 'manage.py');
+  try {
+    const content = await fs.promises.readFile(managePath, 'utf-8');
+    if (!content.includes('DJANGO_SETTINGS_MODULE')) return false;
+    debug(`Found Django manage.py with DJANGO_SETTINGS_MODULE at ${workPath}`);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * List immediate subdirectories of workPath (non-hidden).
+ */
+async function getSubdirectories(workPath: string): Promise<string[]> {
+  try {
+    const entries = await fs.promises.readdir(workPath, {
+      withFileTypes: true,
+    });
+    return entries
+      .filter(e => e.isDirectory() && !e.name.startsWith('.'))
+      .map(e => e.name)
+      .sort();
+  } catch {
+    return [];
+  }
 }
 
 /**
@@ -90,28 +131,24 @@ async function findValidEntrypoint(
 export async function detectGenericPythonEntrypoint(
   workPath: string,
   configuredEntrypoint: string
-): Promise<string | null> {
+): Promise<DetectedPythonEntrypoint | null> {
   const entry = configuredEntrypoint.endsWith('.py')
     ? configuredEntrypoint
     : `${configuredEntrypoint}.py`;
 
   try {
-    const fsFiles = await glob('**', workPath);
-
     // If the configured entrypoint exists and is valid, use it
-    if (fsFiles[entry]) {
-      const isValid = await isPythonEntrypoint(fsFiles[entry] as FileFsRef);
-      if (isValid) {
-        debug(`Using configured Python entrypoint: ${entry}`);
-        return entry;
-      }
+    if (await checkEntrypoint(workPath, entry)) {
+      debug(`Using configured Python entrypoint: ${entry}`);
+      return { entrypoint: entry };
     }
 
     // Search candidate locations using AST-based detection
-    const candidates = PYTHON_CANDIDATE_ENTRYPOINTS.filter(
-      (c: string) => !!fsFiles[c]
+    const found = await findValidEntrypoint(
+      workPath,
+      PYTHON_CANDIDATE_ENTRYPOINTS
     );
-    return findValidEntrypoint(fsFiles, candidates);
+    return found ? { entrypoint: found } : null;
   } catch {
     debug('Failed to discover Python entrypoint');
     return null;
@@ -119,64 +156,42 @@ export async function detectGenericPythonEntrypoint(
 }
 
 /**
- * Detect a Django Python entrypoint: resolve WSGI_APPLICATION from settings
- * to get the wsgi module file (e.g. hello/wsgi.py), then fall back to
- * AST-based detection if needed.
+ * Detect a Django Python entrypoint: look for manage.py with
+ * DJANGO_SETTINGS_MODULE, then fall back to AST-based detection if needed.
  */
 export async function detectDjangoPythonEntrypoint(
   workPath: string,
   configuredEntrypoint: string
-): Promise<string | null> {
+): Promise<DetectedPythonEntrypoint | null> {
   const entry = configuredEntrypoint.endsWith('.py')
     ? configuredEntrypoint
     : `${configuredEntrypoint}.py`;
 
   try {
-    const fsFiles = await glob('**', workPath);
-
     // If the configured entrypoint exists and is valid, use it
-    if (fsFiles[entry]) {
-      const isValid = await isPythonEntrypoint(fsFiles[entry] as FileFsRef);
-      if (isValid) {
-        debug(`Using configured Python entrypoint: ${entry}`);
-        return entry;
-      }
+    if (await checkEntrypoint(workPath, entry)) {
+      debug(`Using configured Python entrypoint: ${entry}`);
+      return { entrypoint: entry };
     }
 
-    // Get root directories
-    const rootGlobs = await glob('*', {
-      cwd: workPath,
-      includeDirectories: true,
-    });
-    const rootDirs = [
-      '',
-      ...Object.keys(rootGlobs).filter(
-        name =>
-          !name.startsWith('.') &&
-          rootGlobs[name].mode != null &&
-          isDirectory(rootGlobs[name].mode)
-      ),
-    ];
+    // Get root directories (workPath root + immediate subdirs)
+    const subdirs = await getSubdirectories(workPath);
+    const rootDirs = ['', ...subdirs];
 
-    // Look for an entrypoint via manage.py -> settings.py -> WSGI_APPLICATION:
-    // Try workPath and immediate subdirectories.
+    // Look for a Django manage.py in workPath and immediate subdirectories.
     for (const rootDir of rootDirs) {
       const currPath = join(workPath, rootDir);
-      const wsgiEntry = await getDjangoEntrypoint(currPath);
-      if (wsgiEntry) {
-        const fullWsgiEntry = pathPosix.join(rootDir, wsgiEntry);
-        if (fsFiles[fullWsgiEntry]) {
-          debug(`Using Django WSGI entrypoint: ${fullWsgiEntry}`);
-          return fullWsgiEntry;
-        }
+      const isDjango = await checkDjangoManage(currPath);
+      if (isDjango) {
+        return { baseDir: rootDir };
       }
     }
 
     // Fall back to AST-based detection,
     // Look in all immediate subdirectories, not just those specified in PYTHON_ENTRYPOINT_DIRS.
-    const baseCandidates = getCandidateEntrypointsInDirs(rootDirs);
-    const candidates = baseCandidates.filter((c: string) => !!fsFiles[c]);
-    return findValidEntrypoint(fsFiles, candidates);
+    const candidates = getCandidateEntrypointsInDirs(rootDirs);
+    const found = await findValidEntrypoint(workPath, candidates);
+    return found ? { entrypoint: found } : null;
   } catch {
     debug('Failed to discover Django Python entrypoint');
     return null;
@@ -190,11 +205,12 @@ export async function detectPythonEntrypoint(
   framework: PythonFramework,
   workPath: string,
   configuredEntrypoint: string
-): Promise<string | null> {
-  const entrypoint =
+): Promise<DetectedPythonEntrypoint | null> {
+  const result =
     framework === 'django'
       ? await detectDjangoPythonEntrypoint(workPath, configuredEntrypoint)
       : await detectGenericPythonEntrypoint(workPath, configuredEntrypoint);
-  if (entrypoint) return entrypoint;
-  return await getPyprojectEntrypoint(workPath);
+  if (result) return result;
+  const pyprojectEntry = await getPyprojectEntrypoint(workPath);
+  return pyprojectEntry ? { entrypoint: pyprojectEntry } : null;
 }

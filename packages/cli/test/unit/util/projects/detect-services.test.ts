@@ -31,6 +31,16 @@ describe('tryDetectServices()', () => {
     expect(result).toBeNull();
   });
 
+  it('should return null for root-only project with no backend', async () => {
+    await writeFile(
+      join(tempDir, 'package.json'),
+      JSON.stringify({ dependencies: { next: '14.0.0' } })
+    );
+
+    const result = await tryDetectServices(tempDir);
+    expect(result).toBeNull();
+  });
+
   it('should return null when vercel.json has no experimentalServices and no service found', async () => {
     await writeFile(
       join(tempDir, 'vercel.json'),

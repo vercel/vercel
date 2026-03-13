@@ -1,5 +1,55 @@
 # vercel-runtime
 
+## 0.8.0
+
+### Minor Changes
+
+- Fix error when running dev server on a django project. ([#15483](https://github.com/vercel/vercel/pull/15483))
+
+## 0.7.0
+
+### Minor Changes
+
+- [python] move vc_init_dev into vercel-runtime ([#15419](https://github.com/vercel/vercel/pull/15419))
+
+## 0.6.0
+
+### Minor Changes
+
+- [python] add support for Python worker services with Django tasks ([#15396](https://github.com/vercel/vercel/pull/15396))
+
+- [python] add support for module-based entrypoints for cron jobs ([#15393](https://github.com/vercel/vercel/pull/15393))
+
+## 0.5.6
+
+### Patch Changes
+
+- [services] adds support for python cron worker services ([#15175](https://github.com/vercel/vercel/pull/15175))
+
+## 0.5.5
+
+### Patch Changes
+
+- Report fatal init errors via IPC `unrecoverable-error` message ([#15319](https://github.com/vercel/vercel/pull/15319))
+
+## 0.5.4
+
+### Patch Changes
+
+- Move the matplotlib env var to quirks. ([#15305](https://github.com/vercel/vercel/pull/15305))
+
+## 0.5.3
+
+### Patch Changes
+
+- Add `prisma-client-py` support and the quirks system ([#15289](https://github.com/vercel/vercel/pull/15289))
+
+## 0.5.2
+
+### Patch Changes
+
+- fix ASGI lifecycle events in non-IPC codepath ([#15268](https://github.com/vercel/vercel/pull/15268))
+
 ## 0.5.1
 
 ### Patch Changes
