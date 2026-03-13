@@ -115,34 +115,6 @@ export function globalCliFlagTakesValue(flagName: string): boolean {
 }
 
 /**
- * Returns only global flags from argv tail. Safe to append to suggested
- * commands for any subcommand so agents do not hit parse errors from
- * subcommand-specific flags.
- */
-export function getGlobalFlagsOnlyFromArgs(args: string[]): string[] {
-  const out: string[] = [];
-  for (let i = 0; i < args.length; i++) {
-    const a = args[i];
-    if (!a.startsWith('-')) continue;
-    let name = a;
-    const hasEq = a.includes('=');
-    if (hasEq) {
-      name = a.slice(0, a.indexOf('='));
-    }
-    if (!GLOBAL_CLI_FLAG_NAMES.has(name)) {
-      continue;
-    }
-    out.push(a);
-    if (!hasEq && globalCliFlagTakesValue(name)) {
-      if (i + 1 < args.length && !args[i + 1].startsWith('-')) {
-        out.push(args[++i]);
-      }
-    }
-  }
-  return out;
-}
-
-/**
  * Subcommand option names that take a separate argv token (not boolean).
  * Used when the suggested `next` command is the SAME subcommand so we
  * preserve e.g. --slug acme, --status 301 alongside globals.
