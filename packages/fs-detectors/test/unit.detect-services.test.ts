@@ -952,13 +952,13 @@ describe('detectServices', () => {
           experimentalServices: {
             cleanup: {
               type: 'cron',
-              entrypoint: 'cron/cleanup.ts',
+              entrypoint: 'cron/cleanup.py',
               schedule: '0 0 * * *',
               subdomain: 'jobs',
             },
           },
         }),
-        'cron/cleanup.ts': 'export default async () => {}',
+        'cron/cleanup.py': 'def main(): pass',
       });
       const result = await detectServices({ fs });
 
@@ -1053,12 +1053,12 @@ describe('detectServices', () => {
           experimentalServices: {
             cleanup: {
               type: 'cron',
-              entrypoint: 'cron/cleanup.ts',
+              entrypoint: 'cron/cleanup.py',
               schedule: '0 0 * * *',
             },
           },
         }),
-        'cron/cleanup.ts': 'export default async () => {}',
+        'cron/cleanup.py': 'def main(): pass',
       });
       const result = await detectServices({ fs });
 
@@ -1077,12 +1077,12 @@ describe('detectServices', () => {
           experimentalServices: {
             cleanup: {
               type: 'cron',
-              entrypoint: 'cron/cleanup.ts',
+              entrypoint: 'cron/cleanup.py',
               schedule: '0 0 * * *',
             },
           },
         }),
-        'cron/cleanup.ts': 'export default async () => {}',
+        'cron/cleanup.py': 'def main(): pass',
       });
       const result = await detectServices({ fs });
 
@@ -1102,7 +1102,7 @@ describe('detectServices', () => {
           experimentalServices: {
             cleanup: {
               type: 'cron',
-              entrypoint: 'cron/cleanup.ts',
+              entrypoint: 'cron/cleanup.py',
             },
           },
         }),
@@ -1123,7 +1123,7 @@ describe('detectServices', () => {
           experimentalServices: {
             cleanup: {
               type: 'cron',
-              entrypoint: 'cron/cleanup.ts',
+              entrypoint: 'cron/cleanup.py',
               schedule: '0 0 * * *',
               routePrefix: '/cron',
             },

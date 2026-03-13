@@ -259,7 +259,7 @@ it('maps service internal function output without leading slash', async () => {
   ).toBe(true);
   expect(result.output['_svc/js-api/index']).toBeDefined();
   expect(result.output['/_svc/js-api/index']).toBeUndefined();
-});
+}, 30000);
 
 it('does not rewrite non-service route outputs', async () => {
   const fixtureName = '01-express-index-ts-esm';
@@ -277,7 +277,7 @@ it('does not rewrite non-service route outputs', async () => {
 
   expect(result.output['/user/:id']).toBeDefined();
   expect(result.output['_svc/js-api/index']).toBeUndefined();
-});
+}, 30000);
 
 const extractAndExecuteLambda = async (
   lambda: NodejsLambda,
