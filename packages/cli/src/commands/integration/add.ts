@@ -308,7 +308,8 @@ export async function add(
         projectLink.value,
         resourceName,
         parsedMetadata,
-        billingPlanId
+        billingPlanId,
+        options.environments
       );
     }
 
@@ -337,7 +338,8 @@ function provisionResourceViaWebUI(
   projectId?: string,
   resourceName?: string,
   metadata?: Metadata,
-  billingPlanId?: string
+  billingPlanId?: string,
+  environments?: string[]
 ) {
   const url = new URL('/api/marketplace/cli', 'https://vercel.com');
   url.searchParams.set('teamId', teamId);
@@ -355,6 +357,9 @@ function provisionResourceViaWebUI(
   }
   if (billingPlanId) {
     url.searchParams.set('planId', billingPlanId);
+  }
+  if (environments?.length) {
+    url.searchParams.set('environment', environments.join(','));
   }
   url.searchParams.set('cmd', 'add');
   output.print('Opening the Vercel Dashboard to continue the installation...');
@@ -489,7 +494,8 @@ async function provisionResourceViaCLI(
         projectLink.value,
         name,
         metadata,
-        billingPlan.id
+        billingPlan.id,
+        options.environments
       );
     }
 
