@@ -237,7 +237,6 @@ export class MockClient extends Client {
             : String(chunk);
       const trimmed = str.trim();
       if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
-        // biome-ignore lint/suspicious/noConsole: intentional test-only mirroring
         console.log(trimmed);
       }
       return originalStdoutWrite(
