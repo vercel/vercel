@@ -8,7 +8,7 @@ import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import formatTable from '../../util/format-table';
 import { validateJsonOutput } from '../../util/output-format';
-import { getCommandName } from '../../util/pkg-name';
+import { getCommandNamePlain } from '../../util/pkg-name';
 import output from '../../output-manager';
 import { WebhooksLsTelemetryClient } from '../../util/telemetry/commands/webhooks/ls';
 import { listSubcommand } from './command';
@@ -81,7 +81,7 @@ export default async function ls(client: Client, argv: string[]) {
           message: `${webhooks.length} webhook(s) found.`,
           next: [
             {
-              command: getCommandName('webhooks get <id>'),
+              command: getCommandNamePlain('webhooks get <id>'),
               when: 'Inspect a webhook',
             },
           ],
