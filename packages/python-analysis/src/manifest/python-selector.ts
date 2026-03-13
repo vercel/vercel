@@ -195,7 +195,7 @@ export function selectPythonVersion({
     };
   }
 
-  // No match at all — extract version string for error message
+  // No match at all -- extract version string for error message
   const versionString = extractConstraintVersionString(constraints);
   return {
     build: defaultBuild,
@@ -309,7 +309,7 @@ function truncatePatchConstraint(c: Pep440Constraint): Pep440Constraint | null {
  * behaviour where `~=3.10` was interpreted as `>=3.10, <3.11` (i.e., pinned
  * to the minor version) rather than the PEP 440 correct `>=3.10, <4.0`.
  *
- * 3-part `~=X.Y.Z` is unaffected — `truncatePatchConstraint` already
+ * 3-part `~=X.Y.Z` is unaffected -- `truncatePatchConstraint` already
  * converts it to `==X.Y.*`.
  */
 function legacyTildeEqualsTransform(req: PythonRequest): PythonRequest {
