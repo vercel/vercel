@@ -59,6 +59,7 @@ import {
 } from '@vercel/routing-utils';
 
 import output from '../../output-manager';
+import { getGlobalFlagsOnlyFromArgs } from '../../util/arg-common';
 import { outputAgentError } from '../../util/agent-output';
 import { cleanupCorepack, initCorepack } from '../../util/build/corepack';
 import { importBuilders } from '../../util/build/import-builders';
@@ -104,6 +105,18 @@ import { help } from '../help';
 import { pullCommandLogic } from '../pull';
 import { buildCommand } from './command';
 import { mkdir, writeFile } from 'fs/promises';
+
+/** Build a plain suggested command with global flags (e.g. --cwd, --non-interactive) appended. */
+function buildCommandWithGlobalFlags(
+  baseSubcommand: string,
+  argv: string[]
+): string {
+  const globalFlags = getGlobalFlagsOnlyFromArgs(argv.slice(2));
+  const full = globalFlags.length
+    ? `${baseSubcommand} ${globalFlags.join(' ')}`
+    : baseSubcommand;
+  return cli.getCommandNamePlain(full);
+}
 
 type BuildResult = BuildResultV2 | BuildResultV3;
 
@@ -265,11 +278,19 @@ export default async function main(client: Client): Promise<number> {
               'No project settings found locally. Run pull to retrieve them, or re-run with --yes to pull automatically.',
             next: [
               {
-                command: cli.getCommandName(
-                  `pull --yes --environment ${target}`
+                command: buildCommandWithGlobalFlags(
+                  `pull --yes --environment ${target}`,
+                  client.argv
                 ),
+                when: 'retrieve project settings',
               },
-              { command: cli.getCommandName(`build --yes`) },
+              {
+                command: buildCommandWithGlobalFlags(
+                  'build --yes',
+                  client.argv
+                ),
+                when: 're-run build after pull',
+              },
             ],
           },
           1
@@ -406,7 +427,7 @@ export default async function main(client: Client): Promise<number> {
             message: 'Build completed successfully.',
             next: [
               {
-                command: cli.getCommandName('deploy'),
+                command: buildCommandWithGlobalFlags('deploy', client.argv),
                 when: 'Deploy the build output',
               },
             ],
@@ -427,10 +448,16 @@ export default async function main(client: Client): Promise<number> {
             message: err?.message ?? String(err),
             next: [
               {
-                command: cli.getCommandName('pull --yes'),
+                command: buildCommandWithGlobalFlags('pull --yes', client.argv),
                 when: 'Ensure project settings are present',
               },
-              { command: cli.getCommandName('build --yes') },
+              {
+                command: buildCommandWithGlobalFlags(
+                  'build --yes',
+                  client.argv
+                ),
+                when: 're-run build',
+              },
             ],
           },
           null,
