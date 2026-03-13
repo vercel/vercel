@@ -48,6 +48,7 @@ interface UserEventsResponse {
 
 interface ActivityScope {
   projectIds?: string[];
+  projectName?: string;
   teamId?: string;
   teamSlug?: string;
 }
@@ -175,13 +176,13 @@ function printExpandedEvents(events: UserEventDTO[]) {
   const lines = [''];
 
   events.forEach(event => {
-    lines.push(chalk.bold(formatEventText(event.text)));
-    lines.push(`   ${chalk.cyan('Type:')} ${event.type ?? '-'}`);
-    lines.push(`   ${chalk.cyan('Actor:')} ${formatActor(event)}`);
+    lines.push(`${chalk.gray('-')} ${formatEventText(event.text)}`);
+    lines.push(`    ${chalk.cyan('Type'.padEnd(14))}${event.type ?? '-'}`);
+    lines.push(`    ${chalk.cyan('Actor'.padEnd(14))}${formatActor(event)}`);
     lines.push(
-      `   ${chalk.cyan('Timestamp:')} ${formatTimestamp(event.createdAt)}`
+      `    ${chalk.cyan('Timestamp'.padEnd(14))}${formatTimestamp(event.createdAt)}`
     );
-    lines.push(`   ${chalk.cyan('ID:')} ${event.id}`);
+    lines.push(`    ${chalk.cyan('ID'.padEnd(14))}${event.id}`);
     lines.push('');
   });
 
@@ -328,6 +329,7 @@ async function resolveScope(
       teamId: team.id,
       teamSlug: team.slug,
       projectIds: [projectResult.id],
+      projectName: projectResult.name,
     };
   }
 
@@ -348,6 +350,7 @@ async function resolveScope(
   const isTeamProject = linkedProject.org.type === 'team';
   return {
     projectIds: [linkedProject.project.id],
+    projectName: linkedProject.project.name,
     teamId: isTeamProject ? linkedProject.org.id : undefined,
     teamSlug: isTeamProject ? linkedProject.org.slug : undefined,
   };
@@ -403,6 +406,18 @@ function paginateEvents(
       : null;
 
   return { events, next };
+}
+
+function printScopeHeader(scope: ActivityScope) {
+  if (!scope.projectName && scope.teamSlug) {
+    output.log(`Showing all activity for team ${chalk.bold(scope.teamSlug)}`);
+  } else if (scope.projectName && scope.teamSlug) {
+    output.log(
+      `Showing activity for project ${chalk.bold(scope.projectName)} in team ${chalk.bold(scope.teamSlug)}`
+    );
+  } else if (scope.projectName) {
+    output.log(`Showing activity for project ${chalk.bold(scope.projectName)}`);
+  }
 }
 
 function printNextPageHint(flags: ListFlags, next: number) {
@@ -474,11 +489,23 @@ export default async function list(
     const { events, next } = paginateEvents(allEvents, validatedInputs.limit);
 
     if (jsonOutput) {
-      client.stdout.write(
-        `${JSON.stringify({ events, pagination: { next } }, null, 2)}\n`
-      );
+      const hasScope = scope.teamSlug || scope.projectName;
+      const jsonResponse = {
+        ...(hasScope && {
+          scope: {
+            ...(scope.teamSlug && { teamSlug: scope.teamSlug }),
+            ...(scope.projectName && { projectName: scope.projectName }),
+            ...(scope.projectIds && { projectIds: scope.projectIds }),
+          },
+        }),
+        events,
+        pagination: { next },
+      };
+      client.stdout.write(`${JSON.stringify(jsonResponse, null, 2)}\n`);
       return 0;
     }
+
+    printScopeHeader(scope);
 
     if (events.length === 0) {
       output.log('No activity events found.');

@@ -81,6 +81,119 @@ export const globalCommandOptions = [
   { name: 'api', shorthand: null, type: String, deprecated: false },
 ] as const;
 
+/**
+ * Long and short names for global CLI flags (from globalCommandOptions).
+ * Use when building suggested `next` commands so only context flags are forwarded.
+ */
+export const GLOBAL_CLI_FLAG_NAMES: ReadonlySet<string> = (() => {
+  const set = new Set<string>();
+  for (const opt of globalCommandOptions) {
+    set.add(`--${opt.name}`);
+    if (opt.shorthand) {
+      set.add(`-${opt.shorthand}`);
+    }
+  }
+  return set;
+})();
+
+/**
+ * Whether a global CLI flag expects a separate argv token (String type).
+ */
+export function globalCliFlagTakesValue(flagName: string): boolean {
+  const normalized = flagName.includes('=')
+    ? flagName.slice(0, flagName.indexOf('='))
+    : flagName;
+  for (const opt of globalCommandOptions) {
+    if (`--${opt.name}` === normalized) {
+      return opt.type === String;
+    }
+    if (opt.shorthand && `-${opt.shorthand}` === normalized) {
+      return opt.type === String;
+    }
+  }
+  return false;
+}
+
+/**
+ * Returns only global flags from argv tail. Safe to append to suggested
+ * commands for any subcommand so agents do not hit parse errors from
+ * subcommand-specific flags.
+ */
+export function getGlobalFlagsOnlyFromArgs(args: string[]): string[] {
+  const out: string[] = [];
+  for (let i = 0; i < args.length; i++) {
+    const a = args[i];
+    if (!a.startsWith('-')) continue;
+    let name = a;
+    const hasEq = a.includes('=');
+    if (hasEq) {
+      name = a.slice(0, a.indexOf('='));
+    }
+    if (!GLOBAL_CLI_FLAG_NAMES.has(name)) {
+      continue;
+    }
+    out.push(a);
+    if (!hasEq && globalCliFlagTakesValue(name)) {
+      if (i + 1 < args.length && !args[i + 1].startsWith('-')) {
+        out.push(args[++i]);
+      }
+    }
+  }
+  return out;
+}
+
+/**
+ * Subcommand option names that take a separate argv token (not boolean).
+ * Used when the suggested `next` command is the SAME subcommand so we
+ * preserve e.g. --slug acme, --status 301 alongside globals.
+ */
+const SUBCOMMAND_FLAG_TAKES_VALUE = new Set([
+  '--status',
+  '--name',
+  '--slug',
+  '--version', // redirects list --version
+  '--search',
+  '--format',
+  '--page',
+  '--per-page',
+]);
+
+function suggestionFlagTakesSeparateValue(flagName: string): boolean {
+  const name = flagName.includes('=')
+    ? flagName.slice(0, flagName.indexOf('='))
+    : flagName;
+  if (globalCliFlagTakesValue(name)) return true;
+  return SUBCOMMAND_FLAG_TAKES_VALUE.has(name);
+}
+
+/**
+ * Builds a flag suffix for suggested commands that repeat the SAME subcommand
+ * as the user's invocation. Preserves subcommand-specific flags and their
+ * values; skips bare positionals. Use this instead of getGlobalFlagsOnlyFromArgs
+ * when next[] points at the same command (e.g. teams add with missing --name).
+ *
+ * When next[] points at a different subcommand (e.g. promote, list), use
+ * getGlobalFlagsOnlyFromArgs so flags that don't apply are not forwarded.
+ */
+export function getSameSubcommandSuggestionFlags(args: string[]): string[] {
+  const out: string[] = [];
+  for (let i = 0; i < args.length; i++) {
+    const a = args[i];
+    if (!a.startsWith('-')) continue;
+    out.push(a);
+    if (a.includes('=')) continue;
+    const name = a;
+    if (
+      suggestionFlagTakesSeparateValue(name) &&
+      i + 1 < args.length &&
+      !args[i + 1].startsWith('-')
+    ) {
+      out.push(args[++i]);
+    }
+  }
+  return out;
+}
+
 const GLOBAL_OPTIONS = getFlagsSpecification(globalCommandOptions);
 
 export default () => GLOBAL_OPTIONS;
