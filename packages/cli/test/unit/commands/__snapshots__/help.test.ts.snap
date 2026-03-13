@@ -5864,7 +5864,7 @@ exports[`help command > teams help output snapshots > teams invite help output s
 
     $ vercel teams invite
 
-  - Invite multiple members simultaneously
+  - Invite multiple members (required in non-interactive mode)
 
     $ vercel teams invite abc@vercel.com xyz@vercel.com
 
