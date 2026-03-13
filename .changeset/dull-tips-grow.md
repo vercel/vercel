@@ -3,4 +3,4 @@
 '@vercel/python': minor
 ---
 
-[python] move vc_init_dev into vercel-runtime
+Fix serving static files for a django WSGI app in vercel dev.

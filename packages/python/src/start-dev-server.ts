@@ -501,7 +501,8 @@ function createDevShim(
   workPath: string,
   entry: string,
   modulePath: string,
-  serviceName?: string
+  serviceName: string | undefined,
+  framework: string
 ): DevShimResult | null {
   try {
     // When a service name is provided, place the shim in a per-service
@@ -535,7 +536,8 @@ function createDevShim(
     const template = readFileSync(templatePath, 'utf8');
     const shimSource = template
       .replace(/__VC_DEV_MODULE_NAME__/g, qualifiedModule)
-      .replace(/__VC_DEV_ENTRY_ABS__/g, entryAbs);
+      .replace(/__VC_DEV_ENTRY_ABS__/g, entryAbs)
+      .replace(/__VC_DEV_FRAMEWORK__/g, framework);
     writeFileSync(shimPath, shimSource, 'utf8');
     debug(`Prepared Python dev shim at ${shimPath}`);
     return {
@@ -569,12 +571,7 @@ async function getMultiServicePythonRunner(
 
   // Create a per-service .venv, so deps are managed separately.
   const venvPath = join(workPath, '.venv');
-  await ensureVenv({
-    pythonPath: systemPython,
-    venvPath,
-    uvPath,
-    quiet: true,
-  });
+  await ensureVenv({ pythonPath: systemPython, venvPath, uvPath, quiet: true });
   debug(`Created virtualenv at ${venvPath} for multi-service dev`);
 
   const pythonBin = getVenvPythonBin(venvPath);
@@ -658,6 +655,7 @@ export const startDevServer: StartDevServer = async opts => {
       const hookResult = await runFrameworkHook(framework, {
         pythonEnv: env,
         projectDir: join(workPath, detected?.baseDir ?? ''),
+        workPath,
         entrypoint: rawEntrypoint,
         detected: detected ?? undefined,
       });
@@ -802,7 +800,13 @@ export const startDevServer: StartDevServer = async opts => {
     }
 
     // Spawn the actual server process
-    const devShim = createDevShim(workPath, entry, modulePath, serviceName);
+    const devShim = createDevShim(
+      workPath,
+      entry,
+      modulePath,
+      serviceName,
+      framework
+    );
 
     // Add shim directory to PYTHONPATH so the shim can be imported,
     // and .vercel/python so vercel_runtime (installed there) is importable.
