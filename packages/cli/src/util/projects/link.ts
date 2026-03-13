@@ -325,7 +325,7 @@ export async function getLinkedProject(
 
     output.print(
       prependEmoji(
-        "Your Project was either deleted, transferred to a new Team, or you don't have access to it anymore.\n",
+        'Your Project was either deleted, transferred to a new Team, or you don’t have access to it anymore.\n',
         emoji('warning')
       )
     );
