@@ -48,6 +48,7 @@ interface UserEventsResponse {
 
 interface ActivityScope {
   projectIds?: string[];
+  projectName?: string;
   teamId?: string;
   teamSlug?: string;
 }
@@ -328,6 +329,7 @@ async function resolveScope(
       teamId: team.id,
       teamSlug: team.slug,
       projectIds: [projectResult.id],
+      projectName: projectResult.name,
     };
   }
 
@@ -348,6 +350,7 @@ async function resolveScope(
   const isTeamProject = linkedProject.org.type === 'team';
   return {
     projectIds: [linkedProject.project.id],
+    projectName: linkedProject.project.name,
     teamId: isTeamProject ? linkedProject.org.id : undefined,
     teamSlug: isTeamProject ? linkedProject.org.slug : undefined,
   };
@@ -405,13 +408,15 @@ function paginateEvents(
   return { events, next };
 }
 
-function printScopeHeader(scope: ActivityScope, flags: ListFlags) {
-  if (flags['--all'] && scope.teamSlug) {
+function printScopeHeader(scope: ActivityScope) {
+  if (!scope.projectName && scope.teamSlug) {
     output.log(`Showing all activity for team ${chalk.bold(scope.teamSlug)}`);
-  } else if (flags['--project'] && scope.teamSlug) {
+  } else if (scope.projectName && scope.teamSlug) {
     output.log(
-      `Showing activity for project ${chalk.bold(flags['--project'])} in team ${chalk.bold(scope.teamSlug)}`
+      `Showing activity for project ${chalk.bold(scope.projectName)} in team ${chalk.bold(scope.teamSlug)}`
     );
+  } else if (scope.projectName) {
+    output.log(`Showing activity for project ${chalk.bold(scope.projectName)}`);
   }
 }
 
@@ -484,10 +489,12 @@ export default async function list(
     const { events, next } = paginateEvents(allEvents, validatedInputs.limit);
 
     if (jsonOutput) {
+      const hasScope = scope.teamSlug || scope.projectName;
       const jsonResponse = {
-        ...(scope.teamSlug && {
+        ...(hasScope && {
           scope: {
-            teamSlug: scope.teamSlug,
+            ...(scope.teamSlug && { teamSlug: scope.teamSlug }),
+            ...(scope.projectName && { projectName: scope.projectName }),
             ...(scope.projectIds && { projectIds: scope.projectIds }),
           },
         }),
@@ -498,7 +505,7 @@ export default async function list(
       return 0;
     }
 
-    printScopeHeader(scope, flags);
+    printScopeHeader(scope);
 
     if (events.length === 0) {
       output.log('No activity events found.');
