@@ -120,7 +120,7 @@ export const build: BuildV2 = async args => {
       ignoreNodeModules: false,
       ignore: args.config.excludeFiles,
       conditions: isBun ? ['bun'] : undefined,
-      span: buildSpan,
+      span: buildSpan.child('vc.builder.backends.nodeModuleNft'),
     });
 
     const baseDir = args.repoRootPath || args.workPath;
