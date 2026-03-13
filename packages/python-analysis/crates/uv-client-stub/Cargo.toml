@@ -1,0 +1,15 @@
+# Stubbed uv-client: provides only BaseClientBuilder and Connectivity
+# for uv-requirements-txt in WASM (always offline, no HTTP).
+[package]
+name = "uv-client"
+version = "0.0.20"
+edition.workspace = true
+rust-version.workspace = true
+
+[lib]
+doctest = false
+
+[dependencies]
+
+[features]
+default = []
