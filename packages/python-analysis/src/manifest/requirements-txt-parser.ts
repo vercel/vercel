@@ -377,7 +377,7 @@ function extractInlineHashes(line: string): HashDigest[] {
 
 /**
  * Extract the argument value from a line like "--option=value" or "--option value".
- * Strips inline comments (e.g., "value # comment" → "value").
+ * Strips inline comments (e.g., "value # comment" -> "value").
  */
 function extractArgValue(line: string, option: string): string | null {
   let value: string | null = null;
@@ -474,7 +474,7 @@ function parseWheelFilename(
   const version = parts[1];
   if (!name || !version) return null;
 
-  // Normalize distribution name: underscores → hyphens (PEP 503)
+  // Normalize distribution name: underscores -> hyphens (PEP 503)
   return {
     name: name.replace(/_/g, '-'),
     version,

@@ -10,17 +10,39 @@ publish = false
 rust-version = "1.90"
 
 [workspace.dependencies]
-wit-bindgen = { version = "0.51", features = ["macros"] }
-wit-bindgen-rust = { version = "0.51" }
-uv-pypi-types = { git = "https://github.com/astral-sh/uv", rev = "35d1e90961c1c2bd238ee6b015f970c0cf97f5d5" }
-uv-normalize = { git = "https://github.com/astral-sh/uv", rev = "35d1e90961c1c2bd238ee6b015f970c0cf97f5d5" }
 csv = "1.3.0"
+memchr = "2"
+rustc-hash = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+thiserror = "2"
+tracing = "0.1"
+unscanny = "0.1"
+url = "2"
+wit-bindgen = { version = "0.51", features = ["macros"] }
+wit-bindgen-rust = { version = "0.51" }
+wit-parser = { version = "0.244", default-features = false }
+
+uv-client = { git = "https://github.com/astral-sh/uv", rev = "35d1e90961c1c2bd238ee6b015f970c0cf97f5d5" }
+uv-configuration = { git = "https://github.com/astral-sh/uv", rev = "35d1e90961c1c2bd238ee6b015f970c0cf97f5d5" }
+uv-distribution-filename = { git = "https://github.com/astral-sh/uv", rev = "35d1e90961c1c2bd238ee6b015f970c0cf97f5d5" }
+uv-distribution-types = { git = "https://github.com/astral-sh/uv", rev = "35d1e90961c1c2bd238ee6b015f970c0cf97f5d5" }
+uv-git-types = { git = "https://github.com/astral-sh/uv", rev = "35d1e90961c1c2bd238ee6b015f970c0cf97f5d5" }
+uv-normalize = { git = "https://github.com/astral-sh/uv", rev = "35d1e90961c1c2bd238ee6b015f970c0cf97f5d5" }
+uv-pep508 = { git = "https://github.com/astral-sh/uv", rev = "35d1e90961c1c2bd238ee6b015f970c0cf97f5d5", features = ["non-pep508-extensions"] }
+uv-pypi-types = { git = "https://github.com/astral-sh/uv", rev = "35d1e90961c1c2bd238ee6b015f970c0cf97f5d5" }
+uv-redacted = { git = "https://github.com/astral-sh/uv", rev = "35d1e90961c1c2bd238ee6b015f970c0cf97f5d5" }
+uv-requirements-txt = { git = "https://github.com/astral-sh/uv", rev = "35d1e90961c1c2bd238ee6b015f970c0cf97f5d5" }
+uv-warnings = { git = "https://github.com/astral-sh/uv", rev = "35d1e90961c1c2bd238ee6b015f970c0cf97f5d5" }
 
 [patch."https://github.com/astral-sh/uv"]
-# Use local uv-fs that makes the `tokio` feature a no-op for wasm32-wasip2.
-uv-fs = { path = "crates/uv-fs-patch" }
+uv-client = { path = "crates/uv-client-stub" }
+uv-configuration = { path = "crates/uv-configuration-stub" }
+uv-distribution-types = { path = "crates/uv-distribution-types-stub" }
+uv-fs = { path = "crates/uv-fs-stub" }
+
+[patch.crates-io]
+fs-err = { path = "crates/fs-err-stub" }
 
 [profile.release]
 opt-level = "z"
@@ -28,3 +50,11 @@ lto = true
 codegen-units = 1
 panic = "abort"
 strip = true
+
+[profile.analysis]
+inherits = "release"
+opt-level = "z"
+lto = false
+codegen-units = 1
+strip = false
+debug = "line-tables-only"
