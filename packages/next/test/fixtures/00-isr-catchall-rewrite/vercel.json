@@ -49,5 +49,10 @@
       "retries": 3,
       "retryDelay": 2000
     }
-  ]
+  ],
+  "build": {
+    "env": {
+      "NEXT_BUILDER_INTEGRATION": "1"
+    }
+  }
 }

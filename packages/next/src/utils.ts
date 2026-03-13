@@ -677,7 +677,7 @@ export async function getDynamicRoutes({
     if (typeof getRouteRegex !== 'function') {
       getRouteRegex = undefined;
     }
-  } catch (_) {} // eslint-disable-line no-empty
+  } catch (_) {}
 
   if (!getRouteRegex || !getSortedRoutes) {
     try {
@@ -689,7 +689,7 @@ export async function getDynamicRoutes({
       if (typeof getRouteRegex !== 'function') {
         getRouteRegex = undefined;
       }
-    } catch (_) {} // eslint-disable-line no-empty
+    } catch (_) {}
   }
 
   if (!getRouteRegex || !getSortedRoutes) {
@@ -1142,7 +1142,7 @@ export type NextRequiredServerFilesManifest = {
 /**
  * The rendering mode for a route.
  */
-export const enum RenderingMode {
+export enum RenderingMode {
   /**
    * `STATIC` rendering mode will output a fully static HTML page or error if
    * anything dynamic is used.
@@ -1875,7 +1875,9 @@ export function addLocaleOrDefault(
 export type LambdaGroup = {
   pages: string[];
   memory?: number;
-  maxDuration?: number;
+  maxDuration?: number | 'max';
+  regions?: string[];
+  functionFailoverRegions?: string[];
   supportsCancellation?: boolean;
   isAppRouter?: boolean;
   isAppRouteHandler?: boolean;
@@ -1890,6 +1892,18 @@ export type LambdaGroup = {
   pseudoLayerUncompressedBytes: number;
   experimentalTriggers?: NodejsLambda['experimentalTriggers'];
 };
+
+function compareRegions(
+  a: string[] | undefined,
+  b: string[] | undefined
+): boolean {
+  if (a === undefined && b === undefined) return true;
+  if (a === undefined || b === undefined) return false;
+  if (a.length !== b.length) return false;
+  const sortedA = [...a].sort();
+  const sortedB = [...b].sort();
+  return sortedA.every((val, idx) => val === sortedB[idx]);
+}
 
 export async function getPageLambdaGroups({
   entryPath,
@@ -1946,7 +1960,9 @@ export async function getPageLambdaGroups({
     let opts: {
       architecture?: NodejsLambda['architecture'];
       memory?: number;
-      maxDuration?: number;
+      maxDuration?: number | 'max';
+      regions?: string[];
+      functionFailoverRegions?: string[];
       experimentalTriggers?: NodejsLambda['experimentalTriggers'];
       supportsCancellation?: boolean;
     } = {};
@@ -1955,7 +1971,12 @@ export async function getPageLambdaGroups({
       functionsConfigManifest &&
       functionsConfigManifest.functions[routeName]
     ) {
-      opts = functionsConfigManifest.functions[routeName];
+      // Exclude `regions` from the manifest. Next.js outputs `preferredRegion`
+      // as `regions` in the manifest, but for Node.js lambdas we only support
+      // regions via vercel.json functions config, not route-level config.
+      const { regions: _regions, ...manifestOpts } =
+        functionsConfigManifest.functions[routeName];
+      opts = manifestOpts;
     }
 
     if (config && config.functions) {
@@ -2026,6 +2047,11 @@ export async function getPageLambdaGroups({
           const matches =
             group.maxDuration === opts.maxDuration &&
             group.memory === opts.memory &&
+            compareRegions(group.regions, opts.regions) &&
+            compareRegions(
+              group.functionFailoverRegions,
+              opts.functionFailoverRegions
+            ) &&
             group.isPrerenders === isPrerenderRoute &&
             group.isExperimentalPPR === isExperimentalPPR &&
             JSON.stringify(group.experimentalTriggers) ===
@@ -3045,6 +3071,12 @@ export const onPrerenderRoute =
         }
       }
 
+      const partialFallback =
+        isAppPathRoute &&
+        renderingMode === RenderingMode.PARTIALLY_STATIC &&
+        isFallback &&
+        Boolean(postponedState);
+
       // If this is a static metadata file that should output FileRef instead of Prerender
       const staticMetadataFile = getSourceFileRefOfStaticMetadata(
         routeKey,
@@ -3075,6 +3107,7 @@ export const onPrerenderRoute =
           experimentalStreamingLambdaPath,
           chain,
           allowHeader,
+          partialFallback: partialFallback || undefined,
 
           ...(isNotFound
             ? {
@@ -3124,6 +3157,7 @@ export const onPrerenderRoute =
           bypassToken: prerenderManifest.bypassToken,
           experimentalBypassFor,
           allowHeader,
+          partialFallback: undefined,
 
           ...(isNotFound
             ? {
@@ -3228,6 +3262,7 @@ export const onPrerenderRoute =
               bypassToken: prerenderManifest.bypassToken,
               experimentalBypassFor,
               allowHeader,
+              partialFallback: undefined,
               chain: {
                 outputPath: normalizePathData(outputPathData),
                 headers: routesManifest.ppr.chain.headers,
@@ -3355,6 +3390,7 @@ export const onPrerenderRoute =
                 // Use the same prerender group as the JSON/data prerender.
                 group: prerenderGroup,
                 allowHeader,
+                partialFallback: undefined,
 
                 // These routes are always only static, so they should not
                 // permit any bypass unless it's for preview
@@ -3613,7 +3649,7 @@ export {
   normalizePackageJson,
   getNextConfig,
   getImagesConfig,
-  stringMap,
+  type stringMap,
   normalizePage,
   isDynamicRoute,
   getSourceFilePathFromPage,
@@ -3624,7 +3660,8 @@ export type FunctionsConfigManifestV1 = {
   functions: Record<
     string,
     {
-      maxDuration?: number | undefined;
+      maxDuration?: number | 'max' | undefined;
+      regions?: string[];
       runtime?: 'nodejs';
       matchers?: Array<{
         regexp: string;
@@ -4653,7 +4690,7 @@ export async function getServerActionMetaRoutes(
     }
 
     return routes;
-  } catch (error) {
+  } catch (_error) {
     // If manifest doesn't exist or can't be read, return empty routes
     return [];
   }

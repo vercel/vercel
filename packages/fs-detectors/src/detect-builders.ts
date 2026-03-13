@@ -8,6 +8,7 @@ import type {
   Builder,
   Config,
   BuilderFunctions,
+  ExperimentalServices,
   ProjectSettings,
   Service,
 } from '@vercel/build-utils';
@@ -49,6 +50,7 @@ export interface ErrorResponse {
 export interface Options {
   tag?: string;
   functions?: BuilderFunctions;
+  experimentalServices?: ExperimentalServices;
   ignoreBuildScript?: boolean;
   projectSettings?: ProjectSettings;
   cleanUrls?: boolean;
@@ -116,16 +118,18 @@ export async function detectBuilders(
   builders: Builder[] | null;
   errors: ErrorResponse[] | null;
   warnings: ErrorResponse[];
+  hostRewriteRoutes?: Route[] | null;
   defaultRoutes: Route[] | null;
   redirectRoutes: Route[] | null;
   rewriteRoutes: Route[] | null;
   errorRoutes: Route[] | null;
   services?: Service[];
 }> {
-  const { projectSettings = {} } = options;
+  const { experimentalServices: services, projectSettings = {} } = options;
   const { framework } = projectSettings;
+  const hasServicesConfig = services != null && typeof services === 'object';
 
-  if (framework === 'services') {
+  if (hasServicesConfig || framework === 'services') {
     return getServicesBuilders({
       workPath: options.workPath,
     });
@@ -367,12 +371,13 @@ export async function detectBuilders(
   if (frontendBuilder) {
     // Add @vercel/static build for public files for server-based frameworks
     // so that files in `public/` are served from the root path, e.g. `/logo.svg`.
-    // This applies to Express, Hono, Go, and Python-based server frameworks.
+    // This applies to Express, Hono, Go, Python, and experimental backends.
     if (
-      frontendBuilder?.use === '@vercel/express' ||
-      frontendBuilder?.use === '@vercel/hono' ||
-      frontendBuilder?.use === '@vercel/python' ||
-      frontendBuilder?.use === '@vercel/go'
+      isOfficialRuntime('express', frontendBuilder?.use) ||
+      isOfficialRuntime('hono', frontendBuilder?.use) ||
+      isOfficialRuntime('python', frontendBuilder?.use) ||
+      isOfficialRuntime('go', frontendBuilder?.use) ||
+      isOfficialRuntime('backends', frontendBuilder?.use)
     ) {
       builders.push({
         src: 'public/**/*',
@@ -677,13 +682,15 @@ function validateFunctions({ functions = {} }: Options) {
 
     if (
       func.maxDuration !== undefined &&
+      func.maxDuration !== 'max' &&
       (func.maxDuration < 1 ||
         func.maxDuration > 900 ||
         !Number.isInteger(func.maxDuration))
     ) {
       return {
         code: 'invalid_function_duration',
-        message: 'Functions must have a duration between 1 and 900.',
+        message:
+          'Functions must have a maxDuration between 1 and 900, or "max".',
       };
     }
 
@@ -779,24 +786,8 @@ function checkUnusedFunctions(
       isOfficialRuntime('hono', frontendBuilder.use) ||
       isOfficialRuntime('backends', frontendBuilder.use))
   ) {
-    // Copied from builder entrypoint detection
-    const validFilenames = [
-      'app',
-      'index',
-      'server',
-      'src/app',
-      'src/index',
-      'src/server',
-    ];
-    const validExtensions = ['js', 'cjs', 'mjs', 'ts', 'cts', 'mts'];
-    const validEntrypoints = validFilenames.flatMap(filename =>
-      validExtensions.map(extension => `${filename}.${extension}`)
-    );
-    for (const fnKey of unusedFunctions.values()) {
-      if (validEntrypoints.includes(fnKey)) {
-        unusedFunctions.delete(fnKey);
-      }
-    }
+    // Skip for backends because function names aren't statically defined
+    return null;
   }
 
   if (unusedFunctions.size) {
@@ -1142,9 +1133,9 @@ function getRouteResult(
       const hasApiBuild = apiBuilders.find(builder => {
         return builder.src?.startsWith('api/');
       });
-      if (typeof ignoreRuntimes === 'undefined' && hasApiBuild) {
-        // This route is only necessary to hide the directory listing
-        // to avoid enumerating serverless function names.
+      // Skip for Next.js: it serves /api (Pages + App Router) and 404s unmatched
+      // paths; adding a catch-all here would 404 dynamic routes like /api/flow/[id]/next.
+      if (typeof ignoreRuntimes === 'undefined' && hasApiBuild && !isNextjs) {
         // But it causes issues in `vc dev` for frameworks that handle
         // their own functions such as redwood, so we ignore.
         rewriteRoutes.push({
@@ -1155,7 +1146,7 @@ function getRouteResult(
     } else {
       defaultRoutes.push(...apiRoutes);
 
-      if (apiRoutes.length) {
+      if (apiRoutes.length && !isNextjs) {
         defaultRoutes.push({
           status: 404,
           src: '^/api(/.*)?$',

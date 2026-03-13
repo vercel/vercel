@@ -1,5 +1,5 @@
 import assert from 'assert';
-import { describe, it, expect, beforeAll, vi } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import createLineIterator from 'line-async-iterator';
 import { client } from '../../../mocks/client';
 import { useUser } from '../../../mocks/user';
@@ -23,36 +23,19 @@ const fixture = (name: string) =>
 
 describe('list', () => {
   describe('--non-interactive', () => {
-    it('outputs action_required JSON and exits when not linked and multiple teams (no --scope)', async () => {
+    it('lists all deployments when not linked and multiple teams (no --scope)', async () => {
       const cwd = setupTmpDir();
-      useUser({ version: 'northstar' });
+      const user = useUser({ version: 'northstar' });
       useTeams('team_dummy');
       createTeam();
+      useDeployment({ creator: user });
       client.cwd = cwd;
       client.setArgv('list', '--non-interactive');
       (client as { nonInteractive: boolean }).nonInteractive = true;
 
-      const exitSpy = vi
-        .spyOn(process, 'exit')
-        .mockImplementation((code?: number) => {
-          throw new Error(`process.exit(${code})`);
-        });
-      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+      const exitCode = await list(client);
+      expect(exitCode).toEqual(0);
 
-      await expect(list(client)).rejects.toThrow('process.exit(1)');
-
-      expect(logSpy).toHaveBeenCalledTimes(1);
-      const payload = JSON.parse(logSpy.mock.calls[0][0]);
-      expect(payload.status).toBe('action_required');
-      expect(payload.reason).toBe('missing_scope');
-      expect(payload.message).toContain('--scope');
-      expect(payload.message).toContain('non-interactive');
-      expect(Array.isArray(payload.choices)).toBe(true);
-      expect(payload.choices.length).toBeGreaterThanOrEqual(2);
-      expect(exitSpy).toHaveBeenCalledWith(1);
-
-      exitSpy.mockRestore();
-      logSpy.mockRestore();
       (client as { nonInteractive: boolean }).nonInteractive = false;
     });
   });
@@ -113,6 +96,7 @@ describe('list', () => {
       const header = parseSpacedTableRow(line.value!);
       expect(header).toEqual([
         'Age',
+        'Project',
         'Deployment',
         'Status',
         'Environment',
@@ -122,7 +106,8 @@ describe('list', () => {
 
       line = await lines.next();
       const data = parseSpacedTableRow(line.value!);
-      data.shift();
+      data.shift(); // Age
+      data.shift(); // Project
       expect(data).toEqual([
         `https://${deployment.url}`,
         stateString(deployment.readyState || ''),
@@ -365,6 +350,74 @@ describe('list', () => {
     });
   });
 
+  describe('--all', () => {
+    it('should track use of `--all` flag', async () => {
+      const user = useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'with-team',
+        name: 'with-team',
+      });
+      useDeployment({ creator: user });
+
+      client.cwd = fixture('with-team');
+      client.setArgv('list', '--all');
+      await list(client);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:all',
+          value: 'TRUE',
+        },
+      ]);
+    });
+
+    it('should list all deployments across projects when --all flag is used', async () => {
+      const user = useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'with-team',
+        name: 'with-team',
+      });
+      useDeployment({ creator: user });
+
+      client.cwd = fixture('with-team');
+      client.setArgv('list', '--all');
+      const exitCode = await list(client);
+
+      expect(exitCode).toEqual(0);
+
+      const lines = createLineIterator(client.stderr);
+
+      let line = await lines.next();
+      expect(line.value).toContain('Fetching deployments');
+
+      // Should show "Deployments" without project-specific label
+      line = await lines.next();
+      expect(line.value).toContain('Deployments');
+      expect(line.value).not.toContain('for');
+    });
+
+    it('should error when --all flag is used with app argument', async () => {
+      useUser();
+      useProject({
+        ...defaultProject,
+        id: 'with-team',
+        name: 'with-team',
+      });
+
+      client.setArgv('list', 'my-project', '--all');
+      const exitCode = await list(client);
+
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput(
+        'Cannot use --all flag with a project argument'
+      );
+    });
+  });
+
   it('should get deployments from a project linked by a directory', async () => {
     const user = useUser();
     const teams = useTeams('team_dummy');
@@ -398,6 +451,7 @@ describe('list', () => {
     const header = parseSpacedTableRow(line.value!);
     expect(header).toEqual([
       'Age',
+      'Project',
       'Deployment',
       'Status',
       'Environment',
@@ -407,7 +461,8 @@ describe('list', () => {
 
     line = await lines.next();
     const data = parseSpacedTableRow(line.value!);
-    data.shift();
+    data.shift(); // Age
+    data.shift(); // Project
     expect(data).toEqual([
       `https://${deployment.url}`,
       stateString(deployment.readyState || ''),
@@ -493,8 +548,9 @@ describe('list', () => {
 
       const data = parseSpacedTableRow(line.value!);
       // Verify that we have a deployment URL and it shows READY status
-      expect(data[1]).toMatch(/^https:\/\/.+/); // URL pattern
-      expect(data[2]).toEqual(stateString('READY'));
+      // data[0]=Age, data[1]=Project, data[2]=Deployment, data[3]=Status
+      expect(data[2]).toMatch(/^https:\/\/.+/); // URL pattern
+      expect(data[3]).toEqual(stateString('READY'));
     });
 
     it('should error on invalid status', async () => {

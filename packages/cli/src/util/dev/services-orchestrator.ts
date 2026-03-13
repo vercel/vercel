@@ -4,7 +4,11 @@ import { Transform, Writable, type TransformCallback } from 'stream';
 import type { ChildProcess } from 'child_process';
 import getPort from 'get-port';
 import chalk from 'chalk';
-import type { Service } from '@vercel/fs-detectors';
+import {
+  getInternalServiceCronPathPrefix,
+  getInternalServiceWorkerPathPrefix,
+  type Service,
+} from '@vercel/fs-detectors';
 import { frameworkList, type Framework } from '@vercel/frameworks';
 import {
   cloneEnv,
@@ -68,8 +72,11 @@ function createServiceLogger(
   const padding = ' '.repeat(maxNameLength - serviceName.length);
   const prefix = color(`[${serviceName}]`) + padding;
 
-  const createTransform = () => {
+  const createTransform = (streamLabel: string) => {
     let buffer = '';
+    const labelPrefix = output.debugEnabled
+      ? `${prefix} ${chalk.gray(`(${streamLabel})`)}`
+      : prefix;
     return new Transform({
       transform(
         chunk: Buffer,
@@ -82,7 +89,9 @@ function createServiceLogger(
         buffer = lines.pop() || '';
         // Output complete lines with prefix
         if (lines.length > 0) {
-          const prefixed = lines.map(line => `${prefix} ${line}`).join('\n');
+          const prefixed = lines
+            .map(line => `${labelPrefix} ${line}`)
+            .join('\n');
           callback(null, prefixed + '\n');
         } else {
           callback(null, '');
@@ -91,7 +100,7 @@ function createServiceLogger(
       flush(callback: TransformCallback) {
         // Output any remaining buffered content on close
         if (buffer) {
-          callback(null, `${prefix} ${buffer}\n`);
+          callback(null, `${labelPrefix} ${buffer}\n`);
         } else {
           callback(null, '');
         }
@@ -99,8 +108,8 @@ function createServiceLogger(
     });
   };
 
-  const stdout = createTransform();
-  const stderr = createTransform();
+  const stdout = createTransform('stdout');
+  const stderr = createTransform('stderr');
 
   stdout.pipe(process.stdout);
   stderr.pipe(process.stderr);
@@ -122,9 +131,19 @@ interface ServiceDevProcess {
   pid: number;
   process?: ChildProcess;
   shutdown?: () => Promise<void>;
-  routePrefix: string;
+  routePrefixes: string[];
   workspace: string;
   logger: ServiceLogger;
+}
+
+function getServiceRoutePrefixes(service: Service): string[] {
+  if (service.type === 'worker') {
+    return [getInternalServiceWorkerPathPrefix(service.name)];
+  }
+  if (service.type === 'cron') {
+    return [getInternalServiceCronPathPrefix(service.name)];
+  }
+  return [service.routePrefix || '/'];
 }
 
 interface ServicesOrchestratorOptions {
@@ -240,27 +259,27 @@ export class ServicesOrchestrator {
     let bestMatchLength = -1;
 
     for (const service of this.managedServices.values()) {
-      const { routePrefix } = service;
-
-      if (routePrefix === '/') {
-        if (bestMatchLength === -1) {
-          bestMatch = service;
-          bestMatchLength = 0;
+      for (const routePrefix of service.routePrefixes) {
+        if (routePrefix === '/') {
+          if (bestMatchLength === -1) {
+            bestMatch = service;
+            bestMatchLength = 0;
+          }
+          continue;
         }
-        continue;
-      }
 
-      const normalizedPrefix = routePrefix.startsWith('/')
-        ? routePrefix
-        : `/${routePrefix}`;
+        const normalizedPrefix = routePrefix.startsWith('/')
+          ? routePrefix
+          : `/${routePrefix}`;
 
-      if (
-        pathname === normalizedPrefix ||
-        pathname.startsWith(`${normalizedPrefix}/`)
-      ) {
-        if (normalizedPrefix.length > bestMatchLength) {
-          bestMatch = service;
-          bestMatchLength = normalizedPrefix.length;
+        if (
+          pathname === normalizedPrefix ||
+          pathname.startsWith(`${normalizedPrefix}/`)
+        ) {
+          if (normalizedPrefix.length > bestMatchLength) {
+            bestMatch = service;
+            bestMatchLength = normalizedPrefix.length;
+          }
         }
       }
     }
@@ -309,9 +328,11 @@ export class ServicesOrchestrator {
       this.env,
       serviceUrlEnvVars
     );
+    env.VERCEL_SERVICE_TYPE = service.type;
 
     if (service.routePrefix && service.routePrefix !== '/') {
-      env.VERCEL_SERVICE_BASE_PATH = service.routePrefix;
+      env.VERCEL_SERVICE_ROUTE_PREFIX = service.routePrefix;
+      env.VERCEL_SERVICE_ROUTE_PREFIX_STRIP = '1';
     }
 
     // Try to use builder's startDevServer if available
@@ -410,7 +431,7 @@ export class ServicesOrchestrator {
         port: result.port,
         pid: result.pid,
         shutdown: result.shutdown,
-        routePrefix: service.routePrefix || '/',
+        routePrefixes: getServiceRoutePrefixes(service),
         workspace: service.workspace || '.',
         logger,
       };
@@ -456,10 +477,16 @@ export class ServicesOrchestrator {
       `Starting ${chalk.bold(service.name)} with ${chalk.cyan.bold(`"${devCommand}"`)}`
     );
 
+    // Pass terminal width so child frameworks can format output correctly.
+    if (process.stdout.columns) {
+      env.COLUMNS = `${process.stdout.columns}`;
+    }
+
     const child = spawnCommand(devCommand, {
       cwd: workspacePath,
       env,
-      stdio: ['inherit', 'pipe', 'pipe'],
+      stdio: ['ignore', 'pipe', 'pipe'],
+      detached: true,
     });
 
     if (!child.pid) {
@@ -498,7 +525,7 @@ export class ServicesOrchestrator {
       port,
       pid: child.pid,
       process: child,
-      routePrefix: service.routePrefix || '/',
+      routePrefixes: getServiceRoutePrefixes(service),
       workspace: service.workspace || '.',
       logger,
     };

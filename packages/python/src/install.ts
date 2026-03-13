@@ -1,19 +1,11 @@
 import execa from 'execa';
 import fs from 'fs';
 import { join, dirname } from 'path';
-import {
-  FileFsRef,
-  Files,
-  Meta,
-  NowBuildError,
-  debug,
-  glob,
-} from '@vercel/build-utils';
+import { Meta, NowBuildError, debug } from '@vercel/build-utils';
 import {
   discoverPythonPackage,
   stringifyManifest,
   createMinimalManifest,
-  normalizePackageName,
   PythonAnalysisError,
   PythonLockFileKind,
   PythonManifestConvertedKind,
@@ -21,10 +13,7 @@ import {
 } from '@vercel/python-analysis';
 import { getVenvPythonBin } from './utils';
 import { UvRunner, filterUnsafeUvPipArgs, getProtectedUvEnv } from './uv';
-import { DEFAULT_PYTHON_VERSION } from './version';
-
-// AWS Lambda uncompressed size limit is 250MB, but we use 249MB to leave a small buffer
-export const LAMBDA_SIZE_THRESHOLD_BYTES = 249 * 1024 * 1024;
+import { DEFAULT_PYTHON_VERSION_STRING } from './version';
 
 const makeDependencyCheckCode = (dependency: string) => `
 from importlib import util
@@ -49,7 +38,7 @@ export async function isInstalled(
       }
     );
     return stdout.startsWith(cwd);
-  } catch (err) {
+  } catch (_err) {
     return false;
   }
 }
@@ -78,7 +67,7 @@ async function areRequirementsInstalled(
       }
     );
     return true;
-  } catch (err) {
+  } catch (_err) {
     return false;
   }
 }
@@ -121,44 +110,19 @@ export function resolveVendorDir() {
   return vendorDir;
 }
 
-function toBuildError(error: PythonAnalysisError): NowBuildError {
-  return new NowBuildError({
-    code: error.code,
-    message: error.message,
-    link: error.link,
-    action: error.action,
-  });
-}
-
-export type ManifestType = 'uv.lock' | 'pylock.toml' | 'pyproject.toml' | null;
-
-export interface InstallSourceInfo {
-  manifestPath: string | null;
-  manifestType: ManifestType;
-  /** The discovered package info from python-analysis. */
-  pythonPackage?: PythonPackage;
-}
-
-interface DetectInstallSourceParams {
-  workPath: string;
-  entryDirectory: string;
-  repoRootPath?: string;
-}
-
-export async function detectInstallSource({
-  workPath,
-  entryDirectory,
-  repoRootPath,
-}: DetectInstallSourceParams): Promise<InstallSourceInfo> {
-  const entrypointDir = join(workPath, entryDirectory);
-  const rootDir = repoRootPath ?? workPath;
-
-  let pythonPackage: PythonPackage;
+/**
+ * Discover Python package metadata, converting PythonAnalysisError
+ * into NowBuildError with diagnostic logging.
+ */
+export async function discoverPackage({
+  entrypointDir,
+  rootDir,
+}: {
+  entrypointDir: string;
+  rootDir: string;
+}): Promise<PythonPackage> {
   try {
-    pythonPackage = await discoverPythonPackage({
-      entrypointDir,
-      rootDir,
-    });
+    return await discoverPythonPackage({ entrypointDir, rootDir });
   } catch (error: unknown) {
     if (error instanceof PythonAnalysisError) {
       if (
@@ -170,11 +134,30 @@ export async function detectInstallSource({
           `Failed to parse "${error.path}". File content:\n${error.fileContent}`
         );
       }
-      throw toBuildError(error);
+      throw new NowBuildError({
+        code: error.code,
+        message: error.message,
+        link: error.link,
+        action: error.action,
+      });
     }
     throw error;
   }
+}
 
+export type ManifestType = 'uv.lock' | 'pylock.toml' | 'pyproject.toml' | null;
+
+export interface InstallSourceInfo {
+  manifestPath: string | null;
+  manifestType: ManifestType;
+  /** The discovered package info from python-analysis. */
+  pythonPackage: PythonPackage;
+}
+
+export function detectInstallSource(
+  pythonPackage: PythonPackage,
+  rootDir: string
+): InstallSourceInfo {
   // Determine effective manifest type based on lock file and manifest presence
   let manifestType: ManifestType = null;
   let manifestPath: string | null = null;
@@ -210,7 +193,7 @@ export async function createPyprojectToml({
   dependencies: string[];
   pythonVersion?: string;
 }) {
-  const version = pythonVersion ?? DEFAULT_PYTHON_VERSION;
+  const version = pythonVersion ?? DEFAULT_PYTHON_VERSION_STRING;
   const requiresPython = `~=${version}.0`;
 
   const manifest = createMinimalManifest({
@@ -232,8 +215,8 @@ export interface UvProjectInfo {
 
 interface EnsureUvProjectParams {
   workPath: string;
-  entryDirectory: string;
-  repoRootPath?: string;
+  rootDir: string;
+  pythonPackage: PythonPackage;
   pythonVersion: string;
   uv: UvRunner;
   generateLockFile?: boolean;
@@ -247,22 +230,15 @@ interface EnsureUvProjectParams {
 
 export async function ensureUvProject({
   workPath,
-  entryDirectory,
-  repoRootPath,
+  rootDir,
+  pythonPackage,
   pythonVersion,
   uv,
   generateLockFile = false,
   requireBinaryWheels = false,
 }: EnsureUvProjectParams): Promise<UvProjectInfo> {
-  const rootDir = repoRootPath ?? workPath;
-
-  const installInfo = await detectInstallSource({
-    workPath,
-    entryDirectory,
-    repoRootPath,
-  });
-  const { manifestType, pythonPackage } = installInfo;
-  const manifest = pythonPackage?.manifest;
+  const { manifestType } = detectInstallSource(pythonPackage, rootDir);
+  const manifest = pythonPackage.manifest;
 
   let projectDir: string;
   let pyprojectPath: string;
@@ -274,7 +250,7 @@ export async function ensureUvProject({
     lockFileProvidedByUser = true;
     // Lock file exists - use it directly
     const lockFile =
-      pythonPackage?.manifest?.lockFile ?? pythonPackage?.workspaceLockFile;
+      pythonPackage.manifest?.lockFile ?? pythonPackage.workspaceLockFile;
     if (!lockFile) {
       throw new Error(
         `Expected lock file path to be resolved, but it was null`
@@ -315,9 +291,11 @@ export async function ensureUvProject({
 
     // If this is a converted manifest, write the pyproject.toml to disk
     if (manifest.origin) {
-      // Inject requires-python for the target version if not already set,
+      // Override requires-python to match the builder's selected Python version
       // so that `uv lock` and `uv sync` agree on the Python constraint.
-      if (manifest.data.project && !manifest.data.project['requires-python']) {
+      // For converted manifests the original constraint (e.g. from Pipfile.lock)
+      // may specify an older version that the builder has auto-upgraded.
+      if (manifest.data.project) {
         manifest.data.project['requires-python'] = `~=${pythonVersion}.0`;
       }
       const content = stringifyManifest(manifest.data);
@@ -327,7 +305,7 @@ export async function ensureUvProject({
     }
 
     // Check for workspace lock file
-    const workspaceLockFile = pythonPackage?.workspaceLockFile;
+    const workspaceLockFile = pythonPackage.workspaceLockFile;
     if (workspaceLockFile) {
       lockPath = join(rootDir, workspaceLockFile.path);
     } else {
@@ -535,168 +513,4 @@ export async function installRequirementsFile({
     ['--upgrade', '-r', filePath, ...args],
     targetDir
   );
-}
-
-export async function mirrorSitePackagesIntoVendor({
-  venvPath,
-  vendorDirName,
-}: {
-  venvPath: string;
-  vendorDirName: string;
-}): Promise<Files> {
-  const vendorFiles: Files = {};
-  // Map the files from site-packages in the virtual environment
-  // into the Lambda bundle under `_vendor`.
-  try {
-    const sitePackageDirs = await getVenvSitePackagesDirs(venvPath);
-    for (const dir of sitePackageDirs) {
-      if (!fs.existsSync(dir)) continue;
-
-      const dirFiles = await glob('**', dir);
-      for (const relativePath of Object.keys(dirFiles)) {
-        if (
-          relativePath.endsWith('.pyc') ||
-          relativePath.includes('__pycache__')
-        ) {
-          continue;
-        }
-
-        const srcFsPath = join(dir, relativePath);
-
-        const bundlePath = join(vendorDirName, relativePath).replace(
-          /\\/g,
-          '/'
-        );
-        vendorFiles[bundlePath] = new FileFsRef({ fsPath: srcFsPath });
-      }
-    }
-  } catch (err) {
-    console.log('Failed to collect site-packages from virtual environment');
-    throw err;
-  }
-
-  return vendorFiles;
-}
-
-/**
- * Calculate the total uncompressed size of files in a Files object.
- */
-export async function calculateBundleSize(files: Files): Promise<number> {
-  let totalSize = 0;
-
-  for (const filePath of Object.keys(files)) {
-    const file = files[filePath];
-    if ('fsPath' in file && file.fsPath) {
-      try {
-        const stats = await fs.promises.stat(file.fsPath);
-        totalSize += stats.size;
-      } catch (err) {
-        console.warn(
-          `Warning: Failed to stat file ${file.fsPath}, size will not be included in bundle calculation: ${err}`
-        );
-      }
-    } else if ('data' in file) {
-      // FileBlob with data
-      const data = (file as { data: string | Buffer }).data;
-      totalSize +=
-        typeof data === 'string' ? Buffer.byteLength(data) : data.length;
-    }
-  }
-
-  return totalSize;
-}
-
-/**
- * Mirror only private packages from site-packages into the _vendor directory.
- */
-export async function mirrorPrivatePackagesIntoVendor({
-  venvPath,
-  vendorDirName,
-  privatePackages,
-}: {
-  venvPath: string;
-  vendorDirName: string;
-  privatePackages: string[];
-}): Promise<Files> {
-  const vendorFiles: Files = {};
-
-  if (privatePackages.length === 0) {
-    debug('No private packages to bundle');
-    return vendorFiles;
-  }
-
-  const privatePackageSet = new Set(privatePackages.map(normalizePackageName));
-
-  try {
-    const sitePackageDirs = await getVenvSitePackagesDirs(venvPath);
-
-    for (const dir of sitePackageDirs) {
-      if (!fs.existsSync(dir)) continue;
-
-      const entries = await fs.promises.readdir(dir, { withFileTypes: true });
-
-      for (const entry of entries) {
-        // Skip __pycache__ and .pyc files
-        if (entry.name === '__pycache__' || entry.name.endsWith('.pyc')) {
-          continue;
-        }
-
-        // Check if this entry belongs to a private package.
-        // Per PEP 427, dist-info directories are named {distribution}-{version}.dist-info
-        // where {distribution} has non-alphanumeric chars (except .) replaced with underscores.
-        // E.g., "my-package" becomes "my_package-1.0.0.dist-info"
-        const entryBaseName = entry.name
-          .replace(/-[\d.]+\.dist-info$/, '')
-          .replace(/\.dist-info$/, '')
-          .replace(/-[\d.]+\.egg-info$/, '')
-          .replace(/\.egg-info$/, '');
-
-        const normalizedEntry = normalizePackageName(entryBaseName);
-
-        // Include if it matches a private package
-        const isPrivate = privatePackageSet.has(normalizedEntry);
-
-        if (isPrivate) {
-          const entryPath = join(dir, entry.name);
-
-          if (entry.isDirectory()) {
-            // Recursively add all files in the directory
-            const dirFiles = await glob('**', entryPath);
-            for (const relativePath of Object.keys(dirFiles)) {
-              if (
-                relativePath.endsWith('.pyc') ||
-                relativePath.includes('__pycache__')
-              ) {
-                continue;
-              }
-
-              const srcFsPath = join(entryPath, relativePath);
-              const bundlePath = join(
-                vendorDirName,
-                entry.name,
-                relativePath
-              ).replace(/\\/g, '/');
-              vendorFiles[bundlePath] = new FileFsRef({ fsPath: srcFsPath });
-            }
-          } else {
-            // Single file
-            const bundlePath = join(vendorDirName, entry.name).replace(
-              /\\/g,
-              '/'
-            );
-            vendorFiles[bundlePath] = new FileFsRef({ fsPath: entryPath });
-          }
-        }
-      }
-    }
-
-    debug(
-      `Bundled ${Object.keys(vendorFiles).length} files from private packages`
-    );
-  } catch (err) {
-    console.log('Failed to collect private packages from virtual environment');
-    throw err;
-  }
-
-  return vendorFiles;
 }

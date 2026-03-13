@@ -21,6 +21,7 @@ exports[`base level help output > help 1`] = `
       inspect              [id]        Displays information related to a deployment
       i | install          [name]      Install an integration from the Marketplace
       integration          [cmd]       Manages your Marketplace integrations
+      ir | integration-resource [cmd]  Manages your Marketplace integration resources
       link                 [path]      Link local directory to a Vercel Project
       ls | list            [app]       Lists deployments
       login                [email]     Logs into your account or creates a new one
@@ -46,6 +47,7 @@ exports[`base level help output > help 1`] = `
       projects                         Manages your Projects
       redirects            [cmd]       Manages redirects for your current Project
       rm | remove          [id]        Removes a deployment
+      routes               [cmd]       Manages routing rules for your current Project
       teams                            Manages your teams
       upgrade                          Upgrade the Vercel CLI to the latest version
       whoami                           Shows the username of the currently logged in user

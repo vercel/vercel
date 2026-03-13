@@ -6,7 +6,7 @@ try {
   process.cwd();
 } catch (err: unknown) {
   if (isError(err) && err.message.includes('uv_cwd')) {
-    // eslint-disable-next-line no-console
+    // biome-ignore lint/suspicious/noConsole: intentional console usage
     console.error('Error: The current working directory does not exist.');
     process.exit(1);
   }
@@ -17,9 +17,8 @@ try {
     'DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.',
   ];
 
-  // eslint-disable-next-line no-console
+  // biome-ignore lint/suspicious/noConsole: intentional console usage
   const originalError = console.error;
-  // eslint-disable-next-line no-console
   console.error = (msg: unknown) => {
     const isSilencedError = SILENCED_ERRORS.some(
       error => typeof msg === 'string' && msg.includes(error)
@@ -211,20 +210,19 @@ const main = async () => {
   const subSubCommand = parsedArgs.args[3];
 
   // If empty, leave this code here for easy adding of beta commands later
-  const betaCommands: string[] = ['api', 'curl', 'webhooks'];
-  if (betaCommands.includes(targetOrSubcommand)) {
-    output.print(
-      `${chalk.grey(
-        `${getTitleName()} CLI ${pkg.version} | ${chalk.bold(targetOrSubcommand)} is in beta — https://vercel.com/feedback`
-      )}\n`
-    );
+  const betaCommands: string[] = ['api', 'crons', 'curl', 'webhooks'];
+  const msg = betaCommands.includes(targetOrSubcommand)
+    ? `${getTitleName()} CLI ${pkg.version} | ${targetOrSubcommand} is in beta — https://vercel.com/feedback`
+    : `${getTitleName()} CLI ${pkg.version}`;
+  if (process.env.VERCEL === '1') {
+    output.print(`${msg}\n`);
   } else {
-    output.print(`${chalk.grey(`${getTitleName()} CLI ${pkg.version}`)}\n`);
+    output.debug(msg);
   }
 
   // Handle `--version` directly
   if (!targetOrSubcommand && parsedArgs.flags['--version']) {
-    // eslint-disable-next-line no-console
+    // biome-ignore lint/suspicious/noConsole: intentional console usage
     console.log(pkg.version);
     return 0;
   }
@@ -347,19 +345,26 @@ const main = async () => {
 
   try {
     new URL(apiUrl);
-  } catch (err: unknown) {
+  } catch (_err: unknown) {
     output.error(`Please provide a valid URL instead of ${highlight(apiUrl)}.`);
     return 1;
   }
 
   // Shared API `Client` instance for all sub-commands to utilize.
-  // Non-interactive when: --non-interactive flag, or agent running without a TTY (so Cursor terminal stays interactive).
+  // Non-interactive when: --non-interactive is set, or agent is detected (and no TTY). Explicit --non-interactive=false overrides agent detection.
   const stdinIsTTY = process.stdin?.isTTY === true;
   const nonInteractiveFlag = parsedArgs.flags['--non-interactive'] === true;
-  const nonInteractive = nonInteractiveFlag || (isAgent && !stdinIsTTY);
+  const argv = process.argv;
+  const explicitNonInteractiveFalse =
+    argv.includes('--non-interactive=false') ||
+    (argv.includes('--non-interactive') &&
+      argv[argv.indexOf('--non-interactive') + 1] === 'false');
+  const nonInteractive = explicitNonInteractiveFalse
+    ? false
+    : nonInteractiveFlag || (isAgent && !stdinIsTTY);
 
   output.debug(
-    `Agent/TTY/nonInteractive: isAgent=${isAgent} agentName=${detectedAgent?.name ?? 'none'} stdin.isTTY=${String(process.stdin?.isTTY)} --non-interactive=${nonInteractiveFlag} => nonInteractive=${nonInteractive}`
+    `Agent/TTY/nonInteractive: isAgent=${isAgent} agentName=${detectedAgent?.name ?? 'none'} stdin.isTTY=${String(process.stdin?.isTTY)} --non-interactive=${nonInteractiveFlag} explicitFalse=${explicitNonInteractiveFalse} => nonInteractive=${nonInteractive}`
   );
 
   // Only load proxy-agent if proxy env vars are configured (saves ~60ms startup)
@@ -437,6 +442,7 @@ const main = async () => {
   }
 
   const subcommandsWithoutToken = [
+    'agent',
     'login',
     'logout',
     'help',
@@ -444,10 +450,22 @@ const main = async () => {
     'build',
     'telemetry',
     'upgrade',
+    'skills',
   ];
 
   if (process.env.FF_GUIDANCE_MODE) {
     subcommandsWithoutToken.push('guidance');
+  }
+
+  if (
+    subcommand === 'dev' &&
+    (client.argv.includes('--local') || client.argv.includes('-L'))
+  ) {
+    subcommandsWithoutToken.push('dev');
+  }
+
+  if (subcommand === 'flags' && subSubCommand === 'prepare') {
+    subcommandsWithoutToken.push('flags');
   }
 
   // Prompt for login if there is no current token
@@ -566,6 +584,7 @@ const main = async () => {
 
     try {
       user = await getUser(client);
+      telemetryEventStore.updateUserId(user.id);
     } catch (err: unknown) {
       if (err instanceof Error) {
         output.debug(err.stack || err.toString());
@@ -705,9 +724,21 @@ const main = async () => {
           break;
 
         // Non-priority commands - loaded from bulk bundle
+        case 'agent':
+          telemetry.trackCliCommandAgent(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).agent;
+          break;
         case 'alias':
           telemetry.trackCliCommandAlias(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).alias;
+          break;
+        case 'activity':
+          telemetry.trackCliCommandActivity(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).activity;
+          break;
+        case 'alerts':
+          telemetry.trackCliCommandAlerts(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).alerts;
           break;
         case 'api':
           telemetry.trackCliCommandApi(userSuppliedSubCommand);
@@ -720,6 +751,10 @@ const main = async () => {
         case 'blob':
           telemetry.trackCliCommandBlob(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).blob;
+          break;
+        case 'buy':
+          telemetry.trackCliCommandBuy(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).buy;
           break;
         case 'init':
           telemetry.trackCliCommandInit(userSuppliedSubCommand);
@@ -736,6 +771,11 @@ const main = async () => {
         case 'certs':
           telemetry.trackCliCommandCerts(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).certs;
+          break;
+        case 'crons':
+        case 'cron':
+          telemetry.trackCliCommandCrons(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).crons;
           break;
         case 'curl':
           telemetry.trackCliCommandCurl(userSuppliedSubCommand);
@@ -804,6 +844,15 @@ const main = async () => {
           telemetry.trackCliCommandLogs(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).logs;
           break;
+        case 'metrics':
+          if (process.env.FF_METRICS) {
+            telemetry.trackCliCommandMetrics(userSuppliedSubCommand);
+            func = (await import('./commands-bulk.js')).metrics;
+            break;
+          } else {
+            func = null;
+            break;
+          }
         case 'microfrontends':
           telemetry.trackCliCommandMicrofrontends(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).microfrontends;
@@ -832,6 +881,10 @@ const main = async () => {
           telemetry.trackCliCommandRedirects(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).redirects;
           break;
+        case 'routes':
+          telemetry.trackCliCommandRoutes(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).routes;
+          break;
         case 'remove':
           telemetry.trackCliCommandRemove(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).remove;
@@ -845,6 +898,10 @@ const main = async () => {
         case 'rolling-release':
           telemetry.trackCliCommandRollingRelease(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).rollingRelease;
+          break;
+        case 'skills':
+          telemetry.trackCliCommandSkills(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).skills;
           break;
         case 'target':
           telemetry.trackCliCommandTarget(userSuppliedSubCommand);
@@ -966,6 +1023,14 @@ const main = async () => {
   }
 
   telemetryEventStore.updateTeamId(client.config.currentTeam);
+  if (!telemetryEventStore.hasUserId) {
+    try {
+      const user = await getUser(client);
+      telemetryEventStore.updateUserId(user.id);
+    } catch {
+      // best-effort for telemetry
+    }
+  }
   await telemetryEventStore.save();
 
   return exitCode;
@@ -1003,15 +1068,26 @@ main()
             `Changelog: ${output.link(changelog, changelog, { fallback: false })}\n`
           );
 
-          const shouldUpgrade = await client.input.confirm(
-            'Would you like to upgrade now?',
-            true
-          );
+          try {
+            const shouldUpgrade = await client.input.confirm(
+              'Would you like to upgrade now?',
+              true
+            );
 
-          if (shouldUpgrade) {
-            const upgradeExitCode = await executeUpgrade();
-            process.exitCode = upgradeExitCode;
-            return;
+            if (shouldUpgrade) {
+              const upgradeExitCode = await executeUpgrade();
+              process.exitCode = upgradeExitCode;
+              return;
+            }
+          } catch (err: unknown) {
+            if (
+              err instanceof Error &&
+              err.message.includes('User force closed the prompt')
+            ) {
+              // User pressed Ctrl+C to dismiss the prompt
+            } else {
+              throw err;
+            }
           }
         } else {
           const errorMsg =

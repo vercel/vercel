@@ -121,6 +121,8 @@ export interface BuildOptions {
   service?: {
     /** URL path prefix where the service is mounted (e.g., "/api"). */
     routePrefix?: string;
+    /** Optional subdomain this service is mounted on (e.g., "api"). */
+    subdomain?: string;
     /** Workspace directory for this service, relative to the project root. */
     workspace?: string;
   };
@@ -251,7 +253,6 @@ export type StartDevServerResult = StartDevServerSuccess | null;
  * Credit to Iain Reid, MIT license.
  * Source: https://gist.github.com/iainreid820/5c1cc527fe6b5b7dba41fec7fe54bf6e
  */
-// eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace PackageJson {
   /**
    * An author or contributor
@@ -410,12 +411,15 @@ export interface Builder {
   config?: Config;
 }
 
+export type MaxDuration = number | 'max';
+
 export interface BuilderFunctions {
   [key: string]: {
     architecture?: LambdaArchitecture;
     memory?: number;
-    maxDuration?: number;
+    maxDuration?: MaxDuration;
     regions?: string[];
+    functionFailoverRegions?: string[];
     runtime?: string;
     includeFiles?: string;
     excludeFiles?: string;
@@ -559,8 +563,12 @@ export interface Service {
   installCommand?: string;
   /* web service config */
   routePrefix?: string;
+  routePrefixSource?: 'configured' | 'generated';
+  subdomain?: string;
   /* cron service config */
   schedule?: string;
+  /* optional handler for cron service in format of {module}:{callable} */
+  handlerFunction?: string;
   /* worker service config */
   topic?: string;
   consumer?: string;
@@ -744,16 +752,12 @@ export type ServiceType = 'web' | 'cron' | 'worker';
 export interface ExperimentalServiceConfig {
   type?: ServiceType;
   /**
-   * Entry file for the service, relative to the workspace directory.
-   * @example "src/index.ts", "main.py", "api/server.go"
+   * Service entrypoint, relative to the project root.
+   * Can be either a file path (runtime entrypoint) or a directory path
+   * (service workspace for framework-based services).
+   * @example "apps/web", "services/api/src/index.ts", "services/fastapi/main.py"
    */
   entrypoint?: string;
-  /**
-   * Path to the directory containing the service's manifest file
-   * (package.json, pyproject.toml, etc.).
-   * Defaults to "." (project root) if not specified.
-   */
-  workspace?: string;
 
   /** Framework to use */
   framework?: string;
@@ -767,13 +771,15 @@ export interface ExperimentalServiceConfig {
 
   /** Lambda config */
   memory?: number;
-  maxDuration?: number;
+  maxDuration?: MaxDuration;
   includeFiles?: string | string[];
   excludeFiles?: string | string[];
 
   /* Web service config */
   /** URL prefix for routing */
   routePrefix?: string;
+  /** Subdomain this service should respond to (web services only). */
+  subdomain?: string;
 
   /* Cron service config */
   /** Cron schedule expression (e.g., "0 0 * * *") */

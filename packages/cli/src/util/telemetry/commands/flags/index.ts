@@ -1,6 +1,6 @@
 import { TelemetryClient } from '../..';
-import type { TelemetryMethods } from '../../types';
 import type { flagsCommand } from '../../../../commands/flags/command';
+import type { TelemetryMethods } from '../../types';
 
 export class FlagsTelemetryClient
   extends TelemetryClient
@@ -20,13 +20,33 @@ export class FlagsTelemetryClient
     });
   }
 
-  trackCliSubcommandAdd(actual: string) {
+  trackCliSubcommandOpen(actual: string) {
     this.trackCliSubcommand({
-      subcommand: 'add',
+      subcommand: 'open',
       value: actual,
     });
   }
 
+  trackCliSubcommandCreate(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'create',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandUpdate(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'update',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandSet(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'set',
+      value: actual,
+    });
+  }
   trackCliSubcommandRemove(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'rm',
@@ -58,6 +78,13 @@ export class FlagsTelemetryClient
   trackCliSubcommandSdkKeys(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'sdk-keys',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandPrepare(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'prepare',
       value: actual,
     });
   }

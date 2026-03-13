@@ -124,7 +124,7 @@ async function readPackageJson(entryPath: string): Promise<PackageJson> {
 
   try {
     return JSON.parse(await readFile(packagePath, 'utf8'));
-  } catch (err) {
+  } catch (_err) {
     debug('package.json not found in entry');
     return {};
   }
@@ -666,16 +666,14 @@ export const build: BuildV2 = async buildOptions => {
   const hasIsr404Page =
     typeof prerenderManifest.staticRoutes[
       routesManifest?.i18n
-        ? // eslint-disable-next-line @typescript-eslint/no-non-null-asserted-optional-chain
-          path.join('/', routesManifest?.i18n!.defaultLocale!, '/404')
+        ? path.join('/', routesManifest?.i18n!.defaultLocale!, '/404')
         : '/404'
     ]?.initialRevalidate === 'number';
 
   const hasIsr500Page =
     typeof prerenderManifest.staticRoutes[
       routesManifest?.i18n
-        ? // eslint-disable-next-line @typescript-eslint/no-non-null-asserted-optional-chain
-          path.join('/', routesManifest?.i18n!.defaultLocale!, '/500')
+        ? path.join('/', routesManifest?.i18n!.defaultLocale!, '/500')
         : '/500'
     ]?.initialRevalidate === 'number';
 
@@ -721,7 +719,7 @@ export const build: BuildV2 = async buildOptions => {
         'utf8'
       );
       escapedBuildId = escapeStringRegexp(buildId);
-    } catch (err) {
+    } catch (_err) {
       throw new NowBuildError({
         code: 'NOW_NEXT_NO_BUILD_ID',
         message:
@@ -2065,7 +2063,8 @@ export const build: BuildV2 = async buildOptions => {
           let lambdaOptions: {
             architecture?: NodejsLambda['architecture'];
             memory?: number;
-            maxDuration?: number;
+            maxDuration?: number | 'max';
+            regions?: string[];
             experimentalTriggers?: TriggerEvent[];
             supportsCancellation?: boolean;
           } = {};
@@ -2090,7 +2089,6 @@ export const build: BuildV2 = async buildOptions => {
               files: launcherFiles,
               layers: [
                 Object.keys(pageTraces[page] || {}).reduce((prev, cur) => {
-                  // eslint-disable-next-line @typescript-eslint/no-non-null-asserted-optional-chain
                   prev[cur] = tracedPseudoLayer?.pseudoLayer[cur]!;
                   return prev;
                 }, {} as PseudoLayer),
@@ -2732,7 +2730,6 @@ export const build: BuildV2 = async buildOptions => {
       ...pageLambdaRoutes.filter(route => {
         // filter out any SSG pages as they are already present in output
         if ('headers' in route) {
-          // eslint-disable-next-line @typescript-eslint/no-non-null-asserted-optional-chain
           let page = route.headers?.['x-nextjs-page']!;
           page = page === '/index' ? '/' : page;
 

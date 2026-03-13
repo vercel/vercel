@@ -521,5 +521,10 @@
       "status": 200,
       "mustContain": "\"catchall\":\"yes\""
     }
-  ]
+  ],
+  "build": {
+    "env": {
+      "NEXT_BUILDER_INTEGRATION": "1"
+    }
+  }
 }

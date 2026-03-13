@@ -18,7 +18,7 @@ import { getVercelOidcTokenSync } from '@vercel/oidc';
  * @property {number} [durationSeconds=3600] - The duration, in seconds, of the role session. Defaults to 3600 seconds.
  */
 
-export interface AwsCredentialsProviderInit // eslint-disable-line @typescript-eslint/no-empty-interface
+export interface AwsCredentialsProviderInit
   extends Omit<FromWebTokenInit, 'webIdentityToken'> {}
 
 /**

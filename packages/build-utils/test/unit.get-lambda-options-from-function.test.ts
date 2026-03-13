@@ -11,6 +11,7 @@ describe('getLambdaOptionsFromFunction', () => {
           memory: 1024,
           maxDuration: 60,
           regions: ['sfo1', 'iad1'],
+          functionFailoverRegions: ['dub1'],
         },
       },
     };
@@ -25,6 +26,28 @@ describe('getLambdaOptionsFromFunction', () => {
       memory: 1024,
       maxDuration: 60,
       regions: ['sfo1', 'iad1'],
+      functionFailoverRegions: ['dub1'],
+    });
+  });
+
+  it('returns matching function options with maxDuration set to "max"', async () => {
+    const config: Pick<Config, 'functions'> = {
+      functions: {
+        'api/*.js': {
+          memory: 1024,
+          maxDuration: 'max',
+        },
+      },
+    };
+
+    const options = await getLambdaOptionsFromFunction({
+      sourceFile: 'api/user.js',
+      config,
+    });
+
+    expect(options).toMatchObject({
+      memory: 1024,
+      maxDuration: 'max',
     });
   });
 

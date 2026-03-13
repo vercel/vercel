@@ -53,4 +53,38 @@ export class IntegrationAddTelemetryClient
       this.trackCliFlag('no-env-pull');
     }
   }
+
+  trackCliOptionEnvironment(v: string[] | undefined) {
+    if (v?.length) {
+      this.trackCliOption({
+        option: 'environment',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionInstallationId(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'installation-id',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackMarketplaceEvent(event: string, props: Record<string, unknown>) {
+    this.trackCommandOutput({
+      key: event,
+      value: JSON.stringify(props),
+    });
+  }
+
+  trackCliOptionPrefix(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'prefix',
+        value: this.redactedValue,
+      });
+    }
+  }
 }

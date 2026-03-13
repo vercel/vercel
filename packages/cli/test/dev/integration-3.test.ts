@@ -5,12 +5,12 @@ import {
   sleep,
   shouldSkip,
   fetchWithRetry,
-  fetch,
   fixture,
   testFixture,
   testFixtureStdio,
   validateResponseHeaders,
 } from './utils';
+import nodeFetch from 'node-fetch';
 
 // Angular has `engines: { node: "10.x" }` in its `package.json`
 test('[vercel dev] 02-angular-node', async () => {
@@ -51,7 +51,6 @@ test('[vercel dev] 02-angular-node', async () => {
 });
 
 // https://linear.app/vercel/issue/ZERO-3238/unskip-tests-failing-due-to-node-16-removal
-// eslint-disable-next-line jest/no-disabled-tests
 test.skip(
   '[vercel dev] 03-aurelia',
   testFixtureStdio(
@@ -103,7 +102,6 @@ test('[vercel dev] 08-hugo', async () => {
     );
     await tester();
   } else {
-    // eslint-disable-next-line no-console
     console.log(`Skipping 08-hugo on platform ${process.platform}`);
   }
 });
@@ -177,7 +175,6 @@ test(
 );
 
 // https://linear.app/vercel/issue/ZERO-3238/unskip-tests-failing-due-to-node-16-removal
-// eslint-disable-next-line jest/no-disabled-tests
 test.skip(
   '[vercel dev] 16-vue-node',
   testFixtureStdio(
@@ -195,7 +192,6 @@ test.skip(
 );
 
 // https://linear.app/vercel/issue/ZERO-3238/unskip-tests-failing-due-to-node-16-removal
-// eslint-disable-next-line jest/no-disabled-tests
 test.skip(
   '[vercel dev] 17-vuepress-node',
   testFixtureStdio(
@@ -218,7 +214,7 @@ test(
     '01-node',
     async (_testPath: any, port: any) => {
       {
-        const res = await fetch(`http://localhost:${port}////?foo=bar`, {
+        const res = await nodeFetch(`http://localhost:${port}////?foo=bar`, {
           redirect: 'manual',
         });
 
@@ -233,10 +229,13 @@ test(
       }
 
       {
-        const res = await fetch(`http://localhost:${port}///api////date.js`, {
-          method: 'POST',
-          redirect: 'manual',
-        });
+        const res = await nodeFetch(
+          `http://localhost:${port}///api////date.js`,
+          {
+            method: 'POST',
+            redirect: 'manual',
+          }
+        );
 
         validateResponseHeaders(res);
 
@@ -274,7 +273,6 @@ test(
 );
 
 // https://linear.app/vercel/issue/ZERO-3238/unskip-tests-failing-due-to-node-16-removal
-// eslint-disable-next-line jest/no-disabled-tests
 test.skip(
   '[vercel dev] 19-mithril',
   testFixtureStdio(
@@ -309,7 +307,6 @@ test(
 );
 
 // https://linear.app/vercel/issue/ZERO-3238/unskip-tests-failing-due-to-node-16-removal
-// eslint-disable-next-line jest/no-disabled-tests
 test.skip(
   '[vercel dev] 23-docusaurus',
   testFixtureStdio(

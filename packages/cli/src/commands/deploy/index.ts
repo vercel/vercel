@@ -81,6 +81,7 @@ import { ensureLink } from '../../util/link/ensure-link';
 import { UploadErrorMissingArchive } from '../../util/deploy/process-deployment';
 import { displayBuildLogsUntilFinalError } from '../../util/logs';
 import { determineAgent } from '@vercel/detect-agent';
+import { validateJsonOutput } from '../../util/output-format';
 
 const COMMAND_CONFIG = {
   init: getCommandAliases(initSubcommand),
@@ -168,6 +169,16 @@ async function handleInitDeployment(
     return 1;
   }
 
+  telemetryClient.trackCliFlagJson(parsedArguments.flags['--json']);
+  telemetryClient.trackCliOptionFormat(parsedArguments.flags['--format']);
+
+  const formatResult = validateJsonOutput(parsedArguments.flags);
+  if (!formatResult.valid) {
+    output.error(formatResult.error);
+    return 1;
+  }
+  const asJson = formatResult.jsonOutput;
+
   // Strip 'deploy' and 'init' from args
   let args = parsedArguments.args;
   if (args[0] === 'deploy') args = args.slice(1);
@@ -245,6 +256,9 @@ async function handleInitDeployment(
     );
   }
 
+  const cliMeta = parseMeta(parsedArguments.flags['--meta']);
+  const isV0 = cliMeta.v0 === 'true';
+
   const link = await ensureLink('deploy', client, cwd, {
     autoConfirm,
     setupMsg: 'Set up and deploy',
@@ -253,6 +267,7 @@ async function handleInitDeployment(
       nowConfig: localConfig,
       paths,
     }),
+    v0: isV0,
   });
   if (typeof link === 'number') {
     return link;
@@ -351,11 +366,7 @@ async function handleInitDeployment(
     }
   }
 
-  const meta = Object.assign(
-    {},
-    parseMeta(localConfig.meta),
-    parseMeta(parsedArguments.flags['--meta'])
-  );
+  const meta = Object.assign({}, parseMeta(localConfig.meta), cliMeta);
 
   const gitMetadata = await createGitMeta(cwd, project);
 
@@ -435,6 +446,7 @@ async function handleInitDeployment(
       withFullLogs: false,
       autoAssignCustomDomains,
       manual: true,
+      jsonOutput: asJson,
     };
 
     if (!localConfig.builds || localConfig.builds.length === 0) {
@@ -494,13 +506,35 @@ async function handleInitDeployment(
     }
 
     if (deployment.readyState === 'CANCELED') {
-      output.print('The deployment has been canceled.\n');
+      if (asJson) {
+        output.stopSpinner();
+        client.stdout.write(
+          `${JSON.stringify(
+            getDeploymentOutputJson(deployment, client.apiUrl, {
+              name: 'DEPLOYMENT_CANCELED',
+              message: 'The deployment has been canceled.',
+            }),
+            null,
+            2
+          )}\n`
+        );
+      } else {
+        output.print('The deployment has been canceled.\n');
+      }
       return 1;
     }
 
     if (deployment === null) {
       error('Uploading failed. Please try again.');
       return 1;
+    }
+
+    if (asJson) {
+      output.stopSpinner();
+      client.stdout.write(
+        `${JSON.stringify(getDeploymentOutputJson(deployment, client.apiUrl), null, 2)}\n`
+      );
+      return 0;
     }
 
     return printDeploymentStatus(deployment, deployStamp, noWait, false, true);
@@ -670,6 +704,15 @@ async function handleDefaultDeploy(
   telemetryClient.trackCliFlagGuidance(parsedArguments.flags['--guidance']);
   telemetryClient.trackCliFlagForce(parsedArguments.flags['--force']);
   telemetryClient.trackCliFlagWithCache(parsedArguments.flags['--with-cache']);
+  telemetryClient.trackCliFlagJson(parsedArguments.flags['--json']);
+  telemetryClient.trackCliOptionFormat(parsedArguments.flags['--format']);
+
+  const formatResult = validateJsonOutput(parsedArguments.flags);
+  if (!formatResult.valid) {
+    output.error(formatResult.error);
+    return 1;
+  }
+  const asJson = formatResult.jsonOutput;
 
   if ('--confirm' in parsedArguments.flags) {
     telemetryClient.trackCliFlagConfirm(parsedArguments.flags['--confirm']);
@@ -770,6 +813,15 @@ async function handleDefaultDeploy(
     flags: parsedArguments.flags,
   });
 
+  // Validate that --skip-domain is only used with production deployments
+  const skipDomain = parsedArguments.flags['--skip-domain'];
+  if (skipDomain && target !== 'production') {
+    output.error(
+      'The `--skip-domain` option can only be used with production deployments. Use `--prod` or `--target=production`.'
+    );
+    return 1;
+  }
+
   const parsedArchive = parsedArguments.flags['--archive'];
   if (
     typeof parsedArchive === 'string' &&
@@ -792,6 +844,9 @@ async function handleDefaultDeploy(
     );
   }
 
+  const cliMeta = parseMeta(parsedArguments.flags['--meta']);
+  const isV0 = cliMeta.v0 === 'true';
+
   const link = await ensureLink('deploy', client, cwd, {
     autoConfirm,
     setupMsg: 'Set up and deploy',
@@ -800,6 +855,7 @@ async function handleDefaultDeploy(
       nowConfig: localConfig,
       paths,
     }),
+    v0: isV0,
   });
   if (typeof link === 'number') {
     return link;
@@ -956,11 +1012,7 @@ async function handleDefaultDeploy(
   }
 
   // #region Meta
-  const meta = Object.assign(
-    {},
-    parseMeta(localConfig.meta),
-    parseMeta(parsedArguments.flags['--meta'])
-  );
+  const meta = Object.assign({}, parseMeta(localConfig.meta), cliMeta);
 
   const gitMetadata = await createGitMeta(cwd, project);
   // #endregion
@@ -1003,7 +1055,7 @@ async function handleDefaultDeploy(
   const deployStamp = stamp();
   let deployment = null;
   const noWait = !!parsedArguments.flags['--no-wait'];
-  const withFullLogs = parsedArguments.flags['--logs'] ? true : false;
+  const withFullLogs = !!parsedArguments.flags['--logs'];
 
   const localConfigurationOverrides = pickOverrides(localConfig);
 
@@ -1046,6 +1098,7 @@ async function handleDefaultDeploy(
       withFullLogs,
       autoAssignCustomDomains,
       agentName: client.agentName,
+      jsonOutput: asJson,
     };
 
     if (!localConfig.builds || localConfig.builds.length === 0) {
@@ -1109,7 +1162,21 @@ async function handleDefaultDeploy(
     }
 
     if (deployment.readyState === 'CANCELED') {
-      output.print('The deployment has been canceled.\n');
+      if (asJson) {
+        output.stopSpinner();
+        client.stdout.write(
+          `${JSON.stringify(
+            getDeploymentOutputJson(deployment, client.apiUrl, {
+              name: 'DEPLOYMENT_CANCELED',
+              message: 'The deployment has been canceled.',
+            }),
+            null,
+            2
+          )}\n`
+        );
+      } else {
+        output.print('The deployment has been canceled.\n');
+      }
       return 1;
     }
 
@@ -1123,7 +1190,22 @@ async function handleDefaultDeploy(
       const counterList = Array.from(counters)
         .map(([name, no]) => `${no} ${name}`)
         .join(', ');
-      output.error(`Running Checks: ${counterList}`);
+
+      if (asJson) {
+        output.stopSpinner();
+        client.stdout.write(
+          `${JSON.stringify(
+            getDeploymentOutputJson(deployment, client.apiUrl, {
+              name: 'CHECKS_FAILED',
+              message: `Running Checks: ${counterList}`,
+            }),
+            null,
+            2
+          )}\n`
+        );
+      } else {
+        output.error(`Running Checks: ${counterList}`);
+      }
       return 1;
     }
 
@@ -1197,14 +1279,27 @@ async function handleDefaultDeploy(
     }
 
     if (err instanceof BuildError) {
-      if (withFullLogs === false) {
+      if (now.url) {
         try {
-          if (now.url) {
-            const failedDeployment = await getDeployment(
-              client,
-              contextName,
-              now.url
+          const failedDeployment = await getDeployment(
+            client,
+            contextName,
+            now.url
+          );
+
+          if (asJson) {
+            output.stopSpinner();
+            client.stdout.write(
+              `${JSON.stringify(
+                getDeploymentOutputJson(failedDeployment, client.apiUrl, {
+                  name: 'BUILD_ERROR',
+                  message: err.message,
+                }),
+                null,
+                2
+              )}\n`
             );
+          } else if (withFullLogs === false) {
             await displayBuildLogsUntilFinalError(
               client,
               failedDeployment,
@@ -1212,14 +1307,31 @@ async function handleDefaultDeploy(
             );
           }
         } catch (_) {
-          output.log(
-            `To check build logs run: ${getCommandName(
-              `inspect ${now.url} --logs`
-            )}`
-          );
-          output.log(
-            `Or inspect them in your browser at https://${now.url}/_logs`
-          );
+          if (asJson) {
+            output.stopSpinner();
+            client.stdout.write(
+              `${JSON.stringify(
+                {
+                  error: {
+                    name: 'BUILD_ERROR',
+                    message: err.message,
+                  },
+                  url: `https://${now.url}`,
+                },
+                null,
+                2
+              )}\n`
+            );
+          } else {
+            output.log(
+              `To check build logs run: ${getCommandName(
+                `inspect ${now.url} --logs`
+              )}`
+            );
+            output.log(
+              `Or inspect them in your browser at https://${now.url}/_logs`
+            );
+          }
         }
       }
 
@@ -1235,6 +1347,14 @@ async function handleDefaultDeploy(
 
     printError(err);
     return 1;
+  }
+
+  if (asJson) {
+    output.stopSpinner();
+    client.stdout.write(
+      `${JSON.stringify(getDeploymentOutputJson(deployment, client.apiUrl), null, 2)}\n`
+    );
+    return 0;
   }
 
   const { isAgent } = await determineAgent();
@@ -1498,4 +1618,26 @@ async function handleContinueDeployment({
     }
     return 1;
   }
+}
+
+function getDeploymentOutputJson(
+  deployment: {
+    id: string;
+    url: string;
+    inspectorUrl?: string | null;
+    readyState: string;
+    target?: string | null;
+  },
+  apiUrl: string,
+  error?: { name: string; message: string }
+) {
+  return {
+    id: deployment.id,
+    url: `https://${deployment.url}`,
+    inspectorUrl: deployment.inspectorUrl ?? null,
+    readyState: deployment.readyState,
+    target: deployment.target ?? null,
+    deploymentApiUrl: `${apiUrl}/v13/deployments/${deployment.id}`,
+    ...(error ? { error } : {}),
+  };
 }

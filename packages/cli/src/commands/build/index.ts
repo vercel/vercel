@@ -36,6 +36,7 @@ import {
   type Service,
   isBackendBuilder,
   type Lambda,
+  type TriggerEvent,
 } from '@vercel/build-utils';
 import type { VercelConfig } from '@vercel/client';
 import { fileNameSymbol } from '@vercel/client';
@@ -45,6 +46,7 @@ import {
   detectFrameworkRecord,
   detectFrameworkVersion,
   detectInstrumentation,
+  getInternalServiceCronPath,
   LocalFileSystemDetector,
 } from '@vercel/fs-detectors';
 import {
@@ -66,6 +68,7 @@ import { sortBuilders } from '../../util/build/sort-builders';
 import {
   OUTPUT_DIR,
   writeBuildResult,
+  isLambda,
   type PathOverride,
 } from '../../util/build/write-build-result';
 import type Client from '../../util/client';
@@ -81,6 +84,7 @@ import parseTarget from '../../util/parse-target';
 import cliPkg from '../../util/pkg';
 import * as cli from '../../util/pkg-name';
 import { getProjectLink, VERCEL_DIR } from '../../util/projects/link';
+import { resolveProjectCwd } from '../../util/projects/find-project-root';
 import {
   pickOverrides,
   readProjectSettings,
@@ -162,6 +166,7 @@ export default async function main(client: Client): Promise<number> {
   const rootSpan = new Span({ name: 'vc', reporter });
 
   let { cwd } = client;
+  cwd = await resolveProjectCwd(cwd);
 
   // Ensure that `vc build` is not being invoked recursively
   if (process.env.__VERCEL_BUILD_RUNNING) {
@@ -253,7 +258,7 @@ export default async function main(client: Client): Promise<number> {
         output.print(
           `No Project Settings found locally. Run ${cli.getCommandName(
             'pull --yes'
-          )} to retrieve them.`
+          )} to retrieve them. In non-interactive mode, set VERCEL_TOKEN for authentication.`
         );
         return 1;
       }
@@ -521,8 +526,8 @@ async function doBuild(
   }
 
   if (process.env.VERCEL_EXPERIMENTAL_EMBED_FLAG_DEFINITIONS === '1') {
-    const { emitFlagsDefinitions } = await import('./emit-flags-definitions');
-    await emitFlagsDefinitions(cwd, process.env);
+    const { emitFlagsDatafiles } = await import('./emit-flags-datafiles');
+    await emitFlagsDatafiles(cwd, process.env);
   }
 
   // Get a list of source files
@@ -553,7 +558,7 @@ async function doBuild(
     output.warn(
       'Due to `builds` existing in your configuration file, the Build and Development Settings defined in your Project Settings will not apply. Learn More: https://vercel.link/unused-build-settings'
     );
-    builds = builds.map(b => expandBuild(files, b)).flat();
+    builds = builds.flatMap(b => expandBuild(files, b));
   } else {
     // Zero config
     isZeroConfig = true;
@@ -603,6 +608,16 @@ async function doBuild(
     }
 
     zeroConfigRoutes.push(...(detectedBuilders.redirectRoutes || []));
+    const detectedHostRewriteRoutes = (
+      detectedBuilders as typeof detectedBuilders & {
+        hostRewriteRoutes?: Route[] | null;
+      }
+    ).hostRewriteRoutes;
+    zeroConfigRoutes = appendRoutesToPhase({
+      routes: zeroConfigRoutes,
+      newRoutes: detectedHostRewriteRoutes ?? null,
+      phase: null,
+    });
     zeroConfigRoutes.push(
       ...appendRoutesToPhase({
         routes: [],
@@ -620,7 +635,7 @@ async function doBuild(
 
   const builderSpecs = new Set(builds.map(b => b.use));
 
-  const buildersWithPkgs = await importBuilders(builderSpecs, cwd);
+  const buildersWithPkgs = await importBuilders(builderSpecs, cwd, span);
 
   // Populate Files -> FileFsRef mapping
   const filesMap: Files = {};
@@ -682,6 +697,8 @@ async function doBuild(
 
   const hasDetectedServices =
     detectedServices !== undefined && detectedServices.length > 0;
+  const hasWorkerServices =
+    hasDetectedServices && detectedServices!.some(s => s.type === 'worker');
   const servicesByBuilderSrc = new Map<string, Service>();
   if (hasDetectedServices) {
     for (const service of detectedServices!) {
@@ -720,6 +737,8 @@ async function doBuild(
       const service = hasDetectedServices
         ? servicesByBuilderSrc.get(build.src)
         : undefined;
+      const stripServiceRoutePrefix =
+        !!service?.routePrefix && service.routePrefix !== '/';
 
       let buildWorkPath = workPath;
       let buildEntrypoint = build.src;
@@ -794,6 +813,7 @@ async function doBuild(
           // build.config already contains framework, routePrefix, memory, etc.
           buildConfig = {
             ...build.config,
+            ...(hasWorkerServices ? { hasWorkerServices: true } : undefined),
             // Override project-level settings with service-specific ones.
             // The project-level framework is "services" which must NOT be
             // propagated to individual builders.
@@ -830,7 +850,11 @@ async function doBuild(
       }
 
       const builderSpan = span.child('vc.builder', {
-        name: builderPkg.name,
+        'builder.name': builderPkg.name,
+        'builder.version': builderPkg.version,
+        'builder.dynamicallyInstalled': String(
+          builderWithPkg.dynamicallyInstalled
+        ),
       });
 
       const serviceRoutePrefix = build.config?.routePrefix;
@@ -1000,9 +1024,48 @@ async function doBuild(
         });
       }
 
+      if (service?.type === 'worker' && 'output' in buildResult) {
+        attachWorkerServiceTrigger(buildResult.output, service);
+      }
+
+      let mergedBuildResult: BuildResult | BuildOutputConfig = buildResult;
+      if ('buildOutputPath' in buildResult) {
+        // Read this builder's own Build Output API config directly. When
+        // multiple builders write into `.vercel/output`, a later filesystem
+        // merge can overwrite `config.json` from a sibling builder.
+        const buildOutputConfigPath = join(
+          buildResult.buildOutputPath,
+          'config.json'
+        );
+        const buildOutputConfig = await readJSONFile<BuildOutputConfig>(
+          buildOutputConfigPath
+        );
+        if (buildOutputConfig instanceof CantParseJSONFile) {
+          throw buildOutputConfig;
+        }
+
+        if (buildOutputConfig) {
+          if (buildOutputConfig.overrides) {
+            overrides.push(buildOutputConfig.overrides);
+          }
+          if (
+            hasDetectedServices &&
+            service &&
+            Array.isArray(buildOutputConfig.routes) &&
+            detectedServices
+          ) {
+            buildOutputConfig.routes = scopeRoutesToServiceOwnership({
+              routes: buildOutputConfig.routes as Route[],
+              owner: service,
+              allServices: detectedServices,
+            });
+          }
+          mergedBuildResult = buildOutputConfig;
+        }
+      }
       // Store the build result to generate the final `config.json` after
       // all builds have completed
-      buildResults.set(build, buildResult);
+      buildResults.set(build, mergedBuildResult);
 
       let buildOutputLength = 0;
       if ('output' in buildResult) {
@@ -1029,6 +1092,7 @@ async function doBuild(
               standalone,
               workPath: buildWorkPath,
               service,
+              stripServiceRoutePrefix,
             })
           )
           .then(
@@ -1124,14 +1188,6 @@ async function doBuild(
     if (existingConfig.overrides) {
       overrides.push(existingConfig.overrides);
     }
-    // Find the `Build` entry for this config file and update the build result
-    for (const [build, buildResult] of buildResults.entries()) {
-      if ('buildOutputPath' in buildResult) {
-        output.debug(`Using "config.json" for "${build.use}`);
-        buildResults.set(build, existingConfig);
-        break;
-      }
-    }
   }
 
   const builderRoutes: MergeRoutesProps['builds'] = Array.from(
@@ -1173,7 +1229,11 @@ async function doBuild(
   });
 
   const mergedImages = mergeImages(localConfig.images, buildResults.values());
-  const mergedCrons = mergeCrons(localConfig.crons, buildResults.values());
+  const serviceCrons = getServiceCrons(detectedServices);
+  const mergedCrons = mergeCrons(
+    [...(localConfig.crons || []), ...serviceCrons],
+    buildResults.values()
+  );
   const mergedWildcard = mergeWildcard(buildResults.values());
   const mergedDeploymentId = await mergeDeploymentId(
     existingConfig?.deploymentId,
@@ -1565,6 +1625,26 @@ function mergeImages(
   return images;
 }
 
+function getServiceCrons(services?: Service[]): Cron[] {
+  if (!services || services.length === 0) {
+    return [];
+  }
+
+  const crons: Cron[] = [];
+  for (const service of services) {
+    if (service.type !== 'cron' || typeof service.schedule !== 'string') {
+      continue;
+    }
+    const cronEntrypoint = service.entrypoint || service.builder.src || 'index';
+    crons.push({
+      path: getInternalServiceCronPath(service.name, cronEntrypoint),
+      schedule: service.schedule,
+    });
+  }
+
+  return crons;
+}
+
 function mergeCrons(
   crons: BuildOutputConfig['crons'] = [],
   buildResults: Iterable<BuildResult | BuildOutputConfig>
@@ -1725,4 +1805,41 @@ function getServicesMergeEntrypoint(
   const normalized = normalizeServiceRoutePrefix(routePrefix);
   const sortKey = String(10000 - normalized.length).padStart(5, '0');
   return `svc:${sortKey}:${normalized}:${service.name}:${buildSrc}`;
+}
+
+function attachWorkerServiceTrigger(
+  buildOutput: BuildResultV2Typical['output'] | BuildResultV3['output'],
+  service: Service
+): void {
+  const trigger: TriggerEvent = {
+    type: 'queue/v1beta',
+    topic: service.topic || 'default',
+    consumer: service.consumer || 'default',
+  };
+
+  if (isLambda(buildOutput)) {
+    appendWorkerTrigger(buildOutput, trigger);
+    return;
+  }
+
+  for (const output of Object.values(buildOutput)) {
+    if (isLambda(output)) {
+      appendWorkerTrigger(output, trigger);
+    }
+  }
+}
+
+function appendWorkerTrigger(lambda: Lambda, trigger: TriggerEvent): void {
+  const existingTriggers = Array.isArray(lambda.experimentalTriggers)
+    ? lambda.experimentalTriggers
+    : [];
+  const alreadyConfigured = existingTriggers.some(
+    existing =>
+      existing.type === trigger.type &&
+      existing.topic === trigger.topic &&
+      existing.consumer === trigger.consumer
+  );
+  if (!alreadyConfigured) {
+    lambda.experimentalTriggers = [...existingTriggers, trigger];
+  }
 }

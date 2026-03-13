@@ -18,6 +18,8 @@ import { useUser } from '../../../mocks/user';
 import humanizePath from '../../../../src/util/humanize-path';
 import sleep from '../../../../src/util/sleep';
 import * as createDeployModule from '../../../../src/util/deploy/create-deploy';
+import { BuildError } from '../../../../src/util/errors-ts';
+import type Now from '../../../../src/util';
 
 describe('deploy', () => {
   describe('--non-interactive', () => {
@@ -692,7 +694,7 @@ describe('deploy', () => {
     client.setArgv('deploy');
     const exitCodePromise = deploy(client);
     await expect(client.stderr).toOutput(
-      'WARN! Node.js Version "10.x" is discontinued and must be upgraded. Please set "engines": { "node": "24.x" } in your `package.json` file to use Node.js 24.'
+      'WARNING! Node.js Version "10.x" is discontinued and must be upgraded. Please set "engines": { "node": "24.x" } in your `package.json` file to use Node.js 24.'
     );
     const exitCode = await exitCodePromise;
     expect(exitCode, 'exit code for "deploy"').toEqual(0);
@@ -1070,9 +1072,29 @@ describe('deploy', () => {
         { key: 'output:deployment-id', value: 'dpl_archive_test' },
       ]);
     });
-    it('--skip-domain', async () => {
+    it('--skip-domain without --prod should error', async () => {
       client.cwd = setupUnitFixture('commands/deploy/static');
       client.setArgv('deploy', '--skip-domain');
+      const exitCodePromise = deploy(client);
+      await expect(client.stderr).toOutput(
+        'Error: The `--skip-domain` option can only be used with production deployments. Use `--prod` or `--target=production`.'
+      );
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(1);
+    });
+    it('--skip-domain with --target=custom-env should error', async () => {
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', '--skip-domain', '--target', 'my-custom-env');
+      const exitCodePromise = deploy(client);
+      await expect(client.stderr).toOutput(
+        'Error: The `--skip-domain` option can only be used with production deployments. Use `--prod` or `--target=production`.'
+      );
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(1);
+    });
+    it('--skip-domain with --prod', async () => {
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', '--skip-domain', '--prod');
       const exitCode = await deploy(client);
       expect(exitCode).toEqual(0);
 
@@ -1081,10 +1103,33 @@ describe('deploy', () => {
           ...baseCreateDeployArgs,
           createArgs: expect.objectContaining({
             autoAssignCustomDomains: false,
+            target: 'production',
           }),
         })
       );
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'flag:prod', value: 'TRUE' },
+        { key: 'flag:skip-domain', value: 'TRUE' },
+        { key: 'output:deployment-id', value: 'dpl_archive_test' },
+      ]);
+    });
+    it('--skip-domain with --target=production', async () => {
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', '--skip-domain', '--target', 'production');
+      const exitCode = await deploy(client);
+      expect(exitCode).toEqual(0);
+
+      expect(mock).toHaveBeenCalledWith(
+        ...Object.values({
+          ...baseCreateDeployArgs,
+          createArgs: expect.objectContaining({
+            autoAssignCustomDomains: false,
+            target: 'production',
+          }),
+        })
+      );
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'option:target', value: 'production' },
         { key: 'flag:skip-domain', value: 'TRUE' },
         { key: 'output:deployment-id', value: 'dpl_archive_test' },
       ]);
@@ -1669,6 +1714,437 @@ describe('deploy', () => {
 
       const stderrOutput = client.stderr.read().toString();
       expect(stderrOutput).not.toContain('Aliased:');
+    });
+  });
+
+  describe('--json', () => {
+    const deploymentUrl = 'my-app-abc123.vercel.app';
+    const deploymentId = 'dpl_json_test';
+    const inspectorUrl = 'https://vercel.com/team/project/dpl_json_test';
+
+    beforeEach(() => {
+      const user = useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        name: 'static',
+        id: 'static',
+      });
+
+      client.scenario.post(`/v13/deployments`, (req, res) => {
+        res.json({
+          creator: {
+            uid: user.id,
+            username: user.username,
+          },
+          id: deploymentId,
+          url: deploymentUrl,
+          inspectorUrl,
+          readyState: 'READY',
+          target: 'production',
+        });
+      });
+      client.scenario.get(`/v13/deployments/${deploymentId}`, (req, res) => {
+        res.json({
+          creator: {
+            uid: user.id,
+            username: user.username,
+          },
+          id: deploymentId,
+          url: deploymentUrl,
+          inspectorUrl,
+          readyState: 'READY',
+          target: 'production',
+          aliasAssigned: true,
+          alias: [],
+        });
+      });
+    });
+
+    it('should output deployment as JSON to stdout with --json', async () => {
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', '--json');
+      const exitCode = await deploy(client);
+      expect(exitCode).toEqual(0);
+
+      const stdoutOutput = client.stdout.getFullOutput();
+      const json = JSON.parse(stdoutOutput);
+
+      expect(json).toEqual({
+        id: deploymentId,
+        url: `https://${deploymentUrl}`,
+        inspectorUrl,
+        readyState: 'READY',
+        target: 'production',
+        deploymentApiUrl: `${client.apiUrl}/v13/deployments/${deploymentId}`,
+      });
+    });
+
+    it('should output deployment as JSON to stdout with --format=json', async () => {
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', '--format', 'json');
+      const exitCode = await deploy(client);
+      expect(exitCode).toEqual(0);
+
+      const stdoutOutput = client.stdout.getFullOutput();
+      const json = JSON.parse(stdoutOutput);
+
+      expect(json).toEqual({
+        id: deploymentId,
+        url: `https://${deploymentUrl}`,
+        inspectorUrl,
+        readyState: 'READY',
+        target: 'production',
+        deploymentApiUrl: `${client.apiUrl}/v13/deployments/${deploymentId}`,
+      });
+    });
+
+    it('should track --json flag telemetry', async () => {
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', '--json');
+      await deploy(client);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'flag:json', value: 'TRUE' },
+        { key: 'output:deployment-id', value: deploymentId },
+      ]);
+    });
+
+    it('should track --format telemetry', async () => {
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', '--format', 'json');
+      await deploy(client);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'option:format', value: 'json' },
+        { key: 'output:deployment-id', value: deploymentId },
+      ]);
+    });
+
+    it('should return error for invalid format', async () => {
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', '--format', 'xml');
+      const exitCode = await deploy(client);
+      expect(exitCode).toEqual(1);
+    });
+
+    it('should output only valid JSON to stdout when piped (non-TTY)', async () => {
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', '--json');
+      // Simulate piped stdout (non-TTY) like `vc deploy --json | jq`
+      client.stdout.isTTY = false;
+      const exitCode = await deploy(client);
+      expect(exitCode).toEqual(0);
+
+      const stdoutOutput = client.stdout.getFullOutput();
+      // Should be valid JSON parseable by jq
+      const json = JSON.parse(stdoutOutput);
+      expect(json).toEqual({
+        id: deploymentId,
+        url: `https://${deploymentUrl}`,
+        inspectorUrl,
+        readyState: 'READY',
+        target: 'production',
+        deploymentApiUrl: `${client.apiUrl}/v13/deployments/${deploymentId}`,
+      });
+    });
+  });
+
+  describe('--json with failed deployment', () => {
+    const deploymentUrl = 'my-app-failed-abc123.vercel.app';
+    const deploymentId = 'dpl_json_failed_test';
+    const inspectorUrl = 'https://vercel.com/team/project/dpl_json_failed_test';
+
+    it('should output JSON with error field when build fails', async () => {
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        name: 'static',
+        id: 'static',
+      });
+
+      // Mock getDeployment endpoint to return a failed deployment
+      client.scenario.get(`/v13/deployments/${deploymentUrl}`, (_req, res) => {
+        res.json({
+          id: deploymentId,
+          url: deploymentUrl,
+          inspectorUrl,
+          readyState: 'ERROR',
+          target: null,
+          aliasAssigned: false,
+          alias: [],
+        });
+      });
+
+      // Mock createDeploy to simulate a build error
+      const mock = vi
+        .spyOn(createDeployModule, 'default')
+        .mockImplementation(async (_client, now: Now) => {
+          // Simulate what processDeployment does: set now.url before throwing
+          now.url = deploymentUrl;
+          throw new BuildError({
+            message: 'Command "npm run build" exited with 1',
+            meta: {},
+          });
+        });
+
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', '--json');
+      const exitCode = await deploy(client);
+      expect(exitCode).toEqual(1);
+
+      const stdoutOutput = client.stdout.getFullOutput();
+      const json = JSON.parse(stdoutOutput);
+
+      expect(json).toEqual({
+        id: deploymentId,
+        url: `https://${deploymentUrl}`,
+        inspectorUrl,
+        readyState: 'ERROR',
+        target: null,
+        deploymentApiUrl: `${client.apiUrl}/v13/deployments/${deploymentId}`,
+        error: {
+          name: 'BUILD_ERROR',
+          message: 'Command "npm run build" exited with 1',
+        },
+      });
+
+      mock.mockRestore();
+    });
+
+    it('should output valid JSON to stdout when piped (non-TTY) and build fails', async () => {
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        name: 'static',
+        id: 'static',
+      });
+
+      client.scenario.get(`/v13/deployments/${deploymentUrl}`, (_req, res) => {
+        res.json({
+          id: deploymentId,
+          url: deploymentUrl,
+          inspectorUrl,
+          readyState: 'ERROR',
+          target: null,
+          aliasAssigned: false,
+          alias: [],
+        });
+      });
+
+      const mock = vi
+        .spyOn(createDeployModule, 'default')
+        .mockImplementation(async (_client, now: Now) => {
+          now.url = deploymentUrl;
+          throw new BuildError({
+            message: 'Command "npm run build" exited with 1',
+            meta: {},
+          });
+        });
+
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', '--json');
+      client.stdout.isTTY = false;
+      const exitCode = await deploy(client);
+      expect(exitCode).toEqual(1);
+
+      const stdoutOutput = client.stdout.getFullOutput();
+      // Should be valid JSON parseable by jq
+      const json = JSON.parse(stdoutOutput);
+      expect(json.error).toEqual({
+        name: 'BUILD_ERROR',
+        message: 'Command "npm run build" exited with 1',
+      });
+      expect(json.readyState).toEqual('ERROR');
+
+      mock.mockRestore();
+    });
+
+    it('should output JSON with error field when deployment is canceled', async () => {
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        name: 'static',
+        id: 'static',
+      });
+
+      client.scenario.post(`/v13/deployments`, (_req, res) => {
+        res.json({
+          id: deploymentId,
+          url: deploymentUrl,
+          inspectorUrl,
+          readyState: 'CANCELED',
+          target: null,
+        });
+      });
+      client.scenario.get(`/v13/deployments/${deploymentId}`, (_req, res) => {
+        res.json({
+          id: deploymentId,
+          url: deploymentUrl,
+          inspectorUrl,
+          readyState: 'CANCELED',
+          target: null,
+          aliasAssigned: false,
+          alias: [],
+        });
+      });
+
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', '--json');
+      const exitCode = await deploy(client);
+      expect(exitCode).toEqual(1);
+
+      const stdoutOutput = client.stdout.getFullOutput();
+      const json = JSON.parse(stdoutOutput);
+
+      expect(json).toEqual({
+        id: deploymentId,
+        url: `https://${deploymentUrl}`,
+        inspectorUrl,
+        readyState: 'CANCELED',
+        target: null,
+        deploymentApiUrl: `${client.apiUrl}/v13/deployments/${deploymentId}`,
+        error: {
+          name: 'DEPLOYMENT_CANCELED',
+          message: 'The deployment has been canceled.',
+        },
+      });
+    });
+  });
+
+  describe('deploy init --json', () => {
+    const deploymentUrl = 'my-app-init-abc123.vercel.app';
+    const deploymentId = 'dpl_init_json_test';
+    const inspectorUrl = 'https://vercel.com/team/project/dpl_init_json_test';
+
+    beforeEach(() => {
+      const user = useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        name: 'static',
+        id: 'static',
+      });
+
+      client.scenario.post(`/v13/deployments`, (req, res) => {
+        res.json({
+          creator: {
+            uid: user.id,
+            username: user.username,
+          },
+          id: deploymentId,
+          url: deploymentUrl,
+          inspectorUrl,
+          readyState: 'INITIALIZING',
+          target: 'production',
+        });
+      });
+      client.scenario.get(`/v13/deployments/${deploymentId}`, (req, res) => {
+        res.json({
+          creator: {
+            uid: user.id,
+            username: user.username,
+          },
+          id: deploymentId,
+          url: deploymentUrl,
+          inspectorUrl,
+          readyState: 'INITIALIZING',
+          target: 'production',
+          aliasAssigned: false,
+          alias: [],
+        });
+      });
+    });
+
+    it('should output deployment as JSON to stdout with --json', async () => {
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', 'init', '--json');
+      const exitCode = await deploy(client);
+      expect(exitCode).toEqual(0);
+
+      const stdoutOutput = client.stdout.getFullOutput();
+      const json = JSON.parse(stdoutOutput);
+
+      expect(json).toEqual({
+        id: deploymentId,
+        url: `https://${deploymentUrl}`,
+        inspectorUrl,
+        readyState: 'INITIALIZING',
+        target: 'production',
+        deploymentApiUrl: `${client.apiUrl}/v13/deployments/${deploymentId}`,
+      });
+    });
+
+    it('should output deployment as JSON to stdout with --format=json', async () => {
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', 'init', '--format', 'json');
+      const exitCode = await deploy(client);
+      expect(exitCode).toEqual(0);
+
+      const stdoutOutput = client.stdout.getFullOutput();
+      const json = JSON.parse(stdoutOutput);
+
+      expect(json).toEqual({
+        id: deploymentId,
+        url: `https://${deploymentUrl}`,
+        inspectorUrl,
+        readyState: 'INITIALIZING',
+        target: 'production',
+        deploymentApiUrl: `${client.apiUrl}/v13/deployments/${deploymentId}`,
+      });
+    });
+
+    it('should track --json flag telemetry', async () => {
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', 'init', '--json');
+      await deploy(client);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'subcommand:init', value: 'init' },
+        { key: 'flag:json', value: 'TRUE' },
+      ]);
+    });
+
+    it('should track --format telemetry', async () => {
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', 'init', '--format', 'json');
+      await deploy(client);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'subcommand:init', value: 'init' },
+        { key: 'option:format', value: 'json' },
+      ]);
+    });
+
+    it('should return error for invalid format', async () => {
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', 'init', '--format', 'xml');
+      const exitCode = await deploy(client);
+      expect(exitCode).toEqual(1);
+    });
+
+    it('should output only valid JSON to stdout when piped (non-TTY)', async () => {
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', 'init', '--json');
+      // Simulate piped stdout (non-TTY) like `vc deploy init --json | jq`
+      client.stdout.isTTY = false;
+      const exitCode = await deploy(client);
+      expect(exitCode).toEqual(0);
+
+      const stdoutOutput = client.stdout.getFullOutput();
+      // Should be valid JSON parseable by jq
+      const json = JSON.parse(stdoutOutput);
+      expect(json).toEqual({
+        id: deploymentId,
+        url: `https://${deploymentUrl}`,
+        inspectorUrl,
+        readyState: 'INITIALIZING',
+        target: 'production',
+        deploymentApiUrl: `${client.apiUrl}/v13/deployments/${deploymentId}`,
+      });
     });
   });
 });

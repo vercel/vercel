@@ -123,5 +123,10 @@
       "status": 200,
       "mustContain": "one-more"
     }
-  ]
+  ],
+  "build": {
+    "env": {
+      "NEXT_BUILDER_INTEGRATION": "1"
+    }
+  }
 }

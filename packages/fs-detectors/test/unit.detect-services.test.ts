@@ -33,8 +33,43 @@ describe('detectServices', () => {
       const result = await detectServices({ fs });
 
       expect(result.services).toEqual([]);
+      expect(result.source).toBe('auto-detected');
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0].code).toBe('NO_SERVICES_CONFIGURED');
+    });
+
+    it('should auto-detect a Ruby backend service in backend/', async () => {
+      const fs = new VirtualFilesystem({
+        'frontend/package.json': JSON.stringify({
+          dependencies: {
+            next: '15.0.0',
+          },
+        }),
+        'backend/Gemfile': 'source "https://rubygems.org"',
+        'backend/config.ru': 'run Sinatra::Application',
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      expect(result.services).toHaveLength(2);
+
+      const backend = result.services.find(s => s.name === 'backend');
+      expect(backend).toMatchObject({
+        name: 'backend',
+        workspace: 'backend',
+        framework: 'ruby',
+        runtime: 'ruby',
+        routePrefix: '/_/backend',
+        routePrefixSource: 'generated',
+      });
+
+      const backendRoute = findMatchingRoute(
+        result.routes.rewrites,
+        '/_/backend/ping'
+      );
+      expect(backendRoute).toMatchObject({
+        dest: '/_svc/backend/index',
+      });
     });
   });
 
@@ -64,10 +99,12 @@ describe('detectServices', () => {
             },
           },
         }),
+        'src/index.ts': 'export default {}',
       });
       const result = await detectServices({ fs });
 
       expect(result.services).toHaveLength(1);
+      expect(result.source).toBe('configured');
       expect(result.services[0]).toMatchObject({
         name: 'api',
         type: 'web',
@@ -80,26 +117,22 @@ describe('detectServices', () => {
       expect(result.routes.defaults).toHaveLength(1);
     });
 
-    it('should not confuse entrypoint with workspace when paths share a prefix', async () => {
-      // Edge case: workspace is "api" and entrypoint is "api/handler.go"
-      // (meaning the file lives at api/api/handler.go in the repo).
-      // The entrypoint must always be treated as workspace-relative.
+    it('should resolve file entrypoint paths without explicit workspace', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': JSON.stringify({
           experimentalServices: {
             'my-api': {
-              workspace: 'api',
-              entrypoint: 'api/handler.go',
+              entrypoint: 'api/api/handler.go',
               routePrefix: '/api',
             },
           },
         }),
+        'api/api/handler.go': 'package main',
       });
       const result = await detectServices({ fs });
 
       expect(result.services).toHaveLength(1);
       expect(result.errors).toEqual([]);
-      // builder.src should be "api/api/handler.go" (workspace + entrypoint)
       expect(result.services[0].builder.src).toBe('api/api/handler.go');
     });
 
@@ -108,22 +141,25 @@ describe('detectServices', () => {
         'vercel.json': JSON.stringify({
           experimentalServices: {
             frontend: {
-              workspace: 'apps/web',
+              entrypoint: 'apps/web',
               framework: 'nextjs',
               routePrefix: '/',
             },
             api: {
-              workspace: 'apps/api',
-              entrypoint: 'src/server.ts',
+              entrypoint: 'apps/api/src/server.ts',
               routePrefix: '/api',
             },
             admin: {
-              workspace: 'apps/admin',
-              entrypoint: 'src/index.ts',
+              entrypoint: 'apps/admin/src/index.ts',
               routePrefix: '/admin',
             },
           },
         }),
+        'apps/web/package.json': JSON.stringify({ name: 'web' }),
+        'apps/api/package.json': JSON.stringify({ name: 'api' }),
+        'apps/api/src/server.ts': 'export default {}',
+        'apps/admin/package.json': JSON.stringify({ name: 'admin' }),
+        'apps/admin/src/index.ts': 'export default {}',
       });
       const result = await detectServices({ fs });
 
@@ -164,6 +200,74 @@ describe('detectServices', () => {
       expect(result.routes.defaults).toHaveLength(0);
     });
 
+    it('should auto-detect FastAPI for backend file entrypoint in configured services', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            frontend: {
+              entrypoint: 'frontend',
+              routePrefix: '/',
+              framework: 'nextjs',
+            },
+            backend: {
+              entrypoint: 'backend/main.py',
+              routePrefix: '/svc/api',
+            },
+          },
+        }),
+        'frontend/package.json': JSON.stringify({
+          dependencies: {
+            next: '15.0.0',
+          },
+        }),
+        'backend/pyproject.toml': '[project]\ndependencies = ["fastapi"]\n',
+        'backend/main.py': 'from fastapi import FastAPI\napp = FastAPI()\n',
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      expect(result.source).toBe('configured');
+      expect(result.services).toHaveLength(2);
+
+      const frontend = result.services.find(s => s.name === 'frontend');
+      expect(frontend).toMatchObject({
+        name: 'frontend',
+        framework: 'nextjs',
+        workspace: 'frontend',
+        routePrefix: '/',
+        routePrefixSource: 'configured',
+      });
+      expect(frontend?.builder.use).toBe('@vercel/next');
+
+      const backend = result.services.find(s => s.name === 'backend');
+      expect(backend).toMatchObject({
+        name: 'backend',
+        framework: 'fastapi',
+        runtime: 'python',
+        workspace: 'backend',
+        entrypoint: 'main.py',
+        routePrefix: '/svc/api',
+        routePrefixSource: 'configured',
+      });
+      expect(backend?.builder).toMatchObject({
+        src: 'backend/main.py',
+        use: '@vercel/python',
+        config: {
+          zeroConfig: true,
+          routePrefix: 'svc/api',
+          workspace: 'backend',
+          framework: 'fastapi',
+        },
+      });
+
+      expect(result.routes.rewrites).toContainEqual({
+        src: '^(?=/svc/api(?:/|$))(?:/svc/api(?:/.*)?$)',
+        dest: '/_svc/backend/index',
+        check: true,
+      });
+      expect(result.routes.defaults).toEqual([]);
+    });
+
     it('should default type to web', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': JSON.stringify({
@@ -174,6 +278,7 @@ describe('detectServices', () => {
             },
           },
         }),
+        'index.ts': 'export default {}',
       });
       const result = await detectServices({ fs });
 
@@ -190,6 +295,7 @@ describe('detectServices', () => {
             },
           },
         }),
+        'index.ts': 'export default {}',
       });
       const result = await detectServices({ fs });
 
@@ -230,39 +336,92 @@ describe('detectServices', () => {
       ['Pipfile', '[packages]\nfastapi = "*"\n'],
       ['pylock.yml', 'lock-version: "1.0"\n'],
       ['uv.lock', 'version = 1\n'],
-    ])(
-      'should infer Python workspace from nearest %s when workspace is omitted',
-      async (manifestFilename, manifestContents) => {
-        const fs = new VirtualFilesystem({
-          'vercel.json': JSON.stringify({
-            experimentalServices: {
-              'fastapi-api': {
-                framework: 'fastapi',
-                entrypoint: 'services/fastapi-api/main.py',
-                routePrefix: '/fastapi-api',
-              },
+    ])('should infer Python workspace from nearest %s when workspace is omitted', async (manifestFilename, manifestContents) => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            'fastapi-api': {
+              framework: 'fastapi',
+              entrypoint: 'services/fastapi-api/main.py',
+              routePrefix: '/fastapi-api',
             },
-          }),
-          [`services/fastapi-api/${manifestFilename}`]: manifestContents,
-          'services/fastapi-api/main.py': 'from fastapi import FastAPI',
-        });
-        const result = await detectServices({ fs });
+          },
+        }),
+        [`services/fastapi-api/${manifestFilename}`]: manifestContents,
+        'services/fastapi-api/main.py': 'from fastapi import FastAPI',
+      });
+      const result = await detectServices({ fs });
 
-        expect(result.errors).toEqual([]);
-        expect(result.services).toHaveLength(1);
-        expect(result.services[0]).toMatchObject({
-          name: 'fastapi-api',
-          workspace: 'services/fastapi-api',
-          entrypoint: 'main.py',
-        });
-        expect(result.services[0].builder.src).toBe(
-          'services/fastapi-api/main.py'
-        );
-        expect(result.services[0].builder.config).toMatchObject({
-          workspace: 'services/fastapi-api',
-        });
-      }
-    );
+      expect(result.errors).toEqual([]);
+      expect(result.services).toHaveLength(1);
+      expect(result.services[0]).toMatchObject({
+        name: 'fastapi-api',
+        workspace: 'services/fastapi-api',
+        entrypoint: 'main.py',
+      });
+      expect(result.services[0].builder.src).toBe(
+        'services/fastapi-api/main.py'
+      );
+      expect(result.services[0].builder.config).toMatchObject({
+        workspace: 'services/fastapi-api',
+      });
+    });
+
+    it('should auto-detect framework for Python file entrypoint when omitted', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            api: {
+              entrypoint: 'backend/main.py',
+              routePrefix: '/api',
+            },
+          },
+        }),
+        'backend/pyproject.toml': '[project]\ndependencies = ["fastapi"]\n',
+        'backend/main.py': 'from fastapi import FastAPI\napp = FastAPI()\n',
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      expect(result.services).toHaveLength(1);
+      expect(result.services[0]).toMatchObject({
+        name: 'api',
+        framework: 'fastapi',
+        runtime: 'python',
+        workspace: 'backend',
+        entrypoint: 'main.py',
+        routePrefix: '/api',
+      });
+      expect(result.services[0].builder.use).toBe('@vercel/python');
+    });
+
+    it('should keep runtime-only resolution when file entrypoint framework detection is ambiguous', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            api: {
+              entrypoint: 'backend/main.py',
+              routePrefix: '/api',
+            },
+          },
+        }),
+        'backend/requirements.txt': 'fastapi\nflask\n',
+        'backend/main.py': 'from fastapi import FastAPI\napp = FastAPI()\n',
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      expect(result.services).toHaveLength(1);
+      expect(result.services[0]).toMatchObject({
+        name: 'api',
+        runtime: 'python',
+        workspace: 'backend',
+        entrypoint: 'main.py',
+        routePrefix: '/api',
+      });
+      expect(result.services[0].framework).toBeUndefined();
+      expect(result.services[0].builder.use).toBe('@vercel/python');
+    });
 
     it('should infer Ruby workspace from nearest Gemfile when workspace is omitted', async () => {
       const fs = new VirtualFilesystem({
@@ -325,22 +484,21 @@ describe('detectServices', () => {
       });
     });
 
-    it('should prefer explicitly configured workspace over inferred manifest workspace', async () => {
+    it('should use directory entrypoint as service workspace', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': JSON.stringify({
           experimentalServices: {
             api: {
-              workspace: 'apps/api',
-              entrypoint: 'src/main.py',
+              entrypoint: 'apps/api',
               framework: 'fastapi',
               routePrefix: '/api',
             },
           },
         }),
-        // Should be ignored because workspace is explicitly configured.
+        'apps/api/pyproject.toml': '[project]\ndependencies = ["fastapi"]\n',
+        // Should be ignored because directory entrypoint sets workspace directly.
         'services/fastapi-api/pyproject.toml':
           '[project]\nname = "fastapi-api"\n',
-        'apps/api/src/main.py': 'from fastapi import FastAPI',
       });
       const result = await detectServices({ fs });
 
@@ -348,9 +506,184 @@ describe('detectServices', () => {
       expect(result.services).toHaveLength(1);
       expect(result.services[0]).toMatchObject({
         workspace: 'apps/api',
-        entrypoint: 'src/main.py',
+        entrypoint: undefined,
       });
-      expect(result.services[0].builder.src).toBe('apps/api/src/main.py');
+      expect(result.services[0].builder.src).toBe('apps/api/index.py');
+    });
+
+    it('should auto-detect framework for directory entrypoint when omitted', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            api: {
+              entrypoint: 'apps/api',
+              routePrefix: '/api',
+            },
+          },
+        }),
+        'apps/api/pyproject.toml': '[project]\ndependencies = ["fastapi"]\n',
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      expect(result.services).toHaveLength(1);
+      expect(result.services[0]).toMatchObject({
+        name: 'api',
+        framework: 'fastapi',
+        workspace: 'apps/api',
+        entrypoint: undefined,
+      });
+      expect(result.services[0].builder.use).toBe('@vercel/python');
+      expect(result.services[0].builder.src).toBe('apps/api/index.py');
+    });
+
+    it('should treat existing dotted directory entrypoint as a directory', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            web: {
+              entrypoint: 'apps/web.v2',
+              routePrefix: '/',
+            },
+          },
+        }),
+        'apps/web.v2/package.json': JSON.stringify({
+          dependencies: {
+            next: '14.0.0',
+          },
+        }),
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      expect(result.services).toHaveLength(1);
+      expect(result.services[0]).toMatchObject({
+        framework: 'nextjs',
+        workspace: 'apps/web.v2',
+        entrypoint: undefined,
+      });
+      expect(result.services[0].builder.src).toBe('apps/web.v2/package.json');
+    });
+
+    it('should treat existing extensionless entrypoint as a file', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            api: {
+              entrypoint: 'api/server',
+              runtime: 'node',
+              routePrefix: '/api',
+            },
+          },
+        }),
+        'api/server': 'export default function handler() {}',
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      expect(result.services).toHaveLength(1);
+      expect(result.services[0]).toMatchObject({
+        runtime: 'node',
+        workspace: '.',
+        entrypoint: 'api/server',
+      });
+      expect(result.services[0].builder.use).toBe('@vercel/node');
+      expect(result.services[0].builder.src).toBe('api/server');
+    });
+
+    it('should error when directory entrypoint has multiple detected frameworks', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            web: {
+              entrypoint: 'apps/web',
+              routePrefix: '/',
+            },
+          },
+        }),
+        'apps/web/package.json': JSON.stringify({
+          dependencies: {
+            next: '14.0.0',
+            gatsby: '5.0.0',
+          },
+        }),
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.services).toEqual([]);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].code).toBe('MULTIPLE_FRAMEWORKS_SERVICE');
+      expect(result.errors[0].serviceName).toBe('web');
+      expect(result.errors[0].message).toContain('apps/web/');
+    });
+
+    it('should error when directory entrypoint has no detectable framework', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            web: {
+              entrypoint: 'apps/web',
+              routePrefix: '/',
+            },
+          },
+        }),
+        'apps/web/README.md': '# app',
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.services).toEqual([]);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].code).toBe('MISSING_SERVICE_FRAMEWORK');
+      expect(result.errors[0].serviceName).toBe('web');
+      expect(result.errors[0].message).toContain('apps/web');
+    });
+
+    it('should error when directory entrypoint with runtime has no detectable framework', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            api: {
+              entrypoint: 'apps/api',
+              runtime: 'python',
+              routePrefix: '/api',
+            },
+          },
+        }),
+        'apps/api/main.py': 'print("ok")',
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.services).toEqual([]);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].code).toBe('MISSING_SERVICE_FRAMEWORK');
+      expect(result.errors[0].serviceName).toBe('api');
+    });
+
+    it('should auto-detect framework for directory entrypoint with explicit runtime', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            api: {
+              entrypoint: 'apps/api',
+              runtime: 'python',
+              routePrefix: '/api',
+            },
+          },
+        }),
+        'apps/api/pyproject.toml': '[project]\ndependencies = ["fastapi"]\n',
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      expect(result.services).toHaveLength(1);
+      expect(result.services[0]).toMatchObject({
+        name: 'api',
+        framework: 'fastapi',
+        workspace: 'apps/api',
+        entrypoint: undefined,
+      });
+      expect(result.services[0].builder.use).toBe('@vercel/python');
+      expect(result.services[0].builder.src).toBe('apps/api/index.py');
     });
 
     it('should default topic and consumer to "default" for workers', async () => {
@@ -363,6 +696,7 @@ describe('detectServices', () => {
             },
           },
         }),
+        'worker.py': 'def main(): pass',
       });
       const result = await detectServices({ fs });
 
@@ -384,6 +718,7 @@ describe('detectServices', () => {
             },
           },
         }),
+        'index.ts': 'export default {}',
       });
       const result = await detectServices({ fs });
 
@@ -391,39 +726,45 @@ describe('detectServices', () => {
       expect(result.services[0].consumer).toBeUndefined();
     });
 
-    it.each(['1api', 'my service', 'my.service', 'api_', 'api-'])(
-      'should reject invalid service name "%s"',
-      async name => {
-        const fs = new VirtualFilesystem({
-          'vercel.json': JSON.stringify({
-            experimentalServices: {
-              [name]: { entrypoint: 'index.ts', routePrefix: '/' },
-            },
-          }),
-        });
-        const result = await detectServices({ fs });
+    it.each([
+      '1api',
+      'my service',
+      'my.service',
+      'api_',
+      'api-',
+    ])('should reject invalid service name "%s"', async name => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            [name]: { entrypoint: 'index.ts', routePrefix: '/' },
+          },
+        }),
+      });
+      const result = await detectServices({ fs });
 
-        expect(result.services).toEqual([]);
-        expect(result.errors[0].code).toBe('INVALID_SERVICE_NAME');
-      }
-    );
+      expect(result.services).toEqual([]);
+      expect(result.errors[0].code).toBe('INVALID_SERVICE_NAME');
+    });
 
-    it.each(['api', 'my-api', 'my_service', 'MyService'])(
-      'should accept valid service name "%s"',
-      async name => {
-        const fs = new VirtualFilesystem({
-          'vercel.json': JSON.stringify({
-            experimentalServices: {
-              [name]: { entrypoint: 'index.ts', routePrefix: '/' },
-            },
-          }),
-        });
-        const result = await detectServices({ fs });
+    it.each([
+      'api',
+      'my-api',
+      'my_service',
+      'MyService',
+    ])('should accept valid service name "%s"', async name => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            [name]: { entrypoint: 'index.ts', routePrefix: '/' },
+          },
+        }),
+        'index.ts': 'export default {}',
+      });
+      const result = await detectServices({ fs });
 
-        expect(result.services).toHaveLength(1);
-        expect(result.errors).toEqual([]);
-      }
-    );
+      expect(result.services).toHaveLength(1);
+      expect(result.errors).toEqual([]);
+    });
 
     it('should error when web service is missing routePrefix', async () => {
       const fs = new VirtualFilesystem({
@@ -443,29 +784,77 @@ describe('detectServices', () => {
       expect(result.errors[0].serviceName).toBe('api');
     });
 
-    it.each(['/_svc', '/_svc/api'])(
-      'should error when web service uses reserved internal routePrefix "%s"',
-      async routePrefix => {
-        const fs = new VirtualFilesystem({
-          'vercel.json': JSON.stringify({
-            experimentalServices: {
-              api: {
-                entrypoint: 'api/index.ts',
-                routePrefix,
-              },
+    it('should derive routePrefix from subdomain using /_/serviceName', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            api: {
+              entrypoint: 'api/index.ts',
+              subdomain: 'api',
             },
-          }),
-        });
-        const result = await detectServices({ fs });
+          },
+        }),
+        'api/index.ts': 'export default {}',
+      });
+      const result = await detectServices({ fs });
 
-        expect(result.services).toEqual([]);
-        expect(result.errors).toHaveLength(1);
-        expect(result.errors[0]).toMatchObject({
-          code: 'RESERVED_ROUTE_PREFIX',
-          serviceName: 'api',
-        });
-      }
-    );
+      expect(result.errors).toEqual([]);
+      expect(result.services).toHaveLength(1);
+      expect(result.services[0]).toMatchObject({
+        name: 'api',
+        routePrefix: '/_/api',
+        routePrefixSource: 'generated',
+        subdomain: 'api',
+      });
+    });
+
+    it('should error when non-web service defines subdomain routing', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            cleanup: {
+              type: 'cron',
+              entrypoint: 'cron/cleanup.ts',
+              schedule: '0 0 * * *',
+              subdomain: 'jobs',
+            },
+          },
+        }),
+        'cron/cleanup.ts': 'export default async () => {}',
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.services).toEqual([]);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]).toMatchObject({
+        code: 'INVALID_HOST_ROUTING_CONFIG',
+        serviceName: 'cleanup',
+      });
+    });
+
+    it.each([
+      '/_svc',
+      '/_svc/api',
+    ])('should error when web service uses reserved internal routePrefix "%s"', async routePrefix => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            api: {
+              entrypoint: 'api/index.ts',
+              routePrefix,
+            },
+          },
+        }),
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.services).toEqual([]);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]).toMatchObject({
+        code: 'RESERVED_ROUTE_PREFIX',
+        serviceName: 'api',
+      });
+    });
 
     it('should error when two web services share normalized routePrefix', async () => {
       const fs = new VirtualFilesystem({
@@ -481,6 +870,8 @@ describe('detectServices', () => {
             },
           },
         }),
+        'api/index.ts': 'export default {}',
+        'api/alt.ts': 'export default {}',
       });
       const result = await detectServices({ fs });
 
@@ -507,6 +898,8 @@ describe('detectServices', () => {
             },
           },
         }),
+        'api/index.ts': 'export default {}',
+        'api/fastapi/main.py': 'from fastapi import FastAPI',
       });
       const result = await detectServices({ fs });
 
@@ -527,6 +920,7 @@ describe('detectServices', () => {
             },
           },
         }),
+        'cron/cleanup.ts': 'export default async () => {}',
       });
       const result = await detectServices({ fs });
 
@@ -537,6 +931,31 @@ describe('detectServices', () => {
         schedule: '0 0 * * *',
       });
       expect(result.errors).toEqual([]);
+    });
+
+    it('should generate internal cron callback routes', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            cleanup: {
+              type: 'cron',
+              entrypoint: 'cron/cleanup.ts',
+              schedule: '0 0 * * *',
+            },
+          },
+        }),
+        'cron/cleanup.ts': 'export default async () => {}',
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      expect(result.services).toHaveLength(1);
+      expect(result.routes.crons).toHaveLength(1);
+      expect(result.routes.crons[0]).toEqual({
+        src: '^/_svc/cleanup/crons/cron/cleanup/cron$',
+        dest: '/_svc/cleanup/index',
+        check: true,
+      });
     });
 
     it('should return error for cron without schedule', async () => {
@@ -582,9 +1001,167 @@ describe('detectServices', () => {
         serviceName: 'cleanup',
       });
     });
+
+    it('should detect a cron service with module:function entrypoint', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            'sync-cleanup': {
+              type: 'cron',
+              entrypoint: 'jobs.cleanup:sync_handler',
+              schedule: '0 0 * * *',
+            },
+            'async-cleanup': {
+              type: 'cron',
+              entrypoint: 'jobs.cleanup:async_handler',
+              schedule: '0 6 * * *',
+            },
+          },
+        }),
+        'jobs/cleanup.py':
+          'def sync_handler(): pass\nasync def async_handler(): pass',
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      expect(result.services).toHaveLength(2);
+      expect(result.services[0]).toMatchObject({
+        name: 'sync-cleanup',
+        type: 'cron',
+        entrypoint: 'jobs/cleanup.py',
+        handlerFunction: 'sync_handler',
+        schedule: '0 0 * * *',
+      });
+      expect(result.services[1]).toMatchObject({
+        name: 'async-cleanup',
+        type: 'cron',
+        entrypoint: 'jobs/cleanup.py',
+        handlerFunction: 'async_handler',
+        schedule: '0 6 * * *',
+      });
+    });
+
+    it('should generate cron routes with function name as handler', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            'sync-cleanup': {
+              type: 'cron',
+              entrypoint: 'jobs.cleanup:sync_handler',
+              schedule: '0 0 * * *',
+            },
+          },
+        }),
+        'jobs/cleanup.py': 'def sync_handler(): pass',
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      expect(result.routes.crons).toHaveLength(1);
+      expect(result.routes.crons[0]).toEqual({
+        src: '^/_svc/sync-cleanup/crons/jobs/cleanup/sync_handler$',
+        dest: '/_svc/sync-cleanup/index',
+        check: true,
+      });
+    });
+
+    it('should not parse module:function entrypoint for web services', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            api: {
+              type: 'web',
+              entrypoint: 'jobs.cleanup:handler',
+              routePrefix: '/api',
+            },
+          },
+        }),
+        'jobs/cleanup.py': 'def handler(): pass',
+      });
+      const result = await detectServices({ fs });
+
+      // The raw "jobs.cleanup:handler" is not a valid file path,
+      // so resolution should fail for non-cron services
+      expect(result.services).toHaveLength(0);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]).toMatchObject({
+        code: 'ENTRYPOINT_NOT_FOUND',
+        serviceName: 'api',
+      });
+    });
+
+    it('should not parse module:function entrypoint for worker services', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            processor: {
+              type: 'worker',
+              entrypoint: 'jobs.cleanup:handler',
+              topic: 'jobs',
+            },
+          },
+        }),
+        'jobs/cleanup.py': 'def handler(): pass',
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.services).toHaveLength(0);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]).toMatchObject({
+        code: 'ENTRYPOINT_NOT_FOUND',
+        serviceName: 'processor',
+      });
+    });
+
+    it('should error for module:function entrypoint when file does not exist', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            cleanup: {
+              type: 'cron',
+              entrypoint: 'nonexistent.module:handler',
+              schedule: '0 0 * * *',
+            },
+          },
+        }),
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.services).toHaveLength(0);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]).toMatchObject({
+        code: 'ENTRYPOINT_NOT_FOUND',
+        serviceName: 'cleanup',
+      });
+    });
   });
 
   describe('worker services', () => {
+    it('should generate internal worker callback routes', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            processor: {
+              type: 'worker',
+              entrypoint: 'worker/processor.py',
+              topic: 'jobs',
+            },
+          },
+        }),
+        'worker/processor.py': 'def handler(event): pass',
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      expect(result.services).toHaveLength(1);
+      expect(result.routes.workers).toHaveLength(1);
+      expect(result.routes.workers[0]).toEqual({
+        src: '^/_svc/processor/workers/worker/processor/worker$',
+        dest: '/_svc/processor/index',
+        check: true,
+      });
+    });
+
     it('should error if worker service has routePrefix', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': JSON.stringify({
@@ -620,6 +1197,7 @@ describe('detectServices', () => {
             },
           },
         }),
+        'apps/web/src/index.ts': 'export default {}',
       });
       const result = await detectServices({ fs, workPath: 'apps/web' });
 
@@ -673,12 +1251,13 @@ describe('detectServices', () => {
         'vercel.json': JSON.stringify({
           experimentalServices: {
             admin: {
-              workspace: 'apps/admin',
+              entrypoint: 'apps/admin',
               framework: 'vite',
               routePrefix: '/admin',
             },
           },
         }),
+        'apps/admin/package.json': JSON.stringify({ name: 'admin' }),
       });
       const result = await detectServices({ fs });
 
@@ -708,6 +1287,7 @@ describe('detectServices', () => {
             },
           },
         }),
+        'services/dashboard-api/index.go': 'package main',
       });
       const result = await detectServices({ fs });
       expect(result.errors).toEqual([]);
@@ -741,12 +1321,13 @@ describe('detectServices', () => {
         'vercel.json': JSON.stringify({
           experimentalServices: {
             admin: {
-              workspace: 'apps/admin',
+              entrypoint: 'apps/admin',
               framework: 'vite',
               routePrefix: '/admin',
             },
           },
         }),
+        'apps/admin/package.json': JSON.stringify({ name: 'admin' }),
       });
       const result = await detectServices({ fs });
 
@@ -762,12 +1343,13 @@ describe('detectServices', () => {
         'vercel.json': JSON.stringify({
           experimentalServices: {
             frontend: {
-              workspace: 'packages/web',
+              entrypoint: 'packages/web',
               framework: 'vite',
               routePrefix: '/',
             },
           },
         }),
+        'packages/web/package.json': JSON.stringify({ name: 'web' }),
       });
       const result = await detectServices({ fs });
 
@@ -787,7 +1369,7 @@ describe('detectServices', () => {
               routePrefix: '/',
             },
             'admin-panel': {
-              workspace: 'apps/admin',
+              entrypoint: 'apps/admin',
               framework: 'vite',
               routePrefix: '/admin',
             },
@@ -797,6 +1379,8 @@ describe('detectServices', () => {
             },
           },
         }),
+        'apps/admin/package.json': JSON.stringify({ name: 'admin' }),
+        'api/index.go': 'package main',
       });
       const result = await detectServices({ fs });
 
@@ -835,6 +1419,88 @@ describe('detectServices', () => {
         dest: '/index.html',
       });
     });
+
+    it('should generate host-based rewrites for subdomain-mounted service', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            api: {
+              entrypoint: 'api/index.go',
+              subdomain: 'api',
+            },
+          },
+        }),
+        'api/index.go': 'package main',
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      expect(result.services[0]).toMatchObject({
+        routePrefix: '/_/api',
+        routePrefixSource: 'generated',
+        subdomain: 'api',
+      });
+
+      expect(result.routes.hostRewrites).toContainEqual({
+        src: '^/$',
+        dest: '/_/api',
+        has: [{ type: 'host', value: { pre: 'api.' } }],
+        missing: [
+          { type: 'host', value: { suf: '.vercel.app' } },
+          { type: 'host', value: { suf: '.vercel.dev' } },
+        ],
+        check: true,
+      });
+      expect(result.routes.hostRewrites).toContainEqual({
+        src: '^/(?!_/api(?:/|$))(.*)$',
+        dest: '/_/api/$1',
+        has: [{ type: 'host', value: { pre: 'api.' } }],
+        missing: [
+          { type: 'host', value: { suf: '.vercel.app' } },
+          { type: 'host', value: { suf: '.vercel.dev' } },
+        ],
+        check: true,
+      });
+    });
+
+    it('should generate host-based rewrites for route-owning builders', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            frontend: {
+              framework: 'nextjs',
+              entrypoint: 'apps/web',
+              subdomain: 'app',
+            },
+          },
+        }),
+        'apps/web/package.json': JSON.stringify({
+          dependencies: { next: '15.0.0' },
+        }),
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      expect(result.services[0]).toMatchObject({
+        routePrefix: '/_/frontend',
+        routePrefixSource: 'generated',
+        subdomain: 'app',
+      });
+      // Route-owning services still need host routing, but should not get
+      // synthetic path-based rewrites/defaults from service detection.
+      expect(result.routes.rewrites).toEqual([]);
+      expect(result.routes.defaults).toEqual([]);
+      expect(result.routes.hostRewrites).toContainEqual({
+        src: '^/$',
+        dest: '/_/frontend',
+        has: [{ type: 'host', value: { pre: 'app.' } }],
+        missing: [
+          { type: 'host', value: { suf: '.vercel.app' } },
+          { type: 'host', value: { suf: '.vercel.dev' } },
+        ],
+        check: true,
+      });
+    });
   });
 
   describe('complex multi-service project routing', () => {
@@ -846,22 +1512,22 @@ describe('detectServices', () => {
     //   fastapi-api  → @vercel/python     at /api/fastapi    (runtime)
     const SERVICES_CONFIG = {
       web: {
-        workspace: 'apps/web',
+        entrypoint: 'apps/web',
         framework: 'nextjs',
         routePrefix: '/',
       },
       admin: {
-        workspace: 'apps/admin',
+        entrypoint: 'apps/admin',
         framework: 'vite',
         routePrefix: '/admin',
       },
       dashboard: {
-        workspace: 'apps/dashboard',
+        entrypoint: 'apps/dashboard',
         framework: 'nextjs',
         routePrefix: '/dashboard',
       },
       docs: {
-        workspace: 'apps/docs',
+        entrypoint: 'apps/docs',
         framework: 'docusaurus-2',
         routePrefix: '/docs',
       },
@@ -885,6 +1551,12 @@ describe('detectServices', () => {
         'vercel.json': JSON.stringify({
           experimentalServices: SERVICES_CONFIG,
         }),
+        'apps/web/package.json': JSON.stringify({ name: 'web' }),
+        'apps/admin/package.json': JSON.stringify({ name: 'admin' }),
+        'apps/dashboard/package.json': JSON.stringify({ name: 'dashboard' }),
+        'apps/docs/package.json': JSON.stringify({ name: 'docs' }),
+        'services/gin-api/index.go': 'package main',
+        'services/fastapi-api/main.py': 'from fastapi import FastAPI',
       });
       const result = await detectServices({ fs });
       expect(result.errors).toEqual([]);
@@ -1000,13 +1672,16 @@ describe('detectServices', () => {
     });
 
     describe('route isolation (no cross-service matching)', () => {
-      it.each(['/', '/about', '/contact', '/dashboard', '/dashboard/settings'])(
-        'should NOT match "%s" to any synthetic rewrite (owned by Next.js)',
-        pathname => {
-          const match = findMatchingRoute(rewrites, pathname);
-          expect(match).toBeUndefined();
-        }
-      );
+      it.each([
+        '/',
+        '/about',
+        '/contact',
+        '/dashboard',
+        '/dashboard/settings',
+      ])('should NOT match "%s" to any synthetic rewrite (owned by Next.js)', pathname => {
+        const match = findMatchingRoute(rewrites, pathname);
+        expect(match).toBeUndefined();
+      });
 
       it('should not match /admin-panel to admin service', () => {
         // /admin-panel is NOT under /admin/ — it's a different path

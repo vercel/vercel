@@ -110,7 +110,6 @@ async function extractAndExecuteCode(
     });
 
     fakeLambdaProcess.on('error', error => {
-      // eslint-disable-next-line no-console
       console.error(error);
       reject(error);
     });

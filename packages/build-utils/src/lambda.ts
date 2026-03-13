@@ -10,6 +10,7 @@ import type {
   Env,
   Files,
   FunctionFramework,
+  MaxDuration,
   TriggerEvent,
   TriggerEventInput,
 } from './types';
@@ -62,10 +63,11 @@ export interface LambdaOptionsBase {
   runtimeLanguage?: LambdaExecutableRuntimeLanguages;
   architecture?: LambdaArchitecture;
   memory?: number;
-  maxDuration?: number;
+  maxDuration?: MaxDuration;
   environment?: Env;
   allowQuery?: string[];
   regions?: string[];
+  functionFailoverRegions?: string[];
   supportsMultiPayloads?: boolean;
   supportsWrapper?: boolean;
   supportsResponseStreaming?: boolean;
@@ -159,10 +161,11 @@ export class Lambda {
   runtimeLanguage?: LambdaExecutableRuntimeLanguages;
   architecture: LambdaArchitecture;
   memory?: number;
-  maxDuration?: number;
+  maxDuration?: MaxDuration;
   environment: Env;
   allowQuery?: string[];
   regions?: string[];
+  functionFailoverRegions?: string[];
   /**
    * @deprecated Use `await lambda.createZip()` instead.
    */
@@ -210,6 +213,7 @@ export class Lambda {
       environment = {},
       allowQuery,
       regions,
+      functionFailoverRegions,
       supportsMultiPayloads,
       supportsWrapper,
       supportsResponseStreaming,
@@ -259,7 +263,10 @@ export class Lambda {
     }
 
     if (maxDuration !== undefined) {
-      assert(typeof maxDuration === 'number', '"maxDuration" is not a number');
+      assert(
+        typeof maxDuration === 'number' || maxDuration === 'max',
+        '"maxDuration" is not a number or "max"'
+      );
     }
 
     if (allowQuery !== undefined) {
@@ -289,6 +296,17 @@ export class Lambda {
       assert(
         regions.every(r => typeof r === 'string'),
         '"regions" is not a string Array'
+      );
+    }
+
+    if (functionFailoverRegions !== undefined) {
+      assert(
+        Array.isArray(functionFailoverRegions),
+        '"functionFailoverRegions" is not an Array'
+      );
+      assert(
+        functionFailoverRegions.every(r => typeof r === 'string'),
+        '"functionFailoverRegions" is not a string Array'
       );
     }
 
@@ -420,6 +438,7 @@ export class Lambda {
     this.environment = environment;
     this.allowQuery = allowQuery;
     this.regions = regions;
+    this.functionFailoverRegions = functionFailoverRegions;
     this.zipBuffer = 'zipBuffer' in opts ? opts.zipBuffer : undefined;
     this.supportsMultiPayloads = supportsMultiPayloads;
     this.supportsWrapper = supportsWrapper;
@@ -524,6 +543,7 @@ export async function getLambdaOptionsFromFunction({
     | 'memory'
     | 'maxDuration'
     | 'regions'
+    | 'functionFailoverRegions'
     | 'experimentalTriggers'
     | 'supportsCancellation'
   >
@@ -549,6 +569,7 @@ export async function getLambdaOptionsFromFunction({
           memory: fn.memory,
           maxDuration: fn.maxDuration,
           regions: fn.regions,
+          functionFailoverRegions: fn.functionFailoverRegions,
           experimentalTriggers,
           supportsCancellation: fn.supportsCancellation,
         };

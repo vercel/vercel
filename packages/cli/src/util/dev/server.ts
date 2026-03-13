@@ -3,7 +3,7 @@ import http from 'http';
 import fs from 'fs-extra';
 import ms from 'ms';
 import chalk from 'chalk';
-import fetch from 'node-fetch';
+import nodeFetch from 'node-fetch';
 import plural from 'pluralize';
 import rawBody from 'raw-body';
 import { listen } from 'async-listen';
@@ -45,6 +45,8 @@ import {
   detectBuilders,
   detectApiDirectory,
   detectApiExtensions,
+  getInternalServiceCronPathPrefix,
+  getInternalServiceWorkerPathPrefix,
   isOfficialRuntime,
   type Service,
 } from '@vercel/fs-detectors';
@@ -177,6 +179,16 @@ export default class DevServer {
   private startPromise: Promise<void> | null;
 
   private envValues: Record<string, string>;
+
+  private shouldUseServicesOrchestrator(): boolean {
+    if (!this.services || this.services.length === 0) {
+      return false;
+    }
+    if (this.services.length > 1) {
+      return true;
+    }
+    return this.services[0].type !== 'web';
+  }
 
   constructor(cwd: string, options: DevServerOptions) {
     this.cwd = cwd;
@@ -333,7 +345,7 @@ export default class DevServer {
             filesRemovedArray
           ).catch((err: Error) => {
             output.warn(`An error occurred while rebuilding \`${match.src}\`:`);
-            // eslint-disable-next-line no-console
+            // biome-ignore lint/suspicious/noConsole: intentional console usage
             console.error(err.stack);
           });
         } else {
@@ -600,21 +612,7 @@ export default class DevServer {
         relative(this.cwd, f)
       );
 
-      let {
-        builders,
-        // eslint-disable-next-line prefer-const
-        warnings,
-        // eslint-disable-next-line prefer-const
-        errors,
-        // eslint-disable-next-line prefer-const
-        defaultRoutes,
-        // eslint-disable-next-line prefer-const
-        redirectRoutes,
-        // eslint-disable-next-line prefer-const
-        rewriteRoutes,
-        // eslint-disable-next-line prefer-const
-        errorRoutes,
-      } = await detectBuilders(files, pkg, {
+      const detectedBuilders = await detectBuilders(files, pkg, {
         tag: 'latest',
         functions: vercelConfig.functions,
         projectSettings: projectSettings || this.projectSettings,
@@ -623,6 +621,20 @@ export default class DevServer {
         trailingSlash,
         workPath: this.cwd,
       });
+      let {
+        builders,
+        warnings,
+        errors,
+        defaultRoutes,
+        redirectRoutes,
+        rewriteRoutes,
+        errorRoutes,
+      } = detectedBuilders;
+      const hostRewriteRoutes = (
+        detectedBuilders as typeof detectedBuilders & {
+          hostRewriteRoutes?: Route[] | null;
+        }
+      ).hostRewriteRoutes;
 
       if (errors) {
         output.error(errors[0].message);
@@ -648,6 +660,11 @@ export default class DevServer {
 
       let routes: Route[] = [];
       routes.push(...(redirectRoutes || []));
+      routes = appendRoutesToPhase({
+        routes,
+        newRoutes: hostRewriteRoutes ?? null,
+        phase: null,
+      });
       routes.push(
         ...appendRoutesToPhase({
           routes: vercelConfig.routes,
@@ -806,7 +823,7 @@ export default class DevServer {
         ([name, value]) =>
           typeof value === 'string' &&
           value.startsWith('@') &&
-          !hasOwnProperty(localEnv, name)
+          !hasProp(localEnv, name)
       )
       .map(([name]) => name);
 
@@ -921,9 +938,9 @@ export default class DevServer {
     const vercelConfig = await this.getVercelConfig();
 
     let devCommandPromise: Promise<void> | undefined;
-    if (this.services && this.services.length > 1) {
+    if (this.shouldUseServicesOrchestrator()) {
       this.orchestrator = new ServicesOrchestrator({
-        services: this.services,
+        services: this.services || [],
         cwd: this.cwd,
         repoRoot: this.repoRoot,
         env: this.envConfigs.allEnv,
@@ -939,8 +956,14 @@ export default class DevServer {
       }
 
       output.print(`${chalk.cyan('>')} Available at:\n`);
-      for (const service of this.services) {
-        const serviceUrl = `${addressFormatted}${service.routePrefix === '/' ? '' : service.routePrefix}`;
+      for (const service of this.services || []) {
+        let servicePath = service.routePrefix || '/';
+        if (service.type === 'worker') {
+          servicePath = getInternalServiceWorkerPathPrefix(service.name);
+        } else if (service.type === 'cron') {
+          servicePath = getInternalServiceCronPathPrefix(service.name);
+        }
+        const serviceUrl = `${addressFormatted}${servicePath === '/' ? '' : servicePath}`;
         output.print(`  ${chalk.bold(service.name)}: ${link(serviceUrl)}\n`);
       }
     } else {
@@ -1370,7 +1393,7 @@ export default class DevServer {
       const vercelConfig = await this.getVercelConfig();
       await this.serveProjectAsNowV2(req, res, requestId, vercelConfig);
     } catch (err: unknown) {
-      // eslint-disable-next-line no-console
+      // biome-ignore lint/suspicious/noConsole: intentional console usage
       console.error(err);
 
       if (isError(err) && typeof err.stack === 'string') {
@@ -1551,7 +1574,7 @@ export default class DevServer {
             middlewareReqHeaders.set(name, value);
           }
 
-          const middlewareRes = await fetch(
+          const middlewareRes = await nodeFetch(
             `http://127.0.0.1:${port}${parsed.path}`,
             {
               headers: middlewareReqHeaders,
@@ -1868,7 +1891,6 @@ export default class DevServer {
         get() {
           return statusCode;
         },
-        /* eslint-disable @typescript-eslint/no-unused-vars */
         set(_: number) {
           /* ignore */
         },
@@ -2086,7 +2108,6 @@ export default class DevServer {
       }`
     );
 
-    /* eslint-disable no-case-declarations */
     switch (asset.type) {
       case 'FileFsRef':
         this.setResponseHeaders(res, requestId);
@@ -2164,7 +2185,7 @@ export default class DevServer {
             body: JSON.stringify(payload),
           });
         } catch (err) {
-          // eslint-disable-next-line no-console
+          // biome-ignore lint/suspicious/noConsole: intentional console usage
           console.error(err);
           await this.sendError(
             req,
@@ -2312,7 +2333,7 @@ export default class DevServer {
 
   async runDevCommand(forceRestart: boolean = false) {
     // In multi-service setup, all services are managed by orchestrator
-    if (this.services && this.services.length > 1) {
+    if (this.shouldUseServicesOrchestrator()) {
       return;
     }
 
@@ -2422,7 +2443,7 @@ function proxyPass(
   requestId: string,
   ignorePath: boolean = true
 ): void {
-  return devServer.proxy.web(
+  devServer.proxy.web(
     req,
     res,
     { target: dest, ignorePath },
@@ -2481,7 +2502,7 @@ function generateRequestId(podId: string, isInvoke = false): string {
   ].join('-')}`;
 }
 
-function hasOwnProperty(obj: any, prop: string) {
+function hasProp(obj: any, prop: string) {
   return Object.prototype.hasOwnProperty.call(obj, prop);
 }
 

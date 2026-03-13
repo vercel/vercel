@@ -11,7 +11,24 @@
 // AST Analysis (WASM-based Python parser using ruff_python_ast)
 // =============================================================================
 
-export { containsAppOrHandler } from './semantic/entrypoints';
+export {
+  containsAppOrHandler,
+  containsTopLevelCallable,
+  getStringConstant,
+} from './semantic/entrypoints';
+
+// =============================================================================
+// Installed package analysis (WASM-based .dist-info parsing)
+// =============================================================================
+
+export type {
+  Distribution,
+  DistributionIndex,
+  PackagePath,
+  DirectUrlInfo,
+} from './manifest/dist-metadata';
+
+export { extendDistRecord, scanDistributions } from './manifest/dist-metadata';
 
 // =============================================================================
 // Package discovery (runtime + types)
@@ -59,7 +76,6 @@ export type {
 
 export {
   classifyPackages,
-  generateRuntimeRequirements,
   isPrivatePackageSource,
   normalizePackageName,
   parseUvLock,
@@ -69,8 +85,11 @@ export {
 // Python selection (runtime + types)
 // =============================================================================
 
-export type { PythonSelectionResult } from './manifest/python-selector';
-export { selectPython } from './manifest/python-selector';
+export type {
+  PythonSelectionResult,
+  PythonVersionSelectionResult,
+} from './manifest/python-selector';
+export { selectPython, selectPythonVersion } from './manifest/python-selector';
 
 // =============================================================================
 // Errors
