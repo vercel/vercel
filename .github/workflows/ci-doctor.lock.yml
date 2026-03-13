@@ -25,7 +25,7 @@
 #
 # Source: githubnext/agentics/workflows/ci-doctor.md@ea350161ad5dcc9624cf510f134c6a9e39a6f94d
 #
-# gh-aw-metadata: {"schema_version":"v2","frontmatter_hash":"252cbc35f543a3a930ff5f9915b1699007b9d607638ca5724aab501526044daa","stop_time":"2026-04-11 23:18:25","compiler_version":"v0.57.2","strict":true}
+# gh-aw-metadata: {"schema_version":"v2","frontmatter_hash":"58637893fadbecb8e1123bf2611feb4c7c137643a8c044f0f7ad603cc330a246","stop_time":"2026-04-11 23:18:25","compiler_version":"v0.57.2","strict":true}
 #
 # Effective stop-time: 2026-04-11 23:18:25
 
@@ -36,8 +36,8 @@ name: "CI Failure Doctor"
     types:
     - completed
     workflows:
-    - test-e2e
-    - test
+    - E2E Tests
+    - Unit Tests
 
 permissions: {}
 
