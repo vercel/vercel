@@ -319,12 +319,15 @@ describe('enrichActionRequiredWithInvokingCommand', () => {
 
 describe('outputAgentError', () => {
   it('writes JSON including hint to stdout and exits when nonInteractive', () => {
-    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const stdoutWrite = vi.fn();
     const exitSpy = vi
       .spyOn(process, 'exit')
       .mockImplementation((() => undefined) as never);
 
-    const client = { nonInteractive: true } as Client;
+    const client = {
+      nonInteractive: true,
+      stdout: { write: stdoutWrite },
+    } as Client;
     outputAgentError(client, {
       status: 'error',
       reason: 'no_credentials',
@@ -334,8 +337,8 @@ describe('outputAgentError', () => {
       next: [{ command: 'vercel login', when: 'TTY only' }],
     });
 
-    expect(logSpy).toHaveBeenCalledTimes(1);
-    const written = JSON.parse(logSpy.mock.calls[0][0] as string);
+    expect(stdoutWrite).toHaveBeenCalledTimes(1);
+    const written = JSON.parse(stdoutWrite.mock.calls[0][0] as string);
     expect(written.status).toBe('error');
     expect(written.reason).toBe('no_credentials');
     expect(written.userActionRequired).toBe(true);
@@ -343,7 +346,6 @@ describe('outputAgentError', () => {
     expect(written.next).toHaveLength(1);
     expect(exitSpy).toHaveBeenCalledWith(1);
 
-    logSpy.mockRestore();
     exitSpy.mockRestore();
   });
 
