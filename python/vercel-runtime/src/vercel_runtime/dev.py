@@ -383,6 +383,7 @@ def _setup_apps() -> None:
 
     module_name = os.environ["VERCEL_DEV_MODULE_NAME"]
     entry_abs = os.environ["VERCEL_DEV_ENTRY_ABS"]
+    framework = os.environ["VERCEL_DEV_FRAMEWORK"]
 
     _setup_server_log_routing()
 
@@ -397,12 +398,40 @@ def _setup_apps() -> None:
     if result[0] == "asgi":
         _asgi_user_app = result[1]
     else:
-        _wsgi_user_app = result[1]
+        wsgi_app = result[1]
+
+        if framework == "django":
+            wsgi_app = _wrap_django_static(wsgi_app)
+
+        _wsgi_user_app = wsgi_app
+
+
+def _wrap_django_static(app: WSGIApplication) -> WSGIApplication:
+    # If this is a django app, wrap it with StaticFilesHandler to serve static
+    # files. This is necessary because the dev server will not run the full
+    # build process (including collectstatic), so static files may not
+    # be available depending on the user's configuration.
+    #
+    # Special cases:
+    # - If whitenoise is used, this will override it but that's ok because we
+    #   don't need it in the dev server.
+    # - If django-storages is used, this will override it but that's ok because
+    #   django-storages handles its own upload to some other CDN.
+    try:
+        from django.contrib.staticfiles.handlers import (  # type: ignore[import-not-found]  # noqa: PLC0415  # pyright: ignore[reportMissingImports]
+            StaticFilesHandler,  # pyright: ignore[reportUnknownVariableType]
+        )
+
+        return cast("WSGIApplication", StaticFilesHandler(app))
+    except ImportError:
+        return app
 
 
 # Setup apps at import time so that servers reloader can pick them up.
-if os.environ.get("VERCEL_DEV_MODULE_NAME") and os.environ.get(
-    "VERCEL_DEV_ENTRY_ABS"
+if (
+    os.environ.get("VERCEL_DEV_MODULE_NAME")
+    and os.environ.get("VERCEL_DEV_ENTRY_ABS")
+    and os.environ.get("VERCEL_DEV_FRAMEWORK")
 ):
     _setup_apps()
 

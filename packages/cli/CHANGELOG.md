@@ -1,5 +1,17 @@
 # vercel
 
+## 50.32.5
+
+### Patch Changes
+
+- Add `user_id` to CLI telemetry events. ([#15504](https://github.com/vercel/vercel/pull/15504))
+
+- Output JSON to stdout when `--json` flag is used with `vercel deploy` and the deployment fails (build error, canceled, or checks failed). ([#15476](https://github.com/vercel/vercel/pull/15476))
+
+- Updated dependencies [[`494ec343e1567e65c2de4e15229f757736412ab7`](https://github.com/vercel/vercel/commit/494ec343e1567e65c2de4e15229f757736412ab7)]:
+  - @vercel/go@3.4.5
+  - @vercel/python@6.23.0
+
 ## 50.32.4
 
 ### Patch Changes
