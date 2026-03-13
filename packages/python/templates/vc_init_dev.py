@@ -6,6 +6,7 @@ os.environ.update(
     {
         "VERCEL_DEV_MODULE_NAME": "__VC_DEV_MODULE_NAME__",
         "VERCEL_DEV_ENTRY_ABS": "__VC_DEV_ENTRY_ABS__",
+        "VERCEL_DEV_FRAMEWORK": "__VC_DEV_FRAMEWORK__",
     }
 )
 
