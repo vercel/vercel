@@ -1,8 +1,23 @@
 import chalk from 'chalk';
 import type Client from '../../util/client';
 import output from '../../output-manager';
+import { outputActionRequired } from '../../util/agent-output';
+import {
+  AGENT_STATUS,
+  AGENT_REASON,
+  AGENT_ACTION,
+} from '../../util/agent-output-constants';
 import { addSubcommand } from './command';
-import { parseSubcommandArgs, ensureProjectLink, isValidUrl } from './shared';
+import {
+  parseSubcommandArgs,
+  ensureProjectLink,
+  isValidUrl,
+  buildRedirectsSuggestionFlags,
+  getArgsAfterRedirectsSubcommand,
+  getRedirectGlobalFlagsOnly,
+  getRedirectPromoteSuggestionFlags,
+} from './shared';
+import { getCommandNamePlain } from '../../util/pkg-name';
 import putRedirects from '../../util/redirects/put-redirects';
 import updateRedirectVersion from '../../util/redirects/update-redirect-version';
 import getRedirectVersions from '../../util/redirects/get-redirect-versions';
@@ -25,7 +40,32 @@ export default async function add(client: Client, argv: string[]) {
   const existingStagingVersion = versions.find(v => v.isStaging);
 
   const { args, flags } = parsed;
-  const skipPrompts = flags['--yes'];
+  const skipPrompts = flags['--yes'] || client.nonInteractive;
+
+  if (client.nonInteractive && (!args[0] || !args[1])) {
+    const sourcePart = args[0] || '<source>';
+    const destPart =
+      args[1] !== undefined && args[1] !== '' ? args[1] : '<destination>';
+    const flagParts = buildRedirectsSuggestionFlags(
+      client.argv.slice(2),
+      'add'
+    );
+    const cmd = getCommandNamePlain(
+      `redirects add ${sourcePart} ${destPart} ${flagParts.join(' ')}`.trim()
+    );
+    outputActionRequired(
+      client,
+      {
+        status: AGENT_STATUS.ACTION_REQUIRED,
+        reason: AGENT_REASON.MISSING_ARGUMENTS,
+        action: AGENT_ACTION.MISSING_ARGUMENTS,
+        message: `In non-interactive mode source and destination are required. Run: ${cmd}`,
+        next: [{ command: cmd, when: 'to add a redirect' }],
+      },
+      1
+    );
+    return 1;
+  }
 
   let source: string;
   if (args[0]) {
@@ -197,6 +237,60 @@ export default async function add(client: Client, argv: string[]) {
     teamId,
     versionName
   );
+
+  if (client.nonInteractive) {
+    output.stopSpinner();
+    const testUrl = alias
+      ? source.startsWith('/')
+        ? `https://${alias}${source}`
+        : `https://${alias}`
+      : undefined;
+    const fullArgs = client.argv.slice(2);
+    const afterAdd = getArgsAfterRedirectsSubcommand(fullArgs, 'add');
+    // Only forward global flags into list/promote suggestions; add-only flags
+    // (--status, --name, etc.) would break parsing on those subcommands.
+    const globalFlags = getRedirectGlobalFlagsOnly(afterAdd);
+    const flagsSuffix =
+      globalFlags.length > 0 ? ` ${globalFlags.join(' ')}` : '';
+    const listStagingCmd = getCommandNamePlain(
+      `redirects list --staging${flagsSuffix}`.trim()
+    );
+    const promoteFlagParts = getRedirectPromoteSuggestionFlags(afterAdd);
+    const promoteCmd = getCommandNamePlain(
+      `redirects promote ${version.id} ${promoteFlagParts.join(' ')}`.trim()
+    );
+    const jsonOutput: Record<string, unknown> = {
+      status: AGENT_STATUS.OK,
+      redirect: {
+        source,
+        destination,
+        statusCode,
+        caseSensitive,
+        preserveQueryParams,
+      },
+      version: { id: version.id, name: version.name || version.id },
+      ...(alias && { alias, testUrl }),
+      /** Redirect exists only in staging until promote; production list stays unchanged. */
+      stagingOnly: true,
+      inProduction: false,
+      message:
+        'Redirect was added to a staging version only—not live in production yet. ' +
+        '`vercel redirects list` (without --staging) shows production redirects only, so you may see 0 until you promote. ' +
+        `Use ${listStagingCmd} to see staged redirects including this one, then ${promoteCmd} to promote this staging version to production.`,
+      next: [
+        {
+          command: listStagingCmd,
+          when: 'To list staged redirects (includes this redirect)',
+        },
+        {
+          command: promoteCmd,
+          when: 'To promote this staging version to production',
+        },
+      ],
+    };
+    client.stdout.write(`${JSON.stringify(jsonOutput, null, 2)}\n`);
+    return 0;
+  }
 
   output.log(`${chalk.cyan('✓')} Redirect added ${chalk.gray(addStamp())}`);
 
