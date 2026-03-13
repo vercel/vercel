@@ -46,6 +46,95 @@ export interface AgentErrorPayload {
   next?: Array<{ command: string; when?: string }>;
 }
 
+/** Global CLI flag names (long form) that take a value; used when extracting from argv. */
+const GLOBAL_FLAGS_TAKING_VALUE = new Set([
+  '--cwd',
+  '--local-config',
+  '-A',
+  '--global-config',
+  '-Q',
+  '--scope',
+  '-S',
+  '--token',
+  '-t',
+  '--team',
+  '-T',
+  '--api',
+]);
+
+/** Global CLI flags to preserve in suggested "next" commands (long and short). */
+const GLOBAL_FLAG_NAMES = new Set([
+  '--help',
+  '-h',
+  '--version',
+  '-v',
+  '--cwd',
+  '--local-config',
+  '-A',
+  '--global-config',
+  '-Q',
+  '--debug',
+  '-d',
+  '--no-color',
+  '--non-interactive',
+  '--scope',
+  '-S',
+  '--token',
+  '-t',
+  '--team',
+  '-T',
+  '--api',
+  '--yes',
+  '-y',
+]);
+
+/**
+ * Extracts global CLI flags from argv (e.g. --cwd, --non-interactive, --yes)
+ * for appending to suggested "next" commands so they are copy-pastable with the same context.
+ */
+export function getGlobalFlagsFromArgv(argv: string[]): string[] {
+  const args = argv.slice(2);
+  const out: string[] = [];
+  for (let i = 0; i < args.length; i++) {
+    const a = args[i];
+    if (!a.startsWith('-')) continue;
+    const name = a.split('=')[0];
+    if (!GLOBAL_FLAG_NAMES.has(name)) continue;
+    out.push(a);
+    if (
+      GLOBAL_FLAGS_TAKING_VALUE.has(name) &&
+      !a.includes('=') &&
+      i + 1 < args.length
+    ) {
+      i++;
+      out.push(args[i]);
+    }
+  }
+  return out;
+}
+
+/**
+ * Builds a suggested command string by appending global flags from argv to the template.
+ * Use for "next" commands so the agent gets a copy-pastable command with --cwd, --non-interactive, etc.
+ * Omits flags that already appear in the template to avoid duplicates.
+ */
+export function buildCommandWithGlobalFlags(
+  argv: string[],
+  commandTemplate: string,
+  pkgName: string = packageName
+): string {
+  const base = `${pkgName} ${commandTemplate}`;
+  const globalFlags = getGlobalFlagsFromArgv(argv);
+  if (globalFlags.length === 0) return base;
+  const templateLower = base.toLowerCase();
+  const deduped = globalFlags.filter(flag => {
+    const name = flag.split('=')[0];
+    return !templateLower.includes(name);
+  });
+  if (deduped.length === 0) return base;
+  return `${base} ${deduped.join(' ')}`;
+}
+
 /**
  * Builds the invoking CLI command with --yes added (or retained).
  * Used for non-interactive "confirmation required" payloads.

@@ -4,8 +4,12 @@ import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { getLinkedProject } from '../../util/projects/link';
-import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
-import { buildCommandWithYes, outputAgentError } from '../../util/agent-output';
+import { getCommandName } from '../../util/pkg-name';
+import {
+  buildCommandWithGlobalFlags,
+  buildCommandWithYes,
+  outputAgentError,
+} from '../../util/agent-output';
 import { AGENT_REASON, AGENT_STATUS } from '../../util/agent-output-constants';
 import { getFlag } from '../../util/flags/get-flags';
 import { deleteFlag } from '../../util/flags/delete-flag';
@@ -44,7 +48,14 @@ export default async function rm(
           status: AGENT_STATUS.ERROR,
           reason: AGENT_REASON.MISSING_ARGUMENTS,
           message: 'Please provide a flag slug or ID to delete.',
-          next: [{ command: getCommandNamePlain('flags rm <flag> --yes') }],
+          next: [
+            {
+              command: buildCommandWithGlobalFlags(
+                client.argv,
+                'flags rm <flag> --yes'
+              ),
+            },
+          ],
         },
         1
       );
@@ -82,7 +93,11 @@ export default async function rm(
           status: AGENT_STATUS.ERROR,
           reason: AGENT_REASON.NOT_LINKED,
           message: 'Your codebase is not linked to a project. Run link first.',
-          next: [{ command: getCommandNamePlain('link') }],
+          next: [
+            {
+              command: buildCommandWithGlobalFlags(client.argv, 'link'),
+            },
+          ],
         },
         1
       );
@@ -117,7 +132,8 @@ export default async function rm(
             message: `Flag ${flag.slug} must be archived before it can be deleted.`,
             next: [
               {
-                command: getCommandNamePlain(
+                command: buildCommandWithGlobalFlags(
+                  client.argv,
                   `flags archive ${flag.slug} --yes`
                 ),
               },

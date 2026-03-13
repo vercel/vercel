@@ -5,10 +5,13 @@ import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
-import { outputAgentError } from '../../util/agent-output';
+import {
+  buildCommandWithGlobalFlags,
+  outputAgentError,
+} from '../../util/agent-output';
 import { AGENT_REASON, AGENT_STATUS } from '../../util/agent-output-constants';
 import { getLinkedProject } from '../../util/projects/link';
-import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
+import { getCommandName } from '../../util/pkg-name';
 import { getFlags } from '../../util/flags/get-flags';
 import formatTable from '../../util/format-table';
 import stamp from '../../util/output/stamp';
@@ -42,7 +45,7 @@ export default async function ls(
           message: err instanceof Error ? err.message : String(err),
           next: [
             {
-              command: getCommandNamePlain('flags ls'),
+              command: buildCommandWithGlobalFlags(client.argv, 'flags ls'),
               when: 'list feature flags',
             },
           ],
@@ -74,7 +77,10 @@ export default async function ls(
           reason: AGENT_REASON.NOT_LINKED,
           message: 'Your codebase is not linked to a project. Run link first.',
           next: [
-            { command: getCommandNamePlain('link'), when: 'link the project' },
+            {
+              command: buildCommandWithGlobalFlags(client.argv, 'link'),
+              when: 'link the project',
+            },
           ],
         },
         1
@@ -126,7 +132,7 @@ export default async function ls(
           message: err instanceof Error ? err.message : String(err),
           next: [
             {
-              command: getCommandNamePlain('flags ls'),
+              command: buildCommandWithGlobalFlags(client.argv, 'flags ls'),
               when: 'retry listing flags',
             },
           ],

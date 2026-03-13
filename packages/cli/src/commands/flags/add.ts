@@ -5,8 +5,11 @@ import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { getLinkedProject } from '../../util/projects/link';
-import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
-import { outputAgentError } from '../../util/agent-output';
+import { getCommandName } from '../../util/pkg-name';
+import {
+  buildCommandWithGlobalFlags,
+  outputAgentError,
+} from '../../util/agent-output';
 import { AGENT_REASON, AGENT_STATUS } from '../../util/agent-output-constants';
 import { createFlag } from '../../util/flags/create-flag';
 import output from '../../output-manager';
@@ -62,7 +65,14 @@ export default async function create(
           status: AGENT_STATUS.ERROR,
           reason: AGENT_REASON.MISSING_ARGUMENTS,
           message: 'Please provide a slug for the feature flag.',
-          next: [{ command: getCommandNamePlain('flags add <slug>') }],
+          next: [
+            {
+              command: buildCommandWithGlobalFlags(
+                client.argv,
+                'flags add <slug>'
+              ),
+            },
+          ],
         },
         1
       );
@@ -92,7 +102,8 @@ export default async function create(
           message: `Invalid kind: ${kind}. Must be one of: boolean, string, number.`,
           next: [
             {
-              command: getCommandNamePlain(
+              command: buildCommandWithGlobalFlags(
+                client.argv,
                 `flags add ${slug} --kind <boolean|string|number>`
               ),
             },
@@ -119,7 +130,11 @@ export default async function create(
           status: AGENT_STATUS.ERROR,
           reason: AGENT_REASON.NOT_LINKED,
           message: 'Your codebase is not linked to a project. Run link first.',
-          next: [{ command: getCommandNamePlain('link') }],
+          next: [
+            {
+              command: buildCommandWithGlobalFlags(client.argv, 'link'),
+            },
+          ],
         },
         1
       );
@@ -180,7 +195,10 @@ export default async function create(
             flag: { id: flag.id, slug: flag.slug, kind: flag.kind },
             next: [
               {
-                command: getCommandNamePlain(`flags inspect ${flag.slug}`),
+                command: buildCommandWithGlobalFlags(
+                  client.argv,
+                  `flags inspect ${flag.slug}`
+                ),
                 when: 'Inspect the new flag',
               },
             ],

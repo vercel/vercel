@@ -4,8 +4,12 @@ import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { getLinkedProject } from '../../util/projects/link';
-import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
-import { buildCommandWithYes, outputAgentError } from '../../util/agent-output';
+import { getCommandName } from '../../util/pkg-name';
+import {
+  buildCommandWithGlobalFlags,
+  buildCommandWithYes,
+  outputAgentError,
+} from '../../util/agent-output';
 import { AGENT_REASON, AGENT_STATUS } from '../../util/agent-output-constants';
 import { getSdkKeys, deleteSdkKey } from '../../util/flags/sdk-keys';
 import output from '../../output-manager';
@@ -51,7 +55,11 @@ export default async function sdkKeysRm(
           status: AGENT_STATUS.ERROR,
           reason: AGENT_REASON.NOT_LINKED,
           message: 'Your codebase is not linked to a project. Run link first.',
-          next: [{ command: getCommandNamePlain('link') }],
+          next: [
+            {
+              command: buildCommandWithGlobalFlags(client.argv, 'link'),
+            },
+          ],
         },
         1
       );
@@ -95,9 +103,15 @@ export default async function sdkKeysRm(
             message:
               'Please provide the SDK key hash to delete. Run "vercel flags sdk-keys ls" to list keys.',
             next: [
-              { command: getCommandNamePlain('flags sdk-keys ls') },
               {
-                command: getCommandNamePlain(
+                command: buildCommandWithGlobalFlags(
+                  client.argv,
+                  'flags sdk-keys ls'
+                ),
+              },
+              {
+                command: buildCommandWithGlobalFlags(
+                  client.argv,
                   'flags sdk-keys rm <hashKey> --yes'
                 ),
               },

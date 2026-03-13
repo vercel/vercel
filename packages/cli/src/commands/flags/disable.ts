@@ -4,8 +4,11 @@ import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { getLinkedProject } from '../../util/projects/link';
-import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
-import { outputAgentError } from '../../util/agent-output';
+import { getCommandName } from '../../util/pkg-name';
+import {
+  buildCommandWithGlobalFlags,
+  outputAgentError,
+} from '../../util/agent-output';
 import { AGENT_REASON, AGENT_STATUS } from '../../util/agent-output-constants';
 import { getFlag } from '../../util/flags/get-flags';
 import { updateFlag } from '../../util/flags/update-flag';
@@ -63,7 +66,8 @@ export default async function disable(
           message: 'Please provide a flag slug or ID to disable.',
           next: [
             {
-              command: getCommandNamePlain(
+              command: buildCommandWithGlobalFlags(
+                client.argv,
                 'flags disable <flag> --environment <env>'
               ),
             },
@@ -90,7 +94,8 @@ export default async function disable(
           'Please provide --environment (production, preview, or development).',
         next: [
           {
-            command: getCommandNamePlain(
+            command: buildCommandWithGlobalFlags(
+              client.argv,
               `flags disable ${flagArg} --environment <env>`
             ),
           },
@@ -117,7 +122,11 @@ export default async function disable(
           status: AGENT_STATUS.ERROR,
           reason: AGENT_REASON.NOT_LINKED,
           message: 'Your codebase is not linked to a project. Run link first.',
-          next: [{ command: getCommandNamePlain('link') }],
+          next: [
+            {
+              command: buildCommandWithGlobalFlags(client.argv, 'link'),
+            },
+          ],
         },
         1
       );
@@ -208,7 +217,8 @@ export default async function disable(
               message: result.error,
               next: [
                 {
-                  command: getCommandNamePlain(
+                  command: buildCommandWithGlobalFlags(
+                    client.argv,
                     `flags disable ${flagArg} -e ${environment} --variant <id|value|label>`
                   ),
                 },
@@ -293,6 +303,31 @@ export default async function disable(
     );
   } catch (err) {
     output.stopSpinner();
+    if (
+      client.nonInteractive &&
+      err instanceof Error &&
+      err.message.includes('Invalid environment')
+    ) {
+      outputAgentError(
+        client,
+        {
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.INVALID_ARGUMENTS,
+          message: err.message,
+          next: [
+            {
+              command: buildCommandWithGlobalFlags(
+                client.argv,
+                `flags disable ${flagArg} --environment <production|preview|development>`
+              ),
+              when: 'use a valid environment: production, preview, or development',
+            },
+          ],
+        },
+        1
+      );
+      return 1;
+    }
     printError(err);
     return 1;
   }

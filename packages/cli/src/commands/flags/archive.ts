@@ -4,8 +4,12 @@ import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { getLinkedProject } from '../../util/projects/link';
-import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
-import { buildCommandWithYes, outputAgentError } from '../../util/agent-output';
+import { getCommandName } from '../../util/pkg-name';
+import {
+  buildCommandWithGlobalFlags,
+  buildCommandWithYes,
+  outputAgentError,
+} from '../../util/agent-output';
 import { AGENT_REASON, AGENT_STATUS } from '../../util/agent-output-constants';
 import { getFlag } from '../../util/flags/get-flags';
 import { updateFlag } from '../../util/flags/update-flag';
@@ -46,7 +50,12 @@ export default async function archive(
           reason: AGENT_REASON.MISSING_ARGUMENTS,
           message: 'Please provide a flag slug or ID to archive.',
           next: [
-            { command: getCommandNamePlain('flags archive <flag> --yes') },
+            {
+              command: buildCommandWithGlobalFlags(
+                client.argv,
+                'flags archive <flag> --yes'
+              ),
+            },
           ],
         },
         1
@@ -86,7 +95,11 @@ export default async function archive(
           status: AGENT_STATUS.ERROR,
           reason: AGENT_REASON.NOT_LINKED,
           message: 'Your codebase is not linked to a project. Run link first.',
-          next: [{ command: getCommandNamePlain('link') }],
+          next: [
+            {
+              command: buildCommandWithGlobalFlags(client.argv, 'link'),
+            },
+          ],
         },
         1
       );
@@ -167,7 +180,10 @@ export default async function archive(
             message: `Feature flag ${flag.slug} has been archived.`,
             next: [
               {
-                command: getCommandNamePlain(`flags rm ${flag.slug} --yes`),
+                command: buildCommandWithGlobalFlags(
+                  client.argv,
+                  `flags rm ${flag.slug} --yes`
+                ),
                 when: 'Delete the archived flag',
               },
             ],

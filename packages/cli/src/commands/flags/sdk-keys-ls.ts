@@ -4,10 +4,13 @@ import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
-import { outputAgentError } from '../../util/agent-output';
+import {
+  buildCommandWithGlobalFlags,
+  outputAgentError,
+} from '../../util/agent-output';
 import { AGENT_REASON, AGENT_STATUS } from '../../util/agent-output-constants';
 import { getLinkedProject } from '../../util/projects/link';
-import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
+import { getCommandName } from '../../util/pkg-name';
 import { getSdkKeys } from '../../util/flags/sdk-keys';
 import formatTable from '../../util/format-table';
 import output from '../../output-manager';
@@ -42,7 +45,10 @@ export default async function sdkKeysLs(
           message: err instanceof Error ? err.message : String(err),
           next: [
             {
-              command: getCommandNamePlain('flags sdk-keys ls'),
+              command: buildCommandWithGlobalFlags(
+                client.argv,
+                'flags sdk-keys ls'
+              ),
               when: 'list SDK keys',
             },
           ],
@@ -72,7 +78,10 @@ export default async function sdkKeysLs(
           reason: AGENT_REASON.NOT_LINKED,
           message: 'Your codebase is not linked to a project. Run link first.',
           next: [
-            { command: getCommandNamePlain('link'), when: 'link the project' },
+            {
+              command: buildCommandWithGlobalFlags(client.argv, 'link'),
+              when: 'link the project',
+            },
           ],
         },
         1
@@ -123,7 +132,10 @@ export default async function sdkKeysLs(
           message: err instanceof Error ? err.message : String(err),
           next: [
             {
-              command: getCommandNamePlain('flags sdk-keys ls'),
+              command: buildCommandWithGlobalFlags(
+                client.argv,
+                'flags sdk-keys ls'
+              ),
               when: 'retry listing SDK keys',
             },
           ],
