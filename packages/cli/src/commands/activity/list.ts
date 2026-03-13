@@ -405,6 +405,16 @@ function paginateEvents(
   return { events, next };
 }
 
+function printScopeHeader(scope: ActivityScope, flags: ListFlags) {
+  if (flags['--all'] && scope.teamSlug) {
+    output.log(`Showing all activity for team ${chalk.bold(scope.teamSlug)}`);
+  } else if (flags['--project'] && scope.teamSlug) {
+    output.log(
+      `Showing activity for project ${chalk.bold(flags['--project'])} in team ${chalk.bold(scope.teamSlug)}`
+    );
+  }
+}
+
 function printNextPageHint(flags: ListFlags, next: number) {
   const commandFlags = getCommandFlags(flags, ['--next']);
   output.log(
@@ -474,11 +484,21 @@ export default async function list(
     const { events, next } = paginateEvents(allEvents, validatedInputs.limit);
 
     if (jsonOutput) {
-      client.stdout.write(
-        `${JSON.stringify({ events, pagination: { next } }, null, 2)}\n`
-      );
+      const jsonResponse = {
+        ...(scope.teamSlug && {
+          scope: {
+            teamSlug: scope.teamSlug,
+            ...(scope.projectIds && { projectIds: scope.projectIds }),
+          },
+        }),
+        events,
+        pagination: { next },
+      };
+      client.stdout.write(`${JSON.stringify(jsonResponse, null, 2)}\n`);
       return 0;
     }
+
+    printScopeHeader(scope, flags);
 
     if (events.length === 0) {
       output.log('No activity events found.');

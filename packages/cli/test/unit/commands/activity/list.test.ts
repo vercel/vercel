@@ -379,6 +379,10 @@ describe('activity ls', () => {
 
     const parsed = JSON.parse(client.stdout.getFullOutput());
     expect(parsed).toEqual({
+      scope: {
+        teamSlug: 'my-team',
+        projectIds: ['prj_activity'],
+      },
       events: [
         {
           id: 'uev_1',
@@ -426,6 +430,134 @@ describe('activity ls', () => {
     expect(client.stderr.getFullOutput()).toContain(
       'You do not have permission to list activity events'
     );
+  });
+
+  it('shows scope header with team name when using --all', async () => {
+    client.scenario.get('/v3/events', (_req, res) => {
+      res.json({
+        events: [
+          {
+            id: 'uev_1',
+            createdAt: 1700000000000,
+            text: 'Deployed to production',
+            type: 'deployment',
+            principalId: 'user_1',
+          },
+        ],
+      });
+    });
+
+    client.setArgv('activity', 'ls', '--all');
+
+    const exitCode = await activity(client);
+
+    expect(exitCode).toBe(0);
+    const output = client.stderr.getFullOutput();
+    expect(output).toContain('Showing all activity for team');
+    expect(output).toContain('my-team');
+  });
+
+  it('shows scope header with project and team name when using --project', async () => {
+    client.scenario.get('/v9/projects/:projectNameOrId', (_req, res) => {
+      res.json({
+        id: 'prj_overridden',
+        name: 'my-app',
+        accountId: 'team_dummy',
+        updatedAt: Date.now(),
+        createdAt: Date.now(),
+      });
+    });
+    client.scenario.get('/v3/events', (_req, res) => {
+      res.json({
+        events: [
+          {
+            id: 'uev_1',
+            createdAt: 1700000000000,
+            text: 'Deployed to production',
+            type: 'deployment',
+            principalId: 'user_1',
+          },
+        ],
+      });
+    });
+
+    client.setArgv('activity', 'ls', '--project', 'my-app');
+
+    const exitCode = await activity(client);
+
+    expect(exitCode).toBe(0);
+    const output = client.stderr.getFullOutput();
+    expect(output).toContain('Showing activity for project');
+    expect(output).toContain('my-app');
+    expect(output).toContain('my-team');
+  });
+
+  it('does not show scope header for default linked project', async () => {
+    client.scenario.get('/v3/events', (_req, res) => {
+      res.json({
+        events: [
+          {
+            id: 'uev_1',
+            createdAt: 1700000000000,
+            text: 'Deployed to production',
+            type: 'deployment',
+            principalId: 'user_1',
+          },
+        ],
+      });
+    });
+
+    client.setArgv('activity', 'ls');
+
+    const exitCode = await activity(client);
+
+    expect(exitCode).toBe(0);
+    const output = client.stderr.getFullOutput();
+    expect(output).not.toContain('Showing all activity for team');
+    expect(output).not.toContain('Showing activity for project');
+  });
+
+  it('includes scope in JSON output when using --all', async () => {
+    client.scenario.get('/v3/events', (_req, res) => {
+      res.json({ events: [] });
+    });
+
+    client.setArgv('activity', 'ls', '--all', '--format=json');
+
+    const exitCode = await activity(client);
+
+    expect(exitCode).toBe(0);
+    const parsed = JSON.parse(client.stdout.getFullOutput());
+    expect(parsed.scope).toEqual({
+      teamSlug: 'my-team',
+    });
+    expect(parsed.scope.projectIds).toBeUndefined();
+  });
+
+  it('includes scope with projectIds in JSON output when using --project', async () => {
+    client.scenario.get('/v9/projects/:projectNameOrId', (_req, res) => {
+      res.json({
+        id: 'prj_overridden',
+        name: 'my-app',
+        accountId: 'team_dummy',
+        updatedAt: Date.now(),
+        createdAt: Date.now(),
+      });
+    });
+    client.scenario.get('/v3/events', (_req, res) => {
+      res.json({ events: [] });
+    });
+
+    client.setArgv('activity', 'ls', '--project', 'my-app', '--format=json');
+
+    const exitCode = await activity(client);
+
+    expect(exitCode).toBe(0);
+    const parsed = JSON.parse(client.stdout.getFullOutput());
+    expect(parsed.scope).toEqual({
+      teamSlug: 'my-team',
+      projectIds: ['prj_overridden'],
+    });
   });
 
   it('works in non-TTY mode', async () => {
