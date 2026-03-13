@@ -325,7 +325,11 @@ function getExplicitHostPrefixNegativeLookahead(
     return '';
   }
 
-  return `(?!${explicitPrefixes.map(prefix => `${prefix}(?:/|$)`).join('|')})`;
+  if (explicitPrefixes.length === 1) {
+    return `(?!${explicitPrefixes[0]}(?:/|$))`;
+  }
+
+  return `(?!(?:${explicitPrefixes.join('|')})(?:/|$))`;
 }
 
 function getHostCondition(service: Service): HasField | undefined {
