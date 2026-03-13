@@ -127,14 +127,14 @@ export default async function login(
         reason: 'login_requires_user_action',
         userActionRequired: true,
         message:
-          'Login uses a device flow: a user must open the verification URL and approve in the browser. This cannot complete in non-interactive mode. Run login in a TTY without --non-interactive; credentials are stored globally afterward so agents can rerun commands without any secret on the command line.',
+          'Login uses a device flow: a user must open the verification URL and approve in the browser. This cannot complete in non-interactive mode. Credentials are stored globally afterward so agents can rerun commands without any secret on the command line.',
         next: [
           {
             command: loginTtyCmd,
-            when: 'run in a terminal with TTY (omit --non-interactive) so the user can complete device auth',
+            when: 'the user should complete device auth',
           },
         ],
-        hint: 'Do not run vercel login --non-interactive—it will hang. Avoid passing tokens via CLI where agents can read them; prefer one-time TTY login so the CLI reads auth from global config on later runs.',
+        hint: 'Do not run vercel login --non-interactive—it will hang. Have user run one-time TTY login so the CLI reads auth from global config on later runs.',
       },
       1
     );

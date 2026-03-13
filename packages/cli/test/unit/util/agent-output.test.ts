@@ -327,7 +327,7 @@ describe('outputAgentError', () => {
     const client = {
       nonInteractive: true,
       stdout: { write: stdoutWrite },
-    } as Client;
+    } as unknown as Client;
     outputAgentError(client, {
       status: 'error',
       reason: 'no_credentials',
