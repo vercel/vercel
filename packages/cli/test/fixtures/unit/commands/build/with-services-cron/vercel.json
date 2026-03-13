@@ -3,7 +3,6 @@
     "cleanup": {
       "type": "cron",
       "entrypoint": "index.js",
-      "installCommand": "",
       "schedule": "0 0 * * *"
     }
   }
