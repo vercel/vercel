@@ -19,6 +19,7 @@ interface Options {
 
 interface Event {
   teamId?: string;
+  userId?: string;
   sessionId?: string;
   eventTime: number;
   id: string;
@@ -231,6 +232,7 @@ export class TelemetryEventStore {
   private isDebug: boolean;
   private sessionId: string;
   private teamId = 'NO_TEAM_ID';
+  private userId = 'NO_USER_ID';
   private config: GlobalConfig['telemetry'];
 
   constructor(opts?: { isDebug?: boolean; config: GlobalConfig['telemetry'] }) {
@@ -243,6 +245,7 @@ export class TelemetryEventStore {
   add(event: Event) {
     event.sessionId = this.sessionId;
     event.teamId = this.teamId;
+    event.userId = this.userId;
     this.events.push(event);
   }
 
@@ -250,6 +253,16 @@ export class TelemetryEventStore {
     if (teamId) {
       this.teamId = teamId;
     }
+  }
+
+  updateUserId(userId?: string) {
+    if (userId) {
+      this.userId = userId;
+    }
+  }
+
+  get hasUserId() {
+    return this.userId !== 'NO_USER_ID';
   }
 
   get readonlyEvents() {
@@ -275,6 +288,7 @@ export class TelemetryEventStore {
       output.log(`${LogLabel} Flushing Events`);
       for (const event of this.events) {
         event.teamId = this.teamId;
+        event.userId = this.userId;
         output.log(JSON.stringify(event));
       }
 
@@ -290,8 +304,14 @@ export class TelemetryEventStore {
       const events = this.events.map(event => {
         delete event.sessionId;
         delete event.teamId;
+        delete event.userId;
         const { eventTime, ...rest } = event;
-        return { event_time: eventTime, team_id: this.teamId, ...rest };
+        return {
+          event_time: eventTime,
+          team_id: this.teamId,
+          user_id: this.userId,
+          ...rest,
+        };
       });
       const payload = {
         headers: {
