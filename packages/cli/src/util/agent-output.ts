@@ -46,14 +46,11 @@ export interface AgentErrorPayload {
   status: 'error';
   reason: string;
   message: string;
-  /**
-   * When true, a human must act before the command can succeed (e.g. login, link).
-   * Optional so purely programmatic errors stay unflagged.
-   */
-  userActionRequired?: boolean;
+  next?: Array<{ command: string; when?: string }>;
   /** Optional extra context for agents (plain text, no ANSI). */
   hint?: string;
-  next?: Array<{ command: string; when?: string }>;
+  /** When true, a human must act before the command can succeed. */
+  userActionRequired?: boolean;
 }
 
 /**
@@ -294,8 +291,7 @@ export function outputActionRequired(
     enriched.hint =
       'Run one of the commands in next[] to complete without prompting.';
   }
-  // biome-ignore lint/suspicious/noConsole: intentional console usage
-  console.log(JSON.stringify(enriched, null, 2));
+  client.stdout.write(`${JSON.stringify(enriched, null, 2)}\n`);
   process.exit(exitCode);
 }
 
@@ -312,7 +308,6 @@ export function outputAgentError(
   if (!client.nonInteractive) {
     return;
   }
-  // biome-ignore lint/suspicious/noConsole: intentional console usage
-  console.log(JSON.stringify(payload, null, 2));
+  client.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
   process.exit(exitCode);
 }

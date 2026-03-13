@@ -892,3 +892,46 @@ describe('[vercel dev] Multi-service auto-detection', () => {
     }
   });
 });
+
+describe('[vercel dev] Cron service', () => {
+  const resultsDir = join(__dirname, 'fixtures', 'services-cron', '.results');
+
+  beforeEach(async () => {
+    await fs.remove(resultsDir);
+  });
+
+  test('[vercel dev] trigger cron service via proxy', async () => {
+    const dir = fixture('services-cron');
+    const { dev, port, readyResolver } = await testFixture(
+      dir,
+      {
+        skipNpmInstall: true,
+        env: {
+          VERCEL_USE_EXPERIMENTAL_SERVICES: '1',
+          VERCEL_USE_EXPERIMENTAL_FRAMEWORKS: '1',
+        },
+      },
+      ['--local']
+    );
+
+    try {
+      await readyResolver;
+
+      // Trigger the service directly via the proxy to not wait for a minute
+      const cronRes = await nodeFetch(
+        `http://localhost:${port}/_svc/cron/crons`,
+        { method: 'POST' }
+      );
+      expect(cronRes.status).toBe(200);
+      const cronJson = await cronRes.json();
+      expect(cronJson).toHaveProperty('ok', true);
+
+      const cronResultPath = join(resultsDir, 'cron_result.json');
+      expect(await fs.pathExists(cronResultPath)).toBe(true);
+      const cronResult = await fs.readJson(cronResultPath);
+      expect(cronResult).toHaveProperty('executed', true);
+    } finally {
+      await dev.kill();
+    }
+  });
+});

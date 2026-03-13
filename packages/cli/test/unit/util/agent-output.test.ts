@@ -87,7 +87,6 @@ describe('outputActionRequired', () => {
     reason: 'missing_scope',
   };
   let exitSpy: { mockRestore: () => void };
-  let logSpy: { mockRestore: () => void };
 
   beforeEach(() => {
     exitSpy = vi
@@ -95,35 +94,104 @@ describe('outputActionRequired', () => {
       .mockImplementation((() => {}) as () => never) as unknown as {
       mockRestore: () => void;
     };
-    logSpy = vi
-      .spyOn(console, 'log')
-      .mockImplementation(() => {}) as unknown as { mockRestore: () => void };
   });
 
   afterEach(() => {
     exitSpy.mockRestore();
-    logSpy.mockRestore();
   });
 
   it('does nothing when client.nonInteractive is false', () => {
-    const client = { nonInteractive: false } as Client;
+    const stdoutWrite = vi.fn();
+    const client = {
+      nonInteractive: false,
+      stdout: { write: stdoutWrite },
+      argv: ['/node', '/vc.js', 'deploy'],
+    } as unknown as Client;
+
     outputActionRequired(client, payload);
-    expect(logSpy).not.toHaveBeenCalled();
+    expect(stdoutWrite).not.toHaveBeenCalled();
     expect(exitSpy).not.toHaveBeenCalled();
   });
 
   it('logs JSON and exits with default code when client.nonInteractive is true', () => {
-    const client = { nonInteractive: true } as Client;
+    const stdoutWrite = vi.fn();
+    const client = {
+      nonInteractive: true,
+      stdout: { write: stdoutWrite },
+      argv: ['/node', '/vc.js', 'deploy'],
+    } as unknown as Client;
+
     outputActionRequired(client, payload);
-    expect(logSpy).toHaveBeenCalledTimes(1);
-    expect(logSpy).toHaveBeenCalledWith(JSON.stringify(payload, null, 2));
+    expect(stdoutWrite).toHaveBeenCalledTimes(1);
+    const written = String(stdoutWrite.mock.calls[0][0]);
+    const parsed = JSON.parse(written);
+    expect(parsed.status).toBe('action_required');
+    expect(parsed.message).toBe(payload.message);
+
     expect(exitSpy).toHaveBeenCalledWith(1);
   });
 
   it('exits with custom exitCode when provided', () => {
-    const client = { nonInteractive: true } as Client;
+    const stdoutWrite = vi.fn();
+    const client = {
+      nonInteractive: true,
+      stdout: { write: stdoutWrite },
+      argv: ['/node', '/vc.js', 'deploy'],
+    } as unknown as Client;
+
     outputActionRequired(client, payload, 2);
     expect(exitSpy).toHaveBeenCalledWith(2);
+  });
+});
+
+describe('outputAgentError', () => {
+  const errorPayload = {
+    status: 'error' as const,
+    reason: 'test_reason',
+    message: 'Something went wrong',
+  };
+
+  let exitSpy: { mockRestore: () => void };
+
+  beforeEach(() => {
+    exitSpy = vi
+      .spyOn(process, 'exit')
+      .mockImplementation((() => {}) as () => never) as unknown as {
+      mockRestore: () => void;
+    };
+  });
+
+  afterEach(() => {
+    exitSpy.mockRestore();
+  });
+
+  it('does nothing when client.nonInteractive is false', () => {
+    const stdoutWrite = vi.fn();
+    const client = {
+      nonInteractive: false,
+      stdout: { write: stdoutWrite },
+    } as unknown as Client;
+
+    outputAgentError(client, errorPayload);
+    expect(stdoutWrite).not.toHaveBeenCalled();
+    expect(exitSpy).not.toHaveBeenCalled();
+  });
+
+  it('writes JSON and exits when client.nonInteractive is true', () => {
+    const stdoutWrite = vi.fn();
+    const client = {
+      nonInteractive: true,
+      stdout: { write: stdoutWrite },
+    } as unknown as Client;
+
+    outputAgentError(client, errorPayload, 3);
+    expect(stdoutWrite).toHaveBeenCalledTimes(1);
+    const written = String(stdoutWrite.mock.calls[0][0]);
+    const parsed = JSON.parse(written);
+    expect(parsed.status).toBe('error');
+    expect(parsed.reason).toBe('test_reason');
+    expect(parsed.message).toBe('Something went wrong');
+    expect(exitSpy).toHaveBeenCalledWith(3);
   });
 });
 

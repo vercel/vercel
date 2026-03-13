@@ -9,7 +9,7 @@ import output from '../../output-manager';
 import { LoginTelemetryClient } from '../../util/telemetry/commands/login';
 import { login as future } from './future';
 import { outputActionRequired } from '../../util/agent-output';
-import { getCommandNamePlain } from '../../util/pkg-name';
+import { getCommandNamePlain, packageName } from '../../util/pkg-name';
 import { getGlobalFlagsOnlyFromArgs } from '../../util/arg-common';
 
 export default async function login(
@@ -77,6 +77,36 @@ export default async function login(
         `Read more in our ${output.link('changelog', 'https://vercel.com/changelog/new-vercel-cli-login-flow')}.\n`
       );
     }
+  }
+
+  // Non-interactive mode: don't start an interactive device-code flow.
+  // Passcode-based login is not yet available; the user must run login interactively.
+  if (
+    client.nonInteractive &&
+    options.shouldParseArgs &&
+    parsedArgs &&
+    parsedArgs.args.slice(1).length === 0
+  ) {
+    const loginCmd = `${packageName} login`;
+    const message = `You must run the following command to log in: \`${loginCmd}\`. Run it without --non-interactive to complete sign-in in your browser.`;
+
+    // Plain text for humans (stdout/stderr via output manager)
+    output.print(`${message}\n`);
+
+    // Structured payload for agents
+    outputActionRequired(
+      client,
+      {
+        status: 'action_required',
+        reason: 'login_required',
+        action: 'login_required',
+        message,
+        hint: `Run this command to log in: ${loginCmd}`,
+        verification_uri: 'https://vercel.com/login',
+        next: [{ command: loginCmd, when: 'to log in' }],
+      },
+      1
+    );
   }
 
   telemetry.trackState('started');
