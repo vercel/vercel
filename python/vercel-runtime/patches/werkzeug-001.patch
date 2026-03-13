@@ -1,29 +1,3 @@
-commit 08dcbecc6cf9734c1681dc468bbe81a1091b1d65
-Author: dnwpark <dnwpark@protonmail.com>
-Date:   Thu Mar 12 16:07:28 2026 -0700
-
-    [python] Fix error when running dev server on a django project. (#15483)
-    
-    When starting a WSGI app using `vercel dev`, `BaseWSGIServer.__init__`
-    will attempt to get the version via `importlib.metadata.version`.
-    However, since `django` does not depend on `werkzeug` there is no
-    `.dist-info` to look up a version.
-    
-    `vercel dev` uses a vendored copy of `werkzeug`, but that does not
-    provide a `.dist-info`. Instead of using `importlib`, this PR adds a
-    function to read `vendor.txt` and extract the specific version used.
-
-diff --git a/.changeset/tasty-rings-unite.md b/.changeset/tasty-rings-unite.md
-new file mode 100644
-index 000000000..c14e778ab
---- /dev/null
-+++ b/.changeset/tasty-rings-unite.md
-@@ -0,0 +1,5 @@
-+---
-+'@vercel/python-runtime': minor
-+---
-+
-+Fix error when running dev server on a django project.
 diff --git a/python/vercel-runtime/src/vercel_runtime/_vendor/werkzeug/serving.py b/python/vercel-runtime/src/vercel_runtime/_vendor/werkzeug/serving.py
 index f231bf3bf..df5cd9e88 100644
 --- a/python/vercel-runtime/src/vercel_runtime/_vendor/werkzeug/serving.py
