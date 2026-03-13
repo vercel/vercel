@@ -461,7 +461,7 @@ export async function resolveConfiguredService(
       frameworkDefinition?.useRuntime?.src ||
       'package.json';
   } else if (config.framework) {
-    if (isNodeBackendFramework(config.framework)) {
+    if (type === 'web' && isNodeBackendFramework(config.framework)) {
       builderUse = '@vercel/backends';
     } else {
       builderUse =
