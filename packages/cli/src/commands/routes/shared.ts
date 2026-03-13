@@ -7,6 +7,7 @@ import { getLinkedProject } from '../../util/projects/link';
 import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 import output from '../../output-manager';
 import { outputAgentError, buildCommandWithYes } from '../../util/agent-output';
+import { AGENT_STATUS, AGENT_REASON } from '../../util/agent-output-constants';
 import { getGlobalFlagsOnlyFromArgs } from '../../util/arg-common';
 import type { Command } from '../help';
 import {
@@ -117,8 +118,8 @@ export async function parseSubcommandArgs(
       outputAgentError(
         client,
         {
-          status: 'error',
-          reason: 'invalid_arguments',
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.INVALID_ARGUMENTS,
           message,
           next,
         },
@@ -146,8 +147,8 @@ export async function ensureProjectLink(client: Client) {
       outputAgentError(
         client,
         {
-          status: 'error',
-          reason: 'not_linked',
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.NOT_LINKED,
           userActionRequired: true,
           message:
             'Your codebase is not linked to a Vercel project. Run link first, then retry routes commands.',
@@ -160,6 +161,7 @@ export async function ensureProjectLink(client: Client) {
         },
         1
       );
+      return 1;
     }
     output.error(
       `Your codebase isn't linked to a project on Vercel. Run ${getCommandName('link')} to begin.`
@@ -183,8 +185,8 @@ export async function confirmAction(
 
   if (client.nonInteractive) {
     outputAgentError(client, {
-      status: 'error',
-      reason: 'confirmation_required',
+      status: AGENT_STATUS.ERROR,
+      reason: AGENT_REASON.CONFIRMATION_REQUIRED,
       message: `${message} Re-run with --yes to confirm.`,
       next: [
         {
@@ -467,8 +469,8 @@ export async function resolveRoute(
     outputAgentError(
       client,
       {
-        status: 'error',
-        reason: 'ambiguous_route',
+        status: AGENT_STATUS.ERROR,
+        reason: AGENT_REASON.AMBIGUOUS_ROUTE,
         message: `Multiple routes match "${identifier}" (${matches.length} matches). Pass an exact route name or ID.`,
         next: [
           {
@@ -479,6 +481,7 @@ export async function resolveRoute(
       },
       1
     );
+    return null;
   }
 
   // Multiple matches — interactive disambiguation
@@ -512,8 +515,8 @@ export async function resolveRoutes(
         outputAgentError(
           client,
           {
-            status: 'error',
-            reason: 'not_found',
+            status: AGENT_STATUS.ERROR,
+            reason: AGENT_REASON.NOT_FOUND,
             message: `No route found matching "${identifier}".`,
             next: [
               {
@@ -524,6 +527,7 @@ export async function resolveRoutes(
           },
           1
         );
+        return null;
       }
       output.error(
         `No route found matching "${identifier}". Run ${chalk.cyan(

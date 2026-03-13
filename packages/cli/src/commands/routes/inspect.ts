@@ -14,6 +14,7 @@ import getRouteVersions from '../../util/routes/get-route-versions';
 import stamp from '../../util/output/stamp';
 import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 import { outputAgentError } from '../../util/agent-output';
+import { AGENT_STATUS, AGENT_REASON } from '../../util/agent-output-constants';
 import { getGlobalFlagsOnlyFromArgs } from '../../util/arg-common';
 import {
   getRouteTypeLabel,
@@ -45,8 +46,8 @@ export default async function inspect(client: Client, argv: string[]) {
       outputAgentError(
         client,
         {
-          status: 'error',
-          reason: 'missing_arguments',
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.MISSING_ARGUMENTS,
           message:
             'Route name or ID is required. Pass a single route name or ID as the first argument after inspect.',
           next: [
@@ -62,6 +63,7 @@ export default async function inspect(client: Client, argv: string[]) {
         },
         1
       );
+      return 1;
     }
     output.error(
       `Missing route name or ID. Usage: ${chalk.cyan(getCommandName('routes inspect <name-or-id>'))}`
@@ -95,8 +97,8 @@ export default async function inspect(client: Client, argv: string[]) {
       outputAgentError(
         client,
         {
-          status: 'error',
-          reason: 'not_found',
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.NOT_FOUND,
           message: `No route found matching "${identifier}".`,
           next: [
             {
@@ -107,6 +109,7 @@ export default async function inspect(client: Client, argv: string[]) {
         },
         1
       );
+      return 1;
     }
     output.error(
       `No route found matching "${identifier}". Run ${chalk.cyan(
@@ -122,8 +125,8 @@ export default async function inspect(client: Client, argv: string[]) {
       outputAgentError(
         client,
         {
-          status: 'error',
-          reason: 'ambiguous_route',
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.AMBIGUOUS_ROUTE,
           message: `Multiple routes match "${identifier}" (${routes.length} matches). Pass an exact route name or ID; non-interactive mode cannot prompt for a choice.`,
           next: [
             {
@@ -138,6 +141,7 @@ export default async function inspect(client: Client, argv: string[]) {
         },
         1
       );
+      return 1;
     }
     output.log(
       `Found ${routes.length} routes matching "${identifier}" ${chalk.gray(inspectStamp())}`
