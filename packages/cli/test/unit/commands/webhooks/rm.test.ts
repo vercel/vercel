@@ -62,6 +62,29 @@ describe('webhooks rm', () => {
       });
     });
 
+    it('includes global flags in suggested commands when id is missing', async () => {
+      vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+        throw new Error('exit');
+      }) as () => never);
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+      client.nonInteractive = true;
+      client.setArgv('webhooks', 'rm', '--cwd', '/tmp', '--non-interactive');
+      const exitCodePromise = webhooks(client);
+
+      await expect(exitCodePromise).rejects.toThrow('exit');
+      const payload = JSON.parse(
+        logSpy.mock.calls[logSpy.mock.calls.length - 1][0]
+      );
+      expect(payload.next).toHaveLength(2);
+      expect(payload.next[0].command).toBe(
+        'vercel webhooks ls --cwd /tmp --non-interactive'
+      );
+      expect(payload.next[1].command).toBe(
+        'vercel webhooks rm <id> --yes --cwd /tmp --non-interactive'
+      );
+    });
+
     it('outputs error JSON when --yes is missing', async () => {
       useUser();
       useWebhook('hook_test123', { url: 'https://example.com/webhook' });

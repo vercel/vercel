@@ -63,8 +63,38 @@ describe('webhooks create', () => {
         status: 'error',
         reason: 'missing_url',
         message: expect.stringMatching(/URL|required/),
-        next: [{ command: expect.stringMatching(/webhooks create/) }],
       });
+      expect(payload.next[0].command).toBe('vercel webhooks create <url>');
+    });
+
+    it('substitutes original flags into suggested command when url is missing', async () => {
+      vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+        throw new Error('exit');
+      }) as () => never);
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+      client.setArgv(
+        'webhooks',
+        'create',
+        '--event',
+        'deployment.created',
+        '--cwd',
+        '/tmp',
+        '--non-interactive'
+      );
+      client.nonInteractive = true;
+      const exitCodePromise = webhooks(client);
+
+      await expect(exitCodePromise).rejects.toThrow('exit');
+      expect(logSpy).toHaveBeenCalled();
+      const payload = JSON.parse(
+        logSpy.mock.calls[logSpy.mock.calls.length - 1][0]
+      );
+      expect(payload.status).toBe('error');
+      expect(payload.reason).toBe('missing_url');
+      expect(payload.next[0].command).toBe(
+        'vercel webhooks create <url> --event deployment.created --cwd /tmp --non-interactive'
+      );
     });
 
     it('outputs error JSON when no events provided', async () => {
@@ -86,8 +116,47 @@ describe('webhooks create', () => {
         status: 'error',
         reason: 'missing_events',
         message: expect.stringMatching(/event|required/),
-        next: expect.any(Array),
       });
+      expect(payload.next[0].command).toBe(
+        'vercel webhooks create <url> --event <event>'
+      );
+    });
+
+    it('outputs error JSON for invalid event type and suggests command with original flags', async () => {
+      vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+        throw new Error('exit');
+      }) as () => never);
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+      client.setArgv(
+        'webhooks',
+        'create',
+        'https://brookemosby.tech',
+        '--event',
+        'create',
+        '--cwd',
+        '/tmp',
+        '--non-interactive'
+      );
+      client.nonInteractive = true;
+      const exitCodePromise = webhooks(client);
+
+      await expect(exitCodePromise).rejects.toThrow('exit');
+      expect(logSpy).toHaveBeenCalled();
+      const payload = JSON.parse(
+        logSpy.mock.calls[logSpy.mock.calls.length - 1][0]
+      );
+      expect(payload).toMatchObject({
+        status: 'error',
+        reason: 'invalid_arguments',
+        message: expect.stringMatching(/Invalid event type.*create/),
+        hint: 'See available events: https://vercel.com/docs/webhooks/webhooks-api',
+      });
+      expect(payload.next).toHaveLength(1);
+      expect(payload.next[0].command).toBe(
+        'vercel webhooks create https://brookemosby.tech --cwd /tmp --non-interactive --event <event>'
+      );
+      expect(payload.next[0].command).not.toMatch(/`|\\u001b/);
     });
 
     it('outputs success JSON when url and events provided', async () => {
@@ -115,6 +184,8 @@ describe('webhooks create', () => {
         message: expect.stringMatching(/created/),
         next: expect.any(Array),
       });
+      expect(payload.next[0].command).toMatch(/^vercel webhooks get /);
+      expect(payload.next[0].command).not.toMatch(/`|\\u001b/);
     });
   });
 

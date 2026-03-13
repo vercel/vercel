@@ -3,7 +3,7 @@ import type Client from '../../util/client';
 import createWebhook from '../../util/webhooks/create-webhook';
 import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
-import { getCommandName } from '../../util/pkg-name';
+import { getCommandNamePlain } from '../../util/pkg-name';
 import { outputAgentError } from '../../util/agent-output';
 import output from '../../output-manager';
 import { WebhooksCreateTelemetryClient } from '../../util/telemetry/commands/webhooks/create';
@@ -16,6 +16,9 @@ import {
   getWebhookEvents,
   validateWebhookEvents,
 } from '../../util/webhooks/get-webhook-events';
+
+const WEBHOOKS_EVENTS_DOCS_URL =
+  'https://vercel.com/docs/webhooks/webhooks-api';
 
 export default async function create(client: Client, argv: string[]) {
   const telemetry = new WebhooksCreateTelemetryClient({
@@ -38,6 +41,12 @@ export default async function create(client: Client, argv: string[]) {
   // --- Collect URL ---
   if (!url) {
     if (client.nonInteractive) {
+      const argv = client.argv.slice(2);
+      const subcommandParts = argv.slice(0, 2); // e.g. ['webhooks', 'create']
+      const rest = argv.slice(2);
+      const subcommandWithPlaceholder = `${subcommandParts.join(' ')} <url>${
+        rest.length ? ` ${rest.join(' ')}` : ''
+      }`;
       outputAgentError(
         client,
         {
@@ -47,7 +56,7 @@ export default async function create(client: Client, argv: string[]) {
             'Webhook URL is required. Provide URL as the first argument.',
           next: [
             {
-              command: getCommandName('webhooks create <url> --event <event>'),
+              command: getCommandNamePlain(subcommandWithPlaceholder),
             },
           ],
         },
@@ -90,6 +99,12 @@ export default async function create(client: Client, argv: string[]) {
 
   if (!eventFlags || eventFlags.length === 0) {
     if (client.nonInteractive) {
+      const argv = client.argv.slice(2);
+      const subcommandParts = argv.slice(0, 2); // ['webhooks', 'create']
+      const rest = argv.slice(2);
+      const subcommandWithPlaceholder = `${subcommandParts.join(' ')} <url>${
+        rest.length ? ` ${rest.join(' ')}` : ''
+      }`;
       outputAgentError(
         client,
         {
@@ -99,7 +114,7 @@ export default async function create(client: Client, argv: string[]) {
             'At least one event is required. Use --event <event> (can be repeated).',
           next: [
             {
-              command: getCommandName(`webhooks create ${url} --event <event>`),
+              command: getCommandNamePlain(subcommandWithPlaceholder),
             },
           ],
         },
@@ -130,6 +145,24 @@ export default async function create(client: Client, argv: string[]) {
     // Validate events against the OpenAPI spec
     const invalidEvents = await validateWebhookEvents(eventFlags);
     if (invalidEvents.length > 0) {
+      if (client.nonInteractive) {
+        const suggested = buildCreateCommandWithEventPlaceholder(
+          client.argv,
+          url
+        );
+        outputAgentError(
+          client,
+          {
+            status: 'error',
+            reason: 'invalid_arguments',
+            message: `Invalid event type${invalidEvents.length > 1 ? 's' : ''}: ${invalidEvents.join(', ')}. Use a valid event name (e.g. deployment.created).`,
+            hint: `See available events: ${WEBHOOKS_EVENTS_DOCS_URL}`,
+            next: [{ command: suggested, when: 'use a valid --event value' }],
+          },
+          1
+        );
+        return 1;
+      }
       output.error(
         `Invalid event type${invalidEvents.length > 1 ? 's' : ''}: ${invalidEvents.join(', ')}`
       );
@@ -171,7 +204,7 @@ export default async function create(client: Client, argv: string[]) {
         message: `Webhook ${webhook.id} created.`,
         next: [
           {
-            command: getCommandName(`webhooks get ${webhook.id}`),
+            command: getCommandNamePlain(`webhooks get ${webhook.id}`),
             when: 'Inspect the webhook',
           },
         ],
@@ -214,25 +247,28 @@ export default async function create(client: Client, argv: string[]) {
             : err.code === 'invalid_event'
               ? 'invalid_event'
               : 'api_error';
+        const suggested =
+          reason === 'invalid_event'
+            ? buildCreateCommandWithEventPlaceholder(client.argv, url)
+            : undefined;
         outputAgentError(
           client,
           {
             status: 'error',
             reason,
             message: err.message,
-            next:
+            hint:
               reason === 'invalid_event'
-                ? [
-                    {
-                      command: getCommandName(
-                        'webhooks create <url> --event <event>'
-                      ),
-                    },
-                  ]
+                ? `See available events: ${WEBHOOKS_EVENTS_DOCS_URL}`
+                : undefined,
+            next:
+              suggested !== undefined
+                ? [{ command: suggested, when: 'use a valid --event value' }]
                 : undefined,
           },
           1
         );
+        return 1;
       }
       if (err.code === 'invalid_url') {
         output.error(`Invalid webhook URL: ${url}`);
@@ -247,4 +283,31 @@ export default async function create(client: Client, argv: string[]) {
     }
     throw err;
   }
+}
+
+/**
+ * Builds a plain suggested command from argv, preserving URL and global flags
+ * but replacing --event value(s) with <event> for copy-paste when event is invalid.
+ */
+function buildCreateCommandWithEventPlaceholder(
+  fullArgv: string[],
+  url: string
+): string {
+  const argv = fullArgv.slice(2);
+  const out: string[] = ['webhooks', 'create', url];
+  let i = 3;
+  let hadEvent = false;
+  while (i < argv.length) {
+    if (argv[i] === '--event' || argv[i] === '-e') {
+      hadEvent = true;
+      i += 2;
+      continue;
+    }
+    out.push(argv[i]);
+    i++;
+  }
+  if (hadEvent) {
+    out.push('--event', '<event>');
+  }
+  return getCommandNamePlain(out.join(' '));
 }

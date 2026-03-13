@@ -5,7 +5,8 @@ import getWebhook from '../../util/webhooks/get-webhook';
 import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import param from '../../util/output/param';
-import { getCommandName } from '../../util/pkg-name';
+import { getGlobalFlagsOnlyFromArgs } from '../../util/arg-common';
+import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 import { buildCommandWithYes, outputAgentError } from '../../util/agent-output';
 import output from '../../output-manager';
 import { WebhooksRmTelemetryClient } from '../../util/telemetry/commands/webhooks/rm';
@@ -14,6 +15,18 @@ import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { isAPIError } from '../../util/errors-ts';
+
+/** Build a plain suggested command with global flags (e.g. --cwd, --non-interactive) appended. */
+function webhookCommandWithGlobalFlags(
+  baseSubcommand: string,
+  argv: string[]
+): string {
+  const globalFlags = getGlobalFlagsOnlyFromArgs(argv.slice(2));
+  const full = globalFlags.length
+    ? `${baseSubcommand} ${globalFlags.join(' ')}`
+    : baseSubcommand;
+  return getCommandNamePlain(full);
+}
 
 export default async function rm(client: Client, argv: string[]) {
   const telemetry = new WebhooksRmTelemetryClient({
@@ -45,8 +58,18 @@ export default async function rm(client: Client, argv: string[]) {
           reason: 'missing_id',
           message: 'Webhook ID is required. Provide ID as the first argument.',
           next: [
-            { command: getCommandName('webhooks ls') },
-            { command: getCommandName('webhooks rm <id> --yes') },
+            {
+              command: webhookCommandWithGlobalFlags(
+                'webhooks ls',
+                client.argv
+              ),
+            },
+            {
+              command: webhookCommandWithGlobalFlags(
+                'webhooks rm <id> --yes',
+                client.argv
+              ),
+            },
           ],
         },
         1
@@ -98,7 +121,14 @@ export default async function rm(client: Client, argv: string[]) {
             status: 'error',
             reason: 'webhook_not_found',
             message: `Webhook not found: ${webhookId}.`,
-            next: [{ command: getCommandName('webhooks ls') }],
+            next: [
+              {
+                command: webhookCommandWithGlobalFlags(
+                  'webhooks ls',
+                  client.argv
+                ),
+              },
+            ],
           },
           1
         );
@@ -157,7 +187,14 @@ export default async function rm(client: Client, argv: string[]) {
             status: 'error',
             reason: 'webhook_not_found',
             message: `Webhook not found: ${webhookId}.`,
-            next: [{ command: getCommandName('webhooks ls') }],
+            next: [
+              {
+                command: webhookCommandWithGlobalFlags(
+                  'webhooks ls',
+                  client.argv
+                ),
+              },
+            ],
           },
           1
         );

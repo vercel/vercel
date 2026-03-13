@@ -4,7 +4,7 @@ import stamp from '../../util/output/stamp';
 import formatDate from '../../util/format-date';
 import getWebhook from '../../util/webhooks/get-webhook';
 import getScope from '../../util/get-scope';
-import { getCommandName } from '../../util/pkg-name';
+import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 import { outputAgentError } from '../../util/agent-output';
 import { validateJsonOutput } from '../../util/output-format';
 import { WebhooksGetTelemetryClient } from '../../util/telemetry/commands/webhooks/get';
@@ -44,8 +44,8 @@ export default async function get(client: Client, argv: string[]) {
           reason: 'missing_id',
           message: 'Webhook ID is required. Provide ID as the first argument.',
           next: [
-            { command: getCommandName('webhooks ls') },
-            { command: getCommandName('webhooks get <id>') },
+            { command: getCommandNamePlain('webhooks ls') },
+            { command: getCommandNamePlain('webhooks get <id>') },
           ],
         },
         1
@@ -96,7 +96,7 @@ export default async function get(client: Client, argv: string[]) {
             status: 'error',
             reason: 'webhook_not_found',
             message: `Webhook not found: ${webhookId}.`,
-            next: [{ command: getCommandName('webhooks ls') }],
+            next: [{ command: getCommandNamePlain('webhooks ls') }],
           },
           1
         );
@@ -117,7 +117,7 @@ export default async function get(client: Client, argv: string[]) {
           message: `Webhook ${webhookId} found.`,
           next: [
             {
-              command: getCommandName(`webhooks rm ${webhookId} --yes`),
+              command: getCommandNamePlain(`webhooks rm ${webhookId} --yes`),
               when: 'Remove this webhook',
             },
           ],
