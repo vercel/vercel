@@ -2,7 +2,8 @@
   "experimentalServices": {
     "cleanup": {
       "type": "cron",
-      "entrypoint": "cron.py",
+      "entrypoint": "index.js",
+      "installCommand": "",
       "schedule": "0 0 * * *"
     }
   }

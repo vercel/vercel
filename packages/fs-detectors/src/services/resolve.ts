@@ -102,7 +102,6 @@ interface ResolveConfiguredServiceOptions {
   group?: string;
   resolvedEntrypoint?: ResolvedEntrypointPath;
   routePrefixSource?: RoutePrefixSource;
-  detectedFramework?: string;
 }
 function toWorkspaceRelativeEntrypoint(
   entrypoint: string,
@@ -384,7 +383,6 @@ export async function resolveConfiguredService(
     group,
     resolvedEntrypoint,
     routePrefixSource = 'configured',
-    detectedFramework,
   } = options;
   const type = config.type || 'web';
   const rawEntrypoint = config.entrypoint;
@@ -414,10 +412,8 @@ export async function resolveConfiguredService(
   const normalizedEntrypoint = resolvedEntrypointPath?.normalized;
   const entrypointIsDirectory = Boolean(resolvedEntrypointPath?.isDirectory);
 
-  const framework = config.framework ?? detectedFramework;
   const inferredRuntime = inferServiceRuntime({
     ...config,
-    framework,
     entrypoint: entrypointIsDirectory ? undefined : normalizedEntrypoint,
   });
   let workspace = '.';
@@ -454,8 +450,8 @@ export async function resolveConfiguredService(
   let builderUse: string;
   let builderSrc: string;
 
-  const detectedFrameworkDefinition = framework
-    ? frameworksBySlug.get(framework)
+  const frameworkDefinition = config.framework
+    ? frameworksBySlug.get(config.framework)
     : undefined;
 
   if (config.builder) {
@@ -464,19 +460,19 @@ export async function resolveConfiguredService(
     builderUse = config.builder;
     builderSrc =
       resolvedEntrypointFile ||
-      detectedFrameworkDefinition?.useRuntime?.src ||
+      frameworkDefinition?.useRuntime?.src ||
       'package.json';
-  } else if (framework) {
-    if (isNodeBackendFramework(framework)) {
+  } else if (config.framework) {
+    if (isNodeBackendFramework(config.framework)) {
       builderUse = '@vercel/backends';
     } else {
-      const detected = detectedFrameworkDefinition;
-      builderUse = detected?.useRuntime?.use || '@vercel/static-build';
+      builderUse =
+        frameworkDefinition?.useRuntime?.use || '@vercel/static-build';
     }
     // Prefer user-provided entrypoint over framework default
     builderSrc =
       resolvedEntrypointFile ||
-      detectedFrameworkDefinition?.useRuntime?.src ||
+      frameworkDefinition?.useRuntime?.src ||
       'package.json';
   } else {
     if (!inferredRuntime) {
@@ -543,8 +539,8 @@ export async function resolveConfiguredService(
   if (workspace && workspace !== '.') {
     builderConfig.workspace = workspace;
   }
-  if (framework) {
-    builderConfig.framework = framework;
+  if (config.framework) {
+    builderConfig.framework = config.framework;
   }
   if (moduleAttrParsed) {
     builderConfig.handlerFunction = moduleAttrParsed.attrName;
@@ -559,7 +555,7 @@ export async function resolveConfiguredService(
     routePrefix,
     routePrefixSource: resolvedRoutePrefixSource,
     subdomain: normalizedSubdomain,
-    framework,
+    framework: config.framework,
     builder: {
       src: builderSrc,
       use: builderUse,
@@ -634,7 +630,7 @@ export async function resolveAllConfiguredServices(
       }
     }
 
-    let detectedFramework: string | undefined;
+    let resolvedConfig = serviceConfig;
     if (!serviceConfig.framework && resolvedEntrypoint) {
       if (resolvedEntrypoint.isDirectory) {
         const inferredRuntime = inferServiceRuntime({
@@ -659,7 +655,10 @@ export async function resolveAllConfiguredServices(
           });
           continue;
         }
-        detectedFramework = framework;
+        resolvedConfig = {
+          ...resolvedConfig,
+          framework,
+        };
       } else {
         const inferredRuntime = inferServiceRuntime({
           ...serviceConfig,
@@ -681,11 +680,11 @@ export async function resolveAllConfiguredServices(
             serviceName: name,
             runtime: inferredRuntime,
           });
-          // File entrypoints can still be resolved from runtime + extension.
-          // If framework detection is ambiguous, keep the runtime-only path
-          // rather than turning that ambiguity into a hard service error.
-          if (!detection.error) {
-            detectedFramework = detection.framework;
+          if (!detection.error && detection.framework) {
+            resolvedConfig = {
+              ...resolvedConfig,
+              framework: detection.framework,
+            };
           }
         }
       }
@@ -693,10 +692,9 @@ export async function resolveAllConfiguredServices(
 
     const service = await resolveConfiguredService({
       name,
-      config: serviceConfig,
+      config: resolvedConfig,
       fs,
       resolvedEntrypoint,
-      detectedFramework,
       routePrefixSource,
     });
 
