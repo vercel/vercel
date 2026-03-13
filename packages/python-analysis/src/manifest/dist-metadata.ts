@@ -157,7 +157,7 @@ export async function scanDistributions(
     // Normalize the package name
     const normalizedName = mod.normalizePackageName(metadata.name);
 
-    // Parse RECORD (optional) — analogous to Distribution.files
+    // Parse RECORD (optional) -- analogous to Distribution.files
     let files: PackagePath[] = [];
     const recordContent = await readDistInfoFile(distInfoPath, 'RECORD');
     if (recordContent) {
@@ -168,7 +168,7 @@ export async function scanDistributions(
       }
     }
 
-    // Parse direct_url.json (optional) — analogous to Distribution.origin
+    // Parse direct_url.json (optional) -- analogous to Distribution.origin
     let origin: DirectUrlInfo | undefined;
     const directUrlContent = await readDistInfoFile(
       distInfoPath,
@@ -224,7 +224,7 @@ function hashFile(filePath: string): Promise<{ hash: string; size: number }> {
     const h = createHash('sha256');
     let size = 0;
     const stream = createReadStream(filePath);
-    stream.on('data', (chunk: Buffer) => {
+    stream.on('data', (chunk: Uint8Array) => {
       size += chunk.length;
       h.update(chunk);
     });

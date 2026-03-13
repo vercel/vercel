@@ -5,6 +5,7 @@
 import { readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
+import { createHostUtils } from './host-utils.js';
 
 type ModuleType = typeof import('#wasm/vercel_python_analysis.js');
 type RootType = Awaited<ReturnType<ModuleType['instantiate']>>;
@@ -43,7 +44,10 @@ export async function importWasmModule(): Promise<RootType> {
       const wasiShimModule: any = await import(WASI_SHIM_PATH);
       const WASIShim = wasiShimModule.WASIShim;
       const wasmModule: ModuleType = await import(WASM_MODULE_PATH);
-      const imports = new WASIShim().getImportObject();
+      const imports = {
+        ...new WASIShim().getImportObject(),
+        'vercel:python-analysis/host-utils': createHostUtils(),
+      };
       const instance = await wasmModule.instantiate(getCoreModule, imports);
       wasmInstance = instance;
       return instance;
