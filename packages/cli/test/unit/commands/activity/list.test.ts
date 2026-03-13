@@ -154,9 +154,12 @@ describe('activity ls', () => {
     expect(exitCode).toBe(0);
     const output = client.stderr.getFullOutput();
     expect(output).toContain(longText);
-    expect(output).toContain('Type: firewall-bypass-created');
-    expect(output).toContain('Actor: jane');
-    expect(output).toContain('Timestamp: 2023-11-14T22:13:20.000Z');
+    expect(output).toContain('Type');
+    expect(output).toContain('firewall-bypass-created');
+    expect(output).toContain('Actor');
+    expect(output).toContain('jane');
+    expect(output).toContain('Timestamp');
+    expect(output).toContain('2023-11-14T22:13:20.000Z');
   });
 
   it('supports repeatable and comma-separated --type filters', async () => {

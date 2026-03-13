@@ -175,13 +175,13 @@ function printExpandedEvents(events: UserEventDTO[]) {
   const lines = [''];
 
   events.forEach(event => {
-    lines.push(chalk.bold(formatEventText(event.text)));
-    lines.push(`   ${chalk.cyan('Type:')} ${event.type ?? '-'}`);
-    lines.push(`   ${chalk.cyan('Actor:')} ${formatActor(event)}`);
+    lines.push(`${chalk.gray('-')} ${formatEventText(event.text)}`);
+    lines.push(`    ${chalk.cyan('Type'.padEnd(14))}${event.type ?? '-'}`);
+    lines.push(`    ${chalk.cyan('Actor'.padEnd(14))}${formatActor(event)}`);
     lines.push(
-      `   ${chalk.cyan('Timestamp:')} ${formatTimestamp(event.createdAt)}`
+      `    ${chalk.cyan('Timestamp'.padEnd(14))}${formatTimestamp(event.createdAt)}`
     );
-    lines.push(`   ${chalk.cyan('ID:')} ${event.id}`);
+    lines.push(`    ${chalk.cyan('ID'.padEnd(14))}${event.id}`);
     lines.push('');
   });
 
