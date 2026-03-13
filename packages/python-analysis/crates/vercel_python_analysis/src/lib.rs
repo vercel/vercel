@@ -3,19 +3,34 @@
 mod bindings {
     include!(env!("WIT_BINDINGS"));
 }
-mod entrypoint;
 mod dist_metadata;
+mod entrypoint;
+mod requirements_txt;
 
 bindings::export!(PythonAnalyzer with_types_in bindings);
 
 struct PythonAnalyzer;
 
-use crate::bindings::{DistMetadata, DirectUrlInfo, RecordEntry};
+use std::future::Future;
+use std::pin::pin;
+use std::task::{Context, Poll, Waker};
+
+use crate::bindings::{DirectUrlInfo, DistMetadata, ParsedRequirementsTxt, RecordEntry};
 use crate::entrypoint::{
-    contains_app_or_handler_impl,
-    contains_top_level_callable_impl,
-    get_string_constant_impl,
+    contains_app_or_handler_impl, contains_top_level_callable_impl, get_string_constant_impl,
 };
+
+/// Single-poll executor for WASM: all stub I/O resolves synchronously via host-bridge,
+/// so the future is guaranteed to be ready on the first poll.
+fn block_on<F: Future>(fut: F) -> F::Output {
+    let mut fut = pin!(fut);
+    let waker = Waker::noop();
+    let mut cx = Context::from_waker(&waker);
+    match fut.as_mut().poll(&mut cx) {
+        Poll::Ready(val) => val,
+        Poll::Pending => panic!("unexpected Pending future in WASM block_on: all I/O must be synchronous via host-bridge"),
+    }
+}
 
 impl crate::bindings::Guest for PythonAnalyzer {
     /// Check if Python source code contains or exports:
@@ -59,5 +74,13 @@ impl crate::bindings::Guest for PythonAnalyzer {
 
     fn normalize_package_name(name: String) -> String {
         dist_metadata::normalize::normalize(&name)
+    }
+
+    fn parse_requirements_txt(
+        content: String,
+        working_dir: Option<String>,
+        filename: Option<String>,
+    ) -> Result<ParsedRequirementsTxt, String> {
+        requirements_txt::parse_requirements_txt(&content, working_dir, filename)
     }
 }

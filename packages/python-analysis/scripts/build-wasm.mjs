@@ -31,7 +31,7 @@ function checkToolchain() {
   }
 
   if (hasRustup) {
-    // rustup exists but `rustup which cargo` failed — no toolchain configured
+    // rustup exists but `rustup which cargo` failed -- no toolchain configured
     console.error(`
 error: rustup is installed but no working Rust toolchain was found.
 
@@ -49,7 +49,7 @@ error: a Rust installation was found but it is not managed by rustup.
 
 This package uses a rust-toolchain.toml file to manage the Rust toolchain and
 the wasm32-wasip2 target. Distro-installed or standalone Rust does not support
-this — rustup is needed to automatically install and manage the correct
+this -- rustup is needed to automatically install and manage the correct
 toolchain and compilation targets.
 
 To install rustup alongside your existing Rust installation, run:

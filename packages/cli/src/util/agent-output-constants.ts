@@ -1,20 +1,13 @@
 /**
  * Global constants for non-interactive agent payloads (status, reason, action).
- *
- * This is the single source of truth for all commands. When adding or changing
- * non-interactive JSON output (outputAgentError, outputActionRequired), import
- * from here so values stay consistent across dns, flags, routes, env, domains,
- * link, etc., and are easy to change in one place.
- *
- * Usage:
- *   import { AGENT_STATUS, AGENT_REASON, AGENT_ACTION } from '../../util/agent-output-constants';
- *   outputAgentError(client, { status: AGENT_STATUS.ERROR, reason: AGENT_REASON.NOT_LINKED, ... }, 1);
+ * Use these in outputAgentError and outputActionRequired so values stay consistent
+ * across commands (redirects, routes, dns, env, etc.) and can be documented as a single source of truth.
  */
 
-/** status field for ActionRequiredPayload and AgentErrorPayload */
 export const AGENT_STATUS = {
-  ACTION_REQUIRED: 'action_required',
   ERROR: 'error',
+  ACTION_REQUIRED: 'action_required',
+  OK: 'ok',
 } as const;
 
 /**
@@ -52,6 +45,11 @@ export const AGENT_REASON = {
   INVALID_DNS_TYPE: 'invalid_dns_type',
   DNS_ADD_FAILED: 'dns_add_failed',
   INVALID_DOMAIN: 'invalid_domain',
+  // Redirects
+  REDIRECT_NOT_FOUND: 'redirect_not_found',
+  VERSION_NOT_FOUND: 'version_not_found',
+  VERSION_ALREADY_LIVE: 'version_already_live',
+  VERSION_IS_STAGING: 'version_is_staging',
 } as const;
 
 /** action field for ActionRequiredPayload (what kind of action is needed) */
