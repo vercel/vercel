@@ -5665,9 +5665,15 @@ exports[`help command > target help output snapshots > target list help output s
 
 exports[`help command > teams help output snapshots > teams add help output snapshots > teams add help column width 120 1`] = `
 "
-  ▲ vercel teams add
+  ▲ vercel teams add [options]
 
   Create a new team                                                                                                     
+
+  Options:
+
+   --name  Display name for the team; required in non-interactive mode                                                   
+   --slug  Team URL slug (e.g. acme for vercel.com/acme); required in non-interactive mode                               
+
 
   Global Options:
 
@@ -5682,6 +5688,16 @@ exports[`help command > teams help output snapshots > teams add help output snap
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
 
+
+  Examples:
+
+  - Create a team (interactive)
+
+    $ vercel teams add
+
+  - Create a team non-interactively
+
+    $ vercel teams add --slug acme --name "Acme Corp"
 
 "
 `;
@@ -5848,7 +5864,7 @@ exports[`help command > teams help output snapshots > teams invite help output s
 
     $ vercel teams invite
 
-  - Invite multiple members simultaneously
+  - Invite multiple members (required in non-interactive mode)
 
     $ vercel teams invite abc@vercel.com xyz@vercel.com
 
