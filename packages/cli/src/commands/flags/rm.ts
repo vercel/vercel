@@ -4,8 +4,9 @@ import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { getLinkedProject } from '../../util/projects/link';
-import { getCommandName } from '../../util/pkg-name';
+import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 import { buildCommandWithYes, outputAgentError } from '../../util/agent-output';
+import { AGENT_REASON, AGENT_STATUS } from '../../util/agent-output-constants';
 import { getFlag } from '../../util/flags/get-flags';
 import { deleteFlag } from '../../util/flags/delete-flag';
 import output from '../../output-manager';
@@ -40,10 +41,10 @@ export default async function rm(
       outputAgentError(
         client,
         {
-          status: 'error',
-          reason: 'missing_flag',
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.MISSING_ARGUMENTS,
           message: 'Please provide a flag slug or ID to delete.',
-          next: [{ command: getCommandName('flags rm <flag> --yes') }],
+          next: [{ command: getCommandNamePlain('flags rm <flag> --yes') }],
         },
         1
       );
@@ -57,13 +58,14 @@ export default async function rm(
     outputAgentError(
       client,
       {
-        status: 'error',
-        reason: 'confirmation_required',
+        status: AGENT_STATUS.ERROR,
+        reason: AGENT_REASON.CONFIRMATION_REQUIRED,
         message: 'Deleting a flag requires confirmation. Re-run with --yes.',
         next: [{ command: buildCommandWithYes(client.argv) }],
       },
       1
     );
+    return 1;
   }
 
   telemetryClient.trackCliArgumentFlag(flagArg);
@@ -77,13 +79,14 @@ export default async function rm(
       outputAgentError(
         client,
         {
-          status: 'error',
-          reason: 'not_linked',
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.NOT_LINKED,
           message: 'Your codebase is not linked to a project. Run link first.',
-          next: [{ command: getCommandName('link') }],
+          next: [{ command: getCommandNamePlain('link') }],
         },
         1
       );
+      return 1;
     }
     output.error(
       `Your codebase isn't linked to a project on Vercel. Run ${getCommandName('link')} to begin.`
@@ -113,11 +116,16 @@ export default async function rm(
             reason: 'flag_not_archived',
             message: `Flag ${flag.slug} must be archived before it can be deleted.`,
             next: [
-              { command: getCommandName(`flags archive ${flag.slug} --yes`) },
+              {
+                command: getCommandNamePlain(
+                  `flags archive ${flag.slug} --yes`
+                ),
+              },
             ],
           },
           1
         );
+        return 1;
       }
       output.error(
         `Flag ${chalk.bold(flag.slug)} must be archived before it can be deleted. Run ${getCommandName(`flags archive ${flag.slug}`)} first.`

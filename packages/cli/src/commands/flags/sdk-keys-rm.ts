@@ -4,8 +4,9 @@ import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { getLinkedProject } from '../../util/projects/link';
-import { getCommandName } from '../../util/pkg-name';
+import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 import { buildCommandWithYes, outputAgentError } from '../../util/agent-output';
+import { AGENT_REASON, AGENT_STATUS } from '../../util/agent-output-constants';
 import { getSdkKeys, deleteSdkKey } from '../../util/flags/sdk-keys';
 import output from '../../output-manager';
 import { FlagsSdkKeysRmTelemetryClient } from '../../util/telemetry/commands/flags/sdk-keys';
@@ -47,13 +48,14 @@ export default async function sdkKeysRm(
       outputAgentError(
         client,
         {
-          status: 'error',
-          reason: 'not_linked',
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.NOT_LINKED,
           message: 'Your codebase is not linked to a project. Run link first.',
-          next: [{ command: getCommandName('link') }],
+          next: [{ command: getCommandNamePlain('link') }],
         },
         1
       );
+      return 1;
     }
     output.error(
       `Your codebase isn't linked to a project on Vercel. Run ${getCommandName('link')} to begin.`
@@ -65,14 +67,15 @@ export default async function sdkKeysRm(
     outputAgentError(
       client,
       {
-        status: 'error',
-        reason: 'confirmation_required',
+        status: AGENT_STATUS.ERROR,
+        reason: AGENT_REASON.CONFIRMATION_REQUIRED,
         message:
           'Deleting an SDK key requires confirmation. Re-run with --yes.',
         next: [{ command: buildCommandWithYes(client.argv) }],
       },
       1
     );
+    return 1;
   }
 
   client.config.currentTeam =
@@ -87,17 +90,22 @@ export default async function sdkKeysRm(
         outputAgentError(
           client,
           {
-            status: 'error',
-            reason: 'missing_key',
+            status: AGENT_STATUS.ERROR,
+            reason: AGENT_REASON.MISSING_ARGUMENTS,
             message:
               'Please provide the SDK key hash to delete. Run "vercel flags sdk-keys ls" to list keys.',
             next: [
-              { command: getCommandName('flags sdk-keys ls') },
-              { command: getCommandName('flags sdk-keys rm <hashKey> --yes') },
+              { command: getCommandNamePlain('flags sdk-keys ls') },
+              {
+                command: getCommandNamePlain(
+                  'flags sdk-keys rm <hashKey> --yes'
+                ),
+              },
             ],
           },
           1
         );
+        return 1;
       }
       output.spinner('Fetching SDK keys...');
       const keys = await getSdkKeys(client, project.id);

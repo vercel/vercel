@@ -154,7 +154,7 @@ describe('flags add', () => {
       );
       expect(payload).toMatchObject({
         status: 'error',
-        reason: 'missing_flag_slug',
+        reason: 'missing_arguments',
         message: expect.stringMatching(/slug/),
         next: [{ command: expect.stringMatching(/flags add/) }],
       });

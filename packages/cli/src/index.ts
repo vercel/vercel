@@ -62,7 +62,13 @@ import * as ERRORS from './util/errors-ts';
 import { APIError } from './util/errors-ts';
 import getUpdateCommand from './util/get-update-command';
 import { executeUpgrade } from './util/upgrade';
-import { getCommandName, getTitleName } from './util/pkg-name';
+import {
+  getCommandName,
+  getCommandNamePlain,
+  getTitleName,
+} from './util/pkg-name';
+import { outputActionRequired } from './util/agent-output';
+import { AGENT_REASON } from './util/agent-output-constants';
 import login from './commands/login';
 import type { AuthConfig, GlobalConfig } from '@vercel-internals/types';
 import type { VercelConfig } from '@vercel/client';
@@ -477,6 +483,26 @@ const main = async () => {
     subcommand &&
     !subcommandsWithoutToken.includes(subcommand)
   ) {
+    if (client.nonInteractive) {
+      outputActionRequired(
+        client,
+        {
+          status: 'action_required',
+          reason: AGENT_REASON.LOGIN_REQUIRED,
+          message:
+            'No existing credentials found. The user must run the login command to authenticate.',
+          next: [
+            {
+              command: getCommandNamePlain('login'),
+              when: 'user must run this command to log in',
+            },
+          ],
+          hint: 'The user needs to run the login command.',
+        },
+        1
+      );
+      return 1;
+    }
     if (isTTY) {
       output.log(`No existing credentials found. Please log in:`);
       try {

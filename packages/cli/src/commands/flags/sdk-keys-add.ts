@@ -4,8 +4,9 @@ import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { getLinkedProject } from '../../util/projects/link';
-import { getCommandName } from '../../util/pkg-name';
+import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 import { outputAgentError } from '../../util/agent-output';
+import { AGENT_REASON, AGENT_STATUS } from '../../util/agent-output-constants';
 import { createSdkKey } from '../../util/flags/sdk-keys';
 import output from '../../output-manager';
 import { FlagsSdkKeysAddTelemetryClient } from '../../util/telemetry/commands/flags/sdk-keys';
@@ -53,13 +54,14 @@ export default async function sdkKeysAdd(
       outputAgentError(
         client,
         {
-          status: 'error',
-          reason: 'not_linked',
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.NOT_LINKED,
           message: 'Your codebase is not linked to a project. Run link first.',
-          next: [{ command: getCommandName('link') }],
+          next: [{ command: getCommandNamePlain('link') }],
         },
         1
       );
+      return 1;
     }
     output.error(
       `Your codebase isn't linked to a project on Vercel. Run ${getCommandName('link')} to begin.`
@@ -72,12 +74,12 @@ export default async function sdkKeysAdd(
       outputAgentError(
         client,
         {
-          status: 'error',
-          reason: 'missing_type',
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.MISSING_ARGUMENTS,
           message: 'Please provide --type (server, client, or mobile).',
           next: [
             {
-              command: getCommandName(
+              command: getCommandNamePlain(
                 'flags sdk-keys add --type <type> --environment <env>'
               ),
             },
@@ -85,18 +87,19 @@ export default async function sdkKeysAdd(
         },
         1
       );
+      return 1;
     }
     if (!environment) {
       outputAgentError(
         client,
         {
-          status: 'error',
-          reason: 'missing_environment',
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.MISSING_ARGUMENTS,
           message:
             'Please provide --environment (production, preview, or development).',
           next: [
             {
-              command: getCommandName(
+              command: getCommandNamePlain(
                 `flags sdk-keys add --type ${sdkKeyType ?? 'server'} --environment <env>`
               ),
             },
@@ -104,6 +107,7 @@ export default async function sdkKeysAdd(
         },
         1
       );
+      return 1;
     }
   }
 

@@ -4,8 +4,9 @@ import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { getLinkedProject } from '../../util/projects/link';
-import { getCommandName } from '../../util/pkg-name';
+import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 import { outputAgentError } from '../../util/agent-output';
+import { AGENT_REASON, AGENT_STATUS } from '../../util/agent-output-constants';
 import { getFlag } from '../../util/flags/get-flags';
 import { updateFlag } from '../../util/flags/update-flag';
 import { resolveVariant } from '../../util/flags/resolve-variant';
@@ -45,12 +46,12 @@ export default async function disable(
       outputAgentError(
         client,
         {
-          status: 'error',
-          reason: 'missing_flag',
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.MISSING_ARGUMENTS,
           message: 'Please provide a flag slug or ID to disable.',
           next: [
             {
-              command: getCommandName(
+              command: getCommandNamePlain(
                 'flags disable <flag> --environment <env>'
               ),
             },
@@ -58,6 +59,7 @@ export default async function disable(
         },
         1
       );
+      return 1;
     }
     output.error('Please provide a flag slug or ID to disable');
     output.log(
@@ -70,13 +72,13 @@ export default async function disable(
     outputAgentError(
       client,
       {
-        status: 'error',
-        reason: 'missing_environment',
+        status: AGENT_STATUS.ERROR,
+        reason: AGENT_REASON.MISSING_ARGUMENTS,
         message:
           'Please provide --environment (production, preview, or development).',
         next: [
           {
-            command: getCommandName(
+            command: getCommandNamePlain(
               `flags disable ${flagArg} --environment <env>`
             ),
           },
@@ -84,6 +86,7 @@ export default async function disable(
       },
       1
     );
+    return 1;
   }
 
   telemetryClient.trackCliArgumentFlag(flagArg);
@@ -98,13 +101,14 @@ export default async function disable(
       outputAgentError(
         client,
         {
-          status: 'error',
-          reason: 'not_linked',
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.NOT_LINKED,
           message: 'Your codebase is not linked to a project. Run link first.',
-          next: [{ command: getCommandName('link') }],
+          next: [{ command: getCommandNamePlain('link') }],
         },
         1
       );
+      return 1;
     }
     output.error(
       `Your codebase isn't linked to a project on Vercel. Run ${getCommandName('link')} to begin.`
@@ -136,6 +140,7 @@ export default async function disable(
           },
           1
         );
+        return 1;
       }
       output.error(
         `Flag ${chalk.bold(flag.slug)} is archived and cannot be disabled`
@@ -161,6 +166,7 @@ export default async function disable(
           },
           1
         );
+        return 1;
       }
       output.warn(
         `The ${getCommandName('flags disable')} command only works with boolean flags.`
@@ -190,6 +196,7 @@ export default async function disable(
             },
             1
           );
+          return 1;
         }
         output.error('No valid environments found for this flag');
         return 1;
@@ -245,7 +252,7 @@ export default async function disable(
               message: result.error,
               next: [
                 {
-                  command: getCommandName(
+                  command: getCommandNamePlain(
                     `flags disable ${flagArg} -e ${environment} --variant <id|value|label>`
                   ),
                 },
@@ -253,6 +260,7 @@ export default async function disable(
             },
             1
           );
+          return 1;
         }
         output.error(result.error);
         return 1;
@@ -277,7 +285,7 @@ export default async function disable(
               'Multiple variants available. Specify --variant (variant ID, value, or label).',
             next: [
               {
-                command: getCommandName(
+                command: getCommandNamePlain(
                   `flags disable ${flagArg} -e ${environment} --variant <id|value|label>`
                 ),
               },
@@ -285,6 +293,7 @@ export default async function disable(
           },
           1
         );
+        return 1;
       }
       selectedVariantId = await client.input.select({
         message: 'Select which variant to serve while the flag is disabled:',

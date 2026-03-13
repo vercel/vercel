@@ -163,7 +163,7 @@ describe('flags rm', () => {
       );
       expect(payload).toMatchObject({
         status: 'error',
-        reason: 'missing_flag',
+        reason: 'missing_arguments',
         message: expect.stringMatching(/flag|slug|ID/),
         next: expect.any(Array),
       });
