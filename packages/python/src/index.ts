@@ -60,7 +60,7 @@ interface FrameworkHookContext {
   pythonEnv: NodeJS.ProcessEnv;
   projectDir: string;
   workPath: string;
-  venvPath: string;
+  venvPath?: string;
   entrypoint: string;
   detected: DetectedPythonEntrypoint | undefined;
 }
@@ -120,15 +120,18 @@ const frameworkHooks: Partial<Record<PythonFramework, FrameworkHook>> = {
       }
     }
 
-    const outputStaticDir = join(workPath, '.vercel', 'output', 'static');
-    const djangoStatic = await runDjangoCollectStatic(
-      venvPath,
-      workPath,
-      pythonEnv,
-      outputStaticDir,
-      settingsModule,
-      djangoSettings
-    );
+    let djangoStatic: DjangoCollectStaticResult | null = null;
+    if (venvPath) {
+      const outputStaticDir = join(workPath, '.vercel', 'output', 'static');
+      djangoStatic = await runDjangoCollectStatic(
+        venvPath,
+        workPath,
+        pythonEnv,
+        outputStaticDir,
+        settingsModule,
+        djangoSettings
+      );
+    }
     return { entrypoint, djangoStatic };
   },
 };

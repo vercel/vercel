@@ -1,4 +1,3 @@
-import ms from 'ms';
 import chalk from 'chalk';
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
@@ -155,13 +154,17 @@ function formatActor(event: UserEventDTO): string {
   return event.principalId || '-';
 }
 
-function formatAge(createdAt: number): string {
+function formatTimestamp(createdAt: number): string {
   if (!Number.isFinite(createdAt) || createdAt <= 0) {
     return '-';
   }
 
-  const age = Math.max(0, Date.now() - createdAt);
-  return ms(age);
+  const date = new Date(createdAt);
+  if (Number.isNaN(date.getTime())) {
+    return '-';
+  }
+
+  return date.toISOString();
 }
 
 function formatEventText(text: string): string {
@@ -175,7 +178,9 @@ function printExpandedEvents(events: UserEventDTO[]) {
     lines.push(chalk.bold(formatEventText(event.text)));
     lines.push(`   ${chalk.cyan('Type:')} ${event.type ?? '-'}`);
     lines.push(`   ${chalk.cyan('Actor:')} ${formatActor(event)}`);
-    lines.push(`   ${chalk.cyan('Age:')} ${formatAge(event.createdAt)}`);
+    lines.push(
+      `   ${chalk.cyan('Timestamp:')} ${formatTimestamp(event.createdAt)}`
+    );
     lines.push(`   ${chalk.cyan('ID:')} ${event.id}`);
     lines.push('');
   });
