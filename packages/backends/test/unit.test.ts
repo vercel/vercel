@@ -261,6 +261,24 @@ it('maps service internal function output without leading slash', async () => {
   expect(result.output['/_svc/js-api/index']).toBeUndefined();
 });
 
+it('does not rewrite non-service route outputs', async () => {
+  const fixtureName = '01-express-index-ts-esm';
+  const fixtureSource = join(__dirname, 'fixtures', fixtureName);
+  const { workDir } = await getWorkDir(fixtureName, fixtureSource);
+
+  const result = (await build({
+    files: {},
+    workPath: workDir,
+    config: defaultConfig,
+    meta,
+    entrypoint: 'package.json',
+    repoRootPath: workDir,
+  })) as BuildResultV2Typical;
+
+  expect(result.output['/user/:id']).toBeDefined();
+  expect(result.output['_svc/js-api/index']).toBeUndefined();
+});
+
 const extractAndExecuteLambda = async (
   lambda: NodejsLambda,
   dir: string,

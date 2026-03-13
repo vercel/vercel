@@ -168,6 +168,7 @@ export const build: BuildV2 = async args => {
       typeof serviceName === 'string' && serviceName !== ''
         ? `/_svc/${serviceName}/index`
         : undefined;
+    const internalServiceOutputPath = internalServiceFunctionPath?.slice(1);
     const remapRouteDestination = <T extends { dest?: string }>(
       route: T
     ): T => {
@@ -199,11 +200,12 @@ export const build: BuildV2 = async args => {
         if (route.dest === '/') {
           continue;
         }
-        // Service internal function aliases must be emitted without a leading
-        // slash so route destination resolution can find the target function.
-        const outputPath = route.dest.startsWith('/_svc/')
-          ? route.dest.slice(1)
-          : route.dest;
+        // Only the exact service alias needs the leading slash removed.
+        const outputPath =
+          route.dest === internalServiceFunctionPath &&
+          internalServiceOutputPath
+            ? internalServiceOutputPath
+            : route.dest;
         output[outputPath] = lambda;
       }
     }
