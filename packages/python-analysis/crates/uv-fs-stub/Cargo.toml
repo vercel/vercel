@@ -1,0 +1,20 @@
+# Stubbed uv-fs: provides normalize_url_path, normalize_absolute_path (for uv-pep508),
+# Simplified trait (for uv-requirements-txt), and read_to_string_transcode (host-bridge I/O).
+[package]
+name = "uv-fs"
+version = "0.0.20"
+edition.workspace = true
+rust-version.workspace = true
+
+[lib]
+doctest = false
+
+[dependencies]
+host-bridge = { path = "../host-bridge" }
+percent-encoding = "2.3.1"
+
+[features]
+default = []
+# no-op: keeps dependents that request these features happy
+tokio = []
+serde = []

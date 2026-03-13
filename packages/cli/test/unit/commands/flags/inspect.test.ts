@@ -40,6 +40,39 @@ describe('flags inspect', () => {
     client.setArgv('flags', 'inspect', defaultFlags[0].slug);
     const exitCode = await flags(client);
     expect(exitCode).toEqual(0);
+    const output = client.stderr.getFullOutput();
+    expect(output).toContain('Created:');
+    expect(output).toContain('Updated:');
+    expect(output).toContain('false: Off');
+    expect(output).toContain('id: off');
+    expect(output).toContain('true: On');
+    expect(output).toContain('id: on');
+    expect(output).toContain('production: custom');
+    expect(output).toContain('preview: On');
+    expect(output).toContain('development: On');
+    expect(output).not.toContain('production: active');
+  });
+
+  it('shows the served value for simple environments', async () => {
+    client.setArgv('flags', 'inspect', defaultFlags[1].slug);
+    const exitCode = await flags(client);
+
+    expect(exitCode).toEqual(0);
+    expect(client.stderr.getFullOutput()).toContain('production: Control');
+  });
+
+  it('shows the served paused value for inactive environments', async () => {
+    defaultFlags[1].environments.production.active = false;
+
+    try {
+      client.setArgv('flags', 'inspect', defaultFlags[1].slug);
+      const exitCode = await flags(client);
+
+      expect(exitCode).toEqual(0);
+      expect(client.stderr.getFullOutput()).toContain('production: Control');
+    } finally {
+      defaultFlags[1].environments.production.active = true;
+    }
   });
 
   it('returns error when flag argument is missing', async () => {
