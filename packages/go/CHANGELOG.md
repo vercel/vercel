@@ -1,5 +1,17 @@
 # @vercel/go
 
+## 3.4.5
+
+### Patch Changes
+
+- chore(deps-dev): bump tar from 7.5.7 to 7.5.11 ([#15492](https://github.com/vercel/vercel/pull/15492))
+
+## 3.4.4
+
+### Patch Changes
+
+- [go] versions 1.26 + 1.25 ([#15432](https://github.com/vercel/vercel/pull/15432))
+
 ## 3.4.3
 
 ### Patch Changes

@@ -1110,7 +1110,7 @@ describe.skipIf(flakey)('build', () => {
     ]);
   });
 
-  it('should include cron services in build output crons', async () => {
+  it('should include cron services in build output crons without the services framework setting', async () => {
     const cwd = fixture('with-services-cron');
     const output = join(cwd, '.vercel', 'output');
     client.cwd = cwd;

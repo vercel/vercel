@@ -607,6 +607,7 @@ const main = async () => {
 
     try {
       user = await getUser(client);
+      telemetryEventStore.updateUserId(user.id);
     } catch (err: unknown) {
       if (err instanceof Error) {
         output.debug(err.stack || err.toString());
@@ -757,6 +758,10 @@ const main = async () => {
         case 'activity':
           telemetry.trackCliCommandActivity(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).activity;
+          break;
+        case 'alerts':
+          telemetry.trackCliCommandAlerts(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).alerts;
           break;
         case 'api':
           telemetry.trackCliCommandApi(userSuppliedSubCommand);
@@ -1041,6 +1046,14 @@ const main = async () => {
   }
 
   telemetryEventStore.updateTeamId(client.config.currentTeam);
+  if (!telemetryEventStore.hasUserId) {
+    try {
+      const user = await getUser(client);
+      telemetryEventStore.updateUserId(user.id);
+    } catch {
+      // best-effort for telemetry
+    }
+  }
   await telemetryEventStore.save();
 
   return exitCode;

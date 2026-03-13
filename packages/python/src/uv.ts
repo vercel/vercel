@@ -10,7 +10,6 @@ import { debug } from '@vercel/build-utils';
 export const UV_VERSION = '0.9.22';
 export const UV_PYTHON_PATH_PREFIX = '/uv/python/';
 export const UV_PYTHON_DOWNLOADS_MODE = 'automatic';
-export const UV_CACHE_DIR_SUBPATH = ['.vercel', 'python', 'cache', 'uv'];
 
 const isWin = process.platform === 'win32';
 const uvExec = isWin ? 'uv.exe' : 'uv';
@@ -28,17 +27,11 @@ export function findUvInPath(): string | null {
   return which.sync('uv', { nothrow: true });
 }
 
-export function getUvCacheDir(workPath: string): string {
-  return join(workPath, ...UV_CACHE_DIR_SUBPATH);
-}
-
 export class UvRunner {
   private uvPath: string;
-  private uvCacheDir?: string;
 
-  constructor(uvPath: string, uvCacheDir?: string) {
+  constructor(uvPath: string) {
     this.uvPath = uvPath;
-    this.uvCacheDir = uvCacheDir;
   }
 
   getPath(): string {
@@ -139,7 +132,7 @@ export class UvRunner {
     try {
       await execa(this.uvPath, args, {
         cwd: projectDir,
-        env: getProtectedUvEnv(process.env, this.uvCacheDir),
+        env: getProtectedUvEnv(process.env),
       });
     } catch (err) {
       const error: Error & { code?: unknown } = new Error(
@@ -232,7 +225,7 @@ export class UvRunner {
     const existingPath = process.env.PATH || '';
 
     return {
-      ...getProtectedUvEnv(process.env, this.uvCacheDir),
+      ...getProtectedUvEnv(process.env),
       VIRTUAL_ENV: venvPath,
       PATH: existingPath ? `${binDir}${pathDelimiter}${existingPath}` : binDir,
     };
@@ -356,17 +349,12 @@ export function filterUnsafeUvPipArgs(args: string[]): string[] {
 }
 
 export function getProtectedUvEnv(
-  baseEnv: NodeJS.ProcessEnv = process.env,
-  uvCacheDir?: string
+  baseEnv: NodeJS.ProcessEnv = process.env
 ): NodeJS.ProcessEnv {
-  const env: NodeJS.ProcessEnv = {
+  return {
     ...baseEnv,
     UV_PYTHON_DOWNLOADS: UV_PYTHON_DOWNLOADS_MODE,
   };
-  if (uvCacheDir) {
-    env.UV_CACHE_DIR = uvCacheDir;
-  }
-  return env;
 }
 
 /**

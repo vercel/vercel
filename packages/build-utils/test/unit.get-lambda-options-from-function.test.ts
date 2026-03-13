@@ -30,6 +30,27 @@ describe('getLambdaOptionsFromFunction', () => {
     });
   });
 
+  it('returns matching function options with maxDuration set to "max"', async () => {
+    const config: Pick<Config, 'functions'> = {
+      functions: {
+        'api/*.js': {
+          memory: 1024,
+          maxDuration: 'max',
+        },
+      },
+    };
+
+    const options = await getLambdaOptionsFromFunction({
+      sourceFile: 'api/user.js',
+      config,
+    });
+
+    expect(options).toMatchObject({
+      memory: 1024,
+      maxDuration: 'max',
+    });
+  });
+
   it('returns empty object when no function config matches', async () => {
     const config: Pick<Config, 'functions'> = {
       functions: {

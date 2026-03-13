@@ -2217,7 +2217,6 @@ export const frameworks = [
   {
     name: 'Django',
     slug: 'django',
-    experimental: true,
     logo: 'https://api-frameworks.vercel.sh/framework-logos/django.svg',
     tagline:
       'Django is a high-level Python web framework that encourages rapid development and clean, pragmatic design. ',
@@ -4133,7 +4132,6 @@ export const frameworks = [
   {
     name: 'Python',
     slug: 'python',
-    experimental: true,
     runtimeFramework: true,
     logo: 'https://api-frameworks.vercel.sh/framework-logos/python.svg',
     tagline:
@@ -4337,7 +4335,6 @@ export const frameworks = [
   {
     name: 'Go',
     slug: 'go',
-    experimental: true,
     runtimeFramework: true,
     logo: 'https://api-frameworks.vercel.sh/framework-logos/go.svg',
     tagline: 'An open-source programming language supported by Google.',
