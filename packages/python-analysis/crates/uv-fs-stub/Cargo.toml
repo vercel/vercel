@@ -1,6 +1,5 @@
-# Patched uv-fs: stripped to only the two functions needed by uv-pep508
-# (normalize_url_path, normalize_absolute_path).
-# Everything else has been removed for wasm32-wasip2.
+# Stubbed uv-fs: provides normalize_url_path, normalize_absolute_path (for uv-pep508),
+# Simplified trait (for uv-requirements-txt), and read_to_string_transcode (host-bridge I/O).
 [package]
 name = "uv-fs"
 version = "0.0.20"
@@ -11,6 +10,7 @@ rust-version.workspace = true
 doctest = false
 
 [dependencies]
+host-bridge = { path = "../host-bridge" }
 percent-encoding = "2.3.1"
 
 [features]
