@@ -478,7 +478,11 @@ export async function resolveConfiguredService(
         `Could not infer runtime for service "${name}" and no builder or framework were provided.`
       );
     }
-    builderUse = getBuilderForRuntime(inferredRuntime!);
+    if (inferredRuntime === 'node') {
+      builderUse = type === 'web' ? '@vercel/backends' : '@vercel/node';
+    } else {
+      builderUse = getBuilderForRuntime(inferredRuntime);
+    }
     builderSrc = resolvedEntrypointFile!;
   }
 
