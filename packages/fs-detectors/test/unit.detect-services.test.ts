@@ -1463,6 +1463,59 @@ describe('detectServices', () => {
       });
     });
 
+    it('should preserve explicit service prefixes on another service subdomain', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            web: {
+              framework: 'nextjs',
+              entrypoint: 'apps/web',
+              routePrefix: '/',
+            },
+            docs: {
+              framework: 'vite',
+              entrypoint: 'apps/docs',
+              routePrefix: '/__docs__',
+              subdomain: 'docs',
+            },
+            dashboard: {
+              framework: 'nextjs',
+              entrypoint: 'apps/dashboard',
+              routePrefix: '/__app__',
+              subdomain: 'app',
+            },
+            api: {
+              entrypoint: 'services/api/index.go',
+              subdomain: 'api',
+            },
+          },
+        }),
+        'apps/web/package.json': JSON.stringify({
+          dependencies: { next: '15.0.0' },
+        }),
+        'apps/docs/package.json': JSON.stringify({
+          dependencies: { vite: '6.0.0' },
+        }),
+        'apps/dashboard/package.json': JSON.stringify({
+          dependencies: { next: '15.0.0' },
+        }),
+        'services/api/index.go': 'package main',
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      expect(result.routes.hostRewrites).toContainEqual({
+        src: '^/(?!(?:__docs__|__app__|_/api)(?:/|$))(.*)$',
+        dest: '/__app__/$1',
+        has: [{ type: 'host', value: { pre: 'app.' } }],
+        missing: [
+          { type: 'host', value: { suf: '.vercel.app' } },
+          { type: 'host', value: { suf: '.vercel.dev' } },
+        ],
+        check: true,
+      });
+    });
+
     it('should generate host-based rewrites for route-owning builders', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': JSON.stringify({

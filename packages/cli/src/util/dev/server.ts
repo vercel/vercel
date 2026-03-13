@@ -45,8 +45,6 @@ import {
   detectBuilders,
   detectApiDirectory,
   detectApiExtensions,
-  getInternalServiceCronPathPrefix,
-  getInternalServiceWorkerPathPrefix,
   isOfficialRuntime,
   type Service,
 } from '@vercel/fs-detectors';
@@ -957,12 +955,8 @@ export default class DevServer {
 
       output.print(`${chalk.cyan('>')} Available at:\n`);
       for (const service of this.services || []) {
-        let servicePath = service.routePrefix || '/';
-        if (service.type === 'worker') {
-          servicePath = getInternalServiceWorkerPathPrefix(service.name);
-        } else if (service.type === 'cron') {
-          servicePath = getInternalServiceCronPathPrefix(service.name);
-        }
+        if (service.type !== 'web') continue;
+        const servicePath = service.routePrefix || '/';
         const serviceUrl = `${addressFormatted}${servicePath === '/' ? '' : servicePath}`;
         output.print(`  ${chalk.bold(service.name)}: ${link(serviceUrl)}\n`);
       }
