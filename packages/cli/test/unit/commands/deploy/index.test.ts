@@ -18,6 +18,8 @@ import { useUser } from '../../../mocks/user';
 import humanizePath from '../../../../src/util/humanize-path';
 import sleep from '../../../../src/util/sleep';
 import * as createDeployModule from '../../../../src/util/deploy/create-deploy';
+import { BuildError } from '../../../../src/util/errors-ts';
+import type Now from '../../../../src/util';
 
 describe('deploy', () => {
   describe('--non-interactive', () => {
@@ -1801,6 +1803,171 @@ describe('deploy', () => {
         readyState: 'READY',
         target: 'production',
         deploymentApiUrl: `${client.apiUrl}/v13/deployments/${deploymentId}`,
+      });
+    });
+  });
+
+  describe('--json with failed deployment', () => {
+    const deploymentUrl = 'my-app-failed-abc123.vercel.app';
+    const deploymentId = 'dpl_json_failed_test';
+    const inspectorUrl = 'https://vercel.com/team/project/dpl_json_failed_test';
+
+    it('should output JSON with error field when build fails', async () => {
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        name: 'static',
+        id: 'static',
+      });
+
+      // Mock getDeployment endpoint to return a failed deployment
+      client.scenario.get(`/v13/deployments/${deploymentUrl}`, (_req, res) => {
+        res.json({
+          id: deploymentId,
+          url: deploymentUrl,
+          inspectorUrl,
+          readyState: 'ERROR',
+          target: null,
+          aliasAssigned: false,
+          alias: [],
+        });
+      });
+
+      // Mock createDeploy to simulate a build error
+      const mock = vi
+        .spyOn(createDeployModule, 'default')
+        .mockImplementation(async (_client, now: Now) => {
+          // Simulate what processDeployment does: set now.url before throwing
+          now.url = deploymentUrl;
+          throw new BuildError({
+            message: 'Command "npm run build" exited with 1',
+            meta: {},
+          });
+        });
+
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', '--json');
+      const exitCode = await deploy(client);
+      expect(exitCode).toEqual(1);
+
+      const stdoutOutput = client.stdout.getFullOutput();
+      const json = JSON.parse(stdoutOutput);
+
+      expect(json).toEqual({
+        id: deploymentId,
+        url: `https://${deploymentUrl}`,
+        inspectorUrl,
+        readyState: 'ERROR',
+        target: null,
+        deploymentApiUrl: `${client.apiUrl}/v13/deployments/${deploymentId}`,
+        error: {
+          name: 'BUILD_ERROR',
+          message: 'Command "npm run build" exited with 1',
+        },
+      });
+
+      mock.mockRestore();
+    });
+
+    it('should output valid JSON to stdout when piped (non-TTY) and build fails', async () => {
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        name: 'static',
+        id: 'static',
+      });
+
+      client.scenario.get(`/v13/deployments/${deploymentUrl}`, (_req, res) => {
+        res.json({
+          id: deploymentId,
+          url: deploymentUrl,
+          inspectorUrl,
+          readyState: 'ERROR',
+          target: null,
+          aliasAssigned: false,
+          alias: [],
+        });
+      });
+
+      const mock = vi
+        .spyOn(createDeployModule, 'default')
+        .mockImplementation(async (_client, now: Now) => {
+          now.url = deploymentUrl;
+          throw new BuildError({
+            message: 'Command "npm run build" exited with 1',
+            meta: {},
+          });
+        });
+
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', '--json');
+      client.stdout.isTTY = false;
+      const exitCode = await deploy(client);
+      expect(exitCode).toEqual(1);
+
+      const stdoutOutput = client.stdout.getFullOutput();
+      // Should be valid JSON parseable by jq
+      const json = JSON.parse(stdoutOutput);
+      expect(json.error).toEqual({
+        name: 'BUILD_ERROR',
+        message: 'Command "npm run build" exited with 1',
+      });
+      expect(json.readyState).toEqual('ERROR');
+
+      mock.mockRestore();
+    });
+
+    it('should output JSON with error field when deployment is canceled', async () => {
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        name: 'static',
+        id: 'static',
+      });
+
+      client.scenario.post(`/v13/deployments`, (_req, res) => {
+        res.json({
+          id: deploymentId,
+          url: deploymentUrl,
+          inspectorUrl,
+          readyState: 'CANCELED',
+          target: null,
+        });
+      });
+      client.scenario.get(`/v13/deployments/${deploymentId}`, (_req, res) => {
+        res.json({
+          id: deploymentId,
+          url: deploymentUrl,
+          inspectorUrl,
+          readyState: 'CANCELED',
+          target: null,
+          aliasAssigned: false,
+          alias: [],
+        });
+      });
+
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', '--json');
+      const exitCode = await deploy(client);
+      expect(exitCode).toEqual(1);
+
+      const stdoutOutput = client.stdout.getFullOutput();
+      const json = JSON.parse(stdoutOutput);
+
+      expect(json).toEqual({
+        id: deploymentId,
+        url: `https://${deploymentUrl}`,
+        inspectorUrl,
+        readyState: 'CANCELED',
+        target: null,
+        deploymentApiUrl: `${client.apiUrl}/v13/deployments/${deploymentId}`,
+        error: {
+          name: 'DEPLOYMENT_CANCELED',
+          message: 'The deployment has been canceled.',
+        },
       });
     });
   });
