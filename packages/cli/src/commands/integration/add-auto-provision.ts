@@ -8,7 +8,6 @@ import indent from '../../util/output/indent';
 import { autoProvisionResource } from '../../util/integration/auto-provision-resource';
 import { fetchIntegrationWithTelemetry } from '../../util/integration/fetch-integration';
 import { fetchInstallations } from '../../util/integration/fetch-installations';
-import { acceptTermsViaBrowser } from '../../util/integration/accept-terms-via-browser';
 import { promptForTermAcceptance } from '../../util/integration/prompt-for-terms';
 import { selectProduct } from '../../util/integration/select-product';
 import type {
@@ -160,7 +159,6 @@ export async function addAutoProvision(
   );
 
   let acceptedPolicies: AcceptedPolicies = {};
-  let browserInstallationId: string | undefined;
   if (!teamInstallation) {
     if (
       // AI agent mode — cannot interact with terminal prompts
@@ -170,21 +168,15 @@ export async function addAutoProvision(
       // Server declares browser install required (e.g. needs device fingerprint)
       integration.capabilities?.requiresBrowserInstall
     ) {
-      // Browser flow: open browser for terms acceptance, poll for installation
-      const browserInstallation = await acceptTermsViaBrowser(
-        client,
-        integration,
-        team.id,
-        contextName
+      // Non-interactive: direct to `vercel integration terms` subcommand
+      telemetry.trackMarketplaceEvent('marketplace_install_flow_dropped', {
+        ...baseProps,
+        reason: 'terms_not_accepted',
+      });
+      output.error(
+        `Terms have not been accepted for "${integration.name}".\n\nTo view required terms, run:\n  vercel integration terms ${integrationSlug}\n\nTo accept terms after reviewing, run:\n  vercel integration terms ${integrationSlug} --accept`
       );
-      if (!browserInstallation) {
-        telemetry.trackMarketplaceEvent('marketplace_install_flow_dropped', {
-          ...baseProps,
-          reason: 'browser_terms_timeout',
-        });
-        return 1;
-      }
-      browserInstallationId = browserInstallation.id;
+      return 1;
     } else {
       // Interactive TTY: keep existing prompt behavior
       const policies = await promptForTermAcceptance(client, integration);
@@ -273,7 +265,7 @@ export async function addAutoProvision(
       metadata,
       acceptedPolicies,
       options.billingPlanId,
-      browserInstallationId ?? options.installationId
+      options.installationId
     );
   } catch (error) {
     output.stopSpinner();

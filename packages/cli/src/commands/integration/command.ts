@@ -410,6 +410,29 @@ export const guideSubcommand = {
   ],
 } as const;
 
+export const termsSubcommand = {
+  name: 'terms',
+  aliases: [],
+  description: 'View or accept terms for a marketplace integration',
+  arguments: [
+    {
+      name: 'integration',
+      required: true,
+    },
+  ],
+  options: [
+    {
+      name: 'accept',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Accept all terms for the integration',
+    },
+    formatOption,
+  ],
+  examples: [],
+} as const;
+
 export const integrationCommand = {
   name: 'integration',
   aliases: [],
