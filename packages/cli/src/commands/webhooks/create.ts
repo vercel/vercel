@@ -99,12 +99,6 @@ export default async function create(client: Client, argv: string[]) {
 
   if (!eventFlags || eventFlags.length === 0) {
     if (client.nonInteractive) {
-      const argv = client.argv.slice(2);
-      const subcommandParts = argv.slice(0, 2); // ['webhooks', 'create']
-      const rest = argv.slice(2);
-      const subcommandWithPlaceholder = `${subcommandParts.join(' ')} <url>${
-        rest.length ? ` ${rest.join(' ')}` : ''
-      }`;
       outputAgentError(
         client,
         {
@@ -114,7 +108,9 @@ export default async function create(client: Client, argv: string[]) {
             'At least one event is required. Use --event <event> (can be repeated).',
           next: [
             {
-              command: getCommandNamePlain(subcommandWithPlaceholder),
+              command: getCommandNamePlain(
+                'webhooks create <url> --event <event>'
+              ),
             },
           ],
         },
@@ -122,7 +118,7 @@ export default async function create(client: Client, argv: string[]) {
       );
     }
 
-    const availableEvents = await getWebhookEvents();
+    const availableEvents = (await getWebhookEvents()) ?? [];
     if (availableEvents.length === 0) {
       output.error(
         'Could not fetch available webhook events. Please specify events using --event flags.'

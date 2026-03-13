@@ -333,6 +333,14 @@ describe('webhooks create', () => {
     });
 
     it('should prompt for events when not provided', async () => {
+      const { getWebhookEvents } = await import(
+        '../../../../src/util/webhooks/get-webhook-events'
+      );
+      vi.mocked(getWebhookEvents).mockResolvedValue([
+        'deployment.created',
+        'deployment.ready',
+        'deployment.error',
+      ]);
       useUser();
       useCreateWebhook();
       client.setArgv('webhooks', 'create', 'https://example.com/webhook');
