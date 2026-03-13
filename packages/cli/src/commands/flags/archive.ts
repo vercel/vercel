@@ -131,6 +131,13 @@ export default async function archive(
 
     // Confirm archival
     if (!skipConfirmation) {
+      if (!client.stdin.isTTY) {
+        output.error(
+          'Missing required flag --yes. Use --yes to skip the confirmation prompt in non-interactive mode.'
+        );
+        return 1;
+      }
+
       const confirmed = await client.input.confirm(
         `Are you sure you want to archive ${chalk.bold(flag.slug)}?`,
         false

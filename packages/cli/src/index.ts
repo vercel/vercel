@@ -491,6 +491,7 @@ const main = async () => {
           reason: AGENT_REASON.LOGIN_REQUIRED,
           message:
             'No existing credentials found. The user must run the login command to authenticate.',
+          userActionRequired: true,
           next: [
             {
               command: getCommandNamePlain('login'),
@@ -760,6 +761,10 @@ const main = async () => {
         case 'activity':
           telemetry.trackCliCommandActivity(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).activity;
+          break;
+        case 'alerts':
+          telemetry.trackCliCommandAlerts(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).alerts;
           break;
         case 'api':
           telemetry.trackCliCommandApi(userSuppliedSubCommand);

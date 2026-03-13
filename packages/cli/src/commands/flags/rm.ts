@@ -135,6 +135,13 @@ export default async function rm(
 
     // Confirm deletion
     if (!skipConfirmation) {
+      if (!client.stdin.isTTY) {
+        output.error(
+          'Missing required flag --yes. Use --yes to skip the confirmation prompt in non-interactive mode.'
+        );
+        return 1;
+      }
+
       const confirmed = await client.input.confirm(
         `Are you sure you want to delete ${chalk.bold(flag.slug)}? This action cannot be undone.`,
         false

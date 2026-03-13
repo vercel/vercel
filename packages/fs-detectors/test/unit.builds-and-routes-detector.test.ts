@@ -3,6 +3,7 @@ import type {
   RouteWithHandle as Handler,
   RouteWithSrc as Source,
 } from '@vercel/routing-utils';
+import { join } from 'path';
 import type { PackageJson } from '@vercel/build-utils';
 import {
   detectBuilders,
@@ -92,6 +93,66 @@ function createReplaceLocation(redirectRoutes: Route[] | null) {
 }
 
 describe('Test `detectBuilders`', () => {
+  it('should use services builders when experimentalServices is configured without the services framework', async () => {
+    const workPath = join(
+      __dirname,
+      'fixtures',
+      'e2e',
+      '11-services-python-cron'
+    );
+    const { builders, defaultRoutes, rewriteRoutes, services, errors } =
+      await detectBuilders([], undefined, {
+        experimentalServices: {
+          web: {
+            framework: 'fastapi',
+            entrypoint: 'server.py',
+            routePrefix: '/',
+          },
+          cleanup: {
+            type: 'cron',
+            entrypoint: 'jobs/cleanup.py',
+            schedule: '0 0 * * *',
+          },
+        },
+        projectSettings: {
+          framework: null,
+        },
+        workPath,
+      });
+
+    expect(errors).toBeNull();
+    expect(services).toHaveLength(2);
+    expect(builders).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          src: 'server.py',
+          use: '@vercel/python',
+        }),
+        expect.objectContaining({
+          src: 'jobs/cleanup.py',
+          use: '@vercel/python',
+        }),
+      ])
+    );
+    expect(defaultRoutes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          dest: '/_svc/web/index',
+          check: true,
+        }),
+      ])
+    );
+    expect(rewriteRoutes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          src: '^/_svc/cleanup/crons/jobs/cleanup/cron$',
+          dest: '/_svc/cleanup/index',
+          check: true,
+        }),
+      ])
+    );
+  });
+
   it('should never select now.json src', async () => {
     const files = ['docs/index.md', 'mkdocs.yml', 'now.json'];
     const { builders } = await invokeDetectBuildersAndThrow(files, null, {
@@ -584,6 +645,27 @@ describe('Test `detectBuilders`', () => {
     expect(builders).toHaveLength(0);
     expect(errors.length).toBe(1);
     expect(errors[0].code).toBe('invalid_function_duration');
+  });
+
+  it('valid function maxDuration set to "max"', async () => {
+    const pkg = {
+      scripts: { build: 'next build' },
+      dependencies: { next: '9.0.0' },
+    };
+    const functions = {
+      'pages/api/teams/**': { maxDuration: 'max' as const },
+    };
+    const files = [
+      'package.json',
+      'pages/index.js',
+      'pages/api/teams/members.ts',
+    ];
+    const { builders, errors } = await invokeDetectBuilders(files, pkg, {
+      functions,
+    });
+
+    expect(errors).toHaveLength(0);
+    expect(builders.length).toBe(1);
   });
 
   it('invalid function memory', async () => {

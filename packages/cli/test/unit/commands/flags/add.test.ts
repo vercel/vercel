@@ -6,9 +6,14 @@ import { defaultProject, useProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
 import { useFlags } from '../../../mocks/flags';
+import type { Flag } from '../../../../src/util/flags/types';
 
-describe('flags add', () => {
+describe('flags create', () => {
+  let createdFlags: Flag[];
+  const textMock = vi.fn();
+  const confirmMock = vi.fn();
   beforeEach(() => {
+    createdFlags = [];
     useUser();
     useTeams('team_dummy');
     useProject({
@@ -16,15 +21,20 @@ describe('flags add', () => {
       id: 'vercel-flags-test',
       name: 'vercel-flags-test',
     });
-    useFlags();
+    useFlags(createdFlags);
     const cwd = setupUnitFixture('commands/flags/vercel-flags-test');
     client.cwd = cwd;
+    client.input.text = textMock;
+    client.input.confirm = confirmMock;
+    textMock.mockReset();
+    confirmMock.mockReset();
+    (client.stdin as any).isTTY = true;
   });
 
   describe('--help', () => {
     it('tracks telemetry', async () => {
       const command = 'flags';
-      const subcommand = 'add';
+      const subcommand = 'create';
 
       client.setArgv(command, subcommand, '--help');
       const exitCodePromise = flags(client);
@@ -39,13 +49,33 @@ describe('flags add', () => {
     });
   });
 
-  it('tracks `add` subcommand', async () => {
+  it('tracks `create` subcommand', async () => {
+    client.setArgv('flags', 'create', 'new-feature');
+    const exitCode = await flags(client);
+    expect(exitCode).toEqual(0);
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      {
+        key: 'subcommand:create',
+        value: 'create',
+      },
+      {
+        key: 'argument:slug',
+        value: '[REDACTED]',
+      },
+      {
+        key: 'option:kind',
+        value: 'boolean',
+      },
+    ]);
+  });
+
+  it('supports `add` as an alias for `create`', async () => {
     client.setArgv('flags', 'add', 'new-feature');
     const exitCode = await flags(client);
     expect(exitCode).toEqual(0);
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
       {
-        key: 'subcommand:add',
+        key: 'subcommand:create',
         value: 'add',
       },
       {
@@ -60,20 +90,82 @@ describe('flags add', () => {
   });
 
   it('creates a flag successfully', async () => {
-    client.setArgv('flags', 'add', 'new-feature');
+    client.setArgv('flags', 'create', 'new-feature');
     const exitCode = await flags(client);
     expect(exitCode).toEqual(0);
   });
 
+  it('prints inspect-style details without timestamps after creating a flag', async () => {
+    client.setArgv('flags', 'add', 'new-feature');
+
+    const exitCode = await flags(client);
+
+    expect(exitCode).toEqual(0);
+    const output = client.stderr.getFullOutput();
+    expect(output).toContain('Feature flag new-feature created successfully');
+    expect(output).toContain('Feature flag new-feature for');
+    expect(output).toContain('Variants:');
+    expect(output).toContain('false: Off');
+    expect(output).toContain('true: On');
+    expect(output).toContain('Environments:');
+    expect(output).toContain('production: Off');
+    expect(output).toContain('preview: Off');
+    expect(output).toContain('development: On');
+    expect(output).not.toContain('development: active');
+    expect(output).not.toContain('Default: On');
+    expect(output).not.toContain('Created:');
+    expect(output).not.toContain('Updated:');
+  });
+
+  it('matches dash defaults for boolean flags', async () => {
+    client.setArgv('flags', 'add', 'new-feature');
+
+    const exitCode = await flags(client);
+
+    expect(exitCode).toEqual(0);
+    expect(createdFlags).toHaveLength(1);
+    expect(createdFlags[0].environments.production.active).toBe(false);
+    expect(createdFlags[0].environments.preview.active).toBe(false);
+    expect(createdFlags[0].environments.development.active).toBe(false);
+    expect(createdFlags[0].environments.production.pausedOutcome).toMatchObject(
+      {
+        type: 'variant',
+        variantId: createdFlags[0].variants[0].id,
+      }
+    );
+    expect(
+      createdFlags[0].environments.development.pausedOutcome
+    ).toMatchObject({
+      type: 'variant',
+      variantId: createdFlags[0].variants[1].id,
+    });
+    expect(createdFlags[0].environments.development.fallthrough).toMatchObject({
+      type: 'variant',
+      variantId: createdFlags[0].variants[1].id,
+    });
+    expect(createdFlags[0].variants).toMatchObject([
+      { value: false, label: 'Off', description: 'not enabled' },
+      { value: true, label: 'On', description: 'enabled' },
+    ]);
+  });
+
   describe('--kind', () => {
     it('tracks `kind` option', async () => {
-      client.setArgv('flags', 'add', 'new-feature', '--kind', 'string');
+      client.setArgv(
+        'flags',
+        'create',
+        'new-feature',
+        '--kind',
+        'string',
+        '--variant',
+        'control=Control'
+      );
       const exitCode = await flags(client);
       expect(exitCode).toEqual(0);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
-          key: 'subcommand:add',
-          value: 'add',
+          key: 'subcommand:create',
+          value: 'create',
         },
         {
           key: 'argument:slug',
@@ -91,7 +183,7 @@ describe('flags add', () => {
     it('tracks `description` option', async () => {
       client.setArgv(
         'flags',
-        'add',
+        'create',
         'new-feature',
         '--description',
         'My feature'
@@ -100,8 +192,8 @@ describe('flags add', () => {
       expect(exitCode).toEqual(0);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
-          key: 'subcommand:add',
-          value: 'add',
+          key: 'subcommand:create',
+          value: 'create',
         },
         {
           key: 'argument:slug',
@@ -120,13 +212,13 @@ describe('flags add', () => {
   });
 
   it('errors without slug argument', async () => {
-    client.setArgv('flags', 'add');
+    client.setArgv('flags', 'create');
     const exitCode = await flags(client);
     expect(exitCode).toEqual(1);
   });
 
   it('errors with invalid kind', async () => {
-    client.setArgv('flags', 'add', 'new-feature', '--kind', 'invalid');
+    client.setArgv('flags', 'create', 'new-feature', '--kind', 'invalid');
     const exitCode = await flags(client);
     expect(exitCode).toEqual(1);
     expect(client.stderr.getFullOutput()).toContain('Invalid kind');
@@ -176,5 +268,101 @@ describe('flags add', () => {
         next: expect.any(Array),
       });
     });
+  });
+
+  it('parses repeatable string variants from flags', async () => {
+    client.setArgv(
+      'flags',
+      'add',
+      'welcome-message',
+      '--kind',
+      'string',
+      '--variant',
+      'control=Welcome back',
+      '--variant',
+      'treatment=New onboarding'
+    );
+
+    const exitCode = await flags(client);
+
+    expect(exitCode).toEqual(0);
+    expect(createdFlags[0].variants).toMatchObject([
+      { value: 'control', label: 'Welcome back' },
+      { value: 'treatment', label: 'New onboarding' },
+    ]);
+  });
+
+  it('parses number variants from flags', async () => {
+    client.setArgv(
+      'flags',
+      'add',
+      'bucket-size',
+      '--kind',
+      'number',
+      '--variant',
+      '10=Small',
+      '--variant',
+      '20=Large'
+    );
+
+    const exitCode = await flags(client);
+
+    expect(exitCode).toEqual(0);
+    expect(createdFlags[0].variants).toMatchObject([
+      { value: 10, label: 'Small' },
+      { value: 20, label: 'Large' },
+    ]);
+  });
+
+  it('collects variants interactively for string flags', async () => {
+    textMock
+      .mockResolvedValueOnce('control')
+      .mockResolvedValueOnce('Welcome back')
+      .mockResolvedValueOnce('treatment')
+      .mockResolvedValueOnce('New onboarding');
+    confirmMock.mockResolvedValueOnce(true).mockResolvedValueOnce(false);
+
+    client.setArgv('flags', 'add', 'welcome-message', '--kind', 'string');
+
+    const exitCode = await flags(client);
+
+    expect(exitCode).toEqual(0);
+    expect(createdFlags[0].variants).toMatchObject([
+      { value: 'control', label: 'Welcome back' },
+      { value: 'treatment', label: 'New onboarding' },
+    ]);
+    expect(confirmMock).toHaveBeenNthCalledWith(
+      1,
+      'Add another variant?',
+      false
+    );
+    expect(confirmMock).toHaveBeenNthCalledWith(
+      2,
+      'Add another variant?',
+      false
+    );
+  });
+
+  it('errors in non-interactive mode when string variants are missing', async () => {
+    (client.stdin as any).isTTY = false;
+    client.setArgv('flags', 'add', 'welcome-message', '--kind', 'string');
+
+    const exitCode = await flags(client);
+
+    expect(exitCode).toEqual(1);
+    expect(client.stderr.getFullOutput()).toContain(
+      'Missing required flag --variant'
+    );
+  });
+
+  it('rejects custom variants for boolean flags', async () => {
+    client.setArgv('flags', 'add', 'new-feature', '--variant', 'true=Enabled');
+
+    const exitCode = await flags(client);
+
+    expect(exitCode).toEqual(1);
+    expect(client.stderr.getFullOutput()).toContain(
+      'Boolean flags always use true/false variants'
+    );
   });
 });
