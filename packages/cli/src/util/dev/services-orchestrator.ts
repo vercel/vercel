@@ -413,7 +413,6 @@ export class ServicesOrchestrator {
         repoRootPath: this.repoRoot,
         config: {
           ...(service.builder?.config || {}),
-          serviceName: service.name,
           framework: frameworkForDev,
         },
         meta: {

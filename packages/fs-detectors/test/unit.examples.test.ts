@@ -1,4 +1,4 @@
-import frameworkList from '@vercel/frameworks';
+import { frameworkList } from '@vercel/frameworks';
 import { detectFramework, LocalFileSystemDetector } from '../src';
 import { getExamples } from '../../../examples/__tests__/test-utils';
 
@@ -26,7 +26,6 @@ const experimentalExamples = new Set([
   'axum',
   'gin',
   'django',
-  'node',
 ]);
 
 describe('examples should be detected', () => {

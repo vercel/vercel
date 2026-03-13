@@ -20,11 +20,11 @@ import {
   inferServiceRuntime,
   INTERNAL_SERVICE_PREFIX,
 } from './utils';
-import frameworkList from '@vercel/frameworks';
+import { frameworkList } from '@vercel/frameworks';
 import { detectFrameworks } from '../detect-framework';
 import type { DetectorFilesystem } from '../detectors/filesystem';
 import { normalizeRoutePrefix } from '@vercel/routing-utils';
-import { isNodeBackendFramework } from '@vercel/build-utils';
+import { isNodeBackendFramework } from '@vercel/build-utils/src/framework-helpers';
 
 const frameworksBySlug = new Map(frameworkList.map(f => [f.slug, f]));
 
@@ -458,7 +458,15 @@ export async function resolveConfiguredService(
     ? frameworksBySlug.get(framework)
     : undefined;
 
-  if (framework) {
+  if (config.builder) {
+    // Respect explicit builder overrides. This migration only switches inferred
+    // or framework-selected Node services to @vercel/backends.
+    builderUse = config.builder;
+    builderSrc =
+      resolvedEntrypointFile ||
+      detectedFrameworkDefinition?.useRuntime?.src ||
+      'package.json';
+  } else if (framework) {
     if (isNodeBackendFramework(framework)) {
       builderUse = '@vercel/backends';
     } else {
@@ -470,9 +478,6 @@ export async function resolveConfiguredService(
       resolvedEntrypointFile ||
       detectedFrameworkDefinition?.useRuntime?.src ||
       'package.json';
-  } else if (config.builder) {
-    builderUse = config.builder;
-    builderSrc = resolvedEntrypointFile!;
   } else {
     if (!inferredRuntime) {
       throw new Error(
@@ -514,7 +519,9 @@ export async function resolveConfiguredService(
   // Ensure `zeroConfig` is set on the Builder spec so downstream steps (like
   // CLI `writeBuildResultV3()`) can compute correct extensionless function paths.
   const builderConfig: Record<string, unknown> = { zeroConfig: true };
-  builderConfig.serviceName = name;
+  if (builderUse === '@vercel/backends') {
+    builderConfig.serviceName = name;
+  }
   if (config.memory) builderConfig.memory = config.memory;
   if (config.maxDuration) builderConfig.maxDuration = config.maxDuration;
   if (config.includeFiles) builderConfig.includeFiles = config.includeFiles;
@@ -674,11 +681,12 @@ export async function resolveAllConfiguredServices(
             serviceName: name,
             runtime: inferredRuntime,
           });
-          if (detection.error) {
-            errors.push(detection.error);
-            continue;
+          // File entrypoints can still be resolved from runtime + extension.
+          // If framework detection is ambiguous, keep the runtime-only path
+          // rather than turning that ambiguity into a hard service error.
+          if (!detection.error) {
+            detectedFramework = detection.framework;
           }
-          detectedFramework = detection.framework;
         }
       }
     }

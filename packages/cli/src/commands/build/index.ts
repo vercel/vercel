@@ -813,7 +813,6 @@ async function doBuild(
           // build.config already contains framework, routePrefix, memory, etc.
           buildConfig = {
             ...build.config,
-            serviceName: service.name,
             ...(hasWorkerServices ? { hasWorkerServices: true } : undefined),
             // Override project-level settings with service-specific ones.
             // The project-level framework is "services" which must NOT be
@@ -871,7 +870,6 @@ async function doBuild(
         ...(service
           ? {
               service: {
-                name: service.name,
                 routePrefix:
                   typeof serviceRoutePrefix === 'string'
                     ? serviceRoutePrefix
