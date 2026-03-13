@@ -95,7 +95,7 @@ export async function getRepoLink(
  * @param existingDirectories - Set of directories already linked in repo.json,
  *   used to filter out locally-detected projects that are already covered.
  */
-async function discoverRepoProjects(
+export async function discoverRepoProjects(
   client: Client,
   rootPath: string,
   {
@@ -125,11 +125,11 @@ async function discoverRepoProjects(
   const confirmMessage =
     promptAction === 'add'
       ? `Add Project(s) for Git repository at ${chalk.cyan(
-          `"${toHumanPath(rootPath)}"`
-        )}?`
+        `"${toHumanPath(rootPath)}"`
+      )}?`
       : `Link Git repository at ${chalk.cyan(
-          `"${toHumanPath(rootPath)}"`
-        )} to your Project(s)?`;
+        `"${toHumanPath(rootPath)}"`
+      )} to your Project(s)?`;
 
   const shouldLink = yes || (await client.input.confirm(confirmMessage, true));
 
@@ -269,9 +269,8 @@ async function discoverRepoProjects(
   } else {
     const addSeparators = projects.length > 0 && detectedProjectsCount > 0;
     selected = await client.input.checkbox<Project | NewProject>({
-      message: `Which Projects should be ${
-        projects.length ? 'linked to' : 'created'
-      }?`,
+      message: `Which Projects should be ${projects.length ? 'linked to' : 'created'
+        }?`,
       choices: [
         ...(addSeparators
           ? [new Separator('----- Existing Projects -----')]
@@ -398,8 +397,7 @@ export async function ensureRepoLink(
           'Project',
           result.projects.length,
           true
-        )} under ${chalk.bold(result.orgSlug)} (created ${VERCEL_DIR}${
-          isGitIgnoreUpdated ? ' and added it to .gitignore' : ''
+        )} under ${chalk.bold(result.orgSlug)} (created ${VERCEL_DIR}${isGitIgnoreUpdated ? ' and added it to .gitignore' : ''
         })`,
         emoji('link')
       ) + '\n'

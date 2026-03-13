@@ -720,6 +720,10 @@ const main = async () => {
           telemetry.trackCliCommandLink(userSuppliedSubCommand);
           func = (await import('./commands/link/index.js')).default;
           break;
+        case 'link-2':
+          telemetry.trackCliCommandLink(userSuppliedSubCommand);
+          func = (await import('./commands/link-2/index.js')).default;
+          break;
 
         // Non-priority commands - loaded from bulk bundle
         case 'agent':

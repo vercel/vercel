@@ -24,6 +24,7 @@ import { installCommand } from './install/command';
 import { integrationResourceCommand } from './integration-resource/command';
 import { integrationCommand } from './integration/command';
 import { linkCommand } from './link/command';
+import { link2Command } from './link-2/command';
 import { listCommand } from './list/command';
 import { loginCommand } from './login/command';
 import { logoutCommand } from './logout/command';
@@ -79,6 +80,7 @@ const commandsStructs = [
   integrationCommand,
   integrationResourceCommand,
   linkCommand,
+  link2Command,
   listCommand,
   loginCommand,
   logoutCommand,
