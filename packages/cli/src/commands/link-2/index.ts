@@ -7,7 +7,11 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import output from '../../output-manager';
 import { getCommandAliases } from '..';
-import { discoverRepoProjects, findRepoRoot, RepoProjectsConfig } from '../../util/link/repo';
+import {
+  discoverRepoProjects,
+  findRepoRoot,
+  RepoProjectsConfig,
+} from '../../util/link/repo';
 import { readJSON } from 'fs-extra';
 import path, { join } from 'path';
 import { VERCEL_DIR, VERCEL_DIR_REPO } from '../../util/projects/link';
@@ -74,7 +78,9 @@ export default async function link2(client: Client) {
   output.log(`link-2 (stub); cwd: ${client.cwd}`);
   const rootPath = await findRepoRoot(client.cwd);
   // console.log({ cwd: client.cwd, rootPath });
-  const projectJson = await getIfExists<RepoProjectsConfig>(join(client.cwd, VERCEL_DIR, VERCEL_DIR_REPO));
+  const projectJson = await getIfExists<RepoProjectsConfig>(
+    join(client.cwd, VERCEL_DIR, VERCEL_DIR_REPO)
+  );
   // console.log({ projectJson, rootPath });
   if (rootPath) {
     const detectedProjects = await detectProjects(rootPath);
@@ -83,10 +89,14 @@ export default async function link2(client: Client) {
       // we're not in the root, so we should find the project whose rootDirectory === cwd, if we have none, act like we're in the root
     }
 
-    const repoJson = await getIfExists<RepoProjectsConfig>(join(rootPath, VERCEL_DIR, VERCEL_DIR_REPO));
+    const repoJson = await getIfExists<RepoProjectsConfig>(
+      join(rootPath, VERCEL_DIR, VERCEL_DIR_REPO)
+    );
     if (repoJson) {
       if (!projectJson) {
-        const project = repoJson.projects.find(p => path.normalize(p.directory) === path.normalize(client.cwd));
+        const project = repoJson.projects.find(
+          p => path.normalize(p.directory) === path.normalize(client.cwd)
+        );
         if (project) {
           // console.log('project', project);
           // write the .vercel/project.json file with the projectId, orgId, and projectName
@@ -98,7 +108,10 @@ export default async function link2(client: Client) {
         getGitConfigPath({ cwd: rootPath }) ?? join(rootPath, '.git/config');
       const remoteUrls = await getRemoteUrls(gitConfigPath);
       const remoteNames = Object.keys(remoteUrls || {});
-      const remoteName = remoteNames.length > 1 ? remoteNames.find(key => key !== 'origin') : remoteNames[0];
+      const remoteName =
+        remoteNames.length > 1
+          ? remoteNames.find(key => key !== 'origin')
+          : remoteNames[0];
       if (!remoteName) {
         // Prompt user to select which remote to use
         throw new Error('No remote name found');
