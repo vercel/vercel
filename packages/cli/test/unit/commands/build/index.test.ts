@@ -1120,12 +1120,12 @@ describe.skipIf(flakey)('build', () => {
     const config = await fs.readJSON(join(output, 'config.json'));
     expect(config).toHaveProperty('crons', [
       {
-        path: '/_svc/cleanup/crons/api/cron/cron',
+        path: '/_svc/cleanup/crons/cron/cron',
         schedule: '0 0 * * *',
       },
     ]);
     expect(config.routes).toContainEqual({
-      src: '^/_svc/cleanup/crons/api/cron/cron$',
+      src: '^/_svc/cleanup/crons/cron/cron$',
       dest: '/_svc/cleanup/index',
       check: true,
     });

@@ -2,7 +2,7 @@
   "experimentalServices": {
     "cleanup": {
       "type": "cron",
-      "entrypoint": "api/cron.py",
+      "entrypoint": "cron.py",
       "schedule": "0 0 * * *"
     }
   }
