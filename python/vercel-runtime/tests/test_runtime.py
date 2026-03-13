@@ -540,9 +540,7 @@ class TestASGIApp(_RuntimeTestCase):
             await self.n1.wait_for_message(EndMessage, timeout=5.0)
             decoded = base64.b64decode(error_log.payload.message).decode()
             self.assertEqual(error_log.payload.level, "error")
-            self.assertIn(
-                "Side Effect (via asyncio.create_task) failed", decoded
-            )
+            self.assertIn("background task failed", decoded)
             self.assertIn("background-task-asgi-error", decoded)
 
 

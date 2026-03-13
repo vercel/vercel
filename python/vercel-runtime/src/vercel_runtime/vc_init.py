@@ -18,10 +18,6 @@ import traceback
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import TYPE_CHECKING, Any, Literal, Never, TextIO
 
-from vercel_runtime.background_tasks import (
-    BackgroundTaskScope,
-    install_task_factory,
-)
 from vercel_runtime.crons import (
     bootstrap_cron_service_app,
     is_cron_service,
@@ -44,6 +40,10 @@ from vercel_runtime.routing import (
     apply_service_route_prefix_to_target,
     split_request_target,
 )
+from vercel_runtime.task_manager import (
+    activate_task_manager,
+    drain_task_manager_with_timeout,
+)
 from vercel_runtime.workers import (
     bootstrap_worker_service_app,
     is_celery_app,
@@ -60,6 +60,8 @@ type _ASGISend = Callable[[dict[str, Any]], Awaitable[None]]
 type _ASGIApp = Callable[[_ASGIScope, _ASGIReceive, _ASGISend], Awaitable[None]]
 
 _original_stderr = sys.stderr
+
+_BACKGROUND_TASK_TIMEOUT: float = 30.0
 
 
 def _stderr(message: str) -> None:
@@ -613,10 +615,6 @@ class ASGIMiddleware:
             }
         )
 
-        install_task_factory(asyncio.get_running_loop())
-
-        bg_scope = BackgroundTaskScope()
-        bg_scope.activate()
         token = storage.set(
             {
                 "invocationId": invocation_id,
@@ -624,12 +622,18 @@ class ASGIMiddleware:
             }
         )
         set_vercel_headers_from_asgi_pairs(new_headers)
-
+        activate_task_manager()
         try:
             await self.app(new_scope, receive, send)
         finally:
-            await bg_scope.drain(_entrypoint_rel, _stderr)
-            bg_scope.deactivate()
+            if not await drain_task_manager_with_timeout(
+                _BACKGROUND_TASK_TIMEOUT,
+            ):
+                _stderr(
+                    f"The function `{os.path.basename(_entrypoint_rel)}` "
+                    f"timed out running background tasks "
+                    f"after {_BACKGROUND_TASK_TIMEOUT}s."
+                )
             clear_vercel_headers_context()
             storage.reset(token)
             send_message(

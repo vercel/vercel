@@ -1,17 +1,22 @@
 import asyncio
 import logging
 
+_background_tasks: set[asyncio.Task[None]] = set()
+
 
 async def app(scope, receive, send):
     if scope["type"] != "http":
         return
 
     if scope["path"] == "/error":
-        _task = asyncio.create_task(_background_error())
+        task = asyncio.create_task(_background_error())
     elif scope["path"] == "/slow":
-        _task = asyncio.create_task(_slow_background_log())
+        task = asyncio.create_task(_slow_background_log())
     else:
-        _task = asyncio.create_task(_background_log())
+        task = asyncio.create_task(_background_log())
+
+    _background_tasks.add(task)
+    task.add_done_callback(_background_tasks.discard)
 
     await send(
         {
