@@ -24,6 +24,11 @@ import {
   outputActionRequired,
   outputAgentError,
 } from '../../util/agent-output';
+import {
+  AGENT_ACTION,
+  AGENT_REASON,
+  AGENT_STATUS,
+} from '../../util/agent-output-constants';
 import { getGlobalFlagsOnlyFromArgs } from '../../util/arg-common';
 import { getCommandNamePlain } from '../../util/pkg-name';
 
@@ -37,8 +42,8 @@ export default async function ls(client: Client, argv: string[]) {
       outputAgentError(
         client,
         {
-          status: 'error',
-          reason: 'invalid_arguments',
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.INVALID_ARGUMENTS,
           message: err instanceof Error ? err.message : String(err),
         },
         1
@@ -57,9 +62,9 @@ export default async function ls(client: Client, argv: string[]) {
     outputActionRequired(
       client,
       {
-        status: 'action_required',
-        reason: 'missing_arguments',
-        action: 'missing_arguments',
+        status: AGENT_STATUS.ACTION_REQUIRED,
+        reason: AGENT_REASON.MISSING_ARGUMENTS,
+        action: AGENT_ACTION.MISSING_ARGUMENTS,
         message: `Invalid number of arguments. Run: ${cmd}`,
         next: [
           {
@@ -121,8 +126,8 @@ export default async function ls(client: Client, argv: string[]) {
         outputAgentError(
           client,
           {
-            status: 'error',
-            reason: 'domain_not_found',
+            status: AGENT_STATUS.ERROR,
+            reason: AGENT_REASON.DOMAIN_NOT_FOUND,
             message: `The domain ${domainName} can't be found under ${contextName}.`,
             next: [{ command: cmd, when: 'to list available DNS records' }],
           },

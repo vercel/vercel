@@ -15,6 +15,11 @@ import {
   outputActionRequired,
   outputAgentError,
 } from '../../util/agent-output';
+import {
+  AGENT_ACTION,
+  AGENT_REASON,
+  AGENT_STATUS,
+} from '../../util/agent-output-constants';
 import { getGlobalFlagsOnlyFromArgs } from '../../util/arg-common';
 
 function withGlobalFlags(client: Client, commandTemplate: string): string {
@@ -32,8 +37,8 @@ export default async function importZone(client: Client, argv: string[]) {
       outputAgentError(
         client,
         {
-          status: 'error',
-          reason: 'invalid_arguments',
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.INVALID_ARGUMENTS,
           message: err instanceof Error ? err.message : String(err),
         },
         1
@@ -57,9 +62,9 @@ export default async function importZone(client: Client, argv: string[]) {
       outputActionRequired(
         client,
         {
-          status: 'action_required',
-          reason: 'missing_arguments',
-          action: 'missing_arguments',
+          status: AGENT_STATUS.ACTION_REQUIRED,
+          reason: AGENT_REASON.MISSING_ARGUMENTS,
+          action: AGENT_ACTION.MISSING_ARGUMENTS,
           message: `Invalid number of arguments. Run: ${cmd}`,
           next: [
             {
@@ -95,8 +100,8 @@ export default async function importZone(client: Client, argv: string[]) {
       outputAgentError(
         client,
         {
-          status: 'error',
-          reason: 'domain_not_found',
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.DOMAIN_NOT_FOUND,
           message: `The domain ${domain} can't be found under ${contextName}.`,
           next: [
             {
@@ -121,8 +126,8 @@ export default async function importZone(client: Client, argv: string[]) {
       outputAgentError(
         client,
         {
-          status: 'error',
-          reason: 'invalid_domain',
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.INVALID_DOMAIN,
           message: `The domain ${domain} doesn't match the one found in the zone file.`,
         },
         1

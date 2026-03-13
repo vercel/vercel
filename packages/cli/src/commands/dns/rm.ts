@@ -19,6 +19,11 @@ import {
   outputActionRequired,
   outputAgentError,
 } from '../../util/agent-output';
+import {
+  AGENT_ACTION,
+  AGENT_REASON,
+  AGENT_STATUS,
+} from '../../util/agent-output-constants';
 import { getGlobalFlagsOnlyFromArgs } from '../../util/arg-common';
 
 function withGlobalFlags(client: Client, commandTemplate: string): string {
@@ -36,8 +41,8 @@ export default async function rm(client: Client, argv: string[]) {
       outputAgentError(
         client,
         {
-          status: 'error',
-          reason: 'invalid_arguments',
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.INVALID_ARGUMENTS,
           message: err instanceof Error ? err.message : String(err),
         },
         1
@@ -62,9 +67,9 @@ export default async function rm(client: Client, argv: string[]) {
       outputActionRequired(
         client,
         {
-          status: 'action_required',
-          reason: 'missing_arguments',
-          action: 'missing_arguments',
+          status: AGENT_STATUS.ACTION_REQUIRED,
+          reason: AGENT_REASON.MISSING_ARGUMENTS,
+          action: AGENT_ACTION.MISSING_ARGUMENTS,
           message: `Invalid number of arguments. Run: ${cmd}`,
           next: [
             {
@@ -94,8 +99,8 @@ export default async function rm(client: Client, argv: string[]) {
       outputAgentError(
         client,
         {
-          status: 'error',
-          reason: 'dns_record_not_found',
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.DNS_RECORD_NOT_FOUND,
           message: 'DNS record not found.',
           next: [
             {
@@ -118,9 +123,9 @@ export default async function rm(client: Client, argv: string[]) {
     outputActionRequired(
       client,
       {
-        status: 'action_required',
-        reason: 'confirmation_required',
-        action: 'confirmation_required',
+        status: AGENT_STATUS.ACTION_REQUIRED,
+        reason: AGENT_REASON.CONFIRMATION_REQUIRED,
+        action: AGENT_ACTION.CONFIRMATION_REQUIRED,
         message:
           'In non-interactive mode --yes is required to remove a DNS record.',
         next: [

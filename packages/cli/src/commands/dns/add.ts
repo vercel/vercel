@@ -22,6 +22,11 @@ import {
   outputActionRequired,
   outputAgentError,
 } from '../../util/agent-output';
+import {
+  AGENT_ACTION,
+  AGENT_REASON,
+  AGENT_STATUS,
+} from '../../util/agent-output-constants';
 import { getGlobalFlagsOnlyFromArgs } from '../../util/arg-common';
 
 function withGlobalFlags(client: Client, commandTemplate: string): string {
@@ -39,8 +44,8 @@ export default async function add(client: Client, argv: string[]) {
       outputAgentError(
         client,
         {
-          status: 'error',
-          reason: 'invalid_arguments',
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.INVALID_ARGUMENTS,
           message: err instanceof Error ? err.message : String(err),
         },
         1
@@ -61,9 +66,9 @@ export default async function add(client: Client, argv: string[]) {
       outputActionRequired(
         client,
         {
-          status: 'action_required',
-          reason: 'missing_arguments',
-          action: 'missing_arguments',
+          status: AGENT_STATUS.ACTION_REQUIRED,
+          reason: AGENT_REASON.MISSING_ARGUMENTS,
+          action: AGENT_ACTION.MISSING_ARGUMENTS,
           message: `Invalid number of arguments. Run: ${cmd}`,
           next: [
             {
@@ -95,9 +100,9 @@ export default async function add(client: Client, argv: string[]) {
     outputActionRequired(
       client,
       {
-        status: 'action_required',
-        reason: 'missing_arguments',
-        action: 'missing_arguments',
+        status: AGENT_STATUS.ACTION_REQUIRED,
+        reason: AGENT_REASON.MISSING_ARGUMENTS,
+        action: AGENT_ACTION.MISSING_ARGUMENTS,
         message:
           'In non-interactive mode full record details are required. Run: ' +
           cmd,
@@ -134,8 +139,8 @@ export default async function add(client: Client, argv: string[]) {
       outputAgentError(
         client,
         {
-          status: 'error',
-          reason: 'incomplete_record',
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.INCOMPLETE_RECORD,
           message:
             'Record details could not be determined non-interactively. Provide full arguments for dns add.',
           next: [
@@ -159,8 +164,8 @@ export default async function add(client: Client, argv: string[]) {
       outputAgentError(
         client,
         {
-          status: 'error',
-          reason: 'domain_not_found',
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.DOMAIN_NOT_FOUND,
           message: `The domain ${domain} can't be found under ${contextName}.`,
           next: [
             {
@@ -185,8 +190,8 @@ export default async function add(client: Client, argv: string[]) {
       outputAgentError(
         client,
         {
-          status: 'error',
-          reason: 'permission_denied',
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.PERMISSION_DENIED,
           message: `You don't have permissions to add records to domain ${domain} under ${contextName}.`,
         },
         1
@@ -205,8 +210,8 @@ export default async function add(client: Client, argv: string[]) {
       outputAgentError(
         client,
         {
-          status: 'error',
-          reason: 'invalid_port',
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.INVALID_PORT,
           message: 'Invalid <port> parameter. A number was expected.',
         },
         1
@@ -225,8 +230,8 @@ export default async function add(client: Client, argv: string[]) {
       outputAgentError(
         client,
         {
-          status: 'error',
-          reason: 'invalid_dns_type',
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.INVALID_DNS_TYPE,
           message: `Invalid <type> parameter "${record.meta.type}". Expected one of A, AAAA, ALIAS, CAA, CNAME, MX, SRV, TXT.`,
         },
         1
@@ -247,8 +252,8 @@ export default async function add(client: Client, argv: string[]) {
       outputAgentError(
         client,
         {
-          status: 'error',
-          reason: 'dns_add_failed',
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.DNS_ADD_FAILED,
           message: record.message,
         },
         1
