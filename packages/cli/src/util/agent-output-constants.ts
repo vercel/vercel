@@ -50,7 +50,6 @@ export const AGENT_REASON = {
   VERSION_NOT_FOUND: 'version_not_found',
   VERSION_ALREADY_LIVE: 'version_already_live',
   VERSION_IS_STAGING: 'version_is_staging',
-  AMBIGUOUS_ROUTE: 'ambiguous_route',
 } as const;
 
 /** action field for ActionRequiredPayload (what kind of action is needed) */

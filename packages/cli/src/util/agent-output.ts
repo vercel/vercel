@@ -47,10 +47,6 @@ export interface AgentErrorPayload {
   reason: string;
   message: string;
   next?: Array<{ command: string; when?: string }>;
-  /** Optional extra context for agents (plain text, no ANSI). */
-  hint?: string;
-  /** When true, a human must act before the command can succeed. */
-  userActionRequired?: boolean;
 }
 
 /**
