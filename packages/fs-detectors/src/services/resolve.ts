@@ -455,8 +455,6 @@ export async function resolveConfiguredService(
     : undefined;
 
   if (config.builder) {
-    // Respect explicit builder overrides. This migration only switches inferred
-    // or framework-selected Node services to @vercel/backends.
     builderUse = config.builder;
     builderSrc =
       resolvedEntrypointFile ||
