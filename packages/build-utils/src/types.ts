@@ -617,6 +617,7 @@ export interface BuildResultV3 {
   // TODO: use proper `Route` type from `routing-utils` (perhaps move types to a common package)
   routes?: any[];
   output: Lambda | EdgeFunction;
+  staticFilesPath?: string;
 }
 
 export type BuildV2 = (options: BuildOptions) => Promise<BuildResultV2>;

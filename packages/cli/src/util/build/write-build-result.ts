@@ -442,6 +442,17 @@ async function writeBuildResultV3(args: {
       `Unsupported output type: "${(output as any).type}" for ${build.src}`
     );
   }
+
+  // If the builder declared a staticFilesPath, copy CDN static files to the
+  // correct output location
+  if (buildResult.staticFilesPath) {
+    const outputStaticDir = join(outputDir, 'static');
+    if (resolve(buildResult.staticFilesPath) !== resolve(outputStaticDir)) {
+      await fs.copy(buildResult.staticFilesPath, outputStaticDir, {
+        overwrite: false,
+      });
+    }
+  }
 }
 
 /**

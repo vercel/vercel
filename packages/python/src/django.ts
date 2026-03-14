@@ -48,6 +48,11 @@ export interface DjangoCollectStaticResult {
   /** Absolute path of STATIC_ROOT to exclude from the Lambda bundle. */
   staticRoot: string | null;
   /**
+   * Absolute path to the directory where CDN static files were written,
+   * or null if not applicable (e.g. django-storages handles upload itself).
+   */
+  cdnOutputDir: string | null;
+  /**
    * workPath-relative path to `staticfiles.json` to inject into the Lambda
    * bundle, or null if the storage backend doesn't use a manifest.
    */
@@ -128,6 +133,7 @@ export async function runDjangoCollectStatic(
     return {
       staticSourceDirs,
       staticRoot: staticRoot ? resolve(workPath, staticRoot) : null,
+      cdnOutputDir: null,
       manifestRelPath: null,
     };
   }
@@ -193,6 +199,7 @@ export async function runDjangoCollectStatic(
   return {
     staticSourceDirs,
     staticRoot: staticRoot ? resolve(workPath, staticRoot) : null,
+    cdnOutputDir: outputStaticDir,
     manifestRelPath,
   };
 }
