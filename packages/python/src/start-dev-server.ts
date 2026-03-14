@@ -28,7 +28,7 @@ import {
 import { stringifyManifest } from '@vercel/python-analysis';
 import { VERCEL_RUNTIME_VERSION } from './package-versions';
 
-const DEV_SERVER_STARTUP_TIMEOUT = 10_000;
+const DEV_SERVER_STARTUP_TIMEOUT = 5 * 60_000; // 5 minutes
 
 // Silence all Node.js warnings during the dev server lifecycle to avoid noise and only show the python logs.
 // Specifically, this is implemented to silence the [DEP0060] DeprecationWarning warning from the http-proxy library.
