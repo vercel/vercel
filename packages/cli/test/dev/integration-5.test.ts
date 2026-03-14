@@ -893,6 +893,71 @@ describe('[vercel dev] Multi-service auto-detection', () => {
   });
 });
 
+describe('[vercel dev] Worker service', () => {
+  const resultsDir = join(__dirname, 'fixtures', 'services-worker', '.results');
+
+  beforeEach(async () => {
+    await fs.remove(resultsDir);
+  });
+
+  test('[vercel dev] web send() triggers exact and wildcard worker execution', async () => {
+    const dir = fixture('services-worker');
+    const { dev, port, readyResolver } = await testFixture(
+      dir,
+      {
+        skipNpmInstall: true,
+        env: {
+          VERCEL_USE_EXPERIMENTAL_SERVICES: '1',
+          VERCEL_USE_EXPERIMENTAL_FRAMEWORKS: '1',
+        },
+      },
+      ['--local']
+    );
+
+    try {
+      await readyResolver;
+
+      const enqueueRes = await nodeFetch(`http://localhost:${port}/enqueue`, {
+        method: 'POST',
+      });
+      expect(enqueueRes.status).toBe(200);
+      const enqueueJson = await enqueueRes.json();
+      expect(enqueueJson).toHaveProperty('messageId');
+
+      // Poll for both worker side-effect files
+      const exactResultPath = join(resultsDir, 'worker_exact_result.json');
+      const wildcardResultPath = join(
+        resultsDir,
+        'worker_wildcard_result.json'
+      );
+      let exactResult: any = null;
+      let wildcardResult: any = null;
+      for (let i = 0; i < 30; i++) {
+        await sleep(500);
+        if (!exactResult && (await fs.pathExists(exactResultPath))) {
+          exactResult = await fs.readJson(exactResultPath);
+        }
+        if (!wildcardResult && (await fs.pathExists(wildcardResultPath))) {
+          wildcardResult = await fs.readJson(wildcardResultPath);
+        }
+        if (exactResult && wildcardResult) break;
+      }
+
+      expect(exactResult).not.toBeNull();
+      expect(exactResult).toHaveProperty('received', true);
+      expect(exactResult.message).toHaveProperty('action', 'test');
+      expect(exactResult.message).toHaveProperty('value', 42);
+
+      expect(wildcardResult).not.toBeNull();
+      expect(wildcardResult).toHaveProperty('received', true);
+      expect(wildcardResult.message).toHaveProperty('action', 'test');
+      expect(wildcardResult.message).toHaveProperty('value', 42);
+    } finally {
+      await dev.kill();
+    }
+  });
+});
+
 describe('[vercel dev] Cron service', () => {
   const resultsDir = join(__dirname, 'fixtures', 'services-cron', '.results');
 
