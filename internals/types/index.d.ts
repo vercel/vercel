@@ -527,7 +527,33 @@ export interface Token {
   teamId?: string;
 }
 
-export interface GitMetadata {
+export type CiMetadata =
+  | {
+      ci: true;
+      ciType: 'github-actions';
+      ciGitProviderUsername: string;
+      ciGitRepoVisibility?: never;
+    }
+  | {
+      ci: true;
+      ciType: 'gitlab-ci-cd';
+      ciGitProviderUsername: string;
+      ciGitRepoVisibility?: 'public' | 'private' | 'internal';
+    }
+  | {
+      ci: true;
+      ciType: 'bitbucket-pipelines';
+      ciGitProviderUsername?: never;
+      ciGitRepoVisibility?: never;
+    }
+  | {
+      ci?: true;
+      ciType?: never;
+      ciGitProviderUsername?: never;
+      ciGitRepoVisibility?: never;
+    };
+
+export interface GitMetadata extends CiMetadata {
   commitAuthorName?: string | undefined;
   commitAuthorEmail?: string | undefined;
   commitMessage?: string | undefined;
