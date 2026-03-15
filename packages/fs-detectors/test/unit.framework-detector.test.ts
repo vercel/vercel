@@ -660,4 +660,56 @@ describe('detectFrameworks()', () => {
     );
     expect(slugs).toEqual(['remix']);
   });
+
+  it('Should only run expensive matchContent checks when efficient checks pass (monorepo scenario)', async () => {
+    const fs = new VirtualFilesystem({
+      'packages/app-with-hono/package.json': JSON.stringify({
+        dependencies: {
+          hono: 'latest',
+        },
+      }),
+      'packages/app-with-hono/index.ts': 'import { Hono } from "hono"',
+      'packages/app-without-hono/package.json': JSON.stringify({
+        dependencies: {
+          react: 'latest',
+        },
+      }),
+      'packages/app-without-hono/index.ts': 'import React from "react"',
+    });
+
+    const fsWithHono = fs.chdir('packages/app-with-hono');
+    const readFileSpy = jest.spyOn(fsWithHono as any, '_readFile');
+
+    const slugsWithHono = (
+      await detectFrameworks({ fs: fsWithHono, frameworkList })
+    ).map(f => f.slug);
+    expect(slugsWithHono).toEqual(['hono']);
+
+    const indexTsReadsForHono = readFileSpy.mock.calls.filter((call: any) =>
+      call[0].includes('index.ts')
+    );
+    expect(indexTsReadsForHono.length).toBeGreaterThan(0);
+
+    readFileSpy.mockRestore();
+
+    const fsWithoutHono = fs.chdir('packages/app-without-hono');
+    const readFileSpyWithoutHono = jest.spyOn(
+      fsWithoutHono as any,
+      '_readFile'
+    );
+
+    const slugsWithoutHono = (
+      await detectFrameworks({ fs: fsWithoutHono, frameworkList })
+    ).map(f => f.slug);
+    expect(slugsWithoutHono).not.toContain('hono');
+
+    // Since the package.json check failed, the expensive matchContent checks for Hono should not be run
+    const indexTsReadsWithoutHono = readFileSpyWithoutHono.mock.calls.filter(
+      (call: any) => call[0].includes('index.ts')
+    );
+
+    expect(indexTsReadsWithoutHono.length).toBe(0);
+
+    readFileSpyWithoutHono.mockRestore();
+  });
 });
