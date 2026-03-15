@@ -2518,8 +2518,12 @@ export const build: BuildV2 = async buildOptions => {
     }
   }
 
-  const { staticFiles, publicDirectoryFiles, staticDirectoryFiles } =
-    await getStaticFiles(entryPath, entryDirectory, outputDirectory);
+  const {
+    staticFiles,
+    immutableFiles,
+    publicDirectoryFiles,
+    staticDirectoryFiles,
+  } = await getStaticFiles(entryPath, entryDirectory, outputDirectory);
 
   const { i18n } = routesManifest || {};
 
@@ -2531,6 +2535,7 @@ export const build: BuildV2 = async buildOptions => {
       ...prerenders,
       ...staticPages,
       ...staticFiles,
+      ...immutableFiles,
       ...staticDirectoryFiles,
       ...privateOutputs.files,
     },

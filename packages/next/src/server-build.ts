@@ -1815,8 +1815,12 @@ export async function serverBuild({
     }
   }
 
-  const { staticFiles, publicDirectoryFiles, staticDirectoryFiles } =
-    await getStaticFiles(entryPath, entryDirectory, outputDirectory);
+  const {
+    staticFiles,
+    immutableFiles,
+    publicDirectoryFiles,
+    staticDirectoryFiles,
+  } = await getStaticFiles(entryPath, entryDirectory, outputDirectory);
 
   const normalizeNextDataRoute = (isOverride = false) => {
     return isNextDataServerResolving
@@ -2020,6 +2024,7 @@ export async function serverBuild({
       ...prerenders,
       ...staticPages,
       ...staticFiles,
+      ...immutableFiles,
       ...staticDirectoryFiles,
       ...privateOutputs.files,
       ...middleware.edgeFunctions,

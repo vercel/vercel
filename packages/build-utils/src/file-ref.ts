@@ -10,6 +10,7 @@ interface FileRefOptions {
   digest: string;
   contentType?: string;
   mutable?: boolean;
+  immutable?: boolean;
 }
 
 const semaToDownloadFromS3 = new Sema(5);
@@ -29,12 +30,18 @@ export default class FileRef implements FileBase {
   public digest: string;
   public contentType: string | undefined;
   private mutable: boolean;
+  /**
+   * When true, this file will be written to the `immutable` output directory
+   * instead of `static`, indicating it can be cached indefinitely.
+   */
+  public immutable: boolean;
 
   constructor({
     mode = 0o100644,
     digest,
     contentType,
     mutable = false,
+    immutable = false,
   }: FileRefOptions) {
     assert(typeof mode === 'number');
     assert(typeof digest === 'string');
@@ -43,6 +50,7 @@ export default class FileRef implements FileBase {
     this.digest = digest;
     this.contentType = contentType;
     this.mutable = mutable;
+    this.immutable = immutable;
   }
 
   /**
