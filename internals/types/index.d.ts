@@ -463,6 +463,8 @@ export type ProjectLinked = {
   org: Org;
   project: Project;
   repoRoot?: string;
+  /** Path in repo where this project lives (from repo.json workPath). Use for path resolution when project.rootDirectory may be '.' */
+  projectRootDirectory?: string;
 };
 
 export type ProjectNotLinked = {

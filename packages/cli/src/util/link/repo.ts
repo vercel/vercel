@@ -28,7 +28,18 @@ const home = homedir();
 export interface RepoProjectConfig {
   id: string;
   name: string;
+  /**
+   * Project's Root Directory setting (API). May be '.' for projects that
+   * were set up deploying from a subfolder (e.g. cd apps/web && vc deploy).
+   */
   directory: string;
+  /**
+   * Path within the repo where this project's .vercel and app code live.
+   * Same concept as build workPath but relative to repo root. When absent,
+   * directory is used. Use this to resolve which project is at a given path
+   * when directory is '.' for multiple projects.
+   */
+  workPath?: string;
   orgId?: string;
 }
 
@@ -563,8 +574,10 @@ export async function findRepoRoot(start: string): Promise<string | undefined> {
 }
 
 function sortByDirectory(a: RepoProjectConfig, b: RepoProjectConfig): number {
-  const aParts = a.directory.split('/');
-  const bParts = b.directory.split('/');
+  const aPath = a.workPath ?? a.directory;
+  const bPath = b.workPath ?? b.directory;
+  const aParts = aPath.split('/');
+  const bParts = bPath.split('/');
   return bParts.length - aParts.length;
 }
 
@@ -582,18 +595,22 @@ export function findProjectsFromPath(
     .slice()
     .sort(sortByDirectory)
     .filter(project => {
-      if (project.directory === '.') {
-        // Project has no "Root Directory" setting, so any path is valid
+      const pathForMatch = project.workPath ?? project.directory;
+      if (pathForMatch === '.') {
+        // Project has no specific path, so any path is valid
         return true;
       }
       return (
-        normalizedPath === project.directory ||
-        normalizedPath.startsWith(`${project.directory}/`)
+        normalizedPath === pathForMatch ||
+        normalizedPath.startsWith(`${pathForMatch}/`)
       );
     });
   // If there are multiple matches, we only want the most relevant
   // selections (with the deepest directory depth), so pick the first
   // one and filter on those matches.
   const firstMatch = matches[0];
-  return matches.filter(match => match.directory === firstMatch.directory);
+  const firstPath = firstMatch?.workPath ?? firstMatch?.directory;
+  return matches.filter(
+    match => (match.workPath ?? match.directory) === firstPath
+  );
 }

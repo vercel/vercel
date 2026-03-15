@@ -60,6 +60,13 @@ export const link2Command = {
         'Skip questions when setting up new project using default scope and settings',
     },
     confirmOption,
+    {
+      name: 'json',
+      description: 'Output collected baseline data as JSON (for sanity checking)',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+    },
   ],
   examples: [
     {
