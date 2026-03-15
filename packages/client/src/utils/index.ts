@@ -161,8 +161,8 @@ export async function buildFileTree(
     // Check for .vercel/routes.json and include it if it exists
     try {
       const routesJsonPath = join(path, '.vercel', 'routes.json');
-      const routesJsonContent = await maybeRead(routesJsonPath, null);
-      if (routesJsonContent !== null) {
+      const routesJsonContent = await stat(routesJsonPath);
+      if (routesJsonContent.isFile()) {
         refs.add(routesJsonPath);
         debug('Including .vercel/routes.json in deployment');
       }
