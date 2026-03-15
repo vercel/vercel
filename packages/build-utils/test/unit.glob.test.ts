@@ -65,6 +65,16 @@ describe('glob()', () => {
   });
 
   it('should allow for following symlinks', async () => {
+    // By default, Windows blocks creating symlinks for non-administrative
+    // users, and GitHub Actions runners do not run as administrators, nor is
+    // there a supported way to elevate their privilege
+    // See: https://github.com/nodejs/node/issues/17080
+    if (process.platform === 'win32') {
+      // eslint-disable-next-line no-console
+      console.log('Skipping test on Windows');
+      return;
+    }
+
     const rootDir = await fs.mkdtemp(join(tmpdir(), 'build-utils-test'));
     const dir = await fs.mkdtemp(join(rootDir, 'build-utils-test'));
     try {
