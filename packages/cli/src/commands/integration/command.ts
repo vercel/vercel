@@ -328,7 +328,7 @@ export const removeSubcommand = {
   name: 'remove',
   aliases: [],
   description:
-    'Uninstalls a marketplace integration. Resources must be removed first using `integration-resource remove`.',
+    'Uninstalls a marketplace integration. Remove resources first with `integration-resource remove`, or use `--cascade` to continue uninstall in the browser UI.',
   arguments: [
     {
       name: 'integration',
@@ -340,6 +340,14 @@ export const removeSubcommand = {
       ...yesOption,
       description:
         'Skip the confirmation prompt when uninstalling an integration',
+    },
+    {
+      name: 'cascade',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description:
+        'Open integration settings in your browser to uninstall using the UI flow (supports cascade deletion)',
     },
     formatOption,
   ],
@@ -354,6 +362,10 @@ export const removeSubcommand = {
     {
       name: 'Remove a resource before uninstalling',
       value: `${packageName} integration-resource remove <resource-name> --disconnect-all --yes`,
+    },
+    {
+      name: 'Open integration settings to uninstall using cascade UI flow',
+      value: `${packageName} integration remove acme --cascade`,
     },
     {
       name: 'Output as JSON',
