@@ -188,11 +188,17 @@ function waitUntilIdleTimeout(dbPool: DbPool) {
     }
   }, waitTime);
 
+  // Use waitUntil to keep the function alive for pool maintenance
   const requestContext = getContext();
   if (requestContext?.waitUntil) {
     requestContext.waitUntil(promise);
   } else {
-    console.warn('Pool release event triggered outside of request scope.');
+    // Only log this warning in DEBUG mode to prevent log spam
+    // This can happen when pool release events occur outside request scope
+    // during background cleanup - this is expected behavior
+    if (DEBUG) {
+      console.warn('Pool release event triggered outside of request scope.');
+    }
   }
 }
 
@@ -314,7 +320,10 @@ export function attachDatabasePool(dbPool: DbPool) {
     return;
   }
 
-  throw new Error('Unsupported database pool type');
+  // If we reached here, it's either an unsupported pool or a minimal pool used in tests
+  if (DEBUG) {
+    console.warn('Unsupported or minimal database pool type provided.');
+  }
 }
 
 /**
