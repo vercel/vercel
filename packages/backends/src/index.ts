@@ -223,7 +223,9 @@ export const build: BuildV2 = async args => {
       },
     ];
 
-    const output: Record<string, Lambda> = { index: lambda };
+    const output: Record<string, Lambda> = internalServiceOutputPath
+      ? { [internalServiceOutputPath]: lambda }
+      : { index: lambda };
 
     for (const route of routes) {
       if (route.dest) {

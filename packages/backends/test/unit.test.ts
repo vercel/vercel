@@ -261,11 +261,12 @@ it('maps service internal function output without leading slash', async () => {
     repoRootPath: workDir,
   })) as BuildResultV2Typical;
 
-  const lambda = result.output.index as unknown as NodejsLambda;
+  const lambda = getServiceLambda(result, 'js-api');
 
   expect(
     result.routes?.some(route => route.dest === '/_svc/js-api/index')
   ).toBe(true);
+  expect(result.output.index).toBeUndefined();
   expect(result.output['_svc/js-api/index']).toBeDefined();
   expect(result.output['/_svc/js-api/index']).toBeUndefined();
   expect(lambda.handler).toBe('index.mjs');
@@ -289,7 +290,7 @@ it('prefixes emitted service route sources with routePrefix', async () => {
     repoRootPath: workDir,
   })) as BuildResultV2Typical;
 
-  const lambda = result.output.index as unknown as NodejsLambda;
+  const lambda = getServiceLambda(result, 'js-api');
 
   expect(result.routes).toEqual(
     expect.arrayContaining([
@@ -304,6 +305,7 @@ it('prefixes emitted service route sources with routePrefix', async () => {
       }),
     ])
   );
+  expect(result.output.index).toBeUndefined();
   expect(lambda.handler).toContain('__vc_service_vc_init');
   expect(lambda.environment.VERCEL_SERVICE_ROUTE_PREFIX).toBe('/api/js');
   expect(lambda.environment.VERCEL_SERVICE_ROUTE_PREFIX_STRIP).toBe('1');
@@ -327,6 +329,8 @@ it('does not double-prefix routes already authored with routePrefix', async () =
     repoRootPath: workDir,
   })) as BuildResultV2Typical;
 
+  const lambda = getServiceLambda(result, 'hono-api');
+
   expect(result.routes).toEqual(
     expect.arrayContaining([
       expect.objectContaining({
@@ -345,6 +349,8 @@ it('does not double-prefix routes already authored with routePrefix', async () =
       }),
     ])
   );
+  expect(result.output.index).toBeUndefined();
+  expect(lambda.handler).toContain('__vc_service_vc_init');
 }, 30000);
 
 it('does not rewrite non-service route outputs', async () => {
@@ -389,7 +395,7 @@ it('strips service route prefixes for express apps at runtime', async () => {
     repoRootPath: workDir,
   })) as BuildResultV2Typical;
 
-  const lambda = result.output.index as unknown as NodejsLambda;
+  const lambda = getServiceLambda(result, 'js-api');
   const response = await requestBuiltLambda({
     lambda,
     dir: lambdaOutputDir,
@@ -422,7 +428,7 @@ it('strips service route prefixes for hono apps at runtime', async () => {
     repoRootPath: workDir,
   })) as BuildResultV2Typical;
 
-  const lambda = result.output.index as unknown as NodejsLambda;
+  const lambda = getServiceLambda(result, 'hono-api');
   const response = await requestBuiltLambda({
     lambda,
     dir: lambdaOutputDir,
@@ -533,6 +539,9 @@ const extractLambda = async (
     handlerPath: join(unzipPath, lambda.handler),
   };
 };
+
+const getServiceLambda = (result: BuildResultV2Typical, serviceName: string) =>
+  result.output[`_svc/${serviceName}/index`] as unknown as NodejsLambda;
 
 const requestBuiltLambda = async (args: {
   lambda: NodejsLambda;
