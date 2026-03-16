@@ -26,6 +26,11 @@ import {
   getGlobalFlagsOnlyFromArgs,
   getSameSubcommandSuggestionFlags,
 } from '../../util/arg-common';
+import {
+  isTeamMemberRole,
+  TEAM_MEMBER_ROLE_LIST,
+  type TeamMemberRole,
+} from '../../util/teams/team-member-roles';
 
 /** Append global argv flags (--cwd, --non-interactive, etc.) so agents can re-run with same context. */
 function withGlobalFlags(client: Client, commandTemplate: string): string {
@@ -86,6 +91,35 @@ export default async function invite(
     return 1;
   }
   const { args: emails } = parsedArgs;
+  const roleFlag =
+    typeof parsedArgs.flags['--role'] === 'string'
+      ? parsedArgs.flags['--role'].trim()
+      : undefined;
+  let role: TeamMemberRole | undefined;
+
+  if (roleFlag !== undefined) {
+    const normalizedRole = roleFlag.toUpperCase();
+    if (!isTeamMemberRole(normalizedRole)) {
+      const message = `Invalid ${param(
+        '--role'
+      )}: must be one of ${TEAM_MEMBER_ROLE_LIST}`;
+      const messagePlain = `Invalid --role: must be one of ${TEAM_MEMBER_ROLE_LIST}`;
+      if (client.nonInteractive) {
+        outputAgentError(
+          client,
+          {
+            status: 'error',
+            reason: 'invalid_role',
+            message: messagePlain,
+          },
+          1
+        );
+      }
+      output.error(message);
+      return 1;
+    }
+    role = normalizedRole;
+  }
 
   if (client.nonInteractive && emails.length === 0) {
     const fullArgs = client.argv.slice(2);
@@ -167,7 +201,12 @@ export default async function invite(
         let userInfo = null;
 
         try {
-          const res = await inviteUserToTeam(client, currentTeam.id, email);
+          const res = await inviteUserToTeam(
+            client,
+            currentTeam.id,
+            email,
+            role
+          );
           userInfo = res.username;
         } catch (err: unknown) {
           if (isAPIError(err) && err.code === 'user_not_found') {
@@ -238,7 +277,8 @@ export default async function invite(
         const { username } = await inviteUserToTeam(
           client,
           currentTeam.id,
-          email
+          email,
+          role
         );
         email = `${email}${username ? ` (${username})` : ''} ${elapsed()}`;
         emails.push(email);

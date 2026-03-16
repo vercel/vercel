@@ -1,5 +1,6 @@
 import { packageName } from '../../util/pkg-name';
 import { formatOption, nextOption } from '../../util/arg-common';
+import { TEAM_MEMBER_ROLE_LIST } from '../../util/teams/team-member-roles';
 
 export const addSubcommand = {
   name: 'add',
@@ -93,8 +94,7 @@ export const inviteSubcommand = {
       type: String,
       argument: 'ROLE',
       deprecated: false,
-      description:
-        'Role to assign to the invited team member (OWNER, MEMBER, DEVELOPER, SECURITY, BILLING, VIEWER, VIEWER_FOR_PLUS, CONTRIBUTOR)',
+      description: `Role to assign to the invited team member (${TEAM_MEMBER_ROLE_LIST})`,
     },
   ],
   examples: [
