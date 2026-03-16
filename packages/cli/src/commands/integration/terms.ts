@@ -189,7 +189,7 @@ export async function terms(client: Client, subArgs: string[]) {
     }
 
     output.log(
-      `Please ensure the user has reviewed the terms above before accepting.\nTo accept all terms, run:\n  ${packageName} integration terms ${integrationSlug} --accept`
+      `These terms are legal agreements. You must present the above terms to the user and obtain their explicit approval before running the --accept command.\nTo accept all terms, run:\n  ${packageName} integration terms ${integrationSlug} --accept`
     );
   }
 
