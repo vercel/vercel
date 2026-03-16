@@ -174,7 +174,7 @@ export async function addAutoProvision(
         reason: 'terms_not_accepted',
       });
       output.error(
-        `Terms have not been accepted for "${integration.name}".\n\nBefore accepting, the user must review the required terms:\n  vercel integration terms ${integrationSlug}\n\nAfter the user has reviewed and approved the terms, accept them with:\n  vercel integration terms ${integrationSlug} --accept`
+        `Terms have not been accepted for "${integration.name}".\n\nThese terms are legal agreements that require explicit user consent.\nTo view the required terms, run:\n  vercel integration terms ${integrationSlug}\n\nAfter the user has reviewed and approved, accept with:\n  vercel integration terms ${integrationSlug} --accept`
       );
       return 1;
     } else {
