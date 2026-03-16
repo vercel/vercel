@@ -1,7 +1,6 @@
 import { TelemetryClient } from '../..';
 import type { TelemetryMethods } from '../../types';
 import type { inviteSubcommand } from '../../../../commands/teams/command';
-import type { TeamMemberRole } from '../../../teams/team-member-roles';
 
 export class TeamsInviteTelemetryClient
   extends TelemetryClient
@@ -16,7 +15,7 @@ export class TeamsInviteTelemetryClient
     }
   }
 
-  trackCliOptionRole(value: TeamMemberRole | undefined) {
+  trackCliOptionRole(value: string | undefined) {
     if (value) {
       this.trackCliOption({
         option: 'role',
