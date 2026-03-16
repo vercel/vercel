@@ -17,7 +17,6 @@ import {
 } from '../../util/env/diff-env-files';
 import { isErrnoException } from '@vercel/error-utils';
 import { addToGitIgnore } from '../../util/link/add-to-gitignore';
-import JSONparse from 'json-parse-better-errors';
 import { formatProject } from '../../util/projects/format-project';
 import type { ProjectLinked } from '@vercel-internals/types';
 import output from '../../output-manager';
@@ -176,36 +175,34 @@ export async function envPullCommandLogic(
   const fullPath = resolve(cwd, filename);
   const head = tryReadHeadSync(fullPath, Buffer.byteLength(CONTENTS_PREFIX));
   const exists = typeof head !== 'undefined';
+  const isCliManagedFile = head === CONTENTS_PREFIX;
+  const isUserManagedExistingFile = exists && !isCliManagedFile;
+  const shouldConfirmChanges =
+    isUserManagedExistingFile && !skipConfirmation && !client.nonInteractive;
 
-  if (head === CONTENTS_PREFIX) {
+  if (isCliManagedFile) {
     output.log(`Overwriting existing ${chalk.bold(filename)} file`);
-  } else if (exists && !skipConfirmation) {
-    if (client.nonInteractive) {
-      outputActionRequired(client, {
-        status: 'action_required',
-        reason: 'env_file_exists',
-        message: `File ${param(filename)} already exists and was not created by Vercel CLI. Use --yes to overwrite or specify a different filename.`,
-        next: [
-          {
-            command: getCommandNamePlain(`env pull ${filename} --yes`),
-            when: 'Overwrite this file',
-          },
-          {
-            command: getCommandNamePlain('env pull <filename>'),
-            when: 'Use a different filename',
-          },
-        ],
-      });
-    }
-    if (
-      !(await client.input.confirm(
-        `Found existing file ${param(filename)}. Do you want to overwrite?`,
-        false
-      ))
-    ) {
-      output.log('Canceled');
-      return;
-    }
+  } else if (
+    isUserManagedExistingFile &&
+    !skipConfirmation &&
+    client.nonInteractive
+  ) {
+    outputActionRequired(client, {
+      status: 'action_required',
+      reason: 'env_file_exists',
+      message: `File ${param(filename)} already exists and was not created by Vercel CLI. Use --yes to apply the downloaded changes or specify a different filename.`,
+      next: [
+        {
+          command: getCommandNamePlain(`env pull ${filename} --yes`),
+          when: 'Apply the downloaded changes to this file',
+        },
+        {
+          command: getCommandNamePlain('env pull <filename>'),
+          when: 'Use a different filename',
+        },
+      ],
+    });
+    return;
   }
 
   const projectSlugLink = formatProject(link.org.slug, link.project.name);
@@ -232,36 +229,46 @@ export async function envPullCommandLogic(
     })
   ).env;
 
-  let deltaString = '';
   let oldEnv;
   if (exists) {
     oldEnv = await createEnvObject(fullPath);
-    if (oldEnv) {
-      // Removes any double quotes from `records`, if they exist
-      // We need this because double quotes are stripped from the local .env file,
-      // but `records` is already in the form of a JSON object that doesn't filter
-      // double quotes.
-      const newEnv = JSONparse(JSON.stringify(records).replace(/\\"/g, ''));
-      deltaString = buildDeltaString(oldEnv, newEnv);
+  }
+
+  const { envToWrite, deltaString, hasChanges } = prepareEnvPullState(
+    oldEnv,
+    records
+  );
+
+  if (hasChanges) {
+    output.print('\n' + deltaString);
+  } else if (oldEnv && exists) {
+    output.log('No changes found.');
+    if (isUserManagedExistingFile) {
+      return;
     }
+  }
+
+  if (
+    shouldConfirmChanges &&
+    hasChanges &&
+    !(await client.input.confirm(
+      `Apply these changes to ${param(filename)}?`,
+      false
+    ))
+  ) {
+    output.log('Canceled');
+    return;
   }
 
   const contents =
     CONTENTS_PREFIX +
-    Object.keys(records)
+    Object.keys(envToWrite)
       .sort()
-      .filter(key => !VARIABLES_TO_IGNORE.includes(key))
-      .map(key => `${key}="${escapeValue(records[key])}"`)
+      .map(key => `${key}="${escapeValue(envToWrite[key])}"`)
       .join('\n') +
     '\n';
 
   await outputFile(fullPath, contents, 'utf8');
-
-  if (deltaString) {
-    output.print('\n' + deltaString);
-  } else if (oldEnv && exists) {
-    output.log('No changes found.');
-  }
 
   let isGitIgnoreUpdated = false;
   if (filename === '.env.local') {
@@ -290,4 +297,46 @@ function escapeValue(value: string | undefined) {
         .replace(new RegExp('\n', 'g'), '\\n') // combine newlines (unix) into one line
         .replace(new RegExp('\r', 'g'), '\\r') // combine newlines (windows) into one line
     : '';
+}
+
+function getDownloadedEnv(records: Record<string, string | undefined>) {
+  return Object.fromEntries(
+    Object.entries(records).filter(
+      ([key]) => !VARIABLES_TO_IGNORE.includes(key)
+    )
+  ) as Record<string, string | undefined>;
+}
+
+function normalizeEnvForComparison(env: Record<string, string | undefined>) {
+  // Removes any double quotes from values, if they exist.
+  // We need this because double quotes are stripped from parsed local env
+  // files (by createEnvObject), so we strip them here too to ensure
+  // comparisons reflect what the local parser sees.
+  return Object.fromEntries(
+    Object.entries(env).map(([key, value]) => [key, value?.replace(/"/g, '')])
+  ) as Record<string, string | undefined>;
+}
+
+function prepareEnvPullState(
+  oldEnv: Record<string, string | undefined> | undefined,
+  records: Record<string, string | undefined>
+) {
+  const downloadedEnv = getDownloadedEnv(records);
+  const envToWrite = oldEnv
+    ? {
+        ...oldEnv,
+        ...downloadedEnv,
+      }
+    : downloadedEnv;
+  const normalizedEnvToWrite = normalizeEnvForComparison(envToWrite);
+  const deltaString = oldEnv
+    ? buildDeltaString(oldEnv, normalizedEnvToWrite)
+    : '';
+  const hasChanges = deltaString.length > 0;
+
+  return {
+    envToWrite,
+    deltaString,
+    hasChanges,
+  };
 }

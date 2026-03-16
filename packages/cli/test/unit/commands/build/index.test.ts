@@ -5,7 +5,7 @@ import { getWriteableDirectory } from '@vercel/build-utils';
 import build from '../../../../src/commands/build';
 import cliPkg from '../../../../src/util/pkg';
 import { client } from '../../../mocks/client';
-import { defaultProject, useProject } from '../../../mocks/project';
+import { defaultProject, envs, useProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
 import { execSync } from 'child_process';
@@ -402,6 +402,47 @@ describe.skipIf(flakey)('build', () => {
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
       { key: 'flag:yes', value: 'TRUE' },
     ]);
+  });
+
+  it('should build after auto-pulling preview env values ending with a backslash', async () => {
+    const cwd = fixture('static-pull');
+    useUser();
+    useTeams('team_dummy');
+    useProject(
+      {
+        ...defaultProject,
+        id: 'vercel-pull-next',
+        name: 'vercel-pull-next',
+      },
+      [
+        ...envs,
+        {
+          type: 'encrypted',
+          id: '781dt89g8r2h789g',
+          key: 'PATH_WITH_BACKSLASH',
+          value: 'C:\\Users\\foo\\',
+          target: ['preview'],
+          configurationId: null,
+          updatedAt: 1557241361455,
+          createdAt: 1557241361455,
+        },
+      ]
+    );
+    const envFilePath = join(cwd, '.vercel', '.env.preview.local');
+    const projectJsonPath = join(cwd, '.vercel', 'project.json');
+    const originalProjectJson = await fs.readJSON(projectJsonPath);
+    try {
+      client.cwd = cwd;
+      client.setArgv('build', '--yes');
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      const previewEnv = await fs.readFile(envFilePath, 'utf8');
+      expect(previewEnv).toContain('PATH_WITH_BACKSLASH="C:\\Users\\foo\\"');
+    } finally {
+      await fs.remove(envFilePath);
+      await fs.writeJSON(projectJsonPath, originalProjectJson, { spaces: 2 });
+    }
   });
 
   it('should pull "production" env vars with `--prod`', async () => {
