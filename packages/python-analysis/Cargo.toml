@@ -44,6 +44,7 @@ uv-fs = { path = "crates/uv-fs-stub" }
 [patch.crates-io]
 fs-err = { path = "crates/fs-err-stub" }
 idna = { path = "crates/idna-stub" }
+regex = { path = "crates/regex-stub" }
 unicode-normalization = { path = "crates/unicode-normalization-stub" }
 unicode_names2 = { path = "crates/unicode-names2-stub" }
 

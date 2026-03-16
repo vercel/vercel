@@ -54,6 +54,33 @@ fn generate_native_stubs(out_dir: &str) {
     let mut stubs = String::new();
     stubs.push_str("// Auto-generated from wit/world.wit -- do not edit.\n\n");
 
+    // Collect all record types referenced (transitively) by interface
+    // functions so we can generate Rust struct definitions for them.
+    let mut record_ids: Vec<wit_parser::TypeId> = Vec::new();
+    collect_interface_records(iface, pkg, &mut record_ids);
+    for id in &record_ids {
+        let td = &pkg.types[*id];
+        let name = td
+            .name
+            .as_deref()
+            .expect("record type should have a name");
+        let rust_name = kebab_to_pascal(name);
+        if let TypeDefKind::Record(rec) = &td.kind {
+            stubs.push_str(&format!(
+                "#[derive(Clone, Debug)]\npub struct {rust_name} {{\n"
+            ));
+            for field in &rec.fields {
+                let field_name = field.name.replace('-', "_");
+                let field_ty =
+                    wit_type_to_rust_owned(&field.ty, pkg);
+                stubs.push_str(&format!(
+                    "    pub {field_name}: {field_ty},\n"
+                ));
+            }
+            stubs.push_str("}\n\n");
+        }
+    }
+
     for (_, func) in &iface.functions {
         let rust_name = func.name.replace('-', "_");
 
@@ -141,11 +168,89 @@ fn wit_type_to_rust_owned(ty: &Type, pkg: &UnresolvedPackage) -> String {
                 TypeDefKind::List(t) => {
                     format!("Vec<{}>", wit_type_to_rust_owned(t, pkg))
                 }
+                TypeDefKind::Record(_) => {
+                    let name = td
+                        .name
+                        .as_deref()
+                        .expect("record type should have a name");
+                    kebab_to_pascal(name)
+                }
                 other => panic!(
                     "build.rs: unsupported WIT type in host-utils interface: {other:?}"
                 ),
             }
         }
         other => panic!("build.rs: unsupported WIT primitive type: {other:?}"),
+    }
+}
+
+/// Convert `kebab-case` to `PascalCase`.
+fn kebab_to_pascal(s: &str) -> String {
+    s.split('-')
+        .map(|part| {
+            let mut chars = part.chars();
+            match chars.next() {
+                Some(c) => {
+                    c.to_uppercase().to_string() + chars.as_str()
+                }
+                None => String::new(),
+            }
+        })
+        .collect()
+}
+
+/// Collect all record type IDs referenced (transitively) by the
+/// interface's function signatures, in dependency order.
+fn collect_interface_records(
+    iface: &wit_parser::Interface,
+    pkg: &UnresolvedPackage,
+    out: &mut Vec<wit_parser::TypeId>,
+) {
+    for (_, func) in &iface.functions {
+        for (_, ty) in &func.params {
+            collect_record_types(ty, pkg, out);
+        }
+        if let Some(ty) = &func.result {
+            collect_record_types(ty, pkg, out);
+        }
+    }
+}
+
+/// Recursively collect record type IDs from a WIT type.
+fn collect_record_types(
+    ty: &Type,
+    pkg: &UnresolvedPackage,
+    out: &mut Vec<wit_parser::TypeId>,
+) {
+    if let Type::Id(id) = ty {
+        let td = &pkg.types[*id];
+        match &td.kind {
+            TypeDefKind::Record(rec) => {
+                // Collect field types first (dependencies).
+                for field in &rec.fields {
+                    collect_record_types(&field.ty, pkg, out);
+                }
+                if !out.contains(id) {
+                    out.push(*id);
+                }
+            }
+            TypeDefKind::Tuple(tuple) => {
+                for t in &tuple.types {
+                    collect_record_types(t, pkg, out);
+                }
+            }
+            TypeDefKind::Result(result) => {
+                if let Some(t) = &result.ok {
+                    collect_record_types(t, pkg, out);
+                }
+                if let Some(t) = &result.err {
+                    collect_record_types(t, pkg, out);
+                }
+            }
+            TypeDefKind::Option(t) | TypeDefKind::List(t) => {
+                collect_record_types(t, pkg, out);
+            }
+            _ => {}
+        }
     }
 }

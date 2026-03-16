@@ -25,6 +25,39 @@ interface host-utils {
 
     /// Read a file to a UTF-8 string (for requirements.txt `-r`/`-c` recursion).
     read-file: func(path: string) -> result<string, string>;
+
+    /// Validate a regex pattern. Returns ok if valid, error message if invalid.
+    /// Both `pattern` and `flags` have already been translated from Rust regex
+    /// syntax to JS syntax by the Rust-side `translate_pattern` function.
+    /// `flags` contains only JS-valid single-character flags (e.g. "im", "s").
+    regex-new: func(pattern: string, re-flags: string) -> result<_, string>;
+
+    /// A UTF-8 byte offset span [start, end).
+    record regex-span {
+        start: u32,
+        end: u32,
+    }
+
+    /// A named capture group with its span (None if the group didn't participate).
+    record regex-named-group {
+        name: string,
+        span: option<regex-span>,
+    }
+
+    /// A single regex match with positional and named capture groups.
+    record regex-match {
+        /// The overall match span.
+        overall: regex-span,
+        /// Positional capture groups (index 0 = group 1).
+        groups: list<option<regex-span>>,
+        /// Named capture groups.
+        named: list<regex-named-group>,
+    }
+
+    /// Find all regex matches with capture groups.
+    /// `pattern` and `re-flags` are in JS regex syntax (translated by the caller).
+    /// Returns matches with UTF-8 byte offsets.
+    regex-find-all: func(pattern: string, re-flags: string, text: string) -> list<regex-match>;
 }
 
 /// Import-only world used by the host-bridge crate to generate bindings

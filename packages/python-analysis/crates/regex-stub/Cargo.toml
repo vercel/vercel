@@ -1,0 +1,32 @@
+[package]
+name = "regex"
+version = "1.10.6"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+host-bridge = { path = "../host-bridge" }
+regex-syntax = { git = "https://github.com/rust-lang/regex", tag = "1.10.6", default-features = false }
+regex-upstream = { package = "regex", git = "https://github.com/rust-lang/regex", tag = "1.10.6", optional = true }
+
+[[test]]
+name = "api"
+harness = false
+
+[[test]]
+name = "toml"
+path = "tests/toml_runner.rs"
+harness = false
+
+[dev-dependencies]
+wasm-test-support = { path = "../wasm-test-support" }
+regex-test = { git = "https://github.com/rust-lang/regex", tag = "1.10.6" }
+
+[features]
+default = ["std"]
+std = []
+unicode = []
+unicode-perl = []
+perf = []
+perf-inline = []
+upstream = ["dep:regex-upstream"]
