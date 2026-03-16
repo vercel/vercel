@@ -192,6 +192,7 @@ export default async function invite(
   );
 
   telemetry.trackCliArgumentEmail(emails);
+  telemetry.trackCliOptionRole(role);
 
   if (emails.length > 0) {
     for (const email of emails) {
