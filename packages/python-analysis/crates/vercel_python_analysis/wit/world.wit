@@ -1,6 +1,28 @@
 package vercel:python-analysis;
 
 interface host-utils {
+    /// IDNA domain-to-ASCII conversion (WHATWG URL Standard).
+    /// Normalizes a domain name to ASCII using UTS #46 rules.
+    domain-to-ascii: func(domain: string) -> result<string, string>;
+
+    /// IDNA domain-to-Unicode conversion (WHATWG URL Standard).
+    /// Converts a domain name to its Unicode display form with full UTS #46
+    /// case folding and normalization.
+    /// Returns the best-effort result (even on error) and a separate error flag.
+    domain-to-unicode: func(domain: string) -> tuple<string, bool>;
+
+    /// Unicode NFC normalization (canonical decomposition + canonical composition).
+    nfc-normalize: func(s: string) -> string;
+
+    /// Unicode NFD normalization (canonical decomposition).
+    nfd-normalize: func(s: string) -> string;
+
+    /// Unicode NFKC normalization (compatibility decomposition + canonical composition).
+    nfkc-normalize: func(s: string) -> string;
+
+    /// Unicode NFKD normalization (compatibility decomposition).
+    nfkd-normalize: func(s: string) -> string;
+
     /// Read a file to a UTF-8 string (for requirements.txt `-r`/`-c` recursion).
     read-file: func(path: string) -> result<string, string>;
 }
