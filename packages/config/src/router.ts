@@ -642,7 +642,7 @@ export class Router {
    *    })
    * @internal Can return Route with transforms internally
    */
-  rewrite<T extends string>(source: T, destination: string): Rewrite | Route;
+  rewrite<T extends string>(source: T, destination: string): Rewrite;
   rewrite<T extends string>(
     source: T,
     destination: string,
@@ -866,10 +866,7 @@ export class Router {
    *    })
    * @internal Can return Route with transforms internally
    */
-  public redirect<T extends string>(
-    source: T,
-    destination: string
-  ): Redirect | Route;
+  public redirect<T extends string>(source: T, destination: string): Redirect;
   public redirect<T extends string>(
     source: T,
     destination: string,
