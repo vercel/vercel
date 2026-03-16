@@ -143,7 +143,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "63044e1ae8e69f3b5a92c736ca6269b8d12fa7efe39bf34ddb06d102cf0e2cab"
 dependencies = [
  "memchr",
- "regex-automata",
+ "regex-automata 0.4.14",
  "serde",
 ]
 
@@ -899,13 +899,33 @@ dependencies = [
 
 [[package]]
 name = "regex"
-version = "1.12.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e10754a14b9137dd7b1e3e5b0493cc9171fdd105e0ab477f51b72e7f3ac0e276"
+version = "1.10.6"
+dependencies = [
+ "host-bridge",
+ "regex 1.10.6 (git+https://github.com/rust-lang/regex?tag=1.10.6)",
+ "regex-syntax",
+ "regex-test",
+ "wasm-test-support",
+]
+
+[[package]]
+name = "regex"
+version = "1.10.6"
+source = "git+https://github.com/rust-lang/regex?tag=1.10.6#ab88aa5c6824ebe7c4b4c72fe5191681783b3a68"
 dependencies = [
  "aho-corasick",
  "memchr",
- "regex-automata",
+ "regex-automata 0.4.7",
+ "regex-syntax",
+]
+
+[[package]]
+name = "regex-automata"
+version = "0.4.7"
+source = "git+https://github.com/rust-lang/regex?tag=1.10.6#ab88aa5c6824ebe7c4b4c72fe5191681783b3a68"
+dependencies = [
+ "aho-corasick",
+ "memchr",
  "regex-syntax",
 ]
 
@@ -914,17 +934,22 @@ name = "regex-automata"
 version = "0.4.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6e1dd4122fc1595e8162618945476892eefca7b88c52820e74af6262213cae8f"
-dependencies = [
- "aho-corasick",
- "memchr",
- "regex-syntax",
-]
 
 [[package]]
 name = "regex-syntax"
-version = "0.8.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dc897dd8d9e8bd1ed8cdad82b5966c3e0ecae09fb1907d58efaa013543185d0a"
+version = "0.8.4"
+source = "git+https://github.com/rust-lang/regex?tag=1.10.6#ab88aa5c6824ebe7c4b4c72fe5191681783b3a68"
+
+[[package]]
+name = "regex-test"
+version = "0.1.1"
+source = "git+https://github.com/rust-lang/regex?tag=1.10.6#ab88aa5c6824ebe7c4b4c72fe5191681783b3a68"
+dependencies = [
+ "anyhow",
+ "bstr",
+ "serde",
+ "toml",
+]
 
 [[package]]
 name = "rend"
@@ -1119,6 +1144,15 @@ dependencies = [
 
 [[package]]
 name = "serde_spanned"
+version = "0.6.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bf41e0cfaf7226dca15e8197172c295a782857fcb97fad1808a166870dee75a3"
+dependencies = [
+ "serde",
+]
+
+[[package]]
+name = "serde_spanned"
 version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f8bbf91e5a4d6315eee45e704372590b30e260ee83af6639d64557f51b067776"
@@ -1235,6 +1269,27 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1f3ccbac311fea05f86f61904b462b55fb3df8837a366dfc601a0161d0532f20"
 
 [[package]]
+name = "toml"
+version = "0.8.23"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dc1beb996b9d83529a9e75c17a1686767d148d70663143c7854d8b4a09ced362"
+dependencies = [
+ "serde",
+ "serde_spanned 0.6.9",
+ "toml_datetime 0.6.11",
+ "toml_edit 0.22.27",
+]
+
+[[package]]
+name = "toml_datetime"
+version = "0.6.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "22cddaf88f4fbc13c51aebbf5f8eceb5c7c5a9da2ac40a13519eb5b0a0e8f11c"
+dependencies = [
+ "serde",
+]
+
+[[package]]
 name = "toml_datetime"
 version = "0.7.5+spec-1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1245,14 +1300,27 @@ dependencies = [
 
 [[package]]
 name = "toml_edit"
+version = "0.22.27"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "41fe8c660ae4257887cf66394862d21dbca4a6ddd26f04a3560410406a2f819a"
+dependencies = [
+ "indexmap",
+ "serde",
+ "serde_spanned 0.6.9",
+ "toml_datetime 0.6.11",
+ "winnow",
+]
+
+[[package]]
+name = "toml_edit"
 version = "0.24.1+spec-1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "01f2eadbbc6b377a847be05f60791ef1058d9f696ecb51d2c07fe911d8569d8e"
 dependencies = [
  "indexmap",
  "serde_core",
- "serde_spanned",
- "toml_datetime",
+ "serde_spanned 1.0.4",
+ "toml_datetime 0.7.5+spec-1.1.0",
  "toml_parser",
  "toml_writer",
  "winnow",
@@ -1514,7 +1582,7 @@ dependencies = [
  "boxcar",
  "indexmap",
  "itertools",
- "regex",
+ "regex 1.10.6",
  "rkyv",
  "rustc-hash",
  "serde",
@@ -1554,13 +1622,13 @@ dependencies = [
  "jiff",
  "mailparse",
  "petgraph",
- "regex",
+ "regex 1.10.6",
  "rkyv",
  "rustc-hash",
  "serde",
  "serde-untagged",
  "thiserror",
- "toml_edit",
+ "toml_edit 0.24.1+spec-1.1.0",
  "tracing",
  "url",
  "uv-cache-key",
