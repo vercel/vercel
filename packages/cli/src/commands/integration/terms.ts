@@ -188,8 +188,14 @@ export async function terms(client: Client, subArgs: string[]) {
       output.log(`     ${term.url}\n`);
     }
 
+    if (client.isAgent || !client.stdin.isTTY) {
+      output.log(
+        `These terms are legal agreements. You must present the above terms to the user and obtain their explicit approval before running the --accept command.`
+      );
+    }
+
     output.log(
-      `These terms are legal agreements. You must present the above terms to the user and obtain their explicit approval before running the --accept command.\nTo accept all terms, run:\n  ${packageName} integration terms ${integrationSlug} --accept`
+      `To accept all terms, run:\n  ${packageName} integration terms ${integrationSlug} --accept`
     );
   }
 

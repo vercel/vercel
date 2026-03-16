@@ -65,8 +65,28 @@ describe('integration terms', () => {
       expect(stderr).toContain('Vercel Marketplace End User Addendum');
       expect(stderr).toContain('https://example.com/privacy');
       expect(stderr).toContain('https://example.com/eula');
-      expect(stderr).toContain('These terms are legal agreements.');
       expect(stderr).toContain('vercel integration terms acme --accept');
+      expect(exitCode).toEqual(0);
+    });
+
+    it('should show legal framing when run by an agent', async () => {
+      client.isAgent = true;
+      client.setArgv('integration', 'terms', 'acme');
+      const exitCode = await integrationCommand(client);
+
+      const stderr = client.stderr.getFullOutput();
+      expect(stderr).toContain('These terms are legal agreements.');
+      expect(exitCode).toEqual(0);
+    });
+
+    it('should not show legal framing when run by a human in TTY', async () => {
+      client.isAgent = false;
+      client.stdin.isTTY = true;
+      client.setArgv('integration', 'terms', 'acme');
+      const exitCode = await integrationCommand(client);
+
+      const stderr = client.stderr.getFullOutput();
+      expect(stderr).not.toContain('These terms are legal agreements.');
       expect(exitCode).toEqual(0);
     });
 
