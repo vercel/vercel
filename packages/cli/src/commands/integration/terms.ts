@@ -172,6 +172,7 @@ export async function terms(client: Client, subArgs: string[]) {
         {
           integration: integrationSlug,
           terms: termsList,
+          userReviewRequired: true,
           acceptCommand: `${packageName} integration terms ${integrationSlug} --accept`,
         },
         null,
@@ -188,7 +189,7 @@ export async function terms(client: Client, subArgs: string[]) {
     }
 
     output.log(
-      `To accept all terms, run:\n  ${packageName} integration terms ${integrationSlug} --accept`
+      `Please ensure the user has reviewed the terms above before accepting.\nTo accept all terms, run:\n  ${packageName} integration terms ${integrationSlug} --accept`
     );
   }
 

@@ -65,6 +65,9 @@ describe('integration terms', () => {
       expect(stderr).toContain('Vercel Marketplace End User Addendum');
       expect(stderr).toContain('https://example.com/privacy');
       expect(stderr).toContain('https://example.com/eula');
+      expect(stderr).toContain(
+        'Please ensure the user has reviewed the terms above before accepting.'
+      );
       expect(stderr).toContain('vercel integration terms acme --accept');
       expect(exitCode).toEqual(0);
     });
@@ -91,6 +94,7 @@ describe('integration terms', () => {
       expect(jsonOutput.terms[0].type).toEqual('toc');
       expect(jsonOutput.terms[1].type).toEqual('privacy');
       expect(jsonOutput.terms[2].type).toEqual('eula');
+      expect(jsonOutput.userReviewRequired).toEqual(true);
       expect(jsonOutput.acceptCommand).toContain(
         'integration terms acme --accept'
       );
