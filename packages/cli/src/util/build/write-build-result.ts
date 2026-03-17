@@ -443,15 +443,8 @@ async function writeBuildResultV3(args: {
     );
   }
 
-  // If the builder declared a staticFilesPath, copy CDN static files to the
-  // correct output location
   if (buildResult.staticFilesPath) {
-    const outputStaticDir = join(outputDir, 'static');
-    if (resolve(buildResult.staticFilesPath) !== resolve(outputStaticDir)) {
-      await fs.copy(buildResult.staticFilesPath, outputStaticDir, {
-        overwrite: false,
-      });
-    }
+    await mergeStaticFiles(outputDir, buildResult.staticFilesPath, workPath);
   }
 }
 
@@ -753,6 +746,31 @@ async function mergeBuilderOutput(
   };
 
   await merge(buildResult.buildOutputPath, outputDir, ignoreFilter);
+}
+
+async function mergeStaticFiles(
+  outputDir: string,
+  staticFilesPath: string,
+  workPath: string
+) {
+  const outputStaticDir = join(outputDir, 'static');
+  const { ig } = await getVercelIgnore(workPath);
+  const filter = ig.createFilter();
+
+  if (resolve(staticFilesPath) === resolve(outputStaticDir)) {
+    try {
+      await cleanIgnoredFiles(outputStaticDir, outputStaticDir, filter);
+    } catch (err: any) {
+      if (err.code !== 'ENOENT') throw err;
+    }
+    return;
+  }
+
+  // Unlike mergeBuilderOutput (which sources from buildOutputPath root and sees
+  // paths like "static/app/style.css"), staticFilesPath is already the static
+  // dir, so merge sees paths like "app/style.css" directly — no prefix
+  // stripping needed before applying the filter.
+  await merge(staticFilesPath, outputStaticDir, filter);
 }
 
 async function cleanIgnoredFiles(
