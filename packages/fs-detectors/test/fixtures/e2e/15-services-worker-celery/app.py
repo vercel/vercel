@@ -5,7 +5,6 @@ from uuid import uuid4
 
 from flask import Flask, jsonify, render_template_string, request
 
-from worker.broker import broker
 from worker.tasks import process_job
 
 logger = getLogger(__name__)
@@ -16,8 +15,8 @@ INDEX_HTML = """
 <!doctype html>
 <html>
   <body>
-    <h1>Hello from Flask web service (wildcard topic)</h1>
-    <button id="enqueue-btn" type="button">Enqueue Order</button>
+    <h1>Hello from Flask web service</h1>
+    <button id="enqueue-btn" type="button">Enqueue Job</button>
     <p id="status"></p>
 
     <script>
@@ -31,7 +30,7 @@ INDEX_HTML = """
           const response = await fetch('/enqueue', {
             method: 'POST',
             headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ orderId: '12345', action: 'ship' }),
+            body: JSON.stringify({ source: 'fixture-web-ui' }),
           });
           const data = await response.json();
           if (!response.ok || !data.ok) {
@@ -66,20 +65,12 @@ def enqueue():
     payload["priority"] = Decimal("1.5")
 
     try:
-        message = process_job.send(payload)
+        result = process_job.delay(payload)
     except Exception as exc:
         logger.error(f"Failed to enqueue job: {exc}")
         return jsonify({"ok": False, "error": str(exc)}), 500
 
-    return jsonify(
-        {
-            "ok": True,
-            "jobId": message.message_id,
-            "queueName": message.queue_name,
-            "actorName": message.actor_name,
-            "broker": broker.__class__.__name__,
-        }
-    )
+    return jsonify({"ok": True, "jobId": str(result.id)})
 
 
 @app.get("/health")
