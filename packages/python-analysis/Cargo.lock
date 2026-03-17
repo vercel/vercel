@@ -1653,6 +1653,7 @@ dependencies = [
  "uv-git-types",
  "uv-normalize",
  "uv-pep508",
+ "uv-platform-tags",
  "uv-pypi-types",
  "uv-requirements-txt",
  "wit-bindgen",
