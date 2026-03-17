@@ -90,7 +90,10 @@ function setupMocks(options: MockOptions = {}) {
   });
 
   client.scenario.get('/v9/projects', (_req, res) => {
-    res.json({ projects: defaultProjects });
+    res.json({
+      projects: defaultProjects,
+      pagination: { count: defaultProjects.length, next: null },
+    });
   });
 
   for (const project of defaultProjects) {

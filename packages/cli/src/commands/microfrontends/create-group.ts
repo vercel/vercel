@@ -11,7 +11,7 @@ import { createGroupSubcommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { parseArguments } from '../../util/get-args';
 import { printError } from '../../util/error';
-import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name';
+import getProjectByIdOrName from '../../util/projects/get-project-by-id-or-name';
 import { isAPIError, ProjectNotFound } from '../../util/errors-ts';
 import type { Project } from '@vercel-internals/types';
 import type {
@@ -143,22 +143,12 @@ export default async function createGroup(client: Client): Promise<number> {
     });
   }
 
-  output.spinner('Fetching projects…');
-  const { projects: allProjects } = await client.fetch<{
-    projects: Project[];
-  }>(`/v9/projects?limit=100&teamId=${team.id}`, { method: 'GET' });
-  output.stopSpinner();
-
-  const availableProjects = allProjects.filter(
-    p => !isProjectInMicrofrontendsGroup(p, groups)
-  );
-
   let selectedProjects: Project[];
   if (projectFlags) {
     selectedProjects = [];
     for (const name of projectFlags) {
       try {
-        const project = await getProjectByNameOrId(client, name, team.id);
+        const project = await getProjectByIdOrName(client, name, team.id);
         if (project instanceof ProjectNotFound) {
           output.error(`Project "${name}" not found.`);
           return 1;
@@ -170,46 +160,81 @@ export default async function createGroup(client: Client): Promise<number> {
       }
     }
   } else {
-    if (availableProjects.length === 0) {
-      output.error(
-        'No available projects. All projects are already in a microfrontends group.'
-      );
-      return 1;
-    }
+    output.spinner('Fetching projects…');
+    const firstPage = await client.fetch<{
+      projects: Project[];
+      pagination: { count: number; next: number | null };
+    }>(`/v9/projects?limit=100&teamId=${team.id}`, { method: 'GET' });
+    output.stopSpinner();
 
-    const choices = availableProjects.map(p => ({
-      name: p.name,
-      value: p.id,
-    }));
+    const allProjects = firstPage.projects;
+    const hasMoreProjects = firstPage.pagination.next !== null;
+    const availableProjects = allProjects.filter(
+      p => !isProjectInMicrofrontendsGroup(p, groups)
+    );
 
     selectedProjects = [];
     let addMore = true;
-    while (addMore && choices.length > 0) {
-      const remaining = choices.filter(
-        c => !selectedProjects.some(s => s.id === c.value)
-      );
-      if (remaining.length === 0) {
-        break;
+    while (addMore) {
+      let project: Project | undefined;
+
+      if (hasMoreProjects) {
+        await client.input.text({
+          message:
+            selectedProjects.length === 0
+              ? 'Type a project name to add:'
+              : 'Type another project name to add:',
+          validate: async val => {
+            if (!val) {
+              return 'Project name cannot be empty';
+            }
+            const result = await getProjectByIdOrName(client, val, team.id);
+            if (result instanceof ProjectNotFound) {
+              return 'Project not found';
+            }
+            if (isProjectInMicrofrontendsGroup(result, groups)) {
+              return `Project "${val}" is already in a microfrontends group`;
+            }
+            if (selectedProjects.some(s => s.id === result.id)) {
+              return `Project "${val}" is already selected`;
+            }
+            project = result;
+            return true;
+          },
+        });
+      } else {
+        if (availableProjects.length === 0) {
+          if (selectedProjects.length === 0) {
+            output.error(
+              'No available projects. All projects are already in a microfrontends group.'
+            );
+            return 1;
+          }
+          break;
+        }
+
+        const remaining = availableProjects.filter(
+          p => !selectedProjects.some(s => s.id === p.id)
+        );
+        if (remaining.length === 0) {
+          break;
+        }
+
+        const projectId = await client.input.select({
+          message:
+            selectedProjects.length === 0
+              ? 'Select a project to add:'
+              : 'Select another project to add:',
+          choices: remaining.map(p => ({ name: p.name, value: p.id })),
+        });
+        project = availableProjects.find(p => p.id === projectId);
       }
 
-      const projectId = await client.input.select({
-        message:
-          selectedProjects.length === 0
-            ? 'Select a project to add:'
-            : 'Select another project to add:',
-        choices: remaining,
-      });
-
-      const project = availableProjects.find(p => p.id === projectId);
       if (project) {
         selectedProjects.push(project);
       }
 
-      if (remaining.length > 1) {
-        addMore = await client.input.confirm('Add another project?', false);
-      } else {
-        addMore = false;
-      }
+      addMore = await client.input.confirm('Add another project?', false);
     }
 
     if (selectedProjects.length === 0) {
