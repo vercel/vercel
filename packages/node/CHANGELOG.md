@@ -1,5 +1,12 @@
 # @vercel/node
 
+## 5.6.16
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/build-utils@13.8.1
+
 ## 5.6.15
 
 ### Patch Changes

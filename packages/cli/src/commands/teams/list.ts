@@ -9,6 +9,7 @@ import cmd from '../../util/output/cmd';
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import { printError } from '../../util/error';
+import { outputAgentError } from '../../util/agent-output';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { listSubcommand } from './command';
 import { validateJsonOutput } from '../../util/output-format';
@@ -32,6 +33,17 @@ export default async function list(
   try {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'invalid_arguments',
+          message: error instanceof Error ? error.message : String(error),
+        },
+        1
+      );
+    }
     printError(error);
     return 1;
   }

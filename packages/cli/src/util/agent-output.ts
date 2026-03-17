@@ -41,7 +41,7 @@ export interface AgentErrorPayload {
   status: 'error';
   reason: string;
   message: string;
-  next?: Array<{ command: string }>;
+  next?: Array<{ command: string; when?: string }>;
 }
 
 /**

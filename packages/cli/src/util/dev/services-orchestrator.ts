@@ -10,6 +10,7 @@ import {
   type Service,
 } from '@vercel/fs-detectors';
 import { frameworkList, type Framework } from '@vercel/frameworks';
+import { getNextCronDelay } from './cron';
 import {
   cloneEnv,
   getNodeBinPaths,
@@ -157,6 +158,7 @@ interface ServicesOrchestratorOptions {
 export class ServicesOrchestrator {
   private managedServices = new Map<string, ServiceDevProcess>();
   private managedProcesses = new Map<string, ChildProcess>();
+  private cronTimers: ReturnType<typeof setTimeout>[] = [];
   private stopping = false;
 
   private services: Service[];
@@ -166,6 +168,7 @@ export class ServicesOrchestrator {
   private maxNameLength: number;
   private proxyOrigin: string;
   private pythonServiceCount: number;
+  private hasWorkerService: boolean;
 
   constructor(options: ServicesOrchestratorOptions) {
     this.services = options.services;
@@ -177,6 +180,7 @@ export class ServicesOrchestrator {
     this.pythonServiceCount = options.services.filter(
       s => s.runtime === 'python'
     ).length;
+    this.hasWorkerService = options.services.some(s => s.type === 'worker');
   }
 
   async startAll(): Promise<void> {
@@ -203,6 +207,8 @@ export class ServicesOrchestrator {
     output.debug(
       `All ${this.managedServices.size} services started successfully`
     );
+
+    this.startCronSchedulers();
   }
 
   async stopAll(): Promise<void> {
@@ -247,6 +253,11 @@ export class ServicesOrchestrator {
         );
       }
     }
+
+    for (const timer of this.cronTimers) {
+      clearTimeout(timer);
+    }
+    this.cronTimers = [];
 
     await Promise.all(stopPromises);
     this.managedServices.clear();
@@ -330,6 +341,14 @@ export class ServicesOrchestrator {
     );
     env.VERCEL_SERVICE_TYPE = service.type;
 
+    // When any worker service exists, point all services at the dev server's
+    // queue proxy so that send() calls from web services are routed through
+    // the proxy and dispatched to the matching worker process.
+    if (this.hasWorkerService) {
+      env.VERCEL_QUEUE_BASE_URL = `${this.proxyOrigin}/_svc/_queues`;
+      env.VERCEL_QUEUE_TOKEN = 'vc-dev-token';
+    }
+
     if (service.routePrefix && service.routePrefix !== '/') {
       env.VERCEL_SERVICE_ROUTE_PREFIX = service.routePrefix;
       env.VERCEL_SERVICE_ROUTE_PREFIX_STRIP = '1';
@@ -412,6 +431,7 @@ export class ServicesOrchestrator {
           serviceCount: this.services.length,
           pythonServiceCount: this.pythonServiceCount,
           syncDependencies: true,
+          serviceName: service.name,
         },
         files: {},
         onStdout: (data: Buffer) => logger.stdout.write(data),
@@ -662,5 +682,58 @@ export class ServicesOrchestrator {
         });
       }
     });
+  }
+
+  private startCronSchedulers(): void {
+    for (const service of this.services) {
+      if (service.type !== 'cron' || !service.schedule) continue;
+
+      const managed = this.managedServices.get(service.name);
+      if (!managed) continue;
+
+      output.debug(
+        `Scheduling cron service ${chalk.bold(service.name)} (${chalk.cyan(service.schedule)})`
+      );
+
+      this.scheduleCronTrigger(service.name, service.schedule, managed);
+    }
+  }
+
+  private scheduleCronTrigger(
+    serviceName: string,
+    schedule: string,
+    managed: ServiceDevProcess
+  ): void {
+    const delayMs = getNextCronDelay(schedule);
+    if (delayMs === null) {
+      output.warn(
+        `Could not parse cron schedule "${schedule}" for service "${serviceName}", skipping auto-trigger`
+      );
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      if (this.stopping) return;
+
+      output.debug(
+        `Triggering cron service ${chalk.bold(serviceName)} (schedule: ${chalk.cyan(schedule)})`
+      );
+
+      try {
+        const url = `http://${managed.host}:${managed.port}/`;
+        const res = await fetch(url, { method: 'POST' });
+        output.debug(
+          `Cron trigger for "${serviceName}" responded with status ${res.status}`
+        );
+      } catch (err) {
+        output.error(
+          `Cron trigger for "${serviceName}" failed: ${err instanceof Error ? err.message : String(err)}`
+        );
+      }
+
+      this.scheduleCronTrigger(serviceName, schedule, managed);
+    }, delayMs);
+
+    this.cronTimers.push(timer);
   }
 }

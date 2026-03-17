@@ -3,6 +3,7 @@ import { NowBuildError } from '@vercel/build-utils';
 import { selectPythonVersion, PythonConfigKind } from '@vercel/python-analysis';
 import type { PythonBuild, PythonPackage } from '@vercel/python-analysis';
 import { UvRunner, findUvInPath } from './uv';
+import { detectPlatform } from './utils';
 
 export interface PythonVersion {
   major: number;
@@ -119,13 +120,14 @@ function versionLessOrEqual(a: PythonVersion, b: PythonVersion): boolean {
  * Convert a local PythonVersion entry to a python-analysis PythonBuild.
  */
 function toPythonBuild(opt: PythonVersion): PythonBuild {
+  const platform = detectPlatform();
   return {
     version: { major: opt.major, minor: opt.minor },
     implementation: 'cpython',
     variant: 'default',
-    os: 'linux',
-    architecture: 'x86_64',
-    libc: 'gnu',
+    os: platform.os,
+    architecture: platform.archName,
+    libc: platform.libc,
   };
 }
 

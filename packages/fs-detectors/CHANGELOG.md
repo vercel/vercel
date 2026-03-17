@@ -1,5 +1,22 @@
 # @vercel/fs-detectors
 
+## 5.11.0
+
+### Minor Changes
+
+- [services] add support for background workers to vc dev ([#15434](https://github.com/vercel/vercel/pull/15434))
+
+### Patch Changes
+
+- [services] exclude service route prefixes on subdomain rewrites ([#15508](https://github.com/vercel/vercel/pull/15508))
+
+## 5.10.3
+
+### Patch Changes
+
+- Updated dependencies [[`04433cfd686bf27e3f63bc895c15f7e75918b0d7`](https://github.com/vercel/vercel/commit/04433cfd686bf27e3f63bc895c15f7e75918b0d7)]:
+  - @vercel/frameworks@3.21.1
+
 ## 5.10.2
 
 ### Patch Changes
