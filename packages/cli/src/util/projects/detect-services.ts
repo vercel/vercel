@@ -1,10 +1,23 @@
-import { join } from 'path';
+import { writeFile } from 'fs/promises';
+import { basename, join } from 'path';
 import {
   detectServices,
   LocalFileSystemDetector,
   type DetectServicesResult,
+  type ServicesConfig,
 } from '@vercel/fs-detectors';
+import type { VercelConfig } from '../dev/types';
+import { compileVercelConfig } from '../compile-vercel-config';
+import { CantParseJSONFile } from '../errors-ts';
 import readJSONFile from '../read-json-file';
+import { validateConfig } from '../validate-config';
+
+type ServicesSetupConfigBlocker = 'builds' | 'functions';
+
+export interface DetectServicesForSetupResult {
+  result: DetectServicesResult | null;
+  blockedByProjectConfig: ServicesSetupConfigBlocker | null;
+}
 
 /**
  * Check if vercel.json in the given directory has experimentalServices configured
@@ -60,4 +73,138 @@ export async function tryDetectServices(
   }
 
   return result;
+}
+
+/**
+ * Detect services for the new-project setup flow.
+ *
+ * This returns:
+ * - configured services from project config
+ * - inferred layout services when multiple services are found and we can
+ *   safely materialize them into `vercel.json`
+ *
+ * Returns null for single-service layouts so the standard framework preset
+ * flow remains unchanged.
+ */
+export async function detectServicesForSetup(
+  cwd: string
+): Promise<DetectServicesForSetupResult> {
+  const fs = new LocalFileSystemDetector(cwd);
+  const result = await detectServices({ fs });
+  const hasConfiguredServices = await hasExperimentalServicesConfig(cwd);
+
+  if (hasConfiguredServices) {
+    return {
+      result,
+      blockedByProjectConfig: null,
+    };
+  }
+
+  const inferred = result.inferred;
+  if (
+    !inferred ||
+    inferred.source !== 'layout' ||
+    inferred.services.length <= 1
+  ) {
+    return {
+      result: null,
+      blockedByProjectConfig: null,
+    };
+  }
+
+  try {
+    await prepareServicesConfigWrite(cwd, inferred.config);
+    return {
+      result,
+      blockedByProjectConfig: null,
+    };
+  } catch (error) {
+    return {
+      result: null,
+      blockedByProjectConfig: getServicesSetupConfigBlocker(error),
+    };
+  }
+}
+
+export async function writeServicesConfig(
+  cwd: string,
+  config: ServicesConfig
+): Promise<void> {
+  const prepared = await prepareServicesConfigWrite(cwd, config);
+  await writeFile(
+    prepared.configPath,
+    JSON.stringify(prepared.config, null, 2) + '\n',
+    'utf8'
+  );
+}
+
+function toProjectServicesConfigPatch(
+  config: ServicesConfig
+): Pick<VercelConfig, 'experimentalServices'> {
+  return {
+    experimentalServices: config,
+  };
+}
+
+async function prepareServicesConfigWrite(
+  cwd: string,
+  config: ServicesConfig
+): Promise<{
+  configPath: string;
+  config: VercelConfig;
+}> {
+  const compileResult = await compileVercelConfig(cwd);
+  const configPath = join(cwd, 'vercel.json');
+
+  if (compileResult.wasCompiled) {
+    throw new Error(
+      `Cannot automatically update ${compileResult.sourceFile ?? 'the current Vercel config'}.`
+    );
+  }
+
+  if (
+    compileResult.configPath &&
+    basename(compileResult.configPath) === 'now.json'
+  ) {
+    throw new Error('Cannot automatically update now.json.');
+  }
+
+  let existingConfig: VercelConfig = {};
+  if (
+    compileResult.configPath &&
+    basename(compileResult.configPath) === 'vercel.json'
+  ) {
+    const result = await readJSONFile<VercelConfig>(configPath);
+    if (result instanceof CantParseJSONFile) {
+      throw result;
+    }
+    existingConfig = result ?? {};
+  }
+
+  const nextConfig: VercelConfig = {
+    ...existingConfig,
+    ...toProjectServicesConfigPatch(config),
+  };
+  const validationError = validateConfig(nextConfig);
+  if (validationError) {
+    throw validationError;
+  }
+
+  return {
+    configPath,
+    config: nextConfig,
+  };
+}
+
+function getServicesSetupConfigBlocker(
+  error: unknown
+): ServicesSetupConfigBlocker | null {
+  switch ((error as { code?: string })?.code) {
+    case 'SERVICES_AND_BUILDS':
+      return 'builds';
+    case 'SERVICES_AND_FUNCTIONS':
+      return 'functions';
+    default:
+      return null;
+  }
 }

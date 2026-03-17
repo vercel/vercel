@@ -934,6 +934,141 @@ describe('link', () => {
     expect(exitCode, 'exit code for "link"').toEqual(0);
   });
 
+  it('should write vercel.json for inferred multi-service layouts', async () => {
+    const user = useUser();
+    const cwd = setupTmpDir();
+    useTeams('team_dummy');
+    useUnknownProject();
+
+    await writeJSON(join(cwd, 'package.json'), {
+      dependencies: {
+        next: 'latest',
+      },
+    });
+    await mkdirp(join(cwd, 'services/api'));
+    await writeFile(join(cwd, 'services/api/requirements.txt'), 'fastapi\n');
+    await writeFile(
+      join(cwd, 'services/api/index.py'),
+      'from fastapi import FastAPI\napp = FastAPI()\n'
+    );
+
+    client.cwd = cwd;
+    const exitCodePromise = link(client);
+
+    await expect(client.stderr).toOutput('Set up');
+    client.stdin.write('y\n');
+
+    await expect(client.stderr).toOutput(
+      'Which scope should contain your project?'
+    );
+    client.stdin.write('\n');
+
+    await expect(client.stderr).toOutput('Link to existing project?');
+    client.stdin.write('n\n');
+
+    await expect(client.stderr).toOutput('What’s your project’s name?');
+    client.stdin.write('multi-service-app\n');
+
+    await expect(client.stderr).toOutput(
+      'Save services configuration to vercel.json?'
+    );
+    client.stdin.write('\n');
+
+    await expect(client.stderr).toOutput(
+      'Do you want to change additional project settings?'
+    );
+    client.stdin.write('\n');
+
+    await expect(client.stderr).toOutput(
+      `Linked to ${user.username}/multi-service-app (created .vercel and added it to .gitignore)`
+    );
+
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "link"').toEqual(0);
+
+    expect(await readJSON(join(cwd, 'vercel.json'))).toMatchObject({
+      experimentalServices: {
+        frontend: {
+          framework: 'nextjs',
+          routePrefix: '/',
+        },
+        api: {
+          framework: 'fastapi',
+          entrypoint: 'services/api',
+          routePrefix: '/_/api',
+        },
+      },
+    });
+
+    const projectJson = await readJSON(join(cwd, '.vercel/project.json'));
+    const project = await getProjectByNameOrId(client, projectJson.projectId);
+    if (project instanceof ProjectNotFound) {
+      throw project;
+    }
+    expect(project.framework).toEqual('services');
+  });
+
+  it('should warn when inferred services are blocked by builds config', async () => {
+    const user = useUser();
+    const cwd = setupTmpDir();
+    useTeams('team_dummy');
+    useUnknownProject();
+
+    await writeJSON(join(cwd, 'package.json'), {
+      dependencies: {
+        next: 'latest',
+      },
+    });
+    await writeJSON(join(cwd, 'vercel.json'), {
+      builds: [{ src: 'package.json', use: '@vercel/next' }],
+    });
+    await mkdirp(join(cwd, 'services/api'));
+    await writeFile(join(cwd, 'services/api/requirements.txt'), 'fastapi\n');
+    await writeFile(
+      join(cwd, 'services/api/index.py'),
+      'from fastapi import FastAPI\napp = FastAPI()\n'
+    );
+
+    client.cwd = cwd;
+    const exitCodePromise = link(client);
+
+    await expect(client.stderr).toOutput('Set up');
+    client.stdin.write('y\n');
+
+    await expect(client.stderr).toOutput(
+      'Which scope should contain your project?'
+    );
+    client.stdin.write('\n');
+
+    await expect(client.stderr).toOutput('Link to existing project?');
+    client.stdin.write('n\n');
+
+    await expect(client.stderr).toOutput('What’s your project’s name?');
+    client.stdin.write('services-with-builds\n');
+
+    await expect(client.stderr).toOutput(
+      "Multiple services were detected, but your existing project config uses `builds`, so Vercel won't auto-convert it to Services."
+    );
+    await expect(client.stderr).toOutput('https://vercel.com/docs/services');
+
+    await expect(client.stderr).toOutput(
+      'In which directory is your code located? ./'
+    );
+    client.stdin.write('\n');
+
+    await expect(client.stderr).toOutput(
+      'Do you want to change additional project settings?'
+    );
+    client.stdin.write('\n');
+
+    await expect(client.stderr).toOutput(
+      `Linked to ${user.username}/services-with-builds (created .vercel and added it to .gitignore)`
+    );
+
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "link"').toEqual(0);
+  });
+
   it('should allow overwriting existing link', async () => {
     const cwd = setupTmpDir();
     const user = useUser();

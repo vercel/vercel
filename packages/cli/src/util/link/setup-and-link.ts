@@ -1,4 +1,3 @@
-import chalk from 'chalk';
 import { remove } from 'fs-extra';
 import { join, basename } from 'path';
 import type {
@@ -43,12 +42,19 @@ import {
   type VercelAuthSetting,
   DEFAULT_VERCEL_AUTH_SETTING,
 } from '../input/vercel-auth';
-import { tryDetectServices } from '../projects/detect-services';
+import {
+  detectServicesForSetup,
+  tryDetectServices,
+  writeServicesConfig,
+} from '../projects/detect-services';
 import {
   displayDetectedServices,
   displayServiceErrors,
   displayServicesConfigNote,
 } from '../input/display-services';
+
+const chalk = require('chalk');
+const SERVICES_DOCS_URL = 'https://vercel.com/docs/services';
 
 export interface SetupAndLinkOptions {
   autoConfirm?: boolean;
@@ -162,7 +168,6 @@ export default async function setupAndLink(
 
   if (typeof projectOrNewProjectName === 'string') {
     newProjectName = projectOrNewProjectName;
-    rootDirectory = await inputRootDirectory(client, path, autoConfirm);
   } else {
     const project = projectOrNewProjectName;
 
@@ -182,68 +187,118 @@ export default async function setupAndLink(
     return { status: 'linked', org, project };
   }
 
-  if (
-    rootDirectory &&
-    !(await validateRootDirectory(path, join(path, rootDirectory)))
-  ) {
-    return { status: 'error', exitCode: 1, reason: 'INVALID_ROOT_DIRECTORY' };
-  }
-
   config.currentTeam = org.type === 'team' ? org.id : undefined;
-
-  const pathWithRootDirectory = rootDirectory
-    ? join(path, rootDirectory)
-    : path;
-  const localConfig = await readConfig(pathWithRootDirectory);
-  if (localConfig instanceof CantParseJSONFile) {
-    output.prettyError(localConfig);
-    return { status: 'error', exitCode: 1 };
-  }
-
-  const isZeroConfig =
-    !localConfig || !localConfig.builds || localConfig.builds.length === 0;
-
-  // Check for experimental services (gated by VERCEL_USE_EXPERIMENTAL_SERVICES env var)
-  const servicesResult = await tryDetectServices(pathWithRootDirectory);
+  const { result: setupServicesResult, blockedByProjectConfig } =
+    await detectServicesForSetup(path);
 
   try {
     let settings: ProjectSettings = {};
+    let pathWithRootDirectory = path;
 
-    if (servicesResult) {
-      displayDetectedServices(servicesResult.services);
-      if (servicesResult.errors.length > 0) {
-        displayServiceErrors(servicesResult.errors);
+    if (setupServicesResult?.source === 'configured') {
+      if (setupServicesResult.services.length > 0) {
+        displayDetectedServices(setupServicesResult.services);
+      }
+      if (setupServicesResult.errors.length > 0) {
+        displayServiceErrors(setupServicesResult.errors);
       }
       displayServicesConfigNote();
       settings.framework = 'services';
-    } else if (isZeroConfig) {
-      const localConfigurationOverrides: PartialProjectSettings = {
-        buildCommand: localConfig?.buildCommand,
-        devCommand: localConfig?.devCommand,
-        framework: localConfig?.framework,
-        commandForIgnoringBuildStep: localConfig?.ignoreCommand,
-        installCommand: localConfig?.installCommand,
-        outputDirectory: localConfig?.outputDirectory,
-      };
+    } else {
+      const inferredServices = setupServicesResult?.inferred;
+      const hasInferredLayoutServices = inferredServices?.source === 'layout';
+      if (blockedByProjectConfig) {
+        output.warn(
+          `Multiple services were detected, but your existing project config uses \`${blockedByProjectConfig}\`, so Vercel won't auto-convert it to Services. To deploy multiple services in one project, see ${output.link('Services', SERVICES_DOCS_URL)}.`
+        );
+      }
+      if (hasInferredLayoutServices) {
+        displayDetectedServices(inferredServices.services);
+      }
+      const shouldWriteInferredServicesConfig =
+        hasInferredLayoutServices &&
+        (autoConfirm ||
+          (!nonInteractive &&
+            (await client.input.confirm(
+              'Save services configuration to vercel.json?',
+              true
+            ))));
+      if (hasInferredLayoutServices && shouldWriteInferredServicesConfig) {
+        await writeServicesConfig(path, inferredServices.config);
+        output.log('Added services configuration to vercel.json.');
+        settings.framework = 'services';
+      } else {
+        rootDirectory = await inputRootDirectory(client, path, autoConfirm);
+        if (
+          rootDirectory &&
+          !(await validateRootDirectory(path, join(path, rootDirectory)))
+        ) {
+          return {
+            status: 'error',
+            exitCode: 1,
+            reason: 'INVALID_ROOT_DIRECTORY',
+          };
+        }
 
-      // Run the framework detection logic against the local filesystem.
-      const detectedProjectsForWorkspace = await detectProjects(
-        pathWithRootDirectory
-      );
+        pathWithRootDirectory = rootDirectory
+          ? join(path, rootDirectory)
+          : path;
+        const localConfig = await readConfig(pathWithRootDirectory);
+        if (localConfig instanceof CantParseJSONFile) {
+          output.prettyError(localConfig);
+          return { status: 'error', exitCode: 1 };
+        }
 
-      // Select the first framework detected, or use
-      // the "Other" preset if none was detected.
-      const detectedProjects = detectedProjectsForWorkspace.get('') || [];
-      const framework =
-        detectedProjects[0] ?? frameworkList.find(f => f.slug === null);
+        const isZeroConfig =
+          !localConfig ||
+          !localConfig.builds ||
+          localConfig.builds.length === 0;
 
-      settings = await editProjectSettings(
-        client,
-        {},
-        framework,
-        autoConfirm,
-        localConfigurationOverrides
-      );
+        const shouldDetectServicesInWorkspace =
+          !hasInferredLayoutServices || pathWithRootDirectory !== path;
+        const servicesResult = shouldDetectServicesInWorkspace
+          ? await tryDetectServices(pathWithRootDirectory)
+          : null;
+
+        if (servicesResult) {
+          if (servicesResult.services.length > 0) {
+            displayDetectedServices(servicesResult.services);
+          }
+          if (servicesResult.errors.length > 0) {
+            displayServiceErrors(servicesResult.errors);
+          }
+          displayServicesConfigNote();
+          settings.framework = 'services';
+        } else if (isZeroConfig) {
+          const localConfigurationOverrides: PartialProjectSettings = {
+            buildCommand: localConfig?.buildCommand,
+            devCommand: localConfig?.devCommand,
+            framework: localConfig?.framework,
+            commandForIgnoringBuildStep: localConfig?.ignoreCommand,
+            installCommand: localConfig?.installCommand,
+            outputDirectory: localConfig?.outputDirectory,
+          };
+
+          // Run the framework detection logic against the local filesystem.
+          const detectedProjectsForWorkspace = await detectProjects(
+            pathWithRootDirectory
+          );
+
+          // Select the first framework detected, or use
+          // the "Other" preset if none was detected.
+          const detectedProjects = detectedProjectsForWorkspace.get('') || [];
+          const framework =
+            detectedProjects[0] ?? frameworkList.find(f => f.slug === null);
+
+          settings = await editProjectSettings(
+            client,
+            {},
+            framework,
+            autoConfirm,
+            localConfigurationOverrides
+          );
+        }
+      }
     }
 
     // Support for changing additional, less frequently used project settings.

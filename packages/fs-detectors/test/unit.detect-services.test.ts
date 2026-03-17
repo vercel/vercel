@@ -34,6 +34,9 @@ describe('detectServices', () => {
 
       expect(result.services).toEqual([]);
       expect(result.source).toBe('auto-detected');
+      expect(result.resolved).not.toBeNull();
+      expect(result.resolved?.source).toBe('auto-detected');
+      expect(result.inferred).toBeNull();
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0].code).toBe('NO_SERVICES_CONFIGURED');
     });
@@ -70,6 +73,19 @@ describe('detectServices', () => {
       expect(backendRoute).toMatchObject({
         dest: '/_svc/backend/index',
       });
+      expect(result.resolved).not.toBeNull();
+      expect(result.resolved?.services).toHaveLength(2);
+      expect(result.inferred).toMatchObject({
+        source: 'layout',
+        config: {
+          frontend: { framework: 'nextjs', routePrefix: '/' },
+          backend: {
+            framework: 'ruby',
+            entrypoint: 'backend',
+            routePrefix: '/_/backend',
+          },
+        },
+      });
     });
   });
 
@@ -105,6 +121,9 @@ describe('detectServices', () => {
 
       expect(result.services).toHaveLength(1);
       expect(result.source).toBe('configured');
+      expect(result.resolved).not.toBeNull();
+      expect(result.resolved?.source).toBe('configured');
+      expect(result.inferred).toBeNull();
       expect(result.services[0]).toMatchObject({
         name: 'api',
         type: 'web',
