@@ -2045,6 +2045,9 @@ importers:
       cross-env:
         specifier: 7.0.3
         version: 7.0.3
+      detect-libc:
+        specifier: 2.1.2
+        version: 2.1.2
       execa:
         specifier: ^1.0.0
         version: 1.0.0

@@ -83,4 +83,57 @@ impl crate::bindings::Guest for PythonAnalyzer {
     ) -> Result<ParsedRequirementsTxt, String> {
         requirements_txt::parse_requirements_txt(&content, working_dir, filename)
     }
+
+    fn is_wheel_compatible(
+        wheel_filename: String,
+        python_major: u8,
+        python_minor: u8,
+        os_name: String,
+        arch_name: String,
+        os_major: u16,
+        os_minor: u16,
+    ) -> Result<bool, String> {
+        use std::str::FromStr;
+        use uv_distribution_filename::WheelFilename;
+        use uv_platform_tags::{Arch, Os, Platform, Tags};
+
+        let wheel = WheelFilename::from_str(&wheel_filename)
+            .map_err(|e| format!("invalid wheel filename: {e}"))?;
+
+        let arch = Arch::from_str(&arch_name)
+            .map_err(|e| format!("unknown architecture '{arch_name}': {e}"))?;
+
+        let os = match os_name.as_str() {
+            "manylinux" => Os::Manylinux {
+                major: os_major,
+                minor: os_minor,
+            },
+            "musllinux" => Os::Musllinux {
+                major: os_major,
+                minor: os_minor,
+            },
+            "macos" => Os::Macos {
+                major: os_major,
+                minor: os_minor,
+            },
+            "windows" => Os::Windows,
+            other => return Err(format!("unknown OS '{other}': expected manylinux, musllinux, macos, or windows")),
+        };
+
+        let platform = Platform::new(os, arch);
+        let python_version = (python_major, python_minor);
+
+        let tags = Tags::from_env(
+            &platform,
+            python_version,
+            "cpython",
+            python_version,
+            true,  // manylinux_compatible
+            false, // gil_disabled
+            false, // is_cross
+        )
+        .map_err(|e| format!("failed to build platform tags: {e}"))?;
+
+        Ok(wheel.is_compatible(&tags))
+    }
 }
