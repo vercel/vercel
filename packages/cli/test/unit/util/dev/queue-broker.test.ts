@@ -16,15 +16,21 @@ vi.mock('node-fetch', () => ({
 import nodeFetch from 'node-fetch';
 const mockFetch = vi.mocked(nodeFetch);
 
-function makeWorkerService(name: string, topic = 'default'): Service {
-  return {
+function makeWorkerService(
+  name: string,
+  topic: string | string[] = 'default'
+): Service {
+  const base = {
     name,
     type: 'worker',
-    topic,
     consumer: name,
     workspace: '.',
     builder: { src: 'index.ts', use: '@vercel/node' },
-  } as Service;
+  };
+  if (Array.isArray(topic)) {
+    return { ...base, topics: topic } as Service;
+  }
+  return { ...base, topic } as Service;
 }
 
 function makeWebService(name: string): Service {
@@ -170,6 +176,66 @@ describe('QueueBroker', () => {
       await vi.advanceTimersByTimeAsync(0);
 
       expect(mockFetch).toHaveBeenCalledTimes(2);
+    });
+
+    it('dispatches to worker subscribed to multiple topics via topics[]', async () => {
+      broker = new QueueBroker(
+        [makeWorkerService('multi-worker', ['orders', 'events'])],
+        getServiceOrigin
+      );
+
+      broker.enqueue('orders', Buffer.from('{"a":1}'), 'application/json');
+      broker.enqueue('events', Buffer.from('{"b":2}'), 'application/json');
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+
+      const bodies = mockFetch.mock.calls.map(c =>
+        JSON.parse((c[1] as any).body)
+      );
+      expect(bodies[0].data.queueName).toBe('orders');
+      expect(bodies[1].data.queueName).toBe('events');
+    });
+
+    it('does not cross-dispatch across topics during tick()', async () => {
+      broker = new QueueBroker(
+        [makeWorkerService('multi-worker', ['orders', 'events'])],
+        getServiceOrigin
+      );
+
+      broker.enqueue(
+        'orders',
+        Buffer.from('{"t":"orders"}'),
+        'application/json',
+        {
+          delaySeconds: 5,
+        }
+      );
+      broker.enqueue(
+        'events',
+        Buffer.from('{"t":"events"}'),
+        'application/json',
+        {
+          delaySeconds: 5,
+        }
+      );
+      await vi.advanceTimersByTimeAsync(0);
+      expect(mockFetch).not.toHaveBeenCalled();
+
+      await vi.advanceTimersByTimeAsync(6_000);
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+    });
+
+    it('does not dispatch on unmatched topic when using topics[]', async () => {
+      broker = new QueueBroker(
+        [makeWorkerService('multi-worker', ['orders', 'events'])],
+        getServiceOrigin
+      );
+
+      broker.enqueue('unmatched', Buffer.from('{}'), 'application/json');
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(mockFetch).not.toHaveBeenCalled();
     });
 
     it('does not dispatch when no consumer matches', async () => {

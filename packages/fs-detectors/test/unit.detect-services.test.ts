@@ -863,6 +863,53 @@ describe('detectServices', () => {
       });
     });
 
+    it('should pass through topics array for workers', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            worker: {
+              type: 'worker',
+              entrypoint: 'worker.py',
+              topics: ['orders', 'events'],
+            },
+          },
+        }),
+        'worker.py': 'def main(): pass',
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.services[0]).toMatchObject({
+        type: 'worker',
+        topics: ['orders', 'events'],
+      });
+    });
+
+    it('should error when both topic and topics are set', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            worker: {
+              type: 'worker',
+              entrypoint: 'worker.py',
+              topic: 'orders',
+              topics: ['orders', 'events'],
+            },
+          },
+        }),
+        'worker.py': 'def main(): pass',
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.services).toHaveLength(0);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]).toMatchObject({
+        code: 'INVALID_SERVICE_CONFIG',
+        message: expect.stringContaining(
+          'cannot specify both "topic" and "topics"'
+        ),
+      });
+    });
+
     it('should not set topic/consumer defaults for non-workers', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': JSON.stringify({
