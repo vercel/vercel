@@ -1,3 +1,4 @@
+import chalk from 'chalk';
 import { remove } from 'fs-extra';
 import { join, basename } from 'path';
 import type {
@@ -53,7 +54,6 @@ import {
   displayServicesConfigNote,
 } from '../input/display-services';
 
-const chalk = require('chalk');
 const SERVICES_DOCS_URL = 'https://vercel.com/docs/services';
 
 export interface SetupAndLinkOptions {
