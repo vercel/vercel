@@ -7,7 +7,6 @@ import {
   calculateBundleSize,
   lambdaKnapsack,
   LAMBDA_SIZE_THRESHOLD_BYTES,
-  LAMBDA_PACKING_TARGET_BYTES,
   LAMBDA_EPHEMERAL_STORAGE_BYTES,
 } from '../src/dependency-externalizer';
 import { classifyPackages, parseUvLock } from '@vercel/python-analysis';
@@ -148,8 +147,8 @@ describe('dependency externalizer support', () => {
   });
 
   describe('Lambda size constants', () => {
-    it('LAMBDA_SIZE_THRESHOLD_BYTES is 249 MB', () => {
-      expect(LAMBDA_SIZE_THRESHOLD_BYTES).toBe(249 * 1024 * 1024);
+    it('LAMBDA_SIZE_THRESHOLD_BYTES is 245 MB', () => {
+      expect(LAMBDA_SIZE_THRESHOLD_BYTES).toBe(245 * 1024 * 1024);
     });
 
     it('LAMBDA_EPHEMERAL_STORAGE_BYTES is 500 MB', () => {
@@ -372,18 +371,6 @@ version = "2.31.0"
       );
       const result = lambdaKnapsack(packages, 95);
       expect(result).toHaveLength(9);
-    });
-  });
-
-  describe('LAMBDA_PACKING_TARGET_BYTES', () => {
-    it('defaults to 240 MB', () => {
-      expect(LAMBDA_PACKING_TARGET_BYTES).toBe(240 * 1024 * 1024);
-    });
-
-    it('is less than LAMBDA_SIZE_THRESHOLD_BYTES', () => {
-      expect(LAMBDA_PACKING_TARGET_BYTES).toBeLessThan(
-        LAMBDA_SIZE_THRESHOLD_BYTES
-      );
     });
   });
 });
