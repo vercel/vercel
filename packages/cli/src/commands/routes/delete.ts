@@ -10,6 +10,7 @@ import {
   withGlobalFlags,
 } from './shared';
 import { outputAgentError } from '../../util/agent-output';
+import { AGENT_STATUS, AGENT_REASON } from '../../util/agent-output-constants';
 import getRoutes from '../../util/routes/get-routes';
 import getRouteVersions from '../../util/routes/get-route-versions';
 import deleteRoutes from '../../util/routes/delete-routes';
@@ -34,8 +35,8 @@ export default async function deleteRoute(client: Client, argv: string[]) {
       outputAgentError(
         client,
         {
-          status: 'error',
-          reason: 'missing_arguments',
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.MISSING_ARGUMENTS,
           message: 'At least one route name or ID is required.',
           next: [
             {
@@ -70,8 +71,8 @@ export default async function deleteRoute(client: Client, argv: string[]) {
       outputAgentError(
         client,
         {
-          status: 'error',
-          reason: 'not_found',
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.NOT_FOUND,
           message: 'No routes found in this project.',
         },
         1
@@ -104,8 +105,8 @@ export default async function deleteRoute(client: Client, argv: string[]) {
       outputAgentError(
         client,
         {
-          status: 'error',
-          reason: 'confirmation_required',
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.CONFIRMATION_REQUIRED,
           message:
             'Deletion requires confirmation. Pass --yes to skip the prompt in non-interactive mode.',
           next: [
@@ -165,9 +166,13 @@ export default async function deleteRoute(client: Client, argv: string[]) {
       outputAgentError(
         client,
         {
-          status: 'error',
-          reason: 'api_error',
-          message: error.message || 'Failed to delete routes',
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.API_ERROR,
+          message:
+            'Failed to delete routes for this project. See hint for error details.',
+          hint:
+            error.message ||
+            'Retry with the same command once transient issues are resolved.',
         },
         1
       );

@@ -25,6 +25,7 @@ import { runInteractiveEditLoop } from './edit-interactive';
 import stamp from '../../util/output/stamp';
 import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 import { outputAgentError } from '../../util/agent-output';
+import { AGENT_STATUS, AGENT_REASON } from '../../util/agent-output-constants';
 import { getGlobalFlagsOnlyFromArgs } from '../../util/arg-common';
 import { RoutesAddTelemetryClient } from '../../util/telemetry/commands/routes';
 import {
@@ -132,8 +133,8 @@ export default async function add(client: Client, argv: string[]) {
   const { project, org } = link;
   const teamId = org.type === 'team' ? org.id : undefined;
   const { args, flags } = parsed;
-  const skipPrompts =
-    (flags['--yes'] as boolean | undefined) || client.nonInteractive;
+  const isAgentMode = client.nonInteractive;
+  const skipPrompts = (flags['--yes'] as boolean | undefined) || isAgentMode;
 
   const telemetry = new RoutesAddTelemetryClient({
     opts: { store: client.telemetryEventStore },
@@ -187,7 +188,7 @@ export default async function add(client: Client, argv: string[]) {
   // --- AI generation mode ---
   const aiPrompt = flags['--ai'] as string | undefined;
 
-  if (client.nonInteractive && !aiPrompt && !flags['--src']) {
+  if (isAgentMode && !aiPrompt && !flags['--src']) {
     // Non-interactive paths: (1) full flags, or (2) --ai PROMPT --yes which creates
     // without prompts when generation succeeds (handleAIAdd retries once on failure).
     // Second next command reuses name/action/etc. from argv; placeholders only for missing.
@@ -195,8 +196,8 @@ export default async function add(client: Client, argv: string[]) {
     outputAgentError(
       client,
       {
-        status: 'error',
-        reason: 'missing_arguments',
+        status: AGENT_STATUS.ERROR,
+        reason: AGENT_REASON.MISSING_ARGUMENTS,
         message:
           'In non-interactive mode pass either full route flags (name, --src, --action, --dest, --yes) or --ai <description> with --yes. For --src use a URL path pattern that starts with a forward slash / (e.g. /about, /api/:path*). With --src-syntax regex you may use a regex such as ^/api/.*. Run vercel routes add --help for options.',
         next: [
@@ -274,13 +275,13 @@ export default async function add(client: Client, argv: string[]) {
     }
     name = nameArg;
   } else if (skipPrompts) {
-    if (client.nonInteractive) {
+    if (isAgentMode) {
       const fullFlagsCmd = buildRoutesAddFullFlagsSuggestion(client, parsed);
       outputAgentError(
         client,
         {
-          status: 'error',
-          reason: 'missing_arguments',
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.MISSING_ARGUMENTS,
           message:
             'In non-interactive mode route name is required as the first argument.',
           next: [
@@ -359,12 +360,12 @@ export default async function add(client: Client, argv: string[]) {
   if (flags['--src']) {
     src = stripQuotes(flags['--src'] as string);
   } else if (skipPrompts) {
-    if (client.nonInteractive) {
+    if (isAgentMode) {
       outputAgentError(
         client,
         {
-          status: 'error',
-          reason: 'missing_arguments',
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.MISSING_ARGUMENTS,
           message:
             'In non-interactive mode --src is required. It must be a URL path pattern starting with forward slash / (e.g. /old-page, /api/:path*). Not a Windows path and not backslash. Use --src-syntax regex only if you need a regex pattern.',
           next: [
@@ -418,12 +419,12 @@ export default async function add(client: Client, argv: string[]) {
   if (syntax !== 'regex' && !src.startsWith('/')) {
     const pathMsg =
       '--src must start with a forward slash / (URL path root). Examples: /about, /api/:path*. Backslash \\ is wrong. If you need a regex, pass --src-syntax regex and a pattern like ^/api/.*';
-    if (client.nonInteractive) {
+    if (isAgentMode) {
       outputAgentError(
         client,
         {
-          status: 'error',
-          reason: 'invalid_arguments',
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.INVALID_ARGUMENTS,
           message: pathMsg,
           next: [
             {
@@ -452,12 +453,12 @@ export default async function add(client: Client, argv: string[]) {
   // In flag-based mode, --action is required when --dest or --status is provided
   const actionError = validateActionFlags(actionFlag, dest, status);
   if (actionError) {
-    if (client.nonInteractive) {
+    if (isAgentMode) {
       outputAgentError(
         client,
         {
-          status: 'error',
-          reason: 'invalid_arguments',
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.INVALID_ARGUMENTS,
           message: actionError,
           next: [
             {
@@ -494,12 +495,12 @@ export default async function add(client: Client, argv: string[]) {
 
   // Require at least one action when using --yes
   if (!hasAnyAction && skipPrompts) {
-    if (client.nonInteractive) {
+    if (isAgentMode) {
       outputAgentError(
         client,
         {
-          status: 'error',
-          reason: 'missing_arguments',
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.MISSING_ARGUMENTS,
           message:
             'In non-interactive mode at least one action is required. Use --action with --dest or --status, or header/transform flags.',
           next: [
@@ -738,12 +739,8 @@ export default async function add(client: Client, argv: string[]) {
       position,
     });
 
-    if (client.nonInteractive) {
+    if (isAgentMode) {
       output.stopSpinner();
-      const testUrl =
-        version.alias && src.startsWith('/')
-          ? `https://${version.alias}${syntax === 'equals' ? src : '/'}`
-          : undefined;
       const jsonOutput: Record<string, unknown> = {
         status: 'ok',
         route: {
@@ -757,7 +754,6 @@ export default async function add(client: Client, argv: string[]) {
           id: version.id,
           ...(version.alias && { alias: version.alias }),
         },
-        ...(testUrl && { testUrl }),
         ...(!existingStagingVersion && {
           next: [
             {
@@ -839,13 +835,17 @@ export default async function add(client: Client, argv: string[]) {
     return 0;
   } catch (e: unknown) {
     const error = e as { message?: string };
-    if (client.nonInteractive) {
+    if (isAgentMode) {
       outputAgentError(
         client,
         {
-          status: 'error',
-          reason: 'route_create_failed',
-          message: error.message || 'Failed to create route',
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.ROUTE_CREATE_FAILED,
+          message:
+            'Route creation failed for this project. See hint for next steps.',
+          hint:
+            error.message ||
+            'Use `vercel routes list --diff` to inspect staged routes, then adjust flags and retry.',
           next: [
             {
               command: withGlobalFlags(client, 'routes list --diff'),
@@ -935,8 +935,8 @@ async function handleAIAdd(
       outputAgentError(
         client,
         {
-          status: 'error',
-          reason: 'route_generation_failed',
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.ROUTE_GENERATION_FAILED,
           message:
             errorMessage ||
             'Could not generate a route after retry. Rephrase --ai description or use full route flags.',
@@ -1005,8 +1005,8 @@ async function handleAIAdd(
       outputAgentError(
         client,
         {
-          status: 'error',
-          reason: 'confirmation_requires_tty',
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.CONFIRMATION_REQUIRED,
           message:
             'Route creation from AI preview requires a TTY to confirm, or use full flags with --yes non-interactively.',
           next: [
@@ -1185,10 +1185,6 @@ async function createFromGenerated(
 
     if (client.nonInteractive) {
       output.stopSpinner();
-      const testUrl =
-        version.alias && routeInput.route.src?.startsWith('/')
-          ? `https://${version.alias}/`
-          : undefined;
       const jsonOutput: Record<string, unknown> = {
         status: 'ok',
         route: {
@@ -1200,7 +1196,6 @@ async function createFromGenerated(
           id: version.id,
           ...(version.alias && { alias: version.alias }),
         },
-        ...(testUrl && { testUrl }),
         ...(!existingStagingVersion && {
           next: [
             {
@@ -1242,8 +1237,12 @@ async function createFromGenerated(
         client,
         {
           status: 'error',
-          reason: 'route_create_failed',
-          message: error.message || 'Failed to create route',
+          reason: AGENT_ERROR_REASON.ROUTE_CREATE_FAILED,
+          message:
+            'Route creation failed for this project. See hint for next steps.',
+          hint:
+            error.message ||
+            'Use `vercel routes list --diff` to inspect staged routes, then adjust flags and retry.',
           next: [
             {
               command: withGlobalFlags(client, 'routes list --diff'),

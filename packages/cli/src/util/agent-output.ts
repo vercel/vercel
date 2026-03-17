@@ -44,7 +44,12 @@ export function isActionRequiredPayload(
  */
 export interface AgentErrorPayload {
   status: 'error';
+  /**
+   * Short, stable machine-readable reason code.
+   * Prefer values from AGENT_REASON so agents can branch reliably.
+   */
   reason: string;
+  /** Human-readable message (no ANSI). */
   message: string;
   next?: Array<{ command: string; when?: string }>;
   /** Optional extra context for agents (plain text, no ANSI). */
