@@ -429,6 +429,9 @@ importers:
       '@vercel/detect-agent':
         specifier: workspace:*
         version: link:../detect-agent
+      '@vercel/dotnet':
+        specifier: workspace:*
+        version: link:../dotnet
       '@vercel/elysia':
         specifier: workspace:*
         version: link:../elysia
