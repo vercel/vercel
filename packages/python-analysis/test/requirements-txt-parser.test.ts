@@ -1036,7 +1036,7 @@ uvicorn
 ../shared/wheels/pkg-1.0.0-py3-none-any.whl
 `;
     const result = await parseRequirementsFile(content, {
-      workingDir: '/project',
+      workingDir: '/workspace/project',
     });
     expect(result.requirements).toEqual([
       {
