@@ -1,6 +1,45 @@
 import output from '../../output-manager';
 import type Client from '../../util/client';
+import { ensureLink } from '../../util/link/ensure-link';
+import getScope from '../../util/get-scope';
+import type { Project, Org, Team } from '@vercel-internals/types';
 import type { MicrofrontendsGroupsResponse } from './types';
+
+interface MicrofrontendsContext {
+  project: Project;
+  org: Org;
+  team: Team;
+  repoRoot?: string;
+}
+
+export async function ensureMicrofrontendsContext(
+  client: Client,
+  options?: { autoConfirm?: boolean }
+): Promise<MicrofrontendsContext | number> {
+  const link = await ensureLink('microfrontends', client, client.cwd, {
+    autoConfirm: options?.autoConfirm,
+  });
+  if (typeof link === 'number') {
+    return link;
+  }
+
+  const { project, org, repoRoot } = link;
+
+  if (org.type !== 'team') {
+    output.error('Microfrontends are only available for teams.');
+    return 1;
+  }
+
+  client.config.currentTeam = org.id;
+  const { team } = await getScope(client);
+
+  if (!team) {
+    output.error('Microfrontends are only available for teams.');
+    return 1;
+  }
+
+  return { project, org, team, repoRoot };
+}
 
 export async function fetchMicrofrontendsGroups(
   client: Client,

@@ -1,8 +1,6 @@
 import chalk from 'chalk';
 import output from '../../output-manager';
-import getScope from '../../util/get-scope';
 import type Client from '../../util/client';
-import { ensureLink } from '../../util/link/ensure-link';
 import stamp from '../../util/output/stamp';
 import { deleteGroupSubcommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
@@ -10,7 +8,10 @@ import { parseArguments } from '../../util/get-args';
 import { printError } from '../../util/error';
 import { isAPIError } from '../../util/errors-ts';
 import type { MicrofrontendsGroupResponse } from './types';
-import { fetchMicrofrontendsGroups } from './utils';
+import {
+  ensureMicrofrontendsContext,
+  fetchMicrofrontendsGroups,
+} from './utils';
 
 export default async function deleteGroup(client: Client): Promise<number> {
   let parsedArgs;
@@ -25,27 +26,12 @@ export default async function deleteGroup(client: Client): Promise<number> {
   }
 
   const autoConfirm = !!parsedArgs.flags['--yes'];
-  const link = await ensureLink('microfrontends', client, client.cwd, {
-    autoConfirm,
-  });
-  if (typeof link === 'number') {
-    return link;
+  const context = await ensureMicrofrontendsContext(client, { autoConfirm });
+  if (typeof context === 'number') {
+    return context;
   }
 
-  const { project: linkedProject, org } = link;
-
-  if (org.type !== 'team') {
-    output.error('Microfrontends are only available for teams.');
-    return 1;
-  }
-
-  client.config.currentTeam = org.id;
-  const { team } = await getScope(client);
-
-  if (!team) {
-    output.error('Microfrontends are only available for teams.');
-    return 1;
-  }
+  const { project: linkedProject, team } = context;
 
   const groupsResponse = await fetchMicrofrontendsGroups(client, team.id);
 

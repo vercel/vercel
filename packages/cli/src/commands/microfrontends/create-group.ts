@@ -3,9 +3,7 @@ import { existsSync } from 'fs';
 import { join } from 'path';
 import chalk from 'chalk';
 import output from '../../output-manager';
-import getScope from '../../util/get-scope';
 import type Client from '../../util/client';
-import { ensureLink } from '../../util/link/ensure-link';
 import stamp from '../../util/output/stamp';
 import { createGroupSubcommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
@@ -16,6 +14,7 @@ import { isAPIError, ProjectNotFound } from '../../util/errors-ts';
 import type { Project } from '@vercel-internals/types';
 import type { MicrofrontendsGroupResponse } from './types';
 import {
+  ensureMicrofrontendsContext,
   fetchMicrofrontendsGroups,
   validateDefaultRoute,
   validateRoutingPath,
@@ -35,26 +34,12 @@ export default async function createGroup(client: Client): Promise<number> {
     return 1;
   }
 
-  const link = await ensureLink('microfrontends', client, client.cwd);
-  if (typeof link === 'number') {
-    return link;
+  const context = await ensureMicrofrontendsContext(client);
+  if (typeof context === 'number') {
+    return context;
   }
 
-  const { project: linkedProject, org, repoRoot } = link;
-
-  if (org.type !== 'team') {
-    output.error('Microfrontends are only available for teams.');
-    return 1;
-  }
-
-  client.config.currentTeam = org.id;
-  const { team } = await getScope(client);
-
-  if (!team) {
-    output.error('Microfrontends are only available for teams.');
-    return 1;
-  }
-
+  const { project: linkedProject, team, repoRoot } = context;
   const teamSlug = team.slug;
 
   output.log(
