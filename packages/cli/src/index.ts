@@ -490,6 +490,19 @@ const main = async () => {
       }
 
       output.debug(`Saved credentials in "${hp(VERCEL_DIR)}"`);
+    } else if (isAgent) {
+      // Agent detected without credentials — auto-launch device code login flow.
+      // The login flow handles non-TTY: prints auth URL, opens browser if possible, polls.
+      output.log('No existing credentials found. Starting login flow...');
+      try {
+        const result = await login(client, { shouldParseArgs: false });
+        if (result !== 0) return result;
+      } catch (error) {
+        printError(error);
+        return 1;
+      }
+
+      output.debug(`Saved credentials in "${hp(VERCEL_DIR)}"`);
     } else {
       output.prettyError({
         message:
