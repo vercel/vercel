@@ -16,7 +16,7 @@ export async function isPythonEntrypoint(
     const fsPath = (file as FileFsRef).fsPath;
     if (!fsPath) return false;
     const content = await fs.promises.readFile(fsPath, 'utf-8');
-    return await containsAppOrHandler(content);
+    return (await containsAppOrHandler(content)) !== null;
   } catch (err) {
     debug(`Failed to check Python entrypoint: ${err}`);
     return false;
