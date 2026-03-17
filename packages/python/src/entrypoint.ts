@@ -1,8 +1,9 @@
 import fs from 'fs';
 import { join, posix as pathPosix } from 'path';
 import type { PythonFramework } from '@vercel/build-utils';
-import { debug, isPythonEntrypoint } from '@vercel/build-utils';
+import { debug } from '@vercel/build-utils';
 import { readConfigFile } from '@vercel/build-utils';
+import { containsAppOrHandler } from '@vercel/python-analysis';
 
 export interface DetectedPythonEntrypoint {
   entrypoint?: string; // path to the entrypoint file (e.g. "src/app.py")
@@ -43,13 +44,18 @@ async function fileExists(filePath: string): Promise<boolean> {
   }
 }
 
+/**
+ * Check if a Python file contains a top-level app/handler.
+ * Returns the matched variable name (e.g. "app"), or null if not found.
+ */
 async function checkEntrypoint(
   workPath: string,
   relPath: string
-): Promise<boolean> {
+): Promise<string | null> {
   const absPath = join(workPath, relPath);
-  if (!(await fileExists(absPath))) return false;
-  return isPythonEntrypoint({ fsPath: absPath });
+  if (!(await fileExists(absPath))) return null;
+  const content = await fs.promises.readFile(absPath, 'utf-8');
+  return containsAppOrHandler(content);
 }
 
 interface PyprojectEntrypoint {
@@ -94,11 +100,12 @@ export async function getPyprojectEntrypoint(
 async function findValidEntrypoint(
   workPath: string,
   candidates: string[]
-): Promise<string | null> {
+): Promise<{ entrypoint: string; variableName: string } | null> {
   for (const candidate of candidates) {
-    if (await checkEntrypoint(workPath, candidate)) {
-      debug(`Detected Python entrypoint: ${candidate}`);
-      return candidate;
+    const varName = await checkEntrypoint(workPath, candidate);
+    if (varName) {
+      debug(`Detected Python entrypoint: ${candidate} (variable: ${varName})`);
+      return { entrypoint: candidate, variableName: varName };
     }
   }
   return null;
@@ -149,9 +156,10 @@ export async function detectGenericPythonEntrypoint(
 
   try {
     // If the configured entrypoint exists and is valid, use it
-    if (await checkEntrypoint(workPath, entry)) {
+    const varName = await checkEntrypoint(workPath, entry);
+    if (varName) {
       debug(`Using configured Python entrypoint: ${entry}`);
-      return { entrypoint: entry };
+      return { entrypoint: entry, variableName: varName };
     }
 
     // Search candidate locations using AST-based detection
@@ -159,7 +167,9 @@ export async function detectGenericPythonEntrypoint(
       workPath,
       PYTHON_CANDIDATE_ENTRYPOINTS
     );
-    return found ? { entrypoint: found } : null;
+    return found
+      ? { entrypoint: found.entrypoint, variableName: found.variableName }
+      : null;
   } catch {
     debug('Failed to discover Python entrypoint');
     return null;
@@ -180,9 +190,10 @@ export async function detectDjangoPythonEntrypoint(
 
   try {
     // If the configured entrypoint exists and is valid, use it
-    if (await checkEntrypoint(workPath, entry)) {
+    const varName = await checkEntrypoint(workPath, entry);
+    if (varName) {
       debug(`Using configured Python entrypoint: ${entry}`);
-      return { entrypoint: entry };
+      return { entrypoint: entry, variableName: varName };
     }
 
     // Get root directories (workPath root + immediate subdirs)
@@ -202,7 +213,9 @@ export async function detectDjangoPythonEntrypoint(
     // Look in all immediate subdirectories, not just those specified in PYTHON_ENTRYPOINT_DIRS.
     const candidates = getCandidateEntrypointsInDirs(rootDirs);
     const found = await findValidEntrypoint(workPath, candidates);
-    return found ? { entrypoint: found } : null;
+    return found
+      ? { entrypoint: found.entrypoint, variableName: found.variableName }
+      : null;
   } catch {
     debug('Failed to discover Django Python entrypoint');
     return null;

@@ -8,10 +8,11 @@
 use ruff_python_ast::{Expr, Stmt};
 use ruff_python_parser::parse_module;
 
-pub(crate) fn contains_app_or_handler_impl(source: &str) -> bool {
+/// Returns the name of the matched app/handler variable, or `None` if not found.
+pub(crate) fn contains_app_or_handler_impl(source: &str) -> Option<String> {
     let parsed = match parse_module(source) {
         Ok(parsed) => parsed,
-        Err(_) => return false, // Couldn't parse
+        Err(_) => return None, // Couldn't parse
     };
 
     // Iterate over top-level statements
@@ -21,8 +22,8 @@ pub(crate) fn contains_app_or_handler_impl(source: &str) -> bool {
             // e.g., app = Sanic() or app = Flask(__name__) or app = create_app()
             Stmt::Assign(assign) => {
                 for target in &assign.targets {
-                    if is_name_expr(target, "app") || is_name_expr(target, "application") {
-                        return true;
+                    if let Some(name) = get_name_if_matches(target, &["app", "application"]) {
+                        return Some(name.to_string());
                     }
                 }
             }
@@ -30,10 +31,10 @@ pub(crate) fn contains_app_or_handler_impl(source: &str) -> bool {
             // Check for annotated assignment to 'app' or 'application'
             // e.g., app: Sanic = Sanic()
             Stmt::AnnAssign(ann_assign) => {
-                if is_name_expr(&ann_assign.target, "app")
-                    || is_name_expr(&ann_assign.target, "application")
+                if let Some(name) =
+                    get_name_if_matches(&ann_assign.target, &["app", "application"])
                 {
-                    return true;
+                    return Some(name.to_string());
                 }
             }
 
@@ -41,8 +42,9 @@ pub(crate) fn contains_app_or_handler_impl(source: &str) -> bool {
             // e.g., def app(environ, start_response): ...
             // e.g., async def app(scope, receive, send): ...
             Stmt::FunctionDef(func_def) => {
-                if func_def.name.as_str() == "app" || func_def.name.as_str() == "application" {
-                    return true;
+                let name = func_def.name.as_str();
+                if name == "app" || name == "application" {
+                    return Some(name.to_string());
                 }
             }
 
@@ -59,7 +61,7 @@ pub(crate) fn contains_app_or_handler_impl(source: &str) -> bool {
                         .map(|id| id.as_str())
                         .unwrap_or_else(|| alias.name.as_str());
                     if imported_as == "app" || imported_as == "application" {
-                        return true;
+                        return Some(imported_as.to_string());
                     }
                 }
             }
@@ -68,7 +70,7 @@ pub(crate) fn contains_app_or_handler_impl(source: &str) -> bool {
             // e.g., class handler(BaseHTTPRequestHandler):
             Stmt::ClassDef(class_def) => {
                 if class_def.name.as_str().eq_ignore_ascii_case("handler") {
-                    return true;
+                    return Some(class_def.name.as_str().to_string());
                 }
             }
 
@@ -77,7 +79,21 @@ pub(crate) fn contains_app_or_handler_impl(source: &str) -> bool {
         }
     }
 
-    false
+    None
+}
+
+fn get_name_if_matches<'a>(expr: &'a Expr, candidates: &[&str]) -> Option<&'a str> {
+    match expr {
+        Expr::Name(name_expr) => {
+            let name = name_expr.id.as_str();
+            if candidates.contains(&name) {
+                Some(name)
+            } else {
+                None
+            }
+        }
+        _ => None,
+    }
 }
 
 /// Check if a top-level callable with the given name exists in Python source.
@@ -185,7 +201,7 @@ mod tests {
 from flask import Flask
 app = Flask(__name__)
 "#;
-        assert!(contains_app_or_handler_impl(source));
+        assert_eq!(contains_app_or_handler_impl(source), Some("app".to_string()));
     }
 
     #[test]
@@ -194,7 +210,7 @@ app = Flask(__name__)
 from fastapi import FastAPI
 app = FastAPI()
 "#;
-        assert!(contains_app_or_handler_impl(source));
+        assert_eq!(contains_app_or_handler_impl(source), Some("app".to_string()));
     }
 
     #[test]
@@ -203,7 +219,18 @@ app = FastAPI()
 from sanic import Sanic
 app: Sanic = Sanic()
 "#;
-        assert!(contains_app_or_handler_impl(source));
+        assert_eq!(contains_app_or_handler_impl(source), Some("app".to_string()));
+    }
+
+    #[test]
+    fn test_application_variable() {
+        let source = r#"
+application = get_wsgi_application()
+"#;
+        assert_eq!(
+            contains_app_or_handler_impl(source),
+            Some("application".to_string())
+        );
     }
 
     #[test]
@@ -212,7 +239,7 @@ app: Sanic = Sanic()
 def app(environ, start_response):
     pass
 "#;
-        assert!(contains_app_or_handler_impl(source));
+        assert_eq!(contains_app_or_handler_impl(source), Some("app".to_string()));
     }
 
     #[test]
@@ -221,7 +248,7 @@ def app(environ, start_response):
 async def app(scope, receive, send):
     pass
 "#;
-        assert!(contains_app_or_handler_impl(source));
+        assert_eq!(contains_app_or_handler_impl(source), Some("app".to_string()));
     }
 
     #[test]
@@ -229,7 +256,7 @@ async def app(scope, receive, send):
         let source = r#"
 from server import app
 "#;
-        assert!(contains_app_or_handler_impl(source));
+        assert_eq!(contains_app_or_handler_impl(source), Some("app".to_string()));
     }
 
     #[test]
@@ -237,7 +264,7 @@ from server import app
         let source = r#"
 from server import application as app
 "#;
-        assert!(contains_app_or_handler_impl(source));
+        assert_eq!(contains_app_or_handler_impl(source), Some("app".to_string()));
     }
 
     #[test]
@@ -247,7 +274,10 @@ from http.server import BaseHTTPRequestHandler
 class handler(BaseHTTPRequestHandler):
     pass
 "#;
-        assert!(contains_app_or_handler_impl(source));
+        assert_eq!(
+            contains_app_or_handler_impl(source),
+            Some("handler".to_string())
+        );
     }
 
     #[test]
@@ -257,7 +287,10 @@ from http.server import BaseHTTPRequestHandler
 class Handler(BaseHTTPRequestHandler):
     pass
 "#;
-        assert!(contains_app_or_handler_impl(source));
+        assert_eq!(
+            contains_app_or_handler_impl(source),
+            Some("Handler".to_string())
+        );
     }
 
     #[test]
@@ -266,7 +299,7 @@ class Handler(BaseHTTPRequestHandler):
 def main():
     print("Hello")
 "#;
-        assert!(!contains_app_or_handler_impl(source));
+        assert_eq!(contains_app_or_handler_impl(source), None);
     }
 
     #[test]
@@ -274,7 +307,7 @@ def main():
         let source = r#"
 def invalid(
 "#;
-        assert!(!contains_app_or_handler_impl(source));
+        assert_eq!(contains_app_or_handler_impl(source), None);
     }
 
     #[test]
@@ -285,7 +318,7 @@ def create():
     app = Flask(__name__)
     return app
 "#;
-        assert!(!contains_app_or_handler_impl(source));
+        assert_eq!(contains_app_or_handler_impl(source), None);
     }
 
     // -------------------------------------------------------------------------

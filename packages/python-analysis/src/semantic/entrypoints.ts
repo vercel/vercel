@@ -15,21 +15,24 @@ import { importWasmModule } from '../wasm/load';
  * accurate AST analysis without requiring a Python runtime.
  *
  * @param source - The Python source code to analyze
- * @returns Promise that resolves to true if an app or handler is found, false otherwise.
- *          Returns false for invalid Python syntax.
+ * @returns Promise that resolves to the matched variable name (e.g. "app",
+ *          "application", "handler"), or null if not found.
+ *          Returns null for invalid Python syntax.
  *
  * @example
  * ```typescript
  * import { containsAppOrHandler } from '@vercel/python-analysis';
  *
- * const hasApp = await containsAppOrHandler(`
+ * const name = await containsAppOrHandler(`
  * from flask import Flask
  * app = Flask(__name__)
  * `);
- * console.log(hasApp); // true
+ * console.log(name); // "app"
  * ```
  */
-export async function containsAppOrHandler(source: string): Promise<boolean> {
+export async function containsAppOrHandler(
+  source: string
+): Promise<string | null> {
   // Skip parsing if file doesn't contain {app|application|[Hh]andler}
   if (
     !source.includes('app') &&
@@ -37,10 +40,10 @@ export async function containsAppOrHandler(source: string): Promise<boolean> {
     !source.includes('handler') &&
     !source.includes('Handler')
   ) {
-    return false;
+    return null;
   }
   const mod = await importWasmModule();
-  return mod.containsAppOrHandler(source);
+  return mod.containsAppOrHandler(source) ?? null;
 }
 
 /**
