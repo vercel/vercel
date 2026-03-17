@@ -20,7 +20,7 @@ import {
   BUILDER_COMPILE_STEP,
   type BuildOptions,
   type GlobOptions,
-  type BuildV3,
+  type BuildVX,
   type Files,
   type ShouldServe,
   FileFsRef,
@@ -55,7 +55,7 @@ import {
   type DetectedPythonEntrypoint,
 } from './entrypoint';
 
-export const version = 3;
+export const version = -1;
 
 interface FrameworkHookContext {
   pythonEnv: NodeJS.ProcessEnv;
@@ -166,7 +166,7 @@ export async function downloadFilesInWorkPath({
   return workPath;
 }
 
-export const build: BuildV3 = async ({
+export const build: BuildVX = async ({
   workPath,
   repoRootPath,
   files: originalFiles,
@@ -730,12 +730,25 @@ from vercel_runtime.vc_init import vc_handler
     }
   }
 
-  return {
-    output,
-    ...(djangoStatic?.cdnOutputDir
-      ? { staticFilesPath: djangoStatic.cdnOutputDir }
-      : {}),
-  };
+  if (djangoStatic?.cdnOutputDir) {
+    const lambdaPath = entrypoint.replace(/\.py$/, '');
+    const staticFiles = await glob('**', { cwd: djangoStatic.cdnOutputDir });
+    return {
+      resultVersion: 2,
+      result: {
+        output: {
+          [lambdaPath]: output,
+          ...staticFiles,
+        },
+        routes: [
+          { handle: 'filesystem' },
+          { src: '/(.*)', dest: `/${lambdaPath}` },
+        ],
+      },
+    };
+  }
+
+  return { resultVersion: 3, result: { output } };
 };
 
 export { startDevServer };

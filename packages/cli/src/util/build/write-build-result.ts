@@ -11,11 +11,13 @@ import {
 } from 'path';
 import {
   type Builder,
+  type BuildResultVX,
   type BuildResultV2,
   type BuildResultV3,
   type File,
   type Files,
   FileFsRef,
+  type BuilderVX,
   type BuilderV2,
   type BuilderV3,
   type Lambda,
@@ -63,9 +65,9 @@ interface FunctionConfiguration {
 export async function writeBuildResult(args: {
   repoRootPath: string;
   outputDir: string;
-  buildResult: BuildResultV2 | BuildResultV3;
+  buildResult: BuildResultVX | BuildResultV2 | BuildResultV3;
   build: Builder;
-  builder: BuilderV2 | BuilderV3;
+  builder: BuilderVX | BuilderV2 | BuilderV3;
   builderPkg: PackageJson;
   vercelConfig: VercelConfig | null;
   standalone: boolean;
@@ -86,12 +88,20 @@ export async function writeBuildResult(args: {
     service,
     stripServiceRoutePrefix = false,
   } = args;
-  const version = builder.version;
+  const version =
+    builder.version === -1
+      ? (buildResult as BuildResultVX).resultVersion
+      : builder.version;
+  const actualResult =
+    builder.version === -1
+      ? (buildResult as BuildResultVX).result
+      : (buildResult as BuildResultV2 | BuildResultV3);
+
   if (typeof version !== 'number' || version === 2) {
     return writeBuildResultV2({
       repoRootPath,
       outputDir,
-      buildResult: buildResult as BuildResultV2,
+      buildResult: actualResult as BuildResultV2,
       build,
       vercelConfig,
       standalone,
@@ -103,7 +113,7 @@ export async function writeBuildResult(args: {
     return writeBuildResultV3({
       repoRootPath,
       outputDir,
-      buildResult: buildResult as BuildResultV3,
+      buildResult: actualResult as BuildResultV3,
       build,
       vercelConfig,
       standalone,
@@ -442,10 +452,6 @@ async function writeBuildResultV3(args: {
       `Unsupported output type: "${(output as any).type}" for ${build.src}`
     );
   }
-
-  if (buildResult.staticFilesPath) {
-    await mergeStaticFiles(outputDir, buildResult.staticFilesPath, workPath);
-  }
 }
 
 /**
@@ -746,31 +752,6 @@ async function mergeBuilderOutput(
   };
 
   await merge(buildResult.buildOutputPath, outputDir, ignoreFilter);
-}
-
-async function mergeStaticFiles(
-  outputDir: string,
-  staticFilesPath: string,
-  workPath: string
-) {
-  const outputStaticDir = join(outputDir, 'static');
-  const { ig } = await getVercelIgnore(workPath);
-  const filter = ig.createFilter();
-
-  if (resolve(staticFilesPath) === resolve(outputStaticDir)) {
-    try {
-      await cleanIgnoredFiles(outputStaticDir, outputStaticDir, filter);
-    } catch (err: any) {
-      if (err.code !== 'ENOENT') throw err;
-    }
-    return;
-  }
-
-  // Unlike mergeBuilderOutput (which sources from buildOutputPath root and sees
-  // paths like "static/app/style.css"), staticFilesPath is already the static
-  // dir, so merge sees paths like "app/style.css" directly — no prefix
-  // stripping needed before applying the filter.
-  await merge(staticFilesPath, outputStaticDir, filter);
 }
 
 async function cleanIgnoredFiles(

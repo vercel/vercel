@@ -447,6 +447,18 @@ export interface ProjectSettings {
   commandForIgnoringBuildStep?: string | null;
 }
 
+/*
+ * This is a builder whose build output version may dynamically change.
+ */
+export interface BuilderVX {
+  version: -1;
+  build: BuildVX;
+  diagnostics?: Diagnostics;
+  prepareCache?: PrepareCache;
+  shouldServe?: ShouldServe;
+  startDevServer?: StartDevServer;
+}
+
 export interface BuilderV2 {
   version: 2;
   build: BuildV2;
@@ -611,15 +623,20 @@ export interface BuildResultV2Typical {
   deploymentId?: string;
 }
 
+export interface BuildResultVX {
+  resultVersion: 2 | 3;
+  result: BuildResultV2 | BuildResultV3;
+}
+
 export type BuildResultV2 = BuildResultV2Typical | BuildResultBuildOutput;
 
 export interface BuildResultV3 {
   // TODO: use proper `Route` type from `routing-utils` (perhaps move types to a common package)
   routes?: any[];
   output: Lambda | EdgeFunction;
-  staticFilesPath?: string;
 }
 
+export type BuildVX = (options: BuildOptions) => Promise<BuildResultVX>;
 export type BuildV2 = (options: BuildOptions) => Promise<BuildResultV2>;
 export type BuildV3 = (options: BuildOptions) => Promise<BuildResultV3>;
 export type PrepareCache = (options: PrepareCacheOptions) => Promise<Files>;
