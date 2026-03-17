@@ -794,19 +794,20 @@ if "VERCEL_IPC_PATH" in os.environ:
                     }
                 )
 
-    if "handler" in __vc_variables or "Handler" in __vc_variables:
-        base = (
-            __vc_module.handler
-            if "handler" in __vc_variables
-            else __vc_module.Handler
+    try:
+        app_name, app_obj = resolve_app(
+            __vc_module, _entrypoint_modname, _entrypoint_varname
         )
-        if not issubclass(base, BaseHTTPRequestHandler):
-            _fatal(
-                "Handler must inherit from BaseHTTPRequestHandler\n"
-                "See the docs: https://vercel.com/docs/functions/serverless-functions/runtimes/python"
-            )
+    except RuntimeError as exc:
+        _fatal(str(exc))
 
-        class Handler(BaseHandler, base):  # type: ignore[valid-type,misc]
+    if (
+        app_name.lower() == "handler"
+        and isinstance(app_obj, type)
+        and issubclass(app_obj, BaseHTTPRequestHandler)
+    ):
+
+        class Handler(BaseHandler, app_obj):  # type: ignore[valid-type,misc]
             def handle_request(self) -> None:
                 mname = "do_" + self.command
                 if not hasattr(self, mname):
@@ -819,14 +820,7 @@ if "VERCEL_IPC_PATH" in os.environ:
                 method()
                 self.wfile.flush()
 
-    elif (
-        "app" in __vc_variables
-        or "application" in __vc_variables
-        or _entrypoint_varname in __vc_variables
-    ):
-        app_name, app_obj = resolve_app(
-            __vc_module, _entrypoint_modname, _entrypoint_varname
-        )
+    else:
         detection_result = detect_app_type(
             app_obj,
             _entrypoint_modname,
@@ -966,29 +960,24 @@ if "VERCEL_IPC_PATH" in os.environ:
         _flush_init_log_buf()
         server.serve_forever()  # type: ignore[attr-defined]
 
-    _fatal(
-        f'Missing variable `handler` or `app` in file "{_entrypoint_rel}".\n'
-        "See the docs: https://vercel.com/docs/functions/serverless-functions/runtimes/python"
+try:
+    app_name, app_obj = resolve_app(
+        __vc_module, _entrypoint_modname, _entrypoint_varname
     )
+except RuntimeError as exc:
+    _fatal(str(exc))
 
-if "handler" in __vc_variables or "Handler" in __vc_variables:
-    base = (
-        __vc_module.handler
-        if "handler" in __vc_variables
-        else __vc_module.Handler
-    )
-    if not issubclass(base, BaseHTTPRequestHandler):
-        _fatal(
-            "Handler must inherit from BaseHTTPRequestHandler\n"
-            "See the docs: https://vercel.com/docs/functions/serverless-functions/runtimes/python"
-        )
-
+if (
+    app_name.lower() == "handler"
+    and isinstance(app_obj, type)
+    and issubclass(app_obj, BaseHTTPRequestHandler)
+):
     _stderr("using HTTP Handler")
     import _thread  # noqa: PLC2701
     import http.client
     from http.server import HTTPServer
 
-    server = HTTPServer(("127.0.0.1", 0), base)  # type: ignore[assignment]
+    server = HTTPServer(("127.0.0.1", 0), app_obj)  # type: ignore[assignment]
     port = server.server_address[1]  # type: ignore[attr-defined]
 
     def vc_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
@@ -1029,14 +1018,7 @@ if "handler" in __vc_variables or "Handler" in __vc_variables:
 
         return return_dict
 
-elif (
-    "app" in __vc_variables
-    or "application" in __vc_variables
-    or _entrypoint_varname in __vc_variables
-):
-    app_name, app_obj = resolve_app(
-        __vc_module, _entrypoint_modname, _entrypoint_varname
-    )
+else:
     detection_result = detect_app_type(
         app_obj,
         _entrypoint_modname,
@@ -1413,9 +1395,3 @@ elif (
             finally:
                 clear_vercel_headers_context()
 
-else:
-    _fatal(
-        f"Missing variable `handler`, `app`, or `application` "
-        f'in file "{_entrypoint_rel}".\n'
-        "See the docs: https://vercel.com/docs/functions/serverless-functions/runtimes/python"
-    )
