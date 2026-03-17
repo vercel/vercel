@@ -26,6 +26,7 @@ if (isAgent) {
 This package can detect the following AI agents and development environments:
 
 - **Custom agents** via `AI_AGENT` environment variable
+- **Aider** (via `AI_AGENT=aider` and aider-prefixed product names like `aider-chat`, `aider-browser`, and `aider-watch`, canonicalized to `aider`)
 - **Cursor** (cursor editor and cursor-cli)
 - **Claude Code** (Anthropic's Claude)
 - **Devin** (Cognition Labs)
