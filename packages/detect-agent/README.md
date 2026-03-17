@@ -28,7 +28,7 @@ This package can detect the following AI agents and development environments:
 - **Custom agents** via `AI_AGENT` environment variable
 - **Cursor** (cursor editor and cursor-cli)
 - **Claude Code** (Anthropic's Claude)
-- **Devin** (Cognition Labs)
+- **Devin** (Cognition Labs, via `/opt/.devin` or `AI_AGENT` aliases like `ask-devin`, `deepwiki`, `dana`, `data-analyst-agent`, `devin-review`, and `devin-mcp`; all normalize to `devin`)
 - **Gemini CLI** (Google)
 - **Codex** (OpenAI)
 - **Antigravity** (Google DeepMind)
