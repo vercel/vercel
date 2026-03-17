@@ -105,7 +105,7 @@ _here = os.path.dirname(__file__)
 _entrypoint_rel = _must_getenv("__VC_HANDLER_ENTRYPOINT")
 _entrypoint_abs = _must_getenv("__VC_HANDLER_ENTRYPOINT_ABS")
 _entrypoint_modname = _must_getenv("__VC_HANDLER_MODULE_NAME")
-_entrypoint_varname = os.environ.get("__VC_HANDLER_VARIABLE_NAME", "")
+_entrypoint_varname = _must_getenv("__VC_HANDLER_VARIABLE_NAME")
 
 
 def setup_logging(

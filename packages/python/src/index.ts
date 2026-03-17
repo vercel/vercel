@@ -53,6 +53,7 @@ import {
   PYTHON_CANDIDATE_ENTRYPOINTS,
   detectPythonEntrypoint,
   type DetectedPythonEntrypoint,
+  type PythonEntrypoint,
 } from './entrypoint';
 
 export const version = 3;
@@ -67,8 +68,7 @@ interface FrameworkHookContext {
 }
 
 interface FrameworkHookResult {
-  entrypoint?: string;
-  variableName?: string;
+  entrypoint?: PythonEntrypoint;
 }
 
 interface DjangoFrameworkHookResult extends FrameworkHookResult {
@@ -106,28 +106,27 @@ const frameworkHooks: Partial<Record<PythonFramework, FrameworkHook>> = {
     if (!settingsResult) return;
     const { djangoSettings, settingsModule } = settingsResult;
 
-    let entrypoint: string | undefined;
-    let variableName: string | undefined;
+    let resolvedEntrypoint: PythonEntrypoint | undefined;
     const baseDir = detected?.baseDir ?? '';
     const asgiApp = djangoSettings['ASGI_APPLICATION'];
     if (typeof asgiApp === 'string') {
       const parts = asgiApp.split('.');
-      variableName = parts.at(-1);
+      const variableName = parts.at(-1)!;
       const rel = `${parts.slice(0, -1).join('/')}.py`;
-      entrypoint = baseDir ? `${baseDir}/${rel}` : rel;
-      debug(
-        `Django hook: ASGI entrypoint: ${entrypoint} (variable: ${variableName})`
-      );
+      const ep = baseDir ? `${baseDir}/${rel}` : rel;
+      debug(`Django hook: ASGI entrypoint: ${ep} (variable: ${variableName})`);
+      resolvedEntrypoint = { entrypoint: ep, variableName };
     } else {
       const wsgiApp = djangoSettings['WSGI_APPLICATION'];
       if (typeof wsgiApp === 'string') {
         const parts = wsgiApp.split('.');
-        variableName = parts.at(-1);
+        const variableName = parts.at(-1)!;
         const rel = `${parts.slice(0, -1).join('/')}.py`;
-        entrypoint = baseDir ? `${baseDir}/${rel}` : rel;
+        const ep = baseDir ? `${baseDir}/${rel}` : rel;
         debug(
-          `Django hook: WSGI entrypoint: ${entrypoint} (variable: ${variableName})`
+          `Django hook: WSGI entrypoint: ${ep} (variable: ${variableName})`
         );
+        resolvedEntrypoint = { entrypoint: ep, variableName };
       }
     }
 
@@ -143,7 +142,7 @@ const frameworkHooks: Partial<Record<PythonFramework, FrameworkHook>> = {
         djangoSettings
       );
     }
-    return { entrypoint, variableName, djangoStatic };
+    return { entrypoint: resolvedEntrypoint, djangoStatic };
   },
 };
 
@@ -231,9 +230,9 @@ export const build: BuildV3 = async ({
       )) ?? undefined;
     if (detected?.entrypoint) {
       debug(
-        `Resolved Python entrypoint to "${detected.entrypoint}" (configured "${entrypoint}" not found).`
+        `Resolved Python entrypoint to "${detected.entrypoint.entrypoint}" (configured "${entrypoint}" not found).`
       );
-      entrypoint = detected.entrypoint;
+      entrypoint = detected.entrypoint.entrypoint;
     } else {
       const searchedList = PYTHON_CANDIDATE_ENTRYPOINTS.join(', ');
       entrypointNotFound = new NowBuildError({
@@ -464,8 +463,11 @@ export const build: BuildV3 = async ({
     entrypoint,
     detected,
   });
-  if (entrypointNotFound && hookResult?.entrypoint) {
-    entrypoint = hookResult.entrypoint;
+
+  // Collect the resolved entrypoint from detection or hook, preferring the hook.
+  const resolved = hookResult?.entrypoint ?? detected?.entrypoint;
+  if (entrypointNotFound && resolved) {
+    entrypoint = resolved.entrypoint;
     entrypointNotFound = undefined;
   }
 
@@ -549,7 +551,7 @@ export const build: BuildV3 = async ({
     ? `\n  "__VC_HANDLER_FUNC_NAME": "${handlerFunction}",`
     : '';
 
-  const variableName = hookResult?.variableName ?? detected?.variableName ?? '';
+  const variableName = resolved?.variableName ?? '';
 
   const runtimeTrampoline = `
 import importlib
