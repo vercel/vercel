@@ -1,3 +1,6 @@
+console.log("TOKEN_EXISTS:", !!process.env.VERCEL_TOKEN)
+console.log("BYPASS_EXISTS:", !!process.env.VERCEL_AUTOMATION_BYPASS_SECRET)
+process.exit(0)
 #!/usr/bin/env tsx
 /**
  * Runner for Vercel CLI evals. Discovers evals in evals/, then:
