@@ -20,10 +20,8 @@ import { getUvBinaryForBundling, UV_BUNDLE_DIR } from './uv';
 
 const readFile = promisify(fs.readFile);
 
-// AWS Lambda uncompressed size limit is 250MB, but we use 249MB to leave a small buffer
-export const LAMBDA_SIZE_THRESHOLD_BYTES = 249 * 1024 * 1024;
-// Pack Lambda up to 240MB to leave a buffer
-export const LAMBDA_PACKING_TARGET_BYTES = 240 * 1024 * 1024;
+// AWS Lambda uncompressed size limit is 250MB, but we use 245MB to leave room for Lambda layers
+export const LAMBDA_SIZE_THRESHOLD_BYTES = 245 * 1024 * 1024;
 
 // AWS Lambda ephemeral storage (/tmp) is 512MB. Use 500MB to leave a buffer
 // for runtime overhead (.pyc generation, uv cache, metadata, etc.)
@@ -316,8 +314,13 @@ export class PythonDependencyExternalizer {
       }
     }
 
+    // Dynamically derive the packing target: start from the hard Lambda size
+    // threshold and subtract everything that is already committed to the bundle
+    // (user source code, private packages, always-bundled packages, and the uv
+    // binary). The remainder is the budget the knapsack can fill with public
+    // packages.
     const remainingCapacity =
-      LAMBDA_PACKING_TARGET_BYTES - fixedOverhead - runtimeToolingOverhead;
+      LAMBDA_SIZE_THRESHOLD_BYTES - fixedOverhead - runtimeToolingOverhead;
 
     debug(
       `Fixed overhead: ${(fixedOverhead / (1024 * 1024)).toFixed(2)} MB, ` +
