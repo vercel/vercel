@@ -7,8 +7,10 @@ import {
   stringifyManifest,
   createMinimalManifest,
   PythonAnalysisError,
+  PythonConfigKind,
   PythonLockFileKind,
   PythonManifestConvertedKind,
+  writePythonVersionFile,
   type PythonPackage,
 } from '@vercel/python-analysis';
 import { getVenvPythonBin } from './utils';
@@ -364,6 +366,82 @@ export async function ensureUvProject({
     lockPath: resolvedLockPath,
     lockFileProvidedByUser,
   };
+}
+
+/**
+ * In the Vercel build container, rewrite patch-level Python version pins to
+ * minor-version ranges so that uv (running with UV_PYTHON_DOWNLOADS=never)
+ * can resolve against the pre-installed patch version.
+ *
+ * Examples:
+ *   .python-version:  "3.12.8"   → "3.12"
+ *   pyproject.toml:   "==3.12.8" → ">=3.12,<3.13"
+ *
+ * This is a no-op outside the Vercel build container.
+ */
+async function rewritePythonVersionFiles({
+  pythonPackage,
+  rootDir,
+}: {
+  pythonPackage: PythonPackage;
+  rootDir: string;
+}): Promise<void> {
+  for (const configSet of pythonPackage.configs ?? []) {
+    const pvConfig = configSet[PythonConfigKind.PythonVersion];
+    if (!pvConfig) continue;
+
+    let changed = false;
+    const rewritten = pvConfig.data.map(req => {
+      if (!req.version) return req;
+      const newConstraint = req.version.constraint.map(c => {
+        const parts = c.version.split('.');
+        if (parts.length < 3) return c;
+        changed = true;
+        const [majorStr, minorStr] = parts;
+        const minorNum = parseInt(minorStr, 10);
+        const patchNum = parseInt(parts[2], 10);
+        switch (c.operator) {
+          case '<=':
+            // <=X.Y.Z → <X.(Y+1) to include all patches of X.Y
+            return {
+              ...c,
+              operator: '<',
+              version: `${majorStr}.${minorNum + 1}`,
+            };
+          case '<':
+            if (patchNum > 0) {
+              // <X.Y.Z (Z>0) → <X.(Y+1) to avoid excluding patches of X.Y
+              return { ...c, version: `${majorStr}.${minorNum + 1}` };
+            }
+            // <X.Y.0: strip patch, keep operator (semantically equivalent)
+            return { ...c, version: `${majorStr}.${minorStr}` };
+          case '>':
+            // >X.Y.Z → >=X.Y to include all patches of X.Y
+            return { ...c, operator: '>=', version: `${majorStr}.${minorStr}` };
+          default:
+            // >=, ==, !=, ~=, ===: strip patch to X.Y
+            return { ...c, version: `${majorStr}.${minorStr}` };
+        }
+      });
+      return { ...req, version: { ...req.version, constraint: newConstraint } };
+    });
+    if (!changed) continue;
+
+    const absPath = join(rootDir, pvConfig.path);
+    await fs.promises.writeFile(absPath, writePythonVersionFile(rewritten));
+  }
+}
+
+export async function rewritePatchVersionPins({
+  pythonPackage,
+  rootDir,
+}: {
+  pythonPackage: PythonPackage;
+  rootDir: string;
+}): Promise<void> {
+  if (!process.env.VERCEL_BUILD_IMAGE) return;
+
+  await rewritePythonVersionFiles({ pythonPackage, rootDir });
 }
 
 async function pipInstall(

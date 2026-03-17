@@ -49,11 +49,12 @@ import {
   resetInstalledPythonsCache,
 } from '../src/version';
 import type { PythonConstraint, PythonPackage } from '@vercel/python-analysis';
+import { PythonConfigKind } from '@vercel/python-analysis';
 import { build } from '../src/index';
 import { createVenvEnv, getVenvBinDir } from '../src/utils';
 import { UV_PYTHON_DOWNLOADS_MODE, getProtectedUvEnv } from '../src/uv';
 import { VERCEL_WORKERS_VERSION } from '../src/package-versions';
-import { createPyprojectToml } from '../src/install';
+import { createPyprojectToml, rewritePatchVersionPins } from '../src/install';
 import { detectDjangoPythonEntrypoint } from '../src/entrypoint';
 import { getDjangoSettings } from '../src/django';
 import { FileBlob } from '@vercel/build-utils';
@@ -2513,5 +2514,190 @@ describe('UV_PYTHON_DOWNLOADS environment variable protection', () => {
       expect(env.PATH).toContain('/usr/bin');
       expect(env.UV_PYTHON_DOWNLOADS).toBe(UV_PYTHON_DOWNLOADS_MODE);
     });
+  });
+});
+
+describe('rewritePatchVersionPins', () => {
+  let tmpDir: string;
+  const originalEnv = process.env;
+
+  beforeEach(() => {
+    tmpDir = path.join(tmpdir(), `rewrite-patch-${Date.now()}`);
+    fs.mkdirSync(tmpDir, { recursive: true });
+    process.env = { ...originalEnv };
+  });
+
+  afterEach(() => {
+    process.env = originalEnv;
+    if (fs.existsSync(tmpDir)) fs.removeSync(tmpDir);
+  });
+
+  it('is a no-op outside the build container', async () => {
+    delete process.env.VERCEL_BUILD_IMAGE;
+    const pvPath = path.join(tmpDir, '.python-version');
+    fs.writeFileSync(pvPath, '3.12.8\n');
+
+    await rewritePatchVersionPins({
+      pythonPackage: {
+        configs: [
+          {
+            [PythonConfigKind.PythonVersion]: {
+              kind: PythonConfigKind.PythonVersion,
+              path: '.python-version',
+              data: [
+                {
+                  implementation: 'cpython',
+                  version: {
+                    constraint: [
+                      { operator: '==', version: '3.12.8', prefix: '' },
+                    ],
+                    variant: 'default',
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+      rootDir: tmpDir,
+    });
+
+    expect(fs.readFileSync(pvPath, 'utf8')).toBe('3.12.8\n');
+  });
+
+  it('rewrites .python-version with a patch-level version to major.minor', async () => {
+    process.env.VERCEL_BUILD_IMAGE = '1';
+    const pvPath = path.join(tmpDir, '.python-version');
+    fs.writeFileSync(pvPath, '3.12.8\n');
+
+    await rewritePatchVersionPins({
+      pythonPackage: {
+        configs: [
+          {
+            [PythonConfigKind.PythonVersion]: {
+              kind: PythonConfigKind.PythonVersion,
+              path: '.python-version',
+              data: [
+                {
+                  implementation: 'cpython',
+                  version: {
+                    constraint: [
+                      { operator: '==', version: '3.12.8', prefix: '' },
+                    ],
+                    variant: 'default',
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+      rootDir: tmpDir,
+    });
+
+    expect(fs.readFileSync(pvPath, 'utf8')).toBe('cpython@==3.12\n');
+  });
+
+  it('rewrites .python-version with compound patch constraints using correct operators', async () => {
+    process.env.VERCEL_BUILD_IMAGE = '1';
+    const pvPath = path.join(tmpDir, '.python-version');
+    fs.writeFileSync(pvPath, '>=3.12.4,<=3.12.9\n');
+
+    await rewritePatchVersionPins({
+      pythonPackage: {
+        configs: [
+          {
+            [PythonConfigKind.PythonVersion]: {
+              kind: PythonConfigKind.PythonVersion,
+              path: '.python-version',
+              data: [
+                {
+                  implementation: 'cpython',
+                  version: {
+                    constraint: [
+                      { operator: '>=', version: '3.12.4', prefix: '' },
+                      { operator: '<=', version: '3.12.9', prefix: '' },
+                    ],
+                    variant: 'default',
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+      rootDir: tmpDir,
+    });
+
+    // >=3.12.4 → >=3.12 (strip patch)
+    // <=3.12.9 → <3.13 (convert to exclusive upper bound)
+    expect(fs.readFileSync(pvPath, 'utf8')).toBe('cpython@>=3.12,<3.13\n');
+  });
+
+  it('rewrites .python-version with strict greater-than patch constraint', async () => {
+    process.env.VERCEL_BUILD_IMAGE = '1';
+    const pvPath = path.join(tmpDir, '.python-version');
+    fs.writeFileSync(pvPath, '>3.12.4\n');
+
+    await rewritePatchVersionPins({
+      pythonPackage: {
+        configs: [
+          {
+            [PythonConfigKind.PythonVersion]: {
+              kind: PythonConfigKind.PythonVersion,
+              path: '.python-version',
+              data: [
+                {
+                  implementation: 'cpython',
+                  version: {
+                    constraint: [
+                      { operator: '>', version: '3.12.4', prefix: '' },
+                    ],
+                    variant: 'default',
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+      rootDir: tmpDir,
+    });
+
+    // >3.12.4 → >=3.12 (include all patches of 3.12)
+    expect(fs.readFileSync(pvPath, 'utf8')).toBe('cpython@>=3.12\n');
+  });
+
+  it('does not rewrite .python-version that already has only major.minor', async () => {
+    process.env.VERCEL_BUILD_IMAGE = '1';
+    const pvPath = path.join(tmpDir, '.python-version');
+    fs.writeFileSync(pvPath, '3.12\n');
+
+    await rewritePatchVersionPins({
+      pythonPackage: {
+        configs: [
+          {
+            [PythonConfigKind.PythonVersion]: {
+              kind: PythonConfigKind.PythonVersion,
+              path: '.python-version',
+              data: [
+                {
+                  implementation: 'cpython',
+                  version: {
+                    constraint: [
+                      { operator: '==', version: '3.12', prefix: '' },
+                    ],
+                    variant: 'default',
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+      rootDir: tmpDir,
+    });
+
+    expect(fs.readFileSync(pvPath, 'utf8')).toBe('3.12\n');
   });
 });
