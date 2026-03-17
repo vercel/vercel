@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="90.40802mm"
+   height="21.86491mm"
+   viewBox="0 0 90.408021 21.86491"
+   version="1.1"
+   id="svg1163"
+   inkscape:version="0.92.2 (5c3e80d, 2017-08-06)"
+   sodipodi:docname="sanic-framework-logo-simple.svg"
+   inkscape:export-filename="/home/adam/Projects/sanic/assets/final/png/sanic-framework-logo-simple-400x97.png"
+   inkscape:export-xdpi="112.38"
+   inkscape:export-ydpi="112.38">
+  <defs
+     id="defs1157" />
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="2.0061674"
+     inkscape:cx="39.003758"
+     inkscape:cy="40.322482"
+     inkscape:document-units="mm"
+     inkscape:current-layer="layer1"
+     showgrid="false"
+     inkscape:window-width="2560"
+     inkscape:window-height="1353"
+     inkscape:window-x="3000"
+     inkscape:window-y="281"
+     inkscape:window-maximized="1"
+     fit-margin-top="3"
+     fit-margin-left="3"
+     fit-margin-right="3"
+     fit-margin-bottom="3" />
+  <metadata
+     id="metadata1160">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(-60.577745,-134.26699)">
+    <path
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:medium;line-height:47.20414734px;font-family:'Navy Queen';-inkscape-font-specification:'Navy Queen, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#2e3440;fill-opacity:1;stroke:none;stroke-width:0.49957722px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 85.99093,150.22919 c 0.0016,-0.002 0.0041,-0.003 0.0057,-0.005 0.12197,-0.14355 0.226944,-0.30445 0.33228,-0.44958 -0.09466,0.12345 -0.24814,0.33747 -0.337966,0.45423 z"
+       id="path5167"
+       inkscape:connector-curvature="0"
+       inkscape:export-filename="/scratch/sanic-logo-idea.png"
+       inkscape:export-xdpi="123.48838"
+       inkscape:export-ydpi="123.48838" />
+    <path
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:medium;line-height:47.20414734px;font-family:'Navy Queen';-inkscape-font-specification:'Navy Queen, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#2e3440;fill-opacity:1;stroke:none;stroke-width:0.49957722px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 95.511797,137.70076 c -0.320424,0.009 -0.635088,0.19273 -0.859896,0.43253 -0.339699,0.35969 -0.559633,0.81921 -0.85938,1.19889 -0.179837,0.21982 -0.399277,0.41994 -0.559139,0.63976 -0.659447,0.91922 -0.579757,0.95921 -1.239199,1.87843 -0.639445,0.91923 -0.659337,0.89927 -1.318784,1.8185 -1.935377,2.64663 -1.68919,2.33936 -0.29559,2.37712 0.504367,-0.03 1.299869,0.0888 1.554427,-0.29921 0.619498,-0.85928 0.659524,-0.83933 1.278993,-1.69861 0.59949,-0.85926 0.499324,-0.91908 1.118793,-1.79834 0.269772,-0.37968 0.724131,-0.56947 1.17874,-0.56947 0.454613,0 0.909476,0.18979 1.179256,0.56947 0.619469,0.85928 0.539634,0.91943 1.159103,1.77871 0.619469,0.85927 0.579424,0.85914 1.198893,1.73839 0.399656,0.55953 0.02024,1.31878 -0.679027,1.31878 h -1.918748 c -0.463677,0.0217 -0.969137,0.0219 -1.359606,0.0217 -0.132437,-10e-4 -0.164597,-7.9e-4 -0.279053,-0.002 v 0.001 c -0.94641,0.004 -2.465541,0.0306 -3.787365,0.11783 -0.459764,0.0586 -0.912405,0.14876 -1.343586,0.29249 -0.309743,0.0999 -0.624253,0.22367 -0.93431,0.36948 -0.31006,0.14582 -0.615392,0.31371 -0.906407,0.5023 -0.291013,0.18859 -0.568013,0.39755 -0.820621,0.6258 -0.252423,0.22808 -0.480663,0.47545 -0.67541,0.74001 -0.0043,0.006 -0.0108,0.0147 -0.01497,0.0202 -0.105336,0.14513 -0.210307,0.30603 -0.332277,0.44958 -0.0016,0.002 -0.004,0.003 -0.0057,0.005 -0.141076,0.18338 -0.277614,0.35648 -0.531233,0.71314 -0.359701,0.49957 -0.220017,1.21937 0.279569,1.55907 0.279744,0.19984 0.579938,0.33953 0.899687,0.21963 0.359675,-0.13988 0.579101,-0.51932 0.798917,-0.81907 0.779357,-1.0591 2.098302,-1.83844 3.337264,-2.23811 0.431183,-0.14372 0.883827,-0.23386 1.343588,-0.29248 1.321824,-0.0872 2.840956,-0.1137 3.787365,-0.11783 0.927878,-0.0388 1.612789,-0.0675 2.24276,-0.0692 0.719394,0 1.439129,0.1998 2.098579,0.41961 1.27891,0.41965 2.73726,1.31853 3.45664,2.49752 0.06,0.0799 0.0999,0.18001 0.17983,0.25994 0.15987,0.17985 0.37981,0.25958 0.6196,0.27957 0.89924,0.0999 1.51881,-0.87896 0.97927,-1.6583 -0.63947,-0.89924 -0.63921,-0.91925 -1.29863,-1.81849 -0.63947,-0.91922 -0.59991,-0.93906 -1.25935,-1.85829 -0.63947,-0.91921 -0.65933,-0.89962 -1.31878,-1.79885 -0.65945,-0.91923 -0.67933,-0.89928 -1.31878,-1.8185 -0.659451,-0.89924 -0.539473,-0.99883 -1.198896,-1.89807 -0.839312,-1.19892 -1.698527,-2.4182 -2.657721,-3.53725 -0.159859,-0.19983 -0.359654,-0.41927 -0.599446,-0.4992 -0.104907,-0.04 -0.212553,-0.0563 -0.31936,-0.0532 z"
+       id="path1268"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="ccccccccccscccscccccccccccccccccccccccccccccccccsc"
+       inkscape:export-filename="/scratch/sanic-logo-idea.png"
+       inkscape:export-xdpi="123.48838"
+       inkscape:export-ydpi="123.48838" />
+    <path
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:medium;line-height:47.20414734px;font-family:'Navy Queen';-inkscape-font-specification:'Navy Queen, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#2e3440;fill-opacity:1;stroke:none;stroke-width:0.49957722px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 123.12044,142.23071 c -1e-5,0.0527 0.002,0.14965 0.006,0.20516 0.0161,0.14223 0.0803,0.28016 0.15535,0.40462 0.0819,0.1356 0.19387,0.25706 0.32504,0.35709 0.13118,0.10004 0.28157,0.17879 0.44029,0.22841 0.15873,0.0491 0.32588,0.0706 0.49041,0.0548 0.15423,-0.0151 0.29106,-0.0628 0.40824,-0.13591 0.21739,-0.12793 0.26575,-0.2877 0.26504,-0.43822 -0.009,-0.21233 -0.018,-0.95782 -0.018,-1.91564 0,-1.05911 0.0202,-1.05911 0.0202,-2.11822 0,-0.59949 -0.41956,-1.03887 -1.01906,-1.05885 -0.63944,-0.02 -1.25935,0.39924 -1.25935,1.0387 0,1.07909 0.22014,1.07944 0.22014,2.15852 0,0.60983 -0.0175,0.90948 -0.0341,1.21957 z"
+       id="path5113"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="ccccccccsscsscc"
+       inkscape:export-filename="/scratch/sanic-logo-idea.png"
+       inkscape:export-xdpi="123.48838"
+       inkscape:export-ydpi="123.48838" />
+    <path
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:medium;line-height:47.20414734px;font-family:'Navy Queen';-inkscape-font-specification:'Navy Queen, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#2e3440;fill-opacity:1;stroke:none;stroke-width:0.49957722px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 108.58645,137.73641 c -0.22981,0.002 -0.44923,0.0672 -0.61908,0.21705 -0.11991,0.11989 -0.21979,0.2799 -0.29973,0.43976 -0.06,0.1199 -0.10006,0.25993 -0.14004,0.37982 -0.15986,0.63946 0.0198,1.41847 0.0599,2.07791 0.0399,0.75936 0.06,1.49873 0.06,2.23811 0,1.0591 -0.14004,1.05911 -0.14004,2.11821 0,1.07909 0.0599,1.07927 0.0599,2.13838 0,1.0591 -0.0997,1.05911 -0.0997,2.11822 0,1.0591 0.0599,1.05911 0.0599,2.11821 0,0.59949 0.49966,1.15876 1.09916,1.17874 0.63944,0.02 1.079,-0.51947 1.079,-1.13895 0,-1.09907 0.11989,-1.09907 0.11989,-2.17816 0,-1.07908 -0.0801,-1.07892 -0.0801,-2.15801 0,-1.07909 0.0202,-1.07892 0.0202,-2.15801 0,-0.77933 0.43972,-1.45914 1.03921,-1.73891 0.61947,-0.29974 1.47842,-0.27943 2.07791,0.22014 0.87927,0.73938 0.83916,0.7794 1.7384,1.51877 0.87924,0.7194 0.7997,0.81919 1.67897,1.55857 0.89923,0.71939 0.99917,0.59956 1.87843,1.33893 0.87927,0.73938 0.83915,0.7794 1.7384,1.51877 0.87926,0.71939 0.81935,0.79903 1.69861,1.53841 0.61947,0.49958 1.29873,1.17923 2.03811,1.47898 0.35971,0.15986 0.79925,0.19983 1.13895,0 0.11991,-0.0799 0.22014,-0.17982 0.28009,-0.29972 0.0799,-0.13988 0.0796,-0.27973 0.0796,-0.41962 0.0999,-1.47874 0.0403,-2.99746 0.0403,-4.47621 0,-1.05885 0.12312,-1.95544 0.11989,-2.1177 v -5.3e-4 c -0.005,-0.0747 -0.0237,-0.12425 -0.0548,-0.17725 -0.0756,-0.12849 -0.17955,-0.2407 -0.30232,-0.33125 -0.12278,-0.0905 -0.26457,-0.15957 -0.41701,-0.20205 -0.15243,-0.0423 -0.31555,-0.0579 -0.48008,-0.0419 -0.15388,0.0203 -0.29807,0.0666 -0.42736,0.13384 -0.18531,0.0936 -0.28272,0.12046 -0.39284,0.24182 -0.17163,0.21298 -0.15826,0.32902 -0.17849,0.57691 0,0.089 -0.0104,0.22979 -0.0312,0.36621 v 0 c -0.17344,0.52659 -0.60702,0.89447 -1.07332,1.11208 -0.61947,0.27976 -1.25879,0.23965 -1.85829,-0.25993 -0.89923,-0.71939 -0.99921,-0.59956 -1.87844,-1.33894 -0.87927,-0.71939 -0.87929,-0.73943 -1.75854,-1.45882 -0.89925,-0.73938 -0.87895,-0.73909 -1.7782,-1.47847 -0.87923,-0.73937 -0.7997,-0.81918 -1.67896,-1.55856 -0.89924,-0.73937 -0.93908,-0.67983 -1.79834,-1.43919 -0.61947,-0.51956 -1.19901,-1.13892 -1.93839,-1.49861 -0.20981,-0.0999 -0.44973,-0.1596 -0.67954,-0.1571 z"
+       id="path1270"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cccccssssscsssscccccccccccsccccccccccccccccccccc"
+       inkscape:export-filename="/scratch/sanic-logo-idea.png"
+       inkscape:export-xdpi="123.48838"
+       inkscape:export-ydpi="123.48838" />
+    <path
+       inkscape:connector-curvature="0"
+       id="path1272"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:medium;line-height:47.20414734px;font-family:'Navy Queen';-inkscape-font-specification:'Navy Queen, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#2e3440;fill-opacity:1;stroke:none;stroke-width:0.49957725px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 130.0086,143.1092 c 0,-1.07908 -0.11991,-1.07908 -0.11991,-2.13819 0,-1.0591 -0.0399,-1.0591 -0.0399,-2.1182 0,-0.61948 -0.39968,-1.15902 -1.01915,-1.15902 -0.61947,0 -1.19899,0.53954 -1.19899,1.15902 0,1.0591 0.15987,1.0591 0.15987,2.1182 0,1.05911 -0.11989,1.05911 -0.11989,2.13819 0,1.05911 -0.0201,1.05911 -0.0201,2.11821 0,1.05911 0.15986,1.05911 0.15986,2.13819 0,1.05911 -0.17984,1.05911 -0.17984,2.11821 0,1.05911 0.0799,1.05911 0.0799,2.13819 0,0.5995 0.49959,1.05911 1.11905,1.05911 0.61947,0 0.99915,-0.45961 0.99915,-1.05911 0,-1.07908 0.04,-1.07908 0.04,-2.13819 0,-1.0591 0.0799,-1.0591 0.0799,-2.11821 0,-1.07908 -0.06,-1.07908 -0.06,-2.13819 0,-1.0591 0.1199,-1.0591 0.1199,-2.11821 z"
+       inkscape:export-filename="/scratch/sanic-logo-idea.png"
+       inkscape:export-xdpi="123.48838"
+       inkscape:export-ydpi="123.48838" />
+    <path
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:medium;line-height:47.20414734px;font-family:'Navy Queen';-inkscape-font-specification:'Navy Queen, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#2e3440;fill-opacity:1;stroke:none;stroke-width:0.49957722px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 140.53175,150.892 c -0.41679,0.0166 -0.65676,0.1338 -0.69398,0.15627 -0.1356,0.0819 -0.25757,0.19335 -0.3576,0.32452 -0.10004,0.13117 -0.17829,0.28208 -0.22789,0.4408 -0.049,0.15873 -0.0712,0.32536 -0.0553,0.4899 0.0151,0.15422 0.0633,0.29106 0.13643,0.40824 0.0731,0.11718 0.17169,0.21459 0.2868,0.29197 0.0625,0.0483 0.19477,0.0924 0.52865,0.10707 l 0.29818,-0.007 c 0.74184,0.0112 0.99997,0.0461 2.01589,0.0165 l 0.76688,-0.046 c 0.48216,0.003 0.79268,0.0315 1.57768,0.0315 1.0591,0 1.05912,0.0202 2.11822,0.0202 0.5995,0 1.03939,-0.41956 1.05937,-1.01906 0.02,-0.63944 -0.39975,-1.25884 -1.03922,-1.25884 -1.07909,0 -1.23239,0.10697 -2.31148,0.10697 -1.07908,0 -0.95593,-0.0475 -2.03502,-0.0475 -0.86076,-0.0431 -1.19387,-0.0242 -2.06761,-0.0157 z"
+       id="path5053"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cccccccccccsscsscc"
+       inkscape:export-filename="/scratch/sanic-logo-idea.png"
+       inkscape:export-xdpi="123.48838"
+       inkscape:export-ydpi="123.48838" />
+    <path
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:medium;line-height:47.20414734px;font-family:'Navy Queen';-inkscape-font-specification:'Navy Queen, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#2e3440;fill-opacity:1;stroke:none;stroke-width:0.49957722px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 134.54921,147.8681 c -0.17597,-0.4696 -0.32467,-0.54381 -0.77412,-0.71107 -0.15243,-0.0423 -0.31554,-0.0579 -0.48007,-0.0419 -0.15388,0.0203 -0.29807,0.0666 -0.42736,0.13384 -0.1293,0.0672 -0.24329,0.15557 -0.33694,0.26045 -0.0985,0.10675 -0.1629,0.19209 -0.16639,0.35088 0.0196,0.75561 0.23489,1.33683 0.44647,1.86345 0.27977,0.65944 0.55978,1.31875 1.05937,1.79834 0.49959,0.49958 1.12391,0.88452 1.78335,1.16427 0.68316,0.26931 1.52507,0.48726 1.9544,0.33745 0.16111,-0.0756 0.24065,-0.17901 0.33125,-0.30179 0.0905,-0.12278 0.15956,-0.2646 0.20206,-0.41703 0.0423,-0.15243 0.0573,-0.31554 0.0413,-0.48007 -0.0203,-0.15388 -0.0661,-0.29859 -0.13333,-0.42788 -0.13006,-0.27145 -0.24801,-0.44296 -0.56534,-0.49816 -0.37774,-0.0576 -1.29517,-0.28894 -1.97507,-1.01545 -0.39254,-0.39253 -0.66496,-0.79466 -0.81747,-1.35634 -0.0736,-0.27553 -0.0644,-0.44794 -0.14215,-0.65904 z"
+       id="path5118"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cccccccccccccccccc"
+       inkscape:export-filename="/scratch/sanic-logo-idea.png"
+       inkscape:export-xdpi="123.48838"
+       inkscape:export-ydpi="123.48838" />
+    <path
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:medium;line-height:47.20414734px;font-family:'Navy Queen';-inkscape-font-specification:'Navy Queen, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#2e3440;fill-opacity:1;stroke:none;stroke-width:0.49957722px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 142.46293,137.27391 c -1.19897,0 -1.19915,0.0599 -2.37815,0.0599 h -2.37814 c -0.7194,0 -1.4586,0.10005 -2.09807,0.37982 -0.65944,0.25978 -1.11894,0.83936 -1.6185,1.33894 -0.49959,0.49958 -1.01938,0.97922 -1.29915,1.63866 -0.25977,0.63946 -0.43977,1.33853 -0.43977,2.07791 0,1.03216 0.0252,1.30503 0.0341,2.08153 v 0 c -0.002,0.0396 0.003,-0.0435 0,0 0.0172,0.27299 0.0439,0.36272 0.14454,0.56319 0.0819,0.1356 0.2824,0.30364 0.41357,0.40367 0.13117,0.10004 0.28156,0.17879 0.44028,0.22841 0.15873,0.0491 0.32588,0.0706 0.49041,0.0548 0.15423,-0.0151 0.29106,-0.0628 0.40824,-0.13591 0.11718,-0.0732 0.21458,-0.17169 0.29197,-0.2868 0.10857,-0.17432 0.12793,-0.49346 0.14263,-0.82734 v 0 c -0.0176,-0.77631 -0.0677,-1.04889 -0.0677,-2.08101 0,-0.87926 0.4399,-1.57902 0.99942,-2.15853 0.57952,-0.57951 1.27874,-1.11879 2.15801,-1.11879 1.17901,0 1.1709,0.1204 2.36988,0.1204 1.17899,0 1.18744,-0.1204 2.38641,-0.1204 1.17901,0 1.17038,-0.0548 2.36937,-0.0548 0.37783,0 0.47987,-0.004 0.79013,0.001 0.38043,0.006 0.50453,0.0587 0.87488,0.0589 0.67238,0.001 0.88349,-3.5e-4 1.20665,-0.34778 0.0905,-0.12278 0.15955,-0.2646 0.20205,-0.41703 0.0423,-0.15243 0.0579,-0.31555 0.0419,-0.48008 -0.0203,-0.15387 -0.0666,-0.29806 -0.13384,-0.42736 -0.0672,-0.1293 -0.15557,-0.24329 -0.26045,-0.33693 -0.22849,-0.17309 -0.3807,-0.15092 -0.78083,-0.14728 l -1.93218,-0.0326 c -1.19896,0.006 -1.19863,-0.0346 -2.37764,-0.0346 z"
+       id="path5056"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="csscccscccccccccccscsssscccccccccsc"
+       inkscape:export-filename="/scratch/sanic-logo-idea.png"
+       inkscape:export-xdpi="123.48838"
+       inkscape:export-ydpi="123.48838" />
+    <path
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:medium;line-height:47.20414734px;font-family:'Navy Queen';-inkscape-font-specification:'Navy Queen, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#ff0d68;fill-opacity:1;stroke:none;stroke-width:0.49901298px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 68.274443,152.9271 c 0.143485,-0.0787 0.268457,-0.18705 0.369534,-0.31493 0.101047,-0.1279 0.178521,-0.27525 0.225911,-0.43403 0.04709,-0.15877 0.06424,-0.32872 0.04632,-0.50009 -0.02266,-0.16028 -0.07411,-0.31045 -0.14915,-0.4451 -0.07503,-0.13466 -0.173689,-0.2538 -0.290806,-0.35133 -0.310489,-0.24818 -0.505897,-0.19079 -1.525204,-0.21167 -1.057919,0 -1.116963,0.0601 -2.174864,0.0601 -0.598822,0 -1.157487,0.49909 -1.177439,1.09791 -0.01999,0.63872 0.519098,1.14856 1.137878,1.14856 1.09783,0 1.156736,0.0495 2.234598,0.0495 0.455054,-0.0187 1.009684,0.0344 1.303253,-0.0989 z"
+       id="path4920-1"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cccccccscscc"
+       inkscape:export-filename="/scratch/sanic-logo-idea.png"
+       inkscape:export-xdpi="123.48838"
+       inkscape:export-ydpi="123.48838" />
+    <path
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:medium;line-height:47.20414734px;font-family:'Navy Queen';-inkscape-font-specification:'Navy Queen, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#ff0068;fill-opacity:1;stroke:none;stroke-width:0.49901298px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 77.968927,144.30719 c -0.151408,0.0853 -0.287115,0.20165 -0.398809,0.33827 -0.111705,0.13663 -0.199369,0.29362 -0.254791,0.45895 -0.05482,0.16533 -0.07862,0.339 -0.06094,0.51038 0.01683,0.16065 0.07066,0.30327 0.152321,0.42532 0.293296,0.39946 0.833898,0.31758 1.640348,0.29673 0.618773,0 1.097912,0.3195 1.497115,0.73867 0.41919,0.39921 0.698709,0.87795 0.698709,1.49673 0,0.63873 -0.139639,1.25796 -0.538863,1.67713 -0.399204,0.39922 -1.038188,0.67814 -1.656961,0.67814 -1.117788,0 -1.117796,-0.0597 -2.21561,-0.0597 -1.097839,0 -1.097431,-0.0396 -2.215222,-0.0396 -1.097835,0 -1.098216,-0.0997 -2.216004,-0.0997 -0.590746,0.009 -1.13197,-0.0726 -1.636782,0.14042 -0.151399,0.0853 -0.287115,0.20165 -0.398811,0.33827 -0.111702,0.13663 -0.199359,0.29362 -0.254791,0.45895 -0.05481,0.16533 -0.07862,0.339 -0.06094,0.51039 0.140245,1.10235 1.067136,0.8665 2.351307,0.90721 1.11779,0 1.118171,-0.0597 2.21601,-0.0597 1.097835,0 1.09743,0.0396 2.215218,0.0396 1.097815,0 1.097823,-0.0997 2.215611,-0.0997 0.798425,0 1.516951,-0.21936 2.175644,-0.59861 0.678659,-0.39921 1.237584,-0.89839 1.636787,-1.57704 0.379249,-0.6587 0.758844,-1.39763 0.758844,-2.21601 0,-0.79842 -0.439336,-1.51674 -0.818587,-2.15547 -0.379256,-0.6786 -0.798287,-1.41698 -1.476938,-1.79623 -0.658718,-0.37925 -1.477325,-0.3996 -2.27575,-0.3996 -0.484707,0.001 -0.806588,-0.051 -1.078138,0.0863 z"
+       id="path4925-7"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cccccccscsssccccccsssccsccccc"
+       inkscape:export-filename="/scratch/sanic-logo-idea.png"
+       inkscape:export-xdpi="123.48838"
+       inkscape:export-ydpi="123.48838" />
+    <path
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:medium;line-height:47.20414734px;font-family:'Navy Queen';-inkscape-font-specification:'Navy Queen, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#ff0d68;fill-opacity:1;stroke:none;stroke-width:0.49901298px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 81.792738,139.56421 c 0.234207,0.005 0.100545,-0.008 0.814935,-0.008 0.598813,0 1.038366,-0.4192 1.058334,-1.01803 0.02,-0.63871 -0.399439,-1.25728 -1.038178,-1.25728 -0.382055,-0.0287 -0.916548,-0.0117 -1.123592,0.0392 -0.333693,0.0588 -0.507064,0.1559 -0.706319,0.47597 -0.09072,0.1731 -0.15032,0.32349 -0.19994,0.48221 -0.04914,0.15873 -0.07114,0.32588 -0.05529,0.49041 0.01508,0.15423 0.06328,0.29055 0.136424,0.40773 0.245817,0.39866 0.644351,0.39476 1.113629,0.38757 z"
+       id="path5003"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="ccccccccccc"
+       inkscape:export-filename="/scratch/sanic-logo-idea.png"
+       inkscape:export-xdpi="123.48838"
+       inkscape:export-ydpi="123.48838" />
+    <path
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:medium;line-height:47.20414734px;font-family:'Navy Queen';-inkscape-font-specification:'Navy Queen, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#ff0d68;fill-opacity:1;stroke:none;stroke-width:0.49901298px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 78.467876,137.33541 c -0.505759,0.0227 -0.825776,0.0589 -1.636594,0.0589 -1.097836,0 -1.097063,-0.0997 -2.214851,-0.0997 -1.001408,0 -1.16546,0.0461 -2.021583,0.0548 -1.116793,0.008 -1.330579,0.50913 -1.304311,1.50223 0.01685,0.16065 0.07078,0.30324 0.152445,0.4253 0.08167,0.12205 0.191344,0.22377 0.319876,0.30437 0.200416,0.0894 0.343799,0.0529 0.605649,0.0693 0.0154,-2e-5 0.01574,-5.2e-4 0.03152,-5.2e-4 h 2.215886 c 1.097835,0 1.097579,-0.0801 2.215366,-0.0801 0.682805,0 1.011685,0.007 1.378212,0.0124 0.193284,-0.0122 0.423635,-0.0194 0.566373,-0.0382 h 5.29e-4 c 0.05824,-0.021 0.124251,-0.0236 0.177252,-0.0548 0.12849,-0.0756 0.240178,-0.17953 0.330729,-0.3023 0.09049,-0.12278 0.159573,-0.2646 0.202055,-0.41703 0.04231,-0.15243 0.05785,-0.31555 0.04186,-0.48008 -0.02027,-0.15387 -0.06609,-0.29806 -0.133324,-0.42736 -0.06724,-0.1293 -0.156088,-0.2438 -0.260967,-0.33745 -0.106751,-0.0986 -0.228846,-0.14423 -0.350366,-0.16639 -0.110987,-0.0202 -0.218683,-0.0197 -0.315743,-0.0232 z"
+       id="path5001"
+       inkscape:connector-curvature="0"
+       inkscape:export-filename="/scratch/sanic-logo-idea.png"
+       inkscape:export-xdpi="123.48838"
+       inkscape:export-ydpi="123.48838" />
+    <path
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:medium;line-height:47.20414734px;font-family:'Navy Queen';-inkscape-font-specification:'Navy Queen, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#ff0d68;fill-opacity:1;stroke:none;stroke-width:0.49901298px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 69.068107,137.366 c -0.426312,0.004 -0.544622,0.0487 -1.079315,0.0487 -0.818387,0 -1.516983,0.27932 -2.175653,0.67853 -0.67866,0.37924 -1.337048,0.83864 -1.716305,1.51729 -0.379249,0.6587 -0.519089,1.4368 -0.519089,2.25518 0,0.79842 0.119666,1.59687 0.498908,2.25557 0.399233,0.67865 1.038448,1.15765 1.7171,1.55686 0.658708,0.37925 1.376652,0.53887 2.195039,0.53887 1.097805,0 1.098211,0.17962 2.216008,0.17962 1.097836,0 1.097606,-0.17962 2.195428,-0.17962 1.11778,0 1.118172,0.21998 2.216007,0.21998 1.226966,-0.0133 1.241613,-0.16378 1.459156,-0.82057 0.04708,-0.15877 0.06424,-0.32872 0.04632,-0.50009 -0.02265,-0.16028 -0.07373,-0.31045 -0.148756,-0.4451 -0.07503,-0.13466 -0.174088,-0.2538 -0.291198,-0.35134 -0.31528,-0.26223 -0.706459,-0.12206 -1.065864,-0.1183 -1.097835,0 -1.097827,-0.1998 -2.215618,-0.1998 -1.097812,0 -1.097981,0.0202 -2.195824,0.0202 -1.117782,0 -1.117805,0.15945 -2.215611,0.15945 -0.618805,0 -1.217626,-0.27972 -1.636779,-0.67893 -0.399236,-0.41917 -0.578436,-1.018 -0.578436,-1.63678 0,-0.61877 0.279336,-1.11751 0.678531,-1.53669 0.419183,-0.39921 0.917877,-0.77823 1.536682,-0.77823 0.923297,0.002 1.379437,0.18694 1.896722,-0.2635 0.101047,-0.12789 0.178519,-0.27524 0.225919,-0.43402 0.04709,-0.15878 0.06424,-0.32872 0.04632,-0.5001 -0.04793,-0.33313 -0.225482,-0.58212 -0.439964,-0.79643 -0.200546,-0.15965 -0.273976,-0.16961 -0.649642,-0.1907 z"
+       id="path4928-1"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="csccsccsssccccccssscscccccccc"
+       inkscape:export-filename="/scratch/sanic-logo-idea.png"
+       inkscape:export-xdpi="123.48838"
+       inkscape:export-ydpi="123.48838" />
+  </g>
+</svg>
