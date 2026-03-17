@@ -1,5 +1,11 @@
 # @vercel/frameworks
 
+## 3.21.0
+
+### Minor Changes
+
+- Make the generic "python" framework and the Django framework not experimental ([#15429](https://github.com/vercel/vercel/pull/15429))
+
 ## 3.20.0
 
 ### Minor Changes

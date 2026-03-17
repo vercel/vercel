@@ -208,9 +208,10 @@ const serviceConfigSchema = {
       maximum: 10240,
     },
     maxDuration: {
-      type: 'integer',
-      minimum: 1,
-      maximum: 900,
+      oneOf: [
+        { type: 'integer', minimum: 1, maximum: 900 },
+        { type: 'string', enum: ['max'] },
+      ],
     },
     includeFiles: {
       oneOf: [
