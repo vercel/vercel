@@ -17,3 +17,5 @@ has been removed.  The `tokio` and `serde` features are kept as no-ops so that
 dependents enabling them still compile.
 
 Based on uv revision [`35d1e90`](https://github.com/astral-sh/uv/tree/35d1e90961c1c2bd238ee6b015f970c0cf97f5d5/crates/uv-fs).
+
+Copyright (c) Astral Software Inc. Licensed under Apache-2.0 OR MIT.

@@ -2045,6 +2045,9 @@ importers:
       cross-env:
         specifier: 7.0.3
         version: 7.0.3
+      detect-libc:
+        specifier: 2.1.2
+        version: 2.1.2
       execa:
         specifier: ^1.0.0
         version: 1.0.0
@@ -2093,9 +2096,6 @@ importers:
       minimatch:
         specifier: 10.1.1
         version: 10.1.1
-      pip-requirements-js:
-        specifier: 1.0.3
-        version: 1.0.3
       smol-toml:
         specifier: 1.5.2
         version: 1.5.2
@@ -17027,6 +17027,7 @@ packages:
   /ohm-js@17.2.1:
     resolution: {integrity: sha512-4cXF0G09fAYU9z61kTfkNbKK1Kz/sGEZ5NbVWHoe9Qi7VB7y+Spwk051CpUTfUENdlIr+vt8tMV4/LosTE2cDQ==}
     engines: {node: '>=0.12.1'}
+    dev: true
 
   /on-finished@2.4.1:
     resolution: {integrity: sha512-oVlzkg3ENAhCk2zdv7IJwd/QUD4z2RxRwpkcGY8psCVcCYZNq4wYnVWALHM+brtuJjePWiYF/ClmuDr8Ch5+kg==}
@@ -17539,12 +17540,6 @@ packages:
     dependencies:
       ohm-js: 17.2.1
     dev: true
-
-  /pip-requirements-js@1.0.3:
-    resolution: {integrity: sha512-1O9Bx0mPOZht3tW4LuxOA46qkD8A1AGymWXz3UwIMqGQgiTiOaFptsCf+9IE67qcbBrg8KHG6l8ePF7CoFRW/A==}
-    dependencies:
-      ohm-js: 17.2.1
-    dev: false
 
   /pirates@4.0.7:
     resolution: {integrity: sha512-TfySrs/5nm8fQJDcBDuUng3VOUKsd7S+zqvbOTiGXHfxX4wK31ard+hoNuvkicM/2YFzlpDgABOevKSsB4G/FA==}
