@@ -74,6 +74,8 @@ export interface ClientOptions extends Stdio {
   nonInteractive?: boolean;
   /** Dangerously skip all permission prompts (--dangerously-skip-permissions flag) */
   dangerouslySkipPermissions?: boolean;
+  /** Agent has received user confirmation for mutating operations (--with-agent-confirmation flag) */
+  withAgentConfirmation?: boolean;
 }
 
 export const isJSONObject = (v: any): v is JSONObject => {
@@ -119,6 +121,10 @@ export default class Client extends EventEmitter implements Stdio {
   nonInteractive: boolean;
   /** Dangerously skip all permission prompts (--dangerously-skip-permissions flag) */
   dangerouslySkipPermissions: boolean;
+  /** Agent has received user confirmation for mutating operations (--with-agent-confirmation flag) */
+  withAgentConfirmation: boolean;
+  /** The current CLI command name, set during dispatch for agent confirmation messages */
+  commandName?: string;
   /** Track if we've already logged the token source debug message */
   private _loggedTokenSource: boolean = false;
 
@@ -140,6 +146,7 @@ export default class Client extends EventEmitter implements Stdio {
     this.agentName = opts.agentName;
     this.nonInteractive = opts.nonInteractive ?? this.isAgent;
     this.dangerouslySkipPermissions = opts.dangerouslySkipPermissions ?? false;
+    this.withAgentConfirmation = opts.withAgentConfirmation ?? false;
 
     const theme = {
       prefix: gray('?'),
@@ -342,6 +349,115 @@ export default class Client extends EventEmitter implements Stdio {
     return confirmed;
   }
 
+  /**
+   * Confirms non-GET operations when running under an AI agent.
+   * Called automatically from fetch() — all commands get this protection.
+   *
+   * When in non-TTY mode (typical for agents), outputs a structured JSON
+   * confirmation request to stdout and exits with code 0. The agent can
+   * then ask the user for confirmation and re-run with --with-agent-confirmation.
+   *
+   * - GET operations are always allowed
+   * - Non-GET operations require confirmation (unless --dangerously-skip-permissions is used)
+   * - TTY mode uses interactive prompts
+   * - Non-TTY mode outputs JSON and exits (no blocking)
+   *
+   * @returns true if the operation should proceed, false if canceled
+   */
+  async confirmAgentMutatingOperation(
+    url: string,
+    method: string | undefined
+  ): Promise<boolean> {
+    const normalizedMethod = (method || 'GET').toUpperCase();
+
+    // GET operations are always allowed for agents
+    if (normalizedMethod === 'GET') {
+      return true;
+    }
+
+    // --with-agent-confirmation: the agent has already obtained user approval
+    if (this.withAgentConfirmation) {
+      return true;
+    }
+
+    // Show agent mode warning when --dangerously-skip-permissions is used
+    if (this.dangerouslySkipPermissions) {
+      const agentInfo = this.agentName ? ` (${this.agentName})` : '';
+      output.print('\n');
+      output.print(
+        bgRed(white(bold(' ⚠ WARNING '))) +
+          red(bold(` AGENT MODE - ${normalizedMethod} CONFIRMATION BYPASSED\n`))
+      );
+      output.print(
+        yellow(
+          `  An AI agent${agentInfo} is executing a ${bold(normalizedMethod)} request with --dangerously-skip-permissions flag.\n`
+        )
+      );
+      output.print(yellow(`  Target: ${bold(url)}\n`));
+      output.print(
+        yellow(
+          `  The --dangerously-skip-permissions flag has bypassed the confirmation prompt.\n\n`
+        )
+      );
+      return true;
+    }
+
+    // If TTY is available, use interactive prompt
+    if (this.stdin.isTTY) {
+      const message = `You are about to perform a ${yellow(bold(normalizedMethod))} operation on:\n  ${bold(url)}\n\nAre you sure you want to proceed?`;
+      output.print('\n');
+      const confirmed = await this.input.confirm(message, false);
+      output.print('\n');
+      if (!confirmed) {
+        output.log('Operation canceled by user.');
+      }
+      return confirmed;
+    }
+
+    // Non-TTY agent mode: output structured confirmation request and exit.
+    // The agent should present the operation to the user and re-run with
+    // --with-agent-confirmation. This is a one-time check per command — the
+    // first non-GET fetch triggers it and the command fails. The re-run with
+    // the flag bypasses all subsequent checks.
+    const teamId = this.config.currentTeam;
+    let teamName: string | undefined;
+    if (teamId) {
+      try {
+        const res = await this._fetch(`/teams/${teamId}`, { method: 'GET' });
+        if (res.ok) {
+          const team = await res.json();
+          teamName = team.slug || team.name;
+        }
+      } catch {
+        // Fall back to teamId if we can't resolve the name
+      }
+    }
+    const scopeLabel = teamName || teamId;
+    const scopeInfo = scopeLabel ? ` on team "${scopeLabel}"` : '';
+    const command = this.commandName ?? `${normalizedMethod} ${url}`;
+    const confirmationRequest = {
+      type: 'agent_confirmation_required',
+      command,
+      ...(teamId
+        ? { teamId, ...(teamName ? { teamSlug: teamName } : {}) }
+        : {}),
+      message: `Confirmation required: "vercel ${command}" requires write permissions${scopeInfo}.`,
+      description: `The command "vercel ${command}" requires write privileges which require user approval.`,
+      prompt:
+        'Use a yes/no confirmation prompt to ask the user if they want to proceed with this operation. Do not proceed without explicit user approval.',
+      resolution:
+        'If the user confirms, re-run the same command with the --with-agent-confirmation flag.',
+    };
+
+    // Write JSON and exit immediately with code 0.
+    // Using exit code 0 signals this is not an error — it's a confirmation
+    // request. The agent reads the JSON from stdout and acts on it.
+    // We must exit here to prevent the command's error handler from printing
+    // additional noise to stderr.
+    this.stdout.write(`${JSON.stringify(confirmationRequest)}\n`);
+    process.exit(0);
+  }
+
   private async _fetch(_url: string, opts: FetchOptions = {}) {
     const url = new URL(_url, this.apiUrl);
 
@@ -396,6 +512,20 @@ export default class Client extends EventEmitter implements Stdio {
   fetch<T>(url: string, opts?: FetchOptions): Promise<T>;
   fetch(url: string, opts: FetchOptions = {}) {
     return this.retry(async bail => {
+      // In agent mode, confirm non-GET operations before proceeding
+      if (this.isAgent) {
+        const confirmed = await this.confirmAgentMutatingOperation(
+          url,
+          opts.method
+        );
+        if (!confirmed) {
+          const err = new Error(
+            'Operation canceled: non-GET operations require confirmation when running as an agent.'
+          );
+          return bail(err);
+        }
+      }
+
       const res = await this._fetch(url, opts);
 
       printIndications(res);

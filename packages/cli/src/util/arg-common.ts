@@ -79,6 +79,13 @@ export const globalCommandOptions = [
   },
   { name: 'team', shorthand: 'T', type: String, deprecated: false },
   { name: 'api', shorthand: null, type: String, deprecated: false },
+  // Hidden flag: used by agents to confirm mutating operations after user approval
+  {
+    name: 'with-agent-confirmation',
+    shorthand: null,
+    type: Boolean,
+    deprecated: false,
+  },
 ] as const;
 
 /**
