@@ -32,7 +32,8 @@ def resolve_app(
         return var, getattr(mod, var)
 
     raise RuntimeError(
-        f"Configured application '{var}' missing in module '{module_name}'"
+        f'missing variable "{var}" in file "{module_name}".\n'
+        "See the docs: https://vercel.com/docs/functions/serverless-functions/runtimes/python"
     )
 
 
