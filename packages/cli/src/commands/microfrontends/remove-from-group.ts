@@ -9,7 +9,7 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { parseArguments } from '../../util/get-args';
 import { printError } from '../../util/error';
 import { isAPIError } from '../../util/errors-ts';
-import type { MicrofrontendsGroupsResponse } from './types';
+import { fetchMicrofrontendsGroups } from './utils';
 
 export default async function removeFromGroup(client: Client): Promise<number> {
   let parsedArgs;
@@ -48,12 +48,7 @@ export default async function removeFromGroup(client: Client): Promise<number> {
 
   const teamSlug = team.slug;
 
-  output.spinner('Fetching microfrontends groups…');
-  const groupsResponse = await client.fetch<MicrofrontendsGroupsResponse>(
-    `/v1/microfrontends/groups?teamId=${team.id}`,
-    { method: 'GET' }
-  );
-  output.stopSpinner();
+  const groupsResponse = await fetchMicrofrontendsGroups(client, team.id);
 
   const { groups } = groupsResponse;
 

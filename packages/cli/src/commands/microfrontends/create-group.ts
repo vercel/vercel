@@ -14,11 +14,12 @@ import { printError } from '../../util/error';
 import getProjectByIdOrName from '../../util/projects/get-project-by-id-or-name';
 import { isAPIError, ProjectNotFound } from '../../util/errors-ts';
 import type { Project } from '@vercel-internals/types';
-import type {
-  MicrofrontendsGroupResponse,
-  MicrofrontendsGroupsResponse,
-} from './types';
-import { validateDefaultRoute, validateRoutingPath } from './utils';
+import type { MicrofrontendsGroupResponse } from './types';
+import {
+  fetchMicrofrontendsGroups,
+  validateDefaultRoute,
+  validateRoutingPath,
+} from './utils';
 
 const MAX_GROUP_NAME_LENGTH = 48;
 
@@ -64,12 +65,7 @@ export default async function createGroup(client: Client): Promise<number> {
   );
   output.log('');
 
-  output.spinner('Fetching microfrontends groups…');
-  const groupsResponse = await client.fetch<MicrofrontendsGroupsResponse>(
-    `/v1/microfrontends/groups?teamId=${team.id}`,
-    { method: 'GET' }
-  );
-  output.stopSpinner();
+  const groupsResponse = await fetchMicrofrontendsGroups(client, team.id);
 
   const { groups, maxMicrofrontendsGroupsPerTeam, maxMicrofrontendsPerGroup } =
     groupsResponse;

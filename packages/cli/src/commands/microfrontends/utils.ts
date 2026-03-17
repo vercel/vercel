@@ -1,3 +1,20 @@
+import output from '../../output-manager';
+import type Client from '../../util/client';
+import type { MicrofrontendsGroupsResponse } from './types';
+
+export async function fetchMicrofrontendsGroups(
+  client: Client,
+  teamId: string
+): Promise<MicrofrontendsGroupsResponse> {
+  output.spinner('Fetching microfrontends groups…');
+  const response = await client.fetch<MicrofrontendsGroupsResponse>(
+    `/v1/microfrontends/groups?teamId=${teamId}`,
+    { method: 'GET' }
+  );
+  output.stopSpinner();
+  return response;
+}
+
 /**
  * Validates that a string is a well-formed URL path suitable for use
  * as a microfrontends default route (e.g. `/docs`, `/app/settings`).
