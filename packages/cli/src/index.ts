@@ -81,6 +81,11 @@ import output from './output-manager';
 import { checkGuidanceStatus } from './util/guidance/check-status';
 import { determineAgent } from '@vercel/detect-agent';
 import { outputActionRequired } from './util/agent-output';
+import {
+  AGENT_ACTION,
+  AGENT_REASON,
+  AGENT_STATUS,
+} from './util/agent-output-constants';
 
 const VERCEL_DIR = getGlobalPathConfig();
 const VERCEL_CONFIG_PATH = configFiles.getConfigFilePath();
@@ -487,9 +492,9 @@ const main = async () => {
       outputActionRequired(
         client,
         {
-          status: 'action_required',
-          reason: 'login_required',
-          action: 'login_required',
+          status: AGENT_STATUS.ACTION_REQUIRED,
+          reason: AGENT_REASON.LOGIN_REQUIRED,
+          action: AGENT_ACTION.LOGIN_REQUIRED,
           userActionRequired: true,
           message:
             'No credentials found. A user must log in before running this command.',

@@ -5,6 +5,7 @@ import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import { getCommandNamePlain } from '../../util/pkg-name';
 import { outputAgentError } from '../../util/agent-output';
+import { AGENT_REASON, AGENT_STATUS } from '../../util/agent-output-constants';
 import output from '../../output-manager';
 import { WebhooksCreateTelemetryClient } from '../../util/telemetry/commands/webhooks/create';
 import { createSubcommand } from './command';
@@ -50,8 +51,8 @@ export default async function create(client: Client, argv: string[]) {
       outputAgentError(
         client,
         {
-          status: 'error',
-          reason: 'missing_url',
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.MISSING_URL,
           message:
             'Webhook URL is required. Provide URL as the first argument.',
           next: [
@@ -102,8 +103,8 @@ export default async function create(client: Client, argv: string[]) {
       outputAgentError(
         client,
         {
-          status: 'error',
-          reason: 'missing_events',
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.MISSING_EVENTS,
           message:
             'At least one event is required. Use --event <event> (can be repeated).',
           next: [
@@ -149,8 +150,8 @@ export default async function create(client: Client, argv: string[]) {
         outputAgentError(
           client,
           {
-            status: 'error',
-            reason: 'invalid_arguments',
+            status: AGENT_STATUS.ERROR,
+            reason: AGENT_REASON.INVALID_ARGUMENTS,
             message: `Invalid event type${invalidEvents.length > 1 ? 's' : ''}: ${invalidEvents.join(', ')}. Use a valid event name (e.g. deployment.created).`,
             hint: `See available events: ${WEBHOOKS_EVENTS_DOCS_URL}`,
             next: [{ command: suggested, when: 'use a valid --event value' }],
@@ -188,7 +189,7 @@ export default async function create(client: Client, argv: string[]) {
 
     if (client.nonInteractive) {
       const json: Record<string, unknown> = {
-        status: 'ok',
+        status: AGENT_STATUS.OK,
         webhook: {
           id: webhook.id,
           url: webhook.url,
@@ -239,22 +240,22 @@ export default async function create(client: Client, argv: string[]) {
       if (client.nonInteractive) {
         const reason =
           err.code === 'invalid_url'
-            ? 'invalid_url'
+            ? AGENT_REASON.INVALID_URL
             : err.code === 'invalid_event'
-              ? 'invalid_event'
-              : 'api_error';
+              ? AGENT_REASON.INVALID_EVENT
+              : AGENT_REASON.API_ERROR;
         const suggested =
-          reason === 'invalid_event'
+          reason === AGENT_REASON.INVALID_EVENT
             ? buildCreateCommandWithEventPlaceholder(client.argv, url)
             : undefined;
         outputAgentError(
           client,
           {
-            status: 'error',
+            status: AGENT_STATUS.ERROR,
             reason,
             message: err.message,
             hint:
-              reason === 'invalid_event'
+              reason === AGENT_REASON.INVALID_EVENT
                 ? `See available events: ${WEBHOOKS_EVENTS_DOCS_URL}`
                 : undefined,
             next:

@@ -10,6 +10,7 @@ import formatTable from '../../util/format-table';
 import { validateJsonOutput } from '../../util/output-format';
 import { getCommandNamePlain } from '../../util/pkg-name';
 import output from '../../output-manager';
+import { AGENT_STATUS } from '../../util/agent-output-constants';
 import { WebhooksLsTelemetryClient } from '../../util/telemetry/commands/webhooks/ls';
 import { listSubcommand } from './command';
 import { parseArguments } from '../../util/get-args';
@@ -76,7 +77,7 @@ export default async function ls(client: Client, argv: string[]) {
     }));
     const jsonOutput = client.nonInteractive
       ? {
-          status: 'ok' as const,
+          status: AGENT_STATUS.OK,
           webhooks: webhooksList,
           message: `${webhooks.length} webhook(s) found.`,
           next: [

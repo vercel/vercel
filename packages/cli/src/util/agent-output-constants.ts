@@ -20,6 +20,7 @@ export const AGENT_REASON = {
   MISSING_ARGUMENTS: 'missing_arguments',
   INVALID_ARGUMENTS: 'invalid_arguments',
   CONFIRMATION_REQUIRED: 'confirmation_required',
+  LOGIN_REQUIRED: 'login_required',
   NOT_LINKED: 'not_linked',
   NOT_FOUND: 'not_found',
   MISSING_SCOPE: 'missing_scope',
@@ -45,6 +46,11 @@ export const AGENT_REASON = {
   INVALID_DNS_TYPE: 'invalid_dns_type',
   DNS_ADD_FAILED: 'dns_add_failed',
   INVALID_DOMAIN: 'invalid_domain',
+  // Webhooks
+  MISSING_URL: 'missing_url',
+  MISSING_EVENTS: 'missing_events',
+  INVALID_URL: 'invalid_url',
+  INVALID_EVENT: 'invalid_event',
   // Redirects
   REDIRECT_NOT_FOUND: 'redirect_not_found',
   VERSION_NOT_FOUND: 'version_not_found',
@@ -56,4 +62,5 @@ export const AGENT_REASON = {
 export const AGENT_ACTION = {
   MISSING_ARGUMENTS: 'missing_arguments',
   CONFIRMATION_REQUIRED: 'confirmation_required',
+  LOGIN_REQUIRED: 'login_required',
 } as const;
