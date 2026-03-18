@@ -164,6 +164,13 @@ export class TelemetryClient {
     }
   }
 
+  protected trackStdinIsTTY(isTTY: boolean) {
+    this.track({
+      key: 'stdin_is_tty',
+      value: isTTY ? 'true' : 'false',
+    });
+  }
+
   protected trackVersion(version?: string) {
     if (version) {
       this.track({

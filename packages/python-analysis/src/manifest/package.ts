@@ -647,7 +647,13 @@ async function maybeLoadRequirementsTxt(
   }
 
   try {
-    const pyproject = convertRequirementsToPyprojectToml(requirementsContent);
+    const pyproject = await convertRequirementsToPyprojectToml(
+      requirementsContent,
+      {
+        workingDir: path.join(root, subdir),
+        packageRoot: root,
+      }
+    );
 
     return {
       path: requirementsTxtRelPath,

@@ -1,3 +1,7 @@
+// Derived from the uv project (https://github.com/astral-sh/uv).
+// Copyright (c) 2023 Astral Software Inc.
+// Licensed under the Apache License, Version 2.0 or the MIT License.
+
 /// Network connectivity mode.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum Connectivity {

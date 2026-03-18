@@ -28,7 +28,7 @@ import {
 import { stringifyManifest } from '@vercel/python-analysis';
 import { VERCEL_RUNTIME_VERSION } from './package-versions';
 
-const DEV_SERVER_STARTUP_TIMEOUT = 10_000;
+const DEV_SERVER_STARTUP_TIMEOUT = 5 * 60_000; // 5 minutes
 
 // Silence all Node.js warnings during the dev server lifecycle to avoid noise and only show the python logs.
 // Specifically, this is implemented to silence the [DEP0060] DeprecationWarning warning from the http-proxy library.
@@ -639,10 +639,13 @@ export const startDevServer: StartDevServer = async opts => {
   const env = { ...process.env, ...(meta.env || {}) } as NodeJS.ProcessEnv;
   const serviceType = env.VERCEL_SERVICE_TYPE;
 
-  // For cron services, use the raw entrypoint directly, because
+  // For cron/worker services, use the raw entrypoint directly, because
   // they don't export app/application so standard detection would skip them.
   let entry: string | undefined;
-  if (serviceType === 'cron' && rawEntrypoint?.endsWith('.py')) {
+  if (
+    (serviceType === 'cron' || serviceType === 'worker') &&
+    rawEntrypoint?.endsWith('.py')
+  ) {
     entry = rawEntrypoint;
   } else {
     const detected = await detectPythonEntrypoint(

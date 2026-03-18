@@ -329,10 +329,36 @@ jobs:
         run: node utils/gen.js && node_modules/.bin/turbo run build --cache-dir=".turbo" --log-order=stream --filter=${{matrix.packageName}}...
         env:
           FORCE_COLOR: '1'
+      - name: Resolve Python wheel URLs
+        shell: bash
+        run: |
+          DEPLOYMENT_URL="${{ needs.setup.outputs.dplUrl }}"
+
+          PACKAGES_JSON="$(node utils/get-python-packages.js)"
+          if [ -z "$PACKAGES_JSON" ] || [ "$PACKAGES_JSON" = "[]" ]; then
+            echo "No Python packages discovered; skipping wheel URL resolution."
+            exit 0
+          fi
+
+          echo "$PACKAGES_JSON" | jq -c '.[]' | while IFS= read -r package; do
+            package_slug="$(echo "$package" | jq -r '.packageDir')"
+            package_name="$(echo "$package" | jq -r '.packageName')"
+
+            wheel_name="$(curl -sf "$DEPLOYMENT_URL/tarballs/$package_slug-wheel.json" | jq -r '.filename' || echo "")"
+            if [ -z "$wheel_name" ]; then
+              continue
+            fi
+
+            env_var="$(printf '%s' "$package_name" | tr -c '[:alnum:]' '_' | tr '[:lower:]' '[:upper:]')_PYTHON"
+            echo "$env_var=$package_name @ $DEPLOYMENT_URL/tarballs/$wheel_name" >> "$GITHUB_ENV"
+          done
       - name: Test ${{matrix.packageName}}
         run: node utils/gen.js && node_modules/.bin/turbo run ${{matrix.testScript}} --summarize --cache-dir=".turbo" --log-order=stream --filter=${{matrix.packageName}} -- ${{ join(matrix.testPaths, ' ') }}
         shell: bash
         env:
+          # Per-package pip install specs (e.g. VERCEL_RUNTIME_PYTHON,
+          # VERCEL_WORKERS_PYTHON) are also available here, injected into
+          # $GITHUB_ENV by the "Resolve Python wheel URLs" step above.
           JEST_JUNIT_OUTPUT_FILE: ${{github.workspace}}/.junit-reports/${{matrix.scriptName}}-${{matrix.packageName}}-${{matrix.chunkNumber}}-${{ matrix.runner }}.xml
           VERCEL_CLI_VERSION: ${{ needs.setup.outputs.dplUrl }}/tarballs/vercel.tgz
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}

@@ -1,3 +1,7 @@
+// Derived from the uv project (https://github.com/astral-sh/uv).
+// Copyright (c) 2023 Astral Software Inc.
+// Licensed under the Apache License, Version 2.0 or the MIT License.
+//
 // Stubbed uv-fs: provides normalize_url_path, normalize_absolute_path (for uv-pep508),
 // Simplified trait (for uv-requirements-txt error messages), and read_to_string_transcode
 // (for reading included requirements files via host-bridge).
