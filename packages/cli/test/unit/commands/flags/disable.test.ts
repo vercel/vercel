@@ -136,6 +136,58 @@ describe('flags disable', () => {
     });
   });
 
+  it('emits structured JSON in non-interactive mode when flag slug is missing', async () => {
+    const exitSpy = vi
+      .spyOn(process, 'exit')
+      .mockImplementation((() => {}) as () => never);
+    client.nonInteractive = true;
+    client.setArgv('flags', 'disable', '--cwd', '/tmp', '--non-interactive');
+
+    const exitCode = await flags(client);
+
+    expect(exitCode).toBe(1);
+    const out = client.stdout.getFullOutput();
+    const parsed = JSON.parse(out);
+    expect(parsed.status).toBe('error');
+    expect(parsed.reason).toBe('missing_arguments');
+    expect(parsed.message).toContain('flag');
+    expect(parsed.next).toBeDefined();
+    expect(parsed.next.length).toBeGreaterThan(0);
+    expect(parsed.next[0].command).toContain('flags disable');
+    expect(parsed.next[0].command).toContain('--cwd');
+    expect(parsed.next[0].command).toContain('--non-interactive');
+    exitSpy.mockRestore();
+    client.nonInteractive = false;
+  });
+
+  it('substitutes --environment in suggested command when provided and flag slug is missing', async () => {
+    const exitSpy = vi
+      .spyOn(process, 'exit')
+      .mockImplementation((() => {}) as () => never);
+    client.nonInteractive = true;
+    client.setArgv(
+      'flags',
+      'disable',
+      '--environment',
+      'production',
+      '--cwd',
+      '/tmp',
+      '--non-interactive'
+    );
+
+    const exitCode = await flags(client);
+
+    expect(exitCode).toBe(1);
+    const out = client.stdout.getFullOutput();
+    const parsed = JSON.parse(out);
+    expect(parsed.next[0].command).toContain('--environment production');
+    expect(parsed.next[0].command).not.toContain(
+      '--environment <production|preview|development>'
+    );
+    exitSpy.mockRestore();
+    client.nonInteractive = false;
+  });
+
   it('tracks `disable` subcommand', async () => {
     (client.stdin as any).isTTY = false;
     client.setArgv(
@@ -500,6 +552,75 @@ describe('flags disable', () => {
       'Missing required flag --environment'
     );
     expect(selectMock).not.toHaveBeenCalled();
+  });
+
+  it('emits structured JSON in non-interactive mode when --environment is missing', async () => {
+    const exitSpy = vi
+      .spyOn(process, 'exit')
+      .mockImplementation((() => {}) as () => never);
+    client.nonInteractive = true;
+    client.setArgv(
+      'flags',
+      'disable',
+      testFlags[0].slug,
+      '--cwd',
+      '/tmp',
+      '--non-interactive'
+    );
+
+    const exitCode = await flags(client);
+
+    expect(exitCode).toBe(1);
+    const out = client.stdout.getFullOutput();
+    const parsed = JSON.parse(out);
+    expect(parsed.status).toBe('error');
+    expect(parsed.reason).toBe('missing_arguments');
+    expect(parsed.message).toContain('--environment');
+    expect(parsed.next).toBeDefined();
+    expect(parsed.next.length).toBeGreaterThan(0);
+    expect(parsed.next[0].command).toContain('flags disable');
+    expect(parsed.next[0].command).toContain(testFlags[0].slug);
+    expect(parsed.next[0].command).toContain('--environment');
+    expect(parsed.next[0].command).toContain('--cwd');
+    expect(parsed.next[0].command).toContain('--non-interactive');
+    exitSpy.mockRestore();
+    client.nonInteractive = false;
+  });
+
+  it('emits structured JSON in non-interactive mode when --environment is invalid', async () => {
+    const exitSpy = vi
+      .spyOn(process, 'exit')
+      .mockImplementation((() => {}) as () => never);
+    client.nonInteractive = true;
+    client.setArgv(
+      'flags',
+      'disable',
+      testFlags[0].slug,
+      '--environment',
+      'prod',
+      '--cwd',
+      '/tmp',
+      '--non-interactive'
+    );
+
+    const exitCode = await flags(client);
+
+    expect(exitCode).toBe(1);
+    const out = client.stdout.getFullOutput();
+    const parsed = JSON.parse(out);
+    expect(parsed.status).toBe('error');
+    expect(parsed.reason).toBe('invalid_arguments');
+    expect(parsed.message).toContain('Invalid environment');
+    expect(parsed.message).toContain('prod');
+    expect(parsed.next).toBeDefined();
+    expect(parsed.next.length).toBeGreaterThan(0);
+    expect(parsed.next[0].command).toContain('flags disable');
+    expect(parsed.next[0].command).toContain(testFlags[0].slug);
+    expect(parsed.next[0].command).toContain('--environment');
+    expect(parsed.next[0].command).toContain('--cwd');
+    expect(parsed.next[0].command).toContain('--non-interactive');
+    exitSpy.mockRestore();
+    client.nonInteractive = false;
   });
 
   it('sends a custom revision message', async () => {
