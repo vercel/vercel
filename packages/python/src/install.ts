@@ -6,12 +6,15 @@ import {
   discoverPythonPackage,
   stringifyManifest,
   createMinimalManifest,
+  parseUvPythonRequest,
   PythonAnalysisError,
   PythonConfigKind,
   PythonLockFileKind,
   PythonManifestConvertedKind,
   writePythonVersionFile,
   type PythonPackage,
+  type Pep440Constraint,
+  serializePythonRequest,
 } from '@vercel/python-analysis';
 import { getVenvPythonBin } from './utils';
 import { UvRunner, filterUnsafeUvPipArgs, getProtectedUvEnv } from './uv';
@@ -379,6 +382,52 @@ export async function ensureUvProject({
  *
  * This is a no-op outside the Vercel build container.
  */
+function hasPatchLevelPin(specifier: string): boolean {
+  // matches 3.12.8 but not 3.12
+  return /\d+\.\d+\.\d+/.test(specifier);
+}
+
+function trimPatchLevel(
+  constraint: Pep440Constraint
+): [boolean, Pep440Constraint] {
+  const parts = constraint.version.split('.');
+  if (parts.length < 3) return [false, constraint];
+  const [majorStr, minorStr] = parts;
+  const minorNum = parseInt(minorStr, 10);
+  const patchNum = parseInt(parts[2], 10);
+  switch (constraint.operator) {
+    case '<=':
+      // <=X.Y.Z → <X.(Y+1) to include all patches of X.Y
+      return [
+        true,
+        {
+          ...constraint,
+          operator: '<',
+          version: `${majorStr}.${minorNum + 1}`,
+        },
+      ];
+    case '<':
+      if (patchNum > 0) {
+        // <X.Y.Z (Z>0) → <X.(Y+1) to avoid excluding patches of X.Y
+        return [
+          true,
+          { ...constraint, version: `${majorStr}.${minorNum + 1}` },
+        ];
+      }
+      // <X.Y.0: strip patch, keep operator (semantically equivalent)
+      return [true, { ...constraint, version: `${majorStr}.${minorStr}` }];
+    case '>':
+      // >X.Y.Z → >=X.Y to include all patches of X.Y
+      return [
+        true,
+        { ...constraint, operator: '>=', version: `${majorStr}.${minorStr}` },
+      ];
+    default:
+      // >=, ==, !=, ~=, ===: strip patch to X.Y
+      return [true, { ...constraint, version: `${majorStr}.${minorStr}` }];
+  }
+}
+
 async function rewritePythonVersionFiles({
   pythonPackage,
   rootDir,
@@ -394,34 +443,11 @@ async function rewritePythonVersionFiles({
     const rewritten = pvConfig.data.map(req => {
       if (!req.version) return req;
       const newConstraint = req.version.constraint.map(c => {
-        const parts = c.version.split('.');
-        if (parts.length < 3) return c;
-        changed = true;
-        const [majorStr, minorStr] = parts;
-        const minorNum = parseInt(minorStr, 10);
-        const patchNum = parseInt(parts[2], 10);
-        switch (c.operator) {
-          case '<=':
-            // <=X.Y.Z → <X.(Y+1) to include all patches of X.Y
-            return {
-              ...c,
-              operator: '<',
-              version: `${majorStr}.${minorNum + 1}`,
-            };
-          case '<':
-            if (patchNum > 0) {
-              // <X.Y.Z (Z>0) → <X.(Y+1) to avoid excluding patches of X.Y
-              return { ...c, version: `${majorStr}.${minorNum + 1}` };
-            }
-            // <X.Y.0: strip patch, keep operator (semantically equivalent)
-            return { ...c, version: `${majorStr}.${minorStr}` };
-          case '>':
-            // >X.Y.Z → >=X.Y to include all patches of X.Y
-            return { ...c, operator: '>=', version: `${majorStr}.${minorStr}` };
-          default:
-            // >=, ==, !=, ~=, ===: strip patch to X.Y
-            return { ...c, version: `${majorStr}.${minorStr}` };
+        const [currentChanged, trimmed] = trimPatchLevel(c);
+        if (currentChanged) {
+          changed = true;
         }
+        return trimmed;
       });
       return { ...req, version: { ...req.version, constraint: newConstraint } };
     });
@@ -429,6 +455,52 @@ async function rewritePythonVersionFiles({
 
     const absPath = join(rootDir, pvConfig.path);
     await fs.promises.writeFile(absPath, writePythonVersionFile(rewritten));
+  }
+}
+
+async function rewritePyprojectRequiresPython({
+  pythonPackage,
+  rootDir,
+}: {
+  pythonPackage: PythonPackage;
+  rootDir: string;
+}): Promise<void> {
+  // Converted manifests (Pipfile, requirements.txt) are already handled
+  // in ensureUvProject so we skip them here.
+  const manifest = pythonPackage.manifest;
+  if (!manifest || manifest.origin) return;
+
+  const requiresPython = manifest.data.project?.['requires-python'];
+  if (!requiresPython || !hasPatchLevelPin(requiresPython)) return;
+
+  const request = parseUvPythonRequest(requiresPython);
+  if (!request || !request.version) return;
+
+  let changed = false;
+  const newConstraint = request.version.constraint.map(c => {
+    const [currentChanged, trimmed] = trimPatchLevel(c);
+    if (currentChanged) changed = true;
+    // In pyproject.toml, ==X.Y means exactly X.Y.0; use the wildcard form instead
+    if (trimmed.operator === '==' && !trimmed.version.endsWith('.*')) {
+      return { ...trimmed, version: `${trimmed.version}.*` };
+    }
+    return trimmed;
+  });
+  if (!changed) return;
+
+  // Drop implementation — only the version constraint is relevant for pyproject.toml
+  const updatedRequiresPython = serializePythonRequest({
+    version: { ...request.version, constraint: newConstraint },
+  });
+
+  const absPath = join(rootDir, manifest.path);
+  const content = await fs.promises.readFile(absPath, 'utf8');
+  const rewritten = content.replace(
+    /(requires-python\s*=\s*["'])([^"']*)(['"])/,
+    `$1${updatedRequiresPython}$3`
+  );
+  if (rewritten !== content) {
+    await fs.promises.writeFile(absPath, rewritten);
   }
 }
 
@@ -442,6 +514,7 @@ export async function rewritePatchVersionPins({
   if (!process.env.VERCEL_BUILD_IMAGE) return;
 
   await rewritePythonVersionFiles({ pythonPackage, rootDir });
+  await rewritePyprojectRequiresPython({ pythonPackage, rootDir });
 }
 
 async function pipInstall(

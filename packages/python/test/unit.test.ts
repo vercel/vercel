@@ -2700,4 +2700,123 @@ describe('rewritePatchVersionPins', () => {
 
     expect(fs.readFileSync(pvPath, 'utf8')).toBe('3.12\n');
   });
+
+  it('rewrites requires-python in native pyproject.toml with a patch-level pin', async () => {
+    process.env.VERCEL_BUILD_IMAGE = '1';
+    const pyprojectPath = path.join(tmpDir, 'pyproject.toml');
+    fs.writeFileSync(
+      pyprojectPath,
+      '[project]\nname = "myapp"\nversion = "0.1.0"\nrequires-python = "==3.12.8"\n'
+    );
+
+    await rewritePatchVersionPins({
+      pythonPackage: {
+        manifest: {
+          path: 'pyproject.toml',
+          data: {
+            project: {
+              name: 'myapp',
+              version: '0.1.0',
+              'requires-python': '==3.12.8',
+              dependencies: [],
+            },
+          },
+        },
+      },
+      rootDir: tmpDir,
+    });
+
+    const updated = fs.readFileSync(pyprojectPath, 'utf8');
+    expect(updated).toContain('requires-python = "==3.12.*"'); // ==3.12 would mean exactly 3.12.0
+    expect(updated).not.toContain('==3.12.8');
+  });
+
+  it('rewrites requires-python with >=X.Y.Z style patch constraint', async () => {
+    process.env.VERCEL_BUILD_IMAGE = '1';
+    const pyprojectPath = path.join(tmpDir, 'pyproject.toml');
+    fs.writeFileSync(
+      pyprojectPath,
+      '[project]\nname = "myapp"\nversion = "0.1.0"\nrequires-python = ">=3.12.8,<3.13"\n'
+    );
+
+    await rewritePatchVersionPins({
+      pythonPackage: {
+        manifest: {
+          path: 'pyproject.toml',
+          data: {
+            project: {
+              name: 'myapp',
+              version: '0.1.0',
+              'requires-python': '>=3.12.8,<3.13',
+              dependencies: [],
+            },
+          },
+        },
+      },
+      rootDir: tmpDir,
+    });
+
+    const updated = fs.readFileSync(pyprojectPath, 'utf8');
+    expect(updated).toContain('requires-python = ">=3.12,<3.13"');
+  });
+
+  it('does not rewrite requires-python that has no patch-level version', async () => {
+    process.env.VERCEL_BUILD_IMAGE = '1';
+    const pyprojectPath = path.join(tmpDir, 'pyproject.toml');
+    const original =
+      '[project]\nname = "myapp"\nversion = "0.1.0"\nrequires-python = ">=3.12"\n';
+    fs.writeFileSync(pyprojectPath, original);
+
+    await rewritePatchVersionPins({
+      pythonPackage: {
+        manifest: {
+          path: 'pyproject.toml',
+          data: {
+            project: {
+              name: 'myapp',
+              version: '0.1.0',
+              'requires-python': '>=3.12',
+              dependencies: [],
+            },
+          },
+        },
+      },
+      rootDir: tmpDir,
+    });
+
+    expect(fs.readFileSync(pyprojectPath, 'utf8')).toBe(original);
+  });
+
+  it('skips requires-python rewrite for converted manifests (origin set)', async () => {
+    process.env.VERCEL_BUILD_IMAGE = '1';
+    const pyprojectPath = path.join(tmpDir, 'pyproject.toml');
+    const original =
+      '[project]\nname = "myapp"\nversion = "0.1.0"\nrequires-python = "==3.12.8"\n';
+    fs.writeFileSync(pyprojectPath, original);
+
+    await rewritePatchVersionPins({
+      pythonPackage: {
+        manifest: {
+          path: 'pyproject.toml',
+          data: {
+            project: {
+              name: 'myapp',
+              version: '0.1.0',
+              'requires-python': '==3.12.8',
+              dependencies: [],
+            },
+          },
+          // origin marks this as a converted (e.g. requirements.txt) manifest
+          origin: {
+            kind: 'requirements.txt' as any,
+            path: 'requirements.txt' as any,
+          },
+        },
+      },
+      rootDir: tmpDir,
+    });
+
+    // Converted manifests are handled elsewhere; file should be untouched
+    expect(fs.readFileSync(pyprojectPath, 'utf8')).toBe(original);
+  });
 });

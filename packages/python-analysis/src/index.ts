@@ -210,6 +210,9 @@ export {
 // =============================================================================
 
 export {
+  parseUvPythonRequest,
   serializePythonRequest,
   writePythonVersionFile,
 } from './manifest/uv-python-version-parser';
+
+export type { Pep440Constraint } from './manifest/pep440';
