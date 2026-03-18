@@ -211,10 +211,9 @@ export async function addAutoProvision(
   // partner uses the same key name in both schemas.
   const integrationSchemaProps = integration.metadataSchema?.properties ?? {};
   const productSchemaProps = product.metadataSchema.properties;
-  const mergedParsingSchema = mergeMetadataSchemas(
-    product.metadataSchema,
-    integration.metadataSchema
-  ) ?? product.metadataSchema;
+  const mergedParsingSchema =
+    mergeMetadataSchemas(product.metadataSchema, integration.metadataSchema) ??
+    product.metadataSchema;
   for (const key of Object.keys(integrationSchemaProps)) {
     if (key in productSchemaProps) {
       output.debug(
@@ -409,18 +408,17 @@ export async function addAutoProvision(
         const exampleVal = options?.[0] ?? '<value>';
         return `-m ${key}=${exampleVal}`;
       });
+      output.error(`Missing required metadata: ${missingRequired.join(', ')}.`);
       output.log(
-        `Missing required metadata: ${missingRequired.join(', ')}. Opening browser to complete setup...`
-      );
-      output.log(
-        `  Tip: Provide ${examples.join(' ')} to provision directly from the CLI.`
+        `  Provide ${examples.join(' ')} to provision directly from the CLI.`
       );
       output.log(
         `  Run \`vercel ${commandName} ${integrationSlug} --help\` for all metadata options.`
       );
-    } else {
-      output.log('Additional setup required. Opening browser...');
+      return 1;
     }
+
+    output.log('Additional setup required. Opening browser...');
     const url = new URL(fallback.url);
     url.searchParams.set('defaultResourceName', resourceName);
     url.searchParams.set('source', 'cli');

@@ -671,7 +671,7 @@ describe('integration add (auto-provision)', () => {
   });
 
   describe('fallback to browser', () => {
-    it('should open browser for metadata fallback with source and defaultResourceName', async () => {
+    it('should show error for missing required metadata without opening browser', async () => {
       useAutoProvision({ responseKey: 'metadata' });
 
       client.setArgv('integration', 'add', 'acme');
@@ -679,26 +679,12 @@ describe('integration add (auto-provision)', () => {
 
       // Auto-generated name, server fills metadata defaults — no prompts
       await expect(client.stderr).toOutput(
-        'Missing required metadata: region. Opening browser to complete setup...'
+        'Error: Missing required metadata: region.'
       );
 
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(1);
-      expect(openMock).toHaveBeenCalledWith(
-        expect.stringContaining(
-          'https://vercel.com/acme/~/integrations/checkout/acme'
-        )
-      );
-      expect(openMock).toHaveBeenCalledWith(
-        expect.stringMatching(/defaultResourceName=acme-gray-apple/)
-      );
-      expect(openMock).toHaveBeenCalledWith(
-        expect.stringMatching(/source=cli/)
-      );
-      // No --metadata flags, so metadata should NOT be in the URL
-      expect(openMock).toHaveBeenCalledWith(
-        expect.not.stringMatching(/metadata=/)
-      );
+      expect(openMock).not.toHaveBeenCalled();
 
       expect(client.telemetryEventStore.readonlyEvents).toEqual(
         expect.arrayContaining([
@@ -778,7 +764,7 @@ describe('integration add (auto-provision)', () => {
       expect(parsed.searchParams.get('source')).toEqual('cli');
     });
 
-    it('should open browser for unknown fallback without metadata in URL', async () => {
+    it('should show error for missing required metadata on unknown fallback', async () => {
       useAutoProvision({ responseKey: 'unknown' });
 
       client.setArgv('integration', 'add', 'acme');
@@ -786,31 +772,27 @@ describe('integration add (auto-provision)', () => {
 
       // Auto-generated name, server fills metadata defaults — no prompts
       await expect(client.stderr).toOutput(
-        'Missing required metadata: region. Opening browser to complete setup...'
+        'Error: Missing required metadata: region.'
       );
 
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(1);
-      expect(openMock).toHaveBeenCalled();
-      // No --metadata flags, so metadata should NOT be in the URL
-      expect(openMock).toHaveBeenCalledWith(
-        expect.not.stringMatching(/metadata=/)
-      );
+      expect(openMock).not.toHaveBeenCalled();
     });
 
-    it('should open browser for install fallback (policies not accepted server-side)', async () => {
+    it('should show error for missing required metadata on install fallback', async () => {
       useAutoProvision({ responseKey: 'install' });
 
       client.setArgv('integration', 'add', 'acme');
       const exitCodePromise = integrationCommand(client);
 
       await expect(client.stderr).toOutput(
-        'Missing required metadata: region. Opening browser to complete setup...'
+        'Error: Missing required metadata: region.'
       );
 
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(1);
-      expect(openMock).toHaveBeenCalled();
+      expect(openMock).not.toHaveBeenCalled();
     });
 
     it('should forward --metadata to browser URL on unknown fallback', async () => {
@@ -879,7 +861,7 @@ describe('integration add (auto-provision)', () => {
       expect(parsed.searchParams.get('source')).toEqual('cli');
     });
 
-    it('should not include metadata in URL after term acceptance falls back without --metadata', async () => {
+    it('should show missing metadata error after term acceptance without --metadata', async () => {
       useAutoProvision({
         responseKey: 'metadata',
         withInstallation: false,
@@ -899,14 +881,12 @@ describe('integration add (auto-provision)', () => {
       client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
-        'Missing required metadata: region. Opening browser to complete setup...'
+        'Error: Missing required metadata: region.'
       );
 
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(1);
-      expect(openMock).toHaveBeenCalledWith(
-        expect.not.stringMatching(/metadata=/)
-      );
+      expect(openMock).not.toHaveBeenCalled();
     });
 
     it('should include all three URL params (projectSlug, defaultResourceName, source) when project is linked', async () => {
@@ -919,12 +899,17 @@ describe('integration add (auto-provision)', () => {
       const cwd = setupUnitFixture('vercel-integration-add');
       client.cwd = cwd;
 
-      client.setArgv('integration', 'add', 'acme');
+      client.setArgv(
+        'integration',
+        'add',
+        'acme',
+        '--metadata',
+        'region=us-east-1'
+      );
       const exitCodePromise = integrationCommand(client);
 
-      // Auto-generated name, server fills metadata defaults — no wizard prompts
       await expect(client.stderr).toOutput(
-        'Missing required metadata: region. Opening browser to complete setup...'
+        'Additional setup required. Opening browser...'
       );
 
       const exitCode = await exitCodePromise;
@@ -951,12 +936,18 @@ describe('integration add (auto-provision)', () => {
       const cwd = setupUnitFixture('vercel-integration-add');
       client.cwd = cwd;
 
-      client.setArgv('integration', 'add', 'acme', '--no-connect');
+      client.setArgv(
+        'integration',
+        'add',
+        'acme',
+        '--no-connect',
+        '--metadata',
+        'region=us-east-1'
+      );
       const exitCodePromise = integrationCommand(client);
 
-      // Auto-generated name, server fills metadata defaults — no wizard prompts
       await expect(client.stderr).toOutput(
-        'Missing required metadata: region. Opening browser to complete setup...'
+        'Additional setup required. Opening browser...'
       );
 
       const exitCode = await exitCodePromise;
@@ -976,12 +967,19 @@ describe('integration add (auto-provision)', () => {
     it('should include custom --name in URL when fallback to browser without project', async () => {
       useAutoProvision({ responseKey: 'metadata' });
 
-      client.setArgv('integration', 'add', 'acme', '--name', 'my-custom-db');
+      client.setArgv(
+        'integration',
+        'add',
+        'acme',
+        '--name',
+        'my-custom-db',
+        '--metadata',
+        'region=us-east-1'
+      );
       const exitCodePromise = integrationCommand(client);
 
-      // --name flag provides the name, server fills metadata defaults — no wizard prompts
       await expect(client.stderr).toOutput(
-        'Missing required metadata: region. Opening browser to complete setup...'
+        'Additional setup required. Opening browser...'
       );
 
       const exitCode = await exitCodePromise;
@@ -1004,12 +1002,19 @@ describe('integration add (auto-provision)', () => {
       const cwd = setupUnitFixture('vercel-integration-add');
       client.cwd = cwd;
 
-      client.setArgv('integration', 'add', 'acme', '--name', 'my-proj-db');
+      client.setArgv(
+        'integration',
+        'add',
+        'acme',
+        '--name',
+        'my-proj-db',
+        '--metadata',
+        'region=us-east-1'
+      );
       const exitCodePromise = integrationCommand(client);
 
-      // Server fills defaults, no wizard prompt
       await expect(client.stderr).toOutput(
-        'Missing required metadata: region. Opening browser to complete setup...'
+        'Additional setup required. Opening browser...'
       );
 
       const exitCode = await exitCodePromise;
@@ -1041,13 +1046,14 @@ describe('integration add (auto-provision)', () => {
         'acme',
         '--name',
         'my-nolink-db',
-        '--no-connect'
+        '--no-connect',
+        '--metadata',
+        'region=us-east-1'
       );
       const exitCodePromise = integrationCommand(client);
 
-      // Auto-generated name, server fills metadata defaults — no prompts
       await expect(client.stderr).toOutput(
-        'Missing required metadata: region. Opening browser to complete setup...'
+        'Additional setup required. Opening browser...'
       );
 
       const exitCode = await exitCodePromise;
@@ -1071,10 +1077,10 @@ describe('integration add (auto-provision)', () => {
 
       // Should show which metadata fields are missing
       await expect(client.stderr).toOutput(
-        'Missing required metadata: region. Opening browser to complete setup...'
+        'Error: Missing required metadata: region.'
       );
       await expect(client.stderr).toOutput(
-        'Tip: Provide -m region=us-west-1 to provision directly from the CLI.'
+        'Provide -m region=us-west-1 to provision directly from the CLI.'
       );
       await expect(client.stderr).toOutput(
         'Run `vercel integration add acme --help` for all metadata options.'
@@ -1252,11 +1258,19 @@ describe('integration add (auto-provision)', () => {
     it('should include planId in fallback URL when --plan is provided', async () => {
       useAutoProvision({ responseKey: 'metadata' });
 
-      client.setArgv('integration', 'add', 'acme', '--plan', 'pro');
+      client.setArgv(
+        'integration',
+        'add',
+        'acme',
+        '--plan',
+        'pro',
+        '--metadata',
+        'region=us-east-1'
+      );
       const exitCodePromise = integrationCommand(client);
 
       await expect(client.stderr).toOutput(
-        'Missing required metadata: region. Opening browser to complete setup...'
+        'Additional setup required. Opening browser...'
       );
 
       const exitCode = await exitCodePromise;
@@ -1277,12 +1291,14 @@ describe('integration add (auto-provision)', () => {
         'add',
         'acme',
         '--environment',
-        'production'
+        'production',
+        '--metadata',
+        'region=us-east-1'
       );
       const exitCodePromise = integrationCommand(client);
 
       await expect(client.stderr).toOutput(
-        'Missing required metadata: region. Opening browser to complete setup...'
+        'Additional setup required. Opening browser...'
       );
 
       const exitCode = await exitCodePromise;
@@ -1302,12 +1318,14 @@ describe('integration add (auto-provision)', () => {
         '--environment',
         'production',
         '--environment',
-        'preview'
+        'preview',
+        '--metadata',
+        'region=us-east-1'
       );
       const exitCodePromise = integrationCommand(client);
 
       await expect(client.stderr).toOutput(
-        'Missing required metadata: region. Opening browser to complete setup...'
+        'Additional setup required. Opening browser...'
       );
 
       const exitCode = await exitCodePromise;
@@ -1322,11 +1340,17 @@ describe('integration add (auto-provision)', () => {
     it('should not include environment in fallback URL when --environment is not provided', async () => {
       useAutoProvision({ responseKey: 'metadata' });
 
-      client.setArgv('integration', 'add', 'acme');
+      client.setArgv(
+        'integration',
+        'add',
+        'acme',
+        '--metadata',
+        'region=us-east-1'
+      );
       const exitCodePromise = integrationCommand(client);
 
       await expect(client.stderr).toOutput(
-        'Missing required metadata: region. Opening browser to complete setup...'
+        'Additional setup required. Opening browser...'
       );
 
       const exitCode = await exitCodePromise;
@@ -1339,11 +1363,17 @@ describe('integration add (auto-provision)', () => {
     it('should not include planId in fallback URL when --plan is not provided', async () => {
       useAutoProvision({ responseKey: 'metadata' });
 
-      client.setArgv('integration', 'add', 'acme');
+      client.setArgv(
+        'integration',
+        'add',
+        'acme',
+        '--metadata',
+        'region=us-east-1'
+      );
       const exitCodePromise = integrationCommand(client);
 
       await expect(client.stderr).toOutput(
-        'Missing required metadata: region. Opening browser to complete setup...'
+        'Additional setup required. Opening browser...'
       );
 
       const exitCode = await exitCodePromise;
