@@ -31,5 +31,3 @@ const server = createServer((req, res) => {
 });
 
 server.listen(Number(process.env.PORT || 3000));
-
-module.exports = server;
