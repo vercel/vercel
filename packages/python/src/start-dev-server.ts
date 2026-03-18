@@ -313,6 +313,7 @@ interface InstallVercelRuntimeOptions {
 }
 
 const PENDING_RUNTIME_INSTALLS = new Map<string, Promise<void>>();
+const PENDING_WORKERS_INSTALLS = new Map<string, Promise<void>>();
 
 async function installVercelRuntime({
   workPath,
@@ -444,6 +445,33 @@ async function installVercelWorkers({
   onStderr,
 }: InstallVercelRuntimeOptions): Promise<void> {
   const targetDir = join(workPath, '.vercel', 'python');
+
+  let pending = PENDING_WORKERS_INSTALLS.get(targetDir);
+  if (!pending) {
+    pending = doInstallVercelWorkers({
+      targetDir,
+      workPath,
+      uvPath,
+      pythonBin,
+      env,
+      onStdout,
+      onStderr,
+    });
+    PENDING_WORKERS_INSTALLS.set(targetDir, pending);
+    pending.finally(() => PENDING_WORKERS_INSTALLS.delete(targetDir));
+  }
+  await pending;
+}
+
+async function doInstallVercelWorkers({
+  targetDir,
+  workPath,
+  uvPath,
+  pythonBin,
+  env,
+  onStdout,
+  onStderr,
+}: InstallVercelRuntimeOptions & { targetDir: string }): Promise<void> {
   mkdirSync(targetDir, { recursive: true });
 
   const localWorkersDir = join(
