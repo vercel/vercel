@@ -98,6 +98,10 @@ describe('blob store add', () => {
           key: 'argument:name',
           value: '[REDACTED]',
         },
+        {
+          key: 'option:access',
+          value: 'public',
+        },
       ]);
     });
 
@@ -145,6 +149,10 @@ describe('blob store add', () => {
           value: '[REDACTED]',
         },
         {
+          key: 'option:access',
+          value: 'public',
+        },
+        {
           key: 'option:region',
           value: '[REDACTED]',
         },
@@ -183,6 +191,10 @@ describe('blob store add', () => {
         {
           key: 'argument:name',
           value: '[REDACTED]',
+        },
+        {
+          key: 'option:access',
+          value: 'public',
         },
       ]);
     });
@@ -434,6 +446,10 @@ describe('blob store add', () => {
           key: 'argument:name',
           value: '[REDACTED]',
         },
+        {
+          key: 'option:access',
+          value: 'public',
+        },
       ]);
     });
 
@@ -446,6 +462,10 @@ describe('blob store add', () => {
           key: 'argument:name',
           value: '[REDACTED]',
         },
+        {
+          key: 'option:access',
+          value: 'public',
+        },
       ]);
     });
 
@@ -456,7 +476,12 @@ describe('blob store add', () => {
       const exitCode = await addStore(client, ['--access', 'public']);
 
       expect(exitCode).toBe(0);
-      expect(client.telemetryEventStore).toHaveTelemetryEvents([]);
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'option:access',
+          value: 'public',
+        },
+      ]);
     });
   });
 
