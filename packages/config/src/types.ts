@@ -556,6 +556,11 @@ export interface VercelConfig {
    */
   bunVersion?: string;
   /**
+   * Controls Vercel telemetry instrumentation for the project.
+   * @private
+   */
+  vercelTelemetry?: 'disabled' | 'auto' | 'manual';
+  /**
    * Enables configuration of multiple services in a single deployment. Map of service name to service configuration.
    * @private
    */
@@ -630,6 +635,10 @@ export interface VercelConfig {
        * Consumer group name for worker subscription.
        */
       consumer?: string;
+      /**
+       * Disable telemetry for this service.
+       */
+      disableTelemetry?: boolean;
     }
   >;
   /**

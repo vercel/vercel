@@ -570,6 +570,7 @@ export async function resolveConfiguredService(
     handlerFunction: moduleAttrParsed?.attrName,
     topic,
     consumer,
+    disableTelemetry: config.disableTelemetry,
   };
 }
 

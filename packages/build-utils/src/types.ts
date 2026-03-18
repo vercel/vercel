@@ -574,6 +574,8 @@ export interface Service {
   /* worker service config */
   topic?: string;
   consumer?: string;
+  /** Disable telemetry for this service. */
+  disableTelemetry?: boolean;
 }
 
 /** The framework which created the function */
@@ -746,6 +748,7 @@ export interface TriggerEvent extends TriggerEventBase {
 export type ServiceRuntime = 'node' | 'python' | 'go' | 'rust' | 'ruby';
 
 export type ServiceType = 'web' | 'cron' | 'worker';
+export type VercelTelemetry = 'disabled' | 'auto' | 'manual';
 
 /**
  * Configuration for a service in vercel.json.
@@ -790,6 +793,9 @@ export interface ExperimentalServiceConfig {
   /* Worker service config */
   topic?: string;
   consumer?: string;
+
+  /** Disable telemetry for this service. */
+  disableTelemetry?: boolean;
 }
 
 /**

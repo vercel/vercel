@@ -509,14 +509,22 @@ export const build: BuildV3 = async ({
     });
   }
 
-  // Install OpenTelemetry packages unconditionally so vercel-runtime's
-  // tracing module has everything it needs at cold start.
-  debug(`Installing OTel packages: ${OTEL_PACKAGES.join(', ')}`);
-  await uv.pip({
-    venvPath,
-    projectDir: join(workPath, entryDirectory),
-    args: ['install', ...OTEL_PACKAGES],
-  });
+  // Install OpenTelemetry packages when vercelTelemetry is 'auto' and
+  // telemetry is not disabled for this service.
+  const shouldInstallOtel =
+    config?.vercelTelemetry === 'auto' && config?.disableTelemetry !== true;
+  if (shouldInstallOtel) {
+    debug(`Installing OTel packages: ${OTEL_PACKAGES.join(', ')}`);
+    await uv.pip({
+      venvPath,
+      projectDir: join(workPath, entryDirectory),
+      args: ['install', ...OTEL_PACKAGES],
+    });
+  } else {
+    debug(
+      `Skipping OTel injection (vercelTelemetry=${String(config?.vercelTelemetry)}, disableTelemetry=${String(config?.disableTelemetry)})`
+    );
+  }
 
   // Run quirks: detect dependencies that need special handling (e.g. prisma)
   // and perform fix-up routines before bundling.
@@ -673,7 +681,7 @@ from vercel_runtime.vc_init import vc_handler
     hasCustomCommand,
     alwaysBundlePackages: [
       ...(quirksResult.alwaysBundlePackages ?? []),
-      ...OTEL_ALWAYS_BUNDLE_PACKAGES,
+      ...(shouldInstallOtel ? OTEL_ALWAYS_BUNDLE_PACKAGES : []),
       ...(shouldInstallVercelWorkers
         ? ['vercel-workers', 'vercel_workers']
         : []),

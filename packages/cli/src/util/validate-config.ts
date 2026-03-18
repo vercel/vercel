@@ -248,6 +248,9 @@ const serviceConfigSchema = {
       minLength: 1,
       maxLength: 256,
     },
+    disableTelemetry: {
+      type: 'boolean',
+    },
   },
 };
 
@@ -304,6 +307,7 @@ const vercelConfigSchema = {
     images: imagesSchema,
     crons: cronsSchema,
     bunVersion: { type: 'string' },
+    vercelTelemetry: { enum: ['disabled', 'auto', 'manual'] },
     experimentalServices: experimentalServicesSchema,
     experimentalServiceGroups: experimentalServiceGroupsSchema,
   },
