@@ -211,10 +211,9 @@ export async function addAutoProvision(
   // partner uses the same key name in both schemas.
   const integrationSchemaProps = integration.metadataSchema?.properties ?? {};
   const productSchemaProps = product.metadataSchema.properties;
-  const mergedParsingSchema = mergeMetadataSchemas(
-    product.metadataSchema,
-    integration.metadataSchema
-  ) ?? product.metadataSchema;
+  const mergedParsingSchema =
+    mergeMetadataSchemas(product.metadataSchema, integration.metadataSchema) ??
+    product.metadataSchema;
   for (const key of Object.keys(integrationSchemaProps)) {
     if (key in productSchemaProps) {
       output.debug(
