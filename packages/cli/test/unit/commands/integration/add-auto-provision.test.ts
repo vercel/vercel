@@ -2594,26 +2594,6 @@ describe('integration add (auto-provision)', () => {
       });
     });
 
-    it('should omit installationMetadata from request when no installation keys provided', async () => {
-      client.setArgv(
-        'integration',
-        'add',
-        'acme-install-meta',
-        '-m',
-        'platform=nextjs',
-        '-m',
-        'name=my-org',
-        '-m',
-        'install-region=us'
-      );
-      const exitCode = await integrationCommand(client);
-      expect(exitCode).toEqual(0);
-
-      // When installationMetadata is non-empty, it should be included
-      const body = requestBodies[0] as Record<string, unknown>;
-      expect(body).toHaveProperty('installationMetadata');
-    });
-
     it('should validate installation-level required fields', async () => {
       // Only provide product metadata, omit required installation fields (name, install-region)
       client.setArgv(
@@ -2643,6 +2623,39 @@ describe('integration add (auto-provision)', () => {
       const body = requestBodies[0] as Record<string, unknown>;
       expect(body.metadata).toEqual({ region: 'us-east-1' });
       expect(body).not.toHaveProperty('installationMetadata');
+    });
+  });
+
+  describe('installation metadata in browser fallback URL', () => {
+    it('should forward installationMetadata in browser fallback URL', async () => {
+      useAutoProvision({ responseKey: 'metadata' });
+
+      client.setArgv(
+        'integration',
+        'add',
+        'acme-install-meta',
+        '-m',
+        'platform=nextjs',
+        '-m',
+        'name=my-org',
+        '-m',
+        'install-region=us'
+      );
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput('Opening browser');
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(1);
+
+      const calledUrl = new URL(openMock.mock.calls[0]?.[0] as string);
+      // Product metadata forwarded
+      expect(calledUrl.searchParams.get('metadata')).toEqual(
+        JSON.stringify({ platform: 'nextjs' })
+      );
+      // Installation metadata forwarded
+      expect(calledUrl.searchParams.get('installationMetadata')).toEqual(
+        JSON.stringify({ name: 'my-org', 'install-region': 'us' })
+      );
     });
   });
 });

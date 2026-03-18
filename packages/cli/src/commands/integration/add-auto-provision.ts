@@ -218,8 +218,10 @@ export async function addAutoProvision(
       ...productSchemaProps,
     },
     required: [
-      ...(integration.metadataSchema?.required ?? []),
-      ...(product.metadataSchema.required ?? []),
+      ...new Set([
+        ...(integration.metadataSchema?.required ?? []),
+        ...(product.metadataSchema.required ?? []),
+      ]),
     ],
   };
   let metadata: Metadata;
@@ -426,6 +428,12 @@ export async function addAutoProvision(
     url.searchParams.set('source', 'cli');
     if (Object.keys(metadata).length > 0) {
       url.searchParams.set('metadata', JSON.stringify(metadata));
+    }
+    if (Object.keys(installationMetadata).length > 0) {
+      url.searchParams.set(
+        'installationMetadata',
+        JSON.stringify(installationMetadata)
+      );
     }
     if (projectLink.value) {
       url.searchParams.set('projectSlug', projectLink.value);

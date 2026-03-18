@@ -28,8 +28,10 @@ function mergeMetadataSchemas(
       ...productSchema.properties,
     },
     required: [
-      ...(integrationSchema.required ?? []),
-      ...(productSchema.required ?? []),
+      ...new Set([
+        ...(integrationSchema.required ?? []),
+        ...(productSchema.required ?? []),
+      ]),
     ],
   };
 }
