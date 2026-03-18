@@ -444,27 +444,36 @@ async function promptForInferredServicesSetup({
   if (autoConfirm) {
     choice = 'services';
   } else if (!nonInteractive) {
-    choice = await client.input.select({
+    const choices: Array<{ name: string; value: InferredServicesChoice }> = [
+      {
+        name: 'Deploy detected services',
+        value: 'services',
+      },
+      ...(allowChooseDifferentProjectDirectory
+        ? [
+            {
+              name: 'Choose a different project directory',
+              value: 'project-directory' as const,
+            },
+          ]
+        : []),
+      {
+        name: 'Deploy a single app',
+        value: 'single-app',
+      },
+    ];
+
+    const selected: unknown = await client.input.select({
       message: INFERRED_SERVICES_PROMPT,
-      choices: [
-        {
-          name: 'Deploy detected services',
-          value: 'services',
-        },
-        ...(allowChooseDifferentProjectDirectory
-          ? [
-              {
-                name: 'Choose a different project directory',
-                value: 'project-directory',
-              },
-            ]
-          : []),
-        {
-          name: 'Deploy a single app',
-          value: 'single-app',
-        },
-      ],
+      choices,
     });
+    if (
+      selected === 'services' ||
+      selected === 'project-directory' ||
+      selected === 'single-app'
+    ) {
+      choice = selected;
+    }
   }
 
   if (choice !== 'services') {
