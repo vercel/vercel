@@ -61,6 +61,7 @@ import {
 import output from '../../output-manager';
 import { getGlobalFlagsOnlyFromArgs } from '../../util/arg-common';
 import { outputAgentError } from '../../util/agent-output';
+import { AGENT_STATUS } from '../../util/agent-output-constants';
 import { cleanupCorepack, initCorepack } from '../../util/build/corepack';
 import { importBuilders } from '../../util/build/import-builders';
 import { setMonorepoDefaultSettings } from '../../util/build/monorepo';
@@ -272,7 +273,7 @@ export default async function main(client: Client): Promise<number> {
         outputAgentError(
           client,
           {
-            status: 'error',
+            status: AGENT_STATUS.ERROR,
             reason: 'project_settings_required',
             message:
               'No project settings found locally. Run pull to retrieve them, or re-run with --yes to pull automatically.',
@@ -418,7 +419,7 @@ export default async function main(client: Client): Promise<number> {
       client.stdout.write(
         `${JSON.stringify(
           {
-            status: 'ok',
+            status: AGENT_STATUS.OK,
             outputDir: outputDir,
             outputDirRelative: relOutputDir.startsWith('..')
               ? outputDir
@@ -443,7 +444,7 @@ export default async function main(client: Client): Promise<number> {
       client.stdout.write(
         `${JSON.stringify(
           {
-            status: 'error',
+            status: AGENT_STATUS.ERROR,
             reason: 'build_failed',
             message: err?.message ?? String(err),
             next: [
