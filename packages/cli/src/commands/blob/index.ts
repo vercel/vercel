@@ -14,7 +14,6 @@ import {
   createStoreSubcommand,
   deleteStoreSubcommand,
   getStoreInfoSubcommand,
-  storeSubcommand,
 } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
@@ -24,7 +23,6 @@ import put from './put';
 import get from './get';
 import del from './del';
 import copy from './copy';
-import { store } from './store';
 import addStore from './store-add';
 import removeStore from './store-remove';
 import getStore from './store-get';
@@ -40,7 +38,6 @@ const COMMAND_CONFIG = {
   'create-store': getCommandAliases(createStoreSubcommand),
   'delete-store': getCommandAliases(deleteStoreSubcommand),
   'get-store': getCommandAliases(getStoreInfoSubcommand),
-  store: getCommandAliases(storeSubcommand),
 };
 
 export default async function main(client: Client) {
@@ -200,12 +197,6 @@ export default async function main(client: Client) {
       }
 
       return getStore(client, args, token);
-    case 'store':
-      output.warn(
-        '`vercel blob store` is deprecated. Use `vercel blob create-store`, `vercel blob delete-store`, or `vercel blob get-store` instead.'
-      );
-      telemetry.trackCliSubcommandStore(subcommandOriginal);
-      return store(client, token);
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
       output.print(help(blobCommand, { columns: client.stderr.columns }));
