@@ -53,11 +53,12 @@ export default async function sdkKeysRm(
         {
           status: AGENT_STATUS.ERROR,
           reason: AGENT_REASON.NOT_LINKED,
-          message: 'Your codebase is not linked to a project. Run link first.',
+          message:
+            'Your codebase is not linked to a project. A user must run `vercel link` in a terminal to continue (this will prompt for login if needed).',
           next: [
             {
               command: buildCommandWithGlobalFlags(client.argv, 'link'),
-              when: 'link the project',
+              when: 'run in a terminal to log in if needed and link this codebase to a Vercel project, then retry this command',
             },
           ],
         },
