@@ -17,7 +17,7 @@ import {
   getDefaultAggregation,
   getMeasures,
   getQueryEngineEventName,
-  fetchSchema,
+  fetchSchemaOrExit,
 } from './schema-api';
 import {
   formatQueryJson,
@@ -98,18 +98,6 @@ function handleApiError(
 
   if (jsonOutput) {
     client.stdout.write(formatErrorJson(code, message));
-  } else {
-    output.error(message);
-  }
-  return 1;
-}
-
-function handleSchemaAuthError(client: Client, jsonOutput: boolean): number {
-  const message =
-    'The metrics schema API request was not authorized. Run `vercel login` to authenticate and `vercel switch` to select a team, then try again.';
-
-  if (jsonOutput) {
-    client.stdout.write(formatErrorJson('SCHEMA_UNAUTHORIZED', message));
   } else {
     output.error(message);
   }
@@ -279,23 +267,9 @@ export default async function query(
   }
   const { scope, accountId, teamName, projectName } = scopeResult;
 
-  let schemaData;
-  try {
-    schemaData = await fetchSchema(client, accountId);
-  } catch (err: unknown) {
-    if (isAPIError(err) && (err.status === 401 || err.status === 403)) {
-      return handleSchemaAuthError(client, jsonOutput);
-    }
-    const errMsg =
-      err instanceof Error
-        ? `Failed to fetch metrics schema: ${err.message}`
-        : `Failed to fetch metrics schema: ${String(err)}`;
-    if (jsonOutput) {
-      client.stdout.write(formatErrorJson('SCHEMA_FETCH_FAILED', errMsg));
-    } else {
-      output.error(errMsg);
-    }
-    return 1;
+  const schemaData = await fetchSchemaOrExit(client, accountId, jsonOutput);
+  if (typeof schemaData === 'number') {
+    return schemaData;
   }
 
   const aggregationInput =

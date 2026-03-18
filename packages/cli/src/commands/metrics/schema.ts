@@ -6,9 +6,9 @@ import { printError } from '../../util/error';
 import output from '../../output-manager';
 import { schemaSubcommand } from './command';
 import { validateJsonOutput } from '../../util/output-format';
-import { fetchSchema } from './schema-api';
 import { validateEvent } from './validation';
 import {
+  fetchSchemaOrExit,
   getEventNames,
   getEvent,
   type DimensionSchema,
@@ -23,19 +23,6 @@ import formatTable from '../../util/format-table';
 import indent from '../../util/output/indent';
 import type { MetricsTelemetryClient } from '../../util/telemetry/commands/metrics';
 import getScope from '../../util/get-scope';
-import { isAPIError } from '../../util/errors-ts';
-
-function handleSchemaAuthError(client: Client, jsonOutput: boolean): number {
-  const message =
-    'The metrics schema API request was not authorized. Run `vercel login` to authenticate and `vercel switch` to select a team, then try again.';
-
-  if (jsonOutput) {
-    client.stdout.write(formatErrorJson('SCHEMA_UNAUTHORIZED', message));
-  } else {
-    output.error(message);
-  }
-  return 1;
-}
 
 export default async function schema(
   client: Client,
@@ -66,26 +53,19 @@ export default async function schema(
 
   const { team } = await getScope(client);
   if (!team) {
-    return handleSchemaAuthError(client, jsonOutput);
-  }
-
-  let schemaData;
-  try {
-    schemaData = await fetchSchema(client, team.id);
-  } catch (err: unknown) {
-    if (isAPIError(err) && (err.status === 401 || err.status === 403)) {
-      return handleSchemaAuthError(client, jsonOutput);
-    }
     const message =
-      err instanceof Error
-        ? `Failed to fetch metrics schema: ${err.message}`
-        : `Failed to fetch metrics schema: ${String(err)}`;
+      'The metrics schema API request was not authorized. Run `vercel login` to authenticate and `vercel switch` to select a team, then try again.';
     if (jsonOutput) {
-      client.stdout.write(formatErrorJson('SCHEMA_FETCH_FAILED', message));
+      client.stdout.write(formatErrorJson('SCHEMA_UNAUTHORIZED', message));
     } else {
       output.error(message);
     }
     return 1;
+  }
+
+  const schemaData = await fetchSchemaOrExit(client, team.id, jsonOutput);
+  if (typeof schemaData === 'number') {
+    return schemaData;
   }
 
   if (event) {

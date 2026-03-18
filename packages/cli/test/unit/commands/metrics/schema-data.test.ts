@@ -119,7 +119,7 @@ describe('schema-data', () => {
     expect(getDefaultAggregation(schema, 'edgeRequest', 'bogus')).toBe('sum');
   });
 
-  it('should map CLI aliases back to query-engine names', () => {
+  it('should map aliased events and pass through non-aliased events', () => {
     expect(getQueryEngineEventName(schema, 'edgeRequest')).toBe(
       'incomingRequest'
     );

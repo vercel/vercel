@@ -1,5 +1,8 @@
 import type Client from '../../util/client';
 import type { Aggregation } from '@vercel/o11y-tools/query-engine/types';
+import output from '../../output-manager';
+import { isAPIError } from '../../util/errors-ts';
+import { formatErrorJson } from './output';
 
 export interface DimensionSchema {
   name: string;
@@ -160,4 +163,37 @@ export async function fetchSchema(
   );
 
   return Object.fromEntries(details);
+}
+
+export async function fetchSchemaOrExit(
+  client: Client,
+  accountId: string,
+  jsonOutput: boolean
+): Promise<Schema | number> {
+  try {
+    return await fetchSchema(client, accountId);
+  } catch (err: unknown) {
+    if (isAPIError(err) && (err.status === 401 || err.status === 403)) {
+      const message =
+        'The metrics schema API request was not authorized. Run `vercel login` to authenticate and `vercel switch` to select a team, then try again.';
+
+      if (jsonOutput) {
+        client.stdout.write(formatErrorJson('SCHEMA_UNAUTHORIZED', message));
+      } else {
+        output.error(message);
+      }
+      return 1;
+    }
+
+    const message =
+      err instanceof Error
+        ? `Failed to fetch metrics schema: ${err.message}`
+        : `Failed to fetch metrics schema: ${String(err)}`;
+    if (jsonOutput) {
+      client.stdout.write(formatErrorJson('SCHEMA_FETCH_FAILED', message));
+    } else {
+      output.error(message);
+    }
+    return 1;
+  }
 }
