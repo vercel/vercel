@@ -14,6 +14,7 @@ import {
   isBunVersion,
 } from '@vercel/build-utils';
 import { findEntrypointOrThrow } from './cervel/index.js';
+import { applyServiceVcInit } from './service-vc-init.js';
 // Re-export cervel functions for use by other packages
 export {
   build as cervelBuild,
@@ -143,10 +144,29 @@ export const build: BuildV2 = async args => {
       config: args.config,
     });
 
+    const serviceRoutePrefix = normalizeServiceRoutePrefix(
+      args.config?.routePrefix ?? args.service?.routePrefix
+    );
+    const shouldStripServiceRoutePrefix =
+      !!serviceRoutePrefix &&
+      (typeof args.config?.serviceName === 'string' || !!args.service);
+
+    let lambdaFiles = files;
+    let lambdaHandler = handler;
+    if (shouldStripServiceRoutePrefix) {
+      const shimmedLambda = await applyServiceVcInit({
+        files,
+        handler,
+        workPath: nftWorkPath,
+      });
+      lambdaFiles = shimmedLambda.files;
+      lambdaHandler = shimmedLambda.handler;
+    }
+
     const lambdaArgs: NodejsLambdaOptions = {
       runtime: nodeVersion.runtime,
-      handler,
-      files,
+      handler: lambdaHandler,
+      files: lambdaFiles,
       framework: rolldownResult.framework,
       shouldAddHelpers: false,
       shouldAddSourcemapSupport: true,
@@ -158,10 +178,13 @@ export const build: BuildV2 = async args => {
     };
 
     const lambda = new NodejsLambda(lambdaArgs);
-
-    const serviceRoutePrefix = normalizeServiceRoutePrefix(
-      args.config?.routePrefix ?? args.service?.routePrefix
-    );
+    if (shouldStripServiceRoutePrefix && serviceRoutePrefix) {
+      lambda.environment = {
+        ...lambda.environment,
+        VERCEL_SERVICE_ROUTE_PREFIX: serviceRoutePrefix,
+        VERCEL_SERVICE_ROUTE_PREFIX_STRIP: '1',
+      };
+    }
     const serviceName =
       typeof args.config?.serviceName === 'string' &&
       args.config.serviceName !== ''
@@ -200,7 +223,9 @@ export const build: BuildV2 = async args => {
       },
     ];
 
-    const output: Record<string, Lambda> = { index: lambda };
+    const output: Record<string, Lambda> = internalServiceOutputPath
+      ? { [internalServiceOutputPath]: lambda }
+      : { index: lambda };
 
     for (const route of routes) {
       if (route.dest) {
