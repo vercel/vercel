@@ -50,11 +50,25 @@ def _uses_vercel_celery_broker(broker_url: str | None) -> bool:
 
 def _install_vercel_celery_transport_alias() -> None:
     with contextlib.suppress(Exception):
-        from vercel.workers.celery.transport import (  # type: ignore[import-untyped]  # noqa: PLC0415  # pyright: ignore[reportMissingImports]
-            install_kombu_transport_alias,
+        transport_module = _import_optional_module(
+            "vercel.workers.celery.transport"
         )
+        if transport_module is None:
+            return
 
-        install_kombu_transport_alias("vercel")
+        install_transport_alias = getattr(
+            transport_module,
+            "install_kombu_transport_alias",
+            None,
+        )
+        if not callable(install_transport_alias):
+            return
+
+        install_transport_alias_fn = cast(
+            "Callable[[str], None]",
+            install_transport_alias,
+        )
+        install_transport_alias_fn("vercel")
 
 
 def prepare_celery_environment() -> None:
