@@ -414,7 +414,7 @@ function trimPatchLevel(
           { ...constraint, version: `${majorStr}.${minorNum + 1}` },
         ];
       }
-      // <X.Y.0: strip patch, keep operator (semantically equivalent)
+      // <X.Y.0 → <X.Y (semantically equivalent)
       return [true, { ...constraint, version: `${majorStr}.${minorStr}` }];
     case '>':
       // >X.Y.Z → >=X.Y to include all patches of X.Y
@@ -422,9 +422,20 @@ function trimPatchLevel(
         true,
         { ...constraint, operator: '>=', version: `${majorStr}.${minorStr}` },
       ];
-    default:
-      // >=, ==, !=, ~=, ===: strip patch to X.Y
+    case '~=':
+      // ~=X.Y.Z → >=X.Y (~=X.Y would be >=X.Y, ==X.*, allowing X.(Y+1)+)
+      return [
+        true,
+        { ...constraint, operator: '>=', version: `${majorStr}.${minorStr}` },
+      ];
+    case '>=':
+    case '==':
+      // >=X.Y.Z → >=X.Y (slightly more permissive, includes X.Y.0 to X.Y.Z-1)
+      // ==X.Y.Z → ==X.Y (callers may further adjust, e.g. ==X.Y.* for pyproject.toml)
       return [true, { ...constraint, version: `${majorStr}.${minorStr}` }];
+    default:
+      // Unknown or unsafe to strip (!=, ===, etc.): leave unchanged
+      return [false, constraint];
   }
 }
 
