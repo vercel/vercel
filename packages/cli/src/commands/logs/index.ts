@@ -219,7 +219,7 @@ export default async function logs(client: Client) {
   if (parsedArguments.flags['--help']) {
     telemetry.trackCliFlagHelp('logs');
     output.print(help(logsCommand, { columns: client.stderr.columns }));
-    return 2;
+    return 0;
   }
 
   const subArgs = parsedArguments.args.slice(1);
