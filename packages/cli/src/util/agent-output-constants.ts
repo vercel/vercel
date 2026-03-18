@@ -37,6 +37,8 @@ export const AGENT_REASON = {
   ENV_KEY_SENSITIVE: 'env_key_sensitive',
   // Routes
   AMBIGUOUS_ROUTE: 'ambiguous_route',
+  ROUTE_CREATE_FAILED: 'route_create_failed',
+  ROUTE_GENERATION_FAILED: 'route_generation_failed',
   // DNS
   DOMAIN_NOT_FOUND: 'domain_not_found',
   DNS_RECORD_NOT_FOUND: 'dns_record_not_found',
