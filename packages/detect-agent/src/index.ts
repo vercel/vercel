@@ -17,6 +17,16 @@ const OPENCODE = 'opencode' as const;
 const GITHUB_COPILOT = 'github-copilot' as const;
 const GITHUB_COPILOT_CLI = 'github-copilot-cli' as const;
 
+const DEVIN_AI_AGENT_ALIASES = new Set([
+  DEVIN,
+  'ask-devin',
+  'data-analyst-agent',
+  'dana',
+  'deepwiki',
+  'devin-mcp',
+  'devin-review',
+]);
+
 export type KnownAgentNames =
   | typeof CURSOR
   | typeof CURSOR_CLI
@@ -64,6 +74,12 @@ export async function determineAgent(): Promise<AgentResult> {
   if (process.env.AI_AGENT) {
     const name = process.env.AI_AGENT.trim();
     if (name) {
+      const [baseName] = name.split('@');
+
+      if (DEVIN_AI_AGENT_ALIASES.has(baseName)) {
+        return { isAgent: true, agent: { name: DEVIN } };
+      }
+
       if (name === GITHUB_COPILOT || name === GITHUB_COPILOT_CLI) {
         return {
           isAgent: true,

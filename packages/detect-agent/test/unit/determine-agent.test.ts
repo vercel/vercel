@@ -54,6 +54,36 @@ describe('determineAgent', () => {
     });
   });
 
+  describe('devin detection from `AI_AGENT`', () => {
+    it.each([
+      'devin',
+      'ask-devin',
+      'data-analyst-agent',
+      'dana',
+      'deepwiki',
+      'devin-mcp',
+      'devin-review',
+    ])('detects devin from AI_AGENT=%s', async value => {
+      vi.stubEnv('AI_AGENT', value);
+
+      const result = await determineAgent();
+      expect(result).toEqual({
+        isAgent: true,
+        agent: { name: KNOWN_AGENTS.DEVIN },
+      });
+    });
+
+    it('detects devin from a versioned AI_AGENT alias', async () => {
+      vi.stubEnv('AI_AGENT', 'devin-review@2026.1');
+
+      const result = await determineAgent();
+      expect(result).toEqual({
+        isAgent: true,
+        agent: { name: KNOWN_AGENTS.DEVIN },
+      });
+    });
+  });
+
   describe('github copilot detection', () => {
     it('detects github copilot from AI_AGENT=github-copilot', async () => {
       vi.stubEnv('AI_AGENT', 'github-copilot');
