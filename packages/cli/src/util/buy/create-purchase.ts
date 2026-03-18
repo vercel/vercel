@@ -10,7 +10,7 @@ export async function createPurchase(
   client: Client,
   item: PurchaseItem
 ): Promise<BuyResponse> {
-  return client.fetch<BuyResponse>('/v1/billing/buy', {
+  return client.fetch<BuyResponse>('/v1/billing/buy?source=cli', {
     method: 'POST',
     body: { item },
   });
