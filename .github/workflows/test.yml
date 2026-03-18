@@ -16,7 +16,7 @@ concurrency:
 jobs:
   setup:
     name: Find Changes
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
     outputs:
       tests: ${{ steps['set-tests'].outputs['tests'] }}
@@ -169,7 +169,7 @@ jobs:
 
   comment-test-strategy:
     name: Comment Test Strategy
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
     needs:
       - setup
@@ -402,7 +402,7 @@ jobs:
 
   summary:
     name: Summary
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     timeout-minutes: 5
     if: always()
     needs:

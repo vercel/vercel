@@ -20,7 +20,7 @@ concurrency:
 jobs:
   setup:
     name: Find Changes
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     outputs:
       tests: ${{ steps['set-tests'].outputs['tests'] }}
       dplUrl: ${{ steps.resolveTarball.outputs.url }}
@@ -279,7 +279,7 @@ jobs:
 
   summary:
     name: Summary (e2e)
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     timeout-minutes: 5
     if: always()
     needs:
