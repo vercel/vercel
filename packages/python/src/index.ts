@@ -60,7 +60,7 @@ interface FrameworkHookContext {
   pythonEnv: NodeJS.ProcessEnv;
   projectDir: string;
   workPath: string;
-  venvPath: string;
+  venvPath?: string;
   entrypoint: string;
   detected: DetectedPythonEntrypoint | undefined;
 }
@@ -120,15 +120,18 @@ const frameworkHooks: Partial<Record<PythonFramework, FrameworkHook>> = {
       }
     }
 
-    const outputStaticDir = join(workPath, '.vercel', 'output', 'static');
-    const djangoStatic = await runDjangoCollectStatic(
-      venvPath,
-      workPath,
-      pythonEnv,
-      outputStaticDir,
-      settingsModule,
-      djangoSettings
-    );
+    let djangoStatic: DjangoCollectStaticResult | null = null;
+    if (venvPath) {
+      const outputStaticDir = join(workPath, '.vercel', 'output', 'static');
+      djangoStatic = await runDjangoCollectStatic(
+        venvPath,
+        workPath,
+        pythonEnv,
+        outputStaticDir,
+        settingsModule,
+        djangoSettings
+      );
+    }
     return { entrypoint, djangoStatic };
   },
 };
@@ -341,7 +344,6 @@ export const build: BuildV3 = async ({
   let uvLockPath: string | null = null;
   let uvProjectDir: string | null = null;
   let projectName: string | undefined;
-  let noBuildCheckFailed = false;
 
   await builderSpan
     .child(BUILDER_INSTALLER_STEP, {
@@ -394,29 +396,6 @@ export const build: BuildV3 = async ({
 
         // Get the project name from the already-discovered package info
         projectName = pythonPackage?.manifest?.data?.project?.name;
-
-        // For user-provided lock files, check if all packages have binary wheels
-        // available BEFORE running the actual sync. We track this result so we can
-        // error later if runtime dependency installation is needed (which requires
-        // all public packages to have pre-built wheels).
-        if (lockFileProvidedByUser) {
-          try {
-            await uv.sync({
-              venvPath,
-              projectDir,
-              frozen: true,
-              noBuild: true,
-              noInstallProject: true,
-            });
-          } catch (err) {
-            // Note the failure but don't error yet - we only need wheels
-            // if runtime dependency install is required (bundle > 250MB)
-            noBuildCheckFailed = true;
-            debug(
-              `--no-build check failed: ${err instanceof Error ? err.message : String(err)}`
-            );
-          }
-        }
 
         // `ensureUvProject` would have produced a `pyproject.toml` or `uv.lock`
         // so we can use `uv sync` to install dependencies into the active
@@ -656,7 +635,8 @@ from vercel_runtime.vc_init import vc_handler
     uvLockPath,
     uvProjectDir,
     projectName,
-    noBuildCheckFailed,
+    pythonMajor: pythonVersion.major,
+    pythonMinor: pythonVersion.minor,
     pythonPath: pythonVersion.pythonPath,
     hasCustomCommand,
     alwaysBundlePackages: [
