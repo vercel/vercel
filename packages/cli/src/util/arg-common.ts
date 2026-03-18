@@ -115,34 +115,6 @@ export function globalCliFlagTakesValue(flagName: string): boolean {
 }
 
 /**
- * Returns only global flags from argv tail. Safe to append to suggested
- * commands for any subcommand so agents do not hit parse errors from
- * subcommand-specific flags.
- */
-export function getGlobalFlagsOnlyFromArgs(args: string[]): string[] {
-  const out: string[] = [];
-  for (let i = 0; i < args.length; i++) {
-    const a = args[i];
-    if (!a.startsWith('-')) continue;
-    let name = a;
-    const hasEq = a.includes('=');
-    if (hasEq) {
-      name = a.slice(0, a.indexOf('='));
-    }
-    if (!GLOBAL_CLI_FLAG_NAMES.has(name)) {
-      continue;
-    }
-    out.push(a);
-    if (!hasEq && globalCliFlagTakesValue(name)) {
-      if (i + 1 < args.length && !args[i + 1].startsWith('-')) {
-        out.push(args[++i]);
-      }
-    }
-  }
-  return out;
-}
-
-/**
  * Subcommand option names that take a separate argv token (not boolean).
  * Used when the suggested `next` command is the SAME subcommand so we
  * preserve e.g. --slug acme, --status 301 alongside globals.
@@ -271,3 +243,42 @@ export const allOption = {
   deprecated: false,
   description: 'List resources across all projects',
 } as const;
+
+type GlobalOpt = (typeof globalCommandOptions)[number];
+
+const GLOBAL_LONG_TO_OPT = new Map<string, GlobalOpt>();
+const GLOBAL_SHORT_TO_OPT = new Map<string, GlobalOpt>();
+for (const opt of globalCommandOptions) {
+  GLOBAL_LONG_TO_OPT.set(`--${opt.name}`, opt);
+  if (opt.shorthand) {
+    GLOBAL_SHORT_TO_OPT.set(`-${opt.shorthand}`, opt);
+  }
+}
+
+/**
+ * Collects only global CLI flags from argv for suggested next commands.
+ */
+export function getGlobalFlagsOnlyFromArgs(args: string[]): string[] {
+  const out: string[] = [];
+  for (let i = 0; i < args.length; i++) {
+    const a = args[i];
+    let opt: GlobalOpt | undefined;
+    if (a.startsWith('--') && a.includes('=')) {
+      const name = a.slice(2).split('=')[0];
+      opt = GLOBAL_LONG_TO_OPT.get(`--${name}`);
+      if (opt) out.push(a);
+      continue;
+    }
+    opt = GLOBAL_LONG_TO_OPT.get(a) || GLOBAL_SHORT_TO_OPT.get(a);
+    if (!opt) continue;
+    out.push(a);
+    if (opt.type === String && !a.includes('=')) {
+      const next = args[i + 1];
+      if (next && !next.startsWith('-')) {
+        out.push(next);
+        i++;
+      }
+    }
+  }
+  return out;
+}
