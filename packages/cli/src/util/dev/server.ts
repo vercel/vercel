@@ -1678,7 +1678,7 @@ export default class DevServer {
       const { envConfigs, files, devCacheDir, cwd: workPath } = this;
       try {
         const { builder } = middleware.builderWithPkg;
-        if (builder.version === 3) {
+        if (builder.version === 3 || builder.version === -1) {
           startMiddlewareResult = await builder.startDevServer?.({
             files,
             entrypoint: middleware.entrypoint,
