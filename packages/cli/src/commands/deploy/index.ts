@@ -64,6 +64,7 @@ import parseMeta from '../../util/parse-meta';
 import { getGlobalFlagsOnlyFromArgs } from '../../util/arg-common';
 import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 import { outputAgentError } from '../../util/agent-output';
+import { AGENT_STATUS } from '../../util/agent-output-constants';
 import { pickOverrides } from '../../util/projects/project-settings';
 import validatePaths, {
   validateRootDirectory,
@@ -508,7 +509,7 @@ async function handleInitDeployment(
         client.stdout.write(
           `${JSON.stringify(
             {
-              status: 'error',
+              status: AGENT_STATUS.ERROR,
               reason: 'not_domain_owner',
               message: deployment.message,
               next: [
@@ -535,7 +536,7 @@ async function handleInitDeployment(
         client.stdout.write(
           `${JSON.stringify(
             {
-              status: 'error',
+              status: AGENT_STATUS.ERROR,
               reason: 'deploy_failed',
               message: msg,
               next: [
@@ -611,7 +612,7 @@ async function handleInitDeployment(
         client.stdout.write(
           `${JSON.stringify(
             {
-              status: 'error',
+              status: AGENT_STATUS.ERROR,
               reason: 'upload_failed',
               message: 'Uploading failed. Please try again.',
               next: [
@@ -635,7 +636,7 @@ async function handleInitDeployment(
       const deploymentJson = getDeploymentOutputJson(deployment, client.apiUrl);
       const payload = client.nonInteractive
         ? {
-            status: 'ok' as const,
+            status: AGENT_STATUS.OK,
             deployment: deploymentJson,
             message: `Deployment ${deployment.url} ready.`,
             next: [
@@ -727,7 +728,7 @@ async function handleContinueSubcommand(client: Client): Promise<number> {
       outputAgentError(
         client,
         {
-          status: 'error',
+          status: AGENT_STATUS.ERROR,
           reason: 'missing_id',
           message:
             'Missing required --id flag. Provide the deployment ID to continue.',
@@ -796,7 +797,7 @@ async function handleContinueSubcommand(client: Client): Promise<number> {
       outputAgentError(
         client,
         {
-          status: 'error',
+          status: AGENT_STATUS.ERROR,
           reason: 'prebuilt_not_found',
           message:
             'No prebuilt output found in ".vercel/output". Run build first.',
@@ -993,7 +994,7 @@ async function handleDefaultDeploy(
     outputAgentError(
       client,
       {
-        status: 'error',
+        status: AGENT_STATUS.ERROR,
         reason: 'production_deploy_requires_user',
         message:
           'Deploying to production is not allowed in non-interactive mode. A user must run this command in a terminal (without --non-interactive) to deploy to production.',
@@ -1348,7 +1349,7 @@ async function handleDefaultDeploy(
         client.stdout.write(
           `${JSON.stringify(
             {
-              status: 'error',
+              status: AGENT_STATUS.ERROR,
               reason: 'not_domain_owner',
               message: deployment.message,
               next: [
@@ -1375,7 +1376,7 @@ async function handleDefaultDeploy(
         client.stdout.write(
           `${JSON.stringify(
             {
-              status: 'error',
+              status: AGENT_STATUS.ERROR,
               reason: 'deploy_failed',
               message: msg,
               next: [
@@ -1455,7 +1456,7 @@ async function handleDefaultDeploy(
         client.stdout.write(
           `${JSON.stringify(
             {
-              status: 'error',
+              status: AGENT_STATUS.ERROR,
               reason: 'upload_failed',
               message: 'Uploading failed. Please try again.',
               next: [
@@ -1483,7 +1484,7 @@ async function handleDefaultDeploy(
         client.stdout.write(
           `${JSON.stringify(
             {
-              status: 'error',
+              status: AGENT_STATUS.ERROR,
               reason: 'missing_archive',
               message: err.message,
               next: [
@@ -1507,7 +1508,7 @@ async function handleDefaultDeploy(
         client.stdout.write(
           `${JSON.stringify(
             {
-              status: 'error',
+              status: AGENT_STATUS.ERROR,
               reason: 'not_domain_owner',
               message: err.message,
               next: [
@@ -1572,7 +1573,7 @@ async function handleDefaultDeploy(
         client.stdout.write(
           `${JSON.stringify(
             {
-              status: 'error',
+              status: AGENT_STATUS.ERROR,
               reason: 'deploy_failed',
               message: err instanceof Error ? err.message : String(err),
               next: [
@@ -1658,7 +1659,7 @@ async function handleDefaultDeploy(
         client.stdout.write(
           `${JSON.stringify(
             {
-              status: 'error',
+              status: AGENT_STATUS.ERROR,
               reason: 'size_limit_exceeded',
               message,
               next: [
@@ -1681,7 +1682,7 @@ async function handleDefaultDeploy(
       client.stdout.write(
         `${JSON.stringify(
           {
-            status: 'error',
+            status: AGENT_STATUS.ERROR,
             reason: 'deploy_failed',
             message: err instanceof Error ? err.message : String(err),
             next: [
@@ -1705,7 +1706,7 @@ async function handleDefaultDeploy(
     const deploymentJson = getDeploymentOutputJson(deployment, client.apiUrl);
     const payload = client.nonInteractive
       ? {
-          status: 'ok' as const,
+          status: AGENT_STATUS.OK,
           deployment: deploymentJson,
           message: `Deployment ${deployment.url} ready.`,
           next: [
