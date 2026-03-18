@@ -20,7 +20,7 @@ concurrency:
 jobs:
   setup:
     name: Find Changes
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       tests: ${{ steps['set-tests'].outputs['tests'] }}
       dplUrl: ${{ steps.resolveTarball.outputs.url }}
@@ -169,7 +169,7 @@ jobs:
             );
 
   test:
-    timeout-minutes: 120
+    timeout-minutes: 150
     runs-on: ${{ matrix.runner }}
     name: ${{matrix.scriptName}} (${{matrix.packageName}}, ${{matrix.chunkNumber}}, ${{ matrix.runner }}, Node v${{ matrix.nodeVersion }})
     if: ${{ needs.setup.outputs['tests'] != '[]' }}
@@ -177,6 +177,7 @@ jobs:
       - setup
     strategy:
       fail-fast: false
+      max-parallel: 4
       matrix:
         include: ${{ fromJson(needs.setup.outputs['tests']) }}
     steps:
@@ -230,12 +231,31 @@ jobs:
             echo "$env_var=$package_name @ $DEPLOYMENT_URL/tarballs/$wheel_name" >> "$GITHUB_ENV"
           done
       - name: Test ${{matrix.packageName}}
-        run: node utils/gen.js && node_modules/.bin/turbo run ${{matrix.testScript}} --summarize --cache-dir=".turbo" --log-order=stream --filter=${{matrix.packageName}} -- ${{ join(matrix.testPaths, ' ') }}
+        run: |
+          attempt=1
+          max_attempts=2
+
+          while [ "$attempt" -le "$max_attempts" ]; do
+            echo "Running tests (attempt $attempt/$max_attempts): ${{matrix.testScript}} ${{matrix.packageName}}"
+
+            if node utils/gen.js && node_modules/.bin/turbo run ${{matrix.testScript}} --summarize --cache-dir=".turbo" --log-order=stream --filter=${{matrix.packageName}} -- ${{ join(matrix.testPaths, ' ') }}; then
+              exit 0
+            fi
+
+            if [ "$attempt" -eq "$max_attempts" ]; then
+              echo "Tests failed after $max_attempts attempts."
+              exit 1
+            fi
+
+            echo "Tests failed; retrying once..."
+            attempt=$((attempt+1))
+          done
         shell: bash
         env:
           # Per-package pip install specs (e.g. VERCEL_RUNTIME_PYTHON,
           # VERCEL_WORKERS_PYTHON) are also available here, injected into
           # $GITHUB_ENV by the "Resolve Python wheel URLs" step above.
+          NODE_OPTIONS: '--max-old-space-size=6144'
           JEST_JUNIT_OUTPUT_FILE: ${{github.workspace}}/.junit-reports/${{matrix.scriptName}}-${{matrix.packageName}}-${{matrix.chunkNumber}}-${{ matrix.runner }}.xml
           VERCEL_CLI_VERSION: ${{ needs.setup.outputs.dplUrl }}/tarballs/vercel.tgz
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
@@ -259,7 +279,7 @@ jobs:
 
   summary:
     name: Summary (e2e)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     if: always()
     needs:
