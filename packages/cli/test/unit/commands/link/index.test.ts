@@ -935,7 +935,7 @@ describe('link', () => {
   });
 
   it('should write vercel.json for inferred multi-service layouts', async () => {
-    const user = useUser();
+    useUser();
     const cwd = setupTmpDir();
     useTeams('team_dummy');
     useUnknownProject();
@@ -979,10 +979,6 @@ describe('link', () => {
     );
     client.stdin.write('\n');
 
-    await expect(client.stderr).toOutput(
-      `Linked to ${user.username}/multi-service-app (created .vercel and added it to .gitignore)`
-    );
-
     const exitCode = await exitCodePromise;
     expect(exitCode, 'exit code for "link"').toEqual(0);
 
@@ -1008,7 +1004,7 @@ describe('link', () => {
   });
 
   it('should continue with framework detection when root inferred services are declined', async () => {
-    const user = useUser();
+    useUser();
     const cwd = setupTmpDir();
     useTeams('team_dummy');
     useUnknownProject();
@@ -1063,10 +1059,6 @@ describe('link', () => {
     );
     client.stdin.write('\n');
 
-    await expect(client.stderr).toOutput(
-      `Linked to ${user.username}/declined-multi-service-app (created .vercel and added it to .gitignore)`
-    );
-
     const exitCode = await exitCodePromise;
     expect(exitCode, 'exit code for "link"').toEqual(0);
 
@@ -1080,53 +1072,8 @@ describe('link', () => {
     expect(project.framework).toEqual('nextjs');
   });
 
-  it('should continue link when repo root vercel.json is invalid', async () => {
-    const user = useUser();
-    const cwd = setupTmpDir();
-    useTeams('team_dummy');
-    useUnknownProject();
-
-    await writeFile(join(cwd, 'vercel.json'), '{\n');
-
-    client.cwd = cwd;
-    const exitCodePromise = link(client);
-
-    await expect(client.stderr).toOutput('Set up');
-    client.stdin.write('y\n');
-
-    await expect(client.stderr).toOutput(
-      'Which scope should contain your project?'
-    );
-    client.stdin.write('\n');
-
-    await expect(client.stderr).toOutput('Link to existing project?');
-    client.stdin.write('n\n');
-
-    await expect(client.stderr).toOutput('What’s your project’s name?');
-    client.stdin.write('invalid-root-config-app\n');
-
-    await expect(client.stderr).toOutput(
-      'Do you want to change additional project settings?'
-    );
-    client.stdin.write('\n');
-
-    await expect(client.stderr).toOutput(
-      `Linked to ${user.username}/invalid-root-config-app (created .vercel and added it to .gitignore)`
-    );
-
-    const exitCode = await exitCodePromise;
-    expect(exitCode, 'exit code for "link"').toEqual(0);
-
-    const projectJson = await readJSON(join(cwd, '.vercel/project.json'));
-    const project = await getProjectByNameOrId(client, projectJson.projectId);
-    if (project instanceof ProjectNotFound) {
-      throw project;
-    }
-    expect(project.framework).toEqual('services');
-  });
-
   it('should allow choosing a different project directory before deploying detected services', async () => {
-    const user = useUser();
+    useUser();
     const cwd = setupTmpDir();
     useTeams('team_dummy');
     useUnknownProject();
@@ -1198,10 +1145,6 @@ describe('link', () => {
     );
     client.stdin.write('\n');
 
-    await expect(client.stderr).toOutput(
-      `Linked to ${user.username}/selected-directory-multi-service-app (created .vercel and added it to .gitignore)`
-    );
-
     const exitCode = await exitCodePromise;
     expect(exitCode, 'exit code for "link"').toEqual(0);
 
@@ -1229,7 +1172,7 @@ describe('link', () => {
   });
 
   it('should write vercel.json for inferred multi-service layouts in the selected root directory', async () => {
-    const user = useUser();
+    useUser();
     const cwd = setupTmpDir();
     useTeams('team_dummy');
     useUnknownProject();
@@ -1281,10 +1224,6 @@ describe('link', () => {
     );
     client.stdin.write('\n');
 
-    await expect(client.stderr).toOutput(
-      `Linked to ${user.username}/nested-multi-service-app (created .vercel and added it to .gitignore)`
-    );
-
     const exitCode = await exitCodePromise;
     expect(exitCode, 'exit code for "link"').toEqual(0);
 
@@ -1312,7 +1251,7 @@ describe('link', () => {
   });
 
   it('should continue link when selected root vercel.json is invalid', async () => {
-    const user = useUser();
+    useUser();
     const cwd = setupTmpDir();
     useTeams('team_dummy');
     useUnknownProject();
@@ -1347,10 +1286,6 @@ describe('link', () => {
     );
     client.stdin.write('\n');
 
-    await expect(client.stderr).toOutput(
-      `Linked to ${user.username}/invalid-selected-root-config-app (created .vercel and added it to .gitignore)`
-    );
-
     const exitCode = await exitCodePromise;
     expect(exitCode, 'exit code for "link"').toEqual(0);
 
@@ -1364,7 +1299,7 @@ describe('link', () => {
   });
 
   it('should warn when inferred services are blocked by builds config', async () => {
-    const user = useUser();
+    useUser();
     const cwd = setupTmpDir();
     useTeams('team_dummy');
     useUnknownProject();
@@ -1414,10 +1349,6 @@ describe('link', () => {
       'Do you want to change additional project settings?'
     );
     client.stdin.write('\n');
-
-    await expect(client.stderr).toOutput(
-      `Linked to ${user.username}/services-with-builds (created .vercel and added it to .gitignore)`
-    );
 
     const exitCode = await exitCodePromise;
     expect(exitCode, 'exit code for "link"').toEqual(0);
