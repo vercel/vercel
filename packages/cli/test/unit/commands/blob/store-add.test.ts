@@ -56,9 +56,20 @@ describe('blob store add', () => {
 
   describe('successful store creation', () => {
     it('should create store with provided name and track telemetry', async () => {
-      client.setArgv('blob', 'store', 'add', 'my-test-store');
+      client.setArgv(
+        'blob',
+        'store',
+        'add',
+        'my-test-store',
+        '--access',
+        'public'
+      );
 
-      const exitCode = await addStore(client, ['my-test-store']);
+      const exitCode = await addStore(client, [
+        'my-test-store',
+        '--access',
+        'public',
+      ]);
 
       expect(exitCode).toBe(0);
       expect(client.fetch).toHaveBeenCalledWith('/v1/storage/stores/blob', {
@@ -97,7 +108,9 @@ describe('blob store add', () => {
         'add',
         'my-test-store',
         '--region',
-        'sfo1'
+        'sfo1',
+        '--access',
+        'public'
       );
       client.fetch = vi.fn().mockResolvedValue({
         store: { id: 'store_test123', region: 'sfo1' },
@@ -107,6 +120,8 @@ describe('blob store add', () => {
         'my-test-store',
         '--region',
         'sfo1',
+        '--access',
+        'public',
       ]);
 
       expect(exitCode).toBe(0);
@@ -137,9 +152,20 @@ describe('blob store add', () => {
     });
 
     it('should use default region when no region is specified', async () => {
-      client.setArgv('blob', 'store', 'add', 'default-region-store');
+      client.setArgv(
+        'blob',
+        'store',
+        'add',
+        'default-region-store',
+        '--access',
+        'public'
+      );
 
-      const exitCode = await addStore(client, ['default-region-store']);
+      const exitCode = await addStore(client, [
+        'default-region-store',
+        '--access',
+        'public',
+      ]);
 
       expect(exitCode).toBe(0);
       expect(client.fetch).toHaveBeenCalledWith('/v1/storage/stores/blob', {
@@ -162,12 +188,23 @@ describe('blob store add', () => {
     });
 
     it('should display region in success message when API returns region', async () => {
-      client.setArgv('blob', 'store', 'add', 'region-display-store');
+      client.setArgv(
+        'blob',
+        'store',
+        'add',
+        'region-display-store',
+        '--access',
+        'public'
+      );
       client.fetch = vi.fn().mockResolvedValue({
         store: { id: 'store_test123', region: 'iad1' },
       });
 
-      const exitCode = await addStore(client, ['region-display-store']);
+      const exitCode = await addStore(client, [
+        'region-display-store',
+        '--access',
+        'public',
+      ]);
 
       expect(exitCode).toBe(0);
       expect(mockedOutput.success).toHaveBeenCalledWith(
@@ -176,9 +213,9 @@ describe('blob store add', () => {
     });
 
     it('should prompt for name when not provided', async () => {
-      client.setArgv('blob', 'store', 'add');
+      client.setArgv('blob', 'store', 'add', '--access', 'public');
 
-      const exitCode = await addStore(client, []);
+      const exitCode = await addStore(client, ['--access', 'public']);
 
       expect(exitCode).toBe(0);
       expect(client.input.text).toHaveBeenCalledWith({
@@ -200,7 +237,19 @@ describe('blob store add', () => {
 
   describe('project linking', () => {
     it('should link store to project when confirmed', async () => {
-      const exitCode = await addStore(client, ['test-store']);
+      client.setArgv(
+        'blob',
+        'store',
+        'add',
+        'test-store',
+        '--access',
+        'public'
+      );
+      const exitCode = await addStore(client, [
+        'test-store',
+        '--access',
+        'public',
+      ]);
 
       expect(exitCode).toBe(0);
       expect(client.input.confirm).toHaveBeenCalledWith(
@@ -232,8 +281,19 @@ describe('blob store add', () => {
 
     it('should not link store when user declines', async () => {
       client.input.confirm = vi.fn().mockResolvedValue(false);
-
-      const exitCode = await addStore(client, ['test-store']);
+      client.setArgv(
+        'blob',
+        'store',
+        'add',
+        'test-store',
+        '--access',
+        'public'
+      );
+      const exitCode = await addStore(client, [
+        'test-store',
+        '--access',
+        'public',
+      ]);
 
       expect(exitCode).toBe(0);
       expect(client.input.confirm).toHaveBeenCalledWith(
@@ -246,8 +306,19 @@ describe('blob store add', () => {
 
     it('should handle linking with selected environments', async () => {
       client.input.checkbox = vi.fn().mockResolvedValue(['production']);
-
-      const exitCode = await addStore(client, ['prod-store']);
+      client.setArgv(
+        'blob',
+        'store',
+        'add',
+        'prod-store',
+        '--access',
+        'public'
+      );
+      const exitCode = await addStore(client, [
+        'prod-store',
+        '--access',
+        'public',
+      ]);
 
       expect(exitCode).toBe(0);
       expect(mockedConnectResourceToProject).toHaveBeenCalledWith(
@@ -266,7 +337,11 @@ describe('blob store add', () => {
         status: 'not_linked',
       });
 
-      const exitCode = await addStore(client, ['standalone-store']);
+      const exitCode = await addStore(client, [
+        'standalone-store',
+        '--access',
+        'public',
+      ]);
 
       expect(exitCode).toBe(0);
       expect(client.fetch).toHaveBeenCalledWith('/v1/storage/stores/blob', {
@@ -301,7 +376,11 @@ describe('blob store add', () => {
       const apiError = new Error('Store creation failed');
       client.fetch = vi.fn().mockRejectedValue(apiError);
 
-      const exitCode = await addStore(client, ['test-store']);
+      const exitCode = await addStore(client, [
+        'test-store',
+        '--access',
+        'public',
+      ]);
 
       expect(exitCode).toBe(1);
       expect(mockedOutput.spinner).toHaveBeenCalledWith(
@@ -314,7 +393,11 @@ describe('blob store add', () => {
       const apiError = new Error('Network error');
       client.fetch = vi.fn().mockRejectedValue(apiError);
 
-      const exitCode = await addStore(client, ['failing-store']);
+      const exitCode = await addStore(client, [
+        'failing-store',
+        '--access',
+        'public',
+      ]);
 
       expect(exitCode).toBe(1);
       expect(mockedOutput.success).not.toHaveBeenCalled();
@@ -325,9 +408,9 @@ describe('blob store add', () => {
       mockedConnectResourceToProject.mockRejectedValue(linkError);
 
       // This should still succeed even if linking fails
-      await expect(addStore(client, ['test-store'])).rejects.toThrow(
-        'Linking failed'
-      );
+      await expect(
+        addStore(client, ['test-store', '--access', 'public'])
+      ).rejects.toThrow('Linking failed');
 
       // Store should still be created successfully
       expect(client.fetch).toHaveBeenCalled();
@@ -339,7 +422,11 @@ describe('blob store add', () => {
 
   describe('telemetry tracking', () => {
     it('should track name argument when provided', async () => {
-      const exitCode = await addStore(client, ['telemetry-test-store']);
+      const exitCode = await addStore(client, [
+        'telemetry-test-store',
+        '--access',
+        'public',
+      ]);
 
       expect(exitCode).toBe(0);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
@@ -351,7 +438,7 @@ describe('blob store add', () => {
     });
 
     it('should track name argument even when prompted', async () => {
-      const exitCode = await addStore(client, []);
+      const exitCode = await addStore(client, ['--access', 'public']);
 
       expect(exitCode).toBe(0);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
@@ -366,7 +453,7 @@ describe('blob store add', () => {
       // Mock input to return undefined/empty
       client.input.text = vi.fn().mockResolvedValue('');
 
-      const exitCode = await addStore(client, []);
+      const exitCode = await addStore(client, ['--access', 'public']);
 
       expect(exitCode).toBe(0);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([]);
@@ -375,7 +462,11 @@ describe('blob store add', () => {
 
   describe('API call behavior', () => {
     it('should include accountId when project is linked', async () => {
-      const exitCode = await addStore(client, ['linked-store']);
+      const exitCode = await addStore(client, [
+        'linked-store',
+        '--access',
+        'public',
+      ]);
 
       expect(exitCode).toBe(0);
       expect(client.fetch).toHaveBeenCalledWith('/v1/storage/stores/blob', {
@@ -397,7 +488,11 @@ describe('blob store add', () => {
         status: 'not_linked',
       });
 
-      const exitCode = await addStore(client, ['unlinked-store']);
+      const exitCode = await addStore(client, [
+        'unlinked-store',
+        '--access',
+        'public',
+      ]);
 
       expect(exitCode).toBe(0);
       expect(client.fetch).toHaveBeenCalledWith('/v1/storage/stores/blob', {
@@ -417,7 +512,11 @@ describe('blob store add', () => {
         store: { id: 'store_custom_id_456' },
       });
 
-      const exitCode = await addStore(client, ['custom-store']);
+      const exitCode = await addStore(client, [
+        'custom-store',
+        '--access',
+        'public',
+      ]);
 
       expect(exitCode).toBe(0);
       expect(mockedOutput.success).toHaveBeenCalledWith(
@@ -428,8 +527,8 @@ describe('blob store add', () => {
 
   describe('interactive prompt validation', () => {
     it('should validate store name length correctly', async () => {
-      client.setArgv('blob', 'store', 'add');
-      await addStore(client, []);
+      client.setArgv('blob', 'store', 'add', '--access', 'public');
+      await addStore(client, ['--access', 'public']);
 
       const textCall = textInputMock.mock.calls[0][0];
       const validateFn = textCall.validate;
@@ -461,7 +560,11 @@ describe('blob store add', () => {
         org: { id: 'org_456', slug: 'different-org', type: 'user' },
       });
 
-      const exitCode = await addStore(client, ['confirmation-test']);
+      const exitCode = await addStore(client, [
+        'confirmation-test',
+        '--access',
+        'public',
+      ]);
 
       expect(exitCode).toBe(0);
       expect(client.input.confirm).toHaveBeenCalledWith(
@@ -473,7 +576,11 @@ describe('blob store add', () => {
 
   describe('spinner and output behavior', () => {
     it('should show spinner during store creation and stop on success', async () => {
-      const exitCode = await addStore(client, ['spinner-test']);
+      const exitCode = await addStore(client, [
+        'spinner-test',
+        '--access',
+        'public',
+      ]);
 
       expect(exitCode).toBe(0);
       expect(mockedOutput.spinner).toHaveBeenCalledWith(
@@ -486,7 +593,11 @@ describe('blob store add', () => {
     });
 
     it('should show linking spinner when connecting to project', async () => {
-      const exitCode = await addStore(client, ['link-spinner-test']);
+      const exitCode = await addStore(client, [
+        'link-spinner-test',
+        '--access',
+        'public',
+      ]);
 
       expect(exitCode).toBe(0);
       expect(mockedOutput.spinner).toHaveBeenCalledWith(
@@ -498,7 +609,11 @@ describe('blob store add', () => {
       const apiError = new Error('Creation failed');
       client.fetch = vi.fn().mockRejectedValue(apiError);
 
-      const exitCode = await addStore(client, ['error-test']);
+      const exitCode = await addStore(client, [
+        'error-test',
+        '--access',
+        'public',
+      ]);
 
       expect(exitCode).toBe(1);
       expect(mockedOutput.spinner).toHaveBeenCalledWith(
