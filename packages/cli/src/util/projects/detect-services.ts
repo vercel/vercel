@@ -28,9 +28,7 @@ export async function isExperimentalServicesEnabled(
   );
 }
 
-export async function hasExperimentalServicesConfig(
-  cwd: string
-): Promise<boolean> {
+async function hasExperimentalServicesConfig(cwd: string): Promise<boolean> {
   const config = await readJSONFile<Record<string, unknown>>(
     join(cwd, 'vercel.json')
   );

@@ -30,7 +30,7 @@ export type InferredServicesChoice =
 export interface ServicesSetupState {
   detectServicesResult: DetectServicesResult;
   hasConfiguredServices: boolean;
-  inferredServices: NonNullable<DetectServicesResult['inferred']> | null;
+  inferredServices: DetectServicesResult['inferred'];
   inferredServicesWriteBlocker: ServicesConfigWriteBlocker | null;
 }
 
@@ -41,10 +41,10 @@ export async function getServicesSetupState(
     fs: new LocalFileSystemDetector(workPath),
   });
   const hasConfiguredServices =
-    detectServicesResult.resolved?.source === 'configured';
+    detectServicesResult.resolved.source === 'configured';
   const inferredServices = hasConfiguredServices
     ? null
-    : (detectServicesResult.inferred ?? null);
+    : detectServicesResult.inferred;
   const inferredServicesWriteBlocker = inferredServices
     ? await getServicesConfigWriteBlocker(workPath, inferredServices.config)
     : null;
@@ -106,7 +106,7 @@ export async function promptForInferredServicesSetup({
   autoConfirm: boolean;
   nonInteractive: boolean;
   workPath: string;
-  inferred: NonNullable<DetectServicesResult['inferred']> | null;
+  inferred: DetectServicesResult['inferred'];
   inferredWriteBlocker: ServicesConfigWriteBlocker | null;
   allowChooseDifferentProjectDirectory?: boolean;
 }): Promise<InferredServicesChoice | null> {

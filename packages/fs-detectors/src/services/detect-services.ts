@@ -7,6 +7,8 @@ import {
 import {
   type DetectServicesOptions,
   type DetectServicesResult,
+  type InferredServicesResult,
+  type ResolvedServicesResult,
   type Service,
   type ServicesConfig,
   type ServicesRoutes,
@@ -39,15 +41,15 @@ function emptyRoutes(): ServicesRoutes {
 }
 
 function withResolvedResult(
-  resolved: DetectServicesResult['resolved'],
-  inferred: DetectServicesResult['inferred'] = null
+  resolved: ResolvedServicesResult,
+  inferred: InferredServicesResult | null = null
 ): DetectServicesResult {
   return {
-    services: resolved?.services ?? [],
-    source: resolved?.source ?? 'auto-detected',
-    routes: resolved?.routes ?? emptyRoutes(),
-    errors: resolved?.errors ?? [],
-    warnings: resolved?.warnings ?? [],
+    services: resolved.services,
+    source: resolved.source,
+    routes: resolved.routes,
+    errors: resolved.errors,
+    warnings: resolved.warnings,
     resolved,
     inferred,
   };
@@ -135,7 +137,7 @@ export async function detectServices(
         'generated'
       );
       const routes = generateServicesRoutes(result.services);
-      const resolved: DetectServicesResult['resolved'] = {
+      const resolved: ResolvedServicesResult = {
         services: result.services,
         source: 'auto-detected',
         routes,
@@ -314,7 +316,6 @@ export function generateServicesRoutes(services: Service[]): ServicesRoutes {
           check: true,
         });
       }
-    } else {
     }
   }
 

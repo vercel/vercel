@@ -11,7 +11,6 @@ export interface AutoDetectOptions {
 export interface AutoDetectResult {
   services: ExperimentalServices | null;
   errors: ServiceDetectionError[];
-  frontendServiceNames: string[];
 }
 
 const FRONTEND_DIR = 'frontend';
@@ -76,7 +75,6 @@ export async function autoDetectServices(
           message: `Multiple frameworks detected at root: ${frameworkNames}. Use explicit experimentalServices config.`,
         },
       ],
-      frontendServiceNames: [],
     };
   }
 
@@ -106,7 +104,6 @@ export async function autoDetectServices(
             message: `Multiple frameworks detected in ${frontendLocation}/: ${frameworkNames}. Use explicit experimentalServices config.`,
           },
         ],
-        frontendServiceNames: [],
       };
     }
 
@@ -128,7 +125,6 @@ export async function autoDetectServices(
           'No services detected. Configure experimentalServices in vercel.json or ensure a framework exists at project root, frontend/, or apps/web/.',
       },
     ],
-    frontendServiceNames: [],
   };
 }
 
@@ -148,14 +144,12 @@ async function detectServicesAtRoot(
     return {
       services: null,
       errors: [backendResult.error],
-      frontendServiceNames: [],
     };
   }
   if (Object.keys(backendResult.services).length === 0) {
     return {
       services: null,
       errors: [],
-      frontendServiceNames: [],
     };
   }
   Object.assign(services, backendResult.services);
@@ -163,7 +157,6 @@ async function detectServicesAtRoot(
   return {
     services,
     errors: [],
-    frontendServiceNames: ['frontend'],
   };
 }
 
@@ -188,7 +181,6 @@ async function detectServicesFrontendSubdir(
     return {
       services: null,
       errors: [backendResult.error],
-      frontendServiceNames: [],
     };
   }
 
@@ -202,7 +194,6 @@ async function detectServicesFrontendSubdir(
           message: `Frontend detected in ${frontendLocation}/ but no backend services found. Add a backend/ or services/ directory with a supported framework.`,
         },
       ],
-      frontendServiceNames: [],
     };
   }
 
@@ -211,7 +202,6 @@ async function detectServicesFrontendSubdir(
   return {
     services,
     errors: [],
-    frontendServiceNames: [serviceName],
   };
 }
 

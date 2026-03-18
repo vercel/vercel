@@ -78,9 +78,9 @@ export interface DetectServicesResult extends ResolvedServicesResult {
    */
   // TODO: replace consumption of top-level fields with these nested objects in caller before removal of top-level fields.
   /* Resolved services used by build/dev flows. */
-  resolved: ResolvedServicesResult | null;
+  resolved: ResolvedServicesResult;
   /* Inferred services that can be migrated into project config. */
-  inferred?: InferredServicesResult | null;
+  inferred: InferredServicesResult | null;
 }
 
 export type DetectServicesSource = 'configured' | 'auto-detected';
