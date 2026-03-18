@@ -34,10 +34,7 @@ function mockSchemaApi() {
       res.json({
         name: 'incomingRequest',
         description: 'Edge Requests',
-        dimensions: [
-          { name: 'httpStatus', label: 'HTTP Status', canGroupBy: true },
-          { name: 'projectName', label: 'Project', canGroupBy: false },
-        ],
+        dimensions: [{ name: 'httpStatus', label: 'HTTP Status' }],
         measures: [
           {
             name: 'count',
@@ -115,7 +112,6 @@ describe('schema', () => {
       expect(stderrOutput).toContain('Event: edgeRequest');
       expect(stderrOutput).toContain('Dimension');
       expect(stderrOutput).toContain('Label');
-      expect(stderrOutput).toContain('Groupable');
       expect(stderrOutput).toContain('Measure');
       expect(stderrOutput).toContain('Unit');
     });

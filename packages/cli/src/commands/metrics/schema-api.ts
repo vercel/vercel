@@ -27,7 +27,6 @@ interface SchemaDetailResponse {
   dimensions: Array<{
     name: string;
     label: string;
-    canGroupBy: boolean;
   }>;
   measures: Array<{
     name: string;
@@ -80,7 +79,6 @@ export async function fetchSchema(
         dimensions: detail.dimensions.map(dimension => ({
           name: dimension.name,
           label: dimension.label,
-          filterOnly: !dimension.canGroupBy,
         })),
         measures: detail.measures.map(toMeasureSchema),
       };

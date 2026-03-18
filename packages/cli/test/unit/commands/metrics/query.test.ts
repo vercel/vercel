@@ -59,9 +59,8 @@ function mockSchemaApi() {
         name: 'incomingRequest',
         description: 'Edge Requests',
         dimensions: [
-          { name: 'httpStatus', label: 'HTTP Status', canGroupBy: true },
-          { name: 'route', label: 'Route', canGroupBy: true },
-          { name: 'projectName', label: 'Project', canGroupBy: false },
+          { name: 'httpStatus', label: 'HTTP Status' },
+          { name: 'route', label: 'Route' },
         ],
         measures: [
           {
@@ -96,10 +95,7 @@ function mockSchemaApi() {
       res.json({
         name: 'functionExecution',
         description: 'Functions',
-        dimensions: [
-          { name: 'provider', label: 'Provider', canGroupBy: false },
-          { name: 'route', label: 'Route', canGroupBy: true },
-        ],
+        dimensions: [{ name: 'route', label: 'Route' }],
         measures: [
           {
             name: 'count',
@@ -296,8 +292,8 @@ describe('query', () => {
     });
   });
 
-  describe('filter-only dimension', () => {
-    it('should return error for filter-only dimension in --group-by', async () => {
+  describe('non-groupable dimension', () => {
+    it('should return error for a dimension that is not available in --group-by', async () => {
       mockLinkedProject();
       client.setArgv(
         'metrics',
@@ -311,7 +307,9 @@ describe('query', () => {
       const exitCode = await query(client, new MockTelemetry());
 
       expect(exitCode).toBe(1);
-      expect(client.stderr.getFullOutput()).toContain('filter-only');
+      expect(client.stderr.getFullOutput()).toContain(
+        'Dimension "provider" is not available'
+      );
     });
   });
 

@@ -1,4 +1,3 @@
-import chalk from 'chalk';
 import plural from 'pluralize';
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
@@ -168,15 +167,11 @@ function formatDimensionsTable(dimensions: DimensionSchema[]) {
   }
   return indent(
     formatTable(
-      ['Dimension', 'Label', 'Groupable'],
-      ['l', 'l', 'l'],
+      ['Dimension', 'Label'],
+      ['l', 'l'],
       [
         {
-          rows: dimensions.map(d => [
-            d.name,
-            d.label,
-            d.filterOnly ? chalk.dim('no') : 'yes',
-          ]),
+          rows: dimensions.map(d => [d.name, d.label]),
         },
       ]
     ),

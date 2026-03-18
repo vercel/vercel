@@ -73,15 +73,6 @@ export function validateGroupBy(
         allowedValues: dimensions.map(d => d.name),
       };
     }
-    if (found.filterOnly) {
-      return {
-        valid: false,
-        code: 'FILTER_ONLY_DIMENSION',
-        message:
-          `Dimension "${dim}" on event "${event}" is filter-only and cannot be used in --group-by.\n` +
-          `Use it with --filter instead: --filter "${dim} eq '<value>'"`,
-      };
-    }
   }
   return { valid: true };
 }

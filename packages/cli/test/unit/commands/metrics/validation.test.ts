@@ -14,8 +14,8 @@ const schema: Schema = {
     description: 'Edge Requests',
     queryEngineEvent: 'incomingRequest',
     dimensions: [
-      { name: 'httpStatus', label: 'HTTP Status', filterOnly: false },
-      { name: 'route', label: 'Route', filterOnly: false },
+      { name: 'httpStatus', label: 'HTTP Status' },
+      { name: 'route', label: 'Route' },
     ],
     measures: [
       {
@@ -36,10 +36,7 @@ const schema: Schema = {
   },
   functionExecution: {
     description: 'Functions',
-    dimensions: [
-      { name: 'provider', label: 'Provider', filterOnly: true },
-      { name: 'route', label: 'Route', filterOnly: false },
-    ],
+    dimensions: [{ name: 'route', label: 'Route' }],
     measures: [
       {
         name: 'count',
@@ -117,15 +114,6 @@ describe('validation', () => {
       if (!result.valid) {
         expect(result.code).toBe('UNKNOWN_DIMENSION');
         expect(result.allowedValues).toContain('httpStatus');
-      }
-    });
-
-    it('should fail for filter-only dimension with suggestion', () => {
-      const result = validateGroupBy(schema, 'functionExecution', ['provider']);
-      expect(result.valid).toBe(false);
-      if (!result.valid) {
-        expect(result.code).toBe('FILTER_ONLY_DIMENSION');
-        expect(result.message).toContain('--filter');
       }
     });
   });

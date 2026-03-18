@@ -27,22 +27,14 @@ export function formatQueryJson(
 export function formatSchemaDetailJson(
   event: EventSchema & { name: string }
 ): string {
-  const dimensions = event.dimensions.map(d => {
-    const obj: { name: string; label: string; filterOnly?: boolean } = {
-      name: d.name,
-      label: d.label,
-    };
-    if (d.filterOnly) {
-      obj.filterOnly = true;
-    }
-    return obj;
-  });
-
   return JSON.stringify(
     {
       event: event.name,
       description: event.description,
-      dimensions,
+      dimensions: event.dimensions.map(d => ({
+        name: d.name,
+        label: d.label,
+      })),
       measures: event.measures.map(m => ({
         name: m.name,
         label: m.label,

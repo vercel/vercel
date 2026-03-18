@@ -1,7 +1,6 @@
 export interface DimensionSchema {
   name: string;
   label: string;
-  filterOnly: boolean;
 }
 
 export type MetricsAggregation =

@@ -15,9 +15,8 @@ const schema: Schema = {
     description: 'Edge Requests',
     queryEngineEvent: 'incomingRequest',
     dimensions: [
-      { name: 'httpStatus', label: 'HTTP Status', filterOnly: false },
-      { name: 'route', label: 'Route', filterOnly: false },
-      { name: 'projectName', label: 'Project', filterOnly: true },
+      { name: 'httpStatus', label: 'HTTP Status' },
+      { name: 'route', label: 'Route' },
     ],
     measures: [
       {
@@ -45,10 +44,7 @@ const schema: Schema = {
   },
   functionExecution: {
     description: 'Functions',
-    dimensions: [
-      { name: 'provider', label: 'Provider', filterOnly: true },
-      { name: 'route', label: 'Route', filterOnly: false },
-    ],
+    dimensions: [{ name: 'route', label: 'Route' }],
     measures: [
       {
         name: 'count',
@@ -84,9 +80,8 @@ describe('schema-data', () => {
   it('should return dimensions with correct shape', () => {
     const dims = getDimensions(schema, 'edgeRequest');
     expect(dims).toEqual([
-      { name: 'httpStatus', label: 'HTTP Status', filterOnly: false },
-      { name: 'route', label: 'Route', filterOnly: false },
-      { name: 'projectName', label: 'Project', filterOnly: true },
+      { name: 'httpStatus', label: 'HTTP Status' },
+      { name: 'route', label: 'Route' },
     ]);
   });
 

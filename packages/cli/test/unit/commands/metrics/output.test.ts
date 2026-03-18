@@ -70,8 +70,8 @@ describe('output', () => {
         name: 'functionExecution',
         description: 'Serverless function execution details',
         dimensions: [
-          { name: 'httpStatus', label: 'HTTP Status', filterOnly: false },
-          { name: 'provider', label: 'Provider', filterOnly: true },
+          { name: 'httpStatus', label: 'HTTP Status' },
+          { name: 'provider', label: 'Provider' },
         ],
         measures: [
           {
@@ -87,8 +87,10 @@ describe('output', () => {
       expect(result.event).toBe('functionExecution');
       expect(result.description).toBe('Serverless function execution details');
       expect(result.dimensions).toHaveLength(2);
-      expect(result.dimensions[1].filterOnly).toBe(true);
-      expect(result.dimensions[0]).not.toHaveProperty('filterOnly');
+      expect(result.dimensions[1]).toEqual({
+        name: 'provider',
+        label: 'Provider',
+      });
       expect(result.measures).toHaveLength(1);
       expect(result.measures[0].aggregations).toEqual([
         'sum',
