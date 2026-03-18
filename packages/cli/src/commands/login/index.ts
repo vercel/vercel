@@ -9,6 +9,7 @@ import output from '../../output-manager';
 import { LoginTelemetryClient } from '../../util/telemetry/commands/login';
 import { login as future } from './future';
 import { outputActionRequired } from '../../util/agent-output';
+import { packageName } from '../../util/pkg-name';
 
 export default async function login(
   client: Client,
