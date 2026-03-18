@@ -47,6 +47,9 @@ class VercelQueuesBrokerOptions:
     # Use message_id as idempotency key by default
     use_message_id_as_idempotency_key: bool = True
 
+    # Use custom JSON encoder class to send data
+    json_encoder: type[json.JSONEncoder] | None = None
+
     @classmethod
     def from_dict(cls, options: dict[str, Any]) -> VercelQueuesBrokerOptions:
         """
@@ -89,6 +92,10 @@ class VercelQueuesBrokerOptions:
         use_msg_id = options.get("use_message_id_as_idempotency_key")
         if isinstance(use_msg_id, bool):
             cfg = replace(cfg, use_message_id_as_idempotency_key=use_msg_id)
+
+        json_encoder = options.get("json_encoder")
+        if isinstance(json_encoder, type) and issubclass(json_encoder, json.JSONEncoder):
+            cfg = replace(cfg, json_encoder=json_encoder)
 
         return cfg
 
@@ -313,6 +320,7 @@ class VercelQueuesBroker(Broker):
             base_url=self._cfg.base_url,
             base_path=self._cfg.base_path,
             timeout=self._cfg.timeout,
+            json_encoder=self._cfg.json_encoder,
         )
 
         self.emit_after("enqueue", message, delay)

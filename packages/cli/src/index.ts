@@ -62,7 +62,13 @@ import * as ERRORS from './util/errors-ts';
 import { APIError } from './util/errors-ts';
 import getUpdateCommand from './util/get-update-command';
 import { executeUpgrade } from './util/upgrade';
-import { getCommandName, getTitleName } from './util/pkg-name';
+import {
+  getCommandName,
+  getCommandNamePlain,
+  getTitleName,
+} from './util/pkg-name';
+import { outputAgentError } from './util/agent-output';
+import { getGlobalFlagsOnlyFromArgs } from './util/arg-common';
 import login from './commands/login';
 import type { AuthConfig, GlobalConfig } from '@vercel-internals/types';
 import type { VercelConfig } from '@vercel/client';
@@ -326,6 +332,7 @@ const main = async () => {
   telemetry.trackPlatform();
   telemetry.trackArch();
   telemetry.trackCIVendorName();
+  telemetry.trackStdinIsTTY(process.stdin?.isTTY === true);
   telemetry.trackVersion(pkg.version);
   telemetry.trackCliOptionCwd(parsedArgs.flags['--cwd']);
   telemetry.trackCliOptionLocalConfig(parsedArgs.flags['--local-config']);
@@ -477,11 +484,55 @@ const main = async () => {
     subcommand &&
     !subcommandsWithoutToken.includes(subcommand)
   ) {
+    // Non-interactive / agent mode must not call login() (device flow hangs without TTY).
+    if (client.nonInteractive) {
+      // Do not suggest --token in next[]: passing tokens on the CLI exposes them to
+      // agents, logs, and shell history. Auth is persisted globally after TTY login
+      // (auth.json under the global config dir—not project .vercel); once logged in,
+      // the same command can be re-run non-interactively without any secret on argv.
+      const globalFlagsNoNi = getGlobalFlagsOnlyFromArgs(
+        client.argv.slice(2).filter(a => a !== '--non-interactive')
+      );
+      const loginTtyCmd = getCommandNamePlain(
+        `login ${globalFlagsNoNi.join(' ')}`.trim()
+      );
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'no_credentials',
+          userActionRequired: true,
+          message:
+            'No existing credentials found. A user must run login once in a terminal (TTY) without --non-interactive to complete device authorization. Credentials are then stored globally; retry this command afterward without putting any token on the command line.',
+          next: [
+            {
+              command: loginTtyCmd,
+              when: 'user completes device login in a TTY (omit --non-interactive); then rerun the original command',
+            },
+          ],
+          hint: 'Project .vercel only holds project link data, not the auth token. Do not run vercel login --non-interactive—it hangs. Do not pass tokens via CLI in agent contexts.',
+        },
+        1
+      );
+    }
     if (isTTY) {
       output.log(`No existing credentials found. Please log in:`);
       try {
         const result = await login(client, { shouldParseArgs: false });
         // The login function failed, so it returned an exit code
+        if (result !== 0) return result;
+      } catch (error) {
+        printError(error);
+        return 1;
+      }
+
+      output.debug(`Saved credentials in "${hp(VERCEL_DIR)}"`);
+    } else if (isAgent) {
+      // Agent detected without credentials — auto-launch device code login flow.
+      // The login flow handles non-TTY: prints auth URL, opens browser if possible, polls.
+      output.log('No existing credentials found. Starting login flow...');
+      try {
+        const result = await login(client, { shouldParseArgs: false });
         if (result !== 0) return result;
       } catch (error) {
         printError(error);

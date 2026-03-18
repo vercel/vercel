@@ -417,6 +417,10 @@ export class RootTelemetryClient extends TelemetryClient {
     this.trackCI(CiInfo.id);
   }
 
+  trackStdinIsTTY(isTTY: boolean) {
+    super.trackStdinIsTTY(isTTY);
+  }
+
   trackVersion(version: string | undefined) {
     super.trackVersion(version);
   }

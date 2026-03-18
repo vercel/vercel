@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach } from 'vitest';
+import { describe, expect, it, beforeEach, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import routes from '../../../../src/commands/routes';
 import { useUser } from '../../../mocks/user';
@@ -43,6 +43,29 @@ describe('routes add', () => {
   });
 
   describe('non-interactive mode', () => {
+    it('non-interactive: --ai without description outputs clear message and next with placeholder', async () => {
+      useAddRoute();
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+      const exitSpy = vi
+        .spyOn(process, 'exit')
+        .mockImplementation((() => undefined) as never);
+      client.nonInteractive = true;
+      client.setArgv('routes', 'add', '--ai', '--yes', '--non-interactive');
+      await routes(client);
+      const payload = JSON.parse(logSpy.mock.calls[0][0] as string);
+      expect(payload.reason).toBe('invalid_arguments');
+      expect(payload.message).toContain('--ai requires');
+      expect(payload.message).toContain('<description>');
+      const nextCmd = payload.next?.[0]?.command ?? '';
+      expect(nextCmd).toContain('--ai');
+      expect(nextCmd).toContain('--yes');
+      expect(nextCmd).toContain('<description>');
+      expect(exitSpy).toHaveBeenCalledWith(1);
+      logSpy.mockRestore();
+      exitSpy.mockRestore();
+      client.nonInteractive = false;
+    });
+
     it('should add a basic rewrite route', async () => {
       useAddRoute();
 
