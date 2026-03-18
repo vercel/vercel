@@ -262,7 +262,6 @@ it('maps service internal function output without leading slash', async () => {
   })) as BuildResultV2Typical;
 
   const lambda = getServiceLambda(result, 'js-api');
-
   expect(
     result.routes?.some(route => route.dest === '/_svc/js-api/index')
   ).toBe(true);
@@ -291,7 +290,6 @@ it('prefixes emitted service route sources with routePrefix', async () => {
   })) as BuildResultV2Typical;
 
   const lambda = getServiceLambda(result, 'js-api');
-
   expect(result.routes).toEqual(
     expect.arrayContaining([
       expect.objectContaining({
@@ -330,7 +328,6 @@ it('does not double-prefix routes already authored with routePrefix', async () =
   })) as BuildResultV2Typical;
 
   const lambda = getServiceLambda(result, 'hono-api');
-
   expect(result.routes).toEqual(
     expect.arrayContaining([
       expect.objectContaining({
@@ -368,7 +365,6 @@ it('does not rewrite non-service route outputs', async () => {
   })) as BuildResultV2Typical;
 
   const lambda = result.output.index as unknown as NodejsLambda;
-
   expect(result.output['/user/:id']).toBeDefined();
   expect(result.output['_svc/js-api/index']).toBeUndefined();
   expect(lambda.handler).toBe('index.mjs');

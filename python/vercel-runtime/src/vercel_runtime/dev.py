@@ -18,6 +18,10 @@ from vercel_runtime.routing import (
     apply_service_route_prefix_to_asgi_scope,
     strip_service_route_prefix,
 )
+from vercel_runtime.workers import (
+    bootstrap_worker_service_app,
+    is_worker_service,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
@@ -355,8 +359,8 @@ def _start_wsgi(host: str, port: int) -> None:
 
 def _start_asgi(host: str, port: int) -> None:
     # Prefer user-installed fastapi-cli for web services;
-    # cron services go straight to uvicorn.
-    if not is_cron_service():
+    # cron/worker go straight to uvicorn.
+    if not is_cron_service() and not is_worker_service():
         try:
             from fastapi_cli.cli import (  # noqa: PLC0415  # pyright: ignore[reportMissingImports]
                 dev as fastapi_dev,  # pyright: ignore[reportUnknownVariableType]
@@ -396,6 +400,10 @@ def _setup_apps() -> None:
 
     if is_cron_service():
         _asgi_user_app = bootstrap_cron_service_app(mod)
+        return
+
+    if is_worker_service():
+        _asgi_user_app = cast("ASGI", bootstrap_worker_service_app(mod))
         return
 
     app_name, user_app = resolve_app(mod, module_name)

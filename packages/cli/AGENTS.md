@@ -75,6 +75,8 @@ The entry point resolves subcommands with `getSubcommand`, displays help for `--
 
 ## Interactive Prompts vs Flags
 
+For **structured JSON on stdout**, **`next[]` suggestions with global flags**, and **`--non-interactive`** conventions, see **`docs/non-interactive-mode.md`**.
+
 Commands should support both interactive (TTY) and non-interactive (CI/scripts) usage. Flags always take priority over interactive prompts.
 
 ### Flag-based flow (non-interactive)
