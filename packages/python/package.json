@@ -16,6 +16,7 @@
   },
   "scripts": {
     "build": "node ../../utils/build-builder.mjs",
+    "type-check": "tsc --noEmit",
     "test": "cross-env VERCEL_FORCE_PYTHON_STREAMING=1 jest --reporters=default --reporters=jest-junit --env node --verbose --runInBand --bail",
     "test-unit": "vitest run --config ../../vitest.config.mts test/unit.test.ts",
     "test-e2e": "pnpm test test/integration-*",
