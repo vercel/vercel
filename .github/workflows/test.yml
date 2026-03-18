@@ -297,7 +297,7 @@ jobs:
       - setup
     strategy:
       fail-fast: false
-      max-parallel: 6
+      max-parallel: 100
       matrix:
         include: ${{ fromJson(needs.setup.outputs['tests']) }}
     steps:
