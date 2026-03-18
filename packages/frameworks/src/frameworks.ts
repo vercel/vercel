@@ -4284,7 +4284,6 @@ export const frameworks = [
   {
     name: 'Node',
     slug: 'node',
-    experimental: true,
     runtimeFramework: true,
     logo: 'https://api-frameworks.vercel.sh/framework-logos/node.svg',
     tagline:
@@ -4292,15 +4291,50 @@ export const frameworks = [
     description:
       'A generic Node.js application deployed as a serverless function.',
     website: 'https://nodejs.org',
-    useRuntime: { src: 'server.ts', use: '@vercel/backends' },
+    useRuntime: { src: 'package.json', use: '@vercel/backends' },
     ignoreRuntimes: ['@vercel/node'],
     detectors: {
       every: [
         {
+          path: 'package.json',
+        },
+      ],
+      some: [
+        {
+          path: 'server.cjs',
+        },
+        {
+          path: 'server.js',
+        },
+        {
+          path: 'server.mjs',
+        },
+        {
+          path: 'server.mts',
+        },
+        {
           path: 'server.ts',
         },
         {
-          path: 'package.json',
+          path: 'server.cts',
+        },
+        {
+          path: 'src/server.cjs',
+        },
+        {
+          path: 'src/server.js',
+        },
+        {
+          path: 'src/server.mjs',
+        },
+        {
+          path: 'src/server.mts',
+        },
+        {
+          path: 'src/server.ts',
+        },
+        {
+          path: 'src/server.cts',
         },
       ],
     },
@@ -4314,7 +4348,8 @@ export const frameworks = [
         value: null,
       },
       devCommand: {
-        placeholder: '`npm run dev` or `npx ts-node server.ts`',
+        placeholder:
+          '`npm run dev`, `node server.js`, or `npx ts-node server.ts`',
         value: null,
       },
       outputDirectory: {

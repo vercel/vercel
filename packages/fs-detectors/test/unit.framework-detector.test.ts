@@ -244,6 +244,34 @@ describe('detectFramework()', () => {
     expect(await detectFramework({ fs, frameworkList })).toBe('nextjs');
   });
 
+  it.each([
+    'server.cjs',
+    'server.js',
+    'server.mjs',
+    'server.mts',
+    'server.ts',
+    'server.cts',
+    'src/server.cjs',
+    'src/server.js',
+    'src/server.mjs',
+    'src/server.mts',
+    'src/server.ts',
+    'src/server.cts',
+  ])('Detect experimental Node via `%s`', async entrypoint => {
+    const fs = new VirtualFilesystem({
+      'package.json': JSON.stringify({}),
+      [entrypoint]: '// server entrypoint',
+    });
+
+    expect(
+      await detectFramework({
+        fs,
+        frameworkList,
+        useExperimentalFrameworks: true,
+      })
+    ).toBe('node');
+  });
+
   it('Detect frameworks based on ascending order in framework list', async () => {
     const fs = new VirtualFilesystem({
       'package.json': JSON.stringify({
