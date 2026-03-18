@@ -1,40 +1,15 @@
 import type Client from '../../util/client';
 import type { Command } from '../help';
-import type { MetadataSchema } from '../../util/integration/types';
 import output from '../../output-manager';
 import { fetchIntegration } from '../../util/integration/fetch-integration';
 import { formatProductHelp } from '../../util/integration/format-product-help';
 import { formatBillingPlansHelp } from '../../util/integration/format-billing-plans-help';
 import { formatDynamicExamples } from '../../util/integration/format-dynamic-examples';
-import { formatMetadataSchemaHelp } from '../../util/integration/format-schema-help';
+import {
+  formatMetadataSchemaHelp,
+  mergeMetadataSchemas,
+} from '../../util/integration/format-schema-help';
 import { fetchBillingPlans } from '../../util/integration/fetch-billing-plans';
-
-/**
- * Merges integration-level metadata schema (e.g. org name, region) with
- * product-level metadata schema (e.g. platform) into a single schema.
- * Installation-level fields appear first, followed by product-level fields.
- */
-function mergeMetadataSchemas(
-  productSchema?: MetadataSchema,
-  integrationSchema?: MetadataSchema
-): MetadataSchema | undefined {
-  if (!productSchema && !integrationSchema) return undefined;
-  if (!integrationSchema) return productSchema;
-  if (!productSchema) return integrationSchema;
-  return {
-    type: 'object',
-    properties: {
-      ...integrationSchema.properties,
-      ...productSchema.properties,
-    },
-    required: [
-      ...new Set([
-        ...(integrationSchema.required ?? []),
-        ...(productSchema.required ?? []),
-      ]),
-    ],
-  };
-}
 
 /**
  * Prints dynamic, integration-specific help for the `integration add` / `install` command.

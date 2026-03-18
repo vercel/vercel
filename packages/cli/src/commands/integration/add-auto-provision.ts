@@ -16,7 +16,6 @@ import type {
   AutoProvisionedResponse,
   AutoProvisionFallback,
   AutoProvisionResult,
-  MetadataSchema,
 } from '../../util/integration/types';
 import { buildSSOLink } from '../../util/integration/build-sso-link';
 import { resolveResourceName } from '../../util/integration/generate-resource-name';
@@ -34,6 +33,7 @@ import {
 import {
   isServerHandledRegion,
   getVisibleOptions,
+  mergeMetadataSchemas,
 } from '../../util/integration/format-schema-help';
 import type { Metadata } from '../../util/integration/types';
 
@@ -211,19 +211,17 @@ export async function addAutoProvision(
   // partner uses the same key name in both schemas.
   const integrationSchemaProps = integration.metadataSchema?.properties ?? {};
   const productSchemaProps = product.metadataSchema.properties;
-  const mergedParsingSchema: MetadataSchema = {
-    type: 'object',
-    properties: {
-      ...integrationSchemaProps,
-      ...productSchemaProps,
-    },
-    required: [
-      ...new Set([
-        ...(integration.metadataSchema?.required ?? []),
-        ...(product.metadataSchema.required ?? []),
-      ]),
-    ],
-  };
+  const mergedParsingSchema = mergeMetadataSchemas(
+    product.metadataSchema,
+    integration.metadataSchema
+  ) ?? product.metadataSchema;
+  for (const key of Object.keys(integrationSchemaProps)) {
+    if (key in productSchemaProps) {
+      output.debug(
+        `Metadata key "${key}" exists in both product and installation schemas — product definition wins`
+      );
+    }
+  }
   let metadata: Metadata;
   let installationMetadata: Metadata = {};
   if (options.metadata?.length) {
