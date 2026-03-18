@@ -1,4 +1,17 @@
-import type { Aggregation } from '@vercel/o11y-tools/query-engine/types';
+export type Aggregation =
+  | 'sum'
+  | 'persecond'
+  | 'percent'
+  | 'unique'
+  | 'avg'
+  | 'min'
+  | 'max'
+  | 'p50'
+  | 'p75'
+  | 'p90'
+  | 'p95'
+  | 'p99'
+  | 'stddev';
 
 export interface ProjectScope {
   type: 'project';

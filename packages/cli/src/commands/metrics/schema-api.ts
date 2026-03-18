@@ -1,8 +1,8 @@
 import type Client from '../../util/client';
-import type { Aggregation } from '@vercel/o11y-tools/query-engine/types';
 import output from '../../output-manager';
 import { isAPIError } from '../../util/errors-ts';
 import { formatErrorJson } from './output';
+import type { Aggregation } from './types';
 
 export interface DimensionSchema {
   name: string;

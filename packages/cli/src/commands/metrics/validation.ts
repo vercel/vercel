@@ -1,5 +1,4 @@
 import type { ValidationResult, ValidatedResult } from './types';
-import type { Aggregation } from '@vercel/o11y-tools/query-engine/types';
 import type { Schema } from './schema-api';
 import { validateAllProjectMutualExclusivity } from '../../util/command-validation';
 import {
@@ -9,6 +8,7 @@ import {
   getAggregations,
   getDimensions,
 } from './schema-api';
+import type { Aggregation } from './types';
 
 export function validateEvent(schema: Schema, event: string): ValidationResult {
   if (getEvent(schema, event)) {
