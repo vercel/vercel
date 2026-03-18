@@ -892,10 +892,12 @@ async function doBuild(
         rawBuildResult = await builderSpan.trace<
           BuildResultV2 | BuildResultV3 | BuildResultVX
         >(async () => builder.build(buildOptions));
-        buildResult =
-          builder.version === -1
-            ? (rawBuildResult as BuildResultVX).result
-            : (rawBuildResult as BuildResultV2 | BuildResultV3);
+        if (builder.version === -1) {
+          const vx = rawBuildResult as BuildResultVX;
+          buildResult = vx.result;
+        } else {
+          buildResult = rawBuildResult as BuildResultV2 | BuildResultV3;
+        }
 
         // If the build result has no routes and the framework has default routes,
         // then add the default routes to the build result

@@ -623,10 +623,9 @@ export interface BuildResultV2Typical {
   deploymentId?: string;
 }
 
-export interface BuildResultVX {
-  resultVersion: 2 | 3;
-  result: BuildResultV2 | BuildResultV3;
-}
+export type BuildResultVX =
+  | { resultVersion: 2; result: BuildResultV2 }
+  | { resultVersion: 3; result: BuildResultV3 };
 
 export type BuildResultV2 = BuildResultV2Typical | BuildResultBuildOutput;
 

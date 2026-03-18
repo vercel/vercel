@@ -88,14 +88,16 @@ export async function writeBuildResult(args: {
     service,
     stripServiceRoutePrefix = false,
   } = args;
-  const version =
-    builder.version === -1
-      ? (buildResult as BuildResultVX).resultVersion
-      : builder.version;
-  const actualResult =
-    builder.version === -1
-      ? (buildResult as BuildResultVX).result
-      : (buildResult as BuildResultV2 | BuildResultV3);
+  let version: number;
+  let actualResult: BuildResultV2 | BuildResultV3;
+  if (builder.version === -1) {
+    const vx = buildResult as BuildResultVX;
+    version = vx.resultVersion;
+    actualResult = vx.result;
+  } else {
+    version = builder.version;
+    actualResult = buildResult as BuildResultV2 | BuildResultV3;
+  }
 
   if (typeof version !== 'number' || version === 2) {
     return writeBuildResultV2({
