@@ -19,6 +19,9 @@ import {
   realpath,
 } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
+import type { IncomingMessage } from 'node:http';
+import { Server as HttpServer } from 'node:http';
+import { createServerlessEventHandler } from '../../node/src/serverless-functions/serverless-handler.mts';
 
 const meta = { skipDownload: true };
 const defaultConfig = {
@@ -80,6 +83,9 @@ const USE_DEBUG_DIR = false;
 process.env.VERCEL_BUILDER_DEBUG = '0';
 
 const DEBUG_DIR = join(__dirname, 'debug');
+const SERVICE_ROUTE_PREFIX_PATCH = Symbol.for(
+  'vc.service.route-prefix-strip.patch'
+);
 
 const getWorkDir = async (fixtureName: string, fixtureSource: string) => {
   // Always copy source to a random tmp dir
@@ -255,11 +261,14 @@ it('maps service internal function output without leading slash', async () => {
     repoRootPath: workDir,
   })) as BuildResultV2Typical;
 
+  const lambda = getServiceLambda(result, 'js-api');
   expect(
     result.routes?.some(route => route.dest === '/_svc/js-api/index')
   ).toBe(true);
+  expect(result.output.index).toBeUndefined();
   expect(result.output['_svc/js-api/index']).toBeDefined();
   expect(result.output['/_svc/js-api/index']).toBeUndefined();
+  expect(lambda.handler).toBe('index.mjs');
 }, 30000);
 
 it('prefixes emitted service route sources with routePrefix', async () => {
@@ -280,6 +289,7 @@ it('prefixes emitted service route sources with routePrefix', async () => {
     repoRootPath: workDir,
   })) as BuildResultV2Typical;
 
+  const lambda = getServiceLambda(result, 'js-api');
   expect(result.routes).toEqual(
     expect.arrayContaining([
       expect.objectContaining({
@@ -293,6 +303,10 @@ it('prefixes emitted service route sources with routePrefix', async () => {
       }),
     ])
   );
+  expect(result.output.index).toBeUndefined();
+  expect(lambda.handler).toContain('__vc_service_vc_init');
+  expect(lambda.environment.VERCEL_SERVICE_ROUTE_PREFIX).toBe('/api/js');
+  expect(lambda.environment.VERCEL_SERVICE_ROUTE_PREFIX_STRIP).toBe('1');
 }, 30000);
 
 it('does not double-prefix routes already authored with routePrefix', async () => {
@@ -313,6 +327,7 @@ it('does not double-prefix routes already authored with routePrefix', async () =
     repoRootPath: workDir,
   })) as BuildResultV2Typical;
 
+  const lambda = getServiceLambda(result, 'hono-api');
   expect(result.routes).toEqual(
     expect.arrayContaining([
       expect.objectContaining({
@@ -331,6 +346,8 @@ it('does not double-prefix routes already authored with routePrefix', async () =
       }),
     ])
   );
+  expect(result.output.index).toBeUndefined();
+  expect(lambda.handler).toContain('__vc_service_vc_init');
 }, 30000);
 
 it('does not rewrite non-service route outputs', async () => {
@@ -347,8 +364,76 @@ it('does not rewrite non-service route outputs', async () => {
     repoRootPath: workDir,
   })) as BuildResultV2Typical;
 
+  const lambda = result.output.index as unknown as NodejsLambda;
   expect(result.output['/user/:id']).toBeDefined();
   expect(result.output['_svc/js-api/index']).toBeUndefined();
+  expect(lambda.handler).toBe('index.mjs');
+}, 30000);
+
+it('strips service route prefixes for express apps at runtime', async () => {
+  const fixtureName = '01-express-index-ts-esm';
+  const fixtureSource = join(__dirname, 'fixtures', fixtureName);
+  const { workDir, lambdaOutputDir } = await getWorkDir(
+    fixtureName,
+    fixtureSource
+  );
+
+  const result = (await build({
+    files: {},
+    workPath: workDir,
+    config: {
+      ...defaultConfig,
+      routePrefix: 'api/js',
+      serviceName: 'js-api',
+    },
+    meta,
+    entrypoint: 'package.json',
+    repoRootPath: workDir,
+  })) as BuildResultV2Typical;
+
+  const lambda = getServiceLambda(result, 'js-api');
+  const response = await requestBuiltLambda({
+    lambda,
+    dir: lambdaOutputDir,
+    path: '/api/js/user/123',
+    routePrefix: '/api/js',
+  });
+
+  expect(response.status).toBe(200);
+  expect(readLambdaResponseBody(response)).toBe('Hello World');
+}, 30000);
+
+it('strips service route prefixes for hono apps at runtime', async () => {
+  const fixtureName = '04-hono-index-ts-esm';
+  const fixtureSource = join(__dirname, 'fixtures', fixtureName);
+  const { workDir, lambdaOutputDir } = await getWorkDir(
+    fixtureName,
+    fixtureSource
+  );
+
+  const result = (await build({
+    files: {},
+    workPath: workDir,
+    config: {
+      ...defaultConfig,
+      routePrefix: 'api',
+      serviceName: 'hono-api',
+    },
+    meta,
+    entrypoint: 'package.json',
+    repoRootPath: workDir,
+  })) as BuildResultV2Typical;
+
+  const lambda = getServiceLambda(result, 'hono-api');
+  const response = await requestBuiltLambda({
+    lambda,
+    dir: lambdaOutputDir,
+    path: '/api/user/123',
+    routePrefix: '/api',
+  });
+
+  expect(response.status).toBe(200);
+  expect(readLambdaResponseBody(response)).toBe('User ID: 123');
 }, 30000);
 
 const extractAndExecuteLambda = async (
@@ -356,18 +441,11 @@ const extractAndExecuteLambda = async (
   dir: string,
   extractDirectly = false
 ) => {
-  const out = await lambda.createZip();
-  const lambdaZipPath = join(dir, 'lambda.zip');
-  await writeFile(lambdaZipPath, new Uint8Array(out));
-
-  // When extractDirectly is true, extract to dir directly (for debug output)
-  // Otherwise, extract to dir/lambda subfolder
-  const unzipPath = extractDirectly ? dir : join(dir, 'lambda');
-  await execa('unzip', ['-o', lambdaZipPath, '-d', unzipPath], {
-    stdio: 'ignore',
-  });
-
-  const handlerPath = join(unzipPath, lambda.handler);
+  const { handlerPath, unzipPath } = await extractLambda(
+    lambda,
+    dir,
+    extractDirectly
+  );
 
   // Wrap in a Promise to properly wait for the process to exit
   await new Promise<void>((resolve, reject) => {
@@ -434,4 +512,92 @@ const extractAndExecuteLambda = async (
       settle(() => resolve());
     }, 2000);
   });
+};
+
+const extractLambda = async (
+  lambda: NodejsLambda,
+  dir: string,
+  extractDirectly = false
+) => {
+  const out = await lambda.createZip();
+  const lambdaZipPath = join(dir, 'lambda.zip');
+  await writeFile(lambdaZipPath, new Uint8Array(out));
+
+  // When extractDirectly is true, extract to dir directly (for debug output)
+  // Otherwise, extract to dir/lambda subfolder
+  const unzipPath = extractDirectly ? dir : join(dir, 'lambda');
+  await execa('unzip', ['-o', lambdaZipPath, '-d', unzipPath], {
+    stdio: 'ignore',
+  });
+
+  return {
+    unzipPath,
+    handlerPath: join(unzipPath, lambda.handler),
+  };
+};
+
+const getServiceLambda = (result: BuildResultV2Typical, serviceName: string) =>
+  result.output[`_svc/${serviceName}/index`] as unknown as NodejsLambda;
+
+const requestBuiltLambda = async (args: {
+  lambda: NodejsLambda;
+  dir: string;
+  path: string;
+  routePrefix: string;
+}) => {
+  const { handlerPath } = await extractLambda(args.lambda, args.dir);
+  const originalEmit = HttpServer.prototype.emit;
+  const originalRoutePrefix = process.env.VERCEL_SERVICE_ROUTE_PREFIX;
+  const originalStrip = process.env.VERCEL_SERVICE_ROUTE_PREFIX_STRIP;
+
+  process.env.VERCEL_SERVICE_ROUTE_PREFIX = args.routePrefix;
+  process.env.VERCEL_SERVICE_ROUTE_PREFIX_STRIP = '1';
+
+  try {
+    const { handler, onExit } = await createServerlessEventHandler(
+      handlerPath,
+      {
+        mode: 'buffer',
+        shouldAddHelpers: false,
+      }
+    );
+
+    try {
+      return await handler({
+        method: 'GET',
+        url: args.path,
+        headers: {
+          host: 'example.com',
+          'x-forwarded-host': 'example.com',
+        },
+      } as unknown as IncomingMessage);
+    } finally {
+      await onExit();
+    }
+  } finally {
+    HttpServer.prototype.emit = originalEmit;
+    delete (globalThis as any)[SERVICE_ROUTE_PREFIX_PATCH];
+    restoreEnvVar('VERCEL_SERVICE_ROUTE_PREFIX', originalRoutePrefix);
+    restoreEnvVar('VERCEL_SERVICE_ROUTE_PREFIX_STRIP', originalStrip);
+  }
+};
+
+const readLambdaResponseBody = (
+  response: Awaited<ReturnType<typeof requestBuiltLambda>>
+) => {
+  if (response.body === null) {
+    return '';
+  }
+
+  return Buffer.isBuffer(response.body)
+    ? response.body.toString(response.encoding)
+    : '';
+};
+
+const restoreEnvVar = (name: string, value: string | undefined) => {
+  if (typeof value === 'string') {
+    process.env[name] = value;
+  } else {
+    delete process.env[name];
+  }
 };
