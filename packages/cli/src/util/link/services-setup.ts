@@ -1,3 +1,4 @@
+import { normalizePath } from '@vercel/build-utils';
 import { join, relative } from 'path';
 import {
   detectServices,
@@ -89,7 +90,7 @@ export function toProjectRootDirectory(
   projectPath: string,
   selectedPath: string
 ): string | null {
-  const rootDirectory = relative(projectPath, selectedPath);
+  const rootDirectory = normalizePath(relative(projectPath, selectedPath));
   return rootDirectory === '' ? null : rootDirectory;
 }
 
