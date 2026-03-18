@@ -31,6 +31,10 @@ import {
   parseMetadataFlags,
   validateAndPrintRequiredMetadata,
 } from '../../util/integration/parse-metadata';
+import {
+  isServerHandledRegion,
+  getVisibleOptions,
+} from '../../util/integration/format-schema-help';
 import type { Metadata } from '../../util/integration/types';
 
 export interface AddAutoProvisionOptions extends PostProvisionOptions {
@@ -391,7 +395,32 @@ export async function addAutoProvision(
       return projectLink.exitCode;
     }
 
-    output.log('Additional setup required. Opening browser...');
+    // Check for missing required metadata to give an actionable message
+    const missingRequired = (mergedParsingSchema.required ?? []).filter(key => {
+      if (key in metadata || key in installationMetadata) return false;
+      const prop = mergedParsingSchema.properties[key];
+      return prop && !isServerHandledRegion(prop);
+    });
+
+    if (missingRequired.length > 0) {
+      const examples = missingRequired.map(key => {
+        const prop = mergedParsingSchema.properties[key];
+        const options = prop ? getVisibleOptions(prop) : undefined;
+        const exampleVal = options?.[0] ?? '<value>';
+        return `-m ${key}=${exampleVal}`;
+      });
+      output.log(
+        `Missing required metadata: ${missingRequired.join(', ')}. Opening browser to complete setup...`
+      );
+      output.log(
+        `  Tip: Provide ${examples.join(' ')} to provision directly from the CLI.`
+      );
+      output.log(
+        `  Run \`vercel ${commandName} ${integrationSlug} --help\` for all metadata options.`
+      );
+    } else {
+      output.log('Additional setup required. Opening browser...');
+    }
     const url = new URL(fallback.url);
     url.searchParams.set('defaultResourceName', resourceName);
     url.searchParams.set('source', 'cli');
