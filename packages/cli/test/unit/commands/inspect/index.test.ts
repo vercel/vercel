@@ -310,6 +310,36 @@ describe('inspect', () => {
       );
     });
 
+    it('should resolve deployment from alias URL', async () => {
+      const user = useUser();
+      const deployment = useDeployment({ creator: user });
+      // Set an alias that's different from the deployment URL
+      const aliasHostname = 'my-custom-alias.vercel.app';
+      deployment.alias = [aliasHostname];
+
+      client.setArgv('inspect', `https://${aliasHostname}/`);
+      const exitCode = await inspect(client);
+      expect(exitCode).toEqual(0);
+      await expect(client.stderr).toOutput(
+        `> Fetched deployment "${deployment.url}" in ${user.username}`
+      );
+    });
+
+    it('should resolve deployment from alias without scheme', async () => {
+      const user = useUser();
+      const deployment = useDeployment({ creator: user });
+      // Set an alias that's different from the deployment URL
+      const aliasHostname = 'another-alias.vercel.app';
+      deployment.alias = [aliasHostname];
+
+      client.setArgv('inspect', aliasHostname);
+      const exitCode = await inspect(client);
+      expect(exitCode).toEqual(0);
+      await expect(client.stderr).toOutput(
+        `> Fetched deployment "${deployment.url}" in ${user.username}`
+      );
+    });
+
     it('should print error when deployment not found', async () => {
       const user = useUser();
       useDeployment({ creator: user });

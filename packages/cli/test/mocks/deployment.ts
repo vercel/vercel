@@ -141,11 +141,12 @@ function setupDeploymentEndpoints(): void {
         return res.json({ error: { code: 'bad_request' } });
       }
       deployment = Array.from(deployments.values()).find(d => {
-        return d.url === url;
+        return d.url === url || d.alias?.includes(url);
       });
     } else if (id.includes('.')) {
+      // Look up by hostname - check both url and aliases
       deployment = Array.from(deployments.values()).find(d => {
-        return d.url === id;
+        return d.url === id || d.alias?.includes(id);
       });
     } else {
       // lookup by ID
