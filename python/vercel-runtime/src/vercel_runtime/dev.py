@@ -439,7 +439,7 @@ def _wrap_django_static(app: WSGIApplication) -> WSGIApplication:
     # - If django-storages is used, this will override it but that's ok because
     #   django-storages handles its own upload to some other CDN.
     try:
-        from django.contrib.staticfiles.handlers import (  # type: ignore[import-untyped]  # noqa: PLC0415  # pyright: ignore[reportMissingImports]
+        from django.contrib.staticfiles.handlers import (  # noqa: PLC0415  # pyright: ignore[reportMissingImports, reportMissingTypeStubs]
             StaticFilesHandler,  # pyright: ignore[reportUnknownVariableType]
         )
 

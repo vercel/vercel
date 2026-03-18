@@ -54,6 +54,10 @@ ignore_errors = true
 module = ["tests.fixtures.*"]
 ignore_errors = true
 
+[[tool.mypy.overrides]]
+module = ["django.contrib.staticfiles.handlers"]
+ignore_missing_imports = true
+
 [tool.basedpyright]
 pythonVersion = "3.12"
 typeCheckingMode = "strict"
