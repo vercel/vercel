@@ -20,7 +20,7 @@
   },
   "dependencies": {
     "@iarna/toml": "2.2.3",
-    "js-yaml": "3.13.1",
+    "js-yaml": "3.14.2",
     "@vercel/error-utils": "workspace:*"
   },
   "devDependencies": {
