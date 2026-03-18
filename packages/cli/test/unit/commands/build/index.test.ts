@@ -2153,4 +2153,19 @@ fs.writeFileSync(
       expect(exitCode).toEqual(0);
     });
   });
+
+  it('should allow services to share the same builder source', async () => {
+    const cwd = fixture('with-services-shared-source');
+    const output = join(cwd, '.vercel', 'output');
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toBe(0);
+
+    const config = await fs.readJSON(join(output, 'config.json'));
+    expect(config.services).toHaveLength(2);
+    expect(config.services.map((s: any) => s.name).sort()).toEqual([
+      'worker-topic1',
+      'worker-topic2',
+    ]);
+  });
 });

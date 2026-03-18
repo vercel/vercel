@@ -1,0 +1,23 @@
+{
+  "uploadNowJson": true,
+  "projectSettings": {
+    "framework": "services"
+  },
+  "experimentalServices": {
+    "web": {
+      "framework": "flask",
+      "entrypoint": "app.py",
+      "routePrefix": "/"
+    },
+    "worker-emails": {
+      "type": "worker",
+      "entrypoint": "worker/run.py",
+      "topic": "emails"
+    },
+    "worker-reports": {
+      "type": "worker",
+      "entrypoint": "worker/run.py",
+      "topic": "reports"
+    }
+  }
+}
