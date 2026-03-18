@@ -1110,7 +1110,7 @@ describe.skipIf(flakey)('build', () => {
     ]);
   });
 
-  it('should include cron services in build output crons', async () => {
+  it('should include cron services in build output crons without the services framework setting', async () => {
     const cwd = fixture('with-services-cron');
     const output = join(cwd, '.vercel', 'output');
     client.cwd = cwd;
@@ -1120,12 +1120,12 @@ describe.skipIf(flakey)('build', () => {
     const config = await fs.readJSON(join(output, 'config.json'));
     expect(config).toHaveProperty('crons', [
       {
-        path: '/_svc/cleanup/crons/api/cron/cron',
+        path: '/_svc/cleanup/crons/index/cron',
         schedule: '0 0 * * *',
       },
     ]);
     expect(config.routes).toContainEqual({
-      src: '^/_svc/cleanup/crons/api/cron/cron$',
+      src: '^/_svc/cleanup/crons/index/cron$',
       dest: '/_svc/cleanup/index',
       check: true,
     });

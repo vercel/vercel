@@ -55,6 +55,9 @@ class TransportConfig:
     visibility_timeout_seconds: int = 30
     visibility_refresh_interval_seconds: float = 10.0
 
+    # Use custom JSON encoder class to send data
+    json_encoder: type[json.JSONEncoder] | None = None
+
     @classmethod
     def from_transport_options(cls, options: dict[str, Any]) -> TransportConfig:
         """
@@ -72,6 +75,7 @@ class TransportConfig:
                 "include_raw_message": False,
                 "visibility_timeout_seconds": 30,
                 "visibility_refresh_interval_seconds": 10.0,
+                "json_encoder": CustomJSONEncoder,
             }
         """
 
@@ -119,6 +123,10 @@ class TransportConfig:
         refresh_interval = options.get("visibility_refresh_interval_seconds")
         if isinstance(refresh_interval, (int, float)):
             cfg.visibility_refresh_interval_seconds = float(refresh_interval)
+
+        json_encoder = options.get("json_encoder")
+        if isinstance(json_encoder, type) and issubclass(json_encoder, json.JSONEncoder):
+            cfg.json_encoder = json_encoder
 
         return cfg
 
@@ -179,6 +187,7 @@ class Channel(virtual.Channel):
             base_url=self._cfg.base_url,
             base_path=self._cfg.base_path,
             timeout=self._cfg.timeout,
+            json_encoder=self._cfg.json_encoder,
         )
 
     def _get(self, queue: str, timeout: float | None = None) -> dict[str, Any]:

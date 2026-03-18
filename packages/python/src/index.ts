@@ -1,5 +1,5 @@
 import fs from 'fs';
-import { join, dirname, basename, parse } from 'path';
+import { join, dirname, basename, parse, relative } from 'path';
 import {
   VERCEL_RUNTIME_VERSION,
   VERCEL_WORKERS_VERSION,
@@ -25,7 +25,6 @@ import {
   type ShouldServe,
   FileFsRef,
   PythonFramework,
-  type PrepareCache,
 } from '@vercel/build-utils';
 import {
   discoverPackage,
@@ -35,12 +34,17 @@ import {
   installRequirement,
 } from './install';
 import { PythonDependencyExternalizer } from './dependency-externalizer';
-import { UvRunner, getUvBinaryOrInstall, getUvCacheDir } from './uv';
+import { UvRunner, getUvBinaryOrInstall } from './uv';
 import { resolvePythonVersion, pythonVersionString } from './version';
+import { generateProjectManifest } from './diagnostics';
 import { startDevServer } from './start-dev-server';
 import { runPyprojectScript, ensureVenv, createVenvEnv } from './utils';
 import { runQuirks } from './quirks';
-import { getDjangoSettings } from './django';
+import {
+  getDjangoSettings,
+  runDjangoCollectStatic,
+  type DjangoCollectStaticResult,
+} from './django';
 import { containsTopLevelCallable } from '@vercel/python-analysis';
 
 const writeFile = fs.promises.writeFile;
@@ -56,12 +60,19 @@ export const version = 3;
 interface FrameworkHookContext {
   pythonEnv: NodeJS.ProcessEnv;
   projectDir: string;
+  workPath?: string;
+  venvPath?: string;
   entrypoint: string;
   detected: DetectedPythonEntrypoint | undefined;
 }
 
 interface FrameworkHookResult {
   entrypoint?: string;
+  variableName?: string;
+}
+
+interface DjangoFrameworkHookResult extends FrameworkHookResult {
+  djangoStatic: DjangoCollectStaticResult | null;
 }
 
 type FrameworkHook = (
@@ -69,7 +80,7 @@ type FrameworkHook = (
 ) => Promise<FrameworkHookResult | void>;
 
 export async function runFrameworkHook(
-  framework: string | undefined,
+  framework: string | null | undefined,
   ctx: FrameworkHookContext
 ): Promise<FrameworkHookResult | void> {
   const hook = framework
@@ -79,30 +90,60 @@ export async function runFrameworkHook(
 }
 
 const frameworkHooks: Partial<Record<PythonFramework, FrameworkHook>> = {
-  django: async ({ pythonEnv, projectDir, detected }) => {
+  django: async ({
+    pythonEnv,
+    projectDir,
+    workPath,
+    venvPath,
+    detected,
+  }): Promise<DjangoFrameworkHookResult | void> => {
     if (detected?.baseDir === undefined) {
       debug('Django hook: no manage.py detected, skipping');
       return;
     }
-    const settings = await getDjangoSettings(projectDir, pythonEnv);
-    debug(`Django settings: ${JSON.stringify(settings)}`);
-    if (!settings) return;
+    const settingsResult = await getDjangoSettings(projectDir, pythonEnv);
+    debug(`Django settings: ${JSON.stringify(settingsResult)}`);
+    if (!settingsResult) return;
+    const { djangoSettings, settingsModule } = settingsResult;
 
+    let entrypoint: string | undefined;
+    let variableName: string | undefined;
     const baseDir = detected?.baseDir ?? '';
-    const asgiApp = settings['ASGI_APPLICATION'];
+    const asgiApp = djangoSettings['ASGI_APPLICATION'];
     if (typeof asgiApp === 'string') {
-      const rel = `${asgiApp.split('.').slice(0, -1).join('/')}.py`;
-      const entrypoint = baseDir ? `${baseDir}/${rel}` : rel;
-      debug(`Django hook: ASGI entrypoint: ${entrypoint}`);
-      return { entrypoint };
+      const parts = asgiApp.split('.');
+      variableName = parts.at(-1);
+      const rel = `${parts.slice(0, -1).join('/')}.py`;
+      entrypoint = baseDir ? `${baseDir}/${rel}` : rel;
+      debug(
+        `Django hook: ASGI entrypoint: ${entrypoint} (variable: ${variableName})`
+      );
+    } else {
+      const wsgiApp = djangoSettings['WSGI_APPLICATION'];
+      if (typeof wsgiApp === 'string') {
+        const parts = wsgiApp.split('.');
+        variableName = parts.at(-1);
+        const rel = `${parts.slice(0, -1).join('/')}.py`;
+        entrypoint = baseDir ? `${baseDir}/${rel}` : rel;
+        debug(
+          `Django hook: WSGI entrypoint: ${entrypoint} (variable: ${variableName})`
+        );
+      }
     }
-    const wsgiApp = settings['WSGI_APPLICATION'];
-    if (typeof wsgiApp === 'string') {
-      const rel = `${wsgiApp.split('.').slice(0, -1).join('/')}.py`;
-      const entrypoint = baseDir ? `${baseDir}/${rel}` : rel;
-      debug(`Django hook: WSGI entrypoint: ${entrypoint}`);
-      return { entrypoint };
+
+    let djangoStatic: DjangoCollectStaticResult | null = null;
+    if (workPath && venvPath) {
+      const outputStaticDir = join(workPath, '.vercel', 'output', 'static');
+      djangoStatic = await runDjangoCollectStatic(
+        venvPath,
+        workPath,
+        pythonEnv,
+        outputStaticDir,
+        settingsModule,
+        djangoSettings
+      );
     }
+    return { entrypoint, variableName, djangoStatic };
   },
 };
 
@@ -251,12 +292,10 @@ export const build: BuildV3 = async ({
   // Create a virtual environment under ".vercel/python/.venv" so dependencies
   // can be installed via `uv sync` and then vendored into the Lambda bundle.
   const venvPath = join(workPath, '.vercel', 'python', '.venv');
-  const uvCacheDir = getUvCacheDir(workPath);
   await builderSpan.child('vc.builder.python.venv').trace(async () => {
     await ensureVenv({
       pythonPath: pythonVersion.pythonPath,
       venvPath,
-      uvCacheDir,
     });
   });
 
@@ -289,7 +328,7 @@ export const build: BuildV3 = async ({
   }
 
   const baseEnv = spawnEnv || process.env;
-  const pythonEnv = createVenvEnv(venvPath, baseEnv, uvCacheDir);
+  const pythonEnv = createVenvEnv(venvPath, baseEnv);
 
   pythonEnv.VERCEL_PYTHON_VENV_PATH = venvPath;
 
@@ -302,7 +341,7 @@ export const build: BuildV3 = async ({
   try {
     const uvPath = await getUvBinaryOrInstall(pythonVersion.pythonPath);
     console.log(`Using uv at "${uvPath}"`);
-    uv = new UvRunner(uvPath, uvCacheDir);
+    uv = new UvRunner(uvPath);
   } catch (err) {
     console.log('Failed to install or locate uv');
     throw new Error(
@@ -316,7 +355,6 @@ export const build: BuildV3 = async ({
   let uvLockPath: string | null = null;
   let uvProjectDir: string | null = null;
   let projectName: string | undefined;
-  let noBuildCheckFailed = false;
 
   await builderSpan
     .child(BUILDER_INSTALLER_STEP, {
@@ -369,29 +407,6 @@ export const build: BuildV3 = async ({
         // Get the project name from the already-discovered package info
         projectName = pythonPackage?.manifest?.data?.project?.name;
 
-        // For user-provided lock files, check if all packages have binary wheels
-        // available BEFORE running the actual sync. We track this result so we can
-        // error later if runtime dependency installation is needed (which requires
-        // all public packages to have pre-built wheels).
-        if (lockFileProvidedByUser) {
-          try {
-            await uv.sync({
-              venvPath,
-              projectDir,
-              frozen: true,
-              noBuild: true,
-              noInstallProject: true,
-            });
-          } catch (err) {
-            // Note the failure but don't error yet - we only need wheels
-            // if runtime dependency install is required (bundle > 250MB)
-            noBuildCheckFailed = true;
-            debug(
-              `--no-build check failed: ${err instanceof Error ? err.message : String(err)}`
-            );
-          }
-        }
-
         // `ensureUvProject` would have produced a `pyproject.toml` or `uv.lock`
         // so we can use `uv sync` to install dependencies into the active
         // virtual environment.
@@ -433,10 +448,12 @@ export const build: BuildV3 = async ({
       });
   }
 
-  // Run per-framework post-build hooks (e.g. collectstatic for Django).
+  // Run per-framework hooks (e.g. entrypoint detection and collectstatic for Django).
   const hookResult = await runFrameworkHook(framework, {
     pythonEnv,
     projectDir: join(workPath, entryDirectory),
+    workPath,
+    venvPath,
     entrypoint,
     detected,
   });
@@ -448,6 +465,9 @@ export const build: BuildV3 = async ({
   if (entrypointNotFound) {
     throw entrypointNotFound;
   }
+
+  const djangoStatic: DjangoCollectStaticResult | null =
+    (hookResult as DjangoFrameworkHookResult | undefined)?.djangoStatic ?? null;
 
   // Ensure correct version of vercel-runtime is installed.
   //
@@ -522,6 +542,8 @@ export const build: BuildV3 = async ({
     ? `\n  "__VC_HANDLER_FUNC_NAME": "${handlerFunction}",`
     : '';
 
+  const variableName = hookResult?.variableName ?? detected?.variableName ?? '';
+
   const runtimeTrampoline = `
 import importlib
 import os
@@ -535,7 +557,8 @@ os.environ.update({
   "__VC_HANDLER_MODULE_NAME": "${moduleName}",
   "__VC_HANDLER_ENTRYPOINT": "${entrypointWithSuffix}",
   "__VC_HANDLER_ENTRYPOINT_ABS": os.path.join(_here, "${entrypointWithSuffix}"),
-  "__VC_HANDLER_VENDOR_DIR": "${vendorDir}",${handlerFuncEnvLine}
+  "__VC_HANDLER_VENDOR_DIR": "${vendorDir}",
+  "__VC_HANDLER_VARIABLE_NAME": "${variableName}",${handlerFuncEnvLine}
 })
 
 _vendor_rel = '${vendorDir}'
@@ -580,6 +603,20 @@ from vercel_runtime.vc_init import vc_handler
     '**/package-lock.json',
   ];
 
+  // Exclude source static dirs and STATIC_ROOT from the Lambda bundle.
+  if (djangoStatic) {
+    const dirsToExclude = [
+      ...djangoStatic.staticSourceDirs,
+      ...(djangoStatic.staticRoot ? [djangoStatic.staticRoot] : []),
+    ];
+    for (const absDir of dirsToExclude) {
+      const rel = relative(workPath, absDir);
+      if (!rel.startsWith('..')) {
+        predefinedExcludes.push(`${rel}/**`);
+      }
+    }
+  }
+
   const lambdaEnv = {} as Record<string, string>;
   lambdaEnv.PYTHONPATH = vendorDir;
   Object.assign(lambdaEnv, quirksResult.env);
@@ -597,6 +634,15 @@ from vercel_runtime.vc_init import vc_handler
 
   const files: Files = await glob('**', globOptions);
 
+  // Re-inject staticfiles.json into the Lambda bundle if a manifest storage
+  // backend is in use. The CDN serves static assets; only the manifest is
+  // needed at runtime so Django can resolve hashed filenames for {% static %}.
+  if (djangoStatic?.manifestRelPath) {
+    files[djangoStatic.manifestRelPath] = new FileFsRef({
+      fsPath: join(workPath, djangoStatic.manifestRelPath),
+    });
+  }
+
   // Bundle dependencies, using runtime installation for oversized bundles
   const depExternalizer = new PythonDependencyExternalizer({
     venvPath,
@@ -605,7 +651,8 @@ from vercel_runtime.vc_init import vc_handler
     uvLockPath,
     uvProjectDir,
     projectName,
-    noBuildCheckFailed,
+    pythonMajor: pythonVersion.major,
+    pythonMinor: pythonVersion.minor,
     pythonPath: pythonVersion.pythonPath,
     hasCustomCommand,
     alwaysBundlePackages: [
@@ -660,52 +707,27 @@ from vercel_runtime.vc_init import vc_handler
     supportsResponseStreaming: true,
   });
 
+  // Write project manifest for diagnostics (best-effort, never fails the build).
+  // Requires uv.lock to resolve versions and dependency graph.
+  if (uvLockPath) {
+    try {
+      await generateProjectManifest({
+        workPath,
+        pythonPackage,
+        pythonVersion,
+        uvLockPath,
+      });
+    } catch (err) {
+      debug(
+        `Failed to write project manifest: ${err instanceof Error ? err.message : String(err)}`
+      );
+    }
+  }
+
   return { output };
 };
 
 export { startDevServer };
-
-async function readBuildOutputV3Config(
-  workPath: string
-): Promise<{ cache?: string[] } | undefined> {
-  try {
-    const configPath = join(workPath, '.vercel', 'output', 'config.json');
-    return JSON.parse(await fs.promises.readFile(configPath, 'utf8'));
-  } catch (err: any) {
-    if (err.code !== 'ENOENT') {
-      throw err;
-    }
-  }
-  return undefined;
-}
-
-export const prepareCache: PrepareCache = async ({
-  repoRootPath,
-  workPath,
-}) => {
-  const cacheFiles: Files = {};
-  const root = repoRootPath || workPath;
-  const ignore = ['**/*.pyc', '**/__pycache__/**'];
-
-  const configV3 = await readBuildOutputV3Config(workPath);
-  if (configV3?.cache && Array.isArray(configV3.cache)) {
-    for (const cacheGlob of configV3.cache) {
-      Object.assign(cacheFiles, await glob(cacheGlob, workPath));
-    }
-    return cacheFiles;
-  }
-
-  Object.assign(
-    cacheFiles,
-    await glob('**/.vercel/python/.venv/**', { cwd: root, ignore })
-  );
-  Object.assign(
-    cacheFiles,
-    await glob('**/.vercel/python/cache/uv/**', { cwd: root, ignore })
-  );
-
-  return cacheFiles;
-};
 
 export const shouldServe: ShouldServe = opts => {
   const framework = opts.config.framework;
@@ -744,6 +766,8 @@ export const defaultShouldServe: ShouldServe = ({
 function hasProp(obj: { [path: string]: FileFsRef }, key: string): boolean {
   return Object.hasOwnProperty.call(obj, key);
 }
+
+export { diagnostics } from './diagnostics';
 
 // internal only - expect breaking changes if other packages depend on these exports
 export { installRequirement, installRequirementsFile };
