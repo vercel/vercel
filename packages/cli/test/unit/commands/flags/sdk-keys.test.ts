@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach } from 'vitest';
+import { describe, expect, it, beforeEach, vi } from 'vitest';
 import flags from '../../../../src/commands/flags';
 import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
 import { client } from '../../../mocks/client';
@@ -234,6 +234,72 @@ describe('flags sdk-keys', () => {
       const exitCode = await flags(client);
       expect(exitCode).toEqual(1);
       expect(client.stderr.getFullOutput()).toContain('SDK key not found');
+    });
+
+    it('emits structured JSON in non-interactive mode when hash key is missing', async () => {
+      const exitSpy = vi
+        .spyOn(process, 'exit')
+        .mockImplementation((() => {}) as () => never);
+      client.nonInteractive = true;
+      client.setArgv(
+        'flags',
+        'sdk-keys',
+        'rm',
+        '--cwd',
+        '/tmp',
+        '--non-interactive'
+      );
+
+      const exitCode = await flags(client);
+
+      expect(exitCode).toBe(1);
+      const out = client.stdout.getFullOutput();
+      const parsed = JSON.parse(out);
+      expect(parsed.status).toBe('error');
+      expect(parsed.reason).toBe('missing_arguments');
+      expect(parsed.message).toContain('hash');
+      expect(parsed.next).toBeDefined();
+      expect(parsed.next.length).toBeGreaterThanOrEqual(1);
+      expect(parsed.next[0].command).toContain('flags sdk-keys rm');
+      expect(parsed.next[0].command).toContain('<hashKey>');
+      expect(parsed.next[0].command).toContain('--cwd');
+      expect(parsed.next[0].command).toContain('--non-interactive');
+      exitSpy.mockRestore();
+      client.nonInteractive = false;
+    });
+  });
+
+  describe('add', () => {
+    it('emits structured JSON in non-interactive mode when --type is missing', async () => {
+      const exitSpy = vi
+        .spyOn(process, 'exit')
+        .mockImplementation((() => {}) as () => never);
+      client.nonInteractive = true;
+      client.setArgv(
+        'flags',
+        'sdk-keys',
+        'add',
+        '--cwd',
+        '/tmp',
+        '--non-interactive'
+      );
+
+      const exitCode = await flags(client);
+
+      expect(exitCode).toBe(1);
+      const out = client.stdout.getFullOutput();
+      const parsed = JSON.parse(out);
+      expect(parsed.status).toBe('error');
+      expect(parsed.reason).toBe('missing_arguments');
+      expect(parsed.message).toContain('--type');
+      expect(parsed.next).toBeDefined();
+      expect(parsed.next.length).toBeGreaterThan(0);
+      expect(parsed.next[0].command).toContain('flags sdk-keys add');
+      expect(parsed.next[0].command).toContain('--type');
+      expect(parsed.next[0].command).toContain('--cwd');
+      expect(parsed.next[0].command).toContain('--non-interactive');
+      exitSpy.mockRestore();
+      client.nonInteractive = false;
     });
   });
 });

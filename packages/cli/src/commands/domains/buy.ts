@@ -146,10 +146,22 @@ export default async function buy(client: Client, argv: string[]) {
   }
 
   const availableStamp = stamp();
-  const domainPrice = await getDomainPrice(client, domainName);
+  const [domainPrice, domainStatus] = await Promise.all([
+    getDomainPrice(client, domainName),
+    getDomainStatus(client, domainName),
+  ]);
 
   if (domainPrice instanceof Error) {
     output.prettyError(domainPrice);
+    return 1;
+  }
+
+  if (!domainStatus.available) {
+    output.error(
+      `The domain ${param(domainName)} is ${chalk.underline(
+        'unavailable'
+      )}! ${availableStamp()}`
+    );
     return 1;
   }
 
@@ -157,15 +169,6 @@ export default async function buy(client: Client, argv: string[]) {
 
   if (purchasePrice === null || renewalPrice === null) {
     output.error('Domain price not found');
-    return 1;
-  }
-
-  if (!(await getDomainStatus(client, domainName)).available) {
-    output.error(
-      `The domain ${param(domainName)} is ${chalk.underline(
-        'unavailable'
-      )}! ${availableStamp()}`
-    );
     return 1;
   }
 

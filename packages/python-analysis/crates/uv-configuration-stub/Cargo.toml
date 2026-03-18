@@ -5,6 +5,7 @@ name = "uv-configuration"
 version = "0.0.20"
 edition.workspace = true
 rust-version.workspace = true
+license = "Apache-2.0 OR MIT"
 
 [lib]
 doctest = false

@@ -28,7 +28,7 @@ import {
 import { stringifyManifest } from '@vercel/python-analysis';
 import { VERCEL_RUNTIME_VERSION } from './package-versions';
 
-const DEV_SERVER_STARTUP_TIMEOUT = 10_000;
+const DEV_SERVER_STARTUP_TIMEOUT = 5 * 60_000; // 5 minutes
 
 // Silence all Node.js warnings during the dev server lifecycle to avoid noise and only show the python logs.
 // Specifically, this is implemented to silence the [DEP0060] DeprecationWarning warning from the http-proxy library.
@@ -502,7 +502,8 @@ function createDevShim(
   entry: string,
   modulePath: string,
   serviceName: string | undefined,
-  framework: string
+  framework: string,
+  variableName: string
 ): DevShimResult | null {
   try {
     // When a service name is provided, place the shim in a per-service
@@ -537,7 +538,8 @@ function createDevShim(
     const shimSource = template
       .replace(/__VC_DEV_MODULE_NAME__/g, qualifiedModule)
       .replace(/__VC_DEV_ENTRY_ABS__/g, entryAbs)
-      .replace(/__VC_DEV_FRAMEWORK__/g, framework);
+      .replace(/__VC_DEV_FRAMEWORK__/g, framework)
+      .replace(/__VC_DEV_VARIABLE_NAME__/g, variableName);
     writeFileSync(shimPath, shimSource, 'utf8');
     debug(`Prepared Python dev shim at ${shimPath}`);
     return {
@@ -639,10 +641,14 @@ export const startDevServer: StartDevServer = async opts => {
   const env = { ...process.env, ...(meta.env || {}) } as NodeJS.ProcessEnv;
   const serviceType = env.VERCEL_SERVICE_TYPE;
 
-  // For cron services, use the raw entrypoint directly, because
+  // For cron/worker services, use the raw entrypoint directly, because
   // they don't export app/application so standard detection would skip them.
   let entry: string | undefined;
-  if (serviceType === 'cron' && rawEntrypoint?.endsWith('.py')) {
+  let variableName: string | undefined;
+  if (
+    (serviceType === 'cron' || serviceType === 'worker') &&
+    rawEntrypoint?.endsWith('.py')
+  ) {
     entry = rawEntrypoint;
   } else {
     const detected = await detectPythonEntrypoint(
@@ -651,6 +657,7 @@ export const startDevServer: StartDevServer = async opts => {
       rawEntrypoint
     );
     entry = detected?.entrypoint;
+    variableName = detected?.variableName;
     if (!entry) {
       const hookResult = await runFrameworkHook(framework, {
         pythonEnv: env,
@@ -660,6 +667,7 @@ export const startDevServer: StartDevServer = async opts => {
         detected: detected ?? undefined,
       });
       entry = hookResult?.entrypoint;
+      variableName = hookResult?.variableName;
     }
     if (!entry) {
       const searched = PYTHON_CANDIDATE_ENTRYPOINTS.join(', ');
@@ -805,7 +813,8 @@ export const startDevServer: StartDevServer = async opts => {
       entry,
       modulePath,
       serviceName,
-      framework
+      framework,
+      variableName ?? ''
     );
 
     // Add shim directory to PYTHONPATH so the shim can be imported,

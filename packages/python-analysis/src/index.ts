@@ -72,6 +72,7 @@ export type {
   UvLockFile,
   UvLockPackage,
   UvLockPackageSource,
+  UvLockWheel,
 } from './manifest/uv-lock-parser';
 
 export {
@@ -80,6 +81,12 @@ export {
   normalizePackageName,
   parseUvLock,
 } from './manifest/uv-lock-parser';
+
+// =============================================================================
+// Wheel compatibility checking
+// =============================================================================
+
+export { isWheelCompatible } from './manifest/wheel-compat';
 
 // =============================================================================
 // Python selection (runtime + types)
