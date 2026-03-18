@@ -32,6 +32,11 @@ export async function hasFile(
  */
 export const INTERNAL_SERVICE_PREFIX = '/_svc';
 
+/**
+ * Reserved internal namespace used by the dev queue proxy.
+ */
+export const INTERNAL_QUEUES_PREFIX = '/_svc/_queues';
+
 export function getInternalServiceFunctionPath(serviceName: string): string {
   return `${INTERNAL_SERVICE_PREFIX}/${serviceName}/index`;
 }
