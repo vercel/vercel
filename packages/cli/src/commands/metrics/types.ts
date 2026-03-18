@@ -2,14 +2,14 @@ import type { MetricsAggregation } from './schema-data';
 export type { MetricsAggregation } from './schema-data';
 
 export interface ProjectScope {
-  type: 'project';
-  ownerId: string;
-  projectIds: [string];
+  type: 'project-with-slug';
+  teamSlug: string;
+  projectName: string;
 }
 
 export interface TeamScope {
-  type: 'owner';
-  ownerId: string;
+  type: 'team-with-slug';
+  teamSlug: string;
 }
 
 export type Scope = ProjectScope | TeamScope;
