@@ -166,37 +166,6 @@ describe('runQuirks', () => {
     expect(await fs.pathExists(path.join(cacheDir, 'openssl'))).toBe(true);
   });
 
-  it('injects additional OTel packages when opentelemetry-sdk is detected', async () => {
-    const distInfoDir = path.join(
-      sitePackagesDir,
-      'opentelemetry_sdk-1.0.0.dist-info'
-    );
-    await fs.mkdirp(distInfoDir);
-    await fs.writeFile(
-      path.join(distInfoDir, 'METADATA'),
-      'Metadata-Version: 2.1\nName: opentelemetry-sdk\nVersion: 1.0.0\n'
-    );
-    await fs.writeFile(
-      path.join(distInfoDir, 'RECORD'),
-      'opentelemetry/sdk/__init__.py,,\n'
-    );
-
-    const result = await runQuirks(makeCtx());
-
-    expect(result.additionalPackages).toEqual([
-      'opentelemetry-exporter-otlp-proto-common',
-      'protobuf',
-    ]);
-    expect(result.alwaysBundlePackages).toEqual(
-      expect.arrayContaining([
-        'opentelemetry-exporter-otlp-proto-common',
-        'opentelemetry_exporter_otlp_proto_common',
-        'protobuf',
-        'google',
-      ])
-    );
-  });
-
   it('litellm quirk runs before prisma and propagates buildEnv', async () => {
     // Create dist-info for both litellm and prisma-client-py
     await fs.mkdirp(path.join(sitePackagesDir, 'prisma'));

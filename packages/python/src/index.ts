@@ -40,6 +40,7 @@ import { generateProjectManifest } from './diagnostics';
 import { startDevServer } from './start-dev-server';
 import { runPyprojectScript, ensureVenv, createVenvEnv } from './utils';
 import { runQuirks } from './quirks';
+import { OTEL_PACKAGES, OTEL_ALWAYS_BUNDLE_PACKAGES } from './otel';
 import {
   getDjangoSettings,
   runDjangoCollectStatic,
@@ -508,22 +509,18 @@ export const build: BuildV3 = async ({
     });
   }
 
+  // Install OpenTelemetry packages unconditionally so vercel-runtime's
+  // tracing module has everything it needs at cold start.
+  debug(`Installing OTel packages: ${OTEL_PACKAGES.join(', ')}`);
+  await uv.pip({
+    venvPath,
+    projectDir: join(workPath, entryDirectory),
+    args: ['install', ...OTEL_PACKAGES],
+  });
+
   // Run quirks: detect dependencies that need special handling (e.g. prisma)
   // and perform fix-up routines before bundling.
   const quirksResult = await runQuirks({ venvPath, pythonEnv, workPath });
-
-  // Install any additional packages requested by quirks (e.g. OTel exporter).
-  // Uses `uv pip install` (not `uv sync`) to avoid removing non-manifest packages.
-  if (quirksResult.additionalPackages?.length) {
-    debug(
-      `Installing quirk-requested packages: ${quirksResult.additionalPackages.join(', ')}`
-    );
-    await uv.pip({
-      venvPath,
-      projectDir: join(workPath, entryDirectory),
-      args: ['install', ...quirksResult.additionalPackages],
-    });
-  }
 
   // Apply build-time env vars from quirks so subsequent build steps can use them
   if (quirksResult.buildEnv) {
@@ -676,6 +673,7 @@ from vercel_runtime.vc_init import vc_handler
     hasCustomCommand,
     alwaysBundlePackages: [
       ...(quirksResult.alwaysBundlePackages ?? []),
+      ...OTEL_ALWAYS_BUNDLE_PACKAGES,
       ...(shouldInstallVercelWorkers
         ? ['vercel-workers', 'vercel_workers']
         : []),
