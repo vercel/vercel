@@ -104,6 +104,7 @@ _here = os.path.dirname(__file__)
 _entrypoint_rel = _must_getenv("__VC_HANDLER_ENTRYPOINT")
 _entrypoint_abs = _must_getenv("__VC_HANDLER_ENTRYPOINT_ABS")
 _entrypoint_modname = _must_getenv("__VC_HANDLER_MODULE_NAME")
+_entrypoint_varname = os.environ.get("__VC_HANDLER_VARIABLE_NAME", "")
 
 
 def setup_logging(
@@ -813,8 +814,14 @@ if "VERCEL_IPC_PATH" in os.environ:
                 method()
                 self.wfile.flush()
 
-    elif "app" in __vc_variables or "application" in __vc_variables:
-        app_name, app_obj = resolve_app(__vc_module, _entrypoint_modname)
+    elif (
+        "app" in __vc_variables
+        or "application" in __vc_variables
+        or _entrypoint_varname in __vc_variables
+    ):
+        app_name, app_obj = resolve_app(
+            __vc_module, _entrypoint_modname, _entrypoint_varname
+        )
         detection_result = detect_app_type(
             app_obj,
             _entrypoint_modname,
@@ -1017,8 +1024,14 @@ if "handler" in __vc_variables or "Handler" in __vc_variables:
 
         return return_dict
 
-elif "app" in __vc_variables or "application" in __vc_variables:
-    app_name, app_obj = resolve_app(__vc_module, _entrypoint_modname)
+elif (
+    "app" in __vc_variables
+    or "application" in __vc_variables
+    or _entrypoint_varname in __vc_variables
+):
+    app_name, app_obj = resolve_app(
+        __vc_module, _entrypoint_modname, _entrypoint_varname
+    )
     detection_result = detect_app_type(
         app_obj,
         _entrypoint_modname,
