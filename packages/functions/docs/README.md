@@ -5,4 +5,3 @@
 ### Modules
 
 - [index](modules/index.md)
-- [oidc](modules/oidc.md)

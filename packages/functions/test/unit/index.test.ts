@@ -34,34 +34,6 @@ describe('@vercel/functions', () => {
   });
 });
 
-describe('@vercel/functions/oidc', () => {
-  const EXPECTED_METHODS = [
-    'awsCredentialsProvider',
-    'getVercelOidcToken',
-    'getVercelOidcTokenSync',
-  ];
-
-  test('load as CommonJS', async () => {
-    const code =
-      "console.log(JSON.stringify(Object.keys(require('@vercel/functions/oidc'))))";
-    const exportedMethods = await evalScript(code).then(output =>
-      JSON.parse(output)
-    );
-
-    expect(exportedMethods).toEqual(EXPECTED_METHODS);
-  });
-
-  test('load as ESM', async () => {
-    const code =
-      "import f from '@vercel/functions/oidc'; console.log(JSON.stringify(Object.keys(f)))";
-    const exportedMethods = await evalScript
-      .esm(code)
-      .then(output => JSON.parse(output));
-
-    expect(exportedMethods).toEqual(EXPECTED_METHODS);
-  });
-});
-
 describe('@vercel/functions/headers', () => {
   const EXPECTED_METHODS = [
     'CITY_HEADER_NAME',
