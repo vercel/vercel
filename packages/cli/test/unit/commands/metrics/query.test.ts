@@ -3,12 +3,15 @@ import { client } from '../../../mocks/client';
 import query from '../../../../src/commands/metrics/query';
 import * as linkModule from '../../../../src/util/projects/link';
 import * as getScopeModule from '../../../../src/util/get-scope';
+import getProjectByNameOrId from '../../../../src/util/projects/get-project-by-id-or-name';
 
 vi.mock('../../../../src/util/projects/link');
 vi.mock('../../../../src/util/get-scope');
+vi.mock('../../../../src/util/projects/get-project-by-id-or-name');
 
 const mockedGetLinkedProject = vi.mocked(linkModule.getLinkedProject);
 const mockedGetScope = vi.mocked(getScopeModule.default);
+const mockedGetProjectByNameOrId = vi.mocked(getProjectByNameOrId);
 
 function mockLinkedProject() {
   mockedGetLinkedProject.mockResolvedValue({
@@ -30,6 +33,14 @@ function mockTeamScope(teamSlug = 'my-team') {
     team: { id: 'team_dummy', slug: teamSlug } as any,
     user: { id: 'user_dummy' } as any,
   });
+}
+
+function mockProjectLookup(projectName = 'other-app', projectId = 'prj_other') {
+  mockedGetProjectByNameOrId.mockResolvedValue({
+    id: projectId,
+    name: projectName,
+    accountId: 'team_dummy',
+  } as any);
 }
 
 function mockApiSuccess(data: any[] = [], summary: any[] = []) {
@@ -121,6 +132,7 @@ describe('query', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     client.reset();
+    mockedGetProjectByNameOrId.mockReset();
     mockSchemaApi();
   });
 
@@ -327,9 +339,9 @@ describe('query', () => {
 
       expect(exitCode).toBe(0);
       expect(requestBody.scope).toEqual({
-        type: 'project-with-slug',
-        teamSlug: 'my-team',
-        projectName: 'my-project',
+        type: 'project',
+        ownerId: 'team_dummy',
+        projectIds: ['prj_metricstest'],
       });
     });
 
@@ -340,6 +352,7 @@ describe('query', () => {
         res.json({ data: [], summary: [], statistics: {} });
       });
       mockTeamScope('my-team');
+      mockProjectLookup('other-app');
       client.setArgv(
         'metrics',
         'query',
@@ -353,9 +366,9 @@ describe('query', () => {
 
       expect(exitCode).toBe(0);
       expect(requestBody.scope).toEqual({
-        type: 'project-with-slug',
-        teamSlug: 'my-team',
-        projectName: 'other-app',
+        type: 'project',
+        ownerId: 'team_dummy',
+        projectIds: ['prj_other'],
       });
     });
 
@@ -372,8 +385,8 @@ describe('query', () => {
 
       expect(exitCode).toBe(0);
       expect(requestBody.scope).toEqual({
-        type: 'team-with-slug',
-        teamSlug: 'my-team',
+        type: 'owner',
+        ownerId: 'team_dummy',
       });
     });
 
@@ -465,6 +478,11 @@ describe('query', () => {
       });
       mockLinkedProject(); // linked to 'my-team'
       mockTeamScope('other-team'); // getScope returns 'other-team'
+      mockedGetProjectByNameOrId.mockResolvedValue({
+        id: 'prj_other_team',
+        name: 'other-app',
+        accountId: 'team_dummy',
+      } as any);
       client.setArgv(
         'metrics',
         'query',
@@ -478,9 +496,9 @@ describe('query', () => {
 
       expect(exitCode).toBe(0);
       expect(requestBody.scope).toEqual({
-        type: 'project-with-slug',
-        teamSlug: 'other-team',
-        projectName: 'other-app',
+        type: 'project',
+        ownerId: 'team_dummy',
+        projectIds: ['prj_other_team'],
       });
     });
   });
@@ -891,6 +909,7 @@ describe('query', () => {
     it('should track project option as redacted', async () => {
       mockApiSuccess();
       mockTeamScope();
+      mockProjectLookup('my-app', 'prj_my_app');
       client.setArgv(
         'metrics',
         'query',

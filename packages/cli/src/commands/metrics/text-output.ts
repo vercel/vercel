@@ -656,15 +656,15 @@ export function formatMetadataHeader(opts: MetadataHeaderOptions): string {
     rows.push({ key: 'Filter', value: opts.filter });
   }
 
-  if (opts.scope.type === 'project-with-slug') {
+  if (opts.scope.type === 'project') {
     rows.push({
       key: 'Project',
-      value: `${opts.projectName ?? opts.scope.projectName} (${opts.teamName ?? opts.scope.teamSlug})`,
+      value: `${opts.projectName ?? opts.scope.projectIds[0]} (${opts.teamName ?? opts.scope.ownerId})`,
     });
   } else {
     rows.push({
       key: 'Team',
-      value: `${opts.teamName ?? opts.scope.teamSlug} (all projects)`,
+      value: `${opts.teamName ?? opts.scope.ownerId} (all projects)`,
     });
   }
 

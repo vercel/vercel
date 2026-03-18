@@ -39,8 +39,9 @@ import type {
   MetricsQueryResponse,
 } from './types';
 import { getLinkedProject } from '../../util/projects/link';
+import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name';
 import getScope from '../../util/get-scope';
-import { isAPIError } from '../../util/errors-ts';
+import { isAPIError, ProjectNotFound } from '../../util/errors-ts';
 
 function handleValidationError(
   result: ValidationError,
@@ -147,21 +148,32 @@ async function resolveQueryScope(
 
     if (opts.all) {
       return {
-        scope: { type: 'team-with-slug', teamSlug: team.slug },
+        scope: { type: 'owner', ownerId: team.id },
         accountId: team.id,
         teamName: team.slug,
       };
     }
 
+    const project = await getProjectByNameOrId(client, opts.project!, team.id);
+    if (project instanceof ProjectNotFound) {
+      const errMsg = `Project "${opts.project}" was not found in team "${team.slug}".`;
+      if (opts.jsonOutput) {
+        client.stdout.write(formatErrorJson('PROJECT_NOT_FOUND', errMsg));
+      } else {
+        output.error(errMsg);
+      }
+      return 1;
+    }
+
     return {
       scope: {
-        type: 'project-with-slug',
-        teamSlug: team.slug,
-        projectName: opts.project!,
+        type: 'project',
+        ownerId: team.id,
+        projectIds: [project.id],
       },
       accountId: team.id,
       teamName: team.slug,
-      projectName: opts.project!,
+      projectName: project.name,
     };
   }
 
@@ -183,9 +195,9 @@ async function resolveQueryScope(
 
   return {
     scope: {
-      type: 'project-with-slug',
-      teamSlug: linkedProject.org.slug,
-      projectName: linkedProject.project.name,
+      type: 'project',
+      ownerId: linkedProject.org.id,
+      projectIds: [linkedProject.project.id],
     },
     accountId: linkedProject.org.id,
     teamName: linkedProject.org.slug,

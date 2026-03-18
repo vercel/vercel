@@ -1,14 +1,14 @@
 import type { Aggregation } from '@vercel/o11y-tools/query-engine/types';
 
 export interface ProjectScope {
-  type: 'project-with-slug';
-  teamSlug: string;
-  projectName: string;
+  type: 'project';
+  ownerId: string;
+  projectIds: [string];
 }
 
 export interface TeamScope {
-  type: 'team-with-slug';
-  teamSlug: string;
+  type: 'owner';
+  ownerId: string;
 }
 
 export type Scope = ProjectScope | TeamScope;

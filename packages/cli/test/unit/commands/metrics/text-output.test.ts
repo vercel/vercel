@@ -20,9 +20,9 @@ import type {
 } from '../../../../src/commands/metrics/types';
 
 const projectScope: Scope = {
-  type: 'project-with-slug',
-  projectName: 'my-project',
-  teamSlug: 'my-team',
+  type: 'project',
+  ownerId: 'team_dummy',
+  projectIds: ['prj_metricstest'],
 };
 
 describe('text-output', () => {
