@@ -62,13 +62,7 @@ import * as ERRORS from './util/errors-ts';
 import { APIError } from './util/errors-ts';
 import getUpdateCommand from './util/get-update-command';
 import { executeUpgrade } from './util/upgrade';
-import {
-  getCommandName,
-  getCommandNamePlain,
-  getTitleName,
-} from './util/pkg-name';
-import { outputAgentError } from './util/agent-output';
-import { getGlobalFlagsOnlyFromArgs } from './util/arg-common';
+import { getCommandName, getTitleName } from './util/pkg-name';
 import login from './commands/login';
 import type { AuthConfig, GlobalConfig } from '@vercel-internals/types';
 import type { VercelConfig } from '@vercel/client';
