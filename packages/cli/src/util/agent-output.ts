@@ -72,6 +72,89 @@ export function buildCommandWithYes(
   return `${pkgName} ${out.join(' ')}`;
 }
 
+/** Global flags that should be preserved in suggested "next" commands (e.g. --cwd, --non-interactive). */
+const GLOBAL_FLAG_NAMES = new Set([
+  '--cwd',
+  '--config',
+  '--yes',
+  '-y',
+  '--non-interactive',
+  '--scope',
+  '--team',
+  '-S',
+  '-T',
+  '--token',
+]);
+
+/**
+ * Returns global flag args from argv so suggested commands can include them (e.g. --cwd, --non-interactive).
+ */
+export function getGlobalFlagsFromArgv(argv: string[]): string[] {
+  const args = argv.slice(2);
+  const out: string[] = [];
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    const name = arg.startsWith('--') ? arg.split('=')[0] : arg;
+    if (GLOBAL_FLAG_NAMES.has(name)) {
+      out.push(arg);
+      if (
+        !arg.includes('=') &&
+        i + 1 < args.length &&
+        !args[i + 1].startsWith('-')
+      ) {
+        out.push(args[i + 1]);
+        i++;
+      }
+    }
+  }
+  return out;
+}
+
+/**
+ * Options for buildCommandWithGlobalFlags.
+ * excludeFlags: flag names to omit from the suggested command (e.g. ['--non-interactive'] for login).
+ */
+export interface BuildCommandWithGlobalFlagsOptions {
+  excludeFlags?: string[];
+}
+
+/**
+ * Builds a suggested command string from a template and appends global flags from argv
+ * (e.g. --cwd, --non-interactive) so the next command can be run with the same context.
+ * Use excludeFlags to omit flags that must not appear (e.g. --non-interactive for login).
+ */
+export function buildCommandWithGlobalFlags(
+  argv: string[],
+  commandTemplate: string,
+  pkgName: string = packageName,
+  options?: BuildCommandWithGlobalFlagsOptions
+): string {
+  let preserved = getGlobalFlagsFromArgv(argv);
+  if (options?.excludeFlags?.length) {
+    const exclude = new Set(options.excludeFlags);
+    const out: string[] = [];
+    for (let i = 0; i < preserved.length; i++) {
+      const arg = preserved[i];
+      const name = arg.startsWith('--') ? arg.split('=')[0] : arg;
+      if (exclude.has(name)) {
+        if (
+          !arg.includes('=') &&
+          i + 1 < preserved.length &&
+          !preserved[i + 1].startsWith('-')
+        ) {
+          i++;
+        }
+        continue;
+      }
+      out.push(arg);
+    }
+    preserved = out;
+  }
+  const base = `${pkgName} ${commandTemplate}`;
+  if (preserved.length === 0) return base;
+  return `${base} ${preserved.join(' ')}`;
+}
+
 /**
  * Returns args that should be preserved when suggesting a "next" command for "env add".
  * These are all args after "env add" and its 0–3 positionals (name, target, git-branch).
