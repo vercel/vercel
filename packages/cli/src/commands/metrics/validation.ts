@@ -1,5 +1,6 @@
 import type { ValidationResult, ValidatedResult } from './types';
-import type { MetricsAggregation, Schema } from './schema-data';
+import type { Aggregation } from '@vercel/o11y-tools/query-engine/types';
+import type { Schema } from './schema-api';
 import { validateAllProjectMutualExclusivity } from '../../util/command-validation';
 import {
   getEventNames,
@@ -7,7 +8,7 @@ import {
   getMeasures,
   getAggregations,
   getDimensions,
-} from './schema-data';
+} from './schema-api';
 
 export function validateEvent(schema: Schema, event: string): ValidationResult {
   if (getEvent(schema, event)) {
@@ -43,7 +44,7 @@ export function validateAggregation(
   event: string,
   measure: string,
   aggregation: string
-): ValidatedResult<MetricsAggregation> {
+): ValidatedResult<Aggregation> {
   const aggs = getAggregations(schema, event, measure);
   const found = aggs.find(agg => agg === aggregation);
   if (found) {

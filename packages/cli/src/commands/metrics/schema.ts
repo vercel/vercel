@@ -13,7 +13,7 @@ import {
   getEvent,
   type DimensionSchema,
   type MeasureSchema,
-} from './schema-data';
+} from './schema-api';
 import {
   formatSchemaListJson,
   formatSchemaDetailJson,

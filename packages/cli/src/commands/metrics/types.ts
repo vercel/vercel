@@ -1,5 +1,4 @@
-import type { MetricsAggregation } from './schema-data';
-export type { MetricsAggregation } from './schema-data';
+import type { Aggregation } from '@vercel/o11y-tools/query-engine/types';
 
 export interface ProjectScope {
   type: 'project-with-slug';
@@ -42,7 +41,7 @@ export interface MetricsQueryStatistics {
 export interface QueryMetadata {
   event: string;
   measure: string;
-  aggregation: MetricsAggregation;
+  aggregation: Aggregation;
   groupBy: string[];
   filter: string | undefined;
   startTime: string;
@@ -54,7 +53,7 @@ export interface MetricsQueryRequest {
   reason: 'agent';
   scope: Scope;
   event: string;
-  rollups: Record<string, { measure: string; aggregation: MetricsAggregation }>;
+  rollups: Record<string, { measure: string; aggregation: Aggregation }>;
   startTime: string;
   endTime: string;
   granularity: Granularity;

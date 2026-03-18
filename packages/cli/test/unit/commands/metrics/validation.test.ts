@@ -7,7 +7,7 @@ import {
   validateMutualExclusivity,
   validateRequiredEvent,
 } from '../../../../src/commands/metrics/validation';
-import type { Schema } from '../../../../src/commands/metrics/schema-data';
+import type { Schema } from '../../../../src/commands/metrics/schema-api';
 
 const schema: Schema = {
   edgeRequest: {

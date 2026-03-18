@@ -1,4 +1,4 @@
-import type { EventSchema } from './schema-data';
+import type { EventSchema } from './schema-api';
 import type { QueryMetadata, MetricsQueryResponse } from './types';
 
 export function getRollupColumnName(

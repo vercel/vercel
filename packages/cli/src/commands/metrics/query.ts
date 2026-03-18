@@ -17,8 +17,8 @@ import {
   getDefaultAggregation,
   getMeasures,
   getQueryEngineEventName,
-} from './schema-data';
-import { fetchSchema } from './schema-api';
+  fetchSchema,
+} from './schema-api';
 import {
   formatQueryJson,
   formatErrorJson,

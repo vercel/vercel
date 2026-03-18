@@ -8,7 +8,7 @@ import {
   getDefaultAggregation,
   getQueryEngineEventName,
   type Schema,
-} from '../../../../src/commands/metrics/schema-data';
+} from '../../../../src/commands/metrics/schema-api';
 
 const schema: Schema = {
   edgeRequest: {

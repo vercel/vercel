@@ -4,8 +4,8 @@ import indent from '../../util/output/indent';
 import { getRollupColumnName } from './output';
 import { toGranularityMsFromDuration } from './time-utils';
 import type {
+  Aggregation,
   Granularity,
-  MetricsAggregation,
   MetricsDataRow,
   MetricsQueryResponse,
   Scope,
@@ -42,7 +42,7 @@ interface SummaryTableOptions {
   rows: SummaryTableRow[];
   groupByFields: string[];
   measureType: MeasureType;
-  aggregation: MetricsAggregation;
+  aggregation: Aggregation;
   periodStart: Date;
   periodEnd: Date;
 }
@@ -50,7 +50,7 @@ interface SummaryTableOptions {
 interface MetadataHeaderOptions {
   event: string;
   measure: string;
-  aggregation: MetricsAggregation;
+  aggregation: Aggregation;
   periodStart: string;
   periodEnd: string;
   granularity: Granularity;
@@ -66,7 +66,7 @@ export interface FormatTextOptions {
   event: string;
   measure: string;
   measureUnit?: string;
-  aggregation: MetricsAggregation;
+  aggregation: Aggregation;
   groupBy: string[];
   filter?: string;
   scope: Scope;
@@ -177,7 +177,7 @@ function formatUnitLabel(unit: string): string {
  */
 function isCountIntegerDisplay(
   measureType: MeasureType,
-  aggregation: MetricsAggregation
+  aggregation: Aggregation
 ): boolean {
   // Count + sum should read like totals (integers), while count-persecond /
   // count-percent stay decimal.
@@ -196,7 +196,7 @@ function isCountIntegerDisplay(
 function formatNumber(
   value: number,
   measureType: MeasureType,
-  aggregation: MetricsAggregation,
+  aggregation: Aggregation,
   opts?: { preserveFractionalCountSum?: boolean }
 ): string {
   if (isCountIntegerDisplay(measureType, aggregation)) {
@@ -274,7 +274,7 @@ function formatStatCell(
   column: StatColumn,
   stats: GroupStats,
   measureType: MeasureType,
-  aggregation: MetricsAggregation,
+  aggregation: Aggregation,
   periodStart: Date,
   periodEnd: Date
 ): string {
