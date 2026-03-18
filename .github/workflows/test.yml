@@ -297,7 +297,7 @@ jobs:
       - setup
     strategy:
       fail-fast: false
-      max-parallel: 100
+      max-parallel: 50
       matrix:
         include: ${{ fromJson(needs.setup.outputs['tests']) }}
     steps:
@@ -324,7 +324,15 @@ jobs:
       - name: install pnpm@8.3.1
         run: npm i -g pnpm@8.3.1
 
-      - run: pnpm install
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ~/.pnpm-store
+          key: ${{ runner.os }}-pnpm-store-8.3.1-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-8.3.1-
+
+      - run: pnpm install --store-dir ~/.pnpm-store
 
       - name: Build ${{matrix.packageName}} and all its dependencies
         run: node utils/gen.js && node_modules/.bin/turbo run build --cache-dir=".turbo" --log-order=stream --filter=${{matrix.packageName}}...
@@ -355,13 +363,14 @@ jobs:
           done
       - name: Test ${{matrix.packageName}}
         run: |
+          node utils/gen.js
           attempt=1
           max_attempts=2
 
           while [ "$attempt" -le "$max_attempts" ]; do
             echo "Running tests (attempt $attempt/$max_attempts): ${{matrix.testScript}} ${{matrix.packageName}}"
 
-            if node utils/gen.js && node_modules/.bin/turbo run ${{matrix.testScript}} --summarize --cache-dir=".turbo" --log-order=stream --filter=${{matrix.packageName}} -- ${{ join(matrix.testPaths, ' ') }}; then
+            if node_modules/.bin/turbo run ${{matrix.testScript}} --summarize --cache-dir=".turbo" --log-order=stream --filter=${{matrix.packageName}} -- ${{ join(matrix.testPaths, ' ') }}; then
               exit 0
             fi
 
