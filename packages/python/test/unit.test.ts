@@ -49,7 +49,12 @@ import {
   resetInstalledPythonsCache,
 } from '../src/version';
 import type { PythonConstraint, PythonPackage } from '@vercel/python-analysis';
-import { PythonConfigKind } from '@vercel/python-analysis';
+import {
+  PythonConfigKind,
+  parsePythonVersionFile,
+  parseConfig,
+  PyProjectTomlSchema,
+} from '@vercel/python-analysis';
 import { build } from '../src/index';
 import { createVenvEnv, getVenvBinDir } from '../src/utils';
 import { UV_PYTHON_DOWNLOADS_MODE, getProtectedUvEnv } from '../src/uv';
@@ -2532,33 +2537,28 @@ describe('rewritePatchVersionPins', () => {
     if (fs.existsSync(tmpDir)) fs.removeSync(tmpDir);
   });
 
+  function makePvConfig(content: string) {
+    return {
+      configs: [
+        {
+          [PythonConfigKind.PythonVersion]: {
+            kind: PythonConfigKind.PythonVersion,
+            path: '.python-version',
+            data: parsePythonVersionFile(content)!,
+          },
+        },
+      ],
+    };
+  }
+
   it('is a no-op outside the build container', async () => {
     delete process.env.VERCEL_BUILD_IMAGE;
+    const content = '3.12.8\n';
     const pvPath = path.join(tmpDir, '.python-version');
-    fs.writeFileSync(pvPath, '3.12.8\n');
+    fs.writeFileSync(pvPath, content);
 
     await rewritePatchVersionPins({
-      pythonPackage: {
-        configs: [
-          {
-            [PythonConfigKind.PythonVersion]: {
-              kind: PythonConfigKind.PythonVersion,
-              path: '.python-version',
-              data: [
-                {
-                  implementation: 'cpython',
-                  version: {
-                    constraint: [
-                      { operator: '==', version: '3.12.8', prefix: '' },
-                    ],
-                    variant: 'default',
-                  },
-                },
-              ],
-            },
-          },
-        ],
-      },
+      pythonPackage: makePvConfig(content),
       rootDir: tmpDir,
     });
 
@@ -2567,31 +2567,12 @@ describe('rewritePatchVersionPins', () => {
 
   it('rewrites .python-version with a patch-level version to major.minor', async () => {
     process.env.VERCEL_BUILD_IMAGE = '1';
+    const content = '3.12.8\n';
     const pvPath = path.join(tmpDir, '.python-version');
-    fs.writeFileSync(pvPath, '3.12.8\n');
+    fs.writeFileSync(pvPath, content);
 
     await rewritePatchVersionPins({
-      pythonPackage: {
-        configs: [
-          {
-            [PythonConfigKind.PythonVersion]: {
-              kind: PythonConfigKind.PythonVersion,
-              path: '.python-version',
-              data: [
-                {
-                  implementation: 'cpython',
-                  version: {
-                    constraint: [
-                      { operator: '==', version: '3.12.8', prefix: '' },
-                    ],
-                    variant: 'default',
-                  },
-                },
-              ],
-            },
-          },
-        ],
-      },
+      pythonPackage: makePvConfig(content),
       rootDir: tmpDir,
     });
 
@@ -2600,32 +2581,12 @@ describe('rewritePatchVersionPins', () => {
 
   it('rewrites .python-version with compound patch constraints using correct operators', async () => {
     process.env.VERCEL_BUILD_IMAGE = '1';
+    const content = '>=3.12.4,<=3.12.9\n';
     const pvPath = path.join(tmpDir, '.python-version');
-    fs.writeFileSync(pvPath, '>=3.12.4,<=3.12.9\n');
+    fs.writeFileSync(pvPath, content);
 
     await rewritePatchVersionPins({
-      pythonPackage: {
-        configs: [
-          {
-            [PythonConfigKind.PythonVersion]: {
-              kind: PythonConfigKind.PythonVersion,
-              path: '.python-version',
-              data: [
-                {
-                  implementation: 'cpython',
-                  version: {
-                    constraint: [
-                      { operator: '>=', version: '3.12.4', prefix: '' },
-                      { operator: '<=', version: '3.12.9', prefix: '' },
-                    ],
-                    variant: 'default',
-                  },
-                },
-              ],
-            },
-          },
-        ],
-      },
+      pythonPackage: makePvConfig(content),
       rootDir: tmpDir,
     });
 
@@ -2636,31 +2597,12 @@ describe('rewritePatchVersionPins', () => {
 
   it('rewrites .python-version with strict greater-than patch constraint', async () => {
     process.env.VERCEL_BUILD_IMAGE = '1';
+    const content = '>3.12.4\n';
     const pvPath = path.join(tmpDir, '.python-version');
-    fs.writeFileSync(pvPath, '>3.12.4\n');
+    fs.writeFileSync(pvPath, content);
 
     await rewritePatchVersionPins({
-      pythonPackage: {
-        configs: [
-          {
-            [PythonConfigKind.PythonVersion]: {
-              kind: PythonConfigKind.PythonVersion,
-              path: '.python-version',
-              data: [
-                {
-                  implementation: 'cpython',
-                  version: {
-                    constraint: [
-                      { operator: '>', version: '3.12.4', prefix: '' },
-                    ],
-                    variant: 'default',
-                  },
-                },
-              ],
-            },
-          },
-        ],
-      },
+      pythonPackage: makePvConfig(content),
       rootDir: tmpDir,
     });
 
@@ -2670,59 +2612,40 @@ describe('rewritePatchVersionPins', () => {
 
   it('does not rewrite .python-version that already has only major.minor', async () => {
     process.env.VERCEL_BUILD_IMAGE = '1';
+    const content = '3.12\n';
     const pvPath = path.join(tmpDir, '.python-version');
-    fs.writeFileSync(pvPath, '3.12\n');
+    fs.writeFileSync(pvPath, content);
 
     await rewritePatchVersionPins({
-      pythonPackage: {
-        configs: [
-          {
-            [PythonConfigKind.PythonVersion]: {
-              kind: PythonConfigKind.PythonVersion,
-              path: '.python-version',
-              data: [
-                {
-                  implementation: 'cpython',
-                  version: {
-                    constraint: [
-                      { operator: '==', version: '3.12', prefix: '' },
-                    ],
-                    variant: 'default',
-                  },
-                },
-              ],
-            },
-          },
-        ],
-      },
+      pythonPackage: makePvConfig(content),
       rootDir: tmpDir,
     });
 
     expect(fs.readFileSync(pvPath, 'utf8')).toBe('3.12\n');
   });
 
+  function makePyprojectConfig(
+    content: string,
+    origin?: { kind: any; path: any }
+  ) {
+    return {
+      manifest: {
+        path: 'pyproject.toml',
+        data: parseConfig(content, 'pyproject.toml', PyProjectTomlSchema),
+        ...(origin ? { origin } : {}),
+      },
+    };
+  }
+
   it('rewrites requires-python in native pyproject.toml with a patch-level pin', async () => {
     process.env.VERCEL_BUILD_IMAGE = '1';
+    const content =
+      '[project]\nname = "myapp"\nversion = "0.1.0"\nrequires-python = "==3.12.8"\n';
     const pyprojectPath = path.join(tmpDir, 'pyproject.toml');
-    fs.writeFileSync(
-      pyprojectPath,
-      '[project]\nname = "myapp"\nversion = "0.1.0"\nrequires-python = "==3.12.8"\n'
-    );
+    fs.writeFileSync(pyprojectPath, content);
 
     await rewritePatchVersionPins({
-      pythonPackage: {
-        manifest: {
-          path: 'pyproject.toml',
-          data: {
-            project: {
-              name: 'myapp',
-              version: '0.1.0',
-              'requires-python': '==3.12.8',
-              dependencies: [],
-            },
-          },
-        },
-      },
+      pythonPackage: makePyprojectConfig(content),
       rootDir: tmpDir,
     });
 
@@ -2733,90 +2656,52 @@ describe('rewritePatchVersionPins', () => {
 
   it('rewrites requires-python with >=X.Y.Z style patch constraint', async () => {
     process.env.VERCEL_BUILD_IMAGE = '1';
+    const content =
+      '[project]\nname = "myapp"\nversion = "0.1.0"\nrequires-python = ">=3.12.8,<3.13"\n';
     const pyprojectPath = path.join(tmpDir, 'pyproject.toml');
-    fs.writeFileSync(
-      pyprojectPath,
-      '[project]\nname = "myapp"\nversion = "0.1.0"\nrequires-python = ">=3.12.8,<3.13"\n'
-    );
+    fs.writeFileSync(pyprojectPath, content);
 
     await rewritePatchVersionPins({
-      pythonPackage: {
-        manifest: {
-          path: 'pyproject.toml',
-          data: {
-            project: {
-              name: 'myapp',
-              version: '0.1.0',
-              'requires-python': '>=3.12.8,<3.13',
-              dependencies: [],
-            },
-          },
-        },
-      },
+      pythonPackage: makePyprojectConfig(content),
       rootDir: tmpDir,
     });
 
-    const updated = fs.readFileSync(pyprojectPath, 'utf8');
-    expect(updated).toContain('requires-python = ">=3.12,<3.13"');
+    expect(fs.readFileSync(pyprojectPath, 'utf8')).toContain(
+      'requires-python = ">=3.12,<3.13"'
+    );
   });
 
   it('does not rewrite requires-python that has no patch-level version', async () => {
     process.env.VERCEL_BUILD_IMAGE = '1';
-    const pyprojectPath = path.join(tmpDir, 'pyproject.toml');
-    const original =
+    const content =
       '[project]\nname = "myapp"\nversion = "0.1.0"\nrequires-python = ">=3.12"\n';
-    fs.writeFileSync(pyprojectPath, original);
+    const pyprojectPath = path.join(tmpDir, 'pyproject.toml');
+    fs.writeFileSync(pyprojectPath, content);
 
     await rewritePatchVersionPins({
-      pythonPackage: {
-        manifest: {
-          path: 'pyproject.toml',
-          data: {
-            project: {
-              name: 'myapp',
-              version: '0.1.0',
-              'requires-python': '>=3.12',
-              dependencies: [],
-            },
-          },
-        },
-      },
+      pythonPackage: makePyprojectConfig(content),
       rootDir: tmpDir,
     });
 
-    expect(fs.readFileSync(pyprojectPath, 'utf8')).toBe(original);
+    expect(fs.readFileSync(pyprojectPath, 'utf8')).toBe(content);
   });
 
   it('skips requires-python rewrite for converted manifests (origin set)', async () => {
     process.env.VERCEL_BUILD_IMAGE = '1';
-    const pyprojectPath = path.join(tmpDir, 'pyproject.toml');
-    const original =
+    const content =
       '[project]\nname = "myapp"\nversion = "0.1.0"\nrequires-python = "==3.12.8"\n';
-    fs.writeFileSync(pyprojectPath, original);
+    const pyprojectPath = path.join(tmpDir, 'pyproject.toml');
+    fs.writeFileSync(pyprojectPath, content);
 
     await rewritePatchVersionPins({
-      pythonPackage: {
-        manifest: {
-          path: 'pyproject.toml',
-          data: {
-            project: {
-              name: 'myapp',
-              version: '0.1.0',
-              'requires-python': '==3.12.8',
-              dependencies: [],
-            },
-          },
-          // origin marks this as a converted (e.g. requirements.txt) manifest
-          origin: {
-            kind: 'requirements.txt' as any,
-            path: 'requirements.txt' as any,
-          },
-        },
-      },
+      pythonPackage: makePyprojectConfig(content, {
+        kind: 'requirements.txt',
+        path: 'requirements.txt',
+      }),
       rootDir: tmpDir,
     });
 
     // Converted manifests are handled elsewhere; file should be untouched
-    expect(fs.readFileSync(pyprojectPath, 'utf8')).toBe(original);
+    expect(fs.readFileSync(pyprojectPath, 'utf8')).toBe(content);
   });
 });
