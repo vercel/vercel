@@ -26,7 +26,7 @@
     "@vercel/nft": "1.1.1"
   },
   "devDependencies": {
-    "@next-community/adapter-vercel": "https://adapter-vercel-adapter-8temsd2mt.vercel.app/adapter.tgz",
+    "@next-community/adapter-vercel": "https://adapter-vercel-adapter-r2oru6nb7.vercel.app/adapter.tgz",
     "@types/aws-lambda": "8.10.19",
     "@types/buffer-crc32": "0.2.0",
     "@types/bytes": "3.1.1",
