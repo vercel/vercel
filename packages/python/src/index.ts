@@ -59,7 +59,7 @@ export const version = 3;
 interface FrameworkHookContext {
   pythonEnv: NodeJS.ProcessEnv;
   projectDir: string;
-  workPath: string;
+  workPath?: string;
   venvPath?: string;
   entrypoint: string;
   detected: DetectedPythonEntrypoint | undefined;
@@ -79,7 +79,7 @@ type FrameworkHook = (
 ) => Promise<FrameworkHookResult | void>;
 
 export async function runFrameworkHook(
-  framework: string | undefined,
+  framework: string | null | undefined,
   ctx: FrameworkHookContext
 ): Promise<FrameworkHookResult | void> {
   const hook = framework
@@ -131,7 +131,7 @@ const frameworkHooks: Partial<Record<PythonFramework, FrameworkHook>> = {
     }
 
     let djangoStatic: DjangoCollectStaticResult | null = null;
-    if (venvPath) {
+    if (workPath && venvPath) {
       const outputStaticDir = join(workPath, '.vercel', 'output', 'static');
       djangoStatic = await runDjangoCollectStatic(
         venvPath,

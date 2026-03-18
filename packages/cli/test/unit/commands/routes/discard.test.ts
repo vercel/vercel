@@ -85,6 +85,33 @@ describe('routes discard-staging', () => {
     ]);
   });
 
+  it('non-interactive without --yes outputs JSON confirmation_required and exits', async () => {
+    useUpdateRouteVersion();
+    useRoutesWithDiffForPublish();
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const exitSpy = vi
+      .spyOn(process, 'exit')
+      .mockImplementation((() => undefined) as never);
+    client.nonInteractive = true;
+    client.setArgv('routes', 'discard-staging', '--non-interactive');
+
+    await routes(client);
+
+    expect(logSpy).toHaveBeenCalled();
+    const payload = JSON.parse(logSpy.mock.calls[0][0] as string);
+    expect(payload.status).toBe('error');
+    expect(payload.reason).toBe('confirmation_required');
+    expect(payload.next?.length).toBeGreaterThanOrEqual(1);
+    expect(
+      payload.next.some((n: { command: string }) => n.command.includes('--yes'))
+    ).toBe(true);
+    expect(exitSpy).toHaveBeenCalledWith(1);
+
+    logSpy.mockRestore();
+    exitSpy.mockRestore();
+    client.nonInteractive = false;
+  });
+
   it('should prompt for confirmation and cancel when declined', async () => {
     useUpdateRouteVersion();
     useRoutesWithDiffForPublish();
