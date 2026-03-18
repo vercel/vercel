@@ -10,3 +10,5 @@ Everything else (HTTP client, retry logic, authentication, caching, etc.)
 has been removed. WASM always runs offline.
 
 Based on uv revision [`35d1e90`](https://github.com/astral-sh/uv/tree/35d1e90961c1c2bd238ee6b015f970c0cf97f5d5/crates/uv-client).
+
+Copyright (c) Astral Software Inc. Licensed under Apache-2.0 OR MIT.
