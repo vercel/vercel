@@ -1,4 +1,3 @@
-import bytes from 'bytes';
 import output from '../../output-manager';
 import type { BlobRWToken } from '../../util/blob/token';
 import type Client from '../../util/client';
@@ -7,9 +6,11 @@ import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { getLinkedProject } from '../../util/projects/link';
 import { getStoreSubcommand } from './command';
-import { format } from 'date-fns';
-import chalk from 'chalk';
 import { BlobGetStoreTelemetryClient } from '../../util/telemetry/commands/blob/store-get';
+import {
+  formatStoreDetails,
+  type StoreDetails,
+} from '../../util/blob/format-store';
 
 export default async function getStore(
   client: Client,
@@ -45,7 +46,7 @@ export default async function getStore(
 
   if (!storeId) {
     storeId = await client.input.text({
-      message: 'Enter the ID of the blob store you want to remove',
+      message: 'Enter the ID of the blob store you want to get info about',
       validate: value => {
         if (value.length !== 22) {
           return 'ID must be 22 characters long';
@@ -64,41 +65,16 @@ export default async function getStore(
 
     output.spinner('Getting blob store');
 
-    const store = await client.fetch<{
-      store: {
-        id: string;
-        name: string;
-        createdAt: number;
-        updatedAt: number;
-        billingState: string;
-        size: number;
-        region?: string;
-        access?: string;
-      };
-    }>(`/v1/storage/stores/${storeId}`, {
-      method: 'GET',
-      accountId: link.status === 'linked' ? link.org.id : undefined,
-    });
-
-    const dateTimeFormat = 'MM/DD/YYYY HH:mm:ss.SS';
-
-    const regionInfo = store.store.region
-      ? `\nRegion: ${store.store.region}`
-      : '';
-
-    const accessInfo = `\nAccess: ${store.store.access === 'private' ? 'Private' : 'Public'}`;
-
-    output.print(
-      `Blob Store: ${chalk.bold(store.store.name)} (${chalk.dim(store.store.id)})
-Billing State: ${
-        store.store.billingState === 'active'
-          ? chalk.green('Active')
-          : chalk.red('Inactive')
+    const store = await client.fetch<{ store: StoreDetails }>(
+      `/v1/storage/stores/${storeId}`,
+      {
+        method: 'GET',
+        accountId: link.status === 'linked' ? link.org.id : undefined,
       }
-Size: ${bytes(store.store.size)}${regionInfo}${accessInfo}
-Created At: ${format(new Date(store.store.createdAt), dateTimeFormat)}
-Updated At: ${format(new Date(store.store.updatedAt), dateTimeFormat)}\n`
     );
+
+    const teamSlug = link.status === 'linked' ? link.org.slug : undefined;
+    output.print(formatStoreDetails(store.store, teamSlug));
   } catch (err) {
     printError(err);
     return 1;
