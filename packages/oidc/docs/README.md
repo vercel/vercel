@@ -28,7 +28,7 @@
 
 [packages/oidc/src/get-context.ts:7](https://github.com/vercel/vercel/blob/main/packages/oidc/src/get-context.ts#L7)
 
----
+___
 
 ### getVercelOidcToken
 
@@ -53,32 +53,28 @@ or the token refresh request fails.
 
 ```js
 // Using the OIDC token
-getVercelOidcToken()
-  .then(token => {
-    console.log('OIDC Token:', token);
-  })
-  .catch(error => {
-    console.error('Error:', error.message);
-  });
+getVercelOidcToken().then((token) => {
+  console.log('OIDC Token:', token);
+}).catch((error) => {
+  console.error('Error:', error.message);
+});
 ```
 
 **`Example`**
 
 ```js
 // Using the OIDC token with explicit team and project (supports IDs and slugs)
-getVercelOidcToken({ team: 'my-team', project: 'my-project' })
-  .then(token => {
-    console.log('OIDC Token:', token);
-  })
-  .catch(error => {
-    console.error('Error:', error.message);
-  });
+getVercelOidcToken({ team: 'my-team', project: 'my-project' }).then((token) => {
+  console.log('OIDC Token:', token);
+}).catch((error) => {
+  console.error('Error:', error.message);
+});
 ```
 
 #### Parameters
 
-| Name       | Type                        | Description                                 |
-| :--------- | :-------------------------- | :------------------------------------------ |
+| Name | Type | Description |
+| :------ | :------ | :------ |
 | `options?` | `GetVercelOidcTokenOptions` | Optional configuration for token retrieval. |
 
 #### Returns
@@ -91,7 +87,7 @@ A promise that resolves to the OIDC token.
 
 [packages/oidc/src/get-vercel-oidc-token.ts:64](https://github.com/vercel/vercel/blob/main/packages/oidc/src/get-vercel-oidc-token.ts#L64)
 
----
+___
 
 ### getVercelOidcTokenSync
 
@@ -104,7 +100,7 @@ Do not cache this value, as it is subject to change in production!
 This function is used to retrieve the OIDC token from the request context or the environment variable.
 It checks for the `x-vercel-oidc-token` header in the request context and falls back to the `VERCEL_OIDC_TOKEN` environment variable if the header is not present.
 
-This function will not refresh the token if it is expired. For refreshing the token, use the @{link getVercelOidcToken} function.
+This function will not refresh the token if it is expired. For refreshing the token, use the {@link getVercelOidcToken} function.
 
 **`Throws`**
 
@@ -128,7 +124,7 @@ The OIDC token.
 
 [packages/oidc/src/get-vercel-oidc-token.ts:124](https://github.com/vercel/vercel/blob/main/packages/oidc/src/get-vercel-oidc-token.ts#L124)
 
----
+___
 
 ### getVercelToken
 
@@ -136,8 +132,8 @@ The OIDC token.
 
 #### Parameters
 
-| Name       | Type                    |
-| :--------- | :---------------------- |
+| Name | Type |
+| :------ | :------ |
 | `options?` | `GetVercelTokenOptions` |
 
 #### Returns
