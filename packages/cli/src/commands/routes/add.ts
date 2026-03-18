@@ -1236,8 +1236,8 @@ async function createFromGenerated(
       outputAgentError(
         client,
         {
-          status: 'error',
-          reason: AGENT_ERROR_REASON.ROUTE_CREATE_FAILED,
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.ROUTE_CREATE_FAILED,
           message:
             'Route creation failed for this project. See hint for next steps.',
           hint:
