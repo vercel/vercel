@@ -73,17 +73,29 @@ describe('output', () => {
           { name: 'httpStatus', label: 'HTTP Status', filterOnly: false },
           { name: 'provider', label: 'Provider', filterOnly: true },
         ],
-        measures: [{ name: 'count', label: 'Count', unit: 'count' }],
+        measures: [
+          {
+            name: 'count',
+            label: 'Count',
+            unit: 'count',
+            aggregations: ['sum', 'persecond', 'percent'],
+            defaultAggregation: 'sum',
+          },
+        ],
       };
-      const aggregations = ['sum', 'persecond', 'percent'];
-      const result = JSON.parse(formatSchemaDetailJson(event, aggregations));
+      const result = JSON.parse(formatSchemaDetailJson(event));
       expect(result.event).toBe('functionExecution');
       expect(result.description).toBe('Serverless function execution details');
       expect(result.dimensions).toHaveLength(2);
       expect(result.dimensions[1].filterOnly).toBe(true);
       expect(result.dimensions[0]).not.toHaveProperty('filterOnly');
       expect(result.measures).toHaveLength(1);
-      expect(result.aggregations).toEqual(aggregations);
+      expect(result.measures[0].aggregations).toEqual([
+        'sum',
+        'persecond',
+        'percent',
+      ]);
+      expect(result.measures[0].defaultAggregation).toBe('sum');
     });
   });
 

@@ -1,5 +1,5 @@
 import type { ValidationResult, ValidatedResult } from './types';
-import type { MetricsAggregation } from './schema-data';
+import type { MetricsAggregation, Schema } from './schema-data';
 import { validateAllProjectMutualExclusivity } from '../../util/command-validation';
 import {
   getEventNames,
@@ -9,23 +9,24 @@ import {
   getDimensions,
 } from './schema-data';
 
-export function validateEvent(event: string): ValidationResult {
-  if (getEvent(event)) {
+export function validateEvent(schema: Schema, event: string): ValidationResult {
+  if (getEvent(schema, event)) {
     return { valid: true };
   }
   return {
     valid: false,
     code: 'UNKNOWN_EVENT',
     message: `Unknown event "${event}".`,
-    allowedValues: getEventNames(),
+    allowedValues: getEventNames(schema),
   };
 }
 
 export function validateMeasure(
+  schema: Schema,
   event: string,
   measure: string
 ): ValidationResult {
-  const measures = getMeasures(event);
+  const measures = getMeasures(schema, event);
   if (measures.some(m => m.name === measure)) {
     return { valid: true };
   }
@@ -38,11 +39,12 @@ export function validateMeasure(
 }
 
 export function validateAggregation(
+  schema: Schema,
   event: string,
   measure: string,
   aggregation: string
 ): ValidatedResult<MetricsAggregation> {
-  const aggs = getAggregations(event, measure);
+  const aggs = getAggregations(schema, event, measure);
   const found = aggs.find(agg => agg === aggregation);
   if (found) {
     return { valid: true, value: found };
@@ -56,10 +58,11 @@ export function validateAggregation(
 }
 
 export function validateGroupBy(
+  schema: Schema,
   event: string,
   dims: string[]
 ): ValidationResult {
-  const dimensions = getDimensions(event);
+  const dimensions = getDimensions(schema, event);
   for (const dim of dims) {
     const found = dimensions.find(d => d.name === dim);
     if (!found) {

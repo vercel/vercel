@@ -1,7 +1,6 @@
 import chalk from 'chalk';
 import table from '../../util/output/table';
 import indent from '../../util/output/indent';
-import { getMeasures } from './schema-data';
 import { getRollupColumnName } from './output';
 import { toGranularityMsFromDuration } from './time-utils';
 import type {
@@ -66,6 +65,7 @@ interface MetadataHeaderOptions {
 export interface FormatTextOptions {
   event: string;
   measure: string;
+  measureUnit?: string;
   aggregation: MetricsAggregation;
   groupBy: string[];
   filter?: string;
@@ -85,11 +85,13 @@ const MAX_SPARKLINE_LENGTH = 120;
 type TableAlignment = 'l' | 'c' | 'r';
 type StatColumn = 'total' | 'avg' | 'min' | 'max';
 
-const COUNT_UNITS = new Set(['count', 'us dollars', 'dollars']);
+const COUNT_UNITS = new Set(['count', 'usd', 'us dollars', 'dollars']);
 const DURATION_UNITS = new Set(['milliseconds', 'seconds']);
 const BYTES_UNITS = new Set([
   'bytes',
   'megabytes',
+  'gigabyte hour',
+  'gigabyte_hour',
   'gigabyte hours',
   'gigabyte_hours',
 ]);
@@ -157,8 +159,10 @@ function formatUnitLabel(unit: string): string {
       return 'ms';
     case 'seconds':
       return 's';
+    case 'usd':
     case 'us dollars':
       return 'USD';
+    case 'gigabyte hour':
     case 'gigabyte hours':
       return 'GB-h';
     default:
@@ -652,15 +656,15 @@ export function formatMetadataHeader(opts: MetadataHeaderOptions): string {
     rows.push({ key: 'Filter', value: opts.filter });
   }
 
-  if (opts.scope.type === 'project-with-slug') {
+  if (opts.scope.type === 'project') {
     rows.push({
       key: 'Project',
-      value: `${opts.projectName ?? opts.scope.projectName} (${opts.teamName ?? opts.scope.teamSlug})`,
+      value: `${opts.projectName ?? opts.scope.projectIds[0]} (${opts.teamName ?? opts.scope.ownerId})`,
     });
   } else {
     rows.push({
       key: 'Team',
-      value: `${opts.teamName ?? opts.scope.teamSlug} (all projects)`,
+      value: `${opts.teamName ?? opts.scope.ownerId} (all projects)`,
     });
   }
 
@@ -776,10 +780,7 @@ export function formatText(
   opts: FormatTextOptions
 ): string {
   const rollupColumn = getRollupColumnName(opts.measure, opts.aggregation);
-  const measureSchema = getMeasures(opts.event).find(
-    m => m.name === opts.measure
-  );
-  const measureUnit = measureSchema?.unit;
+  const measureUnit = opts.measureUnit;
   const measureType = getMeasureType(measureUnit ?? 'ratio');
   const granularityMs = toGranularityMsFromDuration(opts.granularity);
 

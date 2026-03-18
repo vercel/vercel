@@ -25,8 +25,7 @@ export function formatQueryJson(
 }
 
 export function formatSchemaDetailJson(
-  event: EventSchema & { name: string },
-  aggregations: readonly string[]
+  event: EventSchema & { name: string }
 ): string {
   const dimensions = event.dimensions.map(d => {
     const obj: { name: string; label: string; filterOnly?: boolean } = {
@@ -48,8 +47,9 @@ export function formatSchemaDetailJson(
         name: m.name,
         label: m.label,
         unit: m.unit,
+        aggregations: m.aggregations,
+        defaultAggregation: m.defaultAggregation,
       })),
-      aggregations: [...aggregations],
     },
     null,
     2

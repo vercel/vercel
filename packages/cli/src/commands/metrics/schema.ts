@@ -7,11 +7,11 @@ import { printError } from '../../util/error';
 import output from '../../output-manager';
 import { schemaSubcommand } from './command';
 import { validateJsonOutput } from '../../util/output-format';
+import { fetchSchema } from './schema-api';
 import { validateEvent } from './validation';
 import {
   getEventNames,
   getEvent,
-  getAggregations,
   type DimensionSchema,
   type MeasureSchema,
 } from './schema-data';
@@ -23,6 +23,20 @@ import {
 import formatTable from '../../util/format-table';
 import indent from '../../util/output/indent';
 import type { MetricsTelemetryClient } from '../../util/telemetry/commands/metrics';
+import getScope from '../../util/get-scope';
+import { isAPIError } from '../../util/errors-ts';
+
+function handleSchemaAuthError(client: Client, jsonOutput: boolean): number {
+  const message =
+    'The metrics schema API request was not authorized. Run `vercel login` to authenticate and `vercel switch` to select a team, then try again.';
+
+  if (jsonOutput) {
+    client.stdout.write(formatErrorJson('SCHEMA_UNAUTHORIZED', message));
+  } else {
+    output.error(message);
+  }
+  return 1;
+}
 
 export default async function schema(
   client: Client,
@@ -51,9 +65,33 @@ export default async function schema(
   telemetry.trackCliOptionEvent(event);
   telemetry.trackCliOptionFormat(flags['--format']);
 
+  const { team } = await getScope(client);
+  if (!team) {
+    return handleSchemaAuthError(client, jsonOutput);
+  }
+
+  let schemaData;
+  try {
+    schemaData = await fetchSchema(client, team.id);
+  } catch (err: unknown) {
+    if (isAPIError(err) && (err.status === 401 || err.status === 403)) {
+      return handleSchemaAuthError(client, jsonOutput);
+    }
+    const message =
+      err instanceof Error
+        ? `Failed to fetch metrics schema: ${err.message}`
+        : `Failed to fetch metrics schema: ${String(err)}`;
+    if (jsonOutput) {
+      client.stdout.write(formatErrorJson('SCHEMA_FETCH_FAILED', message));
+    } else {
+      output.error(message);
+    }
+    return 1;
+  }
+
   if (event) {
     // Event detail
-    const eventResult = validateEvent(event);
+    const eventResult = validateEvent(schemaData, event);
     if (!eventResult.valid) {
       if (jsonOutput) {
         client.stdout.write(
@@ -74,21 +112,11 @@ export default async function schema(
       return 1;
     }
 
-    const eventData = getEvent(event)!;
+    const eventData = getEvent(schemaData, event)!;
     const eventWithName = { ...eventData, name: event };
 
     if (jsonOutput) {
-      // For JSON, compute aggregations from the first non-count measure, or count
-      const hasNonCount = eventData.measures.some(m => m.name !== 'count');
-      const sampleMeasure = hasNonCount
-        ? eventData.measures.find(m => m.name !== 'count')!.name
-        : eventData.measures.length > 0
-          ? 'count'
-          : '';
-      const aggregations = sampleMeasure
-        ? getAggregations(event, sampleMeasure)
-        : [];
-      client.stdout.write(formatSchemaDetailJson(eventWithName, aggregations));
+      client.stdout.write(formatSchemaDetailJson(eventWithName));
     } else {
       output.log(`Event: ${event} - ${eventData.description}`);
 
@@ -106,9 +134,9 @@ export default async function schema(
     }
   } else {
     // Event list
-    const events = getEventNames().map(name => ({
+    const events = getEventNames(schemaData).map(name => ({
       name,
-      description: getEvent(name)!.description,
+      description: getEvent(schemaData, name)!.description,
     }));
 
     if (jsonOutput) {
@@ -162,9 +190,18 @@ function formatMeasuresTable(measures: MeasureSchema[]) {
   }
   return indent(
     formatTable(
-      ['Measure', 'Label', 'Unit'],
-      ['l', 'l', 'l'],
-      [{ rows: measures.map(m => [m.name, m.label, m.unit]) }]
+      ['Measure', 'Label', 'Unit', 'Aggregations'],
+      ['l', 'l', 'l', 'l'],
+      [
+        {
+          rows: measures.map(m => [
+            m.name,
+            m.label,
+            m.unit,
+            m.aggregations.join(', '),
+          ]),
+        },
+      ]
     ),
     1
   );

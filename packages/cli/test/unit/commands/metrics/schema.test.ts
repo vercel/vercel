@@ -2,6 +2,9 @@ import { describe, beforeEach, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import schema from '../../../../src/commands/metrics/schema';
 import { MetricsTelemetryClient } from '../../../../src/util/telemetry/commands/metrics';
+import getScope from '../../../../src/util/get-scope';
+
+vi.mock('../../../../src/util/get-scope');
 
 class MockTelemetry extends MetricsTelemetryClient {
   constructor() {
@@ -13,10 +16,64 @@ class MockTelemetry extends MetricsTelemetryClient {
   }
 }
 
+const mockedGetScope = vi.mocked(getScope);
+
+function mockSchemaApi() {
+  client.scenario.get('/v1/observability/schema', (_req, res) => {
+    res.json({
+      events: [
+        { name: 'incomingRequest', description: 'Edge Requests' },
+        { name: 'functionExecution', description: 'Function Executions' },
+      ],
+    });
+  });
+
+  client.scenario.get(
+    '/v1/observability/schema/incomingRequest',
+    (_req, res) => {
+      res.json({
+        name: 'incomingRequest',
+        description: 'Edge Requests',
+        dimensions: [
+          { name: 'httpStatus', label: 'HTTP Status', canGroupBy: true },
+          { name: 'projectName', label: 'Project', canGroupBy: false },
+        ],
+        measures: [
+          {
+            name: 'count',
+            label: 'Count',
+            unit: 'count',
+            aggregations: ['sum', 'persecond', 'percent'],
+            defaultAggregation: 'sum',
+          },
+        ],
+      });
+    }
+  );
+
+  client.scenario.get(
+    '/v1/observability/schema/functionExecution',
+    (_req, res) => {
+      res.json({
+        name: 'functionExecution',
+        description: 'Function Executions',
+        dimensions: [],
+        measures: [],
+      });
+    }
+  );
+}
+
 describe('schema', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     client.reset();
+    mockedGetScope.mockResolvedValue({
+      contextName: 'my-team',
+      team: { id: 'team_dummy', slug: 'my-team' } as any,
+      user: { id: 'user_dummy' } as any,
+    });
+    mockSchemaApi();
   });
 
   describe('event list', () => {
@@ -81,8 +138,11 @@ describe('schema', () => {
       expect(parsed.description).toBeDefined();
       expect(parsed.dimensions).toBeDefined();
       expect(parsed.measures).toBeDefined();
-      expect(parsed.aggregations).toBeDefined();
-      expect(Array.isArray(parsed.aggregations)).toBe(true);
+      expect(parsed.measures[0].aggregations).toEqual([
+        'sum',
+        'persecond',
+        'percent',
+      ]);
     });
   });
 
