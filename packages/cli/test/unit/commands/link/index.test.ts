@@ -970,7 +970,16 @@ describe('link', () => {
     client.stdin.write('multi-service-app\n');
 
     await expect(client.stderr).toOutput(
-      'Multiple services were detected. What would you like to do?'
+      'Multiple services were detected. How would you like to set up this project?'
+    );
+    expect(client.stderr.getFullOutput()).toContain(
+      'Set up project with all detected services: "frontend" + "api"'
+    );
+    expect(client.stderr.getFullOutput()).toContain(
+      'Set up project with "frontend"'
+    );
+    expect(client.stderr.getFullOutput()).toContain(
+      'Set up project with "api"'
     );
     client.stdin.write('\n');
 
@@ -1039,14 +1048,12 @@ describe('link', () => {
     client.stdin.write('declined-multi-service-app\n');
 
     await expect(client.stderr).toOutput(
-      'Multiple services were detected. What would you like to do?'
+      'Multiple services were detected. How would you like to set up this project?'
     );
-    client.stdin.write('\x1B[B\x1B[B\n');
-
-    await expect(client.stderr).toOutput(
-      'In which directory is your code located? ./'
+    expect(client.stderr.getFullOutput()).toContain(
+      'Set up project with "frontend"'
     );
-    client.stdin.write('\n');
+    client.stdin.write('\x1B[B\n');
 
     await expect(client.stderr).toOutput(
       'Auto-detected Project Settings for Next.js'
@@ -1063,6 +1070,9 @@ describe('link', () => {
     expect(exitCode, 'exit code for "link"').toEqual(0);
 
     expect(await pathExists(join(cwd, 'vercel.json'))).toBe(false);
+    expect(client.stderr.getFullOutput()).not.toContain(
+      'In which directory is your code located?'
+    );
 
     const projectJson = await readJSON(join(cwd, '.vercel/project.json'));
     const project = await getProjectByNameOrId(client, projectJson.projectId);
@@ -1070,6 +1080,77 @@ describe('link', () => {
       throw project;
     }
     expect(project.framework).toEqual('nextjs');
+  });
+
+  it('should continue with the selected nested web service when single-app is chosen', async () => {
+    useUser();
+    const cwd = setupTmpDir();
+    useTeams('team_dummy');
+    useUnknownProject();
+
+    await writeJSON(join(cwd, 'package.json'), {
+      dependencies: {
+        next: 'latest',
+      },
+    });
+    await mkdirp(join(cwd, 'services/api'));
+    await writeFile(join(cwd, 'services/api/requirements.txt'), 'fastapi\n');
+    await writeFile(
+      join(cwd, 'services/api/index.py'),
+      'from fastapi import FastAPI\napp = FastAPI()\n'
+    );
+
+    client.cwd = cwd;
+    const exitCodePromise = link(client);
+
+    await expect(client.stderr).toOutput('Set up');
+    client.stdin.write('y\n');
+
+    await expect(client.stderr).toOutput(
+      'Which scope should contain your project?'
+    );
+    client.stdin.write('\n');
+
+    await expect(client.stderr).toOutput('Link to existing project?');
+    client.stdin.write('n\n');
+
+    await expect(client.stderr).toOutput('What’s your project’s name?');
+    client.stdin.write('single-fastapi-app\n');
+
+    await expect(client.stderr).toOutput(
+      'Multiple services were detected. How would you like to set up this project?'
+    );
+    expect(client.stderr.getFullOutput()).toContain(
+      'Set up project with "api"'
+    );
+    client.stdin.write('\x1B[B\x1B[B\n');
+
+    await expect(client.stderr).toOutput(
+      'Auto-detected Project Settings for FastAPI'
+    );
+    await expect(client.stderr).toOutput('Want to modify these settings?');
+    client.stdin.write('\n');
+
+    await expect(client.stderr).toOutput(
+      'Do you want to change additional project settings?'
+    );
+    client.stdin.write('\n');
+
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "link"').toEqual(0);
+
+    expect(await pathExists(join(cwd, 'vercel.json'))).toBe(false);
+    expect(client.stderr.getFullOutput()).not.toContain(
+      'In which directory is your code located?'
+    );
+
+    const projectJson = await readJSON(join(cwd, '.vercel/project.json'));
+    const project = await getProjectByNameOrId(client, projectJson.projectId);
+    if (project instanceof ProjectNotFound) {
+      throw project;
+    }
+    expect(project.framework).toEqual('fastapi');
+    expect(project.rootDirectory).toEqual('services/api');
   });
 
   it('should allow choosing a different project directory before deploying detected services', async () => {
@@ -1126,9 +1207,12 @@ describe('link', () => {
     client.stdin.write('selected-directory-multi-service-app\n');
 
     await expect(client.stderr).toOutput(
-      'Multiple services were detected. What would you like to do?'
+      'Multiple services were detected. How would you like to set up this project?'
     );
-    client.stdin.write('\x1B[B\n');
+    expect(client.stderr.getFullOutput()).toContain(
+      'Choose a different root directory'
+    );
+    client.stdin.write('\x1B[B\x1B[B\x1B[B\n');
 
     await expect(client.stderr).toOutput(
       'In which directory is your code located? ./'
@@ -1136,7 +1220,7 @@ describe('link', () => {
     client.stdin.write('apps/web\n');
 
     await expect(client.stderr).toOutput(
-      'Multiple services were detected. What would you like to do?'
+      'Multiple services were detected. How would you like to set up this project?'
     );
     client.stdin.write('\n');
 
@@ -1215,7 +1299,7 @@ describe('link', () => {
     client.stdin.write('apps/web\n');
 
     await expect(client.stderr).toOutput(
-      'Multiple services were detected. What would you like to do?'
+      'Multiple services were detected. How would you like to set up this project?'
     );
     client.stdin.write('\n');
 
@@ -1357,7 +1441,7 @@ describe('link', () => {
       'Services are configured via vercel.json.'
     );
     expect(client.stderr.getFullOutput()).not.toContain(
-      'Multiple services were detected. What would you like to do?'
+      'Multiple services were detected. How would you like to set up this project?'
     );
   });
 
