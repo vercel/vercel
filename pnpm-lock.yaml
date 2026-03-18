@@ -1701,8 +1701,8 @@ importers:
         version: 1.1.1
     devDependencies:
       '@next-community/adapter-vercel':
-        specifier: https://adapter-vercel-adapter-pjnbg77yv.vercel.app/adapter.tgz
-        version: '@adapter-vercel-adapter-pjnbg77yv.vercel.app/adapter.tgz(next@16.1.6)'
+        specifier: https://adapter-vercel-adapter-a9hkd85y4.vercel.app/adapter.tgz
+        version: '@adapter-vercel-adapter-a9hkd85y4.vercel.app/adapter.tgz(next@16.1.6)'
       '@types/aws-lambda':
         specifier: 8.10.19
         version: 8.10.19
@@ -21277,9 +21277,9 @@ packages:
     resolution: {integrity: sha512-WPsqwxITS2tzx1bzhIKsEs19ABD5vmCVa4xBo2tq/SrV4RNZtfws1EnCWQXM6yh8bD08a1idvkB5MZSBiZsjwg==}
     dev: false
 
-  '@adapter-vercel-adapter-pjnbg77yv.vercel.app/adapter.tgz(next@16.1.6)':
-    resolution: {tarball: https://adapter-vercel-adapter-pjnbg77yv.vercel.app/adapter.tgz}
-    id: '@adapter-vercel-adapter-pjnbg77yv.vercel.app/adapter.tgz'
+  '@adapter-vercel-adapter-a9hkd85y4.vercel.app/adapter.tgz(next@16.1.6)':
+    resolution: {tarball: https://adapter-vercel-adapter-a9hkd85y4.vercel.app/adapter.tgz}
+    id: '@adapter-vercel-adapter-a9hkd85y4.vercel.app/adapter.tgz'
     name: '@next-community/adapter-vercel'
     version: 0.0.1-beta.14
     engines: {node: '>= 20.6.0'}
