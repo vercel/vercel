@@ -1,3 +1,4 @@
+import chalk from 'chalk';
 import { remove } from 'fs-extra';
 import { join, basename } from 'path';
 import type {
@@ -49,8 +50,6 @@ import {
   toProjectRootDirectory,
   type InferredServicesChoice,
 } from './services-setup';
-
-const chalk = require('chalk');
 
 export interface SetupAndLinkOptions {
   autoConfirm?: boolean;
