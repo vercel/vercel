@@ -21,7 +21,7 @@ classifiers = [
 ]
 
 [build-system]
-requires = ["uv_build>=0.9.22,<0.10.0"]
+requires = ["uv_build>=0.10.11,<0.11"]
 build-backend = "uv_build"
 
 [dependency-groups]
