@@ -17,6 +17,7 @@ import {
   getInternalServiceCronPath,
   getInternalServiceFunctionPath,
   getInternalServiceWorkerPath,
+  isFrontendFramework,
   isRouteOwningBuilder,
   isStaticBuild,
   readVercelConfig,
@@ -73,8 +74,8 @@ function toInferredLayoutConfig(services: ServicesConfig): ServicesConfig {
       serviceConfig.routePrefix = service.routePrefix;
     }
 
-    // Keep the framework only for the primary frontend service.
-    if (service.routePrefix === '/' && typeof service.framework === 'string') {
+    // Keep the framework setting only for frontend services
+    if (isFrontendFramework(service.framework)) {
       serviceConfig.framework = service.framework;
     }
 
