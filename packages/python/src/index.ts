@@ -158,7 +158,10 @@ export async function downloadFilesInWorkPath({
   if (meta.isDev) {
     // Old versions of the CLI don't assign this property
     const { devCacheDir = join(workPath, '.now', 'cache') } = meta;
-    const destCache = join(devCacheDir, basename(entrypoint, '.py'));
+    // Replace dots in the entrypoint basename with underscores so the cache
+    // directory name doesn't collide with the entrypoint file itself.
+    const cacheKey = basename(entrypoint).replace(/\./g, '_');
+    const destCache = join(devCacheDir, cacheKey);
     await download(downloadedFiles, destCache);
     downloadedFiles = await glob('**', destCache);
     workPath = destCache;

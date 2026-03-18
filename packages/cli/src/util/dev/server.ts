@@ -2110,7 +2110,10 @@ export default class DevServer {
     // to. Once the proxied request is finished, vercel dev shuts down the dev
     // server child process.
     const { builder, pkg: builderPkg } = match.builderWithPkg;
-    if (builder.version === 3 && typeof builder.startDevServer === 'function') {
+    if (
+      (builder.version === 3 || builder.version === -1) &&
+      typeof builder.startDevServer === 'function'
+    ) {
       let devServerResult: StartDevServerResult = null;
       try {
         const { envConfigs, files, devCacheDir, cwd: workPath } = this;

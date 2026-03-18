@@ -15,6 +15,7 @@ import {
   normalizePath,
   isBackendFramework,
   isPythonFramework,
+  type BuildResultVX,
 } from '@vercel/build-utils';
 import { isStaticRuntime } from '@vercel/fs-detectors';
 import plural from 'pluralize';
@@ -327,17 +328,36 @@ export async function executeBuild(
     buildResultOrOutputs = await builder.build(buildOptions);
   }
 
+  // Unwrap BuildResultVX (version === -1) to the actual V2 or V3 result.
+  // When using a build process, builder-worker.cjs sends back the already-
+  // unwrapped result, so we detect V2 vs V3 by output shape.
+  // If builder.build() was called directly (no build process), the raw VX
+  // wrapper is returned and we use resultVersion to unwrap it.
+  let effectiveVersion: number = builder.version;
+  if (effectiveVersion === -1) {
+    if ('resultVersion' in (buildResultOrOutputs as object)) {
+      const vx = buildResultOrOutputs as BuildResultVX;
+      effectiveVersion = vx.resultVersion;
+      buildResultOrOutputs = vx.result;
+    } else {
+      effectiveVersion =
+        (buildResultOrOutputs as BuildResultV3).output?.type === 'Lambda'
+          ? 3
+          : 2;
+    }
+  }
+
   // Sort out build result to builder v2 shape
-  if (!builder.version || (builder as any).version === 1) {
+  if (!effectiveVersion || effectiveVersion === 1) {
     // `BuilderOutputs` map was returned (Now Builder v1 behavior)
     result = {
       output: buildResultOrOutputs as BuilderOutputs,
       routes: [],
       watch: [],
     };
-  } else if (builder.version === 2) {
+  } else if (effectiveVersion === 2) {
     result = buildResultOrOutputs as BuildResult;
-  } else if (builder.version === 3) {
+  } else if (effectiveVersion === 3) {
     const { output, ...rest } = buildResultOrOutputs as BuildResultV3;
 
     if (!output || (output as BuilderOutput).type !== 'Lambda') {
