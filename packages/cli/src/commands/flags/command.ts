@@ -350,7 +350,7 @@ export const disableSubcommand = {
     },
     {
       name: 'Disable a flag with a specific variant',
-      value: `${packageName} flags disable my-feature -e production --variant off`,
+      value: `${packageName} flags disable my-feature -e production --variant false`,
     },
     {
       name: 'Disable a flag with a revision message',
