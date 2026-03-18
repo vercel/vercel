@@ -970,7 +970,7 @@ describe('link', () => {
     client.stdin.write('multi-service-app\n');
 
     await expect(client.stderr).toOutput(
-      'Save services configuration to vercel.json?'
+      'Multiple services were detected. What would you like to do?'
     );
     client.stdin.write('\n');
 
@@ -993,7 +993,6 @@ describe('link', () => {
           routePrefix: '/',
         },
         api: {
-          framework: 'fastapi',
           entrypoint: 'services/api',
           routePrefix: '/_/api',
         },
@@ -1006,6 +1005,362 @@ describe('link', () => {
       throw project;
     }
     expect(project.framework).toEqual('services');
+  });
+
+  it('should continue with framework detection when root inferred services are declined', async () => {
+    const user = useUser();
+    const cwd = setupTmpDir();
+    useTeams('team_dummy');
+    useUnknownProject();
+
+    await writeJSON(join(cwd, 'package.json'), {
+      dependencies: {
+        next: 'latest',
+      },
+    });
+    await mkdirp(join(cwd, 'services/api'));
+    await writeFile(join(cwd, 'services/api/requirements.txt'), 'fastapi\n');
+    await writeFile(
+      join(cwd, 'services/api/index.py'),
+      'from fastapi import FastAPI\napp = FastAPI()\n'
+    );
+
+    client.cwd = cwd;
+    const exitCodePromise = link(client);
+
+    await expect(client.stderr).toOutput('Set up');
+    client.stdin.write('y\n');
+
+    await expect(client.stderr).toOutput(
+      'Which scope should contain your project?'
+    );
+    client.stdin.write('\n');
+
+    await expect(client.stderr).toOutput('Link to existing project?');
+    client.stdin.write('n\n');
+
+    await expect(client.stderr).toOutput('What’s your project’s name?');
+    client.stdin.write('declined-multi-service-app\n');
+
+    await expect(client.stderr).toOutput(
+      'Multiple services were detected. What would you like to do?'
+    );
+    client.stdin.write('\x1B[B\x1B[B\n');
+
+    await expect(client.stderr).toOutput(
+      'In which directory is your code located? ./'
+    );
+    client.stdin.write('\n');
+
+    await expect(client.stderr).toOutput(
+      'Auto-detected Project Settings for Next.js'
+    );
+    await expect(client.stderr).toOutput('Want to modify these settings?');
+    client.stdin.write('\n');
+
+    await expect(client.stderr).toOutput(
+      'Do you want to change additional project settings?'
+    );
+    client.stdin.write('\n');
+
+    await expect(client.stderr).toOutput(
+      `Linked to ${user.username}/declined-multi-service-app (created .vercel and added it to .gitignore)`
+    );
+
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "link"').toEqual(0);
+
+    expect(await pathExists(join(cwd, 'vercel.json'))).toBe(false);
+
+    const projectJson = await readJSON(join(cwd, '.vercel/project.json'));
+    const project = await getProjectByNameOrId(client, projectJson.projectId);
+    if (project instanceof ProjectNotFound) {
+      throw project;
+    }
+    expect(project.framework).toEqual('nextjs');
+  });
+
+  it('should continue link when repo root vercel.json is invalid', async () => {
+    const user = useUser();
+    const cwd = setupTmpDir();
+    useTeams('team_dummy');
+    useUnknownProject();
+
+    await writeFile(join(cwd, 'vercel.json'), '{\n');
+
+    client.cwd = cwd;
+    const exitCodePromise = link(client);
+
+    await expect(client.stderr).toOutput('Set up');
+    client.stdin.write('y\n');
+
+    await expect(client.stderr).toOutput(
+      'Which scope should contain your project?'
+    );
+    client.stdin.write('\n');
+
+    await expect(client.stderr).toOutput('Link to existing project?');
+    client.stdin.write('n\n');
+
+    await expect(client.stderr).toOutput('What’s your project’s name?');
+    client.stdin.write('invalid-root-config-app\n');
+
+    await expect(client.stderr).toOutput(
+      'Do you want to change additional project settings?'
+    );
+    client.stdin.write('\n');
+
+    await expect(client.stderr).toOutput(
+      `Linked to ${user.username}/invalid-root-config-app (created .vercel and added it to .gitignore)`
+    );
+
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "link"').toEqual(0);
+
+    const projectJson = await readJSON(join(cwd, '.vercel/project.json'));
+    const project = await getProjectByNameOrId(client, projectJson.projectId);
+    if (project instanceof ProjectNotFound) {
+      throw project;
+    }
+    expect(project.framework).toEqual('services');
+  });
+
+  it('should allow choosing a different project directory before deploying detected services', async () => {
+    const user = useUser();
+    const cwd = setupTmpDir();
+    useTeams('team_dummy');
+    useUnknownProject();
+
+    await writeJSON(join(cwd, 'package.json'), {
+      dependencies: {
+        next: 'latest',
+      },
+    });
+    await mkdirp(join(cwd, 'services/root-api'));
+    await writeFile(
+      join(cwd, 'services/root-api/requirements.txt'),
+      'fastapi\n'
+    );
+    await writeFile(
+      join(cwd, 'services/root-api/index.py'),
+      'from fastapi import FastAPI\napp = FastAPI()\n'
+    );
+
+    await mkdirp(join(cwd, 'apps/web/services/api'));
+    await writeJSON(join(cwd, 'apps/web/package.json'), {
+      dependencies: {
+        next: 'latest',
+      },
+    });
+    await writeFile(
+      join(cwd, 'apps/web/services/api/requirements.txt'),
+      'fastapi\n'
+    );
+    await writeFile(
+      join(cwd, 'apps/web/services/api/index.py'),
+      'from fastapi import FastAPI\napp = FastAPI()\n'
+    );
+
+    client.cwd = cwd;
+    const exitCodePromise = link(client);
+
+    await expect(client.stderr).toOutput('Set up');
+    client.stdin.write('y\n');
+
+    await expect(client.stderr).toOutput(
+      'Which scope should contain your project?'
+    );
+    client.stdin.write('\n');
+
+    await expect(client.stderr).toOutput('Link to existing project?');
+    client.stdin.write('n\n');
+
+    await expect(client.stderr).toOutput('What’s your project’s name?');
+    client.stdin.write('selected-directory-multi-service-app\n');
+
+    await expect(client.stderr).toOutput(
+      'Multiple services were detected. What would you like to do?'
+    );
+    client.stdin.write('\x1B[B\n');
+
+    await expect(client.stderr).toOutput(
+      'In which directory is your code located? ./'
+    );
+    client.stdin.write('apps/web\n');
+
+    await expect(client.stderr).toOutput(
+      'Multiple services were detected. What would you like to do?'
+    );
+    client.stdin.write('\n');
+
+    await expect(client.stderr).toOutput(
+      'Do you want to change additional project settings?'
+    );
+    client.stdin.write('\n');
+
+    await expect(client.stderr).toOutput(
+      `Linked to ${user.username}/selected-directory-multi-service-app (created .vercel and added it to .gitignore)`
+    );
+
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "link"').toEqual(0);
+
+    expect(await readJSON(join(cwd, 'apps/web/vercel.json'))).toMatchObject({
+      experimentalServices: {
+        frontend: {
+          framework: 'nextjs',
+          routePrefix: '/',
+        },
+        api: {
+          entrypoint: 'services/api',
+          routePrefix: '/_/api',
+        },
+      },
+    });
+    expect(await pathExists(join(cwd, 'vercel.json'))).toBe(false);
+
+    const projectJson = await readJSON(join(cwd, '.vercel/project.json'));
+    const project = await getProjectByNameOrId(client, projectJson.projectId);
+    if (project instanceof ProjectNotFound) {
+      throw project;
+    }
+    expect(project.framework).toEqual('services');
+    expect(project.rootDirectory).toEqual('apps/web');
+  });
+
+  it('should write vercel.json for inferred multi-service layouts in the selected root directory', async () => {
+    const user = useUser();
+    const cwd = setupTmpDir();
+    useTeams('team_dummy');
+    useUnknownProject();
+
+    await mkdirp(join(cwd, 'apps/web/services/api'));
+    await writeJSON(join(cwd, 'apps/web/package.json'), {
+      dependencies: {
+        next: 'latest',
+      },
+    });
+    await writeFile(
+      join(cwd, 'apps/web/services/api/requirements.txt'),
+      'fastapi\n'
+    );
+    await writeFile(
+      join(cwd, 'apps/web/services/api/index.py'),
+      'from fastapi import FastAPI\napp = FastAPI()\n'
+    );
+
+    client.cwd = cwd;
+    const exitCodePromise = link(client);
+
+    await expect(client.stderr).toOutput('Set up');
+    client.stdin.write('y\n');
+
+    await expect(client.stderr).toOutput(
+      'Which scope should contain your project?'
+    );
+    client.stdin.write('\n');
+
+    await expect(client.stderr).toOutput('Link to existing project?');
+    client.stdin.write('n\n');
+
+    await expect(client.stderr).toOutput('What’s your project’s name?');
+    client.stdin.write('nested-multi-service-app\n');
+
+    await expect(client.stderr).toOutput(
+      'In which directory is your code located? ./'
+    );
+    client.stdin.write('apps/web\n');
+
+    await expect(client.stderr).toOutput(
+      'Multiple services were detected. What would you like to do?'
+    );
+    client.stdin.write('\n');
+
+    await expect(client.stderr).toOutput(
+      'Do you want to change additional project settings?'
+    );
+    client.stdin.write('\n');
+
+    await expect(client.stderr).toOutput(
+      `Linked to ${user.username}/nested-multi-service-app (created .vercel and added it to .gitignore)`
+    );
+
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "link"').toEqual(0);
+
+    expect(await readJSON(join(cwd, 'apps/web/vercel.json'))).toMatchObject({
+      experimentalServices: {
+        frontend: {
+          framework: 'nextjs',
+          routePrefix: '/',
+        },
+        api: {
+          entrypoint: 'services/api',
+          routePrefix: '/_/api',
+        },
+      },
+    });
+    expect(await pathExists(join(cwd, 'vercel.json'))).toBe(false);
+
+    const projectJson = await readJSON(join(cwd, '.vercel/project.json'));
+    const project = await getProjectByNameOrId(client, projectJson.projectId);
+    if (project instanceof ProjectNotFound) {
+      throw project;
+    }
+    expect(project.framework).toEqual('services');
+    expect(project.rootDirectory).toEqual('apps/web');
+  });
+
+  it('should continue link when selected root vercel.json is invalid', async () => {
+    const user = useUser();
+    const cwd = setupTmpDir();
+    useTeams('team_dummy');
+    useUnknownProject();
+
+    await mkdirp(join(cwd, 'apps/web'));
+    await writeFile(join(cwd, 'apps/web/vercel.json'), '{\n');
+
+    client.cwd = cwd;
+    const exitCodePromise = link(client);
+
+    await expect(client.stderr).toOutput('Set up');
+    client.stdin.write('y\n');
+
+    await expect(client.stderr).toOutput(
+      'Which scope should contain your project?'
+    );
+    client.stdin.write('\n');
+
+    await expect(client.stderr).toOutput('Link to existing project?');
+    client.stdin.write('n\n');
+
+    await expect(client.stderr).toOutput('What’s your project’s name?');
+    client.stdin.write('invalid-selected-root-config-app\n');
+
+    await expect(client.stderr).toOutput(
+      'In which directory is your code located? ./'
+    );
+    client.stdin.write('apps/web\n');
+
+    await expect(client.stderr).toOutput(
+      'Do you want to change additional project settings?'
+    );
+    client.stdin.write('\n');
+
+    await expect(client.stderr).toOutput(
+      `Linked to ${user.username}/invalid-selected-root-config-app (created .vercel and added it to .gitignore)`
+    );
+
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "link"').toEqual(0);
+
+    const projectJson = await readJSON(join(cwd, '.vercel/project.json'));
+    const project = await getProjectByNameOrId(client, projectJson.projectId);
+    if (project instanceof ProjectNotFound) {
+      throw project;
+    }
+    expect(project.framework).toEqual('services');
+    expect(project.rootDirectory).toEqual('apps/web');
   });
 
   it('should warn when inferred services are blocked by builds config', async () => {
@@ -1047,9 +1402,8 @@ describe('link', () => {
     client.stdin.write('services-with-builds\n');
 
     await expect(client.stderr).toOutput(
-      "Multiple services were detected, but your existing project config uses `builds`, so Vercel won't auto-convert it to Services."
+      'Multiple services were detected, but your existing project config uses `builds`. To deploy multiple services in one project, see Services (https://vercel.com/docs/services).'
     );
-    await expect(client.stderr).toOutput('https://vercel.com/docs/services');
 
     await expect(client.stderr).toOutput(
       'In which directory is your code located? ./'
@@ -1067,6 +1421,13 @@ describe('link', () => {
 
     const exitCode = await exitCodePromise;
     expect(exitCode, 'exit code for "link"').toEqual(0);
+    expect(client.stderr.getFullOutput()).not.toContain('Detected services:');
+    expect(client.stderr.getFullOutput()).not.toContain(
+      'Services are configured via vercel.json.'
+    );
+    expect(client.stderr.getFullOutput()).not.toContain(
+      'Multiple services were detected. What would you like to do?'
+    );
   });
 
   it('should allow overwriting existing link', async () => {

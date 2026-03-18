@@ -80,7 +80,6 @@ describe('detectServices', () => {
         config: {
           frontend: { framework: 'nextjs', routePrefix: '/' },
           backend: {
-            framework: 'ruby',
             entrypoint: 'backend',
             routePrefix: '/_/backend',
           },

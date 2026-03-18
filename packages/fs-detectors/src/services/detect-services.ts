@@ -8,6 +8,7 @@ import {
   type DetectServicesOptions,
   type DetectServicesResult,
   type Service,
+  type ServicesConfig,
   type ServicesRoutes,
 } from './types';
 import {
@@ -50,6 +51,35 @@ function withResolvedResult(
     resolved,
     inferred,
   };
+}
+
+/*
+ * This lets us define the conventions of how we'd like the services configuration
+ * to look like.
+ */
+function toInferredLayoutConfig(services: ServicesConfig): ServicesConfig {
+  const inferredConfig: ServicesConfig = {};
+
+  for (const [name, service] of Object.entries(services)) {
+    const serviceConfig: ServicesConfig[string] = {};
+
+    if (typeof service.entrypoint === 'string') {
+      serviceConfig.entrypoint = service.entrypoint;
+    }
+
+    if (typeof service.routePrefix === 'string') {
+      serviceConfig.routePrefix = service.routePrefix;
+    }
+
+    // Keep the framework only for the primary frontend service.
+    if (service.routePrefix === '/' && typeof service.framework === 'string') {
+      serviceConfig.framework = service.framework;
+    }
+
+    inferredConfig[name] = serviceConfig;
+  }
+
+  return inferredConfig;
 }
 
 /**
@@ -112,11 +142,19 @@ export async function detectServices(
         errors: result.errors,
         warnings: [],
       };
+      const rootWebFrameworkServices = result.services.filter(
+        service =>
+          service.type === 'web' &&
+          service.routePrefix === '/' &&
+          typeof service.framework === 'string'
+      );
       const inferred =
-        result.errors.length === 0
+        result.errors.length === 0 &&
+        rootWebFrameworkServices.length === 1 &&
+        result.services.length > 1
           ? {
               source: 'layout' as const,
-              config: autoResult.services,
+              config: toInferredLayoutConfig(autoResult.services),
               services: result.services,
               warnings: [],
             }

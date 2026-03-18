@@ -2,8 +2,9 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { join } from 'path';
 import { mkdir, readFile, rm, writeFile } from 'fs/promises';
 import { tmpdir } from 'os';
+import { detectServices, LocalFileSystemDetector } from '@vercel/fs-detectors';
 import {
-  detectServicesForSetup,
+  getServicesConfigWriteBlocker,
   isExperimentalServicesEnabled,
   tryDetectServices,
   writeServicesConfig,
@@ -101,41 +102,7 @@ describe('tryDetectServices()', () => {
     expect(result?.errors.length).toBeGreaterThan(0);
   });
 
-  it('should return inferred layout services for setup without env gating', async () => {
-    delete process.env.VERCEL_USE_EXPERIMENTAL_SERVICES;
-    await mkdir(join(tempDir, 'services/api'), { recursive: true });
-    await writeFile(
-      join(tempDir, 'package.json'),
-      JSON.stringify({ dependencies: { next: '14.0.0' } })
-    );
-    await writeFile(
-      join(tempDir, 'services/api/requirements.txt'),
-      'fastapi\n'
-    );
-    await writeFile(
-      join(tempDir, 'services/api/index.py'),
-      'from fastapi import FastAPI\napp = FastAPI()\n'
-    );
-
-    const setupResult = await detectServicesForSetup(tempDir);
-
-    expect(setupResult.blockedByProjectConfig).toBeNull();
-    expect(setupResult.result).not.toBeNull();
-    expect(setupResult.result?.source).toBe('auto-detected');
-    expect(setupResult.result?.inferred).toMatchObject({
-      source: 'layout',
-      config: {
-        frontend: { framework: 'nextjs', routePrefix: '/' },
-        api: {
-          framework: 'fastapi',
-          entrypoint: 'services/api',
-          routePrefix: '/_/api',
-        },
-      },
-    });
-  });
-
-  it('should report builds as a blocker for inferred services setup', async () => {
+  it('should report builds as a blocker for inferred services config writes', async () => {
     delete process.env.VERCEL_USE_EXPERIMENTAL_SERVICES;
     await mkdir(join(tempDir, 'services/api'), { recursive: true });
     await writeFile(
@@ -157,10 +124,14 @@ describe('tryDetectServices()', () => {
       'from fastapi import FastAPI\napp = FastAPI()\n'
     );
 
-    const setupResult = await detectServicesForSetup(tempDir);
+    const result = await detectServices({
+      fs: new LocalFileSystemDetector(tempDir),
+    });
 
-    expect(setupResult.result).toBeNull();
-    expect(setupResult.blockedByProjectConfig).toBe('builds');
+    expect(result.inferred?.source).toBe('layout');
+    await expect(
+      getServicesConfigWriteBlocker(tempDir, result.inferred!.config)
+    ).resolves.toBe('builds');
   });
 
   it('should write inferred services config into vercel.json', async () => {
@@ -172,7 +143,6 @@ describe('tryDetectServices()', () => {
     await writeServicesConfig(tempDir, {
       frontend: { framework: 'nextjs', routePrefix: '/' },
       api: {
-        framework: 'fastapi',
         entrypoint: 'services/api',
         routePrefix: '/_/api',
       },
@@ -186,7 +156,6 @@ describe('tryDetectServices()', () => {
       experimentalServices: {
         frontend: { framework: 'nextjs', routePrefix: '/' },
         api: {
-          framework: 'fastapi',
           entrypoint: 'services/api',
           routePrefix: '/_/api',
         },

@@ -11,6 +11,7 @@ export interface AutoDetectOptions {
 export interface AutoDetectResult {
   services: ExperimentalServices | null;
   errors: ServiceDetectionError[];
+  frontendServiceNames: string[];
 }
 
 const FRONTEND_DIR = 'frontend';
@@ -75,6 +76,7 @@ export async function autoDetectServices(
           message: `Multiple frameworks detected at root: ${frameworkNames}. Use explicit experimentalServices config.`,
         },
       ],
+      frontendServiceNames: [],
     };
   }
 
@@ -104,6 +106,7 @@ export async function autoDetectServices(
             message: `Multiple frameworks detected in ${frontendLocation}/: ${frameworkNames}. Use explicit experimentalServices config.`,
           },
         ],
+        frontendServiceNames: [],
       };
     }
 
@@ -125,6 +128,7 @@ export async function autoDetectServices(
           'No services detected. Configure experimentalServices in vercel.json or ensure a framework exists at project root, frontend/, or apps/web/.',
       },
     ],
+    frontendServiceNames: [],
   };
 }
 
@@ -141,14 +145,26 @@ async function detectServicesAtRoot(
 
   const backendResult = await detectBackendServices(fs);
   if (backendResult.error) {
-    return { services: null, errors: [backendResult.error] };
+    return {
+      services: null,
+      errors: [backendResult.error],
+      frontendServiceNames: [],
+    };
   }
   if (Object.keys(backendResult.services).length === 0) {
-    return { services: null, errors: [] };
+    return {
+      services: null,
+      errors: [],
+      frontendServiceNames: [],
+    };
   }
   Object.assign(services, backendResult.services);
 
-  return { services, errors: [] };
+  return {
+    services,
+    errors: [],
+    frontendServiceNames: ['frontend'],
+  };
 }
 
 async function detectServicesFrontendSubdir(
@@ -169,7 +185,11 @@ async function detectServicesFrontendSubdir(
 
   const backendResult = await detectBackendServices(fs);
   if (backendResult.error) {
-    return { services: null, errors: [backendResult.error] };
+    return {
+      services: null,
+      errors: [backendResult.error],
+      frontendServiceNames: [],
+    };
   }
 
   // At least one backend service is required with frontend in frontend/ or apps/web
@@ -182,12 +202,17 @@ async function detectServicesFrontendSubdir(
           message: `Frontend detected in ${frontendLocation}/ but no backend services found. Add a backend/ or services/ directory with a supported framework.`,
         },
       ],
+      frontendServiceNames: [],
     };
   }
 
   Object.assign(services, backendResult.services);
 
-  return { services, errors: [] };
+  return {
+    services,
+    errors: [],
+    frontendServiceNames: [serviceName],
+  };
 }
 
 async function detectBackendServices(fs: DetectorFilesystem): Promise<{

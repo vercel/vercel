@@ -12,12 +12,7 @@ import { CantParseJSONFile } from '../errors-ts';
 import readJSONFile from '../read-json-file';
 import { validateConfig } from '../validate-config';
 
-type ServicesSetupConfigBlocker = 'builds' | 'functions';
-
-export interface DetectServicesForSetupResult {
-  result: DetectServicesResult | null;
-  blockedByProjectConfig: ServicesSetupConfigBlocker | null;
-}
+export type ServicesConfigWriteBlocker = 'builds' | 'functions';
 
 /**
  * Check if vercel.json in the given directory has experimentalServices configured
@@ -33,7 +28,9 @@ export async function isExperimentalServicesEnabled(
   );
 }
 
-async function hasExperimentalServicesConfig(cwd: string): Promise<boolean> {
+export async function hasExperimentalServicesConfig(
+  cwd: string
+): Promise<boolean> {
   const config = await readJSONFile<Record<string, unknown>>(
     join(cwd, 'vercel.json')
   );
@@ -75,57 +72,6 @@ export async function tryDetectServices(
   return result;
 }
 
-/**
- * Detect services for the new-project setup flow.
- *
- * This returns:
- * - configured services from project config
- * - inferred layout services when multiple services are found and we can
- *   safely materialize them into `vercel.json`
- *
- * Returns null for single-service layouts so the standard framework preset
- * flow remains unchanged.
- */
-export async function detectServicesForSetup(
-  cwd: string
-): Promise<DetectServicesForSetupResult> {
-  const fs = new LocalFileSystemDetector(cwd);
-  const result = await detectServices({ fs });
-  const hasConfiguredServices = await hasExperimentalServicesConfig(cwd);
-
-  if (hasConfiguredServices) {
-    return {
-      result,
-      blockedByProjectConfig: null,
-    };
-  }
-
-  const inferred = result.inferred;
-  if (
-    !inferred ||
-    inferred.source !== 'layout' ||
-    inferred.services.length <= 1
-  ) {
-    return {
-      result: null,
-      blockedByProjectConfig: null,
-    };
-  }
-
-  try {
-    await prepareServicesConfigWrite(cwd, inferred.config);
-    return {
-      result,
-      blockedByProjectConfig: null,
-    };
-  } catch (error) {
-    return {
-      result: null,
-      blockedByProjectConfig: getServicesSetupConfigBlocker(error),
-    };
-  }
-}
-
 export async function writeServicesConfig(
   cwd: string,
   config: ServicesConfig
@@ -136,6 +82,18 @@ export async function writeServicesConfig(
     JSON.stringify(prepared.config, null, 2) + '\n',
     'utf8'
   );
+}
+
+export async function getServicesConfigWriteBlocker(
+  cwd: string,
+  config: ServicesConfig
+): Promise<ServicesConfigWriteBlocker | null> {
+  try {
+    await prepareServicesConfigWrite(cwd, config);
+    return null;
+  } catch (error) {
+    return getServicesConfigWriteBlockerFromError(error);
+  }
 }
 
 function toProjectServicesConfigPatch(
@@ -196,9 +154,9 @@ async function prepareServicesConfigWrite(
   };
 }
 
-function getServicesSetupConfigBlocker(
+function getServicesConfigWriteBlockerFromError(
   error: unknown
-): ServicesSetupConfigBlocker | null {
+): ServicesConfigWriteBlocker | null {
   switch ((error as { code?: string })?.code) {
     case 'SERVICES_AND_BUILDS':
       return 'builds';

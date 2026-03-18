@@ -1,6 +1,10 @@
-import chalk from 'chalk';
 import { remove } from 'fs-extra';
 import { join, basename } from 'path';
+import {
+  detectServices,
+  LocalFileSystemDetector,
+  type DetectServicesResult,
+} from '@vercel/fs-detectors';
 import type {
   ProjectLinkResult,
   ProjectSettings,
@@ -44,8 +48,8 @@ import {
   DEFAULT_VERCEL_AUTH_SETTING,
 } from '../input/vercel-auth';
 import {
-  detectServicesForSetup,
-  tryDetectServices,
+  getServicesConfigWriteBlocker,
+  type ServicesConfigWriteBlocker,
   writeServicesConfig,
 } from '../projects/detect-services';
 import {
@@ -54,7 +58,12 @@ import {
   displayServicesConfigNote,
 } from '../input/display-services';
 
+const chalk = require('chalk');
 const SERVICES_DOCS_URL = 'https://vercel.com/docs/services';
+const INFERRED_SERVICES_PROMPT =
+  'Multiple services were detected. What would you like to do?';
+
+type InferredServicesChoice = 'services' | 'project-directory' | 'single-app';
 
 export interface SetupAndLinkOptions {
   autoConfirm?: boolean;
@@ -188,116 +197,155 @@ export default async function setupAndLink(
   }
 
   config.currentTeam = org.type === 'team' ? org.id : undefined;
-  const { result: setupServicesResult, blockedByProjectConfig } =
-    await detectServicesForSetup(path);
+  const rootDetectServicesResult = await detectServices({
+    fs: new LocalFileSystemDetector(path),
+  });
+  const hasRootConfiguredServices =
+    rootDetectServicesResult.resolved?.source === 'configured';
+  const rootInferredServices = hasRootConfiguredServices
+    ? null
+    : (rootDetectServicesResult.inferred ?? null);
+  const rootInferredServicesWriteBlocker = rootInferredServices
+    ? await getServicesConfigWriteBlocker(path, rootInferredServices.config)
+    : null;
 
   try {
     let settings: ProjectSettings = {};
     let pathWithRootDirectory = path;
+    let rootInferredServicesChoice: InferredServicesChoice | null = null;
 
-    if (setupServicesResult?.source === 'configured') {
-      if (setupServicesResult.services.length > 0) {
-        displayDetectedServices(setupServicesResult.services);
+    if (!hasRootConfiguredServices) {
+      rootInferredServicesChoice = await promptForInferredServicesSetup({
+        client,
+        autoConfirm,
+        nonInteractive,
+        workPath: path,
+        inferred: rootInferredServices,
+        inferredWriteBlocker: rootInferredServicesWriteBlocker,
+        allowChooseDifferentProjectDirectory: true,
+      });
+    }
+
+    // Setup priority:
+    // 1. Explicit services config at the repo root.
+    // 2. Inferred services layout at the repo root -> prompt for deployment mode.
+    // 3. Standard framework setup flow.
+    if (hasRootConfiguredServices) {
+      if (rootDetectServicesResult.services.length > 0) {
+        displayDetectedServices(rootDetectServicesResult.services);
       }
-      if (setupServicesResult.errors.length > 0) {
-        displayServiceErrors(setupServicesResult.errors);
+      if (rootDetectServicesResult.errors.length > 0) {
+        displayServiceErrors(rootDetectServicesResult.errors);
       }
       displayServicesConfigNote();
       settings.framework = 'services';
+    } else if (rootInferredServicesChoice === 'services') {
+      settings.framework = 'services';
     } else {
-      const inferredServices = setupServicesResult?.inferred;
-      const hasInferredLayoutServices = inferredServices?.source === 'layout';
-      if (blockedByProjectConfig) {
-        output.warn(
-          `Multiple services were detected, but your existing project config uses \`${blockedByProjectConfig}\`, so Vercel won't auto-convert it to Services. To deploy multiple services in one project, see ${output.link('Services', SERVICES_DOCS_URL)}.`
-        );
+      // Standard framework setup begins here. The selected root directory
+      // gets the same priority order as the repo root:
+      // configured services -> inferred services -> framework/Other.
+      const skipSelectedRootInferredServicesPrompt =
+        rootInferredServicesChoice === 'single-app';
+      rootDirectory = await inputRootDirectory(client, path, autoConfirm);
+      if (
+        rootDirectory &&
+        !(await validateRootDirectory(path, join(path, rootDirectory)))
+      ) {
+        return {
+          status: 'error',
+          exitCode: 1,
+          reason: 'INVALID_ROOT_DIRECTORY',
+        };
       }
-      if (hasInferredLayoutServices) {
-        displayDetectedServices(inferredServices.services);
-      }
-      const shouldWriteInferredServicesConfig =
-        hasInferredLayoutServices &&
-        (autoConfirm ||
-          (!nonInteractive &&
-            (await client.input.confirm(
-              'Save services configuration to vercel.json?',
-              true
-            ))));
-      if (hasInferredLayoutServices && shouldWriteInferredServicesConfig) {
-        await writeServicesConfig(path, inferredServices.config);
-        output.log('Added services configuration to vercel.json.');
-        settings.framework = 'services';
-      } else {
-        rootDirectory = await inputRootDirectory(client, path, autoConfirm);
-        if (
-          rootDirectory &&
-          !(await validateRootDirectory(path, join(path, rootDirectory)))
-        ) {
-          return {
-            status: 'error',
-            exitCode: 1,
-            reason: 'INVALID_ROOT_DIRECTORY',
-          };
-        }
 
-        pathWithRootDirectory = rootDirectory
-          ? join(path, rootDirectory)
-          : path;
-        const localConfig = await readConfig(pathWithRootDirectory);
-        if (localConfig instanceof CantParseJSONFile) {
-          output.prettyError(localConfig);
-          return { status: 'error', exitCode: 1 };
-        }
-
-        const isZeroConfig =
-          !localConfig ||
-          !localConfig.builds ||
-          localConfig.builds.length === 0;
-
-        const shouldDetectServicesInWorkspace =
-          !hasInferredLayoutServices || pathWithRootDirectory !== path;
-        const servicesResult = shouldDetectServicesInWorkspace
-          ? await tryDetectServices(pathWithRootDirectory)
+      pathWithRootDirectory = rootDirectory ? join(path, rootDirectory) : path;
+      const selectedRootDetectServicesResult =
+        pathWithRootDirectory === path
+          ? null
+          : await detectServices({
+              fs: new LocalFileSystemDetector(pathWithRootDirectory),
+            });
+      const hasConfiguredServicesInSelectedRoot =
+        selectedRootDetectServicesResult?.resolved?.source === 'configured';
+      const selectedRootInferredServices = hasConfiguredServicesInSelectedRoot
+        ? null
+        : (selectedRootDetectServicesResult?.inferred ?? null);
+      const selectedRootInferredServicesWriteBlocker =
+        selectedRootInferredServices
+          ? await getServicesConfigWriteBlocker(
+              pathWithRootDirectory,
+              selectedRootInferredServices.config
+            )
           : null;
+      let localConfig = await readConfig(pathWithRootDirectory);
+      if (
+        localConfig instanceof CantParseJSONFile &&
+        !hasConfiguredServicesInSelectedRoot
+      ) {
+        output.prettyError(localConfig);
+        return { status: 'error', exitCode: 1 };
+      }
+      if (localConfig instanceof CantParseJSONFile) {
+        localConfig = null;
+      }
 
-        if (servicesResult) {
-          if (servicesResult.services.length > 0) {
-            displayDetectedServices(servicesResult.services);
-          }
-          if (servicesResult.errors.length > 0) {
-            displayServiceErrors(servicesResult.errors);
-          }
-          displayServicesConfigNote();
-          settings.framework = 'services';
-        } else if (isZeroConfig) {
-          const localConfigurationOverrides: PartialProjectSettings = {
-            buildCommand: localConfig?.buildCommand,
-            devCommand: localConfig?.devCommand,
-            framework: localConfig?.framework,
-            commandForIgnoringBuildStep: localConfig?.ignoreCommand,
-            installCommand: localConfig?.installCommand,
-            outputDirectory: localConfig?.outputDirectory,
-          };
+      const isZeroConfig =
+        !localConfig || !localConfig.builds || localConfig.builds.length === 0;
 
-          // Run the framework detection logic against the local filesystem.
-          const detectedProjectsForWorkspace = await detectProjects(
-            pathWithRootDirectory
-          );
-
-          // Select the first framework detected, or use
-          // the "Other" preset if none was detected.
-          const detectedProjects = detectedProjectsForWorkspace.get('') || [];
-          const framework =
-            detectedProjects[0] ?? frameworkList.find(f => f.slug === null);
-
-          settings = await editProjectSettings(
-            client,
-            {},
-            framework,
-            autoConfirm,
-            localConfigurationOverrides
-          );
+      if (
+        hasConfiguredServicesInSelectedRoot &&
+        selectedRootDetectServicesResult
+      ) {
+        if (selectedRootDetectServicesResult.services.length > 0) {
+          displayDetectedServices(selectedRootDetectServicesResult.services);
         }
+        if (selectedRootDetectServicesResult.errors.length > 0) {
+          displayServiceErrors(selectedRootDetectServicesResult.errors);
+        }
+        displayServicesConfigNote();
+        settings.framework = 'services';
+      } else if (
+        !skipSelectedRootInferredServicesPrompt &&
+        (await promptForInferredServicesSetup({
+          client,
+          autoConfirm,
+          nonInteractive,
+          workPath: pathWithRootDirectory,
+          inferred: selectedRootInferredServices,
+          inferredWriteBlocker: selectedRootInferredServicesWriteBlocker,
+        })) === 'services'
+      ) {
+        settings.framework = 'services';
+      } else if (isZeroConfig) {
+        // Single framework preset, or "Other" if no framework is detected.
+        const localConfigurationOverrides: PartialProjectSettings = {
+          buildCommand: localConfig?.buildCommand,
+          devCommand: localConfig?.devCommand,
+          framework: localConfig?.framework,
+          commandForIgnoringBuildStep: localConfig?.ignoreCommand,
+          installCommand: localConfig?.installCommand,
+          outputDirectory: localConfig?.outputDirectory,
+        };
+
+        // Run the framework detection logic against the local filesystem.
+        const detectedProjectsForWorkspace = await detectProjects(
+          pathWithRootDirectory
+        );
+
+        // Select the first framework detected, or use
+        // the "Other" preset if none was detected.
+        const detectedProjects = detectedProjectsForWorkspace.get('') || [];
+        const framework =
+          detectedProjects[0] ?? frameworkList.find(f => f.slug === null);
+
+        settings = await editProjectSettings(
+          client,
+          {},
+          framework,
+          autoConfirm,
+          localConfigurationOverrides
+        );
       }
     }
 
@@ -360,6 +408,72 @@ export default async function setupAndLink(
 
     return { status: 'error', exitCode: 1 };
   }
+}
+
+async function promptForInferredServicesSetup({
+  client,
+  autoConfirm,
+  nonInteractive,
+  workPath,
+  inferred,
+  inferredWriteBlocker,
+  allowChooseDifferentProjectDirectory = false,
+}: {
+  client: Client;
+  autoConfirm: boolean;
+  nonInteractive: boolean;
+  workPath: string;
+  inferred: NonNullable<DetectServicesResult['inferred']> | null;
+  inferredWriteBlocker: ServicesConfigWriteBlocker | null;
+  allowChooseDifferentProjectDirectory?: boolean;
+}): Promise<InferredServicesChoice | null> {
+  if (!inferred) {
+    return null;
+  }
+
+  if (inferredWriteBlocker) {
+    output.warn(
+      `Multiple services were detected, but your existing project config uses \`${inferredWriteBlocker}\`. To deploy multiple services in one project, see ${output.link('Services', SERVICES_DOCS_URL)}.`
+    );
+    return null;
+  }
+
+  displayDetectedServices(inferred.services);
+
+  let choice: InferredServicesChoice | null = null;
+  if (autoConfirm) {
+    choice = 'services';
+  } else if (!nonInteractive) {
+    choice = await client.input.select({
+      message: INFERRED_SERVICES_PROMPT,
+      choices: [
+        {
+          name: 'Deploy detected services',
+          value: 'services',
+        },
+        ...(allowChooseDifferentProjectDirectory
+          ? [
+              {
+                name: 'Choose a different project directory',
+                value: 'project-directory',
+              },
+            ]
+          : []),
+        {
+          name: 'Deploy a single app',
+          value: 'single-app',
+        },
+      ],
+    });
+  }
+
+  if (choice !== 'services') {
+    return choice;
+  }
+
+  await writeServicesConfig(workPath, inferred.config);
+  output.log('Added services configuration to vercel.json.');
+  return 'services';
 }
 
 export async function connectGitRepository(
