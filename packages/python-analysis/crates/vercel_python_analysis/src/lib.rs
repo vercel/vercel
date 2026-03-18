@@ -5,6 +5,7 @@ mod bindings {
 }
 mod dist_metadata;
 mod entrypoint;
+mod pep508;
 mod requirements_txt;
 
 bindings::export!(PythonAnalyzer with_types_in bindings);
@@ -15,7 +16,7 @@ use std::future::Future;
 use std::pin::pin;
 use std::task::{Context, Poll, Waker};
 
-use crate::bindings::{DirectUrlInfo, DistMetadata, ParsedRequirementsTxt, RecordEntry};
+use crate::bindings::{DirectUrlInfo, DistMetadata, ParsedReqEntry, ParsedRequirementsTxt, RecordEntry};
 use crate::entrypoint::{
     contains_app_or_handler_impl, contains_top_level_callable_impl, get_string_constant_impl,
 };
@@ -82,6 +83,10 @@ impl crate::bindings::Guest for PythonAnalyzer {
         filename: Option<String>,
     ) -> Result<ParsedRequirementsTxt, String> {
         requirements_txt::parse_requirements_txt(&content, working_dir, filename)
+    }
+
+    fn parse_pep508(dep: String) -> Result<ParsedReqEntry, String> {
+        pep508::parse_pep508(&dep)
     }
 
     fn is_wheel_compatible(

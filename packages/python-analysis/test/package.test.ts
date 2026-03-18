@@ -332,6 +332,7 @@ describe('discoverPythonPackage', () => {
         c.source.includes('pyproject.toml')
       );
       expect(constraint).toBeDefined();
+      expect(constraint?.specifier).toBe('>=3.10');
     });
 
     it('extracts requires-python from .python-version file', async () => {
@@ -346,6 +347,22 @@ describe('discoverPythonPackage', () => {
         c.source.includes('.python-version')
       );
       expect(constraint).toBeDefined();
+      expect(constraint?.specifier).toBe('3.12');
+    });
+
+    it('preserves specifier from nested .python-version', async () => {
+      const root = fixtureRoot('python-version-nested');
+      const entrypoint = path.join(root, 'api');
+      const result = await discoverPythonPackage({
+        entrypointDir: entrypoint,
+        rootDir: root,
+      });
+
+      const constraint = result.requiresPython?.find(c =>
+        c.source.includes('.python-version')
+      );
+      expect(constraint).toBeDefined();
+      expect(constraint?.specifier).toBe('3.12');
     });
 
     it('uses workspace requires-python when package does not specify', async () => {
