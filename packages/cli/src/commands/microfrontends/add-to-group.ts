@@ -13,7 +13,10 @@ import {
   fetchMicrofrontendsGroups,
   validateDefaultRoute,
 } from './utils';
-import { outputAgentError } from '../../util/agent-output';
+import {
+  openUrlInBrowserCommand,
+  outputAgentError,
+} from '../../util/agent-output';
 import { getGlobalFlagsOnlyFromArgs } from '../../util/arg-common';
 import { getCommandNamePlain } from '../../util/pkg-name';
 
@@ -110,7 +113,7 @@ export default async function addToGroup(client: Client): Promise<number> {
             'or complete the action in the Vercel dashboard.',
           next: [
             {
-              command: settingsUrl,
+              command: openUrlInBrowserCommand(settingsUrl),
               when: 'user opens Microfrontends settings in the browser',
             },
             {
