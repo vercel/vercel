@@ -257,7 +257,7 @@ describe('detectFramework()', () => {
     'src/server.mts',
     'src/server.ts',
     'src/server.cts',
-  ])('Detect experimental Node via `%s`', async entrypoint => {
+  ])('Detect Node via `%s`', async entrypoint => {
     const fs = new VirtualFilesystem({
       'package.json': JSON.stringify({}),
       [entrypoint]: '// server entrypoint',
@@ -267,7 +267,6 @@ describe('detectFramework()', () => {
       await detectFramework({
         fs,
         frameworkList,
-        useExperimentalFrameworks: true,
       })
     ).toBe('node');
   });

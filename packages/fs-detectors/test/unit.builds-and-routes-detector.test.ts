@@ -334,23 +334,6 @@ describe('Test `detectBuilders`', () => {
     }
   });
 
-  it('node framework uses package.json as builder src', async () => {
-    const files = ['package.json', 'src/server.js'];
-    const pkg = {};
-
-    const { builders } = await invokeDetectBuildersAndThrow(files, pkg, {
-      projectSettings: {
-        framework: 'node',
-      },
-    });
-
-    expect(builders.length).toBe(2);
-    expect(builders[0].use).toBe('@vercel/static');
-    expect(builders[0].src).toBe('public/**/*');
-    expect(builders[1].use).toBe('@vercel/backends');
-    expect(builders[1].src).toBe('package.json');
-  });
-
   it('api go with test files', async () => {
     const files = [
       'api/index.go',
