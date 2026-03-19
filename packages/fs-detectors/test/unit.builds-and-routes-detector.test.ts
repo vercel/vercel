@@ -344,9 +344,11 @@ describe('Test `detectBuilders`', () => {
       },
     });
 
-    expect(builders.length).toBe(1);
-    expect(builders[0].use).toBe('@vercel/backends');
-    expect(builders[0].src).toBe('package.json');
+    expect(builders.length).toBe(2);
+    expect(builders[0].use).toBe('@vercel/static');
+    expect(builders[0].src).toBe('public/**/*');
+    expect(builders[1].use).toBe('@vercel/backends');
+    expect(builders[1].src).toBe('package.json');
   });
 
   it('api go with test files', async () => {
