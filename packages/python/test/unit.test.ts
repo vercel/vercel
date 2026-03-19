@@ -2471,6 +2471,11 @@ describe('UV_PYTHON_DOWNLOADS environment variable protection', () => {
       expect(env.UV_PYTHON_DOWNLOADS).toBe(UV_PYTHON_DOWNLOADS_MODE);
     });
 
+    it('sets UV_PYTHON_DOWNLOADS to "never" inside the build container', () => {
+      const env = getProtectedUvEnv({ VERCEL_BUILD_IMAGE: '1' });
+      expect(env.UV_PYTHON_DOWNLOADS).toBe('never');
+    });
+
     it('overrides UV_PYTHON_DOWNLOADS when user tries to set it to "auto"', () => {
       const userEnv = { UV_PYTHON_DOWNLOADS: 'auto' };
       const env = getProtectedUvEnv(userEnv);

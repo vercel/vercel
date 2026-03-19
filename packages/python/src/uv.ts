@@ -351,9 +351,14 @@ export function filterUnsafeUvPipArgs(args: string[]): string[] {
 export function getProtectedUvEnv(
   baseEnv: NodeJS.ProcessEnv = process.env
 ): NodeJS.ProcessEnv {
+  // In the Vercel build container we ship pre-installed Python versions, so
+  // uv should not download Python.
+  const uvPythonDownloads = baseEnv.VERCEL_BUILD_IMAGE
+    ? 'never'
+    : UV_PYTHON_DOWNLOADS_MODE;
   return {
     ...baseEnv,
-    UV_PYTHON_DOWNLOADS: UV_PYTHON_DOWNLOADS_MODE,
+    UV_PYTHON_DOWNLOADS: uvPythonDownloads,
   };
 }
 
