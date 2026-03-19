@@ -21,6 +21,7 @@ const overrides = new Map([
 // Examples that use experimental frameworks and should
 // be tested with useExperimentalFrameworks enabled
 const experimentalExamples = new Set([
+  'node',
   'starlette',
   'sinatra',
   'axum',
