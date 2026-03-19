@@ -42,7 +42,7 @@ export default async function login(
   if (parsedArgs?.flags['--help']) {
     telemetry.trackCliFlagHelp('login');
     output.print(help(loginCommand, { columns: client.stderr.columns }));
-    return 0;
+    return 2;
   }
 
   if (parsedArgs?.flags['--token']) {

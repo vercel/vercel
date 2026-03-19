@@ -51,7 +51,7 @@ export default async function install(client: Client) {
       output.print(help(cmd, { columns: client.stderr.columns }));
     }
 
-    return 0;
+    return 2;
   }
 
   if (!ffAutoProvision && flags['--installation-id']) {
