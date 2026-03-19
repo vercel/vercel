@@ -25,9 +25,7 @@ def import_module(name: str, path: str) -> ModuleType:
     return mod
 
 
-def resolve_app(
-    mod: ModuleType, module_name: str, var: str
-) -> tuple[str, Any]:
+def resolve_app(mod: ModuleType, module_name: str, var: str) -> tuple[str, Any]:
     if hasattr(mod, var):
         return var, getattr(mod, var)
 
