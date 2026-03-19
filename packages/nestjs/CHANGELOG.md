@@ -1,5 +1,12 @@
 # @vercel/nestjs
 
+## 0.2.54
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.6.17
+
 ## 0.2.53
 
 ### Patch Changes

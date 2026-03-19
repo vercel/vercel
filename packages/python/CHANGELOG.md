@@ -1,5 +1,24 @@
 # @vercel/python
 
+## 6.25.0
+
+### Minor Changes
+
+- Make specifying a different entry point variable actually work ([#15614](https://github.com/vercel/vercel/pull/15614))
+
+### Patch Changes
+
+- [services] allow services to share builder source ([#15631](https://github.com/vercel/vercel/pull/15631))
+
+- [python] update celery worker services declaration to support broker_url="vercel://" instead of having to import from vercel.workers.celery ([#15454](https://github.com/vercel/vercel/pull/15454))
+
+- Add `diagnostics` callback to produce package-manifest.json ([#15373](https://github.com/vercel/vercel/pull/15373))
+
+- Run the typechecker ([#15558](https://github.com/vercel/vercel/pull/15558))
+
+- Updated dependencies [[`8e8110d2eca5832e109f5efb64b192690100927d`](https://github.com/vercel/vercel/commit/8e8110d2eca5832e109f5efb64b192690100927d)]:
+  - @vercel/python-analysis@0.10.1
+
 ## 6.24.0
 
 ### Minor Changes
