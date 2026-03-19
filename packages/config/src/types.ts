@@ -56,7 +56,7 @@ export type Framework =
   | 'flask'
   | 'fasthtml'
   | 'django'
-  | 'sanity-v3'
+  | 'sanity-v2'
   | 'sanity'
   | 'storybook'
   | 'nitro'

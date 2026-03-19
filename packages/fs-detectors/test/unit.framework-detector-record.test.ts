@@ -220,7 +220,7 @@ describe('detectFrameworkRecord', () => {
         });
 
         const framework = await detectFrameworkRecord({ fs, frameworkList });
-        expect(framework?.slug).toBe('sanity');
+        expect(framework?.slug).toBe('sanity-v2');
       });
     });
 
@@ -248,7 +248,55 @@ describe('detectFrameworkRecord', () => {
         });
 
         const framework = await detectFrameworkRecord({ fs, frameworkList });
-        expect(framework?.slug).toBe('sanity-v3');
+        expect(framework?.slug).toBe('sanity');
+      });
+    });
+
+    describe('v4', () => {
+      it('detects', async () => {
+        const fs = new VirtualFilesystem({
+          'sanity.config.ts': '',
+          'package.json': JSON.stringify({
+            dependencies: {
+              '@sanity/vision': '^4.20.0',
+              react: '^19.0.4',
+              'react-dom': '^19.0.4',
+              sanity: '^4.20.0',
+              'styled-components': '^6.1.8',
+            },
+            devDependencies: {
+              '@types/react': '^19.2.7',
+              typescript: '^5.8.3',
+            },
+          }),
+        });
+
+        const framework = await detectFrameworkRecord({ fs, frameworkList });
+        expect(framework?.slug).toBe('sanity');
+      });
+    });
+
+    describe('v5', () => {
+      it('detects', async () => {
+        const fs = new VirtualFilesystem({
+          'sanity.config.ts': '',
+          'package.json': JSON.stringify({
+            dependencies: {
+              '@sanity/vision': '^5.17.0',
+              react: '^19.2.4',
+              'react-dom': '^19.2.4',
+              sanity: '^5.17.0',
+              'styled-components': '^6.3.12',
+            },
+            devDependencies: {
+              '@types/react': '^19.2.14',
+              typescript: '^5.9.3',
+            },
+          }),
+        });
+
+        const framework = await detectFrameworkRecord({ fs, frameworkList });
+        expect(framework?.slug).toBe('sanity');
       });
     });
   });
