@@ -12,8 +12,21 @@ import addRoute from '../../util/routes/add-route';
 import getRouteVersions from '../../util/routes/get-route-versions';
 import { parseConditions } from '../../util/routes/parse-conditions';
 import { populateRouteEnv } from '../../util/routes/env';
+import generateRouteApi, {
+  type GenerateRouteResponse,
+  type GeneratedRoute,
+} from '../../util/routes/generate-route';
+import {
+  generatedRouteToAddInput,
+  convertRouteToCurrentRoute,
+  printGeneratedRoutePreview,
+} from '../../util/routes/ai-transform';
+import { runInteractiveEditLoop } from './edit-interactive';
 import stamp from '../../util/output/stamp';
-import { getCommandName } from '../../util/pkg-name';
+import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
+import { outputAgentError } from '../../util/agent-output';
+import { AGENT_STATUS, AGENT_REASON } from '../../util/agent-output-constants';
+import { getGlobalFlagsOnlyFromArgs } from '../../util/arg-common';
 import { RoutesAddTelemetryClient } from '../../util/telemetry/commands/routes';
 import {
   MAX_NAME_LENGTH,
@@ -31,17 +44,87 @@ import {
 } from '../../util/routes/interactive';
 import type {
   AddRouteInput,
+  EditableRoute,
   HasField,
   Transform,
   SrcSyntax,
   RoutePosition,
 } from '../../util/routes/types';
 
+function withGlobalFlags(client: Client, commandTemplate: string): string {
+  const flags = getGlobalFlagsOnlyFromArgs(client.argv.slice(2));
+  return getCommandNamePlain(`${commandTemplate} ${flags.join(' ')}`.trim());
+}
+
+/**
+ * Shell-quote a token if it contains spaces or special chars.
+ */
+function shellQuoteArg(value: string): string {
+  if (/[\s"'\\]/.test(value)) {
+    return `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
+  }
+  return value;
+}
+
+/**
+ * Build a routes add command string using provided parsed args/flags and
+ * placeholders only for missing required pieces, then append global flags from argv.
+ */
+function buildRoutesAddFullFlagsSuggestion(
+  client: Client,
+  parsed: { args: string[]; flags: { [key: string]: unknown } }
+): string {
+  const { args, flags } = parsed;
+  const parts: string[] = ['routes', 'add'];
+
+  // Positional name: first arg may be subcommand name depending on parser
+  let nameArg = args[0];
+  if (nameArg === 'add' && args[1] && !args[1].startsWith('-')) {
+    nameArg = args[1];
+  }
+  if (nameArg && !nameArg.startsWith('-')) {
+    parts.push(shellQuoteArg(nameArg));
+  } else {
+    parts.push('<name>');
+  }
+
+  if (flags['--src']) {
+    parts.push('--src', shellQuoteArg(String(flags['--src'])));
+  } else {
+    parts.push('--src', '<path>');
+  }
+
+  if (flags['--src-syntax']) {
+    parts.push('--src-syntax', String(flags['--src-syntax']));
+  }
+
+  if (flags['--action']) {
+    parts.push('--action', String(flags['--action']));
+  } else {
+    parts.push('--action', 'rewrite');
+  }
+
+  const action = flags['--action'] as string | undefined;
+  if (flags['--dest']) {
+    parts.push('--dest', shellQuoteArg(String(flags['--dest'])));
+  } else if (!action || action === 'rewrite' || action === 'redirect') {
+    parts.push('--dest', '<dest>');
+  }
+
+  if (flags['--status'] !== undefined && flags['--status'] !== null) {
+    parts.push('--status', String(flags['--status']));
+  }
+
+  // --yes is not a global flag; append so non-interactive suggestion is runnable.
+  parts.push('--yes');
+  return withGlobalFlags(client, parts.join(' '));
+}
+
 /**
  * Adds a new route to the current project.
  */
 export default async function add(client: Client, argv: string[]) {
-  const parsed = await parseSubcommandArgs(argv, addSubcommand);
+  const parsed = await parseSubcommandArgs(argv, addSubcommand, client);
   if (typeof parsed === 'number') return parsed;
 
   const link = await ensureProjectLink(client);
@@ -50,9 +133,9 @@ export default async function add(client: Client, argv: string[]) {
   const { project, org } = link;
   const teamId = org.type === 'team' ? org.id : undefined;
   const { args, flags } = parsed;
-  const skipPrompts = flags['--yes'] as boolean | undefined;
+  const isAgentMode = client.nonInteractive;
+  const skipPrompts = (flags['--yes'] as boolean | undefined) || isAgentMode;
 
-  // Initialize telemetry client
   const telemetry = new RoutesAddTelemetryClient({
     opts: { store: client.telemetryEventStore },
   });
@@ -100,6 +183,82 @@ export default async function add(client: Client, argv: string[]) {
   );
   telemetry.trackCliOptionHas(flags['--has'] as [string] | undefined);
   telemetry.trackCliOptionMissing(flags['--missing'] as [string] | undefined);
+  telemetry.trackCliOptionAi(flags['--ai'] as string | undefined);
+
+  // --- AI generation mode ---
+  const aiPrompt = flags['--ai'] as string | undefined;
+
+  if (isAgentMode && !aiPrompt && !flags['--src']) {
+    // Non-interactive paths: (1) full flags, or (2) --ai PROMPT --yes which creates
+    // without prompts when generation succeeds (handleAIAdd retries once on failure).
+    // Second next command reuses name/action/etc. from argv; placeholders only for missing.
+    const fullFlagsCmd = buildRoutesAddFullFlagsSuggestion(client, parsed);
+    outputAgentError(
+      client,
+      {
+        status: AGENT_STATUS.ERROR,
+        reason: AGENT_REASON.MISSING_ARGUMENTS,
+        message:
+          'In non-interactive mode pass either full route flags (name, --src, --action, --dest, --yes) or --ai <description> with --yes. For --src use a URL path pattern that starts with a forward slash / (e.g. /about, /api/:path*). With --src-syntax regex you may use a regex such as ^/api/.*. Run vercel routes add --help for options.',
+        next: [
+          {
+            command: withGlobalFlags(
+              client,
+              'routes add --ai <description> --yes'
+            ),
+            when: 'AI generates the route and creates it without prompts when generation succeeds (replace <description>)',
+          },
+          {
+            command: fullFlagsCmd,
+            when: 'add missing --src/--dest (or other placeholders) to this command',
+          },
+        ],
+        hint: 'Requires a CLI with the routes command. --src is a URL path: leading character must be / (forward slash). --ai --yes is non-interactive when the API returns a route; if it fails twice, use full flags or rephrase.',
+      },
+      1
+    );
+  }
+
+  if (aiPrompt) {
+    // Validate no conflicting flags
+    const conflictingFlags = [
+      '--src',
+      '--src-syntax',
+      '--action',
+      '--dest',
+      '--status',
+      '--has',
+      '--missing',
+      '--set-response-header',
+      '--append-response-header',
+      '--delete-response-header',
+      '--set-request-header',
+      '--append-request-header',
+      '--delete-request-header',
+      '--set-request-query',
+      '--append-request-query',
+      '--delete-request-query',
+      '--description',
+      '--disabled',
+      '--position',
+    ];
+    const usedConflicts = conflictingFlags.filter(f => flags[f] !== undefined);
+    if (usedConflicts.length > 0) {
+      output.error(
+        `Cannot use --ai with ${usedConflicts.join(', ')}. Use --ai alone to generate a route from a description.`
+      );
+      return 1;
+    }
+
+    return await handleAIAdd(
+      client,
+      project.id,
+      teamId,
+      aiPrompt,
+      skipPrompts,
+      parsed
+    );
+  }
 
   // Check for existing staging version (for auto-promote logic)
   const { versions } = await getRouteVersions(client, project.id, { teamId });
@@ -116,11 +275,61 @@ export default async function add(client: Client, argv: string[]) {
     }
     name = nameArg;
   } else if (skipPrompts) {
+    if (isAgentMode) {
+      const fullFlagsCmd = buildRoutesAddFullFlagsSuggestion(client, parsed);
+      outputAgentError(
+        client,
+        {
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.MISSING_ARGUMENTS,
+          message:
+            'In non-interactive mode route name is required as the first argument.',
+          next: [
+            {
+              command: fullFlagsCmd,
+              when: 'replace <name> and any remaining placeholders',
+            },
+          ],
+        },
+        1
+      );
+    }
     output.error(
       `Route name is required when using --yes. Usage: ${getCommandName('routes add "Route Name" --src "/path" --action rewrite --dest "/destination" --yes')}`
     );
     return 1;
   } else {
+    // Offer AI or manual mode when fully interactive (no args, no flags)
+    const hasAnyFlags =
+      flags['--src'] !== undefined ||
+      flags['--dest'] !== undefined ||
+      flags['--status'] !== undefined;
+
+    if (!hasAnyFlags) {
+      const mode = await client.input.select({
+        message: 'How would you like to create this route?',
+        choices: [
+          {
+            name: 'Describe what you want (AI-powered)',
+            value: 'ai',
+          },
+          { name: 'Build manually (step by step)', value: 'manual' },
+        ],
+      });
+
+      if (mode === 'ai') {
+        telemetry.trackCliOptionAi('interactive');
+        return await handleAIAdd(
+          client,
+          project.id,
+          teamId,
+          undefined,
+          skipPrompts,
+          parsed
+        );
+      }
+    }
+
     output.log('Add a new route\n');
     name = await client.input.text({
       message: 'Route name:',
@@ -151,6 +360,24 @@ export default async function add(client: Client, argv: string[]) {
   if (flags['--src']) {
     src = stripQuotes(flags['--src'] as string);
   } else if (skipPrompts) {
+    if (isAgentMode) {
+      outputAgentError(
+        client,
+        {
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.MISSING_ARGUMENTS,
+          message:
+            'In non-interactive mode --src is required. It must be a URL path pattern starting with forward slash / (e.g. /old-page, /api/:path*). Not a Windows path and not backslash. Use --src-syntax regex only if you need a regex pattern.',
+          next: [
+            {
+              command: buildRoutesAddFullFlagsSuggestion(client, parsed),
+              when: 'set --src to a path starting with /',
+            },
+          ],
+        },
+        1
+      );
+    }
     output.error(
       `Source path is required when using --yes. Usage: ${getCommandName('routes add "Name" --src "/path" --action rewrite --dest "/dest" --yes')}`
     );
@@ -188,9 +415,31 @@ export default async function add(client: Client, argv: string[]) {
     });
   }
 
-  // Validate path starts with / for non-regex syntax
+  // Validate path starts with / for non-regex syntax (URL path, not filesystem backslash)
   if (syntax !== 'regex' && !src.startsWith('/')) {
-    output.error('Path must start with / and be a valid URL path');
+    const pathMsg =
+      '--src must start with a forward slash / (URL path root). Examples: /about, /api/:path*. Backslash \\ is wrong. If you need a regex, pass --src-syntax regex and a pattern like ^/api/.*';
+    if (isAgentMode) {
+      outputAgentError(
+        client,
+        {
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.INVALID_ARGUMENTS,
+          message: pathMsg,
+          next: [
+            {
+              command: buildRoutesAddFullFlagsSuggestion(client, parsed),
+              when: 'prefix --src with / or use --src-syntax regex',
+            },
+          ],
+          hint: 'Route source is matched against request URL paths; they always begin with /.',
+        },
+        1
+      );
+    }
+    output.error(
+      'Path must start with / (forward slash). Use --src-syntax regex for regex patterns.'
+    );
     return 1;
   }
 
@@ -204,6 +453,23 @@ export default async function add(client: Client, argv: string[]) {
   // In flag-based mode, --action is required when --dest or --status is provided
   const actionError = validateActionFlags(actionFlag, dest, status);
   if (actionError) {
+    if (isAgentMode) {
+      outputAgentError(
+        client,
+        {
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.INVALID_ARGUMENTS,
+          message: actionError,
+          next: [
+            {
+              command: buildRoutesAddFullFlagsSuggestion(client, parsed),
+              when: 'fix flags per message (e.g. add --dest for rewrite, --status for redirect)',
+            },
+          ],
+        },
+        1
+      );
+    }
     output.error(actionError);
     return 1;
   }
@@ -229,6 +495,24 @@ export default async function add(client: Client, argv: string[]) {
 
   // Require at least one action when using --yes
   if (!hasAnyAction && skipPrompts) {
+    if (isAgentMode) {
+      outputAgentError(
+        client,
+        {
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.MISSING_ARGUMENTS,
+          message:
+            'In non-interactive mode at least one action is required. Use --action with --dest or --status, or header/transform flags.',
+          next: [
+            {
+              command: buildRoutesAddFullFlagsSuggestion(client, parsed),
+              when: 'example rewrite action; adjust --action/--dest/--status as needed',
+            },
+          ],
+        },
+        1
+      );
+    }
     output.error(
       'At least one action is required when using --yes. Use --action with --dest/--status, or header/transform flags.'
     );
@@ -238,7 +522,7 @@ export default async function add(client: Client, argv: string[]) {
   // --- Interactive mode: conditions first, then action selection loop ---
   if (!hasAnyAction && !skipPrompts) {
     const addConditions = await client.input.confirm(
-      'Add conditions (has/missing)?',
+      'Add conditions (has/does not have)?',
       false
     );
 
@@ -455,6 +739,37 @@ export default async function add(client: Client, argv: string[]) {
       position,
     });
 
+    if (isAgentMode) {
+      output.stopSpinner();
+      const jsonOutput: Record<string, unknown> = {
+        status: 'ok',
+        route: {
+          id: route.id,
+          name: route.name,
+          src,
+          ...(finalDest && { dest: finalDest }),
+          ...(finalStatus && { status: finalStatus }),
+        },
+        version: {
+          id: version.id,
+          ...(version.alias && { alias: version.alias }),
+        },
+        ...(!existingStagingVersion && {
+          next: [
+            {
+              command: withGlobalFlags(client, 'routes publish --yes'),
+              when: 'to promote this version to production',
+            },
+          ],
+        }),
+        ...(existingStagingVersion && {
+          hint: 'Review staged changes with vercel routes list --diff before promoting.',
+        }),
+      };
+      client.stdout.write(`${JSON.stringify(jsonOutput, null, 2)}\n`);
+      return 0;
+    }
+
     output.log(
       `${chalk.cyan('Created')} route "${name}" ${chalk.gray(addStamp())}`
     );
@@ -520,6 +835,424 @@ export default async function add(client: Client, argv: string[]) {
     return 0;
   } catch (e: unknown) {
     const error = e as { message?: string };
+    if (isAgentMode) {
+      outputAgentError(
+        client,
+        {
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.ROUTE_CREATE_FAILED,
+          message:
+            'Route creation failed for this project. See hint for next steps.',
+          hint:
+            error.message ||
+            'Use `vercel routes list --diff` to inspect staged routes, then adjust flags and retry.',
+          next: [
+            {
+              command: withGlobalFlags(client, 'routes list --diff'),
+              when: 'to inspect staged state',
+            },
+          ],
+        },
+        1
+      );
+    }
+    output.error(error.message || 'Failed to create route');
+    return 1;
+  }
+}
+
+/**
+ * Handles AI-powered route creation.
+ * If aiPrompt is provided, uses it directly. Otherwise prompts interactively.
+ */
+async function handleAIAdd(
+  client: Client,
+  projectId: string,
+  teamId: string | undefined,
+  aiPrompt: string | undefined,
+  skipPrompts: boolean | undefined,
+  parsedForSuggestion?: { args: string[]; flags: { [key: string]: unknown } }
+): Promise<number> {
+  // Check for existing staging version (for auto-promote logic)
+  const { versions } = await getRouteVersions(client, projectId, { teamId });
+  const existingStagingVersion = versions.find(v => v.isStaging);
+
+  // Retry loop: if generation fails, let the user rephrase their prompt.
+  // In non-interactive mode with --yes, retry the same prompt once (transient API failures).
+  // Breaks out on success; exits on --yes/non-TTY or user cancel.
+  let prompt = aiPrompt;
+  let currentGenerated;
+  let nonInteractiveGenerationRetries = 0;
+  for (;;) {
+    if (!prompt) {
+      prompt = await client.input.text({
+        message: 'Describe the route you want to create:',
+        validate: val => {
+          if (!val) return 'A description is required';
+          if (val.length > 2000)
+            return 'Description must be 2000 characters or less';
+          return true;
+        },
+      });
+    }
+
+    output.spinner('Generating route...');
+
+    let errorMessage: string | undefined;
+    try {
+      const result = await generateRouteApi(
+        client,
+        projectId,
+        { prompt },
+        { teamId }
+      );
+
+      if (result.error) {
+        errorMessage = result.error;
+      } else if (!result.route) {
+        errorMessage =
+          'Could not generate a route from that description. Try rephrasing.';
+      } else {
+        currentGenerated = result.route;
+      }
+    } catch (e: unknown) {
+      const error = e as { message?: string };
+      errorMessage = error.message || 'Failed to generate route';
+    }
+
+    if (currentGenerated) {
+      break;
+    }
+
+    if (client.nonInteractive || skipPrompts || !client.stdin.isTTY) {
+      // One automatic retry with same prompt (no TTY) before failing.
+      if (skipPrompts && nonInteractiveGenerationRetries < 1) {
+        nonInteractiveGenerationRetries++;
+        output.stopSpinner();
+        output.spinner('Generating route... (retry)');
+        continue;
+      }
+      outputAgentError(
+        client,
+        {
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.ROUTE_GENERATION_FAILED,
+          message:
+            errorMessage ||
+            'Could not generate a route after retry. Rephrase --ai description or use full route flags.',
+          next: [
+            {
+              command: withGlobalFlags(
+                client,
+                'routes add --ai <description> --yes'
+              ),
+              when: 'retry with a clearer description (replace <description>)',
+            },
+            {
+              command: parsedForSuggestion
+                ? buildRoutesAddFullFlagsSuggestion(client, parsedForSuggestion)
+                : withGlobalFlags(
+                    client,
+                    'routes add <name> --src <path> --action rewrite --dest <dest> --yes'
+                  ),
+              when: 'add with explicit flags if AI keeps failing',
+            },
+          ],
+          hint: 'Non-interactive --ai runs up to two generation attempts then exits with JSON.',
+        },
+        1
+      );
+    }
+    output.error(errorMessage!);
+
+    if (skipPrompts || !client.stdin.isTTY) {
+      return 1;
+    }
+
+    const retry = await client.input.select({
+      message: 'What would you like to do?',
+      choices: [
+        { name: 'Try again with a different description', value: 'retry' },
+        { name: 'Cancel', value: 'cancel' },
+      ],
+    });
+
+    if (retry === 'cancel') {
+      output.log('Cancelled.');
+      return 0;
+    }
+
+    // Clear prompt so it's re-prompted on next iteration
+    prompt = undefined;
+  }
+
+  printGeneratedRoutePreview(currentGenerated);
+
+  // If --yes, create immediately
+  if (skipPrompts) {
+    return await createFromGenerated(
+      client,
+      projectId,
+      teamId,
+      currentGenerated,
+      existingStagingVersion,
+      skipPrompts
+    );
+  }
+
+  if (!client.stdin.isTTY) {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.CONFIRMATION_REQUIRED,
+          message:
+            'Route creation from AI preview requires a TTY to confirm, or use full flags with --yes non-interactively.',
+          next: [
+            {
+              command: parsedForSuggestion
+                ? buildRoutesAddFullFlagsSuggestion(client, parsedForSuggestion)
+                : withGlobalFlags(
+                    client,
+                    'routes add <name> --src <path> --action rewrite --dest <dest> --yes'
+                  ),
+              when: 'non-interactive add without AI preview',
+            },
+          ],
+        },
+        1
+      );
+    }
+    output.error(
+      `Cannot interactively confirm route creation in a non-TTY environment. Use full route flags with ${getCommandName('routes add <name> --src ... --yes')}, or run in a TTY.`
+    );
+    return 1;
+  }
+
+  for (;;) {
+    const choice = await client.input.select({
+      message: 'What would you like to do?',
+      choices: [
+        { name: 'Create this route', value: 'create' },
+        { name: 'Edit with AI (describe changes)', value: 'ai-edit' },
+        { name: 'Edit manually', value: 'manual' },
+        { name: 'Discard', value: 'discard' },
+      ],
+      pageSize: 4,
+      loop: false,
+    });
+
+    if (choice === 'create') {
+      return await createFromGenerated(
+        client,
+        projectId,
+        teamId,
+        currentGenerated,
+        existingStagingVersion,
+        skipPrompts
+      );
+    }
+
+    if (choice === 'ai-edit') {
+      const editPrompt = await client.input.text({
+        message: "Describe what you'd like to change:",
+        validate: val => {
+          if (!val) return 'A description is required';
+          if (val.length > 2000)
+            return 'Description must be 2000 characters or less';
+          return true;
+        },
+      });
+
+      output.spinner('Updating route...');
+
+      try {
+        const editResult: GenerateRouteResponse = await generateRouteApi(
+          client,
+          projectId,
+          {
+            prompt: editPrompt,
+            currentRoute: convertRouteToCurrentRoute(currentGenerated),
+          },
+          { teamId }
+        );
+
+        if (editResult.error) {
+          output.error(editResult.error);
+          output.log('Keeping previous route:');
+          printGeneratedRoutePreview(currentGenerated);
+          continue;
+        }
+        if (!editResult.route) {
+          output.error('Could not apply changes. Try rephrasing.');
+          output.log('Keeping previous route:');
+          printGeneratedRoutePreview(currentGenerated);
+          continue;
+        }
+
+        currentGenerated = editResult.route;
+        printGeneratedRoutePreview(currentGenerated);
+      } catch (e: unknown) {
+        const error = e as { message?: string };
+        output.error(error.message || 'Failed to update route');
+        output.log('Keeping previous route:');
+        printGeneratedRoutePreview(currentGenerated);
+      }
+      continue;
+    }
+
+    if (choice === 'manual') {
+      const routeInput = generatedRouteToAddInput(currentGenerated);
+      const tempRule: EditableRoute = {
+        name: routeInput.name,
+        description: routeInput.description,
+        enabled: true,
+        srcSyntax: routeInput.srcSyntax,
+        route: routeInput.route,
+      };
+
+      await runInteractiveEditLoop(client, tempRule);
+      populateRouteEnv(tempRule.route);
+
+      const addStamp = stamp();
+      output.spinner(`Adding route "${tempRule.name}"`);
+
+      try {
+        const { route, version } = await addRoute(
+          client,
+          projectId,
+          {
+            name: tempRule.name,
+            description: tempRule.description,
+            srcSyntax: tempRule.srcSyntax,
+            route: tempRule.route as AddRouteInput['route'],
+          },
+          { teamId }
+        );
+
+        output.log(
+          `${chalk.cyan('Created')} route "${route.name}" ${chalk.gray(addStamp())}`
+        );
+
+        output.print(`\n  ${chalk.bold('Route:')} ${route.name}\n`);
+        output.print(`  ${chalk.gray('ID:')} ${route.id}\n`);
+        output.print(`\n  ${chalk.bold('Staging version:')} ${version.id}\n`);
+
+        await offerAutoPromote(
+          client,
+          projectId,
+          version,
+          !!existingStagingVersion,
+          { teamId, skipPrompts }
+        );
+
+        return 0;
+      } catch (e: unknown) {
+        const error = e as { message?: string };
+        output.error(error.message || 'Failed to create route');
+        return 1;
+      }
+    }
+
+    // Discard
+    output.log('Discarded.');
+    return 0;
+  }
+}
+
+/**
+ * Creates a route from an AI-generated route object.
+ */
+async function createFromGenerated(
+  client: Client,
+  projectId: string,
+  teamId: string | undefined,
+  generated: GeneratedRoute,
+  existingStagingVersion: { isStaging?: boolean } | undefined,
+  skipPrompts: boolean | undefined
+): Promise<number> {
+  const routeInput = generatedRouteToAddInput(generated);
+  populateRouteEnv(routeInput.route);
+
+  const addStamp = stamp();
+  output.spinner(`Adding route "${routeInput.name}"`);
+
+  try {
+    const { route, version } = await addRoute(client, projectId, routeInput, {
+      teamId,
+    });
+
+    if (client.nonInteractive) {
+      output.stopSpinner();
+      const jsonOutput: Record<string, unknown> = {
+        status: 'ok',
+        route: {
+          id: route.id,
+          name: route.name,
+          src: routeInput.route.src,
+        },
+        version: {
+          id: version.id,
+          ...(version.alias && { alias: version.alias }),
+        },
+        ...(!existingStagingVersion && {
+          next: [
+            {
+              command: withGlobalFlags(client, 'routes publish --yes'),
+              when: 'to promote this version to production',
+            },
+          ],
+        }),
+        ...(existingStagingVersion && {
+          hint: 'Review staged changes with vercel routes list --diff before promoting.',
+        }),
+      };
+      client.stdout.write(`${JSON.stringify(jsonOutput, null, 2)}\n`);
+      return 0;
+    }
+
+    output.log(
+      `${chalk.cyan('Created')} route "${route.name}" ${chalk.gray(addStamp())}`
+    );
+
+    output.print(`\n  ${chalk.bold('Route:')} ${route.name}\n`);
+    output.print(`  ${chalk.gray('ID:')} ${route.id}\n`);
+
+    output.print(`\n  ${chalk.bold('Staging version:')} ${version.id}\n`);
+
+    await offerAutoPromote(
+      client,
+      projectId,
+      version,
+      !!existingStagingVersion,
+      { teamId, skipPrompts }
+    );
+
+    return 0;
+  } catch (e: unknown) {
+    const error = e as { message?: string };
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.ROUTE_CREATE_FAILED,
+          message:
+            'Route creation failed for this project. See hint for next steps.',
+          hint:
+            error.message ||
+            'Use `vercel routes list --diff` to inspect staged routes, then adjust flags and retry.',
+          next: [
+            {
+              command: withGlobalFlags(client, 'routes list --diff'),
+              when: 'to inspect staged state',
+            },
+          ],
+        },
+        1
+      );
+    }
     output.error(error.message || 'Failed to create route');
     return 1;
   }

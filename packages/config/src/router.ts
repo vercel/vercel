@@ -1,7 +1,12 @@
 import { cacheHeader } from 'pretty-cache-header';
 import { sourceToRegex } from '@vercel/routing-utils';
 import { validateRegexPattern, parseCronExpression } from './utils/validation';
-import type { Redirect, Rewrite } from './types';
+import type {
+  Condition,
+  MatchableValueObject,
+  Redirect,
+  Rewrite,
+} from './types';
 
 /**
  * Convert a destination string from path-to-regexp format to use capture group references.
@@ -171,104 +176,24 @@ export interface CacheOptions {
   staleIfError?: TimeString;
 }
 
-/**
- * Condition type for matching in redirects, headers, and rewrites.
- * - 'header': Match if a specific HTTP header key/value is present (or missing).
- * - 'cookie': Match if a specific cookie is present (or missing).
- * - 'host':   Match if the incoming host matches a given pattern.
- * - 'query':  Match if a query parameter is present (or missing).
- * - 'path':   Match if the path matches a given pattern.
- */
-export type ConditionType = 'header' | 'cookie' | 'host' | 'query' | 'path';
-
-/**
- * Conditional matching operators for has/missing conditions.
- * These can be used with the value field to perform advanced matching.
- */
-export interface ConditionOperators {
-  /** Check equality on a value (exact match) */
-  eq?: string | number;
-  /** Check inequality on a value (not equal) */
-  neq?: string;
-  /** Check inclusion in an array of values (value is one of) */
-  inc?: string[];
-  /** Check non-inclusion in an array of values (value is not one of) */
-  ninc?: string[];
-  /** Check if value starts with a prefix */
-  pre?: string;
-  /** Check if value ends with a suffix */
-  suf?: string;
-  /** Check if value is greater than (numeric comparison) */
-  gt?: number;
-  /** Check if value is greater than or equal to */
-  gte?: number;
-  /** Check if value is less than (numeric comparison) */
-  lt?: number;
-  /** Check if value is less than or equal to */
-  lte?: number;
-}
-
-/**
- * Used to define "has" or "missing" conditions with advanced matching operators.
- *
- * @example
- * // Simple header presence check
- * { type: 'header', key: 'x-api-key' }
- *
- * @example
- * // Header with exact value match
- * { type: 'header', key: 'x-api-version', value: 'v2' }
- *
- * @example
- * // Header with conditional operators
- * { type: 'header', key: 'x-user-role', inc: ['admin', 'moderator'] }
- *
- * @example
- * // Cookie with prefix matching
- * { type: 'cookie', key: 'session', pre: 'prod-' }
- *
- * @example
- * // Host matching
- * { type: 'host', value: 'api.example.com' }
- *
- * @example
- * // Query parameter with numeric comparison
- * { type: 'query', key: 'version', gte: 2 }
- *
- * @example
- * // Path pattern matching
- * { type: 'path', value: '^/api/v[0-9]+/.*' }
- */
-export interface Condition extends ConditionOperators {
-  type: ConditionType;
-  /** The key to match. Not used for 'host' or 'path' types. */
-  key?: string;
-  /**
-   * Simple string/regex pattern to match against.
-   * For 'host' and 'path' types, this is the only matching option.
-   * For other types, you can use value OR the conditional operators (eq, neq, etc).
-   */
-  value?: string;
-}
-
 function createKeyedConditionHelper(type: 'header' | 'cookie' | 'query') {
-  return (key: string, value?: string | ConditionOperators): Condition => {
+  return (key: string, value?: string | MatchableValueObject): Condition => {
     if (value === undefined) {
       return { type, key };
     }
     if (typeof value === 'string') {
       return { type, key, value };
     }
-    return { type, key, ...value };
+    return { type, key, value };
   };
 }
 
 function createKeylessConditionHelper(type: 'host') {
-  return (value: string | ConditionOperators): Condition => {
+  return (value: string | MatchableValueObject): Condition => {
     if (typeof value === 'string') {
       return { type, value };
     }
-    return { type, ...value };
+    return { type, value };
   };
 }
 
@@ -717,7 +642,7 @@ export class Router {
    *    })
    * @internal Can return Route with transforms internally
    */
-  rewrite<T extends string>(source: T, destination: string): Rewrite | Route;
+  rewrite<T extends string>(source: T, destination: string): Rewrite;
   rewrite<T extends string>(
     source: T,
     destination: string,
@@ -875,34 +800,16 @@ export class Router {
       return route;
     }
 
-    // Simple rewrite without transforms - check if destination has env vars
+    // Simple rewrite without transforms
     const pathParams = this.extractPathParams(source);
     const destEnvVars = extractEnvVars(destination, pathParams);
 
-    if (destEnvVars.length > 0) {
-      // Need Route format to include env field
-      // Convert path-to-regexp patterns to regex for routes format
-      const { src: regexSrc, segments } = sourceToRegex(source);
-      const convertedDest = convertDestination(destination, segments);
-
-      const route: Route = {
-        src: regexSrc,
-        dest: convertedDest,
-        env: destEnvVars,
-      };
-      if (has) route.has = has;
-      if (missing) route.missing = missing;
-      if (respectOriginCacheControl !== undefined)
-        route.respectOriginCacheControl = respectOriginCacheControl;
-      return route;
-    }
-
-    // Simple rewrite without transforms or env vars
     const rewrite: Rewrite = {
       source,
       destination,
     };
 
+    if (destEnvVars.length > 0) rewrite.env = destEnvVars;
     if (has) rewrite.has = has;
     if (missing) rewrite.missing = missing;
     if (respectOriginCacheControl !== undefined)
@@ -941,10 +848,7 @@ export class Router {
    *    })
    * @internal Can return Route with transforms internally
    */
-  public redirect<T extends string>(
-    source: T,
-    destination: string
-  ): Redirect | Route;
+  public redirect<T extends string>(source: T, destination: string): Redirect;
   public redirect<T extends string>(
     source: T,
     destination: string,
@@ -1054,33 +958,16 @@ export class Router {
       return route;
     }
 
-    // Simple redirect without transforms - check if destination has env vars
+    // Simple redirect without transforms
     const pathParams = this.extractPathParams(source);
     const destEnvVars = extractEnvVars(destination, pathParams);
 
-    if (destEnvVars.length > 0) {
-      // Need Route format to include env field
-      // Convert path-to-regexp patterns to regex for routes format
-      const { src: regexSrc, segments } = sourceToRegex(source);
-      const convertedDest = convertDestination(destination, segments);
-
-      const route: Route = {
-        src: regexSrc,
-        dest: convertedDest,
-        status: statusCode || (permanent ? 308 : 307),
-        env: destEnvVars,
-      };
-      if (has) route.has = has;
-      if (missing) route.missing = missing;
-      return route;
-    }
-
-    // Simple redirect without transforms or env vars
     const redirect: Redirect = {
       source,
       destination,
     };
 
+    if (destEnvVars.length > 0) redirect.env = destEnvVars;
     if (permanent !== undefined) redirect.permanent = permanent;
     if (statusCode !== undefined) redirect.statusCode = statusCode;
     if (has) redirect.has = has;

@@ -1,5 +1,57 @@
 # vercel-runtime
 
+## 0.9.0
+
+### Minor Changes
+
+- [services] add support for background workers to vc dev ([#15434](https://github.com/vercel/vercel/pull/15434))
+
+- Fix serving static files for a django WSGI app in vercel dev. ([#15501](https://github.com/vercel/vercel/pull/15501))
+
+- [services] add support for cron services to vc dev ([#15433](https://github.com/vercel/vercel/pull/15433))
+
+### Patch Changes
+
+- Follow up fix to how the vendoring is done ([#15506](https://github.com/vercel/vercel/pull/15506))
+
+## 0.8.0
+
+### Minor Changes
+
+- Fix error when running dev server on a django project. ([#15483](https://github.com/vercel/vercel/pull/15483))
+
+## 0.7.0
+
+### Minor Changes
+
+- [python] move vc_init_dev into vercel-runtime ([#15419](https://github.com/vercel/vercel/pull/15419))
+
+## 0.6.0
+
+### Minor Changes
+
+- [python] add support for Python worker services with Django tasks ([#15396](https://github.com/vercel/vercel/pull/15396))
+
+- [python] add support for module-based entrypoints for cron jobs ([#15393](https://github.com/vercel/vercel/pull/15393))
+
+## 0.5.6
+
+### Patch Changes
+
+- [services] adds support for python cron worker services ([#15175](https://github.com/vercel/vercel/pull/15175))
+
+## 0.5.5
+
+### Patch Changes
+
+- Report fatal init errors via IPC `unrecoverable-error` message ([#15319](https://github.com/vercel/vercel/pull/15319))
+
+## 0.5.4
+
+### Patch Changes
+
+- Move the matplotlib env var to quirks. ([#15305](https://github.com/vercel/vercel/pull/15305))
+
 ## 0.5.3
 
 ### Patch Changes

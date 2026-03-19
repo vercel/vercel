@@ -6,9 +6,12 @@ import { listSubcommand } from './command';
 import {
   parseSubcommandArgs,
   ensureProjectLink,
+  findVersionById,
   formatCondition,
   formatTransform,
+  withGlobalFlags,
 } from './shared';
+import { outputAgentError } from '../../util/agent-output';
 import getRoutes from '../../util/routes/get-routes';
 import getRouteVersions from '../../util/routes/get-route-versions';
 import stamp from '../../util/output/stamp';
@@ -23,7 +26,7 @@ import {
 } from '../../util/routes/types';
 
 export default async function list(client: Client, argv: string[]) {
-  const parsed = await parseSubcommandArgs(argv, listSubcommand);
+  const parsed = await parseSubcommandArgs(argv, listSubcommand, client);
   if (typeof parsed === 'number') return parsed;
 
   const link = await ensureProjectLink(client);
@@ -34,10 +37,8 @@ export default async function list(client: Client, argv: string[]) {
   const teamId = org.type === 'team' ? org.id : undefined;
   const search = flags['--search'] as string | undefined;
   const filter = flags['--filter'] as RouteType | undefined;
-  const page = flags['--page'] as number | undefined;
-  const perPage = flags['--per-page'] as number | undefined;
-  const staging = flags['--staging'] as boolean | undefined;
-  const versionIdFlag = flags['--version'] as string | undefined;
+  const production = flags['--production'] as boolean | undefined;
+  const versionIdFlag = flags['--version-id'] as string | undefined;
   const diffFlag = flags['--diff'] as boolean | undefined;
   const expand = flags['--expand'] as boolean | undefined;
 
@@ -50,25 +51,86 @@ export default async function list(client: Client, argv: string[]) {
       'transform',
     ];
     if (!validFilters.includes(filter)) {
-      output.error(
-        `Invalid filter type "${filter}". Valid types: ${validFilters.join(', ')}`
-      );
+      const msg = `Invalid filter type "${filter}". Valid types: ${validFilters.join(', ')}`;
+      if (client.nonInteractive) {
+        outputAgentError(client, {
+          status: 'error',
+          reason: 'invalid_arguments',
+          message: msg,
+          next: [{ command: withGlobalFlags(client, 'routes list') }],
+        });
+        process.exit(1);
+      }
+      output.error(msg);
       return 1;
     }
   }
 
-  // Check for conflicting flags early
-  if (staging && versionIdFlag) {
-    output.error('Cannot use both --staging and --version flags together');
+  if (production && versionIdFlag) {
+    const msg = 'Cannot use both --production and --version-id flags together';
+    if (client.nonInteractive) {
+      outputAgentError(client, {
+        status: 'error',
+        reason: 'invalid_arguments',
+        message: msg,
+        next: [{ command: withGlobalFlags(client, 'routes list') }],
+      });
+      process.exit(1);
+    }
+    output.error(msg);
+    return 1;
+  }
+
+  if (production && diffFlag) {
+    const msg =
+      'Cannot use both --production and --diff flags together. --diff compares staged changes against production.';
+    if (client.nonInteractive) {
+      outputAgentError(client, {
+        status: 'error',
+        reason: 'invalid_arguments',
+        message: msg,
+        next: [{ command: withGlobalFlags(client, 'routes list --diff') }],
+      });
+      process.exit(1);
+    }
+    output.error(msg);
     return 1;
   }
 
   let versionId: string | undefined;
   let versionName: string | undefined;
-
   let useDiff = false;
 
-  if (staging) {
+  if (production) {
+    output.spinner('Fetching production version');
+    const { versions } = await getRouteVersions(client, project.id, {
+      teamId,
+    });
+    const productionVersion = versions.find(v => !v.isStaging);
+
+    if (!productionVersion) {
+      const msg = `No production version found for ${project.name}.`;
+      if (client.nonInteractive) {
+        outputAgentError(client, {
+          status: 'error',
+          reason: 'not_found',
+          message: msg,
+          next: [{ command: withGlobalFlags(client, 'routes list') }],
+        });
+        process.exit(1);
+      }
+      output.error(
+        `No production version found for ${chalk.bold(project.name)}.`
+      );
+      return 1;
+    }
+
+    versionId = productionVersion.id;
+    versionName = productionVersion.id;
+  }
+
+  if (diffFlag && !versionIdFlag) {
+    // --diff without --version-id: diff staging against production
     output.spinner('Fetching staging version');
     const { versions } = await getRouteVersions(client, project.id, {
       teamId,
@@ -76,21 +138,30 @@ export default async function list(client: Client, argv: string[]) {
     const stagingVersion = versions.find(v => v.isStaging);
 
     if (!stagingVersion) {
+      const msg = `No staged changes to diff. Run ${getCommandName('routes add')} or ${getCommandName('routes edit')} to make changes.`;
+      if (client.nonInteractive) {
+        outputAgentError(client, {
+          status: 'error',
+          reason: 'not_found',
+          message: msg,
+          next: [
+            { command: withGlobalFlags(client, 'routes list') },
+            { command: withGlobalFlags(client, 'routes add') },
+          ],
+        });
+        process.exit(1);
+      }
       output.error(
-        `No staging version found for ${chalk.bold(project.name)}. Run ${chalk.cyan(
-          getCommandName('routes list-versions')
-        )} to see available versions.`
+        `No staged changes to diff. Run ${chalk.cyan(
+          getCommandName('routes add')
+        )} or ${chalk.cyan(getCommandName('routes edit'))} to make changes.`
       );
       return 1;
     }
 
     versionId = stagingVersion.id;
     versionName = stagingVersion.id;
-
-    // Enable diff mode when viewing staging without search/filter/page
-    if (!search && !filter && !page) {
-      useDiff = diffFlag !== false; // Default to diff unless explicitly disabled
-    }
+    useDiff = true;
   }
 
   if (versionIdFlag) {
@@ -98,27 +169,29 @@ export default async function list(client: Client, argv: string[]) {
     const { versions } = await getRouteVersions(client, project.id, {
       teamId,
     });
-    const version = versions.find(v => v.id === versionIdFlag);
+    const result = findVersionById(versions, versionIdFlag);
 
-    if (!version) {
-      output.error(
-        `Version "${versionIdFlag}" not found. Run ${chalk.cyan(
-          getCommandName('routes list-versions')
-        )} to see available versions.`
-      );
+    if (result.error || !result.version) {
+      const msg = result.error ?? 'Version not found';
+      if (client.nonInteractive) {
+        outputAgentError(client, {
+          status: 'error',
+          reason: 'not_found',
+          message: msg,
+          next: [{ command: withGlobalFlags(client, 'routes list-versions') }],
+        });
+        process.exit(1);
+      }
+      output.error(msg);
       return 1;
     }
 
-    versionId = version.id;
-    versionName = version.id;
-  }
+    versionId = result.version.id;
+    versionName = result.version.id;
 
-  // If --diff flag is explicitly set without --staging, show error
-  if (diffFlag && !staging && !versionIdFlag) {
-    output.error(
-      'The --diff flag requires --staging or --version to compare against production'
-    );
-    return 1;
+    if (diffFlag) {
+      useDiff = true;
+    }
   }
 
   const lsStamp = stamp();
@@ -139,8 +212,6 @@ export default async function list(client: Client, argv: string[]) {
     teamId,
     search,
     filter,
-    page,
-    perPage,
     versionId,
     diff: useDiff,
   });
@@ -334,7 +405,7 @@ function formatExpandedRoutes(routes: RoutingRule[]): string {
     }
 
     if (rule.route.missing && rule.route.missing.length > 0) {
-      lines.push(`     ${chalk.cyan('Missing conditions:')}`);
+      lines.push(`     ${chalk.cyan('Does not have conditions:')}`);
       for (const condition of rule.route.missing) {
         lines.push(`       ${formatCondition(condition)}`);
       }

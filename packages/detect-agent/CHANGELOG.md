@@ -1,5 +1,25 @@
 # @vercel/detect-agent
 
+## 1.2.1
+
+### Patch Changes
+
+- Add GitHub Copilot detection support by recognizing `AI_AGENT=github-copilot|github-copilot-cli` and fallback Copilot CLI environment variables (`COPILOT_MODEL`, `COPILOT_ALLOW_ALL`, and `COPILOT_GITHUB_TOKEN`). ([#15449](https://github.com/vercel/vercel/pull/15449))
+
+## 1.2.0
+
+### Minor Changes
+
+- Add `cowork` as a distinct agent name to differentiate Claude Cowork from Claude Code via the `CLAUDE_CODE_IS_COWORK` environment variable. ([#15441](https://github.com/vercel/vercel/pull/15441))
+
+## 1.1.1
+
+### Patch Changes
+
+- Add Antigravity agent detection via `ANTIGRAVITY_AGENT` environment variable ([#15413](https://github.com/vercel/vercel/pull/15413))
+
+- Detect Codex when `CODEX_CI` or `CODEX_THREAD_ID` is present. ([#15412](https://github.com/vercel/vercel/pull/15412))
+
 ## 1.1.0
 
 ### Minor Changes

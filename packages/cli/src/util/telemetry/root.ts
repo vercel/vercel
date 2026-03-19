@@ -12,9 +12,30 @@ export class RootTelemetryClient extends TelemetryClient {
     }
   }
 
+  trackCliCommandAgent(actual: string) {
+    this.trackCliCommand({
+      command: 'agent',
+      value: actual,
+    });
+  }
+
   trackCliCommandAlias(actual: string) {
     this.trackCliCommand({
       command: 'alias',
+      value: actual,
+    });
+  }
+
+  trackCliCommandActivity(actual: string) {
+    this.trackCliCommand({
+      command: 'activity',
+      value: actual,
+    });
+  }
+
+  trackCliCommandAlerts(actual: string) {
+    this.trackCliCommand({
+      command: 'alerts',
       value: actual,
     });
   }
@@ -71,6 +92,13 @@ export class RootTelemetryClient extends TelemetryClient {
   trackCliCommandContract(actual: string) {
     this.trackCliCommand({
       command: 'contract',
+      value: actual,
+    });
+  }
+
+  trackCliCommandCrons(actual: string) {
+    this.trackCliCommand({
+      command: 'crons',
       value: actual,
     });
   }
@@ -306,6 +334,13 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
+  trackCliCommandSkills(actual: string) {
+    this.trackCliCommand({
+      command: 'skills',
+      value: actual,
+    });
+  }
+
   trackCliCommandTarget(actual: string) {
     this.trackCliCommand({
       command: 'target',
@@ -373,6 +408,10 @@ export class RootTelemetryClient extends TelemetryClient {
 
   trackCIVendorName() {
     this.trackCI(CiInfo.id);
+  }
+
+  trackStdinIsTTY(isTTY: boolean) {
+    super.trackStdinIsTTY(isTTY);
   }
 
   trackVersion(version: string | undefined) {

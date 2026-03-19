@@ -1,5 +1,53 @@
 # @vercel/next
 
+## 4.16.1
+
+### Patch Changes
+
+- Update to latest Next.js adapter ([#15440](https://github.com/vercel/vercel/pull/15440))
+
+## 4.16.0
+
+### Minor Changes
+
+- Support `maxDuration: 'max'` to allow the backend to resolve the maximum duration based on account plan type ([#15217](https://github.com/vercel/vercel/pull/15217))
+
+## 4.15.42
+
+### Patch Changes
+
+- Revert "[next] vary fallback allowQuery for partial fallback shells" ([#15418](https://github.com/vercel/vercel/pull/15418))
+
+## 4.15.41
+
+### Patch Changes
+
+- Update Next.js adapter version ([#15382](https://github.com/vercel/vercel/pull/15382))
+
+## 4.15.40
+
+### Patch Changes
+
+- vary fallback `allowQuery` by params for partial fallback shells ([#15338](https://github.com/vercel/vercel/pull/15338))
+
+## 4.15.39
+
+### Patch Changes
+
+- Update Next.js adapter version ([#15366](https://github.com/vercel/vercel/pull/15366))
+
+## 4.15.38
+
+### Patch Changes
+
+- Update Next.js adapter version ([#15360](https://github.com/vercel/vercel/pull/15360))
+
+## 4.15.37
+
+### Patch Changes
+
+- add partialFallback flag to prerender output ([#14703](https://github.com/vercel/vercel/pull/14703))
+
 ## 4.15.36
 
 ### Patch Changes

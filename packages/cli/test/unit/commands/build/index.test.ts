@@ -10,7 +10,10 @@ import { useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
 import { execSync } from 'child_process';
 import { vi } from 'vitest';
-import { REGEX_NON_VERCEL_PLATFORM_FILES } from '@vercel/fs-detectors';
+import {
+  detectBuilders,
+  REGEX_NON_VERCEL_PLATFORM_FILES,
+} from '@vercel/fs-detectors';
 
 vi.setConfig({ testTimeout: 6 * 60 * 1000 });
 
@@ -165,8 +168,7 @@ describe.skipIf(flakey)('build', () => {
     try {
       await fs.unlink(join(cwd, 'foo.html'));
       await fs.symlink(join(cwd, 'index.html'), join(cwd, 'foo.html'));
-    } catch (e) {
-      // eslint-disable-next-line no-console
+    } catch (_e) {
       console.log('Symlinks not available, skipping test');
       return;
     }
@@ -793,7 +795,6 @@ describe.skipIf(flakey)('build', () => {
 
   it('should error when "functions" has runtime that emits discontinued "nodejs12.x"', async () => {
     if (process.platform === 'win32') {
-      // eslint-disable-next-line no-console
       console.log('Skipping test on Windows');
       return;
     }
@@ -1009,7 +1010,6 @@ describe.skipIf(flakey)('build', () => {
   it('should apply project settings overrides from "vercel.json"', async () => {
     if (process.platform === 'win32') {
       // this test runs a build command with `mkdir -p` which is unsupported on Windows
-      // eslint-disable-next-line no-console
       console.log('Skipping test on Windows');
       return;
     }
@@ -1108,6 +1108,27 @@ describe.skipIf(flakey)('build', () => {
         schedule: '0 0 * * *',
       },
     ]);
+  });
+
+  it('should include cron services in build output crons without the services framework setting', async () => {
+    const cwd = fixture('with-services-cron');
+    const output = join(cwd, '.vercel', 'output');
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toBe(0);
+
+    const config = await fs.readJSON(join(output, 'config.json'));
+    expect(config).toHaveProperty('crons', [
+      {
+        path: '/_svc/cleanup/crons/index/cron',
+        schedule: '0 0 * * *',
+      },
+    ]);
+    expect(config.routes).toContainEqual({
+      src: '^/_svc/cleanup/crons/index/cron$',
+      dest: '/_svc/cleanup/index',
+      check: true,
+    });
   });
 
   it('should fail build when CRON_SECRET contains invalid HTTP header characters', async () => {
@@ -1593,6 +1614,42 @@ describe.skipIf(flakey)('build', () => {
     });
   });
 
+  it('should emit flags-definitions module when VERCEL_EXPERIMENTAL_EMBED_FLAG_DEFINITIONS=1', async () => {
+    const cwd = fixture('static');
+    const definitionsDir = join(
+      cwd,
+      'node_modules',
+      '@vercel',
+      'flags-definitions'
+    );
+
+    client.cwd = cwd;
+    client.setArgv('build', '--yes');
+    const prev = process.env.VERCEL_EXPERIMENTAL_EMBED_FLAG_DEFINITIONS;
+    try {
+      process.env.VERCEL_EXPERIMENTAL_EMBED_FLAG_DEFINITIONS = '1';
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      expect(fs.existsSync(join(definitionsDir, 'index.js'))).toBe(true);
+      expect(fs.existsSync(join(definitionsDir, 'index.d.ts'))).toBe(true);
+      expect(fs.existsSync(join(definitionsDir, 'package.json'))).toBe(true);
+      const pkg = await fs.readJSON(join(definitionsDir, 'package.json'));
+      expect(pkg.name).toBe('@vercel/flags-definitions');
+      const indexJs = await fs.readFile(
+        join(definitionsDir, 'index.js'),
+        'utf8'
+      );
+      expect(indexJs).toContain('export function get(hashedSdkKey)');
+    } finally {
+      if (prev !== undefined) {
+        process.env.VERCEL_EXPERIMENTAL_EMBED_FLAG_DEFINITIONS = prev;
+      } else {
+        delete process.env.VERCEL_EXPERIMENTAL_EMBED_FLAG_DEFINITIONS;
+      }
+    }
+  });
+
   it('should not apply framework `defaultRoutes` when build command outputs Build Output API', async () => {
     const cwd = fixture('build-output-api-with-api-dir');
     const output = join(cwd, '.vercel/output');
@@ -1647,7 +1704,6 @@ describe.skipIf(flakey)('build', () => {
 
   it('should create symlinks for duplicate references to Lambda / EdgeFunction instances', async () => {
     if (process.platform === 'win32') {
-      // eslint-disable-next-line no-console
       console.log('Skipping test on Windows');
       return;
     }
@@ -1708,6 +1764,25 @@ describe.skipIf(flakey)('build', () => {
 
       const env = await fs.readJSON(join(output, 'static', 'env.json'));
       expect(Object.keys(env).includes('VERCEL_ANALYTICS_ID')).toEqual(true);
+    });
+  });
+
+  describe('Next.js with root api', () => {
+    it('should not add catch-all /api 404 so dynamic App Router routes work in production', async () => {
+      const files = ['package.json', 'pages/index.js', 'api/legacy.js'];
+      const pkg = {
+        scripts: { build: 'next build' },
+        devDependencies: { next: '13' },
+      };
+      const { rewriteRoutes } = await detectBuilders(files, pkg, {
+        featHandleMiss: true,
+        projectSettings: { framework: 'nextjs' },
+      });
+      const catchAllApi404 = rewriteRoutes?.find(
+        (r: { src?: string; status?: number }) =>
+          r.src === '^/api(/.*)?$' && r.status === 404
+      );
+      expect(catchAllApi404).toBeUndefined();
     });
   });
 
@@ -2077,5 +2152,20 @@ fs.writeFileSync(
       const exitCode = await build(client);
       expect(exitCode).toEqual(0);
     });
+  });
+
+  it('should allow services to share the same builder source', async () => {
+    const cwd = fixture('with-services-shared-source');
+    const output = join(cwd, '.vercel', 'output');
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toBe(0);
+
+    const config = await fs.readJSON(join(output, 'config.json'));
+    expect(config.services).toHaveLength(2);
+    expect(config.services.map((s: any) => s.name).sort()).toEqual([
+      'worker-topic1',
+      'worker-topic2',
+    ]);
   });
 });

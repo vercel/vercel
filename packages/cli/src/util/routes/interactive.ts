@@ -280,7 +280,7 @@ export async function collectInteractiveConditions(
         output.print(`  has: ${c}\n`);
       }
       for (const c of currentMissing) {
-        output.print(`  missing: ${c}\n`);
+        output.print(`  does not have: ${c}\n`);
       }
       output.print('\n');
     }
@@ -289,7 +289,10 @@ export async function collectInteractiveConditions(
       message: 'Condition type:',
       choices: [
         { name: 'has - Request must have this', value: 'has' },
-        { name: 'missing - Request must NOT have this', value: 'missing' },
+        {
+          name: 'does not have - Request must NOT have this',
+          value: 'missing',
+        },
       ],
     });
 

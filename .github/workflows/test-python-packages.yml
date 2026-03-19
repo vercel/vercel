@@ -21,6 +21,9 @@ jobs:
       packages: ${{ steps.discover.outputs.packages }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Check out the PR commit directly instead of a merge commit.
+          ref: ${{ github.event.pull_request.head.sha }}
       - id: discover
         run: |
           PACKAGES="$(node utils/get-python-packages.js)"
@@ -40,6 +43,9 @@ jobs:
         package: ${{ fromJson(needs.setup.outputs.packages) }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Check out the PR commit directly instead of a merge commit.
+          ref: ${{ github.event.pull_request.head.sha }}
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}

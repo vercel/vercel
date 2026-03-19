@@ -75,6 +75,8 @@ The entry point resolves subcommands with `getSubcommand`, displays help for `--
 
 ## Interactive Prompts vs Flags
 
+For **structured JSON on stdout**, **`next[]` suggestions with global flags**, and **`--non-interactive`** conventions, see **`docs/non-interactive-mode.md`**.
+
 Commands should support both interactive (TTY) and non-interactive (CI/scripts) usage. Flags always take priority over interactive prompts.
 
 ### Flag-based flow (non-interactive)
@@ -130,7 +132,7 @@ All output methods write to `stderr` (via the `output` singleton), except `outpu
 | ------------------------- | ------------------- | ----------------------------------------------------------- |
 | `output.log(msg)`         | `> msg`             | Success messages, status updates                            |
 | `output.error(msg)`       | `Error: msg`        | User-facing errors                                          |
-| `output.warn(msg)`        | `WARN! msg`         | Warnings that don't stop execution                          |
+| `output.warn(msg)`        | `WARNING! msg`      | Warnings that don't stop execution                          |
 | `output.debug(msg)`       | `> [debug] msg`     | Debug info (only shown with `--debug`)                      |
 | `output.print(msg)`       | raw to stdout       | Help text, JSON output, primary data                        |
 | `output.spinner(msg)`     | animated            | Long-running operations (>100ms)                            |

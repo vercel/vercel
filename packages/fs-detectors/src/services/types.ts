@@ -35,6 +35,8 @@ export interface DetectServicesOptions {
 }
 
 export interface ServicesRoutes {
+  /** Host-based rewrite routes for subdomain-mounted web services */
+  hostRewrites: Route[];
   /** Rewrite routes for non-root web services (prefix-based) */
   rewrites: Route[];
   /** Default routes (catch-all for root web service) */
@@ -42,29 +44,43 @@ export interface ServicesRoutes {
   /**
    * Internal routes for cron services.
    * These route `/_svc/{serviceName}/crons/{entry}/{handler}` to the cron function.
-   * TODO: Implement
    */
   crons: Route[];
   /**
    * Internal routes for worker services.
    * These route `/_svc/{serviceName}/workers/{entry}/{handler}` to the worker function.
-   * TODO: Implement
    */
   workers: Route[];
 }
 
-export interface DetectServicesResult {
+export type ServicesConfig = ExperimentalServices;
+
+export interface ResolvedServicesResult {
   services: Service[];
+  source: DetectServicesSource;
+  routes: ServicesRoutes;
+  errors: ServiceDetectionError[];
+  warnings: ServiceDetectionWarning[];
+}
+
+export interface InferredServicesResult {
+  source: 'layout' | 'procfile';
+  config: ServicesConfig;
+  services: Service[];
+  warnings: ServiceDetectionWarning[];
+}
+
+export interface DetectServicesResult extends ResolvedServicesResult {
   /**
    * Source of service definitions:
    * - `configured`: loaded from explicit project configuration (currently `vercel.json#experimentalServices`)
    * - `auto-detected`: inferred from project structure
    */
-  source: DetectServicesSource;
-  /** Routing rules derived from services */
-  routes: ServicesRoutes;
-  errors: ServiceDetectionError[];
-  warnings: ServiceDetectionWarning[];
+  // TODO: replace consumption of top-level fields with these nested objects in caller before removal of top-level fields.
+  /* Resolved services used by build/dev flows. */
+  resolved: ResolvedServicesResult;
+  /* Inferred services that can be migrated into project config. */
+  inferred: InferredServicesResult | null;
 }
 
 export type DetectServicesSource = 'configured' | 'auto-detected';
@@ -82,7 +98,7 @@ export interface ServiceDetectionError {
 }
 
 export const RUNTIME_BUILDERS: Record<ServiceRuntime, string> = {
-  node: '@vercel/node',
+  node: '@vercel/backends',
   python: '@vercel/python',
   go: '@vercel/go',
   rust: '@vercel/rust',

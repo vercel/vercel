@@ -26,7 +26,7 @@ export interface JSONObject {
   [key: string]: JSONValue;
 }
 
-interface AuthConfig {
+export interface AuthConfig {
   '// Note'?: string;
   '// Docs'?: string;
   skipWrite?: boolean;

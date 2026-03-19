@@ -124,7 +124,7 @@ export type Route = RouteWithSrc | RouteWithHandle;
 
 export type RouteInput =
   | RouteWithSrc
-  | (Omit<RouteWithSrc, 'src'> & { src?: undefined; source: string })
+  | (Omit<RouteWithSrc, 'src'> & { src?: string; source: string })
   | RouteWithHandle;
 
 export type NormalizedRoutes = {

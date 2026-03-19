@@ -144,6 +144,36 @@ export interface Transform {
 }
 
 /**
+ * A route shape accepted by the interactive edit loop.
+ * Both RoutingRule (from the API, using @vercel/routing-utils types) and
+ * temporary objects built from AddRouteInput (using local types) satisfy
+ * this interface, avoiding casts when passing either to the edit loop.
+ */
+export interface EditableRoute {
+  id?: string;
+  name: string;
+  description?: string;
+  enabled?: boolean;
+  srcSyntax?: SrcSyntax;
+  route: {
+    src: string;
+    dest?: string;
+    status?: number;
+    headers?: Record<string, string>;
+    has?: Array<{ type: string; key?: string; value?: unknown }>;
+    missing?: Array<{ type: string; key?: string; value?: unknown }>;
+    transforms?: Array<{
+      type: string;
+      op: string;
+      target: { key: string | Record<string, unknown> };
+      args?: string | string[];
+      env?: string[];
+    }>;
+    env?: string[];
+  };
+}
+
+/**
  * Position placement options for route ordering
  */
 export interface RoutePosition {

@@ -25,30 +25,14 @@ export const listSubcommand = {
       deprecated: false,
     },
     {
-      name: 'page',
-      description: 'Page number to display',
-      shorthand: null,
-      type: Number,
-      argument: 'NUMBER',
-      deprecated: false,
-    },
-    {
-      name: 'per-page',
-      description: 'Number of routes per page (default: 50)',
-      shorthand: null,
-      type: Number,
-      argument: 'NUMBER',
-      deprecated: false,
-    },
-    {
-      name: 'staging',
-      description: 'List routes from the staging version',
+      name: 'production',
+      description: 'List routes from the live production version',
       shorthand: null,
       type: Boolean,
       deprecated: false,
     },
     {
-      name: 'version',
+      name: 'version-id',
       description: 'List routes from a specific version ID',
       shorthand: null,
       type: String,
@@ -57,7 +41,8 @@ export const listSubcommand = {
     },
     {
       name: 'diff',
-      description: 'Show diff between staging and production',
+      description:
+        'Compare staged changes against production. Use with --version-id to compare a specific version.',
       shorthand: null,
       type: Boolean,
       deprecated: false,
@@ -84,8 +69,12 @@ export const listSubcommand = {
       value: `${packageName} routes list --filter rewrite`,
     },
     {
-      name: 'Show staging changes',
-      value: `${packageName} routes list --staging --diff`,
+      name: 'Show staged changes',
+      value: `${packageName} routes list --diff`,
+    },
+    {
+      name: 'Show live production routes',
+      value: `${packageName} routes list --production`,
     },
     {
       name: 'Show expanded details',
@@ -134,7 +123,7 @@ export const inspectSubcommand = {
   options: [
     {
       name: 'diff',
-      description: 'Show changes between staging and production for this route',
+      description: 'Compare staged changes against production for this route',
       shorthand: null,
       type: Boolean,
       deprecated: false,
@@ -299,7 +288,7 @@ export const addSubcommand = {
     {
       name: 'missing',
       description:
-        'Condition that must NOT match: type:key or type:key:value (repeatable)',
+        '"Does not have" condition: type:key or type:key:value (repeatable)',
       shorthand: null,
       type: [String],
       argument: 'CONDITION',
@@ -322,6 +311,15 @@ export const addSubcommand = {
       deprecated: false,
     },
     {
+      name: 'ai',
+      description:
+        'Generate route from a natural language description (AI-powered)',
+      shorthand: null,
+      type: String,
+      argument: 'PROMPT',
+      deprecated: false,
+    },
+    {
       name: 'position',
       description: 'Position: start, end, after:<id>, before:<id>',
       shorthand: null,
@@ -341,6 +339,10 @@ export const addSubcommand = {
     {
       name: 'Interactive mode',
       value: `${packageName} routes add`,
+    },
+    {
+      name: 'Create with AI',
+      value: `${packageName} routes add --ai "Rewrite /api/* to https://backend.internal/*"`,
     },
     {
       name: 'Add a rewrite',
@@ -765,7 +767,7 @@ export const editSubcommand = {
     {
       name: 'missing',
       description:
-        'Add a missing condition: type:key or type:key:value (repeatable)',
+        'Add a "does not have" condition: type:key or type:key:value (repeatable)',
       shorthand: null,
       type: [String],
       argument: 'CONDITION',
@@ -774,7 +776,7 @@ export const editSubcommand = {
     // Clearing
     {
       name: 'clear-conditions',
-      description: 'Remove all has/missing conditions',
+      description: 'Remove all has/does-not-have conditions',
       shorthand: null,
       type: Boolean,
       deprecated: false,
@@ -794,6 +796,14 @@ export const editSubcommand = {
       deprecated: false,
     },
     {
+      name: 'ai',
+      description: 'Describe changes using natural language (AI-powered)',
+      shorthand: null,
+      type: String,
+      argument: 'PROMPT',
+      deprecated: false,
+    },
+    {
       ...yesOption,
       description: 'Skip confirmation prompts',
     },
@@ -802,6 +812,10 @@ export const editSubcommand = {
     {
       name: 'Interactive mode',
       value: `${packageName} routes edit "API Proxy"`,
+    },
+    {
+      name: 'Edit with AI',
+      value: `${packageName} routes edit "API Proxy" --ai "Add CORS headers and change status to 308"`,
     },
     {
       name: 'Change destination',
@@ -885,5 +899,4 @@ export const routesCommand = {
   ],
   options: [],
   examples: [],
-  hidden: true, // TODO: Remove when all routes subcommands are complete
 } as const;

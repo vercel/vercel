@@ -126,33 +126,31 @@ describe('routes list', () => {
     await expect(client.stderr).toOutput('Invalid filter type');
   });
 
-  it('should list staging routes with --staging flag', async () => {
+  it('should show staged changes with --diff flag', async () => {
     useRouteVersions(3);
     useRoutesWithDiff();
-    client.setArgv('routes', 'list', '--staging');
+    client.setArgv('routes', 'list', '--diff');
     const exitCode = await routes(client);
-    expect(exitCode, 'exit code for "routes list --staging"').toEqual(0);
+    expect(exitCode, 'exit code for "routes list --diff"').toEqual(0);
     await expect(client.stderr).toOutput('Changes in staging version');
   });
 
   it('should show diff with added/removed/modified routes', async () => {
     useRouteVersions(3);
     useRoutesWithDiff();
-    client.setArgv('routes', 'list', '--staging');
+    client.setArgv('routes', 'list', '--diff');
     const exitCode = await routes(client);
-    expect(exitCode, 'exit code for "routes list --staging"').toEqual(0);
-    // Check that output contains diff markers - the toOutput checks the full accumulated output
+    expect(exitCode, 'exit code for "routes list --diff"').toEqual(0);
     await expect(client.stderr).toOutput('Added (1)');
   });
 
-  it('should reject --diff without --staging or --version', async () => {
+  it('should error when --diff is used but no staging version exists', async () => {
+    useRouteVersions(0);
     useRoutes(3);
     client.setArgv('routes', 'list', '--diff');
     const exitCode = await routes(client);
-    expect(exitCode, 'exit code for invalid --diff usage').toEqual(1);
-    await expect(client.stderr).toOutput(
-      '--diff flag requires --staging or --version'
-    );
+    expect(exitCode, 'exit code for --diff without staging').toEqual(1);
+    await expect(client.stderr).toOutput('No staged changes to diff');
   });
 
   describe('--expand', () => {

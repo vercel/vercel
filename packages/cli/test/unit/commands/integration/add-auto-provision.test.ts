@@ -1227,6 +1227,73 @@ describe('integration add (auto-provision)', () => {
       );
     });
 
+    it('should include environment in fallback URL when --environment is provided', async () => {
+      useAutoProvision({ responseKey: 'metadata' });
+
+      client.setArgv(
+        'integration',
+        'add',
+        'acme',
+        '--environment',
+        'production'
+      );
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'Additional setup required. Opening browser...'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(1);
+      const calledUrl = openMock.mock.calls[0]?.[0] as string;
+      const parsed = new URL(calledUrl);
+      expect(parsed.searchParams.get('environment')).toEqual('production');
+    });
+
+    it('should include comma-separated environments in fallback URL when multiple --environment flags are provided', async () => {
+      useAutoProvision({ responseKey: 'metadata' });
+
+      client.setArgv(
+        'integration',
+        'add',
+        'acme',
+        '--environment',
+        'production',
+        '--environment',
+        'preview'
+      );
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'Additional setup required. Opening browser...'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(1);
+      const calledUrl = openMock.mock.calls[0]![0] as string;
+      const parsed = new URL(calledUrl);
+      expect(parsed.searchParams.get('environment')).toEqual(
+        'production,preview'
+      );
+    });
+
+    it('should not include environment in fallback URL when --environment is not provided', async () => {
+      useAutoProvision({ responseKey: 'metadata' });
+
+      client.setArgv('integration', 'add', 'acme');
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'Additional setup required. Opening browser...'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(1);
+      expect(openMock).toHaveBeenCalledWith(
+        expect.not.stringMatching(/environment=/)
+      );
+    });
+
     it('should not include planId in fallback URL when --plan is not provided', async () => {
       useAutoProvision({ responseKey: 'metadata' });
 

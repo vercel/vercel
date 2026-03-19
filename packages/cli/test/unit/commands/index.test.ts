@@ -4,8 +4,11 @@ describe('index', () => {
   it('outputs a map of what aliases our commands use', () => {
     expect(commands).toEqual(
       new Map([
+        ['agent', 'agent'],
+        ['alerts', 'alerts'],
         ['alias', 'alias'],
         ['aliases', 'alias'],
+        ['activity', 'activity'],
         ['api', 'api'],
         ['bisect', 'bisect'],
         ['blob', 'blob'],
@@ -15,6 +18,8 @@ describe('index', () => {
         ['cert', 'certs'],
         ['certs', 'certs'],
         ['contract', 'contract'],
+        ['cron', 'crons'],
+        ['crons', 'crons'],
         ['curl', 'curl'],
         ['deploy', 'deploy'],
         ['dev', 'dev'],
@@ -59,6 +64,7 @@ describe('index', () => {
         ['rolling-release', 'rolling-release'],
         ['routes', 'routes'],
         ['rr', 'rolling-release'],
+        ['skills', 'skills'],
         ['switch', 'teams'],
         ['target', 'target'],
         ['targets', 'target'],

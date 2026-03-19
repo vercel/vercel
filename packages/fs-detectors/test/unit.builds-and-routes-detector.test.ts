@@ -3,6 +3,7 @@ import type {
   RouteWithHandle as Handler,
   RouteWithSrc as Source,
 } from '@vercel/routing-utils';
+import { join } from 'path';
 import type { PackageJson } from '@vercel/build-utils';
 import {
   detectBuilders,
@@ -92,6 +93,66 @@ function createReplaceLocation(redirectRoutes: Route[] | null) {
 }
 
 describe('Test `detectBuilders`', () => {
+  it('should use services builders when experimentalServices is configured without the services framework', async () => {
+    const workPath = join(
+      __dirname,
+      'fixtures',
+      'e2e',
+      '11-services-python-cron'
+    );
+    const { builders, defaultRoutes, rewriteRoutes, services, errors } =
+      await detectBuilders([], undefined, {
+        experimentalServices: {
+          web: {
+            framework: 'fastapi',
+            entrypoint: 'server.py',
+            routePrefix: '/',
+          },
+          cleanup: {
+            type: 'cron',
+            entrypoint: 'jobs/cleanup.py',
+            schedule: '0 0 * * *',
+          },
+        },
+        projectSettings: {
+          framework: null,
+        },
+        workPath,
+      });
+
+    expect(errors).toBeNull();
+    expect(services).toHaveLength(2);
+    expect(builders).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          src: 'server.py',
+          use: '@vercel/python',
+        }),
+        expect.objectContaining({
+          src: 'jobs/cleanup.py',
+          use: '@vercel/python',
+        }),
+      ])
+    );
+    expect(defaultRoutes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          dest: '/_svc/web/index',
+          check: true,
+        }),
+      ])
+    );
+    expect(rewriteRoutes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          src: '^/_svc/cleanup/crons/jobs/cleanup/cron$',
+          dest: '/_svc/cleanup/index',
+          check: true,
+        }),
+      ])
+    );
+  });
+
   it('should never select now.json src', async () => {
     const files = ['docs/index.md', 'mkdocs.yml', 'now.json'];
     const { builders } = await invokeDetectBuildersAndThrow(files, null, {
@@ -584,6 +645,27 @@ describe('Test `detectBuilders`', () => {
     expect(builders).toHaveLength(0);
     expect(errors.length).toBe(1);
     expect(errors[0].code).toBe('invalid_function_duration');
+  });
+
+  it('valid function maxDuration set to "max"', async () => {
+    const pkg = {
+      scripts: { build: 'next build' },
+      dependencies: { next: '9.0.0' },
+    };
+    const functions = {
+      'pages/api/teams/**': { maxDuration: 'max' as const },
+    };
+    const files = [
+      'package.json',
+      'pages/index.js',
+      'pages/api/teams/members.ts',
+    ];
+    const { builders, errors } = await invokeDetectBuilders(files, pkg, {
+      functions,
+    });
+
+    expect(errors).toHaveLength(0);
+    expect(builders.length).toBe(1);
   });
 
   it('invalid function memory', async () => {
@@ -1268,8 +1350,8 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect((defaultRoutes[0] as Handler).handle).toBe('miss');
     expect((defaultRoutes[1] as Source).dest).toBe('/api/$1');
     expect(redirectRoutes).toStrictEqual([]);
-    expect(rewriteRoutes.length).toBe(1);
-    expect((rewriteRoutes[0] as Source).status).toBe(404);
+    // Next.js owns /api; we do not add catch-all 404
+    expect(rewriteRoutes.some(r => (r as Source).status === 404)).toBe(false);
     expect(errorRoutes).toStrictEqual([]);
   });
 
@@ -1297,9 +1379,46 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect((defaultRoutes[0] as Handler).handle).toBe('miss');
     expect((defaultRoutes[1] as Source).dest).toBe('/api/$1');
     expect(redirectRoutes).toStrictEqual([]);
-    expect(rewriteRoutes.length).toBe(1);
-    expect((rewriteRoutes[0] as Source).status).toBe(404);
+    // Next.js owns /api; we do not add catch-all 404
+    expect(rewriteRoutes.some(r => (r as Source).status === 404)).toBe(false);
     expect(errorRoutes).toStrictEqual([]);
+  });
+
+  it('api + non-Next frontend adds catch-all /api 404', async () => {
+    const pkg = {
+      scripts: { build: 'react-scripts build' },
+      dependencies: {
+        react: '17.0.0',
+        'react-dom': '17.0.0',
+        'react-scripts': '4.0.0',
+      },
+    };
+    const files = ['package.json', 'api/endpoint.js', 'src/index.js'];
+    const projectSettings = {
+      framework: 'create-react-app',
+      buildCommand: 'react-scripts build',
+    };
+
+    const { builders, rewriteRoutes } = await invokeDetectBuildersAndThrow(
+      files,
+      pkg,
+      {
+        projectSettings,
+        featHandleMiss,
+      }
+    );
+
+    expect(builders[0].use).toBe('@vercel/node');
+    expect(builders[0].src).toBe('api/endpoint.js');
+    expect(builders[1].use).toBe('@vercel/static-build');
+    expect(builders[1].config?.framework).toBe('create-react-app');
+    expect(builders.length).toBe(2);
+
+    // Non-Next frontend with root api/ gets catch-all to hide directory listing
+    const catchAll = rewriteRoutes.find(
+      r => (r as Source).src === '^/api(/.*)?$' && (r as Source).status === 404
+    );
+    expect(catchAll).toBeDefined();
   });
 
   it('Using "Create React App" framework with `next` in dependencies should NOT autodetect Next.js for new projects', async () => {
@@ -2735,9 +2854,8 @@ describe('Test `detectRoutes`', () => {
     const files = ['public/index.html', 'api/[endpoint].js'];
 
     const { defaultRoutes } = await invokeDetectBuildersAndThrow(files, pkg);
-    expect(defaultRoutes[1].status).toBe(404);
-    expect(defaultRoutes[1].src).toBe('^/api(/.*)?$');
-    expect(defaultRoutes.length).toBe(2);
+    // Next.js owns /api; we do not add catch-all 404
+    expect(defaultRoutes.length).toBe(1);
   });
 
   it('works with static files', async () => {
@@ -2996,13 +3114,8 @@ describe('Test `detectRoutes` with `featHandleMiss=true`', () => {
   it('works with static files with api files', async () => {
     const featHandleMiss = true;
     const pkg = {
-      scripts: {
-        build: 'next build',
-      },
-      framework: {
-        slug: 'next',
-        version: '9.0.0',
-      },
+      scripts: { build: 'next build' },
+      devDependencies: { next: '9.0.0' },
     };
 
     const files = ['public/index.html', 'api/[endpoint].js'];
@@ -3022,15 +3135,12 @@ describe('Test `detectRoutes` with `featHandleMiss=true`', () => {
         check: true,
       },
     ]);
+    // Next.js owns /api; we do not add catch-all 404
     expect(rewriteRoutes).toStrictEqual([
       {
         src: '^/api/([^/]+)$',
         dest: '/api/[endpoint]?endpoint=$1',
         check: true,
-      },
-      {
-        status: 404,
-        src: '^/api(/.*)?$',
       },
     ]);
   });
@@ -3432,13 +3542,8 @@ describe('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`', () 
 
   it('works with static files with api files', async () => {
     const pkg = {
-      scripts: {
-        build: 'next build',
-      },
-      framework: {
-        slug: 'next',
-        version: '9.0.0',
-      },
+      scripts: { build: 'next build' },
+      devDependencies: { next: '9.0.0' },
     };
 
     const files = ['public/index.html', 'api/[endpoint].js'];
@@ -3447,15 +3552,12 @@ describe('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`', () 
       await invokeDetectBuildersAndThrow(files, pkg, options);
     testHeaders(redirectRoutes);
     expect(defaultRoutes).toStrictEqual([]);
+    // Next.js owns /api; we do not add catch-all 404
     expect(rewriteRoutes).toStrictEqual([
       {
         src: '^/api/([^/]+)$',
         dest: '/api/[endpoint]?endpoint=$1',
         check: true,
-      },
-      {
-        status: 404,
-        src: '^/api(/.*)?$',
       },
     ]);
   });

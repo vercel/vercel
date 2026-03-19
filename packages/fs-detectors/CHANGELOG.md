@@ -1,5 +1,104 @@
 # @vercel/fs-detectors
 
+## 5.11.1
+
+### Patch Changes
+
+- Switch "node" framework preset to use @vercel/backends ([#15248](https://github.com/vercel/vercel/pull/15248))
+
+  Fix services-mode internal function output aliasing to use slashless `_svc/*` output keys so Node service routes can resolve their Lambda targets.
+
+- Improve services auto-detection so a single detected frontend at the project root, ([#15571](https://github.com/vercel/vercel/pull/15571))
+  `frontend/`, or `apps/<name>/` is mounted at `/` even without backend services.
+
+## 5.11.0
+
+### Minor Changes
+
+- [services] add support for background workers to vc dev ([#15434](https://github.com/vercel/vercel/pull/15434))
+
+### Patch Changes
+
+- [services] exclude service route prefixes on subdomain rewrites ([#15508](https://github.com/vercel/vercel/pull/15508))
+
+## 5.10.3
+
+### Patch Changes
+
+- Updated dependencies [[`04433cfd686bf27e3f63bc895c15f7e75918b0d7`](https://github.com/vercel/vercel/commit/04433cfd686bf27e3f63bc895c15f7e75918b0d7)]:
+  - @vercel/frameworks@3.21.1
+
+## 5.10.2
+
+### Patch Changes
+
+- [experimental-services] build using `experimentalServices` regardless of framework setting ([#15451](https://github.com/vercel/vercel/pull/15451))
+
+## 5.10.1
+
+### Patch Changes
+
+- Updated dependencies [[`9660ee0aee6113e9674918bbeb2b94db63d36702`](https://github.com/vercel/vercel/commit/9660ee0aee6113e9674918bbeb2b94db63d36702)]:
+  - @vercel/frameworks@3.21.0
+
+## 5.10.0
+
+### Minor Changes
+
+- Support `maxDuration: 'max'` to allow the backend to resolve the maximum duration based on account plan type ([#15217](https://github.com/vercel/vercel/pull/15217))
+
+## 5.9.1
+
+### Patch Changes
+
+- [services] adds support for subdomai configuration in experimentalServices ([#15401](https://github.com/vercel/vercel/pull/15401))
+
+## 5.9.0
+
+### Minor Changes
+
+- [python] add support for module-based entrypoints for cron jobs ([#15393](https://github.com/vercel/vercel/pull/15393))
+
+### Patch Changes
+
+- [python] add support for Python worker services with Django tasks ([#15396](https://github.com/vercel/vercel/pull/15396))
+
+## 5.8.18
+
+### Patch Changes
+
+- [services] adds support for python cron worker services ([#15175](https://github.com/vercel/vercel/pull/15175))
+
+## 5.8.17
+
+### Patch Changes
+
+- [fs-detectors] skip auto-detection for root-only projects ([#15364](https://github.com/vercel/vercel/pull/15364))
+
+- Add background worker service support for Python (Dramatiq/Celery) and propagate vercel headers context to worker handlers. ([#15361](https://github.com/vercel/vercel/pull/15361))
+
+## 5.8.16
+
+### Patch Changes
+
+- [services] run framework detection with file entrypoints ([#15358](https://github.com/vercel/vercel/pull/15358))
+
+- Updated dependencies [[`91e367532050b0c1f17c49df701017f85f4dc85a`](https://github.com/vercel/vercel/commit/91e367532050b0c1f17c49df701017f85f4dc85a), [`e6c736fb74bedb975caad76d4c1f1e589a1c6cc9`](https://github.com/vercel/vercel/commit/e6c736fb74bedb975caad76d4c1f1e589a1c6cc9), [`fac0a516914491cf662068e37cd00f50400e3b58`](https://github.com/vercel/vercel/commit/fac0a516914491cf662068e37cd00f50400e3b58)]:
+  - @vercel/frameworks@3.20.0
+  - @vercel/routing-utils@6.0.2
+
+## 5.8.15
+
+### Patch Changes
+
+- Fix App Router dynamic API routes returning 404 in production. When a project has both Next.js (App Router) and a root `api/` folder, zero-config added a catch-all `^/api(/.*)?# @vercel/fs-detectors → 404 in the filesystem phase, which runs before the rewrite phase where Next.js routes live. So requests like `/api/flow/hello/next`or`/api/blog/posts/5`matched the catch-all and never reached the Next.js route. When Next.js is the frontend we no longer add that rewrite so those routes are handled by Next.js. (Locally, only`next dev`worked;`vc dev` had the same 404.) ([#15297](https://github.com/vercel/vercel/pull/15297))
+
+## 5.8.14
+
+### Patch Changes
+
+- Fix `detectBuilders` so projects using experimental backends still add `@vercel/static` for `public/**/*` files. ([#15261](https://github.com/vercel/vercel/pull/15261))
+
 ## 5.8.13
 
 ### Patch Changes

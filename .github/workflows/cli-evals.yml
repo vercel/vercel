@@ -21,6 +21,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # Check out the PR commit directly instead of a merge commit.
+          # Empty on schedule/workflow_dispatch, which falls back to the default ref.
+          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -53,6 +57,7 @@ jobs:
           NODE_OPTIONS: --max-old-space-size=4096
 
       - name: Upload results folder to centralized evals app
+        if: always()
         env:
           BATCH_ID: daily-${{ github.repository }}-${{ github.run_id }}
           EXPERIMENTS: vercel-cli
@@ -70,26 +75,3 @@ jobs:
             --token "${{ secrets.EVALS_INGEST_TOKEN }}" \
             --protection-bypass-secret "${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}" \
             --bypass-via header
-
-      - name: Eval results detail (on failure)
-        if: failure() && steps.evals.outcome == 'failure'
-        run: |
-          echo "=== Eval results directory ==="
-          RESULTS_DIR="packages/cli/evals/results"
-          if [ -d "$RESULTS_DIR" ]; then
-            echo "Latest run:"
-            LATEST=$(ls -t "$RESULTS_DIR/cli" 2>/dev/null | head -1)
-            if [ -n "$LATEST" ]; then
-              echo "  $RESULTS_DIR/cli/$LATEST"
-              for f in "$RESULTS_DIR/cli/$LATEST"/*/summary.json "$RESULTS_DIR/cli/$LATEST"/*/run-*/outputs/eval.txt; do
-                if [ -f "$f" ]; then
-                  echo ""
-                  echo "--- $f ---"
-                  head -c 8000 "$f" | cat
-                  [ $(wc -c < "$f") -gt 8000 ] && echo "... (truncated)"
-                fi
-              done
-            fi
-          else
-            echo "No results directory found."
-          fi

@@ -32,7 +32,7 @@ export const setupAuthAndConfig = async (sandbox: Sandbox) => {
         `printf 'export VERCEL_TOKEN="%s"\\n' '${shellEscape(token)}' >> "$HOME/.profile"`,
       ]);
     }
-  } catch (err) {
+  } catch (_err) {
     // Host may have no auth (e.g. CI with only VERCEL_TOKEN)
   }
   try {
@@ -45,7 +45,7 @@ export const setupAuthAndConfig = async (sandbox: Sandbox) => {
       '-c',
       `mkdir -p "${cliDataDir}" && printf '%s' '${shellEscape(configJson)}' > "${cliDataDir}/config.json"`,
     ]);
-  } catch (err) {
+  } catch (_err) {
     // Best-effort config write
   }
 };

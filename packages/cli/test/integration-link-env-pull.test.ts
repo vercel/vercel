@@ -20,9 +20,7 @@ beforeAll(async () => {
     const team = await teamPromise;
     await prepareE2EFixtures(team.slug, binaryPath);
   } catch (err) {
-    // eslint-disable-next-line no-console
     console.log('Failed test suite `beforeAll`');
-    // eslint-disable-next-line no-console
     console.log(err);
 
     process.exit(1);
@@ -32,7 +30,6 @@ beforeAll(async () => {
 afterAll(async () => {
   const allTmpDirs = listTmpDirs();
   for (const tmpDir of allTmpDirs) {
-    // eslint-disable-next-line no-console
     console.log('Removing temp dir: ', tmpDir.name);
     tmpDir.removeCallback();
   }

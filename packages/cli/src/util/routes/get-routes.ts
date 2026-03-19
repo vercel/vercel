@@ -5,8 +5,6 @@ interface GetRoutesOptions {
   teamId?: string;
   search?: string;
   filter?: RouteType;
-  page?: number;
-  perPage?: number;
   versionId?: string;
   diff?: boolean;
 }
@@ -16,14 +14,12 @@ export default async function getRoutes(
   projectId: string,
   options: GetRoutesOptions = {}
 ): Promise<GetRoutesResponse> {
-  const { teamId, search, filter, page, perPage, versionId, diff } = options;
+  const { teamId, search, filter, versionId, diff } = options;
 
   const query = new URLSearchParams();
   if (teamId) query.set('teamId', teamId);
   if (search) query.set('q', search);
   if (filter) query.set('filter', filter);
-  if (page) query.set('page', page.toString());
-  if (perPage) query.set('perPage', perPage.toString());
   if (versionId) query.set('versionId', versionId);
   if (diff) query.set('diff', 'true');
 
