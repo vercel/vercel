@@ -107,7 +107,7 @@ export class UvRunner {
   }): Promise<void> {
     const { venvPath, projectDir, locked, frozen, noBuild, noInstallProject } =
       options;
-    const args = ['sync', '--active', '--no-dev', '--link-mode', 'copy'];
+    const args = ['sync', '--active', '--no-dev'];
     if (frozen) {
       args.push('--frozen');
     } else if (locked) {
@@ -198,11 +198,12 @@ export class UvRunner {
   }
 
   /**
-   * Prune the uv cache for CI: removes pre-built wheels and unzipped source
-   * distributions while retaining source-built wheels.
+   * Prune unused cache entries (e.g. stale bucket versions).  Unlike
+   * `--ci`, the plain `prune` keeps pre-built wheels so that subsequent
+   * builds can install from the local cache without re-downloading.
    */
   async cachePrune(): Promise<void> {
-    const args = ['cache', 'prune', '--ci'];
+    const args = ['cache', 'prune'];
     const pretty = `uv ${args.join(' ')}`;
     debug(`Running "${pretty}"...`);
     try {
