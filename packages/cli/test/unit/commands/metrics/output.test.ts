@@ -7,6 +7,7 @@ import {
   formatErrorJson,
 } from '../../../../src/commands/metrics/output';
 import type { QueryMetadata } from '../../../../src/commands/metrics/types';
+import type { EventSchema } from '../../../../src/commands/metrics/schema-api';
 
 describe('output', () => {
   describe('getRollupColumnName', () => {
@@ -66,7 +67,7 @@ describe('output', () => {
 
   describe('formatSchemaDetailJson', () => {
     it('should format event detail as JSON', () => {
-      const event = {
+      const event: EventSchema & { name: string } = {
         name: 'functionExecution',
         description: 'Serverless function execution details',
         dimensions: [
