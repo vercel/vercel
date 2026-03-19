@@ -913,6 +913,10 @@ const main = async () => {
           telemetry.trackCliCommandRollingRelease(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).rollingRelease;
           break;
+        case 'share':
+          telemetry.trackCliCommandShare(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).share;
+          break;
         case 'skills':
           telemetry.trackCliCommandSkills(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).skills;
