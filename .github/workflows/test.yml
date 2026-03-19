@@ -38,7 +38,7 @@ jobs:
           node-version: 22
       - name: install pnpm@8.3.1
         run: npm i -g pnpm@8.3.1
-      - run: pnpm install --frozen-lockfile
+      - run: pnpm install
       - id: affected-packages
         run: |
           # Set base SHA for affected package detection
@@ -316,17 +316,6 @@ jobs:
           toolchain: stable
           targets: wasm32-wasip2
 
-      - name: Cache Cargo + Rustup
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            ~/.rustup
-          key: ${{ runner.os }}-rust-stable-${{ hashFiles('Cargo.lock', 'packages/python-analysis/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-rust-stable-
-
       # yarn 1.22.21 introduced a Corepack bug when running tests.
       # this can be removed once https://github.com/yarnpkg/yarn/issues/9015 is resolved
       - name: install yarn@1.22.19
@@ -335,21 +324,10 @@ jobs:
       - name: install pnpm@8.3.1
         run: npm i -g pnpm@8.3.1
 
-      - name: Cache pnpm store
-        uses: actions/cache@v4
-        with:
-          path: ~/.pnpm-store
-          key: ${{ runner.os }}-pnpm-store-8.3.1-${{ hashFiles('pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-store-8.3.1-
-
-      - run: pnpm install --store-dir ~/.pnpm-store --frozen-lockfile
-
-      - name: Generate turbo cache key
-        run: node utils/gen.js
+      - run: pnpm install
 
       - name: Build ${{matrix.packageName}} and all its dependencies
-        run: node_modules/.bin/turbo run build --cache-dir=".turbo" --log-order=stream --filter=${{matrix.packageName}}...
+        run: node utils/gen.js && node_modules/.bin/turbo run build --cache-dir=".turbo" --log-order=stream --filter=${{matrix.packageName}}...
         env:
           FORCE_COLOR: '1'
       - name: Resolve Python wheel URLs
@@ -383,7 +361,7 @@ jobs:
           while [ "$attempt" -le "$max_attempts" ]; do
             echo "Running tests (attempt $attempt/$max_attempts): ${{matrix.testScript}} ${{matrix.packageName}}"
 
-            if node_modules/.bin/turbo run ${{matrix.testScript}} --summarize --cache-dir=".turbo" --log-order=stream --filter=${{matrix.packageName}} -- ${{ join(matrix.testPaths, ' ') }}; then
+            if node utils/gen.js && node_modules/.bin/turbo run ${{matrix.testScript}} --summarize --cache-dir=".turbo" --log-order=stream --filter=${{matrix.packageName}} -- ${{ join(matrix.testPaths, ' ') }}; then
               exit 0
             fi
 
@@ -400,7 +378,6 @@ jobs:
           # Per-package pip install specs (e.g. VERCEL_RUNTIME_PYTHON,
           # VERCEL_WORKERS_PYTHON) are also available here, injected into
           # $GITHUB_ENV by the "Resolve Python wheel URLs" step above.
-          NODE_OPTIONS: '--max-old-space-size=6144'
           JEST_JUNIT_OUTPUT_FILE: ${{github.workspace}}/.junit-reports/${{matrix.scriptName}}-${{matrix.packageName}}-${{matrix.chunkNumber}}-${{ matrix.runner }}.xml
           VERCEL_CLI_VERSION: ${{ needs.setup.outputs.dplUrl }}/tarballs/vercel.tgz
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
