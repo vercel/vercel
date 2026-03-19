@@ -86,6 +86,18 @@ describe('Router', () => {
       expect(rewrite).toHaveProperty('source');
       expect(rewrite).toHaveProperty('destination');
     });
+
+    it('should return Rewrite type when destination has env vars', () => {
+      const rewrite = router.rewrite(
+        '/api/:path*',
+        `https://${deploymentEnv('API_HOST')}/$path*`
+      );
+      expect(rewrite).toEqual({
+        source: '/api/:path*',
+        destination: 'https://$API_HOST/$path*',
+        env: ['API_HOST'],
+      });
+    });
   });
 
   describe('redirect', () => {
@@ -116,6 +128,18 @@ describe('Router', () => {
         source: '/old-path',
         destination: '/new-path',
         statusCode: 301,
+      });
+    });
+
+    it('should return Redirect type when destination has env vars', () => {
+      const redirect = router.redirect(
+        '/old/:path*',
+        `https://${deploymentEnv('NEW_HOST')}/$path*`
+      );
+      expect(redirect).toEqual({
+        source: '/old/:path*',
+        destination: 'https://$NEW_HOST/$path*',
+        env: ['NEW_HOST'],
       });
     });
   });

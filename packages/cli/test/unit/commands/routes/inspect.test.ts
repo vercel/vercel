@@ -49,6 +49,36 @@ describe('routes inspect', () => {
     await expect(client.stderr).toOutput('Missing route name or ID');
   });
 
+  it('non-interactive: missing identifier outputs JSON and exits', async () => {
+    useRoutesForInspect();
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const exitSpy = vi
+      .spyOn(process, 'exit')
+      .mockImplementation((() => undefined) as never);
+    client.nonInteractive = true;
+    client.setArgv('routes', 'inspect', '--non-interactive');
+
+    await routes(client);
+
+    expect(logSpy).toHaveBeenCalled();
+    const payload = JSON.parse(logSpy.mock.calls[0][0] as string);
+    expect(payload.status).toBe('error');
+    expect(payload.reason).toBe('missing_arguments');
+    expect(payload.next?.length).toBeGreaterThanOrEqual(1);
+    expect(
+      payload.next.some(
+        (n: { command: string }) =>
+          n.command.includes('routes inspect') &&
+          n.command.includes('<name-or-id>')
+      )
+    ).toBe(true);
+    expect(exitSpy).toHaveBeenCalledWith(1);
+
+    logSpy.mockRestore();
+    exitSpy.mockRestore();
+    client.nonInteractive = false;
+  });
+
   it('should inspect a route by exact name', async () => {
     useRoutesForInspect();
     client.setArgv('routes', 'inspect', 'Old page redirect');

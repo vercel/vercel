@@ -210,7 +210,7 @@ const main = async () => {
   const subSubCommand = parsedArgs.args[3];
 
   // If empty, leave this code here for easy adding of beta commands later
-  const betaCommands: string[] = ['api', 'curl', 'webhooks'];
+  const betaCommands: string[] = ['api', 'crons', 'curl', 'webhooks'];
   const msg = betaCommands.includes(targetOrSubcommand)
     ? `${getTitleName()} CLI ${pkg.version} | ${targetOrSubcommand} is in beta — https://vercel.com/feedback`
     : `${getTitleName()} CLI ${pkg.version}`;
@@ -326,6 +326,7 @@ const main = async () => {
   telemetry.trackPlatform();
   telemetry.trackArch();
   telemetry.trackCIVendorName();
+  telemetry.trackStdinIsTTY(process.stdin?.isTTY === true);
   telemetry.trackVersion(pkg.version);
   telemetry.trackCliOptionCwd(parsedArgs.flags['--cwd']);
   telemetry.trackCliOptionLocalConfig(parsedArgs.flags['--local-config']);
@@ -450,6 +451,7 @@ const main = async () => {
     'build',
     'telemetry',
     'upgrade',
+    'skills',
   ];
 
   if (process.env.FF_GUIDANCE_MODE) {
@@ -481,6 +483,19 @@ const main = async () => {
       try {
         const result = await login(client, { shouldParseArgs: false });
         // The login function failed, so it returned an exit code
+        if (result !== 0) return result;
+      } catch (error) {
+        printError(error);
+        return 1;
+      }
+
+      output.debug(`Saved credentials in "${hp(VERCEL_DIR)}"`);
+    } else if (isAgent) {
+      // Agent detected without credentials — auto-launch device code login flow.
+      // The login flow handles non-TTY: prints auth URL, opens browser if possible, polls.
+      output.log('No existing credentials found. Starting login flow...');
+      try {
+        const result = await login(client, { shouldParseArgs: false });
         if (result !== 0) return result;
       } catch (error) {
         printError(error);
@@ -583,6 +598,7 @@ const main = async () => {
 
     try {
       user = await getUser(client);
+      telemetryEventStore.updateUserId(user.id);
     } catch (err: unknown) {
       if (err instanceof Error) {
         output.debug(err.stack || err.toString());
@@ -734,6 +750,10 @@ const main = async () => {
           telemetry.trackCliCommandActivity(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).activity;
           break;
+        case 'alerts':
+          telemetry.trackCliCommandAlerts(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).alerts;
+          break;
         case 'api':
           telemetry.trackCliCommandApi(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).api;
@@ -765,6 +785,11 @@ const main = async () => {
         case 'certs':
           telemetry.trackCliCommandCerts(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).certs;
+          break;
+        case 'crons':
+        case 'cron':
+          telemetry.trackCliCommandCrons(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).crons;
           break;
         case 'curl':
           telemetry.trackCliCommandCurl(userSuppliedSubCommand);
@@ -888,6 +913,10 @@ const main = async () => {
           telemetry.trackCliCommandRollingRelease(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).rollingRelease;
           break;
+        case 'skills':
+          telemetry.trackCliCommandSkills(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).skills;
+          break;
         case 'target':
           telemetry.trackCliCommandTarget(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).target;
@@ -1008,6 +1037,14 @@ const main = async () => {
   }
 
   telemetryEventStore.updateTeamId(client.config.currentTeam);
+  if (!telemetryEventStore.hasUserId) {
+    try {
+      const user = await getUser(client);
+      telemetryEventStore.updateUserId(user.id);
+    } catch {
+      // best-effort for telemetry
+    }
+  }
   await telemetryEventStore.save();
 
   return exitCode;

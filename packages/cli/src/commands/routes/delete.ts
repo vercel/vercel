@@ -7,7 +7,10 @@ import {
   ensureProjectLink,
   resolveRoutes,
   offerAutoPromote,
+  withGlobalFlags,
 } from './shared';
+import { outputAgentError } from '../../util/agent-output';
+import { AGENT_STATUS, AGENT_REASON } from '../../util/agent-output-constants';
 import getRoutes from '../../util/routes/get-routes';
 import getRouteVersions from '../../util/routes/get-route-versions';
 import deleteRoutes from '../../util/routes/delete-routes';
@@ -16,7 +19,7 @@ import { getCommandName } from '../../util/pkg-name';
 import { getRouteTypeLabel } from '../../util/routes/types';
 
 export default async function deleteRoute(client: Client, argv: string[]) {
-  const parsed = await parseSubcommandArgs(argv, deleteSubcommand);
+  const parsed = await parseSubcommandArgs(argv, deleteSubcommand, client);
   if (typeof parsed === 'number') return parsed;
 
   const link = await ensureProjectLink(client);
@@ -28,6 +31,26 @@ export default async function deleteRoute(client: Client, argv: string[]) {
   const skipConfirmation = flags['--yes'] as boolean | undefined;
 
   if (args.length === 0) {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.MISSING_ARGUMENTS,
+          message: 'At least one route name or ID is required.',
+          next: [
+            {
+              command: withGlobalFlags(
+                client,
+                'routes delete <name-or-id> --yes'
+              ),
+              when: 'pass one or more ids/names and --yes to skip confirm',
+            },
+          ],
+        },
+        1
+      );
+    }
     output.error(
       `At least one route name or ID is required. Usage: ${getCommandName('routes delete <name-or-id> [...]')}`
     );
@@ -44,6 +67,17 @@ export default async function deleteRoute(client: Client, argv: string[]) {
   output.stopSpinner();
 
   if (routes.length === 0) {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.NOT_FOUND,
+          message: 'No routes found in this project.',
+        },
+        1
+      );
+    }
     output.error('No routes found in this project.');
     return 1;
   }
@@ -67,6 +101,27 @@ export default async function deleteRoute(client: Client, argv: string[]) {
 
   // Confirm
   if (!skipConfirmation) {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.CONFIRMATION_REQUIRED,
+          message:
+            'Deletion requires confirmation. Pass --yes to skip the prompt in non-interactive mode.',
+          next: [
+            {
+              command: withGlobalFlags(
+                client,
+                `routes delete ${args.join(' ')} --yes`
+              ),
+              when: 're-run with --yes to confirm without prompt',
+            },
+          ],
+        },
+        1
+      );
+    }
     const confirmed = await client.input.confirm(
       `Delete ${resolved.length === 1 ? 'this route' : `these ${resolved.length} routes`}?`,
       false
@@ -107,6 +162,21 @@ export default async function deleteRoute(client: Client, argv: string[]) {
     return 0;
   } catch (e: unknown) {
     const error = e as { message?: string };
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.API_ERROR,
+          message:
+            'Failed to delete routes for this project. See hint for error details.',
+          hint:
+            error.message ||
+            'Retry with the same command once transient issues are resolved.',
+        },
+        1
+      );
+    }
     output.error(error.message || 'Failed to delete routes');
     return 1;
   }

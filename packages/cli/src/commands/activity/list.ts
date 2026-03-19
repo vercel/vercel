@@ -1,4 +1,3 @@
-import ms from 'ms';
 import chalk from 'chalk';
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
@@ -7,7 +6,6 @@ import { printError } from '../../util/error';
 import output from '../../output-manager';
 import { activityCommand } from './command';
 import { validateJsonOutput } from '../../util/output-format';
-import { parseTimeFlag } from '../../util/time-utils';
 import type { ActivityTelemetryClient } from '../../util/telemetry/commands/activity';
 import { getLinkedProject } from '../../util/projects/link';
 import getScope from '../../util/get-scope';
@@ -15,6 +13,16 @@ import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name'
 import { ProjectNotFound, isAPIError } from '../../util/errors-ts';
 import { getCommandName } from '../../util/pkg-name';
 import getCommandFlags from '../../util/get-command-flags';
+import {
+  type ValidatedResult,
+  normalizeRepeatableStringFilters,
+  validateAllProjectMutualExclusivity,
+  validateIntegerRangeWithDefault,
+  validateTimeBound,
+  validateTimeOrder,
+  outputError,
+  handleValidationError,
+} from '../../util/command-validation';
 
 interface Principal {
   type?: string;
@@ -40,6 +48,7 @@ interface UserEventsResponse {
 
 interface ActivityScope {
   projectIds?: string[];
+  projectName?: string;
   teamId?: string;
   teamSlug?: string;
 }
@@ -55,15 +64,6 @@ interface ListFlags {
   '--format'?: string;
 }
 
-type ValidationError = {
-  valid: false;
-  code: string;
-  message: string;
-};
-
-type ValidationResult = { valid: true } | ValidationError;
-type ValidatedResult<T> = { valid: true; value: T } | ValidationError;
-
 type ValidatedInputs = {
   limit: number;
   types: string[];
@@ -75,44 +75,6 @@ type PaginatedEvents = {
   events: UserEventDTO[];
   next: number | null;
 };
-
-function validateLimit(limit: number | undefined): ValidatedResult<number> {
-  if (limit === undefined) {
-    return { valid: true, value: 20 };
-  }
-
-  if (Number.isNaN(limit)) {
-    return {
-      valid: false,
-      code: 'INVALID_LIMIT',
-      message: 'Please provide a number for flag `--limit`.',
-    };
-  }
-
-  if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
-    return {
-      valid: false,
-      code: 'INVALID_LIMIT',
-      message: '`--limit` must be an integer between 1 and 100.',
-    };
-  }
-
-  return { valid: true, value: limit };
-}
-
-function validateMutualExclusivity(
-  all: boolean | undefined,
-  project: string | undefined
-): ValidationResult {
-  if (all && project) {
-    return {
-      valid: false,
-      code: 'MUTUAL_EXCLUSIVITY',
-      message: 'Cannot specify both --all and --project. Use one or the other.',
-    };
-  }
-  return { valid: true };
-}
 
 function validateNext(
   next: number | undefined
@@ -140,77 +102,6 @@ function validateNext(
   }
 
   return { valid: true, value: date };
-}
-
-function validateTimeBound(
-  input: string | undefined
-): ValidatedResult<Date | undefined> {
-  if (!input) {
-    return { valid: true, value: undefined };
-  }
-
-  try {
-    return { valid: true, value: parseTimeFlag(input) };
-  } catch (err) {
-    return {
-      valid: false,
-      code: 'INVALID_TIME',
-      message: (err as Error).message,
-    };
-  }
-}
-
-function validateTimeOrder(
-  since: Date | undefined,
-  until: Date | undefined
-): ValidationResult {
-  if (since && until && since.getTime() > until.getTime()) {
-    return {
-      valid: false,
-      code: 'INVALID_TIME_RANGE',
-      message: '`--since` must be earlier than `--until`.',
-    };
-  }
-  return { valid: true };
-}
-
-function normalizeTypeFilters(typeFilters: string[] | undefined): string[] {
-  if (!typeFilters || typeFilters.length === 0) {
-    return [];
-  }
-
-  const normalized = typeFilters
-    .flatMap(filter => filter.split(','))
-    .map(filter => filter.trim())
-    .filter(Boolean);
-
-  return [...new Set(normalized)];
-}
-
-function formatErrorJson(code: string, message: string): string {
-  return `${JSON.stringify({ error: { code, message } }, null, 2)}\n`;
-}
-
-function outputError(
-  client: Client,
-  jsonOutput: boolean,
-  code: string,
-  message: string
-): number {
-  if (jsonOutput) {
-    client.stdout.write(formatErrorJson(code, message));
-  } else {
-    output.error(message);
-  }
-  return 1;
-}
-
-function handleValidationError(
-  result: ValidationError,
-  jsonOutput: boolean,
-  client: Client
-): number {
-  return outputError(client, jsonOutput, result.code, result.message);
 }
 
 function handleApiError(
@@ -264,13 +155,17 @@ function formatActor(event: UserEventDTO): string {
   return event.principalId || '-';
 }
 
-function formatAge(createdAt: number): string {
+function formatTimestamp(createdAt: number): string {
   if (!Number.isFinite(createdAt) || createdAt <= 0) {
     return '-';
   }
 
-  const age = Math.max(0, Date.now() - createdAt);
-  return ms(age);
+  const date = new Date(createdAt);
+  if (Number.isNaN(date.getTime())) {
+    return '-';
+  }
+
+  return date.toISOString();
 }
 
 function formatEventText(text: string): string {
@@ -280,14 +175,14 @@ function formatEventText(text: string): string {
 function printExpandedEvents(events: UserEventDTO[]) {
   const lines = [''];
 
-  events.forEach((event, index) => {
+  events.forEach(event => {
+    lines.push(`${chalk.gray('-')} ${formatEventText(event.text)}`);
+    lines.push(`    ${chalk.cyan('Type'.padEnd(14))}${event.type ?? '-'}`);
+    lines.push(`    ${chalk.cyan('Actor'.padEnd(14))}${formatActor(event)}`);
     lines.push(
-      `  ${chalk.bold(`${index + 1}. ${formatEventText(event.text)}`)}`
+      `    ${chalk.cyan('Timestamp'.padEnd(14))}${formatTimestamp(event.createdAt)}`
     );
-    lines.push(`     ${chalk.cyan('Type:')} ${event.type ?? '-'}`);
-    lines.push(`     ${chalk.cyan('Actor:')} ${formatActor(event)}`);
-    lines.push(`     ${chalk.cyan('Age:')} ${formatAge(event.createdAt)}`);
-    lines.push(`     ${chalk.cyan('ID:')} ${event.id}`);
+    lines.push(`    ${chalk.cyan('ID'.padEnd(14))}${event.id}`);
     lines.push('');
   });
 
@@ -326,12 +221,17 @@ function resolveValidatedInputs(
   client: Client,
   normalizedTypes: string[]
 ): ValidatedInputs | number {
-  const limitResult = validateLimit(flags['--limit']);
+  const limitResult = validateIntegerRangeWithDefault(flags['--limit'], {
+    flag: '--limit',
+    min: 1,
+    max: 100,
+    defaultValue: 20,
+  });
   if (!limitResult.valid) {
     return handleValidationError(limitResult, jsonOutput, client);
   }
 
-  const mutualResult = validateMutualExclusivity(
+  const mutualResult = validateAllProjectMutualExclusivity(
     flags['--all'],
     flags['--project']
   );
@@ -429,6 +329,7 @@ async function resolveScope(
       teamId: team.id,
       teamSlug: team.slug,
       projectIds: [projectResult.id],
+      projectName: projectResult.name,
     };
   }
 
@@ -449,6 +350,7 @@ async function resolveScope(
   const isTeamProject = linkedProject.org.type === 'team';
   return {
     projectIds: [linkedProject.project.id],
+    projectName: linkedProject.project.name,
     teamId: isTeamProject ? linkedProject.org.id : undefined,
     teamSlug: isTeamProject ? linkedProject.org.slug : undefined,
   };
@@ -506,6 +408,18 @@ function paginateEvents(
   return { events, next };
 }
 
+function printScopeHeader(scope: ActivityScope) {
+  if (!scope.projectName && scope.teamSlug) {
+    output.log(`Showing all activity for team ${chalk.bold(scope.teamSlug)}`);
+  } else if (scope.projectName && scope.teamSlug) {
+    output.log(
+      `Showing activity for project ${chalk.bold(scope.projectName)} in team ${chalk.bold(scope.teamSlug)}`
+    );
+  } else if (scope.projectName) {
+    output.log(`Showing activity for project ${chalk.bold(scope.projectName)}`);
+  }
+}
+
 function printNextPageHint(flags: ListFlags, next: number) {
   const commandFlags = getCommandFlags(flags, ['--next']);
   output.log(
@@ -531,7 +445,7 @@ export default async function list(
   }
   const jsonOutput = formatResult.jsonOutput;
 
-  const normalizedTypes = normalizeTypeFilters(flags['--type']);
+  const normalizedTypes = normalizeRepeatableStringFilters(flags['--type']);
   trackTelemetry(flags, normalizedTypes, telemetry);
 
   const validatedInputs = resolveValidatedInputs(
@@ -575,11 +489,23 @@ export default async function list(
     const { events, next } = paginateEvents(allEvents, validatedInputs.limit);
 
     if (jsonOutput) {
-      client.stdout.write(
-        `${JSON.stringify({ events, pagination: { next } }, null, 2)}\n`
-      );
+      const hasScope = scope.teamSlug || scope.projectName;
+      const jsonResponse = {
+        ...(hasScope && {
+          scope: {
+            ...(scope.teamSlug && { teamSlug: scope.teamSlug }),
+            ...(scope.projectName && { projectName: scope.projectName }),
+            ...(scope.projectIds && { projectIds: scope.projectIds }),
+          },
+        }),
+        events,
+        pagination: { next },
+      };
+      client.stdout.write(`${JSON.stringify(jsonResponse, null, 2)}\n`);
       return 0;
     }
+
+    printScopeHeader(scope);
 
     if (events.length === 0) {
       output.log('No activity events found.');

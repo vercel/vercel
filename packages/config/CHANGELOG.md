@@ -1,5 +1,23 @@
 # @vercel/router-sdk
 
+## 0.0.40
+
+### Patch Changes
+
+- [config] Fix rewrite() and redirect() return types for VercelConfig compatibility ([#15566](https://github.com/vercel/vercel/pull/15566))
+
+## 0.0.39
+
+### Patch Changes
+
+- [services] adds support for subdomai configuration in experimentalServices ([#15401](https://github.com/vercel/vercel/pull/15401))
+
+## 0.0.38
+
+### Patch Changes
+
+- Fix type generation ([#15386](https://github.com/vercel/vercel/pull/15386))
+
 ## 0.0.37
 
 ### Patch Changes

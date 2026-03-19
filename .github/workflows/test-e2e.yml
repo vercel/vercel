@@ -35,7 +35,7 @@ jobs:
           fetch-depth: 0
           # Check out the PR commit directly instead of a merge commit.
           ref: ${{ github.event.pull_request.head.sha }}
-          token: ${{ secrets.GH_TOKEN_PULL_REQUESTS }}
+          token: ${{ secrets.VERCEL_CLI_RELEASE_BOT_TOKEN }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -177,6 +177,7 @@ jobs:
       - setup
     strategy:
       fail-fast: false
+      max-parallel: 75
       matrix:
         include: ${{ fromJson(needs.setup.outputs['tests']) }}
     steps:
@@ -207,6 +208,7 @@ jobs:
         env:
           FORCE_COLOR: '1'
       - name: Resolve Python wheel URLs
+        shell: bash
         run: |
           DEPLOYMENT_URL="${{ needs.setup.outputs.dplUrl }}"
 
@@ -229,7 +231,25 @@ jobs:
             echo "$env_var=$package_name @ $DEPLOYMENT_URL/tarballs/$wheel_name" >> "$GITHUB_ENV"
           done
       - name: Test ${{matrix.packageName}}
-        run: node utils/gen.js && node_modules/.bin/turbo run ${{matrix.testScript}} --summarize --cache-dir=".turbo" --log-order=stream --filter=${{matrix.packageName}} -- ${{ join(matrix.testPaths, ' ') }}
+        run: |
+          attempt=1
+          max_attempts=2
+
+          while [ "$attempt" -le "$max_attempts" ]; do
+            echo "Running tests (attempt $attempt/$max_attempts): ${{matrix.testScript}} ${{matrix.packageName}}"
+
+            if node utils/gen.js && node_modules/.bin/turbo run ${{matrix.testScript}} --summarize --cache-dir=".turbo" --log-order=stream --filter=${{matrix.packageName}} -- ${{ join(matrix.testPaths, ' ') }}; then
+              exit 0
+            fi
+
+            if [ "$attempt" -eq "$max_attempts" ]; then
+              echo "Tests failed after $max_attempts attempts."
+              exit 1
+            fi
+
+            echo "Tests failed; retrying once..."
+            attempt=$((attempt+1))
+          done
         shell: bash
         env:
           # Per-package pip install specs (e.g. VERCEL_RUNTIME_PYTHON,

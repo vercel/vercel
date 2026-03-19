@@ -29,8 +29,13 @@ export async function addDomainToProject(
     );
 
     if (!aliasTarget) {
-      throw new Error(
-        `Unexpected error when adding the domain "${domain}" to project "${projectNameOrId}".`
+      // Return instead of throw so domains/add can handle non-interactive JSON
+      // and avoid bubbling to main() as an "unexpected" error. The API returned
+      // 2xx but no matching alias in the body—often empty array or domain already
+      // attached elsewhere; use domains inspect or --force if moving from another project.
+      return new Error(
+        `Adding domain '${domain}' to project '${projectNameOrId}' did not return a matching alias in the API response. ` +
+          `The domain may already be on another project—try 'vercel domains add ${domain} ${projectNameOrId} --force' after removing it there, or run 'vercel domains inspect ${domain}'.`
       );
     }
 
@@ -39,7 +44,6 @@ export async function addDomainToProject(
     if (isAPIError(err) && err.status < 500) {
       return err;
     }
-
     throw err;
   }
 }
