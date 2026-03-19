@@ -1025,7 +1025,7 @@ if (
 
 else:
     detection_result = detect_app_type(
-        app_obj,
+        app_obj,  # pyright: ignore[reportUnknownArgumentType]
         _entrypoint_modname,
         app_name,
     )
@@ -1399,4 +1399,3 @@ else:
                 return response
             finally:
                 clear_vercel_headers_context()
-
