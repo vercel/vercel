@@ -805,12 +805,11 @@ if "VERCEL_IPC_PATH" in os.environ:
     except RuntimeError as exc:
         _fatal(str(exc))
 
-    if app_name.lower() == "handler" and isinstance(app_obj, type):
-        if not issubclass(app_obj, BaseHTTPRequestHandler):
-            _fatal(
-                f'"handler" must inherit from BaseHTTPRequestHandler '
-                f'in "{_entrypoint_modname}"'
-            )
+    if (
+        app_name.lower() == "handler"
+        and isinstance(app_obj, type)
+        and issubclass(app_obj, BaseHTTPRequestHandler)
+    ):
 
         class Handler(BaseHandler, app_obj):  # type: ignore[valid-type,misc]
             def handle_request(self) -> None:
@@ -826,11 +825,14 @@ if "VERCEL_IPC_PATH" in os.environ:
                 self.wfile.flush()
 
     else:
-        detection_result = detect_app_type(
-            app_obj,
-            _entrypoint_modname,
-            app_name,
-        )
+        try:
+            detection_result = detect_app_type(
+                app_obj,  # pyright: ignore[reportUnknownArgumentType]
+                _entrypoint_modname,
+                app_name,
+            )
+        except RuntimeError as exc:
+            _fatal(str(exc))
         if detection_result[0] == "wsgi":
             from io import BytesIO
 
@@ -1024,11 +1026,14 @@ if (
         return return_dict
 
 else:
-    detection_result = detect_app_type(
-        app_obj,  # pyright: ignore[reportUnknownArgumentType]
-        _entrypoint_modname,
-        app_name,
-    )
+    try:
+        detection_result = detect_app_type(
+            app_obj,  # pyright: ignore[reportUnknownArgumentType]
+            _entrypoint_modname,
+            app_name,
+        )
+    except RuntimeError as exc:
+        _fatal(str(exc))
     if detection_result[0] == "wsgi":
         _stderr("using Web Server Gateway Interface (WSGI)")
         from io import BytesIO
