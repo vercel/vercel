@@ -15,12 +15,21 @@ export interface UvLockPackageSource {
 }
 
 /**
+ * A wheel entry from a uv.lock file.
+ */
+export interface UvLockWheel {
+  url: string;
+}
+
+/**
  * A package entry from a parsed uv.lock file.
  */
 export interface UvLockPackage {
   name: string;
   version: string;
   source?: UvLockPackageSource;
+  wheels: UvLockWheel[];
+  dependencies?: Array<{ name: string }>;
 }
 
 /**
@@ -40,6 +49,8 @@ interface UvLockToml {
     name: string;
     version: string;
     source?: UvLockPackageSource;
+    wheels?: Array<{ url: string }>;
+    dependencies?: Array<{ name: string }>;
   }>;
 }
 
@@ -68,6 +79,8 @@ export function parseUvLock(content: string, path?: string): UvLockFile {
       name: pkg.name,
       version: pkg.version,
       source: pkg.source,
+      wheels: (pkg.wheels ?? []).map(w => ({ url: w.url })),
+      ...(pkg.dependencies ? { dependencies: pkg.dependencies } : {}),
     }));
 
   return { version: parsed.version, packages };

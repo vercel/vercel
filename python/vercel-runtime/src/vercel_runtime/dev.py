@@ -12,10 +12,15 @@ from vercel_runtime._vendor.uvicorn.config import (
     LOGGING_CONFIG as UVICORN_LOGGING_CONFIG,
 )
 from vercel_runtime._vendor.werkzeug.serving import run_simple
+from vercel_runtime.crons import bootstrap_cron_service_app, is_cron_service
 from vercel_runtime.resolver import detect_app_type, import_module, resolve_app
 from vercel_runtime.routing import (
     apply_service_route_prefix_to_asgi_scope,
     strip_service_route_prefix,
+)
+from vercel_runtime.workers import (
+    bootstrap_worker_service_app,
+    is_worker_service,
 )
 
 if TYPE_CHECKING:
@@ -118,12 +123,14 @@ def _build_uvicorn_log_config(
     if default_fmt is None:
         default_fmt = {
             **uvicorn_fmts["default"],
+            "()": "vercel_runtime._vendor.uvicorn.logging.DefaultFormatter",
             "use_colors": not _NO_COLOR,
         }
 
     if access_fmt is None:
         access_fmt = {
             **uvicorn_fmts["access"],
+            "()": "vercel_runtime._vendor.uvicorn.logging.AccessFormatter",
             "use_colors": not _NO_COLOR,
         }
 
@@ -351,22 +358,24 @@ def _start_wsgi(host: str, port: int) -> None:
 
 
 def _start_asgi(host: str, port: int) -> None:
-    # Prefer user-installed fastapi-cli when available
-    try:
-        from fastapi_cli.cli import (  # noqa: PLC0415  # pyright: ignore[reportMissingImports]
-            dev as fastapi_dev,  # pyright: ignore[reportUnknownVariableType]
-        )
+    # Prefer user-installed fastapi-cli for web services;
+    # cron/worker go straight to uvicorn.
+    if not is_cron_service() and not is_worker_service():
+        try:
+            from fastapi_cli.cli import (  # noqa: PLC0415  # pyright: ignore[reportMissingImports]
+                dev as fastapi_dev,  # pyright: ignore[reportUnknownVariableType]
+            )
 
-        _patch_fastapi_cli_log_config()
-        fastapi_dev(
-            entrypoint="vercel_runtime.dev:asgi_app",
-            host=host,
-            port=port,
-            reload=True,
-        )
-        sys.exit(0)
-    except (ImportError, AttributeError):
-        pass
+            _patch_fastapi_cli_log_config()
+            fastapi_dev(
+                entrypoint="vercel_runtime.dev:asgi_app",
+                host=host,
+                port=port,
+                reload=True,
+            )
+            sys.exit(0)
+        except (ImportError, AttributeError):
+            pass
 
     vendored_uvicorn.run(
         "vercel_runtime.dev:asgi_app",
@@ -383,11 +392,22 @@ def _setup_apps() -> None:
 
     module_name = os.environ["VERCEL_DEV_MODULE_NAME"]
     entry_abs = os.environ["VERCEL_DEV_ENTRY_ABS"]
+    framework = os.environ["VERCEL_DEV_FRAMEWORK"]
+    variable_name = os.environ.get("VERCEL_DEV_VARIABLE_NAME") or None
 
     _setup_server_log_routing()
 
     mod = import_module(module_name, entry_abs)
-    app_name, user_app = resolve_app(mod, module_name)
+
+    if is_cron_service():
+        _asgi_user_app = bootstrap_cron_service_app(mod)
+        return
+
+    if is_worker_service():
+        _asgi_user_app = cast("ASGI", bootstrap_worker_service_app(mod))
+        return
+
+    app_name, user_app = resolve_app(mod, module_name, variable_name)
     try:
         result = detect_app_type(user_app, module_name, app_name)
     except RuntimeError:
@@ -397,12 +417,40 @@ def _setup_apps() -> None:
     if result[0] == "asgi":
         _asgi_user_app = result[1]
     else:
-        _wsgi_user_app = result[1]
+        wsgi_app = result[1]
+
+        if framework == "django":
+            wsgi_app = _wrap_django_static(wsgi_app)
+
+        _wsgi_user_app = wsgi_app
+
+
+def _wrap_django_static(app: WSGIApplication) -> WSGIApplication:
+    # If this is a django app, wrap it with StaticFilesHandler to serve static
+    # files. This is necessary because the dev server will not run the full
+    # build process (including collectstatic), so static files may not
+    # be available depending on the user's configuration.
+    #
+    # Special cases:
+    # - If whitenoise is used, this will override it but that's ok because we
+    #   don't need it in the dev server.
+    # - If django-storages is used, this will override it but that's ok because
+    #   django-storages handles its own upload to some other CDN.
+    try:
+        from django.contrib.staticfiles.handlers import (  # type: ignore[import-not-found]  # noqa: PLC0415  # pyright: ignore[reportMissingImports]
+            StaticFilesHandler,  # pyright: ignore[reportUnknownVariableType]
+        )
+
+        return cast("WSGIApplication", StaticFilesHandler(app))
+    except ImportError:
+        return app
 
 
 # Setup apps at import time so that servers reloader can pick them up.
-if os.environ.get("VERCEL_DEV_MODULE_NAME") and os.environ.get(
-    "VERCEL_DEV_ENTRY_ABS"
+if (
+    os.environ.get("VERCEL_DEV_MODULE_NAME")
+    and os.environ.get("VERCEL_DEV_ENTRY_ABS")
+    and os.environ.get("VERCEL_DEV_FRAMEWORK")
 ):
     _setup_apps()
 
