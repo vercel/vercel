@@ -19,6 +19,9 @@ import {
   validateDefaultRoute,
   validateRoutingPath,
 } from './utils';
+import { outputAgentError } from '../../util/agent-output';
+import { getGlobalFlagsOnlyFromArgs } from '../../util/arg-common';
+import { getCommandNamePlain } from '../../util/pkg-name';
 
 const MAX_GROUP_NAME_LENGTH = 48;
 
@@ -101,6 +104,37 @@ export default async function createGroup(client: Client): Promise<number> {
   const defaultRouteFlag = parsedArgs.flags['--default-route'] as
     | string
     | undefined;
+
+  if (client.nonInteractive) {
+    const settingsUrl = `https://vercel.com/${teamSlug}/~/settings/microfrontends`;
+    const flags = getGlobalFlagsOnlyFromArgs(client.argv.slice(2));
+    const interactiveCmd = getCommandNamePlain(
+      `microfrontends create-group ${flags.filter(f => f !== '--non-interactive').join(' ')}`.trim()
+    );
+    outputAgentError(
+      client,
+      {
+        status: 'error',
+        reason: 'purchase_requires_user',
+        message:
+          'Creating a microfrontends group affects billing and cannot be performed non-interactively. ' +
+          'Agents must not make billing changes on behalf of a user. ' +
+          'The user must run this command interactively in a terminal to review billing details and confirm, ' +
+          'or complete the action in the Vercel dashboard.',
+        next: [
+          {
+            command: settingsUrl,
+            when: 'user opens Microfrontends settings in the browser',
+          },
+          {
+            command: interactiveCmd,
+            when: 'user runs this command interactively (remove --non-interactive)',
+          },
+        ],
+      },
+      1
+    );
+  }
 
   if (!client.stdin.isTTY) {
     output.error(

@@ -11,6 +11,15 @@ import {
   ensureMicrofrontendsContext,
   fetchMicrofrontendsGroups,
 } from './utils';
+import {
+  buildCommandWithYes,
+  outputActionRequired,
+} from '../../util/agent-output';
+import {
+  AGENT_ACTION,
+  AGENT_REASON,
+  AGENT_STATUS,
+} from '../../util/agent-output-constants';
 
 export default async function removeFromGroup(client: Client): Promise<number> {
   let parsedArgs;
@@ -57,6 +66,26 @@ export default async function removeFromGroup(client: Client): Promise<number> {
     return 1;
   }
 
+  if (client.nonInteractive && !autoConfirm) {
+    outputActionRequired(
+      client,
+      {
+        status: AGENT_STATUS.ACTION_REQUIRED,
+        reason: AGENT_REASON.CONFIRMATION_REQUIRED,
+        action: AGENT_ACTION.CONFIRMATION_REQUIRED,
+        message: `Removing "${project.name}" from microfrontends group "${projectGroup.group.name}" requires confirmation. Use --yes to confirm.`,
+        next: [
+          {
+            command: buildCommandWithYes(client.argv),
+            when: 'to confirm removal',
+          },
+        ],
+      },
+      1
+    );
+    return 1;
+  }
+
   output.log(
     `Removing project ${chalk.bold(project.name)} from microfrontends group ${chalk.bold(projectGroup.group.name)} on ${chalk.bold(teamSlug)}.`
   );
@@ -76,36 +105,42 @@ export default async function removeFromGroup(client: Client): Promise<number> {
       `Removing this project will cause other microfrontends projects in the group to fail deploying until the configuration is updated.`
     );
 
-    if (!client.stdin.isTTY) {
-      output.error(
-        'Cannot remove a project that is still referenced in microfrontends.json in non-interactive mode.'
+    if (!autoConfirm) {
+      if (!client.stdin.isTTY) {
+        output.error(
+          'Cannot remove a project that is still referenced in microfrontends.json in non-interactive mode.'
+        );
+        return 1;
+      }
+      output.log('');
+      const configConfirmed = await client.input.confirm(
+        `Remove "${project.name}" even though it is still referenced in microfrontends.json?`,
+        false
       );
-      return 1;
-    }
-    output.log('');
-    const configConfirmed = await client.input.confirm(
-      `Remove "${project.name}" even though it is still referenced in microfrontends.json?`,
-      false
-    );
-    if (!configConfirmed) {
-      output.log('Aborted.');
-      return 0;
+      if (!configConfirmed) {
+        output.log('Aborted.');
+        return 0;
+      }
     }
   }
 
   output.log('');
 
-  if (!client.stdin.isTTY) {
-    output.error('This command must be run interactively to confirm removal.');
-    return 1;
-  }
-  const confirmed = await client.input.confirm(
-    `Remove "${project.name}" from "${projectGroup.group.name}"?`,
-    false
-  );
-  if (!confirmed) {
-    output.log('Aborted.');
-    return 0;
+  if (!autoConfirm) {
+    if (!client.stdin.isTTY) {
+      output.error(
+        'This command must be run interactively to confirm removal.'
+      );
+      return 1;
+    }
+    const confirmed = await client.input.confirm(
+      `Remove "${project.name}" from "${projectGroup.group.name}"?`,
+      false
+    );
+    if (!confirmed) {
+      output.log('Aborted.');
+      return 0;
+    }
   }
 
   const removeStamp = stamp();

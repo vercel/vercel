@@ -12,6 +12,15 @@ import {
   ensureMicrofrontendsContext,
   fetchMicrofrontendsGroups,
 } from './utils';
+import {
+  buildCommandWithYes,
+  outputActionRequired,
+} from '../../util/agent-output';
+import {
+  AGENT_ACTION,
+  AGENT_REASON,
+  AGENT_STATUS,
+} from '../../util/agent-output-constants';
 
 export default async function deleteGroup(client: Client): Promise<number> {
   let parsedArgs;
@@ -39,6 +48,27 @@ export default async function deleteGroup(client: Client): Promise<number> {
 
   if (groups.length === 0) {
     output.error('No microfrontends groups exist. There is nothing to delete.');
+    return 1;
+  }
+
+  if (client.nonInteractive && !autoConfirm) {
+    outputActionRequired(
+      client,
+      {
+        status: AGENT_STATUS.ACTION_REQUIRED,
+        reason: AGENT_REASON.CONFIRMATION_REQUIRED,
+        action: AGENT_ACTION.CONFIRMATION_REQUIRED,
+        message:
+          'Deleting a microfrontends group requires confirmation. Use --yes and --group to confirm.',
+        next: [
+          {
+            command: buildCommandWithYes(client.argv),
+            when: 'to confirm deletion',
+          },
+        ],
+      },
+      1
+    );
     return 1;
   }
 
@@ -119,24 +149,28 @@ export default async function deleteGroup(client: Client): Promise<number> {
   output.log(chalk.red('This action is not reversible.'));
   output.log('');
 
-  if (!client.stdin.isTTY) {
-    output.error('This command must be run interactively to confirm deletion.');
-    return 1;
-  }
+  if (!autoConfirm) {
+    if (!client.stdin.isTTY) {
+      output.error(
+        'This command must be run interactively to confirm deletion.'
+      );
+      return 1;
+    }
 
-  const typedName = await client.input.text({
-    message: `Type ${chalk.bold(groupName)} to confirm deletion:`,
-    validate: (val: string) => {
-      if (val !== groupName) {
-        return `You must type "${groupName}" to confirm.`;
-      }
-      return true;
-    },
-  });
+    const typedName = await client.input.text({
+      message: `Type ${chalk.bold(groupName)} to confirm deletion:`,
+      validate: (val: string) => {
+        if (val !== groupName) {
+          return `You must type "${groupName}" to confirm.`;
+        }
+        return true;
+      },
+    });
 
-  if (typedName !== groupName) {
-    output.log('Aborted.');
-    return 0;
+    if (typedName !== groupName) {
+      output.log('Aborted.');
+      return 0;
+    }
   }
 
   const deleteStamp = stamp();
