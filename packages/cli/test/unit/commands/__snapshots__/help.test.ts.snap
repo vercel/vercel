@@ -5840,9 +5840,15 @@ exports[`help command > teams help output snapshots > teams help column width 12
 
 exports[`help command > teams help output snapshots > teams invite help output snapshots > teams invite help column width 120 1`] = `
 "
-  ▲ vercel teams invite email ...
+  ▲ vercel teams invite email ... [options]
 
   Invite a new member to a team                                                                                         
+
+  Options:
+
+   --role <ROLE>  Role to assign to the invited team member (OWNER, MEMBER, DEVELOPER, SECURITY, BILLING, VIEWER,        
+                  VIEWER_FOR_PLUS, CONTRIBUTOR)                                                                          
+
 
   Global Options:
 
@@ -5867,6 +5873,10 @@ exports[`help command > teams help output snapshots > teams invite help output s
   - Invite multiple members (required in non-interactive mode)
 
     $ vercel teams invite abc@vercel.com xyz@vercel.com
+
+  - Invite a member with a specific role
+
+    $ vercel teams invite abc@vercel.com --role DEVELOPER
 
 "
 `;
