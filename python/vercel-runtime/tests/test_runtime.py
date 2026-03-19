@@ -728,7 +728,7 @@ class TestErrorPaths(_RuntimeTestCase):
             )
             self.assertEqual(msg.payload.exit_code, 1)
             self.assertIn(
-                "must inherit from BaseHTTPRequestHandler",
+                "Could not determine the application interface",
                 msg.payload.message,
             )
             async with asyncio.timeout(10.0):
@@ -736,7 +736,7 @@ class TestErrorPaths(_RuntimeTestCase):
             self.assertEqual(returncode, 1)
             stderr = await _read_stderr(proc)
             self.assertIn(
-                "must inherit from BaseHTTPRequestHandler",
+                "Could not determine the application interface",
                 stderr,
             )
 
