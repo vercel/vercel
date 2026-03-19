@@ -47,7 +47,7 @@ describe('install', () => {
 
       client.setArgv(command, '--help');
       const exitCodePromise = install(client);
-      await expect(exitCodePromise).resolves.toEqual(0);
+      await expect(exitCodePromise).resolves.toEqual(2);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -66,7 +66,7 @@ describe('install', () => {
 
       client.setArgv('install', 'acme', '--help');
       const exitCode = await install(client);
-      expect(exitCode).toEqual(0);
+      expect(exitCode).toEqual(2);
 
       const output = client.getFullOutput();
       // Dynamic examples should use "install" not "integration add"
@@ -80,7 +80,7 @@ describe('install', () => {
     it('falls back to static help without a slug', async () => {
       client.setArgv('install', '--help');
       const exitCode = await install(client);
-      expect(exitCode).toEqual(0);
+      expect(exitCode).toEqual(2);
 
       const output = client.getFullOutput();
       expect(output).toContain('vercel install');
