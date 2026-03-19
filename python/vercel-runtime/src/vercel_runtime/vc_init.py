@@ -805,11 +805,12 @@ if "VERCEL_IPC_PATH" in os.environ:
     except RuntimeError as exc:
         _fatal(str(exc))
 
-    if (
-        app_name.lower() == "handler"
-        and isinstance(app_obj, type)
-        and issubclass(app_obj, BaseHTTPRequestHandler)
-    ):
+    if app_name.lower() == "handler" and isinstance(app_obj, type):
+        if not issubclass(app_obj, BaseHTTPRequestHandler):
+            _fatal(
+                f'"handler" must inherit from BaseHTTPRequestHandler '
+                f'in "{_entrypoint_modname}"'
+            )
 
         class Handler(BaseHandler, app_obj):  # type: ignore[valid-type,misc]
             def handle_request(self) -> None:
