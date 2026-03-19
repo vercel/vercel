@@ -202,7 +202,7 @@ export const frameworks = [
     description: 'A new Remix app — the result of running `npx create-remix`.',
     website: 'https://remix.run',
     sort: 6,
-    supersedes: ['hydrogen', 'vite'],
+    supersedes: ['hydrogen', 'vite', 'node'],
     useRuntime: { src: 'package.json', use: '@vercel/remix-builder' },
     ignoreRuntimes: ['@vercel/node'],
     detectors: {
@@ -250,7 +250,7 @@ export const frameworks = [
       'A user-obsessed, standards-focused, multi-strategy router you can deploy anywhere.',
     website: 'https://reactrouter.com',
     sort: 7,
-    supersedes: ['hydrogen', 'vite'],
+    supersedes: ['hydrogen', 'vite', 'node'],
     useRuntime: { src: 'package.json', use: '@vercel/remix-builder' },
     ignoreRuntimes: ['@vercel/node'],
     detectors: {
@@ -2466,6 +2466,7 @@ export const frameworks = [
     description:
       'Fast, lightweight, built on Web Standards. Support for any JavaScript runtime.',
     website: 'https://hono.dev',
+    supersedes: ['node'],
     useRuntime: { src: 'index.js', use: '@vercel/hono' },
     defaultRoutes: [
       {
@@ -2692,6 +2693,7 @@ export const frameworks = [
     tagline: 'Fast, unopinionated, minimalist web framework for Node.js',
     description: 'Fast, unopinionated, minimalist web framework for Node.js',
     website: 'https://expressjs.com',
+    supersedes: ['node'],
     useRuntime: { src: 'index.js', use: '@vercel/express' },
     defaultRoutes: [
       {
@@ -2915,6 +2917,7 @@ export const frameworks = [
     description:
       'H(TTP) server framework built on top of web standards for high performance and composability.',
     website: 'https://h3.dev/',
+    supersedes: ['node'],
     useRuntime: { src: 'index.js', use: '@vercel/h3' },
     defaultRoutes: [
       {
@@ -3139,6 +3142,7 @@ export const frameworks = [
     description:
       'Koa is a new web framework designed by the team behind Express, which aims to be a smaller, more expressive, and more robust foundation for web applications and APIs.',
     website: 'https://koajs.com',
+    supersedes: ['node'],
     useRuntime: { src: 'index.js', use: '@vercel/koa' },
     defaultRoutes: [
       {
@@ -3364,6 +3368,7 @@ export const frameworks = [
     description:
       'A progressive Node.js framework for building efficient, reliable and scalable server-side applications.',
     website: 'https://nestjs.com/',
+    supersedes: ['node'],
     useRuntime: { src: 'index.js', use: '@vercel/nestjs' },
     defaultRoutes: [
       {
@@ -3647,6 +3652,7 @@ export const frameworks = [
     description:
       'TypeScript with End-to-End Type Safety, type integrity, and exceptional developer experience. Supercharged by Bun.',
     website: 'https://elysiajs.com/',
+    supersedes: ['node'],
     useRuntime: { src: 'index.js', use: '@vercel/elysia' },
     defaultRoutes: [
       {
@@ -3872,6 +3878,7 @@ export const frameworks = [
     description:
       'Fastify is a web framework highly focused on providing the best developer experience with the least overhead and a powerful plugin architecture.',
     website: 'https://fastify.dev/',
+    supersedes: ['node'],
     useRuntime: { src: 'index.js', use: '@vercel/fastify' },
     defaultRoutes: [
       {
