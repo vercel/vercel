@@ -44,6 +44,7 @@ from vercel_runtime.workers import (
     bootstrap_worker_service_app,
     is_celery_app,
     is_worker_service,
+    prepare_celery_environment,
 )
 
 if TYPE_CHECKING:
@@ -459,6 +460,7 @@ if _extra_path:
     os.environ["PATH"] = _extra_path + ":" + os.environ.get("PATH", "")
 
 try:
+    prepare_celery_environment()
     __vc_module = import_module(_entrypoint_modname, _entrypoint_abs)
     __vc_variables = dir(__vc_module)
 except Exception:
