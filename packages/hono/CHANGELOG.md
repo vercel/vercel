@@ -1,5 +1,14 @@
 # @vercel/hono
 
+## 0.2.54
+
+### Patch Changes
+
+- Update @vercel/nft to 1.4.0 across packages ([#15626](https://github.com/vercel/vercel/pull/15626))
+
+- Updated dependencies [[`bb5277ab85e41810f96d1619949d76ea5603a58f`](https://github.com/vercel/vercel/commit/bb5277ab85e41810f96d1619949d76ea5603a58f)]:
+  - @vercel/node@5.6.18
+
 ## 0.2.53
 
 ### Patch Changes
