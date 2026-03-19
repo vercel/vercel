@@ -5,7 +5,10 @@ import { debug, isPythonEntrypoint } from '@vercel/build-utils';
 import { readConfigFile } from '@vercel/build-utils';
 
 export interface DetectedPythonEntrypoint {
-  entrypoint?: string;
+  entrypoint?: string; // path to the entrypoint file (e.g. "src/app.py")
+  // the callable name within the module (e.g. "app" from "module:app")
+  // *currently* only populated by 'app' script in pyproject.toml
+  variableName?: string;
   baseDir?: string; // directory containing manage.py, if detected via Django path
 }
 
@@ -49,9 +52,14 @@ async function checkEntrypoint(
   return isPythonEntrypoint({ fsPath: absPath });
 }
 
+interface PyprojectEntrypoint {
+  entrypoint: string;
+  variableName: string;
+}
+
 export async function getPyprojectEntrypoint(
   workPath: string
-): Promise<string | null> {
+): Promise<PyprojectEntrypoint | null> {
   const pyprojectData = await readConfigFile<{
     project?: { scripts?: Record<string, unknown> };
   }>(join(workPath, 'pyproject.toml'));
@@ -70,12 +78,15 @@ export async function getPyprojectEntrypoint(
   const match = appScript.match(/([A-Za-z_][\w.]*)\s*:\s*([A-Za-z_][\w]*)/);
   if (!match) return null;
   const modulePath = match[1];
+  const variableName = match[2];
   const relPath = modulePath.replace(/\./g, '/');
 
   // Prefer an existing file match if present; otherwise fall back to "<module>.py".
   const candidates = [`${relPath}.py`, `${relPath}/__init__.py`];
   for (const candidate of candidates) {
-    if (await fileExists(join(workPath, candidate))) return candidate;
+    if (await fileExists(join(workPath, candidate))) {
+      return { entrypoint: candidate, variableName };
+    }
   }
   return null;
 }
@@ -212,5 +223,9 @@ export async function detectPythonEntrypoint(
       : await detectGenericPythonEntrypoint(workPath, configuredEntrypoint);
   if (result) return result;
   const pyprojectEntry = await getPyprojectEntrypoint(workPath);
-  return pyprojectEntry ? { entrypoint: pyprojectEntry } : null;
+  if (!pyprojectEntry) return null;
+  return {
+    entrypoint: pyprojectEntry.entrypoint,
+    variableName: pyprojectEntry.variableName,
+  };
 }

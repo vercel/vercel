@@ -51,4 +51,9 @@ export interface UvConfig {
    * Workspace configuration.
    */
   workspace?: UvConfigWorkspace;
+  /**
+   * Legacy dev dependencies (pre-PEP 735).
+   * Equivalent to `[dependency-groups].dev`.
+   */
+  'dev-dependencies'?: string[];
 }
