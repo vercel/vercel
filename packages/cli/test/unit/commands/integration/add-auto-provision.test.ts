@@ -679,7 +679,7 @@ describe('integration add (auto-provision)', () => {
 
       // Auto-generated name, server fills metadata defaults — no prompts
       await expect(client.stderr).toOutput(
-        'Additional setup required. Opening browser...'
+        'Missing required metadata: region. Opening browser to complete setup...'
       );
 
       const exitCode = await exitCodePromise;
@@ -786,7 +786,7 @@ describe('integration add (auto-provision)', () => {
 
       // Auto-generated name, server fills metadata defaults — no prompts
       await expect(client.stderr).toOutput(
-        'Additional setup required. Opening browser...'
+        'Missing required metadata: region. Opening browser to complete setup...'
       );
 
       const exitCode = await exitCodePromise;
@@ -805,7 +805,7 @@ describe('integration add (auto-provision)', () => {
       const exitCodePromise = integrationCommand(client);
 
       await expect(client.stderr).toOutput(
-        'Additional setup required. Opening browser...'
+        'Missing required metadata: region. Opening browser to complete setup...'
       );
 
       const exitCode = await exitCodePromise;
@@ -899,7 +899,7 @@ describe('integration add (auto-provision)', () => {
       client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
-        'Additional setup required. Opening browser...'
+        'Missing required metadata: region. Opening browser to complete setup...'
       );
 
       const exitCode = await exitCodePromise;
@@ -924,7 +924,7 @@ describe('integration add (auto-provision)', () => {
 
       // Auto-generated name, server fills metadata defaults — no wizard prompts
       await expect(client.stderr).toOutput(
-        'Additional setup required. Opening browser...'
+        'Missing required metadata: region. Opening browser to complete setup...'
       );
 
       const exitCode = await exitCodePromise;
@@ -956,7 +956,7 @@ describe('integration add (auto-provision)', () => {
 
       // Auto-generated name, server fills metadata defaults — no wizard prompts
       await expect(client.stderr).toOutput(
-        'Additional setup required. Opening browser...'
+        'Missing required metadata: region. Opening browser to complete setup...'
       );
 
       const exitCode = await exitCodePromise;
@@ -981,7 +981,7 @@ describe('integration add (auto-provision)', () => {
 
       // --name flag provides the name, server fills metadata defaults — no wizard prompts
       await expect(client.stderr).toOutput(
-        'Additional setup required. Opening browser...'
+        'Missing required metadata: region. Opening browser to complete setup...'
       );
 
       const exitCode = await exitCodePromise;
@@ -1009,7 +1009,7 @@ describe('integration add (auto-provision)', () => {
 
       // Server fills defaults, no wizard prompt
       await expect(client.stderr).toOutput(
-        'Additional setup required. Opening browser...'
+        'Missing required metadata: region. Opening browser to complete setup...'
       );
 
       const exitCode = await exitCodePromise;
@@ -1047,7 +1047,7 @@ describe('integration add (auto-provision)', () => {
 
       // Auto-generated name, server fills metadata defaults — no prompts
       await expect(client.stderr).toOutput(
-        'Additional setup required. Opening browser...'
+        'Missing required metadata: region. Opening browser to complete setup...'
       );
 
       const exitCode = await exitCodePromise;
@@ -1061,6 +1061,48 @@ describe('integration add (auto-provision)', () => {
       expect(openMock).toHaveBeenCalledWith(
         expect.stringMatching(/source=cli/)
       );
+    });
+
+    it('should show missing required metadata hint when fallback occurs without -m flags', async () => {
+      useAutoProvision({ responseKey: 'metadata' });
+
+      client.setArgv('integration', 'add', 'acme');
+      const exitCodePromise = integrationCommand(client);
+
+      // Should show which metadata fields are missing
+      await expect(client.stderr).toOutput(
+        'Missing required metadata: region. Opening browser to complete setup...'
+      );
+      await expect(client.stderr).toOutput(
+        'Tip: Provide -m region=us-west-1 to provision directly from the CLI.'
+      );
+      await expect(client.stderr).toOutput(
+        'Run `vercel integration add acme --help` for all metadata options.'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(1);
+    });
+
+    it('should show generic message when all required metadata is provided but fallback still occurs', async () => {
+      useAutoProvision({ responseKey: 'metadata' });
+
+      client.setArgv(
+        'integration',
+        'add',
+        'acme',
+        '--metadata',
+        'region=us-east-1'
+      );
+      const exitCodePromise = integrationCommand(client);
+
+      // Required metadata is provided — show generic message (server has other reasons)
+      await expect(client.stderr).toOutput(
+        'Additional setup required. Opening browser...'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(1);
     });
   });
 
@@ -1214,7 +1256,7 @@ describe('integration add (auto-provision)', () => {
       const exitCodePromise = integrationCommand(client);
 
       await expect(client.stderr).toOutput(
-        'Additional setup required. Opening browser...'
+        'Missing required metadata: region. Opening browser to complete setup...'
       );
 
       const exitCode = await exitCodePromise;
@@ -1240,7 +1282,7 @@ describe('integration add (auto-provision)', () => {
       const exitCodePromise = integrationCommand(client);
 
       await expect(client.stderr).toOutput(
-        'Additional setup required. Opening browser...'
+        'Missing required metadata: region. Opening browser to complete setup...'
       );
 
       const exitCode = await exitCodePromise;
@@ -1265,7 +1307,7 @@ describe('integration add (auto-provision)', () => {
       const exitCodePromise = integrationCommand(client);
 
       await expect(client.stderr).toOutput(
-        'Additional setup required. Opening browser...'
+        'Missing required metadata: region. Opening browser to complete setup...'
       );
 
       const exitCode = await exitCodePromise;
@@ -1284,7 +1326,7 @@ describe('integration add (auto-provision)', () => {
       const exitCodePromise = integrationCommand(client);
 
       await expect(client.stderr).toOutput(
-        'Additional setup required. Opening browser...'
+        'Missing required metadata: region. Opening browser to complete setup...'
       );
 
       const exitCode = await exitCodePromise;
@@ -1301,7 +1343,7 @@ describe('integration add (auto-provision)', () => {
       const exitCodePromise = integrationCommand(client);
 
       await expect(client.stderr).toOutput(
-        'Additional setup required. Opening browser...'
+        'Missing required metadata: region. Opening browser to complete setup...'
       );
 
       const exitCode = await exitCodePromise;
@@ -2515,6 +2557,105 @@ describe('integration add (auto-provision)', () => {
       expect(exitCode).toEqual(0);
       // No JSON on stdout
       expect(client.stdout.getFullOutput()).toBe('');
+    });
+  });
+
+  describe('installation-level metadata (Sentry-like)', () => {
+    let requestBodies: ReturnType<typeof useAutoProvision>['requestBodies'];
+
+    beforeEach(() => {
+      ({ requestBodies } = useAutoProvision({ responseKey: 'provisioned' }));
+    });
+
+    it('should split -m flags into product and installation metadata', async () => {
+      client.setArgv(
+        'integration',
+        'add',
+        'acme-install-meta',
+        '-m',
+        'platform=nextjs',
+        '-m',
+        'name=my-org',
+        '-m',
+        'install-region=us'
+      );
+      const exitCode = await integrationCommand(client);
+      expect(exitCode).toEqual(0);
+
+      // Verify the API request separates metadata correctly
+      expect(requestBodies).toHaveLength(1);
+      const body = requestBodies[0] as Record<string, unknown>;
+      // Product metadata: only platform
+      expect(body.metadata).toEqual({ platform: 'nextjs' });
+      // Installation metadata: name + install-region
+      expect(body.installationMetadata).toEqual({
+        name: 'my-org',
+        'install-region': 'us',
+      });
+    });
+
+    it('should validate installation-level required fields', async () => {
+      // Only provide product metadata, omit required installation fields (name, install-region)
+      client.setArgv(
+        'integration',
+        'add',
+        'acme-install-meta',
+        '-m',
+        'platform=nextjs'
+      );
+      const exitCodePromise = integrationCommand(client);
+
+      // Should fail validation because name and install-region are required
+      await expect(client.stderr).toOutput('Required metadata missing');
+      expect(await exitCodePromise).toEqual(1);
+
+      // No API request should have been made
+      expect(requestBodies).toHaveLength(0);
+    });
+
+    it('should not send installationMetadata when integration has no metadataSchema', async () => {
+      // Use regular acme integration (no integration-level metadataSchema)
+      client.setArgv('integration', 'add', 'acme', '-m', 'region=us-east-1');
+      const exitCode = await integrationCommand(client);
+      expect(exitCode).toEqual(0);
+
+      // All metadata goes to product, no installationMetadata field
+      const body = requestBodies[0] as Record<string, unknown>;
+      expect(body.metadata).toEqual({ region: 'us-east-1' });
+      expect(body).not.toHaveProperty('installationMetadata');
+    });
+  });
+
+  describe('installation metadata in browser fallback URL', () => {
+    it('should forward installationMetadata in browser fallback URL', async () => {
+      useAutoProvision({ responseKey: 'metadata' });
+
+      client.setArgv(
+        'integration',
+        'add',
+        'acme-install-meta',
+        '-m',
+        'platform=nextjs',
+        '-m',
+        'name=my-org',
+        '-m',
+        'install-region=us'
+      );
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput('Opening browser');
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(1);
+
+      const calledUrl = new URL(openMock.mock.calls[0]?.[0] as string);
+      // Product metadata forwarded
+      expect(calledUrl.searchParams.get('metadata')).toEqual(
+        JSON.stringify({ platform: 'nextjs' })
+      );
+      // Installation metadata forwarded
+      expect(calledUrl.searchParams.get('installationMetadata')).toEqual(
+        JSON.stringify({ name: 'my-org', 'install-region': 'us' })
+      );
     });
   });
 });
