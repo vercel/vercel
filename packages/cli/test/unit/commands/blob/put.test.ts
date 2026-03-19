@@ -368,22 +368,6 @@ describe('blob put', () => {
       );
     });
 
-    it('should handle --force flag', async () => {
-      const testFile = getFixturePath('test-file.txt');
-      const exitCode = await put(
-        client,
-        ['--access', 'public', '--force', testFile],
-        testToken
-      );
-
-      expect(exitCode).toBe(0);
-      expect(mockedBlob.put).toHaveBeenCalledWith(
-        'test-file.txt',
-        expect.any(ReadStream),
-        expect.objectContaining({ allowOverwrite: true })
-      );
-    });
-
     it('should handle --access private option', async () => {
       const testFile = getFixturePath('test-file.txt');
       const exitCode = await put(
@@ -416,41 +400,6 @@ describe('blob put', () => {
       const exitCode = await put(
         client,
         ['--access', 'public', '--allow-overwrite', testFile],
-        testToken
-      );
-
-      expect(exitCode).toBe(0);
-      expect(mockedBlob.put).toHaveBeenCalledWith(
-        'test-file.txt',
-        expect.any(ReadStream),
-        expect.objectContaining({ allowOverwrite: true })
-      );
-    });
-
-    it('should show deprecation warning when --force is used', async () => {
-      const testFile = getFixturePath('test-file.txt');
-      const exitCode = await put(
-        client,
-        ['--access', 'public', '--force', testFile],
-        testToken
-      );
-
-      expect(exitCode).toBe(0);
-      expect(mockedOutput.warn).toHaveBeenCalledWith(
-        '--force is deprecated, use --allow-overwrite instead'
-      );
-      expect(mockedBlob.put).toHaveBeenCalledWith(
-        'test-file.txt',
-        expect.any(ReadStream),
-        expect.objectContaining({ allowOverwrite: true })
-      );
-    });
-
-    it('should prefer --allow-overwrite over --force', async () => {
-      const testFile = getFixturePath('test-file.txt');
-      const exitCode = await put(
-        client,
-        ['--access', 'public', '--allow-overwrite', '--force', testFile],
         testToken
       );
 
