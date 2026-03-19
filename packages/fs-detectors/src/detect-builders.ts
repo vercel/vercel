@@ -2,7 +2,7 @@ import minimatch from 'minimatch';
 import { valid as validSemver } from 'semver';
 import { parse as parsePath, extname, join } from 'path';
 import type { Route, RouteWithSrc } from '@vercel/routing-utils';
-import frameworkList, { Framework } from '@vercel/frameworks';
+import { frameworkList, type Framework } from '@vercel/frameworks';
 import type {
   PackageJson,
   Builder,

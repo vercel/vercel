@@ -1,6 +1,6 @@
 import type { Framework } from '@vercel/frameworks';
 import { detectFrameworks } from '../detect-framework';
-import frameworkList from '@vercel/frameworks';
+import { frameworkList } from '@vercel/frameworks';
 import type { DetectorFilesystem } from '../detectors/filesystem';
 import type { ExperimentalServices, ServiceDetectionError } from './types';
 
@@ -141,14 +141,23 @@ async function detectServicesAtRoot(
 
   const backendResult = await detectBackendServices(fs);
   if (backendResult.error) {
-    return { services: null, errors: [backendResult.error] };
+    return {
+      services: null,
+      errors: [backendResult.error],
+    };
   }
   if (Object.keys(backendResult.services).length === 0) {
-    return { services: null, errors: [] };
+    return {
+      services: null,
+      errors: [],
+    };
   }
   Object.assign(services, backendResult.services);
 
-  return { services, errors: [] };
+  return {
+    services,
+    errors: [],
+  };
 }
 
 async function detectServicesFrontendSubdir(
@@ -169,7 +178,10 @@ async function detectServicesFrontendSubdir(
 
   const backendResult = await detectBackendServices(fs);
   if (backendResult.error) {
-    return { services: null, errors: [backendResult.error] };
+    return {
+      services: null,
+      errors: [backendResult.error],
+    };
   }
 
   // At least one backend service is required with frontend in frontend/ or apps/web
@@ -187,7 +199,10 @@ async function detectServicesFrontendSubdir(
 
   Object.assign(services, backendResult.services);
 
-  return { services, errors: [] };
+  return {
+    services,
+    errors: [],
+  };
 }
 
 async function detectBackendServices(fs: DetectorFilesystem): Promise<{

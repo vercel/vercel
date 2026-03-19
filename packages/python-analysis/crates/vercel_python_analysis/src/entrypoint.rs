@@ -30,7 +30,9 @@ pub(crate) fn contains_app_or_handler_impl(source: &str) -> bool {
             // Check for annotated assignment to 'app' or 'application'
             // e.g., app: Sanic = Sanic()
             Stmt::AnnAssign(ann_assign) => {
-                if is_name_expr(&ann_assign.target, "app") || is_name_expr(&ann_assign.target, "application") {
+                if is_name_expr(&ann_assign.target, "app")
+                    || is_name_expr(&ann_assign.target, "application")
+                {
                     return true;
                 }
             }
@@ -138,19 +140,19 @@ pub(crate) fn get_string_constant_impl(source: &str, name: &str) -> Option<Strin
     for stmt in parsed.suite() {
         match stmt {
             Stmt::Assign(assign) => {
-                if assign.targets.len() == 1 && is_name_expr(&assign.targets[0], name) {
-                    if let Some(s) = expr_to_string_literal(&assign.value) {
-                        return Some(s);
-                    }
+                if assign.targets.len() == 1
+                    && is_name_expr(&assign.targets[0], name)
+                    && let Some(s) = expr_to_string_literal(&assign.value)
+                {
+                    return Some(s);
                 }
             }
             Stmt::AnnAssign(ann_assign) => {
-                if is_name_expr(&ann_assign.target, name) {
-                    if let Some(value) = &ann_assign.value {
-                        if let Some(s) = expr_to_string_literal(value) {
-                            return Some(s);
-                        }
-                    }
+                if is_name_expr(&ann_assign.target, name)
+                    && let Some(value) = &ann_assign.value
+                    && let Some(s) = expr_to_string_literal(value)
+                {
+                    return Some(s);
                 }
             }
             _ => {}

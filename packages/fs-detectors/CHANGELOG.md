@@ -1,5 +1,26 @@
 # @vercel/fs-detectors
 
+## 5.11.1
+
+### Patch Changes
+
+- Switch "node" framework preset to use @vercel/backends ([#15248](https://github.com/vercel/vercel/pull/15248))
+
+  Fix services-mode internal function output aliasing to use slashless `_svc/*` output keys so Node service routes can resolve their Lambda targets.
+
+- Improve services auto-detection so a single detected frontend at the project root, ([#15571](https://github.com/vercel/vercel/pull/15571))
+  `frontend/`, or `apps/<name>/` is mounted at `/` even without backend services.
+
+## 5.11.0
+
+### Minor Changes
+
+- [services] add support for background workers to vc dev ([#15434](https://github.com/vercel/vercel/pull/15434))
+
+### Patch Changes
+
+- [services] exclude service route prefixes on subdomain rewrites ([#15508](https://github.com/vercel/vercel/pull/15508))
+
 ## 5.10.3
 
 ### Patch Changes

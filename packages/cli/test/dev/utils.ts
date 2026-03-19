@@ -400,11 +400,16 @@ export function testFixtureStdio(
 
         args.push('deploy');
 
-        if (process.env.VERCEL_CLI_VERSION) {
-          args.push(
-            '--build-env',
-            `VERCEL_CLI_VERSION=${process.env.VERCEL_CLI_VERSION}`
-          );
+        const buildEnvNames = [
+          'VERCEL_CLI_VERSION',
+          'VERCEL_RUNTIME_PYTHON',
+          'VERCEL_WORKERS_PYTHON',
+        ] as const;
+        for (const buildEnvName of buildEnvNames) {
+          const buildEnvValue = process.env[buildEnvName];
+          if (buildEnvValue) {
+            args.push('--build-env', `${buildEnvName}=${buildEnvValue}`);
+          }
         }
 
         args.push('--debug');

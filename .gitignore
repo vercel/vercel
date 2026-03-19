@@ -8,6 +8,7 @@ yarn-error.log
 coverage
 coverage.lcov
 *.swp
+*~
 *.bak
 *.tgz
 packages/cli/src/util/dev/templates/*.ts

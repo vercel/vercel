@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from .client import (
     MessageMetadata,
+    WorkerJSONEncoder,
     WorkerTimeoutResult,
     get_asgi_app,
     get_wsgi_app,
@@ -28,6 +29,7 @@ from .exceptions import (
 
 __all__ = [
     "MessageMetadata",
+    "WorkerJSONEncoder",
     "WorkerTimeoutResult",
     "subscribe",
     "get_wsgi_app",

@@ -1120,12 +1120,12 @@ describe.skipIf(flakey)('build', () => {
     const config = await fs.readJSON(join(output, 'config.json'));
     expect(config).toHaveProperty('crons', [
       {
-        path: '/_svc/cleanup/crons/api/cron/cron',
+        path: '/_svc/cleanup/crons/index/cron',
         schedule: '0 0 * * *',
       },
     ]);
     expect(config.routes).toContainEqual({
-      src: '^/_svc/cleanup/crons/api/cron/cron$',
+      src: '^/_svc/cleanup/crons/index/cron$',
       dest: '/_svc/cleanup/index',
       check: true,
     });
@@ -2152,5 +2152,20 @@ fs.writeFileSync(
       const exitCode = await build(client);
       expect(exitCode).toEqual(0);
     });
+  });
+
+  it('should allow services to share the same builder source', async () => {
+    const cwd = fixture('with-services-shared-source');
+    const output = join(cwd, '.vercel', 'output');
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toBe(0);
+
+    const config = await fs.readJSON(join(output, 'config.json'));
+    expect(config.services).toHaveLength(2);
+    expect(config.services.map((s: any) => s.name).sort()).toEqual([
+      'worker-topic1',
+      'worker-topic2',
+    ]);
   });
 });
