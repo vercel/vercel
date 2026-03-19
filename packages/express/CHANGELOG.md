@@ -1,5 +1,15 @@
 # @vercel/express
 
+## 0.1.61
+
+### Patch Changes
+
+- Update @vercel/nft to 1.4.0 across packages ([#15626](https://github.com/vercel/vercel/pull/15626))
+
+- Updated dependencies [[`bb5277ab85e41810f96d1619949d76ea5603a58f`](https://github.com/vercel/vercel/commit/bb5277ab85e41810f96d1619949d76ea5603a58f)]:
+  - @vercel/node@5.6.18
+  - @vercel/cervel@0.0.36
+
 ## 0.1.60
 
 ### Patch Changes

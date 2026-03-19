@@ -1,5 +1,11 @@
 # vercel-runtime
 
+## 0.10.1
+
+### Patch Changes
+
+- Use hardlink link mode instead of copy. ([#15639](https://github.com/vercel/vercel/pull/15639))
+
 ## 0.10.0
 
 ### Minor Changes
