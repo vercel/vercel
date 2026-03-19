@@ -167,6 +167,8 @@ export interface PythonConstraint {
   source: string;
   /** Human-readable description of where this constraint came from. */
   prettySource: string;
+  /** Raw version specifier string from the source file (e.g. ">=3.12", "3.12"). */
+  specifier?: string;
 }
 
 export type PythonVersion = {

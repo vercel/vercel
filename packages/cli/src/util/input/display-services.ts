@@ -110,14 +110,14 @@ function getServiceTarget(service: Service): string {
 
 /**
  * Output format:
- * Multiple services detected. Project Settings:
+ * Detected services:
  *   frontend          [Next.js]   →  /
  *   api               [python]    →  /api/*
  *   cleanup           [node]      →  schedule: 0 0 * * *
  *   processor         [node]      →  topic: jobs
  */
 export function displayDetectedServices(services: Service[]): void {
-  output.print(`Multiple services detected. Project Settings:\n`);
+  output.print(`Detected services:\n`);
 
   const outputOrder: Record<string, number> = { web: 0, cron: 1, worker: 2 };
   const sorted = [...services].sort(
@@ -141,9 +141,7 @@ export function displayDetectedServices(services: Service[]): void {
 }
 
 export function displayServicesConfigNote(): void {
-  output.print(
-    `\n${chalk.dim('Services (experimental) are configured via vercel.json.')}\n`
-  );
+  output.print(`\n${chalk.dim('Services are configured via vercel.json.')}\n`);
 }
 
 export function displayServiceErrors(errors: ServiceDetectionError[]): void {

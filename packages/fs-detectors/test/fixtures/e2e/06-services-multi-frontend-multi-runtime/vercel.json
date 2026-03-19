@@ -20,9 +20,21 @@
       "entrypoint": "services/py-api/index.py",
       "routePrefix": "/api/py"
     },
-    "js-api": {
-      "entrypoint": "services/js-api/index.js",
-      "routePrefix": "/api/js"
+    "node-api": {
+      "entrypoint": "services/node-api/index.js",
+      "routePrefix": "/api/node"
+    },
+    "express-api": {
+      "entrypoint": "services/express-api/index.js",
+      "routePrefix": "/api/express"
+    },
+    "koa-api": {
+      "entrypoint": "services/koa-api/index.js",
+      "routePrefix": "/api/koa"
+    },
+    "hono-api": {
+      "entrypoint": "services/hono-api/index.js",
+      "routePrefix": "/api/hono"
     },
     "rb-api": {
       "entrypoint": "services/rb-api/config.ru",

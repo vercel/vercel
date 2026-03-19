@@ -465,6 +465,9 @@ importers:
       '@vercel/node':
         specifier: workspace:*
         version: link:../node
+      '@vercel/prepare-flags-definitions':
+        specifier: 0.2.0
+        version: 0.2.0
       '@vercel/python':
         specifier: workspace:*
         version: link:../python
@@ -10115,6 +10118,10 @@ packages:
     resolution: {integrity: sha512-UycprH3T6n3jH0k44NHMa7pnFHGu/N05MjojYr+Mc6I7obkoLIJujSWwin1pCvdy/eOxrI/l3uDLQsmcrOb4ug==}
     engines: {node: '>= 20'}
     dev: true
+
+  /@vercel/prepare-flags-definitions@0.2.0:
+    resolution: {integrity: sha512-2yvulNR7yyv/gbWLPPRvLYBq70X6sBuG5kMQWQMQrIJQZrcrTagy/OCj9gTnhNGod5JmYKXjVBV6GW6DZcNWlQ==}
+    dev: false
 
   /@vercel/sandbox@1.6.0:
     resolution: {integrity: sha512-T204S3RZIdo+BCR5gpErTQBYz+ruXjTMRiZyf+HV/UQeKjPKAVKWu27T65kahDvVvJrbadHhxR2Cds28rXXF/Q==}

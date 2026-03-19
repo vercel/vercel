@@ -5,6 +5,11 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { getLinkedProject } from '../../util/projects/link';
 import { getCommandName } from '../../util/pkg-name';
+import {
+  buildCommandWithGlobalFlags,
+  outputAgentError,
+} from '../../util/agent-output';
+import { AGENT_REASON, AGENT_STATUS } from '../../util/agent-output-constants';
 import { getFlag } from '../../util/flags/get-flags';
 import { updateFlag } from '../../util/flags/update-flag';
 import {
@@ -52,6 +57,30 @@ export default async function disable(
   );
 
   if (!flagArg) {
+    if (client.nonInteractive) {
+      const envPart = environment
+        ? `--environment ${environment}`
+        : '--environment <production|preview|development>';
+      outputAgentError(
+        client,
+        {
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.MISSING_ARGUMENTS,
+          message: 'Please provide a flag slug or ID to disable.',
+          next: [
+            {
+              command: buildCommandWithGlobalFlags(
+                client.argv,
+                `flags disable <flag> ${envPart}`
+              ),
+              when: 'disable a feature flag by slug or ID',
+            },
+          ],
+        },
+        1
+      );
+      return 1;
+    }
     output.error('Please provide a flag slug or ID to disable');
     output.log(
       `Example: ${getCommandName('flags disable my-feature --environment production')}`
@@ -68,6 +97,24 @@ export default async function disable(
   if (link.status === 'error') {
     return link.exitCode;
   } else if (link.status === 'not_linked') {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.NOT_LINKED,
+          message: 'Your codebase is not linked to a project. Run link first.',
+          next: [
+            {
+              command: buildCommandWithGlobalFlags(client.argv, 'link'),
+              when: 'link the project',
+            },
+          ],
+        },
+        1
+      );
+      return 1;
+    }
     output.error(
       `Your codebase isn't linked to a project on Vercel. Run ${getCommandName('link')} to begin.`
     );
@@ -102,6 +149,29 @@ export default async function disable(
         projectName: project.name,
       });
       return 0;
+    }
+
+    if (!environment && client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.MISSING_ARGUMENTS,
+          message:
+            'Please provide --environment (production, preview, or development) to disable the flag in.',
+          next: [
+            {
+              command: buildCommandWithGlobalFlags(
+                client.argv,
+                `flags disable ${flagArg} --environment <production|preview|development>`
+              ),
+              when: 'disable the flag in a specific environment',
+            },
+          ],
+        },
+        1
+      );
+      return 1;
     }
 
     environment = await resolveFlagEnvironment(
@@ -157,6 +227,28 @@ export default async function disable(
     );
   } catch (err) {
     output.stopSpinner();
+    const message = err instanceof Error ? err.message : String(err);
+    if (client.nonInteractive && message.startsWith('Invalid environment:')) {
+      outputAgentError(
+        client,
+        {
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.INVALID_ARGUMENTS,
+          message,
+          next: [
+            {
+              command: buildCommandWithGlobalFlags(
+                client.argv,
+                `flags disable ${flagArg} --environment <production|preview|development>`
+              ),
+              when: 'use a valid environment (production, preview, or development)',
+            },
+          ],
+        },
+        1
+      );
+      return 1;
+    }
     printError(err);
     return 1;
   }

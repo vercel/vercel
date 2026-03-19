@@ -1,5 +1,15 @@
 # @vercel/backends
 
+## 0.0.47
+
+### Patch Changes
+
+- Strip service route prefixes in experimental backends builds before requests reach the Node app. ([#15571](https://github.com/vercel/vercel/pull/15571))
+
+- Switch "node" framework preset to use @vercel/backends ([#15248](https://github.com/vercel/vercel/pull/15248))
+
+  Fix services-mode internal function output aliasing to use slashless `_svc/*` output keys so Node service routes can resolve their Lambda targets.
+
 ## 0.0.46
 
 ### Patch Changes
