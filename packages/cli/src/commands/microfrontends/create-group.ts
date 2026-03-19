@@ -14,7 +14,6 @@ import { isAPIError, ProjectNotFound } from '../../util/errors-ts';
 import type { Project } from '@vercel-internals/types';
 import type { MicrofrontendsGroupResponse } from './types';
 import {
-  ensureMicrofrontendsContext,
   fetchMicrofrontendsGroups,
   validateDefaultRoute,
   validateRoutingPath,
@@ -22,6 +21,8 @@ import {
 import { outputAgentError } from '../../util/agent-output';
 import { getGlobalFlagsOnlyFromArgs } from '../../util/arg-common';
 import { getCommandNamePlain } from '../../util/pkg-name';
+import getScope from '../../util/get-scope';
+import { getLinkedProject } from '../../util/projects/link';
 
 const MAX_GROUP_NAME_LENGTH = 48;
 
@@ -37,12 +38,13 @@ export default async function createGroup(client: Client): Promise<number> {
     return 1;
   }
 
-  const context = await ensureMicrofrontendsContext(client);
-  if (typeof context === 'number') {
-    return context;
+  const { team } = await getScope(client);
+
+  if (!team) {
+    output.error('Microfrontends are only available for teams.');
+    return 1;
   }
 
-  const { project: linkedProject, team, repoRoot } = context;
   const teamSlug = team.slug;
 
   output.log(
@@ -105,42 +107,42 @@ export default async function createGroup(client: Client): Promise<number> {
     | string
     | undefined;
 
-  if (client.nonInteractive) {
-    const settingsUrl = `https://vercel.com/${teamSlug}/~/settings/microfrontends`;
-    const flags = getGlobalFlagsOnlyFromArgs(client.argv.slice(2));
-    const interactiveCmd = getCommandNamePlain(
-      `microfrontends create-group ${flags.filter(f => f !== '--non-interactive').join(' ')}`.trim()
-    );
-    outputAgentError(
-      client,
-      {
-        status: 'error',
-        reason: 'purchase_requires_user',
-        message:
-          'Creating a microfrontends group affects billing and cannot be performed non-interactively. ' +
-          'Agents must not make billing changes on behalf of a user. ' +
-          'The user must run this command interactively in a terminal to review billing details and confirm, ' +
-          'or complete the action in the Vercel dashboard.',
-        next: [
-          {
-            command: settingsUrl,
-            when: 'user opens Microfrontends settings in the browser',
-          },
-          {
-            command: interactiveCmd,
-            when: 'user runs this command interactively (remove --non-interactive)',
-          },
-        ],
-      },
-      1
-    );
-  }
+  // Adding projects to a group may incur billing charges beyond the free tier.
+  // Block agents and non-TTY when billing would be affected.
+  const wouldAffectBilling = existingMfeProjectCount + 1 > freeProjects;
+  if (wouldAffectBilling) {
+    if (client.nonInteractive) {
+      const flags = getGlobalFlagsOnlyFromArgs(client.argv.slice(2));
+      const interactiveCmd = getCommandNamePlain(
+        `microfrontends create-group ${flags.filter(f => f !== '--non-interactive').join(' ')}`.trim()
+      );
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'purchase_requires_user',
+          message:
+            'Creating a microfrontends group affects billing and cannot be performed non-interactively. ' +
+            'Agents must not make billing changes on behalf of a user. ' +
+            'The user must run this command interactively in a terminal to review billing details and confirm, ' +
+            'or complete the action in the Vercel dashboard.',
+          next: [
+            {
+              command: interactiveCmd,
+              when: 'user runs this command interactively (remove --non-interactive)',
+            },
+          ],
+        },
+        1
+      );
+    }
 
-  if (!client.stdin.isTTY) {
-    output.error(
-      'This command must be run interactively because it affects billing.'
-    );
-    return 1;
+    if (!client.stdin.isTTY) {
+      output.error(
+        'This command must be run interactively because it affects billing.'
+      );
+      return 1;
+    }
   }
 
   let groupName: string;
@@ -405,7 +407,10 @@ export default async function createGroup(client: Client): Promise<number> {
   );
 
   // If the default app is the linked project, offer to create microfrontends.json
-  if (linkedProject.id === defaultApp.id) {
+  const link = await getLinkedProject(client, client.cwd);
+  const linkedProject = link.status === 'linked' ? link.project : undefined;
+  if (linkedProject && linkedProject.id === defaultApp.id) {
+    const repoRoot = link.status === 'linked' ? link.repoRoot : undefined;
     const projectDir = repoRoot
       ? join(repoRoot, linkedProject.rootDirectory || '')
       : client.cwd;

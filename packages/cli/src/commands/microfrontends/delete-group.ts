@@ -8,10 +8,7 @@ import { parseArguments } from '../../util/get-args';
 import { printError } from '../../util/error';
 import { isAPIError } from '../../util/errors-ts';
 import type { MicrofrontendsGroupResponse } from './types';
-import {
-  ensureMicrofrontendsContext,
-  fetchMicrofrontendsGroups,
-} from './utils';
+import { fetchMicrofrontendsGroups } from './utils';
 import {
   buildCommandWithYes,
   outputActionRequired,
@@ -21,6 +18,8 @@ import {
   AGENT_REASON,
   AGENT_STATUS,
 } from '../../util/agent-output-constants';
+import getScope from '../../util/get-scope';
+import { getLinkedProject } from '../../util/projects/link';
 
 export default async function deleteGroup(client: Client): Promise<number> {
   let parsedArgs;
@@ -35,21 +34,7 @@ export default async function deleteGroup(client: Client): Promise<number> {
   }
 
   const autoConfirm = !!parsedArgs.flags['--yes'];
-  const context = await ensureMicrofrontendsContext(client, { autoConfirm });
-  if (typeof context === 'number') {
-    return context;
-  }
-
-  const { project: linkedProject, team } = context;
-
-  const groupsResponse = await fetchMicrofrontendsGroups(client, team.id);
-
-  const { groups } = groupsResponse;
-
-  if (groups.length === 0) {
-    output.error('No microfrontends groups exist. There is nothing to delete.');
-    return 1;
-  }
+  const groupFlag = parsedArgs.flags['--group'] as string | undefined;
 
   if (client.nonInteractive && !autoConfirm) {
     outputActionRequired(
@@ -72,7 +57,21 @@ export default async function deleteGroup(client: Client): Promise<number> {
     return 1;
   }
 
-  const groupFlag = parsedArgs.flags['--group'] as string | undefined;
+  const { team } = await getScope(client);
+
+  if (!team) {
+    output.error('Microfrontends are only available for teams.');
+    return 1;
+  }
+
+  const groupsResponse = await fetchMicrofrontendsGroups(client, team.id);
+
+  const { groups } = groupsResponse;
+
+  if (groups.length === 0) {
+    output.error('No microfrontends groups exist. There is nothing to delete.');
+    return 1;
+  }
 
   if (!client.stdin.isTTY && !groupFlag) {
     output.error(
@@ -93,15 +92,19 @@ export default async function deleteGroup(client: Client): Promise<number> {
     selectedGroup = found;
   } else {
     // If the linked project is the default app for a group, suggest that group first
-    const linkedGroup = groups.find(g =>
-      g.projects.some(
-        p => p.id === linkedProject.id && p.microfrontends?.isDefaultApp
-      )
-    );
+    const link = await getLinkedProject(client, client.cwd);
+    const linkedProject = link.status === 'linked' ? link.project : undefined;
+    const linkedGroup = linkedProject
+      ? groups.find(g =>
+          g.projects.some(
+            p => p.id === linkedProject.id && p.microfrontends?.isDefaultApp
+          )
+        )
+      : undefined;
 
     if (linkedGroup && client.stdin.isTTY) {
       const useLinkedGroup = await client.input.confirm(
-        `Delete microfrontends group "${linkedGroup.group.name}" (linked to ${chalk.bold(linkedProject.name)})?`,
+        `Delete microfrontends group "${linkedGroup.group.name}" (linked to ${chalk.bold(linkedProject!.name)})?`,
         true
       );
       if (useLinkedGroup) {
