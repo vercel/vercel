@@ -12,7 +12,7 @@ describe('login', () => {
 
       client.setArgv(command, '--help');
       const exitCodePromise = login(client, { shouldParseArgs: true });
-      await expect(exitCodePromise).resolves.toEqual(0);
+      await expect(exitCodePromise).resolves.toEqual(2);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
