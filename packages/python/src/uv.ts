@@ -198,12 +198,11 @@ export class UvRunner {
   }
 
   /**
-   * Prune unused cache entries (e.g. stale bucket versions).  Unlike
-   * `--ci`, the plain `prune` keeps pre-built wheels so that subsequent
-   * builds can install from the local cache without re-downloading.
+   * Prune the uv cache for CI: removes pre-built wheels and unzipped source
+   * distributions while retaining source-built wheels.
    */
   async cachePrune(): Promise<void> {
-    const args = ['cache', 'prune'];
+    const args = ['cache', 'prune', '--ci'];
     const pretty = `uv ${args.join(' ')}`;
     debug(`Running "${pretty}"...`);
     try {
