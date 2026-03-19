@@ -92,7 +92,7 @@ export default async function addToGroup(client: Client): Promise<number> {
     | string
     | undefined;
 
-  // Block agents and non-TTY only when adding this project would incur charges
+  // Block agents when adding this project would incur billing charges beyond the free tier.
   const wouldAffectBilling = totalAfter > freeProjects;
   if (wouldAffectBilling) {
     if (client.nonInteractive) {

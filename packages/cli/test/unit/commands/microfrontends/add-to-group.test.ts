@@ -299,8 +299,22 @@ describe('microfrontends add-to-group', () => {
   });
 
   describe('non-TTY', () => {
-    it('errors requiring interactive mode', async () => {
-      setupMocks();
+    it('errors requiring interactive mode when billing affected', async () => {
+      setupMocks({
+        groupsResponse: {
+          groups: [
+            {
+              group: { id: 'group_1', slug: 'my-group', name: 'My Group' },
+              projects: [
+                { id: 'proj_a', name: 'a' },
+                { id: 'proj_b', name: 'b' },
+              ],
+            },
+          ],
+          maxMicrofrontendsGroupsPerTeam: 10,
+          maxMicrofrontendsPerGroup: 20,
+        },
+      });
       client.setArgv('microfrontends', 'add-to-group');
       (client.stdin as any).isTTY = false;
 

@@ -60,6 +60,8 @@ function setupMocks(options: MockOptions = {}) {
   let deleteCalled = false;
   let deleteGroupId: string | undefined;
 
+  client.config.currentTeam = 'team_123';
+
   mockedGetLinkedProject.mockResolvedValue({
     status: 'linked',
     project: {

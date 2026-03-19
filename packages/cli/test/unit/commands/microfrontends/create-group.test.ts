@@ -60,6 +60,8 @@ function setupMocks(options: MockOptions = {}) {
   let postBody: any;
   let postCalled = false;
 
+  client.config.currentTeam = 'team_123';
+
   mockedGetLinkedProject.mockResolvedValue({
     status: 'linked',
     project: {
@@ -408,8 +410,22 @@ describe('microfrontends create-group', () => {
   });
 
   describe('non-TTY', () => {
-    it('errors requiring interactive mode', async () => {
-      setupMocks();
+    it('errors requiring interactive mode when billing affected', async () => {
+      setupMocks({
+        groupsResponse: {
+          groups: [
+            {
+              group: { id: 'group_1', slug: 'existing', name: 'Existing' },
+              projects: [
+                { id: 'proj_a', name: 'a' },
+                { id: 'proj_b', name: 'b' },
+              ],
+            },
+          ],
+          maxMicrofrontendsGroupsPerTeam: 10,
+          maxMicrofrontendsPerGroup: 20,
+        },
+      });
       client.setArgv('microfrontends', 'create-group');
       (client.stdin as any).isTTY = false;
 

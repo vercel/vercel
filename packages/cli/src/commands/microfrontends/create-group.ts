@@ -107,8 +107,7 @@ export default async function createGroup(client: Client): Promise<number> {
     | string
     | undefined;
 
-  // Adding projects to a group may incur billing charges beyond the free tier.
-  // Block agents and non-TTY when billing would be affected.
+  // Block agents when adding projects would incur billing charges beyond the free tier.
   const wouldAffectBilling = existingMfeProjectCount + 1 > freeProjects;
   if (wouldAffectBilling) {
     if (client.nonInteractive) {
