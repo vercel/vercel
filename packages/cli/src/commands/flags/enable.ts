@@ -5,6 +5,11 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { getLinkedProject } from '../../util/projects/link';
 import { getCommandName } from '../../util/pkg-name';
+import {
+  buildCommandWithGlobalFlags,
+  outputAgentError,
+} from '../../util/agent-output';
+import { AGENT_REASON, AGENT_STATUS } from '../../util/agent-output-constants';
 import { getFlag } from '../../util/flags/get-flags';
 import { formatVariantForDisplay } from '../../util/flags/resolve-variant';
 import { updateFlag } from '../../util/flags/update-flag';
@@ -99,6 +104,29 @@ export default async function enable(
       return 0;
     }
 
+    if (!environment && client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.MISSING_ARGUMENTS,
+          message:
+            'Please provide --environment (production, preview, or development) to enable the flag in.',
+          next: [
+            {
+              command: buildCommandWithGlobalFlags(
+                client.argv,
+                `flags enable ${flagArg} --environment <production|preview|development>`
+              ),
+              when: 'enable the flag in a specific environment',
+            },
+          ],
+        },
+        1
+      );
+      return 1;
+    }
+
     environment = await resolveFlagEnvironment(
       client,
       flag,
@@ -139,6 +167,28 @@ export default async function enable(
     );
   } catch (err) {
     output.stopSpinner();
+    const message = err instanceof Error ? err.message : String(err);
+    if (client.nonInteractive && message.startsWith('Invalid environment:')) {
+      outputAgentError(
+        client,
+        {
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.INVALID_ARGUMENTS,
+          message,
+          next: [
+            {
+              command: buildCommandWithGlobalFlags(
+                client.argv,
+                `flags enable ${flagArg} --environment <production|preview|development>`
+              ),
+              when: 'use a valid environment (production, preview, or development)',
+            },
+          ],
+        },
+        1
+      );
+      return 1;
+    }
     printError(err);
     return 1;
   }

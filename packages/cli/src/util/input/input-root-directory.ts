@@ -1,3 +1,4 @@
+import { normalizePath } from '@vercel/build-utils';
 import path from 'path';
 import chalk from 'chalk';
 import { validateRootDirectory } from '../validate-paths';
@@ -42,6 +43,6 @@ export async function inputRootDirectory(
       continue;
     }
 
-    return normal;
+    return normalizePath(normal);
   }
 }

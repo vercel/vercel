@@ -12,3 +12,5 @@ These types are used by `uv-requirements-txt` to parse `--no-binary` and
 host — they exist only to satisfy the upstream parser's type requirements.
 
 Based on uv revision [`35d1e90`](https://github.com/astral-sh/uv/tree/35d1e90961c1c2bd238ee6b015f970c0cf97f5d5/crates/uv-configuration).
+
+Copyright (c) Astral Software Inc. Licensed under Apache-2.0 OR MIT.
