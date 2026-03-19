@@ -130,6 +130,15 @@ export function inferRuntimeFromFramework(
   return undefined;
 }
 
+export function isFrontendFramework(
+  framework: string | null | undefined
+): boolean {
+  if (!framework) {
+    return false;
+  }
+  return !inferRuntimeFromFramework(framework);
+}
+
 export function filterFrameworksByRuntime<T extends { slug?: string | null }>(
   frameworks: readonly T[],
   runtime?: ServiceRuntime

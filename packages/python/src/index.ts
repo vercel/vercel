@@ -36,6 +36,7 @@ import {
 import { PythonDependencyExternalizer } from './dependency-externalizer';
 import { UvRunner, getUvBinaryOrInstall } from './uv';
 import { resolvePythonVersion, pythonVersionString } from './version';
+import { generateProjectManifest } from './diagnostics';
 import { startDevServer } from './start-dev-server';
 import { runPyprojectScript, ensureVenv, createVenvEnv } from './utils';
 import { runQuirks } from './quirks';
@@ -173,6 +174,7 @@ export const build: BuildV3 = async ({
   meta = {},
   config,
   span: parentSpan,
+  service,
 }) => {
   const builderSpan = parentSpan ?? new Span({ name: 'vc.builder' });
   const framework = config?.framework;
@@ -288,9 +290,14 @@ export const build: BuildV3 = async ({
 
   fsFiles = await glob('**', workPath);
 
-  // Create a virtual environment under ".vercel/python/.venv" so dependencies
-  // can be installed via `uv sync` and then vendored into the Lambda bundle.
-  const venvPath = join(workPath, '.vercel', 'python', '.venv');
+  // Create a virtual environment so dependencies can be installed via
+  // `uv sync` and then vendored into the Lambda bundle.  When building as
+  // part of a named service, namespace the venv so multiple services sharing
+  // the same source don't overwrite each other's artifacts in case of custom
+  // installCommand or buildCommand.
+  const venvPath = service?.name
+    ? join(workPath, '.vercel', 'python', 'services', service.name, '.venv')
+    : join(workPath, '.vercel', 'python', '.venv');
   await builderSpan.child('vc.builder.python.venv').trace(async () => {
     await ensureVenv({
       pythonPath: pythonVersion.pythonPath,
@@ -703,6 +710,23 @@ from vercel_runtime.vc_init import vc_handler
     supportsResponseStreaming: true,
   });
 
+  // Write project manifest for diagnostics (best-effort, never fails the build).
+  // Requires uv.lock to resolve versions and dependency graph.
+  if (uvLockPath) {
+    try {
+      await generateProjectManifest({
+        workPath,
+        pythonPackage,
+        pythonVersion,
+        uvLockPath,
+      });
+    } catch (err) {
+      debug(
+        `Failed to write project manifest: ${err instanceof Error ? err.message : String(err)}`
+      );
+    }
+  }
+
   return { output };
 };
 
@@ -745,6 +769,8 @@ export const defaultShouldServe: ShouldServe = ({
 function hasProp(obj: { [path: string]: FileFsRef }, key: string): boolean {
   return Object.hasOwnProperty.call(obj, key);
 }
+
+export { diagnostics } from './diagnostics';
 
 // internal only - expect breaking changes if other packages depend on these exports
 export { installRequirement, installRequirementsFile };

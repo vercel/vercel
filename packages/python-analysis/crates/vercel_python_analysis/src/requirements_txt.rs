@@ -4,6 +4,7 @@ use std::path::PathBuf;
 
 use crate::bindings::{ParsedReqEntry, ParsedRequirementsTxt, ParsedVcsInfo};
 use crate::block_on;
+use crate::pep508::{convert_version_or_url, extract_vcs_info};
 
 pub(crate) fn parse_requirements_txt(
     content: &str,
@@ -88,19 +89,8 @@ fn convert_requirement(
             let name = Some(named.name.to_string());
             let extras: Vec<String> = named.extras.iter().map(|e| e.to_string()).collect();
             let markers = named.marker.contents().map(|m| m.to_string());
-            let (version_spec, url, editable, vcs, given_url) = match &named.version_or_url {
-                Some(uv_pep508::VersionOrUrl::VersionSpecifier(spec)) => {
-                    (Some(spec.to_string()), None, false, None, None)
-                }
-                Some(uv_pep508::VersionOrUrl::Url(verbatim_url)) => {
-                    let given = verbatim_url.verbatim.given().map(String::from);
-                    let url_str = verbatim_url.verbatim.to_string();
-                    let editable = verbatim_url.parsed_url.is_editable();
-                    let vcs = extract_vcs_info(&verbatim_url.parsed_url);
-                    (None, Some(url_str), editable, vcs, given)
-                }
-                None => (None, None, false, None, None),
-            };
+            let (version_spec, url, editable, vcs, given_url) =
+                convert_version_or_url(&named.version_or_url);
             ConvertedReq {
                 pep508,
                 name,
@@ -138,17 +128,6 @@ fn convert_requirement(
                 given_url: given,
             }
         }
-    }
-}
-
-fn extract_vcs_info(parsed_url: &uv_pypi_types::ParsedUrl) -> Option<ParsedVcsInfo> {
-    match parsed_url {
-        uv_pypi_types::ParsedUrl::Git(git) => {
-            let url = git.url.repository().to_string();
-            let rev = git.url.reference().as_str().map(String::from);
-            Some(ParsedVcsInfo { url, rev })
-        }
-        _ => None,
     }
 }
 
