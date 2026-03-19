@@ -10,20 +10,16 @@ import {
 import readStandardInput from '../../util/input/read-standard-input';
 import param from '../../util/output/param';
 import { emoji, prependEmoji } from '../../util/emoji';
-import { isKnownError } from '../../util/env/known-error';
 import {
   getEnvKeyWarnings,
   removePublicPrefix,
   validateEnvValue,
 } from '../../util/env/validate-env';
 import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
-import { isAPIError } from '../../util/errors-ts';
 import { getCustomEnvironments } from '../../util/target/get-custom-environments';
 import output from '../../output-manager';
 import { EnvAddTelemetryClient } from '../../util/telemetry/commands/env/add';
-import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { printError } from '../../util/error';
 import { addSubcommand } from './command';
 import { getLinkedProject } from '../../util/projects/link';
 import { determineAgent } from '@vercel/detect-agent';
@@ -35,6 +31,12 @@ import {
   buildEnvAddCommandWithPreservedArgs,
   getPreservedArgsForEnvAdd,
 } from '../../util/agent-output';
+import {
+  parseEnvArgs,
+  resolveLinkedProjectWithEnvs,
+  resolveEnvValue,
+  handleEnvApiError,
+} from './shared';
 
 /**
  * For use in suggested "next" commands: escapes a value for shell if it contains spaces or quotes.
@@ -71,23 +73,9 @@ function fillEnvAddTemplate(
 }
 
 export default async function add(client: Client, argv: string[]) {
-  let parsedArgs;
   const flagsSpecification = getFlagsSpecification(addSubcommand.options);
-  try {
-    parsedArgs = parseArguments(argv, flagsSpecification);
-  } catch (err) {
-    if (client.nonInteractive) {
-      outputAgentError(
-        client,
-        {
-          status: 'error',
-          reason: 'invalid_arguments',
-          message: err instanceof Error ? err.message : String(err),
-        },
-        1
-      );
-    }
-    printError(err);
+  const parsedArgs = parseEnvArgs(client, argv, flagsSpecification);
+  if (!parsedArgs) {
     return 1;
   }
 
@@ -407,10 +395,14 @@ export default async function add(client: Client, argv: string[]) {
     }
   }
 
-  const link = await getLinkedProject(client);
-  if (link.status === 'error') {
-    return link.exitCode;
-  } else if (link.status === 'not_linked') {
+  const linkResult = await resolveLinkedProjectWithEnvs(
+    client,
+    'vercel-cli:env:add'
+  );
+  if (linkResult.status === 'error') {
+    return linkResult.exitCode;
+  }
+  if (linkResult.status === 'not_linked') {
     if (client.nonInteractive) {
       const preserved = getPreservedArgsForEnvAdd(client.argv);
       const linkPreserved = preserved.filter((a, i) => {
@@ -419,11 +411,11 @@ export default async function add(client: Client, argv: string[]) {
         if (i > 0 && preserved[i - 1] === '--value') return false;
         return true;
       });
-      // Only add scope/project placeholders when project is not linked
       const linkArgv = [
         ...client.argv.slice(0, 2),
         'link',
-        ...(link.status === 'not_linked' ? ['--scope', '<scope>'] : []),
+        '--scope',
+        '<scope>',
         ...linkPreserved,
       ];
       let envAddRetryArgv = client.argv;
@@ -464,22 +456,10 @@ export default async function add(client: Client, argv: string[]) {
         },
         1
       );
-    } else {
-      output.error(
-        `Your codebase isn’t linked to a project on Vercel. Run ${getCommandName(
-          'link'
-        )} to begin.`
-      );
     }
     return 1;
   }
-  client.config.currentTeam =
-    link.org.type === 'team' ? link.org.id : undefined;
-  const { project } = link;
-  const [{ envs }, customEnvironments] = await Promise.all([
-    getEnvRecords(client, project.id, 'vercel-cli:env:add'),
-    getCustomEnvironments(client, project.id),
-  ]);
+  const { project, envs, customEnvironments } = linkResult;
   const matchingEnvs = envs.filter(r => r.key === envName);
   const existingTargets = new Set<string>();
   const existingCustomEnvs = new Set<string>();
@@ -521,43 +501,40 @@ export default async function add(client: Client, argv: string[]) {
   let type: 'encrypted' | 'sensitive' = opts['--sensitive']
     ? 'sensitive'
     : 'encrypted';
-  let envValue: string;
-
-  if (stdInput) {
-    envValue = stdInput;
-  } else if (valueFromFlag !== undefined) {
-    envValue = valueFromFlag;
-  } else {
-    if (client.nonInteractive) {
-      outputActionRequired(client, {
-        status: 'action_required',
-        reason: 'missing_value',
-        message:
-          "In non-interactive mode provide the value via --value or stdin. Example: vercel env add <name> <environment> --value 'value' --yes",
-        next: [
-          {
-            command: buildEnvAddCommandWithPreservedArgs(
-              client.argv,
-              `env add <name> ${getEnvTargetPlaceholder()} --value <value> --yes`
-            ),
-          },
-        ],
-      });
-    }
-    if (type === 'encrypted') {
-      const isSensitive = await client.input.confirm(
-        `Your value will be encrypted. Mark as sensitive?`,
-        false
-      );
-      if (isSensitive) {
-        type = 'sensitive';
+  const envValue = await resolveEnvValue({
+    stdInput,
+    valueFromFlag,
+    client,
+    nonInteractivePayload: {
+      status: 'action_required',
+      reason: 'missing_value',
+      message:
+        "In non-interactive mode provide the value via --value or stdin. Example: vercel env add <name> <environment> --value 'value' --yes",
+      next: [
+        {
+          command: buildEnvAddCommandWithPreservedArgs(
+            client.argv,
+            `env add <name> ${getEnvTargetPlaceholder()} --value <value> --yes`
+          ),
+        },
+      ],
+    },
+    promptFn: async () => {
+      if (type === 'encrypted') {
+        const isSensitive = await client.input.confirm(
+          `Your value will be encrypted. Mark as sensitive?`,
+          false
+        );
+        if (isSensitive) {
+          type = 'sensitive';
+        }
       }
-    }
-    envValue = await client.input.password({
-      message: `What's the value of ${envName}?`,
-      mask: true,
-    });
-  }
+      return client.input.password({
+        message: `What's the value of ${envName}?`,
+        mask: true,
+      });
+    },
+  });
 
   const { finalValue } = await validateEnvValue({
     envName,
@@ -659,27 +636,7 @@ export default async function add(client: Client, argv: string[]) {
       envGitBranch
     );
   } catch (err: unknown) {
-    if (client.nonInteractive && isAPIError(err)) {
-      const reason =
-        (err as { slug?: string }).slug ||
-        (err.serverMessage?.toLowerCase().includes('branch')
-          ? 'branch_not_found'
-          : 'api_error');
-      outputAgentError(
-        client,
-        {
-          status: 'error',
-          reason,
-          message: err.serverMessage,
-        },
-        1
-      );
-    }
-    if (isAPIError(err) && isKnownError(err)) {
-      output.error(err.serverMessage);
-      return 1;
-    }
-    throw err;
+    return handleEnvApiError(client, err);
   }
 
   output.print(

@@ -2,24 +2,17 @@ import chalk from 'chalk';
 import type Client from '../../util/client';
 import stamp from '../../util/output/stamp';
 import updateEnvRecord from '../../util/env/update-env-record';
-import getEnvRecords from '../../util/env/get-env-records';
 import { getEnvTargetPlaceholder } from '../../util/env/env-target';
 import readStandardInput from '../../util/input/read-standard-input';
 import param from '../../util/output/param';
 import { emoji, prependEmoji } from '../../util/emoji';
-import { isKnownError } from '../../util/env/known-error';
 import { validateEnvValue } from '../../util/env/validate-env';
 import formatEnvironments from '../../util/env/format-environments';
 import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
-import { isAPIError } from '../../util/errors-ts';
-import { getCustomEnvironments } from '../../util/target/get-custom-environments';
 import output from '../../output-manager';
 import { EnvUpdateTelemetryClient } from '../../util/telemetry/commands/env/update';
-import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { printError } from '../../util/error';
 import { updateSubcommand } from './command';
-import { getLinkedProject } from '../../util/projects/link';
 import type { ProjectEnvVariable } from '@vercel-internals/types';
 import {
   outputActionRequired,
@@ -28,25 +21,17 @@ import {
   buildEnvUpdateCommandWithPreservedArgs,
   getPreservedArgsForEnvUpdate,
 } from '../../util/agent-output';
+import {
+  parseEnvArgs,
+  resolveLinkedProjectWithEnvs,
+  resolveEnvValue,
+  handleEnvApiError,
+} from './shared';
 
 export default async function update(client: Client, argv: string[]) {
-  let parsedArgs;
   const flagsSpecification = getFlagsSpecification(updateSubcommand.options);
-  try {
-    parsedArgs = parseArguments(argv, flagsSpecification);
-  } catch (err) {
-    if (client.nonInteractive) {
-      outputAgentError(
-        client,
-        {
-          status: 'error',
-          reason: 'invalid_arguments',
-          message: err instanceof Error ? err.message : String(err),
-        },
-        1
-      );
-    }
-    printError(err);
+  const parsedArgs = parseEnvArgs(client, argv, flagsSpecification);
+  if (!parsedArgs) {
     return 1;
   }
 
@@ -170,10 +155,14 @@ export default async function update(client: Client, argv: string[]) {
     }
   }
 
-  const link = await getLinkedProject(client);
-  if (link.status === 'error') {
-    return link.exitCode;
-  } else if (link.status === 'not_linked') {
+  const linkResult = await resolveLinkedProjectWithEnvs(
+    client,
+    'vercel-cli:env:update'
+  );
+  if (linkResult.status === 'error') {
+    return linkResult.exitCode;
+  }
+  if (linkResult.status === 'not_linked') {
     if (client.nonInteractive) {
       const preserved = getPreservedArgsForEnvUpdate(client.argv).filter(
         a => a !== '--yes' && a !== '-y'
@@ -201,20 +190,9 @@ export default async function update(client: Client, argv: string[]) {
         1
       );
     }
-    output.error(
-      `Your codebase isn't linked to a project on Vercel. Run ${getCommandName(
-        'link'
-      )} to begin.`
-    );
     return 1;
   }
-  client.config.currentTeam =
-    link.org.type === 'team' ? link.org.id : undefined;
-  const { project } = link;
-  const [{ envs }, customEnvironments] = await Promise.all([
-    getEnvRecords(client, project.id, 'vercel-cli:env:update'),
-    getCustomEnvironments(client, project.id),
-  ]);
+  const { project, envs, customEnvironments } = linkResult;
 
   const matchingEnvs = envs.filter(r => r.key === envName);
 
@@ -298,7 +276,7 @@ export default async function update(client: Client, argv: string[]) {
       }
       // Multiple matches, let user choose
       const choices = filteredEnvs.map((env, index) => {
-        const targets = formatEnvironments(link, env, customEnvironments);
+        const targets = formatEnvironments(linkResult, env, customEnvironments);
         return {
           name: targets,
           value: index,
@@ -336,7 +314,7 @@ export default async function update(client: Client, argv: string[]) {
     }
     // Multiple environments without specific target, let user choose
     const choices = matchingEnvs.map((env, index) => {
-      const targets = formatEnvironments(link, env, customEnvironments);
+      const targets = formatEnvironments(linkResult, env, customEnvironments);
       return {
         name: targets,
         value: index,
@@ -351,42 +329,34 @@ export default async function update(client: Client, argv: string[]) {
     selectedEnv = matchingEnvs[selectedIndex];
   }
 
-  let envValue: string;
-
-  if (stdInput) {
-    envValue = stdInput;
-  } else if (valueFromFlag !== undefined) {
-    envValue = valueFromFlag;
-  } else {
-    if (client.nonInteractive) {
-      const branchPart =
-        envTargetArg === 'preview' || envTargetArg === 'development'
-          ? ' <gitbranch>'
-          : '';
-      const targetPart = envTargetArg || getEnvTargetPlaceholder();
-      outputActionRequired(
-        client,
+  const branchPart =
+    envTargetArg === 'preview' || envTargetArg === 'development'
+      ? ' <gitbranch>'
+      : '';
+  const targetPart = envTargetArg || getEnvTargetPlaceholder();
+  const envValue = await resolveEnvValue({
+    stdInput,
+    valueFromFlag,
+    client,
+    nonInteractivePayload: {
+      status: 'action_required',
+      reason: 'missing_value',
+      message:
+        "In non-interactive mode provide the new value via --value or stdin. Example: vercel env update <name> <environment> --value 'value' --yes",
+      next: [
         {
-          status: 'action_required',
-          reason: 'missing_value',
-          message:
-            "In non-interactive mode provide the new value via --value or stdin. Example: vercel env update <name> <environment> --value 'value' --yes",
-          next: [
-            {
-              command: buildEnvUpdateCommandWithPreservedArgs(
-                client.argv,
-                `env update ${envName} ${targetPart}${branchPart} --value <value> --yes`
-              ),
-            },
-          ],
+          command: buildEnvUpdateCommandWithPreservedArgs(
+            client.argv,
+            `env update ${envName} ${targetPart}${branchPart} --value <value> --yes`
+          ),
         },
-        1
-      );
-    }
-    envValue = await client.input.text({
-      message: `What's the new value of ${envName}?`,
-    });
-  }
+      ],
+    },
+    promptFn: () =>
+      client.input.text({
+        message: `What's the new value of ${envName}?`,
+      }),
+  });
 
   const skipConfirm =
     opts['--yes'] || !!stdInput || valueFromFlag !== undefined;
@@ -417,7 +387,7 @@ export default async function update(client: Client, argv: string[]) {
       );
     }
     const currentTargets = formatEnvironments(
-      link,
+      linkResult,
       selectedEnv,
       customEnvironments
     );
@@ -454,27 +424,7 @@ export default async function update(client: Client, argv: string[]) {
       selectedEnv.gitBranch || ''
     );
   } catch (err: unknown) {
-    if (client.nonInteractive && isAPIError(err)) {
-      const reason =
-        (err as { slug?: string }).slug ||
-        (err.serverMessage?.toLowerCase().includes('branch')
-          ? 'branch_not_found'
-          : 'api_error');
-      outputAgentError(
-        client,
-        {
-          status: 'error',
-          reason,
-          message: err.serverMessage,
-        },
-        1
-      );
-    }
-    if (isAPIError(err) && isKnownError(err)) {
-      output.error(err.serverMessage);
-      return 1;
-    }
-    throw err;
+    return handleEnvApiError(client, err);
   }
 
   output.print(
