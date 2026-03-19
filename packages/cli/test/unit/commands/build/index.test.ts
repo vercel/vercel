@@ -5,6 +5,7 @@ import { getWriteableDirectory } from '@vercel/build-utils';
 import build from '../../../../src/commands/build';
 import cliPkg from '../../../../src/util/pkg';
 import { client } from '../../../mocks/client';
+import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
 import { defaultProject, useProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
@@ -1500,7 +1501,7 @@ describe.skipIf(flakey)('build', () => {
   );
 
   it('should build with `repo.json` link', async () => {
-    const cwd = fixture('../../monorepo-link');
+    const cwd = setupUnitFixture('monorepo-link');
 
     useUser();
     useTeams('team_dummy');
