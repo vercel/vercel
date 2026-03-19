@@ -1614,20 +1614,40 @@ describe.skipIf(flakey)('build', () => {
     });
   });
 
-  it('should emit flags-definitions module when VERCEL_EXPERIMENTAL_EMBED_FLAG_DEFINITIONS=1', async () => {
-    const cwd = fixture('static');
-    const definitionsDir = join(
-      cwd,
-      'node_modules',
-      '@vercel',
-      'flags-definitions'
-    );
+  describe('flags-definitions', () => {
+    beforeEach(() => {
+      vi.stubEnv('VERCEL_EXPERIMENTAL_EMBED_FLAG_DEFINITIONS', '1');
+      vi.stubEnv('FLAGS', 'vf_test_fake_sdk_key_for_testing');
 
-    client.cwd = cwd;
-    client.setArgv('build', '--yes');
-    const prev = process.env.VERCEL_EXPERIMENTAL_EMBED_FLAG_DEFINITIONS;
-    try {
-      process.env.VERCEL_EXPERIMENTAL_EMBED_FLAG_DEFINITIONS = '1';
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async input => {
+        const url = typeof input === 'string' ? input : input.toString();
+        if (url === 'https://flags.vercel.com/v1/datafile') {
+          return new Response(JSON.stringify({ flags: [] }), {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          });
+        }
+        throw new Error(`Unexpected fetch call: ${url}`);
+      });
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+      vi.unstubAllEnvs();
+    });
+
+    it('should emit flags-definitions module when VERCEL_EXPERIMENTAL_EMBED_FLAG_DEFINITIONS=1', async () => {
+      const cwd = fixture('static');
+      const definitionsDir = join(
+        cwd,
+        'node_modules',
+        '@vercel',
+        'flags-definitions'
+      );
+
+      client.cwd = cwd;
+      client.setArgv('build', '--yes');
+
       const exitCode = await build(client);
       expect(exitCode).toEqual(0);
 
@@ -1641,13 +1661,7 @@ describe.skipIf(flakey)('build', () => {
         'utf8'
       );
       expect(indexJs).toContain('export function get(hashedSdkKey)');
-    } finally {
-      if (prev !== undefined) {
-        process.env.VERCEL_EXPERIMENTAL_EMBED_FLAG_DEFINITIONS = prev;
-      } else {
-        delete process.env.VERCEL_EXPERIMENTAL_EMBED_FLAG_DEFINITIONS;
-      }
-    }
+    });
   });
 
   it('should not apply framework `defaultRoutes` when build command outputs Build Output API', async () => {
