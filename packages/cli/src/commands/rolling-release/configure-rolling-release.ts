@@ -283,6 +283,14 @@ export async function buildConfigurePayload({
     return { exitCode: 1 };
   }
 
+  if (client.nonInteractive) {
+    output.error(
+      'In non-interactive mode use --enable or --disable with --advancement-type and --stage as needed. ' +
+        'Example: vercel rolling-release configure --enable --advancement-type=automatic --stage=10,5m --stage=50,10m'
+    );
+    return { exitCode: 1 };
+  }
+
   if (client.stdin.isTTY) {
     return interactiveConfigure(client);
   }

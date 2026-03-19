@@ -1,5 +1,33 @@
 # @vercel/go
 
+## 3.4.5
+
+### Patch Changes
+
+- chore(deps-dev): bump tar from 7.5.7 to 7.5.11 ([#15492](https://github.com/vercel/vercel/pull/15492))
+
+## 3.4.4
+
+### Patch Changes
+
+- [go] versions 1.26 + 1.25 ([#15432](https://github.com/vercel/vercel/pull/15432))
+
+## 3.4.3
+
+### Patch Changes
+
+- Rename fetch to nodeFetch in cases where it is an import from node-fetch ([#15234](https://github.com/vercel/vercel/pull/15234))
+
+## 3.4.2
+
+### Patch Changes
+
+- Fix service route-prefix stripping for standalone Go services in services mode. ([#15120](https://github.com/vercel/vercel/pull/15120))
+
+  This updates Go's executable bootstrap to strip generated service route prefixes in production and adds a Go dev wrapper (`vc_init_dev.go`) so standalone Go dev also strips generated service route prefixes before forwarding requests to the user app.
+
+  Update the `09-services-frontend-backend-go-zc` e2e fixture backend from Ruby/Sinatra to Go so it exercises Go services detection and routing in zero-config services mode.
+
 ## 3.4.1
 
 ### Patch Changes

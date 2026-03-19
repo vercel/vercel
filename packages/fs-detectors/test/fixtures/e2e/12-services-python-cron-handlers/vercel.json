@@ -1,0 +1,23 @@
+{
+  "uploadNowJson": true,
+  "projectSettings": {
+    "framework": "services"
+  },
+  "experimentalServices": {
+    "web": {
+      "framework": "fastapi",
+      "entrypoint": "server.py",
+      "routePrefix": "/"
+    },
+    "sync-cleanup": {
+      "type": "cron",
+      "entrypoint": "jobs.cleanup:sync_handler",
+      "schedule": "0 0 * * *"
+    },
+    "async-cleanup": {
+      "type": "cron",
+      "entrypoint": "jobs.async_cleanup:async_handler",
+      "schedule": "0 6 * * *"
+    }
+  }
+}

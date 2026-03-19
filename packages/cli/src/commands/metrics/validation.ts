@@ -1,4 +1,6 @@
 import type { ValidationResult, ValidatedResult } from './types';
+import type { MetricsAggregation } from './schema-data';
+import { validateAllProjectMutualExclusivity } from '../../util/command-validation';
 import {
   getEventNames,
   getEvent,
@@ -39,10 +41,11 @@ export function validateAggregation(
   event: string,
   measure: string,
   aggregation: string
-): ValidationResult {
+): ValidatedResult<MetricsAggregation> {
   const aggs = getAggregations(event, measure);
-  if (aggs.includes(aggregation)) {
-    return { valid: true };
+  const found = aggs.find(agg => agg === aggregation);
+  if (found) {
+    return { valid: true, value: found };
   }
   return {
     valid: false,
@@ -84,14 +87,7 @@ export function validateMutualExclusivity(
   all: boolean | undefined,
   project: string | undefined
 ): ValidationResult {
-  if (all && project) {
-    return {
-      valid: false,
-      code: 'MUTUAL_EXCLUSIVITY',
-      message: 'Cannot specify both --all and --project. Use one or the other.',
-    };
-  }
-  return { valid: true };
+  return validateAllProjectMutualExclusivity(all, project);
 }
 
 export function validateRequiredEvent(

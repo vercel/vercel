@@ -5,11 +5,10 @@
   "license": "Apache-2.0",
   "packageManager": "pnpm@8.3.1",
   "devDependencies": {
+    "@biomejs/biome": "2.4.4",
     "@changesets/cli": "2.27.8",
     "@svitejs/changesets-changelog-github-compact": "1.1.0",
     "@types/node": "20.11.0",
-    "@typescript-eslint/eslint-plugin": "5.21.0",
-    "@typescript-eslint/parser": "5.21.0",
     "@vercel/build-utils": "*",
     "@vercel/style-guide": "4.0.2",
     "async-retry": "1.2.3",
@@ -17,9 +16,6 @@
     "create-svelte": "2.0.1",
     "dot": "1.1.3",
     "esbuild": "0.19.2",
-    "eslint": "8.24.0",
-    "eslint-config-prettier": "8.5.0",
-    "eslint-plugin-jest": "26.1.5",
     "execa": "3.2.0",
     "fs-extra": "11.1.0",
     "glob": "10.2.3",
@@ -50,8 +46,9 @@
     "test-cli": "node utils/gen.js && turbo --no-update-notifier run test-cli",
     "test-e2e": "node utils/gen.js && turbo --no-update-notifier run test-e2e",
     "test-dev": "node utils/gen.js && turbo --no-update-notifier run test-dev",
-    "lint": "eslint . --cache --ext .ts,.js",
-    "prettier-check": "prettier --check .",
+    "lint": "biome lint api internals packages test utils",
+    "format": "biome format --write api internals packages test utils",
+    "format:check": "biome format api internals packages test utils",
     "prepare": "husky install",
     "pack": "cd utils && node -r ts-eager/register ./pack.ts",
     "ci:version": "changeset version && node utils/sync-python-version.js && uv lock && pnpm install --no-frozen-lockfile",
@@ -60,12 +57,12 @@
   },
   "lint-staged": {
     "./{*,{api,internals,packages,test,utils}/**/*}.{js,ts}": [
-      "prettier --write",
-      "eslint",
+      "biome format --write --no-errors-on-unmatched",
+      "biome lint --no-errors-on-unmatched",
       "git add"
     ],
-    "*.{json,md}": [
-      "prettier --write",
+    "./{*,{api,internals,packages,test,utils}/**/*}.json": [
+      "biome format --write --no-errors-on-unmatched",
       "git add"
     ]
   },
@@ -73,104 +70,6 @@
     "trailingComma": "es5",
     "singleQuote": true,
     "arrowParens": "avoid"
-  },
-  "eslintConfig": {
-    "root": true,
-    "parser": "@typescript-eslint/parser",
-    "parserOptions": {
-      "ecmaVersion": 2018,
-      "sourceType": "module",
-      "modules": true
-    },
-    "plugins": [
-      "jest"
-    ],
-    "extends": [
-      "eslint:recommended",
-      "plugin:@typescript-eslint/eslint-recommended",
-      "plugin:@typescript-eslint/recommended",
-      "prettier"
-    ],
-    "env": {
-      "node": true,
-      "jest": true,
-      "es6": true
-    },
-    "rules": {
-      "no-restricted-syntax": [
-        "warn",
-        "WithStatement",
-        {
-          "message": "substr() is deprecated, use slice() or substring() instead",
-          "selector": "MemberExpression > Identifier[name='substr']"
-        }
-      ],
-      "no-dupe-keys": 2,
-      "require-atomic-updates": 0,
-      "@typescript-eslint/ban-ts-comment": 0,
-      "@typescript-eslint/camelcase": 0,
-      "@typescript-eslint/explicit-module-boundary-types": 0,
-      "@typescript-eslint/no-empty-function": 0,
-      "@typescript-eslint/no-explicit-any": 0,
-      "@typescript-eslint/no-non-null-assertion": 0,
-      "@typescript-eslint/no-unused-vars": 2,
-      "@typescript-eslint/no-use-before-define": 0,
-      "@typescript-eslint/no-var-requires": 0,
-      "jest/no-disabled-tests": 2,
-      "jest/no-focused-tests": 2
-    },
-    "overrides": [
-      {
-        "files": [
-          "packages/cli/src/commands/**/*"
-        ],
-        "excludedFiles": [
-          "**/index.ts",
-          "**/blob/store.ts"
-        ],
-        "rules": {
-          "no-restricted-syntax": [
-            "error",
-            {
-              "selector": "Property[key.name='permissive'][value.value=true]",
-              "message": "Do not use 'permissive: true' in leaf commands. Unknown flags will be treated as arguments, causing misleading errors. Only index.ts routing files should use permissive mode."
-            }
-          ]
-        }
-      },
-      {
-        "files": [
-          "packages/cli/**/*"
-        ],
-        "rules": {
-          "lines-between-class-members": 0,
-          "no-async-promise-executor": 0,
-          "no-control-regex": 0,
-          "no-empty": 0,
-          "prefer-destructuring": 0,
-          "@typescript-eslint/ban-types": 0,
-          "@typescript-eslint/consistent-type-assertions": 0,
-          "@typescript-eslint/member-delimiter-style": 0,
-          "@typescript-eslint/no-empty-function": 0,
-          "@typescript-eslint/no-explicit-any": 0,
-          "@typescript-eslint/no-inferrable-types": 0,
-          "no-console": 2,
-          "@typescript-eslint/consistent-type-imports": "error",
-          "prefer-const": "error"
-        }
-      },
-      {
-        "files": [
-          "packages/client/**/*"
-        ],
-        "rules": {
-          "prefer-const": 0,
-          "require-atomic-updates": 0,
-          "@typescript-eslint/ban-ts-ignore": 0,
-          "@typescript-eslint/no-explicit-any": 0
-        }
-      }
-    ]
   },
   "pnpm": {
     "neverBuiltDependencies": []

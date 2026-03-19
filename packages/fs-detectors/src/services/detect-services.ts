@@ -1,4 +1,4 @@
-import type { Route } from '@vercel/routing-utils';
+import type { HasField, Route } from '@vercel/routing-utils';
 import {
   getOwnershipGuard,
   normalizeRoutePrefix,
@@ -7,11 +7,17 @@ import {
 import {
   type DetectServicesOptions,
   type DetectServicesResult,
-  type ResolvedService,
+  type InferredServicesResult,
+  type ResolvedServicesResult,
+  type Service,
+  type ServicesConfig,
   type ServicesRoutes,
 } from './types';
 import {
+  getInternalServiceCronPath,
   getInternalServiceFunctionPath,
+  getInternalServiceWorkerPath,
+  isFrontendFramework,
   isRouteOwningBuilder,
   isStaticBuild,
   readVercelConfig,
@@ -19,10 +25,70 @@ import {
 import { resolveAllConfiguredServices } from './resolve';
 import { autoDetectServices } from './auto-detect';
 
+// don't apply subdomain rewrites on preview urls
+const PREVIEW_DOMAIN_MISSING: HasField = [
+  { type: 'host', value: { suf: '.vercel.app' } },
+  { type: 'host', value: { suf: '.vercel.dev' } },
+];
+
+function emptyRoutes(): ServicesRoutes {
+  return {
+    hostRewrites: [],
+    rewrites: [],
+    defaults: [],
+    crons: [],
+    workers: [],
+  };
+}
+
+function withResolvedResult(
+  resolved: ResolvedServicesResult,
+  inferred: InferredServicesResult | null = null
+): DetectServicesResult {
+  return {
+    services: resolved.services,
+    source: resolved.source,
+    routes: resolved.routes,
+    errors: resolved.errors,
+    warnings: resolved.warnings,
+    resolved,
+    inferred,
+  };
+}
+
+/*
+ * This lets us define the conventions of how we'd like the services configuration
+ * to look like.
+ */
+function toInferredLayoutConfig(services: ServicesConfig): ServicesConfig {
+  const inferredConfig: ServicesConfig = {};
+
+  for (const [name, service] of Object.entries(services)) {
+    const serviceConfig: ServicesConfig[string] = {};
+
+    if (typeof service.entrypoint === 'string') {
+      serviceConfig.entrypoint = service.entrypoint;
+    }
+
+    if (typeof service.routePrefix === 'string') {
+      serviceConfig.routePrefix = service.routePrefix;
+    }
+
+    // Keep the framework setting only for frontend services
+    if (isFrontendFramework(service.framework)) {
+      serviceConfig.framework = service.framework;
+    }
+
+    inferredConfig[name] = serviceConfig;
+  }
+
+  return inferredConfig;
+}
+
 /**
  * Detect and resolve services within a project.
  *
- * Reads vercel.json and resolves `experimentalServices` into ResolvedService objects.
+ * Reads vercel.json and resolves `experimentalServices` into Service objects.
  * Returns an error if no services are configured.
  */
 export async function detectServices(
@@ -38,12 +104,13 @@ export async function detectServices(
     await readVercelConfig(scopedFs);
 
   if (configError) {
-    return {
+    return withResolvedResult({
       services: [],
-      routes: { rewrites: [], defaults: [], crons: [], workers: [] },
+      source: 'configured',
+      routes: emptyRoutes(),
       errors: [configError],
       warnings: [],
-    };
+    });
   }
 
   const configuredServices = vercelConfig?.experimentalServices;
@@ -55,12 +122,13 @@ export async function detectServices(
     const autoResult = await autoDetectServices({ fs: scopedFs });
 
     if (autoResult.errors.length > 0) {
-      return {
+      return withResolvedResult({
         services: [],
-        routes: { rewrites: [], defaults: [], crons: [], workers: [] },
+        source: 'auto-detected',
+        routes: emptyRoutes(),
         errors: autoResult.errors,
         warnings: [],
-      };
+      });
     }
 
     if (autoResult.services) {
@@ -70,17 +138,37 @@ export async function detectServices(
         'generated'
       );
       const routes = generateServicesRoutes(result.services);
-      return {
+      const resolved: ResolvedServicesResult = {
         services: result.services,
+        source: 'auto-detected',
         routes,
         errors: result.errors,
         warnings: [],
       };
+      const rootWebFrameworkServices = result.services.filter(
+        service =>
+          service.type === 'web' &&
+          service.routePrefix === '/' &&
+          typeof service.framework === 'string'
+      );
+      const inferred =
+        result.errors.length === 0 &&
+        rootWebFrameworkServices.length === 1 &&
+        result.services.length > 1
+          ? {
+              source: 'layout' as const,
+              config: toInferredLayoutConfig(autoResult.services),
+              services: result.services,
+              warnings: [],
+            }
+          : null;
+      return withResolvedResult(resolved, inferred);
     }
 
-    return {
+    return withResolvedResult({
       services: [],
-      routes: { rewrites: [], defaults: [], crons: [], workers: [] },
+      source: 'auto-detected',
+      routes: emptyRoutes(),
       errors: [
         {
           code: 'NO_SERVICES_CONFIGURED',
@@ -89,7 +177,7 @@ export async function detectServices(
         },
       ],
       warnings: [],
-    };
+    });
   }
 
   // Resolve configured services from vercel.json
@@ -102,12 +190,13 @@ export async function detectServices(
   // Generate routes
   const routes = generateServicesRoutes(result.services);
 
-  return {
+  return withResolvedResult({
     services: result.services,
+    source: 'configured',
     routes,
     errors: result.errors,
     warnings: [],
-  };
+  });
 }
 
 /**
@@ -130,11 +219,16 @@ export async function detectServices(
  * Builders that provide their own routing (`@vercel/next`, `@vercel/backends`,
  * Build Output API builders, etc.) are not given synthetic routes here.
  *
- * - Cron/Worker services: TODO - internal routes under `/_svc/`
+ * - Worker services:
+ *   Internal queue callback routes under `/_svc/{serviceName}/workers/{entry}/{handler}`
+ *   that rewrite to `/_svc/{serviceName}/index`.
+ *
+ * - Cron services:
+ *   Internal cron callback routes under `/_svc/{serviceName}/crons/{entry}/{handler}`
+ *   that rewrite to `/_svc/{serviceName}/index`.
  */
-export function generateServicesRoutes(
-  services: ResolvedService[]
-): ServicesRoutes {
+export function generateServicesRoutes(services: Service[]): ServicesRoutes {
+  const hostRewrites: Route[] = [];
   const rewrites: Route[] = [];
   const defaults: Route[] = [];
   const crons: Route[] = [];
@@ -144,17 +238,40 @@ export function generateServicesRoutes(
   // so more specific routes match before broader ones.
   const sortedWebServices = services
     .filter(
-      (s): s is ResolvedService & { routePrefix: string } =>
+      (s): s is Service & { routePrefix: string } =>
         s.type === 'web' && typeof s.routePrefix === 'string'
     )
     .sort((a, b) => b.routePrefix.length - a.routePrefix.length);
 
   const allWebPrefixes = getWebRoutePrefixes(sortedWebServices);
+  const explicitHostPrefixGuard =
+    getExplicitHostPrefixNegativeLookahead(allWebPrefixes);
 
   for (const service of sortedWebServices) {
     const { routePrefix } = service;
     const normalizedPrefix = routePrefix.slice(1); // Strip leading /
     const ownershipGuard = getOwnershipGuard(routePrefix, allWebPrefixes);
+    const hostCondition = getHostCondition(service);
+
+    if (hostCondition && routePrefix !== '/') {
+      const normalizedRoutePrefix = normalizeRoutePrefix(routePrefix);
+      hostRewrites.push({
+        src: '^/$',
+        dest: normalizedRoutePrefix,
+        has: hostCondition,
+        missing: PREVIEW_DOMAIN_MISSING,
+        check: true,
+      });
+      hostRewrites.push({
+        // Preserve explicit service prefixes so canonical paths like /_/api
+        // keep routing to their target service even on another service's host.
+        src: `^/${explicitHostPrefixGuard}(.*)$`,
+        dest: `${normalizedRoutePrefix}/$1`,
+        has: hostCondition,
+        missing: PREVIEW_DOMAIN_MISSING,
+        check: true,
+      });
+    }
 
     // Route-owning builders (e.g., Next.js, @vercel/backends) produce their
     // own route tables. Skip synthetic route generation for them.
@@ -200,17 +317,48 @@ export function generateServicesRoutes(
           check: true,
         });
       }
-    } else {
-      // Non-static services without an inferred runtime are expected to provide
-      // their own routing (Next.js, @vercel/backends, Build Output API builders, etc.).
-      continue;
     }
   }
 
-  return { rewrites, defaults, crons, workers };
+  const workerServices = services.filter(s => s.type === 'worker');
+  for (const service of workerServices) {
+    const workerEntrypoint =
+      service.entrypoint || service.builder.src || 'index';
+    const workerPath = getInternalServiceWorkerPath(
+      service.name,
+      workerEntrypoint
+    );
+    const functionPath = getInternalServiceFunctionPath(service.name);
+    workers.push({
+      src: `^${escapeRegex(workerPath)}$`,
+      dest: functionPath,
+      check: true,
+    });
+  }
+
+  const cronServices = services.filter(s => s.type === 'cron');
+  for (const service of cronServices) {
+    const cronEntrypoint = service.entrypoint || service.builder.src || 'index';
+    const cronPath = getInternalServiceCronPath(
+      service.name,
+      cronEntrypoint,
+      service.handlerFunction || 'cron'
+    );
+    const functionPath = getInternalServiceFunctionPath(service.name);
+    crons.push({
+      src: `^${escapeRegex(cronPath)}$`,
+      dest: functionPath,
+      check: true,
+    });
+  }
+  return { hostRewrites, rewrites, defaults, crons, workers };
 }
 
-function getWebRoutePrefixes(services: ResolvedService[]): string[] {
+function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function getWebRoutePrefixes(services: Service[]): string[] {
   const unique = new Set<string>();
   for (const service of services) {
     if (service.type !== 'web' || typeof service.routePrefix !== 'string') {
@@ -219,4 +367,34 @@ function getWebRoutePrefixes(services: ResolvedService[]): string[] {
     unique.add(normalizeRoutePrefix(service.routePrefix));
   }
   return Array.from(unique);
+}
+
+function getExplicitHostPrefixNegativeLookahead(
+  routePrefixes: string[]
+): string {
+  const explicitPrefixes = routePrefixes
+    .map(normalizeRoutePrefix)
+    .filter(prefix => prefix !== '/')
+    .sort((a, b) => b.length - a.length)
+    .map(prefix => escapeRegex(prefix.slice(1)));
+
+  if (explicitPrefixes.length === 0) {
+    return '';
+  }
+
+  if (explicitPrefixes.length === 1) {
+    return `(?!${explicitPrefixes[0]}(?:/|$))`;
+  }
+
+  return `(?!(?:${explicitPrefixes.join('|')})(?:/|$))`;
+}
+
+function getHostCondition(service: Service): HasField | undefined {
+  if (service.type !== 'web') {
+    return undefined;
+  }
+  if (typeof service.subdomain === 'string' && service.subdomain.length > 0) {
+    return [{ type: 'host', value: { pre: `${service.subdomain}.` } }];
+  }
+  return undefined;
 }

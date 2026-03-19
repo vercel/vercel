@@ -373,7 +373,6 @@ export async function ensureRepoLink(
   } else {
     throw new Error('Could not determine Git repository root directory');
   }
-  // eslint-disable-next-line prefer-const
   let { rootPath, repoConfig, repoConfigPath } = repoLink;
 
   if (overwrite || !repoConfig) {

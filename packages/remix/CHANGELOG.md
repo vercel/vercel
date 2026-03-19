@@ -1,5 +1,22 @@
 # @vercel/remix-builder
 
+## 5.7.0
+
+### Minor Changes
+
+- Support `maxDuration: 'max'` to allow the backend to resolve the maximum duration based on account plan type ([#15217](https://github.com/vercel/vercel/pull/15217))
+
+### Patch Changes
+
+- Updated dependencies [[`8a3558f680d592b4ea47ac7e48c99145d6368941`](https://github.com/vercel/vercel/commit/8a3558f680d592b4ea47ac7e48c99145d6368941)]:
+  - @vercel/static-config@3.2.0
+
+## 5.6.0
+
+### Minor Changes
+
+- [remix] Support future.v8_middleware option ([#15189](https://github.com/vercel/vercel/pull/15189))
+
 ## 5.5.10
 
 ### Patch Changes

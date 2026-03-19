@@ -1,5 +1,57 @@
 # @vercel/python-analysis
 
+## 0.10.0
+
+### Minor Changes
+
+- Add requirements.txt parsing via `uv-requirements-txt` ([#15498](https://github.com/vercel/vercel/pull/15498))
+
+### Patch Changes
+
+- Stub unicode/IDNA crates to reduce WASM binary size ([#15499](https://github.com/vercel/vercel/pull/15499))
+
+- Force-bundle packages without compatible wheels instead of failing ([#15587](https://github.com/vercel/vercel/pull/15587))
+
+- replace `pip-requirements-js` with WASM-based uv parser ([#15513](https://github.com/vercel/vercel/pull/15513))
+
+## 0.9.1
+
+### Patch Changes
+
+- Update `pip-requirements-js` to include fixes for grouped `requirements.txt` environment markers and add regression coverage for Poetry-style marker expressions. ([#15422](https://github.com/vercel/vercel/pull/15422))
+
+## 0.9.0
+
+### Minor Changes
+
+- [python] add support for module-based entrypoints for cron jobs ([#15393](https://github.com/vercel/vercel/pull/15393))
+
+- For the django frontend, dynamically load settings.py instead of parsing it ([#15367](https://github.com/vercel/vercel/pull/15367))
+
+## 0.8.2
+
+### Patch Changes
+
+- Consolidate Python version resolution into `python-analysis` ([#15368](https://github.com/vercel/vercel/pull/15368))
+
+## 0.8.1
+
+### Patch Changes
+
+- Add `prisma-client-py` support and the quirks system ([#15289](https://github.com/vercel/vercel/pull/15289))
+
+## 0.8.0
+
+### Minor Changes
+
+- Find entrypoints for django projects. ([#15167](https://github.com/vercel/vercel/pull/15167))
+
+## 0.7.0
+
+### Minor Changes
+
+- Add django experimental framework. ([#15196](https://github.com/vercel/vercel/pull/15196))
+
 ## 0.6.0
 
 ### Minor Changes

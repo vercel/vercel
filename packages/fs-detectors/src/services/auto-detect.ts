@@ -1,6 +1,6 @@
 import type { Framework } from '@vercel/frameworks';
 import { detectFrameworks } from '../detect-framework';
-import frameworkList from '@vercel/frameworks';
+import { frameworkList } from '@vercel/frameworks';
 import type { DetectorFilesystem } from '../detectors/filesystem';
 import type { ExperimentalServices, ServiceDetectionError } from './types';
 
@@ -19,6 +19,12 @@ const BACKEND_DIR = 'backend';
 const SERVICES_DIR = 'services';
 
 const FRONTEND_LOCATIONS = [FRONTEND_DIR, APPS_WEB_DIR];
+// Runtime frameworks, e.g. Python, Node, Ruby, etc. are currently marked experimental,
+// but service auto-detection should still consider them.
+const DETECTION_FRAMEWORKS = frameworkList.filter(
+  (framework: Framework) =>
+    !framework.experimental || framework.runtimeFramework
+);
 
 /**
  * Auto-detect services when experimentalServices is not configured.
@@ -135,11 +141,23 @@ async function detectServicesAtRoot(
 
   const backendResult = await detectBackendServices(fs);
   if (backendResult.error) {
-    return { services: null, errors: [backendResult.error] };
+    return {
+      services: null,
+      errors: [backendResult.error],
+    };
+  }
+  if (Object.keys(backendResult.services).length === 0) {
+    return {
+      services: null,
+      errors: [],
+    };
   }
   Object.assign(services, backendResult.services);
 
-  return { services, errors: [] };
+  return {
+    services,
+    errors: [],
+  };
 }
 
 async function detectServicesFrontendSubdir(
@@ -160,7 +178,10 @@ async function detectServicesFrontendSubdir(
 
   const backendResult = await detectBackendServices(fs);
   if (backendResult.error) {
-    return { services: null, errors: [backendResult.error] };
+    return {
+      services: null,
+      errors: [backendResult.error],
+    };
   }
 
   // At least one backend service is required with frontend in frontend/ or apps/web
@@ -178,7 +199,10 @@ async function detectServicesFrontendSubdir(
 
   Object.assign(services, backendResult.services);
 
-  return { services, errors: [] };
+  return {
+    services,
+    errors: [],
+  };
 }
 
 async function detectBackendServices(fs: DetectorFilesystem): Promise<{
@@ -268,7 +292,8 @@ async function detectServiceInDir(
   const serviceFs = fs.chdir(dirPath);
   const frameworks = await detectFrameworks({
     fs: serviceFs,
-    frameworkList,
+    frameworkList: DETECTION_FRAMEWORKS,
+    useExperimentalFrameworks: true,
   });
 
   if (frameworks.length > 1) {

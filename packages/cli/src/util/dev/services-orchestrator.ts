@@ -4,8 +4,13 @@ import { Transform, Writable, type TransformCallback } from 'stream';
 import type { ChildProcess } from 'child_process';
 import getPort from 'get-port';
 import chalk from 'chalk';
-import type { Service } from '@vercel/fs-detectors';
+import {
+  getInternalServiceCronPathPrefix,
+  getInternalServiceWorkerPathPrefix,
+  type Service,
+} from '@vercel/fs-detectors';
 import { frameworkList, type Framework } from '@vercel/frameworks';
+import { getNextCronDelay } from './cron';
 import {
   cloneEnv,
   getNodeBinPaths,
@@ -68,8 +73,11 @@ function createServiceLogger(
   const padding = ' '.repeat(maxNameLength - serviceName.length);
   const prefix = color(`[${serviceName}]`) + padding;
 
-  const createTransform = () => {
+  const createTransform = (streamLabel: string) => {
     let buffer = '';
+    const labelPrefix = output.debugEnabled
+      ? `${prefix} ${chalk.gray(`(${streamLabel})`)}`
+      : prefix;
     return new Transform({
       transform(
         chunk: Buffer,
@@ -82,7 +90,9 @@ function createServiceLogger(
         buffer = lines.pop() || '';
         // Output complete lines with prefix
         if (lines.length > 0) {
-          const prefixed = lines.map(line => `${prefix} ${line}`).join('\n');
+          const prefixed = lines
+            .map(line => `${labelPrefix} ${line}`)
+            .join('\n');
           callback(null, prefixed + '\n');
         } else {
           callback(null, '');
@@ -91,7 +101,7 @@ function createServiceLogger(
       flush(callback: TransformCallback) {
         // Output any remaining buffered content on close
         if (buffer) {
-          callback(null, `${prefix} ${buffer}\n`);
+          callback(null, `${labelPrefix} ${buffer}\n`);
         } else {
           callback(null, '');
         }
@@ -99,8 +109,8 @@ function createServiceLogger(
     });
   };
 
-  const stdout = createTransform();
-  const stderr = createTransform();
+  const stdout = createTransform('stdout');
+  const stderr = createTransform('stderr');
 
   stdout.pipe(process.stdout);
   stderr.pipe(process.stderr);
@@ -122,9 +132,19 @@ interface ServiceDevProcess {
   pid: number;
   process?: ChildProcess;
   shutdown?: () => Promise<void>;
-  routePrefix: string;
+  routePrefixes: string[];
   workspace: string;
   logger: ServiceLogger;
+}
+
+function getServiceRoutePrefixes(service: Service): string[] {
+  if (service.type === 'worker') {
+    return [getInternalServiceWorkerPathPrefix(service.name)];
+  }
+  if (service.type === 'cron') {
+    return [getInternalServiceCronPathPrefix(service.name)];
+  }
+  return [service.routePrefix || '/'];
 }
 
 interface ServicesOrchestratorOptions {
@@ -138,6 +158,7 @@ interface ServicesOrchestratorOptions {
 export class ServicesOrchestrator {
   private managedServices = new Map<string, ServiceDevProcess>();
   private managedProcesses = new Map<string, ChildProcess>();
+  private cronTimers: ReturnType<typeof setTimeout>[] = [];
   private stopping = false;
 
   private services: Service[];
@@ -147,6 +168,7 @@ export class ServicesOrchestrator {
   private maxNameLength: number;
   private proxyOrigin: string;
   private pythonServiceCount: number;
+  private hasWorkerService: boolean;
 
   constructor(options: ServicesOrchestratorOptions) {
     this.services = options.services;
@@ -158,6 +180,7 @@ export class ServicesOrchestrator {
     this.pythonServiceCount = options.services.filter(
       s => s.runtime === 'python'
     ).length;
+    this.hasWorkerService = options.services.some(s => s.type === 'worker');
   }
 
   async startAll(): Promise<void> {
@@ -184,6 +207,8 @@ export class ServicesOrchestrator {
     output.debug(
       `All ${this.managedServices.size} services started successfully`
     );
+
+    this.startCronSchedulers();
   }
 
   async stopAll(): Promise<void> {
@@ -229,6 +254,11 @@ export class ServicesOrchestrator {
       }
     }
 
+    for (const timer of this.cronTimers) {
+      clearTimeout(timer);
+    }
+    this.cronTimers = [];
+
     await Promise.all(stopPromises);
     this.managedServices.clear();
     this.managedProcesses.clear();
@@ -240,27 +270,27 @@ export class ServicesOrchestrator {
     let bestMatchLength = -1;
 
     for (const service of this.managedServices.values()) {
-      const { routePrefix } = service;
-
-      if (routePrefix === '/') {
-        if (bestMatchLength === -1) {
-          bestMatch = service;
-          bestMatchLength = 0;
+      for (const routePrefix of service.routePrefixes) {
+        if (routePrefix === '/') {
+          if (bestMatchLength === -1) {
+            bestMatch = service;
+            bestMatchLength = 0;
+          }
+          continue;
         }
-        continue;
-      }
 
-      const normalizedPrefix = routePrefix.startsWith('/')
-        ? routePrefix
-        : `/${routePrefix}`;
+        const normalizedPrefix = routePrefix.startsWith('/')
+          ? routePrefix
+          : `/${routePrefix}`;
 
-      if (
-        pathname === normalizedPrefix ||
-        pathname.startsWith(`${normalizedPrefix}/`)
-      ) {
-        if (normalizedPrefix.length > bestMatchLength) {
-          bestMatch = service;
-          bestMatchLength = normalizedPrefix.length;
+        if (
+          pathname === normalizedPrefix ||
+          pathname.startsWith(`${normalizedPrefix}/`)
+        ) {
+          if (normalizedPrefix.length > bestMatchLength) {
+            bestMatch = service;
+            bestMatchLength = normalizedPrefix.length;
+          }
         }
       }
     }
@@ -309,12 +339,19 @@ export class ServicesOrchestrator {
       this.env,
       serviceUrlEnvVars
     );
+    env.VERCEL_SERVICE_TYPE = service.type;
+
+    // When any worker service exists, point all services at the dev server's
+    // queue proxy so that send() calls from web services are routed through
+    // the proxy and dispatched to the matching worker process.
+    if (this.hasWorkerService) {
+      env.VERCEL_QUEUE_BASE_URL = `${this.proxyOrigin}/_svc/_queues`;
+      env.VERCEL_QUEUE_TOKEN = 'vc-dev-token';
+    }
 
     if (service.routePrefix && service.routePrefix !== '/') {
       env.VERCEL_SERVICE_ROUTE_PREFIX = service.routePrefix;
-      if (service.routePrefixSource === 'generated') {
-        env.VERCEL_SERVICE_ROUTE_PREFIX_STRIP = '1';
-      }
+      env.VERCEL_SERVICE_ROUTE_PREFIX_STRIP = '1';
     }
 
     // Try to use builder's startDevServer if available
@@ -394,6 +431,7 @@ export class ServicesOrchestrator {
           serviceCount: this.services.length,
           pythonServiceCount: this.pythonServiceCount,
           syncDependencies: true,
+          serviceName: service.name,
         },
         files: {},
         onStdout: (data: Buffer) => logger.stdout.write(data),
@@ -413,7 +451,7 @@ export class ServicesOrchestrator {
         port: result.port,
         pid: result.pid,
         shutdown: result.shutdown,
-        routePrefix: service.routePrefix || '/',
+        routePrefixes: getServiceRoutePrefixes(service),
         workspace: service.workspace || '.',
         logger,
       };
@@ -459,10 +497,16 @@ export class ServicesOrchestrator {
       `Starting ${chalk.bold(service.name)} with ${chalk.cyan.bold(`"${devCommand}"`)}`
     );
 
+    // Pass terminal width so child frameworks can format output correctly.
+    if (process.stdout.columns) {
+      env.COLUMNS = `${process.stdout.columns}`;
+    }
+
     const child = spawnCommand(devCommand, {
       cwd: workspacePath,
       env,
-      stdio: ['inherit', 'pipe', 'pipe'],
+      stdio: ['ignore', 'pipe', 'pipe'],
+      detached: true,
     });
 
     if (!child.pid) {
@@ -501,7 +545,7 @@ export class ServicesOrchestrator {
       port,
       pid: child.pid,
       process: child,
-      routePrefix: service.routePrefix || '/',
+      routePrefixes: getServiceRoutePrefixes(service),
       workspace: service.workspace || '.',
       logger,
     };
@@ -638,5 +682,58 @@ export class ServicesOrchestrator {
         });
       }
     });
+  }
+
+  private startCronSchedulers(): void {
+    for (const service of this.services) {
+      if (service.type !== 'cron' || !service.schedule) continue;
+
+      const managed = this.managedServices.get(service.name);
+      if (!managed) continue;
+
+      output.debug(
+        `Scheduling cron service ${chalk.bold(service.name)} (${chalk.cyan(service.schedule)})`
+      );
+
+      this.scheduleCronTrigger(service.name, service.schedule, managed);
+    }
+  }
+
+  private scheduleCronTrigger(
+    serviceName: string,
+    schedule: string,
+    managed: ServiceDevProcess
+  ): void {
+    const delayMs = getNextCronDelay(schedule);
+    if (delayMs === null) {
+      output.warn(
+        `Could not parse cron schedule "${schedule}" for service "${serviceName}", skipping auto-trigger`
+      );
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      if (this.stopping) return;
+
+      output.debug(
+        `Triggering cron service ${chalk.bold(serviceName)} (schedule: ${chalk.cyan(schedule)})`
+      );
+
+      try {
+        const url = `http://${managed.host}:${managed.port}/`;
+        const res = await fetch(url, { method: 'POST' });
+        output.debug(
+          `Cron trigger for "${serviceName}" responded with status ${res.status}`
+        );
+      } catch (err) {
+        output.error(
+          `Cron trigger for "${serviceName}" failed: ${err instanceof Error ? err.message : String(err)}`
+        );
+      }
+
+      this.scheduleCronTrigger(serviceName, schedule, managed);
+    }, delayMs);
+
+    this.cronTimers.push(timer);
   }
 }

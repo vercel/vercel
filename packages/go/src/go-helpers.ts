@@ -1,7 +1,7 @@
 import { createHash } from 'crypto';
 import { extract } from 'tar';
 import execa from 'execa';
-import fetch from 'node-fetch';
+import nodeFetch from 'node-fetch';
 import {
   createWriteStream,
   mkdirp,
@@ -23,8 +23,10 @@ import type { Env } from '@vercel/build-utils';
 const streamPipeline = promisify(pipeline);
 
 const versionMap = new Map([
-  ['1.24', '1.24.5'],
-  ['1.23', '1.23.11'],
+  ['1.26', '1.26.1'],
+  ['1.25', '1.25.8'],
+  ['1.24', '1.24.13'],
+  ['1.23', '1.23.12'],
   ['1.22', '1.22.12'],
   ['1.21', '1.21.13'],
   ['1.20', '1.20.14'],
@@ -392,7 +394,7 @@ export async function createGo({
 async function download({ dest, version }: { dest: string; version: string }) {
   const { filename, url } = getGoUrl(version);
   console.log(`Downloading go: ${url}`);
-  const res = await fetch(url);
+  const res = await nodeFetch(url);
 
   if (!res.ok) {
     throw new Error(`Failed to download: ${url} (${res.status})`);

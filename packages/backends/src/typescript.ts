@@ -107,7 +107,7 @@ const resolveTscPath = (args: { entrypoint: string; workPath: string }) => {
       paths: [args.workPath],
     });
     return pkgPath;
-  } catch (e) {
+  } catch (_e) {
     return null;
   }
 };

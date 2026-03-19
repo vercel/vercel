@@ -26,6 +26,7 @@ import { addToGitIgnore } from '../link/add-to-gitignore';
 import type { RepoProjectConfig } from '../link/repo';
 import output from '../../output-manager';
 import pull from '../../commands/env/pull';
+import { resolveProjectCwd } from './find-project-root';
 
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
@@ -77,7 +78,8 @@ export function getVercelDirectory(cwd: string): string {
 
 export async function getProjectLink(
   client: Client,
-  path: string
+  path: string,
+  projectName?: string
 ): Promise<ProjectLink | null> {
   // Prefer an explicit per-directory link (`.vercel/project.json`) over a
   // repository-level link (`.vercel/repo.json`). This prevents scenarios where
@@ -87,12 +89,13 @@ export async function getProjectLink(
   if (dirLink) {
     return dirLink;
   }
-  return await getProjectLinkFromRepoLink(client, path);
+  return await getProjectLinkFromRepoLink(client, path, projectName);
 }
 
 async function getProjectLinkFromRepoLink(
   client: Client,
-  path: string
+  path: string,
+  projectName?: string
 ): Promise<ProjectLink | null> {
   const repoLink = await getRepoLink(client, path);
   if (!repoLink?.repoConfig) {
@@ -108,13 +111,22 @@ async function getProjectLinkFromRepoLink(
   } else {
     const selectableProjects =
       projects.length > 0 ? projects : repoLink.repoConfig.projects;
-    project = await client.input.select({
-      message: `Please select a Project:`,
-      choices: selectableProjects.map(p => ({
-        value: p,
-        name: p.name,
-      })),
-    });
+
+    // If --project flag was provided, try to find a matching project by name
+    if (projectName) {
+      project = selectableProjects.find(p => p.name === projectName);
+    }
+
+    // Fall back to interactive selection if no project was found
+    if (!project) {
+      project = await client.input.select({
+        message: `Please select a Project:`,
+        choices: selectableProjects.map(p => ({
+          value: p,
+          name: p.name,
+        })),
+      });
+    }
   }
   if (project) {
     // Prefer project-level orgId, fall back to top-level for backwards compat
@@ -240,8 +252,11 @@ async function hasProjectLink(
 
 export async function getLinkedProject(
   client: Client,
-  path = client.cwd
+  path = client.cwd,
+  projectName?: string
 ): Promise<ProjectLinkResult> {
+  path = await resolveProjectCwd(path);
+
   const VERCEL_ORG_ID = getPlatformEnv('ORG_ID');
   const VERCEL_PROJECT_ID = getPlatformEnv('PROJECT_ID');
   const shouldUseEnv = Boolean(VERCEL_ORG_ID && VERCEL_PROJECT_ID);
@@ -260,7 +275,7 @@ export async function getLinkedProject(
   const link =
     VERCEL_ORG_ID && VERCEL_PROJECT_ID
       ? { orgId: VERCEL_ORG_ID, projectId: VERCEL_PROJECT_ID }
-      : await getProjectLink(client, path);
+      : await getProjectLink(client, path, projectName);
 
   if (!link) {
     return { status: 'not_linked', org: null, project: null };
@@ -419,7 +434,7 @@ export async function linkFolderToProject(
           'Failed to pull environment variables. You can run `vc env pull` manually.'
         );
       }
-    } catch (error) {
+    } catch (_error) {
       output.error(
         'Failed to pull environment variables. You can run `vc env pull` manually.'
       );

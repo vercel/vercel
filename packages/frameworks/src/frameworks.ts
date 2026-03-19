@@ -156,11 +156,11 @@ export const frameworks = [
         const nowRoutes = JSON.parse(content);
         try {
           await unlink(nowRoutesPath);
-        } catch (err) {
+        } catch (_err) {
           // do nothing if deleting the file fails
         }
         return nowRoutes;
-      } catch (err) {
+      } catch (_err) {
         // if the file doesn't exist, we implement gatsby's recommendations
         // https://www.gatsbyjs.org/docs/caching
 
@@ -2217,7 +2217,6 @@ export const frameworks = [
   {
     name: 'Django',
     slug: 'django',
-    experimental: true,
     logo: 'https://api-frameworks.vercel.sh/framework-logos/django.svg',
     tagline:
       'Django is a high-level Python web framework that encourages rapid development and clean, pragmatic design. ',
@@ -2239,6 +2238,11 @@ export const frameworks = [
         {
           path: 'Pipfile',
           matchContent: '[Dd]jango',
+        },
+        {
+          // a default django project will create a manage.py which sets DJANGO_SETTINGS_MODULE
+          path: 'manage.py',
+          matchContent: 'DJANGO_SETTINGS_MODULE',
         },
       ],
     },
@@ -4128,7 +4132,6 @@ export const frameworks = [
   {
     name: 'Python',
     slug: 'python',
-    experimental: true,
     runtimeFramework: true,
     logo: 'https://api-frameworks.vercel.sh/framework-logos/python.svg',
     tagline:
@@ -4332,7 +4335,6 @@ export const frameworks = [
   {
     name: 'Go',
     slug: 'go',
-    experimental: true,
     runtimeFramework: true,
     logo: 'https://api-frameworks.vercel.sh/framework-logos/go.svg',
     tagline: 'An open-source programming language supported by Google.',

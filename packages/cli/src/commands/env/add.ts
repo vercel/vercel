@@ -96,7 +96,6 @@ export default async function add(client: Client, argv: string[]) {
   const stdInput = await readStandardInput(client.stdin);
   const valueFromFlag =
     typeof opts['--value'] === 'string' ? opts['--value'] : undefined;
-  // eslint-disable-next-line prefer-const
   let [envName, envTargetArg, envGitBranch] = args;
 
   const telemetryClient = new EnvAddTelemetryClient({

@@ -90,7 +90,7 @@ it('Should build the serverless-no-config example', async () => {
   ).toBeFalsy();
 });
 
-// eslint-disable-next-line jest/no-disabled-tests
+// biome-ignore lint/suspicious/noSkippedTests: temporarily disabled
 it.skip('Should invoke build command with serverless-no-config', async () => {
   const {
     workPath,
@@ -127,7 +127,7 @@ it.skip('Should invoke build command with serverless-no-config', async () => {
   ).toBeFalsy();
 });
 
-// eslint-disable-next-line jest/no-disabled-tests
+// biome-ignore lint/suspicious/noSkippedTests: temporarily disabled
 it.skip('Should not exceed function limit for large dependencies (server build)', async () => {
   let logs = '';
 
@@ -181,7 +181,7 @@ it.skip('Should not exceed function limit for large dependencies (server build)'
   expect(logs).toContain('node_modules/chrome-aws-lambda/bin');
 });
 
-// eslint-disable-next-line jest/no-disabled-tests
+// biome-ignore lint/suspicious/noSkippedTests: temporarily disabled
 it.skip('Should not exceed function limit for large dependencies (shared lambda)', async () => {
   let logs = '';
 
@@ -858,5 +858,144 @@ describe('determinism', () => {
         }
       }
     });
+  });
+});
+
+describe('preferredRegion', () => {
+  let buildResult;
+
+  beforeAll(async () => {
+    const result = await runBuildLambda(
+      path.join(__dirname, 'preferred-region')
+    );
+    buildResult = result.buildResult;
+  });
+
+  describe('edge runtime', () => {
+    it('should set regions to undefined for "home" when VERCEL_FUNCTION_REGIONS is not set', () => {
+      const edgeFunction = buildResult.output['edge-home'];
+      expect(edgeFunction).toBeDefined();
+      expect(edgeFunction.type).toBe('EdgeFunction');
+      expect(edgeFunction.regions).toBeUndefined();
+    });
+
+    it('should set regions to "all" for "global"', () => {
+      const edgeFunction = buildResult.output['edge-global'];
+      expect(edgeFunction).toBeDefined();
+      expect(edgeFunction.type).toBe('EdgeFunction');
+      expect(edgeFunction.regions).toBe('all');
+    });
+
+    it('should set regions to "auto" for "auto"', () => {
+      const edgeFunction = buildResult.output['edge-auto'];
+      expect(edgeFunction).toBeDefined();
+      expect(edgeFunction.type).toBe('EdgeFunction');
+      expect(edgeFunction.regions).toBe('auto');
+    });
+
+    it('should pass through specific region codes', () => {
+      const edgeFunction = buildResult.output['edge-specific'];
+      expect(edgeFunction).toBeDefined();
+      expect(edgeFunction.type).toBe('EdgeFunction');
+      expect(edgeFunction.regions).toEqual(['iad1', 'sfo1']);
+    });
+  });
+
+  describe('node runtime', () => {
+    // Note: preferredRegion for Node.js functions is not yet passed through
+    // to the Lambda's regions property. When this is implemented, these tests
+    // should be updated to assert the expected regions values.
+
+    it('should create Lambda for node runtime with home region', () => {
+      const lambda = buildResult.output['node-home'];
+      expect(lambda).toBeDefined();
+      expect(lambda.type).toBe('Lambda');
+      expect(lambda.regions).toBeUndefined();
+    });
+
+    it('should create Lambda for node runtime with global region', () => {
+      const lambda = buildResult.output['node-global'];
+      expect(lambda).toBeDefined();
+      expect(lambda.type).toBe('Lambda');
+      expect(lambda.regions).toBeUndefined();
+    });
+
+    it('should create Lambda for node runtime with auto region', () => {
+      const lambda = buildResult.output['node-auto'];
+      expect(lambda).toBeDefined();
+      expect(lambda.type).toBe('Lambda');
+      expect(lambda.regions).toBeUndefined();
+    });
+
+    it('should create Lambda for node runtime with specific regions', () => {
+      const lambda = buildResult.output['node-specific'];
+      expect(lambda).toBeDefined();
+      expect(lambda.type).toBe('Lambda');
+      expect(lambda.regions).toBeUndefined();
+    });
+  });
+});
+
+describe('vercel.json functions regions', () => {
+  let buildResult;
+
+  beforeAll(async () => {
+    const result = await runBuildLambda(
+      path.join(__dirname, 'vercel-json-regions')
+    );
+    buildResult = result.buildResult;
+  });
+
+  it('should use vercel.json functions regions over preferredRegion and regions from route config', () => {
+    const lambda = buildResult.output['api-route'];
+    expect(lambda).toBeDefined();
+    expect(lambda.type).toBe('Lambda');
+    expect(lambda.regions).toEqual(['iad1', 'sfo1']);
+    expect(lambda.functionFailoverRegions).toEqual(['dub1', 'hnd1']);
+  });
+
+  it('should ignore preferredRegion and regions from route config when no vercel.json functions config', () => {
+    const lambda = buildResult.output['no-override'];
+    expect(lambda).toBeDefined();
+    expect(lambda.type).toBe('Lambda');
+    expect(lambda.regions).toBeUndefined();
+    expect(lambda.functionFailoverRegions).toBeUndefined();
+  });
+
+  it('should not set regions on routes without any config', () => {
+    const output = buildResult.output['index'] || buildResult.output[''];
+    if (output && output.type === 'Lambda') {
+      expect(output.regions).toBeUndefined();
+    }
+  });
+});
+
+describe('vercel.json functions regions with glob pattern', () => {
+  let buildResult;
+
+  beforeAll(async () => {
+    const result = await runBuildLambda(
+      path.join(__dirname, 'vercel-json-regions-glob')
+    );
+    buildResult = result.buildResult;
+  });
+
+  it('should match multiple routes with glob pattern', () => {
+    const lambdaOne = buildResult.output['api-one'];
+    expect(lambdaOne).toBeDefined();
+    expect(lambdaOne.type).toBe('Lambda');
+    expect(lambdaOne.regions).toEqual(['iad1']);
+
+    const lambdaTwo = buildResult.output['api-two'];
+    expect(lambdaTwo).toBeDefined();
+    expect(lambdaTwo.type).toBe('Lambda');
+    expect(lambdaTwo.regions).toEqual(['iad1']);
+  });
+
+  it('should not match routes outside the glob pattern', () => {
+    const output = buildResult.output['index'] || buildResult.output[''];
+    if (output && output.type === 'Lambda') {
+      expect(output.regions).toBeUndefined();
+    }
   });
 });

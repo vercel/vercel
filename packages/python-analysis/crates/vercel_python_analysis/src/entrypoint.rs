@@ -2,6 +2,7 @@
 //!
 //! Currently detects:
 //! - Top-level 'app' callables (Flask, FastAPI, Sanic, etc.)
+//! - Top-level 'application' callables (Django)
 //! - Top-level 'handler' classes (BaseHTTPRequestHandler subclasses)
 
 use ruff_python_ast::{Expr, Stmt};
@@ -29,7 +30,9 @@ pub(crate) fn contains_app_or_handler_impl(source: &str) -> bool {
             // Check for annotated assignment to 'app' or 'application'
             // e.g., app: Sanic = Sanic()
             Stmt::AnnAssign(ann_assign) => {
-                if is_name_expr(&ann_assign.target, "app") || is_name_expr(&ann_assign.target, "application") {
+                if is_name_expr(&ann_assign.target, "app")
+                    || is_name_expr(&ann_assign.target, "application")
+                {
                     return true;
                 }
             }
@@ -77,10 +80,98 @@ pub(crate) fn contains_app_or_handler_impl(source: &str) -> bool {
     false
 }
 
+/// Check if a top-level callable with the given name exists in Python source.
+///
+/// Returns true if found, false otherwise.
+/// Returns false for invalid Python syntax.
+pub(crate) fn contains_top_level_callable_impl(source: &str, name: &str) -> bool {
+    let parsed = match parse_module(source) {
+        Ok(parsed) => parsed,
+        Err(_) => return false,
+    };
+
+    for stmt in parsed.suite() {
+        match stmt {
+            Stmt::FunctionDef(func_def) => {
+                if func_def.name.as_str() == name {
+                    return true;
+                }
+            }
+            Stmt::Assign(assign) => {
+                for target in &assign.targets {
+                    if is_name_expr(target, name) {
+                        return true;
+                    }
+                }
+            }
+            Stmt::AnnAssign(ann_assign) => {
+                if is_name_expr(&ann_assign.target, name) {
+                    return true;
+                }
+            }
+            Stmt::ImportFrom(import_from) => {
+                for alias in &import_from.names {
+                    let imported_as = alias
+                        .asname
+                        .as_ref()
+                        .map(|id| id.as_str())
+                        .unwrap_or_else(|| alias.name.as_str());
+                    if imported_as == name {
+                        return true;
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+
+    false
+}
+
+/// Extract the string value of a top-level constant with the given name.
+/// Only considers simple assignments (`NAME = "string"`) and annotated assignments
+/// (`NAME: str = "string"`) at module level. Returns the first matching string
+/// value, or None if not found or the value is not a string literal.
+pub(crate) fn get_string_constant_impl(source: &str, name: &str) -> Option<String> {
+    let parsed = match parse_module(source) {
+        Ok(parsed) => parsed,
+        Err(_) => return None,
+    };
+    for stmt in parsed.suite() {
+        match stmt {
+            Stmt::Assign(assign) => {
+                if assign.targets.len() == 1
+                    && is_name_expr(&assign.targets[0], name)
+                    && let Some(s) = expr_to_string_literal(&assign.value)
+                {
+                    return Some(s);
+                }
+            }
+            Stmt::AnnAssign(ann_assign) => {
+                if is_name_expr(&ann_assign.target, name)
+                    && let Some(value) = &ann_assign.value
+                    && let Some(s) = expr_to_string_literal(value)
+                {
+                    return Some(s);
+                }
+            }
+            _ => {}
+        }
+    }
+    None
+}
+
 fn is_name_expr(expr: &Expr, name: &str) -> bool {
     match expr {
         Expr::Name(name_expr) => name_expr.id.as_str() == name,
         _ => false,
+    }
+}
+
+fn expr_to_string_literal(expr: &Expr) -> Option<String> {
+    match expr {
+        Expr::StringLiteral(string_lit) => Some(string_lit.value.to_str().to_string()),
+        _ => None,
     }
 }
 
@@ -195,5 +286,103 @@ def create():
     return app
 "#;
         assert!(!contains_app_or_handler_impl(source));
+    }
+
+    // -------------------------------------------------------------------------
+    // contains_top_level_callable_impl
+    // -------------------------------------------------------------------------
+
+    #[test]
+    fn test_contains_top_level_callable_function() {
+        let source = r#"
+def cleanup():
+    pass
+"#;
+        assert!(contains_top_level_callable_impl(source, "cleanup"));
+        assert!(!contains_top_level_callable_impl(source, "other"));
+    }
+
+    #[test]
+    fn test_contains_top_level_callable_async_function() {
+        let source = r#"
+async def cleanup():
+    pass
+"#;
+        assert!(contains_top_level_callable_impl(source, "cleanup"));
+    }
+
+    #[test]
+    fn test_contains_top_level_callable_assignment() {
+        let source = r#"
+cleanup = make_handler()
+"#;
+        assert!(contains_top_level_callable_impl(source, "cleanup"));
+    }
+
+    #[test]
+    fn test_contains_top_level_callable_import() {
+        let source = r#"
+from tasks import cleanup
+"#;
+        assert!(contains_top_level_callable_impl(source, "cleanup"));
+    }
+
+    #[test]
+    fn test_contains_top_level_callable_import_aliased() {
+        let source = r#"
+from tasks import do_cleanup as cleanup
+"#;
+        assert!(contains_top_level_callable_impl(source, "cleanup"));
+        assert!(!contains_top_level_callable_impl(source, "do_cleanup"));
+    }
+
+    #[test]
+    fn test_contains_top_level_callable_nested_not_found() {
+        let source = r#"
+def outer():
+    def cleanup():
+        pass
+"#;
+        assert!(!contains_top_level_callable_impl(source, "cleanup"));
+    }
+
+    #[test]
+    fn test_contains_top_level_callable_invalid_syntax() {
+        let source = r#"def cleanup("#;
+        assert!(!contains_top_level_callable_impl(source, "cleanup"));
+    }
+
+    // -------------------------------------------------------------------------
+    // get_string_constant_impl
+    // -------------------------------------------------------------------------
+
+    #[test]
+    fn test_get_string_constant_simple() {
+        let source = r#"VERSION = "1.0.0""#;
+        assert_eq!(
+            get_string_constant_impl(source, "VERSION"),
+            Some("1.0.0".to_string())
+        );
+    }
+
+    #[test]
+    fn test_get_string_constant_annotated() {
+        let source = r#"APP_NAME: str = "myapp""#;
+        assert_eq!(
+            get_string_constant_impl(source, "APP_NAME"),
+            Some("myapp".to_string())
+        );
+    }
+
+    #[test]
+    fn test_get_string_constant_not_found() {
+        let source = r#"VERSION = "1.0.0""#;
+        assert_eq!(get_string_constant_impl(source, "OTHER"), None);
+    }
+
+    #[test]
+    fn test_get_string_constant_non_string_value() {
+        let source = r#"COUNT = 42"#;
+        assert_eq!(get_string_constant_impl(source, "COUNT"), None);
     }
 }

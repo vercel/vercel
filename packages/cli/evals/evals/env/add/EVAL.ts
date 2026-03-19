@@ -1,0 +1,70 @@
+import { readFileSync, existsSync } from 'fs';
+import { test, expect } from 'vitest';
+
+function getShellCommands(): string[] {
+  const results = JSON.parse(
+    readFileSync('__agent_eval__/results.json', 'utf-8')
+  ) as {
+    o11y?: { shellCommands?: Array<{ command: string }> };
+  };
+
+  return (results.o11y?.shellCommands ?? []).map(c => c.command);
+}
+
+/**
+ * env add eval: agent adds an env var with a unique key using non-interactive flags,
+ * and we verify the key pattern and existence on the project via CLI output.
+ */
+test('project is linked', () => {
+  expect(
+    existsSync('.vercel/project.json') || existsSync('.vercel/config.json')
+  ).toBe(true);
+});
+
+test('agent used vercel env add', () => {
+  const commands = getShellCommands();
+  expect(commands.length).toBeGreaterThan(0);
+
+  const envAddCommands = commands.filter(command =>
+    /\b(vercel|vc)\s+env\s+add\b/.test(command)
+  );
+  expect(envAddCommands.length).toBeGreaterThan(0);
+});
+
+test('agent used non-interactive flags', () => {
+  const commands = getShellCommands();
+  const envAddCommands = commands.filter(command =>
+    /\b(vercel|vc)\s+env\s+add\b/.test(command)
+  );
+  expect(envAddCommands.length).toBeGreaterThan(0);
+
+  const hasNonInteractive = envAddCommands.some(command => {
+    return (
+      command.includes('--yes') ||
+      /\s-y(\s|$)/.test(command) ||
+      command.includes('--non-interactive') ||
+      command.includes('--value')
+    );
+  });
+  expect(hasNonInteractive).toBe(true);
+});
+
+test('agent used EVAL_ADD_ prefix for env var name', () => {
+  const commands = getShellCommands();
+
+  const candidateKeys = new Set<string>();
+  for (const command of commands) {
+    const positionalMatch = command.match(/\benv\s+add\s+([A-Za-z0-9_]+)/);
+    if (positionalMatch?.[1]) {
+      candidateKeys.add(positionalMatch[1]);
+    }
+    const prefixMatches = command.matchAll(/EVAL_ADD_[A-Za-z0-9_]+/g);
+    for (const m of prefixMatches) {
+      candidateKeys.add(m[0]);
+    }
+  }
+
+  const evalAddKeys = [...candidateKeys].filter(key => /^EVAL_ADD_/.test(key));
+  expect(evalAddKeys.length).toBeGreaterThan(0);
+  // Do not assert key exists on project: evals run concurrently and env/remove may have deleted it.
+});

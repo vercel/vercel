@@ -10,20 +10,21 @@ import {
 } from '@vercel/build-utils';
 import {
   classifyPackages,
+  isWheelCompatible,
   normalizePackageName,
   parseUvLock,
   PythonAnalysisError,
   scanDistributions,
 } from '@vercel/python-analysis';
+import type { UvLockFile } from '@vercel/python-analysis';
 import { getVenvSitePackagesDirs } from './install';
 import { getUvBinaryForBundling, UV_BUNDLE_DIR } from './uv';
+import { detectPlatform } from './utils';
 
 const readFile = promisify(fs.readFile);
 
-// AWS Lambda uncompressed size limit is 250MB, but we use 249MB to leave a small buffer
-export const LAMBDA_SIZE_THRESHOLD_BYTES = 249 * 1024 * 1024;
-// Pack Lambda up to 245MB to leave a buffer
-export const LAMBDA_PACKING_TARGET_BYTES = 245 * 1024 * 1024;
+// AWS Lambda uncompressed size limit is 250MB, but we use 245MB to leave room for Lambda layers
+export const LAMBDA_SIZE_THRESHOLD_BYTES = 245 * 1024 * 1024;
 
 // AWS Lambda ephemeral storage (/tmp) is 512MB. Use 500MB to leave a buffer
 // for runtime overhead (.pyc generation, uv cache, metadata, etc.)
@@ -36,8 +37,17 @@ interface PythonDependencyExternalizerOptions {
   uvLockPath: string | null;
   uvProjectDir: string | null;
   projectName: string | undefined;
-  noBuildCheckFailed: boolean;
+  pythonMajor: number;
+  pythonMinor: number;
   pythonPath: string;
+  hasCustomCommand: boolean;
+  alwaysBundlePackages?: string[];
+}
+
+interface DependencyAnalysis {
+  runtimeInstallEnabled: boolean;
+  allVendorFiles: Files;
+  totalBundleSize: number;
 }
 
 export class PythonDependencyExternalizer {
@@ -47,8 +57,11 @@ export class PythonDependencyExternalizer {
   private uvLockPath: string | null;
   private uvProjectDir: string | null;
   private projectName: string | undefined;
-  private noBuildCheckFailed: boolean;
+  private pythonMajor: number;
+  private pythonMinor: number;
   private pythonPath: string;
+  private hasCustomCommand: boolean;
+  private alwaysBundlePackages: string[];
 
   // Populated by analyze()
   private allVendorFiles: Files = {};
@@ -62,8 +75,29 @@ export class PythonDependencyExternalizer {
     this.uvLockPath = options.uvLockPath;
     this.uvProjectDir = options.uvProjectDir;
     this.projectName = options.projectName;
-    this.noBuildCheckFailed = options.noBuildCheckFailed;
+    this.pythonMajor = options.pythonMajor;
+    this.pythonMinor = options.pythonMinor;
     this.pythonPath = options.pythonPath;
+    this.hasCustomCommand = options.hasCustomCommand;
+    this.alwaysBundlePackages = options.alwaysBundlePackages ?? [];
+  }
+
+  shouldEnableRuntimeInstall(): boolean {
+    if (this.hasCustomCommand) {
+      return false;
+    }
+    const pythonOnHiveEnabled =
+      process.env.VERCEL_PYTHON_ON_HIVE === '1' ||
+      process.env.VERCEL_PYTHON_ON_HIVE === 'true';
+    if (pythonOnHiveEnabled) {
+      return false;
+    } else if (
+      this.totalBundleSize > LAMBDA_SIZE_THRESHOLD_BYTES &&
+      this.uvLockPath !== null
+    ) {
+      return true;
+    }
+    return false;
   }
 
   /**
@@ -71,10 +105,7 @@ export class PythonDependencyExternalizer {
    * and determine whether runtime installation is needed.
    * Must be called before generateBundle().
    */
-  async analyze(files: Files): Promise<{
-    overLambdaLimit: boolean;
-    allVendorFiles: Files;
-  }> {
+  async analyze(files: Files): Promise<DependencyAnalysis> {
     this.allVendorFiles = await mirrorPackagesIntoVendor({
       venvPath: this.venvPath,
       vendorDirName: this.vendorDir,
@@ -90,12 +121,38 @@ export class PythonDependencyExternalizer {
     const totalBundleSizeMB = (this.totalBundleSize / (1024 * 1024)).toFixed(2);
     debug(`Total bundle size: ${totalBundleSizeMB} MB`);
 
-    const overLambdaLimit = shouldEnableRuntimeInstall({
-      totalBundleSize: this.totalBundleSize,
-      uvLockPath: this.uvLockPath,
-    });
+    const runtimeInstallEnabled = this.shouldEnableRuntimeInstall();
 
-    return { overLambdaLimit, allVendorFiles: this.allVendorFiles };
+    const pythonOnHiveEnabled =
+      process.env.VERCEL_PYTHON_ON_HIVE === '1' ||
+      process.env.VERCEL_PYTHON_ON_HIVE === 'true';
+
+    if (
+      this.totalBundleSize > LAMBDA_SIZE_THRESHOLD_BYTES &&
+      this.hasCustomCommand &&
+      !pythonOnHiveEnabled
+    ) {
+      const limitMB = (LAMBDA_SIZE_THRESHOLD_BYTES / (1024 * 1024)).toFixed(0);
+      throw new NowBuildError({
+        code: 'LAMBDA_SIZE_EXCEEDED',
+        message:
+          `Total bundle size (${totalBundleSizeMB} MB) exceeds the Lambda size limit (${limitMB} MB).\n\n` +
+          `Runtime dependency installation is not available for projects that use a custom ` +
+          `build or install command, because custom commands may install dependencies that ` +
+          `are not tracked in uv.lock.\n\n` +
+          `To resolve this, either:\n` +
+          `  1. Remove the custom build/install command and let Vercel manage dependencies automatically\n` +
+          `  2. Reduce your dependency footprint to fit within the ${limitMB} MB limit`,
+        link: 'https://vercel.com/docs/functions/runtimes/python#controlling-what-gets-bundled',
+        action: 'Learn More',
+      });
+    }
+
+    return {
+      runtimeInstallEnabled,
+      allVendorFiles: this.allVendorFiles,
+      totalBundleSize: this.totalBundleSize,
+    };
   }
 
   /**
@@ -139,20 +196,8 @@ export class PythonDependencyExternalizer {
           `packages must fit within the ${ephemeralLimitMB} MB ephemeral storage available ` +
           `to Lambda functions. Consider removing unused dependencies or splitting your ` +
           `application into smaller functions.`,
-      });
-    }
-
-    // If the earlier --no-build check failed, we know some packages don't have pre-built wheels.
-    if (this.noBuildCheckFailed) {
-      throw new NowBuildError({
-        code: 'RUNTIME_DEPENDENCY_INSTALLATION_FAILED',
-        message:
-          `Bundle size exceeds the Lambda limit and requires runtime dependency installation, ` +
-          `but some packages in your uv.lock file do not have pre-built binary wheels available.\n` +
-          `Runtime dependency installation requires all public packages to have binary wheels.\n\n` +
-          `To fix this, either:\n` +
-          ` 1. Regenerate your lock file with: uv lock --upgrade --no-build, or\n` +
-          ` 2. Switch the problematic packages to ones that have pre-built wheels available`,
+        link: 'https://vercel.com/docs/functions/runtimes/python#controlling-what-gets-bundled',
+        action: 'Learn More',
       });
     }
 
@@ -211,23 +256,59 @@ export class PythonDependencyExternalizer {
         `${classification.publicPackages.length} public`
     );
 
-    if (classification.publicPackages.length === 0) {
+    // Check which public packages have compatible wheels for the Lambda platform.
+    // Packages without a compatible wheel must be force-bundled because
+    // `uv sync --no-build` at cold start will refuse to build from source.
+    const forceBundledDueToWheels =
+      await this.findPackagesWithoutCompatibleWheels(
+        lockFile,
+        classification.publicPackages
+      );
+
+    if (forceBundledDueToWheels.length > 0) {
+      console.log(
+        `Force-bundling ${forceBundledDueToWheels.length} package(s) without compatible wheels: ` +
+          forceBundledDueToWheels.join(', ')
+      );
+    }
+
+    // Remove force-bundled packages from the public set
+    const forceBundledSet = new Set(
+      forceBundledDueToWheels.map(normalizePackageName)
+    );
+    const externalizablePublic = classification.publicPackages.filter(
+      name => !forceBundledSet.has(normalizePackageName(name))
+    );
+
+    if (externalizablePublic.length === 0) {
       throw new NowBuildError({
         code: 'RUNTIME_DEPENDENCY_INSTALLATION_FAILED',
         message:
-          'Bundle size exceeds limit but no public packages found for runtime installation.',
+          `Bundle size exceeds the Lambda limit and requires runtime dependency installation, ` +
+          `but no public packages have compatible pre-built wheels for the Lambda platform.\n` +
+          `Runtime dependency installation requires packages to have binary wheels.\n\n` +
+          `To fix this, either:\n` +
+          ` 1. Regenerate your lock file with: uv lock --upgrade, or\n` +
+          ` 2. Switch the problematic packages to ones that have pre-built wheels available`,
       });
     }
 
     // Calculate per-package sizes for public packages
     const packageSizes = await calculatePerPackageSizes(this.venvPath);
 
-    // Calculate fixed overhead: source files + private packages + vercel-runtime.
+    // Calculate fixed overhead: source files + private packages + vercel-runtime
+    // + packages without compatible wheels.
     // These are always bundled and not part of the knapsack.
+    // alwaysBundlePackages are included here so their files are copied into
+    // the vendor directory and counted toward the fixed overhead.  They also
+    // appear in bundledPackagesForConfig (below) so the runtime bootstrap
+    // knows to skip reinstalling them.
     const alwaysBundled = [
       ...classification.privatePackages,
       'vercel-runtime',
       'vercel_runtime',
+      ...this.alwaysBundlePackages,
+      ...forceBundledDueToWheels,
     ];
     const alwaysBundledFiles = await mirrorPackagesIntoVendor({
       venvPath: this.venvPath,
@@ -256,8 +337,13 @@ export class PythonDependencyExternalizer {
       }
     }
 
+    // Dynamically derive the packing target: start from the hard Lambda size
+    // threshold and subtract everything that is already committed to the bundle
+    // (user source code, private packages, always-bundled packages, and the uv
+    // binary). The remainder is the budget the knapsack can fill with public
+    // packages.
     const remainingCapacity =
-      LAMBDA_PACKING_TARGET_BYTES - fixedOverhead - runtimeToolingOverhead;
+      LAMBDA_SIZE_THRESHOLD_BYTES - fixedOverhead - runtimeToolingOverhead;
 
     debug(
       `Fixed overhead: ${(fixedOverhead / (1024 * 1024)).toFixed(2)} MB, ` +
@@ -265,10 +351,13 @@ export class PythonDependencyExternalizer {
         `remaining capacity for public packages: ${(remainingCapacity / (1024 * 1024)).toFixed(2)} MB`
     );
 
-    // Build size map for public packages and run the knapsack algorithm
+    // Build size map for externalizable public packages and run the knapsack algorithm
+    const externalizableSet = new Set(
+      externalizablePublic.map(normalizePackageName)
+    );
     const publicPackageSizes = new Map(
       [...packageSizes].filter(([name]) =>
-        classification.publicPackages.includes(name)
+        externalizableSet.has(normalizePackageName(name))
       )
     );
 
@@ -289,9 +378,14 @@ export class PythonDependencyExternalizer {
     // The bundledPackages list for runtime config includes private packages
     // and any public packages we selected for bundling. These will be
     // passed as --no-install-package to uv sync at runtime.
+    // alwaysBundlePackages appear here (in addition to alwaysBundled above)
+    // so they are written to the runtime config and passed as
+    // --no-install-package to `uv sync` at cold start.
     const bundledPackagesForConfig = [
       ...classification.privatePackages,
       ...bundledPublic,
+      ...this.alwaysBundlePackages,
+      ...forceBundledDueToWheels,
     ];
 
     // Write a runtime config marker so the bootstrap knows to run
@@ -352,7 +446,8 @@ export class PythonDependencyExternalizer {
       }
     }
 
-    // Final size verification
+    // Final size verification – note that force-bundled wheel-incompatible packages
+    // are included in the bundle, which can push total size over the threshold.
     const finalBundleSize = await calculateBundleSize(files);
     if (finalBundleSize > LAMBDA_SIZE_THRESHOLD_BYTES) {
       const finalSizeMB = (finalBundleSize / (1024 * 1024)).toFixed(2);
@@ -364,33 +459,84 @@ export class PythonDependencyExternalizer {
           `deferring public packages to runtime installation. This usually means your ` +
           `private packages or source code are too large. Consider reducing the size of ` +
           `private dependencies or splitting your application.`,
+        link: 'https://vercel.com/docs/functions/runtimes/python#controlling-what-gets-bundled',
+        action: 'Learn More',
       });
     }
+  }
+
+  /**
+   * Identify public packages that have no compatible wheel for the Lambda platform.
+   * These packages must be force-bundled because `uv sync --no-build` at cold start
+   * will refuse to build from source.
+   */
+  private async findPackagesWithoutCompatibleWheels(
+    lockFile: UvLockFile,
+    publicPackageNames: string[]
+  ): Promise<string[]> {
+    const platform = detectPlatform();
+    const publicSet = new Set(publicPackageNames.map(normalizePackageName));
+
+    // Build a map of normalized package name -> wheels from the lock file
+    const packageWheels = new Map<string, Array<{ url: string }>>();
+    for (const pkg of lockFile.packages) {
+      const normalized = normalizePackageName(pkg.name);
+      if (publicSet.has(normalized) && pkg.wheels.length > 0) {
+        packageWheels.set(normalized, pkg.wheels);
+      }
+    }
+
+    const incompatible: string[] = [];
+
+    for (const name of publicPackageNames) {
+      const normalized = normalizePackageName(name);
+      const wheels = packageWheels.get(normalized);
+
+      if (!wheels || wheels.length === 0) {
+        // No wheels listed in the lock file — must be source-only
+        incompatible.push(name);
+        continue;
+      }
+
+      // Extract the filename from each wheel URL and check compatibility
+      let hasCompatible = false;
+      for (const wheel of wheels) {
+        const filename = wheel.url.split('/').pop();
+        if (!filename || !filename.endsWith('.whl')) continue;
+
+        try {
+          const compatible = await isWheelCompatible(
+            filename,
+            this.pythonMajor,
+            this.pythonMinor,
+            platform.osName,
+            platform.archName,
+            platform.osMajor,
+            platform.osMinor
+          );
+          if (compatible) {
+            hasCompatible = true;
+            break;
+          }
+        } catch (err) {
+          debug(
+            `Failed to check wheel compatibility for ${filename}: ${
+              err instanceof Error ? err.message : String(err)
+            }`
+          );
+        }
+      }
+
+      if (!hasCompatible) {
+        incompatible.push(name);
+      }
+    }
+
+    return incompatible;
   }
 }
 
 // Utility functions
-export function shouldEnableRuntimeInstall({
-  totalBundleSize,
-  uvLockPath,
-}: {
-  totalBundleSize: number;
-  uvLockPath: string | null;
-}): boolean {
-  const pythonOnHiveEnabled =
-    process.env.VERCEL_PYTHON_ON_HIVE === '1' ||
-    process.env.VERCEL_PYTHON_ON_HIVE === 'true';
-  if (pythonOnHiveEnabled) {
-    return false;
-  } else if (
-    totalBundleSize > LAMBDA_SIZE_THRESHOLD_BYTES &&
-    uvLockPath !== null
-  ) {
-    return true;
-  }
-  return false;
-}
-
 /**
  * Mirror packages from site-packages into the _vendor directory.
  *

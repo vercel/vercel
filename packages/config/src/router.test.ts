@@ -1,5 +1,11 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { createRoutes, Router, deploymentEnv, matchers } from './router';
+import {
+  createRoutes,
+  Router,
+  deploymentEnv,
+  matchers,
+  type Route,
+} from './router';
 
 const { header, cookie, query, host } = matchers;
 import { cacheHeader } from 'pretty-cache-header';
@@ -80,6 +86,18 @@ describe('Router', () => {
       expect(rewrite).toHaveProperty('source');
       expect(rewrite).toHaveProperty('destination');
     });
+
+    it('should return Rewrite type when destination has env vars', () => {
+      const rewrite = router.rewrite(
+        '/api/:path*',
+        `https://${deploymentEnv('API_HOST')}/$path*`
+      );
+      expect(rewrite).toEqual({
+        source: '/api/:path*',
+        destination: 'https://$API_HOST/$path*',
+        env: ['API_HOST'],
+      });
+    });
   });
 
   describe('redirect', () => {
@@ -110,6 +128,18 @@ describe('Router', () => {
         source: '/old-path',
         destination: '/new-path',
         statusCode: 301,
+      });
+    });
+
+    it('should return Redirect type when destination has env vars', () => {
+      const redirect = router.redirect(
+        '/old/:path*',
+        `https://${deploymentEnv('NEW_HOST')}/$path*`
+      );
+      expect(redirect).toEqual({
+        source: '/old/:path*',
+        destination: 'https://$NEW_HOST/$path*',
+        env: ['NEW_HOST'],
       });
     });
   });
@@ -212,7 +242,7 @@ describe('Router', () => {
         expect(header('x-user-role', { inc: ['admin', 'moderator'] })).toEqual({
           type: 'header',
           key: 'x-user-role',
-          inc: ['admin', 'moderator'],
+          value: { inc: ['admin', 'moderator'] },
         });
       });
 
@@ -220,47 +250,47 @@ describe('Router', () => {
         expect(header('x-version', { eq: 2 })).toEqual({
           type: 'header',
           key: 'x-version',
-          eq: 2,
+          value: { eq: 2 },
         });
         expect(header('x-version', { neq: 'beta' })).toEqual({
           type: 'header',
           key: 'x-version',
-          neq: 'beta',
+          value: { neq: 'beta' },
         });
         expect(header('x-version', { gte: 2 })).toEqual({
           type: 'header',
           key: 'x-version',
-          gte: 2,
+          value: { gte: 2 },
         });
         expect(header('x-version', { gt: 1 })).toEqual({
           type: 'header',
           key: 'x-version',
-          gt: 1,
+          value: { gt: 1 },
         });
         expect(header('x-version', { lt: 5 })).toEqual({
           type: 'header',
           key: 'x-version',
-          lt: 5,
+          value: { lt: 5 },
         });
         expect(header('x-version', { lte: 5 })).toEqual({
           type: 'header',
           key: 'x-version',
-          lte: 5,
+          value: { lte: 5 },
         });
         expect(header('x-auth', { pre: 'Bearer ' })).toEqual({
           type: 'header',
           key: 'x-auth',
-          pre: 'Bearer ',
+          value: { pre: 'Bearer ' },
         });
         expect(header('x-auth', { suf: '-token' })).toEqual({
           type: 'header',
           key: 'x-auth',
-          suf: '-token',
+          value: { suf: '-token' },
         });
         expect(header('x-role', { ninc: ['guest'] })).toEqual({
           type: 'header',
           key: 'x-role',
-          ninc: ['guest'],
+          value: { ninc: ['guest'] },
         });
       });
     });
@@ -285,7 +315,7 @@ describe('Router', () => {
         expect(cookie('session', { pre: 'secure-' })).toEqual({
           type: 'cookie',
           key: 'session',
-          pre: 'secure-',
+          value: { pre: 'secure-' },
         });
       });
     });
@@ -310,7 +340,7 @@ describe('Router', () => {
         expect(query('page', { gte: 1 })).toEqual({
           type: 'query',
           key: 'page',
-          gte: 1,
+          value: { gte: 1 },
         });
       });
     });
@@ -326,7 +356,7 @@ describe('Router', () => {
       it('should create a host operator condition', () => {
         expect(host({ suf: '.example.com' })).toEqual({
           type: 'host',
-          suf: '.example.com',
+          value: { suf: '.example.com' },
         });
       });
     });
@@ -348,8 +378,12 @@ describe('Router', () => {
           source: '/admin/(.*)',
           destination: 'https://admin.backend.com/$1',
           has: [
-            { type: 'header', key: 'x-user-role', inc: ['admin', 'moderator'] },
-            { type: 'cookie', key: 'session', pre: 'secure-' },
+            {
+              type: 'header',
+              key: 'x-user-role',
+              value: { inc: ['admin', 'moderator'] },
+            },
+            { type: 'cookie', key: 'session', value: { pre: 'secure-' } },
           ],
           missing: [{ type: 'header', key: 'x-legacy-auth' }],
         });
@@ -359,15 +393,15 @@ describe('Router', () => {
         const rewrite = router.rewrite('/api/(.*)', 'https://backend.com/$1', {
           has: [
             header('authorization', { pre: 'Bearer ' }),
-            { type: 'header', key: 'x-api-version', gte: 2 },
+            { type: 'header', key: 'x-api-version', value: { gte: 2 } },
           ],
         });
         expect(rewrite).toEqual({
           source: '/api/(.*)',
           destination: 'https://backend.com/$1',
           has: [
-            { type: 'header', key: 'authorization', pre: 'Bearer ' },
-            { type: 'header', key: 'x-api-version', gte: 2 },
+            { type: 'header', key: 'authorization', value: { pre: 'Bearer ' } },
+            { type: 'header', key: 'x-api-version', value: { gte: 2 } },
           ],
         });
       });
@@ -542,6 +576,59 @@ describe('Router', () => {
       router.route(route);
 
       expect(route.transforms[0].env).toEqual(['REGION', 'DATACENTER']);
+    });
+  });
+
+  describe('route alias validation', () => {
+    it('should throw if both src and source are defined', () => {
+      expect(() => {
+        router.route({ src: '/foo', source: '/bar' });
+      }).toThrow('Route cannot define both `src` and `source`.');
+    });
+
+    it('should throw if both dest and destination are defined', () => {
+      expect(() => {
+        router.route({ src: '/foo', dest: '/bar', destination: '/baz' });
+      }).toThrow('Route cannot define both `dest` and `destination`.');
+    });
+
+    it('should throw if both status and statusCode are defined', () => {
+      expect(() => {
+        router.route({ src: '/foo', status: 301, statusCode: 302 });
+      }).toThrow('Route cannot define both `status` and `statusCode`.');
+    });
+
+    it('should accept source as an alias for src', () => {
+      router.route({ source: '/foo', dest: '/bar' });
+      const config = router.getConfig();
+      const route = config.routes?.find(
+        r => 'src' in r && r.src === '/foo'
+      ) as Route;
+      expect(route).toBeDefined();
+      expect(route.src).toBe('/foo');
+      expect(route.source).toBeUndefined();
+    });
+
+    it('should accept destination as an alias for dest', () => {
+      router.route({ src: '/foo', destination: '/bar' });
+      const config = router.getConfig();
+      const route = config.routes?.find(
+        r => 'src' in r && r.src === '/foo'
+      ) as Route;
+      expect(route).toBeDefined();
+      expect(route.dest).toBe('/bar');
+      expect(route.destination).toBeUndefined();
+    });
+
+    it('should accept statusCode as an alias for status', () => {
+      router.route({ src: '/foo', statusCode: 301 });
+      const config = router.getConfig();
+      const route = config.routes?.find(
+        r => 'src' in r && r.src === '/foo'
+      ) as Route;
+      expect(route).toBeDefined();
+      expect(route.status).toBe(301);
+      expect(route.statusCode).toBeUndefined();
     });
   });
 });

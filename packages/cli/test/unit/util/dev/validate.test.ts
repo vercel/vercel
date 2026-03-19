@@ -24,6 +24,17 @@ describe('validateConfig', () => {
     expect(error).toBeNull();
   });
 
+  it('should not error with maxDuration set to "max"', async () => {
+    // Runtime allows maxDuration "max"; VercelConfig types expect number only.
+    const config = {
+      functions: {
+        'api/user.go': { memory: 128, maxDuration: 'max' as const },
+      },
+    } as unknown as Parameters<typeof validateConfig>[0];
+    const error = validateConfig(config);
+    expect(error).toBeNull();
+  });
+
   it('should not error with builds and routes', async () => {
     const config = {
       builds: [{ src: 'api/index.js', use: '@vercel/node' }],
@@ -46,17 +57,22 @@ describe('validateConfig', () => {
     );
   });
 
-  it('should error with invalid routes due to additional property and offer suggestion', async () => {
+  it('should not error with routes using source and destination aliases', async () => {
     const error = validateConfig({
-      // @ts-ignore
+      // @ts-expect-error - testing runtime alias support (source/destination accepted by schema, converted to src/dest at runtime)
       routes: [{ source: '/(.*)', destination: '/api/index.js' }],
     });
-    expect(error!.message).toEqual(
-      'Invalid vercel.json - `routes[0]` should NOT have additional property `source`. Did you mean `src`?'
-    );
-    expect(error!.link).toEqual(
-      'https://vercel.com/docs/concepts/projects/project-configuration#routes'
-    );
+    expect(error).toBeNull();
+  });
+
+  it('should not error with routes using source, destination, and statusCode aliases', async () => {
+    const error = validateConfig({
+      routes: [
+        // @ts-expect-error - testing runtime alias support (source/destination/statusCode accepted by schema, converted at runtime)
+        { source: '/(.*)', destination: '/api/index.js', statusCode: 200 },
+      ],
+    });
+    expect(error).toBeNull();
   });
 
   it('should error with invalid routes array type', async () => {
@@ -429,17 +445,17 @@ describe('validateConfig', () => {
     );
   });
 
-  it.each(['x86_64', 'arm64'] as const)(
-    'should not error with valid architecture: %s',
-    architecture => {
-      const error = validateConfig({
-        functions: {
-          'api/user.go': { architecture, memory: 128, maxDuration: 5 },
-        },
-      });
-      expect(error).toBeNull();
-    }
-  );
+  it.each([
+    'x86_64',
+    'arm64',
+  ] as const)('should not error with valid architecture: %s', architecture => {
+    const error = validateConfig({
+      functions: {
+        'api/user.go': { architecture, memory: 128, maxDuration: 5 },
+      },
+    });
+    expect(error).toBeNull();
+  });
 
   it('should error with invalid architecture', () => {
     const error = validateConfig({

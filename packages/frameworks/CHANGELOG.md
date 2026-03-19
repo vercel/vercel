@@ -1,5 +1,37 @@
 # @vercel/frameworks
 
+## 3.21.1
+
+### Patch Changes
+
+- [go] remove experimental flag on "go" frameworks preset ([#15435](https://github.com/vercel/vercel/pull/15435))
+
+## 3.21.0
+
+### Minor Changes
+
+- Make the generic "python" framework and the Django framework not experimental ([#15429](https://github.com/vercel/vercel/pull/15429))
+
+## 3.20.0
+
+### Minor Changes
+
+- Add a content filter for manage.py for django framework detection. ([#15348](https://github.com/vercel/vercel/pull/15348))
+
+- Detect django framework when manage.py is found. ([#15314](https://github.com/vercel/vercel/pull/15314))
+
+## 3.19.1
+
+### Patch Changes
+
+- Rename fetch to nodeFetch when importing from node-fetch ([#15232](https://github.com/vercel/vercel/pull/15232))
+
+## 3.19.0
+
+### Minor Changes
+
+- Add django experimental framework. ([#15196](https://github.com/vercel/vercel/pull/15196))
+
 ## 3.18.0
 
 ### Minor Changes

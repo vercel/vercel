@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import open from 'open';
 import integrationCommand from '../../../../src/commands/integration';
+import install from '../../../../src/commands/install';
 import pull from '../../../../src/commands/env/pull';
 import { connectResourceToProject } from '../../../../src/util/integration-resource/connect-resource-to-project';
 import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
@@ -39,7 +40,7 @@ beforeEach(() => {
   openMock.mockReset().mockResolvedValue(undefined as never);
   pullMock.mockClear();
   connectMock.mockClear();
-  // Enable auto-provision feature flag
+  // Explicitly enable auto-provision so tests pass regardless of flag default
   process.env.FF_AUTO_PROVISION_INSTALL = '1';
   // Mock Math.random to get predictable resource names (gray-apple suffix)
   vi.spyOn(Math, 'random').mockReturnValue(0);
@@ -47,6 +48,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.restoreAllMocks();
+  delete process.env.FF_AUTO_PROVISION_INSTALL;
 });
 
 describe('integration add (auto-provision)', () => {
@@ -112,6 +114,19 @@ describe('integration add (auto-provision)', () => {
         ['--yes'],
         'vercel-cli:integration:add'
       );
+
+      expect(client.telemetryEventStore.readonlyEvents).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            key: 'output:marketplace_checkout_provisioning_completed',
+            value: expect.stringContaining('"resource_id":"resource_123"'),
+          }),
+          expect.objectContaining({
+            key: 'output:marketplace_project_connected',
+            value: expect.stringContaining('"project_id"'),
+          }),
+        ])
+      );
     });
 
     it('should warn when env pull fails', async () => {
@@ -167,6 +182,21 @@ describe('integration add (auto-provision)', () => {
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(1);
       expect(pullMock).not.toHaveBeenCalled();
+
+      expect(client.telemetryEventStore.readonlyEvents).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            key: 'output:marketplace_checkout_provisioning_completed',
+            value: expect.stringContaining('"resource_id":"resource_123"'),
+          }),
+          expect.objectContaining({
+            key: 'output:marketplace_project_connect_failed',
+            value: expect.stringContaining(
+              '"error_message":"Connection failed"'
+            ),
+          }),
+        ])
+      );
     });
 
     it('should skip connecting with --no-connect flag', async () => {
@@ -235,6 +265,24 @@ describe('integration add (auto-provision)', () => {
           key: 'argument:integration',
           value: 'acme',
         },
+        {
+          key: 'output:marketplace_install_flow_started',
+          value: expect.stringContaining('"integration_slug":"acme"'),
+        },
+        {
+          key: 'output:marketplace_checkout_plan_selected',
+          value: expect.stringContaining(
+            '"plan_selection_method":"server_default"'
+          ),
+        },
+        {
+          key: 'output:marketplace_checkout_provisioning_started',
+          value: expect.stringContaining('"integration_slug":"acme"'),
+        },
+        {
+          key: 'output:marketplace_checkout_provisioning_completed',
+          value: expect.stringContaining('"resource_id":"resource_123"'),
+        },
       ]);
     });
 
@@ -266,6 +314,24 @@ describe('integration add (auto-provision)', () => {
         {
           key: 'argument:integration',
           value: 'acme',
+        },
+        {
+          key: 'output:marketplace_install_flow_started',
+          value: expect.stringContaining('"integration_slug":"acme"'),
+        },
+        {
+          key: 'output:marketplace_checkout_plan_selected',
+          value: expect.stringContaining(
+            '"plan_selection_method":"server_default"'
+          ),
+        },
+        {
+          key: 'output:marketplace_checkout_provisioning_started',
+          value: expect.stringContaining('"integration_slug":"acme"'),
+        },
+        {
+          key: 'output:marketplace_checkout_provisioning_completed',
+          value: expect.stringContaining('"resource_id":"resource_123"'),
         },
       ]);
     });
@@ -319,6 +385,19 @@ describe('integration add (auto-provision)', () => {
 
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(1);
+
+      expect(client.telemetryEventStore.readonlyEvents).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            key: 'output:marketplace_install_flow_started',
+            value: expect.stringContaining('"integration_slug":"acme"'),
+          }),
+          expect.objectContaining({
+            key: 'output:marketplace_install_flow_dropped',
+            value: expect.stringContaining('"reason":"policy_declined"'),
+          }),
+        ])
+      );
     });
 
     it('should exit with code 1 when privacy policy declined', async () => {
@@ -364,33 +443,195 @@ describe('integration add (auto-provision)', () => {
       expect(exitCode).toEqual(1);
     });
 
-    it('should exit with code 1 in non-TTY mode when no installation exists', async () => {
+    it('should open browser for terms acceptance in non-TTY mode', async () => {
+      client.reset();
+      useUser();
+      const teams = useTeams('team_dummy');
+      const t = Array.isArray(teams) ? teams[0] : teams.teams[0];
+      client.config.currentTeam = t.id;
+
+      useAutoProvision({
+        responseKey: 'provisioned',
+        withInstallation: false,
+        installationAppearsAfterPolls: 1,
+      });
+
       client.stdin.isTTY = false;
       client.setArgv('integration', 'add', 'acme');
       const exitCodePromise = integrationCommand(client);
 
       await expect(client.stderr).toOutput(
-        'Term acceptance requires an interactive terminal.'
+        'Waiting for terms acceptance in browser...'
+      );
+      await expect(client.stderr).toOutput('Terms accepted in browser.');
+      await expect(client.stderr).toOutput(
+        'Acme Product successfully provisioned: acme-gray-apple'
       );
 
       const exitCode = await exitCodePromise;
-      expect(exitCode).toEqual(1);
+      expect(exitCode).toEqual(0);
+      expect(openMock).toHaveBeenCalledWith(
+        expect.stringContaining('/~/integrations/accept-terms/acme')
+      );
     });
 
-    it('should exit with code 1 when AI agent is detected (legal requirement)', async () => {
-      // Term acceptance must be performed by a human, not an AI agent.
-      // Agents running in a PTY can bypass the isTTY check, so we
-      // explicitly block detected agents from accepting terms.
+    it('should open browser for terms acceptance when AI agent detected', async () => {
+      client.reset();
+      useUser();
+      const teams = useTeams('team_dummy');
+      const t = Array.isArray(teams) ? teams[0] : teams.teams[0];
+      client.config.currentTeam = t.id;
+
+      useAutoProvision({
+        responseKey: 'provisioned',
+        withInstallation: false,
+        installationAppearsAfterPolls: 1,
+      });
+
       client.isAgent = true;
       client.setArgv('integration', 'add', 'acme');
       const exitCodePromise = integrationCommand(client);
 
       await expect(client.stderr).toOutput(
-        'Term acceptance cannot be performed by an AI agent.'
+        'Waiting for terms acceptance in browser...'
+      );
+      await expect(client.stderr).toOutput('Terms accepted in browser.');
+      await expect(client.stderr).toOutput(
+        'Acme Product successfully provisioned: acme-gray-apple'
       );
 
       const exitCode = await exitCodePromise;
-      expect(exitCode).toEqual(1);
+      expect(exitCode).toEqual(0);
+      expect(openMock).toHaveBeenCalledWith(
+        expect.stringContaining('/~/integrations/accept-terms/acme')
+      );
+    });
+
+    it('should open browser for terms when integration has requiresBrowserInstall capability', async () => {
+      client.reset();
+      useUser();
+      const teams = useTeams('team_dummy');
+      const t = Array.isArray(teams) ? teams[0] : teams.teams[0];
+      client.config.currentTeam = t.id;
+
+      useAutoProvision({
+        responseKey: 'provisioned',
+        withInstallation: false,
+        installationAppearsAfterPolls: 1,
+      });
+
+      // TTY is true, isAgent is false — but requiresBrowserInstall should still trigger browser flow
+      client.stdin.isTTY = true;
+      client.isAgent = false;
+      client.setArgv('integration', 'add', 'aws-apg');
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'Waiting for terms acceptance in browser...'
+      );
+      await expect(client.stderr).toOutput('Terms accepted in browser.');
+      await expect(client.stderr).toOutput(
+        'Aurora Postgres successfully provisioned: aws-apg-gray-apple'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+      expect(openMock).toHaveBeenCalledWith(
+        expect.stringContaining('/~/integrations/accept-terms/aws-apg')
+      );
+    });
+
+    it('should exit with code 1 on browser terms timeout', async () => {
+      client.reset();
+      useUser();
+      const teams = useTeams('team_dummy');
+      const t = Array.isArray(teams) ? teams[0] : teams.teams[0];
+      client.config.currentTeam = t.id;
+
+      // Never return an installation — simulates user not accepting in browser
+      useAutoProvision({
+        responseKey: 'provisioned',
+        withInstallation: false,
+      });
+
+      // Mock sleep to be instant so the timeout loop completes quickly
+      vi.mock('../../../../src/util/sleep', () => ({
+        default: vi.fn().mockResolvedValue(undefined),
+      }));
+
+      // Import and call acceptTermsViaBrowser directly with a very short timeout
+      const { acceptTermsViaBrowser } = await import(
+        '../../../../src/util/integration/accept-terms-via-browser'
+      );
+
+      const result = await acceptTermsViaBrowser(
+        client,
+        { id: 'acme', slug: 'acme', name: 'Acme Integration' },
+        t.id,
+        t.slug,
+        100 // 100ms timeout — will expire almost immediately
+      );
+
+      expect(result).toBeNull();
+      expect(openMock).toHaveBeenCalledWith(
+        expect.stringContaining('/~/integrations/accept-terms/acme')
+      );
+    });
+
+    it('should skip browser when installation already exists (agent mode)', async () => {
+      // Need fresh mocks since beforeEach registered withInstallation: false
+      client.reset();
+      useUser();
+      const teams = useTeams('team_dummy');
+      const t = Array.isArray(teams) ? teams[0] : teams.teams[0];
+      client.config.currentTeam = t.id;
+
+      useAutoProvision({
+        responseKey: 'provisioned',
+        withInstallation: true,
+      });
+
+      client.isAgent = true;
+      client.setArgv('integration', 'add', 'acme');
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'Acme Product successfully provisioned: acme-gray-apple'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+      // Browser should NOT be opened since installation already exists
+      expect(openMock).not.toHaveBeenCalled();
+    });
+
+    it('should include correct params in browser terms URL', async () => {
+      client.reset();
+      openMock.mockReset().mockResolvedValue(undefined as never);
+      useUser();
+      const teams = useTeams('team_dummy');
+      const t = Array.isArray(teams) ? teams[0] : teams.teams[0];
+      client.config.currentTeam = t.id;
+
+      useAutoProvision({
+        responseKey: 'provisioned',
+        withInstallation: false,
+        installationAppearsAfterPolls: 1,
+      });
+
+      client.isAgent = true;
+      client.setArgv('integration', 'add', 'acme');
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput('Terms accepted in browser.');
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+
+      const calledUrl = openMock.mock.calls[0]?.[0] as string;
+      const parsed = new URL(calledUrl);
+      expect(parsed.pathname).toContain('/~/integrations/accept-terms/acme');
+      expect(parsed.searchParams.get('source')).toEqual('cli');
     });
 
     it('should reject --yes flag to prevent automated term bypass (legal requirement)', async () => {
@@ -410,10 +651,10 @@ describe('integration add (auto-provision)', () => {
     });
 
     it('should only prompt for addendum when integration has no privacy or EULA', async () => {
-      client.setArgv('integration', 'add', 'aws-apg');
+      client.setArgv('integration', 'add', 'acme-prepayment');
       const exitCodePromise = integrationCommand(client);
 
-      // Only the addendum prompt should appear (aws-apg has no eulaDocUri/privacyDocUri)
+      // Only the addendum prompt should appear (acme-prepayment has no eulaDocUri/privacyDocUri)
       await expect(client.stderr).toOutput(
         'Accept Vercel Marketplace End User Addendum?'
       );
@@ -421,7 +662,7 @@ describe('integration add (auto-provision)', () => {
 
       // Should go straight to provisioning without privacy/EULA prompts
       await expect(client.stderr).toOutput(
-        'Aurora Postgres successfully provisioned'
+        'Acme Product successfully provisioned'
       );
 
       const exitCode = await exitCodePromise;
@@ -457,6 +698,27 @@ describe('integration add (auto-provision)', () => {
       // No --metadata flags, so metadata should NOT be in the URL
       expect(openMock).toHaveBeenCalledWith(
         expect.not.stringMatching(/metadata=/)
+      );
+
+      expect(client.telemetryEventStore.readonlyEvents).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            key: 'output:marketplace_install_flow_started',
+            value: expect.stringContaining('"integration_slug":"acme"'),
+          }),
+          expect.objectContaining({
+            key: 'output:marketplace_checkout_plan_selected',
+            value: expect.stringContaining('"plan_selection_method"'),
+          }),
+          expect.objectContaining({
+            key: 'output:marketplace_checkout_provisioning_started',
+            value: expect.stringContaining('"integration_slug":"acme"'),
+          }),
+          expect.objectContaining({
+            key: 'output:marketplace_install_flow_web_fallback',
+            value: expect.stringContaining('"reason"'),
+          }),
+        ])
       );
     });
 
@@ -534,6 +796,21 @@ describe('integration add (auto-provision)', () => {
       expect(openMock).toHaveBeenCalledWith(
         expect.not.stringMatching(/metadata=/)
       );
+    });
+
+    it('should open browser for install fallback (policies not accepted server-side)', async () => {
+      useAutoProvision({ responseKey: 'install' });
+
+      client.setArgv('integration', 'add', 'acme');
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'Additional setup required. Opening browser...'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(1);
+      expect(openMock).toHaveBeenCalled();
     });
 
     it('should forward --metadata to browser URL on unknown fallback', async () => {
@@ -819,6 +1096,19 @@ describe('integration add (auto-provision)', () => {
         'Error: Resource name can only contain letters, numbers, underscores, and hyphens'
       );
       expect(exitCode).toEqual(1);
+
+      expect(client.telemetryEventStore.readonlyEvents).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            key: 'output:marketplace_install_flow_started',
+            value: expect.stringContaining('"integration_slug":"acme"'),
+          }),
+          expect.objectContaining({
+            key: 'output:marketplace_install_flow_dropped',
+            value: expect.stringContaining('"reason":"resource_name_invalid"'),
+          }),
+        ])
+      );
     });
 
     it('should reject empty resource name from --name flag', async () => {
@@ -937,6 +1227,73 @@ describe('integration add (auto-provision)', () => {
       );
     });
 
+    it('should include environment in fallback URL when --environment is provided', async () => {
+      useAutoProvision({ responseKey: 'metadata' });
+
+      client.setArgv(
+        'integration',
+        'add',
+        'acme',
+        '--environment',
+        'production'
+      );
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'Additional setup required. Opening browser...'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(1);
+      const calledUrl = openMock.mock.calls[0]?.[0] as string;
+      const parsed = new URL(calledUrl);
+      expect(parsed.searchParams.get('environment')).toEqual('production');
+    });
+
+    it('should include comma-separated environments in fallback URL when multiple --environment flags are provided', async () => {
+      useAutoProvision({ responseKey: 'metadata' });
+
+      client.setArgv(
+        'integration',
+        'add',
+        'acme',
+        '--environment',
+        'production',
+        '--environment',
+        'preview'
+      );
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'Additional setup required. Opening browser...'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(1);
+      const calledUrl = openMock.mock.calls[0]![0] as string;
+      const parsed = new URL(calledUrl);
+      expect(parsed.searchParams.get('environment')).toEqual(
+        'production,preview'
+      );
+    });
+
+    it('should not include environment in fallback URL when --environment is not provided', async () => {
+      useAutoProvision({ responseKey: 'metadata' });
+
+      client.setArgv('integration', 'add', 'acme');
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'Additional setup required. Opening browser...'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(1);
+      expect(openMock).toHaveBeenCalledWith(
+        expect.not.stringMatching(/environment=/)
+      );
+    });
+
     it('should not include planId in fallback URL when --plan is not provided', async () => {
       useAutoProvision({ responseKey: 'metadata' });
 
@@ -1052,8 +1409,6 @@ describe('integration add (auto-provision)', () => {
       const teams = useTeams('team_dummy');
       const t = Array.isArray(teams) ? teams[0] : teams.teams[0];
       client.config.currentTeam = t.id;
-      process.env.FF_AUTO_PROVISION_INSTALL = '1';
-
       // Integration endpoint (needed to fetch integration)
       client.scenario.get(
         '/:version/integrations/integration/:slug',
@@ -1448,6 +1803,252 @@ describe('integration add (auto-provision)', () => {
     });
   });
 
+  describe('--installation-id flag', () => {
+    it('should show error with installation list when multiple installations exist', async () => {
+      useAutoProvision({ responseKey: 'multiple_installations' });
+
+      client.setArgv('integration', 'add', 'acme');
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'Multiple installations found for "acme"'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(1);
+      const stderr = client.stderr.getFullOutput();
+      expect(stderr).toContain('icfg_marketplace_1');
+      expect(stderr).toContain('icfg_external_1');
+      expect(stderr).toContain('--installation-id');
+    });
+
+    it('should include externalId and status in the installation list', async () => {
+      useAutoProvision({ responseKey: 'multiple_installations' });
+
+      client.setArgv('integration', 'add', 'acme');
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'Multiple installations found for "acme"'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(1);
+      const stderr = client.stderr.getFullOutput();
+      expect(stderr).toContain('externalId=aws-account-123');
+      expect(stderr).toContain('status=active');
+    });
+
+    it('should provision successfully with --installation-id', async () => {
+      const { requestBodies } = useAutoProvision({
+        responseKey: 'multiple_installations',
+      });
+
+      client.setArgv(
+        'integration',
+        'add',
+        'acme',
+        '--installation-id',
+        'icfg_marketplace_1'
+      );
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'Acme Product successfully provisioned: acme-gray-apple'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+      expect(requestBodies[0]).toMatchObject({
+        installationId: 'icfg_marketplace_1',
+      });
+    });
+
+    it('should pass installationId in request body', async () => {
+      const { requestBodies } = useAutoProvision({
+        responseKey: 'provisioned',
+      });
+
+      client.setArgv(
+        'integration',
+        'add',
+        'acme',
+        '--installation-id',
+        'icfg_custom'
+      );
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'Acme Product successfully provisioned: acme-gray-apple'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+      expect(requestBodies[0]).toMatchObject({
+        installationId: 'icfg_custom',
+      });
+    });
+
+    it('should include product slug in the suggested command when using slash syntax', async () => {
+      useAutoProvision({ responseKey: 'multiple_installations' });
+
+      client.setArgv('integration', 'add', 'acme-two-products/acme-a');
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'vercel integration add acme-two-products/acme-a --installation-id'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(1);
+    });
+  });
+
+  describe('--installation-id FF gating', () => {
+    it('should not show --installation-id in --help when FF is off', async () => {
+      process.env.FF_AUTO_PROVISION_INSTALL = '0';
+      client.setArgv('integration', 'add', '--help');
+      const exitCode = await integrationCommand(client);
+      expect(exitCode).toEqual(0);
+      const stderr = client.stderr.getFullOutput();
+      expect(stderr).not.toContain('--installation-id');
+    });
+
+    it('should show --installation-id in --help when FF is on', async () => {
+      delete process.env.FF_AUTO_PROVISION_INSTALL;
+      client.setArgv('integration', 'add', '--help');
+      const exitCode = await integrationCommand(client);
+      expect(exitCode).toEqual(0);
+      const stderr = client.stderr.getFullOutput();
+      expect(stderr).toContain('--installation-id');
+    });
+
+    it('should reject --installation-id when FF is off', async () => {
+      process.env.FF_AUTO_PROVISION_INSTALL = '0';
+      client.setArgv(
+        'integration',
+        'add',
+        'acme',
+        '--installation-id',
+        'icfg_123'
+      );
+      const exitCode = await integrationCommand(client);
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput(
+        'Unknown or unexpected option: --installation-id'
+      );
+    });
+  });
+
+  describe('--installation-id FF gating (vc install alias)', () => {
+    it('should not show --installation-id in vc install --help when FF is off', async () => {
+      process.env.FF_AUTO_PROVISION_INSTALL = '0';
+      client.setArgv('install', '--help');
+      const exitCode = await install(client);
+      expect(exitCode).toEqual(0);
+      const stderr = client.stderr.getFullOutput();
+      expect(stderr).not.toContain('--installation-id');
+    });
+
+    it('should show --installation-id in vc install --help when FF is on', async () => {
+      delete process.env.FF_AUTO_PROVISION_INSTALL;
+      client.setArgv('install', '--help');
+      const exitCode = await install(client);
+      expect(exitCode).toEqual(0);
+      const stderr = client.stderr.getFullOutput();
+      expect(stderr).toContain('--installation-id');
+    });
+
+    it('should reject --installation-id in vc install when FF is off', async () => {
+      process.env.FF_AUTO_PROVISION_INSTALL = '0';
+      client.setArgv('install', 'acme', '--installation-id', 'icfg_123');
+      const exitCode = await install(client);
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput(
+        'Unknown or unexpected option: --installation-id'
+      );
+    });
+
+    it('should provision successfully via vc install with --installation-id', async () => {
+      const { requestBodies } = useAutoProvision({
+        responseKey: 'multiple_installations',
+      });
+
+      client.setArgv(
+        'install',
+        'acme',
+        '--installation-id',
+        'icfg_marketplace_1'
+      );
+      const exitCodePromise = install(client);
+
+      await expect(client.stderr).toOutput(
+        'Acme Product successfully provisioned: acme-gray-apple'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+      expect(requestBodies[0]).toMatchObject({
+        installationId: 'icfg_marketplace_1',
+      });
+    });
+  });
+
+  describe('command name in error messages', () => {
+    it('should use "vercel integration add" in multiple installations error via integration add', async () => {
+      useAutoProvision({ responseKey: 'multiple_installations' });
+
+      client.setArgv('integration', 'add', 'acme');
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'vercel integration add acme --installation-id'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(1);
+    });
+
+    it('should use "vercel install" in multiple installations error via vc install', async () => {
+      useAutoProvision({ responseKey: 'multiple_installations' });
+
+      client.setArgv('install', 'acme');
+      const exitCodePromise = install(client);
+
+      await expect(client.stderr).toOutput(
+        'vercel install acme --installation-id'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(1);
+      const stderr = client.stderr.getFullOutput();
+      expect(stderr).not.toContain('vercel integration add');
+    });
+
+    it('should use "vercel install" in multiple products error via vc install', async () => {
+      useAutoProvision({ responseKey: 'provisioned' });
+
+      client.setArgv('install', 'acme-two-products');
+      (client.stdin as any).isTTY = false;
+      const exitCode = await install(client);
+      expect(exitCode).toEqual(1);
+      const stderr = client.stderr.getFullOutput();
+      expect(stderr).toContain('vercel install acme-two-products/');
+      expect(stderr).not.toContain('vercel integration add');
+    });
+
+    it('should use "vercel integration add" in multiple products error via integration add', async () => {
+      useAutoProvision({ responseKey: 'provisioned' });
+
+      client.setArgv('integration', 'add', 'acme-two-products');
+      (client.stdin as any).isTTY = false;
+      const exitCode = await integrationCommand(client);
+      expect(exitCode).toEqual(1);
+      const stderr = client.stderr.getFullOutput();
+      expect(stderr).toContain('vercel integration add acme-two-products/');
+    });
+  });
+
   describe('--environment flag', () => {
     beforeEach(() => {
       useAutoProvision({ responseKey: 'provisioned' });
@@ -1480,7 +2081,8 @@ describe('integration add (auto-provision)', () => {
         client,
         'vercel-integration-add',
         'resource_123',
-        ['production']
+        ['production'],
+        undefined
       );
     });
 
@@ -1513,7 +2115,8 @@ describe('integration add (auto-provision)', () => {
         client,
         'vercel-integration-add',
         'resource_123',
-        ['production', 'preview']
+        ['production', 'preview'],
+        undefined
       );
     });
 
@@ -1546,7 +2149,8 @@ describe('integration add (auto-provision)', () => {
         client,
         'vercel-integration-add',
         'resource_123',
-        ['production']
+        ['production'],
+        undefined
       );
     });
 
@@ -1571,7 +2175,8 @@ describe('integration add (auto-provision)', () => {
         client,
         'vercel-integration-add',
         'resource_123',
-        ['production', 'preview', 'development']
+        ['production', 'preview', 'development'],
+        undefined
       );
     });
 
@@ -1596,7 +2201,8 @@ describe('integration add (auto-provision)', () => {
         client,
         'vercel-integration-add',
         'resource_123',
-        ['development']
+        ['development'],
+        undefined
       );
     });
 
@@ -1624,6 +2230,291 @@ describe('integration add (auto-provision)', () => {
       await expect(client.stderr).toOutput(
         'Error: Invalid environment value: "staging", "test". Must be one of: production, preview, development'
       );
+    });
+  });
+
+  describe('--prefix flag', () => {
+    beforeEach(() => {
+      useAutoProvision({ responseKey: 'provisioned' });
+    });
+
+    it('should pass prefix to connectResourceToProject', async () => {
+      useProject({
+        ...defaultProject,
+        id: 'vercel-integration-add',
+        name: 'vercel-integration-add',
+      });
+      const cwd = setupUnitFixture('vercel-integration-add');
+      client.cwd = cwd;
+      client.setArgv('integration', 'add', 'acme', '--prefix', 'NEON2_');
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'Acme Product successfully provisioned: acme-gray-apple'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+      expect(connectMock).toHaveBeenCalledWith(
+        client,
+        'vercel-integration-add',
+        'resource_123',
+        ['production', 'preview', 'development'],
+        { envVarPrefix: 'NEON2_' }
+      );
+    });
+
+    it('should not pass prefix to connectResourceToProject when not provided', async () => {
+      useProject({
+        ...defaultProject,
+        id: 'vercel-integration-add',
+        name: 'vercel-integration-add',
+      });
+      const cwd = setupUnitFixture('vercel-integration-add');
+      client.cwd = cwd;
+      client.setArgv('integration', 'add', 'acme');
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'Acme Product successfully provisioned: acme-gray-apple'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+      expect(connectMock).toHaveBeenCalledWith(
+        client,
+        'vercel-integration-add',
+        'resource_123',
+        ['production', 'preview', 'development'],
+        undefined
+      );
+    });
+
+    it('should track prefix telemetry when --prefix is used', async () => {
+      client.setArgv('integration', 'add', 'acme', '--prefix', 'NEON2_');
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'Acme Product successfully provisioned'
+      );
+
+      await exitCodePromise;
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'subcommand:add',
+          value: 'add',
+        },
+        {
+          key: 'option:prefix',
+          value: '[REDACTED]',
+        },
+        {
+          key: 'argument:integration',
+          value: 'acme',
+        },
+        {
+          key: 'output:marketplace_install_flow_started',
+          value: expect.stringContaining('"integration_slug":"acme"'),
+        },
+        {
+          key: 'output:marketplace_checkout_plan_selected',
+          value: expect.stringContaining(
+            '"plan_selection_method":"server_default"'
+          ),
+        },
+        {
+          key: 'output:marketplace_checkout_provisioning_started',
+          value: expect.stringContaining('"integration_slug":"acme"'),
+        },
+        {
+          key: 'output:marketplace_checkout_provisioning_completed',
+          value: expect.stringContaining('"resource_id":"resource_123"'),
+        },
+      ]);
+    });
+
+    it('should work with --prefix and --environment together', async () => {
+      useProject({
+        ...defaultProject,
+        id: 'vercel-integration-add',
+        name: 'vercel-integration-add',
+      });
+      const cwd = setupUnitFixture('vercel-integration-add');
+      client.cwd = cwd;
+      client.setArgv(
+        'integration',
+        'add',
+        'acme',
+        '--prefix',
+        'NEON2_',
+        '--environment',
+        'production'
+      );
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'Acme Product successfully provisioned: acme-gray-apple'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+      expect(connectMock).toHaveBeenCalledWith(
+        client,
+        'vercel-integration-add',
+        'resource_123',
+        ['production'],
+        { envVarPrefix: 'NEON2_' }
+      );
+    });
+  });
+
+  describe('--format=json', () => {
+    beforeEach(() => {
+      useAutoProvision({ responseKey: 'provisioned' });
+      // Restore pull mock implementation (vi.restoreAllMocks in afterEach clears it)
+      pullMock.mockResolvedValue(0);
+    });
+
+    it('should output valid JSON to stdout on success without project', async () => {
+      client.setArgv('integration', 'add', 'acme', '--format=json');
+      const exitCode = await integrationCommand(client);
+
+      expect(exitCode).toEqual(0);
+      const jsonOutput = JSON.parse(client.stdout.getFullOutput());
+      expect(jsonOutput.resource).toEqual({
+        id: 'resource_123',
+        name: 'test-resource',
+        status: 'available',
+        externalResourceId: 'ext_resource_123',
+      });
+      expect(jsonOutput.integration).toEqual({
+        id: 'acme',
+        slug: 'acme',
+        name: 'Acme Integration',
+      });
+      expect(jsonOutput.product).toEqual({
+        id: 'acme-product',
+        slug: 'acme',
+        name: 'Acme Product',
+      });
+      expect(jsonOutput.installation).toEqual({ id: 'install_123' });
+      expect(jsonOutput.billingPlan).toBeNull();
+      expect(jsonOutput.dashboardUrl).toContain(
+        '/d/dashboard/integrations/acme/install_123/resources/resource_123'
+      );
+      expect(jsonOutput.ssoUrl.integration).toContain(
+        'integrationConfigurationId=install_123'
+      );
+      expect(jsonOutput.ssoUrl.resource).toContain(
+        'resource_id=ext_resource_123'
+      );
+      expect(jsonOutput.project).toBeNull();
+      expect(jsonOutput.environments).toEqual([]);
+      expect(jsonOutput.envPulled).toBe(false);
+      expect(jsonOutput.warnings).toEqual([]);
+    });
+
+    it('should include project and environments in JSON when connected', async () => {
+      useProject({
+        ...defaultProject,
+        id: 'vercel-integration-add',
+        name: 'vercel-integration-add',
+      });
+      const cwd = setupUnitFixture('vercel-integration-add');
+      client.cwd = cwd;
+      client.setArgv('integration', 'add', 'acme', '--format=json');
+      const exitCode = await integrationCommand(client);
+
+      expect(exitCode).toEqual(0);
+      const jsonOutput = JSON.parse(client.stdout.getFullOutput());
+      expect(jsonOutput.project).toEqual({
+        id: 'vercel-integration-add',
+        name: 'vercel-integration-add',
+      });
+      expect(jsonOutput.environments).toEqual([
+        'production',
+        'preview',
+        'development',
+      ]);
+      expect(jsonOutput.envPulled).toBe(true);
+      expect(jsonOutput.warnings).toEqual([]);
+    });
+
+    it('should output JSON with warnings when connect fails', async () => {
+      useProject({
+        ...defaultProject,
+        id: 'vercel-integration-add',
+        name: 'vercel-integration-add',
+      });
+      const cwd = setupUnitFixture('vercel-integration-add');
+      client.cwd = cwd;
+      connectMock.mockRejectedValueOnce(new Error('Connection refused'));
+      client.setArgv('integration', 'add', 'acme', '--format=json');
+      const exitCode = await integrationCommand(client);
+
+      // Exit code 0 because resource was provisioned (primary action succeeded)
+      expect(exitCode).toEqual(0);
+      const jsonOutput = JSON.parse(client.stdout.getFullOutput());
+      expect(jsonOutput.resource.id).toBe('resource_123');
+      expect(jsonOutput.warnings).toEqual([
+        'Failed to connect to project: Connection refused',
+      ]);
+    });
+
+    it('should output JSON with env pull warning when pull fails', async () => {
+      useProject({
+        ...defaultProject,
+        id: 'vercel-integration-add',
+        name: 'vercel-integration-add',
+      });
+      const cwd = setupUnitFixture('vercel-integration-add');
+      client.cwd = cwd;
+      pullMock.mockResolvedValue(1);
+      client.setArgv('integration', 'add', 'acme', '--format=json');
+      const exitCode = await integrationCommand(client);
+
+      expect(exitCode).toEqual(0);
+      const jsonOutput = JSON.parse(client.stdout.getFullOutput());
+      expect(jsonOutput.project).toEqual({
+        id: 'vercel-integration-add',
+        name: 'vercel-integration-add',
+      });
+      expect(jsonOutput.envPulled).toBe(false);
+      expect(jsonOutput.warnings).toContainEqual(
+        expect.stringContaining('Failed to pull environment variables')
+      );
+    });
+
+    it('should not output JSON to stdout on pre-provisioning error', async () => {
+      client.setArgv(
+        'integration',
+        'add',
+        'nonexistent-integration',
+        '--format=json'
+      );
+      const exitCode = await integrationCommand(client);
+
+      expect(exitCode).toEqual(1);
+      // stdout should be empty - no JSON
+      expect(client.stdout.getFullOutput()).toBe('');
+    });
+
+    it('should error on invalid --format value', async () => {
+      client.setArgv('integration', 'add', 'acme', '--format=xml');
+      const exitCode = await integrationCommand(client);
+
+      expect(exitCode).toEqual(1);
+      expect(client.stdout.getFullOutput()).toBe('');
+    });
+
+    it('should not output JSON when --format is not specified', async () => {
+      client.setArgv('integration', 'add', 'acme');
+      const exitCode = await integrationCommand(client);
+
+      expect(exitCode).toEqual(0);
+      // No JSON on stdout
+      expect(client.stdout.getFullOutput()).toBe('');
     });
   });
 });

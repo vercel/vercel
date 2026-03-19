@@ -39,6 +39,7 @@ import { IntegrationAddTelemetryClient } from '../../util/telemetry/commands/int
 import { createAuthorization } from '../../util/integration/create-authorization';
 import sleep from '../../util/sleep';
 import { fetchAuthorization } from '../../util/integration/fetch-authorization';
+import { validateJsonOutput } from '../../util/output-format';
 
 import type { IntegrationAddFlags } from './command';
 
@@ -47,15 +48,33 @@ type AddOptions = PostProvisionOptions;
 export async function add(
   client: Client,
   args: string[],
-  flags: IntegrationAddFlags
+  flags: IntegrationAddFlags,
+  commandName?: 'integration add' | 'install'
 ) {
   const resourceNameArg = flags['--name'];
   const metadataFlags = flags['--metadata'];
   const billingPlanId = flags['--plan'];
+  const prefix = flags['--prefix'];
+  if (prefix !== undefined && !/^[a-zA-Z][a-zA-Z0-9_]*$/.test(prefix)) {
+    output.error(
+      'Invalid --prefix value. It must start with a letter and contain only letters, digits, and underscores.'
+    );
+    return 1;
+  }
+  const installationId = flags['--installation-id'];
+
+  const formatResult = validateJsonOutput(flags);
+  if (!formatResult.valid) {
+    output.error(formatResult.error);
+    return 1;
+  }
+  const asJson = formatResult.jsonOutput;
+
   const options: AddOptions = {
     noConnect: flags['--no-connect'],
     noEnvPull: flags['--no-env-pull'],
     environments: flags['--environment'],
+    prefix,
   };
   if (args.length > 1) {
     output.error('Cannot install more than one integration at a time');
@@ -101,15 +120,26 @@ export async function add(
   // to apply product-specific validation rules
 
   // Auto-provision: completely separate code path (self-contained telemetry)
-  if (process.env.FF_AUTO_PROVISION_INSTALL === '1') {
+  if (process.env.FF_AUTO_PROVISION_INSTALL !== '0') {
     return await addAutoProvision(client, integrationSlug, resourceNameArg, {
       productSlug,
       metadata: metadataFlags,
       billingPlanId,
+      installationId,
       noConnect: options.noConnect,
       noEnvPull: options.noEnvPull,
       environments: options.environments,
+      prefix,
+      commandName,
+      asJson,
     });
+  }
+
+  if (asJson) {
+    output.error(
+      'The --format flag is not yet supported with the integration add command'
+    );
+    return 1;
   }
 
   const telemetry = new IntegrationAddTelemetryClient({
@@ -123,6 +153,7 @@ export async function add(
   telemetry.trackCliFlagNoConnect(options.noConnect);
   telemetry.trackCliFlagNoEnvPull(options.noEnvPull);
   telemetry.trackCliOptionEnvironment(options.environments);
+  telemetry.trackCliOptionPrefix(prefix);
 
   const { contextName, team } = await getScope(client);
 
@@ -277,7 +308,8 @@ export async function add(
         projectLink.value,
         resourceName,
         parsedMetadata,
-        billingPlanId
+        billingPlanId,
+        options.environments
       );
     }
 
@@ -306,7 +338,8 @@ function provisionResourceViaWebUI(
   projectId?: string,
   resourceName?: string,
   metadata?: Metadata,
-  billingPlanId?: string
+  billingPlanId?: string,
+  environments?: string[]
 ) {
   const url = new URL('/api/marketplace/cli', 'https://vercel.com');
   url.searchParams.set('teamId', teamId);
@@ -324,6 +357,9 @@ function provisionResourceViaWebUI(
   }
   if (billingPlanId) {
     url.searchParams.set('planId', billingPlanId);
+  }
+  if (environments?.length) {
+    url.searchParams.set('environment', environments.join(','));
   }
   url.searchParams.set('cmd', 'add');
   output.print('Opening the Vercel Dashboard to continue the installation...');
@@ -458,7 +494,8 @@ async function provisionResourceViaCLI(
         projectLink.value,
         name,
         metadata,
-        billingPlan.id
+        billingPlan.id,
+        options.environments
       );
     }
 
@@ -495,6 +532,7 @@ async function provisionResourceViaCLI(
       metadata,
       billingPlan,
       authorizationId,
+      integration.slug,
       contextName,
       options
     );
@@ -692,6 +730,7 @@ async function provisionStorageProduct(
   metadata: Metadata,
   billingPlan: BillingPlan,
   authorizationId: string,
+  integrationSlug: string,
   contextName: string,
   options: AddOptions = {}
 ) {
@@ -720,5 +759,10 @@ async function provisionStorageProduct(
     `${product.name} successfully provisioned: ${chalk.bold(name)}`
   );
 
-  return postProvisionSetup(client, name, storeId, contextName, options);
+  const result = await postProvisionSetup(client, name, storeId, contextName, {
+    ...options,
+    integrationSlug,
+    installationId: installation.id,
+  });
+  return result.exitCode;
 }
