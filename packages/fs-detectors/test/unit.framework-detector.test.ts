@@ -606,7 +606,14 @@ describe('detectFrameworks()', () => {
       'import("hono")',
     ];
 
-    const filePaths = ['index.ts', 'index.js', 'src/index.ts', 'src/index.js'];
+    const filePaths = [
+      'index.ts',
+      'index.js',
+      'src/index.ts',
+      'src/index.js',
+      'server.ts',
+      'src/server.ts',
+    ];
 
     // Test each import syntax with each file path
     importSyntaxes.forEach(syntax => {
