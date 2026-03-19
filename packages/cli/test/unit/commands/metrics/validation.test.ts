@@ -125,9 +125,26 @@ describe('validation', () => {
       });
     });
 
+    it('should pass when only --project is set', () => {
+      expect(validateMutualExclusivity(undefined, 'my-app')).toEqual({
+        valid: true,
+      });
+    });
+
+    it('should pass when neither is set', () => {
+      expect(validateMutualExclusivity(undefined, undefined)).toEqual({
+        valid: true,
+      });
+    });
+
     it('should fail when both --all and --project are set', () => {
       const result = validateMutualExclusivity(true, 'my-app');
       expect(result.valid).toBe(false);
+      if (!result.valid) {
+        expect(result.code).toBe('MUTUAL_EXCLUSIVITY');
+        expect(result.message).toContain('--all');
+        expect(result.message).toContain('--project');
+      }
     });
   });
 
@@ -142,6 +159,11 @@ describe('validation', () => {
     it('should fail when event is undefined', () => {
       const result = validateRequiredEvent(undefined);
       expect(result.valid).toBe(false);
+      if (!result.valid) {
+        expect(result.code).toBe('MISSING_EVENT');
+        expect(result.message).toContain('--event');
+        expect(result.message).toContain('vercel metrics schema');
+      }
     });
   });
 });
