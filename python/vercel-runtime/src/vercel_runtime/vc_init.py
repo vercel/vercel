@@ -58,6 +58,22 @@ type _ASGIApp = Callable[[_ASGIScope, _ASGIReceive, _ASGISend], Awaitable[None]]
 
 _original_stderr = sys.stderr
 
+# --- IPC socket & send_message (must be available before _fatal) ----------
+_ipc_sock: socket.socket | None = None
+if "VERCEL_IPC_PATH" in os.environ:
+    _ipc_sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    with contextlib.suppress(Exception):
+        _ipc_sock.connect(os.environ["VERCEL_IPC_PATH"])
+
+
+def send_message(message: _IpcMessage) -> None:
+    if _ipc_sock is not None:
+        with contextlib.suppress(Exception):
+            _ipc_sock.sendall((json.dumps(message) + "\0").encode())
+
+
+# -------------------------------------------------------------------------
+
 
 def _stderr(message: str) -> None:
     with contextlib.suppress(Exception):
@@ -260,17 +276,12 @@ def setup_logging(
 # If running in the platform (IPC present), logging must be
 # setup before importing user code so that logs happening
 # outside the request context are emitted correctly.
-ipc_sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
 storage: contextvars.ContextVar[dict[str, str | int] | None] = (
     contextvars.ContextVar(
         "storage",
         default=None,
     )
 )
-
-
-def send_message(message: _IpcMessage) -> None:
-    return None
 
 
 # Buffer for pre-handshake logs (to avoid blocking IPC on startup)
@@ -339,15 +350,8 @@ def flush_init_log_buf_to_stderr() -> None:
 atexit.register(flush_init_log_buf_to_stderr)
 
 
-if "VERCEL_IPC_PATH" in os.environ:
-    with contextlib.suppress(Exception):
-        ipc_sock.connect(os.getenv("VERCEL_IPC_PATH", ""))
-
-        def send_message(message: _IpcMessage) -> None:
-            with contextlib.suppress(Exception):
-                ipc_sock.sendall((json.dumps(message) + "\0").encode())
-
-        setup_logging(send_message, storage)
+if _ipc_sock is not None:
+    setup_logging(send_message, storage)
 
 
 # Runtime dependency installation for large Lambda functions
