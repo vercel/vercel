@@ -3,6 +3,7 @@ import { constants } from 'node:fs';
 
 const DEVIN_LOCAL_PATH = '/opt/.devin';
 
+const AIDER = 'aider' as const;
 const CURSOR = 'cursor' as const;
 const CURSOR_CLI = 'cursor-cli' as const;
 const CLAUDE = 'claude' as const;
@@ -18,6 +19,7 @@ const GITHUB_COPILOT = 'github-copilot' as const;
 const GITHUB_COPILOT_CLI = 'github-copilot-cli' as const;
 
 export type KnownAgentNames =
+  | typeof AIDER
   | typeof CURSOR
   | typeof CURSOR_CLI
   | typeof CLAUDE
@@ -46,6 +48,7 @@ export type AgentResult =
     };
 
 export const KNOWN_AGENTS = {
+  AIDER,
   CURSOR,
   CURSOR_CLI,
   CLAUDE,
@@ -60,20 +63,29 @@ export const KNOWN_AGENTS = {
   GITHUB_COPILOT,
 } as const;
 
+function normalizeAgentName(name: string): string {
+  if (name === GITHUB_COPILOT || name === GITHUB_COPILOT_CLI) {
+    return GITHUB_COPILOT;
+  }
+
+  const [nameWithoutVersion] = name.split('@', 1);
+  if (
+    nameWithoutVersion === AIDER ||
+    nameWithoutVersion.startsWith(`${AIDER}-`)
+  ) {
+    return AIDER;
+  }
+
+  return name;
+}
+
 export async function determineAgent(): Promise<AgentResult> {
   if (process.env.AI_AGENT) {
     const name = process.env.AI_AGENT.trim();
     if (name) {
-      if (name === GITHUB_COPILOT || name === GITHUB_COPILOT_CLI) {
-        return {
-          isAgent: true,
-          agent: { name: GITHUB_COPILOT },
-        };
-      }
-
       return {
         isAgent: true,
-        agent: { name: name as KnownAgentNames },
+        agent: { name: normalizeAgentName(name) as KnownAgentNames },
       };
     }
   }
