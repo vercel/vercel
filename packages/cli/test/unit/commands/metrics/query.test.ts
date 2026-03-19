@@ -372,6 +372,42 @@ describe('query', () => {
       });
     });
 
+    it('should resolve a project ID passed to --project', async () => {
+      let requestBody: any;
+      client.scenario.post('/v1/observability/query', (req, res) => {
+        requestBody = req.body;
+        res.json({ data: [], summary: [], statistics: {} });
+      });
+      mockTeamScope('my-team');
+      mockedGetProjectByNameOrId.mockResolvedValue({
+        id: 'prj_direct',
+        name: 'other-app',
+        accountId: 'team_dummy',
+      } as any);
+      client.setArgv(
+        'metrics',
+        'query',
+        '--event',
+        'edgeRequest',
+        '--project',
+        'prj_direct'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      expect(mockedGetProjectByNameOrId).toHaveBeenCalledWith(
+        client,
+        'prj_direct',
+        'team_dummy'
+      );
+      expect(requestBody.scope).toEqual({
+        type: 'project',
+        ownerId: 'team_dummy',
+        projectIds: ['prj_direct'],
+      });
+    });
+
     it('should use --all with team context', async () => {
       let requestBody: any;
       client.scenario.post('/v1/observability/query', (req, res) => {

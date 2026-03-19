@@ -172,7 +172,7 @@ async function resolveQueryScope(
   }
   if (linkedProject.status === 'not_linked') {
     const errMsg =
-      'No linked project found. Run `vercel link` to link a project, or use --project <name> or --all.';
+      'No linked project found. Run `vercel link` to link a project, or use --project <name-or-id> or --all.';
     if (opts.jsonOutput) {
       client.stdout.write(formatErrorJson('NOT_LINKED', errMsg));
     } else {
