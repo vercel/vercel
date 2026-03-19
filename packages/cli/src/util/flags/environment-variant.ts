@@ -149,7 +149,7 @@ export async function resolveFlagUpdateMessage(
     return message;
   }
 
-  if (!client.stdin.isTTY) {
+  if (client.nonInteractive || !client.stdin.isTTY) {
     return defaultMessage;
   }
 

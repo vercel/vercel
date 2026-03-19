@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.16.2
+
+### Patch Changes
+
+- Update @vercel/nft to 1.4.0 across packages ([#15626](https://github.com/vercel/vercel/pull/15626))
+
 ## 4.16.1
 
 ### Patch Changes

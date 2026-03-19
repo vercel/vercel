@@ -1,10 +1,11 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import { useUser } from '../../../mocks/user';
 import { useProject, defaultProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
 import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
 import { useStageRoutes } from '../../../mocks/routes';
+import { shellQuoteRouteIdentifierForSuggestion } from '../../../../src/commands/routes/shared';
 import routes from '../../../../src/commands/routes';
 
 describe('routes reorder', () => {
@@ -18,6 +19,16 @@ describe('routes reorder', () => {
     });
     const cwd = setupUnitFixture('commands/routes');
     client.cwd = cwd;
+  });
+
+  it('suggested reorder command keeps single quotes around spaced route names', () => {
+    expect(shellQuoteRouteIdentifierForSuggestion('route-id')).toBe('route-id');
+    expect(shellQuoteRouteIdentifierForSuggestion('Rewrite /abc to root')).toBe(
+      "'Rewrite /abc to root'"
+    );
+    expect(shellQuoteRouteIdentifierForSuggestion('API Rewrite')).toBe(
+      "'API Rewrite'"
+    );
   });
 
   it('should show help with --help flag', async () => {
@@ -247,5 +258,40 @@ describe('routes reorder', () => {
     const exitCode = await routes(client);
     expect(exitCode).toEqual(1);
     await expect(client.stderr).toOutput('must be 1 or greater');
+  });
+
+  it('non-interactive: position 0 outputs JSON invalid_arguments with next commands', async () => {
+    useStageRoutes();
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const exitSpy = vi
+      .spyOn(process, 'exit')
+      .mockImplementation((() => undefined) as never);
+    client.nonInteractive = true;
+    client.setArgv(
+      'routes',
+      'reorder',
+      'Route 1',
+      '--position',
+      '0',
+      '--yes',
+      '--non-interactive'
+    );
+    await routes(client);
+    const payload = JSON.parse(logSpy.mock.calls[0][0] as string);
+    expect(payload.status).toBe('error');
+    expect(payload.reason).toBe('invalid_arguments');
+    expect(payload.message).toContain('1 or greater');
+    expect(payload.message).toContain('1-based');
+    expect(payload.next?.length).toBeGreaterThanOrEqual(1);
+    expect(
+      payload.next.some(
+        (n: { command: string }) =>
+          n.command.includes('--first') || n.command.includes('--position 1')
+      )
+    ).toBe(true);
+    expect(exitSpy).toHaveBeenCalledWith(1);
+    logSpy.mockRestore();
+    exitSpy.mockRestore();
+    client.nonInteractive = false;
   });
 });

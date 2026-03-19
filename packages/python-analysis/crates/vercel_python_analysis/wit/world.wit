@@ -171,6 +171,16 @@ world python-analysis {
     export parse-requirements-txt: func(content: string, working-dir: option<string>, filename: option<string>) -> result<parsed-requirements-txt, string>;
 
     // =========================================================================
+    // PEP 508 parsing
+    // =========================================================================
+
+    /// Parse a single PEP 508 dependency string
+    /// (e.g. "flask[async]>=2.0 ; python_version >= '3.8'")
+    /// into a structured requirement entry.
+    /// Returns an error string if the input is not a valid PEP 508 specifier.
+    export parse-pep508: func(dep: string) -> result<parsed-req-entry, string>;
+
+    // =========================================================================
     // Wheel compatibility checking
     // =========================================================================
 
