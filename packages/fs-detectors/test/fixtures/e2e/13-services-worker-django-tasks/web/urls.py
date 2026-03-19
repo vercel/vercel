@@ -1,5 +1,11 @@
+from datetime import UTC, datetime
+from decimal import Decimal
+from uuid import uuid4
+
 from django.http import HttpResponse, JsonResponse
 from django.urls import path
+
+from worker.tasks import process_job
 
 
 def root(request):
@@ -15,10 +21,12 @@ def health(request):
 
 
 def enqueue(request):
-    from worker.tasks import process_job
-
     try:
-        result = process_job.enqueue()
+        result = process_job.enqueue(
+            request_id=uuid4(),
+            enqueued_at=datetime.now(UTC),
+            priority=Decimal("1.5"),
+        )
     except Exception as exc:
         return JsonResponse({"ok": False, "error": str(exc)}, status=500)
 

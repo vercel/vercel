@@ -37,6 +37,7 @@ import {
 import { PythonDependencyExternalizer } from './dependency-externalizer';
 import { UvRunner, getUvBinaryOrInstall } from './uv';
 import { resolvePythonVersion, pythonVersionString } from './version';
+import { generateProjectManifest } from './diagnostics';
 import { startDevServer } from './start-dev-server';
 import { runPyprojectScript, ensureVenv, createVenvEnv } from './utils';
 import { runQuirks } from './quirks';
@@ -60,7 +61,7 @@ export const version = 3;
 interface FrameworkHookContext {
   pythonEnv: NodeJS.ProcessEnv;
   projectDir: string;
-  workPath: string;
+  workPath?: string;
   venvPath?: string;
   entrypoint: string;
   detected: DetectedPythonEntrypoint | undefined;
@@ -68,6 +69,7 @@ interface FrameworkHookContext {
 
 interface FrameworkHookResult {
   entrypoint?: string;
+  variableName?: string;
 }
 
 interface DjangoFrameworkHookResult extends FrameworkHookResult {
@@ -79,7 +81,7 @@ type FrameworkHook = (
 ) => Promise<FrameworkHookResult | void>;
 
 export async function runFrameworkHook(
-  framework: string | undefined,
+  framework: string | null | undefined,
   ctx: FrameworkHookContext
 ): Promise<FrameworkHookResult | void> {
   const hook = framework
@@ -106,23 +108,32 @@ const frameworkHooks: Partial<Record<PythonFramework, FrameworkHook>> = {
     const { djangoSettings, settingsModule } = settingsResult;
 
     let entrypoint: string | undefined;
+    let variableName: string | undefined;
     const baseDir = detected?.baseDir ?? '';
     const asgiApp = djangoSettings['ASGI_APPLICATION'];
     if (typeof asgiApp === 'string') {
-      const rel = `${asgiApp.split('.').slice(0, -1).join('/')}.py`;
+      const parts = asgiApp.split('.');
+      variableName = parts.at(-1);
+      const rel = `${parts.slice(0, -1).join('/')}.py`;
       entrypoint = baseDir ? `${baseDir}/${rel}` : rel;
-      debug(`Django hook: ASGI entrypoint: ${entrypoint}`);
+      debug(
+        `Django hook: ASGI entrypoint: ${entrypoint} (variable: ${variableName})`
+      );
     } else {
       const wsgiApp = djangoSettings['WSGI_APPLICATION'];
       if (typeof wsgiApp === 'string') {
-        const rel = `${wsgiApp.split('.').slice(0, -1).join('/')}.py`;
+        const parts = wsgiApp.split('.');
+        variableName = parts.at(-1);
+        const rel = `${parts.slice(0, -1).join('/')}.py`;
         entrypoint = baseDir ? `${baseDir}/${rel}` : rel;
-        debug(`Django hook: WSGI entrypoint: ${entrypoint}`);
+        debug(
+          `Django hook: WSGI entrypoint: ${entrypoint} (variable: ${variableName})`
+        );
       }
     }
 
     let djangoStatic: DjangoCollectStaticResult | null = null;
-    if (venvPath) {
+    if (workPath && venvPath) {
       const outputStaticDir = join(workPath, '.vercel', 'output', 'static');
       djangoStatic = await runDjangoCollectStatic(
         venvPath,
@@ -133,7 +144,7 @@ const frameworkHooks: Partial<Record<PythonFramework, FrameworkHook>> = {
         djangoSettings
       );
     }
-    return { entrypoint, djangoStatic };
+    return { entrypoint, variableName, djangoStatic };
   },
 };
 
@@ -164,6 +175,7 @@ export const build: BuildV3 = async ({
   meta = {},
   config,
   span: parentSpan,
+  service,
 }) => {
   const builderSpan = parentSpan ?? new Span({ name: 'vc.builder' });
   const framework = config?.framework;
@@ -279,9 +291,14 @@ export const build: BuildV3 = async ({
 
   fsFiles = await glob('**', workPath);
 
-  // Create a virtual environment under ".vercel/python/.venv" so dependencies
-  // can be installed via `uv sync` and then vendored into the Lambda bundle.
-  const venvPath = join(workPath, '.vercel', 'python', '.venv');
+  // Create a virtual environment so dependencies can be installed via
+  // `uv sync` and then vendored into the Lambda bundle.  When building as
+  // part of a named service, namespace the venv so multiple services sharing
+  // the same source don't overwrite each other's artifacts in case of custom
+  // installCommand or buildCommand.
+  const venvPath = service?.name
+    ? join(workPath, '.vercel', 'python', 'services', service.name, '.venv')
+    : join(workPath, '.vercel', 'python', '.venv');
   await builderSpan.child('vc.builder.python.venv').trace(async () => {
     await ensureVenv({
       pythonPath: pythonVersion.pythonPath,
@@ -535,6 +552,8 @@ export const build: BuildV3 = async ({
     ? `\n  "__VC_HANDLER_FUNC_NAME": "${handlerFunction}",`
     : '';
 
+  const variableName = hookResult?.variableName ?? detected?.variableName ?? '';
+
   const runtimeTrampoline = `
 import importlib
 import os
@@ -548,7 +567,8 @@ os.environ.update({
   "__VC_HANDLER_MODULE_NAME": "${moduleName}",
   "__VC_HANDLER_ENTRYPOINT": "${entrypointWithSuffix}",
   "__VC_HANDLER_ENTRYPOINT_ABS": os.path.join(_here, "${entrypointWithSuffix}"),
-  "__VC_HANDLER_VENDOR_DIR": "${vendorDir}",${handlerFuncEnvLine}
+  "__VC_HANDLER_VENDOR_DIR": "${vendorDir}",
+  "__VC_HANDLER_VARIABLE_NAME": "${variableName}",${handlerFuncEnvLine}
 })
 
 _vendor_rel = '${vendorDir}'
@@ -610,6 +630,9 @@ from vercel_runtime.vc_init import vc_handler
   const lambdaEnv = {} as Record<string, string>;
   lambdaEnv.PYTHONPATH = vendorDir;
   Object.assign(lambdaEnv, quirksResult.env);
+  if (shouldInstallVercelWorkers) {
+    lambdaEnv.VERCEL_HAS_WORKER_SERVICES = '1';
+  }
 
   const globOptions: GlobOptions = {
     cwd: workPath,
@@ -694,6 +717,23 @@ from vercel_runtime.vc_init import vc_handler
     supportsResponseStreaming: true,
   });
 
+  // Write project manifest for diagnostics (best-effort, never fails the build).
+  // Requires uv.lock to resolve versions and dependency graph.
+  if (uvLockPath) {
+    try {
+      await generateProjectManifest({
+        workPath,
+        pythonPackage,
+        pythonVersion,
+        uvLockPath,
+      });
+    } catch (err) {
+      debug(
+        `Failed to write project manifest: ${err instanceof Error ? err.message : String(err)}`
+      );
+    }
+  }
+
   return { output };
 };
 
@@ -736,6 +776,8 @@ export const defaultShouldServe: ShouldServe = ({
 function hasProp(obj: { [path: string]: FileFsRef }, key: string): boolean {
   return Object.hasOwnProperty.call(obj, key);
 }
+
+export { diagnostics } from './diagnostics';
 
 // internal only - expect breaking changes if other packages depend on these exports
 export { installRequirement, installRequirementsFile };

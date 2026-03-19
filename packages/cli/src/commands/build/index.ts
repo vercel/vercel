@@ -93,6 +93,7 @@ import {
 import readJSONFile from '../../util/read-json-file';
 import { BuildTelemetryClient } from '../../util/telemetry/commands/build';
 import { validateConfig } from '../../util/validate-config';
+import ua from '../../util/ua';
 import { validateCronSecret } from '../../util/validate-cron-secret';
 import {
   compileVercelConfig,
@@ -525,9 +526,16 @@ async function doBuild(
     await setMonorepoDefaultSettings(cwd, workPath, projectSettings);
   }
 
-  if (process.env.VERCEL_EXPERIMENTAL_EMBED_FLAG_DEFINITIONS === '1') {
-    const { emitFlagsDatafiles } = await import('./emit-flags-datafiles');
-    await emitFlagsDatafiles(cwd, process.env);
+  if (process.env.VERCEL_FLAGS_DISABLE_DEFINITION_EMBEDDING !== '1') {
+    const { prepareFlagsDefinitions } = await import(
+      '@vercel/prepare-flags-definitions'
+    );
+    await prepareFlagsDefinitions({
+      cwd,
+      env: process.env as Record<string, string | undefined>,
+      userAgentSuffix: ua,
+      output,
+    });
   }
 
   // Get a list of source files
@@ -699,19 +707,10 @@ async function doBuild(
     detectedServices !== undefined && detectedServices.length > 0;
   const hasWorkerServices =
     hasDetectedServices && detectedServices!.some(s => s.type === 'worker');
-  const servicesByBuilderSrc = new Map<string, Service>();
+  const serviceByBuilder = new Map<Builder, Service>();
   if (hasDetectedServices) {
     for (const service of detectedServices!) {
-      if (service.builder.src) {
-        const existing = servicesByBuilderSrc.get(service.builder.src);
-        if (existing) {
-          throw new NowBuildError({
-            code: 'DUPLICATE_SERVICE_BUILDER_SRC',
-            message: `Services "${existing.name}" and "${service.name}" both have the same builder source "${service.builder.src}". Each service must have a unique builder source.`,
-          });
-        }
-        servicesByBuilderSrc.set(service.builder.src, service);
-      }
+      serviceByBuilder.set(service.builder, service);
     }
   }
 
@@ -735,7 +734,7 @@ async function doBuild(
       // entrypoint, so their routes are emitted relative to the workspace root
       // (not polluted with the workspace directory prefix).
       const service = hasDetectedServices
-        ? servicesByBuilderSrc.get(build.src)
+        ? serviceByBuilder.get(build)
         : undefined;
       const stripServiceRoutePrefix =
         !!service?.routePrefix && service.routePrefix !== '/';
@@ -867,10 +866,10 @@ async function doBuild(
         config: buildConfig,
         meta,
         span: builderSpan,
-        ...(typeof serviceRoutePrefix === 'string' ||
-        typeof serviceWorkspace === 'string'
+        ...(service
           ? {
               service: {
+                name: service.name,
                 routePrefix:
                   typeof serviceRoutePrefix === 'string'
                     ? serviceRoutePrefix
@@ -1200,7 +1199,7 @@ async function doBuild(
       let entrypoint = build.src!;
 
       if (hasDetectedServices && typeof build.src === 'string') {
-        const service = servicesByBuilderSrc.get(build.src);
+        const service = serviceByBuilder.get(build);
         if (
           service &&
           service.type === 'web' &&

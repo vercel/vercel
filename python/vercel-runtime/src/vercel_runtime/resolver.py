@@ -25,7 +25,17 @@ def import_module(name: str, path: str) -> ModuleType:
     return mod
 
 
-def resolve_app(mod: ModuleType, module_name: str) -> tuple[str, Any]:
+def resolve_app(
+    mod: ModuleType, module_name: str, var: str | None
+) -> tuple[str, Any]:
+    if var:
+        if hasattr(mod, var):
+            return var, getattr(mod, var)
+
+        raise RuntimeError(
+            f"Configured application '{var}' missing in module '{module_name}'"
+        )
+
     for app_var in ("app", "application"):
         if hasattr(mod, app_var):
             return app_var, getattr(mod, app_var)

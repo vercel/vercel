@@ -44,6 +44,7 @@ from vercel_runtime.workers import (
     bootstrap_worker_service_app,
     is_celery_app,
     is_worker_service,
+    prepare_celery_environment,
 )
 
 if TYPE_CHECKING:
@@ -104,6 +105,7 @@ _here = os.path.dirname(__file__)
 _entrypoint_rel = _must_getenv("__VC_HANDLER_ENTRYPOINT")
 _entrypoint_abs = _must_getenv("__VC_HANDLER_ENTRYPOINT_ABS")
 _entrypoint_modname = _must_getenv("__VC_HANDLER_MODULE_NAME")
+_entrypoint_varname = os.environ.get("__VC_HANDLER_VARIABLE_NAME", "")
 
 
 def setup_logging(
@@ -392,6 +394,9 @@ if os.path.exists(_runtime_config_path):
             # Use uv sync --inexact --frozen to install only the
             # missing public packages. --inexact avoids removing
             # packages already present in _vendor (bundled deps).
+            # --link-mode hardlink lets the temporary download cache
+            # and the target venv share inode blocks on /tmp, reducing
+            # peak disk usage on Lambda's limited ephemeral storage.
             _sync_cmd = [
                 _uv_path,
                 "sync",
@@ -405,7 +410,7 @@ if os.path.exists(_runtime_config_path):
                 "--no-cache",
                 "--no-progress",
                 "--link-mode",
-                "copy",
+                "hardlink",
             ]
             for _pkg in _config.get("bundledPackages", []):
                 _sync_cmd.extend(["--no-install-package", _pkg])
@@ -458,6 +463,7 @@ if _extra_path:
     os.environ["PATH"] = _extra_path + ":" + os.environ.get("PATH", "")
 
 try:
+    prepare_celery_environment()
     __vc_module = import_module(_entrypoint_modname, _entrypoint_abs)
     __vc_variables = dir(__vc_module)
 except Exception:
@@ -813,8 +819,14 @@ if "VERCEL_IPC_PATH" in os.environ:
                 method()
                 self.wfile.flush()
 
-    elif "app" in __vc_variables or "application" in __vc_variables:
-        app_name, app_obj = resolve_app(__vc_module, _entrypoint_modname)
+    elif (
+        "app" in __vc_variables
+        or "application" in __vc_variables
+        or _entrypoint_varname in __vc_variables
+    ):
+        app_name, app_obj = resolve_app(
+            __vc_module, _entrypoint_modname, _entrypoint_varname
+        )
         detection_result = detect_app_type(
             app_obj,
             _entrypoint_modname,
@@ -1017,8 +1029,14 @@ if "handler" in __vc_variables or "Handler" in __vc_variables:
 
         return return_dict
 
-elif "app" in __vc_variables or "application" in __vc_variables:
-    app_name, app_obj = resolve_app(__vc_module, _entrypoint_modname)
+elif (
+    "app" in __vc_variables
+    or "application" in __vc_variables
+    or _entrypoint_varname in __vc_variables
+):
+    app_name, app_obj = resolve_app(
+        __vc_module, _entrypoint_modname, _entrypoint_varname
+    )
     detection_result = detect_app_type(
         app_obj,
         _entrypoint_modname,

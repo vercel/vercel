@@ -1,5 +1,15 @@
 # vercel-runtime
 
+## 0.10.0
+
+### Minor Changes
+
+- Make specifying a different entry point variable actually work ([#15614](https://github.com/vercel/vercel/pull/15614))
+
+### Patch Changes
+
+- [python] update celery worker services declaration to support broker_url="vercel://" instead of having to import from vercel.workers.celery ([#15454](https://github.com/vercel/vercel/pull/15454))
+
 ## 0.9.0
 
 ### Minor Changes
