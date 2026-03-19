@@ -1,5 +1,11 @@
 # vercel
 
+## 50.34.2
+
+### Patch Changes
+
+- Removing non-interactive logic for login ([#15643](https://github.com/vercel/vercel/pull/15643))
+
 ## 50.34.1
 
 ### Patch Changes
