@@ -25,6 +25,7 @@ import {
   type ShouldServe,
   FileFsRef,
   PythonFramework,
+  type PrepareCache,
 } from '@vercel/build-utils';
 import {
   discoverPackage,
@@ -34,7 +35,12 @@ import {
   installRequirement,
 } from './install';
 import { PythonDependencyExternalizer } from './dependency-externalizer';
-import { UvRunner, getUvBinaryOrInstall } from './uv';
+import {
+  UvRunner,
+  getUvBinaryOrInstall,
+  getUvCacheDir,
+  findUvInPath,
+} from './uv';
 import { resolvePythonVersion, pythonVersionString } from './version';
 import { generateProjectManifest } from './diagnostics';
 import { startDevServer } from './start-dev-server';
@@ -298,10 +304,12 @@ export const build: BuildV3 = async ({
   const venvPath = service?.name
     ? join(workPath, '.vercel', 'python', 'services', service.name, '.venv')
     : join(workPath, '.vercel', 'python', '.venv');
+  const uvCacheDir = getUvCacheDir(workPath);
   await builderSpan.child('vc.builder.python.venv').trace(async () => {
     await ensureVenv({
       pythonPath: pythonVersion.pythonPath,
       venvPath,
+      uvCacheDir,
     });
   });
 
@@ -334,7 +342,7 @@ export const build: BuildV3 = async ({
   }
 
   const baseEnv = spawnEnv || process.env;
-  const pythonEnv = createVenvEnv(venvPath, baseEnv);
+  const pythonEnv = createVenvEnv(venvPath, baseEnv, uvCacheDir);
 
   pythonEnv.VERCEL_PYTHON_VENV_PATH = venvPath;
 
@@ -347,7 +355,7 @@ export const build: BuildV3 = async ({
   try {
     const uvPath = await getUvBinaryOrInstall(pythonVersion.pythonPath);
     console.log(`Using uv at "${uvPath}"`);
-    uv = new UvRunner(uvPath);
+    uv = new UvRunner(uvPath, uvCacheDir);
   } catch (err) {
     console.log('Failed to install or locate uv');
     throw new Error(
@@ -734,6 +742,37 @@ from vercel_runtime.vc_init import vc_handler
 };
 
 export { startDevServer };
+
+export const prepareCache: PrepareCache = async ({
+  repoRootPath,
+  workPath,
+}) => {
+  const root = repoRootPath || workPath;
+  const ignore = ['**/*.pyc', '**/__pycache__/**'];
+
+  // Prune pre-built wheels and unzipped source distributions from the uv
+  // cache before snapshotting.  Source-built wheels (the expensive artefacts)
+  // are retained.  This keeps the cache lean without sacrificing the main
+  // speed benefit.
+  const uvCacheDir = getUvCacheDir(workPath);
+  try {
+    const uvPath = findUvInPath();
+    if (uvPath) {
+      const uv = new UvRunner(uvPath, uvCacheDir);
+      await uv.cachePrune();
+    }
+  } catch {
+    // best-effort; don't fail the build if pruning fails
+    debug('Failed to prune uv cache before snapshotting');
+  }
+
+  // Only cache the uv package cache — NOT the venv.  Caching the venv caused
+  // stale packages to accumulate (uv pip-installed packages survive uv sync)
+  // and, combined with --link-mode copy, doubled the effective cache size.
+  // With only the uv cache present, `uv sync` on the next build can quickly
+  // repopulate the venv from the local cache without re-downloading.
+  return glob('**/.vercel/python/cache/uv/**', { cwd: root, ignore });
+};
 
 export const shouldServe: ShouldServe = opts => {
   const framework = opts.config.framework;
