@@ -270,10 +270,6 @@ export const build: BuildVX = async ({
         // Crons and worker have their own special entry point logic
         // that involves creating an `app` dynamically.
         varName = 'app';
-      } else if (!isPythonFramework(framework)) {
-        // Don't throw here for framework: "null", etc
-        // TODO: Can we change this and throw here?
-        varName = 'app';
       } else if (!varName) {
         throw new NowBuildError({
           code: 'PYTHON_ENTRYPOINT_NOT_FOUND',
