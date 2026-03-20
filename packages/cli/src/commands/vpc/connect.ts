@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import type Client from '../../util/client';
 import refreshVpcAccount from '../../util/vpc/refresh-account';
-import getScope from '../../util/get-scope';
+import selectOrg from '../../util/input/select-org';
 import stamp from '../../util/output/stamp';
 import { getCommandNamePlain } from '../../util/pkg-name';
 import { outputAgentError } from '../../util/agent-output';
@@ -32,6 +32,23 @@ export default async function connect(client: Client, argv: string[]) {
   const { flags } = parsedArgs;
 
   let awsAccountId = flags['--aws-account-id'] as string | undefined;
+
+  // --- Select team scope (first) ---
+  const org = await selectOrg(
+    client,
+    'Which team should own this VPC connection?'
+  );
+
+  if (org.type === 'team') {
+    client.config.currentTeam = org.id;
+  }
+
+  if (!org.id.startsWith('team_')) {
+    output.error(
+      'VPC commands require a team scope. Personal accounts are not supported.'
+    );
+    return 1;
+  }
 
   // --- Collect AWS Account ID ---
   if (!awsAccountId) {
@@ -76,25 +93,16 @@ export default async function connect(client: Client, argv: string[]) {
 
   telemetry.trackCliOptionAwsAccountId(awsAccountId);
 
-  const { contextName, team } = await getScope(client);
-
-  if (!team) {
-    output.error(
-      'VPC commands require a team scope. Use --scope or --team to specify a team.'
-    );
-    return 1;
-  }
-
   const connectStamp = stamp();
 
   if (!client.nonInteractive) {
     output.spinner(
-      `Verifying connection to AWS account ${chalk.bold(awsAccountId)} under ${chalk.bold(contextName)}`
+      `Verifying connection to AWS account ${chalk.bold(awsAccountId)} under ${chalk.bold(org.slug)}`
     );
   }
 
   try {
-    const account = await refreshVpcAccount(client, team.id, awsAccountId);
+    const account = await refreshVpcAccount(client, org.id, awsAccountId);
 
     if (client.nonInteractive) {
       const json = {
