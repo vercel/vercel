@@ -174,7 +174,7 @@ export async function autoInstallAgentTooling(
         existing.includes(BEST_PRACTICES_START) &&
         existing.includes(BEST_PRACTICES_END);
 
-      if (hasMarkers) {
+      if (hasMarkers || client.isAgent) {
         await agentInit(client, true);
       } else {
         printPreview();
