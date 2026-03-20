@@ -18,7 +18,7 @@ use std::task::{Context, Poll, Waker};
 
 use crate::bindings::{DirectUrlInfo, DistMetadata, ParsedReqEntry, ParsedRequirementsTxt, RecordEntry};
 use crate::entrypoint::{
-    contains_app_or_handler_impl, contains_top_level_callable_impl, get_string_constant_impl,
+    find_app_or_handler_impl, contains_top_level_callable_impl, get_string_constant_impl,
 };
 
 /// Single-poll executor for WASM: all stub I/O resolves synchronously via host-bridge,
@@ -41,8 +41,8 @@ impl crate::bindings::Guest for PythonAnalyzer {
     ///
     /// Returns the matched variable name if found, or None otherwise.
     /// Returns None for invalid Python syntax.
-    fn contains_app_or_handler(source: String) -> Option<String> {
-        contains_app_or_handler_impl(&source)
+    fn find_app_or_handler(source: String) -> Option<String> {
+        find_app_or_handler_impl(&source)
     }
 
     /// Check if a top-level callable with the given name exists in Python source.

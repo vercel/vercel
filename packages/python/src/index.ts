@@ -46,7 +46,7 @@ import {
   type DjangoCollectStaticResult,
 } from './django';
 import {
-  containsAppOrHandler,
+  findAppOrHandler,
   containsTopLevelCallable,
 } from '@vercel/python-analysis';
 
@@ -258,7 +258,7 @@ export const build: BuildV3 = async ({
       join(workPath, entrypoint),
       'utf-8'
     );
-    let varName = await containsAppOrHandler(content);
+    let varName = await findAppOrHandler(content);
     if (!varName) {
       const isSpecialService =
         service?.type === 'cron' || service?.type === 'worker';

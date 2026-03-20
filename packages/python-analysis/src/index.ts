@@ -12,7 +12,7 @@
 // =============================================================================
 
 export {
-  containsAppOrHandler,
+  findAppOrHandler,
   containsTopLevelCallable,
   getStringConstant,
 } from './semantic/entrypoints';

@@ -3,7 +3,7 @@ import { join, posix as pathPosix } from 'path';
 import type { PythonFramework } from '@vercel/build-utils';
 import { debug } from '@vercel/build-utils';
 import { readConfigFile } from '@vercel/build-utils';
-import { containsAppOrHandler } from '@vercel/python-analysis';
+import { findAppOrHandler } from '@vercel/python-analysis';
 
 export interface PythonEntrypoint {
   /** Path to the entrypoint file (e.g. "src/app.py"). */
@@ -61,7 +61,7 @@ async function checkEntrypoint(
   const absPath = join(workPath, relPath);
   if (!(await fileExists(absPath))) return null;
   const content = await fs.promises.readFile(absPath, 'utf-8');
-  return containsAppOrHandler(content);
+  return findAppOrHandler(content);
 }
 
 export async function getPyprojectEntrypoint(
