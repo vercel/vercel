@@ -228,4 +228,5 @@ export interface DeploymentOptions {
   actor?: string;
   autoAssignCustomDomains?: boolean;
   customEnvironmentSlugOrId?: string;
+  vercelTelemetry?: 'disabled' | 'auto' | 'manual';
 }
