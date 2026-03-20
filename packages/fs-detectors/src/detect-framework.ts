@@ -1,3 +1,4 @@
+import minimatch from 'minimatch';
 import type { Framework, FrameworkDetectionItem } from '@vercel/frameworks';
 import { spawnSync } from 'child_process';
 import { DetectorFilesystem } from './detectors/filesystem';
@@ -33,6 +34,37 @@ type MatchResult = {
   framework: BaseFramework;
   detectedVersion?: string;
 };
+
+function hasGlobMagic(path: string): boolean {
+  return /[*?[\]{}()!+@]/.test(path);
+}
+
+async function listPaths(
+  fs: DetectorFilesystem,
+  dirPath = '/'
+): Promise<string[]> {
+  const entries = await fs.readdir(dirPath);
+  const nestedPaths = await Promise.all(
+    entries
+      .filter(entry => entry.type === 'dir')
+      .map(entry => listPaths(fs, entry.path))
+  );
+
+  return [...entries.map(entry => entry.path), ...nestedPaths.flat()];
+}
+
+async function getMatchingPaths(
+  fs: DetectorFilesystem,
+  path: string
+): Promise<string[]> {
+  if (!hasGlobMagic(path)) {
+    return (await fs.hasPath(path)) ? [path] : [];
+  }
+
+  return (await listPaths(fs)).filter(filePath =>
+    minimatch(filePath, path, { dot: true })
+  );
+}
 
 /**
  * Resolves whether experimental frameworks should be included.
@@ -118,28 +150,38 @@ async function matches(
       matchContent = `"(dev)?(d|D)ependencies":\\s*{[^}]*"${matchPackage}":\\s*"(.+?)"[^}]*}`;
     }
 
-    if ((await fs.hasPath(path)) === false) {
+    const matchingPaths = await getMatchingPaths(fs, path);
+    if (matchingPaths.length === 0) {
       return;
     }
 
     if (matchContent) {
-      if ((await fs.isFile(path)) === false) {
-        return;
-      }
-
       const regex = new RegExp(matchContent, 'm');
-      const content = await fs.readFile(path);
 
-      const match = content.toString().match(regex);
-      if (!match) {
-        return;
-      }
-      if (matchPackage && match[3]) {
+      for (const matchingPath of matchingPaths) {
+        if ((await fs.isFile(matchingPath)) === false) {
+          continue;
+        }
+
+        const content = await fs.readFile(matchingPath);
+        const match = content.toString().match(regex);
+        if (!match) {
+          continue;
+        }
+
+        if (matchPackage && match[3]) {
+          return {
+            framework,
+            detectedVersion: match[3],
+          };
+        }
+
         return {
           framework,
-          detectedVersion: match[3],
         };
       }
+
+      return;
     }
 
     return {
