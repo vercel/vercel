@@ -21,18 +21,16 @@ import { importWasmModule } from '../wasm/load';
  *
  * @example
  * ```typescript
- * import { containsAppOrHandler } from '@vercel/python-analysis';
+ * import { findAppOrHandler } from '@vercel/python-analysis';
  *
- * const name = await containsAppOrHandler(`
+ * const name = await findAppOrHandler(`
  * from flask import Flask
  * app = Flask(__name__)
  * `);
  * console.log(name); // "app"
  * ```
  */
-export async function containsAppOrHandler(
-  source: string
-): Promise<string | null> {
+export async function findAppOrHandler(source: string): Promise<string | null> {
   // Skip parsing if file doesn't contain {app|application|[Hh]andler}
   if (
     !source.includes('app') &&
@@ -43,7 +41,7 @@ export async function containsAppOrHandler(
     return null;
   }
   const mod = await importWasmModule();
-  return mod.containsAppOrHandler(source) ?? null;
+  return mod.findAppOrHandler(source) ?? null;
 }
 
 /**

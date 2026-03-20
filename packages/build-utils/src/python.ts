@@ -1,5 +1,5 @@
 import fs from 'fs';
-import { containsAppOrHandler } from '@vercel/python-analysis';
+import { findAppOrHandler } from '@vercel/python-analysis';
 import debug from './debug';
 import FileFsRef from './file-fs-ref';
 
@@ -16,7 +16,7 @@ export async function isPythonEntrypoint(
     const fsPath = (file as FileFsRef).fsPath;
     if (!fsPath) return false;
     const content = await fs.promises.readFile(fsPath, 'utf-8');
-    return (await containsAppOrHandler(content)) !== null;
+    return (await findAppOrHandler(content)) !== null;
   } catch (err) {
     debug(`Failed to check Python entrypoint: ${err}`);
     return false;

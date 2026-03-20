@@ -1,14 +1,14 @@
 import { describe, it, expect } from 'vitest';
-import { containsAppOrHandler } from '../src';
+import { findAppOrHandler } from '../src';
 
-describe('containsAppOrHandler', () => {
+describe('findAppOrHandler', () => {
   describe('app detection', () => {
     it('detects Flask app assignment', async () => {
       const source = `
 from flask import Flask
 app = Flask(__name__)
 `;
-      expect(await containsAppOrHandler(source)).toBe('app');
+      expect(await findAppOrHandler(source)).toBe('app');
     });
 
     it('detects FastAPI app assignment', async () => {
@@ -16,7 +16,7 @@ app = Flask(__name__)
 from fastapi import FastAPI
 app = FastAPI()
 `;
-      expect(await containsAppOrHandler(source)).toBe('app');
+      expect(await findAppOrHandler(source)).toBe('app');
     });
 
     it('detects Sanic app with type annotation', async () => {
@@ -24,14 +24,14 @@ app = FastAPI()
 from sanic import Sanic
 app: Sanic = Sanic()
 `;
-      expect(await containsAppOrHandler(source)).toBe('app');
+      expect(await findAppOrHandler(source)).toBe('app');
     });
 
     it('detects app created via factory function', async () => {
       const source = `
 app = create_app()
 `;
-      expect(await containsAppOrHandler(source)).toBe('app');
+      expect(await findAppOrHandler(source)).toBe('app');
     });
 
     it('detects WSGI function named app', async () => {
@@ -39,7 +39,7 @@ app = create_app()
 def app(environ, start_response):
     pass
 `;
-      expect(await containsAppOrHandler(source)).toBe('app');
+      expect(await findAppOrHandler(source)).toBe('app');
     });
 
     it('detects ASGI async function named app', async () => {
@@ -47,7 +47,7 @@ def app(environ, start_response):
 async def app(scope, receive, send):
     pass
 `;
-      expect(await containsAppOrHandler(source)).toBe('app');
+      expect(await findAppOrHandler(source)).toBe('app');
     });
 
     it('detects Django WSGI application', async () => {
@@ -55,7 +55,7 @@ async def app(scope, receive, send):
 from django.core.wsgi import get_wsgi_application
 application = get_wsgi_application()
 `;
-      expect(await containsAppOrHandler(source)).toBe('application');
+      expect(await findAppOrHandler(source)).toBe('application');
     });
 
     it('detects Django ASGI application', async () => {
@@ -63,35 +63,35 @@ application = get_wsgi_application()
 from django.core.asgi import get_asgi_application
 application = get_asgi_application()
 `;
-      expect(await containsAppOrHandler(source)).toBe('application');
+      expect(await findAppOrHandler(source)).toBe('application');
     });
 
     it('detects imported app', async () => {
       const source = `
 from server import app
 `;
-      expect(await containsAppOrHandler(source)).toBe('app');
+      expect(await findAppOrHandler(source)).toBe('app');
     });
 
     it('detects aliased import as app', async () => {
       const source = `
 from server import application as app
 `;
-      expect(await containsAppOrHandler(source)).toBe('app');
+      expect(await findAppOrHandler(source)).toBe('app');
     });
 
     it('detects imported application', async () => {
       const source = `
 from server import application as app
 `;
-      expect(await containsAppOrHandler(source)).toBe('app');
+      expect(await findAppOrHandler(source)).toBe('app');
     });
 
     it('detects aliased import as application', async () => {
       const source = `
 from server import callable as application
 `;
-      expect(await containsAppOrHandler(source)).toBe('application');
+      expect(await findAppOrHandler(source)).toBe('application');
     });
 
     it('does not detect nested app assignment', async () => {
@@ -100,7 +100,7 @@ def create():
     app = Flask(__name__)
     return app
 `;
-      expect(await containsAppOrHandler(source)).toBeNull();
+      expect(await findAppOrHandler(source)).toBeNull();
     });
 
     it('does not detect app in class method', async () => {
@@ -110,7 +110,7 @@ class Factory:
         app = FastAPI()
         return app
 `;
-      expect(await containsAppOrHandler(source)).toBeNull();
+      expect(await findAppOrHandler(source)).toBeNull();
     });
   });
 
@@ -121,7 +121,7 @@ from http.server import BaseHTTPRequestHandler
 class handler(BaseHTTPRequestHandler):
     pass
 `;
-      expect(await containsAppOrHandler(source)).toBe('handler');
+      expect(await findAppOrHandler(source)).toBe('handler');
     });
 
     it('detects Handler class (capitalized)', async () => {
@@ -130,7 +130,7 @@ from http.server import BaseHTTPRequestHandler
 class Handler(BaseHTTPRequestHandler):
     pass
 `;
-      expect(await containsAppOrHandler(source)).toBe('Handler');
+      expect(await findAppOrHandler(source)).toBe('Handler');
     });
 
     it('detects HANDLER class (uppercase)', async () => {
@@ -139,7 +139,7 @@ from http.server import BaseHTTPRequestHandler
 class HANDLER(BaseHTTPRequestHandler):
     pass
 `;
-      expect(await containsAppOrHandler(source)).toBe('HANDLER');
+      expect(await findAppOrHandler(source)).toBe('HANDLER');
     });
 
     it('does not detect nested handler class', async () => {
@@ -149,13 +149,13 @@ def create_handler():
         pass
     return handler
 `;
-      expect(await containsAppOrHandler(source)).toBeNull();
+      expect(await findAppOrHandler(source)).toBeNull();
     });
   });
 
   describe('negative cases', () => {
     it('returns null for empty file', async () => {
-      expect(await containsAppOrHandler('')).toBeNull();
+      expect(await findAppOrHandler('')).toBeNull();
     });
 
     it('returns null for file without app or handler', async () => {
@@ -166,14 +166,14 @@ def main():
 if __name__ == "__main__":
     main()
 `;
-      expect(await containsAppOrHandler(source)).toBeNull();
+      expect(await findAppOrHandler(source)).toBeNull();
     });
 
     it('returns null for invalid Python syntax', async () => {
       const source = `
 def invalid(
 `;
-      expect(await containsAppOrHandler(source)).toBeNull();
+      expect(await findAppOrHandler(source)).toBeNull();
     });
 
     it('does not detect other class names', async () => {
@@ -181,21 +181,21 @@ def invalid(
 class MyHandler(BaseHTTPRequestHandler):
     pass
 `;
-      expect(await containsAppOrHandler(source)).toBeNull();
+      expect(await findAppOrHandler(source)).toBeNull();
     });
 
     it('does not match app in comments', async () => {
       const source = `
 # app = Flask(__name__)
 `;
-      expect(await containsAppOrHandler(source)).toBeNull();
+      expect(await findAppOrHandler(source)).toBeNull();
     });
 
     it('does not match app in strings', async () => {
       const source = `
 code = "app = Flask(__name__)"
 `;
-      expect(await containsAppOrHandler(source)).toBeNull();
+      expect(await findAppOrHandler(source)).toBeNull();
     });
 
     it('returns null for file with only comments', async () => {
@@ -203,7 +203,7 @@ code = "app = Flask(__name__)"
 # just a comment
 # another comment
 `;
-      expect(await containsAppOrHandler(source)).toBeNull();
+      expect(await findAppOrHandler(source)).toBeNull();
     });
 
     it('does not detect app as function parameter', async () => {
@@ -211,7 +211,7 @@ code = "app = Flask(__name__)"
 def process(app):
     return app.run()
 `;
-      expect(await containsAppOrHandler(source)).toBeNull();
+      expect(await findAppOrHandler(source)).toBeNull();
     });
 
     it('does not detect handler function (only class)', async () => {
@@ -219,7 +219,7 @@ def process(app):
 def handler(request):
     return response
 `;
-      expect(await containsAppOrHandler(source)).toBeNull();
+      expect(await findAppOrHandler(source)).toBeNull();
     });
 
     it('does not detect app in decorator', async () => {
@@ -228,14 +228,14 @@ def handler(request):
 def index():
     pass
 `;
-      expect(await containsAppOrHandler(source)).toBeNull();
+      expect(await findAppOrHandler(source)).toBeNull();
     });
 
     it('does not detect app as attribute access', async () => {
       const source = `
 result = server.app.run()
 `;
-      expect(await containsAppOrHandler(source)).toBeNull();
+      expect(await findAppOrHandler(source)).toBeNull();
     });
   });
 });
