@@ -187,6 +187,21 @@ function logsSpanMultipleDays(logs: RequestLogEntry[]): boolean {
   return logs.some(log => new Date(log.timestamp).toDateString() !== firstDay);
 }
 
+function isAnyFilterOptionEnabled(flags: {
+  environment?: string;
+  level?: string | string[];
+  statusCode?: string;
+  source?: string | string[];
+  since?: string;
+  until?: string;
+  limit?: number;
+  query?: string;
+  search?: string;
+  requestId?: string;
+}): boolean {
+  return Object.values(flags).some(v => v !== undefined);
+}
+
 function parseLevels(levels?: string | string[]): string[] {
   if (!levels) return [];
   if (typeof levels === 'string') return [levels];
@@ -251,11 +266,26 @@ export default async function logs(client: Client) {
   const branchFlagValue = parsedArguments.flags['--branch'];
 
   // Implicit --follow when deployment is specified (for backwards compatibility)
-  // unless --no-follow is explicitly set
+  // unless --no-follow is explicitly set or filtering flags are used
   const followFlagValue = parsedArguments.flags['--follow'];
   const noFollowFlagValue = parsedArguments.flags['--no-follow'];
   const followOption =
-    deploymentOption && !noFollowFlagValue ? true : followFlagValue;
+    deploymentOption &&
+    !noFollowFlagValue &&
+    !isAnyFilterOptionEnabled({
+      environment: environmentOption,
+      level: levelOption,
+      statusCode: statusCodeOption,
+      source: sourceOption,
+      since: sinceOption,
+      until: untilOption,
+      limit: limitOption,
+      query: queryOption,
+      search: searchOption,
+      requestId: requestIdOption,
+    })
+      ? true
+      : followFlagValue;
 
   telemetry.trackCliArgumentUrlOrDeploymentId(deploymentArgument);
   telemetry.trackCliOptionProject(projectOption);
