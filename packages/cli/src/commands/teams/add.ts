@@ -17,6 +17,7 @@ import param from '../../util/output/param';
 import { addSubcommand } from './command';
 import { isAPIError } from '../../util/errors-ts';
 import {
+  openUrlInBrowserCommand,
   outputActionRequired,
   outputAgentError,
 } from '../../util/agent-output';
@@ -144,17 +145,6 @@ function formatCreateTeamErrorPlain(err: unknown, slug: string): string {
       : err.serverMessage || err.message;
   }
   return errorToString(err);
-}
-
-/** Shell command to open a URL in the default browser (cross-platform). */
-function openUrlInBrowserCommand(url: string): string {
-  if (process.platform === 'win32') {
-    return `start ${url}`;
-  }
-  if (process.platform === 'darwin') {
-    return `open '${url}'`;
-  }
-  return `xdg-open '${url}'`;
 }
 
 const VERCEL_ACCOUNT_BILLING_URL = 'https://vercel.com/account/billing';

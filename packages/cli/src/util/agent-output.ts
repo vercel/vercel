@@ -399,3 +399,13 @@ export function outputAgentError(
   client.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
   process.exit(exitCode);
 }
+
+/**
+ * Returns a shell command that opens a URL in the user's default browser.
+ * Used in agent error payloads so the `next[]` command is directly runnable.
+ */
+export function openUrlInBrowserCommand(url: string): string {
+  if (process.platform === 'win32') return `start ${url}`;
+  if (process.platform === 'darwin') return `open '${url}'`;
+  return `xdg-open '${url}'`;
+}

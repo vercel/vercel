@@ -12,4 +12,32 @@ export class MicrofrontendsTelemetryClient
       value: actual,
     });
   }
+
+  trackCliSubcommandCreateGroup(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'create-group',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandAddToGroup(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'add-to-group',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandRemoveFromGroup(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'remove-from-group',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandDeleteGroup(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'delete-group',
+      value: actual,
+    });
+  }
 }

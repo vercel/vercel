@@ -17,17 +17,14 @@ import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import collectContactInformation from '../../util/domains/collect-contact-information';
-import { outputAgentError } from '../../util/agent-output';
+import {
+  openUrlInBrowserCommand,
+  outputAgentError,
+} from '../../util/agent-output';
 import { getGlobalFlagsOnlyFromArgs } from '../../util/arg-common';
 import { getCommandNamePlain } from '../../util/pkg-name';
 
 const VERCEL_DOMAINS_URL = 'https://vercel.com/dashboard/domains';
-
-function openUrlInBrowserCommand(url: string): string {
-  if (process.platform === 'win32') return `start ${url}`;
-  if (process.platform === 'darwin') return `open '${url}'`;
-  return `xdg-open '${url}'`;
-}
 
 export default async function buy(client: Client, argv: string[]) {
   const telemetry = new DomainsBuyTelemetryClient({
