@@ -10,6 +10,7 @@ export default async function refreshVpcAccount(
     `/teams/${encodeURIComponent(teamId)}/private-cloud/accounts/${encodeURIComponent(awsAccountId)}/refresh`,
     {
       method: 'POST',
+      body: {},
       useCurrentTeam: false,
     }
   );
