@@ -10,10 +10,6 @@ func TestBuildEntryParsesJSONLevelWithExtraFields(t *testing.T) {
 	entry, ok := bootstrap.BuildEntry(
 		`{"time":"2026-03-20T15:55:54.702Z","service":"api","request_id":"123","level":"error","msg":"boom"}`,
 		bootstrap.StreamStderr,
-		bootstrap.RequestContext{
-			InvocationID: "inv-1",
-			RequestID:    42,
-		},
 	)
 	if !ok {
 		t.Fatal("expected entry to be emitted")
@@ -32,7 +28,6 @@ func TestBuildEntryDoesNotClassifyJSONWithoutExplicitLevel(t *testing.T) {
 	entry, ok := bootstrap.BuildEntry(
 		`{"service":"api","msg":"user typed error into the search box"}`,
 		bootstrap.StreamStderr,
-		bootstrap.RequestContext{},
 	)
 	if !ok {
 		t.Fatal("expected entry to be emitted")
@@ -51,7 +46,6 @@ func TestBuildEntryParsesLogfmtLevelWithExtraKeys(t *testing.T) {
 	entry, ok := bootstrap.BuildEntry(
 		`time=2026-03-20T15:55:54.702Z service=api request_id=123 level=warn msg="slow path"`,
 		bootstrap.StreamStderr,
-		bootstrap.RequestContext{},
 	)
 	if !ok {
 		t.Fatal("expected entry to be emitted")
@@ -70,7 +64,6 @@ func TestBuildEntryUsesExplicitLogfmtLevelNotMessageText(t *testing.T) {
 	entry, ok := bootstrap.BuildEntry(
 		`service=api msg="error appeared in the user payload" level=info`,
 		bootstrap.StreamStderr,
-		bootstrap.RequestContext{},
 	)
 	if !ok {
 		t.Fatal("expected entry to be emitted")
@@ -85,7 +78,6 @@ func TestBuildEntryDoesNotInferSeverityFromPlainMessageText(t *testing.T) {
 	entry, ok := bootstrap.BuildEntry(
 		`error appeared in the user payload`,
 		bootstrap.StreamStderr,
-		bootstrap.RequestContext{},
 	)
 	if !ok {
 		t.Fatal("expected entry to be emitted")
@@ -104,7 +96,6 @@ func TestBuildEntryKeepsPlainStdoutAsStdout(t *testing.T) {
 	entry, ok := bootstrap.BuildEntry(
 		`bootstrap: stdout message`,
 		bootstrap.StreamStdout,
-		bootstrap.RequestContext{},
 	)
 	if !ok {
 		t.Fatal("expected entry to be emitted")
@@ -123,7 +114,6 @@ func TestBuildEntryParsesBracketedLevels(t *testing.T) {
 	entry, ok := bootstrap.BuildEntry(
 		`[WARN] slow path`,
 		bootstrap.StreamStderr,
-		bootstrap.RequestContext{},
 	)
 	if !ok {
 		t.Fatal("expected entry to be emitted")
@@ -138,7 +128,6 @@ func TestBuildEntryTreatsPanicPrefixAsFatal(t *testing.T) {
 	entry, ok := bootstrap.BuildEntry(
 		`panic: runtime error: index out of range`,
 		bootstrap.StreamStderr,
-		bootstrap.RequestContext{},
 	)
 	if !ok {
 		t.Fatal("expected entry to be emitted")
@@ -149,29 +138,16 @@ func TestBuildEntryTreatsPanicPrefixAsFatal(t *testing.T) {
 	}
 }
 
-func TestContextTrackerFallsBackWhenConcurrent(t *testing.T) {
-	tracker := bootstrap.NewContextTracker()
-	first := bootstrap.RequestContext{
-		InvocationID: "inv-1",
-		RequestID:    1,
-	}
-	second := bootstrap.RequestContext{
-		InvocationID: "inv-2",
-		RequestID:    2,
+func TestBuildEntryUsesDefaultProcessContext(t *testing.T) {
+	entry, ok := bootstrap.BuildEntry(
+		`{"time":"2026-03-20T15:55:54.702Z","level":"info","msg":"booted"}`,
+		bootstrap.StreamStdout,
+	)
+	if !ok {
+		t.Fatal("expected entry to be emitted")
 	}
 
-	tracker.Start(first)
-	if got := tracker.Current(); got != first {
-		t.Fatalf("expected current context to be %+v, got %+v", first, got)
-	}
-
-	tracker.Start(second)
-	if got := tracker.Current(); got != bootstrap.DefaultRequestContext() {
-		t.Fatalf("expected concurrent requests to fall back to default context, got %+v", got)
-	}
-
-	tracker.Finish(second)
-	if got := tracker.Current(); got != first {
-		t.Fatalf("expected current context to recover to %+v, got %+v", first, got)
+	if got := entry.Context; got != bootstrap.DefaultRequestContext() {
+		t.Fatalf("expected default process context, got %+v", got)
 	}
 }

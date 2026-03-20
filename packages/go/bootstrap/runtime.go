@@ -122,8 +122,6 @@ func Main() {
 		os.Exit(1)
 	}
 
-	requestTracker := NewContextTracker()
-
 	if err := cmd.Start(); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to start user server: %v\n", err)
 		os.Exit(1)
@@ -132,7 +130,6 @@ func Main() {
 	go ForwardProcessLogs(
 		stdoutPipe,
 		StreamStdout,
-		requestTracker,
 		func(entry Entry) {
 			emitLogMessage(logMessageFromEntry(entry))
 		},
@@ -143,7 +140,6 @@ func Main() {
 	go ForwardProcessLogs(
 		stderrPipe,
 		StreamStderr,
-		requestTracker,
 		func(entry Entry) {
 			emitLogMessage(logMessageFromEntry(entry))
 		},
@@ -200,9 +196,6 @@ func Main() {
 					r.URL.RawPath = ""
 				}
 			}
-
-			requestTracker.Start(requestContext)
-			defer requestTracker.Finish(requestContext)
 
 			if err := sendIPCMessage(HandlerStartedMessage{
 				Type: "handler-started",

@@ -42,11 +42,6 @@ type LogPayload struct {
 	Stream  string         `json:"stream,omitempty"`
 }
 
-type ContextTracker struct {
-	mu     sync.Mutex
-	active map[string]RequestContext
-}
-
 type jsonSeverityFields struct {
 	Level        json.RawMessage `json:"level"`
 	Severity     json.RawMessage `json:"severity"`
@@ -164,51 +159,6 @@ func (f *InitLogForwarder) FlushToLocalOutput() {
 	f.mu.Unlock()
 }
 
-func NewContextTracker() *ContextTracker {
-	return &ContextTracker{
-		active: make(map[string]RequestContext),
-	}
-}
-
-func (t *ContextTracker) Start(ctx RequestContext) {
-	if t == nil {
-		return
-	}
-
-	t.mu.Lock()
-	defer t.mu.Unlock()
-	t.active[requestContextKey(ctx)] = EnsureRequestContext(ctx)
-}
-
-func (t *ContextTracker) Finish(ctx RequestContext) {
-	if t == nil {
-		return
-	}
-
-	t.mu.Lock()
-	defer t.mu.Unlock()
-	delete(t.active, requestContextKey(ctx))
-}
-
-func (t *ContextTracker) Current() RequestContext {
-	if t == nil {
-		return DefaultRequestContext()
-	}
-
-	t.mu.Lock()
-	defer t.mu.Unlock()
-
-	if len(t.active) != 1 {
-		return DefaultRequestContext()
-	}
-
-	for _, ctx := range t.active {
-		return ctx
-	}
-
-	return DefaultRequestContext()
-}
-
 func DefaultRequestContext() RequestContext {
 	return RequestContext{
 		InvocationID: "0",
@@ -227,7 +177,6 @@ func EnsureRequestContext(ctx RequestContext) RequestContext {
 func BuildEntry(
 	message string,
 	sourceStream string,
-	ctx RequestContext,
 ) (Entry, bool) {
 	trimmed := strings.TrimRight(message, "\r\n")
 	if strings.TrimSpace(trimmed) == "" {
@@ -235,7 +184,7 @@ func BuildEntry(
 	}
 
 	entry := Entry{
-		Context: EnsureRequestContext(ctx),
+		Context: DefaultRequestContext(),
 		Message: trimmed,
 	}
 
@@ -251,7 +200,6 @@ func BuildEntry(
 func ForwardProcessLogs(
 	reader io.Reader,
 	sourceStream string,
-	tracker *ContextTracker,
 	emit func(Entry),
 	handleReadError func(error),
 ) {
@@ -260,11 +208,7 @@ func ForwardProcessLogs(
 	for {
 		line, err := bufferedReader.ReadString('\n')
 		if line != "" {
-			ctx := DefaultRequestContext()
-			if tracker != nil {
-				ctx = tracker.Current()
-			}
-			if entry, ok := BuildEntry(line, sourceStream, ctx); ok && emit != nil {
+			if entry, ok := BuildEntry(line, sourceStream); ok && emit != nil {
 				emit(entry)
 			}
 		}
@@ -482,10 +426,6 @@ func normalizeLevel(raw string) (string, bool) {
 	default:
 		return "", false
 	}
-}
-
-func requestContextKey(ctx RequestContext) string {
-	return fmt.Sprintf("%s:%d", ctx.InvocationID, ctx.RequestID)
 }
 
 func isSeverityKey(key string) bool {
