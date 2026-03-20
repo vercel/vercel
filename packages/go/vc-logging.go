@@ -173,6 +173,13 @@ func writeLogMessageToLocalOutput(msg LogMessage) {
 	fmt.Fprintln(writer, string(decoded))
 }
 
+// detectStructuredLevel recognizes explicit severity formats commonly emitted
+// by Go loggers, such as `slog` JSON/text output.
+
+// {"level":"error","msg":"boom"}                          // slog JSONHandler
+// time=2026-03-20T15:55:54Z level=WARN msg="slow path"    // slog TextHandler
+// [INFO] server started
+// panic: runtime error: index out of range                 // Go panic output
 func detectStructuredLevel(message string) (string, bool) {
 	trimmed := strings.TrimSpace(message)
 	if trimmed == "" {
@@ -180,6 +187,8 @@ func detectStructuredLevel(message string) (string, bool) {
 	}
 
 	lower := strings.ToLower(trimmed)
+	// Go panic output is plain text rather than JSON/logfmt, e.g.
+	// `panic: runtime error: index out of range`.
 	if strings.HasPrefix(lower, "panic:") || strings.HasPrefix(lower, "fatal error:") {
 		return "fatal", true
 	}
@@ -199,6 +208,9 @@ func detectStructuredLevel(message string) (string, bool) {
 	return "", false
 }
 
+// detectJSONLevel recognizes JSON logs with an explicit severity field, e.g.:
+//
+//	{"time":"2026-03-20T15:55:54Z","level":"ERROR","msg":"boom"} // slog JSONHandler
 func detectJSONLevel(trimmed string) (string, bool) {
 	if len(trimmed) < 2 || trimmed[0] != '{' || trimmed[len(trimmed)-1] != '}' {
 		return "", false
@@ -209,6 +221,8 @@ func detectJSONLevel(trimmed string) (string, bool) {
 		return "", false
 	}
 
+	// Check the common field names in priority order and return the first
+	// recognized severity value.
 	for _, raw := range []json.RawMessage{
 		fields.Level,
 		fields.Severity,
@@ -237,6 +251,10 @@ func normalizeJSONLevel(raw json.RawMessage) (string, bool) {
 	return normalizeLevel(value)
 }
 
+// detectLogfmtLevel recognizes key=value text logs like:
+//
+//	time=2026-03-20T15:55:54Z level=INFO msg="slow path"   // slog TextHandler
+//	time="2026-03-20T15:55:54Z" level=info msg="slow path" // logrus text formatter
 func detectLogfmtLevel(line string) (string, bool) {
 	for idx := 0; idx < len(line); {
 		for idx < len(line) && isSpace(line[idx]) {
@@ -252,6 +270,7 @@ func detectLogfmtLevel(line string) (string, bool) {
 			idx++
 		}
 
+		// Not a valid key=value token, so skip to the next space-delimited token.
 		if keyStart == idx || idx >= len(line) || line[idx] != '=' {
 			for idx < len(line) && !isSpace(line[idx]) {
 				idx++
@@ -264,6 +283,7 @@ func detectLogfmtLevel(line string) (string, bool) {
 
 		value, nextIdx, ok := parseLogfmtValue(line, idx)
 		if !ok {
+			// Malformed value; skip this token rather than failing the whole line.
 			for idx < len(line) && !isSpace(line[idx]) {
 				idx++
 			}
@@ -283,6 +303,7 @@ func detectLogfmtLevel(line string) (string, bool) {
 	return "", false
 }
 
+// detectBracketedLevel recognizes logger prefixes like "[WARN] message".
 func detectBracketedLevel(trimmed string) (string, bool) {
 	if !strings.HasPrefix(trimmed, "[") {
 		return "", false
