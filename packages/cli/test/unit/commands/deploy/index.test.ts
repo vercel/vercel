@@ -1323,6 +1323,33 @@ describe('deploy', () => {
         { key: 'output:deployment-id', value: 'dpl_archive_test' },
       ]);
     });
+    it('--prod with --non-interactive', async () => {
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      (client as { nonInteractive: boolean }).nonInteractive = true;
+      client.setArgv('deploy', '--prod', '--non-interactive');
+      const exitCode = await deploy(client);
+      expect(exitCode).toEqual(0);
+
+      expect(mock).toHaveBeenCalledWith(
+        ...Object.values({
+          ...baseCreateDeployArgs,
+          createArgs: expect.objectContaining({
+            target: 'production',
+          }),
+        })
+      );
+
+      const stdoutOutput = client.stdout.getFullOutput().trim();
+      const payload = JSON.parse(stdoutOutput);
+      expect(payload).toMatchObject({
+        status: 'ok',
+        deployment: expect.objectContaining({
+          id: expect.any(String),
+          readyState: expect.any(String),
+        }),
+      });
+      (client as { nonInteractive: boolean }).nonInteractive = false;
+    });
     it('passes agentName from client', async () => {
       client.cwd = setupUnitFixture('commands/deploy/static');
       client.agentName = 'test-agent';

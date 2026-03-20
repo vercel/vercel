@@ -62,7 +62,7 @@ import stamp from '../../util/output/stamp';
 import { parseEnv } from '../../util/parse-env';
 import parseMeta from '../../util/parse-meta';
 import { getCommandNameWithGlobalFlags } from '../../util/arg-common';
-import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
+import { getCommandName } from '../../util/pkg-name';
 import { outputAgentError } from '../../util/agent-output';
 import { AGENT_STATUS } from '../../util/agent-output-constants';
 import { pickOverrides } from '../../util/projects/project-settings';
@@ -1001,35 +1001,6 @@ async function handleDefaultDeploy(
     flagName: 'target',
     flags: parsedArguments.flags,
   });
-
-  // Deploying to production in non-interactive mode is not allowed; a user must run the command in a TTY.
-  if (client.nonInteractive && target === 'production') {
-    const argsWithoutNonInteractive = client.argv
-      .slice(2)
-      .filter(a => a !== '--non-interactive');
-    const suggestedCommand = getCommandNamePlain(
-      argsWithoutNonInteractive.join(' ')
-    );
-    outputAgentError(
-      client,
-      {
-        status: AGENT_STATUS.ERROR,
-        reason: 'production_deploy_requires_user',
-        message:
-          'Deploying to production is not allowed in non-interactive mode. A user must run this command in a terminal (without --non-interactive) to deploy to production.',
-        userActionRequired: true,
-        hint: 'Run the suggested command in a TTY so a human can confirm the production deployment.',
-        next: [
-          {
-            command: suggestedCommand,
-            when: 'user runs deploy to production in a terminal',
-          },
-        ],
-      },
-      1
-    );
-    return 1;
-  }
 
   // Validate that --skip-domain is only used with production deployments
   const skipDomain = parsedArguments.flags['--skip-domain'];
