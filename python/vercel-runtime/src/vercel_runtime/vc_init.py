@@ -360,6 +360,13 @@ def _report_spans(data: dict[str, Any]) -> None:
     send_message({"type": "otel-spans", "payload": data})
 
 
+# Set up tracing before user code is imported so instrumentation patching works.
+try:
+    init_tracing()
+except Exception as err:
+    _stderr(f"could not initialize opentelemetry tracing: {err}")
+
+
 # Runtime dependency installation for large Lambda functions
 # The _uv directory is at the Lambda root, two levels up from this file
 # (this file is at /var/task/_vendor/vercel_runtime/vc_init.py)
@@ -507,13 +514,6 @@ if is_cron_service():
         _stderr("Error bootstrapping cron service app:")
         _stderr(traceback.format_exc())
         exit(1)
-
-# Set up tracing after user code is imported so user-installed
-# opentelemetry packages are available on sys.path.
-try:
-    init_tracing()
-except Exception as err:
-    _stderr(f"could not initialize opentelemetry tracing: {err}")
 
 
 _use_legacy_asyncio = sys.version_info < (3, 10)
