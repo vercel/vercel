@@ -1,0 +1,89 @@
+import { packageName } from '../../util/pkg-name';
+
+export const initSubcommand = {
+  name: 'init',
+  aliases: [],
+  description:
+    'Register an AWS account for Vercel Private Cloud by providing your AWS Account ID',
+  arguments: [],
+  options: [
+    {
+      name: 'aws-account-id',
+      shorthand: null,
+      type: String,
+      argument: 'ACCOUNT_ID',
+      deprecated: false,
+      description: 'AWS Account ID (12 digits)',
+    },
+    {
+      name: 'role-name',
+      shorthand: null,
+      type: String,
+      argument: 'ROLE_NAME',
+      deprecated: false,
+      description: 'IAM Role Name (default: VercelLambdaInvocationRole)',
+    },
+    {
+      name: 'external-id',
+      shorthand: null,
+      type: String,
+      argument: 'EXTERNAL_ID',
+      deprecated: false,
+      description:
+        'External ID for the IAM trust policy (auto-generated if omitted)',
+    },
+  ],
+  examples: [
+    {
+      name: 'Initialize a VPC connection with an AWS account',
+      value: `${packageName} vpc init --aws-account-id 123456789012`,
+    },
+    {
+      name: 'Initialize with a custom role name and external ID',
+      value: `${packageName} vpc init --aws-account-id 123456789012 --role-name MyRole --external-id my-external-id`,
+    },
+  ],
+} as const;
+
+export const connectSubcommand = {
+  name: 'connect',
+  aliases: [],
+  description:
+    'Verify the AWS account connection by refreshing credentials via STS AssumeRole',
+  arguments: [],
+  options: [
+    {
+      name: 'aws-account-id',
+      shorthand: null,
+      type: String,
+      argument: 'ACCOUNT_ID',
+      deprecated: false,
+      description: 'AWS Account ID (12 digits) to connect',
+    },
+  ],
+  examples: [
+    {
+      name: 'Verify connection to a registered AWS account',
+      value: `${packageName} vpc connect --aws-account-id 123456789012`,
+    },
+  ],
+} as const;
+
+export const vpcCommand = {
+  name: 'vpc',
+  aliases: ['vcp'],
+  description: 'Manage Vercel Private Cloud AWS account connections',
+  arguments: [],
+  subcommands: [initSubcommand, connectSubcommand],
+  options: [],
+  examples: [
+    {
+      name: 'Initialize a VPC connection',
+      value: `${packageName} vpc init --aws-account-id 123456789012`,
+    },
+    {
+      name: 'Verify a VPC connection',
+      value: `${packageName} vpc connect --aws-account-id 123456789012`,
+    },
+  ],
+} as const;
