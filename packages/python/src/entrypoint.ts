@@ -149,18 +149,19 @@ async function getSubdirectories(workPath: string): Promise<string[]> {
  */
 export async function detectGenericPythonEntrypoint(
   workPath: string,
-  configuredEntrypoint: string
+  configuredEntrypoint?: string
 ): Promise<DetectedPythonEntrypoint | null> {
-  const entry = configuredEntrypoint.endsWith('.py')
-    ? configuredEntrypoint
-    : `${configuredEntrypoint}.py`;
-
   try {
-    // If the configured entrypoint exists and is valid, use it
-    const varName = await checkEntrypoint(workPath, entry);
-    if (varName) {
-      debug(`Using configured Python entrypoint: ${entry}`);
-      return { entrypoint: { entrypoint: entry, variableName: varName } };
+    // If a configured entrypoint was provided, check it first
+    if (configuredEntrypoint) {
+      const entry = configuredEntrypoint.endsWith('.py')
+        ? configuredEntrypoint
+        : `${configuredEntrypoint}.py`;
+      const varName = await checkEntrypoint(workPath, entry);
+      if (varName) {
+        debug(`Using configured Python entrypoint: ${entry}`);
+        return { entrypoint: { entrypoint: entry, variableName: varName } };
+      }
     }
 
     // Search candidate locations using AST-based detection
@@ -181,18 +182,19 @@ export async function detectGenericPythonEntrypoint(
  */
 export async function detectDjangoPythonEntrypoint(
   workPath: string,
-  configuredEntrypoint: string
+  configuredEntrypoint?: string
 ): Promise<DetectedPythonEntrypoint | null> {
-  const entry = configuredEntrypoint.endsWith('.py')
-    ? configuredEntrypoint
-    : `${configuredEntrypoint}.py`;
-
   try {
-    // If the configured entrypoint exists and is valid, use it
-    const varName = await checkEntrypoint(workPath, entry);
-    if (varName) {
-      debug(`Using configured Python entrypoint: ${entry}`);
-      return { entrypoint: { entrypoint: entry, variableName: varName } };
+    // If a configured entrypoint was provided, check it first
+    if (configuredEntrypoint) {
+      const entry = configuredEntrypoint.endsWith('.py')
+        ? configuredEntrypoint
+        : `${configuredEntrypoint}.py`;
+      const varName = await checkEntrypoint(workPath, entry);
+      if (varName) {
+        debug(`Using configured Python entrypoint: ${entry}`);
+        return { entrypoint: { entrypoint: entry, variableName: varName } };
+      }
     }
 
     // Get root directories (workPath root + immediate subdirs)
@@ -225,7 +227,7 @@ export async function detectDjangoPythonEntrypoint(
 export async function detectPythonEntrypoint(
   framework: PythonFramework,
   workPath: string,
-  configuredEntrypoint: string
+  configuredEntrypoint?: string
 ): Promise<DetectedPythonEntrypoint | null> {
   const result =
     framework === 'django'
