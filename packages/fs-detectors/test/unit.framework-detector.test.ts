@@ -284,6 +284,20 @@ describe('detectFramework()', () => {
     ).toBe('dotnet');
   });
 
+  it('Detect .NET with LocalFileSystemDetector for a real fixture', async () => {
+    const fs = new LocalFileSystemDetector(
+      join(__dirname, '../../dotnet/test/fixtures/01-dotnet-hello-world')
+    );
+
+    expect(
+      await detectFramework({
+        fs,
+        frameworkList,
+        useExperimentalFrameworks: true,
+      })
+    ).toBe('dotnet');
+  });
+
   it('Detect Nuxt.js Edge', async () => {
     const fs = new VirtualFilesystem({
       'package.json': JSON.stringify({

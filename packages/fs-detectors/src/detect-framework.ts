@@ -1,5 +1,6 @@
 import minimatch from 'minimatch';
 import type { Framework, FrameworkDetectionItem } from '@vercel/frameworks';
+import { normalizePath } from '@vercel/build-utils';
 import { spawnSync } from 'child_process';
 import { DetectorFilesystem } from './detectors/filesystem';
 
@@ -39,6 +40,10 @@ function hasGlobMagic(path: string): boolean {
   return /[*?[\]{}()!+@]/.test(path);
 }
 
+function normalizeDetectorPath(path: string): string {
+  return normalizePath(path).replace(/^\/+/, '').replace(/^\.\//, '');
+}
+
 async function listPaths(
   fs: DetectorFilesystem,
   dirPath = '/'
@@ -61,9 +66,11 @@ async function getMatchingPaths(
     return (await fs.hasPath(path)) ? [path] : [];
   }
 
-  return (await listPaths(fs)).filter(filePath =>
-    minimatch(filePath, path, { dot: true })
-  );
+  const normalizedPattern = normalizeDetectorPath(path);
+  return (await listPaths(fs)).filter(filePath => {
+    const normalizedFilePath = normalizeDetectorPath(filePath);
+    return minimatch(normalizedFilePath, normalizedPattern, { dot: true });
+  });
 }
 
 /**
