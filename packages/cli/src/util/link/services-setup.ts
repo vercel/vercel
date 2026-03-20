@@ -42,7 +42,7 @@ export async function getServicesSetupState(
     fs: new LocalFileSystemDetector(workPath),
   });
   const hasConfiguredServices =
-    detectServicesResult.resolved.source === 'configured';
+    detectServicesResult.resolved?.source === 'configured';
   const inferredServices = hasConfiguredServices
     ? null
     : detectServicesResult.inferred;
