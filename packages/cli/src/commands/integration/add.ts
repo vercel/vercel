@@ -13,7 +13,6 @@ import {
   type PostProvisionOptions,
 } from '../../util/integration/post-provision-setup';
 import type {
-  AcceptedPolicies,
   BillingPlan,
   Integration,
   IntegrationInstallation,
@@ -32,6 +31,7 @@ import {
 import { addAutoProvision } from './add-auto-provision';
 import { fetchBillingPlans } from '../../util/integration/fetch-billing-plans';
 import { fetchInstallations } from '../../util/integration/fetch-installations';
+import { installMarketplaceIntegration } from '../../util/integration/install-integration';
 import { fetchIntegrationWithTelemetry } from '../../util/integration/fetch-integration';
 import { selectProduct } from '../../util/integration/select-product';
 import output from '../../output-manager';
@@ -366,21 +366,6 @@ function provisionResourceViaWebUI(
   output.debug(`Opening URL: ${url.href}`);
   open(url.href).catch((err: unknown) =>
     output.debug(`Failed to open browser: ${err}`)
-  );
-}
-
-async function installMarketplaceIntegration(
-  client: Client,
-  integrationId: string,
-  acceptedPolicies: AcceptedPolicies
-): Promise<{ id: string }> {
-  return await client.fetch<{ id: string }>(
-    `/v2/integrations/integration/${encodeURIComponent(integrationId)}/marketplace/install`,
-    {
-      method: 'POST',
-      json: true,
-      body: { acceptedPolicies, source: 'cli' },
-    }
   );
 }
 

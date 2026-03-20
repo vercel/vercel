@@ -443,7 +443,7 @@ describe('integration add (auto-provision)', () => {
       expect(exitCode).toEqual(1);
     });
 
-    it('should open browser for terms acceptance in non-TTY mode', async () => {
+    it('should output terms error in non-TTY mode when not installed', async () => {
       client.reset();
       useUser();
       const teams = useTeams('team_dummy');
@@ -453,7 +453,6 @@ describe('integration add (auto-provision)', () => {
       useAutoProvision({
         responseKey: 'provisioned',
         withInstallation: false,
-        installationAppearsAfterPolls: 1,
       });
 
       client.stdin.isTTY = false;
@@ -461,21 +460,15 @@ describe('integration add (auto-provision)', () => {
       const exitCodePromise = integrationCommand(client);
 
       await expect(client.stderr).toOutput(
-        'Waiting for terms acceptance in browser...'
-      );
-      await expect(client.stderr).toOutput('Terms accepted in browser.');
-      await expect(client.stderr).toOutput(
-        'Acme Product successfully provisioned: acme-gray-apple'
+        'Terms have not been accepted for "Acme Integration"'
       );
 
       const exitCode = await exitCodePromise;
-      expect(exitCode).toEqual(0);
-      expect(openMock).toHaveBeenCalledWith(
-        expect.stringContaining('/~/integrations/accept-terms/acme')
-      );
+      expect(exitCode).toEqual(1);
+      expect(openMock).not.toHaveBeenCalled();
     });
 
-    it('should open browser for terms acceptance when AI agent detected', async () => {
+    it('should output terms error when AI agent detected and not installed', async () => {
       client.reset();
       useUser();
       const teams = useTeams('team_dummy');
@@ -485,7 +478,6 @@ describe('integration add (auto-provision)', () => {
       useAutoProvision({
         responseKey: 'provisioned',
         withInstallation: false,
-        installationAppearsAfterPolls: 1,
       });
 
       client.isAgent = true;
@@ -493,21 +485,15 @@ describe('integration add (auto-provision)', () => {
       const exitCodePromise = integrationCommand(client);
 
       await expect(client.stderr).toOutput(
-        'Waiting for terms acceptance in browser...'
-      );
-      await expect(client.stderr).toOutput('Terms accepted in browser.');
-      await expect(client.stderr).toOutput(
-        'Acme Product successfully provisioned: acme-gray-apple'
+        'Terms have not been accepted for "Acme Integration"'
       );
 
       const exitCode = await exitCodePromise;
-      expect(exitCode).toEqual(0);
-      expect(openMock).toHaveBeenCalledWith(
-        expect.stringContaining('/~/integrations/accept-terms/acme')
-      );
+      expect(exitCode).toEqual(1);
+      expect(openMock).not.toHaveBeenCalled();
     });
 
-    it('should open browser for terms when integration has requiresBrowserInstall capability', async () => {
+    it('should output terms error when integration has requiresBrowserInstall capability', async () => {
       client.reset();
       useUser();
       const teams = useTeams('team_dummy');
@@ -517,69 +503,23 @@ describe('integration add (auto-provision)', () => {
       useAutoProvision({
         responseKey: 'provisioned',
         withInstallation: false,
-        installationAppearsAfterPolls: 1,
       });
 
-      // TTY is true, isAgent is false — but requiresBrowserInstall should still trigger browser flow
       client.stdin.isTTY = true;
       client.isAgent = false;
       client.setArgv('integration', 'add', 'aws-apg');
       const exitCodePromise = integrationCommand(client);
 
       await expect(client.stderr).toOutput(
-        'Waiting for terms acceptance in browser...'
-      );
-      await expect(client.stderr).toOutput('Terms accepted in browser.');
-      await expect(client.stderr).toOutput(
-        'Aurora Postgres successfully provisioned: aws-apg-gray-apple'
+        'Terms have not been accepted for "Aurora Postgres"'
       );
 
       const exitCode = await exitCodePromise;
-      expect(exitCode).toEqual(0);
-      expect(openMock).toHaveBeenCalledWith(
-        expect.stringContaining('/~/integrations/accept-terms/aws-apg')
-      );
+      expect(exitCode).toEqual(1);
+      expect(openMock).not.toHaveBeenCalled();
     });
 
-    it('should exit with code 1 on browser terms timeout', async () => {
-      client.reset();
-      useUser();
-      const teams = useTeams('team_dummy');
-      const t = Array.isArray(teams) ? teams[0] : teams.teams[0];
-      client.config.currentTeam = t.id;
-
-      // Never return an installation — simulates user not accepting in browser
-      useAutoProvision({
-        responseKey: 'provisioned',
-        withInstallation: false,
-      });
-
-      // Mock sleep to be instant so the timeout loop completes quickly
-      vi.mock('../../../../src/util/sleep', () => ({
-        default: vi.fn().mockResolvedValue(undefined),
-      }));
-
-      // Import and call acceptTermsViaBrowser directly with a very short timeout
-      const { acceptTermsViaBrowser } = await import(
-        '../../../../src/util/integration/accept-terms-via-browser'
-      );
-
-      const result = await acceptTermsViaBrowser(
-        client,
-        { id: 'acme', slug: 'acme', name: 'Acme Integration' },
-        t.id,
-        t.slug,
-        100 // 100ms timeout — will expire almost immediately
-      );
-
-      expect(result).toBeNull();
-      expect(openMock).toHaveBeenCalledWith(
-        expect.stringContaining('/~/integrations/accept-terms/acme')
-      );
-    });
-
-    it('should skip browser when installation already exists (agent mode)', async () => {
-      // Need fresh mocks since beforeEach registered withInstallation: false
+    it('should skip terms check when installation already exists (agent mode)', async () => {
       client.reset();
       useUser();
       const teams = useTeams('team_dummy');
@@ -601,37 +541,7 @@ describe('integration add (auto-provision)', () => {
 
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);
-      // Browser should NOT be opened since installation already exists
       expect(openMock).not.toHaveBeenCalled();
-    });
-
-    it('should include correct params in browser terms URL', async () => {
-      client.reset();
-      openMock.mockReset().mockResolvedValue(undefined as never);
-      useUser();
-      const teams = useTeams('team_dummy');
-      const t = Array.isArray(teams) ? teams[0] : teams.teams[0];
-      client.config.currentTeam = t.id;
-
-      useAutoProvision({
-        responseKey: 'provisioned',
-        withInstallation: false,
-        installationAppearsAfterPolls: 1,
-      });
-
-      client.isAgent = true;
-      client.setArgv('integration', 'add', 'acme');
-      const exitCodePromise = integrationCommand(client);
-
-      await expect(client.stderr).toOutput('Terms accepted in browser.');
-
-      const exitCode = await exitCodePromise;
-      expect(exitCode).toEqual(0);
-
-      const calledUrl = openMock.mock.calls[0]?.[0] as string;
-      const parsed = new URL(calledUrl);
-      expect(parsed.pathname).toContain('/~/integrations/accept-terms/acme');
-      expect(parsed.searchParams.get('source')).toEqual('cli');
     });
 
     it('should reject --yes flag to prevent automated term bypass (legal requirement)', async () => {
