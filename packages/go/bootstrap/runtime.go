@@ -1,3 +1,6 @@
+//go:build !vcdev
+// +build !vcdev
+
 package bootstrap
 
 import (
@@ -130,9 +133,7 @@ func Main() {
 	go ForwardProcessLogs(
 		stdoutPipe,
 		StreamStdout,
-		func(entry Entry) {
-			emitLogMessage(logMessageFromEntry(entry))
-		},
+		emitLogMessage,
 		func(err error) {
 			fmt.Fprintf(os.Stderr, "Warning: Failed to read user server stdout: %v\n", err)
 		},
@@ -140,9 +141,7 @@ func Main() {
 	go ForwardProcessLogs(
 		stderrPipe,
 		StreamStderr,
-		func(entry Entry) {
-			emitLogMessage(logMessageFromEntry(entry))
-		},
+		emitLogMessage,
 		func(err error) {
 			fmt.Fprintf(os.Stderr, "Warning: Failed to read user server stderr: %v\n", err)
 		},

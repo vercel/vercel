@@ -1,3 +1,6 @@
+//go:build !vcdev
+// +build !vcdev
+
 package bootstrap
 
 import (
@@ -21,13 +24,6 @@ const (
 type RequestContext struct {
 	InvocationID string `json:"invocationId"`
 	RequestID    uint64 `json:"requestId"`
-}
-
-type Entry struct {
-	Context RequestContext
-	Message string
-	Level   string
-	Stream  string
 }
 
 type LogMessage struct {
@@ -174,33 +170,36 @@ func EnsureRequestContext(ctx RequestContext) RequestContext {
 	return ctx
 }
 
-func BuildEntry(
+func BuildLogMessage(
 	message string,
 	sourceStream string,
-) (Entry, bool) {
+) (LogMessage, bool) {
 	trimmed := strings.TrimRight(message, "\r\n")
 	if strings.TrimSpace(trimmed) == "" {
-		return Entry{}, false
+		return LogMessage{}, false
 	}
 
-	entry := Entry{
+	payload := LogPayload{
 		Context: DefaultRequestContext(),
-		Message: trimmed,
+		Message: base64.StdEncoding.EncodeToString([]byte(trimmed)),
 	}
 
 	if level, ok := detectStructuredLevel(trimmed); ok {
-		entry.Level = level
-		return entry, true
+		payload.Level = level
+	} else {
+		payload.Stream = sourceStream
 	}
 
-	entry.Stream = sourceStream
-	return entry, true
+	return LogMessage{
+		Type:    "log",
+		Payload: payload,
+	}, true
 }
 
 func ForwardProcessLogs(
 	reader io.Reader,
 	sourceStream string,
-	emit func(Entry),
+	emit func(LogMessage),
 	handleReadError func(error),
 ) {
 	bufferedReader := bufio.NewReader(reader)
@@ -208,8 +207,8 @@ func ForwardProcessLogs(
 	for {
 		line, err := bufferedReader.ReadString('\n')
 		if line != "" {
-			if entry, ok := BuildEntry(line, sourceStream); ok && emit != nil {
-				emit(entry)
+			if msg, ok := BuildLogMessage(line, sourceStream); ok && emit != nil {
+				emit(msg)
 			}
 		}
 
@@ -225,18 +224,6 @@ func ForwardProcessLogs(
 			handleReadError(err)
 		}
 		return
-	}
-}
-
-func logMessageFromEntry(entry Entry) LogMessage {
-	return LogMessage{
-		Type: "log",
-		Payload: LogPayload{
-			Context: EnsureRequestContext(entry.Context),
-			Message: base64.StdEncoding.EncodeToString([]byte(entry.Message)),
-			Level:   entry.Level,
-			Stream:  entry.Stream,
-		},
 	}
 }
 

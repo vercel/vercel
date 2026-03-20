@@ -49,6 +49,7 @@ func DevMain() {
 	}
 
 	runTarget := mustEnv("__VC_GO_DEV_RUN_TARGET")
+	runDir := strings.TrimSpace(os.Getenv("__VC_GO_DEV_WORK_PATH"))
 	serviceRoutePrefix := ResolveServiceRoutePrefix()
 
 	userPort, err := FindFreePort()
@@ -61,6 +62,9 @@ func DevMain() {
 	defer cancel()
 
 	cmd := exec.CommandContext(ctx, "go", "run", runTarget)
+	if runDir != "" {
+		cmd.Dir = runDir
+	}
 	cmd.Env = withEnvOverride(os.Environ(), "PORT", strconv.Itoa(userPort))
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

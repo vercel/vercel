@@ -434,6 +434,19 @@ export async function createGo({
   return new GoWrapper(env, opts);
 }
 
+export async function resolvePreferredGoVersion(
+  modulePath?: string
+): Promise<string> {
+  if (modulePath) {
+    const preferredVersion = await parseGoModVersionFromModule(modulePath);
+    if (preferredVersion) {
+      return preferredVersion.toolchain || preferredVersion.go;
+    }
+  }
+
+  return Array.from(versionMap.values())[0];
+}
+
 /**
  * Download and installs the Go distribution.
  *

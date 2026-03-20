@@ -16,31 +16,106 @@ import {
   getLambdaOptionsFromFunction,
 } from '@vercel/build-utils';
 
-import { createGo } from './go-helpers';
+import { createGo, resolvePreferredGoVersion } from './go-helpers';
+
+const bootstrapMinimumGoVersion = '1.20';
+const bootstrapPkgSrc = join(__dirname, '../bootstrap');
+
+function parseGoMajorMinor(version: string) {
+  const match = version.match(/^(\d+)\.(\d+)/);
+
+  if (!match) {
+    return { major: 0, minor: 0 };
+  }
+
+  return {
+    major: Number.parseInt(match[1], 10),
+    minor: Number.parseInt(match[2], 10),
+  };
+}
+
+function getGoDirectiveVersion(version: string) {
+  const { major, minor } = parseGoMajorMinor(version);
+  return `${major}.${minor}`;
+}
+
+function resolveBootstrapGoVersion(preferredGoVersion: string) {
+  const preferred = parseGoMajorMinor(preferredGoVersion);
+  const minimum = parseGoMajorMinor(bootstrapMinimumGoVersion);
+
+  if (
+    preferred.major > minimum.major ||
+    (preferred.major === minimum.major && preferred.minor >= minimum.minor)
+  ) {
+    return preferredGoVersion;
+  }
+
+  return bootstrapMinimumGoVersion;
+}
+
+function getBootstrapGoMod(bootstrapGoVersion: string) {
+  const goDirectiveVersion = getGoDirectiveVersion(bootstrapGoVersion);
+  const toolchainDirective =
+    bootstrapGoVersion !== goDirectiveVersion
+      ? `\ntoolchain go${bootstrapGoVersion}`
+      : '';
+
+  return `module main\n\ngo ${goDirectiveVersion}${toolchainDirective}\n`;
+}
+
+function getBootstrapWrapperSource(mainFunc: 'Main' | 'DevMain') {
+  return `package main
+
+import "main/bootstrap"
+
+func main() {
+\tbootstrap.${mainFunc}()
+}
+`;
+}
+
+async function prepareBootstrapDir(
+  mainFunc: 'Main' | 'DevMain',
+  bootstrapGoVersion: string
+) {
+  const bootstrapDir = await getWriteableDirectory();
+
+  await Promise.all([
+    copy(bootstrapPkgSrc, join(bootstrapDir, 'bootstrap')),
+    writeFile(
+      join(bootstrapDir, 'main.go'),
+      getBootstrapWrapperSource(mainFunc)
+    ),
+    writeFile(
+      join(bootstrapDir, 'go.mod'),
+      getBootstrapGoMod(bootstrapGoVersion)
+    ),
+  ]);
+
+  return bootstrapDir;
+}
 
 /**
  * Find the go.mod file starting from a directory and scanning up.
  */
 async function findGoModPath(entrypointDir: string, workPath: string) {
   let goModPath: string | undefined = undefined;
-  let isGoModInRootDir = false;
   let dir = entrypointDir;
 
-  while (!isGoModInRootDir) {
-    isGoModInRootDir = dir === workPath;
+  while (true) {
     const goMod = join(dir, 'go.mod');
     if (await pathExists(goMod)) {
       goModPath = goMod;
-      debug(`Found ${goModPath}"`);
+      debug(`Found ${goModPath}`);
+      break;
+    }
+    if (dir === workPath) {
       break;
     }
     dir = dirname(dir);
   }
 
-  return {
-    goModPath,
-    isGoModInRootDir,
-  };
+  return { goModPath };
 }
 
 /**
@@ -76,6 +151,8 @@ export async function buildStandaloneServer({
 
   const { goModPath } = await findGoModPath(workPath, workPath);
   const modulePath = goModPath ? dirname(goModPath) : workPath;
+  const preferredGoVersion = await resolvePreferredGoVersion(modulePath);
+  const bootstrapGoVersion = resolveBootstrapGoVersion(preferredGoVersion);
 
   const go = await createGo({
     modulePath,
@@ -104,25 +181,16 @@ export async function buildStandaloneServer({
     throw err;
   }
 
-  // Build the bootstrap wrapper that handles IPC protocol and log forwarding
-  const bootstrapSrc = join(__dirname, '../vc-init.go');
-  const bootstrapPkgSrc = join(__dirname, '../bootstrap');
-  debug(`Building bootstrap wrapper: ${bootstrapSrc} -> ${bootstrapPath}`);
+  // Build the bootstrap wrapper that handles IPC protocol and log forwarding.
+  debug(`Building bootstrap wrapper -> ${bootstrapPath}`);
 
   try {
-    // Create a temporary directory for building the bootstrap
-    const bootstrapBuildDir = await getWriteableDirectory();
-    const bootstrapGoFile = join(bootstrapBuildDir, 'main.go');
+    const bootstrapBuildDir = await prepareBootstrapDir(
+      'Main',
+      bootstrapGoVersion
+    );
 
-    // Copy bootstrap source and package helpers to temp directory
-    await copy(bootstrapSrc, bootstrapGoFile);
-    await copy(bootstrapPkgSrc, join(bootstrapBuildDir, 'bootstrap'));
-
-    // Initialize a minimal go.mod for the bootstrap
-    const bootstrapGoMod = join(bootstrapBuildDir, 'go.mod');
-    await writeFile(bootstrapGoMod, 'module main\n\ngo 1.21\n');
-
-    // Build bootstrap with same env (cross-compile settings)
+    // Build the staged bootstrap module with the production runtime entrypoint.
     const bootstrapGo = await createGo({
       modulePath: bootstrapBuildDir,
       opts: { cwd: bootstrapBuildDir, env },
@@ -179,7 +247,7 @@ export async function buildStandaloneServer({
 
 /**
  * Start a dev server for standalone Go server mode.
- * This runs a small Go dev wrapper (`vc-init-dev.go`) that:
+ * This stages a tiny Go bootstrap module that:
  * - starts the user server on an internal port
  * - strips generated service route prefixes when configured
  * - proxies traffic on the externally assigned dev port
@@ -189,6 +257,10 @@ export async function startStandaloneDevServer(
   resolvedEntrypoint: string
 ): Promise<StartDevServerResult> {
   const { workPath, meta = {} } = opts;
+  const { goModPath } = await findGoModPath(workPath, workPath);
+  const modulePath = goModPath ? dirname(goModPath) : workPath;
+  const preferredGoVersion = await resolvePreferredGoVersion(modulePath);
+  const bootstrapGoVersion = resolveBootstrapGoVersion(preferredGoVersion);
 
   // Use a random port in the ephemeral range
   const port = Math.floor(Math.random() * (65535 - 49152) + 49152);
@@ -203,17 +275,21 @@ export async function startStandaloneDevServer(
   const runTarget =
     resolvedEntrypoint === 'main.go' ? '.' : './' + dirname(resolvedEntrypoint);
 
-  const devWrapper = join(__dirname, '../vc-init-dev.go');
-
-  debug(
-    `Starting standalone Go dev server wrapper: go run ${devWrapper} (target ${runTarget}, port ${port})`
+  const bootstrapDevDir = await prepareBootstrapDir(
+    'DevMain',
+    bootstrapGoVersion
   );
 
-  const child = spawn('go', ['run', '-tags', 'vcdev', devWrapper], {
-    cwd: workPath,
+  debug(
+    `Starting standalone Go dev server wrapper: go run . (target ${runTarget}, port ${port})`
+  );
+
+  const child = spawn('go', ['run', '-tags', 'vcdev', '.'], {
+    cwd: bootstrapDevDir,
     env: {
       ...env,
       __VC_GO_DEV_RUN_TARGET: runTarget,
+      __VC_GO_DEV_WORK_PATH: workPath,
     },
     stdio: ['ignore', 'pipe', 'pipe'],
   });

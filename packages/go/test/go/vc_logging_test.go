@@ -6,148 +6,148 @@ import (
 	"main/bootstrap"
 )
 
-func TestBuildEntryParsesJSONLevelWithExtraFields(t *testing.T) {
-	entry, ok := bootstrap.BuildEntry(
+func TestBuildLogMessageParsesJSONLevelWithExtraFields(t *testing.T) {
+	msg, ok := bootstrap.BuildLogMessage(
 		`{"time":"2026-03-20T15:55:54.702Z","service":"api","request_id":"123","level":"error","msg":"boom"}`,
 		bootstrap.StreamStderr,
 	)
 	if !ok {
-		t.Fatal("expected entry to be emitted")
+		t.Fatal("expected log message to be emitted")
 	}
 
-	if got := entry.Level; got != "error" {
+	if got := msg.Payload.Level; got != "error" {
 		t.Fatalf("expected error level, got %q", got)
 	}
 
-	if got := entry.Stream; got != "" {
+	if got := msg.Payload.Stream; got != "" {
 		t.Fatalf("expected structured entry to omit stream, got %q", got)
 	}
 }
 
-func TestBuildEntryDoesNotClassifyJSONWithoutExplicitLevel(t *testing.T) {
-	entry, ok := bootstrap.BuildEntry(
+func TestBuildLogMessageDoesNotClassifyJSONWithoutExplicitLevel(t *testing.T) {
+	msg, ok := bootstrap.BuildLogMessage(
 		`{"service":"api","msg":"user typed error into the search box"}`,
 		bootstrap.StreamStderr,
 	)
 	if !ok {
-		t.Fatal("expected entry to be emitted")
+		t.Fatal("expected log message to be emitted")
 	}
 
-	if got := entry.Level; got != "" {
+	if got := msg.Payload.Level; got != "" {
 		t.Fatalf("expected no inferred level, got %q", got)
 	}
 
-	if got := entry.Stream; got != bootstrap.StreamStderr {
+	if got := msg.Payload.Stream; got != bootstrap.StreamStderr {
 		t.Fatalf("expected stderr fallback, got %q", got)
 	}
 }
 
-func TestBuildEntryParsesLogfmtLevelWithExtraKeys(t *testing.T) {
-	entry, ok := bootstrap.BuildEntry(
+func TestBuildLogMessageParsesLogfmtLevelWithExtraKeys(t *testing.T) {
+	msg, ok := bootstrap.BuildLogMessage(
 		`time=2026-03-20T15:55:54.702Z service=api request_id=123 level=warn msg="slow path"`,
 		bootstrap.StreamStderr,
 	)
 	if !ok {
-		t.Fatal("expected entry to be emitted")
+		t.Fatal("expected log message to be emitted")
 	}
 
-	if got := entry.Level; got != "warn" {
+	if got := msg.Payload.Level; got != "warn" {
 		t.Fatalf("expected warn level, got %q", got)
 	}
 
-	if got := entry.Stream; got != "" {
+	if got := msg.Payload.Stream; got != "" {
 		t.Fatalf("expected structured entry to omit stream, got %q", got)
 	}
 }
 
-func TestBuildEntryUsesExplicitLogfmtLevelNotMessageText(t *testing.T) {
-	entry, ok := bootstrap.BuildEntry(
+func TestBuildLogMessageUsesExplicitLogfmtLevelNotMessageText(t *testing.T) {
+	msg, ok := bootstrap.BuildLogMessage(
 		`service=api msg="error appeared in the user payload" level=info`,
 		bootstrap.StreamStderr,
 	)
 	if !ok {
-		t.Fatal("expected entry to be emitted")
+		t.Fatal("expected log message to be emitted")
 	}
 
-	if got := entry.Level; got != "info" {
+	if got := msg.Payload.Level; got != "info" {
 		t.Fatalf("expected info level, got %q", got)
 	}
 }
 
-func TestBuildEntryDoesNotInferSeverityFromPlainMessageText(t *testing.T) {
-	entry, ok := bootstrap.BuildEntry(
+func TestBuildLogMessageDoesNotInferSeverityFromPlainMessageText(t *testing.T) {
+	msg, ok := bootstrap.BuildLogMessage(
 		`error appeared in the user payload`,
 		bootstrap.StreamStderr,
 	)
 	if !ok {
-		t.Fatal("expected entry to be emitted")
+		t.Fatal("expected log message to be emitted")
 	}
 
-	if got := entry.Level; got != "" {
+	if got := msg.Payload.Level; got != "" {
 		t.Fatalf("expected no inferred level, got %q", got)
 	}
 
-	if got := entry.Stream; got != bootstrap.StreamStderr {
+	if got := msg.Payload.Stream; got != bootstrap.StreamStderr {
 		t.Fatalf("expected stderr fallback, got %q", got)
 	}
 }
 
-func TestBuildEntryKeepsPlainStdoutAsStdout(t *testing.T) {
-	entry, ok := bootstrap.BuildEntry(
+func TestBuildLogMessageKeepsPlainStdoutAsStdout(t *testing.T) {
+	msg, ok := bootstrap.BuildLogMessage(
 		`bootstrap: stdout message`,
 		bootstrap.StreamStdout,
 	)
 	if !ok {
-		t.Fatal("expected entry to be emitted")
+		t.Fatal("expected log message to be emitted")
 	}
 
-	if got := entry.Level; got != "" {
+	if got := msg.Payload.Level; got != "" {
 		t.Fatalf("expected no inferred level, got %q", got)
 	}
 
-	if got := entry.Stream; got != bootstrap.StreamStdout {
+	if got := msg.Payload.Stream; got != bootstrap.StreamStdout {
 		t.Fatalf("expected stdout stream, got %q", got)
 	}
 }
 
-func TestBuildEntryParsesBracketedLevels(t *testing.T) {
-	entry, ok := bootstrap.BuildEntry(
+func TestBuildLogMessageParsesBracketedLevels(t *testing.T) {
+	msg, ok := bootstrap.BuildLogMessage(
 		`[WARN] slow path`,
 		bootstrap.StreamStderr,
 	)
 	if !ok {
-		t.Fatal("expected entry to be emitted")
+		t.Fatal("expected log message to be emitted")
 	}
 
-	if got := entry.Level; got != "warn" {
+	if got := msg.Payload.Level; got != "warn" {
 		t.Fatalf("expected warn level, got %q", got)
 	}
 }
 
-func TestBuildEntryTreatsPanicPrefixAsFatal(t *testing.T) {
-	entry, ok := bootstrap.BuildEntry(
+func TestBuildLogMessageTreatsPanicPrefixAsFatal(t *testing.T) {
+	msg, ok := bootstrap.BuildLogMessage(
 		`panic: runtime error: index out of range`,
 		bootstrap.StreamStderr,
 	)
 	if !ok {
-		t.Fatal("expected entry to be emitted")
+		t.Fatal("expected log message to be emitted")
 	}
 
-	if got := entry.Level; got != "fatal" {
+	if got := msg.Payload.Level; got != "fatal" {
 		t.Fatalf("expected fatal level, got %q", got)
 	}
 }
 
-func TestBuildEntryUsesDefaultProcessContext(t *testing.T) {
-	entry, ok := bootstrap.BuildEntry(
+func TestBuildLogMessageUsesDefaultProcessContext(t *testing.T) {
+	msg, ok := bootstrap.BuildLogMessage(
 		`{"time":"2026-03-20T15:55:54.702Z","level":"info","msg":"booted"}`,
 		bootstrap.StreamStdout,
 	)
 	if !ok {
-		t.Fatal("expected entry to be emitted")
+		t.Fatal("expected log message to be emitted")
 	}
 
-	if got := entry.Context; got != bootstrap.DefaultRequestContext() {
+	if got := msg.Payload.Context; got != bootstrap.DefaultRequestContext() {
 		t.Fatalf("expected default process context, got %+v", got)
 	}
 }
