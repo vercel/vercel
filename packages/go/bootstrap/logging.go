@@ -55,13 +55,114 @@ type jsonSeverityFields struct {
 	SeverityText json.RawMessage `json:"severity_text"`
 }
 
-var (
-	ipcReady     atomic.Bool
-	initLogBuf   []LogMessage
-	initLogBufMu sync.Mutex
+const maxBufferedInitLogMessages = 1024
+
+// InitLogForwarder buffers process logs until the IPC handshake completes.
+type InitLogForwarder struct {
+	maxBuffered int
+	hasIPC      func() bool
+	forward     func(LogMessage)
+	writeLocal  func(LogMessage)
+
+	ready    atomic.Bool
+	mu       sync.Mutex
+	buffered []LogMessage
+}
+
+var initLogForwarder = NewInitLogForwarder(
+	maxBufferedInitLogMessages,
+	hasIPCConnection,
+	forwardLogMessageToIPCOrLocalOutput,
+	writeLogMessageToLocalOutput,
 )
 
-const maxBufferedInitLogMessages = 1024
+func NewInitLogForwarder(
+	maxBuffered int,
+	hasIPC func() bool,
+	forward func(LogMessage),
+	writeLocal func(LogMessage),
+) *InitLogForwarder {
+	return &InitLogForwarder{
+		maxBuffered: maxBuffered,
+		hasIPC:      hasIPC,
+		forward:     forward,
+		writeLocal:  writeLocal,
+	}
+}
+
+func (f *InitLogForwarder) Emit(msg LogMessage) {
+	if f == nil {
+		return
+	}
+
+	if f.hasIPC == nil || !f.hasIPC() {
+		if f.writeLocal != nil {
+			f.writeLocal(msg)
+		}
+		return
+	}
+
+	if f.ready.Load() {
+		if f.forward != nil {
+			f.forward(msg)
+		}
+		return
+	}
+
+	f.mu.Lock()
+	if f.ready.Load() {
+		f.mu.Unlock()
+		if f.forward != nil {
+			f.forward(msg)
+		}
+		return
+	}
+
+	if len(f.buffered) < f.maxBuffered {
+		f.buffered = append(f.buffered, msg)
+		f.mu.Unlock()
+		return
+	}
+	f.mu.Unlock()
+
+	if f.writeLocal != nil {
+		f.writeLocal(msg)
+	}
+}
+
+func (f *InitLogForwarder) FlushToIPC() {
+	if f == nil {
+		return
+	}
+
+	f.mu.Lock()
+	buffered := f.buffered
+	f.buffered = nil
+	for _, msg := range buffered {
+		if f.forward != nil {
+			f.forward(msg)
+		}
+	}
+	f.ready.Store(true)
+	f.mu.Unlock()
+}
+
+func (f *InitLogForwarder) FlushToLocalOutput() {
+	if f == nil {
+		return
+	}
+
+	f.mu.Lock()
+	buffered := f.buffered
+	f.buffered = nil
+	for _, msg := range buffered {
+		if f.writeLocal != nil {
+			f.writeLocal(msg)
+		}
+	}
+	f.ready.Store(true)
+	f.mu.Unlock()
+}
 
 func NewContextTracker() *ContextTracker {
 	return &ContextTracker{
@@ -195,54 +296,26 @@ func logMessageFromEntry(entry Entry) LogMessage {
 	}
 }
 
-func emitLogMessage(msg LogMessage) {
-	if ipcConn == nil {
+func hasIPCConnection() bool {
+	return ipcConn != nil
+}
+
+func forwardLogMessageToIPCOrLocalOutput(msg LogMessage) {
+	if err := sendIPCMessage(msg); err != nil {
 		writeLogMessageToLocalOutput(msg)
-		return
 	}
+}
 
-	if ipcReady.Load() {
-		if err := sendIPCMessage(msg); err != nil {
-			writeLogMessageToLocalOutput(msg)
-		}
-		return
-	}
-
-	initLogBufMu.Lock()
-	if len(initLogBuf) < maxBufferedInitLogMessages {
-		initLogBuf = append(initLogBuf, msg)
-		initLogBufMu.Unlock()
-		return
-	}
-	initLogBufMu.Unlock()
-
-	writeLogMessageToLocalOutput(msg)
+func emitLogMessage(msg LogMessage) {
+	initLogForwarder.Emit(msg)
 }
 
 func flushBufferedLogMessages() {
-	ipcReady.Store(true)
-
-	initLogBufMu.Lock()
-	buffered := append([]LogMessage(nil), initLogBuf...)
-	initLogBuf = nil
-	initLogBufMu.Unlock()
-
-	for _, msg := range buffered {
-		if err := sendIPCMessage(msg); err != nil {
-			writeLogMessageToLocalOutput(msg)
-		}
-	}
+	initLogForwarder.FlushToIPC()
 }
 
 func flushBufferedLogMessagesToLocalOutput() {
-	initLogBufMu.Lock()
-	buffered := append([]LogMessage(nil), initLogBuf...)
-	initLogBuf = nil
-	initLogBufMu.Unlock()
-
-	for _, msg := range buffered {
-		writeLogMessageToLocalOutput(msg)
-	}
+	initLogForwarder.FlushToLocalOutput()
 }
 
 func writeLogMessageToLocalOutput(msg LogMessage) {
