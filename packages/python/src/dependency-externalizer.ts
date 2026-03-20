@@ -10,13 +10,14 @@ import {
 } from '@vercel/build-utils';
 import {
   classifyPackages,
+  evaluateMarker,
   isWheelCompatible,
   normalizePackageName,
   parseUvLock,
   PythonAnalysisError,
   scanDistributions,
 } from '@vercel/python-analysis';
-import type { UvLockFile } from '@vercel/python-analysis';
+import type { UvLockFile, UvLockPackage } from '@vercel/python-analysis';
 import { getVenvSitePackagesDirs } from './install';
 import { getUvBinaryForBundling, UV_BUNDLE_DIR } from './uv';
 import { detectPlatform } from './utils';
@@ -490,13 +491,44 @@ export class PythonDependencyExternalizer {
    * Identify public packages that have no compatible wheel for the Lambda platform.
    * These packages must be force-bundled because `uv sync --no-build` at cold start
    * will refuse to build from source.
+   *
+   * Packages that are not reachable on the target platform (e.g. pywin32 which is
+   * only a dependency when `sys_platform == 'win32'`) are excluded -- they will
+   * never be installed by `uv sync` on Lambda, so their wheel compatibility is
+   * irrelevant.
    */
   private async findPackagesWithoutCompatibleWheels(
     lockFile: UvLockFile,
     publicPackageNames: string[]
   ): Promise<string[]> {
     const platform = detectPlatform();
-    const publicSet = new Set(publicPackageNames.map(normalizePackageName));
+
+    // Determine which packages are actually reachable on the target platform
+    // by traversing the dependency graph and evaluating environment markers.
+    const reachable = await getPackagesReachableOnPlatform(
+      lockFile,
+      this.projectName,
+      this.pythonMajor,
+      this.pythonMinor,
+      platform.sysPlatform,
+      platform.archName
+    );
+
+    // Only check wheel compatibility for packages reachable on the target platform.
+    const relevantPackages = reachable
+      ? publicPackageNames.filter(name =>
+          reachable.has(normalizePackageName(name))
+        )
+      : publicPackageNames;
+
+    if (relevantPackages.length < publicPackageNames.length) {
+      debug(
+        `Skipping wheel check for ${publicPackageNames.length - relevantPackages.length} ` +
+          `package(s) not reachable on the target platform`
+      );
+    }
+
+    const publicSet = new Set(relevantPackages.map(normalizePackageName));
 
     // Build a map of normalized package name -> wheels from the lock file
     const packageWheels = new Map<string, Array<{ url: string }>>();
@@ -509,12 +541,12 @@ export class PythonDependencyExternalizer {
 
     const incompatible: string[] = [];
 
-    for (const name of publicPackageNames) {
+    for (const name of relevantPackages) {
       const normalized = normalizePackageName(name);
       const wheels = packageWheels.get(normalized);
 
       if (!wheels || wheels.length === 0) {
-        // No wheels listed in the lock file — must be source-only
+        // No wheels listed in the lock file -- must be source-only
         incompatible.push(name);
         continue;
       }
@@ -555,6 +587,92 @@ export class PythonDependencyExternalizer {
 
     return incompatible;
   }
+}
+
+/**
+ * Compute the set of packages reachable from the project root on the target
+ * platform by traversing the dependency graph and evaluating environment
+ * markers using uv's PEP 508 marker evaluator.
+ *
+ * Packages guarded by markers that exclude the target platform (e.g.
+ * `sys_platform == 'win32'` when targeting Linux) are not traversed.
+ *
+ * Returns `null` if the project name is not provided (cannot determine root),
+ * in which case callers should fall back to considering all packages.
+ */
+export async function getPackagesReachableOnPlatform(
+  lockFile: UvLockFile,
+  projectName: string | undefined,
+  pythonMajor: number,
+  pythonMinor: number,
+  sysPlatform: string,
+  platformMachine: string
+): Promise<Set<string> | null> {
+  if (!projectName) return null;
+
+  const rootNormalized = normalizePackageName(projectName);
+
+  // Build a map from normalized name to package entry
+  const packageMap = new Map<string, UvLockPackage>();
+  for (const pkg of lockFile.packages) {
+    packageMap.set(normalizePackageName(pkg.name), pkg);
+  }
+
+  const rootPkg = packageMap.get(rootNormalized);
+  if (!rootPkg) return null;
+
+  const visited = new Set<string>();
+  const queue: string[] = [];
+  let queueHead = 0;
+
+  // Seed the BFS with the root package's compatible dependencies
+  async function enqueueDeps(pkg: UvLockPackage): Promise<void> {
+    if (!pkg.dependencies) return;
+    for (const dep of pkg.dependencies) {
+      const normalized = normalizePackageName(dep.name);
+      if (visited.has(normalized)) continue;
+      if (dep.marker) {
+        try {
+          const compatible = await evaluateMarker(
+            dep.marker,
+            pythonMajor,
+            pythonMinor,
+            sysPlatform,
+            platformMachine
+          );
+          if (!compatible) {
+            debug(
+              `Skipping dependency ${dep.name}: marker "${dep.marker}" not satisfied on ${sysPlatform}`
+            );
+            continue;
+          }
+        } catch (err) {
+          // If we can't evaluate the marker, conservatively include the dependency
+          debug(
+            `Failed to evaluate marker "${dep.marker}" for ${dep.name}, including conservatively: ${
+              err instanceof Error ? err.message : String(err)
+            }`
+          );
+        }
+      }
+      queue.push(normalized);
+    }
+  }
+
+  await enqueueDeps(rootPkg);
+
+  while (queueHead < queue.length) {
+    const current = queue[queueHead++];
+    if (visited.has(current)) continue;
+    visited.add(current);
+
+    const pkg = packageMap.get(current);
+    if (pkg) {
+      await enqueueDeps(pkg);
+    }
+  }
+
+  return visited;
 }
 
 // Utility functions

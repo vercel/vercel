@@ -29,7 +29,7 @@ export interface UvLockPackage {
   version: string;
   source?: UvLockPackageSource;
   wheels: UvLockWheel[];
-  dependencies?: Array<{ name: string }>;
+  dependencies?: Array<{ name: string; marker?: string }>;
 }
 
 /**
@@ -50,7 +50,7 @@ interface UvLockToml {
     version: string;
     source?: UvLockPackageSource;
     wheels?: Array<{ url: string }>;
-    dependencies?: Array<{ name: string }>;
+    dependencies?: Array<{ name: string; marker?: string }>;
   }>;
 }
 

@@ -30,6 +30,7 @@ uv-platform-tags = { git = "https://github.com/astral-sh/uv", rev = "35d1e90961c
 uv-distribution-types = { git = "https://github.com/astral-sh/uv", rev = "35d1e90961c1c2bd238ee6b015f970c0cf97f5d5" }
 uv-git-types = { git = "https://github.com/astral-sh/uv", rev = "35d1e90961c1c2bd238ee6b015f970c0cf97f5d5" }
 uv-normalize = { git = "https://github.com/astral-sh/uv", rev = "35d1e90961c1c2bd238ee6b015f970c0cf97f5d5" }
+uv-pep440 = { git = "https://github.com/astral-sh/uv", rev = "35d1e90961c1c2bd238ee6b015f970c0cf97f5d5" }
 uv-pep508 = { git = "https://github.com/astral-sh/uv", rev = "35d1e90961c1c2bd238ee6b015f970c0cf97f5d5", features = ["non-pep508-extensions"] }
 uv-pypi-types = { git = "https://github.com/astral-sh/uv", rev = "35d1e90961c1c2bd238ee6b015f970c0cf97f5d5" }
 uv-redacted = { git = "https://github.com/astral-sh/uv", rev = "35d1e90961c1c2bd238ee6b015f970c0cf97f5d5" }
