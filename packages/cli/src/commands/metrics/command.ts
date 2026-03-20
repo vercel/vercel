@@ -133,8 +133,8 @@ export const metricsCommand = {
       shorthand: 'p',
       type: String,
       deprecated: false,
-      description: 'Project name (default: linked project)',
-      argument: 'NAME',
+      description: 'Project name or ID (default: linked project)',
+      argument: 'NAME_OR_ID',
     },
     {
       name: 'all',

@@ -337,11 +337,34 @@ export class PythonDependencyExternalizer {
       }
     }
 
+    // _runtime_config.json will always be written.  We don't know the exact
+    // content yet (it depends on bundledPackagesForConfig which is computed
+    // after the knapsack), so use a conservative estimate.
+    runtimeToolingOverhead += 4 * 1024; // 4 KB
+
+    // Check if pyproject.toml and uv.lock will be bundled under _uv/
+    const projectDirRel = relative(this.workPath, this.uvProjectDir);
+    const uvLockRel = relative(this.workPath, this.uvLockPath);
+    const isOutsideWorkPath =
+      projectDirRel.startsWith('..') || uvLockRel.startsWith('..');
+
+    if (isOutsideWorkPath) {
+      const pyprojectPath = join(this.uvProjectDir, 'pyproject.toml');
+      const pyprojectStats = await fs.promises
+        .stat(pyprojectPath)
+        .catch(() => null);
+      const uvLockStats = await fs.promises
+        .stat(this.uvLockPath)
+        .catch(() => null);
+      if (pyprojectStats) runtimeToolingOverhead += pyprojectStats.size;
+      if (uvLockStats) runtimeToolingOverhead += uvLockStats.size;
+    }
+
     // Dynamically derive the packing target: start from the hard Lambda size
     // threshold and subtract everything that is already committed to the bundle
-    // (user source code, private packages, always-bundled packages, and the uv
-    // binary). The remainder is the budget the knapsack can fill with public
-    // packages.
+    // (user source code, private packages, always-bundled packages, the uv
+    // binary, and runtime config files). The remainder is the budget the
+    // knapsack can fill with public packages.
     const remainingCapacity =
       LAMBDA_SIZE_THRESHOLD_BYTES - fixedOverhead - runtimeToolingOverhead;
 
@@ -393,11 +416,6 @@ export class PythonDependencyExternalizer {
     // and uv.lock are already part of the Lambda zip (globbed from
     // workPath). For workspace layouts where the project root lives
     // above workPath we bundle them explicitly under _uv/.
-    const projectDirRel = relative(this.workPath, this.uvProjectDir);
-    const uvLockRel = relative(this.workPath, this.uvLockPath);
-    const isOutsideWorkPath =
-      projectDirRel.startsWith('..') || uvLockRel.startsWith('..');
-
     if (isOutsideWorkPath) {
       // Bundle pyproject.toml and uv.lock into _uv/ so they are
       // available inside the Lambda even for workspace monorepos.
@@ -448,8 +466,11 @@ export class PythonDependencyExternalizer {
 
     // Final size verification – note that force-bundled wheel-incompatible packages
     // are included in the bundle, which can push total size over the threshold.
+    // Allow 100 KB of tolerance for rounding and estimation discrepancies in the
+    // knapsack capacity budget.  The actual AWS Lambda limit is 250 MB and we
+    // target 245 MB, so a slight overshoot here is safe.
     const finalBundleSize = await calculateBundleSize(files);
-    if (finalBundleSize > LAMBDA_SIZE_THRESHOLD_BYTES) {
+    if (finalBundleSize > LAMBDA_SIZE_THRESHOLD_BYTES + 100 * 1024) {
       const finalSizeMB = (finalBundleSize / (1024 * 1024)).toFixed(2);
       const limitMB = (LAMBDA_SIZE_THRESHOLD_BYTES / (1024 * 1024)).toFixed(0);
       throw new NowBuildError({

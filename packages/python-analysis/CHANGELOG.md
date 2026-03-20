@@ -1,5 +1,11 @@
 # @vercel/python-analysis
 
+## 0.10.1
+
+### Patch Changes
+
+- Add `diagnostics` callback to produce package-manifest.json ([#15373](https://github.com/vercel/vercel/pull/15373))
+
 ## 0.10.0
 
 ### Minor Changes

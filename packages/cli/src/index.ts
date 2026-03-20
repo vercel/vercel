@@ -76,6 +76,8 @@ import { checkTelemetryStatus } from './util/telemetry/check-status';
 import output from './output-manager';
 import { checkGuidanceStatus } from './util/guidance/check-status';
 import { determineAgent } from '@vercel/detect-agent';
+import { getLinkFromDir, getVercelDirectory } from './util/projects/link';
+import { getPlatformEnv } from '@vercel/build-utils';
 
 const VERCEL_DIR = getGlobalPathConfig();
 const VERCEL_CONFIG_PATH = configFiles.getConfigFilePath();
@@ -1045,6 +1047,22 @@ const main = async () => {
       // best-effort for telemetry
     }
   }
+
+  // Resolve project_id from VERCEL_PROJECT_ID env var or .vercel/project.json
+  try {
+    const envProjectId = getPlatformEnv('PROJECT_ID');
+    if (envProjectId) {
+      telemetryEventStore.updateProjectId(envProjectId);
+    } else {
+      const link = await getLinkFromDir(getVercelDirectory(client.cwd));
+      if (link) {
+        telemetryEventStore.updateProjectId(link.projectId);
+      }
+    }
+  } catch {
+    // best-effort for telemetry — project may not be linked
+  }
+
   await telemetryEventStore.save();
 
   return exitCode;

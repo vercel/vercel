@@ -1,15 +1,27 @@
-import type { MetricsAggregation } from './schema-data';
-export type { MetricsAggregation } from './schema-data';
+export type Aggregation =
+  | 'sum'
+  | 'persecond'
+  | 'percent'
+  | 'unique'
+  | 'avg'
+  | 'min'
+  | 'max'
+  | 'p50'
+  | 'p75'
+  | 'p90'
+  | 'p95'
+  | 'p99'
+  | 'stddev';
 
 export interface ProjectScope {
-  type: 'project-with-slug';
-  teamSlug: string;
-  projectName: string;
+  type: 'project';
+  ownerId: string;
+  projectIds: [string];
 }
 
 export interface TeamScope {
-  type: 'team-with-slug';
-  teamSlug: string;
+  type: 'owner';
+  ownerId: string;
 }
 
 export type Scope = ProjectScope | TeamScope;
@@ -42,7 +54,7 @@ export interface MetricsQueryStatistics {
 export interface QueryMetadata {
   event: string;
   measure: string;
-  aggregation: MetricsAggregation;
+  aggregation: Aggregation;
   groupBy: string[];
   filter: string | undefined;
   startTime: string;
@@ -54,7 +66,7 @@ export interface MetricsQueryRequest {
   reason: 'agent';
   scope: Scope;
   event: string;
-  rollups: Record<string, { measure: string; aggregation: MetricsAggregation }>;
+  rollups: Record<string, { measure: string; aggregation: Aggregation }>;
   startTime: string;
   endTime: string;
   granularity: Granularity;
