@@ -12,7 +12,7 @@ describe('integration', () => {
 
         client.setArgv(command, subcommand, '--help');
         const exitCode = await integrationCommand(client);
-        expect(exitCode).toEqual(0);
+        expect(exitCode).toEqual(2);
 
         expect(client.telemetryEventStore).toHaveTelemetryEvents([
           {

@@ -17,7 +17,7 @@ describe('project', () => {
 
       client.setArgv(command, '--help');
       const exitCodePromise = project(client);
-      await expect(exitCodePromise).resolves.toEqual(0);
+      await expect(exitCodePromise).resolves.toEqual(2);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {

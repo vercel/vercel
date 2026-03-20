@@ -28,7 +28,7 @@ describe('open', () => {
 
       client.setArgv(command, '--help');
       const exitCodePromise = openCommand(client);
-      await expect(exitCodePromise).resolves.toEqual(0);
+      await expect(exitCodePromise).resolves.toEqual(2);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -41,7 +41,7 @@ describe('open', () => {
     it('prints help message', async () => {
       client.setArgv('open', '--help');
       const exitCode = await openCommand(client);
-      expect(exitCode).toEqual(0);
+      expect(exitCode).toEqual(2);
       expect(client.getFullOutput()).toContain(
         'Opens the current project in the Vercel Dashboard'
       );

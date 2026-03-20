@@ -49,7 +49,7 @@ describe('alerts', () => {
 
     const exitCode = await alerts(client);
 
-    expect(exitCode).toBe(0);
+    expect(exitCode).toBe(2);
     expect(client.stderr.getFullOutput()).toContain(
       'List alerts for a project or team'
     );
