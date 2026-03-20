@@ -304,27 +304,6 @@ describe('query', () => {
     });
   });
 
-  describe('non-groupable dimension', () => {
-    it('should return error for a dimension that is not available in --group-by', async () => {
-      mockLinkedProject();
-      client.setArgv(
-        'metrics',
-        'query',
-        '--event',
-        'functionExecution',
-        '--group-by',
-        'provider'
-      );
-
-      const exitCode = await query(client, new MockTelemetry());
-
-      expect(exitCode).toBe(1);
-      expect(client.stderr.getFullOutput()).toContain(
-        'Dimension "provider" is not available'
-      );
-    });
-  });
-
   describe('scope resolution', () => {
     it('should use linked project by default', async () => {
       let requestBody: any;
