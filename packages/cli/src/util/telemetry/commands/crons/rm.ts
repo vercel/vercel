@@ -17,10 +17,7 @@ export class CronsRmTelemetryClient
 
   trackCliFlagYes(yes: boolean | undefined) {
     if (yes) {
-      this.trackCliFlag({
-        flag: 'yes',
-        value: yes,
-      });
+      this.trackCliFlag('yes');
     }
   }
 }
