@@ -262,11 +262,15 @@ export const build: BuildVX = async ({
       join(workPath, entrypoint),
       'utf-8'
     );
-    // If we couldn't find the variable, fall back to trying app.
-    // TODO: The main case where this is actually useful is with
-    // workers/crons, which currently work by injecting an `app` at
-    // runtime.
-    const varName = (await containsAppOrHandler(content)) ?? 'app';
+    // NOTE: this will fail!
+    const varName = await containsAppOrHandler(content);
+    if (!varName) {
+      throw new NowBuildError({
+        code: `PYTHON_ENTRYPOINT_NOT_FOUND`,
+        message: `Couldn't find python entrypoint in entrypoint file`,
+        action: 'Learn More',
+      });
+    }
     detected = { entrypoint: { entrypoint, variableName: varName } };
   }
 
