@@ -104,8 +104,9 @@ export async function buildStandaloneServer({
     throw err;
   }
 
-  // Build the bootstrap wrapper that handles IPC protocol (vc-init.go + vc-utils.go)
+  // Build the bootstrap wrapper that handles IPC protocol and log forwarding.
   const bootstrapSrc = join(__dirname, '../vc-init.go');
+  const loggingSrc = join(__dirname, '../vc-logging.go');
   const utilsSrc = join(__dirname, '../vc-utils.go');
   debug(`Building bootstrap wrapper: ${bootstrapSrc} -> ${bootstrapPath}`);
 
@@ -114,8 +115,9 @@ export async function buildStandaloneServer({
     const bootstrapBuildDir = await getWriteableDirectory();
     const bootstrapGoFile = join(bootstrapBuildDir, 'main.go');
 
-    // Copy bootstrap source and shared utils to temp directory
+    // Copy bootstrap source and shared runtime helpers to temp directory
     await copy(bootstrapSrc, bootstrapGoFile);
+    await copy(loggingSrc, join(bootstrapBuildDir, 'vc-logging.go'));
     await copy(utilsSrc, join(bootstrapBuildDir, 'vc-utils.go'));
 
     // Initialize a minimal go.mod for the bootstrap
