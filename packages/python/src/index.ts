@@ -258,12 +258,18 @@ export const build: BuildV3 = async ({
       join(workPath, entrypoint),
       'utf-8'
     );
-    // NOTE: this will fail!
-    const varName = await containsAppOrHandler(content);
-    if (!varName) {
+    const isSpecialService =
+      service?.type === 'cron' || service?.type === 'worker';
+    let varName = await containsAppOrHandler(content);
+    if (!varName && isSpecialService) {
+      // Crons and worker have their own special entry point logic
+      // that involves creating an `app` dynamically.
+      varName = 'app';
+    } else if (!varName) {
       throw new NowBuildError({
-        code: `PYTHON_ENTRYPOINT_NOT_FOUND`,
-        message: `Couldn't find python entrypoint in entrypoint file`,
+        code: 'PYTHON_ENTRYPOINT_NOT_FOUND',
+        message: `Could not find a top-level "app", "application", or "handler" in "${entrypoint}".`,
+        link: 'https://vercel.com/docs/functions/serverless-functions/runtimes/python',
         action: 'Learn More',
       });
     }
