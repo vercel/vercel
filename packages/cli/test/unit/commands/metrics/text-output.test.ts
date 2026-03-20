@@ -20,9 +20,9 @@ import type {
 } from '../../../../src/commands/metrics/types';
 
 const projectScope: Scope = {
-  type: 'project-with-slug',
-  projectName: 'my-project',
-  teamSlug: 'my-team',
+  type: 'project',
+  ownerId: 'team_dummy',
+  projectIds: ['prj_metricstest'],
 };
 
 describe('text-output', () => {
@@ -310,9 +310,12 @@ describe('text-output', () => {
       const output = formatText(response, {
         event: 'edgeRequest',
         measure: 'count',
+        measureUnit: 'count',
         aggregation: 'sum',
         groupBy: [],
         scope: projectScope,
+        projectName: 'my-project',
+        teamName: 'my-team',
         periodStart: '2026-02-19T10:00:00.000Z',
         periodEnd: '2026-02-19T10:15:00.000Z',
         granularity: { minutes: 5 },
@@ -382,6 +385,7 @@ describe('text-output', () => {
       const output = formatText(response, {
         event: 'functionExecution',
         measure: 'requestDurationMs',
+        measureUnit: 'milliseconds',
         aggregation: 'avg',
         groupBy: ['projectName', 'httpStatus'],
         scope: projectScope,
@@ -415,6 +419,7 @@ describe('text-output', () => {
         {
           event: 'edgeRequest',
           measure: 'count',
+          measureUnit: 'count',
           aggregation: 'sum',
           groupBy: [],
           scope: projectScope,
@@ -437,6 +442,7 @@ describe('text-output', () => {
         {
           event: 'edgeRequest',
           measure: 'count',
+          measureUnit: 'count',
           aggregation: 'sum',
           groupBy: [],
           scope: projectScope,

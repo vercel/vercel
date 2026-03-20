@@ -90,6 +90,38 @@ interface Analyzed {
   watch?: boolean;
 }
 
+type GoCommandError = Error & {
+  all?: string;
+  stderr?: string;
+  stdout?: string;
+};
+
+function getGoCommandOutput(error: GoCommandError) {
+  const stderr = error.stderr?.trim();
+  const stdout = error.stdout?.trim();
+  const all = error.all?.trim();
+
+  if (stderr && stdout && stdout !== stderr) {
+    return `stderr:\n${stderr}\n\nstdout:\n${stdout}`;
+  }
+
+  return stderr || stdout || all;
+}
+
+function enrichGoCommandError(error: unknown) {
+  if (!(error instanceof Error)) {
+    return error;
+  }
+
+  const output = getGoCommandOutput(error as GoCommandError);
+  if (!output || error.message.includes(output)) {
+    return error;
+  }
+
+  error.message = `${error.message}\n\n${output}`;
+  return error;
+}
+
 /**
  * Parses the AST of the specified entrypoint Go file.
  * @param workPath The work path (e.g. `/path/to/project`)
@@ -180,7 +212,7 @@ export class GoWrapper {
     this.opts = opts;
   }
 
-  private execute(...args: string[]) {
+  private async execute(...args: string[]) {
     const { opts, env } = this;
     debug(
       `Exec: go ${args.map(a => (a.includes(' ') ? `"${a}"` : a)).join(' ')}`
@@ -188,7 +220,25 @@ export class GoWrapper {
     debug(`  CWD=${opts.cwd}`);
     debug(`  GOROOT=${(env || opts.env).GOROOT}`);
     debug(`  GO_BUILD_FLAGS=${(env || opts.env).GO_BUILD_FLAGS}`);
-    return execa('go', args, { stdio: 'inherit', ...opts, env });
+
+    const captureAndForwardOutput =
+      opts.stdio === undefined || opts.stdio === 'inherit';
+    const subprocess = execa('go', args, {
+      ...opts,
+      env,
+      stdio: captureAndForwardOutput ? 'pipe' : opts.stdio,
+    });
+
+    if (captureAndForwardOutput) {
+      subprocess.stdout?.pipe(process.stdout);
+      subprocess.stderr?.pipe(process.stderr);
+    }
+
+    try {
+      return await subprocess;
+    } catch (error) {
+      throw enrichGoCommandError(error);
+    }
   }
 
   mod() {

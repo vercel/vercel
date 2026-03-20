@@ -9,10 +9,18 @@ from unittest.mock import patch
 
 import vercel.workers.celery as vwc
 import vercel.workers.celery.app as vwc_app
+import vercel.workers.celery.transport as vwc_transport
 import vercel.workers.celery.utils as vwc_utils
 
 
 class TestCeleryAdapter(unittest.TestCase):
+    def test_install_kombu_transport_alias_registers_vercel_alias(self) -> None:
+        from kombu.transport import TRANSPORT_ALIASES  # type: ignore[import-untyped]
+
+        with patch.dict(TRANSPORT_ALIASES, {}, clear=True):
+            vwc_transport.install_kombu_transport_alias()
+            self.assertIn("vercel", TRANSPORT_ALIASES)
+
     def test_extract_task_from_kombu_message_supports_common_shapes(self) -> None:
         # Publishing relies on converting Kombu/Celery messages into a safe, JSON envelope
 
