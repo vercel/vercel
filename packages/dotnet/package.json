@@ -15,10 +15,7 @@
   },
   "files": [
     "dist",
-    "bootstrap-linux-x64",
-    "bootstrap-linux-arm64",
-    "vc-init.go",
-    "vc-utils.go"
+    "bootstrap"
   ],
   "dependencies": {
     "execa": "^1.0.0"

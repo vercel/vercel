@@ -1,10 +1,12 @@
 import { spawn } from 'child_process';
+import { dirname, join } from 'path';
 import {
   StartDevServerOptions,
   StartDevServerResult,
   debug,
   cloneEnv,
 } from '@vercel/build-utils';
+import { findCsprojFile } from './project';
 
 /**
  * Start a dev server for .NET projects.
@@ -15,18 +17,19 @@ import {
 export async function startDotnetDevServer(
   options: StartDevServerOptions
 ): Promise<StartDevServerResult> {
-  const { workPath, meta = {} } = options;
+  const { workPath, entrypoint, meta = {} } = options;
 
   const port = Math.floor(Math.random() * (65535 - 49152) + 49152);
+  const csprojPath = await findCsprojFile(workPath, entrypoint);
+  const csprojDir = dirname(join(workPath, csprojPath));
 
   const env = cloneEnv(process.env, meta.env, {
     ASPNETCORE_URLS: `http://localhost:${port}`,
   });
-
-  debug(`Starting .NET dev server on port ${port}`);
+  debug(`Starting .NET dev server on port ${port} using local dotnet`);
 
   const child = spawn('dotnet', ['run'], {
-    cwd: workPath,
+    cwd: csprojDir,
     env,
     stdio: ['ignore', 'pipe', 'pipe'],
   });

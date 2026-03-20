@@ -1,11 +1,14 @@
 import type {
   BuildOptions,
   BuildResultV3,
+  Files,
+  PrepareCacheOptions,
   ShouldServeOptions,
   StartDevServerOptions,
   StartDevServerResult,
 } from '@vercel/build-utils';
 import { buildDotnetServer } from './build';
+import { prepareDotnetCache } from './sdk';
 import { startDotnetDevServer } from './dev-server';
 
 // .NET is a standalone HTTP server — it handles all routes, not just the entrypoint.
@@ -18,6 +21,12 @@ export const version = 3;
 
 export async function build(options: BuildOptions): Promise<BuildResultV3> {
   return buildDotnetServer(options);
+}
+
+export async function prepareCache({
+  workPath,
+}: PrepareCacheOptions): Promise<Files> {
+  return prepareDotnetCache({ workPath });
 }
 
 export async function startDevServer(

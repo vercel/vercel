@@ -1,5 +1,5 @@
+import { readFile } from 'fs/promises';
 import { join, dirname } from 'path';
-import { readFile } from 'fs-extra';
 import {
   BuildOptions,
   BuildResultV3,
@@ -13,55 +13,16 @@ import {
   getLambdaOptionsFromFunction,
 } from '@vercel/build-utils';
 import execa from 'execa';
-
-/**
- * Find the .csproj file in the project directory.
- * Searches the entrypoint's directory first, then the workPath root.
- */
-async function findCsprojFile(
-  workPath: string,
-  entrypoint: string
-): Promise<string> {
-  const entrypointDir = dirname(join(workPath, entrypoint));
-
-  let csprojFiles = await glob('*.csproj', entrypointDir);
-  let keys = Object.keys(csprojFiles);
-
-  if (keys.length === 0 && entrypointDir !== workPath) {
-    csprojFiles = await glob('*.csproj', workPath);
-    keys = Object.keys(csprojFiles);
-  }
-
-  if (keys.length === 0) {
-    throw new Error(`No .csproj file found in ${entrypointDir} or ${workPath}`);
-  }
-
-  if (keys.length > 1) {
-    throw new Error(
-      `Multiple .csproj files found: ${keys.join(', ')}. ` +
-        'Use a .sln file or set the entrypoint to the correct project directory.'
-    );
-  }
-
-  return keys[0];
-}
-
-/**
- * Extract the project name from a .csproj filename.
- * "HelloWorld.csproj" -> "HelloWorld"
- */
-function getProjectName(csprojPath: string): string {
-  const filename = csprojPath.split('/').pop() || csprojPath;
-  return filename.replace(/\.csproj$/, '');
-}
+import { buildBootstrap } from './bootstrap';
+import { createDotnet } from './sdk';
+import { findCsprojFile, getProjectName } from './project';
 
 /**
  * Build a standalone .NET HTTP server with bootstrap wrapper.
  *
  * Produces two binaries in the Lambda:
- * - "executable": Pre-compiled Go bootstrap that handles IPC protocol,
- *   health checks, route prefix stripping, and reverse proxying.
- *   (Forked from packages/go/vc-init.go, adds ASPNETCORE_URLS for .NET)
+ * - "executable": Rust bootstrap compiled from local source that handles
+ *   IPC protocol, health checks, route prefix stripping, and reverse proxying
  * - "user-server": The self-contained .NET binary.
  *
  * The bootstrap starts the .NET binary on an internal port and proxies
@@ -86,18 +47,25 @@ export async function buildDotnetServer({
   const architecture = lambdaOptions?.architecture || 'x86_64';
 
   let rid = 'linux-x64';
-  let bootstrapName = 'bootstrap-linux-x64';
   if (architecture === 'arm64') {
     rid = 'linux-arm64';
-    bootstrapName = 'bootstrap-linux-arm64';
   }
 
   // Find the .csproj to determine what to build
   const csprojPath = await findCsprojFile(workPath, entrypoint);
   const projectName = getProjectName(csprojPath);
   const csprojDir = dirname(join(workPath, csprojPath));
+  const dotnet = await createDotnet({
+    csprojPath: join(workPath, csprojPath),
+    workPath,
+    opts: {
+      env: meta.env,
+    },
+  });
 
-  debug(`Found project: ${csprojPath} (${projectName})`);
+  debug(
+    `Found project: ${csprojPath} (${projectName}) using SDK ${dotnet.sdkVersion}`
+  );
 
   // Publish to a temp directory so we don't pollute the project
   const outDir = await getWriteableDirectory();
@@ -119,9 +87,14 @@ export async function buildDotnetServer({
   debug(`Running: dotnet ${publishArgs.join(' ')}`);
 
   try {
-    await execa('dotnet', publishArgs, {
-      cwd: csprojDir,
-    });
+    try {
+      await execa(dotnet.dotnetPath, publishArgs, {
+        cwd: csprojDir,
+        env: dotnet.env,
+      });
+    } finally {
+      await dotnet.cleanup();
+    }
   } catch (err) {
     console.error(`Failed to build .NET project: ${csprojPath}`);
     throw err;
@@ -131,8 +104,11 @@ export async function buildDotnetServer({
 
   debug(`Published .NET binary: ${userServerPath}`);
 
-  // --- Load the pre-compiled bootstrap ---
-  const bootstrapPath = join(__dirname, '..', bootstrapName);
+  // --- Build the bootstrap executable from local Rust source ---
+  const bootstrapPath = await buildBootstrap({
+    architecture,
+    env: meta.env,
+  });
 
   debug(`Using bootstrap: ${bootstrapPath}`);
 
