@@ -61,7 +61,7 @@ import param from '../../util/output/param';
 import stamp from '../../util/output/stamp';
 import { parseEnv } from '../../util/parse-env';
 import parseMeta from '../../util/parse-meta';
-import { getGlobalFlagsOnlyFromArgs } from '../../util/arg-common';
+import { getCommandNameWithGlobalFlags } from '../../util/arg-common';
 import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 import { outputAgentError } from '../../util/agent-output';
 import { AGENT_STATUS } from '../../util/agent-output-constants';
@@ -90,18 +90,6 @@ const COMMAND_CONFIG = {
   init: getCommandAliases(initSubcommand),
   continue: getCommandAliases(continueSubcommand),
 };
-
-/** Plain suggested command with global flags (e.g. --cwd, --non-interactive) for deploy JSON next[]. */
-function deployCommandWithGlobalFlags(
-  baseSubcommand: string,
-  argv: string[]
-): string {
-  const globalFlags = getGlobalFlagsOnlyFromArgs(argv.slice(2));
-  const full = globalFlags.length
-    ? `${baseSubcommand} ${globalFlags.join(' ')}`
-    : baseSubcommand;
-  return getCommandNamePlain(full);
-}
 
 export default async (client: Client): Promise<number> => {
   const telemetryClient = new DeployTelemetryClient({
@@ -514,7 +502,7 @@ async function handleInitDeployment(
               message: deployment.message,
               next: [
                 {
-                  command: deployCommandWithGlobalFlags('deploy', client.argv),
+                  command: getCommandNameWithGlobalFlags('deploy', client.argv),
                   when: 'retry deploy',
                 },
               ],
@@ -541,7 +529,7 @@ async function handleInitDeployment(
               message: msg,
               next: [
                 {
-                  command: deployCommandWithGlobalFlags('deploy', client.argv),
+                  command: getCommandNameWithGlobalFlags('deploy', client.argv),
                   when: 'retry deploy',
                 },
               ],
@@ -563,16 +551,29 @@ async function handleInitDeployment(
     if (deployment.readyState === 'CANCELED') {
       if (asJson) {
         output.stopSpinner();
-        client.stdout.write(
-          `${JSON.stringify(
-            getDeploymentOutputJson(deployment, client.apiUrl, {
-              name: 'DEPLOYMENT_CANCELED',
-              message: 'The deployment has been canceled.',
-            }),
-            null,
-            2
-          )}\n`
+        const deploymentJson = getDeploymentOutputJson(
+          deployment,
+          client.apiUrl,
+          {
+            name: 'DEPLOYMENT_CANCELED',
+            message: 'The deployment has been canceled.',
+          }
         );
+        const payload = client.nonInteractive
+          ? {
+              status: AGENT_STATUS.ERROR,
+              reason: 'deployment_canceled',
+              message: 'The deployment has been canceled.',
+              deployment: deploymentJson,
+              next: [
+                {
+                  command: getCommandNameWithGlobalFlags('deploy', client.argv),
+                  when: 'retry deploy',
+                },
+              ],
+            }
+          : deploymentJson;
+        client.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
       } else {
         output.print('The deployment has been canceled.\n');
       }
@@ -591,16 +592,30 @@ async function handleInitDeployment(
         .join(', ');
       if (asJson) {
         output.stopSpinner();
-        client.stdout.write(
-          `${JSON.stringify(
-            getDeploymentOutputJson(deployment, client.apiUrl, {
-              name: 'CHECKS_FAILED',
-              message: `Running Checks: ${counterList}`,
-            }),
-            null,
-            2
-          )}\n`
+        const message = `Running Checks: ${counterList}`;
+        const deploymentJson = getDeploymentOutputJson(
+          deployment,
+          client.apiUrl,
+          {
+            name: 'CHECKS_FAILED',
+            message,
+          }
         );
+        const payload = client.nonInteractive
+          ? {
+              status: AGENT_STATUS.ERROR,
+              reason: 'checks_failed',
+              message,
+              deployment: deploymentJson,
+              next: [
+                {
+                  command: getCommandNameWithGlobalFlags('deploy', client.argv),
+                  when: 'retry deploy',
+                },
+              ],
+            }
+          : deploymentJson;
+        client.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
       } else {
         output.error(`Running Checks: ${counterList}`);
       }
@@ -617,7 +632,7 @@ async function handleInitDeployment(
               message: 'Uploading failed. Please try again.',
               next: [
                 {
-                  command: deployCommandWithGlobalFlags('deploy', client.argv),
+                  command: getCommandNameWithGlobalFlags('deploy', client.argv),
                   when: 'retry deploy',
                 },
               ],
@@ -641,14 +656,14 @@ async function handleInitDeployment(
             message: `Deployment ${deployment.url} ready.`,
             next: [
               {
-                command: deployCommandWithGlobalFlags(
+                command: getCommandNameWithGlobalFlags(
                   `inspect ${deployment.url}`,
                   client.argv
                 ),
                 when: 'Inspect deployment',
               },
               {
-                command: deployCommandWithGlobalFlags(
+                command: getCommandNameWithGlobalFlags(
                   'deploy --prod',
                   client.argv
                 ),
@@ -734,7 +749,7 @@ async function handleContinueSubcommand(client: Client): Promise<number> {
             'Missing required --id flag. Provide the deployment ID to continue.',
           next: [
             {
-              command: deployCommandWithGlobalFlags(
+              command: getCommandNameWithGlobalFlags(
                 'deploy continue --id <deployment-id>',
                 client.argv
               ),
@@ -744,11 +759,13 @@ async function handleContinueSubcommand(client: Client): Promise<number> {
         },
         1
       );
+      return 1;
+    } else {
+      output.error(
+        `Missing required ${param('--id')} flag. Usage: ${getCommandName('deploy continue --id <deployment-id>')}`
+      );
+      return 1;
     }
-    output.error(
-      `Missing required ${param('--id')} flag. Usage: ${getCommandName('deploy continue --id <deployment-id>')}`
-    );
-    return 1;
   }
 
   // Validate paths and get project context
@@ -803,11 +820,11 @@ async function handleContinueSubcommand(client: Client): Promise<number> {
             'No prebuilt output found in ".vercel/output". Run build first.',
           next: [
             {
-              command: deployCommandWithGlobalFlags('build', client.argv),
+              command: getCommandNameWithGlobalFlags('build', client.argv),
               when: 'generate prebuilt output',
             },
             {
-              command: deployCommandWithGlobalFlags(
+              command: getCommandNameWithGlobalFlags(
                 `deploy continue --id ${idFlag}`,
                 client.argv
               ),
@@ -817,13 +834,15 @@ async function handleContinueSubcommand(client: Client): Promise<number> {
         },
         1
       );
+      return 1;
+    } else {
+      output.error(
+        `No prebuilt output found in ".vercel/output". Run ${getCommandName(
+          'build'
+        )} to generate a local build.`
+      );
+      return 1;
     }
-    output.error(
-      `No prebuilt output found in ".vercel/output". Run ${getCommandName(
-        'build'
-      )} to generate a local build.`
-    );
-    return 1;
   }
 
   client.config.currentTeam = org.type === 'team' ? org.id : undefined;
@@ -1354,7 +1373,7 @@ async function handleDefaultDeploy(
               message: deployment.message,
               next: [
                 {
-                  command: deployCommandWithGlobalFlags('deploy', client.argv),
+                  command: getCommandNameWithGlobalFlags('deploy', client.argv),
                   when: 'retry deploy',
                 },
               ],
@@ -1381,7 +1400,7 @@ async function handleDefaultDeploy(
               message: msg,
               next: [
                 {
-                  command: deployCommandWithGlobalFlags('deploy', client.argv),
+                  command: getCommandNameWithGlobalFlags('deploy', client.argv),
                   when: 'retry deploy',
                 },
               ],
@@ -1403,16 +1422,29 @@ async function handleDefaultDeploy(
     if (deployment.readyState === 'CANCELED') {
       if (asJson) {
         output.stopSpinner();
-        client.stdout.write(
-          `${JSON.stringify(
-            getDeploymentOutputJson(deployment, client.apiUrl, {
-              name: 'DEPLOYMENT_CANCELED',
-              message: 'The deployment has been canceled.',
-            }),
-            null,
-            2
-          )}\n`
+        const deploymentJson = getDeploymentOutputJson(
+          deployment,
+          client.apiUrl,
+          {
+            name: 'DEPLOYMENT_CANCELED',
+            message: 'The deployment has been canceled.',
+          }
         );
+        const payload = client.nonInteractive
+          ? {
+              status: AGENT_STATUS.ERROR,
+              reason: 'deployment_canceled',
+              message: 'The deployment has been canceled.',
+              deployment: deploymentJson,
+              next: [
+                {
+                  command: getCommandNameWithGlobalFlags('deploy', client.argv),
+                  when: 'retry deploy',
+                },
+              ],
+            }
+          : deploymentJson;
+        client.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
       } else {
         output.print('The deployment has been canceled.\n');
       }
@@ -1431,16 +1463,30 @@ async function handleDefaultDeploy(
         .join(', ');
       if (asJson) {
         output.stopSpinner();
-        client.stdout.write(
-          `${JSON.stringify(
-            getDeploymentOutputJson(deployment, client.apiUrl, {
-              name: 'CHECKS_FAILED',
-              message: `Running Checks: ${counterList}`,
-            }),
-            null,
-            2
-          )}\n`
+        const message = `Running Checks: ${counterList}`;
+        const deploymentJson = getDeploymentOutputJson(
+          deployment,
+          client.apiUrl,
+          {
+            name: 'CHECKS_FAILED',
+            message,
+          }
         );
+        const payload = client.nonInteractive
+          ? {
+              status: AGENT_STATUS.ERROR,
+              reason: 'checks_failed',
+              message,
+              deployment: deploymentJson,
+              next: [
+                {
+                  command: getCommandNameWithGlobalFlags('deploy', client.argv),
+                  when: 'retry deploy',
+                },
+              ],
+            }
+          : deploymentJson;
+        client.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
       } else {
         output.error(`Running Checks: ${counterList}`);
       }
@@ -1461,7 +1507,7 @@ async function handleDefaultDeploy(
               message: 'Uploading failed. Please try again.',
               next: [
                 {
-                  command: deployCommandWithGlobalFlags('deploy', client.argv),
+                  command: getCommandNameWithGlobalFlags('deploy', client.argv),
                   when: 'retry deploy',
                 },
               ],
@@ -1489,7 +1535,7 @@ async function handleDefaultDeploy(
               message: err.message,
               next: [
                 {
-                  command: deployCommandWithGlobalFlags('deploy', client.argv),
+                  command: getCommandNameWithGlobalFlags('deploy', client.argv),
                   when: 'retry deploy',
                 },
               ],
@@ -1513,7 +1559,7 @@ async function handleDefaultDeploy(
               message: err.message,
               next: [
                 {
-                  command: deployCommandWithGlobalFlags('deploy', client.argv),
+                  command: getCommandNameWithGlobalFlags('deploy', client.argv),
                   when: 'retry deploy',
                 },
               ],
@@ -1578,7 +1624,7 @@ async function handleDefaultDeploy(
               message: err instanceof Error ? err.message : String(err),
               next: [
                 {
-                  command: deployCommandWithGlobalFlags('deploy', client.argv),
+                  command: getCommandNameWithGlobalFlags('deploy', client.argv),
                   when: 'retry deploy',
                 },
               ],
@@ -1664,7 +1710,7 @@ async function handleDefaultDeploy(
               message,
               next: [
                 {
-                  command: deployCommandWithGlobalFlags('deploy', client.argv),
+                  command: getCommandNameWithGlobalFlags('deploy', client.argv),
                   when: 'retry deploy',
                 },
               ],
@@ -1687,7 +1733,7 @@ async function handleDefaultDeploy(
             message: err instanceof Error ? err.message : String(err),
             next: [
               {
-                command: deployCommandWithGlobalFlags('deploy', client.argv),
+                command: getCommandNameWithGlobalFlags('deploy', client.argv),
                 when: 'retry deploy',
               },
             ],
@@ -1711,14 +1757,14 @@ async function handleDefaultDeploy(
           message: `Deployment ${deployment.url} ready.`,
           next: [
             {
-              command: deployCommandWithGlobalFlags(
+              command: getCommandNameWithGlobalFlags(
                 `inspect ${deployment.url}`,
                 client.argv
               ),
               when: 'Inspect deployment',
             },
             {
-              command: deployCommandWithGlobalFlags(
+              command: getCommandNameWithGlobalFlags(
                 'deploy --prod',
                 client.argv
               ),
