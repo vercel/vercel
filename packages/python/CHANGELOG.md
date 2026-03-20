@@ -1,5 +1,45 @@
 # @vercel/python
 
+## 6.25.0
+
+### Minor Changes
+
+- Make specifying a different entry point variable actually work ([#15614](https://github.com/vercel/vercel/pull/15614))
+
+### Patch Changes
+
+- [services] allow services to share builder source ([#15631](https://github.com/vercel/vercel/pull/15631))
+
+- [python] update celery worker services declaration to support broker_url="vercel://" instead of having to import from vercel.workers.celery ([#15454](https://github.com/vercel/vercel/pull/15454))
+
+- Add `diagnostics` callback to produce package-manifest.json ([#15373](https://github.com/vercel/vercel/pull/15373))
+
+- Run the typechecker ([#15558](https://github.com/vercel/vercel/pull/15558))
+
+- Updated dependencies [[`8e8110d2eca5832e109f5efb64b192690100927d`](https://github.com/vercel/vercel/commit/8e8110d2eca5832e109f5efb64b192690100927d)]:
+  - @vercel/python-analysis@0.10.1
+
+## 6.24.0
+
+### Minor Changes
+
+- [services] add support for background workers to vc dev ([#15434](https://github.com/vercel/vercel/pull/15434))
+
+- Fix serving static files for a django WSGI app in vercel dev. ([#15501](https://github.com/vercel/vercel/pull/15501))
+
+- [services] add support for cron services to vc dev ([#15433](https://github.com/vercel/vercel/pull/15433))
+
+### Patch Changes
+
+- Use LAMBDA_SIZE_THRESHOLD_BYTES to determine remaining capacity. ([#15596](https://github.com/vercel/vercel/pull/15596))
+
+- [services] increase Python startup timeout to 5 minutes to match orchestrator ([#15535](https://github.com/vercel/vercel/pull/15535))
+
+- Force-bundle packages without compatible wheels instead of failing ([#15587](https://github.com/vercel/vercel/pull/15587))
+
+- Updated dependencies [[`3c4355fa1414aa3270ba4d36423aa647d49a9cf3`](https://github.com/vercel/vercel/commit/3c4355fa1414aa3270ba4d36423aa647d49a9cf3), [`267223f86eb578cc740db501fb2c2cbf43a27b37`](https://github.com/vercel/vercel/commit/267223f86eb578cc740db501fb2c2cbf43a27b37), [`e9a791d0fa04ef58695535fa508554415137fb58`](https://github.com/vercel/vercel/commit/e9a791d0fa04ef58695535fa508554415137fb58), [`12811e7bc827900d534aa25f5f3e2331a80ca6a8`](https://github.com/vercel/vercel/commit/12811e7bc827900d534aa25f5f3e2331a80ca6a8)]:
+  - @vercel/python-analysis@0.10.0
+
 ## 6.23.0
 
 ### Minor Changes

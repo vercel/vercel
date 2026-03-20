@@ -1,5 +1,35 @@
 # vercel-runtime
 
+## 0.10.1
+
+### Patch Changes
+
+- Use hardlink link mode instead of copy. ([#15639](https://github.com/vercel/vercel/pull/15639))
+
+## 0.10.0
+
+### Minor Changes
+
+- Make specifying a different entry point variable actually work ([#15614](https://github.com/vercel/vercel/pull/15614))
+
+### Patch Changes
+
+- [python] update celery worker services declaration to support broker_url="vercel://" instead of having to import from vercel.workers.celery ([#15454](https://github.com/vercel/vercel/pull/15454))
+
+## 0.9.0
+
+### Minor Changes
+
+- [services] add support for background workers to vc dev ([#15434](https://github.com/vercel/vercel/pull/15434))
+
+- Fix serving static files for a django WSGI app in vercel dev. ([#15501](https://github.com/vercel/vercel/pull/15501))
+
+- [services] add support for cron services to vc dev ([#15433](https://github.com/vercel/vercel/pull/15433))
+
+### Patch Changes
+
+- Follow up fix to how the vendoring is done ([#15506](https://github.com/vercel/vercel/pull/15506))
+
 ## 0.8.0
 
 ### Minor Changes

@@ -21,6 +21,7 @@ from vercel_runtime.routing import (
 from vercel_runtime.workers import (
     bootstrap_worker_service_app,
     is_worker_service,
+    prepare_celery_environment,
 )
 
 if TYPE_CHECKING:
@@ -393,8 +394,10 @@ def _setup_apps() -> None:
     module_name = os.environ["VERCEL_DEV_MODULE_NAME"]
     entry_abs = os.environ["VERCEL_DEV_ENTRY_ABS"]
     framework = os.environ["VERCEL_DEV_FRAMEWORK"]
+    variable_name = os.environ.get("VERCEL_DEV_VARIABLE_NAME") or None
 
     _setup_server_log_routing()
+    prepare_celery_environment()
 
     mod = import_module(module_name, entry_abs)
 
@@ -406,7 +409,7 @@ def _setup_apps() -> None:
         _asgi_user_app = cast("ASGI", bootstrap_worker_service_app(mod))
         return
 
-    app_name, user_app = resolve_app(mod, module_name)
+    app_name, user_app = resolve_app(mod, module_name, variable_name)
     try:
         result = detect_app_type(user_app, module_name, app_name)
     except RuntimeError:
@@ -436,7 +439,7 @@ def _wrap_django_static(app: WSGIApplication) -> WSGIApplication:
     # - If django-storages is used, this will override it but that's ok because
     #   django-storages handles its own upload to some other CDN.
     try:
-        from django.contrib.staticfiles.handlers import (  # type: ignore[import-not-found]  # noqa: PLC0415  # pyright: ignore[reportMissingImports]
+        from django.contrib.staticfiles.handlers import (  # noqa: PLC0415  # pyright: ignore[reportMissingImports, reportMissingTypeStubs]
             StaticFilesHandler,  # pyright: ignore[reportUnknownVariableType]
         )
 

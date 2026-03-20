@@ -1,6 +1,6 @@
 [project]
 name = "vercel-runtime"
-version = "0.8.0"
+version = "0.10.1"
 license = "Apache-2.0"
 license-files = [
   "src/vercel_runtime/_vendor/*/LICEN[CS]E*",
@@ -53,6 +53,10 @@ ignore_errors = true
 [[tool.mypy.overrides]]
 module = ["tests.fixtures.*"]
 ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = ["django.contrib.staticfiles.handlers"]
+ignore_missing_imports = true
 
 [tool.basedpyright]
 pythonVersion = "3.12"

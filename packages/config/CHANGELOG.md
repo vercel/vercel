@@ -1,5 +1,11 @@
 # @vercel/router-sdk
 
+## 0.0.40
+
+### Patch Changes
+
+- [config] Fix rewrite() and redirect() return types for VercelConfig compatibility ([#15566](https://github.com/vercel/vercel/pull/15566))
+
 ## 0.0.39
 
 ### Patch Changes

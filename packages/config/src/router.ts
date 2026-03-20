@@ -642,7 +642,7 @@ export class Router {
    *    })
    * @internal Can return Route with transforms internally
    */
-  rewrite<T extends string>(source: T, destination: string): Rewrite | Route;
+  rewrite<T extends string>(source: T, destination: string): Rewrite;
   rewrite<T extends string>(
     source: T,
     destination: string,
@@ -800,34 +800,16 @@ export class Router {
       return route;
     }
 
-    // Simple rewrite without transforms - check if destination has env vars
+    // Simple rewrite without transforms
     const pathParams = this.extractPathParams(source);
     const destEnvVars = extractEnvVars(destination, pathParams);
 
-    if (destEnvVars.length > 0) {
-      // Need Route format to include env field
-      // Convert path-to-regexp patterns to regex for routes format
-      const { src: regexSrc, segments } = sourceToRegex(source);
-      const convertedDest = convertDestination(destination, segments);
-
-      const route: Route = {
-        src: regexSrc,
-        dest: convertedDest,
-        env: destEnvVars,
-      };
-      if (has) route.has = has;
-      if (missing) route.missing = missing;
-      if (respectOriginCacheControl !== undefined)
-        route.respectOriginCacheControl = respectOriginCacheControl;
-      return route;
-    }
-
-    // Simple rewrite without transforms or env vars
     const rewrite: Rewrite = {
       source,
       destination,
     };
 
+    if (destEnvVars.length > 0) rewrite.env = destEnvVars;
     if (has) rewrite.has = has;
     if (missing) rewrite.missing = missing;
     if (respectOriginCacheControl !== undefined)
@@ -866,10 +848,7 @@ export class Router {
    *    })
    * @internal Can return Route with transforms internally
    */
-  public redirect<T extends string>(
-    source: T,
-    destination: string
-  ): Redirect | Route;
+  public redirect<T extends string>(source: T, destination: string): Redirect;
   public redirect<T extends string>(
     source: T,
     destination: string,
@@ -979,33 +958,16 @@ export class Router {
       return route;
     }
 
-    // Simple redirect without transforms - check if destination has env vars
+    // Simple redirect without transforms
     const pathParams = this.extractPathParams(source);
     const destEnvVars = extractEnvVars(destination, pathParams);
 
-    if (destEnvVars.length > 0) {
-      // Need Route format to include env field
-      // Convert path-to-regexp patterns to regex for routes format
-      const { src: regexSrc, segments } = sourceToRegex(source);
-      const convertedDest = convertDestination(destination, segments);
-
-      const route: Route = {
-        src: regexSrc,
-        dest: convertedDest,
-        status: statusCode || (permanent ? 308 : 307),
-        env: destEnvVars,
-      };
-      if (has) route.has = has;
-      if (missing) route.missing = missing;
-      return route;
-    }
-
-    // Simple redirect without transforms or env vars
     const redirect: Redirect = {
       source,
       destination,
     };
 
+    if (destEnvVars.length > 0) redirect.env = destEnvVars;
     if (permanent !== undefined) redirect.permanent = permanent;
     if (statusCode !== undefined) redirect.statusCode = statusCode;
     if (has) redirect.has = has;

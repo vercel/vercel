@@ -1,5 +1,21 @@
 # @vercel/build-utils
 
+## 13.8.2
+
+### Patch Changes
+
+- [services] allow services to share builder source ([#15631](https://github.com/vercel/vercel/pull/15631))
+
+- Updated dependencies [[`8e8110d2eca5832e109f5efb64b192690100927d`](https://github.com/vercel/vercel/commit/8e8110d2eca5832e109f5efb64b192690100927d)]:
+  - @vercel/python-analysis@0.10.1
+
+## 13.8.1
+
+### Patch Changes
+
+- Updated dependencies [[`3c4355fa1414aa3270ba4d36423aa647d49a9cf3`](https://github.com/vercel/vercel/commit/3c4355fa1414aa3270ba4d36423aa647d49a9cf3), [`267223f86eb578cc740db501fb2c2cbf43a27b37`](https://github.com/vercel/vercel/commit/267223f86eb578cc740db501fb2c2cbf43a27b37), [`e9a791d0fa04ef58695535fa508554415137fb58`](https://github.com/vercel/vercel/commit/e9a791d0fa04ef58695535fa508554415137fb58), [`12811e7bc827900d534aa25f5f3e2331a80ca6a8`](https://github.com/vercel/vercel/commit/12811e7bc827900d534aa25f5f3e2331a80ca6a8)]:
+  - @vercel/python-analysis@0.10.0
+
 ## 13.8.0
 
 ### Minor Changes

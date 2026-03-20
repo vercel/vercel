@@ -1,5 +1,145 @@
 # vercel
 
+## 50.34.2
+
+### Patch Changes
+
+- Removing non-interactive logic for login ([#15643](https://github.com/vercel/vercel/pull/15643))
+
+## 50.34.1
+
+### Patch Changes
+
+- Updated dependencies [[`bb5277ab85e41810f96d1619949d76ea5603a58f`](https://github.com/vercel/vercel/commit/bb5277ab85e41810f96d1619949d76ea5603a58f)]:
+  - @vercel/backends@0.0.49
+  - @vercel/express@0.1.61
+  - @vercel/hono@0.2.54
+  - @vercel/next@4.16.2
+  - @vercel/node@5.6.18
+  - @vercel/redwood@2.4.11
+  - @vercel/remix-builder@5.7.1
+  - @vercel/python@6.25.0
+  - @vercel/elysia@0.1.51
+  - @vercel/fastify@0.1.54
+  - @vercel/h3@0.1.60
+  - @vercel/koa@0.1.34
+  - @vercel/nestjs@0.2.55
+
+## 50.34.0
+
+### Minor Changes
+
+- Emit Vercel Flags embedded definitions by default ([#15487](https://github.com/vercel/vercel/pull/15487))
+
+  When you deploy to Vercel, the build process fetches your latest flag definitions once at build time using the Vercel CLI and bundles them into the deployment.
+
+  This used to require opt-in by setting `VERCEL_EXPERIMENTAL_EMBED_FLAG_DEFINITIONS=1`, and has now been switched to be enabled by default. You can opt out by setting `VERCEL_FLAGS_DISABLE_DEFINITION_EMBEDDING=1`.
+
+  Definitions are only fetched in case there is at least one environment variable containing a Vercel Flags SDK key.
+
+  [See docs](https://vercel.com/docs/flags/vercel-flags/sdks/core#embedded-definitions)
+
+### Patch Changes
+
+- Adding in non-interactive mode for flags ([#15539](https://github.com/vercel/vercel/pull/15539))
+
+- [services] allow services to share builder source ([#15631](https://github.com/vercel/vercel/pull/15631))
+
+- [internal] use @vercel/prepare-flags-definitions package for shared logic ([#15403](https://github.com/vercel/vercel/pull/15403))
+
+- [python] update celery worker services declaration to support broker_url="vercel://" instead of having to import from vercel.workers.celery ([#15454](https://github.com/vercel/vercel/pull/15454))
+
+- Adding in non-interactive mode for routes ([#15502](https://github.com/vercel/vercel/pull/15502))
+
+- Adding in non-interactive mode for webhooks ([#15542](https://github.com/vercel/vercel/pull/15542))
+
+- [services] prompt to auto-configure `experimentalServices` in `vercel.json` from layout during project link ([#15590](https://github.com/vercel/vercel/pull/15590))
+
+- Updated dependencies [[`761dd2d91fd2d21f5cb99ece4539c257c83ef3bf`](https://github.com/vercel/vercel/commit/761dd2d91fd2d21f5cb99ece4539c257c83ef3bf), [`f352c8ba7d2474a69a0881528290a3e767d3ba36`](https://github.com/vercel/vercel/commit/f352c8ba7d2474a69a0881528290a3e767d3ba36), [`20974b4079be958f5aa0e1b4984222815aef636d`](https://github.com/vercel/vercel/commit/20974b4079be958f5aa0e1b4984222815aef636d), [`8e8110d2eca5832e109f5efb64b192690100927d`](https://github.com/vercel/vercel/commit/8e8110d2eca5832e109f5efb64b192690100927d), [`93083875ffa19f4eca4f40a86e2fab440dc0a584`](https://github.com/vercel/vercel/commit/93083875ffa19f4eca4f40a86e2fab440dc0a584)]:
+  - @vercel/build-utils@13.8.2
+  - @vercel/python@6.25.0
+  - @vercel/backends@0.0.48
+  - @vercel/elysia@0.1.50
+  - @vercel/express@0.1.60
+  - @vercel/fastify@0.1.53
+  - @vercel/go@3.4.5
+  - @vercel/h3@0.1.59
+  - @vercel/hono@0.2.53
+  - @vercel/hydrogen@1.3.6
+  - @vercel/koa@0.1.33
+  - @vercel/nestjs@0.2.54
+  - @vercel/next@4.16.1
+  - @vercel/node@5.6.17
+  - @vercel/redwood@2.4.10
+  - @vercel/remix-builder@5.7.0
+  - @vercel/ruby@2.3.2
+  - @vercel/rust@1.0.5
+  - @vercel/static-build@2.9.2
+
+## 50.33.1
+
+### Patch Changes
+
+- Fixed example in flags disable command with --variant ([#15618](https://github.com/vercel/vercel/pull/15618))
+
+- Updated dependencies [[`485ff9cc64a894d4fff0fb49f891e0e0a21d30ee`](https://github.com/vercel/vercel/commit/485ff9cc64a894d4fff0fb49f891e0e0a21d30ee), [`db17810dd1230baf8257ab4ce8d9b9f95b333abb`](https://github.com/vercel/vercel/commit/db17810dd1230baf8257ab4ce8d9b9f95b333abb)]:
+  - @vercel/backends@0.0.47
+  - @vercel/static-build@2.9.1
+  - @vercel/express@0.1.59
+
+## 50.33.0
+
+### Minor Changes
+
+- [services] add support for background workers to vc dev ([#15434](https://github.com/vercel/vercel/pull/15434))
+
+- Add `stdin_is_tty` telemetry tracking to measure interactive vs non-interactive CLI usage ([#15574](https://github.com/vercel/vercel/pull/15574))
+
+- [services] add support for cron services to vc dev ([#15433](https://github.com/vercel/vercel/pull/15433))
+
+### Patch Changes
+
+- Auto-run login flow when AI agent is detected without credentials, instead of printing an error and exiting. The device code flow prints an auth URL, opens the browser when possible, and polls for completion. ([#15581](https://github.com/vercel/vercel/pull/15581))
+
+- Improved `vercel activity` command output formatting: added scope headers showing the team/project being queried, aligned event detail fields in expanded view, and included scope information in JSON output. ([#15520](https://github.com/vercel/vercel/pull/15520))
+
+- Preserve `--environment` selection when `integration add` falls back to the browser ([#15493](https://github.com/vercel/vercel/pull/15493))
+
+- Show availability error instead of price check error when domain unavailable ([#15563](https://github.com/vercel/vercel/pull/15563))
+
+- Fixed `--project` flag not being respected when a `repo.json` exists. Previously, running `vercel link --yes --project=example` would still prompt for project selection in monorepo setups with `repo.json`. Now the `--project` flag correctly auto-selects the matching project without interactive prompts. ([#14790](https://github.com/vercel/vercel/pull/14790))
+
+- Non-interactive for redirects ([#15450](https://github.com/vercel/vercel/pull/15450))
+
+- Adding in best practices for non-interactive mode ([#15496](https://github.com/vercel/vercel/pull/15496))
+
+- Adding in non-interactive mode for teams ([#15478](https://github.com/vercel/vercel/pull/15478))
+
+- Adding in non-interactive mode for DNS ([#15494](https://github.com/vercel/vercel/pull/15494))
+
+- [cli] Add client-side validation for `--skip-domain` flag to require `--prod` or `--target=production` ([#14650](https://github.com/vercel/vercel/pull/14650))
+
+- Updated dependencies [[`89f9c77b167bcbcd725c7f963d91f30a22127f2a`](https://github.com/vercel/vercel/commit/89f9c77b167bcbcd725c7f963d91f30a22127f2a), [`1d01a1006715435b145ba3db22421d7365bc0397`](https://github.com/vercel/vercel/commit/1d01a1006715435b145ba3db22421d7365bc0397), [`8c84d5915e5aa6e773de313b3ecb5f6685e8c077`](https://github.com/vercel/vercel/commit/8c84d5915e5aa6e773de313b3ecb5f6685e8c077), [`5badb77cae9c1ed8d1fc32a52788b8af2c36c7fa`](https://github.com/vercel/vercel/commit/5badb77cae9c1ed8d1fc32a52788b8af2c36c7fa), [`e9a791d0fa04ef58695535fa508554415137fb58`](https://github.com/vercel/vercel/commit/e9a791d0fa04ef58695535fa508554415137fb58), [`283df58cf4b75bf9cfe13958ad379149ffeb7464`](https://github.com/vercel/vercel/commit/283df58cf4b75bf9cfe13958ad379149ffeb7464)]:
+  - @vercel/python@6.24.0
+  - @vercel/static-build@2.9.1
+  - @vercel/build-utils@13.8.1
+  - @vercel/backends@0.0.46
+  - @vercel/elysia@0.1.49
+  - @vercel/express@0.1.58
+  - @vercel/fastify@0.1.52
+  - @vercel/go@3.4.5
+  - @vercel/h3@0.1.58
+  - @vercel/hono@0.2.52
+  - @vercel/hydrogen@1.3.6
+  - @vercel/koa@0.1.32
+  - @vercel/nestjs@0.2.53
+  - @vercel/next@4.16.1
+  - @vercel/node@5.6.16
+  - @vercel/redwood@2.4.10
+  - @vercel/remix-builder@5.7.0
+  - @vercel/ruby@2.3.2
+  - @vercel/rust@1.0.5
+
 ## 50.32.5
 
 ### Patch Changes
