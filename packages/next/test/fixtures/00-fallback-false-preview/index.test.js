@@ -33,9 +33,30 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
     Object.assign(ctx, info);
   });
 
+  it('should serve _next/image for static imported image with immutable cache', async () => {
+    const res = await fetch(`${ctx.deploymentUrl}/`);
+    expect(res.status).toBe(200);
+
+    const $ = cheerio.load(await res.text());
+    const imgSrc = $('img[alt="Vercel Logo"]').attr('src');
+    expect(imgSrc).toBeTruthy();
+
+    const imgUrl = new URL(imgSrc, ctx.deploymentUrl);
+    const staticImagePath = imgUrl.searchParams.get('url');
+    expect(staticImagePath).toMatch(/\/_next\/static\/media\/vercel\./);
+
+    const imageRes = await fetch(
+      `${ctx.deploymentUrl}/_next/image?url=${encodeURIComponent(staticImagePath)}&w=256&q=75`
+    );
+    expect(imageRes.status).toBe(200);
+    expect(imageRes.headers.get('cache-control')).toMatch(
+      /public,\s*max-age=31536000,\s*immutable/
+    );
+  });
+
   it('should revalidate content properly from /blog', async () => {
     const dataRes = await fetch(
-      `${ctx.deploymentUrl}/_next/data/testing-build-id/blog.json`
+      `${ctx.deploymentUrl}/_next/data/build-TfctsWXpff2fKS/blog.json`
     );
     expect(dataRes.status).toBe(200);
 
@@ -69,7 +90,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
 
   it('should load content properly from /blog/first', async () => {
     const dataRes = await fetch(
-      `${ctx.deploymentUrl}/_next/data/testing-build-id/blog/first.json`
+      `${ctx.deploymentUrl}/_next/data/build-TfctsWXpff2fKS/blog/first.json`
     );
     expect(dataRes.status).toBe(200);
 
@@ -104,7 +125,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
 
   it('should rewrite/404 for fallback: false page without preview mode', async () => {
     const dataRes = await fetch(
-      `${ctx.deploymentUrl}/_next/data/testing-build-id/blog/another.json`
+      `${ctx.deploymentUrl}/_next/data/build-TfctsWXpff2fKS/blog/another.json`
     );
     expect(dataRes.status).toBe(404);
     expect(await dataRes.text()).toContain('This page could not be found');
@@ -142,7 +163,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
 
   it('should load fallback: false page with preview mode', async () => {
     const dataRes = await fetch(
-      `${ctx.deploymentUrl}/_next/data/testing-build-id/blog/another.json`,
+      `${ctx.deploymentUrl}/_next/data/build-TfctsWXpff2fKS/blog/another.json`,
       {
         headers: {
           Cookie: previewCookie,

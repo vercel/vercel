@@ -2,7 +2,7 @@ import fs from 'fs-extra';
 import { join, resolve } from 'path';
 import type { ExecaChildProcess } from 'execa';
 import _execa, { type Options } from 'execa';
-import fetch, { type RequestInit, type Response } from 'node-fetch';
+import nodeFetch, { type RequestInit, type Response } from 'node-fetch';
 import retry from 'async-retry';
 import { satisfies } from 'semver';
 import stripAnsi from 'strip-ansi';
@@ -17,7 +17,15 @@ export function sleep(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-let port = 3000;
+const BASE_PORT = 3000;
+const PORTS_PER_WORKER = 1000;
+const rawWorkerId = Number.parseInt(process.env.JEST_WORKER_ID || '1', 10);
+const workerId =
+  Number.isFinite(rawWorkerId) && rawWorkerId > 0 ? rawWorkerId : 1;
+
+// Jest may run dev integration files in parallel workers. Keep each worker
+// in its own port range to avoid cross-worker collisions.
+let port = BASE_PORT + (workerId - 1) * PORTS_PER_WORKER;
 
 const binaryPath = resolve(__dirname, `../../scripts/start.js`);
 
@@ -48,7 +56,7 @@ type FetchOptions = RequestInit & {
 export function fetchWithRetry(url: string, opts: FetchOptions = {}) {
   return retry(
     async () => {
-      const res = await fetch(url, opts);
+      const res = await nodeFetch(url, opts);
 
       if (res.status !== opts.status) {
         const text = await res.text();
@@ -113,7 +121,6 @@ function printOutput(fixture: string, stdout: string, stderr: string) {
     return nr === 0 ? '╭' : nr === lines.length - 1 ? '╰' : '│';
   };
 
-  // eslint-disable-next-line no-console
   console.log(
     lines.map((line, index) => ` ${getPrefix(index)} ${line}`).join('\n')
   );
@@ -121,7 +128,6 @@ function printOutput(fixture: string, stdout: string, stderr: string) {
 
 export function shouldSkip(name: string, versions: string) {
   if (!satisfies(process.version, versions)) {
-    // eslint-disable-next-line no-console
     console.log(`Skipping "${name}" because it requires "${versions}".`);
     return true;
   }
@@ -147,7 +153,6 @@ export function validateResponseHeaders(res: Response, podId?: string) {
 export async function exec(directory: string, args: string[] = []) {
   const token = await fetchCachedToken();
 
-  // eslint-disable-next-line no-console
   console.log(
     `exec() ${binaryPath} dev ${directory} -t ***${
       process.env.VERCEL_TEAM_ID ? ' --scope ***' : ''
@@ -202,7 +207,6 @@ export async function testPath(
   const res = await fetchWithRetry(url, opts);
   const msg = `Testing response from ${fetchOpts.method || 'GET'} ${url}`;
 
-  // eslint-disable-next-line no-console
   console.log(msg);
   expect(res.status, getEnvironmentMessage(isDev)).toBe(status);
   validateResponseHeaders(res);
@@ -244,14 +248,16 @@ function getEnvironmentMessage(isDev: boolean): string {
 
 export async function testFixture(
   directory: string,
-  opts: Options<null> = {},
+  opts: Options<null> & { skipNpmInstall?: boolean } = {},
   args: string[] = []
 ) {
-  await runNpmInstall(directory);
+  const { skipNpmInstall, ...execaOpts } = opts;
+  if (!skipNpmInstall) {
+    await runNpmInstall(directory);
+  }
 
   const token = await fetchCachedToken();
 
-  // eslint-disable-next-line no-console
   console.log(
     `testFixture() ${binaryPath} dev ${directory} -t ***${
       process.env.VERCEL_TEAM_ID ? ' --scope ***' : ''
@@ -275,8 +281,8 @@ export async function testFixture(
       reject: false,
       shell: true,
       stdio: 'pipe',
-      ...opts,
-      env: { ...opts.env, __VERCEL_SKIP_DEV_CMD: '1' },
+      ...execaOpts,
+      env: { ...execaOpts.env, __VERCEL_SKIP_DEV_CMD: '1' },
     }
   );
 
@@ -303,6 +309,8 @@ export async function testFixture(
 
     if (stripAnsi(stderr).includes('Ready! Available at')) {
       readyResolver.resolve(null);
+    } else if (stripAnsi(stderr).includes('Available at:')) {
+      readyResolver.resolve(null);
     }
   });
 
@@ -313,7 +321,6 @@ export async function testFixture(
     devTimer = setTimeout(async () => {
       const pids = Object.keys(await ps(dev.pid!)).join(', ');
 
-      // eslint-disable-next-line no-console
       console.error(
         `Test ${directory} exited with code ${code}, but has timed out closing stdio\n` +
           (pids
@@ -393,11 +400,16 @@ export function testFixtureStdio(
 
         args.push('deploy');
 
-        if (process.env.VERCEL_CLI_VERSION) {
-          args.push(
-            '--build-env',
-            `VERCEL_CLI_VERSION=${process.env.VERCEL_CLI_VERSION}`
-          );
+        const buildEnvNames = [
+          'VERCEL_CLI_VERSION',
+          'VERCEL_RUNTIME_PYTHON',
+          'VERCEL_WORKERS_PYTHON',
+        ] as const;
+        for (const buildEnvName of buildEnvNames) {
+          const buildEnvValue = process.env[buildEnvName];
+          if (buildEnvValue) {
+            args.push('--build-env', `${buildEnvName}=${buildEnvValue}`);
+          }
         }
 
         args.push('--debug');
@@ -439,7 +451,6 @@ export function testFixtureStdio(
     try {
       let printedOutput = false;
 
-      // eslint-disable-next-line no-console
       console.log(
         `testFixtureStdio() ${binaryPath} dev -l ${port} -t ***${
           process.env.VERCEL_TEAM_ID ? ' --scope ***' : ''
@@ -561,7 +572,6 @@ async function ps(parentPid: number, pids: Record<string, Array<number>> = {}) {
     }
   } catch (err) {
     const error = err as Error;
-    // eslint-disable-next-line no-console
     console.log(`Failed to get processes: ${error.toString()}`);
   }
   return pids;
@@ -573,7 +583,6 @@ async function nukePID(
   retries: number = 10
 ) {
   if (retries === 0) {
-    // eslint-disable-next-line no-console
     console.log(`pid ${pid} won't die, giving up`);
     return;
   }
@@ -581,10 +590,9 @@ async function nukePID(
   // kill the process
   try {
     process.kill(pid, signal);
-  } catch (e) {
+  } catch (_e) {
     // process does not exist
 
-    // eslint-disable-next-line no-console
     console.log(`pid ${pid} is not running`);
     return;
   }
@@ -594,13 +602,11 @@ async function nukePID(
   try {
     // check if killed
     process.kill(pid, 0);
-  } catch (e) {
-    // eslint-disable-next-line no-console
+  } catch (_e) {
     console.log(`pid ${pid} is not running`);
     return;
   }
 
-  // eslint-disable-next-line no-console
   console.log(`pid ${pid} didn't exit, sending SIGKILL (retries ${retries})`);
   await nukePID(pid, 'SIGKILL', retries - 1);
 }
@@ -617,7 +623,6 @@ async function nukeProcessTree(pid: number, signal?: string) {
     [pid]: [],
   });
 
-  // eslint-disable-next-line no-console
   console.log(`Nuking pids: ${Object.keys(pids).join(', ')}`);
   await Promise.all(Object.keys(pids).map(pid => nukePID(Number(pid), signal)));
 }
@@ -628,9 +633,7 @@ beforeEach(() => {
 
 afterEach(async () => {
   await Promise.all(
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     Array.from(processList).map(async ([_procId, proc]) => {
-      // eslint-disable-next-line no-console
       console.log(`killing process ${proc.pid} "${proc.spawnargs.join(' ')}"`);
 
       try {
@@ -640,12 +643,9 @@ afterEach(async () => {
 
         // Was already killed
         if (error.code !== 'ESRCH') {
-          // eslint-disable-next-line no-console
           console.error('Failed to kill process', proc.pid, error);
         }
       }
     })
   );
 });
-
-export { fetch };

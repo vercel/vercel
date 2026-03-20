@@ -225,6 +225,24 @@ export default async function redeploy(client: Client): Promise<number> {
               event.type === 'checks-conclusion-failed'
             ) {
               output.stopSpinner();
+
+              if (
+                event.type === 'alias-assigned' &&
+                !Array.isArray(event.payload) &&
+                event.payload.target === 'production' &&
+                event.payload.alias &&
+                event.payload.alias.length > 0
+              ) {
+                const primaryDomain = event.payload.alias[0];
+                const prodUrl = `https://${primaryDomain}`;
+                output.print(
+                  prependEmoji(
+                    `Aliased: ${chalk.bold(prodUrl)} ${deployStamp()}`,
+                    emoji('link')
+                  ) + '\n'
+                );
+              }
+
               deployment = event.payload;
               break;
             } else if (event.type === 'canceled') {

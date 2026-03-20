@@ -6,7 +6,7 @@ import type Client from '../../util/client';
 import { emoji, prependEmoji } from '../../util/emoji';
 import param from '../../util/output/param';
 import stamp from '../../util/output/stamp';
-import { getCommandName } from '../../util/pkg-name';
+import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 import {
   type EnvRecordsSource,
   pullEnvRecords,
@@ -28,6 +28,12 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import parseTarget from '../../util/parse-target';
 import { getLinkedProject } from '../../util/projects/link';
+import {
+  buildCommandWithYes,
+  getPreservedArgsForEnvPull,
+  outputActionRequired,
+  outputAgentError,
+} from '../../util/agent-output';
 
 const CONTENTS_PREFIX = '# Created by Vercel CLI\n';
 
@@ -58,7 +64,11 @@ const VARIABLES_TO_IGNORE = [
   'VERCEL_WEB_ANALYTICS_ID',
 ];
 
-export default async function pull(client: Client, argv: string[]) {
+export default async function pull(
+  client: Client,
+  argv: string[],
+  source: EnvRecordsSource = 'vercel-cli:env:pull'
+) {
   const telemetryClient = new EnvPullTelemetryClient({
     opts: {
       store: client.telemetryEventStore,
@@ -98,6 +108,31 @@ export default async function pull(client: Client, argv: string[]) {
   if (link.status === 'error') {
     return link.exitCode;
   } else if (link.status === 'not_linked') {
+    if (client.nonInteractive) {
+      const preserved = getPreservedArgsForEnvPull(client.argv);
+      const linkArgv = [
+        ...client.argv.slice(0, 2),
+        'link',
+        '--scope',
+        '<scope>',
+        ...preserved,
+      ];
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'not_linked',
+          message: `Your codebase isn't linked to a project on Vercel. Run ${getCommandNamePlain(
+            'link'
+          )} to begin. Use --yes for non-interactive; use --scope or --project to specify team or project.`,
+          next: [
+            { command: buildCommandWithYes(linkArgv) },
+            { command: buildCommandWithYes(client.argv) },
+          ],
+        },
+        1
+      );
+    }
     output.error(
       `Your codebase isn’t linked to a project on Vercel. Run ${getCommandName(
         'link'
@@ -122,7 +157,7 @@ export default async function pull(client: Client, argv: string[]) {
     link,
     gitBranch,
     client.cwd,
-    'vercel-cli:env:pull'
+    source
   );
 
   return 0;
@@ -144,25 +179,48 @@ export async function envPullCommandLogic(
 
   if (head === CONTENTS_PREFIX) {
     output.log(`Overwriting existing ${chalk.bold(filename)} file`);
-  } else if (
-    exists &&
-    !skipConfirmation &&
-    !(await client.input.confirm(
-      `Found existing file ${param(filename)}. Do you want to overwrite?`,
-      false
-    ))
-  ) {
-    output.log('Canceled');
-    return;
+  } else if (exists && !skipConfirmation) {
+    if (client.nonInteractive) {
+      outputActionRequired(client, {
+        status: 'action_required',
+        reason: 'env_file_exists',
+        message: `File ${param(filename)} already exists and was not created by Vercel CLI. Use --yes to overwrite or specify a different filename.`,
+        next: [
+          {
+            command: getCommandNamePlain(`env pull ${filename} --yes`),
+            when: 'Overwrite this file',
+          },
+          {
+            command: getCommandNamePlain('env pull <filename>'),
+            when: 'Use a different filename',
+          },
+        ],
+      });
+    }
+    if (
+      !(await client.input.confirm(
+        `Found existing file ${param(filename)}. Do you want to overwrite?`,
+        false
+      ))
+    ) {
+      output.log('Canceled');
+      return;
+    }
   }
 
   const projectSlugLink = formatProject(link.org.slug, link.project.name);
 
-  output.log(
-    `Downloading \`${chalk.cyan(
-      environment
-    )}\` Environment Variables for ${projectSlugLink}`
-  );
+  const downloadMessage = gitBranch
+    ? `Downloading \`${chalk.cyan(
+        environment
+      )}\` Environment Variables for ${projectSlugLink} and any overrides for branch ${chalk.cyan(
+        gitBranch
+      )}`
+    : `Downloading \`${chalk.cyan(
+        environment
+      )}\` Environment Variables for ${projectSlugLink}`;
+
+  output.log(downloadMessage);
 
   const pullStamp = stamp();
   output.spinner('Downloading');

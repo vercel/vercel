@@ -51,5 +51,10 @@
       "status": 404,
       "mustContain": "This page could not be found"
     }
-  ]
+  ],
+  "build": {
+    "env": {
+      "NEXT_BUILDER_INTEGRATION": "1"
+    }
+  }
 }

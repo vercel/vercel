@@ -77,6 +77,7 @@ export async function execExtension(
       },
     });
     exitCode = result.exitCode;
+    debug(`extension command exited with code ${exitCode}`);
   } catch (err: unknown) {
     error(
       `Vercel CLI extension ${JSON.stringify(extensionCommand)} failed:\n${errorToString(err)}`

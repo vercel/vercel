@@ -52,9 +52,10 @@ export default async function getConfig(
     return config;
   }
 
-  // Then try with `vercel.json` or `now.json` in the same directory
   const vercelFilePath = path.resolve(localPath, 'vercel.json');
   const nowFilePath = path.resolve(localPath, 'now.json');
+
+  // Try with `vercel.json` or `now.json` in the same directory
   const [vercelConfig, nowConfig] = await Promise.all([
     readJSONFile<VercelConfig>(vercelFilePath),
     readJSONFile<VercelConfig>(nowFilePath),

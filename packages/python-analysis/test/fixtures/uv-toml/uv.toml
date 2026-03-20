@@ -1,0 +1,5 @@
+[pip]
+index-url = "https://custom.pypi.org/simple"
+
+[workspace]
+members = ["packages/*"]

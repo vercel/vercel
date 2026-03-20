@@ -9,7 +9,7 @@ import listItem from '../../util/output/list-item';
 import toHumanPath from '../../util/humanize-path';
 import type Client from '../../util/client';
 import cmd from '../../util/output/cmd';
-import didYouMean from '../../util/init/did-you-mean';
+import didYouMean from '../../util/did-you-mean';
 import { getCommandName } from '../../util/pkg-name';
 import output from '../../output-manager';
 import type { InitTelemetryClient } from '../../util/telemetry/commands/init';
@@ -26,7 +26,7 @@ type Example = {
   suggestions: string[];
 };
 
-const EXAMPLE_API = 'https://now-example-files.zeit.sh';
+const EXAMPLE_API = 'https://examples.vercel.sh';
 
 export default async function init(
   client: Client,
@@ -198,7 +198,7 @@ function prepareFolder(cwd: string, folder: string, force?: boolean) {
   } else if (dest !== cwd) {
     try {
       fs.mkdirSync(dest);
-    } catch (e) {
+    } catch (_e) {
       throw new Error(`Could not create directory "${chalk.bold(folder)}".`);
     }
   }

@@ -1,5 +1,10 @@
 import { packageName } from '../../util/pkg-name';
-import { nextOption, yesOption } from '../../util/arg-common';
+import {
+  formatOption,
+  jsonOption,
+  nextOption,
+  yesOption,
+} from '../../util/arg-common';
 
 export const addSubcommand = {
   name: 'add',
@@ -51,13 +56,8 @@ export const listSubcommand = {
   arguments: [],
   options: [
     nextOption,
-    {
-      name: 'json',
-      shorthand: null,
-      type: Boolean,
-      deprecated: false,
-      description: 'Output in JSON format',
-    },
+    formatOption,
+    jsonOption,
     {
       name: 'update-required',
       description: 'A list of projects affected by an upcoming deprecation',
@@ -73,7 +73,7 @@ export const listSubcommand = {
     },
     {
       name: 'List projects using a deprecated Node.js version in JSON format',
-      value: `${packageName} project ls --update-required --json`,
+      value: `${packageName} project ls --update-required --format=json`,
     },
   ],
 } as const;
@@ -92,6 +92,29 @@ export const removeSubcommand = {
   examples: [],
 } as const;
 
+export const tokenSubcommand = {
+  name: 'token',
+  aliases: [],
+  description: 'Get a development OIDC token for a project',
+  arguments: [
+    {
+      name: 'name',
+      required: false,
+    },
+  ],
+  options: [yesOption],
+  examples: [
+    {
+      name: 'Get a development OIDC token for the linked project',
+      value: `${packageName} project token`,
+    },
+    {
+      name: 'Get a development OIDC token for the project named "my-project"',
+      value: `${packageName} project token my-project`,
+    },
+  ],
+} as const;
+
 export const projectCommand = {
   name: 'project',
   aliases: ['projects'],
@@ -102,6 +125,7 @@ export const projectCommand = {
     inspectSubcommand,
     listSubcommand,
     removeSubcommand,
+    tokenSubcommand,
   ],
   options: [],
   examples: [],

@@ -3,19 +3,25 @@ require 'webrick'
 require 'net/http'
 require 'base64'
 require 'json'
+require_relative 'vc__utils__ruby'
 
 $entrypoint = '__VC_HANDLER_FILENAME'
 
 ENV['RAILS_ENV'] ||= 'production'
+ENV['RACK_ENV'] ||= 'production'
 ENV['RAILS_LOG_TO_STDOUT'] ||= '1'
 
-def rack_handler(httpMethod, path, body, headers)
+
+$service_route_prefix = resolve_service_route_prefix
+
+def rack_handler(httpMethod, path, body, headers, script_name = '')
   require 'rack'
 
   app, _ = Rack::Builder.parse_file($entrypoint)
   server = Rack::MockRequest.new app
 
   env = headers.transform_keys { |k| k.split('-').join('_').prepend('HTTP_').upcase }
+  env['SCRIPT_NAME'] = script_name unless script_name.empty?
   res = server.request(httpMethod, path, env.merge({ :input => body }))
 
   {
@@ -95,8 +101,13 @@ def vc__handler(event:, context:)
     body = Base64.decode64(body)
   end
 
+  path, script_name = apply_service_route_prefix_to_target(
+    path,
+    $service_route_prefix
+  )
+
   if $entrypoint.end_with? '.ru'
-    return rack_handler(httpMethod, path, body, headers)
+    return rack_handler(httpMethod, path, body, headers, script_name)
   end
 
   return webrick_handler(httpMethod, path, body, headers)

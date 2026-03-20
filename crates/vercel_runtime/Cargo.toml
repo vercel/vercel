@@ -1,6 +1,6 @@
 [package]
 name = "vercel_runtime"
-version = "2.0.0-alpha.2"
+version = "2.1.1"
 edition = "2024"
 description = "Vercel Runtime for Rust"
 license = "Apache-2.0"
@@ -17,3 +17,16 @@ hyper-util = { version = "0.1", features = ["full"] }
 tokio = { version = "1", features = ["full"] }
 http-body-util = "0.1"
 tokio-stream = "0.1"
+lazy_static = "1.4"
+http-body = "1.0"
+tower = { version = "0.5", features = ["util"] }
+
+axum = { version = "0.8", optional = true }
+axum-streams = { version = "0.24", features = ["json", "text"], optional = true }
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+[features]
+default = []
+axum = ["dep:axum", "dep:axum-streams"]

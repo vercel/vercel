@@ -7,30 +7,67 @@ export const BACKEND_FRAMEWORKS = [
   'express',
   'hono',
   'h3',
+  'koa',
   'nestjs',
   'fastify',
   'elysia',
 ] as const;
 
+export const PYTHON_FRAMEWORKS = [
+  'fastapi',
+  'flask',
+  'django',
+  'python', // Generic Python framework preset
+] as const;
+
+export const RUNTIME_FRAMEWORKS = ['python'] as const;
+
+/**
+ * List of framework-specific backend builders that get replaced by UNIFIED_BACKEND_BUILDER
+ * when experimental backends is enabled
+ */
 export const BACKEND_BUILDERS = [
   '@vercel/express',
   '@vercel/hono',
   '@vercel/h3',
+  '@vercel/koa',
   '@vercel/nestjs',
   '@vercel/fastify',
   '@vercel/elysia',
 ] as const;
 
+/**
+ * The unified backend builder that replaces framework-specific backend builders
+ */
+export const UNIFIED_BACKEND_BUILDER = '@vercel/backends' as const;
+
 export type BackendFramework = (typeof BACKEND_FRAMEWORKS)[number];
+export type PythonFramework = (typeof PYTHON_FRAMEWORKS)[number];
 
 /**
  * Checks if the given framework is a backend framework
+ * TODO: make this function generic to all runtimes' backend frameworks and
+ * update callers to use isNodeBackendFramework for Node-specific frameworks.
  */
 export function isBackendFramework(
   framework: string | null | undefined
 ): framework is BackendFramework {
   if (!framework) return false;
   return BACKEND_FRAMEWORKS.includes(framework as BackendFramework);
+}
+
+export function isNodeBackendFramework(
+  framework: string | null | undefined
+): framework is BackendFramework {
+  if (!framework) return false;
+  return BACKEND_FRAMEWORKS.includes(framework as BackendFramework);
+}
+
+export function isPythonFramework(
+  framework: string | null | undefined
+): framework is (typeof PYTHON_FRAMEWORKS)[number] {
+  if (!framework) return false;
+  return PYTHON_FRAMEWORKS.includes(framework as PythonFramework);
 }
 
 // Opt builds into experimental builder, but don't introspect the app
@@ -50,6 +87,7 @@ export function isExperimentalBackendsEnabled(): boolean {
 
 export function isBackendBuilder(builder: Builder | null | undefined): boolean {
   if (!builder) return false;
+  if (builder.use === UNIFIED_BACKEND_BUILDER) return true;
   const use = builder.use as (typeof BACKEND_BUILDERS)[number];
   return BACKEND_BUILDERS.includes(use);
 }

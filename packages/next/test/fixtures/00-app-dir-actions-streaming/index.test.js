@@ -22,7 +22,7 @@ function findActionId(page, runtime) {
 function generateFormDataPayload(actionId) {
   return {
     method: 'POST',
-    body: `------WebKitFormBoundaryHcVuFa30AN0QV3uZ\r\nContent-Disposition: form-data; name=\"1_$ACTION_ID_${actionId}\"\r\n\r\n\r\n------WebKitFormBoundaryHcVuFa30AN0QV3uZ\r\nContent-Disposition: form-data; name=\"0\"\r\n\r\n[\"$K1\"]\r\n------WebKitFormBoundaryHcVuFa30AN0QV3uZ--\r\n`,
+    body: `------WebKitFormBoundaryHcVuFa30AN0QV3uZ\r\nContent-Disposition: form-data; name=\"$ACTION_ID_${actionId}\"\r\n\r\n\r\n------WebKitFormBoundaryHcVuFa30AN0QV3uZ\r\nContent-Disposition: form-data; name=\"0\"\r\n\r\n[\"$K1\"]\r\n------WebKitFormBoundaryHcVuFa30AN0QV3uZ--\r\n`,
     headers: {
       'Content-Type':
         'multipart/form-data; boundary=----WebKitFormBoundaryHcVuFa30AN0QV3uZ',
@@ -103,7 +103,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
 
         const res = await fetch(`${ctx.deploymentUrl}${path}`, {
           method: 'POST',
-          body: `------WebKitFormBoundaryHcVuFa30AN0QV3uZ\r\nContent-Disposition: form-data; name=\"1_$ACTION_ID_${actionId}\"\r\n\r\n\r\n------WebKitFormBoundaryHcVuFa30AN0QV3uZ\r\nContent-Disposition: form-data; name=\"0\"\r\n\r\n[\"$K1\"]\r\n------WebKitFormBoundaryHcVuFa30AN0QV3uZ--\r\n`,
+          body: `------WebKitFormBoundaryHcVuFa30AN0QV3uZ\r\nContent-Disposition: form-data; name=\"$ACTION_ID_${actionId}\"\r\n\r\n\r\n------WebKitFormBoundaryHcVuFa30AN0QV3uZ\r\nContent-Disposition: form-data; name=\"0\"\r\n\r\n[\"$K1\"]\r\n------WebKitFormBoundaryHcVuFa30AN0QV3uZ--\r\n`,
           headers: {
             'Content-Type':
               'multipart/form-data; boundary=----WebKitFormBoundaryHcVuFa30AN0QV3uZ',
@@ -277,8 +277,8 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
       expect(res.headers.get('x-matched-path')).toBe(pagePath + '.rsc');
       expect(res.headers.get('content-type')).toBe('text/x-component');
       const body = await res.text();
-      expect(body).toContain(JSON.stringify(['id', '1', 'd']));
-      expect(body).not.toContain(JSON.stringify(['id', '1.action', 'd']));
+      expect(body).toContain(JSON.stringify(['id', '1', 'd', null]));
+      expect(body).not.toContain(JSON.stringify(['id', '1.action', 'd', null]));
     });
 
     it('should work when a rewrite targets an action', async () => {

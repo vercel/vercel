@@ -8,7 +8,8 @@ import list, {
   stateString,
 } from '../../../../src/commands/list';
 import { join } from 'path';
-import { useTeams } from '../../../mocks/team';
+import { setupTmpDir } from '../../../helpers/setup-unit-fixture';
+import { useTeams, createTeam } from '../../../mocks/team';
 import { defaultProject, useProject } from '../../../mocks/project';
 import { useDeployment } from '../../../mocks/deployment';
 import {
@@ -21,6 +22,24 @@ const fixture = (name: string) =>
   join(__dirname, '../../../fixtures/unit/commands/list', name);
 
 describe('list', () => {
+  describe('--non-interactive', () => {
+    it('lists all deployments when not linked and multiple teams (no --scope)', async () => {
+      const cwd = setupTmpDir();
+      const user = useUser({ version: 'northstar' });
+      useTeams('team_dummy');
+      createTeam();
+      useDeployment({ creator: user });
+      client.cwd = cwd;
+      client.setArgv('list', '--non-interactive');
+      (client as { nonInteractive: boolean }).nonInteractive = true;
+
+      const exitCode = await list(client);
+      expect(exitCode).toEqual(0);
+
+      (client as { nonInteractive: boolean }).nonInteractive = false;
+    });
+  });
+
   beforeAll(() => {
     // There seems to be some test pollution elsehwere, causing us to have to reset to what should
     // be the default state here
@@ -77,6 +96,7 @@ describe('list', () => {
       const header = parseSpacedTableRow(line.value!);
       expect(header).toEqual([
         'Age',
+        'Project',
         'Deployment',
         'Status',
         'Environment',
@@ -86,7 +106,8 @@ describe('list', () => {
 
       line = await lines.next();
       const data = parseSpacedTableRow(line.value!);
-      data.shift();
+      data.shift(); // Age
+      data.shift(); // Project
       expect(data).toEqual([
         `https://${deployment.url}`,
         stateString(deployment.readyState || ''),
@@ -329,6 +350,74 @@ describe('list', () => {
     });
   });
 
+  describe('--all', () => {
+    it('should track use of `--all` flag', async () => {
+      const user = useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'with-team',
+        name: 'with-team',
+      });
+      useDeployment({ creator: user });
+
+      client.cwd = fixture('with-team');
+      client.setArgv('list', '--all');
+      await list(client);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'flag:all',
+          value: 'TRUE',
+        },
+      ]);
+    });
+
+    it('should list all deployments across projects when --all flag is used', async () => {
+      const user = useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'with-team',
+        name: 'with-team',
+      });
+      useDeployment({ creator: user });
+
+      client.cwd = fixture('with-team');
+      client.setArgv('list', '--all');
+      const exitCode = await list(client);
+
+      expect(exitCode).toEqual(0);
+
+      const lines = createLineIterator(client.stderr);
+
+      let line = await lines.next();
+      expect(line.value).toContain('Fetching deployments');
+
+      // Should show "Deployments" without project-specific label
+      line = await lines.next();
+      expect(line.value).toContain('Deployments');
+      expect(line.value).not.toContain('for');
+    });
+
+    it('should error when --all flag is used with app argument', async () => {
+      useUser();
+      useProject({
+        ...defaultProject,
+        id: 'with-team',
+        name: 'with-team',
+      });
+
+      client.setArgv('list', 'my-project', '--all');
+      const exitCode = await list(client);
+
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput(
+        'Cannot use --all flag with a project argument'
+      );
+    });
+  });
+
   it('should get deployments from a project linked by a directory', async () => {
     const user = useUser();
     const teams = useTeams('team_dummy');
@@ -362,6 +451,7 @@ describe('list', () => {
     const header = parseSpacedTableRow(line.value!);
     expect(header).toEqual([
       'Age',
+      'Project',
       'Deployment',
       'Status',
       'Environment',
@@ -371,7 +461,8 @@ describe('list', () => {
 
     line = await lines.next();
     const data = parseSpacedTableRow(line.value!);
-    data.shift();
+    data.shift(); // Age
+    data.shift(); // Project
     expect(data).toEqual([
       `https://${deployment.url}`,
       stateString(deployment.readyState || ''),
@@ -457,8 +548,9 @@ describe('list', () => {
 
       const data = parseSpacedTableRow(line.value!);
       // Verify that we have a deployment URL and it shows READY status
-      expect(data[1]).toMatch(/^https:\/\/.+/); // URL pattern
-      expect(data[2]).toEqual(stateString('READY'));
+      // data[0]=Age, data[1]=Project, data[2]=Deployment, data[3]=Status
+      expect(data[2]).toMatch(/^https:\/\/.+/); // URL pattern
+      expect(data[3]).toEqual(stateString('READY'));
     });
 
     it('should error on invalid status', async () => {
@@ -500,6 +592,105 @@ describe('list', () => {
           value: '[REDACTED]',
         },
       ]);
+    });
+  });
+
+  describe('--format', () => {
+    it('should track telemetry for --format json', async () => {
+      const user = useUser();
+      const { project } = useProject({
+        ...defaultProject,
+        id: 'with-team',
+        name: 'with-team',
+      });
+      useDeployment({ creator: user });
+
+      client.setArgv('list', project.name!, '--format', 'json');
+      await list(client);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'option:format',
+          value: 'json',
+        },
+        {
+          key: 'argument:app',
+          value: '[REDACTED]',
+        },
+      ]);
+    });
+
+    it('should output deployments as JSON', async () => {
+      const user = useUser();
+      const { project } = useProject({
+        ...defaultProject,
+        id: 'with-team',
+        name: 'with-team',
+      });
+      const deployment = useDeployment({ creator: user });
+
+      client.setArgv('list', project.name!, '--format', 'json');
+      const exitCode = await list(client);
+      expect(exitCode).toEqual(0);
+
+      const output = client.stdout.getFullOutput();
+      const jsonOutput = JSON.parse(output);
+
+      expect(jsonOutput).toHaveProperty('deployments');
+      expect(Array.isArray(jsonOutput.deployments)).toBe(true);
+      expect(jsonOutput.deployments.length).toBeGreaterThan(0);
+
+      const dep = jsonOutput.deployments[0];
+      expect(dep).toMatchObject({
+        id: deployment.id,
+        url: deployment.url,
+        name: deployment.name,
+        state: deployment.readyState,
+        createdAt: deployment.createdAt,
+      });
+    });
+
+    it('should output empty deployments array as JSON when no deployments', async () => {
+      useProject({
+        ...defaultProject,
+        id: 'with-team',
+        name: 'with-team',
+      });
+      // Don't create any deployments
+      client.scenario.get('/v6/deployments', (_req, res) => {
+        res.json({ deployments: [] });
+      });
+
+      client.setArgv('list', 'with-team', '--format', 'json');
+      const exitCode = await list(client);
+      expect(exitCode).toEqual(0);
+
+      const output = client.stdout.getFullOutput();
+      const jsonOutput = JSON.parse(output);
+
+      expect(jsonOutput).toEqual({
+        deployments: [],
+        pagination: undefined,
+      });
+    });
+
+    it('should include pagination in JSON output', async () => {
+      const user = useUser();
+      const { project } = useProject({
+        ...defaultProject,
+        id: 'with-team',
+        name: 'with-team',
+      });
+      useDeployment({ creator: user });
+
+      client.setArgv('list', project.name!, '--format', 'json');
+      const exitCode = await list(client);
+      expect(exitCode).toEqual(0);
+
+      const output = client.stdout.getFullOutput();
+      const jsonOutput = JSON.parse(output);
+
+      expect(jsonOutput).toHaveProperty('pagination');
     });
   });
 });

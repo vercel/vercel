@@ -1,0 +1,417 @@
+import { mkdir, writeFile, unlink, access } from 'fs/promises';
+import { join, basename } from 'path';
+import { fork } from 'child_process';
+import { config as dotenvConfig } from 'dotenv';
+import output from '../output-manager';
+import { VERCEL_DIR } from './projects/link';
+import { ConflictingConfigFiles } from './errors-ts';
+import { NowBuildError } from '@vercel/build-utils';
+import type {
+  RouteWithSrc,
+  Rewrite,
+  Redirect,
+  Header,
+} from '@vercel/routing-utils';
+import type { VercelConfig } from '@vercel/client';
+
+type RouteInput = RouteWithSrc | Rewrite | Redirect | Header;
+
+function toRouteFormat(item: RouteInput): RouteWithSrc {
+  if ('src' in item) return item;
+
+  const { source, destination, headers, statusCode, permanent, ...rest } =
+    item as Rewrite & Redirect & Header;
+
+  const route: RouteWithSrc = {
+    src: source,
+    ...rest,
+  };
+
+  if (destination) route.dest = destination;
+  if (headers)
+    route.headers = Object.fromEntries(headers.map(h => [h.key, h.value]));
+
+  if (statusCode !== undefined) {
+    route.status = statusCode;
+  } else if (permanent !== undefined) {
+    route.status = permanent ? 308 : 307;
+  }
+
+  return route;
+}
+
+/**
+ * Normalize config to ensure valid vercel.json output.
+ *
+ * Handles mixed Route/Rewrite types in the same array (from routes.rewrite() API).
+ * When Route format items (src/dest) are detected in rewrites/redirects arrays,
+ * the entire array is normalized to routes format.
+ *
+ * If routes and rewrites/redirects are BOTH explicitly defined,
+ * returns unchanged to let schema validation fail.
+ */
+export function normalizeConfig(config: VercelConfig): VercelConfig {
+  const normalized = { ...config };
+  const { rewrites, redirects, headers } = normalized;
+  let allRoutes: RouteInput[] = (normalized.routes as RouteInput[]) || [];
+
+  const hasRoutes = allRoutes.length > 0;
+  const hasRewrites = (rewrites?.length ?? 0) > 0;
+  const hasRedirects = (redirects?.length ?? 0) > 0;
+  const hasHeaders = (headers?.length ?? 0) > 0;
+
+  function hasRouteFormat(items: RouteInput[] | undefined): boolean {
+    return items?.some(item => 'src' in item) ?? false;
+  }
+
+  // If routes explicitly exists alongside rewrites/redirects/headers, don't merge - let schema validation fail
+  if (hasRoutes && (hasRewrites || hasRedirects || hasHeaders)) {
+    return normalized;
+  }
+
+  // If some arrays will convert to routes but others won't, throw a more specific & helpful error
+  const shouldConvertRewrites = hasRewrites && hasRouteFormat(rewrites);
+  const shouldConvertRedirects = hasRedirects && hasRouteFormat(redirects);
+  const shouldConvertHeaders = hasHeaders && hasRouteFormat(headers);
+
+  const someWillConvert =
+    shouldConvertRewrites || shouldConvertRedirects || shouldConvertHeaders;
+  const someWontConvert =
+    (hasRewrites && !shouldConvertRewrites) ||
+    (hasRedirects && !shouldConvertRedirects) ||
+    (hasHeaders && !shouldConvertHeaders);
+
+  if (someWillConvert && someWontConvert) {
+    throw new NowBuildError({
+      code: 'INVALID_VERCEL_CONFIG',
+      message:
+        'Transforms (e.g., requestHeaders) require the `routes` format, ' +
+        'which cannot be used alongside `rewrites`, `redirects`, or `headers`. ' +
+        'Move everything into the `routes` array instead.',
+      link: 'https://vercel.com/docs/projects/project-configuration#routes',
+    });
+  }
+
+  if (rewrites && shouldConvertRewrites) {
+    allRoutes = [...allRoutes, ...rewrites.map(toRouteFormat)];
+    delete normalized.rewrites;
+  }
+
+  if (redirects && shouldConvertRedirects) {
+    allRoutes = [...allRoutes, ...redirects.map(toRouteFormat)];
+    delete normalized.redirects;
+  }
+
+  if (headers && shouldConvertHeaders) {
+    allRoutes = [...allRoutes, ...headers.map(toRouteFormat)];
+    delete normalized.headers;
+  }
+
+  if (allRoutes.length > 0) {
+    normalized.routes = allRoutes.map(toRouteFormat);
+  }
+
+  return normalized;
+}
+
+export interface CompileConfigResult {
+  configPath: string | null;
+  wasCompiled: boolean;
+  sourceFile?: string;
+}
+
+export const VERCEL_CONFIG_EXTENSIONS = [
+  'ts',
+  'mts',
+  'js',
+  'mjs',
+  'cjs',
+] as const;
+export const DEFAULT_VERCEL_CONFIG_FILENAME = 'Vercel config';
+
+async function fileExists(filePath: string): Promise<boolean> {
+  try {
+    await access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function findAllVercelConfigFiles(workPath: string): Promise<string[]> {
+  const foundFiles: string[] = [];
+  for (const ext of VERCEL_CONFIG_EXTENSIONS) {
+    const configPath = join(workPath, `vercel.${ext}`);
+    if (await fileExists(configPath)) {
+      foundFiles.push(configPath);
+    }
+  }
+  return foundFiles;
+}
+
+/**
+ * Finds the source vercel config file basename (e.g., 'vercel.ts', 'vercel.js')
+ * @param workPath - The directory to search in
+ * @returns The basename of the config file, or null if not found
+ */
+export async function findSourceVercelConfigFile(
+  workPath: string
+): Promise<string | null> {
+  for (const ext of VERCEL_CONFIG_EXTENSIONS) {
+    const configPath = join(workPath, `vercel.${ext}`);
+    if (await fileExists(configPath)) {
+      return basename(configPath);
+    }
+  }
+  return null;
+}
+
+async function findVercelConfigFile(workPath: string): Promise<string | null> {
+  const foundFiles = await findAllVercelConfigFiles(workPath);
+
+  if (foundFiles.length > 1) {
+    throw new ConflictingConfigFiles(
+      foundFiles,
+      'Multiple vercel config files found. Please use only one configuration file.',
+      'https://vercel.com/docs/projects/project-configuration'
+    );
+  }
+
+  return foundFiles[0] || null;
+}
+
+function parseConfigLoaderError(stderr: string): string {
+  if (!stderr.trim()) {
+    return '';
+  }
+
+  const moduleNotFoundMatch = stderr.match(
+    /Error \[ERR_MODULE_NOT_FOUND\]: Cannot find package '([^']+)'/
+  );
+  if (moduleNotFoundMatch) {
+    const packageName = moduleNotFoundMatch[1];
+    return `Cannot find package '${packageName}'. Make sure it's installed in your project dependencies.`;
+  }
+
+  const syntaxErrorMatch = stderr.match(/SyntaxError: (.+?)(?:\n|$)/);
+  if (syntaxErrorMatch) {
+    return `Syntax error: ${syntaxErrorMatch[1]}`;
+  }
+
+  const errorMatch = stderr.match(
+    /^(?:Error|TypeError|ReferenceError): (.+?)(?:\n|$)/m
+  );
+  if (errorMatch) {
+    return errorMatch[1];
+  }
+
+  // otherwise just return the error
+  return stderr.trim();
+}
+
+export async function compileVercelConfig(
+  workPath: string
+): Promise<CompileConfigResult> {
+  const vercelJsonPath = join(workPath, 'vercel.json');
+  const nowJsonPath = join(workPath, 'now.json');
+  const hasVercelJson = await fileExists(vercelJsonPath);
+  const hasNowJson = await fileExists(nowJsonPath);
+
+  // Check for conflicting vercel.json and now.json
+  if (hasVercelJson && hasNowJson) {
+    throw new ConflictingConfigFiles([vercelJsonPath, nowJsonPath]);
+  }
+
+  const vercelConfigPath = await findVercelConfigFile(workPath);
+  const vercelDir = join(workPath, VERCEL_DIR);
+  const compiledConfigPath = join(vercelDir, 'vercel.json');
+
+  if (vercelConfigPath && hasNowJson) {
+    throw new ConflictingConfigFiles(
+      [vercelConfigPath, nowJsonPath],
+      `Both ${basename(vercelConfigPath)} and now.json exist in your project. Please use only one configuration method.`,
+      'https://vercel.com/docs/projects/project-configuration'
+    );
+  }
+
+  if (vercelConfigPath && hasVercelJson) {
+    throw new ConflictingConfigFiles(
+      [vercelConfigPath, vercelJsonPath],
+      `Both ${basename(vercelConfigPath)} and vercel.json exist in your project. Please use only one configuration method.`,
+      'https://vercel.com/docs/projects/project-configuration'
+    );
+  }
+
+  if (!vercelConfigPath) {
+    if (hasVercelJson) {
+      return {
+        configPath: vercelJsonPath,
+        wasCompiled: false,
+      };
+    }
+
+    if (hasNowJson) {
+      return {
+        configPath: nowJsonPath,
+        wasCompiled: false,
+      };
+    }
+
+    if (await fileExists(compiledConfigPath)) {
+      return {
+        configPath: compiledConfigPath,
+        wasCompiled: true,
+        sourceFile: (await findSourceVercelConfigFile(workPath)) ?? undefined,
+      };
+    }
+
+    return {
+      configPath: null,
+      wasCompiled: false,
+    };
+  }
+
+  dotenvConfig({ path: join(workPath, '.env') });
+  dotenvConfig({ path: join(workPath, '.env.local') });
+
+  const tempOutPath = join(vercelDir, 'vercel-temp.mjs');
+  const loaderPath = join(vercelDir, 'vercel-loader.mjs');
+
+  try {
+    const { build } = await import('esbuild');
+
+    await mkdir(vercelDir, { recursive: true });
+
+    await build({
+      entryPoints: [vercelConfigPath],
+      bundle: true,
+      platform: 'node',
+      format: 'esm',
+      outfile: tempOutPath,
+      packages: 'external',
+      target: 'node20',
+      sourcemap: 'inline',
+    });
+
+    const loaderScript = `
+      import { pathToFileURL } from 'url';
+      const configModule = await import(pathToFileURL(process.argv[2]).href);
+      const config = ('default' in configModule) ? configModule.default : ('config' in configModule) ? configModule.config : configModule;
+      process.send(config);
+    `;
+    await writeFile(loaderPath, loaderScript, 'utf-8');
+
+    const config = await new Promise((resolve, reject) => {
+      const child = fork(loaderPath, [tempOutPath], {
+        stdio: ['pipe', 'pipe', 'pipe', 'ipc'],
+      });
+
+      let stderrOutput = '';
+      let stdoutOutput = '';
+
+      if (child.stderr) {
+        child.stderr.on('data', data => {
+          stderrOutput += data.toString();
+        });
+      }
+
+      if (child.stdout) {
+        child.stdout.on('data', data => {
+          stdoutOutput += data.toString();
+        });
+      }
+
+      const timeout = setTimeout(() => {
+        child.kill();
+        reject(new Error('Config loader timed out after 10 seconds'));
+      }, 10000);
+
+      child.on('message', message => {
+        clearTimeout(timeout);
+        child.kill();
+        resolve(message);
+      });
+
+      child.on('error', err => {
+        clearTimeout(timeout);
+        reject(err);
+      });
+
+      child.on('exit', code => {
+        clearTimeout(timeout);
+        if (code !== 0) {
+          if (stderrOutput.trim()) {
+            output.log(stderrOutput);
+          }
+          if (stdoutOutput.trim()) {
+            output.log(stdoutOutput);
+          }
+
+          const parsedError = parseConfigLoaderError(stderrOutput);
+          if (parsedError) {
+            reject(new Error(parsedError));
+          } else if (stdoutOutput.trim()) {
+            reject(new Error(stdoutOutput.trim()));
+          } else {
+            reject(new Error(`Config loader exited with code ${code}`));
+          }
+        }
+      });
+    });
+
+    const normalizedConfig = normalizeConfig(config as VercelConfig);
+    await writeFile(
+      compiledConfigPath,
+      JSON.stringify(normalizedConfig, null, 2),
+      'utf-8'
+    );
+
+    output.debug(`Compiled ${vercelConfigPath} -> ${compiledConfigPath}`);
+
+    return {
+      configPath: compiledConfigPath,
+      wasCompiled: true,
+      sourceFile: (await findSourceVercelConfigFile(workPath)) ?? undefined,
+    };
+  } catch (error: any) {
+    throw new NowBuildError({
+      code: error.code ?? 'vercel_ts_compilation_failed',
+      message: `Failed to compile ${basename(vercelConfigPath)}: ${error.message}`,
+      link:
+        error.link ?? 'https://vercel.com/docs/projects/project-configuration',
+    });
+  } finally {
+    await Promise.all([
+      unlink(tempOutPath).catch(err => {
+        if (err.code !== 'ENOENT') {
+          output.debug(`Failed to cleanup temp file: ${err}`);
+        }
+      }),
+      unlink(loaderPath).catch(err => {
+        if (err.code !== 'ENOENT') {
+          output.debug(`Failed to cleanup loader file: ${err}`);
+        }
+      }),
+    ]);
+  }
+}
+
+export async function getVercelConfigPath(workPath: string): Promise<string> {
+  const vercelJsonPath = join(workPath, 'vercel.json');
+  const nowJsonPath = join(workPath, 'now.json');
+  const compiledConfigPath = join(workPath, VERCEL_DIR, 'vercel.json');
+
+  if (await fileExists(vercelJsonPath)) {
+    return vercelJsonPath;
+  }
+
+  if (await fileExists(nowJsonPath)) {
+    return nowJsonPath;
+  }
+
+  if (await fileExists(compiledConfigPath)) {
+    return compiledConfigPath;
+  }
+
+  return nowJsonPath;
+}

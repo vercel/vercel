@@ -1,0 +1,16 @@
+[
+  {
+    "source": "/old-blog/:slug",
+    "destination": "/blog/:slug"
+  },
+  {
+    "source": "/legacy/:path*",
+    "destination": "/new/:path*",
+    "permanent": true
+  },
+  {
+    "source": "/docs/v1/:page",
+    "destination": "/docs/v2/:page",
+    "statusCode": 301
+  }
+]

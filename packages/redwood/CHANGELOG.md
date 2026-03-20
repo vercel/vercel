@@ -1,5 +1,60 @@
 # @vercel/redwood
 
+## 2.4.11
+
+### Patch Changes
+
+- Update @vercel/nft to 1.4.0 across packages ([#15626](https://github.com/vercel/vercel/pull/15626))
+
+## 2.4.10
+
+### Patch Changes
+
+- Updated dependencies [[`8a3558f680d592b4ea47ac7e48c99145d6368941`](https://github.com/vercel/vercel/commit/8a3558f680d592b4ea47ac7e48c99145d6368941)]:
+  - @vercel/static-config@3.2.0
+
+## 2.4.9
+
+### Patch Changes
+
+- replace getRuntimeNodeVersion with getNodeVersion ([#14622](https://github.com/vercel/vercel/pull/14622))
+
+## 2.4.8
+
+### Patch Changes
+
+- Remove getSpawnOptions ([#14604](https://github.com/vercel/vercel/pull/14604))
+
+## 2.4.7
+
+### Patch Changes
+
+- Replace getNodeVersion with getRuntimeNodeVersion ([#14600](https://github.com/vercel/vercel/pull/14600))
+
+## 2.4.6
+
+### Patch Changes
+
+- Use `workspace:*` for workspace dependencies ([#14396](https://github.com/vercel/vercel/pull/14396))
+
+## 2.4.5
+
+### Patch Changes
+
+- Bump NFT dependency ([#14373](https://github.com/vercel/vercel/pull/14373))
+
+## 2.4.4
+
+### Patch Changes
+
+- Disables auto instrumentation when the app has manual instrumentation setup ([#14345](https://github.com/vercel/vercel/pull/14345))
+
+## 2.4.3
+
+### Patch Changes
+
+- Update NFT dependency ([#14357](https://github.com/vercel/vercel/pull/14357))
+
 ## 2.4.2
 
 ### Patch Changes

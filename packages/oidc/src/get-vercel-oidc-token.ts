@@ -2,6 +2,28 @@ import { getContext } from './get-context';
 import { VercelOidcTokenError } from './token-error';
 
 /**
+ * Options for getting the Vercel OIDC token.
+ */
+export interface GetVercelOidcTokenOptions {
+  /**
+   * Optional team ID (team_*) or slug to use for token refresh.
+   * When provided, this team will be used instead of reading from `.vercel/project.json`.
+   */
+  team?: string;
+  /**
+   * Optional project ID (prj_*) or slug to use for token refresh.
+   * When provided, this project will be used instead of reading from `.vercel/project.json`.
+   */
+  project?: string;
+  /**
+   * Optional time buffer in milliseconds before token expiry to consider it expired.
+   * When provided, the token will be refreshed if it expires within this buffer time.
+   * @default 0
+   */
+  expirationBufferMs?: number;
+}
+
+/**
  * Gets the current OIDC token from the request context or the environment variable.
  *
  * Do not cache this value, as it is subject to change in production!
@@ -11,6 +33,7 @@ import { VercelOidcTokenError } from './token-error';
  *
  * Unlike the `getVercelOidcTokenSync` function, this function will refresh the token if it is expired in a development environment.
  *
+ * @param {GetVercelOidcTokenOptions} [options] - Optional configuration for token retrieval.
  * @returns {Promise<string>} A promise that resolves to the OIDC token.
  * @throws {Error} If the `x-vercel-oidc-token` header is missing from the request context and the environment variable `VERCEL_OIDC_TOKEN` is not set. If the token
  * is expired in a development environment, will also throw an error if the token cannot be refreshed: no CLI credentials are available, CLI credentials are expired, no project configuration is available
@@ -26,8 +49,21 @@ import { VercelOidcTokenError } from './token-error';
  *   console.error('Error:', error.message);
  * });
  * ```
+ *
+ * @example
+ *
+ * ```js
+ * // Using the OIDC token with explicit team and project (supports IDs and slugs)
+ * getVercelOidcToken({ team: 'my-team', project: 'my-project' }).then((token) => {
+ *   console.log('OIDC Token:', token);
+ * }).catch((error) => {
+ *   console.error('Error:', error.message);
+ * });
+ * ```
  */
-export async function getVercelOidcToken(): Promise<string> {
+export async function getVercelOidcToken(
+  options?: GetVercelOidcTokenOptions
+): Promise<string> {
   let token = '';
   let err: any;
 
@@ -44,15 +80,22 @@ export async function getVercelOidcToken(): Promise<string> {
         await import('./token.js'),
       ]);
 
-    if (!token || isExpired(getTokenPayload(token))) {
-      await refreshToken();
+    if (
+      !token ||
+      isExpired(getTokenPayload(token), options?.expirationBufferMs)
+    ) {
+      await refreshToken(options);
       token = getVercelOidcTokenSync();
     }
   } catch (error) {
-    if (err?.message && error instanceof Error) {
-      error.message = `${err.message}\n${error.message}`;
+    let message = err instanceof Error ? err.message : '';
+    if (error instanceof Error) {
+      message = `${message}\n${error.message}`;
     }
-    throw new VercelOidcTokenError(`Failed to refresh OIDC token`, error);
+    if (message) {
+      throw new VercelOidcTokenError(message);
+    }
+    throw error;
   }
   return token;
 }

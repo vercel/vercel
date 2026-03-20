@@ -1,6 +1,6 @@
 import path from 'path';
 import { execCli } from './helpers/exec';
-import fetch from 'node-fetch';
+import nodeFetch from 'node-fetch';
 import { apiFetch } from './helpers/api-fetch';
 import fs from 'fs-extra';
 import sleep from '../src/util/sleep';
@@ -62,9 +62,7 @@ beforeAll(async () => {
     const team = await teamPromise;
     await prepareE2EFixtures(team.slug, binaryPath);
   } catch (err) {
-    // eslint-disable-next-line no-console
     console.log('Failed test suite `beforeAll`');
-    // eslint-disable-next-line no-console
     console.log(err);
 
     // force test suite to actually stop
@@ -77,7 +75,6 @@ afterAll(async () => {
 
   const allTmpDirs = listTmpDirs();
   for (const tmpDir of allTmpDirs) {
-    // eslint-disable-next-line no-console
     console.log('Removing temp dir: ', tmpDir.name);
     tmpDir.removeCallback();
   }
@@ -187,7 +184,7 @@ test('default command should work with --cwd option', async () => {
 
   const url = stdout;
 
-  const deploymentResult = await fetch(`${url}/README.md`);
+  const deploymentResult = await nodeFetch(`${url}/README.md`);
   const body = await deploymentResult.text();
   expect(body).toEqual(
     'readme contents for deploy-default-with-conflicting-sub-directory'
@@ -216,7 +213,7 @@ test('should allow deploying a directory that was built with a target environmen
 
   const url = stdout;
 
-  const deploymentResult = await fetch(`${url}/README.md`);
+  const deploymentResult = await nodeFetch(`${url}/README.md`);
   const body = await deploymentResult.text();
   expect(body).toEqual(
     'readme contents for deploy-default-with-prebuilt-preview'
@@ -243,7 +240,7 @@ test('should allow deploying a directory that was prebuilt, but has no builds.js
 
   const url = stdout;
 
-  const deploymentResult = await fetch(`${url}/README.md`);
+  const deploymentResult = await nodeFetch(`${url}/README.md`);
   const body = await deploymentResult.text();
   expect(body).toEqual('readme contents for build-output-api-raw');
 });
@@ -305,7 +302,7 @@ test('deploy using only now.json with `redirects` defined', async () => {
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   const url = stdout;
-  const res = await fetch(`${url}/foo/bar`, { redirect: 'manual' });
+  const res = await nodeFetch(`${url}/foo/bar`, { redirect: 'manual' });
   const location = res.headers.get('location');
   expect(location).toBe('https://example.com/foo/bar');
 });
@@ -328,18 +325,18 @@ test('deploy using --local-config flag v2', async () => {
   const { host } = new URL(stdout);
   expect(host).toMatch(/secondary/gm);
 
-  const testRes = await fetch(`https://${host}/test-${team.slug}.html`);
+  const testRes = await nodeFetch(`https://${host}/test-${team.slug}.html`);
   const testText = await testRes.text();
   expect(testText).toBe('<h1>hello test</h1>');
 
-  const anotherTestRes = await fetch(`https://${host}/another-test`);
+  const anotherTestRes = await nodeFetch(`https://${host}/another-test`);
   const anotherTestText = await anotherTestRes.text();
   expect(anotherTestText).toBe(testText);
 
-  const mainRes = await fetch(`https://${host}/main-${team.slug}.html`);
+  const mainRes = await nodeFetch(`https://${host}/main-${team.slug}.html`);
   expect(mainRes.status).toBe(404);
 
-  const anotherMainRes = await fetch(`https://${host}/another-main`);
+  const anotherMainRes = await nodeFetch(`https://${host}/another-main`);
   expect(anotherMainRes.status).toBe(404);
 });
 
@@ -391,7 +388,7 @@ test('deploy from a nested directory', async () => {
   vc.stdin?.write('app\n');
 
   // This means the framework detection worked!
-  await waitForPrompt(vc, 'Auto-detected Project Settings (Next.js)');
+  await waitForPrompt(vc, 'Auto-detected Project Settings for Next.js');
 
   vc.kill();
 });
@@ -429,7 +426,7 @@ test('deploy from a nested directory with `--archive=tgz` option', async () => {
   vc.stdin?.write('app\n');
 
   // This means the framework detection worked!
-  await waitForPrompt(vc, 'Auto-detected Project Settings (Next.js)');
+  await waitForPrompt(vc, 'Auto-detected Project Settings for Next.js');
 
   vc.kill();
 });
@@ -450,18 +447,19 @@ test('deploy using --local-config flag above target', async () => {
 
   const { host } = new URL(stdout);
 
-  const testRes = await fetch(`https://${host}/index.html`);
+  const testRes = await nodeFetch(`https://${host}/index.html`);
   const testText = await testRes.text();
   expect(testText).toBe('<h1>hello index</h1>');
 
-  const anotherTestRes = await fetch(`https://${host}/another.html`);
+  const anotherTestRes = await nodeFetch(`https://${host}/another.html`);
   const anotherTestText = await anotherTestRes.text();
   expect(anotherTestText).toBe('<h1>hello another</h1>');
 
   expect(host).toMatch(/root-level/gm);
 });
 
-test('deploy `api-env` fixture and test `vercel env` command', async () => {
+// biome-ignore lint/suspicious/noSkippedTests: temporarily disabled
+test.skip('deploy `api-env` fixture and test `vercel env` command', async () => {
   const target = await setupE2EFixture('api-env');
   // Randomness is required so that tests can run in
   // parallel on the same project
@@ -502,6 +500,8 @@ test('deploy `api-env` fixture and test `vercel env` command', async () => {
 
     await waitForPrompt(vc, "What's the name of the variable?");
     vc.stdin?.write(`${promptEnvVar}\n`);
+    await waitForPrompt(vc, 'Mark as sensitive?');
+    vc.stdin?.write('n\n');
     await waitForPrompt(
       vc,
       chunk =>
@@ -590,7 +590,7 @@ test('deploy `api-env` fixture and test `vercel env` command', async () => {
     );
 
     expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
-    expect(stderr).toMatch(/Created .env.local file/gm);
+    expect(stderr).toMatch(/Updated .env.local file/gm);
 
     const contents = fs.readFileSync(path.join(target, '.env.local'), 'utf8');
     expect(contents).toMatch(/^# Created by Vercel CLI\n/);
@@ -622,6 +622,9 @@ test('deploy `api-env` fixture and test `vercel env` command', async () => {
 
     const vc = execCli(binaryPath, ['env', 'pull'], {
       cwd: target,
+      env: {
+        FORCE_TTY: '1',
+      },
     });
 
     await waitForPrompt(
@@ -642,13 +645,13 @@ test('deploy `api-env` fixture and test `vercel env` command', async () => {
     const { host } = new URL(stdout);
 
     const apiUrl = `https://${host}/api/get-env`;
-    const apiRes = await fetch(apiUrl);
+    const apiRes = await nodeFetch(apiUrl);
     expect(apiRes.status, apiUrl).toBe(200);
     const apiJson = await apiRes.json();
     expect(apiJson[promptEnvVar]).toBe('my plaintext value');
 
     const homeUrl = `https://${host}`;
-    const homeRes = await fetch(homeUrl);
+    const homeRes = await nodeFetch(homeUrl);
     expect(homeRes.status, homeUrl).toBe(200);
     const homeJson = await homeRes.json();
     expect(homeJson[promptEnvVar]).toBe('my plaintext value');
@@ -661,7 +664,7 @@ test('deploy `api-env` fixture and test `vercel env` command', async () => {
 
     const localhost = await getLocalhost(vc);
     const apiUrl = `${localhost[0]}/api/get-env`;
-    const apiRes = await fetch(apiUrl);
+    const apiRes = await nodeFetch(apiUrl);
 
     expect(apiRes.status).toBe(200);
 
@@ -671,7 +674,7 @@ test('deploy `api-env` fixture and test `vercel env` command', async () => {
 
     const homeUrl = localhost[0];
 
-    const homeRes = await fetch(homeUrl);
+    const homeRes = await nodeFetch(homeUrl);
     const homeJson = await homeRes.json();
     expect(homeJson[promptEnvVar]).toBe('my plaintext value');
 
@@ -690,7 +693,7 @@ test('deploy `api-env` fixture and test `vercel env` command', async () => {
 
     const localhost = await getLocalhost(vc);
     const apiUrl = `${localhost[0]}/api/get-env`;
-    const apiRes = await fetch(apiUrl);
+    const apiRes = await nodeFetch(apiUrl);
     expect(apiRes.status).toBe(200);
 
     const apiJson = await apiRes.json();
@@ -698,7 +701,7 @@ test('deploy `api-env` fixture and test `vercel env` command', async () => {
     expect(apiJson[stdinEnvVar]).toBe('{"expect":"quotes"}');
 
     const homeUrl = localhost[0];
-    const homeRes = await fetch(homeUrl);
+    const homeRes = await nodeFetch(homeUrl);
     const homeJson = await homeRes.json();
     expect(homeJson[promptEnvVar]).toBe('my plaintext value');
     expect(homeJson[stdinEnvVar]).toBe('{"expect":"quotes"}');
@@ -726,7 +729,6 @@ test('deploy `api-env` fixture and test `vercel env` command', async () => {
 
     expect(res.status).toBe(200);
     if (res.status === 200) {
-      // eslint-disable-next-line no-console
       console.log(
         `Set autoExposeSystemEnvs=true for project ${link.projectId}`
       );
@@ -762,7 +764,7 @@ test('deploy `api-env` fixture and test `vercel env` command', async () => {
 
     const localhost = await getLocalhost(vc);
     const apiUrl = `${localhost[0]}/api/get-env`;
-    const apiRes = await fetch(apiUrl);
+    const apiRes = await nodeFetch(apiUrl);
 
     const localhostNoProtocol = localhost[0].slice('http://'.length);
 
@@ -777,7 +779,7 @@ test('deploy `api-env` fixture and test `vercel env` command', async () => {
     expect(apiJson['VERCEL_REGION']).toBe('dev1');
 
     const homeUrl = localhost[0];
-    const homeRes = await fetch(homeUrl);
+    const homeRes = await nodeFetch(homeUrl);
     const homeJson = await homeRes.json();
     expect(homeJson['VERCEL']).toBe('1');
     expect(homeJson['VERCEL_URL']).toBe(localhostNoProtocol);

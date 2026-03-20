@@ -45,7 +45,7 @@ This project is configured in a monorepo, where one repository contains multiple
 
 To get started, execute the following:
 
-```
+```bash
 git clone https://github.com/vercel/vercel
 cd vercel
 corepack enable
@@ -61,7 +61,7 @@ Make sure all the tests pass before making changes.
 
 You can use `pnpm vercel` from the `cli` package to invoke Vercel CLI with local changes:
 
-```
+```bash
 cd ./packages/cli
 pnpm vercel <cli-commands...>
 ```
@@ -72,7 +72,7 @@ See [CLI Local Development](../packages/cli#local-development) for more details.
 
 Once you are done with your changes (we even suggest doing it along the way), make sure all the tests still pass by running:
 
-```
+```bash
 pnpm test-unit
 ```
 
@@ -96,7 +96,7 @@ Unit tests are run locally with `jest` and execute quickly because they are test
 
 Integration tests create deployments to your Vercel account using the `test` project name. After each test is deployed, the `probes` key is used to check if the response is the expected value. If the value doesn't match, you'll see a message explaining the difference. If the deployment failed to build, you'll see a more generic message like the following:
 
-```
+```log
 [Error: Fetched page https://test-8ashcdlew.vercel.app/root.js does not contain hello Root!. Instead it contains An error occurred with this application.
 
     NO_STATUS_CODE_FRO Response headers:
@@ -127,13 +127,13 @@ While running the full integration suite locally is not recommended, it's someti
 From there, you should be able to trigger an integration test. Choose one
 that's already isolated to check that things work:
 
-```
+```bash
 cd packages/next
 ```
 
 Run the test:
 
-```
+```bash
 pnpm test test/fixtures/00-server-build/index.test.js
 ```
 
@@ -162,10 +162,13 @@ Sometimes you want to test changes to a Builder against an existing project, may
 
 1. Change directory to the desired Builder `cd ./packages/node`
 2. Run `pnpm build` to compile typescript and other build steps
-3. Run `npm pack` to create a tarball file
-4. Run `vercel *.tgz` to upload the tarball file and get a URL
-5. Edit any existing `vercel.json` project and replace `use` with the URL
-6. Run `vercel` or `vercel dev` to deploy with the experimental Builder
+3. Run `npm pack` to create a tarball file. It is imporant to not use `pnpm pack` because it will not preserve the file permissions
+4. Move the resulting tarball to a directory
+5. Run `vercel <directory>` to upload the tarball file and get a URL. Remember to append `/<tarball name>` to then end of your URL
+6. Edit any existing `vercel.json` project and replace `use` with the URL
+7. Run `vercel` or `vercel dev` to deploy with the experimental Builder
+
+**Note:** You will need to turn off vercel authentication in settings -> deployment protection so the builder can be downloaded
 
 ## Reference
 

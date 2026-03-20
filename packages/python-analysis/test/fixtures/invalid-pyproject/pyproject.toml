@@ -1,0 +1,5 @@
+[project
+name = "broken"
+version = "missing bracket above"
+dependencies = [
+  "flask"

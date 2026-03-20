@@ -1,0 +1,21 @@
+{
+  "probes": [
+    {
+      "logMustContain": "Enabling runtime dependency installation"
+    },
+    {
+      "logMustContain": "Force-bundling"
+    },
+    {
+      "logMustContain": "simplejson"
+    },
+    {
+      "path": "/",
+      "mustContain": "\"all_dependencies_ok\":true"
+    },
+    {
+      "path": "/",
+      "mustContain": "\"simplejson\""
+    }
+  ]
+}

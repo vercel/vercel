@@ -18,7 +18,7 @@ export class APIError extends Error {
   link?: string;
   slug?: string;
   action?: string;
-  retryAfter: number | null | 'never';
+  retryAfterMs?: number | 'never';
   [key: string]: any;
 
   constructor(message: string, response: Response, body?: object) {
@@ -26,7 +26,6 @@ export class APIError extends Error {
     this.message = `${message} (${response.status})`;
     this.status = response.status;
     this.serverMessage = message;
-    this.retryAfter = null;
 
     if (body) {
       for (const field of Object.keys(body)) {
@@ -37,13 +36,34 @@ export class APIError extends Error {
       }
     }
 
-    if (response.status === 429) {
-      const retryAfter = response.headers.get('Retry-After');
-      if (retryAfter) {
-        this.retryAfter = parseInt(retryAfter, 10);
-      }
+    // HTTP 429 (Too Many Requests) or 503 (Service Unavailable) both are spec'd to serve retry-after headers
+    if (response.status === 429 || response.status === 503) {
+      const parsed = parseRetryAfterHeaderAsMillis(
+        response.headers.get('Retry-After')
+      );
+      // If the retry-after header is missing or malfomed set to 0.  This ensures users will attempt a retry even in these cases.
+      this.retryAfterMs = parsed ?? (response.status === 429 ? 0 : undefined);
     }
   }
+}
+
+export function parseRetryAfterHeaderAsMillis(
+  header: string | null
+): number | undefined {
+  if (!header) return undefined;
+  // The header might be a literal number of seconds or a formatted date
+  // The date format is spec'd and date.parse should handle it.
+  let retryAfterMs = Number(header) * 1000;
+  if (Number.isNaN(retryAfterMs)) {
+    retryAfterMs = Date.parse(header);
+    if (Number.isNaN(retryAfterMs)) {
+      return undefined;
+    } else {
+      retryAfterMs = retryAfterMs - Date.now();
+    }
+  }
+  // If the date is in the past (clock skew? latency?) just retry immediately
+  return Math.max(retryAfterMs, 0);
 }
 
 export function isAPIError(v: unknown): v is APIError {
@@ -72,12 +92,22 @@ export class TeamDeleted extends NowError<'TEAM_DELETED', {}> {
  * because the token is not valid anymore.
  */
 export class InvalidToken extends NowError<'NOT_AUTHORIZED', {}> {
-  constructor() {
+  constructor(tokenSource?: 'flag' | 'env') {
+    let message: string;
+    if (tokenSource === 'flag') {
+      message =
+        'The token provided via `--token` argument is not valid. Please provide a valid token.';
+    } else if (tokenSource === 'env') {
+      message =
+        'The token provided via VERCEL_TOKEN environment variable is not valid. Please provide a valid token.';
+    } else {
+      message = `The specified token is not valid. Use ${getCommandName(
+        'login'
+      )} to generate a new token.`;
+    }
     super({
-      code: `NOT_AUTHORIZED`,
-      message: `The specified token is not valid. Use ${getCommandName(
-        `login`
-      )} to generate a new token.`,
+      code: 'NOT_AUTHORIZED',
+      message,
       meta: {},
     });
   }
@@ -489,12 +519,12 @@ export class CertOrderNotFound extends NowError<
  */
 export class TooManyRequests extends NowError<
   'TOO_MANY_REQUESTS',
-  { api: string; retryAfter: number }
+  { api: string; retryAfterMs: number }
 > {
-  constructor(api: string, retryAfter: number) {
+  constructor(api: string, retryAfterMs: number) {
     super({
       code: 'TOO_MANY_REQUESTS',
-      meta: { api, retryAfter },
+      meta: { api, retryAfterMs },
       message: `Rate limited. Too many requests to the same endpoint.`,
     });
   }
@@ -671,12 +701,12 @@ export class AliasInUse extends NowError<'ALIAS_IN_USE', { alias: string }> {
  * a certificate for a domain but the domain is missing. An example would
  * be alias.
  */
-export class CertMissing extends NowError<'ALIAS_IN_USE', { domain: string }> {
+export class CertMissing extends NowError<'CERT_MISSING', { domain: string }> {
   constructor(domain: string) {
     super({
-      code: 'ALIAS_IN_USE',
+      code: 'CERT_MISSING',
       meta: { domain },
-      message: `The alias is already in use`,
+      message: `The certificate for domain ${domain} is missing`,
     });
   }
 }
@@ -698,12 +728,13 @@ export class CantParseJSONFile extends NowError<
 export class ConflictingConfigFiles extends NowBuildError {
   files: string[];
 
-  constructor(files: string[]) {
+  constructor(files: string[], message?: string, link?: string) {
     super({
       code: 'CONFLICTING_CONFIG_FILES',
       message:
+        message ||
         'Cannot use both a `vercel.json` and `now.json` file. Please delete the `now.json` file.',
-      link: 'https://vercel.link/combining-old-and-new-config',
+      link: link || 'https://vercel.link/combining-old-and-new-config',
     });
     this.files = files;
   }

@@ -1,0 +1,13 @@
+{
+  "name": "nestjs-no-build-command",
+  "version": "1.0.0",
+  "dependencies": {
+    "@nestjs/common": "11.1.12",
+    "@nestjs/core": "11.1.12",
+    "@nestjs/platform-express": "11.1.12"
+  },
+  "devDependencies": {
+    "@types/node": "22.0.0",
+    "typescript": "5.9.3"
+  }
+}

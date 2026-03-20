@@ -21,6 +21,9 @@
       "path": "/api/hello",
       "method": "GET",
       "mustContain": "Hello, World!"
+    },
+    {
+      "logMustContain": "Using python version: 3.12"
     }
   ]
 }

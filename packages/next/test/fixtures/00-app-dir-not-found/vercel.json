@@ -21,5 +21,10 @@
       "status": 404,
       "mustContain": "404"
     }
-  ]
+  ],
+  "build": {
+    "env": {
+      "NEXT_BUILDER_INTEGRATION": "1"
+    }
+  }
 }

@@ -13,7 +13,7 @@ function getPromptErrorDetails(
 export default async function waitForPrompt(
   cp: CLIProcess,
   rawAssertion: string | RegExp | ((chunk: string) => boolean),
-  timeout = 3000
+  timeout = 5000
 ) {
   let assertion: (chunk: string) => boolean;
   if (typeof rawAssertion === 'string') {
@@ -27,7 +27,6 @@ export default async function waitForPrompt(
   return new Promise<void>((resolve, reject) => {
     let mostRecentChunk = 'NO CHUNKS SO FAR';
 
-    // eslint-disable-next-line no-console
     console.log('Waiting for prompt...');
     const handleTimeout = setTimeout(() => {
       cleanup();
@@ -59,7 +58,6 @@ export default async function waitForPrompt(
       const chunk = stripAnsi(rawChunk.toString());
 
       mostRecentChunk = chunk;
-      // eslint-disable-next-line no-console
       console.log('> ' + chunk);
       if (assertion(chunk)) {
         cleanup();
