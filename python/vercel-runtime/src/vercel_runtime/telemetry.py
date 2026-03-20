@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import contextvars
+import os
 from typing import TYPE_CHECKING, Any, TypedDict
 
 if TYPE_CHECKING:
@@ -39,6 +40,9 @@ def reset_telemetry(
 
 
 def init_tracing() -> None:
+    if os.environ.get("TELEMETRY_DISABLED") == "true":
+        return
+
     """Set up the Vercel span exporter if opentelemetry is installed."""
     import importlib.util
 
@@ -55,3 +59,11 @@ def init_tracing() -> None:
     )
 
     _init()
+
+    # Auto-instrument installed libraries when telemetry mode is 'auto'
+    if os.environ.get("VERCEL_TELEMETRY_MODE") == "auto":
+        from vercel_runtime._instrument import (  # pyright: ignore[reportMissingModuleSource]
+            instrument_installed,
+        )
+
+        instrument_installed()

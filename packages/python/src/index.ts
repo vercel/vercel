@@ -29,6 +29,7 @@ import {
 import {
   discoverPackage,
   ensureUvProject,
+  getVenvSitePackagesDirs,
   resolveVendorDir,
   installRequirementsFile,
   installRequirement,
@@ -40,13 +41,23 @@ import { generateProjectManifest } from './diagnostics';
 import { startDevServer } from './start-dev-server';
 import { runPyprojectScript, ensureVenv, createVenvEnv } from './utils';
 import { runQuirks } from './quirks';
-import { OTEL_PACKAGES, OTEL_ALWAYS_BUNDLE_PACKAGES } from './otel';
+import {
+  OTEL_PACKAGES,
+  OTEL_ALWAYS_BUNDLE_PACKAGES,
+  resolveOtelInstrumentationPackages,
+  type ResolvedOtelInstrumentation,
+  BASE_OTEL_PACKAGES,
+} from './otel';
 import {
   getDjangoSettings,
   runDjangoCollectStatic,
   type DjangoCollectStaticResult,
 } from './django';
 import { containsTopLevelCallable } from '@vercel/python-analysis';
+import {
+  scanDistributions,
+  type DistributionIndex,
+} from '@vercel/python-analysis';
 
 const writeFile = fs.promises.writeFile;
 
@@ -509,17 +520,57 @@ export const build: BuildV3 = async ({
     });
   }
 
-  // Install OpenTelemetry packages when vercelTelemetry is 'auto' and
-  // telemetry is not disabled for this service.
-  const shouldInstallOtel =
-    config?.vercelTelemetry === 'auto' && config?.disableTelemetry !== true;
-  if (shouldInstallOtel) {
-    debug(`Installing OTel packages: ${OTEL_PACKAGES.join(', ')}`);
-    await uv.pip({
-      venvPath,
-      projectDir: join(workPath, entryDirectory),
-      args: ['install', ...OTEL_PACKAGES],
-    });
+  // Install OpenTelemetry packages when vercelTelemetry is 'auto', the app
+  // doesn't already have opentelemetry-sdk and telemetry is not disabled for
+  // this service.
+  let otelInstrumentation: ResolvedOtelInstrumentation = {
+    packages: [],
+    alwaysBundlePackages: [],
+  };
+  if (config?.disableTelemetry !== true) {
+    // Scan installed app deps to determine conditional instrumentation packages
+    const sitePackageDirs = await getVenvSitePackagesDirs(venvPath);
+    const allDistributions: DistributionIndex = new Map();
+    for (const dir of sitePackageDirs) {
+      const distributions = await scanDistributions(dir);
+      for (const [name, dist] of distributions) {
+        allDistributions.set(name, dist);
+      }
+    }
+
+    const packagesToInstall: string[] = [];
+
+    // If the app already has opentelemetry-sdk as a dependency, skip
+    // OTel instrumentation injection to avoid conflicting with the user's setup.
+    // But still inject OTel dependencies needed for span exporter.
+    if (allDistributions.has('opentelemetry-sdk')) {
+      packagesToInstall.push(...BASE_OTEL_PACKAGES);
+      debug(
+        'Skipping OTel instrumentation injection: app already has opentelemetry-sdk installed'
+      );
+    } else {
+      if (config?.vercelTelemetry === 'auto') {
+        otelInstrumentation =
+          resolveOtelInstrumentationPackages(allDistributions);
+
+        packagesToInstall.push(
+          ...OTEL_PACKAGES,
+          ...otelInstrumentation.packages
+        );
+      } else {
+        debug(
+          `Skipping OTel injection (vercelTelemetry=${String(config?.vercelTelemetry)}, disableTelemetry=${String(config?.disableTelemetry)})`
+        );
+      }
+    }
+    if (packagesToInstall.length) {
+      debug(`Installing OTel packages: ${packagesToInstall.join(', ')}`);
+      await uv.pip({
+        venvPath,
+        projectDir: join(workPath, entryDirectory),
+        args: ['install', ...packagesToInstall],
+      });
+    }
   } else {
     debug(
       `Skipping OTel injection (vercelTelemetry=${String(config?.vercelTelemetry)}, disableTelemetry=${String(config?.disableTelemetry)})`
@@ -643,6 +694,12 @@ from vercel_runtime.vc_init import vc_handler
 
   const lambdaEnv = {} as Record<string, string>;
   lambdaEnv.PYTHONPATH = vendorDir;
+  if (config.disableTelemetry) {
+    lambdaEnv.TELEMETRY_DISABLED = 'true';
+  }
+  else if (config?.vercelTelemetry === 'auto') {
+    lambdaEnv.VERCEL_TELEMETRY_MODE = 'auto';
+  }
   Object.assign(lambdaEnv, quirksResult.env);
   if (shouldInstallVercelWorkers) {
     lambdaEnv.VERCEL_HAS_WORKER_SERVICES = '1';
@@ -681,7 +738,8 @@ from vercel_runtime.vc_init import vc_handler
     hasCustomCommand,
     alwaysBundlePackages: [
       ...(quirksResult.alwaysBundlePackages ?? []),
-      ...(shouldInstallOtel ? OTEL_ALWAYS_BUNDLE_PACKAGES : []),
+      ...OTEL_ALWAYS_BUNDLE_PACKAGES,
+      ...otelInstrumentation.alwaysBundlePackages,
       ...(shouldInstallVercelWorkers
         ? ['vercel-workers', 'vercel_workers']
         : []),
