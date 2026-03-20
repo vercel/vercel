@@ -1298,6 +1298,9 @@ importers:
 
   packages/fs-detectors:
     dependencies:
+      '@vercel/build-utils':
+        specifier: workspace:*
+        version: link:../build-utils
       '@vercel/error-utils':
         specifier: workspace:*
         version: link:../error-utils
@@ -1341,9 +1344,6 @@ importers:
       '@types/semver':
         specifier: 7.3.10
         version: 7.3.10
-      '@vercel/build-utils':
-        specifier: workspace:*
-        version: link:../build-utils
       jest-junit:
         specifier: 16.0.0
         version: 16.0.0
