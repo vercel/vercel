@@ -67,7 +67,7 @@ interface FrameworkHookContext {
   projectDir: string;
   workPath?: string;
   venvPath?: string;
-  entrypoint: string;
+  entrypoint: string | undefined;
   detected: DetectedPythonEntrypoint | undefined;
 }
 
@@ -155,10 +155,12 @@ export async function downloadFilesInWorkPath({
   workPath,
   files,
   meta = {},
-}: Pick<BuildOptions, 'entrypoint' | 'workPath' | 'files' | 'meta'>) {
+}: Pick<BuildOptions, 'workPath' | 'files' | 'meta'> & {
+  entrypoint: string | undefined;
+}) {
   debug('Downloading user files...');
   let downloadedFiles = await download(files, workPath, meta);
-  if (meta.isDev) {
+  if (meta.isDev && entrypoint) {
     // Old versions of the CLI don't assign this property
     const { devCacheDir = join(workPath, '.now', 'cache') } = meta;
     // Replace dots in the entrypoint basename with underscores so the cache
@@ -176,12 +178,15 @@ export const build: BuildVX = async ({
   workPath,
   repoRootPath,
   files: originalFiles,
-  entrypoint,
+  entrypoint: rawEntrypoint,
   meta = {},
   config,
   span: parentSpan,
   service,
 }) => {
+  let entrypoint: string | undefined =
+    rawEntrypoint === '<detect>' ? undefined : rawEntrypoint;
+
   const builderSpan = parentSpan ?? new Span({ name: 'vc.builder' });
   const framework = config?.framework;
   const shouldInstallVercelWorkers = config?.hasWorkerServices === true;
@@ -194,6 +199,8 @@ export const build: BuildVX = async ({
   let hasCustomCommand = false;
 
   debug(`workPath: ${workPath}`);
+  debug(`entrypoint!!!: ${entrypoint}`);
+  debug(`framework!!!: ${framework}`);
 
   workPath = await downloadFilesInWorkPath({
     workPath,
@@ -221,14 +228,37 @@ export const build: BuildVX = async ({
 
   let fsFiles = await glob('**', workPath);
 
-  // Zero config entrypoint discovery
+  // Entrypoint discovery
   let detected: DetectedPythonEntrypoint | undefined;
   let entrypointNotFound: NowBuildError | undefined;
-  if (
+
+  if (!entrypoint && isPythonFramework(framework)) {
+    // Autodetect: no entrypoint configured (src was "<detect>")
+    detected =
+      (await detectPythonEntrypoint(
+        config.framework as PythonFramework,
+        workPath
+      )) ?? undefined;
+    if (detected?.entrypoint) {
+      debug(
+        `Autodetected Python entrypoint: "${detected.entrypoint.entrypoint}"`
+      );
+      entrypoint = detected.entrypoint.entrypoint;
+    } else {
+      const searchedList = PYTHON_CANDIDATE_ENTRYPOINTS.join(', ');
+      entrypointNotFound = new NowBuildError({
+        code: `${framework!.toUpperCase()}_ENTRYPOINT_NOT_FOUND`,
+        message: `No ${framework} entrypoint found. Add an 'app' script in pyproject.toml or define an entrypoint in one of: ${searchedList}.`,
+        link: `https://vercel.com/docs/frameworks/backend/${framework}#exporting-the-${framework}-application`,
+        action: 'Learn More',
+      });
+    }
+  } else if (
+    entrypoint &&
     isPythonFramework(framework) &&
-    // XXX: we might want to detect anyway for django!
     (!fsFiles[entrypoint] || !entrypoint.endsWith('.py'))
   ) {
+    // Configured entrypoint doesn't exist or isn't a .py file — try detection
     detected =
       (await detectPythonEntrypoint(
         config.framework as PythonFramework,
@@ -243,7 +273,7 @@ export const build: BuildVX = async ({
     } else {
       const searchedList = PYTHON_CANDIDATE_ENTRYPOINTS.join(', ');
       entrypointNotFound = new NowBuildError({
-        code: `${framework.toUpperCase()}_ENTRYPOINT_NOT_FOUND`,
+        code: `${framework!.toUpperCase()}_ENTRYPOINT_NOT_FOUND`,
         message: `No ${framework} entrypoint found. Add an 'app' script in pyproject.toml or define an entrypoint in one of: ${searchedList}.`,
         link: `https://vercel.com/docs/frameworks/backend/${framework}#exporting-the-${framework}-application`,
         action: 'Learn More',
@@ -251,11 +281,11 @@ export const build: BuildVX = async ({
     }
   }
 
-  // When the entrypoint file already exists, detection is skipped above.
+  // When the entrypoint file already exists, detection may have been skipped.
   // Still read the file to find the variable name.
   if (
     !detected?.entrypoint &&
-    entrypoint.endsWith('.py') &&
+    entrypoint?.endsWith('.py') &&
     fsFiles[entrypoint]
   ) {
     const content = await fs.promises.readFile(
@@ -270,7 +300,7 @@ export const build: BuildVX = async ({
         // Crons and worker have their own special entry point logic
         // that involves creating an `app` dynamically.
         varName = 'app';
-      } else if (!varName) {
+      } else {
         throw new NowBuildError({
           code: 'PYTHON_ENTRYPOINT_NOT_FOUND',
           message: `Could not find a top-level "app", "application", or "handler" in "${entrypoint}".`,
@@ -286,7 +316,8 @@ export const build: BuildVX = async ({
     throw entrypointNotFound;
   }
 
-  const entryDirectory = detected?.baseDir ?? dirname(entrypoint);
+  const entryDirectory =
+    detected?.baseDir ?? (entrypoint ? dirname(entrypoint) : '.');
 
   const entrypointAbsDir = join(workPath, entryDirectory);
   const rootDir = repoRootPath ?? workPath;
@@ -514,6 +545,14 @@ export const build: BuildVX = async ({
 
   if (entrypointNotFound) {
     throw entrypointNotFound;
+  }
+
+  if (!entrypoint) {
+    throw new NowBuildError({
+      code: 'PYTHON_ENTRYPOINT_NOT_FOUND',
+      message:
+        'No Python entrypoint could be detected. Please specify an entrypoint file.',
+    });
   }
 
   const djangoStatic: DjangoCollectStaticResult | null =
