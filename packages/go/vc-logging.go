@@ -54,6 +54,10 @@ func buildLogMessage(message string, sourceStream string) (LogMessage, bool) {
 	}
 
 	payload := LogPayload{
+		// TODO: Use the actual invocation ID and request ID from the request context
+		// Since the user code runs on a separate process, we can't reliably attribute it
+		// to a request since multiple requests can be handled concurrently and we are sourcing
+		// logs from the server's stdOut/stdErr
 		Context: RequestContext{
 			InvocationID: "0",
 			RequestID:    0,
