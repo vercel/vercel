@@ -1,5 +1,11 @@
 # @vercel/fs-detectors
 
+## 5.11.3
+
+### Patch Changes
+
+- adds build utils to fs-detectors dependencies ([#15642](https://github.com/vercel/vercel/pull/15642))
+
 ## 5.11.2
 
 ### Patch Changes
