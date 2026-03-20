@@ -1614,20 +1614,41 @@ describe.skipIf(flakey)('build', () => {
     });
   });
 
-  it('should emit flags-definitions module when VERCEL_EXPERIMENTAL_EMBED_FLAG_DEFINITIONS=1', async () => {
-    const cwd = fixture('static');
+  describe('flags-definitions', () => {
     const definitionsDir = join(
-      cwd,
+      fixture('static'),
       'node_modules',
       '@vercel',
       'flags-definitions'
     );
 
-    client.cwd = cwd;
-    client.setArgv('build', '--yes');
-    const prev = process.env.VERCEL_EXPERIMENTAL_EMBED_FLAG_DEFINITIONS;
-    try {
-      process.env.VERCEL_EXPERIMENTAL_EMBED_FLAG_DEFINITIONS = '1';
+    beforeEach(() => {
+      vi.stubEnv('FLAGS', 'vf_test_fake_sdk_key_for_testing');
+
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async input => {
+        const url = typeof input === 'string' ? input : input.toString();
+        if (url === 'https://flags.vercel.com/v1/datafile') {
+          return new Response(JSON.stringify({ flags: [] }), {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          });
+        }
+        throw new Error(`Unexpected fetch call: ${url}`);
+      });
+
+      fs.removeSync(definitionsDir);
+    });
+
+    afterEach(() => {
+      fs.removeSync(definitionsDir);
+      vi.restoreAllMocks();
+      vi.unstubAllEnvs();
+    });
+
+    it('should emit flags-definitions module by default', async () => {
+      client.cwd = fixture('static');
+      client.setArgv('build', '--yes');
+
       const exitCode = await build(client);
       expect(exitCode).toEqual(0);
 
@@ -1641,13 +1662,19 @@ describe.skipIf(flakey)('build', () => {
         'utf8'
       );
       expect(indexJs).toContain('export function get(hashedSdkKey)');
-    } finally {
-      if (prev !== undefined) {
-        process.env.VERCEL_EXPERIMENTAL_EMBED_FLAG_DEFINITIONS = prev;
-      } else {
-        delete process.env.VERCEL_EXPERIMENTAL_EMBED_FLAG_DEFINITIONS;
-      }
-    }
+    });
+
+    it('should not emit flags-definitions module when VERCEL_FLAGS_DISABLE_DEFINITION_EMBEDDING=1', async () => {
+      vi.stubEnv('VERCEL_FLAGS_DISABLE_DEFINITION_EMBEDDING', '1');
+
+      client.cwd = fixture('static');
+      client.setArgv('build', '--yes');
+
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      expect(fs.existsSync(join(definitionsDir, 'index.js'))).toBe(false);
+    });
   });
 
   it('should not apply framework `defaultRoutes` when build command outputs Build Output API', async () => {
@@ -2152,5 +2179,20 @@ fs.writeFileSync(
       const exitCode = await build(client);
       expect(exitCode).toEqual(0);
     });
+  });
+
+  it('should allow services to share the same builder source', async () => {
+    const cwd = fixture('with-services-shared-source');
+    const output = join(cwd, '.vercel', 'output');
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toBe(0);
+
+    const config = await fs.readJSON(join(output, 'config.json'));
+    expect(config.services).toHaveLength(2);
+    expect(config.services.map((s: any) => s.name).sort()).toEqual([
+      'worker-topic1',
+      'worker-topic2',
+    ]);
   });
 });

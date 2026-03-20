@@ -80,9 +80,21 @@ export interface PyProjectProject {
 }
 
 /**
- * [dependency-groups].
+ * PEP 735 include-group directive: `{include-group: "other-group"}`.
  */
-export type PyProjectDependencyGroups = Record<string, string[]>;
+export interface DependencyGroupInclude {
+  'include-group': string;
+}
+
+/**
+ * A single entry in a dependency group: either a PEP 508 string or an include directive.
+ */
+export type DependencyGroupEntry = string | DependencyGroupInclude;
+
+/**
+ * [dependency-groups] per PEP 735.
+ */
+export type PyProjectDependencyGroups = Record<string, DependencyGroupEntry[]>;
 
 /**
  * [tool.FOO] section.

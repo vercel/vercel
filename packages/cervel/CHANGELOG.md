@@ -1,5 +1,26 @@
 # @vercel/cervel
 
+## 0.0.36
+
+### Patch Changes
+
+- Updated dependencies [[`bb5277ab85e41810f96d1619949d76ea5603a58f`](https://github.com/vercel/vercel/commit/bb5277ab85e41810f96d1619949d76ea5603a58f)]:
+  - @vercel/backends@0.0.49
+
+## 0.0.35
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/backends@0.0.48
+
+## 0.0.34
+
+### Patch Changes
+
+- Updated dependencies [[`485ff9cc64a894d4fff0fb49f891e0e0a21d30ee`](https://github.com/vercel/vercel/commit/485ff9cc64a894d4fff0fb49f891e0e0a21d30ee), [`db17810dd1230baf8257ab4ce8d9b9f95b333abb`](https://github.com/vercel/vercel/commit/db17810dd1230baf8257ab4ce8d9b9f95b333abb)]:
+  - @vercel/backends@0.0.47
+
 ## 0.0.33
 
 ### Patch Changes

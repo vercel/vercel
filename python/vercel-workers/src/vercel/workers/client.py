@@ -5,10 +5,11 @@ import json
 import os
 from collections.abc import Awaitable, Callable, Iterable
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
+from decimal import Decimal
 from functools import wraps
 from typing import Any, Protocol, TypedDict, overload
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import httpx
 
@@ -32,6 +33,7 @@ from .wsgi import (
 
 __all__ = [
     "MessageMetadata",
+    "WorkerJSONEncoder",
     "WorkerTimeoutResult",
     "subscribe",
     "get_wsgi_app",
@@ -39,6 +41,21 @@ __all__ = [
     "has_subscriptions",
     "send",
 ]
+
+
+class WorkerJSONEncoder(json.JSONEncoder):
+    """Custom JSON encoder that handles common Python types not supported by the stdlib."""
+
+    def default(self, o: Any) -> Any:
+        match o:
+            case UUID():
+                return str(o)
+            case datetime() | date():
+                return o.isoformat()
+            case Decimal():
+                return float(o)
+            case _:
+                return super().default(o)
 
 
 class MessageMetadata(TypedDict, total=False):
@@ -510,6 +527,7 @@ def send(
     content_type: str = "application/json",
     timeout: float | None = 10.0,
     headers: dict[str, str] | None = None,
+    json_encoder: type[json.JSONEncoder] | None = None,
 ) -> SendMessageResult:
     """
     Send a message to a Vercel Queue (synchronous).
@@ -571,7 +589,7 @@ def send(
     # Basic payload handling: default to JSON, but allow callers to provide their own
     # serialisation if they change the content type.
     if content_type == "application/json":
-        body: bytes = json.dumps(payload).encode("utf-8")
+        body: bytes = json.dumps(payload, cls=json_encoder or WorkerJSONEncoder).encode("utf-8")
     elif isinstance(payload, (bytes, bytearray)):
         body = bytes(payload)
     else:
@@ -625,6 +643,7 @@ async def send_async(
     content_type: str = "application/json",
     timeout: float | None = 10.0,
     headers: dict[str, str] | None = None,
+    json_encoder: type[json.JSONEncoder] | None = None,
 ) -> SendMessageResult:
     """
     Asynchronous variant of :func:`send` that additionally supports resolving
@@ -672,7 +691,7 @@ async def send_async(
     # Basic payload handling: default to JSON, but allow callers to provide their own
     # serialisation if they change the content type.
     if content_type == "application/json":
-        body: bytes = json.dumps(payload).encode("utf-8")
+        body: bytes = json.dumps(payload, cls=json_encoder or WorkerJSONEncoder).encode("utf-8")
     elif isinstance(payload, (bytes, bytearray)):
         body = bytes(payload)
     else:

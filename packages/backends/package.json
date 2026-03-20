@@ -1,6 +1,6 @@
 {
   "name": "@vercel/backends",
-  "version": "0.0.46",
+  "version": "0.0.49",
   "license": "Apache-2.0",
   "main": "./dist/index.mjs",
   "homepage": "https://vercel.com/docs",
@@ -32,7 +32,7 @@
   ],
   "dependencies": {
     "@vercel/build-utils": "workspace:*",
-    "@vercel/nft": "1.3.0",
+    "@vercel/nft": "1.4.0",
     "execa": "3.2.0",
     "fs-extra": "11.1.0",
     "oxc-transform": "0.111.0",
