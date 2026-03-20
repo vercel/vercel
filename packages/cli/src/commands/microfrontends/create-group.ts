@@ -314,34 +314,29 @@ export default async function createGroup(client: Client): Promise<number> {
 
   output.log('');
   output.log(chalk.bold('Billing'));
-  output.log(chalk.dim(`  ${chalk.bold('Team:')}     ${teamSlug}`));
+  output.log(`  ${chalk.bold('Team:')}     ${teamSlug}`);
   output.log(
-    chalk.dim(
-      `  ${chalk.bold('Adding:')}   ${newProjectCount} microfrontends project${newProjectCount > 1 ? 's' : ''}`
-    )
+    `  ${chalk.bold('Adding:')}   ${newProjectCount} microfrontends project${newProjectCount > 1 ? 's' : ''}`
   );
 
   let projectFee: string;
   if (totalAfter <= freeProjects) {
-    projectFee =
-      chalk.green('Free') + chalk.dim(` (first ${freeProjects} included)`);
+    projectFee = chalk.green('Free') + ` (first ${freeProjects} included)`;
   } else if (existingMfeProjectCount >= freeProjects) {
     projectFee =
       chalk.yellow(`$250.00/month x ${newProjectCount}`) +
-      chalk.dim(` project${newProjectCount > 1 ? 's' : ''}`);
+      ` project${newProjectCount > 1 ? 's' : ''}`;
   } else {
     const freeRemaining = freeProjects - existingMfeProjectCount;
     const paidProjects = newProjectCount - freeRemaining;
     projectFee =
       chalk.green(`${freeRemaining} free`) +
-      chalk.dim(', ') +
+      ', ' +
       chalk.yellow(`$250.00/month x ${paidProjects}`);
   }
-  output.log(chalk.dim(`  ${chalk.bold('Project fee:')}  ${projectFee}`));
+  output.log(`  ${chalk.bold('Project fee:')}  ${projectFee}`);
   output.log(
-    chalk.dim(
-      `  ${chalk.bold('Request fee:')}  ${chalk.yellow('$2.00')} per million microfrontends routed requests`
-    )
+    `  ${chalk.bold('Request fee:')}  ${chalk.yellow('$2.00')} per million microfrontends routed requests`
   );
   output.log('');
   if (totalAfter <= freeProjects) {

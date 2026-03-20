@@ -188,24 +188,20 @@ export default async function addToGroup(client: Client): Promise<number> {
 
   output.log('');
   output.log(chalk.bold('Billing'));
-  output.log(chalk.dim(`  ${chalk.bold('Team:')}  ${teamSlug}`));
+  output.log(`  ${chalk.bold('Team:')}  ${teamSlug}`);
 
   let projectFee: string;
   if (totalAfter <= freeProjects) {
-    projectFee =
-      chalk.green('Free') + chalk.dim(` (first ${freeProjects} included)`);
+    projectFee = chalk.green('Free') + ` (first ${freeProjects} included)`;
   } else if (existingMfeProjectCount >= freeProjects) {
     projectFee = chalk.yellow('$250.00/month');
   } else {
     projectFee =
-      chalk.yellow('$250.00/month') +
-      chalk.dim(` (${freeProjects} free projects used)`);
+      chalk.yellow('$250.00/month') + ` (${freeProjects} free projects used)`;
   }
-  output.log(chalk.dim(`  ${chalk.bold('Project fee:')}  ${projectFee}`));
+  output.log(`  ${chalk.bold('Project fee:')}  ${projectFee}`);
   output.log(
-    chalk.dim(
-      `  ${chalk.bold('Request fee:')}  ${chalk.yellow('$2.00')} per million microfrontends routed requests`
-    )
+    `  ${chalk.bold('Request fee:')}  ${chalk.yellow('$2.00')} per million microfrontends routed requests`
   );
   output.log('');
   if (totalAfter <= freeProjects) {
