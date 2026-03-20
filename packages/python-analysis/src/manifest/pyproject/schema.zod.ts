@@ -47,7 +47,18 @@ export const pyProjectProjectSchema = z.object({
   entry_points: z.record(z.record(z.string())).optional(),
 });
 
-export const pyProjectDependencyGroupsSchema = z.record(z.array(z.string()));
+export const dependencyGroupIncludeSchema = z.object({
+  'include-group': z.string(),
+});
+
+export const dependencyGroupEntrySchema = z.union([
+  z.string(),
+  dependencyGroupIncludeSchema,
+]);
+
+export const pyProjectDependencyGroupsSchema = z.record(
+  z.array(dependencyGroupEntrySchema)
+);
 
 export const pyProjectToolSectionSchema = z.object({
   uv: uvConfigSchema.optional(),

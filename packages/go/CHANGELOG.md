@@ -1,5 +1,11 @@
 # @vercel/go
 
+## 3.4.6
+
+### Patch Changes
+
+- Improve Go build failures by including the compiler output in surfaced errors. ([#15651](https://github.com/vercel/vercel/pull/15651))
+
 ## 3.4.5
 
 ### Patch Changes

@@ -44,6 +44,7 @@ from vercel_runtime.workers import (
     bootstrap_worker_service_app,
     is_celery_app,
     is_worker_service,
+    prepare_celery_environment,
 )
 
 if TYPE_CHECKING:
@@ -393,6 +394,9 @@ if os.path.exists(_runtime_config_path):
             # Use uv sync --inexact --frozen to install only the
             # missing public packages. --inexact avoids removing
             # packages already present in _vendor (bundled deps).
+            # --link-mode hardlink lets the temporary download cache
+            # and the target venv share inode blocks on /tmp, reducing
+            # peak disk usage on Lambda's limited ephemeral storage.
             _sync_cmd = [
                 _uv_path,
                 "sync",
@@ -406,7 +410,7 @@ if os.path.exists(_runtime_config_path):
                 "--no-cache",
                 "--no-progress",
                 "--link-mode",
-                "copy",
+                "hardlink",
             ]
             for _pkg in _config.get("bundledPackages", []):
                 _sync_cmd.extend(["--no-install-package", _pkg])
@@ -459,6 +463,7 @@ if _extra_path:
     os.environ["PATH"] = _extra_path + ":" + os.environ.get("PATH", "")
 
 try:
+    prepare_celery_environment()
     __vc_module = import_module(_entrypoint_modname, _entrypoint_abs)
     __vc_variables = dir(__vc_module)
 except Exception:

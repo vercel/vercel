@@ -1614,20 +1614,41 @@ describe.skipIf(flakey)('build', () => {
     });
   });
 
-  it('should emit flags-definitions module when VERCEL_EXPERIMENTAL_EMBED_FLAG_DEFINITIONS=1', async () => {
-    const cwd = fixture('static');
+  describe('flags-definitions', () => {
     const definitionsDir = join(
-      cwd,
+      fixture('static'),
       'node_modules',
       '@vercel',
       'flags-definitions'
     );
 
-    client.cwd = cwd;
-    client.setArgv('build', '--yes');
-    const prev = process.env.VERCEL_EXPERIMENTAL_EMBED_FLAG_DEFINITIONS;
-    try {
-      process.env.VERCEL_EXPERIMENTAL_EMBED_FLAG_DEFINITIONS = '1';
+    beforeEach(() => {
+      vi.stubEnv('FLAGS', 'vf_test_fake_sdk_key_for_testing');
+
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async input => {
+        const url = typeof input === 'string' ? input : input.toString();
+        if (url === 'https://flags.vercel.com/v1/datafile') {
+          return new Response(JSON.stringify({ flags: [] }), {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          });
+        }
+        throw new Error(`Unexpected fetch call: ${url}`);
+      });
+
+      fs.removeSync(definitionsDir);
+    });
+
+    afterEach(() => {
+      fs.removeSync(definitionsDir);
+      vi.restoreAllMocks();
+      vi.unstubAllEnvs();
+    });
+
+    it('should emit flags-definitions module by default', async () => {
+      client.cwd = fixture('static');
+      client.setArgv('build', '--yes');
+
       const exitCode = await build(client);
       expect(exitCode).toEqual(0);
 
@@ -1641,13 +1662,19 @@ describe.skipIf(flakey)('build', () => {
         'utf8'
       );
       expect(indexJs).toContain('export function get(hashedSdkKey)');
-    } finally {
-      if (prev !== undefined) {
-        process.env.VERCEL_EXPERIMENTAL_EMBED_FLAG_DEFINITIONS = prev;
-      } else {
-        delete process.env.VERCEL_EXPERIMENTAL_EMBED_FLAG_DEFINITIONS;
-      }
-    }
+    });
+
+    it('should not emit flags-definitions module when VERCEL_FLAGS_DISABLE_DEFINITION_EMBEDDING=1', async () => {
+      vi.stubEnv('VERCEL_FLAGS_DISABLE_DEFINITION_EMBEDDING', '1');
+
+      client.cwd = fixture('static');
+      client.setArgv('build', '--yes');
+
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      expect(fs.existsSync(join(definitionsDir, 'index.js'))).toBe(false);
+    });
   });
 
   it('should not apply framework `defaultRoutes` when build command outputs Build Output API', async () => {
@@ -2152,5 +2179,89 @@ fs.writeFileSync(
       const exitCode = await build(client);
       expect(exitCode).toEqual(0);
     });
+  });
+
+  describe('non-interactive mode', () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('outputs error JSON when project settings missing and --yes not set', async () => {
+      const projectSettingsModule = await import(
+        '../../../../src/util/projects/project-settings'
+      );
+      vi.spyOn(projectSettingsModule, 'readProjectSettings').mockResolvedValue(
+        null
+      );
+      vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+        throw new Error('exit');
+      }) as () => never);
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+      const cwd = fixture('static');
+      client.cwd = cwd;
+      client.nonInteractive = true;
+      client.setArgv('build');
+
+      const exitCodePromise = build(client);
+
+      await expect(exitCodePromise).rejects.toThrow('exit');
+      expect(logSpy).toHaveBeenCalled();
+      const payload = JSON.parse(
+        logSpy.mock.calls[logSpy.mock.calls.length - 1][0]
+      );
+      expect(payload).toMatchObject({
+        status: 'error',
+        reason: 'project_settings_required',
+        message: expect.stringMatching(/project settings|pull/),
+        next: expect.any(Array),
+      });
+      expect(
+        payload.next.some((n: { command: string }) =>
+          n.command.includes('pull')
+        )
+      ).toBe(true);
+    });
+
+    it('outputs success JSON when build completes', async () => {
+      const cwd = fixture('static');
+      const outputDir = join(cwd, '.vercel/output');
+      client.cwd = cwd;
+      client.nonInteractive = true;
+      client.setArgv('build');
+
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      const stdout = client.stdout.getFullOutput();
+      const payload = JSON.parse(stdout);
+      expect(payload).toMatchObject({
+        status: 'ok',
+        outputDir,
+        target: 'preview',
+        message: expect.stringMatching(/completed/),
+        next: expect.any(Array),
+      });
+      expect(
+        payload.next.some((n: { command: string }) =>
+          n.command.includes('deploy')
+        )
+      ).toBe(true);
+    });
+  });
+
+  it('should allow services to share the same builder source', async () => {
+    const cwd = fixture('with-services-shared-source');
+    const output = join(cwd, '.vercel', 'output');
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toBe(0);
+
+    const config = await fs.readJSON(join(output, 'config.json'));
+    expect(config.services).toHaveLength(2);
+    expect(config.services.map((s: any) => s.name).sort()).toEqual([
+      'worker-topic1',
+      'worker-topic2',
+    ]);
   });
 });

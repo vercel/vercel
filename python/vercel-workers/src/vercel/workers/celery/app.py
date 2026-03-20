@@ -8,20 +8,16 @@ from .. import callback as queue_callback
 from ..asgi import build_asgi_app
 from ..exceptions import VQSError
 from ..wsgi import build_wsgi_app, status_reason
-from .transport import TransportConfig, install_kombu_transport_alias
+from .transport import TransportConfig
 from .utils import _execute_envelope
-from .worker import PollingWorker as _PollingWorker, resolve_queue_name
 
 try:
     from celery import Celery as CeleryApp  # type: ignore[import-untyped]
 except Exception as e:
     raise RuntimeError(
-        "celery is required to use vercel.workers.celery.Celery. "
+        "celery is required to use vercel.workers.celery. "
         "Install it with `pip install 'vercel-workers[celery]'` or `pip install celery`.",
     ) from e
-
-DEFAULT_BROKER_ALIAS = "vercelqueue"
-
 
 ASGI = Callable[
     [
@@ -34,101 +30,6 @@ ASGI = Callable[
 WSGI = Callable[[dict[str, Any], Callable[..., Any]], list[bytes]]
 
 
-class Celery(CeleryApp):
-    """
-    Drop-in replacement for :class:`celery.Celery` that defaults to Vercel Queues.
-
-    Usage (same shape as Celery):
-        from vercel.workers.celery import Celery
-        app = Celery("myapp")  # broker defaults to vercelqueue://
-
-    Notes:
-    - If you pass an explicit broker (positional or keyword), it will be respected.
-    - This installs the Kombu transport alias automatically so the broker scheme resolves.
-    """
-
-    def __init__(
-        self,
-        *args: Any,
-        broker_alias: str = DEFAULT_BROKER_ALIAS,
-        configure_defaults: bool = True,
-        queue_name: str | None = None,
-        **kwargs: Any,
-    ) -> None:
-        # Ensure the broker scheme resolves before constructing the Celery app.
-        install_kombu_transport_alias(alias=broker_alias)
-
-        args_list = list(args)
-        if "broker" in kwargs:
-            kwargs["broker"] = (
-                broker_url(alias=broker_alias) if kwargs["broker"] is None else kwargs["broker"]
-            )
-        elif len(args_list) >= 2:
-            args_list[1] = broker_url(alias=broker_alias) if args_list[1] is None else args_list[1]
-        else:
-            # No broker provided (positional or keyword): default to vercelqueue://
-            kwargs["broker"] = broker_url(alias=broker_alias)
-
-        super().__init__(*args_list, **kwargs)
-
-        if configure_defaults:
-            # Only allow JSON (avoid pickle), UTC timezone
-            self.conf.update(
-                task_serializer="json",
-                accept_content=["json"],
-                result_serializer="json",
-                enable_utc=True,
-                timezone="UTC",
-            )
-
-        if queue_name:
-            self.conf.task_default_queue = queue_name
-
-    def PollingWorker(
-        self,
-        *,
-        queue_name: str | None = None,
-        consumer_group: str = "default",
-        limit: int = 1,
-        visibility_timeout_seconds: int = 60,
-        poll_interval_seconds: float = 1.0,
-        on_error_visibility_timeout_seconds: int | None = None,
-        timeout: float | None = 10.0,
-        debug: bool = False,
-        crash_on_error: bool = False,
-        ack_on_error: bool = False,
-    ) -> _PollingWorker:
-        """
-        Construct a local polling worker bound to this Celery app.
-
-        This is intended for local development or non-serverless environments.
-        """
-
-        return _PollingWorker(
-            self,
-            queue_name=resolve_queue_name(self, queue_name),
-            consumer_group=consumer_group,
-            limit=limit,
-            visibility_timeout_seconds=visibility_timeout_seconds,
-            poll_interval_seconds=poll_interval_seconds,
-            on_error_visibility_timeout_seconds=on_error_visibility_timeout_seconds,
-            timeout=timeout,
-            debug=debug,
-            crash_on_error=crash_on_error,
-            ack_on_error=ack_on_error,
-        )
-
-    def get_wsgi_app(self) -> WSGI:
-        """Return a WSGI app that executes Celery tasks from Vercel Queue callbacks."""
-
-        return build_wsgi_app(lambda raw_body: handle_queue_callback(self, raw_body))
-
-    def get_asgi_app(self) -> ASGI:
-        """Return an ASGI app that executes Celery tasks from Vercel Queue callbacks."""
-
-        return build_asgi_app(lambda raw_body: handle_queue_callback(self, raw_body))
-
-
 def get_wsgi_app(celery_app: CeleryApp) -> WSGI:
     """Return a WSGI app that executes Celery tasks from Vercel Queue callbacks."""
 
@@ -139,12 +40,6 @@ def get_asgi_app(celery_app: CeleryApp) -> ASGI:
     """Return an ASGI app that executes Celery tasks from Vercel Queue callbacks."""
 
     return build_asgi_app(lambda raw_body: handle_queue_callback(celery_app, raw_body))
-
-
-def broker_url(alias: str = "vercelqueue") -> str:
-    """Return the broker URL for the installed Kombu transport alias."""
-
-    return f"{alias}://"
 
 
 def handle_queue_callback(

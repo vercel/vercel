@@ -37,6 +37,9 @@ export function execCli(
   // which takes precedence over NO_COLOR in chalk.
   combinedOptions.env['NO_COLOR'] = '1';
   combinedOptions.env['FORCE_COLOR'] = '0';
+  // Disable the update notifier so interactive tests don't hang on the
+  // cache-dependent "Would you like to upgrade now?" prompt.
+  combinedOptions.env['NO_UPDATE_NOTIFIER'] = '1';
 
   return execa(file, args, combinedOptions);
 }
