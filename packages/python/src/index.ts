@@ -45,7 +45,10 @@ import {
   runDjangoCollectStatic,
   type DjangoCollectStaticResult,
 } from './django';
-import { containsTopLevelCallable } from '@vercel/python-analysis';
+import {
+  containsAppOrHandler,
+  containsTopLevelCallable,
+} from '@vercel/python-analysis';
 
 const writeFile = fs.promises.writeFile;
 
@@ -242,6 +245,25 @@ export const build: BuildV3 = async ({
         action: 'Learn More',
       });
     }
+  }
+
+  // When the entrypoint file already exists, detection is skipped above.
+  // Still read the file to find the variable name.
+  if (
+    !detected?.entrypoint &&
+    entrypoint.endsWith('.py') &&
+    fsFiles[entrypoint]
+  ) {
+    const content = await fs.promises.readFile(
+      join(workPath, entrypoint),
+      'utf-8'
+    );
+    // If we couldn't find the variable, fall back to trying app.
+    // TODO: The main case where this is actually useful is with
+    // workers/crons, which currently work by injecting an `app` at
+    // runtime.
+    const varName = (await containsAppOrHandler(content)) ?? 'app';
+    detected = { entrypoint: { entrypoint, variableName: varName } };
   }
 
   if (entrypointNotFound && detected?.baseDir === undefined) {
