@@ -400,6 +400,7 @@ export const build: BuildV3 = async ({
           await ensureUvProject({
             workPath,
             rootDir,
+            venvPath,
             pythonPackage,
             pythonVersion: pythonVersionString(pythonVersion),
             uv,
