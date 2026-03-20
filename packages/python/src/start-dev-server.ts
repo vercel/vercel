@@ -773,7 +773,7 @@ export const startDevServer: StartDevServer = async opts => {
     (serviceType === 'cron' || serviceType === 'worker') &&
     rawEntrypoint?.endsWith('.py')
   ) {
-    resolved = { entrypoint: rawEntrypoint, variableName: '' };
+    resolved = { entrypoint: rawEntrypoint, variableName: 'app' };
   } else {
     const detected = await detectPythonEntrypoint(
       framework as PythonFramework,
