@@ -511,9 +511,11 @@ async function handleInitDeployment(
             2
           )}\n`
         );
+        return 1;
+      } else {
+        output.error(deployment.message);
+        return 1;
       }
-      output.error(deployment.message);
-      return 1;
     }
 
     if (deployment instanceof Error) {
@@ -538,14 +540,16 @@ async function handleInitDeployment(
             2
           )}\n`
         );
+        return 1;
+      } else {
+        output.error(
+          msg,
+          undefined,
+          'https://vercel.link/help',
+          'Contact Support'
+        );
+        return 1;
       }
-      output.error(
-        msg,
-        undefined,
-        'https://vercel.link/help',
-        'Contact Support'
-      );
-      return 1;
     }
 
     if (deployment.readyState === 'CANCELED') {
@@ -641,9 +645,11 @@ async function handleInitDeployment(
             2
           )}\n`
         );
+        return 1;
+      } else {
+        error('Uploading failed. Please try again.');
+        return 1;
       }
-      error('Uploading failed. Please try again.');
-      return 1;
     }
 
     if (asJson) {
@@ -1353,9 +1359,11 @@ async function handleDefaultDeploy(
             2
           )}\n`
         );
+        return 1;
+      } else {
+        output.error(deployment.message);
+        return 1;
       }
-      output.error(deployment.message);
-      return 1;
     }
 
     if (deployment instanceof Error) {
@@ -1380,14 +1388,16 @@ async function handleDefaultDeploy(
             2
           )}\n`
         );
+        return 1;
+      } else {
+        output.error(
+          msg,
+          undefined,
+          'https://vercel.link/help',
+          'Contact Support'
+        );
+        return 1;
       }
-      output.error(
-        msg,
-        undefined,
-        'https://vercel.link/help',
-        'Contact Support'
-      );
-      return 1;
     }
 
     if (deployment.readyState === 'CANCELED') {
@@ -1487,9 +1497,11 @@ async function handleDefaultDeploy(
             2
           )}\n`
         );
+        return 1;
+      } else {
+        error('Uploading failed. Please try again.');
+        return 1;
       }
-      error('Uploading failed. Please try again.');
-      return 1;
     }
   } catch (err: unknown) {
     if (isError(err)) {
@@ -1515,9 +1527,11 @@ async function handleDefaultDeploy(
             2
           )}\n`
         );
+        return 1;
+      } else {
+        output.prettyError(err);
+        return 1;
       }
-      output.prettyError(err);
-      return 1;
     }
 
     if (err instanceof NotDomainOwner) {
@@ -1539,9 +1553,11 @@ async function handleDefaultDeploy(
             2
           )}\n`
         );
+        return 1;
+      } else {
+        output.error(err.message);
+        return 1;
       }
-      output.error(err.message);
-      return 1;
     }
 
     if (err instanceof DomainNotFound && err.meta && err.meta.domain) {
