@@ -104,9 +104,9 @@ export async function buildStandaloneServer({
     throw err;
   }
 
-  // Build the bootstrap wrapper that handles IPC protocol (vc-init.go + vc-utils.go)
+  // Build the bootstrap wrapper that handles IPC protocol and log forwarding
   const bootstrapSrc = join(__dirname, '../vc-init.go');
-  const utilsSrc = join(__dirname, '../vc-utils.go');
+  const bootstrapPkgSrc = join(__dirname, '../bootstrap');
   debug(`Building bootstrap wrapper: ${bootstrapSrc} -> ${bootstrapPath}`);
 
   try {
@@ -114,13 +114,13 @@ export async function buildStandaloneServer({
     const bootstrapBuildDir = await getWriteableDirectory();
     const bootstrapGoFile = join(bootstrapBuildDir, 'main.go');
 
-    // Copy bootstrap source and shared utils to temp directory
+    // Copy bootstrap source and package helpers to temp directory
     await copy(bootstrapSrc, bootstrapGoFile);
-    await copy(utilsSrc, join(bootstrapBuildDir, 'vc-utils.go'));
+    await copy(bootstrapPkgSrc, join(bootstrapBuildDir, 'bootstrap'));
 
     // Initialize a minimal go.mod for the bootstrap
     const bootstrapGoMod = join(bootstrapBuildDir, 'go.mod');
-    await writeFile(bootstrapGoMod, 'module vc-init\n\ngo 1.21\n');
+    await writeFile(bootstrapGoMod, 'module main\n\ngo 1.21\n');
 
     // Build bootstrap with same env (cross-compile settings)
     const bootstrapGo = await createGo({
@@ -204,13 +204,12 @@ export async function startStandaloneDevServer(
     resolvedEntrypoint === 'main.go' ? '.' : './' + dirname(resolvedEntrypoint);
 
   const devWrapper = join(__dirname, '../vc-init-dev.go');
-  const devUtils = join(__dirname, '../vc-utils.go');
 
   debug(
     `Starting standalone Go dev server wrapper: go run ${devWrapper} (target ${runTarget}, port ${port})`
   );
 
-  const child = spawn('go', ['run', '-tags', 'vcdev', devWrapper, devUtils], {
+  const child = spawn('go', ['run', '-tags', 'vcdev', devWrapper], {
     cwd: workPath,
     env: {
       ...env,

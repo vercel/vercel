@@ -11,13 +11,15 @@
   },
   "scripts": {
     "build": "node ../../utils/build-builder.mjs",
-    "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --runInBand --bail",
-    "test-e2e": "pnpm test test/integration-*",
+    "test": "pnpm run test:go && jest --reporters=default --reporters=jest-junit --env node --verbose --runInBand --bail",
+    "test:go": "go test ./bootstrap ./test/go && go test -tags vcdev ./bootstrap",
+    "test-e2e": "jest --reporters=default --reporters=jest-junit --env node --verbose --runInBand --bail test/integration-*",
     "type-check": "tsc --noEmit"
   },
   "files": [
     "dist",
-    "*.go"
+    "*.go",
+    "bootstrap"
   ],
   "devDependencies": {
     "@tootallnate/once": "1.1.2",
