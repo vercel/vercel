@@ -570,7 +570,7 @@ export default async function logs(client: Client) {
           time: format(log.timestamp, timeFormat),
           host: log.domain || '',
           level: log.level,
-          path: `${getSourceIcon(log.source)} ${log.requestMethod} ${log.requestPath}`,
+          path: `${log.requestMethod} ${log.requestPath}`,
           status: !statusCode || statusCode <= 0 ? '---' : String(statusCode),
           statusCode,
           message: log.message?.replace(/\n/g, ' ').trim() || '',
@@ -687,24 +687,6 @@ function colorizeStatus(formatted: string, statusCode: number): string {
     return chalk.green(formatted);
   }
   return chalk.gray(formatted);
-}
-
-function getSourceIcon(source: string): string {
-  switch (source) {
-    case 'serverless':
-    case 'lambda':
-      return 'λ';
-    case 'edge-function':
-    case 'edge-middleware':
-    case 'middleware':
-      return 'ε';
-    case 'static':
-    case 'external':
-    case 'redirect':
-      return '◇';
-    default:
-      return ' ';
-  }
 }
 
 function colorizeMessage(message: string, level: string): string {

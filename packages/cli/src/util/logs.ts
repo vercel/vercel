@@ -250,18 +250,16 @@ function prettyPrintLogline(
     message,
     messageTruncated,
     timestampInMs,
-    source,
   }: RuntimeLog,
   print: Printer
 ) {
   const date = format(timestampInMs, dateTimeFormat);
   const levelIcon = getLevelIcon(level);
-  const sourceIcon = getSourceIcon(source);
   const detailsLine = `${chalk.dim(date)}  ${levelIcon}  ${chalk.bold(
     method
   )}  ${chalk.grey(status <= 0 ? '---' : status)}  ${chalk.dim(
     domain
-  )}  ${sourceIcon}  ${path}`;
+  )}  ${path}`;
   print(
     `${detailsLine}\n${'-'.repeat(
       [
@@ -270,7 +268,6 @@ function prettyPrintLogline(
         method.length,
         statusWidth,
         domain.length,
-        sourceIcon.length,
         path.length,
       ].reduce((sum, length) => sum + 2 + length)
     )}\n`
@@ -282,13 +279,6 @@ function prettyPrintLogline(
 
 function getLevelIcon(level: string) {
   return level === 'error' ? '🚫' : level === 'warning' ? '⚠️' : 'ℹ️';
-}
-
-function getSourceIcon(source: string) {
-  if (source === 'edge-function') return 'ന';
-  if (source === 'edge-middleware') return 'ɛ';
-  if (source === 'serverless') return 'ƒ';
-  return ' ';
 }
 
 function sanitize(log: BuildLog): string {
