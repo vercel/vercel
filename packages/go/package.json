@@ -13,6 +13,7 @@
     "build": "node ../../utils/build-builder.mjs",
     "test": "pnpm run test:go && jest --reporters=default --reporters=jest-junit --env node --verbose --runInBand --bail",
     "test:go": "go test ./bootstrap ./test/go && go test -tags vcdev ./bootstrap",
+    "test-unit": "jest --reporters=default --reporters=jest-junit --env node --verbose --runInBand --bail test/go-helpers.test.ts test/index.test.ts test/parse-go-mod-version.test.ts",
     "test-e2e": "jest --reporters=default --reporters=jest-junit --env node --verbose --runInBand --bail test/integration-*",
     "type-check": "tsc --noEmit"
   },
