@@ -1,5 +1,9 @@
-from flask import Flask, jsonify, render_template_string, request
+from datetime import UTC, datetime
+from decimal import Decimal
 from logging import getLogger
+from uuid import uuid4
+
+from flask import Flask, jsonify, render_template_string, request
 
 from worker.broker import broker
 from worker.tasks import process_job
@@ -46,39 +50,43 @@ INDEX_HTML = """
 """
 
 
-@app.get('/')
+@app.get("/")
 def root():
     return render_template_string(INDEX_HTML)
 
 
-@app.post('/enqueue')
+@app.post("/enqueue")
 def enqueue():
     payload = request.get_json(silent=True)
     if not isinstance(payload, dict):
         payload = {}
 
+    payload["request_id"] = uuid4()
+    payload["enqueued_at"] = datetime.now(UTC)
+    payload["priority"] = Decimal("1.5")
+
     try:
         message = process_job.send(payload)
     except Exception as exc:
-        logger.error(f'Failed to enqueue job: {exc}')
-        return jsonify({'ok': False, 'error': str(exc)}), 500
+        logger.error(f"Failed to enqueue job: {exc}")
+        return jsonify({"ok": False, "error": str(exc)}), 500
 
     return jsonify(
         {
-            'ok': True,
-            'jobId': message.message_id,
-            'queueName': message.queue_name,
-            'actorName': message.actor_name,
-            'broker': broker.__class__.__name__,
+            "ok": True,
+            "jobId": message.message_id,
+            "queueName": message.queue_name,
+            "actorName": message.actor_name,
+            "broker": broker.__class__.__name__,
         }
     )
 
 
-@app.get('/health')
+@app.get("/health")
 def health():
-    return jsonify({'status': 'ok'})
+    return jsonify({"status": "ok"})
 
 
 @app.errorhandler(404)
 def not_found_handler(error):
-    return jsonify({'detail': '404 from Flask web service'}), 404
+    return jsonify({"detail": "404 from Flask web service"}), 404

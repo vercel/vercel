@@ -1,4 +1,4 @@
-import frameworkList from '@vercel/frameworks';
+import { frameworkList } from '@vercel/frameworks';
 import { detectFramework, LocalFileSystemDetector } from '../src';
 import { getExamples } from '../../../examples/__tests__/test-utils';
 

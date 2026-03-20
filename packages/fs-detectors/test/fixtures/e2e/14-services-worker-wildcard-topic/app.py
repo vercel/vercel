@@ -1,4 +1,7 @@
+from datetime import UTC, datetime
+from decimal import Decimal
 from logging import getLogger
+from uuid import uuid4
 
 from flask import Flask, jsonify, render_template_string, request
 
@@ -57,6 +60,10 @@ def enqueue():
     payload = request.get_json(silent=True)
     if not isinstance(payload, dict):
         payload = {}
+
+    payload["request_id"] = uuid4()
+    payload["enqueued_at"] = datetime.now(UTC)
+    payload["priority"] = Decimal("1.5")
 
     try:
         message = process_job.send(payload)

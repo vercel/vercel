@@ -502,7 +502,8 @@ function createDevShim(
   entry: string,
   modulePath: string,
   serviceName: string | undefined,
-  framework: string
+  framework: string,
+  variableName: string
 ): DevShimResult | null {
   try {
     // When a service name is provided, place the shim in a per-service
@@ -537,7 +538,8 @@ function createDevShim(
     const shimSource = template
       .replace(/__VC_DEV_MODULE_NAME__/g, qualifiedModule)
       .replace(/__VC_DEV_ENTRY_ABS__/g, entryAbs)
-      .replace(/__VC_DEV_FRAMEWORK__/g, framework);
+      .replace(/__VC_DEV_FRAMEWORK__/g, framework)
+      .replace(/__VC_DEV_VARIABLE_NAME__/g, variableName);
     writeFileSync(shimPath, shimSource, 'utf8');
     debug(`Prepared Python dev shim at ${shimPath}`);
     return {
@@ -642,6 +644,7 @@ export const startDevServer: StartDevServer = async opts => {
   // For cron/worker services, use the raw entrypoint directly, because
   // they don't export app/application so standard detection would skip them.
   let entry: string | undefined;
+  let variableName: string | undefined;
   if (
     (serviceType === 'cron' || serviceType === 'worker') &&
     rawEntrypoint?.endsWith('.py')
@@ -654,6 +657,7 @@ export const startDevServer: StartDevServer = async opts => {
       rawEntrypoint
     );
     entry = detected?.entrypoint;
+    variableName = detected?.variableName;
     if (!entry) {
       const hookResult = await runFrameworkHook(framework, {
         pythonEnv: env,
@@ -663,6 +667,7 @@ export const startDevServer: StartDevServer = async opts => {
         detected: detected ?? undefined,
       });
       entry = hookResult?.entrypoint;
+      variableName = hookResult?.variableName;
     }
     if (!entry) {
       const searched = PYTHON_CANDIDATE_ENTRYPOINTS.join(', ');
@@ -808,7 +813,8 @@ export const startDevServer: StartDevServer = async opts => {
       entry,
       modulePath,
       serviceName,
-      framework
+      framework,
+      variableName ?? ''
     );
 
     // Add shim directory to PYTHONPATH so the shim can be imported,

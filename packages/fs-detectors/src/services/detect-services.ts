@@ -7,13 +7,17 @@ import {
 import {
   type DetectServicesOptions,
   type DetectServicesResult,
+  type InferredServicesResult,
+  type ResolvedServicesResult,
   type Service,
+  type ServicesConfig,
   type ServicesRoutes,
 } from './types';
 import {
   getInternalServiceCronPath,
   getInternalServiceFunctionPath,
   getInternalServiceWorkerPath,
+  isFrontendFramework,
   isRouteOwningBuilder,
   isStaticBuild,
   readVercelConfig,
@@ -26,6 +30,60 @@ const PREVIEW_DOMAIN_MISSING: HasField = [
   { type: 'host', value: { suf: '.vercel.app' } },
   { type: 'host', value: { suf: '.vercel.dev' } },
 ];
+
+function emptyRoutes(): ServicesRoutes {
+  return {
+    hostRewrites: [],
+    rewrites: [],
+    defaults: [],
+    crons: [],
+    workers: [],
+  };
+}
+
+function withResolvedResult(
+  resolved: ResolvedServicesResult,
+  inferred: InferredServicesResult | null = null
+): DetectServicesResult {
+  return {
+    services: resolved.services,
+    source: resolved.source,
+    routes: resolved.routes,
+    errors: resolved.errors,
+    warnings: resolved.warnings,
+    resolved,
+    inferred,
+  };
+}
+
+/*
+ * This lets us define the conventions of how we'd like the services configuration
+ * to look like.
+ */
+function toInferredLayoutConfig(services: ServicesConfig): ServicesConfig {
+  const inferredConfig: ServicesConfig = {};
+
+  for (const [name, service] of Object.entries(services)) {
+    const serviceConfig: ServicesConfig[string] = {};
+
+    if (typeof service.entrypoint === 'string') {
+      serviceConfig.entrypoint = service.entrypoint;
+    }
+
+    if (typeof service.routePrefix === 'string') {
+      serviceConfig.routePrefix = service.routePrefix;
+    }
+
+    // Keep the framework setting only for frontend services
+    if (isFrontendFramework(service.framework)) {
+      serviceConfig.framework = service.framework;
+    }
+
+    inferredConfig[name] = serviceConfig;
+  }
+
+  return inferredConfig;
+}
 
 /**
  * Detect and resolve services within a project.
@@ -46,19 +104,13 @@ export async function detectServices(
     await readVercelConfig(scopedFs);
 
   if (configError) {
-    return {
+    return withResolvedResult({
       services: [],
       source: 'configured',
-      routes: {
-        hostRewrites: [],
-        rewrites: [],
-        defaults: [],
-        crons: [],
-        workers: [],
-      },
+      routes: emptyRoutes(),
       errors: [configError],
       warnings: [],
-    };
+    });
   }
 
   const configuredServices = vercelConfig?.experimentalServices;
@@ -70,19 +122,13 @@ export async function detectServices(
     const autoResult = await autoDetectServices({ fs: scopedFs });
 
     if (autoResult.errors.length > 0) {
-      return {
+      return withResolvedResult({
         services: [],
         source: 'auto-detected',
-        routes: {
-          hostRewrites: [],
-          rewrites: [],
-          defaults: [],
-          crons: [],
-          workers: [],
-        },
+        routes: emptyRoutes(),
         errors: autoResult.errors,
         warnings: [],
-      };
+      });
     }
 
     if (autoResult.services) {
@@ -92,25 +138,37 @@ export async function detectServices(
         'generated'
       );
       const routes = generateServicesRoutes(result.services);
-      return {
+      const resolved: ResolvedServicesResult = {
         services: result.services,
         source: 'auto-detected',
         routes,
         errors: result.errors,
         warnings: [],
       };
+      const rootWebFrameworkServices = result.services.filter(
+        service =>
+          service.type === 'web' &&
+          service.routePrefix === '/' &&
+          typeof service.framework === 'string'
+      );
+      const inferred =
+        result.errors.length === 0 &&
+        rootWebFrameworkServices.length === 1 &&
+        result.services.length > 1
+          ? {
+              source: 'layout' as const,
+              config: toInferredLayoutConfig(autoResult.services),
+              services: result.services,
+              warnings: [],
+            }
+          : null;
+      return withResolvedResult(resolved, inferred);
     }
 
-    return {
+    return withResolvedResult({
       services: [],
       source: 'auto-detected',
-      routes: {
-        hostRewrites: [],
-        rewrites: [],
-        defaults: [],
-        crons: [],
-        workers: [],
-      },
+      routes: emptyRoutes(),
       errors: [
         {
           code: 'NO_SERVICES_CONFIGURED',
@@ -119,7 +177,7 @@ export async function detectServices(
         },
       ],
       warnings: [],
-    };
+    });
   }
 
   // Resolve configured services from vercel.json
@@ -132,13 +190,13 @@ export async function detectServices(
   // Generate routes
   const routes = generateServicesRoutes(result.services);
 
-  return {
+  return withResolvedResult({
     services: result.services,
     source: 'configured',
     routes,
     errors: result.errors,
     warnings: [],
-  };
+  });
 }
 
 /**
@@ -259,7 +317,6 @@ export function generateServicesRoutes(services: Service[]): ServicesRoutes {
           check: true,
         });
       }
-    } else {
     }
   }
 
