@@ -25,19 +25,19 @@ function mockLinkedProject() {
   });
 }
 
-function mockAddEndpoint(opts?: { fail?: boolean; statusCode?: number }) {
+function mockUpdateEndpoint(opts?: { fail?: boolean; statusCode?: number }) {
   let requestBody: any;
-  client.scenario.post(
+  client.scenario.patch(
     `/v1/projects/${projectId}/crons/definitions`,
     (req, res) => {
       requestBody = req.body;
       if (opts?.fail) {
         const code = opts.statusCode ?? 500;
-        if (code === 409) {
-          res.status(409).json({
+        if (code === 404) {
+          res.status(404).json({
             error: {
-              message: 'A cron definition with this path already exists',
-              code: 'conflict',
+              message: 'Cron definition not found',
+              code: 'not_found',
             },
           });
         } else {
@@ -50,12 +50,12 @@ function mockAddEndpoint(opts?: { fail?: boolean; statusCode?: number }) {
         }
         return;
       }
-      res.status(201).json({
+      res.json({
         definitions: [
           {
-            host: 'example.vercel.app',
+            host: req.body.host ?? 'example.vercel.app',
             path: req.body.path,
-            schedule: req.body.schedule,
+            schedule: req.body.schedule ?? '0 0 * * *',
             source: 'api',
           },
         ],
@@ -65,7 +65,7 @@ function mockAddEndpoint(opts?: { fail?: boolean; statusCode?: number }) {
   return { getRequestBody: () => requestBody };
 }
 
-describe('crons add', () => {
+describe('crons update', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     client.reset();
@@ -73,49 +73,47 @@ describe('crons add', () => {
 
   describe('--help', () => {
     it('prints help and tracks telemetry', async () => {
-      client.setArgv('crons', 'add', '--help');
+      client.setArgv('crons', 'update', '--help');
       const exitCode = await crons(client);
       expect(exitCode).toEqual(2);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        { key: 'flag:help', value: 'crons:add' },
+        { key: 'flag:help', value: 'crons:update' },
       ]);
     });
   });
 
   describe('with flags', () => {
-    it('adds cron via API call', async () => {
+    it('updates cron schedule via API', async () => {
       mockLinkedProject();
-      const { getRequestBody } = mockAddEndpoint();
+      const { getRequestBody } = mockUpdateEndpoint();
 
       client.setArgv(
         'crons',
-        'add',
+        'update',
         '--path',
         '/api/cron',
         '--schedule',
-        '0 10 * * *'
+        '0 0 * * *'
       );
       const exitCode = await crons(client);
       expect(exitCode).toEqual(0);
 
       expect(getRequestBody()).toEqual({
         path: '/api/cron',
-        schedule: '0 10 * * *',
+        schedule: '0 0 * * *',
       });
-      await expect(client.stderr).toOutput('Added cron job');
+      await expect(client.stderr).toOutput('Updated cron job');
     });
 
-    it('includes host when provided', async () => {
+    it('updates cron host via API', async () => {
       mockLinkedProject();
-      const { getRequestBody } = mockAddEndpoint();
+      const { getRequestBody } = mockUpdateEndpoint();
 
       client.setArgv(
         'crons',
-        'add',
+        'update',
         '--path',
         '/api/cron',
-        '--schedule',
-        '0 10 * * *',
         '--host',
         'custom.vercel.app'
       );
@@ -124,7 +122,31 @@ describe('crons add', () => {
 
       expect(getRequestBody()).toEqual({
         path: '/api/cron',
-        schedule: '0 10 * * *',
+        host: 'custom.vercel.app',
+      });
+      await expect(client.stderr).toOutput('Updated cron job');
+    });
+
+    it('updates both schedule and host', async () => {
+      mockLinkedProject();
+      const { getRequestBody } = mockUpdateEndpoint();
+
+      client.setArgv(
+        'crons',
+        'update',
+        '--path',
+        '/api/cron',
+        '--schedule',
+        '*/5 * * * *',
+        '--host',
+        'custom.vercel.app'
+      );
+      const exitCode = await crons(client);
+      expect(exitCode).toEqual(0);
+
+      expect(getRequestBody()).toEqual({
+        path: '/api/cron',
+        schedule: '*/5 * * * *',
         host: 'custom.vercel.app',
       });
     });
@@ -134,7 +156,7 @@ describe('crons add', () => {
     it('rejects path not starting with /', async () => {
       client.setArgv(
         'crons',
-        'add',
+        'update',
         '--path',
         'api/cron',
         '--schedule',
@@ -148,66 +170,34 @@ describe('crons add', () => {
     it('rejects invalid cron schedule', async () => {
       client.setArgv(
         'crons',
-        'add',
+        'update',
         '--path',
         '/api/cron',
         '--schedule',
-        'not-a-schedule'
+        'invalid'
       );
       const exitCode = await crons(client);
       expect(exitCode).toEqual(1);
       await expect(client.stderr).toOutput('must have exactly 5 fields');
     });
-
-    it('rejects path longer than 512 characters', async () => {
-      const longPath = '/' + 'a'.repeat(512);
-      client.setArgv(
-        'crons',
-        'add',
-        '--path',
-        longPath,
-        '--schedule',
-        '0 0 * * *'
-      );
-      const exitCode = await crons(client);
-      expect(exitCode).toEqual(1);
-      await expect(client.stderr).toOutput('512 characters or less');
-    });
   });
 
   describe('API error handling', () => {
-    it('handles duplicate path conflict', async () => {
+    it('handles not found error', async () => {
       mockLinkedProject();
-      mockAddEndpoint({ fail: true, statusCode: 409 });
+      mockUpdateEndpoint({ fail: true, statusCode: 404 });
 
       client.setArgv(
         'crons',
-        'add',
+        'update',
         '--path',
-        '/api/cron',
+        '/api/nonexistent',
         '--schedule',
         '0 0 * * *'
       );
       const exitCode = await crons(client);
       expect(exitCode).toEqual(1);
-      await expect(client.stderr).toOutput('Failed to add cron job');
-    });
-
-    it('handles server errors', async () => {
-      mockLinkedProject();
-      mockAddEndpoint({ fail: true, statusCode: 500 });
-
-      client.setArgv(
-        'crons',
-        'add',
-        '--path',
-        '/api/cron',
-        '--schedule',
-        '0 0 * * *'
-      );
-      const exitCode = await crons(client);
-      expect(exitCode).toEqual(1);
-      await expect(client.stderr).toOutput('Failed to add cron job');
+      await expect(client.stderr).toOutput('Failed to update cron job');
     });
   });
 
@@ -218,7 +208,7 @@ describe('crons add', () => {
       } as any);
       client.setArgv(
         'crons',
-        'add',
+        'update',
         '--path',
         '/api/cron',
         '--schedule',
@@ -231,42 +221,52 @@ describe('crons add', () => {
   });
 
   describe('interactive mode', () => {
-    it('prompts for path and schedule', async () => {
+    it('prompts for path and schedule when not provided', async () => {
       mockLinkedProject();
-      mockAddEndpoint();
+      mockUpdateEndpoint();
 
-      client.setArgv('crons', 'add');
+      client.setArgv('crons', 'update');
       const exitCodePromise = crons(client);
 
-      await expect(client.stderr).toOutput('API route path');
+      await expect(client.stderr).toOutput('path of the cron job to update');
       client.stdin.write('/api/cron\n');
 
-      await expect(client.stderr).toOutput('cron schedule expression');
+      await expect(client.stderr).toOutput('new cron schedule expression');
       client.stdin.write('0 0 * * *\n');
 
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);
-      await expect(client.stderr).toOutput('Added cron job');
     });
 
-    it('errors in non-interactive mode without flags', async () => {
-      client.setArgv('crons', 'add');
+    it('errors in non-interactive mode without path', async () => {
+      client.setArgv('crons', 'update');
       (client.stdin as any).isTTY = false;
 
       const exitCode = await crons(client);
       expect(exitCode).toEqual(1);
-      await expect(client.stderr).toOutput('Missing required flags');
+      await expect(client.stderr).toOutput('Missing required flag --path');
+    });
+
+    it('errors in non-interactive mode with path but no schedule or host', async () => {
+      client.setArgv('crons', 'update', '--path', '/api/cron');
+      (client.stdin as any).isTTY = false;
+
+      const exitCode = await crons(client);
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput(
+        'At least one of --schedule or --host'
+      );
     });
   });
 
   describe('telemetry', () => {
     it('tracks subcommand and options', async () => {
       mockLinkedProject();
-      mockAddEndpoint();
+      mockUpdateEndpoint();
 
       client.setArgv(
         'crons',
-        'add',
+        'update',
         '--path',
         '/api/cron',
         '--schedule',
@@ -275,7 +275,7 @@ describe('crons add', () => {
       const exitCode = await crons(client);
       expect(exitCode).toEqual(0);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        { key: 'subcommand:add', value: 'add' },
+        { key: 'subcommand:update', value: 'update' },
         { key: 'option:path', value: '[REDACTED]' },
         { key: 'option:schedule', value: '[REDACTED]' },
       ]);

@@ -3,11 +3,15 @@ import { parseArguments } from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
 import { printError } from '../../util/error';
 import add from './add';
+import update from './update';
+import rm from './rm';
 import ls from './ls';
 import run from './run';
 import {
   cronsCommand,
   addSubcommand,
+  updateSubcommand,
+  rmSubcommand,
   listSubcommand,
   runSubcommand,
 } from './command';
@@ -18,6 +22,8 @@ import output from '../../output-manager';
 
 const COMMAND_CONFIG = {
   add: ['add'],
+  update: ['update'],
+  rm: ['rm', 'remove'],
   ls: ['ls', 'list'],
   run: ['run'],
 };
@@ -68,6 +74,20 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandAdd(subcommandOriginal);
       return add(client, args);
+    case 'update':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('crons', subcommandOriginal);
+        return printHelp(updateSubcommand);
+      }
+      telemetry.trackCliSubcommandUpdate(subcommandOriginal);
+      return update(client, args);
+    case 'rm':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('crons', subcommandOriginal);
+        return printHelp(rmSubcommand);
+      }
+      telemetry.trackCliSubcommandRm(subcommandOriginal);
+      return rm(client, args);
     case 'run':
       if (needHelp) {
         telemetry.trackCliFlagHelp('crons', subcommandOriginal);

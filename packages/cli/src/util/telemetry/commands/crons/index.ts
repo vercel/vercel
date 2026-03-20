@@ -13,6 +13,20 @@ export class CronsTelemetryClient
     });
   }
 
+  trackCliSubcommandUpdate(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'update',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandRm(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'rm',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandList(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'list',
