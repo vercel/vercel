@@ -21,7 +21,8 @@ const VERCEL_AWS_PRINCIPAL_ARN =
 function generateTerraformTemplate(
   roleName: string,
   externalId: string,
-  awsAccountId: string
+  awsAccountId: string,
+  teamSlug: string
 ): string {
   return `# Vercel Private Cloud — IAM Role for AWS Account ${awsAccountId}
 #
@@ -29,10 +30,11 @@ function generateTerraformTemplate(
 # to invoke Lambda functions in your AWS account.
 #
 # Apply this configuration in your AWS account, then run:
-#   vercel vpc connect --aws-account-id ${awsAccountId}
+#   vercel vpc connect --aws-account-id ${awsAccountId} --scope ${teamSlug}
 
 resource "aws_iam_role" "${roleName}" {
-  name = "${roleName}"
+  name                 = "${roleName}"
+  max_session_duration = 43200 # 12 hours
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -192,7 +194,8 @@ export default async function init(client: Client, argv: string[]) {
       const terraform = generateTerraformTemplate(
         account.roleName,
         account.externalId,
-        account.awsAccountId
+        account.awsAccountId,
+        org.slug
       );
       const json = {
         status: AGENT_STATUS.OK,
@@ -206,7 +209,7 @@ export default async function init(client: Client, argv: string[]) {
         next: [
           {
             command: getCommandNamePlain(
-              `vpc connect --aws-account-id ${account.awsAccountId}`
+              `vpc connect --aws-account-id ${account.awsAccountId} --scope ${org.slug}`
             ),
             when: 'After the IAM role has been created in AWS',
           },
@@ -244,7 +247,8 @@ export default async function init(client: Client, argv: string[]) {
     const terraform = generateTerraformTemplate(
       account.roleName,
       account.externalId,
-      account.awsAccountId
+      account.awsAccountId,
+      org.slug
     );
 
     for (const line of terraform.split('\n')) {
@@ -253,7 +257,7 @@ export default async function init(client: Client, argv: string[]) {
 
     output.print('\n');
     output.log(
-      `After applying the Terraform configuration, run ${chalk.bold(`vercel vpc connect --aws-account-id ${account.awsAccountId}`)} to verify the connection.`
+      `After applying the Terraform configuration, run ${chalk.bold(`vercel vpc connect --aws-account-id ${account.awsAccountId} --scope ${org.slug}`)} to verify the connection.`
     );
     output.print('\n');
 
