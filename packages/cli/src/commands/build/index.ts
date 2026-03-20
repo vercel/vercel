@@ -59,6 +59,9 @@ import {
 } from '@vercel/routing-utils';
 
 import output from '../../output-manager';
+import { getGlobalFlagsOnlyFromArgs } from '../../util/arg-common';
+import { outputAgentError } from '../../util/agent-output';
+import { AGENT_REASON, AGENT_STATUS } from '../../util/agent-output-constants';
 import { cleanupCorepack, initCorepack } from '../../util/build/corepack';
 import { importBuilders } from '../../util/build/import-builders';
 import { setMonorepoDefaultSettings } from '../../util/build/monorepo';
@@ -104,6 +107,18 @@ import { help } from '../help';
 import { pullCommandLogic } from '../pull';
 import { buildCommand } from './command';
 import { mkdir, writeFile } from 'fs/promises';
+
+/** Build a plain suggested command with global flags (e.g. --cwd, --non-interactive) appended. */
+function buildCommandWithGlobalFlags(
+  baseSubcommand: string,
+  argv: string[]
+): string {
+  const globalFlags = getGlobalFlagsOnlyFromArgs(argv.slice(2));
+  const full = globalFlags.length
+    ? `${baseSubcommand} ${globalFlags.join(' ')}`
+    : baseSubcommand;
+  return cli.getCommandNamePlain(full);
+}
 
 type BuildResult = BuildResultV2 | BuildResultV3;
 
@@ -255,6 +270,35 @@ export default async function main(client: Client): Promise<number> {
   while (!project?.settings) {
     let confirmed = yes;
     if (!confirmed) {
+      if (client.nonInteractive) {
+        outputAgentError(
+          client,
+          {
+            status: AGENT_STATUS.ERROR,
+            reason: AGENT_REASON.PROJECT_SETTINGS_REQUIRED,
+            message:
+              'No project settings found locally. Run pull to retrieve them, or re-run with --yes to pull automatically.',
+            next: [
+              {
+                command: buildCommandWithGlobalFlags(
+                  `pull --yes --environment ${target}`,
+                  client.argv
+                ),
+                when: 'retrieve project settings',
+              },
+              {
+                command: buildCommandWithGlobalFlags(
+                  'build --yes',
+                  client.argv
+                ),
+                when: 're-run build after pull',
+              },
+            ],
+          },
+          1
+        );
+        return 1;
+      }
       if (!isTTY) {
         output.print(
           `No Project Settings found locally. Run ${cli.getCommandName(
@@ -272,7 +316,8 @@ export default async function main(client: Client): Promise<number> {
       );
     }
     if (!confirmed) {
-      output.print(`Canceled. No Project Settings retrieved.\n`);
+      if (!client.nonInteractive)
+        output.print(`Canceled. No Project Settings retrieved.\n`);
       return 0;
     }
     const { argv: originalArgv } = client;
@@ -317,7 +362,7 @@ export default async function main(client: Client): Promise<number> {
     cliVersion: cliPkg.version,
   };
 
-  if (!process.env.VERCEL_BUILD_IMAGE) {
+  if (!process.env.VERCEL_BUILD_IMAGE && !client.nonInteractive) {
     output.warn(
       'Build not running on Vercel. System environment variables will not be available.'
     );
@@ -371,8 +416,58 @@ export default async function main(client: Client): Promise<number> {
       await rootSpan.stop();
     }
 
+    if (client.nonInteractive) {
+      const relOutputDir = relative(cwd, outputDir);
+      client.stdout.write(
+        `${JSON.stringify(
+          {
+            status: AGENT_STATUS.OK,
+            outputDir: outputDir,
+            outputDirRelative: relOutputDir.startsWith('..')
+              ? outputDir
+              : relOutputDir,
+            target,
+            message: 'Build completed successfully.',
+            next: [
+              {
+                command: buildCommandWithGlobalFlags('deploy', client.argv),
+                when: 'Deploy the build output',
+              },
+            ],
+          },
+          null,
+          2
+        )}\n`
+      );
+    }
     return 0;
   } catch (err: any) {
+    if (client.nonInteractive) {
+      client.stdout.write(
+        `${JSON.stringify(
+          {
+            status: AGENT_STATUS.ERROR,
+            reason: 'build_failed',
+            message: err?.message ?? String(err),
+            next: [
+              {
+                command: buildCommandWithGlobalFlags('pull --yes', client.argv),
+                when: 'Ensure project settings are present',
+              },
+              {
+                command: buildCommandWithGlobalFlags(
+                  'build --yes',
+                  client.argv
+                ),
+                when: 're-run build',
+              },
+            ],
+          },
+          null,
+          2
+        )}\n`
+      );
+    }
     output.prettyError(err);
 
     // Write error to `builds.json` file
@@ -1283,14 +1378,16 @@ async function doBuild(
   await writeFlagsJSON(buildResults.values(), outputDir);
 
   const relOutputDir = relative(cwd, outputDir);
-  output.print(
-    `${prependEmoji(
-      `Build Completed in ${chalk.bold(
-        relOutputDir.startsWith('..') ? outputDir : relOutputDir
-      )} ${chalk.gray(buildStamp())}`,
-      emoji('success')
-    )}\n`
-  );
+  if (!client.nonInteractive) {
+    output.print(
+      `${prependEmoji(
+        `Build Completed in ${chalk.bold(
+          relOutputDir.startsWith('..') ? outputDir : relOutputDir
+        )} ${chalk.gray(buildStamp())}`,
+        emoji('success')
+      )}\n`
+    );
+  }
 
   // Analyze .vc-config.json files if environment variable is set
   if (process.env.VERCEL_ANALYZE_BUILD_OUTPUT === '1') {

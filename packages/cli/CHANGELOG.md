@@ -1,5 +1,20 @@
 # vercel
 
+## 50.34.3
+
+### Patch Changes
+
+- Update CertMissing error message and type to be accurate ([#15657](https://github.com/vercel/vercel/pull/15657))
+
+- Updated `vercel metrics` to align with the observability API schema/query contract. The CLI now uses API-fetched schema metadata for validation and output, resolves project scope to canonical project IDs before querying, and documents `--project` as accepting either a project name or ID. ([#15619](https://github.com/vercel/vercel/pull/15619))
+
+- Fix telemetry, add better error handling ([#15648](https://github.com/vercel/vercel/pull/15648))
+
+- Track project_id when possible inside cli ([#15633](https://github.com/vercel/vercel/pull/15633))
+
+- Updated dependencies [[`7ae5de45a681b6b7297f38a4f8fa5a4fd394f2ea`](https://github.com/vercel/vercel/commit/7ae5de45a681b6b7297f38a4f8fa5a4fd394f2ea)]:
+  - @vercel/go@3.4.6
+
 ## 50.34.2
 
 ### Patch Changes
