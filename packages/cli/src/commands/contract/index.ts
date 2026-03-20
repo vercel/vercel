@@ -41,7 +41,7 @@ export default async function contract(client: Client): Promise<number> {
   if (parsedArgs.flags['--help']) {
     telemetry.trackCliFlagHelp('contract');
     print(help(contractCommand, { columns: client.stderr.columns }));
-    return 0;
+    return 2;
   }
 
   const formatResult = validateJsonOutput(parsedArgs.flags);

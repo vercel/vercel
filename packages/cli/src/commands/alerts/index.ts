@@ -40,7 +40,7 @@ export default async function alerts(client: Client): Promise<number> {
   if (needHelp) {
     telemetry.trackCliFlagHelp('alerts', subcommandOriginal);
     output.print(help(alertsCommand, { columns: client.stderr.columns }));
-    return 0;
+    return 2;
   }
 
   telemetry.trackCliSubcommandLs(subcommandOriginal);

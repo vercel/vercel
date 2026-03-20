@@ -53,7 +53,7 @@ export default async function main(client: Client) {
   if (!subcommand && needHelp) {
     telemetry.trackCliFlagHelp(cacheCommand.name);
     output.print(help(cacheCommand, { columns: client.stderr.columns }));
-    return 0;
+    return 2;
   }
 
   function printHelp(command: Command) {

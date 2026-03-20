@@ -33,7 +33,7 @@ export default async function openCommandHandler(
   if (parsedArgs.flags['--help']) {
     telemetry.trackCliFlagHelp('open');
     output.print(help(openCommand, { columns: client.stderr.columns }));
-    return 0;
+    return 2;
   }
 
   const autoConfirm = !!parsedArgs.flags['--yes'];
