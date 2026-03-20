@@ -146,7 +146,7 @@ async function isPluginInstalledForTarget(target: string): Promise<boolean> {
 
 async function confirm(client: Client, message: string): Promise<boolean> {
   if (!client.stdin.isTTY) {
-    return true;
+    return client.isAgent;
   }
   return client.input.confirm(message, true);
 }
