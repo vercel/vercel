@@ -49,6 +49,7 @@ import {
   resetInstalledPythonsCache,
 } from '../src/version';
 import type { PythonConstraint, PythonPackage } from '@vercel/python-analysis';
+import { PythonManifestConvertedKind } from '@vercel/python-analysis';
 import { build } from '../src/index';
 import { createVenvEnv, getVenvBinDir } from '../src/utils';
 import { UV_PYTHON_DOWNLOADS_MODE, getProtectedUvEnv } from '../src/uv';
@@ -91,17 +92,36 @@ function makeConstraint(version: string, source: string): PythonConstraint {
   };
 }
 
-function makePackage(constraints?: PythonConstraint[]): PythonPackage {
+function makePackage(
+  constraints?: PythonConstraint[],
+  options?: { convertedFrom?: PythonManifestConvertedKind }
+): PythonPackage {
+  if (options?.convertedFrom) {
+    return {
+      requiresPython: constraints,
+      manifest: {
+        path: options.convertedFrom,
+        data: {},
+        origin: {
+          kind: options.convertedFrom,
+          path: options.convertedFrom,
+        },
+      },
+    };
+  }
   return { requiresPython: constraints };
 }
 
 function selectVersion(opts: {
   constraints?: PythonConstraint[];
   isDev?: boolean;
+  convertedFrom?: PythonManifestConvertedKind;
 }) {
   return resolvePythonVersion({
     isDev: opts.isDev,
-    pythonPackage: makePackage(opts.constraints),
+    pythonPackage: makePackage(opts.constraints, {
+      convertedFrom: opts.convertedFrom,
+    }),
     rootDir: '/tmp',
   });
 }
@@ -161,11 +181,12 @@ afterEach(() => {
 });
 
 it('should only match supported versions, otherwise throw an error', () => {
-  makeMockPython('3.9');
+  makeMockPython('3.12');
   const { pythonVersion: result } = selectVersion({
-    constraints: [makeConstraint('3.9', 'Pipfile.lock')],
+    constraints: [makeConstraint('3.12', 'Pipfile.lock')],
+    convertedFrom: PythonManifestConvertedKind.PipfileLock,
   });
-  expect(result).toHaveProperty('runtime', 'python3.9');
+  expect(result).toHaveProperty('runtime', 'python3.12');
 });
 
 it('should ignore minor version in vercel dev', () => {
@@ -191,13 +212,13 @@ it('should ignore minor version in vercel dev', () => {
 });
 
 describe('requires-python range parsing', () => {
-  it('selects latest installed within range ">=3.10,<3.12"', () => {
-    makeMockPython('3.10');
-    makeMockPython('3.11');
+  it('selects latest installed within range ">=3.12,<3.14"', () => {
+    makeMockPython('3.12');
+    makeMockPython('3.13');
     const { pythonVersion: result } = selectVersion({
-      constraints: [makeConstraint('>=3.10,<3.12', 'pyproject.toml')],
+      constraints: [makeConstraint('>=3.12,<3.14', 'pyproject.toml')],
     });
-    expect(result).toHaveProperty('runtime', 'python3.11');
+    expect(result).toHaveProperty('runtime', 'python3.12');
   });
 
   it('selects highest allowed when upper bound inclusive (>=3.10,<=3.12)', () => {
@@ -209,13 +230,13 @@ describe('requires-python range parsing', () => {
     expect(result).toHaveProperty('runtime', 'python3.12');
   });
 
-  it('respects compatible release "~=3.10.0" (>=3.10.0,<3.11.0)', () => {
-    makeMockPython('3.10');
-    makeMockPython('3.11');
+  it('respects compatible release "~=3.12.0" (>=3.12.0,<3.13.0)', () => {
+    makeMockPython('3.12');
+    makeMockPython('3.13');
     const { pythonVersion: result } = selectVersion({
-      constraints: [makeConstraint('~=3.10.0', 'pyproject.toml')],
+      constraints: [makeConstraint('~=3.12.0', 'pyproject.toml')],
     });
-    expect(result).toHaveProperty('runtime', 'python3.10');
+    expect(result).toHaveProperty('runtime', 'python3.12');
   });
 });
 
@@ -318,57 +339,36 @@ describe('Python 3.13 and 3.14 support', () => {
 
 describe('.python-version file support', () => {
   it('selects Python version from .python-version source', () => {
-    makeMockPython('3.11');
-    makeMockPython('3.12');
-    const { pythonVersion: result } = selectVersion({
-      constraints: [makeConstraint('3.11', '.python-version')],
-    });
-    expect(result).toHaveProperty('runtime', 'python3.11');
-  });
-
-  it('uses exact match for .python-version (like Pipfile.lock)', () => {
-    makeMockPython('3.10');
-    makeMockPython('3.11');
-    makeMockPython('3.12');
-    const { pythonVersion: result } = selectVersion({
-      constraints: [makeConstraint('3.10', '.python-version')],
-    });
-    // Should match exactly 3.10, not pick the latest
-    expect(result).toHaveProperty('runtime', 'python3.10');
-  });
-
-  it('warns and falls back when .python-version specifies unavailable version', () => {
     makeMockPython('3.12');
     makeMockPython('3.13');
-    // Request 3.9 which is not installed
     const { pythonVersion: result } = selectVersion({
-      constraints: [makeConstraint('3.9', '.python-version')],
+      constraints: [makeConstraint('3.13', '.python-version')],
     });
-    // Should fall back to default
-    expect(result).toHaveProperty('runtime', 'python3.12');
-    expect(warningMessages[0]).toContain('not installed and will be ignored');
+    expect(result).toHaveProperty('runtime', 'python3.13');
   });
 
-  it('warns and falls back when .python-version specifies unrecognized version', () => {
+  it('uses exact match for .python-version', () => {
     makeMockPython('3.12');
+    makeMockPython('3.13');
+    makeMockPython('3.14');
     const { pythonVersion: result } = selectVersion({
-      constraints: [makeConstraint('999', '.python-version')],
+      constraints: [makeConstraint('3.13', '.python-version')],
     });
-    // Should fall back to default
-    expect(result).toHaveProperty('runtime', 'python3.12');
-    expect(warningMessages[0]).toContain('invalid and will be ignored');
+    // Should match exactly 3.13, not pick 3.12 (default) or 3.14 (latest)
+    expect(result).toHaveProperty('runtime', 'python3.13');
   });
 
   it('logs correct source name when using .python-version', () => {
-    makeMockPython('3.11');
+    makeMockPython('3.12');
+    makeMockPython('3.13');
     // Spy on console.log to verify the message
     const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
     try {
       selectVersion({
-        constraints: [makeConstraint('3.11', '.python-version')],
+        constraints: [makeConstraint('3.13', '.python-version')],
       });
       expect(logSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Using Python 3.11 from .python-version')
+        expect.stringContaining('Using Python 3.13 from .python-version')
       );
     } finally {
       logSpy.mockRestore();
@@ -419,13 +419,14 @@ describe('default Python version behavior', () => {
 
 describe('fallback behavior when requested version is not installed', () => {
   it('falls back to DEFAULT_PYTHON_VERSION_STRING when Pipfile.lock requests unavailable version', () => {
-    // Setup: 3.14, 3.13, 3.12 are installed, but NOT 3.9
+    // Setup: 3.14, 3.13, 3.12 are installed, but 3.9 is not a known version
     makeMockPython('3.14');
     makeMockPython('3.13');
     makeMockPython(DEFAULT_PYTHON_VERSION_STRING); // 3.12
 
     const { pythonVersion: result } = selectVersion({
       constraints: [makeConstraint('3.9', 'Pipfile.lock')],
+      convertedFrom: PythonManifestConvertedKind.PipfileLock,
     });
 
     // Should fall back to 3.12 (the default), NOT 3.14 (the latest)
@@ -433,40 +434,151 @@ describe('fallback behavior when requested version is not installed', () => {
       'runtime',
       `python${DEFAULT_PYTHON_VERSION_STRING}`
     );
-    expect(warningMessages[0]).toContain('not installed and will be ignored');
+    expect(warningMessages[0]).toContain('invalid and will be ignored');
   });
 
   it('falls back to latest installed when requested AND default are both unavailable', () => {
-    // Setup: 3.14, 3.13 are installed, but NOT 3.9 or 3.12
+    // Setup: 3.14, 3.13 are installed, but NOT 3.12
     makeMockPython('3.14');
     makeMockPython('3.13');
-    // Note: NOT installing 3.12 (default) or 3.9 (requested)
+    // Note: NOT installing 3.12 (default)
 
     const { pythonVersion: result } = selectVersion({
       constraints: [makeConstraint('3.9', 'Pipfile.lock')],
+      convertedFrom: PythonManifestConvertedKind.PipfileLock,
     });
 
     // Should fall back to 3.14 (latest installed) since 3.12 is also unavailable
     expect(result).toHaveProperty('runtime', 'python3.14');
-    expect(warningMessages[0]).toContain('not installed and will be ignored');
+    expect(warningMessages[0]).toContain('invalid and will be ignored');
   });
 
-  it('falls back to DEFAULT_PYTHON_VERSION_STRING when pyproject.toml requests unavailable version', () => {
-    // Setup: 3.14, 3.13, 3.12 are installed, but NOT 3.9
+  it('throws when pyproject.toml requests unsupported version', () => {
+    // Setup: 3.14, 3.13, 3.12 are installed, but ==3.9 is not supported
     makeMockPython('3.14');
     makeMockPython('3.13');
     makeMockPython(DEFAULT_PYTHON_VERSION_STRING); // 3.12
 
-    const { pythonVersion: result } = selectVersion({
-      constraints: [makeConstraint('==3.9', 'pyproject.toml')],
-    });
+    expect(() =>
+      selectVersion({
+        constraints: [makeConstraint('==3.9', 'pyproject.toml')],
+      })
+    ).toThrow(/not compatible with the available Python versions/);
+  });
+});
 
-    // Should fall back to 3.12 (the default), NOT 3.14 (the latest)
-    expect(result).toHaveProperty(
-      'runtime',
-      `python${DEFAULT_PYTHON_VERSION_STRING}`
+describe('unsatisfiable version constraint error', () => {
+  it('throws when .python-version specifies unsupported version 3.8', () => {
+    makeMockPython('3.12');
+    expect(() =>
+      selectVersion({
+        constraints: [makeConstraint('3.8', '.python-version')],
+      })
+    ).toThrow(
+      /not compatible with the available Python versions \(3\.14, 3\.13, 3\.12\)/
     );
-    expect(warningMessages[0]).toContain('not installed and will be ignored');
+  });
+
+  it('throws when .python-version specifies unsupported version 3.11', () => {
+    makeMockPython('3.11');
+    makeMockPython('3.12');
+    expect(() =>
+      selectVersion({
+        constraints: [makeConstraint('3.11', '.python-version')],
+      })
+    ).toThrow(/not compatible with the available Python versions/);
+  });
+
+  it('throws when .python-version specifies >=3.8,<3.12', () => {
+    makeMockPython('3.12');
+    expect(() =>
+      selectVersion({
+        constraints: [makeConstraint('>=3.8,<3.12', '.python-version')],
+      })
+    ).toThrow(/not compatible with the available Python versions/);
+  });
+
+  it('throws when pyproject.toml requires-python excludes all supported versions', () => {
+    makeMockPython('3.12');
+    expect(() =>
+      selectVersion({
+        constraints: [makeConstraint('>=3.7,<3.9', 'pyproject.toml')],
+      })
+    ).toThrow(/not compatible with the available Python versions/);
+  });
+
+  it('throws when pyproject.toml pins to ==3.11.*', () => {
+    makeMockPython('3.11');
+    makeMockPython('3.12');
+    expect(() =>
+      selectVersion({
+        constraints: [makeConstraint('~=3.11.0', 'pyproject.toml')],
+      })
+    ).toThrow(/not compatible with the available Python versions/);
+  });
+
+  it('does not throw when .python-version specifies 3.12', () => {
+    makeMockPython('3.12');
+    const { pythonVersion: result } = selectVersion({
+      constraints: [makeConstraint('3.12', '.python-version')],
+    });
+    expect(result).toHaveProperty('runtime', 'python3.12');
+  });
+
+  it('does not throw when .python-version specifies >=3.12', () => {
+    makeMockPython('3.12');
+    makeMockPython('3.13');
+    const { pythonVersion: result } = selectVersion({
+      constraints: [makeConstraint('>=3.12', '.python-version')],
+    });
+    expect(result).toHaveProperty('runtime', 'python3.12');
+  });
+
+  it('does not throw when pyproject.toml specifies >=3.9 (3.12 satisfies)', () => {
+    makeMockPython('3.12');
+    const { pythonVersion: result } = selectVersion({
+      constraints: [makeConstraint('>=3.9', 'pyproject.toml')],
+    });
+    expect(result).toHaveProperty('runtime', 'python3.12');
+  });
+
+  it('does not throw for Pipfile.lock with unsupported version (auto-upgrades instead)', () => {
+    makeMockPython('3.9');
+    makeMockPython('3.12');
+    const { pythonVersion: result } = selectVersion({
+      constraints: [makeConstraint('3.9', 'Pipfile.lock')],
+      convertedFrom: PythonManifestConvertedKind.PipfileLock,
+    });
+    // Pipfile.lock auto-upgrades to default (3.12) instead of throwing
+    expect(result).toHaveProperty('runtime', 'python3.12');
+  });
+
+  it('does not throw for requirements.txt with unsupported version', () => {
+    makeMockPython('3.9');
+    makeMockPython('3.12');
+    const { pythonVersion: result } = selectVersion({
+      constraints: [makeConstraint('3.9', 'requirements.txt')],
+      convertedFrom: PythonManifestConvertedKind.RequirementsTxt,
+    });
+    expect(result).toHaveProperty('runtime', 'python3.12');
+  });
+
+  it('includes version string in error message', () => {
+    makeMockPython('3.12');
+    expect(() =>
+      selectVersion({
+        constraints: [makeConstraint('>=3.7,<3.9', 'pyproject.toml')],
+      })
+    ).toThrow(/">=3\.7,<3\.9"/);
+  });
+
+  it('includes source in error message', () => {
+    makeMockPython('3.12');
+    expect(() =>
+      selectVersion({
+        constraints: [makeConstraint('3.8', '.python-version')],
+      })
+    ).toThrow(/\.python-version/);
   });
 });
 
@@ -518,7 +630,7 @@ describe('createPyprojectToml', () => {
 });
 
 it('should select default or latest installed version when no Piplock detected', () => {
-  makeMockPython('3.10');
+  makeMockPython('3.13');
   const { pythonVersion: result } = selectVersion({
     constraints: undefined,
   });
@@ -529,9 +641,10 @@ it('should select default or latest installed version when no Piplock detected',
 });
 
 it('should select latest supported installed version and warn when invalid Piplock detected', () => {
-  makeMockPython('3.10');
+  makeMockPython('3.13');
   const { pythonVersion: result } = selectVersion({
     constraints: [makeConstraint('999', 'Pipfile.lock')],
+    convertedFrom: PythonManifestConvertedKind.PipfileLock,
   });
   expect(result).toHaveProperty('runtime');
   expect(result.runtime).toMatch(/^python3\.\d+$/);
@@ -544,6 +657,7 @@ it('should throw if uv not found', () => {
   expect(() =>
     selectVersion({
       constraints: [makeConstraint('3.6', 'Pipfile.lock')],
+      convertedFrom: PythonManifestConvertedKind.PipfileLock,
     })
   ).toThrow('uv is required but was not found in PATH.');
   expect(warningMessages).toStrictEqual([]);
@@ -565,38 +679,15 @@ it('should throw if no python versions installed', () => {
   expect(() =>
     selectVersion({
       constraints: [makeConstraint('3.6', 'Pipfile.lock')],
+      convertedFrom: PythonManifestConvertedKind.PipfileLock,
     })
   ).toThrow('Unable to find any supported Python versions.');
   expect(warningMessages).toStrictEqual([]);
 });
 
-it('should throw for discontinued versions', () => {
-  global.Date.now = () => new Date('2022-07-31').getTime();
-  makeMockPython('3.6');
-
-  expect(() =>
-    selectVersion({
-      constraints: [makeConstraint('3.6', 'Pipfile.lock')],
-    })
-  ).toThrow(
-    'Python version "3.6" detected in Pipfile.lock is discontinued and must be upgraded.'
-  );
-  expect(warningMessages).toStrictEqual([]);
-});
-
-it('should warn for deprecated versions, soon to be discontinued', () => {
-  global.Date.now = () => new Date('2021-07-01').getTime();
-  makeMockPython('3.6');
-
-  expect(
-    selectVersion({
-      constraints: [makeConstraint('3.6', 'Pipfile.lock')],
-    }).pythonVersion
-  ).toHaveProperty('runtime', 'python3.6');
-  expect(warningMessages).toStrictEqual([
-    'Error: Python version "3.6" detected in Pipfile.lock has reached End-of-Life. Deployments created on or after 2022-07-18 will fail to build. https://vercel.link/python-version',
-  ]);
-});
+// NOTE: The discontinued version tests for 3.6 were removed because 3.6 is no
+// longer in allOptions.  The discontinueDate infrastructure is retained for
+// future use when a currently supported version needs to be sunset.
 
 /**
  * Generates the JSON output for `uv python list --only-installed --output-format json`
@@ -821,8 +912,8 @@ describe('python version selection from uv.lock and pyproject.toml', () => {
   beforeEach(() => {
     mockWorkPath = path.join(tmpdir(), `python-uvlock-test-${Date.now()}`);
     fs.mkdirSync(mockWorkPath, { recursive: true });
-    makeMockPython('3.11');
-    makeMockPython('3.10');
+    makeMockPython('3.12');
+    makeMockPython('3.13');
   });
 
   afterEach(() => {
@@ -857,7 +948,7 @@ describe('python version selection from uv.lock and pyproject.toml', () => {
     const files = {
       'handler.py': new FileBlob({ data: 'def handler(): pass' }),
       'pyproject.toml': new FileBlob({
-        data: '[project]\nname = "x"\nversion = "0.0.1"\nrequires-python = ">=3.10,<3.12"\n',
+        data: '[project]\nname = "x"\nversion = "0.0.1"\nrequires-python = ">=3.12,<3.14"\n',
       }),
     } as Record<string, FileBlob>;
 
@@ -874,11 +965,11 @@ describe('python version selection from uv.lock and pyproject.toml', () => {
     expect(handler).toBeDefined();
   });
 
-  it('throws when pyproject.toml requires discontinued python version', async () => {
+  it('throws when pyproject.toml requires unsupported python version', async () => {
     const files = {
       'handler.py': new FileBlob({ data: 'def handler(): pass' }),
       'pyproject.toml': new FileBlob({
-        data: '[project]\nname = "x"\nversion = "0.0.1"\nrequires-python = ">=3.6,<3.7"\n',
+        data: '[project]\nname = "x"\nversion = "0.0.1"\nrequires-python = ">=3.9,<3.10"\n',
       }),
     } as Record<string, FileBlob>;
 
@@ -891,7 +982,7 @@ describe('python version selection from uv.lock and pyproject.toml', () => {
         config: {},
         repoRootPath: mockWorkPath,
       })
-    ).rejects.toThrow(/discontinued/i);
+    ).rejects.toThrow(/not compatible with the available Python versions/i);
   });
 });
 
@@ -921,7 +1012,7 @@ describe('uv workspace lockfile resolution (workspace root above workPath)', () 
     );
 
     // Setup mocked Python + uv
-    makeMockPython('3.9');
+    makeMockPython('3.12');
 
     // Override the mock uv binary to emulate workspace behavior.
     // The lock command will create uv.lock at workspace root via repoRoot setup.
@@ -967,7 +1058,7 @@ describe('uv workspace lockfile resolution (workspace root above workPath)', () 
           '[project]',
           'name = "python-app2"',
           'version = "0.0.1"',
-          'requires-python = ">=3.9,<3.10"',
+          'requires-python = ">=3.12,<3.13"',
           'dependencies = ["fastapi"]',
           '',
         ].join('\n'),
@@ -1504,7 +1595,7 @@ describe('handlerFunction validation', () => {
   beforeEach(() => {
     mockWorkPath = path.join(tmpdir(), `python-handler-func-${Date.now()}`);
     fs.mkdirSync(mockWorkPath, { recursive: true });
-    makeMockPython('3.11');
+    makeMockPython('3.12');
   });
 
   afterEach(() => {
@@ -1646,7 +1737,8 @@ describe('python version fallback logging', () => {
   beforeEach(() => {
     mockWorkPath = path.join(tmpdir(), `python-version-log-${Date.now()}`);
     fs.mkdirSync(mockWorkPath, { recursive: true });
-    makeMockPython('3.11');
+    makeMockPython('3.12');
+    makeMockPython('3.13');
     consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
   });
 
@@ -1689,7 +1781,7 @@ describe('python version fallback logging', () => {
     const files = {
       'handler.py': new FileBlob({ data: 'def handler(): pass' }),
       'pyproject.toml': new FileBlob({
-        data: '[project]\nname = "x"\nversion = "0.0.1"\nrequires-python = ">=3.11,<3.13"\n',
+        data: '[project]\nname = "x"\nversion = "0.0.1"\nrequires-python = ">=3.12,<3.14"\n',
       }),
     } as Record<string, FileBlob>;
 
@@ -1703,14 +1795,14 @@ describe('python version fallback logging', () => {
     });
 
     expect(consoleLogSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Using Python 3.11 from pyproject.toml')
+      expect.stringContaining('Using Python 3.12 from pyproject.toml')
     );
   });
 
   it('logs when Python version is found in .python-version', async () => {
     const files = {
       'handler.py': new FileBlob({ data: 'def handler(): pass' }),
-      '.python-version': new FileBlob({ data: '3.11\n' }),
+      '.python-version': new FileBlob({ data: '3.13\n' }),
     } as Record<string, FileBlob>;
 
     await build({
@@ -1723,7 +1815,7 @@ describe('python version fallback logging', () => {
     });
 
     expect(consoleLogSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Using Python 3.11 from .python-version')
+      expect.stringContaining('Using Python 3.13 from .python-version')
     );
   });
 });
@@ -1739,9 +1831,9 @@ describe('.python-version file priority', () => {
       `python-version-file-priority-${Date.now()}`
     );
     fs.mkdirSync(mockWorkPath, { recursive: true });
-    makeMockPython('3.10');
-    makeMockPython('3.11');
     makeMockPython('3.12');
+    makeMockPython('3.13');
+    makeMockPython('3.14');
     consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
     consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
   });
@@ -1757,9 +1849,9 @@ describe('.python-version file priority', () => {
   it('.python-version takes priority over pyproject.toml', async () => {
     const files = {
       'handler.py': new FileBlob({ data: 'def handler(): pass' }),
-      '.python-version': new FileBlob({ data: '3.10\n' }),
+      '.python-version': new FileBlob({ data: '3.13\n' }),
       'pyproject.toml': new FileBlob({
-        data: '[project]\nname = "x"\nversion = "0.0.1"\nrequires-python = ">=3.12"\n',
+        data: '[project]\nname = "x"\nversion = "0.0.1"\nrequires-python = ">=3.14"\n',
       }),
     } as Record<string, FileBlob>;
 
@@ -1772,9 +1864,9 @@ describe('.python-version file priority', () => {
       repoRootPath: mockWorkPath,
     });
 
-    // Should use 3.10 from .python-version, not 3.12 from pyproject.toml
+    // Should use 3.13 from .python-version, not 3.14 from pyproject.toml
     expect(consoleLogSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Using Python 3.10 from .python-version')
+      expect.stringContaining('Using Python 3.13 from .python-version')
     );
   });
 
@@ -1784,7 +1876,7 @@ describe('.python-version file priority', () => {
     // takes priority over the python_version in Pipfile.lock.
     const files = {
       'handler.py': new FileBlob({ data: 'def handler(): pass' }),
-      '.python-version': new FileBlob({ data: '3.10\n' }),
+      '.python-version': new FileBlob({ data: '3.13\n' }),
       'Pipfile.lock': new FileBlob({
         data: JSON.stringify({
           _meta: { requires: { python_version: '3.12' } },
@@ -1806,16 +1898,16 @@ describe('.python-version file priority', () => {
       repoRootPath: mockWorkPath,
     });
 
-    // Should use 3.10 from .python-version, not 3.12 from Pipfile.lock
+    // Should use 3.13 from .python-version, not 3.12 from Pipfile.lock
     expect(consoleLogSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Using Python 3.10 from .python-version')
+      expect.stringContaining('Using Python 3.13 from .python-version')
     );
   });
 
-  it('parses .python-version with patch version (3.11.4 -> 3.11)', async () => {
+  it('parses .python-version with patch version (3.12.4 -> 3.12)', async () => {
     const files = {
       'handler.py': new FileBlob({ data: 'def handler(): pass' }),
-      '.python-version': new FileBlob({ data: '3.11.4\n' }),
+      '.python-version': new FileBlob({ data: '3.12.4\n' }),
     } as Record<string, FileBlob>;
 
     await build({
@@ -1827,9 +1919,9 @@ describe('.python-version file priority', () => {
       repoRootPath: mockWorkPath,
     });
 
-    // Should extract 3.11 from 3.11.4
+    // Should extract 3.12 from 3.12.4
     expect(consoleLogSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Using Python 3.11 from .python-version')
+      expect.stringContaining('Using Python 3.12 from .python-version')
     );
   });
 
@@ -1837,7 +1929,7 @@ describe('.python-version file priority', () => {
     const files = {
       'handler.py': new FileBlob({ data: 'def handler(): pass' }),
       '.python-version': new FileBlob({
-        data: '# This is a comment\n3.11\n',
+        data: '# This is a comment\n3.13\n',
       }),
     } as Record<string, FileBlob>;
 
@@ -1850,9 +1942,9 @@ describe('.python-version file priority', () => {
       repoRootPath: mockWorkPath,
     });
 
-    // Should skip comment and use 3.11
+    // Should skip comment and use 3.13
     expect(consoleLogSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Using Python 3.11 from .python-version')
+      expect.stringContaining('Using Python 3.13 from .python-version')
     );
   });
 
@@ -1935,9 +2027,9 @@ describe('.python-version file auto-creation', () => {
   it('does NOT write .python-version file when one already exists', async () => {
     const files = {
       'handler.py': new FileBlob({ data: 'def handler(): pass' }),
-      '.python-version': new FileBlob({ data: '3.11\n' }),
+      '.python-version': new FileBlob({ data: '3.12\n' }),
       'pyproject.toml': new FileBlob({
-        data: '[project]\nname = "x"\nversion = "0.0.1"\nrequires-python = ">=3.9"\n',
+        data: '[project]\nname = "x"\nversion = "0.0.1"\nrequires-python = ">=3.12"\n',
       }),
     } as Record<string, FileBlob>;
 
@@ -1957,7 +2049,7 @@ describe('.python-version file auto-creation', () => {
 
     // Should use existing .python-version
     expect(consoleLogSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Using Python 3.11 from .python-version')
+      expect.stringContaining('Using Python 3.12 from .python-version')
     );
   });
 
