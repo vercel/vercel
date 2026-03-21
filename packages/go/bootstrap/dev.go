@@ -1,14 +1,7 @@
 //go:build vcdev
 // +build vcdev
 
-// vc-init-dev.go - Dev wrapper for standalone Go servers on Vercel
-//
-// This wrapper is used by `vercel dev` for standalone Go mode. It:
-// 1. Starts the user's server (`go run <target>`) on an internal port
-// 2. Proxies requests from the external dev port to the internal server
-// 3. Optionally strips generated services route prefixes before forwarding
-
-package main
+package bootstrap
 
 import (
 	"context"
@@ -47,7 +40,7 @@ func withEnvOverride(env []string, key, value string) []string {
 	return filtered
 }
 
-func main() {
+func DevMain() {
 	listenPortRaw := mustEnv("PORT")
 	listenPort, err := strconv.Atoi(listenPortRaw)
 	if err != nil || listenPort <= 0 {
@@ -56,9 +49,10 @@ func main() {
 	}
 
 	runTarget := mustEnv("__VC_GO_DEV_RUN_TARGET")
-	serviceRoutePrefix := resolveServiceRoutePrefix()
+	runDir := strings.TrimSpace(os.Getenv("__VC_GO_DEV_WORK_PATH"))
+	serviceRoutePrefix := ResolveServiceRoutePrefix()
 
-	userPort, err := findFreePort()
+	userPort, err := FindFreePort()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to find free port: %v\n", err)
 		os.Exit(1)
@@ -68,6 +62,9 @@ func main() {
 	defer cancel()
 
 	cmd := exec.CommandContext(ctx, "go", "run", runTarget)
+	if runDir != "" {
+		cmd.Dir = runDir
+	}
 	cmd.Env = withEnvOverride(os.Environ(), "PORT", strconv.Itoa(userPort))
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -77,7 +74,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := waitForServer(userPort, 30*time.Second); err != nil {
+	if err := WaitForServer(userPort, 30*time.Second); err != nil {
 		fmt.Fprintf(os.Stderr, "Go dev server failed to start: %v\n", err)
 		_ = cmd.Process.Kill()
 		os.Exit(1)
@@ -104,7 +101,7 @@ func main() {
 
 			if r.URL != nil {
 				originalPath := r.URL.Path
-				r.URL.Path = stripServiceRoutePrefix(r.URL.Path, serviceRoutePrefix)
+				r.URL.Path = StripServiceRoutePrefix(r.URL.Path, serviceRoutePrefix)
 				if r.URL.Path != originalPath {
 					r.URL.RawPath = ""
 				}

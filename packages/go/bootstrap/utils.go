@@ -1,15 +1,14 @@
-package main
+package bootstrap
 
 import (
 	"fmt"
 	"net"
-	"net/http"
 	"os"
 	"strings"
 	"time"
 )
 
-func findFreePort() (int, error) {
+func FindFreePort() (int, error) {
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		return 0, err
@@ -19,14 +18,14 @@ func findFreePort() (int, error) {
 	return port, nil
 }
 
-func waitForServer(port int, timeout time.Duration) error {
+func WaitForServer(port int, timeout time.Duration) error {
 	deadline := time.Now().Add(timeout)
-	url := fmt.Sprintf("http://127.0.0.1:%d/", port)
+	address := fmt.Sprintf("127.0.0.1:%d", port)
 
 	for time.Now().Before(deadline) {
-		resp, err := http.Get(url)
+		conn, err := net.DialTimeout("tcp", address, 500*time.Millisecond)
 		if err == nil {
-			resp.Body.Close()
+			conn.Close()
 			return nil
 		}
 		time.Sleep(50 * time.Millisecond)
@@ -73,7 +72,7 @@ func serviceRoutePrefixStripEnabled() bool {
 	return normalized == "1" || normalized == "true"
 }
 
-func resolveServiceRoutePrefix() string {
+func ResolveServiceRoutePrefix() string {
 	if !serviceRoutePrefixStripEnabled() {
 		return ""
 	}
@@ -81,7 +80,7 @@ func resolveServiceRoutePrefix() string {
 	return normalizeServiceRoutePrefix(os.Getenv("VERCEL_SERVICE_ROUTE_PREFIX"))
 }
 
-func stripServiceRoutePrefix(pathValue string, prefix string) string {
+func StripServiceRoutePrefix(pathValue string, prefix string) string {
 	if pathValue == "*" {
 		return pathValue
 	}

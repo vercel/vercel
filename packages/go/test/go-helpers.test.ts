@@ -26,20 +26,23 @@ describe('GoWrapper', () => {
   });
 
   it('includes compiler output when go build fails', async () => {
+    const expectedArgs = [
+      'build',
+      ...(process.platform === 'win32' ? [] : ['-ldflags', '-s -w']),
+      '-o',
+      '/tmp/3db69a0d/user-server',
+      '.',
+    ];
+    const expectedCommand = `Command failed: go ${expectedArgs.join(' ')}`;
     const compilerOutput =
       '# example.com/project\n./main.go:14:9: undefined: handler';
-    const execaError = Object.assign(
-      new Error(
-        'Command failed: go build -ldflags -s -w -o /tmp/3db69a0d/user-server .'
-      ),
-      {
-        stderr: compilerOutput,
-        stdout: '',
-      }
-    );
+    const execaError = Object.assign(new Error(expectedCommand), {
+      stderr: compilerOutput,
+      stdout: '',
+    });
     mockedExeca.mockReturnValue(createRejectedSubprocess(execaError) as any);
 
-    const go = new GoWrapper(process.env as any);
+    const go = new GoWrapper({} as any);
 
     let error: Error | undefined;
     try {
@@ -49,13 +52,11 @@ describe('GoWrapper', () => {
     }
 
     expect(error).toBeDefined();
-    expect(error?.message).toContain(
-      'Command failed: go build -ldflags -s -w -o /tmp/3db69a0d/user-server .'
-    );
+    expect(error?.message).toContain(expectedCommand);
     expect(error?.message).toContain(compilerOutput);
     expect(mockedExeca).toHaveBeenCalledWith(
       'go',
-      ['build', '-ldflags', '-s -w', '-o', '/tmp/3db69a0d/user-server', '.'],
+      expectedArgs,
       expect.objectContaining({ stdio: 'pipe' })
     );
   });

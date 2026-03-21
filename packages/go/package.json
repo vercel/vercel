@@ -11,13 +11,16 @@
   },
   "scripts": {
     "build": "node ../../utils/build-builder.mjs",
-    "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --runInBand --bail",
+    "test": "pnpm run test:go && jest --reporters=default --reporters=jest-junit --env node --verbose --runInBand --bail",
+    "test:go": "go test ./bootstrap ./test/go && go test -tags vcdev ./bootstrap",
+    "test-unit": "pnpm test test/go-helpers.test.ts test/index.test.ts test/parse-go-mod-version.test.ts test/standalone-server.test.ts",
     "test-e2e": "pnpm test test/integration-*",
     "type-check": "tsc --noEmit"
   },
   "files": [
     "dist",
-    "*.go"
+    "*.go",
+    "bootstrap"
   ],
   "devDependencies": {
     "@tootallnate/once": "1.1.2",
