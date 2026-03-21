@@ -1,0 +1,8 @@
+bin/
+obj/
+.vs/
+*.user
+.vscode/
+.vercel/
+.DS_Store
+.vercel

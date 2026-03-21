@@ -1,0 +1,36 @@
+{
+  "name": "@vercel/dotnet",
+  "version": "0.0.0",
+  "license": "Apache-2.0",
+  "main": "./dist/index",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vercel/vercel.git",
+    "directory": "packages/dotnet"
+  },
+  "scripts": {
+    "build": "node ../../utils/build-builder.mjs",
+    "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --runInBand --bail",
+    "type-check": "tsc --noEmit"
+  },
+  "files": [
+    "dist",
+    "bootstrap-linux-x64",
+    "bootstrap-linux-arm64",
+    "vc-init.go",
+    "vc-utils.go"
+  ],
+  "dependencies": {
+    "execa": "^1.0.0"
+  },
+  "devDependencies": {
+    "@types/execa": "^0.9.0",
+    "@types/fs-extra": "^5.0.5",
+    "@types/jest": "28.1.6",
+    "@types/node": "20.11.0",
+    "@vercel/build-utils": "workspace:*",
+    "fs-extra": "^7.0.0",
+    "jest-junit": "16.0.0",
+    "typescript": "4.9.5"
+  }
+}

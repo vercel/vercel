@@ -1,0 +1,17 @@
+{
+  "probes": [
+    {
+      "path": "/",
+      "status": 200,
+      "mustContain": "Hello from .NET on Vercel!"
+    },
+    {
+      "path": "/api/info",
+      "status": 200,
+      "mustContain": "dotnet",
+      "responseHeaders": {
+        "content-type": "/application\\/json/"
+      }
+    }
+  ]
+}
