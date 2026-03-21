@@ -124,7 +124,7 @@ export default async function link(client: Client) {
     // (e.g. no scope passed), currentTeam may be undefined or from saved config. If the user passed
     // --team to link but currentTeam is still unset, resolve to a team ID and set it so selectOrg
     // has a default; never set a raw slug (always use team ID).
-    const teamFlag = parsedArgs.flags['--team'];
+    const teamFlag = parsedArgs.flags['--team'] || parsedArgs.flags['--scope'];
     if (typeof teamFlag === 'string' && !client.config.currentTeam) {
       try {
         const teams = await getTeams(client);
