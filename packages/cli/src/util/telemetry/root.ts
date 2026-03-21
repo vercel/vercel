@@ -376,6 +376,13 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
+  trackCliCommandVpc(actual: string) {
+    this.trackCliCommand({
+      command: 'vpc',
+      value: actual,
+    });
+  }
+
   trackCliCommandWebhooks(actual: string) {
     this.trackCliCommand({
       command: 'webhooks',

@@ -51,6 +51,7 @@ import { upgradeCommand } from './upgrade/command';
 import { usageCommand } from './usage/command';
 import { whoamiCommand } from './whoami/command';
 import { blobCommand } from './blob/command';
+import { vpcCommand } from './vpc/command';
 import { webhooksCommand } from './webhooks/command';
 import type { Command } from './help';
 import output from '../output-manager';
@@ -105,6 +106,7 @@ const commandsStructs = [
   teamsCommand,
   telemetryCommand,
   upgradeCommand,
+  vpcCommand,
   webhooksCommand,
   usageCommand,
   whoamiCommand,

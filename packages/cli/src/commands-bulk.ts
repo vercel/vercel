@@ -51,5 +51,6 @@ export { default as teams } from './commands/teams';
 export { default as telemetry } from './commands/telemetry';
 export { default as upgrade } from './commands/upgrade';
 export { default as usage } from './commands/usage';
+export { default as vpc } from './commands/vpc';
 export { default as webhooks } from './commands/webhooks';
 export { default as whoami } from './commands/whoami';
