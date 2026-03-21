@@ -3,6 +3,8 @@ import {
   parseUvPythonRequest,
   parsePythonVersionFile,
   pythonRequestFromConstraint,
+  serializePythonRequest,
+  writePythonVersionFile,
 } from '../src/manifest/uv-python-version-parser';
 
 describe('parseUvPythonRequest', () => {
@@ -849,4 +851,207 @@ describe('pythonRequestFromConstraint', () => {
     const result = pythonRequestFromConstraint(constraint);
     expect(result.version?.variant).toBe('default');
   });
+});
+
+describe('serializePythonRequest', () => {
+  it('serializes empty request as "any"', () => {
+    expect(serializePythonRequest({})).toBe('any');
+  });
+
+  it('serializes implementation-only request', () => {
+    expect(serializePythonRequest({ implementation: 'cpython' })).toBe(
+      'cpython'
+    );
+    expect(serializePythonRequest({ implementation: 'pypy' })).toBe('pypy');
+    expect(serializePythonRequest({ implementation: 'graalpy' })).toBe(
+      'graalpy'
+    );
+  });
+
+  it('serializes version-only request', () => {
+    expect(
+      serializePythonRequest({
+        implementation: 'cpython',
+        version: {
+          constraint: [{ operator: '==', version: '3.12', prefix: '' }],
+          variant: 'default',
+        },
+      })
+    ).toBe('cpython@==3.12');
+  });
+
+  it('serializes patch-level version', () => {
+    expect(
+      serializePythonRequest({
+        implementation: 'cpython',
+        version: {
+          constraint: [{ operator: '==', version: '3.12.8', prefix: '' }],
+          variant: 'default',
+        },
+      })
+    ).toBe('cpython@==3.12.8');
+  });
+
+  it('serializes compound specifier', () => {
+    expect(
+      serializePythonRequest({
+        implementation: 'cpython',
+        version: {
+          constraint: [
+            { operator: '>=', version: '3.12', prefix: '' },
+            { operator: '<', version: '3.13', prefix: '' },
+          ],
+          variant: 'default',
+        },
+      })
+    ).toBe('cpython@>=3.12,<3.13');
+  });
+
+  it('serializes freethreaded variant', () => {
+    expect(
+      serializePythonRequest({
+        implementation: 'cpython',
+        version: {
+          constraint: [{ operator: '==', version: '3.13', prefix: '' }],
+          variant: 'freethreaded',
+        },
+      })
+    ).toBe('cpython@==3.13+freethreaded');
+  });
+
+  it('serializes debug variant', () => {
+    expect(
+      serializePythonRequest({
+        implementation: 'cpython',
+        version: {
+          constraint: [{ operator: '==', version: '3.12.0', prefix: '' }],
+          variant: 'debug',
+        },
+      })
+    ).toBe('cpython@==3.12.0+debug');
+  });
+
+  it('serializes freethreaded+debug variant', () => {
+    expect(
+      serializePythonRequest({
+        implementation: 'cpython',
+        version: {
+          constraint: [{ operator: '==', version: '3.13', prefix: '' }],
+          variant: 'freethreaded+debug',
+        },
+      })
+    ).toBe('cpython@==3.13+freethreaded+debug');
+  });
+
+  it('serializes gil variant', () => {
+    expect(
+      serializePythonRequest({
+        implementation: 'cpython',
+        version: {
+          constraint: [{ operator: '==', version: '3.14', prefix: '' }],
+          variant: 'gil',
+        },
+      })
+    ).toBe('cpython@==3.14+gil');
+  });
+
+  it('serializes gil+debug variant', () => {
+    expect(
+      serializePythonRequest({
+        implementation: 'cpython',
+        version: {
+          constraint: [{ operator: '==', version: '3.14', prefix: '' }],
+          variant: 'gil+debug',
+        },
+      })
+    ).toBe('cpython@==3.14+gil+debug');
+  });
+
+  it('serializes platform request', () => {
+    expect(
+      serializePythonRequest({
+        implementation: 'cpython',
+        version: {
+          constraint: [{ operator: '==', version: '3.12.3', prefix: '' }],
+          variant: 'default',
+        },
+        platform: { os: 'macos', arch: 'aarch64', libc: 'none' },
+      })
+    ).toBe('cpython-==3.12.3-macos-aarch64-none');
+  });
+
+  it('serializes platform request with missing fields as "any"', () => {
+    expect(
+      serializePythonRequest({
+        implementation: 'cpython',
+        version: {
+          constraint: [{ operator: '==', version: '3.12', prefix: '' }],
+          variant: 'default',
+        },
+        platform: { os: 'linux' },
+      })
+    ).toBe('cpython-==3.12-linux-any-any');
+  });
+});
+
+describe('writePythonVersionFile', () => {
+  it('writes a single request', () => {
+    const requests = [
+      {
+        implementation: 'cpython' as const,
+        version: {
+          constraint: [{ operator: '==', version: '3.12', prefix: '' }],
+          variant: 'default' as const,
+        },
+      },
+    ];
+    expect(writePythonVersionFile(requests)).toBe('cpython@==3.12\n');
+  });
+
+  it('writes multiple requests one per line', () => {
+    const requests = [
+      {
+        implementation: 'cpython' as const,
+        version: {
+          constraint: [{ operator: '==', version: '3.12', prefix: '' }],
+          variant: 'default' as const,
+        },
+      },
+      {
+        implementation: 'pypy' as const,
+        version: {
+          constraint: [{ operator: '==', version: '3.10', prefix: '' }],
+          variant: 'default' as const,
+        },
+      },
+    ];
+    expect(writePythonVersionFile(requests)).toBe(
+      'cpython@==3.12\npypy@==3.10\n'
+    );
+  });
+});
+
+describe('round-trip: parsePythonVersionFile → writePythonVersionFile', () => {
+  // Serialize the input, then verify that serializing again produces the same
+  // string — i.e. the canonical form is stable.  Both parses go through the
+  // same pep440 code path so no normalization is needed.
+  function roundTrip(input: string): string | null {
+    const parsed = parsePythonVersionFile(input);
+    if (parsed === null) return null;
+    return writePythonVersionFile(parsed);
+  }
+
+  function isStable(input: string) {
+    const serialized = roundTrip(input);
+    expect(roundTrip(serialized!)).toBe(serialized);
+  }
+
+  it('round-trips a bare patch version', () => isStable('3.12.8'));
+  it('round-trips a minor version', () => isStable('3.12'));
+  it('round-trips a compound specifier', () => isStable('>=3.12,<3.13'));
+  it('round-trips a freethreaded variant (short form normalizes to long)', () =>
+    isStable('3.13t'));
+  it('round-trips a platform request', () =>
+    isStable('cpython-3.12.3-macos-aarch64-none'));
+  it('round-trips multiple requests', () => isStable('3.12\npypy@3.10\n'));
 });

@@ -103,6 +103,7 @@ export { selectPython, selectPythonVersion } from './manifest/python-selector';
 // =============================================================================
 
 export { PythonAnalysisError } from './util/error';
+export { parseConfig } from './util/config';
 
 // =============================================================================
 // Schemas (runtime validation)
@@ -204,3 +205,16 @@ export {
   PythonVersionRequest,
   UnknownPythonImplementation,
 } from './manifest/python-specifiers';
+
+// =============================================================================
+// .python-version file serialization
+// =============================================================================
+
+export {
+  parsePythonVersionFile,
+  parseUvPythonRequest,
+  serializePythonRequest,
+  writePythonVersionFile,
+} from './manifest/uv-python-version-parser';
+
+export type { Pep440Constraint } from './manifest/pep440';

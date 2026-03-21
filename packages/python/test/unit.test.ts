@@ -49,11 +49,17 @@ import {
   resetInstalledPythonsCache,
 } from '../src/version';
 import type { PythonConstraint, PythonPackage } from '@vercel/python-analysis';
+import {
+  PythonConfigKind,
+  parsePythonVersionFile,
+  parseConfig,
+  PyProjectTomlSchema,
+} from '@vercel/python-analysis';
 import { build } from '../src/index';
 import { createVenvEnv, getVenvBinDir } from '../src/utils';
 import { UV_PYTHON_DOWNLOADS_MODE, getProtectedUvEnv } from '../src/uv';
 import { VERCEL_WORKERS_VERSION } from '../src/package-versions';
-import { createPyprojectToml } from '../src/install';
+import { createPyprojectToml, rewritePatchVersionPins } from '../src/install';
 import { detectDjangoPythonEntrypoint } from '../src/entrypoint';
 import { getDjangoSettings } from '../src/django';
 import { FileBlob } from '@vercel/build-utils';
@@ -2465,6 +2471,11 @@ describe('UV_PYTHON_DOWNLOADS environment variable protection', () => {
       expect(env.UV_PYTHON_DOWNLOADS).toBe(UV_PYTHON_DOWNLOADS_MODE);
     });
 
+    it('sets UV_PYTHON_DOWNLOADS to "never" inside the build container', () => {
+      const env = getProtectedUvEnv({ VERCEL_BUILD_IMAGE: '1' });
+      expect(env.UV_PYTHON_DOWNLOADS).toBe('never');
+    });
+
     it('overrides UV_PYTHON_DOWNLOADS when user tries to set it to "auto"', () => {
       const userEnv = { UV_PYTHON_DOWNLOADS: 'auto' };
       const env = getProtectedUvEnv(userEnv);
@@ -2513,5 +2524,189 @@ describe('UV_PYTHON_DOWNLOADS environment variable protection', () => {
       expect(env.PATH).toContain('/usr/bin');
       expect(env.UV_PYTHON_DOWNLOADS).toBe(UV_PYTHON_DOWNLOADS_MODE);
     });
+  });
+});
+
+describe('rewritePatchVersionPins', () => {
+  let tmpDir: string;
+  const originalEnv = process.env;
+
+  beforeEach(() => {
+    tmpDir = path.join(tmpdir(), `rewrite-patch-${Date.now()}`);
+    fs.mkdirSync(tmpDir, { recursive: true });
+    process.env = { ...originalEnv };
+  });
+
+  afterEach(() => {
+    process.env = originalEnv;
+    if (fs.existsSync(tmpDir)) fs.removeSync(tmpDir);
+  });
+
+  function makePvConfig(content: string) {
+    return {
+      configs: [
+        {
+          [PythonConfigKind.PythonVersion]: {
+            kind: PythonConfigKind.PythonVersion,
+            path: '.python-version',
+            data: parsePythonVersionFile(content)!,
+          },
+        },
+      ],
+    };
+  }
+
+  it('is a no-op outside the build container', async () => {
+    delete process.env.VERCEL_BUILD_IMAGE;
+    const content = '3.12.8\n';
+    const pvPath = path.join(tmpDir, '.python-version');
+    fs.writeFileSync(pvPath, content);
+
+    await rewritePatchVersionPins({
+      pythonPackage: makePvConfig(content),
+      rootDir: tmpDir,
+    });
+
+    expect(fs.readFileSync(pvPath, 'utf8')).toBe('3.12.8\n');
+  });
+
+  it('rewrites .python-version with a patch-level version to major.minor', async () => {
+    process.env.VERCEL_BUILD_IMAGE = '1';
+    const content = '3.12.8\n';
+    const pvPath = path.join(tmpDir, '.python-version');
+    fs.writeFileSync(pvPath, content);
+
+    await rewritePatchVersionPins({
+      pythonPackage: makePvConfig(content),
+      rootDir: tmpDir,
+    });
+
+    expect(fs.readFileSync(pvPath, 'utf8')).toBe('cpython@==3.12\n');
+  });
+
+  it('rewrites .python-version with compound patch constraints using correct operators', async () => {
+    process.env.VERCEL_BUILD_IMAGE = '1';
+    const content = '>=3.12.4,<=3.12.9\n';
+    const pvPath = path.join(tmpDir, '.python-version');
+    fs.writeFileSync(pvPath, content);
+
+    await rewritePatchVersionPins({
+      pythonPackage: makePvConfig(content),
+      rootDir: tmpDir,
+    });
+
+    // >=3.12.4 → >=3.12 (strip patch)
+    // <=3.12.9 → <3.13 (convert to exclusive upper bound)
+    expect(fs.readFileSync(pvPath, 'utf8')).toBe('cpython@>=3.12,<3.13\n');
+  });
+
+  it('rewrites .python-version with strict greater-than patch constraint', async () => {
+    process.env.VERCEL_BUILD_IMAGE = '1';
+    const content = '>3.12.4\n';
+    const pvPath = path.join(tmpDir, '.python-version');
+    fs.writeFileSync(pvPath, content);
+
+    await rewritePatchVersionPins({
+      pythonPackage: makePvConfig(content),
+      rootDir: tmpDir,
+    });
+
+    // >3.12.4 → >=3.12 (include all patches of 3.12)
+    expect(fs.readFileSync(pvPath, 'utf8')).toBe('cpython@>=3.12\n');
+  });
+
+  it('does not rewrite .python-version that already has only major.minor', async () => {
+    process.env.VERCEL_BUILD_IMAGE = '1';
+    const content = '3.12\n';
+    const pvPath = path.join(tmpDir, '.python-version');
+    fs.writeFileSync(pvPath, content);
+
+    await rewritePatchVersionPins({
+      pythonPackage: makePvConfig(content),
+      rootDir: tmpDir,
+    });
+
+    expect(fs.readFileSync(pvPath, 'utf8')).toBe('3.12\n');
+  });
+
+  function makePyprojectConfig(
+    content: string,
+    origin?: { kind: any; path: any }
+  ) {
+    return {
+      manifest: {
+        path: 'pyproject.toml',
+        data: parseConfig(content, 'pyproject.toml', PyProjectTomlSchema),
+        ...(origin ? { origin } : {}),
+      },
+    };
+  }
+
+  it('rewrites requires-python in native pyproject.toml with a patch-level pin', async () => {
+    process.env.VERCEL_BUILD_IMAGE = '1';
+    const content =
+      '[project]\nname = "myapp"\nversion = "0.1.0"\nrequires-python = "==3.12.8"\n';
+    const pyprojectPath = path.join(tmpDir, 'pyproject.toml');
+    fs.writeFileSync(pyprojectPath, content);
+
+    await rewritePatchVersionPins({
+      pythonPackage: makePyprojectConfig(content),
+      rootDir: tmpDir,
+    });
+
+    const updated = fs.readFileSync(pyprojectPath, 'utf8');
+    expect(updated).toContain('requires-python = "==3.12.*"'); // ==3.12 would mean exactly 3.12.0
+    expect(updated).not.toContain('==3.12.8');
+  });
+
+  it('rewrites requires-python with >=X.Y.Z style patch constraint', async () => {
+    process.env.VERCEL_BUILD_IMAGE = '1';
+    const content =
+      '[project]\nname = "myapp"\nversion = "0.1.0"\nrequires-python = ">=3.12.8,<3.13"\n';
+    const pyprojectPath = path.join(tmpDir, 'pyproject.toml');
+    fs.writeFileSync(pyprojectPath, content);
+
+    await rewritePatchVersionPins({
+      pythonPackage: makePyprojectConfig(content),
+      rootDir: tmpDir,
+    });
+
+    expect(fs.readFileSync(pyprojectPath, 'utf8')).toContain(
+      'requires-python = ">=3.12,<3.13"'
+    );
+  });
+
+  it('does not rewrite requires-python that has no patch-level version', async () => {
+    process.env.VERCEL_BUILD_IMAGE = '1';
+    const content =
+      '[project]\nname = "myapp"\nversion = "0.1.0"\nrequires-python = ">=3.12"\n';
+    const pyprojectPath = path.join(tmpDir, 'pyproject.toml');
+    fs.writeFileSync(pyprojectPath, content);
+
+    await rewritePatchVersionPins({
+      pythonPackage: makePyprojectConfig(content),
+      rootDir: tmpDir,
+    });
+
+    expect(fs.readFileSync(pyprojectPath, 'utf8')).toBe(content);
+  });
+
+  it('skips requires-python rewrite for converted manifests (origin set)', async () => {
+    process.env.VERCEL_BUILD_IMAGE = '1';
+    const content =
+      '[project]\nname = "myapp"\nversion = "0.1.0"\nrequires-python = "==3.12.8"\n';
+    const pyprojectPath = path.join(tmpDir, 'pyproject.toml');
+    fs.writeFileSync(pyprojectPath, content);
+
+    await rewritePatchVersionPins({
+      pythonPackage: makePyprojectConfig(content, {
+        kind: 'requirements.txt',
+        path: 'requirements.txt',
+      }),
+      rootDir: tmpDir,
+    });
+
+    // Converted manifests are handled elsewhere; file should be untouched
+    expect(fs.readFileSync(pyprojectPath, 'utf8')).toBe(content);
   });
 });
