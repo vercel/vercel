@@ -10,7 +10,7 @@ import { transform } from 'oxc-transform';
 import type { NodeFileTraceOptions } from './types.js';
 
 export const nodeFileTrace = async (args: NodeFileTraceOptions) => {
-  const { span } = args;
+  const { span = undefined } = args;
   const files: Files = {};
   const { tracedPaths } = args;
 
