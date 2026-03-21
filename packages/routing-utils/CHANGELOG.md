@@ -1,5 +1,11 @@
 # @vercel/routing-utils
 
+## 6.1.0
+
+### Minor Changes
+
+- Removed bulkRedirectsSchema ([#14340](https://github.com/vercel/vercel/pull/14340))
+
 ## 6.0.2
 
 ### Patch Changes
