@@ -1623,7 +1623,7 @@ describe.skipIf(flakey)('build', () => {
     );
 
     beforeEach(() => {
-      vi.stubEnv('FLAGS', 'vf_test_fake_sdk_key_for_testing');
+      vi.stubEnv('FLAGS', 'vf_server_test_fake_sdk_key_for_testing');
 
       vi.spyOn(globalThis, 'fetch').mockImplementation(async input => {
         const url = typeof input === 'string' ? input : input.toString();
