@@ -208,12 +208,12 @@ function formatNumber(
   return formatDecimal(value);
 }
 
-/** Chooses summary statistic columns for a given measure type. */
-function getStatColumns(measureType: MeasureType): StatColumn[] {
-  if (measureType === 'duration' || measureType === 'ratio') {
-    return ['avg', 'min', 'max'];
+/** Chooses summary statistic columns based on aggregation. */
+function getStatColumns(aggregation: Aggregation): StatColumn[] {
+  if (aggregation === 'sum') {
+    return ['total', 'avg', 'min', 'max'];
   }
-  return ['total', 'avg', 'min', 'max'];
+  return ['avg', 'min', 'max'];
 }
 
 /** Parses API cell values into finite numbers or null for missing/invalid. */
@@ -684,7 +684,7 @@ export function formatMetadataHeader(opts: MetadataHeaderOptions): string {
 
 /** Renders the summary table section. */
 export function formatSummaryTable(opts: SummaryTableOptions): string {
-  const statColumns = getStatColumns(opts.measureType);
+  const statColumns = getStatColumns(opts.aggregation);
   const header = [...opts.groupByFields, ...statColumns];
   const rows: string[][] = [header.map(name => chalk.bold(chalk.cyan(name)))];
 
@@ -771,6 +771,38 @@ export function formatSparklineSection(
 }
 
 /**
+ * Computes the display unit and measure type based on the base unit and
+ * aggregation. Certain aggregations transform the output semantics:
+ * - `percent` → values are 0-100 percentages regardless of base unit
+ * - `persecond` → values are rates in base unit per second
+ * - `unique` → values are distinct counts, unit is hidden
+ * - all others → values stay in the original unit
+ */
+export function getEffectiveDisplay(
+  baseUnit: string | undefined,
+  aggregation: Aggregation
+): { displayUnit: string | undefined; measureType: MeasureType } {
+  switch (aggregation) {
+    case 'percent':
+      return { displayUnit: '%', measureType: 'ratio' };
+    case 'persecond': {
+      const label = baseUnit ? formatUnitLabel(baseUnit) : undefined;
+      return {
+        displayUnit: label ? `${label}/s` : undefined,
+        measureType: getMeasureType(baseUnit ?? 'ratio'),
+      };
+    }
+    case 'unique':
+      return { displayUnit: undefined, measureType: 'count' };
+    default:
+      return {
+        displayUnit: baseUnit,
+        measureType: getMeasureType(baseUnit ?? 'ratio'),
+      };
+  }
+}
+
+/**
  * Composes final text output:
  * metadata + summary table + sparklines.
  * If there is no data, returns metadata and a deterministic `No data` line.
@@ -780,8 +812,10 @@ export function formatText(
   opts: FormatTextOptions
 ): string {
   const rollupColumn = getRollupColumnName(opts.measure, opts.aggregation);
-  const measureUnit = opts.measureUnit;
-  const measureType = getMeasureType(measureUnit ?? 'ratio');
+  const { displayUnit, measureType } = getEffectiveDisplay(
+    opts.measureUnit,
+    opts.aggregation
+  );
   const granularityMs = toGranularityMsFromDuration(opts.granularity);
 
   const { groups, series, groupValues } = extractGroupedSeries(
@@ -804,7 +838,7 @@ export function formatText(
     scope: opts.scope,
     projectName: opts.projectName,
     teamName: opts.teamName,
-    unit: measureUnit,
+    unit: displayUnit,
     groupCount: opts.groupBy.length > 0 ? groups.length : undefined,
   });
 
