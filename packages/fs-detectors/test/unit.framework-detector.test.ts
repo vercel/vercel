@@ -244,6 +244,33 @@ describe('detectFramework()', () => {
     expect(await detectFramework({ fs, frameworkList })).toBe('nextjs');
   });
 
+  it.each([
+    'server.cjs',
+    'server.js',
+    'server.mjs',
+    'server.mts',
+    'server.ts',
+    'server.cts',
+    'src/server.cjs',
+    'src/server.js',
+    'src/server.mjs',
+    'src/server.mts',
+    'src/server.ts',
+    'src/server.cts',
+  ])('Detect Node via `%s`', async entrypoint => {
+    const fs = new VirtualFilesystem({
+      'package.json': JSON.stringify({}),
+      [entrypoint]: '// server entrypoint',
+    });
+
+    expect(
+      await detectFramework({
+        fs,
+        frameworkList,
+      })
+    ).toBe('node');
+  });
+
   it('Detect frameworks based on ascending order in framework list', async () => {
     const fs = new VirtualFilesystem({
       'package.json': JSON.stringify({
@@ -578,7 +605,14 @@ describe('detectFrameworks()', () => {
       'import("hono")',
     ];
 
-    const filePaths = ['index.ts', 'index.js', 'src/index.ts', 'src/index.js'];
+    const filePaths = [
+      'index.ts',
+      'index.js',
+      'src/index.ts',
+      'src/index.js',
+      'server.ts',
+      'src/server.ts',
+    ];
 
     // Test each import syntax with each file path
     importSyntaxes.forEach(syntax => {
