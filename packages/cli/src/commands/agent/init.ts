@@ -6,10 +6,10 @@ import { KNOWN_AGENTS } from '@vercel/detect-agent';
 import { printError } from '../../util/error';
 import output from '../../output-manager';
 
-const BEST_PRACTICES_START = '<!-- VERCEL BEST PRACTICES START -->';
-const BEST_PRACTICES_END = '<!-- VERCEL BEST PRACTICES END -->';
+export const BEST_PRACTICES_START = '<!-- VERCEL BEST PRACTICES START -->';
+export const BEST_PRACTICES_END = '<!-- VERCEL BEST PRACTICES END -->';
 
-const BEST_PRACTICES_BODY = `## Best practices for developing on Vercel
+export const BEST_PRACTICES_BODY = `## Best practices for developing on Vercel
 
 These defaults are optimized for AI coding agents (and humans) working on apps that deploy to Vercel.
 
