@@ -13,6 +13,7 @@ import shutil
 import socket
 import sys
 import tempfile
+import time
 import unittest
 from typing import TYPE_CHECKING, Any
 
@@ -239,6 +240,25 @@ async def _read_stderr(
 ) -> str:
     assert proc.stderr is not None
     return (await proc.stderr.read()).decode()
+
+
+async def _wait_for_log_message_containing(
+    n1: N1Mock,
+    needle: str,
+    *,
+    timeout: float,
+) -> LogMessage:
+    deadline = time.monotonic() + timeout
+    while True:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise TimeoutError(
+                f"Timed out waiting for log containing {needle!r}"
+            )
+        log = await n1.wait_for_message(LogMessage, timeout=remaining)
+        decoded = base64.b64decode(log.payload.message).decode()
+        if needle in decoded:
+            return log
 
 
 class _RuntimeTestCase(unittest.IsolatedAsyncioTestCase):
@@ -470,6 +490,58 @@ class TestASGIApp(_RuntimeTestCase):
             data = sock.recv(4096)
             sock.close()
             self.assertIn(b"200", data)
+
+    async def test_background_tasks_delay_end_and_log_errors(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "background_tasks_asgi_app.py",
+            self.tmp_path,
+        )
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            started_at = time.monotonic()
+            resp = await _http_get(port, "/")
+            self.assertEqual(resp.status, 200)
+            self.assertEqual(resp.read().decode(), "ok")
+
+            await self.n1.wait_for_message(HandlerStartedMessage, timeout=5.0)
+            log = await _wait_for_log_message_containing(
+                self.n1,
+                "background-task-asgi-finished",
+                timeout=5.0,
+            )
+            await self.n1.wait_for_message(EndMessage, timeout=5.0)
+
+            elapsed = time.monotonic() - started_at
+            self.assertGreaterEqual(elapsed, 0.18)
+            self.assertIn(
+                "background-task-asgi-finished",
+                base64.b64decode(log.payload.message).decode(),
+            )
+
+            resp = await _http_get(port, "/error")
+            self.assertEqual(resp.status, 200)
+            resp.read()
+
+            await self.n1.wait_for_message(HandlerStartedMessage, timeout=5.0)
+            error_log = await _wait_for_log_message_containing(
+                self.n1,
+                "background-task-asgi-error",
+                timeout=5.0,
+            )
+            await self.n1.wait_for_message(EndMessage, timeout=5.0)
+            decoded = base64.b64decode(error_log.payload.message).decode()
+            self.assertEqual(error_log.payload.level, "error")
+            self.assertIn("background task failed", decoded)
+            self.assertIn("background-task-asgi-error", decoded)
 
 
 class TestCronService(_RuntimeTestCase):

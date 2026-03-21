@@ -1,0 +1,42 @@
+{
+  "probes": [
+    {
+      "path": "/api?action=enqueue-ok&ns=RANDOMNESS_PLACEHOLDER&token=one",
+      "status": 200,
+      "mustContain": "\"status\": \"queued\""
+    },
+    {
+      "path": "/api?action=status&ns=RANDOMNESS_PLACEHOLDER&token=one",
+      "status": 200,
+      "mustContain": "\"ok\": false"
+    },
+    {
+      "delay": 1300
+    },
+    {
+      "path": "/api?action=status&ns=RANDOMNESS_PLACEHOLDER&token=one",
+      "status": 200,
+      "mustContain": "\"ok\": true",
+      "retries": 5,
+      "retryDelay": 500
+    },
+    {
+      "path": "/api?action=enqueue-error&ns=RANDOMNESS_PLACEHOLDER&token=boom",
+      "status": 200,
+      "mustContain": "\"status\": \"queued\""
+    },
+    {
+      "delay": 700
+    },
+    {
+      "path": "/api?action=status&ns=RANDOMNESS_PLACEHOLDER&token=boom",
+      "status": 200,
+      "mustContain": "\"error\": true",
+      "retries": 5,
+      "retryDelay": 500
+    },
+    {
+      "logMustContain": "Using python version: 3.12"
+    }
+  ]
+}

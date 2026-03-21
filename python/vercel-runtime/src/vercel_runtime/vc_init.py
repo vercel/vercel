@@ -40,6 +40,10 @@ from vercel_runtime.routing import (
     apply_service_route_prefix_to_target,
     split_request_target,
 )
+from vercel_runtime.task_manager import (
+    activate_task_manager,
+    drain_task_manager_with_timeout,
+)
 from vercel_runtime.workers import (
     bootstrap_worker_service_app,
     is_celery_app,
@@ -57,6 +61,8 @@ type _ASGISend = Callable[[dict[str, Any]], Awaitable[None]]
 type _ASGIApp = Callable[[_ASGIScope, _ASGIReceive, _ASGISend], Awaitable[None]]
 
 _original_stderr = sys.stderr
+
+_BACKGROUND_TASK_TIMEOUT: float = 30.0
 
 
 def _stderr(message: str) -> None:
@@ -622,10 +628,18 @@ class ASGIMiddleware:
             }
         )
         set_vercel_headers_from_asgi_pairs(new_headers)
-
+        activate_task_manager()
         try:
             await self.app(new_scope, receive, send)
         finally:
+            if not await drain_task_manager_with_timeout(
+                _BACKGROUND_TASK_TIMEOUT,
+            ):
+                _stderr(
+                    f"The function `{os.path.basename(_entrypoint_rel)}` "
+                    f"timed out running background tasks "
+                    f"after {_BACKGROUND_TASK_TIMEOUT}s."
+                )
             clear_vercel_headers_context()
             storage.reset(token)
             send_message(
