@@ -221,7 +221,7 @@ describe('frameworks', () => {
     'dojo',
     'saber',
     'gridsome',
-    'sanity-v3',
+    'sanity',
     'scully',
     'solidstart',
     'sanity', // https://linear.app/vercel/issue/ZERO-3238/unskip-tests-failing-due-to-node-16-removal
