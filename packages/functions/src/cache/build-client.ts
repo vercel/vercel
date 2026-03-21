@@ -38,9 +38,9 @@ export class BuildCache {
         method: 'GET',
         signal: controller.signal,
       });
+      clearTimeout(timeoutId);
 
       if (res.status === 404) {
-        clearTimeout(timeoutId);
         return null;
       }
       if (res.status === 200) {
@@ -49,14 +49,10 @@ export class BuildCache {
         ) as PkgCacheState | null;
         if (cacheState !== PkgCacheState.Fresh) {
           res.body?.cancel?.();
-          clearTimeout(timeoutId);
           return null;
         }
-        const result = (await res.json()) as unknown;
-        clearTimeout(timeoutId);
-        return result;
+        return (await res.json()) as unknown;
       } else {
-        clearTimeout(timeoutId);
         throw new Error(`Failed to get cache: ${res.statusText}`);
       }
     } catch (error: any) {
