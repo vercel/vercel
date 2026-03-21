@@ -57,11 +57,16 @@ const allOptions: PythonVersion[] = [
   makePythonVersion(3, 14),
   makePythonVersion(3, 13),
   makePythonVersion(3, 12),
-  makePythonVersion(3, 11),
-  makePythonVersion(3, 10),
-  makePythonVersion(3, 9),
-  makePythonVersion(3, 6, new Date('2022-07-18')),
 ];
+
+/**
+ * Human-readable list of supported (non-discontinued) Python versions
+ * derived from `allOptions`, used in user-facing error messages.
+ */
+const supportedVersionsString = allOptions
+  .filter(opt => !opt.discontinueDate)
+  .map(pythonVersionString)
+  .join(', ');
 
 function getDevPythonVersion(): PythonVersion {
   // Use the system-installed version of `python3` when running `vercel dev`.
@@ -225,12 +230,14 @@ export function resolvePythonVersion({
     source = result.source;
     selection = getPythonVersionForBuild(result.build) ?? defaultPv;
 
+    const isConvertedManifest = !!pythonPackage.manifest?.origin;
+
     // Auto-upgrade: when the constraint comes from a converted manifest
     // (e.g. Pipfile.lock) and resolves to a version below the default,
     // upgrade to the default.  Legacy projects often pin old versions
     // that are incompatible with the builder's runtime requirements.
     if (
-      pythonPackage.manifest?.origin &&
+      isConvertedManifest &&
       !result.notAvailable &&
       !result.invalidConstraint &&
       !versionLessOrEqual(defaultPv, selection)
@@ -257,6 +264,17 @@ export function resolvePythonVersion({
       }
       console.log(`Using python version: ${pythonVersionString(selection)}`);
     } else if (result.invalidConstraint) {
+      // For native sources (.python-version, pyproject.toml), a constraint
+      // that no known Python version can satisfy is a hard error.
+      // For converted manifests (Pipfile.lock, requirements.txt), warn and
+      // fall back to the default version.
+      if (!isConvertedManifest) {
+        throw new NowBuildError({
+          code: 'PYTHON_VERSION_UNSATISFIED',
+          link: 'https://vercel.link/python-version',
+          message: `Python version "${result.invalidConstraint.versionString}" specified in ${source} is not compatible with the available Python versions (${supportedVersionsString}). Please update your version constraint to be compatible with one of these versions.`,
+        });
+      }
       console.warn(
         `Warning: Python version "${result.invalidConstraint.versionString}" detected in ${source} is invalid and will be ignored. https://vercel.link/python-version`
       );
