@@ -576,7 +576,7 @@ export const redirectsSchema = {
     properties: {
       source: {
         description:
-          'A pattern that matches each incoming pathname (excluding querystring).',
+          'A pattern that matches each incoming pathname (excluding querystring) or a full URL including domain.',
         type: 'string',
         maxLength: 4096,
       },
