@@ -627,6 +627,10 @@ export interface VercelConfig {
        */
       topic?: string;
       /**
+       * Multiple topic names for worker subscription.
+       */
+      topics?: string[];
+      /**
        * Consumer group name for worker subscription.
        */
       consumer?: string;
