@@ -121,6 +121,8 @@ export interface BuildOptions {
   service?: {
     /** The service name as declared in the project configuration. */
     name?: string;
+    /** The service type (e.g., "web", "cron", "worker"). */
+    type?: ServiceType;
     /** URL path prefix where the service is mounted (e.g., "/api"). */
     routePrefix?: string;
     /** Optional subdomain this service is mounted on (e.g., "api"). */

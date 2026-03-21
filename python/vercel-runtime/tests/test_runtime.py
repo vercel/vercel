@@ -73,6 +73,7 @@ async def _run_runtime(
     entrypoint_rel: str,
     module_name: str,
     ipc_socket_path: str,
+    variable_name: str = "app",
     extra_env: dict[str, str] | None = None,
 ) -> AsyncIterator[asyncio.subprocess.Process]:
     env = {
@@ -80,6 +81,7 @@ async def _run_runtime(
         "__VC_HANDLER_ENTRYPOINT": entrypoint_rel,
         "__VC_HANDLER_ENTRYPOINT_ABS": str(entrypoint_abs),
         "__VC_HANDLER_MODULE_NAME": module_name,
+        "__VC_HANDLER_VARIABLE_NAME": variable_name,
         "VERCEL_IPC_PATH": ipc_socket_path,
     }
     if extra_env:
@@ -133,6 +135,7 @@ async def _invoke_lambda(
     entrypoint_rel: str,
     module_name: str,
     event: dict[str, Any],
+    variable_name: str = "app",
 ) -> dict[str, Any]:
     """Run vc_init.py in legacy mode and call vc_handler.
 
@@ -144,6 +147,7 @@ async def _invoke_lambda(
         "__VC_HANDLER_ENTRYPOINT": entrypoint_rel,
         "__VC_HANDLER_ENTRYPOINT_ABS": str(entrypoint_abs),
         "__VC_HANDLER_MODULE_NAME": module_name,
+        "__VC_HANDLER_VARIABLE_NAME": variable_name,
     }
     env.pop("VERCEL_IPC_PATH", None)
 
@@ -278,6 +282,7 @@ class TestHTTPHandler(_RuntimeTestCase):
             entrypoint_rel=ep_rel,
             module_name=mod,
             ipc_socket_path=self.n1.socket_path,
+            variable_name="handler",
         ):
             ss = await self.n1.wait_for_message(
                 ServerStartedMessage, timeout=10.0
@@ -320,6 +325,7 @@ class TestHTTPHandler(_RuntimeTestCase):
             entrypoint_rel=ep_rel,
             module_name=mod,
             ipc_socket_path=self.n1.socket_path,
+            variable_name="handler",
         ):
             ss = await self.n1.wait_for_message(
                 ServerStartedMessage, timeout=10.0
@@ -338,6 +344,7 @@ class TestHTTPHandler(_RuntimeTestCase):
             entrypoint_rel=ep_rel,
             module_name=mod,
             ipc_socket_path=self.n1.socket_path,
+            variable_name="handler",
         ):
             ss = await self.n1.wait_for_message(
                 ServerStartedMessage, timeout=10.0
@@ -683,7 +690,7 @@ class TestErrorPaths(_RuntimeTestCase):
                 UnrecoverableErrorMessage, timeout=10.0
             )
             self.assertEqual(msg.payload.exit_code, 1)
-            self.assertIn("Missing variable", msg.payload.message)
+            self.assertIn("missing variable", msg.payload.message)
             async with asyncio.timeout(10.0):
                 returncode = await proc.wait()
             self.assertEqual(returncode, 1)
@@ -714,13 +721,14 @@ class TestErrorPaths(_RuntimeTestCase):
             entrypoint_rel=ep_rel,
             module_name=mod,
             ipc_socket_path=self.n1.socket_path,
+            variable_name="handler",
         ) as proc:
             msg = await self.n1.wait_for_message(
                 UnrecoverableErrorMessage, timeout=10.0
             )
             self.assertEqual(msg.payload.exit_code, 1)
             self.assertIn(
-                "Handler must inherit from BaseHTTPRequestHandler",
+                "Could not determine the application interface",
                 msg.payload.message,
             )
             async with asyncio.timeout(10.0):
@@ -728,7 +736,7 @@ class TestErrorPaths(_RuntimeTestCase):
             self.assertEqual(returncode, 1)
             stderr = await _read_stderr(proc)
             self.assertIn(
-                "Handler must inherit from BaseHTTPRequestHandler",
+                "Could not determine the application interface",
                 stderr,
             )
 
@@ -794,6 +802,7 @@ class TestLambdaHTTPHandler(_LambdaTestCase):
             entrypoint_rel=ep_rel,
             module_name=mod,
             event=_lambda_event("GET", "/hello"),
+            variable_name="handler",
         )
         self.assertEqual(result["statusCode"], 200)
         self.assertIn("GET /hello", result["body"])
@@ -810,6 +819,7 @@ class TestLambdaHTTPHandler(_LambdaTestCase):
                 body=base64.b64encode(b"encoded").decode(),
                 encoding="base64",
             ),
+            variable_name="handler",
         )
         self.assertEqual(result["statusCode"], 200)
         self.assertIn("encoded", result["body"])
@@ -823,6 +833,7 @@ class TestLambdaHTTPHandler(_LambdaTestCase):
             entrypoint_rel=ep_rel,
             module_name=mod,
             event=_lambda_event("GET", "/"),
+            variable_name="handler",
         )
         self.assertEqual(result["statusCode"], 200)
         self.assertEqual(result["encoding"], "base64")
@@ -967,6 +978,7 @@ class TestLambdaErrorPaths(_LambdaTestCase):
                 entrypoint_rel=ep_rel,
                 module_name=mod,
                 event=_lambda_event("GET", "/"),
+                variable_name="handler",
             )
 
     async def test_asgi_bad_start_message(self) -> None:
