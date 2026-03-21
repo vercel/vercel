@@ -33,7 +33,7 @@ export default async function upgrade(client: Client): Promise<number> {
   if (parsedArgs.flags['--help']) {
     telemetry.trackCliFlagHelp('upgrade');
     output.print(help(upgradeCommand, { columns: client.stderr.columns }));
-    return 0;
+    return 2;
   }
 
   const dryRun = parsedArgs.flags['--dry-run'];

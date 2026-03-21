@@ -67,7 +67,7 @@ describe('metrics', () => {
 
       const exitCode = await metrics(client);
 
-      expect(exitCode).toBe(0);
+      expect(exitCode).toBe(2);
       const output = client.stderr.getFullOutput();
       // Shows schema subcommand
       expect(output).toContain('schema');

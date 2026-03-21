@@ -52,7 +52,7 @@ describe('integration', () => {
 
         client.setArgv(command, subcommand, '--help');
         const exitCodePromise = integrationCommand(client);
-        await expect(exitCodePromise).resolves.toEqual(0);
+        await expect(exitCodePromise).resolves.toEqual(2);
 
         expect(client.telemetryEventStore).toHaveTelemetryEvents([
           {
@@ -70,7 +70,7 @@ describe('integration', () => {
         it('should show available products for multi-product integration', async () => {
           client.setArgv('integration', 'add', 'acme-two-products', '--help');
           const exitCode = await integrationCommand(client);
-          expect(exitCode).toEqual(0);
+          expect(exitCode).toEqual(2);
           const output = client.getFullOutput();
           expect(output).toContain('Available products for');
           expect(output).toContain('acme-a');
@@ -83,7 +83,7 @@ describe('integration', () => {
         it('should not show product listing for single-product integration', async () => {
           client.setArgv('integration', 'add', 'acme', '--help');
           const exitCode = await integrationCommand(client);
-          expect(exitCode).toEqual(0);
+          expect(exitCode).toEqual(2);
           // Single product — should NOT show product listing
           const output = client.getFullOutput();
           expect(output).not.toContain('Available products for');
@@ -97,7 +97,7 @@ describe('integration', () => {
             '--help'
           );
           const exitCode = await integrationCommand(client);
-          expect(exitCode).toEqual(0);
+          expect(exitCode).toEqual(2);
           const output = client.getFullOutput();
           // Should strip product slug and still fetch the integration for dynamic help
           expect(output).toContain('Available products for');
@@ -108,7 +108,7 @@ describe('integration', () => {
         it('should show usage examples for metadata fields in dynamic help', async () => {
           client.setArgv('integration', 'add', 'acme-full-schema', '--help');
           const exitCode = await integrationCommand(client);
-          expect(exitCode).toEqual(0);
+          expect(exitCode).toEqual(2);
           const output = client.getFullOutput();
           // String field with options should show first option
           expect(output).toContain('Example:');
@@ -122,7 +122,7 @@ describe('integration', () => {
         it('should fall back to standard help when integration not found', async () => {
           client.setArgv('integration', 'add', 'does-not-exist', '--help');
           const exitCode = await integrationCommand(client);
-          expect(exitCode).toEqual(0);
+          expect(exitCode).toEqual(2);
           // Should still show standard help without errors
           const output = client.getFullOutput();
           expect(output).not.toContain('Available products for');

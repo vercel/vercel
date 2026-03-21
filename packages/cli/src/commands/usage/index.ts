@@ -55,7 +55,7 @@ export default async function usage(client: Client): Promise<number> {
   if (parsedArgs.flags['--help']) {
     telemetry.trackCliFlagHelp('usage');
     print(help(usageCommand, { columns: client.stderr.columns }));
-    return 0;
+    return 2;
   }
 
   const formatResult = validateJsonOutput(parsedArgs.flags);

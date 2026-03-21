@@ -1909,7 +1909,7 @@ describe('integration add (auto-provision)', () => {
       process.env.FF_AUTO_PROVISION_INSTALL = '0';
       client.setArgv('integration', 'add', '--help');
       const exitCode = await integrationCommand(client);
-      expect(exitCode).toEqual(0);
+      expect(exitCode).toEqual(2);
       const stderr = client.stderr.getFullOutput();
       expect(stderr).not.toContain('--installation-id');
     });
@@ -1918,7 +1918,7 @@ describe('integration add (auto-provision)', () => {
       delete process.env.FF_AUTO_PROVISION_INSTALL;
       client.setArgv('integration', 'add', '--help');
       const exitCode = await integrationCommand(client);
-      expect(exitCode).toEqual(0);
+      expect(exitCode).toEqual(2);
       const stderr = client.stderr.getFullOutput();
       expect(stderr).toContain('--installation-id');
     });
@@ -1945,7 +1945,7 @@ describe('integration add (auto-provision)', () => {
       process.env.FF_AUTO_PROVISION_INSTALL = '0';
       client.setArgv('install', '--help');
       const exitCode = await install(client);
-      expect(exitCode).toEqual(0);
+      expect(exitCode).toEqual(2);
       const stderr = client.stderr.getFullOutput();
       expect(stderr).not.toContain('--installation-id');
     });
@@ -1954,7 +1954,7 @@ describe('integration add (auto-provision)', () => {
       delete process.env.FF_AUTO_PROVISION_INSTALL;
       client.setArgv('install', '--help');
       const exitCode = await install(client);
-      expect(exitCode).toEqual(0);
+      expect(exitCode).toEqual(2);
       const stderr = client.stderr.getFullOutput();
       expect(stderr).toContain('--installation-id');
     });

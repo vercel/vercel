@@ -41,7 +41,7 @@ export default async function activity(client: Client): Promise<number> {
   if (!subcommand && needHelp) {
     telemetry.trackCliFlagHelp('activity', subcommand);
     output.print(help(activityCommand, { columns: client.stderr.columns }));
-    return 0;
+    return 2;
   }
 
   function printSubcommandHelp(command: Command) {
@@ -55,7 +55,7 @@ export default async function activity(client: Client): Promise<number> {
       if (needHelp) {
         telemetry.trackCliFlagHelp('activity', subcommandOriginal);
         printSubcommandHelp(typesSubcommand);
-        return 0;
+        return 2;
       }
 
       telemetry.trackCliSubcommandTypes(subcommandOriginal);
@@ -66,7 +66,7 @@ export default async function activity(client: Client): Promise<number> {
       if (needHelp) {
         telemetry.trackCliFlagHelp('activity', subcommandOriginal);
         output.print(help(activityCommand, { columns: client.stderr.columns }));
-        return 0;
+        return 2;
       }
       telemetry.trackCliSubcommandLs(subcommandOriginal);
       const listFn = (await import('./list')).default;

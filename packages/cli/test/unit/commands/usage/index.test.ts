@@ -46,7 +46,7 @@ describe('usage', () => {
       client.setArgv('usage', '--help');
       const exitCode = await usage(client);
 
-      expect(exitCode).toEqual(0);
+      expect(exitCode).toEqual(2);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
           key: 'flag:help',

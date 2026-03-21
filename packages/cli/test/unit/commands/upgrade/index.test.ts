@@ -9,7 +9,7 @@ describe('upgrade', () => {
 
       client.setArgv(command, '--help');
       const exitCodePromise = upgrade(client);
-      await expect(exitCodePromise).resolves.toEqual(0);
+      await expect(exitCodePromise).resolves.toEqual(2);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {

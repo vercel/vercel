@@ -32,7 +32,7 @@ export default async function whoami(client: Client): Promise<number> {
   if (parsedArgs.flags['--help']) {
     telemetry.trackCliFlagHelp('whoami');
     output.print(help(whoamiCommand, { columns: client.stderr.columns }));
-    return 0;
+    return 2;
   }
 
   const formatResult = validateJsonOutput(parsedArgs.flags);
