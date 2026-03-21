@@ -1,20 +1,15 @@
-import { resolve } from 'path';
-import { access, readFile, writeFile } from 'fs/promises';
 import chalk from 'chalk';
 import type Client from '../../util/client';
 import { getCommandName } from '../../util/pkg-name';
+import { getLinkedProject } from '../../util/projects/link';
 import output from '../../output-manager';
 import { CronsAddTelemetryClient } from '../../util/telemetry/commands/crons/add';
 import { addSubcommand } from './command';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
-import { VERCEL_CONFIG_EXTENSIONS } from '../../util/compile-vercel-config';
-
-interface CronEntry {
-  path: string;
-  schedule: string;
-}
+import { isAPIError } from '../../util/errors-ts';
+import type { CronDefinitionsResponse } from './types';
 
 const CRON_FIELD_RANGES: [string, number, number][] = [
   ['minute', 0, 59],
@@ -125,6 +120,7 @@ export default async function add(client: Client, argv: string[]) {
 
   let cronPath: string | undefined = flags['--path'];
   let schedule: string | undefined = flags['--schedule'];
+  const host: string | undefined = flags['--host'];
 
   telemetry.trackCliOptionPath(cronPath);
   telemetry.trackCliOptionSchedule(schedule);
@@ -176,84 +172,51 @@ export default async function add(client: Client, argv: string[]) {
     return 1;
   }
 
-  // Check for non-JSON config files (vercel.ts, vercel.mjs, etc.)
-  for (const ext of VERCEL_CONFIG_EXTENSIONS) {
-    const altPath = resolve(client.cwd, `vercel.${ext}`);
-    try {
-      await access(altPath);
-      output.error(
-        `Found ${chalk.cyan(`vercel.${ext}`)} — ${getCommandName('crons add')} only supports ${chalk.cyan('vercel.json')}. Add cron jobs directly to your ${chalk.cyan(`vercel.${ext}`)} file instead.`
-      );
-      return 1;
-    } catch {
-      // File doesn't exist, continue
-    }
-  }
-
-  // Read existing vercel.json or create one
-  const configPath = resolve(client.cwd, 'vercel.json');
-  let config: Record<string, unknown>;
-
-  try {
-    const content = await readFile(configPath, 'utf-8');
-    config = JSON.parse(content);
-  } catch (err: unknown) {
-    if (err instanceof SyntaxError) {
-      output.error(
-        `Failed to parse ${chalk.cyan('vercel.json')}: ${err.message}`
-      );
-      return 1;
-    }
-    if (
-      err instanceof Error &&
-      'code' in err &&
-      (err as NodeJS.ErrnoException).code === 'ENOENT'
-    ) {
-      config = {};
-    } else {
-      output.error(
-        `Failed to read ${chalk.cyan('vercel.json')}: ${err instanceof Error ? err.message : String(err)}`
-      );
-      return 1;
-    }
-  }
-
-  // Get existing crons or create empty array
-  const existingCrons: CronEntry[] = Array.isArray(config.crons)
-    ? config.crons
-    : [];
-
-  // Check for duplicate path
-  if (existingCrons.some(c => c.path === cronPath)) {
+  const link = await getLinkedProject(client);
+  if (link.status === 'error') {
+    return link.exitCode;
+  } else if (link.status === 'not_linked') {
     output.error(
-      `A cron job with path ${chalk.bold(cronPath)} already exists in vercel.json`
+      `Your codebase isn't linked to a project on Vercel. ${client.nonInteractive ? `Run ${getCommandName('link --yes --team <team-id> --project <project-id>')} to link non-interactively.` : `Run ${getCommandName('link')} to begin.`}`
     );
     return 1;
   }
+  client.config.currentTeam =
+    link.org.type === 'team' ? link.org.id : undefined;
 
-  // Add the new cron
-  existingCrons.push({ path: cronPath, schedule });
-  config.crons = existingCrons;
+  const { project } = link;
 
-  // Write back to vercel.json
+  output.spinner(`Adding cron job ${chalk.bold(cronPath)}`);
+
+  const body: { path: string; schedule: string; host?: string } = {
+    path: cronPath,
+    schedule,
+  };
+  if (host) {
+    body.host = host;
+  }
+
   try {
-    await writeFile(
-      configPath,
-      JSON.stringify(config, null, 2) + '\n',
-      'utf-8'
+    await client.fetch<CronDefinitionsResponse>(
+      `/v1/projects/${encodeURIComponent(project.id)}/crons/definitions`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      }
     );
   } catch (err: unknown) {
-    output.error(
-      `Failed to write ${chalk.cyan('vercel.json')}: ${err instanceof Error ? err.message : String(err)}`
-    );
-    return 1;
+    if (isAPIError(err)) {
+      output.error(
+        `Failed to add cron job ${chalk.bold(cronPath)}: ${err.message}`
+      );
+      return 1;
+    }
+    throw err;
   }
 
   output.log(
-    `Added cron job ${chalk.bold(cronPath)} with schedule ${chalk.bold(schedule)} to ${chalk.cyan('vercel.json')}`
-  );
-  output.warn(
-    `This cron job won't be active until the project is deployed to production. Run ${getCommandName('deploy --prod')} to deploy.`
+    `Added cron job ${chalk.bold(cronPath)} with schedule ${chalk.bold(schedule)}`
   );
 
   return 0;

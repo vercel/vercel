@@ -1,10 +1,10 @@
 import { packageName } from '../../util/pkg-name';
-import { formatOption } from '../../util/arg-common';
+import { formatOption, yesOption } from '../../util/arg-common';
 
 export const addSubcommand = {
   name: 'add',
   aliases: [],
-  description: 'Add a cron job to vercel.json',
+  description: 'Add a cron job to the project',
   arguments: [],
   options: [
     {
@@ -23,6 +23,15 @@ export const addSubcommand = {
       deprecated: false,
       description: 'The cron schedule expression (e.g. "0 10 * * *")',
     },
+    {
+      name: 'host',
+      shorthand: null,
+      type: String,
+      argument: 'HOSTNAME',
+      deprecated: false,
+      description:
+        'The hostname for invocation (defaults to production deployment URL)',
+    },
   ],
   examples: [
     {
@@ -32,6 +41,68 @@ export const addSubcommand = {
     {
       name: 'Add a cron job with flags',
       value: `${packageName} crons add --path /api/cron --schedule "0 10 * * *"`,
+    },
+  ],
+} as const;
+
+export const updateSubcommand = {
+  name: 'update',
+  aliases: [],
+  description: 'Update an existing cron job',
+  arguments: [],
+  options: [
+    {
+      name: 'path',
+      shorthand: null,
+      type: String,
+      argument: 'PATH',
+      deprecated: false,
+      description: 'The path of the cron job to update',
+    },
+    {
+      name: 'schedule',
+      shorthand: null,
+      type: String,
+      argument: 'EXPRESSION',
+      deprecated: false,
+      description: 'The new cron schedule expression',
+    },
+    {
+      name: 'host',
+      shorthand: null,
+      type: String,
+      argument: 'HOSTNAME',
+      deprecated: false,
+      description: 'The new hostname for invocation',
+    },
+  ],
+  examples: [
+    {
+      name: 'Update a cron schedule',
+      value: `${packageName} crons update --path /api/cron --schedule "0 0 * * *"`,
+    },
+  ],
+} as const;
+
+export const rmSubcommand = {
+  name: 'rm',
+  aliases: ['remove'],
+  description: 'Remove a cron job from the project',
+  arguments: [
+    {
+      name: 'path',
+      required: false,
+    },
+  ],
+  options: [yesOption],
+  examples: [
+    {
+      name: 'Remove a cron job',
+      value: `${packageName} crons rm /api/cron`,
+    },
+    {
+      name: 'Remove without confirmation',
+      value: `${packageName} crons rm /api/cron --yes`,
     },
   ],
 } as const;
@@ -79,7 +150,13 @@ export const cronsCommand = {
   aliases: ['cron'],
   description: 'Manage cron jobs for a project',
   arguments: [],
-  subcommands: [addSubcommand, listSubcommand, runSubcommand],
+  subcommands: [
+    addSubcommand,
+    updateSubcommand,
+    rmSubcommand,
+    listSubcommand,
+    runSubcommand,
+  ],
   options: [],
   examples: [],
 } as const;

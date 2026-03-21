@@ -1,10 +1,10 @@
 import { TelemetryClient } from '../..';
 import type { TelemetryMethods } from '../../types';
-import type { addSubcommand } from '../../../../commands/crons/command';
+import type { updateSubcommand } from '../../../../commands/crons/command';
 
-export class CronsAddTelemetryClient
+export class CronsUpdateTelemetryClient
   extends TelemetryClient
-  implements TelemetryMethods<typeof addSubcommand>
+  implements TelemetryMethods<typeof updateSubcommand>
 {
   trackCliOptionPath(path: string | undefined) {
     if (path) {
