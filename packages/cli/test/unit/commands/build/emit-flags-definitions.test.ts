@@ -57,8 +57,8 @@ describe('emitFlagsDatafiles', () => {
     expect(files[`${storageDir}/package.json`]).toBeDefined();
   });
 
-  it('should fetch definitions for a direct vf_ key and write files', async () => {
-    const sdkKey = 'vf_test_abc123def456';
+  it('should fetch definitions for a direct vf_server_ or vf_client_ key and write files', async () => {
+    const sdkKey = 'vf_server_abc123def456';
     const definitions = { flag1: { variants: ['on', 'off'] } };
 
     fetch.mockResolvedValueOnce(mockFetchResponse(definitions));
@@ -99,7 +99,7 @@ describe('emitFlagsDatafiles', () => {
   });
 
   it('should extract SDK key from flags: format', async () => {
-    const sdkKey = 'vf_flags_format_key';
+    const sdkKey = 'vf_server_flags_format_key';
     const definitions = { flag1: {} };
 
     fetch.mockResolvedValueOnce(mockFetchResponse(definitions));
@@ -120,7 +120,7 @@ describe('emitFlagsDatafiles', () => {
   });
 
   it('should deduplicate SDK keys across env vars', async () => {
-    const sdkKey = 'vf_duplicate_key';
+    const sdkKey = 'vf_server_duplicate_key';
     const definitions = { flag1: {} };
 
     fetch.mockResolvedValueOnce(mockFetchResponse(definitions));
@@ -135,8 +135,8 @@ describe('emitFlagsDatafiles', () => {
   });
 
   it('should handle multiple distinct SDK keys', async () => {
-    const key1 = 'vf_key_one_abcdef';
-    const key2 = 'vf_key_two_ghijkl';
+    const key1 = 'vf_server_key_one_abcdef';
+    const key2 = 'vf_client_key_two_ghijkl';
     const defs1 = { flagA: { enabled: true } };
     const defs2 = { flagB: { enabled: false } };
 
@@ -164,8 +164,8 @@ describe('emitFlagsDatafiles', () => {
   });
 
   it('should deduplicate identical definitions across keys', async () => {
-    const key1 = 'vf_key_one_abcdef';
-    const key2 = 'vf_key_two_ghijkl';
+    const key1 = 'vf_server_key_one_abcdef';
+    const key2 = 'vf_client_key_two_ghijkl';
     const sameDefs = { flagA: { enabled: true } };
 
     fetch
@@ -192,7 +192,7 @@ describe('emitFlagsDatafiles', () => {
   });
 
   it('should produce a valid module structure', async () => {
-    const sdkKey = 'vf_structure_test_key_123';
+    const sdkKey = 'vf_server_structure_test_key_123';
     const definitions = { myFlag: { variants: ['a', 'b'] } };
 
     fetch.mockResolvedValueOnce(mockFetchResponse(definitions));
@@ -229,7 +229,7 @@ describe('emitFlagsDatafiles', () => {
   });
 
   it('should include Vercel metadata headers when env vars are set', async () => {
-    const sdkKey = 'vf_meta_key_test';
+    const sdkKey = 'vf_server_meta_key_test';
 
     fetch.mockResolvedValueOnce(mockFetchResponse({}));
 
@@ -255,7 +255,7 @@ describe('emitFlagsDatafiles', () => {
   });
 
   it('should throw NowBuildError when fetch fails', async () => {
-    const sdkKey = 'vf_fail_key_abcdef123';
+    const sdkKey = 'vf_server_fail_key_abcdef123';
 
     fetch.mockResolvedValueOnce(mockFetchResponse(null, false));
 
@@ -276,11 +276,30 @@ describe('emitFlagsDatafiles', () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
+  it('should ignore third-party identifiers that start with vf_ but are not Vercel Flags SDK keys', async () => {
+    // Stripe identity flow IDs start with 'vf_' but should not be treated as SDK keys
+    // SDK keys must follow the format vf_server_* or vf_client_*
+    await emitFlagsDatafiles('/app', {
+      NEXT_PUBLIC_STRIPE_IDENTITY_FLOW_ID: 'vf_1PyHgVLpWuMxVFxAbCdEfGhIjKlMn',
+      STRIPE_FLOW_ID: 'vf_live_test_12345',
+      OTHER_SERVICE_ID: 'vf_something_else',
+    });
+
+    expect(fetch).not.toHaveBeenCalled();
+
+    const files = vol.toJSON();
+    const storageDir = '/app/node_modules/@vercel/flags-definitions';
+    const indexJs = files[`${storageDir}/index.js`] as string;
+    expect(indexJs).toBeDefined();
+    // Map should be empty since no valid SDK keys were found
+    expect(indexJs).toContain('const map = {\n};');
+  });
+
   it('should write version field in the generated module', async () => {
     fetch.mockResolvedValueOnce(mockFetchResponse({}));
 
     await emitFlagsDatafiles('/app', {
-      KEY: 'vf_version_test',
+      KEY: 'vf_server_version_test',
     });
 
     const files = vol.toJSON();

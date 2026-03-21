@@ -97,11 +97,22 @@ function generateDefinitionsModule(
 }
 
 /**
+ * Checks if a value is a valid Vercel Flags SDK key.
+ * SDK keys follow the format: vf_server_* or vf_client_*
+ * This is more specific than just checking for 'vf_' prefix to avoid
+ * false positives with third-party service identifiers (e.g., Stripe's
+ * identity flow IDs like 'vf_1PyHgVLpWuMxVFx...').
+ */
+function isVercelFlagsSdkKey(value: string): boolean {
+  return value.startsWith('vf_server_') || value.startsWith('vf_client_');
+}
+
+/**
  * Emits flag definitions into node_modules/@vercel/flags-definitions
  *
- * Reads SDK keys (vf_ prefix) from environment variables, fetches definitions
- * from flags.vercel.com, and writes them to a synthetic package that can be
- * imported at runtime.
+ * Reads SDK keys (vf_server_* or vf_client_* format) from environment
+ * variables, fetches definitions from flags.vercel.com, and writes them
+ * to a synthetic package that can be imported at runtime.
  */
 export async function emitFlagsDatafiles(
   cwd: string,
@@ -110,16 +121,16 @@ export async function emitFlagsDatafiles(
   output.debug('vercel-flags: checking env vars for SDK Keys');
 
   // Collect unique SDK keys from environment variables
-  // Supports both direct SDK keys (vf_ prefix) and flags: format
+  // Supports both direct SDK keys (vf_server_*/vf_client_*) and flags: format
   const sdkKeys = Array.from(
     Object.values(env).reduce<Set<string>>((acc, value) => {
       if (typeof value === 'string') {
-        if (value.startsWith('vf_')) {
+        if (isVercelFlagsSdkKey(value)) {
           acc.add(value);
         } else if (value.startsWith('flags:')) {
           const params = new URLSearchParams(value.slice('flags:'.length));
           const sdkKey = params.get('sdkKey');
-          if (sdkKey?.startsWith('vf_')) {
+          if (sdkKey && isVercelFlagsSdkKey(sdkKey)) {
             acc.add(sdkKey);
           }
         }
