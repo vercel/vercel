@@ -1,3 +1,4 @@
+import { execSync } from 'child_process';
 import fs from 'fs';
 import { join, dirname, basename, parse, relative } from 'path';
 import {
@@ -346,8 +347,11 @@ export const build: BuildV3 = async ({
   let uv: UvRunner;
   try {
     const uvPath = await getUvBinaryOrInstall(pythonVersion.pythonPath);
-    console.log(`Using uv at "${uvPath}"`);
     uv = new UvRunner(uvPath);
+    const uvVersionOutput = execSync(`${uvPath} --version`, {
+      encoding: 'utf8',
+    }).trim();
+    console.log(`Using ${uvVersionOutput}`);
   } catch (err) {
     console.log('Failed to install or locate uv');
     throw new Error(
