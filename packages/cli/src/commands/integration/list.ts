@@ -112,9 +112,12 @@ export async function list(client: Client) {
 
   function filterOnIntegration(resource: Resource): boolean {
     if (!filterIntegration) return true;
-    const match = filterIntegration === resource.product?.slug;
+    const productSlug = resource.product?.slug?.toLocaleLowerCase();
+    const match =
+      productSlug === filterIntegration ||
+      productSlug?.startsWith(`${filterIntegration}-`);
     if (match) knownIntegration = true;
-    return match;
+    return !!match;
   }
 
   function filterOnProject(resource: Resource): boolean {
@@ -158,6 +161,7 @@ export async function list(client: Client) {
       name: result.name,
       status: result.status,
       product: result.product,
+      integration: result.integration,
       installationId: result.configurationId,
       projects: result.projects,
     }));
