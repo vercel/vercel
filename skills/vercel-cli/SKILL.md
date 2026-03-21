@@ -55,6 +55,21 @@ Use this to route to the correct reference file:
 - **Global flags** → `references/global-options.md`
 - **First-time setup** → `references/getting-started.md`
 
+## Critical: Never Disable Deployment Protection
+
+**Deployment protection is a critical security feature.** Never disable it to work around issues, debug problems, or bypass authentication errors. Use `vercel curl` instead — it handles deployment protection automatically and is the correct way to access protected preview deployments.
+
+Disabling deployment protection exposes customer deployments to unauthorized access. **Only disable it with the customer's explicit consent**, and only after explaining the security implications. If you encounter "Authentication Required" errors or similar issues, the solution is `vercel curl`, not disabling protection.
+
+```bash
+# CORRECT: Use vercel curl to access protected deployments
+vercel curl /api/health --deployment $PREVIEW_URL
+
+# WRONG: Never disable protection via API or dashboard
+# Do NOT use the API to set vercelAuthentication.deploymentType to "none"
+# Do NOT disable SSO protection to work around access issues
+```
+
 ## Anti-Patterns
 
 - **Wrong link type in monorepos with multiple projects**: `vercel link` creates `project.json`, which only tracks one project. Use `vercel link --repo` instead. When things break, check `.vercel/` first.
@@ -63,4 +78,4 @@ Use this to route to the correct reference file:
 - **Forgetting `--yes` in CI**: Required to skip interactive prompts.
 - **Using `vercel deploy` after `vercel build` without `--prebuilt`**: The build output is ignored.
 - **Hardcoding tokens in flags**: Use `VERCEL_TOKEN` env var instead of `--token`.
-- **Disabling deployment protection**: Use `vercel curl` instead to access preview deploys.
+- **Disabling deployment protection to debug or bypass issues**: This is a security risk. Use `vercel curl` instead to access preview deploys. Only disable with explicit customer consent.

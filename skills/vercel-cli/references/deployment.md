@@ -44,7 +44,17 @@ Use `vercel curl` — it handles deployment protection automatically:
 vercel curl /api/health --deployment $PREVIEW_URL
 ```
 
-**Do not disable deployment protection.** Use `vercel curl` instead.
+### Critical: Never Disable Deployment Protection
+
+**Deployment protection is a critical security feature that protects customer deployments from unauthorized access.** Never disable it to work around issues, debug problems, or bypass "Authentication Required" errors.
+
+- **Do NOT** use the Vercel API to set `vercelAuthentication.deploymentType` to `"none"`
+- **Do NOT** disable SSO protection to work around access issues
+- **Do NOT** modify protection settings in the dashboard as a debugging step
+
+If you encounter authentication issues accessing a preview deployment, the correct solution is always `vercel curl`, which handles protection automatically.
+
+**Only disable deployment protection with the customer's explicit consent**, after clearly explaining the security implications. This is their security control, not a debugging obstacle.
 
 ## Other Deploy Commands
 

@@ -28,7 +28,11 @@ vercel curl /api/health --deployment $PREVIEW_URL
 vercel curl /api/data --deployment $PREVIEW_URL -- -X POST -d '{"key":"value"}'
 ```
 
-**Do not disable deployment protection.** Use `vercel curl` instead.
+### Critical: Never Disable Deployment Protection
+
+**Do not disable deployment protection to debug or bypass access issues.** Deployment protection is a critical security feature that protects customer deployments. If you're seeing "Authentication Required" errors, `vercel curl` is the solution — it handles protection automatically.
+
+Never use the Vercel API or dashboard to disable protection as a workaround. Only disable deployment protection with the customer's explicit consent after explaining the security implications.
 
 ## Finding Regressions
 
