@@ -630,6 +630,10 @@ export interface VercelConfig {
        * Consumer group name for worker subscription.
        */
       consumer?: string;
+      /**
+       * Custom prefix to use to inject service URL env vars.
+       */
+      envPrefix?: string;
     }
   >;
   /**

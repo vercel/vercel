@@ -574,6 +574,8 @@ export interface Service {
   /* worker service config */
   topic?: string;
   consumer?: string;
+  /** custom prefix to inject service URL env vars */
+  envPrefix?: string;
 }
 
 /** The framework which created the function */
@@ -790,6 +792,9 @@ export interface ExperimentalServiceConfig {
   /* Worker service config */
   topic?: string;
   consumer?: string;
+
+  /** Custom prefix to use to inject service URL env vars */
+  envPrefix?: string;
 }
 
 /**

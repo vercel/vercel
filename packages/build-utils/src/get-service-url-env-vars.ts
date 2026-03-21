@@ -13,6 +13,7 @@ export interface GetServiceUrlEnvVarsOptions {
   currentEnv?: Envs;
   deploymentUrl?: string;
   origin?: string;
+  envPrefix?: string;
 }
 
 /**
@@ -81,6 +82,7 @@ export function getServiceUrlEnvVars(
     currentEnv = {},
     deploymentUrl,
     origin,
+    envPrefix,
   } = options;
 
   const baseUrl = origin || deploymentUrl;
@@ -114,10 +116,14 @@ export function getServiceUrlEnvVars(
       !!origin
     );
 
+    const effectiveBaseEnvVarName = envPrefix
+      ? `${envPrefix}${baseEnvVarName}`
+      : baseEnvVarName;
+
     // Add the base env var with full absolute URL (e.g., BACKEND_URL)
     // for server-side use where relative paths won't resolve
-    if (!(baseEnvVarName in currentEnv)) {
-      envVars[baseEnvVarName] = absoluteUrl;
+    if (!(effectiveBaseEnvVarName in currentEnv)) {
+      envVars[effectiveBaseEnvVarName] = absoluteUrl;
     }
 
     // Add framework-prefixed versions with only the route prefix path
@@ -126,7 +132,9 @@ export function getServiceUrlEnvVars(
     // current origin, avoiding CORS errors when the deployment URL differs
     // from the production/custom domain.
     for (const prefix of frameworkPrefixes) {
-      const prefixedEnvVarName = `${prefix}${baseEnvVarName}`;
+      const prefixedEnvVarName = envPrefix
+        ? `${prefix}${envPrefix}${baseEnvVarName}`
+        : `${prefix}${baseEnvVarName}`;
       if (!(prefixedEnvVarName in currentEnv)) {
         envVars[prefixedEnvVarName] = service.routePrefix;
       }
