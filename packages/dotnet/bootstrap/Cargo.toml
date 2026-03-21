@@ -1,0 +1,15 @@
+[package]
+name = "bootstrap"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[workspace]
+
+[dependencies]
+http-body-util = "0.1.3"
+hyper = { version = "1.8.1", features = ["client", "server", "http1"] }
+hyper-util = { version = "0.1.20", features = ["client-legacy", "server", "http1", "tokio"] }
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.149"
+tokio = { version = "1.50.0", features = ["macros", "rt-multi-thread", "net", "process", "io-util", "sync", "time"] }
