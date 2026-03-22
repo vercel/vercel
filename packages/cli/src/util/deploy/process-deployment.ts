@@ -320,6 +320,55 @@ export default async function processDeployment({
         return event.payload;
       }
 
+      // Security check events
+      if (event.type === 'security-check-running' && !withFullLogs) {
+        output.spinner('Performing security checks for dependencies...', 0);
+      }
+
+      if (event.type === 'security-check-skipped' && !withFullLogs) {
+        const skipReason = event.payload.securityCheck?.skipReason;
+        const message =
+          skipReason === 'prebuilt'
+            ? 'Security check skipped (prebuilt deployment)'
+            : skipReason === 'no-manifest'
+              ? 'Security check skipped (no lockfile or package.json found)'
+              : 'Security check skipped';
+        output.debug(message);
+      }
+
+      if (event.type === 'security-check-succeeded' && !withFullLogs) {
+        const packagesScanned =
+          event.payload.securityCheck?.packagesScanned || 0;
+        output.debug(
+          `Security check passed (${packagesScanned} packages scanned)`
+        );
+      }
+
+      if (event.type === 'security-check-warning' && !withFullLogs) {
+        const issuesFound = event.payload.securityCheck?.issuesFound || 0;
+        output.warn(
+          `Security check found ${issuesFound} non-blocking issue(s)`
+        );
+      }
+
+      if (event.type === 'security-check-failed') {
+        stopSpinner();
+        const securityCheck = event.payload.securityCheck;
+        const malwareCount = securityCheck?.malwareCount || 0;
+        const vulnCount = securityCheck?.vulnerabilityCount || 0;
+        const totalIssues = securityCheck?.issuesFound || 0;
+
+        let message = `Security check failed: ${totalIssues} issue(s) found`;
+        if (malwareCount > 0) {
+          message += ` (${malwareCount} malware)`;
+        }
+        if (vulnCount > 0) {
+          message += ` (${vulnCount} vulnerabilities)`;
+        }
+        output.error(message);
+        return event.payload;
+      }
+
       // Handle error events
       if (event.type === 'error') {
         stopSpinner();

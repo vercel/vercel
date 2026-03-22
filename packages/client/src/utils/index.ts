@@ -44,6 +44,14 @@ const EVENTS_ARRAY = [
   'checks-conclusion-failed',
   'checks-conclusion-skipped',
   'checks-conclusion-canceled',
+  // Security check events
+  'security-check-pending',
+  'security-check-running',
+  'security-check-completed',
+  'security-check-skipped',
+  'security-check-succeeded',
+  'security-check-failed',
+  'security-check-warning',
 ] as const;
 
 export type DeploymentEventType = (typeof EVENTS_ARRAY)[number];

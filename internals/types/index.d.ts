@@ -165,6 +165,79 @@ export interface CustomEnvironmentBranchMatcher {
 
 export type CustomEnvironmentType = 'production' | 'preview' | 'development';
 
+/**
+ * Source type used for security check scanning.
+ * - 'lockfile': Used pnpm-lock.yaml, package-lock.json, yarn.lock, or bun.lockb
+ * - 'package-json': Fell back to package.json (no lockfile available)
+ * - 'none': No dependency manifest found (security check skipped)
+ */
+export type SecurityCheckSource = 'lockfile' | 'package-json' | 'none';
+
+/**
+ * Reason why the security check was skipped.
+ * - 'prebuilt': Deployment is prebuilt, no source files to scan
+ * - 'no-manifest': No lockfile or package.json found
+ * - 'feature-disabled': Security check feature flag is disabled
+ * - 'unsupported-package-manager': Package manager not supported for scanning
+ */
+export type SecurityCheckSkipReason =
+  | 'prebuilt'
+  | 'no-manifest'
+  | 'feature-disabled'
+  | 'unsupported-package-manager';
+
+/**
+ * Details about the security check for dependencies.
+ */
+export interface SecurityCheckDetails {
+  /**
+   * The source used for the security check.
+   */
+  source: SecurityCheckSource;
+  /**
+   * Reason why the security check was skipped, if applicable.
+   */
+  skipReason?: SecurityCheckSkipReason;
+  /**
+   * Path to the lockfile or package.json that was scanned, relative to the deployment root.
+   * For monorepos, this is the path within the workspace being deployed.
+   */
+  manifestPath?: string;
+  /**
+   * Number of packages scanned.
+   */
+  packagesScanned?: number;
+  /**
+   * Number of security issues found.
+   */
+  issuesFound?: number;
+  /**
+   * Number of malware packages detected.
+   */
+  malwareCount?: number;
+  /**
+   * Number of known vulnerabilities detected.
+   */
+  vulnerabilityCount?: number;
+  /**
+   * Duration of the security check in milliseconds.
+   */
+  durationMs?: number;
+  /**
+   * Timestamp when the security check started.
+   */
+  startedAt?: number;
+  /**
+   * Timestamp when the security check completed.
+   */
+  completedAt?: number;
+  /**
+   * Error message if the security check failed due to an error (not security issues).
+   * This indicates an infrastructure problem, not a security finding.
+   */
+  errorMessage?: string;
+}
+
 export type Deployment = {
   alias?: string[];
   aliasAssigned?: boolean | null | number;
@@ -184,6 +257,28 @@ export type Deployment = {
   canceledAt?: number;
   checksState?: 'completed' | 'registered' | 'running';
   checksConclusion?: 'canceled' | 'failed' | 'skipped' | 'succeeded';
+  /**
+   * State of the security check for dependencies.
+   * Only present when the security check feature flag is enabled.
+   * - 'pending': Security check is queued but not yet started
+   * - 'running': Security check is in progress
+   * - 'completed': Security check finished (see securityCheckConclusion for result)
+   * - 'skipped': Security check was skipped (e.g., prebuilt deployment, no lockfile/package.json)
+   */
+  securityCheckState?: 'pending' | 'running' | 'completed' | 'skipped';
+  /**
+   * Conclusion of the security check for dependencies.
+   * Only present when securityCheckState is 'completed'.
+   * - 'succeeded': No security issues found
+   * - 'failed': Security issues (malware, vulnerabilities) were detected
+   * - 'warning': Non-blocking security issues were detected
+   */
+  securityCheckConclusion?: 'succeeded' | 'failed' | 'warning';
+  /**
+   * Details about the security check for dependencies.
+   * Provides context about what was checked and any issues found.
+   */
+  securityCheck?: SecurityCheckDetails;
   createdAt: number;
   createdIn?: string;
   creator: { uid: string; username?: string };
