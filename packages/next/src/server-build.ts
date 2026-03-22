@@ -557,9 +557,10 @@ export async function serverBuild({
     let nextServerBuildTrace;
     let instrumentationHookBuildTrace;
 
-    const useBundledServer =
-      semver.gte(nextVersion, BUNDLED_SERVER_NEXT_VERSION) &&
-      process.env.VERCEL_NEXT_BUNDLED_SERVER === '1';
+    const useBundledServer = semver.gte(
+      nextVersion,
+      BUNDLED_SERVER_NEXT_VERSION
+    );
 
     if (useBundledServer) {
       debug('Using bundled Next.js server');
@@ -588,6 +589,50 @@ export async function serverBuild({
       );
     } catch (_) {
       // if the trace is unavailable we trace inside the runtime
+    }
+
+    // When not using the bundled server, the next-server.js.nft.json trace
+    // may miss vendored context files that require-hook.js rewrites at runtime
+    // (e.g. next/dist/server/route-modules/pages/vendored/contexts/*).
+    // If next-minimal-server.js.nft.json exists (produced by Turbopack and
+    // newer Next.js builds), merge its files into the trace so prebuilt
+    // deployments include all necessary vendored files.
+    if (
+      !useBundledServer &&
+      semver.gte(nextVersion, BUNDLED_SERVER_NEXT_VERSION)
+    ) {
+      try {
+        const minimalServerBuildTrace = JSON.parse(
+          await fs.readFile(
+            path.join(
+              entryPath,
+              outputDirectory,
+              'next-minimal-server.js.nft.json'
+            ),
+            'utf8'
+          )
+        );
+        if (nextServerBuildTrace) {
+          // Merge: add any files from the minimal server trace not already present
+          const existingFiles = new Set(nextServerBuildTrace.files);
+          for (const file of minimalServerBuildTrace.files) {
+            if (!existingFiles.has(file)) {
+              nextServerBuildTrace.files.push(file);
+            }
+          }
+          debug(
+            'Merged next-minimal-server.js.nft.json into next-server.js.nft.json trace'
+          );
+        } else {
+          // No next-server.js.nft.json available; use minimal server trace as fallback
+          nextServerBuildTrace = minimalServerBuildTrace;
+          debug(
+            'Using next-minimal-server.js.nft.json trace as fallback (next-server.js.nft.json unavailable)'
+          );
+        }
+      } catch (_) {
+        // next-minimal-server.js.nft.json not available, continue without it
+      }
     }
 
     try {
