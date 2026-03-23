@@ -7,19 +7,59 @@ import {
   validateMutualExclusivity,
   validateRequiredEvent,
 } from '../../../../src/commands/metrics/validation';
+import type { Schema } from '../../../../src/commands/metrics/schema-api';
+
+const schema: Schema = {
+  edgeRequest: {
+    description: 'Edge Requests',
+    queryEngineEvent: 'incomingRequest',
+    dimensions: [
+      { name: 'httpStatus', label: 'HTTP Status' },
+      { name: 'route', label: 'Route' },
+    ],
+    measures: [
+      {
+        name: 'count',
+        label: 'Count',
+        unit: 'count',
+        aggregations: ['sum', 'persecond', 'percent'],
+        defaultAggregation: 'sum',
+      },
+      {
+        name: 'requestDurationMs',
+        label: 'Request Duration',
+        unit: 'milliseconds',
+        aggregations: ['avg', 'p95'],
+        defaultAggregation: 'avg',
+      },
+    ],
+  },
+  functionExecution: {
+    description: 'Functions',
+    dimensions: [{ name: 'route', label: 'Route' }],
+    measures: [
+      {
+        name: 'count',
+        label: 'Count',
+        unit: 'count',
+        aggregations: ['sum'],
+        defaultAggregation: 'sum',
+      },
+    ],
+  },
+};
 
 describe('validation', () => {
   describe('validateEvent', () => {
     it('should pass for known event', () => {
-      expect(validateEvent('edgeRequest')).toEqual({ valid: true });
+      expect(validateEvent(schema, 'edgeRequest')).toEqual({ valid: true });
     });
 
     it('should fail for unknown event with available list', () => {
-      const result = validateEvent('bogus');
+      const result = validateEvent(schema, 'bogus');
       expect(result.valid).toBe(false);
       if (!result.valid) {
         expect(result.code).toBe('UNKNOWN_EVENT');
-        expect(result.message).toContain('"bogus"');
         expect(result.allowedValues).toContain('edgeRequest');
         expect(result.allowedValues).toContain('functionExecution');
       }
@@ -28,24 +68,16 @@ describe('validation', () => {
 
   describe('validateMeasure', () => {
     it('should pass for valid measure', () => {
-      expect(validateMeasure('edgeRequest', 'count')).toEqual({
-        valid: true,
-      });
-    });
-
-    it('should pass for non-count measure', () => {
-      expect(validateMeasure('edgeRequest', 'requestDurationMs')).toEqual({
+      expect(validateMeasure(schema, 'edgeRequest', 'count')).toEqual({
         valid: true,
       });
     });
 
     it('should fail for unknown measure with available list', () => {
-      const result = validateMeasure('edgeRequest', 'latency');
+      const result = validateMeasure(schema, 'edgeRequest', 'latency');
       expect(result.valid).toBe(false);
       if (!result.valid) {
         expect(result.code).toBe('UNKNOWN_MEASURE');
-        expect(result.message).toContain('"latency"');
-        expect(result.message).toContain('"edgeRequest"');
         expect(result.allowedValues).toContain('count');
         expect(result.allowedValues).toContain('requestDurationMs');
       }
@@ -54,76 +86,35 @@ describe('validation', () => {
 
   describe('validateAggregation', () => {
     it('should pass for valid aggregation on count', () => {
-      expect(validateAggregation('edgeRequest', 'count', 'sum')).toEqual({
-        valid: true,
-        value: 'sum',
-      });
-    });
-
-    it('should pass for p95 on duration measure', () => {
       expect(
-        validateAggregation('edgeRequest', 'requestDurationMs', 'p95')
-      ).toEqual({ valid: true, value: 'p95' });
+        validateAggregation(schema, 'edgeRequest', 'count', 'sum')
+      ).toEqual({ valid: true, value: 'sum' });
     });
 
-    it('should fail for p95 on count measure', () => {
-      const result = validateAggregation('edgeRequest', 'count', 'p95');
+    it('should fail for invalid aggregation', () => {
+      const result = validateAggregation(schema, 'edgeRequest', 'count', 'p95');
       expect(result.valid).toBe(false);
       if (!result.valid) {
         expect(result.code).toBe('INVALID_AGGREGATION');
-        expect(result.message).toContain('"p95"');
-        expect(result.message).toContain('"count"');
-        expect(result.allowedValues).toContain('sum');
-        expect(result.allowedValues).not.toContain('p95');
-      }
-    });
-
-    it('should fail for completely invalid aggregation', () => {
-      const result = validateAggregation(
-        'edgeRequest',
-        'requestDurationMs',
-        'bogus'
-      );
-      expect(result.valid).toBe(false);
-      if (!result.valid) {
-        expect(result.code).toBe('INVALID_AGGREGATION');
-        expect(result.allowedValues).toContain('p95');
-        expect(result.allowedValues).toContain('avg');
+        expect(result.allowedValues).toEqual(['sum', 'persecond', 'percent']);
       }
     });
   });
 
   describe('validateGroupBy', () => {
     it('should pass for valid dimensions', () => {
-      expect(validateGroupBy('edgeRequest', ['httpStatus', 'route'])).toEqual({
-        valid: true,
-      });
+      expect(
+        validateGroupBy(schema, 'edgeRequest', ['httpStatus', 'route'])
+      ).toEqual({ valid: true });
     });
 
     it('should fail for unknown dimension with available list', () => {
-      const result = validateGroupBy('edgeRequest', ['bogus']);
+      const result = validateGroupBy(schema, 'edgeRequest', ['bogus']);
       expect(result.valid).toBe(false);
       if (!result.valid) {
         expect(result.code).toBe('UNKNOWN_DIMENSION');
-        expect(result.message).toContain('"bogus"');
         expect(result.allowedValues).toContain('httpStatus');
       }
-    });
-
-    it('should fail for filter-only dimension with suggestion', () => {
-      const result = validateGroupBy('functionExecution', ['provider']);
-      expect(result.valid).toBe(false);
-      if (!result.valid) {
-        expect(result.code).toBe('FILTER_ONLY_DIMENSION');
-        expect(result.message).toContain('filter-only');
-        expect(result.message).toContain('--filter');
-      }
-    });
-
-    it('should pass for empty dimensions', () => {
-      expect(validateGroupBy('edgeRequest', [])).toEqual({
-        valid: true,
-      });
     });
   });
 

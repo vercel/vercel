@@ -3,12 +3,15 @@ import { client } from '../../../mocks/client';
 import query from '../../../../src/commands/metrics/query';
 import * as linkModule from '../../../../src/util/projects/link';
 import * as getScopeModule from '../../../../src/util/get-scope';
+import getProjectByNameOrId from '../../../../src/util/projects/get-project-by-id-or-name';
 
 vi.mock('../../../../src/util/projects/link');
 vi.mock('../../../../src/util/get-scope');
+vi.mock('../../../../src/util/projects/get-project-by-id-or-name');
 
 const mockedGetLinkedProject = vi.mocked(linkModule.getLinkedProject);
 const mockedGetScope = vi.mocked(getScopeModule.default);
+const mockedGetProjectByNameOrId = vi.mocked(getProjectByNameOrId);
 
 function mockLinkedProject() {
   mockedGetLinkedProject.mockResolvedValue({
@@ -32,8 +35,16 @@ function mockTeamScope(teamSlug = 'my-team') {
   });
 }
 
+function mockProjectLookup(projectName = 'other-app', projectId = 'prj_other') {
+  mockedGetProjectByNameOrId.mockResolvedValue({
+    id: projectId,
+    name: projectName,
+    accountId: 'team_dummy',
+  } as any);
+}
+
 function mockApiSuccess(data: any[] = [], summary: any[] = []) {
-  client.scenario.post('/api/observability/metrics', (_req, res) => {
+  client.scenario.post('/v1/observability/query', (_req, res) => {
     res.json({
       data,
       summary,
@@ -42,10 +53,87 @@ function mockApiSuccess(data: any[] = [], summary: any[] = []) {
   });
 }
 
+function mockSchemaApi() {
+  client.scenario.get('/v1/observability/schema', (_req, res) => {
+    res.json({
+      events: [
+        { name: 'incomingRequest', description: 'Edge Requests' },
+        { name: 'functionExecution', description: 'Functions' },
+      ],
+    });
+  });
+
+  client.scenario.get(
+    '/v1/observability/schema/incomingRequest',
+    (_req, res) => {
+      res.json({
+        name: 'incomingRequest',
+        description: 'Edge Requests',
+        dimensions: [
+          { name: 'httpStatus', label: 'HTTP Status' },
+          { name: 'route', label: 'Route' },
+        ],
+        measures: [
+          {
+            name: 'count',
+            label: 'Count',
+            unit: 'count',
+            aggregations: ['sum', 'persecond', 'percent'],
+            defaultAggregation: 'sum',
+          },
+          {
+            name: 'requestDurationMs',
+            label: 'Request Duration',
+            unit: 'milliseconds',
+            aggregations: ['avg', 'min', 'max', 'p95'],
+            defaultAggregation: 'avg',
+          },
+          {
+            name: 'fdtOutBytes',
+            label: 'Bandwidth',
+            unit: 'bytes',
+            aggregations: ['sum', 'avg'],
+            defaultAggregation: 'sum',
+          },
+        ],
+      });
+    }
+  );
+
+  client.scenario.get(
+    '/v1/observability/schema/functionExecution',
+    (_req, res) => {
+      res.json({
+        name: 'functionExecution',
+        description: 'Functions',
+        dimensions: [{ name: 'route', label: 'Route' }],
+        measures: [
+          {
+            name: 'count',
+            label: 'Count',
+            unit: 'count',
+            aggregations: ['sum'],
+            defaultAggregation: 'sum',
+          },
+          {
+            name: 'requestDurationMs',
+            label: 'Request Duration',
+            unit: 'milliseconds',
+            aggregations: ['avg', 'p95'],
+            defaultAggregation: 'avg',
+          },
+        ],
+      });
+    }
+  );
+}
+
 describe('query', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     client.reset();
+    mockedGetProjectByNameOrId.mockReset();
+    mockSchemaApi();
   });
 
   describe('missing --event', () => {
@@ -132,7 +220,7 @@ describe('query', () => {
   describe('default measure and aggregation', () => {
     it('should default to count/sum', async () => {
       let requestBody: any;
-      client.scenario.post('/api/observability/metrics', (req, res) => {
+      client.scenario.post('/v1/observability/query', (req, res) => {
         requestBody = req.body;
         res.json({ data: [], summary: [], statistics: {} });
       });
@@ -148,7 +236,7 @@ describe('query', () => {
 
     it('should default to avg for duration measures', async () => {
       let requestBody: any;
-      client.scenario.post('/api/observability/metrics', (req, res) => {
+      client.scenario.post('/v1/observability/query', (req, res) => {
         requestBody = req.body;
         res.json({ data: [], summary: [], statistics: {} });
       });
@@ -173,7 +261,7 @@ describe('query', () => {
 
     it('should default to sum for byte measures', async () => {
       let requestBody: any;
-      client.scenario.post('/api/observability/metrics', (req, res) => {
+      client.scenario.post('/v1/observability/query', (req, res) => {
         requestBody = req.body;
         res.json({ data: [], summary: [], statistics: {} });
       });
@@ -216,29 +304,10 @@ describe('query', () => {
     });
   });
 
-  describe('filter-only dimension', () => {
-    it('should return error for filter-only dimension in --group-by', async () => {
-      mockLinkedProject();
-      client.setArgv(
-        'metrics',
-        'query',
-        '--event',
-        'functionExecution',
-        '--group-by',
-        'provider'
-      );
-
-      const exitCode = await query(client, new MockTelemetry());
-
-      expect(exitCode).toBe(1);
-      expect(client.stderr.getFullOutput()).toContain('filter-only');
-    });
-  });
-
   describe('scope resolution', () => {
     it('should use linked project by default', async () => {
       let requestBody: any;
-      client.scenario.post('/api/observability/metrics', (req, res) => {
+      client.scenario.post('/v1/observability/query', (req, res) => {
         requestBody = req.body;
         res.json({ data: [], summary: [], statistics: {} });
       });
@@ -249,19 +318,20 @@ describe('query', () => {
 
       expect(exitCode).toBe(0);
       expect(requestBody.scope).toEqual({
-        type: 'project-with-slug',
-        teamSlug: 'my-team',
-        projectName: 'my-project',
+        type: 'project',
+        ownerId: 'team_dummy',
+        projectIds: ['prj_metricstest'],
       });
     });
 
     it('should use --project with team context', async () => {
       let requestBody: any;
-      client.scenario.post('/api/observability/metrics', (req, res) => {
+      client.scenario.post('/v1/observability/query', (req, res) => {
         requestBody = req.body;
         res.json({ data: [], summary: [], statistics: {} });
       });
       mockTeamScope('my-team');
+      mockProjectLookup('other-app');
       client.setArgv(
         'metrics',
         'query',
@@ -275,15 +345,51 @@ describe('query', () => {
 
       expect(exitCode).toBe(0);
       expect(requestBody.scope).toEqual({
-        type: 'project-with-slug',
-        teamSlug: 'my-team',
-        projectName: 'other-app',
+        type: 'project',
+        ownerId: 'team_dummy',
+        projectIds: ['prj_other'],
+      });
+    });
+
+    it('should resolve a project ID passed to --project', async () => {
+      let requestBody: any;
+      client.scenario.post('/v1/observability/query', (req, res) => {
+        requestBody = req.body;
+        res.json({ data: [], summary: [], statistics: {} });
+      });
+      mockTeamScope('my-team');
+      mockedGetProjectByNameOrId.mockResolvedValue({
+        id: 'prj_direct',
+        name: 'other-app',
+        accountId: 'team_dummy',
+      } as any);
+      client.setArgv(
+        'metrics',
+        'query',
+        '--event',
+        'edgeRequest',
+        '--project',
+        'prj_direct'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      expect(mockedGetProjectByNameOrId).toHaveBeenCalledWith(
+        client,
+        'prj_direct',
+        'team_dummy'
+      );
+      expect(requestBody.scope).toEqual({
+        type: 'project',
+        ownerId: 'team_dummy',
+        projectIds: ['prj_direct'],
       });
     });
 
     it('should use --all with team context', async () => {
       let requestBody: any;
-      client.scenario.post('/api/observability/metrics', (req, res) => {
+      client.scenario.post('/v1/observability/query', (req, res) => {
         requestBody = req.body;
         res.json({ data: [], summary: [], statistics: {} });
       });
@@ -294,8 +400,8 @@ describe('query', () => {
 
       expect(exitCode).toBe(0);
       expect(requestBody.scope).toEqual({
-        type: 'team-with-slug',
-        teamSlug: 'my-team',
+        type: 'owner',
+        ownerId: 'team_dummy',
       });
     });
 
@@ -381,12 +487,17 @@ describe('query', () => {
 
     it('should use getScope team for --project even when linked to a different team', async () => {
       let requestBody: any;
-      client.scenario.post('/api/observability/metrics', (req, res) => {
+      client.scenario.post('/v1/observability/query', (req, res) => {
         requestBody = req.body;
         res.json({ data: [], summary: [], statistics: {} });
       });
       mockLinkedProject(); // linked to 'my-team'
       mockTeamScope('other-team'); // getScope returns 'other-team'
+      mockedGetProjectByNameOrId.mockResolvedValue({
+        id: 'prj_other_team',
+        name: 'other-app',
+        accountId: 'team_dummy',
+      } as any);
       client.setArgv(
         'metrics',
         'query',
@@ -400,16 +511,16 @@ describe('query', () => {
 
       expect(exitCode).toBe(0);
       expect(requestBody.scope).toEqual({
-        type: 'project-with-slug',
-        teamSlug: 'other-team',
-        projectName: 'other-app',
+        type: 'project',
+        ownerId: 'team_dummy',
+        projectIds: ['prj_other_team'],
       });
     });
   });
 
   describe('text output', () => {
     it('should output ungrouped text', async () => {
-      client.scenario.post('/api/observability/metrics', (_req, res) => {
+      client.scenario.post('/v1/observability/query', (_req, res) => {
         res.json({
           data: [
             { timestamp: '2025-01-15T10:00:00Z', count_sum: 89 },
@@ -431,7 +542,7 @@ describe('query', () => {
     });
 
     it('should output grouped text', async () => {
-      client.scenario.post('/api/observability/metrics', (_req, res) => {
+      client.scenario.post('/v1/observability/query', (_req, res) => {
         res.json({
           data: [
             {
@@ -469,7 +580,7 @@ describe('query', () => {
     });
 
     it('should output no-data message for empty data', async () => {
-      client.scenario.post('/api/observability/metrics', (_req, res) => {
+      client.scenario.post('/v1/observability/query', (_req, res) => {
         res.json({ data: [], summary: [], statistics: {} });
       });
       mockLinkedProject();
@@ -487,7 +598,7 @@ describe('query', () => {
 
   describe('JSON output', () => {
     it('should output full JSON structure with --format=json', async () => {
-      client.scenario.post('/api/observability/metrics', (_req, res) => {
+      client.scenario.post('/v1/observability/query', (_req, res) => {
         res.json({
           data: [{ timestamp: '2025-01-15T10:00:00Z', value: 42 }],
           summary: [{ value: 42 }],
@@ -518,7 +629,7 @@ describe('query', () => {
   describe('--limit flag', () => {
     it('should send custom limit to API', async () => {
       let requestBody: any;
-      client.scenario.post('/api/observability/metrics', (req, res) => {
+      client.scenario.post('/v1/observability/query', (req, res) => {
         requestBody = req.body;
         res.json({ data: [], summary: [], statistics: {} });
       });
@@ -542,7 +653,7 @@ describe('query', () => {
   describe('--filter flag', () => {
     it('should pass filter string to API', async () => {
       let requestBody: any;
-      client.scenario.post('/api/observability/metrics', (req, res) => {
+      client.scenario.post('/v1/observability/query', (req, res) => {
         requestBody = req.body;
         res.json({ data: [], summary: [], statistics: {} });
       });
@@ -565,7 +676,7 @@ describe('query', () => {
 
   describe('API errors', () => {
     it('should handle 402 payment required', async () => {
-      client.scenario.post('/api/observability/metrics', (_req, res) => {
+      client.scenario.post('/v1/observability/query', (_req, res) => {
         res.status(402).json({ error: { code: 'PAYMENT_REQUIRED' } });
       });
       mockLinkedProject();
@@ -580,7 +691,7 @@ describe('query', () => {
     });
 
     it('should handle 403 forbidden', async () => {
-      client.scenario.post('/api/observability/metrics', (_req, res) => {
+      client.scenario.post('/v1/observability/query', (_req, res) => {
         res.status(403).json({ error: { code: 'FORBIDDEN' } });
       });
       mockLinkedProject();
@@ -593,7 +704,7 @@ describe('query', () => {
     });
 
     it('should handle 500 internal error', async () => {
-      client.scenario.post('/api/observability/metrics', (_req, res) => {
+      client.scenario.post('/v1/observability/query', (_req, res) => {
         res.status(500).json({ error: { code: 'INTERNAL_ERROR' } });
       });
       mockLinkedProject();
@@ -606,7 +717,7 @@ describe('query', () => {
     });
 
     it('should handle 400 bad request', async () => {
-      client.scenario.post('/api/observability/metrics', (_req, res) => {
+      client.scenario.post('/v1/observability/query', (_req, res) => {
         res
           .status(400)
           .json({ error: { code: 'BAD_REQUEST', message: 'Invalid query' } });
@@ -621,7 +732,7 @@ describe('query', () => {
     });
 
     it('should handle API error in JSON mode', async () => {
-      client.scenario.post('/api/observability/metrics', (_req, res) => {
+      client.scenario.post('/v1/observability/query', (_req, res) => {
         res.status(402).json({ error: { code: 'PAYMENT_REQUIRED' } });
       });
       mockLinkedProject();
@@ -813,6 +924,7 @@ describe('query', () => {
     it('should track project option as redacted', async () => {
       mockApiSuccess();
       mockTeamScope();
+      mockProjectLookup('my-app', 'prj_my_app');
       client.setArgv(
         'metrics',
         'query',
@@ -834,7 +946,7 @@ describe('query', () => {
   describe('request body', () => {
     it('should send correct request structure', async () => {
       let requestBody: any;
-      client.scenario.post('/api/observability/metrics', (req, res) => {
+      client.scenario.post('/v1/observability/query', (req, res) => {
         requestBody = req.body;
         res.json({ data: [], summary: [], statistics: {} });
       });

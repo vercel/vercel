@@ -1,4 +1,5 @@
 import { getFlagsSpecification } from './get-flags-specification';
+import { getCommandNamePlain } from './pkg-name';
 
 export const globalCommandOptions = [
   {
@@ -281,4 +282,16 @@ export function getGlobalFlagsOnlyFromArgs(args: string[]): string[] {
     }
   }
   return out;
+}
+
+/**
+ * Builds a suggested command with only global CLI flags preserved from argv.
+ * Useful for agent next[] hints that should keep context flags like --cwd.
+ */
+export function getCommandNameWithGlobalFlags(
+  commandTemplate: string,
+  argv: string[]
+): string {
+  const flags = getGlobalFlagsOnlyFromArgs(argv.slice(2));
+  return getCommandNamePlain(`${commandTemplate} ${flags.join(' ')}`.trim());
 }

@@ -7,6 +7,7 @@ import {
   formatErrorJson,
 } from '../../../../src/commands/metrics/output';
 import type { QueryMetadata } from '../../../../src/commands/metrics/types';
+import type { EventSchema } from '../../../../src/commands/metrics/schema-api';
 
 describe('output', () => {
   describe('getRollupColumnName', () => {
@@ -66,24 +67,38 @@ describe('output', () => {
 
   describe('formatSchemaDetailJson', () => {
     it('should format event detail as JSON', () => {
-      const event = {
+      const event: EventSchema & { name: string } = {
         name: 'functionExecution',
         description: 'Serverless function execution details',
         dimensions: [
-          { name: 'httpStatus', label: 'HTTP Status', filterOnly: false },
-          { name: 'provider', label: 'Provider', filterOnly: true },
+          { name: 'httpStatus', label: 'HTTP Status' },
+          { name: 'provider', label: 'Provider' },
         ],
-        measures: [{ name: 'count', label: 'Count', unit: 'count' }],
+        measures: [
+          {
+            name: 'count',
+            label: 'Count',
+            unit: 'count',
+            aggregations: ['sum', 'persecond', 'percent'],
+            defaultAggregation: 'sum',
+          },
+        ],
       };
-      const aggregations = ['sum', 'persecond', 'percent'];
-      const result = JSON.parse(formatSchemaDetailJson(event, aggregations));
+      const result = JSON.parse(formatSchemaDetailJson(event));
       expect(result.event).toBe('functionExecution');
       expect(result.description).toBe('Serverless function execution details');
       expect(result.dimensions).toHaveLength(2);
-      expect(result.dimensions[1].filterOnly).toBe(true);
-      expect(result.dimensions[0]).not.toHaveProperty('filterOnly');
+      expect(result.dimensions[1]).toEqual({
+        name: 'provider',
+        label: 'Provider',
+      });
       expect(result.measures).toHaveLength(1);
-      expect(result.aggregations).toEqual(aggregations);
+      expect(result.measures[0].aggregations).toEqual([
+        'sum',
+        'persecond',
+        'percent',
+      ]);
+      expect(result.measures[0].defaultAggregation).toBe('sum');
     });
   });
 

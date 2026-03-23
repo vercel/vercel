@@ -557,9 +557,10 @@ export async function serverBuild({
     let nextServerBuildTrace;
     let instrumentationHookBuildTrace;
 
-    const useBundledServer =
-      semver.gte(nextVersion, BUNDLED_SERVER_NEXT_VERSION) &&
-      process.env.VERCEL_NEXT_BUNDLED_SERVER === '1';
+    const useBundledServer = semver.gte(
+      nextVersion,
+      BUNDLED_SERVER_NEXT_VERSION
+    );
 
     if (useBundledServer) {
       debug('Using bundled Next.js server');

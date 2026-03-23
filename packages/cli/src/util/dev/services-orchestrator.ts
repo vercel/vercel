@@ -19,6 +19,7 @@ import {
   runNpmInstall,
   getServiceUrlEnvVars,
   type BuilderV3,
+  type BuilderVX,
   type Config,
 } from '@vercel/build-utils';
 import { checkForPort } from './port-utils';
@@ -397,9 +398,15 @@ export class ServicesOrchestrator {
     try {
       const builders = await importBuilders(new Set([builderSpec]), this.cwd);
       const builderWithPkg = builders.get(builderSpec);
-      const builder = builderWithPkg?.builder as BuilderV3 | undefined;
+      const builder = builderWithPkg?.builder as
+        | BuilderV3
+        | BuilderVX
+        | undefined;
 
-      if (builder?.version !== 3 || !builder.startDevServer) {
+      if (
+        (builder?.version !== 3 && builder?.version !== -1) ||
+        !builder?.startDevServer
+      ) {
         return null;
       }
 
@@ -578,7 +585,7 @@ export class ServicesOrchestrator {
     return Promise.race([checkForPort(port, STARTUP_TIMEOUT), processError]);
   }
 
-  // This is needed, because only BuilderV3 exposes a dev server,
+  // This is needed, because only BuilderV3 and BuilderVX expose a dev server,
   // but we still want to keep dependencies in sync for BuilderV2 (e.g. Next/Vite/etc).
   // We'll try with the provided installCommand (if any) and then fallback
   // to just trying to install dependencnies for Node.

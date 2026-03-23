@@ -199,4 +199,25 @@ world python-analysis {
         os-major: u16,
         os-minor: u16,
     ) -> result<bool, string>;
+
+    // =========================================================================
+    // PEP 508 environment marker evaluation
+    // =========================================================================
+
+    /// Evaluate a PEP 508 environment marker against a target environment.
+    ///
+    /// `marker` is a PEP 508 marker expression (e.g. "sys_platform == 'win32'").
+    /// `sys-platform` is e.g. "linux", "win32", "darwin".
+    /// `platform-machine` is e.g. "x86_64", "aarch64".
+    /// The remaining environment variables (`os_name`, `platform_system`, etc.)
+    /// are derived from `sys-platform`.
+    ///
+    /// Returns true if the marker is satisfied for the target environment.
+    export evaluate-marker: func(
+        marker: string,
+        python-major: u8,
+        python-minor: u8,
+        sys-platform: string,
+        platform-machine: string,
+    ) -> result<bool, string>;
 }

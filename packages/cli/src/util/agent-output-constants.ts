@@ -21,6 +21,7 @@ export const AGENT_REASON = {
   INVALID_ARGUMENTS: 'invalid_arguments',
   CONFIRMATION_REQUIRED: 'confirmation_required',
   LOGIN_REQUIRED: 'login_required',
+  PROJECT_SETTINGS_REQUIRED: 'project_settings_required',
   NOT_LINKED: 'not_linked',
   NOT_FOUND: 'not_found',
   MISSING_SCOPE: 'missing_scope',

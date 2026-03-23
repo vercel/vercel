@@ -701,12 +701,12 @@ export class AliasInUse extends NowError<'ALIAS_IN_USE', { alias: string }> {
  * a certificate for a domain but the domain is missing. An example would
  * be alias.
  */
-export class CertMissing extends NowError<'ALIAS_IN_USE', { domain: string }> {
+export class CertMissing extends NowError<'CERT_MISSING', { domain: string }> {
   constructor(domain: string) {
     super({
-      code: 'ALIAS_IN_USE',
+      code: 'CERT_MISSING',
       meta: { domain },
-      message: `The alias is already in use`,
+      message: `The certificate for domain ${domain} is missing`,
     });
   }
 }
