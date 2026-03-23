@@ -232,8 +232,8 @@ export const build: BuildVX = async ({
   let detected: DetectedPythonEntrypoint | undefined;
   let entrypointNotFound: NowBuildError | undefined;
 
-  if (!entrypoint && isPythonFramework(framework)) {
-    // Autodetect: no entrypoint configured (src was "<detect>")
+  if (isPythonFramework(framework) && !entrypoint) {
+    // Autodetect entrypoint: no entrypoint configured (src was "<detect>")
     detected =
       (await detectPythonEntrypoint(
         config.framework as PythonFramework,
@@ -242,32 +242,6 @@ export const build: BuildVX = async ({
     if (detected?.entrypoint) {
       debug(
         `Autodetected Python entrypoint: "${detected.entrypoint.entrypoint}"`
-      );
-      entrypoint = detected.entrypoint.entrypoint;
-    } else {
-      const searchedList = PYTHON_CANDIDATE_ENTRYPOINTS.join(', ');
-      entrypointNotFound = new NowBuildError({
-        code: `${framework!.toUpperCase()}_ENTRYPOINT_NOT_FOUND`,
-        message: `No ${framework} entrypoint found. Add an 'app' script in pyproject.toml or define an entrypoint in one of: ${searchedList}.`,
-        link: `https://vercel.com/docs/frameworks/backend/${framework}#exporting-the-${framework}-application`,
-        action: 'Learn More',
-      });
-    }
-  } else if (
-    entrypoint &&
-    isPythonFramework(framework) &&
-    (!fsFiles[entrypoint] || !entrypoint.endsWith('.py'))
-  ) {
-    // Configured entrypoint doesn't exist or isn't a .py file — try detection
-    detected =
-      (await detectPythonEntrypoint(
-        config.framework as PythonFramework,
-        workPath,
-        entrypoint
-      )) ?? undefined;
-    if (detected?.entrypoint) {
-      debug(
-        `Resolved Python entrypoint to "${detected.entrypoint.entrypoint}" (configured "${entrypoint}" not found).`
       );
       entrypoint = detected.entrypoint.entrypoint;
     } else {
