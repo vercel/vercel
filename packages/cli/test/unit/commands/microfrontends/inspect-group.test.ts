@@ -260,6 +260,23 @@ describe('microfrontends inspect-group', () => {
     });
   });
 
+  it('errors when --config-file-name has an invalid extension', async () => {
+    client.setArgv(
+      'microfrontends',
+      'inspect-group',
+      '--group=My Group',
+      '--config-file-name=microfrontends.txt',
+      '--format=json'
+    );
+
+    const exitCodePromise = microfrontends(client);
+
+    await expect(client.stderr).toOutput(
+      'Error: Invalid --config-file-name. Value must end with .json or .jsonc.'
+    );
+    expect(await exitCodePromise).toBe(1);
+  });
+
   it('errors in non-TTY mode without --group', async () => {
     client.setArgv('microfrontends', 'inspect-group');
     (client.stdin as any).isTTY = false;

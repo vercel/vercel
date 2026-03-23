@@ -89,6 +89,9 @@ export default async function inspectGroup(client: Client): Promise<number> {
   const asJson = formatResult.jsonOutput;
 
   const groupFlag = parsedArgs.flags['--group'] as string | undefined;
+  const configFileNameFlag = parsedArgs.flags['--config-file-name'] as
+    | string
+    | undefined;
   const { team } = await getScope(client);
 
   if (!team) {
@@ -171,7 +174,19 @@ export default async function inspectGroup(client: Client): Promise<number> {
   output.stopSpinner();
 
   const defaultProject = projects.find(p => p.isDefaultApp);
-  const configFile = resolveLocalConfigFilePath(projects, localRepoContext);
+  const configuredConfigFileName =
+    resolveConfiguredMicrofrontendsConfigFileName(configFileNameFlag);
+  if (configFileNameFlag && !configuredConfigFileName) {
+    output.error(
+      'Invalid --config-file-name. Value must end with .json or .jsonc.'
+    );
+    return 1;
+  }
+  const configFile = resolveLocalConfigFilePath(
+    projects,
+    localRepoContext,
+    configuredConfigFileName
+  );
   const json: InspectGroupJson = {
     group: {
       id: selectedGroup.group.id,
@@ -361,7 +376,8 @@ async function resolvePackageNameFromLocalRepo(
 
 function resolveLocalConfigFilePath(
   projects: InspectGroupProject[],
-  localRepoContext: LocalRepoContext
+  localRepoContext: LocalRepoContext,
+  configuredConfigFileName?: string | null
 ): string | null {
   const defaultProject = projects.find(project => project.isDefaultApp);
   if (!defaultProject) {
@@ -381,6 +397,13 @@ function resolveLocalConfigFilePath(
     localRepoContext.repoRoot!,
     defaultProject.git.rootDirectory || ''
   );
+  const configuredName = configuredConfigFileName ?? null;
+  if (configuredName) {
+    const configuredPath = join(projectDir, configuredName);
+    if (existsSync(configuredPath)) {
+      return configuredPath;
+    }
+  }
   const jsonPath = join(projectDir, 'microfrontends.json');
   const jsoncPath = join(projectDir, 'microfrontends.jsonc');
   if (existsSync(jsonPath)) {
@@ -390,4 +413,20 @@ function resolveLocalConfigFilePath(
     return jsoncPath;
   }
   return null;
+}
+
+function resolveConfiguredMicrofrontendsConfigFileName(
+  configured?: string | null
+): string | null {
+  if (!configured) {
+    return null;
+  }
+
+  const normalized = configured.trim();
+  if (!normalized.endsWith('.json') && !normalized.endsWith('.jsonc')) {
+    return null;
+  }
+
+  // Treat leading slash as app-root relative.
+  return normalized.replace(/^\/+/, '');
 }

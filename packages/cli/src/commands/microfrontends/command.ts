@@ -180,6 +180,14 @@ export const inspectGroupSubcommand = {
       deprecated: false,
       description: 'Name or ID of the microfrontends group to inspect',
     },
+    {
+      name: 'config-file-name',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description:
+        'Custom microfrontends config file path/name relative to the default app root (must end with .json or .jsonc)',
+    },
     formatOption,
   ],
   examples: [
