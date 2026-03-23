@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import login from '../../../../src/commands/login';
 import { client } from '../../../mocks/client';
 import * as loginFuture from '../../../../src/commands/login/future';
+import * as oauth from '../../../../src/util/oauth';
 
 vi.setConfig({ testTimeout: 10000 });
 
@@ -36,6 +37,19 @@ describe('login', () => {
   it('continues to login flow in non-interactive mode with no args', async () => {
     client.setArgv('login');
     (client as { nonInteractive: boolean }).nonInteractive = true;
+    vi.spyOn(oauth, 'deviceAuthorizationRequest').mockResolvedValue({} as any);
+    vi.spyOn(oauth, 'processDeviceAuthorizationResponse').mockResolvedValue([
+      null,
+      {
+        device_code: 'device-code',
+        user_code: 'BCDF-GHJK',
+        verification_uri: 'https://vercel.com/device',
+        verification_uri_complete:
+          'https://vercel.com/oauth/device?user_code=BCDF-GHJK',
+        expiresAt: Date.now() + 60_000,
+        interval: 5,
+      },
+    ]);
 
     const futureSpy = vi.spyOn(loginFuture, 'login').mockResolvedValue(0);
     const exitCodePromise = login(client, { shouldParseArgs: true });
@@ -44,7 +58,7 @@ describe('login', () => {
     );
     expect(futureSpy).toHaveBeenCalledTimes(0);
     await expect(client.stdout).toOutput(
-      'Visit https://vercel.com/login/generate to generate a login passcode, then run \'vc login --passcode <passcode>\'\n{\n  "status": "action_required",\n  "action": "login_passcode_required",\n  "message": "Visit https://vercel.com/login/generate to generate a login passcode, then run \'vc login --passcode <passcode>\'",\n  "verification_uri": "https://vercel.com/login/generate",\n  "next": [\n    {\n      "command": "vc login --passcode <passcode>"\n    }\n  ],\n  "hint": "Run one of the commands in next[] to complete without prompting."\n}\n'
+      'Visit https://vercel.com/device to generate a login passcode, then run \'vc login --passcode <passcode>\'\n{\n  "status": "action_required",\n  "action": "login_passcode_required",\n  "message": "Visit https://vercel.com/device to generate a login passcode, then run \'vc login --passcode <passcode>\'",\n  "verification_uri": "https://vercel.com/oauth/device?user_code=BCDF-GHJK",\n  "next": [\n    {\n      "command": "vc login --passcode <passcode>"\n    }\n  ],\n  "hint": "Run one of the commands in next[] to complete without prompting."\n}\n'
     );
 
     futureSpy.mockRestore();
