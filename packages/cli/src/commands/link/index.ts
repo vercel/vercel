@@ -70,7 +70,7 @@ export default async function link(client: Client) {
       return 1;
     }
 
-    await autoInstallAgentTooling(client);
+    await autoInstallAgentTooling(client, { autoConfirm: yes });
 
     return 0;
   }
@@ -159,7 +159,7 @@ export default async function link(client: Client) {
     }
   }
 
-  await autoInstallAgentTooling(client);
+  await autoInstallAgentTooling(client, { autoConfirm: yes });
 
   return 0;
 }

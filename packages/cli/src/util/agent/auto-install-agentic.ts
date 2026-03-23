@@ -144,7 +144,14 @@ async function isPluginInstalledForTarget(target: string): Promise<boolean> {
   return false;
 }
 
-async function confirm(client: Client, message: string): Promise<boolean> {
+async function confirm(
+  client: Client,
+  message: string,
+  autoConfirm?: boolean
+): Promise<boolean> {
+  if (autoConfirm) {
+    return true;
+  }
   if (!client.stdin.isTTY) {
     return client.isAgent;
   }
@@ -153,7 +160,7 @@ async function confirm(client: Client, message: string): Promise<boolean> {
 
 export async function autoInstallAgentTooling(
   client: Client,
-  options?: { skipAgentInit?: boolean }
+  options?: { skipAgentInit?: boolean; autoConfirm?: boolean }
 ): Promise<void> {
   try {
     const prefs = await readPrefs();
@@ -180,7 +187,8 @@ export async function autoInstallAgentTooling(
         printPreview();
         const accepted = await confirm(
           client,
-          `Add Vercel best practices to ${chalk.bold(targetFile)}?`
+          `Add Vercel best practices to ${chalk.bold(targetFile)}?`,
+          options?.autoConfirm
         );
         if (accepted) {
           await agentInit(client, true);
@@ -201,7 +209,11 @@ export async function autoInstallAgentTooling(
       }
 
       if (uninstalledTargets.length > 0) {
-        const accepted = await confirm(client, 'Install the Vercel plugin?');
+        const accepted = await confirm(
+          client,
+          'Install the Vercel plugin?',
+          options?.autoConfirm
+        );
         if (accepted) {
           for (const target of uninstalledTargets) {
             output.spinner(`Installing Vercel plugin for ${target}...`);
