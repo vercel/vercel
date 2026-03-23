@@ -40,4 +40,11 @@ export class MicrofrontendsTelemetryClient
       value: actual,
     });
   }
+
+  trackCliSubcommandInspectGroup(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'inspect-group',
+      value: actual,
+    });
+  }
 }
