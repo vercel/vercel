@@ -200,7 +200,10 @@ export async function login(
   client: Client,
   telemetry: LoginTelemetryClient
 ): Promise<number> {
-  const tokens = await performDeviceCodeFlow(client);
+  const passcode = getPasscodeFromArgv(client.argv);
+  const tokens = passcode
+    ? await exchangePasscodeForTokens(passcode)
+    : await performDeviceCodeFlow(client);
 
   if (!tokens) {
     telemetry.trackState('error');
@@ -246,4 +249,42 @@ export async function login(
 
 async function wait(intervalMs: number): Promise<void> {
   await new Promise(resolve => setTimeout(resolve, intervalMs));
+}
+
+function getPasscodeFromArgv(argv: string[]): string | undefined {
+  const args = argv.slice(2);
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === '--passcode' && i + 1 < args.length) {
+      return args[i + 1];
+    }
+    if (args[i].startsWith('--passcode=')) {
+      return args[i].slice('--passcode='.length);
+    }
+  }
+  return undefined;
+}
+
+async function exchangePasscodeForTokens(
+  passcode: string
+): Promise<DeviceCodeTokens | null> {
+  const [tokenResponseError, tokenResponse] = await deviceAccessTokenRequest({
+    passcode,
+  });
+
+  if (tokenResponseError) {
+    printError(tokenResponseError);
+    return null;
+  }
+
+  const [tokensError, tokens] = await processTokenResponse(tokenResponse);
+  if (tokensError) {
+    printError(tokensError);
+    return null;
+  }
+
+  return {
+    access_token: tokens.access_token,
+    expires_in: tokens.expires_in,
+    refresh_token: tokens.refresh_token,
+  };
 }

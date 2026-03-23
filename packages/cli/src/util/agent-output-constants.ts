@@ -75,4 +75,5 @@ export const AGENT_ACTION = {
   MISSING_ARGUMENTS: 'missing_arguments',
   CONFIRMATION_REQUIRED: 'confirmation_required',
   LOGIN_REQUIRED: 'login_required',
+  LOGIN_PASSCODE_REQUIRED: 'login_passcode_required',
 } as const;
