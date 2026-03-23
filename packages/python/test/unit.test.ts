@@ -100,12 +100,9 @@ function makePackage(
     return {
       requiresPython: constraints,
       manifest: {
-        path: options.convertedFrom,
+        path: '',
         data: {},
-        origin: {
-          kind: options.convertedFrom,
-          path: options.convertedFrom,
-        },
+        origin: { kind: options.convertedFrom, path: '' },
       },
     };
   }
