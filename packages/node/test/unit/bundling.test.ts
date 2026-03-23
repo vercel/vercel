@@ -146,4 +146,49 @@ describe('experimentalAllowBundling', () => {
     expect(Object.keys(lambda.files).length).toBeGreaterThan(0);
     expect((lambda as any).zipBuffer).toBeUndefined();
   });
+
+  it('should set handler to shared bundled handler when bundling is enabled', async () => {
+    process.env.VERCEL_API_FUNCTION_BUNDLING = '1';
+
+    const filesystem = await prepareFilesystem({
+      'api/hello.js': `
+        export default (req, res) => res.send('hello');
+      `,
+    });
+
+    const buildResult = await build({
+      ...filesystem,
+      entrypoint: 'api/hello.js',
+      config: { zeroConfig: true },
+      meta: { skipDownload: true },
+    });
+
+    const lambda = buildResult.output as NodejsLambda;
+    // All bundleable lambdas must share the same handler so groupLambdas
+    // can match their signatures and group them into a single Lambda.
+    expect(lambda.handler).toBe('___vc_bundled_api_handler.js');
+    expect(lambda.files['___vc_bundled_api_handler.js']).toBeDefined();
+    // The original user entrypoint should still be in files
+    expect(lambda.files['api/hello.js']).toBeDefined();
+  });
+
+  it('should use original handler when bundling is disabled', async () => {
+    delete process.env.VERCEL_API_FUNCTION_BUNDLING;
+
+    const filesystem = await prepareFilesystem({
+      'api/hello.js': `
+        export default (req, res) => res.send('hello');
+      `,
+    });
+
+    const buildResult = await build({
+      ...filesystem,
+      entrypoint: 'api/hello.js',
+      config: { zeroConfig: true },
+      meta: { skipDownload: true },
+    });
+
+    const lambda = buildResult.output as NodejsLambda;
+    expect(lambda.handler).toBe('api/hello.js');
+  });
 });

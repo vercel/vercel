@@ -604,6 +604,18 @@ export const build = async ({
       !isMiddleware &&
       !isEdgeFunction;
 
+    if (enableBundling) {
+      // All bundleable lambdas share this identical handler file so that
+      // groupLambdas can match their handler field and digest, grouping
+      // them into a single Lambda. At runtime, the shared handler uses
+      // x-matched-path to route to the correct user entrypoint.
+      const bundledHandlerName = '___vc_bundled_api_handler.js';
+      preparedFiles[bundledHandlerName] = new FileFsRef({
+        fsPath: join(dirname(__filename), 'bundling-handler.js'),
+      });
+      handler = bundledHandlerName;
+    }
+
     output = new NodejsLambda({
       files: preparedFiles,
       handler,
