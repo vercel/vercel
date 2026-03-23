@@ -6,6 +6,10 @@ const {
   testDeployment,
 } = require('../../../test/lib/deployment/test-deployment.js');
 
+process.env.VERCEL_FORCE_BUILD_IN_HIVE = 'hvi_lhr1_dizzy';
+process.env.VERCEL_BUILD_CONTAINER_VERSION =
+  'pr-64727-49c03db942db911f60987f7cf6c8f09c6e8c0d78';
+
 jest.setTimeout(4 * 60 * 1000);
 
 module.exports = function setupTests(groupIndex) {
