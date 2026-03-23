@@ -57,7 +57,7 @@ import { VERCEL_WORKERS_VERSION } from '../src/package-versions';
 import { createPyprojectToml } from '../src/install';
 import { detectDjangoPythonEntrypoint } from '../src/entrypoint';
 import { getDjangoSettings, runDjangoCollectStatic } from '../src/django';
-import { FileBlob } from '@vercel/build-utils';
+import { FileBlob, download } from '@vercel/build-utils';
 
 function getBuildOutputV2(result: Awaited<ReturnType<typeof build>>) {
   expect(result.resultVersion).toBe(2);
@@ -1025,7 +1025,7 @@ describe('fastapi entrypoint discovery', () => {
       build({
         workPath: mockWorkPath,
         files,
-        entrypoint: 'main.py',
+        entrypoint: '<detect>',
         meta: { isDev: true },
         config: { framework: 'fastapi' },
         repoRootPath: mockWorkPath,
@@ -1052,11 +1052,13 @@ describe('fastapi entrypoint discovery - positive cases', () => {
         data: 'from fastapi import FastAPI\napp = FastAPI()\n',
       }),
     } as Record<string, FileBlob>;
+    // isDev mode assumes files are already present
+    await download(files, workPath);
 
     const result = await build({
       workPath,
       files,
-      entrypoint: 'server.py',
+      entrypoint: '<detect>',
       meta: { isDev: true },
       config: { framework: 'fastapi' },
       repoRootPath: workPath,
@@ -1085,11 +1087,13 @@ describe('fastapi entrypoint discovery - positive cases', () => {
         data: 'import fastapi\n\napp = fastapi.FastAPI()',
       }),
     } as Record<string, FileBlob>;
+    // isDev mode assumes files are already present
+    await download(files, workPath);
 
     const result = await build({
       workPath,
       files,
-      entrypoint: 'server.py',
+      entrypoint: '<detect>',
       meta: { isDev: true },
       config: { framework: 'fastapi' },
       repoRootPath: workPath,
@@ -1119,11 +1123,13 @@ describe('fastapi entrypoint discovery - positive cases', () => {
         data: 'import fastapi\nfrom fastapi import FastAPI\napp = FastAPI()\n',
       }),
     } as Record<string, FileBlob>;
+    // isDev mode assumes files are already present
+    await download(files, workPath);
 
     const result = await build({
       workPath,
       files,
-      entrypoint: 'server.py',
+      entrypoint: '<detect>',
       meta: { isDev: true },
       config: { framework: 'fastapi' },
       repoRootPath: workPath,
@@ -1195,11 +1201,13 @@ describe('Django entrypoint discovery', () => {
         data: 'application = lambda env, start: None\n',
       }),
     } as Record<string, FileBlob>;
+    // isDev mode assumes files are already present
+    await download(files, workPath);
 
     const result = await build({
       workPath,
       files,
-      entrypoint: 'index.py',
+      entrypoint: '<detect>',
       meta: { isDev: true },
       config: { framework: 'django' },
       repoRootPath: workPath,
@@ -1229,11 +1237,13 @@ describe('Django entrypoint discovery', () => {
         data: 'application = lambda env, start: None\n',
       }),
     } as Record<string, FileBlob>;
+    // isDev mode assumes files are already present
+    await download(files, workPath);
 
     const result = await build({
       workPath,
       files,
-      entrypoint: 'index.py',
+      entrypoint: '<detect>',
       meta: { isDev: true },
       config: { framework: 'django' },
       repoRootPath: workPath,
@@ -1271,11 +1281,13 @@ describe('Django entrypoint discovery', () => {
         data: "WSGI_APPLICATION = 'hello.wsgi.application'\n",
       }),
     } as Record<string, FileBlob>;
+    // isDev mode assumes files are already present
+    await download(files, workPath);
 
     const result = await build({
       workPath,
       files,
-      entrypoint: 'index.py',
+      entrypoint: '<detect>',
       meta: { isDev: true },
       config: { framework: 'django' },
       repoRootPath: workPath,
@@ -1317,11 +1329,13 @@ describe('Django entrypoint discovery', () => {
         data: 'application = lambda env, start: None\n',
       }),
     } as Record<string, FileBlob>;
+    // isDev mode assumes files are already present
+    await download(files, workPath);
 
     const result = await build({
       workPath,
       files,
-      entrypoint: 'index.py',
+      entrypoint: '<detect>',
       meta: { isDev: true },
       config: { framework: 'django' },
       repoRootPath: workPath,
@@ -1359,11 +1373,13 @@ describe('Django entrypoint discovery', () => {
         data: 'application = lambda env, start: None\n',
       }),
     } as Record<string, FileBlob>;
+    // isDev mode assumes files are already present
+    await download(files, workPath);
 
     const result = await build({
       workPath,
       files,
-      entrypoint: 'index.py',
+      entrypoint: '<detect>',
       meta: { isDev: true },
       config: { framework: 'django' },
       repoRootPath: workPath,
@@ -1410,8 +1426,6 @@ describe('Django entrypoint discovery', () => {
     fs.mkdirSync(workPath, { recursive: true });
     makeMockPython('3.9');
 
-    // Omit the configured entrypoint from files so that framework detection
-    // runs and sets detected.baseDir, which the Django hook requires.
     const files = {
       'manage.py': new FileBlob({
         data: "os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'myapp.settings')\n",
@@ -1421,11 +1435,13 @@ describe('Django entrypoint discovery', () => {
       }),
       'static/app.css': new FileBlob({ data: 'body {}' }),
     } as Record<string, FileBlob>;
+    // isDev mode assumes files are already present
+    await download(files, workPath);
 
     const result = await build({
       workPath: workPath,
       files,
-      entrypoint: 'index.py',
+      entrypoint: '<detect>',
       meta: { isDev: false },
       config: { framework: 'django', zeroConfig: true },
       repoRootPath: workPath,
@@ -1479,11 +1495,13 @@ describe('pyproject.toml entrypoint detection', () => {
         data: 'from fastapi import FastAPI\napp = FastAPI()\n',
       }),
     } as Record<string, FileBlob>;
+    // isDev mode assumes files are already present
+    await download(files, workPath);
 
     const result = await buildWithMocks({
       workPath,
       files,
-      entrypoint: 'missing.py',
+      entrypoint: '<detect>',
       meta: { isDev: true },
       config: { framework: 'fastapi' },
       repoRootPath: workPath,
@@ -1523,11 +1541,13 @@ describe('pyproject.toml entrypoint detection', () => {
         data: 'from flask import Flask\napp = Flask(__name__)\n',
       }),
     } as Record<string, FileBlob>;
+    // isDev mode assumes files are already present
+    await download(files, workPath);
 
     const result = await buildWithMocks({
       workPath,
       files,
-      entrypoint: 'missing.py',
+      entrypoint: '<detect>',
       meta: { isDev: true },
       config: { framework: 'flask' },
       repoRootPath: workPath,
@@ -1564,11 +1584,13 @@ describe('pyproject.toml entrypoint detection', () => {
         data: 'from flask import Flask\napp = Flask(__name__)\n',
       }),
     } as Record<string, FileBlob>;
+    // isDev mode assumes files are already present
+    await download(files, workPath);
 
     const result = await buildWithMocks({
       workPath,
       files,
-      entrypoint: 'missing.py',
+      entrypoint: '<detect>',
       meta: { isDev: true },
       config: { framework: 'flask' },
       repoRootPath: workPath,

@@ -561,12 +561,18 @@ export async function getBuildMatches(
       src = 'package.json';
     }
 
-    // The Python builder will handle the actual entrypoint discovery, we just need to
-    // point it to a manifest file that exists.
+    // lambda function files are trimmed of their file extension
+    const mapToEntrypoint = new Map<string, string>();
+
+    // The Python builder handles entrypoint discovery itself via <detect>.
+    // We still need to match a real file so the dev server creates a BuildMatch,
+    // but we preserve the original src (e.g. "<detect>") as the entrypoint
+    // passed to startDevServer/build.
     if (
       buildConfig.config?.framework &&
       isPythonFramework(buildConfig.config?.framework)
     ) {
+      const originalSrc = src;
       const pythonManifestFiles = [
         'pyproject.toml',
         'requirements.txt',
@@ -575,11 +581,9 @@ export async function getBuildMatches(
       const existing = pythonManifestFiles.filter(p => fileList.includes(p));
       if (existing.length > 0) {
         src = existing[0];
+        mapToEntrypoint.set(src, originalSrc);
       }
     }
-
-    // lambda function files are trimmed of their file extension
-    const mapToEntrypoint = new Map<string, string>();
     const extensionless = devServer.getExtensionlessFile(src);
     if (extensionless) {
       mapToEntrypoint.set(extensionless, src);
