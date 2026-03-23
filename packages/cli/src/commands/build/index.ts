@@ -8,6 +8,7 @@ import { readdirSync, statSync } from 'fs';
 
 import {
   download,
+  FileBlob,
   FileFsRef,
   getDiscontinuedNodeVersions,
   getInstalledPackageVersion,
@@ -26,6 +27,7 @@ import {
   type BuildResultV2,
   type BuildResultV2Typical,
   type BuildResultV3,
+  type BuildResultVX,
   type Config,
   type Cron,
   type Files,
@@ -37,6 +39,7 @@ import {
   isBackendBuilder,
   type Lambda,
   type TriggerEvent,
+  downloadFile,
 } from '@vercel/build-utils';
 import type { VercelConfig } from '@vercel/client';
 import { fileNameSymbol } from '@vercel/client';
@@ -106,6 +109,7 @@ import {
 import { help } from '../help';
 import { pullCommandLogic } from '../pull';
 import { buildCommand } from './command';
+import { validatePackageManifest } from '../../util/validate-package-manifest';
 import { mkdir, writeFile } from 'fs/promises';
 
 /** Build a plain suggested command with global flags (e.g. --cwd, --non-interactive) appended. */
@@ -797,6 +801,13 @@ async function doBuild(
     corepackShimDir = await initCorepack({ repoRootPath });
   }
   const diagnostics: Files = {};
+  const packageManifests: Array<{
+    workspace: string;
+    key: string;
+    manifest: Record<string, unknown>;
+    service?: Service;
+    builderUse: string;
+  }> = [];
 
   const hasDetectedServices =
     detectedServices !== undefined && detectedServices.length > 0;
@@ -981,10 +992,17 @@ async function doBuild(
         `Building entrypoint "${build.src}" with "${builderPkg.name}"`
       );
       let buildResult: BuildResultV2 | BuildResultV3;
+      let rawBuildResult: BuildResultV2 | BuildResultV3 | BuildResultVX;
       try {
-        buildResult = await builderSpan.trace<BuildResultV2 | BuildResultV3>(
-          async () => builder.build(buildOptions)
-        );
+        rawBuildResult = await builderSpan.trace<
+          BuildResultV2 | BuildResultV3 | BuildResultVX
+        >(async () => builder.build(buildOptions));
+        if (builder.version === -1) {
+          const vx = rawBuildResult as BuildResultVX;
+          buildResult = vx.result;
+        } else {
+          buildResult = rawBuildResult as BuildResultV2 | BuildResultV3;
+        }
 
         // If the build result has no routes and the framework has default routes,
         // then add the default routes to the build result
@@ -1014,7 +1032,51 @@ async function doBuild(
             .trace(async () => {
               return await builder.diagnostics?.(buildOptions);
             });
-          Object.assign(diagnostics, builderDiagnostics);
+          if (builderDiagnostics) {
+            const prefix =
+              service && service.workspace !== '.'
+                ? service.workspace + '/' + builderPkg.name + '/'
+                : '';
+            for (const [key, value] of Object.entries(builderDiagnostics)) {
+              const fullKey = prefix + key;
+              if (key.endsWith('package-manifest.json')) {
+                try {
+                  let data: string;
+                  if (value.type === 'FileBlob') {
+                    data = (value as unknown as FileBlob).data.toString();
+                  } else {
+                    data = await streamToString(value.toStream());
+                  }
+                  const packageManifest = JSON.parse(data);
+                  const validationError =
+                    validatePackageManifest(packageManifest);
+                  if (validationError) {
+                    output.warn(
+                      `Invalid package-manifest.json from ${fullKey}: ${validationError}`
+                    );
+                  } else {
+                    const workspace =
+                      service && service.workspace !== '.'
+                        ? service.workspace
+                        : '.';
+                    packageManifests.push({
+                      workspace,
+                      key: fullKey,
+                      manifest: packageManifest,
+                      service,
+                      builderUse: builderPkg.name,
+                    });
+                  }
+                } catch (e) {
+                  output.debug(
+                    `Failed to parse ${fullKey}: ${e instanceof Error ? e.message : String(e)}`
+                  );
+                }
+              } else {
+                diagnostics[fullKey] = value;
+              }
+            }
+          }
         } catch (error) {
           output.error('Collecting diagnostics failed');
           output.debug(error);
@@ -1178,7 +1240,7 @@ async function doBuild(
             writeBuildResult({
               repoRootPath,
               outputDir,
-              buildResult,
+              buildResult: rawBuildResult,
               build,
               builder,
               builderPkg,
@@ -1205,6 +1267,43 @@ async function doBuild(
     } finally {
       ops.push(
         download(diagnostics, join(outputDir, 'diagnostics')).then(
+          () => undefined,
+          err => err
+        )
+      );
+    }
+  }
+
+  // Aggregate individual package-manifest.json files from builders into
+  // a single project-manifest.json keyed by service workspace.
+  if (packageManifests.length > 0) {
+    const projectManifest: Record<string, unknown> = {};
+    for (const {
+      workspace,
+      manifest,
+      service,
+      builderUse,
+    } of packageManifests) {
+      projectManifest[`${builderUse}:${workspace}`] = {
+        ...manifest,
+        workspace,
+        builder: builderUse,
+        framework: service?.framework,
+        serviceName: service?.name,
+        serviceType: service?.type,
+        routePrefix: service?.routePrefix,
+      };
+    }
+    if (Object.keys(projectManifest).length > 0) {
+      const projectManifestBlob = new FileBlob({
+        data: JSON.stringify(projectManifest),
+      });
+      diagnostics['project-manifest.json'] = projectManifestBlob;
+      ops.push(
+        downloadFile(
+          projectManifestBlob,
+          join(outputDir, 'diagnostics', 'project-manifest.json')
+        ).then(
           () => undefined,
           err => err
         )
@@ -1938,4 +2037,12 @@ function appendWorkerTrigger(lambda: Lambda, trigger: TriggerEvent): void {
   if (!alreadyConfigured) {
     lambda.experimentalTriggers = [...existingTriggers, trigger];
   }
+}
+
+async function streamToString(stream: NodeJS.ReadableStream): Promise<string> {
+  const chunks: Buffer[] = [];
+  for await (const chunk of stream) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+  return Buffer.concat(chunks).toString('utf-8');
 }

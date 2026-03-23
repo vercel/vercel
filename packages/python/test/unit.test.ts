@@ -50,13 +50,24 @@ import {
 } from '../src/version';
 import type { PythonConstraint, PythonPackage } from '@vercel/python-analysis';
 import { build } from '../src/index';
+import type { BuildResultV3, BuildResultV2 } from '@vercel/build-utils';
 import { createVenvEnv, getVenvBinDir } from '../src/utils';
 import { UV_PYTHON_DOWNLOADS_MODE, getProtectedUvEnv } from '../src/uv';
 import { VERCEL_WORKERS_VERSION } from '../src/package-versions';
 import { createPyprojectToml } from '../src/install';
 import { detectDjangoPythonEntrypoint } from '../src/entrypoint';
-import { getDjangoSettings } from '../src/django';
+import { getDjangoSettings, runDjangoCollectStatic } from '../src/django';
 import { FileBlob } from '@vercel/build-utils';
+
+function getBuildOutputV2(result: Awaited<ReturnType<typeof build>>) {
+  expect(result.resultVersion).toBe(2);
+  return (result as any).result as BuildResultV2;
+}
+
+function getBuildOutputV3(result: Awaited<ReturnType<typeof build>>) {
+  expect(result.resultVersion).toBe(3);
+  return (result as any).result.output as BuildResultV3['output'];
+}
 
 /**
  * Build a PythonConstraint from a PEP 440 version specifier string.
@@ -758,7 +769,7 @@ describe('file exclusions', () => {
       repoRootPath: mockWorkPath,
     });
 
-    const outputFiles = Object.keys(result.output.files || {});
+    const outputFiles = Object.keys(getBuildOutputV3(result).files || {});
     const excludedLockFiles = [
       'pnpm-lock.yaml',
       'yarn.lock',
@@ -802,7 +813,7 @@ describe('file exclusions', () => {
       repoRootPath: mockWorkPath,
     });
 
-    const outputFiles = Object.keys(result.output.files || {});
+    const outputFiles = Object.keys(getBuildOutputV3(result).files || {});
 
     // Should not include the user-excluded file
     expect(outputFiles.some(f => f.includes('secret.txt'))).toBe(false);
@@ -849,7 +860,7 @@ describe('python version selection from uv.lock and pyproject.toml', () => {
       repoRootPath: mockWorkPath,
     });
 
-    const handler = result.output.files?.['vc__handler__python.py'];
+    const handler = getBuildOutputV3(result).files?.['vc__handler__python.py'];
     expect(handler).toBeDefined();
   });
 
@@ -870,7 +881,7 @@ describe('python version selection from uv.lock and pyproject.toml', () => {
       repoRootPath: mockWorkPath,
     });
 
-    const handler = result.output.files?.['vc__handler__python.py'];
+    const handler = getBuildOutputV3(result).files?.['vc__handler__python.py'];
     expect(handler).toBeDefined();
   });
 
@@ -983,7 +994,7 @@ describe('uv workspace lockfile resolution (workspace root above workPath)', () 
       repoRootPath: repoRoot,
     });
 
-    const handler = result.output.files?.['vc__handler__python.py'];
+    const handler = getBuildOutputV3(result).files?.['vc__handler__python.py'];
     expect(handler).toBeDefined();
 
     fs.removeSync(repoRoot);
@@ -1046,7 +1057,7 @@ describe('fastapi entrypoint discovery - positive cases', () => {
       repoRootPath: workPath,
     });
 
-    const handler = result.output.files?.['vc__handler__python.py'];
+    const handler = getBuildOutputV3(result).files?.['vc__handler__python.py'];
     if (!handler || !('data' in handler)) {
       throw new Error('handler bootstrap not found');
     }
@@ -1079,7 +1090,7 @@ describe('fastapi entrypoint discovery - positive cases', () => {
       repoRootPath: workPath,
     });
 
-    const handler = result.output.files?.['vc__handler__python.py'];
+    const handler = getBuildOutputV3(result).files?.['vc__handler__python.py'];
     if (!handler || !('data' in handler)) {
       throw new Error('handler bootstrap not found');
     }
@@ -1113,7 +1124,7 @@ describe('fastapi entrypoint discovery - positive cases', () => {
       repoRootPath: workPath,
     });
 
-    const handler = result.output.files?.['vc__handler__python.py'];
+    const handler = getBuildOutputV3(result).files?.['vc__handler__python.py'];
     if (!handler || !('data' in handler)) {
       throw new Error('handler bootstrap not found');
     }
@@ -1186,7 +1197,7 @@ describe('Django entrypoint discovery', () => {
       repoRootPath: workPath,
     });
 
-    const handler = result.output.files?.['vc__handler__python.py'];
+    const handler = getBuildOutputV3(result).files?.['vc__handler__python.py'];
     if (!handler || !('data' in handler)) {
       throw new Error('handler bootstrap not found');
     }
@@ -1220,7 +1231,7 @@ describe('Django entrypoint discovery', () => {
       repoRootPath: workPath,
     });
 
-    const handler = result.output.files?.['vc__handler__python.py'];
+    const handler = getBuildOutputV3(result).files?.['vc__handler__python.py'];
     if (!handler || !('data' in handler)) {
       throw new Error('handler bootstrap not found');
     }
@@ -1261,7 +1272,7 @@ describe('Django entrypoint discovery', () => {
       repoRootPath: workPath,
     });
 
-    const handler = result.output.files?.['vc__handler__python.py'];
+    const handler = getBuildOutputV3(result).files?.['vc__handler__python.py'];
     if (!handler || !('data' in handler)) {
       throw new Error('handler bootstrap not found');
     }
@@ -1306,7 +1317,7 @@ describe('Django entrypoint discovery', () => {
       repoRootPath: workPath,
     });
 
-    const handler = result.output.files?.['vc__handler__python.py'];
+    const handler = getBuildOutputV3(result).files?.['vc__handler__python.py'];
     if (!handler || !('data' in handler)) {
       throw new Error('handler bootstrap not found');
     }
@@ -1347,12 +1358,76 @@ describe('Django entrypoint discovery', () => {
       repoRootPath: workPath,
     });
 
-    const handler = result.output.files?.['vc__handler__python.py'];
+    const handler = getBuildOutputV3(result).files?.['vc__handler__python.py'];
     if (!handler || !('data' in handler)) {
       throw new Error('handler bootstrap not found');
     }
     const content = handler.data.toString();
     expect(content).toContain('os.path.join(_here, "hello/world.py")');
+
+    if (fs.existsSync(workPath)) fs.removeSync(workPath);
+  });
+
+  it('returns a v2 result with static files in output and filesystem route', async () => {
+    vi.mocked(getDjangoSettings).mockResolvedValueOnce({
+      settingsModule: 'myapp.settings',
+      djangoSettings: {
+        WSGI_APPLICATION: 'myapp.wsgi.application',
+        STATIC_URL: '/static/',
+        STATIC_ROOT: 'staticfiles',
+      },
+    });
+    // Simulate collectstatic succeeding
+    vi.mocked(runDjangoCollectStatic).mockImplementationOnce(
+      async (_venvPath, _workPath, _env, outputStaticDir) => {
+        fs.mkdirSync(path.join(outputStaticDir, 'static'), { recursive: true });
+        fs.writeFileSync(
+          path.join(outputStaticDir, 'static', 'app.css'),
+          'body {}'
+        );
+        return {
+          staticSourceDirs: [path.join(_workPath, 'static')],
+          staticRoot: null,
+          cdnOutputDir: outputStaticDir,
+          manifestRelPath: null,
+        };
+      }
+    );
+
+    const workPath = path.join(tmpdir(), `python-django-build-${Date.now()}`);
+    fs.mkdirSync(workPath, { recursive: true });
+    makeMockPython('3.9');
+
+    // Omit the configured entrypoint from files so that framework detection
+    // runs and sets detected.baseDir, which the Django hook requires.
+    const files = {
+      'manage.py': new FileBlob({
+        data: "os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'myapp.settings')\n",
+      }),
+      'myapp/wsgi.py': new FileBlob({
+        data: 'application = lambda env, start: None\n',
+      }),
+      'static/app.css': new FileBlob({ data: 'body {}' }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath: workPath,
+      files,
+      entrypoint: 'index.py',
+      meta: { isDev: false },
+      config: { framework: 'django', zeroConfig: true },
+      repoRootPath: workPath,
+    });
+
+    const v2result = getBuildOutputV2(result);
+    expect(v2result.routes).toContainEqual({ handle: 'filesystem' });
+    expect(v2result.routes).toContainEqual(
+      expect.objectContaining({ src: '/(.*)', dest: '/myapp/wsgi' })
+    );
+    const lambda = v2result.output['myapp/wsgi'];
+    expect(lambda).toBeDefined(); // Lambda keyed by entrypoint sans extension
+    expect((lambda as any).files?.['static/app.css']).toBeUndefined(); // Excluded from Lambda bundle
+    expect(v2result.output['static/app.css']).toBeDefined(); // Static file from collectstatic
 
     if (fs.existsSync(workPath)) fs.removeSync(workPath);
   });
@@ -1402,7 +1477,7 @@ describe('pyproject.toml entrypoint detection', () => {
       repoRootPath: workPath,
     });
 
-    const handler = result.output.files?.['vc__handler__python.py'];
+    const handler = getBuildOutputV3(result).files?.['vc__handler__python.py'];
     if (!handler || !('data' in handler)) {
       throw new Error('handler bootstrap not found');
     }
@@ -1446,7 +1521,7 @@ describe('pyproject.toml entrypoint detection', () => {
       repoRootPath: workPath,
     });
 
-    const handler = result.output.files?.['vc__handler__python.py'];
+    const handler = getBuildOutputV3(result).files?.['vc__handler__python.py'];
     if (!handler || !('data' in handler)) {
       throw new Error('handler bootstrap not found');
     }
@@ -1487,7 +1562,7 @@ describe('pyproject.toml entrypoint detection', () => {
       repoRootPath: workPath,
     });
 
-    const handler = result.output.files?.['vc__handler__python.py'];
+    const handler = getBuildOutputV3(result).files?.['vc__handler__python.py'];
     if (!handler || !('data' in handler)) {
       throw new Error('handler bootstrap not found');
     }
@@ -1532,7 +1607,7 @@ describe('handlerFunction validation', () => {
       repoRootPath: mockWorkPath,
     });
 
-    const handler = result.output.files?.['vc__handler__python.py'];
+    const handler = getBuildOutputV3(result).files?.['vc__handler__python.py'];
     if (!handler || !('data' in handler)) {
       throw new Error('handler bootstrap not found');
     }
@@ -1560,7 +1635,7 @@ describe('handlerFunction validation', () => {
       repoRootPath: mockWorkPath,
     });
 
-    const handler = result.output.files?.['vc__handler__python.py'];
+    const handler = getBuildOutputV3(result).files?.['vc__handler__python.py'];
     if (!handler || !('data' in handler)) {
       throw new Error('handler bootstrap not found');
     }
@@ -1630,7 +1705,7 @@ describe('handlerFunction validation', () => {
       repoRootPath: mockWorkPath,
     });
 
-    const handler = result.output.files?.['vc__handler__python.py'];
+    const handler = getBuildOutputV3(result).files?.['vc__handler__python.py'];
     if (!handler || !('data' in handler)) {
       throw new Error('handler bootstrap not found');
     }
