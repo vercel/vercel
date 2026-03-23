@@ -1,5 +1,11 @@
 # @vercel/python
 
+## 6.27.0
+
+### Minor Changes
+
+- Ensure django static files are copied in build output. ([#15557](https://github.com/vercel/vercel/pull/15557))
+
 ## 6.26.0
 
 ### Minor Changes
