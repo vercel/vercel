@@ -88,13 +88,13 @@ async function invokeWebHandler(
   };
 
   if (req.method !== 'GET' && req.method !== 'HEAD') {
-    const chunks: Buffer[] = [];
+    const chunks: Uint8Array[] = [];
     for await (const chunk of req) {
       chunks.push(chunk);
     }
     if (chunks.length > 0) {
       const buf = Buffer.concat(chunks);
-      init.body = new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength);
+      init.body = new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength) as unknown as BodyInit;
       init.duplex = 'half';
     }
   }
