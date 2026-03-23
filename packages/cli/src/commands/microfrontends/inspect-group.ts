@@ -40,8 +40,6 @@ interface InspectGroupProject {
   };
   packageName: string | null;
   inGroupConfig: boolean;
-  gitRepo: string | null;
-  gitOrg: string | null;
   projectFetchStatus: 'ok' | 'not_found' | 'error';
 }
 
@@ -54,7 +52,6 @@ interface InspectGroupJson {
   };
   projectCount: number;
   defaultApp: string | null;
-  fallbackEnvironment: string | null;
   configFile: string | null;
   config: {
     exists: boolean;
@@ -139,7 +136,10 @@ export default async function inspectGroup(client: Client): Promise<number> {
   let selectedGroup: MicrofrontendsGroupResponse;
   if (groupFlag) {
     const found = groups.find(
-      g => g.group.name === groupFlag || g.group.id === groupFlag
+      g =>
+        g.group.name === groupFlag ||
+        g.group.id === groupFlag ||
+        g.group.slug === groupFlag
     );
     if (!found) {
       output.error(`Microfrontends group "${groupFlag}" not found.`);
@@ -170,6 +170,7 @@ export default async function inspectGroup(client: Client): Promise<number> {
   );
   output.stopSpinner();
 
+  const defaultProject = projects.find(p => p.isDefaultApp);
   const configFile = resolveLocalConfigFilePath(projects, localRepoContext);
   const json: InspectGroupJson = {
     group: {
@@ -179,11 +180,7 @@ export default async function inspectGroup(client: Client): Promise<number> {
       fallbackEnvironment: selectedGroup.group.fallbackEnvironment ?? null,
     },
     projectCount: projects.length,
-    defaultApp:
-      projects.find(project => project.isDefaultApp)?.name ??
-      projects.find(project => project.isDefaultApp)?.id ??
-      null,
-    fallbackEnvironment: selectedGroup.group.fallbackEnvironment ?? null,
+    defaultApp: defaultProject?.name ?? defaultProject?.id ?? null,
     configFile,
     config: {
       exists: !!selectedGroup.config,
@@ -201,7 +198,9 @@ export default async function inspectGroup(client: Client): Promise<number> {
   output.log(`  ID: ${selectedGroup.group.id}`);
   output.log(`  Slug: ${selectedGroup.group.slug}`);
   output.log(`  Projects: ${projects.length}`);
-  output.log(`  Fallback environment: ${json.fallbackEnvironment ?? '(none)'}`);
+  output.log(
+    `  Fallback environment: ${json.group.fallbackEnvironment ?? '(none)'}`
+  );
   output.log(`  Local config file: ${json.configFile ?? '(not found)'}`);
   output.log(
     `  Config applications: ${json.config.applications.length > 0 ? json.config.applications.join(', ') : '(none)'}`
@@ -291,8 +290,6 @@ async function enrichGroupProject(
     },
     packageName,
     inGroupConfig,
-    gitRepo,
-    gitOrg,
     projectFetchStatus,
   };
 }
