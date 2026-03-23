@@ -26,6 +26,7 @@ import {
   type BuildResultV2,
   type BuildResultV2Typical,
   type BuildResultV3,
+  type BuildResultVX,
   type Config,
   type Cron,
   type Files,
@@ -981,10 +982,17 @@ async function doBuild(
         `Building entrypoint "${build.src}" with "${builderPkg.name}"`
       );
       let buildResult: BuildResultV2 | BuildResultV3;
+      let rawBuildResult: BuildResultV2 | BuildResultV3 | BuildResultVX;
       try {
-        buildResult = await builderSpan.trace<BuildResultV2 | BuildResultV3>(
-          async () => builder.build(buildOptions)
-        );
+        rawBuildResult = await builderSpan.trace<
+          BuildResultV2 | BuildResultV3 | BuildResultVX
+        >(async () => builder.build(buildOptions));
+        if (builder.version === -1) {
+          const vx = rawBuildResult as BuildResultVX;
+          buildResult = vx.result;
+        } else {
+          buildResult = rawBuildResult as BuildResultV2 | BuildResultV3;
+        }
 
         // If the build result has no routes and the framework has default routes,
         // then add the default routes to the build result
@@ -1178,7 +1186,7 @@ async function doBuild(
             writeBuildResult({
               repoRootPath,
               outputDir,
-              buildResult,
+              buildResult: rawBuildResult,
               build,
               builder,
               builderPkg,

@@ -20,7 +20,7 @@ import {
   BUILDER_COMPILE_STEP,
   type BuildOptions,
   type GlobOptions,
-  type BuildV3,
+  type BuildVX,
   type Files,
   type ShouldServe,
   FileFsRef,
@@ -55,7 +55,7 @@ import {
   type DetectedPythonEntrypoint,
 } from './entrypoint';
 
-export const version = 3;
+export const version = -1;
 
 interface FrameworkHookContext {
   pythonEnv: NodeJS.ProcessEnv;
@@ -158,7 +158,10 @@ export async function downloadFilesInWorkPath({
   if (meta.isDev) {
     // Old versions of the CLI don't assign this property
     const { devCacheDir = join(workPath, '.now', 'cache') } = meta;
-    const destCache = join(devCacheDir, basename(entrypoint, '.py'));
+    // Replace dots in the entrypoint basename with underscores so the cache
+    // directory name doesn't collide with the entrypoint file itself.
+    const cacheKey = basename(entrypoint).replace(/\./g, '_');
+    const destCache = join(devCacheDir, cacheKey);
     await download(downloadedFiles, destCache);
     downloadedFiles = await glob('**', destCache);
     workPath = destCache;
@@ -166,7 +169,7 @@ export async function downloadFilesInWorkPath({
   return workPath;
 }
 
-export const build: BuildV3 = async ({
+export const build: BuildVX = async ({
   workPath,
   repoRootPath,
   files: originalFiles,
@@ -731,7 +734,25 @@ from vercel_runtime.vc_init import vc_handler
     }
   }
 
-  return { output };
+  if (djangoStatic?.cdnOutputDir) {
+    const lambdaPath = entrypoint.replace(/\.py$/, '');
+    const staticFiles = await glob('**', { cwd: djangoStatic.cdnOutputDir });
+    return {
+      resultVersion: 2,
+      result: {
+        output: {
+          [lambdaPath]: output,
+          ...staticFiles,
+        },
+        routes: [
+          { handle: 'filesystem' },
+          { src: '/(.*)', dest: `/${lambdaPath}` },
+        ],
+      },
+    };
+  }
+
+  return { resultVersion: 3, result: { output } };
 };
 
 export { startDevServer };
