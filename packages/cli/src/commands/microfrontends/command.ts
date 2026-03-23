@@ -1,5 +1,5 @@
 import { packageName } from '../../util/pkg-name';
-import { yesOption } from '../../util/arg-common';
+import { formatOption, yesOption } from '../../util/arg-common';
 
 export const createGroupSubcommand = {
   name: 'create-group',
@@ -166,6 +166,34 @@ export const pullSubcommand = {
   ],
 } as const;
 
+export const inspectGroupSubcommand = {
+  name: 'inspect-group',
+  aliases: [],
+  description:
+    'Inspect a microfrontends group and return project metadata used for setup automation',
+  arguments: [],
+  options: [
+    {
+      name: 'group',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Name or ID of the microfrontends group to inspect',
+    },
+    formatOption,
+  ],
+  examples: [
+    {
+      name: 'Inspect a microfrontends group interactively',
+      value: `${packageName} microfrontends inspect-group`,
+    },
+    {
+      name: 'Inspect a microfrontends group as JSON',
+      value: `${packageName} mf inspect-group --group="My Group" --format=json`,
+    },
+  ],
+} as const;
+
 export const microfrontendsCommand = {
   name: 'microfrontends',
   aliases: ['mf'],
@@ -177,6 +205,7 @@ export const microfrontendsCommand = {
     addToGroupSubcommand,
     removeFromGroupSubcommand,
     deleteGroupSubcommand,
+    inspectGroupSubcommand,
     pullSubcommand,
   ],
   options: [],

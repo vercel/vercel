@@ -8,6 +8,7 @@ import createGroup from './create-group';
 import addToGroup from './add-to-group';
 import removeFromGroup from './remove-from-group';
 import deleteGroup from './delete-group';
+import inspectGroup from './inspect-group';
 import {
   microfrontendsCommand,
   pullSubcommand,
@@ -15,6 +16,7 @@ import {
   addToGroupSubcommand,
   removeFromGroupSubcommand,
   deleteGroupSubcommand,
+  inspectGroupSubcommand,
 } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
@@ -27,6 +29,7 @@ const COMMAND_CONFIG = {
   'add-to-group': getCommandAliases(addToGroupSubcommand),
   'remove-from-group': getCommandAliases(removeFromGroupSubcommand),
   'delete-group': getCommandAliases(deleteGroupSubcommand),
+  'inspect-group': getCommandAliases(inspectGroupSubcommand),
   pull: getCommandAliases(pullSubcommand),
 };
 
@@ -104,6 +107,13 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandDeleteGroup(subcommandOriginal);
       return deleteGroup(client);
+    case 'inspect-group':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('microfrontends', subcommandOriginal);
+        return printHelp(inspectGroupSubcommand);
+      }
+      telemetry.trackCliSubcommandInspectGroup(subcommandOriginal);
+      return inspectGroup(client);
     case 'pull':
       if (needHelp) {
         telemetry.trackCliFlagHelp('microfrontends', subcommandOriginal);
