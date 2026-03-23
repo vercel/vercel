@@ -579,6 +579,8 @@ export const build = async ({
     handler = shimHandler;
   }
 
+  const experimentalAllowBundling = process.env.NODEJS_ALLOW_BUNDLING === '1';
+
   if (isEdgeFunction) {
     output = new EdgeFunction({
       entrypoint: handler,
@@ -598,6 +600,18 @@ export const build = async ({
         ? true
         : undefined;
 
+    // When experimentalAllowBundling is enabled, use a routing handler that
+    // reads x-matched-path to dispatch to the correct entrypoint. This allows
+    // the build container to combine multiple API route lambdas into fewer
+    // actual Lambda functions.
+    if (experimentalAllowBundling && !isMiddleware) {
+      const bundledHandlerPath = '___vc/__handler.mjs';
+      preparedFiles[bundledHandlerPath] = new FileFsRef({
+        fsPath: join(__dirname, 'bundled-handler.mjs'),
+      });
+      handler = bundledHandlerPath;
+    }
+
     output = new NodejsLambda({
       files: preparedFiles,
       handler,
@@ -615,6 +629,7 @@ export const build = async ({
       shouldDisableAutomaticFetchInstrumentation:
         process.env.VERCEL_TRACING_DISABLE_AUTOMATIC_FETCH_INSTRUMENTATION ===
         '1',
+      experimentalAllowBundling: experimentalAllowBundling || undefined,
     });
   }
 

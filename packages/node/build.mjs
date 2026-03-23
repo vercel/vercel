@@ -18,6 +18,12 @@ await Promise.all([
     bundle: true,
     external: ['@vercel/build-utils', ...externals],
   }),
+  esbuild({
+    entryPoints: ['src/bundled-handler.mts'],
+    outfile: 'dist/bundled-handler.mjs',
+    format: 'esm',
+    bundle: true,
+  }),
 ]);
 
 // Copy public type definitions
