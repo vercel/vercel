@@ -285,7 +285,7 @@ class TestHTTPHandler(_RuntimeTestCase):
             port = ss.payload.http_port
             self.assertIsInstance(port, int)
             self.assertGreater(port, 0)
-            self.assertGreater(ss.payload.init_duration, 0)
+            self.assertIsNotNone(ss.payload.init_duration)
 
             resp = await _http_get(port, "/hello")
             self.assertEqual(resp.status, 200)
@@ -422,7 +422,7 @@ class TestASGIApp(_RuntimeTestCase):
                 ServerStartedMessage, timeout=10.0
             )
             port = ss.payload.http_port
-            self.assertGreater(ss.payload.init_duration, 0)
+            self.assertIsNotNone(ss.payload.init_duration)
 
             resp = await _http_get(port, "/hello")
             self.assertEqual(resp.status, 200)

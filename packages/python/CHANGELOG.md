@@ -1,5 +1,21 @@
 # @vercel/python
 
+## 6.27.0
+
+### Minor Changes
+
+- Ensure django static files are copied in build output. ([#15557](https://github.com/vercel/vercel/pull/15557))
+
+## 6.26.0
+
+### Minor Changes
+
+- Fix building python projects with pyproject.toml but no python-version ([#15554](https://github.com/vercel/vercel/pull/15554))
+
+### Patch Changes
+
+- Add a small buffer to the final lambda size check. ([#15663](https://github.com/vercel/vercel/pull/15663))
+
 ## 6.25.0
 
 ### Minor Changes

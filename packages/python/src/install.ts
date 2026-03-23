@@ -216,6 +216,7 @@ export interface UvProjectInfo {
 interface EnsureUvProjectParams {
   workPath: string;
   rootDir: string;
+  venvPath: string;
   pythonPackage: PythonPackage;
   pythonVersion: string;
   uv: UvRunner;
@@ -231,6 +232,7 @@ interface EnsureUvProjectParams {
 export async function ensureUvProject({
   workPath,
   rootDir,
+  venvPath,
   pythonPackage,
   pythonVersion,
   uv,
@@ -312,19 +314,21 @@ export async function ensureUvProject({
       // Generate a lock file
       // When requireBinaryWheels is true, use --no-build --upgrade to ensure
       // all resolved packages have pre-built wheels available.
-      await uv.lock(
+      await uv.lock({
         projectDir,
-        requireBinaryWheels ? { noBuild: true, upgrade: true } : undefined
-      );
+        venvPath,
+        ...(requireBinaryWheels ? { noBuild: true, upgrade: true } : {}),
+      });
     }
 
     // For runtime install, we may need to regenerate the lock file
     // even if a workspace lock exists, to ensure we have a local copy
     if (generateLockFile && !lockPath) {
-      await uv.lock(
+      await uv.lock({
         projectDir,
-        requireBinaryWheels ? { noBuild: true, upgrade: true } : undefined
-      );
+        venvPath,
+        ...(requireBinaryWheels ? { noBuild: true, upgrade: true } : {}),
+      });
     }
   } else {
     // No manifest detected – create a minimal uv project at the workPath so
@@ -345,10 +349,11 @@ export async function ensureUvProject({
     await fs.promises.writeFile(pyprojectPath, content);
     // When requireBinaryWheels is true, use --no-build --upgrade to ensure
     // all resolved packages have pre-built wheels available.
-    await uv.lock(
+    await uv.lock({
       projectDir,
-      requireBinaryWheels ? { noBuild: true, upgrade: true } : undefined
-    );
+      venvPath,
+      ...(requireBinaryWheels ? { noBuild: true, upgrade: true } : {}),
+    });
   }
 
   // Re-resolve lockfile in case earlier operations (uv add/lock) wrote it at a

@@ -1,6 +1,6 @@
 {
   "name": "@vercel/next",
-  "version": "4.16.1",
+  "version": "4.16.2",
   "license": "Apache-2.0",
   "main": "./dist/index",
   "homepage": "https://vercel.com/docs/runtimes#official-runtimes/next-js",
@@ -23,7 +23,7 @@
     "dist"
   ],
   "dependencies": {
-    "@vercel/nft": "1.4.0"
+    "@vercel/nft": "1.5.0"
   },
   "devDependencies": {
     "@next-community/adapter-vercel": "0.0.1-beta.14",

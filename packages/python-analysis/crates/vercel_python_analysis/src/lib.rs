@@ -14,7 +14,12 @@ struct PythonAnalyzer;
 
 use std::future::Future;
 use std::pin::pin;
+use std::str::FromStr;
 use std::task::{Context, Poll, Waker};
+
+use uv_distribution_filename::WheelFilename;
+use uv_pep508::{MarkerEnvironmentBuilder, MarkerTree};
+use uv_platform_tags::{Arch, Os, Platform, Tags};
 
 use crate::bindings::{DirectUrlInfo, DistMetadata, ParsedReqEntry, ParsedRequirementsTxt, RecordEntry};
 use crate::entrypoint::{
@@ -98,10 +103,6 @@ impl crate::bindings::Guest for PythonAnalyzer {
         os_major: u16,
         os_minor: u16,
     ) -> Result<bool, String> {
-        use std::str::FromStr;
-        use uv_distribution_filename::WheelFilename;
-        use uv_platform_tags::{Arch, Os, Platform, Tags};
-
         let wheel = WheelFilename::from_str(&wheel_filename)
             .map_err(|e| format!("invalid wheel filename: {e}"))?;
 
@@ -140,5 +141,48 @@ impl crate::bindings::Guest for PythonAnalyzer {
         .map_err(|e| format!("failed to build platform tags: {e}"))?;
 
         Ok(wheel.is_compatible(&tags))
+    }
+
+    fn evaluate_marker(
+        marker: String,
+        python_major: u8,
+        python_minor: u8,
+        sys_platform: String,
+        platform_machine: String,
+    ) -> Result<bool, String> {
+        let marker_tree = MarkerTree::from_str(&marker)
+            .map_err(|e| format!("invalid marker expression: {e}"))?;
+
+        let python_version = format!("{python_major}.{python_minor}");
+        let python_full_version = format!("{python_major}.{python_minor}.0");
+
+        // Derive os_name and platform_system from sys_platform
+        let (os_name, platform_system) = match sys_platform.as_str() {
+            "linux" => ("posix", "Linux"),
+            "win32" => ("nt", "Windows"),
+            "darwin" => ("posix", "Darwin"),
+            _ => ("posix", "Linux"), // conservative default
+        };
+
+        let env = MarkerEnvironmentBuilder {
+            implementation_name: "cpython",
+            implementation_version: &python_full_version,
+            os_name,
+            platform_machine: &platform_machine,
+            platform_python_implementation: "CPython",
+            platform_release: "",
+            platform_system,
+            platform_version: "",
+            python_full_version: &python_full_version,
+            python_version: &python_version,
+            sys_platform: &sys_platform,
+        }
+        .try_into()
+        .map_err(|e: uv_pep440::VersionParseError| {
+            format!("failed to build marker environment: {e}")
+        })?;
+
+        let extras: &[uv_normalize::ExtraName] = &[];
+        Ok(marker_tree.evaluate(&env, extras))
     }
 }

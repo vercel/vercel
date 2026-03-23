@@ -1,6 +1,6 @@
 [project]
 name = "vercel-runtime"
-version = "0.10.0"
+version = "0.10.1"
 license = "Apache-2.0"
 license-files = [
   "src/vercel_runtime/_vendor/*/LICEN[CS]E*",
@@ -21,7 +21,7 @@ classifiers = [
 ]
 
 [build-system]
-requires = ["uv_build>=0.9.22,<0.10.0"]
+requires = ["uv_build>=0.10.11,<0.11"]
 build-backend = "uv_build"
 
 [dependency-groups]

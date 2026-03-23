@@ -6,8 +6,9 @@ import fs from 'fs';
 import os from 'os';
 import which from 'which';
 import { debug } from '@vercel/build-utils';
+import { getVenvPythonBin } from './utils';
 
-export const UV_VERSION = '0.9.22';
+export const UV_VERSION = '0.10.11';
 export const UV_PYTHON_PATH_PREFIX = '/uv/python/';
 export const UV_PYTHON_DOWNLOADS_MODE = 'automatic';
 
@@ -116,40 +117,21 @@ export class UvRunner {
     await this.runUvCmd(args, projectDir, venvPath);
   }
 
-  async lock(
-    projectDir: string,
-    options?: { noBuild?: boolean; upgrade?: boolean }
-  ): Promise<void> {
-    const args = ['lock'];
-    if (options?.noBuild) {
+  async lock(options: {
+    projectDir: string;
+    venvPath: string;
+    noBuild?: boolean;
+    upgrade?: boolean;
+  }): Promise<void> {
+    const { projectDir, venvPath, noBuild, upgrade } = options;
+    const args = ['lock', '--python', getVenvPythonBin(venvPath)];
+    if (noBuild) {
       args.push('--no-build');
     }
-    if (options?.upgrade) {
+    if (upgrade) {
       args.push('--upgrade');
     }
-    const pretty = `uv ${args.join(' ')}`;
-    debug(`Running "${pretty}" in ${projectDir}...`);
-    try {
-      await execa(this.uvPath, args, {
-        cwd: projectDir,
-        env: getProtectedUvEnv(process.env),
-      });
-    } catch (err) {
-      const error: Error & { code?: unknown } = new Error(
-        `Failed to run "${pretty}": ${
-          err instanceof Error ? err.message : String(err)
-        }`
-      );
-      // retain code/signal to ensure it's treated as a build error
-      if (err && typeof err === 'object') {
-        if ('code' in err) {
-          error.code = (err as { code: number | string }).code;
-        } else if ('signal' in err) {
-          error.code = (err as { signal: string }).signal;
-        }
-      }
-      throw error;
-    }
+    await this.runUvCmd(args, projectDir, venvPath);
   }
 
   async addDependencies(options: {

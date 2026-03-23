@@ -1,5 +1,100 @@
 # vercel
 
+## 50.36.0
+
+### Minor Changes
+
+- Ensure django static files are copied in build output. ([#15557](https://github.com/vercel/vercel/pull/15557))
+
+- Add a new `vercel microfrontends inspect-group` subcommand to provide structured group/project metadata for automation, including JSON output and improved non-interactive agent behavior when `--group` is missing. ([#15681](https://github.com/vercel/vercel/pull/15681))
+
+### Patch Changes
+
+- Updated dependencies [[`e5564b684ee40dd60f745327ef206bbe58a5191a`](https://github.com/vercel/vercel/commit/e5564b684ee40dd60f745327ef206bbe58a5191a)]:
+  - @vercel/build-utils@13.9.0
+  - @vercel/python@6.27.0
+  - @vercel/backends@0.0.50
+  - @vercel/elysia@0.1.52
+  - @vercel/express@0.1.62
+  - @vercel/fastify@0.1.55
+  - @vercel/go@3.4.6
+  - @vercel/h3@0.1.61
+  - @vercel/hono@0.2.55
+  - @vercel/hydrogen@1.3.6
+  - @vercel/koa@0.1.35
+  - @vercel/nestjs@0.2.56
+  - @vercel/next@4.16.2
+  - @vercel/node@5.6.19
+  - @vercel/redwood@2.4.11
+  - @vercel/remix-builder@5.7.1
+  - @vercel/ruby@2.3.2
+  - @vercel/rust@1.0.5
+  - @vercel/static-build@2.9.3
+
+## 50.35.0
+
+### Minor Changes
+
+- Add CLI commands to create, delete, add to, and remove from microfrontends groups. ([#15464](https://github.com/vercel/vercel/pull/15464))
+
+### Patch Changes
+
+- Adding in non-interactive mode for deploys ([#15548](https://github.com/vercel/vercel/pull/15548))
+
+- Fix metrics output formatting for aggregation-transforming measures (`percent`, `persecond`, `unique`). The displayed unit and stat columns now reflect the effective aggregation rather than the raw measure unit — e.g. `percent` shows `%` instead of `bytes`, `persecond` appends `/s`, and `unique` hides the unit entirely. ([#15655](https://github.com/vercel/vercel/pull/15655))
+
+- Adding in non-interactive for builds ([#15547](https://github.com/vercel/vercel/pull/15547))
+
+- Fix SDK key detection for Vercel Flags to avoid false positives with third-party identifiers. Previously any `vf_` prefix matched, now only `vf_server_` and `vf_client_` prefixes match. ([#15675](https://github.com/vercel/vercel/pull/15675))
+
+- Updated dependencies [[`aa73ff858af822c4286c42299398015942ed1325`](https://github.com/vercel/vercel/commit/aa73ff858af822c4286c42299398015942ed1325), [`b9fe3dd0e9b27b40546dbd3b8951a65889245369`](https://github.com/vercel/vercel/commit/b9fe3dd0e9b27b40546dbd3b8951a65889245369)]:
+  - @vercel/python@6.26.0
+  - @vercel/build-utils@13.8.2
+  - @vercel/next@4.16.2
+  - @vercel/redwood@2.4.11
+  - @vercel/rust@1.0.5
+  - @vercel/static-build@2.9.2
+
+## 50.34.3
+
+### Patch Changes
+
+- Update CertMissing error message and type to be accurate ([#15657](https://github.com/vercel/vercel/pull/15657))
+
+- Updated `vercel metrics` to align with the observability API schema/query contract. The CLI now uses API-fetched schema metadata for validation and output, resolves project scope to canonical project IDs before querying, and documents `--project` as accepting either a project name or ID. ([#15619](https://github.com/vercel/vercel/pull/15619))
+
+- Fix telemetry, add better error handling ([#15648](https://github.com/vercel/vercel/pull/15648))
+
+- Track project_id when possible inside cli ([#15633](https://github.com/vercel/vercel/pull/15633))
+
+- Updated dependencies [[`7ae5de45a681b6b7297f38a4f8fa5a4fd394f2ea`](https://github.com/vercel/vercel/commit/7ae5de45a681b6b7297f38a4f8fa5a4fd394f2ea)]:
+  - @vercel/go@3.4.6
+
+## 50.34.2
+
+### Patch Changes
+
+- Removing non-interactive logic for login ([#15643](https://github.com/vercel/vercel/pull/15643))
+
+## 50.34.1
+
+### Patch Changes
+
+- Updated dependencies [[`bb5277ab85e41810f96d1619949d76ea5603a58f`](https://github.com/vercel/vercel/commit/bb5277ab85e41810f96d1619949d76ea5603a58f)]:
+  - @vercel/backends@0.0.49
+  - @vercel/express@0.1.61
+  - @vercel/hono@0.2.54
+  - @vercel/next@4.16.2
+  - @vercel/node@5.6.18
+  - @vercel/redwood@2.4.11
+  - @vercel/remix-builder@5.7.1
+  - @vercel/python@6.25.0
+  - @vercel/elysia@0.1.51
+  - @vercel/fastify@0.1.54
+  - @vercel/h3@0.1.60
+  - @vercel/koa@0.1.34
+  - @vercel/nestjs@0.2.55
+
 ## 50.34.0
 
 ### Minor Changes

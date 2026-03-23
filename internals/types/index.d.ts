@@ -66,6 +66,7 @@ type Billing = {
   period: { start: number; end: number };
   plan: string;
   platform: string;
+  status: 'active' | 'trialing' | 'overdue' | 'canceled' | 'expired';
   trial: { start: number; end: number };
 };
 
