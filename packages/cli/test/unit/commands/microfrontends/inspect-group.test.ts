@@ -260,6 +260,19 @@ describe('microfrontends inspect-group', () => {
     });
   });
 
+  it('prints one project table per project in text output', async () => {
+    client.setArgv('microfrontends', 'inspect-group', '--group=My Group');
+    const exitCode = await microfrontends(client);
+
+    expect(exitCode).toBe(0);
+    const stderrOutput = client.stderr.getFullOutput();
+    expect(stderrOutput).toContain('Projects');
+    expect(stderrOutput).toContain('Project            web');
+    expect(stderrOutput).toContain('ID                 proj_web');
+    expect(stderrOutput).toContain('Project            docs');
+    expect(stderrOutput).toContain('ID                 proj_docs');
+  });
+
   it('errors when --config-file-name has an invalid extension', async () => {
     client.setArgv(
       'microfrontends',

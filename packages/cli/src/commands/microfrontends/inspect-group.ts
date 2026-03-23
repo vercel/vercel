@@ -24,6 +24,7 @@ import {
   AGENT_REASON,
   AGENT_STATUS,
 } from '../../util/agent-output-constants';
+import table from '../../util/output/table';
 
 interface InspectGroupProject {
   id: string;
@@ -209,32 +210,51 @@ export default async function inspectGroup(client: Client): Promise<number> {
     return 0;
   }
 
-  output.log(`Group: ${selectedGroup.group.name}`);
-  output.log(`  ID: ${selectedGroup.group.id}`);
-  output.log(`  Slug: ${selectedGroup.group.slug}`);
-  output.log(`  Projects: ${projects.length}`);
-  output.log(
-    `  Fallback environment: ${json.group.fallbackEnvironment ?? '(none)'}`
-  );
-  output.log(`  Local config file: ${json.configFile ?? '(not found)'}`);
-  output.log(
-    `  Config applications: ${json.config.applications.length > 0 ? json.config.applications.join(', ') : '(none)'}`
-  );
+  const groupTable = table([
+    ['Group', json.group.name],
+    ['ID', json.group.id],
+    ['Slug', json.group.slug],
+    ['Projects', String(json.projectCount)],
+    ['Default app', json.defaultApp ?? '(none)'],
+    ['Fallback environment', json.group.fallbackEnvironment ?? '(none)'],
+    ['Local config file', json.configFile ?? '(not found)'],
+    [
+      'Config applications',
+      json.config.applications.length > 0
+        ? json.config.applications.join(', ')
+        : '(none)',
+    ],
+  ]);
   output.log('');
-  output.log('Projects:');
+  output.log(groupTable);
+  output.log('');
+
+  output.log('Projects');
+  output.log('');
+
   for (const project of projects) {
-    output.log(
-      `  - ${project.name} (${project.id})${project.isDefaultApp ? ' [default app]' : ''}`
-    );
-    output.log(
-      `    enabled=${project.enabled} defaultRoute=${project.defaultRoute ?? '(none)'} inConfig=${project.inGroupConfig}`
-    );
-    output.log(
-      `    productionDomain=${project.productionDomain ?? '(none)'} framework=${project.framework ?? '(unknown)'}`
-    );
-    output.log(
-      `    rootDirectory=${project.git.rootDirectory ?? '(unknown)'} git=${project.git.org ?? '(unknown)'}/${project.git.repo ?? '(unknown)'} packageName=${project.packageName ?? '(unknown)'}`
-    );
+    const projectTable = table([
+      ['Project', project.name],
+      ['ID', project.id],
+      ['Default app', project.isDefaultApp ? 'yes' : 'no'],
+      ['Enabled', project.enabled ? 'yes' : 'no'],
+      ['Default route', project.defaultRoute ?? '(none)'],
+      ['Production domain', project.productionDomain ?? '(none)'],
+      ['Framework', project.framework ?? '(unknown)'],
+      [
+        'Git org/repo',
+        `${project.git.org ?? '(unknown)'}/${project.git.repo ?? '(unknown)'}`,
+      ],
+      ['Root directory', project.git.rootDirectory ?? '(unknown)'],
+      ['Package name', project.packageName ?? '(unknown)'],
+      ['In config', project.inGroupConfig ? 'yes' : 'no'],
+      ['Fetch status', project.projectFetchStatus],
+    ]);
+    output.log(projectTable);
+    output.log('');
+  }
+
+  for (const project of projects) {
     if (project.projectFetchStatus !== 'ok') {
       output.warn(
         `Project metadata for "${project.id}" is incomplete (status: ${project.projectFetchStatus}).`
