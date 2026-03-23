@@ -32,7 +32,7 @@
   ],
   "dependencies": {
     "@vercel/build-utils": "workspace:*",
-    "@vercel/nft": "1.4.0",
+    "@vercel/nft": "1.5.0",
     "execa": "3.2.0",
     "fs-extra": "11.1.0",
     "oxc-transform": "0.111.0",
