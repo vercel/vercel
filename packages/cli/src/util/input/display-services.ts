@@ -1,5 +1,6 @@
 import { frameworkList } from '@vercel/frameworks';
 import type { Service, ServiceDetectionError } from '@vercel/fs-detectors';
+import { getWorkerTopics } from '@vercel/build-utils';
 import output from '../../output-manager';
 import table from '../output/table';
 
@@ -100,8 +101,8 @@ function getServiceTarget(service: Service): string {
     case 'cron':
       return `schedule: ${service.schedule ?? 'none'}`;
     case 'worker': {
-      const topics = service.topics ?? (service.topic ? [service.topic] : []);
-      return topics.length > 0 ? `topics: ${topics.join(', ')}` : 'topic: none';
+      const topics = getWorkerTopics(service);
+      return `topics: ${topics.join(', ')}`;
     }
     default:
       return service.routePrefix
@@ -116,7 +117,7 @@ function getServiceTarget(service: Service): string {
  *   frontend          [Next.js]   →  /
  *   api               [python]    →  /api/*
  *   cleanup           [node]      →  schedule: 0 0 * * *
- *   processor         [node]      →  topic: jobs
+ *   processor         [node]      →  topics: jobs
  */
 export function displayDetectedServices(services: Service[]): void {
   output.print(`Detected services:\n`);

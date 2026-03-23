@@ -3,12 +3,12 @@
     "worker-topic1": {
       "type": "worker",
       "entrypoint": "worker.js",
-      "topic": "topic1"
+      "topics": ["topic1"]
     },
     "worker-topic2": {
       "type": "worker",
       "entrypoint": "worker.js",
-      "topic": "topic2"
+      "topics": ["topic2"]
     }
   }
 }

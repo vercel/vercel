@@ -4,6 +4,7 @@ import ms from 'ms';
 import { randomBytes } from 'crypto';
 import nodeFetch from 'node-fetch';
 import type { Service } from '@vercel/fs-detectors';
+import { getWorkerTopics } from '@vercel/build-utils';
 import output from '../../output-manager';
 
 interface StoredMessage {
@@ -72,7 +73,7 @@ export class QueueBroker {
     for (const service of services) {
       if (service.type !== 'worker') continue;
 
-      const topicPatterns = service.topics ?? [service.topic || 'default'];
+      const topicPatterns = getWorkerTopics(service);
       for (const topicPattern of topicPatterns) {
         const id = `${service.name}::${topicPattern}`;
         const group: ConsumerGroup = {

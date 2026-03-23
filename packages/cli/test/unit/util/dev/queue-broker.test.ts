@@ -18,19 +18,16 @@ const mockFetch = vi.mocked(nodeFetch);
 
 function makeWorkerService(
   name: string,
-  topic: string | string[] = 'default'
+  topics: [string, ...string[]] = ['default']
 ): Service {
-  const base = {
+  return {
     name,
     type: 'worker',
     consumer: name,
     workspace: '.',
     builder: { src: 'index.ts', use: '@vercel/node' },
-  };
-  if (Array.isArray(topic)) {
-    return { ...base, topics: topic } as Service;
-  }
-  return { ...base, topic } as Service;
+    topics,
+  } as Service;
 }
 
 function makeWebService(name: string): Service {
@@ -113,7 +110,7 @@ describe('QueueBroker', () => {
   describe('enqueue', () => {
     it('returns unique messageIds', () => {
       broker = new QueueBroker(
-        [makeWorkerService('worker-a', 'orders')],
+        [makeWorkerService('worker-a', ['orders'])],
         getServiceOrigin
       );
 
@@ -135,7 +132,7 @@ describe('QueueBroker', () => {
 
     it('dispatches CloudEvent to matching worker', async () => {
       broker = new QueueBroker(
-        [makeWorkerService('worker-a', 'orders')],
+        [makeWorkerService('worker-a', ['orders'])],
         getServiceOrigin
       );
 
@@ -166,8 +163,8 @@ describe('QueueBroker', () => {
     it('dispatches to multiple matching consumer groups', async () => {
       broker = new QueueBroker(
         [
-          makeWorkerService('worker-a', 'order-*'),
-          makeWorkerService('worker-b', 'order-created'),
+          makeWorkerService('worker-a', ['order-*']),
+          makeWorkerService('worker-b', ['order-created']),
         ],
         getServiceOrigin
       );
@@ -240,7 +237,7 @@ describe('QueueBroker', () => {
 
     it('does not dispatch when no consumer matches', async () => {
       broker = new QueueBroker(
-        [makeWorkerService('worker-a', 'orders')],
+        [makeWorkerService('worker-a', ['orders'])],
         getServiceOrigin
       );
 
@@ -261,7 +258,7 @@ describe('QueueBroker', () => {
 
     it('does not dispatch delayed messages immediately', async () => {
       broker = new QueueBroker(
-        [makeWorkerService('worker-a', 'orders')],
+        [makeWorkerService('worker-a', ['orders'])],
         getServiceOrigin
       );
 
@@ -275,7 +272,7 @@ describe('QueueBroker', () => {
 
     it('dispatches delayed messages after the delay passes', async () => {
       broker = new QueueBroker(
-        [makeWorkerService('worker-a', 'orders')],
+        [makeWorkerService('worker-a', ['orders'])],
         getServiceOrigin
       );
 
@@ -293,7 +290,7 @@ describe('QueueBroker', () => {
   describe('receiveById', () => {
     it('returns payload and metadata for an enqueued message', async () => {
       broker = new QueueBroker(
-        [makeWorkerService('worker-a', 'orders')],
+        [makeWorkerService('worker-a', ['orders'])],
         getServiceOrigin
       );
 
@@ -312,7 +309,7 @@ describe('QueueBroker', () => {
 
     it('returns null for non-existent message', () => {
       broker = new QueueBroker(
-        [makeWorkerService('worker-a', 'orders')],
+        [makeWorkerService('worker-a', ['orders'])],
         getServiceOrigin
       );
 
@@ -321,7 +318,7 @@ describe('QueueBroker', () => {
 
     it('returns null for unknown consumer group', () => {
       broker = new QueueBroker(
-        [makeWorkerService('worker-a', 'orders')],
+        [makeWorkerService('worker-a', ['orders'])],
         getServiceOrigin
       );
 
@@ -338,7 +335,7 @@ describe('QueueBroker', () => {
   describe('acknowledge', () => {
     it('returns true and makes message unreceivable in that group', async () => {
       broker = new QueueBroker(
-        [makeWorkerService('worker-a', 'orders')],
+        [makeWorkerService('worker-a', ['orders'])],
         getServiceOrigin
       );
 
@@ -365,7 +362,7 @@ describe('QueueBroker', () => {
 
     it('rejects ACK with wrong ticket', async () => {
       broker = new QueueBroker(
-        [makeWorkerService('worker-a', 'orders')],
+        [makeWorkerService('worker-a', ['orders'])],
         getServiceOrigin
       );
 
@@ -386,7 +383,7 @@ describe('QueueBroker', () => {
 
     it('returns false for unknown consumer group', () => {
       broker = new QueueBroker(
-        [makeWorkerService('worker-a', 'orders')],
+        [makeWorkerService('worker-a', ['orders'])],
         getServiceOrigin
       );
 
@@ -395,7 +392,7 @@ describe('QueueBroker', () => {
 
     it('cleans up message when acked in all groups', async () => {
       broker = new QueueBroker(
-        [makeWorkerService('worker-a', 'orders')],
+        [makeWorkerService('worker-a', ['orders'])],
         getServiceOrigin
       );
 
@@ -416,8 +413,8 @@ describe('QueueBroker', () => {
     it('keeps message receivable in other groups after partial ACK', async () => {
       broker = new QueueBroker(
         [
-          makeWorkerService('worker-a', 'order-*'),
-          makeWorkerService('worker-b', 'order-*'),
+          makeWorkerService('worker-a', ['order-*']),
+          makeWorkerService('worker-b', ['order-*']),
         ],
         getServiceOrigin
       );
@@ -442,7 +439,7 @@ describe('QueueBroker', () => {
   describe('changeVisibility', () => {
     it('returns true for in-flight message with valid ticket', async () => {
       broker = new QueueBroker(
-        [makeWorkerService('worker-a', 'orders')],
+        [makeWorkerService('worker-a', ['orders'])],
         getServiceOrigin
       );
 
@@ -465,7 +462,7 @@ describe('QueueBroker', () => {
 
     it('returns false for pending message', () => {
       broker = new QueueBroker(
-        [makeWorkerService('worker-a', 'orders')],
+        [makeWorkerService('worker-a', ['orders'])],
         getServiceOrigin
       );
 
@@ -483,7 +480,7 @@ describe('QueueBroker', () => {
 
     it('returns false with wrong ticket', async () => {
       broker = new QueueBroker(
-        [makeWorkerService('worker-a', 'orders')],
+        [makeWorkerService('worker-a', ['orders'])],
         getServiceOrigin
       );
 
@@ -501,7 +498,7 @@ describe('QueueBroker', () => {
 
     it('prevents lease expiry when visibility is extended', async () => {
       broker = new QueueBroker(
-        [makeWorkerService('worker-a', 'orders')],
+        [makeWorkerService('worker-a', ['orders'])],
         getServiceOrigin
       );
 
@@ -534,7 +531,7 @@ describe('QueueBroker', () => {
       mockFetch.mockRejectedValueOnce(new Error('ECONNREFUSED'));
 
       broker = new QueueBroker(
-        [makeWorkerService('worker-a', 'orders')],
+        [makeWorkerService('worker-a', ['orders'])],
         getServiceOrigin
       );
 
@@ -564,7 +561,7 @@ describe('QueueBroker', () => {
       mockFetch.mockResolvedValueOnce({ ok: false, status: 500 } as any);
 
       broker = new QueueBroker(
-        [makeWorkerService('worker-a', 'orders')],
+        [makeWorkerService('worker-a', ['orders'])],
         getServiceOrigin
       );
 
@@ -583,7 +580,7 @@ describe('QueueBroker', () => {
       getServiceOrigin.mockReturnValue(null);
 
       broker = new QueueBroker(
-        [makeWorkerService('worker-a', 'orders')],
+        [makeWorkerService('worker-a', ['orders'])],
         getServiceOrigin
       );
 
@@ -604,7 +601,7 @@ describe('QueueBroker', () => {
   describe('lease expiry', () => {
     it('re-dispatches message when visibility timeout expires', async () => {
       broker = new QueueBroker(
-        [makeWorkerService('worker-a', 'orders')],
+        [makeWorkerService('worker-a', ['orders'])],
         getServiceOrigin
       );
 
@@ -623,7 +620,7 @@ describe('QueueBroker', () => {
 
     it('increments delivery count on re-dispatch', async () => {
       broker = new QueueBroker(
-        [makeWorkerService('worker-a', 'orders')],
+        [makeWorkerService('worker-a', ['orders'])],
         getServiceOrigin
       );
 
@@ -650,7 +647,7 @@ describe('QueueBroker', () => {
   describe('message retention', () => {
     it('cleans up expired messages', async () => {
       broker = new QueueBroker(
-        [makeWorkerService('worker-a', 'orders')],
+        [makeWorkerService('worker-a', ['orders'])],
         getServiceOrigin
       );
 
@@ -676,7 +673,7 @@ describe('QueueBroker', () => {
   describe('multiple messages', () => {
     it('dispatches all messages immediately without queuing', async () => {
       broker = new QueueBroker(
-        [makeWorkerService('worker-a', 'orders')],
+        [makeWorkerService('worker-a', ['orders'])],
         getServiceOrigin
       );
 

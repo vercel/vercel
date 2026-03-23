@@ -12,12 +12,12 @@
     "worker-emails": {
       "type": "worker",
       "entrypoint": "worker/run.py",
-      "topic": "emails"
+      "topics": ["emails"]
     },
     "worker-reports": {
       "type": "worker",
       "entrypoint": "worker/run.py",
-      "topic": "reports"
+      "topics": ["reports"]
     }
   }
 }

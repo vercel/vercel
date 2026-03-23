@@ -6,6 +6,7 @@ import type {
   ServiceDetectionError,
   ServiceRuntime,
 } from './types';
+import { getWorkerTopics } from '@vercel/build-utils';
 import {
   ENTRYPOINT_EXTENSIONS,
   RUNTIME_BUILDERS,
@@ -306,13 +307,6 @@ export function validateServiceConfig(
       serviceName: name,
     };
   }
-  if (config.topic && config.topics) {
-    return {
-      code: 'INVALID_SERVICE_CONFIG',
-      message: `Service "${name}" cannot specify both "topic" and "topics". Use one or the other.`,
-      serviceName: name,
-    };
-  }
   if (config.runtime && config.framework) {
     const frameworkRuntime = inferRuntimeFromFramework(config.framework);
     if (frameworkRuntime && frameworkRuntime !== config.runtime) {
@@ -450,8 +444,7 @@ export async function resolveConfiguredService(
     }
   }
 
-  const topics = config.topics;
-  const topic = type === 'worker' ? config.topic || 'default' : config.topic;
+  const topics = type === 'worker' ? getWorkerTopics(config) : config.topics;
   const consumer =
     type === 'worker' ? config.consumer || 'default' : config.consumer;
 
@@ -576,7 +569,6 @@ export async function resolveConfiguredService(
     installCommand: config.installCommand,
     schedule: config.schedule,
     handlerFunction: moduleAttrParsed?.attrName,
-    topic,
     topics,
     consumer,
   };

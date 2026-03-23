@@ -34,6 +34,7 @@ import {
   type PackageJson,
   glob,
   type Service,
+  getWorkerTopics,
   isBackendBuilder,
   type Lambda,
   type TriggerEvent,
@@ -1810,7 +1811,7 @@ function attachWorkerServiceTrigger(
   buildOutput: BuildResultV2Typical['output'] | BuildResultV3['output'],
   service: Service
 ): void {
-  const topics = service.topics ?? [service.topic || 'default'];
+  const topics = getWorkerTopics(service);
   const consumer = service.consumer || 'default';
 
   for (const topic of topics) {
