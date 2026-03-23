@@ -32,9 +32,11 @@ export default async function update(client: Client, argv: string[]) {
   let cronPath: string | undefined = flags['--path'];
   let schedule: string | undefined = flags['--schedule'];
   const host: string | undefined = flags['--host'];
+  const description: string | undefined = flags['--description'];
 
   telemetry.trackCliOptionPath(cronPath);
   telemetry.trackCliOptionSchedule(schedule);
+  telemetry.trackCliOptionDescription(description);
 
   if (!cronPath) {
     if (!client.stdin.isTTY) {
@@ -55,9 +57,11 @@ export default async function update(client: Client, argv: string[]) {
     });
   }
 
-  if (!schedule && !host) {
+  if (!schedule && !host && !description) {
     if (!client.stdin.isTTY) {
-      output.error(`At least one of --schedule or --host must be provided.`);
+      output.error(
+        `At least one of --schedule, --host, or --description must be provided.`
+      );
       return 1;
     }
 
@@ -97,7 +101,12 @@ export default async function update(client: Client, argv: string[]) {
 
   output.spinner(`Updating cron job ${chalk.bold(cronPath)}`);
 
-  const body: { path: string; schedule?: string; host?: string } = {
+  const body: {
+    path: string;
+    schedule?: string;
+    host?: string;
+    description?: string;
+  } = {
     path: cronPath,
   };
   if (schedule) {
@@ -105,6 +114,9 @@ export default async function update(client: Client, argv: string[]) {
   }
   if (host) {
     body.host = host;
+  }
+  if (description) {
+    body.description = description;
   }
 
   try {
@@ -132,6 +144,9 @@ export default async function update(client: Client, argv: string[]) {
   }
   if (host) {
     parts.push(`host ${chalk.bold(host)}`);
+  }
+  if (description) {
+    parts.push(`description ${chalk.bold(description)}`);
   }
 
   output.log(

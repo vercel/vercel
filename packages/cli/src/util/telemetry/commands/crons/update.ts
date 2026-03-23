@@ -32,4 +32,13 @@ export class CronsUpdateTelemetryClient
       });
     }
   }
+
+  trackCliOptionDescription(description: string | undefined) {
+    if (description) {
+      this.trackCliOption({
+        option: 'description',
+        value: this.redactedValue,
+      });
+    }
+  }
 }

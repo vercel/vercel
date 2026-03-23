@@ -151,6 +151,10 @@ const cronsSchema = {
         minLength: 9,
         maxLength: 256,
       },
+      description: {
+        type: 'string',
+        maxLength: 256,
+      },
     },
   },
 };

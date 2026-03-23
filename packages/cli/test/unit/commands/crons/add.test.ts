@@ -128,6 +128,30 @@ describe('crons add', () => {
         host: 'custom.vercel.app',
       });
     });
+
+    it('includes description when provided', async () => {
+      mockLinkedProject();
+      const { getRequestBody } = mockAddEndpoint();
+
+      client.setArgv(
+        'crons',
+        'add',
+        '--path',
+        '/api/cron',
+        '--schedule',
+        '0 10 * * *',
+        '--description',
+        'Daily cleanup job'
+      );
+      const exitCode = await crons(client);
+      expect(exitCode).toEqual(0);
+
+      expect(getRequestBody()).toEqual({
+        path: '/api/cron',
+        schedule: '0 10 * * *',
+        description: 'Daily cleanup job',
+      });
+    });
   });
 
   describe('validation', () => {

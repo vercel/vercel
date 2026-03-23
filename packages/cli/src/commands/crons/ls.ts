@@ -111,6 +111,7 @@ export default async function ls(client: Client, argv: string[]) {
         path: cron.path,
         schedule: cron.schedule,
         host: cron.host,
+        description: cron.description ?? null,
       })),
       undeployed: undeployedCrons.map(cron => ({
         path: cron.path,
@@ -166,12 +167,20 @@ export default async function ls(client: Client, argv: string[]) {
 }
 
 function formatCronsTable(definitions: CronJobDefinition[]) {
-  const rows: string[][] = definitions.map(cron => [
-    chalk.bold(cron.path),
-    cron.schedule,
-  ]);
+  const hasDescriptions = definitions.some(cron => cron.description);
+  const rows: string[][] = definitions.map(cron =>
+    hasDescriptions
+      ? [chalk.bold(cron.path), cron.schedule, cron.description ?? '']
+      : [chalk.bold(cron.path), cron.schedule]
+  );
 
-  return formatTable(['Path', 'Schedule'], ['l', 'l'], [{ rows }]);
+  return hasDescriptions
+    ? formatTable(
+        ['Path', 'Schedule', 'Description'],
+        ['l', 'l', 'l'],
+        [{ rows }]
+      )
+    : formatTable(['Path', 'Schedule'], ['l', 'l'], [{ rows }]);
 }
 
 function formatPendingCronsTable(

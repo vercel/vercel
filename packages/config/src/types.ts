@@ -175,6 +175,7 @@ export interface FunctionConfig {
 export interface CronJob {
   schedule: string;
   path: string;
+  description?: string;
 }
 
 export interface GitDeploymentConfig {

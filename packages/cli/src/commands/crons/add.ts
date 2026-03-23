@@ -121,9 +121,11 @@ export default async function add(client: Client, argv: string[]) {
   let cronPath: string | undefined = flags['--path'];
   let schedule: string | undefined = flags['--schedule'];
   const host: string | undefined = flags['--host'];
+  const description: string | undefined = flags['--description'];
 
   telemetry.trackCliOptionPath(cronPath);
   telemetry.trackCliOptionSchedule(schedule);
+  telemetry.trackCliOptionDescription(description);
 
   // If flags not provided, prompt interactively
   if (!cronPath || !schedule) {
@@ -188,12 +190,20 @@ export default async function add(client: Client, argv: string[]) {
 
   output.spinner(`Adding cron job ${chalk.bold(cronPath)}`);
 
-  const body: { path: string; schedule: string; host?: string } = {
+  const body: {
+    path: string;
+    schedule: string;
+    host?: string;
+    description?: string;
+  } = {
     path: cronPath,
     schedule,
   };
   if (host) {
     body.host = host;
+  }
+  if (description) {
+    body.description = description;
   }
 
   try {

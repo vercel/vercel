@@ -32,6 +32,14 @@ export const addSubcommand = {
       description:
         'The hostname for invocation (defaults to production deployment URL)',
     },
+    {
+      name: 'description',
+      shorthand: null,
+      type: String,
+      argument: 'TEXT',
+      deprecated: false,
+      description: 'A description for the cron job',
+    },
   ],
   examples: [
     {
@@ -74,6 +82,14 @@ export const updateSubcommand = {
       argument: 'HOSTNAME',
       deprecated: false,
       description: 'The new hostname for invocation',
+    },
+    {
+      name: 'description',
+      shorthand: null,
+      type: String,
+      argument: 'TEXT',
+      deprecated: false,
+      description: 'The new description for the cron job',
     },
   ],
   examples: [

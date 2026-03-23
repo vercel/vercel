@@ -150,6 +150,28 @@ describe('crons update', () => {
         host: 'custom.vercel.app',
       });
     });
+
+    it('updates description via API', async () => {
+      mockLinkedProject();
+      const { getRequestBody } = mockUpdateEndpoint();
+
+      client.setArgv(
+        'crons',
+        'update',
+        '--path',
+        '/api/cron',
+        '--description',
+        'Updated cleanup job'
+      );
+      const exitCode = await crons(client);
+      expect(exitCode).toEqual(0);
+
+      expect(getRequestBody()).toEqual({
+        path: '/api/cron',
+        description: 'Updated cleanup job',
+      });
+      await expect(client.stderr).toOutput('Updated cron job');
+    });
   });
 
   describe('validation', () => {
@@ -247,14 +269,14 @@ describe('crons update', () => {
       await expect(client.stderr).toOutput('Missing required flag --path');
     });
 
-    it('errors in non-interactive mode with path but no schedule or host', async () => {
+    it('errors in non-interactive mode with path but no schedule, host, or description', async () => {
       client.setArgv('crons', 'update', '--path', '/api/cron');
       (client.stdin as any).isTTY = false;
 
       const exitCode = await crons(client);
       expect(exitCode).toEqual(1);
       await expect(client.stderr).toOutput(
-        'At least one of --schedule or --host'
+        'At least one of --schedule, --host, or --description'
       );
     });
   });

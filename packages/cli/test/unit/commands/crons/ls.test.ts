@@ -151,6 +151,7 @@ describe('crons ls', () => {
           path: '/api/cron',
           schedule: '0 * * * *',
           host: 'example.vercel.app',
+          description: null,
         },
       ]);
       expect(parsed.enabled).toBe(true);
