@@ -25,6 +25,7 @@ import {
   AGENT_STATUS,
 } from '../../util/agent-output-constants';
 import table from '../../util/output/table';
+import { red } from 'chalk';
 
 interface InspectGroupProject {
   id: string;
@@ -233,11 +234,11 @@ export default async function inspectGroup(client: Client): Promise<number> {
   output.log('');
 
   for (const project of projects) {
-    const projectTable = table([
-      ['Project', project.name],
-      ['ID', project.id],
-      ['Default app', project.isDefaultApp ? 'yes' : 'no'],
-      ['Enabled', project.enabled ? 'yes' : 'no'],
+    const rows: string[][] = [
+      [
+        'Project',
+        project.isDefaultApp ? `${project.name} (default app)` : project.name,
+      ],
       ['Default route', project.defaultRoute ?? '(none)'],
       ['Production domain', project.productionDomain ?? '(none)'],
       ['Framework', project.framework ?? '(unknown)'],
@@ -246,10 +247,17 @@ export default async function inspectGroup(client: Client): Promise<number> {
         `${project.git.org ?? '(unknown)'}/${project.git.repo ?? '(unknown)'}`,
       ],
       ['Root directory', project.git.rootDirectory ?? '(unknown)'],
-      ['Package name', project.packageName ?? '(unknown)'],
-      ['In config', project.inGroupConfig ? 'yes' : 'no'],
-      ['Fetch status', project.projectFetchStatus],
-    ]);
+    ];
+
+    if (project.packageName) {
+      rows.push(['Package name', project.packageName]);
+    }
+
+    if (!project.inGroupConfig) {
+      rows.push(['In config', red('no')]);
+    }
+
+    const projectTable = table(rows);
     output.log(projectTable);
     output.log('');
   }

@@ -267,10 +267,11 @@ describe('microfrontends inspect-group', () => {
     expect(exitCode).toBe(0);
     const stderrOutput = client.stderr.getFullOutput();
     expect(stderrOutput).toContain('Projects');
-    expect(stderrOutput).toContain('Project            web');
-    expect(stderrOutput).toContain('ID                 proj_web');
+    expect(stderrOutput).toContain('Project            web (default app)');
     expect(stderrOutput).toContain('Project            docs');
-    expect(stderrOutput).toContain('ID                 proj_docs');
+    expect(stderrOutput).not.toContain('Enabled');
+    expect(stderrOutput).not.toContain('Fetch status');
+    expect(stderrOutput).not.toContain('ID                 proj_');
   });
 
   it('errors when --config-file-name has an invalid extension', async () => {
