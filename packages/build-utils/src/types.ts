@@ -584,10 +584,21 @@ export interface Service {
   /* optional handler for cron service in format of {module}:{callable} */
   handlerFunction?: string;
   /* worker service config */
-  topic?: string;
+  topics?: string[];
   consumer?: string;
   /** custom prefix to inject service URL env vars */
   envPrefix?: string;
+}
+
+/**
+ * Returns the topics a worker service subscribes to, defaulting to ['default'].
+ */
+export function getWorkerTopics(config: {
+  topics?: string[];
+}): [string, ...string[]] {
+  return config.topics?.length
+    ? (config.topics as [string, ...string[]])
+    : ['default'];
 }
 
 /** The framework which created the function */
@@ -807,7 +818,7 @@ export interface ExperimentalServiceConfig {
   schedule?: string;
 
   /* Worker service config */
-  topic?: string;
+  topics?: string[];
   consumer?: string;
 
   /** Custom prefix to use to inject service URL env vars */

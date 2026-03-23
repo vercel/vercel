@@ -842,7 +842,7 @@ describe('detectServices', () => {
       expect(result.services[0].builder.config?.framework).toBe('express');
     });
 
-    it('should default topic and consumer to "default" for workers', async () => {
+    it('should default topics and consumer to "default" for workers', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': JSON.stringify({
           experimentalServices: {
@@ -858,12 +858,33 @@ describe('detectServices', () => {
 
       expect(result.services[0]).toMatchObject({
         type: 'worker',
-        topic: 'default',
+        topics: ['default'],
         consumer: 'default',
       });
     });
 
-    it('should not set topic/consumer defaults for non-workers', async () => {
+    it('should pass through topics array for workers', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            worker: {
+              type: 'worker',
+              entrypoint: 'worker.py',
+              topics: ['orders', 'events'],
+            },
+          },
+        }),
+        'worker.py': 'def main(): pass',
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.services[0]).toMatchObject({
+        type: 'worker',
+        topics: ['orders', 'events'],
+      });
+    });
+
+    it('should not set topics/consumer defaults for non-workers', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': JSON.stringify({
           experimentalServices: {
@@ -878,7 +899,7 @@ describe('detectServices', () => {
       });
       const result = await detectServices({ fs });
 
-      expect(result.services[0].topic).toBeUndefined();
+      expect(result.services[0].topics).toBeUndefined();
       expect(result.services[0].consumer).toBeUndefined();
     });
 
@@ -1253,7 +1274,7 @@ describe('detectServices', () => {
             processor: {
               type: 'worker',
               entrypoint: 'jobs.cleanup:handler',
-              topic: 'jobs',
+              topics: ['jobs'],
             },
           },
         }),
@@ -1300,7 +1321,7 @@ describe('detectServices', () => {
             processor: {
               type: 'worker',
               entrypoint: 'worker/processor.py',
-              topic: 'jobs',
+              topics: ['jobs'],
             },
           },
         }),
@@ -1325,7 +1346,7 @@ describe('detectServices', () => {
             processor: {
               type: 'worker',
               entrypoint: 'worker/processor.ts',
-              topic: 'jobs',
+              topics: ['jobs'],
               routePrefix: '/worker',
             },
           },

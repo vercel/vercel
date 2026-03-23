@@ -6,6 +6,7 @@ import type {
   ServiceDetectionError,
   ServiceRuntime,
 } from './types';
+import { getWorkerTopics } from '@vercel/build-utils';
 import {
   ENTRYPOINT_EXTENSIONS,
   RUNTIME_BUILDERS,
@@ -453,7 +454,7 @@ export async function resolveConfiguredService(
     }
   }
 
-  const topic = type === 'worker' ? config.topic || 'default' : config.topic;
+  const topics = type === 'worker' ? getWorkerTopics(config) : config.topics;
   const consumer =
     type === 'worker' ? config.consumer || 'default' : config.consumer;
 
@@ -578,7 +579,7 @@ export async function resolveConfiguredService(
     installCommand: config.installCommand,
     schedule: config.schedule,
     handlerFunction: moduleAttrParsed?.attrName,
-    topic,
+    topics,
     consumer,
     envPrefix: config.envPrefix,
   };
