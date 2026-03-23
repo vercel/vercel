@@ -199,7 +199,8 @@ export async function processDeviceAuthorizationResponse(
  * @see https://datatracker.ietf.org/doc/html/rfc8628#section-3.4
  */
 export async function deviceAccessTokenRequest(options: {
-  device_code: string;
+  device_code?: string;
+  passcode?: string;
 }): Promise<[Error] | [null, Response]> {
   try {
     return [

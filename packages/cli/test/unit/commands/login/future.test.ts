@@ -188,4 +188,46 @@ describe('login', () => {
     expect(exitCode).toBe(0);
     expect(client.authConfig.userId).toBeUndefined();
   });
+
+  it('exchanges passcode without polling', async () => {
+    const tokenResponse = mockResponse({
+      access_token: randomUUID(),
+      token_type: 'Bearer',
+      expires_in: 60,
+      scope: 'openid offline_access',
+    });
+    fetch.mockImplementation((_url, options) => {
+      if (options?.method === 'POST') {
+        return Promise.resolve(tokenResponse);
+      }
+      return Promise.resolve(
+        mockResponse({
+          issuer: 'https://vercel.com',
+          device_authorization_endpoint:
+            'https://vercel.com/login/oauth/device-authorization',
+          token_endpoint: 'https://vercel.com/login/oauth/token',
+          revocation_endpoint: 'https://vercel.com/login/oauth/revoke',
+          jwks_uri: 'https://vercel.com/login/oauth/jwks',
+          introspection_endpoint: 'https://vercel.com/login/oauth/introspect',
+        })
+      );
+    });
+
+    client.setArgv('login', '--passcode', 'BCDF-GHJK');
+    client.authConfig.token = 'existing-token';
+    const tokenBefore = client.authConfig.token;
+
+    const exitCodePromise = login(client, { shouldParseArgs: true });
+    expect(await exitCodePromise, 'exit code for "login --passcode"').toBe(0);
+
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(fetch.mock.calls[0][1]?.body?.toString()).toBe(
+      new URLSearchParams({
+        client_id: oauth.VERCEL_CLI_CLIENT_ID,
+        grant_type: 'urn:ietf:params:oauth:grant-type:device_code',
+        passcode: 'BCDF-GHJK',
+      }).toString()
+    );
+    expect(client.authConfig.token).not.toBe(tokenBefore);
+  });
 });
