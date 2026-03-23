@@ -10,6 +10,10 @@ import { LoginTelemetryClient } from '../../util/telemetry/commands/login';
 import { login as future } from './future';
 import { outputActionRequired } from '../../util/agent-output';
 import { AGENT_ACTION, AGENT_STATUS } from '../../util/agent-output-constants';
+import {
+  deviceAuthorizationRequest,
+  processDeviceAuthorizationResponse,
+} from '../../util/oauth';
 
 export default async function login(
   client: Client,
@@ -56,14 +60,20 @@ export default async function login(
   const passcode = typeof passcodeFlag === 'string' ? passcodeFlag : undefined;
 
   if (client.nonInteractive && !passcode) {
-    const message =
-      "Visit https://vercel.com/login/generate to generate a login passcode, then run 'vc login --passcode <passcode>'";
+    const deviceAuthorizationResponse = await deviceAuthorizationRequest();
+    const [deviceAuthorizationError, deviceAuthorization] =
+      await processDeviceAuthorizationResponse(deviceAuthorizationResponse);
+    if (deviceAuthorizationError) {
+      printError(deviceAuthorizationError);
+      return 1;
+    }
+    const message = `Visit ${deviceAuthorization.verification_uri} to generate a login passcode, then run 'vc login --passcode <passcode>'`;
     client.stdout.write(`${message}\n`);
     outputActionRequired(client, {
       status: AGENT_STATUS.ACTION_REQUIRED,
       action: AGENT_ACTION.LOGIN_PASSCODE_REQUIRED,
       message,
-      verification_uri: 'https://vercel.com/login/generate',
+      verification_uri: deviceAuthorization.verification_uri_complete,
       next: [{ command: 'vc login --passcode <passcode>' }],
     });
     return 1;
