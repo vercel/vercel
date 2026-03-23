@@ -572,7 +572,7 @@ export interface Service {
   /* optional handler for cron service in format of {module}:{callable} */
   handlerFunction?: string;
   /* worker service config */
-  topics?: [string, ...string[]];
+  topics?: string[];
   consumer?: string;
 }
 
@@ -799,7 +799,7 @@ export interface ExperimentalServiceConfig {
   schedule?: string;
 
   /* Worker service config */
-  topics?: [string, ...string[]];
+  topics?: string[];
   consumer?: string;
 }
 

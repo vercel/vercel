@@ -18,7 +18,7 @@ const mockFetch = vi.mocked(nodeFetch);
 
 function makeWorkerService(
   name: string,
-  topics: [string, ...string[]] = ['default']
+  topics: string[] = ['default']
 ): Service {
   return {
     name,
