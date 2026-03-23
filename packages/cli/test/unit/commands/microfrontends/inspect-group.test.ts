@@ -50,7 +50,12 @@ const groupsResponse: MicrofrontendsGroupsResponse = {
   maxMicrofrontendsPerGroup: 20,
 };
 
-function setupMocks() {
+interface SetupMocksOptions {
+  projectIdsNotFound?: string[];
+}
+
+function setupMocks(options: SetupMocksOptions = {}) {
+  const { projectIdsNotFound = [] } = options;
   client.config.currentTeam = 'team_123';
 
   client.scenario.get('/v2/user', (_req, res) => {
@@ -72,6 +77,10 @@ function setupMocks() {
 
   client.scenario.get('/v9/projects/:projectId', (req, res) => {
     const projectId = req.params.projectId;
+    if (projectIdsNotFound.includes(projectId)) {
+      res.status(404).json({ error: { code: 'not_found' } });
+      return;
+    }
     if (projectId === 'proj_web') {
       res.json({
         id: 'proj_web',
@@ -156,12 +165,40 @@ describe('microfrontends inspect-group', () => {
     const stdout = client.stdout.getFullOutput().trim();
     const parsed = JSON.parse(stdout);
 
+    expect(Object.keys(parsed).sort()).toEqual(
+      [
+        'config',
+        'configFile',
+        'defaultApp',
+        'group',
+        'projectCount',
+        'projects',
+      ].sort()
+    );
+    expect(Object.keys(parsed.group).sort()).toEqual(
+      ['fallbackEnvironment', 'id', 'name', 'slug'].sort()
+    );
+
     expect(parsed.group.name).toBe('My Group');
     expect(parsed.group.id).toBe('group_1');
     expect(parsed.defaultApp).toBe('web');
-    expect(parsed.fallbackEnvironment).toBe(null);
     expect(parsed.configFile).toBe(null);
     expect(parsed.projects).toHaveLength(2);
+    expect(Object.keys(parsed.projects[0]).sort()).toEqual(
+      [
+        'defaultRoute',
+        'enabled',
+        'framework',
+        'git',
+        'id',
+        'inGroupConfig',
+        'isDefaultApp',
+        'name',
+        'packageName',
+        'productionDomain',
+        'projectFetchStatus',
+      ].sort()
+    );
     expect(parsed.projects[0]).toMatchObject({
       id: 'proj_web',
       name: 'web',
@@ -173,11 +210,53 @@ describe('microfrontends inspect-group', () => {
         repo: 'vercel/front',
         rootDirectory: 'apps/web',
       },
-      gitRepo: 'vercel/front',
-      gitOrg: 'vercel',
       packageName: null,
       inGroupConfig: true,
       projectFetchStatus: 'ok',
+    });
+  });
+
+  it('resolves group by slug', async () => {
+    client.setArgv(
+      'microfrontends',
+      'inspect-group',
+      '--group=my-group',
+      '--format=json'
+    );
+
+    const exitCode = await microfrontends(client);
+
+    expect(exitCode).toBe(0);
+    const parsed = JSON.parse(client.stdout.getFullOutput().trim());
+    expect(parsed.group).toMatchObject({
+      id: 'group_1',
+      slug: 'my-group',
+      name: 'My Group',
+    });
+  });
+
+  it('marks project as not_found when project metadata 404s', async () => {
+    client.reset();
+    teamCache.clear();
+    setupMocks({ projectIdsNotFound: ['proj_docs'] });
+    client.setArgv(
+      'microfrontends',
+      'inspect-group',
+      '--group=My Group',
+      '--format=json'
+    );
+
+    const exitCode = await microfrontends(client);
+
+    expect(exitCode).toBe(0);
+    const parsed = JSON.parse(client.stdout.getFullOutput().trim());
+    const docs = parsed.projects.find((p: any) => p.id === 'proj_docs');
+    expect(docs).toMatchObject({
+      id: 'proj_docs',
+      projectFetchStatus: 'not_found',
+      framework: null,
+      productionDomain: null,
+      packageName: null,
     });
   });
 
