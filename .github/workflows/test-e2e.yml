@@ -282,6 +282,7 @@ jobs:
     timeout-minutes: 5
     if: always()
     needs:
+      - setup
       - test
     steps:
       - name: Check All
