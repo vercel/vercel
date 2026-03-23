@@ -127,14 +127,15 @@ export default async function dev(
 
   let services: ResolvedService[] | undefined;
   const servicesResult = await tryDetectServices(cwd);
-  const foundServices = servicesResult && servicesResult.services.length > 0;
-  if (foundServices) {
-    displayDetectedServices(servicesResult.services);
-    services = servicesResult.services;
+  const detectedServices = servicesResult?.resolved?.services;
+
+  if (detectedServices && detectedServices.length > 0) {
+    displayDetectedServices(detectedServices);
+    services = detectedServices;
   }
 
   let lockAcquired = false;
-  if (foundServices) {
+  if (detectedServices && detectedServices.length > 0) {
     const port = typeof listen[0] === 'number' ? listen[0] : 0;
     const lockResult = await acquireDevLock(cwd, port);
 

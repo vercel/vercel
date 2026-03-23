@@ -8,7 +8,6 @@ import {
   type DetectServicesOptions,
   type DetectServicesResult,
   type InferredServicesResult,
-  type ResolvedServicesResult,
   type Service,
   type ServicesConfig,
   type ServicesRoutes,
@@ -17,6 +16,7 @@ import {
   getInternalServiceCronPath,
   getInternalServiceFunctionPath,
   getInternalServiceWorkerPath,
+  inferServiceRuntime,
   isFrontendFramework,
   isRouteOwningBuilder,
   isStaticBuild,
@@ -38,21 +38,6 @@ function emptyRoutes(): ServicesRoutes {
     defaults: [],
     crons: [],
     workers: [],
-  };
-}
-
-function withResolvedResult(
-  resolved: ResolvedServicesResult,
-  inferred: InferredServicesResult | null = null
-): DetectServicesResult {
-  return {
-    services: resolved.services,
-    source: resolved.source,
-    routes: resolved.routes,
-    errors: resolved.errors,
-    warnings: resolved.warnings,
-    resolved,
-    inferred,
   };
 }
 
@@ -85,6 +70,29 @@ function toInferredLayoutConfig(services: ServicesConfig): ServicesConfig {
   return inferredConfig;
 }
 
+function toInferredLayoutServices(
+  services: ServicesConfig
+): InferredServicesResult['services'] {
+  return Object.entries(services).map(([name, service]) => ({
+    name,
+    type: service.type || 'web',
+    workspace:
+      typeof service.entrypoint === 'string' ? service.entrypoint : '.',
+    entrypoint:
+      typeof service.entrypoint === 'string' ? service.entrypoint : undefined,
+    framework:
+      typeof service.framework === 'string' ? service.framework : undefined,
+    runtime: inferServiceRuntime({
+      runtime: service.runtime,
+      framework: service.framework,
+      builder: service.builder,
+      entrypoint: service.entrypoint,
+    }),
+    routePrefix:
+      typeof service.routePrefix === 'string' ? service.routePrefix : undefined,
+  }));
+}
+
 /**
  * Detect and resolve services within a project.
  *
@@ -104,99 +112,89 @@ export async function detectServices(
     await readVercelConfig(scopedFs);
 
   if (configError) {
-    return withResolvedResult({
-      services: [],
-      source: 'configured',
-      routes: emptyRoutes(),
-      errors: [configError],
-      warnings: [],
-    });
+    return {
+      resolved: {
+        services: [],
+        source: 'configured',
+        routes: emptyRoutes(),
+        errors: [configError],
+        warnings: [],
+      },
+      inferred: null,
+    };
   }
 
   const configuredServices = vercelConfig?.experimentalServices;
   const hasConfiguredServices =
     configuredServices && Object.keys(configuredServices).length > 0;
 
-  // Try auto-detection
-  if (!hasConfiguredServices) {
-    const autoResult = await autoDetectServices({ fs: scopedFs });
+  if (hasConfiguredServices) {
+    // Resolve configured services from vercel.json
+    const result = await resolveAllConfiguredServices(
+      configuredServices,
+      scopedFs,
+      'configured'
+    );
 
-    if (autoResult.errors.length > 0) {
-      return withResolvedResult({
-        services: [],
-        source: 'auto-detected',
-        routes: emptyRoutes(),
-        errors: autoResult.errors,
-        warnings: [],
-      });
-    }
+    // Generate routes
+    const routes = generateServicesRoutes(result.services);
 
-    if (autoResult.services) {
-      const result = await resolveAllConfiguredServices(
-        autoResult.services,
-        scopedFs,
-        'generated'
-      );
-      const routes = generateServicesRoutes(result.services);
-      const resolved: ResolvedServicesResult = {
+    return {
+      resolved: {
         services: result.services,
-        source: 'auto-detected',
+        source: 'configured',
         routes,
         errors: result.errors,
         warnings: [],
-      };
-      const rootWebFrameworkServices = result.services.filter(
-        service =>
-          service.type === 'web' &&
-          service.routePrefix === '/' &&
-          typeof service.framework === 'string'
-      );
-      const inferred =
-        result.errors.length === 0 &&
-        rootWebFrameworkServices.length === 1 &&
-        result.services.length > 1
-          ? {
-              source: 'layout' as const,
-              config: toInferredLayoutConfig(autoResult.services),
-              services: result.services,
-              warnings: [],
-            }
-          : null;
-      return withResolvedResult(resolved, inferred);
-    }
-
-    return withResolvedResult({
-      services: [],
-      source: 'auto-detected',
-      routes: emptyRoutes(),
-      errors: [
-        {
-          code: 'NO_SERVICES_CONFIGURED',
-          message:
-            'No services configured. Add `experimentalServices` to vercel.json.',
-        },
-      ],
-      warnings: [],
-    });
+      },
+      inferred: null,
+    };
   }
 
-  // Resolve configured services from vercel.json
-  const result = await resolveAllConfiguredServices(
-    configuredServices,
-    scopedFs,
-    'configured'
-  );
+  const autoResult = await autoDetectServices({ fs: scopedFs });
 
-  // Generate routes
-  const routes = generateServicesRoutes(result.services);
+  if (autoResult.errors.length > 0) {
+    return {
+      resolved: null,
+      inferred: {
+        source: 'layout',
+        config: null,
+        services: [],
+        errors: autoResult.errors,
+        warnings: [],
+      },
+    };
+  }
 
-  return withResolvedResult({
-    services: result.services,
-    source: 'configured',
-    routes,
-    errors: result.errors,
-    warnings: [],
-  });
+  if (!autoResult.services) {
+    return {
+      resolved: null,
+      inferred: {
+        source: 'layout',
+        config: null,
+        services: [],
+        errors: [
+          {
+            code: 'NO_SERVICES_CONFIGURED',
+            message:
+              'No services configured. Add `experimentalServices` to vercel.json.',
+          },
+        ],
+        warnings: [],
+      },
+    };
+  }
+
+  return {
+    resolved: null,
+    inferred: {
+      source: 'layout',
+      config: toInferredLayoutConfig(autoResult.services),
+      services: toInferredLayoutServices(autoResult.services),
+      errors: [],
+      warnings: [],
+    },
+  };
 }
 
 /**

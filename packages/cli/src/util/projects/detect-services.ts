@@ -15,17 +15,12 @@ import { validateConfig } from '../validate-config';
 export type ServicesConfigWriteBlocker = 'builds' | 'functions';
 
 /**
- * Check if vercel.json in the given directory has experimentalServices configured
- * or VERCEL_USE_EXPERIMENTAL_SERVICES environment variable is set.
+ * Check if the given directory explicitly configures services.
  */
 export async function isExperimentalServicesEnabled(
   cwd: string
 ): Promise<boolean> {
-  return (
-    process.env.VERCEL_USE_EXPERIMENTAL_SERVICES === '1' ||
-    process.env.VERCEL_USE_EXPERIMENTAL_SERVICES?.toLowerCase() === 'true' ||
-    (await hasExperimentalServicesConfig(cwd))
-  );
+  return await hasExperimentalServicesConfig(cwd);
 }
 
 async function hasExperimentalServicesConfig(cwd: string): Promise<boolean> {
@@ -40,30 +35,18 @@ async function hasExperimentalServicesConfig(cwd: string): Promise<boolean> {
 }
 
 /**
- * Detect services if experimental services are enabled.
+ * Detect configured or inferred services for the given directory.
  *
- * Returns the detection result if any of the following is true:
- * - vercel.json contains experimentalServices with valid services
- * - VERCEL_USE_EXPERIMENTAL_SERVICES env var is set (enables auto-detection of services)
- *
- * Returns null otherwise.
+ * Returns only explicitly configured services. Inferred services are handled by
+ * setup flows and should not activate the services runtime/build path.
  */
 export async function tryDetectServices(
   cwd: string
 ): Promise<DetectServicesResult | null> {
-  const isServicesEnabled = await isExperimentalServicesEnabled(cwd);
-  if (!isServicesEnabled) {
-    return null;
-  }
-
   const fs = new LocalFileSystemDetector(cwd);
   const result = await detectServices({ fs });
 
-  // No services configured
-  const hasNoServicesError = result.errors.some(
-    e => e.code === 'NO_SERVICES_CONFIGURED'
-  );
-  if (hasNoServicesError) {
+  if (!result.resolved) {
     return null;
   }
 

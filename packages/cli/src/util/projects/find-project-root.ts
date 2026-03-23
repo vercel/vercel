@@ -1,11 +1,8 @@
-import chalk from 'chalk';
+import * as chalk from 'chalk';
 import { stat } from 'fs/promises';
 import { join, dirname } from 'path';
 import { pathExists } from 'fs-extra';
-import {
-  isExperimentalServicesEnabled,
-  tryDetectServices,
-} from './detect-services';
+import { tryDetectServices } from './detect-services';
 import output from '../../output-manager';
 
 /**
@@ -57,22 +54,18 @@ export async function findProjectRoot(
 /**
  * Resolve the effective project working directory.
  *
- * When experimental services are enabled (via env var or explicit
- * experimentalServices in vercel.json) and the current directory is inside
- * a service subdirectory, this returns the project root instead so that
- * commands operate on the whole project rather than a single service.
+ * When the current directory is inside a detected services project, this
+ * returns the project root so commands operate on the whole project rather
+ * than a single service.
  */
 export async function resolveProjectCwd(cwd: string): Promise<string> {
   const projectRoot = await findProjectRoot(cwd);
   if (!projectRoot || projectRoot === cwd) return cwd;
 
-  const isServicesEnabled = await isExperimentalServicesEnabled(projectRoot);
-  if (!isServicesEnabled) {
-    return cwd;
-  }
-
   const result = await tryDetectServices(projectRoot);
-  if (result && result.services.length > 0) {
+  const detectedServices = result?.resolved?.services ?? [];
+
+  if (detectedServices.length > 0) {
     output.debug(`Running from project root: ${chalk.cyan(projectRoot)}`);
     return projectRoot;
   }

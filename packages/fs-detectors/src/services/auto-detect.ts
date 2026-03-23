@@ -20,7 +20,8 @@ const SERVICES_DIR = 'services';
 
 const FRONTEND_LOCATIONS = [FRONTEND_DIR, APPS_WEB_DIR];
 // Runtime frameworks, e.g. Python, Node, Ruby, etc. are currently marked experimental,
-// but service auto-detection should still consider them.
+// but service auto-detection should still consider them without relying on
+// the experimental frameworks env var.
 const DETECTION_FRAMEWORKS = frameworkList.filter(
   (framework: Framework) =>
     !framework.experimental || framework.runtimeFramework
@@ -62,7 +63,8 @@ export async function autoDetectServices(
 
   const rootFrameworks = await detectFrameworks({
     fs,
-    frameworkList,
+    frameworkList: DETECTION_FRAMEWORKS,
+    useExperimentalFrameworks: true,
   });
 
   if (rootFrameworks.length > 1) {
@@ -91,7 +93,8 @@ export async function autoDetectServices(
     const frontendFs = fs.chdir(frontendLocation);
     const frontendFrameworks = await detectFrameworks({
       fs: frontendFs,
-      frameworkList,
+      frameworkList: DETECTION_FRAMEWORKS,
+      useExperimentalFrameworks: true,
     });
 
     if (frontendFrameworks.length > 1) {

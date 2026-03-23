@@ -63,7 +63,20 @@ interface ServiceDescriptionInfo {
   colorFn: (text: string) => string;
 }
 
-function getServiceDescriptionInfo(service: Service): ServiceDescriptionInfo {
+interface DisplayableService {
+  name: string;
+  type: Service['type'];
+  framework?: string;
+  runtime?: string;
+  builder?: Service['builder'];
+  routePrefix?: string;
+  schedule?: string;
+  topic?: string;
+}
+
+function getServiceDescriptionInfo(
+  service: DisplayableService
+): ServiceDescriptionInfo {
   // Cron and worker services aren't framework apps, so we'll just show type + runtime for them
   // e.g. [Cron/Python] or [Worker/Python]
   if (service.type === 'cron' || service.type === 'worker') {
@@ -95,7 +108,7 @@ function getServiceDescriptionInfo(service: Service): ServiceDescriptionInfo {
   return { label: 'unknown', colorFn: chalk.dim };
 }
 
-function getServiceTarget(service: Service): string {
+function getServiceTarget(service: DisplayableService): string {
   switch (service.type) {
     case 'cron':
       return `schedule: ${service.schedule ?? 'none'}`;
@@ -116,7 +129,7 @@ function getServiceTarget(service: Service): string {
  *   cleanup           [node]      →  schedule: 0 0 * * *
  *   processor         [node]      →  topic: jobs
  */
-export function displayDetectedServices(services: Service[]): void {
+export function displayDetectedServices(services: DisplayableService[]): void {
   output.print(`Detected services:\n`);
 
   const outputOrder: Record<string, number> = { web: 0, cron: 1, worker: 2 };

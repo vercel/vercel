@@ -4,7 +4,6 @@ import {
   detectServices,
   LocalFileSystemDetector,
   type DetectServicesResult,
-  type Service,
 } from '@vercel/fs-detectors';
 import output from '../../output-manager';
 import type Client from '../client';
@@ -41,11 +40,13 @@ export async function getServicesSetupState(
   const detectServicesResult = await detectServices({
     fs: new LocalFileSystemDetector(workPath),
   });
-  const hasConfiguredServices =
-    detectServicesResult.resolved.source === 'configured';
-  const inferredServices = hasConfiguredServices
-    ? null
-    : detectServicesResult.inferred;
+  const hasConfiguredServices = detectServicesResult.resolved !== null;
+  const inferredServices =
+    !hasConfiguredServices &&
+    detectServicesResult.inferred &&
+    detectServicesResult.inferred.config
+      ? detectServicesResult.inferred
+      : null;
   const inferredServicesWriteBlocker = inferredServices
     ? await getServicesConfigWriteBlocker(workPath, inferredServices.config)
     : null;
@@ -61,16 +62,23 @@ export async function getServicesSetupState(
 export function displayConfiguredServicesSetup(
   detectServicesResult: DetectServicesResult
 ): void {
-  if (detectServicesResult.services.length > 0) {
-    displayDetectedServices(detectServicesResult.services);
+  const resolvedServices = detectServicesResult.resolved;
+  if (!resolvedServices) {
+    return;
   }
-  if (detectServicesResult.errors.length > 0) {
-    displayServiceErrors(detectServicesResult.errors);
+
+  if (resolvedServices.services.length > 0) {
+    displayDetectedServices(resolvedServices.services);
+  }
+  if (resolvedServices.errors.length > 0) {
+    displayServiceErrors(resolvedServices.errors);
   }
   displayServicesConfigNote();
 }
 
-function formatDetectedServicesSummary(services: Service[]): string {
+function formatDetectedServicesSummary(
+  services: Array<{ name: string }>
+): string {
   if (services.length === 0) {
     return '';
   }

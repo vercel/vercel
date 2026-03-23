@@ -55,35 +55,48 @@ export interface ServicesRoutes {
 
 export type ServicesConfig = ExperimentalServices;
 
-export interface ResolvedServicesResult {
-  services: Service[];
-  source: DetectServicesSource;
-  routes: ServicesRoutes;
+interface ServicesDetectionIssues {
   errors: ServiceDetectionError[];
   warnings: ServiceDetectionWarning[];
 }
 
-export interface InferredServicesResult {
-  source: 'layout' | 'procfile';
-  config: ServicesConfig;
+interface ServicesDetectionResult extends ServicesDetectionIssues {
   services: Service[];
-  warnings: ServiceDetectionWarning[];
+  routes: ServicesRoutes;
 }
 
-export interface DetectServicesResult extends ResolvedServicesResult {
-  /**
-   * Source of service definitions:
-   * - `configured`: loaded from explicit project configuration (currently `vercel.json#experimentalServices`)
-   * - `auto-detected`: inferred from project structure
-   */
-  // TODO: replace consumption of top-level fields with these nested objects in caller before removal of top-level fields.
-  /* Resolved services used by build/dev flows. */
-  resolved: ResolvedServicesResult;
-  /* Inferred services that can be migrated into project config. */
+export interface ResolvedServicesResult extends ServicesDetectionResult {
+  source: 'configured';
+}
+
+export interface InferredService
+  extends Pick<
+    Service,
+    | 'name'
+    | 'type'
+    | 'workspace'
+    | 'entrypoint'
+    | 'framework'
+    | 'runtime'
+    | 'routePrefix'
+  > {}
+
+export interface InferredServicesResult extends ServicesDetectionIssues {
+  source: 'layout' | 'procfile';
+  config: ServicesConfig | null;
+  services: InferredService[];
+}
+
+export interface DetectServicesResult {
+  /* Services resolved from explicit project configuration. */
+  resolved: ResolvedServicesResult | null;
+  /* Services inferred from project structure or other metadata. */
   inferred: InferredServicesResult | null;
 }
 
-export type DetectServicesSource = 'configured' | 'auto-detected';
+export type DetectServicesSource =
+  | ResolvedServicesResult['source']
+  | InferredServicesResult['source'];
 
 export interface ServiceDetectionWarning {
   code: string;

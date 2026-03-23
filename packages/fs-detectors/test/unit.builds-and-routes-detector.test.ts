@@ -3,6 +3,9 @@ import type {
   RouteWithHandle as Handler,
   RouteWithSrc as Source,
 } from '@vercel/routing-utils';
+import { describe, expect, it } from 'vitest';
+import { mkdtemp, mkdir, rm, writeFile } from 'fs/promises';
+import { tmpdir } from 'os';
 import { join } from 'path';
 import type { PackageJson } from '@vercel/build-utils';
 import {
@@ -151,6 +154,45 @@ describe('Test `detectBuilders`', () => {
         }),
       ])
     );
+  });
+
+  it('should error when services framework has only inferred layout services', async () => {
+    const workPath = await mkdtemp(join(tmpdir(), 'services-framework-'));
+
+    try {
+      await mkdir(join(workPath, 'frontend'), { recursive: true });
+      await mkdir(join(workPath, 'services/api'), { recursive: true });
+      await writeFile(
+        join(workPath, 'frontend/package.json'),
+        JSON.stringify({ dependencies: { next: '14.0.0' } })
+      );
+      await writeFile(
+        join(workPath, 'services/api/requirements.txt'),
+        'fastapi\n'
+      );
+      await writeFile(
+        join(workPath, 'services/api/index.py'),
+        'from fastapi import FastAPI\napp = FastAPI()\n'
+      );
+
+      const result = await detectBuilders([], undefined, {
+        projectSettings: {
+          framework: 'services',
+        },
+        workPath,
+      });
+
+      expect(result.builders).toBeNull();
+      expect(result.errors).toEqual([
+        {
+          code: 'NO_SERVICES_CONFIGURED',
+          message:
+            'No services configured. Add `experimentalServices` to vercel.json.',
+        },
+      ]);
+    } finally {
+      await rm(workPath, { recursive: true, force: true });
+    }
   });
 
   it('should never select now.json src', async () => {

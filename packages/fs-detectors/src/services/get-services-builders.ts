@@ -58,18 +58,38 @@ export async function getServicesBuilders(
 
   const fs = new LocalFileSystemDetector(workPath);
   const result = await detectServices({ fs });
+  const resolvedResult = result.resolved;
+
+  if (!resolvedResult) {
+    return {
+      builders: null,
+      errors: [
+        {
+          code: 'NO_SERVICES_CONFIGURED',
+          message:
+            'No services configured. Add `experimentalServices` to vercel.json.',
+        },
+      ],
+      warnings: [],
+      hostRewriteRoutes: null,
+      defaultRoutes: null,
+      redirectRoutes: null,
+      rewriteRoutes: null,
+      errorRoutes: null,
+    };
+  }
 
   // Transform warnings to ErrorResponse format
-  const warningResponses: ErrorResponse[] = result.warnings.map(w => ({
+  const warningResponses: ErrorResponse[] = resolvedResult.warnings.map(w => ({
     code: w.code,
     message: w.message,
   }));
 
   // Transform errors and return early if any
-  if (result.errors.length > 0) {
+  if (resolvedResult.errors.length > 0) {
     return {
       builders: null,
-      errors: result.errors.map(e => ({
+      errors: resolvedResult.errors.map(e => ({
         code: e.code,
         message: e.message,
       })),
@@ -82,7 +102,7 @@ export async function getServicesBuilders(
     };
   }
 
-  if (result.services.length === 0) {
+  if (resolvedResult.services.length === 0) {
     return {
       builders: null,
       errors: [
@@ -102,28 +122,34 @@ export async function getServicesBuilders(
   }
 
   // Extract builders from services
-  const builders: Builder[] = result.services.map(service => service.builder);
+  const builders: Builder[] = resolvedResult.services.map(
+    service => service.builder
+  );
 
   return {
     builders: builders.length > 0 ? builders : null,
     errors: null,
     warnings: warningResponses,
     hostRewriteRoutes:
-      result.routes.hostRewrites.length > 0 ? result.routes.hostRewrites : null,
+      resolvedResult.routes.hostRewrites.length > 0
+        ? resolvedResult.routes.hostRewrites
+        : null,
     defaultRoutes:
-      result.routes.defaults.length > 0 ? result.routes.defaults : null,
+      resolvedResult.routes.defaults.length > 0
+        ? resolvedResult.routes.defaults
+        : null,
     redirectRoutes: [],
     rewriteRoutes:
-      result.routes.rewrites.length > 0 ||
-      result.routes.workers.length > 0 ||
-      result.routes.crons.length > 0
+      resolvedResult.routes.rewrites.length > 0 ||
+      resolvedResult.routes.workers.length > 0 ||
+      resolvedResult.routes.crons.length > 0
         ? [
-            ...result.routes.rewrites,
-            ...result.routes.workers,
-            ...result.routes.crons,
+            ...resolvedResult.routes.rewrites,
+            ...resolvedResult.routes.workers,
+            ...resolvedResult.routes.crons,
           ]
         : null,
     errorRoutes: [],
-    services: result.services,
+    services: resolvedResult.services,
   };
 }

@@ -32,6 +32,7 @@ export type {
   ServicesConfig,
   ResolvedServicesResult,
   InferredServicesResult,
+  InferredService,
   ResolvedService,
   Service,
   ServicesRoutes,

@@ -1,5 +1,34 @@
-import { detectServices, autoDetectServices } from '../src';
+import {
+  detectServices as rawDetectServices,
+  autoDetectServices,
+  type DetectServicesResult,
+  type InferredServicesResult,
+  type ResolvedServicesResult,
+} from '../src';
+import { describe, expect, it } from 'vitest';
 import VirtualFilesystem from './virtual-file-system';
+
+function expectResolvedResult(
+  result: DetectServicesResult
+): ResolvedServicesResult {
+  expect(result.resolved).not.toBeNull();
+  expect(result.inferred).toBeNull();
+  return result.resolved!;
+}
+
+function expectInferredResult(
+  result: DetectServicesResult
+): InferredServicesResult {
+  expect(result.resolved).toBeNull();
+  expect(result.inferred).not.toBeNull();
+  return result.inferred!;
+}
+
+async function detectResolvedServices(
+  ...args: Parameters<typeof rawDetectServices>
+): Promise<ResolvedServicesResult> {
+  return expectResolvedResult(await rawDetectServices(...args));
+}
 
 describe('autoDetectServices', () => {
   describe('Frontend at root, backend in backend/', () => {
@@ -377,7 +406,7 @@ describe('detectServices with auto-detection', () => {
         }),
       });
 
-      const result = await detectServices({ fs });
+      const result = await detectResolvedServices({ fs });
 
       expect(result.errors).toEqual([]);
       expect(result.warnings).toEqual([]);
@@ -463,11 +492,12 @@ describe('detectServices with auto-detection', () => {
         }),
       });
 
-      const result = await detectServices({ fs });
+      const result = await rawDetectServices({ fs });
+      const inferred = expectInferredResult(result);
 
-      expect(result.source).toBe('auto-detected');
-      expect(result.services).toHaveLength(0);
-      expect(result.errors).toEqual([
+      expect(inferred.source).toBe('layout');
+      expect(inferred.services).toHaveLength(0);
+      expect(inferred.errors).toEqual([
         {
           code: 'NO_SERVICES_CONFIGURED',
           message:
@@ -485,11 +515,12 @@ describe('detectServices with auto-detection', () => {
         }),
       });
 
-      const result = await detectServices({ fs });
+      const result = await rawDetectServices({ fs });
+      const inferred = expectInferredResult(result);
 
-      expect(result.source).toBe('auto-detected');
-      expect(result.services).toHaveLength(0);
-      expect(result.errors).toEqual([
+      expect(inferred.source).toBe('layout');
+      expect(inferred.services).toHaveLength(0);
+      expect(inferred.errors).toEqual([
         {
           code: 'NO_SERVICES_CONFIGURED',
           message:
@@ -509,18 +540,19 @@ describe('detectServices with auto-detection', () => {
         'backend/main.py': 'from fastapi import FastAPI\napp = FastAPI()',
       });
 
-      const result = await detectServices({ fs });
+      const result = await rawDetectServices({ fs });
+      const inferred = expectInferredResult(result);
 
-      expect(result.errors).toEqual([]);
-      expect(result.warnings).toHaveLength(0);
-      expect(result.source).toBe('auto-detected');
-      expect(result.services).toHaveLength(2);
-      const backend = result.services.find(
+      expect(inferred.errors).toEqual([]);
+      expect(inferred.warnings).toHaveLength(0);
+      expect(inferred.source).toBe('layout');
+      expect(inferred.services).toHaveLength(2);
+      const backend = inferred.services.find(
         service => service.name === 'backend'
       );
       expect(backend).toBeDefined();
       expect(backend?.routePrefix).toBe('/_/backend');
-      expect(backend?.routePrefixSource).toBe('generated');
+      expect(inferred.config?.backend?.routePrefix).toBe('/_/backend');
     });
   });
 });

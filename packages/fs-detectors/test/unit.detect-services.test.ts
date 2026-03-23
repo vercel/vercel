@@ -1,5 +1,13 @@
-import { detectServices, isStaticBuild, isRouteOwningBuilder } from '../src';
+import {
+  detectServices as rawDetectServices,
+  isStaticBuild,
+  isRouteOwningBuilder,
+  type DetectServicesResult,
+  type InferredServicesResult,
+  type ResolvedServicesResult,
+} from '../src';
 import type { Route } from '@vercel/routing-utils';
+import { beforeAll, describe, expect, it } from 'vitest';
 import VirtualFilesystem from './virtual-file-system';
 
 /**
@@ -26,19 +34,40 @@ function findMatchingRoute(
   return undefined;
 }
 
+function expectResolvedResult(
+  result: DetectServicesResult
+): ResolvedServicesResult {
+  expect(result.resolved).not.toBeNull();
+  expect(result.inferred).toBeNull();
+  return result.resolved!;
+}
+
+function expectInferredResult(
+  result: DetectServicesResult
+): InferredServicesResult {
+  expect(result.resolved).toBeNull();
+  expect(result.inferred).not.toBeNull();
+  return result.inferred!;
+}
+
+async function detectServices(
+  ...args: Parameters<typeof rawDetectServices>
+): Promise<ResolvedServicesResult> {
+  return expectResolvedResult(await rawDetectServices(...args));
+}
+
 describe('detectServices', () => {
   describe('with no vercel.json', () => {
     it('should return auto-detection error when no service found', async () => {
       const fs = new VirtualFilesystem({});
-      const result = await detectServices({ fs });
+      const result = await rawDetectServices({ fs });
+      const inferred = expectInferredResult(result);
 
-      expect(result.services).toEqual([]);
-      expect(result.source).toBe('auto-detected');
-      expect(result.resolved).not.toBeNull();
-      expect(result.resolved?.source).toBe('auto-detected');
-      expect(result.inferred).toBeNull();
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].code).toBe('NO_SERVICES_CONFIGURED');
+      expect(inferred.services).toEqual([]);
+      expect(inferred.source).toBe('layout');
+      expect(inferred.config).toBeNull();
+      expect(inferred.errors).toHaveLength(1);
+      expect(inferred.errors[0].code).toBe('NO_SERVICES_CONFIGURED');
     });
 
     it('should auto-detect a Ruby backend service in backend/', async () => {
@@ -51,31 +80,22 @@ describe('detectServices', () => {
         'backend/Gemfile': 'source "https://rubygems.org"',
         'backend/config.ru': 'run Sinatra::Application',
       });
-      const result = await detectServices({ fs });
+      const result = await rawDetectServices({ fs });
+      const inferred = expectInferredResult(result);
 
-      expect(result.errors).toEqual([]);
-      expect(result.services).toHaveLength(2);
+      expect(inferred.errors).toEqual([]);
+      expect(inferred.services).toHaveLength(2);
 
-      const backend = result.services.find(s => s.name === 'backend');
+      const backend = inferred.services.find(s => s.name === 'backend');
       expect(backend).toMatchObject({
         name: 'backend',
+        type: 'web',
         workspace: 'backend',
-        framework: 'ruby',
         runtime: 'ruby',
         routePrefix: '/_/backend',
-        routePrefixSource: 'generated',
       });
-
-      const backendRoute = findMatchingRoute(
-        result.routes.rewrites,
-        '/_/backend/ping'
-      );
-      expect(backendRoute).toMatchObject({
-        dest: '/_svc/backend/index',
-      });
-      expect(result.resolved).not.toBeNull();
-      expect(result.resolved?.services).toHaveLength(2);
-      expect(result.inferred).toMatchObject({
+      expect(result.resolved).toBeNull();
+      expect(inferred).toMatchObject({
         source: 'layout',
         config: {
           frontend: { framework: 'nextjs', routePrefix: '/' },
@@ -95,11 +115,12 @@ describe('detectServices', () => {
           buildCommand: 'npm run build',
         }),
       });
-      const result = await detectServices({ fs });
+      const result = await rawDetectServices({ fs });
+      const inferred = expectInferredResult(result);
 
-      expect(result.services).toEqual([]);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0].code).toBe('NO_SERVICES_CONFIGURED');
+      expect(inferred.services).toEqual([]);
+      expect(inferred.errors).toHaveLength(1);
+      expect(inferred.errors[0].code).toBe('NO_SERVICES_CONFIGURED');
     });
   });
 
@@ -120,9 +141,6 @@ describe('detectServices', () => {
 
       expect(result.services).toHaveLength(1);
       expect(result.source).toBe('configured');
-      expect(result.resolved).not.toBeNull();
-      expect(result.resolved?.source).toBe('configured');
-      expect(result.inferred).toBeNull();
       expect(result.services[0]).toMatchObject({
         name: 'api',
         type: 'web',
