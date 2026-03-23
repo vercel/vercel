@@ -598,9 +598,16 @@ export const build = async ({
         ? true
         : undefined;
 
+    const enableBundling =
+      process.env.VERCEL_API_FUNCTION_BUNDLING === '1' &&
+      config.zeroConfig === true &&
+      !isMiddleware &&
+      !isEdgeFunction;
+
     output = new NodejsLambda({
       files: preparedFiles,
       handler,
+      experimentalAllowBundling: enableBundling || undefined,
       architecture: staticConfig?.architecture,
       runtime: nodeVersion.runtime,
       useWebApi: isMiddleware ? true : useWebApi,
