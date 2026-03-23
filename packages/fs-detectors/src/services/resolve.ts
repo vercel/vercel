@@ -50,6 +50,7 @@ function parsePyModuleAttrEntrypoint(entrypoint: string): {
 
 const SERVICE_NAME_REGEX = /^[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$/;
 const DNS_LABEL_RE = /^(?!-)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/i;
+const ENV_PREFIX_RE = /^[A-Z][A-Z0-9_]*_$/;
 
 interface ResolvedEntrypointPath {
   normalized: string;
@@ -291,6 +292,15 @@ export function validateServiceConfig(
       message: `Cron service "${name}" is missing required "schedule" field.`,
       serviceName: name,
     };
+  }
+  if (config.envPrefix !== undefined) {
+    if (!ENV_PREFIX_RE.test(config.envPrefix)) {
+      return {
+        code: 'INVALID_ENV_PREFIX',
+        message: `Service "${name}" has invalid envPrefix "${config.envPrefix}". Must start with an uppercase letter, contain only uppercase letters, digits, and underscores, and end with "_" (e.g., "MY_SERVICE_").`,
+        serviceName: name,
+      };
+    }
   }
   if (config.runtime && !(config.runtime in RUNTIME_BUILDERS)) {
     return {
@@ -570,6 +580,7 @@ export async function resolveConfiguredService(
     handlerFunction: moduleAttrParsed?.attrName,
     topic,
     consumer,
+    envPrefix: config.envPrefix,
   };
 }
 

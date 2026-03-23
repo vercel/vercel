@@ -329,6 +329,7 @@ export class ServicesOrchestrator {
       frameworkList: framework ? [framework] : [],
       origin: this.proxyOrigin,
       currentEnv: this.env,
+      envPrefix: service.envPrefix,
     });
 
     const env = cloneEnv(
