@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 13.9.0
+
+### Minor Changes
+
+- Ensure django static files are copied in build output. ([#15557](https://github.com/vercel/vercel/pull/15557))
+
 ## 13.8.2
 
 ### Patch Changes
