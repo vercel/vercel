@@ -51,6 +51,10 @@ module = ["vercel_runtime._vendor.*"]
 ignore_errors = true
 
 [[tool.mypy.overrides]]
+module = ["vercel_runtime._tracing"]
+ignore_errors = true
+
+[[tool.mypy.overrides]]
 module = ["tests.fixtures.*"]
 ignore_errors = true
 
@@ -62,7 +66,7 @@ ignore_missing_imports = true
 pythonVersion = "3.12"
 typeCheckingMode = "strict"
 include = ["src/vercel_runtime", "tests"]
-exclude = ["src/vercel_runtime/_vendor", "tests/fixtures"]
+exclude = ["src/vercel_runtime/_vendor", "src/vercel_runtime/_tracing.py", "tests/fixtures"]
 extraPaths = ["src"]
 
 [[tool.basedpyright.executionEnvironments]]
@@ -113,6 +117,13 @@ extend-ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
+"src/vercel_runtime/telemetry.py" = [
+    "PLC0415", # conditional import for optional _tracing module
+]
+"src/vercel_runtime/_tracing.py" = [
+    "E501",    # long opentelemetry import path is unavoidable
+    "PLC2701", # opentelemetry _internal import required for encode_spans
+]
 "tests/**/*.py" = [
     "N806",    # allow uppercase variable names
     "PLC0415", # guarded/conditional imports in tests

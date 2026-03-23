@@ -6,6 +6,7 @@ import {
 import { getVenvSitePackagesDirs } from '../install';
 import { matplotlibQuirk } from './matplotlib';
 import { litellmQuirk } from './litellm';
+import { opentelemetryQuirk } from './opentelemetry';
 import { prismaQuirk } from './prisma';
 
 export interface QuirkContext {
@@ -21,6 +22,8 @@ export interface QuirkResult {
   buildEnv?: Record<string, string>;
   /** Packages that must always be bundled (never externalized) */
   alwaysBundlePackages?: string[];
+  /** Additional pip packages to install into the venv */
+  additionalPackages?: string[];
 }
 
 export interface Quirk {
@@ -32,7 +35,12 @@ export interface Quirk {
   run(ctx: QuirkContext): Promise<QuirkResult>;
 }
 
-const quirks: Quirk[] = [litellmQuirk, prismaQuirk, matplotlibQuirk];
+const quirks: Quirk[] = [
+  litellmQuirk,
+  prismaQuirk,
+  matplotlibQuirk,
+  opentelemetryQuirk,
+];
 
 /**
  * Topologically sort activated quirks based on runsBefore/runsAfter edges.
@@ -112,6 +120,7 @@ export async function runQuirks(ctx: QuirkContext): Promise<QuirkResult> {
   const mergedEnv: Record<string, string> = {};
   const mergedBuildEnv: Record<string, string> = {};
   const mergedAlwaysBundle: string[] = [];
+  const mergedAdditionalPackages: string[] = [];
 
   // Scan installed distributions once, reuse for all quirks.
   const installedNames = new Set<string>();
@@ -150,11 +159,15 @@ export async function runQuirks(ctx: QuirkContext): Promise<QuirkResult> {
     if (result.alwaysBundlePackages) {
       mergedAlwaysBundle.push(...result.alwaysBundlePackages);
     }
+    if (result.additionalPackages) {
+      mergedAdditionalPackages.push(...result.additionalPackages);
+    }
   }
 
   return {
     env: mergedEnv,
     buildEnv: mergedBuildEnv,
     alwaysBundlePackages: mergedAlwaysBundle,
+    additionalPackages: mergedAdditionalPackages,
   };
 }
