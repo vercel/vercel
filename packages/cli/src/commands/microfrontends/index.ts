@@ -4,7 +4,18 @@ import getInvalidSubcommand from '../../util/get-invalid-subcommand';
 import { printError } from '../../util/error';
 import { type Command, help } from '../help';
 import pull from './pull';
-import { microfrontendsCommand, pullSubcommand } from './command';
+import createGroup from './create-group';
+import addToGroup from './add-to-group';
+import removeFromGroup from './remove-from-group';
+import deleteGroup from './delete-group';
+import {
+  microfrontendsCommand,
+  pullSubcommand,
+  createGroupSubcommand,
+  addToGroupSubcommand,
+  removeFromGroupSubcommand,
+  deleteGroupSubcommand,
+} from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
 import { getCommandAliases } from '..';
@@ -12,6 +23,10 @@ import getSubcommand from '../../util/get-subcommand';
 import { MicrofrontendsTelemetryClient } from '../../util/telemetry/commands/microfrontends';
 
 const COMMAND_CONFIG = {
+  'create-group': getCommandAliases(createGroupSubcommand),
+  'add-to-group': getCommandAliases(addToGroupSubcommand),
+  'remove-from-group': getCommandAliases(removeFromGroupSubcommand),
+  'delete-group': getCommandAliases(deleteGroupSubcommand),
   pull: getCommandAliases(pullSubcommand),
 };
 
@@ -61,6 +76,34 @@ export default async function main(client: Client) {
   }
 
   switch (subcommand) {
+    case 'create-group':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('microfrontends', subcommandOriginal);
+        return printHelp(createGroupSubcommand);
+      }
+      telemetry.trackCliSubcommandCreateGroup(subcommandOriginal);
+      return createGroup(client);
+    case 'add-to-group':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('microfrontends', subcommandOriginal);
+        return printHelp(addToGroupSubcommand);
+      }
+      telemetry.trackCliSubcommandAddToGroup(subcommandOriginal);
+      return addToGroup(client);
+    case 'remove-from-group':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('microfrontends', subcommandOriginal);
+        return printHelp(removeFromGroupSubcommand);
+      }
+      telemetry.trackCliSubcommandRemoveFromGroup(subcommandOriginal);
+      return removeFromGroup(client);
+    case 'delete-group':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('microfrontends', subcommandOriginal);
+        return printHelp(deleteGroupSubcommand);
+      }
+      telemetry.trackCliSubcommandDeleteGroup(subcommandOriginal);
+      return deleteGroup(client);
     case 'pull':
       if (needHelp) {
         telemetry.trackCliFlagHelp('microfrontends', subcommandOriginal);
