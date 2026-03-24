@@ -30,6 +30,11 @@ import {
   parseMetadataFlags,
   validateAndPrintRequiredMetadata,
 } from '../../util/integration/parse-metadata';
+import {
+  isServerHandledRegion,
+  getVisibleOptions,
+  mergeMetadataSchemas,
+} from '../../util/integration/format-schema-help';
 import type { Metadata } from '../../util/integration/types';
 
 export interface AddAutoProvisionOptions extends PostProvisionOptions {
@@ -199,16 +204,33 @@ export async function addAutoProvision(
     }
   }
 
-  // Validate metadata flags (if provided) BEFORE prompting for resource name
+  // Validate metadata flags (if provided) BEFORE prompting for resource name.
+  // For integrations with an installation-level metadataSchema (e.g. Sentry with
+  // name/region), we accept both product and installation keys via -m flags, then
+  // split them into separate fields for the API. This avoids key conflicts if a
+  // partner uses the same key name in both schemas.
+  const integrationSchemaProps = integration.metadataSchema?.properties ?? {};
+  const productSchemaProps = product.metadataSchema.properties;
+  const mergedParsingSchema =
+    mergeMetadataSchemas(product.metadataSchema, integration.metadataSchema) ??
+    product.metadataSchema;
+  for (const key of Object.keys(integrationSchemaProps)) {
+    if (key in productSchemaProps) {
+      output.debug(
+        `Metadata key "${key}" exists in both product and installation schemas — product definition wins`
+      );
+    }
+  }
   let metadata: Metadata;
+  let installationMetadata: Metadata = {};
   if (options.metadata?.length) {
-    // Parse metadata from CLI flags
+    // Parse metadata from CLI flags against merged schema (accepts all keys)
     output.debug(
       `Parsing metadata from flags: ${JSON.stringify(options.metadata)}`
     );
     const { metadata: parsed, errors } = parseMetadataFlags(
       options.metadata,
-      product.metadataSchema
+      mergedParsingSchema
     );
     if (errors.length) {
       for (const error of errors) {
@@ -220,14 +242,34 @@ export async function addAutoProvision(
       });
       return 1;
     }
-    if (!validateAndPrintRequiredMetadata(parsed, product.metadataSchema)) {
+    // Validate required fields against the merged schema (both product + installation required)
+    if (!validateAndPrintRequiredMetadata(parsed, mergedParsingSchema)) {
       telemetry.trackMarketplaceEvent('marketplace_install_flow_dropped', {
         ...baseProps,
         reason: 'metadata_validation_failed',
       });
       return 1;
     }
-    metadata = parsed;
+
+    // Split parsed metadata into product vs installation buckets.
+    // Keys in both schemas go to product metadata (the more common case).
+    const productMeta: Metadata = {};
+    const installMeta: Metadata = {};
+    for (const [key, value] of Object.entries(parsed)) {
+      if (value === undefined) continue;
+      const inProduct = key in productSchemaProps;
+      const inInstallation = key in integrationSchemaProps;
+      if (inProduct) {
+        productMeta[key] = value;
+      } else if (inInstallation) {
+        installMeta[key] = value;
+      } else {
+        // Key was accepted by merged schema but somehow not in either — include in product
+        productMeta[key] = value;
+      }
+    }
+    metadata = productMeta;
+    installationMetadata = installMeta;
   } else {
     // No --metadata flags: pass {} and let server fill defaults (API PR #58905)
     metadata = {};
@@ -273,7 +315,8 @@ export async function addAutoProvision(
       metadata,
       acceptedPolicies,
       options.billingPlanId,
-      browserInstallationId ?? options.installationId
+      browserInstallationId ?? options.installationId,
+      installationMetadata
     );
   } catch (error) {
     output.stopSpinner();
@@ -351,12 +394,42 @@ export async function addAutoProvision(
       return projectLink.exitCode;
     }
 
+    // Check for missing required metadata to give an actionable message
+    const missingRequired = (mergedParsingSchema.required ?? []).filter(key => {
+      if (key in metadata || key in installationMetadata) return false;
+      const prop = mergedParsingSchema.properties[key];
+      return prop && !isServerHandledRegion(prop);
+    });
+
+    if (missingRequired.length > 0) {
+      const examples = missingRequired.map(key => {
+        const prop = mergedParsingSchema.properties[key];
+        const options = prop ? getVisibleOptions(prop) : undefined;
+        const exampleVal = options?.[0] ?? '<value>';
+        return `-m ${key}=${exampleVal}`;
+      });
+      output.error(`Missing required metadata: ${missingRequired.join(', ')}.`);
+      output.log(
+        `  Provide ${examples.join(' ')} to provision directly from the CLI.`
+      );
+      output.log(
+        `  Run \`vercel ${commandName} ${integrationSlug} --help\` for all metadata options.`
+      );
+      return 1;
+    }
+
     output.log('Additional setup required. Opening browser...');
     const url = new URL(fallback.url);
     url.searchParams.set('defaultResourceName', resourceName);
     url.searchParams.set('source', 'cli');
     if (Object.keys(metadata).length > 0) {
       url.searchParams.set('metadata', JSON.stringify(metadata));
+    }
+    if (Object.keys(installationMetadata).length > 0) {
+      url.searchParams.set(
+        'installationMetadata',
+        JSON.stringify(installationMetadata)
+      );
     }
     if (projectLink.value) {
       url.searchParams.set('projectSlug', projectLink.value);
