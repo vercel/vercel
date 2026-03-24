@@ -1,6 +1,6 @@
 import fs from 'fs';
 import { join, posix as pathPosix } from 'path';
-import type { PythonFramework } from '@vercel/build-utils';
+import { PythonFramework, NowBuildError } from '@vercel/build-utils';
 import { debug } from '@vercel/build-utils';
 import { readConfigFile } from '@vercel/build-utils';
 import { findAppOrHandler } from '@vercel/python-analysis';
@@ -17,6 +17,8 @@ export interface DetectedPythonEntrypoint {
   entrypoint?: PythonEntrypoint;
   /** Directory containing manage.py, if detected via Django path. */
   baseDir?: string;
+  /** Exception to raise, if we can't fix it with per-framework hooks */
+  error?: NowBuildError;
 }
 
 export const PYTHON_ENTRYPOINT_FILENAMES = [
@@ -144,26 +146,23 @@ async function getSubdirectories(workPath: string): Promise<string[]> {
   }
 }
 
+function makeDetectError(framework: string): NowBuildError {
+  const searchedList = PYTHON_CANDIDATE_ENTRYPOINTS.join(', ');
+  return new NowBuildError({
+    code: `${framework!.toUpperCase()}_ENTRYPOINT_NOT_FOUND`,
+    message: `No ${framework} entrypoint found. Add an 'app' script in pyproject.toml or define an entrypoint in one of: ${searchedList}.`,
+    link: `https://vercel.com/docs/frameworks/backend/${framework}#exporting-the-${framework}-application`,
+    action: 'Learn More',
+  });
+}
+
 /**
  * Detect a Python entrypoint for any Python framework using AST-based detection.
  */
 export async function detectGenericPythonEntrypoint(
-  workPath: string,
-  configuredEntrypoint?: string
+  workPath: string
 ): Promise<DetectedPythonEntrypoint | null> {
   try {
-    // If a configured entrypoint was provided, check it first
-    if (configuredEntrypoint) {
-      const entry = configuredEntrypoint.endsWith('.py')
-        ? configuredEntrypoint
-        : `${configuredEntrypoint}.py`;
-      const varName = await checkEntrypoint(workPath, entry);
-      if (varName) {
-        debug(`Using configured Python entrypoint: ${entry}`);
-        return { entrypoint: { entrypoint: entry, variableName: varName } };
-      }
-    }
-
     // Search candidate locations using AST-based detection
     const found = await findValidEntrypoint(
       workPath,
@@ -181,22 +180,9 @@ export async function detectGenericPythonEntrypoint(
  * DJANGO_SETTINGS_MODULE, then fall back to AST-based detection if needed.
  */
 export async function detectDjangoPythonEntrypoint(
-  workPath: string,
-  configuredEntrypoint?: string
+  workPath: string
 ): Promise<DetectedPythonEntrypoint | null> {
   try {
-    // If a configured entrypoint was provided, check it first
-    if (configuredEntrypoint) {
-      const entry = configuredEntrypoint.endsWith('.py')
-        ? configuredEntrypoint
-        : `${configuredEntrypoint}.py`;
-      const varName = await checkEntrypoint(workPath, entry);
-      if (varName) {
-        debug(`Using configured Python entrypoint: ${entry}`);
-        return { entrypoint: { entrypoint: entry, variableName: varName } };
-      }
-    }
-
     // Get root directories (workPath root + immediate subdirs)
     const subdirs = await getSubdirectories(workPath);
     const rootDirs = ['', ...subdirs];
@@ -206,7 +192,7 @@ export async function detectDjangoPythonEntrypoint(
       const currPath = join(workPath, rootDir);
       const isDjango = await checkDjangoManage(currPath);
       if (isDjango) {
-        return { baseDir: rootDir };
+        return { baseDir: rootDir, error: makeDetectError('django') };
       }
     }
 
@@ -225,15 +211,55 @@ export async function detectDjangoPythonEntrypoint(
  * Detect a Python entrypoint path for a given framework relative to workPath, or return null if not found.
  */
 export async function detectPythonEntrypoint(
-  framework: PythonFramework,
+  framework: PythonFramework | undefined,
   workPath: string,
-  configuredEntrypoint?: string
+  configuredEntrypoint?: string,
+  service?: { type?: string }
 ): Promise<DetectedPythonEntrypoint | null> {
+  // TODO: factor out?
+  // If a configured entrypoint was provided, check it first
+  if (configuredEntrypoint) {
+    const entrypoint = configuredEntrypoint.endsWith('.py')
+      ? configuredEntrypoint
+      : `${configuredEntrypoint}.py`;
+    let varName = await checkEntrypoint(workPath, entrypoint);
+
+    if (!varName) {
+      const isSpecialService =
+        service?.type === 'cron' || service?.type === 'worker';
+      if (isSpecialService) {
+        // Crons and worker have their own special entry point logic
+        // that involves creating an `app` dynamically.
+        varName = 'app';
+      }
+    }
+
+    if (varName) {
+      debug(`Using configured Python entrypoint: ${entrypoint}`);
+      return { entrypoint: { entrypoint, variableName: varName } };
+    } else {
+      return {
+        error: new NowBuildError({
+          code: 'PYTHON_ENTRYPOINT_NOT_FOUND',
+          message: `Could not find a top-level "app", "application", or "handler" in "${entrypoint}".`,
+          link: 'https://vercel.com/docs/functions/serverless-functions/runtimes/python',
+          action: 'Learn More',
+        }),
+      };
+    }
+  }
+  if (!framework) {
+    return null;
+  }
+
+  // Otherwise do a search
   const result =
     framework === 'django'
-      ? await detectDjangoPythonEntrypoint(workPath, configuredEntrypoint)
-      : await detectGenericPythonEntrypoint(workPath, configuredEntrypoint);
+      ? await detectDjangoPythonEntrypoint(workPath)
+      : await detectGenericPythonEntrypoint(workPath);
   if (result) return result;
   const pyprojectEntry = await getPyprojectEntrypoint(workPath);
-  return pyprojectEntry ? { entrypoint: pyprojectEntry } : null;
+  return pyprojectEntry
+    ? { entrypoint: pyprojectEntry }
+    : { error: makeDetectError(framework) };
 }
