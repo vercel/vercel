@@ -118,12 +118,12 @@ export async function resolveBuildableServices(options: {
 
   const inferred = detection.inferred;
 
-  if (inferred.errors.length > 0) {
+  if (inferred.services.length === 0) {
     return {
       source: 'inferred',
       services: [],
       routes: emptyRoutes(),
-      errors: inferred.errors,
+      errors: [],
       warnings: inferred.warnings,
     };
   }
@@ -203,15 +203,14 @@ export async function detectServices(
 
   const autoResult = await autoDetectServices({ fs: scopedFs });
 
-  if (autoResult.errors.length > 0) {
+  if (autoResult.warnings.length > 0) {
     return {
       resolved: null,
       inferred: {
         source: 'layout',
         config: {},
         services: [],
-        errors: autoResult.errors,
-        warnings: [],
+        warnings: autoResult.warnings,
       },
     };
   }
@@ -223,14 +222,13 @@ export async function detectServices(
         source: 'layout',
         config: {},
         services: [],
-        errors: [
+        warnings: [
           {
             code: 'NO_SERVICES_CONFIGURED',
             message:
               'No services configured. Add `experimentalServices` to vercel.json.',
           },
         ],
-        warnings: [],
       },
     };
   }
@@ -241,7 +239,6 @@ export async function detectServices(
       source: 'layout',
       config: toInferredLayoutConfig(autoResult.services),
       services: toInferredLayoutServices(autoResult.services),
-      errors: [],
       warnings: [],
     },
   };

@@ -65,8 +65,8 @@ describe('detectServices', () => {
       expect(inferred.services).toEqual([]);
       expect(inferred.source).toBe('layout');
       expect(inferred.config).toEqual({});
-      expect(inferred.errors).toHaveLength(1);
-      expect(inferred.errors[0].code).toBe('NO_SERVICES_CONFIGURED');
+      expect(inferred.warnings).toHaveLength(1);
+      expect(inferred.warnings[0].code).toBe('NO_SERVICES_CONFIGURED');
     });
 
     it('should auto-detect a Ruby backend service in backend/', async () => {
@@ -82,7 +82,7 @@ describe('detectServices', () => {
       const result = await rawDetectServices({ fs });
       const inferred = expectInferredResult(result);
 
-      expect(inferred.errors).toEqual([]);
+      expect(inferred.warnings).toEqual([]);
       expect(inferred.services).toHaveLength(2);
 
       const backend = inferred.services.find(s => s.name === 'backend');
@@ -118,8 +118,8 @@ describe('detectServices', () => {
       const inferred = expectInferredResult(result);
 
       expect(inferred.services).toEqual([]);
-      expect(inferred.errors).toHaveLength(1);
-      expect(inferred.errors[0].code).toBe('NO_SERVICES_CONFIGURED');
+      expect(inferred.warnings).toHaveLength(1);
+      expect(inferred.warnings[0].code).toBe('NO_SERVICES_CONFIGURED');
     });
   });
 

@@ -2,7 +2,7 @@ import type { Framework } from '@vercel/frameworks';
 import { detectFrameworks } from '../detect-framework';
 import { frameworkList } from '@vercel/frameworks';
 import type { DetectorFilesystem } from '../detectors/filesystem';
-import type { ExperimentalServices, ServiceDetectionError } from './types';
+import type { ExperimentalServices, ServiceDetectionWarning } from './types';
 
 export interface AutoDetectOptions {
   fs: DetectorFilesystem;
@@ -10,7 +10,7 @@ export interface AutoDetectOptions {
 
 export interface AutoDetectResult {
   services: ExperimentalServices | null;
-  errors: ServiceDetectionError[];
+  warnings: ServiceDetectionWarning[];
 }
 
 const FRONTEND_DIR = 'frontend';
@@ -71,10 +71,10 @@ export async function autoDetectServices(
     const frameworkNames = rootFrameworks.map(f => f.name).join(', ');
     return {
       services: null,
-      errors: [
+      warnings: [
         {
           code: 'MULTIPLE_FRAMEWORKS_ROOT',
-          message: `Multiple frameworks detected at root: ${frameworkNames}. Use explicit experimentalServices config.`,
+          message: `Multiple frameworks detected at root: ${frameworkNames}.`,
         },
       ],
     };
@@ -101,10 +101,10 @@ export async function autoDetectServices(
       const frameworkNames = frontendFrameworks.map(f => f.name).join(', ');
       return {
         services: null,
-        errors: [
+        warnings: [
           {
             code: 'MULTIPLE_FRAMEWORKS_SERVICE',
-            message: `Multiple frameworks detected in ${frontendLocation}/: ${frameworkNames}. Use explicit experimentalServices config.`,
+            message: `Multiple frameworks detected in ${frontendLocation}/: ${frameworkNames}.`,
           },
         ],
       };
@@ -121,7 +121,7 @@ export async function autoDetectServices(
 
   return {
     services: null,
-    errors: [
+    warnings: [
       {
         code: 'NO_SERVICES_CONFIGURED',
         message:
@@ -146,20 +146,20 @@ async function detectServicesAtRoot(
   if (backendResult.error) {
     return {
       services: null,
-      errors: [backendResult.error],
+      warnings: [backendResult.error],
     };
   }
   if (Object.keys(backendResult.services).length === 0) {
     return {
       services: null,
-      errors: [],
+      warnings: [],
     };
   }
   Object.assign(services, backendResult.services);
 
   return {
     services,
-    errors: [],
+    warnings: [],
   };
 }
 
@@ -183,7 +183,7 @@ async function detectServicesFrontendSubdir(
   if (backendResult.error) {
     return {
       services: null,
-      errors: [backendResult.error],
+      warnings: [backendResult.error],
     };
   }
 
@@ -191,7 +191,7 @@ async function detectServicesFrontendSubdir(
   if (Object.keys(backendResult.services).length === 0) {
     return {
       services: null,
-      errors: [
+      warnings: [
         {
           code: 'NO_BACKEND_SERVICES',
           message: `Frontend detected in ${frontendLocation}/ but no backend services found. Add a backend/ or services/ directory with a supported framework.`,
@@ -204,13 +204,13 @@ async function detectServicesFrontendSubdir(
 
   return {
     services,
-    errors: [],
+    warnings: [],
   };
 }
 
 async function detectBackendServices(fs: DetectorFilesystem): Promise<{
   services: ExperimentalServices;
-  error?: ServiceDetectionError;
+  error?: ServiceDetectionWarning;
 }> {
   const services: ExperimentalServices = {};
 
@@ -247,7 +247,7 @@ async function detectBackendServices(fs: DetectorFilesystem): Promise<{
 
 async function detectServicesDirectory(fs: DetectorFilesystem): Promise<{
   services: ExperimentalServices;
-  error?: ServiceDetectionError;
+  error?: ServiceDetectionWarning;
 }> {
   const services: ExperimentalServices = {};
 
@@ -285,7 +285,7 @@ async function detectServiceInDir(
   serviceName: string
 ): Promise<{
   service?: ExperimentalServices[string];
-  error?: ServiceDetectionError;
+  error?: ServiceDetectionWarning;
 }> {
   const hasDirPath = await fs.hasPath(dirPath);
   if (!hasDirPath) {
