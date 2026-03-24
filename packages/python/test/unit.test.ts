@@ -1433,7 +1433,7 @@ describe('Django entrypoint discovery', () => {
     );
     const lambda = v2result.output['myapp/wsgi'];
     expect(lambda).toBeDefined(); // Lambda keyed by entrypoint sans extension
-    expect((lambda as any).files?.['static/app.css']).toBeUndefined(); // Excluded from Lambda bundle
+    expect((lambda as any).files?.['static/app.css']).toBeDefined(); // Included in Lambda bundle
     expect(v2result.output['static/app.css']).toBeDefined(); // Static file from collectstatic
 
     if (fs.existsSync(workPath)) fs.removeSync(workPath);
