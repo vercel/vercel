@@ -7,7 +7,6 @@ import {
   type ResolvedServicesResult,
 } from '../src';
 import type { Route } from '@vercel/routing-utils';
-import { beforeAll, describe, expect, it } from 'vitest';
 import VirtualFilesystem from './virtual-file-system';
 
 /**

@@ -606,10 +606,6 @@ describe('[vercel dev] Multi-service with experimentalServices', () => {
       dir,
       {
         skipNpmInstall: true,
-        env: {
-          VERCEL_USE_EXPERIMENTAL_SERVICES: '1',
-          VERCEL_USE_EXPERIMENTAL_FRAMEWORKS: '1',
-        },
       },
       ['--local']
     );
@@ -644,7 +640,7 @@ describe('[vercel dev] Multi-service with experimentalServices', () => {
   });
 });
 
-describe('[vercel dev] Multi-service auto-detection', () => {
+describe('[vercel dev] Multi-service inferred services', () => {
   test('[vercel dev] auto-detect: frontend at root + backend/', async () => {
     const dir = fixture('services-zc-root-backend');
     const { dev, port, readyResolver } = await testFixture(
@@ -652,8 +648,7 @@ describe('[vercel dev] Multi-service auto-detection', () => {
       {
         skipNpmInstall: true,
         env: {
-          VERCEL_USE_EXPERIMENTAL_SERVICES: '1',
-          VERCEL_USE_EXPERIMENTAL_FRAMEWORKS: '1',
+          VERCEL_USE_EXPERIMENTAL_INFERRED_SERVICES: '1',
         },
       },
       ['--local']
@@ -697,8 +692,7 @@ describe('[vercel dev] Multi-service auto-detection', () => {
       {
         skipNpmInstall: true,
         env: {
-          VERCEL_USE_EXPERIMENTAL_SERVICES: '1',
-          VERCEL_USE_EXPERIMENTAL_FRAMEWORKS: '1',
+          VERCEL_USE_EXPERIMENTAL_INFERRED_SERVICES: '1',
         },
       },
       ['--local']
@@ -745,8 +739,7 @@ describe('[vercel dev] Multi-service auto-detection', () => {
       {
         skipNpmInstall: true,
         env: {
-          VERCEL_USE_EXPERIMENTAL_SERVICES: '1',
-          VERCEL_USE_EXPERIMENTAL_FRAMEWORKS: '1',
+          VERCEL_USE_EXPERIMENTAL_INFERRED_SERVICES: '1',
         },
       },
       ['--local']
@@ -792,8 +785,7 @@ describe('[vercel dev] Multi-service auto-detection', () => {
       {
         skipNpmInstall: true,
         env: {
-          VERCEL_USE_EXPERIMENTAL_SERVICES: '1',
-          VERCEL_USE_EXPERIMENTAL_FRAMEWORKS: '1',
+          VERCEL_USE_EXPERIMENTAL_INFERRED_SERVICES: '1',
         },
       },
       ['--local']
@@ -839,8 +831,7 @@ describe('[vercel dev] Multi-service auto-detection', () => {
       {
         skipNpmInstall: true,
         env: {
-          VERCEL_USE_EXPERIMENTAL_SERVICES: '1',
-          VERCEL_USE_EXPERIMENTAL_FRAMEWORKS: '1',
+          VERCEL_USE_EXPERIMENTAL_INFERRED_SERVICES: '1',
         },
       },
       ['--local']
@@ -906,10 +897,6 @@ describe('[vercel dev] Worker service', () => {
       dir,
       {
         skipNpmInstall: true,
-        env: {
-          VERCEL_USE_EXPERIMENTAL_SERVICES: '1',
-          VERCEL_USE_EXPERIMENTAL_FRAMEWORKS: '1',
-        },
       },
       ['--local']
     );
@@ -971,10 +958,6 @@ describe('[vercel dev] Cron service', () => {
       dir,
       {
         skipNpmInstall: true,
-        env: {
-          VERCEL_USE_EXPERIMENTAL_SERVICES: '1',
-          VERCEL_USE_EXPERIMENTAL_FRAMEWORKS: '1',
-        },
       },
       ['--local']
     );

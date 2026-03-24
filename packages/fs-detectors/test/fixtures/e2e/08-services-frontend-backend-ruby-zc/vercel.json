@@ -1,5 +1,10 @@
 {
   "uploadNowJson": true,
+  "build": {
+    "env": {
+      "VERCEL_USE_EXPERIMENTAL_INFERRED_SERVICES": "1"
+    }
+  },
   "projectSettings": {
     "framework": "services"
   }

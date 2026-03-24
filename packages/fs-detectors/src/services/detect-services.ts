@@ -7,11 +7,13 @@ import {
 import {
   type DetectServicesOptions,
   type DetectServicesResult,
+  type BuildableServicesResult,
   type InferredServicesResult,
   type Service,
   type ServicesConfig,
   type ServicesRoutes,
 } from './types';
+import type { DetectorFilesystem } from '../detectors/filesystem';
 import {
   getInternalServiceCronPath,
   getInternalServiceFunctionPath,
@@ -91,6 +93,58 @@ function toInferredLayoutServices(
     routePrefix:
       typeof service.routePrefix === 'string' ? service.routePrefix : undefined,
   }));
+}
+
+export function isExperimentalInferredServicesEnabled(
+  value = process.env.VERCEL_USE_EXPERIMENTAL_INFERRED_SERVICES
+): boolean {
+  return value === '1' || value?.toLowerCase() === 'true';
+}
+
+export async function resolveBuildableServices(options: {
+  detection: DetectServicesResult;
+  fs: DetectorFilesystem;
+  useInferred?: boolean;
+}): Promise<BuildableServicesResult | null> {
+  const { detection, fs, useInferred = false } = options;
+
+  if (detection.resolved) {
+    return detection.resolved;
+  }
+
+  if (!useInferred || !detection.inferred) {
+    return null;
+  }
+
+  const inferred = detection.inferred;
+
+  if (inferred.errors.length > 0) {
+    return {
+      source: 'inferred',
+      services: [],
+      routes: emptyRoutes(),
+      errors: inferred.errors,
+      warnings: inferred.warnings,
+    };
+  }
+
+  if (!inferred.config) {
+    return null;
+  }
+
+  const result = await resolveAllConfiguredServices(
+    inferred.config,
+    fs,
+    'generated'
+  );
+
+  return {
+    source: 'inferred',
+    services: result.services,
+    routes: generateServicesRoutes(result.services),
+    errors: result.errors,
+    warnings: inferred.warnings,
+  };
 }
 
 /**

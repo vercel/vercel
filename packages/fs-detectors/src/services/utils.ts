@@ -7,7 +7,7 @@ import type {
   ServiceRuntime,
   ExperimentalServices,
   ServiceDetectionError,
-  ResolvedService,
+  Service,
 } from './types';
 import {
   RUNTIME_BUILDERS,
@@ -84,7 +84,7 @@ export function getBuilderForRuntime(runtime: ServiceRuntime): string {
   return builder;
 }
 
-export function isStaticBuild(service: ResolvedService): boolean {
+export function isStaticBuild(service: Service): boolean {
   return STATIC_BUILDERS.has(service.builder.use);
 }
 
@@ -96,7 +96,7 @@ export function isStaticBuild(service: ResolvedService): boolean {
  * hit, error). The services system should NOT generate synthetic catch-all
  * rewrites for them — instead, we rely on the builder's own `routes[]`.
  */
-export function isRouteOwningBuilder(service: ResolvedService): boolean {
+export function isRouteOwningBuilder(service: Service): boolean {
   return ROUTE_OWNING_BUILDERS.has(service.builder.use);
 }
 

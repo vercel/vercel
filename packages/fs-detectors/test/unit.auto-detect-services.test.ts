@@ -5,7 +5,6 @@ import {
   type InferredServicesResult,
   type ResolvedServicesResult,
 } from '../src';
-import { describe, expect, it } from 'vitest';
 import VirtualFilesystem from './virtual-file-system';
 
 function expectResolvedResult(

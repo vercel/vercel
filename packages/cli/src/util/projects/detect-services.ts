@@ -1,9 +1,8 @@
 import { writeFile } from 'fs/promises';
 import { basename, join } from 'path';
 import {
-  detectServices,
-  LocalFileSystemDetector,
-  type DetectServicesResult,
+  getServicesBuilders,
+  type Service,
   type ServicesConfig,
 } from '@vercel/fs-detectors';
 import type { VercelConfig } from '../dev/types';
@@ -17,13 +16,9 @@ export type ServicesConfigWriteBlocker = 'builds' | 'functions';
 /**
  * Check if the given directory explicitly configures services.
  */
-export async function isExperimentalServicesEnabled(
+export async function hasExperimentalServicesConfig(
   cwd: string
 ): Promise<boolean> {
-  return await hasExperimentalServicesConfig(cwd);
-}
-
-async function hasExperimentalServicesConfig(cwd: string): Promise<boolean> {
   const config = await readJSONFile<Record<string, unknown>>(
     join(cwd, 'vercel.json')
   );
@@ -35,22 +30,13 @@ async function hasExperimentalServicesConfig(cwd: string): Promise<boolean> {
 }
 
 /**
- * Detect configured or inferred services for the given directory.
- *
- * Returns only explicitly configured services. Inferred services are handled by
- * setup flows and should not activate the services runtime/build path.
+ * Detect services that are buildable/runnable for the given directory.
  */
 export async function tryDetectServices(
   cwd: string
-): Promise<DetectServicesResult | null> {
-  const fs = new LocalFileSystemDetector(cwd);
-  const result = await detectServices({ fs });
-
-  if (!result.resolved) {
-    return null;
-  }
-
-  return result;
+): Promise<Service[] | null> {
+  const result = await getServicesBuilders({ workPath: cwd });
+  return result.services ?? null;
 }
 
 export async function writeServicesConfig(

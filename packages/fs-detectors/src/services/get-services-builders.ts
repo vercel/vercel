@@ -1,7 +1,11 @@
 import type { Route } from '@vercel/routing-utils';
 import type { Builder } from '@vercel/build-utils';
-import type { ResolvedService } from './types';
-import { detectServices } from './detect-services';
+import type { Service } from './types';
+import {
+  detectServices,
+  isExperimentalInferredServicesEnabled,
+  resolveBuildableServices,
+} from './detect-services';
 import { LocalFileSystemDetector } from '../detectors/local-file-system-detector';
 
 export interface ErrorResponse {
@@ -24,7 +28,7 @@ export interface ServicesBuildersResult {
   redirectRoutes: Route[] | null;
   rewriteRoutes: Route[] | null;
   errorRoutes: Route[] | null;
-  services?: ResolvedService[];
+  services?: Service[];
 }
 
 /**
@@ -57,10 +61,14 @@ export async function getServicesBuilders(
   }
 
   const fs = new LocalFileSystemDetector(workPath);
-  const result = await detectServices({ fs });
-  const resolvedResult = result.resolved;
+  const detection = await detectServices({ fs });
+  const buildableResult = await resolveBuildableServices({
+    detection,
+    fs,
+    useInferred: isExperimentalInferredServicesEnabled(),
+  });
 
-  if (!resolvedResult) {
+  if (!buildableResult) {
     return {
       builders: null,
       errors: [
@@ -80,16 +88,16 @@ export async function getServicesBuilders(
   }
 
   // Transform warnings to ErrorResponse format
-  const warningResponses: ErrorResponse[] = resolvedResult.warnings.map(w => ({
+  const warningResponses: ErrorResponse[] = buildableResult.warnings.map(w => ({
     code: w.code,
     message: w.message,
   }));
 
   // Transform errors and return early if any
-  if (resolvedResult.errors.length > 0) {
+  if (buildableResult.errors.length > 0) {
     return {
       builders: null,
-      errors: resolvedResult.errors.map(e => ({
+      errors: buildableResult.errors.map(e => ({
         code: e.code,
         message: e.message,
       })),
@@ -102,7 +110,7 @@ export async function getServicesBuilders(
     };
   }
 
-  if (resolvedResult.services.length === 0) {
+  if (buildableResult.services.length === 0) {
     return {
       builders: null,
       errors: [
@@ -122,7 +130,7 @@ export async function getServicesBuilders(
   }
 
   // Extract builders from services
-  const builders: Builder[] = resolvedResult.services.map(
+  const builders: Builder[] = buildableResult.services.map(
     service => service.builder
   );
 
@@ -131,25 +139,25 @@ export async function getServicesBuilders(
     errors: null,
     warnings: warningResponses,
     hostRewriteRoutes:
-      resolvedResult.routes.hostRewrites.length > 0
-        ? resolvedResult.routes.hostRewrites
+      buildableResult.routes.hostRewrites.length > 0
+        ? buildableResult.routes.hostRewrites
         : null,
     defaultRoutes:
-      resolvedResult.routes.defaults.length > 0
-        ? resolvedResult.routes.defaults
+      buildableResult.routes.defaults.length > 0
+        ? buildableResult.routes.defaults
         : null,
     redirectRoutes: [],
     rewriteRoutes:
-      resolvedResult.routes.rewrites.length > 0 ||
-      resolvedResult.routes.workers.length > 0 ||
-      resolvedResult.routes.crons.length > 0
+      buildableResult.routes.rewrites.length > 0 ||
+      buildableResult.routes.workers.length > 0 ||
+      buildableResult.routes.crons.length > 0
         ? [
-            ...resolvedResult.routes.rewrites,
-            ...resolvedResult.routes.workers,
-            ...resolvedResult.routes.crons,
+            ...buildableResult.routes.rewrites,
+            ...buildableResult.routes.workers,
+            ...buildableResult.routes.crons,
           ]
         : null,
     errorRoutes: [],
-    services: resolvedResult.services,
+    services: buildableResult.services,
   };
 }

@@ -55,18 +55,12 @@ export interface ServicesRoutes {
 
 export type ServicesConfig = ExperimentalServices;
 
-interface ServicesDetectionIssues {
-  errors: ServiceDetectionError[];
-  warnings: ServiceDetectionWarning[];
-}
-
-interface ServicesDetectionResult extends ServicesDetectionIssues {
+export interface ResolvedServicesResult {
+  source: 'configured';
   services: Service[];
   routes: ServicesRoutes;
-}
-
-export interface ResolvedServicesResult extends ServicesDetectionResult {
-  source: 'configured';
+  errors: ServiceDetectionError[];
+  warnings: ServiceDetectionWarning[];
 }
 
 export interface InferredService
@@ -81,10 +75,12 @@ export interface InferredService
     | 'routePrefix'
   > {}
 
-export interface InferredServicesResult extends ServicesDetectionIssues {
+export interface InferredServicesResult {
   source: 'layout' | 'procfile';
   config: ServicesConfig | null;
   services: InferredService[];
+  errors: ServiceDetectionError[];
+  warnings: ServiceDetectionWarning[];
 }
 
 export interface DetectServicesResult {
@@ -92,6 +88,14 @@ export interface DetectServicesResult {
   resolved: ResolvedServicesResult | null;
   /* Services inferred from project structure or other metadata. */
   inferred: InferredServicesResult | null;
+}
+
+export interface BuildableServicesResult {
+  source: 'configured' | 'inferred';
+  services: Service[];
+  routes: ServicesRoutes;
+  errors: ServiceDetectionError[];
+  warnings: ServiceDetectionWarning[];
 }
 
 export type DetectServicesSource =

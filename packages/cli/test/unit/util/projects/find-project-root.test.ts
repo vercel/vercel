@@ -114,22 +114,9 @@ describe('resolveProjectCwd', () => {
   });
 
   it('should return project root when services are detected', async () => {
-    mockedTryDetect.mockResolvedValue({
-      resolved: {
-        source: 'configured',
-        services: [{ name: 'api', slug: 'api', directory: 'services/api' }],
-        routes: {
-          hostRewrites: [],
-          rewrites: [],
-          defaults: [],
-          crons: [],
-          workers: [],
-        },
-        errors: [],
-        warnings: [],
-      },
-      inferred: null,
-    } as any);
+    mockedTryDetect.mockResolvedValue([
+      { name: 'api', slug: 'api', directory: 'services/api' },
+    ] as any);
 
     vol.fromJSON({
       '/project/.vercel/project.json': '{}',

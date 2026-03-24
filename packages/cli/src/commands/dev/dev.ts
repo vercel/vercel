@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import ms from 'ms';
 import { resolve, join } from 'path';
 import fs from 'fs-extra';
-import type { ResolvedService } from '@vercel/fs-detectors';
+import type { Service } from '@vercel/fs-detectors';
 
 import DevServer from '../../util/dev/server';
 import { parseListen } from '../../util/dev/parse-listen';
@@ -125,9 +125,8 @@ export default async function dev(
       .env;
   }
 
-  let services: ResolvedService[] | undefined;
-  const servicesResult = await tryDetectServices(cwd);
-  const detectedServices = servicesResult?.resolved?.services;
+  let services: Service[] | undefined;
+  const detectedServices = await tryDetectServices(cwd);
 
   if (detectedServices && detectedServices.length > 0) {
     displayDetectedServices(detectedServices);
