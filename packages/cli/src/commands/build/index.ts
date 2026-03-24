@@ -977,6 +977,7 @@ async function doBuild(
           ? {
               service: {
                 name: service.name,
+                type: service.type,
                 routePrefix:
                   typeof serviceRoutePrefix === 'string'
                     ? serviceRoutePrefix

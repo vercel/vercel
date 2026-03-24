@@ -1,15 +1,22 @@
 import fs from 'fs';
 import { join, posix as pathPosix } from 'path';
 import type { PythonFramework } from '@vercel/build-utils';
-import { debug, isPythonEntrypoint } from '@vercel/build-utils';
+import { debug } from '@vercel/build-utils';
 import { readConfigFile } from '@vercel/build-utils';
+import { findAppOrHandler } from '@vercel/python-analysis';
+
+export interface PythonEntrypoint {
+  /** Path to the entrypoint file (e.g. "src/app.py"). */
+  entrypoint: string;
+  /** The callable name within the module (e.g. "app"). */
+  variableName: string;
+}
 
 export interface DetectedPythonEntrypoint {
-  entrypoint?: string; // path to the entrypoint file (e.g. "src/app.py")
-  // the callable name within the module (e.g. "app" from "module:app")
-  // *currently* only populated by 'app' script in pyproject.toml
-  variableName?: string;
-  baseDir?: string; // directory containing manage.py, if detected via Django path
+  /** Resolved entrypoint, if found. */
+  entrypoint?: PythonEntrypoint;
+  /** Directory containing manage.py, if detected via Django path. */
+  baseDir?: string;
 }
 
 export const PYTHON_ENTRYPOINT_FILENAMES = [
@@ -43,23 +50,23 @@ async function fileExists(filePath: string): Promise<boolean> {
   }
 }
 
+/**
+ * Check if a Python file contains a top-level app/handler.
+ * Returns the matched variable name (e.g. "app"), or null if not found.
+ */
 async function checkEntrypoint(
   workPath: string,
   relPath: string
-): Promise<boolean> {
+): Promise<string | null> {
   const absPath = join(workPath, relPath);
-  if (!(await fileExists(absPath))) return false;
-  return isPythonEntrypoint({ fsPath: absPath });
-}
-
-interface PyprojectEntrypoint {
-  entrypoint: string;
-  variableName: string;
+  if (!(await fileExists(absPath))) return null;
+  const content = await fs.promises.readFile(absPath, 'utf-8');
+  return findAppOrHandler(content);
 }
 
 export async function getPyprojectEntrypoint(
   workPath: string
-): Promise<PyprojectEntrypoint | null> {
+): Promise<PythonEntrypoint | null> {
   const pyprojectData = await readConfigFile<{
     project?: { scripts?: Record<string, unknown> };
   }>(join(workPath, 'pyproject.toml'));
@@ -94,11 +101,12 @@ export async function getPyprojectEntrypoint(
 async function findValidEntrypoint(
   workPath: string,
   candidates: string[]
-): Promise<string | null> {
+): Promise<PythonEntrypoint | null> {
   for (const candidate of candidates) {
-    if (await checkEntrypoint(workPath, candidate)) {
-      debug(`Detected Python entrypoint: ${candidate}`);
-      return candidate;
+    const varName = await checkEntrypoint(workPath, candidate);
+    if (varName) {
+      debug(`Detected Python entrypoint: ${candidate} (variable: ${varName})`);
+      return { entrypoint: candidate, variableName: varName };
     }
   }
   return null;
@@ -149,9 +157,10 @@ export async function detectGenericPythonEntrypoint(
 
   try {
     // If the configured entrypoint exists and is valid, use it
-    if (await checkEntrypoint(workPath, entry)) {
+    const varName = await checkEntrypoint(workPath, entry);
+    if (varName) {
       debug(`Using configured Python entrypoint: ${entry}`);
-      return { entrypoint: entry };
+      return { entrypoint: { entrypoint: entry, variableName: varName } };
     }
 
     // Search candidate locations using AST-based detection
@@ -180,9 +189,10 @@ export async function detectDjangoPythonEntrypoint(
 
   try {
     // If the configured entrypoint exists and is valid, use it
-    if (await checkEntrypoint(workPath, entry)) {
+    const varName = await checkEntrypoint(workPath, entry);
+    if (varName) {
       debug(`Using configured Python entrypoint: ${entry}`);
-      return { entrypoint: entry };
+      return { entrypoint: { entrypoint: entry, variableName: varName } };
     }
 
     // Get root directories (workPath root + immediate subdirs)
@@ -223,9 +233,5 @@ export async function detectPythonEntrypoint(
       : await detectGenericPythonEntrypoint(workPath, configuredEntrypoint);
   if (result) return result;
   const pyprojectEntry = await getPyprojectEntrypoint(workPath);
-  if (!pyprojectEntry) return null;
-  return {
-    entrypoint: pyprojectEntry.entrypoint,
-    variableName: pyprojectEntry.variableName,
-  };
+  return pyprojectEntry ? { entrypoint: pyprojectEntry } : null;
 }
