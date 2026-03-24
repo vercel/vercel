@@ -181,9 +181,14 @@ export async function autoInstallAgentTooling(
         existing.includes(BEST_PRACTICES_START) &&
         existing.includes(BEST_PRACTICES_END);
 
-      if (hasMarkers || client.isAgent) {
+      if (hasMarkers) {
+        // Silently update existing best practices
+        await agentInit(client, true);
+      } else if (client.isAgent) {
+        // Agent — auto-approve
         await agentInit(client, true);
       } else {
+        // Human — prompt interactively
         printPreview();
         const accepted = await confirm(
           client,

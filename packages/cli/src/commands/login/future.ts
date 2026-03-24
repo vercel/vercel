@@ -238,7 +238,7 @@ export async function login(
 
   telemetry.trackState('success');
 
-  await autoInstallAgentTooling(client, { skipAgentInit: true });
+  await autoInstallAgentTooling(client);
 
   return 0;
 }
