@@ -107,7 +107,7 @@ describe('detectServices', () => {
       });
     });
 
-    it('should resolve inferred Ruby backend services without changing suggested config', async () => {
+    it('should resolve inferred Ruby backend services from the inferred config shape', async () => {
       const fs = new VirtualFilesystem({
         'frontend/package.json': JSON.stringify({
           dependencies: {
