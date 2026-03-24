@@ -36,6 +36,7 @@ import {
   type PackageJson,
   glob,
   type Service,
+  getWorkerTopics,
   isBackendBuilder,
   type Lambda,
   type TriggerEvent,
@@ -2006,20 +2007,24 @@ function attachWorkerServiceTrigger(
   buildOutput: BuildResultV2Typical['output'] | BuildResultV3['output'],
   service: Service
 ): void {
-  const trigger: TriggerEvent = {
-    type: 'queue/v1beta',
-    topic: service.topic || 'default',
-    consumer: service.consumer || 'default',
-  };
+  const topics = getWorkerTopics(service);
+  const consumer = service.consumer || 'default';
 
-  if (isLambda(buildOutput)) {
-    appendWorkerTrigger(buildOutput, trigger);
-    return;
-  }
+  for (const topic of topics) {
+    const trigger: TriggerEvent = {
+      type: 'queue/v1beta',
+      topic,
+      consumer,
+    };
 
-  for (const output of Object.values(buildOutput)) {
-    if (isLambda(output)) {
-      appendWorkerTrigger(output, trigger);
+    if (isLambda(buildOutput)) {
+      appendWorkerTrigger(buildOutput, trigger);
+    } else {
+      for (const output of Object.values(buildOutput)) {
+        if (isLambda(output)) {
+          appendWorkerTrigger(output, trigger);
+        }
+      }
     }
   }
 }
