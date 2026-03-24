@@ -394,7 +394,7 @@ def _setup_apps() -> None:
     module_name = os.environ["VERCEL_DEV_MODULE_NAME"]
     entry_abs = os.environ["VERCEL_DEV_ENTRY_ABS"]
     framework = os.environ["VERCEL_DEV_FRAMEWORK"]
-    variable_name = os.environ.get("VERCEL_DEV_VARIABLE_NAME") or None
+    variable_name = os.environ["VERCEL_DEV_VARIABLE_NAME"]
 
     _setup_server_log_routing()
     prepare_celery_environment()

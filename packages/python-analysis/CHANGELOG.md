@@ -1,5 +1,15 @@
 # @vercel/python-analysis
 
+## 0.11.0
+
+### Minor Changes
+
+- Simplify python runtime by always passing in app variable ([#15635](https://github.com/vercel/vercel/pull/15635))
+
+### Patch Changes
+
+- Fix env marker-excluded deps erroneously flagged as lacking wheels ([#15668](https://github.com/vercel/vercel/pull/15668))
+
 ## 0.10.1
 
 ### Patch Changes

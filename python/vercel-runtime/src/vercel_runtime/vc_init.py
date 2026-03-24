@@ -58,6 +58,22 @@ type _ASGIApp = Callable[[_ASGIScope, _ASGIReceive, _ASGISend], Awaitable[None]]
 
 _original_stderr = sys.stderr
 
+# --- IPC socket & send_message (must be available before _fatal) ----------
+_ipc_sock: socket.socket | None = None
+if "VERCEL_IPC_PATH" in os.environ:
+    _ipc_sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    with contextlib.suppress(Exception):
+        _ipc_sock.connect(os.environ["VERCEL_IPC_PATH"])
+
+
+def send_message(message: _IpcMessage) -> None:
+    if _ipc_sock is not None:
+        with contextlib.suppress(Exception):
+            _ipc_sock.sendall((json.dumps(message) + "\0").encode())
+
+
+# -------------------------------------------------------------------------
+
 
 def _stderr(message: str) -> None:
     with contextlib.suppress(Exception):
@@ -105,7 +121,7 @@ _here = os.path.dirname(__file__)
 _entrypoint_rel = _must_getenv("__VC_HANDLER_ENTRYPOINT")
 _entrypoint_abs = _must_getenv("__VC_HANDLER_ENTRYPOINT_ABS")
 _entrypoint_modname = _must_getenv("__VC_HANDLER_MODULE_NAME")
-_entrypoint_varname = os.environ.get("__VC_HANDLER_VARIABLE_NAME", "")
+_entrypoint_varname = _must_getenv("__VC_HANDLER_VARIABLE_NAME")
 
 
 def setup_logging(
@@ -260,17 +276,12 @@ def setup_logging(
 # If running in the platform (IPC present), logging must be
 # setup before importing user code so that logs happening
 # outside the request context are emitted correctly.
-ipc_sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
 storage: contextvars.ContextVar[dict[str, str | int] | None] = (
     contextvars.ContextVar(
         "storage",
         default=None,
     )
 )
-
-
-def send_message(message: _IpcMessage) -> None:
-    return None
 
 
 # Buffer for pre-handshake logs (to avoid blocking IPC on startup)
@@ -339,15 +350,8 @@ def flush_init_log_buf_to_stderr() -> None:
 atexit.register(flush_init_log_buf_to_stderr)
 
 
-if "VERCEL_IPC_PATH" in os.environ:
-    with contextlib.suppress(Exception):
-        ipc_sock.connect(os.getenv("VERCEL_IPC_PATH", ""))
-
-        def send_message(message: _IpcMessage) -> None:
-            with contextlib.suppress(Exception):
-                ipc_sock.sendall((json.dumps(message) + "\0").encode())
-
-        setup_logging(send_message, storage)
+if _ipc_sock is not None:
+    setup_logging(send_message, storage)
 
 
 # Runtime dependency installation for large Lambda functions
@@ -794,19 +798,20 @@ if "VERCEL_IPC_PATH" in os.environ:
                     }
                 )
 
-    if "handler" in __vc_variables or "Handler" in __vc_variables:
-        base = (
-            __vc_module.handler
-            if "handler" in __vc_variables
-            else __vc_module.Handler
+    try:
+        app_name, app_obj = resolve_app(
+            __vc_module, _entrypoint_modname, _entrypoint_varname
         )
-        if not issubclass(base, BaseHTTPRequestHandler):
-            _fatal(
-                "Handler must inherit from BaseHTTPRequestHandler\n"
-                "See the docs: https://vercel.com/docs/functions/serverless-functions/runtimes/python"
-            )
+    except RuntimeError as exc:
+        _fatal(str(exc))
 
-        class Handler(BaseHandler, base):  # type: ignore[valid-type,misc]
+    if (
+        app_name.lower() == "handler"
+        and isinstance(app_obj, type)
+        and issubclass(app_obj, BaseHTTPRequestHandler)
+    ):
+
+        class Handler(BaseHandler, app_obj):  # type: ignore[valid-type,misc]
             def handle_request(self) -> None:
                 mname = "do_" + self.command
                 if not hasattr(self, mname):
@@ -819,19 +824,15 @@ if "VERCEL_IPC_PATH" in os.environ:
                 method()
                 self.wfile.flush()
 
-    elif (
-        "app" in __vc_variables
-        or "application" in __vc_variables
-        or _entrypoint_varname in __vc_variables
-    ):
-        app_name, app_obj = resolve_app(
-            __vc_module, _entrypoint_modname, _entrypoint_varname
-        )
-        detection_result = detect_app_type(
-            app_obj,
-            _entrypoint_modname,
-            app_name,
-        )
+    else:
+        try:
+            detection_result = detect_app_type(
+                app_obj,  # pyright: ignore[reportUnknownArgumentType]
+                _entrypoint_modname,
+                app_name,
+            )
+        except RuntimeError as exc:
+            _fatal(str(exc))
         if detection_result[0] == "wsgi":
             from io import BytesIO
 
@@ -966,29 +967,24 @@ if "VERCEL_IPC_PATH" in os.environ:
         _flush_init_log_buf()
         server.serve_forever()  # type: ignore[attr-defined]
 
-    _fatal(
-        f'Missing variable `handler` or `app` in file "{_entrypoint_rel}".\n'
-        "See the docs: https://vercel.com/docs/functions/serverless-functions/runtimes/python"
+try:
+    app_name, app_obj = resolve_app(
+        __vc_module, _entrypoint_modname, _entrypoint_varname
     )
+except RuntimeError as exc:
+    _fatal(str(exc))
 
-if "handler" in __vc_variables or "Handler" in __vc_variables:
-    base = (
-        __vc_module.handler
-        if "handler" in __vc_variables
-        else __vc_module.Handler
-    )
-    if not issubclass(base, BaseHTTPRequestHandler):
-        _fatal(
-            "Handler must inherit from BaseHTTPRequestHandler\n"
-            "See the docs: https://vercel.com/docs/functions/serverless-functions/runtimes/python"
-        )
-
+if (
+    app_name.lower() == "handler"
+    and isinstance(app_obj, type)
+    and issubclass(app_obj, BaseHTTPRequestHandler)
+):
     _stderr("using HTTP Handler")
     import _thread  # noqa: PLC2701
     import http.client
     from http.server import HTTPServer
 
-    server = HTTPServer(("127.0.0.1", 0), base)  # type: ignore[assignment]
+    server = HTTPServer(("127.0.0.1", 0), app_obj)  # type: ignore[assignment]
     port = server.server_address[1]  # type: ignore[attr-defined]
 
     def vc_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
@@ -1029,19 +1025,15 @@ if "handler" in __vc_variables or "Handler" in __vc_variables:
 
         return return_dict
 
-elif (
-    "app" in __vc_variables
-    or "application" in __vc_variables
-    or _entrypoint_varname in __vc_variables
-):
-    app_name, app_obj = resolve_app(
-        __vc_module, _entrypoint_modname, _entrypoint_varname
-    )
-    detection_result = detect_app_type(
-        app_obj,
-        _entrypoint_modname,
-        app_name,
-    )
+else:
+    try:
+        detection_result = detect_app_type(
+            app_obj,  # pyright: ignore[reportUnknownArgumentType]
+            _entrypoint_modname,
+            app_name,
+        )
+    except RuntimeError as exc:
+        _fatal(str(exc))
     if detection_result[0] == "wsgi":
         _stderr("using Web Server Gateway Interface (WSGI)")
         from io import BytesIO
@@ -1412,10 +1404,3 @@ elif (
                 return response
             finally:
                 clear_vercel_headers_context()
-
-else:
-    _fatal(
-        f"Missing variable `handler`, `app`, or `application` "
-        f'in file "{_entrypoint_rel}".\n'
-        "See the docs: https://vercel.com/docs/functions/serverless-functions/runtimes/python"
-    )

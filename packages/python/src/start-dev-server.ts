@@ -9,6 +9,7 @@ import isPortReachable from 'is-port-reachable';
 import {
   PYTHON_CANDIDATE_ENTRYPOINTS,
   detectPythonEntrypoint,
+  type PythonEntrypoint,
 } from './entrypoint';
 import { runFrameworkHook } from './index';
 import { getDefaultPythonVersion } from './version';
@@ -767,22 +768,21 @@ export const startDevServer: StartDevServer = async opts => {
 
   // For cron/worker services, use the raw entrypoint directly, because
   // they don't export app/application so standard detection would skip them.
-  let entry: string | undefined;
-  let variableName: string | undefined;
+  let resolved: PythonEntrypoint | undefined;
   if (
     (serviceType === 'cron' || serviceType === 'worker') &&
     rawEntrypoint?.endsWith('.py')
   ) {
-    entry = rawEntrypoint;
+    resolved = { entrypoint: rawEntrypoint, variableName: 'app' };
   } else {
     const detected = await detectPythonEntrypoint(
       framework as PythonFramework,
       workPath,
       rawEntrypoint
     );
-    entry = detected?.entrypoint;
-    variableName = detected?.variableName;
-    if (!entry) {
+    if (detected?.entrypoint) {
+      resolved = detected.entrypoint;
+    } else {
       const hookResult = await runFrameworkHook(framework, {
         pythonEnv: env,
         projectDir: join(workPath, detected?.baseDir ?? ''),
@@ -790,10 +790,9 @@ export const startDevServer: StartDevServer = async opts => {
         entrypoint: rawEntrypoint,
         detected: detected ?? undefined,
       });
-      entry = hookResult?.entrypoint;
-      variableName = hookResult?.variableName;
+      resolved = hookResult?.entrypoint;
     }
-    if (!entry) {
+    if (!resolved) {
       const searched = PYTHON_CANDIDATE_ENTRYPOINTS.join(', ');
       throw new NowBuildError({
         code: 'PYTHON_ENTRYPOINT_NOT_FOUND',
@@ -803,6 +802,7 @@ export const startDevServer: StartDevServer = async opts => {
       });
     }
   }
+  const { entrypoint: entry, variableName } = resolved;
 
   // Convert to module path, e.g. "src/app.py" -> "src.app"
   const modulePath = entry.replace(/\.py$/i, '').replace(/[\\/]/g, '.');

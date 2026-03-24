@@ -41,9 +41,9 @@ world python-analysis {
     /// - A top-level 'application' callable (e.g., Django)
     /// - A top-level 'handler' class (e.g., BaseHTTPRequestHandler subclass)
     ///
-    /// Returns true if found, false otherwise.
-    /// Returns false for invalid Python syntax.
-    export contains-app-or-handler: func(source: string) -> bool;
+    /// Returns the matched variable name if found, or none otherwise.
+    /// Returns none for invalid Python syntax.
+    export find-app-or-handler: func(source: string) -> option<string>;
 
     /// Extract the string value of a top-level constant with the given name.
     /// Only considers simple or annotated assignments at module level whose value is a string literal.

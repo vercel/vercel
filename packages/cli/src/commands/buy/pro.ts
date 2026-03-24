@@ -92,6 +92,8 @@ export default async function pro(client: Client, argv: string[]) {
     return 0;
   } catch (err: unknown) {
     output.stopSpinner();
-    return handlePurchaseError(err, contextName);
+    return handlePurchaseError(err, contextName, {
+      openBrowser: !!client.stdout.isTTY,
+    });
   }
 }
