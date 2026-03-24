@@ -1,5 +1,17 @@
 # vercel-runtime
 
+## 0.11.0
+
+### Minor Changes
+
+- Update uv to v0.10.11 ([#15623](https://github.com/vercel/vercel/pull/15623))
+
+- Simplify python runtime by always passing in app variable ([#15635](https://github.com/vercel/vercel/pull/15635))
+
+### Patch Changes
+
+- Fix a flakey unit test ([#15647](https://github.com/vercel/vercel/pull/15647))
+
 ## 0.10.1
 
 ### Patch Changes

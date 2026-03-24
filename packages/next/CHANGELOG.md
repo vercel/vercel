@@ -1,5 +1,15 @@
 # @vercel/next
 
+## 4.16.3
+
+### Patch Changes
+
+- Bump @vercel/nft to 1.5.0 ([#15683](https://github.com/vercel/vercel/pull/15683))
+
+- fix(next): merge next-minimal-server.js.nft.json into server trace for prebuilt deployments ([#15688](https://github.com/vercel/vercel/pull/15688))
+
+- Update to latest Next.js adapter ([#15695](https://github.com/vercel/vercel/pull/15695))
+
 ## 4.16.2
 
 ### Patch Changes
