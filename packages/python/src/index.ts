@@ -199,8 +199,6 @@ export const build: BuildVX = async ({
   let hasCustomCommand = false;
 
   debug(`workPath: ${workPath}`);
-  debug(`entrypoint!!!: ${entrypoint}`);
-  debug(`framework!!!: ${framework}`);
 
   workPath = await downloadFilesInWorkPath({
     workPath,
