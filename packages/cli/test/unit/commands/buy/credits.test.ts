@@ -1,8 +1,17 @@
-import { describe, it, expect } from 'vitest';
+import open from 'open';
+import { describe, it, expect, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import buy from '../../../../src/commands/buy';
 import { useUser } from '../../../mocks/user';
 import { useTeam } from '../../../mocks/team';
+
+vi.mock('open', () => {
+  return {
+    default: vi.fn().mockResolvedValue(undefined),
+  };
+});
+
+const openMock = vi.mocked(open);
 
 function useBuyEndpoint(handler?: (req: any, res: any) => void) {
   client.scenario.post('/v1/billing/buy', (req, res) => {
@@ -144,7 +153,7 @@ describe('buy credits', () => {
 
   describe('API errors', () => {
     it('handles missing_stripe_customer error', async () => {
-      setupTeam();
+      const team = setupTeam();
       client.scenario.post('/v1/billing/buy', (_req, res) => {
         res.status(400).json({
           error: {
@@ -157,10 +166,13 @@ describe('buy credits', () => {
       const exitCode = await buy(client);
       expect(exitCode).toBe(1);
       await expect(client.stderr).toOutput('payment method');
+      expect(openMock).toHaveBeenCalledWith(
+        `https://vercel.com/${team.slug}/~/settings/billing`
+      );
     });
 
     it('handles payment_failed error', async () => {
-      setupTeam();
+      const team = setupTeam();
       client.scenario.post('/v1/billing/buy', (_req, res) => {
         res.status(402).json({
           error: {
@@ -173,6 +185,9 @@ describe('buy credits', () => {
       const exitCode = await buy(client);
       expect(exitCode).toBe(1);
       await expect(client.stderr).toOutput('Payment failed');
+      expect(openMock).toHaveBeenCalledWith(
+        `https://vercel.com/${team.slug}/~/settings/billing`
+      );
     });
   });
 
