@@ -44,7 +44,8 @@ export async function getServicesSetupState(
   const inferredServices =
     !hasConfiguredServices &&
     detectServicesResult.inferred &&
-    detectServicesResult.inferred.config
+    detectServicesResult.inferred.errors.length === 0 &&
+    detectServicesResult.inferred.services.length > 0
       ? detectServicesResult.inferred
       : null;
   const inferredServicesWriteBlocker = inferredServices

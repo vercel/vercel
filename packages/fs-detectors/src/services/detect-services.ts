@@ -128,10 +128,6 @@ export async function resolveBuildableServices(options: {
     };
   }
 
-  if (!inferred.config) {
-    return null;
-  }
-
   const result = await resolveAllConfiguredServices(
     inferred.config,
     fs,
@@ -212,7 +208,7 @@ export async function detectServices(
       resolved: null,
       inferred: {
         source: 'layout',
-        config: null,
+        config: {},
         services: [],
         errors: autoResult.errors,
         warnings: [],
@@ -225,7 +221,7 @@ export async function detectServices(
       resolved: null,
       inferred: {
         source: 'layout',
-        config: null,
+        config: {},
         services: [],
         errors: [
           {

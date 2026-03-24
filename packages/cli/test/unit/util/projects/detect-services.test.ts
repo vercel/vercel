@@ -150,8 +150,10 @@ describe('getBuildableServices()', () => {
     });
 
     expect(result.inferred?.source).toBe('layout');
+    const inferredConfig = result.inferred?.config;
+    expect(inferredConfig).not.toBeNull();
     await expect(
-      getServicesConfigWriteBlocker(tempDir, result.inferred!.config)
+      getServicesConfigWriteBlocker(tempDir, inferredConfig!)
     ).resolves.toBe('builds');
   });
 

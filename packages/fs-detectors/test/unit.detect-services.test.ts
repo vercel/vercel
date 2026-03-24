@@ -64,7 +64,7 @@ describe('detectServices', () => {
 
       expect(inferred.services).toEqual([]);
       expect(inferred.source).toBe('layout');
-      expect(inferred.config).toBeNull();
+      expect(inferred.config).toEqual({});
       expect(inferred.errors).toHaveLength(1);
       expect(inferred.errors[0].code).toBe('NO_SERVICES_CONFIGURED');
     });

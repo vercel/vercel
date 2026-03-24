@@ -80,7 +80,7 @@ export interface InferredService
 
 export interface InferredServicesResult {
   source: 'layout' | 'procfile';
-  config: ServicesConfig | null;
+  config: ServicesConfig;
   services: InferredService[];
   errors: ServiceDetectionError[];
   warnings: ServiceDetectionWarning[];
