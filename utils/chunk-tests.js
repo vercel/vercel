@@ -3,6 +3,13 @@ const child_process = require('node:child_process');
 const path = require('node:path');
 const { getAffectedPackages } = require('./get-affected-packages');
 
+/** Patched Node versions from the 2026-03-24 security release (see nodejs.org security advisories). */
+const NODE_CI_PATCH_VERSIONS = Object.freeze({
+  20: '20.20.2',
+  22: '22.22.2',
+  24: '24.14.1',
+});
+
 const runnersMap = new Map([
   [
     'vitest-unit',
@@ -11,7 +18,10 @@ const runnersMap = new Map([
       max: 1,
       testScript: 'vitest-run',
       runners: ['ubuntu-latest', 'macos-14', 'windows-latest'],
-      nodeVersions: ['20', '22'],
+      nodeVersions: [
+        NODE_CI_PATCH_VERSIONS['20'],
+        NODE_CI_PATCH_VERSIONS['22'],
+      ],
     },
   ],
   [
@@ -21,7 +31,7 @@ const runnersMap = new Map([
       max: 1,
       testScript: 'vitest-run',
       runners: ['ubuntu-latest', 'macos-14'],
-      nodeVersions: ['24'],
+      nodeVersions: [NODE_CI_PATCH_VERSIONS['24']],
     },
   ],
   [
@@ -40,7 +50,7 @@ const runnersMap = new Map([
       max: 7,
       testScript: 'vitest-run',
       runners: ['ubuntu-latest'],
-      nodeVersions: ['20'],
+      nodeVersions: [NODE_CI_PATCH_VERSIONS['20']],
     },
   ],
   [
@@ -68,7 +78,11 @@ const runnersMap = new Map([
       max: 7,
       testScript: 'test',
       runners: ['ubuntu-latest'],
-      nodeVersions: ['20', '22', '24'],
+      nodeVersions: [
+        NODE_CI_PATCH_VERSIONS['20'],
+        NODE_CI_PATCH_VERSIONS['22'],
+        NODE_CI_PATCH_VERSIONS['24'],
+      ],
     },
   ],
   [
@@ -78,7 +92,7 @@ const runnersMap = new Map([
       max: 5,
       runners: ['ubuntu-latest'],
       testScript: 'test',
-      nodeVersions: ['22'],
+      nodeVersions: [NODE_CI_PATCH_VERSIONS['22']],
     },
   ],
   [
@@ -218,7 +232,7 @@ async function getChunkedTests() {
           min,
           max,
           testScript,
-          nodeVersions = ['22'],
+          nodeVersions = [NODE_CI_PATCH_VERSIONS['22']],
         } = runnerOptions;
 
         const sortedTestPaths = testPaths.sort((a, b) => a.localeCompare(b));
@@ -323,4 +337,5 @@ if (module === require.main || !module.parent) {
 
 module.exports = {
   intoChunks,
+  NODE_CI_PATCH_VERSIONS,
 };
