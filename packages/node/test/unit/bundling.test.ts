@@ -1,4 +1,5 @@
 import { afterEach, describe, it, expect } from 'vitest';
+import { join } from 'path';
 import { prepareFilesystem } from './test-utils';
 import { build } from '../../src';
 import type { NodejsLambda } from '@vercel/build-utils';
@@ -169,7 +170,7 @@ describe('experimentalAllowBundling', () => {
     expect(lambda.handler).toBe('___vc_bundled_api_handler.js');
     expect(lambda.files['___vc_bundled_api_handler.js']).toBeDefined();
     // The original user entrypoint should still be in files
-    expect(lambda.files['api/hello.js']).toBeDefined();
+    expect(lambda.files[join('api', 'hello.js')]).toBeDefined();
   });
 
   it('should use original handler when bundling is disabled', async () => {
@@ -189,6 +190,6 @@ describe('experimentalAllowBundling', () => {
     });
 
     const lambda = buildResult.output as NodejsLambda;
-    expect(lambda.handler).toBe('api/hello.js');
+    expect(lambda.handler).toBe(join('api', 'hello.js'));
   });
 });
