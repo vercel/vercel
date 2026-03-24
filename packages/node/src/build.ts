@@ -614,6 +614,40 @@ export const build = async ({
         fsPath: join(dirname(__filename), 'bundling-handler.js'),
       });
       handler = bundledHandlerName;
+
+      // Inject x-matched-path as a request header so the bundled handler
+      // knows which entrypoint to invoke. Mirrors the Next.js approach
+      // (server-build.ts) but uses transforms to set a request header
+      // rather than a response header.
+      routes = [
+        { handle: 'hit' },
+        {
+          src: '/index(?:/)?',
+          transforms: [
+            {
+              type: 'request.headers' as const,
+              op: 'set' as const,
+              target: { key: 'x-matched-path' },
+              args: '/',
+            },
+          ],
+          continue: true,
+          important: true,
+        },
+        {
+          src: '/((?!index$).*?)(?:/)?',
+          transforms: [
+            {
+              type: 'request.headers' as const,
+              op: 'set' as const,
+              target: { key: 'x-matched-path' },
+              args: '/$1',
+            },
+          ],
+          continue: true,
+          important: true,
+        },
+      ];
     }
 
     output = new NodejsLambda({

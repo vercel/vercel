@@ -173,6 +173,72 @@ describe('experimentalAllowBundling', () => {
     expect(lambda.files[join('api', 'hello.js')]).toBeDefined();
   });
 
+  it('should emit handle:hit routes with x-matched-path request header transforms when bundling is enabled', async () => {
+    process.env.VERCEL_API_FUNCTION_BUNDLING = '1';
+
+    const filesystem = await prepareFilesystem({
+      'api/hello.js': `
+        export default (req, res) => res.send('hello');
+      `,
+    });
+
+    const buildResult = await build({
+      ...filesystem,
+      entrypoint: 'api/hello.js',
+      config: { zeroConfig: true },
+      meta: { skipDownload: true },
+    });
+
+    expect(buildResult.routes).toEqual([
+      { handle: 'hit' },
+      {
+        src: '/index(?:/)?',
+        transforms: [
+          {
+            type: 'request.headers',
+            op: 'set',
+            target: { key: 'x-matched-path' },
+            args: '/',
+          },
+        ],
+        continue: true,
+        important: true,
+      },
+      {
+        src: '/((?!index$).*?)(?:/)?',
+        transforms: [
+          {
+            type: 'request.headers',
+            op: 'set',
+            target: { key: 'x-matched-path' },
+            args: '/$1',
+          },
+        ],
+        continue: true,
+        important: true,
+      },
+    ]);
+  });
+
+  it('should not emit routes when bundling is disabled', async () => {
+    delete process.env.VERCEL_API_FUNCTION_BUNDLING;
+
+    const filesystem = await prepareFilesystem({
+      'api/hello.js': `
+        export default (req, res) => res.send('hello');
+      `,
+    });
+
+    const buildResult = await build({
+      ...filesystem,
+      entrypoint: 'api/hello.js',
+      config: { zeroConfig: true },
+      meta: { skipDownload: true },
+    });
+
+    expect(buildResult.routes).toBeUndefined();
+  });
+
   it('should use original handler when bundling is disabled', async () => {
     delete process.env.VERCEL_API_FUNCTION_BUNDLING;
 
