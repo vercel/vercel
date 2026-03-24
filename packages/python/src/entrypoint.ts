@@ -216,7 +216,6 @@ export async function detectPythonEntrypoint(
   configuredEntrypoint?: string,
   service?: { type?: string }
 ): Promise<DetectedPythonEntrypoint | null> {
-  // TODO: factor out?
   // If a configured entrypoint was provided, check it first
   if (configuredEntrypoint) {
     const entrypoint = configuredEntrypoint.endsWith('.py')
