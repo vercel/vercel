@@ -1,5 +1,5 @@
 import open from 'open';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { client } from '../../../mocks/client';
 import buy from '../../../../src/commands/buy';
 import { useUser } from '../../../mocks/user';
@@ -36,6 +36,10 @@ function setupTeam() {
 }
 
 describe('buy addon', () => {
+  beforeEach(() => {
+    openMock.mockClear();
+  });
+
   describe('validation', () => {
     it('errors when addon name is missing', async () => {
       client.setArgv('buy', 'addon');
