@@ -149,11 +149,11 @@ async function confirm(
   message: string,
   autoConfirm?: boolean
 ): Promise<boolean> {
-  if (autoConfirm) {
+  if (autoConfirm && !client.isAgent) {
     return true;
   }
   if (!client.stdin.isTTY) {
-    return client.isAgent;
+    return false;
   }
   return client.input.confirm(message, true);
 }
@@ -166,41 +166,45 @@ export async function autoInstallAgentTooling(
     const prefs = await readPrefs();
 
     if (!options?.skipAgentInit && !prefs.agentInitDismissed) {
-      const targetFile = getTargetFile(client.agentName);
-      const filePath = join(client.cwd, targetFile);
-
-      let existing: string | null = null;
       try {
-        existing = await readFile(filePath, 'utf-8');
-      } catch {
-        // file doesn't exist
-      }
+        const targetFile = getTargetFile(client.agentName);
+        const filePath = join(client.cwd, targetFile);
 
-      const hasMarkers =
-        existing !== null &&
-        existing.includes(BEST_PRACTICES_START) &&
-        existing.includes(BEST_PRACTICES_END);
+        let existing: string | null = null;
+        try {
+          existing = await readFile(filePath, 'utf-8');
+        } catch {
+          // file doesn't exist
+        }
 
-      if (hasMarkers) {
-        // Silently update existing best practices
-        await agentInit(client, true);
-      } else if (client.isAgent) {
-        // Agent — auto-approve
-        await agentInit(client, true);
-      } else {
-        // Human — prompt interactively
-        printPreview();
-        const accepted = await confirm(
-          client,
-          `Add Vercel best practices to ${chalk.bold(targetFile)}?`,
-          options?.autoConfirm
-        );
-        if (accepted) {
+        const hasMarkers =
+          existing !== null &&
+          existing.includes(BEST_PRACTICES_START) &&
+          existing.includes(BEST_PRACTICES_END);
+
+        if (hasMarkers) {
+          // Silently update existing best practices
+          await agentInit(client, true);
+        } else if (client.isAgent) {
+          // Agent — auto-approve
           await agentInit(client, true);
         } else {
-          prefs.agentInitDismissed = true;
-          await writePrefs(prefs);
+          // Human — prompt interactively
+          printPreview();
+          const accepted = await confirm(
+            client,
+            `Add Vercel best practices to ${chalk.bold(targetFile)}?`,
+            options?.autoConfirm
+          );
+          if (accepted) {
+            await agentInit(client, true);
+          } else {
+            prefs.agentInitDismissed = true;
+            await writePrefs(prefs);
+          }
         }
+      } catch (err) {
+        output.debug(`Agent init failed: ${err}`);
       }
     }
 
@@ -214,6 +218,31 @@ export async function autoInstallAgentTooling(
       }
 
       if (uninstalledTargets.length > 0) {
+        // Agents in non-TTY: output structured JSON so agent prompts the user
+        if (client.isAgent && !client.stdin.isTTY) {
+          const next = uninstalledTargets.map(target => ({
+            command: `npx plugins add vercel/vercel-plugin --target ${target} -y`,
+            when: `Install Vercel plugin for ${target}`,
+          }));
+          client.stdout.write(
+            `${JSON.stringify(
+              {
+                status: 'action_required',
+                reason: 'plugin_install',
+                message:
+                  'The Vercel plugin enhances your agent experience. Would you like to install it?',
+                next,
+              },
+              null,
+              2
+            )}\n`
+          );
+          // Dismiss so we don't ask again on next login/link
+          prefs.pluginDismissed = true;
+          await writePrefs(prefs);
+          return;
+        }
+
         const accepted = await confirm(
           client,
           'Install the Vercel plugin?',
