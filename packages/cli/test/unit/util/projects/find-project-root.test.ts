@@ -4,7 +4,7 @@ import {
   findProjectRoot,
   resolveProjectCwd,
 } from '../../../../src/util/projects/find-project-root';
-import { tryDetectServices } from '../../../../src/util/projects/detect-services';
+import { getBuildableServices } from '../../../../src/util/projects/detect-services';
 
 vi.mock('fs/promises', async () => {
   const memfs: { fs: typeof fs } = await vi.importActual('memfs');
@@ -26,7 +26,7 @@ vi.mock('fs-extra', async () => {
 });
 
 vi.mock('../../../../src/util/projects/detect-services', () => ({
-  tryDetectServices: vi.fn(async () => null),
+  getBuildableServices: vi.fn(async () => []),
 }));
 
 describe('findProjectRoot', () => {
@@ -96,11 +96,11 @@ describe('findProjectRoot', () => {
 });
 
 describe('resolveProjectCwd', () => {
-  const mockedTryDetect = vi.mocked(tryDetectServices);
+  const mockedGetBuildableServices = vi.mocked(getBuildableServices);
 
   beforeEach(() => {
     vol.reset();
-    mockedTryDetect.mockResolvedValue(null);
+    mockedGetBuildableServices.mockResolvedValue([]);
   });
 
   afterEach(() => {
@@ -114,7 +114,7 @@ describe('resolveProjectCwd', () => {
   });
 
   it('should return project root when services are detected', async () => {
-    mockedTryDetect.mockResolvedValue([
+    mockedGetBuildableServices.mockResolvedValue([
       { name: 'api', slug: 'api', directory: 'services/api' },
     ] as any);
 
@@ -129,7 +129,7 @@ describe('resolveProjectCwd', () => {
   });
 
   it('should return original cwd when no services are found', async () => {
-    mockedTryDetect.mockResolvedValue(null);
+    mockedGetBuildableServices.mockResolvedValue([]);
 
     vol.fromJSON({
       '/project/.vercel/project.json': '{}',

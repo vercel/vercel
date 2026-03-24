@@ -1,8 +1,8 @@
-import * as chalk from 'chalk';
+import chalk from 'chalk';
 import { stat } from 'fs/promises';
 import { join, dirname } from 'path';
 import { pathExists } from 'fs-extra';
-import { tryDetectServices } from './detect-services';
+import { getBuildableServices } from './detect-services';
 import output from '../../output-manager';
 
 /**
@@ -62,9 +62,9 @@ export async function resolveProjectCwd(cwd: string): Promise<string> {
   const projectRoot = await findProjectRoot(cwd);
   if (!projectRoot || projectRoot === cwd) return cwd;
 
-  const detectedServices = (await tryDetectServices(projectRoot)) ?? [];
+  const buildableServices = await getBuildableServices(projectRoot);
 
-  if (detectedServices.length > 0) {
+  if (buildableServices.length > 0) {
     output.debug(`Running from project root: ${chalk.cyan(projectRoot)}`);
     return projectRoot;
   }

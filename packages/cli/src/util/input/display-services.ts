@@ -1,5 +1,9 @@
 import { frameworkList } from '@vercel/frameworks';
-import type { Service, ServiceDetectionError } from '@vercel/fs-detectors';
+import type {
+  InferredService,
+  Service,
+  ServiceDetectionError,
+} from '@vercel/fs-detectors';
 import output from '../../output-manager';
 import table from '../output/table';
 
@@ -63,15 +67,12 @@ interface ServiceDescriptionInfo {
   colorFn: (text: string) => string;
 }
 
-interface DisplayableService {
-  name: string;
-  type: Service['type'];
-  framework?: string;
-  runtime?: string;
-  builder?: Service['builder'];
-  routePrefix?: string;
-  schedule?: string;
-  topic?: string;
+type DisplayableService = Service | InferredService;
+
+function getServiceBuilder(
+  service: DisplayableService
+): Service['builder'] | undefined {
+  return 'builder' in service ? service.builder : undefined;
 }
 
 function getServiceDescriptionInfo(
@@ -102,9 +103,13 @@ function getServiceDescriptionInfo(
     const normalizedRuntime = service.runtime.toLowerCase().replace(/@.*$/, '');
     const colorFn = runtimeColors[normalizedRuntime] || chalk.yellow;
     return { label: service.runtime, colorFn };
-  } else if (service.builder?.use) {
-    return { label: service.builder.use, colorFn: chalk.magenta };
   }
+
+  const builder = getServiceBuilder(service);
+  if (builder?.use) {
+    return { label: builder.use, colorFn: chalk.magenta };
+  }
+
   return { label: 'unknown', colorFn: chalk.dim };
 }
 

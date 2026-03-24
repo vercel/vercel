@@ -73,6 +73,9 @@ export interface InferredService
     | 'framework'
     | 'runtime'
     | 'routePrefix'
+    | 'schedule'
+    | 'topic'
+    | 'consumer'
   > {}
 
 export interface InferredServicesResult {

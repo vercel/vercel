@@ -30,13 +30,11 @@ export async function hasExperimentalServicesConfig(
 }
 
 /**
- * Detect services that are buildable/runnable for the given directory.
+ * Get services that are buildable/runnable for the given directory.
  */
-export async function tryDetectServices(
-  cwd: string
-): Promise<Service[] | null> {
+export async function getBuildableServices(cwd: string): Promise<Service[]> {
   const result = await getServicesBuilders({ workPath: cwd });
-  return result.services ?? null;
+  return result.services ?? [];
 }
 
 export async function writeServicesConfig(
