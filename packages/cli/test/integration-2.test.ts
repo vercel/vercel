@@ -113,6 +113,9 @@ async function setupProject(
   }
 
   await waitForPrompt(process, 'Linked to');
+
+  await waitForPrompt(process, 'Add Vercel best practices');
+  process.stdin?.write('n\n');
 }
 
 beforeAll(async () => {
@@ -1113,6 +1116,9 @@ test('[vc link] should show project prompts but not framework when `builds` defi
   vc.stdin?.write('\n');
 
   await waitForPrompt(vc, 'Linked to');
+
+  await waitForPrompt(vc, 'Add Vercel best practices');
+  vc.stdin?.write('n\n');
 
   const output = await vc;
 
