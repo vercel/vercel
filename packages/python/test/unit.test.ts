@@ -55,7 +55,6 @@ import { createVenvEnv, getVenvBinDir } from '../src/utils';
 import { UV_PYTHON_DOWNLOADS_MODE, getProtectedUvEnv } from '../src/uv';
 import { VERCEL_WORKERS_VERSION } from '../src/package-versions';
 import { createPyprojectToml } from '../src/install';
-import { detectDjangoPythonEntrypoint } from '../src/entrypoint';
 import { getDjangoSettings, runDjangoCollectStatic } from '../src/django';
 import { FileBlob, download } from '@vercel/build-utils';
 
@@ -1147,39 +1146,6 @@ describe('fastapi entrypoint discovery - positive cases', () => {
 });
 
 describe('Django entrypoint discovery', () => {
-  async function writeFiles(
-    workPath: string,
-    files: Record<string, string>
-  ): Promise<void> {
-    for (const [rel, content] of Object.entries(files)) {
-      const full = path.join(workPath, rel);
-      fs.mkdirSync(path.dirname(full), { recursive: true });
-      fs.writeFileSync(full, content);
-    }
-  }
-
-  it('uses configured entrypoint when it exists and is valid', async () => {
-    const workPath = path.join(
-      tmpdir(),
-      `python-django-configured-${Date.now()}`
-    );
-    fs.mkdirSync(workPath, { recursive: true });
-
-    await writeFiles(workPath, {
-      'hello/world.py': `application = lambda env, start: None`,
-    });
-
-    const result = await detectDjangoPythonEntrypoint(
-      workPath,
-      'hello/world.py'
-    );
-    expect(result).toEqual({
-      entrypoint: { entrypoint: 'hello/world.py', variableName: 'application' },
-    });
-
-    if (fs.existsSync(workPath)) fs.removeSync(workPath);
-  });
-
   it('build() resolves Django entrypoint from WSGI_APPLICATION (hello.wsgi.application -> hello/wsgi.py)', async () => {
     vi.mocked(getDjangoSettings).mockResolvedValueOnce({
       settingsModule: 'hello.settings',

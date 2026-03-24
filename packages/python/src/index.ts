@@ -46,15 +46,11 @@ import {
   runDjangoCollectStatic,
   type DjangoCollectStaticResult,
 } from './django';
-import {
-  findAppOrHandler,
-  containsTopLevelCallable,
-} from '@vercel/python-analysis';
+import { containsTopLevelCallable } from '@vercel/python-analysis';
 
 const writeFile = fs.promises.writeFile;
 
 import {
-  PYTHON_CANDIDATE_ENTRYPOINTS,
   detectPythonEntrypoint,
   type DetectedPythonEntrypoint,
   type PythonEntrypoint,
@@ -226,68 +222,19 @@ export const build: BuildVX = async ({
     throw err;
   }
 
-  let fsFiles = await glob('**', workPath);
-
   // Entrypoint discovery
   let detected: DetectedPythonEntrypoint | undefined;
-  let entrypointNotFound: NowBuildError | undefined;
 
-  if (isPythonFramework(framework) && !entrypoint) {
-    // Autodetect entrypoint: no entrypoint configured (src was "<detect>")
-    detected =
-      (await detectPythonEntrypoint(
-        config.framework as PythonFramework,
-        workPath
-      )) ?? undefined;
-    if (detected?.entrypoint) {
-      debug(
-        `Autodetected Python entrypoint: "${detected.entrypoint.entrypoint}"`
-      );
-      entrypoint = detected.entrypoint.entrypoint;
-    } else {
-      const searchedList = PYTHON_CANDIDATE_ENTRYPOINTS.join(', ');
-      entrypointNotFound = new NowBuildError({
-        code: `${framework!.toUpperCase()}_ENTRYPOINT_NOT_FOUND`,
-        message: `No ${framework} entrypoint found. Add an 'app' script in pyproject.toml or define an entrypoint in one of: ${searchedList}.`,
-        link: `https://vercel.com/docs/frameworks/backend/${framework}#exporting-the-${framework}-application`,
-        action: 'Learn More',
-      });
-    }
-  }
+  detected =
+    (await detectPythonEntrypoint(
+      config.framework as PythonFramework,
+      workPath,
+      entrypoint,
+      service
+    )) ?? undefined;
 
-  // When the entrypoint file already exists, detection may have been skipped.
-  // Still read the file to find the variable name.
-  if (
-    !detected?.entrypoint &&
-    entrypoint?.endsWith('.py') &&
-    fsFiles[entrypoint]
-  ) {
-    const content = await fs.promises.readFile(
-      join(workPath, entrypoint),
-      'utf-8'
-    );
-    let varName = await findAppOrHandler(content);
-    if (!varName) {
-      const isSpecialService =
-        service?.type === 'cron' || service?.type === 'worker';
-      if (isSpecialService) {
-        // Crons and worker have their own special entry point logic
-        // that involves creating an `app` dynamically.
-        varName = 'app';
-      } else {
-        throw new NowBuildError({
-          code: 'PYTHON_ENTRYPOINT_NOT_FOUND',
-          message: `Could not find a top-level "app", "application", or "handler" in "${entrypoint}".`,
-          link: 'https://vercel.com/docs/functions/serverless-functions/runtimes/python',
-          action: 'Learn More',
-        });
-      }
-    }
-    detected = { entrypoint: { entrypoint, variableName: varName } };
-  }
-
-  if (entrypointNotFound && detected?.baseDir === undefined) {
-    throw entrypointNotFound;
+  if (detected?.error && detected?.baseDir === undefined) {
+    throw detected?.error;
   }
 
   const entryDirectory =
@@ -329,8 +276,6 @@ export const build: BuildVX = async ({
       `${pythonVersionString(pythonVersion)}\n`
     );
   }
-
-  fsFiles = await glob('**', workPath);
 
   // Create a virtual environment so dependencies can be installed via
   // `uv sync` and then vendored into the Lambda bundle.  When building as
@@ -512,15 +457,11 @@ export const build: BuildVX = async ({
 
   // Collect the resolved entrypoint from detection or hook, preferring the hook.
   const resolved = hookResult?.entrypoint ?? detected?.entrypoint;
-  if (entrypointNotFound && resolved) {
-    entrypoint = resolved.entrypoint;
-    entrypointNotFound = undefined;
+  if (!resolved && detected?.error) {
+    throw detected?.error;
   }
 
-  if (entrypointNotFound) {
-    throw entrypointNotFound;
-  }
-
+  entrypoint = resolved?.entrypoint;
   if (!entrypoint) {
     throw new NowBuildError({
       code: 'PYTHON_ENTRYPOINT_NOT_FOUND',
