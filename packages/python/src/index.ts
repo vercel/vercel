@@ -31,6 +31,8 @@ import {
   FileFsRef,
   PythonFramework,
   type PrepareCache,
+  type SharedDeps,
+  hasFunctionsBetaOptIn,
 } from '@vercel/build-utils';
 import {
   discoverPackage,
@@ -66,6 +68,7 @@ import {
 } from './utils';
 import { validateBuildArch } from './platform-info';
 import { runQuirks } from './quirks';
+import { startPyPiSddCollector } from './sdd-collector';
 import {
   getDjangoSettings,
   runDjangoCollectStatic,
@@ -158,6 +161,93 @@ async function addVendorBytecodeWithinCapacity({
   });
   addFiles(files, selectedBytecode.files);
   return capacity - selectedBytecode.totalSize;
+}
+
+const PYPI_HOST = 'https://files.pythonhosted.org';
+const API_PYPI_PROXY_SIMPLE_URL =
+  'http://api-packages-pypi.default.svc.cluster.local/v1/packages/pypi/simple';
+const PYTHON_SDD_MOUNT_PATH_ENV = 'VERCEL_PYTHON_SDD_MOUNT_PATH';
+const PYTHON_SDD_DRIVE_PREFIX = 'api-shared-deps-python-v1';
+const PYTHON_SDD_SUPPORTED_REGIONS = new Set(['iad1', 'sfo1']);
+const PYTHON_SHARED_DEPS_OFFLOAD_FUNCTIONS_BETA = 'large-function-opt-2026-06';
+const FORCE_PYTHON_SHARED_DEPS_OFFLOAD_FUNCTIONS_BETA =
+  'force-large-function-opt-2026-06';
+
+function isPythonOnHiveEnabled(env: NodeJS.ProcessEnv): boolean {
+  return (
+    env.VERCEL_PYTHON_ON_HIVE === '1' || env.VERCEL_PYTHON_ON_HIVE === 'true'
+  );
+}
+
+export function resolvePythonDependencyProxyUrl(
+  env: NodeJS.ProcessEnv
+): string | undefined {
+  if (
+    !hasFunctionsBetaOptIn(env, PYTHON_SHARED_DEPS_OFFLOAD_FUNCTIONS_BETA) &&
+    !hasFunctionsBetaOptIn(env, FORCE_PYTHON_SHARED_DEPS_OFFLOAD_FUNCTIONS_BETA)
+  ) {
+    return undefined;
+  }
+
+  if (!isPythonOnHiveEnabled(env)) {
+    throw new NowBuildError({
+      code: 'PYTHON_SDD_REQUIRES_FUNCTIONS_BETA',
+      message:
+        'Python SDD offload requires Functions Beta. Set VERCEL_PYTHON_ON_HIVE=1 or deploy with Functions Beta enabled.',
+    });
+  }
+
+  const currentRegion = env.VERCEL_REGION?.trim();
+  if (!currentRegion || !PYTHON_SDD_SUPPORTED_REGIONS.has(currentRegion)) {
+    throw new NowBuildError({
+      code: 'PYTHON_SDD_UNSUPPORTED_REGION',
+      message: `Python SDD offload is not supported in region ${currentRegion || 'unknown'}. Supported regions: ${Array.from(PYTHON_SDD_SUPPORTED_REGIONS).join(', ')}.`,
+    });
+  }
+
+  let proxyUrl = env.VERCEL_PYTHON_INDEX_ENDPOINT?.trim();
+  proxyUrl ||= API_PYPI_PROXY_SIMPLE_URL;
+
+  return proxyUrl.replace(/\/+$/, '');
+}
+
+function resolvePythonSharedDepsDrive(
+  env: NodeJS.ProcessEnv
+): string | undefined {
+  const explicitDrive = env.VERCEL_PYTHON_SDD_DRIVE?.trim();
+  if (explicitDrive) return explicitDrive;
+
+  const currentRegion = env.VERCEL_REGION?.trim();
+  if (!currentRegion) return undefined;
+
+  return `vblk:${PYTHON_SDD_DRIVE_PREFIX}-${currentRegion}`;
+}
+
+/**
+ * Rewrite download URLs in uv.lock to route through the dependency proxy.
+ *
+ * Saves the original lockfile as `<path>.orig` so it can be restored
+ * after `uv sync` completes.  The rewrite is a simple string
+ * replacement: `https://files.pythonhosted.org` becomes `<proxyUrl>`.
+ */
+async function rewriteLockfileForDependencyProxy(
+  lockPath: string,
+  proxyUrl: string
+): Promise<void> {
+  const original = await fs.promises.readFile(lockPath, 'utf8');
+  await fs.promises.writeFile(`${lockPath}.orig`, original);
+  const base = proxyUrl.replace(/\/+$/, '');
+  const rewritten = original.replaceAll(PYPI_HOST, base);
+  await fs.promises.writeFile(lockPath, rewritten);
+  debug(`Shared deps: rewrote ${lockPath} (${PYPI_HOST} -> ${base})`);
+}
+
+/** Restore the original uv.lock saved by rewriteLockfileForDependencyProxy. */
+async function restoreLockfile(lockPath: string): Promise<void> {
+  const origPath = `${lockPath}.orig`;
+  if (fs.existsSync(origPath)) {
+    await fs.promises.rename(origPath, lockPath);
+  }
 }
 
 interface FrameworkHookContext {
@@ -552,6 +642,9 @@ export const build: BuildVX = async ({
   let uvLockPath: string | null = null;
   let uvProjectDir: string | null = null;
   let projectName: string | undefined;
+  let dependencyProxyUrl: string | undefined;
+  let storagePointInTimeId: string | undefined;
+  let sharedDepsIndexPackageCount = 0;
 
   await builderSpan
     .child(BUILDER_INSTALLER_STEP, {
@@ -604,46 +697,86 @@ export const build: BuildVX = async ({
           : 'uv.lock';
         const cachedLockPath = join(uvCacheDir, lockCacheKey);
 
-        // Default installation path: use uv to normalize manifests into a uv.lock and
-        // sync dependencies into the virtualenv, including required runtime deps.
-        // Ensure all installation paths are normalized into a pyproject.toml and uv.lock
-        // for consistent installation logic and idempotency.
-        const { projectDir, lockPath, lockFileProvidedByUser } =
-          await ensureUvProject({
-            workPath,
-            rootDir,
+        dependencyProxyUrl = resolvePythonDependencyProxyUrl(baseEnv);
+        const sddCollector = dependencyProxyUrl
+          ? await startPyPiSddCollector(
+              dependencyProxyUrl,
+              baseEnv.VERCEL_REGION
+            )
+          : undefined;
+        const dependencyProxyEnv = sddCollector?.env;
+        let lockfileRewritten = false;
+
+        try {
+          // Default installation path: use uv to normalize manifests into a uv.lock and
+          // sync dependencies into the virtualenv, including required runtime deps.
+          // Ensure all installation paths are normalized into a pyproject.toml and uv.lock
+          // for consistent installation logic and idempotency.
+          const { projectDir, lockPath, lockFileProvidedByUser } =
+            await ensureUvProject({
+              workPath,
+              rootDir,
+              venvPath,
+              pythonPackage,
+              pythonVersion: pythonVersionString(pythonVersion),
+              uv,
+              requireBinaryWheels: false,
+              cachedLockPath,
+              packageManagerEnv: dependencyProxyEnv,
+            });
+
+          uvLockPath = lockPath;
+          uvProjectDir = projectDir;
+
+          // Get the project name from the already-discovered package info
+          projectName = pythonPackage?.manifest?.data?.project?.name;
+
+          // `ensureUvProject` would have produced a `pyproject.toml` or `uv.lock`
+          // so we can use `uv sync` to install dependencies into the active
+          // virtual environment.
+          // Use --frozen for user-provided lock files (respects exact versions),
+          // --locked for generated lock files (validates consistency).
+
+          // When dependency offloading is enabled, rewrite download URLs in
+          // uv.lock so that `uv sync --frozen` fetches wheels through the local
+          // collector. The upstream API installs each wheel into SDD as a side
+          // effect of serving the download.
+          if (sddCollector && lockPath) {
+            await rewriteLockfileForDependencyProxy(
+              lockPath,
+              sddCollector.packageUrlBase
+            );
+            lockfileRewritten = true;
+          }
+
+          await uv.sync({
             venvPath,
-            pythonPackage,
-            pythonVersion: pythonVersionString(pythonVersion),
-            uv,
-            requireBinaryWheels: false,
-            cachedLockPath,
+            projectDir,
+            frozen: lockFileProvidedByUser,
+            locked: !lockFileProvidedByUser,
+            pythonPlatform: target.uvPlatform,
+            env: dependencyProxyEnv,
           });
 
-        uvLockPath = lockPath;
-        uvProjectDir = projectDir;
+          await sddCollector?.waitForMetadata();
+          storagePointInTimeId = sddCollector?.getStoragePointInTimeId();
 
-        // Get the project name from the already-discovered package info
-        projectName = pythonPackage?.manifest?.data?.project?.name;
+          if (lockfileRewritten && lockPath) {
+            await restoreLockfile(lockPath);
+            lockfileRewritten = false;
+          }
 
-        // `ensureUvProject` would have produced a `pyproject.toml` or `uv.lock`
-        // so we can use `uv sync` to install dependencies into the active
-        // virtual environment.
-        // Use --frozen for user-provided lock files (respects exact versions),
-        // --locked for generated lock files (validates consistency).
-        await uv.sync({
-          venvPath,
-          projectDir,
-          frozen: lockFileProvidedByUser,
-          locked: !lockFileProvidedByUser,
-          pythonPlatform: target.uvPlatform,
-        });
-
-        // Stash the lock file into the cache dir so prepareCache
-        // preserves it and the next build can skip full resolution.
-        if (lockPath && fs.existsSync(lockPath)) {
-          await fs.promises.mkdir(uvCacheDir, { recursive: true });
-          await fs.promises.copyFile(lockPath, cachedLockPath);
+          // Stash the lock file into the cache dir so prepareCache
+          // preserves it and the next build can skip full resolution.
+          if (lockPath && fs.existsSync(lockPath)) {
+            await fs.promises.mkdir(uvCacheDir, { recursive: true });
+            await fs.promises.copyFile(lockPath, cachedLockPath);
+          }
+        } finally {
+          if (lockfileRewritten && uvLockPath) {
+            await restoreLockfile(uvLockPath);
+          }
+          await sddCollector?.close();
         }
       }
     });
@@ -927,7 +1060,12 @@ from vercel_runtime.vc_init import vc_handler
     files['.sesskey'] = new FileBlob({ data: `"${SESSKEY}"` });
   }
 
-  // Bundle dependencies, using runtime installation for oversized bundles
+  // Bundle dependencies -- the externalizer decides the mode:
+  //  - Shared deps offload (dependency proxy enabled): generate
+  //    .shared_deps_index.json and bundle only vercel-runtime.
+  //  - Runtime install (bundle too large): knapsack-pack what fits, cold-start
+  //    uv sync for the rest.
+  //  - Full bundle (default): everything goes into the Lambda zip.
   const depExternalizer = new PythonDependencyExternalizer({
     venvPath,
     vendorDir,
@@ -945,7 +1083,9 @@ from vercel_runtime.vc_init import vc_handler
         ? ['vercel-workers', 'vercel_workers']
         : []),
     ],
+    sharedDepsOffload: !!dependencyProxyUrl,
   });
+  let sharedDeps: SharedDeps | undefined;
 
   await builderSpan
     .child('vc.builder.python.bundle')
@@ -959,11 +1099,46 @@ from vercel_runtime.vc_init import vc_handler
         'python.bundle.runtimeInstallEnabled': String(
           depAnalysis.runtimeInstallEnabled
         ),
+        'python.bundle.sharedDepsOffloadEnabled': String(
+          depAnalysis.sharedDepsOffloadEnabled
+        ),
       });
 
-      if (depAnalysis.runtimeInstallEnabled) {
+      if (depAnalysis.sharedDepsOffloadEnabled) {
+        const sharedDepsIndex =
+          await depExternalizer.generateSharedDepsIndex(files);
+        sharedDepsIndexPackageCount = sharedDepsIndex.packageCount;
+        if (sharedDepsIndexPackageCount > 0) {
+          if (!storagePointInTimeId) {
+            throw new NowBuildError({
+              code: 'PYTHON_SDD_POINT_IN_TIME_MISSING',
+              message:
+                'Python dependency offloading did not observe an SDD storage point-in-time id.',
+            });
+          }
+          const drive = resolvePythonSharedDepsDrive(baseEnv);
+          if (!drive) {
+            throw new NowBuildError({
+              code: 'PYTHON_SDD_DRIVE_MISSING',
+              message:
+                'Python dependency offloading requires an SDD drive identifier.',
+            });
+          }
+          sharedDeps = {
+            version: 1,
+            mounts: [
+              {
+                drive,
+                mountPathEnv: PYTHON_SDD_MOUNT_PATH_ENV,
+                storagePointInTimeId,
+              },
+            ],
+          };
+          lambdaEnv.SHARED_DEPS_INDEX = '/var/task/.shared_deps_index.json';
+        }
+      } else if (depAnalysis.runtimeInstallEnabled) {
         // >245 MB source-only: the lambda zip is packed full with source
-        // packages via knapsack.  No room for bytecode.
+        // packages via knapsack. No room for bytecode.
         await depExternalizer.generateBundle(files);
       } else {
         // ≤245 MB source-only: bundle all dependencies.
@@ -1054,6 +1229,7 @@ from vercel_runtime.vc_init import vc_handler
     architecture: target.architecture,
     environment: lambdaEnv,
     supportsResponseStreaming: true,
+    sharedDeps,
   });
 
   // Write project manifest for diagnostics (best-effort, never fails the build).

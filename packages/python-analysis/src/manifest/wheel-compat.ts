@@ -37,6 +37,16 @@ export async function isWheelCompatible(
 }
 
 /**
+ * Derive the offload index prefix (`<abi>-<arch>` or `none-any`) from a wheel filename.
+ *
+ * Uses the shared Rust/WASM parser so builder and runtime path selection stay aligned.
+ */
+export async function wheelIndexPrefix(wheelFilename: string): Promise<string> {
+  const mod = await importWasmModule();
+  return mod.wheelIndexPrefix(wheelFilename);
+}
+
+/**
  * Evaluate a PEP 508 environment marker against a target environment.
  *
  * Uses uv's `MarkerTree::evaluate()` via WASM -- the same logic uv uses

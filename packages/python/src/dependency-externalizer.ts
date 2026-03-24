@@ -5,6 +5,7 @@ import {
   FileBlob,
   FileFsRef,
   Files,
+  hasFunctionsBetaOptIn,
   NowBuildError,
   debug,
 } from '@vercel/build-utils';
@@ -30,6 +31,10 @@ import {
 } from './uv';
 import { detectTargetPlatform } from './platform-info';
 import { derivePycPath, type BytecodeCollectionResult } from './compileall';
+
+const PYTHON_SHARED_DEPS_OFFLOAD_FUNCTIONS_BETA = 'large-function-opt-2026-06';
+const FORCE_PYTHON_SHARED_DEPS_OFFLOAD_FUNCTIONS_BETA =
+  'force-large-function-opt-2026-06';
 
 const readFile = promisify(fs.readFile);
 
@@ -110,6 +115,111 @@ export function shouldShowFunctionsBetaHint(): boolean {
   return v === '1' || v === 'true';
 }
 
+function getPythonSizeLimitOverride(): number | null {
+  const raw = process.env.VERCEL_PYTHON_SIZE_LIMIT;
+  if (!raw) return null;
+  const parsed = Number.parseInt(raw, 10);
+  if (!Number.isFinite(parsed) || parsed <= 0) return null;
+  return parsed;
+}
+
+function getLambdaSizeThresholdBytes(): number {
+  return getPythonSizeLimitOverride() ?? LAMBDA_SIZE_THRESHOLD_BYTES;
+}
+
+function getLambdaEphemeralStorageBytes(): number {
+  return getPythonSizeLimitOverride() ?? LAMBDA_EPHEMERAL_STORAGE_BYTES;
+}
+
+function wheelFilenameFromUrl(url: string): string | null {
+  try {
+    return new URL(url).pathname.split('/').pop() || null;
+  } catch {
+    const trimmed = url.split('?')[0];
+    return trimmed.split('/').pop() || null;
+  }
+}
+
+function deriveWheelIndexPrefix(wheelFilename: string): string | null {
+  const withoutSuffix = wheelFilename.replace(/\.whl$/, '');
+  const parts = withoutSuffix.split('-');
+  if (parts.length < 5) return null;
+
+  const abiTag = parts.at(-2);
+  const platformTag = parts.at(-1);
+  if (!abiTag || !platformTag) return null;
+
+  if (abiTag === 'none' && platformTag === 'any') {
+    return 'none-any';
+  }
+
+  const archMatch = platformTag.match(
+    /(?:^|_)(x86_64|aarch64|arm64|i686|ppc64le|s390x)$/
+  );
+  const arch = archMatch?.[1] ?? platformTag;
+
+  return `${abiTag}-${arch}`;
+}
+
+async function getIndexPrefixForPackage(
+  pkg: UvLockPackage,
+  pythonMajor: number,
+  pythonMinor: number,
+  platform: ReturnType<typeof detectTargetPlatform>
+): Promise<string | null> {
+  const scored: Array<{ prefix: string; score: number }> = [];
+
+  for (const wheel of pkg.wheels) {
+    const filename = wheelFilenameFromUrl(wheel.url);
+    if (!filename || !filename.endsWith('.whl')) continue;
+
+    let compatible = false;
+    try {
+      compatible = await isWheelCompatible(
+        filename,
+        pythonMajor,
+        pythonMinor,
+        platform.osName,
+        platform.archName,
+        platform.osMajor,
+        platform.osMinor
+      );
+    } catch (err) {
+      debug(
+        `Failed to check wheel compatibility for ${filename}: ${
+          err instanceof Error ? err.message : String(err)
+        }`
+      );
+      continue;
+    }
+    if (!compatible) continue;
+
+    let prefix: string | null = null;
+    try {
+      prefix = deriveWheelIndexPrefix(filename);
+    } catch (err) {
+      debug(
+        `Failed to derive wheel index prefix for ${filename}: ${
+          err instanceof Error ? err.message : String(err)
+        }`
+      );
+      continue;
+    }
+    if (!prefix) continue;
+
+    let score = 0;
+    if (prefix.startsWith(`cp${pythonMajor}${pythonMinor}`)) score = 3;
+    else if (prefix.startsWith('abi3-')) score = 2;
+    else if (prefix === 'none-any') score = 1;
+
+    scored.push({ prefix, score });
+  }
+
+  if (scored.length === 0) return null;
+  scored.sort((a, b) => b.score - a.score || a.prefix.localeCompare(b.prefix));
+  return scored[0].prefix;
+}
+
 interface PythonDependencyExternalizerOptions {
   venvPath: string;
   vendorDir: string;
@@ -122,10 +232,15 @@ interface PythonDependencyExternalizerOptions {
   pythonPath: string;
   hasCustomCommand: boolean;
   alwaysBundlePackages?: string[];
+  /** Enable Shared Dependency Drive offloading. */
+  sharedDepsOffload?: boolean;
 }
 
-interface DependencyAnalysis {
+export interface DependencyAnalysis {
+  /** True when deps exceed the Lambda limit and uv-sync-at-cold-start is used. */
   runtimeInstallEnabled: boolean;
+  /** True when deps are offloaded to a Shared Dependency Drive. */
+  sharedDepsOffloadEnabled: boolean;
   allVendorFiles: Files;
   totalBundleSize: number;
 }
@@ -142,6 +257,7 @@ export class PythonDependencyExternalizer {
   private pythonPath: string;
   private hasCustomCommand: boolean;
   private alwaysBundlePackages: string[];
+  private sharedDepsOffload: boolean;
 
   // Populated by analyze()
   private sitePackageDirs: string[] = [];
@@ -162,30 +278,66 @@ export class PythonDependencyExternalizer {
     this.pythonPath = options.pythonPath;
     this.hasCustomCommand = options.hasCustomCommand;
     this.alwaysBundlePackages = options.alwaysBundlePackages ?? [];
+    this.sharedDepsOffload = options.sharedDepsOffload ?? false;
+  }
+
+  /** Shared dependency offloading is enabled when configured via options. */
+  isSharedDepsOffloadEnabled(): boolean {
+    return this.sharedDepsOffload;
+  }
+
+  /**
+   * Whether Python SDD offload was explicitly requested.
+   */
+  private isPythonSharedDepsOffloadOptInEnabled(): boolean {
+    return hasFunctionsBetaOptIn(
+      process.env,
+      PYTHON_SHARED_DEPS_OFFLOAD_FUNCTIONS_BETA
+    );
+  }
+
+  /** Whether to offload all public packages regardless of bundle size. */
+  private isForcePythonSharedDepsOffloadEnabled(): boolean {
+    return hasFunctionsBetaOptIn(
+      process.env,
+      FORCE_PYTHON_SHARED_DEPS_OFFLOAD_FUNCTIONS_BETA
+    );
+  }
+
+  /** Whether the bundle needs externalization (runtime install or shared deps). */
+  private needsExternalization(): boolean {
+    if (this.hasCustomCommand) return false;
+    if (this.isSharedDepsOffloadEnabled()) {
+      if (this.isForcePythonSharedDepsOffloadEnabled()) {
+        return this.uvLockPath !== null;
+      }
+      if (this.isPythonSharedDepsOffloadOptInEnabled()) {
+        return (
+          this.totalBundleSize > getLambdaSizeThresholdBytes() &&
+          this.uvLockPath !== null
+        );
+      }
+    }
+    if (
+      process.env.VERCEL_PYTHON_ON_HIVE === '1' ||
+      process.env.VERCEL_PYTHON_ON_HIVE === 'true'
+    ) {
+      return false;
+    }
+    return (
+      this.totalBundleSize > getLambdaSizeThresholdBytes() &&
+      this.uvLockPath !== null
+    );
   }
 
   shouldEnableRuntimeInstall(): boolean {
-    if (this.hasCustomCommand) {
-      return false;
-    }
-    const pythonOnHiveEnabled =
-      process.env.VERCEL_PYTHON_ON_HIVE === '1' ||
-      process.env.VERCEL_PYTHON_ON_HIVE === 'true';
-    if (pythonOnHiveEnabled) {
-      return false;
-    } else if (
-      this.totalBundleSize > LAMBDA_SIZE_THRESHOLD_BYTES &&
-      this.uvLockPath !== null
-    ) {
-      return true;
-    }
-    return false;
+    return this.needsExternalization() && !this.isSharedDepsOffloadEnabled();
   }
 
   /**
    * Analyze the bundle: mirror all vendor files, calculate total size,
-   * and determine whether runtime installation is needed.
-   * Must be called before generateBundle().
+   * and determine which mode to use (bundle, runtime-install, or shared deps).
+   * Must be called before generateBundle() or generateSharedDepsIndex().
    */
   async analyze(files: Files): Promise<DependencyAnalysis> {
     // Resolve site-packages dirs and scan distributions once.  Subsequent
@@ -217,17 +369,22 @@ export class PythonDependencyExternalizer {
     debug(`Total bundle size: ${totalBundleSizeMB} MB`);
 
     const runtimeInstallEnabled = this.shouldEnableRuntimeInstall();
+    const sharedDepsOffloadEnabled =
+      this.needsExternalization() && this.isSharedDepsOffloadEnabled();
 
     const pythonOnHiveEnabled =
       process.env.VERCEL_PYTHON_ON_HIVE === '1' ||
       process.env.VERCEL_PYTHON_ON_HIVE === 'true';
 
     if (
-      this.totalBundleSize > LAMBDA_SIZE_THRESHOLD_BYTES &&
+      this.totalBundleSize > getLambdaSizeThresholdBytes() &&
       this.hasCustomCommand &&
-      !pythonOnHiveEnabled
+      !pythonOnHiveEnabled &&
+      !sharedDepsOffloadEnabled
     ) {
-      const limitMB = (LAMBDA_SIZE_THRESHOLD_BYTES / (1024 * 1024)).toFixed(0);
+      const limitMB = (getLambdaSizeThresholdBytes() / (1024 * 1024)).toFixed(
+        0
+      );
       throw new NowBuildError({
         code: 'LAMBDA_SIZE_EXCEEDED',
         message: shouldShowFunctionsBetaHint()
@@ -267,42 +424,43 @@ export class PythonDependencyExternalizer {
 
     return {
       runtimeInstallEnabled,
+      sharedDepsOffloadEnabled,
       allVendorFiles: this.allVendorFiles,
       totalBundleSize: this.totalBundleSize,
     };
   }
 
   /**
-   * Generate the optimally-packed Lambda bundle.
-   * Mutates `files` in place: adds vendor files (private + knapsack-selected
-   * public), runtime config, and uv binary.
-   * Must be called after analyze().
+   * Shared knapsack packing: parse lock file, classify packages, check
+   * wheel compatibility, run knapsack, mirror bundled packages into vendor.
+   *
+   * Returns the set of packages that were NOT bundled (the "externalized"
+   * set).  Both generateBundle() and generateSharedDepsIndex() call this and then
+   * handle the externalized packages differently.
    */
-  async generateBundle(files: Files): Promise<void> {
+  private async packBundle(files: Files): Promise<{
+    bundledPublic: string[];
+    externalizedPublic: string[];
+    classification: { privatePackages: string[]; publicPackages: string[] };
+    forceBundledDueToWheels: string[];
+  }> {
     if (!this.analyzed) {
-      throw new Error(
-        'PythonDependencyExternalizer.analyze() must be called before generateBundle()'
-      );
+      throw new Error('analyze() must be called first');
     }
     if (!this.uvLockPath || !this.uvProjectDir) {
       throw new NowBuildError({
         code: 'RUNTIME_DEPENDENCY_INSTALLATION_FAILED',
         message:
-          'Runtime dependency installation requires a uv.lock file and project directory.',
+          'Dependency externalization requires a uv.lock file and project directory.',
       });
     }
 
     const totalBundleSizeMB = (this.totalBundleSize / (1024 * 1024)).toFixed(2);
 
-    console.log(
-      `Bundle size (${totalBundleSizeMB} MB) exceeds limit. ` +
-        `Enabling runtime dependency installation.`
-    );
-
     // Verify total deps won't exceed Lambda ephemeral storage (512 MB)
-    if (this.totalBundleSize > LAMBDA_EPHEMERAL_STORAGE_BYTES) {
+    if (this.totalBundleSize > getLambdaEphemeralStorageBytes()) {
       const ephemeralLimitMB = (
-        LAMBDA_EPHEMERAL_STORAGE_BYTES /
+        getLambdaEphemeralStorageBytes() /
         (1024 * 1024)
       ).toFixed(0);
       throw new NowBuildError({
@@ -359,19 +517,16 @@ export class PythonDependencyExternalizer {
       throw error;
     }
 
-    // Exclude the project name from runtime installation requirements.
+    // Exclude the project name from externalization requirements.
     const excludePackages: string[] = [];
     if (this.projectName) {
       excludePackages.push(this.projectName);
       debug(
-        `Excluding project package "${this.projectName}" from runtime installation`
+        `Excluding project package "${this.projectName}" from externalization`
       );
     }
 
-    const classification = classifyPackages({
-      lockFile,
-      excludePackages,
-    });
+    const classification = classifyPackages({ lockFile, excludePackages });
     debug(
       `Package classification: ${classification.privatePackages.length} private, ` +
         `${classification.publicPackages.length} public`
@@ -385,7 +540,6 @@ export class PythonDependencyExternalizer {
         lockFile,
         classification.publicPackages
       );
-
     if (forceBundledDueToWheels.length > 0) {
       console.log(
         `Force-bundling ${forceBundledDueToWheels.length} package(s) without compatible wheels: ` +
@@ -393,7 +547,7 @@ export class PythonDependencyExternalizer {
       );
     }
 
-    // Remove force-bundled packages from the public set
+    // Remove force-bundled packages from the public set.
     const forceBundledSet = new Set(
       forceBundledDueToWheels.map(normalizePackageName)
     );
@@ -448,14 +602,17 @@ export class PythonDependencyExternalizer {
     // Account for the uv binary that will be added to the bundle.
     // This must be subtracted from capacity before running the knapsack
     // so we don't over-pack and exceed the Lambda size limit.
+    // Shared dependency mode doesn't need the uv binary; runtime-install mode does.
     let runtimeToolingOverhead = 0;
-    try {
-      const uvBinaryPath = await this.resolveUvBinaryForBundling();
-      const uvStats = await fs.promises.stat(uvBinaryPath);
-      runtimeToolingOverhead = uvStats.size;
-    } catch {
-      // If we can't stat the binary, use a conservative estimate
-      runtimeToolingOverhead = 50 * 1024 * 1024; // 50 MB
+    if (!this.isSharedDepsOffloadEnabled()) {
+      try {
+        const uvBinaryPath = await this.resolveUvBinaryForBundling();
+        const uvStats = await fs.promises.stat(uvBinaryPath);
+        runtimeToolingOverhead = uvStats.size;
+      } catch {
+        // If we can't stat the binary, use a conservative estimate
+        runtimeToolingOverhead = 50 * 1024 * 1024; // 50 MB
+      }
     }
 
     // _runtime_config.json will always be written.  We don't know the exact
@@ -463,13 +620,12 @@ export class PythonDependencyExternalizer {
     // after the knapsack), so use a conservative estimate.
     runtimeToolingOverhead += 4 * 1024; // 4 KB
 
-    // Check if pyproject.toml and uv.lock will be bundled under _uv/
+    // Check if pyproject.toml and uv.lock will be bundled under _uv/.
     const projectDirRel = relative(this.workPath, this.uvProjectDir);
     const uvLockRel = relative(this.workPath, this.uvLockPath);
     const isOutsideWorkPath =
       projectDirRel.startsWith('..') || uvLockRel.startsWith('..');
-
-    if (isOutsideWorkPath) {
+    if (!this.isSharedDepsOffloadEnabled() && isOutsideWorkPath) {
       const pyprojectPath = join(this.uvProjectDir, 'pyproject.toml');
       const pyprojectStats = await fs.promises
         .stat(pyprojectPath)
@@ -484,10 +640,10 @@ export class PythonDependencyExternalizer {
     // Dynamically derive the packing target: start from the hard Lambda size
     // threshold and subtract everything that is already committed to the bundle
     // (user source code, private packages, always-bundled packages, the uv
-    // binary, and runtime config files). The remainder is the budget the
+    // binary, and runtime config files).  The remainder is the budget the
     // knapsack can fill with public packages.
     const remainingCapacity =
-      LAMBDA_SIZE_THRESHOLD_BYTES - fixedOverhead - runtimeToolingOverhead;
+      getLambdaSizeThresholdBytes() - fixedOverhead - runtimeToolingOverhead;
 
     debug(
       `Fixed overhead: ${(fixedOverhead / (1024 * 1024)).toFixed(2)} MB, ` +
@@ -495,31 +651,80 @@ export class PythonDependencyExternalizer {
         `remaining capacity for public packages: ${(remainingCapacity / (1024 * 1024)).toFixed(2)} MB`
     );
 
-    // Build size map for externalizable public packages and run the knapsack algorithm
-    const externalizableSet = new Set(
-      externalizablePublic.map(normalizePackageName)
-    );
-    const publicPackageSizes = new Map(
-      [...packageSizes].filter(([name]) =>
-        externalizableSet.has(normalizePackageName(name))
-      )
-    );
+    // Build size map for externalizable public packages and run the knapsack algorithm.
+    // When forced shared dependency offload is enabled, bypass the knapsack and
+    // externalize all public packages into shared deps.
+    let bundledPublic: string[];
+    let externalizedPublic: string[];
+    if (
+      this.isSharedDepsOffloadEnabled() &&
+      this.isForcePythonSharedDepsOffloadEnabled()
+    ) {
+      bundledPublic = [];
+      externalizedPublic = externalizablePublic;
+    } else {
+      const externalizableSet = new Set(
+        externalizablePublic.map(normalizePackageName)
+      );
+      const publicPackageSizes = new Map(
+        [...packageSizes].filter(([name]) =>
+          externalizableSet.has(normalizePackageName(name))
+        )
+      );
+      bundledPublic = lambdaKnapsack(publicPackageSizes, remainingCapacity);
+      const bundledPublicSet = new Set(bundledPublic.map(normalizePackageName));
+      externalizedPublic = externalizablePublic.filter(
+        name => !bundledPublicSet.has(normalizePackageName(name))
+      );
+    }
 
-    const bundledPublic = lambdaKnapsack(publicPackageSizes, remainingCapacity);
-
-    // Mirror the selected packages (always-bundled + knapsack-selected public)
+    // Mirror the selected packages (always-bundled + knapsack-selected public).
     const allBundledPackages = [...alwaysBundled, ...bundledPublic];
     const selectedVendorFiles = await this.mirrorPackagesIntoVendor({
       vendorDirName: this.vendorDir,
       includePackages: allBundledPackages,
     });
-
     for (const [p, f] of Object.entries(selectedVendorFiles)) {
       files[p] = f;
     }
 
+    console.log(
+      `Bundled ${allBundledPackages.length} packages, ` +
+        `externalized ${externalizedPublic.length} packages`
+    );
+
+    return {
+      bundledPublic,
+      externalizedPublic,
+      classification,
+      forceBundledDueToWheels,
+    };
+  }
+
+  /**
+   * Generate the optimally-packed Lambda bundle with runtime uv install
+   * for externalized packages.
+   * Mutates `files` in place.
+   */
+  async generateBundle(files: Files): Promise<void> {
+    if (!this.uvLockPath || !this.uvProjectDir) {
+      throw new NowBuildError({
+        code: 'RUNTIME_DEPENDENCY_INSTALLATION_FAILED',
+        message:
+          'Runtime dependency installation requires a uv.lock file and project directory.',
+      });
+    }
+
+    console.log(
+      `Bundle size (${(this.totalBundleSize / (1024 * 1024)).toFixed(2)} MB) exceeds limit. ` +
+        `Enabling runtime dependency installation.`
+    );
+
+    const { bundledPublic, classification, forceBundledDueToWheels } =
+      await this.packBundle(files);
+
     // The bundledPackages list for runtime config includes private packages
-    // and any public packages we selected for bundling. These will be
+    // and any public packages we selected for bundling.  These will be
     // passed as --no-install-package to uv sync at runtime.
     // alwaysBundlePackages appear here (in addition to alwaysBundled above)
     // so they are written to the runtime config and passed as
@@ -532,10 +737,15 @@ export class PythonDependencyExternalizer {
     ];
 
     // Write a runtime config marker so the bootstrap knows to run
-    // `uv sync --inexact --frozen` at cold start. The pyproject.toml
+    // `uv sync --inexact --frozen` at cold start.  The pyproject.toml
     // and uv.lock are already part of the Lambda zip (globbed from
-    // workPath). For workspace layouts where the project root lives
+    // workPath).  For workspace layouts where the project root lives
     // above workPath we bundle them explicitly under _uv/.
+    const projectDirRel = relative(this.workPath, this.uvProjectDir);
+    const uvLockRel = relative(this.workPath, this.uvLockPath);
+    const isOutsideWorkPath =
+      projectDirRel.startsWith('..') || uvLockRel.startsWith('..');
+
     if (isOutsideWorkPath) {
       // Bundle pyproject.toml and uv.lock into _uv/ so they are
       // available inside the Lambda even for workspace monorepos.
@@ -581,15 +791,17 @@ export class PythonDependencyExternalizer {
       });
     }
 
-    // Final size verification – note that force-bundled wheel-incompatible packages
+    // Final size verification -- note that force-bundled wheel-incompatible packages
     // are included in the bundle, which can push total size over the threshold.
     // Allow 100 KB of tolerance for rounding and estimation discrepancies in the
     // knapsack capacity budget.  The actual AWS Lambda limit is 250 MB and we
     // target 245 MB, so a slight overshoot here is safe.
     const finalBundleSize = await calculateBundleSize(files);
-    if (finalBundleSize > LAMBDA_SIZE_THRESHOLD_BYTES + 100 * 1024) {
+    if (finalBundleSize > getLambdaSizeThresholdBytes() + 100 * 1024) {
       const finalSizeMB = (finalBundleSize / (1024 * 1024)).toFixed(2);
-      const limitMB = (LAMBDA_SIZE_THRESHOLD_BYTES / (1024 * 1024)).toFixed(0);
+      const limitMB = (getLambdaSizeThresholdBytes() / (1024 * 1024)).toFixed(
+        0
+      );
       throw new NowBuildError({
         code: 'LAMBDA_SIZE_EXCEEDED',
         message: shouldShowFunctionsBetaHint()
@@ -606,6 +818,123 @@ export class PythonDependencyExternalizer {
         action: 'Learn More',
       });
     }
+  }
+
+  /**
+   * Generate the `.shared_deps_index.json` for shared dependency offloading.
+   *
+   * Uses the same knapsack packing as generateBundle() -- packages that
+   * fit in the Lambda zip are bundled locally, the rest are indexed for
+   * the Shared Dependency Drive mounted by the runtime host.
+   *
+   * Mutates `files` in place.
+   */
+  async generateSharedDepsIndex(
+    files: Files
+  ): Promise<{ packageCount: number }> {
+    console.log(
+      `Bundle size (${(this.totalBundleSize / (1024 * 1024)).toFixed(2)} MB) exceeds limit. ` +
+        `Enabling shared dependency offloading.`
+    );
+
+    const { externalizedPublic } = await this.packBundle(files);
+
+    // Build the shared dependency index only for the externalized packages (the ones
+    // that didn't fit in the knapsack).  Bundled packages are already
+    // in _vendor and don't need a shared dependency mount.
+    if (this.pythonMajor === undefined || this.pythonMinor === undefined) {
+      throw new PythonAnalysisError({
+        code: 'PYTHON_SHARED_DEPS_PYTHON_VERSION_REQUIRED',
+        message: 'Python version is required for shared dependency offload',
+      });
+    }
+
+    const platform = detectTargetPlatform();
+    let lockFile: ReturnType<typeof parseUvLock>;
+    if (!this.uvLockPath) {
+      throw new PythonAnalysisError({
+        code: 'PYTHON_SHARED_DEPS_LOCK_REQUIRED',
+        message: 'uv.lock path is required for shared dependency offload',
+      });
+    }
+    try {
+      const lockContent = await readFile(this.uvLockPath, 'utf8');
+      lockFile = parseUvLock(lockContent, this.uvLockPath);
+    } catch (err) {
+      throw new PythonAnalysisError({
+        code: 'PYTHON_SHARED_DEPS_LOCK_PARSE_FAILED',
+        message: `Failed to parse uv.lock for shared dependency index generation: ${
+          err instanceof Error ? err.message : String(err)
+        }`,
+      });
+    }
+
+    const externalizedSet = new Set(
+      externalizedPublic.map(normalizePackageName)
+    );
+    const prefixByPackage = new Map<string, string>();
+
+    for (const pkg of lockFile.packages) {
+      const normalized = normalizePackageName(pkg.name);
+      if (!externalizedSet.has(normalized)) continue;
+
+      const prefix = await getIndexPrefixForPackage(
+        pkg,
+        this.pythonMajor,
+        this.pythonMinor,
+        platform
+      );
+      if (prefix) {
+        prefixByPackage.set(normalized, prefix);
+      }
+    }
+
+    const sitePackageDirs = await getVenvSitePackagesDirs(this.venvPath);
+    const indexFiles: Record<string, number> = {};
+    const packages: Array<{ pkg: string; prefix: string }> = [];
+
+    for (const dir of sitePackageDirs) {
+      if (!fs.existsSync(dir)) continue;
+
+      const resolvedDir = resolve(dir);
+      const dirPrefix = resolvedDir + sep;
+      const distributions = await scanDistributions(dir);
+
+      for (const [name, dist] of distributions) {
+        const normalizedName = normalizePackageName(name);
+        if (!externalizedSet.has(normalizedName)) continue;
+
+        const prefix = prefixByPackage.get(normalizedName) ?? 'none-any';
+
+        packages.push({ pkg: `${name}==${dist.version}`, prefix });
+
+        for (const { path: rawPath } of dist.files) {
+          const filePath = rawPath.replaceAll('/', '/');
+          if (!resolve(resolvedDir, filePath).startsWith(dirPrefix)) continue;
+          if (filePath.endsWith('.pyc') || filePath.includes('__pycache__')) {
+            continue;
+          }
+          const sharedDepsKey = `${prefix}/${name}/${dist.version}/lib/${filePath}`;
+          try {
+            const stats = await fs.promises.stat(join(dir, rawPath));
+            indexFiles[sharedDepsKey] = stats.size;
+          } catch {
+            // File listed in RECORD but missing on disk; skip
+          }
+        }
+      }
+    }
+
+    files['.shared_deps_index.json'] = new FileBlob({
+      data: JSON.stringify({ packages, files: indexFiles }),
+    });
+
+    console.log(
+      `Shared dependency offloading: ${packages.length} packages, ` +
+        `${Object.keys(indexFiles).length} files indexed`
+    );
+
+    return { packageCount: packages.length };
   }
 
   /**

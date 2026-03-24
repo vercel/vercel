@@ -255,6 +255,8 @@ interface EnsureUvProjectParams {
    * it instead of re-resolving all packages from PyPI.
    */
   cachedLockPath?: string;
+  /** Extra package-manager environment, such as a build-local PyPI index. */
+  packageManagerEnv?: NodeJS.ProcessEnv;
 }
 
 export async function ensureUvProject({
@@ -266,6 +268,7 @@ export async function ensureUvProject({
   uv,
   requireBinaryWheels = false,
   cachedLockPath,
+  packageManagerEnv,
 }: EnsureUvProjectParams): Promise<UvProjectInfo> {
   const { manifestType } = detectInstallSource(pythonPackage, rootDir);
   const manifest = pythonPackage.manifest;
@@ -349,6 +352,7 @@ export async function ensureUvProject({
         projectDir,
         venvPath,
         ...(requireBinaryWheels ? { noBuild: true, upgrade: true } : {}),
+        env: packageManagerEnv,
       });
       lockPath = join(projectDir, 'uv.lock');
     }
@@ -381,6 +385,7 @@ export async function ensureUvProject({
       projectDir,
       venvPath,
       ...(requireBinaryWheels ? { noBuild: true, upgrade: true } : {}),
+      env: packageManagerEnv,
     });
   }
 
