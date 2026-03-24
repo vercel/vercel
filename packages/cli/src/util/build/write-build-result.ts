@@ -408,7 +408,7 @@ async function writeBuildResultV3(args: {
       });
     }
   }
-  const src = build.src === '<detect>' ? 'index' : build.src;
+  const src = build.src;
   if (typeof src !== 'string') {
     throw new Error(`Expected "build.src" to be a string`);
   }

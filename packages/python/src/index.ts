@@ -726,25 +726,28 @@ from vercel_runtime.vc_init import vc_handler
     }
   }
 
-  if (djangoStatic?.cdnOutputDir) {
-    const lambdaPath = entrypoint.replace(/\.py$/, '');
-    const staticFiles = await glob('**', { cwd: djangoStatic.cdnOutputDir });
-    return {
-      resultVersion: 2,
-      result: {
-        output: {
-          [lambdaPath]: output,
-          ...staticFiles,
-        },
-        routes: [
-          { handle: 'filesystem' },
-          { src: '/(.*)', dest: `/${lambdaPath}` },
-        ],
-      },
-    };
+  if (!isPythonFramework(framework)) {
+    return { resultVersion: 3, result: { output } };
   }
 
-  return { resultVersion: 3, result: { output } };
+  const lambdaPath = entrypoint.replace(/\.py$/, '');
+  const staticFiles = djangoStatic?.cdnOutputDir
+    ? await glob('**', { cwd: djangoStatic.cdnOutputDir })
+    : {};
+
+  return {
+    resultVersion: 2,
+    result: {
+      output: {
+        [lambdaPath]: output,
+        ...staticFiles,
+      },
+      routes: [
+        { handle: 'filesystem' },
+        { src: '/(.*)', dest: `/${lambdaPath}` },
+      ],
+    },
+  };
 };
 
 export { startDevServer };

@@ -63,6 +63,13 @@ function getBuildOutputV2(result: Awaited<ReturnType<typeof build>>) {
   return (result as any).result as BuildResultV2;
 }
 
+function getBuildOutputV2Lambda(result: Awaited<ReturnType<typeof build>>) {
+  const v2 = getBuildOutputV2(result) as any;
+  const lambdas = Object.values(v2.output).filter((o: any) => 'handler' in o);
+  expect(lambdas).toHaveLength(1);
+  return lambdas[0] as BuildResultV3['output'];
+}
+
 function getBuildOutputV3(result: Awaited<ReturnType<typeof build>>) {
   expect(result.resultVersion).toBe(3);
   return (result as any).result.output as BuildResultV3['output'];
@@ -998,7 +1005,8 @@ describe('uv workspace lockfile resolution (workspace root above workPath)', () 
       repoRootPath: repoRoot,
     });
 
-    const handler = getBuildOutputV3(result).files?.['vc__handler__python.py'];
+    const handler =
+      getBuildOutputV2Lambda(result).files?.['vc__handler__python.py'];
     expect(handler).toBeDefined();
 
     fs.removeSync(repoRoot);
@@ -1063,7 +1071,8 @@ describe('fastapi entrypoint discovery - positive cases', () => {
       repoRootPath: workPath,
     });
 
-    const handler = getBuildOutputV3(result).files?.['vc__handler__python.py'];
+    const handler =
+      getBuildOutputV2Lambda(result).files?.['vc__handler__python.py'];
     if (!handler || !('data' in handler)) {
       throw new Error('handler bootstrap not found');
     }
@@ -1098,7 +1107,8 @@ describe('fastapi entrypoint discovery - positive cases', () => {
       repoRootPath: workPath,
     });
 
-    const handler = getBuildOutputV3(result).files?.['vc__handler__python.py'];
+    const handler =
+      getBuildOutputV2Lambda(result).files?.['vc__handler__python.py'];
     if (!handler || !('data' in handler)) {
       throw new Error('handler bootstrap not found');
     }
@@ -1134,7 +1144,8 @@ describe('fastapi entrypoint discovery - positive cases', () => {
       repoRootPath: workPath,
     });
 
-    const handler = getBuildOutputV3(result).files?.['vc__handler__python.py'];
+    const handler =
+      getBuildOutputV2Lambda(result).files?.['vc__handler__python.py'];
     if (!handler || !('data' in handler)) {
       throw new Error('handler bootstrap not found');
     }
@@ -1178,7 +1189,8 @@ describe('Django entrypoint discovery', () => {
       repoRootPath: workPath,
     });
 
-    const handler = getBuildOutputV3(result).files?.['vc__handler__python.py'];
+    const handler =
+      getBuildOutputV2Lambda(result).files?.['vc__handler__python.py'];
     if (!handler || !('data' in handler)) {
       throw new Error('handler bootstrap not found');
     }
@@ -1214,7 +1226,8 @@ describe('Django entrypoint discovery', () => {
       repoRootPath: workPath,
     });
 
-    const handler = getBuildOutputV3(result).files?.['vc__handler__python.py'];
+    const handler =
+      getBuildOutputV2Lambda(result).files?.['vc__handler__python.py'];
     if (!handler || !('data' in handler)) {
       throw new Error('handler bootstrap not found');
     }
@@ -1257,7 +1270,8 @@ describe('Django entrypoint discovery', () => {
       repoRootPath: workPath,
     });
 
-    const handler = getBuildOutputV3(result).files?.['vc__handler__python.py'];
+    const handler =
+      getBuildOutputV2Lambda(result).files?.['vc__handler__python.py'];
     if (!handler || !('data' in handler)) {
       throw new Error('handler bootstrap not found');
     }
@@ -1304,7 +1318,8 @@ describe('Django entrypoint discovery', () => {
       repoRootPath: workPath,
     });
 
-    const handler = getBuildOutputV3(result).files?.['vc__handler__python.py'];
+    const handler =
+      getBuildOutputV2Lambda(result).files?.['vc__handler__python.py'];
     if (!handler || !('data' in handler)) {
       throw new Error('handler bootstrap not found');
     }
@@ -1347,7 +1362,8 @@ describe('Django entrypoint discovery', () => {
       repoRootPath: workPath,
     });
 
-    const handler = getBuildOutputV3(result).files?.['vc__handler__python.py'];
+    const handler =
+      getBuildOutputV2Lambda(result).files?.['vc__handler__python.py'];
     if (!handler || !('data' in handler)) {
       throw new Error('handler bootstrap not found');
     }
@@ -1468,7 +1484,8 @@ describe('pyproject.toml entrypoint detection', () => {
       repoRootPath: workPath,
     });
 
-    const handler = getBuildOutputV3(result).files?.['vc__handler__python.py'];
+    const handler =
+      getBuildOutputV2Lambda(result).files?.['vc__handler__python.py'];
     if (!handler || !('data' in handler)) {
       throw new Error('handler bootstrap not found');
     }
@@ -1514,7 +1531,8 @@ describe('pyproject.toml entrypoint detection', () => {
       repoRootPath: workPath,
     });
 
-    const handler = getBuildOutputV3(result).files?.['vc__handler__python.py'];
+    const handler =
+      getBuildOutputV2Lambda(result).files?.['vc__handler__python.py'];
     if (!handler || !('data' in handler)) {
       throw new Error('handler bootstrap not found');
     }
@@ -1557,7 +1575,8 @@ describe('pyproject.toml entrypoint detection', () => {
       repoRootPath: workPath,
     });
 
-    const handler = getBuildOutputV3(result).files?.['vc__handler__python.py'];
+    const handler =
+      getBuildOutputV2Lambda(result).files?.['vc__handler__python.py'];
     if (!handler || !('data' in handler)) {
       throw new Error('handler bootstrap not found');
     }
