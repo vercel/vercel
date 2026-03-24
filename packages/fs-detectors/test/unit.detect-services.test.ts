@@ -7,6 +7,7 @@ import {
   type ResolvedServicesResult,
 } from '../src';
 import type { Route } from '@vercel/routing-utils';
+import { resolveBuildableServices } from '../src/services/detect-services';
 import VirtualFilesystem from './virtual-file-system';
 
 /**
@@ -57,7 +58,7 @@ async function detectServices(
 
 describe('detectServices', () => {
   describe('with no vercel.json', () => {
-    it('should return auto-detection error when no service found', async () => {
+    it('should return an auto-detection warning when no service is found', async () => {
       const fs = new VirtualFilesystem({});
       const result = await rawDetectServices({ fs });
       const inferred = expectInferredResult(result);
@@ -105,10 +106,55 @@ describe('detectServices', () => {
         },
       });
     });
+
+    it('should resolve inferred Ruby backend services without changing suggested config', async () => {
+      const fs = new VirtualFilesystem({
+        'frontend/package.json': JSON.stringify({
+          dependencies: {
+            next: '15.0.0',
+          },
+        }),
+        'backend/Gemfile': 'source "https://rubygems.org"',
+        'backend/config.ru': 'run Sinatra::Application',
+      });
+      const detection = await rawDetectServices({ fs });
+      const inferred = expectInferredResult(detection);
+
+      expect(inferred.config).toMatchObject({
+        frontend: { framework: 'nextjs', routePrefix: '/' },
+        backend: {
+          entrypoint: 'backend',
+          routePrefix: '/_/backend',
+        },
+      });
+
+      const result = await resolveBuildableServices({
+        detection,
+        fs,
+        useInferred: true,
+      });
+
+      expect(result).not.toBeNull();
+      expect(result?.errors).toEqual([]);
+      expect(result?.warnings).toEqual([]);
+      expect(result?.services).toHaveLength(2);
+
+      const backend = result?.services.find(s => s.name === 'backend');
+      expect(backend).toMatchObject({
+        name: 'backend',
+        framework: 'ruby',
+        runtime: 'ruby',
+        workspace: 'backend',
+        entrypoint: undefined,
+        routePrefix: '/_/backend',
+      });
+      expect(backend?.builder.use).toBe('@vercel/ruby');
+      expect(backend?.builder.src).toBe('backend/config.ru');
+    });
   });
 
   describe('with vercel.json without experimentalServices', () => {
-    it('should return auto-detection error when no service found', async () => {
+    it('should return an auto-detection warning when no service is found', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': JSON.stringify({
           buildCommand: 'npm run build',

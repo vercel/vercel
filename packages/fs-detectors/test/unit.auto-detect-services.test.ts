@@ -118,7 +118,7 @@ describe('autoDetectServices', () => {
       });
     });
 
-    it('should error when frontend in frontend/ has no backend', async () => {
+    it('should warn when frontend in frontend/ has no backend', async () => {
       const fs = new VirtualFilesystem({
         'frontend/package.json': JSON.stringify({
           dependencies: {
@@ -135,7 +135,7 @@ describe('autoDetectServices', () => {
       expect(result.warnings[0].message).toContain('frontend/');
     });
 
-    it('should error when multiple frameworks detected in frontend/', async () => {
+    it('should warn when multiple frameworks are detected in frontend/', async () => {
       const fs = new VirtualFilesystem({
         'frontend/package.json': JSON.stringify({
           dependencies: {
@@ -242,7 +242,7 @@ describe('autoDetectServices', () => {
       expect(result.services!.shared).toBeUndefined();
     });
 
-    it('should error when multiple frameworks detected in a service', async () => {
+    it('should warn when multiple frameworks are detected in a service', async () => {
       const fs = new VirtualFilesystem({
         'frontend/package.json': JSON.stringify({
           dependencies: {
@@ -305,7 +305,7 @@ describe('autoDetectServices', () => {
       });
     });
 
-    it('should error when multiple frameworks detected in apps/web/', async () => {
+    it('should warn when multiple frameworks are detected in apps/web/', async () => {
       const fs = new VirtualFilesystem({
         'apps/web/package.json': JSON.stringify({
           dependencies: {
@@ -325,7 +325,7 @@ describe('autoDetectServices', () => {
   });
 
   describe('error cases', () => {
-    it('should error when multiple frameworks detected at root', async () => {
+    it('should warn when multiple frameworks are detected at root', async () => {
       const fs = new VirtualFilesystem({
         'package.json': JSON.stringify({
           dependencies: {
@@ -343,7 +343,7 @@ describe('autoDetectServices', () => {
       expect(result.warnings[0].message).toContain('Multiple frameworks');
     });
 
-    it('should error when multiple frameworks detected in backend', async () => {
+    it('should warn when multiple frameworks are detected in backend', async () => {
       const fs = new VirtualFilesystem({
         'package.json': JSON.stringify({
           dependencies: {
@@ -361,7 +361,7 @@ describe('autoDetectServices', () => {
       expect(result.warnings[0].message).toContain('backend');
     });
 
-    it('should error when service name conflicts between backend/ and services/backend/', async () => {
+    it('should warn when service names conflict between backend/ and services/backend/', async () => {
       const fs = new VirtualFilesystem({
         'package.json': JSON.stringify({
           dependencies: {

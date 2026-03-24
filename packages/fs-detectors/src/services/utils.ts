@@ -152,6 +152,20 @@ export function filterFrameworksByRuntime<T extends { slug?: string | null }>(
   );
 }
 
+export function getServiceDetectionFrameworks<
+  T extends {
+    slug?: string | null;
+    experimental?: boolean;
+    runtimeFramework?: boolean;
+  },
+>(frameworks: readonly T[], runtime?: ServiceRuntime): T[] {
+  // Service detection should still consider runtime frameworks like Python,
+  // Ruby, and Go even when they are marked experimental in the shared list.
+  return filterFrameworksByRuntime(frameworks, runtime).filter(
+    framework => !framework.experimental || framework.runtimeFramework
+  );
+}
+
 /**
  * Infer runtime from available service configuration.
  *

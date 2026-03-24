@@ -3,6 +3,7 @@ import { detectFrameworks } from '../detect-framework';
 import { frameworkList } from '@vercel/frameworks';
 import type { DetectorFilesystem } from '../detectors/filesystem';
 import type { ExperimentalServices, ServiceDetectionWarning } from './types';
+import { getServiceDetectionFrameworks } from './utils';
 
 export interface AutoDetectOptions {
   fs: DetectorFilesystem;
@@ -19,13 +20,7 @@ const BACKEND_DIR = 'backend';
 const SERVICES_DIR = 'services';
 
 const FRONTEND_LOCATIONS = [FRONTEND_DIR, APPS_WEB_DIR];
-// Runtime frameworks, e.g. Python, Node, Ruby, etc. are currently marked experimental,
-// but service auto-detection should still consider them without relying on
-// the experimental frameworks env var.
-const DETECTION_FRAMEWORKS = frameworkList.filter(
-  (framework: Framework) =>
-    !framework.experimental || framework.runtimeFramework
-);
+const DETECTION_FRAMEWORKS = getServiceDetectionFrameworks(frameworkList);
 
 /**
  * Auto-detect services when experimentalServices is not configured.
