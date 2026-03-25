@@ -33,4 +33,74 @@ export class FirewallTelemetryClient
       value: actual,
     });
   }
+
+  trackCliSubcommandSystemBypass(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'system-bypass',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandSystemBypassList(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'system-bypass:list',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandSystemBypassAdd(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'system-bypass:add',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandSystemBypassRemove(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'system-bypass:remove',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandAttackMode(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'attack-mode',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandAttackModeOn(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'attack-mode:on',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandAttackModeOff(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'attack-mode:off',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandSystemMitigations(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'system-mitigations',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandSystemMitigationsPause(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'system-mitigations:pause',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandSystemMitigationsResume(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'system-mitigations:resume',
+      value: actual,
+    });
+  }
 }

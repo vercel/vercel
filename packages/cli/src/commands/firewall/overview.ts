@@ -10,8 +10,19 @@ import {
 } from './shared';
 import listFirewallConfigs from '../../util/firewall/list-firewall-configs';
 import getBypass from '../../util/firewall/get-bypass';
-import { formatStatusOutput } from '../../util/firewall/format';
+import {
+  formatStatusOutput,
+  type AttackModeStatus,
+} from '../../util/firewall/format';
 import { outputAgentError } from '../../util/agent-output';
+
+interface ProjectWithSecurity {
+  security?: {
+    attackModeEnabled?: boolean;
+    attackModeActiveUntil?: number | null;
+    attackModeUpdatedAt?: number;
+  };
+}
 
 export default async function overview(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, overviewSubcommand, client);
@@ -33,17 +44,28 @@ export default async function overview(client: Client, argv: string[]) {
 
     const { active, draft } = configList;
 
+    // Extract attack mode status from the project object
+    const projectSecurity = (project as unknown as ProjectWithSecurity)
+      .security;
+    const attackMode: AttackModeStatus = {
+      enabled: projectSecurity?.attackModeEnabled ?? false,
+      activeUntil: projectSecurity?.attackModeActiveUntil,
+    };
+
     if (parsed.flags['--json']) {
       outputJson(client, {
         active,
         draft,
         bypass: bypassList.result,
+        attackMode,
       });
       return 0;
     }
 
     output.print('\n');
-    output.print(formatStatusOutput(active, draft, bypassList.result));
+    output.print(
+      formatStatusOutput(active, draft, bypassList.result, attackMode)
+    );
     output.print('\n\n');
 
     return 0;
