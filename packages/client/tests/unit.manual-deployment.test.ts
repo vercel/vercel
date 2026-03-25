@@ -1,3 +1,4 @@
+import { join } from 'path';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import type { Deployment } from '../src/types';
 
@@ -361,19 +362,21 @@ describe('manual deployment', () => {
     });
 
     it('should send provision.json separately when using archive', async () => {
+      const testPath = '/test/path';
+      const outputDir = join(testPath, '.vercel', 'output');
+      const indexPath = join(outputDir, 'index.html');
+      const provisionPath = join(outputDir, 'provision.json');
+
       mockPathExists.mockResolvedValueOnce(true);
       mockBuildFileTree.mockResolvedValueOnce({
-        fileList: [
-          '/test/path/.vercel/output/index.html',
-          '/test/path/.vercel/output/provision.json',
-        ],
+        fileList: [indexPath, provisionPath],
       });
 
       const mockArchiveMap = new Map([
         [
           'tgz123',
           {
-            names: ['/test/path/.vercel/source.tgz.part1'],
+            names: [join(testPath, '.vercel/source.tgz.part1')],
             data: Buffer.from('archive'),
             mode: 0o666,
           },
@@ -386,7 +389,7 @@ describe('manual deployment', () => {
         [
           'prov456',
           {
-            names: ['/test/path/.vercel/output/provision.json'],
+            names: [provisionPath],
             data: provisionData,
             mode: 0o644,
           },
@@ -406,7 +409,7 @@ describe('manual deployment', () => {
 
       const iterator = continueDeployment({
         deploymentId: 'dpl_123',
-        path: '/test/path',
+        path: testPath,
         token: 'test-token',
         archive: 'tgz',
       });
@@ -418,19 +421,14 @@ describe('manual deployment', () => {
 
       // createTgzFiles should be called with provision.json in the exclude list
       expect(mockCreateTgzFiles).toHaveBeenCalledWith(
-        '/test/path',
-        [
-          '/test/path/.vercel/output/index.html',
-          '/test/path/.vercel/output/provision.json',
-        ],
+        testPath,
+        [indexPath, provisionPath],
         expect.any(Function),
-        ['/test/path/.vercel/output/provision.json']
+        [provisionPath]
       );
 
       // hashes should be called for the excluded provision.json
-      expect(mockHashes).toHaveBeenCalledWith([
-        '/test/path/.vercel/output/provision.json',
-      ]);
+      expect(mockHashes).toHaveBeenCalledWith([provisionPath]);
 
       // The request body should contain both the archive and provision.json
       const body = JSON.parse(mockFetch.mock.calls[0][2].body as string);
