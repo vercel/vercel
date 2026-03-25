@@ -428,20 +428,39 @@ def _setup_apps() -> None:
 
 
 def _wrap_django_static(app: WSGIApplication) -> WSGIApplication:
-    # If this is a django app, wrap it with StaticFilesHandler to serve static
-    # files. This is necessary because the dev server will not run the full
-    # build process (including collectstatic), so static files may not
-    # be available depending on the user's configuration.
+    # Wrap the Django WSGI app with StaticFilesHandler so that requests to
+    # STATIC_URL are served from source directories via Django's staticfiles
+    # finders, without needing collectstatic to have been run.
     #
-    # Special cases:
-    # - If whitenoise is used, this will override it but that's ok because we
-    #   don't need it in the dev server.
-    # - If django-storages is used, this will override it but that's ok because
-    #   django-storages handles its own upload to some other CDN.
+    # If a manifest-based storage backend is configured, {% static %} tags
+    # produce hashed URLs that finders cannot serve. Override the backend with
+    # plain StaticFilesStorage so that {% static %} produces unhashed URLs that
+    # finders can resolve from source directories.
     try:
+        from django import (  # noqa: PLC0415  # pyright: ignore[reportMissingImports]
+            VERSION as DJANGO_VERSION,  # pyright: ignore[reportUnknownVariableType]
+        )
+        from django.conf import (  # noqa: PLC0415  # pyright: ignore[reportMissingImports]
+            settings as django_settings,  # pyright: ignore[reportUnknownVariableType, reportMissingTypeStubs]
+        )
         from django.contrib.staticfiles.handlers import (  # noqa: PLC0415  # pyright: ignore[reportMissingImports, reportMissingTypeStubs]
             StaticFilesHandler,  # pyright: ignore[reportUnknownVariableType]
         )
+
+        storages = getattr(django_settings, "STORAGES", {})  # pyright: ignore[reportUnknownArgumentType]
+        staticfiles_backend = storages.get("staticfiles", {}).get(
+            "BACKEND", ""
+        ) or getattr(django_settings, "STATICFILES_STORAGE", "")  # pyright: ignore[reportUnknownArgumentType]
+        if (
+            "Manifest" in staticfiles_backend
+            or "Compressed" in staticfiles_backend
+        ):
+            plain = "django.contrib.staticfiles.storage.StaticFilesStorage"
+            if DJANGO_VERSION >= (5, 0):
+                storages = {**storages, "staticfiles": {"BACKEND": plain}}
+                django_settings.STORAGES = storages  # pyright: ignore[reportAttributeAccessIssue]
+            else:
+                django_settings.STATICFILES_STORAGE = plain  # pyright: ignore[reportAttributeAccessIssue]
 
         return cast("WSGIApplication", StaticFilesHandler(app))
     except ImportError:
