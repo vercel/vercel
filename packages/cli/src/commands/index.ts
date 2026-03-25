@@ -16,6 +16,7 @@ import { devCommand } from './dev/command';
 import { dnsCommand } from './dns/command';
 import { domainsCommand } from './domains/command';
 import { envCommand } from './env/command';
+import { firewallCommand } from './firewall/command';
 import { flagsCommand } from './flags/command';
 import { gitCommand } from './git/command';
 import { guidanceCommand } from './guidance/command';
@@ -75,6 +76,7 @@ const commandsStructs = [
   dnsCommand,
   domainsCommand,
   envCommand,
+  firewallCommand,
   flagsCommand,
   gitCommand,
   httpstatCommand,

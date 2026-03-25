@@ -835,6 +835,10 @@ const main = async () => {
           telemetry.trackCliCommandDomains(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).domains;
           break;
+        case 'firewall':
+          telemetry.trackCliCommandFirewall(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).firewall;
+          break;
         case 'flags':
           telemetry.trackCliCommandFlags(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).flags;
