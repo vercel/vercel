@@ -24,7 +24,8 @@ export default async function on(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(
     argv,
     attackModeOnSubcommand,
-    client
+    client,
+    'attack-mode on'
   );
   if (typeof parsed === 'number') return parsed;
 
@@ -79,7 +80,10 @@ export default async function on(client: Client, argv: string[]) {
         message: msg,
         next: [
           {
-            command: withGlobalFlags(client, 'firewall attack-mode on --yes'),
+            command: withGlobalFlags(
+              client,
+              `firewall attack-mode on --duration ${duration} --yes`
+            ),
           },
         ],
       });

@@ -16,7 +16,8 @@ export default async function off(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(
     argv,
     attackModeOffSubcommand,
-    client
+    client,
+    'attack-mode off'
   );
   if (typeof parsed === 'number') return parsed;
 

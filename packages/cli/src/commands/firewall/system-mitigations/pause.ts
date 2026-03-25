@@ -16,7 +16,8 @@ export default async function pause(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(
     argv,
     systemMitigationsPauseSubcommand,
-    client
+    client,
+    'system-mitigations pause'
   );
   if (typeof parsed === 'number') return parsed;
 

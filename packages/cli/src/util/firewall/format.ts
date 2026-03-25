@@ -12,7 +12,7 @@ export interface AttackModeStatus {
   activeUntil?: number | null;
 }
 
-function isAllSourcesBypass(ip: string): boolean {
+export function isAllSourcesBypass(ip: string): boolean {
   return ip === '0.0.0.0/0' || ip === '::/0';
 }
 
@@ -120,16 +120,22 @@ export function formatStatusOutput(
 export function formatBypassTable(bypasses: BypassRule[]): string {
   const lines: string[] = [];
 
+  const domains = bypasses.map(b =>
+    b.Domain === '*' ? 'All domains' : b.Domain
+  );
+  const ipWidth = Math.max('IP/CIDR'.length, ...bypasses.map(b => b.Ip.length));
+  const domainWidth = Math.max('Domain'.length, ...domains.map(d => d.length));
+  const gap = 3;
+
   // Header
   lines.push(
-    `  ${chalk.dim('IP/CIDR'.padEnd(20))}${chalk.dim('Domain'.padEnd(25))}${chalk.dim('Note')}`
+    `  ${chalk.dim('IP/CIDR'.padEnd(ipWidth + gap))}${chalk.dim('Domain'.padEnd(domainWidth + gap))}${chalk.dim('Note')}`
   );
 
-  for (const bypass of bypasses) {
-    const ip = bypass.Ip.padEnd(20);
-    const domain = (
-      bypass.Domain === '*' ? 'All domains' : bypass.Domain
-    ).padEnd(25);
+  for (let i = 0; i < bypasses.length; i++) {
+    const bypass = bypasses[i];
+    const ip = bypass.Ip.padEnd(ipWidth + gap);
+    const domain = domains[i].padEnd(domainWidth + gap);
     const note = bypass.Note || '';
     lines.push(`  ${ip}${domain}${note}`);
   }

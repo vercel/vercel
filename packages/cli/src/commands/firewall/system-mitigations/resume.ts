@@ -16,7 +16,8 @@ export default async function resume(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(
     argv,
     systemMitigationsResumeSubcommand,
-    client
+    client,
+    'system-mitigations resume'
   );
   if (typeof parsed === 'number') return parsed;
 

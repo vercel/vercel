@@ -21,7 +21,8 @@ export default async function remove(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(
     argv,
     systemBypassRemoveSubcommand,
-    client
+    client,
+    'system-bypass remove'
   );
   if (typeof parsed === 'number') return parsed;
 
@@ -105,7 +106,7 @@ export default async function remove(client: Client, argv: string[]) {
           {
             command: withGlobalFlags(
               client,
-              `firewall system-bypass remove ${ip} --yes`
+              `firewall system-bypass remove ${ip}${domain ? ` --domain ${domain}` : ''} --yes`
             ),
           },
         ],

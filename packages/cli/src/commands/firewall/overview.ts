@@ -16,9 +16,10 @@ import {
 } from '../../util/firewall/format';
 import { outputAgentError } from '../../util/agent-output';
 
-interface ProjectWithSecurity {
+interface ProjectSecurityResponse {
   security?: {
     attackModeEnabled?: boolean;
+    /** Epoch milliseconds */
     attackModeActiveUntil?: number | null;
     attackModeUpdatedAt?: number;
   };
@@ -37,19 +38,20 @@ export default async function overview(client: Client, argv: string[]) {
   output.spinner(`Fetching firewall overview for ${chalk.bold(project.name)}`);
 
   try {
-    const [configList, bypassList] = await Promise.all([
+    const [configList, bypassList, freshProject] = await Promise.all([
       listFirewallConfigs(client, project.id, { teamId }),
       getBypass(client, project.id, { teamId }),
+      client.fetch<ProjectSecurityResponse>(
+        `/v9/projects/${encodeURIComponent(project.id)}`,
+        { accountId: teamId }
+      ),
     ]);
 
     const { active, draft } = configList;
 
-    // Extract attack mode status from the project object
-    const projectSecurity = (project as unknown as ProjectWithSecurity)
-      .security;
     const attackMode: AttackModeStatus = {
-      enabled: projectSecurity?.attackModeEnabled ?? false,
-      activeUntil: projectSecurity?.attackModeActiveUntil,
+      enabled: freshProject.security?.attackModeEnabled ?? false,
+      activeUntil: freshProject.security?.attackModeActiveUntil,
     };
 
     if (parsed.flags['--json']) {

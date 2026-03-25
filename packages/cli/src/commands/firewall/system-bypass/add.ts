@@ -21,7 +21,8 @@ export default async function add(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(
     argv,
     systemBypassAddSubcommand,
-    client
+    client,
+    'system-bypass add'
   );
   if (typeof parsed === 'number') return parsed;
 
@@ -109,7 +110,7 @@ export default async function add(client: Client, argv: string[]) {
           {
             command: withGlobalFlags(
               client,
-              `firewall system-bypass add ${ip} --yes`
+              `firewall system-bypass add ${ip}${domain ? ` --domain ${domain}` : ''}${notes ? ` --notes "${notes}"` : ''} --yes`
             ),
           },
         ],

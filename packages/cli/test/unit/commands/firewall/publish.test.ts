@@ -47,7 +47,7 @@ describe('firewall publish', () => {
     client.setArgv('firewall', 'publish');
     const exitCode = await firewall(client);
     expect(exitCode).toEqual(0);
-    await expect(client.stderr).toOutput('No staged changes to publish.');
+    await expect(client.stderr).toOutput('No draft changes to publish.');
   });
 
   it('should publish draft changes with --yes', async () => {
