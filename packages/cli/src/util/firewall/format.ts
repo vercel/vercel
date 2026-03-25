@@ -2,6 +2,7 @@ import chalk from 'chalk';
 import type {
   FirewallConfigResponse,
   FirewallConfigChange,
+  FirewallChangeAction,
   BypassRule,
 } from './types';
 
@@ -46,9 +47,9 @@ export function formatStatusOutput(
   return lines.join('\n');
 }
 
-export function getDiffSymbol(action: string): {
+export function getDiffSymbol(action: FirewallChangeAction): {
   symbol: string;
-  color: typeof chalk;
+  color: (text: string) => string;
 } {
   if (action.endsWith('.insert')) {
     return { symbol: '+', color: chalk.green };

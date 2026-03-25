@@ -12,7 +12,6 @@ import listFirewallConfigs from '../../util/firewall/list-firewall-configs';
 import deleteFirewallDraft from '../../util/firewall/delete-firewall-draft';
 import { formatDiffOutput } from '../../util/firewall/format';
 import stamp from '../../util/output/stamp';
-import { getCommandName } from '../../util/pkg-name';
 import { outputAgentError } from '../../util/agent-output';
 
 export default async function discard(client: Client, argv: string[]) {
@@ -27,39 +26,37 @@ export default async function discard(client: Client, argv: string[]) {
 
   output.spinner(`Fetching draft changes for ${chalk.bold(project.name)}`);
 
-  const { draft } = await listFirewallConfigs(client, project.id, {
-    teamId,
-  });
-
-  if (!draft || draft.changes.length === 0) {
-    output.warn(
-      `No staged changes to discard. Make changes first with ${chalk.cyan(getCommandName('firewall rules add'))} or ${chalk.cyan(getCommandName('firewall ip-blocks block'))}.`
-    );
-    return 0;
-  }
-
-  output.print(
-    `\n${chalk.bold(`Changes to be discarded (${draft.changes.length}):`)}\n\n`
-  );
-  output.print(formatDiffOutput(draft.changes));
-  output.print('\n\n');
-
-  const confirmed = await confirmAction(
-    client,
-    parsed.flags['--yes'],
-    'Discard all staged changes?',
-    'This action cannot be undone.'
-  );
-
-  if (!confirmed) {
-    output.log('Canceled');
-    return 0;
-  }
-
-  const updateStamp = stamp();
-  output.spinner('Discarding staged changes');
-
   try {
+    const { draft } = await listFirewallConfigs(client, project.id, {
+      teamId,
+    });
+
+    if (!draft || draft.changes.length === 0) {
+      output.warn('No staged changes to discard.');
+      return 0;
+    }
+
+    output.print(
+      `\n${chalk.bold(`Changes to be discarded (${draft.changes.length}):`)}\n\n`
+    );
+    output.print(formatDiffOutput(draft.changes));
+    output.print('\n\n');
+
+    const confirmed = await confirmAction(
+      client,
+      parsed.flags['--yes'],
+      'Discard all staged changes?',
+      'This action cannot be undone.'
+    );
+
+    if (!confirmed) {
+      output.log('Canceled');
+      return 0;
+    }
+
+    const updateStamp = stamp();
+    output.spinner('Discarding staged changes');
+
     await deleteFirewallDraft(client, project.id, { teamId });
 
     output.log(

@@ -1,7 +1,3 @@
-// Types for the Vercel Firewall API responses.
-// Only includes types needed by the current set of commands.
-// Extended by later PRs as new commands are added.
-
 export interface FirewallCondition {
   type: string;
   op: string;

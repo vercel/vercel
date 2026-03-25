@@ -132,10 +132,10 @@ export async function confirmAction(
   }
 
   if (details) {
-    output.print(`  ${details}\n\n`);
+    output.print(`  ${details}\n`);
   }
 
-  return client.input.confirm(message, false);
+  return await client.input.confirm(message, false);
 }
 
 export function outputJson(client: Client, data: unknown): void {
