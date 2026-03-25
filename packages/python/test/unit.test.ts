@@ -2272,7 +2272,10 @@ describe('custom install hooks', () => {
       'echo custom-install',
       expect.objectContaining({
         cwd: workPath,
-        env: expect.any(Object),
+        env: expect.objectContaining({
+          VIRTUAL_ENV: expect.any(String),
+          UV_PROJECT_ENVIRONMENT: expect.any(String),
+        }),
       })
     );
   });
@@ -2629,6 +2632,7 @@ describe('UV_PYTHON_DOWNLOADS environment variable protection', () => {
       const env = createVenvEnv(venvPath);
 
       expect(env.VIRTUAL_ENV).toBe(venvPath);
+      expect(env.UV_PROJECT_ENVIRONMENT).toBe(venvPath);
       expect(env.PATH).toContain(getVenvBinDir(venvPath));
       expect(env.PATH).toContain('/usr/bin');
       expect(env.UV_PYTHON_DOWNLOADS).toBe(UV_PYTHON_DOWNLOADS_MODE);
