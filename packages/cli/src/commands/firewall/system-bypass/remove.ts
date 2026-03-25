@@ -13,6 +13,7 @@ import {
   validateBypassIp,
   validateHostname,
 } from '../../../util/firewall/validate';
+import { getCommandName } from '../../../util/pkg-name';
 import stamp from '../../../util/output/stamp';
 import { outputAgentError } from '../../../util/agent-output';
 
@@ -87,7 +88,13 @@ export default async function remove(client: Client, argv: string[]) {
 
     return 0;
   } catch (e: unknown) {
-    const error = e as { message?: string };
+    const error = e as { status?: number; message?: string };
+    if (error.status === 404) {
+      output.error(
+        `No bypass rule found for ${chalk.bold(ip)}. Run ${chalk.cyan(getCommandName('firewall system-bypass list'))} to view all rules.`
+      );
+      return 1;
+    }
     const msg = error.message || 'Failed to remove bypass rule';
     if (client.nonInteractive) {
       outputAgentError(client, {
