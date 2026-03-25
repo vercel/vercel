@@ -13,13 +13,6 @@ export class FirewallTelemetryClient
     });
   }
 
-  trackCliSubcommandSchema(actual: string) {
-    this.trackCliSubcommand({
-      subcommand: 'schema',
-      value: actual,
-    });
-  }
-
   trackCliSubcommandDiff(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'diff',

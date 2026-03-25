@@ -23,25 +23,6 @@ export const statusSubcommand = {
   ],
 } as const;
 
-export const schemaSubcommand = {
-  name: 'schema',
-  aliases: [],
-  description:
-    'List available firewall patch actions or dump the JSON schema for a specific action',
-  arguments: [{ name: 'action', required: false }],
-  options: [],
-  examples: [
-    {
-      name: 'List all actions',
-      value: `${packageName} firewall schema`,
-    },
-    {
-      name: 'Show schema for creating a rule',
-      value: `${packageName} firewall schema rules.insert`,
-    },
-  ],
-} as const;
-
 export const diffSubcommand = {
   name: 'diff',
   aliases: [],
@@ -108,7 +89,6 @@ export const firewallCommand = {
   arguments: [],
   subcommands: [
     statusSubcommand,
-    schemaSubcommand,
     diffSubcommand,
     publishSubcommand,
     discardSubcommand,
