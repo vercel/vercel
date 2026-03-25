@@ -54,9 +54,23 @@ export async function* continueDeployment(options: {
     debug
   );
 
+  /**
+   * Files that must be sent individually (outside the tar archive) so the
+   * API can inspect them before the build starts.
+   */
+  const provisionJsonPath = join(outputDir, 'provision.json');
+  const unbundledFiles = fileList.filter(f => f === provisionJsonPath);
+
   let files: FilesMap;
   if (options.archive === 'tgz') {
-    files = await createTgzFiles(options.path, fileList, debug);
+    files = await createTgzFiles(options.path, fileList, debug, unbundledFiles);
+    // Hash excluded files individually and merge them into the FilesMap
+    if (unbundledFiles.length > 0) {
+      const individualFiles = await hashes(unbundledFiles);
+      for (const [sha, entry] of individualFiles) {
+        files.set(sha, entry);
+      }
+    }
   } else {
     files = await hashes(fileList);
   }

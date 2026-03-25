@@ -364,7 +364,9 @@ describe('deploy', () => {
     );
     const exitCode = await deploy(client);
     expect(exitCode).toEqual(0);
-    expect(body?.files?.[0].file).toEqual('.vercel/source.tgz.part1');
+    const fileNames = body?.files?.map((f: any) => f.file);
+    expect(fileNames).toContain('.vercel/source.tgz.part1');
+    expect(fileNames).toContain('.vercel/output/provision.json');
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
       {
         key: 'subcommand:continue',
