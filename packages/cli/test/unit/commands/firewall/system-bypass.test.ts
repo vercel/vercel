@@ -87,6 +87,65 @@ describe('firewall system-bypass', () => {
       await expect(client.stderr).toOutput('Missing required argument');
       expect(await exitCodePromise).toEqual(1);
     });
+
+    it('should reject invalid IP address', async () => {
+      client.setArgv('firewall', 'system-bypass', 'add', 'not-an-ip', '--yes');
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('valid IP address or CIDR');
+      expect(await exitCodePromise).toEqual(1);
+    });
+
+    it('should reject CIDR with mask less than /16', async () => {
+      client.setArgv('firewall', 'system-bypass', 'add', '10.0.0.0/8', '--yes');
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('net mask less than /16');
+      expect(await exitCodePromise).toEqual(1);
+    });
+
+    it('should accept valid CIDR', async () => {
+      useAddBypass();
+      client.setArgv(
+        'firewall',
+        'system-bypass',
+        'add',
+        '10.0.0.0/24',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('Added system bypass');
+      expect(await exitCodePromise).toEqual(0);
+    });
+
+    it('should reject invalid domain', async () => {
+      client.setArgv(
+        'firewall',
+        'system-bypass',
+        'add',
+        '10.0.0.1',
+        '--domain',
+        'not a valid domain!',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('valid domain');
+      expect(await exitCodePromise).toEqual(1);
+    });
+
+    it('should reject note over 500 characters', async () => {
+      const longNote = 'a'.repeat(501);
+      client.setArgv(
+        'firewall',
+        'system-bypass',
+        'add',
+        '10.0.0.1',
+        '--notes',
+        longNote,
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('500 characters or less');
+      expect(await exitCodePromise).toEqual(1);
+    });
   });
 
   describe('remove', () => {
@@ -108,6 +167,13 @@ describe('firewall system-bypass', () => {
       client.setArgv('firewall', 'system-bypass', 'remove', '--yes');
       const exitCodePromise = firewall(client);
       await expect(client.stderr).toOutput('Missing required argument');
+      expect(await exitCodePromise).toEqual(1);
+    });
+
+    it('should reject invalid IP on remove', async () => {
+      client.setArgv('firewall', 'system-bypass', 'remove', 'garbage', '--yes');
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('valid IP address or CIDR');
       expect(await exitCodePromise).toEqual(1);
     });
   });

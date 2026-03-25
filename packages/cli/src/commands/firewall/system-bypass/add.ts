@@ -9,6 +9,11 @@ import {
   withGlobalFlags,
 } from '../shared';
 import addBypass from '../../../util/firewall/add-bypass';
+import {
+  validateBypassIp,
+  validateHostname,
+  validateNote,
+} from '../../../util/firewall/validate';
 import stamp from '../../../util/output/stamp';
 import { outputAgentError } from '../../../util/agent-output';
 
@@ -26,14 +31,39 @@ export default async function add(client: Client, argv: string[]) {
     return 1;
   }
 
+  // Validate IP/CIDR
+  const ipError = validateBypassIp(ip);
+  if (ipError) {
+    output.error(ipError);
+    return 1;
+  }
+
+  const domain = parsed.flags['--domain'] as string | undefined;
+  const notes = parsed.flags['--notes'] as string | undefined;
+
+  // Validate domain if provided
+  if (domain) {
+    const domainError = validateHostname(domain);
+    if (domainError) {
+      output.error(domainError);
+      return 1;
+    }
+  }
+
+  // Validate note length
+  if (notes) {
+    const noteError = validateNote(notes);
+    if (noteError) {
+      output.error(noteError);
+      return 1;
+    }
+  }
+
   const link = await ensureProjectLink(client);
   if (typeof link === 'number') return link;
 
   const { project, org } = link;
   const teamId = org.type === 'team' ? org.id : undefined;
-
-  const domain = parsed.flags['--domain'] as string | undefined;
-  const notes = parsed.flags['--notes'] as string | undefined;
 
   const scopeLabel = domain || 'all domains';
   const confirmed = await confirmAction(

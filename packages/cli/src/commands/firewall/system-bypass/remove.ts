@@ -9,6 +9,10 @@ import {
   withGlobalFlags,
 } from '../shared';
 import removeBypass from '../../../util/firewall/remove-bypass';
+import {
+  validateBypassIp,
+  validateHostname,
+} from '../../../util/firewall/validate';
 import stamp from '../../../util/output/stamp';
 import { outputAgentError } from '../../../util/agent-output';
 
@@ -26,13 +30,30 @@ export default async function remove(client: Client, argv: string[]) {
     return 1;
   }
 
+  // Validate IP/CIDR
+  const ipError = validateBypassIp(ip);
+  if (ipError) {
+    output.error(ipError);
+    return 1;
+  }
+
+  const domain = parsed.flags['--domain'] as string | undefined;
+
+  // Validate domain if provided
+  if (domain) {
+    const domainError = validateHostname(domain);
+    if (domainError) {
+      output.error(domainError);
+      return 1;
+    }
+  }
+
   const link = await ensureProjectLink(client);
   if (typeof link === 'number') return link;
 
   const { project, org } = link;
   const teamId = org.type === 'team' ? org.id : undefined;
 
-  const domain = parsed.flags['--domain'] as string | undefined;
   const scopeLabel = domain || 'all domains';
 
   const confirmed = await confirmAction(
