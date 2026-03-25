@@ -178,3 +178,27 @@ export function useUpdateAttackMode() {
     });
   });
 }
+
+export function usePatchDraft(
+  responseOverrides: Partial<FirewallConfigResponse> = {}
+) {
+  client.scenario.patch(
+    '/v1/security/firewall/config/draft',
+    (req: any, res: any) => {
+      const patch = req.body;
+      res.json(
+        createConfig({
+          id: 'config_draft',
+          changes: [
+            {
+              action: patch.action,
+              id: patch.id || `generated_${Date.now()}`,
+              value: patch.value,
+            },
+          ],
+          ...responseOverrides,
+        })
+      );
+    }
+  );
+}

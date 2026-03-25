@@ -196,6 +196,120 @@ export const systemBypassSubcommand = {
   ],
 } as const;
 
+
+// IP Blocks subcommands
+export const ipBlocksListSubcommand = {
+  name: 'list',
+  aliases: ['ls'],
+  description: 'List IP blocking rules (shows draft state if a draft exists)',
+  arguments: [],
+  options: [
+    {
+      name: 'json',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Output as JSON',
+    },
+  ],
+  examples: [
+    {
+      name: 'List IP blocking rules',
+      value: `${packageName} firewall ip-blocks list`,
+    },
+  ],
+} as const;
+
+export const ipBlocksBlockSubcommand = {
+  name: 'block',
+  aliases: [],
+  description: 'Block an IP address or CIDR range',
+  arguments: [{ name: 'ip', required: true }],
+  options: [
+    {
+      name: 'hostname',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Scope block to a specific hostname (default: all hosts)',
+    },
+    {
+      name: 'action',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Action: deny, challenge, log, or bypass (default: deny)',
+    },
+    {
+      name: 'notes',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Add a note to the block rule',
+    },
+    yesOption,
+  ],
+  examples: [
+    {
+      name: 'Block an IP',
+      value: `${packageName} firewall ip-blocks block 1.2.3.4`,
+    },
+    {
+      name: 'Block a CIDR range with a note',
+      value: `${packageName} firewall ip-blocks block 10.0.0.0/24 --notes "Suspicious range"`,
+    },
+    {
+      name: 'Block with challenge action',
+      value: `${packageName} firewall ip-blocks block 5.6.7.8 --action challenge`,
+    },
+  ],
+} as const;
+
+export const ipBlocksUnblockSubcommand = {
+  name: 'unblock',
+  aliases: ['rm'],
+  description: 'Remove an IP blocking rule',
+  arguments: [{ name: 'id-or-ip', required: true }],
+  options: [yesOption],
+  examples: [
+    {
+      name: 'Unblock by IP',
+      value: `${packageName} firewall ip-blocks unblock 1.2.3.4`,
+    },
+    {
+      name: 'Unblock by rule ID',
+      value: `${packageName} firewall ip-blocks unblock ip_abc123`,
+    },
+  ],
+} as const;
+
+export const ipBlocksSubcommand = {
+  name: 'ip-blocks',
+  aliases: [],
+  description: 'Manage IP blocking rules',
+  arguments: [],
+  subcommands: [
+    ipBlocksListSubcommand,
+    ipBlocksBlockSubcommand,
+    ipBlocksUnblockSubcommand,
+  ],
+  options: [],
+  examples: [
+    {
+      name: 'List IP blocking rules',
+      value: `${packageName} firewall ip-blocks list`,
+    },
+    {
+      name: 'Block an IP',
+      value: `${packageName} firewall ip-blocks block 1.2.3.4`,
+    },
+    {
+      name: 'Unblock an IP',
+      value: `${packageName} firewall ip-blocks unblock 1.2.3.4`,
+    },
+  ],
+} as const;
+
 // Attack Mode subcommands
 export const attackModeEnableSubcommand = {
   name: 'enable',
@@ -321,6 +435,7 @@ export const firewallCommand = {
     diffSubcommand,
     publishSubcommand,
     discardSubcommand,
+    ipBlocksSubcommand,
     systemBypassSubcommand,
     attackModeSubcommand,
     systemMitigationsSubcommand,

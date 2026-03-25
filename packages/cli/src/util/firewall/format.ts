@@ -143,6 +143,123 @@ export function formatBypassTable(bypasses: BypassRule[]): string {
   return lines.join('\n');
 }
 
+export type IpBlockStatus = 'live' | 'added' | 'removed' | 'modified';
+
+export interface AnnotatedIpRule {
+  rule: FirewallIpRule;
+  status: IpBlockStatus;
+}
+
+/**
+ * Build an annotated list of IP rules showing draft state.
+ * Cross-references draft changes to determine each rule's status.
+ */
+export function annotateIpRules(
+  activeIps: FirewallIpRule[],
+  draftIps: FirewallIpRule[] | null,
+  changes: FirewallConfigChange[]
+): AnnotatedIpRule[] {
+  if (!draftIps) {
+    return activeIps.map(rule => ({ rule, status: 'live' as IpBlockStatus }));
+  }
+
+  const addedIds = new Set(
+    changes
+      .filter(c => c.action === 'ip.insert')
+      .map(c => c.id)
+      .filter((id): id is string => id !== null && id !== undefined)
+  );
+  const removedIds = new Set(
+    changes
+      .filter(c => c.action === 'ip.remove')
+      .map(c => c.id)
+      .filter((id): id is string => id !== null && id !== undefined)
+  );
+  const modifiedIds = new Set(
+    changes
+      .filter(c => c.action === 'ip.update')
+      .map(c => c.id)
+      .filter((id): id is string => id !== null && id !== undefined)
+  );
+
+  const result: AnnotatedIpRule[] = [];
+
+  // Add all draft IPs with their status
+  for (const rule of draftIps) {
+    if (addedIds.has(rule.id)) {
+      result.push({ rule, status: 'added' });
+    } else if (modifiedIds.has(rule.id)) {
+      result.push({ rule, status: 'modified' });
+    } else {
+      result.push({ rule, status: 'live' });
+    }
+  }
+
+  // Add removed rules (in active but not in draft)
+  for (const rule of activeIps) {
+    if (removedIds.has(rule.id)) {
+      result.push({ rule, status: 'removed' });
+    }
+  }
+
+  return result;
+}
+
+export function formatIpBlocksTable(annotated: AnnotatedIpRule[]): string {
+  const lines: string[] = [];
+
+  const hostnames = annotated.map(a =>
+    a.rule.hostname === '*' || a.rule.hostname === ''
+      ? 'All hosts'
+      : a.rule.hostname
+  );
+  const gap = 3;
+  const prefixWidth = 2; // "  " or "+ " or "- " or "~ "
+  const ipWidth = Math.max(
+    'IP/CIDR'.length,
+    ...annotated.map(a => a.rule.ip.length)
+  );
+  const hostnameWidth = Math.max(
+    'Hostname'.length,
+    ...hostnames.map(h => h.length)
+  );
+  const actionWidth = Math.max(
+    'Action'.length,
+    ...annotated.map(a => a.rule.action.length)
+  );
+
+  // Header
+  lines.push(
+    `  ${' '.repeat(prefixWidth)}${chalk.dim('IP/CIDR'.padEnd(ipWidth + gap))}${chalk.dim('Hostname'.padEnd(hostnameWidth + gap))}${chalk.dim('Action'.padEnd(actionWidth + gap))}${chalk.dim('Notes')}`
+  );
+
+  for (let i = 0; i < annotated.length; i++) {
+    const { rule, status } = annotated[i];
+    const ip = rule.ip.padEnd(ipWidth + gap);
+    const hostname = hostnames[i].padEnd(hostnameWidth + gap);
+    const action = rule.action.padEnd(actionWidth + gap);
+    const notes = rule.notes || '';
+
+    let prefix = '  ';
+    let colorFn: (s: string) => string = (s: string) => s;
+
+    if (status === 'added') {
+      prefix = '+ ';
+      colorFn = chalk.green;
+    } else if (status === 'removed') {
+      prefix = '- ';
+      colorFn = chalk.red;
+    } else if (status === 'modified') {
+      prefix = '~ ';
+      colorFn = chalk.yellow;
+    }
+
+    lines.push(colorFn(`  ${prefix}${ip}${hostname}${action}${notes}`));
+  }
+
+  return lines.join('\n');
+}
+
 export function getDiffSymbol(action: FirewallChangeAction): {
   symbol: string;
   color: (text: string) => string;
