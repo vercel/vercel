@@ -162,3 +162,14 @@ export {
 } from './framework-helpers';
 
 export * from './python';
+
+export {
+  getEncryptedEnv,
+  type EncryptedEnvFile,
+} from './process-serverless/get-encrypted-env-file';
+export { getLambdaEnvironment } from './process-serverless/get-lambda-environment';
+export {
+  getLambdaPreloadScripts,
+  type BytecodeCachingOptions,
+} from './process-serverless/get-lambda-preload-scripts';
+export { getLambdaSupportsStreaming } from './process-serverless/get-lambda-supports-streaming';
