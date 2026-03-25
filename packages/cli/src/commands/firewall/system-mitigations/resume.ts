@@ -29,7 +29,8 @@ export default async function resume(client: Client, argv: string[]) {
   const confirmed = await confirmAction(
     client,
     parsed.flags['--yes'],
-    `Resume system mitigations for ${chalk.bold(project.name)}?`
+    `Resume system mitigations for ${chalk.bold(project.name)}?`,
+    'Automatic DDoS protection and system-level traffic filtering will be re-enabled immediately.'
   );
 
   if (!confirmed) {

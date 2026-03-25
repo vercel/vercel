@@ -30,7 +30,7 @@ export default async function pause(client: Client, argv: string[]) {
     client,
     parsed.flags['--yes'],
     `Pause system mitigations for ${chalk.bold(project.name)}?`,
-    `${chalk.yellow('Warning:')} This will disable automatic DDoS protection and system-level mitigations for 24 hours.`
+    `${chalk.yellow('Warning:')} This disables automatic DDoS protection, bot mitigation, and system-level traffic filtering for 24 hours. Your project will be unprotected from automated attacks during this period. Auto-resumes after 24 hours.`
   );
 
   if (!confirmed) {

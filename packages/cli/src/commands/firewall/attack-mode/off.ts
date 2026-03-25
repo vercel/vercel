@@ -29,7 +29,8 @@ export default async function off(client: Client, argv: string[]) {
   const confirmed = await confirmAction(
     client,
     parsed.flags['--yes'],
-    'Disable attack mode?'
+    `Disable attack mode for ${chalk.bold(project.name)}?`,
+    'Visitors will no longer be shown a verification challenge.'
   );
 
   if (!confirmed) {
