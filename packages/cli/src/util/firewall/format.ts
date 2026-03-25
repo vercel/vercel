@@ -88,9 +88,24 @@ export function formatChangeDescription(change: FirewallConfigChange): string {
       const ip = value as { ip?: string } | undefined;
       return `Modified IP block ${ip?.ip || id || 'unknown'}`;
     }
-    case 'firewallEnabled': {
+    case 'firewallEnabled':
       return `${value ? 'Enabled' : 'Disabled'} firewall`;
-    }
+    case 'crs.update':
+      return 'Updated OWASP CRS configuration';
+    case 'crs.disable':
+      return 'Disabled OWASP CRS';
+    case 'managedRules.update':
+      return 'Updated managed ruleset configuration';
+    case 'managedRuleGroup.update':
+      return 'Updated managed rule group';
+    case 'botId.toggle':
+      return `${value ? 'Enabled' : 'Disabled'} Bot ID detection`;
+    case 'ja3Enabled':
+      return `${value ? 'Enabled' : 'Disabled'} JA3 fingerprinting`;
+    case 'ja4Enabled':
+      return `${value ? 'Enabled' : 'Disabled'} JA4 fingerprinting`;
+    case 'logHeaders.update':
+      return 'Updated log headers configuration';
     default:
       return `${action}${id ? ` (${id})` : ''}`;
   }
