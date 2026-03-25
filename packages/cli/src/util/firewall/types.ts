@@ -112,6 +112,7 @@ export interface BypassRule {
   Note?: string;
   IsProjectRule?: boolean;
   CreatedAt?: string;
+  /** Expiration time in epoch seconds */
   ExpiresAt?: number | null;
 }
 
@@ -148,5 +149,6 @@ export interface RemoveBypassResponse {
 
 export interface UpdateAttackModeResponse {
   attackModeEnabled: boolean;
+  /** Epoch milliseconds */
   attackModeUpdatedAt: number;
 }

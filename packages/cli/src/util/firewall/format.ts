@@ -8,14 +8,19 @@ import type {
 
 export interface AttackModeStatus {
   enabled: boolean;
+  /** Epoch milliseconds */
   activeUntil?: number | null;
+}
+
+function isAllSourcesBypass(ip: string): boolean {
+  return ip === '0.0.0.0/0' || ip === '::/0';
 }
 
 export function isMitigationsPaused(bypass: BypassRule[]): boolean {
   const now = Math.floor(Date.now() / 1000);
   return bypass.some(
     b =>
-      b.Ip === '0.0.0.0/0' &&
+      isAllSourcesBypass(b.Ip) &&
       b.Domain === '*' &&
       (b.ExpiresAt === null || b.ExpiresAt === undefined || b.ExpiresAt > now)
   );
@@ -39,7 +44,9 @@ export function formatAttackModeStatus(status: AttackModeStatus): string {
 
 export function formatMitigationsStatus(bypass: BypassRule[]): string {
   if (isMitigationsPaused(bypass)) {
-    const entry = bypass.find(b => b.Ip === '0.0.0.0/0' && b.Domain === '*');
+    const entry = bypass.find(
+      b => isAllSourcesBypass(b.Ip) && b.Domain === '*'
+    );
     if (entry?.ExpiresAt) {
       const remainingMs = entry.ExpiresAt * 1000 - Date.now();
       if (remainingMs > 0) {
@@ -84,7 +91,7 @@ export function formatStatusOutput(
   }
 
   // Filter out the allSources bypass (system mitigations) from the count
-  const regularBypasses = bypass.filter(b => b.Ip !== '0.0.0.0/0');
+  const regularBypasses = bypass.filter(b => !isAllSourcesBypass(b.Ip));
   lines.push(
     `  ${chalk.bold('System Bypass:')}        ${regularBypasses.length} IP${regularBypasses.length !== 1 ? 's' : ''}`
   );

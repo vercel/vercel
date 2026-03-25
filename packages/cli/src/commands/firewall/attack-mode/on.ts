@@ -40,8 +40,7 @@ export default async function on(client: Client, argv: string[]) {
   const link = await ensureProjectLink(client);
   if (typeof link === 'number') return link;
 
-  const { project, org } = link;
-  const teamId = org.type === 'team' ? org.id : undefined;
+  const { project } = link;
 
   const confirmed = await confirmAction(
     client,
@@ -59,9 +58,6 @@ export default async function on(client: Client, argv: string[]) {
   output.spinner('Enabling attack mode');
 
   try {
-    // Set currentTeam for the API call (attack-mode uses team context from client)
-    client.config.currentTeam = teamId;
-
     await updateAttackMode(client, {
       projectId: project.id,
       attackModeEnabled: true,

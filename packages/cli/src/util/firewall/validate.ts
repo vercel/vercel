@@ -141,7 +141,7 @@ export function validateBlockingIp(input: string): string | null {
  */
 export function validateHostname(input: string): string | null {
   const hostnameRegex =
-    /^\*{1}$|^(?!-)(?:\*\.?)?[A-Za-z0-9-]{1,63}(?<!-)(?:\.(?!-)[A-Za-z0-9-]{1,63}(?<!-))*$/;
+    /^\*{1}$|^(?!-)(?:\*\.)?[A-Za-z0-9-]{1,63}(?<!-)(?:\.(?!-)[A-Za-z0-9-]{1,63}(?<!-))*$/;
 
   if (!hostnameRegex.test(input)) {
     return 'Please enter a valid domain (e.g. example.com, *.example.com, or * for all domains).';
