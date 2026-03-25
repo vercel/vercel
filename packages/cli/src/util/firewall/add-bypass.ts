@@ -20,6 +20,7 @@ export default async function addBypass(
   const url = `/v1/security/firewall/bypass?${query.toString()}`;
   return client.fetch<AddBypassResponse>(url, {
     method: 'POST',
-    body,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
   });
 }

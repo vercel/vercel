@@ -20,6 +20,7 @@ export default async function removeBypass(
   const url = `/v1/security/firewall/bypass?${query.toString()}`;
   return client.fetch<RemoveBypassResponse>(url, {
     method: 'DELETE',
-    body,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
   });
 }

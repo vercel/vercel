@@ -20,6 +20,7 @@ export default async function updateAttackMode(
 ): Promise<UpdateAttackModeResponse> {
   return client.fetch<UpdateAttackModeResponse>('/security/attack-mode', {
     method: 'POST',
-    body,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
   });
 }
