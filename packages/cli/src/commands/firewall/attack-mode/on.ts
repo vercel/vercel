@@ -47,7 +47,7 @@ export default async function on(client: Client, argv: string[]) {
     client,
     parsed.flags['--yes'],
     `Enable attack mode for ${chalk.bold(project.name)} (${chalk.bold(duration)})?`,
-    `${chalk.yellow('Warning:')} Every visitor will be shown a verification challenge before accessing your site. This may impact legitimate traffic and SEO. Automatically expires after ${duration}.`
+    `${chalk.yellow('Warning:')} Every visitor will be shown a verification challenge before accessing your site. This may impact legitimate traffic and SEO. Attack mode automatically expires after ${duration}.`
   );
 
   if (!confirmed) {
