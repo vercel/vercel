@@ -367,6 +367,10 @@ describe('deploy', () => {
     expect(body?.files?.[0].file).toEqual('.vercel/source.tgz.part1');
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
       {
+        key: 'subcommand:continue',
+        value: 'continue',
+      },
+      {
         key: 'option:archive',
         value: 'tgz',
       },
