@@ -34,6 +34,27 @@ export class FirewallTelemetryClient
     });
   }
 
+  trackCliSubcommandRules(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'rules',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandRulesList(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'rules:list',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandRulesInspect(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'rules:inspect',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandIpBlocks(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'ip-blocks',

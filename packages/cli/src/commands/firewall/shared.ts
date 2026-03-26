@@ -10,7 +10,7 @@ import { outputAgentError, buildCommandWithYes } from '../../util/agent-output';
 import { AGENT_STATUS, AGENT_REASON } from '../../util/agent-output-constants';
 import { getGlobalFlagsOnlyFromArgs } from '../../util/arg-common';
 import type { Command } from '../help';
-import type { FirewallIpRule } from '../../util/firewall/types';
+import type { FirewallIpRule, FirewallRule } from '../../util/firewall/types';
 import listFirewallConfigs from '../../util/firewall/list-firewall-configs';
 import activateFirewallConfig from '../../util/firewall/activate-firewall-config';
 
@@ -235,5 +235,33 @@ export function resolveIpRule(
 
   // Partial ID match
   const byPartialId = ips.filter(r => r.id.toLowerCase().includes(query));
+  return byPartialId;
+}
+
+/**
+ * Resolve a custom rule by name or ID.
+ * Returns all matching rules (caller handles disambiguation).
+ */
+export function resolveRule(
+  rules: FirewallRule[],
+  identifier: string
+): FirewallRule[] {
+  if (!identifier) return [];
+
+  // Exact ID match
+  const byId = rules.find(r => r.id === identifier);
+  if (byId) return [byId];
+
+  // Exact name match (case-insensitive)
+  const query = identifier.toLowerCase();
+  const byName = rules.filter(r => r.name.toLowerCase() === query);
+  if (byName.length > 0) return byName;
+
+  // Partial name match (case-insensitive substring)
+  const byPartialName = rules.filter(r => r.name.toLowerCase().includes(query));
+  if (byPartialName.length > 0) return byPartialName;
+
+  // Partial ID match
+  const byPartialId = rules.filter(r => r.id.toLowerCase().includes(query));
   return byPartialId;
 }

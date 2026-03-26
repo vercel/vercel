@@ -18,6 +18,7 @@ import {
   diffSubcommand,
   publishSubcommand,
   discardSubcommand,
+  rulesSubcommand,
   ipBlocksSubcommand,
   systemBypassSubcommand,
   attackModeSubcommand,
@@ -30,6 +31,7 @@ import { FirewallTelemetryClient } from '../../util/telemetry/commands/firewall'
 
 const COMMAND_CONFIG = {
   overview: getCommandAliases(overviewSubcommand),
+  rules: getCommandAliases(rulesSubcommand),
   diff: getCommandAliases(diffSubcommand),
   publish: getCommandAliases(publishSubcommand),
   discard: getCommandAliases(discardSubcommand),
@@ -113,6 +115,11 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandDiscard(subcommandOriginal);
       return discard(client, args);
+    case 'rules': {
+      telemetry.trackCliSubcommandRules(subcommandOriginal);
+      const nestedArgs = needHelp ? [...args, '--help'] : args;
+      return (await import('./rules')).default(client, nestedArgs);
+    }
     case 'ip-blocks': {
       telemetry.trackCliSubcommandIpBlocks(subcommandOriginal);
       const nestedArgs = needHelp ? [...args, '--help'] : args;
