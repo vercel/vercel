@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 13.11.0
+
+### Minor Changes
+
+- Add `process-serverless` utilities: `getLambdaEnvironment`, `getLambdaPreloadScripts`, `getLambdaSupportsStreaming`, and `getEncryptedEnv`. ([#15712](https://github.com/vercel/vercel/pull/15712))
+
 ## 13.10.0
 
 ### Minor Changes
