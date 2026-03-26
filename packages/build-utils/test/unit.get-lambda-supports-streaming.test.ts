@@ -4,40 +4,40 @@ import FileBlob from '../src/file-blob';
 
 describe('getLambdaSupportsStreaming()', () => {
   it('returns undefined when streaming is not supported', async () => {
-    expect(
-      await getLambdaSupportsStreaming(
-        {
-          launcherType: 'Nodejs',
-          handler: 'handler.js',
-          runtime: 'nodejs20.x',
-          files: {
-            'handler.js': new FileBlob({
-              data: `module.exports.handler = () => {};`,
-            }),
-          },
+    const result = await getLambdaSupportsStreaming(
+      {
+        launcherType: 'Nodejs',
+        handler: 'handler.js',
+        runtime: 'nodejs20.x',
+        files: {
+          'handler.js': new FileBlob({
+            data: `module.exports.handler = () => {};`,
+          }),
         },
-        false
-      )
-    ).toEqual(undefined);
+      },
+      false
+    );
+    expect(result.supportsStreaming).toEqual(undefined);
+    expect(result.error).toBeUndefined();
   });
 
   it('honors `supportsResponseStreaming` from the lambda', async () => {
-    expect(
-      await getLambdaSupportsStreaming(
-        {
-          supportsResponseStreaming: false,
-          launcherType: 'Nodejs',
-          handler: 'handler.js',
-          runtime: 'nodejs20.x',
-          files: {
-            'handler.js': new FileBlob({
-              data: `module.exports.handler = () => {};`,
-            }),
-          },
+    const result = await getLambdaSupportsStreaming(
+      {
+        supportsResponseStreaming: false,
+        launcherType: 'Nodejs',
+        handler: 'handler.js',
+        runtime: 'nodejs20.x',
+        files: {
+          'handler.js': new FileBlob({
+            data: `module.exports.handler = () => {};`,
+          }),
         },
-        false
-      )
-    ).toEqual(false);
+      },
+      false
+    );
+    expect(result.supportsStreaming).toEqual(false);
+    expect(result.error).toBeUndefined();
   });
 
   it.each([
@@ -51,21 +51,21 @@ describe('getLambdaSupportsStreaming()', () => {
   ])('should return `true` when lambda exports %s in CJS', async ({
     method,
   }) => {
-    expect(
-      await getLambdaSupportsStreaming(
-        {
-          launcherType: 'Nodejs',
-          handler: 'handler.js',
-          runtime: 'nodejs20.x',
-          files: {
-            'handler.js': new FileBlob({
-              data: `module.exports.${method} = () => {};`,
-            }),
-          },
+    const result = await getLambdaSupportsStreaming(
+      {
+        launcherType: 'Nodejs',
+        handler: 'handler.js',
+        runtime: 'nodejs20.x',
+        files: {
+          'handler.js': new FileBlob({
+            data: `module.exports.${method} = () => {};`,
+          }),
         },
-        false
-      )
-    ).toEqual(true);
+      },
+      false
+    );
+    expect(result.supportsStreaming).toEqual(true);
+    expect(result.error).toBeUndefined();
   });
 
   it.each([
@@ -79,21 +79,21 @@ describe('getLambdaSupportsStreaming()', () => {
   ])('should return `true` when lambda exports %s handler method in ESM', async ({
     method,
   }) => {
-    expect(
-      await getLambdaSupportsStreaming(
-        {
-          launcherType: 'Nodejs',
-          handler: 'handler.mjs',
-          runtime: 'nodejs20.x',
-          files: {
-            'handler.mjs': new FileBlob({
-              data: `export const ${method} = () => {};`,
-            }),
-          },
+    const result = await getLambdaSupportsStreaming(
+      {
+        launcherType: 'Nodejs',
+        handler: 'handler.mjs',
+        runtime: 'nodejs20.x',
+        files: {
+          'handler.mjs': new FileBlob({
+            data: `export const ${method} = () => {};`,
+          }),
         },
-        false
-      )
-    ).toEqual(true);
+      },
+      false
+    );
+    expect(result.supportsStreaming).toEqual(true);
+    expect(result.error).toBeUndefined();
   });
 
   it.each([
@@ -107,63 +107,83 @@ describe('getLambdaSupportsStreaming()', () => {
   ])('should return `true` when lambda exports %s handler in ESM but with a .js extension', async ({
     method,
   }) => {
-    expect(
-      await getLambdaSupportsStreaming(
-        {
-          launcherType: 'Nodejs',
-          handler: 'handler.js',
-          runtime: 'nodejs20.x',
-          files: {
-            'handler.js': new FileBlob({
-              data: `export const ${method} = () => {};`,
-            }),
-          },
+    const result = await getLambdaSupportsStreaming(
+      {
+        launcherType: 'Nodejs',
+        handler: 'handler.js',
+        runtime: 'nodejs20.x',
+        files: {
+          'handler.js': new FileBlob({
+            data: `export const ${method} = () => {};`,
+          }),
         },
-        false
-      )
-    ).toEqual(true);
+      },
+      false
+    );
+    expect(result.supportsStreaming).toEqual(true);
+    expect(result.error).toBeUndefined();
   });
 
   it("should return `undefined` when lambda doesn't export an HTTP method", async () => {
-    expect(
-      await getLambdaSupportsStreaming(
-        {
-          launcherType: 'Nodejs',
-          handler: 'handler.js',
-          runtime: 'nodejs20.x',
-          files: {
-            'handler.js': new FileBlob({
-              data: `module.exports.handler = () => {};`,
-            }),
-          },
+    const result = await getLambdaSupportsStreaming(
+      {
+        launcherType: 'Nodejs',
+        handler: 'handler.js',
+        runtime: 'nodejs20.x',
+        files: {
+          'handler.js': new FileBlob({
+            data: `module.exports.handler = () => {};`,
+          }),
         },
-        false
-      )
-    ).toEqual(undefined);
+      },
+      false
+    );
+    expect(result.supportsStreaming).toEqual(undefined);
+    expect(result.error).toBeUndefined();
   });
 
   it('honors the default setting for Python runtimes', async () => {
-    expect(
-      await getLambdaSupportsStreaming(
-        {
-          handler: 'handler.py',
-          runtime: 'python3.8',
-          supportsResponseStreaming: true,
-        },
-        false
-      )
-    ).toEqual(true);
+    const result = await getLambdaSupportsStreaming(
+      {
+        handler: 'handler.py',
+        runtime: 'python3.8',
+        supportsResponseStreaming: true,
+      },
+      false
+    );
+    expect(result.supportsStreaming).toEqual(true);
+    expect(result.error).toBeUndefined();
   });
 
   it('returns true when forceStreamingRuntime is true', async () => {
-    expect(
-      await getLambdaSupportsStreaming(
-        {
-          handler: 'handler.py',
-          runtime: 'python3.8',
+    const result = await getLambdaSupportsStreaming(
+      {
+        handler: 'handler.py',
+        runtime: 'python3.8',
+      },
+      true
+    );
+    expect(result.supportsStreaming).toEqual(true);
+    expect(result.error).toBeUndefined();
+  });
+
+  it('returns error when handler cannot be parsed', async () => {
+    const result = await getLambdaSupportsStreaming(
+      {
+        launcherType: 'Nodejs',
+        handler: 'handler.mjs',
+        runtime: 'nodejs20.x',
+        files: {
+          'handler.mjs': new FileBlob({
+            data: `this is not valid javascript {{{`,
+          }),
         },
-        true
-      )
-    ).toEqual(true);
+      },
+      false
+    );
+    expect(result.supportsStreaming).toEqual(undefined);
+    expect(result.error).toBeDefined();
+    expect(result.error?.handler).toEqual('handler.mjs');
+    expect(result.error?.message).toBeTruthy();
   });
 });

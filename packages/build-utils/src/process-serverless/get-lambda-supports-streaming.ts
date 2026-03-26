@@ -10,6 +10,11 @@ interface LambdaLike {
   supportsResponseStreaming?: boolean;
 }
 
+export interface SupportsStreamingResult {
+  supportsStreaming: boolean | undefined;
+  error?: { handler: string; message: string };
+}
+
 /**
  * Determines if a Lambda should have streaming enabled. If
  * `forceStreamingRuntime` is true, streaming is always enabled. If the
@@ -19,20 +24,20 @@ interface LambdaLike {
 export async function getLambdaSupportsStreaming(
   lambda: LambdaLike,
   forceStreamingRuntime: boolean
-) {
+): Promise<SupportsStreamingResult> {
   if (forceStreamingRuntime) {
-    return true;
+    return { supportsStreaming: true };
   }
 
   if (typeof lambda.supportsResponseStreaming === 'boolean') {
-    return lambda.supportsResponseStreaming;
+    return { supportsStreaming: lambda.supportsResponseStreaming };
   }
 
   if ('launcherType' in lambda && lambda.launcherType === 'Nodejs') {
-    return (await lambdaShouldStream(lambda)) || undefined;
+    return lambdaShouldStream(lambda);
   }
 
-  return undefined;
+  return { supportsStreaming: undefined };
 }
 
 /* https://nextjs.org/docs/app/building-your-application/routing/router-handlers#supported-http-methods */
@@ -55,10 +60,12 @@ const HTTP_METHODS = [
  * simply not opt-in so that we keep the same behavior as before where we
  * fail on runtime.
  */
-async function lambdaShouldStream(lambda: LambdaLike): Promise<boolean> {
+async function lambdaShouldStream(
+  lambda: LambdaLike
+): Promise<SupportsStreamingResult> {
   const stream = lambda.files?.[lambda.handler]?.toStream();
   if (!stream) {
-    return false;
+    return { supportsStreaming: undefined };
   }
 
   try {
@@ -66,15 +73,17 @@ async function lambdaShouldStream(lambda: LambdaLike): Promise<boolean> {
     const names = await getFileExports(lambda.handler, buffer.toString('utf8'));
     for (const name of names) {
       if (HTTP_METHODS.includes(name)) {
-        return true;
+        return { supportsStreaming: true };
       }
     }
   } catch (err) {
-    console.warn(`[vc] failed to parse exports for ${lambda.handler}:`);
-    console.warn(`[vc] ${String(err)}`);
+    return {
+      supportsStreaming: undefined,
+      error: { handler: lambda.handler, message: String(err) },
+    };
   }
 
-  return false;
+  return { supportsStreaming: undefined };
 }
 
 async function getFileExports(
