@@ -9,6 +9,7 @@ import isPortReachable from 'is-port-reachable';
 import {
   PYTHON_CANDIDATE_ENTRYPOINTS,
   detectPythonEntrypoint,
+  type PythonEntrypoint,
 } from './entrypoint';
 import { runFrameworkHook } from './index';
 import { getDefaultPythonVersion } from './version';
@@ -26,9 +27,12 @@ import {
   type ManifestType,
 } from './install';
 import { stringifyManifest } from '@vercel/python-analysis';
-import { VERCEL_RUNTIME_VERSION } from './package-versions';
+import {
+  VERCEL_RUNTIME_VERSION,
+  VERCEL_WORKERS_VERSION,
+} from './package-versions';
 
-const DEV_SERVER_STARTUP_TIMEOUT = 10_000;
+const DEV_SERVER_STARTUP_TIMEOUT = 5 * 60_000; // 5 minutes
 
 // Silence all Node.js warnings during the dev server lifecycle to avoid noise and only show the python logs.
 // Specifically, this is implemented to silence the [DEP0060] DeprecationWarning warning from the http-proxy library.
@@ -64,6 +68,11 @@ function silenceNodeWarnings() {
 }
 
 const DEV_SHIM_MODULE = 'vc_init_dev';
+
+function hasWorkerServicesEnabled(env: NodeJS.ProcessEnv): boolean {
+  const value = env.VERCEL_HAS_WORKER_SERVICES || '';
+  return ['1', 'true'].includes(value.trim().toLowerCase());
+}
 
 function createLogListener(
   callback: ((buf: Buffer) => void) | undefined,
@@ -304,6 +313,9 @@ interface InstallVercelRuntimeOptions {
   onStderr?: (buf: Buffer) => void;
 }
 
+const PENDING_RUNTIME_INSTALLS = new Map<string, Promise<void>>();
+const PENDING_WORKERS_INSTALLS = new Map<string, Promise<void>>();
+
 async function installVercelRuntime({
   workPath,
   uvPath,
@@ -313,6 +325,33 @@ async function installVercelRuntime({
   onStderr,
 }: InstallVercelRuntimeOptions): Promise<void> {
   const targetDir = join(workPath, '.vercel', 'python');
+
+  let pending = PENDING_RUNTIME_INSTALLS.get(targetDir);
+  if (!pending) {
+    pending = doInstallVercelRuntime({
+      targetDir,
+      workPath,
+      uvPath,
+      pythonBin,
+      env,
+      onStdout,
+      onStderr,
+    });
+    PENDING_RUNTIME_INSTALLS.set(targetDir, pending);
+    pending.finally(() => PENDING_RUNTIME_INSTALLS.delete(targetDir));
+  }
+  await pending;
+}
+
+async function doInstallVercelRuntime({
+  targetDir,
+  workPath,
+  uvPath,
+  pythonBin,
+  env,
+  onStdout,
+  onStderr,
+}: InstallVercelRuntimeOptions & { targetDir: string }): Promise<void> {
   mkdirSync(targetDir, { recursive: true });
 
   // Check if we're running from a dev build
@@ -398,6 +437,121 @@ async function installVercelRuntime({
   });
 }
 
+async function installVercelWorkers({
+  workPath,
+  uvPath,
+  pythonBin,
+  env,
+  onStdout,
+  onStderr,
+}: InstallVercelRuntimeOptions): Promise<void> {
+  const targetDir = join(workPath, '.vercel', 'python');
+
+  let pending = PENDING_WORKERS_INSTALLS.get(targetDir);
+  if (!pending) {
+    pending = doInstallVercelWorkers({
+      targetDir,
+      workPath,
+      uvPath,
+      pythonBin,
+      env,
+      onStdout,
+      onStderr,
+    });
+    PENDING_WORKERS_INSTALLS.set(targetDir, pending);
+    pending.finally(() => PENDING_WORKERS_INSTALLS.delete(targetDir));
+  }
+  await pending;
+}
+
+async function doInstallVercelWorkers({
+  targetDir,
+  workPath,
+  uvPath,
+  pythonBin,
+  env,
+  onStdout,
+  onStderr,
+}: InstallVercelRuntimeOptions & { targetDir: string }): Promise<void> {
+  mkdirSync(targetDir, { recursive: true });
+
+  const localWorkersDir = join(
+    __dirname,
+    '..',
+    '..',
+    '..',
+    'python',
+    'vercel-workers'
+  );
+  const isLocalDev = existsSync(join(localWorkersDir, 'pyproject.toml'));
+
+  const workersDep =
+    env.VERCEL_WORKERS_PYTHON ||
+    (isLocalDev
+      ? localWorkersDir
+      : `vercel-workers==${VERCEL_WORKERS_VERSION}`);
+
+  if (!isLocalDev && !env.VERCEL_WORKERS_PYTHON) {
+    const distInfo = join(
+      targetDir,
+      `vercel_workers-${VERCEL_WORKERS_VERSION}.dist-info`
+    );
+    if (existsSync(distInfo)) {
+      debug(
+        `vercel-workers ${VERCEL_WORKERS_VERSION} already installed, skipping`
+      );
+      return;
+    }
+  }
+
+  debug(
+    `Installing vercel-workers into ${targetDir} (type: ${isLocalDev ? 'local' : 'pypi'}, source: ${workersDep})`
+  );
+
+  const pip = uvPath
+    ? { cmd: uvPath, prefix: ['pip', 'install'] }
+    : { cmd: pythonBin, prefix: ['-m', 'pip', 'install'] };
+
+  const spawnArgs = [...pip.prefix, '--target', targetDir, workersDep];
+
+  await new Promise<void>((resolve, reject) => {
+    const child = spawn(pip.cmd, spawnArgs, {
+      cwd: workPath,
+      env: getProtectedUvEnv(env),
+      stdio: ['inherit', 'pipe', 'pipe'],
+    });
+
+    child.stdout?.on('data', (data: Buffer) => {
+      if (onStdout) {
+        onStdout(data);
+      } else {
+        debug(data.toString());
+      }
+    });
+
+    child.stderr?.on('data', (data: Buffer) => {
+      if (onStderr) {
+        onStderr(data);
+      } else {
+        debug(data.toString());
+      }
+    });
+
+    child.on('error', reject);
+    child.on('exit', (code, signal) => {
+      if (code === 0) {
+        resolve();
+      } else {
+        reject(
+          new Error(
+            `Installing vercel-workers failed with code ${code}, signal ${signal}`
+          )
+        );
+      }
+    });
+  });
+}
+
 // Persistent dev servers keyed by workPath + modulePath so background tasks
 // can continue after HTTP response. Reused across requests in `vercel dev`.
 // This is necessary for background tasks to continue after HTTP response.
@@ -465,16 +619,24 @@ function installGlobalCleanupHandlers() {
 interface DevShimResult {
   module: string;
   extraPythonPath?: string;
+  shimDir?: string;
 }
 
 function createDevShim(
   workPath: string,
   entry: string,
   modulePath: string,
-  framework: string
+  serviceName: string | undefined,
+  framework: string,
+  variableName: string
 ): DevShimResult | null {
   try {
-    const vercelPythonDir = join(workPath, '.vercel', 'python');
+    // When a service name is provided, place the shim in a per-service
+    // subdirectory so multiple services in the same workspace don't
+    // overwrite each other's shim.
+    const vercelPythonDir = serviceName
+      ? join(workPath, '.vercel', 'python', 'services', serviceName)
+      : join(workPath, '.vercel', 'python');
     mkdirSync(vercelPythonDir, { recursive: true });
 
     // If workPath is a Python package (has __init__.py), the user
@@ -501,10 +663,15 @@ function createDevShim(
     const shimSource = template
       .replace(/__VC_DEV_MODULE_NAME__/g, qualifiedModule)
       .replace(/__VC_DEV_ENTRY_ABS__/g, entryAbs)
-      .replace(/__VC_DEV_FRAMEWORK__/g, framework);
+      .replace(/__VC_DEV_FRAMEWORK__/g, framework)
+      .replace(/__VC_DEV_VARIABLE_NAME__/g, variableName);
     writeFileSync(shimPath, shimSource, 'utf8');
     debug(`Prepared Python dev shim at ${shimPath}`);
-    return { module: DEV_SHIM_MODULE, extraPythonPath };
+    return {
+      module: DEV_SHIM_MODULE,
+      extraPythonPath,
+      shimDir: vercelPythonDir,
+    };
   } catch (err: any) {
     debug(`Failed to prepare dev shim: ${err?.message || err}`);
     return null;
@@ -554,8 +721,13 @@ export const startDevServer: StartDevServer = async opts => {
 
   const framework = config?.framework;
 
-  // Check for an existing persistent server
-  const serverKey = `${workPath}::${framework}`;
+  // Check for an existing persistent server.
+  // Include serviceName so that services sharing a workspace get separate servers.
+  const serviceName =
+    typeof meta.serviceName === 'string' ? meta.serviceName : undefined;
+  const serverKey = serviceName
+    ? `${workPath}::${framework}::${serviceName}`
+    : `${workPath}::${framework}`;
   const existing = PERSISTENT_SERVERS.get(serverKey);
   if (existing) {
     return {
@@ -591,32 +763,46 @@ export const startDevServer: StartDevServer = async opts => {
   // Silence Node warnings and install cleanup handlers once
   if (!restoreWarnings) restoreWarnings = silenceNodeWarnings();
   installGlobalCleanupHandlers();
-  const detected = await detectPythonEntrypoint(
-    framework as PythonFramework,
-    workPath,
-    rawEntrypoint
-  );
   const env = { ...process.env, ...(meta.env || {}) } as NodeJS.ProcessEnv;
-  let entry = detected?.entrypoint;
-  if (!entry) {
-    const hookResult = await runFrameworkHook(framework, {
-      pythonEnv: env,
-      projectDir: join(workPath, detected?.baseDir ?? ''),
+  const serviceType = env.VERCEL_SERVICE_TYPE;
+
+  // For cron/worker services, use the raw entrypoint directly, because
+  // they don't export app/application so standard detection would skip them.
+  let resolved: PythonEntrypoint | undefined;
+  if (
+    (serviceType === 'cron' || serviceType === 'worker') &&
+    rawEntrypoint?.endsWith('.py')
+  ) {
+    resolved = { entrypoint: rawEntrypoint, variableName: 'app' };
+  } else {
+    const detected = await detectPythonEntrypoint(
+      framework as PythonFramework,
       workPath,
-      entrypoint: rawEntrypoint,
-      detected: detected ?? undefined,
-    });
-    entry = hookResult?.entrypoint;
+      rawEntrypoint
+    );
+    if (detected?.entrypoint) {
+      resolved = detected.entrypoint;
+    } else {
+      const hookResult = await runFrameworkHook(framework, {
+        pythonEnv: env,
+        projectDir: join(workPath, detected?.baseDir ?? ''),
+        workPath,
+        entrypoint: rawEntrypoint,
+        detected: detected ?? undefined,
+      });
+      resolved = hookResult?.entrypoint;
+    }
+    if (!resolved) {
+      const searched = PYTHON_CANDIDATE_ENTRYPOINTS.join(', ');
+      throw new NowBuildError({
+        code: 'PYTHON_ENTRYPOINT_NOT_FOUND',
+        message: `No ${framework} entrypoint found. Add an 'app' script in pyproject.toml or define an entrypoint in one of: ${searched}.`,
+        link: `https://vercel.com/docs/frameworks/backend/${framework?.toLowerCase()}#exporting-the-${framework?.toLowerCase()}-application`,
+        action: 'Learn More',
+      });
+    }
   }
-  if (!entry) {
-    const searched = PYTHON_CANDIDATE_ENTRYPOINTS.join(', ');
-    throw new NowBuildError({
-      code: 'PYTHON_ENTRYPOINT_NOT_FOUND',
-      message: `No ${framework} entrypoint found. Add an 'app' script in pyproject.toml or define an entrypoint in one of: ${searched}.`,
-      link: `https://vercel.com/docs/frameworks/backend/${framework?.toLowerCase()}#exporting-the-${framework?.toLowerCase()}-application`,
-      action: 'Learn More',
-    });
-  }
+  const { entrypoint: entry, variableName } = resolved;
 
   // Convert to module path, e.g. "src/app.py" -> "src.app"
   const modulePath = entry.replace(/\.py$/i, '').replace(/[\\/]/g, '.');
@@ -734,16 +920,45 @@ export const startDevServer: StartDevServer = async opts => {
       env,
     });
 
+    if (hasWorkerServicesEnabled(env)) {
+      await installVercelWorkers({
+        workPath,
+        uvPath,
+        pythonBin: spawnCommand,
+        env,
+        onStdout,
+        onStderr,
+      });
+    }
+
     const port = typeof meta.port === 'number' ? meta.port : await getPort();
     env.PORT = `${port}`;
 
-    // Spawn the actual server process
-    const devShim = createDevShim(workPath, entry, modulePath, framework);
+    if (config.handlerFunction && typeof config?.handlerFunction === 'string') {
+      env.__VC_HANDLER_FUNC_NAME = config.handlerFunction;
+    }
 
-    // Add .vercel/python to PYTHONPATH so the shim can be imported
+    if (entry) {
+      env.__VC_HANDLER_ENTRYPOINT_ABS = join(workPath, entry);
+    }
+
+    // Spawn the actual server process
+    const devShim = createDevShim(
+      workPath,
+      entry,
+      modulePath,
+      serviceName,
+      framework,
+      variableName ?? ''
+    );
+
+    // Add shim directory to PYTHONPATH so the shim can be imported,
+    // and .vercel/python so vercel_runtime (installed there) is importable.
     if (devShim) {
-      const vercelPythonDir = join(workPath, '.vercel', 'python');
-      const pathParts = [vercelPythonDir];
+      const shimDir = devShim.shimDir || join(workPath, '.vercel', 'python');
+      const runtimeDir = join(workPath, '.vercel', 'python');
+      const pathParts =
+        shimDir !== runtimeDir ? [shimDir, runtimeDir] : [shimDir];
 
       if (devShim.extraPythonPath) {
         pathParts.push(devShim.extraPythonPath);

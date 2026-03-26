@@ -28,10 +28,59 @@ DRAMATIQ_AVAILABLE = _has_module("dramatiq")
 DJANGO_TASKS_AVAILABLE = _has_module("django.tasks")
 VERCEL_WORKERS_AVAILABLE = _has_module("vercel.workers")
 
+VERCEL_CELERY_BROKER_URL = "vercel://"
+
 
 def is_worker_service() -> bool:
     svc_type = os.environ.get("VERCEL_SERVICE_TYPE") or ""
     return svc_type.strip().lower() == "worker"
+
+
+def has_worker_services() -> bool:
+    value = os.environ.get("VERCEL_HAS_WORKER_SERVICES") or ""
+    return value.strip().lower() in {"1", "true"}
+
+
+def _uses_vercel_celery_broker(broker_url: str | None) -> bool:
+    if broker_url is None:
+        return False
+    normalized = broker_url.strip().lower()
+    return normalized.startswith(VERCEL_CELERY_BROKER_URL)
+
+
+def _install_vercel_celery_transport_alias() -> None:
+    with contextlib.suppress(Exception):
+        transport_module = _import_optional_module(
+            "vercel.workers.celery.transport"
+        )
+        if transport_module is None:
+            return
+
+        install_transport_alias = getattr(
+            transport_module,
+            "install_kombu_transport_alias",
+            None,
+        )
+        if not callable(install_transport_alias):
+            return
+
+        install_transport_alias_fn = cast(
+            "Callable[[str], None]",
+            install_transport_alias,
+        )
+        install_transport_alias_fn("vercel")
+
+
+def prepare_celery_environment() -> None:
+    has_worker_svcs = has_worker_services()
+    if has_worker_svcs and "CELERY_BROKER_URL" not in os.environ:
+        os.environ["CELERY_BROKER_URL"] = VERCEL_CELERY_BROKER_URL
+
+    broker_url = os.environ.get("CELERY_BROKER_URL")
+    if not has_worker_svcs and not _uses_vercel_celery_broker(broker_url):
+        return
+
+    _install_vercel_celery_transport_alias()
 
 
 def is_celery_app(candidate: object) -> bool:
@@ -72,7 +121,7 @@ def _bootstrap_dramatiq_worker_app(module: object) -> object | None:
             raise RuntimeError(
                 "Dramatiq worker service detected, but "
                 '"vercel-workers" is not installed. '
-                'Install "vercel-workers==0.0.10" and '
+                'Install "vercel-workers" and '
                 "configure "
                 '"from vercel.workers.dramatiq import '
                 'VercelQueuesBroker".'
@@ -134,28 +183,12 @@ def _bootstrap_celery_worker_app(module: object) -> object | None:
     if celery_app is None:
         return None
 
-    get_asgi_app = getattr(celery_app, "get_asgi_app", None)
-    if callable(get_asgi_app):
-        with contextlib.suppress(Exception):
-            get_asgi_app_fn = cast(
-                "Callable[[], object]",
-                get_asgi_app,
-            )
-            wrapped_app = get_asgi_app_fn()
-            if wrapped_app is not None:
-                return wrapped_app
-
     vercel_celery = _import_optional_module("vercel.workers.celery")
     if vercel_celery is None:
         if not VERCEL_WORKERS_AVAILABLE:
             raise RuntimeError(
-                "Celery worker service detected, but "
-                '"vercel-workers" is not installed. '
-                'Install "vercel-workers==0.0.10" and use '
-                '"from vercel.workers.celery import Celery"'
-                ", or expose "
-                '"app = vercel.workers.celery'
-                '.get_asgi_app(celery_app)".'
+                'Celery worker service requires "vercel-workers". '
+                'Install "vercel-workers" and export a Celery app.'
             )
         raise RuntimeError(
             "Failed to import Celery worker adapter from vercel-workers."
@@ -183,7 +216,7 @@ def _bootstrap_django_worker_app(module: object) -> object | None:
             raise RuntimeError(
                 "Django tasks worker service detected, but "
                 '"vercel-workers" is not installed. '
-                'Install "vercel-workers==0.0.10" and '
+                'Install "vercel-workers" and '
                 "configure "
                 '"vercel.workers.django.VercelQueuesBackend" '
                 "as your Django tasks backend."
@@ -267,7 +300,7 @@ def bootstrap_worker_service_app(module: object) -> object:
         raise RuntimeError(
             "Unable to bootstrap worker service because "
             '"vercel-workers" is missing. Install '
-            '"vercel-workers==0.0.10" and configure an '
+            '"vercel-workers" and configure an '
             "explicit worker integration."
         )
 

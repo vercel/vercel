@@ -41,6 +41,31 @@ describe('routes edit', () => {
     expect(exitCode).toEqual(1);
   });
 
+  it('non-interactive missing flags: suggested command uses single quotes for spaced name (no backslash)', async () => {
+    useEditRouteComprehensive();
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const exitSpy = vi
+      .spyOn(process, 'exit')
+      .mockImplementation((() => undefined) as never);
+    client.nonInteractive = true;
+    client.setArgv(
+      'routes',
+      'edit',
+      'API Rewrite',
+      '--yes',
+      '--non-interactive'
+    );
+    await routes(client);
+    const payload = JSON.parse(logSpy.mock.calls[0][0] as string);
+    expect(payload.reason).toBe('missing_arguments');
+    const nextCmd = payload.next?.[0]?.command ?? '';
+    expect(nextCmd).toContain("'API Rewrite'");
+    expect(nextCmd).not.toContain('\\"');
+    logSpy.mockRestore();
+    exitSpy.mockRestore();
+    client.nonInteractive = false;
+  });
+
   it('should error when route not found', async () => {
     useEditRoute();
     client.setArgv('routes', 'edit', 'nonexistent', '--name', 'New Name');

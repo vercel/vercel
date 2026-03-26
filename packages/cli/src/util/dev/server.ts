@@ -45,8 +45,6 @@ import {
   detectBuilders,
   detectApiDirectory,
   detectApiExtensions,
-  getInternalServiceCronPathPrefix,
-  getInternalServiceWorkerPathPrefix,
   isOfficialRuntime,
   type Service,
 } from '@vercel/fs-detectors';
@@ -91,6 +89,7 @@ import type {
 import type { ProjectSettings } from '@vercel-internals/types';
 import { treeKill } from '../tree-kill';
 import { ServicesOrchestrator } from './services-orchestrator';
+import { QueueBroker } from './queue-broker';
 import { applyOverriddenHeaders, nodeHeadersToFetchHeaders } from './headers';
 import { formatQueryString, parseQueryString } from './parse-query-string';
 import {
@@ -172,6 +171,7 @@ export default class DevServer {
   private projectSettings?: ProjectSettings;
   private services?: Service[];
   private orchestrator?: ServicesOrchestrator;
+  private queueBroker?: QueueBroker;
 
   private vercelConfigWarning: boolean;
   private getVercelConfigPromise: Promise<VercelConfig> | null;
@@ -949,6 +949,16 @@ export default class DevServer {
       devCommandPromise = this.orchestrator.startAll();
       this.devProcessOrigin = undefined;
 
+      // Instantiate the dev queue broker if any worker services exist
+      const workerServices = (this.services || []).filter(
+        s => s.type === 'worker'
+      );
+      if (workerServices.length > 0) {
+        this.queueBroker = new QueueBroker(this.services || [], name =>
+          this.orchestrator!.getServiceOrigin(name)
+        );
+      }
+
       let addressFormatted = this.address.toString();
       if (this.address.pathname === '/' && this.address.protocol === 'http:') {
         // log address without trailing slash to maintain backwards compatibility
@@ -957,12 +967,8 @@ export default class DevServer {
 
       output.print(`${chalk.cyan('>')} Available at:\n`);
       for (const service of this.services || []) {
-        let servicePath = service.routePrefix || '/';
-        if (service.type === 'worker') {
-          servicePath = getInternalServiceWorkerPathPrefix(service.name);
-        } else if (service.type === 'cron') {
-          servicePath = getInternalServiceCronPathPrefix(service.name);
-        }
+        if (service.type !== 'web') continue;
+        const servicePath = service.routePrefix || '/';
         const serviceUrl = `${addressFormatted}${servicePath === '/' ? '' : servicePath}`;
         output.print(`  ${chalk.bold(service.name)}: ${link(serviceUrl)}\n`);
       }
@@ -1095,6 +1101,10 @@ export default class DevServer {
 
     if (this.orchestrator) {
       ops.push(this.orchestrator.stopAll());
+    }
+
+    if (this.queueBroker) {
+      this.queueBroker.stop();
     }
 
     ops.push(close(this.server));
@@ -1442,6 +1452,121 @@ export default class DevServer {
   };
 
   /**
+   * Handle /_svc/_queues/* routes for the dev queue broker, which mimics
+   * the Vercel Queues API so workers can be used in vc dev unchanged.
+   */
+  private handleQueuesRoute = async (
+    req: http.IncomingMessage,
+    res: http.ServerResponse,
+    pathname: string
+  ) => {
+    if (!this.queueBroker) {
+      res.writeHead(503);
+      res.end('Queues broker not initialized');
+      return;
+    }
+
+    // POST api/v2/messages - enqueue a message
+    if (req.method === 'POST' && pathname === '/_svc/_queues/api/v2/messages') {
+      const queueName = (req.headers['vqs-queue-name'] as string) || 'default';
+      const contentType =
+        (req.headers['content-type'] as string) || 'application/json';
+      const payload = await rawBody(req);
+
+      const retentionHeader = req.headers['vqs-retention-seconds'] as
+        | string
+        | undefined;
+      const retentionSeconds =
+        retentionHeader && !isNaN(parseInt(retentionHeader, 10))
+          ? parseInt(retentionHeader, 10)
+          : undefined;
+
+      const { messageId } = this.queueBroker.enqueue(
+        queueName,
+        payload,
+        contentType,
+        { retentionSeconds }
+      );
+
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ messageId }));
+      return;
+    }
+
+    // GET/DELETE/PATCH /api/v2/messages/:messageId
+    const messageMatch = pathname.match(
+      /^\/_svc\/_queues\/api\/v2\/messages\/([a-f0-9]+)$/
+    );
+    if (!messageMatch) {
+      res.writeHead(404);
+      res.end('Not Found');
+      return;
+    }
+    const messageId = messageMatch[1];
+    const consumerGroup =
+      (req.headers['vqs-consumer-group'] as string) || 'default';
+
+    if (req.method === 'GET') {
+      const result = this.queueBroker.receiveById(messageId, consumerGroup);
+
+      if (!result) {
+        res.writeHead(404);
+        res.end('Message not found');
+        return;
+      }
+
+      const boundary = `----vcdevboundary${randomBytes(8).toString('hex')}`;
+      const partHeaders = [
+        `Vqs-Message-Id: ${messageId}`,
+        `Vqs-Delivery-Count: ${result.deliveryCount}`,
+        `Vqs-Timestamp: ${result.createdAt}`,
+        `Vqs-Ticket: ${result.ticket}`,
+        `Content-Type: ${result.contentType}`,
+      ].join('\r\n');
+
+      const body = Buffer.concat([
+        Buffer.from(`--${boundary}\r\n${partHeaders}\r\n\r\n`),
+        result.payload,
+        Buffer.from(`\r\n--${boundary}--\r\n`),
+      ]);
+
+      res.writeHead(200, {
+        'Content-Type': `multipart/mixed; boundary=${boundary}`,
+        'Content-Length': body.length,
+      });
+      res.end(body);
+      return;
+    }
+
+    if (req.method === 'DELETE') {
+      const ticket = (req.headers['vqs-ticket'] as string) || '';
+      this.queueBroker.acknowledge(messageId, consumerGroup, ticket);
+      res.writeHead(204);
+      res.end();
+      return;
+    }
+
+    if (req.method === 'PATCH') {
+      const ticket = (req.headers['vqs-ticket'] as string) || '';
+      const timeoutHeader = req.headers['vqs-visibility-timeout'] as string;
+      const timeoutSeconds = timeoutHeader ? parseInt(timeoutHeader, 10) : 60;
+
+      this.queueBroker.changeVisibility(
+        messageId,
+        consumerGroup,
+        ticket,
+        timeoutSeconds
+      );
+      res.writeHead(200);
+      res.end();
+      return;
+    }
+
+    res.writeHead(405);
+    res.end('Method Not Allowed');
+  };
+
+  /**
    * Serve project directory as a v2 deployment.
    */
   serveProjectAsNowV2 = async (
@@ -1472,6 +1597,15 @@ export default class DevServer {
 
       debug(`Rewriting URL from "${req.url}" to "${location}"`);
       req.url = location;
+    }
+
+    // Handle /_svc/_queues/* routes for the dev queue proxy
+    if (callLevel === 0 && this.orchestrator) {
+      const pathname = parsed.pathname || '/';
+      if (pathname.startsWith('/_svc/_queues/')) {
+        await this.handleQueuesRoute(req, res, pathname);
+        return;
+      }
     }
 
     // With multi-service setup, try to route to the appropriate service first
@@ -1544,7 +1678,7 @@ export default class DevServer {
       const { envConfigs, files, devCacheDir, cwd: workPath } = this;
       try {
         const { builder } = middleware.builderWithPkg;
-        if (builder.version === 3) {
+        if (builder.version === 3 || builder.version === -1) {
           startMiddlewareResult = await builder.startDevServer?.({
             files,
             entrypoint: middleware.entrypoint,
@@ -1976,7 +2110,10 @@ export default class DevServer {
     // to. Once the proxied request is finished, vercel dev shuts down the dev
     // server child process.
     const { builder, pkg: builderPkg } = match.builderWithPkg;
-    if (builder.version === 3 && typeof builder.startDevServer === 'function') {
+    if (
+      (builder.version === 3 || builder.version === -1) &&
+      typeof builder.startDevServer === 'function'
+    ) {
       let devServerResult: StartDevServerResult = null;
       try {
         const { envConfigs, files, devCacheDir, cwd: workPath } = this;

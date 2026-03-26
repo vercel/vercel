@@ -20,6 +20,7 @@ interface Options {
 interface Event {
   teamId?: string;
   userId?: string;
+  projectId?: string;
   sessionId?: string;
   eventTime: number;
   id: string;
@@ -164,6 +165,13 @@ export class TelemetryClient {
     }
   }
 
+  protected trackStdinIsTTY(isTTY: boolean) {
+    this.track({
+      key: 'stdin_is_tty',
+      value: isTTY ? 'true' : 'false',
+    });
+  }
+
   protected trackVersion(version?: string) {
     if (version) {
       this.track({
@@ -233,6 +241,7 @@ export class TelemetryEventStore {
   private sessionId: string;
   private teamId = 'NO_TEAM_ID';
   private userId = 'NO_USER_ID';
+  private projectId = 'NO_PROJECT_ID';
   private config: GlobalConfig['telemetry'];
 
   constructor(opts?: { isDebug?: boolean; config: GlobalConfig['telemetry'] }) {
@@ -246,6 +255,7 @@ export class TelemetryEventStore {
     event.sessionId = this.sessionId;
     event.teamId = this.teamId;
     event.userId = this.userId;
+    event.projectId = this.projectId;
     this.events.push(event);
   }
 
@@ -258,6 +268,12 @@ export class TelemetryEventStore {
   updateUserId(userId?: string) {
     if (userId) {
       this.userId = userId;
+    }
+  }
+
+  updateProjectId(projectId?: string) {
+    if (projectId) {
+      this.projectId = projectId;
     }
   }
 
@@ -289,6 +305,7 @@ export class TelemetryEventStore {
       for (const event of this.events) {
         event.teamId = this.teamId;
         event.userId = this.userId;
+        event.projectId = this.projectId;
         output.log(JSON.stringify(event));
       }
 
@@ -305,11 +322,13 @@ export class TelemetryEventStore {
         delete event.sessionId;
         delete event.teamId;
         delete event.userId;
+        delete event.projectId;
         const { eventTime, ...rest } = event;
         return {
           event_time: eventTime,
           team_id: this.teamId,
           user_id: this.userId,
+          project_id: this.projectId,
           ...rest,
         };
       });

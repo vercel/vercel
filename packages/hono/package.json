@@ -1,6 +1,6 @@
 {
   "name": "@vercel/hono",
-  "version": "0.2.51",
+  "version": "0.2.56",
   "license": "Apache-2.0",
   "main": "./dist/index.js",
   "homepage": "https://vercel.com/docs",
@@ -23,7 +23,7 @@
     "edge-entry.js"
   ],
   "dependencies": {
-    "@vercel/nft": "1.1.1",
+    "@vercel/nft": "1.5.0",
     "@vercel/static-config": "workspace:*",
     "@vercel/node": "workspace:*",
     "fs-extra": "11.1.0",

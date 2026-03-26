@@ -76,6 +76,8 @@ import { checkTelemetryStatus } from './util/telemetry/check-status';
 import output from './output-manager';
 import { checkGuidanceStatus } from './util/guidance/check-status';
 import { determineAgent } from '@vercel/detect-agent';
+import { getLinkFromDir, getVercelDirectory } from './util/projects/link';
+import { getPlatformEnv } from '@vercel/build-utils';
 
 const VERCEL_DIR = getGlobalPathConfig();
 const VERCEL_CONFIG_PATH = configFiles.getConfigFilePath();
@@ -326,6 +328,7 @@ const main = async () => {
   telemetry.trackPlatform();
   telemetry.trackArch();
   telemetry.trackCIVendorName();
+  telemetry.trackStdinIsTTY(process.stdin?.isTTY === true);
   telemetry.trackVersion(pkg.version);
   telemetry.trackCliOptionCwd(parsedArgs.flags['--cwd']);
   telemetry.trackCliOptionLocalConfig(parsedArgs.flags['--local-config']);
@@ -482,6 +485,19 @@ const main = async () => {
       try {
         const result = await login(client, { shouldParseArgs: false });
         // The login function failed, so it returned an exit code
+        if (result !== 0) return result;
+      } catch (error) {
+        printError(error);
+        return 1;
+      }
+
+      output.debug(`Saved credentials in "${hp(VERCEL_DIR)}"`);
+    } else if (isAgent) {
+      // Agent detected without credentials — auto-launch device code login flow.
+      // The login flow handles non-TTY: prints auth URL, opens browser if possible, polls.
+      output.log('No existing credentials found. Starting login flow...');
+      try {
+        const result = await login(client, { shouldParseArgs: false });
         if (result !== 0) return result;
       } catch (error) {
         printError(error);
@@ -1031,6 +1047,22 @@ const main = async () => {
       // best-effort for telemetry
     }
   }
+
+  // Resolve project_id from VERCEL_PROJECT_ID env var or .vercel/project.json
+  try {
+    const envProjectId = getPlatformEnv('PROJECT_ID');
+    if (envProjectId) {
+      telemetryEventStore.updateProjectId(envProjectId);
+    } else {
+      const link = await getLinkFromDir(getVercelDirectory(client.cwd));
+      if (link) {
+        telemetryEventStore.updateProjectId(link.projectId);
+      }
+    }
+  } catch {
+    // best-effort for telemetry — project may not be linked
+  }
+
   await telemetryEventStore.save();
 
   return exitCode;
