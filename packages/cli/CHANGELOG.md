@@ -1,5 +1,36 @@
 # vercel
 
+## 50.37.1
+
+### Patch Changes
+
+- Improve agent plugin install flow: agents now receive structured JSON prompts for plugin installation instead of auto-approving silently. Preferences are persisted to avoid repeat prompts. On deploy, shows a non-blocking tip if the plugin is not installed. ([#15707](https://github.com/vercel/vercel/pull/15707))
+
+- Auto-install agent tooling on `vercel login`, `vercel link`, and `vercel deploy`. When a supported agent platform (Claude Code, Cursor) is detected or the user has `~/.claude`/`~/.cursor` directories, prompts to install the Vercel plugin. On `vercel link`, also prompts to add Vercel best practices to AGENTS.md/CLAUDE.md. On `vercel deploy`, shows a non-blocking tip if the plugin is not installed. User preferences are persisted to avoid repeat prompts. ([#15692](https://github.com/vercel/vercel/pull/15692))
+
+- Add --archive support to `deploy continue` command. ([#15197](https://github.com/vercel/vercel/pull/15197))
+
+- Updated dependencies [[`a54b8f246ac6b43ac8f1674093402e3fe145fd64`](https://github.com/vercel/vercel/commit/a54b8f246ac6b43ac8f1674093402e3fe145fd64)]:
+  - @vercel/build-utils@13.11.0
+  - @vercel/backends@0.0.52
+  - @vercel/elysia@0.1.54
+  - @vercel/express@0.1.64
+  - @vercel/fastify@0.1.57
+  - @vercel/go@3.4.6
+  - @vercel/h3@0.1.63
+  - @vercel/hono@0.2.57
+  - @vercel/hydrogen@1.3.6
+  - @vercel/koa@0.1.37
+  - @vercel/nestjs@0.2.58
+  - @vercel/next@4.16.3
+  - @vercel/node@5.6.21
+  - @vercel/python@6.28.0
+  - @vercel/redwood@2.4.12
+  - @vercel/remix-builder@5.7.2
+  - @vercel/ruby@2.3.2
+  - @vercel/rust@1.0.5
+  - @vercel/static-build@2.9.5
+
 ## 50.37.0
 
 ### Minor Changes
