@@ -3,6 +3,7 @@ import type {
   FirewallConfigResponse,
   FirewallConfigChange,
   FirewallChangeAction,
+  FirewallIpRule,
   BypassRule,
 } from './types';
 
