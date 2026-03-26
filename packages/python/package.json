@@ -43,7 +43,7 @@
     "get-port": "5.1.1",
     "is-port-reachable": "3.1.0",
     "jest-junit": "16.0.0",
-    "minimatch": "3.1.4",
+    "minimatch": "10.1.1",
     "pip-requirements-js": "1.0.2",
     "smol-toml": "1.5.2",
     "vitest": "2.1.4",
