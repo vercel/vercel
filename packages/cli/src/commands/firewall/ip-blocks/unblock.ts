@@ -6,7 +6,6 @@ import {
   parseSubcommandArgs,
   ensureProjectLink,
   confirmAction,
-  detectExistingDraft,
   offerAutoPublish,
   resolveIpRule,
   withGlobalFlags,
@@ -102,11 +101,8 @@ export default async function unblock(client: Client, argv: string[]) {
     const unblockStamp = stamp();
     output.spinner('Staging IP block removal');
 
-    const hadExistingDraft = await detectExistingDraft(
-      client,
-      project.id,
-      teamId
-    );
+    // Use the draft data we already fetched (avoid a second API call)
+    const hadExistingDraft = draft !== null && draft.changes.length > 0;
 
     await patchFirewallDraft(
       client,

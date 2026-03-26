@@ -43,7 +43,8 @@ export default async function block(client: Client, argv: string[]) {
     return 1;
   }
 
-  const hostname = (parsed.flags['--hostname'] as string) || '*';
+  const hostnameFlag = parsed.flags['--hostname'] as string | undefined;
+  const hostname = hostnameFlag && hostnameFlag !== '' ? hostnameFlag : '*';
   const action = (parsed.flags['--action'] as string) || 'deny';
   const notes = parsed.flags['--notes'] as string | undefined;
 
@@ -140,7 +141,7 @@ export default async function block(client: Client, argv: string[]) {
           {
             command: withGlobalFlags(
               client,
-              `firewall ip-blocks block ${ip} --action ${action}${hostname !== '*' ? ` --hostname ${hostname}` : ''}${notes ? ` --notes "${notes}"` : ''} --yes`
+              `firewall ip-blocks block ${ip} --action ${action}${hostname !== '*' ? ` --hostname ${hostname}` : ''} --yes`
             ),
           },
         ],

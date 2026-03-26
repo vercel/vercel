@@ -222,6 +222,8 @@ export function resolveIpRule(
   ips: FirewallIpRule[],
   identifier: string
 ): FirewallIpRule[] {
+  if (!identifier) return [];
+
   // Exact ID match
   const byId = ips.find(r => r.id === identifier);
   if (byId) return [byId];
