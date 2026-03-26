@@ -76,5 +76,10 @@
       "status": 200,
       "mustContain": "\"post\""
     }
-  ]
+  ],
+  "build": {
+    "env": {
+      "NEXT_BUILDER_INTEGRATION": "1"
+    }
+  }
 }

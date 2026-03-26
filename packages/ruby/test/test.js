@@ -22,7 +22,6 @@ const testsThatFailToBuild = new Map([
 
 const testsThatShouldBeSkipped = ['06-rails'];
 
-// eslint-disable-next-line no-restricted-syntax
 for (const fixture of fs.readdirSync(fixturesPath)) {
   const shouldSkip = testsThatShouldBeSkipped.includes(fixture);
   if (shouldSkip) {
@@ -32,7 +31,6 @@ for (const fixture of fs.readdirSync(fixturesPath)) {
 
   const errMsg = testsThatFailToBuild.get(fixture);
   if (errMsg) {
-    // eslint-disable-next-line no-loop-func
     it(`should fail to build ${fixture}`, async () => {
       try {
         await testDeployment(path.join(fixturesPath, fixture));
@@ -42,9 +40,8 @@ for (const fixture of fs.readdirSync(fixturesPath)) {
         expect(err.deployment.errorMessage).toBe(errMsg);
       }
     });
-    continue; //eslint-disable-line
+    continue;
   }
-  // eslint-disable-next-line no-loop-func
   it(`should build ${fixture}`, async () => {
     await expect(
       testDeployment(path.join(fixturesPath, fixture))

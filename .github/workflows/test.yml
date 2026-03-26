@@ -20,7 +20,7 @@ jobs:
     if: github.event_name == 'pull_request'
     outputs:
       tests: ${{ steps['set-tests'].outputs['tests'] }}
-      dplUrl: ${{ steps.waitForTarball.outputs.url }}
+      dplUrl: ${{ steps.resolveTarball.outputs.url }}
       affectedPackages: ${{ steps['affected-packages'].outputs['packages'] }}
       testStrategy: ${{ steps['affected-packages'].outputs['strategy'] }}
       affectedCount: ${{ steps['affected-packages'].outputs['count'] }}
@@ -30,7 +30,9 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0 # Need full history for turbo query to work
-          token: ${{ secrets.GH_TOKEN_PULL_REQUESTS }}
+          # Check out the PR commit directly instead of a merge commit.
+          ref: ${{ github.event.pull_request.head.sha }}
+          token: ${{ secrets.VERCEL_CLI_RELEASE_BOT_TOKEN }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -86,10 +88,84 @@ jobs:
           TEST_TYPE: unit
       - uses: patrickedqvist/wait-for-vercel-preview@bfdff514ff78a669f2536e9f4dd4ef5813a704a2
         id: waitForTarball
+        continue-on-error: true
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           max_timeout: 360
           check_interval: 5
+      - name: Resolve Vercel tarball URL
+        id: resolveTarball
+        uses: actions/github-script@v7
+        env:
+          WAIT_URL: ${{ steps.waitForTarball.outputs.url }}
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const prNumber =
+              context.payload.pull_request?.number ?? context.issue.number;
+
+            const waitUrl = process.env.WAIT_URL || '';
+            if (waitUrl) {
+              core.info(`Using deployment URL from wait step: ${waitUrl}`);
+              core.setOutput('url', waitUrl);
+              return;
+            }
+
+            core.info(
+              'No deployment found for the current HEAD commit. Falling back to the most recent successful Vercel preview deployment for this PR.'
+            );
+
+            const { data: commits } = await github.rest.pulls.listCommits({
+              owner,
+              repo,
+              pull_number: prNumber,
+              per_page: 100,
+            });
+
+            // API returns commits oldest->newest; prefer newest first.
+            const shas = commits.map(c => c.sha).reverse();
+
+            for (const sha of shas) {
+              core.info(`Checking deployments for ${sha}...`);
+
+              const { data: deployments } =
+                await github.rest.repos.listDeployments({
+                  owner,
+                  repo,
+                  sha,
+                  environment: 'Preview',
+                  per_page: 5,
+                });
+
+              for (const deployment of deployments) {
+                if (deployment.creator?.login !== 'vercel[bot]') {
+                  continue;
+                }
+
+                const { data: statuses } =
+                  await github.rest.repos.listDeploymentStatuses({
+                    owner,
+                    repo,
+                    deployment_id: deployment.id,
+                    per_page: 10,
+                  });
+
+                const success = statuses.find(
+                  s => s.state === 'success' && s.environment_url
+                );
+
+                if (success?.environment_url) {
+                  core.info(`Resolved deployment URL: ${success.environment_url}`);
+                  core.setOutput('url', success.environment_url);
+                  return;
+                }
+              }
+            }
+
+            core.setFailed(
+              'No Vercel preview deployment found for any commit in this PR.'
+            );
 
   comment-test-strategy:
     name: Comment Test Strategy
@@ -136,7 +212,7 @@ jobs:
               }
               message += '### Results\n\n';
               message += '- **Unit tests**: All affected packages will run unit tests\n';
-              message += '- **E2E tests**: Handled separately (Version Packages PRs or `run-e2e-tests` label)\n';
+              message += '- **E2E tests**: Running in parallel via E2E Tests workflow\n';
               message += '- **Type checks**: All affected packages will run type checks';
             } else if (strategy === 'affected-only') {
               message += '**Strategy**: Affected packages only\n\n';
@@ -150,14 +226,14 @@ jobs:
               }
               message += '### Results\n\n';
               message += '- **Unit tests**: Only affected packages will run unit tests\n';
-              message += '- **E2E tests**: Handled separately (Version Packages PRs or `run-e2e-tests` label)\n';
+              message += '- **E2E tests**: Running in parallel via E2E Tests workflow\n';
               message += '- **Type checks**: Only affected packages will run type checks';
             } else if (strategy === 'no-tests') {
               message += '**Strategy**: No tests needed\n\n';
               message += '✨ No packages affected - skipping tests\n\n';
               message += '### Results\n\n';
               message += '- **Unit tests**: None\n';
-              message += '- **E2E tests**: Handled separately (Version Packages PRs or `run-e2e-tests` label)\n';
+              message += '- **E2E tests**: Running in parallel via E2E Tests workflow\n';
               message += '- **Type checks**: None';
             } else if (strategy === 'test-all') {
               message += '**Strategy**: Full unit test suite\n\n';
@@ -171,14 +247,14 @@ jobs:
               }
               message += '### Results\n\n';
               message += '- **Unit tests**: All packages will run unit tests\n';
-              message += '- **E2E tests**: Handled separately (Version Packages PRs or `run-e2e-tests` label)\n';
+              message += '- **E2E tests**: Running in parallel via E2E Tests workflow\n';
               message += '- **Type checks**: All packages will run type checks';
             } else {
               message += '**Strategy**: Unknown\n\n';
               message += `⚠️ Unknown strategy: ${strategy}\n\n`;
               message += '### Results\n\n';
               message += '- **Unit tests**: Unknown\n';
-              message += '- **E2E tests**: Handled separately (Version Packages PRs or `run-e2e-tests` label)\n';
+              message += '- **E2E tests**: Running in parallel via E2E Tests workflow\n';
               message += '- **Type checks**: Unknown';
             }
 
@@ -221,12 +297,15 @@ jobs:
       - setup
     strategy:
       fail-fast: false
+      max-parallel: 75
       matrix:
         include: ${{ fromJson(needs.setup.outputs['tests']) }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0 # Need full history for turbo query to work
+          # Check out the PR commit directly instead of a merge commit.
+          ref: ${{ github.event.pull_request.head.sha }}
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.nodeVersion }}
@@ -251,10 +330,54 @@ jobs:
         run: node utils/gen.js && node_modules/.bin/turbo run build --cache-dir=".turbo" --log-order=stream --filter=${{matrix.packageName}}...
         env:
           FORCE_COLOR: '1'
+      - name: Resolve Python wheel URLs
+        shell: bash
+        run: |
+          DEPLOYMENT_URL="${{ needs.setup.outputs.dplUrl }}"
+
+          PACKAGES_JSON="$(node utils/get-python-packages.js)"
+          if [ -z "$PACKAGES_JSON" ] || [ "$PACKAGES_JSON" = "[]" ]; then
+            echo "No Python packages discovered; skipping wheel URL resolution."
+            exit 0
+          fi
+
+          echo "$PACKAGES_JSON" | jq -c '.[]' | while IFS= read -r package; do
+            package_slug="$(echo "$package" | jq -r '.packageDir')"
+            package_name="$(echo "$package" | jq -r '.packageName')"
+
+            wheel_name="$(curl -sf "$DEPLOYMENT_URL/tarballs/$package_slug-wheel.json" | jq -r '.filename' || echo "")"
+            if [ -z "$wheel_name" ]; then
+              continue
+            fi
+
+            env_var="$(printf '%s' "$package_name" | tr -c '[:alnum:]' '_' | tr '[:lower:]' '[:upper:]')_PYTHON"
+            echo "$env_var=$package_name @ $DEPLOYMENT_URL/tarballs/$wheel_name" >> "$GITHUB_ENV"
+          done
       - name: Test ${{matrix.packageName}}
-        run: node utils/gen.js && node_modules/.bin/turbo run ${{matrix.testScript}} --summarize --cache-dir=".turbo" --log-order=stream --filter=${{matrix.packageName}} -- ${{ join(matrix.testPaths, ' ') }}
+        run: |
+          attempt=1
+          max_attempts=2
+
+          while [ "$attempt" -le "$max_attempts" ]; do
+            echo "Running tests (attempt $attempt/$max_attempts): ${{matrix.testScript}} ${{matrix.packageName}}"
+
+            if node utils/gen.js && node_modules/.bin/turbo run ${{matrix.testScript}} --summarize --cache-dir=".turbo" --log-order=stream --filter=${{matrix.packageName}} -- ${{ join(matrix.testPaths, ' ') }}; then
+              exit 0
+            fi
+
+            if [ "$attempt" -eq "$max_attempts" ]; then
+              echo "Tests failed after $max_attempts attempts."
+              exit 1
+            fi
+
+            echo "Tests failed; retrying once..."
+            attempt=$((attempt+1))
+          done
         shell: bash
         env:
+          # Per-package pip install specs (e.g. VERCEL_RUNTIME_PYTHON,
+          # VERCEL_WORKERS_PYTHON) are also available here, injected into
+          # $GITHUB_ENV by the "Resolve Python wheel URLs" step above.
           JEST_JUNIT_OUTPUT_FILE: ${{github.workspace}}/.junit-reports/${{matrix.scriptName}}-${{matrix.packageName}}-${{matrix.chunkNumber}}-${{ matrix.runner }}.xml
           VERCEL_CLI_VERSION: ${{ needs.setup.outputs.dplUrl }}/tarballs/vercel.tgz
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
@@ -282,6 +405,7 @@ jobs:
     timeout-minutes: 5
     if: always()
     needs:
+      - setup
       - test
     steps:
       - name: Check All

@@ -557,9 +557,10 @@ export async function serverBuild({
     let nextServerBuildTrace;
     let instrumentationHookBuildTrace;
 
-    const useBundledServer =
-      semver.gte(nextVersion, BUNDLED_SERVER_NEXT_VERSION) &&
-      process.env.VERCEL_NEXT_BUNDLED_SERVER === '1';
+    const useBundledServer = semver.gte(
+      nextVersion,
+      BUNDLED_SERVER_NEXT_VERSION
+    );
 
     if (useBundledServer) {
       debug('Using bundled Next.js server');
@@ -1002,7 +1003,7 @@ export async function serverBuild({
               await fs.readFile(`${serverComponentFile}.nft.json`, 'utf8')
             );
             scTrace.files.forEach((file: string) => files.push(file));
-          } catch (err) {
+          } catch (_err) {
             /* non-fatal for now */
           }
         }
@@ -1425,6 +1426,8 @@ export async function serverBuild({
         ),
         operationType,
         memory: group.memory,
+        regions: group.regions,
+        functionFailoverRegions: group.functionFailoverRegions,
         runtime: nodeVersion.runtime,
         maxDuration: group.maxDuration,
         supportsCancellation: group.supportsCancellation,

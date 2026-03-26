@@ -42,6 +42,7 @@ export default async function main(client: Client) {
   const needHelp = flags['--help'];
 
   if (!subcommand && needHelp) {
+    telemetry.trackCliFlagHelp('integration-resource');
     output.print(
       help(integrationResourceCommand, { columns: client.stderr.columns })
     );

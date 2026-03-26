@@ -12,5 +12,10 @@
         "redirect": "manual"
       }
     }
-  ]
+  ],
+  "build": {
+    "env": {
+      "NEXT_BUILDER_INTEGRATION": "1"
+    }
+  }
 }

@@ -1,4 +1,5 @@
 import { packageName } from '../../util/pkg-name';
+import { yesOption } from '../../util/arg-common';
 
 export const curlCommand = {
   name: 'curl',
@@ -12,6 +13,11 @@ export const curlCommand = {
     },
   ],
   options: [
+    {
+      ...yesOption,
+      description:
+        'Skip confirmation when linking is required (e.g. in non-interactive mode)',
+    },
     {
       name: 'deployment',
       shorthand: null,

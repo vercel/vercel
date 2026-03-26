@@ -1,67 +1,74 @@
+import { join, dirname } from 'path';
 import { NowBuildError } from '@vercel/build-utils';
+import { selectPythonVersion, PythonConfigKind } from '@vercel/python-analysis';
+import type { PythonBuild, PythonPackage } from '@vercel/python-analysis';
 import { UvRunner, findUvInPath } from './uv';
+import { detectPlatform } from './utils';
 
-interface PythonVersion {
-  version: string;
+export interface PythonVersion {
+  major: number;
+  minor: number;
   pipPath: string;
   pythonPath: string;
   runtime: string;
   discontinueDate?: Date;
 }
 
-export const DEFAULT_PYTHON_VERSION = '3.12';
+export interface PythonVersionResolution {
+  pythonVersion: PythonVersion;
+  pythonPackage: PythonPackage;
+  versionSource?: string;
+  /**
+   * When set, the builder should write a `.python-version` file at this
+   * absolute path with the selected version string.  This is returned when
+   * the version was inferred from `requires-python` in `pyproject.toml`,
+   * no `.python-version` already exists, and the resolved version is at or
+   * below DEFAULT_PYTHON_VERSION.
+   */
+  pinVersionFilePath?: string;
+}
+
+export function pythonVersionString(pv: PythonVersion): string {
+  return `${pv.major}.${pv.minor}`;
+}
+
+const DEFAULT_PYTHON_VERSION: PythonVersion = makePythonVersion(3, 12);
+export const DEFAULT_PYTHON_VERSION_STRING = pythonVersionString(
+  DEFAULT_PYTHON_VERSION
+);
+
+function makePythonVersion(
+  major: number,
+  minor: number,
+  discontinueDate?: Date
+): PythonVersion {
+  return {
+    major,
+    minor,
+    pipPath: `pip${major}.${minor}`,
+    pythonPath: `python${major}.${minor}`,
+    runtime: `python${major}.${minor}`,
+    discontinueDate,
+  };
+}
 
 // The order must be most recent first
 const allOptions: PythonVersion[] = [
-  {
-    version: '3.14',
-    pipPath: 'pip3.14',
-    pythonPath: 'python3.14',
-    runtime: 'python3.14',
-  },
-  {
-    version: '3.13',
-    pipPath: 'pip3.13',
-    pythonPath: 'python3.13',
-    runtime: 'python3.13',
-  },
-  {
-    version: '3.12',
-    pipPath: 'pip3.12',
-    pythonPath: 'python3.12',
-    runtime: 'python3.12',
-  },
-  {
-    version: '3.11',
-    pipPath: 'pip3.11',
-    pythonPath: 'python3.11',
-    runtime: 'python3.11',
-  },
-  {
-    version: '3.10',
-    pipPath: 'pip3.10',
-    pythonPath: 'python3.10',
-    runtime: 'python3.10',
-  },
-  {
-    version: '3.9',
-    pipPath: 'pip3.9',
-    pythonPath: 'python3.9',
-    runtime: 'python3.9',
-  },
-  {
-    version: '3.6',
-    pipPath: 'pip3.6',
-    pythonPath: 'python3.6',
-    runtime: 'python3.6',
-    discontinueDate: new Date('2022-07-18'),
-  },
+  makePythonVersion(3, 14),
+  makePythonVersion(3, 13),
+  makePythonVersion(3, 12),
+  makePythonVersion(3, 11),
+  makePythonVersion(3, 10),
+  makePythonVersion(3, 9),
+  makePythonVersion(3, 6, new Date('2022-07-18')),
 ];
 
 function getDevPythonVersion(): PythonVersion {
-  // Use the system-installed version of `python3` when running `vercel dev`
+  // Use the system-installed version of `python3` when running `vercel dev`.
+  // minor is set to 0 as a placeholder — it is not used in dev mode.
   return {
-    version: '3',
+    major: 3,
+    minor: 0,
     pipPath: 'pip3',
     pythonPath: 'python3',
     runtime: 'python3',
@@ -72,7 +79,6 @@ function getDevPythonVersion(): PythonVersion {
  * Select the appropriate Python version for production builds when no version is specified
  * or an unsupported version is requested.
  */
-
 export function getDefaultPythonVersion({
   isDev,
 }: {
@@ -82,9 +88,8 @@ export function getDefaultPythonVersion({
     return getDevPythonVersion();
   }
 
-  // When no version is explicitly specified use default version
   const defaultOption = allOptions.find(
-    opt => opt.version === DEFAULT_PYTHON_VERSION && isInstalled(opt)
+    opt => versionsEqual(opt, DEFAULT_PYTHON_VERSION) && isInstalled(opt)
   );
   if (defaultOption) {
     return defaultOption;
@@ -102,200 +107,212 @@ export function getDefaultPythonVersion({
   return selection;
 }
 
-/**
- * example: "3.10" -> [3, 10]
- */
-export function parseVersionTuple(input: string): [number, number] | null {
-  const cleaned = input.trim().replace(/\s+/g, '');
-  const m = cleaned.match(/^(\d+)(?:\.(\d+))?/);
-  if (!m) return null;
-  const major = Number(m[1]);
-  const minor = m[2] !== undefined ? Number(m[2]) : 0;
-  if (Number.isNaN(major) || Number.isNaN(minor)) return null;
-  return [major, minor];
+function versionsEqual(a: PythonVersion, b: PythonVersion): boolean {
+  return a.major === b.major && a.minor === b.minor;
 }
 
-export function compareTuples(
-  a: [number, number],
-  b: [number, number]
-): number {
-  if (a[0] !== b[0]) return a[0] - b[0];
-  return a[1] - b[1];
-}
-
-type SpecOp = '<' | '<=' | '>' | '>=' | '==' | '!=' | '~=';
-interface VersionSpecifier {
-  op: SpecOp;
-  ver: [number, number];
+function versionLessOrEqual(a: PythonVersion, b: PythonVersion): boolean {
+  if (a.major !== b.major) return a.major < b.major;
+  return a.minor <= b.minor;
 }
 
 /**
- * example: ">=3.10" -> { op: '>=', ver: [3, 10] }
+ * Convert a local PythonVersion entry to a python-analysis PythonBuild.
  */
-function parseSpecifier(spec: string): VersionSpecifier | null {
-  const s = spec.trim();
-  // Support operators: <=, >=, ==, !=, ~=, <, >
-  // Allow optional patch version (e.g., 3.11.4) which will be ignored (only major.minor used)
-  const m =
-    s.match(
-      /^(<=|>=|==|!=|~=|<|>)\s*([0-9]+(?:\.[0-9]+)?)(?:\.[0-9]+)?(?:\.\*)?$/
-    ) ||
-    // Bare version like "3.11" or "3.11.4" -> implied ==
-    s.match(/^()([0-9]+(?:\.[0-9]+)?)(?:\.[0-9]+)?(?:\.\*)?$/);
-  if (!m) return null;
-  const op = (m[1] || '==') as SpecOp;
-  const vt = parseVersionTuple(m[2]);
-  if (!vt) return null;
-  return { op, ver: vt };
+function toPythonBuild(opt: PythonVersion): PythonBuild {
+  const platform = detectPlatform();
+  return {
+    version: { major: opt.major, minor: opt.minor },
+    implementation: 'cpython',
+    variant: 'default',
+    os: platform.os,
+    architecture: platform.archName,
+    libc: platform.libc,
+  };
 }
 
 /**
- * example: [3, 10] satisfies ">=3.10" -> true
- * example: [3, 9] satisfies ">=3.10" -> false
+ * Build the list of available Python builds for selectPythonVersion().
+ *
+ * Ordered with DEFAULT_PYTHON_VERSION first, then remaining versions in
+ * descending order. Only includes installed, non-discontinued versions.
+ * This preserves the "3.12 preferred" behavior since selectPythonVersion
+ * returns the first match.
  */
-function satisfies(
-  candidate: [number, number],
-  spec: VersionSpecifier
-): boolean {
-  const cmp = compareTuples(candidate, spec.ver);
-  switch (spec.op) {
-    case '==':
-      return cmp === 0;
-    case '!=':
-      return cmp !== 0;
-    case '<':
-      return cmp < 0;
-    case '<=':
-      return cmp <= 0;
-    case '>':
-      return cmp > 0;
-    case '>=':
-      return cmp >= 0;
-    case '~=': {
-      // Compatible release, e.g. ~=3.10 means >=3.10 and <3.11
-      const lowerOk = cmp >= 0;
-      const upper: [number, number] = [spec.ver[0], spec.ver[1] + 1];
-      return lowerOk && compareTuples(candidate, upper) < 0;
-    }
-    default:
-      return false;
-  }
-}
-
-function selectFromRequiresPython(expr: string): PythonVersion | undefined {
-  const raw = expr.trim();
-  if (!raw) return undefined;
-  const parts = raw
-    .split(',')
-    .map(p => p.trim())
-    .filter(Boolean);
-  const specifiers: VersionSpecifier[] = [];
-  for (const p of parts) {
-    const sp = parseSpecifier(p);
-    if (sp) specifiers.push(sp);
-  }
-  if (specifiers.length === 0) {
-    // Try direct exact match with the raw string (e.g. "3.11")
-    return allOptions.find(o => o.version === raw);
-  }
-  // Filter all supported options by the specifiers (intersection semantics)
-  const matches = allOptions.filter(opt => {
-    const vt = parseVersionTuple(opt.version)!;
-    return specifiers.every(sp => satisfies(vt, sp));
-  });
-  if (matches.length === 0) return undefined;
-
-  // Prefer DEFAULT_PYTHON_VERSION (3.12) if it satisfies the constraints.
-  // This makes Python 3.13+ opt-in only - users must explicitly require
-  const defaultMatch = matches.find(
-    opt => opt.version === DEFAULT_PYTHON_VERSION && isInstalled(opt)
+function getAvailablePythonBuilds(): PythonBuild[] {
+  const installed = allOptions.filter(
+    opt => !isDiscontinued(opt) && isInstalled(opt)
   );
-  if (defaultMatch) {
-    return defaultMatch;
-  }
-
-  // If DEFAULT_PYTHON_VERSION doesn't match constraints, fall back to
-  // the latest installed version that matches
-  const installedMatch = matches.find(isInstalled);
-  return installedMatch ?? matches[0];
+  const defaultOpt = installed.find(opt =>
+    versionsEqual(opt, DEFAULT_PYTHON_VERSION)
+  );
+  const rest = installed.filter(
+    opt => !versionsEqual(opt, DEFAULT_PYTHON_VERSION)
+  );
+  const ordered = defaultOpt ? [defaultOpt, ...rest] : rest;
+  return ordered.map(toPythonBuild);
 }
 
-export function getSupportedPythonVersion({
+/**
+ * Build the list of ALL known Python builds (including discontinued
+ * and not-installed), used for producing better error diagnostics.
+ */
+function getAllPythonBuilds(): PythonBuild[] {
+  return allOptions.map(toPythonBuild);
+}
+
+/**
+ * Map a python-analysis PythonBuild back to a local PythonVersion entry.
+ */
+function getPythonVersionForBuild(
+  build: PythonBuild
+): PythonVersion | undefined {
+  return allOptions.find(
+    opt =>
+      opt.major === build.version.major && opt.minor === build.version.minor
+  );
+}
+
+/**
+ * Resolve Python version from an already-discovered PythonPackage.
+ *
+ * Handles isDev early return, delegates constraint matching to
+ * python-analysis selectPythonVersion, and applies builder-specific
+ * logging, warnings, and error handling.
+ */
+export function resolvePythonVersion({
   isDev,
-  declaredPythonVersion,
+  pythonPackage,
+  rootDir,
 }: {
   isDev?: boolean;
-  declaredPythonVersion?: {
-    version: string;
-    source: 'Pipfile.lock' | 'pyproject.toml' | '.python-version';
-  };
-}): PythonVersion {
+  pythonPackage: PythonPackage;
+  rootDir: string;
+}): PythonVersionResolution {
   if (isDev) {
-    return getDevPythonVersion();
+    return {
+      pythonVersion: getDevPythonVersion(),
+      pythonPackage,
+    };
   }
 
-  let selection = getDefaultPythonVersion({ isDev: false });
+  const constraints = pythonPackage.requiresPython;
+  const defaultPv = getDefaultPythonVersion({ isDev: false });
 
-  if (declaredPythonVersion) {
-    const { version, source } = declaredPythonVersion;
-    let requested: PythonVersion | undefined;
-    if (source === 'pyproject.toml' || source === '.python-version') {
-      // Support both exact versions and version specifiers (e.g. ">=3.12")
-      requested = selectFromRequiresPython(version);
-    } else {
-      // For Pipfile.lock, do exact match
-      requested = allOptions.find(o => o.version === version);
-    }
-    if (requested) {
-      // If a discontinued version is explicitly requested, error even if not installed
-      if (isDiscontinued(requested)) {
+  let selection: PythonVersion;
+  let source: string | undefined;
+  let autoUpgraded = false;
+
+  if (!constraints || constraints.length === 0) {
+    console.log(
+      `No Python version specified in .python-version, pyproject.toml, or Pipfile.lock. Using python version: ${pythonVersionString(defaultPv)}`
+    );
+    selection = defaultPv;
+  } else {
+    const defaultBuild = toPythonBuild(defaultPv);
+    const availableBuilds = getAvailablePythonBuilds();
+    const allBuilds = getAllPythonBuilds();
+
+    const result = selectPythonVersion({
+      constraints,
+      availableBuilds,
+      allBuilds,
+      defaultBuild,
+      majorMinorOnly: true,
+      legacyTildeEquals: true,
+    });
+
+    source = result.source;
+    selection = getPythonVersionForBuild(result.build) ?? defaultPv;
+
+    // Auto-upgrade: when the constraint comes from a converted manifest
+    // (e.g. Pipfile.lock) and resolves to a version below the default,
+    // upgrade to the default.  Legacy projects often pin old versions
+    // that are incompatible with the builder's runtime requirements.
+    if (
+      pythonPackage.manifest?.origin &&
+      !result.notAvailable &&
+      !result.invalidConstraint &&
+      !versionLessOrEqual(defaultPv, selection)
+    ) {
+      const originalVersion = pythonVersionString(selection);
+      selection = defaultPv;
+      autoUpgraded = true;
+      console.log(
+        `Python version ${originalVersion} detected in ${source} is below the minimum supported version. Using python version: ${pythonVersionString(selection)}`
+      );
+    } else if (result.notAvailable) {
+      const npv = getPythonVersionForBuild(result.notAvailable.build);
+      if (npv && isDiscontinued(npv)) {
         throw new NowBuildError({
           code: 'BUILD_UTILS_PYTHON_VERSION_DISCONTINUED',
           link: 'https://vercel.link/python-version',
-          message: `Python version "${requested.version}" detected in ${source} is discontinued and must be upgraded.`,
+          message: `Python version "${pythonVersionString(npv)}" detected in ${source} is discontinued and must be upgraded.`,
         });
       }
-      // Otherwise, prefer the requested version if installed; fall back to latest installed
-      if (isInstalled(requested)) {
-        selection = requested;
-        console.log(`Using Python ${selection.version} from ${source}`);
-      } else {
+      if (npv) {
         console.warn(
-          `Warning: Python version "${version}" detected in ${source} is not installed and will be ignored. https://vercel.link/python-version`
+          `Warning: Python version "${pythonVersionString(npv)}" detected in ${source} is not installed and will be ignored. https://vercel.link/python-version`
         );
-        console.log(`Using python version: ${selection.version}`);
       }
-    } else {
+      console.log(`Using python version: ${pythonVersionString(selection)}`);
+    } else if (result.invalidConstraint) {
       console.warn(
-        `Warning: Python version "${version}" detected in ${source} is invalid and will be ignored. https://vercel.link/python-version`
+        `Warning: Python version "${result.invalidConstraint.versionString}" detected in ${source} is invalid and will be ignored. https://vercel.link/python-version`
       );
-      console.log(`Using python version: ${selection.version}`);
+      console.log(`Using python version: ${pythonVersionString(selection)}`);
+    } else {
+      console.log(
+        `Using Python ${pythonVersionString(selection)} from ${source}`
+      );
     }
-  } else {
-    console.log(
-      `No Python version specified in .python-version, pyproject.toml, or Pipfile.lock. Using python version: ${selection.version}`
-    );
   }
 
   if (isDiscontinued(selection)) {
     throw new NowBuildError({
       code: 'BUILD_UTILS_PYTHON_VERSION_DISCONTINUED',
       link: 'https://vercel.link/python-version',
-      message: `Python version "${selection.version}" declared in project configuration is discontinued and must be upgraded.`,
+      message: `Python version "${pythonVersionString(selection)}" declared in project configuration is discontinued and must be upgraded.`,
     });
   }
 
   if (selection.discontinueDate) {
     const d = selection.discontinueDate.toISOString().split('T')[0];
-    const srcSuffix = declaredPythonVersion
-      ? `detected in ${declaredPythonVersion.source}`
-      : 'selected by runtime';
+    const srcSuffix = source ? `detected in ${source}` : 'selected by runtime';
     console.warn(
-      `Error: Python version "${selection.version}" ${srcSuffix} has reached End-of-Life. Deployments created on or after ${d} will fail to build. https://vercel.link/python-version`
+      `Error: Python version "${pythonVersionString(selection)}" ${srcSuffix} has reached End-of-Life. Deployments created on or after ${d} will fail to build. https://vercel.link/python-version`
     );
   }
 
-  return selection;
+  let pinVersionFilePath: string | undefined;
+  const hasPythonVersionFile =
+    pythonPackage.configs?.some(
+      configSet => configSet[PythonConfigKind.PythonVersion] !== undefined
+    ) ?? false;
+
+  if (
+    !hasPythonVersionFile &&
+    pythonPackage.manifest &&
+    versionLessOrEqual(selection, defaultPv)
+  ) {
+    // Pin .python-version when:
+    // - The version was auto-upgraded from a converted manifest (Pipfile.lock, etc.)
+    // - Or the version came from requires-python in a native pyproject.toml
+    if (
+      autoUpgraded ||
+      (!pythonPackage.manifest.origin && source?.endsWith('pyproject.toml'))
+    ) {
+      const manifestDir = join(rootDir, dirname(pythonPackage.manifest.path));
+      pinVersionFilePath = join(manifestDir, '.python-version');
+    }
+  }
+
+  return {
+    pythonVersion: selection,
+    pythonPackage,
+    versionSource: source,
+    pinVersionFilePath,
+  };
 }
 
 function isDiscontinued({ discontinueDate }: PythonVersion): boolean {
@@ -332,10 +349,10 @@ export function resetInstalledPythonsCache(): void {
   installedPythonsCache = null;
 }
 
-function isInstalled({ version }: PythonVersion): boolean {
+function isInstalled(pv: PythonVersion): boolean {
   try {
     const installed = getInstalledPythons();
-    return installed.has(version);
+    return installed.has(pythonVersionString(pv));
   } catch (err) {
     throw new NowBuildError({
       code: 'UV_ERROR',

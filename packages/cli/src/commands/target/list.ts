@@ -87,7 +87,10 @@ export default async function list(client: Client, argv: string[]) {
   const asJson = formatResult.jsonOutput;
   telemetry.trackCliOptionFormat(parsedArgs.flags['--format']);
 
-  const link = await ensureLink(targetCommand.name, client, cwd);
+  const autoConfirm = !!parsedArgs.flags['--yes'];
+  const link = await ensureLink(targetCommand.name, client, cwd, {
+    autoConfirm,
+  });
   if (typeof link === 'number') {
     return link;
   }

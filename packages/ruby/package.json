@@ -1,14 +1,15 @@
 {
   "name": "@vercel/ruby",
   "author": "Nathan Cahill <nathan@nathancahill.com>",
-  "version": "2.2.5",
+  "version": "2.3.2",
   "license": "Apache-2.0",
   "main": "./dist/index",
   "homepage": "https://vercel.com/docs/runtimes#official-runtimes/ruby",
   "files": [
     "dist",
     "vc_init.rb",
-    "vc_init_dev.rb"
+    "vc_init_dev.rb",
+    "vc_utils.rb"
   ],
   "repository": {
     "type": "git",

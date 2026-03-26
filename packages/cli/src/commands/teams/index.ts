@@ -13,6 +13,7 @@ import {
 import { type Command, help } from '../help';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
+import { outputAgentError } from '../../util/agent-output';
 import { TeamsTelemetryClient } from '../../util/telemetry/commands/teams';
 import output from '../../output-manager';
 import getSubcommand from '../../util/get-subcommand';
@@ -39,6 +40,17 @@ export default async function teams(client: Client) {
       permissive: true,
     });
   } catch (error) {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'invalid_arguments',
+          message: error instanceof Error ? error.message : String(error),
+        },
+        1
+      );
+    }
     printError(error);
     return 1;
   }
@@ -92,7 +104,7 @@ export default async function teams(client: Client) {
         return 2;
       }
       telemetry.trackCliSubcommandAdd(subcommandOriginal);
-      return add(client);
+      return add(client, args);
     }
     case 'invite': {
       if (needHelp) {

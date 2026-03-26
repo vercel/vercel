@@ -1,44 +1,47 @@
 /*
  * Convert requirements.txt and requirements.in to pyproject.toml
+ *
+ * Uses the WASM-based uv-requirements-txt parser for PEP 508 parsing,
+ * pip option extraction, git URL processing, and -r/-c recursion.
+ * File I/O for referenced files is handled via AsyncLocalStorage host-bridge.
  */
 
 /** Name for the primary index when --index-url is specified */
 const PRIMARY_INDEX_NAME = 'primary';
 /** Prefix for extra index names when --extra-index-url is specified */
 const EXTRA_INDEX_PREFIX = 'extra-';
+/** Prefix for flat index names when --find-links is specified */
+const FIND_LINKS_PREFIX = 'find-links-';
 
-import { normalize } from 'node:path';
+import { isAbsolute, join, relative } from 'node:path/posix';
 
-import type {
-  EnvironmentMarker,
-  EnvironmentMarkerLeaf,
-  EnvironmentMarkerNode,
-  ProjectNameRequirement,
-  ProjectURLRequirement,
-  Requirement,
-} from 'pip-requirements-js';
-import { parsePipRequirementsFile } from 'pip-requirements-js';
 import type { PyProjectToml } from './pyproject/types';
 import type {
   DependencySource,
-  HashDigest,
   NormalizedRequirement,
 } from './requirement/types';
 import type { UvIndexEntry } from './uv-config/types';
+import type {
+  ParsedReqEntry,
+  ParsedRequirementsTxt,
+} from '#wasm/vercel_python_analysis.js';
 import { formatPep508 } from './pep508';
+import { importWasmModule } from '../wasm/load';
+import { readFileStorage } from '../wasm/host-utils';
+import type { ReadFileFn } from '../wasm/host-utils';
 
 /**
  * Parsed pip arguments from requirements file.
  */
 export interface PipOptions {
-  /** Files referenced via -r or --requirement */
-  requirementFiles: string[];
-  /** Files referenced via -c or --constraint */
-  constraintFiles: string[];
   /** Primary index URL (--index-url or -i) - only the last one is kept */
   indexUrl?: string;
   /** Extra index URLs (--extra-index-url) */
   extraIndexUrls: string[];
+  /** Directories/URLs for --find-links / -f (only set when present) */
+  findLinks?: string[];
+  /** Whether --no-index was specified (only set when true) */
+  noIndex?: boolean;
 }
 
 /**
@@ -50,290 +53,164 @@ export interface ParsedRequirementsFile {
 }
 
 /**
- * Function type for reading referenced requirement files.
+ * Options for parsing requirements files.
  */
-export type ReadFileFn = (path: string) => string | null;
-
-/**
- * Parsed git URL components.
- */
-interface ParsedGitUrl {
-  /** The git repository URL (without the git+ prefix and without @ref or #egg) */
-  url: string;
-  /** Git reference (branch, tag, or commit hash) */
-  ref?: string;
-  /** Package name from #egg=name fragment */
-  egg?: string;
-  /** Whether this is an editable install (-e) */
-  editable?: boolean;
+export interface ParseRequirementsOptions {
+  /** Function to read referenced requirement files (-r, -c). */
+  readFile?: ReadFileFn;
+  /** Directory containing the requirements file, used for resolving relative paths. */
+  workingDir?: string;
+  /**
+   * Package root directory (where pyproject.toml lives).
+   * When set and different from workingDir, source paths are rebased
+   * relative to this directory in convertRequirementsToPyprojectToml.
+   */
+  packageRoot?: string;
 }
 
 /**
- * Parse a VCS URL from requirements.txt format.
- *
- * Supports formats like:
- * - git+https://github.com/user/repo.git@tag#egg=package
- * - git+ssh://git@github.com/user/repo.git@branch#egg=package
- * - git+https://github.com/user/repo@commit#egg=package&subdirectory=src
- *
- * @param url - The URL to parse (may include git+ prefix)
- * @returns Parsed components, or null if not a git URL
+ * Parse requirements.txt content using the WASM parser.
+ * When readFile is provided, wraps the call in AsyncLocalStorage context
+ * so the WASM host-bridge can delegate file reads for -r/-c recursion.
  */
-function parseGitUrl(url: string): ParsedGitUrl | null {
-  // Check if it's a git URL
-  if (!url.startsWith('git+')) {
-    return null;
+async function parseWithWasm(
+  content: string,
+  readFile?: ReadFileFn,
+  workingDir?: string
+): Promise<ParsedRequirementsTxt> {
+  const wasm = await importWasmModule();
+  // Rust defaults workingDir to "/" when None; keep TS context in sync
+  const resolvedDir = workingDir ?? '/';
+  if (readFile) {
+    return readFileStorage.run({ readFile, workingDir: resolvedDir }, () =>
+      wasm.parseRequirementsTxt(content, resolvedDir, undefined)
+    );
   }
+  return wasm.parseRequirementsTxt(content, workingDir ?? undefined, undefined);
+}
 
-  // Remove the git+ prefix
-  let remaining = url.slice(4);
-
-  // Extract fragment (#egg=name&subdirectory=path)
-  let egg: string | undefined;
-  const fragmentIdx = remaining.indexOf('#');
-  if (fragmentIdx !== -1) {
-    const fragment = remaining.slice(fragmentIdx + 1);
-    remaining = remaining.slice(0, fragmentIdx);
-
-    // Handle both #egg=name format and #egg=name&subdirectory=path
-    for (const part of fragment.split('&')) {
-      const [key, value] = part.split('=');
-      if (key === 'egg' && value) {
-        egg = value;
-      }
+/**
+ * Convert a WASM-parsed requirement entry to a NormalizedRequirement.
+ */
+function wasmEntryToNormalized(
+  entry: ParsedReqEntry,
+  editable: boolean
+): NormalizedRequirement {
+  // Use parsed name, or derive from URL directory basename as fallback
+  let name = entry.name || '';
+  if (!name && entry.url) {
+    const urlPath = entry.url.replace(/^file:\/\//, '');
+    // For directory URLs (no file extension), use basename
+    const basename = urlPath.replace(/\/$/, '').split('/').pop();
+    if (basename && !basename.includes('.')) {
+      name = basename;
     }
   }
 
-  // Extract ref (@tag, @branch, @commit)
-  let ref: string | undefined;
-  // Find the last @ that's not part of the username (e.g., git@github.com)
-  // The ref @ comes after the path, so we look for @ after the last /
-  const lastSlashIdx = remaining.lastIndexOf('/');
-  const atIdx = remaining.indexOf('@', lastSlashIdx > 0 ? lastSlashIdx : 0);
-  if (atIdx !== -1 && atIdx > remaining.indexOf('://')) {
-    ref = remaining.slice(atIdx + 1);
-    remaining = remaining.slice(0, atIdx);
-  }
-
-  return {
-    url: remaining,
-    ref,
-    egg,
-  };
-}
-
-/**
- * Check if a URL is a git VCS URL.
- */
-function isGitUrl(url: string): boolean {
-  return url.startsWith('git+');
-}
-
-/**
- * Pre-process requirements file content to extract pip arguments that
- * pip-requirements-js doesn't handle (long-form options and index URLs).
- *
- * Returns the cleaned content (with extracted lines removed) and the extracted options.
- */
-function extractPipArguments(fileContent: string): {
-  cleanedContent: string;
-  options: PipOptions;
-} {
-  const options: PipOptions = {
-    requirementFiles: [],
-    constraintFiles: [],
-    extraIndexUrls: [],
+  const req: NormalizedRequirement = {
+    name,
   };
 
-  const lines = fileContent.split(/\r?\n/);
-  const cleanedLines: string[] = [];
+  if (entry.versionSpec) {
+    req.version = entry.versionSpec;
+  }
 
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    const trimmed = line.trim();
+  if (entry.extras.length > 0) {
+    req.extras = entry.extras;
+  }
 
-    // Skip empty lines and comments - pass them through
-    if (trimmed === '' || trimmed.startsWith('#')) {
-      cleanedLines.push(line);
-      continue;
+  if (entry.markers) {
+    req.markers = entry.markers;
+  }
+
+  // Use VCS info from Rust-side parsing
+  if (entry.vcs) {
+    const source: DependencySource = {
+      git: entry.vcs.url,
+    };
+    if (entry.vcs.rev) {
+      source.rev = entry.vcs.rev;
     }
-
-    // Handle line continuations - build the full logical line
-    let fullLine = trimmed;
-    let linesConsumed = 0;
-    while (fullLine.endsWith('\\') && i + linesConsumed + 1 < lines.length) {
-      linesConsumed++;
-      fullLine = fullLine.slice(0, -1) + lines[i + linesConsumed].trim();
+    if (editable) {
+      source.editable = true;
     }
+    req.source = source;
+  }
 
-    const extracted = tryExtractPipArgument(fullLine, options);
-    if (extracted) {
-      // Skip the continuation lines we consumed
-      i += linesConsumed;
-      // Don't add the line to cleanedLines
+  if (entry.url) {
+    if (entry.url.startsWith('file://') && !entry.vcs) {
+      // Use the original path as written by the user; fall back to stripping file://
+      const given = entry.givenUrl ?? entry.url;
+      const path = given.startsWith('file://')
+        ? given.slice('file://'.length)
+        : given;
+      req.source = { path, ...(editable ? { editable: true } : {}) };
     } else {
-      // Not a standalone pip argument, but might have inline --hash
-      // Strip --hash from the line and keep the requirement part
-      const strippedLine = stripInlineHashes(fullLine);
-      if (strippedLine !== fullLine) {
-        // Line had hashes, add the stripped version
-        cleanedLines.push(strippedLine);
-      } else {
-        // No hashes, keep the original line(s)
-        cleanedLines.push(line);
-        // If we consumed continuation lines, add them back
-        for (let j = 1; j <= linesConsumed; j++) {
-          cleanedLines.push(lines[i + j]);
-        }
-      }
-      i += linesConsumed;
+      req.url = entry.url;
     }
   }
 
-  return {
-    cleanedContent: cleanedLines.join('\n'),
-    options,
-  };
+  if (entry.hashes.length > 0) {
+    req.hashes = entry.hashes;
+  }
+
+  return req;
 }
 
 /**
- * Try to extract a pip argument from a line.
- * Returns true if the line was a pip argument that was extracted.
+ * Rebase a path from workingDir to packageRoot.
+ * If the path is absolute, it's returned as-is.
+ * If workingDir and packageRoot are the same (or either is missing), no rebasing occurs.
  */
-function tryExtractPipArgument(line: string, options: PipOptions): boolean {
-  // --requirement=<path> or --requirement <path>
-  if (line.startsWith('--requirement')) {
-    const path = extractArgValue(line, '--requirement');
-    if (path) {
-      options.requirementFiles.push(path);
-      return true;
-    }
-  }
-
-  // --constraint=<path> or --constraint <path>
-  if (line.startsWith('--constraint')) {
-    const path = extractArgValue(line, '--constraint');
-    if (path) {
-      options.constraintFiles.push(path);
-      return true;
-    }
-  }
-
-  // --index-url=<url> or --index-url <url>
-  if (line.startsWith('--index-url')) {
-    const url = extractArgValue(line, '--index-url');
-    if (url) {
-      // Only the last --index-url is used (pip behavior)
-      options.indexUrl = url;
-      return true;
-    }
-  }
-
-  // -i <url> (short form for --index-url)
-  if (line.startsWith('-i ') || line === '-i') {
-    const match = line.match(/^-i\s+(\S+)/);
-    if (match) {
-      options.indexUrl = match[1];
-      return true;
-    }
-  }
-
-  // --extra-index-url=<url> or --extra-index-url <url>
-  if (line.startsWith('--extra-index-url')) {
-    const url = extractArgValue(line, '--extra-index-url');
-    if (url) {
-      options.extraIndexUrls.push(url);
-      return true;
-    }
-  }
-
-  return false;
-}
-
-/**
- * Strip inline --hash arguments from a requirement line.
- * Returns the line without the hash arguments.
- */
-function stripInlineHashes(line: string): string {
-  // Match --hash=algorithm:value patterns
-  return line.replace(/\s+--hash=\S+/g, '').trim();
-}
-
-/**
- * Extract all --hash values from a requirement line.
- * Returns an array of hash strings in the format "algorithm:value".
- */
-function extractInlineHashes(line: string): HashDigest[] {
-  const hashes: HashDigest[] = [];
-  const hashRegex = /--hash=(\S+)/g;
-  let match;
-  while ((match = hashRegex.exec(line)) != null) {
-    hashes.push(match[1]);
-  }
-  return hashes;
-}
-
-/**
- * Extract the argument value from a line like "--option=value" or "--option value".
- */
-function extractArgValue(line: string, option: string): string | null {
-  // Check for --option=value format
-  if (line.startsWith(`${option}=`)) {
-    const value = line.slice(option.length + 1).trim();
-    return value || null;
-  }
-
-  // Check for --option value format
-  if (line.startsWith(`${option} `) || line.startsWith(`${option}\t`)) {
-    const value = line.slice(option.length).trim();
-    return value || null;
-  }
-
-  return null;
+function rebasePath(
+  p: string,
+  workingDir?: string,
+  packageRoot?: string
+): string {
+  if (!workingDir || !packageRoot || workingDir === packageRoot) return p;
+  if (isAbsolute(p)) return p;
+  const abs = join(workingDir, p);
+  const rel = relative(packageRoot, abs);
+  if (isAbsolute(rel)) return rel;
+  if (rel.startsWith('..')) return rel;
+  return './' + rel;
 }
 
 /**
  * Convert a requirements.txt content to a pyproject.toml object suitable for uv.
- *
- * This creates a minimal pyproject:
- *
- * [project]
- * dependencies = [...]
- *
- * [tool.uv.sources]
- * package = { git = "..." }
- *
- * Note: Hash information is not included in pyproject.toml output.
- *
- * @param fileContent - The content of the requirements.txt file
- * @param readFile - Optional function to read referenced requirement files (-r, --requirement).
- *                   If provided, referenced files will be recursively processed.
  */
-export function convertRequirementsToPyprojectToml(
+export async function convertRequirementsToPyprojectToml(
   fileContent: string,
-  readFile?: ReadFileFn
-): PyProjectToml {
+  options?: ParseRequirementsOptions
+): Promise<PyProjectToml> {
   const pyproject: PyProjectToml = {};
 
-  const parsed = parseRequirementsFile(fileContent, readFile);
+  const parsed = await parseRequirementsFile(fileContent, options);
   const deps: string[] = [];
   const sources: Record<string, DependencySource[]> = {};
+  const { workingDir, packageRoot } = options ?? {};
 
   for (const req of parsed.requirements) {
     deps.push(formatPep508(req));
 
     // Collect sources for uv
     if (req.source) {
+      const source = { ...req.source };
+      if (source.path) {
+        source.path = rebasePath(source.path, workingDir, packageRoot);
+      }
       if (Object.prototype.hasOwnProperty.call(sources, req.name)) {
-        sources[req.name].push(req.source);
+        sources[req.name].push(source);
       } else {
-        sources[req.name] = [req.source];
+        sources[req.name] = [source];
       }
     }
   }
 
   if (deps.length > 0) {
     pyproject.project = {
+      name: 'app',
+      version: '0.1.0',
       dependencies: deps,
     };
   }
@@ -383,303 +260,75 @@ function buildIndexEntries(pipOptions: PipOptions): UvIndexEntry[] {
     });
   }
 
+  // Add find-links as flat indexes (--find-links / -f)
+  if (pipOptions.findLinks) {
+    for (let i = 0; i < pipOptions.findLinks.length; i++) {
+      indexes.push({
+        name: `${FIND_LINKS_PREFIX}${i + 1}`,
+        url: pipOptions.findLinks[i],
+        format: 'flat',
+      });
+    }
+  }
+
   return indexes;
 }
 
 /**
  * Parse requirements file content with full pip options support.
- * Returns both the normalized requirements and the parsed pip options
- * (--requirement, --constraint, --index-url, --extra-index-url, --hash).
- *
- * @param fileContent - The content of the requirements.txt file
- * @param readFile - Optional function to read referenced requirement files (-r, --requirement).
- *                   If provided, referenced files will be recursively processed and their
- *                   requirements merged into the result.
+ * The upstream WASM parser handles -r/-c recursion natively via the host-bridge.
  */
-export function parseRequirementsFile(
+export async function parseRequirementsFile(
   fileContent: string,
-  readFile?: ReadFileFn
-): ParsedRequirementsFile {
-  const visited = new Set<string>();
-  return parseRequirementsFileInternal(fileContent, readFile, visited);
+  options?: ParseRequirementsOptions
+): Promise<ParsedRequirementsFile> {
+  const wasmResult = await parseWithWasm(
+    fileContent,
+    options?.readFile,
+    options?.workingDir
+  );
+  return processWasmResult(wasmResult);
 }
 
 /**
- * Internal implementation that tracks visited files to prevent circular references.
+ * Process WASM parser result into ParsedRequirementsFile.
  */
-function parseRequirementsFileInternal(
-  fileContent: string,
-  readFile: ReadFileFn | undefined,
-  visited: Set<string>
+function processWasmResult(
+  wasmResult: ParsedRequirementsTxt
 ): ParsedRequirementsFile {
-  const { cleanedContent, options } = extractPipArguments(fileContent);
-
-  // Build a map from requirement name to hashes from the original content
-  const hashMap = buildHashMap(fileContent);
-
-  const requirements = parsePipRequirementsFile(cleanedContent);
   const normalized: NormalizedRequirement[] = [];
 
-  // Collect all pip options (will be merged with referenced files)
-  const mergedOptions: PipOptions = {
-    requirementFiles: [...options.requirementFiles],
-    constraintFiles: [...options.constraintFiles],
-    indexUrl: options.indexUrl,
-    extraIndexUrls: [...options.extraIndexUrls],
+  // Process regular requirements
+  for (const entry of wasmResult.requirements) {
+    normalized.push(wasmEntryToNormalized(entry, false));
+  }
+
+  // Process editable requirements
+  for (const entry of wasmResult.editables) {
+    const norm = wasmEntryToNormalized(entry, true);
+    // For editable local paths, ensure source is set
+    if (!norm.source && !entry.vcs) {
+      // Fallback: pep508 field contains the raw text for editables without a URL
+      norm.source = { path: entry.pep508, editable: true };
+    } else if (norm.source && !norm.source.editable) {
+      norm.source.editable = true;
+    }
+    normalized.push(norm);
+  }
+
+  // Build pip options from WASM result
+  const pipOptions: PipOptions = {
+    indexUrl: wasmResult.indexUrl || undefined,
+    extraIndexUrls: [...wasmResult.extraIndexUrls],
+    findLinks:
+      wasmResult.findLinks.length > 0 ? [...wasmResult.findLinks] : undefined,
+    noIndex: wasmResult.noIndex || undefined,
   };
-
-  for (const req of requirements) {
-    // Also collect -r and -c references from pip-requirements-js
-    if (req.type === 'RequirementsFile') {
-      mergedOptions.requirementFiles.push(req.path);
-      continue;
-    }
-    if (req.type === 'ConstraintsFile') {
-      mergedOptions.constraintFiles.push(req.path);
-      continue;
-    }
-
-    const norm = normalizeRequirement(req);
-    if (norm != null) {
-      // Attach hashes if present
-      const hashes = hashMap.get(norm.name.toLowerCase());
-      if (hashes && hashes.length > 0) {
-        norm.hashes = hashes;
-      }
-      normalized.push(norm);
-    }
-  }
-
-  // If readFile is provided, recursively process referenced requirement files
-  if (readFile) {
-    for (const refPath of mergedOptions.requirementFiles) {
-      // Normalize the path for cycle detection to handle variations like
-      // "./base.txt" vs "base.txt" vs "foo/../base.txt"
-      const refPathKey = normalize(refPath);
-
-      // Skip if already visited (prevent circular references)
-      if (visited.has(refPathKey)) {
-        continue;
-      }
-      visited.add(refPathKey);
-
-      const refContent = readFile(refPath);
-      if (refContent != null) {
-        const refParsed = parseRequirementsFileInternal(
-          refContent,
-          readFile,
-          visited
-        );
-
-        // Merge requirements (avoiding duplicates by name)
-        const existingNames = new Set(
-          normalized.map(r => r.name.toLowerCase())
-        );
-        for (const req of refParsed.requirements) {
-          if (!existingNames.has(req.name.toLowerCase())) {
-            normalized.push(req);
-            existingNames.add(req.name.toLowerCase());
-          }
-        }
-
-        // Merge pip options
-        // Index URL: later files take precedence
-        if (refParsed.pipOptions.indexUrl) {
-          mergedOptions.indexUrl = refParsed.pipOptions.indexUrl;
-        }
-
-        // Extra index URLs: collect all unique ones
-        for (const url of refParsed.pipOptions.extraIndexUrls) {
-          if (!mergedOptions.extraIndexUrls.includes(url)) {
-            mergedOptions.extraIndexUrls.push(url);
-          }
-        }
-
-        // Constraint files: collect all unique ones
-        for (const constraintPath of refParsed.pipOptions.constraintFiles) {
-          if (!mergedOptions.constraintFiles.includes(constraintPath)) {
-            mergedOptions.constraintFiles.push(constraintPath);
-          }
-        }
-
-        // Requirement files are already tracked via visited set
-      }
-    }
-  }
 
   return {
     requirements: normalized,
-    pipOptions: mergedOptions,
+    pipOptions,
   };
 }
 
-/**
- * Build a map from package name to hashes from the original file content.
- */
-function buildHashMap(fileContent: string): Map<string, HashDigest[]> {
-  const hashMap = new Map<string, HashDigest[]>();
-  const lines = fileContent.split(/\r?\n/);
-
-  for (let i = 0; i < lines.length; i++) {
-    let line = lines[i].trim();
-
-    // Skip empty lines and comments
-    if (line === '' || line.startsWith('#') || line.startsWith('-')) {
-      continue;
-    }
-
-    // Handle line continuations
-    while (line.endsWith('\\') && i + 1 < lines.length) {
-      i++;
-      line = line.slice(0, -1) + lines[i].trim();
-    }
-
-    // Extract hashes from the line
-    const hashes = extractInlineHashes(line);
-    if (hashes.length === 0) {
-      continue;
-    }
-
-    // Extract package name (first word before any version specifier, extras, etc.)
-    const packageMatch = line.match(/^([a-zA-Z0-9][-a-zA-Z0-9._]*)/);
-    if (packageMatch) {
-      const packageName = packageMatch[1].toLowerCase();
-      hashMap.set(packageName, hashes);
-    }
-  }
-
-  return hashMap;
-}
-
-function normalizeRequirement(req: Requirement): NormalizedRequirement | null {
-  if (req.type === 'RequirementsFile' || req.type === 'ConstraintsFile') {
-    // Skip -r and -c directives - these reference other files
-    return null;
-  }
-
-  if (req.type === 'ProjectURL') {
-    return normalizeProjectURLRequirement(req);
-  }
-
-  if (req.type === 'ProjectName') {
-    return normalizeProjectNameRequirement(req);
-  }
-
-  return null;
-}
-
-function normalizeProjectNameRequirement(
-  req: ProjectNameRequirement
-): NormalizedRequirement {
-  const normalized: NormalizedRequirement = {
-    name: req.name,
-  };
-
-  if (req.extras && req.extras.length > 0) {
-    normalized.extras = req.extras;
-  }
-
-  if (req.versionSpec && req.versionSpec.length > 0) {
-    // Combine all version specs into a single version string
-    // e.g., [{ operator: '>=', version: '1.0' }, { operator: '<', version: '2.0' }]
-    // becomes '>=1.0,<2.0'
-    normalized.version = req.versionSpec
-      .map(spec => `${spec.operator}${spec.version}`)
-      .join(',');
-  }
-
-  if (req.environmentMarkerTree) {
-    normalized.markers = formatEnvironmentMarkers(req.environmentMarkerTree);
-  }
-
-  return normalized;
-}
-
-function normalizeProjectURLRequirement(
-  req: ProjectURLRequirement
-): NormalizedRequirement {
-  const normalized: NormalizedRequirement = {
-    name: req.name,
-  };
-
-  if (req.extras && req.extras.length > 0) {
-    normalized.extras = req.extras;
-  }
-
-  if (req.environmentMarkerTree) {
-    normalized.markers = formatEnvironmentMarkers(req.environmentMarkerTree);
-  }
-
-  // Check if this is a git URL and parse it
-  if (isGitUrl(req.url)) {
-    const parsed = parseGitUrl(req.url);
-    if (parsed) {
-      // Create source for tool.uv.sources
-      const source: DependencySource = {
-        git: parsed.url,
-      };
-      if (parsed.ref) {
-        source.rev = parsed.ref;
-      }
-      if (parsed.editable) {
-        source.editable = true;
-      }
-      normalized.source = source;
-    }
-  }
-
-  // For PEP 508, we still use the original URL format
-  // uv understands git+https:// URLs in the @ syntax
-  normalized.url = req.url;
-
-  return normalized;
-}
-
-/**
- * Format environment markers back to their string representation.
- */
-function formatEnvironmentMarkers(marker: EnvironmentMarker): string {
-  if (isEnvironmentMarkerNode(marker)) {
-    const left = formatEnvironmentMarkers(marker.left);
-    const right = formatEnvironmentMarkers(marker.right);
-    return `(${left}) ${marker.operator} (${right})`;
-  }
-
-  // It's a leaf node
-  const leaf = marker as EnvironmentMarkerLeaf;
-  const leftStr = formatMarkerValue(leaf.left);
-  const rightStr = formatMarkerValue(leaf.right);
-  return `${leftStr} ${leaf.operator} ${rightStr}`;
-}
-
-/**
- * Type guard to check if marker is a node (has and/or operator with left/right subtrees)
- * vs a leaf (has comparison operator with left/right values).
- *
- * Both EnvironmentMarkerNode and EnvironmentMarkerLeaf have 'left', 'right', and 'operator',
- * but a Node's operator is 'and' | 'or' while a Leaf's operator is a comparison operator.
- */
-function isEnvironmentMarkerNode(
-  marker: EnvironmentMarker
-): marker is EnvironmentMarkerNode {
-  // Check if it's an object with the operator property
-  if (typeof marker !== 'object' || marker == null) {
-    return false;
-  }
-
-  // A node has 'and' or 'or' as the operator
-  const op = (marker as EnvironmentMarkerNode).operator;
-  return op === 'and' || op === 'or';
-}
-
-function formatMarkerValue(value: string): string {
-  // If it's already a quoted string (PythonString type), return as-is
-  if (
-    (value.startsWith('"') && value.endsWith('"')) ||
-    (value.startsWith("'") && value.endsWith("'"))
-  ) {
-    return value;
-  }
-  // Otherwise it's an EnvironmentMarkerVariable, return as-is
-  return value;
-}
+export type { ReadFileFn };

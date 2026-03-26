@@ -1,4 +1,5 @@
 import chalk from 'chalk';
+import ms from 'ms';
 import { resolve, join } from 'path';
 import fs from 'fs-extra';
 import type { ResolvedService } from '@vercel/fs-detectors';
@@ -9,22 +10,27 @@ import type Client from '../../util/client';
 import { getLinkedProject } from '../../util/projects/link';
 import type { ProjectSettings } from '@vercel-internals/types';
 import setupAndLink from '../../util/link/setup-and-link';
-import { getCommandName } from '../../util/pkg-name';
+import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 import param from '../../util/output/param';
+import cmd from '../../util/output/cmd';
 import { OUTPUT_DIR } from '../../util/build/write-build-result';
 import { pullEnvRecords } from '../../util/env/get-env-records';
 import output from '../../output-manager';
 import { refreshOidcToken } from '../../util/env/refresh-oidc-token';
+import {
+  outputActionRequired,
+  buildCommandWithYes,
+} from '../../util/agent-output';
 import type { DevTelemetryClient } from '../../util/telemetry/commands/dev';
 import { VERCEL_OIDC_TOKEN } from '../../util/env/constants';
-import {
-  tryDetectServices,
-  isExperimentalServicesEnabled,
-} from '../../util/projects/detect-services';
+import { tryDetectServices } from '../../util/projects/detect-services';
 import { displayDetectedServices } from '../../util/input/display-services';
+import { acquireDevLock, releaseDevLock } from '../../util/dev/dev-lock';
+import { resolveProjectCwd } from '../../util/projects/find-project-root';
 
 type Options = {
   '--listen': string;
+  '--local': boolean;
   '--yes': boolean;
 };
 
@@ -38,30 +44,60 @@ export default async function dev(
   let cwd = resolve(dir);
   const listen = parseListen(opts['--listen'] || '3000');
 
+  cwd = await resolveProjectCwd(cwd);
+
   // retrieve dev command
   let link = await getLinkedProject(client, cwd);
 
   if (link.status === 'not_linked' && !process.env.__VERCEL_SKIP_DEV_CMD) {
-    link = await setupAndLink(client, cwd, {
-      autoConfirm: opts['--yes'],
-      link,
-      successEmoji: 'link',
-      setupMsg: 'Set up and develop',
-    });
+    if (opts['--local']) {
+      output.warn(
+        'Running dev server in local mode without a project setup:\n' +
+          '  - Environment variables will not be pulled from Vercel\n' +
+          '  - Project settings are defined by local configuration\n\n' +
+          `To link your project, run ${getCommandName('dev')} without \`-L\` or \`--local\` or ${getCommandName('link')}.`
+      );
+    } else {
+      link = await setupAndLink(client, cwd, {
+        autoConfirm: opts['--yes'],
+        link,
+        successEmoji: 'link',
+        setupMsg: 'Set up and develop',
+        nonInteractive: client.nonInteractive,
+      });
 
-    if (link.status === 'not_linked') {
-      // User aborted project linking questions
-      return 0;
+      if (link.status === 'not_linked') {
+        // User aborted project linking questions
+        return 0;
+      }
     }
   }
 
   if (link.status === 'error') {
     if (link.reason === 'HEADLESS') {
-      output.error(
-        `Command ${getCommandName(
-          'dev'
-        )} requires confirmation. Use option ${param('--yes')} to confirm.`
-      );
+      if (client.nonInteractive) {
+        outputActionRequired(
+          client,
+          {
+            status: 'action_required',
+            reason: 'confirmation_required',
+            message: `Command ${getCommandNamePlain('dev')} requires confirmation. Use option --yes to confirm.`,
+            next: [
+              {
+                command: buildCommandWithYes(client.argv),
+                when: 'Confirm and run',
+              },
+            ],
+          },
+          link.exitCode
+        );
+      } else {
+        output.error(
+          `Command ${getCommandName(
+            'dev'
+          )} requires confirmation. Use option ${param('--yes')} to confirm.`
+        );
+      }
     }
     return link.exitCode;
   }
@@ -90,12 +126,38 @@ export default async function dev(
   }
 
   let services: ResolvedService[] | undefined;
-  if (isExperimentalServicesEnabled()) {
-    const result = await tryDetectServices(cwd);
-    if (result && result.services.length > 0) {
-      displayDetectedServices(result.services);
-      services = result.services;
+  const servicesResult = await tryDetectServices(cwd);
+  const foundServices = servicesResult && servicesResult.services.length > 0;
+  if (foundServices) {
+    displayDetectedServices(servicesResult.services);
+    services = servicesResult.services;
+  }
+
+  let lockAcquired = false;
+  if (foundServices) {
+    const port = typeof listen[0] === 'number' ? listen[0] : 0;
+    const lockResult = await acquireDevLock(cwd, port);
+
+    if (!lockResult.acquired) {
+      output.error(
+        `Another ${getCommandName('dev')} process is already running for this project.`
+      );
+      if (lockResult.existingLock) {
+        const { existingLock } = lockResult;
+        const startTime = ms(Date.now() - existingLock.startedAt);
+        output.print(`  Port: ${chalk.cyan(existingLock.port)}\n`);
+        output.print(`  PID: ${chalk.cyan(existingLock.pid)}\n`);
+        output.print(`  Started: ${chalk.cyan(startTime)} ago\n`);
+        output.log(
+          `To stop the existing process, press Ctrl+C in its terminal or run: ` +
+            cmd(`kill ${existingLock.pid}`)
+        );
+      } else {
+        output.log(lockResult.reason);
+      }
+      return 1;
     }
+    lockAcquired = true;
   }
 
   const devServer = new DevServer(cwd, {
@@ -132,12 +194,37 @@ export default async function dev(
     }
   });
 
-  // listen to SIGTERM for graceful shutdown
-  process.on('SIGTERM', () => {
+  let cleanupInProgress = false;
+  const cleanup = async (signal: string) => {
+    if (cleanupInProgress) return;
+    cleanupInProgress = true;
+
+    output.debug(`Received ${signal}, shutting down...`);
+
     clearTimeout(timeout);
     controller.abort();
-    devServer.stop();
-  });
+
+    if (lockAcquired) {
+      releaseDevLock(cwd);
+    }
+
+    await devServer.stop();
+
+    let exitCode = 0;
+    switch (signal) {
+      case 'SIGINT':
+        exitCode = 130;
+        break;
+      case 'SIGTERM':
+        exitCode = 143;
+        break;
+    }
+
+    process.exit(exitCode);
+  };
+
+  process.on('SIGTERM', async () => await cleanup('SIGTERM'));
+  process.on('SIGINT', async () => await cleanup('SIGINT'));
 
   // If there is no Development Command, we must delete the
   // v3 Build Output because it will incorrectly be detected by
@@ -152,6 +239,11 @@ export default async function dev(
 
   try {
     await devServer.start(...listen);
+  } catch (err) {
+    if (lockAcquired) {
+      releaseDevLock(cwd);
+    }
+    throw err;
   } finally {
     clearTimeout(timeout);
     controller.abort();

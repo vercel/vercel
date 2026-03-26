@@ -20,6 +20,13 @@ export class IntegrationTelemetryClient
     });
   }
 
+  trackCliSubcommandDiscover(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'discover',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandOpen(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'open',
@@ -37,6 +44,13 @@ export class IntegrationTelemetryClient
   trackCliSubcommandRemove(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'remove',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandGuide(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'guide',
       value: actual,
     });
   }

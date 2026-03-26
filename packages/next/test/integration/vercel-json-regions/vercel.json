@@ -1,0 +1,15 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next"
+    }
+  ],
+  "functions": {
+    "app/api-route/route.js": {
+      "regions": ["iad1", "sfo1"],
+      "functionFailoverRegions": ["dub1", "hnd1"]
+    }
+  }
+}
