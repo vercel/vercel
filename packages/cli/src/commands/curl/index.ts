@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 import { spawn } from 'child_process';
 import type Client from '../../util/client';
 import { curlCommand } from './command';
@@ -25,6 +24,7 @@ export default async function curl(client: Client): Promise<number> {
   const result = await getDeploymentUrlAndToken(client, 'curl', path, {
     deploymentFlag,
     protectionBypassFlag,
+    autoConfirm: setup.yes,
   });
 
   if (typeof result === 'number') {

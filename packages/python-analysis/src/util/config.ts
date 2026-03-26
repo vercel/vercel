@@ -41,6 +41,7 @@ function parseRawConfig(
         message: `Could not parse config file "${filename}": ${error.message}`,
         code: 'PYTHON_CONFIG_PARSE_ERROR',
         path: filename,
+        fileContent: content,
       });
     }
     throw error;
@@ -76,6 +77,7 @@ export function parseConfig<T>(
       message: `Invalid config in "${filename}":\n${issues}`,
       code: 'PYTHON_CONFIG_VALIDATION_ERROR',
       path: filename,
+      fileContent: content,
     });
   }
 

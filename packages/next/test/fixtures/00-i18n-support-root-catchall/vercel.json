@@ -188,5 +188,10 @@
       "status": 200,
       "mustContain": ">nl-NL<"
     }
-  ]
+  ],
+  "build": {
+    "env": {
+      "NEXT_BUILDER_INTEGRATION": "1"
+    }
+  }
 }

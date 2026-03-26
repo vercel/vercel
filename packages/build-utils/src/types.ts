@@ -113,6 +113,23 @@ export interface BuildOptions {
    * The current trace state from the internal vc tracing
    */
   span?: Span;
+
+  /**
+   * Service-specific options. Only present when the build is part of a
+   * multi-service project.
+   */
+  service?: {
+    /** The service name as declared in the project configuration. */
+    name?: string;
+    /** The service type (e.g., "web", "cron", "worker"). */
+    type?: ServiceType;
+    /** URL path prefix where the service is mounted (e.g., "/api"). */
+    routePrefix?: string;
+    /** Optional subdomain this service is mounted on (e.g., "api"). */
+    subdomain?: string;
+    /** Workspace directory for this service, relative to the project root. */
+    workspace?: string;
+  };
 }
 
 export interface PrepareCacheOptions {
@@ -240,7 +257,6 @@ export type StartDevServerResult = StartDevServerSuccess | null;
  * Credit to Iain Reid, MIT license.
  * Source: https://gist.github.com/iainreid820/5c1cc527fe6b5b7dba41fec7fe54bf6e
  */
-// eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace PackageJson {
   /**
    * An author or contributor
@@ -399,15 +415,19 @@ export interface Builder {
   config?: Config;
 }
 
+export type MaxDuration = number | 'max';
+
 export interface BuilderFunctions {
   [key: string]: {
     architecture?: LambdaArchitecture;
     memory?: number;
-    maxDuration?: number;
+    maxDuration?: MaxDuration;
+    regions?: string[];
+    functionFailoverRegions?: string[];
     runtime?: string;
     includeFiles?: string;
     excludeFiles?: string;
-    experimentalTriggers?: TriggerEvent[];
+    experimentalTriggers?: TriggerEventInput[];
     supportsCancellation?: boolean;
   };
 }
@@ -427,6 +447,18 @@ export interface ProjectSettings {
   directoryListing?: boolean;
   gitForkProtection?: boolean;
   commandForIgnoringBuildStep?: string | null;
+}
+
+/*
+ * This is a builder whose build output version may dynamically change.
+ */
+export interface BuilderVX {
+  version: -1;
+  build: BuildVX;
+  diagnostics?: Diagnostics;
+  prepareCache?: PrepareCache;
+  shouldServe?: ShouldServe;
+  startDevServer?: StartDevServer;
 }
 
 export interface BuilderV2 {
@@ -547,11 +579,28 @@ export interface Service {
   installCommand?: string;
   /* web service config */
   routePrefix?: string;
+  routePrefixSource?: 'configured' | 'generated';
+  subdomain?: string;
   /* cron service config */
   schedule?: string;
+  /* optional handler for cron service in format of {module}:{callable} */
+  handlerFunction?: string;
   /* worker service config */
-  topic?: string;
+  topics?: string[];
   consumer?: string;
+  /** custom prefix to inject service URL env vars */
+  envPrefix?: string;
+}
+
+/**
+ * Returns the topics a worker service subscribes to, defaulting to ['default'].
+ */
+export function getWorkerTopics(config: {
+  topics?: string[];
+}): [string, ...string[]] {
+  return config.topics?.length
+    ? (config.topics as [string, ...string[]])
+    : ['default'];
 }
 
 /** The framework which created the function */
@@ -589,6 +638,10 @@ export interface BuildResultV2Typical {
   deploymentId?: string;
 }
 
+export type BuildResultVX =
+  | { resultVersion: 2; result: BuildResultV2 }
+  | { resultVersion: 3; result: BuildResultV3 };
+
 export type BuildResultV2 = BuildResultV2Typical | BuildResultBuildOutput;
 
 export interface BuildResultV3 {
@@ -597,6 +650,7 @@ export interface BuildResultV3 {
   output: Lambda | EdgeFunction;
 }
 
+export type BuildVX = (options: BuildOptions) => Promise<BuildResultVX>;
 export type BuildV2 = (options: BuildOptions) => Promise<BuildResultV2>;
 export type BuildV3 = (options: BuildOptions) => Promise<BuildResultV3>;
 export type PrepareCache = (options: PrepareCacheOptions) => Promise<Files>;
@@ -648,19 +702,9 @@ export interface Chain {
   headers: Record<string, string>;
 }
 
-/**
- * Queue trigger event for Vercel's queue system.
- * Handles "queue/v1beta" events with queue-specific configuration.
- */
-export interface TriggerEvent {
-  /** Event type - must be "queue/v1beta" (REQUIRED) */
-  type: 'queue/v1beta';
-
+interface TriggerEventBase {
   /** Name of the queue topic to consume from (REQUIRED) */
   topic: string;
-
-  /** Name of the consumer group for this trigger (REQUIRED) */
-  consumer: string;
 
   /**
    * Maximum number of delivery attempts for message processing (OPTIONAL)
@@ -691,6 +735,46 @@ export interface TriggerEvent {
   maxConcurrency?: number;
 }
 
+/**
+ * Queue trigger input event for v1beta (from vercel.json config).
+ * Requires explicit consumer name.
+ */
+export interface TriggerEventInputV1 extends TriggerEventBase {
+  /** Event type - must be "queue/v1beta" (REQUIRED) */
+  type: 'queue/v1beta';
+
+  /** Name of the consumer group for this trigger (REQUIRED) */
+  consumer: string;
+}
+
+/**
+ * Queue trigger input event for v2beta (from vercel.json config).
+ * Consumer name is implicitly derived from the function path.
+ * Only one trigger per function is allowed.
+ */
+export interface TriggerEventInputV2 extends TriggerEventBase {
+  /** Event type - must be "queue/v2beta" (REQUIRED) */
+  type: 'queue/v2beta';
+}
+
+/**
+ * Queue trigger input event from vercel.json config.
+ * v1beta requires explicit consumer, v2beta derives consumer from function path.
+ */
+export type TriggerEventInput = TriggerEventInputV1 | TriggerEventInputV2;
+
+/**
+ * Processed queue trigger event for Lambda.
+ * Consumer is always present (explicitly provided for v1beta, derived for v2beta).
+ */
+export interface TriggerEvent extends TriggerEventBase {
+  /** Event type */
+  type: 'queue/v1beta' | 'queue/v2beta';
+
+  /** Name of the consumer group for this trigger (always present in processed output) */
+  consumer: string;
+}
+
 export type ServiceRuntime = 'node' | 'python' | 'go' | 'rust' | 'ruby';
 
 export type ServiceType = 'web' | 'cron' | 'worker';
@@ -702,16 +786,12 @@ export type ServiceType = 'web' | 'cron' | 'worker';
 export interface ExperimentalServiceConfig {
   type?: ServiceType;
   /**
-   * Entry file for the service, relative to the workspace directory.
-   * @example "src/index.ts", "main.py", "api/server.go"
+   * Service entrypoint, relative to the project root.
+   * Can be either a file path (runtime entrypoint) or a directory path
+   * (service workspace for framework-based services).
+   * @example "apps/web", "services/api/src/index.ts", "services/fastapi/main.py"
    */
   entrypoint?: string;
-  /**
-   * Path to the directory containing the service's manifest file
-   * (package.json, pyproject.toml, etc.).
-   * Defaults to "." (project root) if not specified.
-   */
-  workspace?: string;
 
   /** Framework to use */
   framework?: string;
@@ -725,21 +805,26 @@ export interface ExperimentalServiceConfig {
 
   /** Lambda config */
   memory?: number;
-  maxDuration?: number;
+  maxDuration?: MaxDuration;
   includeFiles?: string | string[];
   excludeFiles?: string | string[];
 
   /* Web service config */
   /** URL prefix for routing */
   routePrefix?: string;
+  /** Subdomain this service should respond to (web services only). */
+  subdomain?: string;
 
   /* Cron service config */
   /** Cron schedule expression (e.g., "0 0 * * *") */
   schedule?: string;
 
   /* Worker service config */
-  topic?: string;
+  topics?: string[];
   consumer?: string;
+
+  /** Custom prefix to use to inject service URL env vars */
+  envPrefix?: string;
 }
 
 /**

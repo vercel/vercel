@@ -1,0 +1,141 @@
+import chalk from 'chalk';
+import type { FlagVariant } from './types';
+
+export interface ResolveVariantResult {
+  variant: FlagVariant | null;
+  error: string | null;
+}
+
+/**
+ * Formats a variant value for display.
+ */
+export function formatVariantValue(value: FlagVariant['value']): string {
+  return JSON.stringify(value);
+}
+
+/**
+ * Formats a variant for display in prompts and messages.
+ * Shows the value first, followed by the label if available.
+ */
+export function formatVariantForDisplay(variant: FlagVariant): string {
+  const parts = [formatVariantValue(variant.value)];
+  if (variant.label) {
+    parts.push(chalk.dim(variant.label));
+  }
+  return parts.join(' ');
+}
+
+/**
+ * Formats a list of variants for error messages.
+ */
+export function formatAvailableVariants(variants: FlagVariant[]): string {
+  return variants.map(v => `  - ${formatAvailableVariant(v)}`).join('\n');
+}
+
+/**
+ * Resolves a user-provided variant input to an actual variant.
+ *
+ * Resolution order:
+ * 1. Exact match on variant ID
+ * 2. Match on variant value (supports true/false, string values, numbers, etc.)
+ *
+ * Labels are intentionally excluded because they are presentation-oriented and
+ * may not be unique across variants.
+ *
+ * @param input - The user-provided variant identifier (ID or value)
+ * @param variants - The available variants for the flag
+ * @returns The resolved variant or null with an error message
+ */
+export function resolveVariant(
+  input: string,
+  variants: FlagVariant[]
+): ResolveVariantResult {
+  // 1. Try exact match on variant ID
+  const byId = variants.find(v => v.id === input);
+  if (byId) {
+    return { variant: byId, error: null };
+  }
+
+  // 2. Try to match by value
+  // First try exact string match (for string variants with values like "off")
+  const byExactValue = variants.find(v => v.value === input);
+  if (byExactValue) {
+    return { variant: byExactValue, error: null };
+  }
+
+  // Then try parsed value (handles "true"/"false" for boolean flags)
+  const parsedInput = parseVariantValue(input);
+  const byValue = variants.find(v => valuesMatch(v.value, parsedInput));
+  if (byValue) {
+    return { variant: byValue, error: null };
+  }
+
+  // No match found - return helpful error
+  const availableList = formatAvailableVariants(variants);
+  const error = `Variant "${input}" not found.\n\nAvailable variants:\n${availableList}\n\nYou can specify a variant by its ID or value.`;
+
+  return { variant: null, error };
+}
+
+/**
+ * Parses a string input into the appropriate type for comparison.
+ * Handles booleans, numbers, and strings.
+ */
+function parseVariantValue(input: string): string | number | boolean {
+  // Handle boolean values (only true/false)
+  const lowerInput = input.toLowerCase();
+  if (lowerInput === 'true') {
+    return true;
+  }
+  if (lowerInput === 'false') {
+    return false;
+  }
+
+  // Handle numeric values
+  const num = Number(input);
+  if (!isNaN(num) && input.trim() !== '') {
+    return num;
+  }
+
+  // Return as string
+  return input;
+}
+
+/**
+ * Compares two variant values for equality.
+ * Handles type coercion for common cases.
+ */
+function valuesMatch(
+  variantValue: string | number | boolean,
+  inputValue: string | number | boolean
+): boolean {
+  // Direct equality
+  if (variantValue === inputValue) {
+    return true;
+  }
+
+  // String comparison of values (for cases like "off" matching string "off")
+  if (String(variantValue) === String(inputValue)) {
+    return true;
+  }
+
+  return false;
+}
+
+function formatAvailableVariant(variant: FlagVariant): string {
+  const value = formatStyledVariantValue(variant.value);
+  if (!variant.label) {
+    return value;
+  }
+
+  return `${value} ${chalk.dim(variant.label)}`;
+}
+
+function formatStyledVariantValue(value: FlagVariant['value']): string {
+  const formattedValue = formatVariantValue(value);
+  if (typeof value !== 'string') {
+    return chalk.bold(formattedValue);
+  }
+
+  return `"${chalk.bold(formattedValue.slice(1, -1))}"`;
+}

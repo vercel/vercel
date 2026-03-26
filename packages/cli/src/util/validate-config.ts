@@ -155,27 +155,6 @@ const cronsSchema = {
   },
 };
 
-const customErrorPageSchema = {
-  oneOf: [
-    { type: 'string', minLength: 1 },
-    {
-      type: 'object',
-      additionalProperties: false,
-      minProperties: 1,
-      properties: {
-        default5xx: {
-          type: 'string',
-          minLength: 1,
-        },
-        default4xx: {
-          type: 'string',
-          minLength: 1,
-        },
-      },
-    },
-  ],
-};
-
 const serviceConfigSchema = {
   type: 'object',
   additionalProperties: false,
@@ -188,15 +167,15 @@ const serviceConfigSchema = {
       minLength: 1,
       maxLength: 512,
     },
-    workspace: {
-      type: 'string',
-      minLength: 1,
-      maxLength: 512,
-    },
     routePrefix: {
       type: 'string',
       minLength: 1,
       maxLength: 512,
+    },
+    subdomain: {
+      type: 'string',
+      minLength: 1,
+      maxLength: 63,
     },
     framework: {
       type: 'string',
@@ -229,9 +208,10 @@ const serviceConfigSchema = {
       maximum: 10240,
     },
     maxDuration: {
-      type: 'integer',
-      minimum: 1,
-      maximum: 900,
+      oneOf: [
+        { type: 'integer', minimum: 1, maximum: 900 },
+        { type: 'string', enum: ['max'] },
+      ],
     },
     includeFiles: {
       oneOf: [
@@ -258,10 +238,14 @@ const serviceConfigSchema = {
       maxLength: 256,
     },
     // Worker-specific
-    topic: {
-      type: 'string',
-      minLength: 1,
-      maxLength: 256,
+    topics: {
+      type: 'array',
+      items: {
+        type: 'string',
+        minLength: 1,
+        maxLength: 256,
+      },
+      minItems: 1,
     },
     consumer: {
       type: 'string',
@@ -323,7 +307,6 @@ const vercelConfigSchema = {
     functions: functionsSchema,
     images: imagesSchema,
     crons: cronsSchema,
-    customErrorPage: customErrorPageSchema,
     bunVersion: { type: 'string' },
     experimentalServices: experimentalServicesSchema,
     experimentalServiceGroups: experimentalServiceGroupsSchema,

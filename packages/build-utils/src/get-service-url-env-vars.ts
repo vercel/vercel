@@ -12,6 +12,8 @@ export interface GetServiceUrlEnvVarsOptions {
   frameworkList: readonly FrameworkInfo[];
   currentEnv?: Envs;
   deploymentUrl?: string;
+  origin?: string;
+  envPrefix?: string;
 }
 
 /**
@@ -22,15 +24,24 @@ function serviceNameToEnvVar(name: string): string {
   return `${name.replace(/-/g, '_').toUpperCase()}_URL`;
 }
 
-function computeServiceUrl(deploymentUrl: string, routePrefix: string): string {
+function computeServiceUrl(
+  baseUrl: string,
+  routePrefix: string,
+  isOrigin: boolean
+): string {
+  if (!isOrigin) {
+    // This is deployment host, needs https:// prefix
+    baseUrl = `https://${baseUrl}`;
+  }
+
   if (routePrefix === '/') {
-    return `https://${deploymentUrl}`;
+    return baseUrl;
   }
 
   const normalizedPrefix = routePrefix.startsWith('/')
     ? routePrefix.slice(1)
     : routePrefix;
-  return `https://${deploymentUrl}/${normalizedPrefix}`;
+  return `${baseUrl}/${normalizedPrefix}`;
 }
 
 /**
@@ -51,10 +62,13 @@ function getFrameworkEnvPrefix(
  * Generate environment variables for service URLs.
  *
  * For each web service, generates:
- * 1. A base env var (e.g., BACKEND_URL)
- * 2. Framework-prefixed versions for each frontend framework in the deployment
- *    (e.g., VITE_BACKEND_URL, NEXT_PUBLIC_BACKEND_URL) so they can be accessed
- *    in client-side code.
+ * 1. A base env var with the full absolute URL (e.g., BACKEND_URL=https://deploy.vercel.app/api)
+ *    for server-side use.
+ * 2. Framework-prefixed versions with only the route prefix path
+ *    (e.g., NEXT_PUBLIC_BACKEND_URL=/api, VITE_BACKEND_URL=/api) for client-side use.
+ *    Using relative paths avoids CORS issues since the browser resolves them against
+ *    the current origin, which works correctly across production domains, preview
+ *    deployments, and custom domains.
  *
  * Environment variables that are already set in `currentEnv` will NOT be overwritten,
  * allowing user-defined values to take precedence.
@@ -62,10 +76,19 @@ function getFrameworkEnvPrefix(
 export function getServiceUrlEnvVars(
   options: GetServiceUrlEnvVarsOptions
 ): Record<string, string> {
-  const { services, frameworkList, currentEnv = {}, deploymentUrl } = options;
+  const {
+    services,
+    frameworkList,
+    currentEnv = {},
+    deploymentUrl,
+    origin,
+    envPrefix,
+  } = options;
 
-  // Can't generate service URLs without a deployment URL
-  if (!deploymentUrl || !services || services.length === 0) {
+  const baseUrl = origin || deploymentUrl;
+
+  // Can't generate service URLs without a base URL
+  if (!baseUrl || !services || services.length === 0) {
     return {};
   }
 
@@ -87,19 +110,33 @@ export function getServiceUrlEnvVars(
     }
 
     const baseEnvVarName = serviceNameToEnvVar(service.name);
-    const url = computeServiceUrl(deploymentUrl, service.routePrefix);
+    const absoluteUrl = computeServiceUrl(
+      baseUrl,
+      service.routePrefix,
+      !!origin
+    );
 
-    // Add the base env var (e.g., BACKEND_URL) if not already set
-    if (!(baseEnvVarName in currentEnv)) {
-      envVars[baseEnvVarName] = url;
+    const effectiveBaseEnvVarName = envPrefix
+      ? `${envPrefix}${baseEnvVarName}`
+      : baseEnvVarName;
+
+    // Add the base env var with full absolute URL (e.g., BACKEND_URL)
+    // for server-side use where relative paths won't resolve
+    if (!(effectiveBaseEnvVarName in currentEnv)) {
+      envVars[effectiveBaseEnvVarName] = absoluteUrl;
     }
 
-    // Add framework-prefixed versions for each frontend framework in the deployment
-    // e.g., VITE_BACKEND_URL, NEXT_PUBLIC_BACKEND_URL
+    // Add framework-prefixed versions with only the route prefix path
+    // (e.g., NEXT_PUBLIC_BACKEND_URL, VITE_BACKEND_URL) for client-side use.
+    // Using relative paths ensures the browser resolves requests against the
+    // current origin, avoiding CORS errors when the deployment URL differs
+    // from the production/custom domain.
     for (const prefix of frameworkPrefixes) {
-      const prefixedEnvVarName = `${prefix}${baseEnvVarName}`;
+      const prefixedEnvVarName = envPrefix
+        ? `${prefix}${envPrefix}${baseEnvVarName}`
+        : `${prefix}${baseEnvVarName}`;
       if (!(prefixedEnvVarName in currentEnv)) {
-        envVars[prefixedEnvVarName] = url;
+        envVars[prefixedEnvVarName] = service.routePrefix;
       }
     }
   }

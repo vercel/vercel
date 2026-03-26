@@ -58,5 +58,10 @@
         "x-vercel-cache": "/HIT|STALE/"
       }
     }
-  ]
+  ],
+  "build": {
+    "env": {
+      "NEXT_BUILDER_INTEGRATION": "1"
+    }
+  }
 }

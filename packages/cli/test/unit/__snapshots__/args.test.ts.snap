@@ -21,6 +21,7 @@ exports[`base level help output > help 1`] = `
       inspect              [id]        Displays information related to a deployment
       i | install          [name]      Install an integration from the Marketplace
       integration          [cmd]       Manages your Marketplace integrations
+      ir | integration-resource [cmd]  Manages your Marketplace integration resources
       link                 [path]      Link local directory to a Vercel Project
       ls | list            [app]       Lists deployments
       login                [email]     Logs into your account or creates a new one
@@ -34,23 +35,37 @@ exports[`base level help output > help 1`] = `
 
     Advanced
 
+      activity                         List user activity events
+      agent                [init]      Generate AGENTS.md with Vercel best practices
+      alerts                           List alerts for a project or team
       alias                [cmd]       Manages your domain aliases
       api                  [endpoint]  Make authenticated HTTP requests to the Vercel API [beta]
       bisect                           Use binary search to find the deployment that introduced a bug
+      blob                 [cmd]       Manages your Blob stores and files
+      buy                  [cmd]       Purchase Vercel products for your team
       certs                [cmd]       Manages your SSL certificates
+      contract                         Show contract information for billing periods
+      cron | crons         [cmd]       Manage cron jobs for a project [beta]
       curl                 [path]      cURL requests to your linked project's deployment [beta]
       dns                  [name]      Manages your DNS records
       domains              [name]      Manages your domain names
+      httpstat             path        Visualize HTTP timing statistics for deployments
       logs                 [url]       Displays the logs for a deployment
+      mcp                              Set up MCP agents and configuration
       microfrontends                   Manages your microfrontends
       projects                         Manages your Projects
       redirects            [cmd]       Manages redirects for your current Project
       rm | remove          [id]        Removes a deployment
+      routes               [cmd]       Manages routing rules for your current Project
+      rr | rolling-release [cmd]       Manage rolling releases for gradual traffic shifting
+      skills               [query]     Discover agent skills relevant to your project
+      target               [cmd]       Manage custom environments for your Project
       teams                            Manages your teams
+      telemetry            [cmd]       Enable or disable telemetry collection
       upgrade                          Upgrade the Vercel CLI to the latest version
-      whoami                           Shows the username of the currently logged in user
-      blob                 [cmd]       Manages your Blob stores and files
+      usage                            Show billing usage for the current billing period
       webhooks             [cmd]       Manages webhooks [beta]
+      whoami                           Shows the username of the currently logged in user
 
   Global Options:
 

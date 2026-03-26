@@ -20,6 +20,13 @@ export const devCommand = {
       type: String,
       deprecated: false,
     },
+    {
+      name: 'local',
+      shorthand: 'L',
+      type: Boolean,
+      deprecated: false,
+      description: 'Start the dev server without linking to a Vercel project',
+    },
     yesOption,
     { name: 'port', shorthand: 'p', type: String, deprecated: true },
     confirmOption,

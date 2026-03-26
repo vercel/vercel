@@ -2,9 +2,23 @@ import execa from 'execa';
 import path from 'path';
 import fs from 'fs-extra';
 import { TurboDryRun } from './types';
+const { getPythonPackages } = require('./get-python-packages.js');
 
 const rootDir = path.join(__dirname, '..');
 const ignoredPackages = ['api', 'examples'];
+const pythonWheelPackages = getPythonPackages(rootDir).map(
+  (pkg: {
+    packageDir: string;
+    projectDir: string;
+    label: string;
+    nodePackageName: string;
+  }) => ({
+    packageDir: pkg.packageDir,
+    tag: `${pkg.nodePackageName}@*`,
+    packagePath: pkg.projectDir,
+    packageLabel: pkg.label,
+  })
+);
 
 async function main() {
   const sha = await getSha();
@@ -49,6 +63,115 @@ async function main() {
       stdio: 'inherit',
     });
     await fs.writeJson(packageJsonPath, originalPackageObj, { spaces: 2 });
+  }
+
+  // Build Python wheels so they can be hosted on preview deployments.
+  for (const pkg of pythonWheelPackages) {
+    await buildPythonWheel(pkg);
+  }
+}
+
+async function buildPythonWheel({
+  packageDir,
+  tag,
+  packagePath,
+  packageLabel,
+}: {
+  packageDir: string;
+  tag: string;
+  packagePath: string;
+  packageLabel: string;
+}) {
+  const pythonPackageDir = path.join(rootDir, 'python', packageDir);
+  const pyprojectPath = path.join(pythonPackageDir, 'pyproject.toml');
+
+  if (!(await fs.pathExists(pyprojectPath))) {
+    console.log(
+      `Skipping Python ${packageLabel} wheel build: missing ${pyprojectPath}`
+    );
+    return;
+  }
+
+  try {
+    // Find the last release tag for this package
+    let lastTag: string;
+    try {
+      const { stdout } = await execa('git', [
+        'describe',
+        '--tags',
+        '--match',
+        tag,
+        '--abbrev=0',
+      ]);
+      lastTag = stdout.trim();
+    } catch {
+      console.log(
+        `No previous ${tag} tag found, building ${packageLabel} wheel.`
+      );
+      lastTag = '';
+    }
+
+    // Check if there are changes since the last tag
+    // (git diff --quiet exits 0 if no changes, 1 if changes)
+    if (lastTag) {
+      const result = await execa('git', [
+        'diff',
+        '--quiet',
+        lastTag,
+        'HEAD',
+        '--',
+        packagePath,
+      ]).catch(err => err);
+
+      if (result.exitCode === 0) {
+        console.log(
+          `No changes to ${packagePath} since ${lastTag}, skipping wheel build.`
+        );
+        return;
+      }
+    }
+
+    const sha = (await getSha()).trim();
+    let timestamp: number;
+    try {
+      const { stdout } = await execa('git', ['log', '-1', '--format=%ct'], {
+        env: { ...process.env, LC_ALL: 'C', TZ: 'UTC' },
+      });
+      timestamp = Number(stdout.trim()) || 0;
+    } catch {
+      timestamp = 0;
+    }
+    const original = await fs.readFile(pyprojectPath, 'utf8');
+    // e.g. 0.4.0 -> 0.5.0.dev1739371200+d496c36
+    const devVersion = original.replace(
+      /^(version\s*=\s*")(\d+)\.(\d+)\.(\d+)(")/m,
+      (
+        _m: string,
+        pre: string,
+        major: string,
+        minor: string,
+        _patch: string,
+        post: string
+      ) => `${pre}${major}.${Number(minor) + 1}.0.dev${timestamp}+${sha}${post}`
+    );
+    await fs.writeFile(pyprojectPath, devVersion);
+
+    console.log(
+      `Building Python ${packageLabel} wheel (dev${timestamp}+${sha}, ${lastTag || 'no prior tag'})...`
+    );
+
+    try {
+      await execa('uv', ['build', '--wheel', '--out-dir', 'dist/'], {
+        cwd: pythonPackageDir,
+        stdio: 'inherit',
+      });
+      console.log(`Python ${packageLabel} wheel built successfully.`);
+    } finally {
+      await fs.writeFile(pyprojectPath, original);
+    }
+  } catch (err) {
+    console.error(`Failed to build Python ${packageLabel} wheel:`, err);
+    throw err;
   }
 }
 

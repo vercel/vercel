@@ -160,5 +160,10 @@
       "status": 200,
       "mustContain": "post-1337"
     }
-  ]
+  ],
+  "build": {
+    "env": {
+      "NEXT_BUILDER_INTEGRATION": "1"
+    }
+  }
 }

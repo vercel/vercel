@@ -140,5 +140,10 @@
       "status": 200,
       "mustContain": "Example Domain"
     }
-  ]
+  ],
+  "build": {
+    "env": {
+      "NEXT_BUILDER_INTEGRATION": "1"
+    }
+  }
 }

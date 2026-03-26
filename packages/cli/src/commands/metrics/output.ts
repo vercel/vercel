@@ -1,0 +1,70 @@
+import type { EventSchema } from './schema-api';
+import type { QueryMetadata, MetricsQueryResponse } from './types';
+
+export function getRollupColumnName(
+  measure: string,
+  aggregation: string
+): string {
+  return `${measure}_${aggregation}`;
+}
+
+export function formatQueryJson(
+  query: QueryMetadata,
+  response: MetricsQueryResponse
+): string {
+  return JSON.stringify(
+    {
+      query,
+      summary: response.summary ?? [],
+      data: response.data ?? [],
+      statistics: response.statistics ?? {},
+    },
+    null,
+    2
+  );
+}
+
+export function formatSchemaDetailJson(
+  event: EventSchema & { name: string }
+): string {
+  return JSON.stringify(
+    {
+      event: event.name,
+      description: event.description,
+      dimensions: event.dimensions.map(d => ({
+        name: d.name,
+        label: d.label,
+      })),
+      measures: event.measures.map(m => ({
+        name: m.name,
+        label: m.label,
+        unit: m.unit,
+        aggregations: m.aggregations,
+        defaultAggregation: m.defaultAggregation,
+      })),
+    },
+    null,
+    2
+  );
+}
+
+export function formatSchemaListJson(
+  events: Array<{ name: string; description: string }>
+): string {
+  return JSON.stringify(events, null, 2);
+}
+
+export function formatErrorJson(
+  code: string,
+  message: string,
+  allowedValues?: string[]
+): string {
+  const error: { code: string; message: string; allowedValues?: string[] } = {
+    code,
+    message,
+  };
+  if (allowedValues && allowedValues.length > 0) {
+    error.allowedValues = allowedValues;
+  }
+  return JSON.stringify({ error }, null, 2);
+}

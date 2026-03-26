@@ -11,11 +11,8 @@ let sentry: typeof SentryType | undefined;
 export function getSentry(): typeof SentryType {
   if (!sentry) {
     // Dynamic require to avoid loading Sentry at startup
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const Sentry = require('@sentry/node') as typeof SentryType;
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { SENTRY_DSN } = require('./constants');
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const pkg = require('./pkg').default;
 
     Sentry.init({

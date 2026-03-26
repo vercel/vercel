@@ -1,16 +1,26 @@
 import path from 'path';
 import ms from 'ms';
-import { Transform, type TransformCallback } from 'stream';
+import { Transform, Writable, type TransformCallback } from 'stream';
 import type { ChildProcess } from 'child_process';
 import getPort from 'get-port';
 import chalk from 'chalk';
-import type { Service } from '@vercel/fs-detectors';
+import {
+  getInternalServiceCronPathPrefix,
+  getInternalServiceWorkerPathPrefix,
+  type Service,
+} from '@vercel/fs-detectors';
 import { frameworkList, type Framework } from '@vercel/frameworks';
+import { getNextCronDelay } from './cron';
 import {
   cloneEnv,
   getNodeBinPaths,
   spawnCommand,
+  NowBuildError,
+  runNpmInstall,
+  getServiceUrlEnvVars,
   type BuilderV3,
+  type BuilderVX,
+  type Config,
 } from '@vercel/build-utils';
 import { checkForPort } from './port-utils';
 import { importBuilders } from '../build/import-builders';
@@ -18,6 +28,28 @@ import output from '../../output-manager';
 import { treeKill } from '../tree-kill';
 
 const STARTUP_TIMEOUT = ms('5m');
+
+export class ServiceStartError extends Error {
+  constructor(failures: Error[]) {
+    // Deduplicate errors that are the same for all services
+    const dedupeErrorCodes = new Set(['PYTHON_EXTERNAL_VENV_DETECTED']);
+    const seenCodes = new Set<string>();
+    const uniqueMessages: string[] = [];
+
+    for (const err of failures) {
+      if (err instanceof NowBuildError && dedupeErrorCodes.has(err.code)) {
+        if (!seenCodes.has(err.code)) {
+          uniqueMessages.push(err.message);
+          seenCodes.add(err.code);
+        }
+      } else {
+        uniqueMessages.push(err.message);
+      }
+    }
+
+    super(uniqueMessages.join('\n'));
+  }
+}
 
 const SERVICE_COLORS = [
   chalk.cyan,
@@ -42,29 +74,44 @@ function createServiceLogger(
   const padding = ' '.repeat(maxNameLength - serviceName.length);
   const prefix = color(`[${serviceName}]`) + padding;
 
-  const createTransform = () =>
-    new Transform({
+  const createTransform = (streamLabel: string) => {
+    let buffer = '';
+    const labelPrefix = output.debugEnabled
+      ? `${prefix} ${chalk.gray(`(${streamLabel})`)}`
+      : prefix;
+    return new Transform({
       transform(
         chunk: Buffer,
         _encoding: BufferEncoding,
         callback: TransformCallback
       ) {
-        const text = chunk.toString();
-        const lines = text.split('\n');
-        const prefixed = lines
-          .map((line, index) => {
-            if (index === lines.length - 1 && line === '') {
-              return '';
-            }
-            return `${prefix} ${line}`;
-          })
-          .join('\n');
-        callback(null, prefixed);
+        buffer += chunk.toString();
+        const lines = buffer.split('\n');
+        // Keep the last incomplete line in the buffer
+        buffer = lines.pop() || '';
+        // Output complete lines with prefix
+        if (lines.length > 0) {
+          const prefixed = lines
+            .map(line => `${labelPrefix} ${line}`)
+            .join('\n');
+          callback(null, prefixed + '\n');
+        } else {
+          callback(null, '');
+        }
+      },
+      flush(callback: TransformCallback) {
+        // Output any remaining buffered content on close
+        if (buffer) {
+          callback(null, `${labelPrefix} ${buffer}\n`);
+        } else {
+          callback(null, '');
+        }
       },
     });
+  };
 
-  const stdout = createTransform();
-  const stderr = createTransform();
+  const stdout = createTransform('stdout');
+  const stderr = createTransform('stderr');
 
   stdout.pipe(process.stdout);
   stderr.pipe(process.stderr);
@@ -86,9 +133,19 @@ interface ServiceDevProcess {
   pid: number;
   process?: ChildProcess;
   shutdown?: () => Promise<void>;
-  routePrefix: string;
+  routePrefixes: string[];
   workspace: string;
   logger: ServiceLogger;
+}
+
+function getServiceRoutePrefixes(service: Service): string[] {
+  if (service.type === 'worker') {
+    return [getInternalServiceWorkerPathPrefix(service.name)];
+  }
+  if (service.type === 'cron') {
+    return [getInternalServiceCronPathPrefix(service.name)];
+  }
+  return [service.routePrefix || '/'];
 }
 
 interface ServicesOrchestratorOptions {
@@ -102,6 +159,7 @@ interface ServicesOrchestratorOptions {
 export class ServicesOrchestrator {
   private managedServices = new Map<string, ServiceDevProcess>();
   private managedProcesses = new Map<string, ChildProcess>();
+  private cronTimers: ReturnType<typeof setTimeout>[] = [];
   private stopping = false;
 
   private services: Service[];
@@ -110,6 +168,8 @@ export class ServicesOrchestrator {
   private env: NodeJS.ProcessEnv;
   private maxNameLength: number;
   private proxyOrigin: string;
+  private pythonServiceCount: number;
+  private hasWorkerServices: boolean;
 
   constructor(options: ServicesOrchestratorOptions) {
     this.services = options.services;
@@ -118,28 +178,38 @@ export class ServicesOrchestrator {
     this.maxNameLength = Math.max(...options.services.map(s => s.name.length));
     this.proxyOrigin = options.proxyOrigin;
     this.env = options.env;
+    this.pythonServiceCount = options.services.filter(
+      s => s.runtime === 'python'
+    ).length;
+    this.hasWorkerServices = options.services.some(s => s.type === 'worker');
   }
 
   async startAll(): Promise<void> {
     output.debug(`Starting ${this.services.length} services`);
 
     const startPromises = this.services.map((service, index) =>
-      this.startService(service, index)
+      this.startService(service, index).then(result => {
+        this.managedServices.set(result.name, result);
+        return result;
+      })
     );
 
-    try {
-      const results = await Promise.all(startPromises);
-      for (const result of results) {
-        this.managedServices.set(result.name, result);
-      }
-      output.debug(
-        `All ${this.managedServices.size} services started successfully`
-      );
-    } catch (error) {
-      output.error(`${error}`);
+    const results = await Promise.allSettled(startPromises);
+
+    const failures = results.filter(
+      (r): r is PromiseRejectedResult => r.status === 'rejected'
+    );
+
+    if (failures.length > 0) {
       await this.stopAll();
-      throw error;
+      throw new ServiceStartError(failures.map(f => f.reason as Error));
     }
+
+    output.debug(
+      `All ${this.managedServices.size} services started successfully`
+    );
+
+    this.startCronSchedulers();
   }
 
   async stopAll(): Promise<void> {
@@ -154,19 +224,22 @@ export class ServicesOrchestrator {
     for (const [name, service] of this.managedServices) {
       output.debug(`Stopping service "${name}" (PID: ${service.pid})`);
 
-      if (service.shutdown) {
-        stopPromises.push(
-          service.shutdown().catch(err => {
+      // For some builders (e.g. @vercel/python) `shutdown` is defined as no-op,
+      // so we'll try to be nice at first, but then proceed with killing the tree.
+      const stopService = async () => {
+        if (service.shutdown) {
+          await service.shutdown().catch(err => {
             output.debug(`Failed to shutdown service "${name}": ${err}`);
-          })
-        );
-      } else if (service.pid) {
-        stopPromises.push(
-          treeKill(service.pid).catch(err => {
-            output.debug(`Failed to stop service "${name}": ${err}`);
-          })
-        );
-      }
+          });
+        }
+
+        if (service.pid) {
+          await treeKill(service.pid).catch(err => {
+            output.debug(`Failed to kill service "${name}": ${err}`);
+          });
+        }
+      };
+      stopPromises.push(stopService());
 
       service.logger.cleanup();
     }
@@ -182,6 +255,11 @@ export class ServicesOrchestrator {
       }
     }
 
+    for (const timer of this.cronTimers) {
+      clearTimeout(timer);
+    }
+    this.cronTimers = [];
+
     await Promise.all(stopPromises);
     this.managedServices.clear();
     this.managedProcesses.clear();
@@ -193,27 +271,27 @@ export class ServicesOrchestrator {
     let bestMatchLength = -1;
 
     for (const service of this.managedServices.values()) {
-      const { routePrefix } = service;
-
-      if (routePrefix === '/') {
-        if (bestMatchLength === -1) {
-          bestMatch = service;
-          bestMatchLength = 0;
+      for (const routePrefix of service.routePrefixes) {
+        if (routePrefix === '/') {
+          if (bestMatchLength === -1) {
+            bestMatch = service;
+            bestMatchLength = 0;
+          }
+          continue;
         }
-        continue;
-      }
 
-      const normalizedPrefix = routePrefix.startsWith('/')
-        ? routePrefix
-        : `/${routePrefix}`;
+        const normalizedPrefix = routePrefix.startsWith('/')
+          ? routePrefix
+          : `/${routePrefix}`;
 
-      if (
-        pathname === normalizedPrefix ||
-        pathname.startsWith(`${normalizedPrefix}/`)
-      ) {
-        if (normalizedPrefix.length > bestMatchLength) {
-          bestMatch = service;
-          bestMatchLength = normalizedPrefix.length;
+        if (
+          pathname === normalizedPrefix ||
+          pathname.startsWith(`${normalizedPrefix}/`)
+        ) {
+          if (normalizedPrefix.length > bestMatchLength) {
+            bestMatch = service;
+            bestMatchLength = normalizedPrefix.length;
+          }
         }
       }
     }
@@ -246,9 +324,13 @@ export class ServicesOrchestrator {
       this.maxNameLength
     );
 
-    const serviceUrlEnvVars = this.generateServiceUrlEnvVars(
-      framework?.envPrefix
-    );
+    const serviceUrlEnvVars = getServiceUrlEnvVars({
+      services: this.services,
+      frameworkList: framework ? [framework] : [],
+      origin: this.proxyOrigin,
+      currentEnv: this.env,
+      envPrefix: service.envPrefix,
+    });
 
     const env = cloneEnv(
       {
@@ -259,9 +341,26 @@ export class ServicesOrchestrator {
       this.env,
       serviceUrlEnvVars
     );
+    env.VERCEL_SERVICE_TYPE = service.type;
+    if (
+      this.hasWorkerServices &&
+      service.runtime === 'python' &&
+      env.VERCEL_HAS_WORKER_SERVICES === undefined
+    ) {
+      env.VERCEL_HAS_WORKER_SERVICES = '1';
+    }
+
+    // When any worker service exists, point all services at the dev server's
+    // queue proxy so that send() calls from web services are routed through
+    // the proxy and dispatched to the matching worker process.
+    if (this.hasWorkerServices) {
+      env.VERCEL_QUEUE_BASE_URL = `${this.proxyOrigin}/_svc/_queues`;
+      env.VERCEL_QUEUE_TOKEN = 'vc-dev-token';
+    }
 
     if (service.routePrefix && service.routePrefix !== '/') {
-      env.VERCEL_SERVICE_BASE_PATH = service.routePrefix;
+      env.VERCEL_SERVICE_ROUTE_PREFIX = service.routePrefix;
+      env.VERCEL_SERVICE_ROUTE_PREFIX_STRIP = '1';
     }
 
     // Try to use builder's startDevServer if available
@@ -300,9 +399,15 @@ export class ServicesOrchestrator {
     try {
       const builders = await importBuilders(new Set([builderSpec]), this.cwd);
       const builderWithPkg = builders.get(builderSpec);
-      const builder = builderWithPkg?.builder as BuilderV3 | undefined;
+      const builder = builderWithPkg?.builder as
+        | BuilderV3
+        | BuilderVX
+        | undefined;
 
-      if (builder?.version !== 3 || !builder.startDevServer) {
+      if (
+        (builder?.version !== 3 && builder?.version !== -1) ||
+        !builder?.startDevServer
+      ) {
         return null;
       }
 
@@ -311,16 +416,37 @@ export class ServicesOrchestrator {
       );
 
       // Use the resolved builder.src which includes framework defaults,
-      // or fall back to explicit entrypoint
-      const entrypoint = service.builder?.src || service.entrypoint || '';
+      // or fall back to explicit entrypoint.
+      // Strip the workspace prefix since workPath is already the service workspace.
+      // e.g., builder.src="frontend/package.json" + workspace="frontend"
+      //   → entrypoint="package.json" (relative to workspacePath)
+      let entrypoint = service.builder?.src || service.entrypoint || '';
+      const workspace = service.workspace || '.';
+      if (workspace !== '.') {
+        const wsPrefix = workspace + '/';
+        if (entrypoint.startsWith(wsPrefix)) {
+          entrypoint = entrypoint.slice(wsPrefix.length);
+        }
+      }
+      // Mirror services build behavior in dev: when a service doesn't declare
+      // an explicit framework (runtime-only services), builders should still
+      // receive the project framework context of "services".
+      const frameworkForDev = service.framework || 'services';
       const result = await builder.startDevServer({
         entrypoint,
         workPath: workspacePath,
         repoRootPath: this.repoRoot,
-        config: { framework: service.framework },
+        config: {
+          ...(service.builder?.config || {}),
+          framework: frameworkForDev,
+        },
         meta: {
           isDev: true,
           env,
+          serviceCount: this.services.length,
+          pythonServiceCount: this.pythonServiceCount,
+          syncDependencies: true,
+          serviceName: service.name,
         },
         files: {},
         onStdout: (data: Buffer) => logger.stdout.write(data),
@@ -340,12 +466,16 @@ export class ServicesOrchestrator {
         port: result.port,
         pid: result.pid,
         shutdown: result.shutdown,
-        routePrefix: service.routePrefix || '/',
+        routePrefixes: getServiceRoutePrefixes(service),
         workspace: service.workspace || '.',
         logger,
       };
     } catch (err) {
       output.debug(`Failed to use startDevServer for ${service.name}: ${err}`);
+      // Re-throw NowBuildError so user-facing errors are displayed properly
+      if (err instanceof NowBuildError) {
+        throw err;
+      }
       return null;
     }
   }
@@ -365,6 +495,8 @@ export class ServicesOrchestrator {
       );
     }
 
+    await this.syncDependencies(service.builder?.config, workspacePath, logger);
+
     const port = await getPort();
     env.PORT = `${port}`;
 
@@ -380,10 +512,16 @@ export class ServicesOrchestrator {
       `Starting ${chalk.bold(service.name)} with ${chalk.cyan.bold(`"${devCommand}"`)}`
     );
 
+    // Pass terminal width so child frameworks can format output correctly.
+    if (process.stdout.columns) {
+      env.COLUMNS = `${process.stdout.columns}`;
+    }
+
     const child = spawnCommand(devCommand, {
       cwd: workspacePath,
       env,
-      stdio: ['inherit', 'pipe', 'pipe'],
+      stdio: ['ignore', 'pipe', 'pipe'],
+      detached: true,
     });
 
     if (!child.pid) {
@@ -422,7 +560,7 @@ export class ServicesOrchestrator {
       port,
       pid: child.pid,
       process: child,
-      routePrefix: service.routePrefix || '/',
+      routePrefixes: getServiceRoutePrefixes(service),
       workspace: service.workspace || '.',
       logger,
     };
@@ -448,26 +586,169 @@ export class ServicesOrchestrator {
     return Promise.race([checkForPort(port, STARTUP_TIMEOUT), processError]);
   }
 
-  private generateServiceUrlEnvVars(
-    envPrefix?: string
-  ): Record<string, string> {
-    const envVars: Record<string, string> = {};
+  // This is needed, because only BuilderV3 and BuilderVX expose a dev server,
+  // but we still want to keep dependencies in sync for BuilderV2 (e.g. Next/Vite/etc).
+  // We'll try with the provided installCommand (if any) and then fallback
+  // to just trying to install dependencnies for Node.
+  private async syncDependencies(
+    config: Config | undefined,
+    workspacePath: string,
+    logger: ServiceLogger
+  ): Promise<void> {
+    logger.stdout.write(`${chalk.gray('Synchronizing dependencies...')}\n`);
+    const installCommand =
+      typeof config?.installCommand === 'string'
+        ? config.installCommand.trim()
+        : '';
+    if (installCommand) {
+      await this.runInstallCommand(installCommand, workspacePath, logger);
+    } else {
+      await this.maybeInstallJSDependencies(workspacePath, logger);
+    }
+  }
 
+  private async runBuffered(
+    logger: ServiceLogger,
+    task: (stdout: Writable, stderr: Writable) => Promise<void>
+  ): Promise<void> {
+    const captured: Array<['stdout' | 'stderr', Buffer]> = [];
+    const bufStdout = new Writable({
+      write(chunk, _enc, cb) {
+        const b = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+        captured.push(['stdout', b]);
+        if (output.debugEnabled) logger.stdout.write(b);
+        cb();
+      },
+    });
+    const bufStderr = new Writable({
+      write(chunk, _enc, cb) {
+        const b = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+        captured.push(['stderr', b]);
+        if (output.debugEnabled) logger.stderr.write(b);
+        cb();
+      },
+    });
+
+    try {
+      await task(bufStdout, bufStderr);
+    } catch (err) {
+      for (const [channel, chunk] of captured) {
+        logger[channel].write(chunk);
+      }
+      throw err;
+    }
+  }
+
+  private async runInstallCommand(
+    command: string,
+    workspacePath: string,
+    logger: ServiceLogger
+  ): Promise<void> {
+    await this.runBuffered(logger, (stdout, stderr) => {
+      return new Promise<void>((resolve, reject) => {
+        output.debug(
+          `Running install command: "${command}" in ${workspacePath}`
+        );
+        const child = spawnCommand(command, {
+          cwd: workspacePath,
+          stdio: ['inherit', 'pipe', 'pipe'],
+        });
+
+        child.stdout?.on('data', (chunk: Buffer) => stdout.write(chunk));
+        child.stderr?.on('data', (chunk: Buffer) => stderr.write(chunk));
+
+        child.on('error', reject);
+        child.on('exit', (code, signal) => {
+          if (code === 0) {
+            resolve();
+          } else {
+            reject(
+              new NowBuildError({
+                code: 'INSTALL_COMMAND_FAILED',
+                message: `Install command "${command}" failed with code ${code}, signal ${signal}`,
+              })
+            );
+          }
+        });
+      });
+    });
+  }
+
+  private async maybeInstallJSDependencies(
+    workspacePath: string,
+    logger: ServiceLogger
+  ): Promise<void> {
+    await this.runBuffered(logger, async (stdout, stderr) => {
+      try {
+        await runNpmInstall(
+          workspacePath,
+          [],
+          undefined,
+          undefined,
+          undefined,
+          { stdout, stderr }
+        );
+      } catch (err) {
+        throw new NowBuildError({
+          code: 'NODE_DEPENDENCY_SYNC_FAILED',
+          message: `Failed to install Node.JS dependencies: ${
+            err instanceof Error ? err.message : String(err)
+          }`,
+        });
+      }
+    });
+  }
+
+  private startCronSchedulers(): void {
     for (const service of this.services) {
-      const { name, routePrefix } = service;
-      if (!routePrefix) continue;
+      if (service.type !== 'cron' || !service.schedule) continue;
 
-      const baseName = name.toUpperCase().replace(/-/g, '_');
-      const key = envPrefix ? `${envPrefix}${baseName}_URL` : `${baseName}_URL`;
+      const managed = this.managedServices.get(service.name);
+      if (!managed) continue;
 
-      const url =
-        routePrefix === '/'
-          ? this.proxyOrigin
-          : `${this.proxyOrigin}${routePrefix.startsWith('/') ? '' : '/'}${routePrefix}`;
+      output.debug(
+        `Scheduling cron service ${chalk.bold(service.name)} (${chalk.cyan(service.schedule)})`
+      );
 
-      envVars[key] = url;
+      this.scheduleCronTrigger(service.name, service.schedule, managed);
+    }
+  }
+
+  private scheduleCronTrigger(
+    serviceName: string,
+    schedule: string,
+    managed: ServiceDevProcess
+  ): void {
+    const delayMs = getNextCronDelay(schedule);
+    if (delayMs === null) {
+      output.warn(
+        `Could not parse cron schedule "${schedule}" for service "${serviceName}", skipping auto-trigger`
+      );
+      return;
     }
 
-    return envVars;
+    const timer = setTimeout(async () => {
+      if (this.stopping) return;
+
+      output.debug(
+        `Triggering cron service ${chalk.bold(serviceName)} (schedule: ${chalk.cyan(schedule)})`
+      );
+
+      try {
+        const url = `http://${managed.host}:${managed.port}/`;
+        const res = await fetch(url, { method: 'POST' });
+        output.debug(
+          `Cron trigger for "${serviceName}" responded with status ${res.status}`
+        );
+      } catch (err) {
+        output.error(
+          `Cron trigger for "${serviceName}" failed: ${err instanceof Error ? err.message : String(err)}`
+        );
+      }
+
+      this.scheduleCronTrigger(serviceName, schedule, managed);
+    }, delayMs);
+
+    this.cronTimers.push(timer);
   }
 }

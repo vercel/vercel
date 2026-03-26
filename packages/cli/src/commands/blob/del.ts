@@ -37,15 +37,17 @@ export default async function del(
   }
 
   const { args } = parsedArgs;
+  const { '--if-match': ifMatch } = parsedArgs.flags;
 
   telemetryClient.trackCliArgumentUrlsOrPathnames(args[0]);
+  telemetryClient.trackCliOptionIfMatch(ifMatch);
 
   try {
     output.debug('Deleting blob');
 
     output.spinner('Deleting blob');
 
-    await blob.del(args, { token: rwToken });
+    await blob.del(args, { token: rwToken, ifMatch });
   } catch (err) {
     output.error(`Error deleting blob: ${err}`);
     return 1;

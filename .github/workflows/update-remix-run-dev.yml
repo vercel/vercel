@@ -24,7 +24,7 @@ jobs:
       - name: Update @remix-run/dev
         uses: actions/github-script@v7
         with:
-          github-token: ${{ secrets.GH_TOKEN_PULL_REQUESTS }}
+          github-token: ${{ secrets.VERCEL_CLI_RELEASE_BOT_TOKEN }}
           script: |
             const script = require('./utils/update-remix-run-dev.js')
             await script({ github, context }, "${{ inputs.new-version }}")

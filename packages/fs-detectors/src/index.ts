@@ -14,11 +14,24 @@ export type {
   AutoDetectOptions,
   AutoDetectResult,
 } from './services/auto-detect';
-export { isStaticBuild } from './services/utils';
+export {
+  isStaticBuild,
+  isRouteOwningBuilder,
+  INTERNAL_SERVICE_PREFIX,
+  getInternalServiceFunctionPath,
+  getInternalServiceCronPath,
+  getInternalServiceCronPathPrefix,
+  getInternalServiceWorkerPath,
+  getInternalServiceWorkerPathPrefix,
+} from './services/utils';
 export { getServicesBuilders } from './services/get-services-builders';
 export type {
   DetectServicesOptions,
   DetectServicesResult,
+  DetectServicesSource,
+  ServicesConfig,
+  ResolvedServicesResult,
+  InferredServicesResult,
   ResolvedService,
   Service,
   ServicesRoutes,
