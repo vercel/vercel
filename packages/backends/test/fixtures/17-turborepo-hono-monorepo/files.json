@@ -1,0 +1,9 @@
+[
+  "packages/echo-with-dep/src/index.mjs",
+  "packages/echo-with-dep/package.json",
+  "packages/ts-utils/src/index.mjs",
+  "packages/ts-utils/package.json",
+  "packages/shared-types/src/index.mjs",
+  "packages/shared-types/package.json",
+  "_virtual/_cjs-shim_packages_echo-with-dep_jsonwebtoken.mjs"
+]

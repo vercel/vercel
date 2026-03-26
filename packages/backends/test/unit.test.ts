@@ -206,6 +206,37 @@ describe('successful builds', async () => {
   }, 20000);
 });
 
+it.skipIf(process.platform === 'win32')(
+  'does not crash when a workspace dep cannot be resolved',
+  async () => {
+    const fixtureName = '17-turborepo-hono-monorepo';
+    const fixtureSource = join(__dirname, 'fixtures', fixtureName);
+    const { workDir } = await getWorkDir(fixtureName, fixtureSource);
+
+    // Add an unresolvable workspace dep import to server.ts
+    const serverPath = join(workDir, 'apps/api/server.ts');
+    const serverContent = await readFile(serverPath, 'utf-8');
+    await writeFile(
+      serverPath,
+      `// @ts-expect-error\nimport { MAGIC } from '@repo/unresolvable'\nconsole.log(MAGIC)\n${serverContent}`
+    );
+
+    // The workspace dep has no exports/main, so rolldown can't resolve it.
+    // Before the fix, this caused: "File .../apps/api/@repo/unresolvable does not exist."
+    await expect(
+      build({
+        files: {},
+        workPath: join(workDir, 'apps/api'),
+        config: getFixtureConfig(await loadVercelJson(fixtureSource)),
+        meta,
+        entrypoint: 'package.json',
+        repoRootPath: workDir,
+      })
+    ).resolves.toBeDefined();
+  },
+  30000
+);
+
 it('extractAndExecuteLambda throws with invalid code', async () => {
   const validLambda = new NodejsLambda({
     runtime: 'nodejs22.x',
