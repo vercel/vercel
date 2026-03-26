@@ -662,8 +662,8 @@ export class Router {
       has?: Condition[];
       missing?: Condition[];
       respectOriginCacheControl?: boolean;
-    } & // Require at least one transform field so this overload only matches
-    // when transforms are present — otherwise falls through to the Rewrite overload.
+    } & // when transforms are present — otherwise falls through to the Rewrite overload. // Require at least one transform field so this overload only matches
+    // push
     (
       | {
           requestHeaders: Record<string, string | string[]>;
