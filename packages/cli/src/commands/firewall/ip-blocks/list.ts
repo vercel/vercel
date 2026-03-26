@@ -64,13 +64,11 @@ export default async function list(client: Client, argv: string[]) {
 
     output.print(`\n${formatIpBlocksTable(annotated)}\n`);
 
-    if (hasDraftChanges) {
-      const ipChanges = changes.filter(c => c.action.startsWith('ip.')).length;
-      if (ipChanges > 0) {
-        output.print(
-          `\n  ${chalk.yellow(`${ipChanges} unpublished IP block change${ipChanges !== 1 ? 's' : ''}.`)} Run ${chalk.cyan(getCommandName('firewall publish'))} to publish.\n`
-        );
-      }
+    const ipChanges = changes.filter(c => c.action.startsWith('ip.')).length;
+    if (ipChanges > 0) {
+      output.print(
+        `\n  ${chalk.yellow(`${ipChanges} unpublished IP block change${ipChanges !== 1 ? 's' : ''}.`)} Run ${chalk.cyan(getCommandName('firewall publish'))} to publish.\n`
+      );
     } else {
       output.print(`\n  ${chalk.dim('Showing live configuration.')}\n`);
     }
