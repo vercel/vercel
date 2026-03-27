@@ -654,44 +654,51 @@ export function formatRuleExpanded(rule: FirewallRule, index?: number): string {
 export function formatRuleDetail(rule: FirewallRule): string {
   const lines: string[] = [];
 
+  // Identity
   lines.push(`  ${chalk.bold('Rule:')}        ${rule.name}`);
   lines.push(`  ${chalk.bold('ID:')}          ${chalk.dim(rule.id)}`);
   lines.push(
     `  ${chalk.bold('Status:')}      ${rule.active ? chalk.green('Active') : chalk.dim('Inactive')}`
   );
-  lines.push(
-    `  ${chalk.bold('Action:')}      ${formatActionDisplay(rule.action)}`
-  );
   if (rule.description) {
     lines.push(`  ${chalk.bold('Description:')} ${rule.description}`);
   }
 
-  // Duration
+  lines.push('');
+
+  // Conditions (the "IF")
+  if (rule.conditionGroup.length === 0) {
+    lines.push(`  ${chalk.bold('Conditions:')}  ${chalk.dim('No conditions')}`);
+  } else {
+    lines.push(`  ${chalk.bold('Conditions:')}`);
+    for (let i = 0; i < rule.conditionGroup.length; i++) {
+      if (rule.conditionGroup.length > 1) {
+        lines.push(`    ${chalk.dim(`Group ${i + 1} (AND):`)}`);
+      }
+      for (const condition of rule.conditionGroup[i].conditions) {
+        lines.push(`      ${formatConditionCompact(condition)}`);
+      }
+      if (i < rule.conditionGroup.length - 1) {
+        lines.push(`    ${chalk.dim('OR')}`);
+      }
+    }
+  }
+
+  lines.push('');
+
+  // Action (the "THEN")
+  lines.push(
+    `  ${chalk.bold('Action:')}      ${formatActionDisplay(rule.action)}`
+  );
+
   const duration = rule.action.mitigate?.actionDuration;
   if (duration) {
     lines.push(`  ${chalk.bold('Duration:')}    ${duration}`);
   }
 
-  lines.push('');
-
-  // Conditions
-  lines.push(`  ${chalk.bold('Conditions:')}`);
-  for (let i = 0; i < rule.conditionGroup.length; i++) {
-    if (rule.conditionGroup.length > 1) {
-      lines.push(`    ${chalk.dim(`Group ${i + 1} (AND):`)}`);
-    }
-    for (const condition of rule.conditionGroup[i].conditions) {
-      lines.push(`      ${formatConditionCompact(condition)}`);
-    }
-    if (i < rule.conditionGroup.length - 1) {
-      lines.push(`    ${chalk.dim('OR')}`);
-    }
-  }
-
   // Rate limit details
   const rl = rule.action.mitigate?.rateLimit;
   if (rl) {
-    lines.push('');
     lines.push(`  ${chalk.bold('Rate Limit:')}`);
     lines.push(`    Algorithm:  ${rl.algo}`);
     lines.push(`    Window:     ${rl.window}s`);
@@ -705,7 +712,6 @@ export function formatRuleDetail(rule: FirewallRule): string {
   // Redirect details
   const rd = rule.action.mitigate?.redirect;
   if (rd) {
-    lines.push('');
     lines.push(`  ${chalk.bold('Redirect:')}`);
     lines.push(`    Location:   ${rd.location}`);
     lines.push(
