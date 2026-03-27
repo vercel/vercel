@@ -6,7 +6,7 @@ import type Client from '../../util/client';
 import getScope from '../../util/get-scope';
 import indent from '../../util/output/indent';
 import { autoProvisionResource } from '../../util/integration/auto-provision-resource';
-import { fetchIntegrationWithTelemetry } from '../../util/integration/fetch-integration';
+import { resolveAndFetchIntegration } from '../../util/integration/fetch-integration';
 import { fetchInstallations } from '../../util/integration/fetch-installations';
 import { acceptTermsViaBrowser } from '../../util/integration/accept-terms-via-browser';
 import { promptForTermAcceptance } from '../../util/integration/prompt-for-terms';
@@ -76,19 +76,24 @@ export async function addAutoProvision(
   }
   client.config.currentTeam = team.id;
 
-  // Fetch integration
-  const integration = await fetchIntegrationWithTelemetry(
+  // Fetch integration (with discover fallback if slug not found)
+  const resolved = await resolveAndFetchIntegration(
     client,
     integrationSlug,
     telemetry
   );
-  if (!integration) {
+  if (!resolved) {
     return 1;
+  }
+  const integration = resolved.integration;
+  const resolvedSlug = resolved.integrationSlug;
+  if (resolved.productSlug && !options.productSlug) {
+    options.productSlug = resolved.productSlug;
   }
 
   if (!integration.products?.length) {
     output.error(
-      `Integration "${integrationSlug}" is not a Marketplace integration`
+      `Integration "${resolvedSlug}" is not a Marketplace integration`
     );
     return 1;
   }
@@ -100,10 +105,10 @@ export async function addAutoProvision(
     !client.stdin.isTTY
   ) {
     const choices = integration.products
-      .map(p => `  ${integrationSlug}/${p.slug}`)
+      .map(p => `  ${resolvedSlug}/${p.slug}`)
       .join('\n');
     output.error(
-      `Integration "${integrationSlug}" has multiple products. Specify one with:\n\n${choices}\n\nExample: vercel ${commandName} ${integrationSlug}/${integration.products[0].slug}`
+      `Integration "${resolvedSlug}" has multiple products. Specify one with:\n\n${choices}\n\nExample: vercel ${commandName} ${resolvedSlug}/${integration.products[0].slug}`
     );
     return 1;
   }
@@ -356,8 +361,8 @@ export async function addAutoProvision(
       .map(line => `  - ${line}`)
       .join('\n');
     const slug = options.productSlug
-      ? `${integrationSlug}/${options.productSlug}`
-      : integrationSlug;
+      ? `${resolvedSlug}/${options.productSlug}`
+      : resolvedSlug;
     telemetry.trackMarketplaceEvent(
       'marketplace_install_flow_multiple_installations',
       {
@@ -366,7 +371,7 @@ export async function addAutoProvision(
       }
     );
     output.error(
-      `Multiple installations found for "${integrationSlug}":\n${installationsList}\n\nRe-run with --installation-id to select one, e.g.:\n  vercel ${commandName} ${slug} --installation-id ${result.installations[0].id}`
+      `Multiple installations found for "${resolvedSlug}":\n${installationsList}\n\nRe-run with --installation-id to select one, e.g.:\n  vercel ${commandName} ${slug} --installation-id ${result.installations[0].id}`
     );
     return 1;
   }
@@ -413,7 +418,7 @@ export async function addAutoProvision(
         `  Provide ${examples.join(' ')} to provision directly from the CLI.`
       );
       output.log(
-        `  Run \`vercel ${commandName} ${integrationSlug} --help\` for all metadata options.`
+        `  Run \`vercel ${commandName} ${resolvedSlug} --help\` for all metadata options.`
       );
       return 1;
     }
