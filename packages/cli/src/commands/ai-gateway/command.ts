@@ -1,0 +1,62 @@
+import { packageName } from '../../util/pkg-name';
+
+export const createApiKeySubcommand = {
+  name: 'create-api-key',
+  aliases: [],
+  description: 'Create a new AI Gateway API key',
+  arguments: [],
+  options: [
+    {
+      name: 'name',
+      shorthand: null,
+      type: String,
+      argument: 'NAME',
+      deprecated: false,
+      description: 'Human-readable name for the API key',
+    },
+    {
+      name: 'limit',
+      shorthand: null,
+      type: Number,
+      argument: 'AMOUNT',
+      deprecated: false,
+      description: 'Quota limit amount in USD (minimum 1)',
+    },
+    {
+      name: 'refresh-period',
+      shorthand: null,
+      type: String,
+      argument: 'PERIOD',
+      deprecated: false,
+      description:
+        'Quota refresh cadence: daily, weekly, monthly, or none (default: none)',
+    },
+    {
+      name: 'include-byok',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Include BYOK usage in quota (default: false)',
+    },
+  ],
+  examples: [
+    {
+      name: 'Create an API key with defaults',
+      value: `${packageName} ai-gateway create-api-key`,
+    },
+    {
+      name: 'Create an API key with a budget',
+      value: `${packageName} ai-gateway create-api-key --name my-key --limit 500 --refresh-period monthly`,
+    },
+  ],
+} as const;
+
+export const aiGatewayCommand = {
+  name: 'ai-gateway',
+  aliases: [],
+  description: 'Manage AI Gateway resources',
+  arguments: [],
+  subcommands: [createApiKeySubcommand],
+  options: [],
+  examples: [],
+} as const;

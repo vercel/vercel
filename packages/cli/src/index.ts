@@ -744,6 +744,10 @@ const main = async () => {
           telemetry.trackCliCommandAgent(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).agent;
           break;
+        case 'ai-gateway':
+          telemetry.trackCliCommandAiGateway(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).aiGateway;
+          break;
         case 'alias':
           telemetry.trackCliCommandAlias(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).alias;

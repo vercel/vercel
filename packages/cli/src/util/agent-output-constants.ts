@@ -54,6 +54,9 @@ export const AGENT_REASON = {
   MISSING_EVENTS: 'missing_events',
   INVALID_URL: 'invalid_url',
   INVALID_EVENT: 'invalid_event',
+  // AI Gateway
+  INVALID_LIMIT: 'invalid_limit',
+  INVALID_REFRESH_PERIOD: 'invalid_refresh_period',
   // Redirects
   REDIRECT_NOT_FOUND: 'redirect_not_found',
   VERSION_NOT_FOUND: 'version_not_found',
