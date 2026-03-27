@@ -9,7 +9,7 @@ export default async function dev(
   args: string[],
   telemetry: DevTelemetryClient
 ) {
-  if (opts['--agent']) {
+  if (opts['--agent'] || client.isAgent) {
     return startAgentMode(client, opts, args, telemetry);
   }
   return startDevServer(client, opts, args, telemetry);

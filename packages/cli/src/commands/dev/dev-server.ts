@@ -27,8 +27,12 @@ import {
 } from '../../util/agent-output';
 import type { DevTelemetryClient } from '../../util/telemetry/commands/dev';
 import { VERCEL_OIDC_TOKEN } from '../../util/env/constants';
-import { tryDetectServices } from '../../util/projects/detect-services';
+import {
+  tryDetectServices,
+  getServicesConfigWriteBlocker,
+} from '../../util/projects/detect-services';
 import { displayDetectedServices } from '../../util/input/display-services';
+import { promptForInferredServicesSetup } from '../../util/link/services-setup';
 import { displayPlatformConfigs } from '../../util/input/display-platform-configs';
 import { acquireDevLock, releaseDevLock } from '../../util/dev/dev-lock';
 import { resolveProjectCwd } from '../../util/projects/find-project-root';
@@ -153,17 +157,79 @@ export async function startDevServer(
   }
 
   let services: ResolvedService[] | undefined;
-  const detection = await tryDetectServices(cwd);
-  const foundServices =
+  let detection = await tryDetectServices(cwd);
+  let foundServices =
     detection?.enabled && detection.resolved.services.length > 0;
-  if (detection && !detection.enabled) {
-    // Services detected from project layout but not explicitly enabled
-    output.warn(
-      'Detected services in your project. To enable multi-service mode, ' +
-        'add `experimentalServices` to vercel.json or set ' +
-        'VERCEL_USE_EXPERIMENTAL_SERVICES=1.'
+  if (detection && !detection.enabled && detection.inferred) {
+    // Services detected from project layout but not explicitly enabled.
+    // Three paths:
+    //   1. --yes is set (interactive OR agent re-invocation): auto-configure
+    //   2. Non-interactive without --yes: emit action_required JSON so the
+    //      agent knows to re-invoke with --yes
+    //   3. Interactive without --yes: show a prompt
+    const autoConfirm = opts['--yes'] ?? false;
+    const writeBlocker = await getServicesConfigWriteBlocker(
+      cwd,
+      detection.inferred.config
     );
-  } else if (foundServices) {
+
+    if (client.nonInteractive && !autoConfirm) {
+      // Non-interactive (agent) path without --yes: show what was found,
+      // then emit a structured action_required payload and exit so the
+      // calling agent can decide whether to re-invoke with --yes.
+      displayDetectedServices(detection.inferred.services);
+
+      if (writeBlocker) {
+        output.warn(
+          `Multiple services were detected, but your existing project config uses \`${writeBlocker}\`. ` +
+            'Remove it before enabling multi-service mode.'
+        );
+      } else {
+        outputActionRequired(
+          client,
+          {
+            status: 'action_required',
+            reason: 'unconfigured_services',
+            message:
+              `Detected ${detection.inferred.services.length} services in your project ` +
+              'that are not configured. Enable multi-service mode to run them all.',
+            hint: 'Re-run with --yes to auto-configure all detected services.',
+            next: [
+              {
+                command: buildCommandWithYes(client.argv),
+                when: 'Auto-configure all detected services and start dev server',
+              },
+            ],
+          },
+          1
+        );
+      }
+    } else {
+      // Interactive path, or --yes (auto-confirm) for both interactive
+      // and non-interactive callers. promptForInferredServicesSetup
+      // handles autoConfirm by choosing "all services" without prompting.
+      ctx.willPrompt?.();
+      const choice = await promptForInferredServicesSetup({
+        client,
+        autoConfirm,
+        nonInteractive: client.nonInteractive,
+        workPath: cwd,
+        inferred: detection.inferred,
+        inferredWriteBlocker: writeBlocker,
+      });
+      ctx.didPrompt?.();
+
+      if (choice?.type === 'services') {
+        // Config was written — re-detect so we get the resolved services
+        // from the newly written vercel.json.
+        detection = await tryDetectServices(cwd);
+        if (detection?.enabled && detection.resolved.services.length > 0) {
+          foundServices = true;
+          services = detection.resolved.services;
+        }
+      }
+    }
+  } else if (foundServices && detection) {
     displayDetectedServices(detection.resolved.services);
     services = detection.resolved.services;
   }
