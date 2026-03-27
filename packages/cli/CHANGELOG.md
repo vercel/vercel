@@ -1,5 +1,11 @@
 # vercel
 
+## 50.37.3
+
+### Patch Changes
+
+- Improve plugin install flow: handle Ctrl+C to cancel install, only install for detected agent harness, add description before plugin prompt, and remove CLAUDE.md/AGENTS.md prompt from link/login flows. ([#15733](https://github.com/vercel/vercel/pull/15733))
+
 ## 50.37.2
 
 ### Patch Changes
