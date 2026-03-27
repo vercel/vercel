@@ -8,6 +8,7 @@ import {
   Text,
   Input,
   Spacer,
+  matchesKey,
 } from '@mariozechner/pi-tui';
 
 import DevServer from '../../util/dev/server';
@@ -72,15 +73,32 @@ export async function startAgentMode(
     tui.requestRender();
   }
 
-  // Placeholder: echo user input to output panel
   inputPanel.onSubmit = (value: string) => {
-    appendOutput(`\n${chalk.cyan('>')} ${value}\n`);
+    appendOutput(`user said: ${value}\n`);
     inputPanel.setValue('');
   };
 
   // Start the TUI first (terminal.start sets up raw mode, bracketed paste,
   // kitty protocol — all using the still-unpatched process.stdout.write).
   tui.start();
+
+  // Mutable exit handler — starts simple, upgraded to full cleanup
+  // once the DevServer is created.
+  let onExit: () => void = () => {
+    restoreIO();
+    tui.stop();
+    process.exit(0);
+  };
+
+  // Handle Ctrl+C and Ctrl+D to quit.
+  // In raw mode (and kitty protocol) these arrive as input, not signals.
+  tui.addInputListener((data: string) => {
+    if (matchesKey(data, 'ctrl+c') || matchesKey(data, 'ctrl+d')) {
+      onExit();
+      return { consume: true };
+    }
+    return undefined;
+  });
 
   // Now override ALL terminal output methods to use the saved original write.
   // ProcessTerminal hardcodes process.stdout.write in every method, so we
@@ -305,8 +323,9 @@ export async function startAgentMode(
     }
   });
 
+  // Upgrade onExit to full cleanup now that DevServer exists
   let cleanupInProgress = false;
-  const cleanup = async (signal: string) => {
+  onExit = () => {
     if (cleanupInProgress) return;
     cleanupInProgress = true;
 
@@ -317,26 +336,15 @@ export async function startAgentMode(
       releaseDevLock(cwd);
     }
 
-    await devServer.stop();
-
-    restoreIO();
-    tui.stop();
-
-    let exitCode = 0;
-    switch (signal) {
-      case 'SIGINT':
-        exitCode = 130;
-        break;
-      case 'SIGTERM':
-        exitCode = 143;
-        break;
-    }
-
-    process.exit(exitCode);
+    devServer.stop().finally(() => {
+      restoreIO();
+      tui.stop();
+      process.exit(0);
+    });
   };
 
-  process.on('SIGTERM', async () => await cleanup('SIGTERM'));
-  process.on('SIGINT', async () => await cleanup('SIGINT'));
+  process.on('SIGTERM', () => onExit());
+  process.on('SIGINT', () => onExit());
 
   if (!devServer.devCommand) {
     const outputDir = join(cwd, OUTPUT_DIR);
