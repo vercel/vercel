@@ -825,7 +825,7 @@ export const build: BuildV2 = async buildOptions => {
               `);
             }
 
-            return { src: `rex:${code}` };
+            return { src: '^.*$', middlewarePath: `rex:${code}` };
           };
           if (routesManifest.rewrites.beforeFiles.length > 0) {
             beforeFilesRewrites.push(

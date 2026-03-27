@@ -3608,7 +3608,10 @@ export function updateRouteSrc(
   index: number,
   manifestItems: Array<{ regex: string }>
 ) {
-  if (route.src && !route.src.startsWith('rex:')) {
+  if (
+    route.src &&
+    !('middlewarePath' in route && route.middlewarePath?.startsWith('rex:'))
+  ) {
     route.src = manifestItems[index].regex;
   }
   return route;
@@ -4683,7 +4686,8 @@ export async function getServerActionMetaRoutes(
       end
     `);
     const route: Route = {
-      src: `rex:${code}`,
+      src: '^.*$',
+      middlewarePath: `rex:${code}`,
     };
     return [route];
   } catch (_error) {
