@@ -34,6 +34,89 @@ export function createRule(index: number): FirewallRule {
   };
 }
 
+export function createRateLimitRule(): FirewallRule {
+  return {
+    id: 'rule_rate_limit',
+    name: 'Rate Limit API',
+    description: 'Rate limit API endpoints',
+    active: true,
+    conditionGroup: [
+      {
+        conditions: [
+          { type: 'path', op: 'pre', value: '/api' },
+          { type: 'method', op: 'inc', value: ['POST', 'PUT', 'DELETE'] },
+        ],
+      },
+    ],
+    action: {
+      mitigate: {
+        action: 'rate_limit',
+        rateLimit: {
+          algo: 'fixed_window',
+          window: 60,
+          limit: 100,
+          keys: ['ip'],
+          action: 'deny',
+        },
+        actionDuration: null,
+      },
+    },
+  };
+}
+
+export function createMultiGroupRule(): FirewallRule {
+  return {
+    id: 'rule_multi_group',
+    name: 'Block Suspicious Traffic',
+    description: 'Block bots and suspicious IPs',
+    active: true,
+    conditionGroup: [
+      {
+        conditions: [
+          { type: 'user_agent', op: 'sub', value: 'crawler' },
+          { type: 'geo_country', op: 'inc', neg: true, value: ['US', 'CA'] },
+        ],
+      },
+      {
+        conditions: [{ type: 'ip_address', op: 'eq', value: '1.2.3.4' }],
+      },
+      {
+        conditions: [{ type: 'header', op: 'ex', key: 'X-Suspicious' }],
+      },
+    ],
+    action: {
+      mitigate: {
+        action: 'deny',
+        actionDuration: '1h',
+      },
+    },
+  };
+}
+
+export function createRedirectRule(): FirewallRule {
+  return {
+    id: 'rule_redirect',
+    name: 'Redirect Old Path',
+    description: 'Redirect /old to /new',
+    active: true,
+    conditionGroup: [
+      {
+        conditions: [{ type: 'path', op: 'pre', value: '/old' }],
+      },
+    ],
+    action: {
+      mitigate: {
+        action: 'redirect',
+        redirect: {
+          location: '/new',
+          permanent: true,
+        },
+        actionDuration: null,
+      },
+    },
+  };
+}
+
 export function createIpRule(index: number): FirewallIpRule {
   return {
     id: `ip_${String(index).padStart(3, '0')}`,

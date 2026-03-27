@@ -6,6 +6,8 @@ import {
   useListFirewallConfigs,
   createConfig,
   createRule,
+  createRateLimitRule,
+  createMultiGroupRule,
 } from '../../../mocks/firewall';
 import { useProject, defaultProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
@@ -46,14 +48,25 @@ describe('firewall rules inspect', () => {
     expect(await exitCodePromise).toEqual(0);
   });
 
-  it('should inspect a rule by partial name', async () => {
+  it('should inspect a rate limit rule with full details', async () => {
     const active = createConfig({
-      rules: [createRule(1)],
+      rules: [createRateLimitRule()],
     });
     useListFirewallConfigs(active, null);
-    client.setArgv('firewall', 'rules', 'inspect', 'Test Rule');
+    client.setArgv('firewall', 'rules', 'inspect', 'Rate Limit API');
     const exitCodePromise = firewall(client);
-    await expect(client.stderr).toOutput('Test Rule 1');
+    await expect(client.stderr).toOutput('Rate Limit API');
+    expect(await exitCodePromise).toEqual(0);
+  });
+
+  it('should inspect a multi-group rule', async () => {
+    const active = createConfig({
+      rules: [createMultiGroupRule()],
+    });
+    useListFirewallConfigs(active, null);
+    client.setArgv('firewall', 'rules', 'inspect', 'Block Suspicious');
+    const exitCodePromise = firewall(client);
+    await expect(client.stderr).toOutput('Block Suspicious Traffic');
     expect(await exitCodePromise).toEqual(0);
   });
 
@@ -72,7 +85,20 @@ describe('firewall rules inspect', () => {
     expect(await exitCodePromise).toEqual(1);
   });
 
-  it('should output JSON with --json flag', async () => {
+  it('should error on multiple matches in non-TTY mode', async () => {
+    const active = createConfig({
+      rules: [createRule(1), createRule(2), createRule(3)],
+    });
+    useListFirewallConfigs(active, null);
+    client.setArgv('firewall', 'rules', 'inspect', 'Test Rule');
+    (client.stdin as any).isTTY = false;
+
+    const exitCodePromise = firewall(client);
+    await expect(client.stderr).toOutput('Multiple rules match');
+    expect(await exitCodePromise).toEqual(1);
+  });
+
+  it('should output valid JSON with --json flag', async () => {
     const active = createConfig({
       rules: [createRule(1)],
     });
@@ -80,6 +106,15 @@ describe('firewall rules inspect', () => {
     client.setArgv('firewall', 'rules', 'inspect', 'Test Rule 1', '--json');
     const exitCode = await firewall(client);
     expect(exitCode).toEqual(0);
+
+    // Verify JSON shape
+    const jsonOutput = (client.stdout as any).getFullOutput();
+    const parsed = JSON.parse(jsonOutput);
+    expect(parsed).toHaveProperty('name', 'Test Rule 1');
+    expect(parsed).toHaveProperty('id', 'rule_001');
+    expect(parsed).toHaveProperty('active');
+    expect(parsed).toHaveProperty('conditionGroup');
+    expect(parsed).toHaveProperty('action');
   });
 
   it('tracks help telemetry', async () => {

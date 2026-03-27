@@ -6,6 +6,9 @@ import {
   useListFirewallConfigs,
   createConfig,
   createRule,
+  createRateLimitRule,
+  createMultiGroupRule,
+  createRedirectRule,
   createChange,
 } from '../../../mocks/firewall';
 import { useProject, defaultProject } from '../../../mocks/project';
@@ -44,6 +47,22 @@ describe('firewall rules list', () => {
     expect(await exitCodePromise).toEqual(0);
   });
 
+  it('should list rules with various action types', async () => {
+    const active = createConfig({
+      rules: [
+        createRule(1),
+        createRateLimitRule(),
+        createMultiGroupRule(),
+        createRedirectRule(),
+      ],
+    });
+    useListFirewallConfigs(active, null);
+    client.setArgv('firewall', 'rules', 'list');
+    const exitCodePromise = firewall(client);
+    await expect(client.stderr).toOutput('Showing live configuration');
+    expect(await exitCodePromise).toEqual(0);
+  });
+
   it('should annotate draft additions', async () => {
     const active = createConfig({
       rules: [createRule(1)],
@@ -67,7 +86,7 @@ describe('firewall rules list', () => {
 
   it('should show expanded view with --expand', async () => {
     const active = createConfig({
-      rules: [createRule(1)],
+      rules: [createMultiGroupRule(), createRateLimitRule()],
     });
     useListFirewallConfigs(active, null);
     client.setArgv('firewall', 'rules', 'list', '--expand');
@@ -76,14 +95,25 @@ describe('firewall rules list', () => {
     expect(await exitCodePromise).toEqual(0);
   });
 
-  it('should output JSON with --json flag', async () => {
+  it('should output valid JSON with --json flag', async () => {
     const active = createConfig({
-      rules: [createRule(1)],
+      rules: [createRule(1), createRateLimitRule()],
     });
     useListFirewallConfigs(active, null);
     client.setArgv('firewall', 'rules', 'list', '--json');
     const exitCode = await firewall(client);
     expect(exitCode).toEqual(0);
+
+    // Verify JSON shape from stdout
+    const jsonOutput = (client.stdout as any).getFullOutput();
+    const parsed = JSON.parse(jsonOutput);
+    expect(parsed).toHaveProperty('rules');
+    expect(parsed).toHaveProperty('hasDraft');
+    expect(parsed).toHaveProperty('pendingChanges');
+    expect(parsed.rules).toHaveLength(2);
+    expect(parsed.rules[0]).toHaveProperty('_status', 'live');
+    expect(parsed.rules[0]).toHaveProperty('name');
+    expect(parsed.rules[0]).toHaveProperty('action');
   });
 
   it('tracks help telemetry', async () => {

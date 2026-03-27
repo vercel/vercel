@@ -57,6 +57,7 @@ export default async function inspect(client: Client, argv: string[]) {
 
     // Disambiguate if multiple matches
     if (matches.length > 1) {
+      output.stopSpinner();
       if (client.nonInteractive || !client.stdin.isTTY) {
         output.error(
           `Multiple rules match "${identifier}". Specify the full rule ID to disambiguate.`

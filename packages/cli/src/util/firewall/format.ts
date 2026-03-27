@@ -355,10 +355,23 @@ const OPERATOR_LABELS: Record<string, string> = {
   lte: '<=',
 };
 
+const NEGATED_OPERATOR_LABELS: Record<string, string> = {
+  eq: 'does not equal',
+  re: 'does not match regex',
+  ex: 'does not exist',
+  inc: 'is not any of',
+  pre: 'does not start with',
+  suf: 'does not end with',
+  sub: 'does not contain',
+  gt: 'NOT >',
+  gte: 'NOT >=',
+  lt: 'NOT <',
+  lte: 'NOT <=',
+};
+
 function getOperatorLabel(op: string, neg?: boolean): string {
   if (neg) {
-    const base = OPERATOR_LABELS[op] || op;
-    return `NOT ${base}`;
+    return NEGATED_OPERATOR_LABELS[op] || `NOT ${OPERATOR_LABELS[op] || op}`;
   }
   return OPERATOR_LABELS[op] || op;
 }
