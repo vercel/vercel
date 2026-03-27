@@ -1,5 +1,16 @@
 import chalk from 'chalk';
-import type { FlagVariant } from './types';
+import type { FlagVariant, JsonVariantValue } from './types';
+
+function isJsonVariantValue(
+  value: FlagVariant['value']
+): value is JsonVariantValue {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'variantId' in value &&
+    typeof (value as JsonVariantValue).variantId === 'string'
+  );
+}
 
 export interface ResolveVariantResult {
   variant: FlagVariant | null;
@@ -58,7 +69,13 @@ export function resolveVariant(
 
   // 2. Try to match by value
   // First try exact string match (for string variants with values like "off")
-  const byExactValue = variants.find(v => v.value === input);
+  // JSON experiment variants: match user input to `variantId`
+  const byExactValue = variants.find(v => {
+    if (isJsonVariantValue(v.value)) {
+      return v.value.variantId === input;
+    }
+    return v.value === input;
+  });
   if (byExactValue) {
     return { variant: byExactValue, error: null };
   }
@@ -104,18 +121,28 @@ function parseVariantValue(input: string): string | number | boolean {
 /**
  * Compares two variant values for equality.
  * Handles type coercion for common cases.
+ * JSON flag values match by `variantId` against the parsed CLI input.
  */
 function valuesMatch(
-  variantValue: string | number | boolean,
+  variantValue: FlagVariant['value'],
   inputValue: string | number | boolean
 ): boolean {
+  if (isJsonVariantValue(variantValue)) {
+    return (
+      variantValue.variantId === inputValue ||
+      String(variantValue.variantId) === String(inputValue)
+    );
+  }
+
+  const primitive = variantValue as string | number | boolean;
+
   // Direct equality
-  if (variantValue === inputValue) {
+  if (primitive === inputValue) {
     return true;
   }
 
   // String comparison of values (for cases like "off" matching string "off")
-  if (String(variantValue) === String(inputValue)) {
+  if (String(primitive) === String(inputValue)) {
     return true;
   }
 
