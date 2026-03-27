@@ -176,13 +176,17 @@ export default async function add(client: Client, argv: string[]) {
     return 1;
   }
 
-  // Check for non-JSON config files (vercel.ts, vercel.mjs, etc.)
-  for (const ext of VERCEL_CONFIG_EXTENSIONS) {
-    const altPath = resolve(client.cwd, `vercel.${ext}`);
+  // Check for non-JSON config files (vercel.ts, vercel.mjs, vercel.toml, etc.)
+  const nonJsonConfigs = [
+    ...VERCEL_CONFIG_EXTENSIONS.map(ext => `vercel.${ext}`),
+    'vercel.toml',
+  ];
+  for (const configName of nonJsonConfigs) {
+    const altPath = resolve(client.cwd, configName);
     try {
       await access(altPath);
       output.error(
-        `Found ${chalk.cyan(`vercel.${ext}`)} — ${getCommandName('crons add')} only supports ${chalk.cyan('vercel.json')}. Add cron jobs directly to your ${chalk.cyan(`vercel.${ext}`)} file instead.`
+        `Found ${chalk.cyan(configName)} — ${getCommandName('crons add')} only supports ${chalk.cyan('vercel.json')}. Add cron jobs directly to your ${chalk.cyan(configName)} file instead.`
       );
       return 1;
     } catch {

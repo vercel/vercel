@@ -161,6 +161,13 @@ export function readLocalConfig(
         break;
       } catch {}
     }
+    if (!sourceFile) {
+      const tomlPath = join(workPath, 'vercel.toml');
+      try {
+        accessSync(tomlPath, constants.F_OK);
+        sourceFile = 'vercel.toml';
+      } catch {}
+    }
     config[fileNameSymbol] = sourceFile || DEFAULT_VERCEL_CONFIG_FILENAME;
   } else {
     config[fileNameSymbol] = basename(target);

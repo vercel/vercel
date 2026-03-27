@@ -51,7 +51,7 @@ import getTeams from './util/teams/get-teams';
 import Client from './util/client';
 import { printError } from './util/error';
 import reportError from './util/report-error';
-import getConfig from './util/get-config';
+import earlyGetConfig from './util/get-config';
 import * as configFiles from './util/config/files';
 import getGlobalPathConfig from './util/config/global-path';
 import {
@@ -206,7 +206,7 @@ const main = async () => {
 
   const localConfigPath = parsedArgs.flags['--local-config'];
   let localConfig: VercelConfig | Error | undefined =
-    await getConfig(localConfigPath);
+    await earlyGetConfig(localConfigPath);
 
   if (localConfig instanceof ERRORS.CantParseJSONFile) {
     output.error(`Couldn't parse JSON file ${localConfig.meta.file}.`);

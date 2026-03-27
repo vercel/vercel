@@ -132,6 +132,13 @@ async function prepareServicesConfigWrite(
     throw new Error('Cannot automatically update now.json.');
   }
 
+  if (
+    compileResult.configPath &&
+    basename(compileResult.configPath) === 'vercel.toml'
+  ) {
+    throw new Error('Cannot automatically update vercel.toml.');
+  }
+
   let existingConfig: VercelConfig = {};
   if (
     compileResult.configPath &&

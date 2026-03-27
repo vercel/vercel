@@ -42,9 +42,10 @@ export async function findProjectRoot(
 
     const hasVercelDir = await pathExists(join(dir, '.vercel'));
     const hasVercelJson = await pathExists(join(dir, 'vercel.json'));
+    const hasVercelToml = await pathExists(join(dir, 'vercel.toml'));
     const hasGit = await pathExists(join(dir, '.git'));
 
-    if (hasVercelDir || hasVercelJson || hasGit) {
+    if (hasVercelDir || hasVercelJson || hasVercelToml || hasGit) {
       return dir;
     }
 

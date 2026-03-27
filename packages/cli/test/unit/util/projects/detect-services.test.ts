@@ -85,6 +85,38 @@ describe('tryDetectServices()', () => {
     });
   });
 
+  it('should return services when configured via vercel.toml', async () => {
+    await mkdir(join(tempDir, 'api'), { recursive: true });
+    await writeFile(
+      join(tempDir, 'vercel.toml'),
+      `[experimentalServices.frontend]
+framework = "nextjs"
+routePrefix = "/"
+
+[experimentalServices.backend]
+entrypoint = "api/index.py"
+routePrefix = "/api"`
+    );
+    await writeFile(
+      join(tempDir, 'api/index.py'),
+      'def app():\n  return None\n'
+    );
+
+    const result = await tryDetectServices(tempDir);
+    expect(result).not.toBeNull();
+    expect(result?.services).toHaveLength(2);
+    expect(result?.services.find(s => s.name === 'frontend')).toMatchObject({
+      name: 'frontend',
+      framework: 'nextjs',
+      routePrefix: '/',
+    });
+    expect(result?.services.find(s => s.name === 'backend')).toMatchObject({
+      name: 'backend',
+      entrypoint: 'api/index.py',
+      routePrefix: '/api',
+    });
+  });
+
   it('should return validation errors for invalid services', async () => {
     await writeFile(
       join(tempDir, 'vercel.json'),
@@ -252,6 +284,26 @@ describe('tryDetectServices()', () => {
       );
 
       await expect(isExperimentalServicesEnabled(tempDir)).resolves.toBe(true);
+    });
+
+    it('should return true when vercel.toml has experimentalServices', async () => {
+      await writeFile(
+        join(tempDir, 'vercel.toml'),
+        `[experimentalServices.frontend]
+framework = "nextjs"
+routePrefix = "/"`
+      );
+
+      await expect(isExperimentalServicesEnabled(tempDir)).resolves.toBe(true);
+    });
+
+    it('should return false when vercel.toml has no experimentalServices', async () => {
+      await writeFile(
+        join(tempDir, 'vercel.toml'),
+        `buildCommand = "npm run build"`
+      );
+
+      await expect(isExperimentalServicesEnabled(tempDir)).resolves.toBe(false);
     });
   });
 });
