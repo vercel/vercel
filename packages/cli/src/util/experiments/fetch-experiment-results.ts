@@ -10,12 +10,11 @@ export type ExperimentResultsQuery = {
 };
 
 /**
- * GET /v1/projects/:projectId/experiments/:flagSlug/results
- * Query mirrors the dashboard / API (projectId, experimentName, metrics, unit field).
+ * GET /web/insights/experiment-results
+ * Served by Web Analytics; results use project metrics and tracked events.
  */
 export function buildExperimentResultsPath(
   projectId: string,
-  flagSlug: string,
   query: ExperimentResultsQuery
 ): string {
   const params = new URLSearchParams();
@@ -33,16 +32,15 @@ export function buildExperimentResultsPath(
   }
 
   const qs = params.toString();
-  return `/v1/projects/${encodeURIComponent(projectId)}/experiments/${encodeURIComponent(flagSlug)}/results?${qs}`;
+  return `/web/insights/experiment-results?${qs}`;
 }
 
 export async function fetchExperimentResults(
   client: Client,
   projectId: string,
-  flagSlug: string,
   query: ExperimentResultsQuery
 ): Promise<unknown> {
-  const path = buildExperimentResultsPath(projectId, flagSlug, query);
+  const path = buildExperimentResultsPath(projectId, query);
   output.debug(`GET ${path}`);
   return client.fetch<unknown>(path);
 }

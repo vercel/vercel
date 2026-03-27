@@ -40,4 +40,11 @@ export class ExperimentTelemetryClient
       value: actual,
     });
   }
+
+  trackCliSubcommandMetrics(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'metrics',
+      value: actual,
+    });
+  }
 }

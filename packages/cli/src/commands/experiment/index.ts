@@ -17,6 +17,11 @@ import {
   experimentStopSubcommand,
 } from './command';
 import analyse from './analyse';
+import experimentCreate from './create';
+import experimentList from './list';
+import experimentStart from './start';
+import experimentStop from './stop';
+import metricsIndex from './metrics-index';
 
 const COMMAND_CONFIG = {
   create: getCommandAliases(experimentCreateSubcommand),
@@ -24,6 +29,7 @@ const COMMAND_CONFIG = {
   start: getCommandAliases(experimentStartSubcommand),
   stop: getCommandAliases(experimentStopSubcommand),
   analyse: getCommandAliases(experimentAnalyseSubcommand),
+  metrics: ['metrics'],
 };
 
 export default async function main(client: Client): Promise<number> {
@@ -86,10 +92,7 @@ export default async function main(client: Client): Promise<number> {
         return 2;
       }
       telemetry.trackCliSubcommandCreate(subcommandOriginal);
-      output.error(
-        'This subcommand is not implemented yet. Use the dashboard or API to create experiments.'
-      );
-      return 1;
+      return experimentCreate(client, args);
     case 'list':
       if (needHelp) {
         telemetry.trackCliFlagHelp('experiment', subcommandOriginal);
@@ -97,10 +100,7 @@ export default async function main(client: Client): Promise<number> {
         return 2;
       }
       telemetry.trackCliSubcommandList(subcommandOriginal);
-      output.error(
-        'This subcommand is not implemented yet. Use `vc flags list` to list feature flags.'
-      );
-      return 1;
+      return experimentList(client, args);
     case 'start':
       if (needHelp) {
         telemetry.trackCliFlagHelp('experiment', subcommandOriginal);
@@ -108,8 +108,7 @@ export default async function main(client: Client): Promise<number> {
         return 2;
       }
       telemetry.trackCliSubcommandStart(subcommandOriginal);
-      output.error('This subcommand is not implemented yet.');
-      return 1;
+      return experimentStart(client, args);
     case 'stop':
       if (needHelp) {
         telemetry.trackCliFlagHelp('experiment', subcommandOriginal);
@@ -117,8 +116,7 @@ export default async function main(client: Client): Promise<number> {
         return 2;
       }
       telemetry.trackCliSubcommandStop(subcommandOriginal);
-      output.error('This subcommand is not implemented yet.');
-      return 1;
+      return experimentStop(client, args);
     case 'analyse':
       if (needHelp) {
         telemetry.trackCliFlagHelp('experiment', subcommandOriginal);
@@ -127,6 +125,9 @@ export default async function main(client: Client): Promise<number> {
       }
       telemetry.trackCliSubcommandAnalyse(subcommandOriginal);
       return analyse(client, args);
+    case 'metrics':
+      telemetry.trackCliSubcommandMetrics(subcommandOriginal);
+      return metricsIndex(client);
     default:
       output.print(help(experimentCommand, { columns: client.stderr.columns }));
       return 2;

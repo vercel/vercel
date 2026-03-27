@@ -175,7 +175,13 @@ export function useFlags(
     '/v1/projects/:projectId/feature-flags/flags',
     (req, res) => {
       const state = req.query.state || 'active';
-      const filteredFlags = flagsList.filter(f => f.state === state);
+      let filteredFlags = flagsList.filter(f => f.state === state);
+      const hasExperiment = req.query.hasExperiment;
+      if (hasExperiment === 'true') {
+        filteredFlags = filteredFlags.filter(f => Boolean(f.experiment));
+      } else if (hasExperiment === 'false') {
+        filteredFlags = filteredFlags.filter(f => !f.experiment);
+      }
       res.json({ data: filteredFlags });
     }
   );

@@ -18,22 +18,19 @@ describe('experiment analyse', () => {
     const cwd = setupUnitFixture('commands/flags/vercel-flags-test');
     client.cwd = cwd;
 
-    client.scenario.get(
-      '/v1/projects/:projectId/experiments/:flagSlug/results',
-      (req, res) => {
-        expect(req.query.projectId).toBe('prj_experiment_test');
-        expect(req.query.experimentName).toBe('my-flag');
-        expect(req.query.metricEventNames).toBe('purchase');
-        expect(req.query.metricTypes).toBe('conversion');
-        expect(req.query.unitField).toBe('visitorId');
-        res.json({
-          variants: [
-            { name: 'control', conversionRate: 0.12 },
-            { name: 'treatment', conversionRate: 0.15 },
-          ],
-        });
-      }
-    );
+    client.scenario.get('/web/insights/experiment-results', (req, res) => {
+      expect(req.query.projectId).toBe('prj_experiment_test');
+      expect(req.query.experimentName).toBe('my-flag');
+      expect(req.query.metricEventNames).toBe('purchase');
+      expect(req.query.metricTypes).toBe('conversion');
+      expect(req.query.unitField).toBe('visitorId');
+      res.json({
+        variants: [
+          { name: 'control', conversionRate: 0.12 },
+          { name: 'treatment', conversionRate: 0.15 },
+        ],
+      });
+    });
   });
 
   it('fetches results and prints JSON summary', async () => {
@@ -67,13 +64,10 @@ describe('experiment analyse', () => {
       name: 'experiment-test',
     });
     client.cwd = setupUnitFixture('commands/flags/vercel-flags-test');
-    client.scenario.get(
-      '/v1/projects/:projectId/experiments/:flagSlug/results',
-      (req, res) => {
-        expect(req.query.peek).toBe('true');
-        res.json({ ok: true });
-      }
-    );
+    client.scenario.get('/web/insights/experiment-results', (req, res) => {
+      expect(req.query.peek).toBe('true');
+      res.json({ ok: true });
+    });
     client.setArgv(
       'experiment',
       'analyse',

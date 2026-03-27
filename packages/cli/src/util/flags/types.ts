@@ -1,6 +1,12 @@
+/** JSON flag variant payload for experiment flags (`kind: "json"`). */
+export interface JsonVariantValue {
+  variantId: string;
+  params?: Record<string, unknown>;
+}
+
 export interface FlagVariant {
   id: string;
-  value: string | number | boolean;
+  value: string | number | boolean | JsonVariantValue;
   label?: string;
   description?: string;
 }
@@ -12,11 +18,14 @@ export interface FlagOutcome {
 
 export interface FlagSplitOutcome {
   type: 'split';
-  base: {
-    type: 'entity';
-    kind: string;
-    attribute: string;
-  };
+  /** Allocation base (entity accessor or experiment shorthand e.g. `{ type: 'visitor' }`). */
+  base:
+    | {
+        type: 'entity';
+        kind: string;
+        attribute: string;
+      }
+    | { type: string; kind?: string; attribute?: string };
   weights: Record<string, number>;
   defaultVariantId: string;
 }
@@ -51,11 +60,37 @@ export interface FlagEnvironmentConfig {
   revision?: number;
 }
 
+export type ExperimentStatus = 'draft' | 'running' | 'paused' | 'closed';
+
+export type ExperimentAllocationUnit = 'cookieId' | 'visitorId' | 'userId';
+
+/**
+ * Experiment configuration stored on a feature flag (A/B tests).
+ * @see Vercel API feature-flags experiment schema
+ */
+export interface ExperimentConfig {
+  name?: string;
+  allocationUnit: ExperimentAllocationUnit;
+  numVariants?: number;
+  surfaceArea?: string;
+  stickyRequirement?: boolean;
+  layer?: string;
+  primaryMetricIds: string[];
+  guardrailMetricIds?: string[];
+  status: ExperimentStatus;
+  owner?: string;
+  hypothesis?: string;
+  device?: 'android' | 'ios' | 'desktop' | 'mweb';
+  controlVariantId?: string;
+  startedAt?: number;
+  endedAt?: number;
+}
+
 export interface Flag {
   id: string;
   slug: string;
   description?: string;
-  kind: 'boolean' | 'string' | 'number';
+  kind: 'boolean' | 'string' | 'number' | 'json';
   state: 'active' | 'archived';
   variants: FlagVariant[];
   environments: Record<string, FlagEnvironmentConfig>;
@@ -67,6 +102,7 @@ export interface Flag {
   revision: number;
   seed: number;
   typeName: 'flag';
+  experiment?: ExperimentConfig;
   metadata?: {
     creator?: {
       id: string;
@@ -117,10 +153,13 @@ export interface SdkKeysListResponse {
 
 export interface CreateFlagRequest {
   slug: string;
-  kind: 'boolean' | 'string' | 'number';
+  kind: 'boolean' | 'string' | 'number' | 'json';
   description?: string;
   variants?: FlagVariant[];
   environments: Record<string, FlagEnvironmentConfig>;
+  /** Required for split / experiment flags. */
+  seed?: number;
+  experiment?: ExperimentConfig;
 }
 
 export interface UpdateFlagRequest {
@@ -129,6 +168,45 @@ export interface UpdateFlagRequest {
   variants?: FlagVariant[];
   environments?: Record<string, Partial<FlagEnvironmentConfig>>;
   state?: 'active' | 'archived';
+  experiment?: Partial<ExperimentConfig>;
+}
+
+export type MetricType = 'percentage' | 'currency' | 'count';
+
+export type MetricUnit = 'user' | 'session' | 'visitor';
+
+export type MetricDirectionality = 'increaseIsGood' | 'decreaseIsGood';
+
+/** Experiment metric (Web Analytics / Tinybird). */
+export interface ExperimentMetric {
+  typeName: 'metric';
+  id: string;
+  slug: string;
+  projectId: string;
+  name: string;
+  description?: string;
+  metricType: MetricType;
+  metricUnit: MetricUnit;
+  directionality: MetricDirectionality;
+  metricFormula?: string;
+  createdAt: number;
+  updatedAt: number;
+  createdBy?: string;
+  usedByFlags?: string[];
+}
+
+export interface ExperimentMetricsListResponse {
+  data: ExperimentMetric[];
+}
+
+export interface PutExperimentMetricRequest {
+  slug: string;
+  name: string;
+  description?: string;
+  metricType: MetricType;
+  metricUnit: MetricUnit;
+  directionality: MetricDirectionality;
+  metricFormula?: string;
 }
 
 export interface CreateSdkKeyRequest {

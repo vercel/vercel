@@ -1,15 +1,206 @@
 import { packageName } from '../../util/pkg-name';
 
+export const experimentMetricsAddSubcommand = {
+  name: 'add',
+  aliases: ['create'],
+  description: 'Create an experiment metric (conversion / KPI definition)',
+  arguments: [],
+  options: [
+    {
+      name: 'slug',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Unique metric key (letters, numbers, dashes, underscores)',
+      argument: 'SLUG',
+    },
+    {
+      name: 'name',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Human-readable metric name',
+      argument: 'TEXT',
+    },
+    {
+      name: 'metric-type',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'percentage, currency, or count',
+      argument: 'TYPE',
+    },
+    {
+      name: 'metric-unit',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'user, session, or visitor',
+      argument: 'UNIT',
+    },
+    {
+      name: 'directionality',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'increaseIsGood or decreaseIsGood',
+      argument: 'DIR',
+    },
+    {
+      name: 'description',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Optional description',
+      argument: 'TEXT',
+    },
+    {
+      name: 'metric-formula',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Optional formula for computed metrics',
+      argument: 'EXPR',
+    },
+    {
+      name: 'json',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Output created metric as JSON',
+    },
+  ],
+  examples: [
+    {
+      name: 'Create a count metric',
+      value: `${packageName} experiment metrics add --slug signup-completed --name "Signup Completed" --metric-type count --metric-unit user --directionality increaseIsGood`,
+    },
+  ],
+} as const;
+
+export const experimentMetricsListSubcommand = {
+  name: 'list',
+  aliases: ['ls'],
+  description: 'List experiment metrics for the project',
+  arguments: [],
+  options: [
+    {
+      name: 'json',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Output as JSON',
+    },
+    {
+      name: 'with-metadata',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Include creator metadata in the response',
+    },
+  ],
+  examples: [
+    {
+      name: 'List metrics',
+      value: `${packageName} experiment metrics ls`,
+    },
+  ],
+} as const;
+
+export const experimentMetricsSubcommand = {
+  name: 'metrics',
+  aliases: [],
+  description: 'Create and list experiment metrics',
+  arguments: [],
+  subcommands: [
+    experimentMetricsAddSubcommand,
+    experimentMetricsListSubcommand,
+  ],
+  options: [],
+  examples: [],
+} as const;
+
 export const experimentCreateSubcommand = {
   name: 'create',
   aliases: [],
-  description: 'Create an experiment (feature flag) from a JSON payload',
-  arguments: [],
-  options: [],
+  description:
+    'Create a draft experiment flag (JSON kind) with a 50/50 split in production',
+  arguments: [
+    {
+      name: 'slug',
+      required: true,
+    },
+  ],
+  options: [
+    {
+      name: 'primary-metric-id',
+      shorthand: null,
+      type: [String],
+      deprecated: false,
+      description:
+        'Primary metric id(s) from `experiment metrics add` (1–3, repeatable)',
+      argument: 'ID',
+    },
+    {
+      name: 'allocation-unit',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'cookieId, visitorId, or userId',
+      argument: 'UNIT',
+    },
+    {
+      name: 'hypothesis',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Experiment hypothesis text',
+      argument: 'TEXT',
+    },
+    {
+      name: 'name',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Human-readable experiment name',
+      argument: 'TEXT',
+    },
+    {
+      name: 'control-variant',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Control variant id (default: control)',
+      argument: 'ID',
+    },
+    {
+      name: 'treatment-variant',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Treatment variant id (default: treatment)',
+      argument: 'ID',
+    },
+    {
+      name: 'seed',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Flag seed 0–100000 (default: random)',
+      argument: 'N',
+    },
+    {
+      name: 'json',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Output created flag as JSON',
+    },
+  ],
   examples: [
     {
-      name: 'Create (coming soon)',
-      value: `${packageName} experiment create`,
+      name: 'Create draft experiment',
+      value: `${packageName} experiment create new-signup-flow --primary-metric-id met_abc123 --allocation-unit visitorId --hypothesis "Streamlined signup converts better"`,
     },
   ],
 } as const;
@@ -17,12 +208,28 @@ export const experimentCreateSubcommand = {
 export const experimentListSubcommand = {
   name: 'list',
   aliases: ['ls'],
-  description: 'List experiments for the current project',
+  description: 'List flags that have experiment configuration',
   arguments: [],
-  options: [],
+  options: [
+    {
+      name: 'state',
+      shorthand: 's',
+      type: String,
+      deprecated: false,
+      description: 'Filter by flag state (active or archived)',
+      argument: 'STATE',
+    },
+    {
+      name: 'json',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Output as JSON',
+    },
+  ],
   examples: [
     {
-      name: 'List (coming soon)',
+      name: 'List experiments',
       value: `${packageName} experiment list`,
     },
   ],
@@ -31,18 +238,26 @@ export const experimentListSubcommand = {
 export const experimentStartSubcommand = {
   name: 'start',
   aliases: [],
-  description: 'Set an experiment start time to now',
+  description: 'Set experiment status to running and startedAt to now',
   arguments: [
     {
       name: 'slug',
       required: true,
     },
   ],
-  options: [],
+  options: [
+    {
+      name: 'json',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Output updated flag as JSON',
+    },
+  ],
   examples: [
     {
-      name: 'Start (coming soon)',
-      value: `${packageName} experiment start my-experiment`,
+      name: 'Start',
+      value: `${packageName} experiment start new-signup-flow`,
     },
   ],
 } as const;
@@ -50,18 +265,26 @@ export const experimentStartSubcommand = {
 export const experimentStopSubcommand = {
   name: 'stop',
   aliases: [],
-  description: 'Set an experiment stop time to now',
+  description: 'Set experiment status to closed and endedAt to now',
   arguments: [
     {
       name: 'slug',
       required: true,
     },
   ],
-  options: [],
+  options: [
+    {
+      name: 'json',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Output updated flag as JSON',
+    },
+  ],
   examples: [
     {
-      name: 'Stop (coming soon)',
-      value: `${packageName} experiment stop my-experiment`,
+      name: 'Stop',
+      value: `${packageName} experiment stop new-signup-flow`,
     },
   ],
 } as const;
@@ -69,7 +292,7 @@ export const experimentStopSubcommand = {
 export const experimentAnalyseSubcommand = {
   name: 'analyse',
   aliases: ['analyze'],
-  description: 'Fetch experiment results for a feature-flag experiment',
+  description: 'Fetch experiment results (Web Analytics insights)',
   arguments: [
     {
       name: 'slug',
@@ -98,7 +321,7 @@ export const experimentAnalyseSubcommand = {
       type: [String],
       deprecated: false,
       description:
-        'Metric event name(s) to measure (repeatable). Required unless defaults are set.',
+        'Metric / event name(s) to measure (repeatable). Use metric slugs from your project.',
       argument: 'NAME',
     },
     {
@@ -106,7 +329,7 @@ export const experimentAnalyseSubcommand = {
       shorthand: null,
       type: [String],
       deprecated: false,
-      description: 'Metric type(s), e.g. conversion (repeatable)',
+      description: 'Metric type(s), e.g. conversion or count (repeatable)',
       argument: 'TYPE',
     },
     {
@@ -114,22 +337,23 @@ export const experimentAnalyseSubcommand = {
       shorthand: null,
       type: String,
       deprecated: false,
-      description: 'Field used as the experimental unit (e.g. visitorId)',
+      description:
+        'Field used as the experimental unit (visitorId, userId, …). Should match allocation.',
       argument: 'FIELD',
     },
   ],
   examples: [
     {
       name: 'Results with default metric settings',
-      value: `${packageName} experiment analyse my-flag --metric-event-name purchase --metric-type conversion --unit-field visitorId`,
+      value: `${packageName} experiment analyse my-flag --metric-event-name signup-completed --metric-type conversion --unit-field visitorId`,
     },
     {
       name: 'Peek at in-flight results',
-      value: `${packageName} experiment analyse my-flag --peek --metric-event-name signup --metric-type conversion --unit-field visitorId`,
+      value: `${packageName} experiment analyse my-flag --peek --metric-event-name signup-completed --metric-type conversion --unit-field visitorId`,
     },
     {
       name: 'JSON for scripts and agents',
-      value: `${packageName} experiment analyse my-flag --json --metric-event-name purchase --metric-type conversion --unit-field visitorId`,
+      value: `${packageName} experiment analyse my-flag --json --metric-event-name signup-completed --metric-type conversion --unit-field visitorId`,
     },
   ],
 } as const;
@@ -137,7 +361,8 @@ export const experimentAnalyseSubcommand = {
 export const experimentCommand = {
   name: 'experiment',
   aliases: [],
-  description: 'Manage feature-flag experiments and analyse results',
+  description:
+    'Manage feature-flag experiments: metrics, draft flags, start/stop, and results',
   hidden: true,
   arguments: [],
   subcommands: [
@@ -146,6 +371,7 @@ export const experimentCommand = {
     experimentStartSubcommand,
     experimentStopSubcommand,
     experimentAnalyseSubcommand,
+    experimentMetricsSubcommand,
   ],
   options: [],
   examples: [],

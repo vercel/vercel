@@ -77,7 +77,7 @@ export default async function analyse(
   output.spinner(`Fetching experiment results for ${slug}`);
 
   try {
-    const results = await fetchExperimentResults(client, project.id, slug, {
+    const results = await fetchExperimentResults(client, project.id, {
       experimentName: slug,
       metricEventNames,
       metricTypes: resolvedMetricTypes,
