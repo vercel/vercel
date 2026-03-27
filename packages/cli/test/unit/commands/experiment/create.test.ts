@@ -13,7 +13,7 @@ describe('experiment create', () => {
     useTeams('team_dummy');
     useProject({
       ...defaultProject,
-      id: 'prj_experiment_test',
+      id: 'vercel-flags-test',
       name: 'experiment-test',
     });
     useFlags();

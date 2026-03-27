@@ -12,14 +12,15 @@ describe('experiment analyse', () => {
     useTeams('team_dummy');
     useProject({
       ...defaultProject,
-      id: 'prj_experiment_test',
+      // Must match `.vercel/project.json` projectId in the flags fixture.
+      id: 'vercel-flags-test',
       name: 'experiment-test',
     });
     const cwd = setupUnitFixture('commands/flags/vercel-flags-test');
     client.cwd = cwd;
 
     client.scenario.get('/web/insights/experiment-results', (req, res) => {
-      expect(req.query.projectId).toBe('prj_experiment_test');
+      expect(req.query.projectId).toBe('vercel-flags-test');
       expect(req.query.experimentName).toBe('my-flag');
       expect(req.query.metricEventNames).toBe('purchase');
       expect(req.query.metricTypes).toBe('conversion');
@@ -60,7 +61,7 @@ describe('experiment analyse', () => {
     useTeams('team_dummy');
     useProject({
       ...defaultProject,
-      id: 'prj_experiment_test',
+      id: 'vercel-flags-test',
       name: 'experiment-test',
     });
     client.cwd = setupUnitFixture('commands/flags/vercel-flags-test');
@@ -91,7 +92,7 @@ describe('experiment analyse', () => {
       client.setArgv('experiment', 'analyse', '--help');
       const exitCode = await experiment(client);
       expect(exitCode).toBe(2);
-      expect(client.stdout.getFullOutput()).toContain('analyse');
+      expect(client.stderr.getFullOutput()).toContain('analyse');
     });
   });
 });

@@ -33,7 +33,7 @@ const draftExperimentFlag: Flag = {
   createdAt: Date.now(),
   updatedAt: Date.now(),
   createdBy: 'user_123',
-  projectId: 'prj_experiment_test',
+  projectId: 'vercel-flags-test',
   ownerId: 'team_dummy',
   revision: 1,
   seed: 1,
@@ -52,7 +52,7 @@ describe('experiment start / stop', () => {
     useTeams('team_dummy');
     useProject({
       ...defaultProject,
-      id: 'prj_experiment_test',
+      id: 'vercel-flags-test',
       name: 'experiment-test',
     });
     useFlags([draftExperimentFlag]);
