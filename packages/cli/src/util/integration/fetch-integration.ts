@@ -46,6 +46,7 @@ type DiscoverEntry = {
   slug: string;
   provider: string;
   description: string;
+  tags: string[];
 };
 
 function toDiscoverEntries(
@@ -58,6 +59,7 @@ function toDiscoverEntries(
       continue;
     }
 
+    const integrationTags = integration.tagIds ?? [];
     const products = integration.products ?? [];
     if (products.length === 0) {
       entries.push({
@@ -65,6 +67,7 @@ function toDiscoverEntries(
         slug: integration.slug,
         provider: integration.name,
         description: integration.shortDescription ?? '',
+        tags: integrationTags,
       });
       continue;
     }
@@ -80,6 +83,7 @@ function toDiscoverEntries(
         provider: integration.name,
         description:
           product.shortDescription ?? integration.shortDescription ?? '',
+        tags: [...integrationTags, ...(product.tags ?? [])],
       });
     }
   }
@@ -93,7 +97,8 @@ function matchesSearchTerm(entry: DiscoverEntry, term: string): boolean {
     entry.name.toLowerCase().includes(lower) ||
     entry.slug.toLowerCase().includes(lower) ||
     entry.provider.toLowerCase().includes(lower) ||
-    entry.description.toLowerCase().includes(lower)
+    entry.description.toLowerCase().includes(lower) ||
+    entry.tags.some(tag => tag.toLowerCase().includes(lower))
   );
 }
 
