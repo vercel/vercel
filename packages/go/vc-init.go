@@ -1,13 +1,17 @@
+//go:build !vcdev
+// +build !vcdev
+
 // vc-init.go - Bootstrap wrapper for standalone Go servers on Vercel
 // This handles the IPC protocol required for executable runtime mode.
 //
 // The bootstrap:
 // 1. Connects to VERCEL_IPC_PATH Unix socket
 // 2. Starts the user's server on an internal port
-// 3. Sends "server-started" IPC message
-// 4. Reverse proxies requests to user's server
-// 5. Handles /_vercel/ping health check
-// 6. Sends "end" IPC message after each request
+// 3. Forwards user server logs over IPC with structured level detection
+// 4. Sends "server-started" IPC message
+// 5. Reverse proxies requests to user's server
+// 6. Handles /_vercel/ping health check
+// 7. Sends "end" IPC message after each request
 
 package main
 
@@ -56,7 +60,6 @@ type RequestContext struct {
 var (
 	ipcConn   net.Conn
 	ipcMutex  sync.Mutex
-	ipcReady  bool
 	startTime time.Time
 )
 
@@ -122,16 +125,34 @@ func main() {
 
 	cmd := exec.CommandContext(ctx, userBinary)
 	cmd.Env = append(os.Environ(), fmt.Sprintf("PORT=%d", userPort))
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+
+	stdoutPipe, err := cmd.StdoutPipe()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to capture user server stdout: %v\n", err)
+		os.Exit(1)
+	}
+
+	stderrPipe, err := cmd.StderrPipe()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to capture user server stderr: %v\n", err)
+		os.Exit(1)
+	}
 
 	if err := cmd.Start(); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to start user server: %v\n", err)
 		os.Exit(1)
 	}
 
+	go forwardProcessLogs(stdoutPipe, StreamStdout, func(err error) {
+		fmt.Fprintf(os.Stderr, "Warning: Failed to read user server stdout: %v\n", err)
+	})
+	go forwardProcessLogs(stderrPipe, StreamStderr, func(err error) {
+		fmt.Fprintf(os.Stderr, "Warning: Failed to read user server stderr: %v\n", err)
+	})
+
 	// Wait for user's server to be ready
 	if err := waitForServer(userPort, 30*time.Second); err != nil {
+		flushBufferedLogMessagesToLocalOutput()
 		fmt.Fprintf(os.Stderr, "User server failed to start: %v\n", err)
 		cmd.Process.Kill()
 		os.Exit(1)
@@ -217,8 +238,9 @@ func main() {
 
 	if err := sendIPCMessage(startMsg); err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: Failed to send IPC start message: %v\n", err)
+		flushBufferedLogMessagesToLocalOutput()
 	} else {
-		ipcReady = true
+		flushBufferedLogMessages()
 	}
 
 	// If no IPC, print the port for local development
