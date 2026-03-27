@@ -109,14 +109,110 @@ export async function startAgentMode(
     tui.requestRender();
   }
 
+  // Teardown / agent handoff state — declared early so runFixAgent can access it.
+  let tornDown = false;
+
+  let lastErrorChunk: string | null = null;
+
   const errorChunker = new ErrorChunker((text: string) => {
-    // TODO: Replace with actual agent callback
-    appendOutput(chalk.green(`[error chunk]\n${text}`));
+    lastErrorChunk = text;
   });
 
+  let agentSession:
+    | Awaited<
+        ReturnType<
+          typeof import('@mariozechner/pi-coding-agent')['createAgentSession']
+        >
+      >['session']
+    | null = null;
+
+  async function runFixAgent() {
+    try {
+      const { createAgentSession, SessionManager } = await import(
+        '@mariozechner/pi-coding-agent'
+      );
+
+      const { session } = await createAgentSession({
+        cwd: process.cwd(),
+        sessionManager: SessionManager.inMemory(),
+      });
+      agentSession = session;
+
+      appendOutput(chalk.cyan('\n--- Agent fixing error ---\n'));
+
+      session.subscribe((event: { type: string; [key: string]: unknown }) => {
+        switch (event.type) {
+          case 'message_update': {
+            const evt = event as {
+              type: 'message_update';
+              assistantMessageEvent: { type: string; delta?: string };
+            };
+            if (evt.assistantMessageEvent.type === 'text_delta') {
+              appendOutput(evt.assistantMessageEvent.delta ?? '');
+            }
+            break;
+          }
+          case 'tool_execution_start': {
+            const evt = event as {
+              type: 'tool_execution_start';
+              toolName: string;
+              args: unknown;
+            };
+            appendOutput(
+              chalk.dim(`\n[${evt.toolName}] `) +
+                chalk.dim(JSON.stringify(evt.args)) +
+                '\n'
+            );
+            break;
+          }
+          case 'tool_execution_end': {
+            const evt = event as {
+              type: 'tool_execution_end';
+              toolName: string;
+              isError: boolean;
+            };
+            appendOutput(
+              evt.isError
+                ? chalk.red(`[${evt.toolName}] error\n`)
+                : chalk.green(`[${evt.toolName}] done\n`)
+            );
+            break;
+          }
+          case 'agent_end': {
+            appendOutput(chalk.cyan('\n--- Agent finished ---\n'));
+            break;
+          }
+        }
+      });
+
+      await session.prompt(
+        `Fix this error from the dev server:\n\n${lastErrorChunk}`
+      );
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      appendOutput(chalk.red(`\nAgent error: ${msg}\n`));
+    } finally {
+      if (agentSession) {
+        agentSession.dispose();
+        agentSession = null;
+      }
+    }
+  }
+
   inputPanel.onSubmit = (value: string) => {
-    appendOutput(`user said: ${value}\n`);
+    const trimmed = value.trim();
     inputPanel.setValue('');
+
+    if (trimmed === '/fix') {
+      if (!lastErrorChunk) {
+        appendOutput(chalk.yellow('No recent error to fix.\n'));
+        return;
+      }
+      void runFixAgent();
+      return;
+    }
+
+    appendOutput(`user said: ${value}\n`);
   };
 
   tui.start();
@@ -136,7 +232,6 @@ export async function startAgentMode(
   appendOutput(`${chalk.bold('Vercel Dev')} ${chalk.dim('(agent mode)')}\n\n`);
 
   // Teardown follows the pi-agent pattern: drain stdin, then stop TUI.
-  let tornDown = false;
   async function teardownTUI() {
     if (tornDown) return;
     tornDown = true;
