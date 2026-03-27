@@ -187,12 +187,13 @@ export default async function create(
   const { project } = link;
 
   const variants: FlagVariant[] = [
-    { id: controlVariantId, value: controlValue },
-    { id: treatmentVariantId, value: treatmentValue },
+    { id: controlVariantId, value: controlValue, description: '' },
+    { id: treatmentVariantId, value: treatmentValue, description: '' },
   ];
 
   const body: CreateFlagRequest = {
     slug,
+    description: '',
     kind: 'json',
     seed,
     variants,
