@@ -8,11 +8,13 @@ import { getCommandName } from '../../util/pkg-name';
 import { validateJsonOutput } from '../../util/output-format';
 import { createFlag } from '../../util/flags/create-flag';
 import { experimentCreateSubcommand } from './command';
+import { parseMetricDefinitionJson } from '../../util/experiments/parse-metric-definition';
 import type {
   CreateFlagRequest,
   ExperimentAllocationUnit,
   FlagEnvironmentConfig,
   FlagVariant,
+  MetricDefinition,
 } from '../../util/flags/types';
 
 function defaultProductionEnv(
@@ -52,7 +54,7 @@ export default async function create(
   const slug = parsedArgs.args[0];
   if (!slug) {
     output.error(
-      `Missing flag slug. Example: ${getCommandName('experiment create my-signup-test --primary-metric-id met_xxx --allocation-unit visitorId')}`
+      `Missing flag slug. Example: ${getCommandName('experiment create my-signup-test --metric \'{"name":"Signup","metricType":"count","metricUnit":"user","directionality":"increaseIsGood"}\' --allocation-unit visitorId')}`
     );
     return 1;
   }
@@ -64,8 +66,8 @@ export default async function create(
   }
   const asJson = formatResult.jsonOutput;
 
-  const primaryMetricIds =
-    (parsedArgs.flags['--primary-metric-id'] as string[] | undefined) ?? [];
+  const metricJsonList =
+    (parsedArgs.flags['--metric'] as string[] | undefined) ?? [];
   const allocationUnit =
     (parsedArgs.flags['--allocation-unit'] as
       | ExperimentAllocationUnit
@@ -83,10 +85,20 @@ export default async function create(
       ? Number(seedRaw)
       : Math.floor(Math.random() * 100_001);
 
-  if (primaryMetricIds.length === 0 || primaryMetricIds.length > 3) {
-    output.error(
-      'Provide 1–3 primary metrics with --primary-metric-id <id> (repeatable). Create metrics first with `vc experiment metrics add`.'
-    );
+  let primaryMetrics: MetricDefinition[];
+  try {
+    if (metricJsonList.length === 0 || metricJsonList.length > 3) {
+      throw new Error('METRIC_COUNT');
+    }
+    primaryMetrics = metricJsonList.map(s => parseMetricDefinitionJson(s));
+  } catch (err) {
+    if (err instanceof Error && err.message === 'METRIC_COUNT') {
+      output.error(
+        "Provide 1–3 primary metrics with --metric '<json>' (repeatable). Each object must include name, metricType, metricUnit, and directionality (API Metric schema)."
+      );
+    } else {
+      printError(err);
+    }
     return 1;
   }
 
@@ -136,7 +148,7 @@ export default async function create(
     experiment: {
       name: experimentName,
       allocationUnit,
-      primaryMetricIds,
+      primaryMetrics,
       status: 'draft',
       hypothesis,
       controlVariantId,

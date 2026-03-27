@@ -8,7 +8,7 @@ import output from '../../output-manager';
 import { getLinkedProject } from '../../util/projects/link';
 import { getCommandName } from '../../util/pkg-name';
 import { validateJsonOutput } from '../../util/output-format';
-import { listExperimentMetrics } from '../../util/experiments/metrics';
+import { listExperimentMetricsForFlag } from '../../util/experiments/metrics';
 import { experimentMetricsListSubcommand } from './command';
 import table from '../../util/output/table';
 import { formatProject } from '../../util/projects/format-project';
@@ -36,7 +36,14 @@ export default async function metricsLs(
     return 1;
   }
   const asJson = formatResult.jsonOutput;
-  const withMetadata = Boolean(flags['--with-metadata']);
+
+  const flagSlug = parsedArgs.args[0];
+  if (!flagSlug) {
+    output.error(
+      `Missing flag slug. Example: ${getCommandName('experiment metrics list my-experiment-flag')}`
+    );
+    return 1;
+  }
 
   const link = await getLinkedProject(client);
   if (link.status === 'error') {
@@ -56,32 +63,42 @@ export default async function metricsLs(
   const projectSlugLink = formatProject(org.slug, project.name);
   const lsStamp = stamp();
 
-  output.spinner(`Fetching metrics for ${projectSlugLink}`);
+  output.spinner(
+    `Fetching metrics for flag "${flagSlug}" (${projectSlugLink})`
+  );
 
   try {
-    const metrics = await listExperimentMetrics(client, project.id, {
-      withMetadata,
-    });
+    const { primary, guardrail } = await listExperimentMetricsForFlag(
+      client,
+      project.id,
+      flagSlug
+    );
     output.stopSpinner();
 
+    const rows = [
+      ...primary.map(m => ['primary', m.name, m.metricType, m.metricUnit]),
+      ...guardrail.map(m => ['guardrail', m.name, m.metricType, m.metricUnit]),
+    ];
+
     if (asJson) {
-      client.stdout.write(`${JSON.stringify({ metrics }, null, 2)}\n`);
+      client.stdout.write(
+        `${JSON.stringify({ flag: flagSlug, primary, guardrail }, null, 2)}\n`
+      );
       return 0;
     }
 
-    if (metrics.length === 0) {
+    if (rows.length === 0) {
       output.log(
-        `No metrics found for ${projectSlugLink} ${chalk.gray(lsStamp())}`
+        `No metrics on experiment "${flagSlug}" for ${projectSlugLink} ${chalk.gray(lsStamp())}`
       );
       return 0;
     }
 
     output.log(
-      `${plural('metric', metrics.length, true)} for ${projectSlugLink} ${chalk.gray(lsStamp())}`
+      `${plural('metric', rows.length, true)} on "${flagSlug}" for ${projectSlugLink} ${chalk.gray(lsStamp())}`
     );
 
-    const headers = ['Slug', 'Name', 'Type', 'Unit'];
-    const rows = metrics.map(m => [m.slug, m.name, m.metricType, m.metricUnit]);
+    const headers = ['Kind', 'Name', 'Type', 'Unit'];
     output.print(table([headers, ...rows]));
     return 0;
   } catch (err) {

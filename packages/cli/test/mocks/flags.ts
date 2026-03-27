@@ -1,10 +1,5 @@
 import { client } from './client';
-import type {
-  Flag,
-  SdkKey,
-  FlagSettings,
-  ExperimentMetric,
-} from '../../src/util/flags/types';
+import type { Flag, SdkKey, FlagSettings } from '../../src/util/flags/types';
 
 export const defaultFlagSettings: FlagSettings = {
   typeName: 'settings',
@@ -167,7 +162,6 @@ export function useFlags(
   sdkKeysList: SdkKey[] = defaultSdkKeys,
   settings: FlagSettings = defaultFlagSettings
 ) {
-  const metricsList: ExperimentMetric[] = [];
   // Get flag settings
   client.scenario.get(
     '/v1/projects/:projectId/feature-flags/settings',
@@ -238,37 +232,6 @@ export function useFlags(
       };
       flagsList.push(newFlag);
       res.status(201).json(newFlag);
-    }
-  );
-
-  // Experiment metrics
-  client.scenario.put(
-    '/v1/projects/:projectId/feature-flags/metrics',
-    (req, res) => {
-      const metric: ExperimentMetric = {
-        typeName: 'metric',
-        id: `met_${Date.now()}`,
-        slug: req.body.slug,
-        name: req.body.name,
-        description: req.body.description,
-        metricType: req.body.metricType,
-        metricUnit: req.body.metricUnit,
-        directionality: req.body.directionality,
-        metricFormula: req.body.metricFormula,
-        projectId: req.params.projectId,
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-        createdBy: 'user_123',
-      };
-      metricsList.push(metric);
-      res.status(201).json(metric);
-    }
-  );
-
-  client.scenario.get(
-    '/v1/projects/:projectId/feature-flags/metrics',
-    (_req, res) => {
-      res.json({ data: metricsList });
     }
   );
 

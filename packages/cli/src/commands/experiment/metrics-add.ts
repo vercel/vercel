@@ -6,17 +6,19 @@ import output from '../../output-manager';
 import { getLinkedProject } from '../../util/projects/link';
 import { getCommandName } from '../../util/pkg-name';
 import { validateJsonOutput } from '../../util/output-format';
-import { putExperimentMetric } from '../../util/experiments/metrics';
+import { appendMetricToExperiment } from '../../util/experiments/metrics';
+import {
+  buildMetricDefinitionFromCli,
+  DIRECTIONALITIES,
+  METRIC_TYPES,
+  METRIC_UNITS,
+} from '../../util/experiments/parse-metric-definition';
 import { experimentMetricsAddSubcommand } from './command';
 import type {
   MetricDirectionality,
   MetricType,
   MetricUnit,
 } from '../../util/flags/types';
-
-const METRIC_TYPES: MetricType[] = ['percentage', 'currency', 'count'];
-const METRIC_UNITS: MetricUnit[] = ['user', 'session', 'visitor'];
-const DIRS: MetricDirectionality[] = ['increaseIsGood', 'decreaseIsGood'];
 
 export default async function metricsAdd(
   client: Client,
@@ -41,17 +43,18 @@ export default async function metricsAdd(
   }
   const asJson = formatResult.jsonOutput;
 
-  const slug = flags['--slug'] as string | undefined;
+  const flagSlug = flags['--flag'] as string | undefined;
   const name = flags['--name'] as string | undefined;
   const metricType = flags['--metric-type'] as string | undefined;
   const metricUnit = flags['--metric-unit'] as string | undefined;
   const directionality = flags['--directionality'] as string | undefined;
   const description = flags['--description'] as string | undefined;
   const metricFormula = flags['--metric-formula'] as string | undefined;
+  const guardrail = Boolean(flags['--guardrail']);
 
-  if (!slug || !name || !metricType || !metricUnit || !directionality) {
+  if (!flagSlug || !name || !metricType || !metricUnit || !directionality) {
     output.error(
-      `Required: --slug, --name, --metric-type, --metric-unit, --directionality. Example: ${getCommandName('experiment metrics add --slug signup-completed --name "Signup Completed" --metric-type count --metric-unit user --directionality increaseIsGood')}`
+      `Required: --flag, --name, --metric-type, --metric-unit, --directionality. Example: ${getCommandName('experiment metrics add --flag my-exp --name "Signup Completed" --metric-type count --metric-unit user --directionality increaseIsGood')}`
     );
     return 1;
   }
@@ -64,8 +67,10 @@ export default async function metricsAdd(
     output.error(`--metric-unit must be one of: ${METRIC_UNITS.join(', ')}`);
     return 1;
   }
-  if (!DIRS.includes(directionality as MetricDirectionality)) {
-    output.error(`--directionality must be one of: ${DIRS.join(', ')}`);
+  if (!DIRECTIONALITIES.includes(directionality as MetricDirectionality)) {
+    output.error(
+      `--directionality must be one of: ${DIRECTIONALITIES.join(', ')}`
+    );
     return 1;
   }
 
@@ -85,24 +90,37 @@ export default async function metricsAdd(
 
   const { project } = link;
 
-  output.spinner(`Creating metric ${slug}`);
+  const metric = buildMetricDefinitionFromCli({
+    name,
+    description,
+    metricType: metricType as MetricType,
+    metricUnit: metricUnit as MetricUnit,
+    directionality: directionality as MetricDirectionality,
+    metricFormula,
+  });
+
+  output.spinner(
+    `Adding ${guardrail ? 'guardrail ' : ''}metric "${name}" to ${flagSlug}`
+  );
 
   try {
-    const metric = await putExperimentMetric(client, project.id, {
-      slug,
-      name,
-      description,
-      metricType: metricType as MetricType,
-      metricUnit: metricUnit as MetricUnit,
-      directionality: directionality as MetricDirectionality,
-      metricFormula,
-    });
+    const { metric: added } = await appendMetricToExperiment(
+      client,
+      project.id,
+      flagSlug,
+      metric,
+      { guardrail }
+    );
     output.stopSpinner();
 
     if (asJson) {
-      client.stdout.write(`${JSON.stringify({ metric }, null, 2)}\n`);
+      client.stdout.write(
+        `${JSON.stringify({ metric: added, flag: flagSlug }, null, 2)}\n`
+      );
     } else {
-      output.log(`Metric created: ${metric.slug} (${metric.id})`);
+      output.log(
+        `Metric "${added.name}" added to experiment on flag "${flagSlug}" (${guardrail ? 'guardrail' : 'primary'}).`
+      );
     }
     return 0;
   } catch (err) {

@@ -64,19 +64,39 @@ export type ExperimentStatus = 'draft' | 'running' | 'paused' | 'closed';
 
 export type ExperimentAllocationUnit = 'cookieId' | 'visitorId' | 'userId';
 
+export type MetricType = 'percentage' | 'currency' | 'count';
+
+export type MetricUnit = 'user' | 'session' | 'visitor';
+
+export type MetricDirectionality = 'increaseIsGood' | 'decreaseIsGood';
+
+/** Embedded metric on a flag experiment (API Metric / MetricSchema). */
+export interface MetricDefinition {
+  name: string;
+  description?: string;
+  metricType: MetricType;
+  metricUnit: MetricUnit;
+  directionality: MetricDirectionality;
+  metricFormula?: string;
+}
+
 /**
  * Experiment configuration stored on a feature flag (A/B tests).
  * @see Vercel API feature-flags experiment schema
  */
 export interface ExperimentConfig {
+  /** Assigned by the API when the experiment is first stored. */
+  id?: string;
   name?: string;
   allocationUnit: ExperimentAllocationUnit;
   numVariants?: number;
   surfaceArea?: string;
   stickyRequirement?: boolean;
   layer?: string;
-  primaryMetricIds: string[];
-  guardrailMetricIds?: string[];
+  /** Primary metrics (1–3). */
+  primaryMetrics: MetricDefinition[];
+  /** Guardrail metrics (0–2). */
+  guardrailMetrics?: MetricDefinition[];
   status: ExperimentStatus;
   owner?: string;
   hypothesis?: string;
@@ -169,44 +189,6 @@ export interface UpdateFlagRequest {
   environments?: Record<string, Partial<FlagEnvironmentConfig>>;
   state?: 'active' | 'archived';
   experiment?: Partial<ExperimentConfig>;
-}
-
-export type MetricType = 'percentage' | 'currency' | 'count';
-
-export type MetricUnit = 'user' | 'session' | 'visitor';
-
-export type MetricDirectionality = 'increaseIsGood' | 'decreaseIsGood';
-
-/** Experiment metric (Web Analytics / Tinybird). */
-export interface ExperimentMetric {
-  typeName: 'metric';
-  id: string;
-  slug: string;
-  projectId: string;
-  name: string;
-  description?: string;
-  metricType: MetricType;
-  metricUnit: MetricUnit;
-  directionality: MetricDirectionality;
-  metricFormula?: string;
-  createdAt: number;
-  updatedAt: number;
-  createdBy?: string;
-  usedByFlags?: string[];
-}
-
-export interface ExperimentMetricsListResponse {
-  data: ExperimentMetric[];
-}
-
-export interface PutExperimentMetricRequest {
-  slug: string;
-  name: string;
-  description?: string;
-  metricType: MetricType;
-  metricUnit: MetricUnit;
-  directionality: MetricDirectionality;
-  metricFormula?: string;
 }
 
 export interface CreateSdkKeyRequest {

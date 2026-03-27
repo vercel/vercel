@@ -25,8 +25,8 @@ describe('experiment create', () => {
       'experiment',
       'create',
       'new-flow',
-      '--primary-metric-id',
-      'met_abc123',
+      '--metric',
+      '{"name":"Primary KPI","metricType":"count","metricUnit":"user","directionality":"increaseIsGood"}',
       '--allocation-unit',
       'visitorId',
       '--hypothesis',
@@ -39,6 +39,12 @@ describe('experiment create', () => {
     expect(parsed.flag.slug).toBe('new-flow');
     expect(parsed.flag.kind).toBe('json');
     expect(parsed.flag.experiment?.status).toBe('draft');
-    expect(parsed.flag.experiment?.primaryMetricIds).toEqual(['met_abc123']);
+    expect(parsed.flag.experiment?.primaryMetrics).toHaveLength(1);
+    expect(parsed.flag.experiment?.primaryMetrics?.[0]).toMatchObject({
+      name: 'Primary KPI',
+      metricType: 'count',
+      metricUnit: 'user',
+      directionality: 'increaseIsGood',
+    });
   });
 });

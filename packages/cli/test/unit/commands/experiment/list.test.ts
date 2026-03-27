@@ -41,7 +41,14 @@ const experimentFlag: Flag = {
   typeName: 'flag',
   experiment: {
     allocationUnit: 'visitorId',
-    primaryMetricIds: ['met_test'],
+    primaryMetrics: [
+      {
+        name: 'Test metric',
+        metricType: 'count',
+        metricUnit: 'user',
+        directionality: 'increaseIsGood',
+      },
+    ],
     status: 'draft',
   },
 };

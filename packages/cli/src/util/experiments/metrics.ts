@@ -1,41 +1,75 @@
-import type { JSONObject } from '@vercel-internals/types';
 import type Client from '../client';
-import type {
-  ExperimentMetric,
-  ExperimentMetricsListResponse,
-  PutExperimentMetricRequest,
-} from '../flags/types';
-import output from '../../output-manager';
+import { getFlag } from '../flags/get-flags';
+import { updateFlag } from '../flags/update-flag';
+import type { Flag, MetricDefinition } from '../flags/types';
 
 /**
- * PUT /v1/projects/:projectId/feature-flags/metrics
+ * Appends a metric to an existing flag experiment via PATCH flag (embedded
+ * `primaryMetrics` / `guardrailMetrics` — see api-feature-flags experiment schema).
  */
-export async function putExperimentMetric(
+export async function appendMetricToExperiment(
   client: Client,
   projectId: string,
-  body: PutExperimentMetricRequest
-): Promise<ExperimentMetric> {
-  const url = `/v1/projects/${encodeURIComponent(projectId)}/feature-flags/metrics`;
-  output.debug(`PUT ${url}`);
-  return client.fetch<ExperimentMetric>(url, {
-    method: 'PUT',
-    body: body as unknown as JSONObject,
+  flagSlug: string,
+  metric: MetricDefinition,
+  options: { guardrail?: boolean }
+): Promise<{ flag: Flag; metric: MetricDefinition }> {
+  const flag = await getFlag(client, projectId, flagSlug);
+  if (!flag.experiment) {
+    throw new Error(
+      `Flag "${flagSlug}" has no experiment. Create one with \`experiment create\` first.`
+    );
+  }
+
+  const exp = flag.experiment;
+
+  if (options.guardrail) {
+    const guardrailMetrics = [...(exp.guardrailMetrics ?? [])];
+    if (guardrailMetrics.length >= 2) {
+      throw new Error(
+        'This experiment already has the maximum of 2 guardrail metrics.'
+      );
+    }
+    guardrailMetrics.push(metric);
+    const updated = await updateFlag(client, projectId, flagSlug, {
+      experiment: {
+        ...exp,
+        guardrailMetrics,
+      },
+    });
+    return { flag: updated, metric };
+  }
+
+  const primaryMetrics = [...(exp.primaryMetrics ?? [])];
+  if (primaryMetrics.length >= 3) {
+    throw new Error(
+      'This experiment already has the maximum of 3 primary metrics.'
+    );
+  }
+  primaryMetrics.push(metric);
+  const updated = await updateFlag(client, projectId, flagSlug, {
+    experiment: {
+      ...exp,
+      primaryMetrics,
+    },
   });
+  return { flag: updated, metric };
 }
 
-/**
- * GET /v1/projects/:projectId/feature-flags/metrics
- */
-export async function listExperimentMetrics(
+export async function listExperimentMetricsForFlag(
   client: Client,
   projectId: string,
-  options?: { withMetadata?: boolean }
-): Promise<ExperimentMetric[]> {
-  let url = `/v1/projects/${encodeURIComponent(projectId)}/feature-flags/metrics`;
-  if (options?.withMetadata) {
-    url += '?withMetadata=true';
+  flagSlug: string
+): Promise<{
+  primary: MetricDefinition[];
+  guardrail: MetricDefinition[];
+}> {
+  const flag = await getFlag(client, projectId, flagSlug);
+  if (!flag.experiment) {
+    throw new Error(`Flag "${flagSlug}" has no experiment configuration.`);
   }
-  output.debug(`GET ${url}`);
-  const res = await client.fetch<ExperimentMetricsListResponse>(url);
-  return res.data;
+  return {
+    primary: flag.experiment.primaryMetrics ?? [],
+    guardrail: flag.experiment.guardrailMetrics ?? [],
+  };
 }

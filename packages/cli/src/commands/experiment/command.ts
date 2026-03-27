@@ -3,15 +3,16 @@ import { packageName } from '../../util/pkg-name';
 export const experimentMetricsAddSubcommand = {
   name: 'add',
   aliases: ['create'],
-  description: 'Create an experiment metric (conversion / KPI definition)',
+  description:
+    'Append a metric to an existing experiment on a flag (PATCH flag experiment)',
   arguments: [],
   options: [
     {
-      name: 'slug',
+      name: 'flag',
       shorthand: null,
       type: String,
       deprecated: false,
-      description: 'Unique metric key (letters, numbers, dashes, underscores)',
+      description: 'Feature flag slug whose experiment receives this metric',
       argument: 'SLUG',
     },
     {
@@ -63,6 +64,14 @@ export const experimentMetricsAddSubcommand = {
       argument: 'EXPR',
     },
     {
+      name: 'guardrail',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description:
+        'Add as a guardrail metric (max 2) instead of primary (max 3)',
+    },
+    {
       name: 'json',
       shorthand: null,
       type: Boolean,
@@ -72,8 +81,8 @@ export const experimentMetricsAddSubcommand = {
   ],
   examples: [
     {
-      name: 'Create a count metric',
-      value: `${packageName} experiment metrics add --slug signup-completed --name "Signup Completed" --metric-type count --metric-unit user --directionality increaseIsGood`,
+      name: 'Add a primary metric to a draft experiment',
+      value: `${packageName} experiment metrics add --flag my-exp --name "Signup Completed" --metric-type count --metric-unit user --directionality increaseIsGood`,
     },
   ],
 } as const;
@@ -81,8 +90,13 @@ export const experimentMetricsAddSubcommand = {
 export const experimentMetricsListSubcommand = {
   name: 'list',
   aliases: ['ls'],
-  description: 'List experiment metrics for the project',
-  arguments: [],
+  description: 'List primary and guardrail metrics for a flag experiment',
+  arguments: [
+    {
+      name: 'flag',
+      required: true,
+    },
+  ],
   options: [
     {
       name: 'json',
@@ -91,18 +105,11 @@ export const experimentMetricsListSubcommand = {
       deprecated: false,
       description: 'Output as JSON',
     },
-    {
-      name: 'with-metadata',
-      shorthand: null,
-      type: Boolean,
-      deprecated: false,
-      description: 'Include creator metadata in the response',
-    },
   ],
   examples: [
     {
       name: 'List metrics',
-      value: `${packageName} experiment metrics ls`,
+      value: `${packageName} experiment metrics ls my-exp-flag`,
     },
   ],
 } as const;
@@ -133,13 +140,13 @@ export const experimentCreateSubcommand = {
   ],
   options: [
     {
-      name: 'primary-metric-id',
+      name: 'metric',
       shorthand: null,
       type: [String],
       deprecated: false,
       description:
-        'Primary metric id(s) from `experiment metrics add` (1–3, repeatable)',
-      argument: 'ID',
+        'Primary metric as JSON per API Metric schema (1–3, repeatable): name, metricType, metricUnit, directionality; optional description, metricFormula',
+      argument: 'JSON',
     },
     {
       name: 'allocation-unit',
@@ -200,7 +207,7 @@ export const experimentCreateSubcommand = {
   examples: [
     {
       name: 'Create draft experiment',
-      value: `${packageName} experiment create new-signup-flow --primary-metric-id met_abc123 --allocation-unit visitorId --hypothesis "Streamlined signup converts better"`,
+      value: `${packageName} experiment create new-signup-flow --metric '{"name":"Signup","metricType":"count","metricUnit":"user","directionality":"increaseIsGood"}' --allocation-unit visitorId --hypothesis "Streamlined signup converts better"`,
     },
   ],
 } as const;

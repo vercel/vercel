@@ -85,7 +85,8 @@ export default async function list(
     const headers = ['Slug', 'Status', 'Primary metrics'];
     const rows = flagsList.map(f => {
       const st = f.experiment?.status ?? '—';
-      const pm = f.experiment?.primaryMetricIds?.join(', ') ?? '—';
+      const pm =
+        f.experiment?.primaryMetrics?.map(m => m.name).join(', ') ?? '—';
       return [f.slug, st, pm];
     });
     output.print(table([headers, ...rows]));

@@ -40,7 +40,14 @@ const draftExperimentFlag: Flag = {
   typeName: 'flag',
   experiment: {
     allocationUnit: 'visitorId',
-    primaryMetricIds: ['met_x'],
+    primaryMetrics: [
+      {
+        name: 'Conversion',
+        metricType: 'count',
+        metricUnit: 'visitor',
+        directionality: 'increaseIsGood',
+      },
+    ],
     status: 'draft',
     controlVariantId: 'control',
   },
