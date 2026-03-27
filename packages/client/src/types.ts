@@ -190,7 +190,6 @@ export interface VercelConfig {
    */
   experimentalServiceGroups?: ExperimentalServiceGroups;
   integrations?: Record<string, string[]>;
-  storage?: string[];
 }
 
 export interface GitMetadata {

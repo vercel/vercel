@@ -10,7 +10,6 @@ import {
 
 export type IntegrationRequirementsConfig = {
   integrations?: Record<string, string[]>;
-  storage?: string[];
 };
 
 export type IntegrationRequirement = {
@@ -237,11 +236,6 @@ export function parseIntegrationRequirements(
         append(group, tokens);
       }
     }
-  }
-
-  // Backward-compatible shorthand shape: { "storage": ["postgres"] }
-  if (config.storage !== undefined) {
-    append('storage', config.storage);
   }
 
   return {

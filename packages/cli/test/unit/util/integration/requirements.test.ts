@@ -23,30 +23,16 @@ describe('integration requirements', () => {
     ]);
   });
 
-  it('parses top-level storage shorthand requirements', () => {
-    const result = parseIntegrationRequirements({
-      storage: ['postgres'],
-    });
-
-    expect(result.errors).toEqual([]);
-    expect(result.requirements).toEqual([
-      {
-        group: 'storage',
-        token: 'postgres',
-      },
-    ]);
-  });
-
   it('returns errors for invalid requirement shapes', () => {
     const result = parseIntegrationRequirements({
       integrations: {
+        ai: 'openai' as unknown as string[],
         storage: ['postgres', ''],
       },
-      storage: 'postgres' as unknown as string[],
     });
 
     expect(result.errors).toContain(
-      'Expected "storage" integration requirements to be an array of strings.'
+      'Expected "ai" integration requirements to be an array of strings.'
     );
     expect(result.errors).toContain(
       'Expected "storage" integration requirements to contain non-empty strings.'
