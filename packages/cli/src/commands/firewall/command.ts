@@ -409,7 +409,8 @@ export const rulesAddSubcommand = {
       shorthand: null,
       type: [String] as unknown as StringConstructor,
       deprecated: false,
-      description: 'Condition: type:op:value or type:key:op:value (repeatable)',
+      description:
+        'Condition (repeatable). Format: type:op:value. Operators: equals, contains, starts_with, ends_with, matches, exists, any_of (or short: eq, sub, pre, suf, re, ex, inc). Negate with ! or not_ prefix.',
     },
     {
       name: 'or',
@@ -508,11 +509,11 @@ export const rulesAddSubcommand = {
     },
     {
       name: 'Create with flags (single AND group)',
-      value: `${packageName} firewall rules add "Block bots" --condition "user_agent:sub:crawler" --action deny --yes`,
+      value: `${packageName} firewall rules add "Block bots" --condition "user_agent:contains:crawler" --action deny --yes`,
     },
     {
       name: 'Create with OR groups',
-      value: `${packageName} firewall rules add "Block suspicious" --condition "user_agent:sub:crawler" --or --condition "ip_address:eq:1.2.3.4" --action deny --yes`,
+      value: `${packageName} firewall rules add "Block suspicious" --condition "user_agent:contains:crawler" --or --condition "ip_address:equals:1.2.3.4" --action deny --yes`,
     },
   ],
 } as const;

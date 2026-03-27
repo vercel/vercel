@@ -425,6 +425,136 @@ describe('firewall rules add', () => {
     });
   });
 
+  // ─── Flag mode: readable operator aliases ──────────────────────────
+
+  describe('flag mode operator aliases', () => {
+    it('should accept readable operator: starts_with', async () => {
+      useListFirewallConfigs(createConfig(), null);
+      usePatchDraft();
+      useActivateConfig();
+
+      client.setArgv(
+        'firewall',
+        'rules',
+        'add',
+        'Alias test 1',
+        '--condition',
+        'path:starts_with:/api',
+        '--action',
+        'log',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('staged');
+      expect(await exitCodePromise).toEqual(0);
+    });
+
+    it('should accept readable operator: contains', async () => {
+      useListFirewallConfigs(createConfig(), null);
+      usePatchDraft();
+      useActivateConfig();
+
+      client.setArgv(
+        'firewall',
+        'rules',
+        'add',
+        'Alias test 2',
+        '--condition',
+        'user_agent:contains:crawler',
+        '--action',
+        'log',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('staged');
+      expect(await exitCodePromise).toEqual(0);
+    });
+
+    it('should accept readable operator: not_equals', async () => {
+      useListFirewallConfigs(createConfig(), null);
+      usePatchDraft();
+      useActivateConfig();
+
+      client.setArgv(
+        'firewall',
+        'rules',
+        'add',
+        'Alias test 3',
+        '--condition',
+        'geo_country:not_equals:US',
+        '--action',
+        'log',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('does not equal');
+      expect(await exitCodePromise).toEqual(0);
+    });
+
+    it('should accept readable operator: any_of', async () => {
+      useListFirewallConfigs(createConfig(), null);
+      usePatchDraft();
+      useActivateConfig();
+
+      client.setArgv(
+        'firewall',
+        'rules',
+        'add',
+        'Alias test 4',
+        '--condition',
+        'method:any_of:GET,POST,DELETE',
+        '--action',
+        'log',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('staged');
+      expect(await exitCodePromise).toEqual(0);
+    });
+
+    it('should accept readable operator: exists', async () => {
+      useListFirewallConfigs(createConfig(), null);
+      usePatchDraft();
+      useActivateConfig();
+
+      client.setArgv(
+        'firewall',
+        'rules',
+        'add',
+        'Alias test 5',
+        '--condition',
+        'header:Authorization:exists',
+        '--action',
+        'log',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('staged');
+      expect(await exitCodePromise).toEqual(0);
+    });
+
+    it('should accept readable operator: not_any_of', async () => {
+      useListFirewallConfigs(createConfig(), null);
+      usePatchDraft();
+      useActivateConfig();
+
+      client.setArgv(
+        'firewall',
+        'rules',
+        'add',
+        'Alias test 6',
+        '--condition',
+        'geo_country:not_any_of:CN,RU,IR',
+        '--action',
+        'log',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('staged');
+      expect(await exitCodePromise).toEqual(0);
+    });
+  });
+
   // ─── Flag mode: validation errors ──────────────────────────────────
 
   describe('flag mode validation', () => {

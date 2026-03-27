@@ -1,6 +1,52 @@
 import type { FirewallCondition, FirewallConditionGroup } from './types';
 import { CONDITION_TYPE_MAP, ALL_OPERATORS } from './condition-types';
 
+// Human-readable operator aliases → short codes
+// Both forms are accepted in --condition flags
+const OPERATOR_ALIASES: Record<string, string> = {
+  equals: 'eq',
+  not_equals: '!eq',
+  contains: 'sub',
+  starts_with: 'pre',
+  ends_with: 'suf',
+  matches: 're',
+  matches_regex: 're',
+  regex: 're',
+  exists: 'ex',
+  not_exists: '!ex',
+  any_of: 'inc',
+  is_any_of: 'inc',
+  not_any_of: '!inc',
+  is_not_any_of: '!inc',
+  greater_than: 'gt',
+  greater_or_equal: 'gte',
+  less_than: 'lt',
+  less_or_equal: 'lte',
+};
+
+/**
+ * Resolve an operator alias to its short code.
+ * Handles both aliases ("starts_with") and direct codes ("pre").
+ * Also handles negation prefix ("!" or "not_").
+ */
+function resolveOperator(opRaw: string): { op: string; neg: boolean } {
+  // Check alias first (including negated aliases like "not_equals")
+  const alias = OPERATOR_ALIASES[opRaw];
+  if (alias) {
+    if (alias.startsWith('!')) {
+      return { op: alias.slice(1), neg: true };
+    }
+    return { op: alias, neg: false };
+  }
+
+  // Handle ! prefix on short codes
+  if (opRaw.startsWith('!')) {
+    return { op: opRaw.slice(1), neg: true };
+  }
+
+  return { op: opRaw, neg: false };
+}
+
 export interface ParsedConditionGroups {
   groups: FirewallConditionGroup[];
 }
@@ -96,13 +142,8 @@ export function parseConditionFlag(flag: string): FirewallCondition | string {
     valueRaw = parts.length > 2 ? parts.slice(2).join(':') : undefined;
   }
 
-  // Handle negation prefix
-  let neg = false;
-  let op = opRaw;
-  if (opRaw.startsWith('!')) {
-    neg = true;
-    op = opRaw.slice(1);
-  }
+  // Resolve operator — supports aliases (starts_with → pre) and negation (! prefix or not_ aliases)
+  const { op, neg } = resolveOperator(opRaw);
 
   // Validate operator
   if (!ALL_OPERATORS.includes(op)) {
