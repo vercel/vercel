@@ -12,7 +12,6 @@ import {
   CATEGORY_LABELS,
   VALID_ACTIONS,
   VALID_DURATIONS,
-  VALID_ALGORITHMS,
   type ConditionTypeMeta,
 } from '../../../util/firewall/condition-types';
 import {
@@ -379,36 +378,41 @@ async function buildActionInteractive(
 }
 
 async function buildRateLimitInteractive(client: Client) {
-  const algo = (await client.input.select({
-    message: 'Rate limit algorithm:',
-    choices: VALID_ALGORITHMS.map(a => ({
-      value: a,
-      name: a === 'fixed_window' ? 'Fixed Window' : 'Token Bucket (Enterprise)',
-    })),
-  })) as (typeof VALID_ALGORITHMS)[number];
+  // Only show Fixed Window by default — Token Bucket requires Enterprise
+  const algo = 'fixed_window' as const;
+  output.print(
+    `  ${chalk.dim('Algorithm:')} Fixed Window ${chalk.dim('(Token Bucket available on Enterprise via --rate-limit-algo flag)')}\n`
+  );
 
   const windowStr = await client.input.text({
-    message: 'Window (seconds):',
+    message: 'Window in seconds (10-3600):',
     default: '60',
     validate: (val: string) => {
       const n = Number(val);
-      if (Number.isNaN(n) || n < 10) return 'Minimum 10 seconds.';
+      if (Number.isNaN(n) || !Number.isInteger(n))
+        return 'Please enter a whole number.';
+      if (n < 10) return 'Minimum 10 seconds.';
+      if (n > 3600) return 'Maximum 3600 seconds (1 hour).';
       return true;
     },
   });
 
   const limitStr = await client.input.text({
-    message: 'Max requests per window:',
+    message: 'Max requests per window (1-10,000,000):',
     default: '100',
     validate: (val: string) => {
       const n = Number(val);
-      if (Number.isNaN(n) || n < 1) return 'Minimum 1 request.';
+      if (Number.isNaN(n) || !Number.isInteger(n))
+        return 'Please enter a whole number.';
+      if (n < 1) return 'Minimum 1 request.';
+      if (n > 10_000_000) return 'Maximum 10,000,000 requests.';
       return true;
     },
   });
 
   const keysStr = await client.input.text({
-    message: 'Rate limit keys (comma-separated, e.g. ip,ja4):',
+    message:
+      'Rate limit keys (comma-separated, e.g. ip, ja4, header:user-agent):',
     default: 'ip',
     validate: (val: string) =>
       val.trim() ? true : 'At least one key is required.',

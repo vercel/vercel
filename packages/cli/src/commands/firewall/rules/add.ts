@@ -355,8 +355,14 @@ function buildActionFromFlags(
     if (!window || window < 10) {
       return 'Rate limit --rate-limit-window is required (minimum 10 seconds).';
     }
+    if (window > 3600) {
+      return 'Rate limit --rate-limit-window maximum is 3600 seconds (1 hour).';
+    }
     if (!requests || requests < 1) {
       return 'Rate limit --rate-limit-requests is required (minimum 1).';
+    }
+    if (requests > 10_000_000) {
+      return 'Rate limit --rate-limit-requests maximum is 10,000,000.';
     }
 
     action.mitigate!.rateLimit = {
