@@ -44,7 +44,7 @@ export async function ensureLink(
     if (opts.forceDelete) {
       link = { status: 'not_linked', org: null, project: null };
     } else {
-      link = await getLinkedProject(client, cwd);
+      link = await getLinkedProject(client, cwd, opts.projectName);
     }
     opts.link = link;
   }

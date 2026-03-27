@@ -4,8 +4,12 @@ import asyncio
 import json
 import unittest
 from datetime import UTC, datetime, timedelta
+from decimal import Decimal
 from typing import Any
 from unittest.mock import MagicMock, patch
+from uuid import uuid4
+
+from vercel.workers import client
 
 # Skip all tests if Django is not available (optional dependency)
 try:
@@ -687,6 +691,86 @@ class TestDjangoTaskRetryBehavior(unittest.TestCase):
         self.assertTrue(body["delayed"])
         # First retry uses base delay (5 seconds by default)
         self.assertIn("timeoutSeconds", body)
+
+
+@_skip_without_django
+class TestDjangoEnqueueSerializesNonPrimitiveTypes(unittest.TestCase):
+    def _make_backend(self) -> Any:
+        mock_backend = MagicMock(spec=vwd_backend.VercelQueuesBackend)
+        mock_backend._cfg = vwd_backend.VercelQueuesBackendOptions()
+        mock_backend.alias = "default"
+        mock_backend.enqueue = vwd_backend.VercelQueuesBackend.enqueue.__get__(mock_backend)
+        mock_backend.validate_task = MagicMock()
+        return mock_backend
+
+    def _make_task(self) -> Any:
+        task = MagicMock()
+        task.module_path = "myapp.tasks.my_task"
+        task.takes_context = False
+        task.backend = "default"
+        task.queue_name = "default"
+        task.priority = 0
+        task.run_after = None
+        return task
+
+    def _capture_enqueue(
+        self,
+        args: tuple[Any, ...],
+        kwargs: dict[str, Any],
+    ) -> dict[str, Any]:
+        captured: list[bytes] = []
+
+        class _FakeResponse:
+            status_code = 200
+            reason_phrase = "OK"
+            text = ""
+
+            def raise_for_status(self) -> None:
+                pass
+
+            def json(self) -> dict:  # pyright: ignore[reportMissingTypeArgument]
+                return {"messageId": "msg-django"}
+
+        class _FakeClient:
+            def __init__(self, **kw: object) -> None:
+                pass
+
+            def __enter__(self) -> _FakeClient:
+                return self
+
+            def __exit__(self, *a: object) -> bool:
+                return False
+
+            def post(self, url: str, *, content: bytes, headers: dict) -> _FakeResponse:  # pyright: ignore[reportMissingTypeArgument]
+                captured.append(content)
+                return _FakeResponse()
+
+        backend = self._make_backend()
+        task = self._make_task()
+
+        with (
+            patch.dict("os.environ", {"VERCEL_QUEUE_TOKEN": "tok"}),
+            patch.object(client.httpx, "Client", _FakeClient),
+            patch.object(backend, "_store_result"),
+        ):
+            backend.enqueue(task, args=args, kwargs=kwargs)
+
+        return json.loads(captured[0])
+
+    def test_enqueue_with_uuid(self) -> None:
+        uid = uuid4()
+        body = self._capture_enqueue(args=(uid,), kwargs={})
+        self.assertEqual(body["args"], [str(uid)])
+
+    def test_enqueue_with_datetime(self) -> None:
+        dt = datetime.now()
+        body = self._capture_enqueue(args=(dt,), kwargs={})
+        self.assertEqual(body["args"], [dt.isoformat()])
+
+    def test_enqueue_with_decimal(self) -> None:
+        dec = Decimal("9.99")
+        body = self._capture_enqueue(args=(), kwargs={"price": dec})
+        self.assertAlmostEqual(body["kwargs"]["price"], 9.99)
 
 
 if __name__ == "__main__":

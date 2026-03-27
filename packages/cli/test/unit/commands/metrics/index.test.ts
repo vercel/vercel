@@ -1,11 +1,64 @@
 import { describe, beforeEach, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import metrics from '../../../../src/commands/metrics';
+import getScope from '../../../../src/util/get-scope';
+import { getLinkedProject } from '../../../../src/util/projects/link';
+
+vi.mock('../../../../src/util/get-scope');
+vi.mock('../../../../src/util/projects/link');
+
+const mockedGetScope = vi.mocked(getScope);
+const mockedGetLinkedProject = vi.mocked(getLinkedProject);
+
+function mockSchemaApi() {
+  client.scenario.get('/v1/observability/schema', (_req, res) => {
+    res.json({
+      events: [{ name: 'incomingRequest', description: 'Edge Requests' }],
+    });
+  });
+
+  client.scenario.get(
+    '/v1/observability/schema/incomingRequest',
+    (_req, res) => {
+      res.json({
+        name: 'incomingRequest',
+        description: 'Edge Requests',
+        dimensions: [],
+        measures: [
+          {
+            name: 'count',
+            label: 'Count',
+            unit: 'count',
+            aggregations: ['sum'],
+            defaultAggregation: 'sum',
+          },
+        ],
+      });
+    }
+  );
+}
 
 describe('metrics', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     client.reset();
+    mockedGetScope.mockResolvedValue({
+      contextName: 'my-team',
+      team: { id: 'team_dummy', slug: 'my-team' } as any,
+      user: { id: 'user_dummy' } as any,
+    });
+    mockedGetLinkedProject.mockResolvedValue({
+      status: 'linked',
+      project: {
+        id: 'prj_metricstest',
+        name: 'my-project',
+        accountId: 'team_dummy',
+        updatedAt: Date.now(),
+        createdAt: Date.now(),
+      },
+      org: { id: 'team_dummy', slug: 'my-team', type: 'team' },
+    } as any);
+    mockSchemaApi();
   });
 
   describe('--help', () => {
@@ -42,7 +95,7 @@ describe('metrics', () => {
       // schema lists events, exit 0
       expect(exitCode).toBe(0);
       const stderrOutput = client.stderr.getFullOutput();
-      expect(stderrOutput).toContain('Events found');
+      expect(stderrOutput).toContain('Event found');
     });
 
     it('should route to query as default subcommand', async () => {

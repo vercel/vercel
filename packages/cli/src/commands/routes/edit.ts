@@ -7,7 +7,10 @@ import {
   ensureProjectLink,
   resolveRoute,
   offerAutoPromote,
+  withGlobalFlags,
+  shellQuoteRouteIdentifierForSuggestion,
 } from './shared';
+import { outputAgentError } from '../../util/agent-output';
 import {
   runInteractiveEditLoop,
   cloneRoute,
@@ -34,7 +37,7 @@ import { hasAnyTransformFlags } from '../../util/routes/interactive';
 import type { RoutingRule } from '../../util/routes/types';
 
 export default async function edit(client: Client, argv: string[]) {
-  const parsed = await parseSubcommandArgs(argv, editSubcommand);
+  const parsed = await parseSubcommandArgs(argv, editSubcommand, client);
   if (typeof parsed === 'number') return parsed;
 
   const link = await ensureProjectLink(client);
@@ -110,6 +113,28 @@ export default async function edit(client: Client, argv: string[]) {
   telemetry.trackCliOptionAi(flags['--ai'] as string | undefined);
 
   if (!identifier) {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'missing_arguments',
+          message:
+            'Route name or ID is required as the first argument after routes edit.',
+          next: [
+            {
+              command: withGlobalFlags(client, 'routes edit <name-or-id>'),
+              when: 'replace <name-or-id> with route name or id from routes list',
+            },
+            {
+              command: withGlobalFlags(client, 'routes list'),
+              when: 'to list routes',
+            },
+          ],
+        },
+        1
+      );
+    }
     output.error(
       `Route name or ID is required. Usage: ${getCommandName('routes edit <name-or-id>')}`
     );
@@ -126,6 +151,26 @@ export default async function edit(client: Client, argv: string[]) {
   output.stopSpinner();
 
   if (routes.length === 0) {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'not_found',
+          message: 'No routes found in this project.',
+          next: [
+            {
+              command: withGlobalFlags(
+                client,
+                'routes add --ai <description> --yes'
+              ),
+              when: 'add a route first (or use full flags)',
+            },
+          ],
+        },
+        1
+      );
+    }
     output.error('No routes found in this project.');
     return 1;
   }
@@ -133,6 +178,27 @@ export default async function edit(client: Client, argv: string[]) {
   // Resolve the route
   const originalRoute = await resolveRoute(client, routes, identifier);
   if (!originalRoute) {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'not_found',
+          message: `No route found matching "${identifier}".`,
+          next: [
+            {
+              command: withGlobalFlags(client, 'routes list'),
+              when: 'to list routes and pick an exact name or id',
+            },
+            {
+              command: withGlobalFlags(client, 'routes edit <name-or-id>'),
+              when: 'retry with a unique name or id',
+            },
+          ],
+        },
+        1
+      );
+    }
     output.error(
       `No route found matching "${identifier}". Run ${chalk.cyan(
         getCommandName('routes list')
@@ -173,6 +239,26 @@ export default async function edit(client: Client, argv: string[]) {
     ];
     const usedConflicts = conflictingFlags.filter(f => flags[f] !== undefined);
     if (usedConflicts.length > 0) {
+      if (client.nonInteractive) {
+        outputAgentError(
+          client,
+          {
+            status: 'error',
+            reason: 'invalid_arguments',
+            message: `Cannot use --ai with ${usedConflicts.join(', ')}. Use --ai alone to describe changes.`,
+            next: [
+              {
+                command: withGlobalFlags(
+                  client,
+                  `routes edit ${shellQuoteRouteIdentifierForSuggestion(identifier)} --ai <description> --yes`
+                ),
+                when: 'use only --ai with route id/name already set',
+              },
+            ],
+          },
+          1
+        );
+      }
       output.error(
         `Cannot use --ai with ${usedConflicts.join(', ')}. Use --ai alone to describe changes.`
       );
@@ -215,12 +301,54 @@ export default async function edit(client: Client, argv: string[]) {
     // --- Flag-based mode ---
     const error = applyFlagMutations(route, flags);
     if (error) {
+      if (client.nonInteractive) {
+        outputAgentError(
+          client,
+          {
+            status: 'error',
+            reason: 'invalid_arguments',
+            message: error,
+            next: [
+              {
+                command: withGlobalFlags(
+                  client,
+                  `routes edit ${shellQuoteRouteIdentifierForSuggestion(identifier)} ...`
+                ),
+                when: 'fix flags per message; see routes edit --help',
+              },
+            ],
+          },
+          1
+        );
+      }
       output.error(error);
       return 1;
     }
   } else {
     // --- Interactive mode ---
-    if (!client.stdin.isTTY) {
+    if (!client.stdin.isTTY || client.nonInteractive) {
+      if (client.nonInteractive) {
+        outputAgentError(
+          client,
+          {
+            status: 'error',
+            reason: 'missing_arguments',
+            message:
+              'No edit flags provided. In non-interactive mode pass flags such as --name, --src, --dest, --action, header flags, or --ai <description> --yes.',
+            next: [
+              {
+                command: withGlobalFlags(
+                  client,
+                  `routes edit ${shellQuoteRouteIdentifierForSuggestion(identifier)} --dest <dest> --yes`
+                ),
+                when: 'example: set destination; see routes edit --help',
+              },
+            ],
+            hint: 'Run vercel routes edit --help for all flag options.',
+          },
+          1
+        );
+      }
       output.error(
         `No edit flags provided. When running non-interactively, use flags like --name, --dest, --src, etc. Run ${getCommandName('routes edit --help')} for all options.`
       );

@@ -11,7 +11,7 @@
     "worker": {
       "type": "worker",
       "entrypoint": "worker.py",
-      "topic": "dramatiq",
+      "topics": ["dramatiq"],
       "consumer": "default"
     }
   }

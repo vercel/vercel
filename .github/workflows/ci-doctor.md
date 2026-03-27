@@ -2,7 +2,7 @@
 description: Investigates failed CI workflows to identify root causes and patterns, creating issues with diagnostic information
 on:
   workflow_run:
-    workflows: ['test-e2e', 'test'] # Monitor the CI workflow specifically
+    workflows: ['E2E Tests', 'Unit Tests'] # Monitor the CI workflow specifically
     types:
       - completed
     # This will trigger only when the CI workflow completes with failure
@@ -49,8 +49,6 @@ tools:
 timeout-minutes: 20
 
 source: githubnext/agentics/workflows/ci-doctor.md@ea350161ad5dcc9624cf510f134c6a9e39a6f94d
-imports:
-  - shared/mood.md
 ---
 
 # CI Failure Doctor

@@ -17,6 +17,14 @@ import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import collectContactInformation from '../../util/domains/collect-contact-information';
+import {
+  openUrlInBrowserCommand,
+  outputAgentError,
+} from '../../util/agent-output';
+import { getGlobalFlagsOnlyFromArgs } from '../../util/arg-common';
+import { getCommandNamePlain } from '../../util/pkg-name';
+
+const VERCEL_DOMAINS_URL = 'https://vercel.com/dashboard/domains';
 
 export default async function buy(client: Client, argv: string[]) {
   const telemetry = new DomainsBuyTelemetryClient({
@@ -30,6 +38,17 @@ export default async function buy(client: Client, argv: string[]) {
   try {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'invalid_arguments',
+          message: error instanceof Error ? error.message : String(error),
+        },
+        1
+      );
+    }
     printError(error);
     return 1;
   }
@@ -40,8 +59,60 @@ export default async function buy(client: Client, argv: string[]) {
   telemetry.trackCliArgumentDomain(domainName);
 
   if (!domainName) {
+    if (client.nonInteractive) {
+      const flags = getGlobalFlagsOnlyFromArgs(client.argv.slice(2));
+      const cmd = getCommandNamePlain(
+        `domains buy <domain> ${flags.join(' ')}`.trim()
+      );
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'missing_arguments',
+          message: `Missing domain name. This command cannot be completed non-interactively without a domain. Run: ${cmd}`,
+          next: [
+            {
+              command: cmd,
+              when: 'user must run interactively; agents must not purchase on behalf of a user',
+            },
+          ],
+        },
+        1
+      );
+    }
     output.error(
       `Missing domain name. Run ${getCommandName(`domains --help`)}`
+    );
+    return 1;
+  }
+
+  // Domain purchase requires confirmation and contact details—never run by agents.
+  if (client.nonInteractive) {
+    const flags = getGlobalFlagsOnlyFromArgs(client.argv.slice(2));
+    const interactiveCmd = getCommandNamePlain(
+      `domains buy ${domainName} ${flags.filter(f => f !== '--non-interactive').join(' ')}`.trim()
+    );
+    outputAgentError(
+      client,
+      {
+        status: 'error',
+        reason: 'purchase_requires_user',
+        message:
+          'Domain purchase cannot be performed non-interactively. Agents must not purchase domains on behalf of a user. ' +
+          'The user must run this command interactively in a terminal to confirm price, auto-renew, and provide registrant contact details. ' +
+          'Alternatively the user can complete purchase in the Vercel dashboard.',
+        next: [
+          {
+            command: openUrlInBrowserCommand(VERCEL_DOMAINS_URL),
+            when: 'user opens Domains in the browser to purchase',
+          },
+          {
+            command: interactiveCmd,
+            when: 'user runs this command interactively (remove --non-interactive)',
+          },
+        ],
+      },
+      1
     );
     return 1;
   }
@@ -52,6 +123,17 @@ export default async function buy(client: Client, argv: string[]) {
 
   const { domain: rootDomain, subdomain } = parsedDomain;
   if (subdomain || !rootDomain) {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'invalid_domain',
+          message: `Invalid domain name '${domainName}'. Use a registrable root domain (no subdomain).`,
+        },
+        1
+      );
+    }
     output.error(
       `Invalid domain name "${domainName}". Run ${getCommandName(
         `domains --help`
@@ -61,10 +143,22 @@ export default async function buy(client: Client, argv: string[]) {
   }
 
   const availableStamp = stamp();
-  const domainPrice = await getDomainPrice(client, domainName);
+  const [domainPrice, domainStatus] = await Promise.all([
+    getDomainPrice(client, domainName),
+    getDomainStatus(client, domainName),
+  ]);
 
   if (domainPrice instanceof Error) {
     output.prettyError(domainPrice);
+    return 1;
+  }
+
+  if (!domainStatus.available) {
+    output.error(
+      `The domain ${param(domainName)} is ${chalk.underline(
+        'unavailable'
+      )}! ${availableStamp()}`
+    );
     return 1;
   }
 
@@ -72,15 +166,6 @@ export default async function buy(client: Client, argv: string[]) {
 
   if (purchasePrice === null || renewalPrice === null) {
     output.error('Domain price not found');
-    return 1;
-  }
-
-  if (!(await getDomainStatus(client, domainName)).available) {
-    output.error(
-      `The domain ${param(domainName)} is ${chalk.underline(
-        'unavailable'
-      )}! ${availableStamp()}`
-    );
     return 1;
   }
 

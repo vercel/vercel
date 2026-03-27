@@ -47,11 +47,19 @@ async function processMessage(message) {
     buildOptions.files[name] = ref;
   }
 
-  const result = await builder.build(buildOptions);
+  let result = await builder.build(buildOptions);
 
   // `@vercel/next` sets this, but it causes "Converting circular
   // structure to JSON" errors, so delete the property...
   delete result.childProcesses;
+
+  // Unwrap BuildResultVX (builder.version === -1) to the actual V2 or V3 result.
+  // effectiveVersion reflects the actual result version for downstream checks.
+  let effectiveVersion = builder.version;
+  if (builder.version === -1) {
+    effectiveVersion = result.resultVersion;
+    result = result.result;
+  }
 
   // Helper to handle zipBuffer - writes to temp file if too large for IPC
   async function processLambdaOutput(output) {
@@ -77,7 +85,7 @@ async function processMessage(message) {
     }
   }
 
-  if (builder.version === 3) {
+  if (effectiveVersion === 3) {
     if (result.output.type === 'Lambda') {
       await processLambdaOutput(result.output);
     }

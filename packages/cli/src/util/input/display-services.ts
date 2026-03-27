@@ -1,8 +1,6 @@
 import { frameworkList } from '@vercel/frameworks';
-import type {
-  ResolvedService,
-  ServiceDetectionError,
-} from '@vercel/fs-detectors';
+import type { Service, ServiceDetectionError } from '@vercel/fs-detectors';
+import { getWorkerTopics } from '@vercel/build-utils';
 import output from '../../output-manager';
 import table from '../output/table';
 
@@ -66,9 +64,22 @@ interface ServiceDescriptionInfo {
   colorFn: (text: string) => string;
 }
 
-function getServiceDescriptionInfo(
-  service: ResolvedService
-): ServiceDescriptionInfo {
+function getServiceDescriptionInfo(service: Service): ServiceDescriptionInfo {
+  // Cron and worker services aren't framework apps, so we'll just show type + runtime for them
+  // e.g. [Cron/Python] or [Worker/Python]
+  if (service.type === 'cron' || service.type === 'worker') {
+    const typeLabel = service.type === 'cron' ? 'Cron' : 'Worker';
+    const typeColorFn = service.type === 'cron' ? chalk.yellow : chalk.magenta;
+    if (service.runtime) {
+      const runtimeName =
+        service.runtime.charAt(0).toUpperCase() + service.runtime.slice(1);
+      const runtimeColorFn = runtimeColors[service.runtime] || chalk.yellow;
+      const label = `${typeLabel}${chalk.white('/')}${runtimeColorFn(runtimeName)}`;
+      return { label, colorFn: typeColorFn };
+    }
+    return { label: typeLabel, colorFn: typeColorFn };
+  }
+
   const frameworkName = getFrameworkName(service.framework);
 
   // Show the most detailed info: framework > runtime > builder
@@ -85,12 +96,14 @@ function getServiceDescriptionInfo(
   return { label: 'unknown', colorFn: chalk.dim };
 }
 
-function getServiceTarget(service: ResolvedService): string {
+function getServiceTarget(service: Service): string {
   switch (service.type) {
     case 'cron':
       return `schedule: ${service.schedule ?? 'none'}`;
-    case 'worker':
-      return `topic: ${service.topic ?? 'none'}`;
+    case 'worker': {
+      const topics = getWorkerTopics(service);
+      return `topics: ${topics.join(', ')}`;
+    }
     default:
       return service.routePrefix
         ? formatRoutePrefix(service.routePrefix)
@@ -100,16 +113,21 @@ function getServiceTarget(service: ResolvedService): string {
 
 /**
  * Output format:
- * Multiple services detected. Project Settings:
+ * Detected services:
  *   frontend          [Next.js]   →  /
  *   api               [python]    →  /api/*
  *   cleanup           [node]      →  schedule: 0 0 * * *
- *   processor         [node]      →  topic: jobs
+ *   processor         [node]      →  topics: jobs
  */
-export function displayDetectedServices(services: ResolvedService[]): void {
-  output.print(`Multiple services detected. Project Settings:\n`);
+export function displayDetectedServices(services: Service[]): void {
+  output.print(`Detected services:\n`);
 
-  const rows: string[][] = services.map(service => {
+  const outputOrder: Record<string, number> = { web: 0, cron: 1, worker: 2 };
+  const sorted = [...services].sort(
+    (a, b) => (outputOrder[a.type] ?? 3) - (outputOrder[b.type] ?? 3)
+  );
+
+  const rows: string[][] = sorted.map(service => {
     const descInfo = getServiceDescriptionInfo(service);
     const target = getServiceTarget(service);
 
@@ -126,9 +144,7 @@ export function displayDetectedServices(services: ResolvedService[]): void {
 }
 
 export function displayServicesConfigNote(): void {
-  output.print(
-    `\n${chalk.dim('Services (experimental) are configured via vercel.json.')}\n`
-  );
+  output.print(`\n${chalk.dim('Services are configured via vercel.json.')}\n`);
 }
 
 export function displayServiceErrors(errors: ServiceDetectionError[]): void {

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import stripAnsi from 'strip-ansi';
 import {
   getMeasureType,
+  getEffectiveDisplay,
   formatCount,
   formatDecimal,
   formatMinMaxTimestamp,
@@ -20,9 +21,9 @@ import type {
 } from '../../../../src/commands/metrics/types';
 
 const projectScope: Scope = {
-  type: 'project-with-slug',
-  projectName: 'my-project',
-  teamSlug: 'my-team',
+  type: 'project',
+  ownerId: 'team_dummy',
+  projectIds: ['prj_metricstest'],
 };
 
 describe('text-output', () => {
@@ -53,6 +54,68 @@ describe('text-output', () => {
       expect(formatDecimal(0.87)).toBe('0.87');
       expect(formatDecimal(0.042)).toBe('0.042');
       expect(formatDecimal(0.003)).toBe('0.003');
+    });
+  });
+
+  describe('getEffectiveDisplay', () => {
+    it('should return percent display for percent aggregation', () => {
+      expect(getEffectiveDisplay('bytes', 'percent')).toEqual({
+        displayUnit: '%',
+        measureType: 'ratio',
+      });
+      expect(getEffectiveDisplay('count', 'percent')).toEqual({
+        displayUnit: '%',
+        measureType: 'ratio',
+      });
+      expect(getEffectiveDisplay('milliseconds', 'percent')).toEqual({
+        displayUnit: '%',
+        measureType: 'ratio',
+      });
+    });
+
+    it('should return rate display for persecond aggregation', () => {
+      expect(getEffectiveDisplay('bytes', 'persecond')).toEqual({
+        displayUnit: 'bytes/s',
+        measureType: 'bytes',
+      });
+      expect(getEffectiveDisplay('count', 'persecond')).toEqual({
+        displayUnit: 'count/s',
+        measureType: 'count',
+      });
+      expect(getEffectiveDisplay('milliseconds', 'persecond')).toEqual({
+        displayUnit: 'ms/s',
+        measureType: 'duration',
+      });
+    });
+
+    it('should return count display with hidden unit for unique aggregation', () => {
+      expect(getEffectiveDisplay('count', 'unique')).toEqual({
+        displayUnit: undefined,
+        measureType: 'count',
+      });
+      expect(getEffectiveDisplay('bytes', 'unique')).toEqual({
+        displayUnit: undefined,
+        measureType: 'count',
+      });
+    });
+
+    it('should pass through base unit for standard aggregations', () => {
+      expect(getEffectiveDisplay('bytes', 'sum')).toEqual({
+        displayUnit: 'bytes',
+        measureType: 'bytes',
+      });
+      expect(getEffectiveDisplay('milliseconds', 'avg')).toEqual({
+        displayUnit: 'milliseconds',
+        measureType: 'duration',
+      });
+      expect(getEffectiveDisplay('count', 'sum')).toEqual({
+        displayUnit: 'count',
+        measureType: 'count',
+      });
+      expect(getEffectiveDisplay(undefined, 'avg')).toEqual({
+        displayUnit: undefined,
+        measureType: 'ratio',
+      });
     });
   });
 
@@ -310,9 +373,12 @@ describe('text-output', () => {
       const output = formatText(response, {
         event: 'edgeRequest',
         measure: 'count',
+        measureUnit: 'count',
         aggregation: 'sum',
         groupBy: [],
         scope: projectScope,
+        projectName: 'my-project',
+        teamName: 'my-team',
         periodStart: '2026-02-19T10:00:00.000Z',
         periodEnd: '2026-02-19T10:15:00.000Z',
         granularity: { minutes: 5 },
@@ -382,6 +448,7 @@ describe('text-output', () => {
       const output = formatText(response, {
         event: 'functionExecution',
         measure: 'requestDurationMs',
+        measureUnit: 'milliseconds',
         aggregation: 'avg',
         groupBy: ['projectName', 'httpStatus'],
         scope: projectScope,
@@ -415,6 +482,7 @@ describe('text-output', () => {
         {
           event: 'edgeRequest',
           measure: 'count',
+          measureUnit: 'count',
           aggregation: 'sum',
           groupBy: [],
           scope: projectScope,
@@ -437,6 +505,7 @@ describe('text-output', () => {
         {
           event: 'edgeRequest',
           measure: 'count',
+          measureUnit: 'count',
           aggregation: 'sum',
           groupBy: [],
           scope: projectScope,
@@ -449,6 +518,152 @@ describe('text-output', () => {
       expect(output).toContain('Metric:');
       expect(output).toContain('No data found for this period.');
       expect(output).not.toContain('sparklines:');
+    });
+
+    it('should show Units: % and no total for percent aggregation with bytes measure', () => {
+      const response: MetricsQueryResponse = {
+        data: [
+          { timestamp: '2026-02-19T10:00:00.000Z', fdtInBytes_percent: 40 },
+          { timestamp: '2026-02-19T10:05:00.000Z', fdtInBytes_percent: 35 },
+          { timestamp: '2026-02-19T10:10:00.000Z', fdtInBytes_percent: 25 },
+        ],
+        summary: [],
+        statistics: {},
+      };
+
+      const output = formatText(response, {
+        event: 'edgeRequest',
+        measure: 'fdtInBytes',
+        measureUnit: 'bytes',
+        aggregation: 'percent',
+        groupBy: [],
+        scope: projectScope,
+        projectName: 'my-project',
+        teamName: 'my-team',
+        periodStart: '2026-02-19T10:00:00.000Z',
+        periodEnd: '2026-02-19T10:15:00.000Z',
+        granularity: { minutes: 5 },
+      });
+
+      const normalized = output
+        .split('\n')
+        .map(line => stripAnsi(line).trimEnd())
+        .join('\n');
+
+      expect(normalized).toContain('Units: %');
+      expect(normalized).not.toContain('Units: bytes');
+      expect(normalized).not.toContain('total');
+      expect(normalized).toContain('avg');
+      expect(normalized).toContain('min');
+      expect(normalized).toContain('max');
+    });
+
+    it('should show Units: bytes/s for persecond aggregation with bytes measure', () => {
+      const output = formatText(
+        {
+          data: [
+            {
+              timestamp: '2026-02-19T10:00:00.000Z',
+              fdtInBytes_persecond: 1024,
+            },
+            {
+              timestamp: '2026-02-19T10:05:00.000Z',
+              fdtInBytes_persecond: 2048,
+            },
+          ],
+          summary: [],
+          statistics: {},
+        },
+        {
+          event: 'edgeRequest',
+          measure: 'fdtInBytes',
+          measureUnit: 'bytes',
+          aggregation: 'persecond',
+          groupBy: [],
+          scope: projectScope,
+          periodStart: '2026-02-19T10:00:00.000Z',
+          periodEnd: '2026-02-19T10:10:00.000Z',
+          granularity: { minutes: 5 },
+        }
+      );
+
+      const normalized = output
+        .split('\n')
+        .map(line => stripAnsi(line).trimEnd())
+        .join('\n');
+
+      expect(normalized).toContain('Units: bytes/s');
+      expect(normalized).not.toContain('total');
+    });
+
+    it('should hide Units line for unique aggregation', () => {
+      const output = formatText(
+        {
+          data: [
+            { timestamp: '2026-02-19T10:00:00.000Z', count_unique: 5 },
+            { timestamp: '2026-02-19T10:05:00.000Z', count_unique: 8 },
+          ],
+          summary: [],
+          statistics: {},
+        },
+        {
+          event: 'edgeRequest',
+          measure: 'count',
+          measureUnit: 'count',
+          aggregation: 'unique',
+          groupBy: [],
+          scope: projectScope,
+          periodStart: '2026-02-19T10:00:00.000Z',
+          periodEnd: '2026-02-19T10:10:00.000Z',
+          granularity: { minutes: 5 },
+        }
+      );
+
+      const normalized = output
+        .split('\n')
+        .map(line => stripAnsi(line).trimEnd())
+        .join('\n');
+
+      expect(normalized).not.toContain('Units:');
+      expect(normalized).not.toContain('total');
+    });
+
+    it('should still show total for sum aggregation with duration measure', () => {
+      const output = formatText(
+        {
+          data: [
+            {
+              timestamp: '2026-02-19T10:00:00.000Z',
+              requestDurationMs_sum: 500,
+            },
+            {
+              timestamp: '2026-02-19T10:05:00.000Z',
+              requestDurationMs_sum: 300,
+            },
+          ],
+          summary: [],
+          statistics: {},
+        },
+        {
+          event: 'edgeRequest',
+          measure: 'requestDurationMs',
+          measureUnit: 'milliseconds',
+          aggregation: 'sum',
+          groupBy: [],
+          scope: projectScope,
+          periodStart: '2026-02-19T10:00:00.000Z',
+          periodEnd: '2026-02-19T10:10:00.000Z',
+          granularity: { minutes: 5 },
+        }
+      );
+
+      const normalized = output
+        .split('\n')
+        .map(line => stripAnsi(line).trimEnd())
+        .join('\n');
+
+      expect(normalized).toContain('Units: ms');
+      expect(normalized).toContain('total');
     });
   });
 });

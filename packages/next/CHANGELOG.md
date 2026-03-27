@@ -1,5 +1,39 @@
 # @vercel/next
 
+## 4.16.3
+
+### Patch Changes
+
+- Bump @vercel/nft to 1.5.0 ([#15683](https://github.com/vercel/vercel/pull/15683))
+
+- fix(next): merge next-minimal-server.js.nft.json into server trace for prebuilt deployments ([#15688](https://github.com/vercel/vercel/pull/15688))
+
+- Update to latest Next.js adapter ([#15695](https://github.com/vercel/vercel/pull/15695))
+
+## 4.16.2
+
+### Patch Changes
+
+- Update @vercel/nft to 1.4.0 across packages ([#15626](https://github.com/vercel/vercel/pull/15626))
+
+## 4.16.1
+
+### Patch Changes
+
+- Update to latest Next.js adapter ([#15440](https://github.com/vercel/vercel/pull/15440))
+
+## 4.16.0
+
+### Minor Changes
+
+- Support `maxDuration: 'max'` to allow the backend to resolve the maximum duration based on account plan type ([#15217](https://github.com/vercel/vercel/pull/15217))
+
+## 4.15.42
+
+### Patch Changes
+
+- Revert "[next] vary fallback allowQuery for partial fallback shells" ([#15418](https://github.com/vercel/vercel/pull/15418))
+
 ## 4.15.41
 
 ### Patch Changes

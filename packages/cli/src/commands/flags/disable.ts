@@ -5,15 +5,29 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { getLinkedProject } from '../../util/projects/link';
 import { getCommandName } from '../../util/pkg-name';
+import {
+  buildCommandWithGlobalFlags,
+  outputAgentError,
+} from '../../util/agent-output';
+import { AGENT_REASON, AGENT_STATUS } from '../../util/agent-output-constants';
 import { getFlag } from '../../util/flags/get-flags';
 import { updateFlag } from '../../util/flags/update-flag';
-import { resolveVariant } from '../../util/flags/resolve-variant';
-import { getFlagDashboardUrl } from '../../util/flags/dashboard-url';
+import {
+  formatVariantForDisplay,
+  resolveVariant,
+} from '../../util/flags/resolve-variant';
+import { logNonBooleanFlagGuidance } from '../../util/flags/log-non-boolean-guidance';
+import { normalizeOptionalInput } from '../../util/flags/normalize-optional-input';
+import {
+  buildPausedEnvironmentConfig,
+  getBooleanVariant,
+  isPausingEnvironmentToVariant,
+  resolveFlagEnvironment,
+  resolveFlagUpdateMessage,
+} from '../../util/flags/environment-variant';
 import output from '../../output-manager';
 import { FlagsDisableTelemetryClient } from '../../util/telemetry/commands/flags/disable';
 import { disableSubcommand } from './command';
-
-const VALID_ENVIRONMENTS = ['production', 'preview', 'development'];
 
 export default async function disable(
   client: Client,
@@ -38,8 +52,35 @@ export default async function disable(
   const [flagArg] = args;
   let environment = flags['--environment'] as string | undefined;
   const variantId = flags['--variant'] as string | undefined;
+  const message = normalizeOptionalInput(
+    flags['--message'] as string | undefined
+  );
 
   if (!flagArg) {
+    if (client.nonInteractive) {
+      const envPart = environment
+        ? `--environment ${environment}`
+        : '--environment <production|preview|development>';
+      outputAgentError(
+        client,
+        {
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.MISSING_ARGUMENTS,
+          message: 'Please provide a flag slug or ID to disable.',
+          next: [
+            {
+              command: buildCommandWithGlobalFlags(
+                client.argv,
+                `flags disable <flag> ${envPart}`
+              ),
+              when: 'disable a feature flag by slug or ID',
+            },
+          ],
+        },
+        1
+      );
+      return 1;
+    }
     output.error('Please provide a flag slug or ID to disable');
     output.log(
       `Example: ${getCommandName('flags disable my-feature --environment production')}`
@@ -50,11 +91,30 @@ export default async function disable(
   telemetryClient.trackCliArgumentFlag(flagArg);
   telemetryClient.trackCliOptionEnvironment(environment);
   telemetryClient.trackCliOptionVariant(variantId);
+  telemetryClient.trackCliOptionMessage(message);
 
   const link = await getLinkedProject(client);
   if (link.status === 'error') {
     return link.exitCode;
   } else if (link.status === 'not_linked') {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.NOT_LINKED,
+          message: 'Your codebase is not linked to a project. Run link first.',
+          next: [
+            {
+              command: buildCommandWithGlobalFlags(client.argv, 'link'),
+              when: 'link the project',
+            },
+          ],
+        },
+        1
+      );
+      return 1;
+    }
     output.error(
       `Your codebase isn't linked to a project on Vercel. Run ${getCommandName('link')} to begin.`
     );
@@ -81,130 +141,121 @@ export default async function disable(
 
     // Only boolean flags can be enabled/disabled via CLI
     if (flag.kind !== 'boolean') {
-      const dashboardUrl = getFlagDashboardUrl(
-        link.org.slug,
-        project.name,
-        flag.slug
-      );
-      output.warn(
-        `The ${getCommandName('flags disable')} command only works with boolean flags.`
-      );
-      output.log(
-        `Flag ${chalk.bold(flag.slug)} is a ${chalk.cyan(flag.kind)} flag. You can update it on the dashboard:`
-      );
-      output.log(`  ${chalk.cyan(dashboardUrl)}`);
+      logNonBooleanFlagGuidance(flag, {
+        attemptedSubcommand: 'disable',
+        environment,
+        isInteractive: Boolean(client.stdin.isTTY),
+        teamSlug: link.org.slug,
+        projectName: project.name,
+      });
       return 0;
     }
 
-    // If environment not specified, prompt for it
-    if (!environment) {
-      const availableEnvs = Object.keys(flag.environments).filter(env =>
-        VALID_ENVIRONMENTS.includes(env)
+    if (!environment && client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.MISSING_ARGUMENTS,
+          message:
+            'Please provide --environment (production, preview, or development) to disable the flag in.',
+          next: [
+            {
+              command: buildCommandWithGlobalFlags(
+                client.argv,
+                `flags disable ${flagArg} --environment <production|preview|development>`
+              ),
+              when: 'disable the flag in a specific environment',
+            },
+          ],
+        },
+        1
       );
+      return 1;
+    }
 
-      if (availableEnvs.length === 0) {
-        output.error('No valid environments found for this flag');
+    environment = await resolveFlagEnvironment(
+      client,
+      flag,
+      environment,
+      'Select an environment to disable the flag in:'
+    );
+
+    const envConfig = flag.environments[environment];
+    let selectedVariant = getBooleanVariant(flag, false);
+
+    if (variantId) {
+      const result = resolveVariant(variantId, flag.variants);
+      if (result.error) {
+        output.error(result.error);
         return 1;
       }
 
-      environment = await client.input.select({
-        message: 'Select an environment to disable the flag in:',
-        choices: availableEnvs.map(env => {
-          const config = flag.environments[env];
-          const status = config?.active
-            ? chalk.green('active')
-            : chalk.yellow('paused');
-          return {
-            name: `${env} (${status})`,
-            value: env,
-          };
-        }),
-      });
+      selectedVariant = result.variant!;
     }
 
-    if (!VALID_ENVIRONMENTS.includes(environment)) {
-      output.error(
-        `Invalid environment: ${environment}. Must be one of: ${VALID_ENVIRONMENTS.join(', ')}`
-      );
-      return 1;
-    }
-
-    const envConfig = flag.environments[environment];
-    if (!envConfig) {
-      output.error(`Environment ${environment} not found for this flag`);
-      return 1;
-    }
-
-    if (!envConfig.active) {
+    if (isPausingEnvironmentToVariant(envConfig, selectedVariant.id)) {
       output.warn(
         `Flag ${chalk.bold(flag.slug)} is already disabled in ${environment}`
       );
       return 0;
     }
 
-    // Determine which variant to serve while disabled
-    let selectedVariantId = variantId;
-    if (selectedVariantId) {
-      // Resolve the variant from user input (can be ID, value, or label)
-      const result = resolveVariant(selectedVariantId, flag.variants);
-      if (result.error) {
-        output.error(result.error);
-        return 1;
-      }
-      selectedVariantId = result.variant!.id;
-    } else if (flag.variants.length === 1) {
-      // Only one variant available, use it
-      selectedVariantId = flag.variants[0].id;
-    } else if (flag.kind === 'boolean') {
-      // For boolean flags, default to the false variant (the "off" value)
-      const falseVariant = flag.variants.find(v => v.value === false);
-      selectedVariantId = falseVariant?.id ?? flag.variants[0].id;
-    } else {
-      // Multiple variants available for non-boolean flags, prompt user to select
-      selectedVariantId = await client.input.select({
-        message: 'Select which variant to serve while the flag is disabled:',
-        choices: flag.variants.map(v => ({
-          name: `${v.id} (${chalk.yellow(JSON.stringify(v.value))})${v.label ? ` - ${v.label}` : ''}`,
-          value: v.id,
-        })),
-      });
-    }
-
-    const updatedEnvConfig = {
-      active: false,
-      fallthrough: envConfig.fallthrough,
-      rules: envConfig.rules,
-      pausedOutcome: {
-        type: 'variant' as const,
-        variantId: selectedVariantId,
-      },
-    };
+    const updateMessage = await resolveFlagUpdateMessage(
+      client,
+      message,
+      getDefaultDisableMessage(environment)
+    );
 
     output.spinner(`Disabling flag in ${environment}...`);
     await updateFlag(client, project.id, flagArg, {
       environments: {
-        [environment]: updatedEnvConfig,
+        [environment]: buildPausedEnvironmentConfig(
+          envConfig,
+          selectedVariant.id
+        ),
       },
-      message: `Disabled in ${environment} via CLI`,
+      message: updateMessage,
     });
     output.stopSpinner();
-
-    const variant = flag.variants.find(v => v.id === selectedVariantId);
-    const variantValue = variant
-      ? JSON.stringify(variant.value)
-      : selectedVariantId;
 
     output.success(
       `Feature flag ${chalk.bold(flag.slug)} has been disabled in ${chalk.bold(environment)}`
     );
     output.log(
-      `  ${chalk.dim('Serving variant:')} ${selectedVariantId} (${chalk.yellow(variantValue)})`
+      `  ${chalk.dim('Serving variant:')} ${formatVariantForDisplay(selectedVariant)}`
     );
   } catch (err) {
     output.stopSpinner();
+    const message = err instanceof Error ? err.message : String(err);
+    if (client.nonInteractive && message.startsWith('Invalid environment:')) {
+      outputAgentError(
+        client,
+        {
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.INVALID_ARGUMENTS,
+          message,
+          next: [
+            {
+              command: buildCommandWithGlobalFlags(
+                client.argv,
+                `flags disable ${flagArg} --environment <production|preview|development>`
+              ),
+              when: 'use a valid environment (production, preview, or development)',
+            },
+          ],
+        },
+        1
+      );
+      return 1;
+    }
     printError(err);
     return 1;
   }
 
   return 0;
+}
+
+function getDefaultDisableMessage(environment: string): string {
+  return `Disabled for ${environment} via CLI`;
 }

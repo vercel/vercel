@@ -119,8 +119,14 @@ export interface BuildOptions {
    * multi-service project.
    */
   service?: {
+    /** The service name as declared in the project configuration. */
+    name?: string;
+    /** The service type (e.g., "web", "cron", "worker"). */
+    type?: ServiceType;
     /** URL path prefix where the service is mounted (e.g., "/api"). */
     routePrefix?: string;
+    /** Optional subdomain this service is mounted on (e.g., "api"). */
+    subdomain?: string;
     /** Workspace directory for this service, relative to the project root. */
     workspace?: string;
   };
@@ -409,11 +415,13 @@ export interface Builder {
   config?: Config;
 }
 
+export type MaxDuration = number | 'max';
+
 export interface BuilderFunctions {
   [key: string]: {
     architecture?: LambdaArchitecture;
     memory?: number;
-    maxDuration?: number;
+    maxDuration?: MaxDuration;
     regions?: string[];
     functionFailoverRegions?: string[];
     runtime?: string;
@@ -439,6 +447,18 @@ export interface ProjectSettings {
   directoryListing?: boolean;
   gitForkProtection?: boolean;
   commandForIgnoringBuildStep?: string | null;
+}
+
+/*
+ * This is a builder whose build output version may dynamically change.
+ */
+export interface BuilderVX {
+  version: -1;
+  build: BuildVX;
+  diagnostics?: Diagnostics;
+  prepareCache?: PrepareCache;
+  shouldServe?: ShouldServe;
+  startDevServer?: StartDevServer;
 }
 
 export interface BuilderV2 {
@@ -560,13 +580,27 @@ export interface Service {
   /* web service config */
   routePrefix?: string;
   routePrefixSource?: 'configured' | 'generated';
+  subdomain?: string;
   /* cron service config */
   schedule?: string;
   /* optional handler for cron service in format of {module}:{callable} */
   handlerFunction?: string;
   /* worker service config */
-  topic?: string;
+  topics?: string[];
   consumer?: string;
+  /** custom prefix to inject service URL env vars */
+  envPrefix?: string;
+}
+
+/**
+ * Returns the topics a worker service subscribes to, defaulting to ['default'].
+ */
+export function getWorkerTopics(config: {
+  topics?: string[];
+}): [string, ...string[]] {
+  return config.topics?.length
+    ? (config.topics as [string, ...string[]])
+    : ['default'];
 }
 
 /** The framework which created the function */
@@ -604,6 +638,10 @@ export interface BuildResultV2Typical {
   deploymentId?: string;
 }
 
+export type BuildResultVX =
+  | { resultVersion: 2; result: BuildResultV2 }
+  | { resultVersion: 3; result: BuildResultV3 };
+
 export type BuildResultV2 = BuildResultV2Typical | BuildResultBuildOutput;
 
 export interface BuildResultV3 {
@@ -612,6 +650,7 @@ export interface BuildResultV3 {
   output: Lambda | EdgeFunction;
 }
 
+export type BuildVX = (options: BuildOptions) => Promise<BuildResultVX>;
 export type BuildV2 = (options: BuildOptions) => Promise<BuildResultV2>;
 export type BuildV3 = (options: BuildOptions) => Promise<BuildResultV3>;
 export type PrepareCache = (options: PrepareCacheOptions) => Promise<Files>;
@@ -766,21 +805,26 @@ export interface ExperimentalServiceConfig {
 
   /** Lambda config */
   memory?: number;
-  maxDuration?: number;
+  maxDuration?: MaxDuration;
   includeFiles?: string | string[];
   excludeFiles?: string | string[];
 
   /* Web service config */
   /** URL prefix for routing */
   routePrefix?: string;
+  /** Subdomain this service should respond to (web services only). */
+  subdomain?: string;
 
   /* Cron service config */
   /** Cron schedule expression (e.g., "0 0 * * *") */
   schedule?: string;
 
   /* Worker service config */
-  topic?: string;
+  topics?: string[];
   consumer?: string;
+
+  /** Custom prefix to use to inject service URL env vars */
+  envPrefix?: string;
 }
 
 /**
