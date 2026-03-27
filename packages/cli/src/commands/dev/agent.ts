@@ -4,6 +4,7 @@ import {
   TUI,
   ProcessTerminal,
   Text,
+  Spacer,
   matchesKey,
   visibleWidth,
 } from '@mariozechner/pi-tui';
@@ -389,16 +390,24 @@ export async function startAgentMode(
   const statusBar = new StatusBar(errorStore);
 
   tui.addChild(outputPanel);
+  tui.addChild(new Spacer(1));
   tui.addChild(statusBar);
   tui.setFocus(statusBar);
   statusBar.bindRender(() => tui.requestRender());
 
   let outputBuffer = '';
+  let renderScheduled = false;
 
   function appendOutput(text: string) {
     outputBuffer += text;
     outputPanel.setText(outputBuffer);
-    tui.requestRender();
+    if (!renderScheduled) {
+      renderScheduled = true;
+      queueMicrotask(() => {
+        renderScheduled = false;
+        tui.requestRender(true);
+      });
+    }
   }
 
   // Teardown / agent handoff state
