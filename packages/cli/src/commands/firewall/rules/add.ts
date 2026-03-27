@@ -380,6 +380,13 @@ function buildActionFromFlags(
     if (!redirectUrl) {
       return 'Redirect action requires --redirect-url.';
     }
+    if (
+      !redirectUrl.startsWith('/') &&
+      !redirectUrl.startsWith('http://') &&
+      !redirectUrl.startsWith('https://')
+    ) {
+      return 'Redirect URL must start with /, http://, or https://';
+    }
 
     action.mitigate!.redirect = {
       location: redirectUrl,

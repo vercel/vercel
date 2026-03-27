@@ -272,20 +272,57 @@ async function buildConditionInteractive(
   const neg = opChoice.startsWith('!');
   const op = neg ? opChoice.slice(1) : opChoice;
 
-  // Value
+  // Value — with per-type validation and multi-select for presets
   let value: string | string[] | number | undefined;
   if (op !== 'ex') {
-    if (op === 'inc') {
+    if (op === 'inc' && meta?.presetValues) {
+      // Multi-select from preset values
+      const selected = await client.input.checkbox<string>({
+        message: `Select values (space to toggle, enter to confirm):`,
+        choices: meta.presetValues.map(v => ({ name: v, value: v })),
+      });
+      if (selected.length === 0) {
+        // Fallback to text if nothing selected
+        const valStr = await client.input.text({
+          message: 'Values (comma-separated):',
+          validate: (val: string) =>
+            val.trim() ? true : 'At least one value is required.',
+        });
+        value = valStr.split(',').map((v: string) => v.trim());
+      } else {
+        value = selected;
+      }
+    } else if (op === 'inc') {
+      // Free text comma-separated for types without presets
       const valStr = await client.input.text({
         message: 'Values (comma-separated):',
         validate: (val: string) =>
           val.trim() ? true : 'At least one value is required.',
       });
       value = valStr.split(',').map((v: string) => v.trim());
+    } else if (op === 're') {
+      // Regex — validate as valid RegExp
+      const valStr = await client.input.text({
+        message: 'Regex pattern:',
+        validate: (val: string) => {
+          if (!val.trim()) return 'Regex pattern is required.';
+          try {
+            new RegExp(val);
+            return true;
+          } catch {
+            return 'Invalid regex pattern. Please enter a valid regular expression.';
+          }
+        },
+      });
+      value = valStr;
     } else {
+      // String value — with per-type validation
       const valStr = await client.input.text({
         message: 'Value:',
-        validate: (val: string) => (val.trim() ? true : 'Value is required.'),
+        validate: (val: string) => {
+          if (!val.trim()) return 'Value is required.';
+          return validateConditionValue(val, meta);
+        },
       });
       value = valStr;
     }
@@ -350,7 +387,16 @@ async function buildActionInteractive(
   if (actionType === 'redirect') {
     const location = await client.input.text({
       message: 'Redirect URL or path:',
-      validate: (val: string) => (val.trim() ? true : 'URL is required.'),
+      validate: (val: string) => {
+        if (!val.trim()) return 'URL is required.';
+        if (
+          !val.startsWith('/') &&
+          !val.startsWith('http://') &&
+          !val.startsWith('https://')
+        )
+          return 'URL must start with /, http://, or https://';
+        return true;
+      },
     });
     const permanent = await client.input.confirm(
       'Permanent redirect (301)?',
@@ -410,13 +456,34 @@ async function buildRateLimitInteractive(client: Client) {
     },
   });
 
-  const keysStr = await client.input.text({
-    message:
-      'Rate limit keys (comma-separated, e.g. ip, ja4, header:user-agent):',
-    default: 'ip',
-    validate: (val: string) =>
-      val.trim() ? true : 'At least one key is required.',
+  // Rate limit keys — multi-select from presets
+  const selectedKeys = await client.input.checkbox<string>({
+    message: 'Rate limit keys (space to toggle, enter to confirm):',
+    choices: [
+      { name: 'IP Address (ip)', value: 'ip', checked: true },
+      { name: 'JA4 Digest (ja4)', value: 'ja4' },
+      { name: 'User Agent (header:user-agent)', value: 'header:user-agent' },
+    ],
   });
+
+  // Optionally add custom header key
+  let keys = [...selectedKeys];
+  const addCustom = await client.input.confirm(
+    'Add a custom header key?',
+    false
+  );
+  if (addCustom) {
+    const customKey = await client.input.text({
+      message: 'Header name (e.g. x-api-key):',
+      validate: (val: string) =>
+        val.trim() ? true : 'Header name is required.',
+    });
+    keys.push(`header:${customKey}`);
+  }
+
+  if (keys.length === 0) {
+    keys = ['ip']; // Default fallback
+  }
 
   const subAction = await client.input.select({
     message: 'Sub-action when limit is exceeded:',
@@ -432,7 +499,7 @@ async function buildRateLimitInteractive(client: Client) {
     algo,
     window: Number(windowStr),
     limit: Number(limitStr),
-    keys: keysStr.split(',').map((k: string) => k.trim()),
+    keys,
     action: subAction as string,
   };
 }
@@ -447,4 +514,42 @@ function getActionDisplayName(action: string): string {
     redirect: 'Redirect — Send to a different URL',
   };
   return labels[action] || action;
+}
+
+/**
+ * Per-type value validation for the interactive builder.
+ * Returns true if valid, or an error string if invalid.
+ */
+function validateConditionValue(
+  val: string,
+  meta: ConditionTypeMeta | undefined
+): string | true {
+  if (!meta?.valueValidation) return true;
+
+  switch (meta.valueValidation) {
+    case 'path':
+      if (!val.startsWith('/')) return 'Path must start with /';
+      return true;
+    case 'ip': {
+      const { isIP } = require('node:net');
+      if (isIP(val)) return true;
+      // Check CIDR
+      const slashIdx = val.lastIndexOf('/');
+      if (slashIdx !== -1) {
+        const ip = val.slice(0, slashIdx);
+        const prefix = Number.parseInt(val.slice(slashIdx + 1), 10);
+        if (isIP(ip) && !Number.isNaN(prefix) && prefix >= 0) return true;
+      }
+      return 'Please enter a valid IP address or CIDR range.';
+    }
+    case 'hostname':
+      if (!/^[A-Za-z0-9-]{1,63}(?:\.[A-Za-z0-9-]{1,63})*$/.test(val))
+        return 'Please enter a valid hostname.';
+      return true;
+    case 'digits':
+      if (!/^\d+$/.test(val)) return 'Please enter digits only.';
+      return true;
+    default:
+      return true;
+  }
 }

@@ -635,6 +635,151 @@ describe('firewall rules add', () => {
       await expect(client.stderr).toOutput('requires --redirect-url');
       expect(await exitCodePromise).toEqual(1);
     });
+
+    it('should error on invalid redirect URL', async () => {
+      client.setArgv(
+        'firewall',
+        'rules',
+        'add',
+        'Test',
+        '--condition',
+        'path:pre:/old',
+        '--action',
+        'redirect',
+        '--redirect-url',
+        'not-a-url',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('must start with');
+      expect(await exitCodePromise).toEqual(1);
+    });
+
+    it('should accept redirect URL starting with /', async () => {
+      useListFirewallConfigs(createConfig(), null);
+      usePatchDraft();
+      useActivateConfig();
+
+      client.setArgv(
+        'firewall',
+        'rules',
+        'add',
+        'Redirect path',
+        '--condition',
+        'path:pre:/old',
+        '--action',
+        'redirect',
+        '--redirect-url',
+        '/new-path',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('staged');
+      expect(await exitCodePromise).toEqual(0);
+    });
+
+    it('should accept redirect URL starting with https://', async () => {
+      useListFirewallConfigs(createConfig(), null);
+      usePatchDraft();
+      useActivateConfig();
+
+      client.setArgv(
+        'firewall',
+        'rules',
+        'add',
+        'Redirect URL',
+        '--condition',
+        'path:pre:/old',
+        '--action',
+        'redirect',
+        '--redirect-url',
+        'https://example.com/new',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('staged');
+      expect(await exitCodePromise).toEqual(0);
+    });
+
+    it('should error on invalid regex in condition', async () => {
+      client.setArgv(
+        'firewall',
+        'rules',
+        'add',
+        'Test',
+        '--condition',
+        'path:re:[invalid',
+        '--action',
+        'deny',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('Invalid regex pattern');
+      expect(await exitCodePromise).toEqual(1);
+    });
+
+    it('should accept valid regex in condition', async () => {
+      useListFirewallConfigs(createConfig(), null);
+      usePatchDraft();
+      useActivateConfig();
+
+      client.setArgv(
+        'firewall',
+        'rules',
+        'add',
+        'Regex rule',
+        '--condition',
+        'path:re:^/api/v[0-9]+',
+        '--action',
+        'deny',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('staged');
+      expect(await exitCodePromise).toEqual(0);
+    });
+
+    it('should error on rate limit window exceeding max', async () => {
+      client.setArgv(
+        'firewall',
+        'rules',
+        'add',
+        'Test',
+        '--condition',
+        'path:pre:/api',
+        '--action',
+        'rate_limit',
+        '--rate-limit-window',
+        '7200',
+        '--rate-limit-requests',
+        '100',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('maximum is 3600');
+      expect(await exitCodePromise).toEqual(1);
+    });
+
+    it('should error on rate limit requests exceeding max', async () => {
+      client.setArgv(
+        'firewall',
+        'rules',
+        'add',
+        'Test',
+        '--condition',
+        'path:pre:/api',
+        '--action',
+        'rate_limit',
+        '--rate-limit-window',
+        '60',
+        '--rate-limit-requests',
+        '99999999',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('maximum is 10,000,000');
+      expect(await exitCodePromise).toEqual(1);
+    });
   });
 
   // ─── JSON mode ─────────────────────────────────────────────────────

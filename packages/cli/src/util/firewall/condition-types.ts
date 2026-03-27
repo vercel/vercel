@@ -9,6 +9,10 @@ export interface ConditionTypeMeta {
   category: 'request' | 'client' | 'geo' | 'key-value' | 'security' | 'bot';
   requiresKey: boolean;
   operators: string[];
+  /** Preset values for multi-select on `inc` operator in interactive mode */
+  presetValues?: string[];
+  /** Value validation type for interactive mode */
+  valueValidation?: 'ip' | 'path' | 'hostname' | 'digits' | null;
   planRequirement?: 'enterprise' | 'security-plus' | null;
   /** Hidden from interactive builder by default (plan-gated or deprecated) */
   hiddenFromInteractive?: boolean;
@@ -38,6 +42,7 @@ export const CONDITION_TYPES: ConditionTypeMeta[] = [
     category: 'request',
     requiresKey: false,
     operators: STRING_AND_MATCH,
+    valueValidation: 'path',
   },
   {
     type: 'route',
@@ -46,6 +51,7 @@ export const CONDITION_TYPES: ConditionTypeMeta[] = [
     category: 'request',
     requiresKey: false,
     operators: STRING_AND_MATCH,
+    valueValidation: 'path',
   },
   {
     type: 'raw_path',
@@ -54,6 +60,7 @@ export const CONDITION_TYPES: ConditionTypeMeta[] = [
     category: 'request',
     requiresKey: false,
     operators: STRING_AND_MATCH,
+    valueValidation: 'path',
   },
   {
     type: 'server_action',
@@ -70,6 +77,17 @@ export const CONDITION_TYPES: ConditionTypeMeta[] = [
     category: 'request',
     requiresKey: false,
     operators: STRING_ONLY,
+    presetValues: [
+      'GET',
+      'HEAD',
+      'POST',
+      'DELETE',
+      'PATCH',
+      'PUT',
+      'CONNECT',
+      'OPTIONS',
+      'TRACE',
+    ],
   },
   {
     type: 'host',
@@ -78,6 +96,7 @@ export const CONDITION_TYPES: ConditionTypeMeta[] = [
     category: 'request',
     requiresKey: false,
     operators: STRING_AND_MATCH,
+    valueValidation: 'hostname',
   },
   {
     type: 'protocol',
@@ -86,6 +105,7 @@ export const CONDITION_TYPES: ConditionTypeMeta[] = [
     category: 'request',
     requiresKey: false,
     operators: STRING_ONLY,
+    presetValues: ['HTTP/1.1', 'HTTP/2.0'],
   },
   {
     type: 'environment',
@@ -94,6 +114,7 @@ export const CONDITION_TYPES: ConditionTypeMeta[] = [
     category: 'request',
     requiresKey: false,
     operators: STRING_ONLY,
+    presetValues: ['preview', 'production'],
   },
   {
     type: 'region',
@@ -112,6 +133,7 @@ export const CONDITION_TYPES: ConditionTypeMeta[] = [
     category: 'client',
     requiresKey: false,
     operators: STRING_ONLY,
+    valueValidation: 'ip',
   },
   {
     type: 'user_agent',
@@ -138,6 +160,7 @@ export const CONDITION_TYPES: ConditionTypeMeta[] = [
     category: 'geo',
     requiresKey: false,
     operators: STRING_ONLY,
+    presetValues: ['AF', 'AN', 'AS', 'EU', 'NA', 'OC', 'SA'],
   },
   {
     type: 'geo_city',
@@ -162,6 +185,7 @@ export const CONDITION_TYPES: ConditionTypeMeta[] = [
     category: 'geo',
     requiresKey: false,
     operators: STRING_AND_MATCH,
+    valueValidation: 'digits',
   },
 
   // Key-Value

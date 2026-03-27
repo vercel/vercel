@@ -142,6 +142,17 @@ export function parseConditionFlag(flag: string): FirewallCondition | string {
       return `Operator "${op}" requires a numeric value, got "${valueRaw}".`;
     }
     condition.value = num;
+  } else if (op === 're') {
+    // Regex operator — validate as valid RegExp
+    if (!valueRaw) {
+      return `Operator "re" requires a regex pattern.`;
+    }
+    try {
+      new RegExp(valueRaw);
+    } catch {
+      return `Invalid regex pattern: "${valueRaw}". Please provide a valid regular expression.`;
+    }
+    condition.value = valueRaw;
   } else {
     // String operators — value required
     if (!valueRaw) {
