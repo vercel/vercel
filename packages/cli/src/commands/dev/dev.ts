@@ -7,7 +7,8 @@ import type { ResolvedService } from '@vercel/fs-detectors';
 import DevServer from '../../util/dev/server';
 import { parseListen } from '../../util/dev/parse-listen';
 import type Client from '../../util/client';
-import { getLinkedProject } from '../../util/projects/link';
+import { getLinkedProject, getVercelDirectory } from '../../util/projects/link';
+import { readProjectSettings } from '../../util/projects/project-settings';
 import type { ProjectSettings } from '@vercel-internals/types';
 import setupAndLink from '../../util/link/setup-and-link';
 import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
@@ -116,6 +117,52 @@ export default async function dev(
     client.config.currentTeam = org.type === 'team' ? org.id : undefined;
 
     projectSettings = project;
+
+    // Merge local project settings from .vercel/project.json
+    // Local settings take precedence when API values are null/undefined
+    const localProjectSettings = await readProjectSettings(
+      getVercelDirectory(cwd)
+    );
+    if (localProjectSettings?.settings) {
+      const localSettings = localProjectSettings.settings;
+      // Only use local settings as fallback for null/undefined API values
+      if (projectSettings.framework == null && localSettings.framework) {
+        projectSettings = {
+          ...projectSettings,
+          framework: localSettings.framework,
+        };
+      }
+      if (projectSettings.devCommand == null && localSettings.devCommand) {
+        projectSettings = {
+          ...projectSettings,
+          devCommand: localSettings.devCommand,
+        };
+      }
+      if (projectSettings.buildCommand == null && localSettings.buildCommand) {
+        projectSettings = {
+          ...projectSettings,
+          buildCommand: localSettings.buildCommand,
+        };
+      }
+      if (
+        projectSettings.installCommand == null &&
+        localSettings.installCommand
+      ) {
+        projectSettings = {
+          ...projectSettings,
+          installCommand: localSettings.installCommand,
+        };
+      }
+      if (
+        projectSettings.outputDirectory == null &&
+        localSettings.outputDirectory
+      ) {
+        projectSettings = {
+          ...projectSettings,
+          outputDirectory: localSettings.outputDirectory,
+        };
+      }
+    }
 
     if (project.rootDirectory) {
       cwd = join(cwd, project.rootDirectory);

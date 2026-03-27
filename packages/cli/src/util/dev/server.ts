@@ -621,6 +621,7 @@ export default class DevServer {
         trailingSlash,
         workPath: this.cwd,
       });
+
       let {
         builders,
         warnings,
@@ -679,6 +680,25 @@ export default class DevServer {
       });
       routes.push(...(defaultRoutes || []));
       vercelConfig.routes = routes;
+
+      // For runtime frameworks (e.g., Rust, Python, Go), add the framework's
+      // default routes to enable proper request routing in dev mode.
+      // This is enabled for Rust framework or via the experimental frameworks flag.
+      const frameworkSlug = this.projectSettings?.framework;
+      if (frameworkSlug === 'rust' || shouldUseExperimentalFrameworks()) {
+        if (frameworkSlug) {
+          const framework = frameworkList.find(f => f.slug === frameworkSlug);
+          if (framework?.runtimeFramework && framework.defaultRoutes) {
+            const frameworkRoutes = await getFrameworkRoutes(framework);
+            if (frameworkRoutes.length > 0) {
+              vercelConfig.routes = [
+                ...vercelConfig.routes,
+                ...frameworkRoutes,
+              ];
+            }
+          }
+        }
+      }
     }
 
     if (Array.isArray(vercelConfig.builds)) {
@@ -2870,6 +2890,32 @@ function hasNewRoutingProperties(vercelConfig: VercelConfig) {
     typeof vercelConfig.rewrites !== undefined ||
     typeof vercelConfig.trailingSlash !== undefined
   );
+}
+
+/**
+ * Checks if experimental frameworks should be included based on env var.
+ */
+function shouldUseExperimentalFrameworks(): boolean {
+  const experimentalEnv = process.env.VERCEL_USE_EXPERIMENTAL_FRAMEWORKS;
+  return (
+    experimentalEnv === '1' ||
+    (typeof experimentalEnv === 'string' &&
+      experimentalEnv.toLowerCase() === 'true')
+  );
+}
+
+/**
+ * Gets the default routes for a framework (similar to getFrameworkRoutes in build/index.ts).
+ */
+async function getFrameworkRoutes(
+  framework: (typeof frameworkList)[number]
+): Promise<Route[]> {
+  if (typeof framework.defaultRoutes === 'function') {
+    return framework.defaultRoutes('');
+  } else if (Array.isArray(framework.defaultRoutes)) {
+    return framework.defaultRoutes;
+  }
+  return [];
 }
 
 function buildMatchEquals(a?: BuildMatch, b?: BuildMatch): boolean {

@@ -3,3 +3,6 @@ resolver = "3"
 members = [
     "crates/vercel_runtime",
 ]
+exclude = [
+    "examples/axum",
+]
