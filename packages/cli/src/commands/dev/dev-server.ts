@@ -42,7 +42,7 @@ export interface DevContext {
   didPrompt?: () => void;
   /** Called once cleanup fn is ready. Use to wire additional exit triggers (e.g. Ctrl+C in TUI). */
   onCleanupReady?: (cleanup: () => void) => void;
-  /** Called during cleanup to restore terminal state. May be async (e.g. to drain stdin). */
+  /** Called during cleanup to restore terminal state. May return a Promise (e.g. to drain stdin). */
   onShutdown?: () => void | Promise<void>;
 }
 
@@ -224,7 +224,8 @@ export async function startDevServer(
     if (cleanupInProgress) return;
     cleanupInProgress = true;
 
-    // Restore terminal state (may drain stdin to prevent key leaks).
+    // Restore terminal state. onShutdown may be async (e.g. to drain
+    // Kitty key release events from stdin before disabling raw mode).
     await ctx.onShutdown?.();
 
     clearTimeout(timeout);

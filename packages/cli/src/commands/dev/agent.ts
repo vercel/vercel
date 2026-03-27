@@ -126,11 +126,15 @@ export async function startAgentMode(
 
   async function shutdown() {
     restoreIO();
-    // Drain any leftover input bytes (e.g. Ctrl+D) while stdin is still
-    // in raw mode, before tui.stop() switches back to cooked mode —
-    // otherwise the bytes leak to the parent shell.
-    await terminal.drainInput(200, 50);
+    // Wait for any pending renders to complete (pi-agent pattern).
+    await new Promise<void>(resolve => process.nextTick(resolve));
+    // drainInput() disables Kitty protocol first (so no new key release
+    // events are generated), then waits for any in-flight bytes to arrive
+    // on stdin and swallows them. This must happen BEFORE tui.stop()
+    // removes the stdin handler and disables raw mode.
+    await terminal.drainInput(1000);
     tui.stop();
+    process.exit(0);
   }
 
   interceptIO();
