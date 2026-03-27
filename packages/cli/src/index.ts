@@ -143,6 +143,13 @@ const handleUnexpected = async (err: Error) => {
 process.on('unhandledRejection', handleRejection);
 process.on('uncaughtException', handleUnexpected);
 
+// Emit plugin hint when running inside Claude Code
+if (process.env.CLAUDECODE) {
+  process.stderr.write(
+    '<claude-code-hint v="1" type="plugin" value="vercel@claude-plugins-official" />\n'
+  );
+}
+
 let { isTTY } = process.stdout;
 
 let apiUrl = 'https://api.vercel.com';
