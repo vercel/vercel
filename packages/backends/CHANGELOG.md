@@ -1,5 +1,14 @@
 # @vercel/backends
 
+## 0.0.53
+
+### Patch Changes
+
+- Fix crash when a workspace dependency cannot be resolved by rolldown ([#15667](https://github.com/vercel/vercel/pull/15667))
+
+- Updated dependencies [[`3427149c3751192b54bb4fad9d3b50f171a28666`](https://github.com/vercel/vercel/commit/3427149c3751192b54bb4fad9d3b50f171a28666)]:
+  - @vercel/build-utils@13.12.0
+
 ## 0.0.52
 
 ### Patch Changes
