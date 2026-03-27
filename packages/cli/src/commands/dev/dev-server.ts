@@ -144,15 +144,17 @@ export async function startDevServer(
   let services: ResolvedService[] | undefined;
   const detection = await tryDetectServices(cwd);
   const foundServices =
-    detection?.enabled && detection.result.services.length > 0;
+    detection?.enabled && detection.resolved.services.length > 0;
   if (detection && !detection.enabled) {
     // Services detected from project layout but not explicitly enabled
     output.warn(
-      'Detected services in your project. Multi-service support is not enabled.'
+      'Detected services in your project. To enable multi-service mode, ' +
+        'add `experimentalServices` to vercel.json or set ' +
+        'VERCEL_USE_EXPERIMENTAL_SERVICES=1.'
     );
   } else if (foundServices) {
-    displayDetectedServices(detection.result.services);
-    services = detection.result.services;
+    displayDetectedServices(detection.resolved.services);
+    services = detection.resolved.services;
   }
 
   let lockAcquired = false;

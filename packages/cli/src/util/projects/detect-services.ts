@@ -3,7 +3,8 @@ import { basename, join } from 'path';
 import {
   detectServices,
   LocalFileSystemDetector,
-  type DetectServicesResult,
+  type ResolvedServicesResult,
+  type InferredServicesResult,
   type ServicesConfig,
 } from '@vercel/fs-detectors';
 import type { VercelConfig } from '../dev/types';
@@ -26,7 +27,11 @@ export type ServicesConfigWriteBlocker = 'builds' | 'functions';
  *   informational message but should not change dev-server behavior.
  */
 export interface TryDetectServicesResult {
-  result: DetectServicesResult;
+  /** Services resolved for use by dev/build (from config or auto-detection). */
+  resolved: ResolvedServicesResult;
+  /** Inferred services from layout that could be written to config, or null. */
+  inferred: InferredServicesResult | null;
+  /** Whether the user has explicitly opted in (vercel.json config or env var). */
   enabled: boolean;
 }
 
@@ -56,45 +61,70 @@ async function hasExperimentalServicesConfig(cwd: string): Promise<boolean> {
 }
 
 /**
+ * Minimum number of inferred services required to classify a project as
+ * services-shaped. Matches the threshold used by the API repo so a solo
+ * root framework (e.g. a plain Next.js app) doesn't get misclassified.
+ */
+const MIN_INFERRED_SERVICES = 2;
+
+/**
  * Detect services in the project directory.
  *
- * Always runs filesystem auto-detection regardless of configuration.
+ * Uses the structured `resolved` / `inferred` fields from
+ * `@vercel/fs-detectors` rather than the deprecated top-level fields.
  *
  * Returns a `TryDetectServicesResult` when services are found:
  * - `enabled: true` when the user has explicitly opted in (config or env var)
- * - `enabled: false` when services were auto-detected but the user has not
- *   opted in (informational only)
+ * - `enabled: false` when services were auto-detected from the project
+ *   layout but the user has not opted in (informational only)
  *
  * Returns `null` when no services are detected.
  */
 export async function tryDetectServices(
   cwd: string
 ): Promise<TryDetectServicesResult | null> {
-  const enabled = await isExperimentalServicesEnabled(cwd);
-
   const fs = new LocalFileSystemDetector(cwd);
   const result = await detectServices({ fs });
+  const { resolved, inferred } = result;
 
-  // No services found at all (not configured, not auto-detected)
-  const hasNoServicesError = result.errors.some(
-    e => e.code === 'NO_SERVICES_CONFIGURED'
-  );
-  if (hasNoServicesError) {
-    return null;
+  // Explicitly configured services in vercel.json
+  const hasConfiguredServices =
+    resolved.source === 'configured' &&
+    resolved.services.length > 0 &&
+    resolved.errors.length === 0;
+
+  if (hasConfiguredServices) {
+    return { resolved, inferred, enabled: true };
   }
 
-  // When explicitly enabled, always return the result (even with 0 services
-  // but errors, so validation errors can be surfaced to the user).
-  if (enabled) {
-    return { result, enabled };
+  // Configured but with validation errors — still surface them so the
+  // user sees what went wrong in their vercel.json.
+  if (resolved.source === 'configured' && resolved.errors.length > 0) {
+    return { resolved, inferred, enabled: true };
   }
 
-  // When not explicitly enabled, only return if auto-detection found services
-  if (result.services.length === 0) {
-    return null;
+  // Auto-detection via env var: treat as explicitly enabled when the env
+  // var is set and enough services were inferred from the project layout.
+  const envVarEnabled =
+    process.env.VERCEL_USE_EXPERIMENTAL_SERVICES === '1' ||
+    process.env.VERCEL_USE_EXPERIMENTAL_SERVICES?.toLowerCase() === 'true';
+
+  if (
+    envVarEnabled &&
+    inferred !== null &&
+    inferred.services.length >= MIN_INFERRED_SERVICES
+  ) {
+    return { resolved, inferred, enabled: true };
   }
 
-  return { result, enabled };
+  // Inferred services found by filesystem layout but user hasn't opted in.
+  // Return for informational purposes (the caller can show a hint).
+  if (inferred !== null && inferred.services.length >= MIN_INFERRED_SERVICES) {
+    return { resolved, inferred, enabled: false };
+  }
+
+  // Nothing meaningful detected.
+  return null;
 }
 
 export async function writeServicesConfig(

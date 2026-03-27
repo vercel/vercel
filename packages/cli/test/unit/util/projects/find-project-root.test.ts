@@ -124,9 +124,10 @@ describe('resolveProjectCwd', () => {
   it('should return project root when flag is on and services detected', async () => {
     mockedIsEnabled.mockResolvedValue(true);
     mockedTryDetect.mockResolvedValue({
-      result: {
+      resolved: {
         services: [{ name: 'api', slug: 'api', directory: 'services/api' }],
       },
+      inferred: null,
       enabled: true,
     } as any);
 

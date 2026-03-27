@@ -73,16 +73,16 @@ describe('tryDetectServices()', () => {
     const detection = await tryDetectServices(tempDir);
     expect(detection).not.toBeNull();
     expect(detection?.enabled).toBe(true);
-    expect(detection?.result.services).toHaveLength(2);
+    expect(detection?.resolved.services).toHaveLength(2);
     expect(
-      detection?.result.services.find(s => s.name === 'frontend')
+      detection?.resolved.services.find(s => s.name === 'frontend')
     ).toMatchObject({
       name: 'frontend',
       framework: 'nextjs',
       routePrefix: '/',
     });
     expect(
-      detection?.result.services.find(s => s.name === 'backend')
+      detection?.resolved.services.find(s => s.name === 'backend')
     ).toMatchObject({
       name: 'backend',
       entrypoint: 'api/index.py',
@@ -104,8 +104,8 @@ describe('tryDetectServices()', () => {
     const detection = await tryDetectServices(tempDir);
     expect(detection).not.toBeNull();
     expect(detection?.enabled).toBe(true);
-    expect(detection?.result.services).toHaveLength(0);
-    expect(detection?.result.errors.length).toBeGreaterThan(0);
+    expect(detection?.resolved.services).toHaveLength(0);
+    expect(detection?.resolved.errors.length).toBeGreaterThan(0);
   });
 
   it('should report builds as a blocker for inferred services config writes', async () => {
@@ -193,7 +193,7 @@ describe('tryDetectServices()', () => {
       const detection = await tryDetectServices(tempDir);
       expect(detection).not.toBeNull();
       expect(detection?.enabled).toBe(true);
-      expect(detection?.result.services).toHaveLength(2);
+      expect(detection?.resolved.services).toHaveLength(2);
     });
 
     it('should return null when vercel.json has no experimentalServices', async () => {
@@ -209,6 +209,67 @@ describe('tryDetectServices()', () => {
     it('should return null when no vercel.json exists', async () => {
       const result = await tryDetectServices(tempDir);
       expect(result).toBeNull();
+    });
+  });
+
+  describe('inferred services threshold', () => {
+    it('should return null when only one service is inferred (below threshold)', async () => {
+      // A solo Next.js project shouldn't be classified as services-shaped
+      await writeFile(
+        join(tempDir, 'package.json'),
+        JSON.stringify({ dependencies: { next: '14.0.0' } })
+      );
+
+      const result = await tryDetectServices(tempDir);
+      expect(result).toBeNull();
+    });
+
+    it('should return enabled:true when env var is set and >= 2 services inferred', async () => {
+      process.env.VERCEL_USE_EXPERIMENTAL_SERVICES = '1';
+      // Create a project layout with a frontend + backend (2 services)
+      await mkdir(join(tempDir, 'services/api'), { recursive: true });
+      await writeFile(
+        join(tempDir, 'package.json'),
+        JSON.stringify({ dependencies: { next: '14.0.0' } })
+      );
+      await writeFile(
+        join(tempDir, 'services/api/requirements.txt'),
+        'fastapi\n'
+      );
+      await writeFile(
+        join(tempDir, 'services/api/index.py'),
+        'from fastapi import FastAPI\napp = FastAPI()\n'
+      );
+
+      const detection = await tryDetectServices(tempDir);
+      expect(detection).not.toBeNull();
+      expect(detection?.enabled).toBe(true);
+      expect(detection?.inferred).not.toBeNull();
+      expect(detection?.inferred?.services.length).toBeGreaterThanOrEqual(2);
+    });
+
+    it('should return enabled:false when >= 2 services inferred but env var not set', async () => {
+      delete process.env.VERCEL_USE_EXPERIMENTAL_SERVICES;
+      // Create a project layout with a frontend + backend (2 services)
+      await mkdir(join(tempDir, 'services/api'), { recursive: true });
+      await writeFile(
+        join(tempDir, 'package.json'),
+        JSON.stringify({ dependencies: { next: '14.0.0' } })
+      );
+      await writeFile(
+        join(tempDir, 'services/api/requirements.txt'),
+        'fastapi\n'
+      );
+      await writeFile(
+        join(tempDir, 'services/api/index.py'),
+        'from fastapi import FastAPI\napp = FastAPI()\n'
+      );
+
+      const detection = await tryDetectServices(tempDir);
+      expect(detection).not.toBeNull();
+      expect(detection?.enabled).toBe(false);
+      expect(detection?.inferred).not.toBeNull();
+      expect(detection?.inferred?.services.length).toBeGreaterThanOrEqual(2);
     });
   });
 
