@@ -68,7 +68,9 @@ interface ServiceLogger {
 function createServiceLogger(
   serviceName: string,
   colorIndex: number,
-  maxNameLength: number
+  maxNameLength: number,
+  outStream: NodeJS.WritableStream = process.stdout,
+  errStream: NodeJS.WritableStream = process.stderr
 ): ServiceLogger {
   const color = SERVICE_COLORS[colorIndex % SERVICE_COLORS.length];
   const padding = ' '.repeat(maxNameLength - serviceName.length);
@@ -113,12 +115,12 @@ function createServiceLogger(
   const stdout = createTransform('stdout');
   const stderr = createTransform('stderr');
 
-  stdout.pipe(process.stdout);
-  stderr.pipe(process.stderr);
+  stdout.pipe(outStream);
+  stderr.pipe(errStream);
 
   const cleanup = () => {
-    stdout.unpipe(process.stdout);
-    stderr.unpipe(process.stderr);
+    stdout.unpipe(outStream);
+    stderr.unpipe(errStream);
     stdout.destroy();
     stderr.destroy();
   };
@@ -154,6 +156,8 @@ interface ServicesOrchestratorOptions {
   repoRoot: string;
   env: NodeJS.ProcessEnv;
   proxyOrigin: string;
+  stdout?: NodeJS.WritableStream;
+  stderr?: NodeJS.WritableStream;
 }
 
 export class ServicesOrchestrator {
@@ -171,10 +175,15 @@ export class ServicesOrchestrator {
   private pythonServiceCount: number;
   private hasWorkerServices: boolean;
 
+  private stdout: NodeJS.WritableStream;
+  private stderr: NodeJS.WritableStream;
+
   constructor(options: ServicesOrchestratorOptions) {
     this.services = options.services;
     this.cwd = options.cwd;
     this.repoRoot = options.repoRoot;
+    this.stdout = options.stdout ?? process.stdout;
+    this.stderr = options.stderr ?? process.stderr;
     this.maxNameLength = Math.max(...options.services.map(s => s.name.length));
     this.proxyOrigin = options.proxyOrigin;
     this.env = options.env;
@@ -321,7 +330,9 @@ export class ServicesOrchestrator {
     const logger = createServiceLogger(
       service.name,
       colorIndex,
-      this.maxNameLength
+      this.maxNameLength,
+      this.stdout,
+      this.stderr
     );
 
     const serviceUrlEnvVars = getServiceUrlEnvVars({

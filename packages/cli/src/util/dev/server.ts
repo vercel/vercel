@@ -135,6 +135,8 @@ export default class DevServer {
   public proxy: httpProxy;
   public envConfigs: EnvConfigs;
   public files: BuilderInputs;
+  public stdout: NodeJS.WritableStream;
+  public stderr: NodeJS.WritableStream;
 
   private _address: URL | undefined;
   public get address(): URL {
@@ -193,6 +195,8 @@ export default class DevServer {
   constructor(cwd: string, options: DevServerOptions) {
     this.cwd = cwd;
     this.repoRoot = options.repoRoot ?? cwd;
+    this.stdout = options.stdout ?? process.stdout;
+    this.stderr = options.stderr ?? process.stderr;
     this.envConfigs = { buildEnv: {}, runEnv: {}, allEnv: {} };
     this.envValues = options.envValues || {};
     this.files = {};
@@ -945,6 +949,8 @@ export default class DevServer {
         repoRoot: this.repoRoot,
         env: this.envConfigs.allEnv,
         proxyOrigin: this.address.origin,
+        stdout: this.stdout,
+        stderr: this.stderr,
       });
       devCommandPromise = this.orchestrator.startAll();
       this.devProcessOrigin = undefined;
@@ -2545,11 +2551,11 @@ export default class DevServer {
       throw new Error('Expected child process to have stdout and stderr');
     }
 
-    p.stderr.pipe(process.stderr);
+    p.stderr.pipe(this.stderr);
     p.stdout.setEncoding('utf8');
 
     p.stdout.on('data', (data: string) => {
-      process.stdout.write(data.replace(proxyPort, this.address.port));
+      this.stdout.write(data.replace(proxyPort, this.address.port));
     });
 
     p.on('exit', (code, signal) => {

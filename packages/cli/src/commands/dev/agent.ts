@@ -1,4 +1,5 @@
 import chalk from 'chalk';
+import { Writable } from 'stream';
 import {
   TUI,
   ProcessTerminal,
@@ -18,12 +19,6 @@ export async function startAgentMode(
   args: string[],
   telemetry: DevTelemetryClient
 ): Promise<number> {
-  // Save original writes before anything else — the TUI terminal
-  // needs these to render directly to the real terminal.
-  const originalStdoutWrite = process.stdout.write.bind(process.stdout);
-  const originalStderrWrite = process.stderr.write.bind(process.stderr);
-
-  // Set up TUI
   const terminal = new ProcessTerminal();
   const tui = new TUI(terminal);
 
@@ -49,116 +44,51 @@ export async function startAgentMode(
     inputPanel.setValue('');
   };
 
-  // Start the TUI first (terminal.start sets up raw mode, bracketed paste,
-  // kitty protocol — all using the still-unpatched process.stdout.write).
   tui.start();
 
-  // Override ALL terminal output methods to use the saved original write.
-  // ProcessTerminal hardcodes process.stdout.write in every method, so we
-  // must bypass our upcoming intercept for every one of them.
-  terminal.write = (data: string) => {
-    originalStdoutWrite(data);
-  };
-  terminal.hideCursor = () => {
-    originalStdoutWrite('\x1b[?25l');
-  };
-  terminal.showCursor = () => {
-    originalStdoutWrite('\x1b[?25h');
-  };
-  terminal.clearLine = () => {
-    originalStdoutWrite('\x1b[K');
-  };
-  terminal.clearFromCursor = () => {
-    originalStdoutWrite('\x1b[J');
-  };
-  terminal.clearScreen = () => {
-    originalStdoutWrite('\x1b[2J\x1b[H');
-  };
-  terminal.moveBy = (lines: number) => {
-    if (lines > 0) {
-      originalStdoutWrite(`\x1b[${lines}B`);
-    } else if (lines < 0) {
-      originalStdoutWrite(`\x1b[${-lines}A`);
-    }
-  };
-  terminal.setTitle = (title: string) => {
-    originalStdoutWrite(`\x1b]0;${title}\x07`);
-  };
+  // Writable stream that feeds into the TUI output panel.
+  // Passed to DevServer so child process output goes here
+  // instead of directly to process.stdout/stderr.
+  const tuiStream = new Writable({
+    write(chunk, _encoding, callback) {
+      appendOutput(typeof chunk === 'string' ? chunk : chunk.toString('utf8'));
+      callback();
+    },
+  });
 
-  // Intercept stdout/stderr to route dev server output to the TUI panel.
-  // The TUI's terminal methods above bypass this by using originalStdoutWrite.
-  function interceptIO() {
-    process.stdout.write = (
-      chunk: string | Uint8Array,
-      encodingOrCb?: BufferEncoding | ((err?: Error) => void),
-      cb?: (err?: Error) => void
-    ): boolean => {
-      const text =
-        typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8');
-      appendOutput(text);
-      const callback = typeof encodingOrCb === 'function' ? encodingOrCb : cb;
-      if (callback) {
-        callback();
-      }
-      return true;
-    };
-
-    process.stderr.write = (
-      chunk: string | Uint8Array,
-      encodingOrCb?: BufferEncoding | ((err?: Error) => void),
-      cb?: (err?: Error) => void
-    ): boolean => {
-      const text =
-        typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8');
-      appendOutput(text);
-      const callback = typeof encodingOrCb === 'function' ? encodingOrCb : cb;
-      if (callback) {
-        callback();
-      }
-      return true;
-    };
-  }
-
-  function restoreIO() {
-    process.stdout.write = originalStdoutWrite;
-    process.stderr.write = originalStderrWrite;
-  }
-
-  async function shutdown() {
-    restoreIO();
-    // Wait for any pending renders to complete (pi-agent pattern).
-    await new Promise<void>(resolve => process.nextTick(resolve));
-    // drainInput() disables Kitty protocol first (so no new key release
-    // events are generated), then waits for any in-flight bytes to arrive
-    // on stdin and swallows them. This must happen BEFORE tui.stop()
-    // removes the stdin handler and disables raw mode.
-    await terminal.drainInput(1000);
-    tui.stop();
-    process.exit(0);
-  }
-
-  interceptIO();
   appendOutput(`${chalk.bold('Vercel Dev')} ${chalk.dim('(agent mode)')}\n\n`);
 
+  // Teardown follows the pi-agent pattern: drain stdin, then stop TUI.
+  let tornDown = false;
+  async function teardownTUI() {
+    if (tornDown) return;
+    tornDown = true;
+    await new Promise<void>(resolve => process.nextTick(resolve));
+    await terminal.drainInput(1000);
+    tui.stop();
+  }
+
   const ctx: DevContext = {
+    stdout: tuiStream,
+    stderr: tuiStream,
     willPrompt() {
-      restoreIO();
+      tornDown = true;
       tui.stop();
     },
     didPrompt() {
+      tornDown = false;
       tui.start();
-      interceptIO();
     },
     onCleanupReady(cleanup) {
       tui.addInputListener((data: string) => {
         if (matchesKey(data, 'ctrl+c') || matchesKey(data, 'ctrl+d')) {
-          cleanup();
+          teardownTUI().then(() => cleanup());
           return { consume: true };
         }
         return undefined;
       });
     },
-    onShutdown: shutdown,
+    onShutdown: teardownTUI,
   };
 
   return startDevServer(client, opts, args, telemetry, ctx);

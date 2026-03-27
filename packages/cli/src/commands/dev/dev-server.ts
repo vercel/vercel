@@ -36,11 +36,17 @@ export type DevOptions = {
 };
 
 export interface DevContext {
+  /** Writable stream for child process stdout. Defaults to process.stdout. */
+  stdout?: NodeJS.WritableStream;
+  /** Writable stream for child process stderr. Defaults to process.stderr. */
+  stderr?: NodeJS.WritableStream;
   /** Called before interactive prompts (setupAndLink) that need real terminal. */
   willPrompt?: () => void;
   /** Called after interactive prompts complete. */
   didPrompt?: () => void;
-  /** Called once cleanup fn is ready. Use to wire additional exit triggers (e.g. Ctrl+C in TUI). */
+  /** Called once cleanup fn is ready. Use to wire additional exit triggers (e.g. Ctrl+C in TUI).
+   *  The callback stops the dev server and releases the lock. Call onShutdown yourself
+   *  first if you need to tear down UI before the server stops. */
   onCleanupReady?: (cleanup: () => void) => void;
   /** Called during cleanup to restore terminal state. May return a Promise (e.g. to drain stdin). */
   onShutdown?: () => void | Promise<void>;
@@ -114,7 +120,7 @@ export async function startDevServer(
         );
       }
     }
-    ctx.onShutdown?.();
+    await ctx.onShutdown?.();
     return link.exitCode;
   }
 
@@ -179,7 +185,7 @@ export async function startDevServer(
       } else {
         output.log(lockResult.reason);
       }
-      ctx.onShutdown?.();
+      await ctx.onShutdown?.();
       return 1;
     }
     lockAcquired = true;
@@ -190,6 +196,8 @@ export async function startDevServer(
     envValues,
     repoRoot,
     services,
+    stdout: ctx.stdout,
+    stderr: ctx.stderr,
   });
 
   const controller = new AbortController();
@@ -220,13 +228,9 @@ export async function startDevServer(
   });
 
   let cleanupInProgress = false;
-  const cleanup = async ({ forceExit = false } = {}) => {
+  const cleanup = async () => {
     if (cleanupInProgress) return;
     cleanupInProgress = true;
-
-    // Restore terminal state. onShutdown may be async (e.g. to drain
-    // Kitty key release events from stdin before disabling raw mode).
-    await ctx.onShutdown?.();
 
     clearTimeout(timeout);
     controller.abort();
@@ -235,25 +239,13 @@ export async function startDevServer(
       releaseDevLock(cwd);
     }
 
-    // When triggered by a real signal we must force exit since there's
-    // no call stack to unwind.  When triggered from TUI input (Ctrl+C/D)
-    // we let devServer.stop() resolve devServer.start(), which unwinds
-    // startDevServer naturally — avoiding process.exit() prevents stray
-    // bytes from leaking to the parent shell.
-    if (forceExit) {
-      devServer.stop().finally(() => {
-        process.exit(0);
-      });
-    } else {
-      devServer.stop();
-    }
+    await ctx.onShutdown?.();
+    devServer.stop();
   };
 
-  process.on('SIGTERM', () => cleanup({ forceExit: true }));
-  process.on('SIGINT', () => cleanup({ forceExit: true }));
-  ctx.onCleanupReady?.(() => {
-    cleanup();
-  });
+  process.on('SIGTERM', () => cleanup());
+  process.on('SIGINT', () => cleanup());
+  ctx.onCleanupReady?.(() => cleanup());
 
   // If there is no Development Command, we must delete the
   // v3 Build Output because it will incorrectly be detected by
@@ -272,7 +264,7 @@ export async function startDevServer(
     if (lockAcquired) {
       releaseDevLock(cwd);
     }
-    ctx.onShutdown?.();
+    await ctx.onShutdown?.();
     throw err;
   } finally {
     clearTimeout(timeout);

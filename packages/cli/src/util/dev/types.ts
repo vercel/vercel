@@ -26,6 +26,10 @@ export interface DevServerOptions {
   envValues?: Record<string, string>;
   repoRoot?: string;
   services?: ResolvedService[];
+  /** Writable stream for child process stdout. Defaults to process.stdout. */
+  stdout?: NodeJS.WritableStream;
+  /** Writable stream for child process stderr. Defaults to process.stderr. */
+  stderr?: NodeJS.WritableStream;
 }
 
 export interface EnvConfigs {
