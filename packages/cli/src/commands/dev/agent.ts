@@ -13,6 +13,7 @@ import type { Component } from '@mariozechner/pi-tui';
 import type Client from '../../util/client';
 import type { DevTelemetryClient } from '../../util/telemetry/commands/dev';
 import { startDevServer, type DevContext, type DevOptions } from './dev-server';
+import output from '../../output-manager';
 
 // ---------------------------------------------------------------------------
 // ANSI / line helpers
@@ -535,12 +536,21 @@ export async function startAgentMode(
     },
   });
 
+  // Redirect the global output singleton through the TUI so that calls like
+  // output.log(), output.spinner(), output.print() don't write directly to
+  // the terminal and fight with the TUI rendering.
+  const originalOutputStream = output.stream;
+  output.initialize({
+    stream: tuiStream as unknown as import('tty').WriteStream,
+  });
+
   appendOutput(`${chalk.bold('Vercel Dev')} ${chalk.dim('(agent mode)')}\n\n`);
 
   // Teardown follows the pi-agent pattern: drain stdin, then stop TUI.
   async function teardownTUI() {
     if (tornDown) return;
     tornDown = true;
+    output.initialize({ stream: originalOutputStream });
     errorChunker.dispose();
     statusBar.dispose();
     await new Promise<void>(resolve => process.nextTick(resolve));
@@ -553,11 +563,15 @@ export async function startAgentMode(
     stderr: tuiStream,
     willPrompt() {
       tornDown = true;
+      output.initialize({ stream: originalOutputStream });
       tui.stop();
     },
     didPrompt() {
       tornDown = false;
       tui.start();
+      output.initialize({
+        stream: tuiStream as unknown as import('tty').WriteStream,
+      });
     },
     onCleanupReady(cleanup) {
       tui.addInputListener((data: string) => {
