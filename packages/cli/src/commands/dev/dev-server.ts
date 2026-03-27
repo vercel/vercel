@@ -2,7 +2,11 @@ import chalk from 'chalk';
 import ms from 'ms';
 import { resolve, join } from 'path';
 import fs from 'fs-extra';
-import type { ResolvedService } from '@vercel/fs-detectors';
+import {
+  type ResolvedService,
+  detectPlatformConfigs,
+  LocalFileSystemDetector,
+} from '@vercel/fs-detectors';
 
 import DevServer from '../../util/dev/server';
 import { parseListen } from '../../util/dev/parse-listen';
@@ -25,6 +29,7 @@ import type { DevTelemetryClient } from '../../util/telemetry/commands/dev';
 import { VERCEL_OIDC_TOKEN } from '../../util/env/constants';
 import { tryDetectServices } from '../../util/projects/detect-services';
 import { displayDetectedServices } from '../../util/input/display-services';
+import { displayPlatformConfigs } from '../../util/input/display-platform-configs';
 import { acquireDevLock, releaseDevLock } from '../../util/dev/dev-lock';
 import { resolveProjectCwd } from '../../util/projects/find-project-root';
 
@@ -161,6 +166,13 @@ export async function startDevServer(
   } else if (foundServices) {
     displayDetectedServices(detection.resolved.services);
     services = detection.resolved.services;
+  }
+
+  // Detect config files from other cloud platforms / Docker
+  const platformDetector = new LocalFileSystemDetector(cwd);
+  const platformConfigs = await detectPlatformConfigs(platformDetector);
+  if (platformConfigs.configs.length > 0) {
+    displayPlatformConfigs(platformConfigs);
   }
 
   let lockAcquired = false;

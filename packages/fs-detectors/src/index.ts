@@ -64,3 +64,10 @@ export { packageManagers } from './package-managers/package-managers';
 export * from './monorepos/get-monorepo-default-settings';
 export { REGEX_NON_VERCEL_PLATFORM_FILES } from './detect-builders';
 export { detectInstrumentation } from './detect-instrumentation';
+export { detectPlatformConfigs } from './detect-platform-configs';
+export type {
+  PlatformId,
+  PlatformConfigFile,
+  DetectedPlatformConfig,
+  DetectPlatformConfigsResult,
+} from './detect-platform-configs';
