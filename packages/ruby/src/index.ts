@@ -324,7 +324,9 @@ export const build: BuildV3 = async ({
     files: outputFiles,
     handler: `${handlerRbFilename}.vc__handler`,
     runtime,
-    environment: {},
+    environment: config.experimentalDepEnvVars
+      ? { ...config.experimentalDepEnvVars }
+      : ({} as Record<string, string>),
   });
 
   return { output };

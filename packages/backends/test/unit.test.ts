@@ -340,6 +340,42 @@ it('prefixes emitted service route sources with routePrefix', async () => {
   expect(lambda.environment.VERCEL_SERVICE_ROUTE_PREFIX_STRIP).toBe('1');
 }, 30000);
 
+it('injects dep env vars with projectId into service lambdas', async () => {
+  const fixtureName = '01-express-index-ts-esm';
+  const fixtureSource = join(__dirname, 'fixtures', fixtureName);
+  const { workDir } = await getWorkDir(fixtureName, fixtureSource);
+
+  const result = (await build({
+    files: {},
+    workPath: workDir,
+    config: {
+      ...defaultConfig,
+      experimentalDepEnvVars: {
+        PAYMENTS_API_URL: 'https://payments-preview.vercel.app/api',
+        ORDERS_API_URL: 'https://orders-preview.vercel.app/api',
+      },
+      routePrefix: 'api/js',
+      serviceName: 'js-api',
+    },
+    meta,
+    entrypoint: 'package.json',
+    repoRootPath: workDir,
+    service: {
+      name: 'js-api',
+      routePrefix: '/api/js',
+    },
+  })) as BuildResultV2Typical;
+
+  const lambda = getServiceLambda(result, 'js-api');
+  expect(lambda.environment.PAYMENTS_API_URL).toBe(
+    'https://payments-preview.vercel.app/api'
+  );
+  expect(lambda.environment.ORDERS_API_URL).toBe(
+    'https://orders-preview.vercel.app/api'
+  );
+  expect(lambda.environment.SKIPPED_URL).toBeUndefined();
+}, 30000);
+
 it('does not double-prefix routes already authored with routePrefix', async () => {
   const fixtureName = '04-hono-index-ts-esm';
   const fixtureSource = join(__dirname, 'fixtures', fixtureName);

@@ -69,6 +69,7 @@ import { AGENT_REASON, AGENT_STATUS } from '../../util/agent-output-constants';
 import { cleanupCorepack, initCorepack } from '../../util/build/corepack';
 import { importBuilders } from '../../util/build/import-builders';
 import { setMonorepoDefaultSettings } from '../../util/build/monorepo';
+import { resolveExperimentalDepEnvVars } from '../../util/build/resolve-experimental-dep-env-vars';
 import { scrubArgv } from '../../util/build/scrub-argv';
 import { scopeRoutesToServiceOwnership } from '../../util/build/service-route-ownership';
 import { sortBuilders } from '../../util/build/sort-builders';
@@ -102,6 +103,7 @@ import { BuildTelemetryClient } from '../../util/telemetry/commands/build';
 import { validateConfig } from '../../util/validate-config';
 import ua from '../../util/ua';
 import { validateCronSecret } from '../../util/validate-cron-secret';
+import { createGitMeta } from '../../util/create-git-meta';
 import {
   compileVercelConfig,
   findSourceVercelConfigFile,
@@ -815,6 +817,18 @@ async function doBuild(
   const hasWorkerServices =
     hasDetectedServices && detectedServices!.some(s => s.type === 'worker');
   const serviceByBuilder = new Map<Builder, Service>();
+  const depResolutionCache = new Map<
+    string,
+    Promise<{ baseUrl?: string; warning?: string }>
+  >();
+  const depResolutionTarget = buildsJson.target ?? 'preview';
+  let currentGitBranch: string | undefined;
+  try {
+    const gitMeta = await createGitMeta(cwd);
+    currentGitBranch = gitMeta?.commitRef;
+  } catch {
+    // Continue without a branch hint when Git metadata is unavailable.
+  }
   if (hasDetectedServices) {
     for (const service of detectedServices!) {
       serviceByBuilder.set(service.builder, service);
@@ -910,6 +924,16 @@ async function doBuild(
       // the project-level framework is 'services'.
       const builderFramework =
         build.config?.framework ?? projectSettings.framework;
+      const depResolution = await resolveExperimentalDepEnvVars({
+        client,
+        deps: build.config?.experimentalDeps ?? localConfig.experimentalDeps,
+        target: depResolutionTarget,
+        branch: currentGitBranch,
+        cache: depResolutionCache,
+      });
+      for (const warning of depResolution.warnings) {
+        output.warn(warning);
+      }
 
       let buildConfig: Config;
 
@@ -934,6 +958,14 @@ async function doBuild(
             framework: builderFramework,
             nodeVersion: projectSettings.nodeVersion,
             bunVersion: localConfig.bunVersion ?? undefined,
+            experimentalDeps:
+              build.config?.experimentalDeps ??
+              localConfig.experimentalDeps ??
+              undefined,
+            experimentalDepEnvVars:
+              Object.keys(depResolution.envVars).length > 0
+                ? depResolution.envVars
+                : undefined,
           };
         } else {
           buildConfig = {
@@ -946,12 +978,28 @@ async function doBuild(
             framework: projectSettings.framework,
             nodeVersion: projectSettings.nodeVersion,
             bunVersion: localConfig.bunVersion ?? undefined,
+            experimentalDeps:
+              build.config?.experimentalDeps ??
+              localConfig.experimentalDeps ??
+              undefined,
+            experimentalDepEnvVars:
+              Object.keys(depResolution.envVars).length > 0
+                ? depResolution.envVars
+                : undefined,
           };
         }
       } else {
         buildConfig = {
           ...(build.config || {}),
           bunVersion: localConfig.bunVersion ?? undefined,
+          experimentalDeps:
+            build.config?.experimentalDeps ??
+            localConfig.experimentalDeps ??
+            undefined,
+          experimentalDepEnvVars:
+            Object.keys(depResolution.envVars).length > 0
+              ? depResolution.envVars
+              : undefined,
         };
       }
 

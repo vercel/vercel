@@ -2264,4 +2264,54 @@ fs.writeFileSync(
       'worker-topic2',
     ]);
   });
+
+  it('should resolve deployment URLs for service deps during build', async () => {
+    const createGitMetaModule = await import(
+      '../../../../src/util/create-git-meta'
+    );
+    const createGitMetaSpy = vi
+      .spyOn(createGitMetaModule, 'createGitMeta')
+      .mockResolvedValue({
+        commitRef: 'feature-branch',
+      } as any);
+
+    client.scenario.get('/v6/deployments', (req, res) => {
+      if (
+        req.query.projectId === 'prj_payments' &&
+        req.query.target === 'preview' &&
+        req.query['meta-githubCommitRef'] === 'feature-branch'
+      ) {
+        return res.json({
+          deployments: [
+            {
+              uid: 'dpl_payments_feature',
+              url: 'payments-feature.vercel.app',
+            },
+          ],
+        });
+      }
+
+      return res.json({ deployments: [] });
+    });
+
+    const cwd = await getWriteableDirectory();
+    await fs.copy(fixture('with-services-deps'), cwd);
+    const output = join(cwd, '.vercel', 'output');
+    client.cwd = cwd;
+
+    try {
+      const exitCode = await build(client);
+      expect(exitCode).toBe(0);
+
+      const vcConfig = await fs.readJSON(
+        join(output, 'functions', '_svc', 'api', 'index.func', '.vc-config.json')
+      );
+      expect(vcConfig.environment.PAYMENTS_API_URL).toBe(
+        'https://payments-feature.vercel.app/api'
+      );
+    } finally {
+      await fs.remove(cwd);
+      createGitMetaSpy.mockRestore();
+    }
+  });
 });

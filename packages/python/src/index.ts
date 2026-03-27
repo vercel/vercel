@@ -673,6 +673,7 @@ from vercel_runtime.vc_init import vc_handler
   if (shouldInstallVercelWorkers) {
     lambdaEnv.VERCEL_HAS_WORKER_SERVICES = '1';
   }
+  Object.assign(lambdaEnv, config.experimentalDepEnvVars);
 
   const globOptions: GlobOptions = {
     cwd: workPath,

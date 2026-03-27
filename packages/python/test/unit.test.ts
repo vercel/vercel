@@ -42,6 +42,37 @@ vi.mock('../src/django', () => ({
   runDjangoCollectStatic: vi.fn(async () => null),
 }));
 
+vi.mock('@vercel/python-analysis', async () => {
+  const real = await vi.importActual<object>('@vercel/python-analysis');
+
+  return Object.assign({}, real, {
+    findAppOrHandler: async (content: string) => {
+      if (
+        content.includes('def app(') ||
+        content.includes('async def app(') ||
+        content.includes('app =')
+      ) {
+        return 'app';
+      }
+      if (
+        content.includes('def application(') ||
+        content.includes('async def application(') ||
+        content.includes('application =')
+      ) {
+        return 'application';
+      }
+      if (
+        content.includes('def handler(') ||
+        content.includes('async def handler(') ||
+        content.includes('handler =')
+      ) {
+        return 'handler';
+      }
+      return null;
+    },
+  });
+});
+
 // Imports after mocks are set up (vitest hoists vi.mock calls)
 import {
   resolvePythonVersion,
@@ -1725,6 +1756,50 @@ describe('handlerFunction validation', () => {
     const content = handler.data.toString();
     expect(content).not.toContain('__VC_HANDLER_FUNC_NAME');
   });
+});
+
+it('injects dep env vars into lambda environment for service deps', async () => {
+  const workPath = path.join(tmpdir(), `python-service-deps-${Date.now()}`);
+  fs.mkdirSync(workPath, { recursive: true });
+  makeMockPython('3.11');
+
+  try {
+    const files = {
+      'handler.py': new FileBlob({
+        data: 'def app(environ, start_response):\n    return []\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "x"\nversion = "0.0.1"\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath,
+      files,
+      entrypoint: 'handler.py',
+      meta: { isDev: false },
+      config: {
+        experimentalDepEnvVars: {
+          PAYMENTS_API_URL: 'https://payments-preview.vercel.app/api',
+          ORDERS_API_URL: 'https://orders-preview.vercel.app/api',
+        },
+      },
+      repoRootPath: workPath,
+    });
+
+    const output = getBuildOutputV3(result);
+    expect(output.environment.PAYMENTS_API_URL).toBe(
+      'https://payments-preview.vercel.app/api'
+    );
+    expect(output.environment.ORDERS_API_URL).toBe(
+      'https://orders-preview.vercel.app/api'
+    );
+    expect(output.environment.SKIPPED_URL).toBeUndefined();
+  } finally {
+    if (fs.existsSync(workPath)) {
+      fs.removeSync(workPath);
+    }
+  }
 });
 
 describe('python version fallback logging', () => {

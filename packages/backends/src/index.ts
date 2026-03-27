@@ -178,6 +178,12 @@ export const build: BuildV2 = async args => {
     };
 
     const lambda = new NodejsLambda(lambdaArgs);
+    if (args.config.experimentalDepEnvVars) {
+      lambda.environment = {
+        ...args.config.experimentalDepEnvVars,
+        ...lambda.environment,
+      };
+    }
     if (shouldStripServiceRoutePrefix && serviceRoutePrefix) {
       lambda.environment = {
         ...lambda.environment,

@@ -58,6 +58,14 @@ interface ResolvedEntrypointPath {
   isDirectory: boolean;
 }
 
+type ExperimentalDepsLike = Record<
+  string,
+  {
+    projectId?: string;
+    env?: string;
+  }
+>;
+
 function normalizeServiceEntrypoint(entrypoint: string): string {
   const normalized = posixPath.normalize(entrypoint);
   return normalized === '' ? '.' : normalized;
@@ -535,6 +543,8 @@ export async function resolveConfiguredService(
   if (config.maxDuration) builderConfig.maxDuration = config.maxDuration;
   if (config.includeFiles) builderConfig.includeFiles = config.includeFiles;
   if (config.excludeFiles) builderConfig.excludeFiles = config.excludeFiles;
+  const serviceDeps = (config as { deps?: ExperimentalDepsLike }).deps;
+  if (serviceDeps) builderConfig.experimentalDeps = serviceDeps;
 
   const isStaticBuild = STATIC_BUILDERS.has(builderUse);
   const runtime = isStaticBuild ? undefined : inferredRuntime;

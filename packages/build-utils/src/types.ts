@@ -45,6 +45,9 @@ export interface Config {
   framework?: string | null;
   nodeVersion?: string;
   middleware?: boolean;
+  experimentalDeps?: ExperimentalDeps;
+  /** Internal build-time resolved dep environment variables. */
+  experimentalDepEnvVars?: Record<string, string>;
   [key: string]: unknown;
 }
 
@@ -129,6 +132,8 @@ export interface BuildOptions {
     subdomain?: string;
     /** Workspace directory for this service, relative to the project root. */
     workspace?: string;
+    /** Cross-project or cross-application dependencies for this service. */
+    deps?: ExperimentalDeps;
   };
 }
 
@@ -590,6 +595,8 @@ export interface Service {
   consumer?: string;
   /** custom prefix to inject service URL env vars */
   envPrefix?: string;
+  /** cross-project or cross-application dependencies */
+  deps?: ExperimentalDeps;
 }
 
 /**

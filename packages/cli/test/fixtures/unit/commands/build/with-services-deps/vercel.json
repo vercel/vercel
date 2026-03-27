@@ -1,0 +1,14 @@
+{
+  "experimentalServices": {
+    "api": {
+      "entrypoint": "index.js",
+      "routePrefix": "/api",
+      "deps": {
+        "payments.api": {
+          "projectId": "prj_payments",
+          "env": "PAYMENTS_API_URL"
+        }
+      }
+    }
+  }
+}
