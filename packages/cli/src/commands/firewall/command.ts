@@ -384,13 +384,147 @@ export const rulesInspectSubcommand = {
   ],
 } as const;
 
+export const rulesAddSubcommand = {
+  name: 'add',
+  aliases: [],
+  description: 'Create a new custom firewall rule',
+  arguments: [{ name: 'name', required: false }],
+  options: [
+    {
+      name: 'ai',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Generate rule from natural language (AI-powered)',
+    },
+    {
+      name: 'json',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Create rule from JSON payload',
+    },
+    {
+      name: 'condition',
+      shorthand: null,
+      type: [String] as unknown as StringConstructor,
+      deprecated: false,
+      description: 'Condition: type:op:value or type:key:op:value (repeatable)',
+    },
+    {
+      name: 'or',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Start a new OR condition group',
+    },
+    {
+      name: 'action',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Action: deny, challenge, log, bypass, rate_limit, redirect',
+    },
+    {
+      name: 'duration',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Action duration: 1m, 5m, 15m, 30m, 1h',
+    },
+    {
+      name: 'description',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Rule description (max 256 chars)',
+    },
+    {
+      name: 'inactive',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Create as inactive (default: active)',
+    },
+    {
+      name: 'algo',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Rate limit algorithm: fixed_window, token_bucket',
+    },
+    {
+      name: 'window',
+      shorthand: null,
+      type: Number,
+      deprecated: false,
+      description: 'Rate limit window in seconds',
+    },
+    {
+      name: 'limit',
+      shorthand: null,
+      type: Number,
+      deprecated: false,
+      description: 'Rate limit max requests per window',
+    },
+    {
+      name: 'keys',
+      shorthand: null,
+      type: [String] as unknown as StringConstructor,
+      deprecated: false,
+      description: 'Rate limit keys (repeatable): ip, ja4, header:name',
+    },
+    {
+      name: 'redirect-url',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Redirect URL or path',
+    },
+    {
+      name: 'permanent',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Permanent redirect (301 vs 307)',
+    },
+    yesOption,
+  ],
+  examples: [
+    {
+      name: 'Interactive mode',
+      value: `${packageName} firewall rules add`,
+    },
+    {
+      name: 'Create with AI',
+      value: `${packageName} firewall rules add --ai "Block bots from Russia"`,
+    },
+    {
+      name: 'Create from JSON',
+      value: `${packageName} firewall rules add --json '{"name":"Block bots","active":true,"conditionGroup":[{"conditions":[{"type":"user_agent","op":"sub","value":"crawler"}]}],"action":{"mitigate":{"action":"deny"}}}'`,
+    },
+    {
+      name: 'Create with flags (single AND group)',
+      value: `${packageName} firewall rules add "Block bots" --condition "user_agent:sub:crawler" --action deny --yes`,
+    },
+    {
+      name: 'Create with OR groups',
+      value: `${packageName} firewall rules add "Block suspicious" --condition "user_agent:sub:crawler" --or --condition "ip_address:eq:1.2.3.4" --action deny --yes`,
+    },
+  ],
+} as const;
+
 export const rulesSubcommand = {
   name: 'rules',
   aliases: [],
   description:
     'Manage custom firewall rules that control how traffic is handled based on conditions',
   arguments: [],
-  subcommands: [rulesListSubcommand, rulesInspectSubcommand],
+  subcommands: [
+    rulesListSubcommand,
+    rulesInspectSubcommand,
+    rulesAddSubcommand,
+  ],
   options: [],
   examples: [
     {
@@ -400,6 +534,10 @@ export const rulesSubcommand = {
     {
       name: 'Inspect a rule',
       value: `${packageName} firewall rules inspect "Block bots"`,
+    },
+    {
+      name: 'Create with AI',
+      value: `${packageName} firewall rules add --ai "Block bots from Russia"`,
     },
   ],
 } as const;
