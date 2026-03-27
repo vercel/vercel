@@ -4,12 +4,13 @@ export const connectCommand = {
   name: 'connect',
   aliases: [],
   description:
-    'Connect a third-party service (e.g., Slack) to your project via Vercel STS.',
+    'Connect a third-party service or list existing connections.',
   arguments: [
     {
-      name: 'provider',
-      required: true,
-      description: 'The provider to connect (e.g., slack, github)',
+      name: 'provider-or-subcommand',
+      required: false,
+      description:
+        'Provider to connect (e.g., slack, github) or "list" to show existing connections',
     },
   ],
   options: [
@@ -30,6 +31,14 @@ export const connectCommand = {
       deprecated: false,
     },
     {
+      name: 'provider',
+      shorthand: 'p',
+      type: String,
+      argument: 'PROVIDER',
+      description: 'Filter connections by provider (for list)',
+      deprecated: false,
+    },
+    {
       name: 'no-open',
       shorthand: null,
       type: Boolean,
@@ -47,16 +56,20 @@ export const connectCommand = {
   ],
   examples: [
     {
-      name: 'Connect Slack to your project',
+      name: 'List all connections',
+      value: `${packageName} connect list`,
+    },
+    {
+      name: 'List Slack connections',
+      value: `${packageName} connect list --provider slack`,
+    },
+    {
+      name: 'Connect Slack',
       value: `${packageName} connect slack`,
     },
     {
       name: 'Connect Slack with a custom bot name',
       value: `${packageName} connect slack --app-name "My Bot"`,
-    },
-    {
-      name: 'Connect Slack as a user token',
-      value: `${packageName} connect slack --mode user`,
     },
   ],
 } as const;

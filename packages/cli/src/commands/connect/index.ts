@@ -26,6 +26,16 @@ interface ConnectResponse {
   error?: string;
 }
 
+interface TokenDefinition {
+  id: string;
+  name: string;
+  provider: string;
+  mode: string;
+  appName?: string;
+  scopes?: string[];
+  createdAt: number;
+}
+
 function generateRandomCode(): string {
   return randomBytes(32).toString('base64url');
 }
@@ -85,6 +95,48 @@ function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+async function listConnections(stsUrl: string, providerFilter?: string): Promise<number> {
+  try {
+    const url = new URL('/setup/tokens', stsUrl);
+    if (providerFilter) {
+      url.searchParams.set('provider', providerFilter);
+    }
+
+    const response = await fetch(url.toString(), {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
+    });
+
+    if (!response.ok) {
+      output.error('Failed to list connections');
+      return 1;
+    }
+
+    const tokens = (await response.json()) as TokenDefinition[];
+
+    if (tokens.length === 0) {
+      output.log('No connections found.');
+      return 0;
+    }
+
+    output.log('');
+    for (const token of tokens) {
+      const name = token.appName || token.name;
+      const scopes = token.scopes?.join(', ') || '';
+      output.log(
+        `  ${chalk.cyan(token.id)}  ${chalk.bold(token.provider)}  ${name}  ${chalk.dim(token.mode)}  ${chalk.dim(scopes)}`
+      );
+    }
+    output.log('');
+    return 0;
+  } catch (error) {
+    output.error(
+      error instanceof Error ? error.message : 'Failed to list connections'
+    );
+    return 1;
+  }
+}
+
 export default async function connect(client: Client): Promise<number> {
   let parsedArgs = null;
 
@@ -110,10 +162,20 @@ export default async function connect(client: Client): Promise<number> {
     return 0;
   }
 
-  const provider = parsedArgs.args[0];
+  const stsUrl = process.env.STS_URL || STS_URL;
+  const subcommand = parsedArgs.args[1];
+
+  // vc connect list
+  if (subcommand === 'list') {
+    const providerFilter = parsedArgs.flags['--provider'] as string | undefined;
+    return listConnections(stsUrl, providerFilter);
+  }
+
+  // vc connect <provider>
+  const provider = subcommand;
   if (!provider) {
     output.error(
-      'Missing required argument: provider. Usage: vc connect <provider>'
+      'Usage: vc connect <provider> or vc connect list'
     );
     return 1;
   }
@@ -124,18 +186,14 @@ export default async function connect(client: Client): Promise<number> {
   const timeout = parsedArgs.flags['--timeout'] as number | undefined;
   const timeoutMs = timeout ? timeout * 1000 : DEFAULT_TIMEOUT_MS;
 
-  const stsUrl = process.env.STS_URL || STS_URL;
-
   try {
     // Generate PKCE-like code
     const code = generateRandomCode();
     const codeHash = hashCode(code);
 
-    output.spinner(
-      `Creating ${chalk.bold(provider)} connection...`
-    );
+    output.spinner(`Creating ${chalk.bold(provider)} connection...`);
 
-    // Call the connect API to create the Slack app and get the OAuth URL
+    // Call the connect API to create the app and get the OAuth URL
     const connectUrl = new URL('/api/connect', stsUrl);
     const connectResponse = await fetch(connectUrl.toString(), {
       method: 'POST',
@@ -164,7 +222,7 @@ export default async function connect(client: Client): Promise<number> {
     );
     output.log('');
 
-    // Open browser to Slack OAuth (via /slack/install which sets CSRF cookie)
+    // Open browser to OAuth
     if (!noOpen) {
       try {
         await open.default(data.installUrl);
