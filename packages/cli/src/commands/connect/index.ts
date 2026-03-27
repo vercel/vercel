@@ -20,40 +20,18 @@ interface RegistrationStatus {
   error?: string;
 }
 
+interface ConnectResponse {
+  installUrl: string;
+  slackAppId: string;
+  error?: string;
+}
+
 function generateRandomCode(): string {
-  return randomBytes(32)
-    .toString('base64url');
+  return randomBytes(32).toString('base64url');
 }
 
 function hashCode(code: string): string {
-  return createHash('sha256')
-    .update(code)
-    .digest('base64url');
-}
-
-function buildRegistrationUrl(
-  stsUrl: string,
-  codeHash: string,
-  params: {
-    provider?: string;
-    mode?: string;
-    appName?: string;
-  }
-): string {
-  const url = new URL('/setup/register', stsUrl);
-  url.searchParams.set('code', codeHash);
-
-  if (params.provider) {
-    url.searchParams.set('provider', params.provider);
-  }
-  if (params.mode) {
-    url.searchParams.set('mode', params.mode);
-  }
-  if (params.appName) {
-    url.searchParams.set('appName', params.appName);
-  }
-
-  return url.toString();
+  return createHash('sha256').update(code).digest('base64url');
 }
 
 async function pollRegistrationStatus(
@@ -153,34 +131,51 @@ export default async function connect(client: Client): Promise<number> {
     const code = generateRandomCode();
     const codeHash = hashCode(code);
 
-    // Build registration URL
-    const registrationUrl = buildRegistrationUrl(stsUrl, codeHash, {
-      provider,
-      mode,
-      appName,
+    output.spinner(
+      `Creating ${chalk.bold(provider)} connection...`
+    );
+
+    // Call the connect API to create the Slack app and get the OAuth URL
+    const connectUrl = new URL('/api/connect', stsUrl);
+    const connectResponse = await fetch(connectUrl.toString(), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        provider,
+        mode,
+        appName,
+        codeHash,
+      }),
     });
 
-    output.log('');
-    output.log(
-      `  To connect ${chalk.bold(provider)}, visit the following URL:`
-    );
-    output.log('');
-    output.log(`  ${chalk.cyan(registrationUrl)}`);
-    output.log('');
-
-    // Open browser unless --no-open
-    if (!noOpen) {
-      output.log('  Opening browser...');
-      try {
-        await open.default(registrationUrl);
-      } catch {
-        output.log(
-          '  Could not open browser automatically. Please visit the URL above.'
-        );
-      }
+    if (!connectResponse.ok) {
+      output.stopSpinner();
+      const errorData = (await connectResponse.json()) as { error?: string };
+      output.error(errorData.error || 'Failed to create connection');
+      return 1;
     }
 
-    output.spinner('Waiting for authentication...');
+    const data = (await connectResponse.json()) as ConnectResponse;
+
+    output.stopSpinner();
+    output.log('');
+    output.log(
+      `  Authorize ${chalk.bold(provider)} in your browser to complete the connection.`
+    );
+    output.log('');
+
+    // Open browser to Slack OAuth (via /slack/install which sets CSRF cookie)
+    if (!noOpen) {
+      try {
+        await open.default(data.installUrl);
+      } catch {
+        output.log(`  Open this URL: ${chalk.cyan(data.installUrl)}`);
+      }
+    } else {
+      output.log(`  Open this URL: ${chalk.cyan(data.installUrl)}`);
+    }
+
+    output.spinner('Waiting for authorization...');
 
     // Poll for completion
     const result = await pollRegistrationStatus(stsUrl, code, timeoutMs);
@@ -191,13 +186,6 @@ export default async function connect(client: Client): Promise<number> {
       output.log('');
       output.success(
         `${chalk.bold(provider)} connected! Token ID: ${chalk.cyan(result.tokenDefinitionId)}`
-      );
-      output.log('');
-      output.log(
-        `  Use ${chalk.cyan(`vc connect`)} to manage your connections.`
-      );
-      output.log(
-        `  The token can be retrieved via the STS SDK or CLI.`
       );
       return 0;
     }
