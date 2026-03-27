@@ -249,7 +249,9 @@ export async function autoInstallAgentTooling(
           options?.autoConfirm
         );
         if (accepted) {
+          let interrupted = false;
           for (const target of uninstalledTargets) {
+            if (interrupted) break;
             output.spinner(`Installing Vercel plugin for ${target}...`);
             const exitCode = await new Promise<number>(resolve => {
               const child = spawn(
@@ -264,10 +266,25 @@ export async function autoInstallAgentTooling(
                 ],
                 { stdio: 'pipe' }
               );
-              child.on('close', c => resolve(c ?? 1));
-              child.on('error', () => resolve(1));
+              const onSigint = () => {
+                interrupted = true;
+                child.kill('SIGTERM');
+              };
+              process.once('SIGINT', onSigint);
+              child.on('close', c => {
+                process.removeListener('SIGINT', onSigint);
+                resolve(c ?? 1);
+              });
+              child.on('error', () => {
+                process.removeListener('SIGINT', onSigint);
+                resolve(1);
+              });
             });
             output.stopSpinner();
+            if (interrupted) {
+              output.log('Plugin installation cancelled.');
+              break;
+            }
             if (exitCode === 0) {
               output.success(`Installed Vercel plugin for ${target}`);
             } else {
