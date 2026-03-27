@@ -1,5 +1,6 @@
 import { randomBytes, createHash } from 'node:crypto';
 import chalk from 'chalk';
+import { config as dotenvConfig } from 'dotenv';
 import * as open from 'open';
 import { help } from '../help';
 import { connectCommand } from './command';
@@ -100,7 +101,6 @@ async function getToken(stsUrl: string, tokenId: string): Promise<number> {
     const url = new URL(`/token/${tokenId}`, stsUrl);
 
     // Load .env.local and .env into process.env (won't override existing)
-    const { config: dotenvConfig } = await import('dotenv');
     dotenvConfig({ path: '.env.local' });
     dotenvConfig({ path: '.env' });
 
