@@ -261,7 +261,7 @@ describe('firewall rules add', () => {
         'redirect',
         '--redirect-url',
         '/new',
-        '--permanent',
+        '--redirect-permanent',
         '--yes'
       );
       const exitCodePromise = firewall(client);

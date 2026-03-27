@@ -374,7 +374,7 @@ function buildActionFromFlags(
 
   if (actionType === 'redirect') {
     const redirectUrl = flags['--redirect-url'] as string | undefined;
-    const permanent = !!flags['--permanent'];
+    const permanent = !!flags['--redirect-permanent'];
 
     if (!redirectUrl) {
       return 'Redirect action requires --redirect-url.';

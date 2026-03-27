@@ -486,11 +486,11 @@ export const rulesAddSubcommand = {
       description: 'Redirect URL or path',
     },
     {
-      name: 'permanent',
+      name: 'redirect-permanent',
       shorthand: null,
       type: Boolean,
       deprecated: false,
-      description: 'Permanent redirect (301 vs 307)',
+      description: 'Permanent redirect (301). Default: temporary (307)',
     },
     yesOption,
   ],
