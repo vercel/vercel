@@ -783,11 +783,11 @@ export const build: BuildV2 = async buildOptions => {
                       when has-config.type == "header" do
                         when has-value = has-config.value do
                           // header present + value match
-                          when req.header.(has-config.key) = has-value do
+                          when req.headers.(has-config.key) = has-value do
                             req.path = destination.path // match
                             break
                           end
-                        else when req.header.(has-config.key) do
+                        else when req.headers.(has-config.key) do
                           // header present
                           req.path = destination.path // match
                           break
