@@ -51,6 +51,10 @@ import {
   type InferredServicesChoice,
 } from './services-setup';
 import { parseIntegrationRequirements } from '../integration/requirements';
+import {
+  isFirstPartyIntegration,
+  provisionFirstPartyIntegration,
+} from '../integration/first-party';
 import { add as addIntegration } from '../../commands/integration/add';
 
 export interface SetupAndLinkOptions {
@@ -481,6 +485,19 @@ export async function setupRequiredIntegrations(
       if (!shouldInstall) {
         continue;
       }
+    }
+
+    if (isFirstPartyIntegration(slug)) {
+      output.log(`Provisioning ${chalk.bold(slug)}...`);
+      const exitCode = await provisionFirstPartyIntegration(client, slug, {
+        cwd,
+      });
+      if (exitCode !== 0) {
+        output.warn(
+          `Failed to provision "${slug}". You can retry with ${chalk.cyan(`vercel integration add ${slug}`)}.`
+        );
+      }
+      continue;
     }
 
     output.log(`Installing required integration: ${chalk.bold(slug)}`);
