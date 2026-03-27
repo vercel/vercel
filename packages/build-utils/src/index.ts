@@ -176,3 +176,22 @@ export {
   getLambdaSupportsStreaming,
   type SupportsStreamingResult,
 } from './process-serverless/get-lambda-supports-streaming';
+
+export {
+  streamToDigestAsync,
+  sha256,
+  md5,
+  type FileDigest,
+} from './fs/stream-to-digest-async';
+
+export {
+  getBuildResultMetadata,
+  type BuildResultMetadata,
+} from './collect-build-result/get-build-result-metadata';
+export { getLambdaByOutputPath } from './collect-build-result/get-lambda-by-output-path';
+export { isRouteMiddleware } from './collect-build-result/is-route-middleware';
+export { getPrerenderChain } from './collect-build-result/get-prerender-chain';
+export {
+  streamWithExtendedPayload,
+  type ExtendedBodyData,
+} from './collect-build-result/stream-with-extended-payload';
