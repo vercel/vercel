@@ -209,10 +209,14 @@ async function buildConditionGroupLoop(
 async function buildConditionInteractive(
   client: Client
 ): Promise<FirewallCondition> {
-  // Group condition types by category
+  // Group visible condition types by category
+  // Plan-gated types (ja3, bot_name, bot_category) are hidden from
+  // the interactive builder to match the dashboard behavior. They can
+  // still be used via --condition flags or --json.
+  const visibleTypes = CONDITION_TYPES.filter(ct => !ct.hiddenFromInteractive);
+
   const categories = new Map<string, ConditionTypeMeta[]>();
-  for (const ct of CONDITION_TYPES) {
-    if (ct.planRequirement) continue; // Skip plan-gated for now
+  for (const ct of visibleTypes) {
     const existing = categories.get(ct.category) || [];
     existing.push(ct);
     categories.set(ct.category, existing);
@@ -230,25 +234,6 @@ async function buildConditionInteractive(
       choices.push({
         value: ct.type,
         name: `  ${ct.displayName}  ${chalk.dim(ct.description)}`,
-      });
-    }
-  }
-
-  // Add plan-gated types at the end
-  const gatedTypes = CONDITION_TYPES.filter(ct => ct.planRequirement);
-  if (gatedTypes.length > 0) {
-    choices.push({
-      value: '__sep_gated',
-      name: chalk.dim('── Plan-gated ──'),
-    });
-    for (const ct of gatedTypes) {
-      const badge =
-        ct.planRequirement === 'enterprise'
-          ? chalk.yellow('[Enterprise]')
-          : chalk.blue('[Security Plus]');
-      choices.push({
-        value: ct.type,
-        name: `  ${ct.displayName} ${badge}  ${chalk.dim(ct.description)}`,
       });
     }
   }

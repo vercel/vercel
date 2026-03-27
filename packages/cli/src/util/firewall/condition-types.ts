@@ -10,6 +10,9 @@ export interface ConditionTypeMeta {
   requiresKey: boolean;
   operators: string[];
   planRequirement?: 'enterprise' | 'security-plus' | null;
+  /** Hidden from interactive builder by default (plan-gated or deprecated) */
+  hiddenFromInteractive?: boolean;
+  deprecated?: boolean;
 }
 
 // Operator groups matching the dashboard
@@ -199,31 +202,34 @@ export const CONDITION_TYPES: ConditionTypeMeta[] = [
   {
     type: 'ja3_digest',
     displayName: 'JA3 Digest',
-    description: 'JA3 TLS fingerprint',
+    description: 'JA3 TLS fingerprint (Enterprise only)',
     category: 'security',
     requiresKey: false,
     operators: STRING_AND_MATCH,
     planRequirement: 'enterprise',
+    hiddenFromInteractive: true,
   },
 
   // Bot
   {
     type: 'bot_name',
     displayName: 'Bot Name',
-    description: 'Verified bot name',
+    description: 'Verified bot name (Security Plus)',
     category: 'bot',
     requiresKey: false,
     operators: STRING_AND_MATCH,
     planRequirement: 'security-plus',
+    hiddenFromInteractive: true,
   },
   {
     type: 'bot_category',
     displayName: 'Bot Category',
-    description: 'Verified bot category',
+    description: 'Verified bot category (Security Plus)',
     category: 'bot',
     requiresKey: false,
     operators: STRING_AND_MATCH,
     planRequirement: 'security-plus',
+    hiddenFromInteractive: true,
   },
 ];
 
