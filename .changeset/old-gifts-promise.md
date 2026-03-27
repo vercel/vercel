@@ -3,4 +3,4 @@
 '@vercel/client': patch
 ---
 
-Add `vercel.json` integration requirements support during project setup so templates can request marketplace integrations via `integrations`. Also strip this setup-only field from deployment payloads.
+Support `integrations` in `vercel.json` as a flat array of integration slugs (e.g. `["neon", "supabase"]`) to install marketplace integrations during project setup. Strip this setup-only field from deployment payloads.

@@ -1,58 +1,59 @@
 import { describe, expect, it } from 'vitest';
-import {
-  parseIntegrationRequirements,
-  resolveIntegrationRequirements,
-} from '../../../../src/util/integration/requirements';
-import { client } from '../../../mocks/client';
-import { useIntegrationDiscover } from '../../../mocks/integration';
+import { parseIntegrationRequirements } from '../../../../src/util/integration/requirements';
 
-describe('integration requirements', () => {
-  it('parses namespaced requirements from vercel.json', () => {
+describe('parseIntegrationRequirements', () => {
+  it('parses a flat array of slugs', () => {
     const result = parseIntegrationRequirements({
-      integrations: {
-        storage: ['postgres', 'postgres'],
-      },
+      integrations: ['neon', 'supabase'],
     });
 
     expect(result.errors).toEqual([]);
-    expect(result.requirements).toEqual([
-      {
-        group: 'storage',
-        token: 'postgres',
-      },
-    ]);
+    expect(result.slugs).toEqual(['neon', 'supabase']);
   });
 
-  it('returns errors for invalid requirement shapes', () => {
+  it('deduplicates slugs', () => {
     const result = parseIntegrationRequirements({
-      integrations: {
-        ai: 'openai' as unknown as string[],
-        storage: ['postgres', ''],
-      },
+      integrations: ['neon', 'Neon', 'supabase'],
+    });
+
+    expect(result.errors).toEqual([]);
+    expect(result.slugs).toEqual(['neon', 'supabase']);
+  });
+
+  it('returns empty slugs when integrations is undefined', () => {
+    const result = parseIntegrationRequirements({});
+
+    expect(result.errors).toEqual([]);
+    expect(result.slugs).toEqual([]);
+  });
+
+  it('returns empty slugs for null config', () => {
+    const result = parseIntegrationRequirements(null);
+
+    expect(result.errors).toEqual([]);
+    expect(result.slugs).toEqual([]);
+  });
+
+  it('returns an error when integrations is not an array', () => {
+    const result = parseIntegrationRequirements({
+      integrations: { storage: ['postgres'] } as unknown as string[],
     });
 
     expect(result.errors).toContain(
-      'Expected "ai" integration requirements to be an array of strings.'
+      'Expected "integrations" to be an array of strings.'
     );
-    expect(result.errors).toContain(
-      'Expected "storage" integration requirements to contain non-empty strings.'
-    );
+    expect(result.slugs).toEqual([]);
   });
 
-  it('resolves postgres requirement to discover candidates', async () => {
-    client.reset();
-    useIntegrationDiscover();
+  it('returns errors for non-string or empty entries', () => {
+    const result = parseIntegrationRequirements({
+      integrations: ['neon', '', 42 as unknown as string],
+    });
 
-    const resolutions = await resolveIntegrationRequirements(client, [
-      {
-        group: 'storage',
-        token: 'postgres',
-      },
+    expect(result.slugs).toEqual(['neon']);
+    expect(result.errors).toEqual([
+      'Expected "integrations" to contain non-empty strings.',
+      'Expected "integrations" to contain non-empty strings.',
     ]);
-
-    expect(resolutions).toHaveLength(1);
-    expect(resolutions[0].candidates.map(candidate => candidate.slug)).toEqual(
-      expect.arrayContaining(['acme-multi/acme-db', 'neon'])
-    );
   });
 });

@@ -50,11 +50,7 @@ import {
   toProjectRootDirectory,
   type InferredServicesChoice,
 } from './services-setup';
-import {
-  parseIntegrationRequirements,
-  resolveIntegrationRequirements,
-  type IntegrationRequirementCandidate,
-} from '../integration/requirements';
+import { parseIntegrationRequirements } from '../integration/requirements';
 import { add as addIntegration } from '../../commands/integration/add';
 
 export interface SetupAndLinkOptions {
@@ -464,50 +460,33 @@ export async function setupRequiredIntegrations(
     return;
   }
 
-  const { requirements, errors } = parseIntegrationRequirements(localConfig);
+  const { slugs, errors } = parseIntegrationRequirements(localConfig);
   for (const error of errors) {
     output.warn(error);
   }
 
-  if (requirements.length === 0) {
+  if (slugs.length === 0) {
     return;
   }
 
   output.log('Detected integration requirements in vercel.json.');
 
-  let resolutions: Awaited<ReturnType<typeof resolveIntegrationRequirements>>;
-  try {
-    resolutions = await resolveIntegrationRequirements(client, requirements);
-  } catch (error) {
-    output.warn(
-      `Failed to resolve integration requirements: ${(error as Error).message}`
-    );
-    return;
-  }
+  for (const slug of slugs) {
+    if (!autoConfirm && !nonInteractive && client.stdin.isTTY === true) {
+      const shouldInstall = await client.input.confirm(
+        `Install integration ${chalk.bold(slug)}?`,
+        true
+      );
 
-  for (const resolution of resolutions) {
-    const requirementLabel = `${resolution.requirement.group}:${resolution.requirement.token}`;
-
-    if (resolution.candidates.length === 0) {
-      output.warn(`No marketplace integration matched "${requirementLabel}".`);
-      continue;
+      if (!shouldInstall) {
+        continue;
+      }
     }
 
-    const selected = await selectIntegrationCandidate(client, {
-      candidates: resolution.candidates,
-      requirementLabel,
-      autoConfirm,
-      nonInteractive,
-    });
-
-    if (!selected) {
-      continue;
-    }
-
-    output.log(`Installing required integration: ${chalk.bold(selected.slug)}`);
+    output.log(`Installing required integration: ${chalk.bold(slug)}`);
     const exitCode = await addIntegration(
       client,
-      [selected.slug],
+      [slug],
       {
         '--no-env-pull': true,
       },
@@ -516,58 +495,8 @@ export async function setupRequiredIntegrations(
 
     if (exitCode !== 0) {
       output.warn(
-        `Failed to install required integration "${selected.slug}". You can retry with ${chalk.cyan(`vercel integration add ${selected.slug}`)}.`
+        `Failed to install integration "${slug}". You can retry with ${chalk.cyan(`vercel integration add ${slug}`)}.`
       );
     }
   }
-}
-
-async function selectIntegrationCandidate(
-  client: Client,
-  {
-    candidates,
-    requirementLabel,
-    autoConfirm,
-    nonInteractive,
-  }: {
-    candidates: IntegrationRequirementCandidate[];
-    requirementLabel: string;
-    autoConfirm: boolean;
-    nonInteractive: boolean;
-  }
-): Promise<IntegrationRequirementCandidate | null> {
-  if (autoConfirm) {
-    return candidates[0];
-  }
-
-  if (candidates.length === 1) {
-    if (nonInteractive || client.stdin.isTTY !== true) {
-      return candidates[0];
-    }
-
-    const shouldInstall = await client.input.confirm(
-      `Install ${chalk.bold(candidates[0].slug)} for "${requirementLabel}"?`,
-      true
-    );
-
-    return shouldInstall ? candidates[0] : null;
-  }
-
-  if (nonInteractive || client.stdin.isTTY !== true) {
-    const choices = candidates.map(candidate => candidate.slug).join(', ');
-    output.warn(
-      `Multiple integrations matched "${requirementLabel}": ${choices}. Choose one manually with ${chalk.cyan('vercel integration add <integration>')}.`
-    );
-    return null;
-  }
-
-  const selected = await client.input.select({
-    message: `Choose an integration for "${requirementLabel}"`,
-    choices: candidates.map(candidate => ({
-      name: `${candidate.name} (${candidate.slug})${candidate.description ? ` - ${candidate.description}` : ''}`,
-      value: candidate.slug,
-    })),
-  });
-
-  return candidates.find(candidate => candidate.slug === selected) ?? null;
 }

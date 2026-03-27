@@ -2,10 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import { setupRequiredIntegrations } from '../../../../src/util/link/setup-and-link';
 import readConfig from '../../../../src/util/config/read-config';
-import {
-  parseIntegrationRequirements,
-  resolveIntegrationRequirements,
-} from '../../../../src/util/integration/requirements';
+import { parseIntegrationRequirements } from '../../../../src/util/integration/requirements';
 import { add as addIntegration } from '../../../../src/commands/integration/add';
 
 vi.mock('../../../../src/util/config/read-config', () => ({
@@ -14,7 +11,6 @@ vi.mock('../../../../src/util/config/read-config', () => ({
 
 vi.mock('../../../../src/util/integration/requirements', () => ({
   parseIntegrationRequirements: vi.fn(),
-  resolveIntegrationRequirements: vi.fn(),
 }));
 
 vi.mock('../../../../src/commands/integration/add', () => ({
@@ -24,7 +20,6 @@ vi.mock('../../../../src/commands/integration/add', () => ({
 describe('setupRequiredIntegrations()', () => {
   const readConfigMock = vi.mocked(readConfig);
   const parseRequirementsMock = vi.mocked(parseIntegrationRequirements);
-  const resolveRequirementsMock = vi.mocked(resolveIntegrationRequirements);
   const addIntegrationMock = vi.mocked(addIntegration);
 
   beforeEach(() => {
@@ -32,35 +27,51 @@ describe('setupRequiredIntegrations()', () => {
     vi.clearAllMocks();
   });
 
-  it('installs auto-selected requirement matches when autoConfirm is true', async () => {
+  it('installs each slug when autoConfirm is true', async () => {
     readConfigMock.mockResolvedValue({
-      integrations: { storage: ['postgres'] },
+      integrations: ['neon', 'supabase'],
     });
     parseRequirementsMock.mockReturnValue({
-      requirements: [{ group: 'storage', token: 'postgres' }],
+      slugs: ['neon', 'supabase'],
       errors: [],
     });
-    resolveRequirementsMock.mockResolvedValue([
-      {
-        requirement: { group: 'storage', token: 'postgres' },
-        candidates: [
-          {
-            name: 'Neon Postgres',
-            slug: 'neon',
-            provider: 'Neon',
-            description: 'Postgres database',
-            tags: ['Storage', 'postgres'],
-            score: 100,
-          },
-        ],
-      },
-    ]);
     addIntegrationMock.mockResolvedValue(0);
 
     await setupRequiredIntegrations(client, {
       cwd: client.cwd,
       autoConfirm: true,
       nonInteractive: false,
+    });
+
+    expect(addIntegrationMock).toHaveBeenCalledTimes(2);
+    expect(addIntegrationMock).toHaveBeenCalledWith(
+      client,
+      ['neon'],
+      { '--no-env-pull': true },
+      'integration add'
+    );
+    expect(addIntegrationMock).toHaveBeenCalledWith(
+      client,
+      ['supabase'],
+      { '--no-env-pull': true },
+      'integration add'
+    );
+  });
+
+  it('installs without prompting in non-interactive mode', async () => {
+    readConfigMock.mockResolvedValue({
+      integrations: ['neon'],
+    });
+    parseRequirementsMock.mockReturnValue({
+      slugs: ['neon'],
+      errors: [],
+    });
+    addIntegrationMock.mockResolvedValue(0);
+
+    await setupRequiredIntegrations(client, {
+      cwd: client.cwd,
+      autoConfirm: false,
+      nonInteractive: true,
     });
 
     expect(addIntegrationMock).toHaveBeenCalledWith(
@@ -71,44 +82,38 @@ describe('setupRequiredIntegrations()', () => {
     );
   });
 
-  it('skips ambiguous matches in non-interactive mode', async () => {
-    readConfigMock.mockResolvedValue({
-      integrations: { storage: ['postgres'] },
-    });
+  it('skips when no slugs are found', async () => {
+    readConfigMock.mockResolvedValue({});
     parseRequirementsMock.mockReturnValue({
-      requirements: [{ group: 'storage', token: 'postgres' }],
+      slugs: [],
       errors: [],
     });
-    resolveRequirementsMock.mockResolvedValue([
-      {
-        requirement: { group: 'storage', token: 'postgres' },
-        candidates: [
-          {
-            name: 'Neon Postgres',
-            slug: 'neon',
-            provider: 'Neon',
-            description: 'Postgres database',
-            tags: ['Storage', 'postgres'],
-            score: 100,
-          },
-          {
-            name: 'Acme DB',
-            slug: 'acme-multi/acme-db',
-            provider: 'Acme',
-            description: 'Relational database',
-            tags: ['Storage', 'postgres'],
-            score: 95,
-          },
-        ],
-      },
-    ]);
 
     await setupRequiredIntegrations(client, {
       cwd: client.cwd,
-      autoConfirm: false,
-      nonInteractive: true,
+      autoConfirm: true,
+      nonInteractive: false,
     });
 
     expect(addIntegrationMock).not.toHaveBeenCalled();
+  });
+
+  it('warns on failed integration install and continues', async () => {
+    readConfigMock.mockResolvedValue({
+      integrations: ['neon', 'supabase'],
+    });
+    parseRequirementsMock.mockReturnValue({
+      slugs: ['neon', 'supabase'],
+      errors: [],
+    });
+    addIntegrationMock.mockResolvedValueOnce(1).mockResolvedValueOnce(0);
+
+    await setupRequiredIntegrations(client, {
+      cwd: client.cwd,
+      autoConfirm: true,
+      nonInteractive: false,
+    });
+
+    expect(addIntegrationMock).toHaveBeenCalledTimes(2);
   });
 });
