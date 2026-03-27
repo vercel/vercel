@@ -2,6 +2,8 @@
 
 `vercel flags` manages [Vercel Flags](https://vercel.com/docs/flags/vercel-flags) — create, inspect, update, set, enable, disable, archive, and delete feature flags, plus manage SDK keys.
 
+The command may be **hidden** from the root `vercel --help` list during rollout; run `vercel flags --help` for subcommands.
+
 ## Creating Flags
 
 `create` is the primary command; `add` is an alias.
@@ -13,6 +15,12 @@ vercel flags create my-feature --kind string --variant control="Welcome back" --
 ```
 
 Flag kinds: `boolean` (default), `string`, `number`. Boolean flags get `true`/`false` variants automatically; use `--variant VALUE[=LABEL]` (repeatable) for string/number flags.
+
+`vercel flags create` does **not** create **JSON / experiment** flags (`kind: json`); those are created with the separate **`vercel experiment`** command (also hidden from root help). Metrics are embedded on the flag experiment (`primaryMetrics` / `guardrailMetrics`), not via a separate metrics REST path. See **Experiments** below.
+
+## Experiments (A/B tests)
+
+Use **`vercel experiment`** (not `vercel flags create`) for draft experiment flags: **`experiment create`**, **`experiment start`**, **`experiment stop`**, **`experiment list`**, **`experiment metrics add`** (requires `--flag` + metric fields), **`experiment metrics list <flag-slug>`**, and **`experiment analyse`**. Primary metrics are passed as repeatable **`--metric '<json>'`** on create (API Metric schema: `name`, `metricType`, `metricUnit`, `directionality`, optional `description` / `metricFormula`). Run **`vercel experiment --help`** for the full surface.
 
 ## Listing and Inspecting
 
@@ -73,6 +81,12 @@ Environments: `production`, `preview`, `development`. Omit `-e` to choose intera
 ```bash
 vercel flags archive my-feature --yes                     # archive (skip prompt)
 vercel flags rm my-feature --yes                          # delete (must be archived first)
+```
+
+## Prepare (build)
+
+```bash
+vercel flags prepare    # emit flag definition fallbacks for the build (@vercel/prepare-flags-definitions)
 ```
 
 ## SDK Keys
