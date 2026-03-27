@@ -357,9 +357,12 @@ const OPERATOR_LABELS: Record<string, string> = {
 
 const NEGATED_OPERATOR_LABELS: Record<string, string> = {
   eq: 'does not equal',
+  neq: 'equals',
   re: 'does not match regex',
   ex: 'does not exist',
+  nex: 'exists',
   inc: 'is not any of',
+  ninc: 'is any of',
   pre: 'does not start with',
   suf: 'does not end with',
   sub: 'does not contain',
@@ -587,7 +590,7 @@ export function formatRuleExpanded(rule: FirewallRule, index?: number): string {
   const status = rule.active ? 'Active' : chalk.dim('Inactive');
   const action = formatActionDisplay(rule.action);
 
-  lines.push(`  ${prefix}${chalk.bold(rule.name)} [${status}] → ${action}`);
+  lines.push(`  ${prefix}${chalk.bold(rule.name)} [${status}]`);
 
   if (rule.description) {
     lines.push(`     ${chalk.dim(rule.description)}`);
@@ -595,23 +598,36 @@ export function formatRuleExpanded(rule: FirewallRule, index?: number): string {
 
   lines.push('');
 
-  for (let i = 0; i < rule.conditionGroup.length; i++) {
-    lines.push(
-      formatConditionGroup(
-        rule.conditionGroup[i],
-        i,
-        rule.conditionGroup.length
-      )
-    );
-    if (i < rule.conditionGroup.length - 1) {
-      lines.push(`     ${chalk.dim('OR')}`);
+  if (rule.conditionGroup.length === 0) {
+    lines.push(`     ${chalk.dim('No conditions')}`);
+  } else {
+    for (let i = 0; i < rule.conditionGroup.length; i++) {
+      lines.push(
+        formatConditionGroup(
+          rule.conditionGroup[i],
+          i,
+          rule.conditionGroup.length
+        )
+      );
+      if (i < rule.conditionGroup.length - 1) {
+        lines.push(`     ${chalk.dim('OR')}`);
+      }
     }
+  }
+
+  // Action
+  lines.push('');
+  lines.push(`     ${chalk.dim('Action:')} ${action}`);
+
+  // Duration
+  const duration = rule.action.mitigate?.actionDuration;
+  if (duration) {
+    lines.push(`     ${chalk.dim('Duration:')} ${duration}`);
   }
 
   // Rate limit details
   const rl = rule.action.mitigate?.rateLimit;
   if (rl) {
-    lines.push('');
     lines.push(
       `     ${chalk.dim('Rate Limit:')} ${rl.limit} req / ${rl.window}s (${rl.algo})`
     );
@@ -624,7 +640,6 @@ export function formatRuleExpanded(rule: FirewallRule, index?: number): string {
   // Redirect details
   const rd = rule.action.mitigate?.redirect;
   if (rd) {
-    lines.push('');
     lines.push(
       `     ${chalk.dim('Redirect:')} ${rd.location} (${rd.permanent ? '301 permanent' : '307 temporary'})`
     );

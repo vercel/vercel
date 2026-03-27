@@ -13,6 +13,7 @@ export function createRule(index: number): FirewallRule {
   return {
     id: `rule_${String(index).padStart(3, '0')}`,
     name: `Test Rule ${index}`,
+    description: `Description for rule ${index}`,
     active: index % 3 !== 0, // every 3rd rule is inactive
     conditionGroup: [
       {
@@ -29,6 +30,22 @@ export function createRule(index: number): FirewallRule {
       mitigate: {
         action: index % 2 === 0 ? 'deny' : 'challenge',
         actionDuration: '1h',
+      },
+    },
+  };
+}
+
+export function createEmptyConditionRule(): FirewallRule {
+  return {
+    id: 'rule_empty_cond',
+    name: 'Empty Conditions Rule',
+    description: 'Rule with no conditions',
+    active: true,
+    conditionGroup: [],
+    action: {
+      mitigate: {
+        action: 'log',
+        actionDuration: null,
       },
     },
   };

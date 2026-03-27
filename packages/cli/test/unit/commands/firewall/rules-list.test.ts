@@ -9,6 +9,7 @@ import {
   createRateLimitRule,
   createMultiGroupRule,
   createRedirectRule,
+  createEmptyConditionRule,
   createChange,
 } from '../../../mocks/firewall';
 import { useProject, defaultProject } from '../../../mocks/project';
@@ -114,6 +115,61 @@ describe('firewall rules list', () => {
     expect(parsed.rules[0]).toHaveProperty('_status', 'live');
     expect(parsed.rules[0]).toHaveProperty('name');
     expect(parsed.rules[0]).toHaveProperty('action');
+  });
+
+  it('should handle rules with empty conditionGroup', async () => {
+    const active = createConfig({
+      rules: [createEmptyConditionRule()],
+    });
+    useListFirewallConfigs(active, null);
+    client.setArgv('firewall', 'rules', 'list', '--expand');
+    const exitCodePromise = firewall(client);
+    await expect(client.stderr).toOutput('No conditions');
+    expect(await exitCodePromise).toEqual(0);
+  });
+
+  it('should show _status added and removed in JSON with draft', async () => {
+    const active = createConfig({
+      rules: [createRule(1), createRule(2)],
+    });
+    const draft = createConfig({
+      id: 'draft',
+      rules: [createRule(1), createRule(3)],
+      changes: [
+        createChange('rules.insert', {
+          id: 'rule_003',
+          value: { name: 'Test Rule 3' },
+        }),
+        createChange('rules.remove', {
+          id: 'rule_002',
+        }),
+      ],
+    });
+    useListFirewallConfigs(active, draft);
+    client.setArgv('firewall', 'rules', 'list', '--json');
+    const exitCode = await firewall(client);
+    expect(exitCode).toEqual(0);
+
+    const jsonOutput = (client.stdout as any).getFullOutput();
+    const parsed = JSON.parse(jsonOutput);
+    expect(parsed.hasDraft).toBe(true);
+    expect(parsed.pendingChanges).toBe(2);
+
+    const statuses = parsed.rules.map((r: { _status: string }) => r._status);
+    expect(statuses).toContain('live');
+    expect(statuses).toContain('added');
+    expect(statuses).toContain('removed');
+  });
+
+  it('should show redirect rule in expanded view', async () => {
+    const active = createConfig({
+      rules: [createRedirectRule()],
+    });
+    useListFirewallConfigs(active, null);
+    client.setArgv('firewall', 'rules', 'list', '--expand');
+    const exitCodePromise = firewall(client);
+    await expect(client.stderr).toOutput('Redirect');
+    expect(await exitCodePromise).toEqual(0);
   });
 
   it('tracks help telemetry', async () => {
