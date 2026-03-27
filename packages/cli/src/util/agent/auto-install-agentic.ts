@@ -6,16 +6,9 @@ import { spawn } from 'node:child_process';
 import chalk from 'chalk';
 import { KNOWN_AGENTS } from '@vercel/detect-agent';
 import type Client from '../client';
-import agentInit from '../../commands/agent/init';
-import {
-  BEST_PRACTICES_BODY,
-  BEST_PRACTICES_START,
-  BEST_PRACTICES_END,
-} from '../../commands/agent/init';
 import output from '../../output-manager';
 import getGlobalPathConfig from '../config/global-path';
 
-const PREVIEW_LINES = 5;
 const PREFS_FILE = 'agent-preferences.json';
 
 const AGENT_TO_TARGET: Record<string, string> = {
@@ -27,7 +20,6 @@ const AGENT_TO_TARGET: Record<string, string> = {
 
 interface AgentPreferences {
   pluginDismissed?: boolean;
-  agentInitDismissed?: boolean;
 }
 
 async function fileExists(filePath: string): Promise<boolean> {
@@ -61,28 +53,6 @@ async function writePrefs(prefs: AgentPreferences): Promise<void> {
   } catch {
     // ignore
   }
-}
-
-function getTargetFile(agentName?: string): string {
-  if (agentName === KNOWN_AGENTS.CLAUDE) {
-    return 'CLAUDE.md';
-  }
-  return 'AGENTS.md';
-}
-
-function printPreview() {
-  const lines = BEST_PRACTICES_BODY.split('\n').filter(l => l.trim() !== '');
-  const preview = lines.slice(0, PREVIEW_LINES);
-  const remaining = lines.length - PREVIEW_LINES;
-
-  output.log('');
-  for (const line of preview) {
-    output.log(chalk.dim(`  ${line}`));
-  }
-  if (remaining > 0) {
-    output.log(chalk.dim(`  (+ ${remaining} more lines)`));
-  }
-  output.log('');
 }
 
 async function getPluginTargets(agentName?: string): Promise<string[]> {
@@ -160,53 +130,10 @@ async function confirm(
 
 export async function autoInstallAgentTooling(
   client: Client,
-  options?: { skipAgentInit?: boolean; autoConfirm?: boolean }
+  options?: { autoConfirm?: boolean }
 ): Promise<void> {
   try {
     const prefs = await readPrefs();
-
-    if (!options?.skipAgentInit && !prefs.agentInitDismissed) {
-      try {
-        const targetFile = getTargetFile(client.agentName);
-        const filePath = join(client.cwd, targetFile);
-
-        let existing: string | null = null;
-        try {
-          existing = await readFile(filePath, 'utf-8');
-        } catch {
-          // file doesn't exist
-        }
-
-        const hasMarkers =
-          existing !== null &&
-          existing.includes(BEST_PRACTICES_START) &&
-          existing.includes(BEST_PRACTICES_END);
-
-        if (hasMarkers) {
-          // Silently update existing best practices
-          await agentInit(client, true);
-        } else if (client.isAgent) {
-          // Agent — auto-approve
-          await agentInit(client, true);
-        } else {
-          // Human — prompt interactively
-          printPreview();
-          const accepted = await confirm(
-            client,
-            `Add Vercel best practices to ${chalk.bold(targetFile)}?`,
-            options?.autoConfirm
-          );
-          if (accepted) {
-            await agentInit(client, true);
-          } else {
-            prefs.agentInitDismissed = true;
-            await writePrefs(prefs);
-          }
-        }
-      } catch (err) {
-        output.debug(`Agent init failed: ${err}`);
-      }
-    }
 
     output.debug(
       `[plugin] prefs=${JSON.stringify(prefs)} agentName=${client.agentName ?? 'none'} isAgent=${client.isAgent} isTTY=${client.stdin.isTTY}`
