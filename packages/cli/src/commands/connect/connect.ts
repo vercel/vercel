@@ -1,8 +1,9 @@
-import { join, resolve } from 'path';
+import { basename, join, relative, resolve } from 'path';
 import { execSync, spawn } from 'child_process';
 import fs from 'fs-extra';
 
 import type Client from '../../util/client';
+import type { ProjectLinked } from '@vercel-internals/types';
 import { getLinkedProject } from '../../util/projects/link';
 import setupAndLink from '../../util/link/setup-and-link';
 import { getCommandName } from '../../util/pkg-name';
@@ -11,36 +12,18 @@ import { pullEnvRecords } from '../../util/env/get-env-records';
 import output from '../../output-manager';
 import { readAuthConfigFile } from '../../util/config/files';
 import { parseListen } from '../../util/dev/parse-listen';
+import { addToGitIgnore } from '../../util/link/add-to-gitignore';
+import { getOrCreateDeploymentProtectionToken } from '../curl/bypass-token';
+import { provisionSandbox } from './sandbox';
 
 type Options = {
   '--listen': string;
   '--yes': boolean;
   '--dev': boolean;
-  '--non-interactive': boolean;
+  '--ide': boolean;
   '--forward-domains': string;
+  '--bridge-version': string;
 };
-
-// Default function URL for local development
-const DEFAULT_FUNCTION_URL = 'localhost:3000';
-
-// TODO: Make tunneld address configurable via flag or env var
-const DEFAULT_TUNNELD_ADDR = 'http://localhost:18443';
-
-/**
- * Convert localhost/loopback addresses to host.docker.internal for use inside containers
- */
-function convertToDockerHost(addr: string): string {
-  // Match localhost or loopback addresses (127.x.x.x) with optional protocol
-  const localhostPattern =
-    /^(https?:\/\/)?(localhost|127\.\d{1,3}\.\d{1,3}\.\d{1,3})(:\d+)?$/;
-  const match = addr.match(localhostPattern);
-  if (match) {
-    const protocol = match[1] || '';
-    const port = match[3] || '';
-    return `${protocol}host.docker.internal${port}`;
-  }
-  return addr;
-}
 
 interface DevContainerConfig {
   name?: string;
@@ -56,6 +39,7 @@ interface DevContainerConfig {
   postStartCommand?: string | string[];
   containerEnv?: Record<string, string>;
   capAdd?: string[];
+  mounts?: (string | { source: string; target: string; type: string })[];
 }
 
 // Default port for the devcontainer
@@ -168,8 +152,11 @@ async function createProjectDevContainer(
   projectName: string,
   port: number,
   functionUrl: string,
+  sandboxUrl: string,
   framework: string | null | undefined,
-  forwardDomains: string[] | undefined
+  bridgeVersion: string,
+  containerWorkspace: string,
+  forwardDomains?: string
 ): Promise<{ path: string; config: DevContainerConfig }> {
   const projectDevcontainerDir = join(cwd, '.devcontainer', projectName);
   await fs.ensureDir(projectDevcontainerDir);
@@ -186,7 +173,10 @@ async function createProjectDevContainer(
       `Using existing devcontainer config from ${existingConfigPath}`
     );
     try {
-      config = await fs.readJson(existingConfigPath);
+      // devcontainer.json uses JSONC (JSON with Comments) format,
+      // so we strip comments before parsing to avoid losing the original config
+      const raw = await fs.readFile(existingConfigPath, 'utf-8');
+      config = JSON.parse(stripJsonComments(raw));
 
       // Adjust build paths since we're in a subdirectory now
       // Default context is "." and default dockerfile is "Dockerfile"
@@ -223,22 +213,53 @@ async function createProjectDevContainer(
   config.name = `Vercel Connect - ${projectName}`;
 
   // Merge connect features into existing features
-  const devconfeatConfig: Record<string, unknown> = {
-    tunneldAddr: convertToDockerHost(DEFAULT_TUNNELD_ADDR),
-    localTarget: `127.0.0.1:${port}`,
-    vercelFunctionUrl: functionUrl,
+  // Options must match devcontainer-feature.json schema
+  const envFile = '.env.development.local';
+  const bridgeConfig: Record<string, unknown> = {
+    sandboxUrl: sandboxUrl,
+    functionUrl: functionUrl,
+    sandboxName: projectName,
+    bridgeVersion: bridgeVersion,
+    envFile,
+    workspacePath: '${containerWorkspaceFolder}',
+    appPort: port,
+    ...(forwardDomains ? { forwardDomains } : {}),
   };
-
-  if (forwardDomains && forwardDomains.length > 0) {
-    devconfeatConfig.forwardDomains = forwardDomains.join(',');
-  }
 
   config.features = {
     ...config.features,
-    'ghcr.io/vercel-eddie/vercel-bridge/vercel-cli:latest': {
-      envFile: '.env.development.local',
+    'ghcr.io/vercel-eddie/bridge/vercel-cli:latest': {
+      envFile,
+      workspacePath: '${containerWorkspaceFolder}',
     },
-    'ghcr.io/vercel-eddie/vercel-bridge/devconfeat:latest': devconfeatConfig,
+    'ghcr.io/vercel-eddie/bridge/bridge:latest': bridgeConfig,
+  };
+
+  // Ensure .env file is mounted into the devcontainer
+  const envFileHostPath = join(cwd, envFile);
+  const envFileContainerPath = `\${containerWorkspaceFolder}/${envFile}`;
+  const existingMounts = config.mounts || [];
+  const envMountExists = existingMounts.some(m => {
+    if (typeof m === 'string') {
+      return m.includes(envFile);
+    }
+    return m.source.includes(envFile) || m.target.includes(envFile);
+  });
+  if (!envMountExists) {
+    config.mounts = [
+      ...existingMounts,
+      {
+        source: envFileHostPath,
+        target: envFileContainerPath,
+        type: 'bind',
+      },
+    ];
+  }
+
+  // Add DEPLOYMENT_URL to containerEnv (merge with existing)
+  config.containerEnv = {
+    ...config.containerEnv,
+    DEPLOYMENT_URL: functionUrl,
   };
 
   // Ensure port is forwarded (merge with existing)
@@ -257,15 +278,18 @@ async function createProjectDevContainer(
   await fs.writeJson(configPath, config, { spaces: 2 });
   output.log(`Created devcontainer config at ${configPath}`);
 
+  // Add .devcontainer to .gitignore
+  await addToGitIgnore(cwd, '.devcontainer');
+
   return { path: configPath, config };
 }
 
 /**
- * Pull environment variables and add VERCEL_TOKEN
+ * Pull environment variables and add VERCEL_TOKEN and bypass secret
  */
 async function pullEnvAndAddToken(
   client: Client,
-  projectId: string,
+  link: ProjectLinked,
   cwd: string
 ): Promise<void> {
   const envFilePath = join(cwd, '.env.development.local');
@@ -273,8 +297,9 @@ async function pullEnvAndAddToken(
   output.log('Pulling environment variables...');
 
   // Pull env records (use 'vercel-cli:dev' as source since connect is similar)
-  const records = (await pullEnvRecords(client, projectId, 'vercel-cli:dev'))
-    .env;
+  const records = (
+    await pullEnvRecords(client, link.project.id, 'vercel-cli:dev')
+  ).env;
 
   // Get the user's auth token
   let vercelToken: string | undefined;
@@ -284,9 +309,6 @@ async function pullEnvAndAddToken(
   } catch {
     output.warn('Could not read auth config to get VERCEL_TOKEN');
   }
-
-  // Build env file contents
-  const lines: string[] = ['# Created by Vercel CLI (connect)'];
 
   // Add VERCEL_TOKEN from auth config, overriding any existing value in records
   if (vercelToken) {
@@ -298,6 +320,25 @@ async function pullEnvAndAddToken(
     );
   }
 
+  // Generate a deployment protection bypass secret (only if not already set)
+  if (!records['VERCEL_AUTOMATION_BYPASS_SECRET']) {
+    try {
+      const bypassSecret = await getOrCreateDeploymentProtectionToken(
+        client,
+        link
+      );
+      records['VERCEL_AUTOMATION_BYPASS_SECRET'] = bypassSecret;
+      output.debug('Added VERCEL_AUTOMATION_BYPASS_SECRET to env file');
+    } catch (err) {
+      output.warn(
+        `Could not generate deployment protection bypass secret: ${err instanceof Error ? err.message : String(err)}`
+      );
+    }
+  }
+
+  // Build env file contents
+  const lines: string[] = ['# Created by Vercel CLI (connect)'];
+
   for (const [key, value] of Object.entries(records)) {
     lines.push(`${key}="${escapeEnvValue(value)}"`);
   }
@@ -306,27 +347,54 @@ async function pullEnvAndAddToken(
   await fs.writeFile(envFilePath, lines.join('\n') + '\n', 'utf-8');
   output.log(`Created ${envFilePath}`);
 
-  // Add to .gitignore
-  const gitignorePath = join(cwd, '.gitignore');
-  try {
-    let gitignore = '';
-    if (await fs.pathExists(gitignorePath)) {
-      gitignore = await fs.readFile(gitignorePath, 'utf-8');
+  // Add .env.development.local to .gitignore
+  await addToGitIgnore(cwd, '.env.development.local');
+}
+
+/**
+ * Strip single-line (//) and multi-line comments from JSONC,
+ * while preserving '//' sequences inside string values (e.g. URLs).
+ */
+function stripJsonComments(input: string): string {
+  let result = '';
+  let i = 0;
+  while (i < input.length) {
+    // String literal — copy through including escaped characters
+    if (input[i] === '"') {
+      result += '"';
+      i++;
+      while (i < input.length && input[i] !== '"') {
+        if (input[i] === '\\') {
+          result += input[i++]; // backslash
+          if (i < input.length) {
+            result += input[i++]; // escaped char
+          }
+        } else {
+          result += input[i++];
+        }
+      }
+      if (i < input.length) {
+        result += '"'; // closing quote
+        i++;
+      }
+    } else if (input[i] === '/' && input[i + 1] === '/') {
+      // Single-line comment — skip to end of line
+      i += 2;
+      while (i < input.length && input[i] !== '\n') {
+        i++;
+      }
+    } else if (input[i] === '/' && input[i + 1] === '*') {
+      // Multi-line comment — skip to closing */
+      i += 2;
+      while (i < input.length && !(input[i] === '*' && input[i + 1] === '/')) {
+        i++;
+      }
+      i += 2; // skip */
+    } else {
+      result += input[i++];
     }
-    if (!gitignore.includes('.env.development.local')) {
-      gitignore += '\n# Vercel connect env\n.env.development.local\n';
-      await fs.writeFile(gitignorePath, gitignore);
-      output.debug('Added .env.development.local to .gitignore');
-    }
-    // Also add .devcontainer to gitignore
-    if (!gitignore.includes('.devcontainer')) {
-      gitignore += '\n# Vercel connect devcontainers\n.devcontainer/\n';
-      await fs.writeFile(gitignorePath, gitignore);
-      output.debug('Added .devcontainer/ to .gitignore');
-    }
-  } catch {
-    output.debug('Could not update .gitignore');
   }
+  return result;
 }
 
 function escapeEnvValue(value: string | undefined): string {
@@ -339,6 +407,57 @@ function escapeEnvValue(value: string | undefined): string {
 }
 
 /**
+ * Parse the devcontainer CLI output to extract a human-readable error message.
+ * The CLI outputs JSON to stdout with fields like `outcome`, `message`, and `description`.
+ * stderr contains Docker build logs which have the actual failure context.
+ */
+function parseDevContainerError(
+  stdout: string,
+  stderr: string,
+  exitCode: number | null
+): string {
+  const lines: string[] = ['Devcontainer failed to start:'];
+
+  // Try to get the high-level reason from the JSON stdout
+  try {
+    const jsonMatch = stdout.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const result = JSON.parse(jsonMatch[0]) as {
+        outcome?: string;
+        message?: string;
+        description?: string;
+      };
+      if (result.description) {
+        lines.push(result.description);
+      } else if (result.message) {
+        lines.push(result.message);
+      }
+    }
+  } catch {
+    // JSON parsing failed, continue with stderr
+  }
+
+  // Include the tail of stderr which contains the actual build/runtime failure details
+  if (stderr.trim()) {
+    const stderrLines = stderr
+      .split('\n')
+      .map(l => l.trim())
+      .filter(l => l.length > 0);
+
+    // Show the last 20 lines of stderr for context
+    const tail = stderrLines.slice(-20);
+    lines.push('', ...tail);
+  }
+
+  if (lines.length === 1) {
+    // No useful info found, fall back to exit code
+    return `Devcontainer failed to start (exit code ${exitCode})`;
+  }
+
+  return lines.join('\n');
+}
+
+/**
  * Start the devcontainer and exec into it (interactive mode)
  */
 async function startAndExecDevContainer(
@@ -346,7 +465,7 @@ async function startAndExecDevContainer(
   configPath: string,
   startDev: boolean
 ): Promise<void> {
-  output.log('Starting devcontainer...');
+  output.spinner('Starting devcontainer...', 0);
 
   // Use devcontainer CLI to start the container
   const upArgs = [
@@ -366,10 +485,13 @@ async function startAndExecDevContainer(
       stdio: ['inherit', 'pipe', 'pipe'],
     });
 
+    let stdout = '';
     let stderr = '';
 
     proc.stdout?.on('data', (data: Buffer) => {
-      output.debug(data.toString().trim());
+      const str = data.toString();
+      stdout += str;
+      output.debug(str.trim());
     });
 
     proc.stderr?.on('data', (data: Buffer) => {
@@ -383,6 +505,7 @@ async function startAndExecDevContainer(
 
     proc.on('close', code => {
       if (code === 0) {
+        output.stopSpinner();
         output.success('Devcontainer started successfully');
 
         // Now exec into the container
@@ -405,7 +528,8 @@ async function startAndExecDevContainer(
         });
 
         execProc.on('close', execCode => {
-          if (execCode === 0) {
+          if (execCode === 0 || execCode === 130) {
+            // 130 = SIGINT (128 + 2), normal Ctrl+C exit
             resolvePromise();
           } else {
             reject(new Error(`devcontainer exec exited with code ${execCode}`));
@@ -416,13 +540,17 @@ async function startAndExecDevContainer(
           reject(new Error(`Failed to exec into devcontainer: ${err.message}`));
         });
       } else {
-        output.error(`Devcontainer failed to start (exit code ${code})`);
-        output.debug(stderr);
-        reject(new Error(`devcontainer up failed with exit code ${code}`));
+        output.stopSpinner();
+
+        // devcontainer CLI outputs JSON to stdout with error details
+        const errorMessage = parseDevContainerError(stdout, stderr, code);
+        output.error(errorMessage);
+        reject(new Error(errorMessage));
       }
     });
 
     proc.on('error', err => {
+      output.stopSpinner();
       if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
         output.error(
           'devcontainer CLI not found. Please install it with: npm install -g @devcontainers/cli'
@@ -435,194 +563,99 @@ async function startAndExecDevContainer(
   });
 }
 
-// Bridge repo configuration
-const BRIDGE_REPO = 'vercel/bridge';
-const BRIDGE_DIRECTORY = 'services/bridge';
+// Bridge dispatcher configuration
+const BRIDGE_REPO_ID = 1148295019; // GitHub repo ID for vercel-eddie/bridge
+const BRIDGE_DIRECTORY = 'services/dispatcher';
 const BRIDGE_REF = 'main';
 
 /**
- * Search for a GitHub repository through Vercel's API
- * This works for private repos that the user has access to via Vercel's GitHub integration
- */
-async function searchGitHubRepo(
-  client: Client,
-  repo: string
-): Promise<{ id: number; defaultBranch: string }> {
-  // Use Vercel's git namespace search API to find the repo
-  const [owner, repoName] = repo.split('/');
-
-  // First, get the git namespaces (organizations/users the user has access to)
-  // Note: useCurrentTeam: false is required because this endpoint doesn't support teamId
-  const namespacesResponse = await client.fetch<
-    | { namespaces: Array<{ id: number; name: string; slug: string }> }
-    | Array<{ id: number; name: string; slug: string }>
-  >('/v1/integrations/git-namespaces?provider=github', {
-    useCurrentTeam: false,
-  });
-
-  // Handle both response formats (array or object with namespaces property)
-  const namespaces = Array.isArray(namespacesResponse)
-    ? namespacesResponse
-    : namespacesResponse.namespaces;
-
-  output.debug(`Found ${namespaces?.length ?? 0} git namespaces`);
-
-  if (!namespaces || namespaces.length === 0) {
-    throw new Error(
-      'No GitHub namespaces found. Make sure you have connected your GitHub account to Vercel.'
-    );
-  }
-
-  // Find the namespace for the owner
-  const namespace = namespaces.find(
-    ns => ns.slug.toLowerCase() === owner.toLowerCase()
-  );
-
-  if (!namespace) {
-    output.debug(
-      `Available namespaces: ${namespaces.map(ns => ns.slug).join(', ')}`
-    );
-    throw new Error(
-      `GitHub organization "${owner}" not found. Make sure you have access to the Vercel GitHub integration.`
-    );
-  }
-
-  output.debug(`Found namespace: ${namespace.slug} (id: ${namespace.id})`);
-
-  // Search for repos in that namespace
-  const reposResponse = await client.fetch<
-    | { repos: Array<{ id: number; name: string; defaultBranch: string }> }
-    | Array<{ id: number; name: string; defaultBranch: string }>
-  >(
-    `/v1/integrations/search-repo?provider=github&namespaceId=${namespace.id}&query=${encodeURIComponent(repoName)}`,
-    { useCurrentTeam: false }
-  );
-
-  // Handle both response formats
-  const repos = Array.isArray(reposResponse)
-    ? reposResponse
-    : reposResponse.repos;
-
-  output.debug(`Found ${repos?.length ?? 0} repos matching "${repoName}"`);
-
-  if (!repos || repos.length === 0) {
-    throw new Error(
-      `Repository "${repo}" not found. Make sure you have access to it via Vercel's GitHub integration.`
-    );
-  }
-
-  const foundRepo = repos.find(
-    r => r.name.toLowerCase() === repoName.toLowerCase()
-  );
-
-  if (!foundRepo) {
-    output.debug(`Available repos: ${repos.map(r => r.name).join(', ')}`);
-    throw new Error(
-      `Repository "${repo}" not found. Make sure you have access to it via Vercel's GitHub integration.`
-    );
-  }
-
-  output.debug(`Found repo: ${foundRepo.name} (id: ${foundRepo.id})`);
-  return { id: foundRepo.id, defaultBranch: foundRepo.defaultBranch };
-}
-
-/**
- * Deploy the bridge service to the user's project
+ * Deploy the bridge dispatcher service
  * Creates a preview deployment using the bridge repo as source
  */
-async function deployBridgeService(
+async function deployBridgeDispatcher(
   client: Client,
   projectId: string,
-  projectName: string
+  projectName: string,
+  sandboxUrl: string
 ): Promise<string> {
-  output.log('Deploying bridge service...');
-  output.spinner('Fetching bridge repository info', 0);
+  output.spinner('Deploying dispatcher...', 0);
 
-  try {
-    // Get the GitHub repo ID for the bridge repo via Vercel's API
-    const repoInfo = await searchGitHubRepo(client, BRIDGE_REPO);
-    output.debug(`Bridge repo ID: ${repoInfo.id}`);
-
-    output.spinner('Creating bridge deployment', 0);
-
-    // Create a deployment using git source from the bridge repo
-    // Note: Don't specify target to create a preview deployment by default
-    const deployment = await client.fetch<{
-      id: string;
-      url: string;
-      readyState: string;
-    }>('/v13/deployments', {
-      method: 'POST',
-      body: {
-        name: projectName,
-        project: projectId,
-        gitSource: {
-          type: 'github',
-          repoId: repoInfo.id,
-          ref: BRIDGE_REF,
-          projectRootDirectory: BRIDGE_DIRECTORY,
-        },
-        meta: {
-          action: 'bridge-connect',
-        },
+  const deployment = await client.fetch<{
+    id: string;
+    url: string;
+    readyState: string;
+  }>('/v13/deployments', {
+    method: 'POST',
+    body: {
+      name: projectName,
+      project: projectId,
+      gitSource: {
+        type: 'github',
+        repoId: BRIDGE_REPO_ID,
+        ref: BRIDGE_REF,
       },
-    });
+      projectSettings: {
+        rootDirectory: BRIDGE_DIRECTORY,
+      },
+      env: {
+        BRIDGE_SERVER_ADDR: sandboxUrl,
+      },
+      meta: {
+        action: 'bridge-connect',
+      },
+    },
+  });
 
-    output.stopSpinner();
-    output.debug(`Bridge deployment created: ${deployment.id}`);
+  output.debug(`Dispatcher deployment created: ${deployment.id}`);
 
-    // Wait for deployment to be ready
-    if (deployment.readyState !== 'READY') {
-      output.spinner('Building bridge service', 0);
+  // If already ready, return immediately
+  if (deployment.readyState === 'READY') {
+    return `https://${deployment.url}`;
+  }
 
-      // Poll for deployment status
-      let attempts = 0;
-      const maxAttempts = 60; // 5 minutes max
+  // Poll for deployment to be ready
+  output.spinner('Building dispatcher...', 0);
+  const maxWaitTime = 5 * 60 * 1000; // 5 minutes
+  const pollInterval = 2000; // 2 seconds
+  const startTime = Date.now();
 
-      while (attempts < maxAttempts) {
-        await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
+  while (Date.now() - startTime < maxWaitTime) {
+    const status = await client.fetch<{
+      readyState: string;
+      url: string;
+      errorMessage?: string;
+      errorCode?: string;
+    }>(`/v13/deployments/${deployment.id}`);
 
-        const status = await client.fetch<{
-          readyState: string;
-          url: string;
-        }>(`/v13/deployments/${deployment.id}`);
+    output.debug(`Deployment status: ${status.readyState}`);
 
-        if (status.readyState === 'READY') {
-          output.stopSpinner();
-          output.success(`Bridge deployed: https://${status.url}`);
-          return `https://${status.url}`;
-        }
-
-        if (status.readyState === 'ERROR' || status.readyState === 'CANCELED') {
-          output.stopSpinner();
-          throw new Error(`Bridge deployment failed: ${status.readyState}`);
-        }
-
-        attempts++;
-      }
-
-      output.stopSpinner();
-      throw new Error('Bridge deployment timed out');
+    if (status.readyState === 'READY') {
+      return `https://${status.url}`;
     }
 
-    output.success(`Bridge deployed: https://${deployment.url}`);
-    return `https://${deployment.url}`;
-  } catch (err) {
-    output.stopSpinner();
-    throw err;
+    if (status.readyState === 'ERROR' || status.readyState === 'CANCELED') {
+      const errorDetails =
+        status.errorMessage || status.errorCode || 'Unknown error';
+      throw new Error(
+        `Deployment ${status.readyState.toLowerCase()}: ${errorDetails}`
+      );
+    }
+
+    await new Promise(resolve => setTimeout(resolve, pollInterval));
   }
+
+  throw new Error('Deployment timed out');
 }
 
 /**
- * Get function URL from environment variable or deploy bridge
- * Returns the URL where the function/bridge is accessible
+ * Get function URL from environment variable or deploy dispatcher
  */
 async function getOrDeployFunctionUrl(
   client: Client,
   projectId: string,
-  projectName: string
+  projectName: string,
+  sandboxUrl: string
 ): Promise<string> {
-  // Check if VERCEL_FUNCTION_URL is set in environment
   const envFunctionUrl = process.env.VERCEL_FUNCTION_URL;
   if (envFunctionUrl) {
     output.debug(
@@ -631,18 +664,7 @@ async function getOrDeployFunctionUrl(
     return envFunctionUrl;
   }
 
-  // Deploy the bridge service
-  try {
-    return await deployBridgeService(client, projectId, projectName);
-  } catch (err) {
-    output.warn(
-      `Failed to deploy bridge service: ${err instanceof Error ? err.message : String(err)}`
-    );
-    output.warn(
-      'Falling back to localhost. Set VERCEL_FUNCTION_URL to use a custom bridge URL.'
-    );
-    return DEFAULT_FUNCTION_URL;
-  }
+  return deployBridgeDispatcher(client, projectId, projectName, sandboxUrl);
 }
 
 /**
@@ -671,23 +693,21 @@ export default async function connect(
   const port = typeof portOrSocket === 'number' ? portOrSocket : DEFAULT_PORT;
 
   // Interactive mode is default, use --non-interactive to opt out
-  const nonInteractive = opts['--non-interactive'] === true;
+  const nonInteractive = opts['--ide'] === true;
   const startDev = opts['--dev'] === true;
 
-  // Parse forward domains from comma-separated string
-  const forwardDomains = opts['--forward-domains']
-    ? opts['--forward-domains']
-        .split(',')
-        .map(d => d.trim())
-        .filter(Boolean)
-    : undefined;
+  // Forward domains
+  const forwardDomains = opts['--forward-domains'];
+
+  // Bridge version (defaults to 'edge')
+  const bridgeVersion = opts['--bridge-version'] || 'edge';
 
   // Check for devcontainer CLI unless non-interactive mode
   if (!nonInteractive && !checkDevContainerCli()) {
     output.error('devcontainer CLI is required. Install it with:');
     output.print('  npm install -g @devcontainers/cli\n');
     output.log(
-      '\nAlternatively, run with --non-interactive to just set up the devcontainer files.'
+      '\nAlternatively, run with --ide to just set up the devcontainer files.'
     );
     return 1;
   }
@@ -734,56 +754,88 @@ export default async function connect(
   client.config.currentTeam = org.type === 'team' ? org.id : undefined;
 
   if (project.rootDirectory) {
-    cwd = join(cwd, project.rootDirectory);
+    // Only append rootDirectory if cwd doesn't already include it
+    const expectedPath = join(cwd, project.rootDirectory);
+    const originalCwd = resolve(dir);
+    if (!originalCwd.endsWith(project.rootDirectory)) {
+      cwd = expectedPath;
+    } else {
+      // User is already in the rootDirectory, use their original path
+      cwd = originalCwd;
+    }
   }
+
+  // Compute the container workspace path: /workspaces/<repo-name>[/<rootDirectory>]
+  const repoRoot = link.repoRoot || cwd;
+  const containerWorkspace = link.repoRoot
+    ? `/workspaces/${basename(repoRoot)}/${relative(repoRoot, cwd)}`.replace(
+        /\/+$/,
+        ''
+      )
+    : `/workspaces/${basename(cwd)}`;
 
   output.log(`Setting up connection for ${project.name}...`);
 
-  // Get function URL from env var or deploy bridge
-  const functionUrl = await getOrDeployFunctionUrl(
-    client,
-    project.id,
-    project.name
-  );
-  output.debug(`Using function URL: ${functionUrl}`);
+  // Provision sandbox first, then deploy dispatcher with sandbox URL
+  let sandboxUrl: string;
+  try {
+    const provisioned = await provisionSandbox({
+      teamId: client.config.currentTeam,
+      projectId: project.id,
+      token: client.authConfig.token!,
+      proxyPort: port,
+      sessionName: project.name,
+      bridgeVersion,
+    });
+    sandboxUrl = provisioned.sandboxUrl;
+    output.stopSpinner();
+    output.success(`Sandbox ready: ${sandboxUrl}`);
+  } catch (err) {
+    output.stopSpinner();
+    output.error(
+      `Sandbox: ${err instanceof Error ? err.message : String(err)}`
+    );
+    return 1;
+  }
+
+  let functionUrl: string;
+  try {
+    functionUrl = await getOrDeployFunctionUrl(
+      client,
+      project.id,
+      project.name,
+      sandboxUrl
+    );
+    output.stopSpinner();
+    output.success(`Dispatcher deployed: ${functionUrl}`);
+  } catch (err) {
+    output.stopSpinner();
+    output.error(
+      `Dispatcher: ${err instanceof Error ? err.message : String(err)}`
+    );
+    return 1;
+  }
 
   // Update devcontainer config in-place
+  output.spinner('Configuring devcontainer...', 0);
   const { path: configPath } = await createProjectDevContainer(
     cwd,
     project.name,
     port,
     functionUrl,
+    sandboxUrl,
     project.framework,
+    bridgeVersion,
+    containerWorkspace,
     forwardDomains
   );
 
-  // Pull environment variables and add VERCEL_TOKEN
-  await pullEnvAndAddToken(client, project.id, cwd);
+  // Pull environment variables, add VERCEL_TOKEN and bypass secret
+  await pullEnvAndAddToken(client, link, cwd);
+  output.stopSpinner();
 
   if (nonInteractive) {
-    // Non-interactive mode: just print instructions
     output.success('Devcontainer configuration complete!');
-    output.print('\n');
-    output.log('You can now connect to the devcontainer using:');
-    output.print('\n');
-    output.log('  VSCode:');
-    output.print(
-      '    Open the folder in VSCode and use "Dev Containers: Reopen in Container"\n'
-    );
-    output.print(`    Select the "${project.name}" configuration\n`);
-    output.print('\n');
-    output.log('  IntelliJ/JetBrains:');
-    output.print('    Use "Dev Containers" plugin to open the project\n');
-    output.print('\n');
-    output.log('  Command line:');
-    output.print(`    cd ${cwd}\n`);
-    output.print(
-      `    devcontainer up --workspace-folder . --config ${configPath}\n`
-    );
-    output.print(
-      `    devcontainer exec --workspace-folder . --config ${configPath} /bin/bash\n`
-    );
-    output.print('\n');
   } else {
     // Interactive mode (default): use devcontainer CLI and exec into container
     try {

@@ -3,3 +3,6 @@
 !test/dev/fixtures/**/.vercel
 # Vercel dev tunnel env
 .env.development.local
+
+# Vercel connect devcontainers
+.devcontainer/

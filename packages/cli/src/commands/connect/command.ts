@@ -21,7 +21,7 @@ export const connectCommand = {
       deprecated: false,
     },
     {
-      name: 'non-interactive',
+      name: 'ide',
       description:
         'Skip exec into the devcontainer, just set up files and exit. Useful for IDE usage (VSCode, IntelliJ, etc.)',
       type: Boolean,
@@ -43,6 +43,14 @@ export const connectCommand = {
       type: String,
       deprecated: false,
     },
+    {
+      name: 'bridge-version',
+      description:
+        'Version of bridge to install (e.g., "v1.0.0" or "edge" for latest)',
+      argument: 'VERSION',
+      type: String,
+      deprecated: false,
+    },
   ],
   examples: [
     {
@@ -55,7 +63,7 @@ export const connectCommand = {
     },
     {
       name: 'Set up devcontainer files without starting (for IDE usage)',
-      value: `${packageName} connect --non-interactive`,
+      value: `${packageName} connect --ide`,
     },
   ],
 } as const;
