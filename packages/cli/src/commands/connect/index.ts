@@ -116,8 +116,13 @@ async function getToken(stsUrl: string, tokenId: string): Promise<number> {
     });
 
     if (!response.ok) {
-      const errorData = (await response.json()) as { error?: string; message?: string };
-      output.error(errorData.message || errorData.error || 'Failed to get token');
+      const errorData = (await response.json()) as {
+        error?: string;
+        message?: string;
+      };
+      output.error(
+        errorData.message || errorData.error || 'Failed to get token'
+      );
       if (response.status === 401) {
         output.log(
           `  Make sure VERCEL_OIDC_TOKEN is set. Run ${chalk.cyan('vc link')} and pull env vars.`
@@ -126,7 +131,10 @@ async function getToken(stsUrl: string, tokenId: string): Promise<number> {
       return 1;
     }
 
-    const data = (await response.json()) as { accessToken: string; expiresAt: number };
+    const data = (await response.json()) as {
+      accessToken: string;
+      expiresAt: number;
+    };
 
     // Print just the token so it can be captured in a variable
     process.stdout.write(data.accessToken);
@@ -139,7 +147,10 @@ async function getToken(stsUrl: string, tokenId: string): Promise<number> {
   }
 }
 
-async function listConnections(stsUrl: string, providerFilter?: string): Promise<number> {
+async function listConnections(
+  stsUrl: string,
+  providerFilter?: string
+): Promise<number> {
   try {
     const url = new URL('/setup/tokens', stsUrl);
     if (providerFilter) {

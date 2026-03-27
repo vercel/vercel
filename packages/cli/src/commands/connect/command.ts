@@ -3,8 +3,7 @@ import { packageName } from '../../util/pkg-name';
 export const connectCommand = {
   name: 'connect',
   aliases: [],
-  description:
-    'Connect a third-party service or list existing connections.',
+  description: 'Connect a third-party service or list existing connections.',
   arguments: [
     {
       name: 'provider-or-subcommand',
