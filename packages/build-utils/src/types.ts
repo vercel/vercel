@@ -780,6 +780,33 @@ export type ServiceRuntime = 'node' | 'python' | 'go' | 'rust' | 'ruby';
 export type ServiceType = 'web' | 'cron' | 'worker';
 
 /**
+ * Configuration for a cross-project or cross-application dependency declared
+ * in vercel.json.
+ * @experimental This feature is experimental and may change.
+ */
+export interface ExperimentalDependencyConfig {
+  /**
+   * Optional Vercel project identifier for the dependency target named by the
+   * map key. The key may be an application name like "backend" or an
+   * application/service identifier like "backend.api".
+   * @example "prj_123456789"
+   */
+  projectId?: string;
+  /**
+   * Override the injected environment variable name for this dependency.
+   * @example "PAYMENTS_API_URL"
+   */
+  env?: string;
+}
+
+/**
+ * Map of dependency key to dependency configuration.
+ * The key may be a local alias or a target identifier such as "payments.api".
+ * @experimental This feature is experimental and may change.
+ */
+export type ExperimentalDeps = Record<string, ExperimentalDependencyConfig>;
+
+/**
  * Configuration for a service in vercel.json.
  * @experimental This feature is experimental and may change.
  */
@@ -792,6 +819,11 @@ export interface ExperimentalServiceConfig {
    * @example "apps/web", "services/api/src/index.ts", "services/fastapi/main.py"
    */
   entrypoint?: string;
+  /**
+   * TODO: implement service root resolution, e.g. services/api
+   * entrypoint becomes relative to root
+   */
+  root?: string;
 
   /** Framework to use */
   framework?: string;
@@ -825,6 +857,9 @@ export interface ExperimentalServiceConfig {
 
   /** Custom prefix to use to inject service URL env vars */
   envPrefix?: string;
+
+  /** Cross-project or cross-application dependencies */
+  deps?: ExperimentalDeps;
 }
 
 /**
@@ -832,6 +867,42 @@ export interface ExperimentalServiceConfig {
  * @experimental This feature is experimental and may change.
  */
 export type ExperimentalServices = Record<string, ExperimentalServiceConfig>;
+
+/**
+ * Configuration for an application in vercel.json.
+ * @experimental This feature is experimental and may change.
+ */
+export interface ExperimentalApplicationConfig {
+  /**
+   * Target Vercel project ID for this application.
+   * @example "prj_123456789"
+   */
+  projectId?: string;
+  /**
+   * Application entrypoint, relative to the project root.
+   * Prefer this field for now.
+   */
+  entrypoint?: string;
+  /**
+   * Reserved for future use. Prefer entrypoint for now.
+   */
+  root?: string;
+  /** Framework to use for single-service applications */
+  framework?: string;
+  /** Cross-project or cross-application dependencies */
+  deps?: ExperimentalDeps;
+  /** Nested services belonging to this application */
+  services?: ExperimentalServices;
+}
+
+/**
+ * Map of application name to application configuration.
+ * @experimental This feature is experimental and may change.
+ */
+export type ExperimentalApplications = Record<
+  string,
+  ExperimentalApplicationConfig
+>;
 
 /**
  * Map of service group name to array of service names belonging to that group.

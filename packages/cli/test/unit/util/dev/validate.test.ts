@@ -799,6 +799,104 @@ describe('validateConfig', () => {
     );
   });
 
+  describe('experimental services and applications', () => {
+    it('should not error with key-addressed deps and reserved root on experimentalServices', () => {
+      const error = validateConfig({
+        experimentalServices: {
+          dashboard: {
+            root: 'apps/dashboard',
+            framework: 'nextjs',
+            routePrefix: '/',
+            deps: {
+              'payments.api': {
+                env: 'PAYMENTS_API_URL',
+              },
+            },
+          },
+        },
+      } as any);
+      expect(error).toBeNull();
+    });
+
+    it('should not error with experimentalApplications and nested services', () => {
+      const error = validateConfig({
+        experimentalApplications: {
+          dashboard: {
+            projectId: 'prj_dashboard',
+            entrypoint: 'apps/web',
+            framework: 'nextjs',
+            deps: {
+              'backend.api': {
+                env: 'BACKEND_API_URL',
+              },
+            },
+          },
+          backend: {
+            services: {
+              api: {
+                root: 'services/api',
+                entrypoint: 'main.py',
+                runtime: 'python',
+                routePrefix: '/',
+                deps: {
+                  'payments.api': {
+                    env: 'PAYMENTS_API_URL',
+                  },
+                },
+              },
+            },
+          },
+        },
+      } as any);
+      expect(error).toBeNull();
+    });
+
+    it('should not error with top-level experimentalDeps for single-service projects', () => {
+      const error = validateConfig({
+        experimentalDeps: {
+          'payments.api': {
+            env: 'PAYMENTS_API_URL',
+          },
+          'backend.api': {
+            projectId: 'prj_backend',
+          },
+        },
+      } as any);
+      expect(error).toBeNull();
+    });
+
+    it('should not error with reserved root on experimentalApplications', () => {
+      const error = validateConfig({
+        experimentalApplications: {
+          dashboard: {
+            root: 'apps/dashboard',
+            framework: 'nextjs',
+          },
+        },
+      } as any);
+      expect(error).toBeNull();
+    });
+
+    it('should error with invalid additional property in experimental deps', () => {
+      const error = validateConfig({
+        experimentalApplications: {
+          dashboard: {
+            deps: {
+              api: {
+                projectId: 'prj_backend',
+                foo: 'bar',
+              },
+            },
+          },
+        },
+      } as any);
+      expect(error).not.toBeNull();
+      expect(error?.message).toMatch(
+        /additional property `foo`\. Please remove it\./
+      );
+    });
+  });
+
   describe('queue/v2beta', () => {
     it('should allow valid v2beta trigger without consumer', () => {
       const error = validateConfig({

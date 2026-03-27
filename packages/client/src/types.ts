@@ -5,6 +5,8 @@ import type {
   Images,
   ProjectSettings,
   Cron,
+  ExperimentalApplications,
+  ExperimentalDeps,
   ExperimentalServices,
   ExperimentalServiceGroups,
 } from '@vercel/build-utils';
@@ -181,6 +183,14 @@ export interface VercelConfig {
    * This file will be included in prebuilt deployments.
    */
   bulkRedirectsPath?: string | null;
+  /**
+   * @experimental This feature is experimental and may change.
+   */
+  experimentalApplications?: ExperimentalApplications;
+  /**
+   * @experimental This feature is experimental and may change.
+   */
+  experimentalDeps?: ExperimentalDeps;
   /**
    * @experimental This feature is experimental and may change.
    */

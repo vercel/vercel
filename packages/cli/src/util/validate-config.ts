@@ -155,6 +155,40 @@ const cronsSchema = {
   },
 };
 
+const experimentalConfigNameSchema = {
+  pattern: '^[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$',
+  maxLength: 64,
+};
+
+const experimentalDepNameSchema = {
+  pattern: '^[a-zA-Z]([a-zA-Z0-9_.-]*[a-zA-Z0-9])?$',
+  maxLength: 64,
+};
+
+const experimentalDependencyConfigSchema = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    projectId: {
+      type: 'string',
+      minLength: 1,
+      maxLength: 256,
+    },
+    env: {
+      type: 'string',
+      minLength: 1,
+      maxLength: 256,
+      pattern: '^[A-Z][A-Z0-9_]*$',
+    },
+  },
+};
+
+const experimentalDepsSchema = {
+  type: 'object',
+  propertyNames: experimentalDepNameSchema,
+  additionalProperties: experimentalDependencyConfigSchema,
+};
+
 const serviceConfigSchema = {
   type: 'object',
   additionalProperties: false,
@@ -163,6 +197,11 @@ const serviceConfigSchema = {
       enum: ['web', 'cron', 'worker'],
     },
     entrypoint: {
+      type: 'string',
+      minLength: 1,
+      maxLength: 512,
+    },
+    root: {
       type: 'string',
       minLength: 1,
       maxLength: 512,
@@ -252,6 +291,7 @@ const serviceConfigSchema = {
       minLength: 1,
       maxLength: 256,
     },
+    deps: experimentalDepsSchema,
   },
 };
 
@@ -263,10 +303,49 @@ const serviceConfigSchema = {
 const experimentalServicesSchema = {
   type: 'object',
   propertyNames: {
-    pattern: '^[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$',
-    maxLength: 64,
+    ...experimentalConfigNameSchema,
   },
   additionalProperties: serviceConfigSchema,
+};
+
+/**
+ * Schema for experimental applications configuration.
+ * Map of application name to application configuration.
+ * @experimental This feature is experimental and may change.
+ */
+const experimentalApplicationsSchema = {
+  type: 'object',
+  propertyNames: {
+    ...experimentalConfigNameSchema,
+  },
+  additionalProperties: {
+    type: 'object',
+    additionalProperties: false,
+    properties: {
+      projectId: {
+        type: 'string',
+        minLength: 1,
+        maxLength: 256,
+      },
+      entrypoint: {
+        type: 'string',
+        minLength: 1,
+        maxLength: 512,
+      },
+      root: {
+        type: 'string',
+        minLength: 1,
+        maxLength: 512,
+      },
+      framework: {
+        type: 'string',
+        minLength: 1,
+        maxLength: 256,
+      },
+      deps: experimentalDepsSchema,
+      services: experimentalServicesSchema,
+    },
+  },
 };
 
 /**
@@ -278,8 +357,7 @@ const experimentalServicesSchema = {
 const experimentalServiceGroupsSchema = {
   type: 'object',
   propertyNames: {
-    pattern: '^[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$',
-    maxLength: 64,
+    ...experimentalConfigNameSchema,
   },
   additionalProperties: {
     type: 'array',
@@ -308,6 +386,8 @@ const vercelConfigSchema = {
     images: imagesSchema,
     crons: cronsSchema,
     bunVersion: { type: 'string' },
+    experimentalApplications: experimentalApplicationsSchema,
+    experimentalDeps: experimentalDepsSchema,
     experimentalServices: experimentalServicesSchema,
     experimentalServiceGroups: experimentalServiceGroupsSchema,
   },
