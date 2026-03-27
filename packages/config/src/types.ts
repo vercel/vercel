@@ -544,6 +544,11 @@ export interface VercelConfig {
    */
   crons?: CronJob[];
   /**
+   * An array of firewall rules for the project.
+   * TODO: Add to OpenAPI schema upstream and regenerate types.
+   */
+  firewallRules?: import('./firewall').FirewallRule[];
+  /**
    * An array of projectIds to associate with the current project.
    */
   relatedProjects?: string[];
