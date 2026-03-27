@@ -100,7 +100,7 @@ export default async function metricsAdd(
     output.stopSpinner();
 
     if (asJson) {
-      output.print(JSON.stringify({ metric }, null, 2));
+      client.stdout.write(`${JSON.stringify({ metric }, null, 2)}\n`);
     } else {
       output.log(`Metric created: ${metric.slug} (${metric.id})`);
     }

@@ -150,7 +150,7 @@ export default async function create(
     output.stopSpinner();
 
     if (asJson) {
-      output.print(JSON.stringify({ flag }, null, 2));
+      client.stdout.write(`${JSON.stringify({ flag }, null, 2)}\n`);
     } else {
       output.log(
         `Draft experiment created on flag "${slug}". Start with \`${getCommandName(`experiment start ${slug}`)}\`.`

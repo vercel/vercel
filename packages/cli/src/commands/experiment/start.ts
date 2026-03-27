@@ -79,7 +79,7 @@ export default async function start(
     output.stopSpinner();
 
     if (asJson) {
-      output.print(JSON.stringify({ flag: updated }, null, 2));
+      client.stdout.write(`${JSON.stringify({ flag: updated }, null, 2)}\n`);
     } else {
       output.log(
         `Experiment "${slug}" is now running (startedAt=${startedAt}).`

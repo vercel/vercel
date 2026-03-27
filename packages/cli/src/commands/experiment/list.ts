@@ -65,7 +65,9 @@ export default async function list(
     output.stopSpinner();
 
     if (asJson) {
-      output.print(JSON.stringify({ experiments: flagsList }, null, 2));
+      client.stdout.write(
+        `${JSON.stringify({ experiments: flagsList }, null, 2)}\n`
+      );
       return 0;
     }
 

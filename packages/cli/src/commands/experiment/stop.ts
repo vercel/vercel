@@ -77,7 +77,7 @@ export default async function stop(
     output.stopSpinner();
 
     if (asJson) {
-      output.print(JSON.stringify({ flag: updated }, null, 2));
+      client.stdout.write(`${JSON.stringify({ flag: updated }, null, 2)}\n`);
     } else {
       output.log(`Experiment "${slug}" is closed (endedAt=${endedAt}).`);
     }

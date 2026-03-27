@@ -65,7 +65,7 @@ export default async function metricsLs(
     output.stopSpinner();
 
     if (asJson) {
-      output.print(JSON.stringify({ metrics }, null, 2));
+      client.stdout.write(`${JSON.stringify({ metrics }, null, 2)}\n`);
       return 0;
     }
 
