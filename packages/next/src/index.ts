@@ -758,14 +758,63 @@ export const build: BuildV2 = async buildOptions => {
         } else {
           console.log('beforeFilesRewrites', beforeFilesRewrites);
           const convertRewritesToRex = (rewrites: Rewrite[]) => {
-            const code = compileRex(`
-              rewrites = {
-                ${rewrites.map(rewrite => `"${rewrite.source}": "${rewrite.destination}",`).join('\n')}
-              }
-              when destination_path = rewrites.(req.path) do
-                req.path = destination_path
-              end
-            `);
+            let code: string;
+            if (rewrites.some(rewrite => !!rewrite.has)) {
+              // "has" config
+              code = compileRex(`
+                rewrites = {
+                  ${rewrites.map(rewrite => `"${rewrite.source}": { path: ${JSON.stringify(rewrite.destination)}, has: ${JSON.stringify(rewrite.has)} },`).join('\n')}
+                }
+                when destination = rewrites.(req.path) do
+                  when has-configs = destination.has do
+                    // "has" config
+                    for has-config in has-configs do
+                      when has-config.type == "header" do
+                        when has-value = has-config.value do
+                          // header present + value match
+                          when req.header.(has-config.key) = has-value do
+                            req.path = destination.path // match
+                            break
+                          end
+                        else when req.header.(has-config.key) do
+                          // header present
+                          req.path = destination.path // match
+                          break
+                        end
+                      else when has-config.type == "query" do
+                        when has-value = has-config.value do
+                          // query param present + value match
+                          when req.query.(has-config.key) = has-value do
+                            req.path = destination.path // match
+                            break
+                          end
+                        else when req.query.(has-config.key) do
+                          // query param present
+                          req.path = destination.path // match
+                          break
+                        end
+                      else when has-config.type == "cookie" do
+                        // TODO
+                      end
+                    end
+                  else
+                    // no "has"
+                    req.path = destination.path
+                  end
+                end
+              `);
+            } else {
+              // no "has"
+              code = compileRex(`
+                rewrites = {
+                  ${rewrites.map(rewrite => `"${rewrite.source}": ${JSON.stringify(rewrite.destination)},`).join('\n')}
+                }
+                when destination = rewrites.(req.path) do
+                  req.path = destination
+                end
+              `);
+            }
+
             return { src: `rex:${code}` };
           };
           beforeFilesRewrites.push(
