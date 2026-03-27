@@ -99,7 +99,7 @@ export default async function analyse(
     };
 
     if (asJson) {
-      output.print(JSON.stringify(payload, null, 2));
+      client.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
       return 0;
     }
 
