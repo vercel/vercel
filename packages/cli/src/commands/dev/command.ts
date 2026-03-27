@@ -27,6 +27,13 @@ export const devCommand = {
       deprecated: false,
       description: 'Start the dev server without linking to a Vercel project',
     },
+    {
+      name: 'agent',
+      shorthand: 'a',
+      type: Boolean,
+      deprecated: false,
+      description: 'Enable agent mode with interactive TUI',
+    },
     yesOption,
     { name: 'port', shorthand: 'p', type: String, deprecated: true },
     confirmOption,

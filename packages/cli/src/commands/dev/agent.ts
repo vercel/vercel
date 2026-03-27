@@ -1,8 +1,14 @@
 import chalk from 'chalk';
-import ms from 'ms';
 import { resolve, join } from 'path';
 import fs from 'fs-extra';
 import type { ResolvedService } from '@vercel/fs-detectors';
+import {
+  TUI,
+  ProcessTerminal,
+  Text,
+  Input,
+  Spacer,
+} from '@mariozechner/pi-tui';
 
 import DevServer from '../../util/dev/server';
 import { parseListen } from '../../util/dev/parse-listen';
@@ -12,7 +18,6 @@ import type { ProjectSettings } from '@vercel-internals/types';
 import setupAndLink from '../../util/link/setup-and-link';
 import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 import param from '../../util/output/param';
-import cmd from '../../util/output/cmd';
 import { OUTPUT_DIR } from '../../util/build/write-build-result';
 import { pullEnvRecords } from '../../util/env/get-env-records';
 import output from '../../output-manager';
@@ -27,7 +32,6 @@ import { tryDetectServices } from '../../util/projects/detect-services';
 import { displayDetectedServices } from '../../util/input/display-services';
 import { acquireDevLock, releaseDevLock } from '../../util/dev/dev-lock';
 import { resolveProjectCwd } from '../../util/projects/find-project-root';
-import { startAgentMode } from './agent';
 
 type Options = {
   '--listen': string;
@@ -36,15 +40,124 @@ type Options = {
   '--agent': boolean;
 };
 
-export default async function dev(
+export async function startAgentMode(
   client: Client,
   opts: Partial<Options>,
   args: string[],
   telemetry: DevTelemetryClient
-) {
-  if (opts['--agent']) {
-    return startAgentMode(client, opts, args, telemetry);
+): Promise<number> {
+  // Save original writes before anything else — the TUI terminal
+  // needs these to render directly to the real terminal.
+  const originalStdoutWrite = process.stdout.write.bind(process.stdout);
+  const originalStderrWrite = process.stderr.write.bind(process.stderr);
+
+  // Set up TUI
+  const terminal = new ProcessTerminal();
+  const tui = new TUI(terminal);
+
+  const outputPanel = new Text('', 0, 0);
+  const spacer = new Spacer(1);
+  const inputPanel = new Input();
+
+  tui.addChild(outputPanel);
+  tui.addChild(spacer);
+  tui.addChild(inputPanel);
+  tui.setFocus(inputPanel);
+
+  let outputBuffer = '';
+
+  function appendOutput(text: string) {
+    outputBuffer += text;
+    outputPanel.setText(outputBuffer);
+    tui.requestRender();
   }
+
+  // Placeholder: echo user input to output panel
+  inputPanel.onSubmit = (value: string) => {
+    appendOutput(`\n${chalk.cyan('>')} ${value}\n`);
+    inputPanel.setValue('');
+  };
+
+  // Start the TUI first (terminal.start sets up raw mode, bracketed paste,
+  // kitty protocol — all using the still-unpatched process.stdout.write).
+  tui.start();
+
+  // Now override ALL terminal output methods to use the saved original write.
+  // ProcessTerminal hardcodes process.stdout.write in every method, so we
+  // must bypass our upcoming intercept for every one of them.
+  terminal.write = (data: string) => {
+    originalStdoutWrite(data);
+  };
+  terminal.hideCursor = () => {
+    originalStdoutWrite('\x1b[?25l');
+  };
+  terminal.showCursor = () => {
+    originalStdoutWrite('\x1b[?25h');
+  };
+  terminal.clearLine = () => {
+    originalStdoutWrite('\x1b[K');
+  };
+  terminal.clearFromCursor = () => {
+    originalStdoutWrite('\x1b[J');
+  };
+  terminal.clearScreen = () => {
+    originalStdoutWrite('\x1b[2J\x1b[H');
+  };
+  terminal.moveBy = (lines: number) => {
+    if (lines > 0) {
+      originalStdoutWrite(`\x1b[${lines}B`);
+    } else if (lines < 0) {
+      originalStdoutWrite(`\x1b[${-lines}A`);
+    }
+  };
+  terminal.setTitle = (title: string) => {
+    originalStdoutWrite(`\x1b]0;${title}\x07`);
+  };
+
+  // Intercept stdout/stderr to route dev server output to the TUI panel.
+  // The TUI's terminal methods above bypass this by using originalStdoutWrite.
+  function interceptIO() {
+    process.stdout.write = (
+      chunk: string | Uint8Array,
+      encodingOrCb?: BufferEncoding | ((err?: Error) => void),
+      cb?: (err?: Error) => void
+    ): boolean => {
+      const text =
+        typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8');
+      appendOutput(text);
+      const callback = typeof encodingOrCb === 'function' ? encodingOrCb : cb;
+      if (callback) {
+        callback();
+      }
+      return true;
+    };
+
+    process.stderr.write = (
+      chunk: string | Uint8Array,
+      encodingOrCb?: BufferEncoding | ((err?: Error) => void),
+      cb?: (err?: Error) => void
+    ): boolean => {
+      const text =
+        typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8');
+      appendOutput(text);
+      const callback = typeof encodingOrCb === 'function' ? encodingOrCb : cb;
+      if (callback) {
+        callback();
+      }
+      return true;
+    };
+  }
+
+  interceptIO();
+  appendOutput(`${chalk.bold('Vercel Dev')} ${chalk.dim('(agent mode)')}\n\n`);
+
+  // Restore stdout/stderr and stop TUI on cleanup
+  function restoreIO() {
+    process.stdout.write = originalStdoutWrite;
+    process.stderr.write = originalStderrWrite;
+  }
+
+  // --- Dev server setup (mirrors dev.ts logic) ---
 
   const [dir = '.'] = args;
   let cwd = resolve(dir);
@@ -52,18 +165,21 @@ export default async function dev(
 
   cwd = await resolveProjectCwd(cwd);
 
-  // retrieve dev command
   let link = await getLinkedProject(client, cwd);
 
   if (link.status === 'not_linked' && !process.env.__VERCEL_SKIP_DEV_CMD) {
     if (opts['--local']) {
-      output.warn(
-        'Running dev server in local mode without a project setup:\n' +
+      appendOutput(
+        chalk.yellow('WARNING!') +
+          ' Running dev server in local mode without a project setup:\n' +
           '  - Environment variables will not be pulled from Vercel\n' +
           '  - Project settings are defined by local configuration\n\n' +
-          `To link your project, run ${getCommandName('dev')} without \`-L\` or \`--local\` or ${getCommandName('link')}.`
+          `To link your project, run ${getCommandName('dev')} without \`-L\` or \`--local\` or ${getCommandName('link')}.\n`
       );
     } else {
+      // Need to restore IO for interactive prompts
+      restoreIO();
+      tui.stop();
       link = await setupAndLink(client, cwd, {
         autoConfirm: opts['--yes'],
         link,
@@ -71,17 +187,21 @@ export default async function dev(
         setupMsg: 'Set up and develop',
         nonInteractive: client.nonInteractive,
       });
-
       if (link.status === 'not_linked') {
-        // User aborted project linking questions
         return 0;
       }
+      // Restart TUI before re-intercepting (start() uses process.stdout.write
+      // directly for terminal setup escape sequences)
+      tui.start();
+      interceptIO();
     }
   }
 
   if (link.status === 'error') {
     if (link.reason === 'HEADLESS') {
       if (client.nonInteractive) {
+        restoreIO();
+        tui.stop();
         outputActionRequired(
           client,
           {
@@ -98,13 +218,13 @@ export default async function dev(
           link.exitCode
         );
       } else {
-        output.error(
-          `Command ${getCommandName(
-            'dev'
-          )} requires confirmation. Use option ${param('--yes')} to confirm.`
+        appendOutput(
+          `${chalk.red('Error:')} Command ${getCommandName('dev')} requires confirmation. Use option ${param('--yes')} to confirm.\n`
         );
       }
     }
+    restoreIO();
+    tui.stop();
     return link.exitCode;
   }
 
@@ -114,13 +234,11 @@ export default async function dev(
   if (link.status === 'linked') {
     const { project, org } = link;
 
-    // If repo linked, update `cwd` to the repo root
     if (link.repoRoot) {
       repoRoot = cwd = link.repoRoot;
     }
 
     client.config.currentTeam = org.type === 'team' ? org.id : undefined;
-
     projectSettings = project;
 
     if (project.rootDirectory) {
@@ -145,22 +263,11 @@ export default async function dev(
     const lockResult = await acquireDevLock(cwd, port);
 
     if (!lockResult.acquired) {
-      output.error(
-        `Another ${getCommandName('dev')} process is already running for this project.`
+      appendOutput(
+        `${chalk.red('Error:')} Another ${getCommandName('dev')} process is already running for this project.\n`
       );
-      if (lockResult.existingLock) {
-        const { existingLock } = lockResult;
-        const startTime = ms(Date.now() - existingLock.startedAt);
-        output.print(`  Port: ${chalk.cyan(existingLock.port)}\n`);
-        output.print(`  PID: ${chalk.cyan(existingLock.pid)}\n`);
-        output.print(`  Started: ${chalk.cyan(startTime)} ago\n`);
-        output.log(
-          `To stop the existing process, press Ctrl+C in its terminal or run: ` +
-            cmd(`kill ${existingLock.pid}`)
-        );
-      } else {
-        output.log(lockResult.reason);
-      }
+      restoreIO();
+      tui.stop();
       return 1;
     }
     lockAcquired = true;
@@ -192,11 +299,9 @@ export default async function dev(
         telemetry.trackOidcTokenRefresh(++refreshCount);
       }
     } catch (error) {
-      // Throw any error aside from an abort error.
       if (!(error instanceof Error && error.name === 'AbortError')) {
         throw error;
       }
-      output.debug('OIDC token refresh was aborted');
     }
   });
 
@@ -204,8 +309,6 @@ export default async function dev(
   const cleanup = async (signal: string) => {
     if (cleanupInProgress) return;
     cleanupInProgress = true;
-
-    output.debug(`Received ${signal}, shutting down...`);
 
     clearTimeout(timeout);
     controller.abort();
@@ -215,6 +318,9 @@ export default async function dev(
     }
 
     await devServer.stop();
+
+    restoreIO();
+    tui.stop();
 
     let exitCode = 0;
     switch (signal) {
@@ -232,13 +338,10 @@ export default async function dev(
   process.on('SIGTERM', async () => await cleanup('SIGTERM'));
   process.on('SIGINT', async () => await cleanup('SIGINT'));
 
-  // If there is no Development Command, we must delete the
-  // v3 Build Output because it will incorrectly be detected by
-  // @vercel/static-build in BuildOutputV3.getBuildOutputDirectory()
   if (!devServer.devCommand) {
     const outputDir = join(cwd, OUTPUT_DIR);
     if (await fs.pathExists(outputDir)) {
-      output.log(`Removing ${OUTPUT_DIR}`);
+      appendOutput(`Removing ${OUTPUT_DIR}\n`);
       await fs.remove(outputDir);
     }
   }
@@ -249,9 +352,13 @@ export default async function dev(
     if (lockAcquired) {
       releaseDevLock(cwd);
     }
+    restoreIO();
+    tui.stop();
     throw err;
   } finally {
     clearTimeout(timeout);
     controller.abort();
   }
+
+  return 0;
 }

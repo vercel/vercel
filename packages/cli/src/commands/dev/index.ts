@@ -61,6 +61,7 @@ export default async function main(client: Client) {
     return 1;
   }
 
+  telemetry.trackCliFlagAgent(parsedArgs.flags['--agent']);
   telemetry.trackCliFlagConfirm(parsedArgs.flags['--confirm']);
   telemetry.trackCliFlagLocal(parsedArgs.flags['--local']);
   telemetry.trackCliFlagYes(parsedArgs.flags['--yes']);

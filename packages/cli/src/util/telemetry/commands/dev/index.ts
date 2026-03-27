@@ -51,6 +51,12 @@ export class DevTelemetryClient
     }
   }
 
+  trackCliFlagAgent(agent: boolean | undefined) {
+    if (agent) {
+      this.trackCliFlag('agent');
+    }
+  }
+
   trackOidcTokenRefresh(count: number) {
     super.trackOidcTokenRefresh(count);
   }
