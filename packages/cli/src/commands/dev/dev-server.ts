@@ -306,7 +306,7 @@ export async function startDevServer(
   });
 
   let cleanupInProgress = false;
-  const cleanup = async () => {
+  const cleanup = async (signal?: string) => {
     if (cleanupInProgress) return;
     cleanupInProgress = true;
 
@@ -318,11 +318,24 @@ export async function startDevServer(
     }
 
     await ctx.onShutdown?.();
-    devServer.stop();
+    await devServer.stop();
+
+    // Hard exit — matches standard signal exit codes.
+    // Without this, lingering event-loop handles can keep the process alive.
+    let exitCode = 0;
+    switch (signal) {
+      case 'SIGINT':
+        exitCode = 130;
+        break;
+      case 'SIGTERM':
+        exitCode = 143;
+        break;
+    }
+    process.exit(exitCode);
   };
 
-  process.on('SIGTERM', () => cleanup());
-  process.on('SIGINT', () => cleanup());
+  process.on('SIGTERM', () => cleanup('SIGTERM'));
+  process.on('SIGINT', () => cleanup('SIGINT'));
   ctx.onCleanupReady?.(() => cleanup());
 
   // If there is no Development Command, we must delete the
