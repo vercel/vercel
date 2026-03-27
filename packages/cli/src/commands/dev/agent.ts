@@ -124,8 +124,12 @@ export async function startAgentMode(
     process.stderr.write = originalStderrWrite;
   }
 
-  function shutdown() {
+  async function shutdown() {
     restoreIO();
+    // Drain any leftover input bytes (e.g. Ctrl+D) while stdin is still
+    // in raw mode, before tui.stop() switches back to cooked mode —
+    // otherwise the bytes leak to the parent shell.
+    await terminal.drainInput(200, 50);
     tui.stop();
   }
 

@@ -42,8 +42,8 @@ export interface DevContext {
   didPrompt?: () => void;
   /** Called once cleanup fn is ready. Use to wire additional exit triggers (e.g. Ctrl+C in TUI). */
   onCleanupReady?: (cleanup: () => void) => void;
-  /** Called after DevServer stops, before process.exit. For TUI teardown. */
-  onShutdown?: () => void;
+  /** Called during cleanup to restore terminal state. May be async (e.g. to drain stdin). */
+  onShutdown?: () => void | Promise<void>;
 }
 
 export async function startDevServer(
@@ -218,13 +218,12 @@ export async function startDevServer(
   });
 
   let cleanupInProgress = false;
-  const cleanup = () => {
+  const cleanup = async ({ forceExit = false } = {}) => {
     if (cleanupInProgress) return;
     cleanupInProgress = true;
 
-    // Restore terminal state first so the user gets a usable shell
-    // immediately, even if devServer.stop() takes time.
-    ctx.onShutdown?.();
+    // Restore terminal state (may drain stdin to prevent key leaks).
+    await ctx.onShutdown?.();
 
     clearTimeout(timeout);
     controller.abort();
@@ -233,14 +232,25 @@ export async function startDevServer(
       releaseDevLock(cwd);
     }
 
-    devServer.stop().finally(() => {
-      process.exit(0);
-    });
+    // When triggered by a real signal we must force exit since there's
+    // no call stack to unwind.  When triggered from TUI input (Ctrl+C/D)
+    // we let devServer.stop() resolve devServer.start(), which unwinds
+    // startDevServer naturally — avoiding process.exit() prevents stray
+    // bytes from leaking to the parent shell.
+    if (forceExit) {
+      devServer.stop().finally(() => {
+        process.exit(0);
+      });
+    } else {
+      devServer.stop();
+    }
   };
 
-  process.on('SIGTERM', cleanup);
-  process.on('SIGINT', cleanup);
-  ctx.onCleanupReady?.(cleanup);
+  process.on('SIGTERM', () => cleanup({ forceExit: true }));
+  process.on('SIGINT', () => cleanup({ forceExit: true }));
+  ctx.onCleanupReady?.(() => {
+    cleanup();
+  });
 
   // If there is no Development Command, we must delete the
   // v3 Build Output because it will incorrectly be detected by
