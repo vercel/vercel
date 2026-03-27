@@ -4,15 +4,18 @@ import {
   TUI,
   ProcessTerminal,
   Text,
-  Input,
-  Spacer,
   matchesKey,
+  visibleWidth,
 } from '@mariozechner/pi-tui';
+import type { Component } from '@mariozechner/pi-tui';
 
 import type Client from '../../util/client';
 import type { DevTelemetryClient } from '../../util/telemetry/commands/dev';
 import { startDevServer, type DevContext, type DevOptions } from './dev-server';
 
+// ---------------------------------------------------------------------------
+// ANSI / line helpers
+// ---------------------------------------------------------------------------
 const ANSI_RE = /\x1b\[[0-9;]*m/g;
 const SERVICE_PREFIX_RE = /^\[([^\]]+)\]/;
 const ERROR_LINE_RE = /^\[([^\]]+)\]\s+ERROR:/;
@@ -21,6 +24,20 @@ function stripAnsi(str: string): string {
   return str.replace(ANSI_RE, '');
 }
 
+/** Return first and last non-empty lines of `text` (ANSI-stripped). */
+function errorSignature(text: string): string {
+  const lines = text
+    .split('\n')
+    .map(l => stripAnsi(l).trim())
+    .filter(Boolean);
+  if (lines.length === 0) return '';
+  if (lines.length === 1) return lines[0];
+  return `${lines[0]}\n${lines[lines.length - 1]}`;
+}
+
+// ---------------------------------------------------------------------------
+// ErrorChunker — collects multi-line error blocks from streaming output
+// ---------------------------------------------------------------------------
 type ErrorChunkCallback = (text: string) => void;
 
 class ErrorChunker {
@@ -52,7 +69,6 @@ class ErrorChunker {
     const errorMatch = stripped.match(ERROR_LINE_RE);
 
     if (errorMatch) {
-      // New error block — flush any previous collection first
       this.flush();
       this.collecting = {
         serviceName: errorMatch[1],
@@ -65,10 +81,8 @@ class ErrorChunker {
     if (this.collecting) {
       const serviceMatch = stripped.match(SERVICE_PREFIX_RE);
       if (serviceMatch && serviceMatch[1] !== this.collecting.serviceName) {
-        // Different service — flush collected error chunk
         this.flush();
       } else {
-        // Same service or no service prefix — keep collecting
         this.collecting.lines.push(line);
       }
     }
@@ -83,6 +97,249 @@ class ErrorChunker {
   }
 }
 
+// ---------------------------------------------------------------------------
+// ErrorStore — groups errors by signature, keeps full text for the agent
+// ---------------------------------------------------------------------------
+const MAX_ERROR_GROUPS = 5;
+
+interface ErrorGroup {
+  /** Hash key — first + last non-empty lines */
+  signature: string;
+  /** Display label — first non-empty line, truncated */
+  label: string;
+  /** Full log text of the most recent occurrence (fed to the agent) */
+  latestFullText: string;
+  /** How many times this signature has been seen */
+  count: number;
+}
+
+class ErrorStore {
+  /** Ordered from oldest to newest */
+  private groups: ErrorGroup[] = [];
+  private onChange?: () => void;
+
+  constructor(onChange?: () => void) {
+    this.onChange = onChange;
+  }
+
+  push(fullText: string) {
+    const sig = errorSignature(fullText);
+    if (!sig) return;
+
+    const existing = this.groups.find(g => g.signature === sig);
+    if (existing) {
+      existing.count++;
+      existing.latestFullText = fullText;
+      // Move to end (most recent)
+      this.groups = this.groups.filter(g => g !== existing);
+      this.groups.push(existing);
+    } else {
+      const firstLine = sig.split('\n')[0];
+      this.groups.push({
+        signature: sig,
+        label: firstLine,
+        latestFullText: fullText,
+        count: 1,
+      });
+    }
+
+    // Cap at MAX_ERROR_GROUPS — drop oldest
+    while (this.groups.length > MAX_ERROR_GROUPS) {
+      this.groups.shift();
+    }
+
+    this.onChange?.();
+  }
+
+  /** Remove groups by signature. */
+  remove(signatures: Set<string>) {
+    this.groups = this.groups.filter(g => !signatures.has(g.signature));
+    this.onChange?.();
+  }
+
+  getGroups(): readonly ErrorGroup[] {
+    return this.groups;
+  }
+
+  get size(): number {
+    return this.groups.length;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// ErrorMenu — custom pi-tui Component: navigable checkbox list of errors
+// ---------------------------------------------------------------------------
+class ErrorMenu implements Component {
+  private cursor = 0;
+  /** Set of selected signatures */
+  private selected = new Set<string>();
+  /** Callback when user presses Enter on LFG */
+  onSubmit?: (selectedGroups: ErrorGroup[]) => void;
+
+  constructor(private errorStore: ErrorStore) {}
+
+  invalidate() {}
+
+  handleInput(data: string) {
+    const groups = this.errorStore.getGroups();
+    // Total items = error groups + 1 for LFG button
+    const totalItems = groups.length + 1;
+    if (totalItems === 0) return;
+
+    if (matchesKey(data, 'up') || matchesKey(data, 'k')) {
+      this.cursor = Math.max(0, this.cursor - 1);
+    } else if (matchesKey(data, 'down') || matchesKey(data, 'j')) {
+      this.cursor = Math.min(totalItems - 1, this.cursor + 1);
+    } else if (data === ' ') {
+      // Space toggles selection — only on error rows, not LFG
+      if (this.cursor < groups.length) {
+        const sig = groups[this.cursor].signature;
+        if (this.selected.has(sig)) {
+          this.selected.delete(sig);
+        } else {
+          this.selected.add(sig);
+        }
+      }
+    } else if (matchesKey(data, 'enter')) {
+      // Enter on LFG button
+      if (this.cursor === groups.length && this.selected.size > 0) {
+        const chosen = groups.filter(g => this.selected.has(g.signature));
+        this.onSubmit?.(chosen);
+      }
+    } else if (matchesKey(data, 'a')) {
+      // Select all / deselect all
+      if (this.selected.size === groups.length) {
+        this.selected.clear();
+      } else {
+        for (const g of groups) {
+          this.selected.add(g.signature);
+        }
+      }
+    }
+  }
+
+  /** Call after errors are removed to clean up stale selections and clamp cursor. */
+  sync() {
+    const groups = this.errorStore.getGroups();
+    const validSigs = new Set(groups.map(g => g.signature));
+    for (const sig of this.selected) {
+      if (!validSigs.has(sig)) this.selected.delete(sig);
+    }
+    const totalItems = groups.length + 1;
+    if (this.cursor >= totalItems) {
+      this.cursor = Math.max(0, totalItems - 1);
+    }
+  }
+
+  render(width: number): string[] {
+    const groups = this.errorStore.getGroups();
+    if (groups.length === 0) return [];
+
+    const lines: string[] = [];
+
+    // Title
+    lines.push(chalk.red.bold('  ● Do you want me to fix the errors for you?'));
+    lines.push('');
+
+    // Error rows
+    for (let i = 0; i < groups.length; i++) {
+      const g = groups[i];
+      const isCursor = i === this.cursor;
+      const isChecked = this.selected.has(g.signature);
+      const checkbox = isChecked ? chalk.red('[x]') : chalk.red('[ ]');
+      const pointer = isCursor ? chalk.red('❯ ') : '  ';
+      const countStr = g.count > 1 ? chalk.red.dim(` (x${g.count})`) : '';
+      // Truncate label to fit
+      const prefixLen = 2 + 4; // pointer + checkbox + space
+      const maxLabel = Math.max(10, width - prefixLen - (g.count > 1 ? 6 : 0));
+      let label = g.label;
+      if (visibleWidth(label) > maxLabel) {
+        label = label.slice(0, maxLabel - 1) + '…';
+      }
+      const labelStyled = isCursor ? chalk.red.bold(label) : chalk.red(label);
+      lines.push(`${pointer}${checkbox} ${labelStyled}${countStr}`);
+    }
+
+    // LFG button
+    lines.push('');
+    const isLfgCursor = this.cursor === groups.length;
+    const hasSelection = this.selected.size > 0;
+    if (hasSelection) {
+      const label = isLfgCursor
+        ? chalk.bgGreen.black.bold(' Fix it for me! ')
+        : chalk.green.bold(' Fix it for me! ');
+      const pointer = isLfgCursor ? chalk.green('❯ ') : '  ';
+      lines.push(`${pointer}${label}`);
+    } else {
+      const label = chalk.dim(' Fix it for me! ');
+      const pointer = isLfgCursor ? chalk.dim('❯ ') : '  ';
+      lines.push(`${pointer}${label}`);
+    }
+
+    return lines;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// StatusBar — switches between "Serving" and ErrorMenu
+// ---------------------------------------------------------------------------
+class StatusBar implements Component {
+  private menu: ErrorMenu;
+  private _fixing = false;
+
+  constructor(private errorStore: ErrorStore) {
+    this.menu = new ErrorMenu(errorStore);
+  }
+
+  get errorMenu(): ErrorMenu {
+    return this.menu;
+  }
+
+  set fixing(value: boolean) {
+    this._fixing = value;
+  }
+
+  invalidate() {
+    this.menu.invalidate();
+  }
+
+  handleInput(data: string) {
+    if (!this._fixing && this.errorStore.size > 0) {
+      this.menu.handleInput(data);
+    }
+  }
+
+  render(width: number): string[] {
+    const separator = chalk.dim('─'.repeat(width));
+    const lines: string[] = [];
+
+    // Status line (always shown)
+    const statusLabel = this._fixing
+      ? chalk.cyan('  ● Fixing…')
+      : chalk.green('  ● Serving');
+
+    if (this.errorStore.size > 0 && !this._fixing) {
+      // Error menu + status underneath
+      lines.push(separator);
+      lines.push(...this.menu.render(width));
+      lines.push('');
+      lines.push(separator);
+      lines.push(statusLabel);
+      lines.push('');
+    } else {
+      // Just the status line
+      lines.push(separator);
+      lines.push(statusLabel);
+      lines.push('');
+    }
+
+    return lines;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Main entry point
+// ---------------------------------------------------------------------------
 export async function startAgentMode(
   client: Client,
   opts: Partial<DevOptions>,
@@ -93,13 +350,18 @@ export async function startAgentMode(
   const tui = new TUI(terminal);
 
   const outputPanel = new Text('', 0, 0);
-  const spacer = new Spacer(1);
-  const inputPanel = new Input();
+
+  // Error store drives the bottom status bar.
+  const errorStore = new ErrorStore(() => {
+    statusBar.errorMenu.sync();
+    tui.requestRender();
+  });
+
+  const statusBar = new StatusBar(errorStore);
 
   tui.addChild(outputPanel);
-  tui.addChild(spacer);
-  tui.addChild(inputPanel);
-  tui.setFocus(inputPanel);
+  tui.addChild(statusBar);
+  tui.setFocus(statusBar);
 
   let outputBuffer = '';
 
@@ -109,13 +371,11 @@ export async function startAgentMode(
     tui.requestRender();
   }
 
-  // Teardown / agent handoff state — declared early so runFixAgent can access it.
+  // Teardown / agent handoff state
   let tornDown = false;
 
-  let lastErrorChunk: string | null = null;
-
   const errorChunker = new ErrorChunker((text: string) => {
-    lastErrorChunk = text;
+    errorStore.push(text);
   });
 
   let agentSession:
@@ -126,7 +386,22 @@ export async function startAgentMode(
       >['session']
     | null = null;
 
-  async function runFixAgent() {
+  async function runFixAgent(groups: ErrorGroup[]) {
+    // Build the prompt from the full text of each selected error
+    const errorTexts = groups
+      .map(
+        (g, i) =>
+          `--- Error ${i + 1} (seen ${g.count} time${g.count > 1 ? 's' : ''}) ---\n${g.latestFullText}`
+      )
+      .join('\n\n');
+
+    // Remove selected errors from the store immediately
+    const sigs = new Set(groups.map(g => g.signature));
+    errorStore.remove(sigs);
+
+    statusBar.fixing = true;
+    tui.requestRender();
+
     try {
       const { createAgentSession, SessionManager } = await import(
         '@mariozechner/pi-coding-agent'
@@ -138,7 +413,7 @@ export async function startAgentMode(
       });
       agentSession = session;
 
-      appendOutput(chalk.cyan('\n--- Agent fixing error ---\n'));
+      appendOutput(chalk.cyan('\n--- Agent fixing errors ---\n'));
 
       session.subscribe((event: { type: string; [key: string]: unknown }) => {
         switch (event.type) {
@@ -186,7 +461,7 @@ export async function startAgentMode(
       });
 
       await session.prompt(
-        `Fix this error from the dev server:\n\n${lastErrorChunk}`
+        `Fix these errors from the dev server:\n\n${errorTexts}`
       );
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -196,30 +471,19 @@ export async function startAgentMode(
         agentSession.dispose();
         agentSession = null;
       }
+      statusBar.fixing = false;
+      tui.requestRender();
     }
   }
 
-  inputPanel.onSubmit = (value: string) => {
-    const trimmed = value.trim();
-    inputPanel.setValue('');
-
-    if (trimmed === '/fix') {
-      if (!lastErrorChunk) {
-        appendOutput(chalk.yellow('No recent error to fix.\n'));
-        return;
-      }
-      void runFixAgent();
-      return;
-    }
-
-    appendOutput(`user said: ${value}\n`);
+  // Wire LFG submit
+  statusBar.errorMenu.onSubmit = (groups: ErrorGroup[]) => {
+    void runFixAgent(groups);
   };
 
   tui.start();
 
-  // Writable stream that feeds into the TUI output panel.
-  // Passed to DevServer so child process output goes here
-  // instead of directly to process.stdout/stderr.
+  // Writable stream that feeds into the TUI output panel + error chunker.
   const tuiStream = new Writable({
     write(chunk, _encoding, callback) {
       const text = typeof chunk === 'string' ? chunk : chunk.toString('utf8');
