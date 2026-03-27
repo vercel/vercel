@@ -32,10 +32,15 @@ import {
   getServicesConfigWriteBlocker,
 } from '../../util/projects/detect-services';
 import { displayDetectedServices } from '../../util/input/display-services';
-import { promptForInferredServicesSetup } from '../../util/link/services-setup';
 import { displayPlatformConfigs } from '../../util/input/display-platform-configs';
 import { acquireDevLock, releaseDevLock } from '../../util/dev/dev-lock';
 import { resolveProjectCwd } from '../../util/projects/find-project-root';
+import {
+  generateVercelConfig,
+  writeVercelConfig,
+} from '../../util/llm/generate-services-config';
+import readJSONFile from '../../util/read-json-file';
+import type { VercelConfig } from '../../util/dev/types';
 
 export type DevOptions = {
   '--listen': string;
@@ -156,6 +161,13 @@ export async function startDevServer(
       .env;
   }
 
+  // Detect config files from other cloud platforms / Docker (needed as LLM context)
+  const platformDetector = new LocalFileSystemDetector(cwd);
+  const platformConfigs = await detectPlatformConfigs(platformDetector);
+  if (platformConfigs.configs.length > 0) {
+    displayPlatformConfigs(platformConfigs);
+  }
+
   let services: ResolvedService[] | undefined;
   let detection = await tryDetectServices(cwd);
   let foundServices =
@@ -204,41 +216,49 @@ export async function startDevServer(
           1
         );
       }
+    } else if (writeBlocker) {
+      output.warn(
+        `Multiple services were detected, but your existing project config uses \`${writeBlocker}\`. ` +
+          'Remove it before enabling multi-service mode.'
+      );
     } else {
-      // Interactive path, or --yes (auto-confirm) for both interactive
-      // and non-interactive callers. promptForInferredServicesSetup
-      // handles autoConfirm by choosing "all services" without prompting.
-      ctx.willPrompt?.();
-      const choice = await promptForInferredServicesSetup({
-        client,
-        autoConfirm,
-        nonInteractive: client.nonInteractive,
-        workPath: cwd,
-        inferred: detection.inferred,
-        inferredWriteBlocker: writeBlocker,
-      });
-      ctx.didPrompt?.();
+      // Generate config via LLM
+      const existingConfig =
+        (await readJSONFile<VercelConfig>(join(cwd, 'vercel.json'))) ?? null;
+      const safeExistingConfig =
+        existingConfig instanceof Error ? null : existingConfig;
 
-      if (choice?.type === 'services') {
-        // Config was written — re-detect so we get the resolved services
-        // from the newly written vercel.json.
+      output.spinner('Generating services configuration…');
+      const llmConfig = await generateVercelConfig({
+        existingConfig: safeExistingConfig,
+        inferredServices: detection.inferred,
+        platformConfigs,
+        cwd,
+      });
+      output.stopSpinner();
+
+      if (llmConfig) {
+        await writeVercelConfig(cwd, llmConfig);
+        output.log(
+          'Generated and wrote services configuration to vercel.json.'
+        );
+
+        // Re-detect so we get the resolved services from the newly written config.
         detection = await tryDetectServices(cwd);
         if (detection?.enabled && detection.resolved.services.length > 0) {
           foundServices = true;
           services = detection.resolved.services;
+          displayDetectedServices(detection.resolved.services);
         }
+      } else {
+        output.error(
+          'Failed to generate services configuration. Check that your LLM provider is configured (e.g. ANTHROPIC_API_KEY is set).'
+        );
       }
     }
   } else if (foundServices && detection) {
     displayDetectedServices(detection.resolved.services);
     services = detection.resolved.services;
-  }
-
-  // Detect config files from other cloud platforms / Docker
-  const platformDetector = new LocalFileSystemDetector(cwd);
-  const platformConfigs = await detectPlatformConfigs(platformDetector);
-  if (platformConfigs.configs.length > 0) {
-    displayPlatformConfigs(platformConfigs);
   }
 
   let lockAcquired = false;

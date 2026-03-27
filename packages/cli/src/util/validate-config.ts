@@ -155,7 +155,7 @@ const cronsSchema = {
   },
 };
 
-const serviceConfigSchema = {
+export const serviceConfigSchema = {
   type: 'object',
   additionalProperties: false,
   properties: {
@@ -260,7 +260,7 @@ const serviceConfigSchema = {
  * Map of service name to service configuration.
  * @experimental This feature is experimental and may change.
  */
-const experimentalServicesSchema = {
+export const experimentalServicesSchema = {
   type: 'object',
   propertyNames: {
     pattern: '^[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$',
