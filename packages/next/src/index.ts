@@ -758,10 +758,20 @@ export const build: BuildV2 = async buildOptions => {
         } else {
           console.log('beforeFilesRewrites', beforeFilesRewrites);
           const convertRewritesToRex = (rewrites: Rewrite[]) => {
+            const compileRexAndLog = (source: string) => {
+              console.log('#################################');
+              console.log('Rex rewrite');
+              console.log(rewrites);
+              console.log('------------------');
+              console.log(source);
+              console.log('------------------');
+              console.log('#################################');
+              return compileRex(source);
+            };
             let code: string;
             if (rewrites.some(rewrite => !!rewrite.has)) {
               // "has" config
-              code = compileRex(`
+              code = compileRexAndLog(`
                 rewrites = {
                   ${rewrites.map(rewrite => `"${rewrite.source}": { path: ${JSON.stringify(rewrite.destination)}, has: ${JSON.stringify(rewrite.has)} },`).join('\n')}
                 }
@@ -805,7 +815,7 @@ export const build: BuildV2 = async buildOptions => {
               `);
             } else {
               // no "has"
-              code = compileRex(`
+              code = compileRexAndLog(`
                 rewrites = {
                   ${rewrites.map(rewrite => `"${rewrite.source}": ${JSON.stringify(rewrite.destination)},`).join('\n')}
                 }
@@ -817,15 +827,21 @@ export const build: BuildV2 = async buildOptions => {
 
             return { src: `rex:${code}` };
           };
-          beforeFilesRewrites.push(
-            convertRewritesToRex(routesManifest.rewrites.beforeFiles)
-          );
-          afterFilesRewrites.push(
-            convertRewritesToRex(routesManifest.rewrites.afterFiles)
-          );
-          fallbackRewrites.push(
-            convertRewritesToRex(routesManifest.rewrites.fallback)
-          );
+          if (routesManifest.rewrites.beforeFiles.length > 0) {
+            beforeFilesRewrites.push(
+              convertRewritesToRex(routesManifest.rewrites.beforeFiles)
+            );
+          }
+          if (routesManifest.rewrites.afterFiles.length > 0) {
+            afterFilesRewrites.push(
+              convertRewritesToRex(routesManifest.rewrites.afterFiles)
+            );
+          }
+          if (routesManifest.rewrites.fallback.length > 0) {
+            fallbackRewrites.push(
+              convertRewritesToRex(routesManifest.rewrites.fallback)
+            );
+          }
 
           // beforeFilesRewrites.push(
           //   ...convertRewrites(routesManifest.rewrites.beforeFiles).map(r => {
