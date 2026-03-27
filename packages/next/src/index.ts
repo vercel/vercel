@@ -32,7 +32,12 @@ import {
   BUILDER_COMPILE_STEP,
   type TriggerEvent,
 } from '@vercel/build-utils';
-import { Route, RouteWithHandle, RouteWithSrc } from '@vercel/routing-utils';
+import {
+  Rewrite,
+  Route,
+  RouteWithHandle,
+  RouteWithSrc,
+} from '@vercel/routing-utils';
 import {
   convertHeaders,
   convertRedirects,
@@ -100,13 +105,14 @@ import {
   getServerlessPages,
   RenderingMode,
 } from './utils';
+import { compile as compileRex } from '@vercel/rex';
 import { getAppRouterPathnameFilesMap } from './metadata';
 
 export const version = 2;
 export const htmlContentType = 'text/html; charset=utf-8';
 const SERVER_BUILD_MINIMUM_NEXT_VERSION = 'v10.0.9-canary.4';
 // related PR: https://github.com/vercel/next.js/pull/25418
-const BEFORE_FILES_CONTINUE_NEXT_VERSION = 'v10.2.3-canary.1';
+// const BEFORE_FILES_CONTINUE_NEXT_VERSION = 'v10.2.3-canary.1';
 // related PR: https://github.com/vercel/next.js/pull/27143
 const REDIRECTS_NO_STATIC_NEXT_VERSION = 'v11.0.2-canary.15';
 // related PR: https://github.com/vercel/next.js/pull/84643
@@ -438,10 +444,10 @@ export const build: BuildV2 = async buildOptions => {
     !(config.framework === 'blitzjs') &&
     semver.gte(nextVersion, SERVER_BUILD_MINIMUM_NEXT_VERSION);
 
-  const beforeFilesShouldContinue = semver.gte(
-    nextVersion,
-    BEFORE_FILES_CONTINUE_NEXT_VERSION
-  );
+  // const beforeFilesShouldContinue = semver.gte(
+  //   nextVersion,
+  //   BEFORE_FILES_CONTINUE_NEXT_VERSION
+  // );
   const isCorrectLocaleAPIRoutes = semver.gte(nextVersion, 'v11.0.2-canary.3');
 
   if (isServerMode) {
@@ -750,26 +756,48 @@ export const build: BuildV2 = async buildOptions => {
             )
           );
         } else {
-          beforeFilesRewrites.push(
-            ...convertRewrites(routesManifest.rewrites.beforeFiles).map(r => {
-              if ('check' in r) {
-                if (beforeFilesShouldContinue) {
-                  delete r.check;
-                  r.continue = true;
-                }
-                // override: true helps maintain order so that redirects don't
-                // come after beforeFiles rewrites
-                r.override = true;
+          console.log('beforeFilesRewrites', beforeFilesRewrites);
+          const convertRewritesToRex = (rewrites: Rewrite[]) => {
+            const code = compileRex(`
+              rewrites = {
+                ${rewrites.map(rewrite => `"${rewrite.source}": "${rewrite.destination}",`).join('\n')}
               }
-              return r;
-            })
+              when destination_path = rewrites.(req.path) do
+                req.path = destination_path
+              end
+            `);
+            return { src: `rex:${code}` };
+          };
+          beforeFilesRewrites.push(
+            convertRewritesToRex(routesManifest.rewrites.beforeFiles)
           );
           afterFilesRewrites.push(
-            ...convertRewrites(routesManifest.rewrites.afterFiles)
+            convertRewritesToRex(routesManifest.rewrites.afterFiles)
           );
           fallbackRewrites.push(
-            ...convertRewrites(routesManifest.rewrites.fallback)
+            convertRewritesToRex(routesManifest.rewrites.fallback)
           );
+
+          // beforeFilesRewrites.push(
+          //   ...convertRewrites(routesManifest.rewrites.beforeFiles).map(r => {
+          //     if ('check' in r) {
+          //       if (beforeFilesShouldContinue) {
+          //         delete r.check;
+          //         r.continue = true;
+          //       }
+          //       // override: true helps maintain order so that redirects don't
+          //       // come after beforeFiles rewrites
+          //       r.override = true;
+          //     }
+          //     return r;
+          //   })
+          // );
+          // afterFilesRewrites.push(
+          //   ...convertRewrites(routesManifest.rewrites.afterFiles)
+          // );
+          // fallbackRewrites.push(
+          //   ...convertRewrites(routesManifest.rewrites.fallback)
+          // );
         }
 
         if (routesManifest.headers) {

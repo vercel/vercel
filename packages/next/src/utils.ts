@@ -3608,7 +3608,7 @@ export function updateRouteSrc(
   index: number,
   manifestItems: Array<{ regex: string }>
 ) {
-  if (route.src) {
+  if (route.src && !route.src.startsWith('rex:')) {
     route.src = manifestItems[index].regex;
   }
   return route;
@@ -4678,8 +4678,8 @@ export async function getServerActionMetaRoutes(
           .map(([id, actionName]) => `"${id}": "${actionName}",`)
           .join('\n')} 
       }
-      when action-name = action-names-by-id.(headers.next-action) do
-        headers.x-server-action-name = action-name
+      when action-name = action-names-by-id.(req.headers.next-action) do
+        req.headers.x-server-action-name = action-name
       end
     `);
     const route: Route = {
