@@ -25,7 +25,7 @@ import {
   writeReadme,
 } from '../../util/projects/link';
 import { addToGitIgnore } from '../../util/link/add-to-gitignore';
-import { ensureLink } from '../../util/link/ensure-link';
+import { ensureLinkLegacy } from '../../util/link/ensure-link';
 import { isErrnoException } from '@vercel/error-utils';
 import selectOrg from '../../util/input/select-org';
 import createProject from '../../util/projects/create-project';
@@ -158,7 +158,7 @@ export default async function link2(client: Client) {
   if (!baseline.rootPath) {
     const yes = !!parsedArgs.flags['--yes'];
     // No repo detected: always use directory-only link (same as vc link)
-    const link = await ensureLink('link-2', client, client.cwd, {
+    const link = await ensureLinkLegacy('link-2', client, client.cwd, {
       autoConfirm: yes,
       forceDelete: false,
     });

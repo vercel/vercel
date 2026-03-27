@@ -9,18 +9,13 @@ import { parseListen } from '../../util/dev/parse-listen';
 import type Client from '../../util/client';
 import { getLinkedProject } from '../../util/projects/link';
 import type { ProjectSettings } from '@vercel-internals/types';
-import setupAndLink from '../../util/link/setup-and-link';
-import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
-import param from '../../util/output/param';
+import { ensureLink } from '../../util/link/ensure-link';
+import { getCommandName } from '../../util/pkg-name';
 import cmd from '../../util/output/cmd';
 import { OUTPUT_DIR } from '../../util/build/write-build-result';
 import { pullEnvRecords } from '../../util/env/get-env-records';
 import output from '../../output-manager';
 import { refreshOidcToken } from '../../util/env/refresh-oidc-token';
-import {
-  outputActionRequired,
-  buildCommandWithYes,
-} from '../../util/agent-output';
 import type { DevTelemetryClient } from '../../util/telemetry/commands/dev';
 import { VERCEL_OIDC_TOKEN } from '../../util/env/constants';
 import { tryDetectServices } from '../../util/projects/detect-services';
@@ -58,48 +53,16 @@ export default async function dev(
           `To link your project, run ${getCommandName('dev')} without \`-L\` or \`--local\` or ${getCommandName('link')}.`
       );
     } else {
-      link = await setupAndLink(client, cwd, {
+      const linkResult = await ensureLink('dev', client, cwd, {
         autoConfirm: opts['--yes'],
         link,
-        successEmoji: 'link',
-        setupMsg: 'Set up and develop',
         nonInteractive: client.nonInteractive,
       });
-
-      if (link.status === 'not_linked') {
-        // User aborted project linking questions
-        return 0;
+      if (typeof linkResult === 'number') {
+        return linkResult;
       }
+      link = linkResult;
     }
-  }
-
-  if (link.status === 'error') {
-    if (link.reason === 'HEADLESS') {
-      if (client.nonInteractive) {
-        outputActionRequired(
-          client,
-          {
-            status: 'action_required',
-            reason: 'confirmation_required',
-            message: `Command ${getCommandNamePlain('dev')} requires confirmation. Use option --yes to confirm.`,
-            next: [
-              {
-                command: buildCommandWithYes(client.argv),
-                when: 'Confirm and run',
-              },
-            ],
-          },
-          link.exitCode
-        );
-      } else {
-        output.error(
-          `Command ${getCommandName(
-            'dev'
-          )} requires confirmation. Use option ${param('--yes')} to confirm.`
-        );
-      }
-    }
-    return link.exitCode;
   }
 
   let projectSettings: ProjectSettings | undefined;

@@ -755,9 +755,6 @@ const main = async () => {
           func = (await import('./commands/list/index.js')).default;
           break;
         case 'link':
-          telemetry.trackCliCommandLink(userSuppliedSubCommand);
-          func = (await import('./commands/link/index.js')).default;
-          break;
         case 'link-2':
           telemetry.trackCliCommandLink(userSuppliedSubCommand);
           func = (await import('./commands/link-2/index.js')).default;
