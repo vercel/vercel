@@ -283,12 +283,25 @@ class ErrorMenu implements Component {
 // ---------------------------------------------------------------------------
 // StatusBar — switches between "Serving" and ErrorMenu
 // ---------------------------------------------------------------------------
+const SERVING_FRAMES = ['  ●', '  ◉', '  ○', '  ◉'];
+const FIXING_FRAMES = ['  ▲', '  ▶', '  ▼', '  ◀'];
+const ANIM_INTERVAL = 300;
+
 class StatusBar implements Component {
   private menu: ErrorMenu;
   private _fixing = false;
+  private _frame = 0;
+  private _timer: ReturnType<typeof setInterval> | null = null;
+  private _requestRender?: () => void;
 
   constructor(private errorStore: ErrorStore) {
     this.menu = new ErrorMenu(errorStore);
+  }
+
+  /** Must be called once so the animation can trigger TUI redraws. */
+  bindRender(requestRender: () => void) {
+    this._requestRender = requestRender;
+    this.startAnim();
   }
 
   get errorMenu(): ErrorMenu {
@@ -297,6 +310,23 @@ class StatusBar implements Component {
 
   set fixing(value: boolean) {
     this._fixing = value;
+    this._frame = 0;
+  }
+
+  dispose() {
+    if (this._timer) {
+      clearInterval(this._timer);
+      this._timer = null;
+    }
+  }
+
+  private startAnim() {
+    if (this._timer) return;
+    this._timer = setInterval(() => {
+      const frames = this._fixing ? FIXING_FRAMES : SERVING_FRAMES;
+      this._frame = (this._frame + 1) % frames.length;
+      this._requestRender?.();
+    }, ANIM_INTERVAL);
   }
 
   invalidate() {
@@ -313,13 +343,13 @@ class StatusBar implements Component {
     const separator = chalk.dim('─'.repeat(width));
     const lines: string[] = [];
 
-    // Status line (always shown)
+    const frames = this._fixing ? FIXING_FRAMES : SERVING_FRAMES;
+    const disc = frames[this._frame % frames.length];
     const statusLabel = this._fixing
-      ? chalk.cyan('  ● Fixing…')
-      : chalk.green('  ● Serving');
+      ? chalk.cyan(`${disc} Fixing…`)
+      : chalk.green(`${disc} Serving`);
 
     if (this.errorStore.size > 0 && !this._fixing) {
-      // Error menu + status underneath
       lines.push(separator);
       lines.push(...this.menu.render(width));
       lines.push('');
@@ -327,7 +357,6 @@ class StatusBar implements Component {
       lines.push(statusLabel);
       lines.push('');
     } else {
-      // Just the status line
       lines.push(separator);
       lines.push(statusLabel);
       lines.push('');
@@ -362,6 +391,7 @@ export async function startAgentMode(
   tui.addChild(outputPanel);
   tui.addChild(statusBar);
   tui.setFocus(statusBar);
+  statusBar.bindRender(() => tui.requestRender());
 
   let outputBuffer = '';
 
@@ -500,6 +530,7 @@ export async function startAgentMode(
     if (tornDown) return;
     tornDown = true;
     errorChunker.dispose();
+    statusBar.dispose();
     await new Promise<void>(resolve => process.nextTick(resolve));
     await terminal.drainInput(1000);
     tui.stop();
