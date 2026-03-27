@@ -9,6 +9,11 @@ import { printError } from '../../util/error';
 import output from '../../output-manager';
 import { WhoamiTelemetryClient } from '../../util/telemetry/commands/whoami';
 import { validateJsonOutput } from '../../util/output-format';
+import resolveWhoamiLinkedScopeSlug from '../../util/resolve-whoami-scope';
+import { getScopeOrTeamFromArgv } from '../../util/input/select-org';
+import getUser from '../../util/get-user';
+import { TeamDeleted } from '../../util/errors-ts';
+import type { User } from '@vercel-internals/types';
 
 export default async function whoami(client: Client): Promise<number> {
   let parsedArgs = null;
@@ -43,21 +48,47 @@ export default async function whoami(client: Client): Promise<number> {
   const asJson = formatResult.jsonOutput;
   telemetry.trackCliOptionFormat(parsedArgs.flags['--format']);
 
-  const { contextName, user } = await getScope(client, { getTeam: false });
+  const linkedScopeSlug = await resolveWhoamiLinkedScopeSlug(
+    client,
+    client.cwd
+  );
+
+  let defaultScopeName: string;
+  let user: User;
+  try {
+    const scope = await getScope(client, {});
+    defaultScopeName = scope.contextName;
+    user = scope.user;
+  } catch (err) {
+    if (err instanceof TeamDeleted) {
+      user = await getUser(client);
+      defaultScopeName = user.username || user.email || '';
+    } else {
+      throw err;
+    }
+  }
+
+  const explicitScopeFromArgv = getScopeOrTeamFromArgv(client.argv);
+  const scopeSlug =
+    explicitScopeFromArgv != null && explicitScopeFromArgv !== ''
+      ? defaultScopeName
+      : (linkedScopeSlug ?? defaultScopeName);
+  const primary = user.username || user.email || '';
 
   if (asJson) {
     const jsonOutput = {
       username: user.username,
       email: user.email,
       name: user.name,
+      scope: scopeSlug,
     };
     client.stdout.write(`${JSON.stringify(jsonOutput, null, 2)}\n`);
   } else if (client.stdout.isTTY) {
-    output.log(contextName);
+    output.log(scopeSlug === primary ? primary : `${primary} (${scopeSlug})`);
   } else {
     // If stdout is not a TTY, then only print the username
     // to support piping the output to another file / exe
-    client.stdout.write(`${contextName}\n`);
+    client.stdout.write(`${primary}\n`);
   }
 
   return 0;

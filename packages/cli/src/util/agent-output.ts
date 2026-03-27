@@ -261,6 +261,29 @@ export function enrichActionRequiredWithInvokingCommand(
 }
 
 /**
+ * Writes action_required JSON to stdout and exits. Use when the caller has
+ * already decided structured output is required (e.g. agent mode), or from
+ * {@link outputActionRequired} after a non-interactive check.
+ */
+export function emitActionRequiredJsonAndExit(
+  client: Client,
+  payload: ActionRequiredPayload,
+  exitCode: number = 1
+): never {
+  const enriched = enrichActionRequiredWithInvokingCommand(
+    payload,
+    client.argv
+  );
+  if (!enriched.hint && enriched.next?.length) {
+    enriched.hint =
+      'Run one of the commands in next[] to complete without prompting.';
+  }
+  // biome-ignore lint/suspicious/noConsole: intentional console usage
+  console.log(JSON.stringify(enriched, null, 2));
+  process.exit(exitCode);
+}
+
+/**
  * When client.nonInteractive, writes the action_required payload as a single
  * JSON line to stdout and exits with exitCode (default 1).
  * The payload's next[] is enriched with both link commands and the invoking command with --scope.
@@ -274,17 +297,7 @@ export function outputActionRequired(
   if (!client.nonInteractive) {
     return;
   }
-  const enriched = enrichActionRequiredWithInvokingCommand(
-    payload,
-    client.argv
-  );
-  if (!enriched.hint && enriched.next?.length) {
-    enriched.hint =
-      'Run one of the commands in next[] to complete without prompting.';
-  }
-  // biome-ignore lint/suspicious/noConsole: intentional console usage
-  console.log(JSON.stringify(enriched, null, 2));
-  process.exit(exitCode);
+  emitActionRequiredJsonAndExit(client, payload, exitCode);
 }
 
 /**

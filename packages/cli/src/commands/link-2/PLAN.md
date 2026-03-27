@@ -108,6 +108,14 @@ These are **unknowns or decisions** that will need to be resolved before or duri
 
 ---
 
+## 8b. Non-interactive / --yes: never create a project (implemented)
+
+**Decision:** For `--yes` or any non-interactive invocation, link-2 **never creates a new project**. If the outcome would be **offer_create** (create new project with detected framework) or the **suggest_potential** branch where the user declines "Connect this repo?" and we would create a new project by name — we exit with an error: "Project creation requires interactive mode. Run without --yes or run in a TTY."
+
+This differs from current `vc link --yes`, which does create a project when no match is found. **Implemented:** the offer_create path and the suggest_potential "new project name" branch both check `if (yes || !client.stdin.isTTY)` and return 1 with the above message before calling `createProject`.
+
+---
+
 ## 9. No-framework directory + new-project flow
 
 **Current behavior (to reconsider):** If you run `vc link` from a directory where we didn’t detect a framework (e.g. `/apps` with no package.json or app there), we still let you go through the “new project” flow even when there’s a repo.json at the root. That’s confusing: we have a linked repo but we’re offering to create a new project in a non-project folder.
@@ -130,19 +138,19 @@ We detect **potential projects** by folder name and rule out ones that are git-l
 
 **Skip first question:** Do not ask “Link Git repository at X to your Project(s)? (Y/n)” — we obviously want to link. Same for plain `vc link`; the question is redundant.
 
-**Scope:** Keep the scope question as is for now. (Later we may allow multiple teams in the selection.)
+**Scope:** Do not ask for team/scope up front. Prompt for scope only when creating a new project (`selectOrg` with a create-specific message). Listing “other projects to link” uses the `accountId` of the project already in context (or the first ambiguous root project’s team for “find or create”).
 
 **Flow (after finding repo root, linked projects, and framework detection):**
 
 1. **Not at repo root** (cwd !== rootPath):
-   - If there is an **existing project match** for current folder (by git repo + rootDirectory, or project name same as folder name): ask “Link to &lt;project name&gt;?” with **Y** auto-selected. If yes → link flow → ask pull env vars. If no → (no existing match path or offer create if framework detected).
+   - If there is an **existing project match** for current folder (by git repo + rootDirectory, or project name same as folder name): ask “Link to &lt;project name&gt;?” with **Y** auto-selected. If yes → link flow → ask pull env vars (**N** default). If they say yes: **one** linked project → run `env pull` for that app directory; **multiple** linked projects → checkbox (all checked by default) to choose which apps to pull for. If no → (no existing match path or offer create if framework detected).
    - If **framework detected** at cwd: offer to **create new project** with folder name suggested as project name and framework shown. **Do not ask “which directory”** — we know it (current folder). (We only ask “which directory” when user is at repo root or there is no repo root.)
    - Otherwise: no match, no framework → guide or skip.
 
 2. **At repo root** (cwd === rootPath), or no repo root:
    - If there are **existing projects** attached (from API):
-     - If **exactly one** and its root dir is `"."`: link that project and we’re done (then write, optionally ask pull env).
-     - If **multiple** (even if one is root match): link all repo projects (we always link the list we have; no checkbox). Show a summary of what was linked.
+     - If **exactly one** and its root dir is `"."`: link that project and we’re done (then write, optionally ask pull env — **N** default; **Y** runs pull for that project without a second chooser).
+     - If **multiple** (even if one is root match): link all repo projects (we always link the list we have; no checkbox at link time). Show a summary of what was linked. Env pull: **N** default; **Y** then checkbox over linked projects (all checked by default). With `link-2 --yes`, pull runs for every linked project without prompts.
    - If no existing projects / we need to offer create: **only here** do we ask “which directory” (with strong recommendation e.g. `apps/web`), then project name (folder name suggested), then create. So: **we only ask “which directory” when the user is at the repo root or there is no repo root.**
 
 **Repo-only flow (`--repo` or add):** Don’t consider folder name; show the whole list of found projects regardless of cwd. Don’t offer to create (that’s what the `add` subcommand is for).

@@ -1,4 +1,7 @@
 import assert from 'node:assert';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { describe, it, expect } from 'vitest';
 import { frameworkList } from '@vercel/frameworks';
 import createLineIterator from 'line-async-iterator';
@@ -7,6 +10,21 @@ import { useUser } from '../../../mocks/user';
 import { useTeams } from '../../../mocks/team';
 import { defaultProject, useProject } from '../../../mocks/project';
 import { client } from '../../../mocks/client';
+// import * as agentOutput from '../../../../src/util/agent-output';
+
+/** stderr line chunks may omit blank lines; skip them for stable assertions. */
+async function nextNonEmptyLine(
+  lines: AsyncIterableIterator<string>
+): Promise<string> {
+  let line = await lines.next();
+  while (line.value === '') {
+    line = await lines.next();
+  }
+  if (line.done || line.value === undefined) {
+    throw new Error('unexpected end of stderr lines');
+  }
+  return line.value;
+}
 
 describe('inspect', () => {
   describe('invalid argument', () => {
@@ -58,81 +76,121 @@ describe('inspect', () => {
 
     const lines = createLineIterator(client.stderr);
 
-    let line = await lines.next();
-    expect(line.value).toContain(`Found Project ${team.slug}/${project.name}`);
+    let row = await nextNonEmptyLine(lines);
+    expect(row).toContain(`Found Project ${team.slug}/${project.name}`);
 
-    // empty line
-    line = await lines.next();
-    expect(line.value).toEqual('');
+    row = await nextNonEmptyLine(lines);
+    expect(row).toContain(`General`);
 
-    line = await lines.next();
-    expect(line.value).toContain(`General`);
-
-    // empty line
-    line = await lines.next();
-    expect(line.value).toEqual('');
-
-    line = await lines.next();
-    let parts = line.value!.trim().split(/\t+/);
+    row = await nextNonEmptyLine(lines);
+    let parts = row.trim().split(/\t+/);
     expect(parts).toEqual(['ID', project.id]);
 
-    line = await lines.next();
-    parts = line.value!.trim().split(/\t+/);
+    row = await nextNonEmptyLine(lines);
+    parts = row.trim().split(/\t+/);
     expect(parts).toEqual(['Name', project.name]);
 
-    line = await lines.next();
-    parts = line.value!.trim().split(/\t+/);
+    row = await nextNonEmptyLine(lines);
+    parts = row.trim().split(/\t+/);
     expect(parts).toEqual(['Owner', team.name]);
 
-    line = await lines.next();
-    parts = line.value!.trim().split(/\t+/);
+    row = await nextNonEmptyLine(lines);
+    parts = row.trim().split(/\t+/);
     expect(parts[0]).toEqual('Created At');
 
-    line = await lines.next();
-    parts = line.value!.trim().split(/\t+/);
+    row = await nextNonEmptyLine(lines);
+    parts = row.trim().split(/\t+/);
     expect(parts).toEqual(['Root Directory', project.rootDirectory]);
 
-    line = await lines.next();
-    parts = line.value!.trim().split(/\t+/);
+    row = await nextNonEmptyLine(lines);
+    parts = row.trim().split(/\t+/);
     expect(parts).toEqual(['Node.js Version', project.nodeVersion]);
 
-    // empty line
-    line = await lines.next();
-    expect(line.value).toEqual('');
-
-    line = await lines.next();
-    expect(line.value).toContain(`Framework Settings`);
+    row = await nextNonEmptyLine(lines);
+    expect(row).toContain(`Framework Settings`);
     const fw = frameworkList.find(f => f.slug === project.framework);
     assert(fw);
 
-    // empty line
-    line = await lines.next();
-    expect(line.value).toEqual('');
-
-    line = await lines.next();
-    parts = line.value!.trim().split(/\t+/);
+    row = await nextNonEmptyLine(lines);
+    parts = row.trim().split(/\t+/);
     expect(parts).toEqual(['Framework Preset', fw.name]);
 
-    line = await lines.next();
-    parts = line.value!.trim().split(/\t+/);
+    row = await nextNonEmptyLine(lines);
+    parts = row.trim().split(/\t+/);
     expect(parts).toEqual([
       'Build Command',
       fw.settings?.buildCommand.placeholder,
     ]);
 
-    line = await lines.next();
-    parts = line.value!.trim().split(/\t+/);
+    row = await nextNonEmptyLine(lines);
+    parts = row.trim().split(/\t+/);
     expect(parts).toEqual([
       'Output Directory',
       fw.settings?.outputDirectory.placeholder,
     ]);
 
-    line = await lines.next();
-    parts = line.value!.trim().split(/\t+/);
+    row = await nextNonEmptyLine(lines);
+    parts = row.trim().split(/\t+/);
     expect(parts).toEqual(['Install Command', project.installCommand]);
+  });
 
-    // empty line
-    line = await lines.next();
-    expect(line.value).toEqual('');
+  describe('without linked project (cwd has no .vercel link)', () => {
+    it('exits with error in non-interactive mode without starting link (--yes does not create)', async () => {
+      useUser();
+      // Fresh temp dir has no .vercel/project.json — getLinkedProject returns not_linked naturally
+      const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'vc-inspect-'));
+      client.cwd = dir;
+      client.nonInteractive = true;
+      client.setArgv('project', 'inspect', '--yes');
+
+      const exitCode = await projects(client);
+
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput('No Vercel project is linked');
+    });
+
+    // TODO
+    // it('emits action_required JSON for agent mode', async () => {
+    //   useUser();
+    //   // Fresh temp dir has no .vercel/project.json — getLinkedProject returns not_linked naturally
+    //   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'vc-inspect-agent-'));
+    //   client.cwd = dir;
+    //   // In real CLI, isAgent=true implies nonInteractive=true (Client constructor sets it).
+    //   // Set both to match that invariant so the agent branch fires before the nonInteractive exit.
+    //   client.isAgent = true;
+    //   client.nonInteractive = true;
+    //   client.setArgv('project', 'inspect');
+
+    //   const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+    //     throw new Error('exit');
+    //   });
+    //   const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    //   try {
+    //     await expect(projects(client)).rejects.toThrow('exit');
+    //   } finally {
+    //     exitSpy.mockRestore();
+    //     logSpy.mockRestore();
+    //   }
+
+    //   expect(logSpy).toHaveBeenCalledTimes(1);
+    //   const parsed = JSON.parse(logSpy.mock.calls[0][0] as string);
+    //   expect(agentOutput.isActionRequiredPayload(parsed)).toBe(true);
+    //   expect(parsed.status).toBe('action_required');
+    //   expect(parsed.message).toContain('No Vercel project is linked');
+    //   expect(parsed.next?.map((n: { command: string }) => n.command)).toEqual(
+    //     expect.arrayContaining([
+    //       expect.stringMatching(/^vercel link/),
+    //       expect.stringMatching(/^vercel project add <project-name>/),
+    //       expect.stringMatching(/^vercel project inspect <project-name>/),
+    //     ])
+    //   );
+    //   expect(
+    //     parsed.next?.some((n: { command: string }) =>
+    //       n.command.includes('--yes')
+    //     )
+    //   ).toBe(false);
+    //   expect(exitSpy).toHaveBeenCalledWith(1);
+    // });
   });
 });

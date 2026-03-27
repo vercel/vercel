@@ -17,7 +17,7 @@ import { getGitConfigPath } from '../../util/git-helpers';
 import { getRemoteUrls } from '../../util/create-git-meta';
 import { normalizePath } from '@vercel/build-utils';
 import type { Project } from '@vercel-internals/types';
-import { ensureDir, outputJSON, readJSON } from 'fs-extra';
+import { ensureDir, outputJSON, pathExists, readJSON } from 'fs-extra';
 import {
   VERCEL_DIR,
   VERCEL_DIR_PROJECT,
@@ -25,12 +25,27 @@ import {
   writeReadme,
 } from '../../util/projects/link';
 import { addToGitIgnore } from '../../util/link/add-to-gitignore';
+import { ensureLink } from '../../util/link/ensure-link';
 import { isErrnoException } from '@vercel/error-utils';
 import selectOrg from '../../util/input/select-org';
 import createProject from '../../util/projects/create-project';
-import { connectGitProvider, parseRepoUrl } from '../../util/git/connect-git-provider';
+import {
+  connectGitProvider,
+  parseRepoUrl,
+} from '../../util/git/connect-git-provider';
 import pull from '../env/pull';
 import { prependEmoji, emoji } from '../../util/emoji';
+
+/** Prompt for team/personal scope only when creating a new project; sets currentTeam for the API. */
+async function selectOrgForNewProject(client: Client, autoConfirm: boolean) {
+  const org = await selectOrg(
+    client,
+    'Which scope should your new Project be created under?',
+    autoConfirm
+  );
+  client.config.currentTeam = org.type === 'team' ? org.id : undefined;
+  return org;
+}
 
 const COMMAND_CONFIG = {
   add: getCommandAliases(addSubcommand),
@@ -86,48 +101,73 @@ export default async function link2(client: Client) {
 
   const baseline = await collectLinkBaseline(client.cwd, { client });
 
-  const asJson = parsedArgs.flags['--json'];
-  if (asJson) {
-    const serializable = {
-      cwd: baseline.cwd,
-      rootPath: baseline.rootPath ?? null,
-      detectedProjects: [...baseline.detectedProjects.entries()].map(
-        ([dir, fws]) => [dir, fws.map(f => f.slug)]
-      ),
-      repoJson: baseline.repoJson,
-      projectJsonFiles: baseline.projectJsonFiles,
+  const asJson = !!parsedArgs.flags['--json'];
+
+  function serializeBaselineForJson(bl: LinkBaseline, linked?: unknown) {
+    const out: Record<string, unknown> = {
+      cwd: bl.cwd,
+      rootPath: bl.rootPath ?? null,
+      detectedProjects: [...bl.detectedProjects.entries()].map(([dir, fws]) => [
+        dir,
+        fws.map(f => f.slug),
+      ]),
+      repoJson: bl.repoJson,
+      projectJsonFiles: bl.projectJsonFiles,
       repo:
-        baseline.repo?.map(p => ({
+        bl.repo?.map(p => ({
           id: p.id,
           name: p.name,
           accountId: p.accountId,
           rootDirectory: p.rootDirectory,
-          link: p.link ? p.link.repo ? {
-            repo: p.link.repo,
-            org: p.link.org,
-          } : p.link.repoId ? {
-            repoId: p.link.repoId,
-          } : null : null,
+          link: p.link
+            ? p.link.repo
+              ? {
+                  repo: p.link.repo,
+                  org: p.link.org,
+                }
+              : p.link.repoId
+                ? {
+                    repoId: p.link.repoId,
+                  }
+                : null
+            : null,
         })) ?? null,
-      potentialProjects: baseline.potentialProjects.map(p => ({
+      potentialProjects: bl.potentialProjects.map(p => ({
         id: p.id,
         name: p.name,
         accountId: p.accountId,
         rootDirectory: p.rootDirectory,
-        link: p.link ? p.link.repo ? {
-          repo: p.link.repo,
-          org: p.link.org,
-        } : p.link.repoId ? {
-          repoId: p.link.repoId,
-        } : null : null,
+        link: p.link
+          ? p.link.repo
+            ? {
+                repo: p.link.repo,
+                org: p.link.org,
+              }
+            : p.link.repoId
+              ? {
+                  repoId: p.link.repoId,
+                }
+              : null
+          : null,
       })),
     };
-    output.print(JSON.stringify(serializable, null, 2));
-    return 0;
+    if (linked !== undefined) out.linked = linked;
+    return out;
   }
 
   if (!baseline.rootPath) {
-    output.log(`link-2 (stub); cwd: ${client.cwd}; not in a repo`);
+    const yes = !!parsedArgs.flags['--yes'];
+    // No repo detected: always use directory-only link (same as vc link)
+    const link = await ensureLink('link-2', client, client.cwd, {
+      autoConfirm: yes,
+      forceDelete: false,
+    });
+    if (typeof link === 'number') return link;
+    if (asJson) {
+      output.print(
+        JSON.stringify(serializeBaselineForJson(baseline, true), null, 2)
+      );
+    }
     return 0;
   }
 
@@ -135,24 +175,24 @@ export default async function link2(client: Client) {
   const repoProjects: Project[] = baseline.repo ?? [];
   const yes = !!parsedArgs.flags['--yes'];
 
-  // Scope selection (see PLAN §11 — keep as is)
-  if (client.stdin.isTTY) {
-    const org = await selectOrg(
-      client,
-      'Which scope should contain your Project(s)?',
-      yes
-    );
-    client.config.currentTeam = org.type === 'team' ? org.id : undefined;
-  }
-
   // --- State for interactive flow (see PLAN §11) ---
-  const atRepoRoot = normalizePath(relative(rootPath, baseline.cwd)) === '.' || baseline.cwd === rootPath;
-  const cwdRelativePath = normalizePath(relative(rootPath, baseline.cwd)) || '.';
-  const cwdFolderName = cwdRelativePath === '.' ? undefined : cwdRelativePath.split('/').filter(Boolean).slice(-1)[0];
+  const atRepoRoot =
+    normalizePath(relative(rootPath, baseline.cwd)) === '.' ||
+    baseline.cwd === rootPath;
+  const cwdRelativePath =
+    normalizePath(relative(rootPath, baseline.cwd)) || '.';
+  const cwdFolderName =
+    cwdRelativePath === '.'
+      ? undefined
+      : cwdRelativePath.split('/').filter(Boolean).slice(-1)[0];
   const projectsMatchingCwd: Project[] = repoProjects.filter(
-    p => normalizePath(p.rootDirectory || '.') === cwdRelativePath || p.name === cwdFolderName
+    p =>
+      normalizePath(p.rootDirectory || '.') === cwdRelativePath ||
+      p.name === cwdFolderName
   );
-  const rootProject = repoProjects.find(p => normalizePath(p.rootDirectory || '.') === '.');
+  const rootProject = repoProjects.find(
+    p => normalizePath(p.rootDirectory || '.') === '.'
+  );
   const detectedKeyForCwd = cwdRelativePath === '.' ? '' : cwdRelativePath;
   const frameworkAtCwd = baseline.detectedProjects.get(detectedKeyForCwd);
   const frameworkDetectedAtCwd = !!frameworkAtCwd && frameworkAtCwd.length > 0;
@@ -169,6 +209,7 @@ export default async function link2(client: Client) {
     | { type: 'skip' };
 
   let outcome: InteractiveOutcome;
+  let jsonResult: ReturnType<typeof serializeBaselineForJson> | null = null;
 
   switch (atRepoRoot) {
     case true: {
@@ -242,17 +283,16 @@ export default async function link2(client: Client) {
   /** When we linked an existing (non-repo) project by name; after write we offer git-connect or new project name. */
   let linkedPotentialProject: Project | null = null;
 
+  /** True if project rootDirectory is repo root (".", "", "./", etc.). */
+  function isRepoRootDir(rootDir: string | null | undefined): boolean {
+    const n = normalizePath(rootDir || '.');
+    return n === '.' || n === '';
+  }
+
   switch (outcome.type) {
     case 'link_one': {
-      projectsToWrite = [outcome.project];
-      shouldAskPullEnv = true;
-      break;
-    }
-    case 'link_many': {
-      projectsToWrite = outcome.projects;
-      break;
-    }
-    case 'prompt_link_existing': {
+      const linkOneProject = outcome.project;
+      // Repo root, single project — confirm like subfolder (closer behavior)
       if (!client.stdin.isTTY && !yes) {
         output.error(
           'Cannot confirm link in non-interactive mode. Use --yes or run in a TTY.'
@@ -263,12 +303,358 @@ export default async function link2(client: Client) {
         yes ||
         (client.stdin.isTTY &&
           (await client.input.confirm(
-            `Link to ${chalk.cyan(outcome.project.name)}?`,
+            `Found project ${chalk.cyan(`"${linkOneProject.name}"`)}. Link to it?`,
             true
           )));
       if (linkToIt) {
-        projectsToWrite = [outcome.project];
+        projectsToWrite = [linkOneProject];
         shouldAskPullEnv = true;
+      } else {
+        const action = await client.input.select({
+          message:
+            'Would you like to link to an existing project or create a new one?',
+          choices: [
+            {
+              name: 'Link to an existing project',
+              value: 'existing' as const,
+            },
+            { name: 'Create a new project', value: 'new' as const },
+          ],
+        });
+        if (action === 'existing') {
+          const res = await client.fetch<{
+            projects: Project[];
+            pagination: { next: number | null };
+          }>(`/v9/projects?limit=100`, {
+            accountId: linkOneProject.accountId,
+          });
+          const allProjects = res.projects ?? [];
+          const otherProjects = allProjects.filter(
+            p => p.id !== linkOneProject.id
+          );
+          if (otherProjects.length === 0) {
+            if (!asJson) output.log('No other projects in this scope.');
+          } else {
+            const sorted = [...otherProjects].sort(
+              (a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0)
+            );
+            const chosen = await client.input.select<Project>({
+              message: 'Which existing project do you want to link?',
+              choices: sorted.map(p => ({ name: p.name, value: p })),
+            });
+            const withRoot: Project = {
+              ...chosen,
+              rootDirectory:
+                cwdRelativePath === '.' ? undefined : cwdRelativePath,
+            };
+            projectsToWrite = [
+              ...(baseline.repo ?? []).filter(p => p.id !== chosen.id),
+              withRoot,
+            ];
+            linkedPotentialProject = (baseline.repo ?? []).some(
+              p => p.id === chosen.id
+            )
+              ? null
+              : chosen;
+            shouldAskPullEnv = true;
+          }
+        } else {
+          const suggestedName = cwdFolderName ?? 'my-app';
+          const gitConfigPath =
+            getGitConfigPath({ cwd: rootPath }) ??
+            join(rootPath, '.git/config');
+          const remoteUrls = await getRemoteUrls(gitConfigPath);
+          const repoUrl =
+            remoteUrls?.origin ?? (remoteUrls && Object.values(remoteUrls)[0]);
+          const parsed = repoUrl ? parseRepoUrl(repoUrl) : null;
+          if (!parsed) {
+            output.error(
+              'Could not parse Git remote URL to connect the new project.'
+            );
+            return 1;
+          }
+          await selectOrgForNewProject(client, yes);
+          output.spinner(`Creating project ${suggestedName}…`);
+          const newProject = await createProject(client, {
+            name: suggestedName,
+            framework: frameworkAtCwd?.[0]?.slug ?? undefined,
+          });
+          output.stopSpinner();
+          const connectResult = await connectGitProvider(
+            client,
+            newProject.id,
+            parsed.provider,
+            `${parsed.org}/${parsed.repo}`
+          );
+          if (connectResult === 1) return 1;
+          const projectWithRoot: Project = {
+            ...newProject,
+            rootDirectory:
+              cwdRelativePath === '.' ? undefined : cwdRelativePath,
+          };
+          projectsToWrite = [...(baseline.repo ?? []), projectWithRoot];
+          shouldAskPullEnv = true;
+          if (!asJson) {
+            output.log(
+              prependEmoji(
+                `Created ${chalk.bold(newProject.name)} and connected to Git`,
+                emoji('link')
+              )
+            );
+          }
+        }
+      }
+      break;
+    }
+    case 'link_many': {
+      const rootDirProjects = outcome.projects.filter(p =>
+        isRepoRootDir(p.rootDirectory)
+      );
+      if (rootDirProjects.length >= 2 && client.stdin.isTTY && !yes) {
+        // Ambiguous: multiple projects use repo root — show list to choose from
+        const others = outcome.projects.filter(
+          p => !isRepoRootDir(p.rootDirectory)
+        );
+        const LEARN_MORE_MULTIPLE_ROOT =
+          'https://vercel.com/docs/cli/link#multiple-projects-repo-root';
+        const whichRoot = await client.input.select<
+          Project | 'find_or_create' | 'none'
+        >({
+          message: `Multiple projects are set to the repo root directory. Learn more: ${LEARN_MORE_MULTIPLE_ROOT}`,
+          choices: [
+            ...rootDirProjects.map(p => ({ name: p.name, value: p })),
+            {
+              name: 'Find or create project',
+              value: 'find_or_create' as const,
+            },
+            { name: 'None', value: 'none' as const },
+          ],
+        });
+        if (whichRoot === 'none') {
+          // Don't link any root-dir project; still link the others
+          projectsToWrite = others;
+          shouldAskPullEnv = others.length > 0;
+        } else if (whichRoot === 'find_or_create') {
+          const listAccountId = rootDirProjects[0]?.accountId;
+          const action = await client.input.select({
+            message:
+              'Would you like to link to an existing project or create a new one?',
+            choices: [
+              {
+                name: 'Link to an existing project',
+                value: 'existing' as const,
+              },
+              { name: 'Create a new project', value: 'new' as const },
+            ],
+          });
+          if (action === 'existing') {
+            if (!listAccountId) {
+              if (!asJson) {
+                output.log(
+                  'Could not determine team for project list; linking non-root projects only.'
+                );
+              }
+              projectsToWrite = others;
+              shouldAskPullEnv = others.length > 0;
+            } else {
+              const res = await client.fetch<{
+                projects: Project[];
+                pagination: { next: number | null };
+              }>(`/v9/projects?limit=100`, { accountId: listAccountId });
+              const allProjects = res.projects ?? [];
+              if (allProjects.length === 0) {
+                if (!asJson) output.log('No other projects in this scope.');
+              } else {
+                const sorted = [...allProjects].sort(
+                  (a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0)
+                );
+                const chosen = await client.input.select<Project>({
+                  message: 'Which existing project do you want to link?',
+                  choices: sorted.map(p => ({ name: p.name, value: p })),
+                });
+                const withRoot: Project = {
+                  ...chosen,
+                  rootDirectory:
+                    cwdRelativePath === '.' ? undefined : cwdRelativePath,
+                };
+                projectsToWrite = [
+                  ...others.filter(p => p.id !== chosen.id),
+                  withRoot,
+                ];
+                linkedPotentialProject = (baseline.repo ?? []).some(
+                  p => p.id === chosen.id
+                )
+                  ? null
+                  : chosen;
+                shouldAskPullEnv = true;
+              }
+            }
+          } else {
+            const suggestedName = cwdFolderName ?? 'my-app';
+            const gitConfigPath =
+              getGitConfigPath({ cwd: rootPath }) ??
+              join(rootPath, '.git/config');
+            const remoteUrls = await getRemoteUrls(gitConfigPath);
+            const repoUrl =
+              remoteUrls?.origin ??
+              (remoteUrls && Object.values(remoteUrls)[0]);
+            const parsed = repoUrl ? parseRepoUrl(repoUrl) : null;
+            if (!parsed) {
+              output.error(
+                'Could not parse Git remote URL to connect the new project.'
+              );
+              return 1;
+            }
+            await selectOrgForNewProject(client, yes);
+            output.spinner(`Creating project ${suggestedName}…`);
+            const newProject = await createProject(client, {
+              name: suggestedName,
+              framework: frameworkAtCwd?.[0]?.slug ?? undefined,
+            });
+            output.stopSpinner();
+            const connectResult = await connectGitProvider(
+              client,
+              newProject.id,
+              parsed.provider,
+              `${parsed.org}/${parsed.repo}`
+            );
+            if (connectResult === 1) return 1;
+            const projectWithRoot: Project = {
+              ...newProject,
+              rootDirectory:
+                cwdRelativePath === '.' ? undefined : cwdRelativePath,
+            };
+            projectsToWrite = [...others, projectWithRoot];
+            shouldAskPullEnv = true;
+            if (!asJson) {
+              output.log(
+                prependEmoji(
+                  `Created ${chalk.bold(newProject.name)} and connected to Git`,
+                  emoji('link')
+                )
+              );
+            }
+          }
+        } else {
+          projectsToWrite = [...others, whichRoot];
+          shouldAskPullEnv = true;
+        }
+      } else {
+        projectsToWrite = outcome.projects;
+        shouldAskPullEnv = true;
+      }
+      break;
+    }
+    case 'prompt_link_existing': {
+      const promptProject = outcome.project;
+      if (!client.stdin.isTTY && !yes) {
+        output.error(
+          'Cannot confirm link in non-interactive mode. Use --yes or run in a TTY.'
+        );
+        return 1;
+      }
+      const linkToIt =
+        yes ||
+        (client.stdin.isTTY &&
+          (await client.input.confirm(
+            `Link to ${chalk.cyan(promptProject.name)}?`,
+            true
+          )));
+      if (linkToIt) {
+        projectsToWrite = [promptProject];
+        shouldAskPullEnv = true;
+      } else {
+        const action = await client.input.select({
+          message:
+            'Would you like to link to an existing project or create a new one?',
+          choices: [
+            { name: 'Link to an existing project', value: 'existing' as const },
+            { name: 'Create a new project', value: 'new' as const },
+          ],
+        });
+        if (action === 'existing') {
+          const res = await client.fetch<{
+            projects: Project[];
+            pagination: { next: number | null };
+          }>(`/v9/projects?limit=100`, {
+            accountId: promptProject.accountId,
+          });
+          const allProjects = res.projects ?? [];
+          const otherProjects = allProjects.filter(
+            p => p.id !== promptProject.id
+          );
+          if (otherProjects.length === 0) {
+            if (!asJson) output.log('No other projects in this scope.');
+          } else {
+            const sorted = [...otherProjects].sort(
+              (a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0)
+            );
+            const chosen = await client.input.select<Project>({
+              message: 'Which existing project do you want to link?',
+              choices: sorted.map(p => ({ name: p.name, value: p })),
+            });
+            const withRoot: Project = {
+              ...chosen,
+              rootDirectory:
+                cwdRelativePath === '.' ? undefined : cwdRelativePath,
+            };
+            projectsToWrite = [
+              ...(baseline.repo ?? []).filter(p => p.id !== chosen.id),
+              withRoot,
+            ];
+            linkedPotentialProject = (baseline.repo ?? []).some(
+              p => p.id === chosen.id
+            )
+              ? null
+              : chosen;
+            shouldAskPullEnv = true;
+          }
+        } else {
+          // Create new — same flow as offer_create
+          const suggestedName = cwdFolderName ?? 'my-app';
+          const gitConfigPath =
+            getGitConfigPath({ cwd: rootPath }) ??
+            join(rootPath, '.git/config');
+          const remoteUrls = await getRemoteUrls(gitConfigPath);
+          const repoUrl =
+            remoteUrls?.origin ?? (remoteUrls && Object.values(remoteUrls)[0]);
+          const parsed = repoUrl ? parseRepoUrl(repoUrl) : null;
+          if (!parsed) {
+            output.error(
+              'Could not parse Git remote URL to connect the new project.'
+            );
+            return 1;
+          }
+          await selectOrgForNewProject(client, yes);
+          output.spinner(`Creating project ${suggestedName}…`);
+          const newProject = await createProject(client, {
+            name: suggestedName,
+            framework: frameworkAtCwd?.[0]?.slug ?? undefined,
+          });
+          output.stopSpinner();
+          const connectResult = await connectGitProvider(
+            client,
+            newProject.id,
+            parsed.provider,
+            `${parsed.org}/${parsed.repo}`
+          );
+          if (connectResult === 1) return 1;
+          const projectWithRoot: Project = {
+            ...newProject,
+            rootDirectory:
+              cwdRelativePath === '.' ? undefined : cwdRelativePath,
+          };
+          projectsToWrite = [...(baseline.repo ?? []), projectWithRoot];
+          shouldAskPullEnv = true;
+          if (!asJson) {
+            output.log(
+              prependEmoji(
+                `Created ${chalk.bold(newProject.name)} and connected to Git`,
+                emoji('link')
+              )
+            );
+          }
+        }
       }
       break;
     }
@@ -289,8 +675,7 @@ export default async function link2(client: Client) {
       if (linkToExisting) {
         const withRoot: Project = {
           ...outcome.project,
-          rootDirectory:
-            cwdRelativePath === '.' ? undefined : cwdRelativePath,
+          rootDirectory: cwdRelativePath === '.' ? undefined : cwdRelativePath,
         };
         projectsToWrite = [...(baseline.repo ?? []), withRoot];
         linkedPotentialProject = outcome.project;
@@ -299,21 +684,18 @@ export default async function link2(client: Client) {
       break;
     }
     case 'offer_create': {
-      if (!client.stdin.isTTY && !yes) {
+      if (yes || !client.stdin.isTTY) {
         output.error(
-          'Cannot confirm project creation in non-interactive mode. Use --yes or run in a TTY.'
+          'Project creation requires interactive mode. Run without --yes or run in a TTY.'
         );
         return 1;
       }
       const frameworkName = frameworkAtCwd?.[0]?.name ?? 'project';
       const suggestedName = cwdFolderName ?? 'my-app';
-      const createIt =
-        yes ||
-        (client.stdin.isTTY &&
-          (await client.input.confirm(
-            `Create new project ${chalk.cyan(suggestedName)} with ${chalk.cyan(frameworkName)}?`,
-            true
-          )));
+      const createIt = await client.input.confirm(
+        `Create new project ${chalk.cyan(suggestedName)} with ${chalk.cyan(frameworkName)}?`,
+        true
+      );
       if (createIt) {
         const gitConfigPath =
           getGitConfigPath({ cwd: rootPath }) ?? join(rootPath, '.git/config');
@@ -322,9 +704,12 @@ export default async function link2(client: Client) {
           remoteUrls?.origin ?? (remoteUrls && Object.values(remoteUrls)[0]);
         const parsed = repoUrl ? parseRepoUrl(repoUrl) : null;
         if (!parsed) {
-          output.error('Could not parse Git remote URL to connect the new project.');
+          output.error(
+            'Could not parse Git remote URL to connect the new project.'
+          );
           return 1;
         }
+        await selectOrgForNewProject(client, yes);
         output.spinner(`Creating project ${suggestedName}…`);
         const newProject = await createProject(client, {
           name: suggestedName,
@@ -344,18 +729,39 @@ export default async function link2(client: Client) {
         };
         projectsToWrite = [...(baseline.repo ?? []), projectWithRoot];
         shouldAskPullEnv = true;
-        output.log(
-          prependEmoji(
-            `Created ${chalk.bold(newProject.name)} and connected to Git`,
-            emoji('link')
-          )
-        );
+        if (!asJson) {
+          output.log(
+            prependEmoji(
+              `Created ${chalk.bold(newProject.name)} and connected to Git`,
+              emoji('link')
+            )
+          );
+        }
       }
       break;
     }
     case 'skip':
-      output.log('No project to link.');
+      jsonResult = serializeBaselineForJson(baseline, []);
+      if (!asJson) output.log('No project to link.');
       break;
+  }
+
+  // Subtle notice: repo-linked projects that have no matching folder locally
+  if ((baseline.repo?.length ?? 0) > 0 && rootPath && !asJson) {
+    const noFolder: Project[] = [];
+    for (const p of baseline.repo ?? []) {
+      const dir = join(rootPath, p.rootDirectory || '.');
+      if (!(await pathExists(dir))) noFolder.push(p);
+    }
+    if (noFolder.length > 0) {
+      output.log(
+        chalk.gray(
+          'Note: The following projects are linked to this repo but no matching folder was found: ' +
+            noFolder.map(p => p.name).join(', ') +
+            '.'
+        )
+      );
+    }
   }
 
   type WrittenRepoProject = {
@@ -405,7 +811,9 @@ export default async function link2(client: Client) {
       getGitConfigPath({ cwd: root }) ?? join(root, '.git/config');
     const remoteUrls = await getRemoteUrls(gitConfigPath);
     const remoteName =
-      remoteUrls?.origin ?? (remoteUrls && Object.keys(remoteUrls)[0]) ?? 'origin';
+      remoteUrls?.origin ??
+      (remoteUrls && Object.keys(remoteUrls)[0]) ??
+      'origin';
     const repoConfig = {
       remoteName,
       projects: projects.map(p => {
@@ -464,6 +872,7 @@ export default async function link2(client: Client) {
       baseline.projectJsonFiles,
       baseline.detectedProjects
     );
+    jsonResult = serializeBaselineForJson(baseline, writtenProjects);
 
     // If we linked a potential (existing unconnected) project, offer git-connect or new project name
     if (linkedPotentialProject) {
@@ -482,7 +891,9 @@ export default async function link2(client: Client) {
           remoteUrls?.origin ?? (remoteUrls && Object.values(remoteUrls)[0]);
         const parsed = repoUrl ? parseRepoUrl(repoUrl) : null;
         if (!parsed) {
-          output.error('Could not parse Git remote URL to connect the project.');
+          output.error(
+            'Could not parse Git remote URL to connect the project.'
+          );
           return 1;
         }
         const connectResult = await connectGitProvider(
@@ -509,66 +920,132 @@ export default async function link2(client: Client) {
             });
           }
         }
-        output.print(
-          prependEmoji(
-            `Linked to ${chalk.cyan(linkedPotentialProject.name)}`,
-            emoji('link')
-          ) + '\n'
-        );
-        output.print(chalk.gray(`   ${VERCEL_DIR} updated`) + '\n');
+        if (!asJson) {
+          output.print(
+            prependEmoji(
+              `Linked to ${chalk.cyan(linkedPotentialProject.name)}`,
+              emoji('link')
+            ) + '\n'
+          );
+          output.print(chalk.gray(`   ${VERCEL_DIR} updated`) + '\n');
+        }
       } else {
-        const newName =
-          yes && cwdFolderName
-            ? cwdFolderName
-            : client.stdin.isTTY
-              ? await client.input.text({
-                  message: 'New project name:',
-                  default: cwdFolderName ?? 'my-app',
-                })
-              : cwdFolderName ?? 'my-app';
-        const gitConfigPathNew =
-          getGitConfigPath({ cwd: rootPath }) ?? join(rootPath, '.git/config');
-        const remoteUrlsForNew = await getRemoteUrls(gitConfigPathNew);
-        const repoUrlForNew =
-          remoteUrlsForNew?.origin ??
-          (remoteUrlsForNew && Object.values(remoteUrlsForNew)[0]);
-        const parsedNew = repoUrlForNew ? parseRepoUrl(repoUrlForNew) : null;
-        if (!parsedNew) {
-          output.error('Could not parse Git remote URL.');
+        // They declined "Connect this repo?" — offer link to another existing or create new
+        if (yes || !client.stdin.isTTY) {
+          output.error(
+            'Project creation requires interactive mode. Run without --yes or run in a TTY.'
+          );
           return 1;
         }
-        output.spinner(`Creating project ${newName}…`);
-        const newProject = await createProject(client, {
-          name: newName,
-          framework: frameworkAtCwd?.[0]?.slug ?? undefined,
+        const action = await client.input.select({
+          message:
+            'Would you like to link to an existing project or create a new one?',
+          choices: [
+            { name: 'Link to an existing project', value: 'existing' as const },
+            { name: 'Create a new project', value: 'new' as const },
+          ],
         });
-        output.stopSpinner();
-        const connectResult = await connectGitProvider(
-          client,
-          newProject.id,
-          parsedNew.provider,
-          `${parsedNew.org}/${parsedNew.repo}`
-        );
-        if (connectResult === 1) return 1;
-        const newProjectWithRoot: Project = {
-          ...newProject,
-          rootDirectory:
-            cwdRelativePath === '.' ? undefined : cwdRelativePath,
-        };
-        projectsToWrite = [...(baseline.repo ?? []), newProjectWithRoot];
-        await writeRepoAndProjectFiles(
-          rootPath,
-          projectsToWrite,
-          baseline.projectJsonFiles,
-          baseline.detectedProjects
-        );
-        output.print(
-          prependEmoji(
-            `Created and linked ${chalk.cyan(newProject.name)}`,
-            emoji('link')
-          ) + '\n'
-        );
-        output.print(chalk.gray(`   ${VERCEL_DIR} updated`) + '\n');
+        if (action === 'existing') {
+          const res = await client.fetch<{
+            projects: Project[];
+            pagination: { next: number | null };
+          }>(`/v9/projects?limit=100`, {
+            accountId: linkedPotentialProject!.accountId,
+          });
+          const allProjects = res.projects ?? [];
+          const otherProjects = allProjects.filter(
+            p => p.id !== linkedPotentialProject!.id
+          );
+          if (otherProjects.length === 0) {
+            if (!asJson) output.log('No other projects in this scope.');
+          } else {
+            const sorted = [...otherProjects].sort(
+              (a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0)
+            );
+            const chosen = await client.input.select<Project>({
+              message: 'Which existing project do you want to link?',
+              choices: sorted.map(p => ({ name: p.name, value: p })),
+            });
+            const withRoot: Project = {
+              ...chosen,
+              rootDirectory:
+                cwdRelativePath === '.' ? undefined : cwdRelativePath,
+            };
+            projectsToWrite = [
+              ...(baseline.repo ?? []).filter(p => p.id !== chosen.id),
+              withRoot,
+            ];
+            const writtenForChosen = await writeRepoAndProjectFiles(
+              rootPath,
+              projectsToWrite,
+              baseline.projectJsonFiles,
+              baseline.detectedProjects
+            );
+            jsonResult = serializeBaselineForJson(baseline, writtenForChosen);
+            if (!asJson) {
+              output.print(
+                prependEmoji(
+                  `Linked to ${chalk.cyan(chosen.name)}`,
+                  emoji('link')
+                ) + '\n'
+              );
+              output.print(chalk.gray(`   ${VERCEL_DIR} updated`) + '\n');
+            }
+          }
+        } else {
+          const newName = await client.input.text({
+            message: 'New project name:',
+            default: cwdFolderName ?? 'my-app',
+          });
+          const gitConfigPathNew =
+            getGitConfigPath({ cwd: rootPath }) ??
+            join(rootPath, '.git/config');
+          const remoteUrlsForNew = await getRemoteUrls(gitConfigPathNew);
+          const repoUrlForNew =
+            remoteUrlsForNew?.origin ??
+            (remoteUrlsForNew && Object.values(remoteUrlsForNew)[0]);
+          const parsedNew = repoUrlForNew ? parseRepoUrl(repoUrlForNew) : null;
+          if (!parsedNew) {
+            output.error('Could not parse Git remote URL.');
+            return 1;
+          }
+          await selectOrgForNewProject(client, yes);
+          output.spinner(`Creating project ${newName}…`);
+          const newProject = await createProject(client, {
+            name: newName,
+            framework: frameworkAtCwd?.[0]?.slug ?? undefined,
+          });
+          output.stopSpinner();
+          const connectResult = await connectGitProvider(
+            client,
+            newProject.id,
+            parsedNew.provider,
+            `${parsedNew.org}/${parsedNew.repo}`
+          );
+          if (connectResult === 1) return 1;
+          const newProjectWithRoot: Project = {
+            ...newProject,
+            rootDirectory:
+              cwdRelativePath === '.' ? undefined : cwdRelativePath,
+          };
+          projectsToWrite = [...(baseline.repo ?? []), newProjectWithRoot];
+          const writtenForNew = await writeRepoAndProjectFiles(
+            rootPath,
+            projectsToWrite,
+            baseline.projectJsonFiles,
+            baseline.detectedProjects
+          );
+          jsonResult = serializeBaselineForJson(baseline, writtenForNew);
+          if (!asJson) {
+            output.print(
+              prependEmoji(
+                `Created and linked ${chalk.cyan(newProject.name)}`,
+                emoji('link')
+              ) + '\n'
+            );
+            output.print(chalk.gray(`   ${VERCEL_DIR} updated`) + '\n');
+          }
+        }
       }
     } else {
       // When in a project subfolder, only mention that project; at repo root show full list
@@ -579,30 +1056,32 @@ export default async function link2(client: Client) {
         );
 
       if (linkedProjectForCwd) {
-        output.print(
-          prependEmoji(
-            `Linked to ${chalk.cyan(linkedProjectForCwd.name)}`,
-            emoji('link')
-          ) + '\n'
-        );
-        output.print(chalk.gray(`   ${VERCEL_DIR} updated`) + '\n');
+        if (!asJson) {
+          output.print(
+            prependEmoji(
+              `Linked to ${chalk.cyan(linkedProjectForCwd.name)}`,
+              emoji('link')
+            ) + '\n'
+          );
+          output.print(chalk.gray(`   ${VERCEL_DIR} updated`) + '\n');
+        }
       } else {
-        const summaryLines = writtenProjects.map(
-          p =>
-            `   ${chalk.gray('•')} ${chalk.cyan(p.name)} ${chalk.gray(
-              `(${(p.workPath ?? p.directory) || '.'})`
-            )}`
-        );
-        output.print(
-          prependEmoji(
-            `Linked ${writtenProjects.length} project(s):`,
-            emoji('link')
-          ) + '\n'
-        );
-        output.print(summaryLines.join('\n') + '\n');
-        output.print(
-          chalk.gray(`   ${VERCEL_DIR} updated`) + '\n'
-        );
+        if (!asJson) {
+          const summaryLines = writtenProjects.map(
+            p =>
+              `   ${chalk.gray('•')} ${chalk.cyan(p.name)} ${chalk.gray(
+                `(${(p.workPath ?? p.directory) || '.'})`
+              )}`
+          );
+          output.print(
+            prependEmoji(
+              `Linked ${writtenProjects.length} project(s):`,
+              emoji('link')
+            ) + '\n'
+          );
+          output.print(summaryLines.join('\n') + '\n');
+          output.print(chalk.gray(`   ${VERCEL_DIR} updated`) + '\n');
+        }
       }
     }
 
@@ -611,36 +1090,74 @@ export default async function link2(client: Client) {
         yes ||
         (await client.input.confirm(
           'Would you like to pull environment variables now?',
-          true
+          false
         ));
-      if (pullEnvConfirmed) {
-        const originalCwd = client.cwd;
-        try {
-          client.cwd = baseline.cwd;
-          const exitCode = await pull(
-            client,
-            yes ? ['--yes'] : [],
-            'vercel-cli:link'
-          );
-          if (exitCode !== 0) {
-            output.error(
-              'Failed to pull environment variables. You can run `vercel env pull` manually.'
-            );
+      if (pullEnvConfirmed && writtenProjects.length > 0) {
+        let pullTargets: WrittenRepoProject[];
+        if (yes || writtenProjects.length === 1) {
+          pullTargets = writtenProjects;
+        } else {
+          pullTargets = await client.input.checkbox<WrittenRepoProject>({
+            message:
+              'Which projects should environment variables be pulled for?',
+            choices: writtenProjects.map(p => {
+              const pathLabel = (p.workPath ?? p.directory) || '.';
+              return {
+                name: `${p.name} ${chalk.gray(`(${pathLabel})`)}`,
+                value: p,
+                checked: true,
+              };
+            }),
+          });
+        }
+        if (pullTargets.length > 0) {
+          const originalCwd = client.cwd;
+          const pullArgv = yes ? ['--yes'] : [];
+          try {
+            for (const target of pullTargets) {
+              const rel = normalizePath(
+                (target.workPath ?? target.directory) || '.'
+              );
+              const projectDir =
+                rel === '.' || rel === '' ? rootPath : join(rootPath, rel);
+              client.cwd = projectDir;
+              const exitCode = await pull(client, pullArgv, 'vercel-cli:link');
+              if (exitCode !== 0) {
+                output.error(
+                  `Failed to pull environment variables for ${chalk.bold(
+                    target.name
+                  )}. Run ${chalk.bold('vercel env pull')} from that project directory, or try again.`
+                );
+              }
+            }
+          } finally {
+            client.cwd = originalCwd;
           }
-        } finally {
-          client.cwd = originalCwd;
         }
       }
     }
-  } else if (outcome.type === 'skip' && baseline.repo !== null && baseline.repo.length === 0) {
-    output.log('No projects linked to this repo.');
+  } else if (
+    outcome.type === 'skip' &&
+    baseline.repo !== null &&
+    baseline.repo.length === 0
+  ) {
+    if (!jsonResult) jsonResult = serializeBaselineForJson(baseline, []);
+    if (!asJson) output.log('No projects linked to this repo.');
   } else if (outcome.type === 'skip' && baseline.repo === null) {
-    const detectedCount = baseline.detectedProjects.size;
-    const repoProjectCount = baseline.repoJson?.projects?.length ?? 0;
-    const projectJsonCount = baseline.projectJsonFiles.length;
-    output.log(
-      `link-2: root: ${baseline.rootPath}; detected: ${detectedCount} project(s); repo.json: ${repoProjectCount} project(s); project.json files: ${projectJsonCount} (no API repo data)`
-    );
+    if (!jsonResult) jsonResult = serializeBaselineForJson(baseline, []);
+    if (!asJson) {
+      const detectedCount = baseline.detectedProjects.size;
+      const repoProjectCount = baseline.repoJson?.projects?.length ?? 0;
+      const projectJsonCount = baseline.projectJsonFiles.length;
+      output.log(
+        `link-2: root: ${baseline.rootPath}; detected: ${detectedCount} project(s); repo.json: ${repoProjectCount} project(s); project.json files: ${projectJsonCount} (no API repo data)`
+      );
+    }
+  }
+
+  if (asJson) {
+    const result = jsonResult ?? serializeBaselineForJson(baseline, []);
+    output.print(JSON.stringify(result, null, 2));
   }
   return 0;
 }

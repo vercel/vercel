@@ -11,7 +11,8 @@ import {
 
 type Choice = { name: string; value: Org };
 
-function getScopeOrTeamFromArgv(argv: string[]): string | null {
+/** Scope or team value from `--scope` / `--team` / `-S` / `-T` in argv (global CLI flags). */
+export function getScopeOrTeamFromArgv(argv: string[]): string | null {
   const args = argv.slice(2);
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];

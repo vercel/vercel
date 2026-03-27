@@ -76,6 +76,12 @@ import { checkTelemetryStatus } from './util/telemetry/check-status';
 import output from './output-manager';
 import { checkGuidanceStatus } from './util/guidance/check-status';
 import { determineAgent } from '@vercel/detect-agent';
+import { getScopeOrTeamFromArgv } from './util/input/select-org';
+import {
+  applyCwdProjectJsonScopeToClient,
+  commandSkipsCwdProjectJsonScope,
+} from './util/apply-cwd-project-json-scope';
+import { getVercelDirectory, getLinkFromDir } from './util/projects/link';
 
 const VERCEL_DIR = getGlobalPathConfig();
 const VERCEL_CONFIG_PATH = configFiles.getConfigFilePath();
@@ -502,6 +508,7 @@ const main = async () => {
   // Check for VERCEL_TOKEN environment variable if --token flag not provided
   // Track where the token came from for better error messages
   let tokenSource: 'flag' | 'env' | undefined;
+  let tokenScopeMismatchCheck: Promise<string | null> | undefined;
   if (typeof parsedArgs.flags['--token'] === 'string') {
     tokenSource = 'flag';
   } else if (process.env.VERCEL_TOKEN) {
@@ -555,6 +562,17 @@ const main = async () => {
     // Don't use team from config if `--token` was set
     if (client.config && client.config.currentTeam) {
       delete client.config.currentTeam;
+    }
+
+    // Fire a parallel check: does the token match the org in .vercel/project.json?
+    // Awaited later (before the command runs) so the network call overlaps with
+    // --scope resolution and other startup work.
+    if (!commandSkipsCwdProjectJsonScope(subcommand, subSubCommand)) {
+      tokenScopeMismatchCheck = checkTokenVsProjectLink(
+        client,
+        client.cwd,
+        tokenSource
+      );
     }
   }
 
@@ -651,6 +669,26 @@ const main = async () => {
       }
 
       client.config.currentTeam = related.id;
+    }
+  }
+
+  const explicitCliScopeRaw = getScopeOrTeamFromArgv(process.argv);
+  const hasExplicitCliScope =
+    explicitCliScopeRaw != null && explicitCliScopeRaw !== '';
+  if (
+    !hasExplicitCliScope &&
+    typeof parsedArgs.flags['--token'] !== 'string' &&
+    !commandSkipsCwdProjectJsonScope(subcommand, subSubCommand)
+  ) {
+    await applyCwdProjectJsonScopeToClient(client, client.cwd);
+  }
+
+  // Warn if VERCEL_TOKEN / --token doesn't match the org in .vercel/project.json.
+  // Only when no explicit --scope was given (explicit scope = user knows what they want).
+  if (tokenScopeMismatchCheck && !scope) {
+    const mismatchWarning = await tokenScopeMismatchCheck;
+    if (mismatchWarning) {
+      output.warn(mismatchWarning);
     }
   }
 
@@ -1096,3 +1134,48 @@ Run ${chalk.cyan(cmd(await getUpdateCommand()))} to update.${errorMsg}`
     process.exitCode = exitCode;
   })
   .catch(handleUnexpected);
+
+/**
+ * Checks whether the token (from --token or VERCEL_TOKEN) has access to the
+ * org recorded in `.vercel/project.json`. Returns a warning string on
+ * mismatch, or null when everything lines up (or there's no link to check).
+ *
+ * Designed to run in parallel with other startup work — the caller fires this
+ * off and awaits the result before the command runs.
+ */
+async function checkTokenVsProjectLink(
+  client: Client,
+  cwd: string,
+  tokenSource: 'flag' | 'env' | undefined
+): Promise<string | null> {
+  try {
+    const vercelDir = getVercelDirectory(cwd);
+    const link = await getLinkFromDir(vercelDir);
+    if (!link?.orgId) return null;
+
+    const source = tokenSource === 'env' ? 'VERCEL_TOKEN' : param('--token');
+
+    if (link.orgId.startsWith('team_')) {
+      await client.fetch(`/teams/${encodeURIComponent(link.orgId)}`);
+      return null;
+    }
+
+    const user = await getUser(client);
+    if (user.id !== link.orgId) {
+      return (
+        `${source} authenticates as "${user.username}" but this directory is linked to a different account. ` +
+        `Commands will use the token's scope. Use ${param('--scope')} to override.`
+      );
+    }
+    return null;
+  } catch (err: unknown) {
+    if (err instanceof APIError && (err.status === 403 || err.status === 404)) {
+      const source = tokenSource === 'env' ? 'VERCEL_TOKEN' : param('--token');
+      return (
+        `${source} does not have access to the team linked in .vercel/project.json. ` +
+        `Commands will use the token's default scope. Use ${param('--scope')} to override.`
+      );
+    }
+    return null;
+  }
+}
