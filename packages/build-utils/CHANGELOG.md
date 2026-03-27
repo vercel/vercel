@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 13.12.0
+
+### Minor Changes
+
+- Add hash utilities (`streamToDigestAsync`, `sha256`, `md5`) and build result helpers (`getBuildResultMetadata`, `getLambdaByOutputPath`, `isRouteMiddleware`, `getPrerenderChain`, `streamWithExtendedPayload`) for shared use. ([#15726](https://github.com/vercel/vercel/pull/15726))
+
 ## 13.11.0
 
 ### Minor Changes
