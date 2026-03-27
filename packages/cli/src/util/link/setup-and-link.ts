@@ -478,7 +478,7 @@ export async function setupRequiredIntegrations(
   for (const slug of slugs) {
     if (!autoConfirm && !nonInteractive && client.stdin.isTTY === true) {
       const shouldInstall = await client.input.confirm(
-        `Install integration ${chalk.bold(slug)}?`,
+        `Install ${chalk.bold(slug)} integration?`,
         true
       );
 
