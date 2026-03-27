@@ -135,28 +135,16 @@ export async function autoInstallAgentTooling(
   try {
     const prefs = await readPrefs();
 
-    output.debug(
-      `[plugin] prefs=${JSON.stringify(prefs)} agentName=${client.agentName ?? 'none'} isAgent=${client.isAgent} isTTY=${client.stdin.isTTY}`
-    );
     if (!prefs.pluginDismissed) {
       const targets = await getPluginTargets(client.agentName);
-      output.debug(`[plugin] targets=${JSON.stringify(targets)}`);
       const uninstalledTargets: string[] = [];
       for (const target of targets) {
-        const installed = await isPluginInstalledForTarget(target);
-        output.debug(`[plugin] ${target} installed=${installed}`);
-        if (!installed) {
+        if (!(await isPluginInstalledForTarget(target))) {
           uninstalledTargets.push(target);
         }
       }
-      output.debug(
-        `[plugin] uninstalled=${JSON.stringify(uninstalledTargets)}`
-      );
 
       if (uninstalledTargets.length > 0) {
-        output.debug(
-          `[plugin] entering install branch, isAgent=${client.isAgent} isTTY=${client.stdin.isTTY}`
-        );
         // Agents in non-TTY: output structured JSON so agent prompts the user
         if (client.isAgent && !client.stdin.isTTY) {
           const next = uninstalledTargets.map(target => ({
