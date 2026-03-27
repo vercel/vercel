@@ -26,6 +26,9 @@ export interface FlagCondition {
     | { type: 'segment' }
     | { type: 'entity'; kind: string; attribute: string };
   cmp: string;
+  cmpOptions?: {
+    ignoreCase?: boolean;
+  };
   rhs?: string | number | boolean | { type: string; items?: unknown[] };
 }
 
