@@ -20,6 +20,8 @@ import { startDevServer, type DevContext, type DevOptions } from './dev-server';
 const ANSI_RE = /\x1b\[[0-9;]*m/g;
 const SERVICE_PREFIX_RE = /^\[([^\]]+)\]/;
 const ERROR_LINE_RE = /^\[([^\]]+)\]\s+ERROR:/;
+const HTTP_ERROR_RE =
+  /^\[([^\]]+)\].*"[A-Z]+\s+\S+\s+HTTP\/[\d.]+"\s+([45]\d{2})\b/;
 
 function stripAnsi(str: string): string {
   return str.replace(ANSI_RE, '');
@@ -67,7 +69,8 @@ class ErrorChunker {
 
   private processLine(line: string) {
     const stripped = stripAnsi(line);
-    const errorMatch = stripped.match(ERROR_LINE_RE);
+    const errorMatch =
+      stripped.match(ERROR_LINE_RE) || stripped.match(HTTP_ERROR_RE);
 
     if (errorMatch) {
       this.flush();
