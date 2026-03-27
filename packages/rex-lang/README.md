@@ -1,11 +1,11 @@
-# @creationix/rex
+# @vercel/rex
 
 Rex compiler and parser package.
 
 ## Install
 
 ```sh
-bun add -g @creationix/rex
+bun add -g @vercel/rex
 ```
 
 ## Publish to npm
@@ -38,11 +38,11 @@ rex --expr "x = method + path x" --minify-names --dedupe-values
 Run without installing globally:
 
 ```sh
-bunx @creationix/rex --help
-bunx @creationix/rex --expr "when x do y end"
+bunx @vercel/rex --help
+bunx @vercel/rex --expr "when x do y end"
 
-npx -y @creationix/rex -- --help
-npx -y @creationix/rex -- --expr "when x do y end"
+npx -y @vercel/rex -- --help
+npx -y @vercel/rex -- --expr "when x do y end"
 ```
 
 `npx` works with Node.js alone (v22.18+). `bunx` works with Bun alone.
@@ -54,11 +54,15 @@ The `rx` CLI for inspecting, converting, and filtering REXC/JSON data lives in [
 ## Programmatic API
 
 ```ts
-import { compile, parseToIR, optimizeIR, encodeIR } from "@creationix/rex";
+import { compile, parseToIR, optimizeIR, encodeIR } from '@vercel/rex';
 
-const source = "when x do y else z end";
+const source = 'when x do y else z end';
 const encoded = compile(source);
-const optimized = compile(source, { optimize: true, minifyNames: true, dedupeValues: true });
+const optimized = compile(source, {
+  optimize: true,
+  minifyNames: true,
+  dedupeValues: true,
+});
 
 const ir = parseToIR(source);
 const optimizedIR = optimizeIR(ir);

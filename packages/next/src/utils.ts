@@ -58,7 +58,7 @@ import {
   getSourceFileRefOfStaticMetadata,
 } from './metadata';
 import { isDynamicRoute } from './is-dynamic-route';
-import { compile as compileRex } from '@creationix/rex';
+import { compile as compileRex } from '@vercel/rex';
 
 type stringMap = { [key: string]: string };
 
