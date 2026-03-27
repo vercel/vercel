@@ -43,20 +43,17 @@ export default async function analyse(
   const asJson = formatResult.jsonOutput;
 
   const peek = Boolean(flags['--peek']);
-  const metricEventNames =
-    (flags['--metric-event-name'] as string[] | undefined) ?? [];
-  const metricTypes = (flags['--metric-type'] as string[] | undefined) ?? [];
+  const metricEventName =
+    (flags['--metric-event-name'] as string | undefined);
   const unitField =
     (flags['--unit-field'] as string | undefined) ?? 'visitorId';
 
-  if (metricEventNames.length === 0) {
+  if (!metricEventName || metricEventName.length === 0) {
     output.error(
-      'Specify at least one --metric-event-name (repeatable), e.g. --metric-event-name purchase'
+      'Please specify --metric-event-name, e.g. --metric-event-name purchase'
     );
     return 1;
   }
-
-  const resolvedMetricTypes = metricTypes.length ? metricTypes : ['conversion'];
 
   const link = await getLinkedProject(client);
   if (link.status === 'error') {
@@ -79,8 +76,7 @@ export default async function analyse(
   try {
     const results = await fetchExperimentResults(client, project.id, {
       experimentName: slug,
-      metricEventNames,
-      metricTypes: resolvedMetricTypes,
+      metricEventName,
       unitField,
       peek,
     });
@@ -91,8 +87,7 @@ export default async function analyse(
       projectId: project.id,
       peek,
       query: {
-        metricEventNames,
-        metricTypes: resolvedMetricTypes,
+        metricEventName,
         unitField,
       },
       results,

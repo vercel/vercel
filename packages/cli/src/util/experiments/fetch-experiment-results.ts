@@ -3,8 +3,7 @@ import output from '../../output-manager';
 
 export type ExperimentResultsQuery = {
   experimentName: string;
-  metricEventNames: string[];
-  metricTypes: string[];
+  metricEventName: string;
   unitField: string;
   peek?: boolean;
 };
@@ -18,13 +17,8 @@ export function buildExperimentResultsPath(
   query: ExperimentResultsQuery
 ): string {
   const params = new URLSearchParams();
-  params.set('projectId', projectId);
-  params.set('experimentName', query.experimentName);
-  for (const name of query.metricEventNames) {
-    params.append('metricEventNames', name);
-  }
-  for (const t of query.metricTypes) {
-    params.append('metricTypes', t);
+  for (const name of query.metricEventName) {
+    params.append('metricEventName', name);
   }
   params.set('unitField', query.unitField);
   if (query.peek) {
@@ -32,7 +26,7 @@ export function buildExperimentResultsPath(
   }
 
   const qs = params.toString();
-  return `/web/insights/experiment-results?${qs}`;
+  return `/v2/projects/${projectId}/experiments/${query.experimentName}/results?${qs}`;
 }
 
 export async function fetchExperimentResults(
