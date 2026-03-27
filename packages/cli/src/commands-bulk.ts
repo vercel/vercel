@@ -18,6 +18,7 @@ export { default as contract } from './commands/contract';
 export { default as certs } from './commands/certs';
 export { default as crons } from './commands/crons';
 export { default as curl } from './commands/curl';
+export { default as deployButton } from './commands/deploy-button';
 export { default as dns } from './commands/dns';
 export { default as domains } from './commands/domains';
 export { default as flags } from './commands/flags';

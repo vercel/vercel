@@ -797,6 +797,10 @@ const main = async () => {
           telemetry.trackCliCommandCurl(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).curl;
           break;
+        case 'deploy-button':
+          telemetry.trackCliCommandDeployButton(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).deployButton;
+          break;
         case 'dns':
           telemetry.trackCliCommandDns(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).dns;
