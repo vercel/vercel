@@ -124,7 +124,10 @@ describe('resolveProjectCwd', () => {
   it('should return project root when flag is on and services detected', async () => {
     mockedIsEnabled.mockResolvedValue(true);
     mockedTryDetect.mockResolvedValue({
-      services: [{ name: 'api', slug: 'api', directory: 'services/api' }],
+      result: {
+        services: [{ name: 'api', slug: 'api', directory: 'services/api' }],
+      },
+      enabled: true,
     } as any);
 
     vol.fromJSON({
@@ -139,9 +142,7 @@ describe('resolveProjectCwd', () => {
 
   it('should return original cwd when flag is on but no services found', async () => {
     mockedIsEnabled.mockResolvedValue(true);
-    mockedTryDetect.mockResolvedValue({
-      services: [],
-    } as any);
+    mockedTryDetect.mockResolvedValue(null);
 
     vol.fromJSON({
       '/project/.vercel/project.json': '{}',

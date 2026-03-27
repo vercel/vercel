@@ -70,15 +70,20 @@ describe('tryDetectServices()', () => {
       'def app():\n  return None\n'
     );
 
-    const result = await tryDetectServices(tempDir);
-    expect(result).not.toBeNull();
-    expect(result?.services).toHaveLength(2);
-    expect(result?.services.find(s => s.name === 'frontend')).toMatchObject({
+    const detection = await tryDetectServices(tempDir);
+    expect(detection).not.toBeNull();
+    expect(detection?.enabled).toBe(true);
+    expect(detection?.result.services).toHaveLength(2);
+    expect(
+      detection?.result.services.find(s => s.name === 'frontend')
+    ).toMatchObject({
       name: 'frontend',
       framework: 'nextjs',
       routePrefix: '/',
     });
-    expect(result?.services.find(s => s.name === 'backend')).toMatchObject({
+    expect(
+      detection?.result.services.find(s => s.name === 'backend')
+    ).toMatchObject({
       name: 'backend',
       entrypoint: 'api/index.py',
       routePrefix: '/api',
@@ -96,10 +101,11 @@ describe('tryDetectServices()', () => {
       })
     );
 
-    const result = await tryDetectServices(tempDir);
-    expect(result).not.toBeNull();
-    expect(result?.services).toHaveLength(0);
-    expect(result?.errors.length).toBeGreaterThan(0);
+    const detection = await tryDetectServices(tempDir);
+    expect(detection).not.toBeNull();
+    expect(detection?.enabled).toBe(true);
+    expect(detection?.result.services).toHaveLength(0);
+    expect(detection?.result.errors.length).toBeGreaterThan(0);
   });
 
   it('should report builds as a blocker for inferred services config writes', async () => {
@@ -184,9 +190,10 @@ describe('tryDetectServices()', () => {
         'def app():\n  return None\n'
       );
 
-      const result = await tryDetectServices(tempDir);
-      expect(result).not.toBeNull();
-      expect(result?.services).toHaveLength(2);
+      const detection = await tryDetectServices(tempDir);
+      expect(detection).not.toBeNull();
+      expect(detection?.enabled).toBe(true);
+      expect(detection?.result.services).toHaveLength(2);
     });
 
     it('should return null when vercel.json has no experimentalServices', async () => {

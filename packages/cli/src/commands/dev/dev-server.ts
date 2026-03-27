@@ -142,11 +142,17 @@ export async function startDevServer(
   }
 
   let services: ResolvedService[] | undefined;
-  const servicesResult = await tryDetectServices(cwd);
-  const foundServices = servicesResult && servicesResult.services.length > 0;
-  if (foundServices) {
-    displayDetectedServices(servicesResult.services);
-    services = servicesResult.services;
+  const detection = await tryDetectServices(cwd);
+  const foundServices =
+    detection?.enabled && detection.result.services.length > 0;
+  if (detection && !detection.enabled) {
+    // Services detected from project layout but not explicitly enabled
+    output.warn(
+      'Detected services in your project. Multi-service support is not enabled.'
+    );
+  } else if (foundServices) {
+    displayDetectedServices(detection.result.services);
+    services = detection.result.services;
   }
 
   let lockAcquired = false;

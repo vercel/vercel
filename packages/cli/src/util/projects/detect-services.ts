@@ -15,6 +15,22 @@ import { validateConfig } from '../validate-config';
 export type ServicesConfigWriteBlocker = 'builds' | 'functions';
 
 /**
+ * Result of `tryDetectServices()`.
+ *
+ * - `enabled`: `true` when the user has explicitly opted in to multi-service
+ *   mode (via `experimentalServices` in vercel.json or the
+ *   `VERCEL_USE_EXPERIMENTAL_SERVICES` env var). When `true`, the caller
+ *   should activate multi-service dev (orchestrator, lock, etc.).
+ * - `enabled`: `false` when services were auto-detected from the project
+ *   layout but the user has not opted in. The caller can display an
+ *   informational message but should not change dev-server behavior.
+ */
+export interface TryDetectServicesResult {
+  result: DetectServicesResult;
+  enabled: boolean;
+}
+
+/**
  * Check if vercel.json in the given directory has experimentalServices configured
  * or VERCEL_USE_EXPERIMENTAL_SERVICES environment variable is set.
  */
@@ -40,26 +56,26 @@ async function hasExperimentalServicesConfig(cwd: string): Promise<boolean> {
 }
 
 /**
- * Detect services if experimental services are enabled.
+ * Detect services in the project directory.
  *
- * Returns the detection result if any of the following is true:
- * - vercel.json contains experimentalServices with valid services
- * - VERCEL_USE_EXPERIMENTAL_SERVICES env var is set (enables auto-detection of services)
+ * Always runs filesystem auto-detection regardless of configuration.
  *
- * Returns null otherwise.
+ * Returns a `TryDetectServicesResult` when services are found:
+ * - `enabled: true` when the user has explicitly opted in (config or env var)
+ * - `enabled: false` when services were auto-detected but the user has not
+ *   opted in (informational only)
+ *
+ * Returns `null` when no services are detected.
  */
 export async function tryDetectServices(
   cwd: string
-): Promise<DetectServicesResult | null> {
-  const isServicesEnabled = await isExperimentalServicesEnabled(cwd);
-  if (!isServicesEnabled) {
-    return null;
-  }
+): Promise<TryDetectServicesResult | null> {
+  const enabled = await isExperimentalServicesEnabled(cwd);
 
   const fs = new LocalFileSystemDetector(cwd);
   const result = await detectServices({ fs });
 
-  // No services configured
+  // No services found at all (not configured, not auto-detected)
   const hasNoServicesError = result.errors.some(
     e => e.code === 'NO_SERVICES_CONFIGURED'
   );
@@ -67,7 +83,18 @@ export async function tryDetectServices(
     return null;
   }
 
-  return result;
+  // When explicitly enabled, always return the result (even with 0 services
+  // but errors, so validation errors can be surfaced to the user).
+  if (enabled) {
+    return { result, enabled };
+  }
+
+  // When not explicitly enabled, only return if auto-detection found services
+  if (result.services.length === 0) {
+    return null;
+  }
+
+  return { result, enabled };
 }
 
 export async function writeServicesConfig(
