@@ -6,18 +6,6 @@ export class DeployButtonTelemetryClient
   extends TelemetryClient
   implements TelemetryMethods<typeof deployButtonCommand>
 {
-  trackCliFlagCopy(v: boolean | undefined) {
-    if (v) {
-      this.trackCliFlag('copy');
-    }
-  }
-
-  trackCliFlagMarkdown(v: boolean | undefined) {
-    if (v) {
-      this.trackCliFlag('markdown');
-    }
-  }
-
   trackCliFlagYes(v: boolean | undefined) {
     if (v) {
       this.trackCliFlag('yes');

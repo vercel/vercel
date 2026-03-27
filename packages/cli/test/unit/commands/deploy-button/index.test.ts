@@ -352,15 +352,17 @@ describe('deploy-button', () => {
       expect(output).not.toContain('integration-ids');
     });
 
-    it('outputs markdown with --markdown flag', async () => {
+    it('outputs both deploy URL and markdown', async () => {
       setupLinkedProject();
       setupMockApis({ resources: [], configurations: [] });
 
-      client.setArgv('deploy-button', '--yes', '--markdown');
+      client.setArgv('deploy-button', '--yes');
       const exitCode = await deployButtonCommand(client);
       expect(exitCode).toEqual(0);
 
       const output = client.getFullOutput();
+      expect(output).toContain('Deploy URL:');
+      expect(output).toContain('vercel.com/new/clone');
       expect(output).toContain('[![Deploy with Vercel]');
       expect(output).toContain('https://vercel.com/button');
     });

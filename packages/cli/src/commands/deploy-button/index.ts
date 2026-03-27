@@ -151,12 +151,8 @@ export default async function deployButton(client: Client): Promise<number> {
     return 0;
   }
 
-  const copyFlag = !!parsedArgs.flags['--copy'];
-  const markdownFlag = !!parsedArgs.flags['--markdown'];
   const autoConfirm = !!parsedArgs.flags['--yes'];
 
-  telemetry.trackCliFlagCopy(parsedArgs.flags['--copy']);
-  telemetry.trackCliFlagMarkdown(parsedArgs.flags['--markdown']);
   telemetry.trackCliFlagYes(parsedArgs.flags['--yes']);
 
   const link = await ensureLink('deploy-button', client, client.cwd, {
@@ -421,21 +417,17 @@ export default async function deployButton(client: Client): Promise<number> {
   const deployUrl = url.toString();
   const markdown = `[![Deploy with Vercel](https://vercel.com/button)](${deployUrl})`;
 
-  if (markdownFlag) {
-    output.print(`${markdown}\n`);
-  } else {
-    output.log(`Deploy URL:\n`);
-    output.print(`${deployUrl}\n\n`);
-    output.log(`Markdown:\n`);
-    output.print(`${markdown}\n`);
-  }
+  output.log(`Deploy URL:\n`);
+  output.print(`${deployUrl}\n\n`);
+  output.log(`Markdown:\n`);
+  output.print(`${markdown}\n`);
 
-  if (copyFlag) {
-    if (copyToClipboard(markdownFlag ? markdown : deployUrl)) {
-      output.success('Copied to clipboard!');
-    } else {
-      output.warn('Could not copy to clipboard. Please copy the URL manually.');
-    }
+  if (copyToClipboard(markdown)) {
+    output.success('Copied markdown to clipboard!');
+  } else {
+    output.warn(
+      'Could not copy to clipboard. Please copy the markdown manually.'
+    );
   }
 
   return 0;
