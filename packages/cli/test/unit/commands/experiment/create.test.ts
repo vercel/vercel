@@ -46,5 +46,52 @@ describe('experiment create', () => {
       metricUnit: 'user',
       directionality: 'increaseIsGood',
     });
+    expect(parsed.flag.environments.production.fallthrough.base).toMatchObject({
+      type: 'entity',
+      kind: 'visitor',
+      attribute: 'id',
+    });
+  });
+
+  it('maps cookieId allocation unit to cookie entity', async () => {
+    client.setArgv(
+      'experiment',
+      'create',
+      'cookie-test',
+      '--metric',
+      '{"name":"CTR","metricType":"percentage","metricUnit":"visitor","directionality":"increaseIsGood"}',
+      '--allocation-unit',
+      'cookieId',
+      '--json'
+    );
+    const exitCode = await experiment(client);
+    expect(exitCode).toBe(0);
+    const parsed = JSON.parse(client.stdout.getFullOutput());
+    expect(parsed.flag.environments.production.fallthrough.base).toMatchObject({
+      type: 'entity',
+      kind: 'cookie',
+      attribute: 'id',
+    });
+  });
+
+  it('maps userId allocation unit to user entity', async () => {
+    client.setArgv(
+      'experiment',
+      'create',
+      'user-test',
+      '--metric',
+      '{"name":"Revenue","metricType":"currency","metricUnit":"user","directionality":"increaseIsGood"}',
+      '--allocation-unit',
+      'userId',
+      '--json'
+    );
+    const exitCode = await experiment(client);
+    expect(exitCode).toBe(0);
+    const parsed = JSON.parse(client.stdout.getFullOutput());
+    expect(parsed.flag.environments.production.fallthrough.base).toMatchObject({
+      type: 'entity',
+      kind: 'user',
+      attribute: 'id',
+    });
   });
 });

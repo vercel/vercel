@@ -25,7 +25,7 @@ const experimentFlag: Flag = {
       rules: [],
       fallthrough: {
         type: 'split',
-        base: { type: 'visitor' },
+        base: { type: 'entity', kind: 'visitor', attribute: 'id' },
         weights: { control: 50, treatment: 50 },
         defaultVariantId: 'control',
       },

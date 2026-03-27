@@ -17,9 +17,17 @@ import type {
   MetricDefinition,
 } from '../../util/flags/types';
 
+const ALLOCATION_UNIT_TO_ENTITY_KIND: Record<ExperimentAllocationUnit, string> =
+  {
+    visitorId: 'visitor',
+    cookieId: 'cookie',
+    userId: 'user',
+  };
+
 function defaultProductionEnv(
   controlVariantId: string,
-  treatmentVariantId: string
+  treatmentVariantId: string,
+  allocationUnit: ExperimentAllocationUnit
 ): Record<string, FlagEnvironmentConfig> {
   return {
     production: {
@@ -28,7 +36,11 @@ function defaultProductionEnv(
       rules: [],
       fallthrough: {
         type: 'split',
-        base: { type: 'visitor' },
+        base: {
+          type: 'entity',
+          kind: ALLOCATION_UNIT_TO_ENTITY_KIND[allocationUnit],
+          attribute: 'id',
+        },
         weights: { [controlVariantId]: 50, [treatmentVariantId]: 50 },
         defaultVariantId: controlVariantId,
       },
@@ -144,7 +156,11 @@ export default async function create(
     kind: 'json',
     seed,
     variants,
-    environments: defaultProductionEnv(controlVariantId, treatmentVariantId),
+    environments: defaultProductionEnv(
+      controlVariantId,
+      treatmentVariantId,
+      allocationUnit
+    ),
     experiment: {
       name: experimentName,
       allocationUnit,
