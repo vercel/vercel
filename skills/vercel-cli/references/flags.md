@@ -20,7 +20,73 @@ Flag kinds: `boolean` (default), `string`, `number`. Boolean flags get `true`/`f
 
 ## Experiments (A/B tests)
 
-Use **`vercel experiment`** (not `vercel flags create`) for draft experiment flags: **`experiment create`**, **`experiment start`**, **`experiment stop`**, **`experiment list`**, **`experiment metrics add`** (requires `--flag` + metric fields), **`experiment metrics list <flag-slug>`**, and **`experiment analyse`**. Primary metrics are passed as repeatable **`--metric '<json>'`** on create (API Metric schema: `name`, `metricType`, `metricUnit`, `directionality`, optional `description` / `metricFormula`). Run **`vercel experiment --help`** for the full surface.
+Use **`vercel experiment`** (not `vercel flags create`) for experiment flags (`kind: json`). The command is hidden from root help; run `vercel experiment --help` for subcommands.
+
+### Creating experiments
+
+```bash
+vercel experiment create new-signup-flow \
+  --metric '{"name":"Signup","metricType":"count","metricUnit":"user","directionality":"increaseIsGood"}' \
+  --allocation-unit visitorId \
+  --hypothesis "Streamlined signup converts better"
+
+vercel experiment create my-test \
+  --metric '{"name":"CTR","metricType":"percentage","metricUnit":"visitor","directionality":"increaseIsGood"}' \
+  --allocation-unit cookieId \
+  --control-variant baseline --treatment-variant new-flow \
+  --name "Q3 Click-through test" --seed 42 --json
+```
+
+Options: `--metric JSON` (1–3, repeatable; API Metric schema: `name`, `metricType`, `metricUnit`, `directionality`, optional `description`/`metricFormula`), `--allocation-unit` (`cookieId`, `visitorId`, or `userId`; default `visitorId`), `--hypothesis`, `--name`, `--control-variant` (default `control`), `--treatment-variant` (default `treatment`), `--seed` (0–100000, default random), `--json`.
+
+### Starting and stopping
+
+```bash
+vercel experiment start new-signup-flow          # status → running
+vercel experiment stop new-signup-flow           # status → closed
+vercel experiment start new-signup-flow --json   # JSON output
+```
+
+### Listing experiments
+
+```bash
+vercel experiment list                           # list active experiment flags
+vercel experiment ls --state archived --json     # archived, JSON output
+```
+
+### Analysing results
+
+`analyse` (alias `analyze`) fetches experiment results from Web Analytics insights.
+
+```bash
+vercel experiment analyse my-flag \
+  --metric-event-name signup-completed --metric-type conversion --unit-field visitorId
+
+vercel experiment analyse my-flag --peek \
+  --metric-event-name signup-completed --metric-type conversion --unit-field visitorId
+
+vercel experiment analyse my-flag --json \
+  --metric-event-name signup-completed --metric-type conversion --unit-field visitorId
+```
+
+Options: `--metric-event-name NAME` (repeatable), `--metric-type TYPE` (repeatable, e.g. `conversion`, `count`), `--unit-field FIELD` (should match allocation unit), `--peek` (include partial results while running), `--json`.
+
+### Managing metrics
+
+Add or list metrics on an existing experiment flag.
+
+```bash
+vercel experiment metrics add --flag my-exp \
+  --name "Signup Completed" --metric-type count --metric-unit user --directionality increaseIsGood
+
+vercel experiment metrics add --flag my-exp \
+  --name "Error Rate" --metric-type percentage --metric-unit session --directionality decreaseIsGood --guardrail
+
+vercel experiment metrics ls my-exp-flag
+vercel experiment metrics ls my-exp-flag --json
+```
+
+`metrics add` options: `--flag SLUG` (required), `--name`, `--metric-type` (`percentage`/`currency`/`count`), `--metric-unit` (`user`/`session`/`visitor`), `--directionality` (`increaseIsGood`/`decreaseIsGood`), `--description`, `--metric-formula`, `--guardrail` (guardrail metric instead of primary), `--json`.
 
 ## Listing and Inspecting
 

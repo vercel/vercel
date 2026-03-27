@@ -181,12 +181,30 @@ export const experimentCreateSubcommand = {
       argument: 'ID',
     },
     {
+      name: 'control-value',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description:
+        'JSON value for the control variant (default includes unitType, experimentId, variantId, isControl, params)',
+      argument: 'JSON',
+    },
+    {
       name: 'treatment-variant',
       shorthand: null,
       type: String,
       deprecated: false,
       description: 'Treatment variant id (default: treatment)',
       argument: 'ID',
+    },
+    {
+      name: 'treatment-value',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description:
+        'JSON value for the treatment variant (default includes unitType, experimentId, variantId, isControl, params)',
+      argument: 'JSON',
     },
     {
       name: 'seed',
@@ -208,6 +226,10 @@ export const experimentCreateSubcommand = {
     {
       name: 'Create draft experiment',
       value: `${packageName} experiment create new-signup-flow --metric '{"name":"Signup","metricType":"count","metricUnit":"user","directionality":"increaseIsGood"}' --allocation-unit visitorId --hypothesis "Streamlined signup converts better"`,
+    },
+    {
+      name: 'Create with custom JSON variant values',
+      value: `${packageName} experiment create new-signup-flow --metric '{"name":"Signup","metricType":"count","metricUnit":"user","directionality":"increaseIsGood"}' --control-value '{"unitType":"visitorId","experimentId":"e1","variantId":"v0","isControl":true,"params":{"showBanner":false}}' --treatment-value '{"unitType":"visitorId","experimentId":"e1","variantId":"v1","isControl":false,"params":{"showBanner":true}}'`,
     },
   ],
 } as const;

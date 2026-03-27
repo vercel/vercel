@@ -91,6 +91,12 @@ export default async function create(
   const treatmentVariantId =
     (parsedArgs.flags['--treatment-variant'] as string | undefined) ??
     'treatment';
+  const controlValueRaw = parsedArgs.flags['--control-value'] as
+    | string
+    | undefined;
+  const treatmentValueRaw = parsedArgs.flags['--treatment-value'] as
+    | string
+    | undefined;
   const seedRaw = parsedArgs.flags['--seed'] as string | undefined;
   const seed =
     seedRaw !== undefined
@@ -124,6 +130,46 @@ export default async function create(
     return 1;
   }
 
+  let controlValue: FlagVariant['value'];
+  if (controlValueRaw !== undefined) {
+    try {
+      controlValue = JSON.parse(controlValueRaw) as FlagVariant['value'];
+    } catch {
+      output.error(
+        '--control-value must be valid JSON, e.g. \'{"unitType":"visitorId","experimentId":"e1","variantId":"v0","isControl":true,"params":{"color":"blue"}}\''
+      );
+      return 1;
+    }
+  } else {
+    controlValue = {
+      unitType: allocationUnit,
+      experimentId: slug,
+      variantId: controlVariantId,
+      isControl: true,
+      params: {},
+    };
+  }
+
+  let treatmentValue: FlagVariant['value'];
+  if (treatmentValueRaw !== undefined) {
+    try {
+      treatmentValue = JSON.parse(treatmentValueRaw) as FlagVariant['value'];
+    } catch {
+      output.error(
+        '--treatment-value must be valid JSON, e.g. \'{"unitType":"visitorId","experimentId":"e1","variantId":"v1","isControl":false,"params":{"color":"green"}}\''
+      );
+      return 1;
+    }
+  } else {
+    treatmentValue = {
+      unitType: allocationUnit,
+      experimentId: slug,
+      variantId: treatmentVariantId,
+      isControl: false,
+      params: {},
+    };
+  }
+
   const link = await getLinkedProject(client);
   if (link.status === 'error') {
     return link.exitCode;
@@ -141,14 +187,8 @@ export default async function create(
   const { project } = link;
 
   const variants: FlagVariant[] = [
-    {
-      id: controlVariantId,
-      value: { variantId: controlVariantId, params: {} },
-    },
-    {
-      id: treatmentVariantId,
-      value: { variantId: treatmentVariantId, params: {} },
-    },
+    { id: controlVariantId, value: controlValue },
+    { id: treatmentVariantId, value: treatmentValue },
   ];
 
   const body: CreateFlagRequest = {

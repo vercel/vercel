@@ -1,6 +1,9 @@
 /** JSON flag variant payload for experiment flags (`kind: "json"`). */
 export interface JsonVariantValue {
   variantId: string;
+  unitType?: string;
+  experimentId?: string;
+  isControl?: boolean;
   params?: Record<string, unknown>;
 }
 
