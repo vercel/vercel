@@ -99,18 +99,21 @@ async function getToken(stsUrl: string, tokenId: string): Promise<number> {
   try {
     const url = new URL(`/token/${tokenId}`, stsUrl);
 
-    // Try to get OIDC token — check env first, then .env.local
+    // Try to get OIDC token — check env first, then .env.local, then .env
     let oidcToken = process.env.VERCEL_OIDC_TOKEN;
     if (!oidcToken) {
-      try {
-        const { readFileSync } = await import('node:fs');
-        const envLocal = readFileSync('.env.local', 'utf-8');
-        const match = envLocal.match(/VERCEL_OIDC_TOKEN=["']?([^"'\n]+)["']?/);
-        if (match) {
-          oidcToken = match[1];
+      const { readFileSync } = await import('node:fs');
+      for (const envFile of ['.env.local', '.env']) {
+        try {
+          const content = readFileSync(envFile, 'utf-8');
+          const match = content.match(/VERCEL_OIDC_TOKEN=["']?([^"'\n]+)["']?/);
+          if (match) {
+            oidcToken = match[1];
+            break;
+          }
+        } catch {
+          // file not found, try next
         }
-      } catch {
-        // .env.local not found, continue without
       }
     }
     const headers: Record<string, string> = {
