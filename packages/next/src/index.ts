@@ -107,6 +107,7 @@ import {
 } from './utils';
 import { compile as compileRex } from '@vercel/rex';
 import { getAppRouterPathnameFilesMap } from './metadata';
+import { createRexRoute } from './rex';
 
 export const version = 2;
 export const htmlContentType = 'text/html; charset=utf-8';
@@ -825,7 +826,7 @@ export const build: BuildV2 = async buildOptions => {
               `);
             }
 
-            return { src: '^.*$', middlewarePath: `rex:${code}` };
+            return createRexRoute(code);
           };
           if (routesManifest.rewrites.beforeFiles.length > 0) {
             beforeFilesRewrites.push(

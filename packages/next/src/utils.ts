@@ -59,6 +59,7 @@ import {
 } from './metadata';
 import { isDynamicRoute } from './is-dynamic-route';
 import { compile as compileRex } from '@vercel/rex';
+import { createRexRoute, isRexRoute } from './rex';
 
 type stringMap = { [key: string]: string };
 
@@ -3608,10 +3609,7 @@ export function updateRouteSrc(
   index: number,
   manifestItems: Array<{ regex: string }>
 ) {
-  if (
-    route.src &&
-    !('middlewarePath' in route && route.middlewarePath?.startsWith('rex:'))
-  ) {
+  if (route.src && !isRexRoute(route)) {
     route.src = manifestItems[index].regex;
   }
   return route;
@@ -4685,10 +4683,7 @@ export async function getServerActionMetaRoutes(
         req.headers.x-server-action-name = action-name
       end
     `);
-    const route: Route = {
-      src: '^.*$',
-      middlewarePath: `rex:${code}`,
-    };
+    const route = createRexRoute(code);
     return [route];
   } catch (_error) {
     // If manifest doesn't exist or can't be read, return empty routes
