@@ -216,7 +216,9 @@ export async function startDevServer(
     if (cleanupInProgress) return;
     cleanupInProgress = true;
 
-    output.debug('Shutting down...');
+    // Restore terminal state first so the user gets a usable shell
+    // immediately, even if devServer.stop() takes time.
+    ctx.onShutdown?.();
 
     clearTimeout(timeout);
     controller.abort();
@@ -226,7 +228,6 @@ export async function startDevServer(
     }
 
     devServer.stop().finally(() => {
-      ctx.onShutdown?.();
       process.exit(0);
     });
   };
