@@ -95,6 +95,50 @@ function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+async function getToken(stsUrl: string, tokenId: string): Promise<number> {
+  try {
+    const url = new URL(`/token/${tokenId}`, stsUrl);
+
+    // Try to get OIDC token for auth
+    const oidcToken = process.env.VERCEL_OIDC_TOKEN;
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    };
+    if (oidcToken) {
+      headers['Authorization'] = `Bearer ${oidcToken}`;
+    }
+
+    const response = await fetch(url.toString(), {
+      method: 'POST',
+      headers,
+      body: '{}',
+    });
+
+    if (!response.ok) {
+      const errorData = (await response.json()) as { error?: string; message?: string };
+      output.error(errorData.message || errorData.error || 'Failed to get token');
+      if (response.status === 401) {
+        output.log(
+          `  Make sure VERCEL_OIDC_TOKEN is set. Run ${chalk.cyan('vc link')} and pull env vars.`
+        );
+      }
+      return 1;
+    }
+
+    const data = (await response.json()) as { accessToken: string; expiresAt: number };
+
+    // Print just the token so it can be captured in a variable
+    process.stdout.write(data.accessToken);
+    return 0;
+  } catch (error) {
+    output.error(
+      error instanceof Error ? error.message : 'Failed to get token'
+    );
+    return 1;
+  }
+}
+
 async function listConnections(stsUrl: string, providerFilter?: string): Promise<number> {
   try {
     const url = new URL('/setup/tokens', stsUrl);
@@ -171,11 +215,21 @@ export default async function connect(client: Client): Promise<number> {
     return listConnections(stsUrl, providerFilter);
   }
 
+  // vc connect get-token <id>
+  if (subcommand === 'get-token') {
+    const tokenId = parsedArgs.args[2];
+    if (!tokenId) {
+      output.error('Usage: vc connect get-token <token-id>');
+      return 1;
+    }
+    return getToken(stsUrl, tokenId);
+  }
+
   // vc connect <provider>
   const provider = subcommand;
   if (!provider) {
     output.error(
-      'Usage: vc connect <provider> or vc connect list'
+      'Usage: vc connect <provider> | vc connect list | vc connect get-token <id>'
     );
     return 1;
   }

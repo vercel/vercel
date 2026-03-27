@@ -71,5 +71,9 @@ export const connectCommand = {
       name: 'Connect Slack with a custom bot name',
       value: `${packageName} connect slack --app-name "My Bot"`,
     },
+    {
+      name: 'Get an access token',
+      value: `${packageName} connect get-token <token-id>`,
+    },
   ],
 } as const;
