@@ -39,6 +39,10 @@ export function pythonRequestFromConstraint(
   };
 }
 
+// ---------------------------------------------------------------------------
+// Parsing
+// ---------------------------------------------------------------------------
+
 /**
  * Parse the contents of a `.python-version` file.
  */
@@ -329,4 +333,62 @@ function tryParsePlatformRequest(raw: string): PythonRequest | null {
   }
 
   return { implementation, version, platform };
+}
+
+// ---------------------------------------------------------------------------
+// Serialization (inverse of parsing)
+// ---------------------------------------------------------------------------
+
+function serializeConstraint(constraint: Pep440Constraint[]): string {
+  return constraint.map(c => `${c.operator}${c.version}`).join(',');
+}
+
+function serializeVersionRequest(vr: PythonVersionRequest): string {
+  const base = serializeConstraint(vr.constraint);
+  if (!vr.variant || vr.variant === 'default') return base;
+  return `${base}+${PythonVariant.toString(vr.variant)}`;
+}
+
+/**
+ * Serialize a single Python version request to a string suitable for a
+ * `.python-version` line.  This is the inverse of `parseUvPythonRequest`.
+ * Comments are not preserved.
+ */
+export function serializePythonRequest(request: PythonRequest): string {
+  const { implementation, version, platform } = request;
+
+  if (!implementation && !version && !platform) return 'any';
+
+  if (platform) {
+    const implStr = implementation
+      ? PythonImplementation.toString(implementation)
+      : 'any';
+    const verStr = version ? serializeVersionRequest(version) : 'any';
+    return [
+      implStr,
+      verStr,
+      platform.os ?? 'any',
+      platform.arch ?? 'any',
+      platform.libc ?? 'any',
+    ].join('-');
+  }
+
+  if (implementation && !version) {
+    return PythonImplementation.toString(implementation);
+  }
+
+  const verStr = version ? serializeVersionRequest(version) : '';
+  if (implementation) {
+    return `${PythonImplementation.toString(implementation)}@${verStr}`;
+  }
+  return verStr;
+}
+
+/**
+ * Serialize an array of Python version requests to `.python-version` file
+ * content.  This is the inverse of `parsePythonVersionFile`.
+ * Comments are not preserved.
+ */
+export function writePythonVersionFile(requests: PythonRequest[]): string {
+  return requests.map(serializePythonRequest).join('\n') + '\n';
 }

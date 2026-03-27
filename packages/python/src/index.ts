@@ -31,6 +31,7 @@ import {
   discoverPackage,
   ensureUvProject,
   resolveVendorDir,
+  rewritePatchVersionPins,
   installRequirementsFile,
   installRequirement,
 } from './install';
@@ -324,6 +325,13 @@ export const build: BuildVX = async ({
       `${pythonVersionString(pythonVersion)}\n`
     );
   }
+
+  // In the build container, rewrite any patch-level Python version pins in
+  // .python-version and pyproject.toml to minor-version ranges.
+  await rewritePatchVersionPins({
+    pythonPackage,
+    rootDir,
+  });
 
   fsFiles = await glob('**', workPath);
 
