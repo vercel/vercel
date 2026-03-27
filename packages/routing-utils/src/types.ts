@@ -63,6 +63,16 @@ type Transform = {
   env?: string[];
 };
 
+// export type RouteWithRex = {
+//   rex: string;
+//   // --------------
+//   src?: undefined;
+//   check?: undefined;
+//   status?: undefined;
+//   override?: undefined;
+//   continue?: undefined;
+// };
+
 export type RouteWithSrc = {
   src: string;
   dest?: string;
@@ -120,10 +130,11 @@ export type RouteWithHandle = {
   status?: number;
 };
 
-export type Route = RouteWithSrc | RouteWithHandle;
+export type Route = /* RouteWithRex | */ RouteWithSrc | RouteWithHandle;
 
 export type RouteInput =
   | RouteWithSrc
+  // | RouteWithRex
   | (Omit<RouteWithSrc, 'src'> & { src?: string; source: string })
   | RouteWithHandle;
 

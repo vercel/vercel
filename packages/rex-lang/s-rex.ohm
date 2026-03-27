@@ -1,0 +1,112 @@
+Rex {
+  space += comment
+
+  Program
+    = Expr*
+
+  Expr
+    = bareWord "=" Expr       -- binding
+    | "(" Expr Any<Expr> ")"  -- call
+    | Atom                    -- atom
+
+  Atom
+    = String -- string
+    | Number -- number
+    | Boolean -- boolean
+    | Null -- null
+    | Undefined -- undefined
+    | Array -- array
+    | Object -- object
+    | bareWord -- symbol
+
+  Array
+    = "[" Any<Expr> "]"
+
+  Object
+    = "{" Any<Pair> "}"
+
+  Pair
+    = (bareWord | String | Number) ":" Expr
+
+  Any<item>
+    = (item ","?)*
+
+  String
+    = DQuotedString
+    | SQuotedString
+
+  DQuotedString
+    = "\"" dStringChar* "\""
+
+  dStringChar
+    = ~("\"" | "\\") any
+    | escape
+
+  SQuotedString
+    = "'" sStringChar* "'"
+
+  sStringChar
+    = ~("'" | "\\") any
+    | escape
+
+  escape
+    = "\\" ("\"" | "'" | "\\" | "/" | "b" | "f" | "n" | "r" | "t" | unicodeEscape)
+
+  unicodeEscape
+    = "u" hex hex hex hex
+
+  hex
+    = digit
+    | "A".."F"
+    | "a".."f"
+
+  Number
+    = hexNumber    
+    | binaryNumber 
+    | decimalNumber
+
+  hexNumber
+    = "-"? "0x" hex+
+
+  binaryNumber
+    = "-"? "0b" bit+
+
+  decimalNumber
+    = "-"? decimalInteger ("." digit+)? exponent?
+
+  decimalInteger
+    = nonZeroDigit digit*  -- nonZero
+    | "0"                  -- zero
+
+  bit
+    = "0" | "1"
+
+  exponent
+    = ("e" | "E") ("+" | "-")? digit+
+
+  bareWord
+    = letter (letter | digit | "." | "-" | "_")*
+
+  Boolean
+    = "true" | "false"
+
+  Null
+    = "null"
+
+  Undefined
+    = "undefined"
+
+  nonZeroDigit
+    = "1".."9"
+
+  comment
+    = lineComment
+    | blockComment
+
+  lineComment
+    = "//" (~"\n" any)* "\n"?
+
+  blockComment
+    = "/*" (~"*/" any)* "*/"
+}
+

@@ -1,0 +1,70 @@
+{
+  "name": "@creationix/rex",
+  "private": true,
+  "version": "0.6.0",
+  "description": "Compiler and parser for the Rex language",
+  "keywords": [
+    "rex",
+    "dsl",
+    "compiler",
+    "parser",
+    "configuration"
+  ],
+  "type": "module",
+  "bin": {
+    "rex": "rex-cli.js",
+    "rx": "rx-cli.js"
+  },
+  "main": "rex.js",
+  "types": "./rex.ts",
+  "exports": {
+    ".": {
+      "bun": "./rex.ts",
+      "default": "./rex.js"
+    },
+    "./rexc": "./rexc.ts",
+    "./rex-repl": "./rex-repl.ts"
+  },
+  "files": [
+    "README.md",
+    "LICENSE",
+    "rex.js",
+    "rex.ts",
+    "rex-cli.ts",
+    "rex-cli.js",
+    "rex.ohm",
+    "rex.ohm-bundle.cjs",
+    "rex.ohm-bundle.js",
+    "rex.ohm-bundle.d.ts",
+    "rexc-interpreter.ts",
+    "rex-repl.ts",
+    "rex-repl.js",
+    "rx-cli.ts",
+    "rx-cli.js"
+  ],
+  "scripts": {
+    "build": "node ../../utils/build.mjs",
+    "build:grammar": "ohm generateBundles --withTypes rex.ohm && node -e \"require('node:fs').copyFileSync('rex.ohm-bundle.js','rex.ohm-bundle.cjs')\"",
+    "build:js": "bun build rex.ts --outfile rex.js --format esm --target node && bun build rex-repl.ts --outfile rex-repl.js --format esm --target node && bun build rex-cli.ts --outfile rex-cli.js --format esm --target node && bun build rx-cli.ts --outfile rx-cli.js --format esm --target node && node -e \"const fs=require('fs');for(const f of['rex-cli.js','rx-cli.js'])fs.writeFileSync(f,'#!/usr/bin/env node\\n'+fs.readFileSync(f,'utf8'))\"",
+    "compile": "bun run rex-cli.ts",
+    "verify:docs": "bun run verify-doc-examples.ts",
+    "pack:dry-run": "npm pack --dry-run",
+    "prepublishOnly": "bun run build:grammar && bun test && bun run build:js && npm run pack:dry-run",
+    "release": "npm publish"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/creationix/rex.git",
+    "directory": "packages/rex-lang"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "ohm-js": "^17.1.0"
+  },
+  "devDependencies": {
+    "@ohm-js/cli": "^2.0.1"
+  }
+}

@@ -58,6 +58,7 @@ import {
   getSourceFileRefOfStaticMetadata,
 } from './metadata';
 import { isDynamicRoute } from './is-dynamic-route';
+import { compile as compileRex } from '@creationix/rex';
 
 type stringMap = { [key: string]: string };
 
@@ -499,6 +500,7 @@ export async function getDynamicRoutes({
             override: true,
           });
         }
+        // console.log('manifest', routesManifest);
 
         for (const dynamicRoute of routesManifest.dynamicRoutes) {
           if (!canUsePreviewMode && omittedRoutes?.has(dynamicRoute.page)) {
@@ -627,6 +629,7 @@ export async function getDynamicRoutes({
               check: true,
               override: true,
             });
+            // console.log('segment route', routes[routes.length - 1]);
           } else {
             routes.push({
               ...route,
@@ -4647,7 +4650,7 @@ export async function getServerActionMetaRoutes(
       edge?: Record<string, ActionItem>;
     };
 
-    const routes: Route[] = [];
+    const actionNameById: Record<string, string> = {};
 
     // Process both node and edge entries
     for (const runtimeType of ['node', 'edge'] as const) {
@@ -4664,32 +4667,25 @@ export async function getServerActionMetaRoutes(
           exportedName = 'anonymous_fn';
         }
 
-        const route: Route = {
-          src: '/(.*)',
-          has: [
-            {
-              type: 'header',
-              key: 'next-action',
-              value: id,
-            },
-          ],
-          transforms: [
-            {
-              type: 'request.headers',
-              op: 'append',
-              target: {
-                key: 'x-server-action-name',
-              },
-              args: `${entry.filename}#${exportedName}`,
-            },
-          ],
-        };
-
-        routes.push(route);
+        const actionName = `${entry.filename}#${exportedName}`;
+        actionNameById[id] = actionName;
       }
     }
 
-    return routes;
+    const code = compileRex(`
+      action-names-by-id = {
+        ${Object.entries(actionNameById)
+          .map(([id, actionName]) => `"${id}": "${actionName}",`)
+          .join('\n')} 
+      }
+      when action-name = action-names-by-id.(headers.next-action) do
+        headers.x-server-action-name = action-name
+      end
+    `);
+    const route: Route = {
+      src: `rex:${code}`,
+    };
+    return [route];
   } catch (_error) {
     // If manifest doesn't exist or can't be read, return empty routes
     return [];
