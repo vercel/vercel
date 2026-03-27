@@ -447,32 +447,35 @@ export const rulesAddSubcommand = {
       description: 'Create as inactive (default: active)',
     },
     {
-      name: 'algo',
+      name: 'rate-limit-algo',
       shorthand: null,
       type: String,
       deprecated: false,
-      description: 'Rate limit algorithm: fixed_window, token_bucket',
+      description:
+        'Rate limit algorithm: fixed_window, token_bucket (default: fixed_window)',
     },
     {
-      name: 'window',
+      name: 'rate-limit-window',
       shorthand: null,
       type: Number,
       deprecated: false,
-      description: 'Rate limit window in seconds',
+      description: 'Rate limit window in seconds (required for rate_limit)',
     },
     {
-      name: 'limit',
+      name: 'rate-limit-requests',
       shorthand: null,
       type: Number,
       deprecated: false,
-      description: 'Rate limit max requests per window',
+      description:
+        'Rate limit max requests per window (required for rate_limit)',
     },
     {
-      name: 'keys',
+      name: 'rate-limit-keys',
       shorthand: null,
       type: [String] as unknown as StringConstructor,
       deprecated: false,
-      description: 'Rate limit keys (repeatable): ip, ja4, header:name',
+      description:
+        'Rate limit keys (repeatable): ip, ja4, header:name (default: ip)',
     },
     {
       name: 'redirect-url',

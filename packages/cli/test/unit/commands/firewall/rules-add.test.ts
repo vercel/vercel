@@ -1,0 +1,1118 @@
+import { describe, expect, it, beforeEach } from 'vitest';
+import { client } from '../../../mocks/client';
+import firewall from '../../../../src/commands/firewall';
+import { useUser } from '../../../mocks/user';
+import {
+  useListFirewallConfigs,
+  useActivateConfig,
+  usePatchDraft,
+  useGenerateFirewallRule,
+  useGenerateFirewallRuleError,
+  createConfig,
+  createChange,
+} from '../../../mocks/firewall';
+import { useProject, defaultProject } from '../../../mocks/project';
+import { useTeams } from '../../../mocks/team';
+import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
+
+describe('firewall rules add', () => {
+  beforeEach(() => {
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      id: 'firewall-test-project',
+      name: 'firewall-test',
+    });
+    const cwd = setupUnitFixture('commands/firewall');
+    client.cwd = cwd;
+  });
+
+  // ─── Flag mode: happy paths ────────────────────────────────────────
+
+  describe('flag mode', () => {
+    it('should create a simple deny rule', async () => {
+      useListFirewallConfigs(createConfig(), null);
+      usePatchDraft();
+      useActivateConfig();
+
+      client.setArgv(
+        'firewall',
+        'rules',
+        'add',
+        'Block test path',
+        '--condition',
+        'path:pre:/test',
+        '--action',
+        'deny',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('Rule "Block test path" staged');
+      expect(await exitCodePromise).toEqual(0);
+    });
+
+    it('should create a multi-condition AND rule', async () => {
+      useListFirewallConfigs(createConfig(), null);
+      usePatchDraft();
+      useActivateConfig();
+
+      client.setArgv(
+        'firewall',
+        'rules',
+        'add',
+        'Multi condition',
+        '--condition',
+        'user_agent:sub:crawler',
+        '--condition',
+        'geo_country:inc:CN,RU',
+        '--action',
+        'challenge',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('Rule "Multi condition" staged');
+      expect(await exitCodePromise).toEqual(0);
+    });
+
+    it('should create a rule with OR groups', async () => {
+      useListFirewallConfigs(createConfig(), null);
+      usePatchDraft();
+      useActivateConfig();
+
+      client.setArgv(
+        'firewall',
+        'rules',
+        'add',
+        'OR group rule',
+        '--condition',
+        'user_agent:sub:bot',
+        '--or',
+        '--condition',
+        'ip_address:eq:1.2.3.4',
+        '--action',
+        'deny',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('Rule "OR group rule" staged');
+      expect(await exitCodePromise).toEqual(0);
+    });
+
+    it('should create a rule with three OR groups', async () => {
+      useListFirewallConfigs(createConfig(), null);
+      usePatchDraft();
+      useActivateConfig();
+
+      client.setArgv(
+        'firewall',
+        'rules',
+        'add',
+        'Three groups',
+        '--condition',
+        'path:pre:/api',
+        '--or',
+        '--condition',
+        'path:pre:/admin',
+        '--or',
+        '--condition',
+        'path:pre:/internal',
+        '--action',
+        'deny',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('Rule "Three groups" staged');
+      expect(await exitCodePromise).toEqual(0);
+    });
+
+    it('should create a rule with key-based condition', async () => {
+      useListFirewallConfigs(createConfig(), null);
+      usePatchDraft();
+      useActivateConfig();
+
+      client.setArgv(
+        'firewall',
+        'rules',
+        'add',
+        'Header exists',
+        '--condition',
+        'header:Authorization:ex',
+        '--action',
+        'bypass',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('Rule "Header exists" staged');
+      expect(await exitCodePromise).toEqual(0);
+    });
+
+    it('should create a rule with negated condition', async () => {
+      useListFirewallConfigs(createConfig(), null);
+      usePatchDraft();
+      useActivateConfig();
+
+      client.setArgv(
+        'firewall',
+        'rules',
+        'add',
+        'Non-US traffic',
+        '--condition',
+        'geo_country:!eq:US',
+        '--action',
+        'challenge',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('does not equal US');
+      expect(await exitCodePromise).toEqual(0);
+    });
+
+    it('should create a rule with multi-value condition', async () => {
+      useListFirewallConfigs(createConfig(), null);
+      usePatchDraft();
+      useActivateConfig();
+
+      client.setArgv(
+        'firewall',
+        'rules',
+        'add',
+        'Block methods',
+        '--condition',
+        'method:inc:DELETE,PUT,PATCH',
+        '--action',
+        'deny',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('Rule "Block methods" staged');
+      expect(await exitCodePromise).toEqual(0);
+    });
+
+    it('should create a rate limit rule with all flags', async () => {
+      useListFirewallConfigs(createConfig(), null);
+      usePatchDraft();
+      useActivateConfig();
+
+      client.setArgv(
+        'firewall',
+        'rules',
+        'add',
+        'Rate limit API',
+        '--condition',
+        'path:pre:/api',
+        '--action',
+        'rate_limit',
+        '--rate-limit-algo',
+        'fixed_window',
+        '--rate-limit-window',
+        '60',
+        '--rate-limit-requests',
+        '100',
+        '--rate-limit-keys',
+        'ip',
+        '--rate-limit-keys',
+        'ja4',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('Rule "Rate limit API" staged');
+      expect(await exitCodePromise).toEqual(0);
+    });
+
+    it('should create a rate limit rule with defaults (algo and keys)', async () => {
+      useListFirewallConfigs(createConfig(), null);
+      usePatchDraft();
+      useActivateConfig();
+
+      client.setArgv(
+        'firewall',
+        'rules',
+        'add',
+        'Rate limit default',
+        '--condition',
+        'path:pre:/api',
+        '--action',
+        'rate_limit',
+        '--rate-limit-window',
+        '30',
+        '--rate-limit-requests',
+        '50',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('Rule "Rate limit default" staged');
+      expect(await exitCodePromise).toEqual(0);
+    });
+
+    it('should create a redirect rule', async () => {
+      useListFirewallConfigs(createConfig(), null);
+      usePatchDraft();
+      useActivateConfig();
+
+      client.setArgv(
+        'firewall',
+        'rules',
+        'add',
+        'Redirect old path',
+        '--condition',
+        'path:pre:/old',
+        '--action',
+        'redirect',
+        '--redirect-url',
+        '/new',
+        '--permanent',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('Rule "Redirect old path" staged');
+      expect(await exitCodePromise).toEqual(0);
+    });
+
+    it('should create a redirect rule (temporary by default)', async () => {
+      useListFirewallConfigs(createConfig(), null);
+      usePatchDraft();
+      useActivateConfig();
+
+      client.setArgv(
+        'firewall',
+        'rules',
+        'add',
+        'Temp redirect',
+        '--condition',
+        'path:pre:/temp',
+        '--action',
+        'redirect',
+        '--redirect-url',
+        '/new',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('Rule "Temp redirect" staged');
+      expect(await exitCodePromise).toEqual(0);
+    });
+
+    it('should create a rule with duration', async () => {
+      useListFirewallConfigs(createConfig(), null);
+      usePatchDraft();
+      useActivateConfig();
+
+      client.setArgv(
+        'firewall',
+        'rules',
+        'add',
+        'Deny with duration',
+        '--condition',
+        'ip_address:eq:1.2.3.4',
+        '--action',
+        'deny',
+        '--duration',
+        '1h',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('Duration: 1h');
+      expect(await exitCodePromise).toEqual(0);
+    });
+
+    it('should create an inactive rule with description', async () => {
+      useListFirewallConfigs(createConfig(), null);
+      usePatchDraft();
+      useActivateConfig();
+
+      client.setArgv(
+        'firewall',
+        'rules',
+        'add',
+        'Inactive rule',
+        '--condition',
+        'path:pre:/test',
+        '--action',
+        'log',
+        '--inactive',
+        '--description',
+        'Test description',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('Inactive rule');
+      expect(await exitCodePromise).toEqual(0);
+    });
+
+    it('should create a log rule', async () => {
+      useListFirewallConfigs(createConfig(), null);
+      usePatchDraft();
+      useActivateConfig();
+
+      client.setArgv(
+        'firewall',
+        'rules',
+        'add',
+        'Log rule',
+        '--condition',
+        'method:eq:DELETE',
+        '--action',
+        'log',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('Rule "Log rule" staged');
+      expect(await exitCodePromise).toEqual(0);
+    });
+
+    it('should create a bypass rule', async () => {
+      useListFirewallConfigs(createConfig(), null);
+      usePatchDraft();
+      useActivateConfig();
+
+      client.setArgv(
+        'firewall',
+        'rules',
+        'add',
+        'Bypass rule',
+        '--condition',
+        'ip_address:eq:10.0.0.0/24',
+        '--action',
+        'bypass',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('Rule "Bypass rule" staged');
+      expect(await exitCodePromise).toEqual(0);
+    });
+
+    it('should show preview before creating', async () => {
+      useListFirewallConfigs(createConfig(), null);
+      usePatchDraft();
+      useActivateConfig();
+
+      client.setArgv(
+        'firewall',
+        'rules',
+        'add',
+        'Preview test',
+        '--condition',
+        'path:pre:/api',
+        '--action',
+        'deny',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      // Preview should show the condition
+      await expect(client.stderr).toOutput('path starts with /api');
+      expect(await exitCodePromise).toEqual(0);
+    });
+
+    it('should handle colon in condition value', async () => {
+      useListFirewallConfigs(createConfig(), null);
+      usePatchDraft();
+      useActivateConfig();
+
+      client.setArgv(
+        'firewall',
+        'rules',
+        'add',
+        'Colon value',
+        '--condition',
+        'header:X-Forward:eq:1.2.3.4:8080',
+        '--action',
+        'deny',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('Rule "Colon value" staged');
+      expect(await exitCodePromise).toEqual(0);
+    });
+  });
+
+  // ─── Flag mode: validation errors ──────────────────────────────────
+
+  describe('flag mode validation', () => {
+    it('should error when name is missing', async () => {
+      client.setArgv(
+        'firewall',
+        'rules',
+        'add',
+        '--condition',
+        'path:pre:/test',
+        '--action',
+        'deny',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('Missing rule name');
+      expect(await exitCodePromise).toEqual(1);
+    });
+
+    it('should error when --action is missing', async () => {
+      client.setArgv(
+        'firewall',
+        'rules',
+        'add',
+        'Test',
+        '--condition',
+        'path:pre:/test',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('Missing --action');
+      expect(await exitCodePromise).toEqual(1);
+    });
+
+    it('should error on invalid action', async () => {
+      client.setArgv(
+        'firewall',
+        'rules',
+        'add',
+        'Test',
+        '--condition',
+        'path:pre:/test',
+        '--action',
+        'invalid',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('Invalid action');
+      expect(await exitCodePromise).toEqual(1);
+    });
+
+    it('should error on invalid condition format', async () => {
+      client.setArgv(
+        'firewall',
+        'rules',
+        'add',
+        'Test',
+        '--condition',
+        'badformat',
+        '--action',
+        'deny',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('Invalid condition format');
+      expect(await exitCodePromise).toEqual(1);
+    });
+
+    it('should error on invalid operator', async () => {
+      client.setArgv(
+        'firewall',
+        'rules',
+        'add',
+        'Test',
+        '--condition',
+        'path:badop:value',
+        '--action',
+        'deny',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('Invalid operator');
+      expect(await exitCodePromise).toEqual(1);
+    });
+
+    it('should error on missing value for string operator', async () => {
+      client.setArgv(
+        'firewall',
+        'rules',
+        'add',
+        'Test',
+        '--condition',
+        'path:pre',
+        '--action',
+        'deny',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('requires a value');
+      expect(await exitCodePromise).toEqual(1);
+    });
+
+    it('should error on missing key for header type', async () => {
+      client.setArgv(
+        'firewall',
+        'rules',
+        'add',
+        'Test',
+        '--condition',
+        'header:ex',
+        '--action',
+        'deny',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('requires a key');
+      expect(await exitCodePromise).toEqual(1);
+    });
+
+    it('should error on invalid duration', async () => {
+      client.setArgv(
+        'firewall',
+        'rules',
+        'add',
+        'Test',
+        '--condition',
+        'path:pre:/test',
+        '--action',
+        'deny',
+        '--duration',
+        '2h',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('Invalid duration');
+      expect(await exitCodePromise).toEqual(1);
+    });
+
+    it('should error when rate limit missing --rate-limit-window', async () => {
+      client.setArgv(
+        'firewall',
+        'rules',
+        'add',
+        'Test',
+        '--condition',
+        'path:pre:/api',
+        '--action',
+        'rate_limit',
+        '--rate-limit-requests',
+        '100',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('--rate-limit-window is required');
+      expect(await exitCodePromise).toEqual(1);
+    });
+
+    it('should error when rate limit missing --rate-limit-requests', async () => {
+      client.setArgv(
+        'firewall',
+        'rules',
+        'add',
+        'Test',
+        '--condition',
+        'path:pre:/api',
+        '--action',
+        'rate_limit',
+        '--rate-limit-window',
+        '60',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('--rate-limit-requests is required');
+      expect(await exitCodePromise).toEqual(1);
+    });
+
+    it('should error on --or before any conditions', async () => {
+      client.setArgv(
+        'firewall',
+        'rules',
+        'add',
+        'Test',
+        '--or',
+        '--condition',
+        'path:pre:/test',
+        '--action',
+        'deny',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('cannot be placed before');
+      expect(await exitCodePromise).toEqual(1);
+    });
+
+    it('should error on redirect without --redirect-url', async () => {
+      client.setArgv(
+        'firewall',
+        'rules',
+        'add',
+        'Test',
+        '--condition',
+        'path:pre:/old',
+        '--action',
+        'redirect',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('requires --redirect-url');
+      expect(await exitCodePromise).toEqual(1);
+    });
+  });
+
+  // ─── JSON mode ─────────────────────────────────────────────────────
+
+  describe('JSON mode', () => {
+    it('should create a rule from valid JSON', async () => {
+      useListFirewallConfigs(createConfig(), null);
+      usePatchDraft();
+      useActivateConfig();
+
+      client.setArgv(
+        'firewall',
+        'rules',
+        'add',
+        '--json',
+        JSON.stringify({
+          name: 'JSON rule',
+          active: true,
+          conditionGroup: [
+            { conditions: [{ type: 'path', op: 'pre', value: '/api' }] },
+          ],
+          action: { mitigate: { action: 'deny' } },
+        }),
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('Rule "JSON rule" staged');
+      expect(await exitCodePromise).toEqual(0);
+    });
+
+    it('should create a complex JSON rule with rate limit', async () => {
+      useListFirewallConfigs(createConfig(), null);
+      usePatchDraft();
+      useActivateConfig();
+
+      client.setArgv(
+        'firewall',
+        'rules',
+        'add',
+        '--json',
+        JSON.stringify({
+          name: 'Complex JSON',
+          active: true,
+          conditionGroup: [
+            {
+              conditions: [
+                { type: 'path', op: 'pre', value: '/api' },
+                { type: 'method', op: 'inc', value: ['POST', 'PUT'] },
+              ],
+            },
+            {
+              conditions: [{ type: 'ip_address', op: 'eq', value: '1.2.3.4' }],
+            },
+          ],
+          action: {
+            mitigate: {
+              action: 'rate_limit',
+              rateLimit: {
+                algo: 'fixed_window',
+                window: 60,
+                limit: 100,
+                keys: ['ip'],
+              },
+            },
+          },
+        }),
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('Rule "Complex JSON" staged');
+      expect(await exitCodePromise).toEqual(0);
+    });
+
+    it('should error on invalid JSON string', async () => {
+      client.setArgv(
+        'firewall',
+        'rules',
+        'add',
+        '--json',
+        '{bad json',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('Invalid JSON');
+      expect(await exitCodePromise).toEqual(1);
+    });
+
+    it('should error when JSON missing name', async () => {
+      client.setArgv(
+        'firewall',
+        'rules',
+        'add',
+        '--json',
+        JSON.stringify({
+          conditionGroup: [
+            { conditions: [{ type: 'path', op: 'pre', value: '/api' }] },
+          ],
+          action: { mitigate: { action: 'deny' } },
+        }),
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('"name" field');
+      expect(await exitCodePromise).toEqual(1);
+    });
+
+    it('should error when JSON missing conditionGroup', async () => {
+      client.setArgv(
+        'firewall',
+        'rules',
+        'add',
+        '--json',
+        JSON.stringify({
+          name: 'Test',
+          action: { mitigate: { action: 'deny' } },
+        }),
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('"conditionGroup" field');
+      expect(await exitCodePromise).toEqual(1);
+    });
+
+    it('should error when JSON missing action', async () => {
+      client.setArgv(
+        'firewall',
+        'rules',
+        'add',
+        '--json',
+        JSON.stringify({
+          name: 'Test',
+          conditionGroup: [
+            { conditions: [{ type: 'path', op: 'pre', value: '/api' }] },
+          ],
+        }),
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('"action" field');
+      expect(await exitCodePromise).toEqual(1);
+    });
+
+    it('should error when name too long', async () => {
+      client.setArgv(
+        'firewall',
+        'rules',
+        'add',
+        '--json',
+        JSON.stringify({
+          name: 'a'.repeat(161),
+          conditionGroup: [
+            { conditions: [{ type: 'path', op: 'pre', value: '/api' }] },
+          ],
+          action: { mitigate: { action: 'deny' } },
+        }),
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('160 characters or less');
+      expect(await exitCodePromise).toEqual(1);
+    });
+  });
+
+  // ─── Mutual exclusivity ────────────────────────────────────────────
+
+  describe('mutual exclusivity', () => {
+    it('should error on --ai + --condition', async () => {
+      client.setArgv(
+        'firewall',
+        'rules',
+        'add',
+        '--ai',
+        'Block bots',
+        '--condition',
+        'path:pre:/test',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput(
+        'Cannot use --ai, --json, and --condition together'
+      );
+      expect(await exitCodePromise).toEqual(1);
+    });
+
+    it('should error on --json + --condition', async () => {
+      client.setArgv(
+        'firewall',
+        'rules',
+        'add',
+        '--json',
+        '{"name":"test"}',
+        '--condition',
+        'path:pre:/test',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput(
+        'Cannot use --ai, --json, and --condition together'
+      );
+      expect(await exitCodePromise).toEqual(1);
+    });
+
+    it('should error on --ai + --json', async () => {
+      client.setArgv(
+        'firewall',
+        'rules',
+        'add',
+        '--ai',
+        'Block bots',
+        '--json',
+        '{"name":"test"}',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput(
+        'Cannot use --ai, --json, and --condition together'
+      );
+      expect(await exitCodePromise).toEqual(1);
+    });
+  });
+
+  // ─── AI mode ───────────────────────────────────────────────────────
+
+  describe('AI mode', () => {
+    it('should create a rule from AI with --yes', async () => {
+      useListFirewallConfigs(createConfig(), null);
+      usePatchDraft();
+      useActivateConfig();
+      useGenerateFirewallRule();
+
+      client.setArgv(
+        'firewall',
+        'rules',
+        'add',
+        '--ai',
+        'Block traffic from China and Russia',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('Rule "AI Generated Rule" staged');
+      expect(await exitCodePromise).toEqual(0);
+    });
+
+    it('should create a rule with specific AI-generated conditions', async () => {
+      useListFirewallConfigs(createConfig(), null);
+      usePatchDraft();
+      useActivateConfig();
+      useGenerateFirewallRule({
+        name: 'Rate limit /api',
+        description: 'Limit API requests',
+        active: true,
+        id: 'ai_generated',
+        conditionGroup: [
+          {
+            conditions: [
+              { type: 'path', op: 'pre', value: '/api' },
+              { type: 'method', op: 'inc', value: ['POST', 'PUT'] },
+            ],
+          },
+        ],
+        action: {
+          mitigate: {
+            action: 'rate_limit',
+            rateLimit: {
+              algo: 'fixed_window',
+              window: 60,
+              limit: 100,
+              keys: ['ip'],
+            },
+            redirect: null,
+            actionDuration: null,
+          },
+        },
+      });
+
+      client.setArgv(
+        'firewall',
+        'rules',
+        'add',
+        '--ai',
+        'Rate limit API to 100 requests per minute',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('Rule "Rate limit /api" staged');
+      expect(await exitCodePromise).toEqual(0);
+    });
+
+    it('should show error when AI returns error field', async () => {
+      useGenerateFirewallRule(undefined, 'Too vague — please be more specific');
+
+      client.setArgv(
+        'firewall',
+        'rules',
+        'add',
+        '--ai',
+        'do something',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('Too vague');
+      expect(await exitCodePromise).toEqual(1);
+    });
+
+    it('should show error when AI API fails in non-interactive mode', async () => {
+      useGenerateFirewallRuleError(500);
+      (client.stdin as any).isTTY = false;
+
+      client.setArgv('firewall', 'rules', 'add', '--ai', 'Block bots', '--yes');
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('Response Error');
+      expect(await exitCodePromise).toEqual(1);
+    });
+
+    it('should show retry menu when AI API fails in interactive mode', async () => {
+      useGenerateFirewallRuleError(500);
+
+      client.setArgv('firewall', 'rules', 'add', '--ai', 'Block bots', '--yes');
+      const exitCodePromise = firewall(client);
+
+      // Should show retry/cancel menu
+      await expect(client.stderr).toOutput('Generation failed');
+      // Select "Cancel"
+      client.stdin.write('\x1B[B'); // down to Cancel
+      client.stdin.write('\n');
+
+      await expect(client.stderr).toOutput('Canceled');
+      expect(await exitCodePromise).toEqual(0);
+    });
+  });
+
+  // ─── offerAutoPublish ──────────────────────────────────────────────
+
+  describe('offerAutoPublish', () => {
+    it('should show "only staged change" when no prior draft', async () => {
+      useListFirewallConfigs(createConfig(), null);
+      usePatchDraft();
+      useActivateConfig();
+
+      client.setArgv(
+        'firewall',
+        'rules',
+        'add',
+        'First change',
+        '--condition',
+        'path:pre:/test',
+        '--action',
+        'deny',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('This change is staged');
+      expect(await exitCodePromise).toEqual(0);
+    });
+
+    it('should warn about existing draft changes', async () => {
+      const draft = createConfig({
+        id: 'draft',
+        changes: [
+          createChange('rules.insert', {
+            value: { name: 'Existing' },
+          }),
+        ],
+      });
+      useListFirewallConfigs(createConfig(), draft);
+      usePatchDraft();
+
+      client.setArgv(
+        'firewall',
+        'rules',
+        'add',
+        'Second change',
+        '--condition',
+        'path:pre:/test',
+        '--action',
+        'deny',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('other draft changes');
+      expect(await exitCodePromise).toEqual(0);
+    });
+  });
+
+  // ─── Non-interactive / agent mode ──────────────────────────────────
+
+  describe('non-interactive mode', () => {
+    it('should work with flags in non-TTY mode', async () => {
+      useListFirewallConfigs(createConfig(), null);
+      usePatchDraft();
+      useActivateConfig();
+      (client.stdin as any).isTTY = false;
+
+      client.setArgv(
+        'firewall',
+        'rules',
+        'add',
+        'Non-TTY rule',
+        '--condition',
+        'path:pre:/test',
+        '--action',
+        'deny',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('Rule "Non-TTY rule" staged');
+      expect(await exitCodePromise).toEqual(0);
+    });
+  });
+
+  // ─── Help + telemetry ──────────────────────────────────────────────
+
+  describe('help', () => {
+    it('tracks help telemetry', async () => {
+      client.setArgv('firewall', 'rules', 'add', '--help');
+      const exitCode = await firewall(client);
+      expect(exitCode).toEqual(2);
+    });
+  });
+
+  // ─── Interactive mode ──────────────────────────────────────────────
+
+  describe('interactive mode', () => {
+    it('should create a rule via AI interactive mode', async () => {
+      useListFirewallConfigs(createConfig(), null);
+      usePatchDraft();
+      useActivateConfig();
+      useGenerateFirewallRule();
+
+      client.setArgv('firewall', 'rules', 'add');
+      const exitCodePromise = firewall(client);
+
+      // Select "Describe what you want (AI-powered)" (first option)
+      await expect(client.stderr).toOutput(
+        'How would you like to create the rule?'
+      );
+      client.stdin.write('\n'); // select first = AI
+
+      // Enter prompt
+      await expect(client.stderr).toOutput('Describe the rule');
+      client.stdin.write('Block traffic from China\n');
+
+      // AI generates, shows preview, review menu
+      await expect(client.stderr).toOutput('What would you like to do?');
+      client.stdin.write('\n'); // select "Create this rule" (first)
+
+      // offerAutoPublish will prompt since no existing draft
+      await expect(client.stderr).toOutput('Publish to production now?');
+      client.stdin.write('n\n'); // decline publish
+
+      expect(await exitCodePromise).toEqual(0);
+    });
+
+    it('should allow discarding AI-generated rule', async () => {
+      useGenerateFirewallRule();
+
+      client.setArgv('firewall', 'rules', 'add');
+      const exitCodePromise = firewall(client);
+
+      // Select AI
+      await expect(client.stderr).toOutput(
+        'How would you like to create the rule?'
+      );
+      client.stdin.write('\n');
+
+      // Enter prompt
+      await expect(client.stderr).toOutput('Describe the rule');
+      client.stdin.write('Block bots\n');
+
+      // Preview shows, select "Discard" (4th option)
+      await expect(client.stderr).toOutput('What would you like to do?');
+      client.stdin.write('\x1B[B'); // down
+      client.stdin.write('\x1B[B'); // down
+      client.stdin.write('\x1B[B'); // down to "Discard"
+      client.stdin.write('\n');
+
+      await expect(client.stderr).toOutput('Discarded');
+      expect(await exitCodePromise).toEqual(0);
+    });
+  });
+});

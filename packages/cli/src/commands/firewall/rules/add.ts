@@ -344,25 +344,25 @@ function buildActionFromFlags(
   };
 
   if (actionType === 'rate_limit') {
-    const algo = (flags['--algo'] as string) || 'fixed_window';
-    const window = flags['--window'] as number | undefined;
-    const limit = flags['--limit'] as number | undefined;
-    const keys = (flags['--keys'] as string[]) || ['ip'];
+    const algo = (flags['--rate-limit-algo'] as string) || 'fixed_window';
+    const window = flags['--rate-limit-window'] as number | undefined;
+    const requests = flags['--rate-limit-requests'] as number | undefined;
+    const keys = (flags['--rate-limit-keys'] as string[]) || ['ip'];
 
     if (!VALID_ALGORITHMS.includes(algo as (typeof VALID_ALGORITHMS)[number])) {
-      return `Invalid algorithm "${algo}". Valid: ${VALID_ALGORITHMS.join(', ')}`;
+      return `Invalid rate limit algorithm "${algo}". Valid: ${VALID_ALGORITHMS.join(', ')}`;
     }
     if (!window || window < 10) {
-      return 'Rate limit --window is required (minimum 10 seconds).';
+      return 'Rate limit --rate-limit-window is required (minimum 10 seconds).';
     }
-    if (!limit || limit < 1) {
-      return 'Rate limit --limit is required (minimum 1).';
+    if (!requests || requests < 1) {
+      return 'Rate limit --rate-limit-requests is required (minimum 1).';
     }
 
     action.mitigate!.rateLimit = {
       algo: algo as 'fixed_window' | 'token_bucket',
       window,
-      limit,
+      limit: requests,
       keys,
     };
   }
