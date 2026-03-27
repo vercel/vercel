@@ -189,6 +189,8 @@ export interface VercelConfig {
    * @experimental This feature is experimental and may change.
    */
   experimentalServiceGroups?: ExperimentalServiceGroups;
+  integrations?: Record<string, string[]>;
+  storage?: string[];
 }
 
 export interface GitMetadata {

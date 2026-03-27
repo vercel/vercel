@@ -162,6 +162,8 @@ export default class Now {
     // Ignore specific items from vercel.json
     delete requestBody.scope;
     delete requestBody.github;
+    delete (requestBody as { integrations?: unknown }).integrations;
+    delete (requestBody as { storage?: unknown }).storage;
 
     const deployment = await processDeployment({
       now: this,
