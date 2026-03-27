@@ -208,16 +208,28 @@ export async function autoInstallAgentTooling(
       }
     }
 
+    output.debug(
+      `[plugin] prefs=${JSON.stringify(prefs)} agentName=${client.agentName ?? 'none'} isAgent=${client.isAgent} isTTY=${client.stdin.isTTY}`
+    );
     if (!prefs.pluginDismissed) {
       const targets = await getPluginTargets(client.agentName);
+      output.debug(`[plugin] targets=${JSON.stringify(targets)}`);
       const uninstalledTargets: string[] = [];
       for (const target of targets) {
-        if (!(await isPluginInstalledForTarget(target))) {
+        const installed = await isPluginInstalledForTarget(target);
+        output.debug(`[plugin] ${target} installed=${installed}`);
+        if (!installed) {
           uninstalledTargets.push(target);
         }
       }
+      output.debug(
+        `[plugin] uninstalled=${JSON.stringify(uninstalledTargets)}`
+      );
 
       if (uninstalledTargets.length > 0) {
+        output.debug(
+          `[plugin] entering install branch, isAgent=${client.isAgent} isTTY=${client.stdin.isTTY}`
+        );
         // Agents in non-TTY: output structured JSON so agent prompts the user
         if (client.isAgent && !client.stdin.isTTY) {
           const next = uninstalledTargets.map(target => ({
@@ -243,6 +255,10 @@ export async function autoInstallAgentTooling(
           return;
         }
 
+        const targetList = uninstalledTargets.join(', ');
+        output.log(
+          `The Vercel plugin installs on your agent harness (${targetList}) to give your AI agent the ability to manage deployments, environments, and more.`
+        );
         const accepted = await confirm(
           client,
           'Install the Vercel plugin?',
@@ -268,7 +284,7 @@ export async function autoInstallAgentTooling(
               );
               const onSigint = () => {
                 interrupted = true;
-                child.kill('SIGTERM');
+                child.kill();
               };
               process.once('SIGINT', onSigint);
               child.on('close', c => {
