@@ -1,6 +1,12 @@
+import type { JSONValue } from '@vercel-internals/types';
+
+export type FlagKind = 'boolean' | 'string' | 'number' | 'json';
+
+export type FlagVariantValue = JSONValue;
+
 export interface FlagVariant {
   id: string;
-  value: string | number | boolean;
+  value: FlagVariantValue;
   label?: string;
   description?: string;
 }
@@ -55,7 +61,7 @@ export interface Flag {
   id: string;
   slug: string;
   description?: string;
-  kind: 'boolean' | 'string' | 'number';
+  kind: FlagKind;
   state: 'active' | 'archived';
   variants: FlagVariant[];
   environments: Record<string, FlagEnvironmentConfig>;
@@ -117,7 +123,7 @@ export interface SdkKeysListResponse {
 
 export interface CreateFlagRequest {
   slug: string;
-  kind: 'boolean' | 'string' | 'number';
+  kind: FlagKind;
   description?: string;
   variants?: FlagVariant[];
   environments: Record<string, FlagEnvironmentConfig>;
