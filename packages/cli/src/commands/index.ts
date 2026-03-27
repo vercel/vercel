@@ -8,6 +8,7 @@ import { buildCommand } from './build/command';
 import { buyCommand } from './buy/command';
 import { cacheCommand } from './cache/command';
 import { certsCommand } from './certs/command';
+import { connectCommand } from './connect/command';
 import { contractCommand } from './contract/command';
 import { cronsCommand } from './crons/command';
 import { curlCommand } from './curl/command';
@@ -67,6 +68,7 @@ const commandsStructs = [
   buyCommand,
   cacheCommand,
   certsCommand,
+  connectCommand,
   contractCommand,
   cronsCommand,
   curlCommand,
