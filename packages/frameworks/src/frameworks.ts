@@ -4282,6 +4282,108 @@ export const frameworks = [
     ],
   },
   {
+    name: 'Axum',
+    slug: 'axum',
+    experimental: true,
+    runtimeFramework: true,
+    supersedes: ['rust'],
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/axum.svg',
+    tagline:
+      'Ergonomic and modular web framework built with Tokio, Tower, and Hyper.',
+    description: 'An Axum application deployed as a serverless function.',
+    website: 'https://github.com/tokio-rs/axum',
+    useRuntime: { src: 'src/main.rs', use: '@vercel/rust' },
+    ignoreRuntimes: ['@vercel/rust'],
+    detectors: {
+      every: [
+        {
+          path: 'Cargo.toml',
+          matchContent: 'axum\\s*=',
+        },
+        {
+          path: 'src/main.rs',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: 'None',
+      },
+      buildCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      devCommand: {
+        placeholder: '`cargo run`',
+        value: null,
+      },
+      outputDirectory: {
+        value: 'N/A',
+      },
+    },
+    getOutputDirName: async () => 'public',
+    defaultRoutes: [
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        dest: '/src/main',
+      },
+    ],
+  },
+  {
+    name: 'Actix Web',
+    slug: 'actix-web',
+    experimental: true,
+    runtimeFramework: true,
+    supersedes: ['rust'],
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/actix-web.svg',
+    tagline:
+      'A powerful, pragmatic, and extremely fast web framework for Rust.',
+    description: 'An Actix Web application deployed as a serverless function.',
+    website: 'https://actix.rs',
+    useRuntime: { src: 'src/main.rs', use: '@vercel/rust' },
+    ignoreRuntimes: ['@vercel/rust'],
+    detectors: {
+      every: [
+        {
+          path: 'Cargo.toml',
+          matchContent: 'actix-web\\s*=',
+        },
+        {
+          path: 'src/main.rs',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: 'None',
+      },
+      buildCommand: {
+        placeholder: 'None',
+        value: null,
+      },
+      devCommand: {
+        placeholder: '`cargo run`',
+        value: null,
+      },
+      outputDirectory: {
+        value: 'N/A',
+      },
+    },
+    getOutputDirName: async () => 'public',
+    defaultRoutes: [
+      {
+        handle: 'filesystem',
+      },
+      {
+        src: '/(.*)',
+        dest: '/src/main',
+      },
+    ],
+  },
+  {
     name: 'Node',
     slug: 'node',
     experimental: true,
