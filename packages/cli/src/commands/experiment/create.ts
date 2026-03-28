@@ -47,6 +47,7 @@ function defaultEnvironments(
 
   const linked: FlagEnvironmentConfig = {
     active: true,
+    pausedOutcome: { type: 'variant', variantId: controlVariantId },
     reuse: { active: true, environment: 'production' },
     rules: [],
     fallthrough: { type: 'variant', variantId: controlVariantId },
