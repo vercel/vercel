@@ -43,6 +43,7 @@ export interface FetchRequestLogsOptions {
   requestId?: string;
   branch?: string;
   page?: number;
+  expand?: boolean;
 }
 
 function parseRelativeTime(input: string): number {
@@ -176,9 +177,12 @@ export async function fetchRequestLogs(
       traceId: row.traceId,
     };
 
-    // Expand all log entries for this request so that --expand shows every
-    // console.log / console.warn line, not just the first one.
-    const logEntries = row.logs && row.logs.length > 0 ? row.logs : [{}];
+    // When --expand is set, emit one entry per log line so every
+    // console.log / console.warn line is shown on its own row.
+    // In default mode, emit only the first log entry to avoid
+    // duplicate rows for requests that produced multiple log lines.
+    const allLogEntries = row.logs && row.logs.length > 0 ? row.logs : [{}];
+    const logEntries = options.expand ? allLogEntries : [allLogEntries[0]];
     return logEntries.map((logEntry, index) => ({
       ...baseEntry,
       // Use a stable per-entry id so duplicate filtering works correctly

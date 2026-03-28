@@ -271,4 +271,62 @@ describe('logs-v2 utility', () => {
       expect(logs).toHaveLength(3);
     });
   });
+
+  describe('expand option', () => {
+    it('should emit one entry per request when expand is false (default)', async () => {
+      const mockLogs = [
+        createMockApiLog({
+          requestId: 'log_multi',
+          logs: [
+            { level: 'info', message: 'line 1' },
+            { level: 'error', message: 'line 2' },
+            { level: 'warning', message: 'line 3' },
+          ],
+        }),
+      ];
+      client.scenario.get('/api/logs/request-logs', (_req, res) => {
+        res.json({ rows: mockLogs, hasMoreRows: false });
+      });
+
+      const result = await fetchRequestLogs(client, {
+        projectId: 'prj_test',
+        ownerId: 'team_test',
+      });
+
+      // Without expand, only the first log entry per request row is emitted
+      expect(result.logs).toHaveLength(1);
+      expect(result.logs[0].id).toEqual('log_multi');
+      expect(result.logs[0].message).toEqual('line 1');
+    });
+
+    it('should emit one entry per log line when expand is true', async () => {
+      const mockLogs = [
+        createMockApiLog({
+          requestId: 'log_multi',
+          logs: [
+            { level: 'info', message: 'line 1' },
+            { level: 'error', message: 'line 2' },
+            { level: 'warning', message: 'line 3' },
+          ],
+        }),
+      ];
+      client.scenario.get('/api/logs/request-logs', (_req, res) => {
+        res.json({ rows: mockLogs, hasMoreRows: false });
+      });
+
+      const result = await fetchRequestLogs(client, {
+        projectId: 'prj_test',
+        ownerId: 'team_test',
+        expand: true,
+      });
+
+      // With expand, all log lines are emitted
+      expect(result.logs).toHaveLength(3);
+      expect(result.logs[0].message).toEqual('line 1');
+      expect(result.logs[1].message).toEqual('line 2');
+      expect(result.logs[2].message).toEqual('line 3');
+      expect(result.logs[1].id).toEqual('log_multi_1');
+      expect(result.logs[2].id).toEqual('log_multi_2');
+    });
+  });
 });
