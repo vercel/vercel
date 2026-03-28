@@ -23,6 +23,8 @@ const SERVICE_PREFIX_RE = /^\[([^\]]+)\]/;
 const ERROR_LINE_RE = /^\[([^\]]+)\]\s+ERROR:/;
 const HTTP_ERROR_RE =
   /^\[([^\]]+)\].*"[A-Z]+\s+\S+\s+HTTP\/[\d.]+"\s+([45]\d{2})\b/;
+const AVAILABLE_AT_RE = /^>\s+Available at:\s*$/;
+const AVAILABLE_AT_URL_RE = /^\s+([a-zA-Z0-9_-]+):\s+(https?:\/\/\S+)\s*$/;
 const MAX_EVENT_TEXT_LENGTH = 200;
 const MAX_TOOL_PREVIEW_LENGTH = 60;
 
@@ -144,12 +146,6 @@ function formatToolDoneLine(toolName: string): string {
   return chalk.green(`[${toolName}] done\n`);
 }
 
-export const _internal = {
-  formatReadArgs,
-  formatEditArgs,
-  formatToolArgs,
-};
-
 function formatToolError(details: unknown): string {
   if (details instanceof Error) {
     return truncateText(details.message);
@@ -263,6 +259,68 @@ class ErrorChunker {
     const text = this.collecting.lines.join('');
     this.collecting = null;
     this.onChunk(text);
+  }
+}
+
+class ServingUrlDetector {
+  private lineBuffer = '';
+  private inAvailableAtBlock = false;
+  private pendingUrls = new Map<string, string>();
+
+  constructor(private onUrl: (url: string) => void) {}
+
+  feed(text: string) {
+    this.lineBuffer += text;
+    const lines = this.lineBuffer.split('\n');
+    this.lineBuffer = lines.pop() || '';
+
+    for (const line of lines) {
+      this.processLine(line);
+    }
+  }
+
+  private processLine(line: string) {
+    const stripped = stripAnsi(line);
+
+    if (AVAILABLE_AT_RE.test(stripped.trimEnd())) {
+      this.inAvailableAtBlock = true;
+      this.pendingUrls.clear();
+      return;
+    }
+
+    if (!this.inAvailableAtBlock) return;
+
+    if (stripped.trim() === '') {
+      this.emitBestUrl();
+      return;
+    }
+
+    const match = stripped.match(AVAILABLE_AT_URL_RE);
+    if (match) {
+      const [, serviceName, url] = match;
+      this.pendingUrls.set(serviceName, url);
+      if (serviceName === 'frontend') {
+        this.emitBestUrl();
+      }
+      return;
+    }
+
+    this.emitBestUrl();
+  }
+
+  private emitBestUrl() {
+    if (!this.inAvailableAtBlock) return;
+
+    const url =
+      this.pendingUrls.get('frontend') ??
+      this.pendingUrls.values().next().value;
+
+    this.inAvailableAtBlock = false;
+    this.pendingUrls.clear();
+
+    if (typeof url === 'string' && url.length > 0) {
+      this.onUrl(url);
+    }
   }
 }
 
@@ -514,6 +572,7 @@ class StatusBar implements Component {
   private servicesConfigMenu = new ServicesConfigMenu();
   private _showServicesConfigPrompt = false;
   private _state: StatusBarState = 'initializing';
+  private _servingUrl: string | null = null;
   private _frame = 0;
   private _timer: ReturnType<typeof setInterval> | null = null;
   private _requestRender?: () => void;
@@ -556,7 +615,20 @@ class StatusBar implements Component {
   }
 
   set fixing(value: boolean) {
-    this.state = value ? 'fixing' : 'serving';
+    this.state = value
+      ? 'fixing'
+      : this._servingUrl
+        ? 'serving'
+        : 'initializing';
+  }
+
+  set servingUrl(value: string | null) {
+    this._servingUrl = value;
+    this.state = value ? 'serving' : 'initializing';
+  }
+
+  get servingUrl(): string | null {
+    return this._servingUrl;
   }
 
   dispose() {
@@ -620,7 +692,9 @@ class StatusBar implements Component {
         break;
       case 'serving':
       default:
-        statusLabel = chalk.green(`${disc} Serving`);
+        statusLabel = this._servingUrl
+          ? chalk.green(`${disc} Serving ${this._servingUrl}`)
+          : chalk.green(`${disc} Serving`);
         break;
     }
 
@@ -696,6 +770,10 @@ export async function startAgentMode(
 
   const errorChunker = new ErrorChunker((text: string) => {
     errorStore.push(text);
+  });
+  const servingUrlDetector = new ServingUrlDetector(url => {
+    statusBar.servingUrl = url;
+    tui.requestRender();
   });
 
   let agentSession:
@@ -827,6 +905,7 @@ export async function startAgentMode(
       const text = typeof chunk === 'string' ? chunk : chunk.toString('utf8');
       appendOutput(text);
       errorChunker.feed(text);
+      servingUrlDetector.feed(text);
       callback();
     },
   });
@@ -903,7 +982,6 @@ export async function startAgentMode(
       return promptToGenerateServicesConfig();
     },
     onReady() {
-      statusBar.state = 'serving';
       tui.requestRender();
     },
   };
