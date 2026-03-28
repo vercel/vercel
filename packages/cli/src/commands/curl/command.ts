@@ -8,7 +8,7 @@ export const curlCommand = {
     'Execute curl with automatic deployment URL and protection bypass.',
   arguments: [
     {
-      name: 'path',
+      name: 'url',
       required: true,
     },
   ],
@@ -23,7 +23,8 @@ export const curlCommand = {
       shorthand: null,
       type: String,
       deprecated: false,
-      description: 'The deployment ID or URL to target',
+      description:
+        'The deployment ID or URL to use as the base (with a relative path)',
       argument: 'ID|URL',
     },
     {
@@ -38,28 +39,28 @@ export const curlCommand = {
   ],
   examples: [
     {
-      name: 'Make a GET request to an API endpoint',
+      name: 'Curl a full deployment URL directly',
+      value: `${packageName} curl https://my-app.vercel.app/api/hello`,
+    },
+    {
+      name: 'Make a POST request',
+      value: `${packageName} curl https://my-app.vercel.app/api/users -X POST -d '{"name": "John"}'`,
+    },
+    {
+      name: 'Use a relative path (resolves from linked project)',
       value: `${packageName} curl /api/hello`,
     },
     {
-      name: 'Make a POST request with data',
-      value: `${packageName} curl /api/users -- --request POST --data '{"name": "John"}'`,
+      name: 'Relative path with a specific deployment',
+      value: `${packageName} curl /api/status --deployment dpl_ERiL45NJvP8ghWxgbvCM447bmxwV`,
     },
     {
-      name: 'Target a specific deployment by ID',
-      value: `${packageName} curl /api/status --deployment ERiL45NJvP8ghWxgbvCM447bmxwV`,
+      name: 'Add custom headers',
+      value: `${packageName} curl /api/test -H "Content-Type: application/json" -X PUT`,
     },
     {
-      name: 'Target a specific deployment by URL',
-      value: `${packageName} curl /api/status --deployment https://your-project-abc123.vercel.app`,
-    },
-    {
-      name: 'Use curl flags after the separator',
-      value: `${packageName} curl /api/test -- --header "Content-Type: application/json" --request PUT`,
-    },
-    {
-      name: 'Use with protection bypass secret',
-      value: `${packageName} curl /api/protected --protection-bypass <secret> -- --request GET`,
+      name: 'With protection bypass secret',
+      value: `${packageName} curl /api/protected --protection-bypass <secret>`,
     },
   ],
 } as const;

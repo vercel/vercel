@@ -6,20 +6,29 @@ export class CurlTelemetryClient
   extends TelemetryClient
   implements TelemetryMethods<typeof curlCommand>
 {
-  trackCliArgumentPath(path: string | undefined) {
-    if (path) {
-      // Track whether path starts with / or not
-      const value = path.startsWith('/') ? 'slash' : 'no-slash';
+  trackCliArgumentUrl(url: string | undefined) {
+    if (url) {
+      let value: string;
+      if (url.startsWith('http://') || url.startsWith('https://')) {
+        value = 'full-url';
+      } else if (url.startsWith('/')) {
+        value = 'slash';
+      } else {
+        value = 'no-slash';
+      }
       this.trackCliArgument({
-        arg: 'path',
+        arg: 'url',
         value,
       });
     }
   }
 
+  trackCliArgumentPath(path: string | undefined) {
+    this.trackCliArgumentUrl(path);
+  }
+
   trackCliOptionDeployment(deploymentId: string | undefined) {
     if (deploymentId) {
-      // Track whether value is a URL, or if dpl_ prefix was provided
       const value =
         deploymentId.startsWith('http://') ||
         deploymentId.startsWith('https://')

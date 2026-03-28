@@ -8,7 +8,7 @@ import type {
 import chalk from 'chalk';
 import sleep from '../../util/sleep';
 
-async function createDeploymentProtectionToken(
+export async function createDeploymentProtectionToken(
   client: Client,
   projectId: string,
   orgId: string

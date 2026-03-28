@@ -8,7 +8,7 @@ export const httpstatCommand = {
     'Execute httpstat with automatic deployment URL and protection bypass to visualize HTTP timing statistics.',
   arguments: [
     {
-      name: 'path',
+      name: 'url',
       required: true,
     },
   ],
@@ -23,7 +23,8 @@ export const httpstatCommand = {
       shorthand: null,
       type: String,
       deprecated: false,
-      description: 'The deployment ID or URL to target',
+      description:
+        'The deployment ID or URL to use as the base (with a relative path)',
       argument: 'ID|URL',
     },
     {
@@ -38,20 +39,20 @@ export const httpstatCommand = {
   ],
   examples: [
     {
-      name: 'Visualize timing for a GET request to an API endpoint',
+      name: 'Visualize timing for a full URL',
+      value: `${packageName} httpstat https://my-app.vercel.app/api/hello`,
+    },
+    {
+      name: 'Use a relative path (resolves from linked project)',
       value: `${packageName} httpstat /api/hello`,
     },
     {
       name: 'Make a POST request with data and see timing details',
-      value: `${packageName} httpstat /api/users -- -X POST -d '{"name": "John"}'`,
+      value: `${packageName} httpstat /api/users -X POST -d '{"name": "John"}'`,
     },
     {
       name: 'Target a specific deployment by ID',
       value: `${packageName} httpstat /api/status --deployment ERiL45NJvP8ghWxgbvCM447bmxwV`,
-    },
-    {
-      name: 'Use curl flags after the separator',
-      value: `${packageName} httpstat /api/test -- -H "Content-Type: application/json" -X PUT`,
     },
     {
       name: 'Use with protection bypass secret',

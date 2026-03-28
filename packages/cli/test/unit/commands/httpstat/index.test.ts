@@ -12,8 +12,6 @@ vi.mock('child_process', () => ({
 }));
 
 describe('httpstat', () => {
-  let originalProcessArgv: string[];
-
   const setupLinkedProject = async () => {
     const { setupUnitFixture } = await import(
       '../../../helpers/setup-unit-fixture'
@@ -35,8 +33,6 @@ describe('httpstat', () => {
   };
 
   beforeEach(async () => {
-    originalProcessArgv = process.argv;
-
     const childProcess = await import('child_process');
     spawnMock = vi.mocked(childProcess.spawn);
 
@@ -51,7 +47,6 @@ describe('httpstat', () => {
   });
 
   afterEach(() => {
-    process.argv = originalProcessArgv;
     vi.clearAllMocks();
   });
 
@@ -102,18 +97,18 @@ describe('httpstat', () => {
   });
 
   describe('argument parsing', () => {
-    it('should reject when no path is provided', async () => {
+    it('should reject when no target is provided', async () => {
       client.setArgv('httpstat');
       const exitCode = await httpstat(client);
       expect(exitCode).toEqual(1);
-      await expect(client.stderr).toOutput('requires an API path');
+      await expect(client.stderr).toOutput('requires a URL or API path');
     });
 
-    it('should reject when only -- is provided without a path', async () => {
+    it('should reject when only -- is provided without a target', async () => {
       client.setArgv('httpstat', '--', '-H', 'Content-Type: application/json');
       const exitCode = await httpstat(client);
       expect(exitCode).toEqual(1);
-      await expect(client.stderr).toOutput('requires an API path');
+      await expect(client.stderr).toOutput('requires a URL or API path');
     });
 
     it('should accept / as a valid path', async () => {
@@ -126,7 +121,7 @@ describe('httpstat', () => {
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
-          key: 'argument:path',
+          key: 'argument:url',
           value: 'slash',
         },
         {
@@ -136,79 +131,54 @@ describe('httpstat', () => {
       ]);
     });
 
-    it('should reject when a full https URL is provided as the path', async () => {
-      client.setArgv('httpstat', 'https://example.com/api/hello');
-      const exitCode = await httpstat(client);
-      expect(exitCode).toEqual(1);
-      await expect(client.stderr).toOutput('must be a relative API path');
-    });
-
-    it('should reject when a full http URL is provided as the path', async () => {
-      client.setArgv('httpstat', 'http://localhost:3000/');
-      const exitCode = await httpstat(client);
-      expect(exitCode).toEqual(1);
-      await expect(client.stderr).toOutput('must be a relative API path');
-    });
-
-    it('should reject unrecognized flags before --', async () => {
-      client.setArgv('httpstat', '/api/hello', '--invalid-flag');
-      const exitCode = await httpstat(client);
-      expect(exitCode).toEqual(1);
-      await expect(client.stderr).toOutput('unknown or unexpected option');
-    });
-
-    it('should handle process.argv parsing for httpstat flags after --', () => {
-      process.argv = [
-        'node',
-        'vercel',
+    it('should accept a full https URL as the target', async () => {
+      client.setArgv(
         'httpstat',
-        '/api/hello',
-        '--',
-        '-H',
-        'Content-Type: application/json',
+        'https://example.com/api/hello',
+        '--protection-bypass',
+        'test'
+      );
+      const exitCode = await httpstat(client);
+      expect(exitCode).toEqual(0);
+
+      expect(spawnMock).toHaveBeenCalledWith(
+        'httpstat',
+        expect.arrayContaining(['https://example.com/api/hello']),
+        expect.any(Object)
+      );
+    });
+
+    it('should pass httpstat flags through without -- separator', async () => {
+      client.setArgv(
+        'httpstat',
+        'https://example.com/api/hello',
+        '--protection-bypass',
+        'test',
         '-X',
         'POST',
-      ];
-
-      const separatorIndex = process.argv.indexOf('--');
-      const httpstatFlags =
-        separatorIndex !== -1 ? process.argv.slice(separatorIndex + 1) : [];
-
-      expect(httpstatFlags).toEqual([
         '-H',
-        'Content-Type: application/json',
-        '-X',
-        'POST',
-      ]);
+        'Content-Type: application/json'
+      );
+      const exitCode = await httpstat(client);
+      expect(exitCode).toEqual(0);
+
+      expect(spawnMock).toHaveBeenCalledWith(
+        'httpstat',
+        [
+          'https://example.com/api/hello',
+          '-H',
+          'x-vercel-protection-bypass: test',
+          '-X',
+          'POST',
+          '-H',
+          'Content-Type: application/json',
+        ],
+        expect.any(Object)
+      );
     });
   });
 
   describe('--deployment flag', () => {
-    it('should accept deployment ID with dpl_ prefix', async () => {
-      client.setArgv(
-        'httpstat',
-        '/api/hello',
-        '--deployment',
-        'dpl_ERiL45NJvP8ghWxgbvCM447bmxwV'
-      );
-      const separatorIndex = client.argv.indexOf('--');
-      expect(separatorIndex).toBe(-1);
-    });
-
-    it('should accept deployment ID without dpl_ prefix', async () => {
-      client.setArgv(
-        'httpstat',
-        '/api/hello',
-        '--deployment',
-        'ERiL45NJvP8ghWxgbvCM447bmxwV'
-      );
-      const deploymentIndex = client.argv.indexOf('--deployment');
-      expect(deploymentIndex).toBeGreaterThan(-1);
-      expect(client.argv[deploymentIndex + 1]).toBe(
-        'ERiL45NJvP8ghWxgbvCM447bmxwV'
-      );
-    });
-
     it('should accept a full deployment URL', async () => {
       await setupLinkedProject();
 
@@ -226,7 +196,7 @@ describe('httpstat', () => {
       expect(exitCode).toEqual(0);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
-          key: 'argument:path',
+          key: 'argument:url',
           value: 'slash',
         },
         {
@@ -254,27 +224,6 @@ describe('httpstat', () => {
       expect(bypassIndex).toBeGreaterThan(-1);
       expect(client.argv[bypassIndex + 1]).toBe('my-secret-token');
     });
-
-    it('should work with both --deployment and --protection-bypass', async () => {
-      client.setArgv(
-        'httpstat',
-        '/api/hello',
-        '--deployment',
-        'dpl_ERiL45NJvP8ghWxgbvCM447bmxwV',
-        '--protection-bypass',
-        'my-secret-token'
-      );
-
-      const deploymentIndex = client.argv.indexOf('--deployment');
-      const bypassIndex = client.argv.indexOf('--protection-bypass');
-
-      expect(deploymentIndex).toBeGreaterThan(-1);
-      expect(bypassIndex).toBeGreaterThan(-1);
-      expect(client.argv[deploymentIndex + 1]).toBe(
-        'dpl_ERiL45NJvP8ghWxgbvCM447bmxwV'
-      );
-      expect(client.argv[bypassIndex + 1]).toBe('my-secret-token');
-    });
   });
 
   describe('telemetry', () => {
@@ -292,7 +241,7 @@ describe('httpstat', () => {
       expect(exitCode).toEqual(0);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
-          key: 'argument:path',
+          key: 'argument:url',
           value: 'slash',
         },
         {
@@ -316,7 +265,7 @@ describe('httpstat', () => {
       expect(exitCode).toEqual(0);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
-          key: 'argument:path',
+          key: 'argument:url',
           value: 'no-slash',
         },
         {
@@ -349,7 +298,7 @@ describe('httpstat', () => {
       expect(exitCode).toEqual(0);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
-          key: 'argument:path',
+          key: 'argument:url',
           value: 'slash',
         },
         {
@@ -386,7 +335,7 @@ describe('httpstat', () => {
       expect(exitCode).toEqual(0);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
-          key: 'argument:path',
+          key: 'argument:url',
           value: 'slash',
         },
         {

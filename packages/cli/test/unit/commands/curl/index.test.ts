@@ -2,7 +2,10 @@ import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { client } from '../../../mocks/client';
 import curl from '../../../../src/commands/curl';
 import { getDeploymentUrlById } from '../../../../src/commands/curl/deployment-url';
-import { getDeploymentUrlAndToken } from '../../../../src/commands/curl/shared';
+import {
+  getDeploymentUrlAndToken,
+  parseCurlLikeArgs,
+} from '../../../../src/commands/curl/shared';
 import { useUser } from '../../../mocks/user';
 import { useProject } from '../../../mocks/project';
 import { useTeams, createTeam } from '../../../mocks/team';
@@ -16,8 +19,6 @@ vi.mock('child_process', () => ({
 }));
 
 describe('curl', () => {
-  let originalProcessArgv: string[];
-
   const setupLinkedProject = async () => {
     const { setupUnitFixture } = await import(
       '../../../helpers/setup-unit-fixture'
@@ -39,8 +40,6 @@ describe('curl', () => {
   };
 
   beforeEach(async () => {
-    originalProcessArgv = process.argv;
-
     const childProcess = await import('child_process');
     spawnMock = vi.mocked(childProcess.spawn);
 
@@ -55,7 +54,6 @@ describe('curl', () => {
   });
 
   afterEach(() => {
-    process.argv = originalProcessArgv;
     vi.clearAllMocks();
   });
 
@@ -106,14 +104,14 @@ describe('curl', () => {
   });
 
   describe('argument parsing', () => {
-    it('should reject when no path is provided', async () => {
+    it('should reject when no target is provided', async () => {
       client.setArgv('curl');
       const exitCode = await curl(client);
       expect(exitCode).toEqual(1);
-      await expect(client.stderr).toOutput('requires an API path');
+      await expect(client.stderr).toOutput('requires a URL or API path');
     });
 
-    it('should reject when only -- is provided without a path', async () => {
+    it('should reject when only -- is provided without a target', async () => {
       client.setArgv(
         'curl',
         '--',
@@ -122,7 +120,7 @@ describe('curl', () => {
       );
       const exitCode = await curl(client);
       expect(exitCode).toEqual(1);
-      await expect(client.stderr).toOutput('requires an API path');
+      await expect(client.stderr).toOutput('requires a URL or API path');
     });
 
     it('should accept / as a valid path', async () => {
@@ -135,7 +133,7 @@ describe('curl', () => {
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
-          key: 'argument:path',
+          key: 'argument:url',
           value: 'slash',
         },
         {
@@ -145,121 +143,253 @@ describe('curl', () => {
       ]);
     });
 
-    it('should reject when a full https URL is provided as the path', async () => {
-      client.setArgv('curl', 'https://example.com/api/hello');
-      const exitCode = await curl(client);
-      expect(exitCode).toEqual(1);
-      await expect(client.stderr).toOutput('must be a relative API path');
-    });
-
-    it('should reject when a full http URL is provided as the path', async () => {
-      client.setArgv('curl', 'http://localhost:3000/');
-      const exitCode = await curl(client);
-      expect(exitCode).toEqual(1);
-      await expect(client.stderr).toOutput('must be a relative API path');
-    });
-
-    it('should reject unrecognized flags before --', async () => {
-      client.setArgv('curl', '/api/hello', '--invalid-flag');
-      const exitCode = await curl(client);
-      expect(exitCode).toEqual(1);
-      await expect(client.stderr).toOutput('unknown or unexpected option');
-    });
-
-    it('should handle process.argv parsing for curl flags after --', () => {
-      process.argv = [
-        'node',
-        'vercel',
+    it('should accept a full https URL as the target', async () => {
+      client.setArgv(
         'curl',
-        '/api/hello',
-        '--',
-        '--header',
-        'Content-Type: application/json',
-        '--request',
-        'POST',
-      ];
+        'https://example.com/api/hello',
+        '--protection-bypass',
+        'test'
+      );
+      const exitCode = await curl(client);
+      expect(exitCode).toEqual(0);
 
-      const separatorIndex = process.argv.indexOf('--');
-      const curlFlags =
-        separatorIndex !== -1 ? process.argv.slice(separatorIndex + 1) : [];
-
-      expect(curlFlags).toEqual([
-        '--header',
-        'Content-Type: application/json',
-        '--request',
-        'POST',
-      ]);
+      expect(spawnMock).toHaveBeenCalledWith(
+        'curl',
+        expect.arrayContaining(['--url', 'https://example.com/api/hello']),
+        expect.any(Object)
+      );
     });
 
-    it('should preserve arguments with spaces in process.argv', () => {
-      process.argv = [
-        'node',
-        'vercel',
+    it('should accept a full http URL as the target', async () => {
+      client.setArgv(
         'curl',
-        '/api/hello',
+        'http://localhost:3000/api/hello',
+        '--protection-bypass',
+        'test'
+      );
+      const exitCode = await curl(client);
+      expect(exitCode).toEqual(0);
+
+      expect(spawnMock).toHaveBeenCalledWith(
+        'curl',
+        expect.arrayContaining(['--url', 'http://localhost:3000/api/hello']),
+        expect.any(Object)
+      );
+    });
+
+    it('should pass curl flags through without -- separator', async () => {
+      client.setArgv(
+        'curl',
+        'https://example.com/api/hello',
+        '--protection-bypass',
+        'test',
+        '-X',
+        'POST',
+        '-H',
+        'Content-Type: application/json',
+        '-d',
+        '{"name":"John"}'
+      );
+      const exitCode = await curl(client);
+      expect(exitCode).toEqual(0);
+
+      expect(spawnMock).toHaveBeenCalledWith(
+        'curl',
+        [
+          '--url',
+          'https://example.com/api/hello',
+          '--header',
+          'x-vercel-protection-bypass: test',
+          '-X',
+          'POST',
+          '-H',
+          'Content-Type: application/json',
+          '-d',
+          '{"name":"John"}',
+        ],
+        expect.any(Object)
+      );
+    });
+
+    it('should still support -- separator for backwards compat', async () => {
+      client.setArgv(
+        'curl',
+        'https://example.com/api/hello',
+        '--protection-bypass',
+        'test',
         '--',
-        '--header',
-        'X-Custom-Header: value with spaces',
-      ];
+        '-X',
+        'POST'
+      );
+      const exitCode = await curl(client);
+      expect(exitCode).toEqual(0);
 
-      const separatorIndex = process.argv.indexOf('--');
-      const curlFlags =
-        separatorIndex !== -1 ? process.argv.slice(separatorIndex + 1) : [];
+      expect(spawnMock).toHaveBeenCalledWith(
+        'curl',
+        [
+          '--url',
+          'https://example.com/api/hello',
+          '--header',
+          'x-vercel-protection-bypass: test',
+          '-X',
+          'POST',
+        ],
+        expect.any(Object)
+      );
+    });
 
-      expect(curlFlags).toEqual([
-        '--header',
-        'X-Custom-Header: value with spaces',
+    it('should pass -v (verbose) through to curl, not consume as --version', async () => {
+      client.setArgv(
+        'curl',
+        'https://example.com/',
+        '--protection-bypass',
+        'test',
+        '-v'
+      );
+      const exitCode = await curl(client);
+      expect(exitCode).toEqual(0);
+
+      expect(spawnMock).toHaveBeenCalledWith(
+        'curl',
+        [
+          '--url',
+          'https://example.com/',
+          '--header',
+          'x-vercel-protection-bypass: test',
+          '-v',
+        ],
+        expect.any(Object)
+      );
+    });
+
+    it('should pass -d (data) through to curl, not consume as --debug', async () => {
+      client.setArgv(
+        'curl',
+        'https://example.com/api',
+        '--protection-bypass',
+        'test',
+        '-d',
+        '{"key":"value"}'
+      );
+      const exitCode = await curl(client);
+      expect(exitCode).toEqual(0);
+
+      expect(spawnMock).toHaveBeenCalledWith(
+        'curl',
+        [
+          '--url',
+          'https://example.com/api',
+          '--header',
+          'x-vercel-protection-bypass: test',
+          '-d',
+          '{"key":"value"}',
+        ],
+        expect.any(Object)
+      );
+    });
+  });
+
+  describe('full URL mode', () => {
+    it('should error when project cannot be resolved from URL', async () => {
+      client.setArgv('curl', 'https://my-app.vercel.app/api/hello');
+      const exitCode = await curl(client);
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput(
+        'Could not resolve project for my-app.vercel.app'
+      );
+      expect(spawnMock).not.toHaveBeenCalled();
+    });
+
+    it('should include protection bypass header when flag is provided', async () => {
+      client.setArgv(
+        'curl',
+        'https://my-app.vercel.app/api/hello',
+        '--protection-bypass',
+        'my-secret'
+      );
+      const exitCode = await curl(client);
+      expect(exitCode).toEqual(0);
+
+      expect(spawnMock).toHaveBeenCalledWith(
+        'curl',
+        [
+          '--url',
+          'https://my-app.vercel.app/api/hello',
+          '--header',
+          'x-vercel-protection-bypass: my-secret',
+        ],
+        expect.any(Object)
+      );
+    });
+
+    it('should include protection bypass from env var', async () => {
+      process.env.VERCEL_AUTOMATION_BYPASS_SECRET = 'env-secret';
+
+      client.setArgv('curl', 'https://my-app.vercel.app/api/hello');
+      const exitCode = await curl(client);
+
+      expect(exitCode).toEqual(0);
+      expect(spawnMock).toHaveBeenCalledWith(
+        'curl',
+        [
+          '--url',
+          'https://my-app.vercel.app/api/hello',
+          '--header',
+          'x-vercel-protection-bypass: env-secret',
+        ],
+        expect.any(Object)
+      );
+
+      delete process.env.VERCEL_AUTOMATION_BYPASS_SECRET;
+    });
+
+    it('should track full-url telemetry', async () => {
+      client.setArgv(
+        'curl',
+        'https://my-app.vercel.app/api/hello',
+        '--protection-bypass',
+        'test-secret'
+      );
+      await curl(client);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'argument:url',
+          value: 'full-url',
+        },
+        {
+          key: 'option:protection-bypass',
+          value: '[REDACTED]',
+        },
       ]);
-      expect(curlFlags[1]).toBe('X-Custom-Header: value with spaces');
     });
   });
 
   describe('--deployment flag', () => {
     it('should accept deployment ID with dpl_ prefix', async () => {
+      await setupLinkedProject();
+
       client.setArgv(
         'curl',
         '/api/hello',
         '--deployment',
-        'dpl_ERiL45NJvP8ghWxgbvCM447bmxwV'
+        'dpl_ERiL45NJvP8ghWxgbvCM447bmxwV',
+        '--protection-bypass',
+        'test-secret'
       );
-      const separatorIndex = client.argv.indexOf('--');
-      expect(separatorIndex).toBe(-1); // No -- separator in this case
+
+      client.scenario.get(
+        '/v13/deployments/dpl_ERiL45NJvP8ghWxgbvCM447bmxwV',
+        (_req, res) => {
+          res.json({ url: 'deployment-abc123.vercel.app' });
+        }
+      );
+
+      const exitCode = await curl(client);
+      expect(exitCode).toEqual(0);
     });
 
-    it('should accept deployment ID without dpl_ prefix', async () => {
-      client.setArgv(
-        'curl',
-        '/api/hello',
-        '--deployment',
-        'ERiL45NJvP8ghWxgbvCM447bmxwV'
-      );
-      const deploymentIndex = client.argv.indexOf('--deployment');
-      expect(deploymentIndex).toBeGreaterThan(-1);
-      expect(client.argv[deploymentIndex + 1]).toBe(
-        'ERiL45NJvP8ghWxgbvCM447bmxwV'
-      );
-    });
-
-    it('should work with --deployment and curl flags after --', () => {
-      process.argv = [
-        'node',
-        'vercel',
-        'curl',
-        '/api/hello',
-        '--deployment',
-        'ERiL45NJvP8ghWxgbvCM447bmxwV',
-        '--',
-        '--header',
-        'Content-Type: application/json',
-      ];
-      const separatorIndex = process.argv.indexOf('--');
-      const curlFlags =
-        separatorIndex !== -1 ? process.argv.slice(separatorIndex + 1) : [];
-
-      expect(curlFlags).toEqual(['--header', 'Content-Type: application/json']);
-    });
-
-    it('should accept a full deployment URL', async () => {
+    it('should accept a full deployment URL via --deployment', async () => {
       await setupLinkedProject();
 
       client.setArgv(
@@ -276,7 +406,7 @@ describe('curl', () => {
       expect(exitCode).toEqual(0);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
-          key: 'argument:path',
+          key: 'argument:url',
           value: 'slash',
         },
         {
@@ -293,6 +423,8 @@ describe('curl', () => {
 
   describe('--protection-bypass flag', () => {
     it('should accept a protection bypass secret', async () => {
+      await setupLinkedProject();
+
       client.setArgv(
         'curl',
         '/api/hello',
@@ -300,12 +432,13 @@ describe('curl', () => {
         'my-secret-token'
       );
 
-      const bypassIndex = client.argv.indexOf('--protection-bypass');
-      expect(bypassIndex).toBeGreaterThan(-1);
-      expect(client.argv[bypassIndex + 1]).toBe('my-secret-token');
+      const exitCode = await curl(client);
+      expect(exitCode).toEqual(0);
     });
 
     it('should work with both --deployment and --protection-bypass', async () => {
+      await setupLinkedProject();
+
       client.setArgv(
         'curl',
         '/api/hello',
@@ -315,87 +448,20 @@ describe('curl', () => {
         'my-secret-token'
       );
 
-      const deploymentIndex = client.argv.indexOf('--deployment');
-      const bypassIndex = client.argv.indexOf('--protection-bypass');
-
-      expect(deploymentIndex).toBeGreaterThan(-1);
-      expect(bypassIndex).toBeGreaterThan(-1);
-      expect(client.argv[deploymentIndex + 1]).toBe(
-        'dpl_ERiL45NJvP8ghWxgbvCM447bmxwV'
+      client.scenario.get(
+        '/v13/deployments/dpl_ERiL45NJvP8ghWxgbvCM447bmxwV',
+        (_req, res) => {
+          res.json({ url: 'deployment-abc123.vercel.app' });
+        }
       );
-      expect(client.argv[bypassIndex + 1]).toBe('my-secret-token');
-    });
 
-    it('should work with --protection-bypass and curl flags after --', () => {
-      process.argv = [
-        'node',
-        'vercel',
-        'curl',
-        '/api/hello',
-        '--protection-bypass',
-        'my-secret-token',
-        '--',
-        '--request',
-        'POST',
-      ];
-
-      const separatorIndex = process.argv.indexOf('--');
-      const curlFlags =
-        separatorIndex !== -1 ? process.argv.slice(separatorIndex + 1) : [];
-
-      expect(curlFlags).toEqual(['--request', 'POST']);
-
-      // Verify --protection-bypass is before the separator
-      const bypassIndex = process.argv.indexOf('--protection-bypass');
-      expect(bypassIndex).toBeGreaterThan(-1);
-      expect(bypassIndex).toBeLessThan(separatorIndex);
-      expect(process.argv[bypassIndex + 1]).toBe('my-secret-token');
-    });
-
-    it('should work with all flags combined', () => {
-      process.argv = [
-        'node',
-        'vercel',
-        'curl',
-        '/api/protected',
-        '--deployment',
-        'dpl_ERiL45NJvP8ghWxgbvCM447bmxwV',
-        '--protection-bypass',
-        'my-secret-token',
-        '--',
-        '--request',
-        'POST',
-        '--header',
-        'Content-Type: application/json',
-        '--data',
-        '{"key": "value"}',
-      ];
-
-      const separatorIndex = process.argv.indexOf('--');
-      const curlFlags =
-        separatorIndex !== -1 ? process.argv.slice(separatorIndex + 1) : [];
-
-      expect(curlFlags).toEqual([
-        '--request',
-        'POST',
-        '--header',
-        'Content-Type: application/json',
-        '--data',
-        '{"key": "value"}',
-      ]);
-
-      const deploymentIndex = process.argv.indexOf('--deployment');
-      const bypassIndex = process.argv.indexOf('--protection-bypass');
-
-      expect(deploymentIndex).toBeLessThan(separatorIndex);
-      expect(bypassIndex).toBeLessThan(separatorIndex);
-      expect(process.argv[deploymentIndex + 1]).toBe(
-        'dpl_ERiL45NJvP8ghWxgbvCM447bmxwV'
-      );
-      expect(process.argv[bypassIndex + 1]).toBe('my-secret-token');
+      const exitCode = await curl(client);
+      expect(exitCode).toEqual(0);
     });
 
     it('should handle protection bypass secret with special characters', async () => {
+      await setupLinkedProject();
+
       const secretWithSpecialChars = 'abc123-XYZ_456.789~token';
       client.setArgv(
         'curl',
@@ -404,21 +470,28 @@ describe('curl', () => {
         secretWithSpecialChars
       );
 
-      const bypassIndex = client.argv.indexOf('--protection-bypass');
-      expect(client.argv[bypassIndex + 1]).toBe(secretWithSpecialChars);
+      const exitCode = await curl(client);
+      expect(exitCode).toEqual(0);
+
+      expect(spawnMock).toHaveBeenCalledWith(
+        'curl',
+        expect.arrayContaining([
+          '--header',
+          `x-vercel-protection-bypass: ${secretWithSpecialChars}`,
+        ]),
+        expect.any(Object)
+      );
     });
   });
 
   describe('error handling', () => {
     it('should handle getOrCreateDeploymentProtectionToken failure gracefully', async () => {
-      // Import setupUnitFixture to use a real fixture
       const { setupUnitFixture } = await import(
         '../../../helpers/setup-unit-fixture'
       );
       const cwd = setupUnitFixture('commands/deploy/static');
       client.cwd = cwd;
 
-      // Mock the bypass-token module to throw an error
       const bypassTokenModule = await import(
         '../../../../src/commands/curl/bypass-token'
       );
@@ -430,9 +503,9 @@ describe('curl', () => {
         );
 
       useUser();
-      useTeams('team_dummy'); // Matches the orgId in the fixture
+      useTeams('team_dummy');
       useProject({
-        id: 'static', // Matches the projectId in the fixture
+        id: 'static',
         name: 'static-project',
         latestDeployments: [
           {
@@ -450,10 +523,7 @@ describe('curl', () => {
         'Failed to get deployment protection bypass token'
       );
 
-      // Verify the mock was called
       expect(mockSpy).toHaveBeenCalled();
-
-      // Restore the mock
       mockSpy.mockRestore();
     });
   });
@@ -473,7 +543,7 @@ describe('curl', () => {
       expect(exitCode).toEqual(0);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
-          key: 'argument:path',
+          key: 'argument:url',
           value: 'slash',
         },
         {
@@ -492,7 +562,7 @@ describe('curl', () => {
       expect(exitCode).toEqual(0);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
-          key: 'argument:path',
+          key: 'argument:url',
           value: 'no-slash',
         },
         {
@@ -525,7 +595,7 @@ describe('curl', () => {
       expect(exitCode).toEqual(0);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
-          key: 'argument:path',
+          key: 'argument:url',
           value: 'slash',
         },
         {
@@ -551,7 +621,6 @@ describe('curl', () => {
         'test-secret'
       );
 
-      // Mock the deployment URL lookup (prefix will be auto-added)
       client.scenario.get('/v13/deployments/dpl_ABC123', (_req, res) => {
         res.json({
           url: 'deployment-abc123.vercel.app',
@@ -563,7 +632,7 @@ describe('curl', () => {
       expect(exitCode).toEqual(0);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
-          key: 'argument:path',
+          key: 'argument:url',
           value: 'slash',
         },
         {
@@ -591,7 +660,7 @@ describe('curl', () => {
       expect(exitCode).toEqual(0);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
-          key: 'argument:path',
+          key: 'argument:url',
           value: 'slash',
         },
         {
@@ -613,7 +682,6 @@ describe('curl', () => {
         'another-secret'
       );
 
-      // Mock the deployment URL lookup
       client.scenario.get('/v13/deployments/dpl_XYZ789', (_req, res) => {
         res.json({
           url: 'deployment-xyz789.vercel.app',
@@ -625,7 +693,7 @@ describe('curl', () => {
       expect(exitCode).toEqual(0);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
-          key: 'argument:path',
+          key: 'argument:url',
           value: 'no-slash',
         },
         {
@@ -638,6 +706,163 @@ describe('curl', () => {
         },
       ]);
     });
+  });
+});
+
+describe('parseCurlLikeArgs', () => {
+  it('should parse a full URL as the target', () => {
+    const result = parseCurlLikeArgs(
+      ['curl', 'https://example.com/api/hello'],
+      'curl'
+    );
+    expect(result.target).toBe('https://example.com/api/hello');
+    expect(result.toolFlags).toEqual([]);
+  });
+
+  it('should parse a relative path as the target', () => {
+    const result = parseCurlLikeArgs(['curl', '/api/hello'], 'curl');
+    expect(result.target).toBe('/api/hello');
+    expect(result.toolFlags).toEqual([]);
+  });
+
+  it('should pass short flags through as tool flags', () => {
+    const result = parseCurlLikeArgs(
+      ['curl', 'https://example.com', '-X', 'POST', '-v'],
+      'curl'
+    );
+    expect(result.target).toBe('https://example.com');
+    expect(result.toolFlags).toEqual(['-X', 'POST', '-v']);
+  });
+
+  it('should pass -d through to curl (not consume as --debug)', () => {
+    const result = parseCurlLikeArgs(
+      ['curl', 'https://example.com', '-d', '{"foo":"bar"}'],
+      'curl'
+    );
+    expect(result.target).toBe('https://example.com');
+    expect(result.toolFlags).toEqual(['-d', '{"foo":"bar"}']);
+  });
+
+  it('should pass -v through to curl (not consume as --version)', () => {
+    const result = parseCurlLikeArgs(
+      ['curl', 'https://example.com', '-v'],
+      'curl'
+    );
+    expect(result.target).toBe('https://example.com');
+    expect(result.toolFlags).toEqual(['-v']);
+  });
+
+  it('should pass -T through to curl (not consume as --team)', () => {
+    const result = parseCurlLikeArgs(
+      ['curl', 'https://example.com', '-T', 'file.txt'],
+      'curl'
+    );
+    expect(result.target).toBe('https://example.com');
+    expect(result.toolFlags).toEqual(['-T', 'file.txt']);
+  });
+
+  it('should extract --deployment flag', () => {
+    const result = parseCurlLikeArgs(
+      ['curl', '/api/hello', '--deployment', 'dpl_123'],
+      'curl'
+    );
+    expect(result.target).toBe('/api/hello');
+    expect(result.deployment).toBe('dpl_123');
+    expect(result.toolFlags).toEqual([]);
+  });
+
+  it('should extract --protection-bypass flag', () => {
+    const result = parseCurlLikeArgs(
+      ['curl', '/api/hello', '--protection-bypass', 'my-secret'],
+      'curl'
+    );
+    expect(result.target).toBe('/api/hello');
+    expect(result.protectionBypass).toBe('my-secret');
+    expect(result.toolFlags).toEqual([]);
+  });
+
+  it('should extract --yes flag', () => {
+    const result = parseCurlLikeArgs(['curl', '/api/hello', '--yes'], 'curl');
+    expect(result.target).toBe('/api/hello');
+    expect(result.yes).toBe(true);
+  });
+
+  it('should handle --flag=value syntax for vc flags', () => {
+    const result = parseCurlLikeArgs(
+      ['curl', '/api/hello', '--deployment=dpl_123'],
+      'curl'
+    );
+    expect(result.deployment).toBe('dpl_123');
+  });
+
+  it('should strip global long flags', () => {
+    const result = parseCurlLikeArgs(
+      ['curl', '--debug', '/api/hello', '--scope', 'my-team', '-v'],
+      'curl'
+    );
+    expect(result.target).toBe('/api/hello');
+    expect(result.toolFlags).toEqual(['-v']);
+  });
+
+  it('should handle -- separator for backwards compat', () => {
+    const result = parseCurlLikeArgs(
+      ['curl', '/api/hello', '--', '-X', 'POST', '-H', 'Content-Type: json'],
+      'curl'
+    );
+    expect(result.target).toBe('/api/hello');
+    expect(result.toolFlags).toEqual([
+      '-X',
+      'POST',
+      '-H',
+      'Content-Type: json',
+    ]);
+  });
+
+  it('should combine flags from before and after --', () => {
+    const result = parseCurlLikeArgs(
+      ['curl', '/api/hello', '-v', '--', '-X', 'POST'],
+      'curl'
+    );
+    expect(result.target).toBe('/api/hello');
+    expect(result.toolFlags).toEqual(['-v', '-X', 'POST']);
+  });
+
+  it('should handle vc flags mixed with curl flags', () => {
+    const result = parseCurlLikeArgs(
+      [
+        'curl',
+        'https://example.com/api',
+        '--protection-bypass',
+        'secret',
+        '-X',
+        'POST',
+        '-H',
+        'Authorization: Bearer token',
+      ],
+      'curl'
+    );
+    expect(result.target).toBe('https://example.com/api');
+    expect(result.protectionBypass).toBe('secret');
+    expect(result.toolFlags).toEqual([
+      '-X',
+      'POST',
+      '-H',
+      'Authorization: Bearer token',
+    ]);
+  });
+
+  it('should return undefined target when no positional arg given', () => {
+    const result = parseCurlLikeArgs(['curl'], 'curl');
+    expect(result.target).toBeUndefined();
+  });
+
+  it('should handle unknown long flags as pass-through', () => {
+    const result = parseCurlLikeArgs(
+      ['curl', 'https://example.com', '--compressed', '--silent'],
+      'curl'
+    );
+    expect(result.target).toBe('https://example.com');
+    expect(result.toolFlags).toEqual(['--compressed', '--silent']);
   });
 });
 

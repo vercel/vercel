@@ -4,7 +4,11 @@ import { curlCommand } from './command';
 import output from '../../output-manager';
 import { requoteArgs } from './utils';
 import { CurlTelemetryClient } from '../../util/telemetry/commands/curl';
-import { getDeploymentUrlAndToken, setupCurlLikeCommand } from './shared';
+import {
+  getDeploymentUrlAndToken,
+  resolveFullUrlProtection,
+  setupCurlLikeCommand,
+} from './shared';
 
 export default async function curl(client: Client): Promise<number> {
   const telemetryClient = new CurlTelemetryClient({
@@ -19,19 +23,37 @@ export default async function curl(client: Client): Promise<number> {
     return setup;
   }
 
-  const { path, deploymentFlag, protectionBypassFlag, toolFlags } = setup;
+  const { target, isFullUrl, deploymentFlag, protectionBypassFlag, toolFlags } =
+    setup;
 
-  const result = await getDeploymentUrlAndToken(client, 'curl', path, {
-    deploymentFlag,
-    protectionBypassFlag,
-    autoConfirm: setup.yes,
-  });
+  let fullUrl: string;
+  let deploymentProtectionToken: string | null = null;
 
-  if (typeof result === 'number') {
-    return result;
+  if (isFullUrl) {
+    fullUrl = target;
+    const protection = await resolveFullUrlProtection(
+      client,
+      target,
+      protectionBypassFlag
+    );
+    if (typeof protection === 'number') {
+      return protection;
+    }
+    deploymentProtectionToken = protection;
+  } else {
+    const result = await getDeploymentUrlAndToken(client, 'curl', target, {
+      deploymentFlag,
+      protectionBypassFlag,
+      autoConfirm: setup.yes,
+    });
+
+    if (typeof result === 'number') {
+      return result;
+    }
+
+    fullUrl = result.fullUrl;
+    deploymentProtectionToken = result.deploymentProtectionToken;
   }
-
-  const { fullUrl, deploymentProtectionToken } = result;
 
   const curlFlags = [...toolFlags];
 
