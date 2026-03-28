@@ -752,6 +752,7 @@ export async function startAgentMode(
 
   let outputBuffer = '';
   let renderScheduled = false;
+  let llmTextOpen = false;
 
   function appendOutput(text: string) {
     outputBuffer += text;
@@ -903,6 +904,10 @@ export async function startAgentMode(
   const tuiStream = new Writable({
     write(chunk, _encoding, callback) {
       const text = typeof chunk === 'string' ? chunk : chunk.toString('utf8');
+      if (llmTextOpen) {
+        appendOutput('\n');
+        llmTextOpen = false;
+      }
       appendOutput(text);
       errorChunker.feed(text);
       servingUrlDetector.feed(text);
@@ -960,16 +965,35 @@ export async function startAgentMode(
     onLLMEvent(event) {
       switch (event.type) {
         case 'prompt':
+          if (llmTextOpen) {
+            appendOutput('\n');
+            llmTextOpen = false;
+          }
           appendOutput(
             chalk.dim(`\n[prompt] `) +
               chalk.dim(truncateText(event.text)) +
               '\n'
           );
           break;
+        case 'text_delta':
+          if (!llmTextOpen) {
+            appendOutput(chalk.dim('\n[assistant] '));
+            llmTextOpen = true;
+          }
+          appendOutput(chalk.dim(event.delta));
+          break;
         case 'tool_start':
+          if (llmTextOpen) {
+            appendOutput('\n');
+            llmTextOpen = false;
+          }
           appendOutput(formatToolStartLine(event.toolName, event.args));
           break;
         case 'tool_end':
+          if (llmTextOpen) {
+            appendOutput('\n');
+            llmTextOpen = false;
+          }
           appendOutput(
             event.isError
               ? chalk.red(`[${event.toolName}] error\n`)
