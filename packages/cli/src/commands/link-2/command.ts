@@ -62,7 +62,16 @@ export const link2Command = {
     confirmOption,
     {
       name: 'json',
-      description: 'Output collected baseline data as JSON (for sanity checking)',
+      description:
+        'Output collected baseline data as JSON (for sanity checking)',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+    },
+    {
+      name: 'skip-pull',
+      description:
+        'Skip the environment variable pull prompt after linking (used internally by other commands)',
       shorthand: null,
       type: Boolean,
       deprecated: false,

@@ -260,8 +260,8 @@ export default async function main(client: Client): Promise<number> {
   }
 
   // If repo linked, update `cwd` to the repo root
-  const link = await getProjectLink(client, cwd);
-  const projectRootDirectory = link?.projectRootDirectory ?? '';
+  let link = await getProjectLink(client, cwd);
+  let projectRootDirectory = link?.projectRootDirectory ?? '';
   if (link?.repoRoot) {
     cwd = client.cwd = link.repoRoot;
   }
@@ -313,17 +313,7 @@ export default async function main(client: Client): Promise<number> {
         return 1;
       }
 
-      confirmed = await client.input.confirm(
-        `No Project Settings found locally. Run ${cli.getCommandName(
-          'pull'
-        )} for retrieving them?`,
-        true
-      );
-    }
-    if (!confirmed) {
-      if (!client.nonInteractive)
-        output.print(`Canceled. No Project Settings retrieved.\n`);
-      return 0;
+      confirmed = true;
     }
     const { argv: originalArgv } = client;
     client.cwd = join(cwd, projectRootDirectory);
@@ -345,7 +335,19 @@ export default async function main(client: Client): Promise<number> {
     }
     client.cwd = cwd;
     client.argv = originalArgv;
-    project = await readProjectSettings(vercelDir);
+
+    // Pull may have created a repo-aware link (via link-2). Re-read
+    // so we pick up repoRoot and adjust cwd before computing paths.
+    if (!link) {
+      link = await getProjectLink(client, cwd);
+      if (link?.repoRoot) {
+        cwd = client.cwd = link.repoRoot;
+        projectRootDirectory = link.projectRootDirectory ?? '';
+      }
+    }
+
+    const updatedVercelDir = join(cwd, projectRootDirectory, VERCEL_DIR);
+    project = await readProjectSettings(updatedVercelDir);
   }
 
   // Delete output directory from potential previous build
@@ -410,6 +412,12 @@ export default async function main(client: Client): Promise<number> {
     // Some build processes use these env vars to platform detect Vercel
     process.env.VERCEL = '1';
     process.env.NOW_BUILDER = '1';
+
+    // For repo-linked projects the Vercel API may not have rootDirectory set,
+    // but the local link knows the correct subdirectory via projectRootDirectory.
+    if (projectRootDirectory && !project.settings.rootDirectory) {
+      project.settings.rootDirectory = projectRootDirectory;
+    }
 
     try {
       await rootSpan

@@ -55,6 +55,8 @@ export interface FetchOptions extends Omit<RequestInit, 'body'> {
   accountId?: string;
   /** When true, 429 responses are returned immediately instead of waiting for Retry-After and retrying */
   bailOn429?: boolean;
+  /** When true, SAML auth errors are bailed on immediately instead of triggering interactive re-auth */
+  skipSAMLReauth?: boolean;
 }
 
 export interface ClientOptions extends Stdio {
@@ -403,15 +405,13 @@ export default class Client extends EventEmitter implements Stdio {
       if (!res.ok) {
         const error = await responseError(res);
 
-        // we should force reauth only if error has a teamId
         if (isSAMLError(error) && error.teamId) {
+          if (opts.skipSAMLReauth) {
+            return bail(error);
+          }
           try {
-            // A SAML error means the token is expired, or is not
-            // designated for the requested team, so the user needs
-            // to re-authenticate
             await this.reauthenticate(error);
           } catch (reauthError) {
-            // there's no sense in retrying
             return bail(normalizeError(reauthError));
           }
         } else if (res.status === 429 && opts.bailOn429) {

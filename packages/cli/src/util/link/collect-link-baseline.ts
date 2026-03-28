@@ -1,8 +1,12 @@
-import { basename, join } from 'path';
+import { join, relative } from 'path';
 import { pathExists, readdir, readJSON } from 'fs-extra';
 import { findRepoRoot } from './repo';
 import { detectProjects } from '../projects/detect-projects';
-import { VERCEL_DIR, VERCEL_DIR_PROJECT, VERCEL_DIR_REPO } from '../projects/link';
+import {
+  VERCEL_DIR,
+  VERCEL_DIR_PROJECT,
+  VERCEL_DIR_REPO,
+} from '../projects/link';
 import { getGitConfigPath } from '../git-helpers';
 import { getRemoteUrls } from '../create-git-meta';
 import { parseRepoUrl } from '../git/connect-git-provider';
@@ -11,6 +15,9 @@ import type { Framework } from '@vercel/frameworks';
 import type { Project } from '@vercel-internals/types';
 import type Client from '../client';
 import { isErrnoException } from '@vercel/error-utils';
+import output from '../../output-manager';
+
+const API_DISCOVERY_TIMEOUT_MS = 15_000;
 
 /**
  * Parsed content of a `.vercel/project.json` file.
@@ -59,6 +66,8 @@ export interface LinkBaseline {
 export interface CollectLinkBaselineOptions {
   /** When provided, fetches repo (projects by repo URL) and potentialProjects (by folder name, excluding linked-to-other-repo). */
   client?: Client;
+  /** Pre-resolved team IDs to query. When provided, skips the /v1/teams fetch inside discovery. */
+  teamIds?: string[];
 }
 
 const REPO_JSON = VERCEL_DIR_REPO;
@@ -73,21 +82,26 @@ async function findProjectJsonPaths(
   currentDir: string
 ): Promise<string[]> {
   const fullPath = currentDir === '.' ? root : join(root, currentDir);
-  const entries = await readdir(fullPath, { withFileTypes: true }).catch(err => {
-    if (isErrnoException(err) && err.code === 'ENOENT') return [];
-    throw err;
-  });
+  const entries = await readdir(fullPath, { withFileTypes: true }).catch(
+    err => {
+      if (isErrnoException(err) && err.code === 'ENOENT') return [];
+      throw err;
+    }
+  );
 
   const results: string[] = [];
   for (const ent of entries) {
     if (ent.isDirectory()) {
       if (ent.name === VERCEL_DIR) {
-        const exists = await pathExists(join(fullPath, VERCEL_DIR, PROJECT_JSON));
+        const exists = await pathExists(
+          join(fullPath, VERCEL_DIR, PROJECT_JSON)
+        );
         if (exists) {
           results.push(currentDir === '.' ? '.' : currentDir);
         }
       } else if (ent.name !== 'node_modules' && !ent.name.startsWith('.')) {
-        const nextDir = currentDir === '.' ? ent.name : `${currentDir}/${ent.name}`;
+        const nextDir =
+          currentDir === '.' ? ent.name : `${currentDir}/${ent.name}`;
         results.push(...(await findProjectJsonPaths(root, nextDir)));
       }
     }
@@ -105,6 +119,158 @@ function folderNameForMatching(
   }
   const segments = directory.split('/').filter(Boolean);
   return segments[segments.length - 1] ?? repoName ?? 'root';
+}
+
+interface ApiDiscoveryResult {
+  repo: Project[] | null;
+  potentialProjects: Project[];
+  currentRepoOrgRepo: string | null;
+  repoName: string | undefined;
+}
+
+async function discoverProjectsFromApiInner(
+  client: Client,
+  rootPath: string,
+  cwd: string,
+  detectedProjects: Map<string, Framework[]>,
+  teamIds?: string[]
+): Promise<ApiDiscoveryResult> {
+  const gitConfigPath =
+    getGitConfigPath({ cwd: rootPath }) ?? join(rootPath, '.git/config');
+  const remoteUrls = await getRemoteUrls(gitConfigPath);
+  const repoUrl =
+    remoteUrls?.origin ?? (remoteUrls && Object.values(remoteUrls)[0]);
+  const parsed = repoUrl ? parseRepoUrl(repoUrl) : null;
+  const repoName = parsed?.repo;
+
+  let currentRepoOrgRepo: string | null = null;
+  let repo: Project[] | null = null;
+  const potentialProjects: Project[] = [];
+
+  /** Single-page fetch (no pagination) — keeps request count bounded. */
+  async function fetchOnePage(
+    url: string,
+    accountId: string | undefined
+  ): Promise<Project[]> {
+    const opts = accountId
+      ? { accountId, skipSAMLReauth: true }
+      : { useCurrentTeam: false, skipSAMLReauth: true };
+    try {
+      const body = await client.fetch<{ projects: Project[] }>(url, opts);
+      return body.projects ?? [];
+    } catch {
+      return [];
+    }
+  }
+
+  const scopes: Array<string | undefined> = [undefined, ...(teamIds ?? [])];
+
+  // 1. Find projects connected to this git repo (filtered server-side, small result set).
+  if (parsed && repoUrl) {
+    currentRepoOrgRepo = `${parsed.org}/${parsed.repo}`;
+    const query = new URLSearchParams({ repoUrl, limit: '100' });
+    const endpoint = `/v9/projects?${query}`;
+
+    const settled = await Promise.allSettled(
+      scopes.map(id => fetchOnePage(endpoint, id))
+    );
+    const seenIds = new Set<string>();
+    const repoList: Project[] = [];
+    for (const result of settled) {
+      if (result.status !== 'fulfilled') continue;
+      for (const p of result.value) {
+        if (!seenIds.has(p.id)) {
+          seenIds.add(p.id);
+          repoList.push(p);
+        }
+      }
+    }
+    repo = repoList;
+  } else {
+    repo = [];
+  }
+
+  // 2. Search for projects matching the CWD folder name only (not all workspace paths).
+  const cwdRel = relative(rootPath, cwd).replace(/\\/g, '/') || '.';
+  const cwdFolderName = folderNameForMatching(cwdRel, repoName);
+
+  if (cwdFolderName) {
+    const query = new URLSearchParams({ search: cwdFolderName, limit: '20' });
+    const endpoint = `/v9/projects?${query}`;
+    const searchPromises = scopes.map(id => fetchOnePage(endpoint, id));
+
+    const settled = await Promise.allSettled(searchPromises);
+    const seen = new Set<string>();
+    for (const result of settled) {
+      if (result.status !== 'fulfilled') continue;
+      for (const p of result.value) {
+        if (p.name !== cwdFolderName || seen.has(p.id)) continue;
+        const linkOrgRepo = p.link?.repo
+          ? p.link.repo.includes('/')
+            ? p.link.repo
+            : p.link.org
+              ? `${p.link.org}/${p.link.repo}`
+              : p.link.repo
+          : null;
+        const linkedToOtherRepo =
+          currentRepoOrgRepo &&
+          linkOrgRepo &&
+          linkOrgRepo !== currentRepoOrgRepo;
+        if (!linkedToOtherRepo) {
+          seen.add(p.id);
+          potentialProjects.push(p);
+        }
+      }
+    }
+  }
+
+  return { repo, potentialProjects, currentRepoOrgRepo, repoName };
+}
+
+/**
+ * Runs all API discovery with a hard timeout.
+ * If anything hangs (slow endpoint, SAML, network), we fall back to local-only data.
+ */
+async function discoverProjectsFromApi(
+  client: Client,
+  rootPath: string,
+  cwd: string,
+  detectedProjects: Map<string, Framework[]>,
+  teamIds?: string[]
+): Promise<ApiDiscoveryResult> {
+  try {
+    const result = discoverProjectsFromApiInner(
+      client,
+      rootPath,
+      cwd,
+      detectedProjects,
+      teamIds
+    );
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const timeout = new Promise<never>((_, reject) => {
+      timer = setTimeout(
+        () => reject(new Error('API discovery timed out')),
+        API_DISCOVERY_TIMEOUT_MS
+      );
+    });
+    try {
+      return await Promise.race([result, timeout]);
+    } finally {
+      clearTimeout(timer);
+    }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    output.warn(`Project discovery failed: ${msg}`);
+    output.debug(
+      `Cross-team API discovery skipped: ${err instanceof Error ? err.stack : err}`
+    );
+    return {
+      repo: null,
+      potentialProjects: [],
+      currentRepoOrgRepo: null,
+      repoName: undefined,
+    };
+  }
 }
 
 /**
@@ -157,56 +323,17 @@ export async function collectLinkBaseline(
 
   let repo: Project[] | null = null;
   let potentialProjects: Project[] = [];
-  let currentRepoOrgRepo: string | null = null;
-  let repoName: string | undefined;
 
   if (client) {
-    const gitConfigPath =
-      getGitConfigPath({ cwd: rootPath }) ?? join(rootPath, '.git/config');
-    const remoteUrls = await getRemoteUrls(gitConfigPath);
-    const repoUrl =
-      remoteUrls?.origin ?? (remoteUrls && Object.values(remoteUrls)[0]);
-    const parsed = repoUrl ? parseRepoUrl(repoUrl) : null;
-    repoName = parsed?.repo;
-    if (parsed && repoUrl) {
-      currentRepoOrgRepo = `${parsed.org}/${parsed.repo}`;
-      const query = new URLSearchParams({ repoUrl });
-      const repoList: Project[] = [];
-      const iterator = client.fetchPaginated<{ projects: Project[] }>(
-        `/v9/projects?${query}`
-      );
-      for await (const chunk of iterator) {
-        repoList.push(...(chunk.projects ?? []));
-      }
-      repo = repoList;
-    } else {
-      repo = [];
-    }
-
-    if (detectedProjects.size > 0) {
-      const folderNames = new Set(
-        [...detectedProjects.keys()].map(dir =>
-          folderNameForMatching(dir, repoName)
-        )
-      );
-      const seen = new Set<string>();
-      const iterator = client.fetchPaginated<{ projects: Project[] }>(
-        '/v9/projects?limit=100'
-      );
-      for await (const chunk of iterator) {
-        for (const p of chunk.projects ?? []) {
-          if (!folderNames.has(p.name) || seen.has(p.id)) continue;
-          const linkedToOtherRepo =
-            currentRepoOrgRepo &&
-            p.link?.repo &&
-            p.link.repo !== currentRepoOrgRepo;
-          if (!linkedToOtherRepo) {
-            seen.add(p.id);
-            potentialProjects.push(p);
-          }
-        }
-      }
-    }
+    const apiResult = await discoverProjectsFromApi(
+      client,
+      rootPath,
+      cwd,
+      detectedProjects,
+      options?.teamIds
+    );
+    repo = apiResult.repo;
+    potentialProjects = apiResult.potentialProjects;
   }
 
   return {

@@ -41,9 +41,9 @@ export async function writeProjectSettings(
   }
 
   const projectLinkAndSettings: ProjectLinkAndSettings = {
-    projectId: isRepoLinked ? undefined : project.id,
-    orgId: isRepoLinked ? undefined : org.id,
-    projectName: isRepoLinked ? undefined : project.name,
+    projectId: project.id,
+    orgId: org.id,
+    projectName: project.name,
     settings: {
       createdAt: project.createdAt,
       framework: project.framework,

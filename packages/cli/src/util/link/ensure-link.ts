@@ -57,7 +57,7 @@ export async function ensureLink(
 
     const savedArgv = client.argv;
     const savedCwd = client.cwd;
-    const linkArgv = [savedArgv[0], savedArgv[1], 'link'];
+    const linkArgv = [savedArgv[0], savedArgv[1], 'link', '--skip-pull'];
     if (opts.autoConfirm) linkArgv.push('--yes');
     if (opts.projectName) linkArgv.push('--project', opts.projectName);
     client.argv = linkArgv;

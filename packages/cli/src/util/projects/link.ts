@@ -87,50 +87,48 @@ export async function getProjectLink(
   // user is re-prompted to select a repo-linked project again.
   const dirLink = await getLinkFromDir(getVercelDirectory(path));
   if (dirLink) {
+    // If there's also a repo.json, enrich the dir link with repoRoot
+    // so callers (like build) can adjust cwd to the repo root.
+    if (!dirLink.repoRoot) {
+      const repoLink = await getRepoLink(client, path);
+      if (repoLink?.rootPath) {
+        dirLink.repoRoot = repoLink.rootPath;
+        dirLink.projectRootDirectory ??= relative(repoLink.rootPath, path);
+      }
+    }
     return dirLink;
   }
   return await getProjectLinkFromRepoLink(client, path, projectName);
 }
 
-async function getProjectLinkFromRepoLink(
+async function resolveCollision(
   client: Client,
-  path: string,
+  repoLink: {
+    rootPath: string;
+    repoConfigPath: string;
+    repoConfig?: { orgId?: string; projects: RepoProjectConfig[] };
+  },
+  candidates: RepoProjectConfig[],
   projectName?: string
 ): Promise<ProjectLink | null> {
-  const repoLink = await getRepoLink(client, path);
-  if (!repoLink?.repoConfig) {
-    return null;
-  }
-  const projects = findProjectsFromPath(
-    repoLink.repoConfig.projects,
-    relative(repoLink.rootPath, path)
-  );
   let project: RepoProjectConfig | undefined;
-  if (projects.length === 1) {
-    project = projects[0];
-  } else {
-    const selectableProjects =
-      projects.length > 0 ? projects : repoLink.repoConfig.projects;
 
-    // If --project flag was provided, try to find a matching project by name
-    if (projectName) {
-      project = selectableProjects.find(p => p.name === projectName);
-    }
-
-    // Fall back to interactive selection if no project was found
-    if (!project) {
-      project = await client.input.select({
-        message: `Please select a Project:`,
-        choices: selectableProjects.map(p => ({
-          value: p,
-          name: p.name,
-        })),
-      });
-    }
+  if (projectName) {
+    project = candidates.find(p => p.name === projectName);
   }
+
+  if (!project) {
+    project = await client.input.select({
+      message: `Multiple projects found for this directory. Please select one:`,
+      choices: candidates.map(p => ({
+        value: p,
+        name: p.name,
+      })),
+    });
+  }
+
   if (project) {
-    // Prefer project-level orgId, fall back to top-level for backwards compat
-    const orgId = project.orgId ?? repoLink.repoConfig.orgId;
+    const orgId = project.orgId ?? repoLink.repoConfig?.orgId;
     if (!orgId) {
       const projectInfo = [
         project.name ? `name: "${project.name}"` : '',
@@ -151,6 +149,47 @@ async function getProjectLinkFromRepoLink(
     };
   }
   return null;
+}
+
+async function getProjectLinkFromRepoLink(
+  client: Client,
+  path: string,
+  projectName?: string
+): Promise<ProjectLink | null> {
+  const repoLink = await getRepoLink(client, path);
+  if (!repoLink?.repoConfig) {
+    return null;
+  }
+  const projects = findProjectsFromPath(
+    repoLink.repoConfig.projects,
+    relative(repoLink.rootPath, path)
+  );
+  if (projects.length === 0) {
+    return null;
+  }
+  if (projects.length === 1) {
+    const project = projects[0];
+    const orgId = project.orgId ?? repoLink.repoConfig.orgId;
+    if (!orgId) {
+      const projectInfo = [
+        project.name ? `name: "${project.name}"` : '',
+        project.directory ? `directory: "${project.directory}"` : '',
+      ]
+        .filter(Boolean)
+        .join(', ');
+      const details = projectInfo ? ` Project: { ${projectInfo} }.` : '';
+      throw new Error(
+        `Could not determine org ID from repo.json config at "${repoLink.repoConfigPath}".${details} Please re-link the repository.`
+      );
+    }
+    return {
+      repoRoot: repoLink.rootPath,
+      orgId,
+      projectId: project.id,
+      projectRootDirectory: project.workPath ?? project.directory,
+    };
+  }
+  return await resolveCollision(client, repoLink, projects, projectName);
 }
 
 export async function getLinkFromDir<T = ProjectLink>(

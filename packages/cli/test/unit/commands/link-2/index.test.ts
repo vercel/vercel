@@ -22,9 +22,15 @@ const mockPull = vi.mocked(pull);
 
 const FIXTURES_DIR = join(__dirname, 'fixtures');
 
-function copyFixtureToTmp(fixtureName: string): string {
+function copyFixtureToTmp(
+  fixtureName: string,
+  { keepRepoJson = false }: { keepRepoJson?: boolean } = {}
+): string {
   const tmpDir = mkdtempSync(join(tmpdir(), 'link-2-cmd-'));
   cpSync(join(FIXTURES_DIR, fixtureName), tmpDir, { recursive: true });
+  if (!keepRepoJson) {
+    rmSync(join(tmpDir, '.vercel', 'repo.json'), { force: true });
+  }
   return tmpDir;
 }
 
@@ -184,6 +190,107 @@ describe('link-2', () => {
       expect(json.rootPath).toBeNull();
       expect(json.repo).toBeNull();
       expect(json.linked).toBe(true);
+    });
+  });
+
+  describe('already linked (repo.json exists)', () => {
+    it('at repo root with --yes: prints summary and returns 0', async () => {
+      const tmpDir = copyFixtureToTmp('monorepo-linked', {
+        keepRepoJson: true,
+      });
+      tmpDirs.push(tmpDir);
+      await setupGitRepo(tmpDir);
+
+      client.cwd = tmpDir;
+      client.setArgv('link-2', '--yes');
+
+      const code = await link2(client);
+      expect(code).toBe(0);
+      const stderr = client.stderr.getFullOutput();
+      expect(stderr).toContain('Linked 1 project(s)');
+      expect(stderr).toContain('web');
+    });
+
+    it('at repo root interactive: shows workspace selector, keeps existing', async () => {
+      const tmpDir = copyFixtureToTmp('monorepo-linked', {
+        keepRepoJson: true,
+      });
+      tmpDirs.push(tmpDir);
+      await setupGitRepo(tmpDir);
+
+      client.cwd = tmpDir;
+      client.setArgv('link-2');
+
+      const exitCodePromise = link2(client);
+
+      await expect(client.stderr).toOutput('Which workspace folders');
+      client.stdin.write('\n'); // accept defaults (apps/web checked)
+
+      const code = await exitCodePromise;
+      expect(code).toBe(0);
+      const stderr = client.stderr.getFullOutput();
+      expect(stderr).toContain('Linked 1 project(s)');
+      expect(stderr).toContain('web');
+    });
+
+    it('at subfolder with matching project: prints "Already linked to X"', async () => {
+      const tmpDir = copyFixtureToTmp('monorepo-linked', {
+        keepRepoJson: true,
+      });
+      tmpDirs.push(tmpDir);
+      await setupGitRepo(tmpDir);
+
+      client.cwd = join(tmpDir, 'apps', 'web');
+      client.setArgv('link-2');
+
+      const code = await link2(client);
+      expect(code).toBe(0);
+      const stderr = client.stderr.getFullOutput();
+      expect(stderr).toContain('Already linked to');
+      expect(stderr).toContain('web');
+    });
+
+    it('at subfolder not in repo.json: falls through to discovery', async () => {
+      useUser();
+      const teamId = 'team_abc';
+      useTeams(teamId);
+      useUnknownProject();
+
+      const tmpDir = copyFixtureToTmp('monorepo-linked', {
+        keepRepoJson: true,
+      });
+      tmpDirs.push(tmpDir);
+      await setupGitRepo(tmpDir);
+      mockV9Projects([]);
+
+      client.cwd = join(tmpDir, 'apps', 'api');
+      client.setArgv('link-2', '--yes');
+
+      const code = await link2(client);
+      expect(code).toBe(0);
+      const stderr = client.stderr.getFullOutput();
+      expect(stderr).not.toContain('Already linked');
+    });
+
+    it('at repo root with --yes --json: outputs JSON with linked projects', async () => {
+      const tmpDir = copyFixtureToTmp('monorepo-linked', {
+        keepRepoJson: true,
+      });
+      tmpDirs.push(tmpDir);
+      await setupGitRepo(tmpDir);
+
+      client.cwd = tmpDir;
+      client.setArgv('link-2', '--yes', '--json');
+
+      const code = await link2(client);
+      expect(code).toBe(0);
+
+      const out = client.stderr.getFullOutput();
+      const jsonStart = out.indexOf('{');
+      const json = JSON.parse(out.slice(jsonStart));
+      expect(Array.isArray(json.linked)).toBe(true);
+      expect(json.linked.length).toBe(1);
+      expect(json.linked[0].name).toBe('web');
     });
   });
 

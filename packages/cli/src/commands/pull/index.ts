@@ -122,11 +122,14 @@ export async function pullCommandLogic(
     return link;
   }
 
-  const { project, org, repoRoot } = link;
+  const { project, org, repoRoot, projectRootDirectory } = link;
 
   let currentDirectory: string;
   if (repoRoot) {
-    currentDirectory = join(repoRoot, project.rootDirectory || '');
+    currentDirectory = join(
+      repoRoot,
+      projectRootDirectory || project.rootDirectory || ''
+    );
   } else {
     currentDirectory = cwd;
   }
