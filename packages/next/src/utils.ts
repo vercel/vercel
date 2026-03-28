@@ -4681,6 +4681,8 @@ export async function getServerActionMetaRoutes(
       }
       when action-name = action-names-by-id.(req.headers.next-action) do
         req.headers.x-server-action-name = action-name
+        // TODO(rex): demo only
+        res.headers.x-server-action-name = action-name
       end
     `);
     const route = createRexRoute(code);
