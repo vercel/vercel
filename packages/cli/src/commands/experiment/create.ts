@@ -24,27 +24,38 @@ const ALLOCATION_UNIT_TO_ENTITY_KIND: Record<ExperimentAllocationUnit, string> =
     userId: 'user',
   };
 
-function defaultProductionEnv(
+function defaultEnvironments(
   controlVariantId: string,
   treatmentVariantId: string,
   allocationUnit: ExperimentAllocationUnit
-): Record<string, FlagEnvironmentConfig> {
-  return {
-    production: {
-      active: true,
-      pausedOutcome: { type: 'variant', variantId: controlVariantId },
-      rules: [],
-      fallthrough: {
-        type: 'split',
-        base: {
-          type: 'entity',
-          kind: ALLOCATION_UNIT_TO_ENTITY_KIND[allocationUnit],
-          attribute: 'id',
-        },
-        weights: { [controlVariantId]: 50, [treatmentVariantId]: 50 },
-        defaultVariantId: controlVariantId,
+): CreateFlagRequest['environments'] {
+  const production: FlagEnvironmentConfig = {
+    active: true,
+    pausedOutcome: { type: 'variant', variantId: controlVariantId },
+    rules: [],
+    fallthrough: {
+      type: 'split',
+      base: {
+        type: 'entity',
+        kind: ALLOCATION_UNIT_TO_ENTITY_KIND[allocationUnit],
+        attribute: 'id',
       },
+      weights: { [controlVariantId]: 50, [treatmentVariantId]: 50 },
+      defaultVariantId: controlVariantId,
     },
+  };
+
+  const linked: FlagEnvironmentConfig = {
+    active: true,
+    reuse: { active: true, environment: 'production' },
+    rules: [],
+    fallthrough: { type: 'variant', variantId: controlVariantId },
+  };
+
+  return {
+    production,
+    preview: linked,
+    development: linked,
   };
 }
 
@@ -197,7 +208,7 @@ export default async function create(
     kind: 'json',
     seed,
     variants,
-    environments: defaultProductionEnv(
+    environments: defaultEnvironments(
       controlVariantId,
       treatmentVariantId,
       allocationUnit

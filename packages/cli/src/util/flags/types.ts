@@ -179,7 +179,11 @@ export interface CreateFlagRequest {
   kind: 'boolean' | 'string' | 'number' | 'json';
   description?: string;
   variants?: FlagVariant[];
-  environments: Record<string, FlagEnvironmentConfig>;
+  environments: {
+    preview: FlagEnvironmentConfig;
+    production: FlagEnvironmentConfig;
+    development: FlagEnvironmentConfig;
+  };
   /** Required for split / experiment flags. */
   seed?: number;
   experiment?: ExperimentConfig;

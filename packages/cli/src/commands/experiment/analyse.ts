@@ -43,8 +43,7 @@ export default async function analyse(
   const asJson = formatResult.jsonOutput;
 
   const peek = Boolean(flags['--peek']);
-  const metricEventName =
-    (flags['--metric-event-name'] as string | undefined);
+  const metricEventName = flags['--metric-event-name'] as string | undefined;
   const unitField =
     (flags['--unit-field'] as string | undefined) ?? 'visitorId';
 
