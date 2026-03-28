@@ -38,7 +38,7 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
       'index.html': '<span>test scope username</span',
     },
     'config-scope-property-vercel-ts': {
-      'vercel.ts': `export default { scope: "${session}", builds: [ { src: "*.html", use: "@vercel/static" } ] };`,
+      'vercel.ts': `export default { scope: "${process.env.VERCEL_TEAM_ID}", builds: [ { src: "*.html", use: "@vercel/static" } ] };`,
       'index.html': '<span>test scope vercel.ts</span',
     },
     'builds-wrong': {
