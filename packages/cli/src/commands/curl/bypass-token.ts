@@ -53,19 +53,6 @@ export async function createDeploymentProtectionToken(
       `Failed to generate deployment protection bypass token: ${error}`
     );
 
-    output.note(
-      'To bypass deployment protection, create a "Protection Bypass for Automation" secret in your project settings:'
-    );
-    output.log(`  1. Visit ${chalk.cyan('https://vercel.com/dashboard')}`);
-    output.log(`  2. Go to your project settings → Deployment Protection`);
-    output.log(`  3. Generate a "Protection Bypass for Automation" secret`);
-    output.log(
-      `  4. Use it with ${chalk.cyan(
-        '--protection-bypass'
-      )} flag or set ${chalk.cyan('VERCEL_AUTOMATION_BYPASS_SECRET')} env var`
-    );
-    output.log('');
-
     throw new Error('Failed to create deployment protection bypass token');
   }
 }

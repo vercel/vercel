@@ -53,6 +53,15 @@ export interface CommandTelemetryClient {
   trackCliOptionProtectionBypass(secret: string | undefined): void;
 }
 
+/**
+ * Detect bare hostnames like `my-app.vercel.app` or `example.com/api`
+ * so they get treated as full URLs rather than relative paths.
+ */
+function looksLikeHostname(target: string): boolean {
+  const firstSegment = target.split('/')[0];
+  return firstSegment.includes('.') && !firstSegment.startsWith('.');
+}
+
 const VC_STRING_FLAGS = new Set(['--deployment', '--protection-bypass']);
 const VC_BOOLEAN_FLAGS = new Set(['--yes', '--help']);
 
@@ -192,15 +201,19 @@ export function setupCurlLikeCommand(
     return 1;
   }
 
-  const isFullUrl =
-    target.startsWith('http://') || target.startsWith('https://');
+  let isFullUrl = target.startsWith('http://') || target.startsWith('https://');
+
+  if (!isFullUrl && looksLikeHostname(target)) {
+    isFullUrl = true;
+  }
 
   output.debug(
     `${command.name} target: ${target} (fullUrl=${isFullUrl}), toolFlags (${parsed.toolFlags.length}): ${JSON.stringify(parsed.toolFlags)}`
   );
 
   return {
-    target,
+    target:
+      isFullUrl && !target.startsWith('http') ? `https://${target}` : target,
     isFullUrl,
     deploymentFlag: parsed.deployment,
     protectionBypassFlag: parsed.protectionBypass,
@@ -356,15 +369,17 @@ async function resolveProjectFromUrl(
  * Priority:
  *  1. Explicit --protection-bypass flag
  *  2. VERCEL_AUTOMATION_BYPASS_SECRET env var
- *  3. Resolve project from URL (deployment → alias → hostname parsing)
+ *  3. Local cache
+ *  4. Resolve project from URL (deployment → alias → hostname parsing)
  *
- * Returns the bypass token string, or an exit code (number) on failure.
+ * Best-effort: if the project can't be resolved or a token can't be
+ * obtained, returns null so the request proceeds without a bypass header.
  */
 export async function resolveFullUrlProtection(
   client: Client,
   fullUrl: string,
   protectionBypassFlag?: string
-): Promise<string | null | number> {
+): Promise<string | null> {
   if (protectionBypassFlag) return protectionBypassFlag;
   if (process.env.VERCEL_AUTOMATION_BYPASS_SECRET) {
     output.debug('Using protection bypass secret from environment variable');
@@ -375,48 +390,48 @@ export async function resolveFullUrlProtection(
   if (cached) return cached;
 
   const resolved = await resolveProjectFromUrl(client, fullUrl);
-  if (resolved) {
-    const { project, ownerId } = resolved;
+  if (!resolved) {
     output.debug(
-      `Resolved project: ${project.id} (${project.name}), owner: ${ownerId}`
+      `Could not resolve project for ${toHost(fullUrl)} — proceeding without bypass token`
     );
-    try {
-      if (
-        project.protectionBypass &&
-        Object.keys(project.protectionBypass).length
-      ) {
-        const token = getAutomationBypassToken(project.protectionBypass);
-        if (token) {
-          output.debug(`Using existing bypass token for project ${project.id}`);
-          await setCachedBypassToken(fullUrl, token, project.id);
-          return token;
-        }
-      }
-
-      output.debug('No existing bypass token, creating new one');
-      const token = await createDeploymentProtectionToken(
-        client,
-        project.id,
-        ownerId
-      );
-      await setCachedBypassToken(fullUrl, token, project.id);
-      return token;
-    } catch (err) {
-      output.error(
-        `Could not create protection bypass token: ${err instanceof Error ? err.message : String(err)}`
-      );
-      return 1;
-    }
+    return null;
   }
 
-  const host = toHost(fullUrl);
-  output.error(
-    `Could not resolve project for ${chalk.bold(host)}. The deployment or alias was not found.`
+  const { project, ownerId } = resolved;
+  output.debug(
+    `Resolved project: ${project.id} (${project.name}), owner: ${ownerId}`
   );
-  output.print(
-    `  Provide a bypass secret with ${chalk.cyan('--protection-bypass <secret>')} or ${chalk.cyan('VERCEL_AUTOMATION_BYPASS_SECRET')}.\n`
-  );
-  return 1;
+
+  try {
+    if (
+      project.protectionBypass &&
+      Object.keys(project.protectionBypass).length
+    ) {
+      const token = getAutomationBypassToken(project.protectionBypass);
+      if (token) {
+        output.debug(`Using existing bypass token for project ${project.id}`);
+        await setCachedBypassToken(fullUrl, token, project.id);
+        return token;
+      }
+    }
+
+    output.debug('No existing bypass token, creating new one');
+    const token = await createDeploymentProtectionToken(
+      client,
+      project.id,
+      ownerId
+    );
+    await setCachedBypassToken(fullUrl, token, project.id);
+    return token;
+  } catch (err) {
+    output.debug(
+      `Could not obtain bypass token: ${err instanceof Error ? err.message : String(err)}`
+    );
+    output.warn(
+      `Could not obtain a deployment protection bypass token for ${chalk.bold(project.name)}. If the response is 401, provide one with ${chalk.cyan('--protection-bypass <secret>')} or set ${chalk.cyan('VERCEL_AUTOMATION_BYPASS_SECRET')}.`
+    );
+    return null;
+  }
 }
 
 /**

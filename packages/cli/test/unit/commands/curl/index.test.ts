@@ -160,6 +160,43 @@ describe('curl', () => {
       );
     });
 
+    it('should treat a bare hostname as a full URL', async () => {
+      client.setArgv(
+        'curl',
+        'my-app.vercel.app/api/hello',
+        '--protection-bypass',
+        'test'
+      );
+      const exitCode = await curl(client);
+      expect(exitCode).toEqual(0);
+
+      expect(spawnMock).toHaveBeenCalledWith(
+        'curl',
+        expect.arrayContaining([
+          '--url',
+          'https://my-app.vercel.app/api/hello',
+        ]),
+        expect.any(Object)
+      );
+    });
+
+    it('should treat a bare hostname without path as a full URL', async () => {
+      client.setArgv(
+        'curl',
+        'my-app.vercel.app',
+        '--protection-bypass',
+        'test'
+      );
+      const exitCode = await curl(client);
+      expect(exitCode).toEqual(0);
+
+      expect(spawnMock).toHaveBeenCalledWith(
+        'curl',
+        expect.arrayContaining(['--url', 'https://my-app.vercel.app']),
+        expect.any(Object)
+      );
+    });
+
     it('should accept a full http URL as the target', async () => {
       client.setArgv(
         'curl',
@@ -290,14 +327,16 @@ describe('curl', () => {
   });
 
   describe('full URL mode', () => {
-    it('should error when project cannot be resolved from URL', async () => {
+    it('should proceed without bypass header when project cannot be resolved from URL', async () => {
       client.setArgv('curl', 'https://my-app.vercel.app/api/hello');
       const exitCode = await curl(client);
-      expect(exitCode).toEqual(1);
-      await expect(client.stderr).toOutput(
-        'Could not resolve project for my-app.vercel.app'
+      expect(exitCode).toEqual(0);
+
+      expect(spawnMock).toHaveBeenCalledWith(
+        'curl',
+        ['--url', 'https://my-app.vercel.app/api/hello'],
+        expect.any(Object)
       );
-      expect(spawnMock).not.toHaveBeenCalled();
     });
 
     it('should include protection bypass header when flag is provided', async () => {
@@ -722,6 +761,15 @@ describe('parseCurlLikeArgs', () => {
   it('should parse a relative path as the target', () => {
     const result = parseCurlLikeArgs(['curl', '/api/hello'], 'curl');
     expect(result.target).toBe('/api/hello');
+    expect(result.toolFlags).toEqual([]);
+  });
+
+  it('should parse a bare hostname as the target', () => {
+    const result = parseCurlLikeArgs(
+      ['curl', 'my-app.vercel.app/api/hello'],
+      'curl'
+    );
+    expect(result.target).toBe('my-app.vercel.app/api/hello');
     expect(result.toolFlags).toEqual([]);
   });
 

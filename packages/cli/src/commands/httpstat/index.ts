@@ -31,15 +31,11 @@ export default async function httpstat(client: Client): Promise<number> {
 
   if (isFullUrl) {
     fullUrl = target;
-    const protection = await resolveFullUrlProtection(
+    deploymentProtectionToken = await resolveFullUrlProtection(
       client,
       target,
       protectionBypassFlag
     );
-    if (typeof protection === 'number') {
-      return protection;
-    }
-    deploymentProtectionToken = protection;
   } else {
     const result = await getDeploymentUrlAndToken(client, 'httpstat', target, {
       deploymentFlag,
