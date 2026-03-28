@@ -10,11 +10,20 @@ import {
 } from '../validate-config';
 import output from '../../output-manager';
 
+export type LLMEventCallback = (event: LLMEvent) => void;
+
+export type LLMEvent =
+  | { type: 'prompt'; text: string }
+  | { type: 'text_delta'; delta: string }
+  | { type: 'tool_start'; toolName: string; args: unknown }
+  | { type: 'tool_end'; toolName: string; isError: boolean };
+
 interface GenerateVercelConfigOptions {
   existingConfig: VercelConfig | null;
   inferredServices: InferredServicesResult;
   platformConfigs: DetectPlatformConfigsResult;
   cwd: string;
+  onEvent?: LLMEventCallback;
 }
 
 function buildPrompt(opts: GenerateVercelConfigOptions): string {
@@ -118,6 +127,7 @@ export async function generateVercelConfig(
   opts: GenerateVercelConfigOptions
 ): Promise<VercelConfig | null> {
   const prompt = buildPrompt(opts);
+  const onEvent = opts.onEvent;
 
   try {
     const { createAgentSession, SessionManager } = await import(
@@ -133,17 +143,49 @@ export async function generateVercelConfig(
       let responseText = '';
 
       session.subscribe((event: { type: string; [key: string]: unknown }) => {
-        if (event.type === 'message_update') {
-          const evt = event as {
-            type: 'message_update';
-            assistantMessageEvent: { type: string; delta?: string };
-          };
-          if (evt.assistantMessageEvent.type === 'text_delta') {
-            responseText += evt.assistantMessageEvent.delta ?? '';
+        switch (event.type) {
+          case 'message_update': {
+            const evt = event as {
+              type: 'message_update';
+              assistantMessageEvent: { type: string; delta?: string };
+            };
+            if (evt.assistantMessageEvent.type === 'text_delta') {
+              const delta = evt.assistantMessageEvent.delta ?? '';
+              responseText += delta;
+              onEvent?.({ type: 'text_delta', delta });
+            }
+            break;
+          }
+          case 'tool_execution_start': {
+            const evt = event as {
+              type: 'tool_execution_start';
+              toolName: string;
+              args: unknown;
+            };
+            onEvent?.({
+              type: 'tool_start',
+              toolName: evt.toolName,
+              args: evt.args,
+            });
+            break;
+          }
+          case 'tool_execution_end': {
+            const evt = event as {
+              type: 'tool_execution_end';
+              toolName: string;
+              isError: boolean;
+            };
+            onEvent?.({
+              type: 'tool_end',
+              toolName: evt.toolName,
+              isError: evt.isError,
+            });
+            break;
           }
         }
       });
 
+      onEvent?.({ type: 'prompt', text: prompt });
       await session.prompt(prompt);
 
       // Parse and validate
@@ -157,9 +199,10 @@ export async function generateVercelConfig(
         'LLM config generation: first attempt failed validation, retrying...'
       );
       responseText = '';
-      await session.prompt(
-        'The JSON you returned was invalid. Please try again. Return ONLY valid JSON for the complete vercel.json object, with no markdown fences or explanation.'
-      );
+      const retryPrompt =
+        'The JSON you returned was invalid. Please try again. Return ONLY valid JSON for the complete vercel.json object, with no markdown fences or explanation.';
+      onEvent?.({ type: 'prompt', text: retryPrompt });
+      await session.prompt(retryPrompt);
 
       return parseAndValidate(responseText, opts.existingConfig);
     } finally {

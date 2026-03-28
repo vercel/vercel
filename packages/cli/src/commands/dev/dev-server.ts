@@ -38,6 +38,7 @@ import { resolveProjectCwd } from '../../util/projects/find-project-root';
 import {
   generateVercelConfig,
   writeVercelConfig,
+  type LLMEventCallback,
 } from '../../util/llm/generate-services-config';
 import readJSONFile from '../../util/read-json-file';
 import type { VercelConfig } from '../../util/dev/types';
@@ -64,6 +65,12 @@ export interface DevContext {
   onCleanupReady?: (cleanup: () => void) => void;
   /** Called during cleanup to restore terminal state. May return a Promise (e.g. to drain stdin). */
   onShutdown?: () => void | Promise<void>;
+  /** Callback for LLM events during config generation (tool calls, prompts, text deltas). */
+  onLLMEvent?: LLMEventCallback;
+  /** Prompt the user before generating a services config during initialization. */
+  confirmGenerateServicesConfig?: () => Promise<boolean>;
+  /** Called when initialization is complete and the dev server is about to start serving. */
+  onReady?: () => void;
 }
 
 export async function startDevServer(
@@ -222,38 +229,49 @@ export async function startDevServer(
           'Remove it before enabling multi-service mode.'
       );
     } else {
-      // Generate config via LLM
-      const existingConfig =
-        (await readJSONFile<VercelConfig>(join(cwd, 'vercel.json'))) ?? null;
-      const safeExistingConfig =
-        existingConfig instanceof Error ? null : existingConfig;
+      displayDetectedServices(detection.inferred.services);
 
-      output.spinner('Generating services configuration…');
-      const llmConfig = await generateVercelConfig({
-        existingConfig: safeExistingConfig,
-        inferredServices: detection.inferred,
-        platformConfigs,
-        cwd,
-      });
-      output.stopSpinner();
+      const shouldGenerate = autoConfirm
+        ? true
+        : ((await ctx.confirmGenerateServicesConfig?.()) ?? true);
 
-      if (llmConfig) {
-        await writeVercelConfig(cwd, llmConfig);
-        output.log(
-          'Generated and wrote services configuration to vercel.json.'
-        );
-
-        // Re-detect so we get the resolved services from the newly written config.
-        detection = await tryDetectServices(cwd);
-        if (detection?.enabled && detection.resolved.services.length > 0) {
-          foundServices = true;
-          services = detection.resolved.services;
-          displayDetectedServices(detection.resolved.services);
-        }
+      if (!shouldGenerate) {
+        output.log('Skipped generating services configuration.');
       } else {
-        output.error(
-          'Failed to generate services configuration. Check that your LLM provider is configured (e.g. ANTHROPIC_API_KEY is set).'
-        );
+        // Generate config via LLM
+        const existingConfig =
+          (await readJSONFile<VercelConfig>(join(cwd, 'vercel.json'))) ?? null;
+        const safeExistingConfig =
+          existingConfig instanceof Error ? null : existingConfig;
+
+        output.spinner('Generating services configuration…');
+        const llmConfig = await generateVercelConfig({
+          existingConfig: safeExistingConfig,
+          inferredServices: detection.inferred,
+          platformConfigs,
+          cwd,
+          onEvent: ctx.onLLMEvent,
+        });
+        output.stopSpinner();
+
+        if (llmConfig) {
+          await writeVercelConfig(cwd, llmConfig);
+          output.log(
+            'Generated and wrote services configuration to vercel.json.'
+          );
+
+          // Re-detect so we get the resolved services from the newly written config.
+          detection = await tryDetectServices(cwd);
+          if (detection?.enabled && detection.resolved.services.length > 0) {
+            foundServices = true;
+            services = detection.resolved.services;
+            displayDetectedServices(detection.resolved.services);
+          }
+        } else {
+          output.error(
+            'Failed to generate services configuration. Check that your LLM provider is configured (e.g. ANTHROPIC_API_KEY is set).'
+          );
+        }
       }
     }
   } else if (foundServices && detection) {
@@ -371,6 +389,7 @@ export async function startDevServer(
 
   try {
     await devServer.start(...listen);
+    ctx.onReady?.();
   } catch (err) {
     if (lockAcquired) {
       releaseDevLock(cwd);

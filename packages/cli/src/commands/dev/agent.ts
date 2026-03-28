@@ -23,9 +23,66 @@ const SERVICE_PREFIX_RE = /^\[([^\]]+)\]/;
 const ERROR_LINE_RE = /^\[([^\]]+)\]\s+ERROR:/;
 const HTTP_ERROR_RE =
   /^\[([^\]]+)\].*"[A-Z]+\s+\S+\s+HTTP\/[\d.]+"\s+([45]\d{2})\b/;
+const MAX_EVENT_TEXT_LENGTH = 200;
 
 function stripAnsi(str: string): string {
   return str.replace(ANSI_RE, '');
+}
+
+function truncateText(text: string, maxLength = MAX_EVENT_TEXT_LENGTH): string {
+  if (text.length <= maxLength) return text;
+  return `${text.slice(0, maxLength - 1)}…`;
+}
+
+function formatToolArgs(args: unknown): string {
+  try {
+    const serialized = JSON.stringify(args);
+    return truncateText(serialized ?? String(args));
+  } catch {
+    return truncateText(String(args));
+  }
+}
+
+function formatToolError(details: unknown): string {
+  if (details instanceof Error) {
+    return truncateText(details.message);
+  }
+
+  if (typeof details === 'string') {
+    return truncateText(details);
+  }
+
+  if (details && typeof details === 'object') {
+    const candidate = details as {
+      error?: unknown;
+      message?: unknown;
+      result?: unknown;
+    };
+
+    if (typeof candidate.message === 'string') {
+      return truncateText(candidate.message);
+    }
+
+    if (candidate.error instanceof Error) {
+      return truncateText(candidate.error.message);
+    }
+
+    if (typeof candidate.error === 'string') {
+      return truncateText(candidate.error);
+    }
+
+    if (typeof candidate.result === 'string') {
+      return truncateText(candidate.result);
+    }
+
+    try {
+      return truncateText(JSON.stringify(details) ?? String(details));
+    } catch {
+      return truncateText(String(details));
+    }
+  }
+
+  return truncateText(String(details));
 }
 
 /** Return first and last non-empty lines of `text` (ANSI-stripped). */
@@ -285,16 +342,71 @@ class ErrorMenu implements Component {
   }
 }
 
+class ServicesConfigMenu implements Component {
+  private cursor = 0;
+  onSubmit?: (shouldGenerate: boolean) => void;
+
+  invalidate() {}
+
+  handleInput(data: string) {
+    if (matchesKey(data, 'left') || matchesKey(data, 'h')) {
+      this.cursor = 0;
+    } else if (matchesKey(data, 'right') || matchesKey(data, 'l')) {
+      this.cursor = 1;
+    } else if (matchesKey(data, 'up') || matchesKey(data, 'k')) {
+      this.cursor = 0;
+    } else if (matchesKey(data, 'down') || matchesKey(data, 'j')) {
+      this.cursor = 1;
+    } else if (matchesKey(data, 'enter')) {
+      this.onSubmit?.(this.cursor === 0);
+    }
+  }
+
+  render(): string[] {
+    const lines: string[] = [];
+    const generateSelected = this.cursor === 0;
+    const skipSelected = this.cursor === 1;
+
+    lines.push(
+      chalk.white.bold(
+        '  ● Do you want me to generate a vercel.json for these services?'
+      )
+    );
+    lines.push('');
+    lines.push(
+      `${generateSelected ? chalk.white('❯ ') : '  '}${
+        generateSelected
+          ? chalk.bgWhite.black.bold(' Generate vercel.json ')
+          : chalk.white.bold(' Generate vercel.json ')
+      }`
+    );
+    lines.push(
+      `${skipSelected ? chalk.dim('❯ ') : '  '}${
+        skipSelected
+          ? chalk.bgBlackBright.white.bold(' Skip ')
+          : chalk.dim(' Skip ')
+      }`
+    );
+
+    return lines;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // StatusBar — switches between "Serving" and ErrorMenu
 // ---------------------------------------------------------------------------
+const INITIALIZING_FRAMES = ['  ●', '  ◉', '  ○', '  ◉'];
 const SERVING_FRAMES = ['  ●', '  ◉', '  ○', '  ◉'];
 const FIXING_FRAMES = ['  ▲', '  ▶', '  ▼', '  ◀'];
 const ANIM_INTERVAL = 300;
 
+type StatusBarState = 'initializing' | 'serving' | 'fixing';
+
 class StatusBar implements Component {
   private menu: ErrorMenu;
-  private _fixing = false;
+  private servicesConfigMenu = new ServicesConfigMenu();
+  private _showServicesConfigPrompt = false;
+  private _state: StatusBarState = 'initializing';
   private _frame = 0;
   private _timer: ReturnType<typeof setInterval> | null = null;
   private _requestRender?: () => void;
@@ -313,9 +425,31 @@ class StatusBar implements Component {
     return this.menu;
   }
 
+  get configMenu(): ServicesConfigMenu {
+    return this.servicesConfigMenu;
+  }
+
+  get showServicesConfigPrompt(): boolean {
+    return this._showServicesConfigPrompt;
+  }
+
+  set showServicesConfigPrompt(value: boolean) {
+    this._showServicesConfigPrompt = value;
+  }
+
+  get state(): StatusBarState {
+    return this._state;
+  }
+
+  set state(value: StatusBarState) {
+    if (this._state !== value) {
+      this._state = value;
+      this._frame = 0;
+    }
+  }
+
   set fixing(value: boolean) {
-    this._fixing = value;
-    this._frame = 0;
+    this.state = value ? 'fixing' : 'serving';
   }
 
   dispose() {
@@ -325,10 +459,22 @@ class StatusBar implements Component {
     }
   }
 
+  private framesForState(): string[] {
+    switch (this._state) {
+      case 'initializing':
+        return INITIALIZING_FRAMES;
+      case 'fixing':
+        return FIXING_FRAMES;
+      case 'serving':
+      default:
+        return SERVING_FRAMES;
+    }
+  }
+
   private startAnim() {
     if (this._timer) return;
     this._timer = setInterval(() => {
-      const frames = this._fixing ? FIXING_FRAMES : SERVING_FRAMES;
+      const frames = this.framesForState();
       this._frame = (this._frame + 1) % frames.length;
       this._requestRender?.();
     }, ANIM_INTERVAL);
@@ -336,10 +482,16 @@ class StatusBar implements Component {
 
   invalidate() {
     this.menu.invalidate();
+    this.servicesConfigMenu.invalidate();
   }
 
   handleInput(data: string) {
-    if (!this._fixing && this.errorStore.size > 0) {
+    if (this._showServicesConfigPrompt && this._state === 'initializing') {
+      this.servicesConfigMenu.handleInput(data);
+      return;
+    }
+
+    if (this._state === 'serving' && this.errorStore.size > 0) {
       this.menu.handleInput(data);
     }
   }
@@ -348,13 +500,31 @@ class StatusBar implements Component {
     const separator = chalk.dim('─'.repeat(width));
     const lines: string[] = [];
 
-    const frames = this._fixing ? FIXING_FRAMES : SERVING_FRAMES;
+    const frames = this.framesForState();
     const disc = frames[this._frame % frames.length];
-    const statusLabel = this._fixing
-      ? chalk.cyan(`${disc} Fixing…`)
-      : chalk.green(`${disc} Serving`);
 
-    if (this.errorStore.size > 0 && !this._fixing) {
+    let statusLabel: string;
+    switch (this._state) {
+      case 'initializing':
+        statusLabel = chalk.white(`${disc} Initializing`);
+        break;
+      case 'fixing':
+        statusLabel = chalk.cyan(`${disc} Fixing…`);
+        break;
+      case 'serving':
+      default:
+        statusLabel = chalk.green(`${disc} Serving`);
+        break;
+    }
+
+    if (this._showServicesConfigPrompt && this._state === 'initializing') {
+      lines.push(separator);
+      lines.push(...this.servicesConfigMenu.render());
+      lines.push('');
+      lines.push(separator);
+      lines.push(statusLabel);
+      lines.push('');
+    } else if (this.errorStore.size > 0 && this._state === 'serving') {
       lines.push(separator);
       lines.push(...this.menu.render(width));
       lines.push('');
@@ -429,6 +599,19 @@ export async function startAgentMode(
       >['session']
     | null = null;
 
+  async function promptToGenerateServicesConfig(): Promise<boolean> {
+    return await new Promise<boolean>(resolve => {
+      statusBar.showServicesConfigPrompt = true;
+      statusBar.configMenu.onSubmit = shouldGenerate => {
+        statusBar.showServicesConfigPrompt = false;
+        statusBar.configMenu.onSubmit = undefined;
+        tui.requestRender();
+        resolve(shouldGenerate);
+      };
+      tui.requestRender();
+    });
+  }
+
   async function runFixAgent(groups: ErrorGroup[]) {
     // Build the prompt from the full text of each selected error
     const errorTexts = groups
@@ -446,12 +629,12 @@ export async function startAgentMode(
     tui.requestRender();
 
     try {
-      const { createAgentSession, SessionManager } = await import(
-        '@mariozechner/pi-coding-agent'
-      );
+      const { createAgentSession, SessionManager, createCodingTools } =
+        await import('@mariozechner/pi-coding-agent');
 
       const { session } = await createAgentSession({
         cwd: process.cwd(),
+        tools: createCodingTools(process.cwd()),
         sessionManager: SessionManager.inMemory(),
       });
       agentSession = session;
@@ -466,7 +649,7 @@ export async function startAgentMode(
               assistantMessageEvent: { type: string; delta?: string };
             };
             if (evt.assistantMessageEvent.type === 'text_delta') {
-              appendOutput(evt.assistantMessageEvent.delta ?? '');
+              appendOutput(truncateText(evt.assistantMessageEvent.delta ?? ''));
             }
             break;
           }
@@ -478,7 +661,7 @@ export async function startAgentMode(
             };
             appendOutput(
               chalk.dim(`\n[${evt.toolName}] `) +
-                chalk.dim(JSON.stringify(evt.args)) +
+                chalk.dim(formatToolArgs(evt.args)) +
                 '\n'
             );
             break;
@@ -488,10 +671,19 @@ export async function startAgentMode(
               type: 'tool_execution_end';
               toolName: string;
               isError: boolean;
+              error?: unknown;
+              message?: unknown;
+              result?: unknown;
             };
             appendOutput(
               evt.isError
-                ? chalk.red(`[${evt.toolName}] error\n`)
+                ? chalk.red(
+                    `[${evt.toolName}] error: ${formatToolError({
+                      error: evt.error,
+                      message: evt.message,
+                      result: evt.result,
+                    })}\n`
+                  )
                 : chalk.green(`[${evt.toolName}] done\n`)
             );
             break;
@@ -583,6 +775,38 @@ export async function startAgentMode(
       });
     },
     onShutdown: teardownTUI,
+    onLLMEvent(event) {
+      switch (event.type) {
+        case 'prompt':
+          appendOutput(
+            chalk.dim(`\n[prompt] `) +
+              chalk.dim(truncateText(event.text)) +
+              '\n'
+          );
+          break;
+        case 'tool_start':
+          appendOutput(
+            chalk.dim(`\n[${event.toolName}] `) +
+              chalk.dim(formatToolArgs(event.args)) +
+              '\n'
+          );
+          break;
+        case 'tool_end':
+          appendOutput(
+            event.isError
+              ? chalk.red(`[${event.toolName}] error\n`)
+              : chalk.green(`[${event.toolName}] done\n`)
+          );
+          break;
+      }
+    },
+    confirmGenerateServicesConfig() {
+      return promptToGenerateServicesConfig();
+    },
+    onReady() {
+      statusBar.state = 'serving';
+      tui.requestRender();
+    },
   };
 
   return startDevServer(client, opts, args, telemetry, ctx);
