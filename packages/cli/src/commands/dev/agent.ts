@@ -24,6 +24,7 @@ const ERROR_LINE_RE = /^\[([^\]]+)\]\s+ERROR:/;
 const HTTP_ERROR_RE =
   /^\[([^\]]+)\].*"[A-Z]+\s+\S+\s+HTTP\/[\d.]+"\s+([45]\d{2})\b/;
 const MAX_EVENT_TEXT_LENGTH = 200;
+const MAX_TOOL_PREVIEW_LENGTH = 60;
 
 function stripAnsi(str: string): string {
   return str.replace(ANSI_RE, '');
@@ -34,14 +35,120 @@ function truncateText(text: string, maxLength = MAX_EVENT_TEXT_LENGTH): string {
   return `${text.slice(0, maxLength - 1)}…`;
 }
 
-function formatToolArgs(args: unknown): string {
+function truncateInlineValue(
+  value: string,
+  maxLength = MAX_TOOL_PREVIEW_LENGTH
+) {
+  return truncateText(value.replace(/\s+/g, ' '), maxLength);
+}
+
+function quoteToolValue(value: string): string {
+  return JSON.stringify(truncateInlineValue(value));
+}
+
+function formatReadArgs(args: unknown): string | null {
+  if (!args || typeof args !== 'object') return null;
+  const candidate = args as {
+    path?: unknown;
+    offset?: unknown;
+    limit?: unknown;
+  };
+
+  if (typeof candidate.path !== 'string') return null;
+
+  const segments = [candidate.path];
+  if (
+    typeof candidate.offset === 'number' &&
+    Number.isInteger(candidate.offset) &&
+    typeof candidate.limit === 'number' &&
+    Number.isInteger(candidate.limit) &&
+    candidate.limit > 0
+  ) {
+    segments.push(
+      `lines ${candidate.offset + 1}-${candidate.offset + candidate.limit}`
+    );
+  } else if (
+    typeof candidate.offset === 'number' &&
+    Number.isInteger(candidate.offset)
+  ) {
+    segments.push(`offset ${candidate.offset}`);
+  }
+
+  return truncateText(segments.join(' '));
+}
+
+function formatEditArgs(args: unknown): string | null {
+  if (!args || typeof args !== 'object') return null;
+  const candidate = args as {
+    path?: unknown;
+    oldText?: unknown;
+    newText?: unknown;
+  };
+
+  if (typeof candidate.path !== 'string') return null;
+
+  if (
+    typeof candidate.oldText === 'string' &&
+    typeof candidate.newText === 'string'
+  ) {
+    return truncateText(
+      `${candidate.path} replace ${quoteToolValue(candidate.oldText)} -> ${quoteToolValue(candidate.newText)}`
+    );
+  }
+
+  return truncateText(candidate.path);
+}
+
+function formatToolArgs(toolName: string, args: unknown): string {
+  if (toolName === 'read') {
+    const readArgs = formatReadArgs(args);
+    if (readArgs) return readArgs;
+  }
+
+  if (toolName === 'edit') {
+    const editArgs = formatEditArgs(args);
+    if (editArgs) return editArgs;
+  }
+
   try {
+    if (args && typeof args === 'object' && !Array.isArray(args)) {
+      const entries = Object.entries(args as Record<string, unknown>)
+        .filter(([, value]) => value !== undefined)
+        .map(([key, value]) => {
+          if (typeof value === 'string') {
+            return `${key}=${quoteToolValue(value)}`;
+          }
+          try {
+            return `${key}=${truncateInlineValue(JSON.stringify(value) ?? String(value))}`;
+          } catch {
+            return `${key}=${truncateInlineValue(String(value))}`;
+          }
+        });
+      if (entries.length > 0) {
+        return truncateText(entries.join(' '));
+      }
+    }
+
     const serialized = JSON.stringify(args);
     return truncateText(serialized ?? String(args));
   } catch {
     return truncateText(String(args));
   }
 }
+
+function formatToolStartLine(toolName: string, args: unknown): string {
+  return chalk.dim(`\n[${toolName}] ${formatToolArgs(toolName, args)}\n`);
+}
+
+function formatToolDoneLine(toolName: string): string {
+  return chalk.green(`[${toolName}] done\n`);
+}
+
+export const _internal = {
+  formatReadArgs,
+  formatEditArgs,
+  formatToolArgs,
+};
 
 function formatToolError(details: unknown): string {
   if (details instanceof Error) {
@@ -659,11 +766,7 @@ export async function startAgentMode(
               toolName: string;
               args: unknown;
             };
-            appendOutput(
-              chalk.dim(`\n[${evt.toolName}] `) +
-                chalk.dim(formatToolArgs(evt.args)) +
-                '\n'
-            );
+            appendOutput(formatToolStartLine(evt.toolName, evt.args));
             break;
           }
           case 'tool_execution_end': {
@@ -684,7 +787,7 @@ export async function startAgentMode(
                       result: evt.result,
                     })}\n`
                   )
-                : chalk.green(`[${evt.toolName}] done\n`)
+                : formatToolDoneLine(evt.toolName)
             );
             break;
           }
@@ -785,17 +888,13 @@ export async function startAgentMode(
           );
           break;
         case 'tool_start':
-          appendOutput(
-            chalk.dim(`\n[${event.toolName}] `) +
-              chalk.dim(formatToolArgs(event.args)) +
-              '\n'
-          );
+          appendOutput(formatToolStartLine(event.toolName, event.args));
           break;
         case 'tool_end':
           appendOutput(
             event.isError
               ? chalk.red(`[${event.toolName}] error\n`)
-              : chalk.green(`[${event.toolName}] done\n`)
+              : formatToolDoneLine(event.toolName)
           );
           break;
       }
