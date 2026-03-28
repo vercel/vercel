@@ -4664,9 +4664,10 @@ export async function getServerActionMetaRoutes(
 
         let exportedName = entry.exportedName;
 
-        if (exportedName === '$$RSC_SERVER_ACTION_0') {
-          exportedName = 'anonymous_fn';
-        }
+        // TODO(rex): this is broken anyway
+        // if (exportedName === '$$RSC_SERVER_ACTION_0') {
+        //   exportedName = 'anonymous_fn';
+        // }
 
         const actionName = `${entry.filename}#${exportedName}`;
         actionNameById[id] = actionName;
