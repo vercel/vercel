@@ -15,12 +15,12 @@ export const createApiKeySubcommand = {
       description: 'Human-readable name for the API key',
     },
     {
-      name: 'limit',
+      name: 'budget',
       shorthand: null,
       type: Number,
       argument: 'AMOUNT',
       deprecated: false,
-      description: 'Quota limit amount in USD (minimum 1)',
+      description: 'Quota budget amount in USD (minimum 1)',
     },
     {
       name: 'refresh-period',
@@ -46,7 +46,7 @@ export const createApiKeySubcommand = {
     },
     {
       name: 'Create an API key with a budget',
-      value: `${packageName} ai-gateway create-api-key --name my-key --limit 500 --refresh-period monthly`,
+      value: `${packageName} ai-gateway create-api-key --name my-key --budget 500 --refresh-period monthly`,
     },
   ],
 } as const;

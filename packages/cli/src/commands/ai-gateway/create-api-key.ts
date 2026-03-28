@@ -37,29 +37,29 @@ export default async function createApiKey(client: Client, argv: string[]) {
   const { flags: opts } = parsedArgs;
 
   const name = opts['--name'] as string | undefined;
-  const limit = opts['--limit'] as number | undefined;
+  const budget = opts['--budget'] as number | undefined;
   const refreshPeriod = opts['--refresh-period'] as string | undefined;
   const includeByok = opts['--include-byok'] as boolean | undefined;
 
   // Track telemetry
   telemetry.trackCliOptionName(name);
-  telemetry.trackCliOptionLimit(limit);
+  telemetry.trackCliOptionBudget(budget);
   telemetry.trackCliOptionRefreshPeriod(refreshPeriod);
   telemetry.trackCliFlagIncludeByok(includeByok);
 
-  // Validate --limit if provided
-  if (limit !== undefined && limit < 1) {
-    const message = 'Limit must be a positive number in USD (minimum 1).';
+  // Validate --budget if provided
+  if (budget !== undefined && budget < 1) {
+    const message = 'Budget must be a positive number in USD (minimum 1).';
     outputAgentError(
       client,
       {
         status: AGENT_STATUS.ERROR,
-        reason: AGENT_REASON.INVALID_LIMIT,
+        reason: AGENT_REASON.INVALID_BUDGET,
         message,
         next: [
           {
             command: getCommandNamePlain(
-              'ai-gateway create-api-key --limit 500'
+              'ai-gateway create-api-key --budget 500'
             ),
           },
         ],
@@ -102,9 +102,9 @@ export default async function createApiKey(client: Client, argv: string[]) {
   const effectiveRefreshPeriod =
     refreshPeriod && refreshPeriod !== 'none' ? refreshPeriod : undefined;
   const aiGatewayQuota: AiGatewayQuota | undefined =
-    limit !== undefined || effectiveRefreshPeriod || includeByok
+    budget !== undefined || effectiveRefreshPeriod || includeByok
       ? {
-          ...(limit !== undefined && { limitAmount: limit }),
+          ...(budget !== undefined && { limitAmount: budget }),
           ...(effectiveRefreshPeriod && {
             refreshPeriod: effectiveRefreshPeriod,
           }),

@@ -15,10 +15,10 @@ export class AiGatewayCreateApiKeyTelemetryClient
     }
   }
 
-  trackCliOptionLimit(limit: number | undefined) {
-    if (limit !== undefined) {
+  trackCliOptionBudget(budget: number | undefined) {
+    if (budget !== undefined) {
       this.trackCliOption({
-        option: 'limit',
+        option: 'budget',
         value: this.redactedValue,
       });
     }

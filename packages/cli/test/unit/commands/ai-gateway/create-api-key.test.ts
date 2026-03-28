@@ -65,7 +65,7 @@ describe('ai-gateway create-api-key', () => {
         'create-api-key',
         '--name',
         'my-key',
-        '--limit',
+        '--budget',
         '500',
         '--refresh-period',
         'monthly',
@@ -96,23 +96,23 @@ describe('ai-gateway create-api-key', () => {
       expect(await exitCodePromise).toBe(1);
     });
 
-    it('fails with negative --limit', async () => {
+    it('fails with negative --budget', async () => {
       useUser();
-      client.setArgv('ai-gateway', 'create-api-key', '--limit', '-5');
+      client.setArgv('ai-gateway', 'create-api-key', '--budget', '-5');
 
       const exitCodePromise = aiGateway(client);
 
-      await expect(client.stderr).toOutput('Limit must be a positive number');
+      await expect(client.stderr).toOutput('Budget must be a positive number');
       expect(await exitCodePromise).toBe(1);
     });
 
-    it('fails with zero --limit', async () => {
+    it('fails with zero --budget', async () => {
       useUser();
-      client.setArgv('ai-gateway', 'create-api-key', '--limit', '0');
+      client.setArgv('ai-gateway', 'create-api-key', '--budget', '0');
 
       const exitCodePromise = aiGateway(client);
 
-      await expect(client.stderr).toOutput('Limit must be a positive number');
+      await expect(client.stderr).toOutput('Budget must be a positive number');
       expect(await exitCodePromise).toBe(1);
     });
   });
