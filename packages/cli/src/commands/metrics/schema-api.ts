@@ -181,21 +181,88 @@ export function getApiDimensionName(
   return dimension?.apiName ?? cliDimension;
 }
 
+function isIdentifierStart(char: string): boolean {
+  return /[A-Za-z_]/.test(char);
+}
+
+function isIdentifierChar(char: string): boolean {
+  return /[A-Za-z0-9_]/.test(char);
+}
+
+function findStringLiteralEnd(input: string, start: number): number {
+  let index = start + 1;
+
+  while (index < input.length) {
+    if (input[index] !== "'") {
+      index += 1;
+      continue;
+    }
+
+    // OData escapes single quotes by doubling them.
+    if (input[index + 1] === "'") {
+      index += 2;
+      continue;
+    }
+
+    return index + 1;
+  }
+
+  return -1;
+}
+
 export function convertFilterToApiNames(
   schema: Schema,
   eventName: string,
   filter: string
 ): string {
-  const dimensions = getDimensions(schema, eventName);
-  // Sort longest-first to avoid partial replacements
-  const sorted = [...dimensions]
-    .filter(d => d.apiName)
-    .sort((a, b) => b.name.length - a.name.length);
+  // Avoid a plain replaceAll() here. Filters can contain quoted literals and
+  // larger identifiers, so a blind string replacement would mutate values like
+  // '/http_status' or names like 'route_identifier' instead of only rewriting
+  // the actual dimension token.
+  const apiNames = new Map(
+    getDimensions(schema, eventName)
+      .filter(d => d.apiName)
+      .map(d => [d.name, d.apiName!])
+  );
 
-  let result = filter;
-  for (const dim of sorted) {
-    result = result.replaceAll(dim.name, dim.apiName!);
+  if (apiNames.size === 0) {
+    return filter;
   }
+
+  let result = '';
+  let index = 0;
+
+  while (index < filter.length) {
+    const char = filter[index];
+
+    // Only rewrite confident identifier tokens. If the filter contains an
+    // malformed string literal, leave it untouched and let the API validate it.
+    if (char === "'") {
+      const end = findStringLiteralEnd(filter, index);
+      if (end === -1) {
+        return filter;
+      }
+      result += filter.slice(index, end);
+      index = end;
+      continue;
+    }
+
+    if (isIdentifierStart(char)) {
+      const start = index;
+      index += 1;
+      while (index < filter.length && isIdentifierChar(filter[index])) {
+        index += 1;
+      }
+
+      const identifier = filter.slice(start, index);
+      result += apiNames.get(identifier) ?? identifier;
+      continue;
+    }
+
+    result += char;
+    index += 1;
+  }
+
   return result;
 }
 
@@ -229,9 +296,10 @@ export async function fetchSchema(
         measures: detail.measures.map(toMeasureSchema),
       };
 
-      const queryEngineEvent = toApiEventName(cliEventName);
-      if (queryEngineEvent !== cliEventName) {
-        schema.queryEngineEvent = queryEngineEvent;
+      if (detail.name !== cliEventName) {
+        // Preserve the exact API event name from the schema response. Rebuilding
+        // it from the CLI name can lose acronym casing like CPUUsage.
+        schema.queryEngineEvent = detail.name;
       }
 
       return [cliEventName, schema] as const;

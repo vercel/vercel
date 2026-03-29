@@ -739,6 +739,30 @@ describe('query', () => {
       expect(exitCode).toBe(0);
       expect(requestBody.filter).toBe('httpStatus ge 500');
     });
+
+    it('should not rewrite dimension names inside quoted strings', async () => {
+      let requestBody: any;
+      client.scenario.post('/v1/observability/query', (req, res) => {
+        requestBody = req.body;
+        res.json({ data: [], summary: [], statistics: {} });
+      });
+      mockLinkedProject();
+      client.setArgv(
+        'metrics',
+        'query',
+        '--event',
+        'vercel.edge_request',
+        '--filter',
+        "contains(route, '/http_status') and http_status ge 500"
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      expect(requestBody.filter).toBe(
+        "contains(route, '/http_status') and httpStatus ge 500"
+      );
+    });
   });
 
   describe('API errors', () => {

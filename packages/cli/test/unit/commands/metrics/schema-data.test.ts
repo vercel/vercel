@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import {
+  fetchSchema,
   getEventNames,
   getEvent,
   getDimensions,
@@ -17,6 +18,7 @@ import {
   toApiEventName,
   type Schema,
 } from '../../../../src/commands/metrics/schema-api';
+import { client } from '../../../mocks/client';
 
 const schema: Schema = {
   'vercel.edge_request': {
@@ -73,6 +75,17 @@ const schema: Schema = {
         defaultAggregation: 'avg',
       },
     ],
+  },
+};
+
+const filterSchema: Schema = {
+  'vercel.edge_request': {
+    description: 'Edge Requests',
+    dimensions: [
+      { name: 'http_status', apiName: 'httpStatus', label: 'HTTP Status' },
+      { name: 'route_id', apiName: 'routeId', label: 'Route ID' },
+    ],
+    measures: [],
   },
 };
 
@@ -180,6 +193,33 @@ describe('schema-data', () => {
       )
     ).toBe('httpStatus ge 500');
   });
+
+  it('should not rewrite dimension names inside quoted strings', () => {
+    expect(
+      convertFilterToApiNames(
+        filterSchema,
+        'vercel.edge_request',
+        "contains(route, '/http_status') and http_status ge 500"
+      )
+    ).toBe("contains(route, '/http_status') and httpStatus ge 500");
+  });
+
+  it('should not rewrite partial identifier matches', () => {
+    expect(
+      convertFilterToApiNames(
+        filterSchema,
+        'vercel.edge_request',
+        "route_id eq 'x' and route_identifier eq 'y'"
+      )
+    ).toBe("routeId eq 'x' and route_identifier eq 'y'");
+  });
+
+  it('should leave malformed quoted filters unchanged', () => {
+    const filter = "http_status eq '500";
+    expect(
+      convertFilterToApiNames(filterSchema, 'vercel.edge_request', filter)
+    ).toBe(filter);
+  });
 });
 
 describe('parseEventMeasure', () => {
@@ -271,5 +311,41 @@ describe('toCliEventName / toApiEventName', () => {
     expect(toApiEventName('vercel.ai_gateway_request')).toBe(
       'aiGatewayRequest'
     );
+  });
+});
+
+describe('fetchSchema', () => {
+  beforeEach(() => {
+    client.reset();
+  });
+
+  it('should preserve the canonical API event name for queries', async () => {
+    client.scenario.get('/v1/observability/schema', (_req, res) => {
+      res.json({
+        events: [{ name: 'CPUUsage', description: 'CPU Usage' }],
+      });
+    });
+
+    client.scenario.get('/v1/observability/schema/CPUUsage', (_req, res) => {
+      res.json({
+        name: 'CPUUsage',
+        description: 'CPU Usage',
+        dimensions: [],
+        measures: [
+          {
+            name: 'count',
+            label: 'Count',
+            unit: 'count',
+            aggregations: ['sum'],
+            defaultAggregation: 'sum',
+          },
+        ],
+      });
+    });
+
+    const fetched = await fetchSchema(client, 'team_dummy');
+
+    expect(fetched).toHaveProperty('vercel.cpu_usage');
+    expect(fetched['vercel.cpu_usage']?.queryEngineEvent).toBe('CPUUsage');
   });
 });
