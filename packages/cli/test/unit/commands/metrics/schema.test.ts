@@ -84,7 +84,7 @@ describe('schema', () => {
       expect(stderrOutput).toContain('Events found');
       expect(stderrOutput).toContain('Event');
       expect(stderrOutput).toContain('Description');
-      expect(stderrOutput).toContain('edgeRequest');
+      expect(stderrOutput).toContain('vercel.edge_request');
     });
 
     it('should output JSON list with --format=json', async () => {
@@ -103,13 +103,13 @@ describe('schema', () => {
 
   describe('event detail', () => {
     it('should output table detail for a known event', async () => {
-      client.setArgv('metrics', 'schema', '--event', 'edgeRequest');
+      client.setArgv('metrics', 'schema', '--event', 'vercel.edge_request');
 
       const exitCode = await schema(client, new MockTelemetry());
 
       expect(exitCode).toBe(0);
       const stderrOutput = client.stderr.getFullOutput();
-      expect(stderrOutput).toContain('Event: edgeRequest');
+      expect(stderrOutput).toContain('Event: vercel.edge_request');
       expect(stderrOutput).toContain('Dimension');
       expect(stderrOutput).toContain('Label');
       expect(stderrOutput).toContain('Measure');
@@ -121,7 +121,7 @@ describe('schema', () => {
         'metrics',
         'schema',
         '--event',
-        'edgeRequest',
+        'vercel.edge_request',
         '--format=json'
       );
 
@@ -130,7 +130,7 @@ describe('schema', () => {
       expect(exitCode).toBe(0);
       const output = client.stdout.getFullOutput();
       const parsed = JSON.parse(output);
-      expect(parsed.event).toBe('edgeRequest');
+      expect(parsed.event).toBe('vercel.edge_request');
       expect(parsed.description).toBeDefined();
       expect(parsed.dimensions).toBeDefined();
       expect(parsed.measures).toBeDefined();
@@ -161,18 +161,18 @@ describe('schema', () => {
       const output = client.stdout.getFullOutput();
       const parsed = JSON.parse(output);
       expect(parsed.error.code).toBe('UNKNOWN_EVENT');
-      expect(parsed.error.allowedValues).toContain('edgeRequest');
+      expect(parsed.error.allowedValues).toContain('vercel.edge_request');
     });
   });
 
   describe('telemetry', () => {
     it('should track event option', async () => {
-      client.setArgv('metrics', 'schema', '--event', 'edgeRequest');
+      client.setArgv('metrics', 'schema', '--event', 'vercel.edge_request');
 
       await schema(client, new MockTelemetry());
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        { key: 'option:event', value: 'edgeRequest' },
+        { key: 'option:event', value: 'vercel.edge_request' },
       ]);
     });
 

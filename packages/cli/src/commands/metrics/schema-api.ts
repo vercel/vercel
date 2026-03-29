@@ -6,11 +6,13 @@ import type { Aggregation } from './types';
 
 export interface DimensionSchema {
   name: string;
+  apiName?: string;
   label: string;
 }
 
 export interface MeasureSchema {
   name: string;
+  apiName?: string;
   label: string;
   unit: string;
   aggregations: Aggregation[];
@@ -82,8 +84,10 @@ export function toCliEventName(apiName: string): string {
 function toMeasureSchema(
   measure: SchemaDetailResponse['measures'][number]
 ): MeasureSchema {
+  const cliName = camelToSnakeCase(measure.name);
   return {
-    name: measure.name,
+    name: cliName,
+    ...(cliName !== measure.name ? { apiName: measure.name } : {}),
     label: measure.label,
     unit: measure.unit,
     aggregations: measure.aggregations as Aggregation[],
@@ -141,6 +145,46 @@ export function getAggregations(
   return measure?.aggregations ?? [];
 }
 
+export function getApiMeasureName(
+  schema: Schema,
+  eventName: string,
+  cliMeasure: string
+): string {
+  const measure = getMeasures(schema, eventName).find(
+    m => m.name === cliMeasure
+  );
+  return measure?.apiName ?? cliMeasure;
+}
+
+export function getApiDimensionName(
+  schema: Schema,
+  eventName: string,
+  cliDimension: string
+): string {
+  const dimension = getDimensions(schema, eventName).find(
+    d => d.name === cliDimension
+  );
+  return dimension?.apiName ?? cliDimension;
+}
+
+export function convertFilterToApiNames(
+  schema: Schema,
+  eventName: string,
+  filter: string
+): string {
+  const dimensions = getDimensions(schema, eventName);
+  // Sort longest-first to avoid partial replacements
+  const sorted = [...dimensions]
+    .filter(d => d.apiName)
+    .sort((a, b) => b.name.length - a.name.length);
+
+  let result = filter;
+  for (const dim of sorted) {
+    result = result.replaceAll(dim.name, dim.apiName!);
+  }
+  return result;
+}
+
 export async function fetchSchema(
   client: Client,
   accountId: string
@@ -160,10 +204,14 @@ export async function fetchSchema(
       const cliEventName = toCliEventName(detail.name);
       const schema: EventSchema = {
         description: detail.description,
-        dimensions: detail.dimensions.map(dimension => ({
-          name: dimension.name,
-          label: dimension.label,
-        })),
+        dimensions: detail.dimensions.map(dimension => {
+          const cliName = camelToSnakeCase(dimension.name);
+          return {
+            name: cliName,
+            ...(cliName !== dimension.name ? { apiName: dimension.name } : {}),
+            label: dimension.label,
+          };
+        }),
         measures: detail.measures.map(toMeasureSchema),
       };
 

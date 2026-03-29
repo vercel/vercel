@@ -16,8 +16,8 @@ describe('output', () => {
     });
 
     it('should return custom column name', () => {
-      expect(getRollupColumnName('requestDurationMs', 'p95')).toBe(
-        'requestDurationMs_p95'
+      expect(getRollupColumnName('request_duration_ms', 'p95')).toBe(
+        'request_duration_ms_p95'
       );
     });
   });
@@ -25,7 +25,7 @@ describe('output', () => {
   describe('formatQueryJson', () => {
     it('should format full JSON response', () => {
       const query: QueryMetadata = {
-        event: 'edgeRequest',
+        event: 'vercel.edge_request',
         measure: 'count',
         aggregation: 'sum',
         groupBy: [],
@@ -68,10 +68,14 @@ describe('output', () => {
   describe('formatSchemaDetailJson', () => {
     it('should format event detail as JSON', () => {
       const event: EventSchema & { name: string } = {
-        name: 'functionExecution',
+        name: 'vercel.function_execution',
         description: 'Serverless function execution details',
         dimensions: [
-          { name: 'httpStatus', label: 'HTTP Status' },
+          {
+            name: 'http_status',
+            apiName: 'httpStatus',
+            label: 'HTTP Status',
+          },
           { name: 'provider', label: 'Provider' },
         ],
         measures: [
@@ -85,7 +89,7 @@ describe('output', () => {
         ],
       };
       const result = JSON.parse(formatSchemaDetailJson(event));
-      expect(result.event).toBe('functionExecution');
+      expect(result.event).toBe('vercel.function_execution');
       expect(result.description).toBe('Serverless function execution details');
       expect(result.dimensions).toHaveLength(2);
       expect(result.dimensions[1]).toEqual({

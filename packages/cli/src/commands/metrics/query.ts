@@ -17,6 +17,9 @@ import {
   getDefaultAggregation,
   getMeasures,
   getQueryEngineEventName,
+  getApiMeasureName,
+  getApiDimensionName,
+  convertFilterToApiNames,
   fetchSchemaOrExit,
 } from './schema-api';
 import {
@@ -332,18 +335,25 @@ export default async function query(
     toGranularityMsFromDuration(granResult.duration)
   );
 
-  // Build request body
+  // Build request body — convert CLI names to API names for the query engine
+  const apiMeasure = getApiMeasureName(schemaData, event, measure);
+  const apiGroupBy = groupBy.map(dim =>
+    getApiDimensionName(schemaData, event, dim)
+  );
+  const apiFilter = filter
+    ? convertFilterToApiNames(schemaData, event, filter)
+    : undefined;
   const rollupColumn = getRollupColumnName(measure, aggregation);
   const body: MetricsQueryRequest = {
     reason: 'agent' as const,
     scope,
     event: getQueryEngineEventName(schemaData, event),
-    rollups: { [rollupColumn]: { measure, aggregation } },
+    rollups: { [rollupColumn]: { measure: apiMeasure, aggregation } },
     startTime: rounded.start.toISOString(),
     endTime: rounded.end.toISOString(),
     granularity: granResult.duration,
-    ...(groupBy.length > 0 ? { groupBy } : {}),
-    ...(filter ? { filter } : {}),
+    ...(apiGroupBy.length > 0 ? { groupBy: apiGroupBy } : {}),
+    ...(apiFilter ? { filter: apiFilter } : {}),
     limit: limit ?? 10,
   };
 
@@ -372,6 +382,26 @@ export default async function query(
     return 1;
   } finally {
     output.stopSpinner();
+  }
+
+  // Rename API groupBy columns back to CLI names in response data
+  if (apiGroupBy.length > 0) {
+    const columnMap = new Map(apiGroupBy.map((api, i) => [api, groupBy[i]]));
+    const renameColumns = (rows: typeof response.data): typeof response.data =>
+      rows?.map(row => {
+        const renamed: Record<string, unknown> = {};
+        for (const [key, value] of Object.entries(row)) {
+          renamed[columnMap.get(key) ?? key] = value;
+        }
+        return renamed as typeof row;
+      });
+    response = {
+      ...response,
+      data: renameColumns(response.data),
+      summary: renameColumns(
+        response.summary as typeof response.data
+      ) as typeof response.summary,
+    };
   }
 
   // Format and output

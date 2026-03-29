@@ -169,7 +169,7 @@ describe('query', () => {
       const output = client.stdout.getFullOutput();
       const parsed = JSON.parse(output);
       expect(parsed.error.code).toBe('UNKNOWN_EVENT');
-      expect(parsed.error.allowedValues).toContain('edgeRequest');
+      expect(parsed.error.allowedValues).toContain('vercel.edge_request');
     });
   });
 
@@ -180,7 +180,7 @@ describe('query', () => {
         'metrics',
         'query',
         '--event',
-        'edgeRequest',
+        'vercel.edge_request',
         '--measure',
         'bogus'
       );
@@ -201,7 +201,7 @@ describe('query', () => {
         'metrics',
         'query',
         '--event',
-        'edgeRequest',
+        'vercel.edge_request',
         '--measure',
         'count',
         '--aggregation',
@@ -225,7 +225,7 @@ describe('query', () => {
         res.json({ data: [], summary: [], statistics: {} });
       });
       mockLinkedProject();
-      client.setArgv('metrics', '--event', 'edgeRequest');
+      client.setArgv('metrics', '--event', 'vercel.edge_request');
 
       const exitCode = await query(client, new MockTelemetry());
 
@@ -245,18 +245,20 @@ describe('query', () => {
         'metrics',
         'query',
         '--event',
-        'functionExecution',
+        'vercel.function_execution',
         '--measure',
-        'requestDurationMs'
+        'request_duration_ms'
       );
 
       const exitCode = await query(client, new MockTelemetry());
 
       expect(exitCode).toBe(0);
-      expect(requestBody.rollups.requestDurationMs_avg.measure).toBe(
+      expect(requestBody.rollups.request_duration_ms_avg.measure).toBe(
         'requestDurationMs'
       );
-      expect(requestBody.rollups.requestDurationMs_avg.aggregation).toBe('avg');
+      expect(requestBody.rollups.request_duration_ms_avg.aggregation).toBe(
+        'avg'
+      );
     });
 
     it('should default to sum for byte measures', async () => {
@@ -270,16 +272,16 @@ describe('query', () => {
         'metrics',
         'query',
         '--event',
-        'edgeRequest',
+        'vercel.edge_request',
         '--measure',
-        'fdtOutBytes'
+        'fdt_out_bytes'
       );
 
       const exitCode = await query(client, new MockTelemetry());
 
       expect(exitCode).toBe(0);
-      expect(requestBody.rollups.fdtOutBytes_sum.measure).toBe('fdtOutBytes');
-      expect(requestBody.rollups.fdtOutBytes_sum.aggregation).toBe('sum');
+      expect(requestBody.rollups.fdt_out_bytes_sum.measure).toBe('fdtOutBytes');
+      expect(requestBody.rollups.fdt_out_bytes_sum.aggregation).toBe('sum');
     });
   });
 
@@ -290,7 +292,7 @@ describe('query', () => {
         'metrics',
         'query',
         '--event',
-        'edgeRequest',
+        'vercel.edge_request',
         '--group-by',
         'bogus'
       );
@@ -312,7 +314,7 @@ describe('query', () => {
         res.json({ data: [], summary: [], statistics: {} });
       });
       mockLinkedProject();
-      client.setArgv('metrics', '--event', 'edgeRequest');
+      client.setArgv('metrics', '--event', 'vercel.edge_request');
 
       const exitCode = await query(client, new MockTelemetry());
 
@@ -336,7 +338,7 @@ describe('query', () => {
         'metrics',
         'query',
         '--event',
-        'edgeRequest',
+        'vercel.edge_request',
         '--project',
         'other-app'
       );
@@ -367,7 +369,7 @@ describe('query', () => {
         'metrics',
         'query',
         '--event',
-        'edgeRequest',
+        'vercel.edge_request',
         '--project',
         'prj_direct'
       );
@@ -394,7 +396,7 @@ describe('query', () => {
         res.json({ data: [], summary: [], statistics: {} });
       });
       mockTeamScope('my-team');
-      client.setArgv('metrics', '--event', 'edgeRequest', '--all');
+      client.setArgv('metrics', '--event', 'vercel.edge_request', '--all');
 
       const exitCode = await query(client, new MockTelemetry());
 
@@ -410,7 +412,7 @@ describe('query', () => {
         'metrics',
         'query',
         '--event',
-        'edgeRequest',
+        'vercel.edge_request',
         '--all',
         '--project',
         'my-app'
@@ -430,7 +432,7 @@ describe('query', () => {
         org: null as any,
         project: null as any,
       });
-      client.setArgv('metrics', '--event', 'edgeRequest');
+      client.setArgv('metrics', '--event', 'vercel.edge_request');
 
       const exitCode = await query(client, new MockTelemetry());
 
@@ -443,7 +445,7 @@ describe('query', () => {
         status: 'error',
         exitCode: 1,
       });
-      client.setArgv('metrics', '--event', 'edgeRequest');
+      client.setArgv('metrics', '--event', 'vercel.edge_request');
 
       const exitCode = await query(client, new MockTelemetry());
 
@@ -456,7 +458,7 @@ describe('query', () => {
         team: null,
         user: { id: 'user_dummy' } as any,
       });
-      client.setArgv('metrics', '--event', 'edgeRequest', '--all');
+      client.setArgv('metrics', '--event', 'vercel.edge_request', '--all');
 
       const exitCode = await query(client, new MockTelemetry());
 
@@ -474,7 +476,7 @@ describe('query', () => {
         'metrics',
         'query',
         '--event',
-        'edgeRequest',
+        'vercel.edge_request',
         '--project',
         'my-app'
       );
@@ -502,7 +504,7 @@ describe('query', () => {
         'metrics',
         'query',
         '--event',
-        'edgeRequest',
+        'vercel.edge_request',
         '--project',
         'other-app'
       );
@@ -531,7 +533,7 @@ describe('query', () => {
         });
       });
       mockLinkedProject();
-      client.setArgv('metrics', '--event', 'edgeRequest');
+      client.setArgv('metrics', '--event', 'vercel.edge_request');
 
       const exitCode = await query(client, new MockTelemetry());
 
@@ -565,16 +567,16 @@ describe('query', () => {
         'metrics',
         'query',
         '--event',
-        'edgeRequest',
+        'vercel.edge_request',
         '--group-by',
-        'httpStatus'
+        'http_status'
       );
 
       const exitCode = await query(client, new MockTelemetry());
 
       expect(exitCode).toBe(0);
       const output = client.stdout.getFullOutput();
-      expect(output).toContain('httpStatus');
+      expect(output).toContain('http_status');
       expect(output).toContain('sparklines:');
       expect(output).toContain('> Groups:');
     });
@@ -584,7 +586,7 @@ describe('query', () => {
         res.json({ data: [], summary: [], statistics: {} });
       });
       mockLinkedProject();
-      client.setArgv('metrics', '--event', 'edgeRequest');
+      client.setArgv('metrics', '--event', 'vercel.edge_request');
 
       const exitCode = await query(client, new MockTelemetry());
 
@@ -610,7 +612,7 @@ describe('query', () => {
         'metrics',
         'query',
         '--event',
-        'edgeRequest',
+        'vercel.edge_request',
         '--format=json'
       );
 
@@ -619,7 +621,7 @@ describe('query', () => {
       expect(exitCode).toBe(0);
       const output = client.stdout.getFullOutput();
       const parsed = JSON.parse(output);
-      expect(parsed.query.event).toBe('edgeRequest');
+      expect(parsed.query.event).toBe('vercel.edge_request');
       expect(parsed.data).toHaveLength(1);
       expect(parsed.summary).toHaveLength(1);
       expect(parsed.statistics).toBeDefined();
@@ -638,7 +640,7 @@ describe('query', () => {
         'metrics',
         'query',
         '--event',
-        'edgeRequest',
+        'vercel.edge_request',
         '--limit',
         '50'
       );
@@ -662,9 +664,9 @@ describe('query', () => {
         'metrics',
         'query',
         '--event',
-        'edgeRequest',
+        'vercel.edge_request',
         '--filter',
-        'httpStatus ge 500'
+        'http_status ge 500'
       );
 
       const exitCode = await query(client, new MockTelemetry());
@@ -680,7 +682,7 @@ describe('query', () => {
         res.status(402).json({ error: { code: 'PAYMENT_REQUIRED' } });
       });
       mockLinkedProject();
-      client.setArgv('metrics', '--event', 'edgeRequest');
+      client.setArgv('metrics', '--event', 'vercel.edge_request');
 
       const exitCode = await query(client, new MockTelemetry());
 
@@ -695,7 +697,7 @@ describe('query', () => {
         res.status(403).json({ error: { code: 'FORBIDDEN' } });
       });
       mockLinkedProject();
-      client.setArgv('metrics', '--event', 'edgeRequest');
+      client.setArgv('metrics', '--event', 'vercel.edge_request');
 
       const exitCode = await query(client, new MockTelemetry());
 
@@ -708,7 +710,7 @@ describe('query', () => {
         res.status(500).json({ error: { code: 'INTERNAL_ERROR' } });
       });
       mockLinkedProject();
-      client.setArgv('metrics', '--event', 'edgeRequest');
+      client.setArgv('metrics', '--event', 'vercel.edge_request');
 
       const exitCode = await query(client, new MockTelemetry());
 
@@ -723,7 +725,7 @@ describe('query', () => {
           .json({ error: { code: 'BAD_REQUEST', message: 'Invalid query' } });
       });
       mockLinkedProject();
-      client.setArgv('metrics', '--event', 'edgeRequest');
+      client.setArgv('metrics', '--event', 'vercel.edge_request');
 
       const exitCode = await query(client, new MockTelemetry());
 
@@ -740,7 +742,7 @@ describe('query', () => {
         'metrics',
         'query',
         '--event',
-        'edgeRequest',
+        'vercel.edge_request',
         '--format=json'
       );
 
@@ -757,12 +759,12 @@ describe('query', () => {
     it('should track event option', async () => {
       mockApiSuccess();
       mockLinkedProject();
-      client.setArgv('metrics', '--event', 'edgeRequest');
+      client.setArgv('metrics', '--event', 'vercel.edge_request');
 
       await query(client, new MockTelemetry());
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        { key: 'option:event', value: 'edgeRequest' },
+        { key: 'option:event', value: 'vercel.edge_request' },
       ]);
     });
 
@@ -773,16 +775,16 @@ describe('query', () => {
         'metrics',
         'query',
         '--event',
-        'edgeRequest',
+        'vercel.edge_request',
         '--measure',
-        'requestDurationMs'
+        'request_duration_ms'
       );
 
       await query(client, new MockTelemetry());
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        { key: 'option:event', value: 'edgeRequest' },
-        { key: 'option:measure', value: 'requestDurationMs' },
+        { key: 'option:event', value: 'vercel.edge_request' },
+        { key: 'option:measure', value: 'request_duration_ms' },
       ]);
     });
 
@@ -793,9 +795,9 @@ describe('query', () => {
         'metrics',
         'query',
         '--event',
-        'edgeRequest',
+        'vercel.edge_request',
         '--measure',
-        'requestDurationMs',
+        'request_duration_ms',
         '--aggregation',
         'p95'
       );
@@ -803,8 +805,8 @@ describe('query', () => {
       await query(client, new MockTelemetry());
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        { key: 'option:event', value: 'edgeRequest' },
-        { key: 'option:measure', value: 'requestDurationMs' },
+        { key: 'option:event', value: 'vercel.edge_request' },
+        { key: 'option:measure', value: 'request_duration_ms' },
         { key: 'option:aggregation', value: 'p95' },
       ]);
     });
@@ -816,16 +818,16 @@ describe('query', () => {
         'metrics',
         'query',
         '--event',
-        'edgeRequest',
+        'vercel.edge_request',
         '--group-by',
-        'httpStatus'
+        'http_status'
       );
 
       await query(client, new MockTelemetry());
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        { key: 'option:event', value: 'edgeRequest' },
-        { key: 'option:group-by', value: 'httpStatus' },
+        { key: 'option:event', value: 'vercel.edge_request' },
+        { key: 'option:group-by', value: 'http_status' },
       ]);
     });
 
@@ -836,7 +838,7 @@ describe('query', () => {
         'metrics',
         'query',
         '--event',
-        'edgeRequest',
+        'vercel.edge_request',
         '--limit',
         '50'
       );
@@ -844,7 +846,7 @@ describe('query', () => {
       await query(client, new MockTelemetry());
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        { key: 'option:event', value: 'edgeRequest' },
+        { key: 'option:event', value: 'vercel.edge_request' },
         { key: 'option:limit', value: '[REDACTED]' },
       ]);
     });
@@ -856,15 +858,15 @@ describe('query', () => {
         'metrics',
         'query',
         '--event',
-        'edgeRequest',
+        'vercel.edge_request',
         '--filter',
-        'httpStatus ge 500'
+        'http_status ge 500'
       );
 
       await query(client, new MockTelemetry());
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        { key: 'option:event', value: 'edgeRequest' },
+        { key: 'option:event', value: 'vercel.edge_request' },
         { key: 'option:filter', value: '[REDACTED]' },
       ]);
     });
@@ -872,12 +874,12 @@ describe('query', () => {
     it('should track --all flag', async () => {
       mockApiSuccess();
       mockTeamScope();
-      client.setArgv('metrics', '--event', 'edgeRequest', '--all');
+      client.setArgv('metrics', '--event', 'vercel.edge_request', '--all');
 
       await query(client, new MockTelemetry());
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        { key: 'option:event', value: 'edgeRequest' },
+        { key: 'option:event', value: 'vercel.edge_request' },
         { key: 'flag:all', value: 'TRUE' },
       ]);
     });
@@ -889,14 +891,14 @@ describe('query', () => {
         'metrics',
         'query',
         '--event',
-        'edgeRequest',
+        'vercel.edge_request',
         '--format=json'
       );
 
       await query(client, new MockTelemetry());
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        { key: 'option:event', value: 'edgeRequest' },
+        { key: 'option:event', value: 'vercel.edge_request' },
         { key: 'option:format', value: 'json' },
       ]);
     });
@@ -908,7 +910,7 @@ describe('query', () => {
         'metrics',
         'query',
         '--event',
-        'edgeRequest',
+        'vercel.edge_request',
         '--granularity',
         '5m'
       );
@@ -916,7 +918,7 @@ describe('query', () => {
       await query(client, new MockTelemetry());
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        { key: 'option:event', value: 'edgeRequest' },
+        { key: 'option:event', value: 'vercel.edge_request' },
         { key: 'option:granularity', value: '5m' },
       ]);
     });
@@ -929,7 +931,7 @@ describe('query', () => {
         'metrics',
         'query',
         '--event',
-        'edgeRequest',
+        'vercel.edge_request',
         '--project',
         'my-app'
       );
@@ -937,7 +939,7 @@ describe('query', () => {
       await query(client, new MockTelemetry());
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        { key: 'option:event', value: 'edgeRequest' },
+        { key: 'option:event', value: 'vercel.edge_request' },
         { key: 'option:project', value: '[REDACTED]' },
       ]);
     });
@@ -955,13 +957,13 @@ describe('query', () => {
         'metrics',
         'query',
         '--event',
-        'edgeRequest',
+        'vercel.edge_request',
         '--measure',
-        'requestDurationMs',
+        'request_duration_ms',
         '--aggregation',
         'p95',
         '--group-by',
-        'httpStatus',
+        'http_status',
         '--since',
         '2025-01-15T00:00:00Z',
         '--until',
@@ -975,10 +977,12 @@ describe('query', () => {
       expect(exitCode).toBe(0);
       expect(requestBody.reason).toBe('agent');
       expect(requestBody.event).toBe('incomingRequest');
-      expect(requestBody.rollups.requestDurationMs_p95.measure).toBe(
+      expect(requestBody.rollups.request_duration_ms_p95.measure).toBe(
         'requestDurationMs'
       );
-      expect(requestBody.rollups.requestDurationMs_p95.aggregation).toBe('p95');
+      expect(requestBody.rollups.request_duration_ms_p95.aggregation).toBe(
+        'p95'
+      );
       expect(requestBody.groupBy).toEqual(['httpStatus']);
       expect(requestBody.granularity).toEqual({ minutes: 15 });
     });

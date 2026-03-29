@@ -24,11 +24,11 @@ export const schemaSubcommand = {
     },
     {
       name: 'Show event details',
-      value: `${packageName} metrics schema -e functionExecution`,
+      value: `${packageName} metrics schema -e vercel.function_execution`,
     },
     {
       name: 'Schema as JSON for agents',
-      value: `${packageName} metrics schema -e edgeRequest --format=json`,
+      value: `${packageName} metrics schema -e vercel.edge_request --format=json`,
     },
   ],
 } as const;
@@ -59,7 +59,8 @@ export const metricsCommand = {
       shorthand: 'e',
       type: String,
       deprecated: false,
-      description: 'Event type to query (e.g., edgeRequest, functionExecution)',
+      description:
+        'Event type to query (e.g., vercel.function_execution, vercel.edge_request)',
       argument: 'NAME',
     },
     {
@@ -148,23 +149,23 @@ export const metricsCommand = {
   examples: [
     {
       name: '5xx errors by error code in the last hour',
-      value: `${packageName} metrics -e functionExecution -f "httpStatus ge 500" --group-by errorCode --since 1h`,
+      value: `${packageName} metrics -e vercel.function_execution -f "http_status ge 500" --group-by error_code --since 1h`,
     },
     {
       name: 'Function invocations by HTTP status code',
-      value: `${packageName} metrics -e functionExecution --group-by httpStatus --since 6h`,
+      value: `${packageName} metrics -e vercel.function_execution --group-by http_status --since 6h`,
     },
     {
       name: 'Function duration by route',
-      value: `${packageName} metrics -e functionExecution -m functionDurationMs -a avg --group-by route --since 1h`,
+      value: `${packageName} metrics -e vercel.function_execution -m function_duration_ms -a avg --group-by route --since 1h`,
     },
     {
       name: 'AI Gateway costs by provider',
-      value: `${packageName} metrics -e aiGatewayRequest -m cost -a sum --group-by aiProvider --since 7d`,
+      value: `${packageName} metrics -e vercel.ai_gateway_request -m cost -a sum --group-by ai_provider --since 7d`,
     },
     {
       name: 'Core Web Vitals (LCP) by route',
-      value: `${packageName} metrics -e speedInsightsMetric -m lcp -a p75 --group-by route --since 7d`,
+      value: `${packageName} metrics -e vercel.speed_insights_metric -m lcp -a p75 --group-by route --since 7d`,
     },
     {
       name: 'List available events',
@@ -172,15 +173,15 @@ export const metricsCommand = {
     },
     {
       name: 'Function executions matching a path pattern',
-      value: `${packageName} metrics -e functionExecution -f "contains(requestPath, '/api')" --group-by route --since 1h`,
+      value: `${packageName} metrics -e vercel.function_execution -f "contains(request_path, '/api')" --group-by route --since 1h`,
     },
     {
       name: 'Show schema for an event',
-      value: `${packageName} metrics schema -e edgeRequest`,
+      value: `${packageName} metrics schema -e vercel.edge_request`,
     },
     {
       name: 'Team-wide function executions by project',
-      value: `${packageName} metrics --all -e functionExecution --group-by projectId --since 24h`,
+      value: `${packageName} metrics --all -e vercel.function_execution --group-by project_id --since 24h`,
     },
   ],
 } as const;

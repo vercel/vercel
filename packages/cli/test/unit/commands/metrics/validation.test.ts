@@ -10,11 +10,11 @@ import {
 import type { Schema } from '../../../../src/commands/metrics/schema-api';
 
 const schema: Schema = {
-  edgeRequest: {
+  'vercel.edge_request': {
     description: 'Edge Requests',
     queryEngineEvent: 'incomingRequest',
     dimensions: [
-      { name: 'httpStatus', label: 'HTTP Status' },
+      { name: 'http_status', apiName: 'httpStatus', label: 'HTTP Status' },
       { name: 'route', label: 'Route' },
     ],
     measures: [
@@ -26,7 +26,8 @@ const schema: Schema = {
         defaultAggregation: 'sum',
       },
       {
-        name: 'requestDurationMs',
+        name: 'request_duration_ms',
+        apiName: 'requestDurationMs',
         label: 'Request Duration',
         unit: 'milliseconds',
         aggregations: ['avg', 'p95'],
@@ -34,8 +35,9 @@ const schema: Schema = {
       },
     ],
   },
-  functionExecution: {
+  'vercel.function_execution': {
     description: 'Functions',
+    queryEngineEvent: 'functionExecution',
     dimensions: [{ name: 'route', label: 'Route' }],
     measures: [
       {
@@ -52,7 +54,9 @@ const schema: Schema = {
 describe('validation', () => {
   describe('validateEvent', () => {
     it('should pass for known event', () => {
-      expect(validateEvent(schema, 'edgeRequest')).toEqual({ valid: true });
+      expect(validateEvent(schema, 'vercel.edge_request')).toEqual({
+        valid: true,
+      });
     });
 
     it('should fail for unknown event with available list', () => {
@@ -60,26 +64,26 @@ describe('validation', () => {
       expect(result.valid).toBe(false);
       if (!result.valid) {
         expect(result.code).toBe('UNKNOWN_EVENT');
-        expect(result.allowedValues).toContain('edgeRequest');
-        expect(result.allowedValues).toContain('functionExecution');
+        expect(result.allowedValues).toContain('vercel.edge_request');
+        expect(result.allowedValues).toContain('vercel.function_execution');
       }
     });
   });
 
   describe('validateMeasure', () => {
     it('should pass for valid measure', () => {
-      expect(validateMeasure(schema, 'edgeRequest', 'count')).toEqual({
+      expect(validateMeasure(schema, 'vercel.edge_request', 'count')).toEqual({
         valid: true,
       });
     });
 
     it('should fail for unknown measure with available list', () => {
-      const result = validateMeasure(schema, 'edgeRequest', 'latency');
+      const result = validateMeasure(schema, 'vercel.edge_request', 'latency');
       expect(result.valid).toBe(false);
       if (!result.valid) {
         expect(result.code).toBe('UNKNOWN_MEASURE');
         expect(result.allowedValues).toContain('count');
-        expect(result.allowedValues).toContain('requestDurationMs');
+        expect(result.allowedValues).toContain('request_duration_ms');
       }
     });
   });
@@ -87,12 +91,17 @@ describe('validation', () => {
   describe('validateAggregation', () => {
     it('should pass for valid aggregation on count', () => {
       expect(
-        validateAggregation(schema, 'edgeRequest', 'count', 'sum')
+        validateAggregation(schema, 'vercel.edge_request', 'count', 'sum')
       ).toEqual({ valid: true, value: 'sum' });
     });
 
     it('should fail for invalid aggregation', () => {
-      const result = validateAggregation(schema, 'edgeRequest', 'count', 'p95');
+      const result = validateAggregation(
+        schema,
+        'vercel.edge_request',
+        'count',
+        'p95'
+      );
       expect(result.valid).toBe(false);
       if (!result.valid) {
         expect(result.code).toBe('INVALID_AGGREGATION');
@@ -104,16 +113,16 @@ describe('validation', () => {
   describe('validateGroupBy', () => {
     it('should pass for valid dimensions', () => {
       expect(
-        validateGroupBy(schema, 'edgeRequest', ['httpStatus', 'route'])
+        validateGroupBy(schema, 'vercel.edge_request', ['http_status', 'route'])
       ).toEqual({ valid: true });
     });
 
     it('should fail for unknown dimension with available list', () => {
-      const result = validateGroupBy(schema, 'edgeRequest', ['bogus']);
+      const result = validateGroupBy(schema, 'vercel.edge_request', ['bogus']);
       expect(result.valid).toBe(false);
       if (!result.valid) {
         expect(result.code).toBe('UNKNOWN_DIMENSION');
-        expect(result.allowedValues).toContain('httpStatus');
+        expect(result.allowedValues).toContain('http_status');
       }
     });
   });
@@ -150,9 +159,9 @@ describe('validation', () => {
 
   describe('validateRequiredEvent', () => {
     it('should pass when event is provided', () => {
-      expect(validateRequiredEvent('edgeRequest')).toEqual({
+      expect(validateRequiredEvent('vercel.edge_request')).toEqual({
         valid: true,
-        value: 'edgeRequest',
+        value: 'vercel.edge_request',
       });
     });
 
