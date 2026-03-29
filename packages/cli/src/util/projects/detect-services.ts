@@ -29,14 +29,21 @@ export async function isExperimentalServicesEnabled(
 }
 
 async function hasExperimentalServicesConfig(cwd: string): Promise<boolean> {
-  const config = await readJSONFile<Record<string, unknown>>(
-    join(cwd, 'vercel.json')
-  );
-  if (!config || config instanceof Error) return false;
-  return (
-    config.experimentalServices != null &&
-    typeof config.experimentalServices === 'object'
-  );
+  try {
+    const compileResult = await compileVercelConfig(cwd);
+    if (!compileResult.configPath) return false;
+
+    const config = await readJSONFile<Record<string, unknown>>(
+      compileResult.configPath
+    );
+    if (!config || config instanceof Error) return false;
+    return (
+      config.experimentalServices != null &&
+      typeof config.experimentalServices === 'object'
+    );
+  } catch {
+    return false;
+  }
 }
 
 /**
