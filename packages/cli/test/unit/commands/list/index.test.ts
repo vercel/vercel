@@ -651,6 +651,7 @@ describe('list', () => {
     });
 
     it('should output empty deployments array as JSON when no deployments', async () => {
+      const user = useUser();
       useProject({
         ...defaultProject,
         id: 'with-team',
@@ -671,6 +672,7 @@ describe('list', () => {
       expect(jsonOutput).toEqual({
         deployments: [],
         pagination: undefined,
+        contextName: user.username,
       });
     });
 
