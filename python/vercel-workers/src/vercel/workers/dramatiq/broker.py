@@ -10,7 +10,7 @@ from ..client import send
 
 try:
     from dramatiq.broker import Broker, Consumer, MessageProxy
-    from dramatiq.common import current_millis, dq_name
+    from dramatiq.common import current_millis
     from dramatiq.message import Message
 except Exception as e:
     raise RuntimeError(
@@ -278,11 +278,11 @@ class VercelQueuesBroker(Broker):
         """
         queue_name = message.queue_name
 
-        # Handle delay queues (Dramatiq uses separate delay queues)
+        # Handle delayed messages. Usually Dramatiq uses separate
+        # ".DQ" delay queues, but Vercel Queues handles delays natively
+        # via eta, so no need for a separate queue name.
         if delay is not None and delay > 0:
-            queue_name = dq_name(queue_name)
             message = message.copy(
-                queue_name=queue_name,
                 options={
                     **message.options,
                     "eta": current_millis() + delay,
@@ -348,8 +348,11 @@ class VercelQueuesBroker(Broker):
         return self._queues.copy()
 
     def get_declared_delay_queues(self) -> set[str]:
-        """Get the set of declared delay queue names."""
-        return {dq_name(q) for q in self._queues}
+        """Get the set of declared delay queue names.
+
+        Note: Vercel Queues handles delays natively using the original queue.
+        """
+        return set()
 
     def join(self, queue_name: str, *, timeout: int | None = None) -> None:
         """
