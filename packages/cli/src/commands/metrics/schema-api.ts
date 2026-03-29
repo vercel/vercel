@@ -57,12 +57,26 @@ interface SchemaDetailResponse {
   }>;
 }
 
+export function camelToSnakeCase(str: string): string {
+  return str
+    .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
+    .replace(/([A-Z]+)([A-Z][a-z])/g, '$1_$2')
+    .toLowerCase();
+}
+
+export function snakeToCamelCase(str: string): string {
+  return str.replace(/_([a-z])/g, (_, ch) => ch.toUpperCase());
+}
+
 export function toApiEventName(cliName: string): string {
-  return EVENT_ALIASES[cliName] ?? cliName;
+  const withoutPrefix = cliName.replace(/^vercel\./, '');
+  const camel = snakeToCamelCase(withoutPrefix);
+  return EVENT_ALIASES[camel] ?? camel;
 }
 
 export function toCliEventName(apiName: string): string {
-  return REVERSE_ALIASES[apiName] ?? apiName;
+  const aliased = REVERSE_ALIASES[apiName] ?? apiName;
+  return `vercel.${camelToSnakeCase(aliased)}`;
 }
 
 function toMeasureSchema(
