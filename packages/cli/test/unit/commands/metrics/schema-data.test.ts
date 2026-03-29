@@ -10,6 +10,7 @@ import {
   getApiMeasureName,
   getApiDimensionName,
   convertFilterToApiNames,
+  parseEventMeasure,
   camelToSnakeCase,
   snakeToCamelCase,
   toCliEventName,
@@ -178,6 +179,34 @@ describe('schema-data', () => {
         'http_status ge 500'
       )
     ).toBe('httpStatus ge 500');
+  });
+});
+
+describe('parseEventMeasure', () => {
+  it('should return event only when no measure is embedded', () => {
+    expect(parseEventMeasure('vercel.edge_request')).toEqual({
+      event: 'vercel.edge_request',
+    });
+  });
+
+  it('should extract embedded measure from third segment', () => {
+    expect(parseEventMeasure('vercel.edge_request.count')).toEqual({
+      event: 'vercel.edge_request',
+      measure: 'count',
+    });
+  });
+
+  it('should handle multi-word measure names', () => {
+    expect(
+      parseEventMeasure('vercel.edge_request.request_duration_ms')
+    ).toEqual({
+      event: 'vercel.edge_request',
+      measure: 'request_duration_ms',
+    });
+  });
+
+  it('should pass through non-prefixed input unchanged', () => {
+    expect(parseEventMeasure('bogus')).toEqual({ event: 'bogus' });
   });
 });
 

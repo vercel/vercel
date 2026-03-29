@@ -156,8 +156,8 @@ export const metricsCommand = {
       value: `${packageName} metrics -e vercel.function_execution --group-by http_status --since 6h`,
     },
     {
-      name: 'Function duration by route',
-      value: `${packageName} metrics -e vercel.function_execution -m function_duration_ms -a avg --group-by route --since 1h`,
+      name: 'Function duration by route (shorthand)',
+      value: `${packageName} metrics -e vercel.function_execution.function_duration_ms -a avg --group-by route --since 1h`,
     },
     {
       name: 'AI Gateway costs by provider',

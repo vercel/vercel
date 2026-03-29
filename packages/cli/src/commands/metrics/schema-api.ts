@@ -81,6 +81,20 @@ export function toCliEventName(apiName: string): string {
   return `vercel.${camelToSnakeCase(aliased)}`;
 }
 
+export function parseEventMeasure(input: string): {
+  event: string;
+  measure?: string;
+} {
+  const parts = input.split('.');
+  if (parts.length >= 3 && parts[0] === 'vercel') {
+    return {
+      event: `${parts[0]}.${parts[1]}`,
+      measure: parts.slice(2).join('.'),
+    };
+  }
+  return { event: input };
+}
+
 function toMeasureSchema(
   measure: SchemaDetailResponse['measures'][number]
 ): MeasureSchema {

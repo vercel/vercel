@@ -20,6 +20,7 @@ import {
   getApiMeasureName,
   getApiDimensionName,
   convertFilterToApiNames,
+  parseEventMeasure,
   fetchSchemaOrExit,
 } from './schema-api';
 import {
@@ -221,7 +222,7 @@ export default async function query(
 
   // Extract raw flag values
   const eventFlag = flags['--event'];
-  const measure = flags['--measure'] ?? 'count';
+  const measureFlag = flags['--measure'];
   const aggregationFlag = flags['--aggregation'];
   const groupBy = flags['--group-by'] ?? [];
   const limit = flags['--limit'];
@@ -234,7 +235,7 @@ export default async function query(
 
   // Track telemetry
   telemetry.trackCliOptionEvent(eventFlag);
-  telemetry.trackCliOptionMeasure(flags['--measure']);
+  telemetry.trackCliOptionMeasure(measureFlag);
   telemetry.trackCliOptionAggregation(aggregationFlag);
   telemetry.trackCliOptionGroupBy(groupBy.length > 0 ? groupBy : undefined);
   telemetry.trackCliOptionLimit(limit);
@@ -251,7 +252,24 @@ export default async function query(
   if (!requiredResult.valid) {
     return handleValidationError(requiredResult, jsonOutput, client);
   }
-  const event = requiredResult.value;
+
+  // Parse embedded measure from event (e.g. vercel.edge_request.count)
+  const parsed = parseEventMeasure(requiredResult.value);
+  const event = parsed.event;
+
+  if (parsed.measure && measureFlag) {
+    const errMsg =
+      'Cannot specify --measure when the event already includes a measure. ' +
+      `Use either "--event ${parsed.event} --measure ${measureFlag}" or "--event ${requiredResult.value}".`;
+    if (jsonOutput) {
+      client.stdout.write(formatErrorJson('MEASURE_CONFLICT', errMsg));
+    } else {
+      output.error(errMsg);
+    }
+    return 1;
+  }
+
+  const measure = parsed.measure ?? measureFlag ?? 'count';
 
   // Validate mutual exclusivity
   const mutualResult = validateMutualExclusivity(all, project);

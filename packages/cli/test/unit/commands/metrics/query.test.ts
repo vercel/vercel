@@ -285,6 +285,71 @@ describe('query', () => {
     });
   });
 
+  describe('embedded measure in --event', () => {
+    it('should resolve event and measure from shorthand', async () => {
+      let requestBody: any;
+      client.scenario.post('/v1/observability/query', (req, res) => {
+        requestBody = req.body;
+        res.json({ data: [], summary: [], statistics: {} });
+      });
+      mockLinkedProject();
+      client.setArgv(
+        'metrics',
+        '--event',
+        'vercel.edge_request.request_duration_ms',
+        '--aggregation',
+        'avg'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      expect(requestBody.rollups.request_duration_ms_avg.measure).toBe(
+        'requestDurationMs'
+      );
+      expect(requestBody.rollups.request_duration_ms_avg.aggregation).toBe(
+        'avg'
+      );
+    });
+
+    it('should error when both embedded measure and --measure are provided', async () => {
+      mockLinkedProject();
+      client.setArgv(
+        'metrics',
+        '--event',
+        'vercel.edge_request.count',
+        '--measure',
+        'request_duration_ms'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(1);
+      expect(client.stderr.getFullOutput()).toContain(
+        'Cannot specify --measure when the event already includes a measure'
+      );
+    });
+
+    it('should return JSON error for conflict with --format=json', async () => {
+      mockLinkedProject();
+      client.setArgv(
+        'metrics',
+        '--event',
+        'vercel.edge_request.count',
+        '--measure',
+        'request_duration_ms',
+        '--format=json'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(1);
+      const output = client.stdout.getFullOutput();
+      const parsed = JSON.parse(output);
+      expect(parsed.error.code).toBe('MEASURE_CONFLICT');
+    });
+  });
+
   describe('unknown dimension', () => {
     it('should return error with --group-by bogus', async () => {
       mockLinkedProject();
