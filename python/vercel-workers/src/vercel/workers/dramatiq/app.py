@@ -11,11 +11,10 @@ from ..asgi import build_asgi_app
 from ..exceptions import VQSError
 from ..wsgi import build_wsgi_app, status_reason
 from .broker import VercelQueuesBroker, _envelope_to_message
+from .worker import execute_message
 
 try:
-    import dramatiq
     from dramatiq.common import current_millis
-    from dramatiq.message import Message
 except Exception as e:
     raise RuntimeError(
         "dramatiq is required to use vercel.workers.dramatiq. "
@@ -119,31 +118,6 @@ def _retry_delay_ms(cfg: DramatiqWorkerConfig, attempt: int) -> int:
     return int(max(0, min(float(cfg.max_retry_delay_ms), delay)))
 
 
-def _execute_message(broker: VercelQueuesBroker, message: Message) -> dict[str, Any]:
-    """
-    Execute a Dramatiq message.
-
-    Returns:
-        {"ack": True} on success
-        {"timeoutSeconds": N} for retry
-    """
-    actor = broker.get_actor(message.actor_name)
-    if actor is None:
-        raise LookupError(f"Dramatiq actor not found: {message.actor_name!r}")
-
-    try:
-        # Execute the actor function directly
-        # Note: In a full implementation, we'd use Dramatiq's middleware pipeline
-        actor(*message.args, **message.kwargs)
-        return {"ack": True}
-    except dramatiq.Retry as exc:
-        # Handle retry with delay
-        delay = getattr(exc, "delay", None)
-        if delay is not None:
-            return {"timeoutSeconds": int(delay / 1000)}
-        return {"timeoutSeconds": 60}  # Default retry delay
-
-
 def handle_queue_callback(
     broker: VercelQueuesBroker,
     raw_body: bytes,
@@ -224,7 +198,7 @@ def handle_queue_callback(
 
         try:
             # Execute the task
-            outcome = _execute_message(broker, dramatiq_message)
+            outcome = execute_message(broker, dramatiq_message)
             timeout_seconds = outcome.get("timeoutSeconds")
 
             if timeout_seconds is not None:

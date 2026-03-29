@@ -22,6 +22,7 @@ from vercel.workers.dramatiq.broker import (
     _envelope_to_message,
     _message_to_envelope,
 )
+from vercel.workers.dramatiq.worker import execute_message
 
 
 class TestVercelQueuesBrokerOptions:
@@ -298,3 +299,112 @@ class TestActorIntegration:
         assert envelope["vercel"]["kind"] == "dramatiq"
         assert envelope["actor_name"] == "add_numbers_test"
         assert envelope["args"] == [10, 20]
+
+
+class TestMiddlewarePipeline:
+    def test_middleware_called_on_success(self):
+        mw = MagicMock(spec=dramatiq.Middleware)
+        mw.actor_options = set()
+        mw.ephemeral_options = set()
+        broker = VercelQueuesBroker(middleware=[mw])
+
+        @dramatiq.actor(broker=broker, queue_name="test-mw")
+        def mw_test_actor(x):
+            return x * 2
+
+        message = Message(
+            queue_name="test-mw",
+            actor_name="mw_test_actor",
+            args=(5,),
+            kwargs={},
+            options={},
+        )
+
+        result = execute_message(broker, message)
+        assert result == {"ack": True}
+
+        mw.before_process_message.assert_called_once()
+        mw.after_process_message.assert_called_once()
+
+        call_kwargs = mw.after_process_message.call_args
+        assert call_kwargs.kwargs["result"] == 10
+        assert "exception" not in call_kwargs.kwargs
+
+    def test_middleware_called_on_failure(self):
+        mw = MagicMock(spec=dramatiq.Middleware)
+        mw.actor_options = set()
+        mw.ephemeral_options = set()
+        broker = VercelQueuesBroker(middleware=[mw])
+
+        @dramatiq.actor(broker=broker, queue_name="test-mw")
+        def failing_actor():
+            raise RuntimeError("test")
+
+        message = Message(
+            queue_name="test-mw",
+            actor_name="failing_actor",
+            args=(),
+            kwargs={},
+            options={},
+        )
+
+        with pytest.raises(RuntimeError, match="test"):
+            execute_message(broker, message)
+
+        mw.before_process_message.assert_called_once()
+        mw.after_process_message.assert_called_once()
+
+        call_kwargs = mw.after_process_message.call_args
+        assert isinstance(call_kwargs.kwargs["exception"], RuntimeError)
+
+    def test_middleware_skip_message(self):
+        mw = MagicMock(spec=dramatiq.Middleware)
+        mw.actor_options = set()
+        mw.ephemeral_options = set()
+        mw.before_process_message.side_effect = dramatiq.middleware.SkipMessage()
+        broker = VercelQueuesBroker(middleware=[mw])
+
+        @dramatiq.actor(broker=broker, queue_name="test-mw")
+        def skippable_actor():
+            raise AssertionError("should not be called")
+
+        message = Message(
+            queue_name="test-mw",
+            actor_name="skippable_actor",
+            args=(),
+            kwargs={},
+            options={},
+        )
+
+        result = execute_message(broker, message)
+
+        assert result == {"ack": True}
+        mw.before_process_message.assert_called_once()
+        mw.after_skip_message.assert_called_once()
+        mw.after_process_message.assert_not_called()
+
+    def test_middleware_called_on_retry(self):
+        mw = MagicMock(spec=dramatiq.Middleware)
+        mw.actor_options = set()
+        mw.ephemeral_options = set()
+        broker = VercelQueuesBroker(middleware=[mw])
+
+        @dramatiq.actor(broker=broker, queue_name="test-mw")
+        def retrying_actor():
+            raise dramatiq.Retry(delay=5000)
+
+        message = Message(
+            queue_name="test-mw",
+            actor_name="retrying_actor",
+            args=(),
+            kwargs={},
+            options={},
+        )
+
+        result = execute_message(broker, message)
+
+        assert result == {"timeoutSeconds": 5}
+        mw.before_process_message.assert_called_once()
+        mw.after_process_message.assert_called_once()
+        call_kwargs = mw.after_process_message.call_args
+        assert isinstance(call_kwargs.kwargs["exception"], dramatiq.Retry)
