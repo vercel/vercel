@@ -123,17 +123,14 @@ class DramatiqTaskEnvelope(dict):
 def _message_to_envelope(message: Message, queue_name: str) -> DramatiqTaskEnvelope:
     """
     Convert a Dramatiq Message to a Vercel Queues envelope.
+
+    Serialization goes through configured dramatiq's encoder so
+    ephemeral options or custom types can be handled by the encoder.
     """
-    return DramatiqTaskEnvelope(
-        vercel={"kind": "dramatiq", "version": 1},
-        queue_name=queue_name,
-        actor_name=message.actor_name,
-        message_id=message.message_id,
-        message_timestamp=message.message_timestamp,
-        args=list(message.args) if message.args else [],
-        kwargs=dict(message.kwargs) if message.kwargs else {},
-        options=dict(message.options) if message.options else {},
-    )
+    data = json.loads(message.encode())
+    data["queue_name"] = queue_name
+    data["vercel"] = {"kind": "dramatiq", "version": 1}
+    return DramatiqTaskEnvelope(data)
 
 
 def _envelope_to_message(envelope: dict[str, Any]) -> Message:

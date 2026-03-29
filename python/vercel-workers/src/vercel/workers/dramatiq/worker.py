@@ -101,6 +101,8 @@ class PollingWorker:
 
     def start(self) -> None:
         """Start the polling loop. Blocks until stop() is called."""
+        self.broker.emit_before("worker_boot", None)
+        self.broker.emit_after("worker_boot", None)
         while not self._stop_requested:
             self.run_once()
 
@@ -208,7 +210,7 @@ class PollingWorker:
                 raise
 
     def _execute_message(self, message: Message) -> dict[str, Any]:
-        return execute_message(self.broker, message)
+        return _execute_message(self.broker, message)
 
     def _debug_log_received(self, msg: queue_callback.ReceivedMessage) -> None:
         """Log received message details for debugging."""
@@ -236,7 +238,7 @@ class PollingWorker:
             )
 
 
-def execute_message(broker: VercelQueuesBroker, message: Message) -> dict[str, Any]:
+def _execute_message(broker: VercelQueuesBroker, message: Message) -> dict[str, Any]:
     """
     Execute a Dramatiq message.
 

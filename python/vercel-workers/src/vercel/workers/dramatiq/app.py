@@ -11,7 +11,7 @@ from ..asgi import build_asgi_app
 from ..exceptions import VQSError
 from ..wsgi import build_wsgi_app, status_reason
 from .broker import VercelQueuesBroker, _envelope_to_message
-from .worker import execute_message
+from .worker import _execute_message
 
 try:
     from dramatiq.common import current_millis
@@ -92,12 +92,28 @@ def get_wsgi_app(broker: VercelQueuesBroker) -> WSGI:
 
         app = get_wsgi_app(broker)
     """
+    # WSGI has no lifespan protocol, so emit worker_boot eagerly.
+    broker.emit_before("worker_boot", None)
+    broker.emit_after("worker_boot", None)
     return build_wsgi_app(lambda raw_body: handle_queue_callback(broker, raw_body))
 
 
 def get_asgi_app(broker: VercelQueuesBroker) -> ASGI:
     """ASGI variant of get_wsgi_app()."""
-    return build_asgi_app(lambda raw_body: handle_queue_callback(broker, raw_body))
+
+    def _on_startup() -> None:
+        broker.emit_before("worker_boot", None)
+        broker.emit_after("worker_boot", None)
+
+    def _on_shutdown() -> None:
+        broker.emit_before("worker_shutdown", None)
+        broker.emit_after("worker_shutdown", None)
+
+    return build_asgi_app(
+        lambda raw_body: handle_queue_callback(broker, raw_body),
+        on_startup=_on_startup,
+        on_shutdown=_on_shutdown,
+    )
 
 
 def _retry_delay_ms(cfg: DramatiqWorkerConfig, attempt: int) -> int:
@@ -198,7 +214,7 @@ def handle_queue_callback(
 
         try:
             # Execute the task
-            outcome = execute_message(broker, dramatiq_message)
+            outcome = _execute_message(broker, dramatiq_message)
             timeout_seconds = outcome.get("timeoutSeconds")
 
             if timeout_seconds is not None:

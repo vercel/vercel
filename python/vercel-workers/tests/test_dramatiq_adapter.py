@@ -22,7 +22,7 @@ from vercel.workers.dramatiq.broker import (
     _envelope_to_message,
     _message_to_envelope,
 )
-from vercel.workers.dramatiq.worker import execute_message
+from vercel.workers.dramatiq.worker import _execute_message
 
 
 class TestVercelQueuesBrokerOptions:
@@ -320,7 +320,7 @@ class TestMiddlewarePipeline:
             options={},
         )
 
-        result = execute_message(broker, message)
+        result = _execute_message(broker, message)
         assert result == {"ack": True}
 
         mw.before_process_message.assert_called_once()
@@ -349,7 +349,7 @@ class TestMiddlewarePipeline:
         )
 
         with pytest.raises(RuntimeError, match="test"):
-            execute_message(broker, message)
+            _execute_message(broker, message)
 
         mw.before_process_message.assert_called_once()
         mw.after_process_message.assert_called_once()
@@ -376,7 +376,7 @@ class TestMiddlewarePipeline:
             options={},
         )
 
-        result = execute_message(broker, message)
+        result = _execute_message(broker, message)
 
         assert result == {"ack": True}
         mw.before_process_message.assert_called_once()
@@ -401,10 +401,132 @@ class TestMiddlewarePipeline:
             options={},
         )
 
-        result = execute_message(broker, message)
+        result = _execute_message(broker, message)
 
         assert result == {"timeoutSeconds": 5}
         mw.before_process_message.assert_called_once()
         mw.after_process_message.assert_called_once()
         call_kwargs = mw.after_process_message.call_args
         assert isinstance(call_kwargs.kwargs["exception"], dramatiq.Retry)
+
+
+class TestEncoderIntegration:
+    def test_envelope_uses_global_encoder(self):
+        message = Message(
+            queue_name="test-q",
+            actor_name="test_actor",
+            args=(1, "hello"),
+            kwargs={"x": 10},
+            options={"retries": 3},
+        )
+
+        envelope = _message_to_envelope(message, "test-q")
+
+        assert envelope["vercel"] == {"kind": "dramatiq", "version": 1}
+        assert envelope["queue_name"] == "test-q"
+        assert envelope["actor_name"] == "test_actor"
+        assert envelope["args"] == [1, "hello"]
+        assert envelope["kwargs"] == {"x": 10}
+        assert envelope["options"]["retries"] == 3
+
+    def test_custom_encoder_strips_options(self):
+        original_encoder = dramatiq.get_encoder()
+
+        class StrippingEncoder(dramatiq.JSONEncoder):
+            def encode(self, data):
+                if "options" in data:
+                    data = {
+                        **data,
+                        "options": {
+                            k: v for k, v in data["options"].items() if k != "ephemeral_thing"
+                        },
+                    }
+                return super().encode(data)
+
+        dramatiq.set_encoder(StrippingEncoder())
+        try:
+            message = Message(
+                queue_name="test-q",
+                actor_name="test_actor",
+                args=(),
+                kwargs={},
+                options={"ephemeral_thing": "secret", "retries": 1},
+            )
+
+            envelope = _message_to_envelope(message, "test-q")
+
+            assert "ephemeral_thing" not in envelope["options"]
+            assert envelope["options"]["retries"] == 1
+        finally:
+            dramatiq.set_encoder(original_encoder)
+
+    @patch("vercel.workers.dramatiq.broker.send")
+    def test_enqueue_uses_encoder(self, mock_send):
+        mock_send.return_value = {"messageId": "msg-123"}
+
+        broker = VercelQueuesBroker()
+
+        @dramatiq.actor(broker=broker, queue_name="test-q")
+        def my_actor():
+            pass
+
+        message = Message(
+            queue_name="test-q",
+            actor_name="my_actor",
+            args=(42,),
+            kwargs={},
+            options={},
+        )
+
+        broker.enqueue(message)
+
+        call_args = mock_send.call_args
+        envelope = call_args[0][1]
+        assert envelope["vercel"]["kind"] == "dramatiq"
+        assert envelope["args"] == [42]
+
+
+class TestAsyncActors:
+    @staticmethod
+    def _boot_worker(broker):
+        # simulate ASGI lifespan startup that boots a worker
+        broker.emit_before("worker_boot", None)
+        broker.emit_after("worker_boot", None)
+
+    def test_async_actor_executes(self):
+        broker = VercelQueuesBroker(middleware=[dramatiq.middleware.AsyncIO()])
+        self._boot_worker(broker)
+
+        @dramatiq.actor(broker=broker, queue_name="test-async")
+        async def async_add(a, b):
+            return a + b
+
+        message = Message(
+            queue_name="test-async",
+            actor_name="async_add",
+            args=(3, 4),
+            kwargs={},
+            options={},
+        )
+
+        result = _execute_message(broker, message)
+        assert result == {"ack": True}
+
+    def test_async_actor_exception_propagates(self):
+        broker = VercelQueuesBroker(middleware=[dramatiq.middleware.AsyncIO()])
+        self._boot_worker(broker)
+
+        @dramatiq.actor(broker=broker, queue_name="test-async")
+        async def async_fail():
+            raise RuntimeError("test")
+
+        message = Message(
+            queue_name="test-async",
+            actor_name="async_fail",
+            args=(),
+            kwargs={},
+            options={},
+        )
+
+        with pytest.raises(RuntimeError, match="test"):
+            _execute_message(broker, message)
