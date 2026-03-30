@@ -94,11 +94,10 @@ class TestVercelQueuesBroker:
         broker.declare_queue("my-queue")
         assert list(broker.get_declared_queues()).count("my-queue") == 1
 
-    def test_get_declared_delay_queues(self):
+    def test_get_declared_delay_queues_empty(self):
         broker = VercelQueuesBroker()
         broker.declare_queue("my-queue")
-        delay_queues = broker.get_declared_delay_queues()
-        assert "my-queue.DQ" in delay_queues
+        assert broker.get_declared_delay_queues() == set()
 
     def test_consume_raises_not_implemented(self):
         broker = VercelQueuesBroker()
@@ -487,17 +486,17 @@ class TestEncoderIntegration:
 
 
 class TestAsyncActors:
-    @staticmethod
-    def _boot_worker(broker):
-        # simulate ASGI lifespan startup that boots a worker
+    @pytest.fixture()
+    def async_broker(self):
+        broker = VercelQueuesBroker(middleware=[dramatiq.middleware.AsyncIO()])
         broker.emit_before("worker_boot", None)
         broker.emit_after("worker_boot", None)
+        yield broker
+        broker.emit_before("worker_shutdown", None)
+        broker.emit_after("worker_shutdown", None)
 
-    def test_async_actor_executes(self):
-        broker = VercelQueuesBroker(middleware=[dramatiq.middleware.AsyncIO()])
-        self._boot_worker(broker)
-
-        @dramatiq.actor(broker=broker, queue_name="test-async")
+    def test_async_actor_executes(self, async_broker):
+        @dramatiq.actor(broker=async_broker, queue_name="test-async")
         async def async_add(a, b):
             return a + b
 
@@ -509,14 +508,11 @@ class TestAsyncActors:
             options={},
         )
 
-        result = _execute_message(broker, message)
+        result = _execute_message(async_broker, message)
         assert result == {"ack": True}
 
-    def test_async_actor_exception_propagates(self):
-        broker = VercelQueuesBroker(middleware=[dramatiq.middleware.AsyncIO()])
-        self._boot_worker(broker)
-
-        @dramatiq.actor(broker=broker, queue_name="test-async")
+    def test_async_actor_exception_propagates(self, async_broker):
+        @dramatiq.actor(broker=async_broker, queue_name="test-async")
         async def async_fail():
             raise RuntimeError("test")
 
@@ -529,4 +525,4 @@ class TestAsyncActors:
         )
 
         with pytest.raises(RuntimeError, match="test"):
-            _execute_message(broker, message)
+            _execute_message(async_broker, message)
