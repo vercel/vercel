@@ -59,6 +59,12 @@ export const AGENT_REASON = {
   VERSION_NOT_FOUND: 'version_not_found',
   VERSION_ALREADY_LIVE: 'version_already_live',
   VERSION_IS_STAGING: 'version_is_staging',
+  // Input hardening (agent hallucination defenses)
+  PATH_TRAVERSAL: 'path_traversal',
+  CONTROL_CHARS: 'control_chars',
+  INVALID_RESOURCE_ID: 'invalid_resource_id',
+  // Dry-run
+  DRY_RUN_OK: 'dry_run_ok',
 } as const;
 
 /** action field for ActionRequiredPayload (what kind of action is needed) */
