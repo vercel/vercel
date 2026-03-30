@@ -253,6 +253,14 @@ export const describeOption = {
   description: 'Output command schema as JSON (for agent introspection)',
 } as const;
 
+export const dryRunOption = {
+  name: 'dry-run',
+  shorthand: null,
+  type: Boolean,
+  deprecated: false,
+  description: 'Validate inputs and show what would happen without executing',
+} as const;
+
 type GlobalOpt = (typeof globalCommandOptions)[number];
 
 const GLOBAL_LONG_TO_OPT = new Map<string, GlobalOpt>();
