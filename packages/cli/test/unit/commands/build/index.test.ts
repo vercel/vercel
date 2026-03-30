@@ -2302,7 +2302,12 @@ fs.writeFileSync(
     }
 
     // Check the span names and hierarchy (ignore timing values)
-    const tree = spans.map(({ name, parent }) => ({ name, parent }));
+    const tree = spans.map(
+      ({ name, parent }: { name: string; parent: string | null }) => ({
+        name,
+        parent,
+      })
+    );
     expect(tree).toEqual(
       expect.arrayContaining([
         { name: 'vc.cli', parent: null },
