@@ -17,6 +17,7 @@ import { validateInput } from '../../util/input-validation';
 import { writeAgentResponse } from '../../util/agent-response';
 import { buildCommandWithGlobalFlags } from '../../util/agent-output';
 import { EXIT_CODE } from '../../util/exit-codes';
+import { outputCommandSchema } from '../../util/describe-command';
 
 const COMMAND_CONFIG = {
   add: getCommandAliases(addSubcommand),
@@ -94,6 +95,11 @@ export default async function link(client: Client) {
     telemetry.trackCliFlagHelp('link');
     output.print(help(linkCommand, { columns: client.stderr.columns }));
     return 2;
+  }
+
+  if (parsedArgs.flags['--describe']) {
+    outputCommandSchema(client, linkCommand);
+    return 0;
   }
 
   telemetry.trackCliFlagRepo(parsedArgs.flags['--repo']);

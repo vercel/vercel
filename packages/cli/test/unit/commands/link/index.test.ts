@@ -59,6 +59,46 @@ describe('link', () => {
     });
   });
 
+  describe('--describe', () => {
+    it('outputs command schema as JSON and returns 0', async () => {
+      client.setArgv('link', '--describe');
+      const exitCode = await link(client);
+      expect(exitCode).toBe(0);
+
+      const output = client.stdout.getFullOutput();
+      const schema = JSON.parse(output);
+      expect(schema.name).toBe('link');
+      expect(schema.description).toBe(
+        'Link a local directory to a Vercel Project.'
+      );
+      expect(Array.isArray(schema.options)).toBe(true);
+      expect(Array.isArray(schema.arguments)).toBe(true);
+      expect(Array.isArray(schema.examples)).toBe(true);
+    });
+
+    it('includes --dry-run and --describe in schema options', async () => {
+      client.setArgv('link', '--describe');
+      await link(client);
+
+      const output = client.stdout.getFullOutput();
+      const schema = JSON.parse(output);
+      const optionNames = schema.options.map((o: { name: string }) => o.name);
+      expect(optionNames).toContain('dry-run');
+      expect(optionNames).toContain('describe');
+    });
+
+    it('does not invoke the link flow', async () => {
+      client.setArgv('link', '--describe');
+
+      const exitCode = await link(client);
+      expect(exitCode).toBe(0);
+
+      // Verify no API calls were made — stderr should have no link output
+      const stderrOutput = client.stderr.getFullOutput();
+      expect(stderrOutput).not.toContain('Linked to');
+    });
+  });
+
   describe('--repo', () => {
     it('should support linking using `--repo` flag', async () => {
       const user = useUser();
