@@ -348,6 +348,22 @@ describe('detectFramework()', () => {
     expect(await detectFramework({ fs, frameworkList })).toBe('middleman');
   });
 
+  it('Detect Sinatra-style Rack apps as generic ruby instead of rails', async () => {
+    const fs = new VirtualFilesystem({
+      Gemfile: 'source "https://rubygems.org"\ngem "sinatra", "~> 4.0"',
+      'config.ru': "require './app'\nrun Sinatra::Application",
+      'app.rb': 'require "sinatra"',
+    });
+
+    expect(
+      await detectFramework({
+        fs,
+        frameworkList,
+        useExperimentalFrameworks: true,
+      })
+    ).toBe('ruby');
+  });
+
   it('Detect Scully', async () => {
     const fs = new VirtualFilesystem({
       'package.json': JSON.stringify({

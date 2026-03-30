@@ -4141,9 +4141,6 @@ export const frameworks = [
     detectors: {
       some: [
         {
-          path: 'config.ru',
-        },
-        {
           path: 'Gemfile',
           matchContent: 'gem\\s+["\']rails["\']',
         },
