@@ -245,6 +245,14 @@ export const allOption = {
   description: 'List resources across all projects',
 } as const;
 
+export const describeOption = {
+  name: 'describe',
+  shorthand: null,
+  type: Boolean,
+  deprecated: false,
+  description: 'Output command schema as JSON (for agent introspection)',
+} as const;
+
 type GlobalOpt = (typeof globalCommandOptions)[number];
 
 const GLOBAL_LONG_TO_OPT = new Map<string, GlobalOpt>();
