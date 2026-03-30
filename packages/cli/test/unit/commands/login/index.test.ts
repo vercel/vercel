@@ -23,6 +23,43 @@ describe('login', () => {
     });
   });
 
+  describe('--describe', () => {
+    it('outputs command schema as JSON and returns 0', async () => {
+      client.setArgv('login', '--describe');
+      const exitCode = await login(client, { shouldParseArgs: true });
+      expect(exitCode).toBe(0);
+
+      const output = client.stdout.getFullOutput();
+      const schema = JSON.parse(output);
+      expect(schema.name).toBe('login');
+      expect(schema.description).toBe('Sign in to your Vercel account.');
+      expect(Array.isArray(schema.options)).toBe(true);
+      expect(Array.isArray(schema.arguments)).toBe(true);
+      expect(Array.isArray(schema.examples)).toBe(true);
+    });
+
+    it('includes --dry-run and --describe in schema options', async () => {
+      client.setArgv('login', '--describe');
+      await login(client, { shouldParseArgs: true });
+
+      const output = client.stdout.getFullOutput();
+      const schema = JSON.parse(output);
+      const optionNames = schema.options.map((o: { name: string }) => o.name);
+      expect(optionNames).toContain('dry-run');
+      expect(optionNames).toContain('describe');
+    });
+
+    it('does not invoke the login flow', async () => {
+      client.setArgv('login', '--describe');
+      const futureSpy = vi.spyOn(loginFuture, 'login').mockResolvedValue(0);
+
+      await login(client, { shouldParseArgs: true });
+      expect(futureSpy).not.toHaveBeenCalled();
+
+      futureSpy.mockRestore();
+    });
+  });
+
   it('should not allow the `--token` flag', async () => {
     client.setArgv('login', '--token', 'foo');
     const exitCodePromise = login(client, { shouldParseArgs: true });

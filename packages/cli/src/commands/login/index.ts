@@ -8,6 +8,7 @@ import { printError } from '../../util/error';
 import output from '../../output-manager';
 import { LoginTelemetryClient } from '../../util/telemetry/commands/login';
 import { login as future } from './future';
+import { outputCommandSchema } from '../../util/describe-command';
 
 export default async function login(
   client: Client,
@@ -42,6 +43,11 @@ export default async function login(
   if (parsedArgs?.flags['--help']) {
     telemetry.trackCliFlagHelp('login');
     output.print(help(loginCommand, { columns: client.stderr.columns }));
+    return 0;
+  }
+
+  if (parsedArgs?.flags['--describe']) {
+    outputCommandSchema(client, loginCommand);
     return 0;
   }
 
