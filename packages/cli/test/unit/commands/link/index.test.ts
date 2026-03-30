@@ -1942,4 +1942,122 @@ describe('link', () => {
       expect(client.cwd).toEqual(originalCwd);
     });
   });
+
+  describe('input validation', () => {
+    describe('--project flag', () => {
+      it('rejects control characters in agent mode with structured JSON', async () => {
+        client.setArgv('link', '--project', 'my-project\x00evil', '--yes');
+        (client as { nonInteractive: boolean }).nonInteractive = true;
+
+        const exitCode = await link(client);
+        expect(exitCode).toBe(3); // EXIT_CODE.VALIDATION
+
+        const output = client.stdout.getFullOutput();
+        const result = JSON.parse(output);
+        expect(result.status).toBe('error');
+        expect(result.reason).toBe('invalid_arguments');
+        expect(result.message).toContain('Control characters detected');
+        expect(result.message).toContain('project');
+        expect(result.next).toBeDefined();
+        expect(result.next.length).toBeGreaterThan(0);
+        expect(result.next[0].command).toContain('link --project <name>');
+
+        (client as { nonInteractive: boolean }).nonInteractive = false;
+      });
+
+      it('rejects resource ID with query params in agent mode', async () => {
+        client.setArgv('link', '--project', 'proj_123?fields=name', '--yes');
+        (client as { nonInteractive: boolean }).nonInteractive = true;
+
+        const exitCode = await link(client);
+        expect(exitCode).toBe(3);
+
+        const output = client.stdout.getFullOutput();
+        const result = JSON.parse(output);
+        expect(result.status).toBe('error');
+        expect(result.reason).toBe('invalid_arguments');
+        expect(result.message).toContain('resource IDs must not contain');
+
+        (client as { nonInteractive: boolean }).nonInteractive = false;
+      });
+
+      it('rejects control characters in interactive mode with error output', async () => {
+        client.setArgv('link', '--project', 'my-project\x00evil', '--yes');
+        (client as { nonInteractive: boolean }).nonInteractive = false;
+
+        const exitCode = await link(client);
+        expect(exitCode).toBe(3);
+
+        // In interactive mode, error goes to stderr, not structured JSON to stdout
+        const stdoutOutput = client.stdout.getFullOutput();
+        expect(stdoutOutput.trim()).toBe('');
+      });
+
+      it('accepts valid project names', async () => {
+        useUser();
+        const cwd = setupTmpDir();
+        useTeams('team_dummy');
+        useProject({
+          ...defaultProject,
+          id: 'valid-project',
+          name: 'valid-project',
+        });
+        useUnknownProject();
+
+        client.cwd = cwd;
+        client.setArgv('link', '--project', 'valid-project', '--yes');
+
+        const exitCodePromise = link(client);
+
+        await expect(client.stderr).toOutput('Linked to');
+
+        const exitCode = await exitCodePromise;
+        expect(exitCode).toBe(0);
+      });
+    });
+
+    describe('--team flag', () => {
+      it('rejects control characters in agent mode with structured JSON', async () => {
+        client.setArgv('link', '--team', 'team\x1bevil', '--yes');
+        (client as { nonInteractive: boolean }).nonInteractive = true;
+
+        const exitCode = await link(client);
+        expect(exitCode).toBe(3);
+
+        const output = client.stdout.getFullOutput();
+        const result = JSON.parse(output);
+        expect(result.status).toBe('error');
+        expect(result.reason).toBe('invalid_arguments');
+        expect(result.message).toContain('Control characters detected');
+        expect(result.message).toContain('team');
+        expect(result.next[0].command).toContain('link --team <slug>');
+
+        (client as { nonInteractive: boolean }).nonInteractive = false;
+      });
+
+      it('rejects resource ID with fragment in agent mode', async () => {
+        client.setArgv('link', '--team', 'team_abc#fragment', '--yes');
+        (client as { nonInteractive: boolean }).nonInteractive = true;
+
+        const exitCode = await link(client);
+        expect(exitCode).toBe(3);
+
+        const output = client.stdout.getFullOutput();
+        const result = JSON.parse(output);
+        expect(result.status).toBe('error');
+        expect(result.reason).toBe('invalid_arguments');
+        expect(result.message).toContain('resource IDs must not contain');
+
+        (client as { nonInteractive: boolean }).nonInteractive = false;
+      });
+
+      it('rejects control characters in interactive mode', async () => {
+        client.setArgv('link', '--team', 'team\x00evil', '--yes');
+        (client as { nonInteractive: boolean }).nonInteractive = false;
+
+        const exitCode = await link(client);
+        expect(exitCode).toBe(3);
+      });
+    });
+  });
 });

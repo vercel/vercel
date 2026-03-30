@@ -13,6 +13,10 @@ import output from '../../output-manager';
 import { LinkTelemetryClient } from '../../util/telemetry/commands/link';
 import { getCommandAliases } from '..';
 import { autoInstallAgentTooling } from '../../util/agent/auto-install-agentic';
+import { validateInput } from '../../util/input-validation';
+import { writeAgentResponse } from '../../util/agent-response';
+import { buildCommandWithGlobalFlags } from '../../util/agent-output';
+import { EXIT_CODE } from '../../util/exit-codes';
 
 const COMMAND_CONFIG = {
   add: getCommandAliases(addSubcommand),
@@ -96,6 +100,66 @@ export default async function link(client: Client) {
   telemetry.trackCliFlagYes(parsedArgs.flags['--yes']);
   telemetry.trackCliOptionProject(parsedArgs.flags['--project']);
 
+  // Validate --project flag
+  const projectFlag = parsedArgs.flags['--project'];
+  if (typeof projectFlag === 'string') {
+    const check = validateInput(projectFlag, 'project', [
+      'controlChars',
+      'resourceId',
+    ]);
+    if (!check.valid) {
+      if (client.nonInteractive) {
+        writeAgentResponse(client, {
+          status: 'error',
+          reason: 'invalid_arguments',
+          message: check.error!,
+          next: [
+            {
+              command: buildCommandWithGlobalFlags(
+                client.argv,
+                'link --project <name>'
+              ),
+              when: 'Retry with a valid project name',
+            },
+          ],
+        });
+      } else {
+        output.error(check.error!);
+      }
+      return EXIT_CODE.VALIDATION;
+    }
+  }
+
+  // Validate --team flag
+  const teamFlag = parsedArgs.flags['--team'];
+  if (typeof teamFlag === 'string') {
+    const check = validateInput(teamFlag, 'team', [
+      'controlChars',
+      'resourceId',
+    ]);
+    if (!check.valid) {
+      if (client.nonInteractive) {
+        writeAgentResponse(client, {
+          status: 'error',
+          reason: 'invalid_arguments',
+          message: check.error!,
+          next: [
+            {
+              command: buildCommandWithGlobalFlags(
+                client.argv,
+                'link --team <slug>'
+              ),
+              when: 'Retry with a valid team identifier',
+            },
+          ],
+        });
+      } else {
+        output.error(check.error!);
+      }
+      return EXIT_CODE.VALIDATION;
+    }
+  }
+
   if ('--confirm' in parsedArgs.flags) {
     telemetry.trackCliFlagConfirm(parsedArgs.flags['--confirm']);
     output.warn('`--confirm` is deprecated, please use `--yes` instead');
@@ -129,8 +193,8 @@ export default async function link(client: Client) {
     // (e.g. no scope passed), currentTeam may be undefined or from saved config. If the user passed
     // --team to link but currentTeam is still unset, resolve to a team ID and set it so selectOrg
     // has a default; never set a raw slug (always use team ID).
-    const teamFlag = parsedArgs.flags['--team'];
-    if (typeof teamFlag === 'string' && !client.config.currentTeam) {
+    const teamFlagValue = parsedArgs.flags['--team'];
+    if (typeof teamFlagValue === 'string' && !client.config.currentTeam) {
       try {
         const teams = await getTeams(client);
         const related = teams.find(
