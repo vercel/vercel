@@ -77,7 +77,12 @@ import output from './output-manager';
 import { checkGuidanceStatus } from './util/guidance/check-status';
 import { determineAgent } from '@vercel/detect-agent';
 import { getLinkFromDir, getVercelDirectory } from './util/projects/link';
-import { getPlatformEnv } from '@vercel/build-utils';
+import {
+  getPlatformEnv,
+  Span,
+  type Reporter,
+  type TraceEvent,
+} from '@vercel/build-utils';
 
 const VERCEL_DIR = getGlobalPathConfig();
 const VERCEL_CONFIG_PATH = configFiles.getConfigFilePath();
@@ -147,7 +152,17 @@ let { isTTY } = process.stdout;
 
 let apiUrl = 'https://api.vercel.com';
 
+class InMemoryReporter implements Reporter {
+  public events: TraceEvent[] = [];
+  report(event: TraceEvent) {
+    this.events.push(event);
+  }
+}
+
 const main = async () => {
+  const traceReporter = new InMemoryReporter();
+  const rootSpan = new Span({ name: 'vc.cli', reporter: traceReporter });
+
   if (process.env.FORCE_TTY === '1') {
     isTTY = true;
     process.stdout.isTTY = true;
@@ -391,6 +406,8 @@ const main = async () => {
     agentName: detectedAgent?.name,
     nonInteractive,
   });
+
+  client.rootSpan = rootSpan;
 
   // The `--cwd` flag is respected for all sub-commands
   if (parsedArgs.flags['--cwd']) {
@@ -968,7 +985,9 @@ const main = async () => {
         func = func.default;
       }
 
-      exitCode = await func(client);
+      exitCode = await rootSpan
+        .child('vc.cli.command', { command: subcommand || 'deploy' })
+        .trace(() => func(client));
     }
   } catch (err: unknown) {
     if (isErrnoException(err) && err.code === 'ENOTFOUND') {
@@ -1038,13 +1057,18 @@ const main = async () => {
     return 1;
   }
 
+  const postCommandSpan = rootSpan.child('vc.postCommand');
+
   telemetryEventStore.updateTeamId(client.config.currentTeam);
   if (!telemetryEventStore.hasUserId) {
+    const getUserSpan = postCommandSpan.child('vc.postCommand.getUser');
     try {
       const user = await getUser(client);
       telemetryEventStore.updateUserId(user.id);
     } catch {
       // best-effort for telemetry
+    } finally {
+      getUserSpan.stop();
     }
   }
 
@@ -1064,6 +1088,25 @@ const main = async () => {
   }
 
   await telemetryEventStore.save();
+  postCommandSpan.stop();
+
+  rootSpan.stop();
+
+  // Flush trace events to disk. Only `vc build` sets traceDiagnosticsPath,
+  // so traces are not written for other commands (deploy, env, etc.).
+  if (client.traceDiagnosticsPath) {
+    try {
+      const { mkdir, writeFile } = await import('fs/promises');
+      await mkdir(join(client.traceDiagnosticsPath, '..'), { recursive: true });
+      await writeFile(
+        client.traceDiagnosticsPath,
+        JSON.stringify(traceReporter.events)
+      );
+    } catch (err) {
+      output.error('Failed to write diagnostics trace file');
+      output.prettyError(err);
+    }
+  }
 
   return exitCode;
 };
