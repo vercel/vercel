@@ -212,12 +212,13 @@ export const build: BuildVX = async ({
 }) => {
   const configuredEntrypoint = entrypoint;
   await download(files, workPath, meta);
-
-  const fsFiles = await glob('**', workPath);
   debug(`ruby: downloaded files to workPath=${workPath}`);
 
   // Rails zero-config expects a root-level config.ru.
-  if (!fsFiles[entrypoint] && config?.framework === 'rails') {
+  if (
+    config?.framework === 'rails' &&
+    !(await pathExists(join(workPath, entrypoint)))
+  ) {
     throw new NowBuildError({
       code: 'RAILS_ENTRYPOINT_NOT_FOUND',
       message:

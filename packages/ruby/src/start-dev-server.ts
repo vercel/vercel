@@ -98,19 +98,6 @@ function installGlobalCleanupHandlers() {
   });
 }
 
-function discoverRackEntrypoint(
-  workPath: string,
-  rawEntrypoint: string
-): string | null {
-  // If the provided entrypoint is already a Rack file, use it (if it exists)
-  if (rawEntrypoint.endsWith('.ru')) {
-    if (existsSync(join(workPath, rawEntrypoint))) {
-      return rawEntrypoint;
-    }
-  }
-  return null;
-}
-
 function createDevRubyShim(
   workPath: string,
   entrypoint: string
@@ -184,11 +171,12 @@ async function run(
 }
 
 export const startDevServer: StartDevServer = async opts => {
-  const { entrypoint: rawEntrypoint, workPath, meta = {} } = opts;
+  const { entrypoint, workPath, meta = {} } = opts;
 
-  // Ruby dev server supports Rack (.ru) entrypoints.
-  const entrypoint = discoverRackEntrypoint(workPath, rawEntrypoint);
-  if (!entrypoint) return null;
+  // Ruby dev server supports Rack (.ru) entrypoints only.
+  if (!entrypoint.endsWith('.ru') || !existsSync(join(workPath, entrypoint))) {
+    return null;
+  }
 
   if (!restoreWarnings) restoreWarnings = silenceNodeWarnings();
   installGlobalCleanupHandlers();
