@@ -1,6 +1,6 @@
 import { EOL, release } from 'os';
 import { join, dirname } from 'path';
-import execa = require('execa');
+import execa from 'execa';
 import {
   ensureDir,
   move,

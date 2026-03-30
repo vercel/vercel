@@ -1,4 +1,4 @@
-import execa = require('execa');
+import execa from 'execa';
 import which from 'which';
 import { join } from 'path';
 import { intersects } from 'semver';
