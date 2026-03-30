@@ -1178,6 +1178,7 @@ describe('Django entrypoint discovery', () => {
     vi.mocked(getDjangoSettings).mockResolvedValueOnce({
       settingsModule: 'hello.settings',
       djangoSettings: { WSGI_APPLICATION: 'hello.wsgi.application' },
+      djangoVersion: [5, 1, 0],
     });
     const workPath = path.join(tmpdir(), `python-django-wsgi-${Date.now()}`);
     fs.mkdirSync(workPath, { recursive: true });
@@ -1253,6 +1254,7 @@ describe('Django entrypoint discovery', () => {
     vi.mocked(getDjangoSettings).mockResolvedValueOnce({
       settingsModule: 'hello.settings',
       djangoSettings: { WSGI_APPLICATION: 'hello.wsgi.application' },
+      djangoVersion: [5, 1, 0],
     });
     const workPath = path.join(
       tmpdir(),
@@ -1294,6 +1296,7 @@ describe('Django entrypoint discovery', () => {
     vi.mocked(getDjangoSettings).mockResolvedValueOnce({
       settingsModule: 'config.settings',
       djangoSettings: { WSGI_APPLICATION: 'config.wsgi.application' },
+      djangoVersion: [5, 1, 0],
     });
     const workPath = path.join(
       tmpdir(),
@@ -1339,6 +1342,7 @@ describe('Django entrypoint discovery', () => {
     vi.mocked(getDjangoSettings).mockResolvedValueOnce({
       settingsModule: 'hello.settings',
       djangoSettings: { WSGI_APPLICATION: 'hello.world.application' },
+      djangoVersion: [5, 1, 0],
     });
     const workPath = path.join(tmpdir(), `python-django-build-${Date.now()}`);
     fs.mkdirSync(workPath, { recursive: true });
@@ -1383,6 +1387,7 @@ describe('Django entrypoint discovery', () => {
         STATIC_URL: '/static/',
         STATIC_ROOT: 'staticfiles',
       },
+      djangoVersion: [5, 1, 0],
     });
     // Simulate collectstatic succeeding
     vi.mocked(runDjangoCollectStatic).mockImplementationOnce(
@@ -1433,7 +1438,7 @@ describe('Django entrypoint discovery', () => {
     );
     const lambda = v2result.output['myapp/wsgi'];
     expect(lambda).toBeDefined(); // Lambda keyed by entrypoint sans extension
-    expect((lambda as any).files?.['static/app.css']).toBeUndefined(); // Excluded from Lambda bundle
+    expect((lambda as any).files?.['static/app.css']).toBeDefined(); // Included in Lambda bundle
     expect(v2result.output['static/app.css']).toBeDefined(); // Static file from collectstatic
 
     if (fs.existsSync(workPath)) fs.removeSync(workPath);
