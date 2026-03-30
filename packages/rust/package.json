@@ -19,7 +19,7 @@
     "dist"
   ],
   "dependencies": {
-    "@iarna/toml": "^2.2.5",
+    "smol-toml": "1.5.2",
     "execa": "5"
   },
   "devDependencies": {
