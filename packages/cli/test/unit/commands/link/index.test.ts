@@ -2100,4 +2100,99 @@ describe('link', () => {
       });
     });
   });
+
+  describe('structured JSON success output (agent mode)', () => {
+    it('emits ok JSON with org, project, and next[] when linking existing project', async () => {
+      const cwd = setupTmpDir();
+      const user = useUser();
+      useTeams('team_dummy');
+      const { project } = useProject({
+        ...defaultProject,
+        id: basename(cwd),
+        name: basename(cwd),
+      });
+      useUnknownProject();
+
+      client.cwd = cwd;
+      // Set currentTeam so selectOrg resolves without prompting in non-interactive mode
+      client.config.currentTeam = user.id;
+      client.setArgv('link', '--project', project.name!, '--yes');
+      (client as { nonInteractive: boolean }).nonInteractive = true;
+
+      const exitCode = await link(client);
+      expect(exitCode).toBe(0);
+
+      const stdoutOutput = client.stdout.getFullOutput();
+      const result = JSON.parse(stdoutOutput);
+      expect(result.status).toBe('ok');
+      expect(result.message).toContain(
+        `Linked to ${user.username}/${project.name}`
+      );
+      expect(result.data.org.id).toBe(user.id);
+      expect(result.data.org.slug).toBe(user.username);
+      expect(result.data.project.id).toBe(project.id);
+      expect(result.data.project.name).toBe(project.name);
+      expect(result.data.directory).toBe(cwd);
+      expect(result.data.projectJsonPath).toContain('.vercel/project.json');
+
+      (client as { nonInteractive: boolean }).nonInteractive = false;
+    });
+
+    it('includes deploy and env pull in next[] suggestions', async () => {
+      const cwd = setupTmpDir();
+      const user = useUser();
+      useTeams('team_dummy');
+      const { project } = useProject({
+        ...defaultProject,
+        id: basename(cwd),
+        name: basename(cwd),
+      });
+      useUnknownProject();
+
+      client.cwd = cwd;
+      client.config.currentTeam = user.id;
+      client.setArgv('link', '--project', project.name!, '--yes');
+      (client as { nonInteractive: boolean }).nonInteractive = true;
+
+      const exitCode = await link(client);
+      expect(exitCode).toBe(0);
+
+      const stdoutOutput = client.stdout.getFullOutput();
+      const result = JSON.parse(stdoutOutput);
+      expect(result.next).toHaveLength(2);
+      expect(result.next[0].command).toContain('deploy');
+      expect(result.next[0].when).toBe('Deploy the project');
+      expect(result.next[1].command).toContain('env pull');
+      expect(result.next[1].when).toBe('Pull environment variables');
+
+      (client as { nonInteractive: boolean }).nonInteractive = false;
+    });
+
+    it('does not emit JSON in interactive mode', async () => {
+      const cwd = setupTmpDir();
+      useUser();
+      useTeams('team_dummy');
+      const { project } = useProject({
+        ...defaultProject,
+        id: basename(cwd),
+        name: basename(cwd),
+      });
+      useUnknownProject();
+
+      client.cwd = cwd;
+      client.setArgv('link', '--project', project.name!, '--yes');
+      (client as { nonInteractive: boolean }).nonInteractive = false;
+
+      const exitCodePromise = link(client);
+
+      await expect(client.stderr).toOutput(`Linked to`);
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toBe(0);
+
+      // stdout should NOT contain structured JSON in interactive mode
+      const stdoutOutput = client.stdout.getFullOutput();
+      expect(stdoutOutput.trim()).toBe('');
+    });
+  });
 });
