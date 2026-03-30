@@ -5,6 +5,8 @@ import { ProjectNotFound } from '../../util/errors-ts';
 import type { Project, Org } from '@vercel-internals/types';
 import slugify from '@sindresorhus/slugify';
 import output from '../../output-manager';
+import { writeAgentResponse } from '../agent-response';
+import { buildCommandWithGlobalFlags } from '../agent-output';
 
 export default async function inputProject(
   client: Client,
@@ -42,8 +44,22 @@ export default async function inputProject(
   }
 
   if (client.nonInteractive) {
-    const err = new Error('Confirmation required');
+    writeAgentResponse(client, {
+      status: 'action_required',
+      reason: 'missing_arguments',
+      message: 'Project name required. Use --project flag.',
+      next: [
+        {
+          command: buildCommandWithGlobalFlags(
+            client.argv,
+            'link --project <name>'
+          ),
+        },
+      ],
+    });
+    const err = new Error('Project name required. Use --project flag.');
     (err as NodeJS.ErrnoException).code = 'HEADLESS';
+    (err as any).agentResponseWritten = true;
     throw err;
   }
 

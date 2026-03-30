@@ -158,7 +158,20 @@ export default async function setupAndLink(
       err instanceof Error &&
       (err as NodeJS.ErrnoException).code === 'HEADLESS'
     ) {
-      return { status: 'error', exitCode: 1, reason: 'HEADLESS' };
+      const result: {
+        status: 'error';
+        exitCode: number;
+        reason: 'HEADLESS';
+        agentResponseWritten?: boolean;
+      } = {
+        status: 'error',
+        exitCode: 1,
+        reason: 'HEADLESS',
+      };
+      if ((err as any).agentResponseWritten) {
+        result.agentResponseWritten = true;
+      }
+      return result;
     }
     throw err;
   }
