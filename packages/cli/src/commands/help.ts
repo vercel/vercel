@@ -250,7 +250,9 @@ export function buildSubcommandLines(
       nameCell,
       argsCell,
       {
-        content: command.description,
+        content: command.default
+          ? `${command.description} ${chalk.bold('(default)')}`
+          : command.description,
         wordWrap: true,
       },
     ]);
@@ -266,6 +268,10 @@ export function buildSubcommandLines(
       colWidths: [null, null, finalColumnWidth],
     })
   );
+
+  if (rows.length === 0) {
+    return null;
+  }
 
   table.push(...rows);
   return [

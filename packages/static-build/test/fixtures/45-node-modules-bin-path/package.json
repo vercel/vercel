@@ -8,7 +8,7 @@
     "build": "next build"
   },
   "dependencies": {
-    "next": "^15.0.0",
+    "next": "^15.0.5",
     "react": "^18.0.0",
     "react-dom": "^18.0.0"
   },

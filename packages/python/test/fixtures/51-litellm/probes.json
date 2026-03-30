@@ -1,0 +1,9 @@
+{
+  "probes": [
+    {
+      "path": "/health/liveliness",
+      "status": 200,
+      "mustContain": "I'm alive!"
+    }
+  ]
+}

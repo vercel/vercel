@@ -17,6 +17,10 @@
       "dependsOn": ["build"],
       "outputLogs": "new-only"
     },
+    "vitest-unit-node-24": {
+      "dependsOn": ["build"],
+      "outputLogs": "new-only"
+    },
     "vitest-run": {
       "dependsOn": ["build"],
       "outputLogs": "new-only"

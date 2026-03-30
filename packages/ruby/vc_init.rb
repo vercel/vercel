@@ -3,12 +3,16 @@ require 'webrick'
 require 'net/http'
 require 'base64'
 require 'json'
+require_relative 'vc__utils__ruby'
 
 $entrypoint = '__VC_HANDLER_FILENAME'
 $framework = ENV['VC_FRAMEWORK']
 
 ENV['RAILS_ENV'] ||= 'production'
+ENV['RACK_ENV'] ||= 'production'
 ENV['RAILS_LOG_TO_STDOUT'] ||= '1'
+
+$service_route_prefix = resolve_service_route_prefix
 
 # Zero-config fallback: if SECRET_KEY_BASE is not provided by the user,
 # and this is a Rails app, use the per-deployment generated value.
@@ -19,13 +23,14 @@ if $framework == 'rails' && (ENV['SECRET_KEY_BASE'].nil? || ENV['SECRET_KEY_BASE
   end
 end
 
-def rack_handler(httpMethod, path, body, headers)
+def rack_handler(httpMethod, path, body, headers, script_name = '')
   require 'rack'
 
   app, _ = Rack::Builder.parse_file($entrypoint)
   server = Rack::MockRequest.new app
 
   env = headers.transform_keys { |k| k.split('-').join('_').prepend('HTTP_').upcase }
+  env['SCRIPT_NAME'] = script_name unless script_name.empty?
   res = server.request(httpMethod, path, env.merge({ :input => body }))
 
   {
@@ -105,8 +110,13 @@ def vc__handler(event:, context:)
     body = Base64.decode64(body)
   end
 
+  path, script_name = apply_service_route_prefix_to_target(
+    path,
+    $service_route_prefix
+  )
+
   if $entrypoint.end_with? '.ru'
-    return rack_handler(httpMethod, path, body, headers)
+    return rack_handler(httpMethod, path, body, headers, script_name)
   end
 
   return webrick_handler(httpMethod, path, body, headers)

@@ -22,6 +22,7 @@ export async function provisionStoreResource(
         metadata,
         name,
         authorizationId,
+        source: 'cli',
       },
     }
   );

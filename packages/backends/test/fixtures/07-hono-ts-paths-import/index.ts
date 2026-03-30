@@ -1,5 +1,10 @@
 import { Hono } from 'hono'
 import { echo } from '@/echo'
+import { getVercelOidcTokenSync } from '@vercel/functions/oidc'
+
+if(typeof getVercelOidcTokenSync !== 'function') {
+  throw new Error('getVercelOidcTokenSync is not a function')
+}
 
 const app = new Hono()
 
@@ -9,7 +14,8 @@ const welcomeStrings = [
 ]
 
 app.get('/', (c) => {
-  return c.text(welcomeStrings.join('\n\n'))
+  const oidcToken = getVercelOidcTokenSync();
+  return c.text(welcomeStrings.join('\n\n') + `\n\nOIDC Token: ${oidcToken}`)
 })
 
 app.get('/echo', (c) => {

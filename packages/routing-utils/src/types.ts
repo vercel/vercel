@@ -60,6 +60,7 @@ type Transform = {
         };
   };
   args?: string | string[];
+  env?: string[];
 };
 
 export type RouteWithSrc = {
@@ -68,9 +69,11 @@ export type RouteWithSrc = {
   headers?: { [name: string]: string };
   methods?: string[];
   continue?: boolean;
+  /** @deprecated */
   override?: boolean;
   caseSensitive?: boolean;
   check?: boolean;
+  /** @deprecated */
   important?: boolean;
   status?: number;
   has?: HasField;
@@ -79,10 +82,20 @@ export type RouteWithSrc = {
     action: MitigateAction;
   };
   transforms?: Transform[];
+  env?: string[];
   locale?: {
     redirect?: Record<string, string>;
     cookie?: string;
   };
+  /**
+   * Aliases for `src`, `dest`, and `status`. These provide consistency with the
+   * `rewrites`, `redirects`, and `headers` fields which use `source`, `destination`,
+   * and `statusCode`. During normalization, these are converted to their canonical
+   * forms (`src`, `dest`, `status`) and stripped from the route object.
+   */
+  source?: string;
+  destination?: string;
+  statusCode?: number;
   /**
    * A middleware key within the `output` key under the build result.
    * Overrides a `middleware` definition.
@@ -96,9 +109,11 @@ export type RouteWithSrc = {
    * A middleware index in the `middleware` key under the build result
    */
   middleware?: number;
+  respectOriginCacheControl?: boolean;
 };
 
 export type RouteWithHandle = {
+  /** @deprecated Internal use only. Do not use in vercel.json. */
   handle: HandleValue;
   src?: string;
   dest?: string;
@@ -107,13 +122,18 @@ export type RouteWithHandle = {
 
 export type Route = RouteWithSrc | RouteWithHandle;
 
+export type RouteInput =
+  | RouteWithSrc
+  | (Omit<RouteWithSrc, 'src'> & { src?: string; source: string })
+  | RouteWithHandle;
+
 export type NormalizedRoutes = {
   routes: Route[] | null;
   error: RouteApiError | null;
 };
 
 export interface GetRoutesProps {
-  routes?: Route[];
+  routes?: RouteInput[];
   cleanUrls?: boolean;
   rewrites?: Rewrite[];
   redirects?: Redirect[];
@@ -138,6 +158,8 @@ export interface Rewrite {
   has?: HasField;
   missing?: HasField;
   statusCode?: number;
+  env?: string[];
+  respectOriginCacheControl?: boolean;
 }
 
 export interface Redirect {
@@ -147,6 +169,7 @@ export interface Redirect {
   statusCode?: number;
   has?: HasField;
   missing?: HasField;
+  env?: string[];
 }
 
 export interface Header {

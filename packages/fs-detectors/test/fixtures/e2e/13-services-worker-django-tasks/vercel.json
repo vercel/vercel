@@ -1,0 +1,19 @@
+{
+  "uploadNowJson": true,
+  "projectSettings": {
+    "framework": "services"
+  },
+  "experimentalServices": {
+    "web": {
+      "framework": "django",
+      "entrypoint": "web/wsgi.py",
+      "routePrefix": "/"
+    },
+    "worker": {
+      "type": "worker",
+      "entrypoint": "worker/run.py",
+      "topics": ["jobs"],
+      "consumer": "default"
+    }
+  }
+}

@@ -8,5 +8,14 @@ export const { build, entrypointCallback, findEntrypoint, require_ } =
     /(?:from|require|import)\s*(?:\(\s*)?["']elysia["']\s*(?:\))?/g,
     ['app', 'index', 'server', 'src/app', 'src/index', 'src/server'],
     ['js', 'cjs', 'mjs', 'ts', 'cts', 'mts'],
-    nodeBuild
+    nodeBuild,
+    {
+      checks: (project: { isBun: boolean }) => {
+        if (!project.isBun) {
+          console.warn(
+            'Warning: Currently using Elysia with Node.js. To use Bun, add `"bunVersion": "1.x"` to `vercel.json`.'
+          );
+        }
+      },
+    }
   );

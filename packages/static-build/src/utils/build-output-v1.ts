@@ -135,6 +135,9 @@ async function readFunctions({
         ...config,
         shouldAddHelpers: false,
         shouldAddSourcemapSupport: false,
+        shouldDisableAutomaticFetchInstrumentation:
+          process.env.VERCEL_TRACING_DISABLE_AUTOMATIC_FETCH_INSTRUMENTATION ===
+          '1',
       });
     } else {
       if (!runtime) {
@@ -206,10 +209,11 @@ async function readFunctionsConfig({ workPath }: { workPath: string }) {
     string,
     {
       memory?: number;
-      maxDuration?: number;
+      maxDuration?: number | 'max';
       runtime?: string;
       handler?: string;
       regions?: string[];
+      functionFailoverRegions?: string[];
     }
   >();
 
@@ -232,17 +236,18 @@ function parseFunctionConfig(data: Record<string, unknown>) {
 
   const config: {
     memory?: number;
-    maxDuration?: number;
+    maxDuration?: number | 'max';
     runtime?: string;
     handler?: string;
     regions?: string[];
+    functionFailoverRegions?: string[];
   } = {};
 
   if (typeof data.memory === 'number') {
     config.memory = data.memory;
   }
 
-  if (typeof data.maxDuration === 'number') {
+  if (typeof data.maxDuration === 'number' || data.maxDuration === 'max') {
     config.maxDuration = data.maxDuration;
   }
 
@@ -257,6 +262,13 @@ function parseFunctionConfig(data: Record<string, unknown>) {
     data.regions.every(r => typeof r === 'string')
   ) {
     config.regions = data.regions;
+  }
+
+  if (
+    Array.isArray(data.functionFailoverRegions) &&
+    data.functionFailoverRegions.every(r => typeof r === 'string')
+  ) {
+    config.functionFailoverRegions = data.functionFailoverRegions;
   }
 
   return config;

@@ -16,12 +16,14 @@ import chalk from 'chalk';
 import type { Agent } from 'http';
 import type Now from '../../util';
 import { emoji, prependEmoji } from '../emoji';
-import { displayBuildLogs } from '../logs';
+import { displayBuildLogs, type BuildLog, parseLogLines } from '../logs';
 import { progress } from '../output/progress';
 import ua from '../ua';
 import output from '../../output-manager';
+import eraseLines from '../output/erase-lines';
 import getProjectByNameOrId from '../projects/get-project-by-id-or-name';
 import type { ProjectNotFound } from '../errors-ts';
+import printEvents from '../events';
 
 function printInspectUrl(
   inspectorUrl: string | null | undefined,
@@ -46,8 +48,10 @@ export default async function processDeployment({
   archive,
   skipAutoDetectionConfirmation,
   noWait,
-  withLogs,
+  withFullLogs,
   agent,
+  manual,
+  jsonOutput,
   ...args
 }: {
   now: Now;
@@ -67,8 +71,11 @@ export default async function processDeployment({
   skipAutoDetectionConfirmation?: boolean;
   rootDirectory?: string | null;
   noWait?: boolean;
-  withLogs?: boolean;
+  withFullLogs?: boolean;
   agent?: Agent;
+  bulkRedirectsPath?: string | null;
+  manual?: boolean;
+  jsonOutput?: boolean;
 }) {
   const {
     now,
@@ -81,6 +88,7 @@ export default async function processDeployment({
     prebuilt,
     vercelOutputDir,
     rootDirectory,
+    bulkRedirectsPath,
   } = args;
 
   const client = now._client;
@@ -107,6 +115,8 @@ export default async function processDeployment({
     archive,
     agent,
     projectName,
+    bulkRedirectsPath,
+    manual,
   };
 
   const deployingSpinnerVal = isSettingUpProject
@@ -127,6 +137,7 @@ export default async function processDeployment({
 
   let rollingRelease: ProjectRollingRelease | undefined;
   let project: Project | ProjectNotFound | undefined;
+  let latestLogMessage = '';
 
   try {
     for await (const event of createDeployment(clientOptions, requestBody)) {
@@ -203,11 +214,11 @@ export default async function processDeployment({
             `${isProdDeployment ? 'Production' : 'Preview'}: ${chalk.bold(
               previewUrl
             )} ${deployStamp()}`,
-            emoji('success')
+            emoji(withFullLogs ? 'link' : 'loading')
           ) + `\n`
         );
 
-        if (quiet || process.env.FORCE_TTY === '1') {
+        if (!jsonOutput && (quiet || process.env.FORCE_TTY === '1')) {
           process.stdout.write(`https://${event.payload.url}`);
         }
 
@@ -215,7 +226,10 @@ export default async function processDeployment({
           return deployment;
         }
 
-        if (withLogs) {
+        latestLogMessage =
+          deployment.readyState === 'QUEUED' ? 'Queued...' : 'Building...';
+
+        if (withFullLogs) {
           let promise: Promise<void>;
           ({ abortController, promise } = displayBuildLogs(
             client,
@@ -225,15 +239,36 @@ export default async function processDeployment({
           promise.catch(error =>
             output.warn(`Failed to read build logs: ${error}`)
           );
+        } else {
+          abortController = new AbortController();
+          const promise = printEvents(
+            client,
+            deployment.id,
+            {
+              mode: 'logs',
+              onEvent: (event: BuildLog) => {
+                if (!event.created) return;
+                const lines = parseLogLines(event);
+                const message = lines[0];
+                if (message) {
+                  latestLogMessage = `Building: ${message}`;
+                  output.spinner(latestLogMessage, 0);
+                }
+              },
+              quiet: false,
+              findOpts: { direction: 'forward', follow: true },
+            },
+            abortController
+          );
+          promise.catch(error =>
+            output.warn(`Failed to read build logs: ${error}`)
+          );
         }
-        output.spinner(
-          deployment.readyState === 'QUEUED' ? 'Queued' : 'Building',
-          0
-        );
+        output.spinner(latestLogMessage, 0);
       }
 
-      if (event.type === 'building' && !withLogs) {
-        output.spinner('Building', 0);
+      if (event.type === 'building' && !withFullLogs) {
+        output.spinner(latestLogMessage || 'Building...', 0);
       }
 
       if (event.type === 'canceled') {
@@ -247,8 +282,8 @@ export default async function processDeployment({
       }
 
       if (event.type === 'ready' && rollingRelease) {
-        output.spinner('Releasing', 0);
-        output.stopSpinner();
+        output.spinner('Releasing...', 0);
+        stopSpinner();
         return event.payload;
       }
 
@@ -259,13 +294,25 @@ export default async function processDeployment({
         (event.payload.checksState
           ? event.payload.checksState === 'completed'
           : true) &&
-        !withLogs
+        !withFullLogs
       ) {
-        output.spinner('Completing', 0);
+        stopSpinner();
+        process.stderr.write(eraseLines(2));
+        const isProdDeployment = event.payload.target === 'production';
+        const previewUrl = `https://${event.payload.url}`;
+        output.print(
+          prependEmoji(
+            `${isProdDeployment ? 'Production' : 'Preview'}: ${chalk.bold(
+              previewUrl
+            )} ${deployStamp()}`,
+            emoji('success')
+          ) + `\n`
+        );
+        output.spinner('Completing...', 0);
       }
 
-      if (event.type === 'checks-running' && !withLogs) {
-        output.spinner('Running Checks', 0);
+      if (event.type === 'checks-running' && !withFullLogs) {
+        output.spinner('Running Checks...', 0);
       }
 
       if (event.type === 'checks-conclusion-failed') {
@@ -302,6 +349,22 @@ export default async function processDeployment({
       // Handle alias-assigned event
       if (event.type === 'alias-assigned') {
         stopSpinner();
+
+        if (
+          event.payload.target === 'production' &&
+          event.payload.alias &&
+          event.payload.alias.length > 0
+        ) {
+          const primaryDomain = event.payload.alias[0];
+          const prodUrl = `https://${primaryDomain}`;
+          output.print(
+            prependEmoji(
+              `Aliased: ${chalk.bold(prodUrl)} ${deployStamp()}`,
+              emoji('link')
+            ) + '\n'
+          );
+        }
+
         event.payload.indications = indications;
         return event.payload;
       }

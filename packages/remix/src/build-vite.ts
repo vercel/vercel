@@ -8,7 +8,6 @@ import {
   execCommand,
   getEnvForPackageManager,
   getNodeVersion,
-  getSpawnOptions,
   glob,
   runNpmInstall,
   runPackageJsonScript,
@@ -310,16 +309,11 @@ export const build: BuildV2 = async ({
     turboSupportsCorepackHome,
   } = await scanParentDirs(entrypointFsDirname, true);
 
-  const spawnOpts = getSpawnOptions(meta, nodeVersion);
-  if (!spawnOpts.env) {
-    spawnOpts.env = {};
-  }
-
-  spawnOpts.env = getEnvForPackageManager({
+  const spawnEnv = getEnvForPackageManager({
     cliType,
     lockfileVersion,
     packageJsonPackageManager,
-    env: spawnOpts.env,
+    env: process.env,
     turboSupportsCorepackHome,
     projectCreatedAt: config.projectSettings?.createdAt,
   });
@@ -328,7 +322,7 @@ export const build: BuildV2 = async ({
     if (installCommand.trim()) {
       console.log(`Running "install" command: \`${installCommand}\`...`);
       await execCommand(installCommand, {
-        ...spawnOpts,
+        env: spawnEnv,
         cwd: entrypointFsDirname,
       });
     } else {
@@ -338,7 +332,7 @@ export const build: BuildV2 = async ({
     await runNpmInstall(
       entrypointFsDirname,
       [],
-      spawnOpts,
+      { env: spawnEnv },
       meta,
       config.projectSettings?.createdAt
     );
@@ -357,7 +351,7 @@ export const build: BuildV2 = async ({
   if (buildCommand) {
     debug(`Executing build command "${buildCommand}"`);
     await execCommand(buildCommand, {
-      ...spawnOpts,
+      env: spawnEnv,
       cwd: entrypointFsDirname,
     });
   } else {
@@ -366,7 +360,7 @@ export const build: BuildV2 = async ({
       await runPackageJsonScript(
         entrypointFsDirname,
         'vercel-build',
-        spawnOpts,
+        { env: spawnEnv },
         config.projectSettings?.createdAt
       );
     } else if (hasScript('build', packageJson)) {
@@ -374,12 +368,12 @@ export const build: BuildV2 = async ({
       await runPackageJsonScript(
         entrypointFsDirname,
         'build',
-        spawnOpts,
+        { env: spawnEnv },
         config.projectSettings?.createdAt
       );
     } else {
       await execCommand(frameworkSettings.buildCommand, {
-        ...spawnOpts,
+        env: spawnEnv,
         cwd: entrypointFsDirname,
       });
     }
@@ -511,11 +505,6 @@ export const build: BuildV2 = async ({
   const assetsDir = viteConfig?.build?.assetsDir || 'assets';
   const routes: any[] = [
     {
-      src: `^/${assetsDir}/(.*)$`,
-      headers: { 'cache-control': 'public, max-age=31536000, immutable' },
-      continue: true,
-    },
-    {
       handle: 'filesystem',
     },
   ];
@@ -554,6 +543,18 @@ export const build: BuildV2 = async ({
   routes.push({
     src: '/(.*)',
     dest: '/',
+  });
+
+  // Routes to call after a file has been matched.
+  // Cache headers are set here so they only apply to files that exist,
+  // preventing 404 responses from being cached with immutable headers.
+  routes.push({
+    handle: 'hit',
+  });
+  routes.push({
+    src: `^/${assetsDir}/(.*)$`,
+    headers: { 'cache-control': 'public, max-age=31536000, immutable' },
+    continue: true,
   });
 
   return { routes, output, framework: { version: frameworkVersion } };
@@ -700,6 +701,9 @@ function createNodeFunction({
       slug: frameworkSlug,
       version: frameworkVersion,
     },
+    shouldDisableAutomaticFetchInstrumentation:
+      process.env.VERCEL_TRACING_DISABLE_AUTOMATIC_FETCH_INSTRUMENTATION ===
+      '1',
   });
 }
 

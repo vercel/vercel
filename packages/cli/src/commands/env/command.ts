@@ -1,6 +1,6 @@
 import { packageName } from '../../util/pkg-name';
 import { getEnvTargetPlaceholder } from '../../util/env/env-target';
-import { forceOption, yesOption } from '../../util/arg-common';
+import { forceOption, formatOption, yesOption } from '../../util/arg-common';
 
 const targetPlaceholder = getEnvTargetPlaceholder();
 
@@ -19,6 +19,7 @@ export const listSubcommand = {
     },
   ],
   options: [
+    formatOption,
     {
       name: 'guidance',
       description: 'Receive command suggestions once command is complete',
@@ -43,6 +44,10 @@ export const addSubcommand = {
       name: 'environment',
       required: false,
     },
+    {
+      name: 'git-branch',
+      required: false,
+    },
   ],
   options: [
     {
@@ -58,10 +63,24 @@ export const addSubcommand = {
       shorthand: null,
     },
     {
+      ...yesOption,
+      description:
+        'Skip the confirmation prompt when adding an Environment Variable',
+    },
+    {
       name: 'guidance',
       description: 'Receive command suggestions once command is complete',
       shorthand: null,
       type: Boolean,
+      deprecated: false,
+    },
+    {
+      name: 'value',
+      description:
+        'Value for the variable (non-interactive). Otherwise use stdin or you will be prompted.',
+      shorthand: null,
+      type: String,
+      argument: 'VALUE',
       deprecated: false,
     },
   ],
@@ -91,7 +110,7 @@ export const addSubcommand = {
     {
       name: 'Add a new Environment Variable for a specific Environment and Git Branch',
       value: [
-        `${packageName} env add <name> ${targetPlaceholder} <git-branch>`,
+        `${packageName} env add <name> ${targetPlaceholder} <gitbranch>`,
         `${packageName} env add DB_PASS preview feat1`,
       ],
     },
@@ -102,6 +121,10 @@ export const addSubcommand = {
         `cat ~/.npmrc | ${packageName} env add NPM_RC preview`,
         `${packageName} env add API_URL production < url.txt`,
       ],
+    },
+    {
+      name: 'Add with value as argument (non-interactive)',
+      value: `${packageName} env add API_TOKEN production --value "secret" --yes`,
     },
   ],
 } as const;
@@ -198,6 +221,50 @@ export const pullSubcommand = {
   ],
 } as const;
 
+export const runSubcommand = {
+  name: 'run',
+  aliases: [],
+  description:
+    'Run a command with environment variables from the linked Vercel project',
+  arguments: [
+    {
+      name: 'command',
+      required: true,
+      multiple: true,
+    },
+  ],
+  options: [
+    {
+      name: 'environment',
+      description:
+        'Specify the environment to pull variables from (default: development)',
+      shorthand: 'e',
+      type: String,
+      argument: 'TARGET',
+      deprecated: false,
+    },
+    {
+      name: 'git-branch',
+      description:
+        'Specify the Git branch to pull specific Environment Variables for',
+      shorthand: null,
+      type: String,
+      argument: 'NAME',
+      deprecated: false,
+    },
+  ],
+  examples: [
+    {
+      name: 'Run Next.js dev server with development environment variables',
+      value: `${packageName} env run -- next dev`,
+    },
+    {
+      name: 'Run tests with preview environment variables for a specific branch',
+      value: `${packageName} env run -e preview --git-branch feature-x -- npm test`,
+    },
+  ],
+} as const;
+
 export const updateSubcommand = {
   name: 'update',
   aliases: [],
@@ -225,6 +292,15 @@ export const updateSubcommand = {
       ...yesOption,
       description:
         'Skip the confirmation prompt when updating an Environment Variable',
+    },
+    {
+      name: 'value',
+      description:
+        'New value for the variable (non-interactive). Otherwise use stdin or you will be prompted.',
+      shorthand: null,
+      type: String,
+      argument: 'VALUE',
+      deprecated: false,
     },
   ],
   examples: [
@@ -270,6 +346,7 @@ export const envCommand = {
     listSubcommand,
     pullSubcommand,
     removeSubcommand,
+    runSubcommand,
     updateSubcommand,
   ],
   options: [],

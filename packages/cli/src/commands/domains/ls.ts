@@ -14,12 +14,14 @@ import { getPaginationOpts } from '../../util/get-pagination-opts';
 import { getCommandName } from '../../util/pkg-name';
 import isDomainExternal from '../../util/domains/is-domain-external';
 import { getDomainRegistrar } from '../../util/domains/get-domain-registrar';
+import { validateJsonOutput } from '../../util/output-format';
 import output from '../../output-manager';
 import { DomainsLsTelemetryClient } from '../../util/telemetry/commands/domains/ls';
 import { listSubcommand } from './command';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
+import { validateLsArgs } from '../../util/validate-ls-args';
 
 export default async function ls(client: Client, argv: string[]) {
   const telemetry = new DomainsLsTelemetryClient({
@@ -38,9 +40,26 @@ export default async function ls(client: Client, argv: string[]) {
   }
   const { args, flags: opts } = parsedArgs;
 
+  const validationResult = validateLsArgs({
+    commandName: 'domains ls',
+    args: args,
+    maxArgs: 0,
+    exitCode: 2,
+  });
+  if (validationResult !== 0) {
+    return validationResult;
+  }
+
   telemetry.trackCliOptionLimit(opts['--limit']);
   telemetry.trackCliOptionNext(opts['--next']);
+  telemetry.trackCliOptionFormat(opts['--format']);
 
+  const formatResult = validateJsonOutput(opts);
+  if (!formatResult.valid) {
+    output.error(formatResult.error);
+    return 1;
+  }
+  const asJson = formatResult.jsonOutput;
   let paginationOptions: (number | undefined)[];
 
   try {
@@ -54,15 +73,6 @@ export default async function ls(client: Client, argv: string[]) {
 
   const lsStamp = stamp();
 
-  if (args.length !== 0) {
-    output.error(
-      `Invalid number of arguments. Usage: ${chalk.cyan(
-        `${getCommandName('domains ls')}`
-      )}`
-    );
-    return 1;
-  }
-
   output.spinner(`Fetching Domains under ${chalk.bold(contextName)}`);
 
   const { domains, pagination } = await getDomains(
@@ -70,26 +80,42 @@ export default async function ls(client: Client, argv: string[]) {
     ...paginationOptions
   );
 
-  output.log(
-    `${plural('Domain', domains.length, true)} found under ${chalk.bold(
-      contextName
-    )} ${chalk.gray(lsStamp())}`
-  );
-
-  if (domains.length > 0) {
-    output.print(
-      formatDomainsTable(domains).replace(/^(.*)/gm, `${' '.repeat(1)}$1`)
-    );
-    output.print('\n\n');
-  }
-
-  if (pagination && pagination.count === 20) {
-    const flags = getCommandFlags(opts, ['_', '--next']);
+  if (asJson) {
+    output.stopSpinner();
+    const jsonOutput = {
+      domains: domains.map(domain => ({
+        name: domain.name,
+        registrar: getDomainRegistrar(domain),
+        nameservers: isDomainExternal(domain) ? 'external' : 'vercel',
+        expiresAt: domain.expiresAt,
+        createdAt: domain.createdAt,
+        creator: domain.creator.username,
+      })),
+      pagination,
+    };
+    client.stdout.write(`${JSON.stringify(jsonOutput, null, 2)}\n`);
+  } else {
     output.log(
-      `To display the next page, run ${getCommandName(
-        `domains ls${flags} --next ${pagination.next}`
-      )}`
+      `${plural('Domain', domains.length, true)} found under ${chalk.bold(
+        contextName
+      )} ${chalk.gray(lsStamp())}`
     );
+
+    if (domains.length > 0) {
+      output.print(
+        formatDomainsTable(domains).replace(/^(.*)/gm, `${' '.repeat(1)}$1`)
+      );
+      output.print('\n\n');
+    }
+
+    if (pagination && pagination.count === 20) {
+      const flags = getCommandFlags(opts, ['_', '--next', '--format']);
+      output.log(
+        `To display the next page, run ${getCommandName(
+          `domains ls${flags} --next ${pagination.next}`
+        )}`
+      );
+    }
   }
 
   return 0;

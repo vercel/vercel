@@ -10,6 +10,11 @@ export type NodeVersionMajor = ReturnType<typeof getOptions>[number]['major'];
 // with the newest supported version first
 export const NODE_VERSIONS: NodeVersion[] = [
   new NodeVersion({
+    major: 24,
+    range: '24.x',
+    runtime: 'nodejs24.x',
+  }),
+  new NodeVersion({
     major: 22,
     range: '22.x',
     runtime: 'nodejs22.x',
@@ -70,32 +75,22 @@ export function getNodeVersionByMajor(major: number): NodeVersion | undefined {
 }
 
 function getOptions(): NodeVersion[] {
-  if (process.env.VERCEL_ALLOW_NODEJS_24 === '1') {
-    return [
-      new NodeVersion({
-        major: 24,
-        range: '24.x',
-        runtime: 'nodejs24.x',
-      }),
-      ...NODE_VERSIONS,
-    ];
-  }
   return NODE_VERSIONS;
 }
 
 function isNodeVersionAvailable(version: NodeVersion): boolean {
-  try {
-    return statSync(`/node${version.major}`).isDirectory();
-  } catch {
-    // ENOENT, or any other error, we don't care about
-  }
-  return false;
+  const stat = statSync(`/node${version.major}`, { throwIfNoEntry: false });
+  return stat?.isDirectory() ?? false;
 }
 
 export function getAvailableNodeVersions(): NodeVersionMajor[] {
-  return getOptions()
-    .filter(isNodeVersionAvailable)
-    .map(n => n.major);
+  return (
+    getOptions()
+      // Only check versions >= 18, as older versions don't have directories in the build container
+      .filter(v => v.major >= 18)
+      .filter(isNodeVersionAvailable)
+      .map(n => n.major)
+  );
 }
 
 function getHint(isAuto = false, availableVersions?: NodeVersionMajor[]) {
@@ -153,8 +148,8 @@ export async function getSupportedNodeVersion(
     if (!found) {
       throw new NowBuildError({
         code: 'BUILD_UTILS_NODE_VERSION_INVALID',
-        link: 'http://vercel.link/node-version',
-        message: `Found invalid Node.js Version: "${engineRange}". ${getHint(
+        link: 'https://vercel.link/node-version',
+        message: `Found invalid or discontinued Node.js Version: "${engineRange}". ${getHint(
           isAuto,
           availableVersions
         )}`,
@@ -170,7 +165,7 @@ export async function getSupportedNodeVersion(
     const intro = `Node.js Version "${selection.range}" is discontinued and must be upgraded.`;
     throw new NowBuildError({
       code: 'BUILD_UTILS_NODE_VERSION_DISCONTINUED',
-      link: 'http://vercel.link/node-version',
+      link: 'https://vercel.link/node-version',
       message: `${intro} ${getHint(isAuto)}`,
     });
   }

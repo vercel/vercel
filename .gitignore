@@ -1,12 +1,14 @@
 node_modules
 dist
 .vscode
+.zed
 npm-debug.log
 yarn-error.log
 .nyc_output
 coverage
 coverage.lcov
 *.swp
+*~
 *.bak
 *.tgz
 packages/cli/src/util/dev/templates/*.ts
@@ -25,6 +27,7 @@ test/lib/deployment/failed-page.txt
 .DS_Store
 .next
 /.env
+/.venv*/
 /public
 __pycache__
 .vercel
@@ -32,3 +35,11 @@ __pycache__
 .eslintcache
 turbo-cache-key.json
 junit.xml
+**/target/
+.env*.local
+# CLI "target" subcommand (e.g. vercel target list) is source, not build output
+!packages/cli/src/commands/target/
+!packages/cli/src/commands/target/**
+# CLI target command tests
+!packages/cli/test/unit/commands/target/
+!packages/cli/test/unit/commands/target/**

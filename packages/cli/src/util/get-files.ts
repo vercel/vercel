@@ -136,14 +136,14 @@ async function explode(
 
     try {
       s = await fs.stat(path);
-    } catch (e) {
+    } catch (_e) {
       // In case the file comes from `files`
       // and it wasn't specified with `.js` by the user
       path = `${file}.js`;
 
       try {
         s = await fs.stat(path);
-      } catch (e2) {
+      } catch (_e2) {
         debug(`Ignoring invalid file ${file}`);
         return null;
       }
@@ -151,7 +151,6 @@ async function explode(
 
     if (s.isDirectory()) {
       const all = await fs.readdir(file);
-      /* eslint-disable no-use-before-define */
       const recursive = many(all.map(subdir => asAbsolute(subdir, file)));
       return recursive as any as Promise<string | null>;
       /* eslint-enable no-use-before-define */

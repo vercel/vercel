@@ -1,0 +1,9 @@
+{
+  "projectId": "prj_turborepo_hono",
+  "orgId": "team_dummy",
+  "settings": {
+    "framework": "hono",
+    "rootDirectory": "apps/api"
+  }
+}
+

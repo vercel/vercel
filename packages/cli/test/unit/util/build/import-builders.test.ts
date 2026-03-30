@@ -1,13 +1,24 @@
 import { describe, it, expect } from 'vitest';
 import { join } from 'path';
-import { remove } from 'fs-extra';
+import { ensureDir, remove, outputJSON, writeFile } from 'fs-extra';
 import { getWriteableDirectory } from '@vercel/build-utils';
 import { client } from '../../../mocks/client';
-import {
-  importBuilders,
-  resolveBuilders,
-} from '../../../../src/util/build/import-builders';
+import { importBuilders } from '../../../../src/util/build/import-builders';
+import * as installBuildersModule from '../../../../src/util/build/install-builders';
 import vercelNextPkg from '@vercel/next/package.json';
+
+vi.mock('../../../../src/util/build/install-builders', async importOriginal => {
+  const actual = await (
+    importOriginal as () => Promise<typeof installBuildersModule>
+  )();
+  return {
+    ...actual,
+    installBuilders: vi.fn(
+      (...args: Parameters<typeof actual.installBuilders>) =>
+        actual.installBuilders(...args)
+    ),
+  };
+});
 import vercelNodePkg from '@vercel/node/package.json';
 import { vi } from 'vitest';
 import { isWindows } from '../../../helpers/is-windows';
@@ -119,7 +130,7 @@ describe('importBuilders()', () => {
       const cwd = await getWriteableDirectory();
       try {
         const spec = 'vercel-deno@2.0.1';
-        const tarballSpec = 'https://files-njlxk3l0r-curated-tests.vercel.app';
+        const tarballSpec = 'https://files-roan-zeta.vercel.app';
         const specs = new Set([spec, tarballSpec]);
         const builders = await importBuilders(specs, cwd);
         expect(builders.size).toEqual(2);
@@ -138,7 +149,7 @@ describe('importBuilders()', () => {
           'function'
         );
         await expect(client.stderr).toOutput(
-          '> Installing Builders: vercel-deno@2.0.1, https://files-njlxk3l0r-curated-tests.vercel.app'
+          `> Installing Builders: vercel-deno@2.0.1, ${tarballSpec}`
         );
       } finally {
         await remove(cwd);
@@ -192,35 +203,74 @@ describe('importBuilders()', () => {
       'https://vercel.link/builder-dependencies-install-failed'
     );
   });
-});
 
-describe('resolveBuilders()', () => {
-  it('should return builders to install when missing', async () => {
-    const specs = new Set(['@vercel/does-not-exist']);
-    const result = await resolveBuilders(process.cwd(), specs);
-    if (!('buildersToAdd' in result)) {
-      throw new Error('Expected `buildersToAdd` to be defined');
-    }
-    expect([...result.buildersToAdd]).toEqual(['@vercel/does-not-exist']);
-  });
+  it('should attempt install when builder is missing locally and throw MODULE_NOT_FOUND on 2nd pass when install returns empty', async () => {
+    const spec = '@vercel/does-not-exist';
+    const specs = new Set([spec]);
+    const cwd = await getWriteableDirectory();
+    const buildersDir = join(cwd, '.vercel', 'builders');
 
-  it('should throw error when `MODULE_NOT_FOUND` on 2nd pass', async () => {
+    vi.mocked(installBuildersModule.installBuilders).mockResolvedValueOnce(
+      new Map()
+    );
     let err: Error | undefined;
-    const specs = new Set(['@vercel/does-not-exist']);
-
-    // The empty Map represents `resolveBuilders()` being invoked after the install step
     try {
-      await resolveBuilders(process.cwd(), specs, new Map());
+      await importBuilders(specs, cwd);
     } catch (_err: unknown) {
       err = _err as Error;
+    } finally {
+      await remove(cwd);
     }
 
+    expect(installBuildersModule.installBuilders).toHaveBeenCalledWith(
+      buildersDir,
+      new Set([spec]),
+      undefined
+    );
     if (!err) {
       throw new Error('Expected `err` to be defined');
     }
-
     expect(
       err.message.startsWith('Importing "@vercel/does-not-exist": Cannot')
-    ).toEqual(true);
+    ).toBe(true);
+  });
+
+  it('should install and import builder', async () => {
+    const spec = 'fake-builder@1.0.0';
+    const specs = new Set([spec]);
+    const cwd = await getWriteableDirectory();
+    const buildersDir = join(cwd, '.vercel', 'builders');
+    const pkgName = 'fake-builder';
+    const builderModuleDir = join(buildersDir, 'node_modules', pkgName);
+
+    vi.mocked(installBuildersModule.installBuilders).mockImplementationOnce(
+      async (dir, buildersToAdd) => {
+        await ensureDir(join(dir, 'node_modules', pkgName));
+        await outputJSON(join(dir, 'node_modules', pkgName, 'package.json'), {
+          name: pkgName,
+          version: '1.0.0',
+          main: 'index.js',
+        });
+        await writeFile(
+          join(dir, 'node_modules', pkgName, 'index.js'),
+          `exports.version = 3; exports.build = async function() { return { output: {} }; };`
+        );
+        return new Map([[Array.from(buildersToAdd)[0], pkgName]]);
+      }
+    );
+
+    try {
+      const builders = await importBuilders(specs, cwd);
+      expect(builders.size).toBe(1);
+      expect(builders.get(spec)?.pkg.name).toBe(pkgName);
+      expect(builders.get(spec)?.pkg.version).toBe('1.0.0');
+      expect(builders.get(spec)?.pkgPath).toBe(
+        join(builderModuleDir, 'package.json')
+      );
+      expect(builders.get(spec)?.dynamicallyInstalled).toBe(true);
+      expect(typeof builders.get(spec)?.builder.build).toBe('function');
+    } finally {
+      await remove(cwd);
+    }
   });
 });

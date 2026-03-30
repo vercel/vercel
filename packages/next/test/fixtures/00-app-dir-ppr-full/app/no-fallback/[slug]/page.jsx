@@ -9,7 +9,13 @@ export function generateStaticParams() {
   return slugs.map((slug) => ({  slug  }));
 }
 
-export default function NoFallbackPage({ params: { slug } }) {
+export default async function NoFallbackPage(props) {
+  const params = await props.params;
+
+  const {
+    slug
+  } = params;
+
   return (
     <Suspense fallback={<Dynamic pathname={`/no-fallback/${slug}`} fallback />}>
       <Dynamic pathname={`/no-fallback/${slug}`} />

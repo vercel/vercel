@@ -1,0 +1,12 @@
+{
+  "name": "hono-xxhash",
+  "type": "module",
+  "dependencies": {
+    "hono": "4.8.9",
+    "@node-rs/xxhash": "1.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "20.11.17",
+    "typescript": "5.8.3"
+  }
+}

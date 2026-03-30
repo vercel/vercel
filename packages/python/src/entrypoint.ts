@@ -1,134 +1,72 @@
 import fs from 'fs';
 import { join, posix as pathPosix } from 'path';
-import type { FileFsRef } from '@vercel/build-utils';
-import { glob, debug } from '@vercel/build-utils';
+import type { PythonFramework } from '@vercel/build-utils';
+import { debug } from '@vercel/build-utils';
 import { readConfigFile } from '@vercel/build-utils';
+import { findAppOrHandler } from '@vercel/python-analysis';
 
-export const FASTAPI_ENTRYPOINT_FILENAMES = ['app', 'index', 'server', 'main'];
-export const FASTAPI_ENTRYPOINT_DIRS = ['', 'src', 'app', 'api'];
-export const FASTAPI_CONTENT_REGEX =
-  /(from\s+fastapi\s+import\s+FastAPI|import\s+fastapi|FastAPI\s*\()/;
+export interface PythonEntrypoint {
+  /** Path to the entrypoint file (e.g. "src/app.py"). */
+  entrypoint: string;
+  /** The callable name within the module (e.g. "app"). */
+  variableName: string;
+}
 
-export const FASTAPI_CANDIDATE_ENTRYPOINTS =
-  FASTAPI_ENTRYPOINT_FILENAMES.flatMap((filename: string) =>
-    FASTAPI_ENTRYPOINT_DIRS.map((dir: string) =>
+export interface DetectedPythonEntrypoint {
+  /** Resolved entrypoint, if found. */
+  entrypoint?: PythonEntrypoint;
+  /** Directory containing manage.py, if detected via Django path. */
+  baseDir?: string;
+}
+
+export const PYTHON_ENTRYPOINT_FILENAMES = [
+  'app',
+  'index',
+  'server',
+  'main',
+  'wsgi',
+  'asgi',
+];
+export const PYTHON_ENTRYPOINT_DIRS = ['', 'src', 'app', 'api'];
+
+export const PYTHON_CANDIDATE_ENTRYPOINTS = getCandidateEntrypointsInDirs(
+  PYTHON_ENTRYPOINT_DIRS
+);
+
+function getCandidateEntrypointsInDirs(dirs: string[]) {
+  return dirs.flatMap((dir: string) =>
+    PYTHON_ENTRYPOINT_FILENAMES.map((filename: string) =>
       pathPosix.join(dir, `${filename}.py`)
     )
   );
-
-export function isFastapiEntrypoint(
-  file: FileFsRef | { fsPath?: string }
-): boolean {
-  try {
-    const fsPath = (file as FileFsRef).fsPath;
-    if (!fsPath) return false;
-    const contents = fs.readFileSync(fsPath, 'utf8');
-    return FASTAPI_CONTENT_REGEX.test(contents);
-  } catch {
-    return false;
-  }
 }
 
-// Flask zero-config detection
-export const FLASK_ENTRYPOINT_FILENAMES = ['app', 'index', 'server', 'main'];
-export const FLASK_ENTRYPOINT_DIRS = ['', 'src', 'app', 'api'];
-export const FLASK_CONTENT_REGEX =
-  /(from\s+flask\s+import\s+Flask|import\s+flask|Flask\s*\()/;
-
-export const FLASK_CANDIDATE_ENTRYPOINTS = FLASK_ENTRYPOINT_FILENAMES.flatMap(
-  (filename: string) =>
-    FLASK_ENTRYPOINT_DIRS.map((dir: string) =>
-      pathPosix.join(dir, `${filename}.py`)
-    )
-);
-
-export function isFlaskEntrypoint(
-  file: FileFsRef | { fsPath?: string }
-): boolean {
+async function fileExists(filePath: string): Promise<boolean> {
   try {
-    const fsPath = (file as FileFsRef).fsPath;
-    if (!fsPath) return false;
-    const contents = fs.readFileSync(fsPath, 'utf8');
-    return FLASK_CONTENT_REGEX.test(contents);
+    const stat = await fs.promises.stat(filePath);
+    return stat.isFile();
   } catch {
     return false;
   }
 }
 
 /**
- * Detect a Flask entrypoint path relative to workPath, or return null if not found.
+ * Check if a Python file contains a top-level app/handler.
+ * Returns the matched variable name (e.g. "app"), or null if not found.
  */
-export async function detectFlaskEntrypoint(
+async function checkEntrypoint(
   workPath: string,
-  configuredEntrypoint: string
+  relPath: string
 ): Promise<string | null> {
-  const entry = configuredEntrypoint.endsWith('.py')
-    ? configuredEntrypoint
-    : `${configuredEntrypoint}.py`;
-
-  try {
-    const fsFiles = await glob('**', workPath);
-    if (fsFiles[entry]) return entry;
-
-    const candidates = FLASK_CANDIDATE_ENTRYPOINTS.filter(
-      (c: string) => !!fsFiles[c]
-    );
-    if (candidates.length > 0) {
-      const flaskEntrypoint =
-        candidates.find((c: string) =>
-          isFlaskEntrypoint(fsFiles[c] as FileFsRef)
-        ) || candidates[0];
-      debug(`Detected Flask entrypoint: ${flaskEntrypoint}`);
-      return flaskEntrypoint;
-    }
-
-    return null;
-  } catch {
-    debug('Failed to discover entrypoint for Flask');
-    return null;
-  }
-}
-
-/**
- * Detect a FastAPI entrypoint path relative to workPath, or return null if not found.
- */
-export async function detectFastapiEntrypoint(
-  workPath: string,
-  configuredEntrypoint: string
-): Promise<string | null> {
-  const entry = configuredEntrypoint.endsWith('.py')
-    ? configuredEntrypoint
-    : `${configuredEntrypoint}.py`;
-
-  try {
-    const fsFiles = await glob('**', workPath);
-    // If the configured entrypoint exists, use it
-    if (fsFiles[entry]) return entry;
-
-    // Otherwise search for candidates
-    const candidates = FASTAPI_CANDIDATE_ENTRYPOINTS.filter(
-      (c: string) => !!fsFiles[c]
-    );
-    if (candidates.length > 0) {
-      const fastapiEntrypoint =
-        candidates.find((c: string) =>
-          isFastapiEntrypoint(fsFiles[c] as FileFsRef)
-        ) || candidates[0];
-      debug(`Detected FastAPI entrypoint: ${fastapiEntrypoint}`);
-      return fastapiEntrypoint;
-    }
-
-    // Nothing found
-    return null;
-  } catch {
-    debug('Failed to discover entrypoint for FastAPI');
-    return null;
-  }
+  const absPath = join(workPath, relPath);
+  if (!(await fileExists(absPath))) return null;
+  const content = await fs.promises.readFile(absPath, 'utf-8');
+  return findAppOrHandler(content);
 }
 
 export async function getPyprojectEntrypoint(
   workPath: string
-): Promise<string | null> {
+): Promise<PythonEntrypoint | null> {
   const pyprojectData = await readConfigFile<{
     project?: { scripts?: Record<string, unknown> };
   }>(join(workPath, 'pyproject.toml'));
@@ -147,18 +85,136 @@ export async function getPyprojectEntrypoint(
   const match = appScript.match(/([A-Za-z_][\w.]*)\s*:\s*([A-Za-z_][\w]*)/);
   if (!match) return null;
   const modulePath = match[1];
+  const variableName = match[2];
   const relPath = modulePath.replace(/\./g, '/');
 
   // Prefer an existing file match if present; otherwise fall back to "<module>.py".
-  try {
-    const fsFiles = await glob('**', workPath);
-    const candidates = [`${relPath}.py`, `${relPath}/__init__.py`];
-    for (const candidate of candidates) {
-      if (fsFiles[candidate]) return candidate;
+  const candidates = [`${relPath}.py`, `${relPath}/__init__.py`];
+  for (const candidate of candidates) {
+    if (await fileExists(join(workPath, candidate))) {
+      return { entrypoint: candidate, variableName };
     }
-    return null;
+  }
+  return null;
+}
+
+async function findValidEntrypoint(
+  workPath: string,
+  candidates: string[]
+): Promise<PythonEntrypoint | null> {
+  for (const candidate of candidates) {
+    const varName = await checkEntrypoint(workPath, candidate);
+    if (varName) {
+      debug(`Detected Python entrypoint: ${candidate} (variable: ${varName})`);
+      return { entrypoint: candidate, variableName: varName };
+    }
+  }
+  return null;
+}
+
+/**
+ * Check if manage.py exists in workPath and references DJANGO_SETTINGS_MODULE.
+ */
+async function checkDjangoManage(workPath: string): Promise<boolean> {
+  const managePath = join(workPath, 'manage.py');
+  try {
+    const content = await fs.promises.readFile(managePath, 'utf-8');
+    if (!content.includes('DJANGO_SETTINGS_MODULE')) return false;
+    debug(`Found Django manage.py with DJANGO_SETTINGS_MODULE at ${workPath}`);
+    return true;
   } catch {
-    debug('Failed to discover Python entrypoint from pyproject.toml');
+    return false;
+  }
+}
+
+/**
+ * List immediate subdirectories of workPath (non-hidden).
+ */
+async function getSubdirectories(workPath: string): Promise<string[]> {
+  try {
+    const entries = await fs.promises.readdir(workPath, {
+      withFileTypes: true,
+    });
+    return entries
+      .filter(e => e.isDirectory() && !e.name.startsWith('.'))
+      .map(e => e.name)
+      .sort();
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Detect a Python entrypoint for any Python framework using AST-based detection.
+ */
+export async function detectGenericPythonEntrypoint(
+  workPath: string,
+  configuredEntrypoint: string
+): Promise<DetectedPythonEntrypoint | null> {
+  const entry = configuredEntrypoint.endsWith('.py')
+    ? configuredEntrypoint
+    : `${configuredEntrypoint}.py`;
+
+  try {
+    // If the configured entrypoint exists and is valid, use it
+    const varName = await checkEntrypoint(workPath, entry);
+    if (varName) {
+      debug(`Using configured Python entrypoint: ${entry}`);
+      return { entrypoint: { entrypoint: entry, variableName: varName } };
+    }
+
+    // Search candidate locations using AST-based detection
+    const found = await findValidEntrypoint(
+      workPath,
+      PYTHON_CANDIDATE_ENTRYPOINTS
+    );
+    return found ? { entrypoint: found } : null;
+  } catch {
+    debug('Failed to discover Python entrypoint');
+    return null;
+  }
+}
+
+/**
+ * Detect a Django Python entrypoint: look for manage.py with
+ * DJANGO_SETTINGS_MODULE, then fall back to AST-based detection if needed.
+ */
+export async function detectDjangoPythonEntrypoint(
+  workPath: string,
+  configuredEntrypoint: string
+): Promise<DetectedPythonEntrypoint | null> {
+  const entry = configuredEntrypoint.endsWith('.py')
+    ? configuredEntrypoint
+    : `${configuredEntrypoint}.py`;
+
+  try {
+    // If the configured entrypoint exists and is valid, use it
+    const varName = await checkEntrypoint(workPath, entry);
+    if (varName) {
+      debug(`Using configured Python entrypoint: ${entry}`);
+      return { entrypoint: { entrypoint: entry, variableName: varName } };
+    }
+
+    // Get root directories (workPath root + immediate subdirs)
+    const subdirs = await getSubdirectories(workPath);
+    const rootDirs = ['', ...subdirs];
+
+    // Look for a Django manage.py in workPath and immediate subdirectories.
+    for (const rootDir of rootDirs) {
+      const currPath = join(workPath, rootDir);
+      const isDjango = await checkDjangoManage(currPath);
+      if (isDjango) {
+        return { baseDir: rootDir };
+      }
+    }
+
+    // Fall back to AST-based detection,
+    // Look in all immediate subdirectories, not just those specified in PYTHON_ENTRYPOINT_DIRS.
+    const candidates = getCandidateEntrypointsInDirs(rootDirs);
+    const found = await findValidEntrypoint(workPath, candidates);
+    return found ? { entrypoint: found } : null;
+  } catch {
+    debug('Failed to discover Django Python entrypoint');
     return null;
   }
 }
@@ -167,16 +223,15 @@ export async function getPyprojectEntrypoint(
  * Detect a Python entrypoint path for a given framework relative to workPath, or return null if not found.
  */
 export async function detectPythonEntrypoint(
-  framework: 'fastapi' | 'flask',
+  framework: PythonFramework,
   workPath: string,
   configuredEntrypoint: string
-): Promise<string | null> {
-  let entrypoint = null;
-  if (framework === 'fastapi') {
-    entrypoint = await detectFastapiEntrypoint(workPath, configuredEntrypoint);
-  } else if (framework === 'flask') {
-    entrypoint = await detectFlaskEntrypoint(workPath, configuredEntrypoint);
-  }
-  if (entrypoint) return entrypoint;
-  return await getPyprojectEntrypoint(workPath);
+): Promise<DetectedPythonEntrypoint | null> {
+  const result =
+    framework === 'django'
+      ? await detectDjangoPythonEntrypoint(workPath, configuredEntrypoint)
+      : await detectGenericPythonEntrypoint(workPath, configuredEntrypoint);
+  if (result) return result;
+  const pyprojectEntry = await getPyprojectEntrypoint(workPath);
+  return pyprojectEntry ? { entrypoint: pyprojectEntry } : null;
 }

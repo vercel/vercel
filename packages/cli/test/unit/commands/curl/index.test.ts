@@ -2,9 +2,11 @@ import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { client } from '../../../mocks/client';
 import curl from '../../../../src/commands/curl';
 import { getDeploymentUrlById } from '../../../../src/commands/curl/deployment-url';
+import { getDeploymentUrlAndToken } from '../../../../src/commands/curl/shared';
 import { useUser } from '../../../mocks/user';
 import { useProject } from '../../../mocks/project';
-import { useTeams } from '../../../mocks/team';
+import { useTeams, createTeam } from '../../../mocks/team';
+import { setupTmpDir } from '../../../helpers/setup-unit-fixture';
 
 const MOCK_ACCOUNT_ID = 'team_test123';
 
@@ -55,6 +57,41 @@ describe('curl', () => {
   afterEach(() => {
     process.argv = originalProcessArgv;
     vi.clearAllMocks();
+  });
+
+  describe('--non-interactive', () => {
+    it('outputs action_required JSON and exits when not linked and multiple teams (no --scope)', async () => {
+      const cwd = setupTmpDir();
+      useUser({ version: 'northstar' });
+      useTeams('team_dummy');
+      createTeam();
+      client.cwd = cwd;
+      client.setArgv('curl', '/', '--non-interactive');
+      (client as { nonInteractive: boolean }).nonInteractive = true;
+
+      const exitSpy = vi
+        .spyOn(process, 'exit')
+        .mockImplementation((code?: number) => {
+          throw new Error(`process.exit(${code})`);
+        });
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+      await expect(curl(client)).rejects.toThrow('process.exit(1)');
+
+      expect(logSpy).toHaveBeenCalledTimes(1);
+      const payload = JSON.parse(logSpy.mock.calls[0][0]);
+      expect(payload.status).toBe('action_required');
+      expect(payload.reason).toBe('missing_scope');
+      expect(payload.message).toContain('--scope');
+      expect(payload.message).toContain('non-interactive');
+      expect(Array.isArray(payload.choices)).toBe(true);
+      expect(payload.choices.length).toBeGreaterThanOrEqual(2);
+      expect(exitSpy).toHaveBeenCalledWith(1);
+
+      exitSpy.mockRestore();
+      logSpy.mockRestore();
+      (client as { nonInteractive: boolean }).nonInteractive = false;
+    });
   });
 
   describe('--help', () => {
@@ -605,6 +642,22 @@ describe('curl', () => {
 });
 
 describe('getDeploymentUrlById', () => {
+  it('should accept a bare vercel.app host and return https origin', async () => {
+    const mockClient = {
+      fetch: vi.fn().mockResolvedValue({
+        url: 'should-not-be-used.vercel.app',
+      }),
+    } as any;
+
+    const result = await getDeploymentUrlById(
+      mockClient,
+      'my-app-abc123.vercel.app'
+    );
+
+    expect(result).toBe('https://my-app-abc123.vercel.app');
+    expect(mockClient.fetch).not.toHaveBeenCalled();
+  });
+
   it('should add dpl_ prefix when missing', async () => {
     const mockClient = {
       fetch: vi.fn().mockResolvedValue({
@@ -675,5 +728,95 @@ describe('getDeploymentUrlById', () => {
       '/v13/deployments/dpl_XYZ789ABC123',
       { accountId: MOCK_ACCOUNT_ID }
     );
+  });
+});
+
+describe('getDeploymentUrlAndToken target selection', () => {
+  it('uses production target alias when available', async () => {
+    const { setupUnitFixture } = await import(
+      '../../../helpers/setup-unit-fixture'
+    );
+    const cwd = setupUnitFixture('commands/deploy/static');
+    client.cwd = cwd;
+
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      id: 'static',
+      name: 'static-project',
+      targets: {
+        production: { alias: ['prod-alias.vercel.app'] },
+      },
+      latestDeployments: [
+        {
+          url: 'static-project-abc123.vercel.app',
+        },
+      ],
+    } as any);
+
+    const res = await getDeploymentUrlAndToken(client, 'curl', '/api/hello', {
+      protectionBypassFlag: 'test-secret',
+    });
+
+    expect(typeof res).toBe('object');
+    if (typeof res === 'number') {
+      throw new Error('expected object result');
+    }
+    expect(res.fullUrl).toBe('https://prod-alias.vercel.app/api/hello');
+  });
+
+  it('falls back to latest deployment url when no production alias', async () => {
+    const { setupUnitFixture } = await import(
+      '../../../helpers/setup-unit-fixture'
+    );
+    const cwd = setupUnitFixture('commands/deploy/static');
+    client.cwd = cwd;
+
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      id: 'static',
+      name: 'static-project',
+      latestDeployments: [
+        {
+          url: 'static-project-abc123.vercel.app',
+        },
+      ],
+    } as any);
+
+    const res = await getDeploymentUrlAndToken(client, 'curl', '/api/hello', {
+      protectionBypassFlag: 'test-secret',
+    });
+
+    expect(typeof res).toBe('object');
+    if (typeof res === 'number') {
+      throw new Error('expected object result');
+    }
+    expect(res.fullUrl).toBe(
+      'https://static-project-abc123.vercel.app/api/hello'
+    );
+  });
+
+  it('throws when no target or latest deployments exist', async () => {
+    const { setupUnitFixture } = await import(
+      '../../../helpers/setup-unit-fixture'
+    );
+    const cwd = setupUnitFixture('commands/deploy/static');
+    client.cwd = cwd;
+
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      id: 'static',
+      name: 'static-project',
+      latestDeployments: [],
+      targets: {},
+    } as any);
+
+    await expect(
+      getDeploymentUrlAndToken(client, 'curl', '/api/hello', {
+        protectionBypassFlag: 'test-secret',
+      })
+    ).rejects.toThrow('No deployment URL found for the project');
   });
 });

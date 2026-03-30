@@ -62,6 +62,7 @@ export default async function main(client: Client) {
   }
 
   telemetry.trackCliFlagConfirm(parsedArgs.flags['--confirm']);
+  telemetry.trackCliFlagLocal(parsedArgs.flags['--local']);
   telemetry.trackCliFlagYes(parsedArgs.flags['--yes']);
   telemetry.trackCliOptionPort(parsedArgs.flags['--port']);
   telemetry.trackCliOptionListen(parsedArgs.flags['--listen']);
@@ -90,6 +91,11 @@ export default async function main(client: Client) {
   const dir = passedDir || process.cwd();
 
   const vercelConfig = await readConfig(dir);
+
+  if (vercelConfig instanceof Error) {
+    output.prettyError(vercelConfig);
+    return 1;
+  }
 
   const hasBuilds =
     vercelConfig &&

@@ -1,7 +1,7 @@
 {
   "probes": [
     {
-      "logMustContain": "uv at \""
+      "logMustContain": "Using uv "
     },
     {
       "logMustNotContain": "falling back to pip"
@@ -12,6 +12,9 @@
       "responseHeaders": {
         "content-type": "text/html; charset=utf-8"
       }
+    },
+    {
+      "logMustContain": "Using python version: 3.12"
     }
   ]
 }

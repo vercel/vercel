@@ -1,13 +1,30 @@
-import { join } from 'path';
+import { join, relative } from 'path';
 import { isErrnoException } from '@vercel/error-utils';
 import { stat, move, remove, rmdir, readdir } from 'fs-extra';
 import type { Stats } from 'fs-extra';
+
+type IgnoreFilter = (path: string) => boolean;
 
 /**
  * Merge a directory into another directory. A `move` file operation is preferred,
  * falling back to a recursive `move` of contents within the source directory.
  */
-export async function merge(source: string, destination: string) {
+export async function merge(
+  source: string,
+  destination: string,
+  ignoreFilter?: IgnoreFilter,
+  sourceRoot?: string
+) {
+  const root = sourceRoot || source;
+
+  if (ignoreFilter) {
+    const relPath = relative(root, source);
+    if (relPath && !ignoreFilter(relPath)) {
+      await remove(source);
+      return;
+    }
+  }
+
   const destStat: Stats | NodeJS.ErrnoException = await stat(destination).catch(
     err => err
   );
@@ -32,7 +49,9 @@ export async function merge(source: string, destination: string) {
       }
     } else {
       await Promise.all(
-        contents.map(name => merge(join(source, name), join(destination, name)))
+        contents.map(name =>
+          merge(join(source, name), join(destination, name), ignoreFilter, root)
+        )
       );
       // Source should be empty at this point
       await rmdir(source);

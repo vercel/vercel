@@ -7,7 +7,7 @@ import { pkgVersion } from '../pkg';
 import { NowBuildError } from '@vercel/build-utils';
 import { VercelClientOptions, VercelConfig } from '../types';
 import { Sema } from 'async-sema';
-import { readFile } from 'fs-extra';
+import { readFile, stat } from 'fs-extra';
 import readdir from './readdir-recursive';
 import {
   findConfig as findMicrofrontendsConfig,
@@ -65,7 +65,6 @@ export async function parseVercelConfig(
 
     return JSON.parse(jsonString);
   } catch (e) {
-    // eslint-disable-next-line no-console
     console.error(e);
 
     return {};
@@ -75,7 +74,7 @@ export async function parseVercelConfig(
 const maybeRead = async function <T>(path: string, default_: T) {
   try {
     return await readFile(path, 'utf8');
-  } catch (err) {
+  } catch (_err) {
     return default_;
   }
 };
@@ -88,6 +87,7 @@ export async function buildFileTree(
     vercelOutputDir,
     rootDirectory,
     projectName,
+    bulkRedirectsPath,
   }: Pick<
     VercelClientOptions,
     | 'isDirectory'
@@ -95,6 +95,7 @@ export async function buildFileTree(
     | 'vercelOutputDir'
     | 'rootDirectory'
     | 'projectName'
+    | 'bulkRedirectsPath'
   >,
   debug: Debug
 ): Promise<{ fileList: string[]; ignoreList: string[] }> {
@@ -117,10 +118,12 @@ export async function buildFileTree(
     };
     fileList = await readdir(path, [ignores]);
 
+    // Check for special files that should be included even if ignored
+    const refs = new Set<string>();
+
     if (prebuilt) {
       // Traverse over the `.vc-config.json` files and include
       // the files referenced by the "filePathMap" properties
-      const refs = new Set<string>();
       const vcConfigFilePaths = fileList.filter(
         file => basename(file) === '.vc-config.json'
       );
@@ -153,10 +156,66 @@ export async function buildFileTree(
       } catch (e) {
         debug(`Error detecting microfrontend config: ${e}`);
       }
+    }
 
-      if (refs.size > 0) {
-        fileList = fileList.concat(Array.from(refs));
+    // Check for .vercel/routes.json and include it if it exists
+    try {
+      const routesJsonPath = join(path, '.vercel', 'routes.json');
+      const routesJsonContent = await maybeRead(routesJsonPath, null);
+      if (routesJsonContent !== null) {
+        refs.add(routesJsonPath);
+        debug('Including .vercel/routes.json in deployment');
       }
+    } catch (e) {
+      debug(`Error checking for .vercel/routes.json: ${e}`);
+    }
+
+    // Include bulkRedirectsPath file or directory if specified (for prebuilt deployments)
+    if (prebuilt && bulkRedirectsPath) {
+      try {
+        const projectRoot = path;
+        const bulkRedirectsFullPath = join(
+          projectRoot,
+          rootDirectory || '',
+          bulkRedirectsPath
+        );
+
+        // Validate that the resolved path stays within the project root
+        const relativeFromRoot = relative(projectRoot, bulkRedirectsFullPath);
+        if (relativeFromRoot.startsWith('..')) {
+          debug(
+            `Skipping bulk redirects path "${bulkRedirectsPath}" - path traversal detected (resolves outside project root)`
+          );
+        } else {
+          try {
+            const stats = await stat(bulkRedirectsFullPath);
+            if (stats.isDirectory()) {
+              // If it's a directory, recursively include all files
+              const dirFiles = await readdir(bulkRedirectsFullPath, []);
+              for (const file of dirFiles) {
+                refs.add(file);
+              }
+              debug(
+                `Including ${dirFiles.length} files from bulk redirects directory "${bulkRedirectsPath}" in deployment`
+              );
+            } else if (stats.isFile()) {
+              // If it's a file, include it directly
+              refs.add(bulkRedirectsFullPath);
+              debug(
+                `Including bulk redirects file "${bulkRedirectsPath}" in deployment`
+              );
+            }
+          } catch (_e) {
+            debug(`Bulk redirects path "${bulkRedirectsPath}" not found`);
+          }
+        }
+      } catch (e) {
+        debug(`Error checking for bulk redirects path: ${e}`);
+      }
+    }
+
+    if (refs.size > 0) {
+      fileList = fileList.concat(Array.from(refs));
     }
 
     debug(`Found ${fileList.length} files in the specified directory`);
@@ -273,7 +332,7 @@ interface FetchOpts extends RequestInit {
   userAgent?: string;
 }
 
-export const fetch = async (
+export const fetchApi = async (
   url: string,
   token: string,
   opts: FetchOpts = {},

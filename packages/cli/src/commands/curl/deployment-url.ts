@@ -17,10 +17,14 @@ export async function getDeploymentUrlById(
         const url = new URL(deploymentIdOrUrl);
         // Normalize to origin (scheme + host), ignore path/query/fragment
         return url.origin;
-      } catch (err) {
+      } catch (_err) {
         output.debug(`Invalid deployment URL provided: ${deploymentIdOrUrl}`);
         return null;
       }
+    }
+
+    if (deploymentIdOrUrl.includes('vercel.app')) {
+      return `https://${deploymentIdOrUrl}`;
     }
 
     let fullDeploymentId = deploymentIdOrUrl;

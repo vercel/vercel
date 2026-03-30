@@ -146,33 +146,39 @@ export const defaultProject: Project = {
  * to allow `useProject` responses to still happen.
  */
 export function useUnknownProject() {
-  let project: Project;
+  const projects = new Map<string, Project>();
   client.scenario.get(`/:version/projects/:projectNameOrId`, (req, res) => {
-    if (
-      project?.id === req.params.projectNameOrId ||
-      project?.name === req.params.projectNameOrId
-    ) {
+    const project = Array.from(projects.values()).find(
+      p =>
+        p.id === req.params.projectNameOrId ||
+        p.name === req.params.projectNameOrId
+    );
+    if (project) {
       return res.json(project);
     }
     res.status(404).send();
   });
   client.scenario.post(`/:version/projects`, (req, res) => {
-    project = {
+    const project = {
       ...defaultProject,
       ...req.body,
       id: req.body.name,
     };
+    projects.set(project.id, project);
     res.json(project);
   });
   client.scenario.post(`/v9/projects/:projectNameOrId/link`, (req, res) => {
     const { type, repo, org } = req.body;
     const projName = req.params.projectNameOrId;
-    if (projName !== project.name && projName !== project.id) {
+    const project = Array.from(projects.values()).find(
+      p => p.name === projName || p.id === projName
+    );
+    if (!project) {
       return res.status(404).send('Invalid Project name or ID');
     }
     if (
       (type === 'github' || type === 'gitlab' || type === 'bitbucket') &&
-      (repo === 'user/repo' || repo === 'user2/repo2')
+      (repo === 'user/repo' || repo === 'user2/repo2' || repo === 'user3/repo3')
     ) {
       project.link = {
         type,
@@ -204,8 +210,17 @@ export function useUnknownProject() {
     }
   });
   client.scenario.patch(`/:version/projects/:projectNameOrId`, (req, res) => {
-    Object.assign(project, req.body);
-    res.json(project);
+    const project = Array.from(projects.values()).find(
+      p =>
+        p.name === req.params.projectNameOrId ||
+        p.id === req.params.projectNameOrId
+    );
+    if (project) {
+      Object.assign(project, req.body);
+      res.json(project);
+    } else {
+      res.status(404).send();
+    }
   });
 }
 

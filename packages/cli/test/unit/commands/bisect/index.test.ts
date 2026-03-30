@@ -416,4 +416,27 @@ describe('bisect', () => {
 
     await expect(bisectPromise).resolves.toEqual(0);
   });
+
+  describe('validation errors', () => {
+    it('should error when good and bad deployments are the same', async () => {
+      const { deployment1 } = setupBisectState();
+
+      client.setArgv(
+        'bisect',
+        '--good',
+        `https://${deployment1.url}`,
+        '--bad',
+        `https://${deployment1.url}`,
+        '--path',
+        '/docs'
+      );
+      const bisectPromise = bisect(client);
+
+      await expect(client.stderr).toOutput(
+        'Error: Good and Bad deployments must be different'
+      );
+
+      await expect(bisectPromise).resolves.toEqual(1);
+    });
+  });
 });

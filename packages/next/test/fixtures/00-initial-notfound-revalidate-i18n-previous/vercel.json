@@ -1,6 +1,7 @@
 {
   "build": {
     "env": {
+      "NEXT_BUILDER_INTEGRATION": "1",
       "VERCEL_DEBUG": "1"
     }
   },

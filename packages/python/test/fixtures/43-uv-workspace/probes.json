@@ -1,0 +1,12 @@
+{
+  "probes": [
+    {
+      "path": "/api/greet/RANDOMNESS_PLACEHOLDER",
+      "status": 200,
+      "mustContain": "Hello, RANDOMNESS_PLACEHOLDER"
+    },
+    {
+      "logMustContain": "Using Python 3.12 from .python-version"
+    }
+  ]
+}

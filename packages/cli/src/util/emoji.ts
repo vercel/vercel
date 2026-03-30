@@ -6,6 +6,7 @@ const emojiLabels = {
   inspect: '🔍',
   success: '✅',
   locked: '🔒',
+  loading: '⏳',
 } as const;
 
 const stripEmojiRegex = new RegExp(Object.values(emojiLabels).join('|'), 'gi');

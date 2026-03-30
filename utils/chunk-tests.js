@@ -1,6 +1,6 @@
 // @ts-check
-const child_process = require('child_process');
-const path = require('path');
+const child_process = require('node:child_process');
+const path = require('node:path');
 const { getAffectedPackages } = require('./get-affected-packages');
 
 const runnersMap = new Map([
@@ -12,6 +12,16 @@ const runnersMap = new Map([
       testScript: 'vitest-run',
       runners: ['ubuntu-latest', 'macos-14', 'windows-latest'],
       nodeVersions: ['20', '22'],
+    },
+  ],
+  [
+    'vitest-unit-node-24',
+    {
+      min: 1,
+      max: 1,
+      testScript: 'vitest-run',
+      runners: ['ubuntu-latest', 'macos-14'],
+      nodeVersions: ['24'],
     },
   ],
   [
@@ -58,7 +68,7 @@ const runnersMap = new Map([
       max: 7,
       testScript: 'test',
       runners: ['ubuntu-latest'],
-      nodeVersions: ['20', '22'],
+      nodeVersions: ['20', '22', '24'],
     },
   ],
   [
@@ -82,8 +92,21 @@ const runnersMap = new Map([
   ],
 ]);
 
+// Test type categorization for filtering
+const UNIT_TEST_SCRIPTS = ['vitest-unit', 'vitest-unit-node-24', 'test-unit'];
+const E2E_TEST_SCRIPTS = [
+  'vitest-e2e',
+  'vitest-e2e-node-20',
+  'test-e2e',
+  'test-e2e-node-all-versions',
+  'test-next-local',
+  'test-dev',
+];
+
 const packageOptionsOverrides = {
-  // 'some-package': { min: 1, max: 1 },
+  // The vercel CLI package has enough test files that passing them all as
+  // command-line arguments exceeds the Windows cmd.exe ~8191 character limit.
+  vercel: { max: 2 },
 };
 
 function getRunnerOptions(scriptName, packageName) {
@@ -104,12 +127,32 @@ function getRunnerOptions(scriptName, packageName) {
 }
 
 async function getChunkedTests() {
-  const scripts = [...runnersMap.keys()];
+  let scripts = [...runnersMap.keys()];
   const rootPath = path.resolve(__dirname, '..');
+
+  // Filter scripts based on TEST_TYPE environment variable
+  const testType = process.env.TEST_TYPE;
+  if (testType === 'unit') {
+    scripts = scripts.filter(s => UNIT_TEST_SCRIPTS.includes(s));
+    console.error('Filtering to unit tests only:', scripts.join(', '));
+  } else if (testType === 'e2e') {
+    scripts = scripts.filter(s => E2E_TEST_SCRIPTS.includes(s));
+    console.error('Filtering to e2e tests only:', scripts.join(', '));
+  }
 
   // Get affected packages based on git changes
   const baseSha = process.env.TURBO_BASE_SHA || process.env.GITHUB_BASE_REF;
-  const affectedPackages = baseSha ? await getAffectedPackages(baseSha) : [];
+  const result = baseSha
+    ? await getAffectedPackages(baseSha)
+    : { result: 'test-all' };
+
+  let affectedPackages = [];
+  if (result.result === 'test-affected') {
+    affectedPackages = result.packages;
+  } else if (result.result === 'test-none') {
+    console.error('Testing strategy: no tests (no packages affected)');
+    return [];
+  }
 
   console.error(
     `Testing strategy: ${affectedPackages.length > 0 ? 'affected packages only' : 'all packages'}`

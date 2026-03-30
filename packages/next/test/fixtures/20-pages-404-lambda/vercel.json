@@ -14,5 +14,10 @@
       "path": "/non-existent",
       "mustContain": "__next"
     }
-  ]
+  ],
+  "build": {
+    "env": {
+      "NEXT_BUILDER_INTEGRATION": "1"
+    }
+  }
 }

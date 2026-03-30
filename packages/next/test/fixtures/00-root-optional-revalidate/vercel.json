@@ -11,5 +11,10 @@
       "path": "/non-existent",
       "status": 404
     }
-  ]
+  ],
+  "build": {
+    "env": {
+      "NEXT_BUILDER_INTEGRATION": "1"
+    }
+  }
 }
