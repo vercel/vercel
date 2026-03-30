@@ -1,5 +1,10 @@
 import { packageName } from '../../util/pkg-name';
-import { confirmOption, yesOption } from '../../util/arg-common';
+import {
+  confirmOption,
+  describeOption,
+  dryRunOption,
+  yesOption,
+} from '../../util/arg-common';
 
 export const addSubcommand = {
   name: 'add',
@@ -60,6 +65,8 @@ export const linkCommand = {
         'Skip questions when setting up new project using default scope and settings',
     },
     confirmOption,
+    dryRunOption,
+    describeOption,
   ],
   examples: [
     {
