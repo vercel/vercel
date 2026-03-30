@@ -108,15 +108,6 @@ function discoverRackEntrypoint(
       return rawEntrypoint;
     }
   }
-  // Zero-config discovery for Rails: prefer config.ru in common roots
-  const candidateDirs = ['', 'src', 'app'];
-  for (const d of candidateDirs) {
-    const p = d ? join(d, 'config.ru') : 'config.ru';
-    if (existsSync(join(workPath, p))) {
-      debug(`ruby: discovered Rack entrypoint at ${p}`);
-      return p;
-    }
-  }
   return null;
 }
 
@@ -195,7 +186,7 @@ async function run(
 export const startDevServer: StartDevServer = async opts => {
   const { entrypoint: rawEntrypoint, workPath, meta = {} } = opts;
 
-  // Ruby dev server supports Rack (.ru) entrypoints. Try zero-config discovery for Rails.
+  // Ruby dev server supports Rack (.ru) entrypoints.
   const entrypoint = discoverRackEntrypoint(workPath, rawEntrypoint);
   if (!entrypoint) return null;
 

@@ -1,6 +1,6 @@
 import { EOL, release } from 'os';
 import { join, dirname } from 'path';
-import execa from 'execa';
+import execa = require('execa');
 import {
   ensureDir,
   move,
@@ -20,7 +20,8 @@ import {
   FileBlob,
   type GlobOptions,
   type Files,
-  type BuildV3,
+  type BuildVX,
+  type BuildResultVX,
   type ShouldServe,
   NowBuildError,
 } from '@vercel/build-utils';
@@ -46,6 +47,43 @@ async function matchPaths(
   );
 
   return patternPaths.reduce((a, b) => a.concat(b), []);
+}
+
+function getConfiguredOutputPath(entrypoint: string): string {
+  return entrypoint.replace(/\\/g, '/').replace(/\.(rb|ru)$/, '');
+}
+
+export function createBuildResult({
+  framework,
+  configuredEntrypoint,
+  output,
+}: {
+  framework?: string | null;
+  configuredEntrypoint: string;
+  output: Lambda;
+}): BuildResultVX {
+  if (framework === 'rails') {
+    const lambdaPath = getConfiguredOutputPath(configuredEntrypoint);
+    return {
+      resultVersion: 2,
+      result: {
+        output: {
+          [lambdaPath]: output,
+        },
+        routes: [
+          { handle: 'filesystem' },
+          { src: '/(.*)', dest: `/${lambdaPath}` },
+        ],
+      },
+    };
+  }
+
+  return {
+    resultVersion: 3,
+    result: {
+      output,
+    },
+  };
 }
 
 async function prepareGemfile(
@@ -163,41 +201,30 @@ async function bundleInstall(
   }
 }
 
-export const version = 3;
+export const version = -1;
 
-export const build: BuildV3 = async ({
+export const build: BuildVX = async ({
   workPath,
   files,
   entrypoint,
   config,
   meta = {},
 }) => {
+  const configuredEntrypoint = entrypoint;
   await download(files, workPath, meta);
 
   const fsFiles = await glob('**', workPath);
   debug(`ruby: downloaded files to workPath=${workPath}`);
 
-  // Zero-config entrypoint discovery for Rails
+  // Rails zero-config expects a root-level config.ru.
   if (!fsFiles[entrypoint] && config?.framework === 'rails') {
-    const candidateDirs = ['', 'src', 'app'];
-    const candidates = candidateDirs.map(d =>
-      d ? `${d}/config.ru` : 'config.ru'
-    );
-    const existing = candidates.filter(p => !!fsFiles[p]);
-    debug(
-      `ruby: rails entrypoint candidates=${JSON.stringify(candidates)} existing=${JSON.stringify(existing)}`
-    );
-    if (existing.length > 0) {
-      debug(
-        `ruby: resolved rails entrypoint from=${entrypoint} to=${existing[0]}`
-      );
-      entrypoint = existing[0];
-    } else {
-      throw new NowBuildError({
-        code: 'RAILS_ENTRYPOINT_NOT_FOUND',
-        message: `No Rails entrypoint found. Searched for: ${candidates.join(', ')}`,
-      });
-    }
+    throw new NowBuildError({
+      code: 'RAILS_ENTRYPOINT_NOT_FOUND',
+      message:
+        entrypoint === 'config.ru'
+          ? 'No Rails entrypoint found at "config.ru". Rails zero-config expects a root-level "config.ru" next to your "Gemfile".'
+          : `No Rails entrypoint found at "${entrypoint}".`,
+    });
   }
 
   const entrypointFsDirname = join(workPath, dirname(entrypoint));
@@ -374,7 +401,11 @@ export const build: BuildV3 = async ({
     environment: lambdaEnv,
   });
 
-  return { output };
+  return createBuildResult({
+    framework: config?.framework,
+    configuredEntrypoint,
+    output,
+  });
 };
 
 export { startDevServer } from './start-dev-server';

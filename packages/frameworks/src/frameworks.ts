@@ -4132,6 +4132,7 @@ export const frameworks = [
   {
     name: 'Ruby on Rails',
     slug: 'rails',
+    experimental: true,
     logo: 'https://api-frameworks.vercel.sh/framework-logos/rails.svg',
     demo: 'https://vercel-plus-rails.vercel.app/',
     tagline: 'Compress the complexity of modern web apps.',
