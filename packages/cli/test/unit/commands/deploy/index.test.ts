@@ -18,7 +18,7 @@ import { useUser } from '../../../mocks/user';
 import humanizePath from '../../../../src/util/humanize-path';
 import sleep from '../../../../src/util/sleep';
 import * as createDeployModule from '../../../../src/util/deploy/create-deploy';
-import { BuildError } from '../../../../src/util/errors-ts';
+import { BuildError, NotDomainOwner } from '../../../../src/util/errors-ts';
 import type Now from '../../../../src/util';
 
 describe('deploy', () => {
@@ -1389,10 +1389,12 @@ describe('deploy', () => {
       const payload = JSON.parse(stdoutOutput);
       expect(payload).toMatchObject({
         status: 'ok',
-        deployment: expect.objectContaining({
-          id: expect.any(String),
-          readyState: expect.any(String),
-        }),
+        data: {
+          deployment: expect.objectContaining({
+            id: expect.any(String),
+            readyState: expect.any(String),
+          }),
+        },
       });
       (client as { nonInteractive: boolean }).nonInteractive = false;
     });
@@ -2244,6 +2246,295 @@ describe('deploy', () => {
         target: 'production',
         deploymentApiUrl: `${client.apiUrl}/v13/deployments/${deploymentId}`,
       });
+    });
+  });
+
+  describe('writeAgentResponse refactoring (Phase 3.3)', () => {
+    const deploymentUrl = 'my-app-agent-test.vercel.app';
+    const deploymentId = 'dpl_agent_test';
+    const inspectorUrl = 'https://vercel.com/team/project/dpl_agent_test';
+
+    it('emits structured agent JSON for NotDomainOwner error', async () => {
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        name: 'static',
+        id: 'static',
+      });
+
+      const mock = vi
+        .spyOn(createDeployModule, 'default')
+        .mockResolvedValue(
+          new NotDomainOwner('You do not own the domain example.com')
+        );
+
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', '--yes');
+      (client as { nonInteractive: boolean }).nonInteractive = true;
+
+      const exitCode = await deploy(client);
+      expect(exitCode).toBe(1);
+
+      const stdoutOutput = client.stdout.getFullOutput();
+      const result = JSON.parse(stdoutOutput);
+      expect(result.status).toBe('error');
+      expect(result.reason).toBe('not_domain_owner');
+      expect(result.message).toContain('example.com');
+      expect(result.next).toBeDefined();
+      expect(result.next[0].command).toContain('deploy');
+
+      mock.mockRestore();
+      (client as { nonInteractive: boolean }).nonInteractive = false;
+    });
+
+    it('emits structured agent JSON for generic deploy error', async () => {
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        name: 'static',
+        id: 'static',
+      });
+
+      const mock = vi
+        .spyOn(createDeployModule, 'default')
+        .mockResolvedValue(new Error('Something went wrong'));
+
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', '--yes');
+      (client as { nonInteractive: boolean }).nonInteractive = true;
+
+      const exitCode = await deploy(client);
+      expect(exitCode).toBe(1);
+
+      const stdoutOutput = client.stdout.getFullOutput();
+      const result = JSON.parse(stdoutOutput);
+      expect(result.status).toBe('error');
+      expect(result.reason).toBe('deploy_failed');
+      expect(result.message).toBe('Something went wrong');
+      expect(result.next[0].command).toContain('deploy');
+
+      mock.mockRestore();
+      (client as { nonInteractive: boolean }).nonInteractive = false;
+    });
+
+    it('emits agent JSON with deployment data for canceled deployment', async () => {
+      const user = useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        name: 'static',
+        id: 'static',
+      });
+
+      const mock = vi.spyOn(createDeployModule, 'default').mockResolvedValue({
+        creator: { uid: user.id, username: user.username },
+        id: deploymentId,
+        url: deploymentUrl,
+        inspectorUrl,
+        readyState: 'CANCELED',
+        target: null,
+      });
+
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', '--json', '--yes');
+      (client as { nonInteractive: boolean }).nonInteractive = true;
+
+      const exitCode = await deploy(client);
+      expect(exitCode).toBe(1);
+
+      const stdoutOutput = client.stdout.getFullOutput();
+      const result = JSON.parse(stdoutOutput);
+      expect(result.status).toBe('error');
+      expect(result.reason).toBe('deployment_canceled');
+      expect(result.data.deployment).toBeDefined();
+      expect(result.data.deployment.readyState).toBe('CANCELED');
+      expect(result.next[0].command).toContain('deploy');
+
+      mock.mockRestore();
+      (client as { nonInteractive: boolean }).nonInteractive = false;
+    });
+
+    it('emits agent JSON for successful deployment', async () => {
+      const user = useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        name: 'static',
+        id: 'static',
+      });
+
+      const mock = vi.spyOn(createDeployModule, 'default').mockResolvedValue({
+        creator: { uid: user.id, username: user.username },
+        id: deploymentId,
+        url: deploymentUrl,
+        inspectorUrl,
+        readyState: 'READY',
+        target: 'production',
+      });
+
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', '--json', '--yes', '--no-wait');
+      (client as { nonInteractive: boolean }).nonInteractive = true;
+
+      const exitCode = await deploy(client);
+      expect(exitCode).toBe(0);
+
+      const stdoutOutput = client.stdout.getFullOutput();
+      const result = JSON.parse(stdoutOutput);
+      expect(result.status).toBe('ok');
+      expect(result.message).toContain(deploymentUrl);
+      expect(result.data.deployment).toBeDefined();
+      expect(result.data.deployment.id).toBe(deploymentId);
+      expect(result.next.length).toBe(2);
+      expect(result.next[0].command).toContain('inspect');
+      expect(result.next[1].command).toContain('deploy --prod');
+
+      mock.mockRestore();
+      (client as { nonInteractive: boolean }).nonInteractive = false;
+    });
+
+    it('emits agent JSON for build error with deployment details', async () => {
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        name: 'static',
+        id: 'static',
+      });
+
+      client.scenario.get(`/v13/deployments/${deploymentUrl}`, (_req, res) => {
+        res.json({
+          id: deploymentId,
+          url: deploymentUrl,
+          inspectorUrl,
+          readyState: 'ERROR',
+          target: null,
+          aliasAssigned: false,
+          alias: [],
+        });
+      });
+
+      const mock = vi
+        .spyOn(createDeployModule, 'default')
+        .mockImplementation(async (_client, now: Now) => {
+          now.url = deploymentUrl;
+          throw new BuildError({
+            message: 'Build failed: exit code 1',
+            meta: {},
+          });
+        });
+
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', '--json', '--yes');
+      (client as { nonInteractive: boolean }).nonInteractive = true;
+
+      const exitCode = await deploy(client);
+      expect(exitCode).toBe(1);
+
+      const stdoutOutput = client.stdout.getFullOutput();
+      const result = JSON.parse(stdoutOutput);
+      expect(result.status).toBe('error');
+      expect(result.reason).toBe('build_error');
+      expect(result.message).toBe('Build failed: exit code 1');
+      expect(result.data.deployment).toBeDefined();
+      expect(result.next.length).toBe(2);
+      expect(result.next[0].command).toContain('inspect');
+      expect(result.next[1].command).toContain('deploy');
+
+      mock.mockRestore();
+      (client as { nonInteractive: boolean }).nonInteractive = false;
+    });
+
+    it('does not emit agent JSON in interactive mode (human JSON only)', async () => {
+      const user = useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        name: 'static',
+        id: 'static',
+      });
+
+      const mock = vi.spyOn(createDeployModule, 'default').mockResolvedValue({
+        creator: { uid: user.id, username: user.username },
+        id: deploymentId,
+        url: deploymentUrl,
+        inspectorUrl,
+        readyState: 'READY',
+        target: 'production',
+      });
+
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', '--json', '--yes', '--no-wait');
+      (client as { nonInteractive: boolean }).nonInteractive = false;
+
+      const exitCode = await deploy(client);
+      expect(exitCode).toBe(0);
+
+      const stdoutOutput = client.stdout.getFullOutput();
+      const result = JSON.parse(stdoutOutput);
+      // In interactive mode, should output plain deployment JSON (no status/reason wrapper)
+      expect(result.status).toBeUndefined();
+      expect(result.id).toBe(deploymentId);
+      expect(result.url).toContain(deploymentUrl);
+
+      mock.mockRestore();
+    });
+
+    it('uses EXIT_CODE constants for agent error responses', async () => {
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        name: 'static',
+        id: 'static',
+      });
+
+      const mock = vi
+        .spyOn(createDeployModule, 'default')
+        .mockResolvedValue(new NotDomainOwner('Domain not owned'));
+
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', '--yes');
+      (client as { nonInteractive: boolean }).nonInteractive = true;
+
+      const exitCode = await deploy(client);
+      // EXIT_CODE.API_ERROR = 1
+      expect(exitCode).toBe(1);
+
+      mock.mockRestore();
+      (client as { nonInteractive: boolean }).nonInteractive = false;
+    });
+
+    it('includes hint in agent error responses', async () => {
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        name: 'static',
+        id: 'static',
+      });
+
+      const mock = vi
+        .spyOn(createDeployModule, 'default')
+        .mockResolvedValue(new Error('Deploy error'));
+
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', '--yes');
+      (client as { nonInteractive: boolean }).nonInteractive = true;
+
+      const exitCode = await deploy(client);
+      expect(exitCode).toBe(1);
+
+      const stdoutOutput = client.stdout.getFullOutput();
+      const result = JSON.parse(stdoutOutput);
+      // writeAgentResponse adds default hint for error with next[]
+      expect(result.hint).toBeDefined();
+      expect(result.hint).toContain('next[]');
+
+      mock.mockRestore();
+      (client as { nonInteractive: boolean }).nonInteractive = false;
     });
   });
 
