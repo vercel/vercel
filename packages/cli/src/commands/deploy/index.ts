@@ -64,7 +64,10 @@ import { parseEnv } from '../../util/parse-env';
 import parseMeta from '../../util/parse-meta';
 import { getCommandNameWithGlobalFlags } from '../../util/arg-common';
 import { getCommandName } from '../../util/pkg-name';
-import { outputAgentError } from '../../util/agent-output';
+import {
+  outputAgentError,
+  buildCommandWithGlobalFlags,
+} from '../../util/agent-output';
 import { AGENT_STATUS } from '../../util/agent-output-constants';
 import { pickOverrides } from '../../util/projects/project-settings';
 import validatePaths, {
@@ -86,6 +89,13 @@ import { UploadErrorMissingArchive } from '../../util/deploy/process-deployment'
 import { displayBuildLogsUntilFinalError } from '../../util/logs';
 import { determineAgent } from '@vercel/detect-agent';
 import { validateJsonOutput } from '../../util/output-format';
+import {
+  validateKeyValue,
+  validateTarget as validateTargetInput,
+  validateSafePath,
+} from '../../util/input-validation';
+import { writeAgentResponse } from '../../util/agent-response';
+import { EXIT_CODE } from '../../util/exit-codes';
 
 const COMMAND_CONFIG = {
   init: getCommandAliases(initSubcommand),
@@ -183,10 +193,150 @@ async function handleInitDeployment(
   }
   const asJson = formatResult.jsonOutput || client.nonInteractive;
 
+  // #region Input validation (agent hardening)
+  const initEnvValues = parsedArguments.flags['--env'] as string[] | undefined;
+  if (initEnvValues) {
+    for (const val of initEnvValues) {
+      const check = validateKeyValue(val, '--env');
+      if (!check.valid) {
+        if (client.nonInteractive) {
+          writeAgentResponse(client, {
+            status: 'error',
+            reason: 'invalid_arguments',
+            message: check.error!,
+            next: [
+              {
+                command: buildCommandWithGlobalFlags(
+                  client.argv,
+                  'deploy --env KEY=VALUE'
+                ),
+              },
+            ],
+          });
+        } else {
+          output.error(check.error!);
+        }
+        return EXIT_CODE.VALIDATION;
+      }
+    }
+  }
+
+  const initBuildEnvValues = parsedArguments.flags['--build-env'] as
+    | string[]
+    | undefined;
+  if (initBuildEnvValues) {
+    for (const val of initBuildEnvValues) {
+      const check = validateKeyValue(val, '--build-env');
+      if (!check.valid) {
+        if (client.nonInteractive) {
+          writeAgentResponse(client, {
+            status: 'error',
+            reason: 'invalid_arguments',
+            message: check.error!,
+            next: [
+              {
+                command: buildCommandWithGlobalFlags(
+                  client.argv,
+                  'deploy --build-env KEY=VALUE'
+                ),
+              },
+            ],
+          });
+        } else {
+          output.error(check.error!);
+        }
+        return EXIT_CODE.VALIDATION;
+      }
+    }
+  }
+
+  const initMetaValues = parsedArguments.flags['--meta'] as
+    | string[]
+    | undefined;
+  if (initMetaValues) {
+    for (const val of initMetaValues) {
+      const check = validateKeyValue(val, '--meta');
+      if (!check.valid) {
+        if (client.nonInteractive) {
+          writeAgentResponse(client, {
+            status: 'error',
+            reason: 'invalid_arguments',
+            message: check.error!,
+            next: [
+              {
+                command: buildCommandWithGlobalFlags(
+                  client.argv,
+                  'deploy --meta KEY=VALUE'
+                ),
+              },
+            ],
+          });
+        } else {
+          output.error(check.error!);
+        }
+        return EXIT_CODE.VALIDATION;
+      }
+    }
+  }
+
+  const initTargetFlag = parsedArguments.flags['--target'] as
+    | string
+    | undefined;
+  if (initTargetFlag) {
+    const check = validateTargetInput(initTargetFlag);
+    if (!check.valid) {
+      if (client.nonInteractive) {
+        writeAgentResponse(client, {
+          status: 'error',
+          reason: 'invalid_arguments',
+          message: check.error!,
+          next: [
+            {
+              command: buildCommandWithGlobalFlags(
+                client.argv,
+                'deploy --target <environment>'
+              ),
+            },
+          ],
+        });
+      } else {
+        output.error(check.error!);
+      }
+      return EXIT_CODE.VALIDATION;
+    }
+  }
+  // #endregion
+
   // Strip 'deploy' and 'init' from args
   let args = parsedArguments.args;
   if (args[0] === 'deploy') args = args.slice(1);
   if (args[0] === 'init') args = args.slice(1);
+
+  // Validate raw path arguments before resolving (skip absolute paths — they're valid deploy targets)
+  for (const arg of args) {
+    if (arg.startsWith('/')) continue;
+    const check = validateSafePath(arg);
+    if (!check.valid) {
+      if (client.nonInteractive) {
+        writeAgentResponse(client, {
+          status: 'error',
+          reason: 'invalid_arguments',
+          message: check.error!,
+          next: [
+            {
+              command: buildCommandWithGlobalFlags(
+                client.argv,
+                'deploy <path>'
+              ),
+            },
+          ],
+        });
+      } else {
+        output.error(check.error!);
+      }
+      return EXIT_CODE.VALIDATION;
+    }
+  }
 
   let paths;
   if (args.length > 0) {
@@ -921,6 +1071,145 @@ async function handleDefaultDeploy(
     return 1;
   }
   const asJson = formatResult.jsonOutput || client.nonInteractive;
+
+  // #region Input validation (agent hardening)
+  const envValues = parsedArguments.flags['--env'] as string[] | undefined;
+  if (envValues) {
+    for (const val of envValues) {
+      const check = validateKeyValue(val, '--env');
+      if (!check.valid) {
+        if (client.nonInteractive) {
+          writeAgentResponse(client, {
+            status: 'error',
+            reason: 'invalid_arguments',
+            message: check.error!,
+            next: [
+              {
+                command: buildCommandWithGlobalFlags(
+                  client.argv,
+                  'deploy --env KEY=VALUE'
+                ),
+              },
+            ],
+          });
+        } else {
+          output.error(check.error!);
+        }
+        return EXIT_CODE.VALIDATION;
+      }
+    }
+  }
+
+  const buildEnvValues = parsedArguments.flags['--build-env'] as
+    | string[]
+    | undefined;
+  if (buildEnvValues) {
+    for (const val of buildEnvValues) {
+      const check = validateKeyValue(val, '--build-env');
+      if (!check.valid) {
+        if (client.nonInteractive) {
+          writeAgentResponse(client, {
+            status: 'error',
+            reason: 'invalid_arguments',
+            message: check.error!,
+            next: [
+              {
+                command: buildCommandWithGlobalFlags(
+                  client.argv,
+                  'deploy --build-env KEY=VALUE'
+                ),
+              },
+            ],
+          });
+        } else {
+          output.error(check.error!);
+        }
+        return EXIT_CODE.VALIDATION;
+      }
+    }
+  }
+
+  const metaValues = parsedArguments.flags['--meta'] as string[] | undefined;
+  if (metaValues) {
+    for (const val of metaValues) {
+      const check = validateKeyValue(val, '--meta');
+      if (!check.valid) {
+        if (client.nonInteractive) {
+          writeAgentResponse(client, {
+            status: 'error',
+            reason: 'invalid_arguments',
+            message: check.error!,
+            next: [
+              {
+                command: buildCommandWithGlobalFlags(
+                  client.argv,
+                  'deploy --meta KEY=VALUE'
+                ),
+              },
+            ],
+          });
+        } else {
+          output.error(check.error!);
+        }
+        return EXIT_CODE.VALIDATION;
+      }
+    }
+  }
+
+  const targetFlag = parsedArguments.flags['--target'] as string | undefined;
+  if (targetFlag) {
+    const check = validateTargetInput(targetFlag);
+    if (!check.valid) {
+      if (client.nonInteractive) {
+        writeAgentResponse(client, {
+          status: 'error',
+          reason: 'invalid_arguments',
+          message: check.error!,
+          next: [
+            {
+              command: buildCommandWithGlobalFlags(
+                client.argv,
+                'deploy --target <environment>'
+              ),
+            },
+          ],
+        });
+      } else {
+        output.error(check.error!);
+      }
+      return EXIT_CODE.VALIDATION;
+    }
+  }
+
+  const rawPathArgs =
+    parsedArguments.args[0] === 'deploy'
+      ? parsedArguments.args.slice(1)
+      : parsedArguments.args;
+  for (const arg of rawPathArgs) {
+    if (arg.startsWith('/')) continue; // Absolute paths are valid deploy targets
+    const check = validateSafePath(arg);
+    if (!check.valid) {
+      if (client.nonInteractive) {
+        writeAgentResponse(client, {
+          status: 'error',
+          reason: 'invalid_arguments',
+          message: check.error!,
+          next: [
+            {
+              command: buildCommandWithGlobalFlags(
+                client.argv,
+                'deploy <path>'
+              ),
+            },
+          ],
+        });
+      } else {
+        output.error(check.error!);
+      }
+      return EXIT_CODE.VALIDATION;
+    }
+  }
+  // #endregion
 
   if ('--confirm' in parsedArguments.flags) {
     telemetryClient.trackCliFlagConfirm(parsedArguments.flags['--confirm']);

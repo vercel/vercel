@@ -2246,4 +2246,191 @@ describe('deploy', () => {
       });
     });
   });
+
+  describe('input validation (Phase 3.2)', () => {
+    describe('--env validation', () => {
+      it('rejects malformed --env in agent mode with structured JSON', async () => {
+        client.setArgv('deploy', '--env', 'MISSING_EQUALS', '--yes');
+        (client as { nonInteractive: boolean }).nonInteractive = true;
+
+        const exitCode = await deploy(client);
+        expect(exitCode).toBe(3); // EXIT_CODE.VALIDATION
+
+        const stdoutOutput = client.stdout.getFullOutput();
+        const result = JSON.parse(stdoutOutput);
+        expect(result.status).toBe('error');
+        expect(result.reason).toBe('invalid_arguments');
+        expect(result.message).toContain('--env');
+        expect(result.message).toContain('KEY=VALUE');
+        expect(result.next).toBeDefined();
+        expect(result.next.length).toBeGreaterThan(0);
+        expect(result.next[0].command).toContain('deploy --env KEY=VALUE');
+
+        (client as { nonInteractive: boolean }).nonInteractive = false;
+      });
+
+      it('rejects --env with empty key in agent mode', async () => {
+        client.setArgv('deploy', '--env', '=value', '--yes');
+        (client as { nonInteractive: boolean }).nonInteractive = true;
+
+        const exitCode = await deploy(client);
+        expect(exitCode).toBe(3);
+
+        const stdoutOutput = client.stdout.getFullOutput();
+        const result = JSON.parse(stdoutOutput);
+        expect(result.status).toBe('error');
+        expect(result.reason).toBe('invalid_arguments');
+        expect(result.message).toContain('Key must not be empty');
+
+        (client as { nonInteractive: boolean }).nonInteractive = false;
+      });
+
+      it('rejects malformed --env in interactive mode', async () => {
+        client.setArgv('deploy', '--env', 'NO_EQUALS', '--yes');
+        (client as { nonInteractive: boolean }).nonInteractive = false;
+
+        const exitCode = await deploy(client);
+        expect(exitCode).toBe(3);
+
+        const stdoutOutput = client.stdout.getFullOutput();
+        expect(stdoutOutput.trim()).toBe('');
+      });
+    });
+
+    describe('--build-env validation', () => {
+      it('rejects malformed --build-env in agent mode', async () => {
+        client.setArgv('deploy', '--build-env', 'BAD_VALUE', '--yes');
+        (client as { nonInteractive: boolean }).nonInteractive = true;
+
+        const exitCode = await deploy(client);
+        expect(exitCode).toBe(3);
+
+        const stdoutOutput = client.stdout.getFullOutput();
+        const result = JSON.parse(stdoutOutput);
+        expect(result.status).toBe('error');
+        expect(result.reason).toBe('invalid_arguments');
+        expect(result.message).toContain('--build-env');
+        expect(result.next[0].command).toContain(
+          'deploy --build-env KEY=VALUE'
+        );
+
+        (client as { nonInteractive: boolean }).nonInteractive = false;
+      });
+    });
+
+    describe('--meta validation', () => {
+      it('rejects malformed --meta in agent mode', async () => {
+        client.setArgv('deploy', '--meta', 'no-equals', '--yes');
+        (client as { nonInteractive: boolean }).nonInteractive = true;
+
+        const exitCode = await deploy(client);
+        expect(exitCode).toBe(3);
+
+        const stdoutOutput = client.stdout.getFullOutput();
+        const result = JSON.parse(stdoutOutput);
+        expect(result.status).toBe('error');
+        expect(result.reason).toBe('invalid_arguments');
+        expect(result.message).toContain('--meta');
+        expect(result.next[0].command).toContain('deploy --meta KEY=VALUE');
+
+        (client as { nonInteractive: boolean }).nonInteractive = false;
+      });
+    });
+
+    describe('--target validation', () => {
+      it('rejects invalid target with special characters in agent mode', async () => {
+        client.setArgv('deploy', '--target', '../evil', '--yes');
+        (client as { nonInteractive: boolean }).nonInteractive = true;
+
+        const exitCode = await deploy(client);
+        expect(exitCode).toBe(3);
+
+        const stdoutOutput = client.stdout.getFullOutput();
+        const result = JSON.parse(stdoutOutput);
+        expect(result.status).toBe('error');
+        expect(result.reason).toBe('invalid_arguments');
+        expect(result.message).toContain('Invalid target');
+        expect(result.next[0].command).toContain(
+          'deploy --target <environment>'
+        );
+
+        (client as { nonInteractive: boolean }).nonInteractive = false;
+      });
+
+      it('rejects invalid target in interactive mode', async () => {
+        client.setArgv('deploy', '--target', 'bad/target', '--yes');
+        (client as { nonInteractive: boolean }).nonInteractive = false;
+
+        const exitCode = await deploy(client);
+        expect(exitCode).toBe(3);
+
+        const stdoutOutput = client.stdout.getFullOutput();
+        expect(stdoutOutput.trim()).toBe('');
+      });
+    });
+
+    describe('path argument validation', () => {
+      it('rejects path traversal in agent mode', async () => {
+        client.setArgv('deploy', '../../etc/passwd', '--yes');
+        (client as { nonInteractive: boolean }).nonInteractive = true;
+
+        const exitCode = await deploy(client);
+        expect(exitCode).toBe(3);
+
+        const stdoutOutput = client.stdout.getFullOutput();
+        const result = JSON.parse(stdoutOutput);
+        expect(result.status).toBe('error');
+        expect(result.reason).toBe('invalid_arguments');
+        expect(result.message).toContain('Path traversal');
+        expect(result.next[0].command).toContain('deploy <path>');
+
+        (client as { nonInteractive: boolean }).nonInteractive = false;
+      });
+
+      it('rejects path traversal in interactive mode', async () => {
+        client.setArgv('deploy', '../../etc/passwd', '--yes');
+        (client as { nonInteractive: boolean }).nonInteractive = false;
+
+        const exitCode = await deploy(client);
+        expect(exitCode).toBe(3);
+
+        const stdoutOutput = client.stdout.getFullOutput();
+        expect(stdoutOutput.trim()).toBe('');
+      });
+    });
+
+    describe('init subcommand validation', () => {
+      it('rejects malformed --env in init subcommand agent mode', async () => {
+        client.setArgv('deploy', 'init', '--env', 'MISSING_EQ', '--yes');
+        (client as { nonInteractive: boolean }).nonInteractive = true;
+
+        const exitCode = await deploy(client);
+        expect(exitCode).toBe(3);
+
+        const stdoutOutput = client.stdout.getFullOutput();
+        const result = JSON.parse(stdoutOutput);
+        expect(result.status).toBe('error');
+        expect(result.reason).toBe('invalid_arguments');
+        expect(result.message).toContain('--env');
+
+        (client as { nonInteractive: boolean }).nonInteractive = false;
+      });
+
+      it('rejects invalid --target in init subcommand agent mode', async () => {
+        client.setArgv('deploy', 'init', '--target', 'bad!target', '--yes');
+        (client as { nonInteractive: boolean }).nonInteractive = true;
+
+        const exitCode = await deploy(client);
+        expect(exitCode).toBe(3);
+
+        const stdoutOutput = client.stdout.getFullOutput();
+        const result = JSON.parse(stdoutOutput);
+        expect(result.status).toBe('error');
+        expect(result.reason).toBe('invalid_arguments');
+        expect(result.message).toContain('Invalid target');
+
+        (client as { nonInteractive: boolean }).nonInteractive = false;
+      });
+    });
+  });
 });
