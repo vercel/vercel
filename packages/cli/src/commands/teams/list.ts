@@ -93,10 +93,11 @@ export default async function list(
     currentTeam = user.id;
   }
 
-  const teamList = teams.map(({ id, slug, name }) => ({
+  const teamList = teams.map(({ id, slug, name, billing }) => ({
     id,
     name,
     value: slug,
+    plan: billing?.plan ?? '',
     isCurrent: id === currentTeam,
   }));
 
@@ -105,6 +106,7 @@ export default async function list(
       id: user.id,
       name: user.email,
       value: user.username || user.email,
+      plan: user.billing?.plan ?? '',
       isCurrent: accountIsCurrent,
     });
   }
@@ -124,6 +126,7 @@ export default async function list(
         id: team.id,
         slug: team.value,
         name: team.name,
+        plan: team.plan,
         current: team.isCurrent,
       })),
       pagination,
@@ -134,8 +137,8 @@ export default async function list(
 
     const teamTable = table(
       [
-        ['id', 'Team name'].map(str => gray(str)),
-        ...teamList.map(team => [team.value, team.name]),
+        ['id', 'Team name', 'Plan'].map(str => gray(str)),
+        ...teamList.map(team => [team.value, team.name, team.plan]),
       ],
       { hsep: 5 }
     );

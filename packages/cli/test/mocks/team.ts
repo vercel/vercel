@@ -11,6 +11,14 @@ export type Team = {
   creatorId: string;
   created: string;
   avatar: null;
+  billing: {
+    addons: string[];
+    period: { start: number; end: number };
+    plan: string;
+    platform: string;
+    status: string;
+    trial: { start: number; end: number };
+  };
 };
 
 let teams: Team[] = [];
@@ -98,13 +106,21 @@ export function createTeam(teamId?: string, slug?: string, name?: string) {
   const id = teamId || chance().guid();
   const teamSlug = slug || chance().string({ length: 5, casing: 'lower' });
   const teamName = name || chance().company();
-  const newTeam = {
+  const newTeam: Team = {
     id,
     slug: teamSlug,
     name: teamName,
     creatorId: chance().guid(),
     created: '2017-04-29T17:21:54.514Z',
     avatar: null,
+    billing: {
+      addons: [],
+      period: { start: 0, end: 0 },
+      plan: 'pro',
+      platform: 'stripe',
+      status: 'active',
+      trial: { start: 0, end: 0 },
+    },
   };
   teams.push(newTeam);
   return newTeam;

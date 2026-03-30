@@ -148,7 +148,20 @@ describe('teams ls', () => {
         expect(firstTeam).toHaveProperty('id');
         expect(firstTeam).toHaveProperty('slug');
         expect(firstTeam).toHaveProperty('name');
+        expect(firstTeam).toHaveProperty('plan');
         expect(firstTeam).toHaveProperty('current');
+      });
+
+      it('includes plan field from billing data', async () => {
+        client.setArgv('teams', 'ls', '--format', 'json');
+        const exitCode = await teams(client);
+        expect(exitCode).toEqual(0);
+
+        const output = client.stdout.getFullOutput();
+        const jsonOutput = JSON.parse(output);
+
+        const firstTeam = jsonOutput.teams[0];
+        expect(firstTeam.plan).toBe('pro');
       });
     });
   });
