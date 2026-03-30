@@ -60,6 +60,52 @@ describe('login', () => {
     });
   });
 
+  describe('--dry-run', () => {
+    it('outputs dry-run actions as JSON in agent mode and returns 0', async () => {
+      client.setArgv('login', '--dry-run');
+      (client as { nonInteractive: boolean }).nonInteractive = true;
+
+      const exitCode = await login(client, { shouldParseArgs: true });
+      expect(exitCode).toBe(0);
+
+      const output = client.stdout.getFullOutput();
+      const result = JSON.parse(output);
+      expect(result.status).toBe('dry_run');
+      expect(result.reason).toBe('dry_run_ok');
+      expect(result.message).toBe(
+        'Login would initiate OAuth device code flow'
+      );
+      expect(result.data.actions).toHaveLength(4);
+      expect(result.data.actions[0].action).toBe('api_call');
+      expect(result.data.actions[1].action).toBe('browser_open');
+      expect(result.data.actions[2].action).toBe('poll');
+      expect(result.data.actions[3].action).toBe('file_write');
+      expect(result.data.actions[3].details).toEqual({
+        path: '~/.vercel/auth.json',
+      });
+
+      (client as { nonInteractive: boolean }).nonInteractive = false;
+    });
+
+    it('outputs human-readable dry-run in interactive mode and returns 0', async () => {
+      client.setArgv('login', '--dry-run');
+      (client as { nonInteractive: boolean }).nonInteractive = false;
+
+      const exitCode = await login(client, { shouldParseArgs: true });
+      expect(exitCode).toBe(0);
+    });
+
+    it('does not invoke the login flow', async () => {
+      client.setArgv('login', '--dry-run');
+      const futureSpy = vi.spyOn(loginFuture, 'login').mockResolvedValue(0);
+
+      await login(client, { shouldParseArgs: true });
+      expect(futureSpy).not.toHaveBeenCalled();
+
+      futureSpy.mockRestore();
+    });
+  });
+
   it('should not allow the `--token` flag', async () => {
     client.setArgv('login', '--token', 'foo');
     const exitCodePromise = login(client, { shouldParseArgs: true });
