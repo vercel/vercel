@@ -31,17 +31,9 @@ Connect to Unix socket at `VERCEL_IPC_PATH`. Messages are JSON terminated with `
 }
 ```
 
-**`handler-started`** (required, per request):
+**`handler-started`** (deprecated):
 
-```json
-{
-  "type": "handler-started",
-  "payload": {
-    "handlerStartedAt": 1704067200000,
-    "context": { "invocationId": "abc123", "requestId": 42 }
-  }
-}
-```
+Replaced by the `/_vercel/ping` endpoint. Harmless if present.
 
 **`end`** (required, per request):
 
@@ -87,6 +79,8 @@ Extract and remove before passing to user code:
 ### Health Check
 
 Return HTTP 200 for `/_vercel/ping`. Do NOT send IPC messages.
+
+Used for healthchecks and latency measurements.
 
 ## Implementation Checklist
 
