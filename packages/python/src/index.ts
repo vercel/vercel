@@ -720,7 +720,12 @@ from vercel_runtime.vc_init import vc_handler
     return { resultVersion: 3, result: { output } };
   }
 
-  const lambdaPath = entrypoint.replace(/\.py$/, '');
+  // If there is a service name, we need to mount this under the
+  // service properly, for a V2 build.
+  // TODO: Ideally this should be handled by writeBuildResultV2.
+  const lambdaPath = service?.name
+    ? `_svc/${service.name}/index`
+    : entrypoint.replace(/\.py$/, '');
   const staticFiles = djangoStatic?.cdnOutputDir
     ? await glob('**', { cwd: djangoStatic.cdnOutputDir })
     : {};
