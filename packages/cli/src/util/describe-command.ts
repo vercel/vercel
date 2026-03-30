@@ -39,21 +39,23 @@ export function commandToSchema(command: Command): CommandSchema {
       name: arg.name,
       required: arg.required,
     })),
-    options: command.options.map(opt => {
-      const entry: CommandSchema['options'][number] = {
-        name: opt.name,
-        shorthand: opt.shorthand,
-        type: optionTypeToString(opt.type),
-        deprecated: opt.deprecated,
-      };
-      if (opt.argument) {
-        entry.argument = opt.argument;
-      }
-      if (opt.description) {
-        entry.description = opt.description;
-      }
-      return entry;
-    }),
+    options: command.options
+      .filter(opt => !opt.deprecated)
+      .map(opt => {
+        const entry: CommandSchema['options'][number] = {
+          name: opt.name,
+          shorthand: opt.shorthand,
+          type: optionTypeToString(opt.type),
+          deprecated: opt.deprecated,
+        };
+        if (opt.argument) {
+          entry.argument = opt.argument;
+        }
+        if (opt.description) {
+          entry.description = opt.description;
+        }
+        return entry;
+      }),
     examples: command.examples.map(ex => ({
       name: ex.name,
       value: (Array.isArray(ex.value) ? [...ex.value] : ex.value) as

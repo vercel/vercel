@@ -130,18 +130,11 @@ describe('commandToSchema', () => {
     expect(schema.subcommands).toBeUndefined();
   });
 
-  it('converts options with correct types', () => {
+  it('excludes deprecated options from schema', () => {
     const schema = commandToSchema(simpleCommand);
 
-    expect(schema.options).toHaveLength(2);
+    expect(schema.options).toHaveLength(1);
     expect(schema.options[0]).toEqual({
-      name: 'github',
-      shorthand: null,
-      type: 'boolean',
-      deprecated: true,
-      description: 'Log in with GitHub',
-    });
-    expect(schema.options[1]).toEqual({
       name: 'oob',
       shorthand: null,
       type: 'boolean',
@@ -200,18 +193,10 @@ describe('commandToSchema', () => {
     expect(prod?.argument).toBeUndefined();
   });
 
-  it('omits description field when not present on option', () => {
+  it('excludes deprecated options from subcommand parent', () => {
     const schema = commandToSchema(commandWithSubcommands);
     const name = schema.options.find(o => o.name === 'name');
-    expect(name?.description).toBeUndefined();
-  });
-
-  it('preserves deprecated flag on options', () => {
-    const schema = commandToSchema(commandWithSubcommands);
-    const name = schema.options.find(o => o.name === 'name');
-    expect(name?.deprecated).toBe(true);
-    const prod = schema.options.find(o => o.name === 'prod');
-    expect(prod?.deprecated).toBe(false);
+    expect(name).toBeUndefined();
   });
 
   it('converts subcommands recursively', () => {
@@ -264,7 +249,7 @@ describe('outputCommandSchema', () => {
     expect(parsed.name).toBe('login');
     expect(parsed.description).toBe('Sign in to your Vercel account.');
     expect(parsed.arguments).toHaveLength(1);
-    expect(parsed.options).toHaveLength(2);
+    expect(parsed.options).toHaveLength(1);
     expect(parsed.examples).toHaveLength(2);
   });
 
