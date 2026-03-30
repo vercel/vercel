@@ -108,7 +108,10 @@ const frameworkHooks: Partial<Record<PythonFramework, FrameworkHook>> = {
     const settingsResult = await getDjangoSettings(projectDir, pythonEnv);
     debug(`Django settings: ${JSON.stringify(settingsResult)}`);
     if (!settingsResult) return;
-    const { djangoSettings, settingsModule } = settingsResult;
+    const { djangoSettings, settingsModule, djangoVersion } = settingsResult;
+    if (djangoVersion) {
+      console.log(`Django ${djangoVersion.join('.')} detected`);
+    }
 
     let resolvedEntrypoint: PythonEntrypoint | undefined;
     const baseDir = detected?.baseDir ?? '';
@@ -143,7 +146,8 @@ const frameworkHooks: Partial<Record<PythonFramework, FrameworkHook>> = {
         pythonEnv,
         outputStaticDir,
         settingsModule,
-        djangoSettings
+        djangoSettings,
+        djangoVersion
       );
     }
     return { entrypoint: resolvedEntrypoint, djangoStatic };
