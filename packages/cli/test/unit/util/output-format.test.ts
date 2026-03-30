@@ -4,6 +4,7 @@ import {
   getOutputFormat,
   isJsonOutput,
   validateJsonOutput,
+  resolveJsonOutput,
   OUTPUT_FORMATS,
 } from '../../../src/util/output-format';
 import { formatOption, jsonOption } from '../../../src/util/arg-common';
@@ -125,6 +126,79 @@ describe('output-format', () => {
 
     it('should handle case-insensitive json format', () => {
       const result = validateJsonOutput({ '--format': 'JSON' });
+      expect(result.valid).toBe(true);
+      if (result.valid) {
+        expect(result.jsonOutput).toBe(true);
+      }
+    });
+  });
+
+  describe('resolveJsonOutput', () => {
+    it('should return jsonOutput true when --format=json and not agent', () => {
+      const result = resolveJsonOutput(
+        { '--format': 'json' },
+        { nonInteractive: false }
+      );
+      expect(result.valid).toBe(true);
+      if (result.valid) {
+        expect(result.jsonOutput).toBe(true);
+      }
+    });
+
+    it('should return jsonOutput true when agent is detected (nonInteractive) even without flags', () => {
+      const result = resolveJsonOutput({}, { nonInteractive: true });
+      expect(result.valid).toBe(true);
+      if (result.valid) {
+        expect(result.jsonOutput).toBe(true);
+      }
+    });
+
+    it('should return jsonOutput false when no flags and not agent', () => {
+      const result = resolveJsonOutput({}, { nonInteractive: false });
+      expect(result.valid).toBe(true);
+      if (result.valid) {
+        expect(result.jsonOutput).toBe(false);
+      }
+    });
+
+    it('should return jsonOutput true when both --format=json and agent', () => {
+      const result = resolveJsonOutput(
+        { '--format': 'json' },
+        { nonInteractive: true }
+      );
+      expect(result.valid).toBe(true);
+      if (result.valid) {
+        expect(result.jsonOutput).toBe(true);
+      }
+    });
+
+    it('should return jsonOutput true when --json flag and agent', () => {
+      const result = resolveJsonOutput(
+        { '--json': true },
+        { nonInteractive: true }
+      );
+      expect(result.valid).toBe(true);
+      if (result.valid) {
+        expect(result.jsonOutput).toBe(true);
+      }
+    });
+
+    it('should return error for invalid format even when agent', () => {
+      const result = resolveJsonOutput(
+        { '--format': 'xml' },
+        { nonInteractive: true }
+      );
+      expect(result.valid).toBe(false);
+      if (!result.valid) {
+        expect(result.error).toContain('Invalid output format: "xml"');
+      }
+    });
+
+    it('should return jsonOutput true for deprecated --json flag without agent', () => {
+      const result = resolveJsonOutput(
+        { '--json': true },
+        { nonInteractive: false }
+      );
       expect(result.valid).toBe(true);
       if (result.valid) {
         expect(result.jsonOutput).toBe(true);

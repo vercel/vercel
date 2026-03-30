@@ -80,3 +80,30 @@ export function validateJsonOutput(flags: {
     return { valid: false, error: (err as Error).message };
   }
 }
+
+/**
+ * Validates format flags and auto-enables JSON when an agent is detected.
+ *
+ * When `client.nonInteractive` is true (agent detected or --non-interactive flag),
+ * JSON output is enabled automatically even without --format=json. This ensures
+ * agents always receive structured JSON without needing to pass explicit flags.
+ *
+ * Use this instead of `validateJsonOutput` when the command should auto-JSON for agents.
+ *
+ * @param flags - Parsed CLI flags object
+ * @param client - Client instance (only `nonInteractive` is read)
+ * @returns OutputFormatResult with `jsonOutput: true` when flags request JSON OR agent is detected
+ */
+export function resolveJsonOutput(
+  flags: { '--format'?: string; '--json'?: boolean },
+  client: { nonInteractive: boolean }
+): OutputFormatResult {
+  const result = validateJsonOutput(flags);
+  if (!result.valid) {
+    return result;
+  }
+  return {
+    valid: true,
+    jsonOutput: result.jsonOutput || client.nonInteractive,
+  };
+}
