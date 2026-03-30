@@ -17,6 +17,7 @@ group :development, :test do
 
   # Omakase Ruby styling [https://github.com/rails/rubocop-rails-omakase/]
   gem "rubocop-rails-omakase", require: false
+  gem "json", ">= 2.17.1.2", require: false
 end
 
 gem "webrick"
