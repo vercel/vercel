@@ -1,6 +1,6 @@
 import { execSync } from 'child_process';
 import fs from 'fs';
-import { join, dirname, basename, parse, relative } from 'path';
+import { join, dirname, basename, parse } from 'path';
 import {
   VERCEL_RUNTIME_VERSION,
   VERCEL_WORKERS_VERSION,
@@ -656,20 +656,6 @@ from vercel_runtime.vc_init import vc_handler
     '**/yarn.lock',
     '**/package-lock.json',
   ];
-
-  // Exclude source static dirs and STATIC_ROOT from the Lambda bundle.
-  if (djangoStatic) {
-    const dirsToExclude = [
-      ...djangoStatic.staticSourceDirs,
-      ...(djangoStatic.staticRoot ? [djangoStatic.staticRoot] : []),
-    ];
-    for (const absDir of dirsToExclude) {
-      const rel = relative(workPath, absDir);
-      if (!rel.startsWith('..')) {
-        predefinedExcludes.push(`${rel}/**`);
-      }
-    }
-  }
 
   const lambdaEnv = {} as Record<string, string>;
   lambdaEnv.PYTHONPATH = vendorDir;
