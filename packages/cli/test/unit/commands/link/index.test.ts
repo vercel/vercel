@@ -99,6 +99,59 @@ describe('link', () => {
     });
   });
 
+  describe('--dry-run', () => {
+    it('outputs dry-run actions as JSON in agent mode and returns 0', async () => {
+      client.setArgv(
+        'link',
+        '--dry-run',
+        '--project',
+        'my-app',
+        '--team',
+        'my-team'
+      );
+      (client as { nonInteractive: boolean }).nonInteractive = true;
+
+      const exitCode = await link(client);
+      expect(exitCode).toBe(0);
+
+      const output = client.stdout.getFullOutput();
+      const result = JSON.parse(output);
+      expect(result.status).toBe('dry_run');
+      expect(result.reason).toBe('dry_run_ok');
+      expect(result.message).toBe(
+        'Link would connect this directory to a Vercel project'
+      );
+      expect(result.data.actions).toHaveLength(2);
+      expect(result.data.actions[0].action).toBe('api_call');
+      expect(result.data.actions[0].details.project).toBe('my-app');
+      expect(result.data.actions[0].details.team).toBe('my-team');
+      expect(result.data.actions[1].action).toBe('file_write');
+      expect(result.data.actions[1].details.path).toContain(
+        '.vercel/project.json'
+      );
+
+      (client as { nonInteractive: boolean }).nonInteractive = false;
+    });
+
+    it('outputs human-readable dry-run in interactive mode and returns 0', async () => {
+      client.setArgv('link', '--dry-run');
+      (client as { nonInteractive: boolean }).nonInteractive = false;
+
+      const exitCode = await link(client);
+      expect(exitCode).toBe(0);
+    });
+
+    it('does not invoke the link flow', async () => {
+      client.setArgv('link', '--dry-run');
+      const exitCode = await link(client);
+      expect(exitCode).toBe(0);
+
+      // Verify no API calls were made — stderr should have no link output
+      const stderrOutput = client.stderr.getFullOutput();
+      expect(stderrOutput).not.toContain('Linked to');
+    });
+  });
+
   describe('--repo', () => {
     it('should support linking using `--repo` flag', async () => {
       const user = useUser();

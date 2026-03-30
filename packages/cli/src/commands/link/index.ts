@@ -18,6 +18,8 @@ import { writeAgentResponse } from '../../util/agent-response';
 import { buildCommandWithGlobalFlags } from '../../util/agent-output';
 import { EXIT_CODE } from '../../util/exit-codes';
 import { outputCommandSchema } from '../../util/describe-command';
+import { outputDryRun } from '../../util/dry-run';
+import { join } from 'path';
 
 const COMMAND_CONFIG = {
   add: getCommandAliases(addSubcommand),
@@ -100,6 +102,30 @@ export default async function link(client: Client) {
   if (parsedArgs.flags['--describe']) {
     outputCommandSchema(client, linkCommand);
     return 0;
+  }
+
+  if (parsedArgs.flags['--dry-run']) {
+    const cwd = parsedArgs.args[1] || client.cwd;
+    return outputDryRun(client, {
+      status: 'dry_run',
+      reason: 'dry_run_ok',
+      message: 'Link would connect this directory to a Vercel project',
+      actions: [
+        {
+          action: 'api_call',
+          description: 'Fetch or create project',
+          details: {
+            project: parsedArgs.flags['--project'] ?? undefined,
+            team: parsedArgs.flags['--team'] ?? undefined,
+          },
+        },
+        {
+          action: 'file_write',
+          description: 'Write .vercel/project.json',
+          details: { path: join(cwd, '.vercel', 'project.json') },
+        },
+      ],
+    });
   }
 
   telemetry.trackCliFlagRepo(parsedArgs.flags['--repo']);
