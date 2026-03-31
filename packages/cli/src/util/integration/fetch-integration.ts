@@ -125,26 +125,26 @@ export async function resolveAndFetchIntegration(
     return null;
   }
 
-  if (client.stdin.isTTY !== true) {
-    output.error(
-      `Found multiple integrations matching "${rawSlug}". Available integrations:\n${matches.map(m => `- ${m.slug}: ${m.description}`).join('\n')}`
-    );
-    telemetry.trackCliArgumentIntegration(rawSlug, false);
-    return null;
-  }
-
   let selectedSlug: string;
 
   if (matches.length === 1) {
     const match = matches[0];
-    const confirmed = await client.input.confirm(
-      `Install ${chalk.bold(match.name)} (${match.slug})?`,
-      true
-    );
-    if (!confirmed) {
-      return null;
+    if (client.stdin.isTTY === true) {
+      const confirmed = await client.input.confirm(
+        `Install ${chalk.bold(match.name)} (${match.slug})?`,
+        true
+      );
+      if (!confirmed) {
+        return null;
+      }
     }
     selectedSlug = match.slug;
+  } else if (client.stdin.isTTY !== true) {
+    output.error(
+      `Found ${matches.length} integrations matching "${rawSlug}". Available integrations:\n${matches.map(m => `- ${m.slug}: ${m.description}`).join('\n')}`
+    );
+    telemetry.trackCliArgumentIntegration(rawSlug, false);
+    return null;
   } else {
     selectedSlug = await client.input.select({
       message: `Found ${matches.length} integrations matching "${rawSlug}". Pick one to install:`,
