@@ -4,7 +4,7 @@ import * as ERRORS from '../../util/errors-ts';
 import { isAPIError } from '../../util/errors-ts';
 import type Client from '../../util/client';
 import formatNSTable from '../../util/format-ns-table';
-import { resolveScopeContext } from '../../util/scope-context';
+import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import { getCommandName } from '../../util/pkg-name';
 import { getDomain } from '../../util/domains/get-domain';
@@ -133,7 +133,7 @@ export default async function add(client: Client, argv: string[]) {
 
   const force = opts['--force'];
   telemetry.trackCliFlagForce(force);
-  const { contextName } = await resolveScopeContext(client, {
+  const { contextName } = await getScope(client, {
     requiresTeamOnly: true,
   });
 

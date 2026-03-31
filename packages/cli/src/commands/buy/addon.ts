@@ -10,7 +10,7 @@ import {
   type AddonAlias,
 } from './command';
 import output from '../../output-manager';
-import { resolveScopeContext } from '../../util/scope-context';
+import getScope from '../../util/get-scope';
 import { getCommandName } from '../../util/pkg-name';
 import stamp from '../../util/output/stamp';
 import { createPurchase } from '../../util/buy/create-purchase';
@@ -75,7 +75,7 @@ export default async function addon(client: Client, argv: string[]) {
   }
 
   // Ensure we have a team scope
-  const { team, contextName } = await resolveScopeContext(client, {
+  const { team, contextName } = await getScope(client, {
     requiresTeamOnly: true,
   });
 

@@ -23,7 +23,7 @@ import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { getLinkedProject } from '../../util/projects/link';
-import { applyScopeFromLink } from '../../util/scope-context';
+import { applyScopeFromLink } from '../../util/get-scope';
 import { determineAgent } from '@vercel/detect-agent';
 import { suggestNextCommands } from '../../util/suggest-next-commands';
 import { validateLsArgs } from '../../util/validate-ls-args';

@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import open from 'open';
 import type Client from '../../util/client';
 import formatTable from '../../util/format-table';
-import { resolveScopeContext } from '../../util/scope-context';
+import getScope from '../../util/get-scope';
 import list from '../../util/input/list';
 import indent from '../../util/output/indent';
 import {
@@ -155,7 +155,7 @@ export async function add(
   telemetry.trackCliOptionEnvironment(options.environments);
   telemetry.trackCliOptionPrefix(prefix);
 
-  const { contextName, team } = await resolveScopeContext(client, {
+  const { contextName, team } = await getScope(client, {
     requiresTeamOnly: true,
   });
 

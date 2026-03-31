@@ -6,7 +6,7 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
 import { getCommandName } from '../../util/pkg-name';
 import { getLinkedProject } from '../../util/projects/link';
-import { applyScopeFromLink } from '../../util/scope-context';
+import { applyScopeFromLink } from '../../util/get-scope';
 import { emoji, prependEmoji } from '../../util/emoji';
 import { CacheInvalidateTelemetryClient } from '../../util/telemetry/commands/cache/invalidate';
 import plural from 'pluralize';

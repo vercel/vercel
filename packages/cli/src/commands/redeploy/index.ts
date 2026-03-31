@@ -5,7 +5,7 @@ import { emoji, prependEmoji } from '../../util/emoji';
 import { parseArguments } from '../../util/get-args';
 import { getCommandName } from '../../util/pkg-name';
 import { getDeploymentByIdOrURL } from '../../util/deploy/get-deployment-by-id-or-url';
-import { resolveScopeContext } from '../../util/scope-context';
+import getScope from '../../util/get-scope';
 import { printError } from '../../util/error';
 import { isErrnoException } from '@vercel/error-utils';
 import Now from '../../util';
@@ -74,7 +74,7 @@ export default async function redeploy(client: Client): Promise<number> {
   telemetry.trackCliFlagNoWait(parsedArgs.flags['--no-wait']);
   telemetry.trackCliOptionTarget(parsedArgs.flags['--target']);
 
-  const { contextName } = await resolveScopeContext(client, {
+  const { contextName } = await getScope(client, {
     requiresTeamOnly: true,
   });
   const noWait = !!parsedArgs.flags['--no-wait'];

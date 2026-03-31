@@ -4,7 +4,7 @@ import { inspectGroupSubcommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { parseArguments } from '../../util/get-args';
 import { printError } from '../../util/error';
-import { resolveScopeContext } from '../../util/scope-context';
+import getScope from '../../util/get-scope';
 import { fetchMicrofrontendsGroups } from './utils';
 import getProjectByIdOrName from '../../util/projects/get-project-by-id-or-name';
 import { ProjectNotFound } from '../../util/errors-ts';
@@ -94,7 +94,7 @@ export default async function inspectGroup(client: Client): Promise<number> {
   const configFileNameFlag = parsedArgs.flags['--config-file-name'] as
     | string
     | undefined;
-  const { team } = await resolveScopeContext(client, {
+  const { team } = await getScope(client, {
     requiresTeamOnly: true,
   });
 

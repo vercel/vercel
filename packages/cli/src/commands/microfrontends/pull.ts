@@ -4,7 +4,7 @@ import output from '../../output-manager';
 import getScope from '../../util/get-scope';
 import type Client from '../../util/client';
 import { ensureLink } from '../../util/link/ensure-link';
-import { applyScopeFromLink } from '../../util/scope-context';
+import { applyScopeFromLink } from '../../util/get-scope';
 import { emoji, prependEmoji } from '../../util/emoji';
 import humanizePath from '../../util/humanize-path';
 import stamp from '../../util/output/stamp';

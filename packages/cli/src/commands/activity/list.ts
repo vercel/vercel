@@ -8,7 +8,7 @@ import { activityCommand } from './command';
 import { validateJsonOutput } from '../../util/output-format';
 import type { ActivityTelemetryClient } from '../../util/telemetry/commands/activity';
 import { getLinkedProject } from '../../util/projects/link';
-import { resolveScopeContext } from '../../util/scope-context';
+import getScope from '../../util/get-scope';
 import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name';
 import { ProjectNotFound, isAPIError } from '../../util/errors-ts';
 import { getCommandName } from '../../util/pkg-name';
@@ -277,7 +277,7 @@ async function resolveScope(
   opts: { project?: string; all?: boolean; jsonOutput: boolean }
 ): Promise<ActivityScope | number> {
   if (opts.all || opts.project) {
-    const { team } = await resolveScopeContext(client, {
+    const { team } = await getScope(client, {
       requiresTeamOnly: true,
     });
     if (!team) {

@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import * as ERRORS from '../../util/errors-ts';
 import type Client from '../../util/client';
-import { resolveScopeContext } from '../../util/scope-context';
+import getScope from '../../util/get-scope';
 import param from '../../util/output/param';
 import transferInDomain from '../../util/domains/transfer-in-domain';
 import stamp from '../../util/output/stamp';
@@ -70,7 +70,7 @@ export default async function transferIn(client: Client, argv: string[]) {
     return 1;
   }
 
-  const { contextName } = await resolveScopeContext(client, {
+  const { contextName } = await getScope(client, {
     requiresTeamOnly: true,
   });
   output.log(

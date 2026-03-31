@@ -7,7 +7,7 @@ import * as ERRORS from '../../util/errors-ts';
 import deleteCertById from '../../util/certs/delete-cert-by-id';
 import getCertById from '../../util/certs/get-cert-by-id';
 import { getCustomCertsForDomain } from '../../util/certs/get-custom-certs-for-domain';
-import { resolveScopeContext } from '../../util/scope-context';
+import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import param from '../../util/output/param';
 import { getCommandName } from '../../util/pkg-name';
@@ -51,7 +51,7 @@ async function rm(client: Client, argv: string[]): Promise<number> {
     return 1;
   }
 
-  const { contextName } = await resolveScopeContext(client, {
+  const { contextName } = await getScope(client, {
     requiresTeamOnly: true,
   });
   const certs = await getCertsToDelete(client, contextName, id);

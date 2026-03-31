@@ -13,7 +13,7 @@ import {
   getEnvTargetPlaceholder,
 } from '../../util/env/env-target';
 import { ensureLink } from '../../util/link/ensure-link';
-import { applyScopeFromLink } from '../../util/scope-context';
+import { applyScopeFromLink } from '../../util/get-scope';
 import humanizePath from '../../util/humanize-path';
 
 import { help } from '../help';

@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import plural from 'pluralize';
 import * as ERRORS from '../../util/errors-ts';
-import { resolveScopeContext } from '../../util/scope-context';
+import getScope from '../../util/get-scope';
 import moveOutDomain from '../../util/domains/move-out-domain';
 import isRootDomain from '../../util/is-root-domain';
 import param from '../../util/output/param';
@@ -39,7 +39,7 @@ export default async function move(client: Client, argv: string[]) {
   telemetry.trackCliArgumentDomain(args[0]);
   telemetry.trackCliArgumentDestination(args[1]);
 
-  const { contextName, user } = await resolveScopeContext(client, {
+  const { contextName, user } = await getScope(client, {
     requiresTeamOnly: true,
   });
   const { domainName, destination } = await getArgs(client, args);

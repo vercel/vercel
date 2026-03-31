@@ -21,7 +21,7 @@ import {
 import { outputAgentError } from '../../util/agent-output';
 import { getGlobalFlagsOnlyFromArgs } from '../../util/arg-common';
 import { getCommandNamePlain } from '../../util/pkg-name';
-import { resolveScopeContext } from '../../util/scope-context';
+import getScope from '../../util/get-scope';
 import { getLinkedProject } from '../../util/projects/link';
 
 const MAX_GROUP_NAME_LENGTH = 48;
@@ -38,7 +38,7 @@ export default async function createGroup(client: Client): Promise<number> {
     return 1;
   }
 
-  const { team } = await resolveScopeContext(client, {
+  const { team } = await getScope(client, {
     requiresTeamOnly: true,
   });
 

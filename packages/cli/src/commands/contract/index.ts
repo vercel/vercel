@@ -4,7 +4,7 @@ import { parseArguments } from '../../util/get-args';
 import { printError } from '../../util/error';
 import elapsed from '../../util/output/elapsed';
 import type Client from '../../util/client';
-import { resolveScopeContext } from '../../util/scope-context';
+import getScope from '../../util/get-scope';
 import { help } from '../help';
 import { contractCommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
@@ -57,7 +57,7 @@ export default async function contract(client: Client): Promise<number> {
   let teamId: string | undefined;
 
   try {
-    const scope = await resolveScopeContext(client, { requiresTeamOnly: true });
+    const scope = await getScope(client, { requiresTeamOnly: true });
     contextName = scope.contextName;
     teamId = scope.team?.id;
   } catch (err: unknown) {

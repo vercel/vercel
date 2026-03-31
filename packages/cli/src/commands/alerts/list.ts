@@ -9,7 +9,7 @@ import output from '../../output-manager';
 import { alertsCommand } from './command';
 import { validateJsonOutput } from '../../util/output-format';
 import { getLinkedProject } from '../../util/projects/link';
-import { resolveScopeContext } from '../../util/scope-context';
+import getScope from '../../util/get-scope';
 import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name';
 import { ProjectNotFound, isAPIError } from '../../util/errors-ts';
 import type { AlertsTelemetryClient } from '../../util/telemetry/commands/alerts';
@@ -114,7 +114,7 @@ async function resolveScope(
   opts: { project?: string; all?: boolean; jsonOutput: boolean }
 ): Promise<AlertsScope | number> {
   if (opts.all || opts.project) {
-    const { team } = await resolveScopeContext(client, {
+    const { team } = await getScope(client, {
       requiresTeamOnly: true,
     });
     if (!team) {

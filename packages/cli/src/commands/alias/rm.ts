@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import ms from 'ms';
 import table from '../../util/output/table';
 import type Client from '../../util/client';
-import { resolveScopeContext } from '../../util/scope-context';
+import getScope from '../../util/get-scope';
 import removeAliasById from '../../util/alias/remove-alias-by-id';
 import stamp from '../../util/output/stamp';
 import findAliasByAliasOrId from '../../util/alias/find-alias-by-alias-or-id';
@@ -30,7 +30,7 @@ export default async function rm(client: Client, argv: string[]) {
 
   const { args, flags: opts } = parsedArguments;
 
-  const { contextName } = await resolveScopeContext(client, {
+  const { contextName } = await getScope(client, {
     requiresTeamOnly: true,
   });
   const telemetryClient = new AliasRemoveTelemetryClient({

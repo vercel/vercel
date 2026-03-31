@@ -18,7 +18,7 @@ import {
   AGENT_REASON,
   AGENT_STATUS,
 } from '../../util/agent-output-constants';
-import { resolveScopeContext } from '../../util/scope-context';
+import getScope from '../../util/get-scope';
 import { getLinkedProject } from '../../util/projects/link';
 
 export default async function deleteGroup(client: Client): Promise<number> {
@@ -57,7 +57,7 @@ export default async function deleteGroup(client: Client): Promise<number> {
     return 1;
   }
 
-  const { team } = await resolveScopeContext(client, {
+  const { team } = await getScope(client, {
     requiresTeamOnly: true,
   });
 

@@ -3,7 +3,7 @@ import { isErrnoException } from '@vercel/error-utils';
 import type Client from '../../util/client';
 import output from '../../output-manager';
 import { ensureLink } from '../../util/link/ensure-link';
-import { resolveScopeContext } from '../../util/scope-context';
+import getScope from '../../util/get-scope';
 import { getOrCreateDeploymentProtectionToken } from './bypass-token';
 import { getLinkedProject } from '../../util/projects/link';
 import { getDeploymentUrlById } from './deployment-url';
@@ -141,7 +141,7 @@ export async function getDeploymentUrlAndToken(
   let scope;
 
   try {
-    scope = await resolveScopeContext(client, { requiresTeamOnly: true });
+    scope = await getScope(client, { requiresTeamOnly: true });
   } catch (err: unknown) {
     if (
       isErrnoException(err) &&

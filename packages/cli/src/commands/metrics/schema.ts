@@ -22,7 +22,7 @@ import {
 import formatTable from '../../util/format-table';
 import indent from '../../util/output/indent';
 import type { MetricsTelemetryClient } from '../../util/telemetry/commands/metrics';
-import { resolveScopeContext } from '../../util/scope-context';
+import getScope from '../../util/get-scope';
 
 export default async function schema(
   client: Client,
@@ -51,7 +51,7 @@ export default async function schema(
   telemetry.trackCliOptionEvent(event);
   telemetry.trackCliOptionFormat(flags['--format']);
 
-  const { team } = await resolveScopeContext(client, {
+  const { team } = await getScope(client, {
     requiresTeamOnly: true,
   });
   if (!team) {

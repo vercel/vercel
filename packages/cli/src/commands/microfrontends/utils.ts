@@ -1,7 +1,7 @@
 import output from '../../output-manager';
 import type Client from '../../util/client';
 import { ensureLink } from '../../util/link/ensure-link';
-import { resolveScopeContext } from '../../util/scope-context';
+import getScope from '../../util/get-scope';
 import type { Project, Org, Team } from '@vercel-internals/types';
 import type { MicrofrontendsGroupsResponse } from './types';
 
@@ -31,7 +31,7 @@ export async function ensureMicrofrontendsContext(
   }
 
   client.config.currentTeam = org.id;
-  const { team } = await resolveScopeContext(client, {
+  const { team } = await getScope(client, {
     requiresTeamOnly: true,
   });
 

@@ -7,7 +7,7 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { getResources } from '../../util/integration-resource/get-resources';
 import { IntegrationResourceCreateThresholdTelemetryClient } from '../../util/telemetry/commands/integration-resource/create-threshold';
 import { createThresholdSubcommand } from './command';
-import { resolveScopeContext } from '../../util/scope-context';
+import getScope from '../../util/get-scope';
 import { getBalanceInformation } from '../../util/integration/fetch-installation-prepayment-info';
 import { updateThreshold } from '../../util/integration-resource/update-threshold';
 import { updateInstallationThreshold } from '../../util/integration/update-installation-threshold';
@@ -53,7 +53,7 @@ export async function createThreshold(client: Client) {
   const { resourceName, minimum, spend, limit } = args;
 
   // Fetch Team
-  const { team } = await resolveScopeContext(client, {
+  const { team } = await getScope(client, {
     requiresTeamOnly: true,
   });
   if (!team) {

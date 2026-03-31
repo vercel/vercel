@@ -4,7 +4,7 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { v0Subcommand } from './command';
 import output from '../../output-manager';
-import { resolveScopeContext } from '../../util/scope-context';
+import getScope from '../../util/get-scope';
 
 export default async function v0(client: Client, argv: string[]) {
   const flagsSpecification = getFlagsSpecification(v0Subcommand.options);
@@ -16,7 +16,7 @@ export default async function v0(client: Client, argv: string[]) {
   }
 
   // Ensure we have a team scope
-  const { team, contextName } = await resolveScopeContext(client, {
+  const { team, contextName } = await getScope(client, {
     requiresTeamOnly: true,
   });
 

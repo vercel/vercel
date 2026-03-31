@@ -3,7 +3,7 @@ import ms from 'ms';
 import table from '../../util/output/table';
 import type Client from '../../util/client';
 import getAliases from '../../util/alias/get-aliases';
-import { resolveScopeContext } from '../../util/scope-context';
+import getScope from '../../util/get-scope';
 import { getPaginationOpts } from '../../util/get-pagination-opts';
 import stamp from '../../util/output/stamp';
 import getCommandFlags from '../../util/get-command-flags';
@@ -40,7 +40,7 @@ export default async function ls(client: Client, argv: string[]) {
     return validationResult;
   }
 
-  const { contextName } = await resolveScopeContext(client, {
+  const { contextName } = await getScope(client, {
     requiresTeamOnly: true,
   });
 

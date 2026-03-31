@@ -5,7 +5,7 @@ import stamp from '../../util/output/stamp';
 import formatDate from '../../util/format-date';
 import formatNSTable from '../../util/format-ns-table';
 import getDomainByName from '../../util/domains/get-domain-by-name';
-import { resolveScopeContext } from '../../util/scope-context';
+import getScope from '../../util/get-scope';
 import formatTable from '../../util/format-table';
 import { findProjectsForDomain } from '../../util/projects/find-projects-for-domain';
 import getDomainPrice from '../../util/domains/get-domain-price';
@@ -60,7 +60,7 @@ export default async function inspect(client: Client, argv: string[]) {
 
   output.debug(`Fetching domain info`);
 
-  const { contextName } = await resolveScopeContext(client, {
+  const { contextName } = await getScope(client, {
     requiresTeamOnly: true,
   });
   output.spinner(

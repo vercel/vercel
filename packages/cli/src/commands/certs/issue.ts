@@ -7,7 +7,7 @@ import createCertFromFile from '../../util/certs/create-cert-from-file';
 import dnsTable from '../../util/format-dns-table';
 import finishCertOrder from '../../util/certs/finish-cert-order';
 import getCnsFromArgs from '../../util/certs/get-cns-from-args';
-import { resolveScopeContext } from '../../util/scope-context';
+import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import startCertOrder from '../../util/certs/start-cert-order';
 import handleCertError from '../../util/certs/handle-cert-error';
@@ -105,7 +105,7 @@ export default async function issue(
 
   const cns = getCnsFromArgs(args);
 
-  const { contextName } = await resolveScopeContext(client, {
+  const { contextName } = await getScope(client, {
     requiresTeamOnly: true,
   });
 

@@ -10,7 +10,7 @@ import { printError } from '../../util/error';
 import { GitDisconnectTelemetryClient } from '../../util/telemetry/commands/git/disconnect';
 import type Client from '../../util/client';
 import { ensureLink } from '../../util/link/ensure-link';
-import { applyScopeFromLink } from '../../util/scope-context';
+import { applyScopeFromLink } from '../../util/get-scope';
 
 export default async function disconnect(client: Client, argv: string[]) {
   let parsedArgs;

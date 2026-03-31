@@ -11,7 +11,7 @@ import formatDate from '../../util/format-date';
 import getDeployment from '../../util/get-deployment';
 import { packageName } from '../../util/pkg-name';
 import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name';
-import { resolveScopeContext } from '../../util/scope-context';
+import getScope from '../../util/get-scope';
 import ms from 'ms';
 import { ProjectNotFound } from '../../util/errors-ts';
 import renderAliasStatus from '../../util/alias/render-alias-status';
@@ -67,7 +67,7 @@ export default async function promoteStatus({
     : `Checking promotion status of ${project.name}`;
 
   if (!contextName) {
-    ({ contextName } = await resolveScopeContext(client, {
+    ({ contextName } = await getScope(client, {
       requiresTeamOnly: true,
     }));
   }

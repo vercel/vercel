@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import type Client from '../../util/client';
-import { resolveScopeContext } from '../../util/scope-context';
+import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import output from '../../output-manager';
 import createCertFromFile from '../../util/certs/create-cert-from-file';
@@ -96,7 +96,7 @@ async function add(client: Client, argv: string[]): Promise<number> {
       `Generating a certificate for ${chalk.bold(cns.join(', '))}`
     );
 
-    const { contextName } = await resolveScopeContext(client, {
+    const { contextName } = await getScope(client, {
       requiresTeamOnly: true,
     });
     cert = await createCertForCns(client, cns, contextName);

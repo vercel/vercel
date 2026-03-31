@@ -23,7 +23,7 @@ import { printError } from '../../util/error';
 import output from '../../output-manager';
 import { RollingReleaseTelemetryClient } from '../../util/telemetry/commands/rolling-release';
 import { getLinkedProject } from '../../util/projects/link';
-import { applyScopeFromLink } from '../../util/scope-context';
+import { applyScopeFromLink } from '../../util/get-scope';
 import getSubcommand from '../../util/get-subcommand';
 import { getCommandAliases } from '..';
 import getInvalidSubcommand from '../../util/get-invalid-subcommand';

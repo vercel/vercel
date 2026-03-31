@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import type Client from '../../util/client';
 import createWebhook from '../../util/webhooks/create-webhook';
-import { resolveScopeContext } from '../../util/scope-context';
+import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import { getCommandNamePlain } from '../../util/pkg-name';
 import { outputAgentError } from '../../util/agent-output';
@@ -172,7 +172,7 @@ export default async function create(client: Client, argv: string[]) {
   telemetry.trackCliOptionEvent(events);
   telemetry.trackCliOptionProject(projectIds);
 
-  const { contextName } = await resolveScopeContext(client, {
+  const { contextName } = await getScope(client, {
     requiresTeamOnly: true,
   });
 

@@ -8,7 +8,7 @@ import getDNSRecords, {
   type DomainRecordsItem,
 } from '../../util/dns/get-dns-records';
 import getDomainDNSRecords from '../../util/dns/get-domain-dns-records';
-import { resolveScopeContext } from '../../util/scope-context';
+import getScope from '../../util/get-scope';
 import { getPaginationOpts } from '../../util/get-pagination-opts';
 import stamp from '../../util/output/stamp';
 import getCommandFlags from '../../util/get-command-flags';
@@ -89,7 +89,7 @@ export default async function ls(client: Client, argv: string[]) {
   }
 
   const { telemetryEventStore } = client;
-  const { contextName } = await resolveScopeContext(client, {
+  const { contextName } = await getScope(client, {
     requiresTeamOnly: true,
   });
   const telemetry = new DnsLsTelemetryClient({
