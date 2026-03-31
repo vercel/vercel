@@ -15,7 +15,7 @@ import { useProject, defaultProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
 import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
 
-describe('firewall status', () => {
+describe('firewall overview', () => {
   beforeEach(() => {
     useUser();
     useTeams('team_dummy');
@@ -30,20 +30,20 @@ describe('firewall status', () => {
 
   describe('--help', () => {
     it('tracks telemetry', async () => {
-      client.setArgv('firewall', 'status', '--help');
+      client.setArgv('firewall', 'overview', '--help');
       const exitCode = await firewall(client);
       expect(exitCode).toEqual(2);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
           key: 'flag:help',
-          value: 'firewall:status',
+          value: 'firewall:overview',
         },
       ]);
     });
   });
 
-  it('should show firewall status when enabled with rules', async () => {
+  it('should show firewall overview when enabled with rules', async () => {
     const active = createConfig({
       firewallEnabled: true,
       rules: [createRule(1), createRule(2), createRule(3)],
@@ -52,13 +52,13 @@ describe('firewall status', () => {
     useListFirewallConfigs(active, null);
     useGetBypass([createBypassRule(1)]);
 
-    client.setArgv('firewall', 'status');
+    client.setArgv('firewall', 'overview');
     const exitCodePromise = firewall(client);
     await expect(client.stderr).toOutput('2 active, 1 inactive (3 total)');
     expect(await exitCodePromise).toEqual(0);
   });
 
-  it('should show firewall status when disabled', async () => {
+  it('should show firewall overview when disabled', async () => {
     const active = createConfig({
       firewallEnabled: false,
       rules: [],
@@ -67,7 +67,7 @@ describe('firewall status', () => {
     useListFirewallConfigs(active, null);
     useGetBypass([]);
 
-    client.setArgv('firewall', 'status');
+    client.setArgv('firewall', 'overview');
     const exitCodePromise = firewall(client);
     await expect(client.stderr).toOutput('Disabled');
     expect(await exitCodePromise).toEqual(0);
@@ -89,7 +89,7 @@ describe('firewall status', () => {
     useListFirewallConfigs(active, draft);
     useGetBypass([]);
 
-    client.setArgv('firewall', 'status');
+    client.setArgv('firewall', 'overview');
     const exitCodePromise = firewall(client);
     await expect(client.stderr).toOutput('2 unpublished changes');
     expect(await exitCodePromise).toEqual(0);
@@ -99,7 +99,7 @@ describe('firewall status', () => {
     useListFirewallConfigs(null, null);
     useGetBypass([]);
 
-    client.setArgv('firewall', 'status');
+    client.setArgv('firewall', 'overview');
     const exitCodePromise = firewall(client);
     await expect(client.stderr).toOutput('Not configured');
     expect(await exitCodePromise).toEqual(0);
@@ -110,7 +110,7 @@ describe('firewall status', () => {
     useListFirewallConfigs(active, null);
     useGetBypass([]);
 
-    client.setArgv('firewall', 'status', '--json');
+    client.setArgv('firewall', 'overview', '--json');
     const exitCode = await firewall(client);
     expect(exitCode).toEqual(0);
   });

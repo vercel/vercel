@@ -4,10 +4,10 @@ import getInvalidSubcommand from '../../util/get-invalid-subcommand';
 import getSubcommand from '../../util/get-subcommand';
 import { printError } from '../../util/error';
 import { type Command, help } from '../help';
-import status from './status';
+import overview from './status';
 import {
   firewallCommand,
-  statusSubcommand,
+  overviewSubcommand,
   diffSubcommand,
   publishSubcommand,
   discardSubcommand,
@@ -18,7 +18,7 @@ import { getCommandAliases } from '..';
 import { FirewallTelemetryClient } from '../../util/telemetry/commands/firewall';
 
 const COMMAND_CONFIG = {
-  status: getCommandAliases(statusSubcommand),
+  overview: getCommandAliases(overviewSubcommand),
   diff: getCommandAliases(diffSubcommand),
   publish: getCommandAliases(publishSubcommand),
   discard: getCommandAliases(discardSubcommand),
@@ -66,14 +66,14 @@ export default async function main(client: Client) {
   }
 
   switch (subcommand) {
-    case 'status':
+    case 'overview':
       if (needHelp) {
         telemetry.trackCliFlagHelp('firewall', subcommandOriginal);
-        printHelp(statusSubcommand);
+        printHelp(overviewSubcommand);
         return 2;
       }
-      telemetry.trackCliSubcommandStatus(subcommandOriginal);
-      return status(client, args);
+      telemetry.trackCliSubcommandOverview(subcommandOriginal);
+      return overview(client, args);
     case 'diff':
       if (needHelp) {
         telemetry.trackCliFlagHelp('firewall', subcommandOriginal);

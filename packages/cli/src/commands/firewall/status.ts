@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import type Client from '../../util/client';
 import output from '../../output-manager';
-import { statusSubcommand } from './command';
+import { overviewSubcommand } from './command';
 import {
   parseSubcommandArgs,
   ensureProjectLink,
@@ -14,7 +14,7 @@ import { formatStatusOutput } from '../../util/firewall/format';
 import { outputAgentError } from '../../util/agent-output';
 
 export default async function status(client: Client, argv: string[]) {
-  const parsed = await parseSubcommandArgs(argv, statusSubcommand, client);
+  const parsed = await parseSubcommandArgs(argv, overviewSubcommand, client);
   if (typeof parsed === 'number') return parsed;
 
   const link = await ensureProjectLink(client);
@@ -23,7 +23,7 @@ export default async function status(client: Client, argv: string[]) {
   const { project, org } = link;
   const teamId = org.type === 'team' ? org.id : undefined;
 
-  output.spinner(`Fetching firewall status for ${chalk.bold(project.name)}`);
+  output.spinner(`Fetching firewall overview for ${chalk.bold(project.name)}`);
 
   try {
     const [configList, bypassList] = await Promise.all([
@@ -49,13 +49,13 @@ export default async function status(client: Client, argv: string[]) {
     return 0;
   } catch (e: unknown) {
     const error = e as { message?: string };
-    const msg = error.message || 'Failed to fetch firewall status';
+    const msg = error.message || 'Failed to fetch firewall overview';
     if (client.nonInteractive) {
       outputAgentError(client, {
         status: 'error',
         reason: 'api_error',
         message: msg,
-        next: [{ command: withGlobalFlags(client, 'firewall status') }],
+        next: [{ command: withGlobalFlags(client, 'firewall overview') }],
       });
       process.exit(1);
       return 1;

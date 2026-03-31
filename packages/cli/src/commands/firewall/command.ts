@@ -1,10 +1,11 @@
 import { packageName } from '../../util/pkg-name';
 import { yesOption } from '../../util/arg-common';
 
-export const statusSubcommand = {
-  name: 'status',
+export const overviewSubcommand = {
+  name: 'overview',
   aliases: [],
-  description: 'Show firewall status and configuration overview',
+  description:
+    "Show a summary of your project's firewall configuration, including active rules, IP blocks, bypasses, and any unpublished draft changes",
   arguments: [],
   options: [
     {
@@ -17,8 +18,8 @@ export const statusSubcommand = {
   ],
   examples: [
     {
-      name: 'Show firewall status',
-      value: `${packageName} firewall status`,
+      name: 'Show firewall overview',
+      value: `${packageName} firewall overview`,
     },
   ],
 } as const;
@@ -26,7 +27,8 @@ export const statusSubcommand = {
 export const diffSubcommand = {
   name: 'diff',
   aliases: [],
-  description: 'Show pending draft changes',
+  description:
+    'Show draft changes that have been made but are not yet published to production',
   arguments: [],
   options: [
     {
@@ -39,7 +41,7 @@ export const diffSubcommand = {
   ],
   examples: [
     {
-      name: 'Show pending changes',
+      name: 'Show unpublished changes',
       value: `${packageName} firewall diff`,
     },
   ],
@@ -48,7 +50,8 @@ export const diffSubcommand = {
 export const publishSubcommand = {
   name: 'publish',
   aliases: [],
-  description: 'Publish draft changes to production',
+  description:
+    'Publish all draft firewall changes to production, making them live immediately',
   arguments: [],
   options: [yesOption],
   examples: [
@@ -66,7 +69,8 @@ export const publishSubcommand = {
 export const discardSubcommand = {
   name: 'discard',
   aliases: [],
-  description: 'Discard all draft changes',
+  description:
+    'Permanently discard all unpublished draft changes, reverting to the current production configuration',
   arguments: [],
   options: [yesOption],
   examples: [
@@ -84,11 +88,12 @@ export const discardSubcommand = {
 export const firewallCommand = {
   name: 'firewall',
   aliases: [],
-  description: 'Manage your project firewall configuration',
+  description:
+    "Manage your project's firewall rules, IP blocks, and system bypass configuration",
   hidden: true as const,
   arguments: [],
   subcommands: [
-    statusSubcommand,
+    overviewSubcommand,
     diffSubcommand,
     publishSubcommand,
     discardSubcommand,
@@ -96,11 +101,11 @@ export const firewallCommand = {
   options: [],
   examples: [
     {
-      name: 'Show firewall status',
-      value: `${packageName} firewall status`,
+      name: 'Show firewall overview',
+      value: `${packageName} firewall overview`,
     },
     {
-      name: 'Show pending changes',
+      name: 'Show unpublished changes',
       value: `${packageName} firewall diff`,
     },
     {

@@ -6,9 +6,9 @@ export class FirewallTelemetryClient
   extends TelemetryClient
   implements TelemetryMethods<typeof firewallCommand>
 {
-  trackCliSubcommandStatus(actual: string) {
+  trackCliSubcommandOverview(actual: string) {
     this.trackCliSubcommand({
-      subcommand: 'status',
+      subcommand: 'overview',
       value: actual,
     });
   }
