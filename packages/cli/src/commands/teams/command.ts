@@ -99,6 +99,24 @@ export const inviteSubcommand = {
   ],
 } as const;
 
+export const membersSubcommand = {
+  name: 'members',
+  aliases: ['member'],
+  description: 'List members for the currently scoped team',
+  arguments: [],
+  options: [formatOption],
+  examples: [
+    {
+      name: 'List team members',
+      value: `${packageName} teams members`,
+    },
+    {
+      name: 'List team members as JSON',
+      value: `${packageName} teams members --format json`,
+    },
+  ],
+} as const;
+
 export const teamsCommand = {
   name: 'teams',
   aliases: ['switch', 'team'],
@@ -109,6 +127,7 @@ export const teamsCommand = {
     inviteSubcommand,
     listSubcommand,
     switchSubcommand,
+    membersSubcommand,
   ],
   options: [],
   examples: [],
