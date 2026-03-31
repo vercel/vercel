@@ -49,6 +49,7 @@ import {
   detectFrameworkVersion,
   detectInstrumentation,
   getInternalServiceCronPath,
+  getInternalServiceFunctionPath,
   LocalFileSystemDetector,
 } from '@vercel/fs-detectors';
 import {
@@ -856,8 +857,81 @@ async function doBuild(
     }
   }
 
+  // group cron services that share the same workspace, builder, and runtime
+  // so they can be built into a single Lambda. Services with custom
+  // buildCommand or installCommand are excluded since they may produce
+  // different dependency sets.
+  const secondaryCronBuilders = new Set<Builder>();
+  const cronGroupByPrimaryBuilder = new Map<Builder, Service[]>();
+  if (hasDetectedServices) {
+    const cronGroups = new Map<string, Service[]>();
+
+    for (const service of detectedServices!) {
+      if (
+        service.runtime !== 'python' || // for now only Python cron services are supported
+        service.type !== 'cron' ||
+        service.buildCommand ||
+        service.installCommand
+      )
+        continue;
+
+      const key = `${service.workspace}:${service.builder.use}:${service.runtime}`;
+      let group = cronGroups.get(key);
+      if (!group) {
+        group = [];
+        cronGroups.set(key, group);
+      }
+      group.push(service);
+    }
+
+    // split into primary cron service and secondary services,
+    // only the primary one would be built while the rest would
+    // be just served from it.
+    for (const group of cronGroups.values()) {
+      if (group.length < 2) continue;
+
+      const primary = group[0];
+      cronGroupByPrimaryBuilder.set(primary.builder, group);
+      for (const s of group.slice(1)) {
+        secondaryCronBuilders.add(s.builder);
+      }
+    }
+  }
+
+  // rewrite routes, so secondary crons point to the Lambda built for
+  // the primary service
+  if (cronGroupByPrimaryBuilder.size > 0) {
+    const secondaryToPrimaryPath = new Map<string, string>();
+
+    for (const group of cronGroupByPrimaryBuilder.values()) {
+      const primaryPath = getInternalServiceFunctionPath(group[0].name);
+
+      for (const s of group.slice(1)) {
+        secondaryToPrimaryPath.set(
+          getInternalServiceFunctionPath(s.name),
+          primaryPath
+        );
+      }
+    }
+
+    for (const route of zeroConfigRoutes) {
+      if ('dest' in route && typeof route.dest === 'string') {
+        const rewritten = secondaryToPrimaryPath.get(route.dest);
+        if (rewritten) {
+          route.dest = rewritten;
+        }
+      }
+    }
+  }
+
   for (const build of sortedBuilders) {
     if (typeof build.src !== 'string') continue;
+
+    if (secondaryCronBuilders.has(build)) {
+      const svc = serviceByBuilder.get(build);
+      output.debug(`Skipping build for grouped cron service "${svc?.name}"`);
+      continue;
+    }
 
     const builderWithPkg = buildersWithPkgs.get(build.use);
     if (!builderWithPkg) {
@@ -950,11 +1024,26 @@ async function doBuild(
 
       if (isZeroConfig) {
         if (service) {
+          // When this service is the primary of a grouped cron build,
+          // pass handler info for all services so the builder can embed
+          // it in the trampoline for multi-handler dispatch.
+          const cronGroup = cronGroupByPrimaryBuilder.get(build);
+          const cronHandlersConfig = cronGroup
+            ? cronGroup.map(s => ({
+                name: s.name,
+                entrypoint: s.entrypoint!,
+                handlerFunction: s.handlerFunction,
+              }))
+            : undefined;
+
           // Services build: use service-specific config from resolution.
           // build.config already contains framework, routePrefix, memory, etc.
           buildConfig = {
             ...build.config,
             ...(hasWorkerServices ? { hasWorkerServices: true } : undefined),
+            ...(cronHandlersConfig
+              ? { cronHandlers: cronHandlersConfig }
+              : undefined),
             // Override project-level settings with service-specific ones.
             // The project-level framework is "services" which must NOT be
             // propagated to individual builders.

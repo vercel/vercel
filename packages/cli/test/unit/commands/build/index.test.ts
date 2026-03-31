@@ -1131,6 +1131,58 @@ describe.skipIf(flakey)('build', () => {
     });
   });
 
+  it('should build grouped Python cron services into a single lambda', async () => {
+    const cwd = fixture('with-services-grouped-python-crons');
+    const output = join(cwd, '.vercel', 'output');
+    client.cwd = cwd;
+    const exitCode = await build(client);
+    expect(exitCode).toBe(0);
+
+    const config = await fs.readJSON(join(output, 'config.json'));
+
+    // both crons are in the config
+    expect(config.crons).toEqual(
+      expect.arrayContaining([
+        {
+          path: '/_svc/cron-a/crons/jobs/handler_a/cron',
+          schedule: '0 * * * *',
+        },
+        {
+          path: '/_svc/cron-b/crons/jobs/handler_b/cron',
+          schedule: '0 6 * * *',
+        },
+      ])
+    );
+
+    // both routes result into cron-a
+    expect(config.routes).toContainEqual(
+      expect.objectContaining({
+        src: expect.stringContaining('cron-a'),
+        dest: '/_svc/cron-a/index',
+        check: true,
+      })
+    );
+    expect(config.routes).toContainEqual(
+      expect.objectContaining({
+        src: expect.stringContaining('cron-b'),
+        dest: '/_svc/cron-a/index',
+        check: true,
+      })
+    );
+
+    // only one cron lambda is built
+    expect(
+      await fs
+        .stat(join(output, 'functions', '_svc', 'cron-a', 'index.func'))
+        .catch(() => null)
+    ).not.toBeNull();
+    expect(
+      await fs
+        .stat(join(output, 'functions', '_svc', 'cron-b', 'index.func'))
+        .catch(() => null)
+    ).toBeNull();
+  });
+
   it('should fail build when CRON_SECRET contains invalid HTTP header characters', async () => {
     const cwd = fixture('with-cron');
     const output = join(cwd, '.vercel', 'output');

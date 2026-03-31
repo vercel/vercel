@@ -1739,6 +1739,139 @@ describe('handlerFunction validation', () => {
   });
 });
 
+describe('grouped cron service builds', () => {
+  let mockWorkPath: string;
+
+  beforeEach(() => {
+    mockWorkPath = path.join(tmpdir(), `grouped-cron-${Date.now()}`);
+    fs.mkdirSync(mockWorkPath, { recursive: true });
+    makeMockPython('3.12');
+  });
+
+  afterEach(() => {
+    if (fs.existsSync(mockWorkPath)) {
+      fs.removeSync(mockWorkPath);
+    }
+  });
+
+  it('includes __VC_HANDLER_CRON_HANDLERS in trampoline when cronHandlers config is set', async () => {
+    const files = {
+      'jobs/handler_a.py': new FileBlob({
+        data: 'def run_a():\n    print("a")\n',
+      }),
+      'jobs/handler_b.py': new FileBlob({
+        data: 'async def run_b():\n    print("b")\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "x"\nversion = "0.0.1"\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'jobs/handler_a.py',
+      meta: { isDev: false },
+      config: {
+        handlerFunction: 'run_a',
+        cronHandlers: [
+          {
+            name: 'cron-a',
+            entrypoint: 'jobs/handler_a.py',
+            handlerFunction: 'run_a',
+          },
+          {
+            name: 'cron-b',
+            entrypoint: 'jobs/handler_b.py',
+            handlerFunction: 'run_b',
+          },
+        ],
+      },
+      repoRootPath: mockWorkPath,
+      service: { type: 'cron', name: 'cron-a' },
+    });
+
+    const handler = getBuildOutputV3(result).files?.['vc__handler__python.py'];
+    if (!handler || !('data' in handler)) {
+      throw new Error('handler bootstrap not found');
+    }
+    const content = handler.data.toString();
+    expect(content).toContain('__VC_HANDLER_CRON_HANDLERS');
+    expect(content).toContain('cron-a');
+    expect(content).toContain('cron-b');
+    expect(content).toContain('run_a');
+    expect(content).toContain('run_b');
+  });
+
+  it('validates handler functions for grouped services', async () => {
+    const files = {
+      'jobs/handler_a.py': new FileBlob({
+        data: 'def run_a():\n    print("a")\n',
+      }),
+      'jobs/handler_b.py': new FileBlob({
+        data: 'def other_func():\n    pass\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "x"\nversion = "0.0.1"\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    await expect(
+      build({
+        workPath: mockWorkPath,
+        files,
+        entrypoint: 'jobs/handler_a.py',
+        meta: { isDev: false },
+        config: {
+          handlerFunction: 'run_a',
+          cronHandlers: [
+            {
+              name: 'cron-a',
+              entrypoint: 'jobs/handler_a.py',
+              handlerFunction: 'run_a',
+            },
+            {
+              name: 'cron-b',
+              entrypoint: 'jobs/handler_b.py',
+              handlerFunction: 'nonexistent',
+            },
+          ],
+        },
+        repoRootPath: mockWorkPath,
+        service: { type: 'cron', name: 'cron-a' },
+      })
+    ).rejects.toThrow(/Handler function "nonexistent" not found/);
+  });
+
+  it('does not include __VC_HANDLER_CRON_HANDLERS when cronHandlers is absent', async () => {
+    const files = {
+      'jobs/handler_a.py': new FileBlob({
+        data: 'def run_a():\n    print("a")\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "x"\nversion = "0.0.1"\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'jobs/handler_a.py',
+      meta: { isDev: false },
+      config: { handlerFunction: 'run_a' },
+      repoRootPath: mockWorkPath,
+      service: { type: 'cron', name: 'cron-a' },
+    });
+
+    const handler = getBuildOutputV3(result).files?.['vc__handler__python.py'];
+    if (!handler || !('data' in handler)) {
+      throw new Error('handler bootstrap not found');
+    }
+    const content = handler.data.toString();
+    expect(content).not.toContain('__VC_HANDLER_CRON_HANDLERS');
+  });
+});
+
 describe('python version fallback logging', () => {
   let mockWorkPath: string;
   let consoleLogSpy: MockInstance;

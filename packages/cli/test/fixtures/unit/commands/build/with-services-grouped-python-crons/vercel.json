@@ -1,0 +1,14 @@
+{
+  "experimentalServices": {
+    "cron-a": {
+      "type": "cron",
+      "entrypoint": "jobs.handler_a:run_a",
+      "schedule": "0 * * * *"
+    },
+    "cron-b": {
+      "type": "cron",
+      "entrypoint": "jobs.handler_b:run_b",
+      "schedule": "0 6 * * *"
+    }
+  }
+}

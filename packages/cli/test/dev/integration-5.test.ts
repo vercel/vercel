@@ -1000,3 +1000,71 @@ describe('[vercel dev] Cron service', () => {
     }
   });
 });
+
+describe('[vercel dev] Grouped cron services', () => {
+  const resultsDir = join(
+    __dirname,
+    'fixtures',
+    'services-grouped-crons',
+    '.results'
+  );
+
+  beforeEach(async () => {
+    await fs.remove(resultsDir);
+  });
+
+  test('[vercel dev] grouped cron services dispatch to correct handler', async () => {
+    const dir = fixture('services-grouped-crons');
+    const { dev, port, readyResolver } = await testFixture(
+      dir,
+      {
+        skipNpmInstall: true,
+        env: {
+          VERCEL_USE_EXPERIMENTAL_SERVICES: '1',
+          VERCEL_USE_EXPERIMENTAL_FRAMEWORKS: '1',
+        },
+      },
+      ['--local']
+    );
+
+    try {
+      await readyResolver;
+
+      const resA = await nodeFetch(
+        `http://localhost:${port}/_svc/cron-a/crons/jobs/task_a/run_task_a`,
+        { method: 'POST' }
+      );
+      expect(resA.status).toBe(200);
+      const jsonA = await resA.json();
+      expect(jsonA).toHaveProperty('ok', true);
+
+      const resultPathA = join(resultsDir, 'task_a_result.json');
+      expect(await fs.pathExists(resultPathA)).toBe(true);
+      const resultA = await fs.readJson(resultPathA);
+      expect(resultA).toHaveProperty('executed', 'task_a');
+
+      // trigger cron-b which is served by the same ASGI server as cron-a
+      const resB = await nodeFetch(
+        `http://localhost:${port}/_svc/cron-b/crons/jobs/task_b/run_task_b`,
+        { method: 'POST' }
+      );
+      expect(resB.status).toBe(200);
+      const jsonB = await resB.json();
+      expect(jsonB).toHaveProperty('ok', true);
+
+      const resultPathB = join(resultsDir, 'task_b_result.json');
+      expect(await fs.pathExists(resultPathB)).toBe(true);
+      const resultB = await fs.readJson(resultPathB);
+      expect(resultB).toHaveProperty('executed', 'task_b');
+    } finally {
+      const { stdout: devStdout } = await dev.kill();
+
+      // grouped crons are served by the same ASGI server, so it should appear only once
+      const uvicornMatches = devStdout.match(/Uvicorn running on/g) || [];
+      expect(uvicornMatches).toHaveLength(1);
+
+      expect(devStdout).toContain('[cron-a,cron-b]');
+      expect(devStdout).not.toMatch(/\[cron-b\]\s/);
+    }
+  });
+});

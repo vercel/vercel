@@ -5,6 +5,7 @@ import type { ChildProcess } from 'child_process';
 import getPort from 'get-port';
 import chalk from 'chalk';
 import {
+  getInternalServiceCronPath,
   getInternalServiceCronPathPrefix,
   getInternalServiceWorkerPathPrefix,
   type Service,
@@ -138,6 +139,20 @@ interface ServiceDevProcess {
   logger: ServiceLogger;
 }
 
+/**
+ * Build a display label for grouped cron services.
+ * Shows the first two names, then "+N" for the rest.
+ *   1 service  → "cron-a"
+ *   2 services → "cron-a,cron-b"
+ *   4 services → "cron-a,cron-b (+2)"
+ */
+function getGroupedLoggerName(group: Service[] | undefined): string {
+  if (!group || group.length <= 1) return group?.[0]?.name ?? '';
+  const shown = group.slice(0, 2).map(s => s.name);
+  const rest = group.length - shown.length;
+  return rest > 0 ? `${shown.join(',')} (+${rest})` : shown.join(',');
+}
+
 function getServiceRoutePrefixes(service: Service): string[] {
   if (service.type === 'worker') {
     return [getInternalServiceWorkerPathPrefix(service.name)];
@@ -171,6 +186,10 @@ export class ServicesOrchestrator {
   private pythonServiceCount: number;
   private hasWorkerServices: boolean;
 
+  // Grouped cron services: secondary services share the primary's process.
+  private secondaryCronServices = new Set<string>();
+  private cronGroupByPrimary = new Map<string, Service[]>();
+
   constructor(options: ServicesOrchestratorOptions) {
     this.services = options.services;
     this.cwd = options.cwd;
@@ -182,12 +201,54 @@ export class ServicesOrchestrator {
       s => s.runtime === 'python'
     ).length;
     this.hasWorkerServices = options.services.some(s => s.type === 'worker');
+
+    this.groupCronServices();
+
+    // Recalculate max name length to account for grouped labels.
+    for (const group of this.cronGroupByPrimary.values()) {
+      const label = getGroupedLoggerName(group);
+      this.maxNameLength = Math.max(this.maxNameLength, label.length);
+    }
+  }
+
+  /**
+   * Group Python cron services that share the same workspace so they run
+   * in a single dev server process instead of N identical processes.
+   */
+  private groupCronServices(): void {
+    const groups = new Map<string, Service[]>();
+    for (const service of this.services) {
+      if (service.type !== 'cron') continue;
+      if (service.runtime !== 'python') continue;
+      if (service.buildCommand || service.installCommand) continue;
+      const key = `${service.workspace}:${service.builder.use}:${service.runtime}`;
+      let group = groups.get(key);
+      if (!group) {
+        group = [];
+        groups.set(key, group);
+      }
+      group.push(service);
+    }
+    for (const group of groups.values()) {
+      if (group.length <= 1) continue;
+      const primary = group[0];
+      this.cronGroupByPrimary.set(primary.name, group);
+      for (let i = 1; i < group.length; i++) {
+        this.secondaryCronServices.add(group[i].name);
+      }
+    }
   }
 
   async startAll(): Promise<void> {
     output.debug(`Starting ${this.services.length} services`);
 
-    const startPromises = this.services.map((service, index) =>
+    // Only start primary services; secondary cron services will be
+    // registered under the primary's process after startup.
+    const servicesToStart = this.services.filter(
+      s => !this.secondaryCronServices.has(s.name)
+    );
+
+    const startPromises = servicesToStart.map((service, index) =>
       this.startService(service, index).then(result => {
         this.managedServices.set(result.name, result);
         return result;
@@ -203,6 +264,27 @@ export class ServicesOrchestrator {
     if (failures.length > 0) {
       await this.stopAll();
       throw new ServiceStartError(failures.map(f => f.reason as Error));
+    }
+
+    // Register secondary cron services under the primary's process
+    // so route matching and service origin lookups work for all services.
+    for (const [primaryName, group] of this.cronGroupByPrimary) {
+      const primaryProcess = this.managedServices.get(primaryName);
+      if (!primaryProcess) continue;
+      for (const service of group) {
+        if (service.name === primaryName) continue;
+        const secondaryPrefixes = getServiceRoutePrefixes(service);
+        primaryProcess.routePrefixes.push(...secondaryPrefixes);
+        // Register secondary under the primary's process so
+        // getServiceOrigin() resolves for all grouped services.
+        this.managedServices.set(service.name, {
+          ...primaryProcess,
+          name: service.name,
+        });
+        output.debug(
+          `Grouped cron service "${service.name}" under primary "${primaryName}"`
+        );
+      }
     }
 
     output.debug(
@@ -318,8 +400,13 @@ export class ServicesOrchestrator {
   ): Promise<ServiceDevProcess> {
     const workspacePath = path.join(this.cwd, service.workspace || '.');
     const framework = frameworkList.find(f => f.slug === service.framework);
+
+    // For grouped cron primaries, show which services share the process.
+    // Show the first two names, then "+N" for the rest.
+    const cronGroup = this.cronGroupByPrimary.get(service.name);
+    const loggerName = getGroupedLoggerName(cronGroup);
     const logger = createServiceLogger(
-      service.name,
+      loggerName,
       colorIndex,
       this.maxNameLength
     );
@@ -348,6 +435,32 @@ export class ServicesOrchestrator {
       env.VERCEL_HAS_WORKER_SERVICES === undefined
     ) {
       env.VERCEL_HAS_WORKER_SERVICES = '1';
+    }
+
+    // For grouped cron builds, set the handler mapping so the cron ASGI
+    // app can dispatch to the correct handler based on request path.
+    if (cronGroup) {
+      const mapping: Record<
+        string,
+        {
+          module: string;
+          entrypoint: string;
+          entry_abs: string;
+          func?: string;
+        }
+      > = {};
+      for (const s of cronGroup) {
+        if (s.entrypoint) {
+          const mod = s.entrypoint.replace(/\//g, '.').replace(/\.py$/i, '');
+          mapping[s.name] = {
+            module: mod,
+            entrypoint: s.entrypoint,
+            entry_abs: path.join(workspacePath, s.entrypoint),
+            ...(s.handlerFunction ? { func: s.handlerFunction } : undefined),
+          };
+        }
+      }
+      env.__VC_HANDLER_CRON_HANDLERS = JSON.stringify(mapping);
     }
 
     // When any worker service exists, point all services at the dev server's
@@ -717,14 +830,30 @@ export class ServicesOrchestrator {
         `Scheduling cron service ${chalk.bold(service.name)} (${chalk.cyan(service.schedule)})`
       );
 
-      this.scheduleCronTrigger(service.name, service.schedule, managed);
+      // Build the cron invocation path so the ASGI app can dispatch
+      // grouped cron services to the correct handler.
+      const cronEntrypoint =
+        service.entrypoint || service.builder.src || 'index';
+      const cronPath = getInternalServiceCronPath(
+        service.name,
+        cronEntrypoint,
+        service.handlerFunction || 'cron'
+      );
+
+      this.scheduleCronTrigger(
+        service.name,
+        service.schedule,
+        managed,
+        cronPath
+      );
     }
   }
 
   private scheduleCronTrigger(
     serviceName: string,
     schedule: string,
-    managed: ServiceDevProcess
+    managed: ServiceDevProcess,
+    cronPath: string
   ): void {
     const delayMs = getNextCronDelay(schedule);
     if (delayMs === null) {
@@ -742,7 +871,7 @@ export class ServicesOrchestrator {
       );
 
       try {
-        const url = `http://${managed.host}:${managed.port}/`;
+        const url = `http://${managed.host}:${managed.port}${cronPath}`;
         const res = await fetch(url, { method: 'POST' });
         output.debug(
           `Cron trigger for "${serviceName}" responded with status ${res.status}`
@@ -753,7 +882,7 @@ export class ServicesOrchestrator {
         );
       }
 
-      this.scheduleCronTrigger(serviceName, schedule, managed);
+      this.scheduleCronTrigger(serviceName, schedule, managed, cronPath);
     }, delayMs);
 
     this.cronTimers.push(timer);

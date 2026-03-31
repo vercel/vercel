@@ -163,6 +163,53 @@ const frameworkHooks: Partial<Record<PythonFramework, FrameworkHook>> = {
   },
 };
 
+interface CronHandlerConfig {
+  name: string;
+  entrypoint: string;
+  handlerFunction?: string;
+}
+
+async function buildCronHandlersMapping(
+  cronHandlers: unknown,
+  workPath: string
+): Promise<string | undefined> {
+  if (!Array.isArray(cronHandlers)) return undefined;
+
+  const handlers = cronHandlers as CronHandlerConfig[];
+  const mapping: Record<
+    string,
+    { module: string; entrypoint: string; func?: string }
+  > = {};
+
+  // verify that all handlers really exist and have function to execute
+  for (const h of handlers) {
+    const mod = h.entrypoint.replace(/\//g, '.').replace(/\.py$/i, '');
+
+    if (h.handlerFunction) {
+      const source = await fs.promises.readFile(
+        join(workPath, h.entrypoint),
+        'utf-8'
+      );
+      if (!(await containsTopLevelCallable(source, h.handlerFunction))) {
+        throw new NowBuildError({
+          code: 'PYTHON_HANDLER_NOT_FOUND',
+          message:
+            `Handler function "${h.handlerFunction}" not found in ${h.entrypoint}. ` +
+            `Ensure it is defined at the module's top level.`,
+        });
+      }
+    }
+
+    mapping[h.name] = {
+      module: mod,
+      entrypoint: h.entrypoint,
+      ...(h.handlerFunction ? { func: h.handlerFunction } : undefined),
+    };
+  }
+
+  return JSON.stringify(mapping);
+}
+
 export async function downloadFilesInWorkPath({
   entrypoint,
   workPath,
@@ -550,6 +597,11 @@ export const build: BuildVX = async ({
     }
   }
 
+  const cronHandlersJson = await buildCronHandlersMapping(
+    config?.cronHandlers,
+    workPath
+  );
+
   const vendorDir = resolveVendorDir();
 
   // Since `vercel dev` renames source files, we must reference the original
@@ -561,10 +613,18 @@ export const build: BuildVX = async ({
     ? `\n  "__VC_HANDLER_FUNC_NAME": "${handlerFunction}",`
     : '';
 
+  const cronHandlersEnvLine = cronHandlersJson
+    ? `\n  "__VC_HANDLER_CRON_HANDLERS": json.dumps({
+    k: {**v, "entry_abs": os.path.join(_here, v["entrypoint"])}
+    for k, v in json.loads(${JSON.stringify(cronHandlersJson)}).items()
+  }),`
+    : '';
+
   const variableName = resolved?.variableName ?? '';
 
   const runtimeTrampoline = `
 import importlib
+${cronHandlersJson ? 'import json' : ''}
 import os
 import os.path
 import site
@@ -577,7 +637,7 @@ os.environ.update({
   "__VC_HANDLER_ENTRYPOINT": "${entrypointWithSuffix}",
   "__VC_HANDLER_ENTRYPOINT_ABS": os.path.join(_here, "${entrypointWithSuffix}"),
   "__VC_HANDLER_VENDOR_DIR": "${vendorDir}",
-  "__VC_HANDLER_VARIABLE_NAME": "${variableName}",${handlerFuncEnvLine}
+  "__VC_HANDLER_VARIABLE_NAME": "${variableName}",${handlerFuncEnvLine}${cronHandlersEnvLine}
 })
 
 _vendor_rel = '${vendorDir}'

@@ -1,0 +1,16 @@
+{
+  "experimentalServices": {
+    "cron-a": {
+      "type": "cron",
+      "runtime": "python",
+      "entrypoint": "jobs.task_a:run_task_a",
+      "schedule": "* * * * *"
+    },
+    "cron-b": {
+      "type": "cron",
+      "runtime": "python",
+      "entrypoint": "jobs.task_b:run_task_b",
+      "schedule": "* * * * *"
+    }
+  }
+}

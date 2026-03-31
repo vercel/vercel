@@ -607,6 +607,191 @@ class TestCronService(_RuntimeTestCase):
             self.assertTrue(marker_path.exists())
             self.assertEqual(marker_path.read_text(), "ran-async")
 
+    async def test_dispatches_sync_handler_by_service_name_in_grouped_build(
+        self,
+    ) -> None:
+        ep_path, _, mod = _make_entrypoint(
+            "cron_grouped_handler_a.py", self.tmp_path
+        )
+        _make_entrypoint("cron_grouped_handler_b.py", self.tmp_path)
+
+        marker_path = self.tmp_path / "grouped-sync.marker"
+        cron_handlers = json.dumps(
+            {
+                "svc-a": self._build_handler(
+                    "cron_grouped_handler_a.py", "handler_a"
+                ),
+                "svc-b": self._build_handler(
+                    "cron_grouped_handler_b.py", "handler_b"
+                ),
+            }
+        )
+        async with _run_runtime(
+            entrypoint_abs=ep_path,
+            entrypoint_rel="cron_grouped_handler_a.py",
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+            extra_env={
+                "VERCEL_SERVICE_TYPE": "cron",
+                "CRON_MARKER_FILE": str(marker_path),
+                "__VC_HANDLER_FUNC_NAME": "handler_a",
+                "__VC_HANDLER_CRON_HANDLERS": cron_handlers,
+            },
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            # Invoke via the cron path for svc-a
+            resp = await _http_get(
+                port, "/_svc/svc-a/crons/cron_grouped_handler_a/handler_a"
+            )
+            self.assertEqual(resp.status, 200)
+            self.assertEqual(resp.read().decode(), '{"ok":true}')
+            self.assertTrue(marker_path.exists())
+            self.assertEqual(marker_path.read_text(), "ran-handler-a")
+
+    async def test_dispatches_async_handler_by_service_name_in_grouped_build(
+        self,
+    ) -> None:
+        ep_path, _, mod = _make_entrypoint(
+            "cron_grouped_handler_a.py", self.tmp_path
+        )
+        _make_entrypoint("cron_grouped_handler_b.py", self.tmp_path)
+
+        marker_path = self.tmp_path / "grouped-async.marker"
+        cron_handlers = json.dumps(
+            {
+                "svc-a": self._build_handler(
+                    "cron_grouped_handler_a.py", "handler_a"
+                ),
+                "svc-b": self._build_handler(
+                    "cron_grouped_handler_b.py", "handler_b"
+                ),
+            }
+        )
+        async with _run_runtime(
+            entrypoint_abs=ep_path,
+            entrypoint_rel="cron_grouped_handler_a.py",
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+            extra_env={
+                "VERCEL_SERVICE_TYPE": "cron",
+                "CRON_MARKER_FILE": str(marker_path),
+                "__VC_HANDLER_FUNC_NAME": "handler_a",
+                "__VC_HANDLER_CRON_HANDLERS": cron_handlers,
+            },
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            resp = await _http_get(
+                port, "/_svc/svc-b/crons/cron_grouped_handler_b/handler_b"
+            )
+            self.assertEqual(resp.status, 200)
+            self.assertEqual(resp.read().decode(), '{"ok":true}')
+            self.assertTrue(marker_path.exists())
+            self.assertEqual(marker_path.read_text(), "ran-handler-b")
+
+    async def test_returns_404_for_unknown_cron_in_grouped_build(
+        self,
+    ) -> None:
+        ep_path, _, mod = _make_entrypoint(
+            "cron_grouped_handler_a.py", self.tmp_path
+        )
+        _make_entrypoint("cron_grouped_handler_b.py", self.tmp_path)
+        cron_handlers = json.dumps(
+            {
+                "svc-a": self._build_handler(
+                    "cron_grouped_handler_a.py", "handler_a"
+                ),
+                "svc-b": self._build_handler(
+                    "cron_grouped_handler_b.py", "handler_b"
+                ),
+            }
+        )
+        async with _run_runtime(
+            entrypoint_abs=ep_path,
+            entrypoint_rel="cron_grouped_handler_a.py",
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+            extra_env={
+                "VERCEL_SERVICE_TYPE": "cron",
+                "__VC_HANDLER_FUNC_NAME": "handler_a",
+                "__VC_HANDLER_CRON_HANDLERS": cron_handlers,
+            },
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            resp = await _http_get(
+                port, "/_svc/unknown-svc/crons/foo/bar"
+            )
+            self.assertEqual(resp.status, 404)
+
+    async def test_cron_secret_enforced_for_grouped(self) -> None:
+        ep_path, _, mod = _make_entrypoint(
+            "cron_grouped_handler_a.py", self.tmp_path
+        )
+        _make_entrypoint("cron_grouped_handler_b.py", self.tmp_path)
+        marker_path = self.tmp_path / "grouped-secret.marker"
+        cron_handlers = json.dumps(
+            {
+                "svc-a": self._build_handler(
+                    "cron_grouped_handler_a.py", "handler_a"
+                ),
+                "svc-b": self._build_handler(
+                    "cron_grouped_handler_b.py", "handler_b"
+                ),
+            }
+        )
+        async with _run_runtime(
+            entrypoint_abs=ep_path,
+            entrypoint_rel="cron_grouped_handler_a.py",
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+            extra_env={
+                "VERCEL_SERVICE_TYPE": "cron",
+                "CRON_SECRET": "secret123",
+                "CRON_MARKER_FILE": str(marker_path),
+                "__VC_HANDLER_FUNC_NAME": "handler_a",
+                "__VC_HANDLER_CRON_HANDLERS": cron_handlers,
+            },
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            # wrong secret
+            resp = await _http_get(
+                port, "/_svc/svc-a/crons/cron_grouped_handler_a/handler_a"
+            )
+            self.assertEqual(resp.status, 401)
+
+            resp = await _http_get(
+                port,
+                "/_svc/svc-a/crons/cron_grouped_handler_a/handler_a",
+                headers={"authorization": "Bearer secret123"},
+            )
+            self.assertEqual(resp.status, 200)
+            self.assertEqual(resp.read().decode(), '{"ok":true}')
+
+    def _build_handler(
+        self, fixture_name: str, func: str
+    ) -> dict[str, str]:
+        module = fixture_name.removesuffix(".py")
+        return {
+            "module": module,
+            "entrypoint": fixture_name,
+            "entry_abs": str(self.tmp_path / fixture_name),
+            "func": func,
+        }
 
 class TestLogging(_RuntimeTestCase):
     """Tests for IPC log message forwarding."""

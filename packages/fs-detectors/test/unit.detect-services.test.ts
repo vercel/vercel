@@ -1242,6 +1242,53 @@ describe('detectServices', () => {
       });
     });
 
+    it('should detect multiple cron services sharing the same workspace', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            'cron-a': {
+              type: 'cron',
+              entrypoint: 'jobs.handler_a:run_a',
+              schedule: '0 * * * *',
+            },
+            'cron-b': {
+              type: 'cron',
+              entrypoint: 'jobs.handler_b:run_b',
+              schedule: '0 6 * * *',
+            },
+          },
+        }),
+        'pyproject.toml': '[project]\nname = "x"\nversion = "0.0.1"\n',
+        'jobs/handler_a.py': 'def run_a(): pass',
+        'jobs/handler_b.py': 'def run_b(): pass',
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      expect(result.services).toHaveLength(2);
+
+      // Both should share the same workspace (root, inferred from pyproject.toml)
+      expect(result.services[0].workspace).toBe('.');
+      expect(result.services[1].workspace).toBe('.');
+
+      // Each should have its own cron route
+      expect(result.routes.crons).toHaveLength(2);
+      expect(result.routes.crons).toContainEqual({
+        src: '^/_svc/cron-a/crons/jobs/handler_a/run_a$',
+        dest: '/_svc/cron-a/index',
+        check: true,
+      });
+      expect(result.routes.crons).toContainEqual({
+        src: '^/_svc/cron-b/crons/jobs/handler_b/run_b$',
+        dest: '/_svc/cron-b/index',
+        check: true,
+      });
+
+      // Both should use the same builder
+      expect(result.services[0].builder.use).toBe('@vercel/python');
+      expect(result.services[1].builder.use).toBe('@vercel/python');
+    });
+
     it('should not parse module:function entrypoint for web services', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': JSON.stringify({
