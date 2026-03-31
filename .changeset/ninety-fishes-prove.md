@@ -2,4 +2,4 @@
 "vercel": patch
 ---
 
-Include context information during `vc ls`
+Include context information during `vc ls`.
