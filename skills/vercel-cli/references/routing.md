@@ -2,11 +2,23 @@
 
 ## Overview
 
-`vercel routes` manages project-level CDN routing rules. These take effect immediately without a deployment and take precedence over routes defined in your deployment configuration (`vercel.json`, `next.config.js`, etc.).
+`vercel routes` manages project-level routing rules. Each rule matches requests by path pattern and optional conditions (headers, cookies, query params), then applies an action (rewrite, redirect, set status) or modifies headers and query params.
 
-All changes are staged as drafts before going live. After making changes, run `vercel routes publish` to push them to production, or `vercel routes discard-staging` to undo.
+Routing rules take effect immediately without a deployment and take precedence over routes defined in your deployment configuration (`vercel.json`, `next.config.js`, etc.).
+
+All changes are staged as drafts. After a single change with no existing draft, the CLI offers to publish immediately. Otherwise, run `vercel routes publish` to push staged changes to production, or `vercel routes discard-staging` to undo.
+
+When in doubt about flags or subcommands, use `--help`:
+
+```bash
+vercel routes -h             # list subcommands
+vercel routes add -h         # flags for add
+vercel routes edit -h        # flags for edit
+```
 
 ## Viewing Routing Rules
+
+Use `list` to see all routing rules and `inspect` for full details on a specific rule.
 
 ```bash
 vercel routes list                       # all routing rules
@@ -21,15 +33,17 @@ vercel routes inspect "My Route" --diff  # compare staged vs production
 
 ## Creating Routing Rules
 
-### Source path syntax (`--src-syntax`)
+### Source path (`--src` and `--src-syntax`)
 
-| Syntax | Default | Example | When to use |
-|--------|---------|---------|-------------|
-| `regex` | Yes | `^/api/(.*)$` | Full regex control. Default if not specified. |
-| `path-to-regexp` | No | `/api/:path*` | Express-style named params. More readable. |
-| `equals` | No | `/about` | Exact string match. Simplest option. |
+Use `--src` to specify the path pattern and `--src-syntax` to control how it's interpreted:
 
-`path-to-regexp` and `equals` paths must start with `/`. Only `regex` allows patterns without a leading `/`.
+| Syntax | Example | When to use |
+|--------|---------|-------------|
+| `regex` | `^/api/(.*)$` | Full regex control. |
+| `path-to-regexp` | `/api/:path*` | Express-style named params. More readable. |
+| `equals` | `/about` | Exact string match. Simplest option. |
+
+Defaults to `regex` if `--src-syntax` is not specified. `path-to-regexp` and `equals` paths must start with `/`.
 
 ### Actions
 
@@ -67,11 +81,12 @@ vercel routes add "CORS" \
   --src "^/api/.*$" \
   --set-response-header "Access-Control-Allow-Origin=*" --yes
 
-# Routing rule with conditions — redirect if auth cookie missing
+# Routing rule with conditions and a description
 vercel routes add "Auth Required" \
   --src "/dashboard/:path*" --src-syntax path-to-regexp \
   --action redirect --dest "/login" --status 307 \
-  --missing "cookie:session" --yes
+  --missing "cookie:session" \
+  --description "Redirect unauthenticated users to login" --yes
 
 # Control position in priority order
 vercel routes add "Priority Route" \
@@ -82,11 +97,11 @@ vercel routes add "Priority Route" \
 
 ## Conditions
 
-Control when a routing rule matches using `--has` (must match) and `--missing` (must not match). Repeatable, max 16 total.
+Used with `--has` and `--missing` flags on both `add` and `edit` commands. Repeatable.
 
 **Types:** `header`, `cookie`, `query`, `host`
 
-**Formats:**
+Max 16 conditions per routing rule (has + missing combined).
 
 ```bash
 # Existence check
@@ -106,7 +121,7 @@ Control when a routing rule matches using `--has` (must match) and `--missing` (
 
 ## Response Headers & Request Transforms
 
-Modify headers and query params on the request or response. All flags are repeatable.
+Used on both `add` and `edit` commands. Applied at the CDN level — response headers are set before the response reaches the client, request transforms are applied before the request reaches the origin. All flags are repeatable.
 
 ```bash
 # Response headers
@@ -132,7 +147,7 @@ vercel routes edit "My Route" --ai "Add CORS headers and change to 308 redirect"
 # Interactive — pick fields to edit
 vercel routes edit "My Route"
 
-# Change specific fields (other fields preserved)
+# Only the specified fields are changed; everything else is preserved
 vercel routes edit "My Route" --dest "https://new-api.example.com/:path*" --yes
 vercel routes edit "My Route" --action redirect --dest "/new" --status 301 --yes
 vercel routes edit "My Route" --name "New Name" --yes
@@ -146,6 +161,8 @@ vercel routes edit "My Route" --clear-transforms --yes
 ```
 
 ## Managing Routing Rules
+
+Use `vercel routes list` or `inspect` to find routing rule names and IDs.
 
 ```bash
 vercel routes enable "My Route"           # enable a disabled routing rule
@@ -163,8 +180,8 @@ vercel routes reorder "My Route" --position before:<id>     # move before anothe
 vercel routes publish                    # promote staged changes to production
 vercel routes discard-staging            # discard all staged changes
 vercel routes list-versions              # view version history
-vercel routes restore <version-id>       # restore a previous version
-vercel routes export                     # export as vercel.json/vercel.ts format
+vercel routes restore <version-id>       # roll back to a previous version
+vercel routes export                     # export routing rules in vercel.json or vercel.ts format
 ```
 
 ## Anti-patterns
