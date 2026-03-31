@@ -3,7 +3,7 @@ import type Client from '../../util/client';
 import stamp from '../../util/output/stamp';
 import formatDate from '../../util/format-date';
 import getWebhook from '../../util/webhooks/get-webhook';
-import getScope from '../../util/get-scope';
+import { resolveScopeContext } from '../../util/scope-context';
 import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 import { outputAgentError } from '../../util/agent-output';
 import { validateJsonOutput } from '../../util/output-format';
@@ -76,7 +76,9 @@ export default async function get(client: Client, argv: string[]) {
 
   output.debug(`Fetching webhook info`);
 
-  const { contextName } = await getScope(client);
+  const { contextName } = await resolveScopeContext(client, {
+    requiresTeamOnly: true,
+  });
   if (!client.nonInteractive) {
     output.spinner(
       `Fetching Webhook ${webhookId} under ${chalk.bold(contextName)}`

@@ -4,7 +4,7 @@ import type { Response } from 'node-fetch';
 import { parseArguments } from '../../util/get-args';
 import { printError } from '../../util/error';
 import type Client from '../../util/client';
-import getScope from '../../util/get-scope';
+import { resolveScopeContext } from '../../util/scope-context';
 import { help } from '../help';
 import { usageCommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
@@ -120,7 +120,7 @@ export default async function usage(client: Client): Promise<number> {
   let teamId: string | undefined;
 
   try {
-    const scope = await getScope(client);
+    const scope = await resolveScopeContext(client, { requiresTeamOnly: true });
     contextName = scope.contextName;
     teamId = scope.team?.id;
   } catch (err: unknown) {

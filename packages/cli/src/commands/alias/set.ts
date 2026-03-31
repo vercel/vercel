@@ -6,7 +6,7 @@ import assignAlias from '../../util/alias/assign-alias';
 import type Client from '../../util/client';
 import getDeployment from '../../util/get-deployment';
 import { getDeploymentForAlias } from '../../util/alias/get-deployment-by-alias';
-import getScope from '../../util/get-scope';
+import { resolveScopeContext } from '../../util/scope-context';
 import type setupDomain from '../../util/domains/setup-domain';
 import stamp from '../../util/output/stamp';
 import { isValidName } from '../../util/is-valid-name';
@@ -47,7 +47,9 @@ export default async function set(client: Client, argv: string[]) {
   });
   telemetryClient.trackCliFlagDebug(opts['--debug']);
   telemetryClient.trackCliOptionLocalConfig(opts['--local-config']);
-  const { contextName, user } = await getScope(client);
+  const { contextName, user } = await resolveScopeContext(client, {
+    requiresTeamOnly: true,
+  });
 
   // If there are more than two args we have to error
   if (args.length > 2) {

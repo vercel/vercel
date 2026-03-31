@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import open from 'open';
 import type Client from '../../util/client';
-import getScope from '../../util/get-scope';
+import { resolveScopeContext } from '../../util/scope-context';
 import type { Configuration } from '../../util/integration/types';
 import { getFirstConfiguration } from '../../util/integration/fetch-marketplace-integrations';
 import { buildSSOLink } from '../../util/integration/build-sso-link';
@@ -55,7 +55,9 @@ export async function openIntegration(client: Client, subArgs: string[]) {
     return 1;
   }
 
-  const { team } = await getScope(client);
+  const { team } = await resolveScopeContext(client, {
+    requiresTeamOnly: true,
+  });
 
   if (!team) {
     output.error('Team not found');

@@ -7,7 +7,7 @@ import {
 } from '../../util/errors-ts';
 import addDNSRecord from '../../util/dns/add-dns-record';
 import type Client from '../../util/client';
-import getScope from '../../util/get-scope';
+import { resolveScopeContext } from '../../util/scope-context';
 import parseAddDNSRecordArgs from '../../util/dns/parse-add-dns-record-args';
 import getDNSData from '../../util/dns/get-dns-data';
 import stamp from '../../util/output/stamp';
@@ -156,7 +156,9 @@ export default async function add(client: Client, argv: string[]) {
     return 1;
   }
 
-  const { contextName } = await getScope(client);
+  const { contextName } = await resolveScopeContext(client, {
+    requiresTeamOnly: true,
+  });
 
   const record = await addDNSRecord(client, domain, data);
   if (record instanceof DomainNotFound) {

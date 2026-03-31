@@ -12,7 +12,7 @@ import { parseArguments } from '../../util/get-args';
 import type Client from '../../util/client';
 import type { Deployment } from '@vercel-internals/types';
 import { normalizeURL } from '../../util/bisect/normalize-url';
-import getScope from '../../util/get-scope';
+import { resolveScopeContext } from '../../util/scope-context';
 import getDeployment from '../../util/get-deployment';
 import { help } from '../help';
 import { bisectCommand } from './command';
@@ -54,7 +54,7 @@ export default async function bisect(client: Client): Promise<number> {
   telemetry.trackCliOptionRun(parsedArgs.flags['--run']);
   telemetry.trackCliFlagOpen(parsedArgs.flags['--open']);
 
-  const scope = await getScope(client);
+  const scope = await resolveScopeContext(client, { requiresTeamOnly: true });
   const { contextName } = scope;
 
   let bad =

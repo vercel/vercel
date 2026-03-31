@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import type Client from '../../util/client';
-import getScope from '../../util/get-scope';
+import { resolveScopeContext } from '../../util/scope-context';
 import { getLinkedProject } from '../../util/projects/link';
 import type { Resource } from '../../util/integration-resource/types';
 import { getResources } from '../../util/integration-resource/get-resources';
@@ -68,7 +68,9 @@ export async function list(client: Client) {
     project = { name: parsedArguments.args[1] };
   }
 
-  const { contextName, team } = await getScope(client);
+  const { contextName, team } = await resolveScopeContext(client, {
+    requiresTeamOnly: true,
+  });
 
   if (!team) {
     output.error('Team not found.');

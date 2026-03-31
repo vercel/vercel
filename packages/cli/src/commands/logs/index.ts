@@ -6,7 +6,7 @@ import { createGitMeta } from '../../util/create-git-meta';
 import { printError } from '../../util/error';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import getScope from '../../util/get-scope';
+import { resolveScopeContext } from '../../util/scope-context';
 import { formatProject } from '../../util/projects/format-project';
 import getProjectByIdOrName from '../../util/projects/get-project-by-id-or-name';
 import { getLinkedProject } from '../../util/projects/link';
@@ -304,7 +304,9 @@ export default async function logs(client: Client) {
   let contextName: string | null = null;
 
   try {
-    ({ contextName } = await getScope(client));
+    ({ contextName } = await resolveScopeContext(client, {
+      requiresTeamOnly: true,
+    }));
   } catch (err: unknown) {
     if (
       isErrnoException(err) &&

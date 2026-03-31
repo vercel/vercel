@@ -13,7 +13,7 @@ import getCommandFlags from '../../util/get-command-flags';
 import { getCommandName } from '../../util/pkg-name';
 import type Client from '../../util/client';
 import { getLinkedProject } from '../../util/projects/link';
-import getScope from '../../util/get-scope';
+import { resolveScopeContext } from '../../util/scope-context';
 import { ProjectNotFound } from '../../util/errors-ts';
 import { isErrnoException } from '@vercel/error-utils';
 import { help } from '../help';
@@ -166,7 +166,9 @@ export default async function list(client: Client) {
       // `app` looks like a hostname / URL, so fetch the deployment
       // from the API and retrieve the project ID from the deployment
       try {
-        ({ contextName } = await getScope(client));
+        ({ contextName } = await resolveScopeContext(client, {
+          requiresTeamOnly: true,
+        }));
       } catch (err: unknown) {
         if (
           isErrnoException(err) &&
@@ -222,7 +224,9 @@ export default async function list(client: Client) {
 
   if (!contextName) {
     try {
-      ({ contextName } = await getScope(client));
+      ({ contextName } = await resolveScopeContext(client, {
+        requiresTeamOnly: true,
+      }));
     } catch (err: unknown) {
       if (
         isErrnoException(err) &&

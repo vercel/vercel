@@ -5,7 +5,7 @@ import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { validateJsonOutput } from '../../util/output-format';
-import getScope from '../../util/get-scope';
+import { resolveScopeContext } from '../../util/scope-context';
 import { getBalanceInformation } from '../../util/integration/fetch-installation-prepayment-info';
 import { getFirstConfiguration } from '../../util/integration/fetch-marketplace-integrations';
 import type {
@@ -56,7 +56,9 @@ export async function balance(client: Client) {
     return 1;
   }
 
-  const { team } = await getScope(client);
+  const { team } = await resolveScopeContext(client, {
+    requiresTeamOnly: true,
+  });
 
   if (!team) {
     output.error('Team not found.');

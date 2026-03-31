@@ -3,7 +3,7 @@ import { errorToString } from '@vercel/error-utils';
 import open from 'open';
 import output from '../../output-manager';
 import type Client from '../../util/client';
-import getScope from '../../util/get-scope';
+import { resolveScopeContext } from '../../util/scope-context';
 import indent from '../../util/output/indent';
 import { autoProvisionResource } from '../../util/integration/auto-provision-resource';
 import { fetchIntegrationWithTelemetry } from '../../util/integration/fetch-integration';
@@ -69,7 +69,9 @@ export async function addAutoProvision(
   telemetry.trackCliOptionFormat(options.asJson ? 'json' : undefined);
 
   // Get team context
-  const { contextName, team } = await getScope(client);
+  const { contextName, team } = await resolveScopeContext(client, {
+    requiresTeamOnly: true,
+  });
   if (!team) {
     output.error('Team not found');
     return 1;

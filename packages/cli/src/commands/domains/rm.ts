@@ -5,7 +5,7 @@ import type { Domain } from '@vercel-internals/types';
 import type Client from '../../util/client';
 import deleteCertById from '../../util/certs/delete-cert-by-id';
 import getDomainByName from '../../util/domains/get-domain-by-name';
-import getScope from '../../util/get-scope';
+import { resolveScopeContext } from '../../util/scope-context';
 import removeAliasById from '../../util/alias/remove-alias-by-id';
 import removeDomainByName from '../../util/domains/remove-domain-by-name';
 import stamp from '../../util/output/stamp';
@@ -49,7 +49,9 @@ export default async function rm(client: Client, argv: string[]) {
     return 1;
   }
 
-  const { contextName } = await getScope(client);
+  const { contextName } = await resolveScopeContext(client, {
+    requiresTeamOnly: true,
+  });
 
   if (args.length !== 1) {
     output.error(

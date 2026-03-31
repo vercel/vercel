@@ -4,7 +4,7 @@ import { errorToString } from '@vercel/error-utils';
 import * as ERRORS from '../../util/errors-ts';
 import getDomainPrice from '../../util/domains/get-domain-price';
 import getDomainStatus from '../../util/domains/get-domain-status';
-import getScope from '../../util/get-scope';
+import { resolveScopeContext } from '../../util/scope-context';
 import param from '../../util/output/param';
 import purchaseDomain from '../../util/domains/purchase-domain';
 import stamp from '../../util/output/stamp';
@@ -117,7 +117,9 @@ export default async function buy(client: Client, argv: string[]) {
     return 1;
   }
 
-  const { contextName } = await getScope(client);
+  const { contextName } = await resolveScopeContext(client, {
+    requiresTeamOnly: true,
+  });
 
   const parsedDomain = parse(domainName);
 

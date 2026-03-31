@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import * as ERRORS from '../../util/errors-ts';
 import type Client from '../../util/client';
-import getScope from '../../util/get-scope';
+import { resolveScopeContext } from '../../util/scope-context';
 import param from '../../util/output/param';
 import transferInDomain from '../../util/domains/transfer-in-domain';
 import stamp from '../../util/output/stamp';
@@ -70,7 +70,9 @@ export default async function transferIn(client: Client, argv: string[]) {
     return 1;
   }
 
-  const { contextName } = await getScope(client);
+  const { contextName } = await resolveScopeContext(client, {
+    requiresTeamOnly: true,
+  });
   output.log(
     `The domain ${param(domainName)} is ${chalk.underline(
       'available'

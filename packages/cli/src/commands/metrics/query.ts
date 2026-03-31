@@ -40,7 +40,7 @@ import type {
 } from './types';
 import { getLinkedProject } from '../../util/projects/link';
 import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name';
-import getScope from '../../util/get-scope';
+import { resolveScopeContext } from '../../util/scope-context';
 import { isAPIError, ProjectNotFound } from '../../util/errors-ts';
 
 function handleValidationError(
@@ -122,7 +122,9 @@ async function resolveQueryScope(
 > {
   // --project or --all: resolve team context via getScope
   if (opts.project || opts.all) {
-    const { team } = await getScope(client);
+    const { team } = await resolveScopeContext(client, {
+      requiresTeamOnly: true,
+    });
     if (!team) {
       const errMsg =
         'No team context found. Run `vercel switch` to select a team, or use `vercel link` in a project directory.';

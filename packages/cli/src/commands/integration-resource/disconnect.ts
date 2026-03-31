@@ -3,7 +3,7 @@ import output from '../../output-manager';
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import getScope from '../../util/get-scope';
+import { resolveScopeContext } from '../../util/scope-context';
 import { printError } from '../../util/error';
 import { validateJsonOutput } from '../../util/output-format';
 import {
@@ -56,7 +56,9 @@ export async function disconnect(client: Client) {
     return 1;
   }
 
-  const { team } = await getScope(client);
+  const { team } = await resolveScopeContext(client, {
+    requiresTeamOnly: true,
+  });
   if (!team) {
     output.error('Team not found.');
     return 1;

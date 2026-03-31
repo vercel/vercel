@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import type Client from '../../util/client';
 import deleteWebhook from '../../util/webhooks/delete-webhook';
 import getWebhook from '../../util/webhooks/get-webhook';
-import getScope from '../../util/get-scope';
+import { resolveScopeContext } from '../../util/scope-context';
 import stamp from '../../util/output/stamp';
 import param from '../../util/output/param';
 import { getGlobalFlagsOnlyFromArgs } from '../../util/arg-common';
@@ -93,7 +93,9 @@ export default async function rm(client: Client, argv: string[]) {
     );
   }
 
-  const { contextName } = await getScope(client);
+  const { contextName } = await resolveScopeContext(client, {
+    requiresTeamOnly: true,
+  });
 
   if (args.length !== 1) {
     output.error(

@@ -11,7 +11,7 @@ import { printError } from '../../util/error';
 import { parseArguments } from '../../util/get-args';
 import getDeployment from '../../util/get-deployment';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import getScope from '../../util/get-scope';
+import { resolveScopeContext } from '../../util/scope-context';
 import readStandardInput from '../../util/input/read-standard-input';
 import buildsList from '../../util/output/builds';
 import elapsed from '../../util/output/elapsed';
@@ -90,7 +90,9 @@ export default async function inspect(client: Client) {
   let contextName: string | null = null;
 
   try {
-    ({ contextName } = await getScope(client));
+    ({ contextName } = await resolveScopeContext(client, {
+      requiresTeamOnly: true,
+    }));
   } catch (err: unknown) {
     if (
       isErrnoException(err) &&

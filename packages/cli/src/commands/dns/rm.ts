@@ -5,7 +5,7 @@ import type { DNSRecord } from '@vercel-internals/types';
 import type Client from '../../util/client';
 import deleteDNSRecordById from '../../util/dns/delete-dns-record-by-id';
 import getDNSRecordById from '../../util/dns/get-dns-record-by-id';
-import getScope from '../../util/get-scope';
+import { resolveScopeContext } from '../../util/scope-context';
 import stamp from '../../util/output/stamp';
 import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 import output from '../../output-manager';
@@ -58,7 +58,7 @@ export default async function rm(client: Client, argv: string[]) {
       store: telemetryEventStore,
     },
   });
-  await getScope(client);
+  await resolveScopeContext(client, { requiresTeamOnly: true });
 
   const [recordId] = args;
   if (args.length !== 1) {

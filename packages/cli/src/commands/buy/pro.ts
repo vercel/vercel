@@ -5,7 +5,7 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { proSubcommand } from './command';
 import output from '../../output-manager';
-import getScope from '../../util/get-scope';
+import { resolveScopeContext } from '../../util/scope-context';
 import stamp from '../../util/output/stamp';
 import { createPurchase } from '../../util/buy/create-purchase';
 import { handlePurchaseError } from '../../util/buy/handle-purchase-error';
@@ -29,7 +29,9 @@ export default async function pro(client: Client, argv: string[]) {
   const asJson = formatResult.jsonOutput;
 
   // Ensure we have a team scope
-  const { team, contextName } = await getScope(client);
+  const { team, contextName } = await resolveScopeContext(client, {
+    requiresTeamOnly: true,
+  });
 
   if (!team) {
     output.error(

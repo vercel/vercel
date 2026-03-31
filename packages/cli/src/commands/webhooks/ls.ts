@@ -4,7 +4,7 @@ import plural from 'pluralize';
 
 import type Client from '../../util/client';
 import getWebhooks from '../../util/webhooks/get-webhooks';
-import getScope from '../../util/get-scope';
+import { resolveScopeContext } from '../../util/scope-context';
 import stamp from '../../util/output/stamp';
 import formatTable from '../../util/format-table';
 import { validateJsonOutput } from '../../util/output-format';
@@ -55,7 +55,9 @@ export default async function ls(client: Client, argv: string[]) {
   }
   const asJson = formatResult.jsonOutput || client.nonInteractive;
 
-  const { contextName } = await getScope(client);
+  const { contextName } = await resolveScopeContext(client, {
+    requiresTeamOnly: true,
+  });
 
   const lsStamp = stamp();
 

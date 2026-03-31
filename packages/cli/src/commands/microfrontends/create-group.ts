@@ -21,7 +21,7 @@ import {
 import { outputAgentError } from '../../util/agent-output';
 import { getGlobalFlagsOnlyFromArgs } from '../../util/arg-common';
 import { getCommandNamePlain } from '../../util/pkg-name';
-import getScope from '../../util/get-scope';
+import { resolveScopeContext } from '../../util/scope-context';
 import { getLinkedProject } from '../../util/projects/link';
 
 const MAX_GROUP_NAME_LENGTH = 48;
@@ -38,7 +38,9 @@ export default async function createGroup(client: Client): Promise<number> {
     return 1;
   }
 
-  const { team } = await getScope(client);
+  const { team } = await resolveScopeContext(client, {
+    requiresTeamOnly: true,
+  });
 
   if (!team) {
     output.error('Microfrontends are only available for teams.');

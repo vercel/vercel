@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import type Client from '../../util/client';
-import getScope from '../../util/get-scope';
+import { resolveScopeContext } from '../../util/scope-context';
 import { DomainNotFound, InvalidDomain } from '../../util/errors-ts';
 import stamp from '../../util/output/stamp';
 import importZonefile from '../../util/dns/import-zonefile';
@@ -49,7 +49,9 @@ export default async function importZone(client: Client, argv: string[]) {
   }
   const { args } = parsedArgs;
   const { telemetryEventStore } = client;
-  const { contextName } = await getScope(client);
+  const { contextName } = await resolveScopeContext(client, {
+    requiresTeamOnly: true,
+  });
   const telemetry = new DnsImportTelemetryClient({
     opts: {
       store: telemetryEventStore,

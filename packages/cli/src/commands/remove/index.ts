@@ -6,7 +6,7 @@ import Now from '../../util';
 import getAliases from '../../util/alias/get-aliases';
 import elapsed from '../../util/output/elapsed';
 import { normalizeURL } from '../../util/url';
-import getScope from '../../util/get-scope';
+import { resolveScopeContext } from '../../util/scope-context';
 import { isValidName } from '../../util/is-valid-name';
 import removeProject from '../../util/projects/remove-project';
 import getProjectByIdOrName from '../../util/projects/get-project-by-id-or-name';
@@ -82,7 +82,9 @@ export default async function remove(client: Client) {
     return 1;
   }
 
-  const { contextName } = await getScope(client);
+  const { contextName } = await resolveScopeContext(client, {
+    requiresTeamOnly: true,
+  });
 
   output.spinner(
     `Fetching deployment(s) ${ids

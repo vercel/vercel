@@ -7,7 +7,7 @@ import createCertFromFile from '../../util/certs/create-cert-from-file';
 import dnsTable from '../../util/format-dns-table';
 import finishCertOrder from '../../util/certs/finish-cert-order';
 import getCnsFromArgs from '../../util/certs/get-cns-from-args';
-import getScope from '../../util/get-scope';
+import { resolveScopeContext } from '../../util/scope-context';
 import stamp from '../../util/output/stamp';
 import startCertOrder from '../../util/certs/start-cert-order';
 import handleCertError from '../../util/certs/handle-cert-error';
@@ -105,7 +105,9 @@ export default async function issue(
 
   const cns = getCnsFromArgs(args);
 
-  const { contextName } = await getScope(client);
+  const { contextName } = await resolveScopeContext(client, {
+    requiresTeamOnly: true,
+  });
 
   // If the user specifies that he wants the challenge to be solved manually, we request the
   // order, show the result challenges and finish immediately.

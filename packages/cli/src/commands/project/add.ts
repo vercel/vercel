@@ -10,7 +10,7 @@ import { addSubcommand } from './command';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
-import getScope from '../../util/get-scope';
+import { resolveScopeContext } from '../../util/scope-context';
 
 export default async function add(
   client: Client,
@@ -72,7 +72,9 @@ export default async function add(
   }
   const elapsed = ms(Date.now() - start);
 
-  const { contextName } = await getScope(client);
+  const { contextName } = await resolveScopeContext(client, {
+    requiresTeamOnly: true,
+  });
   output.log(
     `${chalk.cyan('Success!')} Project ${chalk.bold(
       name.toLowerCase()

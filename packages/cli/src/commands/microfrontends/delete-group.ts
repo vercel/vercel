@@ -18,7 +18,7 @@ import {
   AGENT_REASON,
   AGENT_STATUS,
 } from '../../util/agent-output-constants';
-import getScope from '../../util/get-scope';
+import { resolveScopeContext } from '../../util/scope-context';
 import { getLinkedProject } from '../../util/projects/link';
 
 export default async function deleteGroup(client: Client): Promise<number> {
@@ -57,7 +57,9 @@ export default async function deleteGroup(client: Client): Promise<number> {
     return 1;
   }
 
-  const { team } = await getScope(client);
+  const { team } = await resolveScopeContext(client, {
+    requiresTeamOnly: true,
+  });
 
   if (!team) {
     output.error('Microfrontends are only available for teams.');

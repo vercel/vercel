@@ -22,7 +22,7 @@ import {
 import formatTable from '../../util/format-table';
 import indent from '../../util/output/indent';
 import type { MetricsTelemetryClient } from '../../util/telemetry/commands/metrics';
-import getScope from '../../util/get-scope';
+import { resolveScopeContext } from '../../util/scope-context';
 
 export default async function schema(
   client: Client,
@@ -51,7 +51,9 @@ export default async function schema(
   telemetry.trackCliOptionEvent(event);
   telemetry.trackCliOptionFormat(flags['--format']);
 
-  const { team } = await getScope(client);
+  const { team } = await resolveScopeContext(client, {
+    requiresTeamOnly: true,
+  });
   if (!team) {
     const message =
       'The metrics schema API request was not authorized. Run `vercel login` to authenticate and `vercel switch` to select a team, then try again.';
