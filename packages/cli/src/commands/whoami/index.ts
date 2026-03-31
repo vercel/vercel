@@ -9,6 +9,7 @@ import { printError } from '../../util/error';
 import output from '../../output-manager';
 import { WhoamiTelemetryClient } from '../../util/telemetry/commands/whoami';
 import { validateJsonOutput } from '../../util/output-format';
+import { TeamDeleted } from '../../util/errors-ts';
 
 export default async function whoami(client: Client): Promise<number> {
   let parsedArgs = null;
@@ -43,17 +44,37 @@ export default async function whoami(client: Client): Promise<number> {
   const asJson = formatResult.jsonOutput;
   telemetry.trackCliOptionFormat(parsedArgs.flags['--format']);
 
-  const { contextName, user } = await getScope(client, { getTeam: false });
+  let scope = await getScope(client).catch(async error => {
+    // Preserve whoami as a resilient informational command when currentTeam is stale.
+    if (!(error instanceof TeamDeleted)) {
+      throw error;
+    }
+    return getScope(client, { getTeam: false });
+  });
+  const { contextName, team, user } = scope;
+  const plan = team?.billing.plan ?? user.billing?.plan ?? null;
 
   if (asJson) {
     const jsonOutput = {
       username: user.username,
       email: user.email,
       name: user.name,
+      plan,
+      scope: {
+        type: team ? 'team' : 'user',
+        name: contextName,
+      },
+      team: team
+        ? {
+            id: team.id,
+            slug: team.slug,
+            name: team.name,
+          }
+        : null,
     };
     client.stdout.write(`${JSON.stringify(jsonOutput, null, 2)}\n`);
   } else if (client.stdout.isTTY) {
-    output.log(contextName);
+    output.log(plan ? `${contextName} (${plan})` : contextName);
   } else {
     // If stdout is not a TTY, then only print the username
     // to support piping the output to another file / exe

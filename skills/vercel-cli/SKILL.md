@@ -16,7 +16,7 @@ Commands must be run from the directory containing the `.vercel` folder (or a su
 
 Running from a project subdirectory (e.g., `apps/web/`) skips the "which project?" prompt since it's unambiguous.
 
-**When something goes wrong, check how things are linked first** — look at what's in `.vercel/` and whether it's `project.json` or `repo.json`. Also verify you're on the right team with `vercel whoami` — linking while on the wrong team is a common mistake.
+**When something goes wrong, check how things are linked first** — look at what's in `.vercel/` and whether it's `project.json` or `repo.json`. Also verify you're on the right team and plan with `vercel whoami` — linking while on the wrong team is a common mistake.
 
 ## Quick Start
 
@@ -59,7 +59,7 @@ Use this to route to the correct reference file:
 
 - **Wrong link type in monorepos with multiple projects**: `vercel link` creates `project.json`, which only tracks one project. Use `vercel link --repo` instead. When things break, check `.vercel/` first.
 - **Letting commands auto-link in monorepos**: Many commands implicitly run `vercel link` if `.vercel/` doesn't exist. This creates `project.json`, which may be wrong. Run `vercel link` (or `--repo`) explicitly first.
-- **Linking while on the wrong team**: Use `vercel whoami` to check, `vercel teams switch` to change.
+- **Linking while on the wrong team**: Use `vercel whoami` to check the current scope and plan, `vercel teams switch` to change.
 - **Forgetting `--yes` in CI**: Required to skip interactive prompts.
 - **Using `vercel deploy` after `vercel build` without `--prebuilt`**: The build output is ignored.
 - **Hardcoding tokens in flags**: Use `VERCEL_TOKEN` env var instead of `--token`.

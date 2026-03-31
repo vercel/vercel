@@ -23,8 +23,10 @@ vercel remove my-app --safe          # skip aliased deployments
 ## Teams
 
 ```bash
-vercel whoami                        # current user and team
-vercel teams ls                      # list teams
+vercel whoami                        # current scope and effective plan
+vercel whoami --format json          # JSON output for agents/scripts
+vercel teams ls                      # list accounts/teams with plans
+vercel teams ls --format json        # machine-readable team/account plans
 vercel teams switch                  # interactive team picker
 vercel teams switch my-team          # switch by slug
 vercel teams invite user@example.com # invite member

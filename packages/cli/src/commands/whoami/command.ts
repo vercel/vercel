@@ -4,12 +4,13 @@ import { formatOption } from '../../util/arg-common';
 export const whoamiCommand = {
   name: 'whoami',
   aliases: [],
-  description: 'Shows the username of the currently logged in user.',
+  description:
+    'Shows the currently logged in user, active scope, and effective plan.',
   arguments: [],
   options: [formatOption],
   examples: [
     {
-      name: 'Shows the username of the currently logged in user',
+      name: 'Show the current scope and effective plan',
       value: `${packageName} whoami`,
     },
   ],

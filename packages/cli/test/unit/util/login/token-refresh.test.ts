@@ -12,6 +12,15 @@ vi.mock('node-fetch', async () => ({
   default: vi.fn(),
 }));
 
+const mockBilling = {
+  addons: [],
+  plan: 'hobby',
+  platform: 'stripe',
+  status: 'active',
+  period: { start: 0, end: 0 },
+  trial: { start: 0, end: 0 },
+};
+
 describe('OAuth Token Refresh', () => {
   it('should refresh the token when it is expired', async () => {
     const refreshToken = randomUUID();
@@ -56,7 +65,12 @@ describe('OAuth Token Refresh', () => {
       // Mock the user endpoint, which gets called during client initialization
       if (url.endsWith('/v2/user')) {
         return json({
-          user: { id: randomUUID(), email: Chance().email(), username: name },
+          user: {
+            id: randomUUID(),
+            email: Chance().email(),
+            username: name,
+            billing: mockBilling,
+          },
         });
       }
 
@@ -88,7 +102,12 @@ describe('OAuth Token Refresh', () => {
       // Mock the user endpoint, which gets called during client initialization
       if (url.endsWith('/v2/user')) {
         return json({
-          user: { id: randomUUID(), email: Chance().email(), username: name },
+          user: {
+            id: randomUUID(),
+            email: Chance().email(),
+            username: name,
+            billing: mockBilling,
+          },
         });
       }
       throw new Error(`Unexpected URL: ${url}`);
