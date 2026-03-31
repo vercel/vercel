@@ -47,6 +47,7 @@ interface PythonDependencyExternalizerOptions {
 
 interface DependencyAnalysis {
   runtimeInstallEnabled: boolean;
+  requiresContainerImage: boolean;
   allVendorFiles: Files;
   totalBundleSize: number;
 }
@@ -122,6 +123,27 @@ export class PythonDependencyExternalizer {
     const totalBundleSizeMB = (this.totalBundleSize / (1024 * 1024)).toFixed(2);
     debug(`Total bundle size: ${totalBundleSizeMB} MB`);
 
+    // When VERCEL_PYTHON_ON_DOCKER is enabled and the bundle exceeds the
+    // Lambda ZIP size limit, deploy as a Docker container image instead.
+    // This bypasses all size checks and the runtime dependency installation
+    // path — all dependencies are bundled directly into the container image.
+    if (
+      this.totalBundleSize > LAMBDA_SIZE_THRESHOLD_BYTES &&
+      process.env.VERCEL_PYTHON_ON_DOCKER === '1'
+    ) {
+      const limitMB = (LAMBDA_SIZE_THRESHOLD_BYTES / (1024 * 1024)).toFixed(0);
+      debug(
+        `Bundle size (${totalBundleSizeMB} MB) exceeds Lambda ZIP limit (${limitMB} MB). ` +
+          `Function will be deployed as a container image.`
+      );
+      return {
+        runtimeInstallEnabled: false,
+        requiresContainerImage: true,
+        allVendorFiles: this.allVendorFiles,
+        totalBundleSize: this.totalBundleSize,
+      };
+    }
+
     const runtimeInstallEnabled = this.shouldEnableRuntimeInstall();
 
     const pythonOnHiveEnabled =
@@ -151,6 +173,7 @@ export class PythonDependencyExternalizer {
 
     return {
       runtimeInstallEnabled,
+      requiresContainerImage: false,
       allVendorFiles: this.allVendorFiles,
       totalBundleSize: this.totalBundleSize,
     };

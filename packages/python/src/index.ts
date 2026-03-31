@@ -713,6 +713,8 @@ from vercel_runtime.vc_init import vc_handler
     ],
   });
 
+  let requiresContainerImage = false;
+
   await builderSpan
     .child('vc.builder.python.bundle')
     .trace(async bundleSpan => {
@@ -723,9 +725,20 @@ from vercel_runtime.vc_init import vc_handler
         'python.bundle.runtimeInstallEnabled': String(
           depAnalysis.runtimeInstallEnabled
         ),
+        'python.bundle.requiresContainerImage': String(
+          depAnalysis.requiresContainerImage
+        ),
       });
 
-      if (depAnalysis.runtimeInstallEnabled) {
+      requiresContainerImage = depAnalysis.requiresContainerImage;
+
+      if (requiresContainerImage) {
+        // Bundle ALL dependencies — container images have no size limit.
+        // Skip the dependency externalizer's runtime install path entirely.
+        for (const [p, f] of Object.entries(depAnalysis.allVendorFiles)) {
+          files[p] = f;
+        }
+      } else if (depAnalysis.runtimeInstallEnabled) {
         await depExternalizer.generateBundle(files);
       } else {
         // Bundle all dependencies since we're not doing runtime installation
@@ -755,6 +768,9 @@ from vercel_runtime.vc_init import vc_handler
     runtime: pythonVersion.runtime,
     environment: lambdaEnv,
     supportsResponseStreaming: true,
+    ...(requiresContainerImage && {
+      packageType: 'Image' as const,
+    }),
   });
 
   // Write project manifest for diagnostics (best-effort, never fails the build).

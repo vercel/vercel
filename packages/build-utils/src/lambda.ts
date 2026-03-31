@@ -103,6 +103,18 @@ export interface LambdaOptionsBase {
    * When true, the Function runtime will not automatically instrument fetch calls.
    */
   shouldDisableAutomaticFetchInstrumentation?: boolean;
+
+  /**
+   * The packaging format for deploying this function.
+   * - `'Zip'` (default): Deploy as a zip archive (traditional Lambda).
+   * - `'Image'`: Deploy as a Docker container image.
+   *
+   * When set to `'Image'`, the build container will build a Docker
+   * image containing the function files and the Vercel runtime, push it to
+   * ECR, and create the Lambda with `PackageType: 'Image'`. This enables
+   * functions that exceed the Lambda ZIP size limit (250MB).
+   */
+  packageType?: 'Zip' | 'Image';
 }
 
 export interface LambdaOptionsWithFiles extends LambdaOptionsBase {
@@ -202,6 +214,13 @@ export class Lambda {
    */
   shouldDisableAutomaticFetchInstrumentation?: boolean;
 
+  /**
+   * The packaging format for deploying this function.
+   * - `'Zip'` (default): Deploy as a zip archive (traditional Lambda).
+   * - `'Image'`: Deploy as a Docker container image.
+   */
+  packageType?: 'Zip' | 'Image';
+
   constructor(opts: LambdaOptions) {
     const {
       handler,
@@ -223,6 +242,7 @@ export class Lambda {
       experimentalTriggers,
       supportsCancellation,
       shouldDisableAutomaticFetchInstrumentation,
+      packageType,
     } = opts;
     if ('files' in opts) {
       assert(typeof opts.files === 'object', '"files" must be an object');
@@ -426,6 +446,13 @@ export class Lambda {
       );
     }
 
+    if (packageType !== undefined) {
+      assert(
+        packageType === 'Zip' || packageType === 'Image',
+        '"packageType" must be either "Zip" or "Image"'
+      );
+    }
+
     this.type = 'Lambda';
     this.operationType = operationType;
     this.files = 'files' in opts ? opts.files : undefined;
@@ -453,6 +480,7 @@ export class Lambda {
     this.supportsCancellation = supportsCancellation;
     this.shouldDisableAutomaticFetchInstrumentation =
       shouldDisableAutomaticFetchInstrumentation;
+    this.packageType = packageType;
   }
 
   async createZip(): Promise<Buffer> {
