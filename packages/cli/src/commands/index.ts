@@ -141,3 +141,11 @@ output.debug(
 );
 
 export const commandNames = Array.from(commands.keys());
+
+/** Map from canonical command name to its Command definition (for global --describe) */
+export const commandDefs = new Map<string, Command>();
+for (const command of commandsStructs) {
+  if ('description' in command) {
+    commandDefs.set(command.name, command as unknown as Command);
+  }
+}

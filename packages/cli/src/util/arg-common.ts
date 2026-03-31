@@ -80,6 +80,20 @@ export const globalCommandOptions = [
   },
   { name: 'team', shorthand: 'T', type: String, deprecated: false },
   { name: 'api', shorthand: null, type: String, deprecated: false },
+  {
+    name: 'describe',
+    shorthand: null,
+    type: Boolean,
+    description: 'Output command schema as JSON (for agent introspection)',
+    deprecated: false,
+  },
+  {
+    name: 'dry-run',
+    shorthand: null,
+    type: Boolean,
+    description: 'Validate inputs and show what would happen without executing',
+    deprecated: false,
+  },
 ] as const;
 
 /**
