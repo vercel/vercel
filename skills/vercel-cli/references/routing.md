@@ -105,8 +105,6 @@ vercel routes add "Auth Required" \
 
 ## Editing Routing Rules
 
-Use `--ai` to describe changes in natural language, or use flags to change specific fields.
-
 ```bash
 # AI — describe the changes
 vercel routes edit "My Route" --ai "Add CORS headers and change to 308 redirect"
