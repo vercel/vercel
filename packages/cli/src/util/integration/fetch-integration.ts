@@ -117,7 +117,7 @@ export async function resolveAndFetchIntegration(
 
   const matches = entries.filter(entry => matchesSearchTerm(entry, rawSlug));
 
-  if (matches.length === 0) {
+  if (!matches.length) {
     output.error(
       `No integration found matching "${rawSlug}". Run ${chalk.cyan('vercel integration discover')} to browse available integrations.`
     );
