@@ -195,3 +195,22 @@ export {
   streamWithExtendedPayload,
   type ExtendedBodyData,
 } from './collect-build-result/stream-with-extended-payload';
+
+export { collectUncompressedSize } from './collect-uncompressed-size';
+
+export {
+  finalizeLambda,
+  type FinalizeLambdaParams,
+  type FinalizeLambdaResult,
+  type TraceFn,
+} from './finalize-lambda';
+
+export {
+  validateLambdaSize,
+  validateUncompressedLambdaSize,
+  FunctionSizeError,
+  MAX_LAMBDA_SIZE,
+  MAX_LAMBDA_UNCOMPRESSED_SIZE,
+  validateEnvWrapperSupport,
+  ENV_WRAPPER_SUPPORTED_FAMILIES,
+} from './validate-lambda-size';
