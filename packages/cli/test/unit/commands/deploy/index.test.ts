@@ -2538,6 +2538,123 @@ describe('deploy', () => {
     });
   });
 
+  describe('--dry-run (Phase 3.5)', () => {
+    it('outputs dry-run actions as JSON in agent mode and returns 0', async () => {
+      client.setArgv('deploy', '--dry-run', '--yes');
+      (client as { nonInteractive: boolean }).nonInteractive = true;
+
+      const exitCode = await deploy(client);
+      expect(exitCode).toBe(0);
+
+      const stdoutOutput = client.stdout.getFullOutput();
+      const result = JSON.parse(stdoutOutput);
+      expect(result.status).toBe('dry_run');
+      expect(result.reason).toBe('dry_run_ok');
+      expect(result.message).toBe('Deployment validated but not executed');
+      expect(result.data.actions).toBeDefined();
+      expect(result.data.actions.length).toBeGreaterThanOrEqual(2);
+      expect(result.data.actions[0].action).toBe('api_call');
+      expect(result.data.actions[0].description).toBe('Create deployment');
+      expect(result.data.actions[0].details.target).toBe('preview');
+
+      (client as { nonInteractive: boolean }).nonInteractive = false;
+    });
+
+    it('outputs human-readable dry-run in interactive mode and returns 0', async () => {
+      client.setArgv('deploy', '--dry-run', '--yes');
+      (client as { nonInteractive: boolean }).nonInteractive = false;
+
+      const exitCode = await deploy(client);
+      expect(exitCode).toBe(0);
+    });
+
+    it('does not invoke the deploy flow', async () => {
+      client.setArgv('deploy', '--dry-run', '--yes');
+      const exitCode = await deploy(client);
+      expect(exitCode).toBe(0);
+
+      // Verify no API calls were made — stderr should have no actual deployment output
+      const stderrOutput = client.stderr.getFullOutput();
+      expect(stderrOutput).not.toContain('Deploying to');
+      expect(stderrOutput).not.toContain('Linked to');
+      expect(stderrOutput).not.toContain('Inspect:');
+    });
+
+    it('includes production domain_alias action when --prod is used', async () => {
+      client.setArgv('deploy', '--dry-run', '--prod', '--yes');
+      (client as { nonInteractive: boolean }).nonInteractive = true;
+
+      const exitCode = await deploy(client);
+      expect(exitCode).toBe(0);
+
+      const stdoutOutput = client.stdout.getFullOutput();
+      const result = JSON.parse(stdoutOutput);
+      expect(result.data.actions[0].details.target).toBe('production');
+      const domainAction = result.data.actions.find(
+        (a: { action: string }) => a.action === 'domain_alias'
+      );
+      expect(domainAction).toBeDefined();
+      expect(domainAction.description).toBe('Assign production domains');
+
+      (client as { nonInteractive: boolean }).nonInteractive = false;
+    });
+
+    it('skips file_upload action when --prebuilt is used', async () => {
+      client.setArgv('deploy', '--dry-run', '--prebuilt', '--yes');
+      (client as { nonInteractive: boolean }).nonInteractive = true;
+
+      const exitCode = await deploy(client);
+      expect(exitCode).toBe(0);
+
+      const stdoutOutput = client.stdout.getFullOutput();
+      const result = JSON.parse(stdoutOutput);
+      expect(result.data.actions[0].details.prebuilt).toBe(true);
+      const uploadAction = result.data.actions.find(
+        (a: { action: string }) => a.action === 'file_upload'
+      );
+      expect(uploadAction).toBeUndefined();
+
+      (client as { nonInteractive: boolean }).nonInteractive = false;
+    });
+
+    it('still validates input before dry-run', async () => {
+      client.setArgv('deploy', '--dry-run', '--env', 'MISSING_EQUALS', '--yes');
+      (client as { nonInteractive: boolean }).nonInteractive = true;
+
+      const exitCode = await deploy(client);
+      expect(exitCode).toBe(3); // EXIT_CODE.VALIDATION — validation runs before dry-run
+
+      const stdoutOutput = client.stdout.getFullOutput();
+      const result = JSON.parse(stdoutOutput);
+      expect(result.status).toBe('error');
+      expect(result.reason).toBe('invalid_arguments');
+
+      (client as { nonInteractive: boolean }).nonInteractive = false;
+    });
+
+    describe('init subcommand', () => {
+      it('outputs dry-run for init subcommand in agent mode', async () => {
+        client.setArgv('deploy', 'init', '--dry-run', '--yes');
+        (client as { nonInteractive: boolean }).nonInteractive = true;
+
+        const exitCode = await deploy(client);
+        expect(exitCode).toBe(0);
+
+        const stdoutOutput = client.stdout.getFullOutput();
+        const result = JSON.parse(stdoutOutput);
+        expect(result.status).toBe('dry_run');
+        expect(result.reason).toBe('dry_run_ok');
+        expect(result.message).toContain('init subcommand');
+        expect(result.data.actions[0].action).toBe('api_call');
+        expect(result.data.actions[0].description).toBe(
+          'Create deployment via init'
+        );
+
+        (client as { nonInteractive: boolean }).nonInteractive = false;
+      });
+    });
+  });
+
   describe('input validation (Phase 3.2)', () => {
     describe('--env validation', () => {
       it('rejects malformed --env in agent mode with structured JSON', async () => {

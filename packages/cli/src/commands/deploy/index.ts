@@ -99,6 +99,7 @@ import {
   maybeAgentResponse,
 } from '../../util/agent-response';
 import { EXIT_CODE } from '../../util/exit-codes';
+import { outputDryRun } from '../../util/dry-run';
 
 const COMMAND_CONFIG = {
   init: getCommandAliases(initSubcommand),
@@ -347,6 +348,48 @@ async function handleInitDeployment(
     telemetryClient.trackCliArgumentProjectPath(paths[0]);
   } else {
     paths = [client.cwd];
+  }
+
+  // Dry-run: validate inputs and describe what would happen without executing
+  if (parsedArguments.flags['--dry-run']) {
+    const initTarget = parseTarget({
+      flagName: 'target',
+      flags: parsedArguments.flags,
+    });
+    return outputDryRun(client, {
+      status: 'dry_run',
+      reason: 'dry_run_ok',
+      message: 'Deployment validated but not executed (init subcommand)',
+      actions: [
+        {
+          action: 'api_call',
+          description: 'Create deployment via init',
+          details: {
+            path: paths[0],
+            target: initTarget ?? 'preview',
+            env: initEnvValues ?? [],
+            buildEnv: initBuildEnvValues ?? [],
+            meta: initMetaValues ?? [],
+          },
+        },
+        {
+          action: 'file_upload',
+          description: 'Upload source files',
+        },
+        {
+          action: 'poll',
+          description: 'Wait for build to complete',
+        },
+        ...(initTarget === 'production'
+          ? [
+              {
+                action: 'domain_alias',
+                description: 'Assign production domains',
+              },
+            ]
+          : []),
+      ],
+    });
   }
 
   const pathValidation = await validatePaths(client, paths);
@@ -1229,6 +1272,55 @@ async function handleDefaultDeploy(
 
   if (!pathValidation.valid) {
     return pathValidation.exitCode;
+  }
+
+  // Dry-run: validate inputs and describe what would happen without executing
+  if (parsedArguments.flags['--dry-run']) {
+    const dryRunTarget = parseTarget({
+      flagName: 'target',
+      flags: parsedArguments.flags,
+    });
+    const prebuilt = !!parsedArguments.flags['--prebuilt'];
+    return outputDryRun(client, {
+      status: 'dry_run',
+      reason: 'dry_run_ok',
+      message: 'Deployment validated but not executed',
+      actions: [
+        {
+          action: 'api_call',
+          description: 'Create deployment',
+          details: {
+            path: paths[0],
+            target: dryRunTarget ?? 'preview',
+            prebuilt,
+            env: (envValues ?? []).length,
+            buildEnv: (buildEnvValues ?? []).length,
+            meta: (metaValues ?? []).length,
+          },
+        },
+        ...(prebuilt
+          ? []
+          : [
+              {
+                action: 'file_upload',
+                description: 'Upload source files',
+                details: { path: paths[0] },
+              },
+            ]),
+        {
+          action: 'poll',
+          description: 'Wait for build to complete',
+        },
+        ...(dryRunTarget === 'production'
+          ? [
+              {
+                action: 'domain_alias',
+                description: 'Assign production domains',
+              },
+            ]
+          : []),
+      ],
+    });
   }
   // #endregion
 
