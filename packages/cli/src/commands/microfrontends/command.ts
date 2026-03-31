@@ -37,12 +37,16 @@ export const createGroupSubcommand = {
       description: 'Default route for the default application',
     },
     {
-      name: 'project-route',
+      name: 'project-default-route',
       shorthand: null,
       type: [String],
       deprecated: false,
       description:
         'Default route for a non-default project in the form "<project>=<route>" (repeatable)',
+    },
+    {
+      ...yesOption,
+      description: 'Skip creation confirmation prompt',
     },
   ],
   examples: [
@@ -52,7 +56,7 @@ export const createGroupSubcommand = {
     },
     {
       name: 'Create a microfrontends group with flags',
-      value: `${packageName} mf create-group --name="My Group" --project=web --project=docs --default-app=web --project-route=docs=/docs`,
+      value: `${packageName} mf create-group --name="My Group" --project=web --project=docs --default-app=web --project-default-route=docs=/docs --yes`,
     },
   ],
 } as const;

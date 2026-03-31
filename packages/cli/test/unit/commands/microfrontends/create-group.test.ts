@@ -49,6 +49,13 @@ const defaultProjects = [
     updatedAt: Date.now(),
     createdAt: Date.now(),
   },
+  {
+    id: 'proj_blog',
+    name: 'blog',
+    accountId: 'team_123',
+    updatedAt: Date.now(),
+    createdAt: Date.now(),
+  },
 ];
 
 interface MockOptions {
@@ -507,6 +514,7 @@ describe('microfrontends create-group', () => {
         'microfrontends',
         'create-group',
         '--non-interactive',
+        '--yes',
         '--name=My Group',
         '--project=web',
         '--default-app=web'
@@ -523,7 +531,7 @@ describe('microfrontends create-group', () => {
       });
     });
 
-    it('errors in non-interactive mode when missing project routes', async () => {
+    it('errors in non-interactive mode when missing project default routes', async () => {
       setupMocks();
       client.setArgv(
         'microfrontends',
@@ -538,12 +546,12 @@ describe('microfrontends create-group', () => {
       const exitCodePromise = microfrontends(client);
 
       await expect(client.stderr).toOutput(
-        'Error: Missing required flag --project-route for "docs". Use --project-route=docs=/<path> in non-interactive mode.'
+        'Error: Missing required flag --project-default-route for "docs". Use --project-default-route=docs=/<path> in non-interactive mode.'
       );
       expect(await exitCodePromise).toBe(1);
     });
 
-    it('errors for invalid --project-route format', async () => {
+    it('errors for invalid --project-default-route format', async () => {
       setupMocks();
       client.setArgv(
         'microfrontends',
@@ -553,18 +561,18 @@ describe('microfrontends create-group', () => {
         '--project=web',
         '--project=docs',
         '--default-app=web',
-        '--project-route=docs'
+        '--project-default-route=docs'
       );
 
       const exitCodePromise = microfrontends(client);
 
       await expect(client.stderr).toOutput(
-        'Error: Invalid --project-route value "docs". Use "<project>=<route>", for example "docs=/docs".'
+        'Error: Invalid --project-default-route value "docs". Use "<project>=<route>", for example "docs=/docs".'
       );
       expect(await exitCodePromise).toBe(1);
     });
 
-    it('errors when --project-route points to an unselected project', async () => {
+    it('errors when --project-default-route points to an unselected project', async () => {
       setupMocks();
       client.setArgv(
         'microfrontends',
@@ -574,18 +582,18 @@ describe('microfrontends create-group', () => {
         '--project=web',
         '--project=docs',
         '--default-app=web',
-        '--project-route=shop=/shop'
+        '--project-default-route=shop=/shop'
       );
 
       const exitCodePromise = microfrontends(client);
 
       await expect(client.stderr).toOutput(
-        'Error: Invalid --project-route value "shop=/shop". Project "shop" is not one of the selected projects.'
+        'Error: Invalid --project-default-route value "shop=/shop". Project "shop" is not one of the selected projects.'
       );
       expect(await exitCodePromise).toBe(1);
     });
 
-    it('errors when --project-route is provided for the default app', async () => {
+    it('errors when --project-default-route is provided for the default app', async () => {
       setupMocks();
       client.setArgv(
         'microfrontends',
@@ -595,18 +603,18 @@ describe('microfrontends create-group', () => {
         '--project=web',
         '--project=docs',
         '--default-app=web',
-        '--project-route=web=/'
+        '--project-default-route=web=/'
       );
 
       const exitCodePromise = microfrontends(client);
 
       await expect(client.stderr).toOutput(
-        'Error: Invalid --project-route value "web=/". Use --default-route for the default app "web".'
+        'Error: Invalid --project-default-route value "web=/". Use --default-route for the default app "web".'
       );
       expect(await exitCodePromise).toBe(1);
     });
 
-    it('errors for invalid route value in --project-route', async () => {
+    it('errors for invalid route value in --project-default-route', async () => {
       setupMocks();
       client.setArgv(
         'microfrontends',
@@ -616,28 +624,29 @@ describe('microfrontends create-group', () => {
         '--project=web',
         '--project=docs',
         '--default-app=web',
-        '--project-route=docs=docs'
+        '--project-default-route=docs=docs'
       );
 
       const exitCodePromise = microfrontends(client);
 
       await expect(client.stderr).toOutput(
-        'Error: Invalid --project-route value "docs=docs": Route must start with /'
+        'Error: Invalid --project-default-route value "docs=docs": Route must start with /'
       );
       expect(await exitCodePromise).toBe(1);
     });
 
-    it('creates group in non-interactive mode with multiple projects and project routes', async () => {
+    it('creates group in non-interactive mode with multiple projects and project default routes', async () => {
       const mocks = setupMocks();
       client.setArgv(
         'microfrontends',
         'create-group',
         '--non-interactive',
+        '--yes',
         '--name=My Group',
         '--project=web',
         '--project=docs',
         '--default-app=web',
-        '--project-route=docs=/docs'
+        '--project-default-route=docs=/docs'
       );
 
       const exitCode = await microfrontends(client);
@@ -651,7 +660,7 @@ describe('microfrontends create-group', () => {
       });
     });
 
-    it('accepts multiple --project-route values', async () => {
+    it('accepts multiple --project-default-route values', async () => {
       const mocks = setupMocks();
       client.setArgv(
         'microfrontends',
@@ -661,8 +670,8 @@ describe('microfrontends create-group', () => {
         '--project=docs',
         '--project=blog',
         '--default-app=web',
-        '--project-route=docs=/docs',
-        '--project-route=blog=/blog'
+        '--project-default-route=docs=/docs',
+        '--project-default-route=blog=/blog'
       );
 
       const exitCodePromise = microfrontends(client);
@@ -687,7 +696,7 @@ describe('microfrontends create-group', () => {
       });
     });
 
-    it('errors on duplicate --project-route for the same project', async () => {
+    it('errors on duplicate --project-default-route for the same project', async () => {
       setupMocks();
       client.setArgv(
         'microfrontends',
@@ -697,14 +706,14 @@ describe('microfrontends create-group', () => {
         '--project=web',
         '--project=docs',
         '--default-app=web',
-        '--project-route=docs=/docs',
-        '--project-route=docs=/docs-v2'
+        '--project-default-route=docs=/docs',
+        '--project-default-route=docs=/docs-v2'
       );
 
       const exitCodePromise = microfrontends(client);
 
       await expect(client.stderr).toOutput(
-        'Error: Duplicate --project-route for project "docs".'
+        'Error: Duplicate --project-default-route for project "docs".'
       );
       expect(await exitCodePromise).toBe(1);
     });
