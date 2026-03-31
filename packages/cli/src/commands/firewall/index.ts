@@ -5,6 +5,9 @@ import getSubcommand from '../../util/get-subcommand';
 import { printError } from '../../util/error';
 import { type Command, help } from '../help';
 import overview from './overview';
+import diff from './diff';
+import publish from './publish';
+import discard from './discard';
 import {
   firewallCommand,
   overviewSubcommand,
@@ -81,7 +84,7 @@ export default async function main(client: Client) {
         return 2;
       }
       telemetry.trackCliSubcommandDiff(subcommandOriginal);
-      return (await import('./diff')).default(client, args);
+      return diff(client, args);
     case 'publish':
       if (needHelp) {
         telemetry.trackCliFlagHelp('firewall', subcommandOriginal);
@@ -89,7 +92,7 @@ export default async function main(client: Client) {
         return 2;
       }
       telemetry.trackCliSubcommandPublish(subcommandOriginal);
-      return (await import('./publish')).default(client, args);
+      return publish(client, args);
     case 'discard':
       if (needHelp) {
         telemetry.trackCliFlagHelp('firewall', subcommandOriginal);
@@ -97,7 +100,7 @@ export default async function main(client: Client) {
         return 2;
       }
       telemetry.trackCliSubcommandDiscard(subcommandOriginal);
-      return (await import('./discard')).default(client, args);
+      return discard(client, args);
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
       output.print(help(firewallCommand, { columns: client.stderr.columns }));
