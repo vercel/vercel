@@ -1432,9 +1432,9 @@ describe('Django entrypoint discovery', () => {
     const v2result = getBuildOutputV2(result);
     expect(v2result.routes).toContainEqual({ handle: 'filesystem' });
     expect(v2result.routes).toContainEqual(
-      expect.objectContaining({ src: '/(.*)', dest: '/myapp/wsgi' })
+      expect.objectContaining({ src: '/(.*)', dest: '/index' })
     );
-    const lambda = v2result.output['myapp/wsgi'];
+    const lambda = v2result.output['index'];
     expect(lambda).toBeDefined(); // Lambda keyed by entrypoint sans extension
     expect((lambda as any).files?.['static/app.css']).toBeDefined(); // Included in Lambda bundle
     expect(v2result.output['static/app.css']).toBeDefined(); // Static file from collectstatic
