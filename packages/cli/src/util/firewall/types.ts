@@ -146,9 +146,3 @@ export interface RemoveBypassRequest {
 export interface RemoveBypassResponse {
   ok: boolean;
 }
-
-export interface UpdateAttackModeResponse {
-  attackModeEnabled: boolean;
-  /** Epoch milliseconds */
-  attackModeUpdatedAt: number;
-}

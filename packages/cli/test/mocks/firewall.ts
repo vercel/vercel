@@ -169,12 +169,3 @@ export function useRemoveBypass() {
     }
   );
 }
-
-export function useUpdateAttackMode() {
-  client.scenario.post('/security/attack-mode', (req: any, res: any) => {
-    res.json({
-      attackModeEnabled: req.body.attackModeEnabled,
-      attackModeUpdatedAt: Date.now(),
-    });
-  });
-}

@@ -89,7 +89,8 @@ export const discardSubcommand = {
 export const systemBypassListSubcommand = {
   name: 'list',
   aliases: ['ls'],
-  description: 'List system bypass rules',
+  description:
+    'List all system bypass rules that allow specific IPs to skip firewall checks',
   arguments: [],
   options: [
     {
@@ -111,7 +112,8 @@ export const systemBypassListSubcommand = {
 export const systemBypassAddSubcommand = {
   name: 'add',
   aliases: [],
-  description: 'Add a system bypass rule for an IP address',
+  description:
+    'Add a system bypass rule to allow a specific IP address to skip firewall checks',
   arguments: [{ name: 'ip', required: true }],
   options: [
     {
@@ -145,7 +147,8 @@ export const systemBypassAddSubcommand = {
 export const systemBypassRemoveSubcommand = {
   name: 'remove',
   aliases: ['rm'],
-  description: 'Remove a system bypass rule',
+  description:
+    'Remove a system bypass rule so the IP is no longer exempt from firewall checks',
   arguments: [{ name: 'ip', required: true }],
   options: [
     {
@@ -168,7 +171,8 @@ export const systemBypassRemoveSubcommand = {
 export const systemBypassSubcommand = {
   name: 'system-bypass',
   aliases: [],
-  description: 'Manage system bypass rules',
+  description:
+    'Manage system bypass rules that allow specific IPs to skip firewall checks',
   arguments: [],
   subcommands: [
     systemBypassListSubcommand,
@@ -192,114 +196,6 @@ export const systemBypassSubcommand = {
   ],
 } as const;
 
-// Attack Mode subcommands
-export const attackModeOnSubcommand = {
-  name: 'on',
-  aliases: [],
-  description: 'Enable attack mode (challenge all requests)',
-  arguments: [],
-  options: [
-    {
-      name: 'duration',
-      shorthand: null,
-      type: String,
-      deprecated: false,
-      description: 'Duration: 1h, 6h, or 24h (default: 1h)',
-    },
-    yesOption,
-  ],
-  examples: [
-    {
-      name: 'Enable attack mode for 1 hour',
-      value: `${packageName} firewall attack-mode on`,
-    },
-    {
-      name: 'Enable attack mode for 24 hours',
-      value: `${packageName} firewall attack-mode on --duration 24h`,
-    },
-  ],
-} as const;
-
-export const attackModeOffSubcommand = {
-  name: 'off',
-  aliases: [],
-  description: 'Disable attack mode',
-  arguments: [],
-  options: [yesOption],
-  examples: [
-    {
-      name: 'Disable attack mode',
-      value: `${packageName} firewall attack-mode off`,
-    },
-  ],
-} as const;
-
-export const attackModeSubcommand = {
-  name: 'attack-mode',
-  aliases: [],
-  description: 'Manage attack mode (challenge all incoming requests)',
-  arguments: [],
-  subcommands: [attackModeOnSubcommand, attackModeOffSubcommand],
-  options: [],
-  examples: [
-    {
-      name: 'Enable attack mode',
-      value: `${packageName} firewall attack-mode on`,
-    },
-    {
-      name: 'Disable attack mode',
-      value: `${packageName} firewall attack-mode off`,
-    },
-  ],
-} as const;
-
-// System Mitigations subcommands
-export const systemMitigationsPauseSubcommand = {
-  name: 'pause',
-  aliases: [],
-  description: 'Pause system mitigations for 24 hours',
-  arguments: [],
-  options: [yesOption],
-  examples: [
-    {
-      name: 'Pause system mitigations',
-      value: `${packageName} firewall system-mitigations pause --yes`,
-    },
-  ],
-} as const;
-
-export const systemMitigationsResumeSubcommand = {
-  name: 'resume',
-  aliases: [],
-  description: 'Resume system mitigations',
-  arguments: [],
-  options: [yesOption],
-  examples: [
-    {
-      name: 'Resume system mitigations',
-      value: `${packageName} firewall system-mitigations resume`,
-    },
-  ],
-} as const;
-
-export const systemMitigationsSubcommand = {
-  name: 'system-mitigations',
-  aliases: [],
-  description: 'Manage automatic system mitigations',
-  arguments: [],
-  subcommands: [
-    systemMitigationsPauseSubcommand,
-    systemMitigationsResumeSubcommand,
-  ],
-  options: [],
-  examples: [
-    {
-      name: 'Pause system mitigations',
-      value: `${packageName} firewall system-mitigations pause`,
-    },
-  ],
-} as const;
-
 export const firewallCommand = {
   name: 'firewall',
   aliases: [],
@@ -313,8 +209,6 @@ export const firewallCommand = {
     publishSubcommand,
     discardSubcommand,
     systemBypassSubcommand,
-    attackModeSubcommand,
-    systemMitigationsSubcommand,
   ],
   options: [],
   examples: [
@@ -329,10 +223,6 @@ export const firewallCommand = {
     {
       name: 'Add a system bypass for an IP',
       value: `${packageName} firewall system-bypass add 10.0.0.1`,
-    },
-    {
-      name: 'Enable attack mode',
-      value: `${packageName} firewall attack-mode on`,
     },
   ],
 } as const;
