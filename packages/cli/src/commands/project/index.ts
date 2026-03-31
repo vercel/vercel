@@ -7,9 +7,11 @@ import add from './add';
 import inspect from './inspect';
 import list from './list';
 import members from './members';
+import accessGroups from './access-groups';
 import rm from './rm';
 import getOidcToken from './token';
 import {
+  accessGroupsSubcommand,
   addSubcommand,
   inspectSubcommand,
   listSubcommand,
@@ -28,6 +30,7 @@ const COMMAND_CONFIG = {
   inspect: getCommandAliases(inspectSubcommand),
   list: getCommandAliases(listSubcommand),
   members: getCommandAliases(membersSubcommand),
+  accessGroups: getCommandAliases(accessGroupsSubcommand),
   add: getCommandAliases(addSubcommand),
   remove: getCommandAliases(removeSubcommand),
   token: getCommandAliases(tokenSubcommand),
@@ -104,6 +107,13 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandMembers(subcommandOriginal);
       return members(client, args);
+    case 'accessGroups':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('project', subcommandOriginal);
+        return printHelp(accessGroupsSubcommand);
+      }
+      telemetry.trackCliSubcommandAccessGroups(subcommandOriginal);
+      return accessGroups(client, args);
     case 'token':
       if (needHelp) {
         telemetry.trackCliFlagHelp('project', subcommandOriginal);
