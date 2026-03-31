@@ -1,20 +1,16 @@
 {
+  "include": ["**/*.ts", "**/*.tsx"],
   "compilerOptions": {
-    "target": "es2021",
-    "module": "esnext",
-    "moduleResolution": "node16",
-    "lib": ["dom", "dom.iterable", "scripthost", "es2021"],
+    "lib": ["DOM", "DOM.Iterable", "ES2022"],
+    "target": "ES2022",
+    "module": "ES2022",
+    "moduleResolution": "bundler",
     "jsx": "react-jsx",
-    "types": ["vite/client", "vitest/globals"],
     "strict": true,
-    "esModuleInterop": true,
+    "skipLibCheck": true,
     "isolatedModules": true,
     "resolveJsonModule": true,
-    "skipLibCheck": true,
-    "paths": {
-      "~/*": ["./src/*"]
-    }
-  },
-  "exclude": ["node_modules", "dist"],
-  "include": ["**/*.ts", "**/*.tsx"]
+    "esModuleInterop": true,
+    "rootDirs": [".", "./.react-router/types"]
+  }
 }
