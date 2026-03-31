@@ -182,4 +182,79 @@ describe('agent init', () => {
       expect(exitCode).toBe(1);
     });
   });
+
+  describe('Claude Code detection', () => {
+    it('should write to CLAUDE.md when agentName is claude', async () => {
+      client.setArgv('agent', 'init', '--yes');
+      client.stdin.isTTY = false;
+      client.agentName = 'claude';
+
+      const exitCode = await agent(client);
+      expect(exitCode).toBe(0);
+
+      await expect(client.stderr).toOutput('Created CLAUDE.md');
+
+      const content = await fs.readFile(join(cwd, 'CLAUDE.md'), 'utf-8');
+      expect(content).toContain('<!-- VERCEL BEST PRACTICES START -->');
+      expect(content).toContain('## Best practices for developing on Vercel');
+      expect(content).toContain('<!-- VERCEL BEST PRACTICES END -->');
+      expect(fs.existsSync(join(cwd, 'AGENTS.md'))).toBe(false);
+    });
+
+    it('should append to existing CLAUDE.md when agentName is claude', async () => {
+      const existingContent = '# My Claude Config\n\nSome existing content.\n';
+      await fs.writeFile(join(cwd, 'CLAUDE.md'), existingContent);
+
+      client.setArgv('agent', 'init', '--yes');
+      client.stdin.isTTY = false;
+      client.agentName = 'claude';
+
+      const exitCode = await agent(client);
+      expect(exitCode).toBe(0);
+
+      await expect(client.stderr).toOutput(
+        'Appended Vercel best practices to CLAUDE.md'
+      );
+
+      const content = await fs.readFile(join(cwd, 'CLAUDE.md'), 'utf-8');
+      expect(content).toContain('# My Claude Config');
+      expect(content).toContain('<!-- VERCEL BEST PRACTICES START -->');
+    });
+
+    it('should update existing best practices in CLAUDE.md when agentName is claude', async () => {
+      const existingContent =
+        '# Claude\n\n<!-- VERCEL BEST PRACTICES START -->\nOld content here.\n<!-- VERCEL BEST PRACTICES END -->\n';
+      await fs.writeFile(join(cwd, 'CLAUDE.md'), existingContent);
+
+      client.setArgv('agent', 'init', '--yes');
+      client.stdin.isTTY = false;
+      client.agentName = 'claude';
+
+      const exitCode = await agent(client);
+      expect(exitCode).toBe(0);
+
+      await expect(client.stderr).toOutput(
+        'Updated Vercel best practices in CLAUDE.md'
+      );
+
+      const content = await fs.readFile(join(cwd, 'CLAUDE.md'), 'utf-8');
+      expect(content).toContain('# Claude');
+      expect(content).not.toContain('Old content here.');
+      expect(content).toContain('## Best practices for developing on Vercel');
+    });
+
+    it('should write to AGENTS.md when agentName is not claude', async () => {
+      client.setArgv('agent', 'init', '--yes');
+      client.stdin.isTTY = false;
+      client.agentName = 'cursor';
+
+      const exitCode = await agent(client);
+      expect(exitCode).toBe(0);
+
+      await expect(client.stderr).toOutput('Created AGENTS.md');
+
+      expect(fs.existsSync(join(cwd, 'AGENTS.md'))).toBe(true);
+      expect(fs.existsSync(join(cwd, 'CLAUDE.md'))).toBe(false);
+    });
+  });
 });

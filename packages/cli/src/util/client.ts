@@ -26,6 +26,7 @@ import reauthenticate from './login/reauthenticate';
 import type { SAMLError } from './login/types';
 import { writeToAuthConfigFile, writeToConfigFile } from './config/files';
 import type { TelemetryEventStore } from './telemetry';
+import type { Span } from '@vercel/build-utils';
 import type {
   AuthConfig,
   GlobalConfig,
@@ -53,6 +54,8 @@ export interface FetchOptions extends Omit<RequestInit, 'body'> {
   retry?: RetryOptions;
   useCurrentTeam?: boolean;
   accountId?: string;
+  /** When true, 429 responses are returned immediately instead of waiting for Retry-After and retrying */
+  bailOn429?: boolean;
 }
 
 export interface ClientOptions extends Stdio {
@@ -117,6 +120,10 @@ export default class Client extends EventEmitter implements Stdio {
   nonInteractive: boolean;
   /** Dangerously skip all permission prompts (--dangerously-skip-permissions flag) */
   dangerouslySkipPermissions: boolean;
+  /** Root trace span for CLI diagnostics */
+  rootSpan?: Span;
+  /** Path to write CLI trace diagnostics. Only set by `vc build`; other commands do not write traces. */
+  traceDiagnosticsPath?: string;
   /** Track if we've already logged the token source debug message */
   private _loggedTokenSource: boolean = false;
 
@@ -357,6 +364,9 @@ export default class Client extends EventEmitter implements Stdio {
 
     const headers = new Headers(opts.headers);
     headers.set('user-agent', ua);
+    if (this.agentName) {
+      headers.set('x-ai-agent', this.agentName);
+    }
 
     await this.ensureAuthorized();
 
@@ -409,6 +419,8 @@ export default class Client extends EventEmitter implements Stdio {
             // there's no sense in retrying
             return bail(normalizeError(reauthError));
           }
+        } else if (res.status === 429 && opts.bailOn429) {
+          return bail(error);
         } else if (typeof error.retryAfterMs === 'number') {
           // Respect the Retry-After header and then try again below.
           // This covers 429 responses which would otherwise bail out

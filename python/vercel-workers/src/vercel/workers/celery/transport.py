@@ -12,12 +12,15 @@ try:
     from kombu.transport import TRANSPORT_ALIASES, virtual  # type: ignore[import-untyped]
 except Exception as e:
     raise RuntimeError(
-        "kombu is required for vercelqueue:// broker support. "
+        "kombu is required for vercel:// broker support. "
         "Make sure Celery and its dependencies are installed.",
     ) from e
 
 
-def install_kombu_transport_alias(alias: str = "vercelqueue") -> None:
+DEFAULT_BROKER_ALIAS = "vercel"
+
+
+def install_kombu_transport_alias(alias: str = DEFAULT_BROKER_ALIAS) -> None:
     """
     Register the Kombu transport alias for this package.
 
@@ -27,7 +30,7 @@ def install_kombu_transport_alias(alias: str = "vercelqueue") -> None:
 
     After calling this, users can set:
 
-        broker_url = "vercelqueue://"
+        broker_url = "vercel://"
     """
 
     # Use the actual import path so vendored/relocated packages keep working.
@@ -53,6 +56,9 @@ class TransportConfig:
     visibility_timeout_seconds: int = 30
     visibility_refresh_interval_seconds: float = 10.0
 
+    # Use custom JSON encoder class to send data
+    json_encoder: type[json.JSONEncoder] | None = None
+
     @classmethod
     def from_transport_options(cls, options: dict[str, Any]) -> TransportConfig:
         """
@@ -70,6 +76,7 @@ class TransportConfig:
                 "include_raw_message": False,
                 "visibility_timeout_seconds": 30,
                 "visibility_refresh_interval_seconds": 10.0,
+                "json_encoder": CustomJSONEncoder,
             }
         """
 
@@ -118,6 +125,10 @@ class TransportConfig:
         if isinstance(refresh_interval, (int, float)):
             cfg.visibility_refresh_interval_seconds = float(refresh_interval)
 
+        json_encoder = options.get("json_encoder")
+        if isinstance(json_encoder, type) and issubclass(json_encoder, json.JSONEncoder):
+            cfg.json_encoder = json_encoder
+
         return cfg
 
 
@@ -149,23 +160,23 @@ class Channel(virtual.Channel):
         if os.environ.get("VWC_DEBUG_PUBLISH") not in {None, "", "0", "false", "FALSE"}:
             try:
                 print(
-                    "[vercelqueue publish] kombu message keys/types:",
+                    "[vercel publish] kombu message keys/types:",
                     {k: type(v).__name__ for k, v in message.items()},
                 )
                 print(
-                    "[vercelqueue publish] kombu message headers:",
+                    "[vercel publish] kombu message headers:",
                     message.get("headers"),
                 )
                 print(
-                    "[vercelqueue publish] kombu message body type:",
+                    "[vercel publish] kombu message body type:",
                     type(message.get("body")).__name__,
                 )
                 print(
-                    "[vercelqueue publish] envelope:",
+                    "[vercel publish] envelope:",
                     json.dumps(envelope, indent=2, default=str),
                 )
             except Exception:
-                print("[vercelqueue publish] debug print failed")
+                print("[vercel publish] debug print failed")
 
         send(
             queue,
@@ -177,6 +188,7 @@ class Channel(virtual.Channel):
             base_url=self._cfg.base_url,
             base_path=self._cfg.base_path,
             timeout=self._cfg.timeout,
+            json_encoder=self._cfg.json_encoder,
         )
 
     def _get(self, queue: str, timeout: float | None = None) -> dict[str, Any]:
@@ -195,12 +207,13 @@ class Channel(virtual.Channel):
 
 class Transport(virtual.Transport):
     Channel = Channel
-    driver_type = "vercelqueue"
-    driver_name = "vercelqueue"
+    driver_type = DEFAULT_BROKER_ALIAS
+    driver_name = DEFAULT_BROKER_ALIAS
     default_port = 0
 
 
 __all__ = [
+    "DEFAULT_BROKER_ALIAS",
     "Transport",
     "install_kombu_transport_alias",
 ]

@@ -93,6 +93,13 @@ export const nft = async (
   await nftSpan.trace(runNft);
 };
 const isTypeScriptFile = (fsPath: string) => {
+  if (
+    fsPath.endsWith('.d.ts') ||
+    fsPath.endsWith('.d.mts') ||
+    fsPath.endsWith('.d.cts')
+  ) {
+    return false;
+  }
   return (
     fsPath.endsWith('.ts') ||
     fsPath.endsWith('.tsx') ||

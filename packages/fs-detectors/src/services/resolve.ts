@@ -6,6 +6,7 @@ import type {
   ServiceDetectionError,
   ServiceRuntime,
 } from './types';
+import { getWorkerTopics } from '@vercel/build-utils';
 import {
   ENTRYPOINT_EXTENSIONS,
   RUNTIME_BUILDERS,
@@ -20,10 +21,11 @@ import {
   inferServiceRuntime,
   INTERNAL_SERVICE_PREFIX,
 } from './utils';
-import frameworkList from '@vercel/frameworks';
+import { frameworkList } from '@vercel/frameworks';
 import { detectFrameworks } from '../detect-framework';
 import type { DetectorFilesystem } from '../detectors/filesystem';
 import { normalizeRoutePrefix } from '@vercel/routing-utils';
+import { isNodeBackendFramework } from '@vercel/build-utils';
 
 const frameworksBySlug = new Map(frameworkList.map(f => [f.slug, f]));
 
@@ -48,6 +50,9 @@ function parsePyModuleAttrEntrypoint(entrypoint: string): {
 }
 
 const SERVICE_NAME_REGEX = /^[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$/;
+const DNS_LABEL_RE = /^(?!-)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/i;
+const ENV_PREFIX_RE = /^[A-Z][A-Z0-9_]*_$/;
+
 interface ResolvedEntrypointPath {
   normalized: string;
   isDirectory: boolean;
@@ -236,10 +241,21 @@ export function validateServiceConfig(
     };
   }
   const serviceType = config.type || 'web';
-  if (serviceType === 'web' && !config.routePrefix) {
+  const hasRoutePrefix = typeof config.routePrefix === 'string';
+  const hasSubdomain = typeof config.subdomain === 'string';
+
+  if (hasSubdomain && !DNS_LABEL_RE.test(config.subdomain!)) {
+    return {
+      code: 'INVALID_SUBDOMAIN',
+      message: `Web service "${name}" has invalid subdomain "${config.subdomain}". Use a single DNS label such as "api".`,
+      serviceName: name,
+    };
+  }
+
+  if (serviceType === 'web' && !hasRoutePrefix && !hasSubdomain) {
     return {
       code: 'MISSING_ROUTE_PREFIX',
-      message: `Web service "${name}" must specify "routePrefix".`,
+      message: `Web service "${name}" must specify at least one of "routePrefix" or "subdomain".`,
       serviceName: name,
     };
   }
@@ -264,12 +280,28 @@ export function validateServiceConfig(
       serviceName: name,
     };
   }
+  if ((serviceType === 'worker' || serviceType === 'cron') && hasSubdomain) {
+    return {
+      code: 'INVALID_HOST_ROUTING_CONFIG',
+      message: `${serviceType === 'worker' ? 'Worker' : 'Cron'} service "${name}" cannot have "subdomain". Only web services should specify subdomain routing.`,
+      serviceName: name,
+    };
+  }
   if (serviceType === 'cron' && !config.schedule) {
     return {
       code: 'MISSING_CRON_SCHEDULE',
       message: `Cron service "${name}" is missing required "schedule" field.`,
       serviceName: name,
     };
+  }
+  if (config.envPrefix !== undefined) {
+    if (!ENV_PREFIX_RE.test(config.envPrefix)) {
+      return {
+        code: 'INVALID_ENV_PREFIX',
+        message: `Service "${name}" has invalid envPrefix "${config.envPrefix}". Must start with an uppercase letter, contain only uppercase letters, digits, and underscores, and end with "_" (e.g., "MY_SERVICE_").`,
+        serviceName: name,
+      };
+    }
   }
   if (config.runtime && !(config.runtime in RUNTIME_BUILDERS)) {
     return {
@@ -333,6 +365,7 @@ export function validateServiceEntrypoint(
     !config.framework
   ) {
     const runtime = inferServiceRuntime({
+      ...config,
       entrypoint: resolvedEntrypoint.normalized,
     });
     if (!runtime) {
@@ -421,33 +454,67 @@ export async function resolveConfiguredService(
     }
   }
 
-  const topic = type === 'worker' ? config.topic || 'default' : config.topic;
+  const topics = type === 'worker' ? getWorkerTopics(config) : config.topics;
   const consumer =
     type === 'worker' ? config.consumer || 'default' : config.consumer;
 
   let builderUse: string;
   let builderSrc: string;
 
-  if (config.framework) {
-    const framework = frameworksBySlug.get(config.framework);
-    builderUse = framework?.useRuntime?.use || '@vercel/static-build';
+  const frameworkDefinition = config.framework
+    ? frameworksBySlug.get(config.framework)
+    : undefined;
+
+  if (config.builder) {
+    builderUse = config.builder;
+    builderSrc =
+      resolvedEntrypointFile ||
+      frameworkDefinition?.useRuntime?.src ||
+      'package.json';
+  } else if (config.framework) {
+    if (type === 'web' && isNodeBackendFramework(config.framework)) {
+      builderUse = '@vercel/backends';
+    } else {
+      builderUse =
+        frameworkDefinition?.useRuntime?.use || '@vercel/static-build';
+    }
     // Prefer user-provided entrypoint over framework default
     builderSrc =
-      resolvedEntrypointFile || framework?.useRuntime?.src || 'package.json';
-  } else if (config.builder) {
-    builderUse = config.builder;
-    builderSrc = resolvedEntrypointFile!;
+      resolvedEntrypointFile ||
+      frameworkDefinition?.useRuntime?.src ||
+      'package.json';
   } else {
-    builderUse = getBuilderForRuntime(inferredRuntime!);
+    if (!inferredRuntime) {
+      throw new Error(
+        `Could not infer runtime for service "${name}" and no builder or framework were provided.`
+      );
+    }
+    if (inferredRuntime === 'node') {
+      builderUse = type === 'web' ? '@vercel/backends' : '@vercel/node';
+    } else {
+      builderUse = getBuilderForRuntime(inferredRuntime);
+    }
     builderSrc = resolvedEntrypointFile!;
   }
 
-  // routePrefix is required for web services; normalize to always start with /
+  const normalizedSubdomain =
+    type === 'web' && typeof config.subdomain === 'string'
+      ? config.subdomain.toLowerCase()
+      : undefined;
+  const defaultRoutePrefix =
+    type === 'web' && normalizedSubdomain ? `/_/${name}` : undefined;
+  // routePrefix defaults to /_/serviceName for subdomain-mounted web services.
   const routePrefix =
-    type === 'web' && config.routePrefix
-      ? config.routePrefix.startsWith('/')
-        ? config.routePrefix
-        : `/${config.routePrefix}`
+    type === 'web' && (config.routePrefix || defaultRoutePrefix)
+      ? (config.routePrefix || defaultRoutePrefix)!.startsWith('/')
+        ? (config.routePrefix || defaultRoutePrefix)!
+        : `/${config.routePrefix || defaultRoutePrefix}`
+      : undefined;
+  const resolvedRoutePrefixSource =
+    type === 'web' && typeof routePrefix === 'string'
+      ? config.routePrefix
+        ? routePrefixSource
+        : 'generated'
       : undefined;
 
   // Ensure builder.src is fully qualified for non-root workspaces.
@@ -461,6 +528,9 @@ export async function resolveConfiguredService(
   // Ensure `zeroConfig` is set on the Builder spec so downstream steps (like
   // CLI `writeBuildResultV3()`) can compute correct extensionless function paths.
   const builderConfig: Record<string, unknown> = { zeroConfig: true };
+  if (builderUse === '@vercel/backends') {
+    builderConfig.serviceName = name;
+  }
   if (config.memory) builderConfig.memory = config.memory;
   if (config.maxDuration) builderConfig.maxDuration = config.maxDuration;
   if (config.includeFiles) builderConfig.includeFiles = config.includeFiles;
@@ -496,10 +566,8 @@ export async function resolveConfiguredService(
     workspace,
     entrypoint: resolvedEntrypointFile,
     routePrefix,
-    routePrefixSource:
-      type === 'web' && typeof routePrefix === 'string'
-        ? routePrefixSource
-        : undefined,
+    routePrefixSource: resolvedRoutePrefixSource,
+    subdomain: normalizedSubdomain,
     framework: config.framework,
     builder: {
       src: builderSrc,
@@ -511,8 +579,9 @@ export async function resolveConfiguredService(
     installCommand: config.installCommand,
     schedule: config.schedule,
     handlerFunction: moduleAttrParsed?.attrName,
-    topic,
+    topics,
     consumer,
+    envPrefix: config.envPrefix,
   };
 }
 
@@ -576,13 +645,16 @@ export async function resolveAllConfiguredServices(
     }
 
     let resolvedConfig = serviceConfig;
-
     if (!serviceConfig.framework && resolvedEntrypoint) {
       if (resolvedEntrypoint.isDirectory) {
+        const inferredRuntime = inferServiceRuntime({
+          ...serviceConfig,
+        });
         const workspace = resolvedEntrypoint.normalized;
         const { framework, error } = await detectFrameworkFromWorkspace({
           fs,
           workspace,
+          runtime: inferredRuntime,
           serviceName: name,
         });
         if (error) {
@@ -622,7 +694,7 @@ export async function resolveAllConfiguredServices(
             serviceName: name,
             runtime: inferredRuntime,
           });
-          if (detection.framework) {
+          if (!detection.error && detection.framework) {
             resolvedConfig = {
               ...resolvedConfig,
               framework: detection.framework,

@@ -76,6 +76,14 @@ import { checkTelemetryStatus } from './util/telemetry/check-status';
 import output from './output-manager';
 import { checkGuidanceStatus } from './util/guidance/check-status';
 import { determineAgent } from '@vercel/detect-agent';
+import { getLinkFromDir, getVercelDirectory } from './util/projects/link';
+import {
+  getPlatformEnv,
+  Span,
+  type Reporter,
+  type TraceEvent,
+} from '@vercel/build-utils';
+import { mkdir, writeFile } from 'fs/promises';
 
 const VERCEL_DIR = getGlobalPathConfig();
 const VERCEL_CONFIG_PATH = configFiles.getConfigFilePath();
@@ -141,11 +149,28 @@ const handleUnexpected = async (err: Error) => {
 process.on('unhandledRejection', handleRejection);
 process.on('uncaughtException', handleUnexpected);
 
+// Emit plugin hint when running inside Claude Code
+if (process.env.CLAUDECODE) {
+  process.stderr.write(
+    '<claude-code-hint v="1" type="plugin" value="vercel@claude-plugins-official" />\n'
+  );
+}
+
 let { isTTY } = process.stdout;
 
 let apiUrl = 'https://api.vercel.com';
 
+class InMemoryReporter implements Reporter {
+  public events: TraceEvent[] = [];
+  report(event: TraceEvent) {
+    this.events.push(event);
+  }
+}
+
 const main = async () => {
+  const traceReporter = new InMemoryReporter();
+  const rootSpan = new Span({ name: 'vc.cli', reporter: traceReporter });
+
   if (process.env.FORCE_TTY === '1') {
     isTTY = true;
     process.stdout.isTTY = true;
@@ -210,7 +235,7 @@ const main = async () => {
   const subSubCommand = parsedArgs.args[3];
 
   // If empty, leave this code here for easy adding of beta commands later
-  const betaCommands: string[] = ['api', 'curl', 'webhooks'];
+  const betaCommands: string[] = ['api', 'crons', 'curl', 'webhooks'];
   const msg = betaCommands.includes(targetOrSubcommand)
     ? `${getTitleName()} CLI ${pkg.version} | ${targetOrSubcommand} is in beta — https://vercel.com/feedback`
     : `${getTitleName()} CLI ${pkg.version}`;
@@ -326,6 +351,7 @@ const main = async () => {
   telemetry.trackPlatform();
   telemetry.trackArch();
   telemetry.trackCIVendorName();
+  telemetry.trackStdinIsTTY(process.stdin?.isTTY === true);
   telemetry.trackVersion(pkg.version);
   telemetry.trackCliOptionCwd(parsedArgs.flags['--cwd']);
   telemetry.trackCliOptionLocalConfig(parsedArgs.flags['--local-config']);
@@ -389,6 +415,8 @@ const main = async () => {
     nonInteractive,
   });
 
+  client.rootSpan = rootSpan;
+
   // The `--cwd` flag is respected for all sub-commands
   if (parsedArgs.flags['--cwd']) {
     client.cwd = parsedArgs.flags['--cwd'];
@@ -450,6 +478,7 @@ const main = async () => {
     'build',
     'telemetry',
     'upgrade',
+    'skills',
   ];
 
   if (process.env.FF_GUIDANCE_MODE) {
@@ -481,6 +510,19 @@ const main = async () => {
       try {
         const result = await login(client, { shouldParseArgs: false });
         // The login function failed, so it returned an exit code
+        if (result !== 0) return result;
+      } catch (error) {
+        printError(error);
+        return 1;
+      }
+
+      output.debug(`Saved credentials in "${hp(VERCEL_DIR)}"`);
+    } else if (isAgent) {
+      // Agent detected without credentials — auto-launch device code login flow.
+      // The login flow handles non-TTY: prints auth URL, opens browser if possible, polls.
+      output.log('No existing credentials found. Starting login flow...');
+      try {
+        const result = await login(client, { shouldParseArgs: false });
         if (result !== 0) return result;
       } catch (error) {
         printError(error);
@@ -583,6 +625,7 @@ const main = async () => {
 
     try {
       user = await getUser(client);
+      telemetryEventStore.updateUserId(user.id);
     } catch (err: unknown) {
       if (err instanceof Error) {
         output.debug(err.stack || err.toString());
@@ -734,6 +777,10 @@ const main = async () => {
           telemetry.trackCliCommandActivity(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).activity;
           break;
+        case 'alerts':
+          telemetry.trackCliCommandAlerts(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).alerts;
+          break;
         case 'api':
           telemetry.trackCliCommandApi(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).api;
@@ -765,6 +812,11 @@ const main = async () => {
         case 'certs':
           telemetry.trackCliCommandCerts(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).certs;
+          break;
+        case 'crons':
+        case 'cron':
+          telemetry.trackCliCommandCrons(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).crons;
           break;
         case 'curl':
           telemetry.trackCliCommandCurl(userSuppliedSubCommand);
@@ -888,6 +940,10 @@ const main = async () => {
           telemetry.trackCliCommandRollingRelease(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).rollingRelease;
           break;
+        case 'skills':
+          telemetry.trackCliCommandSkills(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).skills;
+          break;
         case 'target':
           telemetry.trackCliCommandTarget(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).target;
@@ -937,7 +993,9 @@ const main = async () => {
         func = func.default;
       }
 
-      exitCode = await func(client);
+      exitCode = await rootSpan
+        .child('vc.cli.command', { command: subcommand || 'deploy' })
+        .trace(() => func(client));
     }
   } catch (err: unknown) {
     if (isErrnoException(err) && err.code === 'ENOTFOUND') {
@@ -1007,8 +1065,55 @@ const main = async () => {
     return 1;
   }
 
+  const postCommandSpan = rootSpan.child('vc.postCommand');
+
   telemetryEventStore.updateTeamId(client.config.currentTeam);
+  if (!telemetryEventStore.hasUserId) {
+    const getUserSpan = postCommandSpan.child('vc.postCommand.getUser');
+    try {
+      const user = await getUser(client);
+      telemetryEventStore.updateUserId(user.id);
+    } catch {
+      // best-effort for telemetry
+    } finally {
+      getUserSpan.stop();
+    }
+  }
+
+  // Resolve project_id from VERCEL_PROJECT_ID env var or .vercel/project.json
+  try {
+    const envProjectId = getPlatformEnv('PROJECT_ID');
+    if (envProjectId) {
+      telemetryEventStore.updateProjectId(envProjectId);
+    } else {
+      const link = await getLinkFromDir(getVercelDirectory(client.cwd));
+      if (link) {
+        telemetryEventStore.updateProjectId(link.projectId);
+      }
+    }
+  } catch {
+    // best-effort for telemetry — project may not be linked
+  }
+
   await telemetryEventStore.save();
+  postCommandSpan.stop();
+
+  rootSpan.stop();
+
+  // Flush trace events to disk. Only `vc build` sets traceDiagnosticsPath,
+  // so traces are not written for other commands (deploy, env, etc.).
+  if (client.traceDiagnosticsPath) {
+    try {
+      await mkdir(join(client.traceDiagnosticsPath, '..'), { recursive: true });
+      await writeFile(
+        client.traceDiagnosticsPath,
+        JSON.stringify(traceReporter.events)
+      );
+    } catch (err) {
+      output.error('Failed to write diagnostics trace file');
+      output.prettyError(err);
+    }
+  }
 
   return exitCode;
 };

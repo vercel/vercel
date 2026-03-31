@@ -2069,7 +2069,7 @@ export const frameworks = [
       'FastAPI framework, high performance, easy to learn, fast to code, ready for production',
     website: 'https://fastapi.tiangolo.com',
     supersedes: ['python'],
-    useRuntime: { src: 'index.py', use: '@vercel/python' },
+    useRuntime: { src: '<detect>', use: '@vercel/python' },
     ignoreRuntimes: ['@vercel/python'],
     detectors: {
       some: [
@@ -2122,7 +2122,7 @@ export const frameworks = [
     description: 'A Flask app, ready for production',
     website: 'https://flask.palletsprojects.com',
     supersedes: ['python'],
-    useRuntime: { src: 'index.py', use: '@vercel/python' },
+    useRuntime: { src: '<detect>', use: '@vercel/python' },
     ignoreRuntimes: ['@vercel/python'],
     detectors: {
       some: [
@@ -2217,14 +2217,13 @@ export const frameworks = [
   {
     name: 'Django',
     slug: 'django',
-    experimental: true,
     logo: 'https://api-frameworks.vercel.sh/framework-logos/django.svg',
     tagline:
       'Django is a high-level Python web framework that encourages rapid development and clean, pragmatic design. ',
     description: 'A Django project served via the Python Runtime.',
     website: 'https://www.djangoproject.com',
     supersedes: ['python'],
-    useRuntime: { src: 'index.py', use: '@vercel/python' },
+    useRuntime: { src: '<detect>', use: '@vercel/python' },
     ignoreRuntimes: ['@vercel/python'],
     detectors: {
       some: [
@@ -4133,7 +4132,6 @@ export const frameworks = [
   {
     name: 'Python',
     slug: 'python',
-    experimental: true,
     runtimeFramework: true,
     logo: 'https://api-frameworks.vercel.sh/framework-logos/python.svg',
     tagline:
@@ -4141,7 +4139,7 @@ export const frameworks = [
     description:
       'A generic Python application deployed as a serverless function.',
     website: 'https://python.org',
-    useRuntime: { src: 'index.py', use: '@vercel/python' },
+    useRuntime: { src: '<detect>', use: '@vercel/python' },
     ignoreRuntimes: ['@vercel/python'],
     detectors: {
       some: [
@@ -4337,7 +4335,6 @@ export const frameworks = [
   {
     name: 'Go',
     slug: 'go',
-    experimental: true,
     runtimeFramework: true,
     logo: 'https://api-frameworks.vercel.sh/framework-logos/go.svg',
     tagline: 'An open-source programming language supported by Google.',

@@ -1,5 +1,127 @@
 # @vercel/fs-detectors
 
+## 5.12.2
+
+### Patch Changes
+
+- Updated dependencies [[`3427149c3751192b54bb4fad9d3b50f171a28666`](https://github.com/vercel/vercel/commit/3427149c3751192b54bb4fad9d3b50f171a28666)]:
+  - @vercel/build-utils@13.12.0
+
+## 5.12.1
+
+### Patch Changes
+
+- Updated dependencies [[`a54b8f246ac6b43ac8f1674093402e3fe145fd64`](https://github.com/vercel/vercel/commit/a54b8f246ac6b43ac8f1674093402e3fe145fd64)]:
+  - @vercel/build-utils@13.11.0
+
+## 5.12.0
+
+### Minor Changes
+
+- [services] support multiple topics for a single worker service ([#15615](https://github.com/vercel/vercel/pull/15615))
+
+- [services] support for specifying an env prefix for each service ([#15641](https://github.com/vercel/vercel/pull/15641))
+
+### Patch Changes
+
+- Updated dependencies [[`4839214ae9cbcc95d448429bf93133e58284e03f`](https://github.com/vercel/vercel/commit/4839214ae9cbcc95d448429bf93133e58284e03f), [`13f719da050ba4b73b95b51e8edf7141c967b9a2`](https://github.com/vercel/vercel/commit/13f719da050ba4b73b95b51e8edf7141c967b9a2), [`ece813e0a9a75e3ad262817f00050c62f5ad67eb`](https://github.com/vercel/vercel/commit/ece813e0a9a75e3ad262817f00050c62f5ad67eb), [`d7107d025500d6be305895dfd5cd89d87e6eb9f0`](https://github.com/vercel/vercel/commit/d7107d025500d6be305895dfd5cd89d87e6eb9f0), [`25a6a2daa46baba6e8d7dec90eb49213b8150b8c`](https://github.com/vercel/vercel/commit/25a6a2daa46baba6e8d7dec90eb49213b8150b8c)]:
+  - @vercel/build-utils@13.10.0
+  - @vercel/routing-utils@6.1.1
+  - @vercel/frameworks@3.21.1
+
+## 5.11.5
+
+### Patch Changes
+
+- Updated dependencies [[`e5564b684ee40dd60f745327ef206bbe58a5191a`](https://github.com/vercel/vercel/commit/e5564b684ee40dd60f745327ef206bbe58a5191a)]:
+  - @vercel/build-utils@13.9.0
+
+## 5.11.4
+
+### Patch Changes
+
+- Updated dependencies [[`62b9c34a92fe6d60d73f81a1674c2e483f12fc8f`](https://github.com/vercel/vercel/commit/62b9c34a92fe6d60d73f81a1674c2e483f12fc8f)]:
+  - @vercel/routing-utils@6.1.0
+  - @vercel/build-utils@13.8.2
+  - @vercel/frameworks@3.21.1
+
+## 5.11.3
+
+### Patch Changes
+
+- adds build utils to fs-detectors dependencies ([#15642](https://github.com/vercel/vercel/pull/15642))
+
+## 5.11.2
+
+### Patch Changes
+
+- [python] update celery worker services declaration to support broker_url="vercel://" instead of having to import from vercel.workers.celery ([#15454](https://github.com/vercel/vercel/pull/15454))
+
+- [services] prompt to auto-configure `experimentalServices` in `vercel.json` from layout during project link ([#15590](https://github.com/vercel/vercel/pull/15590))
+
+## 5.11.1
+
+### Patch Changes
+
+- Switch "node" framework preset to use @vercel/backends ([#15248](https://github.com/vercel/vercel/pull/15248))
+
+  Fix services-mode internal function output aliasing to use slashless `_svc/*` output keys so Node service routes can resolve their Lambda targets.
+
+- Improve services auto-detection so a single detected frontend at the project root, ([#15571](https://github.com/vercel/vercel/pull/15571))
+  `frontend/`, or `apps/<name>/` is mounted at `/` even without backend services.
+
+## 5.11.0
+
+### Minor Changes
+
+- [services] add support for background workers to vc dev ([#15434](https://github.com/vercel/vercel/pull/15434))
+
+### Patch Changes
+
+- [services] exclude service route prefixes on subdomain rewrites ([#15508](https://github.com/vercel/vercel/pull/15508))
+
+## 5.10.3
+
+### Patch Changes
+
+- Updated dependencies [[`04433cfd686bf27e3f63bc895c15f7e75918b0d7`](https://github.com/vercel/vercel/commit/04433cfd686bf27e3f63bc895c15f7e75918b0d7)]:
+  - @vercel/frameworks@3.21.1
+
+## 5.10.2
+
+### Patch Changes
+
+- [experimental-services] build using `experimentalServices` regardless of framework setting ([#15451](https://github.com/vercel/vercel/pull/15451))
+
+## 5.10.1
+
+### Patch Changes
+
+- Updated dependencies [[`9660ee0aee6113e9674918bbeb2b94db63d36702`](https://github.com/vercel/vercel/commit/9660ee0aee6113e9674918bbeb2b94db63d36702)]:
+  - @vercel/frameworks@3.21.0
+
+## 5.10.0
+
+### Minor Changes
+
+- Support `maxDuration: 'max'` to allow the backend to resolve the maximum duration based on account plan type ([#15217](https://github.com/vercel/vercel/pull/15217))
+
+## 5.9.1
+
+### Patch Changes
+
+- [services] adds support for subdomai configuration in experimentalServices ([#15401](https://github.com/vercel/vercel/pull/15401))
+
+## 5.9.0
+
+### Minor Changes
+
+- [python] add support for module-based entrypoints for cron jobs ([#15393](https://github.com/vercel/vercel/pull/15393))
+
+### Patch Changes
+
+- [python] add support for Python worker services with Django tasks ([#15396](https://github.com/vercel/vercel/pull/15396))
+
 ## 5.8.18
 
 ### Patch Changes

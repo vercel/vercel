@@ -1,5 +1,105 @@
 # @vercel/express
 
+## 0.1.65
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.6.22
+  - @vercel/cervel@0.0.40
+
+## 0.1.64
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.6.21
+  - @vercel/cervel@0.0.39
+
+## 0.1.63
+
+### Patch Changes
+
+- Bump @vercel/nft to 1.5.0 ([#15683](https://github.com/vercel/vercel/pull/15683))
+
+- Updated dependencies [[`69cd8ea307f507037fe735d7ba09c58fb4193e13`](https://github.com/vercel/vercel/commit/69cd8ea307f507037fe735d7ba09c58fb4193e13)]:
+  - @vercel/node@5.6.20
+  - @vercel/cervel@0.0.38
+
+## 0.1.62
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.6.19
+  - @vercel/cervel@0.0.37
+
+## 0.1.61
+
+### Patch Changes
+
+- Update @vercel/nft to 1.4.0 across packages ([#15626](https://github.com/vercel/vercel/pull/15626))
+
+- Updated dependencies [[`bb5277ab85e41810f96d1619949d76ea5603a58f`](https://github.com/vercel/vercel/commit/bb5277ab85e41810f96d1619949d76ea5603a58f)]:
+  - @vercel/node@5.6.18
+  - @vercel/cervel@0.0.36
+
+## 0.1.60
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.6.17
+  - @vercel/cervel@0.0.35
+
+## 0.1.59
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/cervel@0.0.34
+
+## 0.1.58
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.6.16
+  - @vercel/cervel@0.0.33
+
+## 0.1.57
+
+### Patch Changes
+
+- Updated dependencies [[`8a3558f680d592b4ea47ac7e48c99145d6368941`](https://github.com/vercel/vercel/commit/8a3558f680d592b4ea47ac7e48c99145d6368941)]:
+  - @vercel/static-config@3.2.0
+  - @vercel/node@5.6.15
+  - @vercel/cervel@0.0.32
+
+## 0.1.56
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.6.14
+  - @vercel/cervel@0.0.31
+
+## 0.1.55
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.6.13
+  - @vercel/cervel@0.0.30
+
+## 0.1.54
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/node@5.6.12
+  - @vercel/cervel@0.0.29
+
 ## 0.1.53
 
 ### Patch Changes

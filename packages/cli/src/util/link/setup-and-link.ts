@@ -43,12 +43,13 @@ import {
   type VercelAuthSetting,
   DEFAULT_VERCEL_AUTH_SETTING,
 } from '../input/vercel-auth';
-import { tryDetectServices } from '../projects/detect-services';
 import {
-  displayDetectedServices,
-  displayServiceErrors,
-  displayServicesConfigNote,
-} from '../input/display-services';
+  displayConfiguredServicesSetup,
+  getServicesSetupState,
+  promptForInferredServicesSetup,
+  toProjectRootDirectory,
+  type InferredServicesChoice,
+} from './services-setup';
 import searchProjectAcrossTeams from '../projects/search-project-across-teams';
 import type { CrossTeamMatch } from '../projects/search-project-across-teams';
 
@@ -286,7 +287,6 @@ export default async function setupAndLink(
 
   if (typeof projectOrNewProjectName === 'string') {
     newProjectName = projectOrNewProjectName;
-    rootDirectory = await inputRootDirectory(client, path, autoConfirm);
   } else {
     const project = projectOrNewProjectName;
 
@@ -306,68 +306,141 @@ export default async function setupAndLink(
     return { status: 'linked', org, project };
   }
 
-  if (
-    rootDirectory &&
-    !(await validateRootDirectory(path, join(path, rootDirectory)))
-  ) {
-    return { status: 'error', exitCode: 1, reason: 'INVALID_ROOT_DIRECTORY' };
-  }
-
   config.currentTeam = org.type === 'team' ? org.id : undefined;
-
-  const pathWithRootDirectory = rootDirectory
-    ? join(path, rootDirectory)
-    : path;
-  const localConfig = await readConfig(pathWithRootDirectory);
-  if (localConfig instanceof CantParseJSONFile) {
-    output.prettyError(localConfig);
-    return { status: 'error', exitCode: 1 };
-  }
-
-  const isZeroConfig =
-    !localConfig || !localConfig.builds || localConfig.builds.length === 0;
-
-  // Check for experimental services (gated by VERCEL_USE_EXPERIMENTAL_SERVICES env var)
-  const servicesResult = await tryDetectServices(pathWithRootDirectory);
+  const rootServicesSetup = await getServicesSetupState(path);
 
   try {
     let settings: ProjectSettings = {};
+    let pathWithRootDirectory = path;
+    let rootInferredServicesChoice: InferredServicesChoice | null = null;
 
-    if (servicesResult) {
-      displayDetectedServices(servicesResult.services);
-      if (servicesResult.errors.length > 0) {
-        displayServiceErrors(servicesResult.errors);
-      }
-      displayServicesConfigNote();
-      settings.framework = 'services';
-    } else if (isZeroConfig) {
-      const localConfigurationOverrides: PartialProjectSettings = {
-        buildCommand: localConfig?.buildCommand,
-        devCommand: localConfig?.devCommand,
-        framework: localConfig?.framework,
-        commandForIgnoringBuildStep: localConfig?.ignoreCommand,
-        installCommand: localConfig?.installCommand,
-        outputDirectory: localConfig?.outputDirectory,
-      };
-
-      // Run the framework detection logic against the local filesystem.
-      const detectedProjectsForWorkspace = await detectProjects(
-        pathWithRootDirectory
-      );
-
-      // Select the first framework detected, or use
-      // the "Other" preset if none was detected.
-      const detectedProjects = detectedProjectsForWorkspace.get('') || [];
-      const framework =
-        detectedProjects[0] ?? frameworkList.find(f => f.slug === null);
-
-      settings = await editProjectSettings(
+    if (!rootServicesSetup.hasConfiguredServices) {
+      rootInferredServicesChoice = await promptForInferredServicesSetup({
         client,
-        {},
-        framework,
         autoConfirm,
-        localConfigurationOverrides
-      );
+        nonInteractive,
+        workPath: path,
+        inferred: rootServicesSetup.inferredServices,
+        inferredWriteBlocker: rootServicesSetup.inferredServicesWriteBlocker,
+        allowChooseDifferentProjectDirectory: true,
+      });
+    }
+
+    // Setup priority:
+    // 1. Explicit services config at the repo root.
+    // 2. Inferred services layout at the repo root -> prompt for deployment mode.
+    // 3. Standard framework setup flow.
+    if (rootServicesSetup.hasConfiguredServices) {
+      displayConfiguredServicesSetup(rootServicesSetup.detectServicesResult);
+      settings.framework = 'services';
+    } else if (rootInferredServicesChoice?.type === 'services') {
+      settings.framework = 'services';
+    } else {
+      // Standard framework setup begins here. The selected root directory
+      // gets the same priority order as the repo root:
+      // configured services -> inferred services -> framework/Other.
+      const skipSelectedRootInferredServicesPrompt =
+        rootInferredServicesChoice?.type === 'single-app';
+
+      if (rootInferredServicesChoice?.type === 'single-app') {
+        rootDirectory = toProjectRootDirectory(
+          path,
+          rootInferredServicesChoice.selectedPath
+        );
+      } else {
+        rootDirectory = await inputRootDirectory(client, path, autoConfirm);
+        if (
+          rootDirectory &&
+          !(await validateRootDirectory(path, join(path, rootDirectory)))
+        ) {
+          return {
+            status: 'error',
+            exitCode: 1,
+            reason: 'INVALID_ROOT_DIRECTORY',
+          };
+        }
+      }
+
+      pathWithRootDirectory = rootDirectory ? join(path, rootDirectory) : path;
+      const selectedRootServicesSetup =
+        pathWithRootDirectory === path
+          ? null
+          : await getServicesSetupState(pathWithRootDirectory);
+      let selectedRootInferredServicesChoice: InferredServicesChoice | null =
+        null;
+      if (!skipSelectedRootInferredServicesPrompt) {
+        selectedRootInferredServicesChoice =
+          await promptForInferredServicesSetup({
+            client,
+            autoConfirm,
+            nonInteractive,
+            workPath: pathWithRootDirectory,
+            inferred: selectedRootServicesSetup?.inferredServices ?? null,
+            inferredWriteBlocker:
+              selectedRootServicesSetup?.inferredServicesWriteBlocker ?? null,
+          });
+      }
+
+      if (selectedRootServicesSetup?.hasConfiguredServices) {
+        displayConfiguredServicesSetup(
+          selectedRootServicesSetup.detectServicesResult
+        );
+        settings.framework = 'services';
+      } else if (selectedRootInferredServicesChoice?.type === 'services') {
+        settings.framework = 'services';
+      } else {
+        if (selectedRootInferredServicesChoice?.type === 'single-app') {
+          rootDirectory = toProjectRootDirectory(
+            path,
+            selectedRootInferredServicesChoice.selectedPath
+          );
+          pathWithRootDirectory = rootDirectory
+            ? join(path, rootDirectory)
+            : path;
+        }
+
+        const localConfig = await readConfig(pathWithRootDirectory);
+        if (localConfig instanceof CantParseJSONFile) {
+          output.prettyError(localConfig);
+          return { status: 'error', exitCode: 1 };
+        }
+
+        const isZeroConfig =
+          !localConfig ||
+          !localConfig.builds ||
+          localConfig.builds.length === 0;
+
+        if (isZeroConfig) {
+          // Single framework preset, or "Other" if no framework is detected.
+          const localConfigurationOverrides: PartialProjectSettings = {
+            buildCommand: localConfig?.buildCommand,
+            devCommand: localConfig?.devCommand,
+            framework: localConfig?.framework,
+            commandForIgnoringBuildStep: localConfig?.ignoreCommand,
+            installCommand: localConfig?.installCommand,
+            outputDirectory: localConfig?.outputDirectory,
+          };
+
+          // Run the framework detection logic against the local filesystem.
+          const detectedProjectsForWorkspace = await detectProjects(
+            pathWithRootDirectory
+          );
+
+          // Select the first framework detected, or use
+          // the "Other" preset if none was detected.
+          const detectedProjects = detectedProjectsForWorkspace.get('') || [];
+          const framework =
+            detectedProjects[0] ?? frameworkList.find(f => f.slug === null);
+
+          settings = await editProjectSettings(
+            client,
+            {},
+            framework,
+            autoConfirm,
+            localConfigurationOverrides
+          );
+        }
+      }
     }
 
     // Support for changing additional, less frequently used project settings.

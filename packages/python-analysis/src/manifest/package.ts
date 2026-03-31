@@ -127,6 +127,8 @@ export interface PythonVersionConfig {
   path: RelPath;
   /** Parsed Python version requests from the file. */
   data: PythonRequest[];
+  /** Raw version string from the file (e.g. "3.12", ">=3.12,<3.13"). */
+  specifier: string;
 }
 
 /**
@@ -328,6 +330,7 @@ function computeRequiresPython(
         request: pythonVersionConfig.data,
         source: pythonVersionConfig.path,
         prettySource: pythonVersionConfig.path,
+        specifier: pythonVersionConfig.specifier,
       });
       hasPythonVersionFile = true;
       break;
@@ -346,6 +349,7 @@ function computeRequiresPython(
           request: [request],
           source: manifest.path,
           prettySource: `"requires-python" key in ${manifest.path}`,
+          specifier: manifestRequiresPython,
         });
       }
     } else {
@@ -360,6 +364,7 @@ function computeRequiresPython(
             request: [request],
             source: workspaceManifest.path,
             prettySource: `"requires-python" key in ${workspaceManifest.path}`,
+            specifier: workspaceRequiresPython,
           });
         }
       }
@@ -647,7 +652,13 @@ async function maybeLoadRequirementsTxt(
   }
 
   try {
-    const pyproject = convertRequirementsToPyprojectToml(requirementsContent);
+    const pyproject = await convertRequirementsToPyprojectToml(
+      requirementsContent,
+      {
+        workingDir: path.join(root, subdir),
+        packageRoot: root,
+      }
+    );
 
     return {
       path: requirementsTxtRelPath,
@@ -718,5 +729,6 @@ async function maybeLoadPythonRequest(
     kind: PythonConfigKind.PythonVersion,
     path: dotPythonVersionRelPath,
     data: pyreq,
+    specifier: data.trim(),
   };
 }

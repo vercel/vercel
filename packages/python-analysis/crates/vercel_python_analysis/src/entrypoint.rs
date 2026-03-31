@@ -5,14 +5,14 @@
 //! - Top-level 'application' callables (Django)
 //! - Top-level 'handler' classes (BaseHTTPRequestHandler subclasses)
 
-use ruff_python_ast::visitor::{walk_body, walk_expr, Visitor};
 use ruff_python_ast::{Expr, Stmt};
 use ruff_python_parser::parse_module;
 
-pub(crate) fn contains_app_or_handler_impl(source: &str) -> bool {
+/// Returns the name of the matched app/handler variable, or `None` if not found.
+pub(crate) fn find_app_or_handler_impl(source: &str) -> Option<String> {
     let parsed = match parse_module(source) {
         Ok(parsed) => parsed,
-        Err(_) => return false, // Couldn't parse
+        Err(_) => return None, // Couldn't parse
     };
 
     // Iterate over top-level statements
@@ -22,8 +22,8 @@ pub(crate) fn contains_app_or_handler_impl(source: &str) -> bool {
             // e.g., app = Sanic() or app = Flask(__name__) or app = create_app()
             Stmt::Assign(assign) => {
                 for target in &assign.targets {
-                    if is_name_expr(target, "app") || is_name_expr(target, "application") {
-                        return true;
+                    if let Some(name) = get_name_if_matches(target, &["app", "application"]) {
+                        return Some(name.to_string());
                     }
                 }
             }
@@ -31,8 +31,10 @@ pub(crate) fn contains_app_or_handler_impl(source: &str) -> bool {
             // Check for annotated assignment to 'app' or 'application'
             // e.g., app: Sanic = Sanic()
             Stmt::AnnAssign(ann_assign) => {
-                if is_name_expr(&ann_assign.target, "app") || is_name_expr(&ann_assign.target, "application") {
-                    return true;
+                if let Some(name) =
+                    get_name_if_matches(&ann_assign.target, &["app", "application"])
+                {
+                    return Some(name.to_string());
                 }
             }
 
@@ -40,8 +42,9 @@ pub(crate) fn contains_app_or_handler_impl(source: &str) -> bool {
             // e.g., def app(environ, start_response): ...
             // e.g., async def app(scope, receive, send): ...
             Stmt::FunctionDef(func_def) => {
-                if func_def.name.as_str() == "app" || func_def.name.as_str() == "application" {
-                    return true;
+                let name = func_def.name.as_str();
+                if name == "app" || name == "application" {
+                    return Some(name.to_string());
                 }
             }
 
@@ -58,7 +61,7 @@ pub(crate) fn contains_app_or_handler_impl(source: &str) -> bool {
                         .map(|id| id.as_str())
                         .unwrap_or_else(|| alias.name.as_str());
                     if imported_as == "app" || imported_as == "application" {
-                        return true;
+                        return Some(imported_as.to_string());
                     }
                 }
             }
@@ -67,7 +70,7 @@ pub(crate) fn contains_app_or_handler_impl(source: &str) -> bool {
             // e.g., class handler(BaseHTTPRequestHandler):
             Stmt::ClassDef(class_def) => {
                 if class_def.name.as_str().eq_ignore_ascii_case("handler") {
-                    return true;
+                    return Some(class_def.name.as_str().to_string());
                 }
             }
 
@@ -76,7 +79,21 @@ pub(crate) fn contains_app_or_handler_impl(source: &str) -> bool {
         }
     }
 
-    false
+    None
+}
+
+fn get_name_if_matches<'a>(expr: &'a Expr, candidates: &[&str]) -> Option<&'a str> {
+    match expr {
+        Expr::Name(name_expr) => {
+            let name = name_expr.id.as_str();
+            if candidates.contains(&name) {
+                Some(name)
+            } else {
+                None
+            }
+        }
+        _ => None,
+    }
 }
 
 /// Check if a top-level callable with the given name exists in Python source.
@@ -139,19 +156,19 @@ pub(crate) fn get_string_constant_impl(source: &str, name: &str) -> Option<Strin
     for stmt in parsed.suite() {
         match stmt {
             Stmt::Assign(assign) => {
-                if assign.targets.len() == 1 && is_name_expr(&assign.targets[0], name) {
-                    if let Some(s) = expr_to_string_literal(&assign.value) {
-                        return Some(s);
-                    }
+                if assign.targets.len() == 1
+                    && is_name_expr(&assign.targets[0], name)
+                    && let Some(s) = expr_to_string_literal(&assign.value)
+                {
+                    return Some(s);
                 }
             }
             Stmt::AnnAssign(ann_assign) => {
-                if is_name_expr(&ann_assign.target, name) {
-                    if let Some(value) = &ann_assign.value {
-                        if let Some(s) = expr_to_string_literal(value) {
-                            return Some(s);
-                        }
-                    }
+                if is_name_expr(&ann_assign.target, name)
+                    && let Some(value) = &ann_assign.value
+                    && let Some(s) = expr_to_string_literal(value)
+                {
+                    return Some(s);
                 }
             }
             _ => {}
@@ -165,75 +182,6 @@ fn is_name_expr(expr: &Expr, name: &str) -> bool {
         Expr::Name(name_expr) => name_expr.id.as_str() == name,
         _ => false,
     }
-}
-
-fn is_name_or_attribute_expr(expr: &Expr, path: &[&str]) -> bool {
-    match path {
-        [] => false,
-        [single] => matches!(expr, Expr::Name(n) if n.id.as_str() == *single),
-        _ => {
-            let (last, rest) = path.split_last().unwrap();
-            match expr {
-                Expr::Attribute(attr) if attr.attr.as_str() == *last => {
-                    is_name_or_attribute_expr(attr.value.as_ref(), rest)
-                }
-                _ => false,
-            }
-        }
-    }
-}
-
-/// Extract the default value from os.environ.setdefault('DJANGO_SETTINGS_MODULE', '...')
-/// by parsing the Python source and walking the AST. Returns the second argument
-/// (e.g. 'app.settings') only if exactly one such call exists; returns None if
-/// there are zero or more than one.
-pub(crate) fn parse_django_settings_module_impl(source: &str) -> Option<String> {
-    let parsed = match parse_module(source) {
-        Ok(parsed) => parsed,
-        Err(_) => return None,
-    };
-    let mut finder = DjangoSettingsFinder {
-        matches: Vec::new(),
-    };
-    walk_body(&mut finder, parsed.suite());
-    match finder.matches.len() {
-        1 => Some(finder.matches.into_iter().next().unwrap()),
-        _ => None,
-    }
-}
-
-/// Visitor that walks the AST and collects every DJANGO_SETTINGS_MODULE value
-/// from os.environ.setdefault('DJANGO_SETTINGS_MODULE', ...) calls.
-struct DjangoSettingsFinder {
-    matches: Vec<String>,
-}
-
-impl Visitor<'_> for DjangoSettingsFinder {
-    fn visit_expr(&mut self, expr: &Expr) {
-        if let Expr::Call(call) = expr {
-            if let Some(settings) = match_django_setdefault_call(call) {
-                self.matches.push(settings);
-            }
-        }
-        walk_expr(self, expr);
-    }
-}
-
-/// Check if this Call is os.environ.setdefault('DJANGO_SETTINGS_MODULE', <second>)
-/// and return the second argument as a string if it is a string literal.
-fn match_django_setdefault_call(call: &ruff_python_ast::ExprCall) -> Option<String> {
-    if !is_name_or_attribute_expr(call.func.as_ref(), &["os", "environ", "setdefault"]) {
-        return None;
-    }
-    let args = &call.arguments.args;
-    if args.len() < 2 {
-        return None;
-    }
-    let first_str = expr_to_string_literal(&args[0])?;
-    if first_str != "DJANGO_SETTINGS_MODULE" {
-        return None;
-    }
-    expr_to_string_literal(&args[1])
 }
 
 fn expr_to_string_literal(expr: &Expr) -> Option<String> {
@@ -253,7 +201,7 @@ mod tests {
 from flask import Flask
 app = Flask(__name__)
 "#;
-        assert!(contains_app_or_handler_impl(source));
+        assert_eq!(find_app_or_handler_impl(source), Some("app".to_string()));
     }
 
     #[test]
@@ -262,7 +210,7 @@ app = Flask(__name__)
 from fastapi import FastAPI
 app = FastAPI()
 "#;
-        assert!(contains_app_or_handler_impl(source));
+        assert_eq!(find_app_or_handler_impl(source), Some("app".to_string()));
     }
 
     #[test]
@@ -271,7 +219,18 @@ app = FastAPI()
 from sanic import Sanic
 app: Sanic = Sanic()
 "#;
-        assert!(contains_app_or_handler_impl(source));
+        assert_eq!(find_app_or_handler_impl(source), Some("app".to_string()));
+    }
+
+    #[test]
+    fn test_application_variable() {
+        let source = r#"
+application = get_wsgi_application()
+"#;
+        assert_eq!(
+            find_app_or_handler_impl(source),
+            Some("application".to_string())
+        );
     }
 
     #[test]
@@ -280,7 +239,7 @@ app: Sanic = Sanic()
 def app(environ, start_response):
     pass
 "#;
-        assert!(contains_app_or_handler_impl(source));
+        assert_eq!(find_app_or_handler_impl(source), Some("app".to_string()));
     }
 
     #[test]
@@ -289,7 +248,7 @@ def app(environ, start_response):
 async def app(scope, receive, send):
     pass
 "#;
-        assert!(contains_app_or_handler_impl(source));
+        assert_eq!(find_app_or_handler_impl(source), Some("app".to_string()));
     }
 
     #[test]
@@ -297,7 +256,7 @@ async def app(scope, receive, send):
         let source = r#"
 from server import app
 "#;
-        assert!(contains_app_or_handler_impl(source));
+        assert_eq!(find_app_or_handler_impl(source), Some("app".to_string()));
     }
 
     #[test]
@@ -305,7 +264,7 @@ from server import app
         let source = r#"
 from server import application as app
 "#;
-        assert!(contains_app_or_handler_impl(source));
+        assert_eq!(find_app_or_handler_impl(source), Some("app".to_string()));
     }
 
     #[test]
@@ -315,7 +274,10 @@ from http.server import BaseHTTPRequestHandler
 class handler(BaseHTTPRequestHandler):
     pass
 "#;
-        assert!(contains_app_or_handler_impl(source));
+        assert_eq!(
+            find_app_or_handler_impl(source),
+            Some("handler".to_string())
+        );
     }
 
     #[test]
@@ -325,7 +287,10 @@ from http.server import BaseHTTPRequestHandler
 class Handler(BaseHTTPRequestHandler):
     pass
 "#;
-        assert!(contains_app_or_handler_impl(source));
+        assert_eq!(
+            find_app_or_handler_impl(source),
+            Some("Handler".to_string())
+        );
     }
 
     #[test]
@@ -334,7 +299,7 @@ class Handler(BaseHTTPRequestHandler):
 def main():
     print("Hello")
 "#;
-        assert!(!contains_app_or_handler_impl(source));
+        assert_eq!(find_app_or_handler_impl(source), None);
     }
 
     #[test]
@@ -342,7 +307,7 @@ def main():
         let source = r#"
 def invalid(
 "#;
-        assert!(!contains_app_or_handler_impl(source));
+        assert_eq!(find_app_or_handler_impl(source), None);
     }
 
     #[test]
@@ -353,7 +318,7 @@ def create():
     app = Flask(__name__)
     return app
 "#;
-        assert!(!contains_app_or_handler_impl(source));
+        assert_eq!(find_app_or_handler_impl(source), None);
     }
 
     // -------------------------------------------------------------------------
@@ -452,72 +417,5 @@ def outer():
     fn test_get_string_constant_non_string_value() {
         let source = r#"COUNT = 42"#;
         assert_eq!(get_string_constant_impl(source, "COUNT"), None);
-    }
-
-    // -------------------------------------------------------------------------
-    // parse_django_settings_module_impl
-    // -------------------------------------------------------------------------
-
-    #[test]
-    fn test_parse_django_settings_module_in_main() {
-        let source = r#"
-#!/usr/bin/env python
-import os
-import sys
-
-def main():
-    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'hello.settings')
-    from django.core.management import execute_from_command_line
-    execute_from_command_line(sys.argv)
-
-if __name__ == '__main__':
-    main()
-"#;
-        assert_eq!(
-            parse_django_settings_module_impl(source),
-            Some("hello.settings".to_string())
-        );
-    }
-
-    #[test]
-    fn test_parse_django_settings_module_app_settings() {
-        let source = r#"os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'app.settings')"#;
-        assert_eq!(
-            parse_django_settings_module_impl(source),
-            Some("app.settings".to_string())
-        );
-    }
-
-    #[test]
-    fn test_parse_django_settings_module_double_quotes() {
-        let source = r#"os.environ.setdefault("DJANGO_SETTINGS_MODULE", "myproject.settings")"#;
-        assert_eq!(
-            parse_django_settings_module_impl(source),
-            Some("myproject.settings".to_string())
-        );
-    }
-
-    #[test]
-    fn test_parse_django_settings_module_not_found() {
-        let source = r#"
-import os
-print("hello")
-"#;
-        assert_eq!(parse_django_settings_module_impl(source), None);
-    }
-
-    #[test]
-    fn test_parse_django_settings_module_invalid_syntax() {
-        let source = r#"os.environ.setdefault('DJANGO_SETTINGS_MODULE', "#;
-        assert_eq!(parse_django_settings_module_impl(source), None);
-    }
-
-    #[test]
-    fn test_parse_django_settings_module_multiple_matches() {
-        let source = r#"
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'app.settings')
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'other.settings')
-"#;
-        assert_eq!(parse_django_settings_module_impl(source), None);
     }
 }

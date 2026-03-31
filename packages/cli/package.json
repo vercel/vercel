@@ -1,6 +1,6 @@
 {
   "name": "vercel",
-  "version": "50.28.0",
+  "version": "50.37.3",
   "type": "module",
   "preferGlobal": true,
   "license": "Apache-2.0",
@@ -60,6 +60,7 @@
     "@vercel/nestjs": "workspace:*",
     "@vercel/next": "workspace:*",
     "@vercel/node": "workspace:*",
+    "@vercel/prepare-flags-definitions": "0.2.1",
     "@vercel/python": "workspace:*",
     "@vercel/redwood": "workspace:*",
     "@vercel/remix-builder": "workspace:*",

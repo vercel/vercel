@@ -1,5 +1,122 @@
 # @vercel/python
 
+## 6.28.0
+
+### Minor Changes
+
+- Update uv to v0.10.11 ([#15623](https://github.com/vercel/vercel/pull/15623))
+
+- Simplify python runtime by always passing in app variable ([#15635](https://github.com/vercel/vercel/pull/15635))
+
+### Patch Changes
+
+- Fix env marker-excluded deps erroneously flagged as lacking wheels ([#15668](https://github.com/vercel/vercel/pull/15668))
+
+- Updated dependencies [[`ac87d5a5ef5d79b55765e094efc957de987d7ac4`](https://github.com/vercel/vercel/commit/ac87d5a5ef5d79b55765e094efc957de987d7ac4), [`25a6a2daa46baba6e8d7dec90eb49213b8150b8c`](https://github.com/vercel/vercel/commit/25a6a2daa46baba6e8d7dec90eb49213b8150b8c)]:
+  - @vercel/python-analysis@0.11.0
+
+## 6.27.0
+
+### Minor Changes
+
+- Ensure django static files are copied in build output. ([#15557](https://github.com/vercel/vercel/pull/15557))
+
+## 6.26.0
+
+### Minor Changes
+
+- Fix building python projects with pyproject.toml but no python-version ([#15554](https://github.com/vercel/vercel/pull/15554))
+
+### Patch Changes
+
+- Add a small buffer to the final lambda size check. ([#15663](https://github.com/vercel/vercel/pull/15663))
+
+## 6.25.0
+
+### Minor Changes
+
+- Make specifying a different entry point variable actually work ([#15614](https://github.com/vercel/vercel/pull/15614))
+
+### Patch Changes
+
+- [services] allow services to share builder source ([#15631](https://github.com/vercel/vercel/pull/15631))
+
+- [python] update celery worker services declaration to support broker_url="vercel://" instead of having to import from vercel.workers.celery ([#15454](https://github.com/vercel/vercel/pull/15454))
+
+- Add `diagnostics` callback to produce package-manifest.json ([#15373](https://github.com/vercel/vercel/pull/15373))
+
+- Run the typechecker ([#15558](https://github.com/vercel/vercel/pull/15558))
+
+- Updated dependencies [[`8e8110d2eca5832e109f5efb64b192690100927d`](https://github.com/vercel/vercel/commit/8e8110d2eca5832e109f5efb64b192690100927d)]:
+  - @vercel/python-analysis@0.10.1
+
+## 6.24.0
+
+### Minor Changes
+
+- [services] add support for background workers to vc dev ([#15434](https://github.com/vercel/vercel/pull/15434))
+
+- Fix serving static files for a django WSGI app in vercel dev. ([#15501](https://github.com/vercel/vercel/pull/15501))
+
+- [services] add support for cron services to vc dev ([#15433](https://github.com/vercel/vercel/pull/15433))
+
+### Patch Changes
+
+- Use LAMBDA_SIZE_THRESHOLD_BYTES to determine remaining capacity. ([#15596](https://github.com/vercel/vercel/pull/15596))
+
+- [services] increase Python startup timeout to 5 minutes to match orchestrator ([#15535](https://github.com/vercel/vercel/pull/15535))
+
+- Force-bundle packages without compatible wheels instead of failing ([#15587](https://github.com/vercel/vercel/pull/15587))
+
+- Updated dependencies [[`3c4355fa1414aa3270ba4d36423aa647d49a9cf3`](https://github.com/vercel/vercel/commit/3c4355fa1414aa3270ba4d36423aa647d49a9cf3), [`267223f86eb578cc740db501fb2c2cbf43a27b37`](https://github.com/vercel/vercel/commit/267223f86eb578cc740db501fb2c2cbf43a27b37), [`e9a791d0fa04ef58695535fa508554415137fb58`](https://github.com/vercel/vercel/commit/e9a791d0fa04ef58695535fa508554415137fb58), [`12811e7bc827900d534aa25f5f3e2331a80ca6a8`](https://github.com/vercel/vercel/commit/12811e7bc827900d534aa25f5f3e2331a80ca6a8)]:
+  - @vercel/python-analysis@0.10.0
+
+## 6.23.0
+
+### Minor Changes
+
+- Run Django's `collectstatic` during Vercel builds, serving static files from the CDN and excluding them from the Lambda bundle. ([#15391](https://github.com/vercel/vercel/pull/15391))
+
+### Patch Changes
+
+- Leave 10mb of space for src code before packing lambda. ([#15475](https://github.com/vercel/vercel/pull/15475))
+
+## 6.22.1
+
+### Patch Changes
+
+- Revert the prepareCache python implementation. ([#15470](https://github.com/vercel/vercel/pull/15470))
+
+## 6.22.0
+
+### Minor Changes
+
+- [python] move vc_init_dev into vercel-runtime ([#15419](https://github.com/vercel/vercel/pull/15419))
+
+### Patch Changes
+
+- Updated dependencies [[`a67131396956632b060895afe44b26bb99941817`](https://github.com/vercel/vercel/commit/a67131396956632b060895afe44b26bb99941817)]:
+  - @vercel/python-analysis@0.9.1
+
+## 6.21.0
+
+### Minor Changes
+
+- [python] add support for module-based entrypoints for cron jobs ([#15393](https://github.com/vercel/vercel/pull/15393))
+
+- Avoid doing entry point detection on every request to a python dev server ([#15365](https://github.com/vercel/vercel/pull/15365))
+
+- For the django frontend, dynamically load settings.py instead of parsing it ([#15367](https://github.com/vercel/vercel/pull/15367))
+
+### Patch Changes
+
+- speed up python entrypoint detection ([#15402](https://github.com/vercel/vercel/pull/15402))
+
+- Add Python builder cache preparation for Build Output API v3 cache globs, the builder virtualenv, and the repo-local uv cache. ([#15407](https://github.com/vercel/vercel/pull/15407))
+
+- Updated dependencies [[`83e804013528fc54de31082960ae31f58339bd71`](https://github.com/vercel/vercel/commit/83e804013528fc54de31082960ae31f58339bd71), [`921314f958c4ec85adb09e020310a5becb7f866c`](https://github.com/vercel/vercel/commit/921314f958c4ec85adb09e020310a5becb7f866c)]:
+  - @vercel/python-analysis@0.9.0
+
 ## 6.20.2
 
 ### Patch Changes

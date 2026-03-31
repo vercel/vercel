@@ -1,0 +1,21 @@
+[package]
+name = "unicode-normalization"
+version = "0.1.25"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+host-bridge = { path = "../host-bridge" }
+unicode-normalization-upstream = { package = "unicode-normalization", git = "https://github.com/unicode-rs/unicode-normalization", rev = "576ae0b", optional = true }
+
+[[test]]
+name = "norm"
+harness = false
+
+[dev-dependencies]
+wasm-test-support = { path = "../wasm-test-support" }
+
+[features]
+default = ["std"]
+std = []
+upstream = ["dep:unicode-normalization-upstream"]

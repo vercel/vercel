@@ -109,6 +109,8 @@ export interface Integration {
   slug: string;
   name: string;
   products?: IntegrationProduct[];
+  /** Integration-level metadata schema (e.g. org name, region for Sentry). */
+  metadataSchema?: MetadataSchema;
   eulaDocUri?: string;
   privacyDocUri?: string;
   capabilities?: {

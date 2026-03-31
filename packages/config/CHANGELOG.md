@@ -1,5 +1,43 @@
 # @vercel/router-sdk
 
+## 0.1.0
+
+### Minor Changes
+
+- [services] support multiple topics for a single worker service ([#15615](https://github.com/vercel/vercel/pull/15615))
+
+- [services] support for specifying an env prefix for each service ([#15641](https://github.com/vercel/vercel/pull/15641))
+
+### Patch Changes
+
+- Updated dependencies [[`13f719da050ba4b73b95b51e8edf7141c967b9a2`](https://github.com/vercel/vercel/commit/13f719da050ba4b73b95b51e8edf7141c967b9a2)]:
+  - @vercel/routing-utils@6.1.1
+
+## 0.0.41
+
+### Patch Changes
+
+- Updated dependencies [[`62b9c34a92fe6d60d73f81a1674c2e483f12fc8f`](https://github.com/vercel/vercel/commit/62b9c34a92fe6d60d73f81a1674c2e483f12fc8f)]:
+  - @vercel/routing-utils@6.1.0
+
+## 0.0.40
+
+### Patch Changes
+
+- [config] Fix rewrite() and redirect() return types for VercelConfig compatibility ([#15566](https://github.com/vercel/vercel/pull/15566))
+
+## 0.0.39
+
+### Patch Changes
+
+- [services] adds support for subdomai configuration in experimentalServices ([#15401](https://github.com/vercel/vercel/pull/15401))
+
+## 0.0.38
+
+### Patch Changes
+
+- Fix type generation ([#15386](https://github.com/vercel/vercel/pull/15386))
+
 ## 0.0.37
 
 ### Patch Changes

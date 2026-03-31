@@ -86,9 +86,9 @@ export interface FunctionConfig {
    */
   includeFiles?: string;
   /**
-   * An integer defining how long your Serverless Function should be allowed to run on every request in seconds (between 1 and the maximum limit of your plan).
+   * An integer defining how long your Serverless Function should be allowed to run on every request in seconds (between 1 and the maximum limit of your plan), or the string `'max'` to use the maximum duration allowed by your plan.
    */
-  maxDuration?: number;
+  maxDuration?: number | 'max';
   /**
    * An integer defining the memory your Serverless Function should be provided with (between 128 and 10240).
    */
@@ -579,6 +579,10 @@ export interface VercelConfig {
        */
       routePrefix?: string;
       /**
+       * Subdomain for host-based routing (web services only).
+       */
+      subdomain?: string;
+      /**
        * Framework to use.
        */
       framework?: string;
@@ -619,13 +623,17 @@ export interface VercelConfig {
        */
       schedule?: string;
       /**
-       * Topic name for worker subscription.
+       * Topic names for worker subscription.
        */
-      topic?: string;
+      topics?: string[];
       /**
        * Consumer group name for worker subscription.
        */
       consumer?: string;
+      /**
+       * Custom prefix to use to inject service URL env vars.
+       */
+      envPrefix?: string;
     }
   >;
   /**

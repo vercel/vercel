@@ -11,6 +11,11 @@ export interface ActionRequiredPayload {
   reason?: string;
   action?: string;
   message: string;
+  /**
+   * When true, a human must act (e.g. login in TTY, approve in browser).
+   * Agents should surface this to the user instead of retrying alone.
+   */
+  userActionRequired?: boolean;
   /** Hint for agents: run one of the commands in next[] to complete without prompting. */
   hint?: string;
   verification_uri?: string;
@@ -39,9 +44,18 @@ export function isActionRequiredPayload(
  */
 export interface AgentErrorPayload {
   status: 'error';
+  /**
+   * Short, stable machine-readable reason code.
+   * Prefer values from AGENT_REASON so agents can branch reliably.
+   */
   reason: string;
+  /** Human-readable message (no ANSI). */
   message: string;
-  next?: Array<{ command: string }>;
+  next?: Array<{ command: string; when?: string }>;
+  /** Optional extra context for agents (plain text, no ANSI). */
+  hint?: string;
+  /** When true, a human must act before the command can succeed. */
+  userActionRequired?: boolean;
 }
 
 /**
@@ -56,6 +70,89 @@ export function buildCommandWithYes(
   const hasYes = args.some(a => a === '--yes' || a === '-y');
   const out = hasYes ? [...args] : [...args, '--yes'];
   return `${pkgName} ${out.join(' ')}`;
+}
+
+/** Global flags that should be preserved in suggested "next" commands (e.g. --cwd, --non-interactive). */
+const GLOBAL_FLAG_NAMES = new Set([
+  '--cwd',
+  '--config',
+  '--yes',
+  '-y',
+  '--non-interactive',
+  '--scope',
+  '--team',
+  '-S',
+  '-T',
+  '--token',
+]);
+
+/**
+ * Returns global flag args from argv so suggested commands can include them (e.g. --cwd, --non-interactive).
+ */
+export function getGlobalFlagsFromArgv(argv: string[]): string[] {
+  const args = argv.slice(2);
+  const out: string[] = [];
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    const name = arg.startsWith('--') ? arg.split('=')[0] : arg;
+    if (GLOBAL_FLAG_NAMES.has(name)) {
+      out.push(arg);
+      if (
+        !arg.includes('=') &&
+        i + 1 < args.length &&
+        !args[i + 1].startsWith('-')
+      ) {
+        out.push(args[i + 1]);
+        i++;
+      }
+    }
+  }
+  return out;
+}
+
+/**
+ * Options for buildCommandWithGlobalFlags.
+ * excludeFlags: flag names to omit from the suggested command (e.g. ['--non-interactive'] for login).
+ */
+export interface BuildCommandWithGlobalFlagsOptions {
+  excludeFlags?: string[];
+}
+
+/**
+ * Builds a suggested command string from a template and appends global flags from argv
+ * (e.g. --cwd, --non-interactive) so the next command can be run with the same context.
+ * Use excludeFlags to omit flags that must not appear (e.g. --non-interactive for login).
+ */
+export function buildCommandWithGlobalFlags(
+  argv: string[],
+  commandTemplate: string,
+  pkgName: string = packageName,
+  options?: BuildCommandWithGlobalFlagsOptions
+): string {
+  let preserved = getGlobalFlagsFromArgv(argv);
+  if (options?.excludeFlags?.length) {
+    const exclude = new Set(options.excludeFlags);
+    const out: string[] = [];
+    for (let i = 0; i < preserved.length; i++) {
+      const arg = preserved[i];
+      const name = arg.startsWith('--') ? arg.split('=')[0] : arg;
+      if (exclude.has(name)) {
+        if (
+          !arg.includes('=') &&
+          i + 1 < preserved.length &&
+          !preserved[i + 1].startsWith('-')
+        ) {
+          i++;
+        }
+        continue;
+      }
+      out.push(arg);
+    }
+    preserved = out;
+  }
+  const base = `${pkgName} ${commandTemplate}`;
+  if (preserved.length === 0) return base;
+  return `${base} ${preserved.join(' ')}`;
 }
 
 /**
@@ -282,8 +379,7 @@ export function outputActionRequired(
     enriched.hint =
       'Run one of the commands in next[] to complete without prompting.';
   }
-  // biome-ignore lint/suspicious/noConsole: intentional console usage
-  console.log(JSON.stringify(enriched, null, 2));
+  client.stdout.write(`${JSON.stringify(enriched, null, 2)}\n`);
   process.exit(exitCode);
 }
 
@@ -300,7 +396,16 @@ export function outputAgentError(
   if (!client.nonInteractive) {
     return;
   }
-  // biome-ignore lint/suspicious/noConsole: intentional console usage
-  console.log(JSON.stringify(payload, null, 2));
+  client.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
   process.exit(exitCode);
+}
+
+/**
+ * Returns a shell command that opens a URL in the user's default browser.
+ * Used in agent error payloads so the `next[]` command is directly runnable.
+ */
+export function openUrlInBrowserCommand(url: string): string {
+  if (process.platform === 'win32') return `start ${url}`;
+  if (process.platform === 'darwin') return `open '${url}'`;
+  return `xdg-open '${url}'`;
 }

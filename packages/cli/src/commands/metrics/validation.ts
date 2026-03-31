@@ -1,30 +1,33 @@
 import type { ValidationResult, ValidatedResult } from './types';
-import type { MetricsAggregation } from './schema-data';
+import type { Schema } from './schema-api';
+import { validateAllProjectMutualExclusivity } from '../../util/command-validation';
 import {
   getEventNames,
   getEvent,
   getMeasures,
   getAggregations,
   getDimensions,
-} from './schema-data';
+} from './schema-api';
+import type { Aggregation } from './types';
 
-export function validateEvent(event: string): ValidationResult {
-  if (getEvent(event)) {
+export function validateEvent(schema: Schema, event: string): ValidationResult {
+  if (getEvent(schema, event)) {
     return { valid: true };
   }
   return {
     valid: false,
     code: 'UNKNOWN_EVENT',
     message: `Unknown event "${event}".`,
-    allowedValues: getEventNames(),
+    allowedValues: getEventNames(schema),
   };
 }
 
 export function validateMeasure(
+  schema: Schema,
   event: string,
   measure: string
 ): ValidationResult {
-  const measures = getMeasures(event);
+  const measures = getMeasures(schema, event);
   if (measures.some(m => m.name === measure)) {
     return { valid: true };
   }
@@ -37,11 +40,12 @@ export function validateMeasure(
 }
 
 export function validateAggregation(
+  schema: Schema,
   event: string,
   measure: string,
   aggregation: string
-): ValidatedResult<MetricsAggregation> {
-  const aggs = getAggregations(event, measure);
+): ValidatedResult<Aggregation> {
+  const aggs = getAggregations(schema, event, measure);
   const found = aggs.find(agg => agg === aggregation);
   if (found) {
     return { valid: true, value: found };
@@ -55,10 +59,11 @@ export function validateAggregation(
 }
 
 export function validateGroupBy(
+  schema: Schema,
   event: string,
   dims: string[]
 ): ValidationResult {
-  const dimensions = getDimensions(event);
+  const dimensions = getDimensions(schema, event);
   for (const dim of dims) {
     const found = dimensions.find(d => d.name === dim);
     if (!found) {
@@ -69,15 +74,6 @@ export function validateGroupBy(
         allowedValues: dimensions.map(d => d.name),
       };
     }
-    if (found.filterOnly) {
-      return {
-        valid: false,
-        code: 'FILTER_ONLY_DIMENSION',
-        message:
-          `Dimension "${dim}" on event "${event}" is filter-only and cannot be used in --group-by.\n` +
-          `Use it with --filter instead: --filter "${dim} eq '<value>'"`,
-      };
-    }
   }
   return { valid: true };
 }
@@ -86,14 +82,7 @@ export function validateMutualExclusivity(
   all: boolean | undefined,
   project: string | undefined
 ): ValidationResult {
-  if (all && project) {
-    return {
-      valid: false,
-      code: 'MUTUAL_EXCLUSIVITY',
-      message: 'Cannot specify both --all and --project. Use one or the other.',
-    };
-  }
-  return { valid: true };
+  return validateAllProjectMutualExclusivity(all, project);
 }
 
 export function validateRequiredEvent(

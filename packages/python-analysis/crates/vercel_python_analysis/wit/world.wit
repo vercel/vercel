@@ -1,15 +1,49 @@
 package vercel:python-analysis;
 
+interface host-utils {
+    /// IDNA domain-to-ASCII conversion (WHATWG URL Standard).
+    /// Normalizes a domain name to ASCII using UTS #46 rules.
+    domain-to-ascii: func(domain: string) -> result<string, string>;
+
+    /// IDNA domain-to-Unicode conversion (WHATWG URL Standard).
+    /// Converts a domain name to its Unicode display form with full UTS #46
+    /// case folding and normalization.
+    /// Returns the best-effort result (even on error) and a separate error flag.
+    domain-to-unicode: func(domain: string) -> tuple<string, bool>;
+
+    /// Unicode NFC normalization (canonical decomposition + canonical composition).
+    nfc-normalize: func(s: string) -> string;
+
+    /// Unicode NFD normalization (canonical decomposition).
+    nfd-normalize: func(s: string) -> string;
+
+    /// Unicode NFKC normalization (compatibility decomposition + canonical composition).
+    nfkc-normalize: func(s: string) -> string;
+
+    /// Unicode NFKD normalization (compatibility decomposition).
+    nfkd-normalize: func(s: string) -> string;
+
+    /// Read a file to a UTF-8 string (for requirements.txt `-r`/`-c` recursion).
+    read-file: func(path: string) -> result<string, string>;
+}
+
+/// Import-only world used by the host-bridge crate to generate bindings
+/// for the host-utils imports without pulling in the full export surface.
+world host-bridge {
+    import host-utils;
+}
+
 /// Semantic analysis of Python source code
 world python-analysis {
+    import host-utils;
     /// Check if Python source code contains or exports:
     /// - A top-level 'app' callable (e.g., Flask, FastAPI, Sanic apps)
     /// - A top-level 'application' callable (e.g., Django)
     /// - A top-level 'handler' class (e.g., BaseHTTPRequestHandler subclass)
     ///
-    /// Returns true if found, false otherwise.
-    /// Returns false for invalid Python syntax.
-    export contains-app-or-handler: func(source: string) -> bool;
+    /// Returns the matched variable name if found, or none otherwise.
+    /// Returns none for invalid Python syntax.
+    export find-app-or-handler: func(source: string) -> option<string>;
 
     /// Extract the string value of a top-level constant with the given name.
     /// Only considers simple or annotated assignments at module level whose value is a string literal.
@@ -20,11 +54,6 @@ world python-analysis {
     /// Returns true if found, false otherwise.
     /// Returns false for invalid Python syntax.
     export contains-top-level-callable: func(source: string, name: string) -> bool;
-
-    /// Extract the default value from os.environ.setdefault('DJANGO_SETTINGS_MODULE', '...')
-    /// in Python source (e.g. manage.py). Returns the second argument (e.g. 'app.settings')
-    /// or none if not found or parse error.
-    export parse-django-settings-module: func(source: string) -> option<string>;
 
     // =========================================================================
     // Installed package distribution metadata parsing
@@ -96,4 +125,99 @@ world python-analysis {
 
     /// Normalize a package name per PEP 503.
     export normalize-package-name: func(name: string) -> string;
+
+    // =========================================================================
+    // Requirements.txt parsing
+    // =========================================================================
+
+    /// Parsed VCS (Git) URL information.
+    record parsed-vcs-info {
+        /// Repository URL (without git+ prefix, @ref, or #fragment).
+        url: string,
+        /// Requested revision (branch, tag, or commit hash).
+        rev: option<string>,
+    }
+
+    /// A single parsed requirement entry from requirements.txt.
+    record parsed-req-entry {
+        name: option<string>,
+        pep508: string,
+        extras: list<string>,
+        markers: option<string>,
+        version-spec: option<string>,
+        url: option<string>,
+        hashes: list<string>,
+        editable: bool,
+        /// Parsed VCS info if this is a git+ URL.
+        vcs: option<parsed-vcs-info>,
+        /// The URL/path as originally written by the user (before resolution).
+        given-url: option<string>,
+    }
+
+    /// Full parsed requirements.txt result.
+    record parsed-requirements-txt {
+        requirements: list<parsed-req-entry>,
+        editables: list<parsed-req-entry>,
+        index-url: option<string>,
+        extra-index-urls: list<string>,
+        find-links: list<string>,
+        no-index: bool,
+    }
+
+    /// Parse requirements.txt content into structured data.
+    /// `working-dir` is used to resolve relative paths to file:// URLs.
+    /// `filename` is the name of the file being parsed (used in error messages);
+    /// defaults to "requirements.txt" if not provided.
+    export parse-requirements-txt: func(content: string, working-dir: option<string>, filename: option<string>) -> result<parsed-requirements-txt, string>;
+
+    // =========================================================================
+    // PEP 508 parsing
+    // =========================================================================
+
+    /// Parse a single PEP 508 dependency string
+    /// (e.g. "flask[async]>=2.0 ; python_version >= '3.8'")
+    /// into a structured requirement entry.
+    /// Returns an error string if the input is not a valid PEP 508 specifier.
+    export parse-pep508: func(dep: string) -> result<parsed-req-entry, string>;
+
+    // =========================================================================
+    // Wheel compatibility checking
+    // =========================================================================
+
+    /// Check if a wheel filename is compatible with a given platform.
+    ///
+    /// `wheel-filename` is the wheel filename (e.g. "numpy-1.26.4-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl").
+    /// `os-name` is one of "manylinux", "musllinux", "macos", "windows".
+    /// `arch-name` is e.g. "x86_64", "aarch64".
+    /// `os-major`/`os-minor` is the glibc version (for Linux) or macOS version.
+    export is-wheel-compatible: func(
+        wheel-filename: string,
+        python-major: u8,
+        python-minor: u8,
+        os-name: string,
+        arch-name: string,
+        os-major: u16,
+        os-minor: u16,
+    ) -> result<bool, string>;
+
+    // =========================================================================
+    // PEP 508 environment marker evaluation
+    // =========================================================================
+
+    /// Evaluate a PEP 508 environment marker against a target environment.
+    ///
+    /// `marker` is a PEP 508 marker expression (e.g. "sys_platform == 'win32'").
+    /// `sys-platform` is e.g. "linux", "win32", "darwin".
+    /// `platform-machine` is e.g. "x86_64", "aarch64".
+    /// The remaining environment variables (`os_name`, `platform_system`, etc.)
+    /// are derived from `sys-platform`.
+    ///
+    /// Returns true if the marker is satisfied for the target environment.
+    export evaluate-marker: func(
+        marker: string,
+        python-major: u8,
+        python-minor: u8,
+        sys-platform: string,
+        platform-machine: string,
+    ) -> result<bool, string>;
 }
