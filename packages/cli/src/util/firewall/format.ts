@@ -224,21 +224,16 @@ export function formatIpBlocksTable(annotated: AnnotatedIpRule[]): string {
     'Hostname'.length,
     ...hostnames.map(h => h.length)
   );
-  const actionWidth = Math.max(
-    'Action'.length,
-    ...annotated.map(a => a.rule.action.length)
-  );
 
   // Header
   lines.push(
-    `  ${' '.repeat(prefixWidth)}${chalk.dim('IP/CIDR'.padEnd(ipWidth + gap))}${chalk.dim('Hostname'.padEnd(hostnameWidth + gap))}${chalk.dim('Action'.padEnd(actionWidth + gap))}${chalk.dim('Notes')}`
+    `  ${' '.repeat(prefixWidth)}${chalk.dim('IP/CIDR'.padEnd(ipWidth + gap))}${chalk.dim('Hostname'.padEnd(hostnameWidth + gap))}${chalk.dim('Notes')}`
   );
 
   for (let i = 0; i < annotated.length; i++) {
     const { rule, status } = annotated[i];
     const ip = rule.ip.padEnd(ipWidth + gap);
     const hostname = hostnames[i].padEnd(hostnameWidth + gap);
-    const action = rule.action.padEnd(actionWidth + gap);
     const notes = rule.notes || '';
 
     let prefix = '  ';
@@ -255,7 +250,7 @@ export function formatIpBlocksTable(annotated: AnnotatedIpRule[]): string {
       colorFn = chalk.yellow;
     }
 
-    lines.push(colorFn(`  ${prefix}${ip}${hostname}${action}${notes}`));
+    lines.push(colorFn(`  ${prefix}${ip}${hostname}${notes}`));
   }
 
   return lines.join('\n');

@@ -201,7 +201,8 @@ export const systemBypassSubcommand = {
 export const ipBlocksListSubcommand = {
   name: 'list',
   aliases: ['ls'],
-  description: 'List IP blocking rules (shows draft state if a draft exists)',
+  description:
+    'List all IP blocking rules, including any unpublished draft changes',
   arguments: [],
   options: [
     {
@@ -223,7 +224,7 @@ export const ipBlocksListSubcommand = {
 export const ipBlocksBlockSubcommand = {
   name: 'block',
   aliases: [],
-  description: 'Block an IP address or CIDR range',
+  description: 'Block an IP address or CIDR range from accessing your project',
   arguments: [{ name: 'ip', required: true }],
   options: [
     {
@@ -231,14 +232,8 @@ export const ipBlocksBlockSubcommand = {
       shorthand: null,
       type: String,
       deprecated: false,
-      description: 'Scope block to a specific hostname (default: all hosts)',
-    },
-    {
-      name: 'action',
-      shorthand: null,
-      type: String,
-      deprecated: false,
-      description: 'Action: deny, challenge, log, or bypass (default: deny)',
+      description:
+        'Scope block to a specific hostname (default: * for all hosts)',
     },
     {
       name: 'notes',
@@ -259,8 +254,8 @@ export const ipBlocksBlockSubcommand = {
       value: `${packageName} firewall ip-blocks block 10.0.0.0/24 --notes "Suspicious range"`,
     },
     {
-      name: 'Block with challenge action',
-      value: `${packageName} firewall ip-blocks block 5.6.7.8 --action challenge`,
+      name: 'Block scoped to a hostname',
+      value: `${packageName} firewall ip-blocks block 1.2.3.4 --hostname example.com`,
     },
   ],
 } as const;
@@ -268,7 +263,8 @@ export const ipBlocksBlockSubcommand = {
 export const ipBlocksUnblockSubcommand = {
   name: 'unblock',
   aliases: ['rm'],
-  description: 'Remove an IP blocking rule',
+  description:
+    'Remove an IP blocking rule to allow the address to access your project again',
   arguments: [{ name: 'id-or-ip', required: true }],
   options: [yesOption],
   examples: [
@@ -286,7 +282,8 @@ export const ipBlocksUnblockSubcommand = {
 export const ipBlocksSubcommand = {
   name: 'ip-blocks',
   aliases: [],
-  description: 'Manage IP blocking rules',
+  description:
+    'Manage IP blocking rules that deny access from specific addresses or ranges',
   arguments: [],
   subcommands: [
     ipBlocksListSubcommand,

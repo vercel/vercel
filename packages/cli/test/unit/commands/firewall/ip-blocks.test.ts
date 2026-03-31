@@ -94,7 +94,9 @@ describe('firewall ip-blocks', () => {
 
       client.setArgv('firewall', 'ip-blocks', 'block', '10.0.0.1', '--yes');
       const exitCodePromise = firewall(client);
-      await expect(client.stderr).toOutput('IP block for 10.0.0.1 staged');
+      await expect(client.stderr).toOutput(
+        'IP block for 10.0.0.1 on all hosts staged'
+      );
       expect(await exitCodePromise).toEqual(0);
     });
 
@@ -105,11 +107,13 @@ describe('firewall ip-blocks', () => {
 
       client.setArgv('firewall', 'ip-blocks', 'block', '10.0.0.0/24', '--yes');
       const exitCodePromise = firewall(client);
-      await expect(client.stderr).toOutput('IP block for 10.0.0.0/24 staged');
+      await expect(client.stderr).toOutput(
+        'IP block for 10.0.0.0/24 on all hosts staged'
+      );
       expect(await exitCodePromise).toEqual(0);
     });
 
-    it('should accept --hostname and --action flags', async () => {
+    it('should accept --hostname flag', async () => {
       useListFirewallConfigs(createConfig(), null);
       usePatchDraft();
       useActivateConfig();
@@ -121,8 +125,6 @@ describe('firewall ip-blocks', () => {
         '10.0.0.1',
         '--hostname',
         'example.com',
-        '--action',
-        'challenge',
         '--yes'
       );
       const exitCodePromise = firewall(client);
@@ -148,21 +150,6 @@ describe('firewall ip-blocks', () => {
       client.setArgv('firewall', 'ip-blocks', 'block', '10.0.0.0/8', '--yes');
       const exitCodePromise = firewall(client);
       await expect(client.stderr).toOutput('net mask less than /16');
-      expect(await exitCodePromise).toEqual(1);
-    });
-
-    it('should reject invalid action', async () => {
-      client.setArgv(
-        'firewall',
-        'ip-blocks',
-        'block',
-        '10.0.0.1',
-        '--action',
-        'invalid',
-        '--yes'
-      );
-      const exitCodePromise = firewall(client);
-      await expect(client.stderr).toOutput('Invalid action');
       expect(await exitCodePromise).toEqual(1);
     });
 

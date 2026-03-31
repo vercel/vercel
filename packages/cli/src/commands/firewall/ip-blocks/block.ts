@@ -19,8 +19,6 @@ import {
 import stamp from '../../../util/output/stamp';
 import { outputAgentError } from '../../../util/agent-output';
 
-const VALID_ACTIONS = ['deny', 'challenge', 'log', 'bypass'];
-
 export default async function block(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(
     argv,
@@ -45,16 +43,7 @@ export default async function block(client: Client, argv: string[]) {
 
   const hostnameFlag = parsed.flags['--hostname'] as string | undefined;
   const hostname = hostnameFlag && hostnameFlag !== '' ? hostnameFlag : '*';
-  const action = (parsed.flags['--action'] as string) || 'deny';
   const notes = parsed.flags['--notes'] as string | undefined;
-
-  // Validate action
-  if (!VALID_ACTIONS.includes(action)) {
-    output.error(
-      `Invalid action "${action}". Valid options: ${VALID_ACTIONS.join(', ')}`
-    );
-    return 1;
-  }
 
   // Validate hostname if not wildcard
   if (hostname !== '*') {
@@ -85,7 +74,7 @@ export default async function block(client: Client, argv: string[]) {
   const confirmed = await confirmAction(
     client,
     parsed.flags['--yes'],
-    `Block ${chalk.bold(ip)} on ${chalk.bold(hostnameLabel)} with action ${chalk.bold(action)}?`
+    `Block ${chalk.bold(ip)} on ${chalk.bold(hostnameLabel)}?`
   );
 
   if (!confirmed) {
@@ -112,7 +101,7 @@ export default async function block(client: Client, argv: string[]) {
         value: {
           ip,
           hostname,
-          action,
+          action: 'deny',
           ...(notes ? { notes } : {}),
         },
       },
@@ -120,7 +109,7 @@ export default async function block(client: Client, argv: string[]) {
     );
 
     output.log(
-      `${chalk.cyan('Success!')} IP block for ${chalk.bold(ip)} staged ${chalk.gray(blockStamp())}`
+      `${chalk.cyan('Success!')} IP block for ${chalk.bold(ip)} on ${chalk.bold(hostnameLabel)} staged ${chalk.gray(blockStamp())}`
     );
 
     await offerAutoPublish(client, project.id, hadExistingDraft, {
@@ -141,7 +130,7 @@ export default async function block(client: Client, argv: string[]) {
           {
             command: withGlobalFlags(
               client,
-              `firewall ip-blocks block ${ip} --action ${action}${hostname !== '*' ? ` --hostname ${hostname}` : ''} --yes`
+              `firewall ip-blocks block ${ip}${hostname !== '*' ? ` --hostname ${hostname}` : ''} --yes`
             ),
           },
         ],
