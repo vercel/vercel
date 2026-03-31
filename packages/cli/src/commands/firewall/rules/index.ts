@@ -4,6 +4,8 @@ import getInvalidSubcommand from '../../../util/get-invalid-subcommand';
 import getSubcommand from '../../../util/get-subcommand';
 import { printError } from '../../../util/error';
 import { type Command, help } from '../../help';
+import list from './list';
+import inspect from './inspect';
 import {
   firewallCommand,
   rulesSubcommand,
@@ -74,7 +76,7 @@ export default async function main(client: Client, args: string[]) {
         return 2;
       }
       telemetry.trackCliSubcommandRulesList(subcommandOriginal);
-      return (await import('./list')).default(client, subArgs);
+      return list(client, subArgs);
     case 'inspect':
       if (needHelp) {
         telemetry.trackCliFlagHelp('firewall', `rules:${subcommandOriginal}`);
@@ -82,7 +84,7 @@ export default async function main(client: Client, args: string[]) {
         return 2;
       }
       telemetry.trackCliSubcommandRulesInspect(subcommandOriginal);
-      return (await import('./inspect')).default(client, subArgs);
+      return inspect(client, subArgs);
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
       output.print(
