@@ -21,6 +21,7 @@ import {
   getGlobalFlagsOnlyFromArgs,
   getSameSubcommandSuggestionFlags,
 } from '../../util/arg-common';
+import { getProjectLink } from '../../util/projects/link';
 
 /** Append global argv flags (--cwd, --non-interactive, etc.) so agents can re-run with same context. */
 function withGlobalFlags(client: Client, commandTemplate: string): string {
@@ -37,6 +38,30 @@ const updateCurrentTeam = (config: GlobalConfig, team?: Team) => {
 
   writeToConfigFile(config);
 };
+
+/**
+ * After switching scope, check if the cwd has a .vercel/project.json or
+ * .vercel/repo.json whose orgId differs from the newly active scope.
+ * If so, warn the user that project-bound commands will still use the
+ * linked project's team.
+ *
+ * This is a read-only, best-effort check — it never modifies link files.
+ */
+async function warnIfStaleLinkExists(
+  client: Client,
+  newOrgId: string
+): Promise<void> {
+  const link = await getProjectLink(client, client.cwd).catch(() => null);
+  if (!link) return;
+
+  if (link.orgId !== newOrgId) {
+    output.warn(
+      `This directory is linked to a project under a different team/scope. ` +
+        `Commands like \`deploy\` will still use the linked project's team. ` +
+        `Run \`vc link\` to re-link.`
+    );
+  }
+}
 
 export default async function change(client: Client, argv: string[]) {
   let parsedArgs;
@@ -287,6 +312,7 @@ export default async function change(client: Client, argv: string[]) {
     output.success(
       `Your account (${chalk.bold(user.username)}) is now active!`
     );
+    await warnIfStaleLinkExists(client, user.id);
     return 0;
   }
 
@@ -335,5 +361,6 @@ export default async function change(client: Client, argv: string[]) {
   output.success(
     `The team ${chalk.bold(newTeam.name)} (${newTeam.slug}) is now active!`
   );
+  await warnIfStaleLinkExists(client, newTeam.id);
   return 0;
 }

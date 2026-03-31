@@ -1,8 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
+import { join } from 'path';
+import { outputFile } from 'fs-extra';
 import { client } from '../../../mocks/client';
 import teams from '../../../../src/commands/teams';
 import { useUser } from '../../../mocks/user';
-import { useTeam } from '../../../mocks/team';
+import { useTeam, createTeam } from '../../../mocks/team';
+import { setupTmpDir } from '../../../helpers/setup-unit-fixture';
 
 describe('teams switch', () => {
   describe('non-northstar', () => {
@@ -255,6 +258,57 @@ describe('teams switch', () => {
       logSpy.mockRestore();
       exitSpy.mockRestore();
       client.nonInteractive = false;
+    });
+  });
+
+  describe('stale-link detection', () => {
+    it('should warn when switching to a team that differs from the linked project', async () => {
+      useUser();
+      const teamA = useTeam('team_aaa');
+      const teamB = createTeam('team_bbb', 'team-b', 'Team B');
+
+      // Link cwd to team_aaa
+      const cwd = setupTmpDir();
+      client.cwd = cwd;
+      await outputFile(
+        join(cwd, '.vercel', 'project.json'),
+        JSON.stringify({ projectId: 'prj_xxx', orgId: 'team_aaa' })
+      );
+
+      // Switch to team-b via slug
+      client.config.currentTeam = teamA.id;
+      client.setArgv('teams', 'switch', teamB.slug);
+      const exitCode = await teams(client);
+      expect(exitCode).toBe(0);
+      await expect(client.stderr).toOutput(
+        'This directory is linked to a project under a different team/scope'
+      );
+    });
+
+    it('should not warn when switching to the same team as the linked project', async () => {
+      useUser();
+      const teamA = useTeam('team_aaa');
+      const teamB = createTeam('team_bbb', 'team-b', 'Team B');
+
+      // Link cwd to team_bbb (same as what we'll switch to)
+      const cwd = setupTmpDir();
+      client.cwd = cwd;
+      await outputFile(
+        join(cwd, '.vercel', 'project.json'),
+        JSON.stringify({ projectId: 'prj_xxx', orgId: 'team_bbb' })
+      );
+
+      // Switch from team_aaa to team-b
+      client.config.currentTeam = teamA.id;
+      client.setArgv('teams', 'switch', teamB.slug);
+      const exitCode = await teams(client);
+      expect(exitCode).toBe(0);
+      await expect(client.stderr).toOutput(
+        `The team ${teamB.name} (${teamB.slug}) is now active!`
+      );
+      await expect(client.stderr).not.toOutput(
+        'This directory is linked to a project under a different team/scope'
+      );
     });
   });
 });
