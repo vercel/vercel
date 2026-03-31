@@ -432,6 +432,14 @@ def _wrap_django_static(app: WSGIApplication) -> WSGIApplication:
     # STATIC_URL are served from source directories via Django's staticfiles
     # finders, without needing collectstatic to have been run.
     try:
+        from django.conf import (  # noqa: PLC0415  # pyright: ignore[reportMissingImports]
+            settings as django_settings,  # pyright: ignore[reportUnknownVariableType, reportMissingTypeStubs]
+        )
+
+        installed = getattr(django_settings, "INSTALLED_APPS", [])  # pyright: ignore[reportUnknownArgumentType]
+        if "django.contrib.staticfiles" not in installed:
+            return app
+
         from django.contrib.staticfiles.handlers import (  # noqa: PLC0415  # pyright: ignore[reportMissingImports, reportMissingTypeStubs]
             StaticFilesHandler,  # pyright: ignore[reportUnknownVariableType]
         )
