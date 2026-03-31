@@ -4,6 +4,9 @@ import getInvalidSubcommand from '../../../util/get-invalid-subcommand';
 import getSubcommand from '../../../util/get-subcommand';
 import { printError } from '../../../util/error';
 import { type Command, help } from '../../help';
+import list from './list';
+import block from './block';
+import unblock from './unblock';
 import {
   firewallCommand,
   ipBlocksSubcommand,
@@ -79,7 +82,7 @@ export default async function main(client: Client, args: string[]) {
         return 2;
       }
       telemetry.trackCliSubcommandIpBlocksList(subcommandOriginal);
-      return (await import('./list')).default(client, subArgs);
+      return list(client, subArgs);
     case 'block':
       if (needHelp) {
         telemetry.trackCliFlagHelp(
@@ -90,7 +93,7 @@ export default async function main(client: Client, args: string[]) {
         return 2;
       }
       telemetry.trackCliSubcommandIpBlocksBlock(subcommandOriginal);
-      return (await import('./block')).default(client, subArgs);
+      return block(client, subArgs);
     case 'unblock':
       if (needHelp) {
         telemetry.trackCliFlagHelp(
@@ -101,7 +104,7 @@ export default async function main(client: Client, args: string[]) {
         return 2;
       }
       telemetry.trackCliSubcommandIpBlocksUnblock(subcommandOriginal);
-      return (await import('./unblock')).default(client, subArgs);
+      return unblock(client, subArgs);
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
       output.print(

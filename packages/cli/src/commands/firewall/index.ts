@@ -11,6 +11,7 @@ import discard from './discard';
 import systemBypass from './system-bypass';
 import attackMode from './attack-mode';
 import systemMitigations from './system-mitigations';
+import ipBlocks from './ip-blocks';
 import {
   firewallCommand,
   overviewSubcommand,
@@ -115,7 +116,7 @@ export default async function main(client: Client) {
     case 'ip-blocks': {
       telemetry.trackCliSubcommandIpBlocks(subcommandOriginal);
       const nestedArgs = needHelp ? [...args, '--help'] : args;
-      return (await import('./ip-blocks')).default(client, nestedArgs);
+      return ipBlocks(client, nestedArgs);
     }
     case 'system-bypass': {
       telemetry.trackCliSubcommandSystemBypass(subcommandOriginal);
