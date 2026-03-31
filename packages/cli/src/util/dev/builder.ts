@@ -591,7 +591,11 @@ export async function getBuildMatches(
       .map(name => join(cwd, name));
 
     if (files.length === 0) {
-      noMatches.push(buildConfig);
+      // Don't warn about zero-config static builders (e.g. public/**)
+      // when the directory simply doesn't exist.
+      if (!(config.zeroConfig && use === '@vercel/static')) {
+        noMatches.push(buildConfig);
+      }
     }
 
     for (const file of files) {
