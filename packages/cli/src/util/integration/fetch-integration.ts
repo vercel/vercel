@@ -153,9 +153,8 @@ export async function resolveAndFetchIntegration(
   }
 
   if (client.stdin.isTTY !== true) {
-    const slugList = matches.map(m => m.slug).join(', ');
     output.error(
-      `Integration "${rawSlug}" not found. Did you mean one of: ${slugList}?`
+      `Found multiple integrations matching "${rawSlug}". Available integrations:\n${matches.map(m => `- ${m.slug}: ${m.description}`).join('\n')}`
     );
     telemetry.trackCliArgumentIntegration(rawSlug, false);
     return null;
