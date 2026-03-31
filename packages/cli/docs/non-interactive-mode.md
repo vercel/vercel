@@ -74,6 +74,104 @@ Implementations use **`outputActionRequired`** / **`outputAgentError`** (`packag
 | `packages/cli/src/util/arg-common.ts` | `globalCommandOptions`; add **`getGlobalFlagsOnlyFromArgs`** / **`getSameSubcommandSuggestionFlags`** when missing so `next[]` can preserve context safely |
 | `packages/cli/src/util/pkg-name.ts` | `getCommandNamePlain`, `packageName` |
 
+## Schema introspection (`--describe`)
+
+Any command supports `--describe` to output its schema as JSON. Agents can discover available flags, arguments, and subcommands without parsing help text:
+
+```bash
+vercel deploy --describe
+```
+
+```json
+{
+  "name": "deploy",
+  "description": "Deploy a project to Vercel",
+  "arguments": [{ "name": "path", "required": false }],
+  "options": [
+    { "name": "prod", "shorthand": null, "type": "boolean", "deprecated": false },
+    { "name": "target", "shorthand": null, "type": "string", "argument": "TARGET", "deprecated": false }
+  ],
+  "examples": [...]
+}
+```
+
+- `--describe` is handled globally — it works for all registered commands, not just migrated ones
+- No authentication required — the schema is returned before any auth check
+- Subcommands are included recursively in the schema
+
+## Dry-run mode (`--dry-run`)
+
+Commands that support `--dry-run` validate all inputs and show what would happen without executing:
+
+```bash
+vercel deploy --dry-run --yes
+```
+
+In agent mode (`--non-interactive`), outputs structured JSON:
+
+```json
+{
+  "status": "dry_run",
+  "reason": "dry_run_ok",
+  "message": "Deployment validated but not executed",
+  "actions": [
+    { "action": "api_call", "description": "Create deployment", "details": { "project": "my-app" } },
+    { "action": "file_upload", "description": "Upload source files" },
+    { "action": "poll", "description": "Wait for build to complete" }
+  ]
+}
+```
+
+In interactive mode, outputs a human-readable numbered list to stderr.
+
+Supported commands: `login`, `link`, `deploy`.
+
+## Exit codes
+
+| Code | Constant | Meaning |
+|------|----------|---------|
+| `0` | `SUCCESS` | Operation completed successfully |
+| `1` | `API_ERROR` | Vercel API returned an error |
+| `2` | `AUTH_ERROR` | Authentication or authorization failed |
+| `3` | `VALIDATION` | Input validation failed (bad flags, path traversal, control chars) |
+| `4` | `CONFIG_ERROR` | Missing configuration (not linked, bad vercel.json) |
+| `5` | `INTERNAL` | Unexpected internal error |
+
+Import from `packages/cli/src/util/exit-codes.ts`:
+
+```typescript
+import { EXIT_CODE } from '../../util/exit-codes';
+return EXIT_CODE.VALIDATION; // 3
+```
+
+## Input validation and hardening
+
+The CLI validates inputs to defend against agent hallucinations and injection attacks. Validation runs early (before API calls) and returns structured errors in agent mode.
+
+**What gets rejected:**
+
+| Validator | Rejects | Example |
+|-----------|---------|---------|
+| `validateSafePath` | Path traversal (`..`), absolute paths, `~`, percent-encoded traversals | `../../etc/passwd`, `%2e%2e/` |
+| `rejectControlChars` | ASCII control characters (0x00-0x08, 0x0b, 0x0c, 0x0e-0x1f, 0x7f) | `\x00`, `\x1b[31m` |
+| `validateResourceId` | Query params or fragments in resource IDs | `proj_123?fields=name` |
+| `rejectDoubleEncoding` | Percent-encoded dots, slashes, backslashes | `%2e`, `%2f`, `%5c` |
+| `validateKeyValue` | Malformed KEY=VALUE pairs | missing `=`, empty key |
+| `validateTarget` | Invalid target environment names | `../evil`, empty string |
+
+Import validators from `packages/cli/src/util/input-validation.ts`:
+
+```typescript
+import { validateInput } from '../../util/input-validation';
+
+const check = validateInput(flags['--project'], 'project', ['controlChars', 'resourceId']);
+if (!check.valid) {
+  // In agent mode: writeAgentResponse with reason 'invalid_arguments'
+  // In interactive mode: output.error(check.error)
+  return EXIT_CODE.VALIDATION;
+}
+```
+
 ## Backwards compatibility
 
 - Interactive behavior unchanged.

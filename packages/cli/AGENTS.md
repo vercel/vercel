@@ -289,6 +289,128 @@ pnpm build
 node packages/cli/dist/index.js <command> [args]
 ```
 
+## Agent-First Flags
+
+Three global flags support agent/automation workflows. They are defined in `src/util/arg-common.ts` and available on all commands:
+
+| Flag | Purpose |
+|------|---------|
+| `--describe` | Output command schema as JSON — agents discover flags without parsing help text |
+| `--dry-run` | Validate inputs and show what would happen without executing |
+| `--format json` | Machine-readable JSON output (also auto-enabled when `--non-interactive` is set) |
+
+Usage:
+
+```bash
+# Introspect a command's schema
+vercel deploy --describe
+
+# Validate without executing
+vercel deploy --dry-run --yes
+
+# Force JSON output
+vercel deploy --format json --yes
+```
+
+See `docs/non-interactive-mode.md` for detailed output format documentation.
+
+## Structured Agent Responses (`writeAgentResponse`)
+
+When adding or modifying non-interactive output paths, use `writeAgentResponse` / `maybeAgentResponse` from `src/util/agent-response.ts` instead of inline `JSON.stringify`:
+
+```typescript
+import { writeAgentResponse, maybeAgentResponse } from '../../util/agent-response';
+import { EXIT_CODE } from '../../util/exit-codes';
+
+// Pattern 1: Agent-only output (caller handles human path separately)
+if (client.nonInteractive) {
+  writeAgentResponse(client, {
+    status: 'ok',
+    message: 'Deployed successfully',
+    data: { url: deploymentUrl, id: deployment.id },
+    next: [{ command: buildCommandWithGlobalFlags(client.argv, 'inspect'), when: 'View details' }],
+  });
+  return EXIT_CODE.SUCCESS;
+}
+
+// Pattern 2: Auto-detect mode (returns exit code in agent mode, null in human mode)
+const exitCode = maybeAgentResponse(client, {
+  status: 'error',
+  reason: 'auth_error',
+  message: 'Authentication failed',
+}, EXIT_CODE.AUTH_ERROR);
+if (exitCode !== null) return exitCode;
+// ...human output path...
+```
+
+**Key behaviors:**
+- Writes `JSON.stringify(response, null, 2) + '\n'` to `client.stdout`
+- Does NOT call `process.exit()` — the caller returns the exit code
+- Enriches `action_required` status with invoking command via `enrichActionRequiredWithInvokingCommand()`
+- Adds default hint for `action_required` / `error` statuses with `next[]` suggestions
+
+**Response statuses:** `ok`, `error`, `action_required`, `dry_run`
+
+## Input Validation for Commands
+
+Commands that accept user/agent input should validate early (before API calls) using validators from `src/util/input-validation.ts`:
+
+```typescript
+import { validateInput, validateKeyValue, validateTarget } from '../../util/input-validation';
+import { EXIT_CODE } from '../../util/exit-codes';
+
+// Validate a flag value against multiple checks
+const check = validateInput(flags['--project'], 'project', ['controlChars', 'resourceId']);
+if (!check.valid) {
+  if (client.nonInteractive) {
+    writeAgentResponse(client, {
+      status: 'error',
+      reason: 'invalid_arguments',
+      message: check.error!,
+      next: [{ command: buildCommandWithGlobalFlags(client.argv, 'link --project <name>') }],
+    });
+  } else {
+    output.error(check.error!);
+  }
+  return EXIT_CODE.VALIDATION;
+}
+
+// Validate KEY=VALUE pairs (--env, --build-env, --meta)
+const kvCheck = validateKeyValue(value, '--env');
+
+// Validate target environment names
+const targetCheck = validateTarget(flags['--target']);
+```
+
+**Available validators:** `validateSafePath`, `rejectControlChars`, `validateResourceId`, `rejectDoubleEncoding`, `validateKeyValue`, `validateTarget`, `validateInput` (composite).
+
+## Exit Code Categories
+
+Use typed exit codes from `src/util/exit-codes.ts` instead of raw numbers:
+
+| Code | Constant | Use when |
+|------|----------|----------|
+| `0` | `EXIT_CODE.SUCCESS` | Operation completed |
+| `1` | `EXIT_CODE.API_ERROR` | Vercel API returned an error |
+| `2` | `EXIT_CODE.AUTH_ERROR` | Authentication/authorization failed |
+| `3` | `EXIT_CODE.VALIDATION` | Input validation failed |
+| `4` | `EXIT_CODE.CONFIG_ERROR` | Missing config, not linked, bad vercel.json |
+| `5` | `EXIT_CODE.INTERNAL` | Unexpected internal error |
+
+## Skill Files and CONTEXT.md
+
+Agent-specific documentation lives in two places:
+
+- **`skills/`** — Per-command skill files for agents that support the skill/tool system:
+  - `skills/vercel-shared/SKILL.md` — Auth, global flags, exit codes, security rules
+  - `skills/vercel-login/SKILL.md` — Login workflow and device code flow
+  - `skills/vercel-link/SKILL.md` — Project linking flags and examples
+  - `skills/vercel-deploy/SKILL.md` — Deployment flags, output format, examples
+
+- **`packages/cli/CONTEXT.md`** — Compact invariants file for agents that don't load the full skill system. Contains quick start, critical rules, workflow steps, and error recovery patterns.
+
+When adding new agent-first commands, create a corresponding `skills/vercel-<command>/SKILL.md` and update `CONTEXT.md` if the command is part of a core workflow.
+
 ## General CLI Best Practices
 
 - **Prefer flags to positional arguments.** Flags are self-documenting and order-independent.
