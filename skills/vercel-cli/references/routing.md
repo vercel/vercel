@@ -6,7 +6,9 @@
 
 Routing rules take effect immediately without a deployment and take precedence over routes defined in your deployment configuration (`vercel.json`, `next.config.js`, etc.).
 
-All changes are staged as drafts. After a single change with no existing draft, the CLI offers to publish immediately. Otherwise, run `vercel routes publish` to push staged changes to production, or `vercel routes discard-staging` to undo.
+Each routing rule has a unique name within the project, used to identify it in `edit`, `delete`, `enable`, `disable`, and `reorder` commands. Rules are evaluated in priority order (top to bottom). Use `reorder` to control placement.
+
+All changes are staged as drafts. Run `vercel routes publish` to push staged changes to production.
 
 When in doubt about flags or subcommands, use `--help`:
 
@@ -55,7 +57,7 @@ Each routing rule can have at most one primary action:
 | `redirect` | `--dest` + `--status` (301/302/307/308) | Redirect the client to a new URL |
 | `set-status` | `--status` (100-599) | Return a status code (no destination) |
 
-Routing rules can also be used without a primary action to only set response headers or apply request transforms.
+A routing rule without a primary action can still set response headers or apply request transforms.
 
 ### Examples
 
@@ -147,7 +149,7 @@ vercel routes edit "My Route" --ai "Add CORS headers and change to 308 redirect"
 # Interactive — pick fields to edit
 vercel routes edit "My Route"
 
-# Only the specified fields are changed; everything else is preserved
+# Change specific fields
 vercel routes edit "My Route" --dest "https://new-api.example.com/:path*" --yes
 vercel routes edit "My Route" --action redirect --dest "/new" --status 301 --yes
 vercel routes edit "My Route" --name "New Name" --yes
