@@ -608,7 +608,6 @@ export const build: BuildV2 = async buildOptions => {
         if (!(await pathExists(destPath))) {
           const srcPath = publicFiles[fileName].fsPath;
           await copy(srcPath, destPath);
-          debug(`Copied post-build public file: ${fileName}`);
         }
       }
     }
