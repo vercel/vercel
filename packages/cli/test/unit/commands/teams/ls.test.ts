@@ -220,8 +220,10 @@ describe('teams ls', () => {
 
     it('marks the configured team as current and renders its plan in the table', async () => {
       useUser();
-      const { teams: teamResponse } = useTeams(undefined, { apiVersion: 2 });
-      const currentTeam = teamResponse[0];
+      const teamResponse = useTeams(undefined, { apiVersion: 2 });
+      const currentTeam = Array.isArray(teamResponse)
+        ? teamResponse[0]
+        : teamResponse.teams[0];
       client.config.currentTeam = currentTeam.id;
       client.setArgv('teams', 'ls');
 

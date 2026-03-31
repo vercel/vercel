@@ -23,15 +23,22 @@ export type Team = {
 
 let teams: Team[] = [];
 
+export interface UseTeamsOptions {
+  failMissingToken?: boolean;
+  failInvalidToken?: boolean;
+  failNoAccess?: boolean;
+  failWithCustom403Code?: boolean;
+  apiVersion?: number;
+}
+
 export function useTeams(
   teamId?: string,
-  options: {
-    failMissingToken?: boolean;
-    failInvalidToken?: boolean;
-    failNoAccess?: boolean;
-    failWithCustom403Code?: boolean;
-    apiVersion?: number;
-  } = {
+  options?: UseTeamsOptions
+): Team[] | { teams: Team[] };
+
+export function useTeams(
+  teamId?: string,
+  options: UseTeamsOptions = {
     failMissingToken: false,
     failInvalidToken: false,
     failNoAccess: false,
@@ -107,7 +114,7 @@ export function createTeam(teamId?: string, slug?: string, name?: string) {
   const teamSlug = slug || chance().string({ length: 5, casing: 'lower' });
   const teamName = name || chance().company();
   const now = Date.now();
-  const newTeam = {
+  const newTeam: Team = {
     id,
     slug: teamSlug,
     name: teamName,
@@ -118,7 +125,7 @@ export function createTeam(teamId?: string, slug?: string, name?: string) {
       addons: [],
       plan: 'pro',
       platform: 'stripe',
-      status: 'active' as const,
+      status: 'active',
       period: { start: now, end: now + 30 * 24 * 60 * 60 * 1000 },
       trial: { start: now, end: now + 14 * 24 * 60 * 60 * 1000 },
     },
