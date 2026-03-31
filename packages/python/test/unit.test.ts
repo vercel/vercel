@@ -55,13 +55,19 @@ import { createVenvEnv, getVenvBinDir } from '../src/utils';
 import { UV_PYTHON_DOWNLOADS_MODE, getProtectedUvEnv } from '../src/uv';
 import { VERCEL_WORKERS_VERSION } from '../src/package-versions';
 import { createPyprojectToml } from '../src/install';
-import { detectDjangoPythonEntrypoint } from '../src/entrypoint';
 import { getDjangoSettings, runDjangoCollectStatic } from '../src/django';
-import { FileBlob } from '@vercel/build-utils';
+import { FileBlob, download } from '@vercel/build-utils';
 
 function getBuildOutputV2(result: Awaited<ReturnType<typeof build>>) {
   expect(result.resultVersion).toBe(2);
   return (result as any).result as BuildResultV2;
+}
+
+function getBuildOutputV2Lambda(result: Awaited<ReturnType<typeof build>>) {
+  const v2 = getBuildOutputV2(result) as any;
+  const lambdas = Object.values(v2.output).filter((o: any) => 'handler' in o);
+  expect(lambdas).toHaveLength(1);
+  return lambdas[0] as BuildResultV3['output'];
 }
 
 function getBuildOutputV3(result: Awaited<ReturnType<typeof build>>) {
@@ -999,7 +1005,8 @@ describe('uv workspace lockfile resolution (workspace root above workPath)', () 
       repoRootPath: repoRoot,
     });
 
-    const handler = getBuildOutputV3(result).files?.['vc__handler__python.py'];
+    const handler =
+      getBuildOutputV2Lambda(result).files?.['vc__handler__python.py'];
     expect(handler).toBeDefined();
 
     fs.removeSync(repoRoot);
@@ -1025,7 +1032,7 @@ describe('fastapi entrypoint discovery', () => {
       build({
         workPath: mockWorkPath,
         files,
-        entrypoint: 'main.py',
+        entrypoint: '<detect>',
         meta: { isDev: true },
         config: { framework: 'fastapi' },
         repoRootPath: mockWorkPath,
@@ -1052,17 +1059,20 @@ describe('fastapi entrypoint discovery - positive cases', () => {
         data: 'from fastapi import FastAPI\napp = FastAPI()\n',
       }),
     } as Record<string, FileBlob>;
+    // isDev mode assumes files are already present
+    await download(files, workPath);
 
     const result = await build({
       workPath,
       files,
-      entrypoint: 'server.py',
+      entrypoint: '<detect>',
       meta: { isDev: true },
       config: { framework: 'fastapi' },
       repoRootPath: workPath,
     });
 
-    const handler = getBuildOutputV3(result).files?.['vc__handler__python.py'];
+    const handler =
+      getBuildOutputV2Lambda(result).files?.['vc__handler__python.py'];
     if (!handler || !('data' in handler)) {
       throw new Error('handler bootstrap not found');
     }
@@ -1085,17 +1095,20 @@ describe('fastapi entrypoint discovery - positive cases', () => {
         data: 'import fastapi\n\napp = fastapi.FastAPI()',
       }),
     } as Record<string, FileBlob>;
+    // isDev mode assumes files are already present
+    await download(files, workPath);
 
     const result = await build({
       workPath,
       files,
-      entrypoint: 'server.py',
+      entrypoint: '<detect>',
       meta: { isDev: true },
       config: { framework: 'fastapi' },
       repoRootPath: workPath,
     });
 
-    const handler = getBuildOutputV3(result).files?.['vc__handler__python.py'];
+    const handler =
+      getBuildOutputV2Lambda(result).files?.['vc__handler__python.py'];
     if (!handler || !('data' in handler)) {
       throw new Error('handler bootstrap not found');
     }
@@ -1119,17 +1132,20 @@ describe('fastapi entrypoint discovery - positive cases', () => {
         data: 'import fastapi\nfrom fastapi import FastAPI\napp = FastAPI()\n',
       }),
     } as Record<string, FileBlob>;
+    // isDev mode assumes files are already present
+    await download(files, workPath);
 
     const result = await build({
       workPath,
       files,
-      entrypoint: 'server.py',
+      entrypoint: '<detect>',
       meta: { isDev: true },
       config: { framework: 'fastapi' },
       repoRootPath: workPath,
     });
 
-    const handler = getBuildOutputV3(result).files?.['vc__handler__python.py'];
+    const handler =
+      getBuildOutputV2Lambda(result).files?.['vc__handler__python.py'];
     if (!handler || !('data' in handler)) {
       throw new Error('handler bootstrap not found');
     }
@@ -1141,39 +1157,6 @@ describe('fastapi entrypoint discovery - positive cases', () => {
 });
 
 describe('Django entrypoint discovery', () => {
-  async function writeFiles(
-    workPath: string,
-    files: Record<string, string>
-  ): Promise<void> {
-    for (const [rel, content] of Object.entries(files)) {
-      const full = path.join(workPath, rel);
-      fs.mkdirSync(path.dirname(full), { recursive: true });
-      fs.writeFileSync(full, content);
-    }
-  }
-
-  it('uses configured entrypoint when it exists and is valid', async () => {
-    const workPath = path.join(
-      tmpdir(),
-      `python-django-configured-${Date.now()}`
-    );
-    fs.mkdirSync(workPath, { recursive: true });
-
-    await writeFiles(workPath, {
-      'hello/world.py': `application = lambda env, start: None`,
-    });
-
-    const result = await detectDjangoPythonEntrypoint(
-      workPath,
-      'hello/world.py'
-    );
-    expect(result).toEqual({
-      entrypoint: { entrypoint: 'hello/world.py', variableName: 'application' },
-    });
-
-    if (fs.existsSync(workPath)) fs.removeSync(workPath);
-  });
-
   it('build() resolves Django entrypoint from WSGI_APPLICATION (hello.wsgi.application -> hello/wsgi.py)', async () => {
     vi.mocked(getDjangoSettings).mockResolvedValueOnce({
       settingsModule: 'hello.settings',
@@ -1195,17 +1178,20 @@ describe('Django entrypoint discovery', () => {
         data: 'application = lambda env, start: None\n',
       }),
     } as Record<string, FileBlob>;
+    // isDev mode assumes files are already present
+    await download(files, workPath);
 
     const result = await build({
       workPath,
       files,
-      entrypoint: 'index.py',
+      entrypoint: '<detect>',
       meta: { isDev: true },
       config: { framework: 'django' },
       repoRootPath: workPath,
     });
 
-    const handler = getBuildOutputV3(result).files?.['vc__handler__python.py'];
+    const handler =
+      getBuildOutputV2Lambda(result).files?.['vc__handler__python.py'];
     if (!handler || !('data' in handler)) {
       throw new Error('handler bootstrap not found');
     }
@@ -1229,17 +1215,20 @@ describe('Django entrypoint discovery', () => {
         data: 'application = lambda env, start: None\n',
       }),
     } as Record<string, FileBlob>;
+    // isDev mode assumes files are already present
+    await download(files, workPath);
 
     const result = await build({
       workPath,
       files,
-      entrypoint: 'index.py',
+      entrypoint: '<detect>',
       meta: { isDev: true },
       config: { framework: 'django' },
       repoRootPath: workPath,
     });
 
-    const handler = getBuildOutputV3(result).files?.['vc__handler__python.py'];
+    const handler =
+      getBuildOutputV2Lambda(result).files?.['vc__handler__python.py'];
     if (!handler || !('data' in handler)) {
       throw new Error('handler bootstrap not found');
     }
@@ -1271,17 +1260,20 @@ describe('Django entrypoint discovery', () => {
         data: "WSGI_APPLICATION = 'hello.wsgi.application'\n",
       }),
     } as Record<string, FileBlob>;
+    // isDev mode assumes files are already present
+    await download(files, workPath);
 
     const result = await build({
       workPath,
       files,
-      entrypoint: 'index.py',
+      entrypoint: '<detect>',
       meta: { isDev: true },
       config: { framework: 'django' },
       repoRootPath: workPath,
     });
 
-    const handler = getBuildOutputV3(result).files?.['vc__handler__python.py'];
+    const handler =
+      getBuildOutputV2Lambda(result).files?.['vc__handler__python.py'];
     if (!handler || !('data' in handler)) {
       throw new Error('handler bootstrap not found');
     }
@@ -1317,17 +1309,20 @@ describe('Django entrypoint discovery', () => {
         data: 'application = lambda env, start: None\n',
       }),
     } as Record<string, FileBlob>;
+    // isDev mode assumes files are already present
+    await download(files, workPath);
 
     const result = await build({
       workPath,
       files,
-      entrypoint: 'index.py',
+      entrypoint: '<detect>',
       meta: { isDev: true },
       config: { framework: 'django' },
       repoRootPath: workPath,
     });
 
-    const handler = getBuildOutputV3(result).files?.['vc__handler__python.py'];
+    const handler =
+      getBuildOutputV2Lambda(result).files?.['vc__handler__python.py'];
     if (!handler || !('data' in handler)) {
       throw new Error('handler bootstrap not found');
     }
@@ -1359,17 +1354,20 @@ describe('Django entrypoint discovery', () => {
         data: 'application = lambda env, start: None\n',
       }),
     } as Record<string, FileBlob>;
+    // isDev mode assumes files are already present
+    await download(files, workPath);
 
     const result = await build({
       workPath,
       files,
-      entrypoint: 'index.py',
+      entrypoint: '<detect>',
       meta: { isDev: true },
       config: { framework: 'django' },
       repoRootPath: workPath,
     });
 
-    const handler = getBuildOutputV3(result).files?.['vc__handler__python.py'];
+    const handler =
+      getBuildOutputV2Lambda(result).files?.['vc__handler__python.py'];
     if (!handler || !('data' in handler)) {
       throw new Error('handler bootstrap not found');
     }
@@ -1410,8 +1408,6 @@ describe('Django entrypoint discovery', () => {
     fs.mkdirSync(workPath, { recursive: true });
     makeMockPython('3.9');
 
-    // Omit the configured entrypoint from files so that framework detection
-    // runs and sets detected.baseDir, which the Django hook requires.
     const files = {
       'manage.py': new FileBlob({
         data: "os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'myapp.settings')\n",
@@ -1421,11 +1417,13 @@ describe('Django entrypoint discovery', () => {
       }),
       'static/app.css': new FileBlob({ data: 'body {}' }),
     } as Record<string, FileBlob>;
+    // isDev mode assumes files are already present
+    await download(files, workPath);
 
     const result = await build({
       workPath: workPath,
       files,
-      entrypoint: 'index.py',
+      entrypoint: '<detect>',
       meta: { isDev: false },
       config: { framework: 'django', zeroConfig: true },
       repoRootPath: workPath,
@@ -1479,17 +1477,20 @@ describe('pyproject.toml entrypoint detection', () => {
         data: 'from fastapi import FastAPI\napp = FastAPI()\n',
       }),
     } as Record<string, FileBlob>;
+    // isDev mode assumes files are already present
+    await download(files, workPath);
 
     const result = await buildWithMocks({
       workPath,
       files,
-      entrypoint: 'missing.py',
+      entrypoint: '<detect>',
       meta: { isDev: true },
       config: { framework: 'fastapi' },
       repoRootPath: workPath,
     });
 
-    const handler = getBuildOutputV3(result).files?.['vc__handler__python.py'];
+    const handler =
+      getBuildOutputV2Lambda(result).files?.['vc__handler__python.py'];
     if (!handler || !('data' in handler)) {
       throw new Error('handler bootstrap not found');
     }
@@ -1523,17 +1524,20 @@ describe('pyproject.toml entrypoint detection', () => {
         data: 'from flask import Flask\napp = Flask(__name__)\n',
       }),
     } as Record<string, FileBlob>;
+    // isDev mode assumes files are already present
+    await download(files, workPath);
 
     const result = await buildWithMocks({
       workPath,
       files,
-      entrypoint: 'missing.py',
+      entrypoint: '<detect>',
       meta: { isDev: true },
       config: { framework: 'flask' },
       repoRootPath: workPath,
     });
 
-    const handler = getBuildOutputV3(result).files?.['vc__handler__python.py'];
+    const handler =
+      getBuildOutputV2Lambda(result).files?.['vc__handler__python.py'];
     if (!handler || !('data' in handler)) {
       throw new Error('handler bootstrap not found');
     }
@@ -1564,17 +1568,20 @@ describe('pyproject.toml entrypoint detection', () => {
         data: 'from flask import Flask\napp = Flask(__name__)\n',
       }),
     } as Record<string, FileBlob>;
+    // isDev mode assumes files are already present
+    await download(files, workPath);
 
     const result = await buildWithMocks({
       workPath,
       files,
-      entrypoint: 'missing.py',
+      entrypoint: '<detect>',
       meta: { isDev: true },
       config: { framework: 'flask' },
       repoRootPath: workPath,
     });
 
-    const handler = getBuildOutputV3(result).files?.['vc__handler__python.py'];
+    const handler =
+      getBuildOutputV2Lambda(result).files?.['vc__handler__python.py'];
     if (!handler || !('data' in handler)) {
       throw new Error('handler bootstrap not found');
     }
