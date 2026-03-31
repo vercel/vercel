@@ -2,7 +2,7 @@
 
 ## Overview
 
-`vercel routes` manages project-level routing rules. Each rule matches requests by path pattern and optional conditions (headers, cookies, query parameters), then applies an action (rewrite, redirect, set status) or modifies headers and query parameters. Use `--ai` with a natural language description to generate or edit rules with AI.
+`vercel routes` manages project-level routing rules. Each rule matches requests by path pattern and optional conditions (headers, cookies, query parameters), then applies an action (rewrite, redirect, set status) or modifies headers and query parameters.
 
 Routing rules take effect immediately without a deployment and take precedence over routes defined in your deployment configuration (`vercel.json`, `next.config.js`, etc.).
 
@@ -19,6 +19,8 @@ vercel routes inspect "My Route"         # full details of a specific rule
 ```
 
 ## Creating Routing Rules
+
+Use `--ai` with a natural language description to generate routing rules with AI. For full control, use flags or interactive mode.
 
 ### Source path (`--src` and `--src-syntax`)
 
@@ -53,10 +55,11 @@ vercel routes add --ai "Rewrite /api/* to https://backend.example.com/*"
 # Interactive — step by step
 vercel routes add
 
-# Rewrite with path-to-regexp syntax
+# Rewrite with path-to-regexp syntax and a request header
 vercel routes add "API Proxy" \
   --src "/api/:path*" --src-syntax path-to-regexp \
-  --action rewrite --dest "https://api.example.com/:path*" --yes
+  --action rewrite --dest "https://api.example.com/:path*" \
+  --set-request-header "X-Forwarded-Host=myapp.com" --yes
 
 # Redirect with status
 vercel routes add "Legacy Redirect" \
@@ -136,5 +139,4 @@ vercel routes publish                    # promote staged changes to production
 vercel routes discard-staging            # discard all staged changes
 vercel routes list-versions              # view version history
 vercel routes restore <version-id>       # roll back to a previous version
-vercel routes export                     # export routing rules in vercel.json or vercel.ts format
 ```
