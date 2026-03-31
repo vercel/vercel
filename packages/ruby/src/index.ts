@@ -170,7 +170,8 @@ async function bundleInstall(
   bundlePath: string,
   bundleDir: string,
   gemfilePath: string,
-  rubyPath: string
+  rubyPath: string,
+  isDev: boolean
 ) {
   const bundleAppConfig = await getWriteableDirectory();
   const bundlerEnv = cloneEnv(process.env, {
@@ -181,6 +182,12 @@ async function bundleInstall(
     BUNDLE_DEPLOYMENT: 'true',
     BUNDLE_PATH: bundleDir,
     BUNDLE_FROZEN: 'true',
+    ...(isDev
+      ? {}
+      : {
+          // Default non-dev builds to runtime-only gems, but respect explicit user config.
+          BUNDLE_WITHOUT: process.env.BUNDLE_WITHOUT ?? 'development:test',
+        }),
   });
 
   debug('running "bundle install"');
@@ -292,7 +299,13 @@ export const build: BuildVX = async ({
   // If gems are pre-vendored and already included in the vendor directory, Bundler keeps them when they
   // match the lockfile and platform; otherwise it only installs/replaces what's
   // missing or mismatched (e.g. add webrick or correct platform builds).
-  await bundleInstall(bundlerPath, bundleDir, gemfilePath, rubyPath);
+  await bundleInstall(
+    bundlerPath,
+    bundleDir,
+    gemfilePath,
+    rubyPath,
+    Boolean(meta.isDev)
+  );
 
   // try to remove gem cache to slim bundle size
   try {

@@ -1,0 +1,10 @@
+{
+  "projectSettings": {
+    "framework": "rails"
+  },
+  "build": {
+    "env": {
+      "VERCEL_CLI_VERSION": "vercel@https://vercel-jhs3frhz6.vercel.sh/tarballs/vercel.tgz"
+    }
+  }
+}
