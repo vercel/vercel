@@ -6,21 +6,9 @@
 
 All changes are staged as drafts before going live. After making changes, run `vercel routes publish` to push them to production, or `vercel routes discard-staging` to undo.
 
-## Source Path Syntax
-
-Three pattern types via `--src-syntax`:
-
-| Syntax | Default | Example | When to use |
-|--------|---------|---------|-------------|
-| `regex` | Yes | `^/api/(.*)$` | Full regex control. Default if `--src-syntax` is not specified. |
-| `path-to-regexp` | No | `/api/:path*` | Express-style named params. More readable for dynamic routes. |
-| `equals` | No | `/about` | Exact string match. Simplest option for static paths. |
-
-`path-to-regexp` and `equals` paths must start with `/`. Only `regex` allows patterns without a leading `/`.
-
 ## Actions
 
-Every route needs an action. Specify with `--action`:
+A route can have at most one primary action:
 
 | Action | Required flags | Description |
 |--------|---------------|-------------|
@@ -28,7 +16,7 @@ Every route needs an action. Specify with `--action`:
 | `redirect` | `--dest` + `--status` (301/302/307/308) | Redirect the client to a new URL |
 | `set-status` | `--status` (100-599) | Return a status code (no destination) |
 
-A route can also have only response headers or request transforms (no `--action` needed).
+A route can also have no primary action — only response headers or request transforms.
 
 ## Conditions
 
@@ -75,6 +63,18 @@ Modify headers and query params on the request or response. All flags are repeat
 
 ## Creating Routes
 
+### Source path syntax (`--src-syntax`)
+
+| Syntax | Default | Example | When to use |
+|--------|---------|---------|-------------|
+| `regex` | Yes | `^/api/(.*)$` | Full regex control. Default if not specified. |
+| `path-to-regexp` | No | `/api/:path*` | Express-style named params. More readable. |
+| `equals` | No | `/about` | Exact string match. Simplest option. |
+
+`path-to-regexp` and `equals` paths must start with `/`. Only `regex` allows patterns without a leading `/`.
+
+### Examples
+
 ```bash
 # AI — describe what you want
 vercel routes add --ai "Rewrite /api/* to https://backend.example.com/*"
@@ -92,12 +92,12 @@ vercel routes add "Legacy Redirect" \
   --src "/old-blog" --src-syntax equals \
   --action redirect --dest "/blog" --status 301 --yes
 
-# CORS headers (no action, just headers)
+# CORS headers (no primary action, just headers)
 vercel routes add "CORS" \
   --src "^/api/.*$" \
   --set-response-header "Access-Control-Allow-Origin=*" --yes
 
-# Route with conditions — require auth cookie with specific value
+# Route with conditions — redirect if auth cookie missing
 vercel routes add "Auth Required" \
   --src "/dashboard/:path*" --src-syntax path-to-regexp \
   --action redirect --dest "/login" --status 307 \
@@ -170,6 +170,4 @@ vercel routes export                     # export as vercel.json/vercel.ts forma
 ## Anti-patterns
 
 - Don't forget to `vercel routes publish` after making changes — they stay staged until published.
-- Don't use `--production` when you want to see draft changes — it only shows live routes.
-- Use `--yes` in CI/automation to skip confirmation prompts.
 - `--action redirect` requires both `--dest` AND `--status` — omitting either will error.
