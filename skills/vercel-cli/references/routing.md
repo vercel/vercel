@@ -6,6 +6,19 @@
 
 All changes are staged as drafts before going live. After making changes, run `vercel routes publish` to push them to production, or `vercel routes discard-staging` to undo.
 
+## Viewing Routing Rules
+
+```bash
+vercel routes list                       # all routing rules
+vercel routes list --diff                # staged changes vs production
+vercel routes list --production          # production only
+vercel routes list --search "api"        # search by name, src, dest
+vercel routes list --filter rewrite      # filter: rewrite, redirect, set_status, transform
+vercel routes list --expand              # show expanded details
+vercel routes inspect "My Route"         # full details of a specific routing rule
+vercel routes inspect "My Route" --diff  # compare staged vs production
+```
+
 ## Creating Routing Rules
 
 ### Source path syntax (`--src-syntax`)
@@ -142,19 +155,6 @@ vercel routes reorder "My Route" --position start           # move to top
 vercel routes reorder "My Route" --position end             # move to bottom
 vercel routes reorder "My Route" --position after:<id>      # move after another
 vercel routes reorder "My Route" --position before:<id>     # move before another
-```
-
-## Viewing Routing Rules
-
-```bash
-vercel routes list                       # all routing rules
-vercel routes list --diff                # staged changes vs production
-vercel routes list --production          # production only
-vercel routes list --search "api"        # search by name, src, dest
-vercel routes list --filter rewrite      # filter: rewrite, redirect, set_status, transform
-vercel routes list --expand              # show expanded details
-vercel routes inspect "My Route"         # full details of a specific routing rule
-vercel routes inspect "My Route" --diff  # compare staged vs production
 ```
 
 ## Publishing & Versioning
