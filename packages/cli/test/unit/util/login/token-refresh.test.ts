@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import { randomUUID } from 'node:crypto';
 import _fetch, { Request, Response } from 'node-fetch';
@@ -22,6 +22,10 @@ const mockBilling = {
 };
 
 describe('OAuth Token Refresh', () => {
+  beforeEach(() => {
+    fetch.mockReset();
+  });
+
   it('should refresh the token when it is expired', async () => {
     const refreshToken = randomUUID();
     const accessToken = randomUUID();
@@ -93,9 +97,6 @@ describe('OAuth Token Refresh', () => {
 
     const name = Chance().name();
 
-    const exitCode = await whoami(client);
-    expect(exitCode).toBe(0);
-
     fetch.mockImplementation(init => {
       const url = init instanceof Request ? init.url : init.toString();
 
@@ -112,6 +113,9 @@ describe('OAuth Token Refresh', () => {
       }
       throw new Error(`Unexpected URL: ${url}`);
     });
+
+    const exitCode = await whoami(client);
+    expect(exitCode).toBe(0);
 
     expect(client.stderr).toOutput(name);
     expect(client.authConfig.token).toBeUndefined();

@@ -112,6 +112,14 @@ describe('whoami', () => {
     it('falls back to the personal scope when currentTeam is stale', async () => {
       const user = useUser();
       client.config.currentTeam = 'stale-team-id';
+      client.scenario.get('/teams/stale-team-id', (_req, res) => {
+        res.status(404).json({
+          error: {
+            code: 'not_found',
+            message: 'Team not found',
+          },
+        });
+      });
       client.setArgv('whoami', '--format', 'json');
 
       const exitCode = await whoami(client);

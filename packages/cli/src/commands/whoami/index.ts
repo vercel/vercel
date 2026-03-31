@@ -9,7 +9,7 @@ import { printError } from '../../util/error';
 import output from '../../output-manager';
 import { WhoamiTelemetryClient } from '../../util/telemetry/commands/whoami';
 import { validateJsonOutput } from '../../util/output-format';
-import { TeamDeleted } from '../../util/errors-ts';
+import { APIError, TeamDeleted } from '../../util/errors-ts';
 
 export default async function whoami(client: Client): Promise<number> {
   let parsedArgs = null;
@@ -44,9 +44,16 @@ export default async function whoami(client: Client): Promise<number> {
   const asJson = formatResult.jsonOutput;
   telemetry.trackCliOptionFormat(parsedArgs.flags['--format']);
 
-  let scope = await getScope(client).catch(async error => {
+  const scope = await getScope(client).catch(async error => {
     // Preserve whoami as a resilient informational command when currentTeam is stale.
-    if (!(error instanceof TeamDeleted)) {
+    const isStaleTeamError =
+      error instanceof TeamDeleted ||
+      (error instanceof APIError &&
+        (error.status === 404 ||
+          error.code === 'team_unauthorized' ||
+          error.code === 'forbidden' ||
+          error.code === 'custom_error_code'));
+    if (!isStaleTeamError) {
       throw error;
     }
     return getScope(client, { getTeam: false });
