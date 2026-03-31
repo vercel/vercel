@@ -94,7 +94,7 @@ export async function handleAIAdd(
         continue;
       }
 
-      if (!client.stdin.isTTY || client.nonInteractive) {
+      if (!client.stdin.isTTY || client.nonInteractive || opts.skipPrompts) {
         output.error(msg);
         return 1;
       }

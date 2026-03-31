@@ -1227,7 +1227,7 @@ describe('firewall rules add', () => {
     it('should show retry menu when AI API fails in interactive mode', async () => {
       useGenerateFirewallRuleError(500);
 
-      client.setArgv('firewall', 'rules', 'add', '--ai', 'Block bots', '--yes');
+      client.setArgv('firewall', 'rules', 'add', '--ai', 'Block bots');
       const exitCodePromise = firewall(client);
 
       // Should show retry/cancel menu

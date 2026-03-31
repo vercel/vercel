@@ -387,7 +387,8 @@ export const rulesInspectSubcommand = {
 export const rulesAddSubcommand = {
   name: 'add',
   aliases: [],
-  description: 'Create a new custom firewall rule',
+  description:
+    'Create a new custom firewall rule using AI, an interactive builder, JSON, or command-line flags',
   arguments: [{ name: 'name', required: false }],
   options: [
     {
