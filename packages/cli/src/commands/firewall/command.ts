@@ -326,7 +326,8 @@ export const ipBlocksSubcommand = {
 export const rulesListSubcommand = {
   name: 'list',
   aliases: ['ls'],
-  description: 'List custom firewall rules',
+  description:
+    'List all custom firewall rules, including any unpublished draft changes',
   arguments: [],
   options: [
     {
@@ -359,7 +360,8 @@ export const rulesListSubcommand = {
 export const rulesInspectSubcommand = {
   name: 'inspect',
   aliases: [],
-  description: 'Show full details of a custom firewall rule',
+  description:
+    'Show the full configuration of a custom firewall rule, including conditions, action, and rate limit settings',
   arguments: [{ name: 'name-or-id', required: true }],
   options: [
     {
@@ -385,7 +387,8 @@ export const rulesInspectSubcommand = {
 export const rulesSubcommand = {
   name: 'rules',
   aliases: [],
-  description: 'Manage custom firewall rules',
+  description:
+    'Manage custom firewall rules that control how traffic is handled based on conditions',
   arguments: [],
   subcommands: [rulesListSubcommand, rulesInspectSubcommand],
   options: [],
