@@ -124,6 +124,13 @@ export default async function usage(client: Client): Promise<number> {
     groupByDimension = groupByFlag;
   }
 
+  if (breakdownPeriod && groupByDimension) {
+    error(
+      '--breakdown and --group-by cannot be used together. Use one or the other.'
+    );
+    return 1;
+  }
+
   telemetry.trackCliOptionFrom(fromFlag);
   telemetry.trackCliOptionTo(toFlag);
   telemetry.trackCliOptionFormat(parsedArgs.flags['--format']);

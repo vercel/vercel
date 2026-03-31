@@ -565,6 +565,29 @@ describe('usage', () => {
       expect(json.totals.billedCost).toEqual(30);
     });
 
+    it('should error when --breakdown and --group-by are used together', async () => {
+      useBillingCharges([]);
+
+      client.setArgv(
+        'usage',
+        '--from',
+        '2025-12-01',
+        '--to',
+        '2025-12-31',
+        '--breakdown',
+        'daily',
+        '--group-by',
+        'project'
+      );
+      const exitCode = await usage(client);
+
+      expect(exitCode).toEqual(1);
+      const output = client.getFullOutput();
+      expect(output).toContain(
+        '--breakdown and --group-by cannot be used together'
+      );
+    });
+
     it('should error on invalid group-by dimension', async () => {
       useBillingCharges([]);
 
