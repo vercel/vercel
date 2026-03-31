@@ -4,7 +4,7 @@ import getInvalidSubcommand from '../../util/get-invalid-subcommand';
 import getSubcommand from '../../util/get-subcommand';
 import { printError } from '../../util/error';
 import { type Command, help } from '../help';
-import overview from './status';
+import overview from './overview';
 import {
   firewallCommand,
   overviewSubcommand,

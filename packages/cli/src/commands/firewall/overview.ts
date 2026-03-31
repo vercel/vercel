@@ -13,7 +13,7 @@ import getBypass from '../../util/firewall/get-bypass';
 import { formatStatusOutput } from '../../util/firewall/format';
 import { outputAgentError } from '../../util/agent-output';
 
-export default async function status(client: Client, argv: string[]) {
+export default async function overview(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, overviewSubcommand, client);
   if (typeof parsed === 'number') return parsed;
 
