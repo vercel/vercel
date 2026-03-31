@@ -6,9 +6,21 @@
 
 All changes are staged as drafts before going live. After making changes, run `vercel routes publish` to push them to production, or `vercel routes discard-staging` to undo.
 
-## Actions
+## Creating Routing Rules
 
-A route can have at most one primary action:
+### Source path syntax (`--src-syntax`)
+
+| Syntax | Default | Example | When to use |
+|--------|---------|---------|-------------|
+| `regex` | Yes | `^/api/(.*)$` | Full regex control. Default if not specified. |
+| `path-to-regexp` | No | `/api/:path*` | Express-style named params. More readable. |
+| `equals` | No | `/about` | Exact string match. Simplest option. |
+
+`path-to-regexp` and `equals` paths must start with `/`. Only `regex` allows patterns without a leading `/`.
+
+### Actions
+
+Each routing rule can have at most one primary action:
 
 | Action | Required flags | Description |
 |--------|---------------|-------------|
@@ -16,22 +28,59 @@ A route can have at most one primary action:
 | `redirect` | `--dest` + `--status` (301/302/307/308) | Redirect the client to a new URL |
 | `set-status` | `--status` (100-599) | Return a status code (no destination) |
 
-A route can also have no primary action — only response headers or request transforms.
+Routing rules can also be used without a primary action to only set response headers or apply request transforms.
+
+### Examples
+
+```bash
+# AI — describe what you want
+vercel routes add --ai "Rewrite /api/* to https://backend.example.com/*"
+
+# Interactive — step by step
+vercel routes add
+
+# Rewrite with path-to-regexp syntax
+vercel routes add "API Proxy" \
+  --src "/api/:path*" --src-syntax path-to-regexp \
+  --action rewrite --dest "https://api.example.com/:path*" --yes
+
+# Redirect with status
+vercel routes add "Legacy Redirect" \
+  --src "/old-blog" --src-syntax equals \
+  --action redirect --dest "/blog" --status 301 --yes
+
+# Response headers only (no primary action)
+vercel routes add "CORS" \
+  --src "^/api/.*$" \
+  --set-response-header "Access-Control-Allow-Origin=*" --yes
+
+# Routing rule with conditions — redirect if auth cookie missing
+vercel routes add "Auth Required" \
+  --src "/dashboard/:path*" --src-syntax path-to-regexp \
+  --action redirect --dest "/login" --status 307 \
+  --missing "cookie:session" --yes
+
+# Control position in priority order
+vercel routes add "Priority Route" \
+  --src "/critical" --src-syntax equals \
+  --action rewrite --dest "/handler" \
+  --position start --yes
+```
 
 ## Conditions
 
-Control when a route matches using `--has` (must match) and `--missing` (must not match). Repeatable, max 16 total.
+Control when a routing rule matches using `--has` (must match) and `--missing` (must not match). Repeatable, max 16 total.
 
 **Types:** `header`, `cookie`, `query`, `host`
 
 **Formats:**
 
 ```bash
-# Existence check — does the header/cookie/query exist?
+# Existence check
 --has "cookie:session"
 --missing "header:Authorization"
 
-# Value matching — check the actual value
+# Value matching
 --has "header:X-API-Key:eq=my-secret"          # exact match
 --has "cookie:theme:contains=dark"              # value contains substring
 --has "header:Accept:re=application/json.*"     # regex match
@@ -61,56 +110,7 @@ Modify headers and query params on the request or response. All flags are repeat
 --delete-request-query "debug"
 ```
 
-## Creating Routes
-
-### Source path syntax (`--src-syntax`)
-
-| Syntax | Default | Example | When to use |
-|--------|---------|---------|-------------|
-| `regex` | Yes | `^/api/(.*)$` | Full regex control. Default if not specified. |
-| `path-to-regexp` | No | `/api/:path*` | Express-style named params. More readable. |
-| `equals` | No | `/about` | Exact string match. Simplest option. |
-
-`path-to-regexp` and `equals` paths must start with `/`. Only `regex` allows patterns without a leading `/`.
-
-### Examples
-
-```bash
-# AI — describe what you want
-vercel routes add --ai "Rewrite /api/* to https://backend.example.com/*"
-
-# Interactive — step by step
-vercel routes add
-
-# Flags — full control
-vercel routes add "API Proxy" \
-  --src "/api/:path*" --src-syntax path-to-regexp \
-  --action rewrite --dest "https://api.example.com/:path*" --yes
-
-# Redirect with status
-vercel routes add "Legacy Redirect" \
-  --src "/old-blog" --src-syntax equals \
-  --action redirect --dest "/blog" --status 301 --yes
-
-# CORS headers (no primary action, just headers)
-vercel routes add "CORS" \
-  --src "^/api/.*$" \
-  --set-response-header "Access-Control-Allow-Origin=*" --yes
-
-# Route with conditions — redirect if auth cookie missing
-vercel routes add "Auth Required" \
-  --src "/dashboard/:path*" --src-syntax path-to-regexp \
-  --action redirect --dest "/login" --status 307 \
-  --missing "cookie:session" --yes
-
-# Control position in priority order
-vercel routes add "Priority Route" \
-  --src "/critical" --src-syntax equals \
-  --action rewrite --dest "/handler" \
-  --position start --yes
-```
-
-## Editing Routes
+## Editing Routing Rules
 
 ```bash
 # AI — describe the changes
@@ -132,28 +132,28 @@ vercel routes edit "My Route" --clear-headers --yes
 vercel routes edit "My Route" --clear-transforms --yes
 ```
 
-## Managing Routes
+## Managing Routing Rules
 
 ```bash
-vercel routes enable "My Route"           # enable a disabled route
+vercel routes enable "My Route"           # enable a disabled routing rule
 vercel routes disable "My Route"          # disable without removing
-vercel routes delete "My Route"           # delete a route
+vercel routes delete "My Route"           # delete a routing rule
 vercel routes reorder "My Route" --position start           # move to top
 vercel routes reorder "My Route" --position end             # move to bottom
 vercel routes reorder "My Route" --position after:<id>      # move after another
 vercel routes reorder "My Route" --position before:<id>     # move before another
 ```
 
-## Viewing Routes
+## Viewing Routing Rules
 
 ```bash
-vercel routes list                       # all routes
+vercel routes list                       # all routing rules
 vercel routes list --diff                # staged changes vs production
 vercel routes list --production          # production only
 vercel routes list --search "api"        # search by name, src, dest
 vercel routes list --filter rewrite      # filter: rewrite, redirect, set_status, transform
 vercel routes list --expand              # show expanded details
-vercel routes inspect "My Route"         # full details of a specific route
+vercel routes inspect "My Route"         # full details of a specific routing rule
 vercel routes inspect "My Route" --diff  # compare staged vs production
 ```
 
