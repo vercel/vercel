@@ -26,6 +26,7 @@ import reauthenticate from './login/reauthenticate';
 import type { SAMLError } from './login/types';
 import { writeToAuthConfigFile, writeToConfigFile } from './config/files';
 import type { TelemetryEventStore } from './telemetry';
+import type { Span } from '@vercel/build-utils';
 import type {
   AuthConfig,
   GlobalConfig,
@@ -119,6 +120,10 @@ export default class Client extends EventEmitter implements Stdio {
   nonInteractive: boolean;
   /** Dangerously skip all permission prompts (--dangerously-skip-permissions flag) */
   dangerouslySkipPermissions: boolean;
+  /** Root trace span for CLI diagnostics */
+  rootSpan?: Span;
+  /** Path to write CLI trace diagnostics. Only set by `vc build`; other commands do not write traces. */
+  traceDiagnosticsPath?: string;
   /** Track if we've already logged the token source debug message */
   private _loggedTokenSource: boolean = false;
 
