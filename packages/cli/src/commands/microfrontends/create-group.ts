@@ -106,11 +106,41 @@ export default async function createGroup(client: Client): Promise<number> {
   const defaultRouteFlag = parsedArgs.flags['--default-route'] as
     | string
     | undefined;
+  const projectRouteFlags = parsedArgs.flags['--project-route'] as
+    | string[]
+    | undefined;
+  const isNonInteractive =
+    client.nonInteractive || client.argv.includes('--non-interactive');
+
+  if (isNonInteractive) {
+    if (!nameFlag) {
+      output.error(
+        'Missing required flag --name. Use --name in non-interactive mode.'
+      );
+      return 1;
+    }
+
+    if (!projectFlags || projectFlags.length === 0) {
+      output.error(
+        'Missing required flag --project. Use --project in non-interactive mode.'
+      );
+      return 1;
+    }
+
+    if (projectFlags.length > 1 && !defaultAppFlag) {
+      output.error(
+        'Missing required flag --default-app when using multiple --project values in non-interactive mode.'
+      );
+      return 1;
+    }
+  }
 
   // Block agents when adding projects would incur billing charges beyond the free tier.
-  const wouldAffectBilling = existingMfeProjectCount + 1 > freeProjects;
+  const projectsToAddCount = projectFlags?.length ?? 1;
+  const wouldAffectBilling =
+    existingMfeProjectCount + projectsToAddCount > freeProjects;
   if (wouldAffectBilling) {
-    if (client.nonInteractive) {
+    if (isNonInteractive) {
       const flags = getGlobalFlagsOnlyFromArgs(client.argv.slice(2));
       const interactiveCmd = getCommandNamePlain(
         `microfrontends create-group ${flags.filter(f => f !== '--non-interactive').join(' ')}`.trim()
@@ -134,6 +164,7 @@ export default async function createGroup(client: Client): Promise<number> {
         },
         1
       );
+      return 1;
     }
 
     if (!client.stdin.isTTY) {
@@ -299,13 +330,33 @@ export default async function createGroup(client: Client): Promise<number> {
   }
 
   const otherProjects = selectedProjects.filter(p => p.id !== defaultApp.id);
+  const parsedProjectRoutes = parseProjectRouteFlags(
+    projectRouteFlags,
+    selectedProjects,
+    defaultApp
+  );
+  if (typeof parsedProjectRoutes === 'string') {
+    output.error(parsedProjectRoutes);
+    return 1;
+  }
   const otherApplications: { projectId: string; defaultRoute: string }[] = [];
 
   for (const project of otherProjects) {
-    const route = await client.input.text({
-      message: `Default route for "${project.name}":`,
-      validate: validateDefaultRoute,
-    });
+    const routeFromFlag = parsedProjectRoutes.get(project.id);
+    let route: string;
+    if (routeFromFlag) {
+      route = routeFromFlag;
+    } else if (isNonInteractive) {
+      output.error(
+        `Missing required flag --project-route for "${project.name}". Use --project-route=${project.name}=/<path> in non-interactive mode.`
+      );
+      return 1;
+    } else {
+      route = await client.input.text({
+        message: `Default route for "${project.name}":`,
+        validate: validateDefaultRoute,
+      });
+    }
     otherApplications.push({ projectId: project.id, defaultRoute: route });
   }
 
@@ -354,10 +405,9 @@ export default async function createGroup(client: Client): Promise<number> {
   }
   output.log('');
 
-  const confirmed = await client.input.confirm(
-    'Create microfrontends group?',
-    true
-  );
+  const confirmed = isNonInteractive
+    ? true
+    : await client.input.confirm('Create microfrontends group?', true);
   if (!confirmed) {
     output.log('Aborted.');
     return 0;
@@ -416,6 +466,7 @@ export default async function createGroup(client: Client): Promise<number> {
       );
       const shouldCreate =
         client.stdin.isTTY &&
+        !isNonInteractive &&
         (await client.input.confirm('Create a microfrontends.json now?', true));
       if (shouldCreate) {
         const routingPaths: Record<string, string[]> = {};
@@ -511,4 +562,52 @@ function isProjectInMicrofrontendsGroup(
   groups: MicrofrontendsGroupResponse[]
 ): boolean {
   return groups.some(g => g.projects.some(p => p.id === project.id));
+}
+
+function parseProjectRouteFlags(
+  projectRouteFlags: string[] | undefined,
+  selectedProjects: Project[],
+  defaultApp: Project
+): Map<string, string> | string {
+  const routeByProjectId = new Map<string, string>();
+  if (!projectRouteFlags || projectRouteFlags.length === 0) {
+    return routeByProjectId;
+  }
+
+  for (const entry of projectRouteFlags) {
+    const separatorIndex = entry.indexOf('=');
+    if (separatorIndex <= 0 || separatorIndex === entry.length - 1) {
+      return `Invalid --project-route value "${entry}". Use "<project>=<route>", for example "docs=/docs".`;
+    }
+
+    const projectIdentifier = entry.slice(0, separatorIndex).trim();
+    const route = entry.slice(separatorIndex + 1).trim();
+    if (!projectIdentifier || !route) {
+      return `Invalid --project-route value "${entry}". Use "<project>=<route>", for example "docs=/docs".`;
+    }
+
+    const project = selectedProjects.find(
+      p => p.name === projectIdentifier || p.id === projectIdentifier
+    );
+    if (!project) {
+      return `Invalid --project-route value "${entry}". Project "${projectIdentifier}" is not one of the selected projects.`;
+    }
+
+    if (project.id === defaultApp.id) {
+      return `Invalid --project-route value "${entry}". Use --default-route for the default app "${defaultApp.name}".`;
+    }
+
+    const routeValidation = validateDefaultRoute(route);
+    if (routeValidation !== true) {
+      return `Invalid --project-route value "${entry}": ${routeValidation}`;
+    }
+
+    if (routeByProjectId.has(project.id)) {
+      return `Duplicate --project-route for project "${project.name}".`;
+    }
+
+    routeByProjectId.set(project.id, route);
+  }
+
+  return routeByProjectId;
 }
