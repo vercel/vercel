@@ -74,6 +74,17 @@ export async function resolveScopeContext(
     );
     if (projects.length === 1) {
       localOrgId = projects[0].orgId ?? repoLink.repoConfig.orgId ?? undefined;
+    } else if (projects.length > 1) {
+      // Multiple projects match this path — check if they all share the same orgId
+      const orgIds = new Set(
+        projects.map(p => p.orgId ?? repoLink.repoConfig.orgId ?? '')
+      );
+      if (orgIds.size === 1) {
+        const [singleOrgId] = orgIds;
+        if (singleOrgId) {
+          localOrgId = singleOrgId;
+        }
+      }
     }
   }
 
@@ -155,6 +166,12 @@ export async function resolveScopeContext(
       resolvedTeam = corrected.team;
     } else {
       // No local link, use global scope as-is
+      if (isCrossTeamRepo) {
+        output.warn(
+          `This repository has projects across multiple teams. ` +
+            `Use \`--scope\` to specify which team, or \`cd\` into a project directory.`
+        );
+      }
       resolvedOrg = team
         ? { type: 'team', id: team.id, slug: team.slug }
         : { type: 'user', id: user.id, slug: user.username };

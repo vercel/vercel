@@ -1,7 +1,11 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { join } from 'path';
+import { outputFile } from 'fs-extra';
 import { client } from '../../mocks/client';
 import { useUser } from '../../mocks/user';
 import { useTeam } from '../../mocks/team';
+import { setupTmpDir } from '../../helpers/setup-unit-fixture';
+import * as projectLinkModule from '../../../src/util/projects/link';
 import {
   resolveScopeContext,
   applyScopeFromLink,
@@ -97,6 +101,129 @@ describe('resolveScopeContext', () => {
       const ctx = await resolveScopeContext(client);
 
       expect(ctx.isCrossTeamRepo).toBe(false);
+    });
+  });
+
+  describe('cross-team repo awareness', () => {
+    let mockTeam: ReturnType<typeof useTeam>;
+
+    beforeEach(() => {
+      mockTeam = useTeam('team_dummy');
+      useUser();
+      // Mock getProjectLink to return null so it doesn't trigger interactive
+      // prompts when repo.json has multiple projects
+      vi.spyOn(projectLinkModule, 'getProjectLink').mockResolvedValue(null);
+    });
+
+    it('should warn about cross-team repo when no localOrgId and requiresTeamOnly', async () => {
+      const cwd = setupTmpDir();
+      client.cwd = cwd;
+      client.config.currentTeam = mockTeam.id;
+
+      await outputFile(
+        join(cwd, '.vercel', 'repo.json'),
+        JSON.stringify({
+          remoteName: 'origin',
+          projects: [
+            {
+              id: 'prj_aaa',
+              name: 'proj-a',
+              directory: 'apps/a',
+              orgId: 'team_aaa',
+            },
+            {
+              id: 'prj_bbb',
+              name: 'proj-b',
+              directory: 'apps/b',
+              orgId: 'team_bbb',
+            },
+          ],
+        })
+      );
+
+      const exitCodePromise = resolveScopeContext(client, {
+        requiresTeamOnly: true,
+      });
+      await expect(client.stderr).toOutput(
+        'This repository has projects across multiple teams'
+      );
+      const ctx = await exitCodePromise;
+
+      expect(ctx.isCrossTeamRepo).toBe(true);
+      expect(ctx.org.id).toEqual(mockTeam.id);
+    });
+
+    it('should not warn about cross-team repo when explicit --scope is provided', async () => {
+      const cwd = setupTmpDir();
+      client.cwd = cwd;
+      client.config.currentTeam = mockTeam.id;
+      client.argv = ['projects', 'ls', '--scope', mockTeam.slug];
+
+      await outputFile(
+        join(cwd, '.vercel', 'repo.json'),
+        JSON.stringify({
+          remoteName: 'origin',
+          projects: [
+            {
+              id: 'prj_aaa',
+              name: 'proj-a',
+              directory: 'apps/a',
+              orgId: 'team_aaa',
+            },
+            {
+              id: 'prj_bbb',
+              name: 'proj-b',
+              directory: 'apps/b',
+              orgId: 'team_bbb',
+            },
+          ],
+        })
+      );
+
+      const ctx = await resolveScopeContext(client, { requiresTeamOnly: true });
+
+      expect(ctx.isCrossTeamRepo).toBe(true);
+      expect(ctx.explicitScopeProvided).toBe(true);
+      expect(ctx.org.id).toEqual(mockTeam.id);
+    });
+
+    it('should resolve localOrgId when multiple matched projects share the same orgId', async () => {
+      const cwd = setupTmpDir();
+      client.cwd = cwd;
+      client.config.currentTeam = mockTeam.id;
+
+      await outputFile(
+        join(cwd, '.vercel', 'repo.json'),
+        JSON.stringify({
+          remoteName: 'origin',
+          projects: [
+            {
+              id: 'prj_aaa',
+              name: 'proj-a',
+              directory: '.',
+              orgId: mockTeam.id,
+            },
+            {
+              id: 'prj_bbb',
+              name: 'proj-b',
+              directory: '.',
+              orgId: mockTeam.id,
+            },
+            {
+              id: 'prj_ccc',
+              name: 'proj-c',
+              directory: 'apps/c',
+              orgId: 'team_other',
+            },
+          ],
+        })
+      );
+
+      const ctx = await resolveScopeContext(client, { requiresTeamOnly: true });
+
+      expect(ctx.isCrossTeamRepo).toBe(true);
+      // Both root projects share the same orgId — resolves without warning
+      expect(ctx.org.id).toEqual(mockTeam.id);
     });
   });
 
