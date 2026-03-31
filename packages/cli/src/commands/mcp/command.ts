@@ -1,10 +1,40 @@
 import { packageName } from '../../util/pkg-name';
 
+export const mcpServeSubcommand = {
+  name: 'serve',
+  aliases: [],
+  description:
+    'Start a local MCP server over stdio, exposing CLI commands as tools',
+  arguments: [],
+  options: [
+    {
+      name: 'commands',
+      shorthand: null,
+      type: [String],
+      argument: 'COMMAND',
+      description:
+        'Limit exposed tools to these commands (default: all non-hidden)',
+      deprecated: false,
+    },
+  ],
+  examples: [
+    {
+      name: 'Start MCP server with all commands',
+      value: `${packageName} mcp serve`,
+    },
+    {
+      name: 'Expose only deploy and link',
+      value: `${packageName} mcp serve --commands deploy --commands link`,
+    },
+  ],
+} as const;
+
 export const mcpCommand = {
   name: 'mcp',
   aliases: [],
   description: 'Set up MCP agents and configuration for Vercel integration',
   arguments: [],
+  subcommands: [mcpServeSubcommand],
   options: [
     {
       name: 'project',
