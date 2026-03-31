@@ -59,9 +59,6 @@ describe('provisionFirstPartyIntegration', () => {
           id: 'org_123',
           slug: 'my-team',
           type: 'team',
-          name: 'My Team',
-          createdAt: 0,
-          updatedAt: 0,
         },
         project: {
           id: 'proj_123',
