@@ -3,11 +3,6 @@ import { detectFramework, LocalFileSystemDetector } from '../src';
 import { getExamples } from '../../../examples/__tests__/test-utils';
 
 const overrides = new Map([
-  // Storybook isn't really a "framework".
-  // In this example, it's really a Next.js app.
-  ['storybook', 'nextjs'],
-  // Hydrogen v2 uses Remix under the hood.
-  ['hydrogen-2', 'remix'],
   // Starlette is a Python framework without a dedicated framework preset
   ['starlette', 'python'],
   // Sinatra is a Ruby framework without a dedicated framework preset
