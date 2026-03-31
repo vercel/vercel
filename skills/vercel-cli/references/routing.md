@@ -81,7 +81,7 @@ Response headers, request headers, and request query parameters can each be set,
 # AI — describe what you want
 vercel routes add --ai "Rewrite /api/* to https://backend.example.com/*"
 
-# Interactive — step by step
+# Interactive — guided builder with prompts
 vercel routes add
 
 # Rewrite with path-to-regexp syntax and a request header
@@ -111,7 +111,7 @@ Use `--ai` to describe changes in natural language, or use flags to change speci
 # AI — describe the changes
 vercel routes edit "My Route" --ai "Add CORS headers and change to 308 redirect"
 
-# Interactive — pick fields to edit
+# Interactive — choose which fields to modify
 vercel routes edit "My Route"
 
 # Change specific fields
