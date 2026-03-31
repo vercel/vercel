@@ -33,6 +33,9 @@
     "vitest": "^0.15.2"
   },
   "prettier": "@shopify/prettier-config",
+  "overrides": {
+    "@shopify/ngrok": "npm:empty-npm-package@1.0.0"
+  },
   "dependencies": {
     "@headlessui/react": "^1.6.4",
     "@heroicons/react": "^1.0.6",
