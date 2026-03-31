@@ -102,14 +102,16 @@ export default async function list(
     currentTeam = user.id;
   }
 
-  const teamList: TeamListEntry[] = teams.map(({ id, slug, name, billing }) => ({
-    id,
-    name,
-    value: slug,
-    isCurrent: id === currentTeam,
-    plan: billing?.plan ?? null,
-    type: 'team',
-  }));
+  const teamList: TeamListEntry[] = teams.map(
+    ({ id, slug, name, billing }) => ({
+      id,
+      name,
+      value: slug,
+      isCurrent: id === currentTeam,
+      plan: billing?.plan ?? null,
+      type: 'team',
+    })
+  );
 
   if (user.version !== 'northstar') {
     teamList.unshift({
