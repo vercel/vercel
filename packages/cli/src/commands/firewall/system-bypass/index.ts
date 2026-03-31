@@ -4,6 +4,9 @@ import getInvalidSubcommand from '../../../util/get-invalid-subcommand';
 import getSubcommand from '../../../util/get-subcommand';
 import { printError } from '../../../util/error';
 import { type Command, help } from '../../help';
+import list from './list';
+import add from './add';
+import remove from './remove';
 import {
   firewallCommand,
   systemBypassSubcommand,
@@ -81,7 +84,7 @@ export default async function main(client: Client, args: string[]) {
         return 2;
       }
       telemetry.trackCliSubcommandSystemBypassList(subcommandOriginal);
-      return (await import('./list')).default(client, subArgs);
+      return list(client, subArgs);
     case 'add':
       if (needHelp) {
         telemetry.trackCliFlagHelp(
@@ -92,7 +95,7 @@ export default async function main(client: Client, args: string[]) {
         return 2;
       }
       telemetry.trackCliSubcommandSystemBypassAdd(subcommandOriginal);
-      return (await import('./add')).default(client, subArgs);
+      return add(client, subArgs);
     case 'remove':
       if (needHelp) {
         telemetry.trackCliFlagHelp(
@@ -103,7 +106,7 @@ export default async function main(client: Client, args: string[]) {
         return 2;
       }
       telemetry.trackCliSubcommandSystemBypassRemove(subcommandOriginal);
-      return (await import('./remove')).default(client, subArgs);
+      return remove(client, subArgs);
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
       output.print(

@@ -8,6 +8,7 @@ import overview from './overview';
 import diff from './diff';
 import publish from './publish';
 import discard from './discard';
+import systemBypass from './system-bypass';
 import {
   firewallCommand,
   overviewSubcommand,
@@ -106,7 +107,7 @@ export default async function main(client: Client) {
     case 'system-bypass': {
       telemetry.trackCliSubcommandSystemBypass(subcommandOriginal);
       const nestedArgs = needHelp ? [...args, '--help'] : args;
-      return (await import('./system-bypass')).default(client, nestedArgs);
+      return systemBypass(client, nestedArgs);
     }
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
