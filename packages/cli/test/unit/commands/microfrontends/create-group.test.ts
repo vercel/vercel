@@ -718,6 +718,27 @@ describe('microfrontends create-group', () => {
       expect(await exitCodePromise).toBe(1);
     });
 
+    it('errors when --yes is missing and stdin is not a TTY', async () => {
+      setupMocks();
+      client.setArgv(
+        'microfrontends',
+        'create-group',
+        '--non-interactive',
+        '--name=My Group',
+        '--project=web',
+        '--default-app=web'
+      );
+      (client.stdin as any).isTTY = false;
+
+      const exitCodePromise = microfrontends(client);
+
+      await expect(client.stderr).toOutput(
+        'Error: Confirmation required. Use --yes to confirm group creation in non-interactive mode.'
+      );
+      expect(await exitCodePromise).toBe(1);
+      (client.stdin as any).isTTY = true;
+    });
+
     it('errors in non-interactive mode when creation would affect billing', async () => {
       const mocks = setupMocks({
         groupsResponse: {
