@@ -95,7 +95,7 @@ Conditions control when a routing rule matches. Use `--has` to require something
 
 ## Response Headers & Request Transforms
 
-Modify headers and query parameters on the request or response. All flags support `set`, `append`, and `delete` variants for each type (`response-header`, `request-header`, `request-query`). All are repeatable.
+Response headers, request headers, and request query parameters can each be set, appended to, or deleted. All flags are repeatable.
 
 ```bash
 --set-response-header "Cache-Control=public, max-age=3600"
