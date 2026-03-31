@@ -30,10 +30,6 @@ import {
   validateRequiredMetadata,
 } from '../../util/integration/parse-metadata';
 import { addAutoProvision } from './add-auto-provision';
-import {
-  isFirstPartyIntegration,
-  provisionFirstPartyIntegration,
-} from '../../util/integration/first-party';
 import { fetchBillingPlans } from '../../util/integration/fetch-billing-plans';
 import { fetchInstallations } from '../../util/integration/fetch-installations';
 import { resolveAndFetchIntegration } from '../../util/integration/fetch-integration';
@@ -107,11 +103,6 @@ export async function add(
     }
   } else {
     integrationSlug = rawArg;
-  }
-
-  // First-party Vercel products (e.g. blob) bypass the marketplace API
-  if (isFirstPartyIntegration(integrationSlug)) {
-    return provisionFirstPartyIntegration(client, integrationSlug);
   }
 
   // Validate --environment values early (before any network requests)
