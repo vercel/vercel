@@ -14,33 +14,6 @@ export async function fetchIntegration(client: Client, slug: string) {
   });
 }
 
-/**
- * Fetch an integration by slug, print errors, and track telemetry.
- * Returns the integration on success, or null on failure (after printing the error).
- */
-export async function fetchIntegrationWithTelemetry(
-  client: Client,
-  integrationSlug: string,
-  telemetry: IntegrationAddTelemetryClient
-): Promise<Integration | null> {
-  let knownIntegrationSlug = false;
-  try {
-    const integration = await fetchIntegration(client, integrationSlug);
-    knownIntegrationSlug = true;
-    return integration;
-  } catch (error) {
-    output.error(
-      `Failed to get integration "${integrationSlug}": ${(error as Error).message}`
-    );
-    return null;
-  } finally {
-    telemetry.trackCliArgumentIntegration(
-      integrationSlug,
-      knownIntegrationSlug
-    );
-  }
-}
-
 type DiscoverEntry = {
   name: string;
   slug: string;
