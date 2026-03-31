@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import ms from 'ms';
 import table from '../../util/output/table';
 import type Client from '../../util/client';
-import getScope from '../../util/get-scope';
+import { resolveScopeContext } from '../../util/scope-context';
 import { getPaginationOpts } from '../../util/get-pagination-opts';
 import stamp from '../../util/output/stamp';
 import getCerts from '../../util/certs/get-certs';
@@ -60,7 +60,9 @@ async function ls(client: Client, argv: string[]): Promise<number> {
   // Get the list of certificates
   const { certs, pagination } = await getCerts(client, ...paginationOptions);
 
-  const { contextName } = await getScope(client);
+  const { contextName } = await resolveScopeContext(client, {
+    requiresTeamOnly: true,
+  });
   output.log(
     `${
       certs.length > 0 ? 'Certificates' : 'No certificates'

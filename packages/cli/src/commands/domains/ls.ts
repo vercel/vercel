@@ -4,7 +4,7 @@ import plural from 'pluralize';
 
 import type Client from '../../util/client';
 import getDomains from '../../util/domains/get-domains';
-import getScope from '../../util/get-scope';
+import { resolveScopeContext } from '../../util/scope-context';
 import stamp from '../../util/output/stamp';
 import formatTable from '../../util/format-table';
 import { formatDateWithoutTime } from '../../util/format-date';
@@ -69,7 +69,9 @@ export default async function ls(client: Client, argv: string[]) {
     return 1;
   }
 
-  const { contextName } = await getScope(client);
+  const { contextName } = await resolveScopeContext(client, {
+    requiresTeamOnly: true,
+  });
 
   const lsStamp = stamp();
 

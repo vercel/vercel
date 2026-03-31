@@ -10,7 +10,7 @@ import { listSubcommand } from './command';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
-import getScope from '../../util/get-scope';
+import { resolveScopeContext } from '../../util/scope-context';
 import type Client from '../../util/client';
 import type { Project } from '@vercel-internals/types';
 
@@ -63,7 +63,9 @@ export default async function list(
 
   const start = Date.now();
 
-  const { contextName } = await getScope(client);
+  const { contextName } = await resolveScopeContext(client, {
+    requiresTeamOnly: true,
+  });
   output.spinner(`Fetching projects in ${chalk.bold(contextName)}`);
 
   // Process flags and build URL

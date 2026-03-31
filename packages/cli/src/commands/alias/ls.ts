@@ -3,7 +3,7 @@ import ms from 'ms';
 import table from '../../util/output/table';
 import type Client from '../../util/client';
 import getAliases from '../../util/alias/get-aliases';
-import getScope from '../../util/get-scope';
+import { resolveScopeContext } from '../../util/scope-context';
 import { getPaginationOpts } from '../../util/get-pagination-opts';
 import stamp from '../../util/output/stamp';
 import getCommandFlags from '../../util/get-command-flags';
@@ -40,7 +40,9 @@ export default async function ls(client: Client, argv: string[]) {
     return validationResult;
   }
 
-  const { contextName } = await getScope(client);
+  const { contextName } = await resolveScopeContext(client, {
+    requiresTeamOnly: true,
+  });
 
   const telemetryClient = new AliasListTelemetryClient({
     opts: {

@@ -23,6 +23,7 @@ import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { getLinkedProject } from '../../util/projects/link';
+import { applyScopeFromLink } from '../../util/scope-context';
 import { determineAgent } from '@vercel/detect-agent';
 import { suggestNextCommands } from '../../util/suggest-next-commands';
 import { validateLsArgs } from '../../util/validate-ls-args';
@@ -79,8 +80,7 @@ export default async function ls(client: Client, argv: string[]) {
     );
     return 1;
   }
-  client.config.currentTeam =
-    link.org.type === 'team' ? link.org.id : undefined;
+  applyScopeFromLink(client, link);
 
   const { project, org } = link;
 
