@@ -8,6 +8,7 @@ import DevServer from '../../util/dev/server';
 import { parseListen } from '../../util/dev/parse-listen';
 import type Client from '../../util/client';
 import { getLinkedProject } from '../../util/projects/link';
+import { applyScopeFromLink } from '../../util/scope-context';
 import type { ProjectSettings } from '@vercel-internals/types';
 import setupAndLink from '../../util/link/setup-and-link';
 import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
@@ -113,7 +114,7 @@ export default async function dev(
       repoRoot = cwd = link.repoRoot;
     }
 
-    client.config.currentTeam = org.type === 'team' ? org.id : undefined;
+    applyScopeFromLink(client, { org });
 
     projectSettings = project;
 

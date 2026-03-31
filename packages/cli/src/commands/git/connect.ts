@@ -20,6 +20,7 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { connectSubcommand } from './command';
 import { ensureLink } from '../../util/link/ensure-link';
+import { applyScopeFromLink } from '../../util/scope-context';
 
 interface ConnectArgParams {
   client: Client;
@@ -88,7 +89,7 @@ export default async function connect(client: Client, argv: string[]) {
   const { project, org } = linkedProject;
 
   const gitProviderLink = project.link;
-  client.config.currentTeam = org.type === 'team' ? org.id : undefined;
+  applyScopeFromLink(client, { org });
 
   // get project from .git
   const gitConfigPath = join(cwd, '.git/config');

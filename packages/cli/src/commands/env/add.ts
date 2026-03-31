@@ -11,6 +11,7 @@ import readStandardInput from '../../util/input/read-standard-input';
 import param from '../../util/output/param';
 import { emoji, prependEmoji } from '../../util/emoji';
 import { isKnownError } from '../../util/env/known-error';
+import { applyScopeFromLink } from '../../util/scope-context';
 import {
   getEnvKeyWarnings,
   removePublicPrefix,
@@ -198,7 +199,7 @@ export default async function add(client: Client, argv: string[]) {
     if (link.status !== 'linked') return 1;
     const { project } = link;
     const org = link.org;
-    client.config.currentTeam = org.type === 'team' ? org.id : undefined;
+    applyScopeFromLink(client, { org });
     const [{ envs }, customEnvironments] = await Promise.all([
       getEnvRecords(client, project.id, 'vercel-cli:env:add'),
       getCustomEnvironments(client, project.id),

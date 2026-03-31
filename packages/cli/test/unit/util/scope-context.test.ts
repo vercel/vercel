@@ -2,7 +2,10 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { client } from '../../mocks/client';
 import { useUser } from '../../mocks/user';
 import { useTeam } from '../../mocks/team';
-import { resolveScopeContext } from '../../../src/util/scope-context';
+import {
+  resolveScopeContext,
+  applyScopeFromLink,
+} from '../../../src/util/scope-context';
 
 describe('resolveScopeContext', () => {
   describe('with no local links', () => {
@@ -141,5 +144,50 @@ describe('resolveScopeContext', () => {
       expect(ctx.user.id).toEqual(mockUser.id);
       expect(ctx.team?.id).toEqual(mockTeam.id);
     });
+  });
+});
+
+describe('applyScopeFromLink', () => {
+  it('should set currentTeam from team org', () => {
+    client.config.currentTeam = undefined;
+    applyScopeFromLink(client, {
+      org: { type: 'team', id: 'team_abc', slug: 'my-team' },
+    });
+    expect(client.config.currentTeam).toEqual('team_abc');
+  });
+
+  it('should clear currentTeam for personal account org', () => {
+    client.config.currentTeam = 'team_old';
+    applyScopeFromLink(client, {
+      org: { type: 'user', id: 'user_abc', slug: 'johndoe' },
+    });
+    expect(client.config.currentTeam).toBeUndefined();
+  });
+
+  it('should override currentTeam when switching teams', () => {
+    client.config.currentTeam = 'team_old';
+    applyScopeFromLink(client, {
+      org: { type: 'team', id: 'team_new', slug: 'new-team' },
+    });
+    expect(client.config.currentTeam).toEqual('team_new');
+  });
+
+  it('should warn on scope mismatch', async () => {
+    client.config.currentTeam = 'team_global';
+    applyScopeFromLink(client, {
+      org: { type: 'team', id: 'team_local', slug: 'local-team' },
+    });
+    await expect(client.stderr).toOutput(
+      'This directory is linked to a project under a different team'
+    );
+    expect(client.config.currentTeam).toEqual('team_local');
+  });
+
+  it('should not warn when scopes match', () => {
+    client.config.currentTeam = 'team_abc';
+    applyScopeFromLink(client, {
+      org: { type: 'team', id: 'team_abc', slug: 'my-team' },
+    });
+    expect(client.config.currentTeam).toEqual('team_abc');
   });
 });

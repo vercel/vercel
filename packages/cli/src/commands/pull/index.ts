@@ -13,6 +13,7 @@ import {
   getEnvTargetPlaceholder,
 } from '../../util/env/env-target';
 import { ensureLink } from '../../util/link/ensure-link';
+import { applyScopeFromLink } from '../../util/scope-context';
 import humanizePath from '../../util/humanize-path';
 
 import { help } from '../help';
@@ -131,7 +132,7 @@ export async function pullCommandLogic(
     currentDirectory = cwd;
   }
 
-  client.config.currentTeam = org.type === 'team' ? org.id : undefined;
+  applyScopeFromLink(client, { org });
 
   const pullResultCode = await pullAllEnvFiles(
     environment,

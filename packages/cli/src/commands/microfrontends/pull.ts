@@ -4,6 +4,7 @@ import output from '../../output-manager';
 import getScope from '../../util/get-scope';
 import type Client from '../../util/client';
 import { ensureLink } from '../../util/link/ensure-link';
+import { applyScopeFromLink } from '../../util/scope-context';
 import { emoji, prependEmoji } from '../../util/emoji';
 import humanizePath from '../../util/humanize-path';
 import stamp from '../../util/output/stamp';
@@ -53,7 +54,7 @@ export default async function pull(client: Client): Promise<number> {
     currentDirectory = client.cwd;
   }
 
-  client.config.currentTeam = org.type === 'team' ? org.id : undefined;
+  applyScopeFromLink(client, { org });
 
   const { contextName } = await getScope(client);
   output.spinner(

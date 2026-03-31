@@ -10,6 +10,7 @@ import { printError } from '../../util/error';
 import { GitDisconnectTelemetryClient } from '../../util/telemetry/commands/git/disconnect';
 import type Client from '../../util/client';
 import { ensureLink } from '../../util/link/ensure-link';
+import { applyScopeFromLink } from '../../util/scope-context';
 
 export default async function disconnect(client: Client, argv: string[]) {
   let parsedArgs;
@@ -55,7 +56,7 @@ export default async function disconnect(client: Client, argv: string[]) {
   }
 
   const { org, project } = linkedProject;
-  client.config.currentTeam = org.type === 'team' ? org.id : undefined;
+  applyScopeFromLink(client, { org });
 
   if (project.link) {
     const { org: linkOrg, repo } = project.link;

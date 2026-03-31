@@ -180,6 +180,32 @@ export async function resolveScopeContext(
 }
 
 /**
+ * Applies scope from a pre-resolved project link.
+ * Sets client.config.currentTeam and warns if the linked project's org
+ * differs from the user's current global scope (--scope, vc switch, config).
+ *
+ * Use this when the command already has a link from getLinkedProject()/ensureLink().
+ * Unlike resolveScopeContext(), this makes no API calls.
+ */
+export function applyScopeFromLink(client: Client, link: { org: Org }): void {
+  const globalTeamId = client.config.currentTeam;
+  const localOrgId = link.org.id;
+
+  const scopeMismatch = Boolean(globalTeamId && globalTeamId !== localOrgId);
+
+  if (scopeMismatch) {
+    output.warn(
+      `This directory is linked to a project under a different team than your current scope. ` +
+        `Using the linked project's team. To change, run \`vc link\`.`
+    );
+  }
+
+  client.config.currentTeam = localOrgId.startsWith('team_')
+    ? localOrgId
+    : undefined;
+}
+
+/**
  * Detects whether the user explicitly provided a scope via --scope, --team,
  * or the `scope` field in vercel.json (localConfig).
  */

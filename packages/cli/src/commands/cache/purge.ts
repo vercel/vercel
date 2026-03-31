@@ -6,6 +6,7 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
 import { getCommandName } from '../../util/pkg-name';
 import { getLinkedProject } from '../../util/projects/link';
+import { applyScopeFromLink } from '../../util/scope-context';
 import { emoji, prependEmoji } from '../../util/emoji';
 import { CachePurgeTelemetryClient } from '../../util/telemetry/commands/cache/purge';
 
@@ -42,7 +43,7 @@ export default async function purge(
   }
 
   const { project, org } = link;
-  client.config.currentTeam = org.type === 'team' ? org.id : undefined;
+  applyScopeFromLink(client, { org });
   const yes = Boolean(parsedArgs.flags['--yes']);
   telemetry.trackCliFlagYes(yes);
 

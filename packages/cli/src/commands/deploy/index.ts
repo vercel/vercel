@@ -82,6 +82,7 @@ import parseTarget from '../../util/parse-target';
 import { DeployTelemetryClient } from '../../util/telemetry/commands/deploy';
 import output from '../../output-manager';
 import { ensureLink } from '../../util/link/ensure-link';
+import { applyScopeFromLink } from '../../util/scope-context';
 import { UploadErrorMissingArchive } from '../../util/deploy/process-deployment';
 import { displayBuildLogsUntilFinalError } from '../../util/logs';
 import { determineAgent } from '@vercel/detect-agent';
@@ -287,7 +288,7 @@ async function handleInitDeployment(
   }
 
   const contextName = org.slug;
-  client.config.currentTeam = org.type === 'team' ? org.id : undefined;
+  applyScopeFromLink(client, { org });
 
   if (
     rootDirectory &&
@@ -863,7 +864,7 @@ async function handleContinueSubcommand(
     }
   }
 
-  client.config.currentTeam = org.type === 'team' ? org.id : undefined;
+  applyScopeFromLink(client, { org });
 
   const deployStamp = stamp();
 
@@ -1135,7 +1136,7 @@ async function handleDefaultDeploy(
   // #endregion
 
   const contextName = org.slug;
-  client.config.currentTeam = org.type === 'team' ? org.id : undefined;
+  applyScopeFromLink(client, { org });
 
   if (
     rootDirectory &&

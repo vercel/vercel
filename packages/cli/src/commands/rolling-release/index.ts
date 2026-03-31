@@ -23,6 +23,7 @@ import { printError } from '../../util/error';
 import output from '../../output-manager';
 import { RollingReleaseTelemetryClient } from '../../util/telemetry/commands/rolling-release';
 import { getLinkedProject } from '../../util/projects/link';
+import { applyScopeFromLink } from '../../util/scope-context';
 import getSubcommand from '../../util/get-subcommand';
 import { getCommandAliases } from '..';
 import getInvalidSubcommand from '../../util/get-invalid-subcommand';
@@ -173,7 +174,7 @@ export default async function rollingRelease(client: Client): Promise<number> {
     }
 
     const { project, org } = link;
-    client.config.currentTeam = org.type === 'team' ? org.id : undefined;
+    applyScopeFromLink(client, { org });
 
     let subcommandFlags;
     switch (subcommand) {

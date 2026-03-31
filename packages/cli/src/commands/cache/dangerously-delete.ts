@@ -6,6 +6,7 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
 import { getCommandName } from '../../util/pkg-name';
 import { getLinkedProject } from '../../util/projects/link';
+import { applyScopeFromLink } from '../../util/scope-context';
 import { emoji, prependEmoji } from '../../util/emoji';
 import { CacheDangerouslyDeleteTelemetryClient } from '../../util/telemetry/commands/cache/dangerously-delete';
 import plural from 'pluralize';
@@ -45,7 +46,7 @@ export default async function dangerouslyDelete(
   }
 
   const { project, org } = link;
-  client.config.currentTeam = org.type === 'team' ? org.id : undefined;
+  applyScopeFromLink(client, { org });
   const yes = Boolean(parsedArgs.flags['--yes']);
   const tag = parsedArgs.flags['--tag'];
   const srcimg = parsedArgs.flags['--srcimg'];
