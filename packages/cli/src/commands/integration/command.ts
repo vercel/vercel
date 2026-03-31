@@ -98,6 +98,13 @@ export const addSubcommand = {
       ],
     },
     {
+      name: 'Search by keyword (prompts to select a matching integration)',
+      value: [
+        `${packageName} integration add postgres`,
+        `${packageName} integration add redis`,
+      ],
+    },
+    {
       name: 'Install with a custom resource name',
       value: [
         `${packageName} integration add acme --name my-database`,
