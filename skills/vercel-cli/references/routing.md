@@ -46,6 +46,35 @@ Each routing rule can have at most one primary action:
 
 A routing rule without a primary action can still set response headers or apply request transforms.
 
+### Conditions
+
+Conditions control when a routing rule matches. Use `--has` to require something is present, and `--missing` to require it is absent. Supported types are `header`, `cookie`, `query`, and `host`. Conditions are repeatable, up to 16 per rule.
+
+```bash
+# Existence check
+--has "cookie:session"
+--missing "header:Authorization"
+
+# Value matching
+--has "header:X-API-Key:eq=my-secret"          # exact match
+--has "cookie:theme:contains=dark"              # value contains substring
+--has "header:Accept:re=application/json.*"     # regex match
+--missing "query:debug:eq=true"                 # must NOT have debug=true
+
+# Host matching (no key, just value)
+--has "host:eq=example.com"
+```
+
+### Response headers & request transforms
+
+Response headers, request headers, and request query parameters can each be set, appended to, or deleted. All flags are repeatable.
+
+```bash
+--set-response-header "Cache-Control=public, max-age=3600"
+--append-request-header "X-Forwarded-Host=myapp.com"
+--delete-request-query "debug"
+```
+
 ### Examples
 
 ```bash
@@ -74,36 +103,9 @@ vercel routes add "Auth Required" \
   --description "Redirect unauthenticated users to login" --yes
 ```
 
-## Conditions
-
-Conditions control when a routing rule matches. Use `--has` to require something is present, and `--missing` to require it is absent. Supported types are `header`, `cookie`, `query`, and `host`. Conditions are repeatable, up to 16 per rule.
-
-```bash
-# Existence check
---has "cookie:session"
---missing "header:Authorization"
-
-# Value matching
---has "header:X-API-Key:eq=my-secret"          # exact match
---has "cookie:theme:contains=dark"              # value contains substring
---has "header:Accept:re=application/json.*"     # regex match
---missing "query:debug:eq=true"                 # must NOT have debug=true
-
-# Host matching (no key, just value)
---has "host:eq=example.com"
-```
-
-## Response Headers & Request Transforms
-
-Response headers, request headers, and request query parameters can each be set, appended to, or deleted. All flags are repeatable.
-
-```bash
---set-response-header "Cache-Control=public, max-age=3600"
---append-request-header "X-Forwarded-Host=myapp.com"
---delete-request-query "debug"
-```
-
 ## Editing Routing Rules
+
+Use `--ai` to describe changes in natural language, or use flags to change specific fields.
 
 ```bash
 # AI — describe the changes
