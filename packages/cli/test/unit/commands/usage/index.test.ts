@@ -360,5 +360,250 @@ describe('usage', () => {
       expect(output).toContain('Invalid breakdown period');
       expect(output).toContain('daily, weekly, monthly');
     });
+
+    it('should display usage grouped by project with --group-by project', async () => {
+      const mockCharges = [
+        createMockCharge({
+          ServiceName: 'Serverless Function Execution',
+          PricingQuantity: 100,
+          BilledCost: 10,
+          EffectiveCost: 8,
+          Tags: { ProjectId: 'prj_abc', ProjectName: 'my-web-app' },
+        }),
+        createMockCharge({
+          ServiceName: 'Edge Middleware Invocations',
+          PricingQuantity: 50,
+          BilledCost: 5,
+          EffectiveCost: 4,
+          Tags: { ProjectId: 'prj_abc', ProjectName: 'my-web-app' },
+        }),
+        createMockCharge({
+          ServiceName: 'Serverless Function Execution',
+          PricingQuantity: 200,
+          BilledCost: 20,
+          EffectiveCost: 16,
+          Tags: { ProjectId: 'prj_def', ProjectName: 'my-api' },
+        }),
+      ];
+      useBillingCharges(mockCharges);
+
+      client.setArgv(
+        'usage',
+        '--from',
+        '2025-12-01',
+        '--to',
+        '2025-12-31',
+        '--group-by',
+        'project'
+      );
+      const exitCode = await usage(client);
+
+      expect(exitCode).toEqual(0);
+      const output = client.getFullOutput();
+      expect(output).toContain('my-web-app');
+      expect(output).toContain('my-api');
+      expect(output).toContain('Usage by Project');
+    });
+
+    it('should display usage grouped by region with --group-by region', async () => {
+      const mockCharges = [
+        createMockCharge({
+          ServiceName: 'Serverless Function Execution',
+          PricingQuantity: 100,
+          BilledCost: 10,
+          EffectiveCost: 8,
+          RegionId: 'iad1',
+          RegionName: 'Washington, D.C., USA',
+        }),
+        createMockCharge({
+          ServiceName: 'Serverless Function Execution',
+          PricingQuantity: 200,
+          BilledCost: 20,
+          EffectiveCost: 16,
+          RegionId: 'sfo1',
+          RegionName: 'San Francisco, CA, USA',
+        }),
+      ];
+      useBillingCharges(mockCharges);
+
+      client.setArgv(
+        'usage',
+        '--from',
+        '2025-12-01',
+        '--to',
+        '2025-12-31',
+        '--group-by',
+        'region'
+      );
+      const exitCode = await usage(client);
+
+      expect(exitCode).toEqual(0);
+      const output = client.getFullOutput();
+      expect(output).toContain('Washington, D.C., USA');
+      expect(output).toContain('San Francisco, CA, USA');
+      expect(output).toContain('Usage by Region');
+    });
+
+    it('should show (unattributed) for charges without project data', async () => {
+      const mockCharges = [
+        createMockCharge({
+          ServiceName: 'Serverless Function Execution',
+          PricingQuantity: 100,
+          BilledCost: 10,
+          EffectiveCost: 8,
+          Tags: { ProjectId: 'prj_abc', ProjectName: 'my-web-app' },
+        }),
+        createMockCharge({
+          ServiceName: 'Edge Middleware Invocations',
+          PricingQuantity: 50,
+          BilledCost: 5,
+          EffectiveCost: 4,
+          Tags: {},
+        }),
+      ];
+      useBillingCharges(mockCharges);
+
+      client.setArgv(
+        'usage',
+        '--from',
+        '2025-12-01',
+        '--to',
+        '2025-12-31',
+        '--group-by',
+        'project'
+      );
+      const exitCode = await usage(client);
+
+      expect(exitCode).toEqual(0);
+      const output = client.getFullOutput();
+      expect(output).toContain('my-web-app');
+      expect(output).toContain('(unattributed)');
+    });
+
+    it('should show (global) for charges without region data', async () => {
+      const mockCharges = [
+        createMockCharge({
+          ServiceName: 'Serverless Function Execution',
+          PricingQuantity: 100,
+          BilledCost: 10,
+          EffectiveCost: 8,
+          RegionId: 'iad1',
+          RegionName: 'Washington, D.C., USA',
+        }),
+        createMockCharge({
+          ServiceName: 'Edge Middleware Invocations',
+          PricingQuantity: 50,
+          BilledCost: 5,
+          EffectiveCost: 4,
+          RegionId: undefined,
+          RegionName: undefined,
+        }),
+      ];
+      useBillingCharges(mockCharges);
+
+      client.setArgv(
+        'usage',
+        '--from',
+        '2025-12-01',
+        '--to',
+        '2025-12-31',
+        '--group-by',
+        'region'
+      );
+      const exitCode = await usage(client);
+
+      expect(exitCode).toEqual(0);
+      const output = client.getFullOutput();
+      expect(output).toContain('Washington, D.C., USA');
+      expect(output).toContain('(global)');
+    });
+
+    it('should output JSON with group-by data when --group-by project and --format json', async () => {
+      const mockCharges = [
+        createMockCharge({
+          ServiceName: 'Serverless Function Execution',
+          PricingQuantity: 100,
+          BilledCost: 10,
+          EffectiveCost: 8,
+          Tags: { ProjectId: 'prj_abc', ProjectName: 'my-web-app' },
+        }),
+        createMockCharge({
+          ServiceName: 'Serverless Function Execution',
+          PricingQuantity: 200,
+          BilledCost: 20,
+          EffectiveCost: 16,
+          Tags: { ProjectId: 'prj_def', ProjectName: 'my-api' },
+        }),
+      ];
+      useBillingCharges(mockCharges);
+
+      client.setArgv(
+        'usage',
+        '--from',
+        '2025-12-01',
+        '--to',
+        '2025-12-31',
+        '--group-by',
+        'project',
+        '--format',
+        'json'
+      );
+      const exitCode = await usage(client);
+
+      expect(exitCode).toEqual(0);
+      const output = client.stdout.getFullOutput();
+      const json = JSON.parse(output);
+      expect(json.groupBy).toBeDefined();
+      expect(json.groupBy.dimension).toEqual('project');
+      expect(json.groupBy.data).toHaveLength(2);
+      // Sorted by billedCost descending
+      expect(json.groupBy.data[0].name).toEqual('my-api');
+      expect(json.groupBy.data[0].totals.billedCost).toEqual(20);
+      expect(json.groupBy.data[1].name).toEqual('my-web-app');
+      expect(json.groupBy.data[1].totals.billedCost).toEqual(10);
+      // Grand totals should still be present
+      expect(json.totals.billedCost).toEqual(30);
+    });
+
+    it('should error on invalid group-by dimension', async () => {
+      useBillingCharges([]);
+
+      client.setArgv(
+        'usage',
+        '--from',
+        '2025-12-01',
+        '--to',
+        '2025-12-31',
+        '--group-by',
+        'user'
+      );
+      const exitCode = await usage(client);
+
+      expect(exitCode).toEqual(1);
+      const output = client.getFullOutput();
+      expect(output).toContain('Invalid group-by dimension');
+      expect(output).toContain('project, region');
+    });
+
+    it('should track telemetry for --group-by option', async () => {
+      useBillingCharges([]);
+
+      client.setArgv(
+        'usage',
+        '--from',
+        '2025-12-01',
+        '--to',
+        '2025-12-31',
+        '--group-by',
+        'project'
+      );
+      await usage(client);
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'option:from', value: '[REDACTED]' },
+        { key: 'option:to', value: '[REDACTED]' },
+        { key: 'option:group-by', value: 'project' },
+      ]);
+    });
   });
 });

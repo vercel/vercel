@@ -15,8 +15,10 @@ import { isErrnoException } from '@vercel/error-utils';
 import type { FocusCharge } from '../../util/billing/focus-charge';
 import type {
   BreakdownPeriod,
+  GroupByDimension,
   ServiceAggregation,
   PeriodAggregation,
+  GroupAggregation,
   UsageData,
 } from './types';
 import {
@@ -29,8 +31,13 @@ import {
   isValidBreakdownPeriod,
   VALID_BREAKDOWN_PERIODS,
 } from '../../util/billing/period-utils';
+import {
+  isValidGroupByDimension,
+  VALID_GROUP_BY_DIMENSIONS,
+} from '../../util/billing/group-by-utils';
 import { outputAggregated } from './output-aggregated';
 import { outputBreakdown } from './output-breakdown';
+import { outputGroupBy } from './output-group-by';
 import { outputJson } from './output-json';
 
 export default async function usage(client: Client): Promise<number> {
@@ -104,10 +111,24 @@ export default async function usage(client: Client): Promise<number> {
     breakdownPeriod = breakdownFlag;
   }
 
+  const groupByFlag = parsedArgs.flags['--group-by'];
+  let groupByDimension: GroupByDimension | undefined;
+
+  if (groupByFlag) {
+    if (!isValidGroupByDimension(groupByFlag)) {
+      error(
+        `Invalid group-by dimension: "${groupByFlag}". Valid options are: ${VALID_GROUP_BY_DIMENSIONS.join(', ')}`
+      );
+      return 1;
+    }
+    groupByDimension = groupByFlag;
+  }
+
   telemetry.trackCliOptionFrom(fromFlag);
   telemetry.trackCliOptionTo(toFlag);
   telemetry.trackCliOptionFormat(parsedArgs.flags['--format']);
   telemetry.trackCliOptionBreakdown(breakdownFlag);
+  telemetry.trackCliOptionGroupBy(groupByFlag);
 
   if (fromFlag) {
     debug(`Date conversion: ${fromFlag} -> ${fromDate}`);
@@ -164,6 +185,7 @@ export default async function usage(client: Client): Promise<number> {
     const usageData = await processCharges(
       response,
       breakdownPeriod,
+      groupByDimension,
       contextName,
       fromDisplay,
       toDisplay,
@@ -176,11 +198,18 @@ export default async function usage(client: Client): Promise<number> {
         fromDate,
         toDate,
         breakdownPeriod,
+        groupByDimension,
       });
       return 0;
     }
 
-    if (breakdownPeriod) {
+    if (groupByDimension) {
+      outputGroupBy({
+        data: usageData,
+        groupByDimension,
+        startTime: start,
+      });
+    } else if (breakdownPeriod) {
       outputBreakdown({
         data: usageData,
         breakdownPeriod,
@@ -200,9 +229,19 @@ export default async function usage(client: Client): Promise<number> {
   }
 }
 
+function getGroupKey(charge: FocusCharge, dimension: GroupByDimension): string {
+  if (dimension === 'project') {
+    return (
+      charge.Tags?.ProjectName || charge.Tags?.ProjectId || '(unattributed)'
+    );
+  }
+  return charge.RegionName || charge.RegionId || '(global)';
+}
+
 async function processCharges(
   response: Response,
   breakdownPeriod: BreakdownPeriod | undefined,
+  groupByDimension: GroupByDimension | undefined,
   contextName: string,
   fromDisplay: string,
   toDisplay: string,
@@ -210,6 +249,7 @@ async function processCharges(
 ): Promise<UsageData> {
   const services = new Map<string, ServiceAggregation>();
   const periodUsage = new Map<string, PeriodAggregation>();
+  const groupByUsage = new Map<string, GroupAggregation>();
   let grandPricingQuantity = 0;
   let grandEffective = 0;
   let grandBilled = 0;
@@ -285,6 +325,37 @@ async function processCharges(
           pricingUnit: periodService.pricingUnit,
         });
       }
+
+      // Accumulate per group-by dimension
+      if (groupByDimension) {
+        const groupKey = getGroupKey(charge, groupByDimension);
+
+        if (!groupByUsage.has(groupKey)) {
+          groupByUsage.set(groupKey, {
+            services: new Map(),
+            totalPricingQuantity: 0,
+            totalEffectiveCost: 0,
+            totalBilledCost: 0,
+          });
+        }
+        const groupData = groupByUsage.get(groupKey)!;
+        groupData.totalPricingQuantity += quantity;
+        groupData.totalEffectiveCost += effective;
+        groupData.totalBilledCost += billed;
+
+        const groupService = groupData.services.get(serviceName) || {
+          pricingQuantity: 0,
+          effectiveCost: 0,
+          billedCost: 0,
+          pricingUnit: charge.PricingUnit || pricingUnit,
+        };
+        groupData.services.set(serviceName, {
+          pricingQuantity: groupService.pricingQuantity + quantity,
+          effectiveCost: groupService.effectiveCost + effective,
+          billedCost: groupService.billedCost + billed,
+          pricingUnit: groupService.pricingUnit,
+        });
+      }
     });
 
     stream.on('end', resolve);
@@ -301,6 +372,7 @@ async function processCharges(
     chargeCount,
     services,
     periodUsage,
+    groupByUsage,
     grandTotals: {
       pricingQuantity: grandPricingQuantity,
       effectiveCost: grandEffective,
