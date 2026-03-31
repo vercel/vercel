@@ -2655,6 +2655,67 @@ describe('deploy', () => {
     });
   });
 
+  describe('--describe (Phase 3.6)', () => {
+    it('outputs deploy command schema as JSON and returns 0', async () => {
+      client.setArgv('deploy', '--describe');
+      const exitCode = await deploy(client);
+      expect(exitCode).toBe(0);
+
+      const stdoutOutput = client.stdout.getFullOutput();
+      const schema = JSON.parse(stdoutOutput);
+      expect(schema.name).toBe('deploy');
+      expect(schema.description).toContain('Deploy your project');
+      expect(Array.isArray(schema.options)).toBe(true);
+      expect(Array.isArray(schema.arguments)).toBe(true);
+      expect(Array.isArray(schema.examples)).toBe(true);
+      expect(Array.isArray(schema.subcommands)).toBe(true);
+      expect(schema.subcommands.length).toBe(2);
+    });
+
+    it('includes --dry-run and --describe in schema options', async () => {
+      client.setArgv('deploy', '--describe');
+      await deploy(client);
+
+      const stdoutOutput = client.stdout.getFullOutput();
+      const schema = JSON.parse(stdoutOutput);
+      const optionNames = schema.options.map((o: { name: string }) => o.name);
+      expect(optionNames).toContain('dry-run');
+      expect(optionNames).toContain('describe');
+    });
+
+    it('does not invoke the deploy flow', async () => {
+      client.setArgv('deploy', '--describe');
+      const exitCode = await deploy(client);
+      expect(exitCode).toBe(0);
+
+      const stderrOutput = client.stderr.getFullOutput();
+      expect(stderrOutput).not.toContain('Deploying to');
+      expect(stderrOutput).not.toContain('Linked to');
+    });
+
+    it('outputs init subcommand schema when used with init', async () => {
+      client.setArgv('deploy', 'init', '--describe');
+      const exitCode = await deploy(client);
+      expect(exitCode).toBe(0);
+
+      const stdoutOutput = client.stdout.getFullOutput();
+      const schema = JSON.parse(stdoutOutput);
+      expect(schema.name).toBe('init');
+      expect(schema.description).toContain('manual deployment');
+    });
+
+    it('outputs continue subcommand schema when used with continue', async () => {
+      client.setArgv('deploy', 'continue', '--describe');
+      const exitCode = await deploy(client);
+      expect(exitCode).toBe(0);
+
+      const stdoutOutput = client.stdout.getFullOutput();
+      const schema = JSON.parse(stdoutOutput);
+      expect(schema.name).toBe('continue');
+      expect(schema.description).toContain('Continue a manual deployment');
+    });
+  });
+
   describe('input validation (Phase 3.2)', () => {
     describe('--env validation', () => {
       it('rejects malformed --env in agent mode with structured JSON', async () => {

@@ -100,6 +100,7 @@ import {
 } from '../../util/agent-response';
 import { EXIT_CODE } from '../../util/exit-codes';
 import { outputDryRun } from '../../util/dry-run';
+import { outputCommandSchema } from '../../util/describe-command';
 
 const COMMAND_CONFIG = {
   init: getCommandAliases(initSubcommand),
@@ -151,6 +152,10 @@ export default async (client: Client): Promise<number> => {
         printSubcommandHelp(initSubcommand);
         return 2;
       }
+      if (parsedArguments.flags['--describe']) {
+        outputCommandSchema(client, initSubcommand);
+        return 0;
+      }
       telemetryClient.trackCliSubcommandInit(subcommandOriginal);
       return handleInitDeployment(client, telemetryClient);
 
@@ -160,6 +165,10 @@ export default async (client: Client): Promise<number> => {
         printSubcommandHelp(continueSubcommand);
         return 2;
       }
+      if (parsedArguments.flags['--describe']) {
+        outputCommandSchema(client, continueSubcommand);
+        return 0;
+      }
       telemetryClient.trackCliSubcommandContinue(subcommandOriginal);
       return handleContinueSubcommand(client, telemetryClient);
 
@@ -168,6 +177,10 @@ export default async (client: Client): Promise<number> => {
         telemetryClient.trackCliFlagHelp('deploy');
         output.print(help(deployCommand, { columns: client.stderr.columns }));
         return 2;
+      }
+      if (parsedArguments.flags['--describe']) {
+        outputCommandSchema(client, deployCommand);
+        return 0;
       }
       return handleDefaultDeploy(client, telemetryClient);
   }
