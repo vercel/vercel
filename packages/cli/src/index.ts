@@ -83,6 +83,7 @@ import {
   type Reporter,
   type TraceEvent,
 } from '@vercel/build-utils';
+import { mkdir, writeFile } from 'fs/promises';
 
 const VERCEL_DIR = getGlobalPathConfig();
 const VERCEL_CONFIG_PATH = configFiles.getConfigFilePath();
@@ -1103,7 +1104,6 @@ const main = async () => {
   // so traces are not written for other commands (deploy, env, etc.).
   if (client.traceDiagnosticsPath) {
     try {
-      const { mkdir, writeFile } = await import('fs/promises');
       await mkdir(join(client.traceDiagnosticsPath, '..'), { recursive: true });
       await writeFile(
         client.traceDiagnosticsPath,
