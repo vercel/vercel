@@ -55,6 +55,15 @@ Use this to route to the correct reference file:
 - **Global flags** → `references/global-options.md`
 - **First-time setup** → `references/getting-started.md`
 
+## Agent Skills
+
+For agent-specific workflows with structured output, flags tables, and invariants:
+
+- [vercel-shared](../vercel-shared/SKILL.md) — Auth, global flags, security rules
+- [vercel-login](../vercel-login/SKILL.md) — Authentication
+- [vercel-link](../vercel-link/SKILL.md) — Project linking
+- [vercel-deploy](../vercel-deploy/SKILL.md) — Deployment
+
 ## Anti-Patterns
 
 - **Wrong link type in monorepos with multiple projects**: `vercel link` creates `project.json`, which only tracks one project. Use `vercel link --repo` instead. When things break, check `.vercel/` first.
