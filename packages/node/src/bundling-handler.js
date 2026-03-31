@@ -9,10 +9,213 @@
 //
 // This runs at Lambda runtime where the handler is invoked with (req, res).
 // User modules are in the Lambda's file tree alongside this file.
+//
+// Supports all handler shapes:
+//   1. Function export:  module.exports = (req, res) => { ... }
+//   2. Web handlers:     export function GET(request) { ... }
+//   3. Fetch handler:    export function fetch(request) { ... }
+//   4. Server handler:   http.createServer(...).listen()
+//
+
+const http = require('http');
+const { existsSync } = require('fs');
+const { resolve } = require('path');
+const { pathToFileURL } = require('url');
+const { Readable } = require('stream');
+
+const HTTP_METHODS = [
+  'GET',
+  'HEAD',
+  'OPTIONS',
+  'POST',
+  'PUT',
+  'DELETE',
+  'PATCH',
+];
 
 const handlerCache = Object.create(null);
 
-module.exports = (req, res) => {
+/**
+ * Resolve an extensionless entrypoint to an actual file path.
+ * Tries common JS extensions in order, returning the first match.
+ */
+function resolveEntrypoint(name) {
+  const base = resolve('./' + name);
+  for (const ext of ['.js', '.cjs', '.mjs']) {
+    const p = base + ext;
+    if (existsSync(p)) return p;
+  }
+  // Fallback: try without extension (e.g. directory with index.js)
+  if (existsSync(base)) return base;
+  return null;
+}
+
+/**
+ * Load a module, using import() for ESM (.mjs) and require() for CJS.
+ */
+async function loadModule(filePath) {
+  if (filePath.endsWith('.mjs')) {
+    return import(pathToFileURL(filePath).href);
+  }
+  return require(filePath);
+}
+
+/**
+ * Unwrap nested default exports (common with TS/ESM compiled to CJS).
+ */
+function unwrapDefaults(mod) {
+  for (let i = 0; i < 5; i++) {
+    if (mod && mod.default) mod = mod.default;
+    else break;
+  }
+  return mod;
+}
+
+/**
+ * Create a Node.js (req, res) handler from web handler exports (GET, POST, fetch, etc.).
+ * Uses Node.js 18+ built-in Web API globals (Request, Response).
+ */
+function createWebHandler(listener) {
+  const methods = Object.create(null);
+
+  // If fetch is exported, it handles all methods
+  if (typeof listener.fetch === 'function') {
+    for (const m of HTTP_METHODS) {
+      methods[m] = listener.fetch;
+    }
+  }
+
+  // Named method exports override fetch
+  for (const m of HTTP_METHODS) {
+    if (typeof listener[m] === 'function') {
+      methods[m] = listener[m];
+    }
+  }
+
+  return async (req, res) => {
+    const method = req.method || 'GET';
+    const fn = methods[method];
+    if (!fn) {
+      res.statusCode = 405;
+      res.end('Method Not Allowed');
+      return;
+    }
+
+    // Build a Web API Request from the Node.js IncomingMessage
+    const proto = req.headers['x-forwarded-proto'] || 'https';
+    const host =
+      req.headers['x-forwarded-host'] || req.headers.host || 'localhost';
+    const url = new URL(req.url || '/', `${proto}://${host}`);
+
+    const init = { method, headers: req.headers, duplex: 'half' };
+    if (method !== 'GET' && method !== 'HEAD') {
+      init.body = Readable.toWeb(req);
+    }
+
+    const request = new Request(url, init);
+    const response = await fn(request);
+
+    // Write the Web API Response back to the Node.js ServerResponse
+    res.statusCode = response.status;
+    for (const [key, value] of response.headers) {
+      res.appendHeader(key, value);
+    }
+
+    if (response.body) {
+      for await (const chunk of response.body) {
+        res.write(chunk);
+      }
+    }
+    res.end();
+  };
+}
+
+/**
+ * Compile a user module and return a (req, res) handler regardless of
+ * export shape. Mirrors the detection logic in serverless-handler.mts.
+ */
+async function compileUserCode(filePath) {
+  let server = null;
+  let serverFound;
+
+  // Monkey-patch http.Server.prototype.listen to capture server instances
+  // created during module import (e.g. Express apps calling app.listen()).
+  const originalListen = http.Server.prototype.listen;
+  http.Server.prototype.listen = function () {
+    server = this;
+    http.Server.prototype.listen = originalListen;
+    if (serverFound) serverFound();
+    return this;
+  };
+
+  let listener = await loadModule(filePath);
+  listener = unwrapDefaults(listener);
+
+  // 1. Web handlers (GET, POST, fetch, etc.)
+  const isWebHandler =
+    HTTP_METHODS.some(m => typeof listener[m] === 'function') ||
+    typeof listener.fetch === 'function';
+
+  if (isWebHandler) {
+    http.Server.prototype.listen = originalListen;
+    return createWebHandler(listener);
+  }
+
+  // 2. Function handler: (req, res) => { ... }
+  if (typeof listener === 'function') {
+    http.Server.prototype.listen = originalListen;
+    return listener;
+  }
+
+  // 3. Server handler: http.createServer(...).listen()
+  //    Wait briefly for async server creation if not captured yet.
+  if (!server) {
+    await new Promise(r => {
+      serverFound = r;
+      setTimeout(r, 1000);
+    });
+  }
+
+  http.Server.prototype.listen = originalListen;
+
+  if (server) {
+    // Start the captured server on a random port and proxy requests to it.
+    await new Promise(r => server.listen(0, '127.0.0.1', r));
+    const { port } = server.address();
+
+    return (req, res) => {
+      const proxyReq = http.request(
+        {
+          hostname: '127.0.0.1',
+          port,
+          path: req.url,
+          method: req.method,
+          headers: {
+            ...req.headers,
+            host: req.headers['x-forwarded-host'] || req.headers.host,
+          },
+        },
+        proxyRes => {
+          res.writeHead(proxyRes.statusCode, proxyRes.headers);
+          proxyRes.pipe(res);
+        }
+      );
+      proxyReq.on('error', err => {
+        res.statusCode = 502;
+        res.end('Proxy error: ' + err.message);
+      });
+      req.pipe(proxyReq);
+    };
+  }
+
+  throw new Error(
+    "Can't detect handler export shape for " +
+      filePath +
+      '. Expected a function export, HTTP method exports (GET, POST, ...), or an http.Server.'
+  );
+}
+
+module.exports = async (req, res) => {
   const matchedPath = req.headers['x-matched-path'];
   if (typeof matchedPath !== 'string' || !matchedPath) {
     res.statusCode = 500;
@@ -22,21 +225,20 @@ module.exports = (req, res) => {
     return;
   }
 
-  const entrypoint = matchedPath.replace(/^\//, '');
+  // Convert matched path to entrypoint name.
+  // x-matched-path "/" maps to "index", "/api/hello" maps to "api/hello".
+  const entrypoint = matchedPath.replace(/^\//, '') || 'index';
 
   if (!handlerCache[entrypoint]) {
-    let mod = require('./' + entrypoint);
-    // Unwrap default exports (TS/ESM compiled to CJS pattern)
-    if (mod && mod.default && typeof mod.default === 'function') {
-      mod = mod.default;
-    }
-    if (typeof mod !== 'function') {
-      res.statusCode = 500;
-      res.end('Handler for ' + entrypoint + ' does not export a function');
+    const filePath = resolveEntrypoint(entrypoint);
+    if (!filePath) {
+      res.statusCode = 404;
+      res.end('No handler found for ' + entrypoint);
       return;
     }
-    handlerCache[entrypoint] = mod;
+    handlerCache[entrypoint] = compileUserCode(filePath);
   }
 
-  return handlerCache[entrypoint](req, res);
+  const handler = await handlerCache[entrypoint];
+  return handler(req, res);
 };

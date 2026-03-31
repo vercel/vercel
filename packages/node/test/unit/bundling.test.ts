@@ -1,8 +1,12 @@
-import { afterEach, describe, it, expect } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, it, expect } from 'vitest';
 import { join } from 'path';
 import { prepareFilesystem } from './test-utils';
 import { build } from '../../src';
 import type { NodejsLambda } from '@vercel/build-utils';
+import { createServer } from 'http';
+import type { Server } from 'http';
+import { promises as fs } from 'fs';
+import { tmpdir } from 'os';
 
 describe('experimentalAllowBundling', () => {
   const originalEnv = process.env.VERCEL_API_FUNCTION_BUNDLING;
@@ -257,5 +261,218 @@ describe('experimentalAllowBundling', () => {
 
     const lambda = buildResult.output as NodejsLambda;
     expect(lambda.handler).toBe(join('api', 'hello.js'));
+  });
+});
+
+describe('bundling-handler runtime', () => {
+  let fixtureDir: string;
+  let originalCwd: string;
+  let handler: (req: any, res: any) => Promise<void>;
+  let server: Server;
+  let baseUrl: string;
+
+  beforeAll(async () => {
+    fixtureDir = join(tmpdir(), `bundling-handler-test-${Date.now()}`);
+    await fs.mkdir(fixtureDir, { recursive: true });
+    await fs.mkdir(join(fixtureDir, 'api'), { recursive: true });
+
+    // Function export (.js)
+    await fs.writeFile(
+      join(fixtureDir, 'api', 'func.js'),
+      `module.exports = (req, res) => { res.end('func-ok'); };`
+    );
+
+    // Function export (.cjs)
+    await fs.writeFile(
+      join(fixtureDir, 'api', 'cjsfunc.cjs'),
+      `module.exports = (req, res) => { res.end('cjs-ok'); };`
+    );
+
+    // ES module default export (.mjs)
+    await fs.writeFile(
+      join(fixtureDir, 'api', 'esmfunc.mjs'),
+      `export default (req, res) => { res.end('esm-ok'); };`
+    );
+
+    // Web handler exports (GET/POST)
+    await fs.writeFile(
+      join(fixtureDir, 'api', 'web.js'),
+      `
+      module.exports.GET = (request) => new Response('get-ok');
+      module.exports.POST = (request) => new Response('post-ok');
+      `
+    );
+
+    // Fetch handler export
+    await fs.writeFile(
+      join(fixtureDir, 'api', 'fetchhandler.js'),
+      `module.exports.fetch = (request) => new Response('fetch-ok: ' + request.method);`
+    );
+
+    // Server handler (http.createServer + .listen)
+    await fs.writeFile(
+      join(fixtureDir, 'api', 'serverhandler.js'),
+      `
+      const http = require('http');
+      const server = http.createServer((req, res) => {
+        res.end('server-ok');
+      });
+      server.listen();
+      module.exports = server;
+      `
+    );
+
+    // Index route handler
+    await fs.writeFile(
+      join(fixtureDir, 'index.js'),
+      `module.exports = (req, res) => { res.end('index-ok'); };`
+    );
+
+    // Default-wrapped export (TS pattern)
+    await fs.writeFile(
+      join(fixtureDir, 'api', 'wrapped.js'),
+      `module.exports = { default: { default: (req, res) => { res.end('wrapped-ok'); } } };`
+    );
+
+    originalCwd = process.cwd();
+    process.chdir(fixtureDir);
+
+    // Load the handler
+    handler = require('../../src/bundling-handler.js');
+
+    // Create a test server using the handler
+    server = createServer(async (req, res) => {
+      try {
+        await handler(req, res);
+      } catch (err: any) {
+        res.statusCode = 500;
+        res.end(err.message);
+      }
+    });
+
+    await new Promise<void>(resolve => {
+      server.listen(0, '127.0.0.1', resolve);
+    });
+    const addr = server.address();
+    if (typeof addr === 'object' && addr) {
+      baseUrl = `http://127.0.0.1:${addr.port}`;
+    }
+  });
+
+  afterAll(async () => {
+    process.chdir(originalCwd);
+    if (server) {
+      await new Promise<void>((resolve, reject) =>
+        server.close(err => (err ? reject(err) : resolve()))
+      );
+    }
+    await fs.rm(fixtureDir, { recursive: true, force: true });
+  });
+
+  it('returns 500 when x-matched-path header is missing', async () => {
+    const res = await fetch(baseUrl + '/api/func');
+    expect(res.status).toBe(500);
+    const body = await res.text();
+    expect(body).toContain('Missing x-matched-path');
+  });
+
+  it('returns 404 for unknown entrypoints', async () => {
+    const res = await fetch(baseUrl + '/api/nonexistent', {
+      headers: { 'x-matched-path': '/api/nonexistent' },
+    });
+    expect(res.status).toBe(404);
+    const body = await res.text();
+    expect(body).toContain('No handler found');
+  });
+
+  it('handles function exports (.js)', async () => {
+    const res = await fetch(baseUrl + '/api/func', {
+      headers: { 'x-matched-path': '/api/func' },
+    });
+    expect(res.status).toBe(200);
+    expect(await res.text()).toBe('func-ok');
+  });
+
+  it('handles function exports (.cjs extension)', async () => {
+    const res = await fetch(baseUrl + '/api/cjsfunc', {
+      headers: { 'x-matched-path': '/api/cjsfunc' },
+    });
+    expect(res.status).toBe(200);
+    expect(await res.text()).toBe('cjs-ok');
+  });
+
+  it('handles ES module default exports (.mjs)', async () => {
+    const res = await fetch(baseUrl + '/api/esmfunc', {
+      headers: { 'x-matched-path': '/api/esmfunc' },
+    });
+    expect(res.status).toBe(200);
+    expect(await res.text()).toBe('esm-ok');
+  });
+
+  it('handles web handler exports (GET)', async () => {
+    const res = await fetch(baseUrl + '/api/web', {
+      headers: { 'x-matched-path': '/api/web' },
+    });
+    expect(res.status).toBe(200);
+    expect(await res.text()).toBe('get-ok');
+  });
+
+  it('handles web handler exports (POST)', async () => {
+    const res = await fetch(baseUrl + '/api/web', {
+      method: 'POST',
+      headers: { 'x-matched-path': '/api/web' },
+    });
+    expect(res.status).toBe(200);
+    expect(await res.text()).toBe('post-ok');
+  });
+
+  it('returns 405 for unsupported methods on web handlers', async () => {
+    const res = await fetch(baseUrl + '/api/web', {
+      method: 'DELETE',
+      headers: { 'x-matched-path': '/api/web' },
+    });
+    expect(res.status).toBe(405);
+  });
+
+  it('handles fetch handler exports', async () => {
+    const res = await fetch(baseUrl + '/api/fetchhandler', {
+      headers: { 'x-matched-path': '/api/fetchhandler' },
+    });
+    expect(res.status).toBe(200);
+    expect(await res.text()).toBe('fetch-ok: GET');
+  });
+
+  it('handles fetch handler with POST method', async () => {
+    const res = await fetch(baseUrl + '/api/fetchhandler', {
+      method: 'POST',
+      headers: { 'x-matched-path': '/api/fetchhandler' },
+      body: 'test',
+    });
+    expect(res.status).toBe(200);
+    expect(await res.text()).toBe('fetch-ok: POST');
+  });
+
+  it('handles server handler exports (http.createServer + .listen)', async () => {
+    const res = await fetch(baseUrl + '/api/serverhandler', {
+      headers: { 'x-matched-path': '/api/serverhandler' },
+    });
+    expect(res.status).toBe(200);
+    expect(await res.text()).toBe('server-ok');
+  });
+
+  it('handles index route (x-matched-path: /)', async () => {
+    const res = await fetch(baseUrl + '/', {
+      headers: { 'x-matched-path': '/' },
+    });
+    expect(res.status).toBe(200);
+    expect(await res.text()).toBe('index-ok');
+  });
+
+  it('unwraps nested default exports', async () => {
+    const res = await fetch(baseUrl + '/api/wrapped', {
+      headers: { 'x-matched-path': '/api/wrapped' },
+    });
+    expect(res.status).toBe(200);
+    expect(await res.text()).toBe('wrapped-ok');
   });
 });
