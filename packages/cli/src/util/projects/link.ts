@@ -163,6 +163,20 @@ export async function getLinkFromDir<T = ProjectLink>(
     const link: T = JSON.parse(json);
 
     if (!ajv.validate(linkSchema, link)) {
+      const raw = link as Record<string, unknown>;
+      const projectId = raw.projectId;
+      const orgId = raw.orgId;
+      const hasPlainLinkIds =
+        typeof projectId === 'string' &&
+        projectId.length > 0 &&
+        typeof orgId === 'string' &&
+        orgId.length > 0;
+      if (!hasPlainLinkIds) {
+        // `vercel pull` with a repo-level link writes settings-only `project.json`
+        // (see writeProjectSettings). Treat as no per-directory link and fall
+        // back to `.vercel/repo.json` resolution.
+        return null;
+      }
       throw new Error(
         `Project Settings are invalid. To link your project again, remove the ${dir} directory.`
       );
