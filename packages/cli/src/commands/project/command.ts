@@ -115,6 +115,30 @@ export const tokenSubcommand = {
   ],
 } as const;
 
+export const accessSummarySubcommand = {
+  name: 'access-summary',
+  aliases: ['summary'],
+  description:
+    'Show member counts by team role for project access (requires access groups entitlement)',
+  arguments: [
+    {
+      name: 'name',
+      required: false,
+    },
+  ],
+  options: [formatOption],
+  examples: [
+    {
+      name: 'Summary for the linked project',
+      value: `${packageName} project access-summary`,
+    },
+    {
+      name: 'Summary as JSON',
+      value: `${packageName} project access-summary my-app --format json`,
+    },
+  ],
+} as const;
+
 export const projectCommand = {
   name: 'project',
   aliases: ['projects'],
@@ -122,6 +146,7 @@ export const projectCommand = {
   arguments: [],
   subcommands: [
     addSubcommand,
+    accessSummarySubcommand,
     inspectSubcommand,
     listSubcommand,
     removeSubcommand,

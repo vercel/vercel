@@ -4,12 +4,14 @@ import getInvalidSubcommand from '../../util/get-invalid-subcommand';
 import { printError } from '../../util/error';
 import { type Command, help } from '../help';
 import add from './add';
+import accessSummary from './access-summary';
 import inspect from './inspect';
 import list from './list';
 import rm from './rm';
 import getOidcToken from './token';
 import {
   addSubcommand,
+  accessSummarySubcommand,
   inspectSubcommand,
   listSubcommand,
   projectCommand,
@@ -26,6 +28,7 @@ const COMMAND_CONFIG = {
   inspect: getCommandAliases(inspectSubcommand),
   list: getCommandAliases(listSubcommand),
   add: getCommandAliases(addSubcommand),
+  'access-summary': getCommandAliases(accessSummarySubcommand),
   remove: getCommandAliases(removeSubcommand),
   token: getCommandAliases(tokenSubcommand),
 };
@@ -94,6 +97,13 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandAdd(subcommandOriginal);
       return add(client, args);
+    case 'access-summary':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('project', subcommandOriginal);
+        return printHelp(accessSummarySubcommand);
+      }
+      telemetry.trackCliSubcommandAccessSummary(subcommandOriginal);
+      return accessSummary(client, args);
     case 'token':
       if (needHelp) {
         telemetry.trackCliFlagHelp('project', subcommandOriginal);
