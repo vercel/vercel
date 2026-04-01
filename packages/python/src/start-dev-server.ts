@@ -6,10 +6,7 @@ import type { PythonFramework, StartDevServer } from '@vercel/build-utils';
 import { debug, NowBuildError } from '@vercel/build-utils';
 import getPort from 'get-port';
 import isPortReachable from 'is-port-reachable';
-import {
-  PYTHON_CANDIDATE_ENTRYPOINTS,
-  detectPythonEntrypoint,
-} from './entrypoint';
+import { detectPythonEntrypoint, type PythonEntrypoint } from './entrypoint';
 import { runFrameworkHook } from './index';
 import { getDefaultPythonVersion } from './version';
 import {
@@ -714,6 +711,7 @@ export const startDevServer: StartDevServer = async opts => {
     workPath,
     meta = {},
     config,
+    service,
     onStdout,
     onStderr,
   } = opts;
@@ -723,7 +721,8 @@ export const startDevServer: StartDevServer = async opts => {
   // Check for an existing persistent server.
   // Include serviceName so that services sharing a workspace get separate servers.
   const serviceName =
-    typeof meta.serviceName === 'string' ? meta.serviceName : undefined;
+    service?.name ??
+    (typeof meta.serviceName === 'string' ? meta.serviceName : undefined);
   const serverKey = serviceName
     ? `${workPath}::${framework}::${serviceName}`
     : `${workPath}::${framework}`;
@@ -763,46 +762,40 @@ export const startDevServer: StartDevServer = async opts => {
   if (!restoreWarnings) restoreWarnings = silenceNodeWarnings();
   installGlobalCleanupHandlers();
   const env = { ...process.env, ...(meta.env || {}) } as NodeJS.ProcessEnv;
-  const serviceType = env.VERCEL_SERVICE_TYPE;
+  const entrypoint = rawEntrypoint === '<detect>' ? undefined : rawEntrypoint;
 
   // For cron/worker services, use the raw entrypoint directly, because
   // they don't export app/application so standard detection would skip them.
-  let entry: string | undefined;
-  let variableName: string | undefined;
-  if (
-    (serviceType === 'cron' || serviceType === 'worker') &&
-    rawEntrypoint?.endsWith('.py')
-  ) {
-    entry = rawEntrypoint;
+  let resolved: PythonEntrypoint | undefined;
+  const detected = await detectPythonEntrypoint(
+    framework as PythonFramework,
+    workPath,
+    entrypoint,
+    service
+  );
+  if (detected?.entrypoint) {
+    resolved = detected.entrypoint;
   } else {
-    const detected = await detectPythonEntrypoint(
-      framework as PythonFramework,
+    const hookResult = await runFrameworkHook(framework, {
+      pythonEnv: env,
+      projectDir: join(workPath, detected?.baseDir ?? ''),
       workPath,
-      rawEntrypoint
-    );
-    entry = detected?.entrypoint;
-    variableName = detected?.variableName;
-    if (!entry) {
-      const hookResult = await runFrameworkHook(framework, {
-        pythonEnv: env,
-        projectDir: join(workPath, detected?.baseDir ?? ''),
-        workPath,
-        entrypoint: rawEntrypoint,
-        detected: detected ?? undefined,
-      });
-      entry = hookResult?.entrypoint;
-      variableName = hookResult?.variableName;
-    }
-    if (!entry) {
-      const searched = PYTHON_CANDIDATE_ENTRYPOINTS.join(', ');
-      throw new NowBuildError({
-        code: 'PYTHON_ENTRYPOINT_NOT_FOUND',
-        message: `No ${framework} entrypoint found. Add an 'app' script in pyproject.toml or define an entrypoint in one of: ${searched}.`,
-        link: `https://vercel.com/docs/frameworks/backend/${framework?.toLowerCase()}#exporting-the-${framework?.toLowerCase()}-application`,
-        action: 'Learn More',
-      });
-    }
+      entrypoint,
+      detected: detected ?? undefined,
+    });
+    resolved = hookResult?.entrypoint;
   }
+  if (!resolved) {
+    if (detected?.error) {
+      throw detected.error;
+    }
+    throw new NowBuildError({
+      code: 'PYTHON_ENTRYPOINT_NOT_FOUND',
+      message:
+        'No Python entrypoint could be detected. Please specify an entrypoint file.',
+    });
+  }
+  const { entrypoint: entry, variableName } = resolved;
 
   // Convert to module path, e.g. "src/app.py" -> "src.app"
   const modulePath = entry.replace(/\.py$/i, '').replace(/[\\/]/g, '.');

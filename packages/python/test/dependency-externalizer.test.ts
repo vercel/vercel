@@ -5,6 +5,7 @@ import { tmpdir } from 'os';
 import {
   PythonDependencyExternalizer,
   calculateBundleSize,
+  getPackagesReachableOnPlatform,
   lambdaKnapsack,
   LAMBDA_SIZE_THRESHOLD_BYTES,
   LAMBDA_EPHEMERAL_STORAGE_BYTES,
@@ -265,6 +266,454 @@ version = "2.31.0"
       expect(result.packageVersions['my-app']).toBeUndefined();
       // requests should still be classified
       expect(result.publicPackages).toContain('requests');
+    });
+  });
+
+  describe('getPackagesReachableOnPlatform', () => {
+    it('returns null when projectName is undefined', async () => {
+      const lockFile = { packages: [] };
+      const result = await getPackagesReachableOnPlatform(
+        lockFile,
+        undefined,
+        3,
+        12,
+        'linux',
+        'x86_64'
+      );
+      expect(result).toBeNull();
+    });
+
+    it('returns null when root package is not found in lock file', async () => {
+      const lockContent = `
+version = 1
+requires-python = ">=3.12"
+
+[[package]]
+name = "requests"
+version = "2.31.0"
+`;
+      const lockFile = parseUvLock(lockContent);
+      const result = await getPackagesReachableOnPlatform(
+        lockFile,
+        'my-app',
+        3,
+        12,
+        'linux',
+        'x86_64'
+      );
+      expect(result).toBeNull();
+    });
+
+    it('includes all unmarked dependencies', async () => {
+      const lockContent = `
+version = 1
+requires-python = ">=3.12"
+
+[[package]]
+name = "my-app"
+version = "0.1.0"
+dependencies = [
+    { name = "requests" },
+    { name = "flask" },
+]
+
+[[package]]
+name = "requests"
+version = "2.31.0"
+
+[[package]]
+name = "flask"
+version = "3.0.0"
+`;
+      const lockFile = parseUvLock(lockContent);
+      const result = await getPackagesReachableOnPlatform(
+        lockFile,
+        'my-app',
+        3,
+        12,
+        'linux',
+        'x86_64'
+      );
+      expect(result).not.toBeNull();
+      expect(result!.has('requests')).toBe(true);
+      expect(result!.has('flask')).toBe(true);
+    });
+
+    it('excludes packages guarded by win32 marker on linux', async () => {
+      const lockContent = `
+version = 1
+requires-python = ">=3.12"
+
+[[package]]
+name = "my-app"
+version = "0.1.0"
+dependencies = [
+    { name = "requests" },
+    { name = "pywin32", marker = "sys_platform == 'win32'" },
+]
+
+[[package]]
+name = "requests"
+version = "2.31.0"
+
+[[package]]
+name = "pywin32"
+version = "306"
+`;
+      const lockFile = parseUvLock(lockContent);
+      const result = await getPackagesReachableOnPlatform(
+        lockFile,
+        'my-app',
+        3,
+        12,
+        'linux',
+        'x86_64'
+      );
+      expect(result).not.toBeNull();
+      expect(result!.has('requests')).toBe(true);
+      expect(result!.has('pywin32')).toBe(false);
+    });
+
+    it('prunes entire subtree behind an excluded marker', async () => {
+      const lockContent = `
+version = 1
+requires-python = ">=3.12"
+
+[[package]]
+name = "my-app"
+version = "0.1.0"
+dependencies = [
+    { name = "requests" },
+    { name = "pywin32", marker = "sys_platform == 'win32'" },
+]
+
+[[package]]
+name = "requests"
+version = "2.31.0"
+
+[[package]]
+name = "pywin32"
+version = "306"
+dependencies = [
+    { name = "pywin32-ctypes" },
+]
+
+[[package]]
+name = "pywin32-ctypes"
+version = "0.2.2"
+`;
+      const lockFile = parseUvLock(lockContent);
+      const result = await getPackagesReachableOnPlatform(
+        lockFile,
+        'my-app',
+        3,
+        12,
+        'linux',
+        'x86_64'
+      );
+      expect(result).not.toBeNull();
+      expect(result!.has('requests')).toBe(true);
+      expect(result!.has('pywin32')).toBe(false);
+      expect(result!.has('pywin32-ctypes')).toBe(false);
+    });
+
+    it('includes packages with linux-satisfied markers', async () => {
+      const lockContent = `
+version = 1
+requires-python = ">=3.12"
+
+[[package]]
+name = "my-app"
+version = "0.1.0"
+dependencies = [
+    { name = "uvloop", marker = "sys_platform == 'linux'" },
+]
+
+[[package]]
+name = "uvloop"
+version = "0.19.0"
+`;
+      const lockFile = parseUvLock(lockContent);
+      const result = await getPackagesReachableOnPlatform(
+        lockFile,
+        'my-app',
+        3,
+        12,
+        'linux',
+        'x86_64'
+      );
+      expect(result).not.toBeNull();
+      expect(result!.has('uvloop')).toBe(true);
+    });
+
+    it('includes win32 packages when target is win32', async () => {
+      const lockContent = `
+version = 1
+requires-python = ">=3.12"
+
+[[package]]
+name = "my-app"
+version = "0.1.0"
+dependencies = [
+    { name = "pywin32", marker = "sys_platform == 'win32'" },
+]
+
+[[package]]
+name = "pywin32"
+version = "306"
+`;
+      const lockFile = parseUvLock(lockContent);
+      const result = await getPackagesReachableOnPlatform(
+        lockFile,
+        'my-app',
+        3,
+        12,
+        'win32',
+        'x86_64'
+      );
+      expect(result).not.toBeNull();
+      expect(result!.has('pywin32')).toBe(true);
+    });
+
+    it('traverses transitive dependencies', async () => {
+      const lockContent = `
+version = 1
+requires-python = ">=3.12"
+
+[[package]]
+name = "my-app"
+version = "0.1.0"
+dependencies = [
+    { name = "requests" },
+]
+
+[[package]]
+name = "requests"
+version = "2.31.0"
+dependencies = [
+    { name = "urllib3" },
+    { name = "certifi" },
+]
+
+[[package]]
+name = "urllib3"
+version = "2.1.0"
+
+[[package]]
+name = "certifi"
+version = "2024.2.2"
+`;
+      const lockFile = parseUvLock(lockContent);
+      const result = await getPackagesReachableOnPlatform(
+        lockFile,
+        'my-app',
+        3,
+        12,
+        'linux',
+        'x86_64'
+      );
+      expect(result).not.toBeNull();
+      expect(result!.has('requests')).toBe(true);
+      expect(result!.has('urllib3')).toBe(true);
+      expect(result!.has('certifi')).toBe(true);
+    });
+
+    it('does not include the root project itself in the reachable set', async () => {
+      const lockContent = `
+version = 1
+requires-python = ">=3.12"
+
+[[package]]
+name = "my-app"
+version = "0.1.0"
+dependencies = [
+    { name = "requests" },
+]
+
+[[package]]
+name = "requests"
+version = "2.31.0"
+`;
+      const lockFile = parseUvLock(lockContent);
+      const result = await getPackagesReachableOnPlatform(
+        lockFile,
+        'my-app',
+        3,
+        12,
+        'linux',
+        'x86_64'
+      );
+      expect(result).not.toBeNull();
+      expect(result!.has('my-app')).toBe(false);
+      expect(result!.has('requests')).toBe(true);
+    });
+
+    it('handles diamond dependencies without duplication', async () => {
+      const lockContent = `
+version = 1
+requires-python = ">=3.12"
+
+[[package]]
+name = "my-app"
+version = "0.1.0"
+dependencies = [
+    { name = "pkg-a" },
+    { name = "pkg-b" },
+]
+
+[[package]]
+name = "pkg-a"
+version = "1.0.0"
+dependencies = [
+    { name = "shared" },
+]
+
+[[package]]
+name = "pkg-b"
+version = "1.0.0"
+dependencies = [
+    { name = "shared" },
+]
+
+[[package]]
+name = "shared"
+version = "1.0.0"
+`;
+      const lockFile = parseUvLock(lockContent);
+      const result = await getPackagesReachableOnPlatform(
+        lockFile,
+        'my-app',
+        3,
+        12,
+        'linux',
+        'x86_64'
+      );
+      expect(result).not.toBeNull();
+      expect(result!.has('pkg-a')).toBe(true);
+      expect(result!.has('pkg-b')).toBe(true);
+      expect(result!.has('shared')).toBe(true);
+      expect(result!.size).toBe(3);
+    });
+
+    it('handles compound markers with mixed platform conditions', async () => {
+      const lockContent = `
+version = 1
+requires-python = ">=3.12"
+
+[[package]]
+name = "my-app"
+version = "0.1.0"
+dependencies = [
+    { name = "linux-only", marker = "sys_platform == 'linux' and python_version >= '3.12'" },
+    { name = "win-and-py", marker = "sys_platform == 'win32' and python_version >= '3.12'" },
+]
+
+[[package]]
+name = "linux-only"
+version = "1.0.0"
+
+[[package]]
+name = "win-and-py"
+version = "1.0.0"
+`;
+      const lockFile = parseUvLock(lockContent);
+      const result = await getPackagesReachableOnPlatform(
+        lockFile,
+        'my-app',
+        3,
+        12,
+        'linux',
+        'x86_64'
+      );
+      expect(result).not.toBeNull();
+      expect(result!.has('linux-only')).toBe(true);
+      expect(result!.has('win-and-py')).toBe(false);
+    });
+
+    it('normalizes package names for matching', async () => {
+      const lockContent = `
+version = 1
+requires-python = ">=3.12"
+
+[[package]]
+name = "My-App"
+version = "0.1.0"
+dependencies = [
+    { name = "My-Package" },
+]
+
+[[package]]
+name = "My-Package"
+version = "1.0.0"
+`;
+      const lockFile = parseUvLock(lockContent);
+      const result = await getPackagesReachableOnPlatform(
+        lockFile,
+        'my-app',
+        3,
+        12,
+        'linux',
+        'x86_64'
+      );
+      expect(result).not.toBeNull();
+      expect(result!.has('my-package')).toBe(true);
+    });
+
+    it('returns empty set when root has no dependencies', async () => {
+      const lockContent = `
+version = 1
+requires-python = ">=3.12"
+
+[[package]]
+name = "my-app"
+version = "0.1.0"
+`;
+      const lockFile = parseUvLock(lockContent);
+      const result = await getPackagesReachableOnPlatform(
+        lockFile,
+        'my-app',
+        3,
+        12,
+        'linux',
+        'x86_64'
+      );
+      expect(result).not.toBeNull();
+      expect(result!.size).toBe(0);
+    });
+
+    it('excludes os_name == nt dependencies on linux', async () => {
+      const lockContent = `
+version = 1
+requires-python = ">=3.12"
+
+[[package]]
+name = "my-app"
+version = "0.1.0"
+dependencies = [
+    { name = "colorama", marker = "os_name == 'nt'" },
+    { name = "click" },
+]
+
+[[package]]
+name = "colorama"
+version = "0.4.6"
+
+[[package]]
+name = "click"
+version = "8.1.7"
+`;
+      const lockFile = parseUvLock(lockContent);
+      const result = await getPackagesReachableOnPlatform(
+        lockFile,
+        'my-app',
+        3,
+        12,
+        'linux',
+        'x86_64'
+      );
+      expect(result).not.toBeNull();
+      expect(result!.has('click')).toBe(true);
+      expect(result!.has('colorama')).toBe(false);
     });
   });
 

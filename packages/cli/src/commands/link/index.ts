@@ -12,6 +12,7 @@ import { printError } from '../../util/error';
 import output from '../../output-manager';
 import { LinkTelemetryClient } from '../../util/telemetry/commands/link';
 import { getCommandAliases } from '..';
+import { autoInstallAgentTooling } from '../../util/agent/auto-install-agentic';
 
 const COMMAND_CONFIG = {
   add: getCommandAliases(addSubcommand),
@@ -68,6 +69,10 @@ export default async function link(client: Client) {
       output.prettyError(err);
       return 1;
     }
+
+    await autoInstallAgentTooling(client, {
+      autoConfirm: yes,
+    });
 
     return 0;
   }
@@ -155,6 +160,10 @@ export default async function link(client: Client) {
       return link;
     }
   }
+
+  await autoInstallAgentTooling(client, {
+    autoConfirm: yes,
+  });
 
   return 0;
 }

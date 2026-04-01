@@ -329,6 +329,7 @@ export class ServicesOrchestrator {
       frameworkList: framework ? [framework] : [],
       origin: this.proxyOrigin,
       currentEnv: this.env,
+      envPrefix: service.envPrefix,
     });
 
     const env = cloneEnv(
@@ -446,6 +447,13 @@ export class ServicesOrchestrator {
           pythonServiceCount: this.pythonServiceCount,
           syncDependencies: true,
           serviceName: service.name,
+        },
+        service: {
+          name: service.name,
+          type: service.type,
+          routePrefix: service.routePrefix,
+          subdomain: service.subdomain,
+          workspace: service.workspace,
         },
         files: {},
         onStdout: (data: Buffer) => logger.stdout.write(data),

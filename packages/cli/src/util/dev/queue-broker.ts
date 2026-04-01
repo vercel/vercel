@@ -4,6 +4,7 @@ import ms from 'ms';
 import { randomBytes } from 'crypto';
 import nodeFetch from 'node-fetch';
 import type { Service } from '@vercel/fs-detectors';
+import { getWorkerTopics } from '@vercel/build-utils';
 import output from '../../output-manager';
 
 interface StoredMessage {
@@ -16,6 +17,7 @@ interface StoredMessage {
 }
 
 interface ConsumerGroup {
+  id: string;
   name: string;
   topicPattern: string;
   topicRegex: RegExp;
@@ -71,19 +73,23 @@ export class QueueBroker {
     for (const service of services) {
       if (service.type !== 'worker') continue;
 
-      const topicPattern = service.topic || 'default';
-      const group: ConsumerGroup = {
-        name: service.name,
-        topicPattern,
-        topicRegex: topicPatternToRegex(topicPattern),
-        serviceOriginFn: () => this.getServiceOrigin(service.name),
-        retryAfterMs: DEFAULT_RETRY_AFTER,
-        maxDeliveries: DEFAULT_MAX_DELIVERIES,
-        initialDelayMs: DEFAULT_INITIAL_DELAY,
-      };
+      const topicPatterns = getWorkerTopics(service);
+      for (const topicPattern of topicPatterns) {
+        const id = `${service.name}::${topicPattern}`;
+        const group: ConsumerGroup = {
+          id,
+          name: service.name,
+          topicPattern,
+          topicRegex: topicPatternToRegex(topicPattern),
+          serviceOriginFn: () => this.getServiceOrigin(service.name),
+          retryAfterMs: DEFAULT_RETRY_AFTER,
+          maxDeliveries: DEFAULT_MAX_DELIVERIES,
+          initialDelayMs: DEFAULT_INITIAL_DELAY,
+        };
 
-      this.consumerGroups.push(group);
-      this.deliveryState.set(group.name, new Map());
+        this.consumerGroups.push(group);
+        this.deliveryState.set(group.id, new Map());
+      }
     }
 
     this.tickTimer = setInterval(() => this.tick(), TICK_INTERVAL);
@@ -128,7 +134,7 @@ export class QueueBroker {
     }
 
     for (const group of matchingGroups) {
-      const groupDeliveries = this.deliveryState.get(group.name)!;
+      const groupDeliveries = this.deliveryState.get(group.id)!;
       const delayMs = delaySeconds > 0 ? delaySeconds * 1000 : 0;
       const effectiveDelayMs = Math.max(delayMs, group.initialDelayMs);
       const visibleAt =
@@ -166,10 +172,7 @@ export class QueueBroker {
     const message = this.messages.get(messageId);
     if (!message) return null;
 
-    const groupDeliveries = this.deliveryState.get(consumerGroup);
-    if (!groupDeliveries) return null;
-
-    const state = groupDeliveries.get(messageId);
+    const { state } = this.findDeliveryState(messageId, consumerGroup);
     if (!state) return null;
 
     return {
@@ -186,11 +189,11 @@ export class QueueBroker {
     consumerGroup: string,
     ticket: string
   ): boolean {
-    const groupDeliveries = this.deliveryState.get(consumerGroup);
-    if (!groupDeliveries) return false;
-
-    const state = groupDeliveries.get(messageId);
-    if (!state) return false;
+    const { deliveries: groupDeliveries, state } = this.findDeliveryState(
+      messageId,
+      consumerGroup
+    );
+    if (!groupDeliveries || !state) return false;
 
     if (state.ticket && state.ticket !== ticket) {
       output.debug(
@@ -216,10 +219,7 @@ export class QueueBroker {
     ticket: string,
     timeoutSeconds: number
   ): boolean {
-    const groupDeliveries = this.deliveryState.get(consumerGroup);
-    if (!groupDeliveries) return false;
-
-    const state = groupDeliveries.get(messageId);
+    const { state } = this.findDeliveryState(messageId, consumerGroup);
     if (!state || state.status !== 'in-flight') return false;
 
     if (state.ticket && state.ticket !== ticket) return false;
@@ -231,11 +231,28 @@ export class QueueBroker {
     return true;
   }
 
+  private findDeliveryState(
+    messageId: string,
+    serviceName: string
+  ): {
+    deliveries: Map<string, DeliveryState> | null;
+    state: DeliveryState | null;
+  } {
+    for (const group of this.consumerGroups) {
+      if (group.name !== serviceName) continue;
+      const deliveries = this.deliveryState.get(group.id);
+      if (!deliveries) continue;
+      const state = deliveries.get(messageId);
+      if (state) return { deliveries, state };
+    }
+    return { deliveries: null, state: null };
+  }
+
   private async dispatchToConsumer(
     message: StoredMessage,
     group: ConsumerGroup
   ): Promise<void> {
-    const groupDeliveries = this.deliveryState.get(group.name);
+    const groupDeliveries = this.deliveryState.get(group.id);
     if (!groupDeliveries) return;
 
     const state = groupDeliveries.get(message.messageId);
@@ -303,7 +320,7 @@ export class QueueBroker {
   }
 
   private handleDeliveryFailure(messageId: string, group: ConsumerGroup): void {
-    const groupDeliveries = this.deliveryState.get(group.name);
+    const groupDeliveries = this.deliveryState.get(group.id);
     if (!groupDeliveries) return;
 
     const state = groupDeliveries.get(messageId);
@@ -318,7 +335,7 @@ export class QueueBroker {
     const now = Date.now();
 
     for (const group of this.consumerGroups) {
-      const groupDeliveries = this.deliveryState.get(group.name);
+      const groupDeliveries = this.deliveryState.get(group.id);
       if (!groupDeliveries) continue;
 
       for (const [messageId, state] of groupDeliveries) {

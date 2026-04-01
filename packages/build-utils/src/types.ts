@@ -121,6 +121,8 @@ export interface BuildOptions {
   service?: {
     /** The service name as declared in the project configuration. */
     name?: string;
+    /** The service type (e.g., "web", "cron", "worker"). */
+    type?: ServiceType;
     /** URL path prefix where the service is mounted (e.g., "/api"). */
     routePrefix?: string;
     /** Optional subdomain this service is mounted on (e.g., "api"). */
@@ -584,8 +586,21 @@ export interface Service {
   /* optional handler for cron service in format of {module}:{callable} */
   handlerFunction?: string;
   /* worker service config */
-  topic?: string;
+  topics?: string[];
   consumer?: string;
+  /** custom prefix to inject service URL env vars */
+  envPrefix?: string;
+}
+
+/**
+ * Returns the topics a worker service subscribes to, defaulting to ['default'].
+ */
+export function getWorkerTopics(config: {
+  topics?: string[];
+}): [string, ...string[]] {
+  return config.topics?.length
+    ? (config.topics as [string, ...string[]])
+    : ['default'];
 }
 
 /** The framework which created the function */
@@ -805,8 +820,11 @@ export interface ExperimentalServiceConfig {
   schedule?: string;
 
   /* Worker service config */
-  topic?: string;
+  topics?: string[];
   consumer?: string;
+
+  /** Custom prefix to use to inject service URL env vars */
+  envPrefix?: string;
 }
 
 /**

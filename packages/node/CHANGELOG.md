@@ -1,5 +1,35 @@
 # @vercel/node
 
+## 5.6.22
+
+### Patch Changes
+
+- Updated dependencies [[`3427149c3751192b54bb4fad9d3b50f171a28666`](https://github.com/vercel/vercel/commit/3427149c3751192b54bb4fad9d3b50f171a28666)]:
+  - @vercel/build-utils@13.12.0
+
+## 5.6.21
+
+### Patch Changes
+
+- Updated dependencies [[`a54b8f246ac6b43ac8f1674093402e3fe145fd64`](https://github.com/vercel/vercel/commit/a54b8f246ac6b43ac8f1674093402e3fe145fd64)]:
+  - @vercel/build-utils@13.11.0
+
+## 5.6.20
+
+### Patch Changes
+
+- Bump @vercel/nft to 1.5.0 ([#15683](https://github.com/vercel/vercel/pull/15683))
+
+- Updated dependencies [[`4839214ae9cbcc95d448429bf93133e58284e03f`](https://github.com/vercel/vercel/commit/4839214ae9cbcc95d448429bf93133e58284e03f), [`ece813e0a9a75e3ad262817f00050c62f5ad67eb`](https://github.com/vercel/vercel/commit/ece813e0a9a75e3ad262817f00050c62f5ad67eb), [`d7107d025500d6be305895dfd5cd89d87e6eb9f0`](https://github.com/vercel/vercel/commit/d7107d025500d6be305895dfd5cd89d87e6eb9f0), [`25a6a2daa46baba6e8d7dec90eb49213b8150b8c`](https://github.com/vercel/vercel/commit/25a6a2daa46baba6e8d7dec90eb49213b8150b8c)]:
+  - @vercel/build-utils@13.10.0
+
+## 5.6.19
+
+### Patch Changes
+
+- Updated dependencies [[`e5564b684ee40dd60f745327ef206bbe58a5191a`](https://github.com/vercel/vercel/commit/e5564b684ee40dd60f745327ef206bbe58a5191a)]:
+  - @vercel/build-utils@13.9.0
+
 ## 5.6.18
 
 ### Patch Changes

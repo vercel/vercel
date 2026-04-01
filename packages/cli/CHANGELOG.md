@@ -1,5 +1,150 @@
 # vercel
 
+## 50.37.3
+
+### Patch Changes
+
+- Improve plugin install flow: handle Ctrl+C to cancel install, only install for detected agent harness, add description before plugin prompt, and remove CLAUDE.md/AGENTS.md prompt from link/login flows. ([#15733](https://github.com/vercel/vercel/pull/15733))
+
+## 50.37.2
+
+### Patch Changes
+
+- Fix `vercel flags` environment details output to show weighted split variants as normalized percentages in rule and default summaries. ([#15659](https://github.com/vercel/vercel/pull/15659))
+
+- Updated dependencies [[`3427149c3751192b54bb4fad9d3b50f171a28666`](https://github.com/vercel/vercel/commit/3427149c3751192b54bb4fad9d3b50f171a28666), [`9a7d4c509f56b5efdfc8b9e72e76fa69fc21e545`](https://github.com/vercel/vercel/commit/9a7d4c509f56b5efdfc8b9e72e76fa69fc21e545)]:
+  - @vercel/build-utils@13.12.0
+  - @vercel/backends@0.0.53
+  - @vercel/elysia@0.1.55
+  - @vercel/express@0.1.65
+  - @vercel/fastify@0.1.58
+  - @vercel/go@3.4.6
+  - @vercel/h3@0.1.64
+  - @vercel/hono@0.2.58
+  - @vercel/hydrogen@1.3.6
+  - @vercel/koa@0.1.38
+  - @vercel/nestjs@0.2.59
+  - @vercel/next@4.16.3
+  - @vercel/node@5.6.22
+  - @vercel/python@6.28.0
+  - @vercel/redwood@2.4.12
+  - @vercel/remix-builder@5.7.2
+  - @vercel/ruby@2.3.2
+  - @vercel/rust@1.0.5
+  - @vercel/static-build@2.9.6
+
+## 50.37.1
+
+### Patch Changes
+
+- Improve agent plugin install flow: agents now receive structured JSON prompts for plugin installation instead of auto-approving silently. Preferences are persisted to avoid repeat prompts. On deploy, shows a non-blocking tip if the plugin is not installed. ([#15707](https://github.com/vercel/vercel/pull/15707))
+
+- Auto-install agent tooling on `vercel login`, `vercel link`, and `vercel deploy`. When a supported agent platform (Claude Code, Cursor) is detected or the user has `~/.claude`/`~/.cursor` directories, prompts to install the Vercel plugin. On `vercel link`, also prompts to add Vercel best practices to AGENTS.md/CLAUDE.md. On `vercel deploy`, shows a non-blocking tip if the plugin is not installed. User preferences are persisted to avoid repeat prompts. ([#15692](https://github.com/vercel/vercel/pull/15692))
+
+- Add --archive support to `deploy continue` command. ([#15197](https://github.com/vercel/vercel/pull/15197))
+
+- Updated dependencies [[`a54b8f246ac6b43ac8f1674093402e3fe145fd64`](https://github.com/vercel/vercel/commit/a54b8f246ac6b43ac8f1674093402e3fe145fd64)]:
+  - @vercel/build-utils@13.11.0
+  - @vercel/backends@0.0.52
+  - @vercel/elysia@0.1.54
+  - @vercel/express@0.1.64
+  - @vercel/fastify@0.1.57
+  - @vercel/go@3.4.6
+  - @vercel/h3@0.1.63
+  - @vercel/hono@0.2.57
+  - @vercel/hydrogen@1.3.6
+  - @vercel/koa@0.1.37
+  - @vercel/nestjs@0.2.58
+  - @vercel/next@4.16.3
+  - @vercel/node@5.6.21
+  - @vercel/python@6.28.0
+  - @vercel/redwood@2.4.12
+  - @vercel/remix-builder@5.7.2
+  - @vercel/ruby@2.3.2
+  - @vercel/rust@1.0.5
+  - @vercel/static-build@2.9.5
+
+## 50.37.0
+
+### Minor Changes
+
+- [services] support multiple topics for a single worker service ([#15615](https://github.com/vercel/vercel/pull/15615))
+
+- [services] support for specifying an env prefix for each service ([#15641](https://github.com/vercel/vercel/pull/15641))
+
+### Patch Changes
+
+- Add missing commands to `vercel help` output (activity, agent, alerts, buy, contract, crons, httpstat, mcp, rolling-release, skills, target, telemetry, usage) ([#15700](https://github.com/vercel/vercel/pull/15700))
+
+- fix(cli): support installation-level metadata for `integration add` ([#15444](https://github.com/vercel/vercel/pull/15444))
+
+  Integrations like Sentry have both product-level metadata (e.g. `platform`) and installation-level metadata (e.g. `name`, `region`). The CLI now:
+
+  - Shows installation-level metadata fields in `--help` output
+  - Accepts installation-level metadata keys via `-m` flags
+  - Splits metadata into product and installation buckets, sending `installationMetadata` as a separate API field
+  - Shows actionable hint when required metadata is missing on browser fallback (lists missing fields with example `-m` flags)
+  - Forwards `installationMetadata` to browser fallback URL so installation config isn't lost on redirect
+  - Logs debug warning when product and installation schemas have overlapping key names
+
+- Redirect sources now support domains ([#15670](https://github.com/vercel/vercel/pull/15670))
+
+- Improve buy command error handling: handle new API error codes (invalid_plan, already_on_plan, invalid_status, forbidden, purchase_create_hosted_failed), distinguish 402 payment failures from server errors, and auto-open billing page in TTY mode for payment-related errors. ([#15699](https://github.com/vercel/vercel/pull/15699))
+
+- Namespace diagnostics keys by builder and service workspace, and aggregate per-builder `package-manifest.json` files into a single `project-manifest.json` ([#15399](https://github.com/vercel/vercel/pull/15399))
+
+- Updated dependencies [[`69cd8ea307f507037fe735d7ba09c58fb4193e13`](https://github.com/vercel/vercel/commit/69cd8ea307f507037fe735d7ba09c58fb4193e13), [`e921c3f3f42cd436525c05627109115bcffc9f4c`](https://github.com/vercel/vercel/commit/e921c3f3f42cd436525c05627109115bcffc9f4c), [`bb98cc3b9a303b9e598c14feca5c0f36128bcf7f`](https://github.com/vercel/vercel/commit/bb98cc3b9a303b9e598c14feca5c0f36128bcf7f), [`4839214ae9cbcc95d448429bf93133e58284e03f`](https://github.com/vercel/vercel/commit/4839214ae9cbcc95d448429bf93133e58284e03f), [`ac87d5a5ef5d79b55765e094efc957de987d7ac4`](https://github.com/vercel/vercel/commit/ac87d5a5ef5d79b55765e094efc957de987d7ac4), [`ece813e0a9a75e3ad262817f00050c62f5ad67eb`](https://github.com/vercel/vercel/commit/ece813e0a9a75e3ad262817f00050c62f5ad67eb), [`d7107d025500d6be305895dfd5cd89d87e6eb9f0`](https://github.com/vercel/vercel/commit/d7107d025500d6be305895dfd5cd89d87e6eb9f0), [`25a6a2daa46baba6e8d7dec90eb49213b8150b8c`](https://github.com/vercel/vercel/commit/25a6a2daa46baba6e8d7dec90eb49213b8150b8c), [`f02b9da61d1acac5b426d8757e9bfb4ba4ffedd8`](https://github.com/vercel/vercel/commit/f02b9da61d1acac5b426d8757e9bfb4ba4ffedd8)]:
+  - @vercel/backends@0.0.51
+  - @vercel/express@0.1.63
+  - @vercel/hono@0.2.56
+  - @vercel/next@4.16.3
+  - @vercel/node@5.6.20
+  - @vercel/redwood@2.4.12
+  - @vercel/remix-builder@5.7.2
+  - @vercel/python@6.28.0
+  - @vercel/build-utils@13.10.0
+  - @vercel/elysia@0.1.53
+  - @vercel/fastify@0.1.56
+  - @vercel/h3@0.1.62
+  - @vercel/koa@0.1.36
+  - @vercel/nestjs@0.2.57
+  - @vercel/static-build@2.9.4
+  - @vercel/go@3.4.6
+  - @vercel/hydrogen@1.3.6
+  - @vercel/ruby@2.3.2
+  - @vercel/rust@1.0.5
+
+## 50.36.0
+
+### Minor Changes
+
+- Ensure django static files are copied in build output. ([#15557](https://github.com/vercel/vercel/pull/15557))
+
+- Add a new `vercel microfrontends inspect-group` subcommand to provide structured group/project metadata for automation, including JSON output and improved non-interactive agent behavior when `--group` is missing. ([#15681](https://github.com/vercel/vercel/pull/15681))
+
+### Patch Changes
+
+- Updated dependencies [[`e5564b684ee40dd60f745327ef206bbe58a5191a`](https://github.com/vercel/vercel/commit/e5564b684ee40dd60f745327ef206bbe58a5191a)]:
+  - @vercel/build-utils@13.9.0
+  - @vercel/python@6.27.0
+  - @vercel/backends@0.0.50
+  - @vercel/elysia@0.1.52
+  - @vercel/express@0.1.62
+  - @vercel/fastify@0.1.55
+  - @vercel/go@3.4.6
+  - @vercel/h3@0.1.61
+  - @vercel/hono@0.2.55
+  - @vercel/hydrogen@1.3.6
+  - @vercel/koa@0.1.35
+  - @vercel/nestjs@0.2.56
+  - @vercel/next@4.16.2
+  - @vercel/node@5.6.19
+  - @vercel/redwood@2.4.11
+  - @vercel/remix-builder@5.7.1
+  - @vercel/ruby@2.3.2
+  - @vercel/rust@1.0.5
+  - @vercel/static-build@2.9.3
+
 ## 50.35.0
 
 ### Minor Changes

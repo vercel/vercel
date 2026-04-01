@@ -279,6 +279,29 @@ describe('redirects upload', () => {
       await expect(exitCodePromise).resolves.toEqual(0);
     });
 
+    it('should upload redirects with full-domain source URLs', async () => {
+      const jsonPath = join(fixtureDir, 'domain-source.json');
+      const jsonContent = JSON.stringify([
+        {
+          source: 'https://old.example.com/path',
+          destination: '/new-path',
+          statusCode: 301,
+        },
+        { source: '/relative', destination: '/dest', statusCode: 302 },
+      ]);
+      writeFileSync(jsonPath, jsonContent);
+
+      mockPutRedirects({ redirectCount: 2 });
+
+      client.setArgv('redirects', 'upload', jsonPath, '--yes');
+      const exitCodePromise = redirects(client);
+
+      await expect(client.stderr).toOutput('Uploading redirects');
+      await expect(client.stderr).toOutput('Uploaded 2 redirects');
+
+      await expect(exitCodePromise).resolves.toEqual(0);
+    });
+
     it('should error on invalid JSON format', async () => {
       const jsonPath = join(fixtureDir, 'invalid.json');
       const jsonContent = `{ invalid json }`;

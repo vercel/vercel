@@ -31,6 +31,11 @@ import { ProjectNotFound } from '../../../../src/util/errors-ts';
 vi.mock('../../../../src/commands/env/pull');
 const mockPull = vi.mocked(pull);
 
+// Mock the auto-install agent tooling so it doesn't prompt during link tests
+vi.mock('../../../../src/util/agent/auto-install-agentic', () => ({
+  autoInstallAgentTooling: vi.fn().mockResolvedValue(undefined),
+}));
+
 describe('link', () => {
   beforeEach(() => {
     vi.clearAllMocks();

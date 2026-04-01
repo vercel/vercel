@@ -8,7 +8,7 @@ import which from 'which';
 import { debug } from '@vercel/build-utils';
 import { getVenvPythonBin } from './utils';
 
-export const UV_VERSION = '0.9.22';
+export const UV_VERSION = '0.10.11';
 export const UV_PYTHON_PATH_PREFIX = '/uv/python/';
 export const UV_PYTHON_DOWNLOADS_MODE = 'automatic';
 

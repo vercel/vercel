@@ -14,6 +14,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -53,6 +54,16 @@ type RequestContext struct {
 	RequestID    uint64 `json:"requestId"`
 }
 
+type UnrecoverableErrorMessage struct {
+	Type    string                    `json:"type"`
+	Payload UnrecoverableErrorPayload `json:"payload"`
+}
+
+type UnrecoverableErrorPayload struct {
+	ExitCode int    `json:"exitCode"`
+	Message  string `json:"message"`
+}
+
 var (
 	ipcConn   net.Conn
 	ipcMutex  sync.Mutex
@@ -76,6 +87,19 @@ func sendIPCMessage(msg interface{}) error {
 	// IPC messages are JSON followed by null byte
 	_, err = ipcConn.Write(append(data, 0))
 	return err
+}
+
+// fatal reports a fatal init error via IPC and exits.
+func fatal(exitCode int, msg string) {
+	fmt.Fprintln(os.Stderr, msg)
+	sendIPCMessage(UnrecoverableErrorMessage{
+		Type: "unrecoverable-error",
+		Payload: UnrecoverableErrorPayload{
+			ExitCode: exitCode,
+			Message:  msg,
+		},
+	})
+	os.Exit(exitCode)
 }
 
 func connectIPC() error {
@@ -106,15 +130,13 @@ func main() {
 	// Find a free port for the user's server
 	userPort, err := findFreePort()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to find free port: %v\n", err)
-		os.Exit(1)
+		fatal(1, fmt.Sprintf("Failed to find free port: %v", err))
 	}
 
 	// Start the user's server binary
 	userBinary := "./user-server"
 	if _, err := os.Stat(userBinary); os.IsNotExist(err) {
-		fmt.Fprintf(os.Stderr, "User server binary not found: %s\n", userBinary)
-		os.Exit(1)
+		fatal(1, fmt.Sprintf("User server binary not found: %s", userBinary))
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -126,15 +148,30 @@ func main() {
 	cmd.Stderr = os.Stderr
 
 	if err := cmd.Start(); err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to start user server: %v\n", err)
-		os.Exit(1)
+		fatal(1, fmt.Sprintf("Failed to start user server: %v", err))
 	}
 
-	// Wait for user's server to be ready
-	if err := waitForServer(userPort, 30*time.Second); err != nil {
-		fmt.Fprintf(os.Stderr, "User server failed to start: %v\n", err)
-		cmd.Process.Kill()
-		os.Exit(1)
+	// Race server readiness against early child death.
+	childDone := make(chan error, 1)
+	go func() { childDone <- cmd.Wait() }()
+
+	serverReady := make(chan error, 1)
+	go func() { serverReady <- waitForServer(userPort, 30*time.Second) }()
+
+	select {
+	case waitErr := <-childDone:
+		// Child exited before the server became ready.
+		exitCode := 1
+		var exitErr *exec.ExitError
+		if errors.As(waitErr, &exitErr) {
+			exitCode = exitErr.ExitCode()
+		}
+		fatal(exitCode, "User server exited during startup")
+	case err := <-serverReady:
+		if err != nil {
+			cmd.Process.Kill()
+			fatal(1, fmt.Sprintf("User server failed to start: %v", err))
+		}
 	}
 
 	// Create reverse proxy to user's server
