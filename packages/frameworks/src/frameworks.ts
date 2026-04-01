@@ -2069,7 +2069,7 @@ export const frameworks = [
       'FastAPI framework, high performance, easy to learn, fast to code, ready for production',
     website: 'https://fastapi.tiangolo.com',
     supersedes: ['python'],
-    useRuntime: { src: 'index.py', use: '@vercel/python' },
+    useRuntime: { src: '<detect>', use: '@vercel/python' },
     ignoreRuntimes: ['@vercel/python'],
     detectors: {
       some: [
@@ -2122,7 +2122,7 @@ export const frameworks = [
     description: 'A Flask app, ready for production',
     website: 'https://flask.palletsprojects.com',
     supersedes: ['python'],
-    useRuntime: { src: 'index.py', use: '@vercel/python' },
+    useRuntime: { src: '<detect>', use: '@vercel/python' },
     ignoreRuntimes: ['@vercel/python'],
     detectors: {
       some: [
@@ -2223,7 +2223,7 @@ export const frameworks = [
     description: 'A Django project served via the Python Runtime.',
     website: 'https://www.djangoproject.com',
     supersedes: ['python'],
-    useRuntime: { src: 'index.py', use: '@vercel/python' },
+    useRuntime: { src: '<detect>', use: '@vercel/python' },
     ignoreRuntimes: ['@vercel/python'],
     detectors: {
       some: [
@@ -4139,7 +4139,7 @@ export const frameworks = [
     description:
       'A generic Python application deployed as a serverless function.',
     website: 'https://python.org',
-    useRuntime: { src: 'index.py', use: '@vercel/python' },
+    useRuntime: { src: '<detect>', use: '@vercel/python' },
     ignoreRuntimes: ['@vercel/python'],
     detectors: {
       some: [

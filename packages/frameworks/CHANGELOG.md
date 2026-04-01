@@ -1,5 +1,15 @@
 # @vercel/frameworks
 
+## 3.22.0
+
+### Minor Changes
+
+- Simplify and streamline python builder logic ([#15696](https://github.com/vercel/vercel/pull/15696))
+
+### Patch Changes
+
+- Switch to using smol-toml for toml parsing ([#15730](https://github.com/vercel/vercel/pull/15730))
+
 ## 3.21.1
 
 ### Patch Changes

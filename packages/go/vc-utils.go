@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"net"
-	"net/http"
 	"os"
 	"strings"
 	"time"
@@ -20,19 +19,46 @@ func findFreePort() (int, error) {
 }
 
 func waitForServer(port int, timeout time.Duration) error {
+	const (
+		dialTimeout  = 200 * time.Millisecond
+		pollInterval = 50 * time.Millisecond
+	)
+
+	addr := fmt.Sprintf("127.0.0.1:%d", port)
 	deadline := time.Now().Add(timeout)
-	url := fmt.Sprintf("http://127.0.0.1:%d/", port)
+	var lastErr error
 
 	for time.Now().Before(deadline) {
-		resp, err := http.Get(url)
+		remaining := time.Until(deadline)
+		if remaining <= 0 {
+			break
+		}
+
+		attemptTimeout := dialTimeout
+		if remaining < attemptTimeout {
+			attemptTimeout = remaining
+		}
+
+		conn, err := net.DialTimeout("tcp", addr, attemptTimeout)
 		if err == nil {
-			resp.Body.Close()
+			conn.Close()
 			return nil
 		}
-		time.Sleep(50 * time.Millisecond)
+
+		lastErr = err
+		time.Sleep(pollInterval)
 	}
 
-	return fmt.Errorf("server did not start within %v", timeout)
+	if lastErr != nil {
+		return fmt.Errorf(
+			"server did not start listening on %s within %v: %w",
+			addr,
+			timeout,
+			lastErr,
+		)
+	}
+
+	return fmt.Errorf("server did not start listening on %s within %v", addr, timeout)
 }
 
 func normalizeServiceRoutePrefix(rawPrefix string) string {

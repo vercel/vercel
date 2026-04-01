@@ -1,5 +1,29 @@
 # @vercel/build-utils
 
+## 13.12.2
+
+### Patch Changes
+
+- Extract finalize/validate function utils for build-utils ([#15776](https://github.com/vercel/vercel/pull/15776))
+
+## 13.12.1
+
+### Patch Changes
+
+- Switch to using smol-toml for toml parsing ([#15730](https://github.com/vercel/vercel/pull/15730))
+
+## 13.12.0
+
+### Minor Changes
+
+- Add hash utilities (`streamToDigestAsync`, `sha256`, `md5`) and build result helpers (`getBuildResultMetadata`, `getLambdaByOutputPath`, `isRouteMiddleware`, `getPrerenderChain`, `streamWithExtendedPayload`) for shared use. ([#15726](https://github.com/vercel/vercel/pull/15726))
+
+## 13.11.0
+
+### Minor Changes
+
+- Add `process-serverless` utilities: `getLambdaEnvironment`, `getLambdaPreloadScripts`, `getLambdaSupportsStreaming`, and `getEncryptedEnv`. ([#15712](https://github.com/vercel/vercel/pull/15712))
+
 ## 13.10.0
 
 ### Minor Changes
