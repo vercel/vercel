@@ -47,7 +47,7 @@ export function readAuthConfig(): AuthConfig | null {
       return null;
     }
     return JSON.parse(content) as AuthConfig;
-  } catch (error) {
+  } catch (_error) {
     return null;
   }
 }
@@ -72,7 +72,10 @@ export function writeAuthConfig(config: AuthConfig): void {
  * Check if an access token is valid (not expired)
  * Copied from packages/cli/src/util/client.ts:72-81
  */
-export function isValidAccessToken(authConfig: AuthConfig): boolean {
+export function isValidAccessToken(
+  authConfig: AuthConfig,
+  expirationBufferMs = 0
+): boolean {
   if (!authConfig.token) return false;
 
   // When `--token` is passed to a command, `expiresAt` will be missing.
@@ -80,5 +83,6 @@ export function isValidAccessToken(authConfig: AuthConfig): boolean {
   if (typeof authConfig.expiresAt !== 'number') return true;
 
   const nowInSeconds = Math.floor(Date.now() / 1000);
-  return authConfig.expiresAt >= nowInSeconds;
+  const bufferInSeconds = expirationBufferMs / 1000;
+  return authConfig.expiresAt >= nowInSeconds + bufferInSeconds;
 }

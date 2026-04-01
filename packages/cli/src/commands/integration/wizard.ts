@@ -17,22 +17,28 @@ const supportedUIControls = new Set([
   'vercel-region',
 ]);
 
-type Step = (client: Client) => Promise<MetadataEntry>;
+interface Step {
+  key: string;
+  run: (client: Client) => Promise<MetadataEntry>;
+}
 
-function createHiddenStep(key: string, schema: MetadataSchemaProperty) {
+function createHiddenStep(key: string, schema: MetadataSchemaProperty): Step {
   if (schema['ui:hidden'] !== true && schema['ui:hidden'] !== 'create') {
     throw new Error(
       `HiddenStep: Expected "ui:hidden" to have value 'true' or '"create"' for key "${key}", but was "${schema['ui:hidden']}"`
     );
   }
 
-  return async () => {
-    const value = schema.default;
-    return [key, value] as const;
+  return {
+    key,
+    run: async () => {
+      const value = schema.default;
+      return [key, value] as const;
+    },
   };
 }
 
-function createInputStep(key: string, schema: MetadataSchemaProperty) {
+function createInputStep(key: string, schema: MetadataSchemaProperty): Step {
   if (schema['ui:control'] !== 'input') {
     throw new Error(
       `InputStep: Expected control "input" for key "${key}", but was "${schema['ui:control']}"`
@@ -41,38 +47,44 @@ function createInputStep(key: string, schema: MetadataSchemaProperty) {
 
   switch (schema.type) {
     case 'string': {
-      return async (client: Client) => {
-        const value = await client.input.text({
-          message: schema['ui:placeholder'] || schema['ui:label'] || key,
-          default: schema.default,
-        });
-        return [key, value] as const;
+      return {
+        key,
+        run: async (client: Client) => {
+          const value = await client.input.text({
+            message: schema['ui:placeholder'] || schema['ui:label'] || key,
+            default: schema.default as string | undefined,
+          });
+          return [key, value] as const;
+        },
       };
     }
     case 'number': {
-      return async (client: Client) => {
-        const value = await client.input.text({
-          message: schema['ui:placeholder'] || schema['ui:label'] || key,
-          default: schema.default,
-          validate: value => {
-            const number = Number(value);
+      return {
+        key,
+        run: async (client: Client) => {
+          const value = await client.input.text({
+            message: schema['ui:placeholder'] || schema['ui:label'] || key,
+            default: schema.default as string | undefined,
+            validate: value => {
+              const number = Number(value);
 
-            if (Number.isNaN(number)) {
-              return `Value "${value}" must be a number.`;
-            }
+              if (Number.isNaN(number)) {
+                return `Value "${value}" must be a number.`;
+              }
 
-            if (schema.minimum !== undefined && schema.minimum > number) {
-              return `Value "${value}" must be greater or equal ${schema.minimum}.`;
-            }
+              if (schema.minimum !== undefined && schema.minimum > number) {
+                return `Value "${value}" must be greater or equal ${schema.minimum}.`;
+              }
 
-            if (schema.maximum !== undefined && schema.maximum < number) {
-              return `Value "${value}" must be smaller or equal ${schema.maximum}.`;
-            }
+              if (schema.maximum !== undefined && schema.maximum < number) {
+                return `Value "${value}" must be smaller or equal ${schema.maximum}.`;
+              }
 
-            return true;
-          },
-        });
-        return [key, value] as const;
+              return true;
+            },
+          });
+          return [key, value] as const;
+        },
       };
     }
     default: {
@@ -83,7 +95,7 @@ function createInputStep(key: string, schema: MetadataSchemaProperty) {
   }
 }
 
-function createSelectStep(key: string, schema: MetadataSchemaProperty) {
+function createSelectStep(key: string, schema: MetadataSchemaProperty): Step {
   if (!['select', 'region', 'vercel-region'].includes(schema['ui:control'])) {
     throw new Error(
       `SelectStep: Expected control "select", "region" or "vercel-region", but was "${schema['ui:control']}"`
@@ -122,19 +134,22 @@ function createSelectStep(key: string, schema: MetadataSchemaProperty) {
     }
   }
 
-  return async (client: Client) => {
-    const value = await list(client, {
-      message: schema['ui:placeholder'] || schema['ui:label'] || key,
-      choices,
-    });
+  return {
+    key,
+    run: async (client: Client) => {
+      const value = await list(client, {
+        message: schema['ui:placeholder'] || schema['ui:label'] || key,
+        choices,
+      });
 
-    return [key, value] as const;
+      return [key, value] as const;
+    },
   };
 }
 
 export interface MetadataWizard {
   isSupported: boolean;
-  run: (client: Client) => Promise<Metadata>;
+  run: (client: Client, initialValues?: Metadata) => Promise<Metadata>;
 }
 
 export function createMetadataWizard(
@@ -195,15 +210,15 @@ export function createMetadataWizard(
 
   return {
     isSupported,
-    run: async (client: Client) =>
+    run: async (client: Client, initialValues?: Metadata) =>
       allFieldsAreReadonly
         ? getMetadataFromReadOnlyFields(metadataSchema)
-        : getMetadataFromSteps(client, steps),
+        : getMetadataFromSteps(client, steps, initialValues),
   };
 }
 
 function getMetadataFromReadOnlyFields(metadataSchema: MetadataSchema) {
-  const metadata: Record<string, string | number | undefined> = {};
+  const metadata: Metadata = {};
 
   for (const [key, schema] of Object.entries(metadataSchema.properties)) {
     if (isHidden(schema)) {
@@ -222,12 +237,17 @@ function getMetadataFromReadOnlyFields(metadataSchema: MetadataSchema) {
 
 async function getMetadataFromSteps(
   client: Client,
-  steps: Step[]
+  steps: Step[],
+  initialValues?: Metadata
 ): Promise<Metadata> {
   const metadataEntries: MetadataEntry[] = [];
 
   for (const step of steps) {
-    metadataEntries.push(await step(client));
+    if (initialValues && initialValues[step.key] !== undefined) {
+      metadataEntries.push([step.key, initialValues[step.key]]);
+    } else {
+      metadataEntries.push(await step.run(client));
+    }
   }
 
   return Object.fromEntries(metadataEntries);

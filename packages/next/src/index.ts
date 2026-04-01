@@ -10,9 +10,8 @@ import {
   debug,
   download,
   getLambdaOptionsFromFunction,
-  getRuntimeNodeVersion,
+  getNodeVersion,
   getPrefixedEnvVars,
-  getSpawnOptions,
   getScriptName,
   glob,
   runNpmInstall,
@@ -45,6 +44,7 @@ import { Sema } from 'async-sema';
 import escapeStringRegexp from 'escape-string-regexp';
 import findUp from 'find-up';
 import {
+  copy,
   lstat,
   pathExists,
   readdir,
@@ -112,6 +112,8 @@ const BEFORE_FILES_CONTINUE_NEXT_VERSION = 'v10.2.3-canary.1';
 const REDIRECTS_NO_STATIC_NEXT_VERSION = 'v11.0.2-canary.15';
 // related PR: https://github.com/vercel/next.js/pull/84643
 const IS_APP_CLIENT_SEGMENT_CACHE_ENABLED_VERSION = 'v16.0.0';
+// this version is minimum our Vercel adapter expects to match
+const MINIMUM_NEXT_ADAPTER_VERSION = 'v16.2.0-canary.28';
 
 export const MAX_AGE_ONE_YEAR = 31536000;
 
@@ -123,7 +125,7 @@ async function readPackageJson(entryPath: string): Promise<PackageJson> {
 
   try {
     return JSON.parse(await readFile(packagePath, 'utf8'));
-  } catch (err) {
+  } catch (_err) {
     debug('package.json not found in entry');
     return {};
   }
@@ -270,13 +272,7 @@ export const build: BuildV2 = async buildOptions => {
 
   let pkg = await readPackageJson(entryPath);
   const nextVersionRange = await getNextVersionRange(entryPath);
-  const nodeVersion = await getRuntimeNodeVersion(
-    entryPath,
-    undefined,
-    config,
-    meta
-  );
-  const spawnOpts = getSpawnOptions(meta, nodeVersion);
+  const nodeVersion = await getNodeVersion(entryPath, undefined, config, meta);
   const {
     cliType,
     lockfileVersion,
@@ -284,11 +280,11 @@ export const build: BuildV2 = async buildOptions => {
     turboSupportsCorepackHome,
   } = await scanParentDirs(entryPath, true);
 
-  spawnOpts.env = getEnvForPackageManager({
+  const spawnEnv = getEnvForPackageManager({
     cliType,
     lockfileVersion,
     packageJsonPackageManager,
-    env: spawnOpts.env || {},
+    env: process.env,
     turboSupportsCorepackHome,
     projectCreatedAt: config.projectSettings?.createdAt,
   });
@@ -389,14 +385,14 @@ export const build: BuildV2 = async buildOptions => {
           );
 
           await execCommand(trimmedInstallCommand, {
-            ...spawnOpts,
+            env: spawnEnv,
             cwd: entryPath,
           });
         } else {
           await runNpmInstall(
             entryPath,
             [],
-            spawnOpts,
+            { env: spawnEnv },
             meta,
             config.projectSettings?.createdAt
           );
@@ -406,7 +402,7 @@ export const build: BuildV2 = async buildOptions => {
     console.log(`Skipping "install" command...`);
   }
 
-  if (spawnOpts.env.VERCEL_ANALYTICS_ID) {
+  if (spawnEnv.VERCEL_ANALYTICS_ID) {
     debug('Found VERCEL_ANALYTICS_ID in environment');
 
     const version = await getInstalledPackageVersion(
@@ -418,7 +414,7 @@ export const build: BuildV2 = async buildOptions => {
       // Next.js has a built-in integration with Vercel Speed Insights
       // with the new @vercel/speed-insights package this is no longer needed
       // and can be removed to avoid duplicate events
-      delete spawnOpts.env.VERCEL_ANALYTICS_ID;
+      delete spawnEnv.VERCEL_ANALYTICS_ID;
       delete process.env.VERCEL_ANALYTICS_ID;
 
       debug(
@@ -494,7 +490,7 @@ export const build: BuildV2 = async buildOptions => {
     target = await createServerlessConfig(workPath, entryPath, nextVersion);
   }
 
-  const env: typeof process.env = { ...spawnOpts.env };
+  const env: typeof process.env = { ...spawnEnv };
   env.NEXT_EDGE_RUNTIME_PROVIDER = 'vercel';
 
   if (target) {
@@ -513,6 +509,16 @@ export const build: BuildV2 = async buildOptions => {
     // when testing with jest NODE_ENV will be set to test so ensure
     // it is production when running the build command
     env.NODE_ENV = 'production';
+  }
+
+  if (
+    // integration tests expect outputs object
+    !process.env.NEXT_BUILDER_INTEGRATION &&
+    process.env.NEXT_ENABLE_ADAPTER === '1' &&
+    semver.gte(nextVersion, MINIMUM_NEXT_ADAPTER_VERSION)
+  ) {
+    env.NEXT_ADAPTER_PATH = path.join(__dirname, 'adapter/index.js');
+    env.NEXT_ADAPTER_VERCEL_CONFIG = JSON.stringify(config);
   }
 
   const shouldRunCompileStep =
@@ -549,7 +555,6 @@ export const build: BuildV2 = async buildOptions => {
 
           console.log(`Running "${buildCommand}"`);
           await execCommand(buildCommand, {
-            ...spawnOpts,
             cwd: entryPath,
             env,
           });
@@ -558,7 +563,6 @@ export const build: BuildV2 = async buildOptions => {
             entryPath,
             buildScriptName,
             {
-              ...spawnOpts,
               env,
             },
             config.projectSettings?.createdAt
@@ -586,8 +590,30 @@ export const build: BuildV2 = async buildOptions => {
   }
 
   if (buildOutputVersion) {
+    // Files generated into public/ after `next build` (e.g. service workers
+    // from Serwist) won't be in .vercel/output/static/ yet because Next.js
+    // only copies public/ at build-start.  Sync any missing files now so
+    // they are included in the deploy.
+    const publicDir = path.join(entryPath, 'public');
+    const staticOutputDir = path.join(
+      entryPath,
+      outputDirectory,
+      'output/static'
+    );
+
+    if (await pathExists(publicDir)) {
+      const publicFiles = await glob('**/*', publicDir);
+      for (const fileName of Object.keys(publicFiles)) {
+        const destPath = path.join(staticOutputDir, fileName);
+        if (!(await pathExists(destPath))) {
+          const srcPath = publicFiles[fileName].fsPath;
+          await copy(srcPath, destPath);
+        }
+      }
+    }
+
     return {
-      buildOutputPath: path.join(outputDirectory, 'output'),
+      buildOutputPath: path.join(entryPath, outputDirectory, 'output'),
       buildOutputVersion,
     } as BuildResultBuildOutput;
   }
@@ -663,16 +689,14 @@ export const build: BuildV2 = async buildOptions => {
   const hasIsr404Page =
     typeof prerenderManifest.staticRoutes[
       routesManifest?.i18n
-        ? // eslint-disable-next-line @typescript-eslint/no-non-null-asserted-optional-chain
-          path.join('/', routesManifest?.i18n!.defaultLocale!, '/404')
+        ? path.join('/', routesManifest?.i18n!.defaultLocale!, '/404')
         : '/404'
     ]?.initialRevalidate === 'number';
 
   const hasIsr500Page =
     typeof prerenderManifest.staticRoutes[
       routesManifest?.i18n
-        ? // eslint-disable-next-line @typescript-eslint/no-non-null-asserted-optional-chain
-          path.join('/', routesManifest?.i18n!.defaultLocale!, '/500')
+        ? path.join('/', routesManifest?.i18n!.defaultLocale!, '/500')
         : '/500'
     ]?.initialRevalidate === 'number';
 
@@ -698,6 +722,7 @@ export const build: BuildV2 = async buildOptions => {
   );
 
   const headers: Route[] = [];
+  const onMatchHeaders: Route[] = [];
   const beforeFilesRewrites: Route[] = [];
   const afterFilesRewrites: Route[] = [];
   const fallbackRewrites: Route[] = [];
@@ -717,7 +742,7 @@ export const build: BuildV2 = async buildOptions => {
         'utf8'
       );
       escapedBuildId = escapeStringRegexp(buildId);
-    } catch (err) {
+    } catch (_err) {
       throw new NowBuildError({
         code: 'NOW_NEXT_NO_BUILD_ID',
         message:
@@ -773,6 +798,9 @@ export const build: BuildV2 = async buildOptions => {
         if (routesManifest.headers) {
           headers.push(...convertHeaders(routesManifest.headers));
         }
+        if (routesManifest.onMatchHeaders) {
+          onMatchHeaders.push(...convertHeaders(routesManifest.onMatchHeaders));
+        }
 
         // This applies the _next match prevention for redirects and
         // also allows matching the trailingSlash setting automatically
@@ -810,6 +838,9 @@ export const build: BuildV2 = async buildOptions => {
           );
           headers.forEach((r, i) =>
             updateRouteSrc(r, i, routesManifest.headers || [])
+          );
+          onMatchHeaders.forEach((r, i) =>
+            updateRouteSrc(r, i, routesManifest.onMatchHeaders || [])
           );
         }
 
@@ -1108,6 +1139,7 @@ export const build: BuildV2 = async buildOptions => {
           continue: true,
           important: true,
         },
+        ...onMatchHeaders,
 
         // error handling
         ...(output[path.posix.join('./', entryDirectory, '404')] ||
@@ -1133,7 +1165,9 @@ export const build: BuildV2 = async buildOptions => {
     await runNpmInstall(
       entryPath,
       ['--production'],
-      spawnOpts,
+      {
+        env: spawnEnv,
+      },
       meta,
       config.projectSettings?.createdAt
     );
@@ -1515,14 +1549,16 @@ export const build: BuildV2 = async buildOptions => {
         requiredServerFilesManifest.config.experimental?.ppr ===
           'incremental' ||
         requiredServerFilesManifest.config.experimental?.cacheComponents ===
-          true
+          true ||
+        requiredServerFilesManifest?.config?.cacheComponents === true
       : false;
 
     // When this is true, then it means all routes are PPR enabled.
     const isAppFullPPREnabled = requiredServerFilesManifest
       ? requiredServerFilesManifest?.config.experimental?.ppr === true ||
         requiredServerFilesManifest.config.experimental?.cacheComponents ===
-          true
+          true ||
+        requiredServerFilesManifest?.config?.cacheComponents === true
       : false;
 
     const isAppClientSegmentCacheEnabled =
@@ -1573,6 +1609,7 @@ export const build: BuildV2 = async buildOptions => {
         isCorrectLocaleAPIRoutes,
         pagesDir,
         headers,
+        onMatchHeaders,
         beforeFilesRewrites,
         afterFilesRewrites,
         fallbackRewrites,
@@ -2049,7 +2086,8 @@ export const build: BuildV2 = async buildOptions => {
           let lambdaOptions: {
             architecture?: NodejsLambda['architecture'];
             memory?: number;
-            maxDuration?: number;
+            maxDuration?: number | 'max';
+            regions?: string[];
             experimentalTriggers?: TriggerEvent[];
             supportsCancellation?: boolean;
           } = {};
@@ -2074,7 +2112,6 @@ export const build: BuildV2 = async buildOptions => {
               files: launcherFiles,
               layers: [
                 Object.keys(pageTraces[page] || {}).reduce((prev, cur) => {
-                  // eslint-disable-next-line @typescript-eslint/no-non-null-asserted-optional-chain
                   prev[cur] = tracedPseudoLayer?.pseudoLayer[cur]!;
                   return prev;
                 }, {} as PseudoLayer),
@@ -2716,7 +2753,6 @@ export const build: BuildV2 = async buildOptions => {
       ...pageLambdaRoutes.filter(route => {
         // filter out any SSG pages as they are already present in output
         if ('headers' in route) {
-          // eslint-disable-next-line @typescript-eslint/no-non-null-asserted-optional-chain
           let page = route.headers?.['x-nextjs-page']!;
           page = page === '/index' ? '/' : page;
 
@@ -2841,6 +2877,7 @@ export const build: BuildV2 = async buildOptions => {
         continue: true,
         important: true,
       },
+      ...onMatchHeaders,
 
       // error handling
       ...(isLegacy

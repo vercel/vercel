@@ -83,7 +83,7 @@
       "retryDelay": 2000
     },
     {
-      "path": "/_next/data/testing-build-id/blog/post-4.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/blog/post-4.json",
       "status": 200,
       "responseHeaders": {
         "x-vercel-cache": "MISS"
@@ -91,7 +91,7 @@
     },
     { "delay": 2000 },
     {
-      "path": "/_next/data/testing-build-id/blog/post-4.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/blog/post-4.json",
       "status": 200,
       "responseHeaders": {
         "x-vercel-cache": "/HIT|STALE/"
@@ -126,11 +126,11 @@
       "mustContain": "loading..."
     },
     {
-      "path": "/_next/data/testing-build-id/lambda.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/lambda.json",
       "status": 404
     },
     {
-      "path": "/_next/data/testing-build-id/forever.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/forever.json",
       "status": 200,
       "responseHeaders": {
         "x-vercel-cache": "/PRERENDER|HIT/"
@@ -145,14 +145,14 @@
       "retryDelay": 2000
     },
     {
-      "path": "/_next/data/testing-build-id/forever.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/forever.json",
       "status": 200,
       "responseHeaders": {
         "x-vercel-cache": "HIT"
       }
     },
     {
-      "path": "/_next/data/testing-build-id/another.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/another.json",
       "status": 200,
       "responseHeaders": {
         "x-vercel-cache": "/HIT|STALE/"
@@ -161,7 +161,7 @@
       "retryDelay": 2000
     },
     {
-      "path": "/_next/data/testing-build-id/another2.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/another2.json",
       "status": 200,
       "responseHeaders": {
         "x-vercel-cache": "PRERENDER"
@@ -169,21 +169,21 @@
     },
     { "delay": 2000 },
     {
-      "path": "/_next/data/testing-build-id/another2.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/another2.json",
       "status": 200,
       "responseHeaders": {
         "x-vercel-cache": "HIT"
       }
     },
     {
-      "path": "/_next/data/testing-build-id/blog/post-1.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/blog/post-1.json",
       "status": 200,
       "responseHeaders": {
         "x-vercel-cache": "/HIT|STALE|PRERENDER/"
       }
     },
     {
-      "path": "/_next/data/testing-build-id/blog/post-1337/comment-1337.json",
+      "path": "/_next/data/build-TfctsWXpff2fKS/blog/post-1337/comment-1337.json",
       "status": 200,
       "responseHeaders": {
         "x-vercel-cache": "PRERENDER"

@@ -1,0 +1,9 @@
+{
+  "name": "multi-product-install",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "devDependencies": {
+    "vitest": "^2.0.0"
+  }
+}

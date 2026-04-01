@@ -1,10 +1,16 @@
 import { packageName } from '../../util/pkg-name';
-import { confirmOption, nextOption, yesOption } from '../../util/arg-common';
+import {
+  allOption,
+  confirmOption,
+  formatOption,
+  nextOption,
+  yesOption,
+} from '../../util/arg-common';
 
 export const listCommand = {
   name: 'list',
   aliases: ['ls'],
-  description: 'List app deployments for an app.',
+  description: 'List deployments.',
   arguments: [
     {
       name: 'app',
@@ -12,6 +18,7 @@ export const listCommand = {
     },
   ],
   options: [
+    allOption,
     {
       name: 'meta',
       description:
@@ -52,6 +59,7 @@ export const listCommand = {
     { name: 'prod', shorthand: null, type: Boolean, deprecated: false },
     yesOption,
     confirmOption,
+    formatOption,
   ],
   examples: [
     {
@@ -59,7 +67,11 @@ export const listCommand = {
       value: `${packageName} list`,
     },
     {
-      name: 'List all deployments for the project `my-app` in the team of the currently linked project',
+      name: 'List all deployments across all projects',
+      value: `${packageName} list --all`,
+    },
+    {
+      name: 'List all deployments for the project `my-app`',
       value: `${packageName} list my-app`,
     },
     {

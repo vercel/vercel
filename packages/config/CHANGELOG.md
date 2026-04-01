@@ -1,5 +1,125 @@
 # @vercel/router-sdk
 
+## 0.1.0
+
+### Minor Changes
+
+- [services] support multiple topics for a single worker service ([#15615](https://github.com/vercel/vercel/pull/15615))
+
+- [services] support for specifying an env prefix for each service ([#15641](https://github.com/vercel/vercel/pull/15641))
+
+### Patch Changes
+
+- Updated dependencies [[`13f719da050ba4b73b95b51e8edf7141c967b9a2`](https://github.com/vercel/vercel/commit/13f719da050ba4b73b95b51e8edf7141c967b9a2)]:
+  - @vercel/routing-utils@6.1.1
+
+## 0.0.41
+
+### Patch Changes
+
+- Updated dependencies [[`62b9c34a92fe6d60d73f81a1674c2e483f12fc8f`](https://github.com/vercel/vercel/commit/62b9c34a92fe6d60d73f81a1674c2e483f12fc8f)]:
+  - @vercel/routing-utils@6.1.0
+
+## 0.0.40
+
+### Patch Changes
+
+- [config] Fix rewrite() and redirect() return types for VercelConfig compatibility ([#15566](https://github.com/vercel/vercel/pull/15566))
+
+## 0.0.39
+
+### Patch Changes
+
+- [services] adds support for subdomai configuration in experimentalServices ([#15401](https://github.com/vercel/vercel/pull/15401))
+
+## 0.0.38
+
+### Patch Changes
+
+- Fix type generation ([#15386](https://github.com/vercel/vercel/pull/15386))
+
+## 0.0.37
+
+### Patch Changes
+
+- Updated dependencies [[`e6c736fb74bedb975caad76d4c1f1e589a1c6cc9`](https://github.com/vercel/vercel/commit/e6c736fb74bedb975caad76d4c1f1e589a1c6cc9)]:
+  - @vercel/routing-utils@6.0.2
+
+## 0.0.36
+
+### Patch Changes
+
+- Updated dependencies [[`b3b94f2335026634f4fa9fdfe0671677fa00000e`](https://github.com/vercel/vercel/commit/b3b94f2335026634f4fa9fdfe0671677fa00000e)]:
+  - @vercel/routing-utils@6.0.1
+
+## 0.0.35
+
+### Patch Changes
+
+- Updated dependencies [[`e64a85daec784b4fe571abe7405a80aca150007a`](https://github.com/vercel/vercel/commit/e64a85daec784b4fe571abe7405a80aca150007a), [`af6a651229cad4ddb7fcc15bd14d06355c2b77ee`](https://github.com/vercel/vercel/commit/af6a651229cad4ddb7fcc15bd14d06355c2b77ee)]:
+  - @vercel/routing-utils@6.0.0
+
+## 0.0.34
+
+### Patch Changes
+
+- Undeprecate `routes` to match new routing-utils ([#15016](https://github.com/vercel/vercel/pull/15016))
+
+- Updated dependencies [[`0c961fce30d495620542066249dae447764d2eba`](https://github.com/vercel/vercel/commit/0c961fce30d495620542066249dae447764d2eba)]:
+  - @vercel/routing-utils@5.4.0
+
+## 0.0.33
+
+### Patch Changes
+
+- Fix rewrite regexp conversion when header transforms are present ([#15134](https://github.com/vercel/vercel/pull/15134))
+
+## 0.0.32
+
+### Patch Changes
+
+- Add a new `matchers` export that exposes helpers to make matching against headers, query params, cookies, and host simpler to write. ([#15064](https://github.com/vercel/vercel/pull/15064))
+
+## 0.0.31
+
+### Patch Changes
+
+- Add support for `functions[*].functionFailoverRegions` in `vercel.json` and build output config generation. ([#14969](https://github.com/vercel/vercel/pull/14969))
+
+  This enables per-function failover region configuration instead of only top-level defaults for all functions.
+
+## 0.0.30
+
+### Patch Changes
+
+- Add new expirementalTrigger format for queues v2beta ([#14970](https://github.com/vercel/vercel/pull/14970))
+
+## 0.0.29
+
+### Patch Changes
+
+- Add support for `regions` in `vercel.json` function-level configuration. ([#14963](https://github.com/vercel/vercel/pull/14963))
+
+  Matching function `regions` are now parsed from `functions` config, written into lambda output config, and documented in config types so they override top-level deployment regions for that function.
+
+## 0.0.28
+
+### Patch Changes
+
+- Add maxConcurrency to experimentalTriggers ([#14725](https://github.com/vercel/vercel/pull/14725))
+
+## 0.0.27
+
+### Patch Changes
+
+- Remove references to nonexistent `redirects` property ([#14708](https://github.com/vercel/vercel/pull/14708))
+
+## 0.0.26
+
+### Patch Changes
+
+- Add `experimentalServices` to `vercel.json` ([#14612](https://github.com/vercel/vercel/pull/14612))
+
 ## 0.0.25
 
 ### Patch Changes

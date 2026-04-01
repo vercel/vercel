@@ -1,13 +1,39 @@
 import { packageName } from '../../util/pkg-name';
-import { nextOption } from '../../util/arg-common';
+import { formatOption, nextOption } from '../../util/arg-common';
 
 export const addSubcommand = {
   name: 'add',
   aliases: ['create'],
   description: 'Create a new team',
   arguments: [],
-  options: [],
-  examples: [],
+  options: [
+    {
+      name: 'slug',
+      shorthand: null,
+      type: String,
+      description:
+        'Team URL slug (e.g. acme for vercel.com/acme); required in non-interactive mode',
+      deprecated: false,
+    },
+    {
+      name: 'name',
+      shorthand: null,
+      type: String,
+      description:
+        'Display name for the team; required in non-interactive mode',
+      deprecated: false,
+    },
+  ],
+  examples: [
+    {
+      name: 'Create a team (interactive)',
+      value: `${packageName} teams add`,
+    },
+    {
+      name: 'Create a team non-interactively',
+      value: `${packageName} teams add --slug acme --name "Acme Corp"`,
+    },
+  ],
 } as const;
 
 export const listSubcommand = {
@@ -17,6 +43,7 @@ export const listSubcommand = {
   arguments: [],
   options: [
     nextOption,
+    formatOption,
     { name: 'since', shorthand: null, type: String, deprecated: true },
     { name: 'until', shorthand: null, type: String, deprecated: true },
     { name: 'count', shorthand: 'C', type: Number, deprecated: true },
@@ -66,8 +93,30 @@ export const inviteSubcommand = {
       value: `${packageName} teams invite`,
     },
     {
-      name: 'Invite multiple members simultaneously',
+      name: 'Invite multiple members (required in non-interactive mode)',
       value: `${packageName} teams invite abc@vercel.com xyz@vercel.com`,
+    },
+  ],
+} as const;
+
+export const membersSubcommand = {
+  name: 'members',
+  aliases: ['member'],
+  description: 'List members for the currently scoped team',
+  arguments: [],
+  options: [nextOption, formatOption],
+  examples: [
+    {
+      name: 'List team members',
+      value: `${packageName} teams members`,
+    },
+    {
+      name: 'List team members as JSON',
+      value: `${packageName} teams members --format json`,
+    },
+    {
+      name: 'Paginate results, where `1584722256178` is the time in milliseconds since the UNIX epoch',
+      value: `${packageName} teams members --next 1584722256178`,
     },
   ],
 } as const;
@@ -82,6 +131,7 @@ export const teamsCommand = {
     inviteSubcommand,
     listSubcommand,
     switchSubcommand,
+    membersSubcommand,
   ],
   options: [],
   examples: [],

@@ -85,5 +85,10 @@
       "status": 200,
       "mustContain": "\"rest\":\"hello/world\""
     }
-  ]
+  ],
+  "build": {
+    "env": {
+      "NEXT_BUILDER_INTEGRATION": "1"
+    }
+  }
 }

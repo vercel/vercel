@@ -79,18 +79,18 @@ function getOptions(): NodeVersion[] {
 }
 
 function isNodeVersionAvailable(version: NodeVersion): boolean {
-  try {
-    return statSync(`/node${version.major}`).isDirectory();
-  } catch {
-    // ENOENT, or any other error, we don't care about
-  }
-  return false;
+  const stat = statSync(`/node${version.major}`, { throwIfNoEntry: false });
+  return stat?.isDirectory() ?? false;
 }
 
 export function getAvailableNodeVersions(): NodeVersionMajor[] {
-  return getOptions()
-    .filter(isNodeVersionAvailable)
-    .map(n => n.major);
+  return (
+    getOptions()
+      // Only check versions >= 18, as older versions don't have directories in the build container
+      .filter(v => v.major >= 18)
+      .filter(isNodeVersionAvailable)
+      .map(n => n.major)
+  );
 }
 
 function getHint(isAuto = false, availableVersions?: NodeVersionMajor[]) {
@@ -149,7 +149,7 @@ export async function getSupportedNodeVersion(
       throw new NowBuildError({
         code: 'BUILD_UTILS_NODE_VERSION_INVALID',
         link: 'https://vercel.link/node-version',
-        message: `Found invalid Node.js Version: "${engineRange}". ${getHint(
+        message: `Found invalid or discontinued Node.js Version: "${engineRange}". ${getHint(
           isAuto,
           availableVersions
         )}`,

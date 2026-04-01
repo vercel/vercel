@@ -1,5 +1,17 @@
 # @vercel/rust
 
+## 1.0.6
+
+### Patch Changes
+
+- Switch to using smol-toml for toml parsing ([#15730](https://github.com/vercel/vercel/pull/15730))
+
+## 1.0.5
+
+### Patch Changes
+
+- Do not allow production prebuilt deployments on Windows ([#14724](https://github.com/vercel/vercel/pull/14724))
+
 ## 1.0.4
 
 ### Patch Changes

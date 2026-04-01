@@ -7,6 +7,7 @@ import { prependEmoji, emoji } from '../../util/emoji';
 import output from '../../output-manager';
 import { getCommandName } from '../pkg-name';
 import { suggestNextCommands } from '../suggest-next-commands';
+import { showPluginTipIfNeeded } from '../agent/auto-install-agentic';
 
 /**
  * Prints (to `output`) warnings and errors, if any.
@@ -35,7 +36,8 @@ export async function printDeploymentStatus(
   },
   deployStamp: () => string,
   noWait: boolean,
-  guidanceMode: boolean
+  guidanceMode: boolean,
+  isInit?: boolean
 ): Promise<number> {
   indications = indications || [];
 
@@ -43,12 +45,10 @@ export async function printDeploymentStatus(
   if (noWait) {
     if (isDeploying(readyState)) {
       isStillBuilding = true;
-      output.print(
-        prependEmoji(
-          'Note: Deployment is still processing...',
-          emoji('notice')
-        ) + '\n'
-      );
+      const message = isInit
+        ? 'Deployment is awaiting continuation...'
+        : 'Note: Deployment is still processing...';
+      output.print(prependEmoji(message, emoji('notice')) + '\n');
     }
   }
 
@@ -100,6 +100,8 @@ export async function printDeploymentStatus(
       ].filter(Boolean) as string[]
     );
   }
+
+  await showPluginTipIfNeeded();
 
   return 0;
 }

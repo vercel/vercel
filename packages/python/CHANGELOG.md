@@ -1,5 +1,415 @@
 # @vercel/python
 
+## 6.29.0
+
+### Minor Changes
+
+- Simplify and streamline python builder logic ([#15696](https://github.com/vercel/vercel/pull/15696))
+
+- Fix django static file serving for manifest storage backends. ([#15709](https://github.com/vercel/vercel/pull/15709))
+
+- [django] Don't exclude the /static directory when using staticfiles ([#15705](https://github.com/vercel/vercel/pull/15705))
+
+- [django] Only look at STATICFILES_STORAGE value when on a django that supports it ([#15706](https://github.com/vercel/vercel/pull/15706))
+
+- Produce a better diagnostic when Django settings discovery fails ([#15770](https://github.com/vercel/vercel/pull/15770))
+
+### Patch Changes
+
+- Always make the path name for a python service be `/index` ([#15773](https://github.com/vercel/vercel/pull/15773))
+
+## 6.28.0
+
+### Minor Changes
+
+- Update uv to v0.10.11 ([#15623](https://github.com/vercel/vercel/pull/15623))
+
+- Simplify python runtime by always passing in app variable ([#15635](https://github.com/vercel/vercel/pull/15635))
+
+### Patch Changes
+
+- Fix env marker-excluded deps erroneously flagged as lacking wheels ([#15668](https://github.com/vercel/vercel/pull/15668))
+
+- Updated dependencies [[`ac87d5a5ef5d79b55765e094efc957de987d7ac4`](https://github.com/vercel/vercel/commit/ac87d5a5ef5d79b55765e094efc957de987d7ac4), [`25a6a2daa46baba6e8d7dec90eb49213b8150b8c`](https://github.com/vercel/vercel/commit/25a6a2daa46baba6e8d7dec90eb49213b8150b8c)]:
+  - @vercel/python-analysis@0.11.0
+
+## 6.27.0
+
+### Minor Changes
+
+- Ensure django static files are copied in build output. ([#15557](https://github.com/vercel/vercel/pull/15557))
+
+## 6.26.0
+
+### Minor Changes
+
+- Fix building python projects with pyproject.toml but no python-version ([#15554](https://github.com/vercel/vercel/pull/15554))
+
+### Patch Changes
+
+- Add a small buffer to the final lambda size check. ([#15663](https://github.com/vercel/vercel/pull/15663))
+
+## 6.25.0
+
+### Minor Changes
+
+- Make specifying a different entry point variable actually work ([#15614](https://github.com/vercel/vercel/pull/15614))
+
+### Patch Changes
+
+- [services] allow services to share builder source ([#15631](https://github.com/vercel/vercel/pull/15631))
+
+- [python] update celery worker services declaration to support broker_url="vercel://" instead of having to import from vercel.workers.celery ([#15454](https://github.com/vercel/vercel/pull/15454))
+
+- Add `diagnostics` callback to produce package-manifest.json ([#15373](https://github.com/vercel/vercel/pull/15373))
+
+- Run the typechecker ([#15558](https://github.com/vercel/vercel/pull/15558))
+
+- Updated dependencies [[`8e8110d2eca5832e109f5efb64b192690100927d`](https://github.com/vercel/vercel/commit/8e8110d2eca5832e109f5efb64b192690100927d)]:
+  - @vercel/python-analysis@0.10.1
+
+## 6.24.0
+
+### Minor Changes
+
+- [services] add support for background workers to vc dev ([#15434](https://github.com/vercel/vercel/pull/15434))
+
+- Fix serving static files for a django WSGI app in vercel dev. ([#15501](https://github.com/vercel/vercel/pull/15501))
+
+- [services] add support for cron services to vc dev ([#15433](https://github.com/vercel/vercel/pull/15433))
+
+### Patch Changes
+
+- Use LAMBDA_SIZE_THRESHOLD_BYTES to determine remaining capacity. ([#15596](https://github.com/vercel/vercel/pull/15596))
+
+- [services] increase Python startup timeout to 5 minutes to match orchestrator ([#15535](https://github.com/vercel/vercel/pull/15535))
+
+- Force-bundle packages without compatible wheels instead of failing ([#15587](https://github.com/vercel/vercel/pull/15587))
+
+- Updated dependencies [[`3c4355fa1414aa3270ba4d36423aa647d49a9cf3`](https://github.com/vercel/vercel/commit/3c4355fa1414aa3270ba4d36423aa647d49a9cf3), [`267223f86eb578cc740db501fb2c2cbf43a27b37`](https://github.com/vercel/vercel/commit/267223f86eb578cc740db501fb2c2cbf43a27b37), [`e9a791d0fa04ef58695535fa508554415137fb58`](https://github.com/vercel/vercel/commit/e9a791d0fa04ef58695535fa508554415137fb58), [`12811e7bc827900d534aa25f5f3e2331a80ca6a8`](https://github.com/vercel/vercel/commit/12811e7bc827900d534aa25f5f3e2331a80ca6a8)]:
+  - @vercel/python-analysis@0.10.0
+
+## 6.23.0
+
+### Minor Changes
+
+- Run Django's `collectstatic` during Vercel builds, serving static files from the CDN and excluding them from the Lambda bundle. ([#15391](https://github.com/vercel/vercel/pull/15391))
+
+### Patch Changes
+
+- Leave 10mb of space for src code before packing lambda. ([#15475](https://github.com/vercel/vercel/pull/15475))
+
+## 6.22.1
+
+### Patch Changes
+
+- Revert the prepareCache python implementation. ([#15470](https://github.com/vercel/vercel/pull/15470))
+
+## 6.22.0
+
+### Minor Changes
+
+- [python] move vc_init_dev into vercel-runtime ([#15419](https://github.com/vercel/vercel/pull/15419))
+
+### Patch Changes
+
+- Updated dependencies [[`a67131396956632b060895afe44b26bb99941817`](https://github.com/vercel/vercel/commit/a67131396956632b060895afe44b26bb99941817)]:
+  - @vercel/python-analysis@0.9.1
+
+## 6.21.0
+
+### Minor Changes
+
+- [python] add support for module-based entrypoints for cron jobs ([#15393](https://github.com/vercel/vercel/pull/15393))
+
+- Avoid doing entry point detection on every request to a python dev server ([#15365](https://github.com/vercel/vercel/pull/15365))
+
+- For the django frontend, dynamically load settings.py instead of parsing it ([#15367](https://github.com/vercel/vercel/pull/15367))
+
+### Patch Changes
+
+- speed up python entrypoint detection ([#15402](https://github.com/vercel/vercel/pull/15402))
+
+- Add Python builder cache preparation for Build Output API v3 cache globs, the builder virtualenv, and the repo-local uv cache. ([#15407](https://github.com/vercel/vercel/pull/15407))
+
+- Updated dependencies [[`83e804013528fc54de31082960ae31f58339bd71`](https://github.com/vercel/vercel/commit/83e804013528fc54de31082960ae31f58339bd71), [`921314f958c4ec85adb09e020310a5becb7f866c`](https://github.com/vercel/vercel/commit/921314f958c4ec85adb09e020310a5becb7f866c)]:
+  - @vercel/python-analysis@0.9.0
+
+## 6.20.2
+
+### Patch Changes
+
+- Consolidate Python version resolution into `python-analysis` ([#15368](https://github.com/vercel/vercel/pull/15368))
+
+- Updated dependencies [[`d1c4d7052033aaf7b3f2044aa24484cb143b9348`](https://github.com/vercel/vercel/commit/d1c4d7052033aaf7b3f2044aa24484cb143b9348)]:
+  - @vercel/python-analysis@0.8.2
+
+## 6.20.1
+
+### Patch Changes
+
+- Add background worker service support for Python (Dramatiq/Celery) and propagate vercel headers context to worker handlers. ([#15361](https://github.com/vercel/vercel/pull/15361))
+
+## 6.20.0
+
+### Minor Changes
+
+- Add traces to python builder. ([#15282](https://github.com/vercel/vercel/pull/15282))
+
+### Patch Changes
+
+- Add no install project flag to the predeploy uv sync command ([#15341](https://github.com/vercel/vercel/pull/15341))
+
+- Move the matplotlib env var to quirks. ([#15305](https://github.com/vercel/vercel/pull/15305))
+
+## 6.19.0
+
+### Minor Changes
+
+- [python] setup logging in `vc_init_dev` to route records with level <= `WARNING` to `stdout` and with level >= `ERROR` to `stderr`. ([#15328](https://github.com/vercel/vercel/pull/15328))
+
+## 6.18.1
+
+### Patch Changes
+
+- add litellm proxy support ([#15313](https://github.com/vercel/vercel/pull/15313))
+
+## 6.18.0
+
+### Minor Changes
+
+- Run Python build commands _after_ install commands and in the virtual env ([#15171](https://github.com/vercel/vercel/pull/15171))
+
+### Patch Changes
+
+- Add `prisma-client-py` support and the quirks system ([#15289](https://github.com/vercel/vercel/pull/15289))
+
+- Updated dependencies [[`3880e1028840aae6883211b79a1a30c7432580f3`](https://github.com/vercel/vercel/commit/3880e1028840aae6883211b79a1a30c7432580f3)]:
+  - @vercel/python-analysis@0.8.1
+
+## 6.17.0
+
+### Minor Changes
+
+- Find entrypoints for django projects. ([#15167](https://github.com/vercel/vercel/pull/15167))
+
+### Patch Changes
+
+- Rename fetch to nodeFetch when importing from node-fetch ([#15232](https://github.com/vercel/vercel/pull/15232))
+
+- [services] fix dev server hang when FastAPI CLI is used ([#15274](https://github.com/vercel/vercel/pull/15274))
+
+- [python] fix dev server crash on relative imports ([#15269](https://github.com/vercel/vercel/pull/15269))
+
+- Updated dependencies [[`b3a96cc4f276ce8d16c695eabd499d3a17e73aa8`](https://github.com/vercel/vercel/commit/b3a96cc4f276ce8d16c695eabd499d3a17e73aa8)]:
+  - @vercel/python-analysis@0.8.0
+
+## 6.16.1
+
+### Patch Changes
+
+- Disable runtime dependency installs for projects with custom build/install commands ([#15240](https://github.com/vercel/vercel/pull/15240))
+
+## 6.16.0
+
+### Minor Changes
+
+- [python] add support for running generic ASGI/WSGI applications to vc dev ([#15174](https://github.com/vercel/vercel/pull/15174))
+
+### Patch Changes
+
+- Updated dependencies [[`cb79f6f8080fddd3673a8911566085e0265b060b`](https://github.com/vercel/vercel/commit/cb79f6f8080fddd3673a8911566085e0265b060b)]:
+  - @vercel/python-analysis@0.7.0
+
+## 6.15.1
+
+### Patch Changes
+
+- Check if file exists before mirroring into vendor ([#15181](https://github.com/vercel/vercel/pull/15181))
+
+## 6.15.0
+
+### Minor Changes
+
+- Optimize cold starts for lambdas >250MB ([#15080](https://github.com/vercel/vercel/pull/15080))
+
+  1. Remove `uv pip install` and replace it with `uv sync --inexact --frozen`
+  2. Pack the lambda zip with dependencies up to 245MB then only install the remaining ones at runtime
+
+### Patch Changes
+
+- Updated dependencies [[`fc56fb91b4dafabe0f68f86efeabbaf98b2642bc`](https://github.com/vercel/vercel/commit/fc56fb91b4dafabe0f68f86efeabbaf98b2642bc)]:
+  - @vercel/python-analysis@0.6.0
+
+## 6.14.1
+
+### Patch Changes
+
+- Skip runtime dependency install logic when VERCEL_PYTHON_ON_HIVE is set ([#15111](https://github.com/vercel/vercel/pull/15111))
+
+- Use dist-info RECORD to properly manage installed Python dependencies ([#15083](https://github.com/vercel/vercel/pull/15083))
+
+- Updated dependencies [[`88353afe588b95709af20ba2b82ba83d8a60f90c`](https://github.com/vercel/vercel/commit/88353afe588b95709af20ba2b82ba83d8a60f90c)]:
+  - @vercel/python-analysis@0.5.0
+
+## 6.14.0
+
+### Minor Changes
+
+- Enable runtime dependency installs for lambdas >250MB in size ([#15082](https://github.com/vercel/vercel/pull/15082))
+
+## 6.13.0
+
+### Minor Changes
+
+- Add runtime dependency install to support larger Python functions ([#14976](https://github.com/vercel/vercel/pull/14976))
+
+  This adds logic to calculate the total size of a lambda at build time and offload dependencies
+  to a \_runtime_requirements.txt file so they can be installed at runtime by uv. This allows us to
+  deploy functions up to the total size of the /tmp folder.
+
+## 6.12.0
+
+### Minor Changes
+
+- [services] synchronize dependencies in dev mode for JS/TS and Python services ([#14987](https://github.com/vercel/vercel/pull/14987))
+
+### Patch Changes
+
+- log contents of malformed manifests ([#15019](https://github.com/vercel/vercel/pull/15019))
+
+- Updated dependencies [[`a960cf23a42ff1a570c808ee9567670c24422f98`](https://github.com/vercel/vercel/commit/a960cf23a42ff1a570c808ee9567670c24422f98)]:
+  - @vercel/python-analysis@0.4.1
+
+## 6.11.1
+
+### Patch Changes
+
+- [python] preserve error code on uv error ([#14990](https://github.com/vercel/vercel/pull/14990))
+
+## 6.11.0
+
+### Minor Changes
+
+- Use python-analysis for manifest detection and conversion ([#14956](https://github.com/vercel/vercel/pull/14956))
+
+- [services] detect and manage virtual environments for Python services ([#14952](https://github.com/vercel/vercel/pull/14952))
+
+### Patch Changes
+
+- Updated dependencies [[`9b8f974bbb64fb857b068428b0c2fdccee6ad83c`](https://github.com/vercel/vercel/commit/9b8f974bbb64fb857b068428b0c2fdccee6ad83c)]:
+  - @vercel/python-analysis@0.4.0
+
+## 6.10.0
+
+### Minor Changes
+
+- [python] prefer `fastapi dev` to start ASGI application if FastAPI CLI is available and monitor module changes ([#14861](https://github.com/vercel/vercel/pull/14861))
+
+## 6.9.0
+
+### Minor Changes
+
+- [services] add a dev lock for `vercel dev` to prevent launching multiple `vercel dev` processes for a multi-service projects. ([#14897](https://github.com/vercel/vercel/pull/14897))
+
+## 6.8.0
+
+### Minor Changes
+
+- fix a build regression on projects with changed rootDirectory ([#14931](https://github.com/vercel/vercel/pull/14931))
+
+### Patch Changes
+
+- Revert "[python] Use python-analysis for manifest detection and conversion (#14891)" ([#14928](https://github.com/vercel/vercel/pull/14928))
+
+## 6.7.0
+
+### Minor Changes
+
+- Enable standalone runtime unconditionally ([#14876](https://github.com/vercel/vercel/pull/14876))
+
+## 6.6.0
+
+### Minor Changes
+
+- Add multi-service support for `vercel dev`. When `VERCEL_USE_EXPERIMENTAL_SERVICES=1` is set, the CLI auto-detects different multi-service layouts and orchestrates dev servers for each service through a single proxy server. ([#14805](https://github.com/vercel/vercel/pull/14805))
+
+### Patch Changes
+
+- Skip filtering system pythons on local vercel builds. ([#14858](https://github.com/vercel/vercel/pull/14858))
+
+## 6.5.1
+
+### Patch Changes
+
+- switch tests to vitest ([#14853](https://github.com/vercel/vercel/pull/14853))
+
+## 6.5.0
+
+### Minor Changes
+
+- vendor Python runtime dependencies ([#14827](https://github.com/vercel/vercel/pull/14827))
+
+- Bump vercel-runtime version automatically on its releases ([#14842](https://github.com/vercel/vercel/pull/14842))
+
+## 6.4.2
+
+### Patch Changes
+
+- Fix issue when .python-version file is provided without a pyproject.toml ([#14811](https://github.com/vercel/vercel/pull/14811))
+
+## 6.4.1
+
+### Patch Changes
+
+- Preserve error code when re-throwing errors in UvRunner methods ([#14796](https://github.com/vercel/vercel/pull/14796))
+
+## 6.4.0
+
+### Minor Changes
+
+- Enable support for python 3.13 and 3.14 runtimes ([#14740](https://github.com/vercel/vercel/pull/14740))
+
+  Preserves the current behaviour of "falling back" to python3.12 when an unsupported version of python is selected
+
+## 6.3.2
+
+### Patch Changes
+
+- Revert removing pip from the isInstalled check ([#14728](https://github.com/vercel/vercel/pull/14728))
+
+## 6.3.1
+
+### Patch Changes
+
+- isInstalled check only needs to check for python on the path. ([#14712](https://github.com/vercel/vercel/pull/14712))
+
+## 6.3.0
+
+### Minor Changes
+
+- enable standalone python-runtime behind a feature flag ([#14673](https://github.com/vercel/vercel/pull/14673))
+
+### Patch Changes
+
+- Add syncpack to enforce @types/node version consistency across the monorepo. ([#14665](https://github.com/vercel/vercel/pull/14665))
+
+  Update @types/node to 20.11.0 and fix type compatibility issues.
+
+## 6.2.1
+
+### Patch Changes
+
+- [python] experimental python runtime framework preset ([#14646](https://github.com/vercel/vercel/pull/14646))
+
+- Re-enable automatic python installs at build time. ([#14670](https://github.com/vercel/vercel/pull/14670))
+
+## 6.2.0
+
+### Minor Changes
+
+- Support for python 3.13 and 3.14 ([#14601](https://github.com/vercel/vercel/pull/14601))
+
 ## 6.1.6
 
 ### Patch Changes

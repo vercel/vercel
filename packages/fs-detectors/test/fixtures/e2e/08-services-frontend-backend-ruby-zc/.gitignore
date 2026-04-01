@@ -1,0 +1,7 @@
+.vercel
+
+node_modules
+.next
+
+backend/vendor
+backend/.bundle

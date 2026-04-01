@@ -45,7 +45,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
 
   it('should revalidate content properly from /', async () => {
     const dataRes = await fetch(
-      `${ctx.deploymentUrl}/_next/data/testing-build-id/en-US.json`
+      `${ctx.deploymentUrl}/_next/data/build-TfctsWXpff2fKS/en-US.json`
     );
     expect(dataRes.status).toBe(200);
     await dataRes.json();
@@ -72,7 +72,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
 
   it('should revalidate content properly from /fr', async () => {
     const dataRes = await fetch(
-      `${ctx.deploymentUrl}/_next/data/testing-build-id/fr.json`
+      `${ctx.deploymentUrl}/_next/data/build-TfctsWXpff2fKS/fr.json`
     );
     expect(dataRes.status).toBe(200);
     await dataRes.json();
@@ -98,7 +98,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
 
   it('should revalidate content properly from /nl-NL', async () => {
     const dataRes = await fetch(
-      `${ctx.deploymentUrl}/_next/data/testing-build-id/nl-NL.json`
+      `${ctx.deploymentUrl}/_next/data/build-TfctsWXpff2fKS/nl-NL.json`
     );
     expect(dataRes.status).toBe(200);
     await dataRes.json();
@@ -125,7 +125,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
   it('should revalidate content properly from /gsp/fallback/first', async () => {
     // check the _next/data URL first
     const dataRes = await fetch(
-      `${ctx.deploymentUrl}/_next/data/testing-build-id/en-US/gsp/fallback/first.json`
+      `${ctx.deploymentUrl}/_next/data/build-TfctsWXpff2fKS/en-US/gsp/fallback/first.json`
     );
     expect(dataRes.status).toBe(200);
     await dataRes.json();
@@ -159,7 +159,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
   it('should revalidate content properly from /fr/gsp/fallback/first', async () => {
     // check the _next/data URL first
     const dataRes = await fetch(
-      `${ctx.deploymentUrl}/_next/data/testing-build-id/fr/gsp/fallback/first.json`
+      `${ctx.deploymentUrl}/_next/data/build-TfctsWXpff2fKS/fr/gsp/fallback/first.json`
     );
     expect(dataRes.status).toBe(200);
     await dataRes.json();
@@ -193,7 +193,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
   it('should revalidate content properly from /nl-NL/gsp/fallback/first', async () => {
     // check the _next/data URL first
     const dataRes = await fetch(
-      `${ctx.deploymentUrl}/_next/data/testing-build-id/nl-NL/gsp/fallback/first.json`
+      `${ctx.deploymentUrl}/_next/data/build-TfctsWXpff2fKS/nl-NL/gsp/fallback/first.json`
     );
     expect(dataRes.status).toBe(200);
     await dataRes.json();
@@ -227,7 +227,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
   it('should revalidate content properly from /gsp/fallback/new-page', async () => {
     // we have to hit the _next/data URL first
     const dataRes = await fetch(
-      `${ctx.deploymentUrl}/_next/data/testing-build-id/en-US/gsp/fallback/new-page.json`
+      `${ctx.deploymentUrl}/_next/data/build-TfctsWXpff2fKS/en-US/gsp/fallback/new-page.json`
     );
     expect(dataRes.status).toBe(200);
 
@@ -264,7 +264,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
   it('should revalidate content properly from /fr/gsp/fallback/new-page', async () => {
     // we have to hit the _next/data URL first
     const dataRes = await fetch(
-      `${ctx.deploymentUrl}/_next/data/testing-build-id/fr/gsp/fallback/new-page.json`
+      `${ctx.deploymentUrl}/_next/data/build-TfctsWXpff2fKS/fr/gsp/fallback/new-page.json`
     );
     expect(dataRes.status).toBe(200);
 
@@ -301,7 +301,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
   it('should revalidate content properly from /nl-NL/gsp/fallback/new-page', async () => {
     // we have to hit the _next/data URL first
     const dataRes = await fetch(
-      `${ctx.deploymentUrl}/_next/data/testing-build-id/nl-NL/gsp/fallback/new-page.json`
+      `${ctx.deploymentUrl}/_next/data/build-TfctsWXpff2fKS/nl-NL/gsp/fallback/new-page.json`
     );
     expect(dataRes.status).toBe(200);
 
@@ -344,7 +344,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
 
   it('should revalidate content properly from /gsp/no-fallback/first', async () => {
     const dataRes = await fetch(
-      `${ctx.deploymentUrl}/_next/data/testing-build-id/en-US/gsp/no-fallback/first.json`
+      `${ctx.deploymentUrl}/_next/data/build-TfctsWXpff2fKS/en-US/gsp/no-fallback/first.json`
     );
     expect(dataRes.status).toBe(200);
     await dataRes.json();
@@ -376,7 +376,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
 
   it('should revalidate content properly from /fr/gsp/no-fallback/first', async () => {
     const dataRes = await fetch(
-      `${ctx.deploymentUrl}/_next/data/testing-build-id/fr/gsp/no-fallback/first.json`
+      `${ctx.deploymentUrl}/_next/data/build-TfctsWXpff2fKS/fr/gsp/no-fallback/first.json`
     );
     expect(dataRes.status).toBe(200);
     await dataRes.json();
@@ -408,7 +408,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
 
   it('should revalidate content properly from /nl-NL/gsp/no-fallback/second', async () => {
     const dataRes = await fetch(
-      `${ctx.deploymentUrl}/_next/data/testing-build-id/nl-NL/gsp/no-fallback/second.json`
+      `${ctx.deploymentUrl}/_next/data/build-TfctsWXpff2fKS/nl-NL/gsp/no-fallback/second.json`
     );
     expect(dataRes.status).toBe(200);
     await dataRes.json();

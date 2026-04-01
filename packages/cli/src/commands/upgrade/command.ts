@@ -1,3 +1,4 @@
+import { formatOption, jsonOption } from '../../util/arg-common';
 import { packageName } from '../../util/pkg-name';
 
 export const upgradeCommand = {
@@ -14,12 +15,10 @@ export const upgradeCommand = {
       description: 'Show the upgrade command without executing it',
     },
     {
-      name: 'json',
-      shorthand: null,
-      type: Boolean,
-      deprecated: false,
-      description: 'Output the upgrade information as JSON (implies --dry-run)',
+      ...formatOption,
+      description: 'Specify the output format (json) - implies --dry-run',
     },
+    jsonOption,
   ],
   examples: [
     {
@@ -32,7 +31,7 @@ export const upgradeCommand = {
     },
     {
       name: 'Get upgrade information as JSON',
-      value: `${packageName} upgrade --json`,
+      value: `${packageName} upgrade --format=json`,
     },
   ],
 } as const;

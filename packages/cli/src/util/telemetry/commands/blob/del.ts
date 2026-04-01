@@ -14,4 +14,13 @@ export class BlobDelTelemetryClient
       });
     }
   }
+
+  trackCliOptionIfMatch(ifMatch: string | undefined) {
+    if (ifMatch) {
+      this.trackCliOption({
+        option: 'if-match',
+        value: this.redactedValue,
+      });
+    }
+  }
 }

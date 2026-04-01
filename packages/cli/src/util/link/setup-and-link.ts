@@ -43,6 +43,15 @@ import {
   type VercelAuthSetting,
   DEFAULT_VERCEL_AUTH_SETTING,
 } from '../input/vercel-auth';
+import {
+  displayConfiguredServicesSetup,
+  getServicesSetupState,
+  promptForInferredServicesSetup,
+  toProjectRootDirectory,
+  type InferredServicesChoice,
+} from './services-setup';
+import searchProjectAcrossTeams from '../projects/search-project-across-teams';
+import type { CrossTeamMatch } from '../projects/search-project-across-teams';
 
 export interface SetupAndLinkOptions {
   autoConfirm?: boolean;
@@ -51,6 +60,13 @@ export interface SetupAndLinkOptions {
   successEmoji?: EmojiLabel;
   setupMsg?: string;
   projectName?: string;
+  /** When true, avoid prompts and return action_required payload when scope/project choice is needed */
+  nonInteractive?: boolean;
+  pullEnv?: boolean;
+  /** When true, indicates the project is being created from v0 (grants V0Builder permissions) */
+  v0?: boolean;
+  /** When true, search matching projects across teams before standard linking flow */
+  searchAcrossTeams?: boolean;
 }
 
 export default async function setupAndLink(
@@ -63,6 +79,10 @@ export default async function setupAndLink(
     successEmoji = 'link',
     setupMsg = 'Set up',
     projectName = basename(path),
+    nonInteractive = false,
+    pullEnv = true,
+    v0,
+    searchAcrossTeams = false,
   }: SetupAndLinkOptions
 ): Promise<ProjectLinkResult> {
   const { config } = client;
@@ -89,12 +109,13 @@ export default async function setupAndLink(
     remove(join(vercelDir, VERCEL_DIR_PROJECT));
   }
 
-  if (!isTTY && !autoConfirm) {
+  if (!isTTY && !autoConfirm && !nonInteractive) {
     return { status: 'error', exitCode: 1, reason: 'HEADLESS' };
   }
 
   const shouldStartSetup =
     autoConfirm ||
+    nonInteractive ||
     (await client.input.confirm(
       `${setupMsg} ${chalk.cyan(`“${toHumanPath(path)}”`)}?`,
       true
@@ -103,6 +124,131 @@ export default async function setupAndLink(
   if (!shouldStartSetup) {
     output.print(`Canceled. Project not set up.\n`);
     return { status: 'not_linked', org: null, project: null };
+  }
+
+  let skipAutoDetect = false;
+  if (searchAcrossTeams) {
+    // Search for existing projects across all teams
+    let crossTeamMatches: CrossTeamMatch[] = [];
+    output.spinner('Searching for existing projects…', 1000);
+    try {
+      crossTeamMatches = await searchProjectAcrossTeams(client, projectName);
+    } catch (err) {
+      output.debug(`Cross-team search failed: ${err}`);
+    } finally {
+      output.stopSpinner();
+    }
+
+    if (crossTeamMatches.length === 1) {
+      const match = crossTeamMatches[0];
+
+      if (autoConfirm || nonInteractive) {
+        config.currentTeam =
+          match.org.type === 'team' ? match.org.id : undefined;
+        await linkFolderToProject(
+          client,
+          path,
+          { projectId: match.project.id, orgId: match.org.id },
+          match.project.name,
+          match.org.slug,
+          successEmoji,
+          autoConfirm,
+          pullEnv
+        );
+        return { status: 'linked', org: match.org, project: match.project };
+      }
+
+      const confirmed = await client.input.confirm(
+        `Found project ${chalk.blue(match.org.slug)}/${match.project.name}. Link to it?`,
+        true
+      );
+      if (confirmed) {
+        config.currentTeam =
+          match.org.type === 'team' ? match.org.id : undefined;
+        await linkFolderToProject(
+          client,
+          path,
+          { projectId: match.project.id, orgId: match.org.id },
+          match.project.name,
+          match.org.slug,
+          successEmoji,
+          autoConfirm,
+          pullEnv
+        );
+        return { status: 'linked', org: match.org, project: match.project };
+      }
+      skipAutoDetect = true;
+    } else if (crossTeamMatches.length > 1) {
+      // Auto-link only when there's an unambiguous match on the current team
+      const currentTeamMatch = autoConfirm
+        ? crossTeamMatches.find(m => m.org.id === config.currentTeam)
+        : undefined;
+
+      if (currentTeamMatch) {
+        config.currentTeam =
+          currentTeamMatch.org.type === 'team'
+            ? currentTeamMatch.org.id
+            : undefined;
+        await linkFolderToProject(
+          client,
+          path,
+          {
+            projectId: currentTeamMatch.project.id,
+            orgId: currentTeamMatch.org.id,
+          },
+          currentTeamMatch.project.name,
+          currentTeamMatch.org.slug,
+          successEmoji,
+          autoConfirm,
+          pullEnv
+        );
+        return {
+          status: 'linked',
+          org: currentTeamMatch.org,
+          project: currentTeamMatch.project,
+        };
+      }
+
+      if (!nonInteractive) {
+        // Multiple matches and no unambiguous current-team match: prompt user to select
+        const choices = crossTeamMatches.map(m => ({
+          name: `${chalk.blue(m.org.slug)}/${m.project.name}`,
+          value: m as CrossTeamMatch | null,
+        }));
+        choices.push({
+          name: "Don't link to an existing project",
+          value: null,
+        });
+
+        const selected = await client.input.select<CrossTeamMatch | null>({
+          message:
+            'Found matching projects across teams. Which one do you want to link?',
+          choices,
+        });
+
+        if (selected) {
+          config.currentTeam =
+            selected.org.type === 'team' ? selected.org.id : undefined;
+          await linkFolderToProject(
+            client,
+            path,
+            { projectId: selected.project.id, orgId: selected.org.id },
+            selected.project.name,
+            selected.org.slug,
+            successEmoji,
+            autoConfirm,
+            pullEnv
+          );
+          return {
+            status: 'linked',
+            org: selected.org,
+            project: selected.project,
+          };
+        }
+        skipAutoDetect = true;
+      }
+      // nonInteractive with multiple matches: fall through to selectOrg
+    }
   }
 
   try {
@@ -127,16 +273,27 @@ export default async function setupAndLink(
     throw err;
   }
 
-  const projectOrNewProjectName = await inputProject(
-    client,
-    org,
-    projectName,
-    autoConfirm
-  );
+  let projectOrNewProjectName: Awaited<ReturnType<typeof inputProject>>;
+  try {
+    projectOrNewProjectName = await inputProject(
+      client,
+      org,
+      projectName,
+      autoConfirm,
+      skipAutoDetect
+    );
+  } catch (err) {
+    if (
+      err instanceof Error &&
+      (err as NodeJS.ErrnoException).code === 'HEADLESS'
+    ) {
+      return { status: 'error', exitCode: 1, reason: 'HEADLESS' };
+    }
+    throw err;
+  }
 
   if (typeof projectOrNewProjectName === 'string') {
     newProjectName = projectOrNewProjectName;
-    rootDirectory = await inputRootDirectory(client, path, autoConfirm);
   } else {
     const project = projectOrNewProjectName;
 
@@ -150,63 +307,147 @@ export default async function setupAndLink(
       project.name,
       org.slug,
       successEmoji,
-      autoConfirm
+      autoConfirm,
+      pullEnv
     );
     return { status: 'linked', org, project };
   }
 
-  if (
-    rootDirectory &&
-    !(await validateRootDirectory(path, join(path, rootDirectory)))
-  ) {
-    return { status: 'error', exitCode: 1, reason: 'INVALID_ROOT_DIRECTORY' };
-  }
-
   config.currentTeam = org.type === 'team' ? org.id : undefined;
-
-  const pathWithRootDirectory = rootDirectory
-    ? join(path, rootDirectory)
-    : path;
-  const localConfig = await readConfig(pathWithRootDirectory);
-  if (localConfig instanceof CantParseJSONFile) {
-    output.prettyError(localConfig);
-    return { status: 'error', exitCode: 1 };
-  }
-
-  const isZeroConfig =
-    !localConfig || !localConfig.builds || localConfig.builds.length === 0;
+  const rootServicesSetup = await getServicesSetupState(path);
 
   try {
     let settings: ProjectSettings = {};
+    let pathWithRootDirectory = path;
+    let rootInferredServicesChoice: InferredServicesChoice | null = null;
 
-    if (isZeroConfig) {
-      const localConfigurationOverrides: PartialProjectSettings = {
-        buildCommand: localConfig?.buildCommand,
-        devCommand: localConfig?.devCommand,
-        framework: localConfig?.framework,
-        commandForIgnoringBuildStep: localConfig?.ignoreCommand,
-        installCommand: localConfig?.installCommand,
-        outputDirectory: localConfig?.outputDirectory,
-      };
-
-      // Run the framework detection logic against the local filesystem.
-      const detectedProjectsForWorkspace = await detectProjects(
-        pathWithRootDirectory
-      );
-
-      // Select the first framework detected, or use
-      // the "Other" preset if none was detected.
-      const detectedProjects = detectedProjectsForWorkspace.get('') || [];
-      const framework =
-        detectedProjects[0] ?? frameworkList.find(f => f.slug === null);
-
-      settings = await editProjectSettings(
+    if (!rootServicesSetup.hasConfiguredServices) {
+      rootInferredServicesChoice = await promptForInferredServicesSetup({
         client,
-        {},
-        framework,
         autoConfirm,
-        localConfigurationOverrides
-      );
+        nonInteractive,
+        workPath: path,
+        inferred: rootServicesSetup.inferredServices,
+        inferredWriteBlocker: rootServicesSetup.inferredServicesWriteBlocker,
+        allowChooseDifferentProjectDirectory: true,
+      });
+    }
+
+    // Setup priority:
+    // 1. Explicit services config at the repo root.
+    // 2. Inferred services layout at the repo root -> prompt for deployment mode.
+    // 3. Standard framework setup flow.
+    if (rootServicesSetup.hasConfiguredServices) {
+      displayConfiguredServicesSetup(rootServicesSetup.detectServicesResult);
+      settings.framework = 'services';
+    } else if (rootInferredServicesChoice?.type === 'services') {
+      settings.framework = 'services';
+    } else {
+      // Standard framework setup begins here. The selected root directory
+      // gets the same priority order as the repo root:
+      // configured services -> inferred services -> framework/Other.
+      const skipSelectedRootInferredServicesPrompt =
+        rootInferredServicesChoice?.type === 'single-app';
+
+      if (rootInferredServicesChoice?.type === 'single-app') {
+        rootDirectory = toProjectRootDirectory(
+          path,
+          rootInferredServicesChoice.selectedPath
+        );
+      } else {
+        rootDirectory = await inputRootDirectory(client, path, autoConfirm);
+        if (
+          rootDirectory &&
+          !(await validateRootDirectory(path, join(path, rootDirectory)))
+        ) {
+          return {
+            status: 'error',
+            exitCode: 1,
+            reason: 'INVALID_ROOT_DIRECTORY',
+          };
+        }
+      }
+
+      pathWithRootDirectory = rootDirectory ? join(path, rootDirectory) : path;
+      const selectedRootServicesSetup =
+        pathWithRootDirectory === path
+          ? null
+          : await getServicesSetupState(pathWithRootDirectory);
+      let selectedRootInferredServicesChoice: InferredServicesChoice | null =
+        null;
+      if (!skipSelectedRootInferredServicesPrompt) {
+        selectedRootInferredServicesChoice =
+          await promptForInferredServicesSetup({
+            client,
+            autoConfirm,
+            nonInteractive,
+            workPath: pathWithRootDirectory,
+            inferred: selectedRootServicesSetup?.inferredServices ?? null,
+            inferredWriteBlocker:
+              selectedRootServicesSetup?.inferredServicesWriteBlocker ?? null,
+          });
+      }
+
+      if (selectedRootServicesSetup?.hasConfiguredServices) {
+        displayConfiguredServicesSetup(
+          selectedRootServicesSetup.detectServicesResult
+        );
+        settings.framework = 'services';
+      } else if (selectedRootInferredServicesChoice?.type === 'services') {
+        settings.framework = 'services';
+      } else {
+        if (selectedRootInferredServicesChoice?.type === 'single-app') {
+          rootDirectory = toProjectRootDirectory(
+            path,
+            selectedRootInferredServicesChoice.selectedPath
+          );
+          pathWithRootDirectory = rootDirectory
+            ? join(path, rootDirectory)
+            : path;
+        }
+
+        const localConfig = await readConfig(pathWithRootDirectory);
+        if (localConfig instanceof CantParseJSONFile) {
+          output.prettyError(localConfig);
+          return { status: 'error', exitCode: 1 };
+        }
+
+        const isZeroConfig =
+          !localConfig ||
+          !localConfig.builds ||
+          localConfig.builds.length === 0;
+
+        if (isZeroConfig) {
+          // Single framework preset, or "Other" if no framework is detected.
+          const localConfigurationOverrides: PartialProjectSettings = {
+            buildCommand: localConfig?.buildCommand,
+            devCommand: localConfig?.devCommand,
+            framework: localConfig?.framework,
+            commandForIgnoringBuildStep: localConfig?.ignoreCommand,
+            installCommand: localConfig?.installCommand,
+            outputDirectory: localConfig?.outputDirectory,
+          };
+
+          // Run the framework detection logic against the local filesystem.
+          const detectedProjectsForWorkspace = await detectProjects(
+            pathWithRootDirectory
+          );
+
+          // Select the first framework detected, or use
+          // the "Other" preset if none was detected.
+          const detectedProjects = detectedProjectsForWorkspace.get('') || [];
+          const framework =
+            detectedProjects[0] ?? frameworkList.find(f => f.slug === null);
+
+          settings = await editProjectSettings(
+            client,
+            {},
+            framework,
+            autoConfirm,
+            localConfigurationOverrides
+          );
+        }
+      }
     }
 
     // Support for changing additional, less frequently used project settings.
@@ -233,6 +474,7 @@ export default async function setupAndLink(
       ...settings,
       name: newProjectName,
       vercelAuth: vercelAuthSetting,
+      v0,
     });
 
     await linkFolderToProject(
@@ -256,6 +498,12 @@ export default async function setupAndLink(
     if (isAPIError(err) && err.code === 'too_many_projects') {
       output.prettyError(err);
       return { status: 'error', exitCode: 1, reason: 'TOO_MANY_PROJECTS' };
+    }
+    if (
+      err instanceof Error &&
+      (err as NodeJS.ErrnoException).code === 'HEADLESS'
+    ) {
+      return { status: 'error', exitCode: 1, reason: 'HEADLESS' };
     }
     printError(err);
 

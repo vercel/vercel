@@ -1,0 +1,3 @@
+[toolchain]
+channel = "stable"
+targets = ["wasm32-wasip2"]

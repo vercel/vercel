@@ -1,0 +1,30 @@
+# vercel-workers
+
+## 0.0.13
+
+### Patch Changes
+
+- [python] update celery worker services declaration to support broker_url="vercel://" instead of having to import from vercel.workers.celery ([#15454](https://github.com/vercel/vercel/pull/15454))
+
+- [vercel-workers] support encoding of common non-stdlib types as args ([#15611](https://github.com/vercel/vercel/pull/15611))
+
+## 0.0.12
+
+### Patch Changes
+
+- [python] workers: add headers to send APIs ([#15304](https://github.com/vercel/vercel/pull/15304))
+
+- [python] workers: allow topic filter in subscribe() ([#15306](https://github.com/vercel/vercel/pull/15306))
+
+## 0.0.11
+
+### Patch Changes
+
+- Add a version bump for `@vercel/python-workers` so previously merged changes are included in the next release. ([#15254](https://github.com/vercel/vercel/pull/15254))
+
+## 0.0.10
+
+### Initial Release
+
+- Initial import of the `vercel-workers` Python package into the monorepo.
+- Provides Celery, Django tasks, and Dramatiq adapters for Vercel Queues.

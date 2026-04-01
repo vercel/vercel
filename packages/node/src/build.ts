@@ -23,8 +23,7 @@ import {
   NodejsLambda,
   runNpmInstall,
   runPackageJsonScript,
-  getRuntimeNodeVersion,
-  getSpawnOptions,
+  getNodeVersion,
   debug,
   isSymbolicLink,
   walkParentDirs,
@@ -63,8 +62,7 @@ interface DownloadOptions {
 
 const require_ = createRequire(__filename);
 
-// eslint-disable-next-line no-useless-escape
-const libPathRegEx = /^node_modules|[\/\\]node_modules[\/\\]/;
+const libPathRegEx = /^node_modules|[/\\]node_modules[/\\]/;
 
 async function downloadInstallAndBundle({
   files,
@@ -76,13 +74,12 @@ async function downloadInstallAndBundle({
 }: DownloadOptions) {
   const downloadedFiles = await download(files, workPath, meta);
   const entrypointFsDirname = join(workPath, dirname(entrypoint));
-  const nodeVersion = await getRuntimeNodeVersion(
+  const nodeVersion = await getNodeVersion(
     entrypointFsDirname,
     undefined,
     config,
     meta
   );
-  const spawnOpts = getSpawnOptions(meta, nodeVersion);
 
   const {
     cliType,
@@ -91,11 +88,11 @@ async function downloadInstallAndBundle({
     turboSupportsCorepackHome,
   } = await scanParentDirs(entrypointFsDirname, true);
 
-  spawnOpts.env = getEnvForPackageManager({
+  const spawnEnv = getEnvForPackageManager({
     cliType,
     lockfileVersion,
     packageJsonPackageManager,
-    env: spawnOpts.env || {},
+    env: process.env,
     turboSupportsCorepackHome,
     projectCreatedAt: config.projectSettings?.createdAt,
   });
@@ -105,7 +102,7 @@ async function downloadInstallAndBundle({
     if (installCommand.trim()) {
       console.log(`Running "install" command: \`${installCommand}\`...`);
       await execCommand(installCommand, {
-        ...spawnOpts,
+        env: spawnEnv,
         cwd: entrypointFsDirname,
       });
     } else {
@@ -115,13 +112,13 @@ async function downloadInstallAndBundle({
     await runNpmInstall(
       entrypointFsDirname,
       [],
-      spawnOpts,
+      { env: spawnEnv },
       meta,
       config.projectSettings?.createdAt
     );
   }
   const entrypointPath = downloadedFiles[entrypoint].fsPath;
-  return { entrypointPath, entrypointFsDirname, nodeVersion, spawnOpts };
+  return { entrypointPath, entrypointFsDirname, nodeVersion, spawnEnv };
 }
 
 function renameTStoJS(path: string) {
@@ -147,8 +144,7 @@ async function compile(
   config: Config,
   meta: Meta,
   nodeVersion: NodeVersion,
-  isEdgeFunction: boolean,
-  useTypescript5 = false
+  isEdgeFunction: boolean
 ): Promise<{
   preparedFiles: Files;
   shouldAddSourcemapSupport: boolean;
@@ -190,7 +186,6 @@ async function compile(
         project: path, // Resolve tsconfig.json from entrypoint dir
         files: true, // Include all files such as global `.d.ts`
         nodeVersionMajor: nodeVersion.major,
-        useTypescript5,
       });
     }
     const { code, map } = tsCompile(source, path);
@@ -294,7 +289,6 @@ async function compile(
       },
     }
   );
-
   for (const warning of warnings) {
     debug(`Warning from trace: ${warning.message}`);
   }
@@ -440,7 +434,7 @@ export const build = async ({
     entrypointPath: _entrypointPath,
     entrypointFsDirname,
     nodeVersion,
-    spawnOpts,
+    spawnEnv,
   } = await downloadInstallAndBundle({
     files,
     entrypoint,
@@ -459,13 +453,11 @@ export const build = async ({
   // primary builder
   if (projectBuildCommand && considerBuildCommand) {
     await execCommand(projectBuildCommand, {
-      ...spawnOpts,
-
       // Yarn v2 PnP mode may be activated, so force
       // "node-modules" linker style
       env: {
         YARN_NODE_LINKER: 'node-modules',
-        ...spawnOpts.env,
+        ...spawnEnv,
       },
 
       cwd: workPath,
@@ -478,7 +470,7 @@ export const build = async ({
     await runPackageJsonScript(
       entrypointFsDirname,
       possibleScripts,
-      spawnOpts,
+      { env: spawnEnv },
       config.projectSettings?.createdAt
     );
   }
@@ -519,8 +511,6 @@ export const build = async ({
     isBun: isBunVersion(nodeVersion),
   });
 
-  // Opt backend builders to use typescript5
-  const useTypescript5 = considerBuildCommand;
   debug('Tracing input files...');
   const traceTime = Date.now();
   const { preparedFiles, shouldAddSourcemapSupport } = await compile(
@@ -530,8 +520,7 @@ export const build = async ({
     config,
     meta,
     nodeVersion,
-    isEdgeFunction,
-    useTypescript5
+    isEdgeFunction
   );
   debug(`Trace complete [${Date.now() - traceTime}ms]`);
 

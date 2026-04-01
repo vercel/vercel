@@ -1,11 +1,33 @@
 import { packageName } from '../../util/pkg-name';
 import { confirmOption, yesOption } from '../../util/arg-common';
 
+export const addSubcommand = {
+  name: 'add',
+  aliases: [],
+  description:
+    'Add additional Vercel Projects to an existing repository link. Requires an existing repo.json (created by `link --repo`).',
+  arguments: [],
+  options: [
+    {
+      ...yesOption,
+      description:
+        'Skip questions when adding projects using default scope and settings',
+    },
+  ],
+  examples: [
+    {
+      name: 'Add projects to an existing repository link',
+      value: `${packageName} link add`,
+    },
+  ],
+} as const;
+
 export const linkCommand = {
   name: 'link',
   aliases: [],
   description: 'Link a local directory to a Vercel Project.',
   arguments: [],
+  subcommands: [addSubcommand],
   options: [
     {
       name: 'repo',
@@ -16,9 +38,19 @@ export const linkCommand = {
     },
     {
       name: 'project',
-      description: 'Specify a project name',
+      description:
+        'Project name or ID to link to (required for non-interactive)',
       shorthand: 'p',
-      argument: 'NAME',
+      argument: 'NAME_OR_ID',
+      type: String,
+      deprecated: false,
+    },
+    {
+      name: 'team',
+      description:
+        'Scope: team ID or slug (use with --project for non-interactive)',
+      shorthand: null,
+      argument: 'TEAM_ID_OR_SLUG',
       type: String,
       deprecated: false,
     },
@@ -39,12 +71,20 @@ export const linkCommand = {
       value: `${packageName} link --yes`,
     },
     {
+      name: 'Non-interactive: link to an existing project (CI/agents)',
+      value: `${packageName} link --yes --team <team-id> --project <project-name-or-id>`,
+    },
+    {
       name: 'Link a specific directory to a Vercel Project',
       value: `${packageName} link --cwd /path/to/project`,
     },
     {
       name: 'Link to the current Git repository, allowing for multiple Vercel Projects to be linked simultaneously (useful for monorepos)',
       value: `${packageName} link --repo`,
+    },
+    {
+      name: 'Add additional projects to an existing repository link',
+      value: `${packageName} link add`,
     },
   ],
 } as const;

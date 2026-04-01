@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "name": "vercel-flags-test",
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/index"
+    }
+  ]
+}

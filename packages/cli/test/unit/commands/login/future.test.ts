@@ -12,6 +12,16 @@ vi.mock('node-fetch', async () => ({
   default: vi.fn(),
 }));
 
+vi.mock('open', () => {
+  return {
+    default: vi.fn().mockResolvedValue(undefined),
+  };
+});
+
+vi.mock('../../../../src/util/agent/auto-install-agentic', () => ({
+  autoInstallAgentTooling: vi.fn().mockResolvedValue(undefined),
+}));
+
 function mockResponse(data: unknown, ok = true): Response {
   return {
     ok,

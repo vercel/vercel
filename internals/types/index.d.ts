@@ -26,7 +26,7 @@ export interface JSONObject {
   [key: string]: JSONValue;
 }
 
-interface AuthConfig {
+export interface AuthConfig {
   '// Note'?: string;
   '// Docs'?: string;
   skipWrite?: boolean;
@@ -39,6 +39,11 @@ interface AuthConfig {
    * Used to optimistically check if the token is still valid.
    */
   expiresAt?: number;
+  /**
+   * Indicates where the token was provided from when using external tokens.
+   * Only set when token is provided via `--token` flag or `VERCEL_TOKEN` env var.
+   */
+  tokenSource?: 'flag' | 'env';
 }
 
 export interface GlobalConfig {
@@ -61,6 +66,7 @@ type Billing = {
   period: { start: number; end: number };
   plan: string;
   platform: string;
+  status: 'active' | 'trialing' | 'overdue' | 'canceled' | 'expired';
   trial: { start: number; end: number };
 };
 

@@ -1,9 +1,10 @@
 export interface MetadataSchemaProperty {
-  type: 'string' | 'number' | string;
+  type: 'string' | 'number' | 'boolean' | 'array' | string;
   description?: string;
-  default?: string;
+  default?: string | boolean | number;
   minimum?: number;
   maximum?: number;
+  items?: { type: 'string' | 'number' | string };
   'ui:control': 'input' | 'select' | 'vercel-region' | string;
   'ui:disabled'?: 'create' | Expression | boolean | string;
   'ui:hidden'?: 'create' | Expression | boolean | string;
@@ -23,7 +24,10 @@ export interface Expression {
   expr: string;
 }
 
-export type Metadata = Record<string, string | number | undefined>;
+export type Metadata = Record<
+  string,
+  string | number | boolean | string[] | number[] | undefined
+>;
 export type MetadataEntry = Readonly<[string, Metadata[string]]>;
 
 export interface MetadataSchema {
@@ -46,6 +50,29 @@ export type StorageIntegrationProtocol = IntegrationProductProtocolBase & {
 
 export type VideoIntegrationProtocol = IntegrationProductProtocolBase;
 
+export interface IntegrationGuideStep {
+  title: string;
+  content: string;
+  actions?: { type: string }[];
+}
+
+export interface IntegrationGuide {
+  framework: string;
+  title: string;
+  steps: IntegrationGuideStep[];
+}
+
+export interface IntegrationSnippet {
+  name: string;
+  language: string;
+  content: string;
+}
+
+export interface IntegrationResourceLink {
+  title: string;
+  href: string;
+}
+
 export interface IntegrationProduct {
   id: string;
   slug: string;
@@ -57,6 +84,9 @@ export interface IntegrationProduct {
     video?: VideoIntegrationProtocol;
   };
   metadataSchema: MetadataSchema;
+  guides?: IntegrationGuide[];
+  snippets?: IntegrationSnippet[];
+  resourceLinks?: IntegrationResourceLink[];
 }
 
 export type InstallationType = 'marketplace' | 'external';
@@ -79,6 +109,13 @@ export interface Integration {
   slug: string;
   name: string;
   products?: IntegrationProduct[];
+  /** Integration-level metadata schema (e.g. org name, region for Sentry). */
+  metadataSchema?: MetadataSchema;
+  eulaDocUri?: string;
+  privacyDocUri?: string;
+  capabilities?: {
+    requiresBrowserInstall?: boolean;
+  };
 }
 
 export interface IntegrationInstallation {
@@ -149,3 +186,69 @@ export interface MarketplaceBillingAuthorizationState {
   createdAt: number;
   updatedAt: number;
 }
+
+// Auto-provision types
+
+export type AcceptedPolicies = Partial<
+  Record<'toc' | 'privacy' | 'eula', string>
+>;
+
+export interface AutoProvisionIntegration {
+  id: string;
+  slug: string;
+  name: string;
+  icon: string;
+  policies: {
+    eula?: string; // URL to EULA doc
+    privacy?: string; // URL to privacy doc
+  };
+}
+
+export interface AutoProvisionProduct {
+  id: string;
+  slug: string;
+  name: string;
+  icon: string;
+  iconBackgroundColor?: string;
+  metadataSchema: MetadataSchema;
+}
+
+export interface AutoProvisionResource {
+  id: string;
+  externalResourceId: string;
+  name: string;
+  status: string;
+  ownership?: unknown;
+  secretKeys?: string[];
+}
+
+export interface AutoProvisionedResponse {
+  kind: 'provisioned';
+  integration: AutoProvisionIntegration;
+  product: AutoProvisionProduct;
+  installation: { id: string };
+  resource: AutoProvisionResource;
+  billingPlan: BillingPlan | null;
+}
+
+export interface AutoProvisionInstallationInfo {
+  id: string;
+  type?: 'marketplace' | 'external';
+  externalId?: string;
+  status?: string;
+}
+
+export interface AutoProvisionFallback {
+  kind: string;
+  reason?: string;
+  error_message?: string;
+  url: string;
+  integration: AutoProvisionIntegration;
+  product: AutoProvisionProduct;
+  installation?: { id: string };
+  installations?: AutoProvisionInstallationInfo[];
+}
+
+export type AutoProvisionResult =
+  | AutoProvisionedResponse
+  | AutoProvisionFallback;
