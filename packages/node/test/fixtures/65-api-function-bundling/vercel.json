@@ -12,6 +12,6 @@
     { "path": "/api/esm-handler", "mustContain": "esm:RANDOMNESS_PLACEHOLDER" },
     { "path": "/api/web-get", "mustContain": "web-get:RANDOMNESS_PLACEHOLDER" },
     { "path": "/api/fetch-handler", "mustContain": "fetch:RANDOMNESS_PLACEHOLDER" },
-    { "path": "/api/post-echo", "method": "POST", "body": "test-body", "mustContain": "echo:test-body" }
+    { "path": "/api/post-echo", "method": "POST", "body": "test-body", "mustContain": "echo:\"test-body\"" }
   ]
 }
