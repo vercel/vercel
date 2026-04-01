@@ -25,6 +25,39 @@ export const addSubcommand = {
   ],
 } as const;
 
+export const checksSubcommand = {
+  name: 'checks',
+  aliases: [],
+  description: 'List deployment checks configured for a project',
+  arguments: [
+    {
+      name: 'name',
+      required: false,
+    },
+  ],
+  options: [
+    formatOption,
+    {
+      name: 'blocks',
+      shorthand: null,
+      type: String,
+      description:
+        'Filter by blocking stage: build-start, deployment-start, deployment-alias, deployment-promotion, none',
+      deprecated: false,
+    },
+  ],
+  examples: [
+    {
+      name: 'List checks for the linked project',
+      value: `${packageName} project checks`,
+    },
+    {
+      name: 'Checks that block production alias assignment',
+      value: `${packageName} project checks --blocks deployment-alias`,
+    },
+  ],
+} as const;
+
 export const inspectSubcommand = {
   name: 'inspect',
   aliases: [],
@@ -122,6 +155,7 @@ export const projectCommand = {
   arguments: [],
   subcommands: [
     addSubcommand,
+    checksSubcommand,
     inspectSubcommand,
     listSubcommand,
     removeSubcommand,
