@@ -156,6 +156,10 @@ if (process.env.CLAUDECODE) {
   );
 }
 
+// Snapshot before any command has a chance to mutate process.env
+const SHOULD_CHECK_FOR_UPDATES =
+  !process.env.NO_UPDATE_NOTIFIER && !process.env.VERCEL;
+
 let { isTTY } = process.stdout;
 
 let apiUrl = 'https://api.vercel.com';
@@ -1127,10 +1131,7 @@ const main = async () => {
 
 main()
   .then(async exitCode => {
-    const shouldCheckForUpdates =
-      !process.env.NO_UPDATE_NOTIFIER && !process.env.VERCEL;
-
-    if (shouldCheckForUpdates) {
+    if (SHOULD_CHECK_FOR_UPDATES) {
       const latest = getLatestVersion({
         pkg,
       });
