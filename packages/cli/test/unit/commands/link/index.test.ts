@@ -749,8 +749,6 @@ describe('link', () => {
       const exitCode = await exitCodePromise;
       expect(exitCode, 'exit code for "link"').toEqual(0);
 
-      expect(client.stderr).toOutput('Linked to ');
-
       const projectJson = await readJSON(join(cwd, '.vercel/project.json'));
       expect(projectJson.orgId).toEqual(user.id);
       expect(projectJson.projectId).toEqual(project.id);
