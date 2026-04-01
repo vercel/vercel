@@ -334,7 +334,7 @@ export function validateServiceConfig(
   if (hasCommand && config.runtime !== 'python') {
     return {
       code: 'INVALID_COMMAND_RUNTIME',
-      message: `Cron service "${name}" using "command" must specify "runtime": "python".`,
+      message: `Cron service "${name}" using "command" is currently only supported with "runtime": "python".`,
       serviceName: name,
     };
   }
@@ -378,7 +378,7 @@ export function validateServiceConfig(
   if (!hasFramework && !hasBuilderOrRuntime && !hasEntrypoint && !hasCommand) {
     return {
       code: 'MISSING_SERVICE_CONFIG',
-      message: `Service "${name}" must specify "framework", "entrypoint", or "command" (cron services only).`,
+      message: `Service "${name}" must specify "framework", "entrypoint", or "command".`,
       serviceName: name,
     };
   }

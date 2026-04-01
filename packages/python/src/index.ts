@@ -1,5 +1,5 @@
 import { execSync } from 'child_process';
-import * as fs from 'fs';
+import fs from 'fs';
 import { join, dirname, basename, parse } from 'path';
 import {
   VERCEL_RUNTIME_VERSION,
@@ -673,6 +673,8 @@ from vercel_runtime.vc_init import vc_handler
 
   const files: Files = await glob('**', globOptions);
   if (isCommandCron) {
+    // vc_init.py imports the declared entrypoint module before cron bootstrap.
+    // Command-backed crons ignore this file's contents, but the module must exist.
     files[COMMAND_CRON_ENTRYPOINT] = new FileBlob({
       data: '"""Synthetic entrypoint for command-backed cron services."""\n',
     });
