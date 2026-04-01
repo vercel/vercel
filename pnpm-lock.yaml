@@ -1337,6 +1337,9 @@ importers:
       semver:
         specifier: 6.3.1
         version: 6.3.1
+      smol-toml:
+        specifier: 1.5.2
+        version: 1.5.2
     devDependencies:
       '@types/glob':
         specifier: 7.2.0
