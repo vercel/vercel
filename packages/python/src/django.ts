@@ -24,27 +24,24 @@ export interface DjangoSettingsResult {
 export async function getDjangoSettings(
   projectDir: string,
   env: NodeJS.ProcessEnv
-): Promise<DjangoSettingsResult | null> {
-  try {
-    const { stdout } = await execa('python', ['-c', script], {
-      env,
-      cwd: projectDir,
-    });
-    const parsed = JSON.parse(stdout) as {
-      settings_module: string;
-      django_settings: Record<string, unknown>;
-      django_version?: DjangoVersion;
-    } | null;
-    if (!parsed) return null;
-    return {
-      settingsModule: parsed.settings_module,
-      djangoSettings: parsed.django_settings,
-      djangoVersion: parsed.django_version ?? null,
-    };
-  } catch (err) {
-    debug(`Django hook: failed to discover settings from manage.py: ${err}`);
-    return null;
+): Promise<DjangoSettingsResult> {
+  const { stdout } = await execa('python', ['-c', script], {
+    env,
+    cwd: projectDir,
+  });
+  const parsed = JSON.parse(stdout) as {
+    settings_module: string;
+    django_settings: Record<string, unknown>;
+    django_version?: DjangoVersion;
+  } | null;
+  if (!parsed) {
+    throw new Error('manage.py did not return any settings');
   }
+  return {
+    settingsModule: parsed.settings_module,
+    djangoSettings: parsed.django_settings,
+    djangoVersion: parsed.django_version ?? null,
+  };
 }
 
 export interface DjangoCollectStaticResult {

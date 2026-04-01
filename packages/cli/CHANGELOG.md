@@ -1,5 +1,58 @@
 # vercel
 
+## 50.38.1
+
+### Patch Changes
+
+- Improve `vercel microfrontends create-group` non-interactive behavior by allowing free-tier-safe flows with explicit flags, while still blocking non-interactive execution when the action would impact billing. Add support for repeatable `--project-route=<project>=<route>` to configure non-default project routes without prompts. ([#15785](https://github.com/vercel/vercel/pull/15785))
+
+## 50.38.0
+
+### Minor Changes
+
+- Simplify and streamline python builder logic ([#15696](https://github.com/vercel/vercel/pull/15696))
+
+- [services] Check vercel.ts also in hasExperimentalServicesConfig ([#15736](https://github.com/vercel/vercel/pull/15736))
+
+- Fix django static file serving for manifest storage backends. ([#15709](https://github.com/vercel/vercel/pull/15709))
+
+### Patch Changes
+
+- Add more diagnostic trace spans to CLI build command ([#15759](https://github.com/vercel/vercel/pull/15759))
+
+- Emit Claude Code plugin hint to stderr when running inside Claude Code ([#15728](https://github.com/vercel/vercel/pull/15728))
+
+- Add routing rules reference to the Vercel CLI skill ([#15774](https://github.com/vercel/vercel/pull/15774))
+
+- Include context information during `vc ls` ([#15758](https://github.com/vercel/vercel/pull/15758))
+
+- Suppress warning message about implicit `public/**/*` builders not matching ([#15771](https://github.com/vercel/vercel/pull/15771))
+
+- Remove storybook detect-projects test referencing deleted example ([#15796](https://github.com/vercel/vercel/pull/15796))
+
+- Add `--group-by project` and `--group-by region` flags to `vc usage` for grouping billing charges by project or region ([#15777](https://github.com/vercel/vercel/pull/15777))
+
+- Updated dependencies [[`f912eef614731a75ecdca3bee159cc59abd4c58e`](https://github.com/vercel/vercel/commit/f912eef614731a75ecdca3bee159cc59abd4c58e), [`6c107f8ea8e84462f2b6ea8c9d548ef650cb458a`](https://github.com/vercel/vercel/commit/6c107f8ea8e84462f2b6ea8c9d548ef650cb458a), [`92c858272614b7964705991ba93f171a2b120921`](https://github.com/vercel/vercel/commit/92c858272614b7964705991ba93f171a2b120921), [`e37942b8fff0fec42afdf5989d0c4a80c36e7363`](https://github.com/vercel/vercel/commit/e37942b8fff0fec42afdf5989d0c4a80c36e7363), [`aed1ef68d1866cce0f4cf8486877e111681b2b63`](https://github.com/vercel/vercel/commit/aed1ef68d1866cce0f4cf8486877e111681b2b63), [`2b7c95c3fc06631b88e70ce6f9ddf9db59ae5692`](https://github.com/vercel/vercel/commit/2b7c95c3fc06631b88e70ce6f9ddf9db59ae5692), [`812fbfcbaadd3e7e00cee6a44a9fba442d9b501f`](https://github.com/vercel/vercel/commit/812fbfcbaadd3e7e00cee6a44a9fba442d9b501f), [`0e866b330427c95429881314b20649c2f06b4f36`](https://github.com/vercel/vercel/commit/0e866b330427c95429881314b20649c2f06b4f36), [`6cb5c6e1216d7a0dbaa6f740875a36f1b7166900`](https://github.com/vercel/vercel/commit/6cb5c6e1216d7a0dbaa6f740875a36f1b7166900), [`af261d25a6986785359d151d636c55fabb4c8b47`](https://github.com/vercel/vercel/commit/af261d25a6986785359d151d636c55fabb4c8b47)]:
+  - @vercel/python@6.29.0
+  - @vercel/go@3.4.7
+  - @vercel/next@4.16.4
+  - @vercel/build-utils@13.12.1
+  - @vercel/rust@1.0.6
+  - @vercel/static-build@2.9.7
+  - @vercel/backends@0.0.54
+  - @vercel/elysia@0.1.56
+  - @vercel/express@0.1.66
+  - @vercel/fastify@0.1.59
+  - @vercel/h3@0.1.65
+  - @vercel/hono@0.2.59
+  - @vercel/hydrogen@1.3.6
+  - @vercel/koa@0.1.39
+  - @vercel/nestjs@0.2.60
+  - @vercel/node@5.6.23
+  - @vercel/redwood@2.4.12
+  - @vercel/remix-builder@5.7.2
+  - @vercel/ruby@2.3.2
+
 ## 50.37.3
 
 ### Patch Changes
