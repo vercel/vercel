@@ -71,7 +71,6 @@ export default async function link(client: Client) {
     }
 
     await autoInstallAgentTooling(client, {
-      skipAgentInit: true,
       autoConfirm: yes,
     });
 
@@ -163,7 +162,6 @@ export default async function link(client: Client) {
   }
 
   await autoInstallAgentTooling(client, {
-    skipAgentInit: true,
     autoConfirm: yes,
   });
 
