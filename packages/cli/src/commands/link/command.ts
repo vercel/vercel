@@ -60,6 +60,13 @@ export const linkCommand = {
         'Skip questions when setting up new project using default scope and settings',
     },
     confirmOption,
+    {
+      name: 'skip-env',
+      description: 'Skip pulling environment variables after linking',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+    },
   ],
   examples: [
     {
@@ -73,6 +80,10 @@ export const linkCommand = {
     {
       name: 'Non-interactive: link to an existing project (CI/agents)',
       value: `${packageName} link --yes --team <team-id> --project <project-name-or-id>`,
+    },
+    {
+      name: 'Link a project without pulling environment variables',
+      value: `${packageName} link --yes --skip-env`,
     },
     {
       name: 'Link a specific directory to a Vercel Project',
