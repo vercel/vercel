@@ -196,6 +196,119 @@ export const systemBypassSubcommand = {
   ],
 } as const;
 
+// Attack Mode subcommands
+export const attackModeEnableSubcommand = {
+  name: 'enable',
+  aliases: [],
+  description:
+    'Enable attack mode — all visitors will be shown a verification challenge before accessing your site',
+  arguments: [],
+  options: [
+    {
+      name: 'duration',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Duration: 1h, 6h, or 24h (default: 1h)',
+    },
+    yesOption,
+  ],
+  examples: [
+    {
+      name: 'Enable attack mode for 1 hour',
+      value: `${packageName} firewall attack-mode enable`,
+    },
+    {
+      name: 'Enable attack mode for 24 hours',
+      value: `${packageName} firewall attack-mode enable --duration 24h`,
+    },
+  ],
+} as const;
+
+export const attackModeDisableSubcommand = {
+  name: 'disable',
+  aliases: [],
+  description: 'Disable attack mode — visitors will no longer be challenged',
+  arguments: [],
+  options: [yesOption],
+  examples: [
+    {
+      name: 'Disable attack mode',
+      value: `${packageName} firewall attack-mode disable`,
+    },
+  ],
+} as const;
+
+export const attackModeSubcommand = {
+  name: 'attack-mode',
+  aliases: [],
+  description:
+    'Manage attack mode, which challenges all incoming requests with a verification page',
+  arguments: [],
+  subcommands: [attackModeEnableSubcommand, attackModeDisableSubcommand],
+  options: [],
+  examples: [
+    {
+      name: 'Enable attack mode',
+      value: `${packageName} firewall attack-mode enable`,
+    },
+    {
+      name: 'Disable attack mode',
+      value: `${packageName} firewall attack-mode disable`,
+    },
+  ],
+} as const;
+
+// System Mitigations subcommands
+export const systemMitigationsPauseSubcommand = {
+  name: 'pause',
+  aliases: [],
+  description:
+    'Pause automatic DDoS protection and system-level traffic filtering for 24 hours',
+  arguments: [],
+  options: [yesOption],
+  examples: [
+    {
+      name: 'Pause system mitigations',
+      value: `${packageName} firewall system-mitigations pause`,
+    },
+  ],
+} as const;
+
+export const systemMitigationsResumeSubcommand = {
+  name: 'resume',
+  aliases: [],
+  description:
+    'Resume automatic DDoS protection and system-level traffic filtering',
+  arguments: [],
+  options: [yesOption],
+  examples: [
+    {
+      name: 'Resume system mitigations',
+      value: `${packageName} firewall system-mitigations resume`,
+    },
+  ],
+} as const;
+
+export const systemMitigationsSubcommand = {
+  name: 'system-mitigations',
+  aliases: [],
+  description:
+    'Manage automatic DDoS protection and system-level traffic filtering',
+  arguments: [],
+  subcommands: [
+    systemMitigationsPauseSubcommand,
+    systemMitigationsResumeSubcommand,
+  ],
+  options: [],
+  examples: [
+    {
+      name: 'Pause system mitigations',
+      value: `${packageName} firewall system-mitigations pause`,
+    },
+  ],
+} as const;
+
 export const firewallCommand = {
   name: 'firewall',
   aliases: [],
@@ -209,6 +322,8 @@ export const firewallCommand = {
     publishSubcommand,
     discardSubcommand,
     systemBypassSubcommand,
+    attackModeSubcommand,
+    systemMitigationsSubcommand,
   ],
   options: [],
   examples: [

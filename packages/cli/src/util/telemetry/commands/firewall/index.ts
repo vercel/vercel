@@ -61,4 +61,46 @@ export class FirewallTelemetryClient
       value: actual,
     });
   }
+
+  trackCliSubcommandAttackMode(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'attack-mode',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandAttackModeEnable(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'attack-mode:enable',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandAttackModeDisable(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'attack-mode:disable',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandSystemMitigations(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'system-mitigations',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandSystemMitigationsPause(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'system-mitigations:pause',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandSystemMitigationsResume(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'system-mitigations:resume',
+      value: actual,
+    });
+  }
 }
