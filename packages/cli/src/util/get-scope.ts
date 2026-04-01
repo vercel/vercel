@@ -23,15 +23,37 @@ export interface ScopeContext {
   explicitScopeProvided: boolean;
 }
 
+interface BasicScopeContext {
+  contextName: string;
+  user: User;
+  team: Team | null;
+}
+
 interface GetScopeOptions {
   getTeam?: boolean;
   resolveLocalScope?: boolean;
 }
 
+interface GetScopeWithLocalScopeOptions extends GetScopeOptions {
+  resolveLocalScope: true;
+}
+
+interface GetScopeWithoutLocalScopeOptions extends GetScopeOptions {
+  resolveLocalScope?: false;
+}
+
+export default function getScope(
+  client: Client,
+  opts: GetScopeWithLocalScopeOptions
+): Promise<ScopeContext>;
+export default function getScope(
+  client: Client,
+  opts?: GetScopeWithoutLocalScopeOptions
+): Promise<BasicScopeContext>;
 export default async function getScope(
   client: Client,
   opts: GetScopeOptions = {}
-) {
+): Promise<BasicScopeContext | ScopeContext> {
   const user = await getUser(client);
   let contextName = user.username || user.email;
   let team: Team | null = null;
