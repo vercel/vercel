@@ -123,7 +123,7 @@ async function resolveQueryScope(
   // --project or --all: resolve team context via getScope
   if (opts.project || opts.all) {
     const { team } = await getScope(client, {
-      requiresTeamOnly: true,
+      resolveLocalScope: true,
     });
     if (!team) {
       const errMsg =

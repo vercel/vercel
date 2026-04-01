@@ -61,7 +61,7 @@ async function ls(client: Client, argv: string[]): Promise<number> {
   const { certs, pagination } = await getCerts(client, ...paginationOptions);
 
   const { contextName } = await getScope(client, {
-    requiresTeamOnly: true,
+    resolveLocalScope: true,
   });
   output.log(
     `${

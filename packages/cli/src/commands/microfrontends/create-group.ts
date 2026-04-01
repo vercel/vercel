@@ -39,7 +39,7 @@ export default async function createGroup(client: Client): Promise<number> {
   }
 
   const { team } = await getScope(client, {
-    requiresTeamOnly: true,
+    resolveLocalScope: true,
   });
 
   if (!team) {

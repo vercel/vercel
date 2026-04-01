@@ -70,7 +70,7 @@ export async function addAutoProvision(
 
   // Get team context
   const { contextName, team } = await getScope(client, {
-    requiresTeamOnly: true,
+    resolveLocalScope: true,
   });
   if (!team) {
     output.error('Team not found');

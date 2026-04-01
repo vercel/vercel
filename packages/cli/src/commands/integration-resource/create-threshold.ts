@@ -54,7 +54,7 @@ export async function createThreshold(client: Client) {
 
   // Fetch Team
   const { team } = await getScope(client, {
-    requiresTeamOnly: true,
+    resolveLocalScope: true,
   });
   if (!team) {
     output.error('Team not found.');

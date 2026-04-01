@@ -75,7 +75,7 @@ export default async function redeploy(client: Client): Promise<number> {
   telemetry.trackCliOptionTarget(parsedArgs.flags['--target']);
 
   const { contextName } = await getScope(client, {
-    requiresTeamOnly: true,
+    resolveLocalScope: true,
   });
   const noWait = !!parsedArgs.flags['--no-wait'];
   const targetArgument = parsedArgs.flags['--target'];

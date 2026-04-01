@@ -56,7 +56,7 @@ export async function openIntegration(client: Client, subArgs: string[]) {
   }
 
   const { team } = await getScope(client, {
-    requiresTeamOnly: true,
+    resolveLocalScope: true,
   });
 
   if (!team) {

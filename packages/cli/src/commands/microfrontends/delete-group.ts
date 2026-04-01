@@ -58,7 +58,7 @@ export default async function deleteGroup(client: Client): Promise<number> {
   }
 
   const { team } = await getScope(client, {
-    requiresTeamOnly: true,
+    resolveLocalScope: true,
   });
 
   if (!team) {

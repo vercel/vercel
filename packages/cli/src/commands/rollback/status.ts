@@ -66,7 +66,7 @@ export default async function rollbackStatus({
 
   if (!contextName) {
     ({ contextName } = await getScope(client, {
-      requiresTeamOnly: true,
+      resolveLocalScope: true,
     }));
   }
 

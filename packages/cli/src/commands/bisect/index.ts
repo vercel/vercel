@@ -54,7 +54,7 @@ export default async function bisect(client: Client): Promise<number> {
   telemetry.trackCliOptionRun(parsedArgs.flags['--run']);
   telemetry.trackCliFlagOpen(parsedArgs.flags['--open']);
 
-  const scope = await getScope(client, { requiresTeamOnly: true });
+  const scope = await getScope(client, { resolveLocalScope: true });
   const { contextName } = scope;
 
   let bad =

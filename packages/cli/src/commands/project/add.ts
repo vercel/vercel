@@ -73,7 +73,7 @@ export default async function add(
   const elapsed = ms(Date.now() - start);
 
   const { contextName } = await getScope(client, {
-    requiresTeamOnly: true,
+    resolveLocalScope: true,
   });
   output.log(
     `${chalk.cyan('Success!')} Project ${chalk.bold(

@@ -305,7 +305,7 @@ export default async function logs(client: Client) {
 
   try {
     ({ contextName } = await getScope(client, {
-      requiresTeamOnly: true,
+      resolveLocalScope: true,
     }));
   } catch (err: unknown) {
     if (

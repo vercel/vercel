@@ -157,7 +157,7 @@ export default async function add(client: Client, argv: string[]) {
   }
 
   const { contextName } = await getScope(client, {
-    requiresTeamOnly: true,
+    resolveLocalScope: true,
   });
 
   const record = await addDNSRecord(client, domain, data);

@@ -120,7 +120,7 @@ export default async function usage(client: Client): Promise<number> {
   let teamId: string | undefined;
 
   try {
-    const scope = await getScope(client, { requiresTeamOnly: true });
+    const scope = await getScope(client, { resolveLocalScope: true });
     contextName = scope.contextName;
     teamId = scope.team?.id;
   } catch (err: unknown) {

@@ -95,7 +95,7 @@ export default async function inspectGroup(client: Client): Promise<number> {
     | string
     | undefined;
   const { team } = await getScope(client, {
-    requiresTeamOnly: true,
+    resolveLocalScope: true,
   });
 
   if (!team) {

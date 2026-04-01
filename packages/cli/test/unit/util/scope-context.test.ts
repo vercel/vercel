@@ -5,7 +5,6 @@ import { client } from '../../mocks/client';
 import { useUser } from '../../mocks/user';
 import { useTeam } from '../../mocks/team';
 import { setupTmpDir } from '../../helpers/setup-unit-fixture';
-import * as projectLinkModule from '../../../src/util/projects/link';
 import getScope, { applyScopeFromLink } from '../../../src/util/get-scope';
 
 describe('resolveScopeContext', () => {
@@ -20,13 +19,12 @@ describe('resolveScopeContext', () => {
 
     it('should use global scope when no local link and no --scope', async () => {
       client.config.currentTeam = mockTeam.id;
-      const ctx = await getScope(client, { requiresTeamOnly: true });
+      const ctx = await getScope(client, { resolveLocalScope: true });
 
       expect(ctx.org.id).toEqual(mockTeam.id);
       expect(ctx.contextName).toEqual(mockTeam.slug);
       expect(ctx.user.id).toEqual(mockUser.id);
       expect(ctx.team?.id).toEqual(mockTeam.id);
-      expect(ctx.linkedProject).toBeNull();
       expect(ctx.linkedRepo).toBeNull();
       expect(ctx.isCrossTeamRepo).toBe(false);
       expect(ctx.scopeMismatch).toBe(false);
@@ -34,7 +32,7 @@ describe('resolveScopeContext', () => {
     });
 
     it('should use personal account when no team set', async () => {
-      const ctx = await getScope(client, { requiresTeamOnly: true });
+      const ctx = await getScope(client, { resolveLocalScope: true });
 
       expect(ctx.org.type).toEqual('user');
       expect(ctx.org.id).toEqual(mockUser.id);
@@ -46,7 +44,7 @@ describe('resolveScopeContext', () => {
       client.config.currentTeam = mockTeam.id;
       client.argv = ['projects', 'ls', '--scope', mockTeam.slug];
 
-      const ctx = await getScope(client, { requiresTeamOnly: true });
+      const ctx = await getScope(client, { resolveLocalScope: true });
 
       expect(ctx.explicitScopeProvided).toBe(true);
     });
@@ -55,7 +53,7 @@ describe('resolveScopeContext', () => {
       client.config.currentTeam = mockTeam.id;
       client.argv = ['projects', 'ls', `--scope=${mockTeam.slug}`];
 
-      const ctx = await getScope(client, { requiresTeamOnly: true });
+      const ctx = await getScope(client, { resolveLocalScope: true });
 
       expect(ctx.explicitScopeProvided).toBe(true);
     });
@@ -64,7 +62,7 @@ describe('resolveScopeContext', () => {
       client.config.currentTeam = mockTeam.id;
       client.argv = ['projects', 'ls', '--team', mockTeam.slug];
 
-      const ctx = await getScope(client, { requiresTeamOnly: true });
+      const ctx = await getScope(client, { resolveLocalScope: true });
 
       expect(ctx.explicitScopeProvided).toBe(true);
     });
@@ -73,7 +71,7 @@ describe('resolveScopeContext', () => {
       client.config.currentTeam = mockTeam.id;
       client.argv = ['projects', 'ls', '-T', mockTeam.slug];
 
-      const ctx = await getScope(client, { requiresTeamOnly: true });
+      const ctx = await getScope(client, { resolveLocalScope: true });
 
       expect(ctx.explicitScopeProvided).toBe(true);
     });
@@ -82,7 +80,7 @@ describe('resolveScopeContext', () => {
       client.config.currentTeam = mockTeam.id;
       client.localConfig = { scope: mockTeam.slug };
 
-      const ctx = await getScope(client, { requiresTeamOnly: true });
+      const ctx = await getScope(client, { resolveLocalScope: true });
 
       expect(ctx.explicitScopeProvided).toBe(true);
     });
@@ -95,7 +93,7 @@ describe('resolveScopeContext', () => {
     });
 
     it('should not flag cross-team when there is no repo link', async () => {
-      const ctx = await getScope(client, { requiresTeamOnly: true });
+      const ctx = await getScope(client, { resolveLocalScope: true });
 
       expect(ctx.isCrossTeamRepo).toBe(false);
     });
@@ -107,15 +105,13 @@ describe('resolveScopeContext', () => {
     beforeEach(() => {
       mockTeam = useTeam('team_dummy');
       useUser();
-      // Mock getProjectLink to return null so it doesn't trigger interactive
-      // prompts when repo.json has multiple projects
-      vi.spyOn(projectLinkModule, 'getProjectLink').mockResolvedValue(null);
     });
 
-    it('should warn about cross-team repo when no localOrgId and requiresTeamOnly', async () => {
+    it('should warn about cross-team repo without prompting for a project', async () => {
       const cwd = setupTmpDir();
       client.cwd = cwd;
       client.config.currentTeam = mockTeam.id;
+      const selectSpy = vi.spyOn(client.input, 'select');
 
       await outputFile(
         join(cwd, '.vercel', 'repo.json'),
@@ -139,13 +135,14 @@ describe('resolveScopeContext', () => {
       );
 
       const exitCodePromise = getScope(client, {
-        requiresTeamOnly: true,
+        resolveLocalScope: true,
       });
       await expect(client.stderr).toOutput(
         'This repository has projects across multiple teams'
       );
       const ctx = await exitCodePromise;
 
+      expect(selectSpy).not.toHaveBeenCalled();
       expect(ctx.isCrossTeamRepo).toBe(true);
       expect(ctx.org.id).toEqual(mockTeam.id);
     });
@@ -177,7 +174,7 @@ describe('resolveScopeContext', () => {
         })
       );
 
-      const ctx = await getScope(client, { requiresTeamOnly: true });
+      const ctx = await getScope(client, { resolveLocalScope: true });
 
       expect(ctx.isCrossTeamRepo).toBe(true);
       expect(ctx.explicitScopeProvided).toBe(true);
@@ -216,7 +213,7 @@ describe('resolveScopeContext', () => {
         })
       );
 
-      const ctx = await getScope(client, { requiresTeamOnly: true });
+      const ctx = await getScope(client, { resolveLocalScope: true });
 
       expect(ctx.isCrossTeamRepo).toBe(true);
       // Both root projects share the same orgId — resolves without warning
@@ -234,7 +231,7 @@ describe('resolveScopeContext', () => {
       client.argv = ['deploy'];
       client.localConfig = {};
 
-      const ctx = await getScope(client, { requiresTeamOnly: true });
+      const ctx = await getScope(client, { resolveLocalScope: true });
 
       expect(ctx.explicitScopeProvided).toBe(false);
     });
@@ -243,7 +240,7 @@ describe('resolveScopeContext', () => {
       client.argv = ['deploy', '--force', '--yes'];
       client.localConfig = {};
 
-      const ctx = await getScope(client, { requiresTeamOnly: true });
+      const ctx = await getScope(client, { resolveLocalScope: true });
 
       expect(ctx.explicitScopeProvided).toBe(false);
     });
@@ -262,7 +259,7 @@ describe('resolveScopeContext', () => {
     });
 
     it('should use default team for northstar user', async () => {
-      const ctx = await getScope(client, { requiresTeamOnly: true });
+      const ctx = await getScope(client, { resolveLocalScope: true });
 
       expect(ctx.org.id).toEqual(mockTeam.id);
       expect(ctx.user.id).toEqual(mockUser.id);

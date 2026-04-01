@@ -71,7 +71,7 @@ export default async function transferIn(client: Client, argv: string[]) {
   }
 
   const { contextName } = await getScope(client, {
-    requiresTeamOnly: true,
+    resolveLocalScope: true,
   });
   output.log(
     `The domain ${param(domainName)} is ${chalk.underline(

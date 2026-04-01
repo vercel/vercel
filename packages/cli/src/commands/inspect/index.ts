@@ -91,7 +91,7 @@ export default async function inspect(client: Client) {
 
   try {
     ({ contextName } = await getScope(client, {
-      requiresTeamOnly: true,
+      resolveLocalScope: true,
     }));
   } catch (err: unknown) {
     if (

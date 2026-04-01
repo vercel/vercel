@@ -64,7 +64,7 @@ export default async function list(
   const start = Date.now();
 
   const { contextName } = await getScope(client, {
-    requiresTeamOnly: true,
+    resolveLocalScope: true,
   });
   output.spinner(`Fetching projects in ${chalk.bold(contextName)}`);
 

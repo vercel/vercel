@@ -52,7 +52,7 @@ async function rm(client: Client, argv: string[]): Promise<number> {
   }
 
   const { contextName } = await getScope(client, {
-    requiresTeamOnly: true,
+    resolveLocalScope: true,
   });
   const certs = await getCertsToDelete(client, contextName, id);
   if (certs instanceof ERRORS.CertsPermissionDenied) {

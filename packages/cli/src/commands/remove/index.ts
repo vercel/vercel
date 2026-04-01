@@ -83,7 +83,7 @@ export default async function remove(client: Client) {
   }
 
   const { contextName } = await getScope(client, {
-    requiresTeamOnly: true,
+    resolveLocalScope: true,
   });
 
   output.spinner(

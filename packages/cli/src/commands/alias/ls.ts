@@ -41,7 +41,7 @@ export default async function ls(client: Client, argv: string[]) {
   }
 
   const { contextName } = await getScope(client, {
-    requiresTeamOnly: true,
+    resolveLocalScope: true,
   });
 
   const telemetryClient = new AliasListTelemetryClient({

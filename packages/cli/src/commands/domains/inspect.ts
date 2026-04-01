@@ -61,7 +61,7 @@ export default async function inspect(client: Client, argv: string[]) {
   output.debug(`Fetching domain info`);
 
   const { contextName } = await getScope(client, {
-    requiresTeamOnly: true,
+    resolveLocalScope: true,
   });
   output.spinner(
     `Fetching Domain ${domainName} under ${chalk.bold(contextName)}`

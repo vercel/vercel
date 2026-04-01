@@ -133,14 +133,18 @@ export default async function change(client: Client, argv: string[]) {
     },
   });
   telemetry.trackCliArgumentName(desiredSlug);
-  const personalScopeSelected = !config.currentTeam;
 
   output.spinner('Fetching teams information');
   const [user, teams] = await Promise.all([getUser(client), getTeams(client)]);
 
-  const currentTeam = personalScopeSelected
-    ? undefined
-    : teams.find(team => team.id === config.currentTeam);
+  const defaultTeamId =
+    user.version === 'northstar' ? user.defaultTeamId : undefined;
+  const currentTeamId = config.currentTeam || defaultTeamId;
+  const personalScopeSelected = !currentTeamId;
+
+  const currentTeam = currentTeamId
+    ? teams.find(team => team.id === currentTeamId)
+    : undefined;
 
   if (!personalScopeSelected && !currentTeam) {
     if (client.nonInteractive) {

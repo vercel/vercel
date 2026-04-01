@@ -74,6 +74,43 @@ describe.skipIf(flakey)('build', () => {
     expect(files.sort()).toEqual(['index.html']);
   });
 
+  it('should build from a subdirectory of a linked project', async () => {
+    const cwd = await getWriteableDirectory();
+    await fs.copy(fixture('static'), cwd);
+
+    const nestedCwd = join(cwd, 'src', 'nested');
+    const output = join(cwd, '.vercel/output');
+
+    try {
+      await fs.ensureDir(nestedCwd);
+
+      client.cwd = nestedCwd;
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      const builds = await fs.readJSON(join(output, 'builds.json'));
+      expect(builds).toMatchObject({
+        target: 'preview',
+        builds: [
+          {
+            require: '@vercel/static',
+            apiVersion: 2,
+            src: '**',
+            use: '@vercel/static',
+          },
+        ],
+      });
+
+      const files = await fs.readdir(join(output, 'static'));
+      expect(files.sort()).toEqual(['index.html']);
+      expect(await fs.pathExists(join(nestedCwd, '.vercel', 'output'))).toEqual(
+        false
+      );
+    } finally {
+      await fs.remove(cwd);
+    }
+  });
+
   it('should build with `@now/static`', async () => {
     const cwd = fixture('now-static');
     const output = join(cwd, '.vercel/output');

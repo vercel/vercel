@@ -32,7 +32,7 @@ export async function ensureMicrofrontendsContext(
 
   client.config.currentTeam = org.id;
   const { team } = await getScope(client, {
-    requiresTeamOnly: true,
+    resolveLocalScope: true,
   });
 
   if (!team) {

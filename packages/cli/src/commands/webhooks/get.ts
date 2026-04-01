@@ -77,7 +77,7 @@ export default async function get(client: Client, argv: string[]) {
   output.debug(`Fetching webhook info`);
 
   const { contextName } = await getScope(client, {
-    requiresTeamOnly: true,
+    resolveLocalScope: true,
   });
   if (!client.nonInteractive) {
     output.spinner(

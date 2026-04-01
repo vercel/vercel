@@ -278,7 +278,7 @@ async function resolveScope(
 ): Promise<ActivityScope | number> {
   if (opts.all || opts.project) {
     const { team } = await getScope(client, {
-      requiresTeamOnly: true,
+      resolveLocalScope: true,
     });
     if (!team) {
       return outputError(

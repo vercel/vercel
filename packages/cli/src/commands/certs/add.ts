@@ -97,7 +97,7 @@ async function add(client: Client, argv: string[]): Promise<number> {
     );
 
     const { contextName } = await getScope(client, {
-      requiresTeamOnly: true,
+      resolveLocalScope: true,
     });
     cert = await createCertForCns(client, cns, contextName);
     output.stopSpinner();

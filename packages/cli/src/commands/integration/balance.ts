@@ -57,7 +57,7 @@ export async function balance(client: Client) {
   }
 
   const { team } = await getScope(client, {
-    requiresTeamOnly: true,
+    resolveLocalScope: true,
   });
 
   if (!team) {

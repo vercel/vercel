@@ -56,7 +56,7 @@ export default async function ls(client: Client, argv: string[]) {
   const asJson = formatResult.jsonOutput || client.nonInteractive;
 
   const { contextName } = await getScope(client, {
-    requiresTeamOnly: true,
+    resolveLocalScope: true,
   });
 
   const lsStamp = stamp();

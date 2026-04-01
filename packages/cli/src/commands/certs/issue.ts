@@ -106,7 +106,7 @@ export default async function issue(
   const cns = getCnsFromArgs(args);
 
   const { contextName } = await getScope(client, {
-    requiresTeamOnly: true,
+    resolveLocalScope: true,
   });
 
   // If the user specifies that he wants the challenge to be solved manually, we request the

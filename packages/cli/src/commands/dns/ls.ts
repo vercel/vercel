@@ -90,7 +90,7 @@ export default async function ls(client: Client, argv: string[]) {
 
   const { telemetryEventStore } = client;
   const { contextName } = await getScope(client, {
-    requiresTeamOnly: true,
+    resolveLocalScope: true,
   });
   const telemetry = new DnsLsTelemetryClient({
     opts: {

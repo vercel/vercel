@@ -124,6 +124,29 @@ describe('teams switch', () => {
       );
       await expect(exitCodePromise).resolves.toEqual(1);
     });
+
+    it('should preselect the default team when currentTeam is unset', async () => {
+      const defaultTeam = useTeam('team_zulu');
+      defaultTeam.slug = 'zulu-team';
+      defaultTeam.name = 'Zulu Team';
+      createTeam('team_alpha', 'alpha-team', 'Alpha Team');
+      useUser({
+        version: 'northstar',
+        defaultTeamId: defaultTeam.id,
+      });
+
+      client.config.currentTeam = undefined;
+      client.setArgv('teams', 'switch');
+      const exitCodePromise = teams(client);
+
+      await expect(client.stderr).toOutput(
+        `${defaultTeam.name} (${defaultTeam.slug}) (current)`
+      );
+
+      client.stdin.write('\r');
+      await expect(exitCodePromise).resolves.toEqual(0);
+      await expect(client.stderr).toOutput('No changes made');
+    });
   });
 
   describe('non-interactive mode', () => {

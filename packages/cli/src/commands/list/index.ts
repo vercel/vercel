@@ -167,7 +167,7 @@ export default async function list(client: Client) {
       // from the API and retrieve the project ID from the deployment
       try {
         ({ contextName } = await getScope(client, {
-          requiresTeamOnly: true,
+          resolveLocalScope: true,
         }));
       } catch (err: unknown) {
         if (
@@ -225,7 +225,7 @@ export default async function list(client: Client) {
   if (!contextName) {
     try {
       ({ contextName } = await getScope(client, {
-        requiresTeamOnly: true,
+        resolveLocalScope: true,
       }));
     } catch (err: unknown) {
       if (

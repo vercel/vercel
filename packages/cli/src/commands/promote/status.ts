@@ -68,7 +68,7 @@ export default async function promoteStatus({
 
   if (!contextName) {
     ({ contextName } = await getScope(client, {
-      requiresTeamOnly: true,
+      resolveLocalScope: true,
     }));
   }
 

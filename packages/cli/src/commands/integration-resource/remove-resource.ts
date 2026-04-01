@@ -51,7 +51,7 @@ export async function remove(client: Client) {
   }
 
   const { team } = await getScope(client, {
-    requiresTeamOnly: true,
+    resolveLocalScope: true,
   });
   if (!team) {
     output.error('Team not found.');

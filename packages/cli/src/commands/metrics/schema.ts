@@ -52,7 +52,7 @@ export default async function schema(
   telemetry.trackCliOptionFormat(flags['--format']);
 
   const { team } = await getScope(client, {
-    requiresTeamOnly: true,
+    resolveLocalScope: true,
   });
   if (!team) {
     const message =

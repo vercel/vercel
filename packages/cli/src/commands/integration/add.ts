@@ -156,7 +156,7 @@ export async function add(
   telemetry.trackCliOptionPrefix(prefix);
 
   const { contextName, team } = await getScope(client, {
-    requiresTeamOnly: true,
+    resolveLocalScope: true,
   });
 
   if (!team) {

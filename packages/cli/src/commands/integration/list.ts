@@ -69,7 +69,7 @@ export async function list(client: Client) {
   }
 
   const { contextName, team } = await getScope(client, {
-    requiresTeamOnly: true,
+    resolveLocalScope: true,
   });
 
   if (!team) {
