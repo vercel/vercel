@@ -245,7 +245,6 @@ export function validateServiceConfig(
   const hasSubdomain = typeof config.subdomain === 'string';
   const hasEntrypoint = typeof config.entrypoint === 'string';
   const hasCommand = typeof config.command === 'string';
-  const hasRoot = typeof (config as { root?: unknown }).root === 'string';
 
   if (hasSubdomain && !DNS_LABEL_RE.test(config.subdomain!)) {
     return {
@@ -301,13 +300,6 @@ export function validateServiceConfig(
     return {
       code: 'INVALID_COMMAND_CONFIG',
       message: `Service "${name}" cannot specify "command". Only cron services currently support "command".`,
-      serviceName: name,
-    };
-  }
-  if (hasRoot) {
-    return {
-      code: 'INVALID_ROOT_CONFIG',
-      message: `Service "${name}" cannot specify "root". Command-backed cron services currently run from the project root.`,
       serviceName: name,
     };
   }

@@ -1222,30 +1222,6 @@ describe('detectServices', () => {
       });
     });
 
-    it('should error when command-backed cron specifies root', async () => {
-      const fs = new VirtualFilesystem({
-        'vercel.json': JSON.stringify({
-          experimentalServices: {
-            cleanup: {
-              type: 'cron',
-              runtime: 'python',
-              root: 'jobs',
-              command: 'python cleanup.py',
-              schedule: '0 0 * * *',
-            },
-          },
-        }),
-      });
-      const result = await detectServices({ fs });
-
-      expect(result.services).toHaveLength(0);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0]).toMatchObject({
-        code: 'INVALID_ROOT_CONFIG',
-        serviceName: 'cleanup',
-      });
-    });
-
     it('should return error for cron without schedule', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': JSON.stringify({
