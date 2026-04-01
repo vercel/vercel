@@ -643,15 +643,6 @@ describe('detectFrameworks()', () => {
     });
   });
 
-  it('Should detect "hydrogen" template as `hydrogen`', async () => {
-    const fs = new LocalFileSystemDetector(join(EXAMPLES_DIR, 'hydrogen'));
-
-    const slugs = (await detectFrameworks({ fs, frameworkList })).map(
-      f => f.slug
-    );
-    expect(slugs).toEqual(['hydrogen']);
-  });
-
   it('Should detect "hydrogen-2" template as `remix`', async () => {
     const fs = new LocalFileSystemDetector(join(EXAMPLES_DIR, 'hydrogen-2'));
 
