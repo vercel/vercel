@@ -79,11 +79,22 @@ export default async function getScope(
   const globalTeamId = client.config.currentTeam;
 
   const cwd = client.cwd;
-  const projectLink = await getLinkFromDir<{
-    orgId: string;
-    projectId: string;
-  }>(getVercelDirectory(cwd)).catch(() => null);
-  const repoLink = await getRepoLink(client, cwd).catch(() => null);
+  let projectLink: { orgId: string; projectId: string } | null = null;
+  try {
+    projectLink = await getLinkFromDir<{
+      orgId: string;
+      projectId: string;
+    }>(getVercelDirectory(cwd));
+  } catch (_error) {
+    projectLink = null;
+  }
+
+  let repoLink: Awaited<ReturnType<typeof getRepoLink>> | null = null;
+  try {
+    repoLink = await getRepoLink(client, cwd);
+  } catch (_error) {
+    repoLink = null;
+  }
 
   let localOrgId: string | undefined;
   if (projectLink) {
