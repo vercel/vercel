@@ -1,5 +1,11 @@
 # @vercel/next
 
+## 4.16.4
+
+### Patch Changes
+
+- Copy post-build public files into V3 build output so they are included in Git-driven deploys ([#15780](https://github.com/vercel/vercel/pull/15780))
+
 ## 4.16.3
 
 ### Patch Changes
