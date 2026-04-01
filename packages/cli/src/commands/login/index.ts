@@ -8,6 +8,8 @@ import { printError } from '../../util/error';
 import output from '../../output-manager';
 import { LoginTelemetryClient } from '../../util/telemetry/commands/login';
 import { login as future } from './future';
+import { outputCommandSchema } from '../../util/describe-command';
+import { outputDryRun } from '../../util/dry-run';
 
 export default async function login(
   client: Client,
@@ -43,6 +45,35 @@ export default async function login(
     telemetry.trackCliFlagHelp('login');
     output.print(help(loginCommand, { columns: client.stderr.columns }));
     return 0;
+  }
+
+  if (parsedArgs?.flags['--describe']) {
+    outputCommandSchema(client, loginCommand);
+    return 0;
+  }
+
+  if (parsedArgs?.flags['--dry-run']) {
+    return outputDryRun(client, {
+      status: 'dry_run',
+      reason: 'dry_run_ok',
+      message: 'Login would initiate OAuth device code flow',
+      actions: [
+        {
+          action: 'api_call',
+          description: 'POST device authorization request to Vercel OAuth',
+        },
+        {
+          action: 'browser_open',
+          description: 'Open verification URL in browser',
+        },
+        { action: 'poll', description: 'Poll for token completion' },
+        {
+          action: 'file_write',
+          description: 'Save credentials',
+          details: { path: '~/.vercel/auth.json' },
+        },
+      ],
+    });
   }
 
   if (parsedArgs?.flags['--token']) {

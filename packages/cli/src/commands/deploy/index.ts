@@ -64,7 +64,10 @@ import { parseEnv } from '../../util/parse-env';
 import parseMeta from '../../util/parse-meta';
 import { getCommandNameWithGlobalFlags } from '../../util/arg-common';
 import { getCommandName } from '../../util/pkg-name';
-import { outputAgentError } from '../../util/agent-output';
+import {
+  outputAgentError,
+  buildCommandWithGlobalFlags,
+} from '../../util/agent-output';
 import { AGENT_STATUS } from '../../util/agent-output-constants';
 import { pickOverrides } from '../../util/projects/project-settings';
 import validatePaths, {
@@ -86,6 +89,18 @@ import { UploadErrorMissingArchive } from '../../util/deploy/process-deployment'
 import { displayBuildLogsUntilFinalError } from '../../util/logs';
 import { determineAgent } from '@vercel/detect-agent';
 import { validateJsonOutput } from '../../util/output-format';
+import {
+  validateKeyValue,
+  validateTarget as validateTargetInput,
+  validateSafePath,
+} from '../../util/input-validation';
+import {
+  writeAgentResponse,
+  maybeAgentResponse,
+} from '../../util/agent-response';
+import { EXIT_CODE } from '../../util/exit-codes';
+import { outputDryRun } from '../../util/dry-run';
+import { outputCommandSchema } from '../../util/describe-command';
 
 const COMMAND_CONFIG = {
   init: getCommandAliases(initSubcommand),
@@ -137,6 +152,10 @@ export default async (client: Client): Promise<number> => {
         printSubcommandHelp(initSubcommand);
         return 2;
       }
+      if (parsedArguments.flags['--describe']) {
+        outputCommandSchema(client, initSubcommand);
+        return 0;
+      }
       telemetryClient.trackCliSubcommandInit(subcommandOriginal);
       return handleInitDeployment(client, telemetryClient);
 
@@ -146,6 +165,10 @@ export default async (client: Client): Promise<number> => {
         printSubcommandHelp(continueSubcommand);
         return 2;
       }
+      if (parsedArguments.flags['--describe']) {
+        outputCommandSchema(client, continueSubcommand);
+        return 0;
+      }
       telemetryClient.trackCliSubcommandContinue(subcommandOriginal);
       return handleContinueSubcommand(client, telemetryClient);
 
@@ -154,6 +177,10 @@ export default async (client: Client): Promise<number> => {
         telemetryClient.trackCliFlagHelp('deploy');
         output.print(help(deployCommand, { columns: client.stderr.columns }));
         return 2;
+      }
+      if (parsedArguments.flags['--describe']) {
+        outputCommandSchema(client, deployCommand);
+        return 0;
       }
       return handleDefaultDeploy(client, telemetryClient);
   }
@@ -183,10 +210,150 @@ async function handleInitDeployment(
   }
   const asJson = formatResult.jsonOutput || client.nonInteractive;
 
+  // #region Input validation (agent hardening)
+  const initEnvValues = parsedArguments.flags['--env'] as string[] | undefined;
+  if (initEnvValues) {
+    for (const val of initEnvValues) {
+      const check = validateKeyValue(val, '--env');
+      if (!check.valid) {
+        if (client.nonInteractive) {
+          writeAgentResponse(client, {
+            status: 'error',
+            reason: 'invalid_arguments',
+            message: check.error!,
+            next: [
+              {
+                command: buildCommandWithGlobalFlags(
+                  client.argv,
+                  'deploy --env KEY=VALUE'
+                ),
+              },
+            ],
+          });
+        } else {
+          output.error(check.error!);
+        }
+        return EXIT_CODE.VALIDATION;
+      }
+    }
+  }
+
+  const initBuildEnvValues = parsedArguments.flags['--build-env'] as
+    | string[]
+    | undefined;
+  if (initBuildEnvValues) {
+    for (const val of initBuildEnvValues) {
+      const check = validateKeyValue(val, '--build-env');
+      if (!check.valid) {
+        if (client.nonInteractive) {
+          writeAgentResponse(client, {
+            status: 'error',
+            reason: 'invalid_arguments',
+            message: check.error!,
+            next: [
+              {
+                command: buildCommandWithGlobalFlags(
+                  client.argv,
+                  'deploy --build-env KEY=VALUE'
+                ),
+              },
+            ],
+          });
+        } else {
+          output.error(check.error!);
+        }
+        return EXIT_CODE.VALIDATION;
+      }
+    }
+  }
+
+  const initMetaValues = parsedArguments.flags['--meta'] as
+    | string[]
+    | undefined;
+  if (initMetaValues) {
+    for (const val of initMetaValues) {
+      const check = validateKeyValue(val, '--meta');
+      if (!check.valid) {
+        if (client.nonInteractive) {
+          writeAgentResponse(client, {
+            status: 'error',
+            reason: 'invalid_arguments',
+            message: check.error!,
+            next: [
+              {
+                command: buildCommandWithGlobalFlags(
+                  client.argv,
+                  'deploy --meta KEY=VALUE'
+                ),
+              },
+            ],
+          });
+        } else {
+          output.error(check.error!);
+        }
+        return EXIT_CODE.VALIDATION;
+      }
+    }
+  }
+
+  const initTargetFlag = parsedArguments.flags['--target'] as
+    | string
+    | undefined;
+  if (initTargetFlag) {
+    const check = validateTargetInput(initTargetFlag);
+    if (!check.valid) {
+      if (client.nonInteractive) {
+        writeAgentResponse(client, {
+          status: 'error',
+          reason: 'invalid_arguments',
+          message: check.error!,
+          next: [
+            {
+              command: buildCommandWithGlobalFlags(
+                client.argv,
+                'deploy --target <environment>'
+              ),
+            },
+          ],
+        });
+      } else {
+        output.error(check.error!);
+      }
+      return EXIT_CODE.VALIDATION;
+    }
+  }
+  // #endregion
+
   // Strip 'deploy' and 'init' from args
   let args = parsedArguments.args;
   if (args[0] === 'deploy') args = args.slice(1);
   if (args[0] === 'init') args = args.slice(1);
+
+  // Validate raw path arguments before resolving (skip absolute paths — they're valid deploy targets)
+  for (const arg of args) {
+    if (arg.startsWith('/')) continue;
+    const check = validateSafePath(arg);
+    if (!check.valid) {
+      if (client.nonInteractive) {
+        writeAgentResponse(client, {
+          status: 'error',
+          reason: 'invalid_arguments',
+          message: check.error!,
+          next: [
+            {
+              command: buildCommandWithGlobalFlags(
+                client.argv,
+                'deploy <path>'
+              ),
+            },
+          ],
+        });
+      } else {
+        output.error(check.error!);
+      }
+      return EXIT_CODE.VALIDATION;
+    }
+  }
 
   let paths;
   if (args.length > 0) {
@@ -194,6 +361,48 @@ async function handleInitDeployment(
     telemetryClient.trackCliArgumentProjectPath(paths[0]);
   } else {
     paths = [client.cwd];
+  }
+
+  // Dry-run: validate inputs and describe what would happen without executing
+  if (parsedArguments.flags['--dry-run']) {
+    const initTarget = parseTarget({
+      flagName: 'target',
+      flags: parsedArguments.flags,
+    });
+    return outputDryRun(client, {
+      status: 'dry_run',
+      reason: 'dry_run_ok',
+      message: 'Deployment validated but not executed (init subcommand)',
+      actions: [
+        {
+          action: 'api_call',
+          description: 'Create deployment via init',
+          details: {
+            path: paths[0],
+            target: initTarget ?? 'preview',
+            env: initEnvValues ?? [],
+            buildEnv: initBuildEnvValues ?? [],
+            meta: initMetaValues ?? [],
+          },
+        },
+        {
+          action: 'file_upload',
+          description: 'Upload source files',
+        },
+        {
+          action: 'poll',
+          description: 'Wait for build to complete',
+        },
+        ...(initTarget === 'production'
+          ? [
+              {
+                action: 'domain_alias',
+                description: 'Assign production domains',
+              },
+            ]
+          : []),
+      ],
+    });
   }
 
   const pathValidation = await validatePaths(client, paths);
@@ -494,63 +703,53 @@ async function handleInitDeployment(
     );
 
     if (deployment instanceof NotDomainOwner) {
-      if (client.nonInteractive) {
-        client.stdout.write(
-          `${JSON.stringify(
+      const agentExit = maybeAgentResponse(
+        client,
+        {
+          status: 'error',
+          reason: 'not_domain_owner',
+          message: deployment.message,
+          next: [
             {
-              status: AGENT_STATUS.ERROR,
-              reason: 'not_domain_owner',
-              message: deployment.message,
-              next: [
-                {
-                  command: getCommandNameWithGlobalFlags('deploy', client.argv),
-                  when: 'retry deploy',
-                },
-              ],
+              command: buildCommandWithGlobalFlags(client.argv, 'deploy'),
+              when: 'retry deploy',
             },
-            null,
-            2
-          )}\n`
-        );
-        return 1;
-      } else {
-        output.error(deployment.message);
-        return 1;
-      }
+          ],
+        },
+        EXIT_CODE.API_ERROR
+      );
+      if (agentExit !== null) return agentExit;
+      output.error(deployment.message);
+      return 1;
     }
 
     if (deployment instanceof Error) {
       const msg =
         deployment.message ||
         'An unexpected error occurred while deploying your project';
-      if (client.nonInteractive) {
-        client.stdout.write(
-          `${JSON.stringify(
+      const agentExit = maybeAgentResponse(
+        client,
+        {
+          status: 'error',
+          reason: 'deploy_failed',
+          message: msg,
+          next: [
             {
-              status: AGENT_STATUS.ERROR,
-              reason: 'deploy_failed',
-              message: msg,
-              next: [
-                {
-                  command: getCommandNameWithGlobalFlags('deploy', client.argv),
-                  when: 'retry deploy',
-                },
-              ],
+              command: buildCommandWithGlobalFlags(client.argv, 'deploy'),
+              when: 'retry deploy',
             },
-            null,
-            2
-          )}\n`
-        );
-        return 1;
-      } else {
-        output.error(
-          msg,
-          undefined,
-          'https://vercel.link/help',
-          'Contact Support'
-        );
-        return 1;
-      }
+          ],
+        },
+        EXIT_CODE.API_ERROR
+      );
+      if (agentExit !== null) return agentExit;
+      output.error(
+        msg,
+        undefined,
+        'https://vercel.link/help',
+        'Contact Support'
+      );
+      return 1;
     }
 
     if (deployment.readyState === 'CANCELED') {
@@ -564,21 +763,22 @@ async function handleInitDeployment(
             message: 'The deployment has been canceled.',
           }
         );
-        const payload = client.nonInteractive
-          ? {
-              status: AGENT_STATUS.ERROR,
-              reason: 'deployment_canceled',
-              message: 'The deployment has been canceled.',
-              deployment: deploymentJson,
-              next: [
-                {
-                  command: getCommandNameWithGlobalFlags('deploy', client.argv),
-                  when: 'retry deploy',
-                },
-              ],
-            }
-          : deploymentJson;
-        client.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
+        if (client.nonInteractive) {
+          writeAgentResponse(client, {
+            status: 'error',
+            reason: 'deployment_canceled',
+            message: 'The deployment has been canceled.',
+            data: { deployment: deploymentJson },
+            next: [
+              {
+                command: buildCommandWithGlobalFlags(client.argv, 'deploy'),
+                when: 'retry deploy',
+              },
+            ],
+          });
+        } else {
+          client.stdout.write(`${JSON.stringify(deploymentJson, null, 2)}\n`);
+        }
       } else {
         output.print('The deployment has been canceled.\n');
       }
@@ -606,21 +806,22 @@ async function handleInitDeployment(
             message,
           }
         );
-        const payload = client.nonInteractive
-          ? {
-              status: AGENT_STATUS.ERROR,
-              reason: 'checks_failed',
-              message,
-              deployment: deploymentJson,
-              next: [
-                {
-                  command: getCommandNameWithGlobalFlags('deploy', client.argv),
-                  when: 'retry deploy',
-                },
-              ],
-            }
-          : deploymentJson;
-        client.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
+        if (client.nonInteractive) {
+          writeAgentResponse(client, {
+            status: 'error',
+            reason: 'checks_failed',
+            message,
+            data: { deployment: deploymentJson },
+            next: [
+              {
+                command: buildCommandWithGlobalFlags(client.argv, 'deploy'),
+                when: 'retry deploy',
+              },
+            ],
+          });
+        } else {
+          client.stdout.write(`${JSON.stringify(deploymentJson, null, 2)}\n`);
+        }
       } else {
         output.error(`Running Checks: ${counterList}`);
       }
@@ -628,58 +829,54 @@ async function handleInitDeployment(
     }
 
     if (deployment === null) {
-      if (client.nonInteractive) {
-        client.stdout.write(
-          `${JSON.stringify(
+      const agentExit = maybeAgentResponse(
+        client,
+        {
+          status: 'error',
+          reason: 'upload_failed',
+          message: 'Uploading failed. Please try again.',
+          next: [
             {
-              status: AGENT_STATUS.ERROR,
-              reason: 'upload_failed',
-              message: 'Uploading failed. Please try again.',
-              next: [
-                {
-                  command: getCommandNameWithGlobalFlags('deploy', client.argv),
-                  when: 'retry deploy',
-                },
-              ],
+              command: buildCommandWithGlobalFlags(client.argv, 'deploy'),
+              when: 'retry deploy',
             },
-            null,
-            2
-          )}\n`
-        );
-        return 1;
-      } else {
-        error('Uploading failed. Please try again.');
-        return 1;
-      }
+          ],
+        },
+        EXIT_CODE.API_ERROR
+      );
+      if (agentExit !== null) return agentExit;
+      error('Uploading failed. Please try again.');
+      return 1;
     }
 
     if (asJson) {
       output.stopSpinner();
       const deploymentJson = getDeploymentOutputJson(deployment, client.apiUrl);
-      const payload = client.nonInteractive
-        ? {
-            status: AGENT_STATUS.OK,
-            deployment: deploymentJson,
-            message: `Deployment ${deployment.url} ready.`,
-            next: [
-              {
-                command: getCommandNameWithGlobalFlags(
-                  `inspect ${deployment.url}`,
-                  client.argv
-                ),
-                when: 'Inspect deployment',
-              },
-              {
-                command: getCommandNameWithGlobalFlags(
-                  'deploy --prod',
-                  client.argv
-                ),
-                when: 'Promote to production',
-              },
-            ],
-          }
-        : deploymentJson;
-      client.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
+      if (client.nonInteractive) {
+        writeAgentResponse(client, {
+          status: 'ok',
+          message: `Deployment ${deployment.url} ready.`,
+          data: { deployment: deploymentJson },
+          next: [
+            {
+              command: buildCommandWithGlobalFlags(
+                client.argv,
+                `inspect ${deployment.url}`
+              ),
+              when: 'Inspect deployment',
+            },
+            {
+              command: buildCommandWithGlobalFlags(
+                client.argv,
+                'deploy --prod'
+              ),
+              when: 'Promote to production',
+            },
+          ],
+        });
+      } else {
+        client.stdout.write(`${JSON.stringify(deploymentJson, null, 2)}\n`);
+      }
       return 0;
     }
 
@@ -922,6 +1119,145 @@ async function handleDefaultDeploy(
   }
   const asJson = formatResult.jsonOutput || client.nonInteractive;
 
+  // #region Input validation (agent hardening)
+  const envValues = parsedArguments.flags['--env'] as string[] | undefined;
+  if (envValues) {
+    for (const val of envValues) {
+      const check = validateKeyValue(val, '--env');
+      if (!check.valid) {
+        if (client.nonInteractive) {
+          writeAgentResponse(client, {
+            status: 'error',
+            reason: 'invalid_arguments',
+            message: check.error!,
+            next: [
+              {
+                command: buildCommandWithGlobalFlags(
+                  client.argv,
+                  'deploy --env KEY=VALUE'
+                ),
+              },
+            ],
+          });
+        } else {
+          output.error(check.error!);
+        }
+        return EXIT_CODE.VALIDATION;
+      }
+    }
+  }
+
+  const buildEnvValues = parsedArguments.flags['--build-env'] as
+    | string[]
+    | undefined;
+  if (buildEnvValues) {
+    for (const val of buildEnvValues) {
+      const check = validateKeyValue(val, '--build-env');
+      if (!check.valid) {
+        if (client.nonInteractive) {
+          writeAgentResponse(client, {
+            status: 'error',
+            reason: 'invalid_arguments',
+            message: check.error!,
+            next: [
+              {
+                command: buildCommandWithGlobalFlags(
+                  client.argv,
+                  'deploy --build-env KEY=VALUE'
+                ),
+              },
+            ],
+          });
+        } else {
+          output.error(check.error!);
+        }
+        return EXIT_CODE.VALIDATION;
+      }
+    }
+  }
+
+  const metaValues = parsedArguments.flags['--meta'] as string[] | undefined;
+  if (metaValues) {
+    for (const val of metaValues) {
+      const check = validateKeyValue(val, '--meta');
+      if (!check.valid) {
+        if (client.nonInteractive) {
+          writeAgentResponse(client, {
+            status: 'error',
+            reason: 'invalid_arguments',
+            message: check.error!,
+            next: [
+              {
+                command: buildCommandWithGlobalFlags(
+                  client.argv,
+                  'deploy --meta KEY=VALUE'
+                ),
+              },
+            ],
+          });
+        } else {
+          output.error(check.error!);
+        }
+        return EXIT_CODE.VALIDATION;
+      }
+    }
+  }
+
+  const targetFlag = parsedArguments.flags['--target'] as string | undefined;
+  if (targetFlag) {
+    const check = validateTargetInput(targetFlag);
+    if (!check.valid) {
+      if (client.nonInteractive) {
+        writeAgentResponse(client, {
+          status: 'error',
+          reason: 'invalid_arguments',
+          message: check.error!,
+          next: [
+            {
+              command: buildCommandWithGlobalFlags(
+                client.argv,
+                'deploy --target <environment>'
+              ),
+            },
+          ],
+        });
+      } else {
+        output.error(check.error!);
+      }
+      return EXIT_CODE.VALIDATION;
+    }
+  }
+
+  const rawPathArgs =
+    parsedArguments.args[0] === 'deploy'
+      ? parsedArguments.args.slice(1)
+      : parsedArguments.args;
+  for (const arg of rawPathArgs) {
+    if (arg.startsWith('/')) continue; // Absolute paths are valid deploy targets
+    const check = validateSafePath(arg);
+    if (!check.valid) {
+      if (client.nonInteractive) {
+        writeAgentResponse(client, {
+          status: 'error',
+          reason: 'invalid_arguments',
+          message: check.error!,
+          next: [
+            {
+              command: buildCommandWithGlobalFlags(
+                client.argv,
+                'deploy <path>'
+              ),
+            },
+          ],
+        });
+      } else {
+        output.error(check.error!);
+      }
+      return EXIT_CODE.VALIDATION;
+    }
+  }
+  // #endregion
+
   if ('--confirm' in parsedArguments.flags) {
     telemetryClient.trackCliFlagConfirm(parsedArguments.flags['--confirm']);
     output.warn('`--confirm` is deprecated, please use `--yes` instead');
@@ -949,6 +1285,55 @@ async function handleDefaultDeploy(
 
   if (!pathValidation.valid) {
     return pathValidation.exitCode;
+  }
+
+  // Dry-run: validate inputs and describe what would happen without executing
+  if (parsedArguments.flags['--dry-run']) {
+    const dryRunTarget = parseTarget({
+      flagName: 'target',
+      flags: parsedArguments.flags,
+    });
+    const prebuilt = !!parsedArguments.flags['--prebuilt'];
+    return outputDryRun(client, {
+      status: 'dry_run',
+      reason: 'dry_run_ok',
+      message: 'Deployment validated but not executed',
+      actions: [
+        {
+          action: 'api_call',
+          description: 'Create deployment',
+          details: {
+            path: paths[0],
+            target: dryRunTarget ?? 'preview',
+            prebuilt,
+            env: (envValues ?? []).length,
+            buildEnv: (buildEnvValues ?? []).length,
+            meta: (metaValues ?? []).length,
+          },
+        },
+        ...(prebuilt
+          ? []
+          : [
+              {
+                action: 'file_upload',
+                description: 'Upload source files',
+                details: { path: paths[0] },
+              },
+            ]),
+        {
+          action: 'poll',
+          description: 'Wait for build to complete',
+        },
+        ...(dryRunTarget === 'production'
+          ? [
+              {
+                action: 'domain_alias',
+                description: 'Assign production domains',
+              },
+            ]
+          : []),
+      ],
+    });
   }
   // #endregion
 
@@ -1354,63 +1739,53 @@ async function handleDefaultDeploy(
     }
 
     if (deployment instanceof NotDomainOwner) {
-      if (client.nonInteractive) {
-        client.stdout.write(
-          `${JSON.stringify(
+      const agentExit = maybeAgentResponse(
+        client,
+        {
+          status: 'error',
+          reason: 'not_domain_owner',
+          message: deployment.message,
+          next: [
             {
-              status: AGENT_STATUS.ERROR,
-              reason: 'not_domain_owner',
-              message: deployment.message,
-              next: [
-                {
-                  command: getCommandNameWithGlobalFlags('deploy', client.argv),
-                  when: 'retry deploy',
-                },
-              ],
+              command: buildCommandWithGlobalFlags(client.argv, 'deploy'),
+              when: 'retry deploy',
             },
-            null,
-            2
-          )}\n`
-        );
-        return 1;
-      } else {
-        output.error(deployment.message);
-        return 1;
-      }
+          ],
+        },
+        EXIT_CODE.API_ERROR
+      );
+      if (agentExit !== null) return agentExit;
+      output.error(deployment.message);
+      return 1;
     }
 
     if (deployment instanceof Error) {
       const msg =
         deployment.message ||
         'An unexpected error occurred while deploying your project';
-      if (client.nonInteractive) {
-        client.stdout.write(
-          `${JSON.stringify(
+      const agentExit = maybeAgentResponse(
+        client,
+        {
+          status: 'error',
+          reason: 'deploy_failed',
+          message: msg,
+          next: [
             {
-              status: AGENT_STATUS.ERROR,
-              reason: 'deploy_failed',
-              message: msg,
-              next: [
-                {
-                  command: getCommandNameWithGlobalFlags('deploy', client.argv),
-                  when: 'retry deploy',
-                },
-              ],
+              command: buildCommandWithGlobalFlags(client.argv, 'deploy'),
+              when: 'retry deploy',
             },
-            null,
-            2
-          )}\n`
-        );
-        return 1;
-      } else {
-        output.error(
-          msg,
-          undefined,
-          'https://vercel.link/help',
-          'Contact Support'
-        );
-        return 1;
-      }
+          ],
+        },
+        EXIT_CODE.API_ERROR
+      );
+      if (agentExit !== null) return agentExit;
+      output.error(
+        msg,
+        undefined,
+        'https://vercel.link/help',
+        'Contact Support'
+      );
+      return 1;
     }
 
     if (deployment.readyState === 'CANCELED') {
@@ -1424,21 +1799,22 @@ async function handleDefaultDeploy(
             message: 'The deployment has been canceled.',
           }
         );
-        const payload = client.nonInteractive
-          ? {
-              status: AGENT_STATUS.ERROR,
-              reason: 'deployment_canceled',
-              message: 'The deployment has been canceled.',
-              deployment: deploymentJson,
-              next: [
-                {
-                  command: getCommandNameWithGlobalFlags('deploy', client.argv),
-                  when: 'retry deploy',
-                },
-              ],
-            }
-          : deploymentJson;
-        client.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
+        if (client.nonInteractive) {
+          writeAgentResponse(client, {
+            status: 'error',
+            reason: 'deployment_canceled',
+            message: 'The deployment has been canceled.',
+            data: { deployment: deploymentJson },
+            next: [
+              {
+                command: buildCommandWithGlobalFlags(client.argv, 'deploy'),
+                when: 'retry deploy',
+              },
+            ],
+          });
+        } else {
+          client.stdout.write(`${JSON.stringify(deploymentJson, null, 2)}\n`);
+        }
       } else {
         output.print('The deployment has been canceled.\n');
       }
@@ -1466,21 +1842,22 @@ async function handleDefaultDeploy(
             message,
           }
         );
-        const payload = client.nonInteractive
-          ? {
-              status: AGENT_STATUS.ERROR,
-              reason: 'checks_failed',
-              message,
-              deployment: deploymentJson,
-              next: [
-                {
-                  command: getCommandNameWithGlobalFlags('deploy', client.argv),
-                  when: 'retry deploy',
-                },
-              ],
-            }
-          : deploymentJson;
-        client.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
+        if (client.nonInteractive) {
+          writeAgentResponse(client, {
+            status: 'error',
+            reason: 'checks_failed',
+            message,
+            data: { deployment: deploymentJson },
+            next: [
+              {
+                command: buildCommandWithGlobalFlags(client.argv, 'deploy'),
+                when: 'retry deploy',
+              },
+            ],
+          });
+        } else {
+          client.stdout.write(`${JSON.stringify(deploymentJson, null, 2)}\n`);
+        }
       } else {
         output.error(`Running Checks: ${counterList}`);
       }
@@ -1492,29 +1869,24 @@ async function handleDefaultDeploy(
     }
 
     if (deployment === null) {
-      if (client.nonInteractive) {
-        client.stdout.write(
-          `${JSON.stringify(
+      const agentExit = maybeAgentResponse(
+        client,
+        {
+          status: 'error',
+          reason: 'upload_failed',
+          message: 'Uploading failed. Please try again.',
+          next: [
             {
-              status: AGENT_STATUS.ERROR,
-              reason: 'upload_failed',
-              message: 'Uploading failed. Please try again.',
-              next: [
-                {
-                  command: getCommandNameWithGlobalFlags('deploy', client.argv),
-                  when: 'retry deploy',
-                },
-              ],
+              command: buildCommandWithGlobalFlags(client.argv, 'deploy'),
+              when: 'retry deploy',
             },
-            null,
-            2
-          )}\n`
-        );
-        return 1;
-      } else {
-        error('Uploading failed. Please try again.');
-        return 1;
-      }
+          ],
+        },
+        EXIT_CODE.API_ERROR
+      );
+      if (agentExit !== null) return agentExit;
+      error('Uploading failed. Please try again.');
+      return 1;
     }
   } catch (err: unknown) {
     if (isError(err)) {
@@ -1522,55 +1894,45 @@ async function handleDefaultDeploy(
     }
 
     if (err instanceof UploadErrorMissingArchive) {
-      if (client.nonInteractive) {
-        client.stdout.write(
-          `${JSON.stringify(
+      const agentExit = maybeAgentResponse(
+        client,
+        {
+          status: 'error',
+          reason: 'missing_archive',
+          message: err.message,
+          next: [
             {
-              status: AGENT_STATUS.ERROR,
-              reason: 'missing_archive',
-              message: err.message,
-              next: [
-                {
-                  command: getCommandNameWithGlobalFlags('deploy', client.argv),
-                  when: 'retry deploy',
-                },
-              ],
+              command: buildCommandWithGlobalFlags(client.argv, 'deploy'),
+              when: 'retry deploy',
             },
-            null,
-            2
-          )}\n`
-        );
-        return 1;
-      } else {
-        output.prettyError(err);
-        return 1;
-      }
+          ],
+        },
+        EXIT_CODE.API_ERROR
+      );
+      if (agentExit !== null) return agentExit;
+      output.prettyError(err);
+      return 1;
     }
 
     if (err instanceof NotDomainOwner) {
-      if (client.nonInteractive) {
-        client.stdout.write(
-          `${JSON.stringify(
+      const agentExit = maybeAgentResponse(
+        client,
+        {
+          status: 'error',
+          reason: 'not_domain_owner',
+          message: err.message,
+          next: [
             {
-              status: AGENT_STATUS.ERROR,
-              reason: 'not_domain_owner',
-              message: err.message,
-              next: [
-                {
-                  command: getCommandNameWithGlobalFlags('deploy', client.argv),
-                  when: 'retry deploy',
-                },
-              ],
+              command: buildCommandWithGlobalFlags(client.argv, 'deploy'),
+              when: 'retry deploy',
             },
-            null,
-            2
-          )}\n`
-        );
-        return 1;
-      } else {
-        output.error(err.message);
-        return 1;
-      }
+          ],
+        },
+        EXIT_CODE.API_ERROR
+      );
+      if (agentExit !== null) return agentExit;
+      output.error(err.message);
+      return 1;
     }
 
     if (err instanceof DomainNotFound && err.meta && err.meta.domain) {
@@ -1615,25 +1977,17 @@ async function handleDefaultDeploy(
       err instanceof ConflictingPathSegment ||
       err instanceof ConflictingConfigFiles
     ) {
-      if (client.nonInteractive) {
-        client.stdout.write(
-          `${JSON.stringify(
-            {
-              status: AGENT_STATUS.ERROR,
-              reason: 'deploy_failed',
-              message: err instanceof Error ? err.message : String(err),
-              next: [
-                {
-                  command: getCommandNameWithGlobalFlags('deploy', client.argv),
-                  when: 'retry deploy',
-                },
-              ],
-            },
-            null,
-            2
-          )}\n`
-        );
-      }
+      writeAgentResponse(client, {
+        status: 'error',
+        reason: 'deploy_failed',
+        message: err instanceof Error ? err.message : String(err),
+        next: [
+          {
+            command: buildCommandWithGlobalFlags(client.argv, 'deploy'),
+            when: 'retry deploy',
+          },
+        ],
+      });
       handleCreateDeployError(err, localConfig);
       return 1;
     }
@@ -1649,16 +2003,39 @@ async function handleDefaultDeploy(
 
           if (asJson) {
             output.stopSpinner();
-            client.stdout.write(
-              `${JSON.stringify(
-                getDeploymentOutputJson(failedDeployment, client.apiUrl, {
-                  name: 'BUILD_ERROR',
-                  message: err.message,
-                }),
-                null,
-                2
-              )}\n`
+            const deploymentJson = getDeploymentOutputJson(
+              failedDeployment,
+              client.apiUrl,
+              {
+                name: 'BUILD_ERROR',
+                message: err.message,
+              }
             );
+            if (client.nonInteractive) {
+              writeAgentResponse(client, {
+                status: 'error',
+                reason: 'build_error',
+                message: err.message,
+                data: { deployment: deploymentJson },
+                next: [
+                  {
+                    command: buildCommandWithGlobalFlags(
+                      client.argv,
+                      `inspect ${now.url} --logs`
+                    ),
+                    when: 'View build logs',
+                  },
+                  {
+                    command: buildCommandWithGlobalFlags(client.argv, 'deploy'),
+                    when: 'retry deploy',
+                  },
+                ],
+              });
+            } else {
+              client.stdout.write(
+                `${JSON.stringify(deploymentJson, null, 2)}\n`
+              );
+            }
           } else if (withFullLogs === false) {
             await displayBuildLogsUntilFinalError(
               client,
@@ -1669,19 +2046,41 @@ async function handleDefaultDeploy(
         } catch (_) {
           if (asJson) {
             output.stopSpinner();
-            client.stdout.write(
-              `${JSON.stringify(
-                {
-                  error: {
-                    name: 'BUILD_ERROR',
-                    message: err.message,
+            if (client.nonInteractive) {
+              writeAgentResponse(client, {
+                status: 'error',
+                reason: 'build_error',
+                message: err.message,
+                data: { url: `https://${now.url}` },
+                next: [
+                  {
+                    command: buildCommandWithGlobalFlags(
+                      client.argv,
+                      `inspect ${now.url} --logs`
+                    ),
+                    when: 'View build logs',
                   },
-                  url: `https://${now.url}`,
-                },
-                null,
-                2
-              )}\n`
-            );
+                  {
+                    command: buildCommandWithGlobalFlags(client.argv, 'deploy'),
+                    when: 'retry deploy',
+                  },
+                ],
+              });
+            } else {
+              client.stdout.write(
+                `${JSON.stringify(
+                  {
+                    error: {
+                      name: 'BUILD_ERROR',
+                      message: err.message,
+                    },
+                    url: `https://${now.url}`,
+                  },
+                  null,
+                  2
+                )}\n`
+              );
+            }
           } else {
             output.log(
               `To check build logs run: ${getCommandName(
@@ -1701,48 +2100,32 @@ async function handleDefaultDeploy(
     if (isAPIError(err) && err.code === 'size_limit_exceeded') {
       const { sizeLimit = 0 } = err;
       const message = `File size limit exceeded (${bytes(sizeLimit)})`;
-      if (client.nonInteractive) {
-        client.stdout.write(
-          `${JSON.stringify(
-            {
-              status: AGENT_STATUS.ERROR,
-              reason: 'size_limit_exceeded',
-              message,
-              next: [
-                {
-                  command: getCommandNameWithGlobalFlags('deploy', client.argv),
-                  when: 'retry deploy',
-                },
-              ],
-            },
-            null,
-            2
-          )}\n`
-        );
-      }
+      writeAgentResponse(client, {
+        status: 'error',
+        reason: 'size_limit_exceeded',
+        message,
+        next: [
+          {
+            command: buildCommandWithGlobalFlags(client.argv, 'deploy'),
+            when: 'retry deploy',
+          },
+        ],
+      });
       error(message);
       return 1;
     }
 
-    if (client.nonInteractive) {
-      client.stdout.write(
-        `${JSON.stringify(
-          {
-            status: AGENT_STATUS.ERROR,
-            reason: 'deploy_failed',
-            message: err instanceof Error ? err.message : String(err),
-            next: [
-              {
-                command: getCommandNameWithGlobalFlags('deploy', client.argv),
-                when: 'retry deploy',
-              },
-            ],
-          },
-          null,
-          2
-        )}\n`
-      );
-    }
+    writeAgentResponse(client, {
+      status: 'error',
+      reason: 'deploy_failed',
+      message: err instanceof Error ? err.message : String(err),
+      next: [
+        {
+          command: buildCommandWithGlobalFlags(client.argv, 'deploy'),
+          when: 'retry deploy',
+        },
+      ],
+    });
     printError(err);
     return 1;
   }
@@ -1750,30 +2133,28 @@ async function handleDefaultDeploy(
   if (asJson) {
     output.stopSpinner();
     const deploymentJson = getDeploymentOutputJson(deployment, client.apiUrl);
-    const payload = client.nonInteractive
-      ? {
-          status: AGENT_STATUS.OK,
-          deployment: deploymentJson,
-          message: `Deployment ${deployment.url} ready.`,
-          next: [
-            {
-              command: getCommandNameWithGlobalFlags(
-                `inspect ${deployment.url}`,
-                client.argv
-              ),
-              when: 'Inspect deployment',
-            },
-            {
-              command: getCommandNameWithGlobalFlags(
-                'deploy --prod',
-                client.argv
-              ),
-              when: 'Promote to production',
-            },
-          ],
-        }
-      : deploymentJson;
-    client.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
+    if (client.nonInteractive) {
+      writeAgentResponse(client, {
+        status: 'ok',
+        message: `Deployment ${deployment.url} ready.`,
+        data: { deployment: deploymentJson },
+        next: [
+          {
+            command: buildCommandWithGlobalFlags(
+              client.argv,
+              `inspect ${deployment.url}`
+            ),
+            when: 'Inspect deployment',
+          },
+          {
+            command: buildCommandWithGlobalFlags(client.argv, 'deploy --prod'),
+            when: 'Promote to production',
+          },
+        ],
+      });
+    } else {
+      client.stdout.write(`${JSON.stringify(deploymentJson, null, 2)}\n`);
+    }
     return 0;
   }
 

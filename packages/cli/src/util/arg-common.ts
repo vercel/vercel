@@ -80,6 +80,20 @@ export const globalCommandOptions = [
   },
   { name: 'team', shorthand: 'T', type: String, deprecated: false },
   { name: 'api', shorthand: null, type: String, deprecated: false },
+  {
+    name: 'describe',
+    shorthand: null,
+    type: Boolean,
+    description: 'Output command schema as JSON (for agent introspection)',
+    deprecated: false,
+  },
+  {
+    name: 'dry-run',
+    shorthand: null,
+    type: Boolean,
+    description: 'Validate inputs and show what would happen without executing',
+    deprecated: false,
+  },
 ] as const;
 
 /**
@@ -243,6 +257,22 @@ export const allOption = {
   type: Boolean,
   deprecated: false,
   description: 'List resources across all projects',
+} as const;
+
+export const describeOption = {
+  name: 'describe',
+  shorthand: null,
+  type: Boolean,
+  deprecated: false,
+  description: 'Output command schema as JSON (for agent introspection)',
+} as const;
+
+export const dryRunOption = {
+  name: 'dry-run',
+  shorthand: null,
+  type: Boolean,
+  deprecated: false,
+  description: 'Validate inputs and show what would happen without executing',
 } as const;
 
 type GlobalOpt = (typeof globalCommandOptions)[number];

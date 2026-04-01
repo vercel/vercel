@@ -20,6 +20,9 @@ import {
 } from '../../util/oauth';
 import o from '../../output-manager';
 import type { LoginTelemetryClient } from '../../util/telemetry/commands/login';
+import { writeAgentResponse } from '../../util/agent-response';
+import { buildCommandWithGlobalFlags } from '../../util/agent-output';
+import { EXIT_CODE } from '../../util/exit-codes';
 
 export interface DeviceCodeTokens {
   access_token: string;
@@ -67,6 +70,25 @@ export async function performDeviceCodeFlow(
     const url = new URL(verification_uri_complete);
     url.searchParams.set('team_id', options.teamId);
     verification_uri_complete = url.toString();
+  }
+
+  // Emit structured JSON for agents with the verification URL and user code
+  if (client.nonInteractive) {
+    writeAgentResponse(client, {
+      status: 'action_required',
+      reason: 'login_required',
+      message: 'Complete authentication by visiting the verification URL',
+      userActionRequired: true,
+      verification_uri: verification_uri_complete,
+      data: {
+        user_code,
+        verification_uri,
+        verification_uri_complete,
+        expires_in: Math.ceil((expiresAt - Date.now()) / 1000),
+      },
+      hint: 'A human must visit the URL and enter the code to complete login.',
+    });
+    // Continue polling — the agent will wait for the user to complete the browser flow
   }
 
   // Determine if we should skip opening the browser (only in CI, but not in Cursor)
@@ -204,7 +226,26 @@ export async function login(
 
   if (!tokens) {
     telemetry.trackState('error');
-    return 1;
+    if (client.nonInteractive) {
+      writeAgentResponse(client, {
+        status: 'error',
+        reason: 'auth_error',
+        message: 'Authentication failed. Try again.',
+        next: [
+          {
+            command: buildCommandWithGlobalFlags(
+              client.argv,
+              'login',
+              undefined,
+              {
+                excludeFlags: ['--non-interactive'],
+              }
+            ),
+          },
+        ],
+      });
+    }
+    return EXIT_CODE.AUTH_ERROR;
   }
 
   // user is not currently authenticated on this machine
@@ -228,13 +269,35 @@ export async function login(
 
   o.debug(`Saved credentials in "${hp(getGlobalPathConfig())}"`);
 
-  o.print(`
+  if (client.nonInteractive) {
+    writeAgentResponse(client, {
+      status: 'ok',
+      reason: 'login_success',
+      message: 'Successfully authenticated',
+      data: {
+        team: client.config.currentTeam,
+        configPath: getGlobalPathConfig(),
+      },
+      next: [
+        {
+          command: buildCommandWithGlobalFlags(client.argv, 'link'),
+          when: 'Link a project',
+        },
+        {
+          command: buildCommandWithGlobalFlags(client.argv, 'deploy'),
+          when: 'Deploy a project',
+        },
+      ],
+    });
+  } else {
+    o.print(`
   ${chalk.cyan('Congratulations!')} You are now signed in.
 
   To deploy something, run ${getCommandName()}.
 
   ${emoji('tip')} To deploy every commit automatically,
   connect a Git Repository (${chalk.bold(o.link('vercel.link/git', 'https://vercel.link/git', { color: false }))}).\n`);
+  }
 
   telemetry.trackState('success');
 

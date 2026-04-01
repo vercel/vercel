@@ -2,8 +2,9 @@ import { parseArguments } from '../../util/get-args';
 import type Client from '../../util/client';
 import { printError } from '../../util/error';
 import { help } from '../help';
-import { mcpCommand } from './command';
+import { mcpCommand, mcpServeSubcommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
+import getSubcommand from '../../util/get-subcommand';
 import output from '../../output-manager';
 import { packageName } from '../../util/pkg-name';
 import { outputAgentError } from '../../util/agent-output';
@@ -68,6 +69,31 @@ function parseAndValidateClients(clientsFlag: string | undefined): string[] {
 }
 
 export default async function main(client: Client) {
+  const { subcommand, args } = getSubcommand(client.argv.slice(2), {
+    serve: ['serve'],
+  });
+
+  if (subcommand === 'serve') {
+    const serveFlags = getFlagsSpecification(mcpServeSubcommand.options);
+    let serveParsed;
+    try {
+      serveParsed = parseArguments(args, serveFlags);
+    } catch (error) {
+      printError(error);
+      return 1;
+    }
+
+    if (serveParsed.flags['--help']) {
+      output.print(
+        help(mcpServeSubcommand, { columns: client.stderr.columns })
+      );
+      return 2;
+    }
+
+    const { default: mcpServe } = await import('./serve');
+    return mcpServe(client, serveParsed);
+  }
+
   let parsedArgs;
   const flagsSpecification = getFlagsSpecification(mcpCommand.options);
 

@@ -18,7 +18,7 @@ import { useUser } from '../../../mocks/user';
 import humanizePath from '../../../../src/util/humanize-path';
 import sleep from '../../../../src/util/sleep';
 import * as createDeployModule from '../../../../src/util/deploy/create-deploy';
-import { BuildError } from '../../../../src/util/errors-ts';
+import { BuildError, NotDomainOwner } from '../../../../src/util/errors-ts';
 import type Now from '../../../../src/util';
 
 describe('deploy', () => {
@@ -1389,10 +1389,12 @@ describe('deploy', () => {
       const payload = JSON.parse(stdoutOutput);
       expect(payload).toMatchObject({
         status: 'ok',
-        deployment: expect.objectContaining({
-          id: expect.any(String),
-          readyState: expect.any(String),
-        }),
+        data: {
+          deployment: expect.objectContaining({
+            id: expect.any(String),
+            readyState: expect.any(String),
+          }),
+        },
       });
       (client as { nonInteractive: boolean }).nonInteractive = false;
     });
@@ -2243,6 +2245,660 @@ describe('deploy', () => {
         readyState: 'INITIALIZING',
         target: 'production',
         deploymentApiUrl: `${client.apiUrl}/v13/deployments/${deploymentId}`,
+      });
+    });
+  });
+
+  describe('writeAgentResponse refactoring (Phase 3.3)', () => {
+    const deploymentUrl = 'my-app-agent-test.vercel.app';
+    const deploymentId = 'dpl_agent_test';
+    const inspectorUrl = 'https://vercel.com/team/project/dpl_agent_test';
+
+    it('emits structured agent JSON for NotDomainOwner error', async () => {
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        name: 'static',
+        id: 'static',
+      });
+
+      const mock = vi
+        .spyOn(createDeployModule, 'default')
+        .mockResolvedValue(
+          new NotDomainOwner('You do not own the domain example.com')
+        );
+
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', '--yes');
+      (client as { nonInteractive: boolean }).nonInteractive = true;
+
+      const exitCode = await deploy(client);
+      expect(exitCode).toBe(1);
+
+      const stdoutOutput = client.stdout.getFullOutput();
+      const result = JSON.parse(stdoutOutput);
+      expect(result.status).toBe('error');
+      expect(result.reason).toBe('not_domain_owner');
+      expect(result.message).toContain('example.com');
+      expect(result.next).toBeDefined();
+      expect(result.next[0].command).toContain('deploy');
+
+      mock.mockRestore();
+      (client as { nonInteractive: boolean }).nonInteractive = false;
+    });
+
+    it('emits structured agent JSON for generic deploy error', async () => {
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        name: 'static',
+        id: 'static',
+      });
+
+      const mock = vi
+        .spyOn(createDeployModule, 'default')
+        .mockResolvedValue(new Error('Something went wrong'));
+
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', '--yes');
+      (client as { nonInteractive: boolean }).nonInteractive = true;
+
+      const exitCode = await deploy(client);
+      expect(exitCode).toBe(1);
+
+      const stdoutOutput = client.stdout.getFullOutput();
+      const result = JSON.parse(stdoutOutput);
+      expect(result.status).toBe('error');
+      expect(result.reason).toBe('deploy_failed');
+      expect(result.message).toBe('Something went wrong');
+      expect(result.next[0].command).toContain('deploy');
+
+      mock.mockRestore();
+      (client as { nonInteractive: boolean }).nonInteractive = false;
+    });
+
+    it('emits agent JSON with deployment data for canceled deployment', async () => {
+      const user = useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        name: 'static',
+        id: 'static',
+      });
+
+      const mock = vi.spyOn(createDeployModule, 'default').mockResolvedValue({
+        creator: { uid: user.id, username: user.username },
+        id: deploymentId,
+        url: deploymentUrl,
+        inspectorUrl,
+        readyState: 'CANCELED',
+        target: null,
+      });
+
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', '--json', '--yes');
+      (client as { nonInteractive: boolean }).nonInteractive = true;
+
+      const exitCode = await deploy(client);
+      expect(exitCode).toBe(1);
+
+      const stdoutOutput = client.stdout.getFullOutput();
+      const result = JSON.parse(stdoutOutput);
+      expect(result.status).toBe('error');
+      expect(result.reason).toBe('deployment_canceled');
+      expect(result.data.deployment).toBeDefined();
+      expect(result.data.deployment.readyState).toBe('CANCELED');
+      expect(result.next[0].command).toContain('deploy');
+
+      mock.mockRestore();
+      (client as { nonInteractive: boolean }).nonInteractive = false;
+    });
+
+    it('emits agent JSON for successful deployment', async () => {
+      const user = useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        name: 'static',
+        id: 'static',
+      });
+
+      const mock = vi.spyOn(createDeployModule, 'default').mockResolvedValue({
+        creator: { uid: user.id, username: user.username },
+        id: deploymentId,
+        url: deploymentUrl,
+        inspectorUrl,
+        readyState: 'READY',
+        target: 'production',
+      });
+
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', '--json', '--yes', '--no-wait');
+      (client as { nonInteractive: boolean }).nonInteractive = true;
+
+      const exitCode = await deploy(client);
+      expect(exitCode).toBe(0);
+
+      const stdoutOutput = client.stdout.getFullOutput();
+      const result = JSON.parse(stdoutOutput);
+      expect(result.status).toBe('ok');
+      expect(result.message).toContain(deploymentUrl);
+      expect(result.data.deployment).toBeDefined();
+      expect(result.data.deployment.id).toBe(deploymentId);
+      expect(result.next.length).toBe(2);
+      expect(result.next[0].command).toContain('inspect');
+      expect(result.next[1].command).toContain('deploy --prod');
+
+      mock.mockRestore();
+      (client as { nonInteractive: boolean }).nonInteractive = false;
+    });
+
+    it('emits agent JSON for build error with deployment details', async () => {
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        name: 'static',
+        id: 'static',
+      });
+
+      client.scenario.get(`/v13/deployments/${deploymentUrl}`, (_req, res) => {
+        res.json({
+          id: deploymentId,
+          url: deploymentUrl,
+          inspectorUrl,
+          readyState: 'ERROR',
+          target: null,
+          aliasAssigned: false,
+          alias: [],
+        });
+      });
+
+      const mock = vi
+        .spyOn(createDeployModule, 'default')
+        .mockImplementation(async (_client, now: Now) => {
+          now.url = deploymentUrl;
+          throw new BuildError({
+            message: 'Build failed: exit code 1',
+            meta: {},
+          });
+        });
+
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', '--json', '--yes');
+      (client as { nonInteractive: boolean }).nonInteractive = true;
+
+      const exitCode = await deploy(client);
+      expect(exitCode).toBe(1);
+
+      const stdoutOutput = client.stdout.getFullOutput();
+      const result = JSON.parse(stdoutOutput);
+      expect(result.status).toBe('error');
+      expect(result.reason).toBe('build_error');
+      expect(result.message).toBe('Build failed: exit code 1');
+      expect(result.data.deployment).toBeDefined();
+      expect(result.next.length).toBe(2);
+      expect(result.next[0].command).toContain('inspect');
+      expect(result.next[1].command).toContain('deploy');
+
+      mock.mockRestore();
+      (client as { nonInteractive: boolean }).nonInteractive = false;
+    });
+
+    it('does not emit agent JSON in interactive mode (human JSON only)', async () => {
+      const user = useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        name: 'static',
+        id: 'static',
+      });
+
+      const mock = vi.spyOn(createDeployModule, 'default').mockResolvedValue({
+        creator: { uid: user.id, username: user.username },
+        id: deploymentId,
+        url: deploymentUrl,
+        inspectorUrl,
+        readyState: 'READY',
+        target: 'production',
+      });
+
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', '--json', '--yes', '--no-wait');
+      (client as { nonInteractive: boolean }).nonInteractive = false;
+
+      const exitCode = await deploy(client);
+      expect(exitCode).toBe(0);
+
+      const stdoutOutput = client.stdout.getFullOutput();
+      const result = JSON.parse(stdoutOutput);
+      // In interactive mode, should output plain deployment JSON (no status/reason wrapper)
+      expect(result.status).toBeUndefined();
+      expect(result.id).toBe(deploymentId);
+      expect(result.url).toContain(deploymentUrl);
+
+      mock.mockRestore();
+    });
+
+    it('uses EXIT_CODE constants for agent error responses', async () => {
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        name: 'static',
+        id: 'static',
+      });
+
+      const mock = vi
+        .spyOn(createDeployModule, 'default')
+        .mockResolvedValue(new NotDomainOwner('Domain not owned'));
+
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', '--yes');
+      (client as { nonInteractive: boolean }).nonInteractive = true;
+
+      const exitCode = await deploy(client);
+      // EXIT_CODE.API_ERROR = 1
+      expect(exitCode).toBe(1);
+
+      mock.mockRestore();
+      (client as { nonInteractive: boolean }).nonInteractive = false;
+    });
+
+    it('includes hint in agent error responses', async () => {
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        name: 'static',
+        id: 'static',
+      });
+
+      const mock = vi
+        .spyOn(createDeployModule, 'default')
+        .mockResolvedValue(new Error('Deploy error'));
+
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', '--yes');
+      (client as { nonInteractive: boolean }).nonInteractive = true;
+
+      const exitCode = await deploy(client);
+      expect(exitCode).toBe(1);
+
+      const stdoutOutput = client.stdout.getFullOutput();
+      const result = JSON.parse(stdoutOutput);
+      // writeAgentResponse adds default hint for error with next[]
+      expect(result.hint).toBeDefined();
+      expect(result.hint).toContain('next[]');
+
+      mock.mockRestore();
+      (client as { nonInteractive: boolean }).nonInteractive = false;
+    });
+  });
+
+  describe('--dry-run (Phase 3.5)', () => {
+    it('outputs dry-run actions as JSON in agent mode and returns 0', async () => {
+      client.setArgv('deploy', '--dry-run', '--yes');
+      (client as { nonInteractive: boolean }).nonInteractive = true;
+
+      const exitCode = await deploy(client);
+      expect(exitCode).toBe(0);
+
+      const stdoutOutput = client.stdout.getFullOutput();
+      const result = JSON.parse(stdoutOutput);
+      expect(result.status).toBe('dry_run');
+      expect(result.reason).toBe('dry_run_ok');
+      expect(result.message).toBe('Deployment validated but not executed');
+      expect(result.data.actions).toBeDefined();
+      expect(result.data.actions.length).toBeGreaterThanOrEqual(2);
+      expect(result.data.actions[0].action).toBe('api_call');
+      expect(result.data.actions[0].description).toBe('Create deployment');
+      expect(result.data.actions[0].details.target).toBe('preview');
+
+      (client as { nonInteractive: boolean }).nonInteractive = false;
+    });
+
+    it('outputs human-readable dry-run in interactive mode and returns 0', async () => {
+      client.setArgv('deploy', '--dry-run', '--yes');
+      (client as { nonInteractive: boolean }).nonInteractive = false;
+
+      const exitCode = await deploy(client);
+      expect(exitCode).toBe(0);
+    });
+
+    it('does not invoke the deploy flow', async () => {
+      client.setArgv('deploy', '--dry-run', '--yes');
+      const exitCode = await deploy(client);
+      expect(exitCode).toBe(0);
+
+      // Verify no API calls were made — stderr should have no actual deployment output
+      const stderrOutput = client.stderr.getFullOutput();
+      expect(stderrOutput).not.toContain('Deploying to');
+      expect(stderrOutput).not.toContain('Linked to');
+      expect(stderrOutput).not.toContain('Inspect:');
+    });
+
+    it('includes production domain_alias action when --prod is used', async () => {
+      client.setArgv('deploy', '--dry-run', '--prod', '--yes');
+      (client as { nonInteractive: boolean }).nonInteractive = true;
+
+      const exitCode = await deploy(client);
+      expect(exitCode).toBe(0);
+
+      const stdoutOutput = client.stdout.getFullOutput();
+      const result = JSON.parse(stdoutOutput);
+      expect(result.data.actions[0].details.target).toBe('production');
+      const domainAction = result.data.actions.find(
+        (a: { action: string }) => a.action === 'domain_alias'
+      );
+      expect(domainAction).toBeDefined();
+      expect(domainAction.description).toBe('Assign production domains');
+
+      (client as { nonInteractive: boolean }).nonInteractive = false;
+    });
+
+    it('skips file_upload action when --prebuilt is used', async () => {
+      client.setArgv('deploy', '--dry-run', '--prebuilt', '--yes');
+      (client as { nonInteractive: boolean }).nonInteractive = true;
+
+      const exitCode = await deploy(client);
+      expect(exitCode).toBe(0);
+
+      const stdoutOutput = client.stdout.getFullOutput();
+      const result = JSON.parse(stdoutOutput);
+      expect(result.data.actions[0].details.prebuilt).toBe(true);
+      const uploadAction = result.data.actions.find(
+        (a: { action: string }) => a.action === 'file_upload'
+      );
+      expect(uploadAction).toBeUndefined();
+
+      (client as { nonInteractive: boolean }).nonInteractive = false;
+    });
+
+    it('still validates input before dry-run', async () => {
+      client.setArgv('deploy', '--dry-run', '--env', 'MISSING_EQUALS', '--yes');
+      (client as { nonInteractive: boolean }).nonInteractive = true;
+
+      const exitCode = await deploy(client);
+      expect(exitCode).toBe(3); // EXIT_CODE.VALIDATION — validation runs before dry-run
+
+      const stdoutOutput = client.stdout.getFullOutput();
+      const result = JSON.parse(stdoutOutput);
+      expect(result.status).toBe('error');
+      expect(result.reason).toBe('invalid_arguments');
+
+      (client as { nonInteractive: boolean }).nonInteractive = false;
+    });
+
+    describe('init subcommand', () => {
+      it('outputs dry-run for init subcommand in agent mode', async () => {
+        client.setArgv('deploy', 'init', '--dry-run', '--yes');
+        (client as { nonInteractive: boolean }).nonInteractive = true;
+
+        const exitCode = await deploy(client);
+        expect(exitCode).toBe(0);
+
+        const stdoutOutput = client.stdout.getFullOutput();
+        const result = JSON.parse(stdoutOutput);
+        expect(result.status).toBe('dry_run');
+        expect(result.reason).toBe('dry_run_ok');
+        expect(result.message).toContain('init subcommand');
+        expect(result.data.actions[0].action).toBe('api_call');
+        expect(result.data.actions[0].description).toBe(
+          'Create deployment via init'
+        );
+
+        (client as { nonInteractive: boolean }).nonInteractive = false;
+      });
+    });
+  });
+
+  describe('--describe (Phase 3.6)', () => {
+    it('outputs deploy command schema as JSON and returns 0', async () => {
+      client.setArgv('deploy', '--describe');
+      const exitCode = await deploy(client);
+      expect(exitCode).toBe(0);
+
+      const stdoutOutput = client.stdout.getFullOutput();
+      const schema = JSON.parse(stdoutOutput);
+      expect(schema.name).toBe('deploy');
+      expect(schema.description).toContain('Deploy your project');
+      expect(Array.isArray(schema.options)).toBe(true);
+      expect(Array.isArray(schema.arguments)).toBe(true);
+      expect(Array.isArray(schema.examples)).toBe(true);
+      expect(Array.isArray(schema.subcommands)).toBe(true);
+      expect(schema.subcommands.length).toBe(2);
+    });
+
+    it('includes --dry-run and --describe in schema options', async () => {
+      client.setArgv('deploy', '--describe');
+      await deploy(client);
+
+      const stdoutOutput = client.stdout.getFullOutput();
+      const schema = JSON.parse(stdoutOutput);
+      const optionNames = schema.options.map((o: { name: string }) => o.name);
+      expect(optionNames).toContain('dry-run');
+      expect(optionNames).toContain('describe');
+    });
+
+    it('does not invoke the deploy flow', async () => {
+      client.setArgv('deploy', '--describe');
+      const exitCode = await deploy(client);
+      expect(exitCode).toBe(0);
+
+      const stderrOutput = client.stderr.getFullOutput();
+      expect(stderrOutput).not.toContain('Deploying to');
+      expect(stderrOutput).not.toContain('Linked to');
+    });
+
+    it('outputs init subcommand schema when used with init', async () => {
+      client.setArgv('deploy', 'init', '--describe');
+      const exitCode = await deploy(client);
+      expect(exitCode).toBe(0);
+
+      const stdoutOutput = client.stdout.getFullOutput();
+      const schema = JSON.parse(stdoutOutput);
+      expect(schema.name).toBe('init');
+      expect(schema.description).toContain('manual deployment');
+    });
+
+    it('outputs continue subcommand schema when used with continue', async () => {
+      client.setArgv('deploy', 'continue', '--describe');
+      const exitCode = await deploy(client);
+      expect(exitCode).toBe(0);
+
+      const stdoutOutput = client.stdout.getFullOutput();
+      const schema = JSON.parse(stdoutOutput);
+      expect(schema.name).toBe('continue');
+      expect(schema.description).toContain('Continue a manual deployment');
+    });
+  });
+
+  describe('input validation (Phase 3.2)', () => {
+    describe('--env validation', () => {
+      it('rejects malformed --env in agent mode with structured JSON', async () => {
+        client.setArgv('deploy', '--env', 'MISSING_EQUALS', '--yes');
+        (client as { nonInteractive: boolean }).nonInteractive = true;
+
+        const exitCode = await deploy(client);
+        expect(exitCode).toBe(3); // EXIT_CODE.VALIDATION
+
+        const stdoutOutput = client.stdout.getFullOutput();
+        const result = JSON.parse(stdoutOutput);
+        expect(result.status).toBe('error');
+        expect(result.reason).toBe('invalid_arguments');
+        expect(result.message).toContain('--env');
+        expect(result.message).toContain('KEY=VALUE');
+        expect(result.next).toBeDefined();
+        expect(result.next.length).toBeGreaterThan(0);
+        expect(result.next[0].command).toContain('deploy --env KEY=VALUE');
+
+        (client as { nonInteractive: boolean }).nonInteractive = false;
+      });
+
+      it('rejects --env with empty key in agent mode', async () => {
+        client.setArgv('deploy', '--env', '=value', '--yes');
+        (client as { nonInteractive: boolean }).nonInteractive = true;
+
+        const exitCode = await deploy(client);
+        expect(exitCode).toBe(3);
+
+        const stdoutOutput = client.stdout.getFullOutput();
+        const result = JSON.parse(stdoutOutput);
+        expect(result.status).toBe('error');
+        expect(result.reason).toBe('invalid_arguments');
+        expect(result.message).toContain('Key must not be empty');
+
+        (client as { nonInteractive: boolean }).nonInteractive = false;
+      });
+
+      it('rejects malformed --env in interactive mode', async () => {
+        client.setArgv('deploy', '--env', 'NO_EQUALS', '--yes');
+        (client as { nonInteractive: boolean }).nonInteractive = false;
+
+        const exitCode = await deploy(client);
+        expect(exitCode).toBe(3);
+
+        const stdoutOutput = client.stdout.getFullOutput();
+        expect(stdoutOutput.trim()).toBe('');
+      });
+    });
+
+    describe('--build-env validation', () => {
+      it('rejects malformed --build-env in agent mode', async () => {
+        client.setArgv('deploy', '--build-env', 'BAD_VALUE', '--yes');
+        (client as { nonInteractive: boolean }).nonInteractive = true;
+
+        const exitCode = await deploy(client);
+        expect(exitCode).toBe(3);
+
+        const stdoutOutput = client.stdout.getFullOutput();
+        const result = JSON.parse(stdoutOutput);
+        expect(result.status).toBe('error');
+        expect(result.reason).toBe('invalid_arguments');
+        expect(result.message).toContain('--build-env');
+        expect(result.next[0].command).toContain(
+          'deploy --build-env KEY=VALUE'
+        );
+
+        (client as { nonInteractive: boolean }).nonInteractive = false;
+      });
+    });
+
+    describe('--meta validation', () => {
+      it('rejects malformed --meta in agent mode', async () => {
+        client.setArgv('deploy', '--meta', 'no-equals', '--yes');
+        (client as { nonInteractive: boolean }).nonInteractive = true;
+
+        const exitCode = await deploy(client);
+        expect(exitCode).toBe(3);
+
+        const stdoutOutput = client.stdout.getFullOutput();
+        const result = JSON.parse(stdoutOutput);
+        expect(result.status).toBe('error');
+        expect(result.reason).toBe('invalid_arguments');
+        expect(result.message).toContain('--meta');
+        expect(result.next[0].command).toContain('deploy --meta KEY=VALUE');
+
+        (client as { nonInteractive: boolean }).nonInteractive = false;
+      });
+    });
+
+    describe('--target validation', () => {
+      it('rejects invalid target with special characters in agent mode', async () => {
+        client.setArgv('deploy', '--target', '../evil', '--yes');
+        (client as { nonInteractive: boolean }).nonInteractive = true;
+
+        const exitCode = await deploy(client);
+        expect(exitCode).toBe(3);
+
+        const stdoutOutput = client.stdout.getFullOutput();
+        const result = JSON.parse(stdoutOutput);
+        expect(result.status).toBe('error');
+        expect(result.reason).toBe('invalid_arguments');
+        expect(result.message).toContain('Invalid target');
+        expect(result.next[0].command).toContain(
+          'deploy --target <environment>'
+        );
+
+        (client as { nonInteractive: boolean }).nonInteractive = false;
+      });
+
+      it('rejects invalid target in interactive mode', async () => {
+        client.setArgv('deploy', '--target', 'bad/target', '--yes');
+        (client as { nonInteractive: boolean }).nonInteractive = false;
+
+        const exitCode = await deploy(client);
+        expect(exitCode).toBe(3);
+
+        const stdoutOutput = client.stdout.getFullOutput();
+        expect(stdoutOutput.trim()).toBe('');
+      });
+    });
+
+    describe('path argument validation', () => {
+      it('rejects path traversal in agent mode', async () => {
+        client.setArgv('deploy', '../../etc/passwd', '--yes');
+        (client as { nonInteractive: boolean }).nonInteractive = true;
+
+        const exitCode = await deploy(client);
+        expect(exitCode).toBe(3);
+
+        const stdoutOutput = client.stdout.getFullOutput();
+        const result = JSON.parse(stdoutOutput);
+        expect(result.status).toBe('error');
+        expect(result.reason).toBe('invalid_arguments');
+        expect(result.message).toContain('Path traversal');
+        expect(result.next[0].command).toContain('deploy <path>');
+
+        (client as { nonInteractive: boolean }).nonInteractive = false;
+      });
+
+      it('rejects path traversal in interactive mode', async () => {
+        client.setArgv('deploy', '../../etc/passwd', '--yes');
+        (client as { nonInteractive: boolean }).nonInteractive = false;
+
+        const exitCode = await deploy(client);
+        expect(exitCode).toBe(3);
+
+        const stdoutOutput = client.stdout.getFullOutput();
+        expect(stdoutOutput.trim()).toBe('');
+      });
+    });
+
+    describe('init subcommand validation', () => {
+      it('rejects malformed --env in init subcommand agent mode', async () => {
+        client.setArgv('deploy', 'init', '--env', 'MISSING_EQ', '--yes');
+        (client as { nonInteractive: boolean }).nonInteractive = true;
+
+        const exitCode = await deploy(client);
+        expect(exitCode).toBe(3);
+
+        const stdoutOutput = client.stdout.getFullOutput();
+        const result = JSON.parse(stdoutOutput);
+        expect(result.status).toBe('error');
+        expect(result.reason).toBe('invalid_arguments');
+        expect(result.message).toContain('--env');
+
+        (client as { nonInteractive: boolean }).nonInteractive = false;
+      });
+
+      it('rejects invalid --target in init subcommand agent mode', async () => {
+        client.setArgv('deploy', 'init', '--target', 'bad!target', '--yes');
+        (client as { nonInteractive: boolean }).nonInteractive = true;
+
+        const exitCode = await deploy(client);
+        expect(exitCode).toBe(3);
+
+        const stdoutOutput = client.stdout.getFullOutput();
+        const result = JSON.parse(stdoutOutput);
+        expect(result.status).toBe('error');
+        expect(result.reason).toBe('invalid_arguments');
+        expect(result.message).toContain('Invalid target');
+
+        (client as { nonInteractive: boolean }).nonInteractive = false;
       });
     });
   });

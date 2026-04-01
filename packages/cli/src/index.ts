@@ -39,7 +39,8 @@ import getLatestVersion from './util/get-latest-version';
 import { URL } from 'url';
 import { getSentry } from './util/get-sentry';
 import hp from './util/humanize-path';
-import { commands, commandNames } from './commands';
+import { commands, commandDefs, commandNames } from './commands';
+import { outputCommandSchema } from './util/describe-command';
 import { handleCommandTypo } from './util/handle-command-typo';
 import pkg from './util/pkg';
 import cmd from './util/output/cmd';
@@ -506,6 +507,8 @@ const main = async () => {
     !client.argv.includes('-h') &&
     !client.argv.includes('--help') &&
     !parsedArgs.flags['--token'] &&
+    !parsedArgs.flags['--describe'] &&
+    !parsedArgs.flags['--dry-run'] &&
     subcommand &&
     !subcommandsWithoutToken.includes(subcommand)
   ) {
@@ -614,6 +617,16 @@ const main = async () => {
 
   let targetCommand =
     typeof subcommand === 'string' ? commands.get(subcommand) : undefined;
+
+  // Global --describe handler: output command schema as JSON without executing
+  if (parsedArgs.flags['--describe'] && targetCommand) {
+    const commandDef = commandDefs.get(targetCommand);
+    if (commandDef) {
+      outputCommandSchema(client, commandDef);
+      return 0;
+    }
+  }
+
   const scope =
     parsedArgs.flags['--scope'] ||
     parsedArgs.flags['--team'] ||

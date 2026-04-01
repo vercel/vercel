@@ -59,6 +59,99 @@ describe('link', () => {
     });
   });
 
+  describe('--describe', () => {
+    it('outputs command schema as JSON and returns 0', async () => {
+      client.setArgv('link', '--describe');
+      const exitCode = await link(client);
+      expect(exitCode).toBe(0);
+
+      const output = client.stdout.getFullOutput();
+      const schema = JSON.parse(output);
+      expect(schema.name).toBe('link');
+      expect(schema.description).toBe(
+        'Link a local directory to a Vercel Project.'
+      );
+      expect(Array.isArray(schema.options)).toBe(true);
+      expect(Array.isArray(schema.arguments)).toBe(true);
+      expect(Array.isArray(schema.examples)).toBe(true);
+    });
+
+    it('includes --dry-run and --describe in schema options', async () => {
+      client.setArgv('link', '--describe');
+      await link(client);
+
+      const output = client.stdout.getFullOutput();
+      const schema = JSON.parse(output);
+      const optionNames = schema.options.map((o: { name: string }) => o.name);
+      expect(optionNames).toContain('dry-run');
+      expect(optionNames).toContain('describe');
+    });
+
+    it('does not invoke the link flow', async () => {
+      client.setArgv('link', '--describe');
+
+      const exitCode = await link(client);
+      expect(exitCode).toBe(0);
+
+      // Verify no API calls were made — stderr should have no link output
+      const stderrOutput = client.stderr.getFullOutput();
+      expect(stderrOutput).not.toContain('Linked to');
+    });
+  });
+
+  describe('--dry-run', () => {
+    it('outputs dry-run actions as JSON in agent mode and returns 0', async () => {
+      client.setArgv(
+        'link',
+        '--dry-run',
+        '--project',
+        'my-app',
+        '--team',
+        'my-team'
+      );
+      (client as { nonInteractive: boolean }).nonInteractive = true;
+
+      const exitCode = await link(client);
+      expect(exitCode).toBe(0);
+
+      const output = client.stdout.getFullOutput();
+      const result = JSON.parse(output);
+      expect(result.status).toBe('dry_run');
+      expect(result.reason).toBe('dry_run_ok');
+      expect(result.message).toBe(
+        'Link would connect this directory to a Vercel project'
+      );
+      expect(result.data.actions).toHaveLength(2);
+      expect(result.data.actions[0].action).toBe('api_call');
+      expect(result.data.actions[0].details.project).toBe('my-app');
+      expect(result.data.actions[0].details.team).toBe('my-team');
+      expect(result.data.actions[1].action).toBe('file_write');
+      expect(result.data.actions[1].details.path).toContain(
+        '.vercel/project.json'
+      );
+
+      (client as { nonInteractive: boolean }).nonInteractive = false;
+    });
+
+    it('outputs human-readable dry-run in interactive mode and returns 0', async () => {
+      client.setArgv('link', '--dry-run');
+      (client as { nonInteractive: boolean }).nonInteractive = false;
+
+      const exitCode = await link(client);
+      expect(exitCode).toBe(0);
+    });
+
+    it('does not invoke the link flow', async () => {
+      client.setArgv('link', '--dry-run');
+      const exitCode = await link(client);
+      expect(exitCode).toBe(0);
+
+      // Verify no API calls were made — stderr should have no link output
+      const stderrOutput = client.stderr.getFullOutput();
+      expect(stderrOutput).not.toContain('Linked to');
+    });
+  });
+
   describe('--repo', () => {
     it('should support linking using `--repo` flag', async () => {
       const user = useUser();
@@ -1940,6 +2033,219 @@ describe('link', () => {
 
       // Verify client.cwd is restored even when env pull throws
       expect(client.cwd).toEqual(originalCwd);
+    });
+  });
+
+  describe('input validation', () => {
+    describe('--project flag', () => {
+      it('rejects control characters in agent mode with structured JSON', async () => {
+        client.setArgv('link', '--project', 'my-project\x00evil', '--yes');
+        (client as { nonInteractive: boolean }).nonInteractive = true;
+
+        const exitCode = await link(client);
+        expect(exitCode).toBe(3); // EXIT_CODE.VALIDATION
+
+        const output = client.stdout.getFullOutput();
+        const result = JSON.parse(output);
+        expect(result.status).toBe('error');
+        expect(result.reason).toBe('invalid_arguments');
+        expect(result.message).toContain('Control characters detected');
+        expect(result.message).toContain('project');
+        expect(result.next).toBeDefined();
+        expect(result.next.length).toBeGreaterThan(0);
+        expect(result.next[0].command).toContain('link --project <name>');
+
+        (client as { nonInteractive: boolean }).nonInteractive = false;
+      });
+
+      it('rejects resource ID with query params in agent mode', async () => {
+        client.setArgv('link', '--project', 'proj_123?fields=name', '--yes');
+        (client as { nonInteractive: boolean }).nonInteractive = true;
+
+        const exitCode = await link(client);
+        expect(exitCode).toBe(3);
+
+        const output = client.stdout.getFullOutput();
+        const result = JSON.parse(output);
+        expect(result.status).toBe('error');
+        expect(result.reason).toBe('invalid_arguments');
+        expect(result.message).toContain('resource IDs must not contain');
+
+        (client as { nonInteractive: boolean }).nonInteractive = false;
+      });
+
+      it('rejects control characters in interactive mode with error output', async () => {
+        client.setArgv('link', '--project', 'my-project\x00evil', '--yes');
+        (client as { nonInteractive: boolean }).nonInteractive = false;
+
+        const exitCode = await link(client);
+        expect(exitCode).toBe(3);
+
+        // In interactive mode, error goes to stderr, not structured JSON to stdout
+        const stdoutOutput = client.stdout.getFullOutput();
+        expect(stdoutOutput.trim()).toBe('');
+      });
+
+      it('accepts valid project names', async () => {
+        useUser();
+        const cwd = setupTmpDir();
+        useTeams('team_dummy');
+        useProject({
+          ...defaultProject,
+          id: 'valid-project',
+          name: 'valid-project',
+        });
+        useUnknownProject();
+
+        client.cwd = cwd;
+        client.setArgv('link', '--project', 'valid-project', '--yes');
+
+        const exitCodePromise = link(client);
+
+        await expect(client.stderr).toOutput('Linked to');
+
+        const exitCode = await exitCodePromise;
+        expect(exitCode).toBe(0);
+      });
+    });
+
+    describe('--team flag', () => {
+      it('rejects control characters in agent mode with structured JSON', async () => {
+        client.setArgv('link', '--team', 'team\x1bevil', '--yes');
+        (client as { nonInteractive: boolean }).nonInteractive = true;
+
+        const exitCode = await link(client);
+        expect(exitCode).toBe(3);
+
+        const output = client.stdout.getFullOutput();
+        const result = JSON.parse(output);
+        expect(result.status).toBe('error');
+        expect(result.reason).toBe('invalid_arguments');
+        expect(result.message).toContain('Control characters detected');
+        expect(result.message).toContain('team');
+        expect(result.next[0].command).toContain('link --team <slug>');
+
+        (client as { nonInteractive: boolean }).nonInteractive = false;
+      });
+
+      it('rejects resource ID with fragment in agent mode', async () => {
+        client.setArgv('link', '--team', 'team_abc#fragment', '--yes');
+        (client as { nonInteractive: boolean }).nonInteractive = true;
+
+        const exitCode = await link(client);
+        expect(exitCode).toBe(3);
+
+        const output = client.stdout.getFullOutput();
+        const result = JSON.parse(output);
+        expect(result.status).toBe('error');
+        expect(result.reason).toBe('invalid_arguments');
+        expect(result.message).toContain('resource IDs must not contain');
+
+        (client as { nonInteractive: boolean }).nonInteractive = false;
+      });
+
+      it('rejects control characters in interactive mode', async () => {
+        client.setArgv('link', '--team', 'team\x00evil', '--yes');
+        (client as { nonInteractive: boolean }).nonInteractive = false;
+
+        const exitCode = await link(client);
+        expect(exitCode).toBe(3);
+      });
+    });
+  });
+
+  describe('structured JSON success output (agent mode)', () => {
+    it('emits ok JSON with org, project, and next[] when linking existing project', async () => {
+      const cwd = setupTmpDir();
+      const user = useUser();
+      useTeams('team_dummy');
+      const { project } = useProject({
+        ...defaultProject,
+        id: basename(cwd),
+        name: basename(cwd),
+      });
+      useUnknownProject();
+
+      client.cwd = cwd;
+      // Set currentTeam so selectOrg resolves without prompting in non-interactive mode
+      client.config.currentTeam = user.id;
+      client.setArgv('link', '--project', project.name!, '--yes');
+      (client as { nonInteractive: boolean }).nonInteractive = true;
+
+      const exitCode = await link(client);
+      expect(exitCode).toBe(0);
+
+      const stdoutOutput = client.stdout.getFullOutput();
+      const result = JSON.parse(stdoutOutput);
+      expect(result.status).toBe('ok');
+      expect(result.message).toContain(
+        `Linked to ${user.username}/${project.name}`
+      );
+      expect(result.data.org.id).toBe(user.id);
+      expect(result.data.org.slug).toBe(user.username);
+      expect(result.data.project.id).toBe(project.id);
+      expect(result.data.project.name).toBe(project.name);
+      expect(result.data.directory).toBe(cwd);
+      expect(result.data.projectJsonPath).toContain('.vercel/project.json');
+
+      (client as { nonInteractive: boolean }).nonInteractive = false;
+    });
+
+    it('includes deploy and env pull in next[] suggestions', async () => {
+      const cwd = setupTmpDir();
+      const user = useUser();
+      useTeams('team_dummy');
+      const { project } = useProject({
+        ...defaultProject,
+        id: basename(cwd),
+        name: basename(cwd),
+      });
+      useUnknownProject();
+
+      client.cwd = cwd;
+      client.config.currentTeam = user.id;
+      client.setArgv('link', '--project', project.name!, '--yes');
+      (client as { nonInteractive: boolean }).nonInteractive = true;
+
+      const exitCode = await link(client);
+      expect(exitCode).toBe(0);
+
+      const stdoutOutput = client.stdout.getFullOutput();
+      const result = JSON.parse(stdoutOutput);
+      expect(result.next).toHaveLength(2);
+      expect(result.next[0].command).toContain('deploy');
+      expect(result.next[0].when).toBe('Deploy the project');
+      expect(result.next[1].command).toContain('env pull');
+      expect(result.next[1].when).toBe('Pull environment variables');
+
+      (client as { nonInteractive: boolean }).nonInteractive = false;
+    });
+
+    it('does not emit JSON in interactive mode', async () => {
+      const cwd = setupTmpDir();
+      useUser();
+      useTeams('team_dummy');
+      const { project } = useProject({
+        ...defaultProject,
+        id: basename(cwd),
+        name: basename(cwd),
+      });
+      useUnknownProject();
+
+      client.cwd = cwd;
+      client.setArgv('link', '--project', project.name!, '--yes');
+      (client as { nonInteractive: boolean }).nonInteractive = false;
+
+      const exitCodePromise = link(client);
+
+      await expect(client.stderr).toOutput(`Linked to`);
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toBe(0);
+
+      // stdout should NOT contain structured JSON in interactive mode
+      const stdoutOutput = client.stdout.getFullOutput();
+      expect(stdoutOutput.trim()).toBe('');
     });
   });
 });

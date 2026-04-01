@@ -171,6 +171,38 @@ describe('ensureLink', () => {
       expect(exitSpy).toHaveBeenCalledWith(1);
     });
 
+    it('skips outputActionRequired when HEADLESS has agentResponseWritten flag', async () => {
+      vi.mocked(getLinkedProject).mockResolvedValue({
+        status: 'not_linked',
+        org: null,
+        project: null,
+      });
+      const setupAndLinkModule = await import(
+        '../../../../src/util/link/setup-and-link'
+      );
+      const setupAndLinkFn = setupAndLinkModule.default as ReturnType<
+        typeof vi.fn
+      >;
+      vi.mocked(setupAndLinkFn).mockResolvedValue({
+        status: 'error',
+        exitCode: 1,
+        reason: 'HEADLESS',
+        agentResponseWritten: true,
+      } as any);
+      const agentOutput = await import('../../../../src/util/agent-output');
+      const outputActionRequired = vi.mocked(agentOutput.outputActionRequired);
+
+      (client as { nonInteractive: boolean }).nonInteractive = true;
+      client.argv = ['/node', '/vc.js', 'link', '--non-interactive'];
+      await ensureLink('link', client, client.cwd, {});
+      (client as { nonInteractive: boolean }).nonInteractive = false;
+
+      // outputActionRequired should NOT be called since JSON was already written
+      expect(outputActionRequired).not.toHaveBeenCalled();
+      // But process.exit should still be called
+      expect(exitSpy).toHaveBeenCalledWith(1);
+    });
+
     it('returns 0 when user aborts (setupAndLink returns not_linked)', async () => {
       vi.mocked(getLinkedProject).mockResolvedValue({
         status: 'not_linked',

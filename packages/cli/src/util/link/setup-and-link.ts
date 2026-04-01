@@ -15,6 +15,8 @@ import {
 } from '../projects/link';
 import createProject from '../projects/create-project';
 import type Client from '../client';
+import { writeAgentResponse } from '../agent-response';
+import { buildCommandWithGlobalFlags } from '../agent-output';
 import { printError } from '../error';
 import { parseGitConfig, pluckRemoteUrls } from '../create-git-meta';
 import {
@@ -156,7 +158,20 @@ export default async function setupAndLink(
       err instanceof Error &&
       (err as NodeJS.ErrnoException).code === 'HEADLESS'
     ) {
-      return { status: 'error', exitCode: 1, reason: 'HEADLESS' };
+      const result: {
+        status: 'error';
+        exitCode: number;
+        reason: 'HEADLESS';
+        agentResponseWritten?: boolean;
+      } = {
+        status: 'error',
+        exitCode: 1,
+        reason: 'HEADLESS',
+      };
+      if ((err as any).agentResponseWritten) {
+        result.agentResponseWritten = true;
+      }
+      return result;
     }
     throw err;
   }
@@ -179,6 +194,30 @@ export default async function setupAndLink(
       autoConfirm,
       pullEnv
     );
+
+    if (client.nonInteractive) {
+      writeAgentResponse(client, {
+        status: 'ok',
+        message: `Linked to ${org.slug}/${project.name}`,
+        data: {
+          org: { id: org.id, slug: org.slug },
+          project: { id: project.id, name: project.name },
+          directory: path,
+          projectJsonPath: join(path, '.vercel', 'project.json'),
+        },
+        next: [
+          {
+            command: buildCommandWithGlobalFlags(client.argv, 'deploy'),
+            when: 'Deploy the project',
+          },
+          {
+            command: buildCommandWithGlobalFlags(client.argv, 'env pull'),
+            when: 'Pull environment variables',
+          },
+        ],
+      });
+    }
+
     return { status: 'linked', org, project };
   }
 
@@ -361,6 +400,29 @@ export default async function setupAndLink(
     );
 
     await connectGitRepository(client, path, project, autoConfirm, org);
+
+    if (client.nonInteractive) {
+      writeAgentResponse(client, {
+        status: 'ok',
+        message: `Linked to ${org.slug}/${project.name}`,
+        data: {
+          org: { id: org.id, slug: org.slug },
+          project: { id: project.id, name: project.name },
+          directory: path,
+          projectJsonPath: join(path, '.vercel', 'project.json'),
+        },
+        next: [
+          {
+            command: buildCommandWithGlobalFlags(client.argv, 'deploy'),
+            when: 'Deploy the project',
+          },
+          {
+            command: buildCommandWithGlobalFlags(client.argv, 'env pull'),
+            when: 'Pull environment variables',
+          },
+        ],
+      });
+    }
 
     return { status: 'linked', org, project };
   } catch (err) {

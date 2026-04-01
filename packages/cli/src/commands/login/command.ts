@@ -1,4 +1,5 @@
 import { packageName } from '../../util/pkg-name';
+import { describeOption, dryRunOption } from '../../util/arg-common';
 
 export const loginCommand = {
   name: 'login',
@@ -34,6 +35,8 @@ export const loginCommand = {
       type: Boolean,
       deprecated: true,
     },
+    dryRunOption,
+    describeOption,
   ],
   examples: [
     {

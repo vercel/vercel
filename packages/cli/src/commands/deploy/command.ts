@@ -1,5 +1,7 @@
 import {
   confirmOption,
+  describeOption,
+  dryRunOption,
   forceOption,
   formatOption,
   jsonOption,
@@ -108,6 +110,8 @@ export const initSubcommand = {
     formatOption,
     jsonOption,
     confirmOption,
+    dryRunOption,
+    describeOption,
   ],
   examples: [
     {
@@ -145,6 +149,8 @@ export const continueSubcommand = {
       description:
         'Compress the deployment code into an archive before uploading it',
     },
+    dryRunOption,
+    describeOption,
   ],
   examples: [
     {
@@ -308,6 +314,8 @@ export const deployCommand = {
     formatOption,
     jsonOption,
     confirmOption,
+    dryRunOption,
+    describeOption,
   ],
   examples: [
     {

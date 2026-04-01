@@ -64,7 +64,12 @@ export async function ensureLink(
 
   if (link.status === 'error') {
     if (link.reason === 'HEADLESS') {
-      if (nonInteractive) {
+      // If the source (e.g. inputProject) already wrote structured JSON, skip
+      // duplicate output — just exit with the code.
+      if (
+        nonInteractive &&
+        !('agentResponseWritten' in link && link.agentResponseWritten)
+      ) {
         outputActionRequired(
           client,
           {
@@ -80,7 +85,7 @@ export async function ensureLink(
           },
           link.exitCode
         );
-      } else {
+      } else if (!nonInteractive) {
         output.error(
           `Command ${getCommandName(
             commandName
