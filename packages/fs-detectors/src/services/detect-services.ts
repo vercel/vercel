@@ -141,14 +141,6 @@ export async function detectServices(
         scopedFs,
         'generated'
       );
-      const routes = generateServicesRoutes(result.services);
-      const resolved: ResolvedServicesResult = {
-        services: result.services,
-        source: 'auto-detected',
-        routes,
-        errors: result.errors,
-        warnings: railwayResult.warnings,
-      };
       const inferred =
         result.errors.length === 0 && result.services.length > 0
           ? {
@@ -158,7 +150,20 @@ export async function detectServices(
               warnings: railwayResult.warnings,
             }
           : null;
-      return withResolvedResult(resolved, inferred);
+
+      // Railway detection is used only for a suggestion to generate vercel.json,
+      // so the .resolved field in the result would be useless, we care only
+      // about the source + inferred config.
+      return withResolvedResult(
+        {
+          services: [],
+          source: 'auto-detected',
+          routes: emptyRoutes(),
+          errors: result.errors,
+          warnings: railwayResult.warnings,
+        },
+        inferred
+      );
     }
 
     // Fall back to layout-based auto-detection

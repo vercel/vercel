@@ -601,9 +601,12 @@ describe('detectServices with Railway detection', () => {
 
     expect(result.errors).toEqual([]);
     expect(result.source).toBe('auto-detected');
-    expect(result.services.length).toBe(2);
+    // Railway detection is suggestion-only,
+    // so resolved.services (or .services which are the same) should be empty
+    expect(result.services).toHaveLength(0);
     expect(result.inferred).not.toBeNull();
     expect(result.inferred!.source).toBe('railway');
+    expect(result.inferred!.services).toHaveLength(2);
     expect(result.inferred!.config.api.buildCommand).toBe("echo 'test'");
   });
 
