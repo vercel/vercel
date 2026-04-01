@@ -22,5 +22,8 @@
     "preact-compat": "^3.17.0",
     "preact-render-to-string": "^4.1.0",
     "preact-router": "^2.5.7"
+  },
+  "overrides": {
+    "lodash.template": "4.5.0"
   }
 }
