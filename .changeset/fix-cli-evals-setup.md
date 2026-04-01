@@ -1,5 +1,4 @@
 ---
-'vercel': patch
 ---
 
 fix(cli): fix eval sandbox setup and multi-product-install assertion
