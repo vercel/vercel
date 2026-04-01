@@ -404,6 +404,10 @@ function getAWSLambdaHandler(entrypoint: string, config: Config) {
   return '';
 }
 
+// Track whether bundling routes have already been emitted so they are only
+// included once across all bundled entrypoint builds.
+let bundlingRoutesEmitted = false;
+
 export const build = async ({
   files,
   entrypoint,
@@ -616,38 +620,41 @@ export const build = async ({
       handler = bundledHandlerName;
 
       // Inject x-matched-path as a request header so the bundled handler
-      // knows which entrypoint to invoke. Mirrors the Next.js approach
-      // (server-build.ts) but uses transforms to set a request header
-      // rather than a response header.
-      routes = [
-        { handle: 'hit' },
-        {
-          src: '/index(?:/)?',
-          transforms: [
-            {
-              type: 'request.headers' as const,
-              op: 'set' as const,
-              target: { key: 'x-matched-path' },
-              args: '/',
-            },
-          ],
-          continue: true,
-          important: true,
-        },
-        {
-          src: '/((?!index$).*?)(?:/)?',
-          transforms: [
-            {
-              type: 'request.headers' as const,
-              op: 'set' as const,
-              target: { key: 'x-matched-path' },
-              args: '/$1',
-            },
-          ],
-          continue: true,
-          important: true,
-        },
-      ];
+      // knows which entrypoint to invoke. These routes are identical for
+      // every bundled entrypoint, so only emit them once to avoid
+      // inflating the route table during route merging.
+      if (!bundlingRoutesEmitted) {
+        bundlingRoutesEmitted = true;
+        routes = [
+          { handle: 'hit' },
+          {
+            src: '/index(?:/)?',
+            transforms: [
+              {
+                type: 'request.headers' as const,
+                op: 'set' as const,
+                target: { key: 'x-matched-path' },
+                args: '/',
+              },
+            ],
+            continue: true,
+            important: true,
+          },
+          {
+            src: '/((?!index$).*?)(?:/)?',
+            transforms: [
+              {
+                type: 'request.headers' as const,
+                op: 'set' as const,
+                target: { key: 'x-matched-path' },
+                args: '/$1',
+              },
+            ],
+            continue: true,
+            important: true,
+          },
+        ];
+      }
     }
 
     output = new NodejsLambda({

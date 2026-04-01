@@ -45,8 +45,13 @@ function resolveEntrypoint(name) {
     const p = base + ext;
     if (existsSync(p)) return p;
   }
-  // Fallback: try without extension (e.g. directory with index.js)
-  if (existsSync(base)) return base;
+  // If base is a directory, look for index files inside it
+  if (existsSync(base)) {
+    for (const ext of ['.js', '.cjs', '.mjs']) {
+      const p = resolve(base, 'index' + ext);
+      if (existsSync(p)) return p;
+    }
+  }
   return null;
 }
 
@@ -153,71 +158,71 @@ async function compileUserCode(filePath) {
     return this;
   };
 
-  let listener = await loadModule(filePath);
-  listener = unwrapDefaults(listener);
+  try {
+    let listener = await loadModule(filePath);
+    listener = unwrapDefaults(listener);
 
-  // 1. Web handlers (GET, POST, fetch, etc.)
-  const isWebHandler =
-    HTTP_METHODS.some(m => typeof listener[m] === 'function') ||
-    typeof listener.fetch === 'function';
+    // 1. Web handlers (GET, POST, fetch, etc.)
+    const isWebHandler =
+      HTTP_METHODS.some(m => typeof listener[m] === 'function') ||
+      typeof listener.fetch === 'function';
 
-  if (isWebHandler) {
-    http.Server.prototype.listen = originalListen;
-    return createWebHandler(listener);
-  }
+    if (isWebHandler) {
+      return createWebHandler(listener);
+    }
 
-  // 2. Function handler: (req, res) => { ... }
-  if (typeof listener === 'function') {
-    http.Server.prototype.listen = originalListen;
-    return listener;
-  }
+    // 2. Function handler: (req, res) => { ... }
+    if (typeof listener === 'function') {
+      return listener;
+    }
 
-  // 3. Server handler: http.createServer(...).listen()
-  //    Wait briefly for async server creation if not captured yet.
-  if (!server) {
-    await new Promise(r => {
-      serverFound = r;
-      setTimeout(r, 1000);
-    });
-  }
-
-  http.Server.prototype.listen = originalListen;
-
-  if (server) {
-    // Start the captured server on a random port and proxy requests to it.
-    await new Promise(r => server.listen(0, '127.0.0.1', r));
-    const { port } = server.address();
-
-    return (req, res) => {
-      const proxyReq = http.request(
-        {
-          hostname: '127.0.0.1',
-          port,
-          path: req.url,
-          method: req.method,
-          headers: {
-            ...req.headers,
-            host: req.headers['x-forwarded-host'] || req.headers.host,
-          },
-        },
-        proxyRes => {
-          res.writeHead(proxyRes.statusCode, proxyRes.headers);
-          proxyRes.pipe(res);
-        }
-      );
-      proxyReq.on('error', err => {
-        res.statusCode = 502;
-        res.end('Proxy error: ' + err.message);
+    // 3. Server handler: http.createServer(...).listen()
+    //    Wait briefly for async server creation if not captured yet.
+    if (!server) {
+      await new Promise(r => {
+        serverFound = r;
+        setTimeout(r, 1000);
       });
-      req.pipe(proxyReq);
-    };
-  }
+    }
 
-  throw new Error(
-    "Can't detect handler export shape for " +
-      filePath +
-      '. Expected a function export, HTTP method exports (GET, POST, ...), or an http.Server.'
-  );
+    if (server) {
+      // Start the captured server on a random port and proxy requests to it.
+      await new Promise(r => server.listen(0, '127.0.0.1', r));
+      const { port } = server.address();
+
+      return (req, res) => {
+        const proxyReq = http.request(
+          {
+            hostname: '127.0.0.1',
+            port,
+            path: req.url,
+            method: req.method,
+            headers: {
+              ...req.headers,
+              host: req.headers['x-forwarded-host'] || req.headers.host,
+            },
+          },
+          proxyRes => {
+            res.writeHead(proxyRes.statusCode, proxyRes.headers);
+            proxyRes.pipe(res);
+          }
+        );
+        proxyReq.on('error', err => {
+          res.statusCode = 502;
+          res.end('Proxy error: ' + err.message);
+        });
+        req.pipe(proxyReq);
+      };
+    }
+
+    throw new Error(
+      "Can't detect handler export shape for " +
+        filePath +
+        '. Expected a function export, HTTP method exports (GET, POST, ...), or an http.Server.'
+    );
+  } finally {
+    http.Server.prototype.listen = originalListen;
+  }
 }
 
 module.exports = async (req, res) => {
