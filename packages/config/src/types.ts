@@ -612,6 +612,12 @@ export interface VercelConfig {
        */
       installCommand?: string;
       /**
+       * Command to run after build process succeed but before the deployment's
+       * output is uploaded. Runs during `vercel build` including local builds
+       * and builds on Vercel.
+       */
+      preDeployCommand?: string;
+      /**
        * Memory allocation in MB (128-10240).
        */
       memory?: number;
