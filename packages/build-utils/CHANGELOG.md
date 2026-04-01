@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 13.12.1
+
+### Patch Changes
+
+- Switch to using smol-toml for toml parsing ([#15730](https://github.com/vercel/vercel/pull/15730))
+
 ## 13.12.0
 
 ### Minor Changes

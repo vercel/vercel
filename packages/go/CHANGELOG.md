@@ -1,5 +1,13 @@
 # @vercel/go
 
+## 3.4.7
+
+### Patch Changes
+
+- Do not hang if the go process panics on startup. ([#15761](https://github.com/vercel/vercel/pull/15761))
+
+- [go] update `waitForServer` to not ping root endpoint ([#15765](https://github.com/vercel/vercel/pull/15765))
+
 ## 3.4.6
 
 ### Patch Changes
