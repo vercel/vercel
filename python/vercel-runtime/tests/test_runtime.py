@@ -532,8 +532,7 @@ class TestCronService(_RuntimeTestCase):
             encoding="utf-8",
         )
         command = (
-            f"{shlex.quote(sys.executable)} "
-            f"{shlex.quote(script_path.name)}"
+            f"{shlex.quote(sys.executable)} {shlex.quote(script_path.name)}"
         )
         async with _run_runtime(
             entrypoint_abs=ep_abs,
