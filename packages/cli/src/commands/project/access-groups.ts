@@ -73,8 +73,8 @@ export default async function accessGroups(
   if (typeof limit === 'number') {
     query.set('limit', String(limit));
   }
-  if (typeof parsedArgs.flags['--next'] === 'string') {
-    query.set('next', parsedArgs.flags['--next']);
+  if (typeof parsedArgs.flags['--next'] === 'number') {
+    query.set('next', String(parsedArgs.flags['--next']));
   }
 
   const result = await client.fetch<AccessGroupsResponse>(
