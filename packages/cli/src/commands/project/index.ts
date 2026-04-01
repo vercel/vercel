@@ -6,12 +6,14 @@ import { type Command, help } from '../help';
 import add from './add';
 import inspect from './inspect';
 import list from './list';
+import members from './members';
 import rm from './rm';
 import getOidcToken from './token';
 import {
   addSubcommand,
   inspectSubcommand,
   listSubcommand,
+  membersSubcommand,
   projectCommand,
   removeSubcommand,
   tokenSubcommand,
@@ -25,6 +27,7 @@ import getSubcommand from '../../util/get-subcommand';
 const COMMAND_CONFIG = {
   inspect: getCommandAliases(inspectSubcommand),
   list: getCommandAliases(listSubcommand),
+  members: getCommandAliases(membersSubcommand),
   add: getCommandAliases(addSubcommand),
   remove: getCommandAliases(removeSubcommand),
   token: getCommandAliases(tokenSubcommand),
@@ -94,6 +97,13 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandAdd(subcommandOriginal);
       return add(client, args);
+    case 'members':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('project', subcommandOriginal);
+        return printHelp(membersSubcommand);
+      }
+      telemetry.trackCliSubcommandMembers(subcommandOriginal);
+      return members(client, args);
     case 'token':
       if (needHelp) {
         telemetry.trackCliFlagHelp('project', subcommandOriginal);
