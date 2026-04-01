@@ -41,4 +41,11 @@ export class TeamsTelemetryClient
       });
     }
   }
+
+  trackCliSubcommandRequest(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'request',
+      value: actual,
+    });
+  }
 }
