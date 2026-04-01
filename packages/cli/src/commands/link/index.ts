@@ -154,6 +154,7 @@ export default async function link(client: Client) {
       projectName: parsedArgs.flags['--project'],
       successEmoji: 'success',
       nonInteractive: linkNonInteractive,
+      searchAcrossTeams: true,
     });
 
     if (typeof link === 'number') {
