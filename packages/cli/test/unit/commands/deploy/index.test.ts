@@ -333,6 +333,52 @@ describe('deploy', () => {
     ]);
   });
 
+  it('should send a tgz file when `deploy continue --archive=tgz`', async () => {
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      name: 'static',
+      id: 'static',
+    });
+
+    let body: any;
+    client.scenario.post(`/deployments/dpl_continue/continue`, (req, res) => {
+      body = req.body;
+      res.json({
+        id: 'dpl_continue',
+        url: 'continue.vercel.app',
+        readyState: 'READY',
+        aliasAssigned: true,
+        alias: [],
+      });
+    });
+
+    client.cwd = setupUnitFixture('commands/deploy/static-with-build-output');
+    client.setArgv(
+      'deploy',
+      'continue',
+      '--id',
+      'dpl_continue',
+      '--archive=tgz'
+    );
+    const exitCode = await deploy(client);
+    expect(exitCode).toEqual(0);
+    const fileNames = body?.files?.map((f: any) => f.file);
+    expect(fileNames).toContain('.vercel/source.tgz.part1');
+    expect(fileNames).toContain('.vercel/output/provision.json');
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      {
+        key: 'subcommand:continue',
+        value: 'continue',
+      },
+      {
+        key: 'option:archive',
+        value: 'tgz',
+      },
+    ]);
+  });
+
   it('should pass flag to skip custom domain assignment', async () => {
     const user = useUser();
     useTeams('team_dummy');

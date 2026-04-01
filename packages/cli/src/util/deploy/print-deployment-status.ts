@@ -7,6 +7,7 @@ import { prependEmoji, emoji } from '../../util/emoji';
 import output from '../../output-manager';
 import { getCommandName } from '../pkg-name';
 import { suggestNextCommands } from '../suggest-next-commands';
+import { showPluginTipIfNeeded } from '../agent/auto-install-agentic';
 
 /**
  * Prints (to `output`) warnings and errors, if any.
@@ -99,6 +100,8 @@ export async function printDeploymentStatus(
       ].filter(Boolean) as string[]
     );
   }
+
+  await showPluginTipIfNeeded();
 
   return 0;
 }

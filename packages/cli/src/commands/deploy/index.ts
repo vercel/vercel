@@ -7,6 +7,7 @@ import {
   fileNameSymbol,
   continueDeployment,
   VALID_ARCHIVE_FORMATS,
+  type ArchiveFormat,
   type Dictionary,
   type VercelConfig,
 } from '@vercel/client';
@@ -146,7 +147,7 @@ export default async (client: Client): Promise<number> => {
         return 2;
       }
       telemetryClient.trackCliSubcommandContinue(subcommandOriginal);
-      return handleContinueSubcommand(client);
+      return handleContinueSubcommand(client, telemetryClient);
 
     default:
       if (parsedArguments.flags['--help']) {
@@ -731,7 +732,10 @@ async function handleInitDeployment(
   }
 }
 
-async function handleContinueSubcommand(client: Client): Promise<number> {
+async function handleContinueSubcommand(
+  client: Client,
+  telemetryClient: DeployTelemetryClient
+): Promise<number> {
   // Parse continue-specific flags
   const flagsSpecification = getFlagsSpecification(continueSubcommand.options);
   let parsedArguments;
@@ -743,6 +747,14 @@ async function handleContinueSubcommand(client: Client): Promise<number> {
   }
 
   const idFlag = parsedArguments.flags['--id'];
+  const parsedArchive = parsedArguments.flags['--archive'];
+
+  if (typeof parsedArchive === 'string' && !isValidArchive(parsedArchive)) {
+    output.error(`Format must be one of: ${VALID_ARCHIVE_FORMATS.join(', ')}`);
+    return 1;
+  }
+
+  telemetryClient.trackCliOptionArchive(parsedArchive);
 
   if (!idFlag) {
     if (client.nonInteractive) {
@@ -863,6 +875,7 @@ async function handleContinueSubcommand(client: Client): Promise<number> {
     noWait: false,
     org,
     vercelOutputDir,
+    archive: parsedArchive ? 'tgz' : undefined,
   });
 }
 
@@ -1878,6 +1891,7 @@ async function handleContinueDeployment({
   noWait,
   org,
   vercelOutputDir,
+  archive,
 }: {
   client: Client;
   deploymentId: string;
@@ -1886,6 +1900,7 @@ async function handleContinueDeployment({
   noWait: boolean;
   org: { type: string; id: string; slug: string };
   vercelOutputDir: string | undefined;
+  archive?: ArchiveFormat;
 }): Promise<number> {
   const { debug, error } = output;
 
@@ -1911,6 +1926,7 @@ async function handleContinueDeployment({
       apiUrl: client.apiUrl,
       debug: output.isDebugEnabled(),
       deploymentId,
+      archive,
       path: cwd,
       teamId: org.type === 'team' ? org.id : undefined,
       token,

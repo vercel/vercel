@@ -1,5 +1,5 @@
 import yaml from 'js-yaml';
-import toml from '@iarna/toml';
+import { parse as tomlParse } from 'smol-toml';
 import { readFile } from 'fs-extra';
 import { isErrnoException } from '@vercel/error-utils';
 import { join } from 'path';
@@ -35,7 +35,7 @@ export async function readConfigFile<T>(
         if (name.endsWith('.json')) {
           return JSON.parse(str) as T;
         } else if (name.endsWith('.toml')) {
-          return toml.parse(str) as unknown as T;
+          return tomlParse(str) as unknown as T;
         } else if (name.endsWith('.yaml') || name.endsWith('.yml')) {
           return yaml.safeLoad(str, { filename: name }) as T;
         }

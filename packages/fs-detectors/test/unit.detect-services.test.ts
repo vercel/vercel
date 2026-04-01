@@ -526,7 +526,7 @@ describe('detectServices', () => {
         workspace: 'apps/api',
         entrypoint: undefined,
       });
-      expect(result.services[0].builder.src).toBe('apps/api/index.py');
+      expect(result.services[0].builder.src).toBe('apps/api/<detect>');
     });
 
     it('should auto-detect framework for directory entrypoint when omitted', async () => {
@@ -552,7 +552,7 @@ describe('detectServices', () => {
         entrypoint: undefined,
       });
       expect(result.services[0].builder.use).toBe('@vercel/python');
-      expect(result.services[0].builder.src).toBe('apps/api/index.py');
+      expect(result.services[0].builder.src).toBe('apps/api/<detect>');
     });
 
     it('should treat existing dotted directory entrypoint as a directory', async () => {
@@ -701,7 +701,7 @@ describe('detectServices', () => {
         entrypoint: undefined,
       });
       expect(result.services[0].builder.use).toBe('@vercel/python');
-      expect(result.services[0].builder.src).toBe('apps/api/index.py');
+      expect(result.services[0].builder.src).toBe('apps/api/<detect>');
     });
 
     it('should auto-detect framework for file entrypoint and keep node backend builder', async () => {
