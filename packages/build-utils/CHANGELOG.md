@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 13.12.2
+
+### Patch Changes
+
+- Extract finalize/validate function utils for build-utils ([#15776](https://github.com/vercel/vercel/pull/15776))
+
 ## 13.12.1
 
 ### Patch Changes
