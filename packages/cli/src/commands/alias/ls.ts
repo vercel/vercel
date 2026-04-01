@@ -40,9 +40,7 @@ export default async function ls(client: Client, argv: string[]) {
     return validationResult;
   }
 
-  const { contextName } = await getScope(client, {
-    resolveLocalScope: true,
-  });
+  const { contextName } = await getScope(client);
 
   const telemetryClient = new AliasListTelemetryClient({
     opts: {

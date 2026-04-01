@@ -31,9 +31,7 @@ export async function ensureMicrofrontendsContext(
   }
 
   client.config.currentTeam = org.id;
-  const { team } = await getScope(client, {
-    resolveLocalScope: true,
-  });
+  const { team } = await getScope(client);
 
   if (!team) {
     output.error('Microfrontends are only available for teams.');

@@ -55,9 +55,7 @@ export async function openIntegration(client: Client, subArgs: string[]) {
     return 1;
   }
 
-  const { team } = await getScope(client, {
-    resolveLocalScope: true,
-  });
+  const { team } = await getScope(client);
 
   if (!team) {
     output.error('Team not found');

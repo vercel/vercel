@@ -141,7 +141,7 @@ export async function getDeploymentUrlAndToken(
   let scope;
 
   try {
-    scope = await getScope(client, { resolveLocalScope: true });
+    scope = await getScope(client);
   } catch (err: unknown) {
     if (
       isErrnoException(err) &&

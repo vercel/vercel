@@ -53,9 +53,7 @@ export async function createThreshold(client: Client) {
   const { resourceName, minimum, spend, limit } = args;
 
   // Fetch Team
-  const { team } = await getScope(client, {
-    resolveLocalScope: true,
-  });
+  const { team } = await getScope(client);
   if (!team) {
     output.error('Team not found.');
     return 1;

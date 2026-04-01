@@ -70,9 +70,7 @@ export default async function transferIn(client: Client, argv: string[]) {
     return 1;
   }
 
-  const { contextName } = await getScope(client, {
-    resolveLocalScope: true,
-  });
+  const { contextName } = await getScope(client);
   output.log(
     `The domain ${param(domainName)} is ${chalk.underline(
       'available'

@@ -117,9 +117,7 @@ export default async function buy(client: Client, argv: string[]) {
     return 1;
   }
 
-  const { contextName } = await getScope(client, {
-    resolveLocalScope: true,
-  });
+  const { contextName } = await getScope(client);
 
   const parsedDomain = parse(domainName);
 

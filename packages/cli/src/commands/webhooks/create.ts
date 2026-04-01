@@ -172,9 +172,7 @@ export default async function create(client: Client, argv: string[]) {
   telemetry.trackCliOptionEvent(events);
   telemetry.trackCliOptionProject(projectIds);
 
-  const { contextName } = await getScope(client, {
-    resolveLocalScope: true,
-  });
+  const { contextName } = await getScope(client);
 
   const createStamp = stamp();
 

@@ -96,9 +96,7 @@ async function add(client: Client, argv: string[]): Promise<number> {
       `Generating a certificate for ${chalk.bold(cns.join(', '))}`
     );
 
-    const { contextName } = await getScope(client, {
-      resolveLocalScope: true,
-    });
+    const { contextName } = await getScope(client);
     cert = await createCertForCns(client, cns, contextName);
     output.stopSpinner();
   }

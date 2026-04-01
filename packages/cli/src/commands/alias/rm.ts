@@ -30,9 +30,7 @@ export default async function rm(client: Client, argv: string[]) {
 
   const { args, flags: opts } = parsedArguments;
 
-  const { contextName } = await getScope(client, {
-    resolveLocalScope: true,
-  });
+  const { contextName } = await getScope(client);
   const telemetryClient = new AliasRemoveTelemetryClient({
     opts: {
       store: client.telemetryEventStore,

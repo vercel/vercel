@@ -60,9 +60,7 @@ async function ls(client: Client, argv: string[]): Promise<number> {
   // Get the list of certificates
   const { certs, pagination } = await getCerts(client, ...paginationOptions);
 
-  const { contextName } = await getScope(client, {
-    resolveLocalScope: true,
-  });
+  const { contextName } = await getScope(client);
   output.log(
     `${
       certs.length > 0 ? 'Certificates' : 'No certificates'

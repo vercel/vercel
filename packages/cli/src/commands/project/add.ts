@@ -72,9 +72,7 @@ export default async function add(
   }
   const elapsed = ms(Date.now() - start);
 
-  const { contextName } = await getScope(client, {
-    resolveLocalScope: true,
-  });
+  const { contextName } = await getScope(client);
   output.log(
     `${chalk.cyan('Success!')} Project ${chalk.bold(
       name.toLowerCase()

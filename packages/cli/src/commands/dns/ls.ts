@@ -89,9 +89,7 @@ export default async function ls(client: Client, argv: string[]) {
   }
 
   const { telemetryEventStore } = client;
-  const { contextName } = await getScope(client, {
-    resolveLocalScope: true,
-  });
+  const { contextName } = await getScope(client);
   const telemetry = new DnsLsTelemetryClient({
     opts: {
       store: telemetryEventStore,

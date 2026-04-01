@@ -47,9 +47,7 @@ export default async function set(client: Client, argv: string[]) {
   });
   telemetryClient.trackCliFlagDebug(opts['--debug']);
   telemetryClient.trackCliOptionLocalConfig(opts['--local-config']);
-  const { contextName, user } = await getScope(client, {
-    resolveLocalScope: true,
-  });
+  const { contextName, user } = await getScope(client);
 
   // If there are more than two args we have to error
   if (args.length > 2) {

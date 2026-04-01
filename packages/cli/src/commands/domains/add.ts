@@ -133,9 +133,7 @@ export default async function add(client: Client, argv: string[]) {
 
   const force = opts['--force'];
   telemetry.trackCliFlagForce(force);
-  const { contextName } = await getScope(client, {
-    resolveLocalScope: true,
-  });
+  const { contextName } = await getScope(client);
 
   const project = await getLinkedProject(client).then(result => {
     if (result.status === 'linked') {

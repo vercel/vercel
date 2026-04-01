@@ -58,7 +58,7 @@ export default async function rm(client: Client, argv: string[]) {
       store: telemetryEventStore,
     },
   });
-  await getScope(client, { resolveLocalScope: true });
+  await getScope(client);
 
   const [recordId] = args;
   if (args.length !== 1) {

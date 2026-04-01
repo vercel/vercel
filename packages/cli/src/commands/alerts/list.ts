@@ -114,9 +114,7 @@ async function resolveScope(
   opts: { project?: string; all?: boolean; jsonOutput: boolean }
 ): Promise<AlertsScope | number> {
   if (opts.all || opts.project) {
-    const { team } = await getScope(client, {
-      resolveLocalScope: true,
-    });
+    const { team } = await getScope(client);
     if (!team) {
       return outputError(
         client,

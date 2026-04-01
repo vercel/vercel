@@ -56,9 +56,7 @@ export async function disconnect(client: Client) {
     return 1;
   }
 
-  const { team } = await getScope(client, {
-    resolveLocalScope: true,
-  });
+  const { team } = await getScope(client);
   if (!team) {
     output.error('Team not found.');
     return 1;

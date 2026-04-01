@@ -57,7 +57,7 @@ export default async function contract(client: Client): Promise<number> {
   let teamId: string | undefined;
 
   try {
-    const scope = await getScope(client, { resolveLocalScope: true });
+    const scope = await getScope(client);
     contextName = scope.contextName;
     teamId = scope.team?.id;
   } catch (err: unknown) {

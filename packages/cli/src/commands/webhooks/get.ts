@@ -76,9 +76,7 @@ export default async function get(client: Client, argv: string[]) {
 
   output.debug(`Fetching webhook info`);
 
-  const { contextName } = await getScope(client, {
-    resolveLocalScope: true,
-  });
+  const { contextName } = await getScope(client);
   if (!client.nonInteractive) {
     output.spinner(
       `Fetching Webhook ${webhookId} under ${chalk.bold(contextName)}`

@@ -51,9 +51,7 @@ export default async function schema(
   telemetry.trackCliOptionEvent(event);
   telemetry.trackCliOptionFormat(flags['--format']);
 
-  const { team } = await getScope(client, {
-    resolveLocalScope: true,
-  });
+  const { team } = await getScope(client);
   if (!team) {
     const message =
       'The metrics schema API request was not authorized. Run `vercel login` to authenticate and `vercel switch` to select a team, then try again.';

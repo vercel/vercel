@@ -60,9 +60,7 @@ export default async function inspect(client: Client, argv: string[]) {
 
   output.debug(`Fetching domain info`);
 
-  const { contextName } = await getScope(client, {
-    resolveLocalScope: true,
-  });
+  const { contextName } = await getScope(client);
   output.spinner(
     `Fetching Domain ${domainName} under ${chalk.bold(contextName)}`
   );

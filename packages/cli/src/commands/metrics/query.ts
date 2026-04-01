@@ -122,9 +122,7 @@ async function resolveQueryScope(
 > {
   // --project or --all: resolve team context via getScope
   if (opts.project || opts.all) {
-    const { team } = await getScope(client, {
-      resolveLocalScope: true,
-    });
+    const { team } = await getScope(client);
     if (!team) {
       const errMsg =
         'No team context found. Run `vercel switch` to select a team, or use `vercel link` in a project directory.';

@@ -94,9 +94,7 @@ export default async function inspectGroup(client: Client): Promise<number> {
   const configFileNameFlag = parsedArgs.flags['--config-file-name'] as
     | string
     | undefined;
-  const { team } = await getScope(client, {
-    resolveLocalScope: true,
-  });
+  const { team } = await getScope(client);
 
   if (!team) {
     output.error('Microfrontends are only available for teams.');

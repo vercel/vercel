@@ -69,9 +69,7 @@ export async function addAutoProvision(
   telemetry.trackCliOptionFormat(options.asJson ? 'json' : undefined);
 
   // Get team context
-  const { contextName, team } = await getScope(client, {
-    resolveLocalScope: true,
-  });
+  const { contextName, team } = await getScope(client);
   if (!team) {
     output.error('Team not found');
     return 1;

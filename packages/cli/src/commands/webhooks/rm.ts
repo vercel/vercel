@@ -93,9 +93,7 @@ export default async function rm(client: Client, argv: string[]) {
     );
   }
 
-  const { contextName } = await getScope(client, {
-    resolveLocalScope: true,
-  });
+  const { contextName } = await getScope(client);
 
   if (args.length !== 1) {
     output.error(

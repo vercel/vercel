@@ -155,9 +155,7 @@ export async function add(
   telemetry.trackCliOptionEnvironment(options.environments);
   telemetry.trackCliOptionPrefix(prefix);
 
-  const { contextName, team } = await getScope(client, {
-    resolveLocalScope: true,
-  });
+  const { contextName, team } = await getScope(client);
 
   if (!team) {
     output.error('Team not found');

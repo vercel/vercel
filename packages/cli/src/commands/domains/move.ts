@@ -39,9 +39,7 @@ export default async function move(client: Client, argv: string[]) {
   telemetry.trackCliArgumentDomain(args[0]);
   telemetry.trackCliArgumentDestination(args[1]);
 
-  const { contextName, user } = await getScope(client, {
-    resolveLocalScope: true,
-  });
+  const { contextName, user } = await getScope(client);
   const { domainName, destination } = await getArgs(client, args);
   if (!isRootDomain(domainName)) {
     output.error(

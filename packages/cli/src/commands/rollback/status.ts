@@ -65,9 +65,7 @@ export default async function rollbackStatus({
     : `Checking rollback status of ${project.name}`;
 
   if (!contextName) {
-    ({ contextName } = await getScope(client, {
-      resolveLocalScope: true,
-    }));
+    ({ contextName } = await getScope(client));
   }
 
   try {

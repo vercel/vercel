@@ -75,9 +75,7 @@ export default async function addon(client: Client, argv: string[]) {
   }
 
   // Ensure we have a team scope
-  const { team, contextName } = await getScope(client, {
-    resolveLocalScope: true,
-  });
+  const { team, contextName } = await getScope(client);
 
   if (!team) {
     output.error(

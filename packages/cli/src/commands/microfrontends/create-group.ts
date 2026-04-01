@@ -38,9 +38,7 @@ export default async function createGroup(client: Client): Promise<number> {
     return 1;
   }
 
-  const { team } = await getScope(client, {
-    resolveLocalScope: true,
-  });
+  const { team } = await getScope(client);
 
   if (!team) {
     output.error('Microfrontends are only available for teams.');

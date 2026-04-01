@@ -304,9 +304,7 @@ export default async function logs(client: Client) {
   let contextName: string | null = null;
 
   try {
-    ({ contextName } = await getScope(client, {
-      resolveLocalScope: true,
-    }));
+    ({ contextName } = await getScope(client));
   } catch (err: unknown) {
     if (
       isErrnoException(err) &&

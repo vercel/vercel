@@ -68,9 +68,7 @@ export async function list(client: Client) {
     project = { name: parsedArguments.args[1] };
   }
 
-  const { contextName, team } = await getScope(client, {
-    resolveLocalScope: true,
-  });
+  const { contextName, team } = await getScope(client);
 
   if (!team) {
     output.error('Team not found.');

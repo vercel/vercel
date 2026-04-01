@@ -82,9 +82,7 @@ export default async function remove(client: Client) {
     return 1;
   }
 
-  const { contextName } = await getScope(client, {
-    resolveLocalScope: true,
-  });
+  const { contextName } = await getScope(client);
 
   output.spinner(
     `Fetching deployment(s) ${ids

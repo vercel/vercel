@@ -49,9 +49,7 @@ export default async function importZone(client: Client, argv: string[]) {
   }
   const { args } = parsedArgs;
   const { telemetryEventStore } = client;
-  const { contextName } = await getScope(client, {
-    resolveLocalScope: true,
-  });
+  const { contextName } = await getScope(client);
   const telemetry = new DnsImportTelemetryClient({
     opts: {
       store: telemetryEventStore,

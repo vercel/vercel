@@ -166,9 +166,7 @@ export default async function list(client: Client) {
       // `app` looks like a hostname / URL, so fetch the deployment
       // from the API and retrieve the project ID from the deployment
       try {
-        ({ contextName } = await getScope(client, {
-          resolveLocalScope: true,
-        }));
+        ({ contextName } = await getScope(client));
       } catch (err: unknown) {
         if (
           isErrnoException(err) &&
@@ -224,9 +222,7 @@ export default async function list(client: Client) {
 
   if (!contextName) {
     try {
-      ({ contextName } = await getScope(client, {
-        resolveLocalScope: true,
-      }));
+      ({ contextName } = await getScope(client));
     } catch (err: unknown) {
       if (
         isErrnoException(err) &&
