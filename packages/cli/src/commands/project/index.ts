@@ -4,12 +4,16 @@ import getInvalidSubcommand from '../../util/get-invalid-subcommand';
 import { printError } from '../../util/error';
 import { type Command, help } from '../help';
 import add from './add';
+import accessGroupInspect from './access-group';
+import accessGroups from './access-groups';
 import inspect from './inspect';
 import list from './list';
 import rm from './rm';
 import getOidcToken from './token';
 import {
   addSubcommand,
+  accessGroupInspectSubcommand,
+  accessGroupsSubcommand,
   inspectSubcommand,
   listSubcommand,
   projectCommand,
@@ -26,6 +30,8 @@ const COMMAND_CONFIG = {
   inspect: getCommandAliases(inspectSubcommand),
   list: getCommandAliases(listSubcommand),
   add: getCommandAliases(addSubcommand),
+  'access-group': getCommandAliases(accessGroupInspectSubcommand),
+  'access-groups': getCommandAliases(accessGroupsSubcommand),
   remove: getCommandAliases(removeSubcommand),
   token: getCommandAliases(tokenSubcommand),
 };
@@ -94,6 +100,20 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandAdd(subcommandOriginal);
       return add(client, args);
+    case 'access-group':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('project', subcommandOriginal);
+        return printHelp(accessGroupInspectSubcommand);
+      }
+      telemetry.trackCliSubcommandAccessGroup(subcommandOriginal);
+      return accessGroupInspect(client, args);
+    case 'access-groups':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('project', subcommandOriginal);
+        return printHelp(accessGroupsSubcommand);
+      }
+      telemetry.trackCliSubcommandAccessGroups(subcommandOriginal);
+      return accessGroups(client, args);
     case 'token':
       if (needHelp) {
         telemetry.trackCliFlagHelp('project', subcommandOriginal);

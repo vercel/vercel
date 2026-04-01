@@ -25,6 +25,74 @@ export const addSubcommand = {
   ],
 } as const;
 
+export const accessGroupInspectSubcommand = {
+  name: 'access-group',
+  aliases: [],
+  description:
+    'Show details for a team access group by id or slug (requires project-rbac-access-groups)',
+  arguments: [
+    {
+      name: 'id-or-name',
+      required: true,
+    },
+  ],
+  options: [formatOption],
+  examples: [
+    {
+      name: 'Inspect an access group',
+      value: `${packageName} project access-group my-group-slug`,
+    },
+  ],
+} as const;
+
+export const accessGroupsSubcommand = {
+  name: 'access-groups',
+  aliases: [],
+  description:
+    'List access groups linked to a project (requires project-rbac-access-groups)',
+  arguments: [
+    {
+      name: 'name',
+      required: false,
+    },
+  ],
+  options: [
+    formatOption,
+    {
+      name: 'search',
+      shorthand: null,
+      type: String,
+      description: 'Filter access groups by name',
+      deprecated: false,
+    },
+    {
+      name: 'limit',
+      shorthand: null,
+      type: Number,
+      description: 'Limit how many access groups are returned (1-100)',
+      deprecated: false,
+    },
+    {
+      name: 'cursor',
+      shorthand: null,
+      type: String,
+      description:
+        'Pagination cursor from a previous response (`pagination.next`)',
+      deprecated: false,
+    },
+  ],
+  examples: [
+    {
+      name: 'List access groups for the linked project',
+      value: `${packageName} project access-groups`,
+    },
+    {
+      name: 'JSON output',
+      value: `${packageName} project access-groups my-app --format json`,
+    },
+  ],
+} as const;
+
 export const inspectSubcommand = {
   name: 'inspect',
   aliases: [],
@@ -122,6 +190,8 @@ export const projectCommand = {
   arguments: [],
   subcommands: [
     addSubcommand,
+    accessGroupInspectSubcommand,
+    accessGroupsSubcommand,
     inspectSubcommand,
     listSubcommand,
     removeSubcommand,
