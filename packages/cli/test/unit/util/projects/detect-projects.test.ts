@@ -25,6 +25,12 @@ describe('detectProjects()', () => {
     expect(mapDetected(detected)).toEqual([['', ['nextjs']]]);
   });
 
+  it('should match 1 Project in "storybook" example', async () => {
+    const dir = join(EXAMPLES_DIR, 'storybook');
+    const detected = await detectProjects(dir);
+    expect(mapDetected(detected)).toEqual([['', ['storybook']]]);
+  });
+
   it('should match "30-double-nested-workspaces"', async () => {
     const dir = join(FS_DETECTORS_FIXTURES, '30-double-nested-workspaces');
     const detected = await detectProjects(dir);
