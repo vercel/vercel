@@ -189,8 +189,6 @@ export default async function main(client: Client): Promise<number> {
   let { cwd } = client;
   cwd = await resolveProjectCwd(cwd);
 
-  // If cwd is inside an already-linked project, climb up to it.
-  // This handles `vc build` from a subdirectory of a linked project.
   const linkedRoot = await findEnclosingLinkedVercelRoot(cwd);
   if (linkedRoot) {
     cwd = linkedRoot;
@@ -2060,17 +2058,6 @@ async function streamToString(stream: NodeJS.ReadableStream): Promise<string> {
   return Buffer.concat(chunks).toString('utf-8');
 }
 
-/**
- * Walk upward from startDir looking for a directory that contains
- * `.vercel/project.json` or `.vercel/repo.json` — i.e., an already-linked
- * Vercel project or repo root.
- *
- * Does NOT match `.git` or bare `vercel.json` — those are not proof that
- * a Vercel project link exists.
- *
- * Returns the matching directory, or null if none found before hitting
- * the filesystem root / device boundary.
- */
 async function findEnclosingLinkedVercelRoot(
   startDir: string
 ): Promise<string | null> {

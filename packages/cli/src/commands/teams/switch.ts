@@ -39,14 +39,6 @@ const updateCurrentTeam = (config: GlobalConfig, team?: Team) => {
   writeToConfigFile(config);
 };
 
-/**
- * After switching scope, check if the cwd has a .vercel/project.json or
- * .vercel/repo.json whose orgId differs from the newly active scope.
- * If so, warn the user that project-bound commands will still use the
- * linked project's team.
- *
- * This is a read-only, best-effort check — it never modifies link files.
- */
 async function warnIfStaleLinkExists(
   client: Client,
   newOrgId: string

@@ -10,45 +10,24 @@ import type { RepoProjectsConfig } from './link/repo';
 import output from '../output-manager';
 
 export interface ScopeContext {
-  /** The resolved org for API calls */
   org: Org;
-  /** Display name for the active scope (team slug or username) */
   contextName: string;
-  /** The authenticated user */
   user: User;
-  /** The resolved team, or null if using a personal account */
   team: Team | null;
-
-  /** Local repo link info, null if not in a repo-linked directory */
   linkedRepo: {
     repoConfig: RepoProjectsConfig;
     rootPath: string;
   } | null;
-
-  /** repo.json has projects with different orgIds */
   isCrossTeamRepo: boolean;
-  /** global scope !== linked project's orgId */
   scopeMismatch: boolean;
-  /** user passed --scope, --team, or has scope in vercel.json */
   explicitScopeProvided: boolean;
 }
 
 interface GetScopeOptions {
   getTeam?: boolean;
-  /** Read local scope (.vercel/project.json, .vercel/repo.json) and reconcile with global scope */
   resolveLocalScope?: boolean;
 }
 
-/**
- * Resolves the current scope for CLI commands.
- *
- * With no options (or just `{ getTeam }`), returns the basic global scope:
- * `{ contextName, team, user }`. This is the fast path — no disk reads.
- *
- * With `{ resolveLocalScope }`, also reads local scope
- * (.vercel/project.json, .vercel/repo.json) and reconciles it with
- * the global scope, returning the full `ScopeContext`.
- */
 export default async function getScope(
   client: Client,
   opts: GetScopeOptions = {}
@@ -70,16 +49,13 @@ export default async function getScope(
     contextName = team.slug;
   }
 
-  // Fast path: no local scope resolution, return basic scope
   if (!opts.resolveLocalScope) {
     return { contextName, team, user };
   }
 
-  // Enriched path: reconcile global scope with local scope
   const explicitScopeProvided = detectExplicitScope(client);
   const globalTeamId = client.config.currentTeam;
 
-  // Read local scope (non-blocking, best-effort)
   const cwd = client.cwd;
   const projectLink = await getLinkFromDir<{
     orgId: string;
@@ -87,7 +63,6 @@ export default async function getScope(
   }>(getVercelDirectory(cwd)).catch(() => null);
   const repoLink = await getRepoLink(client, cwd).catch(() => null);
 
-  // Determine the local orgId from project link or repo link
   let localOrgId: string | undefined;
   if (projectLink) {
     localOrgId = projectLink.orgId;
@@ -112,15 +87,12 @@ export default async function getScope(
     }
   }
 
-  // Detect cross-team repo
   const isCrossTeamRepo = detectCrossTeamRepo(repoLink?.repoConfig);
 
-  // Detect mismatch
   const scopeMismatch = Boolean(
     localOrgId && globalTeamId && globalTeamId !== localOrgId
   );
 
-  // Resolve the effective scope
   let resolvedOrg: Org;
   let resolvedContextName = contextName;
   let resolvedTeam = team;
@@ -134,12 +106,10 @@ export default async function getScope(
   }
 
   if (explicitScopeProvided) {
-    // Explicit --scope wins
     resolvedOrg = team
       ? { type: 'team', id: team.id, slug: team.slug }
       : { type: 'user', id: user.id, slug: user.username };
   } else if (localOrgId) {
-    // No explicit scope, inherit from local link
     client.config.currentTeam = localOrgId.startsWith('team_')
       ? localOrgId
       : undefined;
@@ -160,7 +130,6 @@ export default async function getScope(
       : correctedUser.username || correctedUser.email;
     resolvedTeam = correctedTeam;
   } else {
-    // No local link, use global scope as-is
     if (isCrossTeamRepo) {
       output.warn(
         `This repository has projects across multiple teams. ` +
@@ -184,14 +153,6 @@ export default async function getScope(
   } satisfies ScopeContext;
 }
 
-/**
- * Applies scope from a pre-resolved project link.
- * Sets client.config.currentTeam and warns if the linked project's org
- * differs from the user's current global scope (--scope, vc switch, config).
- *
- * Use this when the command already has a link from getLinkedProject()/ensureLink().
- * Unlike getScope(), this makes no API calls.
- */
 export function applyScopeFromLink(client: Client, link: { org: Org }): void {
   const localOrgId = link.org.id;
   const globalTeamId = client.config.currentTeam;
@@ -210,10 +171,6 @@ export function applyScopeFromLink(client: Client, link: { org: Org }): void {
     : undefined;
 }
 
-/**
- * Detects whether the user explicitly provided a scope via --scope, --team,
- * or the `scope` field in vercel.json (localConfig).
- */
 function detectExplicitScope(client: Client): boolean {
   const argv = client.argv;
   for (const arg of argv) {
@@ -235,9 +192,6 @@ function detectExplicitScope(client: Client): boolean {
   return false;
 }
 
-/**
- * Detects whether a repo.json config has projects across multiple teams.
- */
 function detectCrossTeamRepo(
   repoConfig: RepoProjectsConfig | undefined
 ): boolean {

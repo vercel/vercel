@@ -216,7 +216,6 @@ describe('resolveScopeContext', () => {
       const ctx = await getScope(client, { resolveLocalScope: true });
 
       expect(ctx.isCrossTeamRepo).toBe(true);
-      // Both root projects share the same orgId — resolves without warning
       expect(ctx.org.id).toEqual(mockTeam.id);
     });
   });

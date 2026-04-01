@@ -290,7 +290,6 @@ describe('teams switch', () => {
       const teamA = useTeam('team_aaa');
       const teamB = createTeam('team_bbb', 'team-b', 'Team B');
 
-      // Link cwd to team_aaa
       const cwd = setupTmpDir();
       client.cwd = cwd;
       await outputFile(
@@ -298,7 +297,6 @@ describe('teams switch', () => {
         JSON.stringify({ projectId: 'prj_xxx', orgId: 'team_aaa' })
       );
 
-      // Switch to team-b via slug
       client.config.currentTeam = teamA.id;
       client.setArgv('teams', 'switch', teamB.slug);
       const exitCode = await teams(client);
@@ -313,7 +311,6 @@ describe('teams switch', () => {
       const teamA = useTeam('team_aaa');
       const teamB = createTeam('team_bbb', 'team-b', 'Team B');
 
-      // Link cwd to team_bbb (same as what we'll switch to)
       const cwd = setupTmpDir();
       client.cwd = cwd;
       await outputFile(
@@ -321,7 +318,6 @@ describe('teams switch', () => {
         JSON.stringify({ projectId: 'prj_xxx', orgId: 'team_bbb' })
       );
 
-      // Switch from team_aaa to team-b
       client.config.currentTeam = teamA.id;
       client.setArgv('teams', 'switch', teamB.slug);
       const exitCode = await teams(client);
