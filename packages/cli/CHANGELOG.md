@@ -1,5 +1,34 @@
 # vercel
 
+## 50.38.2
+
+### Patch Changes
+
+- Start user fetch earlier ([#15760](https://github.com/vercel/vercel/pull/15760))
+
+- Fix update checker running after `vercel build` on Vercel by reading env vars before CLI internals can unset them ([#15804](https://github.com/vercel/vercel/pull/15804))
+
+- Updated dependencies [[`c98a02d87276f41b1580b78d37f9f671fd9d1f12`](https://github.com/vercel/vercel/commit/c98a02d87276f41b1580b78d37f9f671fd9d1f12)]:
+  - @vercel/build-utils@13.12.2
+  - @vercel/backends@0.0.55
+  - @vercel/elysia@0.1.57
+  - @vercel/express@0.1.67
+  - @vercel/fastify@0.1.60
+  - @vercel/go@3.4.7
+  - @vercel/h3@0.1.66
+  - @vercel/hono@0.2.60
+  - @vercel/hydrogen@1.3.6
+  - @vercel/koa@0.1.40
+  - @vercel/nestjs@0.2.61
+  - @vercel/next@4.16.4
+  - @vercel/node@5.6.24
+  - @vercel/python@6.29.0
+  - @vercel/redwood@2.4.12
+  - @vercel/remix-builder@5.7.2
+  - @vercel/ruby@2.3.2
+  - @vercel/rust@1.0.6
+  - @vercel/static-build@2.9.8
+
 ## 50.38.1
 
 ### Patch Changes
