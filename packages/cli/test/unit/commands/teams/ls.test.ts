@@ -37,12 +37,13 @@ describe('teams ls', () => {
       });
       useTeams(undefined, { apiVersion: 2 });
       client.setArgv('teams', 'ls');
-      const exitCodePromise = teams(client);
-      await expect(client.stderr).toOutput(user.username);
-      await expect(client.stderr).toOutput('Plan');
-      await expect(client.stderr).toOutput('hobby');
-      const exitCode = await exitCodePromise;
+      const exitCode = await teams(client);
       expect(exitCode, 'exit code for "teamsList"').toEqual(0);
+
+      const stderrOutput = client.stderr.getFullOutput();
+      expect(stderrOutput).toContain(user.username);
+      expect(stderrOutput).toContain('Plan');
+      expect(stderrOutput).toContain('hobby');
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
           key: 'subcommand:list',
@@ -230,9 +231,10 @@ describe('teams ls', () => {
       const exitCode = await teams(client);
       expect(exitCode).toEqual(0);
 
-      await expect(client.stderr).toOutput('Plan');
-      await expect(client.stderr).toOutput('pro');
-      await expect(client.stderr).toOutput(currentTeam.slug);
+      const stderrOutput = client.stderr.getFullOutput();
+      expect(stderrOutput).toContain('Plan');
+      expect(stderrOutput).toContain('pro');
+      expect(stderrOutput).toContain(currentTeam.slug);
     });
   });
 });

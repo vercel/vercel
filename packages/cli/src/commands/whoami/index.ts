@@ -55,6 +55,7 @@ export default async function whoami(client: Client): Promise<number> {
   });
   const { contextName, team, user } = scope;
   const plan = team?.billing.plan ?? user.billing?.plan ?? null;
+  const userIdentifier = user.username || user.email;
 
   if (asJson) {
     const jsonOutput = {
@@ -78,9 +79,9 @@ export default async function whoami(client: Client): Promise<number> {
   } else if (client.stdout.isTTY) {
     output.log(plan ? `${contextName} (${plan})` : contextName);
   } else {
-    // If stdout is not a TTY, then only print the username
+    // If stdout is not a TTY, then only print the current user identifier
     // to support piping the output to another file / exe
-    client.stdout.write(`${contextName}\n`);
+    client.stdout.write(`${userIdentifier}\n`);
   }
 
   return 0;

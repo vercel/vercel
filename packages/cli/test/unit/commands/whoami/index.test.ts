@@ -43,6 +43,18 @@ describe('whoami', () => {
     await expect(client.stdout).toOutput(`${user.username}\n`);
   });
 
+  it('should print only the Vercel username when a team scope is active and output is not a TTY', async () => {
+    const team = useTeam();
+    const user = useUser();
+    client.config.currentTeam = team.id;
+    client.stdout.isTTY = false;
+
+    const exitCode = await whoami(client);
+
+    expect(exitCode).toEqual(0);
+    await expect(client.stdout).toOutput(`${user.username}\n`);
+  });
+
   describe('--format', () => {
     it('tracks telemetry for --format json', async () => {
       useUser();

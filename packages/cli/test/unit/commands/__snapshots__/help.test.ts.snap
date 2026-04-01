@@ -6140,8 +6140,8 @@ exports[`help command > whoami help output snapshots > whoami help column width 
 "
   ▲ vercel whoami [options]
 
-  Shows the username of the currently   
-  logged in user.                       
+  Shows the current user, active scope, 
+  and effective plan.                   
 
   Options:
 
@@ -6200,7 +6200,7 @@ exports[`help command > whoami help output snapshots > whoami help column width 
 
   Examples:
 
-  - Shows the username of the currently logged in user
+  - Show the current user and effective scope plan
 
     $ vercel whoami
 
@@ -6211,7 +6211,7 @@ exports[`help command > whoami help output snapshots > whoami help column width 
 "
   ▲ vercel whoami [options]
 
-  Shows the username of the currently logged in user.                           
+  Shows the current user, active scope, and effective plan.                     
 
   Options:
 
@@ -6236,7 +6236,7 @@ exports[`help command > whoami help output snapshots > whoami help column width 
 
   Examples:
 
-  - Shows the username of the currently logged in user
+  - Show the current user and effective scope plan
 
     $ vercel whoami
 
@@ -6247,7 +6247,7 @@ exports[`help command > whoami help output snapshots > whoami help column width 
 "
   ▲ vercel whoami [options]
 
-  Shows the username of the currently logged in user.                                                                   
+  Shows the current user, active scope, and effective plan.                                                             
 
   Options:
 
@@ -6270,7 +6270,7 @@ exports[`help command > whoami help output snapshots > whoami help column width 
 
   Examples:
 
-  - Shows the username of the currently logged in user
+  - Show the current user and effective scope plan
 
     $ vercel whoami
 
