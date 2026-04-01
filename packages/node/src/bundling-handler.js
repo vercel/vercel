@@ -51,13 +51,11 @@ function resolveEntrypoint(name) {
 }
 
 /**
- * Load a module, using import() for ESM (.mjs) and require() for CJS.
+ * Load a module via dynamic import(). Works for both CJS and ESM regardless
+ * of the file extension or the package.json "type" field.
  */
 async function loadModule(filePath) {
-  if (filePath.endsWith('.mjs')) {
-    return import(pathToFileURL(filePath).href);
-  }
-  return require(filePath);
+  return import(pathToFileURL(filePath).href);
 }
 
 /**
@@ -113,7 +111,14 @@ function createWebHandler(listener) {
     }
 
     const request = new Request(url, init);
-    const response = await fn(request);
+    let response;
+    try {
+      response = await fn(request);
+    } catch {
+      res.statusCode = 500;
+      res.end('Internal Server Error');
+      return;
+    }
 
     // Write the Web API Response back to the Node.js ServerResponse
     res.statusCode = response.status;
@@ -236,7 +241,12 @@ module.exports = async (req, res) => {
       res.end('No handler found for ' + entrypoint);
       return;
     }
-    handlerCache[entrypoint] = compileUserCode(filePath);
+    // Store the Promise immediately so concurrent requests to the same
+    // entrypoint share one compileUserCode() call instead of racing.
+    handlerCache[entrypoint] = compileUserCode(filePath).catch(err => {
+      delete handlerCache[entrypoint]; // Allow retry on next request
+      throw err;
+    });
   }
 
   const handler = await handlerCache[entrypoint];

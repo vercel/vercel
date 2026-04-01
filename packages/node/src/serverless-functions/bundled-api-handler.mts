@@ -1,3 +1,22 @@
+/**
+ * NOTE: This file is NOT currently wired into any build or runtime flow.
+ *
+ * `createBundledApiEventHandler` is never called — no code imports it.
+ * It was designed as a future optimization for bundled API routes that would:
+ *   - Bypass the double-proxy through serverless-handler.mts
+ *   - Use an explicit entrypoint map (___vc_api_entrypoint_map.json)
+ *     instead of filesystem probing
+ *   - Integrate directly with the Lambda runtime launcher
+ *
+ * Activating this would require:
+ *   1. Generating ___vc_api_entrypoint_map.json during build or grouping
+ *   2. Platform-level changes so the runtime launcher calls
+ *      createBundledApiEventHandler instead of createServerlessEventHandler
+ *
+ * The active bundled handler is src/bundling-handler.js, which is deployed
+ * as ___vc_bundled_api_handler.js inside the Lambda and invoked through the
+ * standard serverless-handler.mts wrapping.
+ */
 import { addHelpers } from './helpers.js';
 import { createServer } from 'http';
 import {

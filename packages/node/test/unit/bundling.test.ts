@@ -264,6 +264,154 @@ describe('experimentalAllowBundling', () => {
   });
 });
 
+describe('bundling produces groupable lambdas', () => {
+  const originalEnv = process.env.VERCEL_API_FUNCTION_BUNDLING;
+
+  afterEach(() => {
+    if (originalEnv === undefined) {
+      delete process.env.VERCEL_API_FUNCTION_BUNDLING;
+    } else {
+      process.env.VERCEL_API_FUNCTION_BUNDLING = originalEnv;
+    }
+  });
+
+  it('all handler shapes produce identical handler + matching config for grouping', async () => {
+    process.env.VERCEL_API_FUNCTION_BUNDLING = '1';
+
+    // Build multiple entrypoints of different handler shapes
+    const entrypoints: Record<string, string> = {
+      'api/cjs.js': `module.exports = (req, res) => res.end('ok');`,
+      'api/esm-default.js': `export default (req, res) => res.end('ok');`,
+      'api/web.js': `
+        export function GET(req) { return new Response('ok'); }
+        export function POST(req) { return new Response('ok'); }
+      `,
+      'api/fetchhandler.js': `
+        export function fetch(req) { return new Response('ok'); }
+      `,
+      'api/ts.ts': `
+        import type { IncomingMessage, ServerResponse } from 'http';
+        export default (req: IncomingMessage, res: ServerResponse) => res.end('ok');
+      `,
+    };
+
+    const results: Array<{
+      name: string;
+      handler: string;
+      experimentalAllowBundling: boolean | undefined;
+      handlerFileKeys: string[];
+      routes: any;
+    }> = [];
+
+    for (const [entrypoint, code] of Object.entries(entrypoints)) {
+      const filesystem = await prepareFilesystem({ [entrypoint]: code });
+      const buildResult = await build({
+        ...filesystem,
+        entrypoint,
+        config: { zeroConfig: true },
+        meta: { skipDownload: true },
+      });
+
+      const lambda = buildResult.output as NodejsLambda;
+      results.push({
+        name: entrypoint,
+        handler: lambda.handler,
+        experimentalAllowBundling: lambda.experimentalAllowBundling,
+        handlerFileKeys: Object.keys(lambda.files || {}),
+        routes: buildResult.routes,
+      });
+    }
+
+    // All lambdas must have experimentalAllowBundling enabled
+    for (const r of results) {
+      expect(
+        r.experimentalAllowBundling,
+        `${r.name} should have experimentalAllowBundling`
+      ).toBe(true);
+    }
+
+    // All lambdas must use the same shared handler name
+    const handlers = new Set(results.map(r => r.handler));
+    expect(handlers.size, 'all lambdas should share the same handler').toBe(1);
+    expect(handlers.has('___vc_bundled_api_handler.js')).toBe(true);
+
+    // All lambdas must include the shared handler file in their files
+    for (const r of results) {
+      expect(
+        r.handlerFileKeys,
+        `${r.name} should include ___vc_bundled_api_handler.js`
+      ).toContain('___vc_bundled_api_handler.js');
+    }
+
+    // All lambdas must emit handle:hit routes with x-matched-path transforms
+    for (const r of results) {
+      expect(r.routes, `${r.name} should emit routes`).toBeDefined();
+      expect(r.routes.length).toBeGreaterThanOrEqual(2);
+      expect(r.routes[0]).toEqual({ handle: 'hit' });
+    }
+
+    // Verify all lambdas include the shared handler file
+    // (same FileFsRef → same content → same SHA-1 digest for groupLambdas)
+    for (const r of results) {
+      expect(r.handlerFileKeys).toContain('___vc_bundled_api_handler.js');
+    }
+  });
+
+  it('non-bundleable routes are excluded: edge function', async () => {
+    process.env.VERCEL_API_FUNCTION_BUNDLING = '1';
+
+    const filesystem = await prepareFilesystem({
+      'api/edge.js': `export const config = { runtime: 'edge' }; export default (req) => new Response('ok');`,
+    });
+
+    const buildResult = await build({
+      ...filesystem,
+      entrypoint: 'api/edge.js',
+      config: { zeroConfig: true },
+      meta: { skipDownload: true },
+    });
+
+    const lambda = buildResult.output as any;
+    expect(lambda.experimentalAllowBundling).toBeUndefined();
+  });
+
+  it('non-bundleable routes are excluded: middleware', async () => {
+    process.env.VERCEL_API_FUNCTION_BUNDLING = '1';
+
+    const filesystem = await prepareFilesystem({
+      'middleware.js': `export default (req) => new Response('ok');`,
+    });
+
+    const buildResult = await build({
+      ...filesystem,
+      entrypoint: 'middleware.js',
+      config: { zeroConfig: true, middleware: true },
+      meta: { skipDownload: true },
+    });
+
+    const lambda = buildResult.output as any;
+    expect(lambda.experimentalAllowBundling).toBeUndefined();
+  });
+
+  it('non-bundleable routes are excluded: non-zeroConfig', async () => {
+    process.env.VERCEL_API_FUNCTION_BUNDLING = '1';
+
+    const filesystem = await prepareFilesystem({
+      'api/hello.js': `module.exports = (req, res) => res.end('ok');`,
+    });
+
+    const buildResult = await build({
+      ...filesystem,
+      entrypoint: 'api/hello.js',
+      config: {},
+      meta: { skipDownload: true },
+    });
+
+    const lambda = buildResult.output as NodejsLambda;
+    expect(lambda.experimentalAllowBundling).toBeUndefined();
+  });
+});
+
 describe('bundling-handler runtime', () => {
   let fixtureDir: string;
   let originalCwd: string;
@@ -332,6 +480,12 @@ describe('bundling-handler runtime', () => {
     await fs.writeFile(
       join(fixtureDir, 'api', 'wrapped.js'),
       `module.exports = { default: { default: (req, res) => { res.end('wrapped-ok'); } } };`
+    );
+
+    // Race condition target (unused until the concurrent test fires)
+    await fs.writeFile(
+      join(fixtureDir, 'api', 'race.js'),
+      `module.exports = (req, res) => { res.end('race-ok'); };`
     );
 
     originalCwd = process.cwd();
@@ -474,5 +628,88 @@ describe('bundling-handler runtime', () => {
     });
     expect(res.status).toBe(200);
     expect(await res.text()).toBe('wrapped-ok');
+  });
+
+  it('handles concurrent first requests to the same entrypoint without racing', async () => {
+    const results = await Promise.all(
+      Array.from({ length: 5 }, () =>
+        fetch(baseUrl + '/api/race', {
+          headers: { 'x-matched-path': '/api/race' },
+        }).then(async r => ({ status: r.status, body: await r.text() }))
+      )
+    );
+    for (const r of results) {
+      expect(r.status).toBe(200);
+      expect(r.body).toBe('race-ok');
+    }
+  });
+});
+
+describe('bundling-handler with "type": "module" package', () => {
+  let fixtureDir: string;
+  let originalCwd: string;
+  let handler: (req: any, res: any) => Promise<void>;
+  let server: Server;
+  let baseUrl: string;
+
+  beforeAll(async () => {
+    fixtureDir = join(tmpdir(), `bundling-type-module-test-${Date.now()}`);
+    await fs.mkdir(join(fixtureDir, 'api'), { recursive: true });
+
+    // Mark the project as ESM
+    await fs.writeFile(
+      join(fixtureDir, 'package.json'),
+      JSON.stringify({ type: 'module' })
+    );
+
+    // .js file that is ESM due to "type": "module"
+    await fs.writeFile(
+      join(fixtureDir, 'api', 'esm.js'),
+      `export default (req, res) => { res.end('type-module-ok'); };`
+    );
+
+    originalCwd = process.cwd();
+    process.chdir(fixtureDir);
+
+    // Clear the require cache to get a fresh handler with its own handlerCache,
+    // preventing interference from the previous describe block's cached entries.
+    const handlerPath = require.resolve('../../src/bundling-handler.js');
+    delete require.cache[handlerPath];
+    handler = require('../../src/bundling-handler.js');
+
+    server = createServer(async (req, res) => {
+      try {
+        await handler(req, res);
+      } catch (err) {
+        res.statusCode = 500;
+        res.end(err.message);
+      }
+    });
+
+    await new Promise<void>(resolve => {
+      server.listen(0, '127.0.0.1', resolve);
+    });
+    const addr = server.address();
+    if (typeof addr === 'object' && addr) {
+      baseUrl = `http://127.0.0.1:${addr.port}`;
+    }
+  });
+
+  afterAll(async () => {
+    process.chdir(originalCwd);
+    if (server) {
+      await new Promise<void>((resolve, reject) =>
+        server.close(err => (err ? reject(err) : resolve()))
+      );
+    }
+    await fs.rm(fixtureDir, { recursive: true, force: true });
+  });
+
+  it('loads .js files as ESM when package.json has "type": "module"', async () => {
+    const res = await fetch(baseUrl + '/api/esm', {
+      headers: { 'x-matched-path': '/api/esm' },
+    });
+    expect(res.status).toBe(200);
+    expect(await res.text()).toBe('type-module-ok');
   });
 });
