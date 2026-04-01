@@ -4320,23 +4320,40 @@ exports[`help command > project help output snapshots > project help column widt
 
   Commands:
 
-  add      name    Add a new    
-                   project      
-  inspect  [name]  Displays     
-                   information  
-                   related to a 
-                   project      
-  list             Show all     
-                   projects in  
-                   the selected 
-                   scope        
-                   (default)    
-  remove   name    Delete a     
-                   project      
-  token    [name]  Get a        
-                   development  
-                   OIDC token   
-                   for a project
+  add            name    Add a  
+                         new    
+                         project
+  inspect        [name]  Displa…
+                         inform…
+                         related
+                         to a   
+                         project
+  list                   Show   
+                         all    
+                         projec…
+                         in the 
+                         select…
+                         scope  
+                         (defau…
+  members        [name]  List   
+                         project
+                         members
+                         for a  
+                         project
+  access-groups  [name]  List   
+                         access 
+                         groups 
+                         for a  
+                         project
+  remove         name    Delete 
+                         a      
+                         project
+  token          [name]  Get a  
+                         develo…
+                         OIDC   
+                         token  
+                         for a  
+                         project
 
 
   Global Options:
@@ -4398,11 +4415,14 @@ exports[`help command > project help output snapshots > project help column widt
 
   Commands:
 
-  add      name    Add a new project                                    
-  inspect  [name]  Displays information related to a project            
-  list             Show all projects in the selected scope (default)    
-  remove   name    Delete a project                                     
-  token    [name]  Get a development OIDC token for a project           
+  add            name    Add a new project                              
+  inspect        [name]  Displays information related to a project      
+  list                   Show all projects in the selected scope        
+                         (default)                                      
+  members        [name]  List project members for a project             
+  access-groups  [name]  List access groups for a project               
+  remove         name    Delete a project                               
+  token          [name]  Get a development OIDC token for a project     
 
 
   Global Options:
@@ -4432,11 +4452,13 @@ exports[`help command > project help output snapshots > project help column widt
 
   Commands:
 
-  add      name    Add a new project                                                                            
-  inspect  [name]  Displays information related to a project                                                    
-  list             Show all projects in the selected scope (default)                                            
-  remove   name    Delete a project                                                                             
-  token    [name]  Get a development OIDC token for a project                                                   
+  add            name    Add a new project                                                                      
+  inspect        [name]  Displays information related to a project                                              
+  list                   Show all projects in the selected scope (default)                                      
+  members        [name]  List project members for a project                                                     
+  access-groups  [name]  List access groups for a project                                                       
+  remove         name    Delete a project                                                                       
+  token          [name]  Get a development OIDC token for a project                                             
 
 
   Global Options:
@@ -5711,16 +5733,20 @@ exports[`help command > teams help output snapshots > teams help column width 40
 
   Commands:
 
-  add             Create a new  
-                  team          
-  invite  email   Invite a new  
-                  member to a   
-                  team          
-  list            Show all teams
-                  that you're a 
-                  member of     
-  switch  [name]  Switch to a   
-                  different team
+  add              Create a new  
+                   team          
+  invite   email   Invite a new  
+                   member to a   
+                   team          
+  list             Show all teams
+                   that you're a 
+                   member of     
+  switch   [name]  Switch to a   
+                   different team
+  members          List members  
+                   for the       
+                   currently     
+                   scoped team   
 
 
   Global Options:
@@ -5782,10 +5808,11 @@ exports[`help command > teams help output snapshots > teams help column width 80
 
   Commands:
 
-  add             Create a new team                                     
-  invite  email   Invite a new member to a team                         
-  list            Show all teams that you're a member of                
-  switch  [name]  Switch to a different team                            
+  add              Create a new team                                     
+  invite   email   Invite a new member to a team                         
+  list             Show all teams that you're a member of                
+  switch   [name]  Switch to a different team                            
+  members          List members for the currently scoped team            
 
 
   Global Options:
@@ -5815,10 +5842,11 @@ exports[`help command > teams help output snapshots > teams help column width 12
 
   Commands:
 
-  add             Create a new team                                                                             
-  invite  email   Invite a new member to a team                                                                 
-  list            Show all teams that you're a member of                                                        
-  switch  [name]  Switch to a different team                                                                    
+  add              Create a new team                                                                             
+  invite   email   Invite a new member to a team                                                                 
+  list             Show all teams that you're a member of                                                        
+  switch   [name]  Switch to a different team                                                                    
+  members          List members for the currently scoped team                                                    
 
 
   Global Options:
