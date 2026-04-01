@@ -91,10 +91,10 @@ export default async function update(client: Client, argv: string[]) {
     return 1;
   }
 
-  if (stdInput && (!envName || !envTargetArg)) {
+  if (stdInput && !envName) {
     output.error(
       `Invalid number of arguments. Usage: ${getCommandName(
-        `env update <name> <target> <gitbranch> < <file>`
+        `env update <name> [target] [gitbranch] < <file>`
       )}`
     );
     return 1;
