@@ -21,6 +21,7 @@ export {
   getInternalServiceFunctionPath,
   getInternalServiceCronPath,
   getInternalServiceCronPathPrefix,
+  getServiceCronPath,
   getInternalServiceWorkerPath,
   getInternalServiceWorkerPathPrefix,
 } from './services/utils';

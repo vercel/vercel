@@ -1,0 +1,11 @@
+{
+  "experimentalServices": {
+    "cron": {
+      "type": "cron",
+      "runtime": "python",
+      "root": "cron",
+      "command": "python task.py command",
+      "schedule": "* * * * *"
+    }
+  }
+}

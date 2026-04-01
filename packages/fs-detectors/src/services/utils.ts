@@ -7,7 +7,7 @@ import type {
   ServiceRuntime,
   ExperimentalServices,
   ServiceDetectionError,
-  ResolvedService,
+  Service,
 } from './types';
 import {
   RUNTIME_BUILDERS,
@@ -76,6 +76,32 @@ export function getInternalServiceCronPath(
   const normalizedEntrypoint = normalizeInternalServiceEntrypoint(entrypoint);
   return `${getInternalServiceCronPathPrefix(serviceName)}/${normalizedEntrypoint}/${handler}`;
 }
+
+const COMMAND_CRON_ENTRYPOINT = '__command__';
+const COMMAND_CRON_HANDLER = 'run';
+
+export function getServiceCronPath(service: {
+  name: string;
+  entrypoint?: string;
+  builder: { src?: string };
+  handlerFunction?: string;
+  command?: string;
+}): string {
+  if (typeof service.command === 'string' && service.command.length > 0) {
+    return getInternalServiceCronPath(
+      service.name,
+      COMMAND_CRON_ENTRYPOINT,
+      COMMAND_CRON_HANDLER
+    );
+  }
+
+  const cronEntrypoint = service.entrypoint || service.builder.src || 'index';
+  return getInternalServiceCronPath(
+    service.name,
+    cronEntrypoint,
+    service.handlerFunction || 'cron'
+  );
+}
 export function getBuilderForRuntime(runtime: ServiceRuntime): string {
   const builder = RUNTIME_BUILDERS[runtime];
   if (!builder) {
@@ -84,7 +110,7 @@ export function getBuilderForRuntime(runtime: ServiceRuntime): string {
   return builder;
 }
 
-export function isStaticBuild(service: ResolvedService): boolean {
+export function isStaticBuild(service: Service): boolean {
   return STATIC_BUILDERS.has(service.builder.use);
 }
 
@@ -96,7 +122,7 @@ export function isStaticBuild(service: ResolvedService): boolean {
  * hit, error). The services system should NOT generate synthetic catch-all
  * rewrites for them — instead, we rely on the builder's own `routes[]`.
  */
-export function isRouteOwningBuilder(service: ResolvedService): boolean {
+export function isRouteOwningBuilder(service: Service): boolean {
   return ROUTE_OWNING_BUILDERS.has(service.builder.use);
 }
 

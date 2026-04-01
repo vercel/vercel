@@ -167,6 +167,11 @@ const serviceConfigSchema = {
       minLength: 1,
       maxLength: 512,
     },
+    root: {
+      type: 'string',
+      minLength: 1,
+      maxLength: 512,
+    },
     routePrefix: {
       type: 'string',
       minLength: 1,
@@ -236,6 +241,11 @@ const serviceConfigSchema = {
       type: 'string',
       minLength: 9,
       maxLength: 256,
+    },
+    command: {
+      type: 'string',
+      minLength: 1,
+      maxLength: 2048,
     },
     // Worker-specific
     topics: {

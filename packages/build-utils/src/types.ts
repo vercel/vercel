@@ -583,6 +583,8 @@ export interface Service {
   subdomain?: string;
   /* cron service config */
   schedule?: string;
+  /* shell command executed by a command-backed cron service */
+  command?: string;
   /* optional handler for cron service in format of {module}:{callable} */
   handlerFunction?: string;
   /* worker service config */
@@ -792,6 +794,12 @@ export interface ExperimentalServiceConfig {
    * @example "apps/web", "services/api/src/index.ts", "services/fastapi/main.py"
    */
   entrypoint?: string;
+  /**
+   * Service root, relative to the project root.
+   * Used by command-backed cron services as the build/runtime working directory.
+   * @example "apps/jobs", "services/cleanup"
+   */
+  root?: string;
 
   /** Framework to use */
   framework?: string;
@@ -818,6 +826,11 @@ export interface ExperimentalServiceConfig {
   /* Cron service config */
   /** Cron schedule expression (e.g., "0 0 * * *") */
   schedule?: string;
+  /**
+   * Shell command executed by a cron service.
+   * Currently supported for Python cron services only.
+   */
+  command?: string;
 
   /* Worker service config */
   topics?: string[];

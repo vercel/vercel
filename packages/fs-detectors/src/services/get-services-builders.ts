@@ -1,6 +1,6 @@
 import type { Route } from '@vercel/routing-utils';
 import type { Builder } from '@vercel/build-utils';
-import type { ResolvedService } from './types';
+import type { Service } from './types';
 import { detectServices } from './detect-services';
 import { LocalFileSystemDetector } from '../detectors/local-file-system-detector';
 
@@ -24,7 +24,7 @@ export interface ServicesBuildersResult {
   redirectRoutes: Route[] | null;
   rewriteRoutes: Route[] | null;
   errorRoutes: Route[] | null;
-  services?: ResolvedService[];
+  services?: Service[];
 }
 
 /**

@@ -4,6 +4,7 @@ import asyncio
 import hmac
 import inspect
 import os
+import subprocess
 import traceback
 from typing import TYPE_CHECKING, Any, cast
 
@@ -28,6 +29,13 @@ def is_cron_service() -> bool:
 
 
 def bootstrap_cron_service_app(module: ModuleType) -> ASGI:
+    command = _resolve_command()
+    if command is not None:
+        return _make_cron_asgi_app(
+            lambda: _run_command(command),
+            is_async=False,
+        )
+
     # Check for a named handler function (module:function entrypoint)
     handler_func = _resolve_handler_function(module)
     if handler_func is not None:
@@ -54,6 +62,18 @@ def bootstrap_cron_service_app(module: ModuleType) -> ASGI:
         lambda: run_entrypoint_as_main(entrypoint_abs),
         is_async=False,
     )
+
+
+def _resolve_command() -> str | None:
+    command = os.environ.get("__VC_CRON_COMMAND")
+    if command is None or not command.strip():
+        return None
+    return command
+
+
+def _run_command(command: str) -> None:
+    cwd = os.environ.get("__VC_CRON_COMMAND_CWD") or os.getcwd()
+    subprocess.run(command, shell=True, check=True, cwd=cwd)
 
 
 def _resolve_handler_function(module: ModuleType) -> CronHandler | None:
