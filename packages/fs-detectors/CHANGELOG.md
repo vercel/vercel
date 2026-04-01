@@ -1,5 +1,11 @@
 # @vercel/fs-detectors
 
+## 5.14.0
+
+### Minor Changes
+
+- [services] infer services from Railway configs ([#15787](https://github.com/vercel/vercel/pull/15787))
+
 ## 5.13.1
 
 ### Patch Changes
