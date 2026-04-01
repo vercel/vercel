@@ -9,7 +9,7 @@ import { printError } from '../../util/error';
 import output from '../../output-manager';
 import { WhoamiTelemetryClient } from '../../util/telemetry/commands/whoami';
 import { validateJsonOutput } from '../../util/output-format';
-import { APIError, TeamDeleted } from '../../util/errors-ts';
+import { APIError } from '../../util/errors-ts';
 
 export default async function whoami(client: Client): Promise<number> {
   let parsedArgs = null;
@@ -46,17 +46,12 @@ export default async function whoami(client: Client): Promise<number> {
 
   const scope = await getScope(client).catch(async error => {
     // Preserve whoami as a resilient informational command when currentTeam is stale.
-    const isStaleTeamError =
-      error instanceof TeamDeleted ||
-      (error instanceof APIError &&
-        (error.status === 404 ||
-          error.code === 'team_unauthorized' ||
-          error.code === 'forbidden' ||
-          error.code === 'custom_error_code'));
-    if (!isStaleTeamError) {
-      throw error;
+    // Any client error (4xx) from the team lookup means the team is inaccessible
+    // (deleted, unauthorized, forbidden, etc.) — fall back to the personal scope.
+    if (error instanceof APIError && error.status >= 400 && error.status < 500) {
+      return getScope(client, { getTeam: false });
     }
-    return getScope(client, { getTeam: false });
+    throw error;
   });
   const { contextName, team, user } = scope;
   const plan = team?.billing.plan ?? user.billing?.plan ?? null;
