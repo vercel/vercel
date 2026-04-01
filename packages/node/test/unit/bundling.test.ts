@@ -1,7 +1,8 @@
 import { afterAll, afterEach, beforeAll, describe, it, expect } from 'vitest';
+import http from 'http';
 import { join } from 'path';
 import { prepareFilesystem } from './test-utils';
-import { build } from '../../src';
+import { build, _resetBundlingRoutesEmitted } from '../../src';
 import type { NodejsLambda } from '@vercel/build-utils';
 import { createServer } from 'http';
 import type { Server } from 'http';
@@ -12,6 +13,7 @@ describe('experimentalAllowBundling', () => {
   const originalEnv = process.env.VERCEL_API_FUNCTION_BUNDLING;
 
   afterEach(() => {
+    _resetBundlingRoutesEmitted();
     if (originalEnv === undefined) {
       delete process.env.VERCEL_API_FUNCTION_BUNDLING;
     } else {
@@ -268,6 +270,7 @@ describe('bundling produces groupable lambdas', () => {
   const originalEnv = process.env.VERCEL_API_FUNCTION_BUNDLING;
 
   afterEach(() => {
+    _resetBundlingRoutesEmitted();
     if (originalEnv === undefined) {
       delete process.env.VERCEL_API_FUNCTION_BUNDLING;
     } else {
@@ -343,11 +346,16 @@ describe('bundling produces groupable lambdas', () => {
       ).toContain('___vc_bundled_api_handler.js');
     }
 
-    // All lambdas must emit handle:hit routes with x-matched-path transforms
-    for (const r of results) {
-      expect(r.routes, `${r.name} should emit routes`).toBeDefined();
-      expect(r.routes.length).toBeGreaterThanOrEqual(2);
-      expect(r.routes[0]).toEqual({ handle: 'hit' });
+    // Only the first bundled build emits handle:hit routes; subsequent builds
+    // skip them to avoid inflating the merged route table.
+    expect(results[0].routes, `first build should emit routes`).toBeDefined();
+    expect(results[0].routes.length).toBeGreaterThanOrEqual(2);
+    expect(results[0].routes[0]).toEqual({ handle: 'hit' });
+    for (const r of results.slice(1)) {
+      expect(
+        r.routes,
+        `${r.name} should NOT emit duplicate routes`
+      ).toBeUndefined();
     }
 
     // Verify all lambdas include the shared handler file
@@ -711,5 +719,237 @@ describe('bundling-handler with "type": "module" package', () => {
     });
     expect(res.status).toBe(200);
     expect(await res.text()).toBe('type-module-ok');
+  });
+});
+
+describe('resolveEntrypoint handles directories with index files', () => {
+  let fixtureDir: string;
+  let originalCwd: string;
+  let handler: (req: any, res: any) => Promise<void>;
+  let server: Server;
+  let baseUrl: string;
+
+  beforeAll(async () => {
+    fixtureDir = join(tmpdir(), `bundling-dir-resolve-test-${Date.now()}`);
+    await fs.mkdir(join(fixtureDir, 'api', 'subdir'), { recursive: true });
+
+    // Directory with index.js — x-matched-path "/api/subdir" should resolve
+    // to api/subdir/index.js, not attempt to import the directory itself.
+    await fs.writeFile(
+      join(fixtureDir, 'api', 'subdir', 'index.js'),
+      `module.exports = (req, res) => { res.end('subdir-index-ok'); };`
+    );
+
+    // Directory with index.mjs
+    await fs.mkdir(join(fixtureDir, 'api', 'esmdir'), { recursive: true });
+    await fs.writeFile(
+      join(fixtureDir, 'api', 'esmdir', 'index.mjs'),
+      `export default (req, res) => { res.end('esmdir-index-ok'); };`
+    );
+
+    // Root index.js (x-matched-path "/" maps to entrypoint "index")
+    await fs.writeFile(
+      join(fixtureDir, 'index.js'),
+      `module.exports = (req, res) => { res.end('root-index-ok'); };`
+    );
+
+    originalCwd = process.cwd();
+    process.chdir(fixtureDir);
+
+    const handlerPath = require.resolve('../../src/bundling-handler.js');
+    delete require.cache[handlerPath];
+    handler = require('../../src/bundling-handler.js');
+
+    server = createServer(async (req, res) => {
+      try {
+        await handler(req, res);
+      } catch (err: any) {
+        res.statusCode = 500;
+        res.end(err.message);
+      }
+    });
+
+    await new Promise<void>(resolve => {
+      server.listen(0, '127.0.0.1', resolve);
+    });
+    const addr = server.address();
+    if (typeof addr === 'object' && addr) {
+      baseUrl = `http://127.0.0.1:${addr.port}`;
+    }
+  });
+
+  afterAll(async () => {
+    process.chdir(originalCwd);
+    if (server) {
+      await new Promise<void>((resolve, reject) =>
+        server.close(err => (err ? reject(err) : resolve()))
+      );
+    }
+    await fs.rm(fixtureDir, { recursive: true, force: true });
+  });
+
+  it('resolves api/subdir to api/subdir/index.js instead of ERR_UNSUPPORTED_DIR_IMPORT', async () => {
+    const res = await fetch(baseUrl + '/api/subdir', {
+      headers: { 'x-matched-path': '/api/subdir' },
+    });
+    expect(res.status).toBe(200);
+    expect(await res.text()).toBe('subdir-index-ok');
+  });
+
+  it('resolves directory with index.mjs', async () => {
+    const res = await fetch(baseUrl + '/api/esmdir', {
+      headers: { 'x-matched-path': '/api/esmdir' },
+    });
+    expect(res.status).toBe(200);
+    expect(await res.text()).toBe('esmdir-index-ok');
+  });
+
+  it('still resolves extensionless files that are not directories', async () => {
+    // "index" resolves to ./index.js (a file, not a directory)
+    const res = await fetch(baseUrl + '/', {
+      headers: { 'x-matched-path': '/' },
+    });
+    expect(res.status).toBe(200);
+    expect(await res.text()).toBe('root-index-ok');
+  });
+});
+
+describe('bundling routes are only emitted once across builds', () => {
+  const originalEnv = process.env.VERCEL_API_FUNCTION_BUNDLING;
+
+  afterEach(() => {
+    _resetBundlingRoutesEmitted();
+    if (originalEnv === undefined) {
+      delete process.env.VERCEL_API_FUNCTION_BUNDLING;
+    } else {
+      process.env.VERCEL_API_FUNCTION_BUNDLING = originalEnv;
+    }
+  });
+
+  it('first bundled build emits routes, subsequent builds do not', async () => {
+    process.env.VERCEL_API_FUNCTION_BUNDLING = '1';
+
+    const filesystem1 = await prepareFilesystem({
+      'api/first.js': `export default (req, res) => res.end('first');`,
+    });
+    const result1 = await build({
+      ...filesystem1,
+      entrypoint: 'api/first.js',
+      config: { zeroConfig: true },
+      meta: { skipDownload: true },
+    });
+
+    // First build should include the routes
+    expect(result1.routes).toBeDefined();
+    expect(result1.routes).toEqual(
+      expect.arrayContaining([expect.objectContaining({ handle: 'hit' })])
+    );
+
+    const filesystem2 = await prepareFilesystem({
+      'api/second.js': `export default (req, res) => res.end('second');`,
+    });
+    const result2 = await build({
+      ...filesystem2,
+      entrypoint: 'api/second.js',
+      config: { zeroConfig: true },
+      meta: { skipDownload: true },
+    });
+
+    // Second build should NOT emit routes (they were already emitted)
+    expect(result2.routes).toBeUndefined();
+
+    // Both lambdas should still have bundling enabled
+    expect((result1.output as NodejsLambda).experimentalAllowBundling).toBe(
+      true
+    );
+    expect((result2.output as NodejsLambda).experimentalAllowBundling).toBe(
+      true
+    );
+  });
+});
+
+describe('http.Server.prototype.listen is restored after import failure', () => {
+  let fixtureDir: string;
+  let originalCwd: string;
+  let handler: (req: any, res: any) => Promise<void>;
+  let server: Server;
+  let baseUrl: string;
+
+  beforeAll(async () => {
+    fixtureDir = join(tmpdir(), `bundling-listen-restore-test-${Date.now()}`);
+    await fs.mkdir(join(fixtureDir, 'api'), { recursive: true });
+
+    // A module that throws on import
+    await fs.writeFile(
+      join(fixtureDir, 'api', 'broken.js'),
+      `throw new Error('intentional import failure');`
+    );
+
+    // A valid function handler to verify listen() still works after failure
+    await fs.writeFile(
+      join(fixtureDir, 'api', 'healthy.js'),
+      `module.exports = (req, res) => { res.end('healthy-ok'); };`
+    );
+
+    originalCwd = process.cwd();
+    process.chdir(fixtureDir);
+
+    const handlerPath = require.resolve('../../src/bundling-handler.js');
+    delete require.cache[handlerPath];
+    handler = require('../../src/bundling-handler.js');
+
+    server = createServer(async (req, res) => {
+      try {
+        await handler(req, res);
+      } catch (err: any) {
+        res.statusCode = 500;
+        res.end(err.message);
+      }
+    });
+
+    await new Promise<void>(resolve => {
+      server.listen(0, '127.0.0.1', resolve);
+    });
+    const addr = server.address();
+    if (typeof addr === 'object' && addr) {
+      baseUrl = `http://127.0.0.1:${addr.port}`;
+    }
+  });
+
+  afterAll(async () => {
+    process.chdir(originalCwd);
+    if (server) {
+      await new Promise<void>((resolve, reject) =>
+        server.close(err => (err ? reject(err) : resolve()))
+      );
+    }
+    await fs.rm(fixtureDir, { recursive: true, force: true });
+  });
+
+  it('restores listen() after a module fails to import', async () => {
+    const originalListen = http.Server.prototype.listen;
+
+    // Request the broken module — should fail but not leak the patched listen
+    const res1 = await fetch(baseUrl + '/api/broken', {
+      headers: { 'x-matched-path': '/api/broken' },
+    });
+    expect(res1.status).toBe(500);
+
+    // listen() must be restored to the original
+    expect(http.Server.prototype.listen).toBe(originalListen);
+  });
+
+  it('healthy handler still works after a broken module import', async () => {
+    // First trigger the broken import
+    await fetch(baseUrl + '/api/broken', {
+      headers: { 'x-matched-path': '/api/broken' },
+    });
+
+    // Now a healthy handler should still work fine
+    const res = await fetch(baseUrl + '/api/healthy', {
+      headers: { 'x-matched-path': '/api/healthy' },
+    });
+    expect(res.status).toBe(200);
+    expect(await res.text()).toBe('healthy-ok');
   });
 });

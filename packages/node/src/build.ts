@@ -408,6 +408,11 @@ function getAWSLambdaHandler(entrypoint: string, config: Config) {
 // included once across all bundled entrypoint builds.
 let bundlingRoutesEmitted = false;
 
+/** @internal Reset bundling routes state between test runs. */
+export function _resetBundlingRoutesEmitted() {
+  bundlingRoutesEmitted = false;
+}
+
 export const build = async ({
   files,
   entrypoint,
