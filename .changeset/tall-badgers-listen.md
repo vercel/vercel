@@ -5,6 +5,6 @@
 'vercel': patch
 ---
 
-Add experimental service support for Python cron commands using `root` and `command`.
+Add experimental service support for Python cron commands using `command`.
 
 Ensure command-backed cron services resolve correctly, emit stable internal cron paths, and can execute shell commands in both builds and local development.

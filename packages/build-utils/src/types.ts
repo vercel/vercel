@@ -794,12 +794,6 @@ export interface ExperimentalServiceConfig {
    * @example "apps/web", "services/api/src/index.ts", "services/fastapi/main.py"
    */
   entrypoint?: string;
-  /**
-   * Service root, relative to the project root.
-   * Used by command-backed cron services as the build/runtime working directory.
-   * @example "apps/jobs", "services/cleanup"
-   */
-  root?: string;
 
   /** Framework to use */
   framework?: string;

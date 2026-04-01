@@ -3,8 +3,7 @@
     "cron": {
       "type": "cron",
       "runtime": "python",
-      "root": "cron",
-      "command": "python task.py command",
+      "command": "python cron/task.py command",
       "schedule": "* * * * *"
     }
   }

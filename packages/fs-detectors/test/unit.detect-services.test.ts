@@ -1142,14 +1142,12 @@ describe('detectServices', () => {
             cleanup: {
               type: 'cron',
               runtime: 'python',
-              root: 'jobs',
-              command: 'uv run cleanup.py --full',
+              command: 'python cleanup.py --full',
               schedule: '0 0 * * *',
             },
           },
         }),
-        'jobs/pyproject.toml': '[project]\nname = "jobs"\nversion = "0.0.1"\n',
-        'jobs/cleanup.py': 'print("cleanup")\n',
+        'cleanup.py': 'print("cleanup")\n',
       });
       const result = await detectServices({ fs });
 
@@ -1159,15 +1157,14 @@ describe('detectServices', () => {
         name: 'cleanup',
         type: 'cron',
         runtime: 'python',
-        workspace: 'jobs',
-        command: 'uv run cleanup.py --full',
+        workspace: '.',
+        command: 'python cleanup.py --full',
         schedule: '0 0 * * *',
         builder: {
-          src: 'jobs/<detect>',
+          src: '<detect>',
           use: '@vercel/python',
           config: expect.objectContaining({
-            command: 'uv run cleanup.py --full',
-            workspace: 'jobs',
+            command: 'python cleanup.py --full',
           }),
         },
       });
@@ -1185,7 +1182,6 @@ describe('detectServices', () => {
             cleanup: {
               type: 'cron',
               runtime: 'python',
-              root: 'jobs',
               entrypoint: 'jobs/cleanup.py',
               command: 'python cleanup.py',
               schedule: '0 0 * * *',
@@ -1210,7 +1206,6 @@ describe('detectServices', () => {
           experimentalServices: {
             cleanup: {
               type: 'cron',
-              root: 'jobs',
               command: 'python cleanup.py',
               schedule: '0 0 * * *',
             },
@@ -1227,7 +1222,7 @@ describe('detectServices', () => {
       });
     });
 
-    it('should error when command-backed cron root does not exist', async () => {
+    it('should error when command-backed cron specifies root', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': JSON.stringify({
           experimentalServices: {
@@ -1246,7 +1241,7 @@ describe('detectServices', () => {
       expect(result.services).toHaveLength(0);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toMatchObject({
-        code: 'ROOT_NOT_FOUND',
+        code: 'INVALID_ROOT_CONFIG',
         serviceName: 'cleanup',
       });
     });

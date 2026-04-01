@@ -95,43 +95,6 @@ async function resolveEntrypointPath({
   };
 }
 
-async function resolveRootPath({
-  fs,
-  serviceName,
-  root,
-}: {
-  fs: DetectorFilesystem;
-  serviceName: string;
-  root: string;
-}): Promise<{
-  root?: string;
-  error?: ServiceDetectionError;
-}> {
-  const normalized = normalizeServiceEntrypoint(root);
-
-  if (!(await fs.hasPath(normalized))) {
-    return {
-      error: {
-        code: 'ROOT_NOT_FOUND',
-        message: `Service "${serviceName}" has root "${root}" but that path does not exist.`,
-        serviceName,
-      },
-    };
-  }
-
-  if (await fs.isFile(normalized)) {
-    return {
-      error: {
-        code: 'INVALID_ROOT',
-        message: `Service "${serviceName}" has root "${root}" but that path is not a directory.`,
-        serviceName,
-      },
-    };
-  }
-
-  return { root: normalized };
-}
-
 type RoutePrefixSource = 'configured' | 'generated';
 
 interface ResolveConfiguredServiceOptions {
@@ -140,7 +103,6 @@ interface ResolveConfiguredServiceOptions {
   fs: DetectorFilesystem;
   group?: string;
   resolvedEntrypoint?: ResolvedEntrypointPath;
-  resolvedRoot?: string;
   routePrefixSource?: RoutePrefixSource;
 }
 function toWorkspaceRelativeEntrypoint(
@@ -283,7 +245,7 @@ export function validateServiceConfig(
   const hasSubdomain = typeof config.subdomain === 'string';
   const hasEntrypoint = typeof config.entrypoint === 'string';
   const hasCommand = typeof config.command === 'string';
-  const hasRoot = typeof config.root === 'string';
+  const hasRoot = typeof (config as { root?: unknown }).root === 'string';
 
   if (hasSubdomain && !DNS_LABEL_RE.test(config.subdomain!)) {
     return {
@@ -342,10 +304,10 @@ export function validateServiceConfig(
       serviceName: name,
     };
   }
-  if (hasRoot && !hasCommand) {
+  if (hasRoot) {
     return {
       code: 'INVALID_ROOT_CONFIG',
-      message: `Service "${name}" cannot specify "root" without "command".`,
+      message: `Service "${name}" cannot specify "root". Command-backed cron services currently run from the project root.`,
       serviceName: name,
     };
   }
@@ -424,7 +386,7 @@ export function validateServiceConfig(
   if (!hasFramework && !hasBuilderOrRuntime && !hasEntrypoint && !hasCommand) {
     return {
       code: 'MISSING_SERVICE_CONFIG',
-      message: `Service "${name}" must specify "framework", "entrypoint", or both "builder"/"runtime" with "entrypoint".`,
+      message: `Service "${name}" must specify "framework", "entrypoint", or "command" (cron services only).`,
       serviceName: name,
     };
   }
@@ -482,7 +444,6 @@ export async function resolveConfiguredService(
     fs,
     group,
     resolvedEntrypoint,
-    resolvedRoot,
     routePrefixSource = 'configured',
   } = options;
   const type = config.type || 'web';
@@ -519,7 +480,7 @@ export async function resolveConfiguredService(
     ...config,
     entrypoint: entrypointIsDirectory ? undefined : normalizedEntrypoint,
   });
-  let workspace = hasCommand ? resolvedRoot || '.' : '.';
+  let workspace = '.';
   let resolvedEntrypointFile =
     entrypointIsDirectory || !normalizedEntrypoint
       ? undefined
@@ -717,20 +678,7 @@ export async function resolveAllConfiguredServices(
     }
 
     let resolvedEntrypoint: ResolvedEntrypointPath | undefined;
-    let resolvedRoot: string | undefined;
     const serviceType = serviceConfig.type || 'web';
-    if (typeof serviceConfig.root === 'string') {
-      const resolvedRootPath = await resolveRootPath({
-        fs,
-        serviceName: name,
-        root: serviceConfig.root,
-      });
-      if (resolvedRootPath.error) {
-        errors.push(resolvedRootPath.error);
-        continue;
-      }
-      resolvedRoot = resolvedRootPath.root;
-    }
     if (typeof serviceConfig.entrypoint === 'string') {
       const moduleAttr =
         serviceType === 'cron'
@@ -828,7 +776,6 @@ export async function resolveAllConfiguredServices(
       config: resolvedConfig,
       fs,
       resolvedEntrypoint,
-      resolvedRoot,
       routePrefixSource,
     });
 
