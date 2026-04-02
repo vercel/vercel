@@ -8,14 +8,16 @@ import accessGroupInspect from './access-group';
 import accessGroups from './access-groups';
 import inspect from './inspect';
 import list from './list';
+import members from './members';
 import rm from './rm';
 import getOidcToken from './token';
 import {
-  addSubcommand,
   accessGroupInspectSubcommand,
   accessGroupsSubcommand,
+  addSubcommand,
   inspectSubcommand,
   listSubcommand,
+  membersSubcommand,
   projectCommand,
   removeSubcommand,
   tokenSubcommand,
@@ -29,9 +31,10 @@ import getSubcommand from '../../util/get-subcommand';
 const COMMAND_CONFIG = {
   inspect: getCommandAliases(inspectSubcommand),
   list: getCommandAliases(listSubcommand),
+  members: getCommandAliases(membersSubcommand),
+  accessGroups: getCommandAliases(accessGroupsSubcommand),
   add: getCommandAliases(addSubcommand),
-  'access-group': getCommandAliases(accessGroupInspectSubcommand),
-  'access-groups': getCommandAliases(accessGroupsSubcommand),
+  accessGroupInspect: getCommandAliases(accessGroupInspectSubcommand),
   remove: getCommandAliases(removeSubcommand),
   token: getCommandAliases(tokenSubcommand),
 };
@@ -100,14 +103,21 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandAdd(subcommandOriginal);
       return add(client, args);
-    case 'access-group':
+    case 'members':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('project', subcommandOriginal);
+        return printHelp(membersSubcommand);
+      }
+      telemetry.trackCliSubcommandMembers(subcommandOriginal);
+      return members(client, args);
+    case 'accessGroupInspect':
       if (needHelp) {
         telemetry.trackCliFlagHelp('project', subcommandOriginal);
         return printHelp(accessGroupInspectSubcommand);
       }
       telemetry.trackCliSubcommandAccessGroup(subcommandOriginal);
       return accessGroupInspect(client, args);
-    case 'access-groups':
+    case 'accessGroups':
       if (needHelp) {
         telemetry.trackCliFlagHelp('project', subcommandOriginal);
         return printHelp(accessGroupsSubcommand);

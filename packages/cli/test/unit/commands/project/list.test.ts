@@ -203,10 +203,6 @@ describe('list', () => {
     line = await lines.next();
     expect(line.value).toContain(user.username);
 
-    // empty line
-    line = await lines.next();
-    expect(line.value).toEqual('');
-
     line = await lines.next();
     const header = parseSpacedTableRow(line.value!);
     expect(header).toEqual([
@@ -246,10 +242,6 @@ describe('list', () => {
 
     line = await lines.next();
     expect(line.value).toContain(user.username);
-
-    // empty line
-    line = await lines.next();
-    expect(line.value).toEqual('');
 
     line = await lines.next();
     const header = parseSpacedTableRow(line.value!);

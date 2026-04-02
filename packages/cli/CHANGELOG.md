@@ -1,5 +1,22 @@
 # vercel
 
+## 50.38.3
+
+### Patch Changes
+
+- Improve `vercel link` by searching matching project names across teams by default, with clearer linking choices when multiple matches are found. ([#15400](https://github.com/vercel/vercel/pull/15400))
+
+- Updated dependencies [[`a50d9615ea546050b9f37dc7e5b4a81228987eef`](https://github.com/vercel/vercel/commit/a50d9615ea546050b9f37dc7e5b4a81228987eef), [`aa3ad226ef7b4ab98ef97e15f81c91f4f7c527e9`](https://github.com/vercel/vercel/commit/aa3ad226ef7b4ab98ef97e15f81c91f4f7c527e9)]:
+  - @vercel/next@4.16.5
+  - @vercel/node@5.7.0
+  - @vercel/elysia@0.1.58
+  - @vercel/express@0.1.68
+  - @vercel/fastify@0.1.61
+  - @vercel/h3@0.1.67
+  - @vercel/hono@0.2.61
+  - @vercel/koa@0.1.41
+  - @vercel/nestjs@0.2.62
+
 ## 50.38.2
 
 ### Patch Changes

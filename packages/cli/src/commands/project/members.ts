@@ -8,34 +8,31 @@ import {
   exitWithNonInteractiveError,
   outputAgentError,
 } from '../../util/agent-output';
-import { accessGroupsSubcommand } from './command';
+import { membersSubcommand } from './command';
 import { validateJsonOutput } from '../../util/output-format';
 import output from '../../output-manager';
 import getProjectByCwdOrLink from '../../util/projects/get-project-by-cwd-or-link';
 
-/** Row shape from GET /v1/access-groups (fields vary by API version). */
-interface AccessGroupRow extends Record<string, unknown> {
-  id?: string;
-  accessGroupId?: string;
-  name?: string;
-  slug?: string;
-  description?: string | null;
-  role?: string | null;
+interface ProjectMember {
+  uid: string;
+  username?: string;
+  email?: string;
+  role?: string;
+  computedProjectRole?: string;
+  teamRole?: string;
 }
 
-interface ListAccessGroupsResponse {
-  accessGroups?: AccessGroupRow[];
-  pagination?: { count?: number; next?: string | null };
+interface ProjectMembersResponse {
+  members: ProjectMember[];
+  pagination?: Record<string, unknown>;
 }
 
-export default async function accessGroups(
+export default async function members(
   client: Client,
   argv: string[]
 ): Promise<number> {
   let parsedArgs;
-  const flagsSpecification = getFlagsSpecification(
-    accessGroupsSubcommand.options
-  );
+  const flagsSpecification = getFlagsSpecification(membersSubcommand.options);
   try {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
@@ -56,7 +53,7 @@ export default async function accessGroups(
 
   if (parsedArgs.args.length > 1) {
     output.error(
-      'Invalid number of arguments. Usage: `vercel project access-groups [name]`'
+      'Invalid number of arguments. Usage: `vercel project members [name]`'
     );
     return 2;
   }
@@ -74,63 +71,52 @@ export default async function accessGroups(
     return 1;
   }
 
-  let result: ListAccessGroupsResponse;
+  let result: ProjectMembersResponse;
   try {
     const project = await getProjectByCwdOrLink({
       client,
-      commandName: 'project access-groups',
+      commandName: 'project members',
       projectNameOrId: parsedArgs.args[0],
       forReadOnlyCommand: true,
     });
 
     const query = new URLSearchParams();
-    query.set('projectId', project.id);
     if (parsedArgs.flags['--search']) {
       query.set('search', String(parsedArgs.flags['--search']));
     }
     if (typeof limit === 'number') {
       query.set('limit', String(limit));
     }
-    const cursor = parsedArgs.flags['--cursor'];
-    if (typeof cursor === 'string' && cursor.length > 0) {
-      query.set('next', cursor);
-    }
 
-    result = await client.fetch<ListAccessGroupsResponse>(
-      `/v1/access-groups?${query.toString()}`
-    );
+    const qs = query.toString();
+    const path = `/v1/projects/${encodeURIComponent(project.id)}/members${
+      qs ? `?${qs}` : ''
+    }`;
+    result = await client.fetch<ProjectMembersResponse>(path);
   } catch (err: unknown) {
-    exitWithNonInteractiveError(client, err, 1, { variant: 'access-groups' });
+    exitWithNonInteractiveError(client, err, 1, { variant: 'members' });
     printError(err);
     return 1;
   }
 
+  const projectMembers = result.members || [];
+
   if (asJson) {
-    client.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+    client.stdout.write(
+      `${JSON.stringify({ members: projectMembers, pagination: result.pagination }, null, 2)}\n`
+    );
     return 0;
   }
 
-  const rows = result.accessGroups ?? [];
-  if (rows.length === 0) {
-    output.log('No access groups for this project.');
-    return 0;
-  }
-
-  const tableRows = [
-    ['Name', 'ID', 'Slug', 'Role'].map(h => gray(h)),
-    ...rows.map(ag => [
-      String(ag.name ?? ''),
-      String(ag.id ?? ag.accessGroupId ?? ''),
-      String(ag.slug ?? ''),
-      String(ag.role ?? ''),
+  const rows = [
+    ['uid', 'Identity', 'Role', 'Team Role'].map(str => gray(str)),
+    ...projectMembers.map(member => [
+      member.uid,
+      member.username || member.email || '',
+      member.computedProjectRole || member.role || '',
+      member.teamRole || '',
     ]),
   ];
-  client.stderr.write(`${table(tableRows, { hsep: 3 })}\n`);
-  if (result.pagination?.next) {
-    output.log(
-      `More results available. Pass ${gray('--cursor')} with the next cursor to continue.`
-    );
-    output.log(gray(`cursor: ${result.pagination.next}`));
-  }
+  client.stderr.write(`${table(rows, { hsep: 3 })}\n`);
   return 0;
 }

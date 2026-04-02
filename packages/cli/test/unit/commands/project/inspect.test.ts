@@ -61,10 +61,6 @@ describe('inspect', () => {
     let line = await lines.next();
     expect(line.value).toContain(`Found Project ${team.slug}/${project.name}`);
 
-    // empty line
-    line = await lines.next();
-    expect(line.value).toEqual('');
-
     line = await lines.next();
     expect(line.value).toContain(`General`);
 
@@ -96,10 +92,6 @@ describe('inspect', () => {
     parts = line.value!.trim().split(/\t+/);
     expect(parts).toEqual(['Node.js Version', project.nodeVersion]);
 
-    // empty line
-    line = await lines.next();
-    expect(line.value).toEqual('');
-
     line = await lines.next();
     expect(line.value).toContain(`Framework Settings`);
     const fw = frameworkList.find(f => f.slug === project.framework);
@@ -130,9 +122,5 @@ describe('inspect', () => {
     line = await lines.next();
     parts = line.value!.trim().split(/\t+/);
     expect(parts).toEqual(['Install Command', project.installCommand]);
-
-    // empty line
-    line = await lines.next();
-    expect(line.value).toEqual('');
   });
 });
