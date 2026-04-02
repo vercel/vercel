@@ -1,4 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { mkdtempSync, rmSync } from 'fs';
+import { join } from 'path';
+import { tmpdir } from 'os';
+import { describe, expect, it, vi, afterEach } from 'vitest';
 import { client } from '../../../mocks/client';
 import project from '../../../../src/commands/project';
 import { useProject } from '../../../mocks/project';
@@ -79,5 +82,72 @@ describe('project members', () => {
     await expect(client.stderr).toOutput(
       '`--limit` must be a number between 1 and 100.'
     );
+  });
+
+  describe('--non-interactive', () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+      client.nonInteractive = false;
+    });
+
+    it('outputs error JSON when the members API returns 403', async () => {
+      useProject({
+        ...defaultProject,
+        id: 'prj_123',
+        name: 'my-project',
+      });
+
+      vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+        throw new Error(`exit:${code ?? 0}`);
+      }) as () => never);
+
+      client.scenario.get('/v1/projects/:idOrName/members', (_req, res) => {
+        res.status(403).json({
+          error: { code: 'forbidden', message: 'Members list forbidden.' },
+        });
+      });
+
+      client.nonInteractive = true;
+      client.setArgv('project', 'members', 'my-project', '--non-interactive');
+
+      await expect(project(client)).rejects.toThrow('exit:1');
+
+      const payload = JSON.parse(client.stdout.getFullOutput().trim());
+      expect(payload).toMatchObject({
+        status: 'error',
+        reason: 'forbidden',
+        message: 'Members list forbidden.',
+      });
+    });
+
+    it('outputs link_required JSON when no project name and directory is not linked', async () => {
+      const emptyDir = mkdtempSync(join(tmpdir(), 'vc-cli-members-unlinked-'));
+      const prevCwd = client.cwd;
+      client.cwd = emptyDir;
+
+      vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+        throw new Error(`exit:${code ?? 0}`);
+      }) as () => never);
+
+      client.nonInteractive = true;
+      client.setArgv('project', 'members', '--non-interactive');
+
+      try {
+        await expect(project(client)).rejects.toThrow('exit:1');
+
+        const payload = JSON.parse(client.stdout.getFullOutput().trim());
+        expect(payload).toMatchObject({
+          status: 'error',
+          reason: 'link_required',
+        });
+        expect(payload.message).toMatch(/linked|project name/i);
+        expect(
+          payload.next?.some((n: { command: string }) => /link/.test(n.command))
+        ).toBe(true);
+      } finally {
+        client.cwd = prevCwd;
+        rmSync(emptyDir, { recursive: true, force: true });
+      }
+    });
   });
 });

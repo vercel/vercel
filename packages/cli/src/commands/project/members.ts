@@ -4,6 +4,10 @@ import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
+import {
+  exitWithNonInteractiveError,
+  outputAgentError,
+} from '../../util/agent-output';
 import { membersSubcommand } from './command';
 import { validateJsonOutput } from '../../util/output-format';
 import output from '../../output-manager';
@@ -32,6 +36,17 @@ export default async function members(
   try {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'invalid_arguments',
+          message: error instanceof Error ? error.message : String(error),
+        },
+        1
+      );
+    }
     printError(error);
     return 1;
   }
@@ -56,25 +71,34 @@ export default async function members(
     return 1;
   }
 
-  const project = await getProjectByCwdOrLink({
-    client,
-    commandName: 'project members',
-    projectNameOrId: parsedArgs.args[0],
-  });
+  let result: ProjectMembersResponse;
+  try {
+    const project = await getProjectByCwdOrLink({
+      client,
+      commandName: 'project members',
+      projectNameOrId: parsedArgs.args[0],
+      forReadOnlyCommand: true,
+    });
 
-  const query = new URLSearchParams();
-  if (parsedArgs.flags['--search']) {
-    query.set('search', String(parsedArgs.flags['--search']));
-  }
-  if (typeof limit === 'number') {
-    query.set('limit', String(limit));
+    const query = new URLSearchParams();
+    if (parsedArgs.flags['--search']) {
+      query.set('search', String(parsedArgs.flags['--search']));
+    }
+    if (typeof limit === 'number') {
+      query.set('limit', String(limit));
+    }
+
+    const qs = query.toString();
+    const path = `/v1/projects/${encodeURIComponent(project.id)}/members${
+      qs ? `?${qs}` : ''
+    }`;
+    result = await client.fetch<ProjectMembersResponse>(path);
+  } catch (err: unknown) {
+    exitWithNonInteractiveError(client, err, 1, { variant: 'members' });
+    printError(err);
+    return 1;
   }
 
-  const qs = query.toString();
-  const path = `/v1/projects/${encodeURIComponent(project.id)}/members${
-    qs ? `?${qs}` : ''
-  }`;
-  const result = await client.fetch<ProjectMembersResponse>(path);
   const projectMembers = result.members || [];
 
   if (asJson) {

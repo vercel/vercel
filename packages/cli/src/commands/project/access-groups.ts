@@ -4,6 +4,10 @@ import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
+import {
+  exitWithNonInteractiveError,
+  outputAgentError,
+} from '../../util/agent-output';
 import { accessGroupsSubcommand } from './command';
 import { validateJsonOutput } from '../../util/output-format';
 import output from '../../output-manager';
@@ -35,6 +39,17 @@ export default async function accessGroups(
   try {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'invalid_arguments',
+          message: error instanceof Error ? error.message : String(error),
+        },
+        1
+      );
+    }
     printError(error);
     return 1;
   }
@@ -59,27 +74,35 @@ export default async function accessGroups(
     return 1;
   }
 
-  const project = await getProjectByCwdOrLink({
-    client,
-    commandName: 'project access-groups',
-    projectNameOrId: parsedArgs.args[0],
-  });
+  let result: AccessGroupsResponse;
+  try {
+    const project = await getProjectByCwdOrLink({
+      client,
+      commandName: 'project access-groups',
+      projectNameOrId: parsedArgs.args[0],
+      forReadOnlyCommand: true,
+    });
 
-  const query = new URLSearchParams();
-  query.set('projectId', project.id);
-  if (parsedArgs.flags['--search']) {
-    query.set('search', String(parsedArgs.flags['--search']));
-  }
-  if (typeof limit === 'number') {
-    query.set('limit', String(limit));
-  }
-  if (typeof parsedArgs.flags['--next'] === 'number') {
-    query.set('next', String(parsedArgs.flags['--next']));
-  }
+    const query = new URLSearchParams();
+    query.set('projectId', project.id);
+    if (parsedArgs.flags['--search']) {
+      query.set('search', String(parsedArgs.flags['--search']));
+    }
+    if (typeof limit === 'number') {
+      query.set('limit', String(limit));
+    }
+    if (typeof parsedArgs.flags['--next'] === 'number') {
+      query.set('next', String(parsedArgs.flags['--next']));
+    }
 
-  const result = await client.fetch<AccessGroupsResponse>(
-    `/v1/access-groups?${query.toString()}`
-  );
+    result = await client.fetch<AccessGroupsResponse>(
+      `/v1/access-groups?${query.toString()}`
+    );
+  } catch (err: unknown) {
+    exitWithNonInteractiveError(client, err, 1, { variant: 'access-groups' });
+    printError(err);
+    return 1;
+  }
 
   if (asJson) {
     client.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
