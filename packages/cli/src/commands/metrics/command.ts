@@ -23,15 +23,11 @@ export const schemaSubcommand = {
       value: `${packageName} metrics schema`,
     },
     {
-      name: 'Inspect metrics under a prefix',
-      value: `${packageName} metrics schema --metric vercel.requests`,
+      name: 'Show metric details',
+      value: `${packageName} metrics schema --metric vercel.function_execution`,
     },
     {
-      name: 'Inspect a specific metric',
-      value: `${packageName} metrics schema --metric vercel.requests.count`,
-    },
-    {
-      name: 'Schema as JSON',
+      name: 'Schema as JSON for agents',
       value: `${packageName} metrics schema --metric vercel.requests.count --format=json`,
     },
   ],
@@ -143,60 +139,40 @@ export const metricsCommand = {
   ],
   examples: [
     {
-      name: 'Request count by route in the last hour',
-      value: `${packageName} metrics --metric vercel.requests.count --group-by route --since 1h`,
+      name: '5xx errors by error code in the last hour',
+      value: `${packageName} metrics --metric vercel.function_execution.count -f "http_status ge 500" --group-by error_code --since 1h`,
     },
     {
-      name: 'Request duration by route in the last hour',
-      value: `${packageName} metrics --metric vercel.requests.request_duration_ms -a p95 --group-by route --since 1h`,
+      name: 'Function invocations by HTTP status code',
+      value: `${packageName} metrics --metric vercel.function_execution.count --group-by http_status --since 6h`,
     },
     {
-      name: 'Team-wide request count by project in the last 24 hours',
-      value: `${packageName} metrics --all --metric vercel.requests.count --group-by project_id --since 24h`,
+      name: 'Function duration by route (shorthand)',
+      value: `${packageName} metrics --metric vercel.function_execution.request_duration_ms -a avg --group-by route --since 1h`,
+    },
+    {
+      name: 'AI Gateway costs by provider',
+      value: `${packageName} metrics --metric vercel.ai_gateway_request.cost -a sum --group-by ai_provider --since 7d`,
+    },
+    {
+      name: 'Core Web Vitals (LCP) by route',
+      value: `${packageName} metrics --metric vercel.speed_insights_metric.lcp -a p75 --group-by route --since 7d`,
     },
     {
       name: 'List available metrics',
       value: `${packageName} metrics schema`,
     },
     {
-      name: 'Inspect the request metrics',
+      name: 'Function executions matching a path pattern',
+      value: `${packageName} metrics --metric vercel.function_execution.count -f "contains(request_path, '/api')" --group-by route --since 1h`,
+    },
+    {
+      name: 'Show schema for a metric prefix',
       value: `${packageName} metrics schema --metric vercel.requests`,
     },
     {
-      name: 'Inspect a specific metric',
-      value: `${packageName} metrics schema --metric vercel.requests.count`,
-    },
-    {
-      name: 'Query a specific project by name or id',
-      value: `${packageName} metrics --project vercel-site --metric vercel.requests.request_duration_ms -a p95 --group-by route --since 24h --limit 200`,
-    },
-    {
-      name: 'Filter by route substring',
-      value: `${packageName} metrics --metric vercel.requests.request_duration_ms -a p95 --group-by route --since 24h -f "contains(route, 'logs')"`,
-    },
-    {
-      name: 'Filter request count by request path substring',
-      value: `${packageName} metrics --metric vercel.requests.count --group-by request_path --since 7d --limit 200 -f "contains(request_path, '/api/logs/')"`,
-    },
-    {
-      name: 'Query a single route',
-      value: `${packageName} metrics --metric vercel.requests.request_duration_ms -a p95 --since 7d --group-by request_path -f "request_path eq '/api/logs/request-logs'"`,
-    },
-    {
-      name: 'Break down a route by HTTP status',
-      value: `${packageName} metrics --metric vercel.requests.request_duration_ms -a p95 --group-by http_status --since 24h -f "route eq '/user/[search]'"`,
-    },
-    {
-      name: 'Break down a route by cache result',
-      value: `${packageName} metrics --metric vercel.requests.request_duration_ms -a p95 --group-by cache_result --since 24h -f "route eq '/user/[search]'"`,
-    },
-    {
-      name: 'Break down a route by deployment',
-      value: `${packageName} metrics --metric vercel.requests.request_duration_ms -a p95 --group-by deployment_id --since 24h -f "route eq '/user/[search]'"`,
-    },
-    {
-      name: 'Return JSON output',
-      value: `${packageName} metrics --metric vercel.requests.count --group-by route --since 1h --format=json`,
+      name: 'Team-wide function executions by project',
+      value: `${packageName} metrics --all --metric vercel.function_execution.count --group-by project_id --since 24h`,
     },
   ],
 } as const;

@@ -72,7 +72,7 @@ export default async function metrics(client: Client): Promise<number> {
         output.print(help(metricsCommand, { columns: client.stderr.columns }));
         return 0;
       }
-      // Show help if --metric is not provided (required for query).
+      // Show help if --metric is not provided (required for query)
       if (!parsedArgs.flags['--metric']) {
         output.print(help(metricsCommand, { columns: client.stderr.columns }));
         return 2;

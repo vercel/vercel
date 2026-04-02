@@ -1,9 +1,4 @@
-import type { MetricListItem } from './schema-api';
-import type {
-  MetricSchemaDetail,
-  QueryMetadata,
-  MetricsQueryResponse,
-} from './types';
+import type { QueryMetadata, MetricsQueryResponse } from './types';
 
 export function getRollupColumnName(
   metric: string,
@@ -26,14 +21,6 @@ export function formatQueryJson(
     null,
     2
   );
-}
-
-export function formatSchemaDetailJson(detail: MetricSchemaDetail): string {
-  return JSON.stringify(detail, null, 2);
-}
-
-export function formatSchemaListJson(metrics: MetricListItem[]): string {
-  return JSON.stringify(metrics, null, 2);
 }
 
 export function formatErrorJson(

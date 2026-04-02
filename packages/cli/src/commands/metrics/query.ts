@@ -199,7 +199,8 @@ export default async function query(
   }
 
   const flags = parsedArgs.flags;
-  // Validate output format before doing any network or project resolution work.
+
+  // Validate output format
   const formatResult = validateJsonOutput(flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
@@ -207,6 +208,7 @@ export default async function query(
   }
   const jsonOutput = formatResult.jsonOutput;
 
+  // Extract raw flag values
   const metricFlag = flags['--metric'];
   const aggregationFlag = flags['--aggregation'];
   const groupBy = flags['--group-by'] ?? [];
@@ -218,6 +220,7 @@ export default async function query(
   const project = flags['--project'];
   const all = flags['--all'];
 
+  // Track telemetry
   telemetry.trackCliOptionMetric(metricFlag);
   telemetry.trackCliOptionAggregation(aggregationFlag);
   telemetry.trackCliOptionGroupBy(groupBy.length > 0 ? groupBy : undefined);
@@ -230,7 +233,7 @@ export default async function query(
   telemetry.trackCliFlagAll(all);
   telemetry.trackCliOptionFormat(flags['--format']);
 
-  // --metric is required for querying; schema discovery stays on the schema subcommand.
+  // Validate --metric (required)
   const requiredMetric = validateRequiredMetric(metricFlag);
   if (!requiredMetric.valid) {
     return handleValidationError(requiredMetric, jsonOutput, client);
@@ -252,8 +255,7 @@ export default async function query(
   }
   const { scope, accountId, teamName, projectName } = scopeResult;
 
-  // Fetch metric detail from the API so the API remains the source of truth
-  // for supported metrics, dimensions, and aggregations.
+  // Fetch metric detail
   const detail = await fetchMetricDetailOrExit(
     client,
     accountId,
@@ -277,7 +279,7 @@ export default async function query(
     return handleValidationError(groupByResult, jsonOutput, client);
   }
 
-  // Resolve relative or ISO time input into a concrete UTC range for the API.
+  // Resolve time range
   let startTime: Date;
   let endTime: Date;
   try {
@@ -292,8 +294,7 @@ export default async function query(
     return 1;
   }
 
-  // Compute granularity and round to bucket boundaries so every returned bucket
-  // represents a complete interval.
+  // Compute granularity
   const rangeMs = endTime.getTime() - startTime.getTime();
   const granResult = computeGranularity(rangeMs, granularity);
   if (granResult.adjusted && granResult.notice) {
@@ -306,8 +307,7 @@ export default async function query(
     toGranularityMsFromDuration(granResult.duration)
   );
 
-  // Build the v2 request body using the public metric id; the API resolves it
-  // to the underlying query-engine event and measure internally.
+  // Build request body
   const body: MetricsQueryRequest = {
     reason: 'agent',
     scope,
@@ -321,8 +321,6 @@ export default async function query(
     limit: limit ?? 10,
   };
 
-  // Query execution happens through the v2 API endpoint; the CLI handles local
-  // validation, time normalization, and presentation only.
   output.spinner('Querying metrics...');
   let response: MetricsQueryResponse;
   try {
@@ -350,7 +348,7 @@ export default async function query(
     output.stopSpinner();
   }
 
-  // Format and print either JSON for automation or a human-readable table view.
+  // Format and output
   if (jsonOutput) {
     client.stdout.write(
       formatQueryJson(

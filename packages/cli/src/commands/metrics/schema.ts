@@ -11,11 +11,7 @@ import {
   fetchMetricListOrExit,
   type MetricListItem,
 } from './schema-api';
-import {
-  formatSchemaListJson,
-  formatSchemaDetailJson,
-  formatErrorJson,
-} from './output';
+import { formatErrorJson } from './output';
 import formatTable from '../../util/format-table';
 import indent from '../../util/output/indent';
 import type { MetricsTelemetryClient } from '../../util/telemetry/commands/metrics';
@@ -36,7 +32,8 @@ export default async function schema(
   }
 
   const flags = parsedArgs.flags;
-  // Validate output format before fetching schema data.
+
+  // Validate output format
   const formatResult = validateJsonOutput(flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
@@ -61,8 +58,7 @@ export default async function schema(
   }
 
   if (metric) {
-    // A scoped schema lookup can return either the exact metric or all metrics
-    // that match the requested prefix.
+    // Metric detail
     const detail = await fetchMetricDetailOrExit(
       client,
       team.id,
@@ -74,7 +70,7 @@ export default async function schema(
     }
 
     if (jsonOutput) {
-      client.stdout.write(formatSchemaDetailJson(detail));
+      client.stdout.write(JSON.stringify(detail, null, 2));
       return 0;
     }
 
@@ -94,14 +90,14 @@ export default async function schema(
     return 0;
   }
 
-  // No specific metric requested: list all queryable metrics.
+  // Metric list
   const metrics = await fetchMetricListOrExit(client, team.id, jsonOutput);
   if (typeof metrics === 'number') {
     return metrics;
   }
 
   if (jsonOutput) {
-    client.stdout.write(formatSchemaListJson(metrics));
+    client.stdout.write(JSON.stringify(metrics, null, 2));
   } else {
     output.log(`${plural('Metric', metrics.length, true)} found`);
     output.print(formatMetricListTable(metrics));
