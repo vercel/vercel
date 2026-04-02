@@ -341,6 +341,7 @@ test('ensure we render a prompt when deploying home directory', async () => {
 
 test('ensure the `scope` property works with email', async () => {
   const directory = await setupE2EFixture('config-scope-property-email');
+  await fs.remove(path.join(directory, '.vercel'));
 
   const { stderr, stdout, exitCode } = await execCli(binaryPath, [
     directory,
@@ -371,6 +372,7 @@ test('ensure the `scope` property works with email', async () => {
 test('ensure the `scope` property works with username', async () => {
   const team = await teamPromise;
   const directory = await setupE2EFixture('config-scope-property-username');
+  await fs.remove(path.join(directory, '.vercel'));
 
   const { stderr, stdout, exitCode } = await execCli(binaryPath, [
     directory,
@@ -457,6 +459,7 @@ test('try to create a builds deployments with wrong `build.env` property', async
 
 test('create a builds deployments with no actual builds', async () => {
   const directory = await setupE2EFixture('builds-no-list');
+  await fs.remove(path.join(directory, '.vercel'));
 
   const { exitCode, stdout, stderr } = await execCli(binaryPath, [
     directory,
