@@ -12,9 +12,21 @@ export default async function getUser(client: Client) {
       throw new MissingUser();
     }
 
+    if (client.authConfig.userId !== res.user.id) {
+      client.updateAuthConfig({ userId: res.user.id });
+      client.writeToAuthConfigFile();
+    }
+
+    client.telemetryEventStore.updateUserId(res.user.id);
+
     return res.user;
   } catch (error) {
     if (error instanceof APIError && error.status === 403) {
+      if (client.authConfig.userId) {
+        client.updateAuthConfig({ userId: undefined });
+        client.writeToAuthConfigFile();
+      }
+
       throw new InvalidToken(client.authConfig.tokenSource);
     }
 
