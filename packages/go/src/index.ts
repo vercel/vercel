@@ -666,6 +666,8 @@ async function writeEntrypoint(
   await writeFile(dest, mainModGoContents, 'utf-8');
 }
 
+// no op
+
 /**
  * Writes a `go.mod` file in the specified directory. If a `go.mod` file
  * exists, then update the module name and any relative `replace` statements,
