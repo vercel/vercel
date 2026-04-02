@@ -93,7 +93,7 @@ describe('metrics query v2', () => {
         error: {
           code: 'BAD_REQUEST',
           message:
-            'Metric "vercel.requests" is not directly queryable. Use "vercel metrics schema --metric vercel.requests" to inspect the available metrics.',
+            'Metric "vercel.requests" is not directly queryable. Available metrics: vercel.requests.count. Use "vercel metrics schema --metric vercel.requests" to inspect the available metrics.',
         },
       });
     });
@@ -103,6 +103,9 @@ describe('metrics query v2', () => {
 
     expect(exitCode).toBe(1);
     expect(client.stderr.getFullOutput()).toContain('not directly queryable');
+    expect(client.stderr.getFullOutput()).toContain(
+      'Available metrics: vercel.requests.count'
+    );
     expect(client.stderr.getFullOutput()).toContain(
       'vercel metrics schema --metric vercel.requests'
     );
