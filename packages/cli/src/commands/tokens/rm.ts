@@ -5,7 +5,10 @@ import { printError } from '../../util/error';
 import { removeSubcommand } from './command';
 import { validateJsonOutput } from '../../util/output-format';
 import output from '../../output-manager';
-import { outputAgentError } from '../../util/agent-output';
+import {
+  buildCommandWithGlobalFlags,
+  outputAgentError,
+} from '../../util/agent-output';
 
 export default async function rm(
   client: Client,
@@ -22,18 +25,29 @@ export default async function rm(
 
   const id = parsedArgs.args[0];
   if (!id) {
-    if (client.nonInteractive) {
-      outputAgentError(
-        client,
-        {
-          status: 'error',
-          reason: 'missing_arguments',
-          message:
-            'Token id is required. Example: `vercel tokens rm tok_abc123`',
-        },
-        1
-      );
-    }
+    outputAgentError(
+      client,
+      {
+        status: 'error',
+        reason: 'missing_arguments',
+        message: 'Token id is required. Example: `vercel tokens rm tok_abc123`',
+        hint: 'Run `tokens ls` to list ids, then pass the id to `tokens rm`.',
+        next: [
+          {
+            command: buildCommandWithGlobalFlags(client.argv, 'tokens ls'),
+            when: 'List personal access token ids for the current account',
+          },
+          {
+            command: buildCommandWithGlobalFlags(
+              client.argv,
+              'tokens rm <token_id>'
+            ),
+            when: 'Remove a token after replacing <token_id> with an id from the list',
+          },
+        ],
+      },
+      1
+    );
     output.error(
       'Token id is required. Example: `vercel tokens rm tok_abc123`'
     );

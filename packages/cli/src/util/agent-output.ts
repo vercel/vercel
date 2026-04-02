@@ -58,6 +58,8 @@ export interface AgentErrorPayload {
   hint?: string;
   /** When true, a human must act before the command can succeed. */
   userActionRequired?: boolean;
+  /** Dashboard or docs URL for agents that key off a dedicated field (optional). */
+  verification_uri?: string;
 }
 
 /**
@@ -402,7 +404,8 @@ export function argvHasNonInteractive(argv: string[] | undefined): boolean {
   return false;
 }
 
-function shouldEmitNonInteractiveCommandError(client: Client): boolean {
+/** True when the command should emit JSON agent payloads instead of only stderr (matches `outputAgentError`). */
+export function shouldEmitNonInteractiveCommandError(client: Client): boolean {
   return client.nonInteractive || argvHasNonInteractive(client.argv ?? []);
 }
 
