@@ -422,10 +422,16 @@ export function outputAgentError(
   process.exit(exitCode);
 }
 
-/** Suggested follow-ups for `project members` / `project access-groups` failures (only callers of exitWithNonInteractiveError). */
+/** Project subcommands that use `exitWithNonInteractiveError` for parity / agent output. */
+export type ProjectSubcommandNonInteractiveVariant =
+  | 'members'
+  | 'access-groups'
+  | 'access-summary';
+
+/** Suggested follow-ups for `project members` / `project access-groups` / `project access-summary` failures (only callers of exitWithNonInteractiveError). */
 function buildNextStepsForProjectSubcommands(
   client: Client,
-  variant: 'members' | 'access-groups'
+  variant: ProjectSubcommandNonInteractiveVariant
 ): NonNullable<AgentErrorPayload['next']> {
   const byName =
     variant === 'access-groups'
@@ -433,10 +439,15 @@ function buildNextStepsForProjectSubcommands(
           template: 'project access-groups <name>' as const,
           when: 'List access groups by project name (replace <name>)',
         }
-      : {
-          template: 'project members <name>' as const,
-          when: 'List members by project name (replace <name>)',
-        };
+      : variant === 'access-summary'
+        ? {
+            template: 'project access-summary <name>' as const,
+            when: 'Show role counts by project name (replace <name>)',
+          }
+        : {
+            template: 'project members <name>' as const,
+            when: 'List members by project name (replace <name>)',
+          };
   return [
     {
       command: buildCommandWithGlobalFlags(client.argv, 'link'),
@@ -460,7 +471,7 @@ function writeAgentErrorPayloadAndExit(
   client: Client,
   payload: AgentErrorPayload,
   exitCode: number,
-  variant: 'members' | 'access-groups'
+  variant: ProjectSubcommandNonInteractiveVariant
 ): void {
   const next = buildNextStepsForProjectSubcommands(client, variant);
   const out: AgentErrorPayload = {
@@ -508,7 +519,9 @@ export function exitWithNonInteractiveError(
   client: Client,
   err: unknown,
   exitCode: number = 1,
-  options: { variant: 'members' | 'access-groups' } = { variant: 'members' }
+  options: { variant: ProjectSubcommandNonInteractiveVariant } = {
+    variant: 'members',
+  }
 ): void {
   if (!shouldEmitNonInteractiveCommandError(client)) {
     return;

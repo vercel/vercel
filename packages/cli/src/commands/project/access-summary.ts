@@ -4,6 +4,10 @@ import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
+import {
+  exitWithNonInteractiveError,
+  outputAgentError,
+} from '../../util/agent-output';
 import { accessSummarySubcommand } from './command';
 import { validateJsonOutput } from '../../util/output-format';
 import output from '../../output-manager';
@@ -20,6 +24,17 @@ export default async function accessSummary(
   try {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'invalid_arguments',
+          message: error instanceof Error ? error.message : String(error),
+        },
+        1
+      );
+    }
     printError(error);
     return 1;
   }
@@ -38,15 +53,25 @@ export default async function accessSummary(
   }
   const asJson = formatResult.jsonOutput;
 
-  const project = await getProjectByCwdOrLink({
-    client,
-    commandName: 'project access-summary',
-    projectNameOrId: parsedArgs.args[0],
-  });
+  let summary: Record<string, number>;
+  try {
+    const project = await getProjectByCwdOrLink({
+      client,
+      commandName: 'project access-summary',
+      projectNameOrId: parsedArgs.args[0],
+      forReadOnlyCommand: true,
+    });
 
-  const summary = await client.fetch<Record<string, number>>(
-    `/v1/projects/${encodeURIComponent(project.id)}/members/summary`
-  );
+    summary = await client.fetch<Record<string, number>>(
+      `/v1/projects/${encodeURIComponent(project.id)}/members/summary`
+    );
+  } catch (err: unknown) {
+    exitWithNonInteractiveError(client, err, 1, {
+      variant: 'access-summary',
+    });
+    printError(err);
+    return 1;
+  }
 
   if (asJson) {
     client.stdout.write(`${JSON.stringify(summary, null, 2)}\n`);

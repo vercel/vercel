@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import projects from '../../../../src/commands/project';
 import { useUser } from '../../../mocks/user';
 import { useTeams } from '../../../mocks/team';
@@ -110,6 +110,56 @@ describe('access-summary', () => {
         value: 'summary',
       },
     ]);
+  });
+
+  describe('--non-interactive', () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+      client.nonInteractive = false;
+    });
+
+    it('outputs error JSON when the summary API returns 403', async () => {
+      useUser();
+      useTeams('team_dummy');
+      const { project } = useProject({
+        ...defaultProject,
+        name: 'test_project',
+      });
+
+      vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+        throw new Error(`exit:${code ?? 0}`);
+      }) as () => never);
+
+      client.scenario.get(
+        `/v1/projects/${project.id}/members/summary`,
+        (_req, res) => {
+          res.status(403).json({
+            error: {
+              code: 'forbidden',
+              message: 'Invalid team plan.',
+            },
+          });
+        }
+      );
+
+      client.nonInteractive = true;
+      client.setArgv(
+        'project',
+        'access-summary',
+        project.name!,
+        '--non-interactive'
+      );
+
+      await expect(projects(client)).rejects.toThrow('exit:1');
+
+      const payload = JSON.parse(client.stdout.getFullOutput().trim());
+      expect(payload).toMatchObject({
+        status: 'error',
+        reason: 'forbidden',
+        message: 'Invalid team plan.',
+      });
+      expect(Array.isArray(payload.next)).toBe(true);
+    });
   });
 
   it('logs when the API returns an empty object', async () => {
