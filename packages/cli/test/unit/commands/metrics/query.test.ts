@@ -3,10 +3,13 @@ import { client } from '../../../mocks/client';
 import query from '../../../../src/commands/metrics/query';
 import { MetricsTelemetryClient } from '../../../../src/util/telemetry/commands/metrics';
 import * as linkModule from '../../../../src/util/projects/link';
+import getScope from '../../../../src/util/get-scope';
 
 vi.mock('../../../../src/util/projects/link');
+vi.mock('../../../../src/util/get-scope');
 
 const mockedGetLinkedProject = vi.mocked(linkModule.getLinkedProject);
+const mockedGetScope = vi.mocked(getScope);
 
 class MockTelemetry extends MetricsTelemetryClient {
   constructor() {
@@ -28,11 +31,20 @@ function mockLinkedProject() {
   });
 }
 
+function mockTeamScope() {
+  mockedGetScope.mockResolvedValue({
+    contextName: 'my-team',
+    team: { id: 'team_dummy', slug: 'my-team' } as never,
+    user: { id: 'user_dummy' } as never,
+  });
+}
+
 describe('metrics query v2', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     client.reset();
     mockLinkedProject();
+    mockTeamScope();
   });
 
   it('queries a metric through the v2 endpoint', async () => {
@@ -132,7 +144,7 @@ describe('metrics query v2', () => {
         error: {
           code: 'payment_required',
           message:
-            'You have reached the daily observability metrics query limit for your team. Please try again later or contact support if you need a higher limit.',
+            'You have reached the daily observability metrics query limit for your team. Request a higher usage limit from your Vercel account team.',
         },
       });
     });
@@ -168,7 +180,7 @@ describe('metrics query v2', () => {
         error: {
           code: 'rate_limited',
           message:
-            'Too many requests. Please wait and try again. If you need a higher limit, contact support.',
+            'Too many requests. Please wait and try again. If you need a higher limit, request one from your Vercel account team.',
         },
       });
     });

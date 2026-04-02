@@ -18,6 +18,9 @@ describe('metrics index v2', () => {
   it('routes schema subcommand', async () => {
     client.setArgv('metrics', 'schema');
     expect(await metrics(client)).toBe(0);
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      { key: 'subcommand:schema', value: 'schema' },
+    ]);
   });
 
   it('shows help when no --metric is provided for query', async () => {

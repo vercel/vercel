@@ -62,4 +62,40 @@ describe('metrics schema v2', () => {
     expect(exitCode).toBe(0);
     expect(client.stderr.getFullOutput()).toContain('vercel.requests.count');
   });
+
+  describe('telemetry', () => {
+    it('should track metric option', async () => {
+      client.scenario.get(
+        '/v2/observability/schema/vercel.requests.count',
+        (_req, res) => {
+          res.json([
+            {
+              id: 'vercel.requests.count',
+              description: 'Count',
+              unit: 'count',
+              aggregations: ['sum'],
+              defaultAggregation: 'sum',
+            },
+          ]);
+        }
+      );
+      client.setArgv('metrics', 'schema', '--metric', 'vercel.requests.count');
+
+      await schema(client, new MockTelemetry());
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'option:metric', value: 'vercel.requests.count' },
+      ]);
+    });
+
+    it('should track format option', async () => {
+      client.setArgv('metrics', 'schema', '--format=json');
+
+      await schema(client, new MockTelemetry());
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'option:format', value: 'json' },
+      ]);
+    });
+  });
 });

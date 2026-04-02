@@ -67,7 +67,7 @@ function handleApiError(
       code = err.code || 'RATE_LIMITED';
       message =
         err.serverMessage ||
-        'You have reached the metrics query rate limit. Please wait and try again. If you need a higher limit, contact support.';
+        'You have reached the metrics query rate limit. Please wait and try again. If you need a higher limit, request one from your Vercel account team.';
       break;
     case 403:
       code = 'FORBIDDEN';
