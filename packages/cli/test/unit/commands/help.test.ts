@@ -74,9 +74,7 @@ describe('help command', () => {
         client.setArgv('dev', '--help');
         const exitCode = await dev(client);
         expect(exitCode).toEqual(2);
-        expect(
-          String(client.stderr.read() ?? '').trimStart()
-        ).toMatchSnapshot();
+        expect(client.stderr.read()).toMatchSnapshot();
       });
     });
   });
