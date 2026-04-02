@@ -538,7 +538,7 @@ async function editAction(
     if (keys.length === 0) keys = ['ip'];
 
     const subAction = await client.input.select({
-      message: 'Sub-action when limit is exceeded:',
+      message: 'Action when limit is exceeded:',
       choices: [
         { value: 'deny', name: 'Deny (403)' },
         { value: 'challenge', name: 'Challenge' },

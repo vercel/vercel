@@ -535,7 +535,7 @@ async function buildRateLimitInteractive(client: Client) {
   }
 
   const subAction = await client.input.select({
-    message: 'Sub-action when limit is exceeded:',
+    message: 'Action when limit is exceeded:',
     choices: [
       { value: 'deny', name: 'Deny (403)' },
       { value: 'challenge', name: 'Challenge' },

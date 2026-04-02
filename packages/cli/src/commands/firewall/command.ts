@@ -462,7 +462,8 @@ export const rulesAddSubcommand = {
       shorthand: null,
       type: Number,
       deprecated: false,
-      description: 'Rate limit window in seconds (required for rate_limit)',
+      description:
+        'Rate limit window in seconds, 10-3600 (required for rate_limit)',
     },
     {
       name: 'rate-limit-requests',
@@ -470,7 +471,7 @@ export const rulesAddSubcommand = {
       type: Number,
       deprecated: false,
       description:
-        'Rate limit max requests per window (required for rate_limit)',
+        'Rate limit max requests per window, 1-10000000 (required for rate_limit)',
     },
     {
       name: 'rate-limit-keys',
@@ -554,7 +555,8 @@ export const rulesEditSubcommand = {
       shorthand: null,
       type: [String] as unknown as StringConstructor,
       deprecated: false,
-      description: 'Replace conditions (repeatable). Same format as rules add.',
+      description:
+        'Replace conditions (repeatable). Format: type:op:value. Operators: equals, contains, starts_with, ends_with, matches, exists, any_of (or short: eq, sub, pre, suf, re, ex, inc). Negate with ! or not_ prefix.',
     },
     {
       name: 'or',
@@ -618,14 +620,14 @@ export const rulesEditSubcommand = {
       shorthand: null,
       type: Number,
       deprecated: false,
-      description: 'Rate limit window in seconds',
+      description: 'Rate limit window in seconds (10-3600)',
     },
     {
       name: 'rate-limit-requests',
       shorthand: null,
       type: Number,
       deprecated: false,
-      description: 'Rate limit max requests per window',
+      description: 'Rate limit max requests per window (1-10000000)',
     },
     {
       name: 'rate-limit-keys',
