@@ -68,6 +68,30 @@ export async function handleAIAdd(
           output.warn(`AI generation failed: ${response.error}. Retrying...`);
           continue;
         }
+
+        if (client.stdin.isTTY && !client.nonInteractive && !opts.skipPrompts) {
+          const retryChoice = await client.input.select({
+            message: `AI could not generate a rule: ${response.error}`,
+            choices: [
+              {
+                value: 'retry',
+                name: 'Try again with a different description',
+              },
+              { value: 'cancel', name: 'Cancel' },
+            ],
+          });
+          if (retryChoice === 'cancel') {
+            output.log('Canceled');
+            return 0;
+          }
+          prompt = await client.input.text({
+            message: 'Describe the rule you want to create:',
+            validate: (val: string) =>
+              val.trim() ? true : 'Please provide a description.',
+          });
+          continue;
+        }
+
         if (client.nonInteractive) {
           outputAgentError(
             client,
@@ -95,12 +119,35 @@ export async function handleAIAdd(
             1
           );
         }
+
         output.error(`AI could not generate a rule: ${response.error}`);
         return 1;
       }
 
       if (!response.rule) {
         output.stopSpinner();
+        if (client.stdin.isTTY && !client.nonInteractive && !opts.skipPrompts) {
+          const retryChoice = await client.input.select({
+            message: 'AI did not return a rule.',
+            choices: [
+              {
+                value: 'retry',
+                name: 'Try again with a different description',
+              },
+              { value: 'cancel', name: 'Cancel' },
+            ],
+          });
+          if (retryChoice === 'cancel') {
+            output.log('Canceled');
+            return 0;
+          }
+          prompt = await client.input.text({
+            message: 'Describe the rule you want to create:',
+            validate: (val: string) =>
+              val.trim() ? true : 'Please provide a description.',
+          });
+          continue;
+        }
         if (client.nonInteractive) {
           outputAgentError(
             client,

@@ -654,9 +654,9 @@ export function formatRuleExpanded(rule: FirewallRule, index?: number): string {
   lines.push('');
   lines.push(`     ${chalk.dim('Action:')} ${action}`);
 
-  // Duration
+  // Duration (not shown for rate_limit — shown as part of "If exceeded" instead)
   const duration = rule.action.mitigate?.actionDuration;
-  if (duration) {
+  if (duration && rule.action.mitigate?.action !== 'rate_limit') {
     lines.push(`     ${chalk.dim('Duration:')} ${duration}`);
   }
 
@@ -668,7 +668,8 @@ export function formatRuleExpanded(rule: FirewallRule, index?: number): string {
     );
     lines.push(`     ${chalk.dim('Keys:')} ${rl.keys.join(', ')}`);
     if (rl.action) {
-      lines.push(`     ${chalk.dim('Sub-action:')} ${rl.action}`);
+      const exceeded = duration ? `${rl.action} (${duration})` : rl.action;
+      lines.push(`     ${chalk.dim('If exceeded:')} ${exceeded}`);
     }
   }
 
@@ -726,8 +727,9 @@ export function formatRuleDetail(rule: FirewallRule): string {
     `  ${chalk.bold('Action:')}      ${formatActionDisplay(rule.action)}`
   );
 
+  // Duration (not shown for rate_limit — shown as part of "If exceeded" instead)
   const duration = rule.action.mitigate?.actionDuration;
-  if (duration) {
+  if (duration && rule.action.mitigate?.action !== 'rate_limit') {
     lines.push(`  ${chalk.bold('Duration:')}    ${duration}`);
   }
 
@@ -735,12 +737,13 @@ export function formatRuleDetail(rule: FirewallRule): string {
   const rl = rule.action.mitigate?.rateLimit;
   if (rl) {
     lines.push(`  ${chalk.bold('Rate Limit:')}`);
-    lines.push(`    Algorithm:  ${rl.algo}`);
-    lines.push(`    Window:     ${rl.window}s`);
-    lines.push(`    Limit:      ${rl.limit} requests`);
-    lines.push(`    Keys:       ${rl.keys.join(', ')}`);
+    lines.push(`    Algorithm:    ${rl.algo}`);
+    lines.push(`    Window:       ${rl.window}s`);
+    lines.push(`    Limit:        ${rl.limit} requests`);
+    lines.push(`    Keys:         ${rl.keys.join(', ')}`);
     if (rl.action) {
-      lines.push(`    Sub-action: ${rl.action}`);
+      const exceeded = duration ? `${rl.action} (${duration})` : rl.action;
+      lines.push(`    If exceeded:  ${exceeded}`);
     }
   }
 

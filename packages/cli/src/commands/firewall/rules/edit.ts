@@ -221,7 +221,9 @@ export default async function edit(client: Client, argv: string[]) {
       return 0;
     }
 
-    return saveEdit(client, project, teamId, originalRule, modified, parsed);
+    return saveEdit(client, project, teamId, originalRule, modified, parsed, {
+      skipConfirm: true,
+    });
   }
 
   // Non-interactive with no flags
@@ -308,6 +310,28 @@ async function handleAIEdit(
       }
 
       if (!response.rule) {
+        if (client.stdin.isTTY && !client.nonInteractive && !opts.skipPrompts) {
+          const retryChoice = await client.input.select({
+            message: 'AI did not return a rule.',
+            choices: [
+              {
+                value: 'retry',
+                name: 'Try again with a different description',
+              },
+              { value: 'cancel', name: 'Cancel' },
+            ],
+          });
+          if (retryChoice === 'cancel') {
+            output.log('Canceled');
+            return 0;
+          }
+          prompt = await client.input.text({
+            message: 'Describe the changes you want:',
+            validate: (val: string) =>
+              val.trim() ? true : 'Please describe the changes.',
+          });
+          continue;
+        }
         output.error('AI did not return a rule.');
         return 1;
       }
@@ -364,9 +388,17 @@ async function handleAIEdit(
     }
 
     if (choice === 'save') {
-      return saveEdit(client, project, teamId, originalRule, currentRule, {
-        flags: {},
-      });
+      return saveEdit(
+        client,
+        project,
+        teamId,
+        originalRule,
+        currentRule,
+        {
+          flags: {},
+        },
+        { skipConfirm: true }
+      );
     }
 
     if (choice === 'edit-ai') {
@@ -672,20 +704,23 @@ async function saveEdit(
   teamId: string | undefined,
   originalRule: FirewallRule,
   modified: FirewallRule,
-  parsed: { flags: Record<string, unknown> }
+  parsed: { flags: Record<string, unknown> },
+  opts?: { skipConfirm?: boolean }
 ): Promise<number> {
-  // Show preview
-  output.print(`\n${formatRuleExpanded(modified)}\n\n`);
+  if (!opts?.skipConfirm) {
+    // Show preview and confirm (flag-based edits only)
+    output.print(`\n${formatRuleExpanded(modified)}\n\n`);
 
-  const confirmed = await confirmAction(
-    client,
-    parsed.flags['--yes'] as boolean,
-    `Save changes to "${modified.name}"?`
-  );
+    const confirmed = await confirmAction(
+      client,
+      parsed.flags['--yes'] as boolean,
+      `Save changes to "${modified.name}"?`
+    );
 
-  if (!confirmed) {
-    output.log('Canceled');
-    return 0;
+    if (!confirmed) {
+      output.log('Canceled');
+      return 0;
+    }
   }
 
   const editStamp = stamp();
