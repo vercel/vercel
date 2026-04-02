@@ -69,8 +69,11 @@ export default async function accessGroups(
   const asJson = formatResult.jsonOutput;
 
   const limit = parsedArgs.flags['--limit'];
-  if (typeof limit === 'number' && (limit < 1 || limit > 100)) {
-    output.error('`--limit` must be a number between 1 and 100.');
+  if (
+    typeof limit === 'number' &&
+    (!Number.isInteger(limit) || limit < 1 || limit > 100)
+  ) {
+    output.error('`--limit` must be an integer between 1 and 100.');
     return 1;
   }
 
