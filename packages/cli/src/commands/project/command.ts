@@ -115,6 +115,85 @@ export const tokenSubcommand = {
   ],
 } as const;
 
+export const membersSubcommand = {
+  name: 'members',
+  aliases: ['member'],
+  description: 'List project members for a project',
+  arguments: [
+    {
+      name: 'name',
+      required: false,
+    },
+  ],
+  options: [
+    formatOption,
+    {
+      name: 'search',
+      shorthand: null,
+      type: String,
+      description: 'Filter project members by name, username, or email',
+      deprecated: false,
+    },
+    {
+      name: 'limit',
+      shorthand: null,
+      type: Number,
+      description: 'Limit number of project members returned (1-100)',
+      deprecated: false,
+    },
+  ],
+  examples: [
+    {
+      name: 'List members for the linked project',
+      value: `${packageName} project members`,
+    },
+    {
+      name: 'List members for a named project as JSON',
+      value: `${packageName} project members my-project --format json`,
+    },
+  ],
+} as const;
+
+export const accessGroupsSubcommand = {
+  name: 'access-groups',
+  aliases: ['accessgroups'],
+  description: 'List access groups for a project',
+  arguments: [
+    {
+      name: 'name',
+      required: false,
+    },
+  ],
+  options: [
+    formatOption,
+    nextOption,
+    {
+      name: 'search',
+      shorthand: null,
+      type: String,
+      description: 'Search access groups by name',
+      deprecated: false,
+    },
+    {
+      name: 'limit',
+      shorthand: null,
+      type: Number,
+      description: 'Limit number of access groups returned (1-100)',
+      deprecated: false,
+    },
+  ],
+  examples: [
+    {
+      name: 'List access groups for the linked project',
+      value: `${packageName} project access-groups`,
+    },
+    {
+      name: 'List access groups for a named project as JSON',
+      value: `${packageName} project access-groups my-project --format json`,
+    },
+  ],
+} as const;
+
 export const projectCommand = {
   name: 'project',
   aliases: ['projects'],
@@ -124,6 +203,8 @@ export const projectCommand = {
     addSubcommand,
     inspectSubcommand,
     listSubcommand,
+    membersSubcommand,
+    accessGroupsSubcommand,
     removeSubcommand,
     tokenSubcommand,
   ],
