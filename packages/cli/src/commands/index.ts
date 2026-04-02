@@ -46,6 +46,7 @@ import { rollingReleaseCommand } from './rolling-release/command';
 import { skillsCommand } from './skills/command';
 import { targetCommand } from './target/command';
 import { teamsCommand } from './teams/command';
+import { tokensCommand } from './tokens/command';
 import { telemetryCommand } from './telemetry/command';
 import { upgradeCommand } from './upgrade/command';
 import { usageCommand } from './usage/command';
@@ -103,6 +104,7 @@ const commandsStructs = [
   skillsCommand,
   targetCommand,
   teamsCommand,
+  tokensCommand,
   telemetryCommand,
   upgradeCommand,
   webhooksCommand,
