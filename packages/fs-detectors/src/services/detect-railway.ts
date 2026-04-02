@@ -1,7 +1,5 @@
 import { posix as posixPath } from 'path';
 import toml from 'smol-toml';
-import type { Framework } from '@vercel/frameworks';
-import { frameworkList } from '@vercel/frameworks';
 import { detectFrameworks } from '../detect-framework';
 import type { DetectorFilesystem } from '../detectors/filesystem';
 import type {
@@ -10,7 +8,12 @@ import type {
   ServiceDetectionError,
   ServiceDetectionWarning,
 } from './types';
-import { isFrontendFramework, inferRuntimeFromFramework } from './utils';
+import {
+  assignRoutePrefixes,
+  combineBuildCommand,
+  DETECTION_FRAMEWORKS,
+  inferRuntimeFromFramework,
+} from './utils';
 
 export interface RailwayDetectResult {
   services: ExperimentalServices | null;
@@ -67,11 +70,6 @@ const SKIP_DIRS = new Set([
   'CVS',
 ]);
 
-const DETECTION_FRAMEWORKS = frameworkList.filter(
-  (framework: Framework) =>
-    !framework.experimental || framework.runtimeFramework
-);
-
 /**
  * Detect Railway service configurations in the project.
  *
@@ -107,7 +105,9 @@ export async function detectRailwayServices(options: {
     });
 
     // we don't have write access to the FS, so can't just define an entrypoint,
-    // the best we can do is to suggest how to define a cron service properly
+    // the best we can do is to suggest how to define a cron service properly.
+    // Later there will be an option to execute arbitrary bash commands,
+    // so we would be able to automatically handle crons as well
     if (cf.config.deploy?.cronSchedule) {
       const schedule = cf.config.deploy.cronSchedule;
       const runtime =
@@ -310,65 +310,4 @@ function deriveServiceName(dirPath: string): string {
   }
   const segments = dirPath.split('/');
   return segments[segments.length - 1];
-}
-
-function combineBuildCommand(
-  buildCommand: string | undefined,
-  preDeployCommand: string | string[] | undefined
-): string | undefined {
-  const preDeploy = Array.isArray(preDeployCommand)
-    ? preDeployCommand.join(' && ')
-    : preDeployCommand;
-
-  if (preDeploy && buildCommand) {
-    return `${buildCommand} && ${preDeploy}`;
-  } else if (preDeploy) {
-    return preDeploy;
-  } else {
-    return buildCommand;
-  }
-}
-
-/**
- * Assign route prefixes.
- *
- * A frontend service gets `/`, the rest get `/_/{name}`.
- * A single non-frontend service would also get `/`.
- * If no frontend service found, then multiple services get `/_/{name}`.
- *
- * Priority for `/`: single service or frontend > name "frontend" or "web" > alphabetical.
- */
-function assignRoutePrefixes(
-  services: ExperimentalServices
-): ServiceDetectionWarning[] {
-  const warnings: ServiceDetectionWarning[] = [];
-  const names = Object.keys(services);
-
-  if (names.length === 1) {
-    services[names[0]].routePrefix = '/';
-    return warnings;
-  }
-
-  const frontendNames = names.filter(name =>
-    isFrontendFramework(services[name].framework)
-  );
-
-  let rootName: string | null = null;
-  if (frontendNames.length === 1) {
-    rootName = frontendNames[0];
-  } else if (frontendNames.length > 1) {
-    rootName =
-      frontendNames.find(n => n === 'frontend' || n === 'web') ??
-      frontendNames.sort()[0];
-    warnings.push({
-      code: 'MULTIPLE_FRONTENDS',
-      message: `Multiple frontend services detected (${frontendNames.join(', ')}). "${rootName}" was assigned routePrefix "/". Adjust manually if a different service should be the root.`,
-    });
-  }
-
-  for (const name of names) {
-    services[name].routePrefix = name === rootName ? '/' : `/_/${name}`;
-  }
-
-  return warnings;
 }

@@ -2,11 +2,14 @@ import {
   isBackendFramework,
   isPythonFramework,
 } from '@vercel/build-utils/dist/framework-helpers';
+import type { Framework } from '@vercel/frameworks';
+import { frameworkList } from '@vercel/frameworks';
 import type { DetectorFilesystem } from '../detectors/filesystem';
 import type {
   ServiceRuntime,
   ExperimentalServices,
   ServiceDetectionError,
+  ServiceDetectionWarning,
   ResolvedService,
 } from './types';
 import {
@@ -15,6 +18,13 @@ import {
   STATIC_BUILDERS,
   ROUTE_OWNING_BUILDERS,
 } from './types';
+
+// Runtime frameworks, e.g. Python, Node, Ruby, etc. are currently marked experimental,
+// but service auto-detection should still consider them.
+export const DETECTION_FRAMEWORKS = frameworkList.filter(
+  (framework: Framework) =>
+    !framework.experimental || framework.runtimeFramework
+);
 
 export async function hasFile(
   fs: DetectorFilesystem,
@@ -230,5 +240,66 @@ export async function readVercelConfig(
         message: 'Failed to parse vercel.json. Ensure it contains valid JSON.',
       },
     };
+  }
+}
+
+/**
+ * Assign route prefixes to inferred services.
+ *
+ * A frontend service gets `/`, the rest get `/_/{name}`.
+ * A single non-frontend service would also get `/`.
+ * If no frontend service found, then multiple services get `/_/{name}`.
+ *
+ * Priority for `/`: single service or frontend > name "frontend" or "web" > alphabetical.
+ */
+export function assignRoutePrefixes(
+  services: ExperimentalServices
+): ServiceDetectionWarning[] {
+  const warnings: ServiceDetectionWarning[] = [];
+  const names = Object.keys(services);
+
+  if (names.length === 1) {
+    services[names[0]].routePrefix = '/';
+    return warnings;
+  }
+
+  const frontendNames = names.filter(name =>
+    isFrontendFramework(services[name].framework)
+  );
+
+  let rootName: string | null = null;
+  if (frontendNames.length === 1) {
+    rootName = frontendNames[0];
+  } else if (frontendNames.length > 1) {
+    rootName =
+      frontendNames.find(n => n === 'frontend' || n === 'web') ??
+      frontendNames.sort()[0];
+    warnings.push({
+      code: 'MULTIPLE_FRONTENDS',
+      message: `Multiple frontend services detected (${frontendNames.join(', ')}). "${rootName}" was assigned routePrefix "/". Adjust manually if a different service should be the root.`,
+    });
+  }
+
+  for (const name of names) {
+    services[name].routePrefix = name === rootName ? '/' : `/_/${name}`;
+  }
+
+  return warnings;
+}
+
+export function combineBuildCommand(
+  buildCommand: string | undefined,
+  preDeployCommand: string | string[] | undefined
+): string | undefined {
+  const preDeploy = Array.isArray(preDeployCommand)
+    ? preDeployCommand.join(' && ')
+    : preDeployCommand;
+
+  if (preDeploy && buildCommand) {
+    return `${buildCommand} && ${preDeploy}`;
+  } else if (preDeploy) {
+    return preDeploy;
+  } else {
+    return buildCommand;
   }
 }
