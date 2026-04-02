@@ -687,7 +687,7 @@ export const rulesEditSubcommand = {
 export const rulesEnableSubcommand = {
   name: 'enable',
   aliases: [],
-  description: 'Enable a disabled firewall rule',
+  description: 'Enable a disabled custom firewall rule',
   arguments: [{ name: 'name-or-id', required: true }],
   options: [yesOption],
   examples: [
@@ -701,7 +701,7 @@ export const rulesEnableSubcommand = {
 export const rulesDisableSubcommand = {
   name: 'disable',
   aliases: [],
-  description: 'Disable a firewall rule without removing it',
+  description: 'Disable a custom firewall rule without removing it',
   arguments: [{ name: 'name-or-id', required: true }],
   options: [yesOption],
   examples: [
@@ -715,7 +715,7 @@ export const rulesDisableSubcommand = {
 export const rulesRemoveSubcommand = {
   name: 'remove',
   aliases: ['rm', 'delete'],
-  description: 'Remove a firewall rule',
+  description: 'Remove a custom firewall rule',
   arguments: [{ name: 'name-or-id', required: true }],
   options: [yesOption],
   examples: [
@@ -729,7 +729,7 @@ export const rulesRemoveSubcommand = {
 export const rulesReorderSubcommand = {
   name: 'reorder',
   aliases: ['move'],
-  description: 'Change the priority order of a firewall rule',
+  description: 'Change the priority order of a custom firewall rule',
   arguments: [{ name: 'name-or-id', required: true }],
   options: [
     {
