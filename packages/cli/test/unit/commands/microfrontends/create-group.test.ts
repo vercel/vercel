@@ -1,4 +1,4 @@
-import { describe, beforeEach, expect, it, vi } from 'vitest';
+import { describe, beforeEach, afterEach, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import microfrontends from '../../../../src/commands/microfrontends';
 import * as linkModule from '../../../../src/util/projects/link';
@@ -454,6 +454,10 @@ describe('microfrontends create-group', () => {
   });
 
   describe('non-interactive mode', () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
     it('errors when --name is missing', async () => {
       setupMocks();
       client.setArgv(
@@ -754,6 +758,11 @@ describe('microfrontends create-group', () => {
           ],
         },
       });
+
+      vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+        throw new Error(`exit:${code ?? 0}`);
+      }) as () => never);
+
       client.setArgv(
         'microfrontends',
         'create-group',
@@ -763,9 +772,13 @@ describe('microfrontends create-group', () => {
         '--default-app=web'
       );
 
-      const exitCode = await microfrontends(client);
+      await expect(microfrontends(client)).rejects.toThrow('exit:1');
 
-      expect(exitCode).toBe(1);
+      const payload = JSON.parse(client.stdout.getFullOutput().trim());
+      expect(payload).toMatchObject({
+        status: 'error',
+        reason: 'purchase_requires_user',
+      });
       expect(mocks.getPostCalled()).toBe(false);
     });
   });
