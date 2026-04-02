@@ -185,8 +185,13 @@ async function editConditions(
     }
     output.print('\n');
 
-    // Build choices
+    // Build choices — Done first so users don't have to scroll past many conditions
     const choices: { value: string; name: string }[] = [];
+
+    choices.push({
+      value: 'done',
+      name: chalk.bold('Done with conditions'),
+    });
 
     // Edit individual conditions
     let idx = 1;
@@ -218,11 +223,6 @@ async function editConditions(
     choices.push({
       value: 'add-or',
       name: 'Add new group (OR)',
-    });
-
-    choices.push({
-      value: 'done',
-      name: chalk.bold('Done with conditions'),
     });
 
     const action = await client.input.select({
