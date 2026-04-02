@@ -1,7 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
 import { join } from 'path';
 import { mkdirp, writeJSON } from 'fs-extra';
-import { getLinkedProject } from '../../../../src/util/projects/link';
+import {
+  getLinkFromDir,
+  getLinkedProject,
+} from '../../../../src/util/projects/link';
 import { client } from '../../../mocks/client';
 
 import { defaultProject, useProject } from '../../../mocks/project';
@@ -13,6 +16,39 @@ type UnPromisify<T> = T extends Promise<infer U> ? U : T;
 
 const fixture = (name: string) =>
   join(__dirname, '../../../fixtures/unit', name);
+
+describe('getLinkFromDir', () => {
+  it('returns null for settings-only project.json (repo-linked pull output)', async () => {
+    const repoRoot = setupTmpDir('settings-only-project-json');
+    const vercelDir = join(repoRoot, '.vercel');
+    await mkdirp(vercelDir);
+    await writeJSON(join(vercelDir, 'project.json'), {
+      settings: {
+        createdAt: 1555413045188,
+        framework: null,
+        outputDirectory: 'dist',
+        rootDirectory: 'dashboard',
+      },
+    });
+
+    await expect(getLinkFromDir(vercelDir)).resolves.toBeNull();
+  });
+
+  it('throws when project.json has link ids but fails schema validation', async () => {
+    const repoRoot = setupTmpDir('invalid-link-project-json');
+    const vercelDir = join(repoRoot, '.vercel');
+    await mkdirp(vercelDir);
+    await writeJSON(join(vercelDir, 'project.json'), {
+      orgId: 'team_x',
+      projectId: 'proj_x',
+      projectName: 123,
+    });
+
+    await expect(getLinkFromDir(vercelDir)).rejects.toThrow(
+      /Project Settings are invalid/
+    );
+  });
+});
 
 describe('getLinkedProject', () => {
   it('should fail to return a link when token is missing', async () => {

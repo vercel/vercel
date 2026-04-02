@@ -290,6 +290,9 @@ importers:
       '@types/async-retry':
         specifier: ^1.2.1
         version: 1.2.1
+      '@types/bytes':
+        specifier: 3.1.1
+        version: 3.1.1
       '@types/cross-spawn':
         specifier: 6.0.0
         version: 6.0.0
@@ -344,6 +347,9 @@ importers:
       async-sema:
         specifier: 2.1.4
         version: 2.1.4
+      bytes:
+        specifier: 3.1.2
+        version: 3.1.2
       cross-spawn:
         specifier: 6.0.5
         version: 6.0.5
@@ -1331,6 +1337,9 @@ importers:
       semver:
         specifier: 6.3.1
         version: 6.3.1
+      smol-toml:
+        specifier: 1.5.2
+        version: 1.5.2
     devDependencies:
       '@types/glob':
         specifier: 7.2.0
@@ -1710,8 +1719,8 @@ importers:
         version: 1.5.0
     devDependencies:
       '@next-community/adapter-vercel':
-        specifier: 0.0.1-beta.15
-        version: 0.0.1-beta.15(next@16.1.6)
+        specifier: 0.0.1-beta.16
+        version: 0.0.1-beta.16(next@16.1.6)
       '@types/aws-lambda':
         specifier: 8.10.19
         version: 8.10.19
@@ -6472,8 +6481,8 @@ packages:
       '@tybys/wasm-util': 0.10.1
     optional: true
 
-  /@next-community/adapter-vercel@0.0.1-beta.15(next@16.1.6):
-    resolution: {integrity: sha512-/lUio4m+zFdzhGQ2SA+/+sGbR/vNIxoydpkIAJBCUoo7+eCFYt+oWiGjKmYrgVLwLeUKDnbpzamegyzWERgRKA==}
+  /@next-community/adapter-vercel@0.0.1-beta.16(next@16.1.6):
+    resolution: {integrity: sha512-mTJJpubNLGfOiPWRNWhZdDASCSrsMfElZC4sdbbOaQorsKBSNaIetg32aahY1dPsI4do7IPTKzY/wGNpP1UAsQ==}
     engines: {node: '>= 20.6.0'}
     peerDependencies:
       next: '>= 16.1.1-canary.18'
@@ -13022,7 +13031,7 @@ packages:
       eslint-import-resolver-webpack:
         optional: true
     dependencies:
-      '@typescript-eslint/parser': 5.62.0(eslint@8.35.0)(typescript@4.9.4)
+      '@typescript-eslint/parser': 5.62.0(eslint@8.35.0)(typescript@4.9.5)
       debug: 3.2.7
       eslint: 8.35.0
       eslint-import-resolver-node: 0.3.9
@@ -13053,7 +13062,7 @@ packages:
         optional: true
     dependencies:
       '@rtsao/scc': 1.1.0
-      '@typescript-eslint/parser': 5.62.0(eslint@8.35.0)(typescript@4.9.4)
+      '@typescript-eslint/parser': 5.62.0(eslint@8.35.0)(typescript@4.9.5)
       array-includes: 3.1.8
       array.prototype.findlastindex: 1.2.6
       array.prototype.flat: 1.3.3
@@ -13157,7 +13166,7 @@ packages:
         optional: true
     dependencies:
       eslint: 8.35.0
-      eslint-plugin-jest: 27.9.0(@typescript-eslint/eslint-plugin@5.62.0)(eslint@8.35.0)(jest@29.5.0)(typescript@4.9.4)
+      eslint-plugin-jest: 27.9.0(@typescript-eslint/eslint-plugin@5.62.0)(eslint@8.35.0)(jest@29.5.0)(typescript@4.9.5)
     dev: true
 
   /eslint-plugin-react-hooks@4.6.2(eslint@8.35.0):
