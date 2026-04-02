@@ -1,4 +1,6 @@
+import { isError } from '@vercel/error-utils';
 import type Client from './client';
+import { isAPIError, LinkRequiredError, ProjectNotFound } from './errors-ts';
 import { packageName } from './pkg-name';
 
 /**
@@ -56,6 +58,8 @@ export interface AgentErrorPayload {
   hint?: string;
   /** When true, a human must act before the command can succeed. */
   userActionRequired?: boolean;
+  /** Dashboard or docs URL for agents that key off a dedicated field (optional). */
+  verification_uri?: string;
 }
 
 /**
@@ -383,21 +387,196 @@ export function outputActionRequired(
   process.exit(exitCode);
 }
 
+/** True when argv explicitly requests non-interactive mode (matches main `index.ts`). */
+export function argvHasNonInteractive(argv: string[] | undefined): boolean {
+  if (!argv?.length) {
+    return false;
+  }
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (a === '--non-interactive') {
+      return argv[i + 1] !== 'false';
+    }
+    if (a.startsWith('--non-interactive=')) {
+      return a.slice('--non-interactive='.length) !== 'false';
+    }
+  }
+  return false;
+}
+
+/** True when the command should emit JSON agent payloads instead of only stderr (matches `outputAgentError`). */
+export function shouldEmitNonInteractiveCommandError(client: Client): boolean {
+  return client.nonInteractive || argvHasNonInteractive(client.argv ?? []);
+}
+
 /**
- * When client.nonInteractive, writes the error payload as a single JSON line
- * to stdout and exits with exitCode (default 1).
- * In interactive mode, does nothing (caller should print error as usual).
+ * Writes a single JSON error payload to stdout and exits when non-interactive
+ * (`client.nonInteractive` or `--non-interactive` on argv).
  */
 export function outputAgentError(
   client: Client,
   payload: AgentErrorPayload,
   exitCode: number = 1
 ): void {
-  if (!client.nonInteractive) {
+  if (!shouldEmitNonInteractiveCommandError(client)) {
     return;
   }
   client.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
   process.exit(exitCode);
+}
+
+/** Suggested follow-ups for `project members` / `project access-groups` failures (only callers of exitWithNonInteractiveError). */
+function buildNextStepsForProjectSubcommands(
+  client: Client,
+  variant: 'members' | 'access-groups'
+): NonNullable<AgentErrorPayload['next']> {
+  const byName =
+    variant === 'access-groups'
+      ? {
+          template: 'project access-groups <name>' as const,
+          when: 'List access groups by project name (replace <name>)',
+        }
+      : {
+          template: 'project members <name>' as const,
+          when: 'List members by project name (replace <name>)',
+        };
+  return [
+    {
+      command: buildCommandWithGlobalFlags(client.argv, 'link'),
+      when: 'Re-link this directory to the correct Vercel project',
+    },
+    {
+      command: buildCommandWithGlobalFlags(client.argv, byName.template),
+      when: byName.when,
+    },
+    {
+      command: buildCommandWithGlobalFlags(client.argv, 'project ls'),
+      when: 'List projects in the current team to pick a name',
+    },
+  ];
+}
+
+const PROJECT_SUBCOMMAND_ERROR_HINT =
+  'If you use --cwd, ensure that folder is linked to the right project, or pass an explicit project name. Use --scope when the project belongs to another team.';
+
+function writeAgentErrorPayloadAndExit(
+  client: Client,
+  payload: AgentErrorPayload,
+  exitCode: number,
+  variant: 'members' | 'access-groups'
+): void {
+  const next = buildNextStepsForProjectSubcommands(client, variant);
+  const out: AgentErrorPayload = {
+    ...payload,
+    next: payload.next ?? next,
+    hint: payload.hint ?? PROJECT_SUBCOMMAND_ERROR_HINT,
+  };
+  client.stdout.write(`${JSON.stringify(out, null, 2)}\n`);
+  process.exit(exitCode);
+}
+
+function isProjectNotFoundLike(err: unknown): boolean {
+  if (err instanceof ProjectNotFound) {
+    return true;
+  }
+  if (
+    isError(err) &&
+    'code' in err &&
+    (err as { code: unknown }).code === 'PROJECT_NOT_FOUND'
+  ) {
+    return true;
+  }
+  return false;
+}
+
+function isLinkRequiredLike(err: unknown): boolean {
+  return err instanceof LinkRequiredError;
+}
+
+/** Normalize API error text for classification (strip trailing " (404)" etc.). */
+function normalizeApiErrorText(message: string): string {
+  return message.replace(/\s*\(\d{3}\)\s*$/, '').trim();
+}
+
+/**
+ * In `--non-interactive` mode, maps project resolution / API failures to a
+ * single JSON object on stdout (see docs/non-interactive-mode.md) and exits.
+ * In interactive mode, does nothing — the caller should use `printError` or
+ * similar.
+ *
+ * Also honors `--non-interactive` on argv when emitting JSON, so automation
+ * still gets structured output even if `client.nonInteractive` was not set.
+ */
+export function exitWithNonInteractiveError(
+  client: Client,
+  err: unknown,
+  exitCode: number = 1,
+  options: { variant: 'members' | 'access-groups' } = { variant: 'members' }
+): void {
+  if (!shouldEmitNonInteractiveCommandError(client)) {
+    return;
+  }
+  const { variant } = options;
+  if (isLinkRequiredLike(err)) {
+    writeAgentErrorPayloadAndExit(
+      client,
+      {
+        status: 'error',
+        reason: 'link_required',
+        message: err instanceof Error ? err.message : String(err),
+      },
+      exitCode,
+      variant
+    );
+    return;
+  }
+  if (isProjectNotFoundLike(err)) {
+    writeAgentErrorPayloadAndExit(
+      client,
+      {
+        status: 'error',
+        reason: 'project_not_found',
+        message: err instanceof Error ? err.message : String(err),
+      },
+      exitCode,
+      variant
+    );
+    return;
+  }
+  if (isAPIError(err)) {
+    const rawMessage = err.serverMessage || err.message;
+    const message = normalizeApiErrorText(rawMessage);
+    const reason: string =
+      err.status === 403
+        ? 'forbidden'
+        : err.status === 401
+          ? 'not_authorized'
+          : err.status === 404
+            ? 'project_not_found'
+            : err.status === 429
+              ? 'rate_limited'
+              : 'api_error';
+    writeAgentErrorPayloadAndExit(
+      client,
+      {
+        status: 'error',
+        reason,
+        message,
+      },
+      exitCode,
+      variant
+    );
+  }
+  writeAgentErrorPayloadAndExit(
+    client,
+    {
+      status: 'error',
+      reason: 'unexpected_error',
+      message: err instanceof Error ? err.message : String(err),
+    },
+    exitCode,
+    variant
+  );
 }
 
 /**
