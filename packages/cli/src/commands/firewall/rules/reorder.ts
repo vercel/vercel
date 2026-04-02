@@ -11,6 +11,7 @@ import {
   offerAutoPublish,
   withGlobalFlags,
 } from '../shared';
+import { formatActionDisplay } from '../../../util/firewall/format';
 import { outputAgentError } from '../../../util/agent-output';
 import listFirewallConfigs from '../../../util/firewall/list-firewall-configs';
 import patchFirewallDraft from '../../../util/firewall/patch-firewall-draft';
@@ -31,38 +32,7 @@ export default async function reorder(client: Client, argv: string[]) {
 
   const { project, org } = link;
   const teamId = org.type === 'team' ? org.id : undefined;
-  const identifier = parsed.args[0] as string | undefined;
-
-  if (!identifier) {
-    if (client.nonInteractive) {
-      outputAgentError(
-        client,
-        {
-          status: 'error',
-          reason: 'missing_arguments',
-          message: 'Rule name or ID is required.',
-          next: [
-            {
-              command: withGlobalFlags(
-                client,
-                'firewall rules reorder <name-or-id> --first --yes'
-              ),
-              when: 'replace <name-or-id>',
-            },
-            {
-              command: withGlobalFlags(client, 'firewall rules list'),
-              when: 'list rules',
-            },
-          ],
-        },
-        1
-      );
-    }
-    output.error(
-      `Rule name or ID is required. Usage: ${getCommandName('firewall rules reorder <name-or-id> --position N --yes')}`
-    );
-    return 1;
-  }
+  let identifier = parsed.args[0] as string | undefined;
 
   output.spinner(`Fetching rules for ${chalk.bold(project.name)}`);
 
@@ -75,6 +45,56 @@ export default async function reorder(client: Client, argv: string[]) {
     output.stopSpinner();
     output.error('Need at least 2 rules to reorder.');
     return 1;
+  }
+
+  if (!identifier) {
+    output.stopSpinner();
+
+    if (client.nonInteractive || !client.stdin.isTTY) {
+      if (client.nonInteractive) {
+        outputAgentError(
+          client,
+          {
+            status: 'error',
+            reason: 'missing_arguments',
+            message: 'Rule name or ID is required.',
+            next: [
+              {
+                command: withGlobalFlags(
+                  client,
+                  'firewall rules reorder <name-or-id> --first --yes'
+                ),
+                when: 'replace <name-or-id>',
+              },
+              {
+                command: withGlobalFlags(client, 'firewall rules list'),
+                when: 'list rules',
+              },
+            ],
+          },
+          1
+        );
+      }
+      output.error(
+        `Rule name or ID is required. Usage: ${getCommandName('firewall rules reorder <name-or-id> --position N --yes')}`
+      );
+      return 1;
+    }
+
+    const selectedId = await client.input.select({
+      message: 'Select a rule to reorder:',
+      choices: currentRules.map((r, i) => ({
+        value: r.id,
+        name: `${i + 1}. ${r.name} [${r.active ? 'Enabled' : 'Disabled'}] — ${formatActionDisplay(r.action)}`,
+      })),
+    });
+
+    const selected = currentRules.find(r => r.id === selectedId);
+    if (!selected) {
+      output.error('No rule selected');
+      return 1;
+    }
+    identifier = selected.name;
   }
 
   const matches = resolveRule(currentRules, identifier);
@@ -154,38 +174,67 @@ export default async function reorder(client: Client, argv: string[]) {
     targetIndex = flagPosition - 1; // Convert 1-based to 0-based
   } else {
     // No position flag provided
-    if (client.nonInteractive) {
-      outputAgentError(
-        client,
-        {
-          status: 'error',
-          reason: 'missing_arguments',
-          message:
-            'A position flag is required. Use --position N, --first, or --last.',
-          next: [
-            {
-              command: withGlobalFlags(
-                client,
-                `firewall rules reorder "${rule.name}" --first --yes`
-              ),
-              when: 'move to first position',
-            },
-            {
-              command: withGlobalFlags(
-                client,
-                `firewall rules reorder "${rule.name}" --last --yes`
-              ),
-              when: 'move to last position',
-            },
-          ],
-        },
-        1
+    if (client.nonInteractive || !client.stdin.isTTY) {
+      if (client.nonInteractive) {
+        outputAgentError(
+          client,
+          {
+            status: 'error',
+            reason: 'missing_arguments',
+            message:
+              'A position flag is required. Use --position N, --first, or --last.',
+            next: [
+              {
+                command: withGlobalFlags(
+                  client,
+                  `firewall rules reorder "${rule.name}" --first --yes`
+                ),
+                when: 'move to first position',
+              },
+              {
+                command: withGlobalFlags(
+                  client,
+                  `firewall rules reorder "${rule.name}" --last --yes`
+                ),
+                when: 'move to last position',
+              },
+            ],
+          },
+          1
+        );
+      }
+      output.error(
+        `A position flag is required. Use --position N, --first, or --last.`
+      );
+      return 1;
+    }
+
+    // Show current order
+    output.print('\n  Current rule order:\n');
+    for (let i = 0; i < currentRules.length; i++) {
+      const r = currentRules[i];
+      const marker = r.id === rule.id ? '→' : ' ';
+      output.print(
+        `  ${marker} ${i + 1}. ${r.name} [${r.active ? 'Enabled' : 'Disabled'}]\n`
       );
     }
-    output.error(
-      `A position flag is required. Use --position N, --first, or --last.`
-    );
-    return 1;
+    output.print('\n');
+
+    const positionStr = await client.input.text({
+      message: `Move "${rule.name}" to position (1-${currentRules.length}):`,
+      validate: (val: string) => {
+        const num = Number(val);
+        if (Number.isNaN(num) || !Number.isInteger(num)) {
+          return 'Enter a number.';
+        }
+        if (num < 1 || num > currentRules.length) {
+          return `Position must be between 1 and ${currentRules.length}.`;
+        }
+        return true;
+      },
+    });
+
+    targetIndex = Number(positionStr) - 1;
   }
 
   // Check if already at target

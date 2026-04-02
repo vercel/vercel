@@ -63,14 +63,30 @@ describe('firewall rules enable', () => {
     expect(await exitCodePromise).toEqual(1);
   });
 
-  it('should error when no identifier provided', async () => {
+  it('should error when no identifier provided in non-TTY', async () => {
     const active = createConfig({ rules: [createRule(1)] });
     useListFirewallConfigs(active, null);
 
     client.setArgv('firewall', 'rules', 'enable');
+    (client.stdin as any).isTTY = false;
     const exitCodePromise = firewall(client);
     await expect(client.stderr).toOutput('Rule name or ID is required');
     expect(await exitCodePromise).toEqual(1);
+  });
+
+  it('should show interactive picker when no identifier', async () => {
+    const rule = createRule(3); // inactive
+    const active = createConfig({ rules: [createRule(1), rule] });
+    useListFirewallConfigs(active, null);
+    usePatchDraft();
+    useActivateConfig();
+
+    client.setArgv('firewall', 'rules', 'enable', '--yes');
+    const exitCodePromise = firewall(client);
+    await expect(client.stderr).toOutput('Select a rule to enable');
+    client.stdin.write('\x1B[B\n'); // arrow down + enter to select second rule
+    await expect(client.stderr).toOutput('Enabled');
+    expect(await exitCodePromise).toEqual(0);
   });
 
   it('should error when no rules exist', async () => {

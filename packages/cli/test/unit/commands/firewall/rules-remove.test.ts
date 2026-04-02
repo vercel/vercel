@@ -100,14 +100,29 @@ describe('firewall rules remove', () => {
     expect(await exitCodePromise).toEqual(1);
   });
 
-  it('should error when no identifier provided', async () => {
+  it('should error when no identifier provided in non-TTY', async () => {
     const active = createConfig({ rules: [createRule(1)] });
     useListFirewallConfigs(active, null);
 
     client.setArgv('firewall', 'rules', 'remove');
+    (client.stdin as any).isTTY = false;
     const exitCodePromise = firewall(client);
     await expect(client.stderr).toOutput('Rule name or ID is required');
     expect(await exitCodePromise).toEqual(1);
+  });
+
+  it('should show interactive picker when no identifier', async () => {
+    const active = createConfig({ rules: [createRule(1)] });
+    useListFirewallConfigs(active, null);
+    usePatchDraft();
+    useActivateConfig();
+
+    client.setArgv('firewall', 'rules', 'remove', '--yes');
+    const exitCodePromise = firewall(client);
+    await expect(client.stderr).toOutput('Select a rule to remove');
+    client.stdin.write('\n'); // select first rule
+    await expect(client.stderr).toOutput('Removed');
+    expect(await exitCodePromise).toEqual(0);
   });
 
   it('should error when no rules exist', async () => {

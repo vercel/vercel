@@ -210,26 +210,43 @@ describe('firewall rules reorder', () => {
     expect(await exitCodePromise).toEqual(1);
   });
 
-  it('should error when no identifier provided', async () => {
+  it('should error when no identifier provided in non-TTY', async () => {
     const rules = [createRule(1), createRule(2)];
     const active = createConfig({ rules });
     useListFirewallConfigs(active, null);
 
     client.setArgv('firewall', 'rules', 'reorder');
+    (client.stdin as any).isTTY = false;
     const exitCodePromise = firewall(client);
     await expect(client.stderr).toOutput('Rule name or ID is required');
     expect(await exitCodePromise).toEqual(1);
   });
 
-  it('should error when no position flag provided', async () => {
+  it('should error when no position flag provided in non-TTY', async () => {
     const rules = [createRule(1), createRule(2)];
     const active = createConfig({ rules });
     useListFirewallConfigs(active, null);
 
     client.setArgv('firewall', 'rules', 'reorder', 'Test Rule 1', '--yes');
+    (client.stdin as any).isTTY = false;
     const exitCodePromise = firewall(client);
     await expect(client.stderr).toOutput('position flag is required');
     expect(await exitCodePromise).toEqual(1);
+  });
+
+  it('should show interactive position prompt when no flags', async () => {
+    const rules = [createRule(1), createRule(2), createRule(3)];
+    const active = createConfig({ rules });
+    useListFirewallConfigs(active, null);
+    usePatchDraft();
+    useActivateConfig();
+
+    client.setArgv('firewall', 'rules', 'reorder', 'Test Rule 3', '--yes');
+    const exitCodePromise = firewall(client);
+    await expect(client.stderr).toOutput('position (1-3)');
+    client.stdin.write('1\n');
+    await expect(client.stderr).toOutput('Moved');
+    expect(await exitCodePromise).toEqual(0);
   });
 
   it('should cancel when user declines', async () => {

@@ -10,6 +10,7 @@ import {
   offerAutoPublish,
   withGlobalFlags,
 } from '../shared';
+import { formatActionDisplay } from '../../../util/firewall/format';
 import { outputAgentError } from '../../../util/agent-output';
 import listFirewallConfigs from '../../../util/firewall/list-firewall-configs';
 import patchFirewallDraft from '../../../util/firewall/patch-firewall-draft';
@@ -30,38 +31,7 @@ export default async function disable(client: Client, argv: string[]) {
 
   const { project, org } = link;
   const teamId = org.type === 'team' ? org.id : undefined;
-  const identifier = parsed.args[0] as string | undefined;
-
-  if (!identifier) {
-    if (client.nonInteractive) {
-      outputAgentError(
-        client,
-        {
-          status: 'error',
-          reason: 'missing_arguments',
-          message: 'Rule name or ID is required.',
-          next: [
-            {
-              command: withGlobalFlags(
-                client,
-                'firewall rules disable <name-or-id>'
-              ),
-              when: 'replace <name-or-id>',
-            },
-            {
-              command: withGlobalFlags(client, 'firewall rules list'),
-              when: 'list rules',
-            },
-          ],
-        },
-        1
-      );
-    }
-    output.error(
-      `Rule name or ID is required. Usage: ${getCommandName('firewall rules disable <name-or-id>')}`
-    );
-    return 1;
-  }
+  let identifier = parsed.args[0] as string | undefined;
 
   output.spinner(`Fetching rules for ${chalk.bold(project.name)}`);
 
@@ -76,6 +46,56 @@ export default async function disable(client: Client, argv: string[]) {
       'No custom rules configured. Create one first with `vercel firewall rules add`.'
     );
     return 1;
+  }
+
+  if (!identifier) {
+    output.stopSpinner();
+
+    if (client.nonInteractive || !client.stdin.isTTY) {
+      if (client.nonInteractive) {
+        outputAgentError(
+          client,
+          {
+            status: 'error',
+            reason: 'missing_arguments',
+            message: 'Rule name or ID is required.',
+            next: [
+              {
+                command: withGlobalFlags(
+                  client,
+                  'firewall rules disable <name-or-id>'
+                ),
+                when: 'replace <name-or-id>',
+              },
+              {
+                command: withGlobalFlags(client, 'firewall rules list'),
+                when: 'list rules',
+              },
+            ],
+          },
+          1
+        );
+      }
+      output.error(
+        `Rule name or ID is required. Usage: ${getCommandName('firewall rules disable <name-or-id>')}`
+      );
+      return 1;
+    }
+
+    const selectedId = await client.input.select({
+      message: 'Select a rule to disable:',
+      choices: currentRules.map(r => ({
+        value: r.id,
+        name: `${r.name} [${r.active ? 'Enabled' : 'Disabled'}] — ${formatActionDisplay(r.action)}`,
+      })),
+    });
+
+    const selected = currentRules.find(r => r.id === selectedId);
+    if (!selected) {
+      output.error('No rule selected');
+      return 1;
+    }
+    identifier = selected.name;
   }
 
   const matches = resolveRule(currentRules, identifier);
