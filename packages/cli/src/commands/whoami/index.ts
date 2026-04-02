@@ -48,7 +48,11 @@ export default async function whoami(client: Client): Promise<number> {
     // Preserve whoami as a resilient informational command when currentTeam is stale.
     // Any client error (4xx) from the team lookup means the team is inaccessible
     // (deleted, unauthorized, forbidden, etc.) — fall back to the personal scope.
-    if (error instanceof APIError && error.status >= 400 && error.status < 500) {
+    if (
+      error instanceof APIError &&
+      error.status >= 400 &&
+      error.status < 500
+    ) {
       return getScope(client, { getTeam: false });
     }
     throw error;

@@ -258,6 +258,47 @@ describe('getLinkedProject', () => {
     expect(link.repoRoot).toBeUndefined();
   });
 
+  it('should ignore settings-only `project.json` and fall back to `repo.json`', async () => {
+    const repoRoot = setupTmpDir('repo-link-project-settings');
+    const cwd = join(repoRoot, 'apps', 'docs');
+
+    await mkdirp(join(repoRoot, '.vercel'));
+    await writeJSON(join(repoRoot, '.vercel', 'repo.json'), {
+      remoteName: 'origin',
+      projects: [
+        {
+          id: 'repo-proj-1',
+          name: 'repo-proj-1',
+          directory: 'apps/docs',
+          orgId: 'team_dummy',
+        },
+      ],
+    });
+
+    await mkdirp(join(cwd, '.vercel'));
+    await writeJSON(join(cwd, '.vercel', 'project.json'), {
+      settings: {
+        createdAt: 123,
+      },
+    });
+
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      id: 'repo-proj-1',
+      name: 'repo-proj-1',
+    });
+
+    const link = await getLinkedProject(client, cwd);
+
+    if (link.status !== 'linked') {
+      throw new Error('Expected to be linked');
+    }
+    expect(link.project.id).toEqual('repo-proj-1');
+    expect(link.repoRoot).toEqual(repoRoot);
+  });
+
   it('should return link with legacy `repo.json` (top-level orgId)', async () => {
     const cwd = fixture('monorepo-link-legacy');
 

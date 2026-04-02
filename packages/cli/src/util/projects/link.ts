@@ -160,9 +160,19 @@ export async function getLinkFromDir<T = ProjectLink>(
     const json = await readFile(join(dir, VERCEL_DIR_PROJECT), 'utf8');
 
     const ajv = new AJV();
-    const link: T = JSON.parse(json);
+    const link = JSON.parse(json) as T;
+    const hasProjectLinkFields =
+      typeof link === 'object' &&
+      link !== null &&
+      ('projectId' in link || 'orgId' in link || 'projectName' in link);
+    const hasProjectSettings =
+      typeof link === 'object' && link !== null && 'settings' in link;
 
     if (!ajv.validate(linkSchema, link)) {
+      if (hasProjectSettings && !hasProjectLinkFields) {
+        return null;
+      }
+
       throw new Error(
         `Project Settings are invalid. To link your project again, remove the ${dir} directory.`
       );
