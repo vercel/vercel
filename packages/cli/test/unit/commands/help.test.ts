@@ -71,7 +71,9 @@ describe('help command', () => {
     describe.todo('help dev');
     describe('dev --help', async () => {
       it('outputs help', async () => {
-        client.setArgv('dev', '--help');
+        // `--no-color` keeps stderr help text stable: without it, `NO_COLOR` in the
+        // environment toggles whether `removeEmoji().trimStart()` runs on printed help.
+        client.setArgv('dev', '--help', '--no-color');
         const exitCode = await dev(client);
         expect(exitCode).toEqual(2);
         expect(client.stderr.read()).toMatchSnapshot();
