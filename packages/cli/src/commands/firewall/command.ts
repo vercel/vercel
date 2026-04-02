@@ -443,11 +443,11 @@ export const rulesAddSubcommand = {
       description: 'Rule description (max 256 chars)',
     },
     {
-      name: 'inactive',
+      name: 'disabled',
       shorthand: null,
       type: Boolean,
       deprecated: false,
-      description: 'Create as inactive (default: active)',
+      description: 'Create as disabled (default: enabled)',
     },
     {
       name: 'rate-limit-algo',
@@ -593,18 +593,18 @@ export const rulesEditSubcommand = {
       description: 'Change description (use "" to clear)',
     },
     {
-      name: 'active',
+      name: 'enabled',
       shorthand: null,
       type: Boolean,
       deprecated: false,
-      description: 'Set rule to active',
+      description: 'Set rule to enabled',
     },
     {
-      name: 'inactive',
+      name: 'disabled',
       shorthand: null,
       type: Boolean,
       deprecated: false,
-      description: 'Set rule to inactive',
+      description: 'Set rule to disabled',
     },
     {
       name: 'rate-limit-algo',

@@ -552,7 +552,7 @@ export function formatRulesTable(annotated: AnnotatedRule[]): string {
   );
   const statusWidth = Math.max(
     'Status'.length,
-    ...annotated.map(a => (a.rule.active ? 'Active' : 'Inactive').length)
+    ...annotated.map(a => (a.rule.active ? 'Enabled' : 'Disabled').length)
   );
   const actionTexts = annotated.map(a => formatActionDisplay(a.rule.action));
   const actionWidth = Math.max(
@@ -569,7 +569,7 @@ export function formatRulesTable(annotated: AnnotatedRule[]): string {
     const { rule, status } = annotated[i];
     const num = String(i + 1).padEnd(numWidth + gap);
     const name = rule.name.padEnd(nameWidth + gap);
-    const activeStatus = (rule.active ? 'Active' : 'Inactive').padEnd(
+    const activeStatus = (rule.active ? 'Enabled' : 'Disabled').padEnd(
       statusWidth + gap
     );
     const actionText = actionTexts[i].padEnd(actionWidth + gap);
@@ -622,7 +622,7 @@ export function formatRuleExpanded(rule: FirewallRule, index?: number): string {
   const lines: string[] = [];
 
   const prefix = index !== undefined ? `${index + 1}. ` : '';
-  const status = rule.active ? 'Active' : chalk.dim('Inactive');
+  const status = rule.active ? 'Enabled' : chalk.dim('Disabled');
   const action = formatActionDisplay(rule.action);
 
   lines.push(`  ${prefix}${chalk.bold(rule.name)} [${status}]`);
@@ -693,7 +693,7 @@ export function formatRuleDetail(rule: FirewallRule): string {
   lines.push(`  ${chalk.bold('Rule:')}        ${rule.name}`);
   lines.push(`  ${chalk.bold('ID:')}          ${chalk.dim(rule.id)}`);
   lines.push(
-    `  ${chalk.bold('Status:')}      ${rule.active ? chalk.green('Active') : chalk.dim('Inactive')}`
+    `  ${chalk.bold('Status:')}      ${rule.active ? chalk.green('Enabled') : chalk.dim('Disabled')}`
   );
   if (rule.description) {
     lines.push(`  ${chalk.bold('Description:')} ${rule.description}`);

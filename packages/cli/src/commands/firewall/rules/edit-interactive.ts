@@ -81,7 +81,7 @@ export async function runInteractiveEditLoop(
         },
         {
           value: 'active',
-          name: `Status (${edited.active ? chalk.green('Active') : chalk.dim('Inactive')})`,
+          name: `Status (${edited.active ? chalk.green('Enabled') : chalk.dim('Disabled')})`,
         },
         {
           value: 'done',
@@ -136,8 +136,8 @@ export async function runInteractiveEditLoop(
         const toggle = await client.input.select({
           message: 'Rule status:',
           choices: [
-            { value: 'active', name: 'Active' },
-            { value: 'inactive', name: 'Inactive' },
+            { value: 'active', name: 'Enabled' },
+            { value: 'inactive', name: 'Disabled' },
           ],
           default: edited.active ? 'active' : 'inactive',
         });
@@ -185,33 +185,13 @@ async function editConditions(
     }
     output.print('\n');
 
-    // Build choices — Done first so users don't have to scroll past many conditions
+    // Build choices — Done first, then add, remove, edit
     const choices: { value: string; name: string }[] = [];
 
     choices.push({
       value: 'done',
       name: chalk.bold('Done with conditions'),
     });
-
-    // Edit individual conditions
-    let idx = 1;
-    for (let g = 0; g < edited.length; g++) {
-      for (let c = 0; c < edited[g].conditions.length; c++) {
-        choices.push({
-          value: `edit:${g}:${c}`,
-          name: `Edit condition ${idx} (${formatConditionCompact(edited[g].conditions[c])})`,
-        });
-        idx++;
-      }
-    }
-
-    // Remove
-    if (condIndex > 1) {
-      choices.push({
-        value: 'remove',
-        name: 'Remove a condition',
-      });
-    }
 
     // Add
     if (edited.length > 0) {
@@ -224,6 +204,26 @@ async function editConditions(
       value: 'add-or',
       name: 'Add new group (OR)',
     });
+
+    // Remove
+    if (condIndex > 1) {
+      choices.push({
+        value: 'remove',
+        name: 'Remove a condition',
+      });
+    }
+
+    // Edit individual conditions
+    let idx = 1;
+    for (let g = 0; g < edited.length; g++) {
+      for (let c = 0; c < edited[g].conditions.length; c++) {
+        choices.push({
+          value: `edit:${g}:${c}`,
+          name: `Edit condition ${idx} (${formatConditionCompact(edited[g].conditions[c])})`,
+        });
+        idx++;
+      }
+    }
 
     const action = await client.input.select({
       message: 'What would you like to do?',

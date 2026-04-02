@@ -380,7 +380,7 @@ async function handleFlagAdd(
     return 1;
   }
 
-  const active = !parsed.flags['--inactive'];
+  const active = !parsed.flags['--disabled'];
 
   const rule = {
     name,

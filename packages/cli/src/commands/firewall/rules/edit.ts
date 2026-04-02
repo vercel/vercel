@@ -21,7 +21,10 @@ import {
   VALID_ALGORITHMS,
   type FirewallActionType,
 } from '../../../util/firewall/condition-types';
-import { formatRuleExpanded } from '../../../util/firewall/format';
+import {
+  formatRuleExpanded,
+  formatActionDisplay,
+} from '../../../util/firewall/format';
 import type {
   FirewallRule,
   FirewallRuleAction,
@@ -40,11 +43,7 @@ export default async function edit(client: Client, argv: string[]) {
   );
   if (typeof parsed === 'number') return parsed;
 
-  const identifier = parsed.args[0];
-  if (!identifier) {
-    output.error('Missing required argument: <name-or-id>');
-    return 1;
-  }
+  let identifier = parsed.args[0] as string | undefined;
 
   const link = await ensureProjectLink(client);
   if (typeof link === 'number') return link;
@@ -60,6 +59,41 @@ export default async function edit(client: Client, argv: string[]) {
   });
 
   const currentRules = draft?.rules || active?.rules || [];
+
+  // If no identifier provided, let interactive users pick from a list
+  if (!identifier) {
+    output.stopSpinner();
+
+    if (client.nonInteractive || !client.stdin.isTTY) {
+      output.error(
+        `Missing required argument: <name-or-id>. Run ${chalk.cyan(getCommandName('firewall rules list'))} to see all rules.`
+      );
+      return 1;
+    }
+
+    if (currentRules.length === 0) {
+      output.error(
+        'No custom rules configured. Create one first with `vercel firewall rules add`.'
+      );
+      return 1;
+    }
+
+    const selectedId = await client.input.select({
+      message: 'Select a rule to edit:',
+      choices: currentRules.map(r => ({
+        value: r.id,
+        name: `${r.name} [${r.active ? 'Enabled' : 'Disabled'}] — ${formatActionDisplay(r.action)}`,
+      })),
+    });
+
+    const selected = currentRules.find(r => r.id === selectedId);
+    if (!selected) {
+      output.error('No rule selected');
+      return 1;
+    }
+    identifier = selected.name;
+  }
+
   const matches = resolveRule(currentRules, identifier);
 
   if (matches.length === 0) {
@@ -84,7 +118,7 @@ export default async function edit(client: Client, argv: string[]) {
       message: `Multiple rules match "${identifier}". Select one:`,
       choices: matches.map(r => ({
         value: r.id,
-        name: `${r.name} [${r.active ? 'Active' : 'Inactive'}] (${r.id})`,
+        name: `${r.name} [${r.active ? 'Enabled' : 'Disabled'}] (${r.id})`,
       })),
     });
 
@@ -141,8 +175,8 @@ export default async function edit(client: Client, argv: string[]) {
     parsed.flags['--name'] ||
     parsed.flags['--description'] !== undefined ||
     parsed.flags['--duration'] ||
-    parsed.flags['--active'] ||
-    parsed.flags['--inactive'] ||
+    parsed.flags['--enabled'] ||
+    parsed.flags['--disabled'] ||
     parsed.flags['--rate-limit-algo'] ||
     parsed.flags['--rate-limit-window'] ||
     parsed.flags['--rate-limit-requests'] ||
@@ -495,10 +529,10 @@ async function handleFlagEdit(
     modified.description = desc === '' ? undefined : desc;
   }
 
-  if (parsed.flags['--active']) {
+  if (parsed.flags['--enabled']) {
     modified.active = true;
   }
-  if (parsed.flags['--inactive']) {
+  if (parsed.flags['--disabled']) {
     modified.active = false;
   }
 
