@@ -11,8 +11,8 @@ import patchFirewallDraft from '../../../util/firewall/patch-firewall-draft';
 import generateFirewallRule from '../../../util/firewall/generate-firewall-rule';
 import { formatRuleExpanded } from '../../../util/firewall/format';
 import type { FirewallRule } from '../../../util/firewall/types';
+import { runInteractiveEditLoop } from './edit-interactive';
 import stamp from '../../../util/output/stamp';
-import { addInteractive } from './add-interactive';
 
 interface HandleAIAddOptions {
   prompt?: string;
@@ -263,10 +263,15 @@ export async function handleAIAdd(
     }
 
     if (choice === 'edit-manual') {
-      return addInteractive(client, project, teamId, {
-        prePopulated: currentRule,
-        skipPrompts: opts.skipPrompts,
-      });
+      const prePopulated = {
+        ...currentRule!,
+        id: '(new)',
+      } as FirewallRule;
+      const modified = await runInteractiveEditLoop(client, prePopulated);
+      if (!modified) {
+        continue;
+      }
+      return createFromGenerated(client, project, teamId, modified, opts);
     }
 
     if (choice === 'discard') {

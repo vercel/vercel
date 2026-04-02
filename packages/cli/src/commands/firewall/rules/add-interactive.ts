@@ -230,9 +230,9 @@ async function buildConditionGroupLoop(
 
 // --- Single condition builder ---
 
-async function buildConditionInteractive(
+export async function buildConditionInteractive(
   client: Client,
-  planInfo: PlanInfo
+  planInfo?: PlanInfo
 ): Promise<FirewallCondition> {
   // Filter condition types based on plan
   // Enterprise types hidden for non-enterprise, Security Plus hidden for non-security-plus

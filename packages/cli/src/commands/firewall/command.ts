@@ -528,6 +528,152 @@ export const rulesAddSubcommand = {
   ],
 } as const;
 
+export const rulesEditSubcommand = {
+  name: 'edit',
+  aliases: [],
+  description:
+    'Edit an existing custom firewall rule using AI, an interactive editor, JSON, or command-line flags',
+  arguments: [{ name: 'name-or-id', required: true }],
+  options: [
+    {
+      name: 'ai',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Describe changes using natural language (AI-powered)',
+    },
+    {
+      name: 'json',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Replace rule with JSON payload',
+    },
+    {
+      name: 'condition',
+      shorthand: null,
+      type: [String] as unknown as StringConstructor,
+      deprecated: false,
+      description: 'Replace conditions (repeatable). Same format as rules add.',
+    },
+    {
+      name: 'or',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Start a new OR condition group',
+    },
+    {
+      name: 'name',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Rename the rule',
+    },
+    {
+      name: 'action',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description:
+        'Change action: deny, challenge, log, bypass, rate_limit, redirect',
+    },
+    {
+      name: 'duration',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Change action duration: 1m, 5m, 15m, 30m, 1h',
+    },
+    {
+      name: 'description',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Change description (use "" to clear)',
+    },
+    {
+      name: 'active',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Set rule to active',
+    },
+    {
+      name: 'inactive',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Set rule to inactive',
+    },
+    {
+      name: 'rate-limit-algo',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Rate limit algorithm: fixed_window, token_bucket',
+    },
+    {
+      name: 'rate-limit-window',
+      shorthand: null,
+      type: Number,
+      deprecated: false,
+      description: 'Rate limit window in seconds',
+    },
+    {
+      name: 'rate-limit-requests',
+      shorthand: null,
+      type: Number,
+      deprecated: false,
+      description: 'Rate limit max requests per window',
+    },
+    {
+      name: 'rate-limit-keys',
+      shorthand: null,
+      type: [String] as unknown as StringConstructor,
+      deprecated: false,
+      description: 'Rate limit keys (repeatable): ip, ja4, header:name',
+    },
+    {
+      name: 'redirect-url',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Redirect URL or path',
+    },
+    {
+      name: 'redirect-permanent',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Permanent redirect (301). Default: temporary (307)',
+    },
+    yesOption,
+  ],
+  examples: [
+    {
+      name: 'Interactive mode',
+      value: `${packageName} firewall rules edit "My Rule"`,
+    },
+    {
+      name: 'Edit with AI',
+      value: `${packageName} firewall rules edit "My Rule" --ai "Change action to challenge"`,
+    },
+    {
+      name: 'Change action via flags',
+      value: `${packageName} firewall rules edit "My Rule" --action challenge --duration 5m --yes`,
+    },
+    {
+      name: 'Replace conditions',
+      value: `${packageName} firewall rules edit "My Rule" --condition "path:starts_with:/new" --yes`,
+    },
+    {
+      name: 'Rename a rule',
+      value: `${packageName} firewall rules edit "My Rule" --name "New Name" --yes`,
+    },
+  ],
+} as const;
+
 export const rulesSubcommand = {
   name: 'rules',
   aliases: [],
@@ -538,6 +684,7 @@ export const rulesSubcommand = {
     rulesListSubcommand,
     rulesInspectSubcommand,
     rulesAddSubcommand,
+    rulesEditSubcommand,
   ],
   options: [],
   examples: [
@@ -552,6 +699,10 @@ export const rulesSubcommand = {
     {
       name: 'Create with AI',
       value: `${packageName} firewall rules add --ai "Rate limit /api to 100 requests per minute by IP"`,
+    },
+    {
+      name: 'Edit with AI',
+      value: `${packageName} firewall rules edit "My Rule" --ai "Change action to challenge"`,
     },
   ],
 } as const;
