@@ -28,4 +28,13 @@ describe('tokens rm', () => {
     expect(exitCode).toBe(1);
     await expect(client.stderr).toOutput('Token id is required');
   });
+
+  it('errors when more than one id is passed', async () => {
+    useUser();
+    client.setArgv('tokens', 'rm', 'tok_a', 'tok_b');
+
+    const exitCode = await tokens(client);
+    expect(exitCode).toBe(1);
+    await expect(client.stderr).toOutput('Too many arguments');
+  });
 });

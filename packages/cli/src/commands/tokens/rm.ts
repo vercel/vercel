@@ -41,7 +41,7 @@ export default async function rm(
   }
   if (parsedArgs.args.length > 1) {
     output.error('Too many arguments. Pass a single token id.');
-    return 2;
+    return 1;
   }
 
   const validation = validateJsonOutput(parsedArgs.flags);

@@ -31,4 +31,13 @@ describe('tokens add', () => {
     expect(exitCode).toBe(1);
     await expect(client.stderr).toOutput('Token name is required');
   });
+
+  it('errors when more than one name is passed', async () => {
+    useUser();
+    client.setArgv('tokens', 'add', 'one', 'two');
+
+    const exitCode = await tokens(client);
+    expect(exitCode).toBe(1);
+    await expect(client.stderr).toOutput('Too many arguments');
+  });
 });

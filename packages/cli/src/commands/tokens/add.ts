@@ -47,7 +47,7 @@ export default async function add(
   }
   if (args.length > 1) {
     output.error('Too many arguments. Pass a single token name.');
-    return 2;
+    return 1;
   }
 
   const validation = validateJsonOutput(parsedArgs.flags);
