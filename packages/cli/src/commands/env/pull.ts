@@ -231,12 +231,15 @@ export async function envPullCommandLogic(
   output.spinner('Downloading');
 
   const pullId = deploymentId || link.project.id;
-  const records = (
-    await pullEnvRecords(client, pullId, source, {
-      target: environment || 'development',
-      gitBranch,
-    })
-  ).env;
+  const pullResult = await pullEnvRecords(client, pullId, source, {
+    target: environment || 'development',
+    gitBranch,
+  });
+  // When pulling by deployment ID, use buildEnv which always contains the full
+  // set of env vars. The `env` dict may only contain decryption keys when large
+  // env encryption is active (the actual values are in an encrypted blob for
+  // Lambda runtime use).
+  const records = deploymentId ? pullResult.buildEnv : pullResult.env;
 
   let deltaString = '';
   let oldEnv;
