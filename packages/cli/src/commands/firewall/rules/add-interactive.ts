@@ -2,12 +2,12 @@ import { isIP } from 'node:net';
 import chalk from 'chalk';
 import type Client from '../../../util/client';
 import output from '../../../output-manager';
+import getScope from '../../../util/get-scope';
 import {
   confirmAction,
   detectExistingDraft,
   offerAutoPublish,
 } from '../shared';
-import getScope from '../../../util/get-scope';
 import patchFirewallDraft from '../../../util/firewall/patch-firewall-draft';
 import {
   CONDITION_TYPES,
@@ -236,7 +236,7 @@ export async function buildConditionInteractive(
 ): Promise<FirewallCondition> {
   // Filter condition types based on plan
   // Enterprise types hidden for non-enterprise, Security Plus hidden for non-security-plus
-  const visibleTypes = CONDITION_TYPES.filter(ct => {
+  const availableTypes = CONDITION_TYPES.filter(ct => {
     if (ct.deprecated) return false;
     if (ct.planRequirement === 'enterprise' && !planInfo.isEnterprise)
       return false;
@@ -245,8 +245,9 @@ export async function buildConditionInteractive(
     return true;
   });
 
+  // Group by category
   const categories = new Map<string, ConditionTypeMeta[]>();
-  for (const ct of visibleTypes) {
+  for (const ct of availableTypes) {
     const existing = categories.get(ct.category) || [];
     existing.push(ct);
     categories.set(ct.category, existing);
@@ -303,60 +304,76 @@ export async function buildConditionInteractive(
   const neg = opChoice.startsWith('!');
   const op = neg ? opChoice.slice(1) : opChoice;
 
-  // Value — with per-type validation and multi-select for presets
+  // Value — context-dependent input based on operator and preset availability
   let value: string | string[] | number | undefined;
-  if (op !== 'ex') {
-    if (op === 'inc' && meta?.presetValues) {
-      // Multi-select from preset values
+  const baseOp = op; // neg is tracked separately
+  const hasPresets = meta?.presetValues && meta.presetValues.length > 0;
+
+  if (baseOp === 'ex') {
+    // Exists operator — no value needed
+  } else if (baseOp === 'inc' && hasPresets) {
+    // Multi-select from preset values (method, protocol, environment, continent)
+    for (;;) {
       const selected = await client.input.checkbox<string>({
-        message: `Select values (space to toggle, enter to confirm):`,
-        choices: meta.presetValues.map(v => ({ name: v, value: v })),
+        message: 'Select values (space to toggle, enter to confirm):',
+        choices: meta!.presetValues!.map(p => ({
+          name: p.label,
+          value: p.value,
+        })),
+        pageSize: meta!.presetValues!.length,
       });
       if (selected.length === 0) {
-        // Fallback to text if nothing selected
-        const valStr = await client.input.text({
-          message: 'Values (comma-separated):',
-          validate: (val: string) =>
-            val.trim() ? true : 'At least one value is required.',
-        });
-        value = valStr.split(',').map((v: string) => v.trim());
-      } else {
-        value = selected;
+        output.warn('Please select at least one value.');
+        continue;
       }
-    } else if (op === 'inc') {
-      // Free text comma-separated for types without presets
-      const valStr = await client.input.text({
-        message: 'Values (comma-separated):',
-        validate: (val: string) =>
-          val.trim() ? true : 'At least one value is required.',
-      });
-      value = valStr.split(',').map((v: string) => v.trim());
-    } else if (op === 're') {
-      // Regex — validate as valid RegExp
-      const valStr = await client.input.text({
-        message: 'Regex pattern:',
-        validate: (val: string) => {
-          if (!val.trim()) return 'Regex pattern is required.';
-          try {
-            new RegExp(val);
-            return true;
-          } catch {
-            return 'Invalid regex pattern. Please enter a valid regular expression.';
-          }
-        },
-      });
-      value = valStr;
-    } else {
-      // String value — with per-type validation
-      const valStr = await client.input.text({
-        message: 'Value:',
-        validate: (val: string) => {
-          if (!val.trim()) return 'Value is required.';
-          return validateConditionValue(val, meta);
-        },
-      });
-      value = valStr;
+      value = selected;
+      break;
     }
+  } else if (baseOp === 'inc') {
+    // Free text comma-separated for types without presets
+    const valStr = await client.input.text({
+      message: 'Values (comma-separated):',
+      validate: (val: string) =>
+        val.trim() ? true : 'At least one value is required.',
+    });
+    value = valStr.split(',').map((v: string) => v.trim());
+  } else if (baseOp === 'eq' && hasPresets) {
+    // Single select from preset values (method, protocol, environment, continent)
+    value = await client.input.select({
+      message: 'Value:',
+      choices: meta!.presetValues!.map(p => ({
+        name: p.label,
+        value: p.value,
+      })),
+      pageSize: meta!.presetValues!.length,
+    });
+  } else if (baseOp === 're') {
+    // Regex — validate as valid RegExp with length limit
+    const valStr = await client.input.text({
+      message: 'Regex pattern (max 512 chars):',
+      validate: (val: string) => {
+        if (!val.trim()) return 'Regex pattern is required.';
+        if (val.length > 512)
+          return 'Regex pattern must be 512 characters or less.';
+        try {
+          new RegExp(val);
+          return true;
+        } catch {
+          return 'Invalid regex pattern. Please enter a valid regular expression.';
+        }
+      },
+    });
+    value = valStr;
+  } else {
+    // String value — with per-type validation
+    const valStr = await client.input.text({
+      message: 'Value:',
+      validate: (val: string) => {
+        if (!val.trim()) return 'Value is required.';
+        return validateConditionValue(val, meta);
+      },
+    });
+    value = valStr;
   }
 
   const condition: FirewallCondition = { type, op };
@@ -495,6 +512,7 @@ async function buildRateLimitInteractive(client: Client) {
       { name: 'JA4 Digest (ja4)', value: 'ja4' },
       { name: 'User Agent (header:user-agent)', value: 'header:user-agent' },
     ],
+    pageSize: 3,
   });
 
   // Optionally add custom header key
@@ -549,7 +567,8 @@ function getActionDisplayName(action: string): string {
 
 /**
  * Per-type value validation for the interactive builder.
- * Returns true if valid, or an error string if invalid.
+ * Only enforces format constraints where the API strictly requires a specific format.
+ * Most types accept any string — the API validates semantics.
  */
 function validateConditionValue(
   val: string,

@@ -2,6 +2,11 @@
 // Drives the interactive builder, flag parser, and format helpers.
 // Keep in sync with the API's FirewallConditionType enum.
 
+export interface PresetValue {
+  label: string;
+  value: string;
+}
+
 export interface ConditionTypeMeta {
   type: string;
   displayName: string;
@@ -9,10 +14,10 @@ export interface ConditionTypeMeta {
   category: 'request' | 'client' | 'geo' | 'key-value' | 'security' | 'bot';
   requiresKey: boolean;
   operators: string[];
-  /** Preset values for multi-select on `inc` operator in interactive mode */
-  presetValues?: string[];
+  /** Preset values for select/multi-select in interactive mode */
+  presetValues?: PresetValue[];
   /** Value validation type for interactive mode */
-  valueValidation?: 'ip' | 'path' | 'hostname' | 'digits' | null;
+  valueValidation?: 'digits' | null;
   planRequirement?: 'enterprise' | 'security-plus' | null;
   deprecated?: boolean;
 }
@@ -40,7 +45,6 @@ export const CONDITION_TYPES: ConditionTypeMeta[] = [
     category: 'request',
     requiresKey: false,
     operators: STRING_AND_MATCH,
-    valueValidation: 'path',
   },
   {
     type: 'route',
@@ -49,7 +53,6 @@ export const CONDITION_TYPES: ConditionTypeMeta[] = [
     category: 'request',
     requiresKey: false,
     operators: STRING_AND_MATCH,
-    valueValidation: 'path',
   },
   {
     type: 'raw_path',
@@ -58,7 +61,6 @@ export const CONDITION_TYPES: ConditionTypeMeta[] = [
     category: 'request',
     requiresKey: false,
     operators: STRING_AND_MATCH,
-    valueValidation: 'path',
   },
   {
     type: 'server_action',
@@ -76,15 +78,17 @@ export const CONDITION_TYPES: ConditionTypeMeta[] = [
     requiresKey: false,
     operators: STRING_ONLY,
     presetValues: [
-      'GET',
-      'HEAD',
-      'POST',
-      'DELETE',
-      'PATCH',
-      'PUT',
-      'CONNECT',
-      'OPTIONS',
-      'TRACE',
+      { label: 'GET', value: 'GET' },
+      { label: 'HEAD', value: 'HEAD' },
+      { label: 'POST', value: 'POST' },
+      { label: 'DELETE', value: 'DELETE' },
+      { label: 'PATCH', value: 'PATCH' },
+      { label: 'PUT', value: 'PUT' },
+      { label: 'CONNECT', value: 'CONNECT' },
+      { label: 'OPTIONS', value: 'OPTIONS' },
+      { label: 'TRACE', value: 'TRACE' },
+      { label: 'DEBUG', value: 'DEBUG' },
+      { label: 'QUERY', value: 'QUERY' },
     ],
   },
   {
@@ -94,7 +98,6 @@ export const CONDITION_TYPES: ConditionTypeMeta[] = [
     category: 'request',
     requiresKey: false,
     operators: STRING_AND_MATCH,
-    valueValidation: 'hostname',
   },
   {
     type: 'protocol',
@@ -103,7 +106,10 @@ export const CONDITION_TYPES: ConditionTypeMeta[] = [
     category: 'request',
     requiresKey: false,
     operators: STRING_ONLY,
-    presetValues: ['HTTP/1.1', 'HTTP/2.0'],
+    presetValues: [
+      { label: 'HTTP/1.1', value: 'HTTP/1.1' },
+      { label: 'HTTP/2.0', value: 'HTTP/2.0' },
+    ],
   },
   {
     type: 'environment',
@@ -112,7 +118,10 @@ export const CONDITION_TYPES: ConditionTypeMeta[] = [
     category: 'request',
     requiresKey: false,
     operators: STRING_ONLY,
-    presetValues: ['preview', 'production'],
+    presetValues: [
+      { label: 'Preview', value: 'preview' },
+      { label: 'Production', value: 'production' },
+    ],
   },
   {
     type: 'region',
@@ -166,7 +175,6 @@ export const CONDITION_TYPES: ConditionTypeMeta[] = [
     category: 'client',
     requiresKey: false,
     operators: STRING_ONLY,
-    valueValidation: 'ip',
   },
   {
     type: 'user_agent',
@@ -193,7 +201,15 @@ export const CONDITION_TYPES: ConditionTypeMeta[] = [
     category: 'geo',
     requiresKey: false,
     operators: STRING_ONLY,
-    presetValues: ['AF', 'AN', 'AS', 'EU', 'NA', 'OC', 'SA'],
+    presetValues: [
+      { label: 'Africa (AF)', value: 'AF' },
+      { label: 'Antarctica (AN)', value: 'AN' },
+      { label: 'Asia (AS)', value: 'AS' },
+      { label: 'Europe (EU)', value: 'EU' },
+      { label: 'North America (NA)', value: 'NA' },
+      { label: 'Oceania (OC)', value: 'OC' },
+      { label: 'South America (SA)', value: 'SA' },
+    ],
   },
   {
     type: 'geo_city',
@@ -259,7 +275,7 @@ export const CONDITION_TYPES: ConditionTypeMeta[] = [
   {
     type: 'ja3_digest',
     displayName: 'JA3 Digest',
-    description: 'JA3 TLS fingerprint (Enterprise only)',
+    description: 'JA3 TLS fingerprint',
     category: 'security',
     requiresKey: false,
     operators: STRING_AND_MATCH,
@@ -270,7 +286,7 @@ export const CONDITION_TYPES: ConditionTypeMeta[] = [
   {
     type: 'bot_name',
     displayName: 'Bot Name',
-    description: 'Verified bot name (Security Plus)',
+    description: 'Verified bot name',
     category: 'bot',
     requiresKey: false,
     operators: STRING_AND_MATCH,
@@ -279,7 +295,7 @@ export const CONDITION_TYPES: ConditionTypeMeta[] = [
   {
     type: 'bot_category',
     displayName: 'Bot Category',
-    description: 'Verified bot category (Security Plus)',
+    description: 'Verified bot category',
     category: 'bot',
     requiresKey: false,
     operators: STRING_AND_MATCH,

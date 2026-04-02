@@ -377,10 +377,10 @@ async function editSingleCondition(
       for (;;) {
         const selected = await client.input.checkbox<string>({
           message: 'Select values:',
-          choices: meta.presetValues.map(v => ({
-            name: v,
-            value: v,
-            checked: currentArr.includes(v),
+          choices: meta.presetValues.map(p => ({
+            name: p.label,
+            value: p.value,
+            checked: currentArr.includes(p.value),
           })),
           pageSize: meta.presetValues.length,
         });
@@ -405,9 +405,9 @@ async function editSingleCondition(
     } else if (op === 'eq' && meta?.presetValues) {
       value = await client.input.select({
         message: 'Value:',
-        choices: meta.presetValues.map(v => ({
-          name: v,
-          value: v,
+        choices: meta.presetValues.map(p => ({
+          name: p.label,
+          value: p.value,
         })),
         default: typeof currentValue === 'string' ? currentValue : undefined,
         pageSize: meta.presetValues.length,
