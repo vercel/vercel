@@ -194,6 +194,33 @@ export const accessGroupsSubcommand = {
   ],
 } as const;
 
+export const webAnalyticsSubcommand = {
+  name: 'web-analytics',
+  aliases: [],
+  description: 'Enable Web Analytics for a project',
+  arguments: [
+    {
+      name: 'name',
+      required: false,
+    },
+  ],
+  options: [formatOption],
+  examples: [
+    {
+      name: 'Enable Web Analytics for the linked project',
+      value: `${packageName} project web-analytics`,
+    },
+    {
+      name: 'Enable Web Analytics for a named project',
+      value: `${packageName} project web-analytics my-project`,
+    },
+    {
+      name: 'Confirm enablement as JSON (non-interactive / agents)',
+      value: `${packageName} project web-analytics --format json`,
+    },
+  ],
+} as const;
+
 export const projectCommand = {
   name: 'project',
   aliases: ['projects'],
@@ -205,6 +232,7 @@ export const projectCommand = {
     listSubcommand,
     membersSubcommand,
     accessGroupsSubcommand,
+    webAnalyticsSubcommand,
     removeSubcommand,
     tokenSubcommand,
   ],

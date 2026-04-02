@@ -10,6 +10,7 @@ import members from './members';
 import accessGroups from './access-groups';
 import rm from './rm';
 import getOidcToken from './token';
+import webAnalytics from './web-analytics';
 import {
   accessGroupsSubcommand,
   addSubcommand,
@@ -19,6 +20,7 @@ import {
   projectCommand,
   removeSubcommand,
   tokenSubcommand,
+  webAnalyticsSubcommand,
 } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { ProjectTelemetryClient } from '../../util/telemetry/commands/project';
@@ -34,6 +36,7 @@ const COMMAND_CONFIG = {
   add: getCommandAliases(addSubcommand),
   remove: getCommandAliases(removeSubcommand),
   token: getCommandAliases(tokenSubcommand),
+  webAnalytics: getCommandAliases(webAnalyticsSubcommand),
 };
 
 export default async function main(client: Client) {
@@ -114,6 +117,13 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandAccessGroups(subcommandOriginal);
       return accessGroups(client, args);
+    case 'webAnalytics':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('project', subcommandOriginal);
+        return printHelp(webAnalyticsSubcommand);
+      }
+      telemetry.trackCliSubcommandWebAnalytics(subcommandOriginal);
+      return webAnalytics(client, args);
     case 'token':
       if (needHelp) {
         telemetry.trackCliFlagHelp('project', subcommandOriginal);
