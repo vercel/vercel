@@ -247,7 +247,14 @@ export const build: BuildVX = async ({
   // Entrypoint discovery
   let detected: DetectedPythonEntrypoint | undefined;
 
-  if (!isCommandCron) {
+  if (isCommandCron) {
+    detected = {
+      entrypoint: {
+        entrypoint: COMMAND_CRON_ENTRYPOINT,
+        variableName: 'app',
+      },
+    };
+  } else {
     detected =
       (await detectPythonEntrypoint(
         config.framework as PythonFramework,
@@ -469,28 +476,21 @@ export const build: BuildVX = async ({
       });
   }
 
-  const hookResult = isCommandCron
-    ? undefined
-    : await runFrameworkHook(framework, {
-        pythonEnv,
-        projectDir: join(workPath, entryDirectory),
-        workPath,
-        venvPath,
-        entrypoint,
-        detected,
-      });
+  const hookResult = await runFrameworkHook(framework, {
+    pythonEnv,
+    projectDir: join(workPath, entryDirectory),
+    workPath,
+    venvPath,
+    entrypoint,
+    detected,
+  });
   const resolvedFromHook =
     hookResult && 'entrypoint' in hookResult
       ? hookResult.entrypoint
       : undefined;
 
   // Collect the resolved entrypoint from detection or hook, preferring the hook.
-  const resolved = isCommandCron
-    ? {
-        entrypoint: COMMAND_CRON_ENTRYPOINT,
-        variableName: 'app',
-      }
-    : (resolvedFromHook ?? detected?.entrypoint);
+  const resolved = resolvedFromHook ?? detected?.entrypoint;
   if (!resolved && detected?.error) {
     throw detected?.error;
   }
