@@ -196,7 +196,6 @@ export const systemBypassSubcommand = {
   ],
 } as const;
 
-
 // IP Blocks subcommands
 export const ipBlocksListSubcommand = {
   name: 'list',
