@@ -422,16 +422,10 @@ export function outputAgentError(
   process.exit(exitCode);
 }
 
-/** Project subcommands that use `exitWithNonInteractiveError` for parity / agent output. */
-export type ProjectSubcommandNonInteractiveVariant =
-  | 'members'
-  | 'access-groups'
-  | 'access-summary';
-
 /** Suggested follow-ups for `project members` / `project access-groups` / `project access-summary` failures (only callers of exitWithNonInteractiveError). */
 function buildNextStepsForProjectSubcommands(
   client: Client,
-  variant: ProjectSubcommandNonInteractiveVariant
+  variant: 'members' | 'access-groups' | 'access-summary'
 ): NonNullable<AgentErrorPayload['next']> {
   const byName =
     variant === 'access-groups'
@@ -471,7 +465,7 @@ function writeAgentErrorPayloadAndExit(
   client: Client,
   payload: AgentErrorPayload,
   exitCode: number,
-  variant: ProjectSubcommandNonInteractiveVariant
+  variant: 'members' | 'access-groups' | 'access-summary'
 ): void {
   const next = buildNextStepsForProjectSubcommands(client, variant);
   const out: AgentErrorPayload = {
@@ -519,7 +513,7 @@ export function exitWithNonInteractiveError(
   client: Client,
   err: unknown,
   exitCode: number = 1,
-  options: { variant: ProjectSubcommandNonInteractiveVariant } = {
+  options: { variant: 'members' | 'access-groups' | 'access-summary' } = {
     variant: 'members',
   }
 ): void {
