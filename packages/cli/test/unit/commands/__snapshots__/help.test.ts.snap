@@ -4320,23 +4320,40 @@ exports[`help command > project help output snapshots > project help column widt
 
   Commands:
 
-  add      name    Add a new    
-                   project      
-  inspect  [name]  Displays     
-                   information  
-                   related to a 
-                   project      
-  list             Show all     
-                   projects in  
-                   the selected 
-                   scope        
-                   (default)    
-  remove   name    Delete a     
-                   project      
-  token    [name]  Get a        
-                   development  
-                   OIDC token   
-                   for a project
+  add            name    Add a  
+                         new    
+                         project
+  inspect        [name]  Displa…
+                         inform…
+                         related
+                         to a   
+                         project
+  list                   Show   
+                         all    
+                         projec…
+                         in the 
+                         select…
+                         scope  
+                         (defau…
+  members        [name]  List   
+                         project
+                         members
+                         for a  
+                         project
+  access-groups  [name]  List   
+                         access 
+                         groups 
+                         for a  
+                         project
+  remove         name    Delete 
+                         a      
+                         project
+  token          [name]  Get a  
+                         develo…
+                         OIDC   
+                         token  
+                         for a  
+                         project
 
 
   Global Options:
@@ -4398,11 +4415,14 @@ exports[`help command > project help output snapshots > project help column widt
 
   Commands:
 
-  add      name    Add a new project                                    
-  inspect  [name]  Displays information related to a project            
-  list             Show all projects in the selected scope (default)    
-  remove   name    Delete a project                                     
-  token    [name]  Get a development OIDC token for a project           
+  add            name    Add a new project                              
+  inspect        [name]  Displays information related to a project      
+  list                   Show all projects in the selected scope        
+                         (default)                                      
+  members        [name]  List project members for a project             
+  access-groups  [name]  List access groups for a project               
+  remove         name    Delete a project                               
+  token          [name]  Get a development OIDC token for a project     
 
 
   Global Options:
@@ -4432,11 +4452,13 @@ exports[`help command > project help output snapshots > project help column widt
 
   Commands:
 
-  add      name    Add a new project                                                                            
-  inspect  [name]  Displays information related to a project                                                    
-  list             Show all projects in the selected scope (default)                                            
-  remove   name    Delete a project                                                                             
-  token    [name]  Get a development OIDC token for a project                                                   
+  add            name    Add a new project                                                                      
+  inspect        [name]  Displays information related to a project                                              
+  list                   Show all projects in the selected scope (default)                                      
+  members        [name]  List project members for a project                                                     
+  access-groups  [name]  List access groups for a project                                                       
+  remove         name    Delete a project                                                                       
+  token          [name]  Get a development OIDC token for a project                                             
 
 
   Global Options:
