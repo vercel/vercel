@@ -48,6 +48,7 @@ export { default as routes } from './commands/routes';
 export { default as skills } from './commands/skills';
 export { default as target } from './commands/target';
 export { default as teams } from './commands/teams';
+export { default as tokens } from './commands/tokens';
 export { default as telemetry } from './commands/telemetry';
 export { default as upgrade } from './commands/upgrade';
 export { default as usage } from './commands/usage';
