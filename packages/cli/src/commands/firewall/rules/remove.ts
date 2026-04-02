@@ -156,6 +156,7 @@ export default async function remove(client: Client, argv: string[]) {
       {
         action: 'rules.remove',
         id: rule.id,
+        value: null,
       },
       { teamId }
     );
