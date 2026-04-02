@@ -1,11 +1,15 @@
-import type { EventSchema } from './schema-api';
-import type { QueryMetadata, MetricsQueryResponse } from './types';
+import type { MetricListItem } from './schema-api';
+import type {
+  MetricSchemaDetail,
+  QueryMetadata,
+  MetricsQueryResponse,
+} from './types';
 
 export function getRollupColumnName(
-  measure: string,
+  metric: string,
   aggregation: string
 ): string {
-  return `${measure}_${aggregation}`;
+  return `${metric.replace(/\./g, '_')}_${aggregation}`;
 }
 
 export function formatQueryJson(
@@ -24,34 +28,12 @@ export function formatQueryJson(
   );
 }
 
-export function formatSchemaDetailJson(
-  event: EventSchema & { name: string }
-): string {
-  return JSON.stringify(
-    {
-      event: event.name,
-      description: event.description,
-      dimensions: event.dimensions.map(d => ({
-        name: d.name,
-        label: d.label,
-      })),
-      measures: event.measures.map(m => ({
-        name: m.name,
-        label: m.label,
-        unit: m.unit,
-        aggregations: m.aggregations,
-        defaultAggregation: m.defaultAggregation,
-      })),
-    },
-    null,
-    2
-  );
+export function formatSchemaDetailJson(detail: MetricSchemaDetail): string {
+  return JSON.stringify(detail, null, 2);
 }
 
-export function formatSchemaListJson(
-  events: Array<{ name: string; description: string }>
-): string {
-  return JSON.stringify(events, null, 2);
+export function formatSchemaListJson(metrics: MetricListItem[]): string {
+  return JSON.stringify(metrics, null, 2);
 }
 
 export function formatErrorJson(

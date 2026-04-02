@@ -6,28 +6,13 @@ import output from '../../output-manager';
 import { metricsCommand } from './command';
 import { validateJsonOutput } from '../../util/output-format';
 import {
-  validateRequiredEvent,
-  validateEvent,
-  validateMeasure,
   validateAggregation,
   validateGroupBy,
   validateMutualExclusivity,
+  validateRequiredMetric,
 } from './validation';
-import {
-  getDefaultAggregation,
-  getMeasures,
-  getQueryEngineEventName,
-  getApiMeasureName,
-  getApiDimensionName,
-  convertFilterToApiNames,
-  parseEventMeasure,
-  fetchSchemaOrExit,
-} from './schema-api';
-import {
-  formatQueryJson,
-  formatErrorJson,
-  getRollupColumnName,
-} from './output';
+import { fetchMetricDetailOrExit, getDefaultAggregation } from './schema-api';
+import { formatErrorJson, formatQueryJson } from './output';
 import { formatText } from './text-output';
 import {
   computeGranularity,
@@ -59,9 +44,7 @@ function handleValidationError(
   } else {
     output.error(result.message);
     if (result.allowedValues && result.allowedValues.length > 0) {
-      output.print(
-        `\nAvailable ${result.code === 'UNKNOWN_EVENT' ? 'events' : result.code === 'UNKNOWN_MEASURE' ? 'measures' : result.code === 'INVALID_AGGREGATION' ? 'aggregations' : 'dimensions'}: ${result.allowedValues.join(', ')}\n`
-      );
+      output.print(`\nAvailable values: ${result.allowedValues.join(', ')}\n`);
     }
   }
   return 1;
@@ -77,9 +60,16 @@ function handleApiError(
 
   switch (err.status) {
     case 402:
-      code = 'PAYMENT_REQUIRED';
+      code = err.code || 'PAYMENT_REQUIRED';
       message =
+        err.serverMessage ||
         'This feature requires an Observability Plus subscription. Upgrade at https://vercel.com/dashboard/settings/billing';
+      break;
+    case 429:
+      code = err.code || 'RATE_LIMITED';
+      message =
+        err.serverMessage ||
+        'You have reached the metrics query rate limit. Please wait and try again. If you need a higher limit, contact support.';
       break;
     case 403:
       code = 'FORBIDDEN';
@@ -124,7 +114,6 @@ async function resolveQueryScope(
     }
   | number
 > {
-  // --project or --all: resolve team context via getScope
   if (opts.project || opts.all) {
     const { team } = await getScope(client);
     if (!team) {
@@ -169,7 +158,6 @@ async function resolveQueryScope(
     };
   }
 
-  // Default: use linked project
   const linkedProject = await getLinkedProject(client);
   if (linkedProject.status === 'error') {
     return linkedProject.exitCode;
@@ -211,8 +199,7 @@ export default async function query(
   }
 
   const flags = parsedArgs.flags;
-
-  // Validate output format
+  // Validate output format before doing any network or project resolution work.
   const formatResult = validateJsonOutput(flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
@@ -220,9 +207,7 @@ export default async function query(
   }
   const jsonOutput = formatResult.jsonOutput;
 
-  // Extract raw flag values
-  const eventFlag = flags['--event'];
-  const measureFlag = flags['--measure'];
+  const metricFlag = flags['--metric'];
   const aggregationFlag = flags['--aggregation'];
   const groupBy = flags['--group-by'] ?? [];
   const limit = flags['--limit'];
@@ -233,9 +218,7 @@ export default async function query(
   const project = flags['--project'];
   const all = flags['--all'];
 
-  // Track telemetry
-  telemetry.trackCliOptionEvent(eventFlag);
-  telemetry.trackCliOptionMeasure(measureFlag);
+  telemetry.trackCliOptionMetric(metricFlag);
   telemetry.trackCliOptionAggregation(aggregationFlag);
   telemetry.trackCliOptionGroupBy(groupBy.length > 0 ? groupBy : undefined);
   telemetry.trackCliOptionLimit(limit);
@@ -247,37 +230,18 @@ export default async function query(
   telemetry.trackCliFlagAll(all);
   telemetry.trackCliOptionFormat(flags['--format']);
 
-  // Validate --event (required)
-  const requiredResult = validateRequiredEvent(eventFlag);
-  if (!requiredResult.valid) {
-    return handleValidationError(requiredResult, jsonOutput, client);
+  // --metric is required for querying; schema discovery stays on the schema subcommand.
+  const requiredMetric = validateRequiredMetric(metricFlag);
+  if (!requiredMetric.valid) {
+    return handleValidationError(requiredMetric, jsonOutput, client);
   }
+  const metric = requiredMetric.value;
 
-  // Parse embedded measure from event (e.g. vercel.edge_request.count)
-  const parsed = parseEventMeasure(requiredResult.value);
-  const event = parsed.event;
-
-  if (parsed.measure && measureFlag) {
-    const errMsg =
-      'Cannot specify --measure when the event already includes a measure. ' +
-      `Use either "--event ${parsed.event} --measure ${measureFlag}" or "--event ${requiredResult.value}".`;
-    if (jsonOutput) {
-      client.stdout.write(formatErrorJson('MEASURE_CONFLICT', errMsg));
-    } else {
-      output.error(errMsg);
-    }
-    return 1;
-  }
-
-  const measure = parsed.measure ?? measureFlag ?? 'count';
-
-  // Validate mutual exclusivity
   const mutualResult = validateMutualExclusivity(all, project);
   if (!mutualResult.valid) {
     return handleValidationError(mutualResult, jsonOutput, client);
   }
 
-  // Resolve scope
   const scopeResult = await resolveQueryScope(client, {
     project,
     all,
@@ -288,41 +252,32 @@ export default async function query(
   }
   const { scope, accountId, teamName, projectName } = scopeResult;
 
-  const schemaData = await fetchSchemaOrExit(client, accountId, jsonOutput);
-  if (typeof schemaData === 'number') {
-    return schemaData;
+  // Fetch metric detail from the API so the API remains the source of truth
+  // for supported metrics, dimensions, and aggregations.
+  const detail = await fetchMetricDetailOrExit(
+    client,
+    accountId,
+    metric,
+    jsonOutput
+  );
+  if (typeof detail === 'number') {
+    return detail;
   }
 
   const aggregationInput =
-    aggregationFlag ?? getDefaultAggregation(schemaData, event, measure);
-
-  const eventResult = validateEvent(schemaData, event);
-  if (!eventResult.valid) {
-    return handleValidationError(eventResult, jsonOutput, client);
-  }
-
-  const measureResult = validateMeasure(schemaData, event, measure);
-  if (!measureResult.valid) {
-    return handleValidationError(measureResult, jsonOutput, client);
-  }
-
-  const aggResult = validateAggregation(
-    schemaData,
-    event,
-    measure,
-    aggregationInput
-  );
+    aggregationFlag ?? getDefaultAggregation(detail, metric) ?? 'sum';
+  const aggResult = validateAggregation(detail, aggregationInput);
   if (!aggResult.valid) {
     return handleValidationError(aggResult, jsonOutput, client);
   }
   const aggregation = aggResult.value;
 
-  const groupByResult = validateGroupBy(schemaData, event, groupBy);
+  const groupByResult = validateGroupBy(detail, groupBy);
   if (!groupByResult.valid) {
     return handleValidationError(groupByResult, jsonOutput, client);
   }
 
-  // Resolve time range
+  // Resolve relative or ISO time input into a concrete UTC range for the API.
   let startTime: Date;
   let endTime: Date;
   try {
@@ -337,49 +292,42 @@ export default async function query(
     return 1;
   }
 
-  // Compute granularity — may adjust the user's --granularity upward if it's
-  // too fine for the time range (granResult.adjusted will be true in that case).
+  // Compute granularity and round to bucket boundaries so every returned bucket
+  // represents a complete interval.
   const rangeMs = endTime.getTime() - startTime.getTime();
   const granResult = computeGranularity(rangeMs, granularity);
   if (granResult.adjusted && granResult.notice) {
     output.log(`Notice: ${granResult.notice}`);
   }
 
-  // Round start/end to granularity boundaries so every time bucket is complete.
-  // e.g. granularity=1h with range 14:23–16:47 rounds to 14:00–17:00.
   const rounded = roundTimeBoundaries(
     startTime,
     endTime,
     toGranularityMsFromDuration(granResult.duration)
   );
 
-  // Build request body — convert CLI names to API names for the query engine
-  const apiMeasure = getApiMeasureName(schemaData, event, measure);
-  const apiGroupBy = groupBy.map(dim =>
-    getApiDimensionName(schemaData, event, dim)
-  );
-  const apiFilter = filter
-    ? convertFilterToApiNames(schemaData, event, filter)
-    : undefined;
-  const rollupColumn = getRollupColumnName(measure, aggregation);
+  // Build the v2 request body using the public metric id; the API resolves it
+  // to the underlying query-engine event and measure internally.
   const body: MetricsQueryRequest = {
-    reason: 'agent' as const,
+    reason: 'agent',
     scope,
-    event: getQueryEngineEventName(schemaData, event),
-    rollups: { [rollupColumn]: { measure: apiMeasure, aggregation } },
+    metric,
+    aggregation,
     startTime: rounded.start.toISOString(),
     endTime: rounded.end.toISOString(),
     granularity: granResult.duration,
-    ...(apiGroupBy.length > 0 ? { groupBy: apiGroupBy } : {}),
-    ...(apiFilter ? { filter: apiFilter } : {}),
+    ...(groupBy.length > 0 ? { groupBy } : {}),
+    ...(filter ? { filter } : {}),
     limit: limit ?? 10,
   };
 
+  // Query execution happens through the v2 API endpoint; the CLI handles local
+  // validation, time normalization, and presentation only.
   output.spinner('Querying metrics...');
   let response: MetricsQueryResponse;
   try {
     response = await client.fetch<MetricsQueryResponse>(
-      '/v1/observability/query',
+      '/v2/observability/query',
       {
         method: 'POST',
         body: JSON.stringify(body),
@@ -402,33 +350,12 @@ export default async function query(
     output.stopSpinner();
   }
 
-  // Rename API groupBy columns back to CLI names in response data
-  if (apiGroupBy.length > 0) {
-    const columnMap = new Map(apiGroupBy.map((api, i) => [api, groupBy[i]]));
-    const renameColumns = (rows: typeof response.data): typeof response.data =>
-      rows?.map(row => {
-        const renamed: Record<string, unknown> = {};
-        for (const [key, value] of Object.entries(row)) {
-          renamed[columnMap.get(key) ?? key] = value;
-        }
-        return renamed as typeof row;
-      });
-    response = {
-      ...response,
-      data: renameColumns(response.data),
-      summary: renameColumns(
-        response.summary as typeof response.data
-      ) as typeof response.summary,
-    };
-  }
-
-  // Format and output
+  // Format and print either JSON for automation or a human-readable table view.
   if (jsonOutput) {
     client.stdout.write(
       formatQueryJson(
         {
-          event,
-          measure,
+          metric,
           aggregation,
           groupBy,
           filter,
@@ -440,14 +367,11 @@ export default async function query(
       )
     );
   } else {
-    const measureUnit = getMeasures(schemaData, event).find(
-      m => m.name === measure
-    )?.unit;
     client.stdout.write(
       formatText(response, {
-        event,
-        measure,
-        measureUnit,
+        metric,
+        metricUnit:
+          detail.metrics.find(item => item.id === metric)?.unit ?? 'count',
         aggregation,
         groupBy,
         filter,

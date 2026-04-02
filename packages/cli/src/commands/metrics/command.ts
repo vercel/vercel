@@ -4,31 +4,35 @@ import { packageName } from '../../util/pkg-name';
 export const schemaSubcommand = {
   name: 'schema',
   aliases: [],
-  description: 'List available events, dimensions, and measures.',
+  description: 'List available metrics or inspect a specific metric.',
   arguments: [],
   options: [
     {
-      name: 'event',
-      shorthand: 'e',
+      name: 'metric',
+      shorthand: 'm',
       type: String,
       deprecated: false,
-      description: 'Show details for a specific event',
+      description: 'Show details for a specific metric',
       argument: 'NAME',
     },
     formatOption,
   ],
   examples: [
     {
-      name: 'List all events',
+      name: 'List all metrics',
       value: `${packageName} metrics schema`,
     },
     {
-      name: 'Show event details',
-      value: `${packageName} metrics schema -e vercel.function_execution`,
+      name: 'Inspect metrics under a prefix',
+      value: `${packageName} metrics schema --metric vercel.requests`,
     },
     {
-      name: 'Schema as JSON for agents',
-      value: `${packageName} metrics schema -e vercel.edge_request --format=json`,
+      name: 'Inspect a specific metric',
+      value: `${packageName} metrics schema --metric vercel.requests.count`,
+    },
+    {
+      name: 'Schema as JSON',
+      value: `${packageName} metrics schema --metric vercel.requests.count --format=json`,
     },
   ],
 } as const;
@@ -55,20 +59,11 @@ export const metricsCommand = {
   ],
   options: [
     {
-      name: 'event',
-      shorthand: 'e',
-      type: String,
-      deprecated: false,
-      description:
-        'Event type to query (e.g., vercel.function_execution, vercel.edge_request)',
-      argument: 'NAME',
-    },
-    {
-      name: 'measure',
+      name: 'metric',
       shorthand: 'm',
       type: String,
       deprecated: false,
-      description: 'Measurement to aggregate (default: count)',
+      description: 'Metric id to query (e.g., vercel.requests.count)',
       argument: 'NAME',
     },
     {
@@ -148,40 +143,60 @@ export const metricsCommand = {
   ],
   examples: [
     {
-      name: '5xx errors by error code in the last hour',
-      value: `${packageName} metrics -e vercel.function_execution -f "http_status ge 500" --group-by error_code --since 1h`,
+      name: 'Request count by route in the last hour',
+      value: `${packageName} metrics --metric vercel.requests.count --group-by route --since 1h`,
     },
     {
-      name: 'Function invocations by HTTP status code',
-      value: `${packageName} metrics -e vercel.function_execution --group-by http_status --since 6h`,
+      name: 'Request duration by route in the last hour',
+      value: `${packageName} metrics --metric vercel.requests.request_duration_ms -a p95 --group-by route --since 1h`,
     },
     {
-      name: 'Function duration by route (shorthand)',
-      value: `${packageName} metrics -e vercel.function_execution.request_duration_ms -a avg --group-by route --since 1h`,
+      name: 'Team-wide request count by project in the last 24 hours',
+      value: `${packageName} metrics --all --metric vercel.requests.count --group-by project_id --since 24h`,
     },
     {
-      name: 'AI Gateway costs by provider',
-      value: `${packageName} metrics -e vercel.ai_gateway_request -m cost -a sum --group-by ai_provider --since 7d`,
-    },
-    {
-      name: 'Core Web Vitals (LCP) by route',
-      value: `${packageName} metrics -e vercel.speed_insights_metric -m lcp -a p75 --group-by route --since 7d`,
-    },
-    {
-      name: 'List available events',
+      name: 'List available metrics',
       value: `${packageName} metrics schema`,
     },
     {
-      name: 'Function executions matching a path pattern',
-      value: `${packageName} metrics -e vercel.function_execution -f "contains(request_path, '/api')" --group-by route --since 1h`,
+      name: 'Inspect the request metrics',
+      value: `${packageName} metrics schema --metric vercel.requests`,
     },
     {
-      name: 'Show schema for an event',
-      value: `${packageName} metrics schema -e vercel.edge_request`,
+      name: 'Inspect a specific metric',
+      value: `${packageName} metrics schema --metric vercel.requests.count`,
     },
     {
-      name: 'Team-wide function executions by project',
-      value: `${packageName} metrics --all -e vercel.function_execution --group-by project_id --since 24h`,
+      name: 'Query a specific project by name or id',
+      value: `${packageName} metrics --project vercel-site --metric vercel.requests.request_duration_ms -a p95 --group-by route --since 24h --limit 200`,
+    },
+    {
+      name: 'Filter by route substring',
+      value: `${packageName} metrics --metric vercel.requests.request_duration_ms -a p95 --group-by route --since 24h -f "contains(route, 'logs')"`,
+    },
+    {
+      name: 'Filter request count by request path substring',
+      value: `${packageName} metrics --metric vercel.requests.count --group-by request_path --since 7d --limit 200 -f "contains(request_path, '/api/logs/')"`,
+    },
+    {
+      name: 'Query a single route',
+      value: `${packageName} metrics --metric vercel.requests.request_duration_ms -a p95 --since 7d --group-by request_path -f "request_path eq '/api/logs/request-logs'"`,
+    },
+    {
+      name: 'Break down a route by HTTP status',
+      value: `${packageName} metrics --metric vercel.requests.request_duration_ms -a p95 --group-by http_status --since 24h -f "route eq '/user/[search]'"`,
+    },
+    {
+      name: 'Break down a route by cache result',
+      value: `${packageName} metrics --metric vercel.requests.request_duration_ms -a p95 --group-by cache_result --since 24h -f "route eq '/user/[search]'"`,
+    },
+    {
+      name: 'Break down a route by deployment',
+      value: `${packageName} metrics --metric vercel.requests.request_duration_ms -a p95 --group-by deployment_id --since 24h -f "route eq '/user/[search]'"`,
+    },
+    {
+      name: 'Return JSON output',
+      value: `${packageName} metrics --metric vercel.requests.count --group-by route --since 1h --format=json`,
     },
   ],
 } as const;
