@@ -47,4 +47,18 @@ export class ProjectTelemetryClient
       value: actual,
     });
   }
+
+  trackCliSubcommandMembers(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'members',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandAccessGroups(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'access-groups',
+      value: actual,
+    });
+  }
 }

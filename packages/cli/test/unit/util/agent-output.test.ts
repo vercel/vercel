@@ -3,11 +3,14 @@ import {
   isActionRequiredPayload,
   outputActionRequired,
   outputAgentError,
+  argvHasNonInteractive,
+  exitWithNonInteractiveError,
   buildCommandWithScope,
   buildCommandWithYes,
   enrichActionRequiredWithInvokingCommand,
   type ActionRequiredPayload,
 } from '../../../src/util/agent-output';
+import { APIError, LinkRequiredError } from '../../../src/util/errors-ts';
 import type Client from '../../../src/util/client';
 
 describe('isActionRequiredPayload', () => {
@@ -355,7 +358,10 @@ describe('outputAgentError', () => {
       throw new Error('should not exit');
     }) as never);
 
-    const client = { nonInteractive: false } as Client;
+    const client = {
+      nonInteractive: false,
+      argv: ['node', 'vc.js', 'login'],
+    } as Client;
     outputAgentError(client, {
       status: 'error',
       reason: 'no_credentials',
@@ -367,5 +373,105 @@ describe('outputAgentError', () => {
 
     logSpy.mockRestore();
     exitSpy.mockRestore();
+  });
+});
+
+describe('argvHasNonInteractive', () => {
+  it('detects --non-interactive', () => {
+    expect(argvHasNonInteractive(['node', 'vc.js', 'project', 'ls'])).toBe(
+      false
+    );
+    expect(
+      argvHasNonInteractive([
+        'node',
+        'vc.js',
+        'project',
+        'ls',
+        '--non-interactive',
+      ])
+    ).toBe(true);
+    expect(
+      argvHasNonInteractive([
+        'node',
+        'vc.js',
+        '--non-interactive=false',
+        'project',
+        'ls',
+      ])
+    ).toBe(false);
+  });
+});
+
+describe('exitWithNonInteractiveError', () => {
+  it('emits JSON when argv includes --non-interactive even if client.nonInteractive is false', async () => {
+    const { Response } = await import('node-fetch');
+    const res = new Response(
+      JSON.stringify({
+        error: { code: 'not_found', message: 'Project not found.' },
+      }),
+      { status: 404 }
+    );
+    const err = new APIError('Project not found.', res);
+
+    vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+      throw new Error(`exit:${code ?? 0}`);
+    }) as () => never);
+
+    const chunks: string[] = [];
+    const stdout = {
+      write: (s: string) => {
+        chunks.push(s);
+        return true;
+      },
+    };
+
+    const client = {
+      nonInteractive: false,
+      argv: ['node', 'vc.js', 'project', 'members', '--non-interactive'],
+      stdout,
+    } as unknown as Client;
+
+    expect(() => exitWithNonInteractiveError(client, err, 1)).toThrow('exit:1');
+    const payload = JSON.parse(chunks.join('').trim());
+    expect(payload).toMatchObject({
+      status: 'error',
+      reason: 'project_not_found',
+      message: 'Project not found.',
+    });
+
+    vi.restoreAllMocks();
+  });
+
+  it('emits link_required JSON for LinkRequiredError', () => {
+    vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+      throw new Error(`exit:${code ?? 0}`);
+    }) as () => never);
+
+    const chunks: string[] = [];
+    const stdout = {
+      write: (s: string) => {
+        chunks.push(s);
+        return true;
+      },
+    };
+
+    const client = {
+      nonInteractive: true,
+      argv: ['node', 'vc.js', 'project', 'members', '--non-interactive'],
+      stdout,
+    } as unknown as Client;
+
+    expect(() =>
+      exitWithNonInteractiveError(client, new LinkRequiredError(), 1, {
+        variant: 'members',
+      })
+    ).toThrow('exit:1');
+    const payload = JSON.parse(chunks.join('').trim());
+    expect(payload).toMatchObject({
+      status: 'error',
+      reason: 'link_required',
+    });
+
+    vi.restoreAllMocks();
   });
 });

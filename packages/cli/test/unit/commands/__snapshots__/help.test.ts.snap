@@ -1125,8 +1125,7 @@ exports[`help command > deploy help output snapshots > deploy help column width 
 `;
 
 exports[`help command > dev help output snapshots > dev --help > outputs help 1`] = `
-"
-  ▲ vercel dev [dir] [options]
+"▲ vercel dev [dir] [options]
 
   Starts the \`vercel dev\` server.                                               
 
@@ -4348,6 +4347,16 @@ exports[`help command > project help output snapshots > project help column widt
                           selec…
                           scope 
                           (defa…
+  members         [name]  List  
+                          proje…
+                          membe…
+                          for a 
+                          proje…
+  access-groups   [name]  List  
+                          access
+                          groups
+                          for a 
+                          proje…
   remove          name    Delete
                           a     
                           proje…
@@ -4424,6 +4433,8 @@ exports[`help command > project help output snapshots > project help column widt
   inspect         [name]  Displays information related to a project     
   list                    Show all projects in the selected scope       
                           (default)                                     
+  members         [name]  List project members for a project            
+  access-groups   [name]  List access groups for a project              
   remove          name    Delete a project                              
   token           [name]  Get a development OIDC token for a project    
 
@@ -4460,6 +4471,8 @@ exports[`help command > project help output snapshots > project help column widt
                           entitlement)                                                                          
   inspect         [name]  Displays information related to a project                                             
   list                    Show all projects in the selected scope (default)                                     
+  members         [name]  List project members for a project                                                    
+  access-groups   [name]  List access groups for a project                                                      
   remove          name    Delete a project                                                                      
   token           [name]  Get a development OIDC token for a project                                            
 
