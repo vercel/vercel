@@ -26,7 +26,7 @@ describe('metrics schema v2', () => {
     });
   });
 
-  it('lists leaf metrics by default', async () => {
+  it('lists metrics by default', async () => {
     client.scenario.get('/v2/observability/schema', (_req, res) => {
       res.json({
         metrics: [{ id: 'vercel.requests.count', description: 'Count' }],
@@ -44,20 +44,15 @@ describe('metrics schema v2', () => {
     client.scenario.get(
       '/v2/observability/schema/vercel.requests',
       (_req, res) => {
-        res.json({
-          id: 'vercel.requests',
-          description: 'Request metrics',
-          dimensions: [{ name: 'route', label: 'Route' }],
-          metrics: [
-            {
-              id: 'vercel.requests.count',
-              description: 'Count',
-              unit: 'count',
-              aggregations: ['sum'],
-              defaultAggregation: 'sum',
-            },
-          ],
-        });
+        res.json([
+          {
+            id: 'vercel.requests.count',
+            description: 'Count',
+            unit: 'count',
+            aggregations: ['sum'],
+            defaultAggregation: 'sum',
+          },
+        ]);
       }
     );
     client.setArgv('metrics', 'schema', '--metric', 'vercel.requests');

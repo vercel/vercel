@@ -36,7 +36,12 @@ export interface MetricDimension {
   label: string;
 }
 
-export interface MetricLeafSummary {
+export interface MetricListItem {
+  id: string;
+  description: string;
+}
+
+export interface MetricDetail {
   id: string;
   description: string;
   unit: string;
@@ -44,12 +49,11 @@ export interface MetricLeafSummary {
   defaultAggregation: Aggregation;
 }
 
-export type MetricSchemaDetail = {
-  id: string;
-  description: string;
-  dimensions: MetricDimension[];
-  metrics: MetricLeafSummary[];
-};
+export type MetricDetailResponse = MetricDetail[];
+
+export interface MetricListResponse {
+  metrics: MetricListItem[];
+}
 
 export interface MetricsQueryRequest {
   reason: 'agent';
@@ -105,7 +109,6 @@ export type ValidationError = {
   valid: false;
   code: string;
   message: string;
-  allowedValues?: string[];
 };
 
 export type ValidationResult = { valid: true } | ValidationError;

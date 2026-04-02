@@ -6,8 +6,6 @@ import output from '../../output-manager';
 import { metricsCommand } from './command';
 import { validateJsonOutput } from '../../util/output-format';
 import {
-  validateAggregation,
-  validateGroupBy,
   validateMutualExclusivity,
   validateRequiredMetric,
 } from './validation';
@@ -22,6 +20,7 @@ import {
 import { resolveTimeRange } from '../../util/time-utils';
 import type { MetricsTelemetryClient } from '../../util/telemetry/commands/metrics';
 import type {
+  Aggregation,
   Scope,
   ValidationError,
   MetricsQueryRequest,
@@ -38,20 +37,19 @@ function handleValidationError(
   client: Client
 ): number {
   if (jsonOutput) {
-    client.stdout.write(
-      formatErrorJson(result.code, result.message, result.allowedValues)
-    );
+    client.stdout.write(formatErrorJson(result.code, result.message));
   } else {
     output.error(result.message);
-    if (result.allowedValues && result.allowedValues.length > 0) {
-      output.print(`\nAvailable values: ${result.allowedValues.join(', ')}\n`);
-    }
   }
   return 1;
 }
 
 function handleApiError(
-  err: { status: number; code?: string; serverMessage?: string },
+  err: {
+    status: number;
+    code?: string;
+    serverMessage?: string;
+  },
   jsonOutput: boolean,
   client: Client
 ): number {
@@ -84,6 +82,10 @@ function handleApiError(
       code = 'TIMEOUT';
       message =
         'The query timed out. Try a shorter time range or fewer groups.';
+      break;
+    case 400:
+      code = err.code || 'BAD_REQUEST';
+      message = err.serverMessage || `API error (${err.status})`;
       break;
     default:
       code = err.code || 'BAD_REQUEST';
@@ -255,7 +257,6 @@ export default async function query(
   }
   const { scope, accountId, teamName, projectName } = scopeResult;
 
-  // Fetch metric detail
   const detail = await fetchMetricDetailOrExit(
     client,
     accountId,
@@ -268,16 +269,7 @@ export default async function query(
 
   const aggregationInput =
     aggregationFlag ?? getDefaultAggregation(detail, metric) ?? 'sum';
-  const aggResult = validateAggregation(detail, aggregationInput);
-  if (!aggResult.valid) {
-    return handleValidationError(aggResult, jsonOutput, client);
-  }
-  const aggregation = aggResult.value;
-
-  const groupByResult = validateGroupBy(detail, groupBy);
-  if (!groupByResult.valid) {
-    return handleValidationError(groupByResult, jsonOutput, client);
-  }
+  const aggregation = aggregationInput;
 
   // Resolve time range
   let startTime: Date;
@@ -294,13 +286,16 @@ export default async function query(
     return 1;
   }
 
-  // Compute granularity
+  // Compute granularity — may adjust the user's --granularity upward if it's
+  // too fine for the time range (granResult.adjusted will be true in that case).
   const rangeMs = endTime.getTime() - startTime.getTime();
   const granResult = computeGranularity(rangeMs, granularity);
   if (granResult.adjusted && granResult.notice) {
     output.log(`Notice: ${granResult.notice}`);
   }
 
+  // Round start/end to granularity boundaries so every time bucket is complete.
+  // e.g. granularity=1h with range 14:23–16:47 rounds to 14:00–17:00.
   const rounded = roundTimeBoundaries(
     startTime,
     endTime,
@@ -312,7 +307,7 @@ export default async function query(
     reason: 'agent',
     scope,
     metric,
-    aggregation,
+    aggregation: aggregation as Aggregation,
     startTime: rounded.start.toISOString(),
     endTime: rounded.end.toISOString(),
     granularity: granResult.duration,
@@ -331,6 +326,7 @@ export default async function query(
         body: JSON.stringify(body),
         headers: { 'Content-Type': 'application/json' },
         accountId,
+        bailOn429: true,
       }
     );
   } catch (err: unknown) {
@@ -354,7 +350,7 @@ export default async function query(
       formatQueryJson(
         {
           metric,
-          aggregation,
+          aggregation: aggregation as Aggregation,
           groupBy,
           filter,
           startTime: rounded.start.toISOString(),
@@ -368,9 +364,8 @@ export default async function query(
     client.stdout.write(
       formatText(response, {
         metric,
-        metricUnit:
-          detail.metrics.find(item => item.id === metric)?.unit ?? 'count',
-        aggregation,
+        metricUnit: detail.find(item => item.id === metric)?.unit ?? 'count',
+        aggregation: aggregation as Aggregation,
         groupBy,
         filter,
         scope,

@@ -6,17 +6,13 @@ import { printError } from '../../util/error';
 import output from '../../output-manager';
 import { schemaSubcommand } from './command';
 import { validateJsonOutput } from '../../util/output-format';
-import {
-  fetchMetricDetailOrExit,
-  fetchMetricListOrExit,
-  type MetricListItem,
-} from './schema-api';
+import { fetchMetricDetailOrExit, fetchMetricListOrExit } from './schema-api';
 import { formatErrorJson } from './output';
 import formatTable from '../../util/format-table';
 import indent from '../../util/output/indent';
 import type { MetricsTelemetryClient } from '../../util/telemetry/commands/metrics';
 import getScope from '../../util/get-scope';
-import type { MetricSchemaDetail } from './types';
+import type { MetricDetail, MetricListItem } from './types';
 
 export default async function schema(
   client: Client,
@@ -74,14 +70,8 @@ export default async function schema(
       return 0;
     }
 
-    output.log(`Metric: ${detail.id} - ${detail.description}`);
-    const dimensionsTable = formatDimensionsTable(detail.dimensions);
-    if (dimensionsTable) {
-      output.print(dimensionsTable);
-      output.print('\n');
-    }
-
-    const metricsTable = formatMetricsTable(detail.metrics);
+    output.log(`Metric: ${metric}`);
+    const metricsTable = formatMetricsTable(detail);
     if (metricsTable) {
       output.print(metricsTable);
       output.print('\n');
@@ -118,29 +108,7 @@ function formatMetricListTable(metrics: MetricListItem[]) {
   );
 }
 
-function formatDimensionsTable(dimensions: MetricSchemaDetail['dimensions']) {
-  if (dimensions.length === 0) {
-    return null;
-  }
-  return indent(
-    formatTable(
-      ['Dimension', 'Label'],
-      ['l', 'l'],
-      [{ rows: dimensions.map(dimension => [dimension.name, dimension.label]) }]
-    ),
-    1
-  );
-}
-
-function formatMetricsTable(
-  metrics: Array<{
-    id: string;
-    description: string;
-    unit: string;
-    aggregations: readonly string[];
-    defaultAggregation: string;
-  }>
-) {
+function formatMetricsTable(metrics: MetricDetail[]) {
   if (metrics.length === 0) {
     return null;
   }

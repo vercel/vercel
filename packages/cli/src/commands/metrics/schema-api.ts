@@ -4,38 +4,13 @@ import { isAPIError } from '../../util/errors-ts';
 import { formatErrorJson } from './output';
 import type {
   Aggregation,
-  MetricSchemaDetail,
-  MetricLeafSummary,
+  MetricDetail,
+  MetricDetailResponse,
+  MetricListItem,
+  MetricListResponse,
 } from './types';
 
-export type MetricListItem = {
-  id: string;
-  description: string;
-};
-
-interface SchemaListResponse {
-  metrics: MetricListItem[];
-}
-
-interface SchemaDetailResponse {
-  id: string;
-  description: string;
-  dimensions: Array<{
-    name: string;
-    label: string;
-  }>;
-  metrics: Array<{
-    id: string;
-    description: string;
-    unit: string;
-    aggregations: string[];
-    defaultAggregation: string;
-  }>;
-}
-
-function toLeafSummary(
-  metric: SchemaDetailResponse['metrics'][number]
-): MetricLeafSummary {
+function toMetricDetail(metric: MetricDetailResponse[number]): MetricDetail {
   return {
     id: metric.id,
     description: metric.description,
@@ -50,31 +25,17 @@ export function getMetricIds(metrics: MetricListItem[]): string[] {
 }
 
 export function getDefaultAggregation(
-  detail: MetricSchemaDetail,
+  detail: MetricDetail[],
   metricId: string
 ): Aggregation | undefined {
-  return detail.metrics.find(metric => metric.id === metricId)
-    ?.defaultAggregation;
-}
-
-export function getAggregations(
-  detail: MetricSchemaDetail,
-  metricId: string
-): readonly Aggregation[] {
-  return (
-    detail.metrics.find(metric => metric.id === metricId)?.aggregations ?? []
-  );
-}
-
-export function getDimensions(detail: MetricSchemaDetail) {
-  return detail.dimensions;
+  return detail.find(metric => metric.id === metricId)?.defaultAggregation;
 }
 
 export async function fetchMetricList(
   client: Client,
   accountId: string
 ): Promise<MetricListItem[]> {
-  const { metrics } = await client.fetch<SchemaListResponse>(
+  const { metrics } = await client.fetch<MetricListResponse>(
     '/v2/observability/schema',
     { accountId }
   );
@@ -85,18 +46,13 @@ export async function fetchMetricDetail(
   client: Client,
   accountId: string,
   metricId: string
-): Promise<MetricSchemaDetail> {
-  const detail = await client.fetch<SchemaDetailResponse>(
+): Promise<MetricDetail[]> {
+  const detail = await client.fetch<MetricDetailResponse>(
     `/v2/observability/schema/${encodeURIComponent(metricId)}`,
     { accountId }
   );
 
-  return {
-    id: detail.id,
-    description: detail.description,
-    dimensions: detail.dimensions,
-    metrics: detail.metrics.map(toLeafSummary),
-  };
+  return detail.map(toMetricDetail);
 }
 
 export async function fetchMetricListOrExit(
@@ -137,7 +93,7 @@ export async function fetchMetricDetailOrExit(
   accountId: string,
   metricId: string,
   jsonOutput: boolean
-): Promise<MetricSchemaDetail | number> {
+): Promise<MetricDetail[] | number> {
   try {
     return await fetchMetricDetail(client, accountId, metricId);
   } catch (err: unknown) {

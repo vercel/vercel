@@ -35,24 +35,19 @@ describe('metrics query v2', () => {
     mockLinkedProject();
   });
 
-  it('queries a leaf metric through the v2 endpoint', async () => {
+  it('queries a metric through the v2 endpoint', async () => {
     client.scenario.get(
       '/v2/observability/schema/vercel.requests.count',
       (_req, res) => {
-        res.json({
-          id: 'vercel.requests.count',
-          description: 'Count',
-          dimensions: [{ name: 'route', label: 'Route' }],
-          metrics: [
-            {
-              id: 'vercel.requests.count',
-              description: 'Count',
-              unit: 'count',
-              aggregations: ['sum'],
-              defaultAggregation: 'sum',
-            },
-          ],
-        });
+        res.json([
+          {
+            id: 'vercel.requests.count',
+            description: 'Count',
+            unit: 'count',
+            aggregations: ['sum'],
+            defaultAggregation: 'sum',
+          },
+        ]);
       }
     );
 
@@ -81,22 +76,27 @@ describe('metrics query v2', () => {
     client.scenario.get(
       '/v2/observability/schema/vercel.requests',
       (_req, res) => {
-        res.json({
-          id: 'vercel.requests',
-          description: 'Request metrics',
-          dimensions: [{ name: 'route', label: 'Route' }],
-          metrics: [
-            {
-              id: 'vercel.requests.count',
-              description: 'Count',
-              unit: 'count',
-              aggregations: ['sum'],
-              defaultAggregation: 'sum',
-            },
-          ],
-        });
+        res.json([
+          {
+            id: 'vercel.requests.count',
+            description: 'Count',
+            unit: 'count',
+            aggregations: ['sum'],
+            defaultAggregation: 'sum',
+          },
+        ]);
       }
     );
+
+    client.scenario.post('/v2/observability/query', (_req, res) => {
+      res.status(400).json({
+        error: {
+          code: 'BAD_REQUEST',
+          message:
+            'Metric "vercel.requests" is not directly queryable. Use "vercel metrics schema --metric vercel.requests" to inspect the available metrics.',
+        },
+      });
+    });
 
     client.setArgv('metrics', '--metric', 'vercel.requests');
     const exitCode = await query(client, new MockTelemetry());
@@ -112,20 +112,15 @@ describe('metrics query v2', () => {
     client.scenario.get(
       '/v2/observability/schema/vercel.requests.count',
       (_req, res) => {
-        res.json({
-          id: 'vercel.requests.count',
-          description: 'Count',
-          dimensions: [{ name: 'route', label: 'Route' }],
-          metrics: [
-            {
-              id: 'vercel.requests.count',
-              description: 'Count',
-              unit: 'count',
-              aggregations: ['sum'],
-              defaultAggregation: 'sum',
-            },
-          ],
-        });
+        res.json([
+          {
+            id: 'vercel.requests.count',
+            description: 'Count',
+            unit: 'count',
+            aggregations: ['sum'],
+            defaultAggregation: 'sum',
+          },
+        ]);
       }
     );
 
@@ -153,20 +148,15 @@ describe('metrics query v2', () => {
     client.scenario.get(
       '/v2/observability/schema/vercel.requests.count',
       (_req, res) => {
-        res.json({
-          id: 'vercel.requests.count',
-          description: 'Count',
-          dimensions: [{ name: 'route', label: 'Route' }],
-          metrics: [
-            {
-              id: 'vercel.requests.count',
-              description: 'Count',
-              unit: 'count',
-              aggregations: ['sum'],
-              defaultAggregation: 'sum',
-            },
-          ],
-        });
+        res.json([
+          {
+            id: 'vercel.requests.count',
+            description: 'Count',
+            unit: 'count',
+            aggregations: ['sum'],
+            defaultAggregation: 'sum',
+          },
+        ]);
       }
     );
 
@@ -187,6 +177,103 @@ describe('metrics query v2', () => {
     expect(exitCode).toBe(1);
     expect(client.stderr.getFullOutput()).toContain(
       'Too many requests. Please wait and try again.'
+    );
+  });
+
+  it('shows available aggregations when the API rejects an aggregation', async () => {
+    client.scenario.get(
+      '/v2/observability/schema/vercel.requests.count',
+      (_req, res) => {
+        res.json({
+          id: 'vercel.requests.count',
+          description: 'Count',
+          dimensions: [{ name: 'route', label: 'Route' }],
+          metrics: [
+            {
+              id: 'vercel.requests.count',
+              description: 'Count',
+              unit: 'count',
+              aggregations: ['sum'],
+              defaultAggregation: 'sum',
+            },
+          ],
+        });
+      }
+    );
+
+    client.scenario.post('/v2/observability/query', (_req, res) => {
+      res.status(400).json({
+        error: {
+          code: 'INVALID_AGGREGATION',
+          message:
+            'Aggregation "median" is not valid for metric "vercel.requests.count". Available aggregations: sum',
+        },
+      });
+    });
+
+    client.setArgv(
+      'metrics',
+      '--metric',
+      'vercel.requests.count',
+      '-a',
+      'median'
+    );
+
+    const exitCode = await query(client, new MockTelemetry());
+
+    expect(exitCode).toBe(1);
+    expect(client.stderr.getFullOutput()).toContain(
+      'Available aggregations: sum'
+    );
+  });
+
+  it('shows available dimensions when the API rejects a groupBy dimension', async () => {
+    client.scenario.get(
+      '/v2/observability/schema/vercel.requests.count',
+      (_req, res) => {
+        res.json({
+          id: 'vercel.requests.count',
+          description: 'Count',
+          dimensions: [
+            { name: 'route', label: 'Route' },
+            { name: 'request_path', label: 'Request path' },
+          ],
+          metrics: [
+            {
+              id: 'vercel.requests.count',
+              description: 'Count',
+              unit: 'count',
+              aggregations: ['sum'],
+              defaultAggregation: 'sum',
+            },
+          ],
+        });
+      }
+    );
+
+    client.scenario.post('/v2/observability/query', (_req, res) => {
+      res.status(400).json({
+        error: {
+          code: 'UNKNOWN_DIMENSION',
+          message:
+            'Dimension "not_a_dimension" is not available for metric "vercel.requests.count". Available dimensions: route, request_path',
+        },
+      });
+    });
+
+    client.setArgv(
+      'metrics',
+      '--metric',
+      'vercel.requests.count',
+      '--group-by',
+      'not_a_dimension'
+    );
+
+    const exitCode = await query(client, new MockTelemetry());
+
+    expect(exitCode).toBe(1);
+    expect(client.stderr.getFullOutput()).toContain(
+      'Available dimensions: route, request_path'
     );
   });
 });

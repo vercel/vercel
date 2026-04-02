@@ -147,7 +147,7 @@ export const metricsCommand = {
       value: `${packageName} metrics --metric vercel.function_execution.count --group-by http_status --since 6h`,
     },
     {
-      name: 'Function duration by route (shorthand)',
+      name: 'Function duration by route',
       value: `${packageName} metrics --metric vercel.function_execution.request_duration_ms -a avg --group-by route --since 1h`,
     },
     {

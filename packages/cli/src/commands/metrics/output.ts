@@ -23,17 +23,10 @@ export function formatQueryJson(
   );
 }
 
-export function formatErrorJson(
-  code: string,
-  message: string,
-  allowedValues?: string[]
-): string {
-  const error: { code: string; message: string; allowedValues?: string[] } = {
+export function formatErrorJson(code: string, message: string): string {
+  const error: { code: string; message: string } = {
     code,
     message,
   };
-  if (allowedValues && allowedValues.length > 0) {
-    error.allowedValues = allowedValues;
-  }
   return JSON.stringify({ error }, null, 2);
 }
