@@ -2090,9 +2090,10 @@ async function fetchDeploymentBuildEnv(
   client: Client,
   deploymentId: string
 ): Promise<{ env: Record<string, string>; buildEnv: Record<string, string> }> {
-  const startTime = Date.now();
+  const deadline = Date.now() + INTEGRATIONS_POLL_TIMEOUT_MS;
+  let isPolling = false;
 
-  while (true) {
+  while (Date.now() < deadline) {
     try {
       return await pullEnvRecords(client, deploymentId, 'vercel-cli:pull');
     } catch (err: unknown) {
@@ -2104,14 +2105,12 @@ async function fetchDeploymentBuildEnv(
         (err as { integrationsStatus?: string }).integrationsStatus ===
           'pending'
       ) {
-        if (Date.now() - startTime > INTEGRATIONS_POLL_TIMEOUT_MS) {
-          throw new Error(
-            'Timed out waiting for deployment integrations to complete provisioning.'
+        if (!isPolling) {
+          output.spinner(
+            'Waiting for deployment integrations to finish provisioning...'
           );
+          isPolling = true;
         }
-        output.spinner(
-          'Waiting for deployment integrations to finish provisioning...'
-        );
         await new Promise(resolve =>
           setTimeout(resolve, INTEGRATIONS_POLL_INTERVAL_MS)
         );
@@ -2120,4 +2119,8 @@ async function fetchDeploymentBuildEnv(
       throw err;
     }
   }
+
+  throw new Error(
+    'Timed out waiting for deployment integrations to complete provisioning.'
+  );
 }
