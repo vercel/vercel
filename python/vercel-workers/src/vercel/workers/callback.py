@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from .client import QueueClient
 
 
+CLOUD_EVENT_TYPE_V1BETA = "com.vercel.queue.v1beta"
 CLOUD_EVENT_TYPE_V2BETA = "com.vercel.queue.v2beta"
 
 
@@ -51,6 +52,10 @@ def _normalize_headers(headers: Mapping[str, str]) -> dict[str, str]:
     return {str(name).lower(): str(value) for name, value in headers.items()}
 
 
+def _is_record(value: Any) -> bool:
+    return isinstance(value, dict)
+
+
 def _parse_int(value: str | None, *, default: int) -> int:
     if value is None:
         return default
@@ -69,6 +74,57 @@ def _deserialize_payload(raw_body: bytes, content_type: str) -> Any:
         raise MessageCorruptedError(
             "callback", f"Failed to parse inline JSON payload: {exc}"
         ) from exc
+
+
+def _parse_v1_structured_body(
+    body: bytes,
+    content_type: str | None,
+) -> ParsedCallback:
+    if not content_type or "application/cloudevents+json" not in content_type.lower():
+        raise ValueError("Invalid content type: expected 'application/cloudevents+json'")
+
+    try:
+        parsed_body = json.loads(body.decode("utf-8"))
+    except Exception as exc:  # noqa: BLE001
+        raise ValueError("Failed to parse CloudEvent from request body") from exc
+
+    if not _is_record(parsed_body):
+        raise ValueError("Invalid CloudEvent: missing required fields")
+
+    event_type = parsed_body.get("type")
+    source = parsed_body.get("source")
+    event_id = parsed_body.get("id")
+    data = parsed_body.get("data")
+    if not event_type or not source or not event_id or not _is_record(data):
+        raise ValueError("Invalid CloudEvent: missing required fields")
+
+    if event_type != CLOUD_EVENT_TYPE_V1BETA:
+        raise ValueError(
+            f"Invalid CloudEvent type: expected '{CLOUD_EVENT_TYPE_V1BETA}', got {event_type!r}"
+        )
+
+    missing_fields: list[str] = []
+    queue_name = data.get("queueName")
+    consumer_group = data.get("consumerGroup")
+    message_id = data.get("messageId")
+    if queue_name is None:
+        missing_fields.append("queueName")
+    if consumer_group is None:
+        missing_fields.append("consumerGroup")
+    if message_id is None:
+        missing_fields.append("messageId")
+    if missing_fields:
+        raise ValueError(f"Missing required CloudEvent data fields: {', '.join(missing_fields)}")
+
+    result: ParsedCallback = {
+        "queueName": str(queue_name),
+        "consumerGroup": str(consumer_group),
+        "messageId": str(message_id),
+    }
+    region = data.get("region")
+    if region is not None:
+        result["region"] = str(region)
+    return result
 
 
 def _extract_timeout_seconds(result: Any) -> int | None:
@@ -114,9 +170,7 @@ def parse_callback(body: bytes, headers: Mapping[str, str]) -> ParsedCallback:
     normalized = _normalize_headers(headers)
     ce_type = normalized.get("ce-type")
     if ce_type != CLOUD_EVENT_TYPE_V2BETA:
-        raise ValueError(
-            f"Invalid CloudEvent type: expected '{CLOUD_EVENT_TYPE_V2BETA}', got {ce_type!r}"
-        )
+        return _parse_v1_structured_body(body, normalized.get("content-type"))
 
     queue_name = normalized.get("ce-vqsqueuename")
     consumer_group = normalized.get("ce-vqsconsumergroup")

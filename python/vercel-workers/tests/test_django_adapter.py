@@ -293,7 +293,7 @@ class TestDjangoAsgiApp(unittest.TestCase):
         sent = asyncio.run(run())
         self.assertEqual(sent[0]["type"], "http.response.start")
         self.assertEqual(sent[0]["status"], 400)
-        self.assertIn(b"Invalid CloudEvent type", sent[1]["body"])
+        self.assertIn(b"Invalid content type", sent[1]["body"])
 
     def test_post_callback_executes_task_and_deletes_message(self) -> None:
         task_executed: list[tuple] = []

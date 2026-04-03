@@ -53,6 +53,28 @@ class _FakeHttpxClient:
         return self.response
 
 
+def _v1beta_callback_body(
+    *,
+    queue_name: str = "q",
+    consumer_group: str = "c",
+    message_id: str = "m",
+) -> bytes:
+    return json.dumps(
+        {
+            "type": "com.vercel.queue.v1beta",
+            "specversion": "1.0",
+            "source": "vc-dev",
+            "id": f"evt-{message_id}",
+            "datacontenttype": "application/json",
+            "data": {
+                "queueName": queue_name,
+                "consumerGroup": consumer_group,
+                "messageId": message_id,
+            },
+        }
+    ).encode("utf-8")
+
+
 class TestCallbackAndClientEdgeCases(unittest.TestCase):
     def test_deserialize_non_json_payload_returns_raw_bytes(self) -> None:
         result = queue_callback._deserialize_payload(b"not-json", "text/plain")
@@ -83,6 +105,107 @@ class TestCallbackAndClientEdgeCases(unittest.TestCase):
 
         self.assertIsInstance(err.exception.args[0], str)
         self.assertIn("Failed to resolve queue token", err.exception.args[0])
+
+    def test_parse_callback_supports_v1beta_structured_body(self) -> None:
+        parsed = queue_callback.parse_callback(
+            _v1beta_callback_body(),
+            {"content-type": "application/cloudevents+json"},
+        )
+
+        self.assertEqual(
+            parsed,
+            {
+                "queueName": "q",
+                "consumerGroup": "c",
+                "messageId": "m",
+            },
+        )
+
+    def test_handle_callback_supports_v1beta_structured_body(self) -> None:
+        class _FakeClient:
+            region = "iad1"
+
+            def __init__(self) -> None:
+                self.received: list[tuple[str, str, str, int | None]] = []
+                self.acknowledged: list[tuple[str, str, str]] = []
+
+            def receive_by_id(
+                self,
+                queue_name: str,
+                consumer_group: str,
+                message_id: str,
+                *,
+                visibility_timeout_seconds: int | None = None,
+            ) -> dict[str, object]:
+                self.received.append(
+                    (queue_name, consumer_group, message_id, visibility_timeout_seconds)
+                )
+                return {
+                    "messageId": message_id,
+                    "deliveryCount": 1,
+                    "createdAt": "2025-01-01T00:00:00Z",
+                    "expiresAt": None,
+                    "contentType": "application/json",
+                    "receiptHandle": "receipt-123",
+                    "payload": {"hello": "world"},
+                }
+
+            def acknowledge(
+                self,
+                queue_name: str,
+                consumer_group: str,
+                receipt_handle: str,
+            ) -> None:
+                self.acknowledged.append((queue_name, consumer_group, receipt_handle))
+
+            def change_visibility(
+                self,
+                queue_name: str,
+                consumer_group: str,
+                receipt_handle: str,
+                visibility_timeout_seconds: int,
+            ) -> None:
+                raise AssertionError("change_visibility should not be called")
+
+        client = _FakeClient()
+        handled: list[tuple[object, dict[str, object]]] = []
+
+        def _handler(payload: object, metadata: dict[str, object]) -> None:
+            handled.append((payload, metadata))
+
+        status_code, response_headers, body = queue_callback.handle_callback(
+            client,  # type: ignore[arg-type]
+            _v1beta_callback_body(),
+            {"content-type": "application/cloudevents+json"},
+            _handler,
+            refresh_interval_seconds=0,
+        )
+
+        self.assertEqual(status_code, 200)
+        self.assertIn(("Content-Type", "application/json"), response_headers)
+        self.assertEqual(
+            client.received,
+            [("q", "c", "m", 30)],
+        )
+        self.assertEqual(client.acknowledged, [("q", "c", "receipt-123")])
+        self.assertEqual(
+            handled,
+            [
+                (
+                    {"hello": "world"},
+                    {
+                        "messageId": "m",
+                        "deliveryCount": 1,
+                        "createdAt": "2025-01-01T00:00:00Z",
+                        "expiresAt": None,
+                        "topicName": "q",
+                        "consumerGroup": "c",
+                        "region": "iad1",
+                    },
+                )
+            ],
+        )
+        self.assertTrue(json.loads(body.decode("utf-8"))["ok"])
 
 
 class TestWorkerJSONEncoder(unittest.TestCase):
