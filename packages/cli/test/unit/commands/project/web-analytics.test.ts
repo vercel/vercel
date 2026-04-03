@@ -5,7 +5,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import project from '../../../../src/commands/project';
 import { defaultProject, useProject } from '../../../mocks/project';
+import { useUser } from '../../../mocks/user';
 import { installVercelWebAnalyticsPackage } from '../../../../src/util/install-vercel-web-analytics-package';
+
+const { openMock } = vi.hoisted(() => ({
+  openMock: vi.fn(() => Promise.resolve()),
+}));
+
+vi.mock('open', () => ({
+  default: openMock,
+}));
 
 vi.mock(
   '../../../../src/util/install-vercel-web-analytics-package',
@@ -81,11 +90,16 @@ describe('project web-analytics', () => {
   });
 
   describe('--auto-install', () => {
+    beforeEach(() => {
+      openMock.mockClear();
+      useUser({ username: 'fixtureuser' });
+    });
+
     afterEach(() => {
       client.nonInteractive = false;
     });
 
-    it('runs install after enable and logs integration hints', async () => {
+    it('runs install after enable and opens the dashboard for Vercel Agent (PR flow)', async () => {
       vi.mocked(installVercelWebAnalyticsPackage).mockResolvedValue({
         ran: true,
         success: true,
@@ -116,9 +130,14 @@ describe('project web-analytics', () => {
       });
       await expect(client.stderr).toOutput('Installed @vercel/analytics');
       await expect(client.stderr).toOutput('Analytics component');
+      await expect(client.stderr).toOutput('Opening the Vercel dashboard');
+      expect(openMock).toHaveBeenCalledTimes(1);
+      expect(openMock.mock.calls[0][0]).toContain(
+        encodeURIComponent('/fixtureuser/my-project/analytics')
+      );
     });
 
-    it('includes packageInstall and integrate in JSON output', async () => {
+    it('includes packageInstall, integrate, and agentInstallation in JSON output', async () => {
       vi.mocked(installVercelWebAnalyticsPackage).mockResolvedValue({
         ran: true,
         success: true,
@@ -159,6 +178,12 @@ describe('project web-analytics', () => {
         summary: expect.stringContaining('Analytics'),
         nextExample: expect.stringContaining('@vercel/analytics/next'),
       });
+      expect(jsonOutput.agentInstallation).toMatchObject({
+        dashboardUrl: expect.stringContaining('vercel.com/d?to='),
+        summary: expect.stringContaining('pull request'),
+        requirementsNote: expect.stringContaining('GitHub'),
+      });
+      expect(openMock).not.toHaveBeenCalled();
     });
 
     it('exits 1 and prints install error when install fails', async () => {
@@ -188,6 +213,43 @@ describe('project web-analytics', () => {
       const exitCode = await project(client);
       expect(exitCode).toBe(1);
       await expect(client.stderr).toOutput('install failed');
+      await expect(client.stderr).toOutput('vercel.com/d?to=');
+    });
+
+    it('includes agentInstallation in JSON when local install fails', async () => {
+      vi.mocked(installVercelWebAnalyticsPackage).mockResolvedValue({
+        ran: true,
+        success: false,
+        command: 'pnpm add @vercel/analytics',
+        error: 'install failed',
+      });
+
+      useProject({
+        ...defaultProject,
+        id: 'prj_123',
+        name: 'my-project',
+      });
+
+      client.scenario.post('/web/insights/toggle', (_req, res) => {
+        res.json({ value: true });
+      });
+
+      client.setArgv(
+        'project',
+        'web-analytics',
+        'my-project',
+        '--auto-install',
+        '--format',
+        'json'
+      );
+      const exitCode = await project(client);
+      expect(exitCode).toBe(1);
+
+      const jsonOutput = JSON.parse(client.stdout.getFullOutput().trim());
+      expect(jsonOutput.packageInstall.success).toBe(false);
+      expect(jsonOutput.agentInstallation?.dashboardUrl).toContain(
+        'vercel.com/d?to='
+      );
     });
 
     it('pipes install stdio when --non-interactive', async () => {
@@ -221,6 +283,8 @@ describe('project web-analytics', () => {
         cwd: client.cwd,
         pipeStdio: true,
       });
+      expect(openMock).not.toHaveBeenCalled();
+      await expect(client.stderr).toOutput('vercel.com/d?to=');
     });
   });
 

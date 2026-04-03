@@ -88,3 +88,41 @@ export function webAnalyticsIntegratePayloadForJson(): {
       'import { Analytics } from "@vercel/analytics/next";\n\n// In app/layout.tsx:\nexport default function RootLayout({ children }) {\n  return (\n    <html lang="en">\n      <body>{children}<Analytics /></body>\n    </html>\n  );\n}',
   };
 }
+
+/**
+ * Dashboard redirect used by the changelog for Web Analytics (same entry point
+ * as clicking through to the project Analytics page to use "Implement").
+ * @see https://vercel.com/changelog/vercel-agent-installation
+ */
+export function buildWebAnalyticsAgentInstallationDashboardUrl(
+  orgSlug: string,
+  projectName: string
+): string {
+  const toPath = `/${orgSlug}/${projectName}/analytics`;
+  return `https://vercel.com/d?to=${encodeURIComponent(toPath)}&title=${encodeURIComponent('Vercel Web Analytics')}`;
+}
+
+/** Matches Vercel Agent Installation docs: PR with package + code on GitHub. */
+export const WEB_ANALYTICS_AGENT_PR_SUMMARY =
+  'Use Implement on the Web Analytics page to run Vercel Agent: it installs the SDK, adds integration code, and opens a pull request on your connected GitHub repository.';
+
+export type WebAnalyticsAgentInstallationPayload = {
+  dashboardUrl: string;
+  summary: string;
+  requirementsNote: string;
+};
+
+export function webAnalyticsAgentInstallationPayload(
+  orgSlug: string,
+  projectName: string
+): WebAnalyticsAgentInstallationPayload {
+  return {
+    dashboardUrl: buildWebAnalyticsAgentInstallationDashboardUrl(
+      orgSlug,
+      projectName
+    ),
+    summary: WEB_ANALYTICS_AGENT_PR_SUMMARY,
+    requirementsNote:
+      'Vercel Agent Installation requires a GitHub repository connected to the project.',
+  };
+}

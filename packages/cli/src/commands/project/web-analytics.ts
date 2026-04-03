@@ -1,3 +1,4 @@
+import open from 'open';
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
@@ -7,10 +8,14 @@ import {
   exitWithNonInteractiveError,
   outputAgentError,
 } from '../../util/agent-output';
+import getScope from '../../util/get-scope';
 import {
   VERCEL_WEB_ANALYTICS_PACKAGE,
+  WEB_ANALYTICS_AGENT_PR_SUMMARY,
   WEB_ANALYTICS_INTEGRATE_HINT,
+  type WebAnalyticsAgentInstallationPayload,
   installVercelWebAnalyticsPackage,
+  webAnalyticsAgentInstallationPayload,
   webAnalyticsIntegratePayloadForJson,
 } from '../../util/install-vercel-web-analytics-package';
 import { webAnalyticsSubcommand } from './command';
@@ -20,6 +25,45 @@ import getProjectByCwdOrLink from '../../util/projects/get-project-by-cwd-or-lin
 
 interface ToggleResponse {
   value: boolean;
+}
+
+async function tryResolveAgentInstallationPayload(
+  client: Client,
+  projectName: string
+): Promise<WebAnalyticsAgentInstallationPayload | null> {
+  try {
+    const { contextName } = await getScope(client);
+    if (!contextName) {
+      return null;
+    }
+    return webAnalyticsAgentInstallationPayload(contextName, projectName);
+  } catch {
+    return null;
+  }
+}
+
+async function followUpAgentInstallationInTerminal(
+  client: Client,
+  agentInstallation: WebAnalyticsAgentInstallationPayload
+): Promise<void> {
+  const nonInteractive =
+    client.nonInteractive || argvHasNonInteractive(client.argv);
+  if (nonInteractive) {
+    output.log(WEB_ANALYTICS_AGENT_PR_SUMMARY);
+    output.log(agentInstallation.dashboardUrl);
+    return;
+  }
+  output.log(
+    'Opening the Vercel dashboard to the Web Analytics page. Click Implement to have Vercel Agent open a pull request with the SDK and integration code.'
+  );
+  try {
+    await open(agentInstallation.dashboardUrl);
+  } catch (err) {
+    output.debug(
+      `Failed to open browser: ${err instanceof Error ? err.message : String(err)}`
+    );
+    output.log(agentInstallation.dashboardUrl);
+  }
 }
 
 export default async function webAnalytics(
@@ -86,6 +130,10 @@ export default async function webAnalytics(
       client.nonInteractive || argvHasNonInteractive(client.argv);
 
     if (autoInstall) {
+      const agentInstallation = await tryResolveAgentInstallationPayload(
+        client,
+        project.name
+      );
       const packageInstall = await installVercelWebAnalyticsPackage({
         cwd: client.cwd,
         pipeStdio: pipeInstallStdio,
@@ -100,6 +148,7 @@ export default async function webAnalytics(
                 projectName: project.name,
                 packageInstall,
                 integrate: integratePayload,
+                ...(agentInstallation && { agentInstallation }),
               },
               null,
               2
@@ -110,6 +159,10 @@ export default async function webAnalytics(
             packageInstall.error ??
               `Failed to install ${VERCEL_WEB_ANALYTICS_PACKAGE}.`
           );
+          if (agentInstallation) {
+            output.log(WEB_ANALYTICS_AGENT_PR_SUMMARY);
+            output.log(agentInstallation.dashboardUrl);
+          }
         }
         return 1;
       }
@@ -122,6 +175,7 @@ export default async function webAnalytics(
               projectName: project.name,
               packageInstall,
               integrate: integratePayload,
+              ...(agentInstallation && { agentInstallation }),
             },
             null,
             2
@@ -135,6 +189,9 @@ export default async function webAnalytics(
       );
       output.log(WEB_ANALYTICS_INTEGRATE_HINT);
       output.log(`Documentation: ${integratePayload.docsUrl}`);
+      if (agentInstallation) {
+        await followUpAgentInstallationInTerminal(client, agentInstallation);
+      }
       return 0;
     }
 

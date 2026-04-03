@@ -235,7 +235,7 @@ export const webAnalyticsSubcommand = {
       shorthand: null,
       type: Boolean,
       description:
-        'After enabling Web Analytics, install @vercel/analytics using the detected package manager (npm, yarn, pnpm, or bun)',
+        'After enabling Web Analytics: install @vercel/analytics locally with the detected package manager, then open the dashboard Analytics page so you can run Implement (Vercel Agent creates a GitHub PR with the SDK and integration code)',
       deprecated: false,
     },
   ],
@@ -253,7 +253,7 @@ export const webAnalyticsSubcommand = {
       value: `${packageName} project web-analytics --format json`,
     },
     {
-      name: 'Enable, install the SDK, and emit integration hints as JSON (agents / CI)',
+      name: 'Enable, install the SDK locally, emit JSON with PR-flow URL + integration hints (agents / CI)',
       value: `${packageName} project web-analytics --auto-install --format json`,
     },
   ],
