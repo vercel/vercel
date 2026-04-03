@@ -958,6 +958,63 @@ describe('[vercel dev] Worker service', () => {
   });
 });
 
+describe('[vercel dev] Celery worker service', () => {
+  const resultsDir = join(
+    __dirname,
+    'fixtures',
+    'services-worker-celery',
+    '.results'
+  );
+
+  beforeEach(async () => {
+    await fs.remove(resultsDir);
+  });
+
+  test('[vercel dev] web Celery task triggers worker execution', async () => {
+    const dir = fixture('services-worker-celery');
+    const { dev, port, readyResolver } = await testFixture(
+      dir,
+      {
+        skipNpmInstall: true,
+        env: {
+          VERCEL_USE_EXPERIMENTAL_SERVICES: '1',
+          VERCEL_USE_EXPERIMENTAL_FRAMEWORKS: '1',
+        },
+      },
+      ['--local']
+    );
+
+    try {
+      await readyResolver;
+
+      const enqueueRes = await nodeFetch(`http://localhost:${port}/enqueue`, {
+        method: 'POST',
+      });
+      expect(enqueueRes.status).toBe(200);
+      const enqueueJson = await enqueueRes.json();
+      expect(enqueueJson).toHaveProperty('taskId');
+
+      const workerResultPath = join(resultsDir, 'celery_worker_result.json');
+      let workerResult: any = null;
+      for (let i = 0; i < 30; i++) {
+        await sleep(500);
+        if (!workerResult && (await fs.pathExists(workerResultPath))) {
+          workerResult = await fs.readJson(workerResultPath);
+        }
+        if (workerResult) break;
+      }
+
+      expect(workerResult).not.toBeNull();
+      expect(workerResult).toHaveProperty('executed', true);
+      expect(workerResult).toHaveProperty('taskId', enqueueJson.taskId);
+      expect(workerResult.payload).toHaveProperty('action', 'test');
+      expect(workerResult.payload).toHaveProperty('value', 42);
+    } finally {
+      await dev.kill();
+    }
+  });
+});
+
 describe('[vercel dev] Cron service', () => {
   const resultsDir = join(__dirname, 'fixtures', 'services-cron', '.results');
 

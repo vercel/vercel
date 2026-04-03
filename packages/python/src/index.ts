@@ -528,7 +528,7 @@ export const build: BuildVX = async ({
   });
 
   if (shouldInstallVercelWorkers) {
-    // Optional override used by CI/preview builds to test in-repo vercel-workers wheels
+    // Optional override used by CI/preview builds to test in-repo vercel-workers wheels.
     const workersDep =
       baseEnv.VERCEL_WORKERS_PYTHON ||
       `vercel-workers==${VERCEL_WORKERS_VERSION}`;
