@@ -4,6 +4,7 @@ import getInvalidSubcommand from '../../util/get-invalid-subcommand';
 import { printError } from '../../util/error';
 import { type Command, help } from '../help';
 import add from './add';
+import accessSummary from './access-summary';
 import inspect from './inspect';
 import list from './list';
 import members from './members';
@@ -14,6 +15,7 @@ import webAnalytics from './web-analytics';
 import {
   accessGroupsSubcommand,
   addSubcommand,
+  accessSummarySubcommand,
   inspectSubcommand,
   listSubcommand,
   membersSubcommand,
@@ -34,6 +36,7 @@ const COMMAND_CONFIG = {
   members: getCommandAliases(membersSubcommand),
   accessGroups: getCommandAliases(accessGroupsSubcommand),
   add: getCommandAliases(addSubcommand),
+  'access-summary': getCommandAliases(accessSummarySubcommand),
   remove: getCommandAliases(removeSubcommand),
   token: getCommandAliases(tokenSubcommand),
   webAnalytics: getCommandAliases(webAnalyticsSubcommand),
@@ -103,6 +106,13 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandAdd(subcommandOriginal);
       return add(client, args);
+    case 'access-summary':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('project', subcommandOriginal);
+        return printHelp(accessSummarySubcommand);
+      }
+      telemetry.trackCliSubcommandAccessSummary(subcommandOriginal);
+      return accessSummary(client, args);
     case 'members':
       if (needHelp) {
         telemetry.trackCliFlagHelp('project', subcommandOriginal);
