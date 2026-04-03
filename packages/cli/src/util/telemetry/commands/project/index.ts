@@ -61,4 +61,11 @@ export class ProjectTelemetryClient
       value: actual,
     });
   }
+
+  trackCliSubcommandWebAnalytics(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'web-analytics',
+      value: actual,
+    });
+  }
 }
