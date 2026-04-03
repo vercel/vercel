@@ -228,7 +228,17 @@ export const webAnalyticsSubcommand = {
       required: false,
     },
   ],
-  options: [formatOption],
+  options: [
+    formatOption,
+    {
+      name: 'auto-install',
+      shorthand: null,
+      type: Boolean,
+      description:
+        'After enabling Web Analytics, install @vercel/analytics using the detected package manager (npm, yarn, pnpm, or bun)',
+      deprecated: false,
+    },
+  ],
   examples: [
     {
       name: 'Enable Web Analytics for the linked project',
@@ -241,6 +251,10 @@ export const webAnalyticsSubcommand = {
     {
       name: 'Confirm enablement as JSON (non-interactive / agents)',
       value: `${packageName} project web-analytics --format json`,
+    },
+    {
+      name: 'Enable, install the SDK, and emit integration hints as JSON (agents / CI)',
+      value: `${packageName} project web-analytics --auto-install --format json`,
     },
   ],
 } as const;

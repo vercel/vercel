@@ -1,12 +1,29 @@
 import { mkdtempSync, rmSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import project from '../../../../src/commands/project';
 import { defaultProject, useProject } from '../../../mocks/project';
+import { installVercelWebAnalyticsPackage } from '../../../../src/util/install-vercel-web-analytics-package';
+
+vi.mock(
+  '../../../../src/util/install-vercel-web-analytics-package',
+  async () => {
+    const actual = await vi.importActual<
+      typeof import('../../../../src/util/install-vercel-web-analytics-package')
+    >('../../../../src/util/install-vercel-web-analytics-package');
+    return {
+      ...actual,
+      installVercelWebAnalyticsPackage: vi.fn(),
+    };
+  }
+);
 
 describe('project web-analytics', () => {
+  beforeEach(() => {
+    vi.mocked(installVercelWebAnalyticsPackage).mockReset();
+  });
   it('enables Web Analytics for a named project', async () => {
     useProject({
       ...defaultProject,
@@ -23,6 +40,7 @@ describe('project web-analytics', () => {
     client.setArgv('project', 'web-analytics', 'my-project');
     const exitCode = await project(client);
     expect(exitCode).toBe(0);
+    expect(installVercelWebAnalyticsPackage).not.toHaveBeenCalled();
     await expect(client.stderr).toOutput('Web Analytics is enabled');
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
       {
@@ -58,6 +76,151 @@ describe('project web-analytics', () => {
       enabled: true,
       projectId: 'prj_123',
       projectName: 'my-project',
+    });
+    expect(installVercelWebAnalyticsPackage).not.toHaveBeenCalled();
+  });
+
+  describe('--auto-install', () => {
+    afterEach(() => {
+      client.nonInteractive = false;
+    });
+
+    it('runs install after enable and logs integration hints', async () => {
+      vi.mocked(installVercelWebAnalyticsPackage).mockResolvedValue({
+        ran: true,
+        success: true,
+        command: 'pnpm add @vercel/analytics',
+      });
+
+      useProject({
+        ...defaultProject,
+        id: 'prj_123',
+        name: 'my-project',
+      });
+
+      client.scenario.post('/web/insights/toggle', (_req, res) => {
+        res.json({ value: true });
+      });
+
+      client.setArgv(
+        'project',
+        'web-analytics',
+        'my-project',
+        '--auto-install'
+      );
+      const exitCode = await project(client);
+      expect(exitCode).toBe(0);
+      expect(installVercelWebAnalyticsPackage).toHaveBeenCalledWith({
+        cwd: client.cwd,
+        pipeStdio: false,
+      });
+      await expect(client.stderr).toOutput('Installed @vercel/analytics');
+      await expect(client.stderr).toOutput('Analytics component');
+    });
+
+    it('includes packageInstall and integrate in JSON output', async () => {
+      vi.mocked(installVercelWebAnalyticsPackage).mockResolvedValue({
+        ran: true,
+        success: true,
+        command: 'pnpm add @vercel/analytics',
+      });
+
+      useProject({
+        ...defaultProject,
+        id: 'prj_123',
+        name: 'my-project',
+      });
+
+      client.scenario.post('/web/insights/toggle', (_req, res) => {
+        res.json({ value: true });
+      });
+
+      client.setArgv(
+        'project',
+        'web-analytics',
+        'my-project',
+        '--auto-install',
+        '--format',
+        'json'
+      );
+      const exitCode = await project(client);
+      expect(exitCode).toBe(0);
+
+      const jsonOutput = JSON.parse(client.stdout.getFullOutput().trim());
+      expect(jsonOutput.enabled).toBe(true);
+      expect(jsonOutput.projectId).toBe('prj_123');
+      expect(jsonOutput.packageInstall).toEqual({
+        ran: true,
+        success: true,
+        command: 'pnpm add @vercel/analytics',
+      });
+      expect(jsonOutput.integrate).toMatchObject({
+        docsUrl: 'https://vercel.com/docs/analytics/quickstart',
+        summary: expect.stringContaining('Analytics'),
+        nextExample: expect.stringContaining('@vercel/analytics/next'),
+      });
+    });
+
+    it('exits 1 and prints install error when install fails', async () => {
+      vi.mocked(installVercelWebAnalyticsPackage).mockResolvedValue({
+        ran: true,
+        success: false,
+        command: 'pnpm add @vercel/analytics',
+        error: 'install failed',
+      });
+
+      useProject({
+        ...defaultProject,
+        id: 'prj_123',
+        name: 'my-project',
+      });
+
+      client.scenario.post('/web/insights/toggle', (_req, res) => {
+        res.json({ value: true });
+      });
+
+      client.setArgv(
+        'project',
+        'web-analytics',
+        'my-project',
+        '--auto-install'
+      );
+      const exitCode = await project(client);
+      expect(exitCode).toBe(1);
+      await expect(client.stderr).toOutput('install failed');
+    });
+
+    it('pipes install stdio when --non-interactive', async () => {
+      vi.mocked(installVercelWebAnalyticsPackage).mockResolvedValue({
+        ran: true,
+        success: true,
+        command: 'pnpm add @vercel/analytics',
+      });
+
+      useProject({
+        ...defaultProject,
+        id: 'prj_123',
+        name: 'my-project',
+      });
+
+      client.scenario.post('/web/insights/toggle', (_req, res) => {
+        res.json({ value: true });
+      });
+
+      client.nonInteractive = true;
+      client.setArgv(
+        'project',
+        'web-analytics',
+        'my-project',
+        '--auto-install',
+        '--non-interactive'
+      );
+      const exitCode = await project(client);
+      expect(exitCode).toBe(0);
+      expect(installVercelWebAnalyticsPackage).toHaveBeenCalledWith({
+        cwd: client.cwd,
+        pipeStdio: true,
+      });
     });
   });
 
