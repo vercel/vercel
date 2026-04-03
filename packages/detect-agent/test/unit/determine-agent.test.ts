@@ -17,6 +17,7 @@ describe('determineAgent', () => {
     vi.stubEnv('ANTIGRAVITY_AGENT', '');
     vi.stubEnv('AUGMENT_AGENT', '');
     vi.stubEnv('OPENCODE', '');
+    vi.stubEnv('OPENCODE_CLIENT', '');
     vi.stubEnv('CLAUDECODE', '');
     vi.stubEnv('CLAUDE_CODE', '');
     vi.stubEnv('CLAUDE_CODE_IS_COWORK', '');
@@ -296,7 +297,7 @@ describe('determineAgent', () => {
   });
 
   describe('opencode detection', () => {
-    describe('OPENCODE not set', () => {
+    describe('neither OPENCODE nor OPENCODE_CLIENT set', () => {
       it('returns no agent', async () => {
         const result = await determineAgent();
         expect(result).toEqual({ isAgent: false });
@@ -306,6 +307,20 @@ describe('determineAgent', () => {
     describe('OPENCODE set', () => {
       beforeEach(() => {
         vi.stubEnv('OPENCODE', '1');
+      });
+
+      it('detects opencode', async () => {
+        const result = await determineAgent();
+        expect(result).toEqual({
+          isAgent: true,
+          agent: { name: KNOWN_AGENTS.OPENCODE },
+        });
+      });
+    });
+
+    describe('OPENCODE_CLIENT set', () => {
+      beforeEach(() => {
+        vi.stubEnv('OPENCODE_CLIENT', 'opencode');
       });
 
       it('detects opencode', async () => {
