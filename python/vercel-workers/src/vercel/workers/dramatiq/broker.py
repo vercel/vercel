@@ -6,12 +6,13 @@ from collections.abc import Iterable
 from dataclasses import dataclass, replace
 from typing import Any
 
-from ..client import QueueClient, _compose_base_url, send
+from .._internal.queue_api import compose_base_url
+from ..client import QueueClient, send
 
 try:
-    from dramatiq.broker import Broker, Consumer, MessageProxy
-    from dramatiq.common import current_millis, dq_name
-    from dramatiq.message import Message
+    from dramatiq.broker import Broker, Consumer, MessageProxy  # type: ignore[import-not-found]
+    from dramatiq.common import current_millis, dq_name  # type: ignore[import-not-found]
+    from dramatiq.message import Message  # type: ignore[import-not-found]
 except Exception as e:
     raise RuntimeError(
         "dramatiq is required to use vercel.workers.dramatiq. "
@@ -123,7 +124,7 @@ class DramatiqTaskEnvelope(dict):
 def build_queue_client(options: VercelQueuesBrokerOptions) -> QueueClient:
     return QueueClient(
         token=options.token,
-        base_url=_compose_base_url(options.base_url, options.base_path),
+        base_url=compose_base_url(options.base_url, options.base_path),
         deployment_id=options.deployment_id,
         timeout=options.timeout,
         json_encoder=options.json_encoder,
@@ -327,7 +328,7 @@ class VercelQueuesBroker(Broker):
             retention_seconds=self._cfg.retention_seconds,
             deployment_id=self._cfg.deployment_id,
             token=self._cfg.token,
-            base_url=_compose_base_url(self._cfg.base_url, self._cfg.base_path),
+            base_url=compose_base_url(self._cfg.base_url, self._cfg.base_path),
             timeout=self._cfg.timeout,
             json_encoder=self._cfg.json_encoder,
         )

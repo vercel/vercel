@@ -2,18 +2,9 @@ from __future__ import annotations
 
 from .client import (
     AsyncQueueClient,
-    MessageMetadata,
     QueueClient,
-    ReceivedMessage,
-    SendMessageResult,
-    WorkerJSONEncoder,
-    WorkerTimeoutResult,
-    get_asgi_app,
-    get_wsgi_app,
-    has_subscriptions,
     send,
     send_async,
-    subscribe,
 )
 from .exceptions import (
     BadRequestError,
@@ -31,6 +22,14 @@ from .exceptions import (
     TokenResolutionError,
     UnauthorizedError,
     VQSError,
+)
+from .subscriptions import get_asgi_app, get_wsgi_app, has_subscriptions, subscribe
+from .types import (
+    MessageMetadata,
+    ReceivedMessage,
+    SendMessageResult,
+    WorkerJSONEncoder,
+    WorkerTimeoutResult,
 )
 
 __all__ = [

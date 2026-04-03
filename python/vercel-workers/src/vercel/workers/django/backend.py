@@ -10,24 +10,35 @@ from traceback import format_exception
 from typing import Any, TypedDict, cast
 from uuid import UUID
 
-from ..client import _compose_base_url, send, send_async
+from .._internal.queue_api import compose_base_url
+from ..client import send, send_async
 
 try:
-    from django.core.cache import caches  # type: ignore[import-untyped]
-    from django.tasks.backends.base import BaseTaskBackend  # type: ignore[import-untyped]
-    from django.tasks.base import (  # type: ignore[import-untyped]
+    from django.core.cache import caches  # type: ignore[import-untyped, import-not-found]
+    from django.tasks.backends.base import (
+        BaseTaskBackend,  # type: ignore[import-untyped, import-not-found]
+    )
+    from django.tasks.base import (  # type: ignore[import-untyped, import-not-found]
         DEFAULT_TASK_PRIORITY,
         Task,
         TaskError,
         TaskResult,
         TaskResultStatus,
     )
-    from django.tasks.exceptions import TaskResultDoesNotExist  # type: ignore[import-untyped]
-    from django.tasks.signals import task_enqueued  # type: ignore[import-untyped]
-    from django.utils import timezone as dj_timezone  # type: ignore[import-untyped]
-    from django.utils.crypto import get_random_string  # type: ignore[import-untyped]
-    from django.utils.json import normalize_json  # type: ignore[import-untyped]
-    from django.utils.module_loading import import_string  # type: ignore[import-untyped]
+    from django.tasks.exceptions import (
+        TaskResultDoesNotExist,  # type: ignore[import-untyped, import-not-found]
+    )
+    from django.tasks.signals import task_enqueued  # type: ignore[import-untyped, import-not-found]
+    from django.utils import (
+        timezone as dj_timezone,  # type: ignore[import-untyped, import-not-found]
+    )
+    from django.utils.crypto import (
+        get_random_string,  # type: ignore[import-untyped, import-not-found]
+    )
+    from django.utils.json import normalize_json  # type: ignore[import-untyped, import-not-found]
+    from django.utils.module_loading import (
+        import_string,  # type: ignore[import-untyped, import-not-found]
+    )
 except Exception as e:
     raise RuntimeError(
         "django is required to use vercel.workers.django. "
@@ -352,7 +363,7 @@ class VercelQueuesBackend(BaseTaskBackend):
             retention_seconds=self._cfg.retention_seconds,
             deployment_id=self._cfg.deployment_id,
             token=self._cfg.token,
-            base_url=_compose_base_url(self._cfg.base_url, self._cfg.base_path),
+            base_url=compose_base_url(self._cfg.base_url, self._cfg.base_path),
             timeout=self._cfg.timeout,
         )
         result_id = envelope["result_id"]
@@ -423,7 +434,7 @@ class VercelQueuesBackend(BaseTaskBackend):
             retention_seconds=self._cfg.retention_seconds,
             deployment_id=self._cfg.deployment_id,
             token=self._cfg.token,
-            base_url=_compose_base_url(self._cfg.base_url, self._cfg.base_path),
+            base_url=compose_base_url(self._cfg.base_url, self._cfg.base_path),
             timeout=self._cfg.timeout,
         )
         result_id = envelope["result_id"]

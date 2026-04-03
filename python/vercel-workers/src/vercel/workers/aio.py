@@ -1,5 +1,16 @@
 from __future__ import annotations
 
-from .client import AsyncQueueClient, SendMessageResult, send_async as send
+from .client import AsyncQueueClient, send_async as send
+from .types import MessageMetadata, ReceivedMessage, SendMessageResult, WorkerTimeoutResult
 
-__all__ = ["AsyncQueueClient", "SendMessageResult", "send"]
+QueueClient = AsyncQueueClient
+
+__all__ = [
+    "QueueClient",
+    "AsyncQueueClient",
+    "MessageMetadata",
+    "ReceivedMessage",
+    "SendMessageResult",
+    "WorkerTimeoutResult",
+    "send",
+]

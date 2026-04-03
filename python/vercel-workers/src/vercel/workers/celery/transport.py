@@ -5,7 +5,8 @@ import os
 from dataclasses import dataclass
 from typing import Any, Literal
 
-from ..client import QueueClient, _compose_base_url, send
+from .._internal.queue_api import compose_base_url
+from ..client import QueueClient, send
 from .utils import _extract_task_from_kombu_message
 
 try:
@@ -69,7 +70,7 @@ class TransportConfig:
                 "use_task_id_as_idempotency_key": True,
                 "token": "...",
                 "base_url": "https://vercel-queue.com",
-                "base_path": "/api/v2/messages",
+                "base_path": "/api/v3/topic",
                 "retention_seconds": 86400,
                 "deployment_id": "...",
                 "timeout": 10.0,
@@ -135,7 +136,7 @@ class TransportConfig:
 def build_queue_client(cfg: TransportConfig) -> QueueClient:
     return QueueClient(
         token=cfg.token,
-        base_url=_compose_base_url(cfg.base_url, cfg.base_path),
+        base_url=compose_base_url(cfg.base_url, cfg.base_path),
         deployment_id=cfg.deployment_id,
         timeout=cfg.timeout,
         json_encoder=cfg.json_encoder,
@@ -195,7 +196,7 @@ class Channel(virtual.Channel):
             retention_seconds=self._cfg.retention_seconds,
             deployment_id=self._cfg.deployment_id,
             token=self._cfg.token,
-            base_url=_compose_base_url(self._cfg.base_url, self._cfg.base_path),
+            base_url=compose_base_url(self._cfg.base_url, self._cfg.base_path),
             timeout=self._cfg.timeout,
             json_encoder=self._cfg.json_encoder,
         )

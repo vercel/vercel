@@ -7,10 +7,11 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, TypedDict
 
 from .exceptions import MessageCorruptedError, VQSError
+from .types import MessageMetadata, ReceivedMessage, WorkerTimeoutResult
 from .wsgi import json_response, status_reason
 
 if TYPE_CHECKING:
-    from .client import MessageMetadata, QueueClient, ReceivedMessage, WorkerTimeoutResult
+    from .client import QueueClient
 
 
 CLOUD_EVENT_TYPE_V2BETA = "com.vercel.queue.v2beta"

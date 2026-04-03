@@ -8,13 +8,16 @@ from traceback import format_exception
 from typing import Any, cast
 
 try:
-    from django.tasks.base import (  # type: ignore[import-untyped]
+    from django.tasks.base import (  # type: ignore[import-untyped, import-not-found]
         TaskContext,
         TaskError,
         TaskResultStatus,
     )
-    from django.tasks.signals import task_finished, task_started  # type: ignore[import-untyped]
-    from django.utils import timezone as dj_timezone  # type: ignore[import-untyped]
+    from django.tasks.signals import (  # type: ignore[import-untyped, import-not-found]
+        task_finished,
+        task_started,
+    )
+    from django.utils import timezone as dj_timezone  # type: ignore[import-untyped, import-not-found]
 except Exception as e:  # pragma: no cover
     raise RuntimeError(
         "django is required to use vercel.workers.django. "
@@ -22,8 +25,9 @@ except Exception as e:  # pragma: no cover
     ) from e
 
 from .. import callback as queue_callback
+from .._internal.queue_api import compose_base_url
 from ..asgi import build_asgi_app
-from ..client import MessageMetadata, QueueClient, _compose_base_url
+from ..client import MessageMetadata, QueueClient
 from ..exceptions import InternalServerError
 from ..wsgi import build_wsgi_app
 from .backend import DjangoTaskEnvelope, VercelQueuesBackend, _parse_iso_datetime
@@ -105,17 +109,21 @@ def get_wsgi_app(*, backend_alias: str = "default") -> WSGI:
     Usage: configure a Vercel Queue trigger to POST CloudEvents to this route.
     """
     backend = _resolve_backend(backend_alias)
-    return build_wsgi_app(lambda raw_body, headers: handle_queue_callback(backend, raw_body, headers))
+    return build_wsgi_app(
+        lambda raw_body, headers: handle_queue_callback(backend, raw_body, headers)
+    )
 
 
 def get_asgi_app(*, backend_alias: str = "default") -> ASGI:
     """ASGI variant of get_wsgi_app()."""
     backend = _resolve_backend(backend_alias)
-    return build_asgi_app(lambda raw_body, headers: handle_queue_callback(backend, raw_body, headers))
+    return build_asgi_app(
+        lambda raw_body, headers: handle_queue_callback(backend, raw_body, headers)
+    )
 
 
 def _resolve_backend(alias: str) -> VercelQueuesBackend:
-    from django.tasks import task_backends  # type: ignore[import-untyped]
+    from django.tasks import task_backends  # type: ignore[import-untyped, import-not-found]
 
     backend = task_backends[alias]
     if not isinstance(backend, VercelQueuesBackend):
@@ -155,7 +163,7 @@ def _parse_envelope(payload: Any) -> DjangoTaskEnvelope:
 def _build_queue_client(backend: VercelQueuesBackend) -> QueueClient:
     return QueueClient(
         token=backend._cfg.token,
-        base_url=_compose_base_url(backend._cfg.base_url, backend._cfg.base_path),
+        base_url=compose_base_url(backend._cfg.base_url, backend._cfg.base_path),
         deployment_id=backend._cfg.deployment_id,
         timeout=backend._cfg.timeout,
     )
