@@ -11,7 +11,8 @@ from urllib.parse import quote
 
 import httpx
 
-from vercel.oidc import get_vercel_oidc_token, get_vercel_oidc_token_async
+from vercel.oidc import get_vercel_oidc_token
+from vercel.oidc.aio import get_vercel_oidc_token as get_vercel_oidc_token_async
 
 from ..exceptions import (
     BadRequestError,
