@@ -84,7 +84,7 @@ describe('firewall rules enable', () => {
     client.setArgv('firewall', 'rules', 'enable', '--yes');
     const exitCodePromise = firewall(client);
     await expect(client.stderr).toOutput('Select a rule to enable');
-    client.stdin.write('\x1B[B\n'); // arrow down + enter to select second rule
+    client.stdin.write('\n'); // only disabled rules shown, select first (rule 3)
     await expect(client.stderr).toOutput('Enabled');
     expect(await exitCodePromise).toEqual(0);
   });

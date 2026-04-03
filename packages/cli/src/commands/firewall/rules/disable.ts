@@ -82,11 +82,17 @@ export default async function disable(client: Client, argv: string[]) {
       return 1;
     }
 
+    const enabledRules = currentRules.filter(r => r.active !== false);
+    if (enabledRules.length === 0) {
+      output.log('All rules are already disabled.');
+      return 0;
+    }
+
     const selectedId = await client.input.select({
       message: 'Select a rule to disable:',
-      choices: currentRules.map(r => ({
+      choices: enabledRules.map(r => ({
         value: r.id,
-        name: `${r.name} [${r.active ? 'Enabled' : 'Disabled'}] — ${formatActionDisplay(r.action)}`,
+        name: `${r.name} — ${formatActionDisplay(r.action)}`,
       })),
     });
 
