@@ -92,12 +92,16 @@ def get_wsgi_app(broker: VercelQueuesBroker) -> WSGI:
 
         app = get_wsgi_app(broker)
     """
-    return build_wsgi_app(lambda raw_body, headers: handle_queue_callback(broker, raw_body, headers))
+    return build_wsgi_app(
+        lambda raw_body, headers: handle_queue_callback(broker, raw_body, headers)
+    )
 
 
 def get_asgi_app(broker: VercelQueuesBroker) -> ASGI:
     """ASGI variant of get_wsgi_app()."""
-    return build_asgi_app(lambda raw_body, headers: handle_queue_callback(broker, raw_body, headers))
+    return build_asgi_app(
+        lambda raw_body, headers: handle_queue_callback(broker, raw_body, headers)
+    )
 
 
 def _retry_delay_ms(cfg: DramatiqWorkerConfig, attempt: int) -> int:

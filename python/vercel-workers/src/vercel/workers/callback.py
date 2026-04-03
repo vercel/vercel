@@ -66,7 +66,9 @@ def _deserialize_payload(raw_body: bytes, content_type: str) -> Any:
     try:
         return json.loads(raw_body.decode("utf-8"))
     except Exception as exc:  # noqa: BLE001
-        raise MessageCorruptedError("callback", f"Failed to parse inline JSON payload: {exc}") from exc
+        raise MessageCorruptedError(
+            "callback", f"Failed to parse inline JSON payload: {exc}"
+        ) from exc
 
 
 def _extract_timeout_seconds(result: Any) -> int | None:
@@ -83,7 +85,7 @@ def _should_acknowledge(result: Any) -> bool:
 
 
 def _response_payload(
-    metadata: "MessageMetadata",
+    metadata: MessageMetadata,
     *,
     delayed: bool = False,
     timeout_seconds: int | None = None,
@@ -158,7 +160,7 @@ class VisibilityExtender:
 
     def __init__(
         self,
-        client: "QueueClient",
+        client: QueueClient,
         queue_name: str,
         consumer_group: str,
         receipt_handle: str,
@@ -227,7 +229,7 @@ def _finalize_visibility(extender: VisibilityExtender | None, fn: Callable[[], N
         fn()
 
 
-def _inline_message(parsed: ParsedCallback) -> "ReceivedMessage":
+def _inline_message(parsed: ParsedCallback) -> ReceivedMessage:
     content_type = parsed.get("contentType") or "application/octet-stream"
     raw_body = parsed.get("rawBody")
     if raw_body is None:
@@ -245,10 +247,10 @@ def _inline_message(parsed: ParsedCallback) -> "ReceivedMessage":
 
 def _message_metadata(
     parsed: ParsedCallback,
-    message: "ReceivedMessage",
+    message: ReceivedMessage,
     *,
     region: str,
-) -> "MessageMetadata":
+) -> MessageMetadata:
     return {
         "messageId": message["messageId"],
         "deliveryCount": message["deliveryCount"],
@@ -261,7 +263,7 @@ def _message_metadata(
 
 
 def handle_parsed_callback(
-    client: "QueueClient",
+    client: QueueClient,
     parsed: ParsedCallback,
     handler: MessageHandler,
     *,
@@ -273,7 +275,7 @@ def handle_parsed_callback(
     consumer_group = parsed["consumerGroup"]
     active_client = client.with_region(parsed["region"]) if parsed.get("region") else client
 
-    message: "ReceivedMessage"
+    message: ReceivedMessage
     if "receiptHandle" in parsed:
         message = _inline_message(parsed)
     else:
@@ -373,7 +375,7 @@ def handle_parsed_callback(
 
 
 def handle_callback(
-    client: "QueueClient",
+    client: QueueClient,
     raw_body: bytes,
     headers: Mapping[str, str],
     handler: MessageHandler,

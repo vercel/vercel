@@ -9,7 +9,8 @@ from typing import Any
 from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
-from vercel.workers import client
+import vercel.workers._internal.queue_api as queue_api
+from vercel.workers.client import QueueClient
 
 # Skip all tests if Django is not available (optional dependency)
 try:
@@ -24,6 +25,28 @@ except (ImportError, RuntimeError):
 
 
 _skip_without_django = unittest.skipUnless(DJANGO_AVAILABLE, "Django is not installed")
+
+
+def _v2beta_headers(
+    *,
+    queue_name: str = "q",
+    consumer_group: str = "c",
+    message_id: str = "m",
+    receipt_handle: str = "receipt-123",
+    delivery_count: int = 1,
+    created_at: str = "2025-01-01T00:00:00Z",
+    content_type: str = "application/json",
+) -> list[tuple[bytes, bytes]]:
+    return [
+        (b"ce-type", b"com.vercel.queue.v2beta"),
+        (b"ce-vqsqueuename", queue_name.encode()),
+        (b"ce-vqsconsumergroup", consumer_group.encode()),
+        (b"ce-vqsmessageid", message_id.encode()),
+        (b"ce-vqsreceipthandle", receipt_handle.encode()),
+        (b"ce-vqsdeliverycount", str(delivery_count).encode()),
+        (b"ce-vqscreatedat", created_at.encode()),
+        (b"content-type", content_type.encode()),
+    ]
 
 
 @_skip_without_django
@@ -111,7 +134,6 @@ class TestDjangoTaskWorkerConfig(unittest.TestCase):
             "max_attempts": -1,
         }
         cfg = vwd_app.DjangoTaskWorkerConfig.from_backend_options(options)
-        # Should keep defaults for invalid values
         self.assertEqual(cfg.visibility_timeout_seconds, 30)
         self.assertEqual(cfg.max_attempts, 3)
 
@@ -132,7 +154,6 @@ class TestRetryDelayCalculation(unittest.TestCase):
             retry_backoff_base_seconds=5,
             retry_backoff_factor=2.0,
         )
-        # base * factor^(attempt-1) = 5 * 2^1 = 10
         self.assertEqual(vwd_app._retry_delay_seconds(cfg, 2), 10)
 
     def test_third_attempt(self) -> None:
@@ -140,7 +161,6 @@ class TestRetryDelayCalculation(unittest.TestCase):
             retry_backoff_base_seconds=5,
             retry_backoff_factor=2.0,
         )
-        # base * factor^(attempt-1) = 5 * 2^2 = 20
         self.assertEqual(vwd_app._retry_delay_seconds(cfg, 3), 20)
 
     def test_respects_max_delay(self) -> None:
@@ -149,7 +169,6 @@ class TestRetryDelayCalculation(unittest.TestCase):
             retry_backoff_factor=10.0,
             max_retry_delay_seconds=500,
         )
-        # Would be 100 * 10^5 = huge, but capped at 500
         self.assertEqual(vwd_app._retry_delay_seconds(cfg, 6), 500)
 
 
@@ -256,10 +275,7 @@ class TestDjangoAsgiApp(unittest.TestCase):
         return sent
 
     def test_healthcheck_returns_ok(self) -> None:
-        """Test that GET / returns ok for healthcheck."""
-
         async def run() -> list[dict]:
-            # Mock the backend resolution
             mock_backend = MagicMock()
             mock_backend.options = {}
             mock_backend.queues = None
@@ -276,12 +292,11 @@ class TestDjangoAsgiApp(unittest.TestCase):
         self.assertEqual(sent[1]["body"], b"ok")
 
     def test_rejects_non_cloudevents_json(self) -> None:
-        """Test that non-CloudEvents content type is rejected."""
-
         async def run() -> list[dict]:
             mock_backend = MagicMock()
             mock_backend.options = {}
             mock_backend.queues = None
+            mock_backend._cfg = vwd_backend.VercelQueuesBackendOptions()
 
             with patch.object(vwd_app, "_resolve_backend", return_value=mock_backend):
                 app = vwd_app.get_asgi_app(backend_alias="default")
@@ -296,42 +311,15 @@ class TestDjangoAsgiApp(unittest.TestCase):
         sent = asyncio.run(run())
         self.assertEqual(sent[0]["type"], "http.response.start")
         self.assertEqual(sent[0]["status"], 400)
-        self.assertIn(b"Invalid content type", sent[1]["body"])
+        self.assertIn(b"Invalid CloudEvent type", sent[1]["body"])
 
     def test_post_callback_executes_task_and_deletes_message(self) -> None:
-        """Test that a valid callback executes the task and deletes the message."""
-        raw_body = (
-            b'{"type":"com.vercel.queue.v1beta","data":'
-            b'{"queueName":"q","consumerGroup":"c","messageId":"m"}}'
-        )
-
-        class FakeVisibilityExtender:
-            instances: list[FakeVisibilityExtender] = []
-
-            def __init__(self, *args, **kwargs):
-                self.started = False
-                self.finalized = False
-                self.stopped = False
-                FakeVisibilityExtender.instances.append(self)
-
-            def start(self) -> None:
-                self.started = True
-
-            def finalize(self, fn) -> None:
-                self.finalized = True
-                fn()
-
-            def stop(self) -> None:
-                self.stopped = True
-
-        # Track task execution
-        task_executed = []
+        task_executed: list[tuple] = []
 
         def fake_task_func(*args, **kwargs):
             task_executed.append((args, kwargs))
             return "success"
 
-        # Create mock Task and TaskResult
         mock_task = MagicMock()
         mock_task.module_path = "myapp.tasks.my_task"
         mock_task.takes_context = False
@@ -351,11 +339,13 @@ class TestDjangoAsgiApp(unittest.TestCase):
         mock_backend.queues = None
         mock_backend.alias = "default"
         mock_backend.worker_id = "worker-123"
+        mock_backend._cfg = vwd_backend.VercelQueuesBackendOptions()
         mock_backend._load_or_init_result_from_envelope.return_value = mock_task_result
         mock_backend._task_from_module_path.return_value = mock_task
 
         payload: vwd_backend.DjangoTaskEnvelope = {
             "vercel": {"kind": "django-tasks", "version": 1},
+            "result_id": "result-1",
             "task": {
                 "module_path": "myapp.tasks.my_task",
                 "takes_context": False,
@@ -369,93 +359,44 @@ class TestDjangoAsgiApp(unittest.TestCase):
         }
 
         async def run():
-            FakeVisibilityExtender.instances.clear()
+            with (
+                patch.object(vwd_app, "_resolve_backend", return_value=mock_backend),
+                patch.object(QueueClient, "acknowledge") as mock_ack,
+                patch.object(QueueClient, "change_visibility") as mock_cv,
+            ):
+                app = vwd_app.get_asgi_app(backend_alias="default")
+                sent = await self._asgi_request(
+                    app,
+                    method="POST",
+                    path="/callback",
+                    headers=_v2beta_headers(),
+                    body=json.dumps(payload).encode(),
+                )
+                return sent, mock_ack, mock_cv
 
-            with patch.object(vwd_app, "_resolve_backend", return_value=mock_backend):
-                with patch.object(
-                    vwd_app.queue_callback,
-                    "parse_cloudevent",
-                    return_value=("q", "c", "m"),
-                ):
-                    with patch.object(
-                        vwd_app.queue_callback,
-                        "receive_message_by_id",
-                        return_value=(payload, 1, "2025-01-01T00:00:00Z", "ticket"),
-                    ):
-                        with patch.object(
-                            vwd_app.queue_callback,
-                            "VisibilityExtender",
-                            FakeVisibilityExtender,
-                        ):
-                            with patch.object(
-                                vwd_app.queue_callback, "delete_message"
-                            ) as delete_message:
-                                with patch.object(
-                                    vwd_app.queue_callback, "change_visibility"
-                                ) as change_visibility:
-                                    app = vwd_app.get_asgi_app(backend_alias="default")
-                                    sent = await self._asgi_request(
-                                        app,
-                                        method="POST",
-                                        path="/callback",
-                                        headers=[
-                                            (b"content-type", b"application/cloudevents+json")
-                                        ],
-                                        body=raw_body,
-                                    )
-                                    return sent, delete_message, change_visibility
+        sent, mock_ack, mock_cv = asyncio.run(run())
 
-        sent, delete_message, change_visibility = asyncio.run(run())
-
-        # Verify task was executed
         self.assertEqual(len(task_executed), 1)
         self.assertEqual(task_executed[0], ((1, 2), {"x": 9}))
+        mock_ack.assert_called_once()
+        mock_cv.assert_not_called()
 
-        # Verify message was deleted (not visibility changed)
-        delete_message.assert_called_once()
-        change_visibility.assert_not_called()
-
-        # Verify visibility extender lifecycle
-        self.assertGreaterEqual(len(FakeVisibilityExtender.instances), 1)
-        ext = FakeVisibilityExtender.instances[-1]
-        self.assertTrue(ext.started)
-        self.assertTrue(ext.finalized)
-        self.assertTrue(ext.stopped)
-
-        # Verify response
         body = json.loads(sent[1]["body"].decode("utf-8"))
         self.assertTrue(body["ok"])
 
     def test_post_callback_delays_until_run_after_by_changing_visibility(self) -> None:
-        """Test that run_after in the future delays the message."""
-        raw_body = (
-            b'{"type":"com.vercel.queue.v1beta","data":'
-            b'{"queueName":"q","consumerGroup":"c","messageId":"m"}}'
-        )
         fixed_now = datetime(2025, 1, 1, 0, 0, 0, tzinfo=UTC)
         run_after = fixed_now + timedelta(seconds=123)
-
-        class FakeVisibilityExtender:
-            def __init__(self, *args, **kwargs):
-                self.started = False
-                self.stopped = False
-
-            def start(self) -> None:
-                self.started = True
-
-            def finalize(self, fn) -> None:
-                fn()
-
-            def stop(self) -> None:
-                self.stopped = True
 
         mock_backend = MagicMock()
         mock_backend.options = {}
         mock_backend.queues = None
         mock_backend.alias = "default"
+        mock_backend._cfg = vwd_backend.VercelQueuesBackendOptions()
 
         payload: vwd_backend.DjangoTaskEnvelope = {
             "vercel": {"kind": "django-tasks", "version": 1},
+            "result_id": "result-1",
             "task": {
                 "module_path": "myapp.tasks.my_task",
                 "takes_context": False,
@@ -469,49 +410,26 @@ class TestDjangoAsgiApp(unittest.TestCase):
         }
 
         async def run():
-            with patch.object(vwd_app, "_now_utc", return_value=fixed_now):
-                with patch.object(vwd_app, "_resolve_backend", return_value=mock_backend):
-                    with patch.object(
-                        vwd_app.queue_callback,
-                        "parse_cloudevent",
-                        return_value=("q", "c", "m"),
-                    ):
-                        with patch.object(
-                            vwd_app.queue_callback,
-                            "receive_message_by_id",
-                            return_value=(payload, 1, "2025-01-01T00:00:00Z", "ticket"),
-                        ):
-                            with patch.object(
-                                vwd_app.queue_callback,
-                                "VisibilityExtender",
-                                FakeVisibilityExtender,
-                            ):
-                                with patch.object(
-                                    vwd_app.queue_callback,
-                                    "change_visibility",
-                                ) as change_visibility:
-                                    with patch.object(
-                                        vwd_app.queue_callback,
-                                        "delete_message",
-                                    ) as delete_message:
-                                        app = vwd_app.get_asgi_app(backend_alias="default")
-                                        sent = await self._asgi_request(
-                                            app,
-                                            method="POST",
-                                            path="/callback",
-                                            headers=[
-                                                (b"content-type", b"application/cloudevents+json"),
-                                            ],
-                                            body=raw_body,
-                                        )
-                                        return sent, change_visibility, delete_message
+            with (
+                patch.object(vwd_app, "_now_utc", return_value=fixed_now),
+                patch.object(vwd_app, "_resolve_backend", return_value=mock_backend),
+                patch.object(QueueClient, "acknowledge") as mock_ack,
+                patch.object(QueueClient, "change_visibility") as mock_cv,
+            ):
+                app = vwd_app.get_asgi_app(backend_alias="default")
+                sent = await self._asgi_request(
+                    app,
+                    method="POST",
+                    path="/callback",
+                    headers=_v2beta_headers(),
+                    body=json.dumps(payload).encode(),
+                )
+                return sent, mock_ack, mock_cv
 
-        sent, change_visibility, delete_message = asyncio.run(run())
+        sent, mock_ack, mock_cv = asyncio.run(run())
 
-        # Task should NOT have been executed (delayed)
-        # Visibility should have been changed, not deleted
-        change_visibility.assert_called()
-        delete_message.assert_not_called()
+        mock_cv.assert_called()
+        mock_ack.assert_not_called()
 
         body = json.loads(sent[1]["body"].decode("utf-8"))
         self.assertTrue(body["ok"])
@@ -519,37 +437,33 @@ class TestDjangoAsgiApp(unittest.TestCase):
         self.assertEqual(body["timeoutSeconds"], 123)
 
     def test_rejects_wrong_queue(self) -> None:
-        """Test that messages from unexpected queues are rejected."""
-        raw_body = (
-            b'{"type":"com.vercel.queue.v1beta","data":'
-            b'{"queueName":"wrong-queue","consumerGroup":"c","messageId":"m"}}'
-        )
-
         mock_backend = MagicMock()
         mock_backend.options = {}
-        mock_backend.queues = ["expected-queue"]  # Only allow this queue
+        mock_backend.queues = ["expected-queue"]
         mock_backend.alias = "default"
+        mock_backend._cfg = vwd_backend.VercelQueuesBackendOptions()
+
+        payload = {"dummy": True}
 
         async def run() -> list[dict]:
-            with patch.object(vwd_app, "_resolve_backend", return_value=mock_backend):
-                with patch.object(
-                    vwd_app.queue_callback,
-                    "parse_cloudevent",
-                    return_value=("wrong-queue", "c", "m"),
-                ):
-                    app = vwd_app.get_asgi_app(backend_alias="default")
-                    return await self._asgi_request(
-                        app,
-                        method="POST",
-                        path="/callback",
-                        headers=[(b"content-type", b"application/cloudevents+json")],
-                        body=raw_body,
-                    )
+            with (
+                patch.object(vwd_app, "_resolve_backend", return_value=mock_backend),
+                patch.object(QueueClient, "acknowledge"),
+                patch.object(QueueClient, "change_visibility"),
+            ):
+                app = vwd_app.get_asgi_app(backend_alias="default")
+                return await self._asgi_request(
+                    app,
+                    method="POST",
+                    path="/callback",
+                    headers=_v2beta_headers(queue_name="wrong-queue"),
+                    body=json.dumps(payload).encode(),
+                )
 
         sent = asyncio.run(run())
         self.assertEqual(sent[0]["status"], 500)
         body = json.loads(sent[1]["body"].decode("utf-8"))
-        self.assertEqual(body["error"], "invalid-queue")
+        self.assertIn("wrong-queue", body["error"])
 
 
 @_skip_without_django
@@ -584,25 +498,6 @@ class TestDjangoTaskRetryBehavior(unittest.TestCase):
         return sent
 
     def test_task_failure_retries_with_backoff(self) -> None:
-        """Test that task failure triggers retry with visibility change."""
-        raw_body = (
-            b'{"type":"com.vercel.queue.v1beta","data":'
-            b'{"queueName":"q","consumerGroup":"c","messageId":"m"}}'
-        )
-
-        class FakeVisibilityExtender:
-            def __init__(self, *args, **kwargs):
-                pass
-
-            def start(self) -> None:
-                pass
-
-            def finalize(self, fn) -> None:
-                fn()
-
-            def stop(self) -> None:
-                pass
-
         def failing_task(*args, **kwargs):
             raise ValueError("Task failed!")
 
@@ -618,18 +513,20 @@ class TestDjangoTaskRetryBehavior(unittest.TestCase):
         mock_task_result.args = []
         mock_task_result.kwargs = {}
         mock_task_result.errors = []
-        mock_task_result.worker_ids = []  # First attempt
+        mock_task_result.worker_ids = []
 
         mock_backend = MagicMock()
         mock_backend.options = {"max_attempts": 3}
         mock_backend.queues = None
         mock_backend.alias = "default"
         mock_backend.worker_id = "worker-123"
+        mock_backend._cfg = vwd_backend.VercelQueuesBackendOptions()
         mock_backend._load_or_init_result_from_envelope.return_value = mock_task_result
         mock_backend._task_from_module_path.return_value = mock_task
 
         payload: vwd_backend.DjangoTaskEnvelope = {
             "vercel": {"kind": "django-tasks", "version": 1},
+            "result_id": "result-1",
             "task": {
                 "module_path": "myapp.tasks.failing_task",
                 "takes_context": False,
@@ -643,53 +540,29 @@ class TestDjangoTaskRetryBehavior(unittest.TestCase):
         }
 
         async def run():
-            with patch.object(vwd_app, "_resolve_backend", return_value=mock_backend):
-                with patch.object(
-                    vwd_app.queue_callback,
-                    "parse_cloudevent",
-                    return_value=("q", "c", "m"),
-                ):
-                    with patch.object(
-                        vwd_app.queue_callback,
-                        "receive_message_by_id",
-                        return_value=(payload, 1, "2025-01-01T00:00:00Z", "ticket"),
-                    ):
-                        with patch.object(
-                            vwd_app.queue_callback,
-                            "VisibilityExtender",
-                            FakeVisibilityExtender,
-                        ):
-                            with patch.object(
-                                vwd_app.queue_callback,
-                                "change_visibility",
-                            ) as change_visibility:
-                                with patch.object(
-                                    vwd_app.queue_callback,
-                                    "delete_message",
-                                ) as delete_message:
-                                    app = vwd_app.get_asgi_app(backend_alias="default")
-                                    sent = await self._asgi_request(
-                                        app,
-                                        method="POST",
-                                        path="/callback",
-                                        headers=[
-                                            (b"content-type", b"application/cloudevents+json"),
-                                        ],
-                                        body=raw_body,
-                                    )
-                                    return sent, change_visibility, delete_message
+            with (
+                patch.object(vwd_app, "_resolve_backend", return_value=mock_backend),
+                patch.object(QueueClient, "acknowledge") as mock_ack,
+                patch.object(QueueClient, "change_visibility") as mock_cv,
+            ):
+                app = vwd_app.get_asgi_app(backend_alias="default")
+                sent = await self._asgi_request(
+                    app,
+                    method="POST",
+                    path="/callback",
+                    headers=_v2beta_headers(),
+                    body=json.dumps(payload).encode(),
+                )
+                return sent, mock_ack, mock_cv
 
-        result = asyncio.run(run())
-        sent, change_visibility, delete_message = result
+        sent, mock_ack, mock_cv = asyncio.run(run())
 
-        # Should retry (change visibility), not delete
-        change_visibility.assert_called()
-        delete_message.assert_not_called()
+        mock_cv.assert_called()
+        mock_ack.assert_not_called()
 
         body = json.loads(sent[1]["body"].decode("utf-8"))
         self.assertTrue(body["ok"])
         self.assertTrue(body["delayed"])
-        # First retry uses base delay (5 seconds by default)
         self.assertIn("timeoutSeconds", body)
 
 
@@ -750,7 +623,7 @@ class TestDjangoEnqueueSerializesNonPrimitiveTypes(unittest.TestCase):
 
         with (
             patch.dict("os.environ", {"VERCEL_QUEUE_TOKEN": "tok"}),
-            patch.object(client.httpx, "Client", _FakeClient),
+            patch.object(queue_api.httpx, "Client", _FakeClient),
             patch.object(backend, "_store_result"),
         ):
             backend.enqueue(task, args=args, kwargs=kwargs)

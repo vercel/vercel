@@ -17,7 +17,9 @@ try:
         task_finished,
         task_started,
     )
-    from django.utils import timezone as dj_timezone  # type: ignore[import-untyped, import-not-found]
+    from django.utils import (
+        timezone as dj_timezone,  # type: ignore[import-untyped, import-not-found]
+    )
 except Exception as e:  # pragma: no cover
     raise RuntimeError(
         "django is required to use vercel.workers.django. "

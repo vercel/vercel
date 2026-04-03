@@ -8,9 +8,31 @@ from typing import Any, cast
 from unittest.mock import patch
 
 import vercel.workers.celery as vwc
-import vercel.workers.celery.app as vwc_app
 import vercel.workers.celery.transport as vwc_transport
 import vercel.workers.celery.utils as vwc_utils
+from vercel.workers.client import QueueClient
+
+
+def _v2beta_headers(
+    *,
+    queue_name: str = "q",
+    consumer_group: str = "c",
+    message_id: str = "m",
+    receipt_handle: str = "receipt-123",
+    delivery_count: int = 1,
+    created_at: str = "2025-01-01T00:00:00Z",
+    content_type: str = "application/json",
+) -> list[tuple[bytes, bytes]]:
+    return [
+        (b"ce-type", b"com.vercel.queue.v2beta"),
+        (b"ce-vqsqueuename", queue_name.encode()),
+        (b"ce-vqsconsumergroup", consumer_group.encode()),
+        (b"ce-vqsmessageid", message_id.encode()),
+        (b"ce-vqsreceipthandle", receipt_handle.encode()),
+        (b"ce-vqsdeliverycount", str(delivery_count).encode()),
+        (b"ce-vqscreatedat", created_at.encode()),
+        (b"content-type", content_type.encode()),
+    ]
 
 
 class TestCeleryAdapter(unittest.TestCase):
@@ -22,8 +44,6 @@ class TestCeleryAdapter(unittest.TestCase):
             self.assertIn("vercel", TRANSPORT_ALIASES)
 
     def test_extract_task_from_kombu_message_supports_common_shapes(self) -> None:
-        # Publishing relies on converting Kombu/Celery messages into a safe, JSON envelope
-
         cases = [
             (
                 "protocol-v2-minimal",
@@ -79,7 +99,7 @@ class TestCeleryAdapter(unittest.TestCase):
                 self.assertEqual(cast(dict[str, Any], vercel_info).get("version"), 1)
                 for k, v in expected.items():
                     self.assertEqual(env.get(k), v)
-                self.assertNotIn("raw", env)  # default: no raw kombu message
+                self.assertNotIn("raw", env)
 
     def test_get_asgi_app_healthcheck(self) -> None:
         async def run() -> list[dict]:
@@ -142,36 +162,20 @@ class TestCeleryAdapter(unittest.TestCase):
         )
         self.assertEqual(sent[0]["type"], "http.response.start")
         self.assertEqual(sent[0]["status"], 400)
-        self.assertIn(b"Invalid content type", sent[1]["body"])
+        self.assertIn(b"Invalid CloudEvent type", sent[1]["body"])
 
     def test_get_asgi_app_post_callback_executes_task_and_deletes_message(self) -> None:
-        raw_body = (
-            b'{"type":"com.vercel.queue.v1beta","data":'
-            b'{"queueName":"q","consumerGroup":"c","messageId":"m"}}'
-        )
-
-        class FakeVisibilityExtender:
-            instances: list[FakeVisibilityExtender] = []
-
-            def __init__(self, *args, **kwargs):
-                self.started = False
-                self.finalized = False
-                self.stopped = False
-                FakeVisibilityExtender.instances.append(self)
-
-            def start(self) -> None:
-                self.started = True
-
-            def finalize(self, fn) -> None:
-                self.finalized = True
-                fn()
-
-            def stop(self) -> None:
-                self.stopped = True
+        payload = {
+            "vercel": {"kind": "celery", "version": 1},
+            "task": "tasks.add",
+            "id": "task-123",
+            "args": [1, 2],
+            "kwargs": {"x": 9},
+        }
 
         class DummyTask:
             def __init__(self):
-                self.calls = []
+                self.calls: list[tuple] = []
 
             def apply(self, *, args, kwargs, task_id, throw):
                 self.calls.append((list(args), dict(kwargs), str(task_id), bool(throw)))
@@ -185,79 +189,43 @@ class TestCeleryAdapter(unittest.TestCase):
             conf = DummyConf()
             tasks = {"tasks.add": task}
 
-        payload = {
-            "vercel": {"kind": "celery", "version": 1},
-            "task": "tasks.add",
-            "id": "task-123",
-            "args": [1, 2],
-            "kwargs": {"x": 9},
-        }
-
-        with patch.object(vwc_app.queue_callback, "parse_cloudevent", return_value=("q", "c", "m")):
-            with patch.object(
-                vwc_app.queue_callback,
-                "receive_message_by_id",
-                return_value=(payload, 1, "t", "ticket"),
-            ):
-                with patch.object(
-                    vwc_app.queue_callback,
-                    "VisibilityExtender",
-                    FakeVisibilityExtender,
-                ):
-                    with patch.object(vwc_app.queue_callback, "delete_message") as delete_message:
-                        with patch.object(
-                            vwc_app.queue_callback,
-                            "change_visibility",
-                        ) as change_visibility:
-                            sent = asyncio.run(
-                                self._asgi_request(
-                                    vwc.get_asgi_app(cast(Any, DummyCelery())),
-                                    method="POST",
-                                    path="/anything",
-                                    headers=[(b"content-type", b"application/cloudevents+json")],
-                                    body=raw_body,
-                                ),
-                            )
+        with (
+            patch.object(QueueClient, "acknowledge") as mock_ack,
+            patch.object(QueueClient, "change_visibility") as mock_cv,
+        ):
+            sent = asyncio.run(
+                self._asgi_request(
+                    vwc.get_asgi_app(cast(Any, DummyCelery())),
+                    method="POST",
+                    path="/anything",
+                    headers=_v2beta_headers(),
+                    body=json.dumps(payload).encode(),
+                ),
+            )
 
         self.assertEqual(task.calls, [([1, 2], {"x": 9}, "task-123", True)])
-        delete_message.assert_called_once()
-        change_visibility.assert_not_called()
-
-        self.assertGreaterEqual(len(FakeVisibilityExtender.instances), 1)
-        ext = FakeVisibilityExtender.instances[-1]
-        self.assertTrue(ext.started)
-        self.assertTrue(ext.finalized)
-        self.assertTrue(ext.stopped)
+        mock_ack.assert_called_once()
+        mock_cv.assert_not_called()
 
         body = json.loads(sent[1]["body"].decode("utf-8"))
         self.assertTrue(body["ok"])
-        self.assertFalse(body["delayed"])
 
     def test_get_asgi_app_post_callback_delays_until_eta_by_changing_visibility(self) -> None:
-        raw_body = (
-            b'{"type":"com.vercel.queue.v1beta","data":'
-            b'{"queueName":"q","consumerGroup":"c","messageId":"m"}}'
-        )
         fixed_now = datetime(2025, 1, 1, 0, 0, 0, tzinfo=UTC)
         eta = fixed_now + timedelta(seconds=123)
 
-        class FakeVisibilityExtender:
-            def __init__(self, *args, **kwargs):
-                self.started = False
-                self.stopped = False
-
-            def start(self) -> None:
-                self.started = True
-
-            def finalize(self, fn) -> None:
-                fn()
-
-            def stop(self) -> None:
-                self.stopped = True
+        payload = {
+            "vercel": {"kind": "celery", "version": 1},
+            "task": "tasks.add",
+            "id": "task-eta",
+            "args": [1, 2],
+            "kwargs": {},
+            "eta": eta.isoformat().replace("+00:00", "Z"),
+        }
 
         class DummyTask:
             def __init__(self):
-                self.calls = []
+                self.calls: list[tuple] = []
 
             def apply(self, *, args, kwargs, task_id, throw):
                 self.calls.append((args, kwargs, task_id, throw))
@@ -271,54 +239,24 @@ class TestCeleryAdapter(unittest.TestCase):
             conf = DummyConf()
             tasks = {"tasks.add": task}
 
-        payload = {
-            "vercel": {"kind": "celery", "version": 1},
-            "task": "tasks.add",
-            "id": "task-eta",
-            "args": [1, 2],
-            "kwargs": {},
-            "eta": eta.isoformat().replace("+00:00", "Z"),
-        }
+        with (
+            patch.object(vwc_utils, "_now_utc", return_value=fixed_now),
+            patch.object(QueueClient, "acknowledge") as mock_ack,
+            patch.object(QueueClient, "change_visibility") as mock_cv,
+        ):
+            sent = asyncio.run(
+                self._asgi_request(
+                    vwc.get_asgi_app(cast(Any, DummyCelery())),
+                    method="POST",
+                    path="/anything",
+                    headers=_v2beta_headers(),
+                    body=json.dumps(payload).encode(),
+                ),
+            )
 
-        with patch.object(vwc_utils, "_now_utc", return_value=fixed_now):
-            with patch.object(
-                vwc_app.queue_callback,
-                "parse_cloudevent",
-                return_value=("q", "c", "m"),
-            ):
-                with patch.object(
-                    vwc_app.queue_callback,
-                    "receive_message_by_id",
-                    return_value=(payload, 1, "t", "ticket"),
-                ):
-                    with patch.object(
-                        vwc_app.queue_callback,
-                        "VisibilityExtender",
-                        FakeVisibilityExtender,
-                    ):
-                        with patch.object(
-                            vwc_app.queue_callback,
-                            "change_visibility",
-                        ) as change_visibility:
-                            with patch.object(
-                                vwc_app.queue_callback,
-                                "delete_message",
-                            ) as delete_message:
-                                sent = asyncio.run(
-                                    self._asgi_request(
-                                        vwc.get_asgi_app(cast(Any, DummyCelery())),
-                                        method="POST",
-                                        path="/anything",
-                                        headers=[
-                                            (b"content-type", b"application/cloudevents+json"),
-                                        ],
-                                        body=raw_body,
-                                    ),
-                                )
-
-        self.assertEqual(task.calls, [])  # eta scheduling should not execute the task
-        change_visibility.assert_called()
-        delete_message.assert_not_called()
+        self.assertEqual(task.calls, [])
+        mock_cv.assert_called()
+        mock_ack.assert_not_called()
 
         body = json.loads(sent[1]["body"].decode("utf-8"))
         self.assertTrue(body["ok"])

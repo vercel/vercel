@@ -93,6 +93,8 @@ class PollingWorkerConfig:
                 cfg = replace(cfg, **{key: value})
 
         return cfg
+
+
 class PollingWorker:
     """
     Long-lived polling worker for consuming Django tasks from Vercel Queues.

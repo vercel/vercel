@@ -105,10 +105,11 @@ def build_asgi_app(handler: Handler) -> ASGI:
         if method == "POST":
             raw_body = await _read_body(receive)
             headers = _read_headers(scope)
-            status_code, response_headers, body = await asyncio.to_thread(handler, raw_body, headers)
+            status_code, response_headers, body = await asyncio.to_thread(
+                handler, raw_body, headers
+            )
             asgi_headers: list[tuple[bytes, bytes]] = [
-                (k.lower().encode("latin1"), v.encode("latin1"))
-                for (k, v) in response_headers
+                (k.lower().encode("latin1"), v.encode("latin1")) for (k, v) in response_headers
             ]
             await send(
                 {

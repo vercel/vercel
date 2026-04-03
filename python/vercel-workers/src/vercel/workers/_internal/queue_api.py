@@ -96,8 +96,7 @@ def compose_base_url(
         prefix = normalized_path[: -len(BASE_PATH)]
     else:
         raise ValueError(
-            f"Invalid base_path {base_path!r}. "
-            f"Expected a path ending with {BASE_PATH!r}.",
+            f"Invalid base_path {base_path!r}. Expected a path ending with {BASE_PATH!r}.",
         )
 
     prefix = prefix.rstrip("/")

@@ -30,12 +30,16 @@ WSGI = Callable[[dict[str, Any], Callable[..., Any]], list[bytes]]
 
 def get_wsgi_app(celery_app: CeleryApp) -> WSGI:
     """Return a WSGI app that executes Celery tasks from Vercel Queue callbacks."""
-    return build_wsgi_app(lambda raw_body, headers: handle_queue_callback(celery_app, raw_body, headers))
+    return build_wsgi_app(
+        lambda raw_body, headers: handle_queue_callback(celery_app, raw_body, headers)
+    )
 
 
 def get_asgi_app(celery_app: CeleryApp) -> ASGI:
     """Return an ASGI app that executes Celery tasks from Vercel Queue callbacks."""
-    return build_asgi_app(lambda raw_body, headers: handle_queue_callback(celery_app, raw_body, headers))
+    return build_asgi_app(
+        lambda raw_body, headers: handle_queue_callback(celery_app, raw_body, headers)
+    )
 
 
 def handle_queue_callback(
