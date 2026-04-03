@@ -756,6 +756,10 @@ const main = async () => {
           telemetry.trackCliCommandEnv(userSuppliedSubCommand);
           func = (await import('./commands/env/index.js')).default;
           break;
+        case 'experiment':
+          telemetry.trackCliCommandExperiment(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).experiment;
+          break;
         case 'build':
           telemetry.trackCliCommandBuild(userSuppliedSubCommand);
           func = (await import('./commands/build/index.js')).default;

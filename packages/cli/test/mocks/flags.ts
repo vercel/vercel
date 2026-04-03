@@ -175,7 +175,13 @@ export function useFlags(
     '/v1/projects/:projectId/feature-flags/flags',
     (req, res) => {
       const state = req.query.state || 'active';
-      const filteredFlags = flagsList.filter(f => f.state === state);
+      let filteredFlags = flagsList.filter(f => f.state === state);
+      const hasExperiment = req.query.hasExperiment;
+      if (hasExperiment === 'true') {
+        filteredFlags = filteredFlags.filter(f => Boolean(f.experiment));
+      } else if (hasExperiment === 'false') {
+        filteredFlags = filteredFlags.filter(f => !f.experiment);
+      }
       res.json({ data: filteredFlags });
     }
   );
@@ -217,8 +223,12 @@ export function useFlags(
         projectId: req.params.projectId,
         ownerId: 'team_dummy',
         revision: 1,
-        seed: Math.floor(Math.random() * 100000),
+        seed:
+          typeof req.body.seed === 'number'
+            ? req.body.seed
+            : Math.floor(Math.random() * 100000),
         typeName: 'flag',
+        experiment: req.body.experiment,
       };
       flagsList.push(newFlag);
       res.status(201).json(newFlag);
@@ -256,6 +266,12 @@ export function useFlags(
               };
             }
           }
+        }
+        if (req.body.experiment) {
+          updatedFlag.experiment = {
+            ...(flag.experiment || {}),
+            ...req.body.experiment,
+          };
         }
         flagsList[flagIndex] = updatedFlag;
         res.json(updatedFlag);

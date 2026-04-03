@@ -28,6 +28,7 @@ describe('index', () => {
         ['domain', 'domains'],
         ['domains', 'domains'],
         ['env', 'env'],
+        ['experiment', 'experiment'],
         ['flags', 'flags'],
         ['git', 'git'],
         ['help', 'help'],

@@ -51,7 +51,7 @@ Use this to route to the correct reference file:
 - **Node.js backends (Express, Hono, etc.)** → `references/node-backends.md`
 - **Monorepos (Turborepo, Nx, workspaces)** → `references/monorepos.md`
 - **Bun runtime** → `references/bun.md`
-- **Feature flags** → `references/flags.md`
+- **Feature flags or CLI experiments (A/B)** → `references/flags.md`
 - **Advanced (API, webhooks)** → `references/advanced.md`
 - **Global flags** → `references/global-options.md`
 - **First-time setup** → `references/getting-started.md`

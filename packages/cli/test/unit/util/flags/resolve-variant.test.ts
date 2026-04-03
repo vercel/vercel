@@ -26,6 +26,19 @@ describe('resolve-variant', () => {
     { id: 'variant_num3', value: 50 },
   ];
 
+  const jsonVariants: FlagVariant[] = [
+    {
+      id: 'variant_json_control',
+      value: { variantId: 'control', params: { layout: 'a' } },
+      label: 'Control',
+    },
+    {
+      id: 'variant_json_treatment',
+      value: { variantId: 'treatment', params: { layout: 'b' } },
+      label: 'Treatment',
+    },
+  ];
+
   describe('resolveVariant', () => {
     describe('resolution by ID', () => {
       it('resolves variant by exact ID match', () => {
@@ -102,6 +115,22 @@ describe('resolve-variant', () => {
         const result = resolveVariant('control', stringVariants);
         expect(result.error).toBeNull();
         expect(result.variant?.id).toBe('variant_str1');
+      });
+
+      it('resolves json variant by variantId', () => {
+        const result = resolveVariant('treatment', jsonVariants);
+        expect(result.error).toBeNull();
+        expect(result.variant?.id).toBe('variant_json_treatment');
+        expect(result.variant?.value).toEqual({
+          variantId: 'treatment',
+          params: { layout: 'b' },
+        });
+      });
+
+      it('resolves json variant by stable variant id', () => {
+        const result = resolveVariant('variant_json_control', jsonVariants);
+        expect(result.error).toBeNull();
+        expect(result.variant?.id).toBe('variant_json_control');
       });
     });
 
