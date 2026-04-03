@@ -1125,8 +1125,7 @@ exports[`help command > deploy help output snapshots > deploy help column width 
 `;
 
 exports[`help command > dev help output snapshots > dev --help > outputs help 1`] = `
-"
-  ▲ vercel dev [dir] [options]
+"▲ vercel dev [dir] [options]
 
   Starts the \`vercel dev\` server.                                               
 
@@ -2207,6 +2206,7 @@ exports[`help command > env help output snapshots > env pull help output snapsho
 
        --environment <TARGET>  Set the Environment when pulling Environment Variables                                        
        --git-branch <NAME>     Specify the Git branch to pull specific Environment Variables for                             
+       --id <ID>               Pull environment variables for a specific deployment (e.g. dpl_xxx)                           
   -y,  --yes                   Skip the confirmation prompt when removing an environment variable                            
 
 
@@ -2230,6 +2230,10 @@ exports[`help command > env help output snapshots > env pull help output snapsho
 
     $ vercel env pull <file>
     $ vercel env pull .env.development.local
+
+  - Pull environment variables for a specific deployment
+
+    $ vercel env pull --id dpl_xxx
 
 "
 `;
@@ -4320,61 +4324,74 @@ exports[`help command > project help output snapshots > project help column widt
 
   Commands:
 
-  add            name        Add 
-                             a   
-                             new 
-                             pro…
-  inspect        [name]      Dis…
-                             inf…
-                             rel…
-                             to a
-                             pro…
-  list                       Show
-                             all 
-                             pro…
-                             in  
-                             the 
-                             sel…
-                             sco…
-                             (de…
-  members        [name]      List
-                             pro…
-                             mem…
-                             for 
-                             a   
-                             pro…
-  access-group   id-or-name  Show
-                             det…
-                             for 
-                             a   
-                             team
-                             acc…
-                             gro…
-                             by  
-                             id  
-                             or  
-                             slug
-                             (re…
-                             pro…
-  access-groups  [name]      List
-                             acc…
-                             gro…
-                             lin…
-                             to a
-                             pro…
-                             (re…
-                             pro…
-  remove         name        Del…
-                             a   
-                             pro…
-  token          [name]      Get 
-                             a   
-                             dev…
-                             OIDC
-                             tok…
-                             for 
-                             a   
-                             pro…
+  add             name        Add 
+                              a   
+                              new 
+                              pro…
+  access-summary  [name]      Show
+                              mem…
+                              cou…
+                              by  
+                              team
+                              role
+                              for 
+                              pro…
+                              acc…
+                              (re…
+                              acc…
+                              gro…
+                              ent…
+  inspect         [name]      Dis…
+                              inf…
+                              rel…
+                              to a
+                              pro…
+  list                        Show
+                              all 
+                              pro…
+                              in  
+                              the 
+                              sel…
+                              sco…
+                              (de…
+  members         [name]      List
+                              pro…
+                              mem…
+                              for 
+                              a   
+                              pro…
+  access-group    id-or-name  Show
+                              det…
+                              for 
+                              a   
+                              team
+                              acc…
+                              gro…
+                              by  
+                              id  
+                              or  
+                              slug
+                              (re…
+                              pro…
+  access-groups   [name]      List
+                              acc…
+                              gro…
+                              lin…
+                              to a
+                              pro…
+                              (re…
+                              pro…
+  remove          name        Del…
+                              a   
+                              pro…
+  token           [name]      Get 
+                              a   
+                              dev…
+                              OIDC
+                              tok…
+                              for 
+                              a   
+                              pro…
 
 
   Global Options:
@@ -4436,18 +4453,20 @@ exports[`help command > project help output snapshots > project help column widt
 
   Commands:
 
-  add            name        Add a new project                           
-  inspect        [name]      Displays information related to a project   
-  list                       Show all projects in the selected scope     
-                             (default)                                   
-  members        [name]      List project members for a project          
-  access-group   id-or-name  Show details for a team access group by id  
-                             or slug (requires                           
-                             project-rbac-access-groups)                 
-  access-groups  [name]      List access groups linked to a project      
-                             (requires project-rbac-access-groups)       
-  remove         name        Delete a project                            
-  token          [name]      Get a development OIDC token for a project  
+  add             name        Add a new project                           
+  access-summary  [name]      Show member counts by team role for project 
+                              access (requires access groups entitlement) 
+  inspect         [name]      Displays information related to a project   
+  list                        Show all projects in the selected scope     
+                              (default)                                   
+  members         [name]      List project members for a project          
+  access-group    id-or-name  Show details for a team access group by id  
+                              or slug (requires                           
+                              project-rbac-access-groups)                 
+  access-groups   [name]      List access groups linked to a project      
+                              (requires project-rbac-access-groups)       
+  remove          name        Delete a project                            
+  token           [name]      Get a development OIDC token for a project  
 
 
   Global Options:
@@ -4477,15 +4496,17 @@ exports[`help command > project help output snapshots > project help column widt
 
   Commands:
 
-  add            name        Add a new project                                                                   
-  inspect        [name]      Displays information related to a project                                           
-  list                       Show all projects in the selected scope (default)                                   
-  members        [name]      List project members for a project                                                  
-  access-group   id-or-name  Show details for a team access group by id or slug (requires                        
-                             project-rbac-access-groups)                                                         
-  access-groups  [name]      List access groups linked to a project (requires project-rbac-access-groups)        
-  remove         name        Delete a project                                                                    
-  token          [name]      Get a development OIDC token for a project                                          
+  add             name        Add a new project                                                                   
+  access-summary  [name]      Show member counts by team role for project access (requires access groups          
+                              entitlement)                                                                        
+  inspect         [name]      Displays information related to a project                                           
+  list                        Show all projects in the selected scope (default)                                   
+  members         [name]      List project members for a project                                                  
+  access-group    id-or-name  Show details for a team access group by id or slug (requires                        
+                              project-rbac-access-groups)                                                         
+  access-groups   [name]      List access groups linked to a project (requires project-rbac-access-groups)        
+  remove          name        Delete a project                                                                    
+  token           [name]      Get a development OIDC token for a project                                          
 
 
   Global Options:

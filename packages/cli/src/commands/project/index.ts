@@ -6,6 +6,7 @@ import { type Command, help } from '../help';
 import add from './add';
 import accessGroupInspect from './access-group';
 import accessGroups from './access-groups';
+import accessSummary from './access-summary';
 import inspect from './inspect';
 import list from './list';
 import members from './members';
@@ -15,6 +16,7 @@ import {
   accessGroupInspectSubcommand,
   accessGroupsSubcommand,
   addSubcommand,
+  accessSummarySubcommand,
   inspectSubcommand,
   listSubcommand,
   membersSubcommand,
@@ -34,6 +36,7 @@ const COMMAND_CONFIG = {
   members: getCommandAliases(membersSubcommand),
   accessGroups: getCommandAliases(accessGroupsSubcommand),
   add: getCommandAliases(addSubcommand),
+  'access-summary': getCommandAliases(accessSummarySubcommand),
   accessGroupInspect: getCommandAliases(accessGroupInspectSubcommand),
   remove: getCommandAliases(removeSubcommand),
   token: getCommandAliases(tokenSubcommand),
@@ -103,6 +106,13 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandAdd(subcommandOriginal);
       return add(client, args);
+    case 'access-summary':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('project', subcommandOriginal);
+        return printHelp(accessSummarySubcommand);
+      }
+      telemetry.trackCliSubcommandAccessSummary(subcommandOriginal);
+      return accessSummary(client, args);
     case 'members':
       if (needHelp) {
         telemetry.trackCliFlagHelp('project', subcommandOriginal);

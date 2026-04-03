@@ -27,6 +27,13 @@ export class ProjectTelemetryClient
     });
   }
 
+  trackCliSubcommandAccessSummary(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'access-summary',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandAccessGroup(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'access-group',

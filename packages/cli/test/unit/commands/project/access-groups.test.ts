@@ -172,7 +172,7 @@ describe('project access-groups', () => {
     const exitCode = await project(client);
     expect(exitCode).toBe(1);
     await expect(client.stderr).toOutput(
-      '`--limit` must be a number between 1 and 100.'
+      '`--limit` must be an integer between 1 and 100.'
     );
   });
 
