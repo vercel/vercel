@@ -1,7 +1,7 @@
 {
   "experimentalServices": {
     "web": {
-      "entrypoint": "web/server.py",
+      "entrypoint": "server.py",
       "routePrefix": "/"
     },
     "worker": {
