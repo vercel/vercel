@@ -154,9 +154,14 @@ describe('detectRenderServices', () => {
   });
 
   describe('pserv type', () => {
-    it('should map pserv to web service', async () => {
+    it('should skip pserv with a hint', async () => {
       const fs = new VirtualFilesystem({
         'render.yaml': renderYaml([
+          {
+            type: 'web',
+            name: 'web',
+            runtime: 'node',
+          },
           {
             type: 'pserv',
             name: 'internal-api',
@@ -164,20 +169,23 @@ describe('detectRenderServices', () => {
             rootDir: './api',
           },
         ]),
-        'api/requirements.txt': 'fastapi',
-        'api/main.py': 'from fastapi import FastAPI',
+        'package.json': JSON.stringify({
+          dependencies: { next: '14.0.0' },
+        }),
       });
 
       const result = await detectRenderServices({ fs });
 
       expect(result.errors).toEqual([]);
       expect(result.services).not.toBeNull();
-      expect(result.services!['internal-api']).toMatchObject({
-        type: 'web',
-        framework: 'fastapi',
-        entrypoint: './api',
-        routePrefix: '/',
-      });
+      expect(result.services!['internal-api']).toBeUndefined();
+
+      const hint = result.warnings.find(w => w.code === 'RENDER_PSERV_HINT');
+      expect(hint).toBeDefined();
+      expect(hint!.message).toContain('internal-api');
+      expect(hint!.message).toContain('not yet supported');
+      expect(hint!.message).toContain('"entrypoint": "./api"');
+      expect(hint!.message).toContain('"routePrefix": "/_/internal-api"');
     });
   });
 

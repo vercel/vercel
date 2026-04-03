@@ -37,14 +37,13 @@ interface RenderConfig {
 
 const RENDER_YAML = 'render.yaml';
 
-type RenderServiceType = 'web' | 'pserv' | 'static';
+type RenderServiceType = 'web' | 'static';
 
 const SERVICE_TYPE_MAP: Record<
   RenderServiceType,
   ExperimentalServiceConfig['type']
 > = {
   web: 'web',
-  pserv: 'web',
   static: 'web',
 };
 
@@ -143,7 +142,27 @@ export async function detectRenderServices(options: {
       continue;
     }
 
-    // keyvalue and some other types don't map to our services, so just skip them
+    // TODO: private services are close on roadmap, but not yet here,
+    // so we'll produce a hint to a user instead if they really want
+    // to deploy this service
+    if (serviceType === 'pserv') {
+      const name = rs.name ?? 'unnamed';
+      const hint: Record<string, string> = {
+        entrypoint: rs.rootDir ?? '<path-to-entrypoint>',
+        routePrefix: `/_/${name}`,
+      };
+
+      warnings.push({
+        code: 'RENDER_PSERV_HINT',
+        message:
+          `Found Render private service "${name}". ` +
+          `Private services are not yet supported. ` +
+          `If you'd like to deploy it as a regular web service, you can add the following:\n` +
+          `"${name}": ${JSON.stringify(hint, null, 2)}`,
+      });
+      continue;
+    }
+
     if (!serviceType || !(serviceType in SERVICE_TYPE_MAP)) {
       continue;
     }
