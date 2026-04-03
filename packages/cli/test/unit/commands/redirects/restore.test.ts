@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach } from 'vitest';
+import { describe, expect, it, beforeEach, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import redirects from '../../../../src/commands/redirects';
 import { useUser } from '../../../mocks/user';
@@ -61,6 +61,34 @@ describe('redirects restore', () => {
       await expect(client.stderr).toOutput('Version version-2 restored');
 
       await expect(exitCodePromise).resolves.toEqual(0);
+    });
+
+    it('should output action_required JSON when --yes not provided in non-interactive mode', async () => {
+      mockGetVersions({ isStaging: false, isLive: false });
+      mockGetRedirects();
+
+      client.nonInteractive = true;
+      const logSpy = vi
+        .spyOn(console, 'log')
+        .mockImplementation(() => undefined as unknown as void);
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {
+        throw new Error('exit');
+      }) as () => never);
+
+      client.setArgv('redirects', 'restore', 'version-2');
+      await expect(redirects(client)).rejects.toThrow('exit');
+
+      const payload = JSON.parse(logSpy.mock.calls[0][0] as string);
+      expect(payload.status).toBe('action_required');
+      expect(payload.reason).toBe('confirmation_required');
+      expect(payload.message).toContain('--yes to confirm restore');
+      expect(payload.next[0].command).toContain('redirects restore');
+      expect(payload.next[0].command).toContain('version-2');
+      expect(payload.next[0].command).toContain('--yes');
+
+      logSpy.mockRestore();
+      exitSpy.mockRestore();
+      client.nonInteractive = false;
     });
 
     it('should skip confirmation with --yes flag', async () => {
@@ -188,6 +216,43 @@ describe('redirects restore', () => {
       );
 
       await expect(exitCodePromise).resolves.toEqual(1);
+    });
+
+    it('should include list-versions in next when version-id missing in non-interactive mode', async () => {
+      client.nonInteractive = true;
+      const logSpy = vi
+        .spyOn(console, 'log')
+        .mockImplementation(() => undefined as unknown as void);
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {
+        throw new Error('exit');
+      }) as () => never);
+
+      client.setArgv(
+        'redirects',
+        'restore',
+        '--cwd=/tmp/project',
+        '--non-interactive'
+      );
+      await expect(redirects(client)).rejects.toThrow('exit');
+
+      const payload = JSON.parse(logSpy.mock.calls[0][0] as string);
+      expect(payload.reason).toBe('missing_arguments');
+      expect(payload.message).toContain('list-versions');
+      expect(payload.next.length).toBeGreaterThanOrEqual(2);
+      expect(
+        payload.next.some((n: { command: string }) =>
+          n.command.includes('list-versions')
+        )
+      ).toBe(true);
+      expect(
+        payload.next.some((n: { command: string }) =>
+          n.command.includes('restore <version-id>')
+        )
+      ).toBe(true);
+
+      logSpy.mockRestore();
+      exitSpy.mockRestore();
+      client.nonInteractive = false;
     });
   });
 

@@ -2,6 +2,7 @@ import { getCommandAliases } from '..';
 import output from '../../output-manager';
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
+import { printError } from '../../util/error';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import getInvalidSubcommand from '../../util/get-invalid-subcommand';
 import getSubcommand from '../../util/get-subcommand';
@@ -12,6 +13,8 @@ import { balance } from './balance';
 import {
   addSubcommand,
   balanceSubcommand,
+  discoverSubcommand,
+  guideSubcommand,
   integrationCommand,
   listSubcommand,
   openSubcommand,
@@ -20,13 +23,16 @@ import {
 import { list } from './list';
 import { openIntegration } from './open-integration';
 import { remove } from './remove-integration';
-import { fetchIntegration } from '../../util/integration/fetch-integration';
-import { formatProductHelp } from '../../util/integration/format-product-help';
+import { discover } from './discover';
+import { guide } from './guide';
+import { printAddDynamicHelp } from './add-help';
 
 const COMMAND_CONFIG = {
   add: getCommandAliases(addSubcommand),
   open: getCommandAliases(openSubcommand),
   list: getCommandAliases(listSubcommand),
+  discover: getCommandAliases(discoverSubcommand),
+  guide: getCommandAliases(guideSubcommand),
   balance: getCommandAliases(balanceSubcommand),
   remove: getCommandAliases(removeSubcommand),
 };
@@ -71,31 +77,56 @@ export default async function main(client: Client) {
 
   switch (subcommand) {
     case 'add': {
+      const ffAutoProvision = process.env.FF_AUTO_PROVISION_INSTALL !== '0';
+      const addCmd = ffAutoProvision
+        ? addSubcommand
+        : {
+            ...addSubcommand,
+            options: addSubcommand.options.filter(
+              o => o.name !== 'installation-id' && o.name !== 'format'
+            ),
+          };
+
       if (needHelp) {
         telemetry.trackCliFlagHelp('integration', subcommandOriginal);
-        printHelp(addSubcommand);
 
-        // Dynamic help: if an integration slug is provided, fetch and show available products
-        const rawArg = subArgs[0];
-        if (rawArg) {
-          // Strip product slug if slash syntax was used (e.g. "upstash/upstash-kv" → "upstash")
-          const integrationSlug = rawArg.split('/')[0];
-          try {
-            const integration = await fetchIntegration(client, integrationSlug);
-            const products = integration.products ?? [];
-            if (products.length > 1) {
-              output.print(formatProductHelp(integrationSlug, products));
-            }
-          } catch (err: unknown) {
-            output.debug(
-              `Failed to fetch integration for dynamic help: ${err}`
-            );
-          }
+        const printed = await printAddDynamicHelp(
+          client,
+          subArgs[0],
+          addCmd,
+          cmd => printHelp(cmd),
+          'integration add'
+        );
+
+        if (!printed) {
+          printHelp(addCmd);
         }
+
         return 0;
       }
       telemetry.trackCliSubcommandAdd(subcommandOriginal);
-      return add(client, subArgs);
+
+      // Parse add-specific flags from subArgs (which contains everything after 'add')
+      const addFlagsSpec = getFlagsSpecification(addSubcommand.options);
+      let addParsedArgs;
+      try {
+        addParsedArgs = parseArguments(subArgs, addFlagsSpec);
+      } catch (error) {
+        printError(error);
+        return 1;
+      }
+
+      if (!ffAutoProvision && addParsedArgs.flags['--installation-id']) {
+        output.error('Unknown or unexpected option: --installation-id');
+        return 1;
+      }
+
+      return add(
+        client,
+        addParsedArgs.args,
+        addParsedArgs.flags,
+        'integration add'
+      );
     }
     case 'list': {
       if (needHelp) {
@@ -106,6 +137,24 @@ export default async function main(client: Client) {
       telemetry.trackCliSubcommandList(subcommandOriginal);
       return list(client);
     }
+    case 'discover': {
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('integration', subcommandOriginal);
+        printHelp(discoverSubcommand);
+        return 0;
+      }
+      telemetry.trackCliSubcommandDiscover(subcommandOriginal);
+      return discover(client, subArgs);
+    }
+    case 'guide': {
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('integration', subcommandOriginal);
+        printHelp(guideSubcommand);
+        return 0;
+      }
+      telemetry.trackCliSubcommandGuide(subcommandOriginal);
+      return guide(client, subArgs);
+    }
     case 'balance': {
       if (needHelp) {
         telemetry.trackCliFlagHelp('integration', subcommandOriginal);
@@ -113,7 +162,7 @@ export default async function main(client: Client) {
         return 0;
       }
       telemetry.trackCliSubcommandBalance(subcommandOriginal);
-      return balance(client, subArgs);
+      return balance(client);
     }
     case 'open': {
       if (needHelp) {

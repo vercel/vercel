@@ -1,7 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import login from '../../../../src/commands/login';
 import { client } from '../../../mocks/client';
-import { vi } from 'vitest';
+import * as loginFuture from '../../../../src/commands/login/future';
 
 vi.setConfig({ testTimeout: 10000 });
 
@@ -31,5 +31,18 @@ describe('login', () => {
     );
     const exitCode = await exitCodePromise;
     expect(exitCode, 'exit code for "login"').toEqual(2);
+  });
+
+  it('continues to login flow in non-interactive mode with no args', async () => {
+    client.setArgv('login');
+    (client as { nonInteractive: boolean }).nonInteractive = true;
+
+    const futureSpy = vi.spyOn(loginFuture, 'login').mockResolvedValue(0);
+    const exitCode = await login(client, { shouldParseArgs: true });
+    expect(exitCode).toBe(0);
+    expect(futureSpy).toHaveBeenCalledTimes(1);
+
+    futureSpy.mockRestore();
+    (client as { nonInteractive: boolean }).nonInteractive = false;
   });
 });

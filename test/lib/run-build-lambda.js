@@ -35,7 +35,10 @@ exports.createRunBuildLambda = function (builder) {
     const buildResult = await builder.build({
       files: inputFiles,
       entrypoint,
-      config: build.config,
+      config: {
+        ...build.config,
+        ...(nowJson.functions && { functions: nowJson.functions }),
+      },
       workPath,
     });
     const { output } = buildResult;

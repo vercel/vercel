@@ -39,4 +39,29 @@ export class LinkTelemetryClient
       });
     }
   }
+
+  trackCliOptionTeam(value: string | undefined) {
+    if (value) {
+      this.trackCliOption({
+        option: 'team',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionProjectId(value: string | undefined) {
+    if (value) {
+      this.trackCliOption({
+        option: 'project-id',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliSubcommandAdd(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'add',
+      value: actual,
+    });
+  }
 }

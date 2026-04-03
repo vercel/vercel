@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach } from 'vitest';
+import { describe, expect, it, beforeEach, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import redirects from '../../../../src/commands/redirects';
 import { useUser } from '../../../mocks/user';
@@ -279,6 +279,29 @@ describe('redirects upload', () => {
       await expect(exitCodePromise).resolves.toEqual(0);
     });
 
+    it('should upload redirects with full-domain source URLs', async () => {
+      const jsonPath = join(fixtureDir, 'domain-source.json');
+      const jsonContent = JSON.stringify([
+        {
+          source: 'https://old.example.com/path',
+          destination: '/new-path',
+          statusCode: 301,
+        },
+        { source: '/relative', destination: '/dest', statusCode: 302 },
+      ]);
+      writeFileSync(jsonPath, jsonContent);
+
+      mockPutRedirects({ redirectCount: 2 });
+
+      client.setArgv('redirects', 'upload', jsonPath, '--yes');
+      const exitCodePromise = redirects(client);
+
+      await expect(client.stderr).toOutput('Uploading redirects');
+      await expect(client.stderr).toOutput('Uploaded 2 redirects');
+
+      await expect(exitCodePromise).resolves.toEqual(0);
+    });
+
     it('should error on invalid JSON format', async () => {
       const jsonPath = join(fixtureDir, 'invalid.json');
       const jsonContent = `{ invalid json }`;
@@ -364,6 +387,36 @@ describe('redirects upload', () => {
 
       await expect(exitCodePromise).resolves.toEqual(1);
     });
+
+    it('should output action_required with <file> placeholder when no file in non-interactive mode', async () => {
+      client.nonInteractive = true;
+      const logSpy = vi
+        .spyOn(console, 'log')
+        .mockImplementation(() => undefined as unknown as void);
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {
+        throw new Error('exit');
+      }) as () => never);
+
+      client.setArgv(
+        'redirects',
+        'upload',
+        '--cwd=/tmp/project',
+        '--non-interactive'
+      );
+      await expect(redirects(client)).rejects.toThrow('exit');
+
+      const payload = JSON.parse(logSpy.mock.calls[0][0] as string);
+      expect(payload.status).toBe('action_required');
+      expect(payload.reason).toBe('missing_arguments');
+      expect(payload.message).toContain('File path is required');
+      expect(payload.next[0].command).toContain('redirects upload <file>');
+      expect(payload.next[0].command).toContain('--cwd=/tmp/project');
+      expect(payload.next[0].command).toContain('--yes');
+
+      logSpy.mockRestore();
+      exitSpy.mockRestore();
+      client.nonInteractive = false;
+    });
   });
 
   describe('API error handling', () => {
@@ -407,6 +460,63 @@ describe('redirects upload', () => {
       );
 
       await expect(exitCodePromise).resolves.toEqual(1);
+    });
+  });
+
+  describe('client.nonInteractive', () => {
+    it('should output action_required JSON with next command when --yes not provided in non-interactive mode', async () => {
+      const csvPath = join(fixtureDir, 'test.csv');
+      const csvContent = `source,destination
+/old,/new`;
+      writeFileSync(csvPath, csvContent);
+
+      client.nonInteractive = true;
+      const logSpy = vi
+        .spyOn(console, 'log')
+        .mockImplementation(() => undefined as unknown as void);
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {
+        throw new Error('exit');
+      }) as () => never);
+
+      client.setArgv('redirects', 'upload', csvPath);
+      await expect(redirects(client)).rejects.toThrow('exit');
+
+      const payload = JSON.parse(logSpy.mock.calls[0][0] as string);
+      expect(payload.status).toBe('action_required');
+      expect(payload.reason).toBe('confirmation_required');
+      expect(payload.message).toContain('--yes to confirm upload');
+      expect(Array.isArray(payload.next)).toBe(true);
+      expect(payload.next[0].command).toContain('redirects upload');
+      expect(payload.next[0].command).toContain('--yes');
+      expect(payload.next[0].when).toBe('to confirm upload');
+
+      logSpy.mockRestore();
+      exitSpy.mockRestore();
+      client.nonInteractive = false;
+    });
+
+    it('should output JSON only on success when non-interactive with --yes', async () => {
+      const csvPath = join(fixtureDir, 'test.csv');
+      const csvContent = `source,destination
+/old,/new`;
+      writeFileSync(csvPath, csvContent);
+
+      mockPutRedirects({ redirectCount: 1 });
+
+      client.nonInteractive = true;
+      client.setArgv('redirects', 'upload', csvPath, '--yes');
+      const exitCode = await redirects(client);
+
+      expect(exitCode).toEqual(0);
+      const out = client.stdout.getFullOutput();
+      const json = JSON.parse(out);
+      expect(json.status).toEqual('ok');
+      expect(json.version).toBeDefined();
+      expect(json.next).toBeDefined();
+      expect(json.next[0].command).toContain('redirects promote');
+      expect(json.next[0].command).toContain('version-1');
+
+      client.nonInteractive = false;
     });
   });
 

@@ -11,7 +11,7 @@ const branch = `update/gatsby-fixtures`;
  */
 module.exports = async ({ github, context }) => {
   exec('git', ['config', '--global', 'user.email', 'infra+release@vercel.com']);
-  exec('git', ['config', '--global', 'user.name', 'vercel-release-bot']);
+  exec('git', ['config', '--global', 'user.name', 'vercel-cli-release-bot']);
   try {
     // Branch may exist if there's already an existing PR
     exec('git', ['checkout', branch]);

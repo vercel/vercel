@@ -284,6 +284,7 @@ const transformsSchema = {
             },
           },
         },
+        // biome-ignore lint/suspicious/noThenProperty: JSON Schema if/then keyword
         then: {
           required: ['args'],
         },
@@ -307,6 +308,7 @@ const transformsSchema = {
             },
           ],
         },
+        // biome-ignore lint/suspicious/noThenProperty: JSON Schema if/then keyword
         then: {
           properties: {
             target: {
@@ -315,6 +317,7 @@ const transformsSchema = {
                   if: {
                     type: 'string',
                   },
+                  // biome-ignore lint/suspicious/noThenProperty: JSON Schema if/then keyword
                   then: {
                     pattern: '^[a-zA-Z0-9_-]+$',
                   },
@@ -350,7 +353,6 @@ const transformsSchema = {
  */
 export const routesSchema = {
   type: 'array',
-  deprecated: true,
   description:
     'A list of routes objects used to rewrite paths to point towards other internal or external paths',
   example: [{ dest: 'https://docs.example.com', src: '/docs' }],
@@ -358,14 +360,22 @@ export const routesSchema = {
     anyOf: [
       {
         type: 'object',
-        required: ['src'],
+        anyOf: [{ required: ['src'] }, { required: ['source'] }],
         additionalProperties: false,
         properties: {
           src: {
             type: 'string',
             maxLength: 4096,
           },
+          source: {
+            type: 'string',
+            maxLength: 4096,
+          },
           dest: {
+            type: 'string',
+            maxLength: 4096,
+          },
+          destination: {
             type: 'string',
             maxLength: 4096,
           },
@@ -393,6 +403,7 @@ export const routesSchema = {
             type: 'boolean',
           },
           important: {
+            deprecated: true,
             type: 'boolean',
           },
           user: {
@@ -402,6 +413,7 @@ export const routesSchema = {
             type: 'boolean',
           },
           override: {
+            deprecated: true,
             type: 'boolean',
           },
           check: {
@@ -411,6 +423,11 @@ export const routesSchema = {
             type: 'boolean',
           },
           status: {
+            type: 'integer',
+            minimum: 100,
+            maximum: 999,
+          },
+          statusCode: {
             type: 'integer',
             minimum: 100,
             maximum: 999,
@@ -482,6 +499,7 @@ export const routesSchema = {
       },
       {
         type: 'object',
+        deprecated: true,
         required: ['handle'],
         additionalProperties: false,
         properties: {
@@ -558,7 +576,7 @@ export const redirectsSchema = {
     properties: {
       source: {
         description:
-          'A pattern that matches each incoming pathname (excluding querystring).',
+          'A pattern that matches each incoming pathname (excluding querystring) or a full URL including domain.',
         type: 'string',
         maxLength: 4096,
       },
@@ -650,47 +668,4 @@ export const trailingSlashSchema = {
   description:
     'When `false`, visiting a path that ends with a forward slash will respond with a `308` status code and redirect to the path without the trailing slash.',
   type: 'boolean',
-} as const;
-
-export const bulkRedirectsSchema = {
-  type: 'array',
-  description: 'A list of bulk redirect definitions.',
-  items: {
-    type: 'object',
-    additionalProperties: false,
-    required: ['source', 'destination'],
-    properties: {
-      source: {
-        description: 'The exact URL path or pattern to match.',
-        type: 'string',
-        maxLength: 2048,
-      },
-      destination: {
-        description: 'The target URL path where traffic should be redirected.',
-        type: 'string',
-        maxLength: 2048,
-      },
-      permanent: {
-        description:
-          'A boolean to toggle between permanent and temporary redirect. When `true`, the status code is `308`. When `false` the status code is `307`.',
-        type: 'boolean',
-      },
-      statusCode: {
-        description:
-          'An optional integer to define the status code of the redirect.',
-        type: 'integer',
-        enum: [301, 302, 307, 308],
-      },
-      sensitive: {
-        description:
-          'A boolean to toggle between case-sensitive and case-insensitive redirect. When `true`, the redirect is case-sensitive. When `false` the redirect is case-insensitive.',
-        type: 'boolean',
-      },
-      query: {
-        description:
-          'Whether the query string should be preserved by the redirect. The default is `false`.',
-        type: 'boolean',
-      },
-    },
-  },
 } as const;

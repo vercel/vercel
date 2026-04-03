@@ -5,13 +5,16 @@ import {
   NodejsLambda,
   debug,
   getNodeVersion,
+  getLambdaOptionsFromFunction,
   Span,
   type PrepareCache,
   type BuildV2,
   type Lambda,
+  type NodejsLambdaOptions,
   isBunVersion,
 } from '@vercel/build-utils';
 import { findEntrypointOrThrow } from './cervel/index.js';
+import { applyServiceVcInit } from './service-vc-init.js';
 // Re-export cervel functions for use by other packages
 export {
   build as cervelBuild,
@@ -68,6 +71,18 @@ export const build: BuildV2 = async args => {
 
     const userBuildResult = await maybeDoBuildCommand(args, downloadResult);
 
+    const functionConfig = args.config.functions?.[entrypoint];
+    if (functionConfig) {
+      args.config.includeFiles = [
+        ...normalizeArray(args.config.includeFiles),
+        ...normalizeArray(functionConfig.includeFiles),
+      ];
+      args.config.excludeFiles = [
+        ...normalizeArray(args.config.excludeFiles),
+        ...normalizeArray(functionConfig.excludeFiles),
+      ];
+    }
+
     // Always run rolldown, even if the user has provided a build command
     // It's very fast and we use it for introspection.
     const rolldownResult = await rolldown({
@@ -104,45 +119,126 @@ export const build: BuildV2 = async args => {
       localBuildFiles,
       files,
       ignoreNodeModules: false,
+      ignore: args.config.excludeFiles,
       conditions: isBun ? ['bun'] : undefined,
       span: buildSpan,
     });
+
+    const baseDir = args.repoRootPath || args.workPath;
+    const includeResults = await Promise.all(
+      normalizeArray(args.config.includeFiles).map(pattern =>
+        glob(pattern, baseDir)
+      )
+    );
+    for (const matched of includeResults) {
+      for (const [relPath, entry] of Object.entries(matched)) {
+        files[relPath] = entry;
+      }
+    }
+
     const introspectionResult = await introspectionPromise;
     await typescriptPromise;
 
-    const lambda = new NodejsLambda({
+    const functionConfigOverrides = await getLambdaOptionsFromFunction({
+      sourceFile: entrypoint,
+      config: args.config,
+    });
+
+    const serviceRoutePrefix = normalizeServiceRoutePrefix(
+      args.config?.routePrefix ?? args.service?.routePrefix
+    );
+    const shouldStripServiceRoutePrefix =
+      !!serviceRoutePrefix &&
+      (typeof args.config?.serviceName === 'string' || !!args.service);
+
+    let lambdaFiles = files;
+    let lambdaHandler = handler;
+    if (shouldStripServiceRoutePrefix) {
+      const shimmedLambda = await applyServiceVcInit({
+        files,
+        handler,
+        workPath: nftWorkPath,
+      });
+      lambdaFiles = shimmedLambda.files;
+      lambdaHandler = shimmedLambda.handler;
+    }
+
+    const lambdaArgs: NodejsLambdaOptions = {
       runtime: nodeVersion.runtime,
-      handler,
-      files,
+      handler: lambdaHandler,
+      files: lambdaFiles,
       framework: rolldownResult.framework,
       shouldAddHelpers: false,
       shouldAddSourcemapSupport: true,
       awsLambdaHandler: '',
+      ...functionConfigOverrides,
       shouldDisableAutomaticFetchInstrumentation:
         process.env.VERCEL_TRACING_DISABLE_AUTOMATIC_FETCH_INSTRUMENTATION ===
         '1',
-    });
+    };
+
+    const lambda = new NodejsLambda(lambdaArgs);
+    if (shouldStripServiceRoutePrefix && serviceRoutePrefix) {
+      lambda.environment = {
+        ...lambda.environment,
+        VERCEL_SERVICE_ROUTE_PREFIX: serviceRoutePrefix,
+        VERCEL_SERVICE_ROUTE_PREFIX_STRIP: '1',
+      };
+    }
+    const serviceName =
+      typeof args.config?.serviceName === 'string' &&
+      args.config.serviceName !== ''
+        ? args.config.serviceName
+        : undefined;
+    const internalServiceFunctionPath =
+      typeof serviceName === 'string' && serviceName !== ''
+        ? `/_svc/${serviceName}/index`
+        : undefined;
+    const internalServiceOutputPath = internalServiceFunctionPath?.slice(1);
+    const remapRouteDestination = <T extends { src?: string; dest?: string }>(
+      route: T
+    ): T => {
+      const prefixedRoute = maybePrefixServiceRouteSource(
+        route,
+        serviceRoutePrefix
+      );
+      if (!internalServiceFunctionPath || !route.dest) {
+        return prefixedRoute;
+      }
+      return {
+        ...prefixedRoute,
+        dest: internalServiceFunctionPath,
+      };
+    };
 
     // Build routes: filesystem handler, then introspected routes, then catch-all
     const routes = [
       {
         handle: 'filesystem',
       },
-      ...introspectionResult.routes,
+      ...introspectionResult.routes.map(remapRouteDestination),
       {
-        src: '/(.*)',
-        dest: '/',
+        src: getServiceCatchallSource(serviceRoutePrefix),
+        dest: internalServiceFunctionPath ?? '/',
       },
     ];
 
-    const output: Record<string, Lambda> = { index: lambda };
+    const output: Record<string, Lambda> = internalServiceOutputPath
+      ? { [internalServiceOutputPath]: lambda }
+      : { index: lambda };
 
     for (const route of routes) {
       if (route.dest) {
         if (route.dest === '/') {
           continue;
         }
-        output[route.dest] = lambda;
+        // Only the exact service alias needs the leading slash removed.
+        const outputPath =
+          route.dest === internalServiceFunctionPath &&
+          internalServiceOutputPath
+            ? internalServiceOutputPath
+            : route.dest;
+        output[outputPath] = lambda;
       }
     }
 
@@ -156,3 +252,81 @@ export const build: BuildV2 = async args => {
 export const prepareCache: PrepareCache = ({ repoRootPath, workPath }) => {
   return glob(defaultCachePathGlob, repoRootPath || workPath);
 };
+
+const normalizeArray = (value: any) =>
+  Array.isArray(value) ? value : value ? [value] : [];
+
+const normalizeServiceRoutePrefix = (routePrefix: unknown) => {
+  if (
+    typeof routePrefix !== 'string' ||
+    routePrefix === '' ||
+    routePrefix === '.'
+  ) {
+    return undefined;
+  }
+
+  let normalized = routePrefix.startsWith('/')
+    ? routePrefix
+    : `/${routePrefix}`;
+  if (normalized !== '/' && normalized.endsWith('/')) {
+    normalized = normalized.slice(0, -1);
+  }
+  return normalized === '/' ? undefined : normalized;
+};
+
+const maybePrefixServiceRouteSource = <
+  T extends { src?: string; dest?: string },
+>(
+  route: T,
+  routePrefix?: string
+): T => {
+  if (
+    !routePrefix ||
+    typeof route.dest !== 'string' ||
+    !route.dest.startsWith('/')
+  ) {
+    return route;
+  }
+
+  return {
+    ...route,
+    src: getPrefixedRouteSource(route.src, route.dest, routePrefix),
+  };
+};
+
+const getPrefixedRouteSource = (
+  routeSource: string | undefined,
+  routePath: string,
+  routePrefix: string
+) => {
+  if (!routeSource) {
+    return routeSource;
+  }
+
+  if (routePath === routePrefix || routePath.startsWith(`${routePrefix}/`)) {
+    return routeSource;
+  }
+
+  const escapedRoutePrefix = toRegexSource(routePrefix);
+  if (routeSource.startsWith('^(?:')) {
+    return `^(?:${escapedRoutePrefix}${routeSource.slice(4)}`;
+  }
+  if (routeSource.startsWith('^')) {
+    return `^${escapedRoutePrefix}${routeSource.slice(1)}`;
+  }
+  return `${escapedRoutePrefix}${routeSource}`;
+};
+
+const getServiceCatchallSource = (routePrefix?: string) => {
+  if (!routePrefix) {
+    return '/(.*)';
+  }
+
+  return `^${escapeForRegex(routePrefix)}(?:/(.*))?$`;
+};
+
+const escapeForRegex = (value: string) =>
+  value.replace(/[|\\{}()[\]^$+*?.]/g, '\\$&');
+
+const toRegexSource = (value: string) =>
+  escapeForRegex(value).replaceAll('/', '\\/');

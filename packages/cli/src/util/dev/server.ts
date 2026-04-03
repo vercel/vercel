@@ -3,7 +3,7 @@ import http from 'http';
 import fs from 'fs-extra';
 import ms from 'ms';
 import chalk from 'chalk';
-import fetch from 'node-fetch';
+import nodeFetch from 'node-fetch';
 import plural from 'pluralize';
 import rawBody from 'raw-body';
 import { listen } from 'async-listen';
@@ -89,6 +89,7 @@ import type {
 import type { ProjectSettings } from '@vercel-internals/types';
 import { treeKill } from '../tree-kill';
 import { ServicesOrchestrator } from './services-orchestrator';
+import { QueueBroker } from './queue-broker';
 import { applyOverriddenHeaders, nodeHeadersToFetchHeaders } from './headers';
 import { formatQueryString, parseQueryString } from './parse-query-string';
 import {
@@ -170,6 +171,7 @@ export default class DevServer {
   private projectSettings?: ProjectSettings;
   private services?: Service[];
   private orchestrator?: ServicesOrchestrator;
+  private queueBroker?: QueueBroker;
 
   private vercelConfigWarning: boolean;
   private getVercelConfigPromise: Promise<VercelConfig> | null;
@@ -177,6 +179,16 @@ export default class DevServer {
   private startPromise: Promise<void> | null;
 
   private envValues: Record<string, string>;
+
+  private shouldUseServicesOrchestrator(): boolean {
+    if (!this.services || this.services.length === 0) {
+      return false;
+    }
+    if (this.services.length > 1) {
+      return true;
+    }
+    return this.services[0].type !== 'web';
+  }
 
   constructor(cwd: string, options: DevServerOptions) {
     this.cwd = cwd;
@@ -333,7 +345,7 @@ export default class DevServer {
             filesRemovedArray
           ).catch((err: Error) => {
             output.warn(`An error occurred while rebuilding \`${match.src}\`:`);
-            // eslint-disable-next-line no-console
+            // biome-ignore lint/suspicious/noConsole: intentional console usage
             console.error(err.stack);
           });
         } else {
@@ -575,21 +587,6 @@ export default class DevServer {
 
     await this.validateVercelConfig(vercelConfig);
 
-    if (vercelConfig.customErrorPage) {
-      const errorPages =
-        typeof vercelConfig.customErrorPage === 'string'
-          ? [vercelConfig.customErrorPage]
-          : Object.values(vercelConfig.customErrorPage);
-
-      for (const page of errorPages) {
-        if (page && !fs.existsSync(join(this.cwd, page))) {
-          output.warn(
-            `The custom error page "${page}" was not found in "${this.cwd}". This will cause deployment to fail on Vercel.`
-          );
-        }
-      }
-    }
-
     this.projectSettings = {
       ...this.originalProjectSettings,
       ...pickOverrides(vercelConfig),
@@ -615,21 +612,7 @@ export default class DevServer {
         relative(this.cwd, f)
       );
 
-      let {
-        builders,
-        // eslint-disable-next-line prefer-const
-        warnings,
-        // eslint-disable-next-line prefer-const
-        errors,
-        // eslint-disable-next-line prefer-const
-        defaultRoutes,
-        // eslint-disable-next-line prefer-const
-        redirectRoutes,
-        // eslint-disable-next-line prefer-const
-        rewriteRoutes,
-        // eslint-disable-next-line prefer-const
-        errorRoutes,
-      } = await detectBuilders(files, pkg, {
+      const detectedBuilders = await detectBuilders(files, pkg, {
         tag: 'latest',
         functions: vercelConfig.functions,
         projectSettings: projectSettings || this.projectSettings,
@@ -638,6 +621,20 @@ export default class DevServer {
         trailingSlash,
         workPath: this.cwd,
       });
+      let {
+        builders,
+        warnings,
+        errors,
+        defaultRoutes,
+        redirectRoutes,
+        rewriteRoutes,
+        errorRoutes,
+      } = detectedBuilders;
+      const hostRewriteRoutes = (
+        detectedBuilders as typeof detectedBuilders & {
+          hostRewriteRoutes?: Route[] | null;
+        }
+      ).hostRewriteRoutes;
 
       if (errors) {
         output.error(errors[0].message);
@@ -663,6 +660,11 @@ export default class DevServer {
 
       let routes: Route[] = [];
       routes.push(...(redirectRoutes || []));
+      routes = appendRoutesToPhase({
+        routes,
+        newRoutes: hostRewriteRoutes ?? null,
+        phase: null,
+      });
       routes.push(
         ...appendRoutesToPhase({
           routes: vercelConfig.routes,
@@ -821,7 +823,7 @@ export default class DevServer {
         ([name, value]) =>
           typeof value === 'string' &&
           value.startsWith('@') &&
-          !hasOwnProperty(localEnv, name)
+          !hasProp(localEnv, name)
       )
       .map(([name]) => name);
 
@@ -936,9 +938,9 @@ export default class DevServer {
     const vercelConfig = await this.getVercelConfig();
 
     let devCommandPromise: Promise<void> | undefined;
-    if (this.services && this.services.length > 1) {
+    if (this.shouldUseServicesOrchestrator()) {
       this.orchestrator = new ServicesOrchestrator({
-        services: this.services,
+        services: this.services || [],
         cwd: this.cwd,
         repoRoot: this.repoRoot,
         env: this.envConfigs.allEnv,
@@ -947,6 +949,16 @@ export default class DevServer {
       devCommandPromise = this.orchestrator.startAll();
       this.devProcessOrigin = undefined;
 
+      // Instantiate the dev queue broker if any worker services exist
+      const workerServices = (this.services || []).filter(
+        s => s.type === 'worker'
+      );
+      if (workerServices.length > 0) {
+        this.queueBroker = new QueueBroker(this.services || [], name =>
+          this.orchestrator!.getServiceOrigin(name)
+        );
+      }
+
       let addressFormatted = this.address.toString();
       if (this.address.pathname === '/' && this.address.protocol === 'http:') {
         // log address without trailing slash to maintain backwards compatibility
@@ -954,8 +966,10 @@ export default class DevServer {
       }
 
       output.print(`${chalk.cyan('>')} Available at:\n`);
-      for (const service of this.services) {
-        const serviceUrl = `${addressFormatted}${service.routePrefix === '/' ? '' : service.routePrefix}`;
+      for (const service of this.services || []) {
+        if (service.type !== 'web') continue;
+        const servicePath = service.routePrefix || '/';
+        const serviceUrl = `${addressFormatted}${servicePath === '/' ? '' : servicePath}`;
         output.print(`  ${chalk.bold(service.name)}: ${link(serviceUrl)}\n`);
       }
     } else {
@@ -1087,6 +1101,10 @@ export default class DevServer {
 
     if (this.orchestrator) {
       ops.push(this.orchestrator.stopAll());
+    }
+
+    if (this.queueBroker) {
+      this.queueBroker.stop();
     }
 
     ops.push(close(this.server));
@@ -1385,7 +1403,7 @@ export default class DevServer {
       const vercelConfig = await this.getVercelConfig();
       await this.serveProjectAsNowV2(req, res, requestId, vercelConfig);
     } catch (err: unknown) {
-      // eslint-disable-next-line no-console
+      // biome-ignore lint/suspicious/noConsole: intentional console usage
       console.error(err);
 
       if (isError(err) && typeof err.stack === 'string') {
@@ -1434,6 +1452,121 @@ export default class DevServer {
   };
 
   /**
+   * Handle /_svc/_queues/* routes for the dev queue broker, which mimics
+   * the Vercel Queues API so workers can be used in vc dev unchanged.
+   */
+  private handleQueuesRoute = async (
+    req: http.IncomingMessage,
+    res: http.ServerResponse,
+    pathname: string
+  ) => {
+    if (!this.queueBroker) {
+      res.writeHead(503);
+      res.end('Queues broker not initialized');
+      return;
+    }
+
+    // POST api/v2/messages - enqueue a message
+    if (req.method === 'POST' && pathname === '/_svc/_queues/api/v2/messages') {
+      const queueName = (req.headers['vqs-queue-name'] as string) || 'default';
+      const contentType =
+        (req.headers['content-type'] as string) || 'application/json';
+      const payload = await rawBody(req);
+
+      const retentionHeader = req.headers['vqs-retention-seconds'] as
+        | string
+        | undefined;
+      const retentionSeconds =
+        retentionHeader && !isNaN(parseInt(retentionHeader, 10))
+          ? parseInt(retentionHeader, 10)
+          : undefined;
+
+      const { messageId } = this.queueBroker.enqueue(
+        queueName,
+        payload,
+        contentType,
+        { retentionSeconds }
+      );
+
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ messageId }));
+      return;
+    }
+
+    // GET/DELETE/PATCH /api/v2/messages/:messageId
+    const messageMatch = pathname.match(
+      /^\/_svc\/_queues\/api\/v2\/messages\/([a-f0-9]+)$/
+    );
+    if (!messageMatch) {
+      res.writeHead(404);
+      res.end('Not Found');
+      return;
+    }
+    const messageId = messageMatch[1];
+    const consumerGroup =
+      (req.headers['vqs-consumer-group'] as string) || 'default';
+
+    if (req.method === 'GET') {
+      const result = this.queueBroker.receiveById(messageId, consumerGroup);
+
+      if (!result) {
+        res.writeHead(404);
+        res.end('Message not found');
+        return;
+      }
+
+      const boundary = `----vcdevboundary${randomBytes(8).toString('hex')}`;
+      const partHeaders = [
+        `Vqs-Message-Id: ${messageId}`,
+        `Vqs-Delivery-Count: ${result.deliveryCount}`,
+        `Vqs-Timestamp: ${result.createdAt}`,
+        `Vqs-Ticket: ${result.ticket}`,
+        `Content-Type: ${result.contentType}`,
+      ].join('\r\n');
+
+      const body = Buffer.concat([
+        Buffer.from(`--${boundary}\r\n${partHeaders}\r\n\r\n`),
+        result.payload,
+        Buffer.from(`\r\n--${boundary}--\r\n`),
+      ]);
+
+      res.writeHead(200, {
+        'Content-Type': `multipart/mixed; boundary=${boundary}`,
+        'Content-Length': body.length,
+      });
+      res.end(body);
+      return;
+    }
+
+    if (req.method === 'DELETE') {
+      const ticket = (req.headers['vqs-ticket'] as string) || '';
+      this.queueBroker.acknowledge(messageId, consumerGroup, ticket);
+      res.writeHead(204);
+      res.end();
+      return;
+    }
+
+    if (req.method === 'PATCH') {
+      const ticket = (req.headers['vqs-ticket'] as string) || '';
+      const timeoutHeader = req.headers['vqs-visibility-timeout'] as string;
+      const timeoutSeconds = timeoutHeader ? parseInt(timeoutHeader, 10) : 60;
+
+      this.queueBroker.changeVisibility(
+        messageId,
+        consumerGroup,
+        ticket,
+        timeoutSeconds
+      );
+      res.writeHead(200);
+      res.end();
+      return;
+    }
+
+    res.writeHead(405);
+    res.end('Method Not Allowed');
+  };
+
+  /**
    * Serve project directory as a v2 deployment.
    */
   serveProjectAsNowV2 = async (
@@ -1464,6 +1597,15 @@ export default class DevServer {
 
       debug(`Rewriting URL from "${req.url}" to "${location}"`);
       req.url = location;
+    }
+
+    // Handle /_svc/_queues/* routes for the dev queue proxy
+    if (callLevel === 0 && this.orchestrator) {
+      const pathname = parsed.pathname || '/';
+      if (pathname.startsWith('/_svc/_queues/')) {
+        await this.handleQueuesRoute(req, res, pathname);
+        return;
+      }
     }
 
     // With multi-service setup, try to route to the appropriate service first
@@ -1536,7 +1678,7 @@ export default class DevServer {
       const { envConfigs, files, devCacheDir, cwd: workPath } = this;
       try {
         const { builder } = middleware.builderWithPkg;
-        if (builder.version === 3) {
+        if (builder.version === 3 || builder.version === -1) {
           startMiddlewareResult = await builder.startDevServer?.({
             files,
             entrypoint: middleware.entrypoint,
@@ -1566,7 +1708,7 @@ export default class DevServer {
             middlewareReqHeaders.set(name, value);
           }
 
-          const middlewareRes = await fetch(
+          const middlewareRes = await nodeFetch(
             `http://127.0.0.1:${port}${parsed.path}`,
             {
               headers: middlewareReqHeaders,
@@ -1883,7 +2025,6 @@ export default class DevServer {
         get() {
           return statusCode;
         },
-        /* eslint-disable @typescript-eslint/no-unused-vars */
         set(_: number) {
           /* ignore */
         },
@@ -1969,7 +2110,10 @@ export default class DevServer {
     // to. Once the proxied request is finished, vercel dev shuts down the dev
     // server child process.
     const { builder, pkg: builderPkg } = match.builderWithPkg;
-    if (builder.version === 3 && typeof builder.startDevServer === 'function') {
+    if (
+      (builder.version === 3 || builder.version === -1) &&
+      typeof builder.startDevServer === 'function'
+    ) {
       let devServerResult: StartDevServerResult = null;
       try {
         const { envConfigs, files, devCacheDir, cwd: workPath } = this;
@@ -2101,7 +2245,6 @@ export default class DevServer {
       }`
     );
 
-    /* eslint-disable no-case-declarations */
     switch (asset.type) {
       case 'FileFsRef':
         this.setResponseHeaders(res, requestId);
@@ -2179,7 +2322,7 @@ export default class DevServer {
             body: JSON.stringify(payload),
           });
         } catch (err) {
-          // eslint-disable-next-line no-console
+          // biome-ignore lint/suspicious/noConsole: intentional console usage
           console.error(err);
           await this.sendError(
             req,
@@ -2327,7 +2470,7 @@ export default class DevServer {
 
   async runDevCommand(forceRestart: boolean = false) {
     // In multi-service setup, all services are managed by orchestrator
-    if (this.services && this.services.length > 1) {
+    if (this.shouldUseServicesOrchestrator()) {
       return;
     }
 
@@ -2437,7 +2580,7 @@ function proxyPass(
   requestId: string,
   ignorePath: boolean = true
 ): void {
-  return devServer.proxy.web(
+  devServer.proxy.web(
     req,
     res,
     { target: dest, ignorePath },
@@ -2496,7 +2639,7 @@ function generateRequestId(podId: string, isInvoke = false): string {
   ].join('-')}`;
 }
 
-function hasOwnProperty(obj: any, prop: string) {
+function hasProp(obj: any, prop: string) {
   return Object.prototype.hasOwnProperty.call(obj, prop);
 }
 

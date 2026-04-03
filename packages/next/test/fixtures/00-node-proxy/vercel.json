@@ -8,6 +8,7 @@
   ],
   "build": {
     "env": {
+      "NEXT_BUILDER_INTEGRATION": "1",
       "VERCEL_LAMBDA_OUTPUTS_AS_MIDDLEWARE": "1"
     }
   },

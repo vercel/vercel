@@ -51,12 +51,12 @@ describe('help command', () => {
         line: ['a', '  ', '   ', 'b', 'c'],
         expected: 'a     b c',
       },
-    ])(
-      'should insert spaces between non-whitespace items only; $line',
-      ({ line, expected }) => {
-        expect(lineToString(line)).toBe(expected);
-      }
-    );
+    ])('should insert spaces between non-whitespace items only; $line', ({
+      line,
+      expected,
+    }) => {
+      expect(lineToString(line)).toBe(expected);
+    });
   });
 
   describe('outputArrayToString', () => {
@@ -445,6 +445,36 @@ describe('help command', () => {
       it('integration balance subcommand help column width 120', () => {
         expect(
           help(integration.balanceSubcommand, {
+            columns: 120,
+            parent: integration.integrationCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('integration guide subcommand', () => {
+      it('integration guide subcommand help column width 120', () => {
+        expect(
+          help(integration.guideSubcommand, {
+            columns: 120,
+            parent: integration.integrationCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('integration discover subcommand', () => {
+      it('integration discover subcommand help column width 120', () => {
+        expect(
+          help(integration.discoverSubcommand, {
+            columns: 120,
+            parent: integration.integrationCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('integration remove subcommand', () => {
+      it('integration remove subcommand help column width 120', () => {
+        expect(
+          help(integration.removeSubcommand, {
             columns: 120,
             parent: integration.integrationCommand,
           })

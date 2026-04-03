@@ -6,6 +6,15 @@ export class BlobAddStoreTelemetryClient
   extends TelemetryClient
   implements TelemetryMethods<typeof addStoreSubcommand>
 {
+  trackCliOptionAccess(value: string | undefined) {
+    if (value) {
+      this.trackCliOption({
+        option: 'access',
+        value,
+      });
+    }
+  }
+
   trackCliArgumentName(value: string | undefined) {
     if (value) {
       this.trackCliArgument({

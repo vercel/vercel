@@ -53,6 +53,8 @@ export interface FetchOptions extends Omit<RequestInit, 'body'> {
   retry?: RetryOptions;
   useCurrentTeam?: boolean;
   accountId?: string;
+  /** When true, 429 responses are returned immediately instead of waiting for Retry-After and retrying */
+  bailOn429?: boolean;
 }
 
 export interface ClientOptions extends Stdio {
@@ -117,6 +119,8 @@ export default class Client extends EventEmitter implements Stdio {
   nonInteractive: boolean;
   /** Dangerously skip all permission prompts (--dangerously-skip-permissions flag) */
   dangerouslySkipPermissions: boolean;
+  /** Track if we've already logged the token source debug message */
+  private _loggedTokenSource: boolean = false;
 
   constructor(opts: ClientOptions) {
     super();
@@ -193,7 +197,20 @@ export default class Client extends EventEmitter implements Stdio {
 
     // If we have a valid access token, do nothing
     if (isValidAccessToken(authConfig)) {
-      output.debug('Valid access token, skipping token refresh.');
+      if (!this._loggedTokenSource) {
+        if (authConfig.tokenSource === 'flag') {
+          output.debug(
+            'Using token from `--token` argument, skipping token refresh.'
+          );
+        } else if (authConfig.tokenSource === 'env') {
+          output.debug(
+            'Using token from VERCEL_TOKEN environment variable, skipping token refresh.'
+          );
+        } else {
+          output.debug('Valid access token, skipping token refresh.');
+        }
+        this._loggedTokenSource = true;
+      }
       return;
     }
 
@@ -342,6 +359,9 @@ export default class Client extends EventEmitter implements Stdio {
 
     const headers = new Headers(opts.headers);
     headers.set('user-agent', ua);
+    if (this.agentName) {
+      headers.set('x-ai-agent', this.agentName);
+    }
 
     await this.ensureAuthorized();
 
@@ -394,6 +414,8 @@ export default class Client extends EventEmitter implements Stdio {
             // there's no sense in retrying
             return bail(normalizeError(reauthError));
           }
+        } else if (res.status === 429 && opts.bailOn429) {
+          return bail(error);
         } else if (typeof error.retryAfterMs === 'number') {
           // Respect the Retry-After header and then try again below.
           // This covers 429 responses which would otherwise bail out
