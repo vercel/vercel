@@ -4,7 +4,7 @@ import json
 import threading
 from collections.abc import Callable, Mapping
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Any, TypedDict
+from typing import TYPE_CHECKING, Any, TypedDict, Union
 
 from .exceptions import MessageCorruptedError, VQSError
 from .types import MessageMetadata, ReceivedMessage, WorkerTimeoutResult
@@ -39,7 +39,7 @@ class RetryDirective(TypedDict, total=False):
 MessageHandler = Callable[[Any, "MessageMetadata"], Any]
 RetryHandler = Callable[
     [BaseException, "MessageMetadata"],
-    RetryDirective | "WorkerTimeoutResult" | None,
+    Union[RetryDirective, "WorkerTimeoutResult", None],
 ]
 
 
