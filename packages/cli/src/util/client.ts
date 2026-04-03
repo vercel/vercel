@@ -271,7 +271,7 @@ export default class Client extends EventEmitter implements Stdio {
   }
 
   emptyAuthConfig() {
-    this.authConfig = {};
+    this.authConfig = this.authConfig.skipWrite ? { skipWrite: true } : {};
   }
 
   writeToAuthConfigFile() {

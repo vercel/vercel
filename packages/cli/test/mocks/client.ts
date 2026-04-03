@@ -261,6 +261,7 @@ export class MockClient extends Client {
     this.argv = [];
     this.authConfig = {
       token: 'token_dummy',
+      skipWrite: true,
     };
     this.config = {};
     this.localConfig = {};
