@@ -1,13 +1,18 @@
 from __future__ import annotations
 
 from .client import (
+    AsyncQueueClient,
     MessageMetadata,
+    QueueClient,
+    ReceivedMessage,
+    SendMessageResult,
     WorkerJSONEncoder,
     WorkerTimeoutResult,
     get_asgi_app,
     get_wsgi_app,
     has_subscriptions,
     send,
+    send_async,
     subscribe,
 )
 from .exceptions import (
@@ -16,6 +21,7 @@ from .exceptions import (
     ForbiddenError,
     InternalServerError,
     InvalidLimitError,
+    MessageAlreadyProcessedError,
     MessageCorruptedError,
     MessageLockedError,
     MessageNotAvailableError,
@@ -28,7 +34,11 @@ from .exceptions import (
 )
 
 __all__ = [
+    "QueueClient",
+    "AsyncQueueClient",
     "MessageMetadata",
+    "ReceivedMessage",
+    "SendMessageResult",
     "WorkerJSONEncoder",
     "WorkerTimeoutResult",
     "subscribe",
@@ -36,6 +46,7 @@ __all__ = [
     "get_asgi_app",
     "has_subscriptions",
     "send",
+    "send_async",
     # exceptions
     "VQSError",
     "BadRequestError",
@@ -49,6 +60,7 @@ __all__ = [
     "QueueEmptyError",
     "MessageNotFoundError",
     "MessageNotAvailableError",
+    "MessageAlreadyProcessedError",
     "MessageCorruptedError",
     "MessageLockedError",
 ]

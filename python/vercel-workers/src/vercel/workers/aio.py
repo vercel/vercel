@@ -1,5 +1,5 @@
 from __future__ import annotations
 
-from .client import SendMessageResult, send_async as send
+from .client import AsyncQueueClient, SendMessageResult, send_async as send
 
-__all__ = ["SendMessageResult", "send"]
+__all__ = ["AsyncQueueClient", "SendMessageResult", "send"]

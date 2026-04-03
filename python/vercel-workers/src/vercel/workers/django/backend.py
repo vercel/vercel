@@ -10,7 +10,7 @@ from traceback import format_exception
 from typing import Any, TypedDict, cast
 from uuid import UUID
 
-from ..client import send, send_async
+from ..client import _compose_base_url, send, send_async
 
 try:
     from django.core.cache import caches  # type: ignore[import-untyped]
@@ -101,6 +101,7 @@ class DjangoTaskEnvelope(TypedDict):
     """
 
     vercel: dict[str, Any]
+    result_id: str
     task: EnvelopeTask
     args: list[Any]
     kwargs: dict[str, Any]
@@ -331,6 +332,7 @@ class VercelQueuesBackend(BaseTaskBackend):
         kwargs_json = cast(dict[str, Any], _normalize_json(dict(kwargs)))
         envelope: DjangoTaskEnvelope = {
             "vercel": {"kind": "django-tasks", "version": 1},
+            "result_id": get_random_string(32),
             "task": {
                 "module_path": task.module_path,
                 "takes_context": bool(task.takes_context),
@@ -344,21 +346,20 @@ class VercelQueuesBackend(BaseTaskBackend):
         }
 
         # Enqueue to the Vercel queue named after Django's queue_name.
-        send_result = send(
+        send(
             task.queue_name,
             envelope,
             retention_seconds=self._cfg.retention_seconds,
             deployment_id=self._cfg.deployment_id,
             token=self._cfg.token,
-            base_url=self._cfg.base_url,
-            base_path=self._cfg.base_path,
+            base_url=_compose_base_url(self._cfg.base_url, self._cfg.base_path),
             timeout=self._cfg.timeout,
         )
-        message_id = str(send_result["messageId"])
+        result_id = envelope["result_id"]
 
         task_result = TaskResult(
             task=task,
-            id=message_id,
+            id=result_id,
             status=TaskResultStatus.READY,
             enqueued_at=_now_utc(),
             started_at=None,
@@ -402,6 +403,7 @@ class VercelQueuesBackend(BaseTaskBackend):
         kwargs_json = cast(dict[str, Any], _normalize_json(dict(kwargs)))
         envelope: DjangoTaskEnvelope = {
             "vercel": {"kind": "django-tasks", "version": 1},
+            "result_id": get_random_string(32),
             "task": {
                 "module_path": task.module_path,
                 "takes_context": bool(task.takes_context),
@@ -415,21 +417,20 @@ class VercelQueuesBackend(BaseTaskBackend):
         }
 
         # Enqueue using async send.
-        send_result = await send_async(
+        await send_async(
             task.queue_name,
             envelope,
             retention_seconds=self._cfg.retention_seconds,
             deployment_id=self._cfg.deployment_id,
             token=self._cfg.token,
-            base_url=self._cfg.base_url,
-            base_path=self._cfg.base_path,
+            base_url=_compose_base_url(self._cfg.base_url, self._cfg.base_path),
             timeout=self._cfg.timeout,
         )
-        message_id = str(send_result["messageId"])
+        result_id = envelope["result_id"]
 
         task_result = TaskResult(
             task=task,
-            id=message_id,
+            id=result_id,
             status=TaskResultStatus.READY,
             enqueued_at=_now_utc(),
             started_at=None,
@@ -461,8 +462,9 @@ class VercelQueuesBackend(BaseTaskBackend):
         message_id: str,
         envelope: DjangoTaskEnvelope,
     ) -> TaskResult:
+        result_id = str(envelope.get("result_id") or message_id)
         try:
-            return self.get_result(message_id)
+            return self.get_result(result_id)
         except TaskResultDoesNotExist:
             task_info: dict[str, Any] = cast(dict[str, Any], envelope.get("task") or {})
             module_path = str(task_info.get("module_path") or "")
@@ -478,7 +480,7 @@ class VercelQueuesBackend(BaseTaskBackend):
             )
             return TaskResult(
                 task=task,
-                id=str(message_id),
+                id=result_id,
                 status=TaskResultStatus.READY,
                 enqueued_at=None,
                 started_at=None,

@@ -3,44 +3,54 @@ from __future__ import annotations
 import asyncio
 import json
 import os
-from collections.abc import Awaitable, Callable, Iterable
-from dataclasses import dataclass
-from datetime import UTC, date, datetime
+from collections.abc import Awaitable, Callable, Coroutine, Iterable, Mapping
+from dataclasses import dataclass, replace
+from datetime import date, datetime
 from decimal import Decimal
+from email.parser import BytesParser
+from email.policy import default as _email_default_policy
 from functools import wraps
-from typing import Any, Protocol, TypedDict, overload
-from uuid import UUID, uuid4
+from typing import Any, Protocol, TypedDict, cast, overload
+from urllib.parse import quote
+from uuid import UUID
 
 import httpx
 
-from . import callback
 from .asgi import ASGI, build_asgi_app
 from .exceptions import (
     BadRequestError,
     DuplicateIdempotencyKeyError,
     ForbiddenError,
     InternalServerError,
+    InvalidLimitError,
+    MessageAlreadyProcessedError,
+    MessageCorruptedError,
+    MessageNotAvailableError,
+    MessageNotFoundError,
+    ThrottledError,
     TokenResolutionError,
     UnauthorizedError,
-    VQSError,
 )
-from .wsgi import (
-    WSGI,
-    build_wsgi_app,
-    json_response,
-    status_reason,
-)
+from .wsgi import WSGI, build_wsgi_app, json_response
 
 __all__ = [
+    "AsyncQueueClient",
     "MessageMetadata",
+    "QueueClient",
+    "ReceivedMessage",
+    "SendMessageResult",
     "WorkerJSONEncoder",
     "WorkerTimeoutResult",
-    "subscribe",
-    "get_wsgi_app",
     "get_asgi_app",
+    "get_wsgi_app",
     "has_subscriptions",
     "send",
+    "send_async",
+    "subscribe",
 ]
+
+BASE_PATH = "/api/v3/topic"
+DEFAULT_REGION = "iad1"
 
 
 class WorkerJSONEncoder(json.JSONEncoder):
@@ -58,14 +68,16 @@ class WorkerJSONEncoder(json.JSONEncoder):
                 return super().default(o)
 
 
-class MessageMetadata(TypedDict, total=False):
+class MessageMetadata(TypedDict):
     """Metadata describing a queue message delivery."""
 
     messageId: str
     deliveryCount: int
     createdAt: str
-    topic: str
-    consumer: str
+    expiresAt: str | None
+    topicName: str
+    consumerGroup: str
+    region: str
 
 
 class WorkerTimeoutResult(TypedDict):
@@ -81,10 +93,23 @@ class WorkerCallable(Protocol):
 class SendMessageResult(TypedDict):
     """Result of successfully sending a message to the queue."""
 
+    messageId: str | None
+
+
+class ReceivedMessage(TypedDict):
     messageId: str
+    deliveryCount: int
+    createdAt: str
+    expiresAt: str | None
+    receiptHandle: str
+    contentType: str
+    payload: Any
 
 
-@dataclass
+BaseUrlResolver = Callable[[str], str]
+
+
+@dataclass(frozen=True)
 class _Subscription:
     func: WorkerCallable
     topic_filter: Callable[[str | None], bool] | None = None
@@ -92,18 +117,217 @@ class _Subscription:
     consumer: str | None = None
 
     def matches(
-        self, topic: str | None, consumer: str | None = None, *, ignore_consumer: bool = False
+        self,
+        topic_name: str | None,
+        consumer_group: str | None = None,
+        *,
+        ignore_consumer: bool = False,
     ) -> bool:
-        if self.topic_filter is not None:
-            if not self.topic_filter(topic):
-                return False
-        if not ignore_consumer and self.consumer is not None:
-            if self.consumer != consumer:
-                return False
+        if self.topic_filter is not None and not self.topic_filter(topic_name):
+            return False
+        if not ignore_consumer and self.consumer is not None and self.consumer != consumer_group:
+            return False
         return True
 
 
+@dataclass(frozen=True)
+class _ClientConfig:
+    region: str
+    token: str | None = None
+    base_url: str | None = None
+    resolve_base_url: BaseUrlResolver | None = None
+    deployment_id: str | None = None
+    timeout: float | None = 10.0
+    headers: dict[str, str] | None = None
+    json_encoder: type[json.JSONEncoder] | None = None
+
+
 _subscriptions: list[_Subscription] = []
+
+
+def _resolve_region(region: str | None = None) -> str:
+    return region or os.environ.get("VERCEL_REGION") or DEFAULT_REGION
+
+
+def get_queue_base_url(region: str | None = None) -> str:
+    explicit = os.environ.get("VERCEL_QUEUE_BASE_URL")
+    if explicit:
+        return explicit.rstrip("/")
+    return f"https://{_resolve_region(region)}.vercel-queue.com"
+
+
+def _resolve_base_url(config: _ClientConfig) -> str:
+    if config.base_url:
+        return config.base_url.rstrip("/")
+    if config.resolve_base_url is not None:
+        return config.resolve_base_url(config.region).rstrip("/")
+    return get_queue_base_url(config.region)
+
+
+def _compose_base_url(
+    base_url: str | None,
+    base_path: str | None,
+    *,
+    region: str | None = None,
+) -> str | None:
+    if not base_path:
+        return base_url
+
+    prefix = base_path.strip()
+    for suffix in ("/api/v2/messages", "/api/v3/messages", "/api/v3/topic"):
+        if prefix.endswith(suffix):
+            prefix = prefix[: -len(suffix)]
+            break
+    prefix = prefix.rstrip("/")
+    if not prefix:
+        return base_url
+
+    root = (base_url or get_queue_base_url(region)).rstrip("/")
+    normalized_prefix = prefix if prefix.startswith("/") else f"/{prefix}"
+    return f"{root}{normalized_prefix}"
+
+
+def _build_url(base_url: str, queue_name: str, *path_segments: str) -> str:
+    encoded_queue = quote(queue_name, safe="")
+    encoded_segments = "/".join(quote(segment, safe="") for segment in path_segments)
+    suffix = f"/{encoded_segments}" if encoded_segments else ""
+    return f"{base_url.rstrip('/')}{BASE_PATH}/{encoded_queue}{suffix}"
+
+
+def _deployment_id(config: _ClientConfig) -> str | None:
+    return config.deployment_id or os.environ.get("VERCEL_DEPLOYMENT_ID")
+
+
+def _apply_passthrough_headers(
+    target: dict[str, str],
+    extra_headers: Mapping[str, str] | None,
+) -> None:
+    if not extra_headers:
+        return
+    for name, value in extra_headers.items():
+        lower = str(name).lower()
+        if lower in {"authorization", "content-type"} or lower.startswith("vqs-"):
+            continue
+        target[str(name)] = str(value)
+
+
+def _serialize_payload(
+    payload: Any,
+    *,
+    content_type: str,
+    json_encoder: type[json.JSONEncoder] | None,
+) -> bytes:
+    if content_type == "application/json":
+        return json.dumps(payload, cls=json_encoder or WorkerJSONEncoder).encode("utf-8")
+    if isinstance(payload, (bytes, bytearray)):
+        return bytes(payload)
+    raise TypeError(
+        "Non-JSON content_type requires 'payload' to be bytes or bytearray; "
+        "for structured data use the default JSON content type.",
+    )
+
+
+def _parse_retry_after(response: httpx.Response) -> int | None:
+    value = response.headers.get("Retry-After")
+    if value is None:
+        return None
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return None
+    return parsed if parsed >= 0 else None
+
+
+def _raise_common_http_error(
+    response: httpx.Response,
+    *,
+    operation: str,
+    bad_request_default: str = "Invalid parameters",
+) -> None:
+    error_text = response.text
+    if response.status_code == 400:
+        raise BadRequestError(error_text or bad_request_default)
+    if response.status_code == 401:
+        raise UnauthorizedError(error_text or None)
+    if response.status_code == 403:
+        raise ForbiddenError(error_text or None)
+    if response.status_code == 429:
+        raise ThrottledError(_parse_retry_after(response))
+    if response.status_code >= 500:
+        raise InternalServerError(error_text or f"Failed to {operation}: {response.reason_phrase}")
+    response.raise_for_status()
+
+
+def _multipart_parts(response: httpx.Response) -> list[tuple[dict[str, str], bytes]]:
+    content_type = response.headers.get("Content-Type") or ""
+    if "multipart" not in content_type.lower():
+        raise RuntimeError(f"Expected multipart/mixed response, got Content-Type={content_type!r}")
+
+    raw = (f"Content-Type: {content_type}\r\nMIME-Version: 1.0\r\n\r\n").encode("latin1")
+    raw += response.content
+    message = BytesParser(policy=_email_default_policy).parsebytes(raw)  # type: ignore[arg-type]
+    if not message.is_multipart():
+        raise RuntimeError("Expected multipart response, got non-multipart payload")
+
+    parts: list[tuple[dict[str, str], bytes]] = []
+    for part in message.walk():
+        if part.is_multipart():
+            continue
+        headers = dict(part.items())
+        payload = part.get_payload(decode=True)
+        parts.append((headers, payload if isinstance(payload, bytes) else b""))
+    return parts
+
+
+def _parse_message_part(
+    headers: Mapping[str, str],
+    payload_bytes: bytes,
+    *,
+    message_id_hint: str | None = None,
+) -> ReceivedMessage | None:
+    message_id = headers.get("Vqs-Message-Id")
+    created_at = headers.get("Vqs-Timestamp")
+    receipt_handle = headers.get("Vqs-Receipt-Handle")
+    if not message_id or not created_at or not receipt_handle:
+        return None
+
+    delivery_count = 0
+    try:
+        delivery_count = int(headers.get("Vqs-Delivery-Count") or "0")
+    except ValueError:
+        delivery_count = 0
+
+    content_type = headers.get("Content-Type") or "application/octet-stream"
+    payload: Any = payload_bytes
+    if "application/json" in content_type.lower():
+        try:
+            payload = json.loads(payload_bytes.decode("utf-8"))
+        except Exception as exc:  # noqa: BLE001
+            raise MessageCorruptedError(
+                message_id_hint or message_id,
+                f"Failed to parse payload as JSON: {exc}",
+            ) from exc
+
+    return {
+        "messageId": message_id,
+        "deliveryCount": delivery_count,
+        "createdAt": created_at,
+        "expiresAt": headers.get("Vqs-Expires-At"),
+        "receiptHandle": receipt_handle,
+        "contentType": content_type,
+        "payload": payload,
+    }
+
+
+def _parse_send_result(response: httpx.Response) -> SendMessageResult:
+    if response.status_code == 202:
+        return {"messageId": None}
+
+    data = response.json()
+    if not isinstance(data, dict) or "messageId" not in data:
+        raise RuntimeError("Queue API returned an unexpected response: missing 'messageId'")
+    message_id = data["messageId"]
+    return {"messageId": None if message_id is None else str(message_id)}
 
 
 @overload
@@ -124,26 +348,13 @@ def subscribe(
     topic: str | tuple[str, Callable[[str | None], bool]] | None = None,
     consumer: str | None = None,
 ) -> Callable[[WorkerCallable], WorkerCallable] | WorkerCallable:
-    """
-    Register a queue worker function.
-
-    Usage:
-
-        @subscribe
-        def worker(message, metadata): ...
-
-        @subscribe(topic="events", consumer="billing")
-        def billing_worker(message, metadata): ...
-
-        @subscribe(topic=("user-*", lambda t: t.startswith("user-")))
-        def user_worker(message, metadata): ...
-    """
+    """Register a queue worker function."""
 
     topic_filter: Callable[[str | None], bool] | None
     if isinstance(topic, str):
 
-        def topic_filter(t: str | None) -> bool:
-            return t == topic
+        def topic_filter(topic_name: str | None) -> bool:
+            return topic_name == topic
 
         topic_desc = topic
     elif isinstance(topic, tuple):
@@ -155,7 +366,10 @@ def subscribe(
     def decorator(func: WorkerCallable) -> WorkerCallable:
         _subscriptions.append(
             _Subscription(
-                func=func, topic_filter=topic_filter, topic_desc=topic_desc, consumer=consumer
+                func=func,
+                topic_filter=topic_filter,
+                topic_desc=topic_desc,
+                consumer=consumer,
             )
         )
 
@@ -166,45 +380,25 @@ def subscribe(
         return wrapper  # type: ignore[return-value]
 
     if _func is not None:
-        # Used as @subscribe without arguments
         return decorator(_func)
-
-    # Used as @subscribe(...)
     return decorator
 
 
 def has_subscriptions() -> bool:
-    """Return True if any worker functions have been registered via @subscribe."""
     return bool(_subscriptions)
 
 
-def _get_header(environ: dict[str, Any], name: str) -> str | None:
-    """
-    Look up a HTTP header from the WSGI environ by its canonical name.
-
-    Example: name="Vqs-Queue-Name" -> environ["HTTP_VQS_QUEUE_NAME"].
-    """
-    key = "HTTP_" + name.upper().replace("-", "_")
-    value = environ.get(key)
-    if value is None:
-        return None
-    # WSGI may give bytes in some servers
-    if isinstance(value, bytes):
-        return value.decode("latin1")
-    return str(value)
-
-
 def _select_subscriptions(
-    topic: str | None,
-    consumer: str | None,
+    topic_name: str | None,
+    consumer_group: str | None,
     *,
     ignore_consumer: bool = False,
 ) -> Iterable[_Subscription]:
-    # Match by topic and consumer (unless consumer is ignored).
-    explicit_matches = [
-        s for s in _subscriptions if s.matches(topic, consumer, ignore_consumer=ignore_consumer)
+    return [
+        subscription
+        for subscription in _subscriptions
+        if subscription.matches(topic_name, consumer_group, ignore_consumer=ignore_consumer)
     ]
-    return explicit_matches
 
 
 def _invoke_subscriptions(
@@ -213,200 +407,595 @@ def _invoke_subscriptions(
     *,
     ignore_consumer: bool = False,
 ) -> int | None:
-    """
-    Invoke all matching subscriptions and return an optional timeoutSeconds.
-
-    If a worker returns a dict like {"timeoutSeconds": 300} then that value
-    will be propagated back to the queue service to delay the next attempt.
-    """
-    topic = metadata.get("topic")
-    consumer = metadata.get("consumer")
+    topic_name = metadata.get("topicName")
+    consumer_group = metadata.get("consumerGroup")
     timeout_seconds: int | None = None
 
-    for sub in _select_subscriptions(topic, consumer, ignore_consumer=ignore_consumer):
-        try:
-            result = sub.func(message, metadata)
-            if asyncio.iscoroutine(result) or isinstance(result, asyncio.Future):
-                result = asyncio.run(result)  # type: ignore[arg-type]
-        except Exception:
-            # Let the outer WSGI handler respond with 500.
-            raise
-
-        if isinstance(result, dict) and "timeoutSeconds" in result:
+    for subscription in _select_subscriptions(
+        topic_name,
+        consumer_group,
+        ignore_consumer=ignore_consumer,
+    ):
+        result = subscription.func(message, metadata)
+        if asyncio.iscoroutine(result):
+            result = asyncio.run(cast(Coroutine[Any, Any, Any], result))
+        if isinstance(result, dict):
+            result_dict = cast(dict[str, Any], result)
             try:
-                timeout_seconds = int(result["timeoutSeconds"])
+                timeout_value = result_dict.get("timeoutSeconds")
+                if timeout_value is not None:
+                    timeout_seconds = int(timeout_value)
             except (TypeError, ValueError):
-                # Ignore invalid timeout values; continue with previous one if any.
                 pass
 
     return timeout_seconds
 
 
-def _send_in_process(queue_name: str, payload: Any) -> SendMessageResult:
-    """
-    Development-only, in-process send implementation.
+class _BaseQueueClient:
+    def __init__(
+        self,
+        *,
+        region: str | None = None,
+        token: str | None = None,
+        base_url: str | None = None,
+        resolve_base_url: BaseUrlResolver | None = None,
+        deployment_id: str | None = None,
+        timeout: float | None = 10.0,
+        headers: dict[str, str] | None = None,
+        json_encoder: type[json.JSONEncoder] | None = None,
+    ) -> None:
+        self._config = _ClientConfig(
+            region=_resolve_region(region),
+            token=token,
+            base_url=base_url,
+            resolve_base_url=resolve_base_url,
+            deployment_id=deployment_id,
+            timeout=timeout,
+            headers=dict(headers) if headers is not None else None,
+            json_encoder=json_encoder,
+        )
 
-    When ``VERCEL_WORKERS_IN_PROCESS=1``, :func:`send` can short-circuit and invoke
-    subscribed workers directly in the current process instead of talking to the
-    Queue Service API.
+    @property
+    def region(self) -> str:
+        return self._config.region
 
-    This mirrors the TypeScript dev experience where callbacks are triggered
-    locally, but without any persistence, visibility timeouts, or retries.
-    """
+    def _with_region_config(self, region: str) -> _ClientConfig:
+        return replace(self._config, region=_resolve_region(region))
+
+    def _base_headers(self) -> dict[str, str]:
+        return dict(self._config.headers or {})
+
+    def _base_url(self) -> str:
+        return _resolve_base_url(self._config)
+
+
+class QueueClient(_BaseQueueClient):
+    def with_region(self, region: str) -> QueueClient:
+        return QueueClient(
+            region=region,
+            token=self._config.token,
+            base_url=self._config.base_url,
+            resolve_base_url=self._config.resolve_base_url,
+            deployment_id=self._config.deployment_id,
+            timeout=self._config.timeout,
+            headers=self._config.headers,
+            json_encoder=self._config.json_encoder,
+        )
+
+    def send(
+        self,
+        queue_name: str,
+        payload: Any,
+        *,
+        idempotency_key: str | None = None,
+        retention_seconds: int | None = None,
+        delay_seconds: int | None = None,
+        content_type: str = "application/json",
+        headers: dict[str, str] | None = None,
+    ) -> SendMessageResult:
+        request_headers = self._base_headers()
+        _apply_passthrough_headers(request_headers, headers)
+        request_headers["Authorization"] = f"Bearer {get_queue_token(self._config.token)}"
+        request_headers["Content-Type"] = content_type
+
+        deployment_id = _deployment_id(self._config)
+        if deployment_id:
+            request_headers["Vqs-Deployment-Id"] = deployment_id
+        if idempotency_key:
+            request_headers["Vqs-Idempotency-Key"] = idempotency_key
+        if retention_seconds is not None:
+            request_headers["Vqs-Retention-Seconds"] = str(retention_seconds)
+        if delay_seconds is not None:
+            request_headers["Vqs-Delay-Seconds"] = str(delay_seconds)
+
+        body = _serialize_payload(
+            payload,
+            content_type=content_type,
+            json_encoder=self._config.json_encoder,
+        )
+
+        with httpx.Client(timeout=self._config.timeout) as client:
+            response = client.post(
+                _build_url(self._base_url(), queue_name),
+                content=body,
+                headers=request_headers,
+            )
+
+        if response.status_code == 409:
+            raise DuplicateIdempotencyKeyError(
+                response.text or "Duplicate idempotency key detected",
+            )
+        _raise_common_http_error(response, operation="send message")
+        return _parse_send_result(response)
+
+    def receive(
+        self,
+        queue_name: str,
+        consumer_group: str,
+        *,
+        limit: int | None = 1,
+        visibility_timeout_seconds: int | None = None,
+    ) -> list[ReceivedMessage]:
+        if limit is not None and (limit < 1 or limit > 10):
+            raise InvalidLimitError(limit)
+
+        request_headers = self._base_headers()
+        request_headers["Authorization"] = f"Bearer {get_queue_token(self._config.token)}"
+        request_headers["Accept"] = "multipart/mixed"
+        if visibility_timeout_seconds is not None:
+            request_headers["Vqs-Visibility-Timeout-Seconds"] = str(visibility_timeout_seconds)
+        if limit is not None:
+            request_headers["Vqs-Max-Messages"] = str(limit)
+        deployment_id = _deployment_id(self._config)
+        if deployment_id:
+            request_headers["Vqs-Deployment-Id"] = deployment_id
+
+        with httpx.Client(timeout=self._config.timeout) as client:
+            response = client.post(
+                _build_url(self._base_url(), queue_name, "consumer", consumer_group),
+                headers=request_headers,
+            )
+
+        if response.status_code == 204:
+            return []
+        _raise_common_http_error(response, operation="receive messages")
+
+        messages: list[ReceivedMessage] = []
+        for part_headers, payload_bytes in _multipart_parts(response):
+            parsed = _parse_message_part(part_headers, payload_bytes)
+            if parsed is not None:
+                messages.append(parsed)
+        return messages
+
+    def receive_by_id(
+        self,
+        queue_name: str,
+        consumer_group: str,
+        message_id: str,
+        *,
+        visibility_timeout_seconds: int | None = None,
+    ) -> ReceivedMessage:
+        request_headers = self._base_headers()
+        request_headers["Authorization"] = f"Bearer {get_queue_token(self._config.token)}"
+        request_headers["Accept"] = "multipart/mixed"
+        if visibility_timeout_seconds is not None:
+            request_headers["Vqs-Visibility-Timeout-Seconds"] = str(visibility_timeout_seconds)
+        deployment_id = _deployment_id(self._config)
+        if deployment_id:
+            request_headers["Vqs-Deployment-Id"] = deployment_id
+
+        with httpx.Client(timeout=self._config.timeout) as client:
+            response = client.post(
+                _build_url(
+                    self._base_url(),
+                    queue_name,
+                    "consumer",
+                    consumer_group,
+                    "id",
+                    message_id,
+                ),
+                headers=request_headers,
+            )
+
+        if response.status_code == 404:
+            raise MessageNotFoundError(message_id)
+        if response.status_code == 409:
+            raise MessageNotAvailableError(message_id, response.text or None)
+        if response.status_code == 410:
+            raise MessageAlreadyProcessedError(message_id)
+        _raise_common_http_error(response, operation="receive message by ID")
+
+        for part_headers, payload_bytes in _multipart_parts(response):
+            parsed = _parse_message_part(
+                part_headers,
+                payload_bytes,
+                message_id_hint=message_id,
+            )
+            if parsed is not None:
+                return parsed
+        raise MessageCorruptedError(message_id, "Missing required queue headers in response")
+
+    def acknowledge(
+        self,
+        queue_name: str,
+        consumer_group: str,
+        receipt_handle: str,
+    ) -> None:
+        request_headers = self._base_headers()
+        request_headers["Authorization"] = f"Bearer {get_queue_token(self._config.token)}"
+        deployment_id = _deployment_id(self._config)
+        if deployment_id:
+            request_headers["Vqs-Deployment-Id"] = deployment_id
+
+        with httpx.Client(timeout=self._config.timeout) as client:
+            response = client.delete(
+                _build_url(
+                    self._base_url(),
+                    queue_name,
+                    "consumer",
+                    consumer_group,
+                    "lease",
+                    receipt_handle,
+                ),
+                headers=request_headers,
+            )
+
+        if response.status_code == 404:
+            raise MessageNotFoundError(receipt_handle)
+        if response.status_code == 409:
+            raise MessageNotAvailableError(receipt_handle, response.text or None)
+        _raise_common_http_error(
+            response,
+            operation="acknowledge message",
+            bad_request_default="Missing or invalid receipt handle",
+        )
+
+    def change_visibility(
+        self,
+        queue_name: str,
+        consumer_group: str,
+        receipt_handle: str,
+        visibility_timeout_seconds: int,
+    ) -> None:
+        request_headers = self._base_headers()
+        request_headers["Authorization"] = f"Bearer {get_queue_token(self._config.token)}"
+        request_headers["Content-Type"] = "application/json"
+        deployment_id = _deployment_id(self._config)
+        if deployment_id:
+            request_headers["Vqs-Deployment-Id"] = deployment_id
+
+        with httpx.Client(timeout=self._config.timeout) as client:
+            response = client.patch(
+                _build_url(
+                    self._base_url(),
+                    queue_name,
+                    "consumer",
+                    consumer_group,
+                    "lease",
+                    receipt_handle,
+                ),
+                headers=request_headers,
+                content=json.dumps({"visibilityTimeoutSeconds": visibility_timeout_seconds}).encode(
+                    "utf-8"
+                ),
+            )
+
+        if response.status_code == 404:
+            raise MessageNotFoundError(receipt_handle)
+        if response.status_code == 409:
+            raise MessageNotAvailableError(receipt_handle, response.text or None)
+        _raise_common_http_error(
+            response,
+            operation="change visibility",
+            bad_request_default="Missing receipt handle or invalid visibility timeout",
+        )
+
+
+class AsyncQueueClient(_BaseQueueClient):
+    def with_region(self, region: str) -> AsyncQueueClient:
+        return AsyncQueueClient(
+            region=region,
+            token=self._config.token,
+            base_url=self._config.base_url,
+            resolve_base_url=self._config.resolve_base_url,
+            deployment_id=self._config.deployment_id,
+            timeout=self._config.timeout,
+            headers=self._config.headers,
+            json_encoder=self._config.json_encoder,
+        )
+
+    async def send(
+        self,
+        queue_name: str,
+        payload: Any,
+        *,
+        idempotency_key: str | None = None,
+        retention_seconds: int | None = None,
+        delay_seconds: int | None = None,
+        content_type: str = "application/json",
+        headers: dict[str, str] | None = None,
+    ) -> SendMessageResult:
+        request_headers = self._base_headers()
+        _apply_passthrough_headers(request_headers, headers)
+        token = await get_queue_token_async(self._config.token)
+        request_headers["Authorization"] = f"Bearer {token}"
+        request_headers["Content-Type"] = content_type
+
+        deployment_id = _deployment_id(self._config)
+        if deployment_id:
+            request_headers["Vqs-Deployment-Id"] = deployment_id
+        if idempotency_key:
+            request_headers["Vqs-Idempotency-Key"] = idempotency_key
+        if retention_seconds is not None:
+            request_headers["Vqs-Retention-Seconds"] = str(retention_seconds)
+        if delay_seconds is not None:
+            request_headers["Vqs-Delay-Seconds"] = str(delay_seconds)
+
+        body = _serialize_payload(
+            payload,
+            content_type=content_type,
+            json_encoder=self._config.json_encoder,
+        )
+
+        async with httpx.AsyncClient(timeout=self._config.timeout) as client:
+            response = await client.post(
+                _build_url(self._base_url(), queue_name),
+                content=body,
+                headers=request_headers,
+            )
+
+        if response.status_code == 409:
+            raise DuplicateIdempotencyKeyError(
+                response.text or "Duplicate idempotency key detected",
+            )
+        _raise_common_http_error(response, operation="send message")
+        return _parse_send_result(response)
+
+    async def receive(
+        self,
+        queue_name: str,
+        consumer_group: str,
+        *,
+        limit: int | None = 1,
+        visibility_timeout_seconds: int | None = None,
+    ) -> list[ReceivedMessage]:
+        if limit is not None and (limit < 1 or limit > 10):
+            raise InvalidLimitError(limit)
+
+        request_headers = self._base_headers()
+        token = await get_queue_token_async(self._config.token)
+        request_headers["Authorization"] = f"Bearer {token}"
+        request_headers["Accept"] = "multipart/mixed"
+        if visibility_timeout_seconds is not None:
+            request_headers["Vqs-Visibility-Timeout-Seconds"] = str(visibility_timeout_seconds)
+        if limit is not None:
+            request_headers["Vqs-Max-Messages"] = str(limit)
+        deployment_id = _deployment_id(self._config)
+        if deployment_id:
+            request_headers["Vqs-Deployment-Id"] = deployment_id
+
+        async with httpx.AsyncClient(timeout=self._config.timeout) as client:
+            response = await client.post(
+                _build_url(self._base_url(), queue_name, "consumer", consumer_group),
+                headers=request_headers,
+            )
+
+        if response.status_code == 204:
+            return []
+        _raise_common_http_error(response, operation="receive messages")
+
+        messages: list[ReceivedMessage] = []
+        for part_headers, payload_bytes in _multipart_parts(response):
+            parsed = _parse_message_part(part_headers, payload_bytes)
+            if parsed is not None:
+                messages.append(parsed)
+        return messages
+
+    async def receive_by_id(
+        self,
+        queue_name: str,
+        consumer_group: str,
+        message_id: str,
+        *,
+        visibility_timeout_seconds: int | None = None,
+    ) -> ReceivedMessage:
+        request_headers = self._base_headers()
+        token = await get_queue_token_async(self._config.token)
+        request_headers["Authorization"] = f"Bearer {token}"
+        request_headers["Accept"] = "multipart/mixed"
+        if visibility_timeout_seconds is not None:
+            request_headers["Vqs-Visibility-Timeout-Seconds"] = str(visibility_timeout_seconds)
+        deployment_id = _deployment_id(self._config)
+        if deployment_id:
+            request_headers["Vqs-Deployment-Id"] = deployment_id
+
+        async with httpx.AsyncClient(timeout=self._config.timeout) as client:
+            response = await client.post(
+                _build_url(
+                    self._base_url(),
+                    queue_name,
+                    "consumer",
+                    consumer_group,
+                    "id",
+                    message_id,
+                ),
+                headers=request_headers,
+            )
+
+        if response.status_code == 404:
+            raise MessageNotFoundError(message_id)
+        if response.status_code == 409:
+            raise MessageNotAvailableError(message_id, response.text or None)
+        if response.status_code == 410:
+            raise MessageAlreadyProcessedError(message_id)
+        _raise_common_http_error(response, operation="receive message by ID")
+
+        for part_headers, payload_bytes in _multipart_parts(response):
+            parsed = _parse_message_part(
+                part_headers,
+                payload_bytes,
+                message_id_hint=message_id,
+            )
+            if parsed is not None:
+                return parsed
+        raise MessageCorruptedError(message_id, "Missing required queue headers in response")
+
+    async def acknowledge(
+        self,
+        queue_name: str,
+        consumer_group: str,
+        receipt_handle: str,
+    ) -> None:
+        request_headers = self._base_headers()
+        token = await get_queue_token_async(self._config.token)
+        request_headers["Authorization"] = f"Bearer {token}"
+        deployment_id = _deployment_id(self._config)
+        if deployment_id:
+            request_headers["Vqs-Deployment-Id"] = deployment_id
+
+        async with httpx.AsyncClient(timeout=self._config.timeout) as client:
+            response = await client.delete(
+                _build_url(
+                    self._base_url(),
+                    queue_name,
+                    "consumer",
+                    consumer_group,
+                    "lease",
+                    receipt_handle,
+                ),
+                headers=request_headers,
+            )
+
+        if response.status_code == 404:
+            raise MessageNotFoundError(receipt_handle)
+        if response.status_code == 409:
+            raise MessageNotAvailableError(receipt_handle, response.text or None)
+        _raise_common_http_error(
+            response,
+            operation="acknowledge message",
+            bad_request_default="Missing or invalid receipt handle",
+        )
+
+    async def change_visibility(
+        self,
+        queue_name: str,
+        consumer_group: str,
+        receipt_handle: str,
+        visibility_timeout_seconds: int,
+    ) -> None:
+        request_headers = self._base_headers()
+        token = await get_queue_token_async(self._config.token)
+        request_headers["Authorization"] = f"Bearer {token}"
+        request_headers["Content-Type"] = "application/json"
+        deployment_id = _deployment_id(self._config)
+        if deployment_id:
+            request_headers["Vqs-Deployment-Id"] = deployment_id
+
+        async with httpx.AsyncClient(timeout=self._config.timeout) as client:
+            response = await client.patch(
+                _build_url(
+                    self._base_url(),
+                    queue_name,
+                    "consumer",
+                    consumer_group,
+                    "lease",
+                    receipt_handle,
+                ),
+                headers=request_headers,
+                content=json.dumps({"visibilityTimeoutSeconds": visibility_timeout_seconds}).encode(
+                    "utf-8"
+                ),
+            )
+
+        if response.status_code == 404:
+            raise MessageNotFoundError(receipt_handle)
+        if response.status_code == 409:
+            raise MessageNotAvailableError(receipt_handle, response.text or None)
+        _raise_common_http_error(
+            response,
+            operation="change visibility",
+            bad_request_default="Missing receipt handle or invalid visibility timeout",
+        )
+
+
+def get_queue_token(explicit_token: str | None = None) -> str:
+    if explicit_token:
+        return explicit_token
+
+    env_token = os.environ.get("VERCEL_QUEUE_TOKEN")
+    if env_token:
+        return env_token
+
+    from vercel.oidc import get_vercel_oidc_token  # type: ignore[import-not-found]
+
+    token = get_vercel_oidc_token()
+    if token:
+        return token
+
+    raise TokenResolutionError(
+        "Failed to resolve queue token. Provide 'token' explicitly, "
+        "set VERCEL_QUEUE_TOKEN, or ensure a Vercel OIDC token is available.",
+    )
+
+
+async def get_queue_token_async(explicit_token: str | None = None) -> str:
+    if explicit_token:
+        return explicit_token
+
+    env_token = os.environ.get("VERCEL_QUEUE_TOKEN")
+    if env_token:
+        return env_token
+
+    from vercel.oidc.aio import (  # type: ignore[import-not-found]
+        get_vercel_oidc_token as get_vercel_oidc_token_async,
+    )
+
+    token = await get_vercel_oidc_token_async()
+    if token:
+        return token
+
+    raise TokenResolutionError(
+        "Failed to resolve queue token. Provide 'token' explicitly, "
+        "set VERCEL_QUEUE_TOKEN, or ensure a Vercel OIDC token is available.",
+    )
+
+
+def _handle_subscribed_message(
+    message: Any,
+    metadata: MessageMetadata,
+) -> WorkerTimeoutResult | None:
+    if not _select_subscriptions(metadata["topicName"], metadata["consumerGroup"]):
+        raise InternalServerError(
+            "No matching subscribers registered for "
+            f"topic={metadata['topicName']!r} consumer={metadata['consumerGroup']!r}",
+        )
+    timeout_seconds = _invoke_subscriptions(message, metadata)
+    if timeout_seconds is None:
+        return None
+    return {"timeoutSeconds": timeout_seconds}
+
+
+def handle_queue_callback(
+    raw_body: bytes,
+    headers: Mapping[str, str],
+) -> tuple[int, list[tuple[str, str]], bytes]:
     if not _subscriptions:
-        raise RuntimeError(
-            "No worker subscriptions registered. Import the module containing your "
-            "@subscribe handlers before calling send() in in-process dev mode.",
-        )
+        return json_response(500, {"error": "no-subscribers"})
 
-    # In dev mode, surface a clear error when there are worker functions but none of
-    # them are subscribed to the requested topic. This helps catch mismatches between
-    # the queue name used in send() and the topics configured via @subscribe.
-    matching_for_topic = [s for s in _subscriptions if s.matches(queue_name, ignore_consumer=True)]
-    if not matching_for_topic:
-        available_topics = sorted(
-            {s.topic_desc for s in _subscriptions if s.topic_desc is not None},
-        )
-        raise RuntimeError(
-            "No worker subscriptions found for topic "
-            f"{queue_name!r} in in-process dev mode. "
-            "Known topics: "
-            + (", ".join(repr(t) for t in available_topics) or "(none with explicit topics)"),
-        )
+    from . import callback as queue_callback
 
-    message_id = str(uuid4())
-    metadata: MessageMetadata = {
-        "messageId": message_id,
-        "deliveryCount": 1,
-        "createdAt": datetime.now(UTC).isoformat(),
-        "topic": queue_name,
-    }
-
-    # In dev mode we intentionally ignore consumer-group targeting and deliver
-    # to all handlers that match the topic (or have no explicit topic), similar
-    # to the TypeScript dev.ts behaviour.
-    _invoke_subscriptions(payload, metadata, ignore_consumer=True)
-
-    return {"messageId": message_id}
-
-
-def handle_queue_callback(raw_body: bytes) -> tuple[int, list[tuple[str, str]], bytes]:
-    """
-    Core callback handler used by both WSGI/ASGI wrappers.
-
-    Returns: (status_code, headers, body_bytes)
-    """
-
-    extender: callback.VisibilityExtender | None = None
-    try:
-        if not _subscriptions:
-            return json_response(500, {"error": "no-subscribers"})
-
-        # Mirror the Node defaults (ConsumerGroupOptions): 30s visibility, refresh every 10s.
-        visibility_timeout_seconds = int(os.environ.get("VQS_VISIBILITY_TIMEOUT", "30"))
-        refresh_interval_seconds = float(os.environ.get("VQS_VISIBILITY_REFRESH_INTERVAL", "10"))
-
-        queue_name, consumer_group, message_id = callback.parse_cloudevent(raw_body)
-
-        # Fail fast if no workers match this topic/consumer.
-        if not _select_subscriptions(queue_name, consumer_group):
-            return json_response(
-                500,
-                {
-                    "error": "no-matching-subscribers",
-                    "topic": queue_name,
-                    "consumer": consumer_group,
-                },
-            )
-
-        payload, delivery_count, created_at, ticket = callback.receive_message_by_id(
-            queue_name,
-            consumer_group,
-            message_id,
-            visibility_timeout_seconds=visibility_timeout_seconds,
-        )
-
-        metadata: MessageMetadata = {
-            "messageId": message_id,
-            "deliveryCount": delivery_count,
-            "createdAt": created_at,
-            "topic": queue_name,
-            "consumer": consumer_group,
-        }
-
-        if ticket:
-            extender = callback.VisibilityExtender(
-                queue_name,
-                consumer_group,
-                message_id,
-                ticket,
-                visibility_timeout_seconds=visibility_timeout_seconds,
-                refresh_interval_seconds=refresh_interval_seconds,
-            )
-            extender.start()
-
-        # Execute subscribers and ack/delay accordingly.
-        timeout_seconds = _invoke_subscriptions(payload, metadata)
-        if ticket:
-            if timeout_seconds is not None:
-                if extender is not None:
-                    extender.finalize(
-                        lambda: callback.change_visibility(
-                            queue_name,
-                            consumer_group,
-                            message_id,
-                            ticket,
-                            int(timeout_seconds),
-                        ),
-                    )
-                else:
-                    callback.change_visibility(
-                        queue_name,
-                        consumer_group,
-                        message_id,
-                        ticket,
-                        int(timeout_seconds),
-                    )
-            else:
-                if extender is not None:
-                    extender.finalize(
-                        lambda: callback.delete_message(
-                            queue_name,
-                            consumer_group,
-                            message_id,
-                            ticket,
-                        ),
-                    )
-                else:
-                    callback.delete_message(
-                        queue_name,
-                        consumer_group,
-                        message_id,
-                        ticket,
-                    )
-
-        return json_response(200, {"ok": True})
-    except ValueError as exc:
-        return json_response(400, {"error": str(exc)})
-    except VQSError as exc:
-        status_code = getattr(exc, "status_code", None) or 500
-        err_payload: dict[str, Any] = {"error": str(exc), "type": exc.__class__.__name__}
-        retry_after = getattr(exc, "retry_after", None)
-        if isinstance(retry_after, int):
-            err_payload["retryAfter"] = retry_after
-        body = json_response(int(status_code), err_payload)
-        print(
-            "vercel.workers.handle_queue_callback error "
-            f"({int(status_code)} {status_reason(int(status_code))}):",
-            repr(exc),
-        )
-        return body
-    except Exception as exc:  # noqa: BLE001
-        print("vercel.workers.handle_queue_callback error:", repr(exc))
-        return json_response(500, {"error": "internal"})
-    finally:
-        if extender is not None:
-            extender.stop()
+    visibility_timeout_seconds = int(os.environ.get("VQS_VISIBILITY_TIMEOUT", "30"))
+    refresh_interval_seconds = float(os.environ.get("VQS_VISIBILITY_REFRESH_INTERVAL", "10"))
+    client = QueueClient()
+    return queue_callback.handle_callback(
+        client,
+        raw_body,
+        headers,
+        _handle_subscribed_message,
+        visibility_timeout_seconds=visibility_timeout_seconds,
+        refresh_interval_seconds=refresh_interval_seconds,
+        context="vercel.workers.handle_queue_callback",
+    )
 
 
 def get_wsgi_app() -> WSGI:
@@ -419,215 +1008,40 @@ def get_asgi_app() -> ASGI:
     return build_asgi_app(handle_queue_callback)
 
 
-def get_queue_base_url() -> str:
-    """
-    Return the base URL for the Vercel Queue Service API.
-
-    Mirrors the JS client behaviour:
-      - VERCEL_QUEUE_BASE_URL environment variable
-      - default to "https://vercel-queue.com"
-    """
-    return os.environ.get("VERCEL_QUEUE_BASE_URL", "https://vercel-queue.com").rstrip("/")
-
-
-def get_queue_base_path() -> str:
-    """
-    Return the base path for the queue API endpoints.
-
-    Mirrors the JS client behaviour:
-      - VERCEL_QUEUE_BASE_PATH environment variable
-      - default to "/api/v2/messages"
-    """
-    base_path = os.environ.get("VERCEL_QUEUE_BASE_PATH", "/api/v2/messages")
-    if not base_path.startswith("/"):
-        base_path = "/" + base_path
-    return base_path
-
-
-def get_queue_token(explicit_token: str | None = None) -> str:
-    """
-    Resolve the token used to authenticate with the queue service (synchronously).
-
-    Resolution order:
-      1. An explicit ``token=...`` argument.
-      2. The ``VERCEL_QUEUE_TOKEN`` environment variable.
-      3. The Vercel OIDC token from ``vercel.oidc.get_vercel_oidc_token``.
-
-    This helper is used by the synchronous ``send`` function.
-    """
-    if explicit_token:
-        return explicit_token
-
-    env_token = os.environ.get("VERCEL_QUEUE_TOKEN")
-    if env_token:
-        return env_token
-
-    # Fall back to Vercel OIDC token when running inside a Vercel environment.
-    # We use asyncio.run() in contexts without a running event loop. If an event
-    # loop is already running, we silently skip this step and fall through to
-    # the error below, encouraging callers to either pass an explicit token or
-    # use the async send_async() helper instead.
-    token: str | None = None
-    from vercel.oidc import get_vercel_oidc_token
-
-    token = get_vercel_oidc_token()
-
-    if token:
-        return token
-
-    msg = (
-        "Failed to resolve queue token. Provide 'token' explicitly when calling send(), "
-        "set the VERCEL_QUEUE_TOKEN environment variable, "
-        "or ensure a Vercel OIDC token is available in this environment."
-    )
-    raise TokenResolutionError(msg)
-
-
-async def get_queue_token_async(explicit_token: str | None = None) -> str:
-    """
-    Resolve the token used to authenticate with the queue service (asynchronously).
-
-    Resolution order:
-      1. An explicit ``token=...`` argument.
-      2. The ``VERCEL_QUEUE_TOKEN`` environment variable.
-      3. The Vercel OIDC token from ``vercel.oidc.aio.get_vercel_oidc_token``.
-    """
-    if explicit_token:
-        return explicit_token
-
-    env_token = os.environ.get("VERCEL_QUEUE_TOKEN")
-    if env_token:
-        return env_token
-
-    # Fall back to Vercel OIDC token when running inside a Vercel environment.
-    from vercel.oidc.aio import get_vercel_oidc_token as get_vercel_oidc_token_async
-
-    token = await get_vercel_oidc_token_async()
-    if token:
-        return token
-
-    msg = (
-        "Failed to resolve queue token. Provide 'token' explicitly when calling send_async(), "
-        "set the VERCEL_QUEUE_TOKEN environment variable, "
-        "or ensure a Vercel OIDC token is available in this environment."
-    )
-    raise TokenResolutionError(msg)
-
-
 def send(
     queue_name: str,
     payload: Any,
     *,
     idempotency_key: str | None = None,
     retention_seconds: int | None = None,
+    delay_seconds: int | None = None,
     deployment_id: str | None = None,
     token: str | None = None,
     base_url: str | None = None,
-    base_path: str | None = None,
+    resolve_base_url: BaseUrlResolver | None = None,
+    region: str | None = None,
     content_type: str = "application/json",
     timeout: float | None = 10.0,
     headers: dict[str, str] | None = None,
     json_encoder: type[json.JSONEncoder] | None = None,
 ) -> SendMessageResult:
-    """
-    Send a message to a Vercel Queue (synchronous).
-
-    It resolves
-    authentication in this order:
-      1) explicit ``token=...``
-      2) ``VERCEL_QUEUE_TOKEN`` environment variable
-      3) Vercel OIDC token (when running inside Vercel)
-
-    For async applications, prefer :func:`send_async`.
-
-    Args:
-        queue_name: Name of the target queue (equivalent to ``queueName``).
-        payload: Message payload. For the default JSON content type this must be JSON-serialisable.
-        idempotency_key: Optional key to deduplicate submissions (``Vqs-Idempotency-Key`` header).
-        retention_seconds: Optional message retention time in seconds (``Vqs-Retention-Seconds``).
-        deployment_id: Optional deployment identifier (``Vqs-Deployment-Id``).
-        token: Authentication token. If omitted, falls back to ``VERCEL_QUEUE_TOKEN`` env var.
-        base_url: Override base URL for the queue API. Defaults to ``VERCEL_QUEUE_BASE_URL`` or
-            ``https://vercel-queue.com``.
-        base_path: Override base path for the messages endpoint. Defaults to
-            ``VERCEL_QUEUE_BASE_PATH`` or ``/api/v2/messages``.
-        content_type: MIME type of the payload. Defaults to ``application/json``.
-        timeout: Optional request timeout in seconds.
-        headers: Additional headers to include in all requests.
-
-    Returns:
-        A dict containing the generated ``messageId``.
-    """
-    # By default we always talk to the Queue Service API (even in local development).
-    #
-    # For an explicit in-process dev shortcut (no persistence / retries), set:
-    #   VERCEL_WORKERS_IN_PROCESS=1
-    if os.environ.get("VERCEL_WORKERS_IN_PROCESS") in {"1", "true", "TRUE", "yes", "YES"}:
-        return _send_in_process(queue_name, payload)
-
-    resolved_base_url = (base_url or get_queue_base_url()).rstrip("/")
-    resolved_base_path = base_path or get_queue_base_path()
-
-    auth_token = get_queue_token(token)
-
-    headers = {
-        "Authorization": f"Bearer {auth_token}",
-        "Content-Type": content_type,
-    } | (headers or {})
-    headers["Vqs-Queue-Name"] = queue_name
-
-    deployment_id = deployment_id or os.environ.get("VERCEL_DEPLOYMENT_ID")
-    if deployment_id:
-        headers["Vqs-Deployment-Id"] = deployment_id
-
-    if idempotency_key:
-        headers["Vqs-Idempotency-Key"] = idempotency_key
-
-    if retention_seconds is not None:
-        headers["Vqs-Retention-Seconds"] = str(retention_seconds)
-
-    # Basic payload handling: default to JSON, but allow callers to provide their own
-    # serialisation if they change the content type.
-    if content_type == "application/json":
-        body: bytes = json.dumps(payload, cls=json_encoder or WorkerJSONEncoder).encode("utf-8")
-    elif isinstance(payload, (bytes, bytearray)):
-        body = bytes(payload)
-    else:
-        raise TypeError(
-            "Non-JSON content_type requires 'payload' to be bytes or bytearray; "
-            "for structured data use the default JSON content type.",
-        )
-
-    url = f"{resolved_base_url}{resolved_base_path}"
-
-    with httpx.Client(timeout=timeout) as client:
-        response = client.post(url, content=body, headers=headers)
-
-    # Map common error codes to Python exceptions similar to the TS client.
-    if response.status_code == 400:
-        raise BadRequestError(response.text or "Invalid parameters")
-    if response.status_code == 401:
-        raise UnauthorizedError()
-    if response.status_code == 403:
-        raise ForbiddenError()
-    if response.status_code == 409:
-        raise DuplicateIdempotencyKeyError("Duplicate idempotency key detected")
-    if response.status_code >= 500:
-        msg = response.text or f"Server error: {response.status_code} {response.reason_phrase}"
-        raise InternalServerError(msg)
-
-    try:
-        response.raise_for_status()
-    except httpx.HTTPStatusError as exc:  # pragma: no cover - defensive
-        raise RuntimeError(
-            f"Failed to send message: {exc.response.status_code} {exc.response.reason_phrase}",
-        ) from exc
-
-    data = response.json()
-    if not isinstance(data, dict) or "messageId" not in data:
-        raise RuntimeError("Queue API returned an unexpected response: missing 'messageId'")
-
-    return {"messageId": str(data["messageId"])}
+    return QueueClient(
+        region=region,
+        token=token,
+        base_url=base_url,
+        resolve_base_url=resolve_base_url,
+        deployment_id=deployment_id,
+        timeout=timeout,
+        json_encoder=json_encoder,
+    ).send(
+        queue_name,
+        payload,
+        idempotency_key=idempotency_key,
+        retention_seconds=retention_seconds,
+        delay_seconds=delay_seconds,
+        content_type=content_type,
+        headers=headers,
+    )
 
 
 async def send_async(
@@ -636,97 +1050,31 @@ async def send_async(
     *,
     idempotency_key: str | None = None,
     retention_seconds: int | None = None,
+    delay_seconds: int | None = None,
     deployment_id: str | None = None,
     token: str | None = None,
     base_url: str | None = None,
-    base_path: str | None = None,
+    resolve_base_url: BaseUrlResolver | None = None,
+    region: str | None = None,
     content_type: str = "application/json",
     timeout: float | None = 10.0,
     headers: dict[str, str] | None = None,
     json_encoder: type[json.JSONEncoder] | None = None,
 ) -> SendMessageResult:
-    """
-    Asynchronous variant of :func:`send` that additionally supports resolving
-    tokens via the Vercel OIDC helper when running inside Vercel.
-
-    Args:
-        queue_name: Name of the target queue (equivalent to ``queueName``).
-        payload: Message payload. For the default JSON content type this must be JSON-serialisable.
-        idempotency_key: Optional key to deduplicate submissions (``Vqs-Idempotency-Key`` header).
-        retention_seconds: Optional message retention time in seconds (``Vqs-Retention-Seconds``).
-        deployment_id: Optional deployment identifier (``Vqs-Deployment-Id``).
-        token: Authentication token. If omitted, falls back to ``VERCEL_QUEUE_TOKEN`` env var.
-        base_url: Override base URL for the queue API. Defaults to ``VERCEL_QUEUE_BASE_URL`` or
-            ``https://vercel-queue.com``.
-        base_path: Override base path for the messages endpoint. Defaults to
-            ``VERCEL_QUEUE_BASE_PATH`` or ``/api/v2/messages``.
-        content_type: MIME type of the payload. Defaults to ``application/json``.
-        timeout: Optional request timeout in seconds.
-        headers: Additional headers to include in all requests.
-
-    Returns:
-        A dict containing the generated ``messageId``.
-    """
-    resolved_base_url = (base_url or get_queue_base_url()).rstrip("/")
-    resolved_base_path = base_path or get_queue_base_path()
-
-    auth_token = await get_queue_token_async(token)
-
-    headers = {
-        "Authorization": f"Bearer {auth_token}",
-        "Content-Type": content_type,
-    } | (headers or {})
-    headers["Vqs-Queue-Name"] = queue_name
-
-    deployment_id = deployment_id or os.environ.get("VERCEL_DEPLOYMENT_ID")
-    if deployment_id:
-        headers["Vqs-Deployment-Id"] = deployment_id
-
-    if idempotency_key:
-        headers["Vqs-Idempotency-Key"] = idempotency_key
-
-    if retention_seconds is not None:
-        headers["Vqs-Retention-Seconds"] = str(retention_seconds)
-
-    # Basic payload handling: default to JSON, but allow callers to provide their own
-    # serialisation if they change the content type.
-    if content_type == "application/json":
-        body: bytes = json.dumps(payload, cls=json_encoder or WorkerJSONEncoder).encode("utf-8")
-    elif isinstance(payload, (bytes, bytearray)):
-        body = bytes(payload)
-    else:
-        raise TypeError(
-            "Non-JSON content_type requires 'payload' to be bytes or bytearray; "
-            "for structured data use the default JSON content type.",
-        )
-
-    url = f"{resolved_base_url}{resolved_base_path}"
-
-    async with httpx.AsyncClient(timeout=timeout) as client:
-        response = await client.post(url, content=body, headers=headers)
-
-    # Map common error codes to Python exceptions similar to the TS client.
-    if response.status_code == 400:
-        raise BadRequestError(response.text or "Invalid parameters")
-    if response.status_code == 401:
-        raise UnauthorizedError()
-    if response.status_code == 403:
-        raise ForbiddenError()
-    if response.status_code == 409:
-        raise DuplicateIdempotencyKeyError("Duplicate idempotency key detected")
-    if response.status_code >= 500:
-        msg = response.text or f"Server error: {response.status_code} {response.reason_phrase}"
-        raise InternalServerError(msg)
-
-    try:
-        response.raise_for_status()
-    except httpx.HTTPStatusError as exc:  # pragma: no cover - defensive
-        raise RuntimeError(
-            f"Failed to send message: {exc.response.status_code} {exc.response.reason_phrase}",
-        ) from exc
-
-    data = response.json()
-    if not isinstance(data, dict) or "messageId" not in data:
-        raise RuntimeError("Queue API returned an unexpected response: missing 'messageId'")
-
-    return {"messageId": str(data["messageId"])}
+    return await AsyncQueueClient(
+        region=region,
+        token=token,
+        base_url=base_url,
+        resolve_base_url=resolve_base_url,
+        deployment_id=deployment_id,
+        timeout=timeout,
+        json_encoder=json_encoder,
+    ).send(
+        queue_name,
+        payload,
+        idempotency_key=idempotency_key,
+        retention_seconds=retention_seconds,
+        delay_seconds=delay_seconds,
+        content_type=content_type,
+        headers=headers,
+    )

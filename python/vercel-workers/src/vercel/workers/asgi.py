@@ -13,24 +13,25 @@ ASGI = Callable[
     Awaitable[None],
 ]
 
-Handler = Callable[[bytes], tuple[int, list[tuple[str, str]], bytes]]
+Handler = Callable[[bytes, dict[str, str]], tuple[int, list[tuple[str, str]], bytes]]
 
 
-def _get_header(scope: dict[str, Any], name: str) -> str | None:
-    """
-    Fetch an HTTP header value (case-insensitive) from an ASGI scope.
-    """
+def _read_headers(scope: dict[str, Any]) -> dict[str, str]:
+    """Collect HTTP headers from an ASGI scope."""
+    collected: dict[str, str] = {}
     headers = scope.get("headers") or []
-    target = name.lower().encode("latin1")
     try:
         for k, v in headers:
-            if isinstance(k, (bytes, bytearray)) and bytes(k).lower() == target:
-                if isinstance(v, (bytes, bytearray)):
-                    return bytes(v).decode("latin1")
-                return str(v)
+            if not isinstance(k, (bytes, bytearray)):
+                continue
+            name = bytes(k).decode("latin1")
+            if isinstance(v, (bytes, bytearray)):
+                collected[name] = bytes(v).decode("latin1")
+            else:
+                collected[name] = str(v)
     except Exception:
-        return None
-    return None
+        return {}
+    return collected
 
 
 async def _read_body(receive: Callable[[], Awaitable[dict[str, Any]]]) -> bytes:
@@ -56,8 +57,8 @@ def build_asgi_app(handler: Handler) -> ASGI:
     """
     Build an ASGI application that:
       - responds to GET / with "ok" (healthcheck)
-      - accepts POST with Content-Type application/cloudevents+json
-      - delegates CloudEvent handling to `handler(raw_body)` on a thread
+      - accepts POST queue callbacks
+      - delegates callback handling to `handler(raw_body, headers)` on a thread
     """
 
     async def app(
@@ -102,28 +103,12 @@ def build_asgi_app(handler: Handler) -> ASGI:
 
         # Queue callback
         if method == "POST":
-            content_type = _get_header(scope, "content-type")
-            if not content_type or "application/cloudevents+json" not in content_type:
-                body = (
-                    b'{"error":"Invalid content type: expected \\"application/cloudevents+json\\""}'
-                )
-                await send(
-                    {
-                        "type": "http.response.start",
-                        "status": 400,
-                        "headers": [
-                            (b"content-type", b"application/json"),
-                            (b"content-length", str(len(body)).encode("ascii")),
-                        ],
-                    }
-                )
-                await send({"type": "http.response.body", "body": body})
-                return
-
             raw_body = await _read_body(receive)
-            status_code, headers, body = await asyncio.to_thread(handler, raw_body)
+            headers = _read_headers(scope)
+            status_code, response_headers, body = await asyncio.to_thread(handler, raw_body, headers)
             asgi_headers: list[tuple[bytes, bytes]] = [
-                (k.lower().encode("latin1"), v.encode("latin1")) for (k, v) in headers
+                (k.lower().encode("latin1"), v.encode("latin1"))
+                for (k, v) in response_headers
             ]
             await send(
                 {

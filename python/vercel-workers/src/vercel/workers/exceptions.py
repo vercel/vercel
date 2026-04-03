@@ -14,6 +14,7 @@ __all__ = [
     "QueueEmptyError",
     "MessageNotFoundError",
     "MessageNotAvailableError",
+    "MessageAlreadyProcessedError",
     "MessageCorruptedError",
     "MessageLockedError",
     "ThrottledError",
@@ -126,6 +127,16 @@ class MessageNotAvailableError(VQSError, RuntimeError):
         self.reason = str(reason) if reason else None
         suffix = f": {self.reason}" if self.reason else ""
         super().__init__(f"Message {self.message_id} not available for processing{suffix}")
+
+
+class MessageAlreadyProcessedError(VQSError, RuntimeError):
+    """410 - Message was already processed successfully."""
+
+    status_code = 410
+
+    def __init__(self, message_id: str) -> None:
+        self.message_id = str(message_id)
+        super().__init__(f"Message {self.message_id} has already been processed")
 
 
 class MessageCorruptedError(VQSError, RuntimeError):

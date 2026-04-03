@@ -4,7 +4,8 @@ import json
 import time
 from typing import TYPE_CHECKING
 
-from .. import callback as queue_callback
+from ..client import QueueClient, ReceivedMessage
+from .transport import TransportConfig, build_queue_client
 from .utils import _execute_envelope
 
 if TYPE_CHECKING:
@@ -45,17 +46,22 @@ class PollingWorker:
         self.crash_on_error = crash_on_error
         self.ack_on_error = ack_on_error
         self._stop_requested = False
+        conf = getattr(celery_app, "conf", None)
+        transport_options = getattr(conf, "broker_transport_options", None)
+        transport_cfg = TransportConfig.from_transport_options(
+            transport_options if isinstance(transport_options, dict) else {},
+        )
+        self.client: QueueClient = build_queue_client(transport_cfg)
 
     def stop(self) -> None:
         self._stop_requested = True
 
     def run_once(self) -> int:
-        messages = queue_callback.receive_messages(
+        messages = self.client.receive(
             self.queue_name,
             self.consumer_group,
             limit=self.limit,
             visibility_timeout_seconds=self.visibility_timeout_seconds,
-            timeout=self.timeout,
         )
 
         if not messages:
@@ -72,9 +78,9 @@ class PollingWorker:
         while not self._stop_requested:
             self.run_once()
 
-    def _process_message(self, msg: queue_callback.ReceivedMessage) -> None:
+    def _process_message(self, msg: ReceivedMessage) -> None:
         message_id = msg["messageId"]
-        ticket = msg["ticket"]
+        receipt_handle = msg["receiptHandle"]
         payload = msg["payload"]
 
         try:
@@ -89,8 +95,9 @@ class PollingWorker:
                                 "messageId": message_id,
                                 "deliveryCount": msg.get("deliveryCount"),
                                 "createdAt": msg.get("createdAt"),
+                                "expiresAt": msg.get("expiresAt"),
                                 "contentType": msg.get("contentType"),
-                                "ticket": ticket,
+                                "receiptHandle": receipt_handle,
                                 "payload": payload,
                             },
                             indent=2,
@@ -113,19 +120,17 @@ class PollingWorker:
             timeout_seconds = outcome.get("timeoutSeconds")
 
             if timeout_seconds is not None:
-                queue_callback.change_visibility(
+                self.client.change_visibility(
                     self.queue_name,
                     self.consumer_group,
-                    message_id,
-                    ticket,
+                    receipt_handle,
                     int(timeout_seconds),
                 )
             else:
-                queue_callback.delete_message(
+                self.client.acknowledge(
                     self.queue_name,
                     self.consumer_group,
-                    message_id,
-                    ticket,
+                    receipt_handle,
                 )
         except Exception:
             if self.debug:
@@ -141,11 +146,10 @@ class PollingWorker:
             if self.ack_on_error:
                 # Useful in local development to avoid getting stuck on a poison message.
                 try:
-                    queue_callback.delete_message(
+                    self.client.acknowledge(
                         self.queue_name,
                         self.consumer_group,
-                        message_id,
-                        ticket,
+                        receipt_handle,
                     )
                 except Exception:
                     pass
@@ -153,11 +157,10 @@ class PollingWorker:
             # Best-effort: optionally shorten visibility to retry sooner.
             if self.on_error_visibility_timeout_seconds is not None:
                 try:
-                    queue_callback.change_visibility(
+                    self.client.change_visibility(
                         self.queue_name,
                         self.consumer_group,
-                        message_id,
-                        ticket,
+                        receipt_handle,
                         int(self.on_error_visibility_timeout_seconds),
                     )
                 except Exception:

@@ -5,7 +5,7 @@ import os
 from dataclasses import dataclass
 from typing import Any, Literal
 
-from ..client import send
+from ..client import QueueClient, _compose_base_url, send
 from .utils import _extract_task_from_kombu_message
 
 try:
@@ -132,6 +132,16 @@ class TransportConfig:
         return cfg
 
 
+def build_queue_client(cfg: TransportConfig) -> QueueClient:
+    return QueueClient(
+        token=cfg.token,
+        base_url=_compose_base_url(cfg.base_url, cfg.base_path),
+        deployment_id=cfg.deployment_id,
+        timeout=cfg.timeout,
+        json_encoder=cfg.json_encoder,
+    )
+
+
 class Channel(virtual.Channel):
     """
     Kombu transport channel for publishing Celery tasks into Vercel Queues.
@@ -185,8 +195,7 @@ class Channel(virtual.Channel):
             retention_seconds=self._cfg.retention_seconds,
             deployment_id=self._cfg.deployment_id,
             token=self._cfg.token,
-            base_url=self._cfg.base_url,
-            base_path=self._cfg.base_path,
+            base_url=_compose_base_url(self._cfg.base_url, self._cfg.base_path),
             timeout=self._cfg.timeout,
             json_encoder=self._cfg.json_encoder,
         )

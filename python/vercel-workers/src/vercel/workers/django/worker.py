@@ -1,59 +1,18 @@
 from __future__ import annotations
 
 import json
-import math
 import time
 from dataclasses import dataclass, replace
-from datetime import UTC, datetime
-from traceback import format_exception
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
-from .. import callback as queue_callback
-from ..exceptions import VQSError
+from ..client import MessageMetadata, QueueClient, ReceivedMessage
+from .app import _build_queue_client, _execute_task_payload
 
 if TYPE_CHECKING:
-    from .backend import DjangoTaskEnvelope, VercelQueuesBackend
-
-try:
-    from django.tasks.base import (  # type: ignore[import-untyped]
-        TaskContext,
-        TaskError,
-        TaskResultStatus,
-    )
-    from django.tasks.signals import task_finished, task_started  # type: ignore[import-untyped]
-    from django.utils import timezone as dj_timezone  # type: ignore[import-untyped]
-except Exception as e:
-    raise RuntimeError(
-        "django is required to use vercel.workers.django.worker. "
-        "Install it with `pip install 'vercel-workers[django]'` or `pip install Django>=6.0`.",
-    ) from e
+    from .backend import VercelQueuesBackend
 
 
 __all__ = ["PollingWorker", "PollingWorkerConfig"]
-
-
-def _now_utc() -> datetime:
-    try:
-        return dj_timezone.now()
-    except Exception:
-        return datetime.now(UTC)
-
-
-def _parse_iso_datetime(value: str | None) -> datetime | None:
-    if not value or not isinstance(value, str):
-        return None
-    s = value.strip()
-    if not s:
-        return None
-    if s.endswith("Z"):
-        s = s[:-1] + "+00:00"
-    try:
-        dt = datetime.fromisoformat(s)
-    except Exception:
-        return None
-    if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=UTC)
-    return dt
 
 
 @dataclass(frozen=True, slots=True)
@@ -134,22 +93,6 @@ class PollingWorkerConfig:
                 cfg = replace(cfg, **{key: value})
 
         return cfg
-
-
-def _retry_delay_seconds(cfg: PollingWorkerConfig, attempt: int) -> int:
-    """Compute retry delay with exponential backoff."""
-    delay: float
-    base = float(cfg.retry_backoff_base_seconds)
-    factor = float(cfg.retry_backoff_factor)
-    if attempt <= 1:
-        delay = base
-    else:
-        delay = base * math.pow(factor, attempt - 1)
-    if not math.isfinite(delay):
-        delay = float(cfg.max_retry_delay_seconds)
-    return int(max(0, min(float(cfg.max_retry_delay_seconds), delay)))
-
-
 class PollingWorker:
     """
     Long-lived polling worker for consuming Django tasks from Vercel Queues.
@@ -195,6 +138,7 @@ class PollingWorker:
             ack_on_error=ack_on_error,
         )
         self._stop_requested = False
+        self.client: QueueClient = _build_queue_client(backend)
 
     def stop(self) -> None:
         """Signal the worker to stop after the current poll cycle."""
@@ -206,12 +150,11 @@ class PollingWorker:
 
         Returns the number of messages processed.
         """
-        messages = queue_callback.receive_messages(
+        messages = self.client.receive(
             self.cfg.queue_name,
             self.cfg.consumer_group,
             limit=self.cfg.limit,
             visibility_timeout_seconds=self.cfg.visibility_timeout_seconds,
-            timeout=self.cfg.timeout,
         )
 
         if not messages:
@@ -229,114 +172,60 @@ class PollingWorker:
         while not self._stop_requested:
             self.run_once()
 
-    def _process_message(self, msg: queue_callback.ReceivedMessage) -> None:
+    def _process_message(self, msg: ReceivedMessage) -> None:
         message_id = msg["messageId"]
-        ticket = msg["ticket"]
+        receipt_handle = msg["receiptHandle"]
         payload = msg["payload"]
 
         try:
             if self.cfg.debug:
                 self._debug_log_received(msg)
-
-            env = self._parse_envelope(payload)
-            task_info: dict[str, Any] = env.get("task") or {}
-            run_after_raw = task_info.get("run_after")
-            run_after = (
-                _parse_iso_datetime(run_after_raw) if isinstance(run_after_raw, str) else None
-            )
-
-            # Handle run_after delay.
-            if run_after is not None:
-                now = _now_utc()
-                if run_after > now:
-                    delay_seconds = int(max(0.0, (run_after - now).total_seconds()))
-                    queue_callback.change_visibility(
-                        self.cfg.queue_name,
-                        self.cfg.consumer_group,
-                        message_id,
-                        ticket,
-                        delay_seconds,
-                        timeout=self.cfg.timeout,
-                    )
-                    if self.cfg.debug:
-                        print(
-                            f"[django-tasks polling] delaying message {message_id} "
-                            f"for {delay_seconds}s (run_after)"
-                        )
-                    return
-
-            # Load or init TaskResult.
-            task_result = self.backend._load_or_init_result_from_envelope(
-                message_id=message_id,
-                envelope=cast("DjangoTaskEnvelope", env),
-            )
-
-            # Reconstruct task.
-            module_path = str(task_info.get("module_path") or "")
-            queue_name = str(task_info.get("queue_name") or self.cfg.queue_name)
-            takes_context = bool(task_info.get("takes_context", False))
-            priority = int(task_info.get("priority", 0))
-            task = self.backend._task_from_module_path(
-                module_path=module_path,
-                queue_name=queue_name,
-                takes_context=takes_context,
-                priority=priority,
-                run_after=None,
-            )
-            object.__setattr__(task_result, "task", task)
-            object.__setattr__(task_result, "args", env.get("args") or [])
-            object.__setattr__(task_result, "kwargs", env.get("kwargs") or {})
-
-            # Mark started.
-            self.backend._mark_started(task_result, worker_id=self.backend.worker_id)
-            task_started.send(sender=type(self.backend), task_result=task_result)
-
-            try:
-                # Execute task.
-                if task.takes_context:
-                    raw_return_value = task.call(
-                        TaskContext(task_result=task_result),
-                        *task_result.args,
-                        **task_result.kwargs,
-                    )
-                else:
-                    raw_return_value = task.call(*task_result.args, **task_result.kwargs)
-            except KeyboardInterrupt:
-                raise
-            except BaseException as exc:
-                self._handle_task_error(
-                    task_result=task_result,
-                    exc=exc,
-                    message_id=message_id,
-                    ticket=ticket,
+            metadata: MessageMetadata = {
+                "messageId": message_id,
+                "deliveryCount": msg["deliveryCount"],
+                "createdAt": msg["createdAt"],
+                "expiresAt": msg.get("expiresAt"),
+                "topicName": self.cfg.queue_name,
+                "consumerGroup": self.cfg.consumer_group,
+                "region": self.client.region,
+            }
+            outcome = _execute_task_payload(self.backend, self.cfg, payload, metadata)
+            if isinstance(outcome, dict) and outcome.get("acknowledge"):
+                self.client.acknowledge(
+                    self.cfg.queue_name,
+                    self.cfg.consumer_group,
+                    receipt_handle,
                 )
                 return
 
-            # Success: mark finished and ack.
-            self.backend._mark_finished_success(task_result, raw_return_value)
-            task_finished.send(sender=type(self.backend), task_result=task_result)
+            timeout_seconds = None
+            if isinstance(outcome, dict) and "timeoutSeconds" in outcome:
+                try:
+                    timeout_seconds = int(outcome["timeoutSeconds"])
+                except (TypeError, ValueError):
+                    timeout_seconds = None
 
-            queue_callback.delete_message(
+            if timeout_seconds is not None:
+                self.client.change_visibility(
+                    self.cfg.queue_name,
+                    self.cfg.consumer_group,
+                    receipt_handle,
+                    timeout_seconds,
+                )
+                if self.cfg.debug:
+                    print(
+                        f"[django-tasks polling] delaying message {message_id} "
+                        f"for {timeout_seconds}s"
+                    )
+                return
+
+            self.client.acknowledge(
                 self.cfg.queue_name,
                 self.cfg.consumer_group,
-                message_id,
-                ticket,
-                timeout=self.cfg.timeout,
+                receipt_handle,
             )
-
             if self.cfg.debug:
-                print(
-                    f"[django-tasks polling] completed task {task_result.task.module_path} "
-                    f"(message {message_id})"
-                )
-
-        except VQSError as exc:
-            # Queue service errors (locked, not found, throttled, etc.)
-            if self.cfg.debug:
-                print(f"[django-tasks polling] queue service error for {message_id}: {exc!r}")
-            # Don't ack on queue errors - let visibility timeout handle retry
-            if self.cfg.crash_on_error:
-                raise
+                print(f"[django-tasks polling] completed message {message_id}")
 
         except Exception as exc:  # noqa: BLE001
             if self.cfg.debug:
@@ -344,12 +233,10 @@ class PollingWorker:
 
             if self.cfg.ack_on_error:
                 try:
-                    queue_callback.delete_message(
+                    self.client.acknowledge(
                         self.cfg.queue_name,
                         self.cfg.consumer_group,
-                        message_id,
-                        ticket,
-                        timeout=self.cfg.timeout,
+                        receipt_handle,
                     )
                 except Exception:
                     pass
@@ -357,13 +244,11 @@ class PollingWorker:
 
             if self.cfg.on_error_visibility_timeout_seconds is not None:
                 try:
-                    queue_callback.change_visibility(
+                    self.client.change_visibility(
                         self.cfg.queue_name,
                         self.cfg.consumer_group,
-                        message_id,
-                        ticket,
+                        receipt_handle,
                         int(self.cfg.on_error_visibility_timeout_seconds),
-                        timeout=self.cfg.timeout,
                     )
                 except Exception:
                     pass
@@ -371,76 +256,7 @@ class PollingWorker:
             if self.cfg.crash_on_error:
                 raise
 
-    def _handle_task_error(
-        self,
-        *,
-        task_result: Any,  # TaskResult
-        exc: BaseException,
-        message_id: str,
-        ticket: str,
-    ) -> None:
-        """Handle task execution error with retry logic."""
-        # Record the error.
-        exception_type = type(exc)
-        task_result.errors.append(
-            TaskError(
-                exception_class_path=f"{exception_type.__module__}.{exception_type.__qualname__}",
-                traceback="".join(format_exception(exc)),
-            )
-        )
-
-        attempt = len(task_result.worker_ids)
-
-        if attempt < int(self.cfg.max_attempts):
-            delay_seconds = _retry_delay_seconds(self.cfg, attempt)
-            object.__setattr__(task_result, "status", TaskResultStatus.READY)
-            object.__setattr__(task_result, "finished_at", None)
-            self.backend._store_result(task_result)
-
-            queue_callback.change_visibility(
-                self.cfg.queue_name,
-                self.cfg.consumer_group,
-                message_id,
-                ticket,
-                int(delay_seconds),
-                timeout=self.cfg.timeout,
-            )
-
-            if self.cfg.debug:
-                print(
-                    f"[django-tasks polling] task failed "
-                    f"(attempt {attempt}/{self.cfg.max_attempts}), "
-                    f"retrying in {delay_seconds}s: {exc!r}"
-                )
-        else:
-            # Terminal failure.
-            self.backend._mark_failed(task_result, exc)
-            task_finished.send(sender=type(self.backend), task_result=task_result)
-
-            queue_callback.delete_message(
-                self.cfg.queue_name,
-                self.cfg.consumer_group,
-                message_id,
-                ticket,
-                timeout=self.cfg.timeout,
-            )
-
-            if self.cfg.debug:
-                print(
-                    f"[django-tasks polling] task failed permanently "
-                    f"(attempt {attempt}/{self.cfg.max_attempts}): {exc!r}"
-                )
-
-    def _parse_envelope(self, payload: Any) -> dict[str, Any]:
-        """Parse and validate the task envelope."""
-        if not isinstance(payload, dict):
-            raise ValueError("Invalid task payload: expected object")
-        vercel_info = payload.get("vercel")
-        if not isinstance(vercel_info, dict) or vercel_info.get("kind") != "django-tasks":
-            raise ValueError("Invalid task payload: not a django-tasks envelope")
-        return payload  # type: ignore[return-value]
-
-    def _debug_log_received(self, msg: queue_callback.ReceivedMessage) -> None:
+    def _debug_log_received(self, msg: ReceivedMessage) -> None:
         """Log received message details for debugging."""
         try:
             print(
@@ -452,8 +268,9 @@ class PollingWorker:
                         "messageId": msg["messageId"],
                         "deliveryCount": msg.get("deliveryCount"),
                         "createdAt": msg.get("createdAt"),
+                        "expiresAt": msg.get("expiresAt"),
                         "contentType": msg.get("contentType"),
-                        "ticket": msg["ticket"],
+                        "receiptHandle": msg["receiptHandle"],
                     },
                     indent=2,
                     default=str,

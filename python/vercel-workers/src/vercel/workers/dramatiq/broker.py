@@ -6,7 +6,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass, replace
 from typing import Any
 
-from ..client import send
+from ..client import QueueClient, _compose_base_url, send
 
 try:
     from dramatiq.broker import Broker, Consumer, MessageProxy
@@ -118,6 +118,16 @@ class DramatiqTaskEnvelope(dict):
     """
 
     pass
+
+
+def build_queue_client(options: VercelQueuesBrokerOptions) -> QueueClient:
+    return QueueClient(
+        token=options.token,
+        base_url=_compose_base_url(options.base_url, options.base_path),
+        deployment_id=options.deployment_id,
+        timeout=options.timeout,
+        json_encoder=options.json_encoder,
+    )
 
 
 def _message_to_envelope(message: Message, queue_name: str) -> DramatiqTaskEnvelope:
@@ -317,8 +327,7 @@ class VercelQueuesBroker(Broker):
             retention_seconds=self._cfg.retention_seconds,
             deployment_id=self._cfg.deployment_id,
             token=self._cfg.token,
-            base_url=self._cfg.base_url,
-            base_path=self._cfg.base_path,
+            base_url=_compose_base_url(self._cfg.base_url, self._cfg.base_path),
             timeout=self._cfg.timeout,
             json_encoder=self._cfg.json_encoder,
         )

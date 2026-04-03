@@ -5,7 +5,7 @@ from collections.abc import Callable
 from typing import Any
 
 WSGI = Callable[[dict[str, Any], Callable[..., Any]], list[bytes]]
-Handler = Callable[[bytes], tuple[int, list[tuple[str, str]], bytes]]
+Handler = Callable[[bytes, dict[str, str]], tuple[int, list[tuple[str, str]], bytes]]
 
 
 _STATUS_REASONS: dict[int, str] = {
@@ -38,12 +38,28 @@ def _read_body(environ: dict[str, Any]) -> bytes:
     return wsgi_input.read(length)
 
 
+def _read_headers(environ: dict[str, Any]) -> dict[str, str]:
+    headers: dict[str, str] = {}
+    for key, value in environ.items():
+        if key.startswith("HTTP_"):
+            name = key[5:].replace("_", "-")
+        elif key in {"CONTENT_TYPE", "CONTENT_LENGTH"}:
+            name = key.replace("_", "-")
+        else:
+            continue
+        if isinstance(value, bytes):
+            headers[name] = value.decode("latin1")
+        else:
+            headers[name] = str(value)
+    return headers
+
+
 def build_wsgi_app(handler: Handler) -> WSGI:
     """
     Build a WSGI application that:
       - responds to GET / with "ok" (healthcheck)
-      - accepts POST with Content-Type application/cloudevents+json
-      - delegates CloudEvent handling to `handler(raw_body)`
+      - accepts POST queue callbacks
+      - delegates callback handling to `handler(raw_body, headers)`
     """
 
     def app(environ: dict[str, Any], start_response: Callable[..., Any]):
@@ -64,23 +80,13 @@ def build_wsgi_app(handler: Handler) -> WSGI:
 
         # Queue callback
         if method == "POST":
-            content_type = str(environ.get("CONTENT_TYPE") or "")
-            if "application/cloudevents+json" not in content_type:
-                err = (
-                    b'{"error":"Invalid content type: expected \\"application/cloudevents+json\\""}'
-                )
-                start_response(
-                    "400 Bad Request",
-                    [
-                        ("Content-Type", "application/json"),
-                        ("Content-Length", str(len(err))),
-                    ],
-                )
-                return [err]
-
             raw_body = _read_body(environ)
-            status_code, headers, body = handler(raw_body)
-            start_response(f"{int(status_code)} {status_reason(int(status_code))}", headers)
+            headers = _read_headers(environ)
+            status_code, response_headers, body = handler(raw_body, headers)
+            start_response(
+                f"{int(status_code)} {status_reason(int(status_code))}",
+                response_headers,
+            )
             return [body]
 
         # Everything else: simple 404/405.

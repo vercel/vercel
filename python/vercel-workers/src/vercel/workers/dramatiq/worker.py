@@ -4,8 +4,8 @@ import json
 import time
 from typing import TYPE_CHECKING, Any
 
-from .. import callback as queue_callback
-from .broker import _envelope_to_message
+from ..client import QueueClient, ReceivedMessage
+from .broker import _envelope_to_message, build_queue_client
 
 if TYPE_CHECKING:
     from .broker import VercelQueuesBroker
@@ -70,6 +70,7 @@ class PollingWorker:
         self.crash_on_error = crash_on_error
         self.ack_on_error = ack_on_error
         self._stop_requested = False
+        self.client: QueueClient = build_queue_client(broker.options)
 
     def stop(self) -> None:
         """Signal the worker to stop after the current poll cycle."""
@@ -81,12 +82,11 @@ class PollingWorker:
 
         Returns the number of messages processed.
         """
-        messages = queue_callback.receive_messages(
+        messages = self.client.receive(
             self.queue_name,
             self.consumer_group,
             limit=self.limit,
             visibility_timeout_seconds=self.visibility_timeout_seconds,
-            timeout=self.timeout,
         )
 
         if not messages:
@@ -104,9 +104,9 @@ class PollingWorker:
         while not self._stop_requested:
             self.run_once()
 
-    def _process_message(self, msg: queue_callback.ReceivedMessage) -> None:
+    def _process_message(self, msg: ReceivedMessage) -> None:
         message_id = msg["messageId"]
-        ticket = msg["ticket"]
+        receipt_handle = msg["receiptHandle"]
         payload = msg["payload"]
 
         try:
@@ -124,13 +124,11 @@ class PollingWorker:
                 now = current_millis()
                 if eta > now:
                     delay_seconds = int((eta - now) / 1000)
-                    queue_callback.change_visibility(
+                    self.client.change_visibility(
                         self.queue_name,
                         self.consumer_group,
-                        message_id,
-                        ticket,
+                        receipt_handle,
                         delay_seconds,
-                        timeout=self.timeout,
                     )
                     if self.debug:
                         print(
@@ -144,21 +142,17 @@ class PollingWorker:
             timeout_seconds = outcome.get("timeoutSeconds")
 
             if timeout_seconds is not None:
-                queue_callback.change_visibility(
+                self.client.change_visibility(
                     self.queue_name,
                     self.consumer_group,
-                    message_id,
-                    ticket,
+                    receipt_handle,
                     int(timeout_seconds),
-                    timeout=self.timeout,
                 )
             else:
-                queue_callback.delete_message(
+                self.client.acknowledge(
                     self.queue_name,
                     self.consumer_group,
-                    message_id,
-                    ticket,
-                    timeout=self.timeout,
+                    receipt_handle,
                 )
 
             if self.debug:
@@ -181,12 +175,10 @@ class PollingWorker:
             if self.ack_on_error:
                 # Useful in local development to avoid getting stuck on a poison message.
                 try:
-                    queue_callback.delete_message(
+                    self.client.acknowledge(
                         self.queue_name,
                         self.consumer_group,
-                        message_id,
-                        ticket,
-                        timeout=self.timeout,
+                        receipt_handle,
                     )
                 except Exception:
                     pass
@@ -194,13 +186,11 @@ class PollingWorker:
             # Best-effort: optionally shorten visibility to retry sooner.
             if self.on_error_visibility_timeout_seconds is not None:
                 try:
-                    queue_callback.change_visibility(
+                    self.client.change_visibility(
                         self.queue_name,
                         self.consumer_group,
-                        message_id,
-                        ticket,
+                        receipt_handle,
                         int(self.on_error_visibility_timeout_seconds),
-                        timeout=self.timeout,
                     )
                 except Exception:
                     pass
@@ -230,7 +220,7 @@ class PollingWorker:
                 return {"timeoutSeconds": int(delay / 1000)}
             return {"timeoutSeconds": 60}  # Default retry delay
 
-    def _debug_log_received(self, msg: queue_callback.ReceivedMessage) -> None:
+    def _debug_log_received(self, msg: ReceivedMessage) -> None:
         """Log received message details for debugging."""
         try:
             print(
@@ -242,8 +232,9 @@ class PollingWorker:
                         "messageId": msg["messageId"],
                         "deliveryCount": msg.get("deliveryCount"),
                         "createdAt": msg.get("createdAt"),
+                        "expiresAt": msg.get("expiresAt"),
                         "contentType": msg.get("contentType"),
-                        "ticket": msg["ticket"],
+                        "receiptHandle": msg["receiptHandle"],
                     },
                     indent=2,
                     default=str,
