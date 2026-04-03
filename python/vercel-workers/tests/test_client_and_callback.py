@@ -64,7 +64,7 @@ class TestCallbackAndClientEdgeCases(unittest.TestCase):
 
     def test_get_queue_token_error_message_is_string(self) -> None:
         with patch.dict(queue_api.os.environ, {}, clear=True):
-            with patch("vercel.oidc.get_vercel_oidc_token", return_value=None):
+            with patch.object(queue_api, "get_vercel_oidc_token", return_value=None):
                 with self.assertRaises(TokenResolutionError) as err:
                     queue_client.get_queue_token()
 
@@ -73,8 +73,9 @@ class TestCallbackAndClientEdgeCases(unittest.TestCase):
 
     def test_get_queue_token_async_error_message_is_string(self) -> None:
         with patch.dict(queue_api.os.environ, {}, clear=True):
-            with patch(
-                "vercel.oidc.aio.get_vercel_oidc_token",
+            with patch.object(
+                queue_api,
+                "get_vercel_oidc_token_async",
                 new=AsyncMock(return_value=None),
             ):
                 with self.assertRaises(TokenResolutionError) as err:

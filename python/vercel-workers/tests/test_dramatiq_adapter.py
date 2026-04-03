@@ -4,9 +4,8 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 import dramatiq
+import pytest
 from dramatiq.message import Message
 
 from vercel.workers.dramatiq import (
