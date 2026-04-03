@@ -54,8 +54,7 @@ describe('detectServices', () => {
       const result = await detectServices({ fs });
 
       expect(result.errors).toEqual([]);
-      // resolved.services is empty, inferred is used as a suggestion
-      expect(result.services).toHaveLength(0);
+      expect(result.services).toHaveLength(2);
       expect(result.source).toBe('auto-detected');
       expect(result.inferred).not.toBeNull();
       expect(result.inferred!.source).toBe('layout');

@@ -513,8 +513,7 @@ describe('detectServices with auto-detection', () => {
 
       expect(result.errors).toEqual([]);
       expect(result.source).toBe('auto-detected');
-      // resolved.services is empty, inferred is used as a suggestion
-      expect(result.services).toHaveLength(0);
+      expect(result.services).toHaveLength(2);
       expect(result.inferred).not.toBeNull();
       expect(result.inferred!.services).toHaveLength(2);
       const backend = result.inferred!.services.find(

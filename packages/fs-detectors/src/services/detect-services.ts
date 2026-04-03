@@ -200,8 +200,12 @@ export async function detectServices(
  * Returns a result if the detector matched (found services or had errors),
  * or null to signal the caller should try the next detector.
  *
- * All auto-detection sources (Railway, Render, layout) are suggestion-only:
+ * Railway and Render are suggestion-only:
  * they populate `inferred` for the CLI/UI to propose writing to vercel.json.
+ *
+ * Layout-based detection produces a real resolved output as well instead, because
+ * it's based on our convention that we support. This is gated under a flag (env/feature)
+ * but it's in use.
  */
 async function tryResolveInferred(
   detectResult: PlatformDetectResult,
@@ -257,6 +261,23 @@ async function tryResolveInferred(
         warnings: detectResult.warnings,
       }
     : null;
+
+  // Layout-based detection result can actually be used as is,
+  // because the convention is controlled by us. So we produce "resolved"
+  // result as well in addition to inferred
+  if (source === 'layout' && shouldInfer) {
+    const routes = generateServicesRoutes(result.services);
+    return withResolvedResult(
+      {
+        services: result.services,
+        source: 'auto-detected',
+        routes,
+        errors: result.errors,
+        warnings: detectResult.warnings,
+      },
+      inferred
+    );
+  }
 
   return withResolvedResult(
     {
