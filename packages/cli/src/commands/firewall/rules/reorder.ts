@@ -122,7 +122,7 @@ export default async function reorder(client: Client, argv: string[]) {
       message: `Multiple rules match "${identifier}". Select one:`,
       choices: matches.map(r => ({
         value: r.id,
-        name: `${r.name} [${r.active ? 'Enabled' : 'Disabled'}] (${r.id})`,
+        name: `${r.name} [${r.active ? 'Enabled' : 'Disabled'}] — ${formatActionDisplay(r.action)}`,
       })),
     });
 

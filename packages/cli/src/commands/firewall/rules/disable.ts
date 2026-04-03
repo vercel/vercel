@@ -104,14 +104,27 @@ export default async function disable(client: Client, argv: string[]) {
     identifier = selected.name;
   }
 
-  const matches = resolveRule(currentRules, identifier);
+  const allMatches = resolveRule(currentRules, identifier);
 
-  if (matches.length === 0) {
+  if (allMatches.length === 0) {
     output.stopSpinner();
     output.error(
       `No rule found for "${identifier}". Run ${chalk.cyan(getCommandName('firewall rules list'))} to view all rules.`
     );
     return 1;
+  }
+
+  // Filter to only enabled rules
+  const matches = allMatches.filter(r => r.active !== false);
+
+  if (matches.length === 0) {
+    output.stopSpinner();
+    if (allMatches.length === 1) {
+      output.log(`Rule "${allMatches[0].name}" is already disabled.`);
+    } else {
+      output.log(`All matching rules are already disabled.`);
+    }
+    return 0;
   }
 
   let rule = matches[0];
@@ -129,7 +142,7 @@ export default async function disable(client: Client, argv: string[]) {
       message: `Multiple rules match "${identifier}". Select one:`,
       choices: matches.map(r => ({
         value: r.id,
-        name: `${r.name} [${r.active ? 'Enabled' : 'Disabled'}] (${r.id})`,
+        name: `${r.name} — ${formatActionDisplay(r.action)}`,
       })),
     });
 
@@ -142,11 +155,6 @@ export default async function disable(client: Client, argv: string[]) {
   }
 
   output.stopSpinner();
-
-  if (rule.active === false) {
-    output.log(`Rule "${rule.name}" is already disabled.`);
-    return 0;
-  }
 
   const disableStamp = stamp();
   output.spinner('Staging changes');
