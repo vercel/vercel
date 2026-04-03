@@ -1125,8 +1125,7 @@ exports[`help command > deploy help output snapshots > deploy help column width 
 `;
 
 exports[`help command > dev help output snapshots > dev --help > outputs help 1`] = `
-"
-  ▲ vercel dev [dir] [options]
+"▲ vercel dev [dir] [options]
 
   Starts the \`vercel dev\` server.                                               
 
@@ -4363,6 +4362,11 @@ exports[`help command > project help output snapshots > project help column widt
                           groups
                           for a 
                           proje…
+  speed-insights  [name]  Enable
+                          Speed 
+                          Insig…
+                          for a 
+                          proje…
   remove          name    Delete
                           a     
                           proje…
@@ -4441,6 +4445,7 @@ exports[`help command > project help output snapshots > project help column widt
                           (default)                                     
   members         [name]  List project members for a project            
   access-groups   [name]  List access groups for a project              
+  speed-insights  [name]  Enable Speed Insights for a project           
   remove          name    Delete a project                              
   token           [name]  Get a development OIDC token for a project    
 
@@ -4479,6 +4484,7 @@ exports[`help command > project help output snapshots > project help column widt
   list                    Show all projects in the selected scope (default)                                     
   members         [name]  List project members for a project                                                    
   access-groups   [name]  List access groups for a project                                                      
+  speed-insights  [name]  Enable Speed Insights for a project                                                   
   remove          name    Delete a project                                                                      
   token           [name]  Get a development OIDC token for a project                                            
 
