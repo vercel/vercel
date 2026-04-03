@@ -380,6 +380,12 @@ export default async function main(client: Client): Promise<number> {
     const loadEnvSpan = rootSpan.child('vc.loadEnv');
     try {
       if (deploymentId) {
+        // Set the team context so API calls include the teamId query param.
+        // Without this, the API can't find the deployment.
+        if (link?.orgId?.startsWith('team_')) {
+          client.config.currentTeam = link.orgId;
+        }
+
         // When --id is provided, fetch env vars from the deployment
         // instead of loading from local .env files.
         output.debug(
