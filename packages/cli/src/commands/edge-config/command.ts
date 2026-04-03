@@ -88,7 +88,7 @@ export const updateSubcommand = {
       argument: 'JSON',
       deprecated: false,
       description:
-        'JSON for `PATCH /v1/edge-config/:id/items`: either `{"items":[...]}` or a bare `[...]` items array',
+        'JSON for `PATCH /v1/edge-config/:id/items`: `{"items":[...]}` or a bare array. Each item needs `operation` (create | update | upsert | delete), `key`, and usually `value` (see REST API: update-edge-config-items-in-batch)',
     },
   ],
   examples: [],

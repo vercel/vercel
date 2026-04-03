@@ -14,25 +14,8 @@ import { getCommandName } from '../../util/pkg-name';
 import output from '../../output-manager';
 import { EdgeConfigUpdateTelemetryClient } from '../../util/telemetry/commands/edge-config/update';
 import { updateSubcommand } from './command';
+import { parsePatchBody } from './parse-patch-body';
 import { resolveEdgeConfigId } from './resolve-edge-config-id';
-
-function parsePatchBody(raw: string): { items: unknown[] } {
-  const parsed = JSON.parse(raw) as unknown;
-  if (Array.isArray(parsed)) {
-    return { items: parsed };
-  }
-  if (
-    typeof parsed === 'object' &&
-    parsed !== null &&
-    'items' in parsed &&
-    Array.isArray((parsed as { items: unknown }).items)
-  ) {
-    return { items: (parsed as { items: unknown[] }).items };
-  }
-  throw new Error(
-    '`--patch` must be a JSON array of item operations or an object `{ "items": [...] }`.'
-  );
-}
 
 export default async function updateCmd(
   client: Client,
