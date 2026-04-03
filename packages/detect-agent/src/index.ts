@@ -106,7 +106,7 @@ export async function determineAgent(): Promise<AgentResult> {
     return { isAgent: true, agent: { name: AUGMENT_CLI } };
   }
 
-  if (process.env.OPENCODE_CLIENT) {
+  if (process.env.OPENCODE) {
     return { isAgent: true, agent: { name: OPENCODE } };
   }
 
