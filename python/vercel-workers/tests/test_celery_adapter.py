@@ -37,11 +37,9 @@ def _v2beta_headers(
 
 class TestCeleryAdapter(unittest.TestCase):
     def test_install_kombu_transport_alias_registers_vercel_alias(self) -> None:
-        from kombu.transport import TRANSPORT_ALIASES  # type: ignore[import-untyped]
-
-        with patch.dict(TRANSPORT_ALIASES, {}, clear=True):
+        with patch.dict(vwc_transport.TRANSPORT_ALIASES, {}, clear=True):
             vwc_transport.install_kombu_transport_alias()
-            self.assertIn("vercel", TRANSPORT_ALIASES)
+            self.assertIn("vercel", vwc_transport.TRANSPORT_ALIASES)
 
     def test_extract_task_from_kombu_message_supports_common_shapes(self) -> None:
         cases = [

@@ -6,9 +6,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-# Skip all tests in this module if dramatiq is not installed
-pytest.importorskip("dramatiq")
-
 import dramatiq
 from dramatiq.message import Message
 

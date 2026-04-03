@@ -10,21 +10,9 @@ from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
 import vercel.workers._internal.queue_api as queue_api
+import vercel.workers.django.app as vwd_app
+import vercel.workers.django.backend as vwd_backend
 from vercel.workers.client import QueueClient
-
-# Skip all tests if Django is not available (optional dependency)
-try:
-    import vercel.workers.django.app as vwd_app
-    import vercel.workers.django.backend as vwd_backend
-
-    DJANGO_AVAILABLE = True
-except (ImportError, RuntimeError):
-    vwd_app: Any = None  # type: ignore[assignment]
-    vwd_backend: Any = None  # type: ignore[assignment]
-    DJANGO_AVAILABLE = False
-
-
-_skip_without_django = unittest.skipUnless(DJANGO_AVAILABLE, "Django is not installed")
 
 
 def _v2beta_headers(
@@ -49,7 +37,6 @@ def _v2beta_headers(
     ]
 
 
-@_skip_without_django
 class TestDjangoTaskEnvelopeParsing(unittest.TestCase):
     """Tests for envelope parsing and validation."""
 
@@ -95,7 +82,6 @@ class TestDjangoTaskEnvelopeParsing(unittest.TestCase):
         self.assertIn("not a django-tasks envelope", str(ctx.exception))
 
 
-@_skip_without_django
 class TestDjangoTaskWorkerConfig(unittest.TestCase):
     """Tests for DjangoTaskWorkerConfig."""
 
@@ -138,7 +124,6 @@ class TestDjangoTaskWorkerConfig(unittest.TestCase):
         self.assertEqual(cfg.max_attempts, 3)
 
 
-@_skip_without_django
 class TestRetryDelayCalculation(unittest.TestCase):
     """Tests for retry delay calculation with exponential backoff."""
 
@@ -172,7 +157,6 @@ class TestRetryDelayCalculation(unittest.TestCase):
         self.assertEqual(vwd_app._retry_delay_seconds(cfg, 6), 500)
 
 
-@_skip_without_django
 class TestVercelQueuesBackendOptions(unittest.TestCase):
     """Tests for VercelQueuesBackendOptions."""
 
@@ -212,7 +196,6 @@ class TestVercelQueuesBackendOptions(unittest.TestCase):
         self.assertEqual(cfg.result_ttl_seconds, 3600)
 
 
-@_skip_without_django
 class TestParseIsoDatetime(unittest.TestCase):
     """Tests for ISO datetime parsing."""
 
@@ -243,7 +226,6 @@ class TestParseIsoDatetime(unittest.TestCase):
         self.assertIsNone(vwd_backend._parse_iso_datetime("not-a-date"))
 
 
-@_skip_without_django
 class TestDjangoAsgiApp(unittest.TestCase):
     """Tests for Django ASGI app behavior."""
 
@@ -466,7 +448,6 @@ class TestDjangoAsgiApp(unittest.TestCase):
         self.assertIn("wrong-queue", body["error"])
 
 
-@_skip_without_django
 class TestDjangoTaskRetryBehavior(unittest.TestCase):
     """Tests for retry behavior on task failure."""
 
@@ -566,7 +547,6 @@ class TestDjangoTaskRetryBehavior(unittest.TestCase):
         self.assertIn("timeoutSeconds", body)
 
 
-@_skip_without_django
 class TestDjangoEnqueueSerializesNonPrimitiveTypes(unittest.TestCase):
     def _make_backend(self) -> Any:
         mock_backend = MagicMock(spec=vwd_backend.VercelQueuesBackend)
