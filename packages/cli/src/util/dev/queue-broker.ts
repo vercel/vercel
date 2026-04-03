@@ -13,6 +13,7 @@ interface StoredMessage {
   contentType: string;
   queueName: string;
   createdAt: string;
+  expiresAt: string;
   retentionMs: number;
 }
 
@@ -32,9 +33,19 @@ type DeliveryStatus = 'pending' | 'in-flight' | 'acked';
 interface DeliveryState {
   status: DeliveryStatus;
   deliveryCount: number;
-  ticket: string;
+  receiptHandle: string;
   visibleAt: number;
   leaseExpiresAt: number;
+}
+
+interface ReceivedMessageLease {
+  messageId: string;
+  payload: Buffer;
+  contentType: string;
+  deliveryCount: number;
+  createdAt: string;
+  expiresAt: string;
+  receiptHandle: string;
 }
 
 const DEFAULT_RETRY_AFTER = ms('1m');
@@ -107,13 +118,15 @@ export class QueueBroker {
       (options?.retentionSeconds ?? 0) > 0
         ? options!.retentionSeconds! * 1000
         : DEFAULT_RETENTION;
+    const createdAt = new Date().toISOString();
 
     const message: StoredMessage = {
       messageId,
       payload,
       contentType,
       queueName,
-      createdAt: new Date().toISOString(),
+      createdAt,
+      expiresAt: new Date(Date.now() + retentionMs).toISOString(),
       retentionMs,
     };
 
@@ -143,7 +156,7 @@ export class QueueBroker {
       groupDeliveries.set(messageId, {
         status: 'pending',
         deliveryCount: 0,
-        ticket: '',
+        receiptHandle: '',
         visibleAt,
         leaseExpiresAt: 0,
       });
@@ -162,32 +175,108 @@ export class QueueBroker {
   receiveById(
     messageId: string,
     consumerGroup: string
-  ): {
-    payload: Buffer;
-    contentType: string;
-    deliveryCount: number;
-    createdAt: string;
-    ticket: string;
-  } | null {
+  ): ReceivedMessageLease | null {
     const message = this.messages.get(messageId);
     if (!message) return null;
 
     const { state } = this.findDeliveryState(messageId, consumerGroup);
     if (!state) return null;
 
+    return this.createReceivedMessageLease(message, state);
+  }
+
+  receiveMessages(
+    queueName: string,
+    consumerGroup: string,
+    options?: {
+      limit?: number;
+      visibilityTimeoutSeconds?: number;
+    }
+  ): ReceivedMessageLease[] {
+    const group = this.consumerGroups.find(candidate => {
+      return candidate.name === consumerGroup;
+    });
+    if (!group) return [];
+
+    const groupDeliveries = this.deliveryState.get(group.id);
+    if (!groupDeliveries) return [];
+
+    const now = Date.now();
+    const limit = Math.min(Math.max(options?.limit ?? 1, 1), 10);
+    const visibilityTimeoutMs =
+      (options?.visibilityTimeoutSeconds ?? DEFAULT_VISIBILITY_TIMEOUT / 1000) *
+      1000;
+    const messages: ReceivedMessageLease[] = [];
+
+    for (const [messageId, state] of groupDeliveries) {
+      const message = this.messages.get(messageId);
+      if (!message) {
+        groupDeliveries.delete(messageId);
+        continue;
+      }
+
+      if (new Date(message.expiresAt).getTime() < now) {
+        groupDeliveries.delete(messageId);
+        this.maybeCleanupMessage(messageId);
+        continue;
+      }
+
+      if (
+        message.queueName !== queueName ||
+        state.status !== 'pending' ||
+        state.visibleAt > now
+      ) {
+        continue;
+      }
+
+      messages.push(this.leaseMessage(message, state, visibilityTimeoutMs));
+      if (messages.length >= limit) break;
+    }
+
+    return messages;
+  }
+
+  receiveMessageById(
+    queueName: string,
+    consumerGroup: string,
+    messageId: string,
+    visibilityTimeoutSeconds?: number
+  ):
+    | { status: 'ok'; message: ReceivedMessageLease }
+    | { status: 'not_found' | 'not_available' } {
+    const message = this.messages.get(messageId);
+    if (!message || message.queueName !== queueName) {
+      return { status: 'not_found' };
+    }
+
+    const { state } = this.findDeliveryState(messageId, consumerGroup);
+    if (!state) {
+      return { status: 'not_found' };
+    }
+
+    const now = Date.now();
+    if (new Date(message.expiresAt).getTime() < now) {
+      return { status: 'not_found' };
+    }
+
+    if (state.status !== 'pending' || state.visibleAt > now) {
+      return { status: 'not_available' };
+    }
+
     return {
-      payload: message.payload,
-      contentType: message.contentType,
-      deliveryCount: state.deliveryCount,
-      createdAt: message.createdAt,
-      ticket: state.ticket,
+      status: 'ok',
+      message: this.leaseMessage(
+        message,
+        state,
+        (visibilityTimeoutSeconds ?? DEFAULT_VISIBILITY_TIMEOUT / 1000) * 1000
+      ),
     };
   }
 
   acknowledge(
     messageId: string,
     consumerGroup: string,
-    ticket: string
+    receiptHandle: string
   ): boolean {
     const { deliveries: groupDeliveries, state } = this.findDeliveryState(
       messageId,
@@ -195,9 +284,9 @@ export class QueueBroker {
     );
     if (!groupDeliveries || !state) return false;
 
-    if (state.ticket && state.ticket !== ticket) {
+    if (state.receiptHandle && state.receiptHandle !== receiptHandle) {
       output.debug(
-        `queues: ACK rejected for ${messageId} in group "${consumerGroup}" - ticket mismatch`
+        `queues: ACK rejected for ${messageId} in group "${consumerGroup}" - receipt handle mismatch`
       );
       return false;
     }
@@ -213,22 +302,58 @@ export class QueueBroker {
     return true;
   }
 
+  acknowledgeByReceiptHandle(
+    queueName: string,
+    consumerGroup: string,
+    receiptHandle: string
+  ): boolean {
+    const delivery = this.findDeliveryByReceiptHandle(
+      queueName,
+      consumerGroup,
+      receiptHandle
+    );
+    if (!delivery) return false;
+    return this.acknowledge(delivery.messageId, consumerGroup, receiptHandle);
+  }
+
   changeVisibility(
     messageId: string,
     consumerGroup: string,
-    ticket: string,
+    receiptHandle: string,
     timeoutSeconds: number
   ): boolean {
     const { state } = this.findDeliveryState(messageId, consumerGroup);
     if (!state || state.status !== 'in-flight') return false;
 
-    if (state.ticket && state.ticket !== ticket) return false;
+    if (state.receiptHandle && state.receiptHandle !== receiptHandle) {
+      return false;
+    }
 
     state.leaseExpiresAt = Date.now() + timeoutSeconds * 1000;
     output.debug(
       `queues: visibility for ${messageId} in group "${consumerGroup}" extended by ${timeoutSeconds}s`
     );
     return true;
+  }
+
+  changeVisibilityByReceiptHandle(
+    queueName: string,
+    consumerGroup: string,
+    receiptHandle: string,
+    timeoutSeconds: number
+  ): boolean {
+    const delivery = this.findDeliveryByReceiptHandle(
+      queueName,
+      consumerGroup,
+      receiptHandle
+    );
+    if (!delivery) return false;
+    return this.changeVisibility(
+      delivery.messageId,
+      consumerGroup,
+      receiptHandle,
+      timeoutSeconds
+    );
   }
 
   private findDeliveryState(
@@ -246,6 +371,54 @@ export class QueueBroker {
       if (state) return { deliveries, state };
     }
     return { deliveries: null, state: null };
+  }
+
+  private findDeliveryByReceiptHandle(
+    queueName: string,
+    consumerGroup: string,
+    receiptHandle: string
+  ): { messageId: string; state: DeliveryState } | null {
+    for (const group of this.consumerGroups) {
+      if (group.name !== consumerGroup) continue;
+      const deliveries = this.deliveryState.get(group.id);
+      if (!deliveries) continue;
+      for (const [messageId, state] of deliveries) {
+        const message = this.messages.get(messageId);
+        if (!message || message.queueName !== queueName) continue;
+        if (state.receiptHandle === receiptHandle) {
+          return { messageId, state };
+        }
+      }
+    }
+    return null;
+  }
+
+  private createReceivedMessageLease(
+    message: StoredMessage,
+    state: DeliveryState
+  ): ReceivedMessageLease {
+    return {
+      messageId: message.messageId,
+      payload: message.payload,
+      contentType: message.contentType,
+      deliveryCount: state.deliveryCount,
+      createdAt: message.createdAt,
+      expiresAt: message.expiresAt,
+      receiptHandle: state.receiptHandle,
+    };
+  }
+
+  private leaseMessage(
+    message: StoredMessage,
+    state: DeliveryState,
+    visibilityTimeoutMs: number
+  ): ReceivedMessageLease {
+    const receiptHandle = randomBytes(16).toString('hex');
+    state.status = 'in-flight';
+    state.receiptHandle = receiptHandle;
+    state.deliveryCount++;
+    state.leaseExpiresAt = Date.now() + visibilityTimeoutMs;
+    return this.createReceivedMessageLease(message, state);
   }
 
   private async dispatchToConsumer(
@@ -274,35 +447,38 @@ export class QueueBroker {
       return;
     }
 
-    const ticket = randomBytes(16).toString('hex');
-    state.status = 'in-flight';
-    state.ticket = ticket;
-    state.deliveryCount++;
-    state.leaseExpiresAt = Date.now() + DEFAULT_VISIBILITY_TIMEOUT;
-
-    const cloudEvent = JSON.stringify({
-      type: 'com.vercel.queue.v1beta',
-      specversion: '1.0',
-      source: 'vc-dev',
-      id: message.messageId,
-      time: new Date().toISOString(),
-      datacontenttype: 'application/json',
-      data: {
-        queueName: message.queueName,
-        consumerGroup: group.name,
-        messageId: message.messageId,
-      },
-    });
+    const delivery = this.leaseMessage(
+      message,
+      state,
+      DEFAULT_VISIBILITY_TIMEOUT
+    );
 
     output.debug(
-      `queues: dispatching CloudEvent to worker "${group.name}" at ${upstream}`
+      `queues: dispatching v2beta callback to worker "${group.name}" at ${upstream}`
     );
 
     try {
       const response = await nodeFetch(`${upstream}/`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/cloudevents+json' },
-        body: cloudEvent,
+        headers: {
+          'Content-Type': message.contentType,
+          'ce-specversion': '1.0',
+          'ce-source': 'vc-dev',
+          'ce-id': message.messageId,
+          'ce-time': new Date().toISOString(),
+          'ce-type': 'com.vercel.queue.v2beta',
+          'ce-vqsqueuename': message.queueName,
+          'ce-vqsconsumergroup': group.name,
+          'ce-vqsmessageid': message.messageId,
+          'ce-vqsdeliverycount': delivery.deliveryCount.toString(),
+          'ce-vqscreatedat': message.createdAt,
+          'ce-vqsexpiresat': message.expiresAt,
+          'ce-vqsreceipthandle': delivery.receiptHandle,
+          'ce-vqsvisibilitydeadline': new Date(
+            state.leaseExpiresAt
+          ).toISOString(),
+        },
+        body: message.payload,
       });
 
       if (!response.ok) {
@@ -329,6 +505,7 @@ export class QueueBroker {
     state.status = 'pending';
     state.visibleAt = Date.now() + group.retryAfterMs;
     state.leaseExpiresAt = 0;
+    state.receiptHandle = '';
   }
 
   private tick(): void {
@@ -343,9 +520,7 @@ export class QueueBroker {
 
         // Clean up if message expired
         if (message) {
-          const expiresAt =
-            new Date(message.createdAt).getTime() + message.retentionMs;
-          if (expiresAt < now) {
+          if (new Date(message.expiresAt).getTime() < now) {
             groupDeliveries.delete(messageId);
             this.maybeCleanupMessage(messageId);
             continue;
@@ -368,6 +543,7 @@ export class QueueBroker {
             state.status = 'pending';
             state.visibleAt = now + group.retryAfterMs;
             state.leaseExpiresAt = 0;
+            state.receiptHandle = '';
           }
           continue;
         }

@@ -1453,7 +1453,7 @@ export default class DevServer {
 
   /**
    * Handle /_svc/_queues/* routes for the dev queue broker, which mimics
-   * the Vercel Queues API so workers can be used in vc dev unchanged.
+   * the Vercel Queues v3 API so workers can be used in vc dev unchanged.
    */
   private handleQueuesRoute = async (
     req: http.IncomingMessage,
@@ -1466,9 +1466,55 @@ export default class DevServer {
       return;
     }
 
-    // POST api/v2/messages - enqueue a message
-    if (req.method === 'POST' && pathname === '/_svc/_queues/api/v2/messages') {
-      const queueName = (req.headers['vqs-queue-name'] as string) || 'default';
+    const writeMultipartResponse = (
+      messages: Array<{
+        messageId: string;
+        payload: Buffer;
+        contentType: string;
+        deliveryCount: number;
+        createdAt: string;
+        expiresAt: string;
+        receiptHandle: string;
+      }>
+    ) => {
+      const boundary = `----vcdevboundary${randomBytes(8).toString('hex')}`;
+      const parts: Uint8Array[] = [];
+      for (const message of messages) {
+        const partHeaders = [
+          `Vqs-Message-Id: ${message.messageId}`,
+          `Vqs-Delivery-Count: ${message.deliveryCount}`,
+          `Vqs-Timestamp: ${message.createdAt}`,
+          `Vqs-Expires-At: ${message.expiresAt}`,
+          `Vqs-Receipt-Handle: ${message.receiptHandle}`,
+          `Content-Type: ${message.contentType}`,
+        ].join('\r\n');
+
+        parts.push(
+          Uint8Array.from(
+            Buffer.from(`--${boundary}\r\n${partHeaders}\r\n\r\n`)
+          ),
+          Uint8Array.from(message.payload),
+          Uint8Array.from(Buffer.from('\r\n'))
+        );
+      }
+
+      const body = Buffer.concat([
+        ...parts,
+        Uint8Array.from(Buffer.from(`--${boundary}--\r\n`)),
+      ]);
+
+      res.writeHead(200, {
+        'Content-Type': `multipart/mixed; boundary=${boundary}`,
+        'Content-Length': body.length,
+      });
+      res.end(body);
+    };
+
+    const enqueueMatch = pathname.match(
+      /^\/_svc\/_queues\/api\/v3\/topic\/([^/]+)$/
+    );
+    if (req.method === 'POST' && enqueueMatch) {
+      const queueName = decodeURIComponent(enqueueMatch[1]);
       const contentType =
         (req.headers['content-type'] as string) || 'application/json';
       const payload = await rawBody(req);
@@ -1480,12 +1526,19 @@ export default class DevServer {
         retentionHeader && !isNaN(parseInt(retentionHeader, 10))
           ? parseInt(retentionHeader, 10)
           : undefined;
+      const delayHeader = req.headers['vqs-delay-seconds'] as
+        | string
+        | undefined;
+      const delaySeconds =
+        delayHeader && !isNaN(parseInt(delayHeader, 10))
+          ? parseInt(delayHeader, 10)
+          : undefined;
 
       const { messageId } = this.queueBroker.enqueue(
         queueName,
         payload,
         contentType,
-        { retentionSeconds }
+        { retentionSeconds, delaySeconds }
       );
 
       res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -1493,77 +1546,130 @@ export default class DevServer {
       return;
     }
 
-    // GET/DELETE/PATCH /api/v2/messages/:messageId
-    const messageMatch = pathname.match(
-      /^\/_svc\/_queues\/api\/v2\/messages\/([a-f0-9]+)$/
+    const receiveByIdMatch = pathname.match(
+      /^\/_svc\/_queues\/api\/v3\/topic\/([^/]+)\/consumer\/([^/]+)\/id\/([^/]+)$/
     );
-    if (!messageMatch) {
-      res.writeHead(404);
-      res.end('Not Found');
-      return;
-    }
-    const messageId = messageMatch[1];
-    const consumerGroup =
-      (req.headers['vqs-consumer-group'] as string) || 'default';
+    if (req.method === 'POST' && receiveByIdMatch) {
+      const queueName = decodeURIComponent(receiveByIdMatch[1]);
+      const consumerGroup = decodeURIComponent(receiveByIdMatch[2]);
+      const messageId = decodeURIComponent(receiveByIdMatch[3]);
+      const timeoutHeader = req.headers['vqs-visibility-timeout-seconds'] as
+        | string
+        | undefined;
+      const visibilityTimeoutSeconds =
+        timeoutHeader && !isNaN(parseInt(timeoutHeader, 10))
+          ? parseInt(timeoutHeader, 10)
+          : undefined;
+      const result = this.queueBroker.receiveMessageById(
+        queueName,
+        consumerGroup,
+        messageId,
+        visibilityTimeoutSeconds
+      );
 
-    if (req.method === 'GET') {
-      const result = this.queueBroker.receiveById(messageId, consumerGroup);
-
-      if (!result) {
-        res.writeHead(404);
-        res.end('Message not found');
+      if (result.status !== 'ok') {
+        res.writeHead(result.status === 'not_found' ? 404 : 409);
+        res.end(
+          result.status === 'not_found'
+            ? 'Message not found'
+            : 'Message not available'
+        );
         return;
       }
 
-      const boundary = `----vcdevboundary${randomBytes(8).toString('hex')}`;
-      const partHeaders = [
-        `Vqs-Message-Id: ${messageId}`,
-        `Vqs-Delivery-Count: ${result.deliveryCount}`,
-        `Vqs-Timestamp: ${result.createdAt}`,
-        `Vqs-Ticket: ${result.ticket}`,
-        `Content-Type: ${result.contentType}`,
-      ].join('\r\n');
-
-      const body = Buffer.concat([
-        Buffer.from(`--${boundary}\r\n${partHeaders}\r\n\r\n`),
-        result.payload,
-        Buffer.from(`\r\n--${boundary}--\r\n`),
-      ]);
-
-      res.writeHead(200, {
-        'Content-Type': `multipart/mixed; boundary=${boundary}`,
-        'Content-Length': body.length,
-      });
-      res.end(body);
+      writeMultipartResponse([result.message]);
       return;
     }
 
-    if (req.method === 'DELETE') {
-      const ticket = (req.headers['vqs-ticket'] as string) || '';
-      this.queueBroker.acknowledge(messageId, consumerGroup, ticket);
-      res.writeHead(204);
+    const receiveMatch = pathname.match(
+      /^\/_svc\/_queues\/api\/v3\/topic\/([^/]+)\/consumer\/([^/]+)$/
+    );
+    if (req.method === 'POST' && receiveMatch) {
+      const queueName = decodeURIComponent(receiveMatch[1]);
+      const consumerGroup = decodeURIComponent(receiveMatch[2]);
+      const timeoutHeader = req.headers['vqs-visibility-timeout-seconds'] as
+        | string
+        | undefined;
+      const visibilityTimeoutSeconds =
+        timeoutHeader && !isNaN(parseInt(timeoutHeader, 10))
+          ? parseInt(timeoutHeader, 10)
+          : undefined;
+      const limitHeader = req.headers['vqs-max-messages'] as string | undefined;
+      const limit =
+        limitHeader && !isNaN(parseInt(limitHeader, 10))
+          ? parseInt(limitHeader, 10)
+          : undefined;
+      const messages = this.queueBroker.receiveMessages(
+        queueName,
+        consumerGroup,
+        {
+          limit,
+          visibilityTimeoutSeconds,
+        }
+      );
+
+      if (messages.length === 0) {
+        res.writeHead(204);
+        res.end();
+        return;
+      }
+
+      writeMultipartResponse(messages);
+      return;
+    }
+
+    const leaseMatch = pathname.match(
+      /^\/_svc\/_queues\/api\/v3\/topic\/([^/]+)\/consumer\/([^/]+)\/lease\/([^/]+)$/
+    );
+    if (req.method === 'DELETE' && leaseMatch) {
+      const queueName = decodeURIComponent(leaseMatch[1]);
+      const consumerGroup = decodeURIComponent(leaseMatch[2]);
+      const receiptHandle = decodeURIComponent(leaseMatch[3]);
+      const acked = this.queueBroker.acknowledgeByReceiptHandle(
+        queueName,
+        consumerGroup,
+        receiptHandle
+      );
+      res.writeHead(acked ? 204 : 404);
       res.end();
       return;
     }
 
-    if (req.method === 'PATCH') {
-      const ticket = (req.headers['vqs-ticket'] as string) || '';
-      const timeoutHeader = req.headers['vqs-visibility-timeout'] as string;
-      const timeoutSeconds = timeoutHeader ? parseInt(timeoutHeader, 10) : 60;
+    if (req.method === 'PATCH' && leaseMatch) {
+      const queueName = decodeURIComponent(leaseMatch[1]);
+      const consumerGroup = decodeURIComponent(leaseMatch[2]);
+      const receiptHandle = decodeURIComponent(leaseMatch[3]);
+      const payload = await rawBody(req);
+      let timeoutSeconds = 60;
 
-      this.queueBroker.changeVisibility(
-        messageId,
+      if (payload.length > 0) {
+        try {
+          const parsed = JSON.parse(payload.toString()) as {
+            visibilityTimeoutSeconds?: number;
+          };
+          if (typeof parsed.visibilityTimeoutSeconds === 'number') {
+            timeoutSeconds = parsed.visibilityTimeoutSeconds;
+          }
+        } catch {
+          res.writeHead(400);
+          res.end('Invalid JSON body');
+          return;
+        }
+      }
+
+      const updated = this.queueBroker.changeVisibilityByReceiptHandle(
+        queueName,
         consumerGroup,
-        ticket,
+        receiptHandle,
         timeoutSeconds
       );
-      res.writeHead(200);
+      res.writeHead(updated ? 200 : 404);
       res.end();
       return;
     }
 
-    res.writeHead(405);
-    res.end('Method Not Allowed');
+    res.writeHead(404);
+    res.end('Not Found');
   };
 
   /**
