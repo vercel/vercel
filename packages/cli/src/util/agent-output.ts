@@ -451,12 +451,19 @@ const EDGE_CONFIG_NON_INTERACTIVE_HINT =
 export type ExitWithNonInteractiveErrorVariant =
   | 'members'
   | 'access-groups'
+  | 'access-summary'
+  | 'web-analytics'
   | 'edge-config';
 
-/** Suggested follow-ups for `project members` / `project access-groups` failures (only callers of exitWithNonInteractiveError). */
+type ProjectExitWithNonInteractiveVariant = Exclude<
+  ExitWithNonInteractiveErrorVariant,
+  'edge-config'
+>;
+
+/** Suggested follow-ups for project subcommands that use `exitWithNonInteractiveError`. */
 function buildNextStepsForProjectSubcommands(
   client: Client,
-  variant: 'members' | 'access-groups'
+  variant: ProjectExitWithNonInteractiveVariant
 ): NonNullable<AgentErrorPayload['next']> {
   const byName =
     variant === 'access-groups'
@@ -464,10 +471,20 @@ function buildNextStepsForProjectSubcommands(
           template: 'project access-groups <name>' as const,
           when: 'List access groups by project name (replace <name>)',
         }
-      : {
-          template: 'project members <name>' as const,
-          when: 'List members by project name (replace <name>)',
-        };
+      : variant === 'access-summary'
+        ? {
+            template: 'project access-summary <name>' as const,
+            when: 'Show role counts by project name (replace <name>)',
+          }
+        : variant === 'web-analytics'
+          ? {
+              template: 'project web-analytics <name>' as const,
+              when: 'Enable Web Analytics by project name (replace <name>)',
+            }
+          : {
+              template: 'project members <name>' as const,
+              when: 'List members by project name (replace <name>)',
+            };
   return [
     {
       command: buildCommandWithGlobalFlags(client.argv, 'link'),
