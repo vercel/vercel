@@ -452,6 +452,7 @@ export type ExitWithNonInteractiveErrorVariant =
   | 'members'
   | 'access-groups'
   | 'access-summary'
+  | 'speed-insights'
   | 'web-analytics'
   | 'edge-config';
 
@@ -476,15 +477,20 @@ function buildNextStepsForProjectSubcommands(
             template: 'project access-summary <name>' as const,
             when: 'Show role counts by project name (replace <name>)',
           }
-        : variant === 'web-analytics'
+        : variant === 'speed-insights'
           ? {
-              template: 'project web-analytics <name>' as const,
-              when: 'Enable Web Analytics by project name (replace <name>)',
+              template: 'project speed-insights <name>' as const,
+              when: 'Enable Speed Insights by project name (replace <name>)',
             }
-          : {
-              template: 'project members <name>' as const,
-              when: 'List members by project name (replace <name>)',
-            };
+          : variant === 'web-analytics'
+            ? {
+                template: 'project web-analytics <name>' as const,
+                when: 'Enable Web Analytics by project name (replace <name>)',
+              }
+            : {
+                template: 'project members <name>' as const,
+                when: 'List members by project name (replace <name>)',
+              };
   return [
     {
       command: buildCommandWithGlobalFlags(client.argv, 'link'),

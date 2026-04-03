@@ -245,6 +245,33 @@ export const webAnalyticsSubcommand = {
   ],
 } as const;
 
+export const speedInsightsSubcommand = {
+  name: 'speed-insights',
+  aliases: [],
+  description: 'Enable Speed Insights for a project',
+  arguments: [
+    {
+      name: 'name',
+      required: false,
+    },
+  ],
+  options: [formatOption],
+  examples: [
+    {
+      name: 'Enable Speed Insights for the linked project',
+      value: `${packageName} project speed-insights`,
+    },
+    {
+      name: 'Enable Speed Insights for a named project',
+      value: `${packageName} project speed-insights my-project`,
+    },
+    {
+      name: 'Confirm enablement as JSON (non-interactive / agents)',
+      value: `${packageName} project speed-insights --format json`,
+    },
+  ],
+} as const;
+
 export const projectCommand = {
   name: 'project',
   aliases: ['projects'],
@@ -258,6 +285,7 @@ export const projectCommand = {
     membersSubcommand,
     accessGroupsSubcommand,
     webAnalyticsSubcommand,
+    speedInsightsSubcommand,
     removeSubcommand,
     tokenSubcommand,
   ],
