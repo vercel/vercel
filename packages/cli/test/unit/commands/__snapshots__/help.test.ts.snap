@@ -4362,6 +4362,11 @@ exports[`help command > project help output snapshots > project help column widt
                           groups
                           for a 
                           proje…
+  web-analytics   [name]  Enable
+                          Web   
+                          Analy…
+                          for a 
+                          proje…
   speed-insights  [name]  Enable
                           Speed 
                           Insig…
@@ -4445,6 +4450,7 @@ exports[`help command > project help output snapshots > project help column widt
                           (default)                                     
   members         [name]  List project members for a project            
   access-groups   [name]  List access groups for a project              
+  web-analytics   [name]  Enable Web Analytics for a project            
   speed-insights  [name]  Enable Speed Insights for a project           
   remove          name    Delete a project                              
   token           [name]  Get a development OIDC token for a project    
@@ -4484,6 +4490,7 @@ exports[`help command > project help output snapshots > project help column widt
   list                    Show all projects in the selected scope (default)                                     
   members         [name]  List project members for a project                                                    
   access-groups   [name]  List access groups for a project                                                      
+  web-analytics   [name]  Enable Web Analytics for a project                                                    
   speed-insights  [name]  Enable Speed Insights for a project                                                   
   remove          name    Delete a project                                                                      
   token           [name]  Get a development OIDC token for a project                                            

@@ -425,10 +425,15 @@ export function outputAgentError(
   process.exit(exitCode);
 }
 
-/** Suggested follow-ups for `project members` / `project access-groups` / `project access-summary` / `project speed-insights` failures (only callers of exitWithNonInteractiveError). */
+/** Suggested follow-ups for project subcommands that use `exitWithNonInteractiveError`. */
 function buildNextStepsForProjectSubcommands(
   client: Client,
-  variant: 'members' | 'access-groups' | 'access-summary' | 'speed-insights'
+  variant:
+    | 'members'
+    | 'access-groups'
+    | 'access-summary'
+    | 'speed-insights'
+    | 'web-analytics'
 ): NonNullable<AgentErrorPayload['next']> {
   const byName =
     variant === 'access-groups'
@@ -446,10 +451,15 @@ function buildNextStepsForProjectSubcommands(
               template: 'project speed-insights <name>' as const,
               when: 'Enable Speed Insights by project name (replace <name>)',
             }
-          : {
-              template: 'project members <name>' as const,
-              when: 'List members by project name (replace <name>)',
-            };
+          : variant === 'web-analytics'
+            ? {
+                template: 'project web-analytics <name>' as const,
+                when: 'Enable Web Analytics by project name (replace <name>)',
+              }
+            : {
+                template: 'project members <name>' as const,
+                when: 'List members by project name (replace <name>)',
+              };
   return [
     {
       command: buildCommandWithGlobalFlags(client.argv, 'link'),
@@ -473,7 +483,12 @@ function writeAgentErrorPayloadAndExit(
   client: Client,
   payload: AgentErrorPayload,
   exitCode: number,
-  variant: 'members' | 'access-groups' | 'access-summary' | 'speed-insights'
+  variant:
+    | 'members'
+    | 'access-groups'
+    | 'access-summary'
+    | 'speed-insights'
+    | 'web-analytics'
 ): void {
   const next = buildNextStepsForProjectSubcommands(client, variant);
   const out: AgentErrorPayload = {
@@ -522,7 +537,12 @@ export function exitWithNonInteractiveError(
   err: unknown,
   exitCode: number = 1,
   options: {
-    variant: 'members' | 'access-groups' | 'access-summary' | 'speed-insights';
+    variant:
+      | 'members'
+      | 'access-groups'
+      | 'access-summary'
+      | 'speed-insights'
+      | 'web-analytics';
   } = { variant: 'members' }
 ): void {
   if (!shouldEmitNonInteractiveCommandError(client)) {
