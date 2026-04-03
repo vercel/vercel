@@ -68,4 +68,11 @@ export class ProjectTelemetryClient
       value: actual,
     });
   }
+
+  trackCliSubcommandSpeedInsights(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'speed-insights',
+      value: actual,
+    });
+  }
 }
