@@ -109,7 +109,7 @@ Steps 1 and 2 are called **in parallel** (`Promise.all`). Step 4 is a polling lo
 2. `pollForOrder()` polls `GET /v1/registrar/orders/{orderId}` every 500ms (up to 10s).
 3. When `order.status === 'completed'` and the domain's status is `'completed'`, it fetches the domain details via `getDomain()`.
 4. Returns the domain object to `buy.ts`.
-5. `buy.ts` prints: `✔ Domain {name} purchased {time}` + a note about using it as an alias.
+5. `buy.ts` calls `output.success(...)` and `output.note(...)` to print the purchase confirmation and alias guidance.
 
 #### Failure Paths
 
@@ -436,4 +436,234 @@ The changeset for this feature:
 ---
 
 Added `--visa` flag to `vercel domains buy` for Visa credential-based domain purchases.
+```
+
+---
+
+## Part 3: How to Test This
+
+### Prerequisites
+
+From the repo root, install dependencies and build all packages the CLI depends on:
+
+```bash
+pnpm install
+pnpm build --filter vercel...
+```
+
+The `--filter vercel...` syntax builds the CLI package (`vercel`) and all its workspace dependencies (`@vercel/build-utils`, `@vercel/frameworks`, `@vercel-internals/get-package-json`, etc.). Without this build step, Vitest will fail with `Failed to resolve entry for package` errors.
+
+### 3.1 Run Existing `domains buy` Unit Tests (Baseline)
+
+Before making any changes, confirm the existing tests pass:
+
+```bash
+npx vitest run packages/cli/test/unit/commands/domains/buy.test.ts
+```
+
+The existing test file (`test/unit/commands/domains/buy.test.ts`) covers:
+
+- **Subcommand telemetry**: Runs `domains buy` with no domain arg, expects exit code `1` and a `subcommand:buy` telemetry event.
+- **`--help` telemetry**: Runs `domains buy --help`, expects exit code `2` and a `flag:help` telemetry event.
+- **Non-interactive rejection**: Sets `client.nonInteractive = true`, runs `domains buy brookedato.tech --non-interactive`, and asserts the structured JSON error output includes `reason: 'purchase_requires_user'` and the message contains `'Agents must not purchase'`.
+- **Domain argument telemetry**: Mocks `GET /v1/registrar/domains/example.com/price` and `GET /v1/registrar/domains/example.com/availability` via `client.scenario`, runs `domains buy example.com`, waits for the `"Buy now for $100 (1yr)?"` prompt via `toOutput`, sends `'n\n'` to decline, and checks the domain argument is redacted in telemetry.
+
+**Important**: The test file deletes `process.env.CI` in `beforeAll` and restores it in `afterAll` because `buy.ts` line 58 checks `!!process.env.CI` and errors out if it's set (CI mode blocks domain purchase since it can't collect contact info interactively).
+
+### 3.2 How to Write Visa Integration Tests
+
+New tests go in `test/unit/commands/domains/buy-visa.test.ts`. They follow the exact same patterns as the existing `buy.test.ts`.
+
+**Test infrastructure the existing tests use** (available for Visa tests too):
+
+| Component | Import | What it does |
+|-----------|--------|-------------|
+| `client` | `../../../mocks/client` | Mock `Client` instance with an Express mock server, stdin/stderr streams, and telemetry store. Auto-resets between tests. |
+| `useUser()` | `../../../mocks/user` | Registers a `GET /v2/user` mock route. Required whenever the command calls `getScope(client)` (which calls `getUser`). |
+| `client.scenario.get(path, handler)` | (on `client`) | Register a mock GET route on the Express server backing `client.fetch()`. |
+| `client.scenario.post(path, handler)` | (on `client`) | Register a mock POST route. Capture `req.body` to assert on the request payload. |
+| `client.setArgv(...)` | (on `client`) | Set the argv that `buy.ts` will parse. |
+| `client.stdin.write(...)` | (on `client`) | Feed interactive input to prompts (confirm, text, password). |
+| `toOutput(text)` | (on `client.stderr`) | Wait up to 3s for `text` to appear in stderr output. |
+
+**Key pattern for testing the Visa flow end-to-end:**
+
+1. Set `process.env.VERCEL_VISA_TOKEN` to a test value (avoids needing to mock the password prompt).
+2. Mock all four API routes: price, availability, buy (POST), and orders (GET).
+3. Capture the POST body from the buy route to assert it contains `paymentMethod`.
+4. Feed interactive input for the confirm/auto-renew/contact prompts via `client.stdin.write()`.
+5. Clean up the env var in `afterEach`.
+
+**Example test skeleton** (this is what a real test would look like once the implementation ships):
+
+```typescript
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import domains from '../../../../src/commands/domains';
+import { client } from '../../../mocks/client';
+import { useUser } from '../../../mocks/user';
+
+describe('domains buy --visa', () => {
+  let origCI: string | undefined;
+
+  beforeAll(() => {
+    origCI = process.env.CI;
+    delete process.env.CI;
+  });
+
+  afterAll(() => {
+    process.env.CI = origCI;
+  });
+
+  afterEach(() => {
+    delete process.env.VERCEL_VISA_TOKEN;
+  });
+
+  it('should include paymentMethod in the purchase POST body', async () => {
+    useUser();
+
+    process.env.VERCEL_VISA_TOKEN = 'test_vtok_abc123';
+
+    let capturedBody: any;
+
+    client.scenario.get(
+      '/v1/registrar/domains/example.com/price',
+      (_req, res) => {
+        res.json({
+          purchasePrice: 100,
+          renewalPrice: 100,
+          transferPrice: null,
+          years: 1,
+        });
+      }
+    );
+
+    client.scenario.get(
+      '/v1/registrar/domains/example.com/availability',
+      (_req, res) => {
+        res.json({ available: true });
+      }
+    );
+
+    client.scenario.post(
+      '/v1/registrar/domains/example.com/buy',
+      (req, res) => {
+        capturedBody = req.body;
+        res.json({ orderId: 'ord_test123' });
+      }
+    );
+
+    client.scenario.get('/v1/registrar/orders/ord_test123', (_req, res) => {
+      res.json({
+        orderId: 'ord_test123',
+        status: 'completed',
+        domains: [{ domainName: 'example.com', status: 'completed' }],
+      });
+    });
+
+    // Also need GET /v4/domains/example.com for the getDomain call after success
+    client.scenario.get('/v4/domains/example.com', (_req, res) => {
+      res.json({
+        domain: {
+          name: 'example.com',
+          serviceType: 'external',
+          // ... domain fields
+        },
+      });
+    });
+
+    client.setArgv('domains', 'buy', 'example.com', '--visa');
+    const exitCodePromise = domains(client);
+
+    // Respond to interactive prompts
+    await expect(client.stderr).toOutput('Buy now for $100 (1yr)?');
+    client.stdin.write('y\n');
+
+    await expect(client.stderr).toOutput('Auto renew yearly');
+    client.stdin.write('y\n');
+
+    // Contact info prompts (9 fields)
+    await expect(client.stderr).toOutput('First name:');
+    client.stdin.write('Jane\n');
+    await expect(client.stderr).toOutput('Last name:');
+    client.stdin.write('Doe\n');
+    await expect(client.stderr).toOutput('Email:');
+    client.stdin.write('jane@example.com\n');
+    await expect(client.stderr).toOutput('Phone');
+    client.stdin.write('+15551234567\n');
+    await expect(client.stderr).toOutput('Address:');
+    client.stdin.write('123 Main St\n');
+    await expect(client.stderr).toOutput('City:');
+    client.stdin.write('Anytown\n');
+    await expect(client.stderr).toOutput('State');
+    client.stdin.write('CA\n');
+    await expect(client.stderr).toOutput('Postal');
+    client.stdin.write('90210\n');
+    await expect(client.stderr).toOutput('Country');
+    client.stdin.write('US\n');
+    await expect(client.stderr).toOutput('Company');
+    client.stdin.write('\n');
+
+    const exitCode = await exitCodePromise;
+    expect(exitCode).toBe(0);
+
+    // THE CRITICAL ASSERTION: paymentMethod was sent in the POST body
+    expect(capturedBody.paymentMethod).toEqual({
+      type: 'visa',
+      token: 'test_vtok_abc123',
+    });
+    expect(capturedBody.expectedPrice).toBe(100);
+  });
+});
+```
+
+**What this test validates:**
+- The `--visa` flag is parsed correctly.
+- `VERCEL_VISA_TOKEN` env var is read by `getVisaCredential()`.
+- The POST to `/v1/registrar/domains/{name}/buy` includes the `paymentMethod` field in the body alongside the existing fields (`expectedPrice`, `autoRenew`, `years`, `contactInformation`).
+- The rest of the purchase flow (polling, success output) works as before.
+
+### 3.3 Running a Single Test
+
+```bash
+npx vitest run packages/cli/test/unit/commands/domains/buy-visa.test.ts
+```
+
+### 3.4 What NOT to Test This Way
+
+- **Do not call real Vercel API endpoints.** All API calls are mocked via `client.scenario`. The mock server is a real Express instance started by the test harness — `client.fetch()` hits `http://localhost:<port>` instead of `https://api.vercel.com`.
+- **Do not test real payment processing.** The mock POST handler returns a canned `{ orderId }` response. The Visa token value is never sent to any external service.
+- **Do not set `process.env.CI` during tests.** The existing `buy.ts` checks `!!process.env.CI` on line 58 and errors out before reaching the prompts. The existing test suite deletes it in `beforeAll`.
+
+### 3.5 Manual Testing (Build & Run Locally)
+
+To test the full interactive experience with a local build:
+
+```bash
+# From repo root
+pnpm build
+
+# Run the CLI — this hits the REAL Vercel API
+# DO NOT run with --visa against production unless the backend supports it
+node packages/cli/dist/index.js domains buy example-domain.com --visa
+```
+
+The interactive flow will prompt for:
+1. Purchase confirmation (price + years)
+2. Auto-renew confirmation
+3. Contact information (9 fields)
+4. Visa wallet token (masked password input)
+
+### 3.6 Verifying the Existing Baseline
+
+Before starting implementation, verify nothing is broken:
+
+```bash
+# Run all domain-related unit tests
+npx vitest run packages/cli/test/unit/commands/domains/
+
+# Type-check (catches any type errors in modified files)
+pnpm type-check
+
+# Lint
+pnpm lint
 ```
