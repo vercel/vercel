@@ -243,10 +243,16 @@ export class GoWrapper {
   }
 
   mod() {
-    if (this.useVendor) {
+    const envVars = this.env || this.opts.env || {};
+    const envGoBuildFlags = envVars.GO_BUILD_FLAGS;
+
+    const safeVendor = this.useVendor && !envGoBuildFlags;
+
+    if (safeVendor) {
       debug('Skipping `go mod tidy` because vendor mode is enabled');
       return Promise.resolve() as any;
     }
+
     return this.execute('mod', 'tidy');
   }
 
@@ -265,13 +271,13 @@ export class GoWrapper {
     debug(`Building optimized 'go' binary ${src} -> ${dest}`);
     const sources = Array.isArray(src) ? src : [src];
 
-    const envGoBuildFlags = (this.env || this.opts.env).GO_BUILD_FLAGS;
+    const envVars = this.env || this.opts.env || {};
+    const envGoBuildFlags = envVars.GO_BUILD_FLAGS;
+
     const flags = envGoBuildFlags ? stringArgv(envGoBuildFlags) : [...GO_FLAGS];
 
-    // Only apply -mod=vendor when vendor mode is enabled AND the user
-    // has not supplied custom GO_BUILD_FLAGS. Custom flags may modify
-    // go.mod behavior, making vendor/modules.txt stale.
     const safeVendor = this.useVendor && !envGoBuildFlags;
+
     if (safeVendor) {
       flags.push('-mod=vendor');
     }
