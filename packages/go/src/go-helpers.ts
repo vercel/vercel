@@ -268,7 +268,11 @@ export class GoWrapper {
     const envGoBuildFlags = (this.env || this.opts.env).GO_BUILD_FLAGS;
     const flags = envGoBuildFlags ? stringArgv(envGoBuildFlags) : [...GO_FLAGS];
 
-    if (this.useVendor) {
+    // Only apply -mod=vendor when vendor mode is enabled AND the user
+    // has not supplied custom GO_BUILD_FLAGS. Custom flags may modify
+    // go.mod behavior, making vendor/modules.txt stale.
+    const safeVendor = this.useVendor && !envGoBuildFlags;
+    if (safeVendor) {
       flags.push('-mod=vendor');
     }
 
