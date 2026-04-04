@@ -203,6 +203,7 @@ Learn more: https://vercel.com/docs/functions/serverless-functions/runtimes/go
 export class GoWrapper {
   private env: Env;
   private opts: execa.Options;
+  public useVendor = false;
 
   constructor(env: Env, opts: execa.Options = {}) {
     if (!opts.cwd) {
@@ -242,6 +243,10 @@ export class GoWrapper {
   }
 
   mod() {
+    if (this.useVendor) {
+      debug('Skipping `go mod tidy` because vendor mode is enabled');
+      return Promise.resolve() as any;
+    }
     return this.execute('mod', 'tidy');
   }
 
@@ -261,7 +266,11 @@ export class GoWrapper {
     const sources = Array.isArray(src) ? src : [src];
 
     const envGoBuildFlags = (this.env || this.opts.env).GO_BUILD_FLAGS;
-    const flags = envGoBuildFlags ? stringArgv(envGoBuildFlags) : GO_FLAGS;
+    const flags = envGoBuildFlags ? stringArgv(envGoBuildFlags) : [...GO_FLAGS];
+
+    if (this.useVendor) {
+      flags.push('-mod=vendor');
+    }
 
     return this.execute('build', ...flags, '-o', dest, ...sources);
   }

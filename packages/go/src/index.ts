@@ -360,6 +360,18 @@ async function buildHandlerWithGoMod({
     }
   }
 
+  // Detect vendored dependencies by checking for vendor/modules.txt
+  // which is the canonical marker created by `go mod vendor`
+  const vendorModulesPath = join(
+    goModDirname || entrypointDirname,
+    'vendor',
+    'modules.txt'
+  );
+  if (await pathExists(vendorModulesPath)) {
+    console.log('Detected vendor directory, using vendor mode');
+    go.useVendor = true;
+  }
+
   const entrypointArr = entrypoint.split(posix.sep);
   let goPackageName = `${packageName}/${packageName}`;
   const goFuncName = `${packageName}.${handlerFunctionName}`;
