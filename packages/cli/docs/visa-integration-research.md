@@ -163,27 +163,50 @@ Creates `src/commands/visa/` with its own routing. This is heavier and only make
 
 ### 2.2 Passing Visa CLI Credential / Wallet Info to the API
 
-Since the CLI must **never accept secrets via flags** (per `AGENTS.md` — flags leak into `ps` output and shell history), the Visa credential must be provided through one of:
+Since the CLI must **never accept secrets via flags** (per `AGENTS.md` — flags leak into `ps` output and shell history), the Visa credential is collected as follows:
 
-#### Option 1: Environment Variable (Recommended for CI/Automation)
-```bash
-export VERCEL_VISA_TOKEN="vtok_..."
-vercel domains buy example.com --visa
-```
+#### Live Behavior: Interactive Prompt (Primary Path)
 
-The CLI reads `process.env.VERCEL_VISA_TOKEN` when `--visa` is set.
+When `--visa` is set, the CLI **always prompts** the user for their Visa credential interactively using `client.input.password()` (masked input):
 
-#### Option 2: Interactive Prompt (Recommended for TTY)
-When `--visa` is set and no env var is found, prompt the user:
 ```
 ? Visa wallet token: ••••••••••••
 ```
-Using `client.input.password()` (masked input).
 
-#### Option 3: Config File
-Store the Visa credential in `~/.vercel/visa.json` (similar to `auth.json`). The CLI reads it when `--visa` is set.
+This is the canonical path for real usage. The credential is entered each time — it is not persisted to disk. This keeps the flow explicit and secure: the user is making a conscious financial decision and providing their own payment credential in real time.
+
+If stdin is not a TTY (i.e., non-interactive / piped), the command errors out with guidance, consistent with how the rest of `domains buy` already blocks non-interactive execution.
+
+#### Testing / CI: Environment Variable Override
+
+For **automated tests and CI only**, the credential can be provided via the `VERCEL_VISA_TOKEN` environment variable. When this env var is set, the interactive prompt is skipped and the value is used directly. This lets test suites exercise the Visa payment path without mocking interactive input:
+
+```bash
+# In a test .env or CI config
+VERCEL_VISA_TOKEN="test_vtok_hardcoded_for_ci"
+```
+
+The resolution order inside `getVisaCredential()`:
+
+```typescript
+async function getVisaCredential(client: Client): Promise<string> {
+  // 1. Testing/CI override
+  const envToken = process.env.VERCEL_VISA_TOKEN;
+  if (envToken) {
+    output.debug('Using Visa token from VERCEL_VISA_TOKEN environment variable');
+    return envToken;
+  }
+
+  // 2. Live: interactive prompt (primary path)
+  return client.input.password({
+    message: 'Visa wallet token:',
+    validate: (val: string) => val.length > 0 || 'Visa token is required',
+  });
+}
+```
 
 #### How it reaches the API
+
 The Visa credential is passed in the **request body** of the purchase POST, not as a header:
 
 ```json
@@ -197,11 +220,6 @@ The Visa credential is passed in the **request body** of the purchase POST, not 
     "token": "vtok_..."
   }
 }
-```
-
-Alternatively, if the backend prefers, a custom header could carry the token:
-```
-X-Visa-Payment-Token: vtok_...
 ```
 
 The backend must be extended to accept this new `paymentMethod` field and process payment through Visa's payment rails instead of the account's default card.
@@ -268,8 +286,8 @@ The domain name remains the only positional argument. Visa selection is a flag.
 
 | File | Purpose |
 |------|---------|
-| `src/util/domains/get-visa-credential.ts` | Reads Visa token from env var, prompts if interactive, validates format |
-| `test/unit/commands/domains/buy-visa.test.ts` | Tests for the `--visa` flow |
+| `src/util/domains/get-visa-credential.ts` | Prompts user for Visa token interactively (live), falls back to `VERCEL_VISA_TOKEN` env var (testing/CI) |
+| `test/unit/commands/domains/buy-visa.test.ts` | Tests for the `--visa` flow (uses `VERCEL_VISA_TOKEN` env var to provide credential in test harness) |
 
 ---
 
@@ -279,31 +297,27 @@ The domain name remains the only positional argument. Visa selection is a flag.
 1. Parse flags → detect --visa
 2. Track telemetry: trackCliFlagVisa(true)
 3. Validate domain name (same as today)
-4. Check price + availability in parallel (same as today)
-5. Prompt: "Buy now for $12.99 (1yr)?" (same as today)
-6. Prompt: "Auto renew?" (same as today)
-7. Collect contact information (same as today)
-8. NEW: Collect Visa credential:
-   a. If VERCEL_VISA_TOKEN env var is set → use it
-   b. Else if interactive → prompt with password input
-   c. Else → error: "Visa token required. Set VERCEL_VISA_TOKEN or run interactively."
-9. Call purchaseDomain(client, name, price, years, autoRenew, contact, { type: 'visa', token })
-10. POST /v1/registrar/domains/{name}/buy with paymentMethod in body
-11. Poll for order (same as today)
-12. Handle success/failure (same as today, plus Visa-specific errors)
+4. Block non-interactive execution (same as today — purchase requires user)
+5. Check price + availability in parallel (same as today)
+6. Prompt: "Buy now for $12.99 (1yr)?" (same as today)
+7. Prompt: "Auto renew?" (same as today)
+8. Collect contact information (same as today)
+9. NEW: Collect Visa credential via getVisaCredential(client):
+   a. If VERCEL_VISA_TOKEN env var is set → use it (testing/CI only)
+   b. Otherwise → prompt interactively with client.input.password() (live behavior)
+10. Call purchaseDomain(client, name, price, years, autoRenew, contact, { type: 'visa', token })
+11. POST /v1/registrar/domains/{name}/buy with paymentMethod in body
+12. Poll for order (same as today)
+13. Handle success/failure (same as today, plus Visa-specific errors)
 ```
 
 ---
 
 ### 2.6 Non-Interactive / Agent Mode Considerations
 
-The current `buy` command **blocks non-interactive execution entirely**. With Visa, there are two paths:
+The current `buy` command **blocks non-interactive execution entirely**, and this does not change with `--visa`. Domain purchase is a financial commitment that requires explicit human confirmation. The `--visa` flag adds a credential prompt to the interactive flow but does not create a non-interactive path.
 
-1. **Keep the block**: Even with `--visa`, require interactive execution because domain purchase involves financial commitment. This is the safer approach.
-
-2. **Allow non-interactive with all flags**: If all required data can be provided via flags/env vars (domain, `--yes` for confirmation, `VERCEL_VISA_TOKEN`, contact info via flags), allow non-interactive execution. This requires adding contact info flags to `buySubcommand` (currently collected interactively only).
-
-**Recommendation**: Keep the interactive requirement for now. Domain purchases are high-stakes and benefit from explicit human confirmation.
+For **testing/CI**, the `VERCEL_VISA_TOKEN` env var bypasses the interactive prompt for the credential only. The rest of the buy flow (price confirmation, auto-renew, contact info) still requires interactive input — these are handled by the test harness via `client.stdin.write()` in unit tests, just like the existing `buy.test.ts` does today.
 
 ---
 
@@ -371,8 +385,8 @@ User: vercel domains buy example.com --visa
 │  6. Prompt: auto-renew              │
 │  7. collectContactInformation()     │
 │  8. getVisaCredential() [NEW]       │
-│     ├─ env: VERCEL_VISA_TOKEN       │
-│     └─ prompt: password input       │
+│     ├─ prompt: password input (live)│
+│     └─ env: VERCEL_VISA_TOKEN (CI)  │
 │  9. purchaseDomain(... paymentMethod)│
 └────────────┬────────────────────────┘
              │
@@ -404,10 +418,11 @@ User: vercel domains buy example.com --visa
 
 ### 2.10 Security Considerations
 
-1. **Never accept Visa tokens via CLI flags** — they would leak into shell history and `ps` output. Use env vars or interactive prompts only.
-2. **Mask Visa tokens in debug output** — if `output.debug()` logs request bodies, redact the token field.
-3. **Token format validation** — validate the Visa token format client-side before sending to the API to fail fast on typos.
-4. **No token persistence** — unlike the Vercel auth token, Visa tokens should NOT be stored in config files by default (per-transaction use).
+1. **Never accept Visa tokens via CLI flags** — they would leak into shell history and `ps` output. The live path uses `client.input.password()` (masked interactive prompt) exclusively.
+2. **Env var is for testing only** — `VERCEL_VISA_TOKEN` exists so test suites and CI can exercise the payment path. It should be documented as a testing escape hatch, not a recommended production workflow.
+3. **Mask Visa tokens in debug output** — if `output.debug()` logs request bodies, redact the token field.
+4. **Token format validation** — validate the Visa token format client-side before sending to the API to fail fast on typos.
+5. **No token persistence** — unlike the Vercel auth token, Visa tokens should NOT be stored in config files. They are collected fresh each time the user runs the command.
 
 ---
 
