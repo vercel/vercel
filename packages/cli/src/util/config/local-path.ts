@@ -4,6 +4,7 @@ import { InvalidLocalConfig } from '../errors-ts';
 import { ConflictingConfigFiles } from '../errors-ts';
 import getArgs from '../../util/get-args';
 import { VERCEL_DIR } from '../projects/link';
+import { isVercelTomlEnabled } from '../is-vercel-toml-enabled';
 
 export default function getLocalPathConfig(prefix: string) {
   const argv = getArgs(process.argv.slice(2), {}, { permissive: true });
@@ -24,7 +25,7 @@ export default function getLocalPathConfig(prefix: string) {
   const nowConfigPath = path.join(prefix, 'now.json');
 
   const vercelConfigExists = existsSync(vercelConfigPath);
-  const vercelTomlExists = existsSync(vercelTomlPath);
+  const vercelTomlExists = isVercelTomlEnabled() && existsSync(vercelTomlPath);
   const nowConfigExists = existsSync(nowConfigPath);
 
   const foundConfigs: string[] = [];

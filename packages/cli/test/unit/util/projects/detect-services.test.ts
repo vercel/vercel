@@ -12,10 +12,12 @@ import {
 
 describe('tryDetectServices()', () => {
   const originalEnv = process.env.VERCEL_USE_EXPERIMENTAL_SERVICES;
+  const originalTomlEnv = process.env.VERCEL_TOML_CONFIG_ENABLED;
   let tempDir: string;
 
   beforeEach(async () => {
     process.env.VERCEL_USE_EXPERIMENTAL_SERVICES = '1';
+    process.env.VERCEL_TOML_CONFIG_ENABLED = '1';
     tempDir = join(tmpdir(), `detect-services-test-${Date.now()}`);
     await mkdir(tempDir, { recursive: true });
   });
@@ -25,6 +27,11 @@ describe('tryDetectServices()', () => {
       delete process.env.VERCEL_USE_EXPERIMENTAL_SERVICES;
     } else {
       process.env.VERCEL_USE_EXPERIMENTAL_SERVICES = originalEnv;
+    }
+    if (originalTomlEnv === undefined) {
+      delete process.env.VERCEL_TOML_CONFIG_ENABLED;
+    } else {
+      process.env.VERCEL_TOML_CONFIG_ENABLED = originalTomlEnv;
     }
     await rm(tempDir, { recursive: true, force: true });
   });

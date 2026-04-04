@@ -11,6 +11,7 @@ import { compileVercelConfig } from '../compile-vercel-config';
 import { CantParseJSONFile } from '../errors-ts';
 import readJSONFile from '../read-json-file';
 import { validateConfig } from '../validate-config';
+import { isVercelTomlEnabled } from '../is-vercel-toml-enabled';
 
 export type ServicesConfigWriteBlocker = 'builds' | 'functions';
 
@@ -133,6 +134,7 @@ async function prepareServicesConfigWrite(
   }
 
   if (
+    isVercelTomlEnabled() &&
     compileResult.configPath &&
     basename(compileResult.configPath) === 'vercel.toml'
   ) {

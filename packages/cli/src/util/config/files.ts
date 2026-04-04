@@ -8,6 +8,7 @@ import getLocalPathConfig from './local-path';
 import { NowError } from '../now-error';
 import highlight from '../output/highlight';
 import type { VercelConfig } from '../dev/types';
+import { isVercelTomlEnabled } from '../is-vercel-toml-enabled';
 import type { AuthConfig, GlobalConfig } from '@vercel-internals/types';
 import { isErrnoException, isError } from '@vercel/error-utils';
 import { VERCEL_DIR as PROJECT_VERCEL_DIR } from '../projects/link';
@@ -161,7 +162,7 @@ export function readLocalConfig(
         break;
       } catch {}
     }
-    if (!sourceFile) {
+    if (!sourceFile && isVercelTomlEnabled()) {
       const tomlPath = join(workPath, 'vercel.toml');
       try {
         accessSync(tomlPath, constants.F_OK);

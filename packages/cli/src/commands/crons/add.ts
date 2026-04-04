@@ -10,6 +10,7 @@ import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { VERCEL_CONFIG_EXTENSIONS } from '../../util/compile-vercel-config';
+import { isVercelTomlEnabled } from '../../util/is-vercel-toml-enabled';
 
 interface CronEntry {
   path: string;
@@ -179,7 +180,7 @@ export default async function add(client: Client, argv: string[]) {
   // Check for non-JSON config files (vercel.ts, vercel.mjs, vercel.toml, etc.)
   const nonJsonConfigs = [
     ...VERCEL_CONFIG_EXTENSIONS.map(ext => `vercel.${ext}`),
-    'vercel.toml',
+    ...(isVercelTomlEnabled() ? ['vercel.toml'] : []),
   ];
   for (const configName of nonJsonConfigs) {
     const altPath = resolve(client.cwd, configName);

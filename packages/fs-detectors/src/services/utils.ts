@@ -231,7 +231,9 @@ export async function readVercelConfig(
     }
   }
 
-  const hasVercelToml = await fs.hasPath('vercel.toml');
+  const hasVercelToml =
+    process.env.VERCEL_TOML_CONFIG_ENABLED === '1' &&
+    (await fs.hasPath('vercel.toml'));
   if (hasVercelToml) {
     try {
       const { parse: tomlParse } = await import('smol-toml');
