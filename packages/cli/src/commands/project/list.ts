@@ -63,7 +63,9 @@ export default async function list(
 
   const start = Date.now();
 
-  const { contextName } = await getScope(client);
+  const { contextName } = await getScope(client, {
+    resolveLocalScope: true,
+  });
   output.spinner(`Fetching projects in ${chalk.bold(contextName)}`);
 
   // Process flags and build URL
