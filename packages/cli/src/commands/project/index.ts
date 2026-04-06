@@ -124,7 +124,13 @@ export default async function main(client: Client) {
         telemetry.trackCliFlagHelp('project', subcommandOriginal);
         return printHelp(checksSubcommand);
       }
-      telemetry.trackCliSubcommandChecks(subcommandOriginal);
+      telemetry.trackCliSubcommandChecks(
+        args[0] === 'add'
+          ? 'checks add'
+          : args[0] === 'remove' || args[0] === 'rm'
+            ? 'checks remove'
+            : subcommandOriginal
+      );
       return checks(client, args);
     case 'members':
       if (needHelp) {
