@@ -1125,8 +1125,7 @@ exports[`help command > deploy help output snapshots > deploy help column width 
 `;
 
 exports[`help command > dev help output snapshots > dev --help > outputs help 1`] = `
-"
-  ▲ vercel dev [dir] [options]
+"▲ vercel dev [dir] [options]
 
   Starts the \`vercel dev\` server.                                               
 
@@ -5769,20 +5768,32 @@ exports[`help command > teams help output snapshots > teams help column width 40
 
   Commands:
 
-  add              Create a new  
-                   team          
-  invite   email   Invite a new  
-                   member to a   
-                   team          
-  list             Show all teams
-                   that you're a 
-                   member of     
-  switch   [name]  Switch to a   
-                   different team
-  members          List members  
-                   for the       
-                   currently     
-                   scoped team   
+  add                Create a   
+                     new team   
+  invite   email     Invite a   
+                     new member 
+                     to a team  
+  list               Show all   
+                     teams that 
+                     you're a   
+                     member of  
+  request  [userId]  Show       
+                     join-reque…
+                     status for 
+                     the current
+                     team       
+                     (defaults  
+                     to the     
+                     authentica…
+                     user)      
+  switch   [name]    Switch to a
+                     different  
+                     team       
+  members            List       
+                     members for
+                     the        
+                     currently  
+                     scoped team
 
 
   Global Options:
@@ -5844,11 +5855,13 @@ exports[`help command > teams help output snapshots > teams help column width 80
 
   Commands:
 
-  add              Create a new team                                     
-  invite   email   Invite a new member to a team                         
-  list             Show all teams that you're a member of                
-  switch   [name]  Switch to a different team                            
-  members          List members for the currently scoped team            
+  add                Create a new team                                  
+  invite   email     Invite a new member to a team                      
+  list               Show all teams that you're a member of             
+  request  [userId]  Show join-request status for the current team      
+                     (defaults to the authenticated user)               
+  switch   [name]    Switch to a different team                         
+  members            List members for the currently scoped team         
 
 
   Global Options:
@@ -5878,11 +5891,12 @@ exports[`help command > teams help output snapshots > teams help column width 12
 
   Commands:
 
-  add              Create a new team                                                                             
-  invite   email   Invite a new member to a team                                                                 
-  list             Show all teams that you're a member of                                                        
-  switch   [name]  Switch to a different team                                                                    
-  members          List members for the currently scoped team                                                    
+  add                Create a new team                                                                          
+  invite   email     Invite a new member to a team                                                              
+  list               Show all teams that you're a member of                                                     
+  request  [userId]  Show join-request status for the current team (defaults to the authenticated user)         
+  switch   [name]    Switch to a different team                                                                 
+  members            List members for the currently scoped team                                                 
 
 
   Global Options:
