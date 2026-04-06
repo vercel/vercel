@@ -340,19 +340,17 @@ test('ensure we render a prompt when deploying home directory', async () => {
 });
 
 test('ensure the `scope` property works with email', async () => {
+  const team = await teamPromise;
   const directory = await setupE2EFixture('config-scope-property-email');
 
-  const { stderr, stdout, exitCode } = await execCli(binaryPath, [
-    directory,
-    '--public',
-    '--name',
-    session,
-    '--force',
-    '--yes',
-  ]);
+  const { stderr, stdout, exitCode } = await execCli(
+    binaryPath,
+    [directory, '--public', '--name', session, '--force', '--yes'],
+    { scope: false }
+  );
 
-  // Ensure we're deploying under the right scope
-  expect(stderr).toContain(session);
+  // Ensure we're deploying under the right scope (from config, not --scope flag)
+  expect(stderr).toContain(team.slug);
 
   // Ensure the exit code is right
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
@@ -372,16 +370,40 @@ test('ensure the `scope` property works with username', async () => {
   const team = await teamPromise;
   const directory = await setupE2EFixture('config-scope-property-username');
 
-  const { stderr, stdout, exitCode } = await execCli(binaryPath, [
-    directory,
-    '--public',
-    '--name',
-    session,
-    '--force',
-    '--yes',
-  ]);
+  const { stderr, stdout, exitCode } = await execCli(
+    binaryPath,
+    [directory, '--public', '--name', session, '--force', '--yes'],
+    { scope: false }
+  );
 
-  // Ensure we're deploying under the right scope
+  // Ensure we're deploying under the right scope (from config, not --scope flag)
+  expect(stderr).toContain(team.slug);
+
+  // Ensure the exit code is right
+  expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
+
+  // Test if the output is really a URL
+  const { href, host } = new URL(stdout);
+  expect(host.split('-')[0]).toBe(session);
+
+  // Send a test request to the deployment
+  const response = await nodeFetch(href);
+  const contentType = response.headers.get('content-type');
+
+  expect(contentType).toBe('text/html; charset=utf-8');
+});
+
+test('ensure the `scope` property works with vercel.ts', async () => {
+  const team = await teamPromise;
+  const directory = await setupE2EFixture('config-scope-property-vercel-ts');
+
+  const { stderr, stdout, exitCode } = await execCli(
+    binaryPath,
+    [directory, '--public', '--name', session, '--force', '--yes'],
+    { scope: false }
+  );
+
+  // Ensure we're deploying under the right scope (from vercel.ts, not --scope flag)
   expect(stderr).toContain(team.slug);
 
   // Ensure the exit code is right
