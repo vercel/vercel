@@ -52,6 +52,8 @@ export default async function sandbox(client: Client) {
       process.env.VERCEL_AUTH_TOKEN = token;
     } else if (!process.env.VERCEL_AUTH_TOKEN && process.env.VERCEL_TOKEN) {
       process.env.VERCEL_AUTH_TOKEN = process.env.VERCEL_TOKEN;
+    } else if (!process.env.VERCEL_AUTH_TOKEN && client.authConfig.token) {
+      process.env.VERCEL_AUTH_TOKEN = client.authConfig.token;
     }
 
     process.chdir(client.cwd);
