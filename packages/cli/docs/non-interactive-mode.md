@@ -75,6 +75,7 @@ Implementations use **`outputActionRequired`** / **`outputAgentError`** (`packag
 | `packages/cli/src/util/agent-output.ts` | `outputActionRequired`, `outputAgentError`, `buildCommandWithYes`, `enrichActionRequiredWithInvokingCommand` |
 | `packages/cli/src/util/arg-common.ts` | `globalCommandOptions`; add **`getGlobalFlagsOnlyFromArgs`** / **`getSameSubcommandSuggestionFlags`** when missing so `next[]` can preserve context safely |
 | `packages/cli/src/util/pkg-name.ts` | `getCommandNamePlain`, `packageName` |
+| `edge-config` | Team-scoped store; `exitWithNonInteractiveError` with variant **`edge-config`** maps API **404** to **`not_found`** (not `project_not_found`) and suggests `edge-config list` / `teams switch` / `whoami`. |
 
 ## Backwards compatibility
 

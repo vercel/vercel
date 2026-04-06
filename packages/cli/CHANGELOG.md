@@ -1,5 +1,22 @@
 # vercel
 
+## 50.40.0
+
+### Minor Changes
+
+- Add `vercel project speed-insights` to enable Speed Insights for a project (parity with dashboard), including `--format json` and non-interactive error payloads. ([#15832](https://github.com/vercel/vercel/pull/15832))
+
+- Add `vercel project web-analytics` to enable Web Analytics for a project (parity with dashboard), including `--format json` and non-interactive error payloads. ([#15831](https://github.com/vercel/vercel/pull/15831))
+
+### Patch Changes
+
+- Improve CLI scope resolution groundwork and fix `vercel switch` current-team detection. ([#15817](https://github.com/vercel/vercel/pull/15817))
+
+- Cache the authenticated `userId` in the CLI auth config to reduce unnecessary `getUser()` requests. ([#15824](https://github.com/vercel/vercel/pull/15824))
+
+- Updated dependencies []:
+  - @vercel/static-build@2.9.8
+
 ## 50.39.0
 
 ### Minor Changes
