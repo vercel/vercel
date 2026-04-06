@@ -831,6 +831,10 @@ const main = async () => {
           telemetry.trackCliCommandDns(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).dns;
           break;
+        case 'edge-config':
+          telemetry.trackCliCommandEdgeConfig(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).edgeConfig;
+          break;
         case 'domains':
           telemetry.trackCliCommandDomains(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).domains;

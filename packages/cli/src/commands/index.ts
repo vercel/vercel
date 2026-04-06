@@ -15,6 +15,7 @@ import { deployCommand } from './deploy/command';
 import { devCommand } from './dev/command';
 import { dnsCommand } from './dns/command';
 import { domainsCommand } from './domains/command';
+import { edgeConfigCommand } from './edge-config/command';
 import { envCommand } from './env/command';
 import { flagsCommand } from './flags/command';
 import { gitCommand } from './git/command';
@@ -75,6 +76,7 @@ const commandsStructs = [
   devCommand,
   dnsCommand,
   domainsCommand,
+  edgeConfigCommand,
   envCommand,
   flagsCommand,
   gitCommand,
