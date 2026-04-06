@@ -4,14 +4,29 @@ import { formatOption, yesOption } from '../../util/arg-common';
 export const listSubcommand = {
   name: 'list',
   aliases: ['ls'],
-  description: 'List Edge Config stores for the current team',
+  description:
+    'List Edge Config stores for the current team, or stores linked via the linked project’s env vars (`--linked`)',
   default: true,
   arguments: [],
-  options: [formatOption],
+  options: [
+    formatOption,
+    {
+      name: 'linked',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description:
+        'Edge Config stores connected to this project (GET /v1/storage/stores, edge-config only)',
+    },
+  ],
   examples: [
     {
       name: 'List Edge Configs as JSON',
       value: `${packageName} edge-config list --format json`,
+    },
+    {
+      name: 'Edge Configs referenced by linked project env vars',
+      value: `${packageName} edge-config list --linked`,
     },
   ],
 } as const;
@@ -92,6 +107,41 @@ export const updateSubcommand = {
     },
   ],
   examples: [],
+} as const;
+
+export const setSubcommand = {
+  name: 'set',
+  aliases: [],
+  description:
+    'Upsert a single key (`PUT /v1/edge-config/:id/item/:key` with body `{ value }`)',
+  arguments: [
+    {
+      name: 'id-or-slug',
+      required: true,
+    },
+    {
+      name: 'key',
+      required: true,
+    },
+  ],
+  options: [
+    formatOption,
+    {
+      name: 'value',
+      shorthand: null,
+      type: String,
+      argument: 'JSON',
+      deprecated: false,
+      description:
+        'JSON value (string, number, object, array, boolean, or null). Plain text is stored as a string.',
+    },
+  ],
+  examples: [
+    {
+      name: 'Set a boolean flag',
+      value: `${packageName} edge-config set my-store foo --value true`,
+    },
+  ],
 } as const;
 
 export const removeSubcommand = {
@@ -177,6 +227,7 @@ export const edgeConfigCommand = {
     addSubcommand,
     getSubcommand,
     updateSubcommand,
+    setSubcommand,
     removeSubcommand,
     itemsSubcommand,
     tokensSubcommand,

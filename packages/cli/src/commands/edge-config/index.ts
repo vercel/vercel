@@ -6,6 +6,7 @@ import listCmd from './list';
 import addCmd from './add';
 import getCmd from './get';
 import updateCmd from './update';
+import setCmd from './set';
 import removeCmd from './remove';
 import itemsCmd from './items';
 import tokensCmd from './tokens';
@@ -15,6 +16,7 @@ import {
   addSubcommand,
   getSubcommand as getSubcommandDef,
   updateSubcommand,
+  setSubcommand,
   removeSubcommand,
   itemsSubcommand,
   tokensSubcommand,
@@ -29,6 +31,7 @@ const COMMAND_CONFIG = {
   add: ['add', 'create'],
   get: ['get', 'inspect'],
   update: ['update'],
+  set: ['set'],
   remove: ['remove', 'rm', 'delete'],
   items: ['items'],
   tokens: ['tokens'],
@@ -97,6 +100,13 @@ export default async function main(client: Client): Promise<number> {
       }
       telemetry.trackCliSubcommandUpdate(subcommandOriginal);
       return updateCmd(client, args);
+    case 'set':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('edge-config', subcommandOriginal);
+        return printHelp(setSubcommand);
+      }
+      telemetry.trackCliSubcommandSet(subcommandOriginal);
+      return setCmd(client, args);
     case 'remove':
       if (needHelp) {
         telemetry.trackCliFlagHelp('edge-config', subcommandOriginal);

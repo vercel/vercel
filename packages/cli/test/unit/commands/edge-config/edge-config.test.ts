@@ -1,7 +1,10 @@
 import { describe, expect, it, beforeEach, vi, afterEach } from 'vitest';
 import { client } from '../../../mocks/client';
 import { useUser } from '../../../mocks/user';
+import { useProject, defaultProject } from '../../../mocks/project';
+import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
 import edgeConfig from '../../../../src/commands/edge-config';
+import { parseItemValueForSet } from '../../../../src/commands/edge-config/set';
 import { teamCache } from '../../../../src/util/teams/get-team-by-id';
 
 describe('edge-config', () => {
@@ -81,6 +84,58 @@ describe('edge-config', () => {
     ]);
   });
 
+  it('lists linked Edge Config refs via GET /v1/storage/stores', async () => {
+    useProject(
+      {
+        ...defaultProject,
+        id: 'pr_edge_cfg_linked',
+        name: 'edge-linked',
+      },
+      []
+    );
+    client.cwd = setupUnitFixture('commands/edge-config/linked');
+
+    client.scenario.get('/v1/storage/stores', (req, res) => {
+      expect(req.query.teamId).toBe('team_ec_test');
+      res.json({
+        stores: [
+          {
+            type: 'edge-config',
+            id: 'ecfg_linked1',
+            slug: 'store-a',
+            name: 'store-a',
+            projectsMetadata: [
+              {
+                projectId: 'pr_edge_cfg_linked',
+                environmentVariables: ['EDGE_CONFIG'],
+                environments: ['production'],
+              },
+            ],
+          },
+        ],
+      });
+    });
+    client.scenario.get(
+      '/projects/pr_edge_cfg_linked/custom-environments',
+      (_req, res) => {
+        res.json({ environments: [] });
+      }
+    );
+
+    client.setArgv('edge-config', 'list', '--linked');
+    const exitCode = await edgeConfig(client);
+    expect(exitCode).toBe(0);
+    const err = client.stderr.getFullOutput();
+    expect(err).toContain('ecfg_linked1');
+    expect(err).toContain('store-a');
+    expect(err).toContain('EDGE_CONFIG');
+    expect(client.telemetryEventStore.readonlyEvents).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ key: 'flag:linked', value: 'TRUE' }),
+      ])
+    );
+  });
+
   it('creates a token with --add', async () => {
     client.scenario.get('/v1/edge-config', (_req, res) => {
       res.json([{ id: 'ecfg_tok', slug: 's' }]);
@@ -110,6 +165,46 @@ describe('edge-config', () => {
     ]);
   });
 
+  it('sets a single item via PUT /v1/edge-config/:id/item/:key', async () => {
+    client.scenario.get('/v1/edge-config', (_req, res) => {
+      res.json([{ id: 'ecfg_set1', slug: 'store-set' }]);
+    });
+    client.scenario.put('/v1/edge-config/ecfg_set1/item/flag_a', (req, res) => {
+      expect(req.body).toEqual({ value: true });
+      res.json({ status: 'ok' });
+    });
+
+    client.setArgv(
+      'edge-config',
+      'set',
+      'store-set',
+      'flag_a',
+      '--value',
+      'true'
+    );
+    const exitCode = await edgeConfig(client);
+    expect(exitCode).toBe(0);
+    await expect(client.stderr).toOutput('item set');
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      {
+        key: 'subcommand:set',
+        value: 'set',
+      },
+      {
+        key: 'argument:id-or-slug',
+        value: 'store-set',
+      },
+      {
+        key: 'argument:key',
+        value: 'flag_a',
+      },
+      {
+        key: 'option:value',
+        value: '[REDACTED]',
+      },
+    ]);
+  });
+
   it('validates --patch before slug rename when both --slug and --patch are provided', async () => {
     let putCalled = false;
     client.scenario.put('/v1/edge-config/ecfg_update_order', (_req, res) => {
@@ -130,6 +225,30 @@ describe('edge-config', () => {
     expect(exitCode).toBe(1);
     expect(putCalled).toBe(false);
     await expect(client.stderr).toOutput('`--patch` must be');
+  });
+
+  describe('parseItemValueForSet', () => {
+    it('parses JSON primitives and structured values', () => {
+      expect(parseItemValueForSet('true')).toBe(true);
+      expect(parseItemValueForSet('false')).toBe(false);
+      expect(parseItemValueForSet('null')).toBe(null);
+      expect(parseItemValueForSet('42')).toBe(42);
+      expect(parseItemValueForSet('["a"]')).toEqual(['a']);
+      expect(parseItemValueForSet('{"x":1}')).toEqual({ x: 1 });
+    });
+
+    it('returns raw string when JSON.parse fails', () => {
+      expect(parseItemValueForSet('hello')).toBe('hello');
+      expect(parseItemValueForSet('not json {')).toBe('not json {');
+    });
+
+    it('trims before JSON parse', () => {
+      expect(parseItemValueForSet('  true  ')).toBe(true);
+    });
+
+    it('returns empty string for whitespace-only input', () => {
+      expect(parseItemValueForSet('   ')).toBe('');
+    });
   });
 
   describe('--non-interactive', () => {

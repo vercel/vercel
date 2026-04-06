@@ -22,6 +22,10 @@ export class EdgeConfigTelemetryClient
     this.trackCliSubcommand({ subcommand: 'update', value: actual });
   }
 
+  trackCliSubcommandSet(actual: string) {
+    this.trackCliSubcommand({ subcommand: 'set', value: actual });
+  }
+
   trackCliSubcommandRemove(actual: string) {
     this.trackCliSubcommand({ subcommand: 'remove', value: actual });
   }
