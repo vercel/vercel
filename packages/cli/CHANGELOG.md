@@ -1,5 +1,56 @@
 # vercel
 
+## 50.40.0
+
+### Minor Changes
+
+- Add `vercel project speed-insights` to enable Speed Insights for a project (parity with dashboard), including `--format json` and non-interactive error payloads. ([#15832](https://github.com/vercel/vercel/pull/15832))
+
+- Add `vercel project web-analytics` to enable Web Analytics for a project (parity with dashboard), including `--format json` and non-interactive error payloads. ([#15831](https://github.com/vercel/vercel/pull/15831))
+
+### Patch Changes
+
+- Improve CLI scope resolution groundwork and fix `vercel switch` current-team detection. ([#15817](https://github.com/vercel/vercel/pull/15817))
+
+- Cache the authenticated `userId` in the CLI auth config to reduce unnecessary `getUser()` requests. ([#15824](https://github.com/vercel/vercel/pull/15824))
+
+- Updated dependencies []:
+  - @vercel/static-build@2.9.8
+
+## 50.39.0
+
+### Minor Changes
+
+- Add `vercel tokens` subcommands (`ls`, `add`, `rm`) for auth token API parity with the dashboard. ([#15812](https://github.com/vercel/vercel/pull/15812))
+
+- Add `vercel project access-summary` subcommand to list member counts by role for a project. ([#15813](https://github.com/vercel/vercel/pull/15813))
+
+- Add `vercel project members` and `vercel project access-groups` commands, and fix `vercel teams members` to fetch all pages from the paginated team members API. ([#15786](https://github.com/vercel/vercel/pull/15786))
+
+### Patch Changes
+
+- Add `--id` flag to `vercel build` and `vercel env pull` to fetch deployment-scoped environment variables ([#15805](https://github.com/vercel/vercel/pull/15805))
+
+- Updated dependencies []:
+  - @vercel/static-build@2.9.8
+
+## 50.38.3
+
+### Patch Changes
+
+- Improve `vercel link` by searching matching project names across teams by default, with clearer linking choices when multiple matches are found. ([#15400](https://github.com/vercel/vercel/pull/15400))
+
+- Updated dependencies [[`a50d9615ea546050b9f37dc7e5b4a81228987eef`](https://github.com/vercel/vercel/commit/a50d9615ea546050b9f37dc7e5b4a81228987eef), [`aa3ad226ef7b4ab98ef97e15f81c91f4f7c527e9`](https://github.com/vercel/vercel/commit/aa3ad226ef7b4ab98ef97e15f81c91f4f7c527e9)]:
+  - @vercel/next@4.16.5
+  - @vercel/node@5.7.0
+  - @vercel/elysia@0.1.58
+  - @vercel/express@0.1.68
+  - @vercel/fastify@0.1.61
+  - @vercel/h3@0.1.67
+  - @vercel/hono@0.2.61
+  - @vercel/koa@0.1.41
+  - @vercel/nestjs@0.2.62
+
 ## 50.38.2
 
 ### Patch Changes

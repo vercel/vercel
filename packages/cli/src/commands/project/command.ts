@@ -115,6 +115,30 @@ export const tokenSubcommand = {
   ],
 } as const;
 
+export const accessSummarySubcommand = {
+  name: 'access-summary',
+  aliases: ['summary'],
+  description:
+    'Show member counts by team role for project access (requires access groups entitlement)',
+  arguments: [
+    {
+      name: 'name',
+      required: false,
+    },
+  ],
+  options: [formatOption],
+  examples: [
+    {
+      name: 'Summary for the linked project',
+      value: `${packageName} project access-summary`,
+    },
+    {
+      name: 'Summary as JSON',
+      value: `${packageName} project access-summary my-app --format json`,
+    },
+  ],
+} as const;
+
 export const membersSubcommand = {
   name: 'members',
   aliases: ['member'],
@@ -154,6 +178,100 @@ export const membersSubcommand = {
   ],
 } as const;
 
+export const accessGroupsSubcommand = {
+  name: 'access-groups',
+  aliases: ['accessgroups'],
+  description: 'List access groups for a project',
+  arguments: [
+    {
+      name: 'name',
+      required: false,
+    },
+  ],
+  options: [
+    formatOption,
+    nextOption,
+    {
+      name: 'search',
+      shorthand: null,
+      type: String,
+      description: 'Search access groups by name',
+      deprecated: false,
+    },
+    {
+      name: 'limit',
+      shorthand: null,
+      type: Number,
+      description: 'Limit number of access groups returned (1-100)',
+      deprecated: false,
+    },
+  ],
+  examples: [
+    {
+      name: 'List access groups for the linked project',
+      value: `${packageName} project access-groups`,
+    },
+    {
+      name: 'List access groups for a named project as JSON',
+      value: `${packageName} project access-groups my-project --format json`,
+    },
+  ],
+} as const;
+
+export const webAnalyticsSubcommand = {
+  name: 'web-analytics',
+  aliases: [],
+  description: 'Enable Web Analytics for a project',
+  arguments: [
+    {
+      name: 'name',
+      required: false,
+    },
+  ],
+  options: [formatOption],
+  examples: [
+    {
+      name: 'Enable Web Analytics for the linked project',
+      value: `${packageName} project web-analytics`,
+    },
+    {
+      name: 'Enable Web Analytics for a named project',
+      value: `${packageName} project web-analytics my-project`,
+    },
+    {
+      name: 'Confirm enablement as JSON (non-interactive / agents)',
+      value: `${packageName} project web-analytics --format json`,
+    },
+  ],
+} as const;
+
+export const speedInsightsSubcommand = {
+  name: 'speed-insights',
+  aliases: [],
+  description: 'Enable Speed Insights for a project',
+  arguments: [
+    {
+      name: 'name',
+      required: false,
+    },
+  ],
+  options: [formatOption],
+  examples: [
+    {
+      name: 'Enable Speed Insights for the linked project',
+      value: `${packageName} project speed-insights`,
+    },
+    {
+      name: 'Enable Speed Insights for a named project',
+      value: `${packageName} project speed-insights my-project`,
+    },
+    {
+      name: 'Confirm enablement as JSON (non-interactive / agents)',
+      value: `${packageName} project speed-insights --format json`,
+    },
+  ],
+} as const;
+
 export const projectCommand = {
   name: 'project',
   aliases: ['projects'],
@@ -161,9 +279,13 @@ export const projectCommand = {
   arguments: [],
   subcommands: [
     addSubcommand,
+    accessSummarySubcommand,
     inspectSubcommand,
     listSubcommand,
     membersSubcommand,
+    accessGroupsSubcommand,
+    webAnalyticsSubcommand,
+    speedInsightsSubcommand,
     removeSubcommand,
     tokenSubcommand,
   ],
