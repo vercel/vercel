@@ -5,6 +5,7 @@ import {
   detectExistingDraft,
   offerAutoPublish,
   withGlobalFlags,
+  printActionImpactWarning,
 } from '../shared';
 import { outputAgentError } from '../../../util/agent-output';
 import patchFirewallDraft from '../../../util/firewall/patch-firewall-draft';
@@ -365,6 +366,7 @@ async function createFromGenerated(
     output.log(
       `${chalk.cyan('Success!')} Rule "${chalk.bold(rule.name)}" staged ${chalk.gray(createStamp())}`
     );
+    printActionImpactWarning(rule.action);
 
     await offerAutoPublish(client, project.id, hadExistingDraft, {
       teamId,

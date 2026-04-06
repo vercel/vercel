@@ -9,6 +9,7 @@ import {
   detectExistingDraft,
   offerAutoPublish,
   withGlobalFlags,
+  printActionImpactWarning,
 } from '../shared';
 import { formatActionDisplay } from '../../../util/firewall/format';
 import { outputAgentError } from '../../../util/agent-output';
@@ -186,6 +187,7 @@ export default async function enable(client: Client, argv: string[]) {
     output.log(
       `${chalk.cyan('Enabled')} rule "${chalk.bold(rule.name)}" ${chalk.gray(enableStamp())}`
     );
+    printActionImpactWarning(rule.action);
 
     await offerAutoPublish(client, project.id, hadExistingDraft, {
       teamId,
