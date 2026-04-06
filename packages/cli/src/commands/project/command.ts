@@ -25,6 +25,107 @@ export const addSubcommand = {
   ],
 } as const;
 
+/** Shared `--blocks` enum for list (query) and `checks add` (request body). */
+const checksBlocksOption = {
+  name: 'blocks',
+  shorthand: null,
+  type: String,
+  description:
+    'When listing: filter by blocking stage. When adding: blocking stage for the new check. Values: build-start, deployment-start, deployment-alias, deployment-promotion, none',
+  deprecated: false,
+} as const;
+
+/** Flags for `vercel project checks add` (also merged into `checks` help). */
+export const checksAddFlags = [
+  formatOption,
+  checksBlocksOption,
+  {
+    name: 'file',
+    shorthand: null,
+    type: String,
+    description:
+      'Path to JSON file for the POST body (see REST: Create a check). Overrides --check-name / related flags.',
+    deprecated: false,
+  },
+  {
+    name: 'check-name',
+    shorthand: null,
+    type: String,
+    description:
+      'Name of the deployment check (required with --requires unless --file is set)',
+    deprecated: false,
+  },
+  {
+    name: 'requires',
+    shorthand: null,
+    type: String,
+    description:
+      'When the check runs: build-ready, deployment-url, or none (required with --check-name unless --file)',
+    deprecated: false,
+  },
+  {
+    name: 'timeout',
+    shorthand: null,
+    type: Number,
+    description: 'Timeout in seconds for the new check (default 300)',
+    deprecated: false,
+  },
+  {
+    name: 'targets',
+    shorthand: null,
+    type: String,
+    description: 'Comma-separated deployment targets (e.g. production,preview)',
+    deprecated: false,
+  },
+  {
+    name: 'source',
+    shorthand: null,
+    type: String,
+    description:
+      'JSON string for the `source` object (integration, webhook, or git-provider)',
+    deprecated: false,
+  },
+] as const;
+
+/** Flags for `vercel project checks remove` / `rm` (subset of shared `checks` help). */
+export const checksRemoveFlags = [formatOption] as const;
+
+export const checksSubcommand = {
+  name: 'checks',
+  aliases: [],
+  description:
+    'List, add, or remove deployment checks for a project (GET/POST/DELETE /v2/projects/.../checks)',
+  arguments: [
+    {
+      name: 'name',
+      required: false,
+    },
+  ],
+  options: [...checksAddFlags],
+  examples: [
+    {
+      name: 'List checks for the linked project',
+      value: `${packageName} project checks`,
+    },
+    {
+      name: 'Checks that block production alias assignment',
+      value: `${packageName} project checks --blocks deployment-alias`,
+    },
+    {
+      name: 'Add a check from a JSON file',
+      value: `${packageName} project checks add my-app --file ./check.json`,
+    },
+    {
+      name: 'Add a check with flags (requires integration/webhook setup in the body via --file or --source)',
+      value: `${packageName} project checks add --check-name "CI" --requires deployment-url --blocks deployment-alias`,
+    },
+    {
+      name: 'Remove a check by id',
+      value: `${packageName} project checks remove chk_abc123 my-app`,
+    },
+  ],
+} as const;
+
 export const inspectSubcommand = {
   name: 'inspect',
   aliases: [],
@@ -280,6 +381,7 @@ export const projectCommand = {
   subcommands: [
     addSubcommand,
     accessSummarySubcommand,
+    checksSubcommand,
     inspectSubcommand,
     listSubcommand,
     membersSubcommand,
