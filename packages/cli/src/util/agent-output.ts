@@ -454,6 +454,7 @@ export type ExitWithNonInteractiveErrorVariant =
   | 'access-summary'
   | 'speed-insights'
   | 'web-analytics'
+  | 'checks'
   | 'edge-config';
 
 type ProjectExitWithNonInteractiveVariant = Exclude<
@@ -487,10 +488,15 @@ function buildNextStepsForProjectSubcommands(
                 template: 'project web-analytics <name>' as const,
                 when: 'Enable Web Analytics by project name (replace <name>)',
               }
-            : {
-                template: 'project members <name>' as const,
-                when: 'List members by project name (replace <name>)',
-              };
+            : variant === 'checks'
+              ? {
+                  template: 'project checks add <name>' as const,
+                  when: 'Create a deployment check by project name (replace <name>)',
+                }
+              : {
+                  template: 'project members <name>' as const,
+                  when: 'List members by project name (replace <name>)',
+                };
   return [
     {
       command: buildCommandWithGlobalFlags(client.argv, 'link'),
