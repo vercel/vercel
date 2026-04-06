@@ -34,6 +34,7 @@ import { logsCommand } from './logs/command';
 import { mcpCommand } from './mcp/command';
 import { metricsCommand } from './metrics/command';
 import { microfrontendsCommand } from './microfrontends/command';
+import { oauthAppsCommand } from './oauth-apps/command';
 import { openCommand } from './open/command';
 import { projectCommand } from './project/command';
 import { promoteCommand } from './promote/command';
@@ -55,6 +56,10 @@ import { whoamiCommand } from './whoami/command';
 import { blobCommand } from './blob/command';
 import { webhooksCommand } from './webhooks/command';
 import type { Command } from './help';
+import {
+  buildSortedCommandSurface,
+  type RootCommandEntry,
+} from '../util/command-surface';
 import output from '../output-manager';
 
 const commandsStructs = [
@@ -93,6 +98,7 @@ const commandsStructs = [
   logsCommand,
   mcpCommand,
   microfrontendsCommand,
+  oauthAppsCommand,
   openCommand,
   projectCommand,
   promoteCommand,
@@ -145,3 +151,7 @@ output.debug(
 );
 
 export const commandNames = Array.from(commands.keys());
+
+export function getCliCommandSurface(): readonly string[] {
+  return buildSortedCommandSurface(commandsStructs as RootCommandEntry[]);
+}

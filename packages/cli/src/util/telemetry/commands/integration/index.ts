@@ -20,6 +20,13 @@ export class IntegrationTelemetryClient
     });
   }
 
+  trackCliSubcommandInstallations(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'installations',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandDiscover(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'discover',

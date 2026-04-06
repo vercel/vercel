@@ -279,6 +279,30 @@ export const membersSubcommand = {
   ],
 } as const;
 
+export const protectionSubcommand = {
+  name: 'protection',
+  aliases: [],
+  description:
+    'Show deployment protection-related settings for a project (read-only)',
+  arguments: [
+    {
+      name: 'name',
+      required: false,
+    },
+  ],
+  options: [formatOption],
+  examples: [
+    {
+      name: 'Protection settings for the linked project',
+      value: `${packageName} project protection`,
+    },
+    {
+      name: 'Named project as JSON',
+      value: `${packageName} project protection my-app --format json`,
+    },
+  ],
+} as const;
+
 export const accessGroupsSubcommand = {
   name: 'access-groups',
   aliases: ['accessgroups'],
@@ -386,6 +410,7 @@ export const projectCommand = {
     listSubcommand,
     membersSubcommand,
     accessGroupsSubcommand,
+    protectionSubcommand,
     webAnalyticsSubcommand,
     speedInsightsSubcommand,
     removeSubcommand,

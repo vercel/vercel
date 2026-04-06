@@ -15,6 +15,7 @@ import {
   balanceSubcommand,
   discoverSubcommand,
   guideSubcommand,
+  installationsSubcommand,
   integrationCommand,
   listSubcommand,
   openSubcommand,
@@ -26,11 +27,13 @@ import { remove } from './remove-integration';
 import { discover } from './discover';
 import { guide } from './guide';
 import { printAddDynamicHelp } from './add-help';
+import installationsList from './installations-list';
 
 const COMMAND_CONFIG = {
   add: getCommandAliases(addSubcommand),
   open: getCommandAliases(openSubcommand),
   list: getCommandAliases(listSubcommand),
+  installations: getCommandAliases(installationsSubcommand),
   discover: getCommandAliases(discoverSubcommand),
   guide: getCommandAliases(guideSubcommand),
   balance: getCommandAliases(balanceSubcommand),
@@ -136,6 +139,15 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandList(subcommandOriginal);
       return list(client);
+    }
+    case 'installations': {
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('integration', subcommandOriginal);
+        printHelp(installationsSubcommand);
+        return 0;
+      }
+      telemetry.trackCliSubcommandInstallations(subcommandOriginal);
+      return installationsList(client, subArgs);
     }
     case 'discover': {
       if (needHelp) {

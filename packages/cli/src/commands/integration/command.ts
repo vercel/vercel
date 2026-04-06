@@ -211,6 +211,39 @@ export const openSubcommand = {
   ],
 } as const;
 
+export const installationsSubcommand = {
+  name: 'installations',
+  aliases: ['installation'],
+  description:
+    'List marketplace integration installations for the current team (account scope)',
+  arguments: [],
+  options: [
+    {
+      name: 'integration',
+      description: 'Limit to installations of this integration (slug or id)',
+      shorthand: 'i',
+      type: String,
+      deprecated: false,
+      argument: 'SLUG_OR_ID',
+    },
+    formatOption,
+  ],
+  examples: [
+    {
+      name: 'List all marketplace installations for the team',
+      value: [`${packageName} integration installations`],
+    },
+    {
+      name: 'Filter by integration slug',
+      value: [`${packageName} integration installations --integration neon`],
+    },
+    {
+      name: 'JSON output',
+      value: [`${packageName} integration installations --format json`],
+    },
+  ],
+} as const;
+
 export const listSubcommand = {
   name: 'list',
   aliases: ['ls'],
@@ -422,6 +455,7 @@ export const integrationCommand = {
     balanceSubcommand,
     discoverSubcommand,
     guideSubcommand,
+    installationsSubcommand,
     listSubcommand,
     openSubcommand,
     removeSubcommand,
