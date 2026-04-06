@@ -3,7 +3,10 @@ import { join, posix as pathPosix } from 'path';
 import { PythonFramework, NowBuildError } from '@vercel/build-utils';
 import { debug } from '@vercel/build-utils';
 import { readConfigFile } from '@vercel/build-utils';
-import { findAppOrHandler } from '@vercel/python-analysis';
+import {
+  findAppOrHandler,
+  containsTopLevelCallable,
+} from '@vercel/python-analysis';
 
 export interface PythonEntrypoint {
   /** Path to the entrypoint file (e.g. "src/app.py"). */
@@ -218,10 +221,28 @@ export async function detectPythonEntrypoint(
 ): Promise<DetectedPythonEntrypoint | null> {
   // If a configured entrypoint was provided, check it first
   if (configuredEntrypoint) {
-    const entrypoint = configuredEntrypoint.endsWith('.py')
-      ? configuredEntrypoint
-      : `${configuredEntrypoint}.py`;
-    let varName = await checkEntrypoint(workPath, entrypoint);
+    const colonIndex = configuredEntrypoint.lastIndexOf(':');
+    const hasVariable = colonIndex !== -1;
+    const rawPath = hasVariable
+      ? configuredEntrypoint.slice(0, colonIndex)
+      : configuredEntrypoint;
+    const explicitVariable = hasVariable
+      ? configuredEntrypoint.slice(colonIndex + 1)
+      : undefined;
+
+    const entrypoint = rawPath.endsWith('.py') ? rawPath : `${rawPath}.py`;
+    const absPath = join(workPath, entrypoint);
+
+    let varName: string | null = null;
+    if (explicitVariable) {
+      const content = await fs.promises.readFile(absPath, 'utf-8');
+      const found = await containsTopLevelCallable(content, explicitVariable);
+      if (found) {
+        varName = explicitVariable;
+      }
+    } else {
+      varName = await checkEntrypoint(workPath, entrypoint);
+    }
 
     if (!varName) {
       const isSpecialService =
@@ -237,10 +258,13 @@ export async function detectPythonEntrypoint(
       debug(`Using configured Python entrypoint: ${entrypoint}`);
       return { entrypoint: { entrypoint, variableName: varName } };
     } else {
+      const candidateNames = explicitVariable
+        ? `"${explicitVariable}"`
+        : `"app", "application", or "handler"`;
       return {
         error: new NowBuildError({
           code: 'PYTHON_ENTRYPOINT_NOT_FOUND',
-          message: `Could not find a top-level "app", "application", or "handler" in "${entrypoint}".`,
+          message: `Could not find a top-level ${candidateNames} in "${entrypoint}".`,
           link: 'https://vercel.com/docs/functions/serverless-functions/runtimes/python',
           action: 'Learn More',
         }),
