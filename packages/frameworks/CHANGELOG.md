@@ -1,5 +1,11 @@
 # @vercel/frameworks
 
+## 3.23.0
+
+### Minor Changes
+
+- Add Mastra framework preset ([#15076](https://github.com/vercel/vercel/pull/15076))
+
 ## 3.22.0
 
 ### Minor Changes

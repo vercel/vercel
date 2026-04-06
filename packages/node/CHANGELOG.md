@@ -1,5 +1,11 @@
 # @vercel/node
 
+## 5.7.0
+
+### Minor Changes
+
+- Add experimental bundling to node bundler ([#15691](https://github.com/vercel/vercel/pull/15691))
+
 ## 5.6.24
 
 ### Patch Changes
