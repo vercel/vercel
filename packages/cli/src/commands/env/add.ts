@@ -610,7 +610,7 @@ export default async function add(client: Client, argv: string[]) {
     envTargets.length === 1 &&
     envTargets[0] === 'preview'
   ) {
-    if (client.nonInteractive) {
+    if (client.nonInteractive || opts['--yes'] || opts['--force']) {
       outputActionRequired(
         client,
         {
