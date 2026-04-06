@@ -122,6 +122,16 @@ export default async function updateCmd(
     return 1;
   }
 
+  let parsedPatchBody: { items: unknown[] } | undefined;
+  if (patchRaw) {
+    try {
+      parsedPatchBody = parsePatchBody(String(patchRaw));
+    } catch (e) {
+      output.error(e instanceof Error ? e.message : String(e));
+      return 1;
+    }
+  }
+
   let lastPayload: unknown;
 
   try {
@@ -135,19 +145,12 @@ export default async function updateCmd(
       );
     }
 
-    if (patchRaw) {
-      let body: { items: unknown[] };
-      try {
-        body = parsePatchBody(String(patchRaw));
-      } catch (e) {
-        output.error(e instanceof Error ? e.message : String(e));
-        return 1;
-      }
+    if (parsedPatchBody) {
       lastPayload = await client.fetch(
         `/v1/edge-config/${encodeURIComponent(id)}/items`,
         {
           method: 'PATCH',
-          body: body as JSONObject,
+          body: parsedPatchBody as JSONObject,
         }
       );
     }

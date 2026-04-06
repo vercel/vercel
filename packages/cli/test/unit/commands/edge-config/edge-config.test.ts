@@ -110,6 +110,28 @@ describe('edge-config', () => {
     ]);
   });
 
+  it('validates --patch before slug rename when both --slug and --patch are provided', async () => {
+    let putCalled = false;
+    client.scenario.put('/v1/edge-config/ecfg_update_order', (_req, res) => {
+      putCalled = true;
+      res.json({ id: 'ecfg_update_order', slug: 'new-slug' });
+    });
+
+    client.setArgv(
+      'edge-config',
+      'update',
+      'ecfg_update_order',
+      '--slug',
+      'new-slug',
+      '--patch',
+      '{}'
+    );
+    const exitCode = await edgeConfig(client);
+    expect(exitCode).toBe(1);
+    expect(putCalled).toBe(false);
+    await expect(client.stderr).toOutput('`--patch` must be');
+  });
+
   describe('--non-interactive', () => {
     afterEach(() => {
       vi.restoreAllMocks();
