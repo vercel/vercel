@@ -1,5 +1,6 @@
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
+import type { JSONObject, JSONValue } from '@vercel-internals/types';
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
@@ -97,7 +98,7 @@ export async function checksAdd(
   const targetsRaw = parsedArgs.flags['--targets'];
   const sourceRaw = parsedArgs.flags['--source'];
 
-  let body: Record<string, unknown>;
+  let body: JSONObject;
 
   if (typeof filePath === 'string' && filePath.length > 0) {
     try {
@@ -108,7 +109,7 @@ export async function checksAdd(
         output.error('`--file` must contain a JSON object.');
         return 1;
       }
-      body = parsed as Record<string, unknown>;
+      body = parsed as JSONObject;
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       emitValidationError(client, `Failed to read \`--file\`: ${msg}`, 1);
@@ -192,7 +193,7 @@ export async function checksAdd(
     }
     if (typeof sourceRaw === 'string' && sourceRaw.trim()) {
       try {
-        body.source = JSON.parse(sourceRaw) as unknown;
+        body.source = JSON.parse(sourceRaw) as JSONValue;
       } catch {
         emitValidationError(client, '`--source` must be valid JSON.', 1);
         output.error('`--source` must be valid JSON.');
@@ -209,11 +210,10 @@ export async function checksAdd(
       forReadOnlyCommand: true,
     });
 
-    const result = await client.fetch<Record<string, unknown>>(
+    const result = await client.fetch<JSONObject>(
       `/v2/projects/${encodeURIComponent(project.id)}/checks`,
       {
         method: 'POST',
-        json: true,
         body,
       }
     );

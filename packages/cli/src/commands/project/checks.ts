@@ -13,6 +13,7 @@ import { AGENT_REASON, AGENT_STATUS } from '../../util/agent-output-constants';
 import { checksSubcommand } from './command';
 import { validateJsonOutput } from '../../util/output-format';
 import output from '../../output-manager';
+import type { PaginationOptions } from '@vercel-internals/types';
 import getProjectByCwdOrLink from '../../util/projects/get-project-by-cwd-or-link';
 import { checksAdd } from './checks-add';
 import { checksRemove } from './checks-remove';
@@ -26,6 +27,7 @@ const BLOCKING_STAGES = [
 
 interface ProjectChecksResponse {
   checks?: Array<Record<string, unknown>>;
+  pagination?: PaginationOptions;
 }
 
 export default async function checks(

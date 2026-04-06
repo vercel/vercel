@@ -301,5 +301,30 @@ describe('checks', () => {
       });
       expect(payload.message).toMatch(/1 deployment check/);
     });
+
+    it('includes pagination in ok JSON when the API returns it', async () => {
+      useUser();
+      useTeams('team_dummy');
+      const { project } = useProject({
+        ...defaultProject,
+        name: 'test_project',
+      });
+
+      const pagination = { count: 1, next: null, prev: null };
+      client.scenario.get(`/v2/projects/${project.id}/checks`, (_req, res) => {
+        res.json({
+          checks: [{ id: 'chk_1', name: 'Lint', blocks: 'none' }],
+          pagination,
+        });
+      });
+
+      client.nonInteractive = true;
+      client.setArgv('project', 'checks', project.name!, '--non-interactive');
+
+      const exitCode = await projects(client);
+      expect(exitCode).toBe(0);
+      const payload = JSON.parse(client.stdout.getFullOutput().trim());
+      expect(payload.pagination).toEqual(pagination);
+    });
   });
 });
