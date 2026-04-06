@@ -27,6 +27,7 @@ describe('index', () => {
         ['dns', 'dns'],
         ['domain', 'domains'],
         ['domains', 'domains'],
+        ['edge-config', 'edge-config'],
         ['env', 'env'],
         ['flags', 'flags'],
         ['git', 'git'],
