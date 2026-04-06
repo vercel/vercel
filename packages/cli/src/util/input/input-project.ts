@@ -46,6 +46,9 @@ export default async function inputProject(
   }
 
   if (client.nonInteractive) {
+    if (detectedProject) {
+      return detectedProject;
+    }
     const err = new Error('Confirmation required');
     (err as NodeJS.ErrnoException).code = 'HEADLESS';
     throw err;

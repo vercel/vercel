@@ -3,12 +3,14 @@ import add from './add';
 import change from './switch';
 import invite from './invite';
 import request from './request';
+import members from './members';
 import { parseArguments } from '../../util/get-args';
 import {
   addSubcommand,
   inviteSubcommand,
   listSubcommand,
   requestSubcommand,
+  membersSubcommand,
   switchSubcommand,
   teamsCommand,
 } from './command';
@@ -27,6 +29,7 @@ const COMMAND_CONFIG = {
   add: ['create', 'add'],
   invite: ['invite'],
   request: ['request', 'access-request'],
+  members: ['members', 'member'],
 };
 
 export default async function teams(client: Client) {
@@ -127,9 +130,18 @@ export default async function teams(client: Client) {
       telemetry.trackCliSubcommandRequest(subcommandOriginal);
       return request(client, args);
     }
+    case 'members': {
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('teams', subcommandOriginal);
+        printHelp(membersSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandMembers(subcommandOriginal);
+      return members(client, args);
+    }
     default: {
       output.error(
-        'Please specify a valid subcommand: add | ls | switch | invite | request'
+        'Please specify a valid subcommand: add | ls | switch | invite | request | members'
       );
       output.print(help(teamsCommand, { columns: client.stderr.columns }));
       return 2;

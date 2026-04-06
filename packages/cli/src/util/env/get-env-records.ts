@@ -68,21 +68,25 @@ interface PullEnvOptions {
 
 export async function pullEnvRecords(
   client: Client,
-  projectId: string,
+  projectIdOrDeploymentId: string,
   source: EnvRecordsSource,
   { target, gitBranch }: PullEnvOptions = {}
 ) {
   output.debug(
-    `Fetching Environment Variables of project ${projectId} and target ${target}`
+    `Fetching Environment Variables of ${projectIdOrDeploymentId} and target ${target}`
   );
   const query = new URLSearchParams();
 
-  let url = `/v3/env/pull/${projectId}`;
+  let url = `/v3/env/pull/${projectIdOrDeploymentId}`;
 
-  if (target) {
-    url += `/${encodeURIComponent(target)}`;
-    if (gitBranch) {
-      url += `/${encodeURIComponent(gitBranch)}`;
+  // When pulling by deployment ID, target and gitBranch are irrelevant
+  // since the deployment already has its env fully resolved.
+  if (!projectIdOrDeploymentId.startsWith('dpl_')) {
+    if (target) {
+      url += `/${encodeURIComponent(target)}`;
+      if (gitBranch) {
+        url += `/${encodeURIComponent(gitBranch)}`;
+      }
     }
   }
 

@@ -119,13 +119,21 @@ async function getProjectLinkFromRepoLink(
 
     // Fall back to interactive selection if no project was found
     if (!project) {
-      project = await client.input.select({
-        message: `Please select a Project:`,
-        choices: selectableProjects.map(p => ({
-          value: p,
-          name: p.name,
-        })),
-      });
+      if (client.nonInteractive) {
+        if (selectableProjects.length === 1) {
+          project = selectableProjects[0];
+        } else {
+          return null;
+        }
+      } else {
+        project = await client.input.select({
+          message: `Please select a Project:`,
+          choices: selectableProjects.map(p => ({
+            value: p,
+            name: p.name,
+          })),
+        });
+      }
     }
   }
   if (project) {
@@ -463,8 +471,8 @@ export async function linkFolderToProject(
     return;
   }
 
-  // Skip env pull in non-TTY environments (CI)
-  if (!client.stdin.isTTY) {
+  // Skip env pull prompt in CI/non-TTY and in `--non-interactive` (agents, scripts).
+  if (!client.stdin.isTTY || client.nonInteractive) {
     return;
   }
 

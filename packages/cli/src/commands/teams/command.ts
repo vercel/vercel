@@ -123,6 +123,28 @@ export const inviteSubcommand = {
   ],
 } as const;
 
+export const membersSubcommand = {
+  name: 'members',
+  aliases: ['member'],
+  description: 'List members for the currently scoped team',
+  arguments: [],
+  options: [nextOption, formatOption],
+  examples: [
+    {
+      name: 'List team members',
+      value: `${packageName} teams members`,
+    },
+    {
+      name: 'List team members as JSON',
+      value: `${packageName} teams members --format json`,
+    },
+    {
+      name: 'Paginate results, where `1584722256178` is the time in milliseconds since the UNIX epoch',
+      value: `${packageName} teams members --next 1584722256178`,
+    },
+  ],
+} as const;
+
 export const teamsCommand = {
   name: 'teams',
   aliases: ['switch', 'team'],
@@ -134,6 +156,7 @@ export const teamsCommand = {
     listSubcommand,
     requestSubcommand,
     switchSubcommand,
+    membersSubcommand,
   ],
   options: [],
   examples: [],

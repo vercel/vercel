@@ -27,6 +27,13 @@ export class ProjectTelemetryClient
     });
   }
 
+  trackCliSubcommandAccessSummary(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'access-summary',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandRemove(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'remove',
@@ -37,6 +44,34 @@ export class ProjectTelemetryClient
   trackCliSubcommandToken(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'token',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandMembers(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'members',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandAccessGroups(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'access-groups',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandWebAnalytics(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'web-analytics',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandSpeedInsights(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'speed-insights',
       value: actual,
     });
   }
