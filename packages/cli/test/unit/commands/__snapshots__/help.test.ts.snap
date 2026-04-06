@@ -4341,6 +4341,16 @@ exports[`help command > project help output snapshots > project help column widt
                           access
                           groups
                           entit…
+  checks          [name]  List, 
+                          add,  
+                          or    
+                          remove
+                          deplo…
+                          checks
+                          for a 
+                          proje…
+                          (GET/…
+                          /v2/p…
   inspect         [name]  Displ…
                           infor…
                           relat…
@@ -4446,6 +4456,9 @@ exports[`help command > project help output snapshots > project help column widt
   add             name    Add a new project                             
   access-summary  [name]  Show member counts by team role for project   
                           access (requires access groups entitlement)   
+  checks          [name]  List, add, or remove deployment checks for a  
+                          project (GET/POST/DELETE                      
+                          /v2/projects/.../checks)                      
   inspect         [name]  Displays information related to a project     
   list                    Show all projects in the selected scope       
                           (default)                                     
@@ -4487,6 +4500,8 @@ exports[`help command > project help output snapshots > project help column widt
   add             name    Add a new project                                                                     
   access-summary  [name]  Show member counts by team role for project access (requires access groups            
                           entitlement)                                                                          
+  checks          [name]  List, add, or remove deployment checks for a project (GET/POST/DELETE                 
+                          /v2/projects/.../checks)                                                              
   inspect         [name]  Displays information related to a project                                             
   list                    Show all projects in the selected scope (default)                                     
   members         [name]  List project members for a project                                                    
