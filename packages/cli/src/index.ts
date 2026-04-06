@@ -480,6 +480,7 @@ const main = async () => {
     'help',
     'init',
     'build',
+    'sandbox',
     'telemetry',
     'upgrade',
     'skills',
@@ -623,6 +624,7 @@ const main = async () => {
     typeof scope === 'string' &&
     targetCommand !== 'login' &&
     targetCommand !== 'build' &&
+    targetCommand !== 'sandbox' &&
     !(targetCommand === 'teams' && subSubCommand !== 'invite')
   ) {
     let user = null;
@@ -944,6 +946,10 @@ const main = async () => {
         case 'rolling-release':
           telemetry.trackCliCommandRollingRelease(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).rollingRelease;
+          break;
+        case 'sandbox':
+          telemetry.trackCliCommandSandbox(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).sandbox;
           break;
         case 'skills':
           telemetry.trackCliCommandSkills(userSuppliedSubCommand);

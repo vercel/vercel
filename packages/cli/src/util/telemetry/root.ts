@@ -341,6 +341,13 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
+  trackCliCommandSandbox(actual: string) {
+    this.trackCliCommand({
+      command: 'sandbox',
+      value: actual,
+    });
+  }
+
   trackCliCommandTarget(actual: string) {
     this.trackCliCommand({
       command: 'target',
