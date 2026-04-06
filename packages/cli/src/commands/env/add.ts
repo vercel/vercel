@@ -235,10 +235,12 @@ export default async function add(client: Client, argv: string[]) {
     if (!envTargetArg && choices.length > 0)
       missing.push('missing_environment');
     // When nonInteractive and exactly two positionals (name, preview), treat as "all Preview branches"; otherwise require branch
+    // When --yes is provided, also treat as "all Preview branches" without requiring explicit git branch
     if (
       envTargetArg === 'preview' &&
       envGitBranch === undefined &&
-      !(client.nonInteractive && args.length === 2)
+      !(client.nonInteractive && args.length === 2) &&
+      !opts['--yes']
     ) {
       missing.push('git_branch_required');
     }
@@ -610,37 +612,41 @@ export default async function add(client: Client, argv: string[]) {
     envTargets.length === 1 &&
     envTargets[0] === 'preview'
   ) {
-    if (client.nonInteractive) {
-      outputActionRequired(
-        client,
-        {
-          status: 'action_required',
-          reason: 'git_branch_required',
-          message: `Add ${envName} to which Git branch for Preview? Pass branch as third argument, or omit for all Preview branches.`,
-          next: [
-            {
-              command: buildEnvAddCommandWithPreservedArgs(
-                client.argv,
-                `env add ${envName} preview <gitbranch> --value <value> --yes`
-              ),
-              when: 'Add to a specific Git branch',
-            },
-            {
-              command: buildEnvAddCommandWithPreservedArgs(
-                client.argv,
-                `env add ${envName} preview --value <value> --yes`
-              ),
-              when: 'Add to all Preview branches',
-            },
-          ],
-        },
-        1
-      );
-    } else {
-      envGitBranch = await client.input.text({
-        message: `Add ${envName} to which Git branch? (leave empty for all Preview branches)?`,
-      });
+    // When --yes is provided, treat as "all Preview branches" without prompting
+    if (!opts['--yes']) {
+      if (client.nonInteractive) {
+        outputActionRequired(
+          client,
+          {
+            status: 'action_required',
+            reason: 'git_branch_required',
+            message: `Add ${envName} to which Git branch for Preview? Pass branch as third argument, or omit for all Preview branches.`,
+            next: [
+              {
+                command: buildEnvAddCommandWithPreservedArgs(
+                  client.argv,
+                  `env add ${envName} preview <gitbranch> --value <value> --yes`
+                ),
+                when: 'Add to a specific Git branch',
+              },
+              {
+                command: buildEnvAddCommandWithPreservedArgs(
+                  client.argv,
+                  `env add ${envName} preview --value <value> --yes`
+                ),
+                when: 'Add to all Preview branches',
+              },
+            ],
+          },
+          1
+        );
+      } else {
+        envGitBranch = await client.input.text({
+          message: `Add ${envName} to which Git branch? (leave empty for all Preview branches)?`,
+        });
+      }
     }
+    // If --yes is provided, leave envGitBranch undefined to mean "all Preview branches"
   }
 
   const upsert = opts['--force'] ? 'true' : '';
