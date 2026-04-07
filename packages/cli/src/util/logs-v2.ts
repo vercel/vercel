@@ -2,7 +2,7 @@ import ms from 'ms';
 import type Client from './client';
 
 export interface RequestLogMessage {
-  level: 'error' | 'warning' | 'info' | 'fatal';
+  level: string;
   message: string;
   messageTruncated?: boolean;
 }
@@ -52,23 +52,18 @@ export interface FetchRequestLogsOptions {
   page?: number;
 }
 
-const LOG_LEVEL_SEVERITY: Record<RequestLogMessage['level'], number> = {
+const LOG_LEVEL_SEVERITY: Record<
+  'info' | 'warning' | 'error' | 'fatal',
+  number
+> = {
   info: 0,
   warning: 1,
   error: 2,
   fatal: 3,
 };
 
-function normalizeLogLevel(level?: string): RequestLogMessage['level'] {
-  switch (level) {
-    case 'fatal':
-    case 'error':
-    case 'warning':
-    case 'info':
-      return level;
-    default:
-      return 'info';
-  }
+function getLogLevelSeverity(level: string): number {
+  return LOG_LEVEL_SEVERITY[level as keyof typeof LOG_LEVEL_SEVERITY] ?? -1;
 }
 
 function getDisplayLog(
@@ -87,7 +82,7 @@ function getDisplayLog(
   const candidates = matchingLogs.length > 0 ? matchingLogs : logs;
 
   return candidates.reduce((selected, current) =>
-    LOG_LEVEL_SEVERITY[current.level] > LOG_LEVEL_SEVERITY[selected.level]
+    getLogLevelSeverity(current.level) > getLogLevelSeverity(selected.level)
       ? current
       : selected
   );
@@ -207,7 +202,7 @@ export async function fetchRequestLogs(
 
   const logs: RequestLogEntry[] = (data.rows || []).map(row => {
     const requestLogs: RequestLogMessage[] = (row.logs || []).map(log => ({
-      level: normalizeLogLevel(log.level),
+      level: log.level || 'info',
       message: log.message || '',
       messageTruncated: log.messageTruncated,
     }));
