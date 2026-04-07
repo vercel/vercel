@@ -282,15 +282,36 @@ export const membersSubcommand = {
 export const protectionSubcommand = {
   name: 'protection',
   aliases: [],
-  description:
-    'Show deployment protection-related settings for a project (read-only)',
+  description: 'Show or toggle deployment protection settings for a project',
   arguments: [
+    {
+      name: 'action',
+      required: false,
+    },
     {
       name: 'name',
       required: false,
     },
   ],
-  options: [formatOption],
+  options: [
+    formatOption,
+    {
+      name: 'sso',
+      shorthand: null,
+      type: Boolean,
+      description:
+        'Apply action to SSO protection. Defaults to enabled when no target flags are provided.',
+      deprecated: false,
+    },
+    {
+      name: 'password',
+      shorthand: null,
+      type: Boolean,
+      description:
+        'Apply action to password protection (requires eligible plan/permissions).',
+      deprecated: false,
+    },
+  ],
   examples: [
     {
       name: 'Protection settings for the linked project',
@@ -299,6 +320,18 @@ export const protectionSubcommand = {
     {
       name: 'Named project as JSON',
       value: `${packageName} project protection my-app --format json`,
+    },
+    {
+      name: 'Enable deployment protection for the linked project',
+      value: `${packageName} project protection enable`,
+    },
+    {
+      name: 'Disable deployment protection for a named project',
+      value: `${packageName} project protection disable my-app`,
+    },
+    {
+      name: 'Enable only password protection',
+      value: `${packageName} project protection enable my-app --password`,
     },
   ],
 } as const;

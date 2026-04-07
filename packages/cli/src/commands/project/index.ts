@@ -154,7 +154,13 @@ export default async function main(client: Client) {
         telemetry.trackCliFlagHelp('project', subcommandOriginal);
         return printHelp(protectionSubcommand);
       }
-      telemetry.trackCliSubcommandProtection(subcommandOriginal);
+      telemetry.trackCliSubcommandProtection(
+        args[0] === 'enable'
+          ? 'protection enable'
+          : args[0] === 'disable'
+            ? 'protection disable'
+            : subcommandOriginal
+      );
       return protection(client, args);
     case 'webAnalytics':
       if (needHelp) {

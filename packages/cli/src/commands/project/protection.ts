@@ -11,7 +11,11 @@ import { validateJsonOutput } from '../../util/output-format';
 import output from '../../output-manager';
 import getProjectByCwdOrLink from '../../util/projects/get-project-by-cwd-or-link';
 import chalk from 'chalk';
-import type { Project } from '@vercel-internals/types';
+import type { JSONObject, Project } from '@vercel-internals/types';
+
+const PROTECTION_ACTIONS = ['enable', 'disable'] as const;
+type ProtectionAction = (typeof PROTECTION_ACTIONS)[number];
+const ENABLED_DEPLOYMENT_TYPE = 'prod_deployment_urls_and_all_previews';
 
 const PROTECTION_KEYS = [
   'passwordProtection',
@@ -21,6 +25,10 @@ const PROTECTION_KEYS = [
   'gitForkProtection',
   'protectionBypass',
 ] as const;
+
+function isProtectionAction(v: string | undefined): v is ProtectionAction {
+  return !!v && (PROTECTION_ACTIONS as readonly string[]).includes(v);
+}
 
 export default async function protection(
   client: Client,
@@ -48,9 +56,18 @@ export default async function protection(
     return 1;
   }
 
-  if (parsedArgs.args.length > 1) {
+  const actionArg = parsedArgs.args[0];
+  const action = isProtectionAction(actionArg) ? actionArg : undefined;
+
+  if (!action && parsedArgs.args.length > 1) {
     output.error(
       'Invalid arguments. Usage: `vercel project protection [name]`'
+    );
+    return 2;
+  }
+  if (action && parsedArgs.args.length > 2) {
+    output.error(
+      `Invalid arguments. Usage: \`vercel project protection ${action} [name]\``
     );
     return 2;
   }
@@ -61,13 +78,18 @@ export default async function protection(
     return 1;
   }
 
+  const withSso = Boolean(parsedArgs.flags['--sso']);
+  const withPassword = Boolean(parsedArgs.flags['--password']);
+  const selectedSso = withSso || (!withSso && !withPassword);
+  const selectedPassword = withPassword;
+
   let project: Project;
   try {
     project = await getProjectByCwdOrLink({
       client,
       commandName: 'project protection',
-      projectNameOrId: parsedArgs.args[0],
-      forReadOnlyCommand: true,
+      projectNameOrId: action ? parsedArgs.args[1] : parsedArgs.args[0],
+      forReadOnlyCommand: !action,
     });
   } catch (err: unknown) {
     exitWithNonInteractiveError(client, err, 1, {
@@ -75,6 +97,57 @@ export default async function protection(
     });
     printError(err);
     return 1;
+  }
+
+  if (action) {
+    const patchBody: JSONObject = {};
+    if (selectedSso) {
+      patchBody.ssoProtection =
+        action === 'enable'
+          ? { deploymentType: ENABLED_DEPLOYMENT_TYPE }
+          : null;
+    }
+    if (selectedPassword) {
+      patchBody.passwordProtection =
+        action === 'enable'
+          ? { deploymentType: ENABLED_DEPLOYMENT_TYPE }
+          : null;
+    }
+
+    try {
+      await client.fetch(`/v9/projects/${encodeURIComponent(project.id)}`, {
+        method: 'PATCH',
+        body: patchBody,
+      });
+    } catch (err: unknown) {
+      exitWithNonInteractiveError(client, err, 1, { variant: 'protection' });
+      printError(err);
+      return 1;
+    }
+
+    if (formatResult.jsonOutput) {
+      client.stdout.write(
+        `${JSON.stringify(
+          {
+            action,
+            projectId: project.id,
+            projectName: project.name,
+            ssoProtection: selectedSso ? action === 'enable' : undefined,
+            passwordProtection: selectedPassword
+              ? action === 'enable'
+              : undefined,
+          },
+          null,
+          2
+        )}\n`
+      );
+      return 0;
+    }
+
+    output.log(
+      `${chalk.bold('Deployment protection')} ${action === 'enable' ? 'enabled' : 'disabled'} for ${chalk.cyan(project.name)}`
+    );
+    return 0;
   }
 
   const raw = project as Project & Record<string, unknown>;
