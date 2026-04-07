@@ -108,7 +108,7 @@ export class UvRunner {
   }): Promise<void> {
     const { venvPath, projectDir, locked, frozen, noBuild, noInstallProject } =
       options;
-    const args = ['sync', '--active', '--no-dev'];
+    const args = ['sync', '--active', '--no-dev', '--link-mode', 'hardlink'];
     if (frozen) {
       args.push('--frozen');
     } else if (locked) {
