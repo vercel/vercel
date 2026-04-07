@@ -253,4 +253,21 @@ describe('alerts', () => {
       '`--limit` must be an integer between 1 and 100.'
     );
   });
+
+  it('inspect fetches a single alert group for the linked project', async () => {
+    let inspectPath = '';
+    client.scenario.get(/^\/alerts\/v3\/groups\/[^/]+$/, (req, res) => {
+      inspectPath = req.path;
+      res.json({ id: 'grp_x', status: 'active' });
+    });
+
+    client.setArgv('alerts', 'inspect', 'grp_x');
+
+    const exitCode = await alerts(client);
+
+    expect(exitCode).toBe(0);
+    expect(inspectPath).toContain('/alerts/v3/groups/grp_x');
+    expect(client.stdout.getFullOutput()).toContain('"id"');
+    expect(client.stdout.getFullOutput()).toContain('grp_x');
+  });
 });
