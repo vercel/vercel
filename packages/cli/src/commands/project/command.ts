@@ -279,6 +279,45 @@ export const membersSubcommand = {
   ],
 } as const;
 
+export const protectionSubcommand = {
+  name: 'protection',
+  aliases: [],
+  description: 'Show or toggle deployment protection settings for a project',
+  arguments: [
+    { name: 'action', required: false },
+    { name: 'name', required: false },
+  ],
+  options: [
+    formatOption,
+    {
+      name: 'customer-support-code-visibility',
+      shorthand: null,
+      type: Boolean,
+      description:
+        'Apply action to customer support code visibility protection.',
+      deprecated: false,
+    },
+  ],
+  examples: [
+    {
+      name: 'Protection settings for the linked project',
+      value: `${packageName} project protection`,
+    },
+    {
+      name: 'Named project as JSON',
+      value: `${packageName} project protection my-app --format json`,
+    },
+    {
+      name: 'Enable customer support code visibility',
+      value: `${packageName} project protection enable my-app --customer-support-code-visibility`,
+    },
+    {
+      name: 'Disable customer support code visibility',
+      value: `${packageName} project protection disable my-app --customer-support-code-visibility`,
+    },
+  ],
+} as const;
+
 export const accessGroupsSubcommand = {
   name: 'access-groups',
   aliases: ['accessgroups'],
@@ -386,6 +425,7 @@ export const projectCommand = {
     listSubcommand,
     membersSubcommand,
     accessGroupsSubcommand,
+    protectionSubcommand,
     webAnalyticsSubcommand,
     speedInsightsSubcommand,
     removeSubcommand,
