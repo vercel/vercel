@@ -18,6 +18,7 @@ import type { JSONObject, Project } from '@vercel-internals/types';
 const PROTECTION_ACTIONS = ['enable', 'disable'] as const;
 type ProtectionAction = (typeof PROTECTION_ACTIONS)[number];
 const DEFAULT_SKEW_PROTECTION_MAX_AGE = 2592000;
+const ENABLED_DEPLOYMENT_TYPE = 'prod_deployment_urls_and_all_previews';
 
 function parseSkewMaxAgeSeconds(
   value: string
@@ -197,18 +198,26 @@ export default async function protection(
     enableSkewMaxAgeSeconds = parsed.seconds;
   }
 
-  const selected = Boolean(parsedArgs.flags['--skew']);
-  if (action && !selected) {
+  const ssoSelected = Boolean(parsedArgs.flags['--sso']);
+  const skewSelected = Boolean(parsedArgs.flags['--skew']);
+  if (action && !ssoSelected && !skewSelected) {
     const msg =
-      'No protection selected. Pass --skew. Usage: `vercel project protection enable|disable [name] --skew`';
+      'No protection selected. Pass --sso or --skew. Usage: `vercel project protection enable|disable [name] --sso|--skew`';
     outputAgentError(
       client,
       {
         status: 'error',
         reason: AGENT_REASON.MISSING_ARGUMENTS,
         message: msg,
-        hint: 'Use `project protection enable|disable` with the protection flag (e.g. --skew).',
+        hint: 'Use `project protection enable|disable` with a protection flag (e.g. --sso or --skew).',
         next: [
+          {
+            command: buildCommandWithGlobalFlags(
+              client.argv,
+              `project protection ${action} --sso`
+            ),
+            when: 'Example: same action with SSO protection selected',
+          },
           {
             command: buildCommandWithGlobalFlags(
               client.argv,
@@ -246,9 +255,16 @@ export default async function protection(
         ? (enableSkewMaxAgeSeconds ?? DEFAULT_SKEW_PROTECTION_MAX_AGE)
         : 0;
 
-    const patchBody: JSONObject = {
-      skewProtectionMaxAge,
-    };
+    const patchBody: JSONObject = {};
+    if (ssoSelected) {
+      patchBody.ssoProtection =
+        action === 'enable'
+          ? { deploymentType: ENABLED_DEPLOYMENT_TYPE }
+          : null;
+    }
+    if (skewSelected) {
+      patchBody.skewProtectionMaxAge = skewProtectionMaxAge;
+    }
 
     try {
       await client.fetch(`/v9/projects/${encodeURIComponent(project.id)}`, {
@@ -268,10 +284,13 @@ export default async function protection(
             action,
             projectId: project.id,
             projectName: project.name,
-            skewProtection: action === 'enable',
-            ...(action === 'enable'
-              ? { skewProtectionMaxAge }
-              : { skewProtectionMaxAge: 0 }),
+            ssoProtection: ssoSelected ? action === 'enable' : undefined,
+            skewProtection: skewSelected ? action === 'enable' : undefined,
+            ...(skewSelected
+              ? action === 'enable'
+                ? { skewProtectionMaxAge }
+                : { skewProtectionMaxAge: 0 }
+              : {}),
           },
           null,
           2

@@ -169,6 +169,38 @@ describe('project protection (skew)', () => {
     });
   });
 
+  it('returns JSON for enable with --sso', async () => {
+    useProject({
+      ...defaultProject,
+      id: 'prj_123',
+      name: 'my-project',
+    });
+
+    client.scenario.patch('/v9/projects/prj_123', (_req, res) => {
+      res.json({ id: 'prj_123' });
+    });
+
+    client.setArgv(
+      'project',
+      'protection',
+      'enable',
+      'my-project',
+      '--sso',
+      '--format',
+      'json'
+    );
+    const exitCode = await project(client);
+    expect(exitCode).toBe(0);
+
+    const out = JSON.parse(client.stdout.getFullOutput().trim());
+    expect(out).toMatchObject({
+      action: 'enable',
+      projectId: 'prj_123',
+      projectName: 'my-project',
+      ssoProtection: true,
+    });
+  });
+
   describe('--non-interactive', () => {
     afterEach(() => {
       vi.restoreAllMocks();
@@ -203,6 +235,11 @@ describe('project protection (skew)', () => {
         reason: 'missing_arguments',
       });
       expect(payload.message).toMatch(/No protection selected/);
+      expect(
+        payload.next?.some((n: { command: string }) =>
+          /project protection.*--sso/.test(n.command)
+        )
+      ).toBe(true);
       expect(
         payload.next?.some((n: { command: string }) =>
           /project protection.*--skew/.test(n.command)

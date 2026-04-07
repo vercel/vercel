@@ -290,6 +290,13 @@ export const protectionSubcommand = {
   options: [
     formatOption,
     {
+      name: 'sso',
+      shorthand: null,
+      type: Boolean,
+      description: 'Apply action to SSO protection.',
+      deprecated: false,
+    },
+    {
       name: 'skew',
       shorthand: null,
       type: Boolean,
@@ -326,6 +333,14 @@ export const protectionSubcommand = {
     {
       name: 'Disable skew protection',
       value: `${packageName} project protection disable my-app --skew`,
+    },
+    {
+      name: 'Enable SSO deployment protection',
+      value: `${packageName} project protection enable my-app --sso`,
+    },
+    {
+      name: 'Disable SSO for a named project',
+      value: `${packageName} project protection disable my-app --sso`,
     },
   ],
 } as const;
