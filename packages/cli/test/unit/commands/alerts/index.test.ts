@@ -256,7 +256,7 @@ describe('alerts', () => {
 
   it('inspect fetches a single alert group for the linked project', async () => {
     let inspectPath = '';
-    client.scenario.get(/^\/alerts\/v3\/groups\/[^/]+$/, (req, res) => {
+    client.scenario.get('/alerts/v3/groups/:groupId', (req, res) => {
       inspectPath = req.path;
       res.json({ id: 'grp_x', status: 'active' });
     });
