@@ -54,13 +54,6 @@ function parsePyModuleAttrEntrypoint(entrypoint: string): {
   attrName: string;
   filePath: string;
 } | null {
-  const moduleMatch = PYTHON_MODULE_ATTR_RE.exec(entrypoint);
-  if (moduleMatch) {
-    return {
-      attrName: moduleMatch[2],
-      filePath: moduleMatch[1].replace(/\./g, '/') + '.py',
-    };
-  }
   const fileMatch = PYTHON_FILE_ATTR_RE.exec(entrypoint);
   if (fileMatch) {
     return {
@@ -68,6 +61,13 @@ function parsePyModuleAttrEntrypoint(entrypoint: string): {
         ? fileMatch[1]
         : `${fileMatch[1]}.py`,
       attrName: fileMatch[2],
+    };
+  }
+  const moduleMatch = PYTHON_MODULE_ATTR_RE.exec(entrypoint);
+  if (moduleMatch) {
+    return {
+      attrName: moduleMatch[2],
+      filePath: moduleMatch[1].replace(/\./g, '/') + '.py',
     };
   }
   return null;
