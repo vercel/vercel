@@ -47,8 +47,8 @@ export interface ServicesRoutes {
    */
   crons: Route[];
   /**
-   * Internal routes for worker services.
-   * These route `/_svc/{serviceName}/workers/{entry}/{handler}` to the worker function.
+   * Reserved worker callback routes.
+   * Private-path worker services do not emit public route-table entries.
    */
   workers: Route[];
 }

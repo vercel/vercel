@@ -738,7 +738,7 @@ from vercel_runtime.vc_init import vc_handler
   // TODO: Ideally this should be handled by writeBuildResultV2.
   const lambdaPath = service?.name
     ? service.type === 'worker'
-      ? `_svc/${service.name}`
+      ? `_svc/internal/${service.name}`
       : `_svc/${service.name}/index`
     : 'index';
   const staticFiles = djangoStatic?.cdnOutputDir

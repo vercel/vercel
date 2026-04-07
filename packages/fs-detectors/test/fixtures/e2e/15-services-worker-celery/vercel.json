@@ -1,5 +1,4 @@
 {
-  "uploadNowJson": true,
   "projectSettings": {
     "framework": "services"
   },
@@ -12,8 +11,12 @@
     "worker": {
       "type": "worker",
       "entrypoint": "worker/run.py",
-      "topics": ["jobs"],
-      "consumer": "default"
+      "topics": ["jobs"]
+    }
+  },
+  "build": {
+    "env": {
+      "VERCEL_CLI_VERSION": "vercel@https://vercel-7nsizoodj.vercel.sh/tarballs/vercel.tgz"
     }
   }
 }

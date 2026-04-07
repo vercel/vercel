@@ -9,6 +9,7 @@ from datetime import UTC, date, datetime
 from decimal import Decimal
 from functools import wraps
 from typing import Any, Protocol, TypedDict, overload
+from urllib.parse import quote
 from uuid import UUID, uuid4
 
 import httpx
@@ -444,6 +445,32 @@ def get_queue_base_path() -> str:
     return base_path
 
 
+def get_queue_publish_base_path(
+    queue_name: str,
+    explicit_base_path: str | None = None,
+) -> str:
+    """
+    Return the base path for queue publish requests.
+
+    Publish defaults to the V3 topic endpoint:
+      - explicit ``base_path=...`` argument
+      - ``VERCEL_QUEUE_PUBLISH_BASE_PATH`` environment variable
+      - ``VERCEL_QUEUE_BASE_PATH`` environment variable (compat override)
+      - default to ``/api/v3/topic/<queue_name>``
+
+    Receive / ACK helpers continue to use :func:`get_queue_base_path`.
+    """
+    base_path = (
+        explicit_base_path
+        or os.environ.get("VERCEL_QUEUE_PUBLISH_BASE_PATH")
+        or os.environ.get("VERCEL_QUEUE_BASE_PATH")
+        or f"/api/v3/topic/{quote(queue_name, safe='')}"
+    )
+    if not base_path.startswith("/"):
+        base_path = "/" + base_path
+    return base_path
+
+
 def get_queue_token(explicit_token: str | None = None) -> str:
     """
     Resolve the token used to authenticate with the queue service (synchronously).
@@ -549,8 +576,9 @@ def send(
         token: Authentication token. If omitted, falls back to ``VERCEL_QUEUE_TOKEN`` env var.
         base_url: Override base URL for the queue API. Defaults to ``VERCEL_QUEUE_BASE_URL`` or
             ``https://vercel-queue.com``.
-        base_path: Override base path for the messages endpoint. Defaults to
-            ``VERCEL_QUEUE_BASE_PATH`` or ``/api/v2/messages``.
+        base_path: Override base path for the publish endpoint. Defaults to
+            ``VERCEL_QUEUE_PUBLISH_BASE_PATH``, then ``VERCEL_QUEUE_BASE_PATH``,
+            then ``/api/v3/topic/<queue_name>``.
         content_type: MIME type of the payload. Defaults to ``application/json``.
         timeout: Optional request timeout in seconds.
         headers: Additional headers to include in all requests.
@@ -566,7 +594,7 @@ def send(
         return _send_in_process(queue_name, payload)
 
     resolved_base_url = (base_url or get_queue_base_url()).rstrip("/")
-    resolved_base_path = base_path or get_queue_base_path()
+    resolved_base_path = get_queue_publish_base_path(queue_name, base_path)
 
     auth_token = get_queue_token(token)
 
@@ -658,8 +686,9 @@ async def send_async(
         token: Authentication token. If omitted, falls back to ``VERCEL_QUEUE_TOKEN`` env var.
         base_url: Override base URL for the queue API. Defaults to ``VERCEL_QUEUE_BASE_URL`` or
             ``https://vercel-queue.com``.
-        base_path: Override base path for the messages endpoint. Defaults to
-            ``VERCEL_QUEUE_BASE_PATH`` or ``/api/v2/messages``.
+        base_path: Override base path for the publish endpoint. Defaults to
+            ``VERCEL_QUEUE_PUBLISH_BASE_PATH``, then ``VERCEL_QUEUE_BASE_PATH``,
+            then ``/api/v3/topic/<queue_name>``.
         content_type: MIME type of the payload. Defaults to ``application/json``.
         timeout: Optional request timeout in seconds.
         headers: Additional headers to include in all requests.
@@ -668,7 +697,7 @@ async def send_async(
         A dict containing the generated ``messageId``.
     """
     resolved_base_url = (base_url or get_queue_base_url()).rstrip("/")
-    resolved_base_path = base_path or get_queue_base_path()
+    resolved_base_path = get_queue_publish_base_path(queue_name, base_path)
 
     auth_token = await get_queue_token_async(token)
 

@@ -28,6 +28,8 @@ class _FakeResponse:
 
 class _FakeHttpxClient:
     captured_bodies: list[bytes] = []
+    captured_urls: list[str] = []
+    captured_headers: list[dict] = []  # pyright: ignore[reportMissingTypeArgument]
 
     def __init__(self, *args, **kwargs):
         self.response = _FakeResponse()
@@ -43,12 +45,37 @@ class _FakeHttpxClient:
 
     def post(
         self,
-        url: str,  # noqa: ARG002
+        url: str,
         *,
         content: bytes,
-        headers: dict,  # noqa: ARG002  # pyright: ignore[reportMissingTypeArgument]
+        headers: dict,  # pyright: ignore[reportMissingTypeArgument]
     ) -> _FakeResponse:
         _FakeHttpxClient.captured_bodies.append(content)
+        _FakeHttpxClient.captured_urls.append(url)
+        _FakeHttpxClient.captured_headers.append(headers)
+        return self.response
+
+
+class _FakeAsyncHttpxClient:
+    def __init__(self, *args, **kwargs):
+        self.response = _FakeResponse()
+
+    async def __aenter__(self) -> _FakeAsyncHttpxClient:
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> bool:
+        return False
+
+    async def post(
+        self,
+        url: str,
+        *,
+        content: bytes,
+        headers: dict,  # pyright: ignore[reportMissingTypeArgument]
+    ) -> _FakeResponse:
+        _FakeHttpxClient.captured_bodies.append(content)
+        _FakeHttpxClient.captured_urls.append(url)
+        _FakeHttpxClient.captured_headers.append(headers)
         return self.response
 
 
@@ -167,6 +194,8 @@ class TestWorkerJSONEncoder(unittest.TestCase):
 class TestSendWithJSONEncoder(unittest.TestCase):
     def setUp(self) -> None:
         _FakeHttpxClient.captured_bodies.clear()
+        _FakeHttpxClient.captured_urls.clear()
+        _FakeHttpxClient.captured_headers.clear()
 
     def _send(
         self,
@@ -209,3 +238,68 @@ class TestSendWithJSONEncoder(unittest.TestCase):
         body = self._send({"tags": {3, 1, 2}}, json_encoder=_CustomEncoder)
         result = json.loads(body)
         self.assertEqual(result["tags"], [1, 2, 3])
+
+    def test_send_uses_v3_topic_path_by_default(self) -> None:
+        self._send({"ok": True})
+        self.assertEqual(
+            _FakeHttpxClient.captured_urls[-1],
+            "https://vercel-queue.com/api/v3/topic/q",
+        )
+
+    def test_send_respects_explicit_base_path_override(self) -> None:
+        with (
+            patch.dict(queue_client.os.environ, {"VERCEL_QUEUE_TOKEN": "tok"}, clear=False),
+            patch.object(queue_client.httpx, "Client", _FakeHttpxClient),
+        ):
+            queue_client.send("q", {"ok": True}, base_path="/api/v2/messages")
+
+        self.assertEqual(
+            _FakeHttpxClient.captured_urls[-1],
+            "https://vercel-queue.com/api/v2/messages",
+        )
+
+
+class TestPublishBasePath(unittest.TestCase):
+    def test_receive_base_path_remains_v2_by_default(self) -> None:
+        with patch.dict(queue_client.os.environ, {}, clear=True):
+            self.assertEqual(queue_client.get_queue_base_path(), "/api/v2/messages")
+
+    def test_publish_base_path_defaults_to_v3_topic_route(self) -> None:
+        with patch.dict(queue_client.os.environ, {}, clear=True):
+            self.assertEqual(
+                queue_client.get_queue_publish_base_path("orders"),
+                "/api/v3/topic/orders",
+            )
+
+    def test_publish_base_path_uses_publish_override(self) -> None:
+        with patch.dict(
+            queue_client.os.environ,
+            {"VERCEL_QUEUE_PUBLISH_BASE_PATH": "/custom/publish"},
+            clear=True,
+        ):
+            self.assertEqual(
+                queue_client.get_queue_publish_base_path("orders"),
+                "/custom/publish",
+            )
+
+
+class TestAsyncSend(unittest.TestCase):
+    def setUp(self) -> None:
+        _FakeHttpxClient.captured_bodies.clear()
+        _FakeHttpxClient.captured_urls.clear()
+        _FakeHttpxClient.captured_headers.clear()
+
+    def test_send_async_uses_v3_topic_path_by_default(self) -> None:
+        async def _run() -> None:
+            with (
+                patch.dict(queue_client.os.environ, {"VERCEL_QUEUE_TOKEN": "tok"}, clear=False),
+                patch.object(queue_client.httpx, "AsyncClient", _FakeAsyncHttpxClient),
+            ):
+                await queue_client.send_async("orders", {"ok": True})
+
+        asyncio.run(_run())
+
+        self.assertEqual(
+            _FakeHttpxClient.captured_urls[-1],
+            "https://vercel-queue.com/api/v3/topic/orders",
+        )

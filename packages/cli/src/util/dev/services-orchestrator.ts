@@ -369,8 +369,14 @@ export class ServicesOrchestrator {
       env.VERCEL_QUEUE_TOKEN = 'vc-dev-token';
     }
 
-    if (service.routePrefix && service.routePrefix !== '/') {
-      env.VERCEL_SERVICE_ROUTE_PREFIX = service.routePrefix;
+    const serviceRoutePrefix =
+      service.type === 'worker'
+        ? getInternalServiceWorkerPath(service.name)
+        : service.routePrefix && service.routePrefix !== '/'
+          ? service.routePrefix
+          : undefined;
+    if (serviceRoutePrefix) {
+      env.VERCEL_SERVICE_ROUTE_PREFIX = serviceRoutePrefix;
       env.VERCEL_SERVICE_ROUTE_PREFIX_STRIP = '1';
     }
 

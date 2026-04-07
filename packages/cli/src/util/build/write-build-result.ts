@@ -162,8 +162,14 @@ function injectServiceEnvVars(
   if (service?.type) {
     lambda.environment.VERCEL_SERVICE_TYPE = service.type;
   }
-  if (service?.routePrefix && service.routePrefix !== '/') {
-    lambda.environment.VERCEL_SERVICE_ROUTE_PREFIX = service.routePrefix;
+  const serviceRoutePrefix =
+    service?.type === 'worker'
+      ? getInternalServiceWorkerPath(service.name)
+      : service?.routePrefix && service.routePrefix !== '/'
+        ? service.routePrefix
+        : undefined;
+  if (serviceRoutePrefix) {
+    lambda.environment.VERCEL_SERVICE_ROUTE_PREFIX = serviceRoutePrefix;
   }
   if (stripServiceRoutePrefix) {
     lambda.environment.VERCEL_SERVICE_ROUTE_PREFIX_STRIP = '1';

@@ -2267,7 +2267,7 @@ fs.writeFileSync(
 
     expect(
       await fs.pathExists(
-        join(output, 'functions', '_svc', 'worker-orders.func')
+        join(output, 'functions', '_svc', 'internal', 'worker-orders.func')
       )
     ).toBe(true);
     expect(
@@ -2277,7 +2277,14 @@ fs.writeFileSync(
     ).toBe(false);
 
     const vcConfig = await fs.readJSON(
-      join(output, 'functions', '_svc', 'worker-orders.func', '.vc-config.json')
+      join(
+        output,
+        'functions',
+        '_svc',
+        'internal',
+        'worker-orders.func',
+        '.vc-config.json'
+      )
     );
     expect(vcConfig.experimentalTriggers).toEqual([
       {
@@ -2286,10 +2293,15 @@ fs.writeFileSync(
         consumer: 'worker-orders',
       },
     ]);
+    expect(vcConfig.environment).toMatchObject({
+      VERCEL_SERVICE_TYPE: 'worker',
+      VERCEL_SERVICE_ROUTE_PREFIX: '/_svc/internal/worker-orders',
+      VERCEL_SERVICE_ROUTE_PREFIX_STRIP: '1',
+    });
 
     const config = await fs.readJSON(join(output, 'config.json'));
     expect(JSON.stringify(config.routes || [])).not.toContain(
-      '/_svc/worker-orders'
+      '/_svc/internal/worker-orders'
     );
   });
 

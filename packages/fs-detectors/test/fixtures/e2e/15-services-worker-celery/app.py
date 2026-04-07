@@ -80,4 +80,5 @@ def health():
 
 @app.errorhandler(404)
 def not_found_handler(error):
+    print(f"404 from Flask web service: {error}")
     return jsonify({"detail": "404 from Flask web service"}), 404

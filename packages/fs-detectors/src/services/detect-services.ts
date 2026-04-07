@@ -264,8 +264,8 @@ export async function detectServices(
  * Build Output API builders, etc.) are not given synthetic routes here.
  *
  * - Worker services:
- *   Internal queue callback routes under `/_svc/{serviceName}/workers/{entry}/{handler}`
- *   that rewrite to `/_svc/{serviceName}/index`.
+ *   No public route-table entries are generated. The worker callback path is
+ *   tracked in build output metadata and resolved through private-path lookup.
  *
  * - Cron services:
  *   Internal cron callback routes under `/_svc/{serviceName}/crons/{entry}/{handler}`
