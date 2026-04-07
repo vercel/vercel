@@ -1,6 +1,12 @@
 import ms from 'ms';
 import type Client from './client';
 
+export interface RequestLogMessage {
+  level: 'error' | 'warning' | 'info' | 'fatal';
+  message: string;
+  messageTruncated?: boolean;
+}
+
 export interface RequestLogEntry {
   id: string;
   timestamp: number;
@@ -18,6 +24,7 @@ export interface RequestLogEntry {
   cache?: string;
   traceId?: string;
   messageTruncated?: boolean;
+  logs: RequestLogMessage[];
 }
 
 export interface RequestLogsResponse {
@@ -43,6 +50,47 @@ export interface FetchRequestLogsOptions {
   requestId?: string;
   branch?: string;
   page?: number;
+}
+
+const LOG_LEVEL_SEVERITY: Record<RequestLogMessage['level'], number> = {
+  info: 0,
+  warning: 1,
+  error: 2,
+  fatal: 3,
+};
+
+function normalizeLogLevel(level?: string): RequestLogMessage['level'] {
+  switch (level) {
+    case 'fatal':
+    case 'error':
+    case 'warning':
+    case 'info':
+      return level;
+    default:
+      return 'info';
+  }
+}
+
+function getDisplayLog(
+  logs: RequestLogMessage[],
+  requestedLevels?: string[]
+): RequestLogMessage | undefined {
+  if (logs.length === 0) {
+    return undefined;
+  }
+
+  const matchingLogs =
+    requestedLevels && requestedLevels.length > 0
+      ? logs.filter(log => requestedLevels.includes(log.level))
+      : logs;
+
+  const candidates = matchingLogs.length > 0 ? matchingLogs : logs;
+
+  return candidates.reduce((selected, current) =>
+    LOG_LEVEL_SEVERITY[current.level] > LOG_LEVEL_SEVERITY[selected.level]
+      ? current
+      : selected
+  );
 }
 
 function parseRelativeTime(input: string): number {
@@ -158,16 +206,21 @@ export async function fetchRequestLogs(
   }>(url);
 
   const logs: RequestLogEntry[] = (data.rows || []).map(row => {
-    const firstLog = row.logs?.[0];
+    const requestLogs: RequestLogMessage[] = (row.logs || []).map(log => ({
+      level: normalizeLogLevel(log.level),
+      message: log.message || '',
+      messageTruncated: log.messageTruncated,
+    }));
+    const displayLog = getDisplayLog(requestLogs, options.level);
     const firstEvent = row.events?.[0];
     return {
       id: row.requestId || '',
       timestamp: row.timestamp ? new Date(row.timestamp).getTime() : Date.now(),
       deploymentId: row.deploymentId || '',
       projectId: options.projectId,
-      level: (firstLog?.level as RequestLogEntry['level']) || 'info',
-      message: firstLog?.message || '',
-      messageTruncated: firstLog?.messageTruncated,
+      level: displayLog?.level || 'info',
+      message: displayLog?.message || '',
+      messageTruncated: displayLog?.messageTruncated,
       source: (firstEvent?.source as RequestLogEntry['source']) || 'static',
       domain: row.domain || '',
       requestMethod: row.requestMethod || '',
@@ -178,6 +231,7 @@ export async function fetchRequestLogs(
       branch: row.branch,
       cache: row.cache,
       traceId: row.traceId,
+      logs: requestLogs,
     };
   });
 
