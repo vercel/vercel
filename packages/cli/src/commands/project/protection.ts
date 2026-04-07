@@ -125,19 +125,25 @@ export default async function protection(
   const preferJson = formatResult.jsonOutput || Boolean(client.nonInteractive);
 
   const ssoSelected = Boolean(parsedArgs.flags['--sso']);
+  const passwordSelected = Boolean(parsedArgs.flags['--password']);
   const customerSupportCodeVisibilitySelected = Boolean(
     parsedArgs.flags['--customer-support-code-visibility']
   );
-  if (action && !ssoSelected && !customerSupportCodeVisibilitySelected) {
+  if (
+    action &&
+    !ssoSelected &&
+    !passwordSelected &&
+    !customerSupportCodeVisibilitySelected
+  ) {
     const msg =
-      'No protection selected. Pass --sso or --customer-support-code-visibility. Usage: `vercel project protection enable|disable [name] --sso|--customer-support-code-visibility`';
+      'No protection selected. Pass --sso, --password, or --customer-support-code-visibility. Usage: `vercel project protection enable|disable [name] --sso|--password|--customer-support-code-visibility`';
     outputAgentError(
       client,
       {
         status: 'error',
         reason: AGENT_REASON.MISSING_ARGUMENTS,
         message: msg,
-        hint: 'Use `project protection enable|disable` with a protection flag (e.g. --sso or --customer-support-code-visibility).',
+        hint: 'Use `project protection enable|disable` with a protection flag (e.g. --sso, --password, or --customer-support-code-visibility).',
         next: [
           {
             command: buildCommandWithGlobalFlags(
@@ -149,9 +155,16 @@ export default async function protection(
           {
             command: buildCommandWithGlobalFlags(
               client.argv,
+              `project protection ${action} --password`
+            ),
+            when: 'Example: same action with password protection selected',
+          },
+          {
+            command: buildCommandWithGlobalFlags(
+              client.argv,
               `project protection ${action} --customer-support-code-visibility`
             ),
-            when: 'Example: same action with this protection type selected',
+            when: 'Example: same action with customer support code visibility selected',
           },
         ],
       },
@@ -185,6 +198,12 @@ export default async function protection(
           ? { deploymentType: ENABLED_DEPLOYMENT_TYPE }
           : null;
     }
+    if (passwordSelected) {
+      patchBody.passwordProtection =
+        action === 'enable'
+          ? { deploymentType: ENABLED_DEPLOYMENT_TYPE }
+          : null;
+    }
     if (customerSupportCodeVisibilitySelected) {
       patchBody.customerSupportCodeVisibility = action === 'enable';
     }
@@ -208,6 +227,9 @@ export default async function protection(
             projectId: project.id,
             projectName: project.name,
             ssoProtection: ssoSelected ? action === 'enable' : undefined,
+            passwordProtection: passwordSelected
+              ? action === 'enable'
+              : undefined,
             customerSupportCodeVisibility: customerSupportCodeVisibilitySelected
               ? action === 'enable'
               : undefined,

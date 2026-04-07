@@ -297,6 +297,14 @@ export const protectionSubcommand = {
       deprecated: false,
     },
     {
+      name: 'password',
+      shorthand: null,
+      type: Boolean,
+      description:
+        'Apply action to password protection (requires eligible plan/permissions).',
+      deprecated: false,
+    },
+    {
       name: 'customer-support-code-visibility',
       shorthand: null,
       type: Boolean,
@@ -313,6 +321,14 @@ export const protectionSubcommand = {
     {
       name: 'Named project as JSON',
       value: `${packageName} project protection my-app --format json`,
+    },
+    {
+      name: 'Disable password protection',
+      value: `${packageName} project protection disable my-app --password`,
+    },
+    {
+      name: 'Enable password protection',
+      value: `${packageName} project protection enable my-app --password`,
     },
     {
       name: 'Enable customer support code visibility',
