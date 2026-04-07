@@ -17,6 +17,7 @@ import type { JSONObject, Project } from '@vercel-internals/types';
 
 const PROTECTION_ACTIONS = ['enable', 'disable'] as const;
 type ProtectionAction = (typeof PROTECTION_ACTIONS)[number];
+const ENABLED_DEPLOYMENT_TYPE = 'prod_deployment_urls_and_all_previews';
 const PROTECTION_KEYS = [
   'passwordProtection',
   'ssoProtection',
@@ -123,20 +124,28 @@ export default async function protection(
 
   const preferJson = formatResult.jsonOutput || Boolean(client.nonInteractive);
 
-  const selected = Boolean(
+  const ssoSelected = Boolean(parsedArgs.flags['--sso']);
+  const customerSupportCodeVisibilitySelected = Boolean(
     parsedArgs.flags['--customer-support-code-visibility']
   );
-  if (action && !selected) {
+  if (action && !ssoSelected && !customerSupportCodeVisibilitySelected) {
     const msg =
-      'No protection selected. Pass --customer-support-code-visibility. Usage: `vercel project protection enable|disable [name] --customer-support-code-visibility`';
+      'No protection selected. Pass --sso or --customer-support-code-visibility. Usage: `vercel project protection enable|disable [name] --sso|--customer-support-code-visibility`';
     outputAgentError(
       client,
       {
         status: 'error',
         reason: AGENT_REASON.MISSING_ARGUMENTS,
         message: msg,
-        hint: 'Use `project protection enable|disable` with the protection flag (e.g. --customer-support-code-visibility).',
+        hint: 'Use `project protection enable|disable` with a protection flag (e.g. --sso or --customer-support-code-visibility).',
         next: [
+          {
+            command: buildCommandWithGlobalFlags(
+              client.argv,
+              `project protection ${action} --sso`
+            ),
+            when: 'Example: same action with SSO protection selected',
+          },
           {
             command: buildCommandWithGlobalFlags(
               client.argv,
@@ -169,9 +178,16 @@ export default async function protection(
   }
 
   if (action) {
-    const patchBody: JSONObject = {
-      customerSupportCodeVisibility: action === 'enable',
-    };
+    const patchBody: JSONObject = {};
+    if (ssoSelected) {
+      patchBody.ssoProtection =
+        action === 'enable'
+          ? { deploymentType: ENABLED_DEPLOYMENT_TYPE }
+          : null;
+    }
+    if (customerSupportCodeVisibilitySelected) {
+      patchBody.customerSupportCodeVisibility = action === 'enable';
+    }
 
     try {
       await client.fetch(`/v9/projects/${encodeURIComponent(project.id)}`, {
@@ -191,7 +207,10 @@ export default async function protection(
             action,
             projectId: project.id,
             projectName: project.name,
-            customerSupportCodeVisibility: action === 'enable',
+            ssoProtection: ssoSelected ? action === 'enable' : undefined,
+            customerSupportCodeVisibility: customerSupportCodeVisibilitySelected
+              ? action === 'enable'
+              : undefined,
           },
           null,
           2

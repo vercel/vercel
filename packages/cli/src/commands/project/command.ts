@@ -290,6 +290,13 @@ export const protectionSubcommand = {
   options: [
     formatOption,
     {
+      name: 'sso',
+      shorthand: null,
+      type: Boolean,
+      description: 'Apply action to SSO protection.',
+      deprecated: false,
+    },
+    {
       name: 'customer-support-code-visibility',
       shorthand: null,
       type: Boolean,
@@ -314,6 +321,14 @@ export const protectionSubcommand = {
     {
       name: 'Disable customer support code visibility',
       value: `${packageName} project protection disable my-app --customer-support-code-visibility`,
+    },
+    {
+      name: 'Enable SSO deployment protection',
+      value: `${packageName} project protection enable my-app --sso`,
+    },
+    {
+      name: 'Disable SSO for a named project',
+      value: `${packageName} project protection disable my-app --sso`,
     },
   ],
 } as const;
