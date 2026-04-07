@@ -261,4 +261,91 @@ describe('getServiceUrlEnvVars', () => {
       expect(result).toEqual({});
     });
   });
+
+  describe('envPrefix', () => {
+    it('prefixes all generated env vars for services when envPrefix is set', () => {
+      const result = getServiceUrlEnvVars({
+        services: [
+          createService({
+            name: 'frontend',
+            type: 'web',
+            routePrefix: '/',
+            framework: 'nextjs',
+          }),
+          createService({
+            name: 'api',
+            type: 'web',
+            routePrefix: '/_/api',
+          }),
+        ],
+        frameworkList: [{ slug: 'nextjs', envPrefix: 'NEXT_PUBLIC_' }],
+        deploymentUrl: 'my-app.vercel.app',
+        envPrefix: 'TEST_',
+      });
+
+      expect(result).toEqual({
+        TEST_FRONTEND_URL: 'https://my-app.vercel.app',
+        TEST_API_URL: 'https://my-app.vercel.app/_/api',
+        NEXT_PUBLIC_TEST_FRONTEND_URL: '/',
+        NEXT_PUBLIC_TEST_API_URL: '/_/api',
+      });
+    });
+
+    it('does not prefix when envPrefix is not set', () => {
+      const result = getServiceUrlEnvVars({
+        services: [
+          createService({
+            name: 'frontend',
+            type: 'web',
+            routePrefix: '/',
+          }),
+        ],
+        frameworkList: [],
+        deploymentUrl: 'my-app.vercel.app',
+      });
+
+      expect(result).toEqual({
+        FRONTEND_URL: 'https://my-app.vercel.app',
+      });
+    });
+
+    it('respects currentEnv with prefixed names', () => {
+      const result = getServiceUrlEnvVars({
+        services: [
+          createService({
+            name: 'frontend',
+            type: 'web',
+            routePrefix: '/',
+          }),
+        ],
+        frameworkList: [],
+        origin: 'http://localhost:3000',
+        currentEnv: {
+          TEST_FRONTEND_URL: 'https://custom.com',
+        },
+        envPrefix: 'TEST_',
+      });
+
+      expect(result).toEqual({});
+    });
+
+    it('works with origin mode', () => {
+      const result = getServiceUrlEnvVars({
+        services: [
+          createService({
+            name: 'backend',
+            type: 'web',
+            routePrefix: '/_/backend',
+          }),
+        ],
+        frameworkList: [],
+        origin: 'http://localhost:3000',
+        envPrefix: 'TEST_',
+      });
+
+      expect(result).toEqual({
+        TEST_BACKEND_URL: 'http://localhost:3000/_/backend',
+      });
+    });
+  });
 });

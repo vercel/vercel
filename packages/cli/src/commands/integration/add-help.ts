@@ -5,7 +5,10 @@ import { fetchIntegration } from '../../util/integration/fetch-integration';
 import { formatProductHelp } from '../../util/integration/format-product-help';
 import { formatBillingPlansHelp } from '../../util/integration/format-billing-plans-help';
 import { formatDynamicExamples } from '../../util/integration/format-dynamic-examples';
-import { formatMetadataSchemaHelp } from '../../util/integration/format-schema-help';
+import {
+  formatMetadataSchemaHelp,
+  mergeMetadataSchemas,
+} from '../../util/integration/format-schema-help';
 import { fetchBillingPlans } from '../../util/integration/fetch-billing-plans';
 
 /**
@@ -40,16 +43,22 @@ export async function printAddDynamicHelp(
       output.print(formatProductHelp(integrationSlug, products, commandName));
     }
 
-    // Show metadata schema for ALL products
+    // Show metadata schema for ALL products (and integration-level schema)
     for (const product of products) {
-      if (product.metadataSchema) {
+      // Merge integration-level metadata (e.g. org name, region) with
+      // product-level metadata (e.g. platform) so all fields appear in --help
+      const mergedSchema = mergeMetadataSchemas(
+        product.metadataSchema,
+        integration.metadataSchema
+      );
+      if (mergedSchema) {
         // For single-product integrations, don't show product slug
         // For multi-product integrations, show product slug for slash syntax
         const metadataProductSlug =
           products.length > 1 ? product.slug : undefined;
         output.print(
           formatMetadataSchemaHelp(
-            product.metadataSchema,
+            mergedSchema,
             integrationSlug,
             metadataProductSlug
           )

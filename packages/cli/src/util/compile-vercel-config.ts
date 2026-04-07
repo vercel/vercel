@@ -1,11 +1,13 @@
-import { mkdir, writeFile, unlink, access } from 'fs/promises';
+import { mkdir, readFile, writeFile, unlink, access } from 'fs/promises';
 import { join, basename } from 'path';
 import { fork } from 'child_process';
 import { config as dotenvConfig } from 'dotenv';
+import { parse as tomlParse } from 'smol-toml';
 import output from '../output-manager';
 import { VERCEL_DIR } from './projects/link';
 import { ConflictingConfigFiles } from './errors-ts';
 import { NowBuildError } from '@vercel/build-utils';
+import { isVercelTomlEnabled } from './is-vercel-toml-enabled';
 import type {
   RouteWithSrc,
   Rewrite,
@@ -163,6 +165,12 @@ export async function findSourceVercelConfigFile(
       return basename(configPath);
     }
   }
+  if (isVercelTomlEnabled()) {
+    const tomlPath = join(workPath, 'vercel.toml');
+    if (await fileExists(tomlPath)) {
+      return 'vercel.toml';
+    }
+  }
   return null;
 }
 
@@ -214,35 +222,33 @@ export async function compileVercelConfig(
 ): Promise<CompileConfigResult> {
   const vercelJsonPath = join(workPath, 'vercel.json');
   const nowJsonPath = join(workPath, 'now.json');
+  const vercelTomlPath = join(workPath, 'vercel.toml');
   const hasVercelJson = await fileExists(vercelJsonPath);
   const hasNowJson = await fileExists(nowJsonPath);
-
-  // Check for conflicting vercel.json and now.json
-  if (hasVercelJson && hasNowJson) {
-    throw new ConflictingConfigFiles([vercelJsonPath, nowJsonPath]);
-  }
+  const hasVercelToml =
+    isVercelTomlEnabled() && (await fileExists(vercelTomlPath));
 
   const vercelConfigPath = await findVercelConfigFile(workPath);
   const vercelDir = join(workPath, VERCEL_DIR);
   const compiledConfigPath = join(vercelDir, 'vercel.json');
 
-  if (vercelConfigPath && hasNowJson) {
+  // Collect all found config files for conflict detection
+  const foundConfigs: string[] = [];
+  if (hasVercelJson) foundConfigs.push(vercelJsonPath);
+  if (hasNowJson) foundConfigs.push(nowJsonPath);
+  if (hasVercelToml) foundConfigs.push(vercelTomlPath);
+  if (vercelConfigPath) foundConfigs.push(vercelConfigPath);
+
+  if (foundConfigs.length > 1) {
     throw new ConflictingConfigFiles(
-      [vercelConfigPath, nowJsonPath],
-      `Both ${basename(vercelConfigPath)} and now.json exist in your project. Please use only one configuration method.`,
+      foundConfigs,
+      `Multiple config files found: ${foundConfigs.map(f => basename(f)).join(', ')}. Please use only one configuration method.`,
       'https://vercel.com/docs/projects/project-configuration'
     );
   }
 
-  if (vercelConfigPath && hasVercelJson) {
-    throw new ConflictingConfigFiles(
-      [vercelConfigPath, vercelJsonPath],
-      `Both ${basename(vercelConfigPath)} and vercel.json exist in your project. Please use only one configuration method.`,
-      'https://vercel.com/docs/projects/project-configuration'
-    );
-  }
-
-  if (!vercelConfigPath) {
+  // No TS/JS config and no TOML — return JSON/now.json paths directly
+  if (!vercelConfigPath && !hasVercelToml) {
     if (hasVercelJson) {
       return {
         configPath: vercelJsonPath,
@@ -271,6 +277,41 @@ export async function compileVercelConfig(
     };
   }
 
+  // Handle vercel.toml — parse and write to .vercel/vercel.json
+  if (hasVercelToml) {
+    try {
+      const tomlContent = await readFile(vercelTomlPath, 'utf8');
+      const config = tomlParse(tomlContent) as unknown as VercelConfig;
+      const normalizedConfig = normalizeConfig(config);
+
+      await mkdir(vercelDir, { recursive: true });
+      await writeFile(
+        compiledConfigPath,
+        JSON.stringify(normalizedConfig, null, 2),
+        'utf-8'
+      );
+
+      output.debug(`Compiled ${vercelTomlPath} -> ${compiledConfigPath}`);
+
+      return {
+        configPath: compiledConfigPath,
+        wasCompiled: true,
+        sourceFile: 'vercel.toml',
+      };
+    } catch (error: any) {
+      throw new NowBuildError({
+        code: error.code ?? 'vercel_toml_parse_failed',
+        message: `Failed to parse vercel.toml: ${error.message}`,
+        link:
+          error.link ??
+          'https://vercel.com/docs/projects/project-configuration',
+      });
+    }
+  }
+
+  // At this point, vercelConfigPath is guaranteed to be non-null (TS/JS config)
+  const sourceConfigPath = vercelConfigPath!;
+
   dotenvConfig({ path: join(workPath, '.env') });
   dotenvConfig({ path: join(workPath, '.env.local') });
 
@@ -283,7 +324,7 @@ export async function compileVercelConfig(
     await mkdir(vercelDir, { recursive: true });
 
     await build({
-      entryPoints: [vercelConfigPath],
+      entryPoints: [sourceConfigPath],
       bundle: true,
       platform: 'node',
       format: 'esm',
@@ -366,7 +407,7 @@ export async function compileVercelConfig(
       'utf-8'
     );
 
-    output.debug(`Compiled ${vercelConfigPath} -> ${compiledConfigPath}`);
+    output.debug(`Compiled ${sourceConfigPath} -> ${compiledConfigPath}`);
 
     return {
       configPath: compiledConfigPath,
@@ -376,7 +417,7 @@ export async function compileVercelConfig(
   } catch (error: any) {
     throw new NowBuildError({
       code: error.code ?? 'vercel_ts_compilation_failed',
-      message: `Failed to compile ${basename(vercelConfigPath)}: ${error.message}`,
+      message: `Failed to compile ${basename(sourceConfigPath)}: ${error.message}`,
       link:
         error.link ?? 'https://vercel.com/docs/projects/project-configuration',
     });
@@ -399,10 +440,15 @@ export async function compileVercelConfig(
 export async function getVercelConfigPath(workPath: string): Promise<string> {
   const vercelJsonPath = join(workPath, 'vercel.json');
   const nowJsonPath = join(workPath, 'now.json');
+  const vercelTomlPath = join(workPath, 'vercel.toml');
   const compiledConfigPath = join(workPath, VERCEL_DIR, 'vercel.json');
 
   if (await fileExists(vercelJsonPath)) {
     return vercelJsonPath;
+  }
+
+  if (isVercelTomlEnabled() && (await fileExists(vercelTomlPath))) {
+    return vercelTomlPath;
   }
 
   if (await fileExists(nowJsonPath)) {

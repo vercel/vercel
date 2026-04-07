@@ -156,10 +156,22 @@ Use \`--yes\` and \`evals-setup.json\` for team/project IDs when linking.
 
 If \`vercel link\` reports no credentials, run \`source ~/.profile\` first (or \`source ~/.bashrc\`) so VERCEL_TOKEN is set, then retry.`;
 
-    await sandbox.writeFiles({
+    const filesToWrite: Record<string, string> = {
       'evals-setup.json': JSON.stringify({ teamId, projectId }, null, 2),
       ...skillFiles,
-    });
+    };
+
+    // Pre-link the project in the sandbox so the agent doesn't have to
+    // discover evals-setup.json and create .vercel/project.json itself.
+    if (projectId && teamId) {
+      filesToWrite['.vercel/project.json'] = JSON.stringify(
+        { projectId, orgId: teamId },
+        null,
+        2
+      );
+    }
+
+    await sandbox.writeFiles(filesToWrite);
   },
 };
 

@@ -1,5 +1,58 @@
 # @vercel/build-utils
 
+## 13.13.0
+
+### Minor Changes
+
+- Extend `finalizeLambda` with pluggable ZIP strategy (`createZip`), pre-digest validation hook (`validateZip`), and optional trace tags. Widen `getLambdaEnvironment` buffer param to `{ byteLength: number }`. ([#15856](https://github.com/vercel/vercel/pull/15856))
+
+## 13.12.2
+
+### Patch Changes
+
+- Extract finalize/validate function utils for build-utils ([#15776](https://github.com/vercel/vercel/pull/15776))
+
+## 13.12.1
+
+### Patch Changes
+
+- Switch to using smol-toml for toml parsing ([#15730](https://github.com/vercel/vercel/pull/15730))
+
+## 13.12.0
+
+### Minor Changes
+
+- Add hash utilities (`streamToDigestAsync`, `sha256`, `md5`) and build result helpers (`getBuildResultMetadata`, `getLambdaByOutputPath`, `isRouteMiddleware`, `getPrerenderChain`, `streamWithExtendedPayload`) for shared use. ([#15726](https://github.com/vercel/vercel/pull/15726))
+
+## 13.11.0
+
+### Minor Changes
+
+- Add `process-serverless` utilities: `getLambdaEnvironment`, `getLambdaPreloadScripts`, `getLambdaSupportsStreaming`, and `getEncryptedEnv`. ([#15712](https://github.com/vercel/vercel/pull/15712))
+
+## 13.10.0
+
+### Minor Changes
+
+- [services] support multiple topics for a single worker service ([#15615](https://github.com/vercel/vercel/pull/15615))
+
+- [services] support for specifying an env prefix for each service ([#15641](https://github.com/vercel/vercel/pull/15641))
+
+- Simplify python runtime by always passing in app variable ([#15635](https://github.com/vercel/vercel/pull/15635))
+
+### Patch Changes
+
+- Namespace diagnostics keys by builder and service workspace, and aggregate per-builder `package-manifest.json` files into a single `project-manifest.json` ([#15399](https://github.com/vercel/vercel/pull/15399))
+
+- Updated dependencies [[`ac87d5a5ef5d79b55765e094efc957de987d7ac4`](https://github.com/vercel/vercel/commit/ac87d5a5ef5d79b55765e094efc957de987d7ac4), [`25a6a2daa46baba6e8d7dec90eb49213b8150b8c`](https://github.com/vercel/vercel/commit/25a6a2daa46baba6e8d7dec90eb49213b8150b8c)]:
+  - @vercel/python-analysis@0.11.0
+
+## 13.9.0
+
+### Minor Changes
+
+- Ensure django static files are copied in build output. ([#15557](https://github.com/vercel/vercel/pull/15557))
+
 ## 13.8.2
 
 ### Patch Changes

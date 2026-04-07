@@ -1,5 +1,27 @@
 # vercel-runtime
 
+## 0.12.0
+
+### Minor Changes
+
+- Fix django static file serving for manifest storage backends. ([#15709](https://github.com/vercel/vercel/pull/15709))
+
+### Patch Changes
+
+- [django] Fix vc dev when staticfiles is not used ([#15772](https://github.com/vercel/vercel/pull/15772))
+
+## 0.11.0
+
+### Minor Changes
+
+- Update uv to v0.10.11 ([#15623](https://github.com/vercel/vercel/pull/15623))
+
+- Simplify python runtime by always passing in app variable ([#15635](https://github.com/vercel/vercel/pull/15635))
+
+### Patch Changes
+
+- Fix a flakey unit test ([#15647](https://github.com/vercel/vercel/pull/15647))
+
 ## 0.10.1
 
 ### Patch Changes

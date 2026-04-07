@@ -12,7 +12,7 @@
 // =============================================================================
 
 export {
-  containsAppOrHandler,
+  findAppOrHandler,
   containsTopLevelCallable,
   getStringConstant,
 } from './semantic/entrypoints';
@@ -86,7 +86,10 @@ export {
 // Wheel compatibility checking
 // =============================================================================
 
-export { isWheelCompatible } from './manifest/wheel-compat';
+export {
+  evaluateMarker,
+  isWheelCompatible,
+} from './manifest/wheel-compat';
 
 // =============================================================================
 // Python selection (runtime + types)

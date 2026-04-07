@@ -1,3 +1,4 @@
+import { join } from 'path';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import type { Deployment } from '../src/types';
 
@@ -8,6 +9,10 @@ const { mockFetch, mockBuildFileTree } = vi.hoisted(() => ({
 
 const { mockHashes } = vi.hoisted(() => ({
   mockHashes: vi.fn(),
+}));
+
+const { mockCreateTgzFiles } = vi.hoisted(() => ({
+  mockCreateTgzFiles: vi.fn(),
 }));
 
 const { mockLstatSync, mockPathExists } = vi.hoisted(() => ({
@@ -29,6 +34,14 @@ vi.mock('../src/utils/hashes', async () => {
   return {
     ...actual,
     hashes: mockHashes,
+  };
+});
+
+vi.mock('../src/utils/archive', async () => {
+  const actual = await vi.importActual('../src/utils/archive');
+  return {
+    ...actual,
+    createTgzFiles: mockCreateTgzFiles,
   };
 });
 
@@ -294,6 +307,134 @@ describe('manual deployment', () => {
       const eventTypes = events.map(e => e.type);
       expect(eventTypes).toContain('hashes-calculated');
       expect(eventTypes).toContain('file-count');
+    });
+
+    it('should use archive when requested', async () => {
+      mockPathExists.mockResolvedValueOnce(true);
+      mockBuildFileTree.mockResolvedValueOnce({
+        fileList: ['/test/path/.vercel/output/index.html'],
+      });
+
+      const mockFilesMap = new Map([
+        [
+          'tgz123',
+          {
+            names: ['/test/path/.vercel/source.tgz.part1'],
+            data: Buffer.from('archive'),
+            mode: 0o666,
+          },
+        ],
+      ]);
+      mockCreateTgzFiles.mockResolvedValueOnce(mockFilesMap);
+
+      mockFetch.mockResolvedValueOnce(
+        mockResponse(200, {
+          ...mockDeploymentResponse(),
+          readyState: 'READY',
+          aliasAssigned: true,
+        })
+      );
+
+      const { continueDeployment } = await import('../src/continue');
+
+      const iterator = continueDeployment({
+        deploymentId: 'dpl_123',
+        path: '/test/path',
+        token: 'test-token',
+        archive: 'tgz',
+      });
+
+      const events: any[] = [];
+      for await (const event of iterator) {
+        events.push(event);
+      }
+
+      expect(events.map(e => e.type)).toContain('hashes-calculated');
+      expect(mockCreateTgzFiles).toHaveBeenCalledWith(
+        '/test/path',
+        ['/test/path/.vercel/output/index.html'],
+        expect.any(Function),
+        []
+      );
+      expect(mockHashes).not.toHaveBeenCalled();
+      const body = JSON.parse(mockFetch.mock.calls[0][2].body as string);
+      expect(body.files?.[0].file).toEqual('.vercel/source.tgz.part1');
+    });
+
+    it('should send provision.json separately when using archive', async () => {
+      const testPath = '/test/path';
+      const outputDir = join(testPath, '.vercel', 'output');
+      const indexPath = join(outputDir, 'index.html');
+      const provisionPath = join(outputDir, 'provision.json');
+
+      mockPathExists.mockResolvedValueOnce(true);
+      mockBuildFileTree.mockResolvedValueOnce({
+        fileList: [indexPath, provisionPath],
+      });
+
+      const mockArchiveMap = new Map([
+        [
+          'tgz123',
+          {
+            names: [join(testPath, '.vercel/source.tgz.part1')],
+            data: Buffer.from('archive'),
+            mode: 0o666,
+          },
+        ],
+      ]);
+      mockCreateTgzFiles.mockResolvedValueOnce(mockArchiveMap);
+
+      const provisionData = Buffer.from('{"resources":[]}');
+      const provisionMap = new Map([
+        [
+          'prov456',
+          {
+            names: [provisionPath],
+            data: provisionData,
+            mode: 0o644,
+          },
+        ],
+      ]);
+      mockHashes.mockResolvedValueOnce(provisionMap);
+
+      mockFetch.mockResolvedValueOnce(
+        mockResponse(200, {
+          ...mockDeploymentResponse(),
+          readyState: 'READY',
+          aliasAssigned: true,
+        })
+      );
+
+      const { continueDeployment } = await import('../src/continue');
+
+      const iterator = continueDeployment({
+        deploymentId: 'dpl_123',
+        path: testPath,
+        token: 'test-token',
+        archive: 'tgz',
+      });
+
+      const events: any[] = [];
+      for await (const event of iterator) {
+        events.push(event);
+      }
+
+      // createTgzFiles should be called with provision.json in the exclude list
+      expect(mockCreateTgzFiles).toHaveBeenCalledWith(
+        testPath,
+        [indexPath, provisionPath],
+        expect.any(Function),
+        [provisionPath]
+      );
+
+      // hashes should be called for the excluded provision.json
+      expect(mockHashes).toHaveBeenCalledWith([provisionPath]);
+
+      // The request body should contain both the archive and provision.json
+      const body = JSON.parse(mockFetch.mock.calls[0][2].body as string);
+      const fileNames = body.files.map((f: any) => f.file);
+      expect(fileNames).toContain('.vercel/source.tgz.part1');
+      expect(fileNames).toContain('.vercel/output/provision.json');
     });
   });
 });

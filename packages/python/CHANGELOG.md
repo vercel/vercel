@@ -1,5 +1,54 @@
 # @vercel/python
 
+## 6.29.0
+
+### Minor Changes
+
+- Simplify and streamline python builder logic ([#15696](https://github.com/vercel/vercel/pull/15696))
+
+- Fix django static file serving for manifest storage backends. ([#15709](https://github.com/vercel/vercel/pull/15709))
+
+- [django] Don't exclude the /static directory when using staticfiles ([#15705](https://github.com/vercel/vercel/pull/15705))
+
+- [django] Only look at STATICFILES_STORAGE value when on a django that supports it ([#15706](https://github.com/vercel/vercel/pull/15706))
+
+- Produce a better diagnostic when Django settings discovery fails ([#15770](https://github.com/vercel/vercel/pull/15770))
+
+### Patch Changes
+
+- Always make the path name for a python service be `/index` ([#15773](https://github.com/vercel/vercel/pull/15773))
+
+## 6.28.0
+
+### Minor Changes
+
+- Update uv to v0.10.11 ([#15623](https://github.com/vercel/vercel/pull/15623))
+
+- Simplify python runtime by always passing in app variable ([#15635](https://github.com/vercel/vercel/pull/15635))
+
+### Patch Changes
+
+- Fix env marker-excluded deps erroneously flagged as lacking wheels ([#15668](https://github.com/vercel/vercel/pull/15668))
+
+- Updated dependencies [[`ac87d5a5ef5d79b55765e094efc957de987d7ac4`](https://github.com/vercel/vercel/commit/ac87d5a5ef5d79b55765e094efc957de987d7ac4), [`25a6a2daa46baba6e8d7dec90eb49213b8150b8c`](https://github.com/vercel/vercel/commit/25a6a2daa46baba6e8d7dec90eb49213b8150b8c)]:
+  - @vercel/python-analysis@0.11.0
+
+## 6.27.0
+
+### Minor Changes
+
+- Ensure django static files are copied in build output. ([#15557](https://github.com/vercel/vercel/pull/15557))
+
+## 6.26.0
+
+### Minor Changes
+
+- Fix building python projects with pyproject.toml but no python-version ([#15554](https://github.com/vercel/vercel/pull/15554))
+
+### Patch Changes
+
+- Add a small buffer to the final lambda size check. ([#15663](https://github.com/vercel/vercel/pull/15663))
+
 ## 6.25.0
 
 ### Minor Changes

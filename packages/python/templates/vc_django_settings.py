@@ -33,11 +33,14 @@ else:
 
     mod = importlib.import_module(settings_module)
     settings = {k: getattr(mod, k) for k in dir(mod) if k.isupper()}
+    import django
+
     print(
         json.dumps(
             {
                 "settings_module": settings_module,
                 "django_settings": settings,
+                "django_version": django.VERSION[:3],
             },
             default=str,
         )
