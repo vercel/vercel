@@ -142,9 +142,9 @@ export default async function protection(
           {
             command: buildCommandWithGlobalFlags(
               client.argv,
-              'project protection enable --protection-bypass'
+              `project protection ${action} --protection-bypass`
             ),
-            when: 'Example: enable automation protection bypass',
+            when: 'Example: same action with automation protection bypass',
           },
         ],
       },
