@@ -13,10 +13,11 @@ import { validateJsonOutput } from '../../util/output-format';
 import output from '../../output-manager';
 import getProjectByCwdOrLink from '../../util/projects/get-project-by-cwd-or-link';
 import chalk from 'chalk';
-import type { Project } from '@vercel-internals/types';
+import type { JSONObject, Project } from '@vercel-internals/types';
 
 const PROTECTION_ACTIONS = ['enable', 'disable'] as const;
 type ProtectionAction = (typeof PROTECTION_ACTIONS)[number];
+const ENABLED_DEPLOYMENT_TYPE = 'prod_deployment_urls_and_all_previews';
 const PROTECTION_KEYS = [
   'passwordProtection',
   'ssoProtection',
@@ -123,22 +124,30 @@ export default async function protection(
 
   const preferJson = formatResult.jsonOutput || Boolean(client.nonInteractive);
 
-  const selected = Boolean(parsedArgs.flags['--protection-bypass']);
+  const ssoSelected = Boolean(parsedArgs.flags['--sso']);
+  const bypassSelected = Boolean(parsedArgs.flags['--protection-bypass']);
   const protectionBypassSecret = parsedArgs.flags[
     '--protection-bypass-secret'
   ] as string | undefined;
 
-  if (action && !selected) {
+  if (action && !ssoSelected && !bypassSelected) {
     const msg =
-      'No protection selected. Pass --protection-bypass. Usage: `vercel project protection enable|disable [name] --protection-bypass`';
+      'No protection selected. Pass --sso or --protection-bypass. Usage: `vercel project protection enable|disable [name] --sso|--protection-bypass`';
     outputAgentError(
       client,
       {
         status: 'error',
         reason: AGENT_REASON.MISSING_ARGUMENTS,
         message: msg,
-        hint: 'Use `project protection enable|disable` with --protection-bypass.',
+        hint: 'Use `project protection enable|disable` with a protection flag (e.g. --sso or --protection-bypass).',
         next: [
+          {
+            command: buildCommandWithGlobalFlags(
+              client.argv,
+              `project protection ${action} --sso`
+            ),
+            when: 'Example: same action with SSO protection selected',
+          },
           {
             command: buildCommandWithGlobalFlags(
               client.argv,
@@ -171,7 +180,7 @@ export default async function protection(
   }
 
   if (action) {
-    if (selected) {
+    if (bypassSelected) {
       if (action === 'disable' && !protectionBypassSecret) {
         const secretMsg =
           'Disabling protection bypass requires --protection-bypass-secret <secret>.';
@@ -225,6 +234,25 @@ export default async function protection(
       }
     }
 
+    if (ssoSelected) {
+      const patchBody: JSONObject = {
+        ssoProtection:
+          action === 'enable'
+            ? { deploymentType: ENABLED_DEPLOYMENT_TYPE }
+            : null,
+      };
+      try {
+        await client.fetch(`/v9/projects/${encodeURIComponent(project.id)}`, {
+          method: 'PATCH',
+          body: patchBody,
+        });
+      } catch (err: unknown) {
+        exitWithNonInteractiveError(client, err, 1, { variant: 'protection' });
+        printError(err);
+        return 1;
+      }
+    }
+
     if (preferJson) {
       client.stdout.write(
         `${JSON.stringify(
@@ -232,7 +260,8 @@ export default async function protection(
             action,
             projectId: project.id,
             projectName: project.name,
-            protectionBypass: selected ? action === 'enable' : undefined,
+            ssoProtection: ssoSelected ? action === 'enable' : undefined,
+            protectionBypass: bypassSelected ? action === 'enable' : undefined,
           },
           null,
           2
