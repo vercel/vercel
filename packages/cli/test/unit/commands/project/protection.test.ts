@@ -3,7 +3,7 @@ import project from '../../../../src/commands/project';
 import { client } from '../../../mocks/client';
 import { defaultProject, useProject } from '../../../mocks/project';
 
-describe('project protection (customer support code visibility)', () => {
+describe('project protection (SSO)', () => {
   it('shows protection settings by default', async () => {
     useProject({
       ...defaultProject,
@@ -18,7 +18,7 @@ describe('project protection (customer support code visibility)', () => {
     await expect(client.stderr).toOutput('Protection settings');
   });
 
-  it('requires flag for action mode', async () => {
+  it('requires --sso for action mode', async () => {
     useProject({
       ...defaultProject,
       id: 'prj_123',
@@ -32,7 +32,7 @@ describe('project protection (customer support code visibility)', () => {
     await expect(client.stderr).toOutput('No protection selected');
   });
 
-  it('sets customerSupportCodeVisibility', async () => {
+  it('disables SSO protection when --sso is set', async () => {
     useProject({
       ...defaultProject,
       id: 'prj_123',
@@ -40,29 +40,15 @@ describe('project protection (customer support code visibility)', () => {
     });
 
     client.scenario.patch('/v9/projects/prj_123', (req, res) => {
-      expect(req.body).toEqual({ customerSupportCodeVisibility: true });
+      expect(req.body).toEqual({ ssoProtection: null });
       res.json({ id: 'prj_123' });
     });
 
-    client.setArgv(
-      'project',
-      'protection',
-      'enable',
-      'my-project',
-      '--customer-support-code-visibility',
-      '--format',
-      'json'
-    );
+    client.setArgv('project', 'protection', 'disable', 'my-project', '--sso');
     const exitCode = await project(client);
-    expect(exitCode).toBe(0);
 
-    const out = JSON.parse(client.stdout.getFullOutput().trim());
-    expect(out).toMatchObject({
-      action: 'enable',
-      projectId: 'prj_123',
-      projectName: 'my-project',
-      customerSupportCodeVisibility: true,
-    });
+    expect(exitCode).toBe(0);
+    await expect(client.stderr).toOutput('Deployment protection disabled');
   });
 
   it('returns JSON for enable with --sso', async () => {
@@ -164,6 +150,69 @@ describe('project protection (customer support code visibility)', () => {
       const payload = JSON.parse(client.stdout.getFullOutput().trim());
       expect(payload.projectId).toBe('prj_123');
       expect(payload.name).toBe('my-project');
+    });
+  });
+});
+
+describe('project protection (customer support code visibility)', () => {
+  it('shows protection settings by default', async () => {
+    useProject({
+      ...defaultProject,
+      id: 'prj_123',
+      name: 'my-project',
+    });
+
+    client.setArgv('project', 'protection', 'my-project');
+    const exitCode = await project(client);
+
+    expect(exitCode).toBe(0);
+    await expect(client.stderr).toOutput('Protection settings');
+  });
+
+  it('requires flag for action mode', async () => {
+    useProject({
+      ...defaultProject,
+      id: 'prj_123',
+      name: 'my-project',
+    });
+
+    client.setArgv('project', 'protection', 'enable', 'my-project');
+    const exitCode = await project(client);
+
+    expect(exitCode).toBe(2);
+    await expect(client.stderr).toOutput('No protection selected');
+  });
+
+  it('sets customerSupportCodeVisibility', async () => {
+    useProject({
+      ...defaultProject,
+      id: 'prj_123',
+      name: 'my-project',
+    });
+
+    client.scenario.patch('/v9/projects/prj_123', (req, res) => {
+      expect(req.body).toEqual({ customerSupportCodeVisibility: true });
+      res.json({ id: 'prj_123' });
+    });
+
+    client.setArgv(
+      'project',
+      'protection',
+      'enable',
+      'my-project',
+      '--customer-support-code-visibility',
+      '--format',
+      'json'
+    );
+    const exitCode = await project(client);
+    expect(exitCode).toBe(0);
+
+    const out = JSON.parse(client.stdout.getFullOutput().trim());
+    expect(out).toMatchObject({
+      action: 'enable',
+      projectId: 'prj_123',
+      projectName: 'my-project',
+      customerSupportCodeVisibility: true,
     });
   });
 });
