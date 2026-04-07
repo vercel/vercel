@@ -279,6 +279,44 @@ export const membersSubcommand = {
   ],
 } as const;
 
+export const protectionSubcommand = {
+  name: 'protection',
+  aliases: [],
+  description: 'Show or toggle deployment protection settings for a project',
+  arguments: [
+    { name: 'action', required: false },
+    { name: 'name', required: false },
+  ],
+  options: [
+    formatOption,
+    {
+      name: 'sso',
+      shorthand: null,
+      type: Boolean,
+      description: 'Apply action to SSO protection.',
+      deprecated: false,
+    },
+  ],
+  examples: [
+    {
+      name: 'Protection settings for the linked project',
+      value: `${packageName} project protection`,
+    },
+    {
+      name: 'Named project as JSON',
+      value: `${packageName} project protection my-app --format json`,
+    },
+    {
+      name: 'Enable SSO deployment protection',
+      value: `${packageName} project protection enable --sso`,
+    },
+    {
+      name: 'Disable SSO for a named project',
+      value: `${packageName} project protection disable my-app --sso`,
+    },
+  ],
+} as const;
+
 export const accessGroupsSubcommand = {
   name: 'access-groups',
   aliases: ['accessgroups'],
@@ -386,6 +424,7 @@ export const projectCommand = {
     listSubcommand,
     membersSubcommand,
     accessGroupsSubcommand,
+    protectionSubcommand,
     webAnalyticsSubcommand,
     speedInsightsSubcommand,
     removeSubcommand,
