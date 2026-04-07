@@ -10,9 +10,15 @@ import {
   PythonLockFileKind,
   PythonManifestConvertedKind,
   type PythonPackage,
+  type PyProjectToml,
 } from '@vercel/python-analysis';
 import { getVenvPythonBin } from './utils';
-import { UvRunner, filterUnsafeUvPipArgs, getProtectedUvEnv } from './uv';
+import {
+  UvRunner,
+  filterUnsafeUvPipArgs,
+  getProtectedUvEnv,
+  UV_EXCLUDE_NEWER,
+} from './uv';
 import { DEFAULT_PYTHON_VERSION_STRING } from './version';
 
 const makeDependencyCheckCode = (dependency: string) => `
@@ -143,6 +149,18 @@ export async function discoverPackage({
     }
     throw error;
   }
+}
+
+// Exclude newer to help mitigate supply chain attacks.
+// This is only used when vercel generates a pyproject.toml for a user's project.
+export function injectExcludeNewer(data: PyProjectToml): void {
+  if (!data.tool) {
+    data.tool = {};
+  }
+  if (!data.tool.uv) {
+    data.tool.uv = {};
+  }
+  (data.tool.uv as Record<string, unknown>)['exclude-newer'] = UV_EXCLUDE_NEWER;
 }
 
 export type ManifestType = 'uv.lock' | 'pylock.toml' | 'pyproject.toml' | null;
@@ -300,6 +318,7 @@ export async function ensureUvProject({
       if (manifest.data.project) {
         manifest.data.project['requires-python'] = `~=${pythonVersion}.0`;
       }
+      injectExcludeNewer(manifest.data);
       const content = stringifyManifest(manifest.data);
       // Write to the same directory as the original manifest
       pyprojectPath = join(projectDir, 'pyproject.toml');
@@ -345,6 +364,8 @@ export async function ensureUvProject({
       requiresPython,
       dependencies: [],
     });
+
+    injectExcludeNewer(minimalManifest);
     const content = stringifyManifest(minimalManifest);
     await fs.promises.writeFile(pyprojectPath, content);
     // When requireBinaryWheels is true, use --no-build --upgrade to ensure
