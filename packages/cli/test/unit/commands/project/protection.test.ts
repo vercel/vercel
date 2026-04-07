@@ -18,7 +18,7 @@ describe('project protection (password)', () => {
     await expect(client.stderr).toOutput('Protection settings');
   });
 
-  it('requires --password for action mode', async () => {
+  it('requires a protection flag for action mode', async () => {
     useProject({
       ...defaultProject,
       id: 'prj_123',
@@ -88,7 +88,9 @@ describe('project protection (password)', () => {
       passwordProtection: true,
     });
   });
+});
 
+describe('project protection (SSO)', () => {
   it('returns JSON for enable with --sso', async () => {
     useProject({
       ...defaultProject,
@@ -120,72 +122,67 @@ describe('project protection (password)', () => {
       ssoProtection: true,
     });
   });
+});
 
-  describe('--non-interactive', () => {
-    afterEach(() => {
-      vi.restoreAllMocks();
-      client.nonInteractive = false;
+describe('project protection (--non-interactive)', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    client.nonInteractive = false;
+  });
+
+  it('outputs missing_arguments JSON when enable has no protection flag', async () => {
+    useProject({
+      ...defaultProject,
+      id: 'prj_123',
+      name: 'my-project',
     });
 
-    it('outputs missing_arguments JSON when enable has no protection flag', async () => {
-      useProject({
-        ...defaultProject,
-        id: 'prj_123',
-        name: 'my-project',
-      });
+    vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+      throw new Error(`exit:${code ?? 0}`);
+    }) as () => never);
 
-      vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
-        throw new Error(`exit:${code ?? 0}`);
-      }) as () => never);
+    client.nonInteractive = true;
+    client.setArgv(
+      'project',
+      'protection',
+      'enable',
+      'my-project',
+      '--non-interactive'
+    );
 
-      client.nonInteractive = true;
-      client.setArgv(
-        'project',
-        'protection',
-        'enable',
-        'my-project',
-        '--non-interactive'
-      );
+    await expect(project(client)).rejects.toThrow('exit:2');
 
-      await expect(project(client)).rejects.toThrow('exit:2');
+    const payload = JSON.parse(client.stdout.getFullOutput().trim());
+    expect(payload).toMatchObject({
+      status: 'error',
+      reason: 'missing_arguments',
+    });
+    expect(payload.message).toMatch(/No protection selected/);
+    expect(
+      payload.next?.some((n: { command: string }) =>
+        /project protection.*--sso/.test(n.command)
+      )
+    ).toBe(true);
+    expect(
+      payload.next?.some((n: { command: string }) =>
+        /project protection.*--password/.test(n.command)
+      )
+    ).toBe(true);
+  });
 
-      const payload = JSON.parse(client.stdout.getFullOutput().trim());
-      expect(payload).toMatchObject({
-        status: 'error',
-        reason: 'missing_arguments',
-      });
-      expect(payload.message).toMatch(/No protection selected/);
-      expect(
-        payload.next?.some((n: { command: string }) =>
-          /project protection.*--sso/.test(n.command)
-        )
-      ).toBe(true);
-      expect(
-        payload.next?.some((n: { command: string }) =>
-          /project protection.*--password/.test(n.command)
-        )
-      ).toBe(true);
+  it('outputs JSON when listing protection settings without --format', async () => {
+    useProject({
+      ...defaultProject,
+      id: 'prj_123',
+      name: 'my-project',
     });
 
-    it('outputs JSON when listing protection settings without --format', async () => {
-      useProject({
-        ...defaultProject,
-        id: 'prj_123',
-        name: 'my-project',
-      });
-
-      client.nonInteractive = true;
-      client.setArgv(
-        'project',
-        'protection',
-        'my-project',
-        '--non-interactive'
-      );
-      const exitCode = await project(client);
-      expect(exitCode).toBe(0);
-      const payload = JSON.parse(client.stdout.getFullOutput().trim());
-      expect(payload.projectId).toBe('prj_123');
-      expect(payload.name).toBe('my-project');
-    });
+    client.nonInteractive = true;
+    client.setArgv('project', 'protection', 'my-project', '--non-interactive');
+    const exitCode = await project(client);
+    expect(exitCode).toBe(0);
+    const payload = JSON.parse(client.stdout.getFullOutput().trim());
+    expect(payload.projectId).toBe('prj_123');
+    expect(payload.name).toBe('my-project');
   });
 });
