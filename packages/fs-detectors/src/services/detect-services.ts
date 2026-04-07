@@ -30,6 +30,7 @@ import { resolveAllConfiguredServices } from './resolve';
 import { autoDetectServices } from './auto-detect';
 import { detectRailwayServices } from './detect-railway';
 import { detectRenderServices } from './detect-render';
+import { detectProcfileServices } from './detect-procfile';
 
 // don't apply subdomain rewrites on preview urls
 const PREVIEW_DOMAIN_MISSING: HasField = [
@@ -93,6 +94,10 @@ function toInferredLayoutConfig(services: ServicesConfig): ServicesConfig {
       serviceConfig.buildCommand = service.buildCommand;
     }
 
+    if (typeof service.runtime === 'string') {
+      serviceConfig.runtime = service.runtime;
+    }
+
     inferredConfig[name] = serviceConfig;
   }
 
@@ -138,7 +143,7 @@ export async function detectServices(
     configuredServices && Object.keys(configuredServices).length > 0;
 
   // Try auto-detection of services.
-  // Priority: Railway > Render > blessed layouts.
+  // Priority: Railway > Render > Procfile > blessed layouts.
   // Any hard error (.errors) from detection will result into
   // exit from detection and return of the error
   // back to the user
@@ -151,6 +156,7 @@ export async function detectServices(
     }> = [
       { detect: detectRailwayServices, source: 'railway' },
       { detect: detectRenderServices, source: 'render' },
+      { detect: detectProcfileServices, source: 'procfile' },
       { detect: autoDetectServices, source: 'layout' },
     ];
 
