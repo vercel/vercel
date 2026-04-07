@@ -207,28 +207,50 @@ export interface ReadVercelConfigResult {
 }
 
 /**
- * Read and parse vercel.json from filesystem.
+ * Read and parse vercel.json or vercel.toml from filesystem.
  * Returns the parsed config or an error if the file exists but is invalid.
  */
 export async function readVercelConfig(
   fs: DetectorFilesystem
 ): Promise<ReadVercelConfigResult> {
   const hasVercelJson = await fs.hasPath('vercel.json');
-  if (!hasVercelJson) {
-    return { config: null, error: null };
+  if (hasVercelJson) {
+    try {
+      const content = await fs.readFile('vercel.json');
+      const config = JSON.parse(content.toString());
+      return { config, error: null };
+    } catch {
+      return {
+        config: null,
+        error: {
+          code: 'INVALID_VERCEL_JSON',
+          message:
+            'Failed to parse vercel.json. Ensure it contains valid JSON.',
+        },
+      };
+    }
   }
 
-  try {
-    const content = await fs.readFile('vercel.json');
-    const config = JSON.parse(content.toString());
-    return { config, error: null };
-  } catch {
-    return {
-      config: null,
-      error: {
-        code: 'INVALID_VERCEL_JSON',
-        message: 'Failed to parse vercel.json. Ensure it contains valid JSON.',
-      },
-    };
+  const hasVercelToml =
+    process.env.VERCEL_TOML_CONFIG_ENABLED === '1' &&
+    (await fs.hasPath('vercel.toml'));
+  if (hasVercelToml) {
+    try {
+      const { parse: tomlParse } = await import('smol-toml');
+      const content = await fs.readFile('vercel.toml');
+      const config = tomlParse(content.toString());
+      return { config: config as any, error: null };
+    } catch {
+      return {
+        config: null,
+        error: {
+          code: 'INVALID_VERCEL_TOML',
+          message:
+            'Failed to parse vercel.toml. Ensure it contains valid TOML.',
+        },
+      };
+    }
   }
+
+  return { config: null, error: null };
 }
