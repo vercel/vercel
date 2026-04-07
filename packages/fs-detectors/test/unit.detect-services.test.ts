@@ -1242,7 +1242,7 @@ describe('detectServices', () => {
       });
     });
 
-    it('should not parse module:function entrypoint for web services', async () => {
+    it('should parse module:function entrypoint for web services', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': JSON.stringify({
           experimentalServices: {
@@ -1257,17 +1257,16 @@ describe('detectServices', () => {
       });
       const result = await detectServices({ fs });
 
-      // The raw "jobs.cleanup:handler" is not a valid file path,
-      // so resolution should fail for non-cron services
-      expect(result.services).toHaveLength(0);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0]).toMatchObject({
-        code: 'ENTRYPOINT_NOT_FOUND',
-        serviceName: 'api',
+      expect(result.errors).toHaveLength(0);
+      expect(result.services).toHaveLength(1);
+      expect(result.services[0]).toMatchObject({
+        name: 'api',
+        type: 'web',
+        entrypoint: 'jobs/cleanup.py',
       });
     });
 
-    it('should not parse module:function entrypoint for worker services', async () => {
+    it('should parse module:function entrypoint for worker services', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': JSON.stringify({
           experimentalServices: {
@@ -1282,11 +1281,12 @@ describe('detectServices', () => {
       });
       const result = await detectServices({ fs });
 
-      expect(result.services).toHaveLength(0);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0]).toMatchObject({
-        code: 'ENTRYPOINT_NOT_FOUND',
-        serviceName: 'processor',
+      expect(result.errors).toHaveLength(0);
+      expect(result.services).toHaveLength(1);
+      expect(result.services[0]).toMatchObject({
+        name: 'processor',
+        type: 'worker',
+        entrypoint: 'jobs/cleanup.py',
       });
     });
 
