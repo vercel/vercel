@@ -55,6 +55,10 @@ import { whoamiCommand } from './whoami/command';
 import { blobCommand } from './blob/command';
 import { webhooksCommand } from './webhooks/command';
 import type { Command } from './help';
+import {
+  buildSortedCommandSurface,
+  type RootCommandEntry,
+} from '../util/command-surface';
 import output from '../output-manager';
 
 const commandsStructs = [
@@ -145,3 +149,7 @@ output.debug(
 );
 
 export const commandNames = Array.from(commands.keys());
+
+export function getCliCommandSurface(): readonly string[] {
+  return buildSortedCommandSurface(commandsStructs as RootCommandEntry[]);
+}
