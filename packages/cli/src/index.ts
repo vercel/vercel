@@ -1040,6 +1040,10 @@ const main = async () => {
           telemetry.trackCliCommandMicrofrontends(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).microfrontends;
           break;
+        case 'oauth-apps':
+          telemetry.trackCliCommandOauthApps(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).oauthApps;
+          break;
         case 'open':
           telemetry.trackCliCommandOpen(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).open;
