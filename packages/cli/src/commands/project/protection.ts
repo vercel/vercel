@@ -139,9 +139,9 @@ export default async function protection(
           {
             command: buildCommandWithGlobalFlags(
               client.argv,
-              'project protection disable --skew'
+              `project protection ${action} --skew`
             ),
-            when: 'Example: disable with skew protection selected',
+            when: 'Example: same action with skew protection selected',
           },
         ],
       },
