@@ -139,9 +139,9 @@ export default async function protection(
           {
             command: buildCommandWithGlobalFlags(
               client.argv,
-              'project protection disable --password'
+              `project protection ${action} --password`
             ),
-            when: 'Example: disable with password protection selected',
+            when: 'Example: same action with password protection selected',
           },
         ],
       },
