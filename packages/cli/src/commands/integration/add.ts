@@ -163,18 +163,17 @@ export async function add(
   }
   client.config.currentTeam = team.id;
 
-  const resolved = await resolveAndFetchIntegration(
+  const integration = await resolveAndFetchIntegration(
     client,
     integrationSlug,
     telemetry
   );
-  if (!resolved) {
+  if (!integration) {
     return 1;
   }
-  const integration = resolved.integration;
-  integrationSlug = resolved.integrationSlug;
-  if (resolved.productSlug && !productSlug) {
-    productSlug = resolved.productSlug;
+  integrationSlug = integration.slug;
+  if (integration.productSlug && !productSlug) {
+    productSlug = integration.productSlug;
   }
 
   if (!integration.products?.length) {

@@ -81,19 +81,15 @@ function matchesSearchTerm(entry: DiscoverEntry, term: string): boolean {
  */
 export async function resolveAndFetchIntegration(
   client: Client,
-  rawSlug: string,
+  slug: string,
   telemetry: IntegrationAddTelemetryClient
-): Promise<{
-  integration: Integration;
-  integrationSlug: string;
-  productSlug?: string;
-} | null> {
+): Promise<(Integration & { productSlug?: string }) | null> {
   // Try direct fetch first
   let directError: Error | undefined;
   try {
-    const integration = await fetchIntegration(client, rawSlug);
-    telemetry.trackCliArgumentIntegration(rawSlug, true);
-    return { integration, integrationSlug: rawSlug };
+    const integration = await fetchIntegration(client, slug);
+    telemetry.trackCliArgumentIntegration(slug, true);
+    return integration;
   } catch (error) {
     directError = error as Error;
   }
@@ -107,25 +103,23 @@ export async function resolveAndFetchIntegration(
   } catch (_discoverError) {
     output.stopSpinner();
     output.error(
-      `Failed to get integration "${rawSlug}": ${directError?.message ?? (_discoverError as Error).message}`
+      `Failed to get integration "${slug}": ${directError?.message ?? (_discoverError as Error).message}`
     );
-    telemetry.trackCliArgumentIntegration(rawSlug, false);
+    telemetry.trackCliArgumentIntegration(slug, false);
     return null;
   }
 
   output.stopSpinner();
 
-  const matches = entries.filter(entry => matchesSearchTerm(entry, rawSlug));
+  const matches = entries.filter(entry => matchesSearchTerm(entry, slug));
 
   if (!matches.length) {
     output.error(
-      `No integration found matching "${rawSlug}". Run ${chalk.cyan('vercel integration discover')} to browse available integrations.`
+      `No integration found matching "${slug}". Run ${chalk.cyan('vercel integration discover')} to browse available integrations.`
     );
-    telemetry.trackCliArgumentIntegration(rawSlug, false);
+    telemetry.trackCliArgumentIntegration(slug, false);
     return null;
   }
-
-  let selectedSlug: string;
 
   if (matches.length === 1) {
     const match = matches[0];
@@ -138,16 +132,16 @@ export async function resolveAndFetchIntegration(
         return null;
       }
     }
-    selectedSlug = match.slug;
+    slug = match.slug;
   } else if (client.stdin.isTTY !== true) {
     output.error(
-      `Found ${matches.length} integrations matching "${rawSlug}". Available integrations:\n${matches.map(m => `- ${m.slug}: ${m.description}`).join('\n')}`
+      `Found ${matches.length} integrations matching "${slug}". Available integrations:\n${matches.map(m => `- ${m.slug}: ${m.description}`).join('\n')}`
     );
-    telemetry.trackCliArgumentIntegration(rawSlug, false);
+    telemetry.trackCliArgumentIntegration(slug, false);
     return null;
   } else {
-    selectedSlug = await client.input.select({
-      message: `Found ${matches.length} integrations matching "${rawSlug}". Pick one to install:`,
+    slug = await client.input.select({
+      message: `Found ${matches.length} integrations matching "${slug}". Pick one to install:`,
       choices: matches.map(m => ({
         name: `${m.name} (${m.slug})${m.description ? ` - ${m.description}` : ''}`,
         value: m.slug,
@@ -158,18 +152,18 @@ export async function resolveAndFetchIntegration(
   // Parse compound slug (integration/product)
   let integrationSlug: string;
   let productSlug: string | undefined;
-  const slashIndex = selectedSlug.indexOf('/');
+  const slashIndex = slug.indexOf('/');
   if (slashIndex !== -1) {
-    integrationSlug = selectedSlug.substring(0, slashIndex);
-    productSlug = selectedSlug.substring(slashIndex + 1);
+    integrationSlug = slug.substring(0, slashIndex);
+    productSlug = slug.substring(slashIndex + 1);
   } else {
-    integrationSlug = selectedSlug;
+    integrationSlug = slug;
   }
 
   try {
     const integration = await fetchIntegration(client, integrationSlug);
     telemetry.trackCliArgumentIntegration(integrationSlug, true);
-    return { integration, integrationSlug, productSlug };
+    return { ...integration, productSlug };
   } catch (error) {
     output.error(
       `Failed to get integration "${integrationSlug}": ${(error as Error).message}`
