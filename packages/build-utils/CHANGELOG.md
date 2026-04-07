@@ -1,5 +1,11 @@
 # @vercel/build-utils
 
+## 13.13.0
+
+### Minor Changes
+
+- Extend `finalizeLambda` with pluggable ZIP strategy (`createZip`), pre-digest validation hook (`validateZip`), and optional trace tags. Widen `getLambdaEnvironment` buffer param to `{ byteLength: number }`. ([#15856](https://github.com/vercel/vercel/pull/15856))
+
 ## 13.12.2
 
 ### Patch Changes
