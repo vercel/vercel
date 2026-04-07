@@ -6,7 +6,10 @@ import pull from '../../../../src/commands/env/pull';
 import { connectResourceToProject } from '../../../../src/util/integration-resource/connect-resource-to-project';
 import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
 import { client } from '../../../mocks/client';
-import { useAutoProvision } from '../../../mocks/integration';
+import {
+  useAutoProvision,
+  useIntegrationDiscover,
+} from '../../../mocks/integration';
 import { defaultProject, useProject } from '../../../mocks/project';
 import { useTeams, type Team } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
@@ -2686,6 +2689,68 @@ describe('integration add (auto-provision)', () => {
       expect(calledUrl.searchParams.get('installationMetadata')).toEqual(
         JSON.stringify({ name: 'my-org', 'install-region': 'us' })
       );
+    });
+  });
+
+  describe('discover fallback', () => {
+    beforeEach(() => {
+      useAutoProvision({ responseKey: 'provisioned' });
+      useIntegrationDiscover();
+    });
+
+    it('should discover and provision when slug matches a tag', async () => {
+      client.setArgv('integration', 'add', 'postgres');
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput('Pick one to install');
+      client.stdin.write('\n');
+
+      await expect(client.stderr).toOutput(
+        'Neon Postgres successfully provisioned'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+    });
+
+    it('should confirm single match and provision', async () => {
+      client.setArgv('integration', 'add', 'Neon');
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput('Install Neon Postgres (neon)?');
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput(
+        'Neon Postgres successfully provisioned'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+    });
+
+    it('should error when no integrations match the query', async () => {
+      client.setArgv('integration', 'add', 'nonexistent-xyz');
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'No integration found matching "nonexistent-xyz"'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(1);
+    });
+
+    it('should list matches in non-TTY mode', async () => {
+      (client.stdin as any).isTTY = false;
+      client.setArgv('integration', 'add', 'postgres');
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'Found 2 integrations matching "postgres"'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(1);
     });
   });
 });

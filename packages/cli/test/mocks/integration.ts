@@ -283,6 +283,21 @@ const integrations: Record<string, Integration> = {
       },
     ],
   },
+  neon: {
+    id: 'neon',
+    name: 'Neon',
+    slug: 'neon',
+    products: [
+      {
+        id: 'neon-product',
+        name: 'Neon Postgres',
+        slug: 'neon',
+        type: 'storage',
+        shortDescription: 'Serverless Postgres database',
+        metadataSchema: metadataSchema1,
+      },
+    ],
+  },
   'acme-external': {
     id: 'acme-external',
     name: 'Acme Integration External',
