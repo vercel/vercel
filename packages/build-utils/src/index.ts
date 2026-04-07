@@ -200,6 +200,8 @@ export { collectUncompressedSize } from './collect-uncompressed-size';
 
 export {
   finalizeLambda,
+  type CreateZipResult,
+  type CreateZipFn,
   type FinalizeLambdaParams,
   type FinalizeLambdaResult,
   type TraceFn,
