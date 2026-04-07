@@ -2257,6 +2257,42 @@ fs.writeFileSync(
     ]);
   });
 
+  it('should emit worker services at the private callback path', async () => {
+    const cwd = fixture('with-worker-private-path-service');
+    const output = join(cwd, '.vercel', 'output');
+    client.cwd = cwd;
+
+    const exitCode = await build(client);
+    expect(exitCode).toBe(0);
+
+    expect(
+      await fs.pathExists(
+        join(output, 'functions', '_svc', 'worker-orders.func')
+      )
+    ).toBe(true);
+    expect(
+      await fs.pathExists(
+        join(output, 'functions', '_svc', 'worker-orders', 'index.func')
+      )
+    ).toBe(false);
+
+    const vcConfig = await fs.readJSON(
+      join(output, 'functions', '_svc', 'worker-orders.func', '.vc-config.json')
+    );
+    expect(vcConfig.experimentalTriggers).toEqual([
+      {
+        type: 'queue/v2beta',
+        topic: 'orders',
+        consumer: 'worker-orders',
+      },
+    ]);
+
+    const config = await fs.readJSON(join(output, 'config.json'));
+    expect(JSON.stringify(config.routes || [])).not.toContain(
+      '/_svc/worker-orders'
+    );
+  });
+
   it('should not write trace spans for non-build commands', async () => {
     const cwd = fixture('static');
     const tracePath = join(cwd, '.vercel/output/diagnostics/cli_traces.json');

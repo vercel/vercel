@@ -52,9 +52,11 @@ def parse_cloudevent(body: bytes) -> tuple[str, str, str]:
     if not isinstance(data, dict):
         raise ValueError("Invalid CloudEvent: body must be a JSON object")
 
-    if data.get("type") != "com.vercel.queue.v1beta":
+    valid_types = {"com.vercel.queue.v1beta", "com.vercel.queue.v2beta"}
+    if data.get("type") not in valid_types:
         raise ValueError(
-            f"Invalid CloudEvent type: expected 'com.vercel.queue.v1beta', got {data.get('type')!r}"
+            "Invalid CloudEvent type: expected one of "
+            f"{sorted(valid_types)!r}, got {data.get('type')!r}"
         )
 
     ce_data = data.get("data")

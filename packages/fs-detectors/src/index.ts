@@ -19,10 +19,9 @@ export {
   isRouteOwningBuilder,
   INTERNAL_SERVICE_PREFIX,
   getInternalServiceFunctionPath,
+  getInternalServiceWorkerPath,
   getInternalServiceCronPath,
   getInternalServiceCronPathPrefix,
-  getInternalServiceWorkerPath,
-  getInternalServiceWorkerPathPrefix,
 } from './services/utils';
 export { getServicesBuilders } from './services/get-services-builders';
 export type {

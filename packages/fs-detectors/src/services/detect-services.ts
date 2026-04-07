@@ -16,7 +16,6 @@ import {
 import {
   getInternalServiceCronPath,
   getInternalServiceFunctionPath,
-  getInternalServiceWorkerPath,
   isFrontendFramework,
   isRouteOwningBuilder,
   isStaticBuild,
@@ -363,22 +362,6 @@ export function generateServicesRoutes(services: Service[]): ServicesRoutes {
         });
       }
     }
-  }
-
-  const workerServices = services.filter(s => s.type === 'worker');
-  for (const service of workerServices) {
-    const workerEntrypoint =
-      service.entrypoint || service.builder.src || 'index';
-    const workerPath = getInternalServiceWorkerPath(
-      service.name,
-      workerEntrypoint
-    );
-    const functionPath = getInternalServiceFunctionPath(service.name);
-    workers.push({
-      src: `^${escapeRegex(workerPath)}$`,
-      dest: functionPath,
-      check: true,
-    });
   }
 
   const cronServices = services.filter(s => s.type === 'cron');

@@ -6,7 +6,7 @@ import getPort from 'get-port';
 import chalk from 'chalk';
 import {
   getInternalServiceCronPathPrefix,
-  getInternalServiceWorkerPathPrefix,
+  getInternalServiceWorkerPath,
   type Service,
 } from '@vercel/fs-detectors';
 import { frameworkList, type Framework } from '@vercel/frameworks';
@@ -140,7 +140,7 @@ interface ServiceDevProcess {
 
 function getServiceRoutePrefixes(service: Service): string[] {
   if (service.type === 'worker') {
-    return [getInternalServiceWorkerPathPrefix(service.name)];
+    return [getInternalServiceWorkerPath(service.name)];
   }
   if (service.type === 'cron') {
     return [getInternalServiceCronPathPrefix(service.name)];
@@ -302,6 +302,17 @@ export class ServicesOrchestrator {
   getServiceOrigin(serviceName: string): string | null {
     const service = this.managedServices.get(serviceName);
     return service ? `http://${service.host}:${service.port}` : null;
+  }
+
+  getWorkerCallbackUrl(serviceName: string): string | null {
+    const service = this.services.find(
+      candidate => candidate.name === serviceName
+    );
+    if (!service || service.type !== 'worker') {
+      return null;
+    }
+
+    return `${this.proxyOrigin}${getInternalServiceWorkerPath(service.name)}`;
   }
 
   hasServices(): boolean {

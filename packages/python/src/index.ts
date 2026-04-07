@@ -736,7 +736,11 @@ from vercel_runtime.vc_init import vc_handler
   // If there is a service name, we need to mount this under the
   // service properly, for a V2 build.
   // TODO: Ideally this should be handled by writeBuildResultV2.
-  const lambdaPath = service?.name ? `_svc/${service.name}/index` : 'index';
+  const lambdaPath = service?.name
+    ? service.type === 'worker'
+      ? `_svc/${service.name}`
+      : `_svc/${service.name}/index`
+    : 'index';
   const staticFiles = djangoStatic?.cdnOutputDir
     ? await glob('**', { cwd: djangoStatic.cdnOutputDir })
     : {};

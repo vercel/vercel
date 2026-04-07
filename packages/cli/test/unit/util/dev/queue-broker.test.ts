@@ -23,7 +23,6 @@ function makeWorkerService(
   return {
     name,
     type: 'worker',
-    consumer: name,
     workspace: '.',
     builder: { src: 'index.ts', use: '@vercel/node' },
     topics,
@@ -93,13 +92,17 @@ describe('topicPatternToRegex', () => {
 
 describe('QueueBroker', () => {
   let broker: QueueBroker;
-  let getServiceOrigin: ReturnType<typeof vi.fn>;
+  let getWorkerCallbackUrl: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     vi.useFakeTimers();
     mockFetch.mockReset();
     mockFetch.mockResolvedValue({ ok: true, status: 200 } as any);
-    getServiceOrigin = vi.fn().mockReturnValue('http://localhost:3001');
+    getWorkerCallbackUrl = vi
+      .fn()
+      .mockImplementation(
+        (name: string) => `http://localhost:3000/_svc/${name}`
+      );
   });
 
   afterEach(() => {
@@ -111,7 +114,7 @@ describe('QueueBroker', () => {
     it('returns unique messageIds', () => {
       broker = new QueueBroker(
         [makeWorkerService('worker-a', ['orders'])],
-        getServiceOrigin
+        getWorkerCallbackUrl
       );
 
       const r1 = broker.enqueue(
@@ -133,7 +136,7 @@ describe('QueueBroker', () => {
     it('dispatches CloudEvent to matching worker', async () => {
       broker = new QueueBroker(
         [makeWorkerService('worker-a', ['orders'])],
-        getServiceOrigin
+        getWorkerCallbackUrl
       );
 
       const { messageId } = broker.enqueue(
@@ -145,14 +148,14 @@ describe('QueueBroker', () => {
 
       expect(mockFetch).toHaveBeenCalledOnce();
       const [url, opts] = mockFetch.mock.calls[0];
-      expect(url).toBe('http://localhost:3001/');
+      expect(url).toBe('http://localhost:3000/_svc/worker-a');
       expect((opts as any).method).toBe('POST');
       expect((opts as any).headers['Content-Type']).toBe(
         'application/cloudevents+json'
       );
 
       const body = lastCloudEvent();
-      expect(body.type).toBe('com.vercel.queue.v1beta');
+      expect(body.type).toBe('com.vercel.queue.v2beta');
       expect(body.data).toMatchObject({
         queueName: 'orders',
         consumerGroup: 'worker-a',
@@ -166,7 +169,7 @@ describe('QueueBroker', () => {
           makeWorkerService('worker-a', ['order-*']),
           makeWorkerService('worker-b', ['order-created']),
         ],
-        getServiceOrigin
+        getWorkerCallbackUrl
       );
 
       broker.enqueue('order-created', Buffer.from('{}'), 'application/json');
@@ -175,10 +178,13 @@ describe('QueueBroker', () => {
       expect(mockFetch).toHaveBeenCalledTimes(2);
     });
 
-    it('dispatches to worker subscribed to multiple topics via topics[]', async () => {
+    it('dispatches to distinct workers subscribed to different topics', async () => {
       broker = new QueueBroker(
-        [makeWorkerService('multi-worker', ['orders', 'events'])],
-        getServiceOrigin
+        [
+          makeWorkerService('orders-worker', ['orders']),
+          makeWorkerService('events-worker', ['events']),
+        ],
+        getWorkerCallbackUrl
       );
 
       broker.enqueue('orders', Buffer.from('{"a":1}'), 'application/json');
@@ -196,8 +202,11 @@ describe('QueueBroker', () => {
 
     it('does not cross-dispatch across topics during tick()', async () => {
       broker = new QueueBroker(
-        [makeWorkerService('multi-worker', ['orders', 'events'])],
-        getServiceOrigin
+        [
+          makeWorkerService('orders-worker', ['orders']),
+          makeWorkerService('events-worker', ['events']),
+        ],
+        getWorkerCallbackUrl
       );
 
       broker.enqueue(
@@ -223,10 +232,10 @@ describe('QueueBroker', () => {
       expect(mockFetch).toHaveBeenCalledTimes(2);
     });
 
-    it('does not dispatch on unmatched topic when using topics[]', async () => {
+    it('does not dispatch on unmatched topic', async () => {
       broker = new QueueBroker(
-        [makeWorkerService('multi-worker', ['orders', 'events'])],
-        getServiceOrigin
+        [makeWorkerService('orders-worker', ['orders'])],
+        getWorkerCallbackUrl
       );
 
       broker.enqueue('unmatched', Buffer.from('{}'), 'application/json');
@@ -238,7 +247,7 @@ describe('QueueBroker', () => {
     it('does not dispatch when no consumer matches', async () => {
       broker = new QueueBroker(
         [makeWorkerService('worker-a', ['orders'])],
-        getServiceOrigin
+        getWorkerCallbackUrl
       );
 
       broker.enqueue('unmatched-topic', Buffer.from('{}'), 'application/json');
@@ -248,7 +257,10 @@ describe('QueueBroker', () => {
     });
 
     it('ignores non-worker services', async () => {
-      broker = new QueueBroker([makeWebService('frontend')], getServiceOrigin);
+      broker = new QueueBroker(
+        [makeWebService('frontend')],
+        getWorkerCallbackUrl
+      );
 
       broker.enqueue('orders', Buffer.from('{}'), 'application/json');
       await vi.advanceTimersByTimeAsync(0);
@@ -259,7 +271,7 @@ describe('QueueBroker', () => {
     it('does not dispatch delayed messages immediately', async () => {
       broker = new QueueBroker(
         [makeWorkerService('worker-a', ['orders'])],
-        getServiceOrigin
+        getWorkerCallbackUrl
       );
 
       broker.enqueue('orders', Buffer.from('{}'), 'application/json', {
@@ -273,7 +285,7 @@ describe('QueueBroker', () => {
     it('dispatches delayed messages after the delay passes', async () => {
       broker = new QueueBroker(
         [makeWorkerService('worker-a', ['orders'])],
-        getServiceOrigin
+        getWorkerCallbackUrl
       );
 
       broker.enqueue('orders', Buffer.from('{}'), 'application/json', {
@@ -291,7 +303,7 @@ describe('QueueBroker', () => {
     it('returns payload and metadata for an enqueued message', async () => {
       broker = new QueueBroker(
         [makeWorkerService('worker-a', ['orders'])],
-        getServiceOrigin
+        getWorkerCallbackUrl
       );
 
       const payload = Buffer.from('{"item":"book"}');
@@ -310,7 +322,7 @@ describe('QueueBroker', () => {
     it('returns null for non-existent message', () => {
       broker = new QueueBroker(
         [makeWorkerService('worker-a', ['orders'])],
-        getServiceOrigin
+        getWorkerCallbackUrl
       );
 
       expect(broker.receiveById('nonexistent', 'worker-a')).toBeNull();
@@ -319,7 +331,7 @@ describe('QueueBroker', () => {
     it('returns null for unknown consumer group', () => {
       broker = new QueueBroker(
         [makeWorkerService('worker-a', ['orders'])],
-        getServiceOrigin
+        getWorkerCallbackUrl
       );
 
       const { messageId } = broker.enqueue(
@@ -336,7 +348,7 @@ describe('QueueBroker', () => {
     it('returns true and makes message unreceivable in that group', async () => {
       broker = new QueueBroker(
         [makeWorkerService('worker-a', ['orders'])],
-        getServiceOrigin
+        getWorkerCallbackUrl
       );
 
       const { messageId } = broker.enqueue(
@@ -363,7 +375,7 @@ describe('QueueBroker', () => {
     it('rejects ACK with wrong ticket', async () => {
       broker = new QueueBroker(
         [makeWorkerService('worker-a', ['orders'])],
-        getServiceOrigin
+        getWorkerCallbackUrl
       );
 
       const { messageId } = broker.enqueue(
@@ -384,7 +396,7 @@ describe('QueueBroker', () => {
     it('returns false for unknown consumer group', () => {
       broker = new QueueBroker(
         [makeWorkerService('worker-a', ['orders'])],
-        getServiceOrigin
+        getWorkerCallbackUrl
       );
 
       expect(broker.acknowledge('any', 'unknown-group', 'ticket')).toBe(false);
@@ -393,7 +405,7 @@ describe('QueueBroker', () => {
     it('cleans up message when acked in all groups', async () => {
       broker = new QueueBroker(
         [makeWorkerService('worker-a', ['orders'])],
-        getServiceOrigin
+        getWorkerCallbackUrl
       );
 
       const { messageId } = broker.enqueue(
@@ -416,7 +428,7 @@ describe('QueueBroker', () => {
           makeWorkerService('worker-a', ['order-*']),
           makeWorkerService('worker-b', ['order-*']),
         ],
-        getServiceOrigin
+        getWorkerCallbackUrl
       );
 
       const { messageId } = broker.enqueue(
@@ -440,7 +452,7 @@ describe('QueueBroker', () => {
     it('returns true for in-flight message with valid ticket', async () => {
       broker = new QueueBroker(
         [makeWorkerService('worker-a', ['orders'])],
-        getServiceOrigin
+        getWorkerCallbackUrl
       );
 
       const { messageId } = broker.enqueue(
@@ -463,7 +475,7 @@ describe('QueueBroker', () => {
     it('returns false for pending message', () => {
       broker = new QueueBroker(
         [makeWorkerService('worker-a', ['orders'])],
-        getServiceOrigin
+        getWorkerCallbackUrl
       );
 
       const { messageId } = broker.enqueue(
@@ -481,7 +493,7 @@ describe('QueueBroker', () => {
     it('returns false with wrong ticket', async () => {
       broker = new QueueBroker(
         [makeWorkerService('worker-a', ['orders'])],
-        getServiceOrigin
+        getWorkerCallbackUrl
       );
 
       const { messageId } = broker.enqueue(
@@ -499,7 +511,7 @@ describe('QueueBroker', () => {
     it('prevents lease expiry when visibility is extended', async () => {
       broker = new QueueBroker(
         [makeWorkerService('worker-a', ['orders'])],
-        getServiceOrigin
+        getWorkerCallbackUrl
       );
 
       const { messageId } = broker.enqueue(
@@ -532,7 +544,7 @@ describe('QueueBroker', () => {
 
       broker = new QueueBroker(
         [makeWorkerService('worker-a', ['orders'])],
-        getServiceOrigin
+        getWorkerCallbackUrl
       );
 
       const { messageId } = broker.enqueue(
@@ -562,7 +574,7 @@ describe('QueueBroker', () => {
 
       broker = new QueueBroker(
         [makeWorkerService('worker-a', ['orders'])],
-        getServiceOrigin
+        getWorkerCallbackUrl
       );
 
       broker.enqueue('orders', Buffer.from('{}'), 'application/json');
@@ -577,11 +589,11 @@ describe('QueueBroker', () => {
     });
 
     it('retries when service origin is initially null', async () => {
-      getServiceOrigin.mockReturnValue(null);
+      getWorkerCallbackUrl.mockReturnValue(null);
 
       broker = new QueueBroker(
         [makeWorkerService('worker-a', ['orders'])],
-        getServiceOrigin
+        getWorkerCallbackUrl
       );
 
       broker.enqueue('orders', Buffer.from('{}'), 'application/json');
@@ -591,7 +603,9 @@ describe('QueueBroker', () => {
       expect(mockFetch).not.toHaveBeenCalled();
 
       // Service becomes available
-      getServiceOrigin.mockReturnValue('http://localhost:3001');
+      getWorkerCallbackUrl.mockImplementation(
+        (name: string) => `http://localhost:3000/_svc/${name}`
+      );
       await vi.advanceTimersByTimeAsync(61_000);
 
       expect(mockFetch).toHaveBeenCalled();
@@ -602,7 +616,7 @@ describe('QueueBroker', () => {
     it('re-dispatches message when visibility timeout expires', async () => {
       broker = new QueueBroker(
         [makeWorkerService('worker-a', ['orders'])],
-        getServiceOrigin
+        getWorkerCallbackUrl
       );
 
       broker.enqueue('orders', Buffer.from('{}'), 'application/json');
@@ -621,7 +635,7 @@ describe('QueueBroker', () => {
     it('increments delivery count on re-dispatch', async () => {
       broker = new QueueBroker(
         [makeWorkerService('worker-a', ['orders'])],
-        getServiceOrigin
+        getWorkerCallbackUrl
       );
 
       const { messageId } = broker.enqueue(
@@ -648,7 +662,7 @@ describe('QueueBroker', () => {
     it('cleans up expired messages', async () => {
       broker = new QueueBroker(
         [makeWorkerService('worker-a', ['orders'])],
-        getServiceOrigin
+        getWorkerCallbackUrl
       );
 
       const { messageId } = broker.enqueue(
@@ -674,7 +688,7 @@ describe('QueueBroker', () => {
     it('dispatches all messages immediately without queuing', async () => {
       broker = new QueueBroker(
         [makeWorkerService('worker-a', ['orders'])],
-        getServiceOrigin
+        getWorkerCallbackUrl
       );
 
       broker.enqueue('orders', Buffer.from('{"n":1}'), 'application/json');

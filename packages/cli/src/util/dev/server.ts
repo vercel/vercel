@@ -955,7 +955,7 @@ export default class DevServer {
       );
       if (workerServices.length > 0) {
         this.queueBroker = new QueueBroker(this.services || [], name =>
-          this.orchestrator!.getServiceOrigin(name)
+          this.orchestrator!.getWorkerCallbackUrl(name)
         );
       }
 

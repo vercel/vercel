@@ -233,6 +233,59 @@ class TestCeleryAdapter(unittest.TestCase):
         self.assertTrue(body["ok"])
         self.assertFalse(body["delayed"])
 
+    def test_get_asgi_app_post_callback_accepts_v2_cloudevent(self) -> None:
+        raw_body = (
+            b'{"type":"com.vercel.queue.v2beta","data":'
+            b'{"queueName":"q","consumerGroup":"c","messageId":"m"}}'
+        )
+
+        class DummyTask:
+            def __init__(self):
+                self.calls = []
+
+            def apply(self, *, args, kwargs, task_id, throw):
+                self.calls.append((list(args), dict(kwargs), str(task_id), bool(throw)))
+
+        task = DummyTask()
+
+        class DummyConf:
+            broker_transport_options: dict = {}
+
+        class DummyCelery:
+            conf = DummyConf()
+            tasks = {"tasks.add": task}
+
+        payload = {
+            "vercel": {"kind": "celery", "version": 1},
+            "task": "tasks.add",
+            "id": "task-123",
+            "args": [1, 2],
+            "kwargs": {"x": 9},
+        }
+
+        with patch.object(
+            vwc_app.queue_callback,
+            "receive_message_by_id",
+            return_value=(payload, 1, "t", "ticket"),
+        ):
+            with patch.object(vwc_app.queue_callback, "delete_message") as delete_message:
+                sent = asyncio.run(
+                    self._asgi_request(
+                        vwc.get_asgi_app(cast(Any, DummyCelery())),
+                        method="POST",
+                        path="/anything",
+                        headers=[(b"content-type", b"application/cloudevents+json")],
+                        body=raw_body,
+                    )
+                )
+
+        self.assertEqual(task.calls, [([1, 2], {"x": 9}, "task-123", True)])
+        delete_message.assert_called_once_with(
+            "q", "c", "m", "ticket", timeout=10.0
+        )
+        body = json.loads(sent[1]["body"].decode("utf-8"))
+        self.assertTrue(body["ok"])
+
     def test_get_asgi_app_post_callback_delays_until_eta_by_changing_visibility(self) -> None:
         raw_body = (
             b'{"type":"com.vercel.queue.v1beta","data":'

@@ -842,7 +842,7 @@ describe('detectServices', () => {
       expect(result.services[0].builder.config?.framework).toBe('express');
     });
 
-    it('should default topics and consumer to "default" for workers', async () => {
+    it('should default topic and derive consumer from service name for workers', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': JSON.stringify({
           experimentalServices: {
@@ -859,11 +859,31 @@ describe('detectServices', () => {
       expect(result.services[0]).toMatchObject({
         type: 'worker',
         topics: ['default'],
-        consumer: 'default',
       });
     });
 
-    it('should pass through topics array for workers', async () => {
+    it('should pass through a single-item topics array for workers', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            worker: {
+              type: 'worker',
+              entrypoint: 'worker.py',
+              topics: ['orders'],
+            },
+          },
+        }),
+        'worker.py': 'def main(): pass',
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.services[0]).toMatchObject({
+        type: 'worker',
+        topics: ['orders'],
+      });
+    });
+
+    it('should reject more than one worker topic', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': JSON.stringify({
           experimentalServices: {
@@ -878,9 +898,58 @@ describe('detectServices', () => {
       });
       const result = await detectServices({ fs });
 
-      expect(result.services[0]).toMatchObject({
-        type: 'worker',
-        topics: ['orders', 'events'],
+      expect(result.services).toHaveLength(0);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]).toMatchObject({
+        code: 'INVALID_WORKER_TOPICS',
+        serviceName: 'worker',
+      });
+    });
+
+    it('should reject singular topic field for workers', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            worker: {
+              type: 'worker',
+              entrypoint: 'worker.py',
+              topic: 'orders',
+            },
+          },
+        }),
+        'worker.py': 'def main(): pass',
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.services).toHaveLength(0);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]).toMatchObject({
+        code: 'INVALID_WORKER_TOPIC',
+        serviceName: 'worker',
+      });
+    });
+
+    it('should reject explicit consumer for workers', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            worker: {
+              type: 'worker',
+              entrypoint: 'worker.py',
+              topics: ['orders'],
+              consumer: 'custom-consumer',
+            },
+          },
+        }),
+        'worker.py': 'def main(): pass',
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.services).toHaveLength(0);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]).toMatchObject({
+        code: 'INVALID_WORKER_CONSUMER',
+        serviceName: 'worker',
       });
     });
 
@@ -900,7 +969,6 @@ describe('detectServices', () => {
       const result = await detectServices({ fs });
 
       expect(result.services[0].topics).toBeUndefined();
-      expect(result.services[0].consumer).toBeUndefined();
     });
 
     it.each([
@@ -1314,7 +1382,7 @@ describe('detectServices', () => {
   });
 
   describe('worker services', () => {
-    it('should generate internal worker callback routes', async () => {
+    it('should not generate internal worker callback routes', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': JSON.stringify({
           experimentalServices: {
@@ -1331,12 +1399,7 @@ describe('detectServices', () => {
 
       expect(result.errors).toEqual([]);
       expect(result.services).toHaveLength(1);
-      expect(result.routes.workers).toHaveLength(1);
-      expect(result.routes.workers[0]).toEqual({
-        src: '^/_svc/processor/workers/worker/processor/worker$',
-        dest: '/_svc/processor/index',
-        check: true,
-      });
+      expect(result.routes.workers).toEqual([]);
     });
 
     it('should error if worker service has routePrefix', async () => {

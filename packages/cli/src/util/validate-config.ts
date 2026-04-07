@@ -246,11 +246,7 @@ const serviceConfigSchema = {
         maxLength: 256,
       },
       minItems: 1,
-    },
-    consumer: {
-      type: 'string',
-      minLength: 1,
-      maxLength: 256,
+      maxItems: 1,
     },
   },
 };

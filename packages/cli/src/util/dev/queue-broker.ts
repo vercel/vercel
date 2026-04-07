@@ -21,7 +21,7 @@ interface ConsumerGroup {
   name: string;
   topicPattern: string;
   topicRegex: RegExp;
-  serviceOriginFn: () => string | null;
+  callbackUrlFn: () => string | null;
   retryAfterMs: number;
   maxDeliveries: number;
   initialDelayMs: number;
@@ -43,6 +43,7 @@ const DEFAULT_INITIAL_DELAY = 0;
 const DEFAULT_VISIBILITY_TIMEOUT = ms('1m');
 const DEFAULT_RETENTION = ms('1h');
 const TICK_INTERVAL = ms('1s');
+const QUEUE_CLOUD_EVENT_TYPE = 'com.vercel.queue.v2beta';
 
 /**
  * Convert a topic to a proper regex.
@@ -68,7 +69,7 @@ export class QueueBroker {
 
   constructor(
     services: Service[],
-    private getServiceOrigin: (name: string) => string | null
+    private getWorkerCallbackUrl: (name: string) => string | null
   ) {
     for (const service of services) {
       if (service.type !== 'worker') continue;
@@ -81,7 +82,7 @@ export class QueueBroker {
           name: service.name,
           topicPattern,
           topicRegex: topicPatternToRegex(topicPattern),
-          serviceOriginFn: () => this.getServiceOrigin(service.name),
+          callbackUrlFn: () => this.getWorkerCallbackUrl(service.name),
           retryAfterMs: DEFAULT_RETRY_AFTER,
           maxDeliveries: DEFAULT_MAX_DELIVERIES,
           initialDelayMs: DEFAULT_INITIAL_DELAY,
@@ -233,13 +234,13 @@ export class QueueBroker {
 
   private findDeliveryState(
     messageId: string,
-    serviceName: string
+    consumerGroup: string
   ): {
     deliveries: Map<string, DeliveryState> | null;
     state: DeliveryState | null;
   } {
     for (const group of this.consumerGroups) {
-      if (group.name !== serviceName) continue;
+      if (group.name !== consumerGroup) continue;
       const deliveries = this.deliveryState.get(group.id);
       if (!deliveries) continue;
       const state = deliveries.get(messageId);
@@ -267,8 +268,8 @@ export class QueueBroker {
       return;
     }
 
-    const upstream = group.serviceOriginFn();
-    if (!upstream) {
+    const callbackUrl = group.callbackUrlFn();
+    if (!callbackUrl) {
       // Service not ready yet, retry later
       state.visibleAt = Date.now() + group.retryAfterMs;
       return;
@@ -281,7 +282,7 @@ export class QueueBroker {
     state.leaseExpiresAt = Date.now() + DEFAULT_VISIBILITY_TIMEOUT;
 
     const cloudEvent = JSON.stringify({
-      type: 'com.vercel.queue.v1beta',
+      type: QUEUE_CLOUD_EVENT_TYPE,
       specversion: '1.0',
       source: 'vc-dev',
       id: message.messageId,
@@ -295,11 +296,11 @@ export class QueueBroker {
     });
 
     output.debug(
-      `queues: dispatching CloudEvent to worker "${group.name}" at ${upstream}`
+      `queues: dispatching CloudEvent to worker "${group.name}" at ${callbackUrl}`
     );
 
     try {
-      const response = await nodeFetch(`${upstream}/`, {
+      const response = await nodeFetch(callbackUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/cloudevents+json' },
         body: cloudEvent,

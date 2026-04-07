@@ -34,7 +34,6 @@ import {
   type PackageJson,
   glob,
   type Service,
-  getWorkerTopics,
   isBackendBuilder,
   type Lambda,
   type TriggerEvent,
@@ -1210,14 +1209,18 @@ async function doBuild(
         Array.isArray(buildResult.routes) &&
         detectedServices
       ) {
-        buildResult.routes = scopeRoutesToServiceOwnership({
-          routes: buildResult.routes as Route[],
-          owner: service,
-          allServices: detectedServices,
-        });
+        if (service.type === 'worker') {
+          buildResult.routes = undefined;
+        } else {
+          buildResult.routes = scopeRoutesToServiceOwnership({
+            routes: buildResult.routes as Route[],
+            owner: service,
+            allServices: detectedServices,
+          });
+        }
       }
 
-      if (service?.type === 'worker' && 'output' in buildResult) {
+      if (service && service.type === 'worker' && 'output' in buildResult) {
         attachWorkerServiceTrigger(buildResult.output, service);
       }
 
@@ -1247,11 +1250,15 @@ async function doBuild(
             Array.isArray(buildOutputConfig.routes) &&
             detectedServices
           ) {
-            buildOutputConfig.routes = scopeRoutesToServiceOwnership({
-              routes: buildOutputConfig.routes as Route[],
-              owner: service,
-              allServices: detectedServices,
-            });
+            if (service.type === 'worker') {
+              buildOutputConfig.routes = undefined;
+            } else {
+              buildOutputConfig.routes = scopeRoutesToServiceOwnership({
+                routes: buildOutputConfig.routes as Route[],
+                owner: service,
+                allServices: detectedServices,
+              });
+            }
           }
           mergedBuildResult = buildOutputConfig;
         }
@@ -2046,23 +2053,31 @@ function attachWorkerServiceTrigger(
   buildOutput: BuildResultV2Typical['output'] | BuildResultV3['output'],
   service: Service
 ): void {
-  const topics = getWorkerTopics(service);
-  const consumer = service.consumer || 'default';
+  const topic = service.topics?.[0];
+  if (!topic) {
+    throw new Error(
+      `Worker service "${service.name}" is missing a normalized topic`
+    );
+  }
 
-  for (const topic of topics) {
-    const trigger: TriggerEvent = {
-      type: 'queue/v1beta',
-      topic,
-      consumer,
-    };
+  if ((service.topics?.length ?? 0) > 1) {
+    throw new Error(
+      `Worker service "${service.name}" must resolve to exactly one topic`
+    );
+  }
 
-    if (isLambda(buildOutput)) {
-      appendWorkerTrigger(buildOutput, trigger);
-    } else {
-      for (const output of Object.values(buildOutput)) {
-        if (isLambda(output)) {
-          appendWorkerTrigger(output, trigger);
-        }
+  const trigger: TriggerEvent = {
+    type: 'queue/v2beta',
+    topic,
+    consumer: service.name,
+  };
+
+  if (isLambda(buildOutput)) {
+    appendWorkerTrigger(buildOutput, trigger);
+  } else {
+    for (const output of Object.values(buildOutput)) {
+      if (isLambda(output)) {
+        appendWorkerTrigger(output, trigger);
       }
     }
   }

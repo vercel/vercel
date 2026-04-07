@@ -1,0 +1,9 @@
+{
+  "experimentalServices": {
+    "worker-orders": {
+      "type": "worker",
+      "entrypoint": "worker.js",
+      "topics": ["orders"]
+    }
+  }
+}

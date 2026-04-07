@@ -241,6 +241,8 @@ export function validateServiceConfig(
     };
   }
   const serviceType = config.type || 'web';
+  const isWorkerService = serviceType === 'worker';
+  const workerLabel = serviceType === 'cron' ? 'Cron' : 'Worker';
   const hasRoutePrefix = typeof config.routePrefix === 'string';
   const hasSubdomain = typeof config.subdomain === 'string';
 
@@ -270,20 +272,42 @@ export function validateServiceConfig(
       serviceName: name,
     };
   }
-  if (
-    (serviceType === 'worker' || serviceType === 'cron') &&
-    config.routePrefix
-  ) {
+  if ((isWorkerService || serviceType === 'cron') && config.routePrefix) {
     return {
       code: 'INVALID_ROUTE_PREFIX',
-      message: `${serviceType === 'worker' ? 'Worker' : 'Cron'} service "${name}" cannot have "routePrefix". Only web services should specify "routePrefix".`,
+      message: `${workerLabel} service "${name}" cannot have "routePrefix". Only web services should specify "routePrefix".`,
       serviceName: name,
     };
   }
-  if ((serviceType === 'worker' || serviceType === 'cron') && hasSubdomain) {
+  if ((isWorkerService || serviceType === 'cron') && hasSubdomain) {
     return {
       code: 'INVALID_HOST_ROUTING_CONFIG',
-      message: `${serviceType === 'worker' ? 'Worker' : 'Cron'} service "${name}" cannot have "subdomain". Only web services should specify subdomain routing.`,
+      message: `${workerLabel} service "${name}" cannot have "subdomain". Only web services should specify subdomain routing.`,
+      serviceName: name,
+    };
+  }
+  if (serviceType === 'worker' && 'topic' in config) {
+    return {
+      code: 'INVALID_WORKER_TOPIC',
+      message: `Worker service "${name}" cannot use "topic". Use "topics" and specify exactly one topic.`,
+      serviceName: name,
+    };
+  }
+  if (
+    serviceType === 'worker' &&
+    Array.isArray(config.topics) &&
+    config.topics.length > 1
+  ) {
+    return {
+      code: 'INVALID_WORKER_TOPICS',
+      message: `Worker service "${name}" must specify exactly one topic in "topics".`,
+      serviceName: name,
+    };
+  }
+  if (serviceType === 'worker' && 'consumer' in config) {
+    return {
+      code: 'INVALID_WORKER_CONSUMER',
+      message: `Worker service "${name}" cannot use "consumer". The consumer name is derived from the service name.`,
       serviceName: name,
     };
   }
@@ -455,8 +479,6 @@ export async function resolveConfiguredService(
   }
 
   const topics = type === 'worker' ? getWorkerTopics(config) : config.topics;
-  const consumer =
-    type === 'worker' ? config.consumer || 'default' : config.consumer;
 
   let builderUse: string;
   let builderSrc: string;
@@ -580,7 +602,6 @@ export async function resolveConfiguredService(
     schedule: config.schedule,
     handlerFunction: moduleAttrParsed?.attrName,
     topics,
-    consumer,
     envPrefix: config.envPrefix,
   };
 }

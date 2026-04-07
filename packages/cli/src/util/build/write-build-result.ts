@@ -34,7 +34,10 @@ import {
   isExperimentalBackendsEnabled,
   type Service,
 } from '@vercel/build-utils';
-import { getInternalServiceFunctionPath } from '@vercel/fs-detectors';
+import {
+  getInternalServiceFunctionPath,
+  getInternalServiceWorkerPath,
+} from '@vercel/fs-detectors';
 import pipe from 'promisepipe';
 import { merge } from './merge';
 import { unzip } from './unzip';
@@ -351,7 +354,7 @@ async function writeBuildResultV3(args: {
   const routesJsonPath = join(workPath, '.vercel', 'routes.json');
 
   if (isBackendBuilder(build) || build.use === '@vercel/python') {
-    if (existsSync(routesJsonPath)) {
+    if (service?.type !== 'worker' && existsSync(routesJsonPath)) {
       try {
         const newOutput: Record<string, Lambda | EdgeFunction> = {
           index: output,
@@ -391,6 +394,7 @@ async function writeBuildResultV3(args: {
     // This flag is being used to write a v2 build result,
     // earlier in the process, the `routes` check is just to double-check
     if (
+      service?.type !== 'worker' &&
       isBackendBuilder(build) &&
       isExperimentalBackendsEnabled() &&
       'routes' in buildResult
@@ -422,13 +426,15 @@ async function writeBuildResultV3(args: {
 
   const ext = extname(src);
   const path =
-    service && typeof service.runtime === 'string'
-      ? stripDuplicateSlashes(getInternalServiceFunctionPath(service.name))
-      : stripDuplicateSlashes(
-          build.config?.zeroConfig
-            ? src.substring(0, src.length - ext.length)
-            : src
-        );
+    service?.type === 'worker'
+      ? stripDuplicateSlashes(getInternalServiceWorkerPath(service.name))
+      : service && typeof service.runtime === 'string'
+        ? stripDuplicateSlashes(getInternalServiceFunctionPath(service.name))
+        : stripDuplicateSlashes(
+            build.config?.zeroConfig
+              ? src.substring(0, src.length - ext.length)
+              : src
+          );
   if (isLambda(output)) {
     injectServiceEnvVars(output, service, stripServiceRoutePrefix);
     await writeLambda(

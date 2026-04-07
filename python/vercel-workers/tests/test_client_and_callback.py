@@ -118,6 +118,26 @@ class TestCallbackAndClientEdgeCases(unittest.TestCase):
         self.assertIn("Failed to resolve queue token", err.exception.args[0])
 
 
+class TestParseCloudEvent(unittest.TestCase):
+    def test_parse_cloudevent_accepts_v2beta(self) -> None:
+        queue_name, consumer_group, message_id = queue_callback.parse_cloudevent(
+            json.dumps(
+                {
+                    "type": "com.vercel.queue.v2beta",
+                    "data": {
+                        "queueName": "orders",
+                        "consumerGroup": "worker-a",
+                        "messageId": "msg-2",
+                    },
+                }
+            ).encode("utf-8")
+        )
+
+        self.assertEqual(queue_name, "orders")
+        self.assertEqual(consumer_group, "worker-a")
+        self.assertEqual(message_id, "msg-2")
+
+
 class TestWorkerJSONEncoder(unittest.TestCase):
     def test_uuid_serialized_as_string(self) -> None:
         uid = uuid4()
