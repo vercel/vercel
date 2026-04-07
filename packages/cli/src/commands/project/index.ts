@@ -14,6 +14,7 @@ import rm from './rm';
 import getOidcToken from './token';
 import speedInsights from './speed-insights';
 import webAnalytics from './web-analytics';
+import protection from './protection';
 import {
   accessGroupsSubcommand,
   addSubcommand,
@@ -23,6 +24,7 @@ import {
   listSubcommand,
   membersSubcommand,
   projectCommand,
+  protectionSubcommand,
   removeSubcommand,
   speedInsightsSubcommand,
   tokenSubcommand,
@@ -42,6 +44,7 @@ const COMMAND_CONFIG = {
   add: getCommandAliases(addSubcommand),
   'access-summary': getCommandAliases(accessSummarySubcommand),
   checks: getCommandAliases(checksSubcommand),
+  protection: getCommandAliases(protectionSubcommand),
   remove: getCommandAliases(removeSubcommand),
   token: getCommandAliases(tokenSubcommand),
   speedInsights: getCommandAliases(speedInsightsSubcommand),
@@ -146,6 +149,19 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandAccessGroups(subcommandOriginal);
       return accessGroups(client, args);
+    case 'protection':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('project', subcommandOriginal);
+        return printHelp(protectionSubcommand);
+      }
+      telemetry.trackCliSubcommandProtection(
+        args[0] === 'enable'
+          ? 'protection enable'
+          : args[0] === 'disable'
+            ? 'protection disable'
+            : subcommandOriginal
+      );
+      return protection(client, args);
     case 'webAnalytics':
       if (needHelp) {
         telemetry.trackCliFlagHelp('project', subcommandOriginal);
