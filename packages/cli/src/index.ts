@@ -331,6 +331,12 @@ const main = async () => {
   const telemetryEventStore = new TelemetryEventStore({
     isDebug: process.env.VERCEL_TELEMETRY_DEBUG === '1',
     config: config.telemetry,
+    cliSession:
+      process.argv[2] === 'telemetry' && process.argv[3] === 'flush'
+        ? undefined
+        : {
+            filePath: join(VERCEL_DIR, 'telemetry-session.json'),
+          },
   });
 
   checkTelemetryStatus({
@@ -350,6 +356,7 @@ const main = async () => {
   });
 
   const { isAgent, agent: detectedAgent } = await determineAgent();
+  telemetry.trackInvocationId(telemetryEventStore.currentInvocationId);
   telemetry.trackAgenticUse(detectedAgent?.name);
   telemetry.trackCPUs();
   telemetry.trackPlatform();
@@ -1114,6 +1121,7 @@ const main = async () => {
   } catch {
     // best-effort for telemetry — project may not be linked
   }
+  telemetry.trackProjectId(telemetryEventStore.currentProjectId);
 
   await telemetryEventStore.save();
   postCommandSpan.stop();

@@ -432,6 +432,14 @@ export class RootTelemetryClient extends TelemetryClient {
     super.trackVersion(version);
   }
 
+  trackProjectId(projectId: string | undefined) {
+    super.trackProjectId(projectId);
+  }
+
+  trackInvocationId(invocationId: string | undefined) {
+    super.trackInvocationId(invocationId);
+  }
+
   trackCliOptionCwd(cwd: string | undefined) {
     if (cwd) {
       this.trackCliOption({ option: 'cwd', value: this.redactedValue });
