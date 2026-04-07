@@ -1,5 +1,18 @@
 # @vercel/fs-detectors
 
+## 5.14.3
+
+### Patch Changes
+
+- Updated dependencies [[`a80217a9ed60d7b7f3e98537b0468cc5488078c1`](https://github.com/vercel/vercel/commit/a80217a9ed60d7b7f3e98537b0468cc5488078c1)]:
+  - @vercel/build-utils@13.13.0
+
+## 5.14.2
+
+### Patch Changes
+
+- Fall back to `--scope` flag for Turborepo versions 1.1 and below when generating default build commands. ([#15835](https://github.com/vercel/vercel/pull/15835))
+
 ## 5.14.1
 
 ### Patch Changes

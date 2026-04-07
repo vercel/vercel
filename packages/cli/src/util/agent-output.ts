@@ -425,15 +425,48 @@ export function outputAgentError(
   process.exit(exitCode);
 }
 
+/** Suggested follow-ups for `edge-config` failures (only callers of exitWithNonInteractiveError). */
+function buildNextStepsForEdgeConfig(
+  client: Client
+): NonNullable<AgentErrorPayload['next']> {
+  return [
+    {
+      command: buildCommandWithGlobalFlags(client.argv, 'edge-config list'),
+      when: 'List Edge Config stores in the current team scope',
+    },
+    {
+      command: buildCommandWithGlobalFlags(client.argv, 'teams switch'),
+      when: 'Switch to the team that owns the Edge Config',
+    },
+    {
+      command: buildCommandWithGlobalFlags(client.argv, 'whoami'),
+      when: 'Verify the current team or user scope',
+    },
+  ];
+}
+
+const EDGE_CONFIG_NON_INTERACTIVE_HINT =
+  'Edge Config commands use your current team scope. Pass --scope or run `vercel teams switch` if the store is missing.';
+
+export type ExitWithNonInteractiveErrorVariant =
+  | 'members'
+  | 'access-groups'
+  | 'access-summary'
+  | 'protection'
+  | 'speed-insights'
+  | 'web-analytics'
+  | 'checks'
+  | 'edge-config';
+
+type ProjectExitWithNonInteractiveVariant = Exclude<
+  ExitWithNonInteractiveErrorVariant,
+  'edge-config'
+>;
+
 /** Suggested follow-ups for project subcommands that use `exitWithNonInteractiveError`. */
 function buildNextStepsForProjectSubcommands(
   client: Client,
-  variant:
-    | 'members'
-    | 'access-groups'
-    | 'access-summary'
-    | 'speed-insights'
-    | 'web-analytics'
+  variant: ProjectExitWithNonInteractiveVariant
 ): NonNullable<AgentErrorPayload['next']> {
   const byName =
     variant === 'access-groups'
@@ -446,20 +479,30 @@ function buildNextStepsForProjectSubcommands(
             template: 'project access-summary <name>' as const,
             when: 'Show role counts by project name (replace <name>)',
           }
-        : variant === 'speed-insights'
+        : variant === 'protection'
           ? {
-              template: 'project speed-insights <name>' as const,
-              when: 'Enable Speed Insights by project name (replace <name>)',
+              template: 'project protection <name>' as const,
+              when: 'Show deployment protection by project name (replace <name>)',
             }
-          : variant === 'web-analytics'
+          : variant === 'speed-insights'
             ? {
-                template: 'project web-analytics <name>' as const,
-                when: 'Enable Web Analytics by project name (replace <name>)',
+                template: 'project speed-insights <name>' as const,
+                when: 'Enable Speed Insights by project name (replace <name>)',
               }
-            : {
-                template: 'project members <name>' as const,
-                when: 'List members by project name (replace <name>)',
-              };
+            : variant === 'web-analytics'
+              ? {
+                  template: 'project web-analytics <name>' as const,
+                  when: 'Enable Web Analytics by project name (replace <name>)',
+                }
+              : variant === 'checks'
+                ? {
+                    template: 'project checks add <name>' as const,
+                    when: 'Create a deployment check by project name (replace <name>)',
+                  }
+                : {
+                    template: 'project members <name>' as const,
+                    when: 'List members by project name (replace <name>)',
+                  };
   return [
     {
       command: buildCommandWithGlobalFlags(client.argv, 'link'),
@@ -479,22 +522,33 @@ function buildNextStepsForProjectSubcommands(
 const PROJECT_SUBCOMMAND_ERROR_HINT =
   'If you use --cwd, ensure that folder is linked to the right project, or pass an explicit project name. Use --scope when the project belongs to another team.';
 
+function resolveNonInteractiveDefaults(
+  client: Client,
+  variant: ExitWithNonInteractiveErrorVariant
+): Pick<AgentErrorPayload, 'next' | 'hint'> {
+  if (variant === 'edge-config') {
+    return {
+      next: buildNextStepsForEdgeConfig(client),
+      hint: EDGE_CONFIG_NON_INTERACTIVE_HINT,
+    };
+  }
+  return {
+    next: buildNextStepsForProjectSubcommands(client, variant),
+    hint: PROJECT_SUBCOMMAND_ERROR_HINT,
+  };
+}
+
 function writeAgentErrorPayloadAndExit(
   client: Client,
   payload: AgentErrorPayload,
   exitCode: number,
-  variant:
-    | 'members'
-    | 'access-groups'
-    | 'access-summary'
-    | 'speed-insights'
-    | 'web-analytics'
+  variant: ExitWithNonInteractiveErrorVariant
 ): void {
-  const next = buildNextStepsForProjectSubcommands(client, variant);
+  const defaults = resolveNonInteractiveDefaults(client, variant);
   const out: AgentErrorPayload = {
     ...payload,
-    next: payload.next ?? next,
-    hint: payload.hint ?? PROJECT_SUBCOMMAND_ERROR_HINT,
+    next: payload.next ?? defaults.next,
+    hint: payload.hint ?? defaults.hint,
   };
   client.stdout.write(`${JSON.stringify(out, null, 2)}\n`);
   process.exit(exitCode);
@@ -536,20 +590,30 @@ export function exitWithNonInteractiveError(
   client: Client,
   err: unknown,
   exitCode: number = 1,
-  options: {
-    variant:
-      | 'members'
-      | 'access-groups'
-      | 'access-summary'
-      | 'speed-insights'
-      | 'web-analytics';
-  } = { variant: 'members' }
+  options: { variant: ExitWithNonInteractiveErrorVariant } = {
+    variant: 'members',
+  }
 ): void {
   if (!shouldEmitNonInteractiveCommandError(client)) {
     return;
   }
   const { variant } = options;
   if (isLinkRequiredLike(err)) {
+    if (variant === 'edge-config') {
+      writeAgentErrorPayloadAndExit(
+        client,
+        {
+          status: 'error',
+          reason: 'link_required',
+          message: err instanceof Error ? err.message : String(err),
+          next: buildNextStepsForEdgeConfig(client),
+          hint: EDGE_CONFIG_NON_INTERACTIVE_HINT,
+        },
+        exitCode,
+        'edge-config'
+      );
+      return;
+    }
     writeAgentErrorPayloadAndExit(
       client,
       {
@@ -584,7 +648,9 @@ export function exitWithNonInteractiveError(
         : err.status === 401
           ? 'not_authorized'
           : err.status === 404
-            ? 'project_not_found'
+            ? variant === 'edge-config'
+              ? 'not_found'
+              : 'project_not_found'
             : err.status === 429
               ? 'rate_limited'
               : 'api_error';

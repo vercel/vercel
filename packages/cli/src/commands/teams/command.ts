@@ -1,6 +1,30 @@
 import { packageName } from '../../util/pkg-name';
 import { formatOption, nextOption } from '../../util/arg-common';
 
+export const requestSubcommand = {
+  name: 'request',
+  aliases: ['access-request'],
+  description:
+    'Show join-request status for the current team (defaults to the authenticated user)',
+  arguments: [
+    {
+      name: 'userId',
+      required: false,
+    },
+  ],
+  options: [formatOption],
+  examples: [
+    {
+      name: 'Status for your pending request',
+      value: `${packageName} teams request`,
+    },
+    {
+      name: 'Status for another user id',
+      value: `${packageName} teams request user_abc123`,
+    },
+  ],
+} as const;
+
 export const addSubcommand = {
   name: 'add',
   aliases: ['create'],
@@ -130,6 +154,7 @@ export const teamsCommand = {
     addSubcommand,
     inviteSubcommand,
     listSubcommand,
+    requestSubcommand,
     switchSubcommand,
     membersSubcommand,
   ],
