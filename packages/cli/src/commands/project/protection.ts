@@ -125,21 +125,22 @@ export default async function protection(
   const preferJson = formatResult.jsonOutput || Boolean(client.nonInteractive);
 
   const ssoSelected = Boolean(parsedArgs.flags['--sso']);
+  const passwordSelected = Boolean(parsedArgs.flags['--password']);
   const bypassSelected = Boolean(parsedArgs.flags['--protection-bypass']);
   const protectionBypassSecret = parsedArgs.flags[
     '--protection-bypass-secret'
   ] as string | undefined;
 
-  if (action && !ssoSelected && !bypassSelected) {
+  if (action && !ssoSelected && !passwordSelected && !bypassSelected) {
     const msg =
-      'No protection selected. Pass --sso or --protection-bypass. Usage: `vercel project protection enable|disable [name] --sso|--protection-bypass`';
+      'No protection selected. Pass --sso, --password, or --protection-bypass. Usage: `vercel project protection enable|disable [name] --sso|--password|--protection-bypass`';
     outputAgentError(
       client,
       {
         status: 'error',
         reason: AGENT_REASON.MISSING_ARGUMENTS,
         message: msg,
-        hint: 'Use `project protection enable|disable` with a protection flag (e.g. --sso or --protection-bypass).',
+        hint: 'Use `project protection enable|disable` with a protection flag (e.g. --sso, --password, or --protection-bypass).',
         next: [
           {
             command: buildCommandWithGlobalFlags(
@@ -147,6 +148,13 @@ export default async function protection(
               `project protection ${action} --sso`
             ),
             when: 'Example: same action with SSO protection selected',
+          },
+          {
+            command: buildCommandWithGlobalFlags(
+              client.argv,
+              `project protection ${action} --password`
+            ),
+            when: 'Example: same action with password protection selected',
           },
           {
             command: buildCommandWithGlobalFlags(
@@ -234,13 +242,20 @@ export default async function protection(
       }
     }
 
+    const patchBody: JSONObject = {};
     if (ssoSelected) {
-      const patchBody: JSONObject = {
-        ssoProtection:
-          action === 'enable'
-            ? { deploymentType: ENABLED_DEPLOYMENT_TYPE }
-            : null,
-      };
+      patchBody.ssoProtection =
+        action === 'enable'
+          ? { deploymentType: ENABLED_DEPLOYMENT_TYPE }
+          : null;
+    }
+    if (passwordSelected) {
+      patchBody.passwordProtection =
+        action === 'enable'
+          ? { deploymentType: ENABLED_DEPLOYMENT_TYPE }
+          : null;
+    }
+    if (Object.keys(patchBody).length > 0) {
       try {
         await client.fetch(`/v9/projects/${encodeURIComponent(project.id)}`, {
           method: 'PATCH',
@@ -261,6 +276,9 @@ export default async function protection(
             projectId: project.id,
             projectName: project.name,
             ssoProtection: ssoSelected ? action === 'enable' : undefined,
+            passwordProtection: passwordSelected
+              ? action === 'enable'
+              : undefined,
             protectionBypass: bypassSelected ? action === 'enable' : undefined,
           },
           null,
