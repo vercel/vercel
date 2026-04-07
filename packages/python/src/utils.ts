@@ -59,14 +59,31 @@ export function createVenvEnv(
   return env;
 }
 
+/**
+ * Parse the `version` field from a pyvenv.cfg file and return the
+ * "major.minor" string.  Returns null if the file
+ * cannot be read or the version line is missing.
+ */
+async function readVenvPythonVersion(
+  pyvenvCfgPath: string
+): Promise<string | null> {
+  try {
+    const content = await fs.promises.readFile(pyvenvCfgPath, 'utf-8');
+    const match = content.match(/^version\s*=\s*(\d+)\.(\d+)/m);
+    return match ? `${match[1]}.${match[2]}` : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function ensureVenv({
-  pythonPath,
+  pythonVersion,
   venvPath,
   uvPath,
   uvCacheDir,
   quiet,
 }: {
-  pythonPath: string;
+  pythonVersion: { pythonPath: string; major?: number; minor?: number };
   venvPath: string;
   uvPath?: string | null;
   uvCacheDir?: string;
@@ -75,8 +92,25 @@ export async function ensureVenv({
   const marker = join(venvPath, 'pyvenv.cfg');
   try {
     await fs.promises.access(marker);
-    debug(`Using cached virtual environment at "${venvPath}"`);
-    return;
+
+    // Invalidate if the cached venv was built with a different Python version.
+    if (pythonVersion.major != null && pythonVersion.minor != null) {
+      const expected = `${pythonVersion.major}.${pythonVersion.minor}`;
+      const cachedVersion = await readVenvPythonVersion(marker);
+      if (cachedVersion && cachedVersion !== expected) {
+        console.log(
+          `Cached venv Python ${cachedVersion} differs from requested ${expected}, recreating...`
+        );
+        await fs.promises.rm(venvPath, { recursive: true, force: true });
+        // fall through to creation
+      } else {
+        debug(`Using cached virtual environment at "${venvPath}"`);
+        return;
+      }
+    } else {
+      debug(`Using cached virtual environment at "${venvPath}"`);
+      return;
+    }
   } catch {
     // fall through to creation
   }
@@ -89,7 +123,7 @@ export async function ensureVenv({
       env: getProtectedUvEnv(process.env, uvCacheDir),
     });
   } else {
-    await execa(pythonPath, ['-m', 'venv', venvPath]);
+    await execa(pythonVersion.pythonPath, ['-m', 'venv', venvPath]);
   }
 }
 

@@ -316,7 +316,7 @@ export const build: BuildVX = async ({
   }
   await builderSpan.child('vc.builder.python.venv').trace(async () => {
     await ensureVenv({
-      pythonPath: pythonVersion.pythonPath,
+      pythonVersion,
       venvPath,
       uvCacheDir,
     });
@@ -388,6 +388,15 @@ export const build: BuildVX = async ({
     })
     .trace(async () => {
       if (projectInstallCommand) {
+        // Custom commands may not prune removed packages, so always
+        // start from a fresh venv to avoid stale dependency accumulation.
+        await fs.promises.rm(venvPath, { recursive: true, force: true });
+        await ensureVenv({
+          pythonVersion,
+          venvPath,
+          uvCacheDir,
+          quiet: true,
+        });
         console.log(
           `Running "install" command: \`${projectInstallCommand}\`...`
         );
@@ -400,13 +409,15 @@ export const build: BuildVX = async ({
       } else {
         // Check and run a custom vercel install command from project manifest.
         // This will return `false` if no script was ran.
-        assumeDepsInstalled = await runPyprojectScript(
+        // Fresh venv to avoid stale dependency accumulation from custom scripts.
+        const hasCustomScript = await runPyprojectScript(
           workPath,
           ['vercel-install', 'now-install', 'install'],
           pythonEnv,
           /* useUserVirtualEnv */ false
         );
-        if (assumeDepsInstalled) {
+        if (hasCustomScript) {
+          assumeDepsInstalled = true;
           hasCustomCommand = true;
         }
       }
