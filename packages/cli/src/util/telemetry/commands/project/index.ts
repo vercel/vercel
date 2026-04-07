@@ -69,6 +69,13 @@ export class ProjectTelemetryClient
     });
   }
 
+  trackCliSubcommandProtection(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'protection',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandWebAnalytics(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'web-analytics',
