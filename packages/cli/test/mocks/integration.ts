@@ -371,6 +371,61 @@ const integrations: Record<string, Integration> = {
       },
     ],
   },
+  // Sentry-like integration with both installation-level and product-level metadata
+  'acme-install-meta': {
+    id: 'acme-install-meta',
+    name: 'Acme Install Meta',
+    slug: 'acme-install-meta',
+    eulaDocUri: 'https://example.com/eula',
+    privacyDocUri: 'https://example.com/privacy',
+    metadataSchema: {
+      type: 'object',
+      properties: {
+        name: {
+          type: 'string',
+          'ui:control': 'input',
+          'ui:label': 'Organization Name',
+          'ui:placeholder': 'e.g. my-org',
+        },
+        'install-region': {
+          type: 'string',
+          'ui:control': 'select',
+          'ui:label': 'Data Region',
+          'ui:placeholder': 'Choose region',
+          'ui:options': [
+            { value: 'us', label: 'US' },
+            { value: 'eu', label: 'EU' },
+          ],
+        },
+      },
+      required: ['name', 'install-region'],
+    },
+    products: [
+      {
+        id: 'acme-install-meta-product',
+        name: 'Acme Install Meta Product',
+        slug: 'acme-install-meta',
+        type: 'storage',
+        shortDescription: 'Product with installation-level metadata',
+        metadataSchema: {
+          type: 'object',
+          properties: {
+            platform: {
+              type: 'string',
+              'ui:control': 'select',
+              'ui:label': 'Platform',
+              'ui:placeholder': 'e.g. Next.js',
+              'ui:options': [
+                { value: 'nextjs', label: 'Next.js' },
+                { value: 'react', label: 'React' },
+              ],
+            },
+          },
+          required: ['platform'],
+        },
+      },
+    ],
+  },
 };
 
 const configurations: Record<string, Configuration[]> = {

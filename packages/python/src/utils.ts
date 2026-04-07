@@ -157,8 +157,10 @@ export interface PlatformInfo {
   osMajor: number;
   /** Libc minor version */
   osMinor: number;
-  /** High-level OS for PythonBuild: always "linux" for Lambda */
+  /** High-level OS for PythonBuild: "linux", "macos", or "windows" */
   os: string;
+  /** PEP 508 sys_platform value: "linux", "win32", or "darwin" */
+  sysPlatform: string;
   /** High-level libc for PythonBuild: "gnu" or "musl" */
   libc: string;
 }
@@ -174,19 +176,20 @@ const ARCH_MAP: Record<string, string> = {
 };
 
 /**
- * Detect the Lambda target platform for wheel compatibility checking.
+ * Detect the host platform for wheel compatibility checking and build selection.
  *
- * The Lambda runtime is always Linux. On the Vercel build image (which shares
- * the Lambda base), we use `detect-libc` to get the exact glibc/musl version.
- * For local `vercel build` on non-Linux hosts we fall back to conservative
- * defaults (manylinux, glibc 2.17, x86_64).
+ * On the Vercel build image (Linux), we use `detect-libc` to get the exact
+ * glibc/musl version. For local `vercel build` on non-Linux hosts we fall
+ * back to conservative manylinux defaults for wheel tags (since the host
+ * doesn't have a Linux libc).
  */
 export function detectPlatform(): PlatformInfo {
   const arch = os.arch();
   const archName = ARCH_MAP[arch] || arch;
 
-  // Lambda is always Linux — detect libc family and version from the
-  // build image (which runs the same base as the Lambda runtime).
+  // Detect libc family and version from the host. On the Vercel build
+  // image this matches the Lambda runtime; on non-Linux hosts it will
+  // be null and we fall back to conservative defaults.
   const libcFamily = detectLibc.familySync();
   const libcVersion = detectLibc.versionSync();
 
@@ -205,7 +208,7 @@ export function detectPlatform(): PlatformInfo {
     osMajor = parseInt(parts[0], 10);
     osMinor = parseInt(parts[1], 10) || 0;
   } else if (libcFamily === detectLibc.GLIBC) {
-    // glibc detected but version unknown — use conservative default
+    // glibc detected but version unknown -- use conservative default
     osMajor = 2;
     osMinor = 17;
   } else {
@@ -217,5 +220,29 @@ export function detectPlatform(): PlatformInfo {
 
   const libc = libcFamily === detectLibc.MUSL ? 'musl' : 'gnu';
 
-  return { osName, archName, osMajor, osMinor, os: 'linux', libc };
+  // PEP 508 sys_platform value derived from the Node.js process platform.
+  const SYS_PLATFORM_MAP: Record<string, string> = {
+    linux: 'linux',
+    win32: 'win32',
+    darwin: 'darwin',
+  };
+  const sysPlatform = SYS_PLATFORM_MAP[process.platform] || 'linux';
+
+  // High-level OS for PythonBuild selection, derived from the host platform.
+  const OS_MAP: Record<string, string> = {
+    linux: 'linux',
+    win32: 'windows',
+    darwin: 'macos',
+  };
+  const detectedOs = OS_MAP[process.platform] || 'linux';
+
+  return {
+    osName,
+    archName,
+    osMajor,
+    osMinor,
+    os: detectedOs,
+    sysPlatform,
+    libc,
+  };
 }

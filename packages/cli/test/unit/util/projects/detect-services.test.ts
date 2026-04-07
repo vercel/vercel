@@ -240,5 +240,18 @@ describe('tryDetectServices()', () => {
     it('should return false when no vercel.json exists', async () => {
       await expect(isExperimentalServicesEnabled(tempDir)).resolves.toBe(false);
     });
+
+    it('should return true when vercel.ts has experimentalServices', async () => {
+      await writeFile(
+        join(tempDir, 'vercel.ts'),
+        `export default {
+          experimentalServices: {
+            frontend: { framework: 'nextjs', routePrefix: '/' },
+          },
+        };`
+      );
+
+      await expect(isExperimentalServicesEnabled(tempDir)).resolves.toBe(true);
+    });
   });
 });

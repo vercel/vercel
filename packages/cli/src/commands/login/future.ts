@@ -4,6 +4,7 @@ import * as open from 'open';
 import { eraseLines } from 'ansi-escapes';
 import { KNOWN_AGENTS } from '@vercel/detect-agent';
 import type Client from '../../util/client';
+import { autoInstallAgentTooling } from '../../util/agent/auto-install-agentic';
 import { printError } from '../../util/error';
 import { updateCurrentTeamAfterLogin } from '../../util/login/update-current-team-after-login';
 import getGlobalPathConfig from '../../util/config/global-path';
@@ -211,6 +212,7 @@ export async function login(
 
   client.updateAuthConfig({
     token: tokens.access_token,
+    userId: undefined,
     expiresAt: Math.floor(Date.now() / 1000) + tokens.expires_in,
     refreshToken: tokens.refresh_token,
   });
@@ -236,6 +238,9 @@ export async function login(
   connect a Git Repository (${chalk.bold(o.link('vercel.link/git', 'https://vercel.link/git', { color: false }))}).\n`);
 
   telemetry.trackState('success');
+
+  await autoInstallAgentTooling(client);
+
   return 0;
 }
 

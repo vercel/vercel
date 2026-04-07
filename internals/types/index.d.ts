@@ -32,6 +32,8 @@ export interface AuthConfig {
   skipWrite?: boolean;
   /** An `access_token` obtained using the OAuth Device Authorization flow.  */
   token?: string;
+  /** The ID of the currently authenticated user, cached from `/v2/user`. */
+  userId?: string;
   /** A `refresh_token` obtained using the OAuth Device Authorization flow. */
   refreshToken?: string;
   /**
@@ -66,6 +68,7 @@ type Billing = {
   period: { start: number; end: number };
   plan: string;
   platform: string;
+  status: 'active' | 'trialing' | 'overdue' | 'canceled' | 'expired';
   trial: { start: number; end: number };
 };
 

@@ -9,13 +9,13 @@
       "type": "worker",
       "runtime": "python",
       "entrypoint": "worker/worker.py",
-      "topic": "tasks-topic"
+      "topics": ["tasks-topic"]
     },
     "worker-wildcard": {
       "type": "worker",
       "runtime": "python",
       "entrypoint": "worker-wildcard/worker.py",
-      "topic": "tasks-*"
+      "topics": ["tasks-*"]
     }
   }
 }

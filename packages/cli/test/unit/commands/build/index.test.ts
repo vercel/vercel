@@ -1407,15 +1407,7 @@ describe.skipIf(flakey)('build', () => {
 
       const files = await fs.readdir(output);
       // we should NOT see `functions` because that means `middleware.ts` was processed
-      expect(files.sort()).toEqual([
-        'builds.json',
-        'config.json',
-        'diagnostics',
-        'static',
-      ]);
-
-      const diagnostics = await fs.readdir(join(output, 'diagnostics'));
-      expect(diagnostics.sort()).toEqual(['cli_traces.json']);
+      expect(files.sort()).toEqual(['builds.json', 'config.json', 'static']);
     } finally {
       delete process.env.STORYBOOK_DISABLE_TELEMETRY;
     }
@@ -1623,7 +1615,7 @@ describe.skipIf(flakey)('build', () => {
     );
 
     beforeEach(() => {
-      vi.stubEnv('FLAGS', 'vf_test_fake_sdk_key_for_testing');
+      vi.stubEnv('FLAGS', 'vf_server_test_fake_sdk_key_for_testing');
 
       vi.spyOn(globalThis, 'fetch').mockImplementation(async input => {
         const url = typeof input === 'string' ? input : input.toString();
@@ -2181,6 +2173,75 @@ fs.writeFileSync(
     });
   });
 
+  describe('non-interactive mode', () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('outputs error JSON when project settings missing and --yes not set', async () => {
+      const projectSettingsModule = await import(
+        '../../../../src/util/projects/project-settings'
+      );
+      vi.spyOn(projectSettingsModule, 'readProjectSettings').mockResolvedValue(
+        null
+      );
+      vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+        throw new Error('exit');
+      }) as () => never);
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+      const cwd = fixture('static');
+      client.cwd = cwd;
+      client.nonInteractive = true;
+      client.setArgv('build');
+
+      const exitCodePromise = build(client);
+
+      await expect(exitCodePromise).rejects.toThrow('exit');
+      expect(logSpy).toHaveBeenCalled();
+      const payload = JSON.parse(
+        logSpy.mock.calls[logSpy.mock.calls.length - 1][0]
+      );
+      expect(payload).toMatchObject({
+        status: 'error',
+        reason: 'project_settings_required',
+        message: expect.stringMatching(/project settings|pull/),
+        next: expect.any(Array),
+      });
+      expect(
+        payload.next.some((n: { command: string }) =>
+          n.command.includes('pull')
+        )
+      ).toBe(true);
+    });
+
+    it('outputs success JSON when build completes', async () => {
+      const cwd = fixture('static');
+      const outputDir = join(cwd, '.vercel/output');
+      client.cwd = cwd;
+      client.nonInteractive = true;
+      client.setArgv('build');
+
+      const exitCode = await build(client);
+      expect(exitCode).toEqual(0);
+
+      const stdout = client.stdout.getFullOutput();
+      const payload = JSON.parse(stdout);
+      expect(payload).toMatchObject({
+        status: 'ok',
+        outputDir,
+        target: 'preview',
+        message: expect.stringMatching(/completed/),
+        next: expect.any(Array),
+      });
+      expect(
+        payload.next.some((n: { command: string }) =>
+          n.command.includes('deploy')
+        )
+      ).toBe(true);
+    });
+  });
+
   it('should allow services to share the same builder source', async () => {
     const cwd = fixture('with-services-shared-source');
     const output = join(cwd, '.vercel', 'output');
@@ -2194,5 +2255,75 @@ fs.writeFileSync(
       'worker-topic1',
       'worker-topic2',
     ]);
+  });
+
+  it('should not write trace spans for non-build commands', async () => {
+    const cwd = fixture('static');
+    const tracePath = join(cwd, '.vercel/output/diagnostics/cli_traces.json');
+
+    // Remove any leftover trace file from previous test runs
+    await fs.remove(tracePath);
+
+    // Run a command that goes through index.ts but doesn't invoke build
+    const cliPath = join(__dirname, '../../../../dist/vc.js');
+    execSync(`node ${cliPath} --version`, { cwd, stdio: 'pipe' });
+
+    // No trace file should be written
+    expect(await fs.pathExists(tracePath)).toBe(false);
+  });
+
+  it('should emit expected trace spans to cli_traces.json', async () => {
+    const cwd = fixture('static');
+    const outputDir = join(cwd, '.vercel/output');
+
+    // Run the full CLI entry point so index.ts writes cli_traces.json
+    const cliPath = join(__dirname, '../../../../dist/vc.js');
+    execSync(`node ${cliPath} build`, { cwd, stdio: 'pipe' });
+
+    // Read trace events written to disk
+    const tracePath = join(outputDir, 'diagnostics', 'cli_traces.json');
+    const events = await fs.readJSON(tracePath);
+    expect(events.length).toBeGreaterThan(0);
+
+    // Build a parent-child tree from the trace events
+    const idToName = new Map(events.map((e: any) => [e.id, e.name]));
+    const spans = events.map((e: any) => ({
+      name: e.name as string,
+      parent: (e.parentId ? (idToName.get(e.parentId) ?? null) : null) as
+        | string
+        | null,
+      duration: e.duration as number,
+    }));
+
+    // Every span should have a numeric duration > 0
+    for (const span of spans) {
+      expect(typeof span.duration).toBe('number');
+      expect(span.duration).toBeGreaterThan(0);
+    }
+
+    // Check the span names and hierarchy (ignore timing values)
+    const tree = spans.map(
+      ({ name, parent }: { name: string; parent: string | null }) => ({
+        name,
+        parent,
+      })
+    );
+    expect(tree).toEqual(
+      expect.arrayContaining([
+        { name: 'vc.cli', parent: null },
+        { name: 'vc', parent: 'vc.cli' },
+        { name: 'vc.cli.command', parent: 'vc.cli' },
+        { name: 'vc.getProjectLink', parent: 'vc' },
+        { name: 'vc.readProjectSettings', parent: 'vc' },
+        { name: 'vc.doBuild', parent: 'vc' },
+        { name: 'vc.loadEnv', parent: 'vc' },
+        { name: 'vc.compileVercelConfig', parent: 'vc.doBuild' },
+        { name: 'vc.detectBuilders', parent: 'vc.doBuild' },
+        { name: 'vc.importBuilders', parent: 'vc.doBuild' },
+        { name: 'vc.builder', parent: 'vc.doBuild' },
+        { name: 'vc.finalizeBuildOutput', parent: 'vc.doBuild' },
+        { name: 'vc.postCommand', parent: 'vc.cli' },
+      ])
+    );
   });
 });

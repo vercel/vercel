@@ -19,6 +19,7 @@ import {
   runNpmInstall,
   getServiceUrlEnvVars,
   type BuilderV3,
+  type BuilderVX,
   type Config,
 } from '@vercel/build-utils';
 import { checkForPort } from './port-utils';
@@ -168,7 +169,7 @@ export class ServicesOrchestrator {
   private maxNameLength: number;
   private proxyOrigin: string;
   private pythonServiceCount: number;
-  private hasWorkerService: boolean;
+  private hasWorkerServices: boolean;
 
   constructor(options: ServicesOrchestratorOptions) {
     this.services = options.services;
@@ -180,7 +181,7 @@ export class ServicesOrchestrator {
     this.pythonServiceCount = options.services.filter(
       s => s.runtime === 'python'
     ).length;
-    this.hasWorkerService = options.services.some(s => s.type === 'worker');
+    this.hasWorkerServices = options.services.some(s => s.type === 'worker');
   }
 
   async startAll(): Promise<void> {
@@ -328,6 +329,7 @@ export class ServicesOrchestrator {
       frameworkList: framework ? [framework] : [],
       origin: this.proxyOrigin,
       currentEnv: this.env,
+      envPrefix: service.envPrefix,
     });
 
     const env = cloneEnv(
@@ -340,11 +342,18 @@ export class ServicesOrchestrator {
       serviceUrlEnvVars
     );
     env.VERCEL_SERVICE_TYPE = service.type;
+    if (
+      this.hasWorkerServices &&
+      service.runtime === 'python' &&
+      env.VERCEL_HAS_WORKER_SERVICES === undefined
+    ) {
+      env.VERCEL_HAS_WORKER_SERVICES = '1';
+    }
 
     // When any worker service exists, point all services at the dev server's
     // queue proxy so that send() calls from web services are routed through
     // the proxy and dispatched to the matching worker process.
-    if (this.hasWorkerService) {
+    if (this.hasWorkerServices) {
       env.VERCEL_QUEUE_BASE_URL = `${this.proxyOrigin}/_svc/_queues`;
       env.VERCEL_QUEUE_TOKEN = 'vc-dev-token';
     }
@@ -390,9 +399,15 @@ export class ServicesOrchestrator {
     try {
       const builders = await importBuilders(new Set([builderSpec]), this.cwd);
       const builderWithPkg = builders.get(builderSpec);
-      const builder = builderWithPkg?.builder as BuilderV3 | undefined;
+      const builder = builderWithPkg?.builder as
+        | BuilderV3
+        | BuilderVX
+        | undefined;
 
-      if (builder?.version !== 3 || !builder.startDevServer) {
+      if (
+        (builder?.version !== 3 && builder?.version !== -1) ||
+        !builder?.startDevServer
+      ) {
         return null;
       }
 
@@ -432,6 +447,13 @@ export class ServicesOrchestrator {
           pythonServiceCount: this.pythonServiceCount,
           syncDependencies: true,
           serviceName: service.name,
+        },
+        service: {
+          name: service.name,
+          type: service.type,
+          routePrefix: service.routePrefix,
+          subdomain: service.subdomain,
+          workspace: service.workspace,
         },
         files: {},
         onStdout: (data: Buffer) => logger.stdout.write(data),
@@ -571,7 +593,7 @@ export class ServicesOrchestrator {
     return Promise.race([checkForPort(port, STARTUP_TIMEOUT), processError]);
   }
 
-  // This is needed, because only BuilderV3 exposes a dev server,
+  // This is needed, because only BuilderV3 and BuilderVX expose a dev server,
   // but we still want to keep dependencies in sync for BuilderV2 (e.g. Next/Vite/etc).
   // We'll try with the provided installCommand (if any) and then fallback
   // to just trying to install dependencnies for Node.

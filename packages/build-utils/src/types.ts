@@ -121,6 +121,8 @@ export interface BuildOptions {
   service?: {
     /** The service name as declared in the project configuration. */
     name?: string;
+    /** The service type (e.g., "web", "cron", "worker"). */
+    type?: ServiceType;
     /** URL path prefix where the service is mounted (e.g., "/api"). */
     routePrefix?: string;
     /** Optional subdomain this service is mounted on (e.g., "api"). */
@@ -447,6 +449,18 @@ export interface ProjectSettings {
   commandForIgnoringBuildStep?: string | null;
 }
 
+/*
+ * This is a builder whose build output version may dynamically change.
+ */
+export interface BuilderVX {
+  version: -1;
+  build: BuildVX;
+  diagnostics?: Diagnostics;
+  prepareCache?: PrepareCache;
+  shouldServe?: ShouldServe;
+  startDevServer?: StartDevServer;
+}
+
 export interface BuilderV2 {
   version: 2;
   build: BuildV2;
@@ -572,8 +586,21 @@ export interface Service {
   /* optional handler for cron service in format of {module}:{callable} */
   handlerFunction?: string;
   /* worker service config */
-  topic?: string;
+  topics?: string[];
   consumer?: string;
+  /** custom prefix to inject service URL env vars */
+  envPrefix?: string;
+}
+
+/**
+ * Returns the topics a worker service subscribes to, defaulting to ['default'].
+ */
+export function getWorkerTopics(config: {
+  topics?: string[];
+}): [string, ...string[]] {
+  return config.topics?.length
+    ? (config.topics as [string, ...string[]])
+    : ['default'];
 }
 
 /** The framework which created the function */
@@ -611,6 +638,10 @@ export interface BuildResultV2Typical {
   deploymentId?: string;
 }
 
+export type BuildResultVX =
+  | { resultVersion: 2; result: BuildResultV2 }
+  | { resultVersion: 3; result: BuildResultV3 };
+
 export type BuildResultV2 = BuildResultV2Typical | BuildResultBuildOutput;
 
 export interface BuildResultV3 {
@@ -619,6 +650,7 @@ export interface BuildResultV3 {
   output: Lambda | EdgeFunction;
 }
 
+export type BuildVX = (options: BuildOptions) => Promise<BuildResultVX>;
 export type BuildV2 = (options: BuildOptions) => Promise<BuildResultV2>;
 export type BuildV3 = (options: BuildOptions) => Promise<BuildResultV3>;
 export type PrepareCache = (options: PrepareCacheOptions) => Promise<Files>;
@@ -788,8 +820,11 @@ export interface ExperimentalServiceConfig {
   schedule?: string;
 
   /* Worker service config */
-  topic?: string;
+  topics?: string[];
   consumer?: string;
+
+  /** Custom prefix to use to inject service URL env vars */
+  envPrefix?: string;
 }
 
 /**

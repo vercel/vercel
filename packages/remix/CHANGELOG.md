@@ -1,5 +1,17 @@
 # @vercel/remix-builder
 
+## 5.7.2
+
+### Patch Changes
+
+- Bump @vercel/nft to 1.5.0 ([#15683](https://github.com/vercel/vercel/pull/15683))
+
+## 5.7.1
+
+### Patch Changes
+
+- Update @vercel/nft to 1.4.0 across packages ([#15626](https://github.com/vercel/vercel/pull/15626))
+
 ## 5.7.0
 
 ### Minor Changes

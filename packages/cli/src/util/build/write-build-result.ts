@@ -11,11 +11,13 @@ import {
 } from 'path';
 import {
   type Builder,
+  type BuildResultVX,
   type BuildResultV2,
   type BuildResultV3,
   type File,
   type Files,
   FileFsRef,
+  type BuilderVX,
   type BuilderV2,
   type BuilderV3,
   type Lambda,
@@ -63,9 +65,9 @@ interface FunctionConfiguration {
 export async function writeBuildResult(args: {
   repoRootPath: string;
   outputDir: string;
-  buildResult: BuildResultV2 | BuildResultV3;
+  buildResult: BuildResultVX | BuildResultV2 | BuildResultV3;
   build: Builder;
-  builder: BuilderV2 | BuilderV3;
+  builder: BuilderVX | BuilderV2 | BuilderV3;
   builderPkg: PackageJson;
   vercelConfig: VercelConfig | null;
   standalone: boolean;
@@ -86,12 +88,22 @@ export async function writeBuildResult(args: {
     service,
     stripServiceRoutePrefix = false,
   } = args;
-  const version = builder.version;
+  let version: number;
+  let actualResult: BuildResultV2 | BuildResultV3;
+  if (builder.version === -1) {
+    const vx = buildResult as BuildResultVX;
+    version = vx.resultVersion;
+    actualResult = vx.result;
+  } else {
+    version = builder.version;
+    actualResult = buildResult as BuildResultV2 | BuildResultV3;
+  }
+
   if (typeof version !== 'number' || version === 2) {
     return writeBuildResultV2({
       repoRootPath,
       outputDir,
-      buildResult: buildResult as BuildResultV2,
+      buildResult: actualResult as BuildResultV2,
       build,
       vercelConfig,
       standalone,
@@ -103,7 +115,7 @@ export async function writeBuildResult(args: {
     return writeBuildResultV3({
       repoRootPath,
       outputDir,
-      buildResult: buildResult as BuildResultV3,
+      buildResult: actualResult as BuildResultV3,
       build,
       vercelConfig,
       standalone,
@@ -497,6 +509,13 @@ async function writeStaticFile(
 
   // if already on disk hard link instead of copying
   if ('fsPath' in file) {
+    // If source and destination resolve to the same path (e.g. local builds
+    // where a builder writes static files directly into outputDir/static/ and
+    // then returns FileFsRef objects pointing to those same paths), the file
+    // is already in place — skip to avoid truncating it via downloadFile.
+    if (resolve(file.fsPath) === resolve(dest)) {
+      return;
+    }
     try {
       return await fs.link(file.fsPath, dest);
     } catch (_) {

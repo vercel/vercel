@@ -6,10 +6,7 @@ import type { PythonFramework, StartDevServer } from '@vercel/build-utils';
 import { debug, NowBuildError } from '@vercel/build-utils';
 import getPort from 'get-port';
 import isPortReachable from 'is-port-reachable';
-import {
-  PYTHON_CANDIDATE_ENTRYPOINTS,
-  detectPythonEntrypoint,
-} from './entrypoint';
+import { detectPythonEntrypoint, type PythonEntrypoint } from './entrypoint';
 import { runFrameworkHook } from './index';
 import { getDefaultPythonVersion } from './version';
 import {
@@ -26,7 +23,10 @@ import {
   type ManifestType,
 } from './install';
 import { stringifyManifest } from '@vercel/python-analysis';
-import { VERCEL_RUNTIME_VERSION } from './package-versions';
+import {
+  VERCEL_RUNTIME_VERSION,
+  VERCEL_WORKERS_VERSION,
+} from './package-versions';
 
 const DEV_SERVER_STARTUP_TIMEOUT = 5 * 60_000; // 5 minutes
 
@@ -64,6 +64,11 @@ function silenceNodeWarnings() {
 }
 
 const DEV_SHIM_MODULE = 'vc_init_dev';
+
+function hasWorkerServicesEnabled(env: NodeJS.ProcessEnv): boolean {
+  const value = env.VERCEL_HAS_WORKER_SERVICES || '';
+  return ['1', 'true'].includes(value.trim().toLowerCase());
+}
 
 function createLogListener(
   callback: ((buf: Buffer) => void) | undefined,
@@ -305,6 +310,7 @@ interface InstallVercelRuntimeOptions {
 }
 
 const PENDING_RUNTIME_INSTALLS = new Map<string, Promise<void>>();
+const PENDING_WORKERS_INSTALLS = new Map<string, Promise<void>>();
 
 async function installVercelRuntime({
   workPath,
@@ -420,6 +426,121 @@ async function doInstallVercelRuntime({
         reject(
           new Error(
             `Installing vercel-runtime failed with code ${code}, signal ${signal}`
+          )
+        );
+      }
+    });
+  });
+}
+
+async function installVercelWorkers({
+  workPath,
+  uvPath,
+  pythonBin,
+  env,
+  onStdout,
+  onStderr,
+}: InstallVercelRuntimeOptions): Promise<void> {
+  const targetDir = join(workPath, '.vercel', 'python');
+
+  let pending = PENDING_WORKERS_INSTALLS.get(targetDir);
+  if (!pending) {
+    pending = doInstallVercelWorkers({
+      targetDir,
+      workPath,
+      uvPath,
+      pythonBin,
+      env,
+      onStdout,
+      onStderr,
+    });
+    PENDING_WORKERS_INSTALLS.set(targetDir, pending);
+    pending.finally(() => PENDING_WORKERS_INSTALLS.delete(targetDir));
+  }
+  await pending;
+}
+
+async function doInstallVercelWorkers({
+  targetDir,
+  workPath,
+  uvPath,
+  pythonBin,
+  env,
+  onStdout,
+  onStderr,
+}: InstallVercelRuntimeOptions & { targetDir: string }): Promise<void> {
+  mkdirSync(targetDir, { recursive: true });
+
+  const localWorkersDir = join(
+    __dirname,
+    '..',
+    '..',
+    '..',
+    'python',
+    'vercel-workers'
+  );
+  const isLocalDev = existsSync(join(localWorkersDir, 'pyproject.toml'));
+
+  const workersDep =
+    env.VERCEL_WORKERS_PYTHON ||
+    (isLocalDev
+      ? localWorkersDir
+      : `vercel-workers==${VERCEL_WORKERS_VERSION}`);
+
+  if (!isLocalDev && !env.VERCEL_WORKERS_PYTHON) {
+    const distInfo = join(
+      targetDir,
+      `vercel_workers-${VERCEL_WORKERS_VERSION}.dist-info`
+    );
+    if (existsSync(distInfo)) {
+      debug(
+        `vercel-workers ${VERCEL_WORKERS_VERSION} already installed, skipping`
+      );
+      return;
+    }
+  }
+
+  debug(
+    `Installing vercel-workers into ${targetDir} (type: ${isLocalDev ? 'local' : 'pypi'}, source: ${workersDep})`
+  );
+
+  const pip = uvPath
+    ? { cmd: uvPath, prefix: ['pip', 'install'] }
+    : { cmd: pythonBin, prefix: ['-m', 'pip', 'install'] };
+
+  const spawnArgs = [...pip.prefix, '--target', targetDir, workersDep];
+
+  await new Promise<void>((resolve, reject) => {
+    const child = spawn(pip.cmd, spawnArgs, {
+      cwd: workPath,
+      env: getProtectedUvEnv(env),
+      stdio: ['inherit', 'pipe', 'pipe'],
+    });
+
+    child.stdout?.on('data', (data: Buffer) => {
+      if (onStdout) {
+        onStdout(data);
+      } else {
+        debug(data.toString());
+      }
+    });
+
+    child.stderr?.on('data', (data: Buffer) => {
+      if (onStderr) {
+        onStderr(data);
+      } else {
+        debug(data.toString());
+      }
+    });
+
+    child.on('error', reject);
+    child.on('exit', (code, signal) => {
+      if (code === 0) {
+        resolve();
+      } else {
+        reject(
+          new Error(
+            `Installing vercel-workers failed with code ${code}, signal ${signal}`
           )
         );
       }
@@ -590,6 +711,7 @@ export const startDevServer: StartDevServer = async opts => {
     workPath,
     meta = {},
     config,
+    service,
     onStdout,
     onStderr,
   } = opts;
@@ -599,7 +721,8 @@ export const startDevServer: StartDevServer = async opts => {
   // Check for an existing persistent server.
   // Include serviceName so that services sharing a workspace get separate servers.
   const serviceName =
-    typeof meta.serviceName === 'string' ? meta.serviceName : undefined;
+    service?.name ??
+    (typeof meta.serviceName === 'string' ? meta.serviceName : undefined);
   const serverKey = serviceName
     ? `${workPath}::${framework}::${serviceName}`
     : `${workPath}::${framework}`;
@@ -639,46 +762,40 @@ export const startDevServer: StartDevServer = async opts => {
   if (!restoreWarnings) restoreWarnings = silenceNodeWarnings();
   installGlobalCleanupHandlers();
   const env = { ...process.env, ...(meta.env || {}) } as NodeJS.ProcessEnv;
-  const serviceType = env.VERCEL_SERVICE_TYPE;
+  const entrypoint = rawEntrypoint === '<detect>' ? undefined : rawEntrypoint;
 
   // For cron/worker services, use the raw entrypoint directly, because
   // they don't export app/application so standard detection would skip them.
-  let entry: string | undefined;
-  let variableName: string | undefined;
-  if (
-    (serviceType === 'cron' || serviceType === 'worker') &&
-    rawEntrypoint?.endsWith('.py')
-  ) {
-    entry = rawEntrypoint;
+  let resolved: PythonEntrypoint | undefined;
+  const detected = await detectPythonEntrypoint(
+    framework as PythonFramework,
+    workPath,
+    entrypoint,
+    service
+  );
+  if (detected?.entrypoint) {
+    resolved = detected.entrypoint;
   } else {
-    const detected = await detectPythonEntrypoint(
-      framework as PythonFramework,
+    const hookResult = await runFrameworkHook(framework, {
+      pythonEnv: env,
+      projectDir: join(workPath, detected?.baseDir ?? ''),
       workPath,
-      rawEntrypoint
-    );
-    entry = detected?.entrypoint;
-    variableName = detected?.variableName;
-    if (!entry) {
-      const hookResult = await runFrameworkHook(framework, {
-        pythonEnv: env,
-        projectDir: join(workPath, detected?.baseDir ?? ''),
-        workPath,
-        entrypoint: rawEntrypoint,
-        detected: detected ?? undefined,
-      });
-      entry = hookResult?.entrypoint;
-      variableName = hookResult?.variableName;
-    }
-    if (!entry) {
-      const searched = PYTHON_CANDIDATE_ENTRYPOINTS.join(', ');
-      throw new NowBuildError({
-        code: 'PYTHON_ENTRYPOINT_NOT_FOUND',
-        message: `No ${framework} entrypoint found. Add an 'app' script in pyproject.toml or define an entrypoint in one of: ${searched}.`,
-        link: `https://vercel.com/docs/frameworks/backend/${framework?.toLowerCase()}#exporting-the-${framework?.toLowerCase()}-application`,
-        action: 'Learn More',
-      });
-    }
+      entrypoint,
+      detected: detected ?? undefined,
+    });
+    resolved = hookResult?.entrypoint;
   }
+  if (!resolved) {
+    if (detected?.error) {
+      throw detected.error;
+    }
+    throw new NowBuildError({
+      code: 'PYTHON_ENTRYPOINT_NOT_FOUND',
+      message:
+        'No Python entrypoint could be detected. Please specify an entrypoint file.',
+    });
+  }
+  const { entrypoint: entry, variableName } = resolved;
 
   // Convert to module path, e.g. "src/app.py" -> "src.app"
   const modulePath = entry.replace(/\.py$/i, '').replace(/[\\/]/g, '.');
@@ -795,6 +912,17 @@ export const startDevServer: StartDevServer = async opts => {
       pythonBin: spawnCommand,
       env,
     });
+
+    if (hasWorkerServicesEnabled(env)) {
+      await installVercelWorkers({
+        workPath,
+        uvPath,
+        pythonBin: spawnCommand,
+        env,
+        onStdout,
+        onStderr,
+      });
+    }
 
     const port = typeof meta.port === 'number' ? meta.port : await getPort();
     env.PORT = `${port}`;

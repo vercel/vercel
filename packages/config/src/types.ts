@@ -623,13 +623,17 @@ export interface VercelConfig {
        */
       schedule?: string;
       /**
-       * Topic name for worker subscription.
+       * Topic names for worker subscription.
        */
-      topic?: string;
+      topics?: string[];
       /**
        * Consumer group name for worker subscription.
        */
       consumer?: string;
+      /**
+       * Custom prefix to use to inject service URL env vars.
+       */
+      envPrefix?: string;
     }
   >;
   /**

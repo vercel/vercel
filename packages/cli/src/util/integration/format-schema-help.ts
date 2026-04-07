@@ -172,3 +172,31 @@ export function formatMetadataSchemaHelp(
 
   return lines.join('\n');
 }
+
+/**
+ * Merges integration-level metadata schema (e.g. org name, region) with
+ * product-level metadata schema (e.g. platform) into a single schema.
+ * Installation-level fields appear first, followed by product-level fields.
+ * Product properties win on key collision.
+ */
+export function mergeMetadataSchemas(
+  productSchema?: MetadataSchema,
+  integrationSchema?: MetadataSchema
+): MetadataSchema | undefined {
+  if (!productSchema && !integrationSchema) return undefined;
+  if (!integrationSchema) return productSchema;
+  if (!productSchema) return integrationSchema;
+  return {
+    type: 'object',
+    properties: {
+      ...integrationSchema.properties,
+      ...productSchema.properties,
+    },
+    required: [
+      ...new Set([
+        ...(integrationSchema.required ?? []),
+        ...(productSchema.required ?? []),
+      ]),
+    ],
+  };
+}
