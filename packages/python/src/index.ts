@@ -412,22 +412,13 @@ export const build: BuildVX = async ({
       }
 
       if (!assumeDepsInstalled) {
-        // Restore a previously cached uv.lock so that `uv lock` can
-        // validate it instead of re-resolving all packages from PyPI.
-        // Namespace by service name so multiple services don't overwrite
-        // each other's lock files.
+        // Compute the path where we stash a copy of the generated uv.lock
+        // so `uv lock` can validate it on the next build instead of
+        // re-resolving all packages from PyPI.
         const lockCacheKey = service?.name
           ? `uv.lock.${service.name}`
           : 'uv.lock';
         const cachedLockPath = join(uvCacheDir, lockCacheKey);
-        const manifestDir = pythonPackage.manifest
-          ? join(rootDir, dirname(pythonPackage.manifest.path))
-          : workPath;
-        const targetLockPath = join(manifestDir, 'uv.lock');
-        if (fs.existsSync(cachedLockPath) && !fs.existsSync(targetLockPath)) {
-          debug('Restoring cached uv.lock');
-          await fs.promises.copyFile(cachedLockPath, targetLockPath);
-        }
 
         // Default installation path: use uv to normalize manifests into a uv.lock and
         // sync dependencies into the virtualenv, including required runtime deps.
@@ -443,6 +434,7 @@ export const build: BuildVX = async ({
             uv,
             generateLockFile: true,
             requireBinaryWheels: false,
+            cachedLockPath,
           });
 
         uvLockPath = lockPath;

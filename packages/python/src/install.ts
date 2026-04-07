@@ -20,6 +20,23 @@ import {
 } from './uv';
 import { DEFAULT_PYTHON_VERSION_STRING } from './version';
 
+/**
+ * Restore a previously cached uv.lock into the project directory so that
+ * `uv lock` can validate it instead of re-resolving from PyPI.  Only
+ * restores when a cached file exists and no lock file is already present.
+ */
+async function restoreCachedLock(
+  cachedLockPath: string | undefined,
+  projectDir: string
+): Promise<void> {
+  if (!cachedLockPath) return;
+  const targetLockPath = join(projectDir, 'uv.lock');
+  if (fs.existsSync(cachedLockPath) && !fs.existsSync(targetLockPath)) {
+    debug('Restoring cached uv.lock');
+    await fs.promises.copyFile(cachedLockPath, targetLockPath);
+  }
+}
+
 const makeDependencyCheckCode = (dependency: string) => `
 from importlib import util
 dep = '${dependency}'.replace('-', '_')
@@ -232,6 +249,13 @@ interface EnsureUvProjectParams {
    * for runtime dependency installation.
    */
   requireBinaryWheels?: boolean;
+  /**
+   * Path to a cached uv.lock from a previous build.  When set and no
+   * user-provided lock file exists, the cached lock is restored to the
+   * project directory before running `uv lock` so that uv can validate
+   * it instead of re-resolving all packages from PyPI.
+   */
+  cachedLockPath?: string;
 }
 
 export async function ensureUvProject({
@@ -243,6 +267,7 @@ export async function ensureUvProject({
   uv,
   generateLockFile = false,
   requireBinaryWheels = false,
+  cachedLockPath,
 }: EnsureUvProjectParams): Promise<UvProjectInfo> {
   const { manifestType } = detectInstallSource(pythonPackage, rootDir);
   const manifest = pythonPackage.manifest;
@@ -316,6 +341,9 @@ export async function ensureUvProject({
     if (workspaceLockFile) {
       lockPath = join(rootDir, workspaceLockFile.path);
     } else {
+      // Restore a cached lock file so `uv lock` can validate it
+      // instead of re-resolving all packages from PyPI.
+      await restoreCachedLock(cachedLockPath, projectDir);
       // Generate a lock file
       // When requireBinaryWheels is true, use --no-build --upgrade to ensure
       // all resolved packages have pre-built wheels available.
@@ -352,6 +380,9 @@ export async function ensureUvProject({
     });
     const content = stringifyManifest(minimalManifest);
     await fs.promises.writeFile(pyprojectPath, content);
+    // Restore a cached lock file so `uv lock` can validate it
+    // instead of re-resolving all packages from PyPI.
+    await restoreCachedLock(cachedLockPath, projectDir);
     // When requireBinaryWheels is true, use --no-build --upgrade to ensure
     // all resolved packages have pre-built wheels available.
     await uv.lock({
