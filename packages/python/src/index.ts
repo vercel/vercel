@@ -773,7 +773,7 @@ export const prepareCache: PrepareCache = async ({
   const root = repoRootPath || workPath;
   const ignore = ['**/*.pyc', '**/__pycache__/**'];
 
-  // Only cache source-built wheels since pre-built wheels are cheap to download
+  // Prune pre-built wheels from the uv cache (source-built wheels are retained).
   const uvCacheDir = getUvCacheDir(workPath);
   try {
     const uvPath = findUvInPath();
@@ -785,7 +785,7 @@ export const prepareCache: PrepareCache = async ({
     // best-effort; don't fail the build
   }
 
-  return glob('**/.vercel/python/cache/uv/**', { cwd: root, ignore });
+  return glob('**/.vercel/python/{.venv,cache/uv}/**', { cwd: root, ignore });
 };
 
 export const shouldServe: ShouldServe = opts => {
