@@ -296,6 +296,14 @@ export const protectionSubcommand = {
       description: 'Apply action to SSO protection.',
       deprecated: false,
     },
+    {
+      name: 'password',
+      shorthand: null,
+      type: Boolean,
+      description:
+        'Apply action to password protection (requires eligible plan/permissions).',
+      deprecated: false,
+    },
   ],
   examples: [
     {
@@ -307,8 +315,16 @@ export const protectionSubcommand = {
       value: `${packageName} project protection my-app --format json`,
     },
     {
+      name: 'Disable password protection',
+      value: `${packageName} project protection disable my-app --password`,
+    },
+    {
+      name: 'Enable password protection',
+      value: `${packageName} project protection enable my-app --password`,
+    },
+    {
       name: 'Enable SSO deployment protection',
-      value: `${packageName} project protection enable --sso`,
+      value: `${packageName} project protection enable my-app --sso`,
     },
     {
       name: 'Disable SSO for a named project',

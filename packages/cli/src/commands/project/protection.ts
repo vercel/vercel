@@ -124,17 +124,18 @@ export default async function protection(
 
   const preferJson = formatResult.jsonOutput || Boolean(client.nonInteractive);
 
-  const selected = Boolean(parsedArgs.flags['--sso']);
-  if (action && !selected) {
+  const ssoSelected = Boolean(parsedArgs.flags['--sso']);
+  const passwordSelected = Boolean(parsedArgs.flags['--password']);
+  if (action && !ssoSelected && !passwordSelected) {
     const msg =
-      'No protection selected. Pass --sso. Usage: `vercel project protection enable|disable [name] --sso`';
+      'No protection selected. Pass --sso or --password. Usage: `vercel project protection enable|disable [name] --sso|--password`';
     outputAgentError(
       client,
       {
         status: 'error',
         reason: AGENT_REASON.MISSING_ARGUMENTS,
         message: msg,
-        hint: 'Use `project protection enable|disable` with the protection flag (e.g. --sso).',
+        hint: 'Use `project protection enable|disable` with a protection flag (e.g. --sso or --password).',
         next: [
           {
             command: buildCommandWithGlobalFlags(
@@ -142,6 +143,13 @@ export default async function protection(
               `project protection ${action} --sso`
             ),
             when: 'Example: same action with SSO protection selected',
+          },
+          {
+            command: buildCommandWithGlobalFlags(
+              client.argv,
+              `project protection ${action} --password`
+            ),
+            when: 'Example: same action with password protection selected',
           },
         ],
       },
@@ -168,12 +176,19 @@ export default async function protection(
   }
 
   if (action) {
-    const patchBody: JSONObject = {
-      ssoProtection:
+    const patchBody: JSONObject = {};
+    if (ssoSelected) {
+      patchBody.ssoProtection =
         action === 'enable'
           ? { deploymentType: ENABLED_DEPLOYMENT_TYPE }
-          : null,
-    };
+          : null;
+    }
+    if (passwordSelected) {
+      patchBody.passwordProtection =
+        action === 'enable'
+          ? { deploymentType: ENABLED_DEPLOYMENT_TYPE }
+          : null;
+    }
 
     try {
       await client.fetch(`/v9/projects/${encodeURIComponent(project.id)}`, {
@@ -193,7 +208,10 @@ export default async function protection(
             action,
             projectId: project.id,
             projectName: project.name,
-            ssoProtection: action === 'enable',
+            ssoProtection: ssoSelected ? action === 'enable' : undefined,
+            passwordProtection: passwordSelected
+              ? action === 'enable'
+              : undefined,
           },
           null,
           2
