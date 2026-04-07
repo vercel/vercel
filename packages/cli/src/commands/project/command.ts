@@ -279,6 +279,53 @@ export const membersSubcommand = {
   ],
 } as const;
 
+export const protectionSubcommand = {
+  name: 'protection',
+  aliases: [],
+  description: 'Show or toggle deployment protection settings for a project',
+  arguments: [
+    { name: 'action', required: false },
+    { name: 'name', required: false },
+  ],
+  options: [
+    formatOption,
+    {
+      name: 'protection-bypass',
+      shorthand: null,
+      type: Boolean,
+      description: 'Apply action to automation protection bypass secrets.',
+      deprecated: false,
+    },
+    {
+      name: 'protection-bypass-secret',
+      shorthand: null,
+      type: String,
+      argument: 'SECRET',
+      description:
+        'Optional secret value for protection bypass. Required when disabling bypass.',
+      deprecated: false,
+    },
+  ],
+  examples: [
+    {
+      name: 'Protection settings for the linked project',
+      value: `${packageName} project protection`,
+    },
+    {
+      name: 'Named project as JSON',
+      value: `${packageName} project protection my-app --format json`,
+    },
+    {
+      name: 'Enable automation protection bypass',
+      value: `${packageName} project protection enable my-app --protection-bypass`,
+    },
+    {
+      name: 'Disable bypass with secret',
+      value: `${packageName} project protection disable my-app --protection-bypass --protection-bypass-secret <secret>`,
+    },
+  ],
+} as const;
+
 export const accessGroupsSubcommand = {
   name: 'access-groups',
   aliases: ['accessgroups'],
@@ -386,6 +433,7 @@ export const projectCommand = {
     listSubcommand,
     membersSubcommand,
     accessGroupsSubcommand,
+    protectionSubcommand,
     webAnalyticsSubcommand,
     speedInsightsSubcommand,
     removeSubcommand,
