@@ -52,6 +52,8 @@ export interface FetchRequestLogsOptions {
   page?: number;
 }
 
+type DisplayLogLevel = RequestLogEntry['level'];
+
 const LOG_LEVEL_SEVERITY: Record<
   'info' | 'warning' | 'error' | 'fatal',
   number
@@ -213,7 +215,7 @@ export async function fetchRequestLogs(
       timestamp: row.timestamp ? new Date(row.timestamp).getTime() : Date.now(),
       deploymentId: row.deploymentId || '',
       projectId: options.projectId,
-      level: displayLog?.level || 'info',
+      level: (displayLog?.level as DisplayLogLevel) || 'info',
       message: displayLog?.message || '',
       messageTruncated: displayLog?.messageTruncated,
       source: (firstEvent?.source as RequestLogEntry['source']) || 'static',
