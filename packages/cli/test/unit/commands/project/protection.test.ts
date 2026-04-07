@@ -3,7 +3,7 @@ import project from '../../../../src/commands/project';
 import { client } from '../../../mocks/client';
 import { defaultProject, useProject } from '../../../mocks/project';
 
-describe('project protection (automation bypass)', () => {
+describe('project protection (SSO)', () => {
   it('shows protection settings by default', async () => {
     useProject({
       ...defaultProject,
@@ -18,7 +18,7 @@ describe('project protection (automation bypass)', () => {
     await expect(client.stderr).toOutput('Protection settings');
   });
 
-  it('requires --protection-bypass for action mode', async () => {
+  it('requires --sso for action mode', async () => {
     useProject({
       ...defaultProject,
       id: 'prj_123',
@@ -32,42 +32,23 @@ describe('project protection (automation bypass)', () => {
     await expect(client.stderr).toOutput('No protection selected');
   });
 
-  it('enables protection bypass via project bypass endpoint', async () => {
+  it('disables SSO protection when --sso is set', async () => {
     useProject({
       ...defaultProject,
       id: 'prj_123',
       name: 'my-project',
     });
 
-    client.scenario.patch(
-      '/v1/projects/prj_123/protection-bypass',
-      (req, res) => {
-        expect(req.body).toEqual({
-          generate: {},
-        });
-        res.json({ protectionBypass: {} });
-      }
-    );
-
-    client.setArgv(
-      'project',
-      'protection',
-      'enable',
-      'my-project',
-      '--protection-bypass',
-      '--format',
-      'json'
-    );
-    const exitCode = await project(client);
-    expect(exitCode).toBe(0);
-
-    const out = JSON.parse(client.stdout.getFullOutput().trim());
-    expect(out).toMatchObject({
-      action: 'enable',
-      projectId: 'prj_123',
-      projectName: 'my-project',
-      protectionBypass: true,
+    client.scenario.patch('/v9/projects/prj_123', (req, res) => {
+      expect(req.body).toEqual({ ssoProtection: null });
+      res.json({ id: 'prj_123' });
     });
+
+    client.setArgv('project', 'protection', 'disable', 'my-project', '--sso');
+    const exitCode = await project(client);
+
+    expect(exitCode).toBe(0);
+    await expect(client.stderr).toOutput('Deployment protection disabled');
   });
 
   it('returns JSON for enable with --sso', async () => {
@@ -100,25 +81,6 @@ describe('project protection (automation bypass)', () => {
       projectName: 'my-project',
       ssoProtection: true,
     });
-  });
-
-  it('requires bypass secret when disabling protection bypass', async () => {
-    useProject({
-      ...defaultProject,
-      id: 'prj_123',
-      name: 'my-project',
-    });
-
-    client.setArgv(
-      'project',
-      'protection',
-      'disable',
-      'my-project',
-      '--protection-bypass'
-    );
-    const exitCode = await project(client);
-    expect(exitCode).toBe(2);
-    await expect(client.stderr).toOutput('requires --protection-bypass-secret');
   });
 
   describe('--non-interactive', () => {
@@ -187,5 +149,92 @@ describe('project protection (automation bypass)', () => {
       expect(payload.projectId).toBe('prj_123');
       expect(payload.name).toBe('my-project');
     });
+  });
+});
+
+describe('project protection (automation bypass)', () => {
+  it('shows protection settings by default', async () => {
+    useProject({
+      ...defaultProject,
+      id: 'prj_123',
+      name: 'my-project',
+    });
+
+    client.setArgv('project', 'protection', 'my-project');
+    const exitCode = await project(client);
+
+    expect(exitCode).toBe(0);
+    await expect(client.stderr).toOutput('Protection settings');
+  });
+
+  it('requires --protection-bypass for action mode', async () => {
+    useProject({
+      ...defaultProject,
+      id: 'prj_123',
+      name: 'my-project',
+    });
+
+    client.setArgv('project', 'protection', 'enable', 'my-project');
+    const exitCode = await project(client);
+
+    expect(exitCode).toBe(2);
+    await expect(client.stderr).toOutput('No protection selected');
+  });
+
+  it('enables protection bypass via project bypass endpoint', async () => {
+    useProject({
+      ...defaultProject,
+      id: 'prj_123',
+      name: 'my-project',
+    });
+
+    client.scenario.patch(
+      '/v1/projects/prj_123/protection-bypass',
+      (req, res) => {
+        expect(req.body).toEqual({
+          generate: {},
+        });
+        res.json({ protectionBypass: {} });
+      }
+    );
+
+    client.setArgv(
+      'project',
+      'protection',
+      'enable',
+      'my-project',
+      '--protection-bypass',
+      '--format',
+      'json'
+    );
+    const exitCode = await project(client);
+    expect(exitCode).toBe(0);
+
+    const out = JSON.parse(client.stdout.getFullOutput().trim());
+    expect(out).toMatchObject({
+      action: 'enable',
+      projectId: 'prj_123',
+      projectName: 'my-project',
+      protectionBypass: true,
+    });
+  });
+
+  it('requires bypass secret when disabling protection bypass', async () => {
+    useProject({
+      ...defaultProject,
+      id: 'prj_123',
+      name: 'my-project',
+    });
+
+    client.setArgv(
+      'project',
+      'protection',
+      'disable',
+      'my-project',
+      '--protection-bypass'
+    );
+    const exitCode = await project(client);
+    expect(exitCode).toBe(2);
+    await expect(client.stderr).toOutput('requires --protection-bypass-secret');
   });
 });
