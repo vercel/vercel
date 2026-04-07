@@ -18,27 +18,18 @@ describe('project protection', () => {
     await expect(client.stderr).toOutput('Protection settings');
   });
 
-  it('enables SSO protection by default', async () => {
+  it('requires explicit protection selector for action mode', async () => {
     useProject({
       ...defaultProject,
       id: 'prj_123',
       name: 'my-project',
     });
 
-    client.scenario.patch('/v9/projects/prj_123', (req, res) => {
-      expect(req.body).toEqual({
-        ssoProtection: {
-          deploymentType: 'prod_deployment_urls_and_all_previews',
-        },
-      });
-      res.json({ id: 'prj_123' });
-    });
-
     client.setArgv('project', 'protection', 'enable', 'my-project');
     const exitCode = await project(client);
 
-    expect(exitCode).toBe(0);
-    await expect(client.stderr).toOutput('Deployment protection enabled');
+    expect(exitCode).toBe(2);
+    await expect(client.stderr).toOutput('No protection selected');
   });
 
   it('disables only password protection when --password is set', async () => {
@@ -84,6 +75,7 @@ describe('project protection', () => {
       'protection',
       'enable',
       'my-project',
+      '--sso',
       '--format',
       'json'
     );

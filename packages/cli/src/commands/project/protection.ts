@@ -78,10 +78,15 @@ export default async function protection(
     return 1;
   }
 
-  const withSso = Boolean(parsedArgs.flags['--sso']);
-  const withPassword = Boolean(parsedArgs.flags['--password']);
-  const selectedSso = withSso || (!withSso && !withPassword);
-  const selectedPassword = withPassword;
+  const selectedSso = Boolean(parsedArgs.flags['--sso']);
+  const selectedPassword = Boolean(parsedArgs.flags['--password']);
+
+  if (action && !selectedSso && !selectedPassword) {
+    output.error(
+      `No protection selected. Pass at least one of --sso or --password. Usage: \`vercel project protection ${action} [name] --sso|--password\``
+    );
+    return 2;
+  }
 
   let project: Project;
   try {

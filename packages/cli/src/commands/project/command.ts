@@ -299,8 +299,7 @@ export const protectionSubcommand = {
       name: 'sso',
       shorthand: null,
       type: Boolean,
-      description:
-        'Apply action to SSO protection. Defaults to enabled when no target flags are provided.',
+      description: 'Apply action to SSO protection.',
       deprecated: false,
     },
     {
@@ -323,7 +322,7 @@ export const protectionSubcommand = {
     },
     {
       name: 'Enable deployment protection for the linked project',
-      value: `${packageName} project protection enable`,
+      value: `${packageName} project protection enable --sso`,
     },
     {
       name: 'Disable deployment protection for a named project',
