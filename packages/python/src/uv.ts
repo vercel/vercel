@@ -11,6 +11,8 @@ import { getVenvPythonBin } from './utils';
 export const UV_VERSION = '0.10.11';
 export const UV_PYTHON_PATH_PREFIX = '/uv/python/';
 export const UV_PYTHON_DOWNLOADS_MODE = 'automatic';
+// Quarantine window for dependency resolution in builder-generated manifests.
+export const UV_EXCLUDE_NEWER = '7 days';
 
 const isWin = process.platform === 'win32';
 const uvExec = isWin ? 'uv.exe' : 'uv';

@@ -10,9 +10,15 @@ import {
   PythonLockFileKind,
   PythonManifestConvertedKind,
   type PythonPackage,
+  type PyProjectToml,
 } from '@vercel/python-analysis';
 import { getVenvPythonBin } from './utils';
-import { UvRunner, filterUnsafeUvPipArgs, getProtectedUvEnv } from './uv';
+import {
+  UvRunner,
+  filterUnsafeUvPipArgs,
+  getProtectedUvEnv,
+  UV_EXCLUDE_NEWER,
+} from './uv';
 import { DEFAULT_PYTHON_VERSION_STRING } from './version';
 
 const makeDependencyCheckCode = (dependency: string) => `
@@ -143,6 +149,44 @@ export async function discoverPackage({
     }
     throw error;
   }
+}
+
+function hasPrivateIndexes(data: PyProjectToml): boolean {
+  const indexes = data.tool?.uv?.index ?? [];
+  return indexes.length > 0;
+}
+
+function hasPrivateIndexEnvVars(): boolean {
+  return !!(
+    process.env.UV_INDEX_URL ||
+    process.env.UV_EXTRA_INDEX_URL ||
+    process.env.UV_INDEX ||
+    process.env.PIP_INDEX_URL ||
+    process.env.PIP_EXTRA_INDEX_URL
+  );
+}
+
+/**
+ * Inject `exclude-newer` into a builder-generated manifest to quarantine
+ * newly-published packages. Skipped when private indexes are detected.
+ */
+export function injectExcludeNewer(data: PyProjectToml): void {
+  if (hasPrivateIndexes(data)) {
+    debug('Skipping exclude-newer: custom package indexes detected');
+    return;
+  }
+  if (hasPrivateIndexEnvVars()) {
+    debug('Skipping exclude-newer: private index env vars detected');
+    return;
+  }
+
+  if (!data.tool) {
+    data.tool = {};
+  }
+  if (!data.tool.uv) {
+    data.tool.uv = {};
+  }
+  (data.tool.uv as Record<string, unknown>)['exclude-newer'] = UV_EXCLUDE_NEWER;
 }
 
 export type ManifestType = 'uv.lock' | 'pylock.toml' | 'pyproject.toml' | null;
@@ -300,6 +344,7 @@ export async function ensureUvProject({
       if (manifest.data.project) {
         manifest.data.project['requires-python'] = `~=${pythonVersion}.0`;
       }
+      injectExcludeNewer(manifest.data);
       const content = stringifyManifest(manifest.data);
       // Write to the same directory as the original manifest
       pyprojectPath = join(projectDir, 'pyproject.toml');
@@ -345,6 +390,8 @@ export async function ensureUvProject({
       requiresPython,
       dependencies: [],
     });
+
+    injectExcludeNewer(minimalManifest);
     const content = stringifyManifest(minimalManifest);
     await fs.promises.writeFile(pyprojectPath, content);
     // When requireBinaryWheels is true, use --no-build --upgrade to ensure

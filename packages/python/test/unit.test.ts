@@ -52,9 +52,13 @@ import type { PythonConstraint, PythonPackage } from '@vercel/python-analysis';
 import { build } from '../src/index';
 import type { BuildResultV3, BuildResultV2 } from '@vercel/build-utils';
 import { createVenvEnv, getVenvBinDir } from '../src/utils';
-import { UV_PYTHON_DOWNLOADS_MODE, getProtectedUvEnv } from '../src/uv';
+import {
+  UV_PYTHON_DOWNLOADS_MODE,
+  getProtectedUvEnv,
+  UV_EXCLUDE_NEWER,
+} from '../src/uv';
 import { VERCEL_WORKERS_VERSION } from '../src/package-versions';
-import { createPyprojectToml } from '../src/install';
+import { createPyprojectToml, injectExcludeNewer } from '../src/install';
 import { getDjangoSettings, runDjangoCollectStatic } from '../src/django';
 import { FileBlob, download } from '@vercel/build-utils';
 
@@ -531,6 +535,146 @@ describe('createPyprojectToml', () => {
         fs.removeSync(tempDir);
       }
     }
+  });
+});
+
+describe('injectExcludeNewer', () => {
+  it('adds [tool.uv] exclude-newer to an empty manifest', () => {
+    const data: Record<string, unknown> = {
+      project: { name: 'app', version: '0.1.0' },
+    };
+    injectExcludeNewer(data as any);
+    expect((data as any).tool.uv['exclude-newer']).toBe(UV_EXCLUDE_NEWER);
+  });
+
+  it('preserves existing [tool.uv] settings', () => {
+    const data: Record<string, unknown> = {
+      project: { name: 'app', version: '0.1.0' },
+      tool: {
+        uv: {
+          sources: { flask: { git: 'https://example.com/flask.git' } },
+        },
+      },
+    };
+    injectExcludeNewer(data as any);
+    expect((data as any).tool.uv['exclude-newer']).toBe(UV_EXCLUDE_NEWER);
+    expect((data as any).tool.uv.sources).toEqual({
+      flask: { git: 'https://example.com/flask.git' },
+    });
+  });
+
+  it('adds [tool] section when missing', () => {
+    const data: Record<string, unknown> = {
+      project: { name: 'app', version: '0.1.0' },
+    };
+    expect(data.tool).toBeUndefined();
+    injectExcludeNewer(data as any);
+    expect((data as any).tool.uv['exclude-newer']).toBe(UV_EXCLUDE_NEWER);
+  });
+
+  it('adds [tool.uv] section when tool exists but uv is missing', () => {
+    const data: Record<string, unknown> = {
+      project: { name: 'app', version: '0.1.0' },
+      tool: {},
+    };
+    injectExcludeNewer(data as any);
+    expect((data as any).tool.uv['exclude-newer']).toBe(UV_EXCLUDE_NEWER);
+  });
+
+  it('skips injection when tool.uv.index contains entries', () => {
+    const data: Record<string, unknown> = {
+      project: { name: 'app', version: '0.1.0' },
+      tool: {
+        uv: {
+          index: [
+            { name: 'private', url: 'https://private.registry.com/simple' },
+          ],
+        },
+      },
+    };
+    injectExcludeNewer(data as any);
+    expect((data as any).tool.uv['exclude-newer']).toBeUndefined();
+  });
+
+  it('skips injection when --index-url is converted to a default index entry', () => {
+    const data: Record<string, unknown> = {
+      project: { name: 'app', version: '0.1.0' },
+      tool: {
+        uv: {
+          index: [
+            {
+              name: 'primary',
+              url: 'https://private.registry.com/simple',
+              default: true,
+            },
+          ],
+        },
+      },
+    };
+    injectExcludeNewer(data as any);
+    expect((data as any).tool.uv['exclude-newer']).toBeUndefined();
+  });
+
+  it('skips injection when --find-links is converted to a flat index entry', () => {
+    const data: Record<string, unknown> = {
+      project: { name: 'app', version: '0.1.0' },
+      tool: {
+        uv: {
+          index: [
+            {
+              name: 'find-links-1',
+              url: 'https://example.com/wheels/',
+              format: 'flat',
+            },
+          ],
+        },
+      },
+    };
+    injectExcludeNewer(data as any);
+    expect((data as any).tool.uv['exclude-newer']).toBeUndefined();
+  });
+
+  describe('environment variable detection', () => {
+    const envVars = [
+      'UV_INDEX_URL',
+      'UV_EXTRA_INDEX_URL',
+      'UV_INDEX',
+      'PIP_INDEX_URL',
+      'PIP_EXTRA_INDEX_URL',
+    ];
+
+    for (const envVar of envVars) {
+      it(`skips injection when ${envVar} is set`, () => {
+        const original = process.env[envVar];
+        try {
+          process.env[envVar] = 'https://private.registry.com/simple';
+          const data: Record<string, unknown> = {
+            project: { name: 'app', version: '0.1.0' },
+          };
+          injectExcludeNewer(data as any);
+          expect((data as any).tool?.uv?.['exclude-newer']).toBeUndefined();
+        } finally {
+          if (original === undefined) {
+            delete process.env[envVar];
+          } else {
+            process.env[envVar] = original;
+          }
+        }
+      });
+    }
+  });
+
+  it('injects when tool.uv exists but index is empty', () => {
+    const data: Record<string, unknown> = {
+      project: { name: 'app', version: '0.1.0' },
+      tool: {
+        uv: {
+          index: [],
+        },
+      },
+    };
+    injectExcludeNewer(data as any);
+    expect((data as any).tool.uv['exclude-newer']).toBe(UV_EXCLUDE_NEWER);
   });
 });
 
