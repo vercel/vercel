@@ -33,12 +33,13 @@ describe('project protection (skew)', () => {
   });
 
   it('includes skewProtectionMaxAge when listing project protection as JSON', async () => {
-    useProject({
+    const projectWithSkew = {
       ...defaultProject,
       id: 'prj_123',
       name: 'my-project',
       skewProtectionMaxAge: 2592000,
-    });
+    };
+    useProject(projectWithSkew as any);
 
     client.setArgv('project', 'protection', 'my-project', '--format', 'json');
     const exitCode = await project(client);
