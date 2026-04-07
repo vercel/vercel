@@ -1290,6 +1290,80 @@ describe('detectServices', () => {
       });
     });
 
+    it('should parse file:variable entrypoint for cron services', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            cleanup: {
+              type: 'cron',
+              entrypoint: 'jobs/cleanup.py:my_handler',
+              schedule: '0 0 * * *',
+            },
+          },
+        }),
+        'jobs/cleanup.py': 'def my_handler(): pass',
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toHaveLength(0);
+      expect(result.services).toHaveLength(1);
+      expect(result.services[0]).toMatchObject({
+        name: 'cleanup',
+        type: 'cron',
+        entrypoint: 'jobs/cleanup.py',
+        handlerFunction: 'my_handler',
+        schedule: '0 0 * * *',
+      });
+    });
+
+    it('should parse file:variable entrypoint for web services', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            api: {
+              type: 'web',
+              entrypoint: 'app/wsgi.py:wsgi_callable',
+              routePrefix: '/api',
+            },
+          },
+        }),
+        'app/wsgi.py': 'wsgi_callable = create_app()',
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toHaveLength(0);
+      expect(result.services).toHaveLength(1);
+      expect(result.services[0]).toMatchObject({
+        name: 'api',
+        type: 'web',
+        entrypoint: 'app/wsgi.py',
+      });
+    });
+
+    it('should parse file:variable entrypoint for worker services', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            processor: {
+              type: 'worker',
+              entrypoint: 'jobs/worker.py:process_message',
+              topics: ['jobs'],
+            },
+          },
+        }),
+        'jobs/worker.py': 'def process_message(): pass',
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toHaveLength(0);
+      expect(result.services).toHaveLength(1);
+      expect(result.services[0]).toMatchObject({
+        name: 'processor',
+        type: 'worker',
+        entrypoint: 'jobs/worker.py',
+      });
+    });
+
     it('should error for module:function entrypoint when file does not exist', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': JSON.stringify({
