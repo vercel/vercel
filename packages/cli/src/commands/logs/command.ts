@@ -109,13 +109,15 @@ export const logsCommand = {
       shorthand: 'q',
       type: String,
       deprecated: false,
-      description: 'Full-text search query',
+      description:
+        'Advanced search query (supports filter syntax, e.g. "status:500 error")',
     },
     {
       name: 'search',
       shorthand: null,
       type: String,
       deprecated: false,
+      hidden: true,
       description:
         'Advanced search query (supports filter syntax, e.g. "status:500 error")',
     },
@@ -180,7 +182,7 @@ export const logsCommand = {
     },
     {
       name: 'Use advanced search query with filters',
-      value: `${packageName} logs --search 'status:500 error' --json | jq '.message'`,
+      value: `${packageName} logs --query 'status:500 error' --json | jq '.message'`,
     },
     {
       name: 'Display production logs only',
