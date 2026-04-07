@@ -140,9 +140,9 @@ export default async function protection(
           {
             command: buildCommandWithGlobalFlags(
               client.argv,
-              'project protection disable --customer-support-code-visibility'
+              `project protection ${action} --customer-support-code-visibility`
             ),
-            when: 'Example: disable with this protection type selected',
+            when: 'Example: same action with this protection type selected',
           },
         ],
       },
