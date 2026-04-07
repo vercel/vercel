@@ -133,6 +133,36 @@ The `buy` command **explicitly blocks non-interactive execution** (`client.nonIn
 
 ## Part 2: Visa Integration Design
 
+### 2.0 The Real Visa Ecosystem
+
+The Visa CLI ([visacli.sh](https://visacli.sh/)) is a beta product from Visa Crypto Labs that enables programmatic card payments from the command line. Under the hood, it is powered by **Visa Intelligent Commerce (VIC)** — a platform that provides tokenized payment credentials to AI agents and automated software.
+
+The actual npm packages for integration live at [github.com/visa/ai](https://github.com/visa/ai):
+
+| Package | Purpose |
+|---------|---------|
+| `@visa/token-manager` | JWE token generation and management for MCP authentication |
+| `@visa/mcp-client` | MCP client for connecting to Visa MCP server with auto-auth |
+| `@visa/api-client` | API clients for VIC and VDP with X-Pay authentication and MLE (Message Level Encryption) |
+
+The VIC platform's payment flow (per [Visa developer docs](https://developer.visa.com/capabilities/visa-intelligent-commerce)) uses five integrated services:
+1. **Tokenization** — agent-specific pass-through payment tokens (not raw card numbers)
+2. **Authentication** — step-up cardholder verification and Passkey setup
+3. **Payment Instructions** — controls ensuring payment requests match authenticated user instructions
+4. **Signals** — commerce signals for dispute resolution
+5. **Personalization** — user insights for recommendations
+
+The `VicApiClient` from `@visa/api-client` exposes these methods:
+- `enrollCard()` — enroll a card/token in VIC
+- `initiatePurchaseInstruction()` — create a purchase instruction
+- `updatePurchaseInstruction()` / `cancelPurchaseInstruction()`
+- `getTransactionCredentials()` — retrieve payment credentials after instruction validation
+- `sendConfirmations()` — confirm transaction
+
+**The Visa payment flow is NOT a simple "paste a token" operation.** It is a multi-step process involving purchase instruction creation, user authentication via Passkey, and credential retrieval.
+
+---
+
 ### 2.1 Integration Strategy: Reuse vs. Fork
 
 **Recommendation: Extend the existing `domains buy` flow, do not fork it.**
@@ -148,8 +178,8 @@ Two approaches are viable:
 
 #### Approach A: `--visa` flag on `vercel domains buy` (Recommended)
 Add a `--visa` flag to `buySubcommand.options` in `command.ts`. When present:
-1. The CLI collects/validates a Visa credential before calling the purchase API.
-2. The purchase POST body includes an additional `paymentMethod` field.
+1. The CLI orchestrates the VIC purchase instruction flow to obtain transaction credentials.
+2. The purchase POST body includes the VIC transaction credentials as the payment method.
 
 #### Approach B: Separate `vercel visa` top-level command
 Creates `src/commands/visa/` with its own routing. This is heavier and only makes sense if Visa functionality spans beyond domain purchases (e.g., billing management, subscription upgrades).
@@ -161,25 +191,56 @@ Creates `src/commands/visa/` with its own routing. This is heavier and only make
 
 ---
 
-### 2.2 Passing Visa CLI Credential / Wallet Info to the API
+### 2.2 How VIC Credentials Reach the Vercel API
 
-Since the CLI must **never accept secrets via flags** (per `AGENTS.md` — flags leak into `ps` output and shell history), the Visa credential is collected as follows:
+The integration involves **two sides**: the CLI-side VIC flow (obtaining payment credentials) and the Vercel backend (accepting those credentials to charge the purchase).
 
-#### Live Behavior: Interactive Prompt (Primary Path)
+#### 2.2.1 VIC Authentication Prerequisites
 
-When `--visa` is set, the CLI **always prompts** the user for their Visa credential interactively using `client.input.password()` (masked input):
+The `@visa/token-manager` requires these environment variables (from Visa onboarding):
+
+| Variable | Source |
+|----------|--------|
+| `VISA_VIC_API_KEY` | VIC onboarding |
+| `VISA_VIC_API_KEY_SS` | VIC onboarding (shared secret) |
+| `VISA_EXTERNAL_CLIENT_ID` | VIC onboarding |
+| `VISA_EXTERNAL_APP_ID` | VIC onboarding |
+| `VISA_VTS_API_KEY` | VTS onboarding |
+| `VISA_VTS_API_KEY_SS` | VTS onboarding (shared secret) |
+| `VISA_MLE_SERVER_CERT` | User-generated (MLE certificate) |
+| `VISA_MLE_PRIVATE_KEY` | User-generated (MLE private key) |
+| `VISA_KEY_ID` | User-generated (MLE key ID) |
+| `USER_SIGNING_PRIVATE_KEY` | User-generated (RSA key for JWT signing) |
+| `VISA_MCP_BASE_URL` | Visa MCP endpoint (sandbox or prod) |
+
+These are **Vercel's credentials as a VIC-integrated merchant**, NOT the end-user's. They would be configured on the Vercel backend, not in the CLI.
+
+#### 2.2.2 Live Behavior: Interactive Credential Collection
+
+When `--visa` is set, the CLI prompts the user for a VIC-issued credential interactively using `client.input.password()` (masked input):
 
 ```
-? Visa wallet token: ••••••••••••
+? Visa payment token: ••••••••••••
 ```
 
-This is the canonical path for real usage. The credential is entered each time — it is not persisted to disk. This keeps the flow explicit and secure: the user is making a conscious financial decision and providing their own payment credential in real time.
+What this credential actually is depends on the integration depth:
 
-If stdin is not a TTY (i.e., non-interactive / piped), the command errors out with guidance, consistent with how the rest of `domains buy` already blocks non-interactive execution.
+**Option A — VIC transaction credentials flow (full integration):**
+The Vercel backend acts as the VIC merchant. The CLI sends the purchase details to a Vercel API endpoint, which orchestrates the VIC `initiatePurchaseInstruction()` → Passkey authentication → `getTransactionCredentials()` flow server-side. The user authenticates via their device (Passkey). The CLI just triggers it.
 
-#### Testing / CI: Environment Variable Override
+**Option B — Pre-issued Visa CLI token (simpler integration):**
+The user has already authenticated via `visa-cli` ([visacli.sh](https://visacli.sh/)) and has a session token or payment token. The CLI collects this token and passes it to the Vercel backend, which redeems it via VIC APIs.
 
-For **automated tests and CI only**, the credential can be provided via the `VERCEL_VISA_TOKEN` environment variable. When this env var is set, the interactive prompt is skipped and the value is used directly. This lets test suites exercise the Visa payment path without mocking interactive input:
+**The exact mechanism depends on what Visa CLI's beta exposes.** The product is in beta and docs are limited. What we know for certain:
+- Visa CLI uses GitHub-based authentication for access
+- It promises "programmatic card payments without the pain of API keys"
+- The underlying platform is VIC with tokenized credentials
+
+For the **CLI side**, the integration contract is: collect a credential from the user and pass it to the Vercel backend. How the backend redeems it with VIC is a backend concern.
+
+#### 2.2.3 Testing / CI: Environment Variable Override
+
+For **automated tests and CI only**, the credential can be provided via the `VERCEL_VISA_TOKEN` environment variable:
 
 ```bash
 # In a test .env or CI config
@@ -199,15 +260,15 @@ async function getVisaCredential(client: Client): Promise<string> {
 
   // 2. Live: interactive prompt (primary path)
   return client.input.password({
-    message: 'Visa wallet token:',
+    message: 'Visa payment token:',
     validate: (val: string) => val.length > 0 || 'Visa token is required',
   });
 }
 ```
 
-#### How it reaches the API
+#### 2.2.4 How it reaches the Vercel API
 
-The Visa credential is passed in the **request body** of the purchase POST, not as a header:
+The Visa credential is passed in the **request body** of the purchase POST:
 
 ```json
 {
@@ -217,12 +278,15 @@ The Visa credential is passed in the **request body** of the purchase POST, not 
   "contactInformation": { ... },
   "paymentMethod": {
     "type": "visa",
-    "token": "vtok_..."
+    "token": "<vic-credential>"
   }
 }
 ```
 
-The backend must be extended to accept this new `paymentMethod` field and process payment through Visa's payment rails instead of the account's default card.
+The Vercel backend must be extended to:
+1. Accept this new `paymentMethod` field.
+2. Redeem the VIC credential via the `@visa/api-client` (`VicApiClient.getTransactionCredentials()` or equivalent).
+3. Process the domain purchase using the obtained transaction credentials.
 
 ---
 
@@ -247,7 +311,7 @@ export const buySubcommand = {
       shorthand: null,
       type: Boolean,
       deprecated: false,
-      description: 'Pay with Visa credential instead of card on file',
+      description: 'Pay with Visa Intelligent Commerce instead of card on file',
     },
   ],
   examples: [
@@ -260,9 +324,16 @@ export const buySubcommand = {
 ```
 
 #### Environment Variables
-| Variable | Purpose |
-|----------|---------|
-| `VERCEL_VISA_TOKEN` | Visa wallet/credential token for non-interactive use |
+| Variable | Purpose | Used By |
+|----------|---------|---------|
+| `VERCEL_VISA_TOKEN` | VIC credential for testing/CI only | CLI (test harness) |
+| `VISA_VIC_API_KEY` | VIC API key | Vercel backend only |
+| `VISA_VIC_API_KEY_SS` | VIC API shared secret | Vercel backend only |
+| `VISA_MLE_SERVER_CERT` | MLE server certificate | Vercel backend only |
+| `VISA_MLE_PRIVATE_KEY` | MLE private key | Vercel backend only |
+| `VISA_KEY_ID` | MLE key identifier | Vercel backend only |
+
+The VIC merchant credentials (`VISA_*`) are **NOT** needed in the CLI — they belong on the Vercel backend. The CLI only collects the user-facing credential.
 
 #### No New Positional Arguments
 The domain name remains the only positional argument. Visa selection is a flag.
@@ -280,14 +351,22 @@ The domain name remains the only positional argument. Visa selection is a flag.
 | `src/util/domains/purchase-domain.ts` | Accept optional `paymentMethod` param; include in POST body |
 | `src/util/domains/purchase-domain-if-available.ts` | Optionally accept `paymentMethod` and forward to `purchaseDomain()` |
 | `src/util/telemetry/commands/domains/buy.ts` | Add `trackCliFlagVisa()` method |
-| `src/util/errors-ts.ts` | Add `VisaPaymentError` class (optional, if backend returns Visa-specific error codes) |
+| `src/util/errors-ts.ts` | Add Visa-specific error classes (if backend returns VIC-specific error codes) |
 
 #### New Files
 
 | File | Purpose |
 |------|---------|
-| `src/util/domains/get-visa-credential.ts` | Prompts user for Visa token interactively (live), falls back to `VERCEL_VISA_TOKEN` env var (testing/CI) |
+| `src/util/domains/get-visa-credential.ts` | Prompts user for Visa payment token interactively (live), falls back to `VERCEL_VISA_TOKEN` env var (testing/CI) |
 | `test/unit/commands/domains/buy-visa.test.ts` | Tests for the `--visa` flow (uses `VERCEL_VISA_TOKEN` env var to provide credential in test harness) |
+
+#### Backend Work (Outside CLI Scope)
+
+The Vercel API backend needs to:
+1. Add `@visa/api-client` and `@visa/token-manager` as dependencies.
+2. Accept the `paymentMethod` field on `POST /v1/registrar/domains/{name}/buy`.
+3. When `paymentMethod.type === 'visa'`, use `VicApiClient` to redeem the credential and process the domain purchase via VIC payment rails instead of the account's default card.
+4. Return VIC-specific error codes in the API response for CLI-side error handling.
 
 ---
 
@@ -302,13 +381,14 @@ The domain name remains the only positional argument. Visa selection is a flag.
 6. Prompt: "Buy now for $12.99 (1yr)?" (same as today)
 7. Prompt: "Auto renew?" (same as today)
 8. Collect contact information (same as today)
-9. NEW: Collect Visa credential via getVisaCredential(client):
+9. NEW: Collect VIC credential via getVisaCredential(client):
    a. If VERCEL_VISA_TOKEN env var is set → use it (testing/CI only)
    b. Otherwise → prompt interactively with client.input.password() (live behavior)
 10. Call purchaseDomain(client, name, price, years, autoRenew, contact, { type: 'visa', token })
 11. POST /v1/registrar/domains/{name}/buy with paymentMethod in body
-12. Poll for order (same as today)
-13. Handle success/failure (same as today, plus Visa-specific errors)
+12. Vercel backend redeems VIC credential (server-side VIC API calls)
+13. Poll for order (same as today)
+14. Handle success/failure (same as today, plus VIC-specific errors)
 ```
 
 ---
@@ -323,14 +403,15 @@ For **testing/CI**, the `VERCEL_VISA_TOKEN` env var bypasses the interactive pro
 
 ### 2.7 Error Handling Extensions
 
-New error scenarios to handle:
+New error scenarios to handle (exact API codes depend on Vercel backend implementation):
 
-| Error | API Code (proposed) | CLI Message |
-|-------|---------------------|-------------|
-| Invalid Visa token | `visa_token_invalid` | "The Visa credential is invalid or expired. Please check your token." |
-| Visa payment declined | `visa_payment_declined` | "Your Visa payment was declined." |
-| Visa not supported for TLD | `visa_not_supported_for_tld` | "Visa payment is not supported for .{tld} domains." |
-| Visa service unavailable | `visa_service_unavailable` | "Visa payment service is currently unavailable. Try again later or use card on file." |
+| Error | Likely API Code | CLI Message |
+|-------|-----------------|-------------|
+| Invalid VIC credential | `visa_token_invalid` | "The Visa payment credential is invalid or expired." |
+| VIC payment declined | `visa_payment_declined` | "Your Visa payment was declined." |
+| VIC not supported for TLD | `visa_not_supported_for_tld` | "Visa payment is not supported for .{tld} domains." |
+| VIC service unavailable | `visa_service_unavailable` | "Visa payment service is currently unavailable. Try again later or use card on file." |
+| VIC authentication failed | `visa_auth_failed` | "Visa authentication failed. Please try again." |
 
 These map to new error classes in `errors-ts.ts` or can reuse the existing `DomainPaymentError` with an extended message.
 
@@ -392,16 +473,20 @@ User: vercel domains buy example.com --visa
              │
              ▼
 ┌─────────────────────────────────────┐
-│  util/domains/purchase-domain.ts    │
+│  Vercel API Backend                 │
 │  POST /v1/registrar/domains/        │
 │       {name}/buy?teamId=...         │
-│  Body: {                            │
-│    expectedPrice, autoRenew, years, │
-│    contactInformation,              │
-│    paymentMethod: {                 │
-│      type: 'visa', token: '...'     │
-│    }                                │
-│  }                                  │
+│                                     │
+│  paymentMethod.type === 'visa' ?    │
+│  ┌────────────────────────────────┐ │
+│  │ VicApiClient (server-side)     │ │
+│  │ @visa/api-client               │ │
+│  │ @visa/token-manager            │ │
+│  │                                │ │
+│  │ Redeem VIC credential ────────────► Visa Intelligent Commerce API
+│  │ Get transaction credentials    │ │
+│  │ Process payment                │ │
+│  └────────────────────────────────┘ │
 │                                     │
 │  pollForOrder(orderId) ────────────────► GET /v1/registrar/orders/{orderId}
 └────────────┬────────────────────────┘
@@ -409,8 +494,8 @@ User: vercel domains buy example.com --visa
              ▼
 ┌─────────────────────────────────────┐
 │  buy.ts (result handling)           │
-│  ✔ Success: "Domain purchased"      │
-│  ✗ Failure: payment/domain errors   │
+│  Success: "Domain purchased"        │
+│  Failure: payment/domain errors     │
 └─────────────────────────────────────┘
 ```
 
@@ -418,11 +503,22 @@ User: vercel domains buy example.com --visa
 
 ### 2.10 Security Considerations
 
-1. **Never accept Visa tokens via CLI flags** — they would leak into shell history and `ps` output. The live path uses `client.input.password()` (masked interactive prompt) exclusively.
+1. **Never accept Visa credentials via CLI flags** — they would leak into shell history and `ps` output. The live path uses `client.input.password()` (masked interactive prompt) exclusively.
 2. **Env var is for testing only** — `VERCEL_VISA_TOKEN` exists so test suites and CI can exercise the payment path. It should be documented as a testing escape hatch, not a recommended production workflow.
-3. **Mask Visa tokens in debug output** — if `output.debug()` logs request bodies, redact the token field.
-4. **Token format validation** — validate the Visa token format client-side before sending to the API to fail fast on typos.
-5. **No token persistence** — unlike the Vercel auth token, Visa tokens should NOT be stored in config files. They are collected fresh each time the user runs the command.
+3. **VIC merchant credentials stay server-side** — the `VISA_VIC_API_KEY`, `VISA_MLE_*`, and other VIC merchant credentials are configured on the Vercel backend only. They must never be shipped in or required by the CLI.
+4. **MLE encryption** — the `@visa/api-client` handles automatic MLE encryption/decryption for VIC API calls. This is transparent to the CLI since it happens server-side.
+5. **Mask credentials in debug output** — if `output.debug()` logs request bodies, redact the `paymentMethod.token` field.
+6. **No credential persistence** — VIC credentials are collected fresh each time. They are not stored in CLI config files.
+
+### 2.11 Open Questions (Visa CLI Beta)
+
+The Visa CLI is in beta ([visacli.sh](https://visacli.sh/)). These questions need to be resolved with Visa before finalizing the integration:
+
+1. **What credential does the user provide?** Is it a VIC payment token from `visa-cli`, a session token, or something else? The `visa-cli` site says "programmatic card payments without the pain of API keys" — how exactly does the user authenticate?
+2. **Does Vercel need to be a VIC merchant?** If so, Vercel needs to complete VIC onboarding (API keys, MLE certs, VTS enrollment).
+3. **Is there an MCP integration path?** The `@visa/mcp-client` package suggests MCP server integration. Could the Vercel backend connect as an MCP client to orchestrate payments?
+4. **What are the spending limits?** The Visa CLI beta is "subject to spending limits and approval."
+5. **What's the credential format?** Need to know the exact format for client-side validation before sending to the API.
 
 ---
 
