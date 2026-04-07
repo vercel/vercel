@@ -310,6 +310,44 @@ export const protectionSubcommand = {
         'Apply action to password protection (requires eligible plan/permissions).',
       deprecated: false,
     },
+    {
+      name: 'skew',
+      shorthand: null,
+      type: Boolean,
+      description: 'Apply action to skew protection.',
+      deprecated: false,
+    },
+    {
+      name: 'customer-support-code-visibility',
+      shorthand: null,
+      type: Boolean,
+      description:
+        'Apply action to customer support code visibility protection.',
+      deprecated: false,
+    },
+    {
+      name: 'git-fork-protection',
+      shorthand: null,
+      type: Boolean,
+      description: 'Apply action to Git fork protection.',
+      deprecated: false,
+    },
+    {
+      name: 'protection-bypass',
+      shorthand: null,
+      type: Boolean,
+      description: 'Apply action to automation protection bypass secrets.',
+      deprecated: false,
+    },
+    {
+      name: 'protection-bypass-secret',
+      shorthand: null,
+      type: String,
+      argument: 'SECRET',
+      description:
+        'Optional secret value for protection bypass. Required when disabling bypass.',
+      deprecated: false,
+    },
   ],
   examples: [
     {
@@ -331,6 +369,18 @@ export const protectionSubcommand = {
     {
       name: 'Enable only password protection',
       value: `${packageName} project protection enable my-app --password`,
+    },
+    {
+      name: 'Enable skew protection',
+      value: `${packageName} project protection enable my-app --skew`,
+    },
+    {
+      name: 'Disable git fork protection',
+      value: `${packageName} project protection disable my-app --git-fork-protection`,
+    },
+    {
+      name: 'Enable automation protection bypass',
+      value: `${packageName} project protection enable my-app --protection-bypass`,
     },
   ],
 } as const;

@@ -16,6 +16,7 @@ import type { JSONObject, Project } from '@vercel-internals/types';
 const PROTECTION_ACTIONS = ['enable', 'disable'] as const;
 type ProtectionAction = (typeof PROTECTION_ACTIONS)[number];
 const ENABLED_DEPLOYMENT_TYPE = 'prod_deployment_urls_and_all_previews';
+const DEFAULT_SKEW_PROTECTION_MAX_AGE = 2592000;
 
 const PROTECTION_KEYS = [
   'passwordProtection',
@@ -80,10 +81,29 @@ export default async function protection(
 
   const selectedSso = Boolean(parsedArgs.flags['--sso']);
   const selectedPassword = Boolean(parsedArgs.flags['--password']);
+  const selectedSkew = Boolean(parsedArgs.flags['--skew']);
+  const selectedSupportCode = Boolean(
+    parsedArgs.flags['--customer-support-code-visibility']
+  );
+  const selectedGitFork = Boolean(parsedArgs.flags['--git-fork-protection']);
+  const selectedProtectionBypass = Boolean(
+    parsedArgs.flags['--protection-bypass']
+  );
+  const protectionBypassSecret = parsedArgs.flags[
+    '--protection-bypass-secret'
+  ] as string | undefined;
 
-  if (action && !selectedSso && !selectedPassword) {
+  const hasAnySelection =
+    selectedSso ||
+    selectedPassword ||
+    selectedSkew ||
+    selectedSupportCode ||
+    selectedGitFork ||
+    selectedProtectionBypass;
+
+  if (action && !hasAnySelection) {
     output.error(
-      `No protection selected. Pass at least one of --sso or --password. Usage: \`vercel project protection ${action} [name] --sso|--password\``
+      `No protection selected. Pass one or more selectors (for example --sso, --password, --skew, --customer-support-code-visibility, --git-fork-protection, --protection-bypass).`
     );
     return 2;
   }
@@ -118,16 +138,63 @@ export default async function protection(
           ? { deploymentType: ENABLED_DEPLOYMENT_TYPE }
           : null;
     }
+    if (selectedSkew) {
+      patchBody.skewProtectionMaxAge =
+        action === 'enable' ? DEFAULT_SKEW_PROTECTION_MAX_AGE : 0;
+    }
+    if (selectedSupportCode) {
+      patchBody.customerSupportCodeVisibility = action === 'enable';
+    }
+    if (selectedGitFork) {
+      patchBody.gitForkProtection = action === 'enable';
+    }
 
-    try {
-      await client.fetch(`/v9/projects/${encodeURIComponent(project.id)}`, {
-        method: 'PATCH',
-        body: patchBody,
-      });
-    } catch (err: unknown) {
-      exitWithNonInteractiveError(client, err, 1, { variant: 'protection' });
-      printError(err);
-      return 1;
+    if (selectedProtectionBypass) {
+      if (action === 'disable' && !protectionBypassSecret) {
+        output.error(
+          'Disabling protection bypass requires --protection-bypass-secret <secret>.'
+        );
+        return 2;
+      }
+      try {
+        const bypassBody =
+          action === 'enable'
+            ? {
+                generate: protectionBypassSecret
+                  ? { secret: protectionBypassSecret }
+                  : {},
+              }
+            : {
+                revoke: {
+                  secret: protectionBypassSecret,
+                  regenerate: false,
+                },
+              };
+        await client.fetch(
+          `/v1/projects/${encodeURIComponent(project.id)}/protection-bypass`,
+          {
+            method: 'PATCH',
+            body: bypassBody,
+          }
+        );
+      } catch (err: unknown) {
+        exitWithNonInteractiveError(client, err, 1, { variant: 'protection' });
+        printError(err);
+        return 1;
+      }
+    }
+
+    if (Object.keys(patchBody).length > 0) {
+      try {
+        await client.fetch(`/v9/projects/${encodeURIComponent(project.id)}`, {
+          method: 'PATCH',
+          body: patchBody,
+        });
+      } catch (err: unknown) {
+        exitWithNonInteractiveError(client, err, 1, { variant: 'protection' });
+        printError(err);
+        return 1;
+      }
     }
 
     if (formatResult.jsonOutput) {
@@ -139,6 +206,16 @@ export default async function protection(
             projectName: project.name,
             ssoProtection: selectedSso ? action === 'enable' : undefined,
             passwordProtection: selectedPassword
+              ? action === 'enable'
+              : undefined,
+            skewProtection: selectedSkew ? action === 'enable' : undefined,
+            customerSupportCodeVisibility: selectedSupportCode
+              ? action === 'enable'
+              : undefined,
+            gitForkProtection: selectedGitFork
+              ? action === 'enable'
+              : undefined,
+            protectionBypass: selectedProtectionBypass
               ? action === 'enable'
               : undefined,
           },
