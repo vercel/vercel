@@ -1,5 +1,57 @@
 # vercel
 
+## 50.41.0
+
+### Minor Changes
+
+- Add `vercel edge-config` with `list`, `add`, `get`, `update`, `remove`, `items`, and `tokens` subcommands for Edge Config dashboard API parity. ([#15822](https://github.com/vercel/vercel/pull/15822))
+
+- Add `vercel project checks` to list a project's deployment checks configuration (parity with dashboard), including `--format json` and non-interactive error payloads. ([#15816](https://github.com/vercel/vercel/pull/15816))
+
+### Patch Changes
+
+- Improve `vercel teams request` in non-interactive mode: validation, missing team scope, and API errors emit structured JSON on stdout with stable `reason` values and `next[]` commands that preserve global flags (for example `--cwd` and `--non-interactive`). ([#15815](https://github.com/vercel/vercel/pull/15815))
+
+- Hide `--search` flag from `vc logs --help` output while continuing to accept it, and update the `--query` flag description to indicate advanced querying with filter syntax support. ([#15854](https://github.com/vercel/vercel/pull/15854))
+
+- Updated dependencies [[`a80217a9ed60d7b7f3e98537b0468cc5488078c1`](https://github.com/vercel/vercel/commit/a80217a9ed60d7b7f3e98537b0468cc5488078c1)]:
+  - @vercel/build-utils@13.13.0
+  - @vercel/backends@0.0.56
+  - @vercel/elysia@0.1.59
+  - @vercel/express@0.1.69
+  - @vercel/fastify@0.1.62
+  - @vercel/go@3.4.7
+  - @vercel/h3@0.1.68
+  - @vercel/hono@0.2.62
+  - @vercel/hydrogen@1.3.6
+  - @vercel/koa@0.1.42
+  - @vercel/nestjs@0.2.63
+  - @vercel/next@4.16.5
+  - @vercel/node@5.7.1
+  - @vercel/python@6.29.0
+  - @vercel/redwood@2.4.12
+  - @vercel/remix-builder@5.7.2
+  - @vercel/ruby@2.3.2
+  - @vercel/rust@1.0.6
+  - @vercel/static-build@2.9.9
+
+## 50.40.0
+
+### Minor Changes
+
+- Add `vercel project speed-insights` to enable Speed Insights for a project (parity with dashboard), including `--format json` and non-interactive error payloads. ([#15832](https://github.com/vercel/vercel/pull/15832))
+
+- Add `vercel project web-analytics` to enable Web Analytics for a project (parity with dashboard), including `--format json` and non-interactive error payloads. ([#15831](https://github.com/vercel/vercel/pull/15831))
+
+### Patch Changes
+
+- Improve CLI scope resolution groundwork and fix `vercel switch` current-team detection. ([#15817](https://github.com/vercel/vercel/pull/15817))
+
+- Cache the authenticated `userId` in the CLI auth config to reduce unnecessary `getUser()` requests. ([#15824](https://github.com/vercel/vercel/pull/15824))
+
+- Updated dependencies []:
+  - @vercel/static-build@2.9.8
+
 ## 50.39.0
 
 ### Minor Changes

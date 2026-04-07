@@ -5,6 +5,7 @@ import { printError } from '../../util/error';
 import { type Command, help } from '../help';
 import add from './add';
 import accessSummary from './access-summary';
+import checks from './checks';
 import inspect from './inspect';
 import list from './list';
 import members from './members';
@@ -13,14 +14,17 @@ import rm from './rm';
 import getOidcToken from './token';
 import speedInsights from './speed-insights';
 import webAnalytics from './web-analytics';
+import protection from './protection';
 import {
   accessGroupsSubcommand,
   addSubcommand,
   accessSummarySubcommand,
+  checksSubcommand,
   inspectSubcommand,
   listSubcommand,
   membersSubcommand,
   projectCommand,
+  protectionSubcommand,
   removeSubcommand,
   speedInsightsSubcommand,
   tokenSubcommand,
@@ -39,6 +43,8 @@ const COMMAND_CONFIG = {
   accessGroups: getCommandAliases(accessGroupsSubcommand),
   add: getCommandAliases(addSubcommand),
   'access-summary': getCommandAliases(accessSummarySubcommand),
+  checks: getCommandAliases(checksSubcommand),
+  protection: getCommandAliases(protectionSubcommand),
   remove: getCommandAliases(removeSubcommand),
   token: getCommandAliases(tokenSubcommand),
   speedInsights: getCommandAliases(speedInsightsSubcommand),
@@ -116,6 +122,19 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandAccessSummary(subcommandOriginal);
       return accessSummary(client, args);
+    case 'checks':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('project', subcommandOriginal);
+        return printHelp(checksSubcommand);
+      }
+      telemetry.trackCliSubcommandChecks(
+        args[0] === 'add'
+          ? 'checks add'
+          : args[0] === 'remove' || args[0] === 'rm'
+            ? 'checks remove'
+            : subcommandOriginal
+      );
+      return checks(client, args);
     case 'members':
       if (needHelp) {
         telemetry.trackCliFlagHelp('project', subcommandOriginal);
@@ -130,6 +149,19 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandAccessGroups(subcommandOriginal);
       return accessGroups(client, args);
+    case 'protection':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('project', subcommandOriginal);
+        return printHelp(protectionSubcommand);
+      }
+      telemetry.trackCliSubcommandProtection(
+        args[0] === 'enable'
+          ? 'protection enable'
+          : args[0] === 'disable'
+            ? 'protection disable'
+            : subcommandOriginal
+      );
+      return protection(client, args);
     case 'webAnalytics':
       if (needHelp) {
         telemetry.trackCliFlagHelp('project', subcommandOriginal);

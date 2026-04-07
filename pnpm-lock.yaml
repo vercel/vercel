@@ -519,6 +519,9 @@ importers:
       sandbox:
         specifier: 2.5.6
         version: 2.5.6
+      smol-toml:
+        specifier: 1.5.2
+        version: 1.5.2
     devDependencies:
       '@alex_neo/jest-expect-message':
         specifier: 1.0.5

@@ -138,6 +138,13 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
+  trackCliCommandEdgeConfig(actual: string) {
+    this.trackCliCommand({
+      command: 'edge-config',
+      value: actual,
+    });
+  }
+
   trackCliCommandEnv(actual: string) {
     this.trackCliCommand({
       command: 'env',
