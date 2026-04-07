@@ -162,9 +162,9 @@ export default async function protection(
           {
             command: buildCommandWithGlobalFlags(
               client.argv,
-              'project protection disable --sso'
+              `project protection ${action} --sso`
             ),
-            when: 'Example: disable with SSO protection selected',
+            when: 'Example: same action with SSO protection selected',
           },
         ],
       },
