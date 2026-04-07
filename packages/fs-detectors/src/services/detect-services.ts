@@ -180,7 +180,7 @@ export async function detectServices(
         source: 'auto-detected',
         routes,
         errors: result.errors,
-        warnings: [],
+        warnings: autoResult.warnings,
       };
       const rootWebFrameworkServices = result.services.filter(
         service =>
@@ -196,7 +196,7 @@ export async function detectServices(
               source: 'layout' as const,
               config: toInferredLayoutConfig(autoResult.services),
               services: result.services,
-              warnings: [],
+              warnings: autoResult.warnings,
             }
           : null;
       return withResolvedResult(resolved, inferred);
@@ -206,7 +206,7 @@ export async function detectServices(
         source: 'auto-detected',
         routes: emptyRoutes(),
         errors: autoResult.errors,
-        warnings: [],
+        warnings: autoResult.warnings,
       });
     }
 

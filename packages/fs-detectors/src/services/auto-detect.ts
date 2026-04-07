@@ -1,8 +1,16 @@
 import type { Framework } from '@vercel/frameworks';
 import { detectFrameworks } from '../detect-framework';
 import { frameworkList } from '@vercel/frameworks';
-import type { DetectorFilesystem } from '../detectors/filesystem';
-import type { ExperimentalServices, ServiceDetectionError } from './types';
+import type {
+  DetectorFilesystem,
+  DetectorFilesystemStat,
+} from '../detectors/filesystem';
+import type {
+  ExperimentalServices,
+  ServiceDetectionError,
+  ServiceDetectionWarning,
+} from './types';
+import { assignRoutePrefixes, isFrontendFramework } from './utils';
 
 export interface AutoDetectOptions {
   fs: DetectorFilesystem;
@@ -11,14 +19,9 @@ export interface AutoDetectOptions {
 export interface AutoDetectResult {
   services: ExperimentalServices | null;
   errors: ServiceDetectionError[];
+  warnings: ServiceDetectionWarning[];
 }
 
-const FRONTEND_DIR = 'frontend';
-const APPS_WEB_DIR = 'apps/web';
-const BACKEND_DIR = 'backend';
-const SERVICES_DIR = 'services';
-
-const FRONTEND_LOCATIONS = [FRONTEND_DIR, APPS_WEB_DIR];
 // Runtime frameworks, e.g. Python, Node, Ruby, etc. are currently marked experimental,
 // but service auto-detection should still consider them.
 const DETECTION_FRAMEWORKS = frameworkList.filter(
@@ -26,40 +29,41 @@ const DETECTION_FRAMEWORKS = frameworkList.filter(
     !framework.experimental || framework.runtimeFramework
 );
 
+/** Directories that should never be scanned for services. */
+const SKIP_DIRS = new Set(['node_modules', '__pycache__', 'vendor']);
+
+function shouldSkipDir(name: string): boolean {
+  return name.startsWith('.') || SKIP_DIRS.has(name);
+}
+
+interface ServiceCandidate {
+  /** Service name (derived from directory name) */
+  name: string;
+  /** Relative path to the service directory (undefined for root) */
+  path: string | undefined;
+  /** Detected framework */
+  framework: Framework;
+}
+
 /**
- * Auto-detect services when experimentalServices is not configured.
+ * Auto-detect services by scanning the project for frameworks.
  *
- * Scans the project for frameworks, supporting multiple layouts:
+ * Scans the project root and all top-level directories for frameworks.
+ * Directories without a framework are treated as potential parent directories
+ * and their children are scanned one level deep.
  *
- * Frontend at root, backend in backend/:
- *   project/
- *   ├── package.json
- *   └── backend/
- *
- * Frontend in frontend/, backend in backend/:
- *   project/
- *   ├── frontend/
- *   └── backend/
- *
- * Frontend in frontend/, backend in services/{service-name}/:
- *   project/
- *   ├── frontend/
- *   └── services/
- *       ├── service-a/
- *       └── service-b/
- *
- * Frontend in apps/web/ monorepo, backend in services/{service-name}/:
- *   project/
- *   ├── apps/web/
- *   └── services/
- *       ├── service-a/
- *       └── service-b/
+ * Route prefix assignment:
+ * - Single service: gets `/`
+ * - Single frontend among multiple services: frontend gets `/`, rest get `/_/{name}`
+ * - Multiple frontends: `web` or `frontend` preferred for `/`, rest get `/_/{name}`
+ * - No frontends: all get `/_/{name}`
  */
 export async function autoDetectServices(
   options: AutoDetectOptions
 ): Promise<AutoDetectResult> {
   const { fs } = options;
 
+  // Phase 1: Detect framework at root
   const rootFrameworks = await detectFrameworks({
     fs,
     frameworkList,
@@ -75,223 +79,118 @@ export async function autoDetectServices(
           message: `Multiple frameworks detected at root: ${frameworkNames}. Use explicit experimentalServices config.`,
         },
       ],
+      warnings: [],
     };
   }
 
-  if (rootFrameworks.length === 1) {
-    return detectServicesAtRoot(fs, rootFrameworks[0]);
+  // Phase 2: Scan top-level directories for service candidates
+  const candidates: ServiceCandidate[] = [];
+  let entries: DetectorFilesystemStat[];
+  try {
+    entries = await fs.readdir('/');
+  } catch {
+    entries = [];
   }
 
-  for (const frontendLocation of FRONTEND_LOCATIONS) {
-    const hasFrontendDir = await fs.hasPath(frontendLocation);
-    if (!hasFrontendDir) {
+  for (const entry of entries) {
+    if (entry.type !== 'dir' || shouldSkipDir(entry.name)) {
       continue;
     }
 
-    const frontendFs = fs.chdir(frontendLocation);
-    const frontendFrameworks = await detectFrameworks({
-      fs: frontendFs,
-      frameworkList,
-    });
+    const result = await scanDirectory(fs, entry.name, entry.name);
+    if (result.error) {
+      return { services: null, errors: [result.error], warnings: [] };
+    }
+    candidates.push(...result.candidates);
+  }
 
-    if (frontendFrameworks.length > 1) {
-      const frameworkNames = frontendFrameworks.map(f => f.name).join(', ');
+  // Phase 3: Include root framework as a candidate
+  const rootFramework = rootFrameworks[0] ?? null;
+  if (rootFramework && candidates.length > 0) {
+    const rootName = pickRootServiceName(rootFramework, candidates);
+    candidates.push({
+      name: rootName,
+      path: undefined,
+      framework: rootFramework,
+    });
+  }
+
+  // Phase 4: Require at least 2 services
+  if (candidates.length < 2) {
+    if (candidates.length === 0 && !rootFramework) {
       return {
         services: null,
         errors: [
           {
-            code: 'MULTIPLE_FRAMEWORKS_SERVICE',
-            message: `Multiple frameworks detected in ${frontendLocation}/: ${frameworkNames}. Use explicit experimentalServices config.`,
+            code: 'NO_SERVICES_CONFIGURED',
+            message:
+              'No services detected. Configure experimentalServices in vercel.json or ensure your project has at least two directories with detectable frameworks.',
           },
         ],
+        warnings: [],
       };
     }
-
-    if (frontendFrameworks.length === 1) {
-      return detectServicesFrontendSubdir(
-        fs,
-        frontendFrameworks[0],
-        frontendLocation
-      );
-    }
+    return { services: null, errors: [], warnings: [] };
   }
 
-  return {
-    services: null,
-    errors: [
-      {
-        code: 'NO_SERVICES_CONFIGURED',
-        message:
-          'No services detected. Configure experimentalServices in vercel.json or ensure a framework exists at project root, frontend/, or apps/web/.',
-      },
-    ],
-  };
-}
-
-async function detectServicesAtRoot(
-  fs: DetectorFilesystem,
-  rootFramework: Framework
-): Promise<AutoDetectResult> {
-  const services: ExperimentalServices = {};
-
-  services.frontend = {
-    framework: rootFramework.slug ?? undefined,
-    routePrefix: '/',
-  };
-
-  const backendResult = await detectBackendServices(fs);
-  if (backendResult.error) {
-    return {
-      services: null,
-      errors: [backendResult.error],
-    };
-  }
-  if (Object.keys(backendResult.services).length === 0) {
-    return {
-      services: null,
-      errors: [],
-    };
-  }
-  Object.assign(services, backendResult.services);
-
-  return {
-    services,
-    errors: [],
-  };
-}
-
-async function detectServicesFrontendSubdir(
-  fs: DetectorFilesystem,
-  frontendFramework: Framework,
-  frontendLocation: string
-): Promise<AutoDetectResult> {
-  const services: ExperimentalServices = {};
-
-  // Infer service name from directory (e.g., "frontend" or "web" from "apps/web")
-  const serviceName = frontendLocation.split('/').pop() || 'frontend';
-
-  services[serviceName] = {
-    framework: frontendFramework.slug ?? undefined,
-    entrypoint: frontendLocation,
-    routePrefix: '/',
-  };
-
-  const backendResult = await detectBackendServices(fs);
-  if (backendResult.error) {
-    return {
-      services: null,
-      errors: [backendResult.error],
-    };
+  // Phase 5: Check for name conflicts
+  const nameMap = new Map<string, ServiceCandidate[]>();
+  for (const candidate of candidates) {
+    const existing = nameMap.get(candidate.name) ?? [];
+    existing.push(candidate);
+    nameMap.set(candidate.name, existing);
   }
 
-  // At least one backend service is required with frontend in frontend/ or apps/web
-  if (Object.keys(backendResult.services).length === 0) {
-    return {
-      services: null,
-      errors: [
-        {
-          code: 'NO_BACKEND_SERVICES',
-          message: `Frontend detected in ${frontendLocation}/ but no backend services found. Add a backend/ or services/ directory with a supported framework.`,
-        },
-      ],
-    };
-  }
-
-  Object.assign(services, backendResult.services);
-
-  return {
-    services,
-    errors: [],
-  };
-}
-
-async function detectBackendServices(fs: DetectorFilesystem): Promise<{
-  services: ExperimentalServices;
-  error?: ServiceDetectionError;
-}> {
-  const services: ExperimentalServices = {};
-
-  const backendResult = await detectServiceInDir(fs, BACKEND_DIR, 'backend');
-  if (backendResult.error) {
-    return { services: {}, error: backendResult.error };
-  }
-  if (backendResult.service) {
-    services.backend = backendResult.service;
-  }
-
-  const multiServicesResult = await detectServicesDirectory(fs);
-  if (multiServicesResult.error) {
-    return { services: {}, error: multiServicesResult.error };
-  }
-
-  for (const serviceName of Object.keys(multiServicesResult.services)) {
-    if (services[serviceName]) {
+  for (const [name, group] of nameMap) {
+    if (group.length > 1) {
+      const paths = group.map(c => c.path ?? 'project root').join(' and ');
       return {
-        services: {},
-        error: {
-          code: 'SERVICE_NAME_CONFLICT',
-          message: `Service name conflict: "${serviceName}" exists in both ${BACKEND_DIR}/ and ${SERVICES_DIR}/${serviceName}/. Rename one of the directories or use explicit experimentalServices config.`,
-          serviceName,
-        },
+        services: null,
+        errors: [
+          {
+            code: 'SERVICE_NAME_CONFLICT',
+            message: `Service name conflict: "${name}" found in ${paths}. Rename one of the directories or use explicit experimentalServices config.`,
+            serviceName: name,
+          },
+        ],
+        warnings: [],
       };
     }
   }
 
-  Object.assign(services, multiServicesResult.services);
-
-  return { services };
-}
-
-async function detectServicesDirectory(fs: DetectorFilesystem): Promise<{
-  services: ExperimentalServices;
-  error?: ServiceDetectionError;
-}> {
+  // Phase 6: Build services config and assign route prefixes
   const services: ExperimentalServices = {};
-
-  const hasServicesDir = await fs.hasPath(SERVICES_DIR);
-  if (!hasServicesDir) {
-    return { services };
+  for (const candidate of candidates) {
+    services[candidate.name] = {
+      framework: candidate.framework.slug ?? undefined,
+      entrypoint: candidate.path,
+      // routePrefix assigned by assignRoutePrefixes below
+    };
   }
 
-  const servicesFs = fs.chdir(SERVICES_DIR);
-  const entries = await servicesFs.readdir('/');
+  const warnings = assignRoutePrefixes(services);
 
-  for (const entry of entries) {
-    if (entry.type !== 'dir') {
-      continue;
-    }
-
-    const serviceName = entry.name;
-    const serviceDir = `${SERVICES_DIR}/${serviceName}`;
-
-    const result = await detectServiceInDir(fs, serviceDir, serviceName);
-    if (result.error) {
-      return { services: {}, error: result.error };
-    }
-    if (result.service) {
-      services[serviceName] = result.service;
-    }
-  }
-
-  return { services };
+  return { services, errors: [], warnings };
 }
 
-async function detectServiceInDir(
+/**
+ * Scan a directory for frameworks.
+ *
+ * If the directory itself contains a framework, it becomes a service candidate.
+ * If not, scan its children one level deep (auto-detecting parent directories
+ * like apps/, packages/, services/).
+ */
+async function scanDirectory(
   fs: DetectorFilesystem,
   dirPath: string,
-  serviceName: string
+  name: string
 ): Promise<{
-  service?: ExperimentalServices[string];
+  candidates: ServiceCandidate[];
   error?: ServiceDetectionError;
 }> {
-  const hasDirPath = await fs.hasPath(dirPath);
-  if (!hasDirPath) {
-    return {};
-  }
-
-  const serviceFs = fs.chdir(dirPath);
+  const dirFs = fs.chdir(dirPath);
   const frameworks = await detectFrameworks({
-    fs: serviceFs,
+    fs: dirFs,
     frameworkList: DETECTION_FRAMEWORKS,
     useExperimentalFrameworks: true,
   });
@@ -299,25 +198,89 @@ async function detectServiceInDir(
   if (frameworks.length > 1) {
     const frameworkNames = frameworks.map(f => f.name).join(', ');
     return {
+      candidates: [],
       error: {
         code: 'MULTIPLE_FRAMEWORKS_SERVICE',
         message: `Multiple frameworks detected in ${dirPath}/: ${frameworkNames}. Use explicit experimentalServices config.`,
-        serviceName,
+        serviceName: name,
       },
     };
   }
 
   if (frameworks.length === 1) {
-    const framework = frameworks[0];
-
     return {
-      service: {
-        framework: framework.slug ?? undefined,
-        entrypoint: dirPath,
-        routePrefix: `/_/${serviceName}`,
-      },
+      candidates: [{ name, path: dirPath, framework: frameworks[0] }],
     };
   }
 
-  return {};
+  // No framework found — scan children (auto-detect parent directory)
+  let children;
+  try {
+    children = await dirFs.readdir('/');
+  } catch {
+    return { candidates: [] };
+  }
+
+  const childCandidates: ServiceCandidate[] = [];
+
+  for (const child of children) {
+    if (child.type !== 'dir' || shouldSkipDir(child.name)) {
+      continue;
+    }
+
+    const childPath = `${dirPath}/${child.name}`;
+    const childFs = fs.chdir(childPath);
+    const childFrameworks = await detectFrameworks({
+      fs: childFs,
+      frameworkList: DETECTION_FRAMEWORKS,
+      useExperimentalFrameworks: true,
+    });
+
+    if (childFrameworks.length > 1) {
+      const frameworkNames = childFrameworks.map(f => f.name).join(', ');
+      return {
+        candidates: [],
+        error: {
+          code: 'MULTIPLE_FRAMEWORKS_SERVICE',
+          message: `Multiple frameworks detected in ${childPath}/: ${frameworkNames}. Use explicit experimentalServices config.`,
+          serviceName: child.name,
+        },
+      };
+    }
+
+    if (childFrameworks.length === 1) {
+      childCandidates.push({
+        name: child.name,
+        path: childPath,
+        framework: childFrameworks[0],
+      });
+    }
+  }
+
+  return { candidates: childCandidates };
+}
+
+/**
+ * Pick a service name for a root framework that doesn't conflict
+ * with existing candidates.
+ */
+function pickRootServiceName(
+  framework: Framework,
+  candidates: ServiceCandidate[]
+): string {
+  const candidateNames = new Set(candidates.map(c => c.name));
+  const preferredName = isFrontendFramework(framework.slug)
+    ? 'frontend'
+    : 'api';
+
+  if (!candidateNames.has(preferredName)) {
+    return preferredName;
+  }
+  if (!candidateNames.has('app')) {
+    return 'app';
+  }
+  if (!candidateNames.has('root')) {
+    return 'root';
+  }
+  return 'root-app';
 }

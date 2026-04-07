@@ -10,7 +10,7 @@ import type {
   ServiceDetectionError,
   ServiceDetectionWarning,
 } from './types';
-import { isFrontendFramework, inferRuntimeFromFramework } from './utils';
+import { assignRoutePrefixes, inferRuntimeFromFramework } from './utils';
 
 export interface RailwayDetectResult {
   services: ExperimentalServices | null;
@@ -327,48 +327,4 @@ function combineBuildCommand(
   } else {
     return buildCommand;
   }
-}
-
-/**
- * Assign route prefixes.
- *
- * A frontend service gets `/`, the rest get `/_/{name}`.
- * A single non-frontend service would also get `/`.
- * If no frontend service found, then multiple services get `/_/{name}`.
- *
- * Priority for `/`: single service or frontend > name "frontend" or "web" > alphabetical.
- */
-function assignRoutePrefixes(
-  services: ExperimentalServices
-): ServiceDetectionWarning[] {
-  const warnings: ServiceDetectionWarning[] = [];
-  const names = Object.keys(services);
-
-  if (names.length === 1) {
-    services[names[0]].routePrefix = '/';
-    return warnings;
-  }
-
-  const frontendNames = names.filter(name =>
-    isFrontendFramework(services[name].framework)
-  );
-
-  let rootName: string | null = null;
-  if (frontendNames.length === 1) {
-    rootName = frontendNames[0];
-  } else if (frontendNames.length > 1) {
-    rootName =
-      frontendNames.find(n => n === 'frontend' || n === 'web') ??
-      frontendNames.sort()[0];
-    warnings.push({
-      code: 'MULTIPLE_FRONTENDS',
-      message: `Multiple frontend services detected (${frontendNames.join(', ')}). "${rootName}" was assigned routePrefix "/". Adjust manually if a different service should be the root.`,
-    });
-  }
-
-  for (const name of names) {
-    services[name].routePrefix = name === rootName ? '/' : `/_/${name}`;
-  }
-
-  return warnings;
 }
