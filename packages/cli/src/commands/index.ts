@@ -15,6 +15,7 @@ import { deployCommand } from './deploy/command';
 import { devCommand } from './dev/command';
 import { dnsCommand } from './dns/command';
 import { domainsCommand } from './domains/command';
+import { edgeConfigCommand } from './edge-config/command';
 import { envCommand } from './env/command';
 import { flagsCommand } from './flags/command';
 import { gitCommand } from './git/command';
@@ -46,6 +47,7 @@ import { rollingReleaseCommand } from './rolling-release/command';
 import { skillsCommand } from './skills/command';
 import { targetCommand } from './target/command';
 import { teamsCommand } from './teams/command';
+import { tokensCommand } from './tokens/command';
 import { telemetryCommand } from './telemetry/command';
 import { upgradeCommand } from './upgrade/command';
 import { usageCommand } from './usage/command';
@@ -74,6 +76,7 @@ const commandsStructs = [
   devCommand,
   dnsCommand,
   domainsCommand,
+  edgeConfigCommand,
   envCommand,
   flagsCommand,
   gitCommand,
@@ -103,6 +106,7 @@ const commandsStructs = [
   skillsCommand,
   targetCommand,
   teamsCommand,
+  tokensCommand,
   telemetryCommand,
   upgradeCommand,
   webhooksCommand,

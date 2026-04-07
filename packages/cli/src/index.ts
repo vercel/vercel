@@ -64,7 +64,7 @@ import getUpdateCommand from './util/get-update-command';
 import { executeUpgrade } from './util/upgrade';
 import { getCommandName, getTitleName } from './util/pkg-name';
 import login from './commands/login';
-import type { AuthConfig, GlobalConfig } from '@vercel-internals/types';
+import type { AuthConfig, GlobalConfig, User } from '@vercel-internals/types';
 import type { VercelConfig } from '@vercel/client';
 import { Agent as HttpsAgent } from 'https';
 import box from './util/output/box';
@@ -155,6 +155,10 @@ if (process.env.CLAUDECODE) {
     '<claude-code-hint v="1" type="plugin" value="vercel@claude-plugins-official" />\n'
   );
 }
+
+// Snapshot before any command has a chance to mutate process.env
+const SHOULD_CHECK_FOR_UPDATES =
+  !process.env.NO_UPDATE_NOTIFIER && !process.env.VERCEL;
 
 let { isTTY } = process.stdout;
 
@@ -698,6 +702,7 @@ const main = async () => {
   }
 
   let exitCode;
+  let earlyGetUserPromise: Promise<User | undefined> | undefined;
 
   try {
     if (!targetCommand) {
@@ -826,6 +831,10 @@ const main = async () => {
           telemetry.trackCliCommandDns(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).dns;
           break;
+        case 'edge-config':
+          telemetry.trackCliCommandEdgeConfig(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).edgeConfig;
+          break;
         case 'domains':
           telemetry.trackCliCommandDomains(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).domains;
@@ -952,6 +961,10 @@ const main = async () => {
           telemetry.trackCliCommandTeams(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).teams;
           break;
+        case 'tokens':
+          telemetry.trackCliCommandTokens(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).tokens;
+          break;
         case 'telemetry':
           telemetry.trackCliCommandTelemetry(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).telemetry;
@@ -991,6 +1004,10 @@ const main = async () => {
 
       if (func.default) {
         func = func.default;
+      }
+
+      if (!telemetryEventStore.hasUserId && !client.authConfig.userId) {
+        earlyGetUserPromise = getUser(client).catch(() => undefined);
       }
 
       exitCode = await rootSpan
@@ -1068,11 +1085,14 @@ const main = async () => {
   const postCommandSpan = rootSpan.child('vc.postCommand');
 
   telemetryEventStore.updateTeamId(client.config.currentTeam);
+  telemetryEventStore.updateUserId(client.authConfig.userId);
   if (!telemetryEventStore.hasUserId) {
     const getUserSpan = postCommandSpan.child('vc.postCommand.getUser');
     try {
-      const user = await getUser(client);
-      telemetryEventStore.updateUserId(user.id);
+      const user = await earlyGetUserPromise;
+      if (user) {
+        telemetryEventStore.updateUserId(user.id);
+      }
     } catch {
       // best-effort for telemetry
     } finally {
@@ -1120,10 +1140,7 @@ const main = async () => {
 
 main()
   .then(async exitCode => {
-    const shouldCheckForUpdates =
-      !process.env.NO_UPDATE_NOTIFIER && !process.env.VERCEL;
-
-    if (shouldCheckForUpdates) {
+    if (SHOULD_CHECK_FOR_UPDATES) {
       const latest = getLatestVersion({
         pkg,
       });

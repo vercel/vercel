@@ -243,6 +243,8 @@ export default class Client extends EventEmitter implements Stdio {
       return;
     }
 
+    // Token refresh does not change the authenticated user, so the cached
+    // userId is intentionally preserved here.
     this.updateAuthConfig({
       token: tokens.access_token,
       expiresAt: Math.floor(Date.now() / 1000) + tokens.expires_in,
@@ -271,7 +273,7 @@ export default class Client extends EventEmitter implements Stdio {
   }
 
   emptyAuthConfig() {
-    this.authConfig = {};
+    this.authConfig = this.authConfig.skipWrite ? { skipWrite: true } : {};
   }
 
   writeToAuthConfigFile() {
