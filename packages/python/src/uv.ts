@@ -211,7 +211,6 @@ export class UvRunner {
       await execa(this.uvPath, args, {
         cwd,
         env: this.getVenvEnv(venvPath),
-        stdio: ['pipe', 'inherit', 'inherit'],
       });
     } catch (err) {
       const error: Error & { code?: unknown } = new Error(
