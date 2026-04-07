@@ -15,4 +15,7 @@ module.exports = {
   verbose: false,
   testEnvironment: 'node',
   testMatch: ['<rootDir>/test/**/*.test.ts'],
+  ...(process.env.JEST_MAX_WORKERS
+    ? { maxWorkers: process.env.JEST_MAX_WORKERS }
+    : {}),
 };
