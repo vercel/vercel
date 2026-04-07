@@ -432,7 +432,6 @@ export const build: BuildVX = async ({
             pythonPackage,
             pythonVersion: pythonVersionString(pythonVersion),
             uv,
-            generateLockFile: true,
             requireBinaryWheels: false,
             cachedLockPath,
           });

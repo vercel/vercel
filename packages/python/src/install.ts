@@ -242,7 +242,6 @@ interface EnsureUvProjectParams {
   pythonPackage: PythonPackage;
   pythonVersion: string;
   uv: UvRunner;
-  generateLockFile?: boolean;
   /**
    * When true, generate lock files with --no-build --upgrade to ensure
    * all packages have pre-built binary wheels available. This is required
@@ -265,7 +264,6 @@ export async function ensureUvProject({
   pythonPackage,
   pythonVersion,
   uv,
-  generateLockFile = false,
   requireBinaryWheels = false,
   cachedLockPath,
 }: EnsureUvProjectParams): Promise<UvProjectInfo> {
@@ -352,16 +350,7 @@ export async function ensureUvProject({
         venvPath,
         ...(requireBinaryWheels ? { noBuild: true, upgrade: true } : {}),
       });
-    }
-
-    // For runtime install, we may need to regenerate the lock file
-    // even if a workspace lock exists, to ensure we have a local copy
-    if (generateLockFile && !lockPath) {
-      await uv.lock({
-        projectDir,
-        venvPath,
-        ...(requireBinaryWheels ? { noBuild: true, upgrade: true } : {}),
-      });
+      lockPath = join(projectDir, 'uv.lock');
     }
   } else {
     // No manifest detected – create a minimal uv project at the workPath so
