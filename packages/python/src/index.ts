@@ -307,6 +307,13 @@ export const build: BuildVX = async ({
     ? join(workPath, '.vercel', 'python', 'services', service.name, '.venv')
     : join(workPath, '.vercel', 'python', '.venv');
   const uvCacheDir = getUvCacheDir(workPath);
+  const hasCachedVenv = fs.existsSync(join(venvPath, 'pyvenv.cfg'));
+  const hasCachedUv = fs.existsSync(uvCacheDir);
+  if (hasCachedVenv || hasCachedUv) {
+    debug(
+      `Build cache detected: venv=${hasCachedVenv}, uv-cache=${hasCachedUv}`
+    );
+  }
   await builderSpan.child('vc.builder.python.venv').trace(async () => {
     await ensureVenv({
       pythonPath: pythonVersion.pythonPath,

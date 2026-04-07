@@ -1,7 +1,7 @@
 import fs from 'fs';
 import os from 'os';
 import { delimiter as pathDelimiter, join } from 'path';
-import { readConfigFile, execCommand } from '@vercel/build-utils';
+import { readConfigFile, execCommand, debug } from '@vercel/build-utils';
 import * as detectLibc from 'detect-libc';
 import execa from 'execa';
 import { getProtectedUvEnv } from './uv';
@@ -75,6 +75,7 @@ export async function ensureVenv({
   const marker = join(venvPath, 'pyvenv.cfg');
   try {
     await fs.promises.access(marker);
+    debug(`Using cached virtual environment at "${venvPath}"`);
     return;
   } catch {
     // fall through to creation

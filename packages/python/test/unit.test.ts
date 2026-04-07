@@ -230,11 +230,11 @@ describe('prepareCache()', () => {
       // .pyc in uv cache should be excluded
       expect(files['.vercel/python/cache/uv/archive/foo.pyc']).toBeUndefined();
 
-      // venv files should NOT be cached
-      expect(files['.vercel/python/.venv/pyvenv.cfg']).toBeUndefined();
+      // venv files should be cached (uv sync prunes stale packages)
+      expect(files['.vercel/python/.venv/pyvenv.cfg']).toBeDefined();
       expect(
         files['.vercel/python/.venv/lib/site-packages/pkg/mod.py']
-      ).toBeUndefined();
+      ).toBeDefined();
 
       // user source files should NOT be cached
       expect(files['app.py']).toBeUndefined();
