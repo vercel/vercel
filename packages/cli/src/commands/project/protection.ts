@@ -17,6 +17,7 @@ import type { JSONObject, Project } from '@vercel-internals/types';
 
 const PROTECTION_ACTIONS = ['enable', 'disable'] as const;
 type ProtectionAction = (typeof PROTECTION_ACTIONS)[number];
+const ENABLED_DEPLOYMENT_TYPE = 'prod_deployment_urls_and_all_previews';
 const PROTECTION_KEYS = [
   'passwordProtection',
   'ssoProtection',
@@ -123,18 +124,28 @@ export default async function protection(
 
   const preferJson = formatResult.jsonOutput || Boolean(client.nonInteractive);
 
-  const selected = Boolean(parsedArgs.flags['--git-fork-protection']);
-  if (action && !selected) {
+  const ssoSelected = Boolean(parsedArgs.flags['--sso']);
+  const gitForkProtectionSelected = Boolean(
+    parsedArgs.flags['--git-fork-protection']
+  );
+  if (action && !ssoSelected && !gitForkProtectionSelected) {
     const msg =
-      'No protection selected. Pass --git-fork-protection. Usage: `vercel project protection enable|disable [name] --git-fork-protection`';
+      'No protection selected. Pass --sso or --git-fork-protection. Usage: `vercel project protection enable|disable [name] --sso|--git-fork-protection`';
     outputAgentError(
       client,
       {
         status: 'error',
         reason: AGENT_REASON.MISSING_ARGUMENTS,
         message: msg,
-        hint: 'Use `project protection enable|disable` with the protection flag (e.g. --git-fork-protection).',
+        hint: 'Use `project protection enable|disable` with a protection flag (e.g. --sso or --git-fork-protection).',
         next: [
+          {
+            command: buildCommandWithGlobalFlags(
+              client.argv,
+              `project protection ${action} --sso`
+            ),
+            when: 'Example: same action with SSO protection selected',
+          },
           {
             command: buildCommandWithGlobalFlags(
               client.argv,
@@ -167,9 +178,16 @@ export default async function protection(
   }
 
   if (action) {
-    const patchBody: JSONObject = {
-      gitForkProtection: action === 'enable',
-    };
+    const patchBody: JSONObject = {};
+    if (ssoSelected) {
+      patchBody.ssoProtection =
+        action === 'enable'
+          ? { deploymentType: ENABLED_DEPLOYMENT_TYPE }
+          : null;
+    }
+    if (gitForkProtectionSelected) {
+      patchBody.gitForkProtection = action === 'enable';
+    }
 
     try {
       await client.fetch(`/v9/projects/${encodeURIComponent(project.id)}`, {
@@ -189,7 +207,10 @@ export default async function protection(
             action,
             projectId: project.id,
             projectName: project.name,
-            gitForkProtection: action === 'enable',
+            ssoProtection: ssoSelected ? action === 'enable' : undefined,
+            gitForkProtection: gitForkProtectionSelected
+              ? action === 'enable'
+              : undefined,
           },
           null,
           2
