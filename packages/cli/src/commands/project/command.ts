@@ -296,6 +296,15 @@ export const protectionSubcommand = {
       description: 'Apply action to skew protection.',
       deprecated: false,
     },
+    {
+      name: 'skew-max-age',
+      shorthand: null,
+      type: String,
+      argument: 'SECONDS',
+      description:
+        'When enabling with --skew, max age in seconds for skew protection (default 2592000, 30 days).',
+      deprecated: false,
+    },
   ],
   examples: [
     {
@@ -309,6 +318,10 @@ export const protectionSubcommand = {
     {
       name: 'Enable skew protection',
       value: `${packageName} project protection enable my-app --skew`,
+    },
+    {
+      name: 'Enable skew protection with custom max age (seconds)',
+      value: `${packageName} project protection enable my-app --skew --skew-max-age 604800`,
     },
     {
       name: 'Disable skew protection',

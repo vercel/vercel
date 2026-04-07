@@ -18,10 +18,33 @@ import type { JSONObject, Project } from '@vercel-internals/types';
 const PROTECTION_ACTIONS = ['enable', 'disable'] as const;
 type ProtectionAction = (typeof PROTECTION_ACTIONS)[number];
 const DEFAULT_SKEW_PROTECTION_MAX_AGE = 2592000;
+
+function parseSkewMaxAgeSeconds(
+  value: string
+): { ok: true; seconds: number } | { ok: false; message: string } {
+  const trimmed = value.trim();
+  if (trimmed === '' || !/^\d+$/.test(trimmed)) {
+    return {
+      ok: false,
+      message:
+        'Invalid --skew-max-age: expected a positive integer (seconds), e.g. 604800.',
+    };
+  }
+  const n = Number(trimmed);
+  if (!Number.isSafeInteger(n) || n <= 0) {
+    return {
+      ok: false,
+      message:
+        'Invalid --skew-max-age: value must be a positive integer within safe range.',
+    };
+  }
+  return { ok: true, seconds: n };
+}
+
 const PROTECTION_KEYS = [
   'passwordProtection',
   'ssoProtection',
-  'skewProtection',
+  'skewProtectionMaxAge',
   'customerSupportCodeVisibility',
   'gitForkProtection',
   'protectionBypass',
@@ -124,6 +147,56 @@ export default async function protection(
 
   const preferJson = formatResult.jsonOutput || Boolean(client.nonInteractive);
 
+  const skewMaxAgeFlag = parsedArgs.flags['--skew-max-age'] as
+    | string
+    | undefined;
+
+  if (action === 'disable' && skewMaxAgeFlag !== undefined) {
+    const msg =
+      '`--skew-max-age` can only be used with `project protection enable`.';
+    outputAgentError(
+      client,
+      {
+        status: 'error',
+        reason: AGENT_REASON.INVALID_ARGUMENTS,
+        message: msg,
+        hint: 'Use `project protection disable ... --skew` to turn skew protection off.',
+      },
+      2
+    );
+    output.error(msg);
+    return 2;
+  }
+
+  let enableSkewMaxAgeSeconds: number | undefined;
+  if (action === 'enable' && skewMaxAgeFlag !== undefined) {
+    const parsed = parseSkewMaxAgeSeconds(skewMaxAgeFlag);
+    if (!parsed.ok) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: AGENT_REASON.INVALID_ARGUMENTS,
+          message: parsed.message,
+          hint: 'Pass a positive integer number of seconds (e.g. 604800 for 7 days).',
+          next: [
+            {
+              command: buildCommandWithGlobalFlags(
+                client.argv,
+                'project protection enable --skew --skew-max-age 604800'
+              ),
+              when: 'Example with a valid max age in seconds',
+            },
+          ],
+        },
+        1
+      );
+      output.error(parsed.message);
+      return 1;
+    }
+    enableSkewMaxAgeSeconds = parsed.seconds;
+  }
+
   const selected = Boolean(parsedArgs.flags['--skew']);
   if (action && !selected) {
     const msg =
@@ -168,9 +241,13 @@ export default async function protection(
   }
 
   if (action) {
+    const skewProtectionMaxAge =
+      action === 'enable'
+        ? (enableSkewMaxAgeSeconds ?? DEFAULT_SKEW_PROTECTION_MAX_AGE)
+        : 0;
+
     const patchBody: JSONObject = {
-      skewProtectionMaxAge:
-        action === 'enable' ? DEFAULT_SKEW_PROTECTION_MAX_AGE : 0,
+      skewProtectionMaxAge,
     };
 
     try {
@@ -192,6 +269,9 @@ export default async function protection(
             projectId: project.id,
             projectName: project.name,
             skewProtection: action === 'enable',
+            ...(action === 'enable'
+              ? { skewProtectionMaxAge }
+              : { skewProtectionMaxAge: 0 }),
           },
           null,
           2
