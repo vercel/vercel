@@ -18,7 +18,6 @@ export interface CommandOption {
   readonly type: PrimitiveConstructor | ReadonlyArray<PrimitiveConstructor>;
   readonly argument?: string;
   readonly deprecated: boolean;
-  readonly hidden?: boolean;
   readonly description?: string;
 }
 export interface CommandArgument {
@@ -147,9 +146,9 @@ export function buildCommandOptionLines(
   options: BuildHelpOutputOptions,
   sectionTitle: string
 ) {
-  // Filter out deprecated, hidden, and intentionally undocumented options
+  // Filter out deprecated and intentionally undocumented options
   const filteredCommandOptions = commandOptions.filter(
-    option => !option.deprecated && !option.hidden && option.description !== undefined
+    option => !option.deprecated && option.description !== undefined
   );
 
   if (filteredCommandOptions.length === 0) {

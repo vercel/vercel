@@ -116,8 +116,7 @@ export const logsCommand = {
       name: 'search',
       shorthand: null,
       type: String,
-      deprecated: false,
-      hidden: true,
+      deprecated: true,
       description:
         'Advanced search query (supports filter syntax, e.g. "status:500 error")',
     },
