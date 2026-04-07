@@ -773,10 +773,7 @@ export const prepareCache: PrepareCache = async ({
   const root = repoRootPath || workPath;
   const ignore = ['**/*.pyc', '**/__pycache__/**'];
 
-  // Prune pre-built wheels and unzipped source distributions from the uv
-  // cache before snapshotting.  Source-built wheels (the expensive artefacts)
-  // are retained.  This keeps the cache lean without sacrificing the main
-  // speed benefit.
+  // Only cache source-built wheels since pre-built wheels are cheap to download
   const uvCacheDir = getUvCacheDir(workPath);
   try {
     const uvPath = findUvInPath();
@@ -785,15 +782,9 @@ export const prepareCache: PrepareCache = async ({
       await uv.cachePrune();
     }
   } catch {
-    // best-effort; don't fail the build if pruning fails
-    debug('Failed to prune uv cache before snapshotting');
+    // best-effort; don't fail the build
   }
 
-  // Only cache the uv package cache — NOT the venv.  Caching the venv caused
-  // stale packages to accumulate (uv pip-installed packages survive uv sync)
-  // and, combined with --link-mode copy, doubled the effective cache size.
-  // With only the uv cache present, `uv sync` on the next build can quickly
-  // repopulate the venv from the local cache without re-downloading.
   return glob('**/.vercel/python/cache/uv/**', { cwd: root, ignore });
 };
 
