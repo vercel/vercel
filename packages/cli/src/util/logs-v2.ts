@@ -43,6 +43,7 @@ export interface FetchRequestLogsOptions {
   requestId?: string;
   branch?: string;
   page?: number;
+  expand?: boolean;
 }
 
 function parseRelativeTime(input: string): number {
@@ -157,17 +158,13 @@ export async function fetchRequestLogs(
     hasMoreRows?: boolean;
   }>(url);
 
-  const logs: RequestLogEntry[] = (data.rows || []).map(row => {
-    const firstLog = row.logs?.[0];
+  const logs: RequestLogEntry[] = (data.rows || []).flatMap(row => {
     const firstEvent = row.events?.[0];
-    return {
+    const baseEntry = {
       id: row.requestId || '',
       timestamp: row.timestamp ? new Date(row.timestamp).getTime() : Date.now(),
       deploymentId: row.deploymentId || '',
       projectId: options.projectId,
-      level: (firstLog?.level as RequestLogEntry['level']) || 'info',
-      message: firstLog?.message || '',
-      messageTruncated: firstLog?.messageTruncated,
       source: (firstEvent?.source as RequestLogEntry['source']) || 'static',
       domain: row.domain || '',
       requestMethod: row.requestMethod || '',
@@ -179,6 +176,21 @@ export async function fetchRequestLogs(
       cache: row.cache,
       traceId: row.traceId,
     };
+
+    // When --expand is set, emit one entry per log line so every
+    // console.log / console.warn line is shown on its own row.
+    // In default mode, emit only the first log entry to avoid
+    // duplicate rows for requests that produced multiple log lines.
+    const allLogEntries = row.logs && row.logs.length > 0 ? row.logs : [{}];
+    const logEntries = options.expand ? allLogEntries : [allLogEntries[0]];
+    return logEntries.map((logEntry, index) => ({
+      ...baseEntry,
+      // Use a stable per-entry id so duplicate filtering works correctly
+      id: index === 0 ? baseEntry.id : `${baseEntry.id}_${index}`,
+      level: (logEntry.level as RequestLogEntry['level']) || 'info',
+      message: logEntry.message || '',
+      messageTruncated: logEntry.messageTruncated,
+    }));
   });
 
   return {

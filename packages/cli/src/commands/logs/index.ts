@@ -522,6 +522,7 @@ export default async function logs(client: Client) {
       search: searchOption ?? queryOption,
       requestId: requestIdOption,
       branch: branchOption,
+      expand: expandOption,
     })) {
       output.stopSpinner();
       if (jsonOption) {
