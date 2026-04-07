@@ -12,10 +12,12 @@ import {
 
 describe('tryDetectServices()', () => {
   const originalEnv = process.env.VERCEL_USE_EXPERIMENTAL_SERVICES;
+  const originalTomlEnv = process.env.VERCEL_TOML_CONFIG_ENABLED;
   let tempDir: string;
 
   beforeEach(async () => {
     process.env.VERCEL_USE_EXPERIMENTAL_SERVICES = '1';
+    process.env.VERCEL_TOML_CONFIG_ENABLED = '1';
     tempDir = join(tmpdir(), `detect-services-test-${Date.now()}`);
     await mkdir(tempDir, { recursive: true });
   });
@@ -25,6 +27,11 @@ describe('tryDetectServices()', () => {
       delete process.env.VERCEL_USE_EXPERIMENTAL_SERVICES;
     } else {
       process.env.VERCEL_USE_EXPERIMENTAL_SERVICES = originalEnv;
+    }
+    if (originalTomlEnv === undefined) {
+      delete process.env.VERCEL_TOML_CONFIG_ENABLED;
+    } else {
+      process.env.VERCEL_TOML_CONFIG_ENABLED = originalTomlEnv;
     }
     await rm(tempDir, { recursive: true, force: true });
   });
@@ -64,6 +71,38 @@ describe('tryDetectServices()', () => {
           backend: { entrypoint: 'api/index.py', routePrefix: '/api' },
         },
       })
+    );
+    await writeFile(
+      join(tempDir, 'api/index.py'),
+      'def app():\n  return None\n'
+    );
+
+    const result = await tryDetectServices(tempDir);
+    expect(result).not.toBeNull();
+    expect(result?.services).toHaveLength(2);
+    expect(result?.services.find(s => s.name === 'frontend')).toMatchObject({
+      name: 'frontend',
+      framework: 'nextjs',
+      routePrefix: '/',
+    });
+    expect(result?.services.find(s => s.name === 'backend')).toMatchObject({
+      name: 'backend',
+      entrypoint: 'api/index.py',
+      routePrefix: '/api',
+    });
+  });
+
+  it('should return services when configured via vercel.toml', async () => {
+    await mkdir(join(tempDir, 'api'), { recursive: true });
+    await writeFile(
+      join(tempDir, 'vercel.toml'),
+      `[experimentalServices.frontend]
+framework = "nextjs"
+routePrefix = "/"
+
+[experimentalServices.backend]
+entrypoint = "api/index.py"
+routePrefix = "/api"`
     );
     await writeFile(
       join(tempDir, 'api/index.py'),
@@ -252,6 +291,26 @@ describe('tryDetectServices()', () => {
       );
 
       await expect(isExperimentalServicesEnabled(tempDir)).resolves.toBe(true);
+    });
+
+    it('should return true when vercel.toml has experimentalServices', async () => {
+      await writeFile(
+        join(tempDir, 'vercel.toml'),
+        `[experimentalServices.frontend]
+framework = "nextjs"
+routePrefix = "/"`
+      );
+
+      await expect(isExperimentalServicesEnabled(tempDir)).resolves.toBe(true);
+    });
+
+    it('should return false when vercel.toml has no experimentalServices', async () => {
+      await writeFile(
+        join(tempDir, 'vercel.toml'),
+        `buildCommand = "npm run build"`
+      );
+
+      await expect(isExperimentalServicesEnabled(tempDir)).resolves.toBe(false);
     });
   });
 });
