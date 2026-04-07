@@ -199,17 +199,18 @@ export default async function protection(
   }
 
   const ssoSelected = Boolean(parsedArgs.flags['--sso']);
+  const passwordSelected = Boolean(parsedArgs.flags['--password']);
   const skewSelected = Boolean(parsedArgs.flags['--skew']);
-  if (action && !ssoSelected && !skewSelected) {
+  if (action && !ssoSelected && !passwordSelected && !skewSelected) {
     const msg =
-      'No protection selected. Pass --sso or --skew. Usage: `vercel project protection enable|disable [name] --sso|--skew`';
+      'No protection selected. Pass --sso, --password, or --skew. Usage: `vercel project protection enable|disable [name] --sso|--password|--skew`';
     outputAgentError(
       client,
       {
         status: 'error',
         reason: AGENT_REASON.MISSING_ARGUMENTS,
         message: msg,
-        hint: 'Use `project protection enable|disable` with a protection flag (e.g. --sso or --skew).',
+        hint: 'Use `project protection enable|disable` with a protection flag (e.g. --sso, --password, or --skew).',
         next: [
           {
             command: buildCommandWithGlobalFlags(
@@ -217,6 +218,13 @@ export default async function protection(
               `project protection ${action} --sso`
             ),
             when: 'Example: same action with SSO protection selected',
+          },
+          {
+            command: buildCommandWithGlobalFlags(
+              client.argv,
+              `project protection ${action} --password`
+            ),
+            when: 'Example: same action with password protection selected',
           },
           {
             command: buildCommandWithGlobalFlags(
@@ -262,6 +270,12 @@ export default async function protection(
           ? { deploymentType: ENABLED_DEPLOYMENT_TYPE }
           : null;
     }
+    if (passwordSelected) {
+      patchBody.passwordProtection =
+        action === 'enable'
+          ? { deploymentType: ENABLED_DEPLOYMENT_TYPE }
+          : null;
+    }
     if (skewSelected) {
       patchBody.skewProtectionMaxAge = skewProtectionMaxAge;
     }
@@ -285,6 +299,9 @@ export default async function protection(
             projectId: project.id,
             projectName: project.name,
             ssoProtection: ssoSelected ? action === 'enable' : undefined,
+            passwordProtection: passwordSelected
+              ? action === 'enable'
+              : undefined,
             skewProtection: skewSelected ? action === 'enable' : undefined,
             ...(skewSelected
               ? action === 'enable'
