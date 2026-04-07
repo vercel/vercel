@@ -384,6 +384,8 @@ jobs:
           VERCEL_TEAM_ID: ${{ secrets.VERCEL_TEAM_ID }}
           TURBO_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           FORCE_COLOR: '1'
+          # packages/cli Jest: default maxWorkers is 50%; use full runner (e.g. 4 vCPU on ubuntu-latest).
+          JEST_MAX_WORKERS: '100%'
       - name: 'Determine Turbo HIT or MISS'
         if: ${{ !cancelled() }}
         id: turbo-summary
