@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import project from '../../../../src/commands/project';
+import type { CommandOption } from '../../../../src/commands/help';
+import { protectionSubcommand } from '../../../../src/commands/project/command';
 import { client } from '../../../mocks/client';
 import { defaultProject, useProject } from '../../../mocks/project';
 
@@ -202,6 +204,29 @@ describe('project protection', () => {
         reason: 'missing_arguments',
       });
       expect(payload.message).toMatch(/No protection selected/);
+      expect(payload.message).toContain('--password');
+      const toggleFlagsForNext = protectionSubcommand.options
+        .filter(o => {
+          const opt = o as CommandOption;
+          return (
+            opt.type === Boolean &&
+            !opt.deprecated &&
+            opt.description !== undefined &&
+            opt.agentSuggest !== false
+          );
+        })
+        .map(o => `--${(o as CommandOption).name}`);
+      expect(payload.next).toHaveLength(toggleFlagsForNext.length);
+      expect(
+        payload.next.some((n: { command: string }) =>
+          n.command.includes('--password')
+        )
+      ).toBe(false);
+      for (let i = 0; i < toggleFlagsForNext.length; i++) {
+        expect(payload.next[i].command).toContain(
+          `project protection enable ${toggleFlagsForNext[i]}`
+        );
+      }
     });
 
     it('outputs JSON when listing protection settings without --format', async () => {

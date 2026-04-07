@@ -309,6 +309,7 @@ export const protectionSubcommand = {
       description:
         'Apply action to password protection (requires eligible plan/permissions).',
       deprecated: false,
+      agentSuggest: false,
     },
     {
       name: 'skew',

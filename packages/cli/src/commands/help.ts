@@ -19,6 +19,10 @@ export interface CommandOption {
   readonly argument?: string;
   readonly deprecated: boolean;
   readonly description?: string;
+  /**
+   * When false, omit from agent `next` hints (CLI parsing and `--help` unchanged).
+   */
+  readonly agentSuggest?: boolean;
 }
 export interface CommandArgument {
   readonly name: string;

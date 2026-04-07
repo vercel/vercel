@@ -1,7 +1,9 @@
+import type arg from 'arg';
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
+import type { CommandOption } from '../help';
 import {
   buildCommandWithGlobalFlags,
   exitWithNonInteractiveError,
@@ -33,14 +35,72 @@ function isProtectionAction(v: string | undefined): v is ProtectionAction {
   return !!v && (PROTECTION_ACTIONS as readonly string[]).includes(v);
 }
 
+/** Same visibility rules as `buildCommandOptionLines` (non-deprecated, documented). */
+function isCommandOptionDocumented(o: CommandOption): boolean {
+  return !o.deprecated && o.description !== undefined;
+}
+
+/** All boolean toggles the parser accepts (used to detect “at least one selector”). */
+function getProtectionParserToggleFlagNames(spec: arg.Spec): string[] {
+  return protectionSubcommand.options
+    .filter(
+      o =>
+        o.type === Boolean &&
+        spec[`--${o.name}` as keyof typeof spec] === Boolean
+    )
+    .map(o => `--${o.name}`);
+}
+
+/** Documented toggles for the error text (may include flags omitted from `next`). */
+function getProtectionToggleFlagsForMessage(): string[] {
+  return protectionSubcommand.options
+    .filter(o => o.type === Boolean && isCommandOptionDocumented(o))
+    .map(o => `--${o.name}`);
+}
+
+/** Toggles to suggest in `next`: documented, parser-backed, and not opted out via `agentSuggest`. */
+function getProtectionToggleFlagsForNext(spec: arg.Spec): string[] {
+  return protectionSubcommand.options
+    .filter(o => {
+      const opt = o as CommandOption;
+      return (
+        opt.type === Boolean &&
+        isCommandOptionDocumented(opt) &&
+        opt.agentSuggest !== false &&
+        spec[`--${opt.name}` as keyof typeof spec] === Boolean
+      );
+    })
+    .map(o => `--${(o as CommandOption).name}`);
+}
+
+function buildMissingSelectorMessage(): string {
+  const flags = getProtectionToggleFlagsForMessage();
+  const joined = flags.join(', ');
+  return `No protection selected. Pass one or more selectors (for example ${joined}).`;
+}
+
+function buildMissingSelectorNext(
+  client: Client,
+  action: ProtectionAction,
+  spec: arg.Spec
+): Array<{ command: string; when: string }> {
+  return getProtectionToggleFlagsForNext(spec).map(flag => ({
+    command: buildCommandWithGlobalFlags(
+      client.argv,
+      `project protection ${action} ${flag}`
+    ),
+    when: `Run with ${flag} (same action)`,
+  }));
+}
+
 export default async function protection(
   client: Client,
   argv: string[]
 ): Promise<number> {
-  let parsedArgs;
   const flagsSpecification = getFlagsSpecification(
     protectionSubcommand.options
   );
+  let parsedArgs: { args: string[]; flags: Record<string, unknown> };
   try {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
@@ -140,17 +200,14 @@ export default async function protection(
     '--protection-bypass-secret'
   ] as string | undefined;
 
-  const hasAnySelection =
-    selectedSso ||
-    selectedPassword ||
-    selectedSkew ||
-    selectedSupportCode ||
-    selectedGitFork ||
-    selectedProtectionBypass;
+  const parserToggleFlagNames =
+    getProtectionParserToggleFlagNames(flagsSpecification);
+  const hasAnySelection = parserToggleFlagNames.some(flag =>
+    Boolean(parsedArgs.flags[flag])
+  );
 
   if (action && !hasAnySelection) {
-    const msg =
-      'No protection selected. Pass one or more selectors (for example --sso, --password, --skew, --customer-support-code-visibility, --git-fork-protection, --protection-bypass).';
+    const msg = buildMissingSelectorMessage();
     outputAgentError(
       client,
       {
@@ -158,15 +215,7 @@ export default async function protection(
         reason: AGENT_REASON.MISSING_ARGUMENTS,
         message: msg,
         hint: 'Use `project protection enable|disable` with at least one protection flag.',
-        next: [
-          {
-            command: buildCommandWithGlobalFlags(
-              client.argv,
-              `project protection ${action} --sso`
-            ),
-            when: 'Example: same action with SSO protection selected',
-          },
-        ],
+        next: buildMissingSelectorNext(client, action, flagsSpecification),
       },
       2
     );
