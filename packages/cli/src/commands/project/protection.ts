@@ -138,9 +138,9 @@ export default async function protection(
           {
             command: buildCommandWithGlobalFlags(
               client.argv,
-              'project protection disable --git-fork-protection'
+              `project protection ${action} --git-fork-protection`
             ),
-            when: 'Example: disable with Git fork protection selected',
+            when: 'Example: same action with Git fork protection selected',
           },
         ],
       },
