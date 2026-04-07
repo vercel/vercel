@@ -412,6 +412,23 @@ export const build: BuildVX = async ({
       }
 
       if (!assumeDepsInstalled) {
+        // Restore a previously cached uv.lock so that `uv lock` can
+        // validate it instead of re-resolving all packages from PyPI.
+        // Namespace by service name so multiple services don't overwrite
+        // each other's lock files.
+        const lockCacheKey = service?.name
+          ? `uv.lock.${service.name}`
+          : 'uv.lock';
+        const cachedLockPath = join(uvCacheDir, lockCacheKey);
+        const manifestDir = pythonPackage.manifest
+          ? join(rootDir, dirname(pythonPackage.manifest.path))
+          : workPath;
+        const targetLockPath = join(manifestDir, 'uv.lock');
+        if (fs.existsSync(cachedLockPath) && !fs.existsSync(targetLockPath)) {
+          debug('Restoring cached uv.lock');
+          await fs.promises.copyFile(cachedLockPath, targetLockPath);
+        }
+
         // Default installation path: use uv to normalize manifests into a uv.lock and
         // sync dependencies into the virtualenv, including required runtime deps.
         // Ensure all installation paths are normalized into a pyproject.toml and uv.lock
@@ -445,6 +462,13 @@ export const build: BuildVX = async ({
           frozen: lockFileProvidedByUser,
           locked: !lockFileProvidedByUser,
         });
+
+        // Stash the lock file into the cache dir so prepareCache
+        // preserves it and the next build can skip full resolution.
+        if (lockPath && fs.existsSync(lockPath)) {
+          await fs.promises.mkdir(uvCacheDir, { recursive: true });
+          await fs.promises.copyFile(lockPath, cachedLockPath);
+        }
       }
     });
 
@@ -792,7 +816,12 @@ export const prepareCache: PrepareCache = async ({
     // best-effort; don't fail the build
   }
 
-  return glob('**/.vercel/python/{.venv,cache/uv}/**', { cwd: root, ignore });
+  // Cache the uv package cache, the default venv, and any service-namespaced
+  // venvs so that subsequent builds can skip dependency installation.
+  return glob('**/.vercel/python/{.venv,services/*/.venv,cache/uv}/**', {
+    cwd: root,
+    ignore,
+  });
 };
 
 export const shouldServe: ShouldServe = opts => {
