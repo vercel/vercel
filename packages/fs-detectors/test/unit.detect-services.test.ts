@@ -1385,6 +1385,28 @@ describe('detectServices', () => {
         serviceName: 'cleanup',
       });
     });
+
+    it('should error for file:variable entrypoint when file does not exist', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            api: {
+              type: 'web',
+              entrypoint: 'nonexistent.py:my_var',
+              routePrefix: '/api',
+            },
+          },
+        }),
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.services).toHaveLength(0);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]).toMatchObject({
+        code: 'ENTRYPOINT_NOT_FOUND',
+        serviceName: 'api',
+      });
+    });
   });
 
   describe('worker services', () => {
