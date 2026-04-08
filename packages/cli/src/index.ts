@@ -480,6 +480,7 @@ const main = async () => {
     'help',
     'init',
     'build',
+    'sandbox',
     'telemetry',
     'upgrade',
     'skills',
@@ -498,6 +499,16 @@ const main = async () => {
 
   if (subcommand === 'flags' && subSubCommand === 'prepare') {
     subcommandsWithoutToken.push('flags');
+  }
+
+  // Check for VERCEL_TOKEN environment variable if --token flag not provided
+  // Track where the token came from for better error messages
+  let tokenSource: 'flag' | 'env' | undefined;
+  if (typeof parsedArgs.flags['--token'] === 'string') {
+    tokenSource = 'flag';
+  } else if (process.env.VERCEL_TOKEN) {
+    parsedArgs.flags['--token'] = process.env.VERCEL_TOKEN;
+    tokenSource = 'env';
   }
 
   // Prompt for login if there is no current token
@@ -543,16 +554,6 @@ const main = async () => {
       });
       return 1;
     }
-  }
-
-  // Check for VERCEL_TOKEN environment variable if --token flag not provided
-  // Track where the token came from for better error messages
-  let tokenSource: 'flag' | 'env' | undefined;
-  if (typeof parsedArgs.flags['--token'] === 'string') {
-    tokenSource = 'flag';
-  } else if (process.env.VERCEL_TOKEN) {
-    parsedArgs.flags['--token'] = process.env.VERCEL_TOKEN;
-    tokenSource = 'env';
   }
 
   if (
@@ -623,6 +624,7 @@ const main = async () => {
     typeof scope === 'string' &&
     targetCommand !== 'login' &&
     targetCommand !== 'build' &&
+    targetCommand !== 'sandbox' &&
     !(targetCommand === 'teams' && subSubCommand !== 'invite')
   ) {
     let user = null;
@@ -948,6 +950,10 @@ const main = async () => {
         case 'rolling-release':
           telemetry.trackCliCommandRollingRelease(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).rollingRelease;
+          break;
+        case 'sandbox':
+          telemetry.trackCliCommandSandbox(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).sandbox;
           break;
         case 'skills':
           telemetry.trackCliCommandSkills(userSuppliedSubCommand);
