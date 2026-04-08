@@ -60,9 +60,9 @@ export function upgradeWebSocket(request: Request): WebSocketUpgradeResult {
   const socket = upgrade.socket as Socket;
   const head = upgrade.head as Buffer;
 
-  // Use ws to handle WebSocket framing on the already-upgraded socket.
-  // The 101 handshake has already been written by the bridge, so we
-  // use handleUpgrade's callback to get a fully-framed WebSocket.
+  // Use ws to perform the WebSocket handshake and set up framing.
+  // ws writes the 101 Switching Protocols response to the socket
+  // and returns a fully-framed WebSocket in the callback.
   let ws: import('ws').WebSocket;
   wss.handleUpgrade(req, socket, head, client => {
     ws = client;
@@ -70,7 +70,7 @@ export function upgradeWebSocket(request: Request): WebSocketUpgradeResult {
   });
 
   // Synthetic 101 response for frameworks that require returning a Response.
-  // The actual 101 has already been written to the socket by the bridge.
+  // The actual 101 has already been written to the socket by ws.
   const response = new Response(null);
   Object.defineProperty(response, 'status', { value: 101 });
   Object.defineProperty(response, 'statusText', {
