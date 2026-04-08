@@ -361,7 +361,10 @@ export const updateSubcommand = {
   name: 'update',
   aliases: [],
   description:
-    'Update a marketplace integration installation (billing plan or which projects can access it)',
+    'Update a marketplace integration installation (billing plan or which projects can access it). ' +
+    'Install, remove, and connect flows are separate (integration add, integration remove, integration-resource, env pull, etc.) — not part of update. ' +
+    'UI-only flows (OAuth in a browser, consent screens, marketplace purchase) may not map one-to-one to a single CLI flag; pass --plan and --authorization-id when the product requires them for billing changes. ' +
+    'Any extra fields on the configuration resource that the API exposes but this command PATCH body does not send are not covered until the API and CLI support them.',
   arguments: [
     {
       name: 'integration',
