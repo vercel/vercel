@@ -106,10 +106,19 @@ export function useGetBypass(bypass: BypassRule[] = []) {
   });
 }
 
+export const activateConfigTracker: { called: boolean; version: string } = {
+  called: false,
+  version: '',
+};
+
 export function useActivateConfig() {
+  activateConfigTracker.called = false;
+  activateConfigTracker.version = '';
   client.scenario.post(
     '/v1/security/firewall/config/:version/activate',
-    (_req: any, res: any) => {
+    (req: any, res: any) => {
+      activateConfigTracker.called = true;
+      activateConfigTracker.version = req.params.version;
       res.json(
         createConfig({
           id: 'config_new_active',
@@ -120,10 +129,14 @@ export function useActivateConfig() {
   );
 }
 
+export const deleteDraftTracker: { called: boolean } = { called: false };
+
 export function useDeleteDraft() {
+  deleteDraftTracker.called = false;
   client.scenario.delete(
     '/v1/security/firewall/config/draft',
     (_req: any, res: any) => {
+      deleteDraftTracker.called = true;
       res.status(204).end();
     }
   );

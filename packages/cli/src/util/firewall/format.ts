@@ -42,6 +42,7 @@ export function formatStatusOutput(
     lines.push(
       `  ${chalk.bold('Pending Draft:')}        ${chalk.yellow(`${draft.changes.length} unpublished change${draft.changes.length !== 1 ? 's' : ''}`)}`
     );
+    lines.push(formatDiffOutput(draft.changes));
   }
 
   return lines.join('\n');

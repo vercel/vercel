@@ -5,6 +5,7 @@ import { useUser } from '../../../mocks/user';
 import {
   useListFirewallConfigs,
   useDeleteDraft,
+  deleteDraftTracker,
   createConfig,
   createChange,
 } from '../../../mocks/firewall';
@@ -65,6 +66,7 @@ describe('firewall discard', () => {
     const exitCodePromise = firewall(client);
     await expect(client.stderr).toOutput('Staged changes discarded');
     expect(await exitCodePromise).toEqual(0);
+    expect(deleteDraftTracker.called).toBe(true);
   });
 
   it('should show changes before discarding', async () => {

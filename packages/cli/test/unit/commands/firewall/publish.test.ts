@@ -5,6 +5,7 @@ import { useUser } from '../../../mocks/user';
 import {
   useListFirewallConfigs,
   useActivateConfig,
+  activateConfigTracker,
   createConfig,
   createChange,
 } from '../../../mocks/firewall';
@@ -65,6 +66,7 @@ describe('firewall publish', () => {
     const exitCodePromise = firewall(client);
     await expect(client.stderr).toOutput('published to production');
     expect(await exitCodePromise).toEqual(0);
+    expect(activateConfigTracker.called).toBe(true);
   });
 
   it('should show changes before publishing', async () => {
