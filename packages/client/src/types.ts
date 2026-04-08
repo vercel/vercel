@@ -109,6 +109,43 @@ export interface Deployment {
   expiration?: number;
   proposedExpiration?: number;
   undeletedAt?: number;
+  /**
+   * State of the security check for dependencies.
+   * Only present when the security check feature flag is enabled.
+   */
+  securityCheckState?: 'pending' | 'running' | 'completed' | 'skipped';
+  /**
+   * Conclusion of the security check for dependencies.
+   * Only present when securityCheckState is 'completed'.
+   */
+  securityCheckConclusion?: 'succeeded' | 'failed' | 'warning';
+  /**
+   * Details about the security check for dependencies.
+   */
+  securityCheck?: {
+    /** The source used for the security check. */
+    source: 'lockfile' | 'package-json' | 'none';
+    /** Reason why the security check was skipped, if applicable. */
+    skipReason?:
+      | 'prebuilt'
+      | 'no-manifest'
+      | 'feature-disabled'
+      | 'unsupported-package-manager';
+    /** Path to the lockfile or package.json that was scanned. */
+    manifestPath?: string;
+    /** Number of packages scanned. */
+    packagesScanned?: number;
+    /** Number of security issues found. */
+    issuesFound?: number;
+    /** Number of malware packages detected. */
+    malwareCount?: number;
+    /** Number of known vulnerabilities detected. */
+    vulnerabilityCount?: number;
+    /** Duration of the security check in milliseconds. */
+    durationMs?: number;
+    /** Error message if the security check failed due to an error. */
+    errorMessage?: string;
+  };
 }
 
 export interface DeploymentBuild {

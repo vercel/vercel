@@ -11,6 +11,25 @@ type LegacyDeployment = {
   buildingAt: number;
   checksConclusion?: 'succeeded' | 'failed' | 'skipped' | 'canceled';
   checksState?: 'registered' | 'running' | 'completed';
+  /** Security check state (only present when feature flag is enabled) */
+  securityCheckState?: 'pending' | 'running' | 'completed' | 'skipped';
+  /** Security check conclusion (only present when securityCheckState is 'completed') */
+  securityCheckConclusion?: 'succeeded' | 'failed' | 'warning';
+  /** Security check details */
+  securityCheck?: {
+    source: 'lockfile' | 'package-json' | 'none';
+    skipReason?:
+      | 'prebuilt'
+      | 'no-manifest'
+      | 'feature-disabled'
+      | 'unsupported-package-manager';
+    manifestPath?: string;
+    packagesScanned?: number;
+    issuesFound?: number;
+    malwareCount?: number;
+    vulnerabilityCount?: number;
+    durationMs?: number;
+  };
   created: number;
   createdAt?: number;
   creator: {
@@ -78,6 +97,9 @@ export default async function getDeploymentsByProjectId(
       buildingAt: depl.buildingAt,
       checksConclusion: depl.checksConclusion,
       checksState: depl.checksState,
+      securityCheckState: depl.securityCheckState,
+      securityCheckConclusion: depl.securityCheckConclusion,
+      securityCheck: depl.securityCheck,
       createdAt: depl.created,
       creator: {
         uid: depl.creator.uid,

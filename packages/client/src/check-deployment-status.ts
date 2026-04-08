@@ -198,6 +198,63 @@ export async function* checkDeploymentStatus(
       }
     }
 
+    // Security check events (only present when feature flag is enabled)
+    if (deploymentUpdate.securityCheckState !== undefined) {
+      if (
+        deploymentUpdate.securityCheckState === 'pending' &&
+        !finishedEvents.has('security-check-pending')
+      ) {
+        debug('Security check state changed to pending');
+        finishedEvents.add('security-check-pending');
+        yield { type: 'security-check-pending', payload: deploymentUpdate };
+      }
+
+      if (
+        deploymentUpdate.securityCheckState === 'running' &&
+        !finishedEvents.has('security-check-running')
+      ) {
+        debug('Security check state changed to running');
+        finishedEvents.add('security-check-running');
+        yield { type: 'security-check-running', payload: deploymentUpdate };
+      }
+
+      if (
+        deploymentUpdate.securityCheckState === 'skipped' &&
+        !finishedEvents.has('security-check-skipped')
+      ) {
+        debug(
+          `Security check skipped: ${deploymentUpdate.securityCheck?.skipReason || 'unknown reason'}`
+        );
+        finishedEvents.add('security-check-skipped');
+        yield { type: 'security-check-skipped', payload: deploymentUpdate };
+      }
+
+      if (
+        deploymentUpdate.securityCheckState === 'completed' &&
+        !finishedEvents.has('security-check-completed')
+      ) {
+        finishedEvents.add('security-check-completed');
+
+        if (deploymentUpdate.securityCheckConclusion === 'succeeded') {
+          debug('Security check succeeded');
+          yield {
+            type: 'security-check-succeeded',
+            payload: deploymentUpdate,
+          };
+        } else if (deploymentUpdate.securityCheckConclusion === 'failed') {
+          debug(
+            `Security check failed: ${deploymentUpdate.securityCheck?.issuesFound || 0} issues found`
+          );
+          yield { type: 'security-check-failed', payload: deploymentUpdate };
+        } else if (deploymentUpdate.securityCheckConclusion === 'warning') {
+          debug(
+            `Security check warning: ${deploymentUpdate.securityCheck?.issuesFound || 0} issues found`
+          );
+          yield { type: 'security-check-warning', payload: deploymentUpdate };
+        }
+      }
+    }
+
     if (isAliasAssigned(deploymentUpdate)) {
       debug('Deployment alias assigned');
       return yield { type: 'alias-assigned', payload: deploymentUpdate };
