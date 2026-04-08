@@ -52,6 +52,7 @@ describe('firewall rules remove', () => {
     const exitCodePromise = firewall(client);
     await expect(client.stderr).toOutput('Removed');
     expect(await exitCodePromise).toEqual(0);
+    expect(lastPatchBody.action).toBe('rules.remove');
   });
 
   it('should work with delete alias', async () => {
@@ -64,6 +65,7 @@ describe('firewall rules remove', () => {
     const exitCodePromise = firewall(client);
     await expect(client.stderr).toOutput('Removed');
     expect(await exitCodePromise).toEqual(0);
+    expect(lastPatchBody.action).toBe('rules.remove');
   });
 
   it('should show summary before confirming', async () => {

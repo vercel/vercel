@@ -280,5 +280,8 @@ describe('firewall rules reorder', () => {
     const exitCodePromise = firewall(client);
     await expect(client.stderr).toOutput('Moved');
     expect(await exitCodePromise).toEqual(0);
+    expect(lastPatchBody.action).toBe('rules.priority');
+    expect(lastPatchBody.id).toBe('rule_003');
+    expect(lastPatchBody.value).toBe(0);
   });
 });
