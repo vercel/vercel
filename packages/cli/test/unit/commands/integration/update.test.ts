@@ -133,6 +133,13 @@ describe('integration', () => {
       expect(patchedId).toBe('icfg_install_b');
     });
 
+    it('errors when integration slug is missing', async () => {
+      client.setArgv('integration', 'update', '--projects', 'all');
+      const code = await integrationCommand(client);
+      expect(code).toBe(1);
+      await expect(client.stderr).toOutput('must specify an integration');
+    });
+
     it('errors when --plan and --projects are combined', async () => {
       client.setArgv(
         'integration',

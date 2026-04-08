@@ -11,16 +11,22 @@ import type { Configuration } from '../../util/integration/types';
 import { patchIntegrationConfiguration } from '../../util/integration/patch-integration-configuration';
 import { updateSubcommand } from './command';
 import { IntegrationUpdateTelemetryClient } from '../../util/telemetry/commands/integration/update';
+import { isAPIError } from '../../util/errors-ts';
+import { packageName } from '../../util/pkg-name';
+
+type SelectResult =
+  | { ok: true; configuration: Configuration }
+  | { ok: false; message: string };
 
 function selectConfiguration(
   configurations: Configuration[],
   integrationSlug: string,
   installationId: string | undefined
-): { ok: true; configuration: Configuration } | { ok: false; message: string } {
+): SelectResult {
   if (configurations.length === 0) {
     return {
       ok: false,
-      message: `No integration ${chalk.bold(integrationSlug)} found.`,
+      message: `No integration "${integrationSlug}" found.`,
     };
   }
 
@@ -40,7 +46,7 @@ function selectConfiguration(
     const list = configurations.map(c => c.id).join(', ');
     return {
       ok: false,
-      message: `Multiple installations found for "${integrationSlug}": ${list}\n\nRe-run with ${chalk.cyan('--installation-id <id>')} to select one.`,
+      message: `Multiple installations found for "${integrationSlug}": ${list}. Re-run with --installation-id <id> to select one. Run \`${packageName} integration installations\` to list installation IDs for this team.`,
     };
   }
 
@@ -87,15 +93,18 @@ export async function update(client: Client) {
     output.error(formatResult.error);
     return 1;
   }
-  const asJson = formatResult.jsonOutput;
+
+  const preferJson = formatResult.jsonOutput;
 
   if (parsedArguments.args.length < 2) {
-    output.error('You must specify an integration. See `--help` for details.');
+    output.error(
+      'You must specify an integration slug. Usage: `vercel integration update <integration> --plan <id>` or `--projects ...`.'
+    );
     return 1;
   }
   if (parsedArguments.args.length > 2) {
     output.error('Cannot specify more than one integration at a time.');
-    return 1;
+    return 2;
   }
 
   const integrationSlug = parsedArguments.args[1];
@@ -116,7 +125,7 @@ export async function update(client: Client) {
 
   if (hasPlan && projectsRaw !== undefined && projectsRaw.length > 0) {
     output.error(
-      'Pass either --plan or --projects, not both. See `--help` for examples.'
+      'Pass either --plan or --projects, not both. See `vercel integration update --help`.'
     );
     return 1;
   }
@@ -184,15 +193,14 @@ export async function update(client: Client) {
     output.stopSpinner();
   } catch (error) {
     output.stopSpinner();
-    output.error(
-      chalk.red(
-        `Failed to update ${chalk.bold(integrationSlug)}: ${(error as Error).message}`
-      )
-    );
+    const apiMsg = isAPIError(error)
+      ? error.serverMessage || error.message
+      : (error as Error).message;
+    output.error(`Failed to update ${integrationSlug}: ${apiMsg}`);
     return 1;
   }
 
-  if (asJson) {
+  if (preferJson) {
     client.stdout.write(
       `${JSON.stringify(
         {
