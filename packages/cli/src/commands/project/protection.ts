@@ -17,11 +17,35 @@ import type { JSONObject, Project } from '@vercel-internals/types';
 
 const PROTECTION_ACTIONS = ['enable', 'disable'] as const;
 type ProtectionAction = (typeof PROTECTION_ACTIONS)[number];
+const DEFAULT_SKEW_PROTECTION_MAX_AGE = 2592000;
 const ENABLED_DEPLOYMENT_TYPE = 'prod_deployment_urls_and_all_previews';
+
+function parseSkewMaxAgeSeconds(
+  value: string
+): { ok: true; seconds: number } | { ok: false; message: string } {
+  const trimmed = value.trim();
+  if (trimmed === '' || !/^\d+$/.test(trimmed)) {
+    return {
+      ok: false,
+      message:
+        'Invalid --skew-max-age: expected a positive integer (seconds), e.g. 604800.',
+    };
+  }
+  const n = Number(trimmed);
+  if (!Number.isSafeInteger(n) || n <= 0) {
+    return {
+      ok: false,
+      message:
+        'Invalid --skew-max-age: value must be a positive integer within safe range.',
+    };
+  }
+  return { ok: true, seconds: n };
+}
+
 const PROTECTION_KEYS = [
   'passwordProtection',
   'ssoProtection',
-  'skewProtection',
+  'skewProtectionMaxAge',
   'customerSupportCodeVisibility',
   'gitForkProtection',
   'protectionBypass',
@@ -124,17 +148,82 @@ export default async function protection(
 
   const preferJson = formatResult.jsonOutput || Boolean(client.nonInteractive);
 
-  const selected = Boolean(parsedArgs.flags['--sso']);
-  if (action && !selected) {
+  const skewMaxAgeFlag = parsedArgs.flags['--skew-max-age'] as
+    | string
+    | undefined;
+
+  if (action === 'disable' && skewMaxAgeFlag !== undefined) {
     const msg =
-      'No protection selected. Pass --sso. Usage: `vercel project protection enable|disable [name] --sso`';
+      '`--skew-max-age` can only be used with `project protection enable`.';
+    outputAgentError(
+      client,
+      {
+        status: 'error',
+        reason: AGENT_REASON.INVALID_ARGUMENTS,
+        message: msg,
+        hint: 'Use `project protection disable ... --skew` to turn skew protection off.',
+      },
+      2
+    );
+    output.error(msg);
+    return 2;
+  }
+
+  let enableSkewMaxAgeSeconds: number | undefined;
+  if (action === 'enable' && skewMaxAgeFlag !== undefined) {
+    const parsed = parseSkewMaxAgeSeconds(skewMaxAgeFlag);
+    if (!parsed.ok) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: AGENT_REASON.INVALID_ARGUMENTS,
+          message: parsed.message,
+          hint: 'Pass a positive integer number of seconds (e.g. 604800 for 7 days).',
+          next: [
+            {
+              command: buildCommandWithGlobalFlags(
+                client.argv,
+                'project protection enable --skew --skew-max-age 604800'
+              ),
+              when: 'Example with a valid max age in seconds',
+            },
+          ],
+        },
+        1
+      );
+      output.error(parsed.message);
+      return 1;
+    }
+    enableSkewMaxAgeSeconds = parsed.seconds;
+  }
+
+  const ssoSelected = Boolean(parsedArgs.flags['--sso']);
+  const passwordSelected = Boolean(parsedArgs.flags['--password']);
+  const customerSupportCodeVisibilitySelected = Boolean(
+    parsedArgs.flags['--customer-support-code-visibility']
+  );
+  const skewSelected = Boolean(parsedArgs.flags['--skew']);
+  const gitForkProtectionSelected = Boolean(
+    parsedArgs.flags['--git-fork-protection']
+  );
+  if (
+    action &&
+    !ssoSelected &&
+    !passwordSelected &&
+    !customerSupportCodeVisibilitySelected &&
+    !skewSelected &&
+    !gitForkProtectionSelected
+  ) {
+    const msg =
+      'No protection selected. Pass --sso, --password, --customer-support-code-visibility, --skew, or --git-fork-protection. Usage: `vercel project protection enable|disable [name] --sso|--password|--customer-support-code-visibility|--skew|--git-fork-protection`';
     outputAgentError(
       client,
       {
         status: 'error',
         reason: AGENT_REASON.MISSING_ARGUMENTS,
         message: msg,
-        hint: 'Use `project protection enable|disable` with the protection flag (e.g. --sso).',
+        hint: 'Use `project protection enable|disable` with a protection flag (e.g. --sso, --password, --customer-support-code-visibility, --skew, or --git-fork-protection).',
         next: [
           {
             command: buildCommandWithGlobalFlags(
@@ -142,6 +231,34 @@ export default async function protection(
               `project protection ${action} --sso`
             ),
             when: 'Example: same action with SSO protection selected',
+          },
+          {
+            command: buildCommandWithGlobalFlags(
+              client.argv,
+              `project protection ${action} --password`
+            ),
+            when: 'Example: same action with password protection selected',
+          },
+          {
+            command: buildCommandWithGlobalFlags(
+              client.argv,
+              `project protection ${action} --customer-support-code-visibility`
+            ),
+            when: 'Example: same action with customer support code visibility selected',
+          },
+          {
+            command: buildCommandWithGlobalFlags(
+              client.argv,
+              `project protection ${action} --skew`
+            ),
+            when: 'Example: same action with skew protection selected',
+          },
+          {
+            command: buildCommandWithGlobalFlags(
+              client.argv,
+              `project protection ${action} --git-fork-protection`
+            ),
+            when: 'Example: same action with Git fork protection selected',
           },
         ],
       },
@@ -168,12 +285,33 @@ export default async function protection(
   }
 
   if (action) {
-    const patchBody: JSONObject = {
-      ssoProtection:
+    const skewProtectionMaxAge =
+      action === 'enable'
+        ? (enableSkewMaxAgeSeconds ?? DEFAULT_SKEW_PROTECTION_MAX_AGE)
+        : 0;
+
+    const patchBody: JSONObject = {};
+    if (ssoSelected) {
+      patchBody.ssoProtection =
         action === 'enable'
           ? { deploymentType: ENABLED_DEPLOYMENT_TYPE }
-          : null,
-    };
+          : null;
+    }
+    if (passwordSelected) {
+      patchBody.passwordProtection =
+        action === 'enable'
+          ? { deploymentType: ENABLED_DEPLOYMENT_TYPE }
+          : null;
+    }
+    if (customerSupportCodeVisibilitySelected) {
+      patchBody.customerSupportCodeVisibility = action === 'enable';
+    }
+    if (skewSelected) {
+      patchBody.skewProtectionMaxAge = skewProtectionMaxAge;
+    }
+    if (gitForkProtectionSelected) {
+      patchBody.gitForkProtection = action === 'enable';
+    }
 
     try {
       await client.fetch(`/v9/projects/${encodeURIComponent(project.id)}`, {
@@ -193,7 +331,22 @@ export default async function protection(
             action,
             projectId: project.id,
             projectName: project.name,
-            ssoProtection: action === 'enable',
+            ssoProtection: ssoSelected ? action === 'enable' : undefined,
+            passwordProtection: passwordSelected
+              ? action === 'enable'
+              : undefined,
+            customerSupportCodeVisibility: customerSupportCodeVisibilitySelected
+              ? action === 'enable'
+              : undefined,
+            skewProtection: skewSelected ? action === 'enable' : undefined,
+            ...(skewSelected
+              ? action === 'enable'
+                ? { skewProtectionMaxAge }
+                : { skewProtectionMaxAge: 0 }
+              : {}),
+            gitForkProtection: gitForkProtectionSelected
+              ? action === 'enable'
+              : undefined,
           },
           null,
           2

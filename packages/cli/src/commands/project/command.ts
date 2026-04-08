@@ -296,6 +296,45 @@ export const protectionSubcommand = {
       description: 'Apply action to SSO protection.',
       deprecated: false,
     },
+    {
+      name: 'password',
+      shorthand: null,
+      type: Boolean,
+      description:
+        'Apply action to password protection (requires eligible plan/permissions).',
+      deprecated: false,
+    },
+    {
+      name: 'customer-support-code-visibility',
+      shorthand: null,
+      type: Boolean,
+      description:
+        'Apply action to customer support code visibility protection.',
+      deprecated: false,
+    },
+    {
+      name: 'skew',
+      shorthand: null,
+      type: Boolean,
+      description: 'Apply action to skew protection.',
+      deprecated: false,
+    },
+    {
+      name: 'skew-max-age',
+      shorthand: null,
+      type: String,
+      argument: 'SECONDS',
+      description:
+        'When enabling with --skew, max age in seconds for skew protection (default 2592000, 30 days).',
+      deprecated: false,
+    },
+    {
+      name: 'git-fork-protection',
+      shorthand: null,
+      type: Boolean,
+      description: 'Apply action to Git fork protection.',
+      deprecated: false,
+    },
   ],
   examples: [
     {
@@ -307,8 +346,44 @@ export const protectionSubcommand = {
       value: `${packageName} project protection my-app --format json`,
     },
     {
+      name: 'Disable password protection',
+      value: `${packageName} project protection disable my-app --password`,
+    },
+    {
+      name: 'Enable password protection',
+      value: `${packageName} project protection enable my-app --password`,
+    },
+    {
+      name: 'Enable customer support code visibility',
+      value: `${packageName} project protection enable my-app --customer-support-code-visibility`,
+    },
+    {
+      name: 'Disable customer support code visibility',
+      value: `${packageName} project protection disable my-app --customer-support-code-visibility`,
+    },
+    {
+      name: 'Enable skew protection',
+      value: `${packageName} project protection enable my-app --skew`,
+    },
+    {
+      name: 'Enable skew protection with custom max age (seconds)',
+      value: `${packageName} project protection enable my-app --skew --skew-max-age 604800`,
+    },
+    {
+      name: 'Disable skew protection',
+      value: `${packageName} project protection disable my-app --skew`,
+    },
+    {
+      name: 'Enable Git fork protection',
+      value: `${packageName} project protection enable my-app --git-fork-protection`,
+    },
+    {
+      name: 'Disable Git fork protection',
+      value: `${packageName} project protection disable my-app --git-fork-protection`,
+    },
+    {
       name: 'Enable SSO deployment protection',
-      value: `${packageName} project protection enable --sso`,
+      value: `${packageName} project protection enable my-app --sso`,
     },
     {
       name: 'Disable SSO for a named project',
