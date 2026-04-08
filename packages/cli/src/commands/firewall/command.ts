@@ -404,7 +404,6 @@ export const rulesSubcommand = {
   ],
 } as const;
 
-
 export const attackModeEnableSubcommand = {
   name: 'enable',
   aliases: [],
