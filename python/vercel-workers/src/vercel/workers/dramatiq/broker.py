@@ -310,11 +310,15 @@ class VercelQueuesBroker(Broker):
             except Exception:
                 print("[vercelqueue dramatiq publish] debug print failed")
 
+        # Convert delay (milliseconds) to seconds for the v3 API.
+        delay_seconds = int(delay / 1000) if delay is not None and delay > 0 else None
+
         send(
             queue_name,
             envelope,
             idempotency_key=idempotency_key,
             retention_seconds=self._cfg.retention_seconds,
+            delay_seconds=delay_seconds,
             deployment_id=self._cfg.deployment_id,
             token=self._cfg.token,
             base_url=self._cfg.base_url,

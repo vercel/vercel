@@ -38,6 +38,7 @@ import {
   isBackendBuilder,
   type Lambda,
   type TriggerEvent,
+  sanitizeConsumerName,
   downloadFile,
 } from '@vercel/build-utils';
 import type { VercelConfig } from '@vercel/client';
@@ -49,6 +50,7 @@ import {
   detectFrameworkVersion,
   detectInstrumentation,
   getInternalServiceCronPath,
+  getInternalServiceFunctionPath,
   LocalFileSystemDetector,
 } from '@vercel/fs-detectors';
 import {
@@ -2047,11 +2049,13 @@ function attachWorkerServiceTrigger(
   service: Service
 ): void {
   const topics = getWorkerTopics(service);
-  const consumer = service.consumer || 'default';
+  const consumer = sanitizeConsumerName(
+    getInternalServiceFunctionPath(service.name)
+  );
 
   for (const topic of topics) {
     const trigger: TriggerEvent = {
-      type: 'queue/v1beta',
+      type: 'queue/v2beta',
       topic,
       consumer,
     };

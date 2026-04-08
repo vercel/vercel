@@ -270,29 +270,25 @@ describe('Lambda', () => {
         expect(lambda.experimentalTriggers![0].maxConcurrency).toBe(5);
       });
 
-      it('should throw error when v2beta has multiple triggers', () => {
-        expect(
-          () =>
-            new Lambda({
-              files,
-              handler: 'index.handler',
-              runtime: 'nodejs22.x',
-              experimentalTriggers: [
-                {
-                  type: 'queue/v2beta',
-                  topic: 'test-topic-1',
-                  consumer: 'consumer-1',
-                },
-                {
-                  type: 'queue/v2beta',
-                  topic: 'test-topic-2',
-                  consumer: 'consumer-2',
-                },
-              ],
-            })
-        ).toThrow(
-          '"experimentalTriggers" can only have one item for queue/v2beta'
-        );
+      it('should allow v2beta with multiple triggers', () => {
+        const lambda = new Lambda({
+          files,
+          handler: 'index.handler',
+          runtime: 'nodejs22.x',
+          experimentalTriggers: [
+            {
+              type: 'queue/v2beta',
+              topic: 'test-topic-1',
+              consumer: 'consumer-1',
+            },
+            {
+              type: 'queue/v2beta',
+              topic: 'test-topic-2',
+              consumer: 'consumer-2',
+            },
+          ],
+        });
+        expect(lambda.experimentalTriggers).toHaveLength(2);
       });
     });
 

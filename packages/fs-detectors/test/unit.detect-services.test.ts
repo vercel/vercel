@@ -1314,7 +1314,7 @@ describe('detectServices', () => {
   });
 
   describe('worker services', () => {
-    it('should generate internal worker callback routes', async () => {
+    it('should not generate public routes for worker services', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': JSON.stringify({
           experimentalServices: {
@@ -1331,12 +1331,7 @@ describe('detectServices', () => {
 
       expect(result.errors).toEqual([]);
       expect(result.services).toHaveLength(1);
-      expect(result.routes.workers).toHaveLength(1);
-      expect(result.routes.workers[0]).toEqual({
-        src: '^/_svc/processor/workers/worker/processor/worker$',
-        dest: '/_svc/processor/index',
-        check: true,
-      });
+      expect(result.routes.workers).toHaveLength(0);
     });
 
     it('should error if worker service has routePrefix', async () => {

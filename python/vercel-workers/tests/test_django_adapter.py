@@ -296,12 +296,12 @@ class TestDjangoAsgiApp(unittest.TestCase):
         sent = asyncio.run(run())
         self.assertEqual(sent[0]["type"], "http.response.start")
         self.assertEqual(sent[0]["status"], 400)
-        self.assertIn(b"Invalid content type", sent[1]["body"])
+        self.assertIn(b"unsupported callback format", sent[1]["body"])
 
     def test_post_callback_executes_task_and_deletes_message(self) -> None:
         """Test that a valid callback executes the task and deletes the message."""
         raw_body = (
-            b'{"type":"com.vercel.queue.v1beta","data":'
+            b'{"type":"com.vercel.queue.v2beta","data":'
             b'{"queueName":"q","consumerGroup":"c","messageId":"m"}}'
         )
 
@@ -380,7 +380,7 @@ class TestDjangoAsgiApp(unittest.TestCase):
                     with patch.object(
                         vwd_app.queue_callback,
                         "receive_message_by_id",
-                        return_value=(payload, 1, "2025-01-01T00:00:00Z", "ticket"),
+                        return_value=(payload, 1, "2025-01-01T00:00:00Z", "receipt-handle"),
                     ):
                         with patch.object(
                             vwd_app.queue_callback,
@@ -426,33 +426,62 @@ class TestDjangoAsgiApp(unittest.TestCase):
         body = json.loads(sent[1]["body"].decode("utf-8"))
         self.assertTrue(body["ok"])
 
-    def test_post_callback_delays_until_run_after_by_changing_visibility(self) -> None:
-        """Test that run_after in the future delays the message."""
+    def test_post_callback_executes_task_with_run_after_normally(self) -> None:
+        """run_after is handled at send time now, so receive side just executes the task."""
         raw_body = (
-            b'{"type":"com.vercel.queue.v1beta","data":'
+            b'{"type":"com.vercel.queue.v2beta","data":'
             b'{"queueName":"q","consumerGroup":"c","messageId":"m"}}'
         )
         fixed_now = datetime(2025, 1, 1, 0, 0, 0, tzinfo=UTC)
         run_after = fixed_now + timedelta(seconds=123)
 
         class FakeVisibilityExtender:
+            instances: list[FakeVisibilityExtender] = []
+
             def __init__(self, *args, **kwargs):
                 self.started = False
+                self.finalized = False
                 self.stopped = False
+                FakeVisibilityExtender.instances.append(self)
 
             def start(self) -> None:
                 self.started = True
 
             def finalize(self, fn) -> None:
+                self.finalized = True
                 fn()
 
             def stop(self) -> None:
                 self.stopped = True
 
+        # Track task execution
+        task_executed = []
+
+        def fake_task_func(*args, **kwargs):
+            task_executed.append((args, kwargs))
+            return "success"
+
+        mock_task = MagicMock()
+        mock_task.module_path = "myapp.tasks.my_task"
+        mock_task.takes_context = False
+        mock_task.queue_name = "q"
+        mock_task.priority = 0
+        mock_task.call = fake_task_func
+
+        mock_task_result = MagicMock()
+        mock_task_result.task = mock_task
+        mock_task_result.args = [1, 2]
+        mock_task_result.kwargs = {}
+        mock_task_result.errors = []
+        mock_task_result.worker_ids = []
+
         mock_backend = MagicMock()
         mock_backend.options = {}
         mock_backend.queues = None
         mock_backend.alias = "default"
+        mock_backend.worker_id = "worker-123"
+        mock_backend._load_or_init_result_from_envelope.return_value = mock_task_result
+        mock_backend._task_from_module_path.return_value = mock_task
 
         payload: vwd_backend.DjangoTaskEnvelope = {
             "vercel": {"kind": "django-tasks", "version": 1},
@@ -469,59 +498,59 @@ class TestDjangoAsgiApp(unittest.TestCase):
         }
 
         async def run():
-            with patch.object(vwd_app, "_now_utc", return_value=fixed_now):
-                with patch.object(vwd_app, "_resolve_backend", return_value=mock_backend):
+            FakeVisibilityExtender.instances.clear()
+
+            with patch.object(vwd_app, "_resolve_backend", return_value=mock_backend):
+                with patch.object(
+                    vwd_app.queue_callback,
+                    "parse_cloudevent",
+                    return_value=("q", "c", "m"),
+                ):
                     with patch.object(
                         vwd_app.queue_callback,
-                        "parse_cloudevent",
-                        return_value=("q", "c", "m"),
+                        "receive_message_by_id",
+                        return_value=(payload, 1, "2025-01-01T00:00:00Z", "receipt-handle"),
                     ):
                         with patch.object(
                             vwd_app.queue_callback,
-                            "receive_message_by_id",
-                            return_value=(payload, 1, "2025-01-01T00:00:00Z", "ticket"),
+                            "VisibilityExtender",
+                            FakeVisibilityExtender,
                         ):
                             with patch.object(
                                 vwd_app.queue_callback,
-                                "VisibilityExtender",
-                                FakeVisibilityExtender,
-                            ):
+                                "delete_message",
+                            ) as delete_message:
                                 with patch.object(
                                     vwd_app.queue_callback,
                                     "change_visibility",
                                 ) as change_visibility:
-                                    with patch.object(
-                                        vwd_app.queue_callback,
-                                        "delete_message",
-                                    ) as delete_message:
-                                        app = vwd_app.get_asgi_app(backend_alias="default")
-                                        sent = await self._asgi_request(
-                                            app,
-                                            method="POST",
-                                            path="/callback",
-                                            headers=[
-                                                (b"content-type", b"application/cloudevents+json"),
-                                            ],
-                                            body=raw_body,
-                                        )
-                                        return sent, change_visibility, delete_message
+                                    app = vwd_app.get_asgi_app(backend_alias="default")
+                                    sent = await self._asgi_request(
+                                        app,
+                                        method="POST",
+                                        path="/callback",
+                                        headers=[
+                                            (b"content-type", b"application/cloudevents+json"),
+                                        ],
+                                        body=raw_body,
+                                    )
+                                    return sent, delete_message, change_visibility
 
-        sent, change_visibility, delete_message = asyncio.run(run())
+        sent, delete_message, change_visibility = asyncio.run(run())
 
-        # Task should NOT have been executed (delayed)
-        # Visibility should have been changed, not deleted
-        change_visibility.assert_called()
-        delete_message.assert_not_called()
+        # Task should be executed normally despite having a run_after
+        self.assertEqual(len(task_executed), 1)
+        self.assertEqual(task_executed[0], ((1, 2), {}))
+        delete_message.assert_called_once()
+        change_visibility.assert_not_called()
 
         body = json.loads(sent[1]["body"].decode("utf-8"))
         self.assertTrue(body["ok"])
-        self.assertTrue(body["delayed"])
-        self.assertEqual(body["timeoutSeconds"], 123)
 
     def test_rejects_wrong_queue(self) -> None:
         """Test that messages from unexpected queues are rejected."""
         raw_body = (
-            b'{"type":"com.vercel.queue.v1beta","data":'
+            b'{"type":"com.vercel.queue.v2beta","data":'
             b'{"queueName":"wrong-queue","consumerGroup":"c","messageId":"m"}}'
         )
 
@@ -586,7 +615,7 @@ class TestDjangoTaskRetryBehavior(unittest.TestCase):
     def test_task_failure_retries_with_backoff(self) -> None:
         """Test that task failure triggers retry with visibility change."""
         raw_body = (
-            b'{"type":"com.vercel.queue.v1beta","data":'
+            b'{"type":"com.vercel.queue.v2beta","data":'
             b'{"queueName":"q","consumerGroup":"c","messageId":"m"}}'
         )
 
@@ -652,7 +681,7 @@ class TestDjangoTaskRetryBehavior(unittest.TestCase):
                     with patch.object(
                         vwd_app.queue_callback,
                         "receive_message_by_id",
-                        return_value=(payload, 1, "2025-01-01T00:00:00Z", "ticket"),
+                        return_value=(payload, 1, "2025-01-01T00:00:00Z", "receipt-handle"),
                     ):
                         with patch.object(
                             vwd_app.queue_callback,
@@ -721,8 +750,8 @@ class TestDjangoEnqueueSerializesNonPrimitiveTypes(unittest.TestCase):
         captured: list[bytes] = []
 
         class _FakeResponse:
-            status_code = 200
-            reason_phrase = "OK"
+            status_code = 201
+            reason_phrase = "Created"
             text = ""
 
             def raise_for_status(self) -> None:

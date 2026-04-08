@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from typing import Any, Literal
 
 from ..client import send
@@ -69,7 +70,7 @@ class TransportConfig:
                 "use_task_id_as_idempotency_key": True,
                 "token": "...",
                 "base_url": "https://vercel-queue.com",
-                "base_path": "/api/v2/messages",
+                "base_path": "/api/v3/topic",
                 "retention_seconds": 86400,
                 "deployment_id": "...",
                 "timeout": 10.0,
@@ -178,11 +179,26 @@ class Channel(virtual.Channel):
             except Exception:
                 print("[vercel publish] debug print failed")
 
+        # Compute send-time delay from eta if present.
+        delay_seconds: int | None = None
+        eta_raw = envelope.get("eta")
+        if isinstance(eta_raw, str):
+            try:
+                eta_dt = datetime.fromisoformat(eta_raw)
+                if eta_dt.tzinfo is None:
+                    eta_dt = eta_dt.replace(tzinfo=UTC)
+                delta = (eta_dt - datetime.now(UTC)).total_seconds()
+                if delta > 0:
+                    delay_seconds = int(delta)
+            except (TypeError, ValueError):
+                pass
+
         send(
             queue,
             envelope,
             idempotency_key=idempotency_key,
             retention_seconds=self._cfg.retention_seconds,
+            delay_seconds=delay_seconds,
             deployment_id=self._cfg.deployment_id,
             token=self._cfg.token,
             base_url=self._cfg.base_url,

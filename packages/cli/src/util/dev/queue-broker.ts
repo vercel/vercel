@@ -231,6 +231,22 @@ export class QueueBroker {
     return true;
   }
 
+  findMessageByTicket(consumerGroup: string, ticket: string): string | null {
+    for (const group of this.consumerGroups) {
+      if (group.name !== consumerGroup) continue;
+
+      const deliveries = this.deliveryState.get(group.id);
+      if (!deliveries) continue;
+
+      for (const [messageId, state] of deliveries) {
+        if (state.ticket === ticket) {
+          return messageId;
+        }
+      }
+    }
+    return null;
+  }
+
   private findDeliveryState(
     messageId: string,
     serviceName: string
@@ -280,29 +296,35 @@ export class QueueBroker {
     state.deliveryCount++;
     state.leaseExpiresAt = Date.now() + DEFAULT_VISIBILITY_TIMEOUT;
 
-    const cloudEvent = JSON.stringify({
-      type: 'com.vercel.queue.v1beta',
-      specversion: '1.0',
-      source: 'vc-dev',
-      id: message.messageId,
-      time: new Date().toISOString(),
-      datacontenttype: 'application/json',
-      data: {
-        queueName: message.queueName,
-        consumerGroup: group.name,
-        messageId: message.messageId,
-      },
-    });
+    const now = new Date().toISOString();
+    const expiresAt = new Date(
+      new Date(message.createdAt).getTime() + message.retentionMs
+    ).toISOString();
 
     output.debug(
-      `queues: dispatching CloudEvent to worker "${group.name}" at ${upstream}`
+      `queues: dispatching v2beta callback to worker "${group.name}" at ${upstream}`
     );
 
     try {
       const response = await nodeFetch(`${upstream}/`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/cloudevents+json' },
-        body: cloudEvent,
+        headers: {
+          'content-type': message.contentType,
+          'ce-type': 'com.vercel.queue.v2beta',
+          'ce-specversion': '1.0',
+          'ce-source': `/topic/${message.queueName}/consumer/${group.name}`,
+          'ce-id': message.messageId,
+          'ce-time': now,
+          'ce-vqsmessageid': message.messageId,
+          'ce-vqsqueuename': message.queueName,
+          'ce-vqsconsumergroup': group.name,
+          'ce-vqsreceipthandle': ticket,
+          'ce-vqsdeliverycount': String(state.deliveryCount),
+          'ce-vqscreatedat': message.createdAt,
+          'ce-vqsexpiresat': expiresAt,
+          'ce-vqsregion': 'dev1',
+        },
+        body: message.payload,
       });
 
       if (!response.ok) {

@@ -741,6 +741,12 @@ from vercel_runtime.vc_init import vc_handler
     ? await glob('**', { cwd: djangoStatic.cdnOutputDir })
     : {};
 
+  // Worker services use private path routing, so no public routes needed
+  const routes =
+    service?.type === 'worker'
+      ? []
+      : [{ handle: 'filesystem' }, { src: '/(.*)', dest: `/${lambdaPath}` }];
+
   return {
     resultVersion: 2,
     result: {
@@ -748,10 +754,7 @@ from vercel_runtime.vc_init import vc_handler
         [lambdaPath]: output,
         ...staticFiles,
       },
-      routes: [
-        { handle: 'filesystem' },
-        { src: '/(.*)', dest: `/${lambdaPath}` },
-      ],
+      routes,
     },
   };
 };

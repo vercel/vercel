@@ -106,7 +106,7 @@ class PollingWorker:
 
     def _process_message(self, msg: queue_callback.ReceivedMessage) -> None:
         message_id = msg["messageId"]
-        ticket = msg["ticket"]
+        receipt_handle = msg["receiptHandle"]
         payload = msg["payload"]
 
         try:
@@ -115,29 +115,6 @@ class PollingWorker:
 
             # Parse the envelope and convert to Dramatiq message
             dramatiq_message = _envelope_to_message(payload)
-
-            # Handle eta (delayed messages)
-            eta = dramatiq_message.options.get("eta")
-            if eta is not None:
-                from dramatiq.common import current_millis
-
-                now = current_millis()
-                if eta > now:
-                    delay_seconds = int((eta - now) / 1000)
-                    queue_callback.change_visibility(
-                        self.queue_name,
-                        self.consumer_group,
-                        message_id,
-                        ticket,
-                        delay_seconds,
-                        timeout=self.timeout,
-                    )
-                    if self.debug:
-                        print(
-                            f"[dramatiq polling] delaying message {message_id} "
-                            f"for {delay_seconds}s (eta)"
-                        )
-                    return
 
             # Execute the task
             outcome = self._execute_message(dramatiq_message)
@@ -148,7 +125,7 @@ class PollingWorker:
                     self.queue_name,
                     self.consumer_group,
                     message_id,
-                    ticket,
+                    receipt_handle,
                     int(timeout_seconds),
                     timeout=self.timeout,
                 )
@@ -157,7 +134,7 @@ class PollingWorker:
                     self.queue_name,
                     self.consumer_group,
                     message_id,
-                    ticket,
+                    receipt_handle,
                     timeout=self.timeout,
                 )
 
@@ -185,7 +162,7 @@ class PollingWorker:
                         self.queue_name,
                         self.consumer_group,
                         message_id,
-                        ticket,
+                        receipt_handle,
                         timeout=self.timeout,
                     )
                 except Exception:
@@ -198,7 +175,7 @@ class PollingWorker:
                         self.queue_name,
                         self.consumer_group,
                         message_id,
-                        ticket,
+                        receipt_handle,
                         int(self.on_error_visibility_timeout_seconds),
                         timeout=self.timeout,
                     )
@@ -243,7 +220,7 @@ class PollingWorker:
                         "deliveryCount": msg.get("deliveryCount"),
                         "createdAt": msg.get("createdAt"),
                         "contentType": msg.get("contentType"),
-                        "ticket": msg["ticket"],
+                        "receiptHandle": msg["receiptHandle"],
                     },
                     indent=2,
                     default=str,
