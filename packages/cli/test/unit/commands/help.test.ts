@@ -481,6 +481,16 @@ describe('help command', () => {
         ).toMatchSnapshot();
       });
     });
+    describe('integration update subcommand', () => {
+      it('integration update subcommand help column width 120', () => {
+        expect(
+          help(integration.updateSubcommand, {
+            columns: 120,
+            parent: integration.integrationCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
   });
 
   describe('integration-resource help output snapshots', () => {

@@ -20,10 +20,12 @@ import {
   listSubcommand,
   openSubcommand,
   removeSubcommand,
+  updateSubcommand,
 } from './command';
 import { list } from './list';
 import { openIntegration } from './open-integration';
 import { remove } from './remove-integration';
+import { update } from './update-integration';
 import { discover } from './discover';
 import { guide } from './guide';
 import { printAddDynamicHelp } from './add-help';
@@ -38,6 +40,7 @@ const COMMAND_CONFIG = {
   guide: getCommandAliases(guideSubcommand),
   balance: getCommandAliases(balanceSubcommand),
   remove: getCommandAliases(removeSubcommand),
+  update: getCommandAliases(updateSubcommand),
 };
 
 export default async function main(client: Client) {
@@ -193,6 +196,15 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandRemove(subcommandOriginal);
       return remove(client);
+    }
+    case 'update': {
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('integration', subcommandOriginal);
+        printHelp(updateSubcommand);
+        return 0;
+      }
+      telemetry.trackCliSubcommandUpdate(subcommandOriginal);
+      return update(client);
     }
     default: {
       output.error(getInvalidSubcommand(COMMAND_CONFIG));

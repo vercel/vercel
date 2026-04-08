@@ -357,6 +357,83 @@ export const balanceSubcommand = {
   ],
 } as const;
 
+export const updateSubcommand = {
+  name: 'update',
+  aliases: [],
+  description:
+    'Update a marketplace integration installation (billing plan or which projects can access it)',
+  arguments: [
+    {
+      name: 'integration',
+      required: true,
+    },
+  ],
+  options: [
+    {
+      name: 'plan',
+      shorthand: 'p',
+      type: String,
+      deprecated: false,
+      argument: 'PLAN_ID',
+      description:
+        'Billing plan ID for integrations that support installation-level billing plans',
+    },
+    {
+      name: 'authorization-id',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      argument: 'ID',
+      description:
+        'Billing authorization ID when the platform requires it for plan changes',
+    },
+    {
+      name: 'projects',
+      shorthand: null,
+      type: [String],
+      deprecated: false,
+      argument: 'PROJECT',
+      description:
+        'Project ID allowed to use this installation, or "all" for all projects (repeatable)',
+    },
+    {
+      name: 'installation-id',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      argument: 'ID',
+      description:
+        'Configuration ID when multiple marketplace installations exist for this integration',
+    },
+    formatOption,
+  ],
+  examples: [
+    {
+      name: 'Grant all team projects access to the integration',
+      value: [
+        `${packageName} integration update <integration> --projects all`,
+        `${packageName} integration update neon --projects all`,
+      ],
+    },
+    {
+      name: 'Limit access to specific projects',
+      value: `${packageName} integration update neon --projects prj_abc --projects prj_def`,
+    },
+    {
+      name: 'Change installation billing plan',
+      value: `${packageName} integration update acme --plan pro`,
+    },
+    {
+      name: 'Select installation when several exist',
+      value: `${packageName} integration update neon --installation-id icfg_xxx --projects all`,
+    },
+    {
+      name: 'Output result as JSON',
+      value: `${packageName} integration update neon --projects all --format=json`,
+    },
+  ],
+} as const;
+
 export const removeSubcommand = {
   name: 'remove',
   aliases: [],
@@ -458,6 +535,7 @@ export const integrationCommand = {
     installationsSubcommand,
     listSubcommand,
     openSubcommand,
+    updateSubcommand,
     removeSubcommand,
   ],
   examples: [

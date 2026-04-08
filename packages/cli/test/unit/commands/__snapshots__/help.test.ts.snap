@@ -3035,59 +3035,80 @@ exports[`help command > integration help output snapshots > integration help col
 
   Commands:
 
-  add       integration      Instal…
-                             a      
-                             market…
-                             integr…
-  balance   integration      Shows  
-                             the    
-                             balanc…
-                             and    
-                             thresh…
-                             of a   
-                             specif…
-                             market…
-                             integr…
-  discover  [query]          Discov…
-                             availa…
-                             market…
-                             integr…
-  guide     integration      Show   
-                             getting
-                             started
-                             guides 
-                             and    
-                             code   
-                             snippe…
-                             for a  
-                             market…
-                             integr…
-  list      [project]        List   
-                             resour…
-                             from   
-                             market…
-                             integr…
-                             for the
-                             current
-                             project
-  open      name [resource]  Opens a
-                             market…
-                             integr…
-                             or     
-                             resour…
-                             dashbo…
-                             via SSO
-  remove    integration      Uninst…
-                             a      
-                             market…
-                             integr…
-                             Resour…
-                             must be
-                             removed
-                             first  
-                             using  
-                             \`integ…
-                             remove…
+  add            integration      Instal…
+                                  a      
+                                  market…
+                                  integr…
+  balance        integration      Shows  
+                                  the    
+                                  balanc…
+                                  and    
+                                  thresh…
+                                  of a   
+                                  specif…
+                                  market…
+                                  integr…
+  discover       [query]          Discov…
+                                  availa…
+                                  market…
+                                  integr…
+  guide          integration      Show   
+                                  getting
+                                  started
+                                  guides 
+                                  and    
+                                  code   
+                                  snippe…
+                                  for a  
+                                  market…
+                                  integr…
+  installations                   List   
+                                  market…
+                                  integr…
+                                  instal…
+                                  for the
+                                  current
+                                  team   
+                                  (accou…
+                                  scope) 
+  list           [project]        List   
+                                  resour…
+                                  from   
+                                  market…
+                                  integr…
+                                  for the
+                                  current
+                                  project
+  open           name [resource]  Opens a
+                                  market…
+                                  integr…
+                                  or     
+                                  resour…
+                                  dashbo…
+                                  via SSO
+  update         integration      Update 
+                                  a      
+                                  market…
+                                  integr…
+                                  instal…
+                                  (billi…
+                                  plan or
+                                  which  
+                                  projec…
+                                  can    
+                                  access 
+                                  it)    
+  remove         integration      Uninst…
+                                  a      
+                                  market…
+                                  integr…
+                                  Resour…
+                                  must be
+                                  removed
+                                  first  
+                                  using  
+                                  \`integ…
+                                  remove…
 
 
   Global Options:
@@ -3156,19 +3177,23 @@ exports[`help command > integration help output snapshots > integration help col
 
   Commands:
 
-  add       integration      Installs a marketplace integration             
-  balance   integration      Shows the balances and thresholds of a         
-                             specified marketplace integration              
-  discover  [query]          Discover available marketplace integrations    
-  guide     integration      Show getting started guides and code snippets  
-                             for a marketplace integration                  
-  list      [project]        List resources from marketplace integrations   
-                             for the current project                        
-  open      name [resource]  Opens a marketplace integration's or resource's
-                             dashboard via SSO                              
-  remove    integration      Uninstalls a marketplace integration. Resources
-                             must be removed first using                    
-                             \`integration-resource remove\`.                 
+  add            integration      Installs a marketplace integration             
+  balance        integration      Shows the balances and thresholds of a         
+                                  specified marketplace integration              
+  discover       [query]          Discover available marketplace integrations    
+  guide          integration      Show getting started guides and code snippets  
+                                  for a marketplace integration                  
+  installations                   List marketplace integration installations for 
+                                  the current team (account scope)               
+  list           [project]        List resources from marketplace integrations   
+                                  for the current project                        
+  open           name [resource]  Opens a marketplace integration's or resource's
+                                  dashboard via SSO                              
+  update         integration      Update a marketplace integration installation  
+                                  (billing plan or which projects can access it) 
+  remove         integration      Uninstalls a marketplace integration. Resources
+                                  must be removed first using                    
+                                  \`integration-resource remove\`.                 
 
 
   Global Options:
@@ -3204,14 +3229,17 @@ exports[`help command > integration help output snapshots > integration help col
 
   Commands:
 
-  add       integration      Installs a marketplace integration                                                     
-  balance   integration      Shows the balances and thresholds of a specified marketplace integration               
-  discover  [query]          Discover available marketplace integrations                                            
-  guide     integration      Show getting started guides and code snippets for a marketplace integration            
-  list      [project]        List resources from marketplace integrations for the current project                   
-  open      name [resource]  Opens a marketplace integration's or resource's dashboard via SSO                      
-  remove    integration      Uninstalls a marketplace integration. Resources must be removed first using            
-                             \`integration-resource remove\`.                                                         
+  add            integration      Installs a marketplace integration                                                     
+  balance        integration      Shows the balances and thresholds of a specified marketplace integration               
+  discover       [query]          Discover available marketplace integrations                                            
+  guide          integration      Show getting started guides and code snippets for a marketplace integration            
+  installations                   List marketplace integration installations for the current team (account scope)        
+  list           [project]        List resources from marketplace integrations for the current project                   
+  open           name [resource]  Opens a marketplace integration's or resource's dashboard via SSO                      
+  update         integration      Update a marketplace integration installation (billing plan or which projects can      
+                                  access it)                                                                             
+  remove         integration      Uninstalls a marketplace integration. Resources must be removed first using            
+                                  \`integration-resource remove\`.                                                         
 
 
   Global Options:
@@ -3328,6 +3356,61 @@ exports[`help command > integration help output snapshots > integration remove s
   - Output as JSON
 
     $ vercel integration remove acme --format=json --yes
+
+"
+`;
+
+exports[`help command > integration help output snapshots > integration update subcommand > integration update subcommand help column width 120 1`] = `
+"
+  ▲ vercel integration update integration [options]
+
+  Update a marketplace integration installation (billing plan or which projects can access it)                          
+
+  Options:
+
+       --authorization-id <ID>  Billing authorization ID when the platform requires it for plan changes                      
+  -F,  --format <FORMAT>        Specify the output format (json)                                                             
+       --installation-id <ID>   Configuration ID when multiple marketplace installations exist for this integration          
+  -p,  --plan <PLAN_ID>         Billing plan ID for integrations that support installation-level billing plans               
+       --projects <PROJECT>     Project ID allowed to use this installation, or "all" for all projects (repeatable)          
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+       --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - Grant all team projects access to the integration
+
+    $ vercel integration update <integration> --projects all
+    $ vercel integration update neon --projects all
+
+  - Limit access to specific projects
+
+    $ vercel integration update neon --projects prj_abc --projects prj_def
+
+  - Change installation billing plan
+
+    $ vercel integration update acme --plan pro
+
+  - Select installation when several exist
+
+    $ vercel integration update neon --installation-id icfg_xxx --projects all
+
+  - Output result as JSON
+
+    $ vercel integration update neon --projects all --format=json
 
 "
 `;

@@ -512,6 +512,32 @@ const configurations: Record<string, Configuration[]> = {
     },
   ],
   'acme-no-results': [],
+  'acme-multi': [
+    {
+      id: 'icfg_install_a',
+      integrationId: 'acme-multi',
+      ownerId: 'team_dummy',
+      slug: 'acme-multi',
+      teamId: 'team_dummy',
+      userId: 'user_dummy',
+      scopes: ['read-write:integration-resource'],
+      source: 'marketplace',
+      installationType: 'marketplace',
+      projects: [],
+    },
+    {
+      id: 'icfg_install_b',
+      integrationId: 'acme-multi',
+      ownerId: 'team_dummy',
+      slug: 'acme-multi',
+      teamId: 'team_dummy',
+      userId: 'user_dummy',
+      scopes: ['read-write:integration-resource'],
+      source: 'marketplace',
+      installationType: 'marketplace',
+      projects: [],
+    },
+  ],
 };
 
 const integrationPlans: Record<string, unknown> = {
