@@ -100,10 +100,10 @@ export async function resolveAndFetchIntegration(
   try {
     const integrations = await fetchMarketplaceIntegrationsList(client);
     entries = toDiscoverEntries(integrations);
-  } catch (_discoverError) {
+  } catch (discoverError) {
     output.stopSpinner();
     output.error(
-      `Failed to get integration "${slug}": ${directError?.message ?? (_discoverError as Error).message}`
+      `Failed to get integration "${slug}": ${directError?.message ?? (discoverError as Error).message}`
     );
     telemetry.trackCliArgumentIntegration(slug, false);
     return null;
@@ -129,6 +129,7 @@ export async function resolveAndFetchIntegration(
         true
       );
       if (!confirmed) {
+        telemetry.trackCliArgumentIntegration(slug, false);
         return null;
       }
     }

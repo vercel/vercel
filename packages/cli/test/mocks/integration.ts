@@ -360,11 +360,19 @@ const integrations: Record<string, Integration> = {
     slug: 'acme-multi',
     products: [
       {
-        id: 'acme-product',
-        name: 'Acme Product',
-        slug: 'acme',
+        id: 'acme-kv-product',
+        name: 'Acme KV',
+        slug: 'acme-kv',
         type: 'storage',
-        shortDescription: 'The Acme product with multiple fields',
+        shortDescription: 'Key-value store',
+        metadataSchema: metadataSchema2,
+      },
+      {
+        id: 'acme-db-product',
+        name: 'Acme DB',
+        slug: 'acme-db',
+        type: 'storage',
+        shortDescription: 'Relational database',
         metadataSchema: metadataSchema2,
       },
     ],

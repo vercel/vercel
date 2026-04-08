@@ -2752,5 +2752,21 @@ describe('integration add (auto-provision)', () => {
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(1);
     });
+
+    it('should resolve compound slug from multi-product integration', async () => {
+      client.setArgv('integration', 'add', 'redis');
+      const exitCodePromise = integrationCommand(client);
+
+      // Only acme-multi/acme-kv matches "redis" tag
+      await expect(client.stderr).toOutput(
+        'Install Acme KV (acme-multi/acme-kv)?'
+      );
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput('Acme KV successfully provisioned');
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+    });
   });
 });
