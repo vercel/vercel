@@ -2754,16 +2754,18 @@ describe('integration add (auto-provision)', () => {
     });
 
     it('should resolve compound slug from multi-product integration', async () => {
-      client.setArgv('integration', 'add', 'redis');
+      client.setArgv('integration', 'add', 'queue');
       const exitCodePromise = integrationCommand(client);
 
-      // Only acme-multi/acme-kv matches "redis" tag
+      // "queue" tag uniquely matches acme-two-products/acme-b (compound slug)
       await expect(client.stderr).toOutput(
-        'Install Acme KV (acme-multi/acme-kv)?'
+        'Install Acme Product B (acme-two-products/acme-b)?'
       );
       client.stdin.write('y\n');
 
-      await expect(client.stderr).toOutput('Acme KV successfully provisioned');
+      await expect(client.stderr).toOutput(
+        'Acme Product B successfully provisioned'
+      );
 
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);
