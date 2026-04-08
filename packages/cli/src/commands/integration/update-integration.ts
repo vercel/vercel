@@ -11,12 +11,17 @@ import type { Configuration } from '../../util/integration/types';
 import { patchIntegrationConfiguration } from '../../util/integration/patch-integration-configuration';
 import { updateSubcommand } from './command';
 import { IntegrationUpdateTelemetryClient } from '../../util/telemetry/commands/integration/update';
+import {
+  buildCommandWithGlobalFlags,
+  outputAgentError,
+} from '../../util/agent-output';
+import { AGENT_REASON } from '../../util/agent-output-constants';
 import { isAPIError } from '../../util/errors-ts';
 import { packageName } from '../../util/pkg-name';
 
 type SelectResult =
   | { ok: true; configuration: Configuration }
-  | { ok: false; message: string };
+  | { ok: false; message: string; reason: string };
 
 function selectConfiguration(
   configurations: Configuration[],
@@ -26,6 +31,7 @@ function selectConfiguration(
   if (configurations.length === 0) {
     return {
       ok: false,
+      reason: AGENT_REASON.NOT_FOUND,
       message: `No integration "${integrationSlug}" found.`,
     };
   }
@@ -36,6 +42,7 @@ function selectConfiguration(
       const known = configurations.map(c => c.id).join(', ');
       return {
         ok: false,
+        reason: AGENT_REASON.INVALID_ARGUMENTS,
         message: `No installation matching --installation-id ${installationId}. Known configuration IDs: ${known}`,
       };
     }
@@ -46,6 +53,7 @@ function selectConfiguration(
     const list = configurations.map(c => c.id).join(', ');
     return {
       ok: false,
+      reason: AGENT_REASON.INVALID_ARGUMENTS,
       message: `Multiple installations found for "${integrationSlug}": ${list}. Re-run with --installation-id <id> to select one. Run \`${packageName} integration installations\` to list installation IDs for this team.`,
     };
   }
@@ -74,6 +82,30 @@ function buildProjectsBody(
   return { projects: raw };
 }
 
+/** Stderr for humans; JSON on stdout when `--non-interactive` (agent-style). */
+function emitUpdateCliError(
+  client: Client,
+  message: string,
+  reason: string,
+  exitCode: number,
+  extra?: {
+    next?: Array<{ command: string; when?: string }>;
+    hint?: string;
+  }
+): void {
+  outputAgentError(
+    client,
+    {
+      status: 'error',
+      reason,
+      message,
+      ...extra,
+    },
+    exitCode
+  );
+  output.error(message);
+}
+
 export async function update(client: Client) {
   const telemetry = new IntegrationUpdateTelemetryClient({
     opts: { store: client.telemetryEventStore },
@@ -84,26 +116,56 @@ export async function update(client: Client) {
   try {
     parsedArguments = parseArguments(client.argv.slice(3), flagsSpecification);
   } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    outputAgentError(
+      client,
+      {
+        status: 'error',
+        reason: AGENT_REASON.INVALID_ARGUMENTS,
+        message: msg,
+      },
+      1
+    );
     printError(error);
     return 1;
   }
 
   const formatResult = validateJsonOutput(parsedArguments.flags);
   if (!formatResult.valid) {
-    output.error(formatResult.error);
-    return 1;
-  }
-
-  const preferJson = formatResult.jsonOutput;
-
-  if (parsedArguments.args.length < 2) {
-    output.error(
-      'You must specify an integration slug. Usage: `vercel integration update <integration> --plan <id>` or `--projects ...`.'
+    emitUpdateCliError(
+      client,
+      formatResult.error,
+      AGENT_REASON.INVALID_ARGUMENTS,
+      1
     );
     return 1;
   }
+
+  const preferJson = formatResult.jsonOutput || Boolean(client.nonInteractive);
+
+  if (parsedArguments.args.length < 2) {
+    const msg =
+      'You must specify an integration slug. Usage: `vercel integration update <integration> --plan <id>` or `--projects ...`.';
+    emitUpdateCliError(client, msg, AGENT_REASON.MISSING_ARGUMENTS, 1, {
+      next: [
+        {
+          command: buildCommandWithGlobalFlags(
+            client.argv,
+            'integration update neon --projects all'
+          ),
+          when: 'Example: grant all projects access to an installation',
+        },
+      ],
+    });
+    return 1;
+  }
   if (parsedArguments.args.length > 2) {
-    output.error('Cannot specify more than one integration at a time.');
+    emitUpdateCliError(
+      client,
+      'Cannot specify more than one integration at a time.',
+      AGENT_REASON.INVALID_ARGUMENTS,
+      2
+    );
     return 2;
   }
 
@@ -124,19 +186,33 @@ export async function update(client: Client) {
     projectsRaw !== undefined ? buildProjectsBody(projectsRaw) : null;
 
   if (hasPlan && projectsRaw !== undefined && projectsRaw.length > 0) {
-    output.error(
-      'Pass either --plan or --projects, not both. See `vercel integration update --help`.'
+    emitUpdateCliError(
+      client,
+      'Pass either --plan or --projects, not both. See `vercel integration update --help`.',
+      AGENT_REASON.INVALID_ARGUMENTS,
+      1
     );
     return 1;
   }
   if (!hasPlan && !projectsOutcome) {
-    output.error(
-      'Nothing to update. Pass --plan to change billing plan, or --projects to change project access.'
+    emitUpdateCliError(
+      client,
+      'Nothing to update. Pass --plan to change billing plan, or --projects to change project access.',
+      AGENT_REASON.MISSING_ARGUMENTS,
+      1,
+      {
+        hint: `Example: \`${packageName} integration update ${integrationSlug} --projects all\``,
+      }
     );
     return 1;
   }
   if (projectsOutcome && 'error' in projectsOutcome) {
-    output.error(projectsOutcome.error);
+    emitUpdateCliError(
+      client,
+      projectsOutcome.error,
+      AGENT_REASON.INVALID_ARGUMENTS,
+      1
+    );
     return 1;
   }
 
@@ -152,7 +228,20 @@ export async function update(client: Client) {
 
   const { team } = await getScope(client);
   if (!team) {
-    output.error('Team not found.');
+    emitUpdateCliError(
+      client,
+      'Team not found.',
+      AGENT_REASON.MISSING_SCOPE,
+      1,
+      {
+        next: [
+          {
+            command: buildCommandWithGlobalFlags(client.argv, 'teams switch'),
+            when: 'Switch to a team that has this integration',
+          },
+        ],
+      }
+    );
     return 1;
   }
   client.config.currentTeam = team.id;
@@ -170,7 +259,7 @@ export async function update(client: Client) {
     installationId
   );
   if (!selected.ok) {
-    output.error(selected.message);
+    emitUpdateCliError(client, selected.message, selected.reason, 1);
     telemetry.trackCliArgumentIntegration(integrationSlug, false);
     return 1;
   }
@@ -196,7 +285,12 @@ export async function update(client: Client) {
     const apiMsg = isAPIError(error)
       ? error.serverMessage || error.message
       : (error as Error).message;
-    output.error(`Failed to update ${integrationSlug}: ${apiMsg}`);
+    emitUpdateCliError(
+      client,
+      `Failed to update ${integrationSlug}: ${apiMsg}`,
+      AGENT_REASON.API_ERROR,
+      1
+    );
     return 1;
   }
 

@@ -3412,6 +3412,10 @@ exports[`help command > integration help output snapshots > integration update s
 
     $ vercel integration update neon --projects all --format=json
 
+  - Non-interactive (JSON success and errors on stdout)
+
+    $ vercel integration update neon --projects all --non-interactive
+
 "
 `;
 

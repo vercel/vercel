@@ -431,6 +431,10 @@ export const updateSubcommand = {
       name: 'Output result as JSON',
       value: `${packageName} integration update neon --projects all --format=json`,
     },
+    {
+      name: 'Non-interactive (JSON success and errors on stdout)',
+      value: `${packageName} integration update neon --projects all --non-interactive`,
+    },
   ],
 } as const;
 

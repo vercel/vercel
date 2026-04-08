@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import integrationCommand from '../../../../src/commands/integration';
 import { client } from '../../../mocks/client';
 import { useConfiguration } from '../../../mocks/integration';
@@ -14,6 +14,11 @@ describe('integration', () => {
       team = Array.isArray(teams) ? teams[0] : teams.teams[0];
       client.config.currentTeam = team.id;
       useConfiguration();
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+      client.nonInteractive = false;
     });
 
     it('updates project access with --projects all', async () => {
@@ -65,6 +70,34 @@ describe('integration', () => {
       expect(patchedBody).toEqual({
         billingPlanId: 'pro',
         authorizationId: 'auth_123',
+      });
+    });
+
+    it('outputs JSON on success when --non-interactive even without --format', async () => {
+      client.nonInteractive = true;
+      client.scenario.patch(
+        '/v1/integrations/configuration/:id',
+        (_req, res) => {
+          res.status(200).json({});
+        }
+      );
+
+      client.setArgv(
+        'integration',
+        'update',
+        'acme-no-projects',
+        '--projects',
+        'all',
+        '--non-interactive'
+      );
+      const code = await integrationCommand(client);
+      expect(code).toBe(0);
+      const out = JSON.parse(client.stdout.getFullOutput().trim());
+      expect(out).toMatchObject({
+        integration: 'acme-no-projects',
+        configurationId: 'acme-first',
+        updated: true,
+        projects: 'all',
       });
     });
 
@@ -138,6 +171,29 @@ describe('integration', () => {
       const code = await integrationCommand(client);
       expect(code).toBe(1);
       await expect(client.stderr).toOutput('must specify an integration');
+    });
+
+    it('writes structured JSON error to stdout when non-interactive and integration slug is missing', async () => {
+      vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+        throw new Error(`exit:${code ?? 0}`);
+      }) as () => never);
+      client.nonInteractive = true;
+      client.setArgv(
+        'integration',
+        'update',
+        '--non-interactive',
+        '--cwd',
+        '/tmp/example'
+      );
+      await expect(integrationCommand(client)).rejects.toThrow('exit:1');
+      const payload = JSON.parse(client.stdout.getFullOutput().trim());
+      expect(payload).toMatchObject({
+        status: 'error',
+        reason: 'missing_arguments',
+      });
+      expect(payload.message).toMatch(/must specify an integration/i);
+      expect(payload.next?.[0]?.command).toContain('integration update neon');
+      expect(payload.next?.[0]?.command).toContain('--non-interactive');
     });
 
     it('errors when --plan and --projects are combined', async () => {
