@@ -200,6 +200,9 @@ export default async function protection(
 
   const ssoSelected = Boolean(parsedArgs.flags['--sso']);
   const passwordSelected = Boolean(parsedArgs.flags['--password']);
+  const customerSupportCodeVisibilitySelected = Boolean(
+    parsedArgs.flags['--customer-support-code-visibility']
+  );
   const skewSelected = Boolean(parsedArgs.flags['--skew']);
   const bypassSelected = Boolean(parsedArgs.flags['--protection-bypass']);
   const protectionBypassSecret = parsedArgs.flags[
@@ -212,19 +215,20 @@ export default async function protection(
     action &&
     !ssoSelected &&
     !passwordSelected &&
+    !customerSupportCodeVisibilitySelected &&
     !skewSelected &&
     !bypassSelected &&
     !gitForkProtectionSelected
   ) {
     const msg =
-      'No protection selected. Pass --sso, --password, --skew, --protection-bypass, or --git-fork-protection. Usage: `vercel project protection enable|disable [name] --sso|--password|--skew|--protection-bypass|--git-fork-protection`';
+      'No protection selected. Pass --sso, --password, --customer-support-code-visibility, --skew, --protection-bypass, or --git-fork-protection. Usage: `vercel project protection enable|disable [name] --sso|--password|--customer-support-code-visibility|--skew|--protection-bypass|--git-fork-protection`';
     outputAgentError(
       client,
       {
         status: 'error',
         reason: AGENT_REASON.MISSING_ARGUMENTS,
         message: msg,
-        hint: 'Use `project protection enable|disable` with a protection flag (e.g. --sso, --password, --skew, --protection-bypass, or --git-fork-protection).',
+        hint: 'Use `project protection enable|disable` with a protection flag (e.g. --sso, --password, --customer-support-code-visibility, --skew, --protection-bypass, or --git-fork-protection).',
         next: [
           {
             command: buildCommandWithGlobalFlags(
@@ -239,6 +243,13 @@ export default async function protection(
               `project protection ${action} --password`
             ),
             when: 'Example: same action with password protection selected',
+          },
+          {
+            command: buildCommandWithGlobalFlags(
+              client.argv,
+              `project protection ${action} --customer-support-code-visibility`
+            ),
+            when: 'Example: same action with customer support code visibility selected',
           },
           {
             command: buildCommandWithGlobalFlags(
@@ -358,6 +369,9 @@ export default async function protection(
           ? { deploymentType: ENABLED_DEPLOYMENT_TYPE }
           : null;
     }
+    if (customerSupportCodeVisibilitySelected) {
+      patchBody.customerSupportCodeVisibility = action === 'enable';
+    }
     if (skewSelected) {
       patchBody.skewProtectionMaxAge = skewProtectionMaxAge;
     }
@@ -387,6 +401,9 @@ export default async function protection(
             projectName: project.name,
             ssoProtection: ssoSelected ? action === 'enable' : undefined,
             passwordProtection: passwordSelected
+              ? action === 'enable'
+              : undefined,
+            customerSupportCodeVisibility: customerSupportCodeVisibilitySelected
               ? action === 'enable'
               : undefined,
             skewProtection: skewSelected ? action === 'enable' : undefined,
