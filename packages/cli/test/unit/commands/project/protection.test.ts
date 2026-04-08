@@ -129,6 +129,11 @@ describe('project protection (SSO)', () => {
       ).toBe(true);
       expect(
         payload.next?.some((n: { command: string }) =>
+          /project protection.*--skew/.test(n.command)
+        )
+      ).toBe(true);
+      expect(
+        payload.next?.some((n: { command: string }) =>
           /project protection.*--protection-bypass/.test(n.command)
         )
       ).toBe(true);
@@ -244,7 +249,7 @@ describe('project protection (password)', () => {
   });
 });
 
-describe('project protection (automation bypass)', () => {
+describe('project protection (skew)', () => {
   it('shows protection settings by default', async () => {
     useProject({
       ...defaultProject,
@@ -259,7 +264,7 @@ describe('project protection (automation bypass)', () => {
     await expect(client.stderr).toOutput('Protection settings');
   });
 
-  it('requires --protection-bypass for action mode', async () => {
+  it('requires --skew for action mode', async () => {
     useProject({
       ...defaultProject,
       id: 'prj_123',
@@ -273,6 +278,145 @@ describe('project protection (automation bypass)', () => {
     await expect(client.stderr).toOutput('No protection selected');
   });
 
+  it('includes skewProtectionMaxAge when listing project protection as JSON', async () => {
+    const projectWithSkew = {
+      ...defaultProject,
+      id: 'prj_123',
+      name: 'my-project',
+      skewProtectionMaxAge: 2592000,
+    };
+    useProject(projectWithSkew as any);
+
+    client.setArgv('project', 'protection', 'my-project', '--format', 'json');
+    const exitCode = await project(client);
+    expect(exitCode).toBe(0);
+    const payload = JSON.parse(client.stdout.getFullOutput().trim());
+    expect(payload.skewProtectionMaxAge).toBe(2592000);
+  });
+
+  it('enables skew protection via skewProtectionMaxAge', async () => {
+    useProject({
+      ...defaultProject,
+      id: 'prj_123',
+      name: 'my-project',
+    });
+
+    client.scenario.patch('/v9/projects/prj_123', (req, res) => {
+      expect(req.body).toEqual({ skewProtectionMaxAge: 2592000 });
+      res.json({ id: 'prj_123' });
+    });
+
+    client.setArgv('project', 'protection', 'enable', 'my-project', '--skew');
+    const exitCode = await project(client);
+
+    expect(exitCode).toBe(0);
+  });
+
+  it('enables skew protection with custom --skew-max-age (seconds)', async () => {
+    useProject({
+      ...defaultProject,
+      id: 'prj_123',
+      name: 'my-project',
+    });
+
+    client.scenario.patch('/v9/projects/prj_123', (req, res) => {
+      expect(req.body).toEqual({ skewProtectionMaxAge: 604800 });
+      res.json({ id: 'prj_123' });
+    });
+
+    client.setArgv(
+      'project',
+      'protection',
+      'enable',
+      'my-project',
+      '--skew',
+      '--skew-max-age',
+      '604800'
+    );
+    const exitCode = await project(client);
+
+    expect(exitCode).toBe(0);
+  });
+
+  it('rejects disable with --skew-max-age', async () => {
+    useProject({
+      ...defaultProject,
+      id: 'prj_123',
+      name: 'my-project',
+    });
+
+    client.setArgv(
+      'project',
+      'protection',
+      'disable',
+      'my-project',
+      '--skew',
+      '--skew-max-age',
+      '604800'
+    );
+    const exitCode = await project(client);
+
+    expect(exitCode).toBe(2);
+    await expect(client.stderr).toOutput('skew-max-age');
+  });
+
+  it('rejects invalid --skew-max-age', async () => {
+    useProject({
+      ...defaultProject,
+      id: 'prj_123',
+      name: 'my-project',
+    });
+
+    client.setArgv(
+      'project',
+      'protection',
+      'enable',
+      'my-project',
+      '--skew',
+      '--skew-max-age',
+      'not-a-number'
+    );
+    const exitCode = await project(client);
+
+    expect(exitCode).toBe(1);
+    await expect(client.stderr).toOutput('Invalid --skew-max-age');
+  });
+
+  it('returns JSON for enable with --skew', async () => {
+    useProject({
+      ...defaultProject,
+      id: 'prj_123',
+      name: 'my-project',
+    });
+
+    client.scenario.patch('/v9/projects/prj_123', (_req, res) => {
+      res.json({ id: 'prj_123' });
+    });
+
+    client.setArgv(
+      'project',
+      'protection',
+      'enable',
+      'my-project',
+      '--skew',
+      '--format',
+      'json'
+    );
+    const exitCode = await project(client);
+    expect(exitCode).toBe(0);
+
+    const out = JSON.parse(client.stdout.getFullOutput().trim());
+    expect(out).toMatchObject({
+      action: 'enable',
+      projectId: 'prj_123',
+      projectName: 'my-project',
+      skewProtection: true,
+      skewProtectionMaxAge: 2592000,
+    });
+  });
+});
+
+describe('project protection (automation bypass)', () => {
   it('enables protection bypass via project bypass endpoint', async () => {
     useProject({
       ...defaultProject,

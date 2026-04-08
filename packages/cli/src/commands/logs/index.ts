@@ -16,7 +16,11 @@ import {
   ProjectNotFound,
 } from '../../util/errors-ts';
 import { displayRuntimeLogs } from '../../util/logs';
-import { fetchAllRequestLogs, type RequestLogEntry } from '../../util/logs-v2';
+import {
+  fetchAllRequestLogs,
+  type RequestLogEntry,
+  type RequestLogMessage,
+} from '../../util/logs-v2';
 import getDeployment from '../../util/get-deployment';
 import { getCommandName } from '../../util/pkg-name';
 import { LogsTelemetryClient } from '../../util/telemetry/commands/logs';
@@ -207,6 +211,7 @@ export default async function logs(client: Client) {
     parsedArguments = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (err) {
     printError(err);
+    output.print(help(logsCommand, { columns: client.stderr.columns }));
     return 1;
   }
 
@@ -219,7 +224,7 @@ export default async function logs(client: Client) {
   if (parsedArguments.flags['--help']) {
     telemetry.trackCliFlagHelp('logs');
     output.print(help(logsCommand, { columns: client.stderr.columns }));
-    return 2;
+    return 0;
   }
 
   const subArgs = parsedArguments.args.slice(1);
@@ -562,6 +567,7 @@ export default async function logs(client: Client) {
         statusCode: number;
         message: string;
         messageTruncated?: boolean;
+        logs: RequestLogMessage[];
       };
 
       const rowData: RowData[] = logs.map(log => {
@@ -575,6 +581,7 @@ export default async function logs(client: Client) {
           statusCode,
           message: log.message?.replace(/\n/g, ' ').trim() || '',
           messageTruncated: log.messageTruncated,
+          logs: log.logs,
         };
       });
 
@@ -632,12 +639,18 @@ export default async function logs(client: Client) {
         formatHeader: header => chalk.dim(header),
         formatRow: expandOption
           ? (rowStr, row) => {
-              if (row.message) {
-                const coloredMessage = colorizeMessage(row.message, row.level);
-                const truncatedIndicator = row.messageTruncated
-                  ? chalk.gray('…')
-                  : '';
-                return `${rowStr}\n${coloredMessage}${truncatedIndicator}\n`;
+              if (row.logs.length > 0) {
+                const renderedLogs = row.logs
+                  .map(log => {
+                    const message = log.message.replace(/\n/g, ' ').trim();
+                    const safeMessage = message || '(no message)';
+                    const truncatedIndicator = log.messageTruncated
+                      ? chalk.gray('…')
+                      : '';
+                    return `${colorizeMessage(safeMessage, log.level)}${truncatedIndicator}`;
+                  })
+                  .join('\n');
+                return `${rowStr}\n${renderedLogs}\n`;
               }
               return rowStr + '\n';
             }

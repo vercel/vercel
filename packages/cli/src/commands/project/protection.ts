@@ -17,11 +17,35 @@ import type { JSONObject, Project } from '@vercel-internals/types';
 
 const PROTECTION_ACTIONS = ['enable', 'disable'] as const;
 type ProtectionAction = (typeof PROTECTION_ACTIONS)[number];
+const DEFAULT_SKEW_PROTECTION_MAX_AGE = 2592000;
 const ENABLED_DEPLOYMENT_TYPE = 'prod_deployment_urls_and_all_previews';
+
+function parseSkewMaxAgeSeconds(
+  value: string
+): { ok: true; seconds: number } | { ok: false; message: string } {
+  const trimmed = value.trim();
+  if (trimmed === '' || !/^\d+$/.test(trimmed)) {
+    return {
+      ok: false,
+      message:
+        'Invalid --skew-max-age: expected a positive integer (seconds), e.g. 604800.',
+    };
+  }
+  const n = Number(trimmed);
+  if (!Number.isSafeInteger(n) || n <= 0) {
+    return {
+      ok: false,
+      message:
+        'Invalid --skew-max-age: value must be a positive integer within safe range.',
+    };
+  }
+  return { ok: true, seconds: n };
+}
+
 const PROTECTION_KEYS = [
   'passwordProtection',
   'ssoProtection',
-  'skewProtection',
+  'skewProtectionMaxAge',
   'customerSupportCodeVisibility',
   'gitForkProtection',
   'protectionBypass',
@@ -124,23 +148,80 @@ export default async function protection(
 
   const preferJson = formatResult.jsonOutput || Boolean(client.nonInteractive);
 
+  const skewMaxAgeFlag = parsedArgs.flags['--skew-max-age'] as
+    | string
+    | undefined;
+
+  if (action === 'disable' && skewMaxAgeFlag !== undefined) {
+    const msg =
+      '`--skew-max-age` can only be used with `project protection enable`.';
+    outputAgentError(
+      client,
+      {
+        status: 'error',
+        reason: AGENT_REASON.INVALID_ARGUMENTS,
+        message: msg,
+        hint: 'Use `project protection disable ... --skew` to turn skew protection off.',
+      },
+      2
+    );
+    output.error(msg);
+    return 2;
+  }
+
+  let enableSkewMaxAgeSeconds: number | undefined;
+  if (action === 'enable' && skewMaxAgeFlag !== undefined) {
+    const parsed = parseSkewMaxAgeSeconds(skewMaxAgeFlag);
+    if (!parsed.ok) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: AGENT_REASON.INVALID_ARGUMENTS,
+          message: parsed.message,
+          hint: 'Pass a positive integer number of seconds (e.g. 604800 for 7 days).',
+          next: [
+            {
+              command: buildCommandWithGlobalFlags(
+                client.argv,
+                'project protection enable --skew --skew-max-age 604800'
+              ),
+              when: 'Example with a valid max age in seconds',
+            },
+          ],
+        },
+        1
+      );
+      output.error(parsed.message);
+      return 1;
+    }
+    enableSkewMaxAgeSeconds = parsed.seconds;
+  }
+
   const ssoSelected = Boolean(parsedArgs.flags['--sso']);
   const passwordSelected = Boolean(parsedArgs.flags['--password']);
+  const skewSelected = Boolean(parsedArgs.flags['--skew']);
   const bypassSelected = Boolean(parsedArgs.flags['--protection-bypass']);
   const protectionBypassSecret = parsedArgs.flags[
     '--protection-bypass-secret'
   ] as string | undefined;
 
-  if (action && !ssoSelected && !passwordSelected && !bypassSelected) {
+  if (
+    action &&
+    !ssoSelected &&
+    !passwordSelected &&
+    !skewSelected &&
+    !bypassSelected
+  ) {
     const msg =
-      'No protection selected. Pass --sso, --password, or --protection-bypass. Usage: `vercel project protection enable|disable [name] --sso|--password|--protection-bypass`';
+      'No protection selected. Pass --sso, --password, --skew, or --protection-bypass. Usage: `vercel project protection enable|disable [name] --sso|--password|--skew|--protection-bypass`';
     outputAgentError(
       client,
       {
         status: 'error',
         reason: AGENT_REASON.MISSING_ARGUMENTS,
         message: msg,
-        hint: 'Use `project protection enable|disable` with a protection flag (e.g. --sso, --password, or --protection-bypass).',
+        hint: 'Use `project protection enable|disable` with a protection flag (e.g. --sso, --password, --skew, or --protection-bypass).',
         next: [
           {
             command: buildCommandWithGlobalFlags(
@@ -155,6 +236,13 @@ export default async function protection(
               `project protection ${action} --password`
             ),
             when: 'Example: same action with password protection selected',
+          },
+          {
+            command: buildCommandWithGlobalFlags(
+              client.argv,
+              `project protection ${action} --skew`
+            ),
+            when: 'Example: same action with skew protection selected',
           },
           {
             command: buildCommandWithGlobalFlags(
@@ -188,6 +276,11 @@ export default async function protection(
   }
 
   if (action) {
+    const skewProtectionMaxAge =
+      action === 'enable'
+        ? (enableSkewMaxAgeSeconds ?? DEFAULT_SKEW_PROTECTION_MAX_AGE)
+        : 0;
+
     if (bypassSelected) {
       if (action === 'disable' && !protectionBypassSecret) {
         const secretMsg =
@@ -255,6 +348,10 @@ export default async function protection(
           ? { deploymentType: ENABLED_DEPLOYMENT_TYPE }
           : null;
     }
+    if (skewSelected) {
+      patchBody.skewProtectionMaxAge = skewProtectionMaxAge;
+    }
+
     if (Object.keys(patchBody).length > 0) {
       try {
         await client.fetch(`/v9/projects/${encodeURIComponent(project.id)}`, {
@@ -279,6 +376,12 @@ export default async function protection(
             passwordProtection: passwordSelected
               ? action === 'enable'
               : undefined,
+            skewProtection: skewSelected ? action === 'enable' : undefined,
+            ...(skewSelected
+              ? action === 'enable'
+                ? { skewProtectionMaxAge }
+                : { skewProtectionMaxAge: 0 }
+              : {}),
             protectionBypass: bypassSelected ? action === 'enable' : undefined,
           },
           null,
