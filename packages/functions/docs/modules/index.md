@@ -9,6 +9,7 @@
 - [PurgeApi](../interfaces/index.PurgeApi.md)
 - [Request](../interfaces/index.Request.md)
 - [RuntimeCache](../interfaces/index.RuntimeCache.md)
+- [WebSocketUpgradeResult](../interfaces/index.WebSocketUpgradeResult.md)
 
 ### Type Aliases
 
@@ -29,6 +30,7 @@
 - [ipAddress](index.md#ipaddress)
 - [next](index.md#next)
 - [rewrite](index.md#rewrite)
+- [upgradeWebSocket](index.md#upgradewebsocket)
 - [waitUntil](index.md#waituntil)
 
 ## Type Aliases
@@ -497,6 +499,26 @@ export const config = { matcher: '/api/users/:path*' };
 #### Defined in
 
 [packages/functions/src/middleware.ts:101](https://github.com/vercel/vercel/blob/main/packages/functions/src/middleware.ts#L101)
+
+---
+
+### upgradeWebSocket
+
+▸ **upgradeWebSocket**(`request`): [`WebSocketUpgradeResult`](../interfaces/index.WebSocketUpgradeResult.md)
+
+#### Parameters
+
+| Name      | Type                                                                  |
+| :-------- | :-------------------------------------------------------------------- |
+| `request` | [`Request`](https://developer.mozilla.org/en-US/docs/Web/API/Request) |
+
+#### Returns
+
+[`WebSocketUpgradeResult`](../interfaces/index.WebSocketUpgradeResult.md)
+
+#### Defined in
+
+[packages/functions/src/websocket/index.ts:9](https://github.com/vercel/vercel/blob/main/packages/functions/src/websocket/index.ts#L9)
 
 ---
 
