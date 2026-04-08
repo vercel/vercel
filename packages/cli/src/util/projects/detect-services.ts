@@ -11,6 +11,7 @@ import { compileVercelConfig } from '../compile-vercel-config';
 import { CantParseJSONFile } from '../errors-ts';
 import readJSONFile from '../read-json-file';
 import { validateConfig } from '../validate-config';
+import { isVercelTomlEnabled } from '../is-vercel-toml-enabled';
 
 export type ServicesConfigWriteBlocker = 'builds' | 'functions';
 
@@ -130,6 +131,14 @@ async function prepareServicesConfigWrite(
     basename(compileResult.configPath) === 'now.json'
   ) {
     throw new Error('Cannot automatically update now.json.');
+  }
+
+  if (
+    isVercelTomlEnabled() &&
+    compileResult.configPath &&
+    basename(compileResult.configPath) === 'vercel.toml'
+  ) {
+    throw new Error('Cannot automatically update vercel.toml.');
   }
 
   let existingConfig: VercelConfig = {};
