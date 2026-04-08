@@ -211,6 +211,24 @@ export async function detectDjangoPythonEntrypoint(
 }
 
 /**
+ * Split a configured entrypoint like `"app/wsgi.py:my_app"` into the
+ * normalised file path (`app/wsgi.py`) and the optional explicit variable
+ * name (`my_app`).  Ensures the path always ends with `.py`.
+ */
+function parseConfiguredEntrypoint(raw: string): {
+  entrypoint: string;
+  explicitVariable: string | undefined;
+} {
+  const colonIndex = raw.lastIndexOf(':');
+  const hasVariable = colonIndex !== -1;
+  const rawPath = hasVariable ? raw.slice(0, colonIndex) : raw;
+  return {
+    entrypoint: rawPath.endsWith('.py') ? rawPath : `${rawPath}.py`,
+    explicitVariable: hasVariable ? raw.slice(colonIndex + 1) : undefined,
+  };
+}
+
+/**
  * Detect a Python entrypoint path for a given framework relative to workPath, or return null if not found.
  */
 export async function detectPythonEntrypoint(
@@ -221,21 +239,15 @@ export async function detectPythonEntrypoint(
 ): Promise<DetectedPythonEntrypoint | null> {
   // If a configured entrypoint was provided, check it first
   if (configuredEntrypoint) {
-    const colonIndex = configuredEntrypoint.lastIndexOf(':');
-    const hasVariable = colonIndex !== -1;
-    const rawPath = hasVariable
-      ? configuredEntrypoint.slice(0, colonIndex)
-      : configuredEntrypoint;
-    const explicitVariable = hasVariable
-      ? configuredEntrypoint.slice(colonIndex + 1)
-      : undefined;
-
-    const entrypoint = rawPath.endsWith('.py') ? rawPath : `${rawPath}.py`;
-    const absPath = join(workPath, entrypoint);
+    const { entrypoint, explicitVariable } =
+      parseConfiguredEntrypoint(configuredEntrypoint);
 
     let varName: string | null = null;
     if (explicitVariable) {
-      const content = await fs.promises.readFile(absPath, 'utf-8');
+      const content = await fs.promises.readFile(
+        join(workPath, entrypoint),
+        'utf-8'
+      );
       const found = await containsTopLevelCallable(content, explicitVariable);
       if (found) {
         varName = explicitVariable;
