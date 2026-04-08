@@ -58,20 +58,6 @@ interface ResolvedEntrypointPath {
   isDirectory: boolean;
 }
 
-type ServiceMountConfig = {
-  path?: string;
-  subdomain?: string;
-};
-
-type ExperimentalServiceConfigWithMount = ExperimentalServiceConfig & {
-  mount?: string | ServiceMountConfig;
-  consumer?: string;
-};
-
-type ServiceWithConsumer = Service & {
-  consumer?: string;
-};
-
 function normalizeServiceEntrypoint(entrypoint: string): string {
   const normalized = posixPath.normalize(entrypoint);
   return normalized === '' ? '.' : normalized;
@@ -113,7 +99,7 @@ type RoutePrefixSource = 'configured' | 'generated';
 
 interface ResolveConfiguredServiceOptions {
   name: string;
-  config: ExperimentalServiceConfigWithMount;
+  config: ExperimentalServiceConfig;
   fs: DetectorFilesystem;
   group?: string;
   resolvedEntrypoint?: ResolvedEntrypointPath;
@@ -241,7 +227,7 @@ interface ResolvedServiceRoutingConfig {
 
 function resolveServiceRoutingConfig(
   name: string,
-  config: ExperimentalServiceConfigWithMount
+  config: ExperimentalServiceConfig
 ): {
   routing?: ResolvedServiceRoutingConfig;
   error?: ServiceDetectionError;
@@ -344,7 +330,7 @@ function resolveServiceRoutingConfig(
  */
 export function validateServiceConfig(
   name: string,
-  config: ExperimentalServiceConfigWithMount
+  config: ExperimentalServiceConfig
 ): ServiceDetectionError | null {
   if (!SERVICE_NAME_REGEX.test(name)) {
     return {
@@ -512,7 +498,7 @@ export function validateServiceEntrypoint(
  */
 export async function resolveConfiguredService(
   options: ResolveConfiguredServiceOptions
-): Promise<ServiceWithConsumer> {
+): Promise<Service> {
   const {
     name,
     config,

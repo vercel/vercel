@@ -196,6 +196,32 @@ describe('detectServices', () => {
       });
     });
 
+    it('should support mount object with subdomain only', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            docs: {
+              entrypoint: 'docs/index.ts',
+              mount: {
+                subdomain: 'docs',
+              },
+            },
+          },
+        }),
+        'docs/index.ts': 'export default {}',
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      expect(result.services).toHaveLength(1);
+      expect(result.services[0]).toMatchObject({
+        name: 'docs',
+        routePrefix: '/_/docs',
+        routePrefixSource: 'generated',
+        subdomain: 'docs',
+      });
+    });
+
     it('should resolve file entrypoint paths without explicit workspace', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': JSON.stringify({

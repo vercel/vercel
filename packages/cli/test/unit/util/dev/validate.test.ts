@@ -25,18 +25,17 @@ describe('validateConfig', () => {
   });
 
   it('should not error with maxDuration set to "max"', async () => {
-    // Runtime allows maxDuration "max"; VercelConfig types expect number only.
     const config = {
       functions: {
-        'api/user.go': { memory: 128, maxDuration: 'max' as const },
+        'api/user.go': { memory: 128, maxDuration: 'max' },
       },
-    } as unknown as Parameters<typeof validateConfig>[0];
+    } satisfies Parameters<typeof validateConfig>[0];
     const error = validateConfig(config);
     expect(error).toBeNull();
   });
 
   it('should not error with experimentalServices mount config', async () => {
-    const error = validateConfig({
+    const config = {
       experimentalServices: {
         frontend: {
           framework: 'nextjs',
@@ -49,8 +48,15 @@ describe('validateConfig', () => {
             subdomain: 'api',
           },
         },
+        docs: {
+          framework: 'nextjs',
+          mount: {
+            subdomain: 'docs',
+          },
+        },
       },
-    } as Parameters<typeof validateConfig>[0]);
+    } satisfies Parameters<typeof validateConfig>[0];
+    const error = validateConfig(config);
     expect(error).toBeNull();
   });
 
