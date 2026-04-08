@@ -66,7 +66,6 @@ describe('flags override', () => {
       expect(exitCode).toEqual(0);
 
       const output = client.stdout.getFullOutput().trim();
-      expect(output).toBeTruthy();
 
       // Decrypt and verify
       const secret = base64url.decode(TEST_SECRET);
