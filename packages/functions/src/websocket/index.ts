@@ -1,4 +1,4 @@
-import { WebSocketServer } from 'ws';
+import { WebSocketServer, type WebSocket } from 'ws';
 import type { IncomingMessage } from 'http';
 import type { Socket } from 'net';
 import { getContext } from '../get-context';
@@ -6,34 +6,6 @@ import type { WebSocketUpgradeResult } from './types';
 
 const wss = new WebSocketServer({ noServer: true });
 
-/**
- * Upgrades an incoming HTTP request to a WebSocket connection.
- *
- * Delegates to the runtime bridge, which writes a `101 Switching Protocols`
- * response on the underlying socket, detaches it from the framework's
- * response, and returns the raw `(req, socket, head)` tuple. This function
- * then uses `ws` to complete the WebSocket handshake and returns a
- * fully-framed `WebSocket` instance.
- *
- * @param request - The incoming HTTP request to upgrade.
- * @returns An object containing the `socket` (a `ws` WebSocket) and a synthetic 101 `response`.
- * @throws {TypeError} If `request` is not a Request object.
- * @throws {Error} If the runtime does not support WebSocket upgrades.
- *
- * @example
- *
- * ```ts
- * import { upgradeWebSocket } from '@vercel/functions';
- *
- * export function GET(req: Request) {
- *   const { socket, response } = upgradeWebSocket(req);
- *   socket.onmessage = (event) => {
- *     socket.send(`echo: ${event.data}`);
- *   };
- *   return response;
- * }
- * ```
- */
 export function upgradeWebSocket(request: Request): WebSocketUpgradeResult {
   if (
     request === null ||
@@ -63,11 +35,15 @@ export function upgradeWebSocket(request: Request): WebSocketUpgradeResult {
   // Use ws to perform the WebSocket handshake and set up framing.
   // ws writes the 101 Switching Protocols response to the socket
   // and returns a fully-framed WebSocket in the callback.
-  let ws: import('ws').WebSocket;
+  let ws: WebSocket | undefined;
   wss.handleUpgrade(req, socket, head, client => {
     ws = client;
     wss.emit('connection', client, req);
   });
+
+  if (!ws) {
+    throw new Error('WebSocket upgrade failed');
+  }
 
   // Synthetic 101 response for frameworks that require returning a Response.
   // The actual 101 has already been written to the socket by ws.
@@ -77,5 +53,5 @@ export function upgradeWebSocket(request: Request): WebSocketUpgradeResult {
     value: 'Switching Protocols',
   });
 
-  return { socket: ws!, response };
+  return { socket: ws, response };
 }
