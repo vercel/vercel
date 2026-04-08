@@ -1,13 +1,13 @@
 import chalk from 'chalk';
 import type Client from '../../util/client';
-import createVpcAccount from '../../util/vpc/create-account';
+import createByocAccount from '../../util/byoc/create-account';
 import selectOrg from '../../util/input/select-org';
 import stamp from '../../util/output/stamp';
 import { getCommandNamePlain } from '../../util/pkg-name';
 import { outputAgentError } from '../../util/agent-output';
 import { AGENT_REASON, AGENT_STATUS } from '../../util/agent-output-constants';
 import output from '../../output-manager';
-import { VpcInitTelemetryClient } from '../../util/telemetry/commands/vpc/init';
+import { ByocInitTelemetryClient } from '../../util/telemetry/commands/byoc/init';
 import { initSubcommand } from './command';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
@@ -24,13 +24,13 @@ function generateTerraformTemplate(
   awsAccountId: string,
   teamSlug: string
 ): string {
-  return `# Vercel Private Cloud — IAM Role for AWS Account ${awsAccountId}
+  return `# Vercel Bring Your Own Cloud — IAM Role for AWS Account ${awsAccountId}
 #
 # This Terraform configuration creates the IAM role that Vercel uses
 # to invoke Lambda functions in your AWS account.
 #
 # Apply this configuration in your AWS account, then run:
-#   vercel vpc connect --aws-account-id ${awsAccountId} --scope ${teamSlug}
+#   vercel byoc connect --aws-account-id ${awsAccountId} --scope ${teamSlug}
 
 resource "aws_iam_role" "${roleName}" {
   name                 = "${roleName}"
@@ -78,7 +78,7 @@ resource "aws_iam_role" "${roleName}" {
 }
 
 export default async function init(client: Client, argv: string[]) {
-  const telemetry = new VpcInitTelemetryClient({
+  const telemetry = new ByocInitTelemetryClient({
     opts: {
       store: client.telemetryEventStore,
     },
@@ -101,7 +101,7 @@ export default async function init(client: Client, argv: string[]) {
   // --- Select team scope (first) ---
   const org = await selectOrg(
     client,
-    'Which team should own this VPC connection?'
+    'Which team should own this BYOC connection?'
   );
 
   if (org.type === 'team') {
@@ -110,7 +110,7 @@ export default async function init(client: Client, argv: string[]) {
 
   if (!org.id.startsWith('team_')) {
     output.error(
-      'VPC commands require a team scope. Personal accounts are not supported.'
+      'BYOC commands require a team scope. Personal accounts are not supported.'
     );
     return 1;
   }
@@ -128,7 +128,7 @@ export default async function init(client: Client, argv: string[]) {
           next: [
             {
               command: getCommandNamePlain(
-                'vpc init --aws-account-id <account-id>'
+                'byoc init --aws-account-id <account-id>'
               ),
             },
           ],
@@ -184,7 +184,7 @@ export default async function init(client: Client, argv: string[]) {
   }
 
   try {
-    const account = await createVpcAccount(client, org.id, {
+    const account = await createByocAccount(client, org.id, {
       awsAccountId,
       roleName,
       externalId,
@@ -209,7 +209,7 @@ export default async function init(client: Client, argv: string[]) {
         next: [
           {
             command: getCommandNamePlain(
-              `vpc connect --aws-account-id ${account.awsAccountId} --scope ${org.slug}`
+              `byoc connect --aws-account-id ${account.awsAccountId} --scope ${org.slug}`
             ),
             when: 'After the IAM role has been created in AWS',
           },
@@ -257,7 +257,7 @@ export default async function init(client: Client, argv: string[]) {
 
     output.print('\n');
     output.log(
-      `After applying the Terraform configuration, run ${chalk.bold(`vercel vpc connect --aws-account-id ${account.awsAccountId} --scope ${org.slug}`)} to verify the connection.`
+      `After applying the Terraform configuration, run ${chalk.bold(`vercel byoc connect --aws-account-id ${account.awsAccountId} --scope ${org.slug}`)} to verify the connection.`
     );
     output.print('\n');
 

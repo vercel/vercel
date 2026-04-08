@@ -1,13 +1,13 @@
 import chalk from 'chalk';
 import type Client from '../../util/client';
-import refreshVpcAccount from '../../util/vpc/refresh-account';
+import refreshByocAccount from '../../util/byoc/refresh-account';
 import selectOrg from '../../util/input/select-org';
 import stamp from '../../util/output/stamp';
 import { getCommandNamePlain } from '../../util/pkg-name';
 import { outputAgentError } from '../../util/agent-output';
 import { AGENT_REASON, AGENT_STATUS } from '../../util/agent-output-constants';
 import output from '../../output-manager';
-import { VpcConnectTelemetryClient } from '../../util/telemetry/commands/vpc/connect';
+import { ByocConnectTelemetryClient } from '../../util/telemetry/commands/byoc/connect';
 import { connectSubcommand } from './command';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
@@ -15,7 +15,7 @@ import { printError } from '../../util/error';
 import { isAPIError } from '../../util/errors-ts';
 
 export default async function connect(client: Client, argv: string[]) {
-  const telemetry = new VpcConnectTelemetryClient({
+  const telemetry = new ByocConnectTelemetryClient({
     opts: {
       store: client.telemetryEventStore,
     },
@@ -36,7 +36,7 @@ export default async function connect(client: Client, argv: string[]) {
   // --- Select team scope (first) ---
   const org = await selectOrg(
     client,
-    'Which team should own this VPC connection?'
+    'Which team should own this BYOC connection?'
   );
 
   if (org.type === 'team') {
@@ -45,7 +45,7 @@ export default async function connect(client: Client, argv: string[]) {
 
   if (!org.id.startsWith('team_')) {
     output.error(
-      'VPC commands require a team scope. Personal accounts are not supported.'
+      'BYOC commands require a team scope. Personal accounts are not supported.'
     );
     return 1;
   }
@@ -63,7 +63,7 @@ export default async function connect(client: Client, argv: string[]) {
           next: [
             {
               command: getCommandNamePlain(
-                'vpc connect --aws-account-id <account-id>'
+                'byoc connect --aws-account-id <account-id>'
               ),
             },
           ],
@@ -102,7 +102,7 @@ export default async function connect(client: Client, argv: string[]) {
   }
 
   try {
-    const account = await refreshVpcAccount(client, org.id, awsAccountId);
+    const account = await refreshByocAccount(client, org.id, awsAccountId);
 
     if (client.nonInteractive) {
       const json = {
@@ -165,7 +165,7 @@ export default async function connect(client: Client, argv: string[]) {
       }
       if (err.status === 404) {
         output.error(
-          `AWS account ${chalk.bold(awsAccountId)} is not registered. Run ${chalk.bold(`vercel vpc init --aws-account-id ${awsAccountId}`)} first.`
+          `AWS account ${chalk.bold(awsAccountId)} is not registered. Run ${chalk.bold(`vercel byoc init --aws-account-id ${awsAccountId}`)} first.`
         );
         return 1;
       }

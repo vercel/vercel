@@ -1,8 +1,8 @@
 import { TelemetryClient } from '../..';
 import type { TelemetryMethods } from '../../types';
-import type { connectSubcommand } from '../../../../commands/vpc/command';
+import type { connectSubcommand } from '../../../../commands/byoc/command';
 
-export class VpcConnectTelemetryClient
+export class ByocConnectTelemetryClient
   extends TelemetryClient
   implements TelemetryMethods<typeof connectSubcommand>
 {

@@ -1,10 +1,10 @@
 import { TelemetryClient } from '../..';
 import type { TelemetryMethods } from '../../types';
-import type { vpcCommand } from '../../../../commands/vpc/command';
+import type { byocCommand } from '../../../../commands/byoc/command';
 
-export class VpcTelemetryClient
+export class ByocTelemetryClient
   extends TelemetryClient
-  implements TelemetryMethods<typeof vpcCommand>
+  implements TelemetryMethods<typeof byocCommand>
 {
   trackCliSubcommandInit(actual: string) {
     this.trackCliSubcommand({

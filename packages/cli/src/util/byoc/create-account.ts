@@ -14,7 +14,7 @@ export interface PublicAWSCustomerAccount {
   createdAt: string;
 }
 
-export default async function createVpcAccount(
+export default async function createByocAccount(
   client: Client,
   teamId: string,
   payload: CreateAccountRequest

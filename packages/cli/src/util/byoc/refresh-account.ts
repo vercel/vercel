@@ -1,7 +1,7 @@
 import type Client from '../client';
 import type { PublicAWSCustomerAccount } from './create-account';
 
-export default async function refreshVpcAccount(
+export default async function refreshByocAccount(
   client: Client,
   teamId: string,
   awsAccountId: string

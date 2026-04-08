@@ -376,9 +376,9 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
-  trackCliCommandVpc(actual: string) {
+  trackCliCommandByoc(actual: string) {
     this.trackCliCommand({
-      command: 'vpc',
+      command: 'byoc',
       value: actual,
     });
   }

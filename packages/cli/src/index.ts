@@ -933,9 +933,9 @@ const main = async () => {
           telemetry.trackCliCommandUpgrade(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).upgrade;
           break;
-        case 'vpc':
-          telemetry.trackCliCommandVpc(userSuppliedSubCommand);
-          func = (await import('./commands-bulk.js')).vpc;
+        case 'byoc':
+          telemetry.trackCliCommandByoc(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).byoc;
           break;
         case 'webhooks':
           telemetry.trackCliCommandWebhooks(userSuppliedSubCommand);

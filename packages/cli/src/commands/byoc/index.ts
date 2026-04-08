@@ -4,10 +4,10 @@ import getSubcommand from '../../util/get-subcommand';
 import { printError } from '../../util/error';
 import init from './init';
 import connect from './connect';
-import { vpcCommand, initSubcommand, connectSubcommand } from './command';
+import { byocCommand, initSubcommand, connectSubcommand } from './command';
 import { type Command, help } from '../help';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { VpcTelemetryClient } from '../../util/telemetry/commands/vpc';
+import { ByocTelemetryClient } from '../../util/telemetry/commands/byoc';
 import output from '../../output-manager';
 
 const COMMAND_CONFIG = {
@@ -17,7 +17,7 @@ const COMMAND_CONFIG = {
 
 export default async function main(client: Client) {
   let parsedArgs;
-  const flagsSpecification = getFlagsSpecification(vpcCommand.options);
+  const flagsSpecification = getFlagsSpecification(byocCommand.options);
   try {
     parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification, {
       permissive: true,
@@ -27,7 +27,7 @@ export default async function main(client: Client) {
     return 1;
   }
 
-  const telemetry = new VpcTelemetryClient({
+  const telemetry = new ByocTelemetryClient({
     opts: {
       store: client.telemetryEventStore,
     },
@@ -41,14 +41,14 @@ export default async function main(client: Client) {
   const needHelp = parsedArgs.flags['--help'];
 
   if (!subcommand && needHelp) {
-    telemetry.trackCliFlagHelp('vpc');
-    output.print(help(vpcCommand, { columns: client.stderr.columns }));
+    telemetry.trackCliFlagHelp('byoc');
+    output.print(help(byocCommand, { columns: client.stderr.columns }));
     return 2;
   }
 
   function printHelp(command: Command) {
     output.print(
-      help(command, { parent: vpcCommand, columns: client.stderr.columns })
+      help(command, { parent: byocCommand, columns: client.stderr.columns })
     );
     return 2;
   }
@@ -56,21 +56,21 @@ export default async function main(client: Client) {
   switch (subcommand) {
     case 'init':
       if (needHelp) {
-        telemetry.trackCliFlagHelp('vpc', subcommandOriginal);
+        telemetry.trackCliFlagHelp('byoc', subcommandOriginal);
         return printHelp(initSubcommand);
       }
       telemetry.trackCliSubcommandInit(subcommandOriginal);
       return init(client, args);
     case 'connect':
       if (needHelp) {
-        telemetry.trackCliFlagHelp('vpc', subcommandOriginal);
+        telemetry.trackCliFlagHelp('byoc', subcommandOriginal);
         return printHelp(connectSubcommand);
       }
       telemetry.trackCliSubcommandConnect(subcommandOriginal);
       return connect(client, args);
     default:
       // No default subcommand — show help
-      output.print(help(vpcCommand, { columns: client.stderr.columns }));
+      output.print(help(byocCommand, { columns: client.stderr.columns }));
       return 2;
   }
 }
