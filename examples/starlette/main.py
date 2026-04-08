@@ -1,17 +1,9 @@
 from starlette.applications import Starlette
 from starlette.responses import HTMLResponse
-from starlette.routing import Mount
+from starlette.routing import Mount, Route
 from api import api_routes
 
 
-app = Starlette(
-    routes=[
-        Mount("/api", routes=api_routes),
-    ]
-)
-
-
-@app.route("/")
 async def read_root(request):
     return HTMLResponse("""
     <!DOCTYPE html>
@@ -103,6 +95,14 @@ async def read_root(request):
     </body>
     </html>
     """)
+
+
+app = Starlette(
+    routes=[
+        Route("/", read_root),
+        Mount("/api", routes=api_routes),
+    ]
+)
 
 
 if __name__ == "__main__":
