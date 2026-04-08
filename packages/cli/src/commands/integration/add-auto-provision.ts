@@ -85,7 +85,7 @@ export async function addAutoProvision(
   if (!integration) {
     return 1;
   }
-  if (integration.productSlug) {
+  if (integration.productSlug && !options.productSlug) {
     options.productSlug = integration.productSlug;
   }
 
