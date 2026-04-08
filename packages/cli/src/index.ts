@@ -181,10 +181,8 @@ const main = async () => {
     process.stdin.isTTY = true;
   }
 
-  let parsedArgs;
-
-  try {
-    parsedArgs = parseArguments(
+  const parseInitialArgs = () =>
+    parseArguments(
       process.argv,
       {
         '--version': Boolean,
@@ -193,6 +191,11 @@ const main = async () => {
       },
       { permissive: true }
     );
+
+  let parsedArgs: ReturnType<typeof parseInitialArgs>;
+
+  try {
+    parsedArgs = parseInitialArgs();
     const isDebugging = parsedArgs.flags['--debug'];
     const isNoColor = parsedArgs.flags['--no-color'];
     output.initialize({
