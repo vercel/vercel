@@ -136,6 +136,66 @@ describe('detectServices', () => {
       expect(result.routes.defaults).toHaveLength(0);
     });
 
+    it('should support mount string as a routePrefix alias', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            api: {
+              entrypoint: 'src/index.ts',
+              mount: '/api',
+            },
+          },
+        }),
+        'src/index.ts': 'export default {}',
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      expect(result.services).toHaveLength(1);
+      expect(result.services[0]).toMatchObject({
+        name: 'api',
+        routePrefix: '/api',
+        routePrefixSource: 'configured',
+      });
+    });
+
+    it('should support mount object as routePrefix/subdomain alias', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            api: {
+              entrypoint: 'api/index.go',
+              mount: {
+                path: '/internal-api',
+                subdomain: 'api',
+              },
+            },
+          },
+        }),
+        'api/index.go': 'package main',
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      expect(result.services).toHaveLength(1);
+      expect(result.services[0]).toMatchObject({
+        name: 'api',
+        routePrefix: '/internal-api',
+        routePrefixSource: 'configured',
+        subdomain: 'api',
+      });
+      expect(result.routes.hostRewrites).toContainEqual({
+        src: '^/$',
+        dest: '/internal-api',
+        has: [{ type: 'host', value: { pre: 'api.' } }],
+        missing: [
+          { type: 'host', value: { suf: '.vercel.app' } },
+          { type: 'host', value: { suf: '.vercel.dev' } },
+        ],
+        check: true,
+      });
+    });
+
     it('should resolve file entrypoint paths without explicit workspace', async () => {
       const fs = new VirtualFilesystem({
         'vercel.json': JSON.stringify({
@@ -959,6 +1019,29 @@ describe('detectServices', () => {
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0].code).toBe('MISSING_ROUTE_PREFIX');
       expect(result.errors[0].serviceName).toBe('api');
+    });
+
+    it('should error when mount is mixed with legacy routing keys', async () => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          experimentalServices: {
+            api: {
+              entrypoint: 'api/index.ts',
+              mount: '/api',
+              routePrefix: '/legacy-api',
+            },
+          },
+        }),
+        'api/index.ts': 'export default {}',
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.services).toEqual([]);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]).toMatchObject({
+        code: 'CONFLICTING_MOUNT_CONFIG',
+        serviceName: 'api',
+      });
     });
 
     it('should derive routePrefix from subdomain using /_/serviceName', async () => {

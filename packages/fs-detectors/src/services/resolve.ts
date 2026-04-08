@@ -58,6 +58,20 @@ interface ResolvedEntrypointPath {
   isDirectory: boolean;
 }
 
+type ServiceMountConfig = {
+  path?: string;
+  subdomain?: string;
+};
+
+type ExperimentalServiceConfigWithMount = ExperimentalServiceConfig & {
+  mount?: string | ServiceMountConfig;
+  consumer?: string;
+};
+
+type ServiceWithConsumer = Service & {
+  consumer?: string;
+};
+
 function normalizeServiceEntrypoint(entrypoint: string): string {
   const normalized = posixPath.normalize(entrypoint);
   return normalized === '' ? '.' : normalized;
@@ -99,7 +113,7 @@ type RoutePrefixSource = 'configured' | 'generated';
 
 interface ResolveConfiguredServiceOptions {
   name: string;
-  config: ExperimentalServiceConfig;
+  config: ExperimentalServiceConfigWithMount;
   fs: DetectorFilesystem;
   group?: string;
   resolvedEntrypoint?: ResolvedEntrypointPath;
@@ -219,12 +233,118 @@ function isReservedServiceRoutePrefix(routePrefix: string): boolean {
   );
 }
 
+interface ResolvedServiceRoutingConfig {
+  routePrefix?: string;
+  subdomain?: string;
+  routePrefixConfigured: boolean;
+}
+
+function resolveServiceRoutingConfig(
+  name: string,
+  config: ExperimentalServiceConfigWithMount
+): {
+  routing?: ResolvedServiceRoutingConfig;
+  error?: ServiceDetectionError;
+} {
+  const hasLegacyRoutePrefix = typeof config.routePrefix === 'string';
+  const hasLegacySubdomain = typeof config.subdomain === 'string';
+
+  if (config.mount === undefined) {
+    return {
+      routing: {
+        routePrefix: config.routePrefix,
+        subdomain: config.subdomain,
+        routePrefixConfigured: hasLegacyRoutePrefix,
+      },
+    };
+  }
+
+  if (hasLegacyRoutePrefix || hasLegacySubdomain) {
+    return {
+      error: {
+        code: 'CONFLICTING_MOUNT_CONFIG',
+        message: `Service "${name}" cannot mix "mount" with "routePrefix" or "subdomain". Use only one routing configuration style.`,
+        serviceName: name,
+      },
+    };
+  }
+
+  if (typeof config.mount === 'string') {
+    return {
+      routing: {
+        routePrefix: config.mount,
+        routePrefixConfigured: true,
+      },
+    };
+  }
+
+  if (
+    !config.mount ||
+    typeof config.mount !== 'object' ||
+    Array.isArray(config.mount)
+  ) {
+    return {
+      error: {
+        code: 'INVALID_MOUNT',
+        message: `Service "${name}" has invalid "mount" config. Use a string path such as "/api" or an object like { path: "/api", subdomain: "api" }.`,
+        serviceName: name,
+      },
+    };
+  }
+
+  const hasInvalidMountKeys = Object.keys(config.mount).some(
+    key => key !== 'path' && key !== 'subdomain'
+  );
+  if (hasInvalidMountKeys) {
+    return {
+      error: {
+        code: 'INVALID_MOUNT',
+        message: `Service "${name}" has invalid "mount" config. Only "path" and "subdomain" are supported.`,
+        serviceName: name,
+      },
+    };
+  }
+
+  const mountPath = config.mount.path;
+  const mountSubdomain = config.mount.subdomain;
+  if (
+    (mountPath !== undefined && typeof mountPath !== 'string') ||
+    (mountSubdomain !== undefined && typeof mountSubdomain !== 'string')
+  ) {
+    return {
+      error: {
+        code: 'INVALID_MOUNT',
+        message: `Service "${name}" has invalid "mount" config. "path" and "subdomain" must be strings when provided.`,
+        serviceName: name,
+      },
+    };
+  }
+
+  if (typeof mountPath !== 'string' && typeof mountSubdomain !== 'string') {
+    return {
+      error: {
+        code: 'INVALID_MOUNT',
+        message: `Service "${name}" has invalid "mount" config. Specify at least one of "mount.path" or "mount.subdomain".`,
+        serviceName: name,
+      },
+    };
+  }
+
+  return {
+    routing: {
+      routePrefix: mountPath,
+      subdomain: mountSubdomain,
+      routePrefixConfigured: typeof mountPath === 'string',
+    },
+  };
+}
+
 /**
  * Validate a service configuration from vercel.json experimentalServices.
  */
 export function validateServiceConfig(
   name: string,
-  config: ExperimentalServiceConfig
+  config: ExperimentalServiceConfigWithMount
 ): ServiceDetectionError | null {
   if (!SERVICE_NAME_REGEX.test(name)) {
     return {
@@ -241,13 +361,19 @@ export function validateServiceConfig(
     };
   }
   const serviceType = config.type || 'web';
-  const hasRoutePrefix = typeof config.routePrefix === 'string';
-  const hasSubdomain = typeof config.subdomain === 'string';
+  const routingResult = resolveServiceRoutingConfig(name, config);
+  if (routingResult.error) {
+    return routingResult.error;
+  }
+  const configuredRoutePrefix = routingResult.routing?.routePrefix;
+  const configuredSubdomain = routingResult.routing?.subdomain;
+  const hasRoutePrefix = typeof configuredRoutePrefix === 'string';
+  const hasSubdomain = typeof configuredSubdomain === 'string';
 
-  if (hasSubdomain && !DNS_LABEL_RE.test(config.subdomain!)) {
+  if (hasSubdomain && !DNS_LABEL_RE.test(configuredSubdomain!)) {
     return {
       code: 'INVALID_SUBDOMAIN',
-      message: `Web service "${name}" has invalid subdomain "${config.subdomain}". Use a single DNS label such as "api".`,
+      message: `Web service "${name}" has invalid subdomain "${configuredSubdomain}". Use a single DNS label such as "api".`,
       serviceName: name,
     };
   }
@@ -255,35 +381,35 @@ export function validateServiceConfig(
   if (serviceType === 'web' && !hasRoutePrefix && !hasSubdomain) {
     return {
       code: 'MISSING_ROUTE_PREFIX',
-      message: `Web service "${name}" must specify at least one of "routePrefix" or "subdomain".`,
+      message: `Web service "${name}" must specify at least one of "mount", "routePrefix", or "subdomain".`,
       serviceName: name,
     };
   }
   if (
     serviceType === 'web' &&
-    config.routePrefix &&
-    isReservedServiceRoutePrefix(config.routePrefix)
+    configuredRoutePrefix &&
+    isReservedServiceRoutePrefix(configuredRoutePrefix)
   ) {
     return {
       code: 'RESERVED_ROUTE_PREFIX',
-      message: `Web service "${name}" cannot use routePrefix "${config.routePrefix}". The "${INTERNAL_SERVICE_PREFIX}" prefix is reserved for internal services routing.`,
+      message: `Web service "${name}" cannot use routePrefix "${configuredRoutePrefix}". The "${INTERNAL_SERVICE_PREFIX}" prefix is reserved for internal services routing.`,
       serviceName: name,
     };
   }
   if (
     (serviceType === 'worker' || serviceType === 'cron') &&
-    config.routePrefix
+    configuredRoutePrefix
   ) {
     return {
       code: 'INVALID_ROUTE_PREFIX',
-      message: `${serviceType === 'worker' ? 'Worker' : 'Cron'} service "${name}" cannot have "routePrefix". Only web services should specify "routePrefix".`,
+      message: `${serviceType === 'worker' ? 'Worker' : 'Cron'} service "${name}" cannot have "routePrefix" or "mount". Only web services should specify path-based routing.`,
       serviceName: name,
     };
   }
   if ((serviceType === 'worker' || serviceType === 'cron') && hasSubdomain) {
     return {
       code: 'INVALID_HOST_ROUTING_CONFIG',
-      message: `${serviceType === 'worker' ? 'Worker' : 'Cron'} service "${name}" cannot have "subdomain". Only web services should specify subdomain routing.`,
+      message: `${serviceType === 'worker' ? 'Worker' : 'Cron'} service "${name}" cannot have "subdomain" or "mount.subdomain". Only web services should specify subdomain routing.`,
       serviceName: name,
     };
   }
@@ -386,7 +512,7 @@ export function validateServiceEntrypoint(
  */
 export async function resolveConfiguredService(
   options: ResolveConfiguredServiceOptions
-): Promise<Service> {
+): Promise<ServiceWithConsumer> {
   const {
     name,
     config,
@@ -402,6 +528,14 @@ export async function resolveConfiguredService(
     typeof rawEntrypoint === 'string' && type === 'cron'
       ? parsePyModuleAttrEntrypoint(rawEntrypoint)
       : null;
+  const routingResult = resolveServiceRoutingConfig(name, config);
+  if (routingResult.error) {
+    throw new Error(routingResult.error.message);
+  }
+  const configuredRoutePrefix = routingResult.routing?.routePrefix;
+  const configuredSubdomain = routingResult.routing?.subdomain;
+  const routePrefixWasConfigured =
+    routingResult.routing?.routePrefixConfigured ?? false;
 
   let resolvedEntrypointPath = resolvedEntrypoint;
   if (!resolvedEntrypointPath && typeof rawEntrypoint === 'string') {
@@ -498,21 +632,21 @@ export async function resolveConfiguredService(
   }
 
   const normalizedSubdomain =
-    type === 'web' && typeof config.subdomain === 'string'
-      ? config.subdomain.toLowerCase()
+    type === 'web' && typeof configuredSubdomain === 'string'
+      ? configuredSubdomain.toLowerCase()
       : undefined;
   const defaultRoutePrefix =
     type === 'web' && normalizedSubdomain ? `/_/${name}` : undefined;
   // routePrefix defaults to /_/serviceName for subdomain-mounted web services.
   const routePrefix =
-    type === 'web' && (config.routePrefix || defaultRoutePrefix)
-      ? (config.routePrefix || defaultRoutePrefix)!.startsWith('/')
-        ? (config.routePrefix || defaultRoutePrefix)!
-        : `/${config.routePrefix || defaultRoutePrefix}`
+    type === 'web' && (configuredRoutePrefix || defaultRoutePrefix)
+      ? (configuredRoutePrefix || defaultRoutePrefix)!.startsWith('/')
+        ? (configuredRoutePrefix || defaultRoutePrefix)!
+        : `/${configuredRoutePrefix || defaultRoutePrefix}`
       : undefined;
   const resolvedRoutePrefixSource =
     type === 'web' && typeof routePrefix === 'string'
-      ? config.routePrefix
+      ? routePrefixWasConfigured
         ? routePrefixSource
         : 'generated'
       : undefined;
