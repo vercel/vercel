@@ -6,6 +6,7 @@ import {
   useListFirewallConfigs,
   useActivateConfig,
   usePatchDraft,
+  capturedRequests,
   createConfig,
   createIpRule,
   createChange,
@@ -98,6 +99,10 @@ describe('firewall ip-blocks', () => {
         'IP block for 10.0.0.1 on all hosts staged'
       );
       expect(await exitCodePromise).toEqual(0);
+      expect(capturedRequests.patchDraft?.action).toBe('ip.insert');
+      expect(capturedRequests.patchDraft?.value).toMatchObject({
+        ip: '10.0.0.1',
+      });
     });
 
     it('should stage a CIDR block', async () => {
@@ -111,6 +116,10 @@ describe('firewall ip-blocks', () => {
         'IP block for 10.0.0.0/24 on all hosts staged'
       );
       expect(await exitCodePromise).toEqual(0);
+      expect(capturedRequests.patchDraft?.action).toBe('ip.insert');
+      expect(capturedRequests.patchDraft?.value).toMatchObject({
+        ip: '10.0.0.0/24',
+      });
     });
 
     it('should accept --hostname flag', async () => {
@@ -130,6 +139,10 @@ describe('firewall ip-blocks', () => {
       const exitCodePromise = firewall(client);
       await expect(client.stderr).toOutput('staged');
       expect(await exitCodePromise).toEqual(0);
+      expect(capturedRequests.patchDraft?.value).toMatchObject({
+        ip: '10.0.0.1',
+        hostname: 'example.com',
+      });
     });
 
     it('should reject invalid IP', async () => {
@@ -195,6 +208,8 @@ describe('firewall ip-blocks', () => {
         'IP block removal for 10.0.0.1 staged'
       );
       expect(await exitCodePromise).toEqual(0);
+      expect(capturedRequests.patchDraft?.action).toBe('ip.remove');
+      expect(capturedRequests.patchDraft?.id).toBe('ip_001');
     });
 
     it('should stage IP block removal by ID with --yes', async () => {
@@ -209,6 +224,8 @@ describe('firewall ip-blocks', () => {
       const exitCodePromise = firewall(client);
       await expect(client.stderr).toOutput('staged');
       expect(await exitCodePromise).toEqual(0);
+      expect(capturedRequests.patchDraft?.action).toBe('ip.remove');
+      expect(capturedRequests.patchDraft?.id).toBe('ip_001');
     });
 
     it('should error when IP not found', async () => {
