@@ -372,6 +372,37 @@ const NEGATED_OPERATOR_LABELS: Record<string, string> = {
   lte: 'NOT <=',
 };
 
+const CONDITION_TYPE_LABELS: Record<string, string> = {
+  path: 'path',
+  method: 'method',
+  host: 'host',
+  ip_address: 'IP address',
+  user_agent: 'user agent',
+  header: 'header',
+  cookie: 'cookie',
+  query: 'query string',
+  ja3_digest: 'JA3 digest',
+  ja4_digest: 'JA4 digest',
+  geo_country: 'geo country',
+  geo_city: 'geo city',
+  geo_as_number: 'geo AS number',
+  geo_continent: 'geo continent',
+  geo_region: 'geo region',
+  protocol: 'protocol',
+  scheme: 'scheme',
+  request_body: 'request body',
+  target_path: 'target path',
+  region: 'region',
+  environment: 'environment',
+  ssl: 'SSL',
+};
+
+function getConditionTypeLabel(type: string, key?: string): string {
+  const label = CONDITION_TYPE_LABELS[type] || type;
+  if (key) return `${label}[${key}]`;
+  return label;
+}
+
 function getOperatorLabel(op: string, neg?: boolean): string {
   if (neg) {
     return NEGATED_OPERATOR_LABELS[op] || `NOT ${OPERATOR_LABELS[op] || op}`;
@@ -394,9 +425,7 @@ function formatConditionValue(condition: FirewallCondition): string {
  * e.g., "path starts with /api" or "header[Authorization] exists"
  */
 export function formatConditionCompact(condition: FirewallCondition): string {
-  const type = condition.key
-    ? `${condition.type}[${condition.key}]`
-    : condition.type;
+  const type = getConditionTypeLabel(condition.type, condition.key);
   const op = getOperatorLabel(condition.op, condition.neg);
   const value = formatConditionValue(condition);
 

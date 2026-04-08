@@ -46,6 +46,13 @@ describe('firewall rules list', () => {
     const exitCodePromise = firewall(client);
     await expect(client.stderr).toOutput('Showing live configuration');
     expect(await exitCodePromise).toEqual(0);
+
+    const fullOutput = client.stderr.getFullOutput();
+    expect(fullOutput).toContain('Test Rule 1');
+    expect(fullOutput).toContain('Test Rule 2');
+    expect(fullOutput).toContain('Test Rule 3');
+    expect(fullOutput).toContain('Challenge');
+    expect(fullOutput).toContain('Deny');
   });
 
   it('should list rules with various action types', async () => {
@@ -94,6 +101,34 @@ describe('firewall rules list', () => {
     const exitCodePromise = firewall(client);
     await expect(client.stderr).toOutput('Showing live configuration');
     expect(await exitCodePromise).toEqual(0);
+
+    const fullOutput = client.stderr.getFullOutput();
+    expect(fullOutput).toContain('Conditions:');
+    expect(fullOutput).toContain('Action:');
+  });
+
+  it('should show expand with draft annotations', async () => {
+    const active = createConfig({
+      rules: [createRule(1)],
+    });
+    const draft = createConfig({
+      id: 'draft',
+      rules: [createRule(1), createRule(2)],
+      changes: [
+        createChange('rules.insert', {
+          id: 'rule_002',
+          value: { name: 'Test Rule 2' },
+        }),
+      ],
+    });
+    useListFirewallConfigs(active, draft);
+    client.setArgv('firewall', 'rules', 'list', '--expand');
+    const exitCodePromise = firewall(client);
+    await expect(client.stderr).toOutput('unpublished rule change');
+    expect(await exitCodePromise).toEqual(0);
+
+    const fullOutput = client.stderr.getFullOutput();
+    expect(fullOutput).toContain('Test Rule 2');
   });
 
   it('should output valid JSON with --json flag', async () => {

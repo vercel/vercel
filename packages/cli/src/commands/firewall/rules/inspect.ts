@@ -25,7 +25,33 @@ export default async function inspect(client: Client, argv: string[]) {
 
   const identifier = parsed.args[0];
   if (!identifier) {
-    output.error('Missing required argument: <name-or-id>');
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'missing_arguments',
+          message: 'Rule name or ID is required.',
+          next: [
+            {
+              command: withGlobalFlags(
+                client,
+                'firewall rules inspect <name-or-id>'
+              ),
+              when: 'replace <name-or-id>',
+            },
+            {
+              command: withGlobalFlags(client, 'firewall rules list'),
+              when: 'list rules',
+            },
+          ],
+        },
+        1
+      );
+    }
+    output.error(
+      `Rule name or ID is required. Usage: ${getCommandName('firewall rules inspect <name-or-id>')}`
+    );
     return 1;
   }
 
@@ -47,6 +73,24 @@ export default async function inspect(client: Client, argv: string[]) {
     const matches = resolveRule(currentRules, identifier);
 
     if (matches.length === 0) {
+      output.stopSpinner();
+      if (client.nonInteractive) {
+        outputAgentError(
+          client,
+          {
+            status: 'error',
+            reason: 'not_found',
+            message: `No rule found for "${identifier}".`,
+            next: [
+              {
+                command: withGlobalFlags(client, 'firewall rules list'),
+                when: 'list rules',
+              },
+            ],
+          },
+          1
+        );
+      }
       output.error(
         `No rule found for "${identifier}". Run ${chalk.cyan(getCommandName('firewall rules list'))} to view all rules.`
       );
@@ -59,6 +103,24 @@ export default async function inspect(client: Client, argv: string[]) {
     if (matches.length > 1) {
       output.stopSpinner();
       if (client.nonInteractive || !client.stdin.isTTY) {
+        if (client.nonInteractive) {
+          outputAgentError(
+            client,
+            {
+              status: 'error',
+              reason: 'ambiguous_match',
+              message: `Multiple rules match "${identifier}". Specify the full rule ID.`,
+              next: matches.map(r => ({
+                command: withGlobalFlags(
+                  client,
+                  `firewall rules inspect "${r.id}"`
+                ),
+                when: `inspect "${r.name}"`,
+              })),
+            },
+            1
+          );
+        }
         output.error(
           `Multiple rules match "${identifier}". Specify the full rule ID to disambiguate.`
         );

@@ -8,6 +8,7 @@ import {
   createRule,
   createRateLimitRule,
   createMultiGroupRule,
+  createRedirectRule,
 } from '../../../mocks/firewall';
 import { useProject, defaultProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
@@ -57,6 +58,13 @@ describe('firewall rules inspect', () => {
     const exitCodePromise = firewall(client);
     await expect(client.stderr).toOutput('Rate Limit API');
     expect(await exitCodePromise).toEqual(0);
+
+    const fullOutput = client.stderr.getFullOutput();
+    expect(fullOutput).toContain('Rate Limit');
+    expect(fullOutput).toContain('Algorithm:');
+    expect(fullOutput).toContain('Window:');
+    expect(fullOutput).toContain('Limit:');
+    expect(fullOutput).toContain('Keys:');
   });
 
   it('should inspect a multi-group rule', async () => {
@@ -68,6 +76,26 @@ describe('firewall rules inspect', () => {
     const exitCodePromise = firewall(client);
     await expect(client.stderr).toOutput('Block Suspicious Traffic');
     expect(await exitCodePromise).toEqual(0);
+
+    const fullOutput = client.stderr.getFullOutput();
+    expect(fullOutput).toContain('Conditions:');
+    expect(fullOutput).toContain('OR');
+    expect(fullOutput).toContain('Deny');
+  });
+
+  it('should inspect a redirect rule', async () => {
+    const active = createConfig({
+      rules: [createRedirectRule()],
+    });
+    useListFirewallConfigs(active, null);
+    client.setArgv('firewall', 'rules', 'inspect', 'Redirect Old');
+    const exitCodePromise = firewall(client);
+    await expect(client.stderr).toOutput('Redirect Old Path');
+    expect(await exitCodePromise).toEqual(0);
+
+    const fullOutput = client.stderr.getFullOutput();
+    expect(fullOutput).toContain('Redirect');
+    expect(fullOutput).toContain('/new');
   });
 
   it('should error when rule not found', async () => {
@@ -81,7 +109,7 @@ describe('firewall rules inspect', () => {
   it('should error when identifier is missing', async () => {
     client.setArgv('firewall', 'rules', 'inspect');
     const exitCodePromise = firewall(client);
-    await expect(client.stderr).toOutput('Missing required argument');
+    await expect(client.stderr).toOutput('Rule name or ID is required');
     expect(await exitCodePromise).toEqual(1);
   });
 
