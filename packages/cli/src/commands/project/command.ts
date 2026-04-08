@@ -305,6 +305,14 @@ export const protectionSubcommand = {
       deprecated: false,
     },
     {
+      name: 'customer-support-code-visibility',
+      shorthand: null,
+      type: Boolean,
+      description:
+        'Apply action to customer support code visibility protection.',
+      deprecated: false,
+    },
+    {
       name: 'skew',
       shorthand: null,
       type: Boolean,
@@ -344,6 +352,14 @@ export const protectionSubcommand = {
     {
       name: 'Enable password protection',
       value: `${packageName} project protection enable my-app --password`,
+    },
+    {
+      name: 'Enable customer support code visibility',
+      value: `${packageName} project protection enable my-app --customer-support-code-visibility`,
+    },
+    {
+      name: 'Disable customer support code visibility',
+      value: `${packageName} project protection disable my-app --customer-support-code-visibility`,
     },
     {
       name: 'Enable skew protection',

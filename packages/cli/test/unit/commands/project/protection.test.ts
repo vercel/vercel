@@ -129,6 +129,13 @@ describe('project protection (SSO)', () => {
       ).toBe(true);
       expect(
         payload.next?.some((n: { command: string }) =>
+          /project protection.*--customer-support-code-visibility/.test(
+            n.command
+          )
+        )
+      ).toBe(true);
+      expect(
+        payload.next?.some((n: { command: string }) =>
           /project protection.*--skew/.test(n.command)
         )
       ).toBe(true);
@@ -245,6 +252,69 @@ describe('project protection (password)', () => {
       projectId: 'prj_123',
       projectName: 'my-project',
       passwordProtection: true,
+    });
+  });
+});
+
+describe('project protection (customer support code visibility)', () => {
+  it('shows protection settings by default', async () => {
+    useProject({
+      ...defaultProject,
+      id: 'prj_123',
+      name: 'my-project',
+    });
+
+    client.setArgv('project', 'protection', 'my-project');
+    const exitCode = await project(client);
+
+    expect(exitCode).toBe(0);
+    await expect(client.stderr).toOutput('Protection settings');
+  });
+
+  it('requires flag for action mode', async () => {
+    useProject({
+      ...defaultProject,
+      id: 'prj_123',
+      name: 'my-project',
+    });
+
+    client.setArgv('project', 'protection', 'enable', 'my-project');
+    const exitCode = await project(client);
+
+    expect(exitCode).toBe(2);
+    await expect(client.stderr).toOutput('No protection selected');
+  });
+
+  it('sets customerSupportCodeVisibility', async () => {
+    useProject({
+      ...defaultProject,
+      id: 'prj_123',
+      name: 'my-project',
+    });
+
+    client.scenario.patch('/v9/projects/prj_123', (req, res) => {
+      expect(req.body).toEqual({ customerSupportCodeVisibility: true });
+      res.json({ id: 'prj_123' });
+    });
+
+    client.setArgv(
+      'project',
+      'protection',
+      'enable',
+      'my-project',
+      '--customer-support-code-visibility',
+      '--format',
+      'json'
+    );
+    const exitCode = await project(client);
+    expect(exitCode).toBe(0);
+
+    const out = JSON.parse(client.stdout.getFullOutput().trim());
+    expect(out).toMatchObject({
+      action: 'enable',
+      projectId: 'prj_123',
+      projectName: 'my-project',
+      customerSupportCodeVisibility: true,
     });
   });
 });
