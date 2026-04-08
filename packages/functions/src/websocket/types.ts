@@ -1,12 +1,7 @@
-/**
- * The result of upgrading a request to a WebSocket connection.
- */
+import type { WebSocket } from 'ws';
+
 export interface WebSocketUpgradeResult {
-  /**
-   * A WebSocket instance with the standard `onmessage`/`send()`
-   * interface, powered by the `ws` library.
-   */
-  socket: import('ws').WebSocket;
+  socket: WebSocket;
 
   /**
    * A synthetic 101 Switching Protocols response.
