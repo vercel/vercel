@@ -10,11 +10,15 @@ type Context = {
   headers?: Record<string, string>;
   /**
    * Low-level WebSocket upgrade provided by the runtime bridge.
-   * Writes a 101 response on the underlying socket and returns the
-   * raw duplex stream. The `@vercel/functions` `upgradeWebSocket()`
-   * wraps this into a higher-level API.
+   * Writes a 101 response on the underlying socket, detaches it
+   * from the ServerResponse, and returns the raw req/socket/head
+   * tuple for use with libraries like `ws`.
    */
-  upgradeWebSocket?: () => unknown;
+  upgradeWebSocket?: () => {
+    req: unknown;
+    socket: unknown;
+    head: unknown;
+  };
 };
 
 export const SYMBOL_FOR_REQ_CONTEXT = Symbol.for('@vercel/request-context');
