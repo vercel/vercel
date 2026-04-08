@@ -1,5 +1,6 @@
 import { describe, expect, test, vi, beforeEach } from 'vitest';
-import { Duplex } from 'stream';
+import { Socket } from 'net';
+import { IncomingMessage } from 'http';
 import { SYMBOL_FOR_REQ_CONTEXT } from '../../src/get-context';
 import { upgradeWebSocket } from '../../src/websocket';
 
@@ -48,14 +49,21 @@ describe('upgradeWebSocket', () => {
   });
 
   describe('delegation', () => {
-    test('calls context upgradeWebSocket and returns socket + response', () => {
-      const mockSocket = new Duplex({
-        read() {},
-        write(_, __, cb) {
-          cb();
-        },
+    test('calls context upgradeWebSocket and returns ws socket + response', () => {
+      // Create a real socket pair so ws can operate on it
+      const socket = new Socket();
+      const req = new IncomingMessage(socket);
+      req.method = 'GET';
+      req.headers['upgrade'] = 'websocket';
+      req.headers['connection'] = 'Upgrade';
+      req.headers['sec-websocket-key'] = 'dGhlIHNhbXBsZSBub25jZQ==';
+      req.headers['sec-websocket-version'] = '13';
+
+      const mockUpgrade = vi.fn().mockReturnValue({
+        req,
+        socket,
+        head: Buffer.alloc(0),
       });
-      const mockUpgrade = vi.fn().mockReturnValue(mockSocket);
 
       g[SYMBOL_FOR_REQ_CONTEXT] = {
         get: () => ({ upgradeWebSocket: mockUpgrade }),
@@ -68,9 +76,14 @@ describe('upgradeWebSocket', () => {
       const result = upgradeWebSocket(request);
 
       expect(mockUpgrade).toHaveBeenCalled();
-      expect(result.socket).toBe(mockSocket);
+      expect(result.socket).toBeDefined();
+      expect(typeof result.socket.send).toBe('function');
+      expect(typeof result.socket.close).toBe('function');
       expect(result.response.status).toBe(101);
       expect(result.response.statusText).toBe('Switching Protocols');
+
+      // Clean up
+      socket.destroy();
     });
   });
 });
