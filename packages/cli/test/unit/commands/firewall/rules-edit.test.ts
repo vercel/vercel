@@ -50,6 +50,8 @@ describe('firewall rules edit', () => {
       const exitCodePromise = firewall(client);
       await expect(client.stderr).toOutput('updated and staged');
       expect(await exitCodePromise).toEqual(0);
+      expect(lastPatchBody.action).toBe('rules.update');
+      expect(lastPatchBody.id).toBe('rule_001');
     });
 
     it('should edit a rule by ID', async () => {
@@ -70,6 +72,8 @@ describe('firewall rules edit', () => {
       const exitCodePromise = firewall(client);
       await expect(client.stderr).toOutput('updated and staged');
       expect(await exitCodePromise).toEqual(0);
+      expect(lastPatchBody.action).toBe('rules.update');
+      expect(lastPatchBody.value.action.mitigate.action).toBe('log');
     });
 
     it('should error when rule not found', async () => {
