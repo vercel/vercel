@@ -49,7 +49,7 @@ export default async function createApiKey(client: Client, argv: string[]) {
 
   // Validate --budget if provided
   if (budget !== undefined && budget < 1) {
-    const message = 'Budget must be a positive number in USD (minimum 1).';
+    const message = 'Budget must be a positive number in dollars (minimum 1).';
     outputAgentError(
       client,
       {

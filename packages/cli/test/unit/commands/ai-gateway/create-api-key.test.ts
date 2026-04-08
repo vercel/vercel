@@ -102,7 +102,7 @@ describe('ai-gateway create-api-key', () => {
 
       const exitCodePromise = aiGateway(client);
 
-      await expect(client.stderr).toOutput('Budget must be a positive number');
+      await expect(client.stderr).toOutput('Budget must be a positive number in dollars');
       expect(await exitCodePromise).toBe(1);
     });
 
@@ -112,7 +112,7 @@ describe('ai-gateway create-api-key', () => {
 
       const exitCodePromise = aiGateway(client);
 
-      await expect(client.stderr).toOutput('Budget must be a positive number');
+      await expect(client.stderr).toOutput('Budget must be a positive number in dollars');
       expect(await exitCodePromise).toBe(1);
     });
   });

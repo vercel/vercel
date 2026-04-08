@@ -20,7 +20,7 @@ export const createApiKeySubcommand = {
       type: Number,
       argument: 'AMOUNT',
       deprecated: false,
-      description: 'Quota budget amount in USD (minimum 1)',
+      description: 'Quota budget amount in dollars (minimum 1)',
     },
     {
       name: 'refresh-period',
