@@ -6,7 +6,10 @@ import { spawn } from 'node:child_process';
 import { PROJECT_ENV_TARGET } from '@vercel-internals/constants';
 import { cloneEnv } from '@vercel/build-utils';
 import {
+  getOrCreatePersistedCliDevice,
   getOrCreatePersistedCliSession,
+  type PersistedCliDevice,
+  type PersistedCliDeviceOptions,
   touchPersistedCliSession,
   type PersistedCliSession,
   type PersistedCliSessionOptions,
@@ -213,6 +216,15 @@ export class TelemetryClient {
     }
   }
 
+  protected trackDeviceId(deviceId: string | undefined) {
+    if (deviceId) {
+      this.track({
+        key: 'device_id',
+        value: deviceId,
+      });
+    }
+  }
+
   protected trackErrorStatus(status: number | string | undefined) {
     if (typeof status !== 'undefined') {
       this.track({
@@ -314,23 +326,34 @@ export class TelemetryEventStore {
   private isDebug: boolean;
   private sessionId: string;
   private invocationId: string;
+  private deviceId: string;
   private teamId = 'NO_TEAM_ID';
   private userId = 'NO_USER_ID';
   private projectId = 'NO_PROJECT_ID';
   private config: GlobalConfig['telemetry'];
+  private cliDevice?: PersistedCliDevice;
   private cliSession?: PersistedCliSession;
+  private cliDeviceOptions?: PersistedCliDeviceOptions;
   private cliSessionOptions?: PersistedCliSessionOptions;
 
   constructor(opts?: {
     isDebug?: boolean;
     config: GlobalConfig['telemetry'];
+    cliDevice?: PersistedCliDeviceOptions;
     cliSession?: PersistedCliSessionOptions;
   }) {
     this.isDebug = opts?.isDebug || false;
     this.events = [];
     this.config = opts?.config;
+    this.cliDeviceOptions = opts?.cliDevice;
     this.cliSessionOptions = opts?.cliSession;
     this.invocationId = randomUUID();
+    this.deviceId = randomUUID();
+
+    if (this.cliDeviceOptions) {
+      this.cliDevice = getOrCreatePersistedCliDevice(this.cliDeviceOptions);
+      this.deviceId = this.cliDevice.id;
+    }
 
     if (this.cliSessionOptions) {
       this.cliSession = getOrCreatePersistedCliSession(this.cliSessionOptions);
@@ -376,6 +399,10 @@ export class TelemetryEventStore {
 
   get currentInvocationId() {
     return this.invocationId;
+  }
+
+  get currentDeviceId() {
+    return this.deviceId;
   }
 
   get readonlyEvents() {

@@ -440,6 +440,10 @@ export class RootTelemetryClient extends TelemetryClient {
     super.trackInvocationId(invocationId);
   }
 
+  trackDeviceId(deviceId: string | undefined) {
+    super.trackDeviceId(deviceId);
+  }
+
   trackErrorStatus(status: number | string | undefined) {
     super.trackErrorStatus(status);
   }

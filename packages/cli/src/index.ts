@@ -174,6 +174,8 @@ class InMemoryReporter implements Reporter {
 const main = async () => {
   const traceReporter = new InMemoryReporter();
   const rootSpan = new Span({ name: 'vc.cli', reporter: traceReporter });
+  const isTelemetryFlushCommand =
+    process.argv[2] === 'telemetry' && process.argv[3] === 'flush';
 
   if (process.env.FORCE_TTY === '1') {
     isTTY = true;
@@ -334,12 +336,16 @@ const main = async () => {
   const telemetryEventStore = new TelemetryEventStore({
     isDebug: process.env.VERCEL_TELEMETRY_DEBUG === '1',
     config: config.telemetry,
-    cliSession:
-      process.argv[2] === 'telemetry' && process.argv[3] === 'flush'
-        ? undefined
-        : {
-            filePath: join(VERCEL_DIR, 'telemetry-session.json'),
-          },
+    cliDevice: isTelemetryFlushCommand
+      ? undefined
+      : {
+          filePath: join(VERCEL_DIR, 'telemetry-device.json'),
+        },
+    cliSession: isTelemetryFlushCommand
+      ? undefined
+      : {
+          filePath: join(VERCEL_DIR, 'telemetry-session.json'),
+        },
   });
 
   checkTelemetryStatus({
@@ -360,6 +366,7 @@ const main = async () => {
 
   const { isAgent, agent: detectedAgent } = await determineAgent();
   telemetry.trackInvocationId(telemetryEventStore.currentInvocationId);
+  telemetry.trackDeviceId(telemetryEventStore.currentDeviceId);
   telemetry.trackAgenticUse(detectedAgent?.name);
   telemetry.trackCPUs();
   telemetry.trackPlatform();

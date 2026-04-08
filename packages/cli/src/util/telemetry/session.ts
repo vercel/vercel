@@ -13,11 +13,19 @@ export interface PersistedCliSession {
   lastSeenAt: number;
 }
 
+export interface PersistedCliDevice {
+  id: string;
+}
+
 export interface PersistedCliSessionOptions {
   filePath: string;
   inactivityTimeoutMs?: number;
   maxLifetimeMs?: number;
   now?: () => number;
+}
+
+export interface PersistedCliDeviceOptions {
+  filePath: string;
 }
 
 function isPersistedCliSession(value: unknown): value is PersistedCliSession {
@@ -33,6 +41,15 @@ function isPersistedCliSession(value: unknown): value is PersistedCliSession {
     typeof session.lastSeenAt === 'number' &&
     Number.isFinite(session.lastSeenAt)
   );
+}
+
+function isPersistedCliDevice(value: unknown): value is PersistedCliDevice {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const device = value as Partial<PersistedCliDevice>;
+  return typeof device.id === 'string';
 }
 
 function readPersistedCliSession(filePath: string): PersistedCliSession | null {
@@ -51,6 +68,27 @@ function writePersistedCliSession(
   try {
     mkdirSync(dirname(filePath), { recursive: true });
     writeJSON.sync(filePath, session, { indent: 2 });
+  } catch {
+    // best-effort for telemetry
+  }
+}
+
+function readPersistedCliDevice(filePath: string): PersistedCliDevice | null {
+  try {
+    const device = loadJSON.sync(filePath);
+    return isPersistedCliDevice(device) ? device : null;
+  } catch {
+    return null;
+  }
+}
+
+function writePersistedCliDevice(
+  filePath: string,
+  device: PersistedCliDevice
+): void {
+  try {
+    mkdirSync(dirname(filePath), { recursive: true });
+    writeJSON.sync(filePath, device, { indent: 2 });
   } catch {
     // best-effort for telemetry
   }
@@ -96,4 +134,21 @@ export function touchPersistedCliSession(
   };
   writePersistedCliSession(opts.filePath, nextSession);
   return nextSession;
+}
+
+export function getOrCreatePersistedCliDevice(
+  opts: PersistedCliDeviceOptions
+): PersistedCliDevice {
+  const existing = readPersistedCliDevice(opts.filePath);
+
+  if (existing) {
+    return existing;
+  }
+
+  const device = {
+    id: randomUUID(),
+  };
+
+  writePersistedCliDevice(opts.filePath, device);
+  return device;
 }
