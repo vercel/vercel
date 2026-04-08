@@ -1,5 +1,39 @@
 # @vercel/fs-detectors
 
+## 5.15.0
+
+### Minor Changes
+
+- Support configuration via vercel.toml ([#15750](https://github.com/vercel/vercel/pull/15750))
+
+### Patch Changes
+
+- remove experimental flag on node preset ([#15628](https://github.com/vercel/vercel/pull/15628))
+
+- Updated dependencies [[`aea2272ac976a2e13591e402b2a41173cf51f740`](https://github.com/vercel/vercel/commit/aea2272ac976a2e13591e402b2a41173cf51f740), [`42b6ff3113eb7ba5302b8469f8dd10070ecec6f0`](https://github.com/vercel/vercel/commit/42b6ff3113eb7ba5302b8469f8dd10070ecec6f0)]:
+  - @vercel/frameworks@3.24.0
+  - @vercel/build-utils@13.14.0
+
+## 5.14.3
+
+### Patch Changes
+
+- Updated dependencies [[`a80217a9ed60d7b7f3e98537b0468cc5488078c1`](https://github.com/vercel/vercel/commit/a80217a9ed60d7b7f3e98537b0468cc5488078c1)]:
+  - @vercel/build-utils@13.13.0
+
+## 5.14.2
+
+### Patch Changes
+
+- Fall back to `--scope` flag for Turborepo versions 1.1 and below when generating default build commands. ([#15835](https://github.com/vercel/vercel/pull/15835))
+
+## 5.14.1
+
+### Patch Changes
+
+- Updated dependencies [[`d034d90dcf78316ddacdcce8fd51329fb7eefe82`](https://github.com/vercel/vercel/commit/d034d90dcf78316ddacdcce8fd51329fb7eefe82)]:
+  - @vercel/frameworks@3.23.0
+
 ## 5.14.0
 
 ### Minor Changes

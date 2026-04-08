@@ -139,4 +139,53 @@ describe('login', () => {
 
   it.todo('Authorization request error');
   it.todo('Token request error');
+
+  it('clears stale cached userId on re-login', async () => {
+    vi.resetModules();
+    const freshOauth = await import('../../../../src/util/oauth');
+    const { default: freshLogin } = await import(
+      '../../../../src/commands/login'
+    );
+
+    fetch.mockResolvedValueOnce(
+      mockResponse({
+        issuer: 'https://vercel.com',
+        device_authorization_endpoint: 'https://vercel.com',
+        token_endpoint: 'https://vercel.com',
+        revocation_endpoint: 'https://vercel.com',
+        jwks_uri: 'https://vercel.com',
+        introspection_endpoint: 'https://vercel.com',
+      })
+    );
+    await freshOauth.as();
+
+    const authorizationResult = {
+      device_code: randomUUID(),
+      user_code: randomUUID(),
+      verification_uri: 'https://vercel.com/device',
+      verification_uri_complete: `https://vercel.com/device?code=${randomUUID()}`,
+      expires_in: 30,
+      interval: 0.005,
+    };
+
+    fetch.mockResolvedValueOnce(mockResponse(authorizationResult));
+
+    await simulateTokenPolling(
+      1,
+      mockResponse({
+        access_token: randomUUID(),
+        token_type: 'Bearer',
+        expires_in: 60,
+        scope: 'openid offline_access',
+      })
+    );
+
+    client.setArgv('login');
+    client.authConfig.userId = 'user_stale';
+
+    const exitCode = await freshLogin(client, { shouldParseArgs: true });
+
+    expect(exitCode).toBe(0);
+    expect(client.authConfig.userId).toBeUndefined();
+  });
 });
