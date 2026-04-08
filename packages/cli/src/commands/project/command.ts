@@ -336,6 +336,13 @@ export const protectionSubcommand = {
         'Optional secret value for protection bypass. Required when disabling bypass.',
       deprecated: false,
     },
+    {
+      name: 'git-fork-protection',
+      shorthand: null,
+      type: Boolean,
+      description: 'Apply action to Git fork protection.',
+      deprecated: false,
+    },
   ],
   examples: [
     {
@@ -373,6 +380,14 @@ export const protectionSubcommand = {
     {
       name: 'Disable bypass with secret',
       value: `${packageName} project protection disable my-app --protection-bypass --protection-bypass-secret <secret>`,
+    },
+    {
+      name: 'Enable Git fork protection',
+      value: `${packageName} project protection enable my-app --git-fork-protection`,
+    },
+    {
+      name: 'Disable Git fork protection',
+      value: `${packageName} project protection disable my-app --git-fork-protection`,
     },
     {
       name: 'Enable SSO deployment protection',

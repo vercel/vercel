@@ -205,23 +205,26 @@ export default async function protection(
   const protectionBypassSecret = parsedArgs.flags[
     '--protection-bypass-secret'
   ] as string | undefined;
-
+  const gitForkProtectionSelected = Boolean(
+    parsedArgs.flags['--git-fork-protection']
+  );
   if (
     action &&
     !ssoSelected &&
     !passwordSelected &&
     !skewSelected &&
-    !bypassSelected
+    !bypassSelected &&
+    !gitForkProtectionSelected
   ) {
     const msg =
-      'No protection selected. Pass --sso, --password, --skew, or --protection-bypass. Usage: `vercel project protection enable|disable [name] --sso|--password|--skew|--protection-bypass`';
+      'No protection selected. Pass --sso, --password, --skew, --protection-bypass, or --git-fork-protection. Usage: `vercel project protection enable|disable [name] --sso|--password|--skew|--protection-bypass|--git-fork-protection`';
     outputAgentError(
       client,
       {
         status: 'error',
         reason: AGENT_REASON.MISSING_ARGUMENTS,
         message: msg,
-        hint: 'Use `project protection enable|disable` with a protection flag (e.g. --sso, --password, --skew, or --protection-bypass).',
+        hint: 'Use `project protection enable|disable` with a protection flag (e.g. --sso, --password, --skew, --protection-bypass, or --git-fork-protection).',
         next: [
           {
             command: buildCommandWithGlobalFlags(
@@ -250,6 +253,13 @@ export default async function protection(
               `project protection ${action} --protection-bypass`
             ),
             when: 'Example: same action with automation protection bypass',
+          },
+          {
+            command: buildCommandWithGlobalFlags(
+              client.argv,
+              `project protection ${action} --git-fork-protection`
+            ),
+            when: 'Example: same action with Git fork protection selected',
           },
         ],
       },
@@ -351,6 +361,9 @@ export default async function protection(
     if (skewSelected) {
       patchBody.skewProtectionMaxAge = skewProtectionMaxAge;
     }
+    if (gitForkProtectionSelected) {
+      patchBody.gitForkProtection = action === 'enable';
+    }
 
     if (Object.keys(patchBody).length > 0) {
       try {
@@ -383,6 +396,9 @@ export default async function protection(
                 : { skewProtectionMaxAge: 0 }
               : {}),
             protectionBypass: bypassSelected ? action === 'enable' : undefined,
+            gitForkProtection: gitForkProtectionSelected
+              ? action === 'enable'
+              : undefined,
           },
           null,
           2

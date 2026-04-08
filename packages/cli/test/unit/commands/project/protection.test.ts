@@ -137,6 +137,11 @@ describe('project protection (SSO)', () => {
           /project protection.*--protection-bypass/.test(n.command)
         )
       ).toBe(true);
+      expect(
+        payload.next?.some((n: { command: string }) =>
+          /project protection.*--git-fork-protection/.test(n.command)
+        )
+      ).toBe(true);
     });
 
     it('outputs JSON when listing protection settings without --format', async () => {
@@ -412,6 +417,64 @@ describe('project protection (skew)', () => {
       projectName: 'my-project',
       skewProtection: true,
       skewProtectionMaxAge: 2592000,
+    });
+  });
+});
+
+describe('project protection (git fork)', () => {
+  it('sets gitForkProtection', async () => {
+    useProject({
+      ...defaultProject,
+      id: 'prj_123',
+      name: 'my-project',
+    });
+
+    client.scenario.patch('/v9/projects/prj_123', (req, res) => {
+      expect(req.body).toEqual({ gitForkProtection: false });
+      res.json({ id: 'prj_123' });
+    });
+
+    client.setArgv(
+      'project',
+      'protection',
+      'disable',
+      'my-project',
+      '--git-fork-protection'
+    );
+    const exitCode = await project(client);
+
+    expect(exitCode).toBe(0);
+  });
+
+  it('returns JSON for enable with --git-fork-protection', async () => {
+    useProject({
+      ...defaultProject,
+      id: 'prj_123',
+      name: 'my-project',
+    });
+
+    client.scenario.patch('/v9/projects/prj_123', (_req, res) => {
+      res.json({ id: 'prj_123' });
+    });
+
+    client.setArgv(
+      'project',
+      'protection',
+      'enable',
+      'my-project',
+      '--git-fork-protection',
+      '--format',
+      'json'
+    );
+    const exitCode = await project(client);
+    expect(exitCode).toBe(0);
+
+    const out = JSON.parse(client.stdout.getFullOutput().trim());
+    expect(out).toMatchObject({
+      action: 'enable',
+      projectId: 'prj_123',
+      projectName: 'my-project',
+      gitForkProtection: true,
     });
   });
 });
