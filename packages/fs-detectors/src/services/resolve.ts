@@ -580,7 +580,15 @@ export async function resolveConfiguredService(
     builderConfig.framework = config.framework;
   }
   if (moduleAttrParsed) {
-    builderConfig.handlerFunction = moduleAttrParsed.attrName;
+    if (type === 'cron') {
+      // Cron services use handlerFunction for __VC_HANDLER_FUNC_NAME and route
+      // path generation; the WSGI variable is always 'app' for cron lambdas.
+      builderConfig.handlerFunction = moduleAttrParsed.attrName;
+    } else {
+      // For web/worker services, encode the variable in builder.src so it
+      // flows to detectPythonEntrypoint as configuredEntrypoint naturally.
+      builderSrc = `${builderSrc}:${moduleAttrParsed.attrName}`;
+    }
   }
 
   return {
