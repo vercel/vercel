@@ -279,6 +279,88 @@ export const membersSubcommand = {
   ],
 } as const;
 
+export const protectionSubcommand = {
+  name: 'protection',
+  aliases: [],
+  description: 'Show or toggle deployment protection settings for a project',
+  arguments: [
+    { name: 'action', required: false },
+    { name: 'name', required: false },
+  ],
+  options: [
+    formatOption,
+    {
+      name: 'sso',
+      shorthand: null,
+      type: Boolean,
+      description: 'Apply action to SSO protection.',
+      deprecated: false,
+    },
+    {
+      name: 'password',
+      shorthand: null,
+      type: Boolean,
+      description:
+        'Apply action to password protection (requires eligible plan/permissions).',
+      deprecated: false,
+    },
+    {
+      name: 'skew',
+      shorthand: null,
+      type: Boolean,
+      description: 'Apply action to skew protection.',
+      deprecated: false,
+    },
+    {
+      name: 'skew-max-age',
+      shorthand: null,
+      type: String,
+      argument: 'SECONDS',
+      description:
+        'When enabling with --skew, max age in seconds for skew protection (default 2592000, 30 days).',
+      deprecated: false,
+    },
+  ],
+  examples: [
+    {
+      name: 'Protection settings for the linked project',
+      value: `${packageName} project protection`,
+    },
+    {
+      name: 'Named project as JSON',
+      value: `${packageName} project protection my-app --format json`,
+    },
+    {
+      name: 'Disable password protection',
+      value: `${packageName} project protection disable my-app --password`,
+    },
+    {
+      name: 'Enable password protection',
+      value: `${packageName} project protection enable my-app --password`,
+    },
+    {
+      name: 'Enable skew protection',
+      value: `${packageName} project protection enable my-app --skew`,
+    },
+    {
+      name: 'Enable skew protection with custom max age (seconds)',
+      value: `${packageName} project protection enable my-app --skew --skew-max-age 604800`,
+    },
+    {
+      name: 'Disable skew protection',
+      value: `${packageName} project protection disable my-app --skew`,
+    },
+    {
+      name: 'Enable SSO deployment protection',
+      value: `${packageName} project protection enable my-app --sso`,
+    },
+    {
+      name: 'Disable SSO for a named project',
+      value: `${packageName} project protection disable my-app --sso`,
+    },
+  ],
+} as const;
+
 export const accessGroupsSubcommand = {
   name: 'access-groups',
   aliases: ['accessgroups'],
@@ -386,6 +468,7 @@ export const projectCommand = {
     listSubcommand,
     membersSubcommand,
     accessGroupsSubcommand,
+    protectionSubcommand,
     webAnalyticsSubcommand,
     speedInsightsSubcommand,
     removeSubcommand,
