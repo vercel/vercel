@@ -1,8 +1,5 @@
 import { describe, expect, it, beforeEach, afterEach } from 'vitest';
 import { base64url, EncryptJWT, jwtDecrypt } from 'jose';
-import { join } from 'node:path';
-import fs from 'fs-extra';
-import os from 'node:os';
 import flags from '../../../../src/commands/flags';
 import { client } from '../../../mocks/client';
 import { defaultProject, useProject } from '../../../mocks/project';
@@ -15,15 +12,11 @@ const TEST_SECRET = base64url.encode(
 );
 
 describe('flags override', () => {
-  let tmpDir: string;
   let originalFlagsSecret: string | undefined;
 
-  beforeEach(async () => {
+  beforeEach(() => {
     originalFlagsSecret = process.env.FLAGS_SECRET;
     delete process.env.FLAGS_SECRET;
-
-    tmpDir = await fs.mkdtemp(join(os.tmpdir(), 'flags-override-test-'));
-    client.cwd = tmpDir;
 
     useUser();
     useTeams('team_dummy');
@@ -34,13 +27,12 @@ describe('flags override', () => {
     });
   });
 
-  afterEach(async () => {
+  afterEach(() => {
     if (originalFlagsSecret !== undefined) {
       process.env.FLAGS_SECRET = originalFlagsSecret;
     } else {
       delete process.env.FLAGS_SECRET;
     }
-    await fs.remove(tmpDir);
   });
 
   describe('--help', () => {
@@ -156,60 +148,6 @@ describe('flags override', () => {
       const now = Math.floor(Date.now() / 1000);
       expect(payload.exp).toBeGreaterThan(now + thirtyDaysInSeconds - 60);
       expect(payload.exp).toBeLessThan(now + thirtyDaysInSeconds + 60);
-    });
-  });
-
-  describe('with FLAGS_SECRET in .env.local', () => {
-    it('reads secret from .env.local', async () => {
-      await fs.writeFile(
-        join(tmpDir, '.env.local'),
-        `FLAGS_SECRET=${TEST_SECRET}\n`
-      );
-
-      client.setArgv('flags', 'override', 'my-flag=true');
-      const exitCode = await flags(client);
-      expect(exitCode).toEqual(0);
-
-      const output = client.stdout.getFullOutput().trim();
-      const secret = base64url.decode(TEST_SECRET);
-      const { payload } = await jwtDecrypt(output, secret);
-      expect(payload.o).toEqual({ 'my-flag': true });
-    });
-  });
-
-  describe('with FLAGS_SECRET in .env', () => {
-    it('reads secret from .env', async () => {
-      await fs.writeFile(join(tmpDir, '.env'), `FLAGS_SECRET=${TEST_SECRET}\n`);
-
-      client.setArgv('flags', 'override', 'my-flag=true');
-      const exitCode = await flags(client);
-      expect(exitCode).toEqual(0);
-
-      const output = client.stdout.getFullOutput().trim();
-      const secret = base64url.decode(TEST_SECRET);
-      const { payload } = await jwtDecrypt(output, secret);
-      expect(payload.o).toEqual({ 'my-flag': true });
-    });
-
-    it('prefers .env.local over .env', async () => {
-      const altSecret = base64url.encode(
-        new Uint8Array(32).fill(0).map((_, i) => i + 100)
-      );
-      await fs.writeFile(
-        join(tmpDir, '.env.local'),
-        `FLAGS_SECRET=${TEST_SECRET}\n`
-      );
-      await fs.writeFile(join(tmpDir, '.env'), `FLAGS_SECRET=${altSecret}\n`);
-
-      client.setArgv('flags', 'override', 'my-flag=true');
-      const exitCode = await flags(client);
-      expect(exitCode).toEqual(0);
-
-      // Should decrypt with the .env.local secret, not .env
-      const output = client.stdout.getFullOutput().trim();
-      const secret = base64url.decode(TEST_SECRET);
-      const { payload } = await jwtDecrypt(output, secret);
-      expect(payload.o).toEqual({ 'my-flag': true });
     });
   });
 

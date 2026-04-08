@@ -1,10 +1,9 @@
-import { resolve } from 'node:path';
+import { loadEnvConfig } from '@next/env';
 import { base64url, EncryptJWT, jwtDecrypt } from 'jose';
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
-import { createEnvObject } from '../../util/env/diff-env-files';
 import output from '../../output-manager';
 import { overrideSubcommand } from './command';
 
@@ -58,7 +57,7 @@ async function handleEncrypt(
     overrides[key] = parseValue(rawValue);
   }
 
-  const secret = await resolveSecret(client);
+  const secret = resolveSecret(client);
   if (!secret) {
     output.error(
       'FLAGS_SECRET not found. Set it in the environment, .env.local, or .env file.'
@@ -77,7 +76,7 @@ async function handleEncrypt(
 }
 
 async function handleDecrypt(client: Client, token: string): Promise<number> {
-  const secret = await resolveSecret(client);
+  const secret = resolveSecret(client);
   if (!secret) {
     output.error(
       'FLAGS_SECRET not found. Set it in the environment, .env.local, or .env file.'
@@ -107,26 +106,9 @@ function parseValue(raw: string): unknown {
   return raw;
 }
 
-async function resolveSecret(client: Client): Promise<string | undefined> {
-  if (process.env.FLAGS_SECRET) {
-    return process.env.FLAGS_SECRET;
-  }
-
-  try {
-    const env = await createEnvObject(resolve(client.cwd, '.env.local'));
-    if (env?.FLAGS_SECRET) return env.FLAGS_SECRET;
-  } catch {
-    // file not found or unreadable — continue
-  }
-
-  try {
-    const env = await createEnvObject(resolve(client.cwd, '.env'));
-    if (env?.FLAGS_SECRET) return env.FLAGS_SECRET;
-  } catch {
-    // file not found or unreadable — continue
-  }
-
-  return undefined;
+function resolveSecret(client: Client): string | undefined {
+  const { combinedEnv } = loadEnvConfig(client.cwd, true);
+  return combinedEnv.FLAGS_SECRET;
 }
 
 async function encryptOverrides(
