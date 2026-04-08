@@ -409,7 +409,6 @@ export const build: BuildVX = async ({
       } else {
         // Check and run a custom vercel install command from project manifest.
         // This will return `false` if no script was ran.
-        // Fresh venv to avoid stale dependency accumulation from custom scripts.
         const hasCustomScript = await runPyprojectScript(
           workPath,
           ['vercel-install', 'now-install', 'install'],

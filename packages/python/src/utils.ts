@@ -90,36 +90,51 @@ export async function ensureVenv({
   quiet?: boolean;
 }) {
   const marker = join(venvPath, 'pyvenv.cfg');
+  let venvExists = false;
+
   try {
     await fs.promises.access(marker);
+    venvExists = true;
+  } catch {
+    // venv doesn't exist yet
+  }
 
-    // Invalidate if the cached venv was built with a different Python version.
-    if (pythonVersion.major != null && pythonVersion.minor != null) {
-      const expected = `${pythonVersion.major}.${pythonVersion.minor}`;
-      const cachedVersion = await readVenvPythonVersion(marker);
-      if (cachedVersion && cachedVersion !== expected) {
+  // Invalidate if the cached venv was built with a different Python version.
+  if (
+    venvExists &&
+    pythonVersion.major != null &&
+    pythonVersion.minor != null
+  ) {
+    const expected = `${pythonVersion.major}.${pythonVersion.minor}`;
+    const cachedVersion = await readVenvPythonVersion(marker);
+    if (cachedVersion && cachedVersion !== expected) {
+      if (!quiet) {
         console.log(
           `Cached venv Python ${cachedVersion} differs from requested ${expected}, recreating...`
         );
-        await fs.promises.rm(venvPath, { recursive: true, force: true });
-        // fall through to creation
-      } else {
-        debug(`Using cached virtual environment at "${venvPath}"`);
-        return;
       }
-    } else {
-      debug(`Using cached virtual environment at "${venvPath}"`);
-      return;
+      await fs.promises.rm(venvPath, { recursive: true, force: true });
+      venvExists = false;
     }
-  } catch {
-    // fall through to creation
   }
-  await fs.promises.mkdir(venvPath, { recursive: true });
-  if (!quiet) {
-    console.log(`Creating virtual environment at "${venvPath}"...`);
+
+  if (venvExists) {
+    debug(`Refreshing cached virtual environment at "${venvPath}"`);
+  } else {
+    await fs.promises.mkdir(venvPath, { recursive: true });
+    if (!quiet) {
+      console.log(`Creating virtual environment at "${venvPath}"...`);
+    }
   }
+
   if (uvPath) {
-    await execa(uvPath, ['venv', venvPath], {
+    // --allow-existing allows uv to reuse a cached venv
+    const args = ['venv', venvPath, '--allow-existing'];
+    // vc dev uses system python so we skip passing the python version to uv
+    if (pythonVersion.major != null && pythonVersion.minor != null) {
+      args.push('--python', `${pythonVersion.major}.${pythonVersion.minor}`);
+    }
+    await execa(uvPath, args, {
       env: getProtectedUvEnv(process.env, uvCacheDir),
     });
   } else {

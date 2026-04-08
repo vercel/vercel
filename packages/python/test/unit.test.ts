@@ -182,7 +182,7 @@ afterEach(() => {
 });
 
 describe('prepareCache()', () => {
-  it('caches only the uv cache directory, excluding bytecode and the venv', async () => {
+  it('caches uv cache and the venv, excludes bytecode and user source', async () => {
     const workPath = path.join(
       tmpdir(),
       `vc-python-cache-${Math.floor(Math.random() * 1e6)}`
