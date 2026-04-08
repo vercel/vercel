@@ -329,6 +329,22 @@ export const protectionSubcommand = {
       deprecated: false,
     },
     {
+      name: 'protection-bypass',
+      shorthand: null,
+      type: Boolean,
+      description: 'Apply action to automation protection bypass secrets.',
+      deprecated: false,
+    },
+    {
+      name: 'protection-bypass-secret',
+      shorthand: null,
+      type: String,
+      argument: 'SECRET',
+      description:
+        'Optional secret value for protection bypass. Required when disabling bypass.',
+      deprecated: false,
+    },
+    {
       name: 'git-fork-protection',
       shorthand: null,
       type: Boolean,
@@ -372,6 +388,14 @@ export const protectionSubcommand = {
     {
       name: 'Disable skew protection',
       value: `${packageName} project protection disable my-app --skew`,
+    },
+    {
+      name: 'Enable automation protection bypass',
+      value: `${packageName} project protection enable my-app --protection-bypass`,
+    },
+    {
+      name: 'Disable bypass with secret',
+      value: `${packageName} project protection disable my-app --protection-bypass --protection-bypass-secret <secret>`,
     },
     {
       name: 'Enable Git fork protection',

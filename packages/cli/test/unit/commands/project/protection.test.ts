@@ -141,6 +141,11 @@ describe('project protection (SSO)', () => {
       ).toBe(true);
       expect(
         payload.next?.some((n: { command: string }) =>
+          /project protection.*--protection-bypass/.test(n.command)
+        )
+      ).toBe(true);
+      expect(
+        payload.next?.some((n: { command: string }) =>
           /project protection.*--git-fork-protection/.test(n.command)
         )
       ).toBe(true);
@@ -541,5 +546,64 @@ describe('project protection (git fork)', () => {
       projectName: 'my-project',
       gitForkProtection: true,
     });
+  });
+});
+
+describe('project protection (automation bypass)', () => {
+  it('enables protection bypass via project bypass endpoint', async () => {
+    useProject({
+      ...defaultProject,
+      id: 'prj_123',
+      name: 'my-project',
+    });
+
+    client.scenario.patch(
+      '/v1/projects/prj_123/protection-bypass',
+      (req, res) => {
+        expect(req.body).toEqual({
+          generate: {},
+        });
+        res.json({ protectionBypass: {} });
+      }
+    );
+
+    client.setArgv(
+      'project',
+      'protection',
+      'enable',
+      'my-project',
+      '--protection-bypass',
+      '--format',
+      'json'
+    );
+    const exitCode = await project(client);
+    expect(exitCode).toBe(0);
+
+    const out = JSON.parse(client.stdout.getFullOutput().trim());
+    expect(out).toMatchObject({
+      action: 'enable',
+      projectId: 'prj_123',
+      projectName: 'my-project',
+      protectionBypass: true,
+    });
+  });
+
+  it('requires bypass secret when disabling protection bypass', async () => {
+    useProject({
+      ...defaultProject,
+      id: 'prj_123',
+      name: 'my-project',
+    });
+
+    client.setArgv(
+      'project',
+      'protection',
+      'disable',
+      'my-project',
+      '--protection-bypass'
+    );
+    const exitCode = await project(client);
+    expect(exitCode).toBe(2);
+    await expect(client.stderr).toOutput('requires --protection-bypass-secret');
   });
 });
