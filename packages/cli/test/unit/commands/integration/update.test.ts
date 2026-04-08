@@ -166,11 +166,18 @@ describe('integration', () => {
       expect(patchedId).toBe('icfg_install_b');
     });
 
-    it('errors when integration slug is missing', async () => {
+    it('errors when integration slug is missing but --projects was passed first', async () => {
       client.setArgv('integration', 'update', '--projects', 'all');
       const code = await integrationCommand(client);
       expect(code).toBe(1);
-      await expect(client.stderr).toOutput('must specify an integration');
+      await expect(client.stderr).toOutput('immediately after `update`');
+    });
+
+    it('errors when integration slug is missing with no subcommand flags', async () => {
+      client.setArgv('integration', 'update');
+      const code = await integrationCommand(client);
+      expect(code).toBe(1);
+      await expect(client.stderr).toOutput('integration slug after `update`');
     });
 
     it('writes structured JSON error to stdout when non-interactive and integration slug is missing', async () => {
@@ -191,9 +198,37 @@ describe('integration', () => {
         status: 'error',
         reason: 'missing_arguments',
       });
-      expect(payload.message).toMatch(/must specify an integration/i);
-      expect(payload.next?.[0]?.command).toContain('integration update neon');
-      expect(payload.next?.[0]?.command).toContain('--non-interactive');
+      expect(payload.message).toMatch(/integration slug/i);
+      expect(payload.next?.[0]?.command).toMatch(
+        /vercel --non-interactive --cwd \/tmp\/example integration update neon --projects all$/
+      );
+      expect(payload.next?.[1]?.command).toBe(
+        'vercel --non-interactive --cwd /tmp/example integration installations'
+      );
+    });
+
+    it('when --projects is given without a slug, explains argument order in JSON', async () => {
+      vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+        throw new Error(`exit:${code ?? 0}`);
+      }) as () => never);
+      client.nonInteractive = true;
+      client.setArgv(
+        'integration',
+        'update',
+        '--projects',
+        'all',
+        '--cwd',
+        '/tmp/example',
+        '--non-interactive'
+      );
+      await expect(integrationCommand(client)).rejects.toThrow('exit:1');
+      const payload = JSON.parse(client.stdout.getFullOutput().trim());
+      expect(payload.reason).toBe('missing_arguments');
+      expect(payload.message).toMatch(/immediately after `update`/i);
+      expect(payload.hint).toMatch(/integration name/i);
+      expect(payload.next?.[0]?.command).toMatch(
+        /vercel --cwd \/tmp\/example --non-interactive integration update neon --projects all$/
+      );
     });
 
     it('errors when --plan and --projects are combined', async () => {

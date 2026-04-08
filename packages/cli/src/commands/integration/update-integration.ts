@@ -143,17 +143,47 @@ export async function update(client: Client) {
 
   const preferJson = formatResult.jsonOutput || Boolean(client.nonInteractive);
 
+  const plan = parsedArguments.flags['--plan'] as string | undefined;
+  const projectsRaw = parsedArguments.flags['--projects'] as
+    | string[]
+    | undefined;
+  const authorizationId = parsedArguments.flags['--authorization-id'] as
+    | string
+    | undefined;
+  const installationId = parsedArguments.flags['--installation-id'] as
+    | string
+    | undefined;
+
   if (parsedArguments.args.length < 2) {
-    const msg =
-      'You must specify an integration slug. Usage: `vercel integration update <integration> --plan <id>` or `--projects ...`.';
+    const hadSubcommandOptsFirst =
+      (projectsRaw !== undefined && projectsRaw.length > 0) ||
+      plan !== undefined;
+    const msg = hadSubcommandOptsFirst
+      ? `Put the integration slug immediately after \`update\`, before \`--projects\`, \`--plan\`, or other subcommand options. Example: \`${packageName} integration update neon --projects all\`.`
+      : `You must specify an integration slug after \`update\`. Example: \`${packageName} integration update neon --projects all\` or \`${packageName} integration update neon --plan <plan-id>\`.`;
+
     emitUpdateCliError(client, msg, AGENT_REASON.MISSING_ARGUMENTS, 1, {
+      hint: hadSubcommandOptsFirst
+        ? `You used \`--projects\` or \`--plan\` without a preceding integration name. Use \`integration update <integration> --projects …\`. Global flags such as \`--cwd\` may appear anywhere.`
+        : `Run \`${packageName} integration installations\` to list slugs and installation IDs for your team.`,
       next: [
         {
           command: buildCommandWithGlobalFlags(
             client.argv,
-            'integration update neon --projects all'
+            'integration update neon --projects all',
+            packageName,
+            { prependGlobalFlags: true }
           ),
-          when: 'Example: grant all projects access to an installation',
+          when: 'Correct order: integration slug first, then --projects (replace neon)',
+        },
+        {
+          command: buildCommandWithGlobalFlags(
+            client.argv,
+            'integration installations',
+            packageName,
+            { prependGlobalFlags: true }
+          ),
+          when: 'Discover which integration slug to use',
         },
       ],
     });
@@ -170,16 +200,6 @@ export async function update(client: Client) {
   }
 
   const integrationSlug = parsedArguments.args[1];
-  const plan = parsedArguments.flags['--plan'] as string | undefined;
-  const authorizationId = parsedArguments.flags['--authorization-id'] as
-    | string
-    | undefined;
-  const projectsRaw = parsedArguments.flags['--projects'] as
-    | string[]
-    | undefined;
-  const installationId = parsedArguments.flags['--installation-id'] as
-    | string
-    | undefined;
 
   const hasPlan = plan !== undefined;
   const projectsOutcome =
@@ -236,7 +256,12 @@ export async function update(client: Client) {
       {
         next: [
           {
-            command: buildCommandWithGlobalFlags(client.argv, 'teams switch'),
+            command: buildCommandWithGlobalFlags(
+              client.argv,
+              'teams switch',
+              packageName,
+              { prependGlobalFlags: true }
+            ),
             when: 'Switch to a team that has this integration',
           },
         ],

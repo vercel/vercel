@@ -120,6 +120,8 @@ export function getGlobalFlagsFromArgv(argv: string[]): string[] {
  */
 export interface BuildCommandWithGlobalFlagsOptions {
   excludeFlags?: string[];
+  /** Place preserved flags after `vercel` and before the subcommand (recommended for copy-paste). */
+  prependGlobalFlags?: boolean;
 }
 
 /**
@@ -155,7 +157,12 @@ export function buildCommandWithGlobalFlags(
     preserved = out;
   }
   const base = `${pkgName} ${commandTemplate}`;
-  if (preserved.length === 0) return base;
+  if (preserved.length === 0) {
+    return base;
+  }
+  if (options?.prependGlobalFlags) {
+    return `${pkgName} ${preserved.join(' ')} ${commandTemplate}`;
+  }
   return `${base} ${preserved.join(' ')}`;
 }
 
