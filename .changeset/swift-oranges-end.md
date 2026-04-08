@@ -2,4 +2,4 @@
 'vercel': patch
 ---
 
-Show `vc logs --help` output when invalid flags are provided, and exit successfully for explicit `--help`.
+Improve `vc logs` ergonomics by showing `vc logs --help` when invalid flags are provided, exiting successfully for explicit `--help`, and preserving the full nested `logs[]` array in JSON output so all request log messages remain available.
