@@ -138,6 +138,13 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
+  trackCliCommandEdgeConfig(actual: string) {
+    this.trackCliCommand({
+      command: 'edge-config',
+      value: actual,
+    });
+  }
+
   trackCliCommandEnv(actual: string) {
     this.trackCliCommand({
       command: 'env',
@@ -337,6 +344,13 @@ export class RootTelemetryClient extends TelemetryClient {
   trackCliCommandSkills(actual: string) {
     this.trackCliCommand({
       command: 'skills',
+      value: actual,
+    });
+  }
+
+  trackCliCommandSandbox(actual: string) {
+    this.trackCliCommand({
+      command: 'sandbox',
       value: actual,
     });
   }

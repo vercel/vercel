@@ -2377,6 +2377,7 @@ export default class DevServer {
         if (
           base === 'now.json' ||
           base === 'vercel.json' ||
+          base === 'vercel.toml' ||
           base === '.nowignore' ||
           base === '.vercelignore' ||
           !p.startsWith(prefix)

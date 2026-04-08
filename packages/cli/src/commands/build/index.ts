@@ -107,6 +107,7 @@ import {
 } from '../../util/compile-vercel-config';
 import { help } from '../help';
 import { pullCommandLogic } from '../pull';
+import { pullEnvRecords } from '../../util/env/get-env-records';
 import { buildCommand } from './command';
 import { validatePackageManifest } from '../../util/validate-package-manifest';
 
@@ -206,6 +207,7 @@ export default async function main(client: Client): Promise<number> {
     telemetryClient.trackCliFlagProd(parsedArgs.flags['--prod']);
     telemetryClient.trackCliFlagYes(parsedArgs.flags['--yes']);
     telemetryClient.trackCliFlagStandalone(parsedArgs.flags['--standalone']);
+    telemetryClient.trackCliOptionId(parsedArgs.flags['--id']);
   } catch (error) {
     printError(error);
     return 1;
@@ -365,37 +367,69 @@ export default async function main(client: Client): Promise<number> {
     cliVersion: cliPkg.version,
   };
 
-  if (!process.env.VERCEL_BUILD_IMAGE && !client.nonInteractive) {
+  const deploymentId = parsedArgs.flags['--id'];
+
+  // When --id is provided, system env vars are fetched from the deployment,
+  // so the warning about missing system env vars does not apply.
+  if (
+    !process.env.VERCEL_BUILD_IMAGE &&
+    !deploymentId &&
+    !client.nonInteractive
+  ) {
     output.warn(
       'Build not running on Vercel. System environment variables will not be available.'
     );
   }
-
   const envToUnset = new Set<string>(['VERCEL', 'NOW_BUILDER']);
 
   try {
     const loadEnvSpan = rootSpan.child('vc.loadEnv');
     try {
-      const envPath = join(
-        cwd,
-        projectRootDirectory,
-        VERCEL_DIR,
-        `.env.${target}.local`
-      );
-      // TODO (maybe?): load env vars from the API, fall back to the local file if that fails
-      const dotenvResult = dotenv.config({
-        path: envPath,
-        debug: output.isDebugEnabled(),
-      });
-      if (dotenvResult.error) {
-        output.debug(
-          `Failed loading environment variables: ${dotenvResult.error}`
-        );
-      } else if (dotenvResult.parsed) {
-        for (const key of Object.keys(dotenvResult.parsed)) {
-          envToUnset.add(key);
+      if (deploymentId) {
+        // Set the team context so API calls include the teamId query param.
+        // Without this, the API can't find the deployment.
+        if (link?.orgId?.startsWith('team_')) {
+          client.config.currentTeam = link.orgId;
         }
-        output.debug(`Loaded environment variables from "${envPath}"`);
+
+        // When --id is provided, fetch env vars from the deployment
+        // instead of loading from local .env files.
+        output.debug(
+          `Fetching environment variables for deployment ${deploymentId}`
+        );
+        const { buildEnv } = await fetchDeploymentBuildEnv(
+          client,
+          deploymentId
+        );
+        for (const [key, value] of Object.entries(buildEnv)) {
+          envToUnset.add(key);
+          process.env[key] = value;
+        }
+        output.debug(
+          `Loaded ${Object.keys(buildEnv).length} environment variables from deployment ${deploymentId}`
+        );
+      } else {
+        const envPath = join(
+          cwd,
+          projectRootDirectory,
+          VERCEL_DIR,
+          `.env.${target}.local`
+        );
+        // TODO (maybe?): load env vars from the API, fall back to the local file if that fails
+        const dotenvResult = dotenv.config({
+          path: envPath,
+          debug: output.isDebugEnabled(),
+        });
+        if (dotenvResult.error) {
+          output.debug(
+            `Failed loading environment variables: ${dotenvResult.error}`
+          );
+        } else if (dotenvResult.parsed) {
+          for (const key of Object.keys(dotenvResult.parsed)) {
+            envToUnset.add(key);
+          }
+          output.debug(`Loaded environment variables from "${envPath}"`);
+        }
       }
     } finally {
       loadEnvSpan.stop();
@@ -2055,4 +2089,50 @@ async function streamToString(stream: NodeJS.ReadableStream): Promise<string> {
     chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
   }
   return Buffer.concat(chunks).toString('utf-8');
+}
+
+const INTEGRATIONS_POLL_INTERVAL_MS = 5000;
+const INTEGRATIONS_POLL_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes, matches API timeout
+
+/**
+ * Fetches build environment variables for a deployment from the API.
+ * If integrations are still provisioning, polls until they complete.
+ */
+async function fetchDeploymentBuildEnv(
+  client: Client,
+  deploymentId: string
+): Promise<{ env: Record<string, string>; buildEnv: Record<string, string> }> {
+  const deadline = Date.now() + INTEGRATIONS_POLL_TIMEOUT_MS;
+  let isPolling = false;
+
+  while (Date.now() < deadline) {
+    try {
+      return await pullEnvRecords(client, deploymentId, 'vercel-cli:pull');
+    } catch (err: unknown) {
+      // If the API returns integrationsStatus: 'pending', poll until ready
+      if (
+        err &&
+        typeof err === 'object' &&
+        'integrationsStatus' in err &&
+        (err as { integrationsStatus?: string }).integrationsStatus ===
+          'pending'
+      ) {
+        if (!isPolling) {
+          output.spinner(
+            'Waiting for deployment integrations to finish provisioning...'
+          );
+          isPolling = true;
+        }
+        await new Promise(resolve =>
+          setTimeout(resolve, INTEGRATIONS_POLL_INTERVAL_MS)
+        );
+        continue;
+      }
+      throw err;
+    }
+  }
+
+  throw new Error(
+    'Timed out waiting for deployment integrations to complete provisioning.'
+  );
 }
