@@ -201,16 +201,25 @@ export default async function protection(
   const ssoSelected = Boolean(parsedArgs.flags['--sso']);
   const passwordSelected = Boolean(parsedArgs.flags['--password']);
   const skewSelected = Boolean(parsedArgs.flags['--skew']);
-  if (action && !ssoSelected && !passwordSelected && !skewSelected) {
+  const gitForkProtectionSelected = Boolean(
+    parsedArgs.flags['--git-fork-protection']
+  );
+  if (
+    action &&
+    !ssoSelected &&
+    !passwordSelected &&
+    !skewSelected &&
+    !gitForkProtectionSelected
+  ) {
     const msg =
-      'No protection selected. Pass --sso, --password, or --skew. Usage: `vercel project protection enable|disable [name] --sso|--password|--skew`';
+      'No protection selected. Pass --sso, --password, --skew, or --git-fork-protection. Usage: `vercel project protection enable|disable [name] --sso|--password|--skew|--git-fork-protection`';
     outputAgentError(
       client,
       {
         status: 'error',
         reason: AGENT_REASON.MISSING_ARGUMENTS,
         message: msg,
-        hint: 'Use `project protection enable|disable` with a protection flag (e.g. --sso, --password, or --skew).',
+        hint: 'Use `project protection enable|disable` with a protection flag (e.g. --sso, --password, --skew, or --git-fork-protection).',
         next: [
           {
             command: buildCommandWithGlobalFlags(
@@ -232,6 +241,13 @@ export default async function protection(
               `project protection ${action} --skew`
             ),
             when: 'Example: same action with skew protection selected',
+          },
+          {
+            command: buildCommandWithGlobalFlags(
+              client.argv,
+              `project protection ${action} --git-fork-protection`
+            ),
+            when: 'Example: same action with Git fork protection selected',
           },
         ],
       },
@@ -279,6 +295,9 @@ export default async function protection(
     if (skewSelected) {
       patchBody.skewProtectionMaxAge = skewProtectionMaxAge;
     }
+    if (gitForkProtectionSelected) {
+      patchBody.gitForkProtection = action === 'enable';
+    }
 
     try {
       await client.fetch(`/v9/projects/${encodeURIComponent(project.id)}`, {
@@ -308,6 +327,9 @@ export default async function protection(
                 ? { skewProtectionMaxAge }
                 : { skewProtectionMaxAge: 0 }
               : {}),
+            gitForkProtection: gitForkProtectionSelected
+              ? action === 'enable'
+              : undefined,
           },
           null,
           2

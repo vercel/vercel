@@ -320,6 +320,13 @@ export const protectionSubcommand = {
         'When enabling with --skew, max age in seconds for skew protection (default 2592000, 30 days).',
       deprecated: false,
     },
+    {
+      name: 'git-fork-protection',
+      shorthand: null,
+      type: Boolean,
+      description: 'Apply action to Git fork protection.',
+      deprecated: false,
+    },
   ],
   examples: [
     {
@@ -349,6 +356,14 @@ export const protectionSubcommand = {
     {
       name: 'Disable skew protection',
       value: `${packageName} project protection disable my-app --skew`,
+    },
+    {
+      name: 'Enable Git fork protection',
+      value: `${packageName} project protection enable my-app --git-fork-protection`,
+    },
+    {
+      name: 'Disable Git fork protection',
+      value: `${packageName} project protection disable my-app --git-fork-protection`,
     },
     {
       name: 'Enable SSO deployment protection',
