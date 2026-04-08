@@ -49,6 +49,7 @@ function handleApiError(
     status: number;
     code?: string;
     serverMessage?: string;
+    allowedValues?: string[];
   },
   jsonOutput: boolean,
   client: Client
@@ -93,9 +94,12 @@ function handleApiError(
   }
 
   if (jsonOutput) {
-    client.stdout.write(formatErrorJson(code, message));
+    client.stdout.write(formatErrorJson(code, message, err.allowedValues));
   } else {
     output.error(message);
+    if (err.allowedValues && err.allowedValues.length > 0) {
+      output.print(`\nAvailable values: ${err.allowedValues.join(', ')}\n`);
+    }
   }
   return 1;
 }
@@ -304,7 +308,7 @@ export default async function query(
 
   // Build request body
   const body: MetricsQueryRequest = {
-    reason: 'agent',
+    reason: 'api',
     scope,
     metric,
     aggregation: aggregation as Aggregation,

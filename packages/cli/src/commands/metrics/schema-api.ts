@@ -113,10 +113,13 @@ export async function fetchMetricDetailOrExit(
       const message = err.serverMessage || `Unknown metric "${metricId}".`;
       if (jsonOutput) {
         client.stdout.write(
-          formatErrorJson(err.code || 'BAD_REQUEST', message)
+          formatErrorJson(err.code || 'BAD_REQUEST', message, err.allowedValues)
         );
       } else {
         output.error(message);
+        if (err.allowedValues && err.allowedValues.length > 0) {
+          output.print(`\nAvailable values: ${err.allowedValues.join(', ')}\n`);
+        }
       }
       return 1;
     }

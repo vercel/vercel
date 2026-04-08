@@ -103,9 +103,9 @@ describe('metrics query v2', () => {
     client.scenario.post('/v2/observability/query', (_req, res) => {
       res.status(400).json({
         error: {
-          code: 'BAD_REQUEST',
-          message:
-            'Metric "vercel.requests" is not directly queryable. Available metrics: vercel.requests.count. Use "vercel metrics schema --metric vercel.requests" to inspect the available metrics.',
+          code: 'metric_not_queryable',
+          message: 'Metric "vercel.requests" is not directly queryable.',
+          allowedValues: ['vercel.requests.count'],
         },
       });
     });
@@ -116,10 +116,7 @@ describe('metrics query v2', () => {
     expect(exitCode).toBe(1);
     expect(client.stderr.getFullOutput()).toContain('not directly queryable');
     expect(client.stderr.getFullOutput()).toContain(
-      'Available metrics: vercel.requests.count'
-    );
-    expect(client.stderr.getFullOutput()).toContain(
-      'vercel metrics schema --metric vercel.requests'
+      'Available values: vercel.requests.count'
     );
   });
 
@@ -199,29 +196,25 @@ describe('metrics query v2', () => {
     client.scenario.get(
       '/v2/observability/schema/vercel.requests.count',
       (_req, res) => {
-        res.json({
-          id: 'vercel.requests.count',
-          description: 'Count',
-          dimensions: [{ name: 'route', label: 'Route' }],
-          metrics: [
-            {
-              id: 'vercel.requests.count',
-              description: 'Count',
-              unit: 'count',
-              aggregations: ['sum'],
-              defaultAggregation: 'sum',
-            },
-          ],
-        });
+        res.json([
+          {
+            id: 'vercel.requests.count',
+            description: 'Count',
+            unit: 'count',
+            aggregations: ['sum'],
+            defaultAggregation: 'sum',
+          },
+        ]);
       }
     );
 
     client.scenario.post('/v2/observability/query', (_req, res) => {
       res.status(400).json({
         error: {
-          code: 'INVALID_AGGREGATION',
+          code: 'invalid_aggregation',
           message:
-            'Aggregation "median" is not valid for metric "vercel.requests.count". Available aggregations: sum',
+            'Aggregation "median" is not valid for metric "vercel.requests.count".',
+          allowedValues: ['sum'],
         },
       });
     });
@@ -237,41 +230,32 @@ describe('metrics query v2', () => {
     const exitCode = await query(client, new MockTelemetry());
 
     expect(exitCode).toBe(1);
-    expect(client.stderr.getFullOutput()).toContain(
-      'Available aggregations: sum'
-    );
+    expect(client.stderr.getFullOutput()).toContain('Available values: sum');
   });
 
   it('shows available dimensions when the API rejects a groupBy dimension', async () => {
     client.scenario.get(
       '/v2/observability/schema/vercel.requests.count',
       (_req, res) => {
-        res.json({
-          id: 'vercel.requests.count',
-          description: 'Count',
-          dimensions: [
-            { name: 'route', label: 'Route' },
-            { name: 'request_path', label: 'Request path' },
-          ],
-          metrics: [
-            {
-              id: 'vercel.requests.count',
-              description: 'Count',
-              unit: 'count',
-              aggregations: ['sum'],
-              defaultAggregation: 'sum',
-            },
-          ],
-        });
+        res.json([
+          {
+            id: 'vercel.requests.count',
+            description: 'Count',
+            unit: 'count',
+            aggregations: ['sum'],
+            defaultAggregation: 'sum',
+          },
+        ]);
       }
     );
 
     client.scenario.post('/v2/observability/query', (_req, res) => {
       res.status(400).json({
         error: {
-          code: 'UNKNOWN_DIMENSION',
+          code: 'invalid_dimension',
           message:
-            'Dimension "not_a_dimension" is not available for metric "vercel.requests.count". Available dimensions: route, request_path',
+            'Group by uses invalid dimension "not_a_dimension" for metric "vercel.requests.count".',
+          allowedValues: ['route', 'request_path'],
         },
       });
     });
@@ -288,7 +272,7 @@ describe('metrics query v2', () => {
 
     expect(exitCode).toBe(1);
     expect(client.stderr.getFullOutput()).toContain(
-      'Available dimensions: route, request_path'
+      'Available values: route, request_path'
     );
   });
 });
