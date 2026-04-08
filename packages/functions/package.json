@@ -28,6 +28,10 @@
     "./middleware": {
       "import": "./middleware.js",
       "require": "./middleware.js"
+    },
+    "./websocket": {
+      "import": "./websocket/index.js",
+      "require": "./websocket/index.js"
     }
   },
   "version": "3.4.3",
