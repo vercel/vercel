@@ -102,6 +102,8 @@ describe('firewall ip-blocks', () => {
       expect(capturedRequests.patchDraft?.action).toBe('ip.insert');
       expect(capturedRequests.patchDraft?.value).toMatchObject({
         ip: '10.0.0.1',
+        hostname: '*',
+        action: 'deny',
       });
     });
 
@@ -190,6 +192,74 @@ describe('firewall ip-blocks', () => {
       const exitCodePromise = firewall(client);
       await expect(client.stderr).toOutput('Missing required argument');
       expect(await exitCodePromise).toEqual(1);
+    });
+
+    it('should include notes in request body', async () => {
+      useListFirewallConfigs(createConfig(), null);
+      usePatchDraft();
+      useActivateConfig();
+
+      client.setArgv(
+        'firewall',
+        'ip-blocks',
+        'block',
+        '10.0.0.1',
+        '--notes',
+        'Suspicious activity',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('staged');
+      expect(await exitCodePromise).toEqual(0);
+      expect(capturedRequests.patchDraft?.value).toMatchObject({
+        ip: '10.0.0.1',
+        notes: 'Suspicious activity',
+      });
+    });
+
+    it('should reject invalid hostname', async () => {
+      client.setArgv(
+        'firewall',
+        'ip-blocks',
+        'block',
+        '10.0.0.1',
+        '--hostname',
+        'not a valid host!',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('valid domain');
+      expect(await exitCodePromise).toEqual(1);
+    });
+
+    it('should reject note over 500 characters', async () => {
+      const longNote = 'a'.repeat(501);
+      client.setArgv(
+        'firewall',
+        'ip-blocks',
+        'block',
+        '10.0.0.1',
+        '--notes',
+        longNote,
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('500 characters or less');
+      expect(await exitCodePromise).toEqual(1);
+    });
+
+    it('should block an IPv6 address', async () => {
+      useListFirewallConfigs(createConfig(), null);
+      usePatchDraft();
+      useActivateConfig();
+
+      client.setArgv('firewall', 'ip-blocks', 'block', '2001:db8::1', '--yes');
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('staged');
+      expect(await exitCodePromise).toEqual(0);
+      expect(capturedRequests.patchDraft?.value).toMatchObject({
+        ip: '2001:db8::1',
+      });
     });
   });
 

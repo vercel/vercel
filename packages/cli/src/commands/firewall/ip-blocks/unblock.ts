@@ -60,6 +60,24 @@ export default async function unblock(client: Client, argv: string[]) {
     // Disambiguate if multiple matches
     if (matches.length > 1) {
       if (client.nonInteractive || !client.stdin.isTTY) {
+        if (client.nonInteractive) {
+          outputAgentError(
+            client,
+            {
+              status: 'error',
+              reason: 'ambiguous_match',
+              message: `Multiple IP blocks match "${identifier}". Specify the full rule ID.`,
+              next: matches.map(r => ({
+                command: withGlobalFlags(
+                  client,
+                  `firewall ip-blocks unblock "${r.id}" --yes`
+                ),
+                when: `unblock ${r.ip}`,
+              })),
+            },
+            1
+          );
+        }
         output.error(
           `Multiple IP blocks match "${identifier}". Specify the full rule ID to disambiguate.`
         );
