@@ -14,7 +14,7 @@ import {
   type ServicesRoutes,
 } from './types';
 import {
-  getInternalServiceCronPath,
+  getServiceCronPath,
   getInternalServiceFunctionPath,
   getInternalServiceWorkerPath,
   isFrontendFramework,
@@ -383,12 +383,7 @@ export function generateServicesRoutes(services: Service[]): ServicesRoutes {
 
   const cronServices = services.filter(s => s.type === 'cron');
   for (const service of cronServices) {
-    const cronEntrypoint = service.entrypoint || service.builder.src || 'index';
-    const cronPath = getInternalServiceCronPath(
-      service.name,
-      cronEntrypoint,
-      service.handlerFunction || 'cron'
-    );
+    const cronPath = getServiceCronPath(service);
     const functionPath = getInternalServiceFunctionPath(service.name);
     crons.push({
       src: `^${escapeRegex(cronPath)}$`,

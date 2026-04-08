@@ -48,7 +48,7 @@ import {
   detectFrameworkRecord,
   detectFrameworkVersion,
   detectInstrumentation,
-  getInternalServiceCronPath,
+  getServiceCronPath,
   LocalFileSystemDetector,
 } from '@vercel/fs-detectors';
 import {
@@ -1870,9 +1870,8 @@ function getServiceCrons(services?: Service[]): Cron[] {
     if (service.type !== 'cron' || typeof service.schedule !== 'string') {
       continue;
     }
-    const cronEntrypoint = service.entrypoint || service.builder.src || 'index';
     crons.push({
-      path: getInternalServiceCronPath(service.name, cronEntrypoint),
+      path: getServiceCronPath(service),
       schedule: service.schedule,
     });
   }

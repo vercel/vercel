@@ -237,6 +237,11 @@ const serviceConfigSchema = {
       minLength: 9,
       maxLength: 256,
     },
+    command: {
+      type: 'string',
+      minLength: 1,
+      maxLength: 2048,
+    },
     // Worker-specific
     topics: {
       type: 'array',
