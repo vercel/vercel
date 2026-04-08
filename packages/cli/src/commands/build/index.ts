@@ -250,7 +250,7 @@ export default async function main(client: Client): Promise<number> {
   }
 
   // If repo linked, update `cwd` to the repo root
-  const link = await rootSpan
+  let link = await rootSpan
     .child('vc.getProjectLink')
     .trace(() => getProjectLink(client, cwd));
   const projectRootDirectory = link?.projectRootDirectory ?? '';
@@ -340,6 +340,13 @@ export default async function main(client: Client): Promise<number> {
     client.cwd = cwd;
     client.argv = originalArgv;
     project = await readProjectSettings(vercelDir);
+
+    // Re-resolve the project link after pull has established it.
+    // This is needed so that `link.orgId` is available when --id is
+    // used to set the team context for the deployment env pull API call.
+    if (!link) {
+      link = await getProjectLink(client, cwd);
+    }
   }
 
   // Delete output directory from potential previous build

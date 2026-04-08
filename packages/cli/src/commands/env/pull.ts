@@ -28,6 +28,7 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import parseTarget from '../../util/parse-target';
 import { getLinkedProject } from '../../util/projects/link';
+import { ensureLink } from '../../util/link/ensure-link';
 import {
   buildCommandWithYes,
   getPreservedArgsForEnvPull,
@@ -105,46 +106,61 @@ export default async function pull(
   telemetryClient.trackCliOptionEnvironment(opts['--environment']);
   telemetryClient.trackCliOptionId(opts['--id']);
 
-  const link = await getLinkedProject(client);
-  if (link.status === 'error') {
-    return link.exitCode;
-  } else if (link.status === 'not_linked') {
-    if (client.nonInteractive) {
-      const preserved = getPreservedArgsForEnvPull(client.argv);
-      const linkArgv = [
-        ...client.argv.slice(0, 2),
-        'link',
-        '--scope',
-        '<scope>',
-        ...preserved,
-      ];
-      outputAgentError(
-        client,
-        {
-          status: 'error',
-          reason: 'not_linked',
-          message: `Your codebase isn't linked to a project on Vercel. Run ${getCommandNamePlain(
-            'link'
-          )} to begin. Use --yes for non-interactive; use --scope or --project to specify team or project.`,
-          next: [
-            { command: buildCommandWithYes(linkArgv) },
-            { command: buildCommandWithYes(client.argv) },
-          ],
-        },
-        1
-      );
+  const deploymentId = opts['--id'];
+
+  // When --id is provided, use ensureLink so that automatic project linking
+  // (e.g. via Git-connected repos) can establish the link and provide the
+  // teamId needed for the deployment env pull API call.
+  let link;
+  if (deploymentId) {
+    const ensured = await ensureLink('env pull', client, client.cwd, {
+      autoConfirm: !!skipConfirmation,
+    });
+    if (typeof ensured === 'number') {
+      return ensured;
     }
-    output.error(
-      `Your codebase isn’t linked to a project on Vercel. Run ${getCommandName(
-        'link'
-      )} to begin.`
-    );
-    return 1;
+    link = ensured;
+  } else {
+    const result = await getLinkedProject(client);
+    if (result.status === 'error') {
+      return result.exitCode;
+    } else if (result.status === 'not_linked') {
+      if (client.nonInteractive) {
+        const preserved = getPreservedArgsForEnvPull(client.argv);
+        const linkArgv = [
+          ...client.argv.slice(0, 2),
+          'link',
+          '--scope',
+          '<scope>',
+          ...preserved,
+        ];
+        outputAgentError(
+          client,
+          {
+            status: 'error',
+            reason: 'not_linked',
+            message: `Your codebase isn't linked to a project on Vercel. Run ${getCommandNamePlain(
+              'link'
+            )} to begin. Use --yes for non-interactive; use --scope or --project to specify team or project.`,
+            next: [
+              { command: buildCommandWithYes(linkArgv) },
+              { command: buildCommandWithYes(client.argv) },
+            ],
+          },
+          1
+        );
+      }
+      output.error(
+        `Your codebase isn't linked to a project on Vercel. Run ${getCommandName(
+          'link'
+        )} to begin.`
+      );
+      return 1;
+    }
+    link = result;
   }
   client.config.currentTeam =
     link.org.type === 'team' ? link.org.id : undefined;
-
-  const deploymentId = opts['--id'];
 
   const environment =
     parseTarget({
