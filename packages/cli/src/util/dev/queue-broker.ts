@@ -32,7 +32,7 @@ type DeliveryStatus = 'pending' | 'in-flight' | 'acked';
 interface DeliveryState {
   status: DeliveryStatus;
   deliveryCount: number;
-  ticket: string;
+  receiptHandle: string;
   visibleAt: number;
   leaseExpiresAt: number;
 }
@@ -143,7 +143,7 @@ export class QueueBroker {
       groupDeliveries.set(messageId, {
         status: 'pending',
         deliveryCount: 0,
-        ticket: '',
+        receiptHandle: '',
         visibleAt,
         leaseExpiresAt: 0,
       });
@@ -167,7 +167,7 @@ export class QueueBroker {
     contentType: string;
     deliveryCount: number;
     createdAt: string;
-    ticket: string;
+    receiptHandle: string;
   } | null {
     const message = this.messages.get(messageId);
     if (!message) return null;
@@ -180,14 +180,14 @@ export class QueueBroker {
       contentType: message.contentType,
       deliveryCount: state.deliveryCount,
       createdAt: message.createdAt,
-      ticket: state.ticket,
+      receiptHandle: state.receiptHandle,
     };
   }
 
   acknowledge(
     messageId: string,
     consumerGroup: string,
-    ticket: string
+    receiptHandle: string
   ): boolean {
     const { deliveries: groupDeliveries, state } = this.findDeliveryState(
       messageId,
@@ -195,9 +195,9 @@ export class QueueBroker {
     );
     if (!groupDeliveries || !state) return false;
 
-    if (state.ticket && state.ticket !== ticket) {
+    if (state.receiptHandle && state.receiptHandle !== receiptHandle) {
       output.debug(
-        `queues: ACK rejected for ${messageId} in group "${consumerGroup}" - ticket mismatch`
+        `queues: ACK rejected for ${messageId} in group "${consumerGroup}" - receiptHandle mismatch`
       );
       return false;
     }
@@ -216,19 +216,40 @@ export class QueueBroker {
   changeVisibility(
     messageId: string,
     consumerGroup: string,
-    ticket: string,
+    receiptHandle: string,
     timeoutSeconds: number
   ): boolean {
     const { state } = this.findDeliveryState(messageId, consumerGroup);
     if (!state || state.status !== 'in-flight') return false;
 
-    if (state.ticket && state.ticket !== ticket) return false;
+    if (state.receiptHandle && state.receiptHandle !== receiptHandle)
+      return false;
 
     state.leaseExpiresAt = Date.now() + timeoutSeconds * 1000;
     output.debug(
       `queues: visibility for ${messageId} in group "${consumerGroup}" extended by ${timeoutSeconds}s`
     );
     return true;
+  }
+
+  findMessageByReceiptHandle(
+    consumerGroup: string,
+    receiptHandle: string
+  ): string | null {
+    for (const group of this.consumerGroups) {
+      if (group.name !== consumerGroup) continue;
+
+      const deliveries = this.deliveryState.get(group.id);
+      if (!deliveries) continue;
+
+      for (const [messageId, state] of deliveries) {
+        if (state.receiptHandle === receiptHandle) {
+          return messageId;
+        }
+      }
+    }
+
+    return null;
   }
 
   private findDeliveryState(
@@ -274,35 +295,42 @@ export class QueueBroker {
       return;
     }
 
-    const ticket = randomBytes(16).toString('hex');
+    const receiptHandle = randomBytes(16).toString('hex');
     state.status = 'in-flight';
-    state.ticket = ticket;
+    state.receiptHandle = receiptHandle;
     state.deliveryCount++;
     state.leaseExpiresAt = Date.now() + DEFAULT_VISIBILITY_TIMEOUT;
 
-    const cloudEvent = JSON.stringify({
-      type: 'com.vercel.queue.v1beta',
-      specversion: '1.0',
-      source: 'vc-dev',
-      id: message.messageId,
-      time: new Date().toISOString(),
-      datacontenttype: 'application/json',
-      data: {
-        queueName: message.queueName,
-        consumerGroup: group.name,
-        messageId: message.messageId,
-      },
-    });
+    const now = new Date().toISOString();
+    const expiresAt = new Date(
+      new Date(message.createdAt).getTime() + message.retentionMs
+    ).toISOString();
 
     output.debug(
-      `queues: dispatching CloudEvent to worker "${group.name}" at ${upstream}`
+      `queues: dispatching v2beta callback to worker "${group.name}" at ${upstream}`
     );
 
     try {
       const response = await nodeFetch(`${upstream}/`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/cloudevents+json' },
-        body: cloudEvent,
+        headers: {
+          'content-type': message.contentType,
+          'user-agent': 'vercel-queue/v2beta',
+          'ce-type': 'com.vercel.queue.v2beta',
+          'ce-specversion': '1.0',
+          'ce-source': `/topic/${message.queueName}/consumer/${group.name}`,
+          'ce-id': message.messageId,
+          'ce-time': now,
+          'ce-vqsmessageid': message.messageId,
+          'ce-vqsqueuename': message.queueName,
+          'ce-vqsconsumergroup': group.name,
+          'ce-vqsreceipthandle': receiptHandle,
+          'ce-vqsdeliverycount': String(state.deliveryCount),
+          'ce-vqscreatedat': message.createdAt,
+          'ce-vqsexpiresat': expiresAt,
+          'ce-vqsregion': 'dev1',
+        },
+        body: message.payload,
       });
 
       if (!response.ok) {

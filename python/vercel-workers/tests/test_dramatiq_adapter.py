@@ -42,7 +42,7 @@ class TestVercelQueuesBrokerOptions:
             {
                 "token": "test-token",
                 "base_url": "https://example.com",
-                "base_path": "/api/v3/messages",
+                "base_path": "/api/v3/topic",
                 "retention_seconds": 3600,
                 "deployment_id": "deploy-123",
                 "timeout": 30.0,
@@ -53,7 +53,7 @@ class TestVercelQueuesBrokerOptions:
         )
         assert opts.token == "test-token"
         assert opts.base_url == "https://example.com"
-        assert opts.base_path == "/api/v3/messages"
+        assert opts.base_path == "/api/v3/topic"
         assert opts.retention_seconds == 3600
         assert opts.deployment_id == "deploy-123"
         assert opts.timeout == 30.0

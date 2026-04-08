@@ -2051,7 +2051,7 @@ function attachWorkerServiceTrigger(
 
   for (const topic of topics) {
     const trigger: TriggerEvent = {
-      type: 'queue/v1beta',
+      type: 'queue/v2beta',
       topic,
       consumer,
     };

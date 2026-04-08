@@ -142,11 +142,11 @@ class TestCeleryAdapter(unittest.TestCase):
         )
         self.assertEqual(sent[0]["type"], "http.response.start")
         self.assertEqual(sent[0]["status"], 400)
-        self.assertIn(b"Invalid content type", sent[1]["body"])
+        self.assertIn(b"unsupported callback format", sent[1]["body"])
 
     def test_get_asgi_app_post_callback_executes_task_and_deletes_message(self) -> None:
         raw_body = (
-            b'{"type":"com.vercel.queue.v1beta","data":'
+            b'{"type":"com.vercel.queue.v2beta","data":'
             b'{"queueName":"q","consumerGroup":"c","messageId":"m"}}'
         )
 
@@ -197,7 +197,7 @@ class TestCeleryAdapter(unittest.TestCase):
             with patch.object(
                 vwc_app.queue_callback,
                 "receive_message_by_id",
-                return_value=(payload, 1, "t", "ticket"),
+                return_value=(payload, 1, "t", "receipt_handle"),
             ):
                 with patch.object(
                     vwc_app.queue_callback,
@@ -235,7 +235,7 @@ class TestCeleryAdapter(unittest.TestCase):
 
     def test_get_asgi_app_post_callback_delays_until_eta_by_changing_visibility(self) -> None:
         raw_body = (
-            b'{"type":"com.vercel.queue.v1beta","data":'
+            b'{"type":"com.vercel.queue.v2beta","data":'
             b'{"queueName":"q","consumerGroup":"c","messageId":"m"}}'
         )
         fixed_now = datetime(2025, 1, 1, 0, 0, 0, tzinfo=UTC)
@@ -289,7 +289,7 @@ class TestCeleryAdapter(unittest.TestCase):
                 with patch.object(
                     vwc_app.queue_callback,
                     "receive_message_by_id",
-                    return_value=(payload, 1, "t", "ticket"),
+                    return_value=(payload, 1, "t", "receipt_handle"),
                 ):
                     with patch.object(
                         vwc_app.queue_callback,
@@ -316,14 +316,14 @@ class TestCeleryAdapter(unittest.TestCase):
                                     ),
                                 )
 
-        self.assertEqual(task.calls, [])  # eta scheduling should not execute the task
-        change_visibility.assert_called()
-        delete_message.assert_not_called()
+        # Delay is handled at send time; the callback executes the task normally.
+        self.assertEqual(len(task.calls), 1)
+        self.assertEqual(task.calls[0], ([1, 2], {}, "task-eta", True))
+        change_visibility.assert_not_called()
+        delete_message.assert_called()
 
         body = json.loads(sent[1]["body"].decode("utf-8"))
         self.assertTrue(body["ok"])
-        self.assertTrue(body["delayed"])
-        self.assertEqual(body["timeoutSeconds"], 123)
 
 
 if __name__ == "__main__":

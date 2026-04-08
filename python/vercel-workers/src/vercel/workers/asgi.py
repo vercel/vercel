@@ -13,7 +13,7 @@ ASGI = Callable[
     Awaitable[None],
 ]
 
-Handler = Callable[[bytes], tuple[int, list[tuple[str, str]], bytes]]
+Handler = Callable[[bytes, dict[str, Any]], tuple[int, list[tuple[str, str]], bytes]]
 
 
 def _get_header(scope: dict[str, Any], name: str) -> str | None:
@@ -102,11 +102,12 @@ def build_asgi_app(handler: Handler) -> ASGI:
 
         # Queue callback
         if method == "POST":
-            content_type = _get_header(scope, "content-type")
-            if not content_type or "application/cloudevents+json" not in content_type:
-                body = (
-                    b'{"error":"Invalid content type: expected \\"application/cloudevents+json\\""}'
-                )
+            content_type = _get_header(scope, "content-type") or ""
+            ce_type = _get_header(scope, "ce-type") or ""
+            is_v1beta = "application/cloudevents+json" in content_type
+            is_v2beta = ce_type == "com.vercel.queue.v2beta"
+            if not is_v1beta and not is_v2beta:
+                body = b'{"error":"unsupported callback format"}'
                 await send(
                     {
                         "type": "http.response.start",
@@ -121,7 +122,19 @@ def build_asgi_app(handler: Handler) -> ASGI:
                 return
 
             raw_body = await _read_body(receive)
-            status_code, headers, body = await asyncio.to_thread(handler, raw_body)
+
+            # Build WSGI-style environ from ASGI scope headers so the
+            # handler has a uniform interface regardless of server type.
+            environ: dict[str, Any] = {
+                "CONTENT_TYPE": content_type,
+            }
+            for hdr_name, hdr_value in scope.get("headers") or []:
+                name = bytes(hdr_name).decode("latin1")
+                value = bytes(hdr_value).decode("latin1")
+                key = "HTTP_" + name.upper().replace("-", "_")
+                environ[key] = value
+
+            status_code, headers, body = await asyncio.to_thread(handler, raw_body, environ)
             asgi_headers: list[tuple[bytes, bytes]] = [
                 (k.lower().encode("latin1"), v.encode("latin1")) for (k, v) in headers
             ]

@@ -173,7 +173,7 @@ class TestVercelQueuesBackendOptions(unittest.TestCase):
         options = {
             "token": "test-token",
             "base_url": "https://example.com",
-            "base_path": "/api/v3",
+            "base_path": "/api/v3/topic",
             "retention_seconds": 86400,
             "deployment_id": "deploy-123",
             "timeout": 30.0,
@@ -184,7 +184,7 @@ class TestVercelQueuesBackendOptions(unittest.TestCase):
         cfg = vwd_backend.VercelQueuesBackendOptions.from_options_dict(options)
         self.assertEqual(cfg.token, "test-token")
         self.assertEqual(cfg.base_url, "https://example.com")
-        self.assertEqual(cfg.base_path, "/api/v3")
+        self.assertEqual(cfg.base_path, "/api/v3/topic")
         self.assertEqual(cfg.retention_seconds, 86400)
         self.assertEqual(cfg.deployment_id, "deploy-123")
         self.assertEqual(cfg.timeout, 30.0)
@@ -296,12 +296,12 @@ class TestDjangoAsgiApp(unittest.TestCase):
         sent = asyncio.run(run())
         self.assertEqual(sent[0]["type"], "http.response.start")
         self.assertEqual(sent[0]["status"], 400)
-        self.assertIn(b"Invalid content type", sent[1]["body"])
+        self.assertIn(b"unsupported callback format", sent[1]["body"])
 
     def test_post_callback_executes_task_and_deletes_message(self) -> None:
         """Test that a valid callback executes the task and deletes the message."""
         raw_body = (
-            b'{"type":"com.vercel.queue.v1beta","data":'
+            b'{"type":"com.vercel.queue.v2beta","data":'
             b'{"queueName":"q","consumerGroup":"c","messageId":"m"}}'
         )
 
@@ -380,7 +380,7 @@ class TestDjangoAsgiApp(unittest.TestCase):
                     with patch.object(
                         vwd_app.queue_callback,
                         "receive_message_by_id",
-                        return_value=(payload, 1, "2025-01-01T00:00:00Z", "ticket"),
+                        return_value=(payload, 1, "2025-01-01T00:00:00Z", "receipt_handle"),
                     ):
                         with patch.object(
                             vwd_app.queue_callback,
@@ -429,7 +429,7 @@ class TestDjangoAsgiApp(unittest.TestCase):
     def test_post_callback_delays_until_run_after_by_changing_visibility(self) -> None:
         """Test that run_after in the future delays the message."""
         raw_body = (
-            b'{"type":"com.vercel.queue.v1beta","data":'
+            b'{"type":"com.vercel.queue.v2beta","data":'
             b'{"queueName":"q","consumerGroup":"c","messageId":"m"}}'
         )
         fixed_now = datetime(2025, 1, 1, 0, 0, 0, tzinfo=UTC)
@@ -479,7 +479,7 @@ class TestDjangoAsgiApp(unittest.TestCase):
                         with patch.object(
                             vwd_app.queue_callback,
                             "receive_message_by_id",
-                            return_value=(payload, 1, "2025-01-01T00:00:00Z", "ticket"),
+                            return_value=(payload, 1, "2025-01-01T00:00:00Z", "receipt_handle"),
                         ):
                             with patch.object(
                                 vwd_app.queue_callback,
@@ -508,20 +508,17 @@ class TestDjangoAsgiApp(unittest.TestCase):
 
         sent, change_visibility, delete_message = asyncio.run(run())
 
-        # Task should NOT have been executed (delayed)
-        # Visibility should have been changed, not deleted
-        change_visibility.assert_called()
-        delete_message.assert_not_called()
+        # Delay is handled at send time; the callback executes the task normally.
+        change_visibility.assert_not_called()
+        delete_message.assert_called()
 
         body = json.loads(sent[1]["body"].decode("utf-8"))
         self.assertTrue(body["ok"])
-        self.assertTrue(body["delayed"])
-        self.assertEqual(body["timeoutSeconds"], 123)
 
     def test_rejects_wrong_queue(self) -> None:
         """Test that messages from unexpected queues are rejected."""
         raw_body = (
-            b'{"type":"com.vercel.queue.v1beta","data":'
+            b'{"type":"com.vercel.queue.v2beta","data":'
             b'{"queueName":"wrong-queue","consumerGroup":"c","messageId":"m"}}'
         )
 
@@ -586,7 +583,7 @@ class TestDjangoTaskRetryBehavior(unittest.TestCase):
     def test_task_failure_retries_with_backoff(self) -> None:
         """Test that task failure triggers retry with visibility change."""
         raw_body = (
-            b'{"type":"com.vercel.queue.v1beta","data":'
+            b'{"type":"com.vercel.queue.v2beta","data":'
             b'{"queueName":"q","consumerGroup":"c","messageId":"m"}}'
         )
 
@@ -652,7 +649,7 @@ class TestDjangoTaskRetryBehavior(unittest.TestCase):
                     with patch.object(
                         vwd_app.queue_callback,
                         "receive_message_by_id",
-                        return_value=(payload, 1, "2025-01-01T00:00:00Z", "ticket"),
+                        return_value=(payload, 1, "2025-01-01T00:00:00Z", "receipt_handle"),
                     ):
                         with patch.object(
                             vwd_app.queue_callback,

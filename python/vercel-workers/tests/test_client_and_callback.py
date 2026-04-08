@@ -15,8 +15,8 @@ from vercel.workers.exceptions import TokenResolutionError
 
 
 class _FakeResponse:
-    status_code = 200
-    reason_phrase = "OK"
+    status_code = 201
+    reason_phrase = "Created"
     text = ""
 
     def raise_for_status(self) -> None:
@@ -45,56 +45,59 @@ class _FakeHttpxClient:
         self,
         url: str,  # noqa: ARG002
         *,
-        content: bytes,
-        headers: dict,  # noqa: ARG002  # pyright: ignore[reportMissingTypeArgument]
+        content: bytes | None = None,
+        headers: dict | None = None,  # noqa: ARG002  # pyright: ignore[reportMissingTypeArgument]
     ) -> _FakeResponse:
-        _FakeHttpxClient.captured_bodies.append(content)
+        if content is not None:
+            _FakeHttpxClient.captured_bodies.append(content)
         return self.response
 
 
 class TestCallbackAndClientEdgeCases(unittest.TestCase):
     def test_receive_message_by_id_returns_raw_bytes_for_non_json_payload(self) -> None:
-        with patch.object(
-            queue_callback._client,
-            "get_queue_base_url",
-            return_value="https://queue.example.com",
-        ):
-            with patch.object(
+        with (
+            patch.object(
+                queue_callback._client,
+                "get_queue_base_url",
+                return_value="https://queue.example.com",
+            ),
+            patch.object(
                 queue_callback._client,
                 "get_queue_base_path",
-                return_value="/api/v2/messages",
-            ):
-                with patch.object(
-                    queue_callback._client,
-                    "get_queue_token",
-                    return_value="token",
-                ):
-                    with patch.object(queue_callback.httpx, "Client", _FakeHttpxClient):
-                        with patch.object(
-                            queue_callback,
-                            "parse_multipart_message",
-                            return_value=(
-                                {
-                                    "Content-Type": "text/plain",
-                                    "Vqs-Delivery-Count": "2",
-                                    "Vqs-Timestamp": "2025-01-01T00:00:00Z",
-                                    "Vqs-Ticket": "ticket-123",
-                                },
-                                b"not-json",
-                            ),
-                        ):
-                            payload, delivery_count, created_at, ticket = (
-                                queue_callback.receive_message_by_id(
-                                    "q",
-                                    "c",
-                                    "m",
-                                )
-                            )
+                return_value="/api/v3/topic",
+            ),
+            patch.object(
+                queue_callback._client,
+                "get_queue_token",
+                return_value="token",
+            ),
+            patch.object(queue_callback.httpx, "Client", _FakeHttpxClient),
+            patch.object(
+                queue_callback,
+                "parse_multipart_message",
+                return_value=(
+                    {
+                        "Content-Type": "text/plain",
+                        "Vqs-Delivery-Count": "2",
+                        "Vqs-Timestamp": "2025-01-01T00:00:00Z",
+                        "Vqs-Receipt-Handle": "ticket-123",
+                    },
+                    b"not-json",
+                ),
+            ),
+        ):
+            payload, delivery_count, created_at, receipt_handle = (
+                queue_callback.receive_message_by_id(
+                    "q",
+                    "c",
+                    "m",
+                )
+            )
 
         self.assertEqual(payload, b"not-json")
         self.assertEqual(delivery_count, 2)
         self.assertEqual(created_at, "2025-01-01T00:00:00Z")
-        self.assertEqual(ticket, "ticket-123")
+        self.assertEqual(receipt_handle, "ticket-123")
 
     def test_get_queue_token_error_message_is_string(self) -> None:
         with patch.dict(queue_client.os.environ, {}, clear=True):
