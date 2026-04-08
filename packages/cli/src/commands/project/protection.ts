@@ -125,19 +125,25 @@ export default async function protection(
   const preferJson = formatResult.jsonOutput || Boolean(client.nonInteractive);
 
   const ssoSelected = Boolean(parsedArgs.flags['--sso']);
+  const passwordSelected = Boolean(parsedArgs.flags['--password']);
   const gitForkProtectionSelected = Boolean(
     parsedArgs.flags['--git-fork-protection']
   );
-  if (action && !ssoSelected && !gitForkProtectionSelected) {
+  if (
+    action &&
+    !ssoSelected &&
+    !passwordSelected &&
+    !gitForkProtectionSelected
+  ) {
     const msg =
-      'No protection selected. Pass --sso or --git-fork-protection. Usage: `vercel project protection enable|disable [name] --sso|--git-fork-protection`';
+      'No protection selected. Pass --sso, --password, or --git-fork-protection. Usage: `vercel project protection enable|disable [name] --sso|--password|--git-fork-protection`';
     outputAgentError(
       client,
       {
         status: 'error',
         reason: AGENT_REASON.MISSING_ARGUMENTS,
         message: msg,
-        hint: 'Use `project protection enable|disable` with a protection flag (e.g. --sso or --git-fork-protection).',
+        hint: 'Use `project protection enable|disable` with a protection flag (e.g. --sso, --password, or --git-fork-protection).',
         next: [
           {
             command: buildCommandWithGlobalFlags(
@@ -145,6 +151,13 @@ export default async function protection(
               `project protection ${action} --sso`
             ),
             when: 'Example: same action with SSO protection selected',
+          },
+          {
+            command: buildCommandWithGlobalFlags(
+              client.argv,
+              `project protection ${action} --password`
+            ),
+            when: 'Example: same action with password protection selected',
           },
           {
             command: buildCommandWithGlobalFlags(
@@ -185,6 +198,12 @@ export default async function protection(
           ? { deploymentType: ENABLED_DEPLOYMENT_TYPE }
           : null;
     }
+    if (passwordSelected) {
+      patchBody.passwordProtection =
+        action === 'enable'
+          ? { deploymentType: ENABLED_DEPLOYMENT_TYPE }
+          : null;
+    }
     if (gitForkProtectionSelected) {
       patchBody.gitForkProtection = action === 'enable';
     }
@@ -208,6 +227,9 @@ export default async function protection(
             projectId: project.id,
             projectName: project.name,
             ssoProtection: ssoSelected ? action === 'enable' : undefined,
+            passwordProtection: passwordSelected
+              ? action === 'enable'
+              : undefined,
             gitForkProtection: gitForkProtectionSelected
               ? action === 'enable'
               : undefined,

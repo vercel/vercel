@@ -124,6 +124,11 @@ describe('project protection (SSO)', () => {
       ).toBe(true);
       expect(
         payload.next?.some((n: { command: string }) =>
+          /project protection.*--password/.test(n.command)
+        )
+      ).toBe(true);
+      expect(
+        payload.next?.some((n: { command: string }) =>
           /project protection.*--git-fork-protection/.test(n.command)
         )
       ).toBe(true);
@@ -148,6 +153,93 @@ describe('project protection (SSO)', () => {
       const payload = JSON.parse(client.stdout.getFullOutput().trim());
       expect(payload.projectId).toBe('prj_123');
       expect(payload.name).toBe('my-project');
+    });
+  });
+});
+
+describe('project protection (password)', () => {
+  it('shows protection settings by default', async () => {
+    useProject({
+      ...defaultProject,
+      id: 'prj_123',
+      name: 'my-project',
+    });
+
+    client.setArgv('project', 'protection', 'my-project');
+    const exitCode = await project(client);
+
+    expect(exitCode).toBe(0);
+    await expect(client.stderr).toOutput('Protection settings');
+  });
+
+  it('requires --password for action mode', async () => {
+    useProject({
+      ...defaultProject,
+      id: 'prj_123',
+      name: 'my-project',
+    });
+
+    client.setArgv('project', 'protection', 'enable', 'my-project');
+    const exitCode = await project(client);
+
+    expect(exitCode).toBe(2);
+    await expect(client.stderr).toOutput('No protection selected');
+  });
+
+  it('disables password protection when --password is set', async () => {
+    useProject({
+      ...defaultProject,
+      id: 'prj_123',
+      name: 'my-project',
+    });
+
+    client.scenario.patch('/v9/projects/prj_123', (req, res) => {
+      expect(req.body).toEqual({ passwordProtection: null });
+      res.json({ id: 'prj_123' });
+    });
+
+    client.setArgv(
+      'project',
+      'protection',
+      'disable',
+      'my-project',
+      '--password'
+    );
+    const exitCode = await project(client);
+
+    expect(exitCode).toBe(0);
+    await expect(client.stderr).toOutput('Deployment protection disabled');
+  });
+
+  it('returns JSON for enable with --password', async () => {
+    useProject({
+      ...defaultProject,
+      id: 'prj_123',
+      name: 'my-project',
+    });
+
+    client.scenario.patch('/v9/projects/prj_123', (_req, res) => {
+      res.json({ id: 'prj_123' });
+    });
+
+    client.setArgv(
+      'project',
+      'protection',
+      'enable',
+      'my-project',
+      '--password',
+      '--format',
+      'json'
+    );
+    const exitCode = await project(client);
+    expect(exitCode).toBe(0);
+
+    const out = JSON.parse(client.stdout.getFullOutput().trim());
+    expect(out).toMatchObject({
+      action: 'enable',
+      projectId: 'prj_123',
+      projectName: 'my-project',
+      passwordProtection: true,
     });
   });
 });
