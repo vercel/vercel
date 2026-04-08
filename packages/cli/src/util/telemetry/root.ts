@@ -440,6 +440,26 @@ export class RootTelemetryClient extends TelemetryClient {
     super.trackInvocationId(invocationId);
   }
 
+  trackErrorStatus(status: number | string | undefined) {
+    super.trackErrorStatus(status);
+  }
+
+  trackErrorCode(code: string | undefined) {
+    super.trackErrorCode(code);
+  }
+
+  trackErrorSlug(slug: string | undefined) {
+    super.trackErrorSlug(slug);
+  }
+
+  trackErrorAction(action: string | undefined) {
+    super.trackErrorAction(action);
+  }
+
+  trackErrorServerMessage(serverMessage: string | undefined) {
+    super.trackErrorServerMessage(serverMessage);
+  }
+
   trackCliOptionCwd(cwd: string | undefined) {
     if (cwd) {
       this.trackCliOption({ option: 'cwd', value: this.redactedValue });

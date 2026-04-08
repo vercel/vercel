@@ -13,6 +13,7 @@ import {
 } from './session';
 
 const LogLabel = `['telemetry']:`;
+const MAX_ERROR_SERVER_MESSAGE_LENGTH = 500;
 
 interface Args {
   opts: Options;
@@ -208,6 +209,55 @@ export class TelemetryClient {
       this.track({
         key: 'invocation_id',
         value: invocationId,
+      });
+    }
+  }
+
+  protected trackErrorStatus(status: number | string | undefined) {
+    if (typeof status !== 'undefined') {
+      this.track({
+        key: 'error_status',
+        value: String(status),
+      });
+    }
+  }
+
+  protected trackErrorCode(code: string | undefined) {
+    if (code) {
+      this.track({
+        key: 'error_code',
+        value: code,
+      });
+    }
+  }
+
+  protected trackErrorSlug(slug: string | undefined) {
+    if (slug) {
+      this.track({
+        key: 'error_slug',
+        value: slug,
+      });
+    }
+  }
+
+  protected trackErrorAction(action: string | undefined) {
+    if (action) {
+      this.track({
+        key: 'error_action',
+        value: action,
+      });
+    }
+  }
+
+  protected trackErrorServerMessage(serverMessage: string | undefined) {
+    if (serverMessage) {
+      const normalizedServerMessage = serverMessage.trim().replace(/\s+/g, ' ');
+      this.track({
+        key: 'error_server_message',
+        value: normalizedServerMessage.slice(
+          0,
+          MAX_ERROR_SERVER_MESSAGE_LENGTH
+        ),
       });
     }
   }
