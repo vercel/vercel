@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
+import stripAnsi from 'strip-ansi';
 import { join } from 'path';
-import { mkdirp, writeJSON } from 'fs-extra';
+import { mkdirp, readJSON, writeJSON } from 'fs-extra';
 import {
   getLinkFromDir,
   getLinkedProject,
@@ -207,6 +208,7 @@ describe('getLinkedProject', () => {
     expect(link.org.id).toEqual('team_dummy');
     expect(link.org.type).toEqual('team');
     expect(link.project.id).toEqual('QmbKpqpiUqbcke');
+    // When `project.json` ids match the `repo.json` row for this path, the link includes `repoRoot`.
     expect(link.repoRoot).toEqual(cwd);
 
     // marketing
@@ -222,6 +224,7 @@ describe('getLinkedProject', () => {
     expect(link.org.id).toEqual('team_dummy');
     expect(link.org.type).toEqual('team');
     expect(link.project.id).toEqual('QmX6P93ChNDoZP');
+    // `marketing/subdir` has no `.vercel/project.json`; resolution uses `repo.json` at the repo root.
     expect(link.repoRoot).toEqual(cwd);
 
     // blog
@@ -387,5 +390,184 @@ describe('getLinkedProject', () => {
     expect(link.org.type).toEqual('team');
     expect(link.project.id).toEqual('QmScb7GPQt6gsS');
     expect(link.repoRoot).toEqual(cwd);
+  });
+
+  it('should include scope slug in repo project picker when project names collide', async () => {
+    const repoRoot = setupTmpDir('repo-link-dup-names');
+    const cwd = join(repoRoot, 'apps', 'web');
+    await mkdirp(cwd);
+    await mkdirp(join(repoRoot, '.vercel'));
+    await writeJSON(join(repoRoot, '.vercel', 'repo.json'), {
+      remoteName: 'origin',
+      projects: [
+        {
+          id: 'proj-a',
+          name: 'web-23',
+          directory: 'apps/web',
+          orgId: 'team_alpha',
+        },
+        {
+          id: 'proj-b',
+          name: 'web-23',
+          directory: 'apps/web',
+          orgId: 'team_bravo',
+        },
+      ],
+    });
+
+    useUser();
+    useTeams('team_alpha');
+    useProject({
+      ...defaultProject,
+      id: 'proj-a',
+      name: 'web-23',
+      accountId: 'team_alpha',
+    });
+
+    const selectSpy = vi
+      .spyOn(client.input, 'select')
+      .mockImplementation((async (opts: { choices: readonly unknown[] }) => {
+        const choices = opts.choices.filter(
+          (c: unknown): c is { name: string; value: unknown } =>
+            typeof c === 'object' && c !== null && 'value' in c && 'name' in c
+        );
+        expect(choices.map(c => stripAnsi(c.name))).toEqual([
+          'web-23 (team_alpha)',
+          'web-23 (team_bravo)',
+        ]);
+        return choices[0].value;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- match inquirer `select` signature
+      }) as any);
+
+    const link = await getLinkedProject(client, cwd);
+    selectSpy.mockRestore();
+
+    if (link.status !== 'linked') {
+      throw new Error('Expected to be linked');
+    }
+    expect(link.project.id).toEqual('proj-a');
+    expect(link.repoRoot).toEqual(repoRoot);
+  });
+
+  it('writes project.json when resolving duplicate repo rows and skips a second project prompt', async () => {
+    const repoRoot = setupTmpDir('repo-link-persist-dup');
+    const cwd = join(repoRoot, 'apps', 'web');
+    await mkdirp(cwd);
+    await mkdirp(join(repoRoot, '.vercel'));
+    await writeJSON(join(repoRoot, '.vercel', 'repo.json'), {
+      remoteName: 'origin',
+      projects: [
+        {
+          id: 'proj-a',
+          name: 'web-23',
+          directory: 'apps/web',
+          orgId: 'team_alpha',
+        },
+        {
+          id: 'proj-b',
+          name: 'web-23',
+          directory: 'apps/web',
+          orgId: 'team_bravo',
+        },
+      ],
+    });
+
+    useUser();
+    useTeams('team_alpha');
+    useProject({
+      ...defaultProject,
+      id: 'proj-a',
+      name: 'web-23',
+      accountId: 'team_alpha',
+    });
+
+    const selectSpy = vi
+      .spyOn(client.input, 'select')
+      .mockImplementation((async (opts: { choices: readonly unknown[] }) => {
+        const choices = opts.choices.filter(
+          (c: unknown): c is { name: string; value: unknown } =>
+            typeof c === 'object' && c !== null && 'value' in c && 'name' in c
+        );
+        return choices[0].value;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- match inquirer `select` signature
+      }) as any);
+
+    const link = await getLinkedProject(client, cwd);
+    expect(selectSpy).toHaveBeenCalledTimes(1);
+
+    const written = await readJSON(join(cwd, '.vercel', 'project.json'));
+    expect(written).toMatchObject({
+      orgId: 'team_alpha',
+      projectId: 'proj-a',
+      projectName: 'web-23',
+    });
+    expect(written.settings).toBeUndefined();
+
+    selectSpy.mockClear();
+    const link2 = await getLinkedProject(client, cwd);
+    expect(selectSpy).not.toHaveBeenCalled();
+    selectSpy.mockRestore();
+
+    if (link.status !== 'linked' || link2.status !== 'linked') {
+      throw new Error('Expected to be linked');
+    }
+    expect(link.project.id).toEqual('proj-a');
+    expect(link2.project.id).toEqual('proj-a');
+    expect(link.repoRoot).toEqual(repoRoot);
+  });
+
+  it('re-resolves from repo.json when project.json points at a repo project mapped to another path', async () => {
+    const repoRoot = setupTmpDir('stale-project-json-vs-repo');
+    const cwd = join(repoRoot, 'apps', 'web');
+    await mkdirp(cwd);
+    await mkdirp(join(repoRoot, '.vercel'));
+    await writeJSON(join(repoRoot, '.vercel', 'repo.json'), {
+      remoteName: 'origin',
+      projects: [
+        {
+          id: 'for-web',
+          name: 'web-app',
+          directory: 'apps/web',
+          orgId: 'team_dummy',
+        },
+        {
+          id: 'for-docs',
+          name: 'docs',
+          directory: 'apps/docs',
+          orgId: 'team_dummy',
+        },
+      ],
+    });
+    await mkdirp(join(cwd, '.vercel'));
+    await writeJSON(join(cwd, '.vercel', 'project.json'), {
+      orgId: 'team_dummy',
+      projectId: 'for-docs',
+      projectName: 'docs',
+      settings: {},
+    });
+
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      id: 'for-web',
+      name: 'web-app',
+    });
+    useProject({
+      ...defaultProject,
+      id: 'for-docs',
+      name: 'docs',
+    });
+
+    const prevNi = client.nonInteractive;
+    client.nonInteractive = true;
+    const link = await getLinkedProject(client, cwd);
+    client.nonInteractive = prevNi;
+
+    if (link.status !== 'linked') {
+      throw new Error('Expected to be linked');
+    }
+    expect(link.project.id).toEqual('for-web');
+    expect(link.repoRoot).toEqual(repoRoot);
   });
 });

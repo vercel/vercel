@@ -126,7 +126,8 @@ export async function pullCommandLogic(
 
   let currentDirectory: string;
   if (repoRoot) {
-    currentDirectory = join(repoRoot, project.rootDirectory || '');
+    const segment = project.rootDirectory ?? '';
+    currentDirectory = join(repoRoot, segment);
   } else {
     currentDirectory = cwd;
   }
@@ -146,8 +147,7 @@ export async function pullCommandLogic(
 
   output.print('\n');
   output.log('Downloading project settings');
-  const isRepoLinked = typeof repoRoot === 'string';
-  await writeProjectSettings(currentDirectory, project, org, isRepoLinked);
+  await writeProjectSettings(currentDirectory, project, org);
 
   const settingsStamp = stamp();
   output.print(

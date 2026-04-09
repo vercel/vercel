@@ -18,7 +18,11 @@ import type {
 } from '@vercel-internals/types';
 import { prependEmoji, emoji, type EmojiLabel } from '../emoji';
 import { isDirectory } from '../config/global-path';
-import { NowBuildError, getPlatformEnv } from '@vercel/build-utils';
+import {
+  NowBuildError,
+  getPlatformEnv,
+  normalizePath,
+} from '@vercel/build-utils';
 import outputCode from '../output/code';
 import { isErrnoException, isError } from '@vercel/error-utils';
 import { findProjectsFromPath, getRepoLink } from '../link/repo';
@@ -30,6 +34,46 @@ import { resolveProjectCwd } from './find-project-root';
 
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
+
+/** Maps `repo.json` `directory` to `Project.rootDirectory` (null = app at repo root). */
+function repoDirectoryToProjectRootDirectory(dir: string): string | null {
+  if (dir === '' || dir === '.') return null;
+  return normalizePath(dir);
+}
+
+/**
+ * When linked via `repo.json`, the API project’s `rootDirectory` can differ from
+ * the repo mapping; use the repo path for all CLI filesystem routing.
+ */
+function projectWithRepoLinkedRootDirectory(
+  project: Project,
+  link: ProjectLink
+): Project {
+  if (!link.repoRoot || link.projectRootDirectory === undefined) {
+    return project;
+  }
+  return {
+    ...project,
+    rootDirectory: repoDirectoryToProjectRootDirectory(
+      link.projectRootDirectory
+    ),
+  };
+}
+
+/**
+ * Relative path from the Git repo root to the linked app (for `join(repoRoot, …)`).
+ * Empty string when the app is at the repo root or when not repo-linked.
+ */
+export function repoLinkedFilesystemSegment(
+  link: ProjectLink | null | undefined
+): string {
+  if (!link?.repoRoot || link.projectRootDirectory === undefined) {
+    return '';
+  }
+  const d = link.projectRootDirectory;
+  if (d === '' || d === '.') return '';
+  return normalizePath(d);
+}
 
 export const VERCEL_DIR = '.vercel';
 export const VERCEL_DIR_FALLBACK = '.now';
@@ -79,28 +123,153 @@ export function getVercelDirectory(cwd: string): string {
 export async function getProjectLink(
   client: Client,
   path: string,
-  projectName?: string
+  projectName?: string | null
 ): Promise<ProjectLink | null> {
   // Prefer an explicit per-directory link (`.vercel/project.json`) over a
   // repository-level link (`.vercel/repo.json`). This prevents scenarios where
   // a freshly-created local link (e.g. after `vc link`) is ignored and the
   // user is re-prompted to select a repo-linked project again.
-  const dirLink = await getLinkFromDir(getVercelDirectory(path));
+  //
+  // When both exist, `project.json` must agree with `repo.json` for this path
+  // (org + project). If `project.json` references a project that appears in
+  // `repo.json` under a different path or org, treat it as stale and resolve
+  // from `repo.json` again (e.g. after switching which project maps to cwd).
+  const vercelDir = getVercelDirectory(path);
+  const dirLink = await getLinkFromDir(vercelDir);
   if (dirLink) {
+    const repoLink = await getRepoLink(client, path);
+    if (repoLink?.repoConfig) {
+      const rel = relative(repoLink.rootPath, path);
+      const candidates = findProjectsFromPath(
+        repoLink.repoConfig.projects,
+        rel
+      );
+      const topOrg = repoLink.repoConfig.orgId;
+
+      const matchingRow = candidates.find(
+        row =>
+          row.id === dirLink.projectId &&
+          (row.orgId ?? topOrg) === dirLink.orgId
+      );
+
+      if (matchingRow) {
+        return {
+          orgId: dirLink.orgId,
+          projectId: dirLink.projectId,
+          repoRoot: repoLink.rootPath,
+          projectRootDirectory: matchingRow.directory,
+          directorySpecifiedManually:
+            matchingRow.directorySpecifiedManually === true,
+        };
+      }
+
+      const dirLinkRow = repoLink.repoConfig.projects.find(
+        p => p.id === dirLink.projectId
+      );
+      if (dirLinkRow) {
+        const rowOrg = dirLinkRow.orgId ?? topOrg;
+        const orgMismatch = rowOrg !== dirLink.orgId;
+        const appliesHere = findProjectsFromPath([dirLinkRow], rel).length > 0;
+        if (orgMismatch || !appliesHere) {
+          output.debug(
+            '`.vercel/project.json` does not match `repo.json` for this path; re-resolving link from the repository mapping'
+          );
+          return await getProjectLinkFromRepoLink(client, path, projectName);
+        }
+      }
+
+      return dirLink;
+    }
+
     return dirLink;
   }
+
   return await getProjectLinkFromRepoLink(client, path, projectName);
+}
+
+function choiceLabelsForRepoProjectSelect(
+  selectableProjects: RepoProjectConfig[]
+): Array<{ name: string; value: RepoProjectConfig }> {
+  const countByName = new Map<string, number>();
+  for (const p of selectableProjects) {
+    countByName.set(p.name, (countByName.get(p.name) ?? 0) + 1);
+  }
+  const choices: Array<{ name: string; value: RepoProjectConfig }> = [];
+  for (const p of selectableProjects) {
+    let label = p.name;
+    const dup = (countByName.get(p.name) ?? 0) > 1;
+    if (dup && p.orgId) {
+      label = `${p.name}${chalk.dim(` (${p.orgId})`)}`;
+    }
+    choices.push({ name: label, value: p });
+  }
+  return choices;
+}
+
+/**
+ * After resolving a project from `repo.json`, persist `orgId` / `projectId` /
+ * `projectName` to `.vercel/project.json`. If the file already pointed at a
+ * different project, drop `settings` so stale pulled settings are not reused.
+ */
+async function persistRepoResolvedProjectJson(
+  projectCwd: string,
+  next: { orgId: string; projectId: string; projectName: string }
+): Promise<void> {
+  const vercelDir = getVercelDirectory(projectCwd);
+  const projectPath = join(vercelDir, VERCEL_DIR_PROJECT);
+  let existing: Record<string, unknown> | null = null;
+  try {
+    existing = JSON.parse(await readFile(projectPath, 'utf8')) as Record<
+      string,
+      unknown
+    >;
+  } catch (err: unknown) {
+    if (
+      isErrnoException(err) &&
+      err.code &&
+      ['ENOENT', 'ENOTDIR'].includes(err.code)
+    ) {
+      existing = null;
+    } else if (isError(err) && err.name === 'SyntaxError') {
+      existing = null;
+    } else {
+      throw err;
+    }
+  }
+
+  const same =
+    existing &&
+    existing.orgId === next.orgId &&
+    existing.projectId === next.projectId;
+  if (same) {
+    return;
+  }
+
+  await ensureDir(vercelDir);
+  await writeFile(
+    projectPath,
+    JSON.stringify(
+      {
+        orgId: next.orgId,
+        projectId: next.projectId,
+        projectName: next.projectName,
+      },
+      null,
+      2
+    )
+  );
 }
 
 async function getProjectLinkFromRepoLink(
   client: Client,
   path: string,
-  projectName?: string
+  projectName?: string | null
 ): Promise<ProjectLink | null> {
   const repoLink = await getRepoLink(client, path);
   if (!repoLink?.repoConfig) {
     return null;
   }
+  const topOrg = repoLink.repoConfig.orgId;
   const projects = findProjectsFromPath(
     repoLink.repoConfig.projects,
     relative(repoLink.rootPath, path)
@@ -128,17 +297,14 @@ async function getProjectLinkFromRepoLink(
       } else {
         project = await client.input.select({
           message: `Please select a Project:`,
-          choices: selectableProjects.map(p => ({
-            value: p,
-            name: p.name,
-          })),
+          choices: choiceLabelsForRepoProjectSelect(selectableProjects),
         });
       }
     }
   }
   if (project) {
     // Prefer project-level orgId, fall back to top-level for backwards compat
-    const orgId = project.orgId ?? repoLink.repoConfig.orgId;
+    const orgId = project.orgId ?? topOrg;
     if (!orgId) {
       const projectInfo = [
         project.name ? `name: "${project.name}"` : '',
@@ -151,11 +317,17 @@ async function getProjectLinkFromRepoLink(
         `Could not determine org ID from repo.json config at "${repoLink.repoConfigPath}".${details} Please re-link the repository.`
       );
     }
+    await persistRepoResolvedProjectJson(path, {
+      orgId,
+      projectId: project.id,
+      projectName: project.name,
+    });
     return {
       repoRoot: repoLink.rootPath,
       orgId,
       projectId: project.id,
       projectRootDirectory: project.directory,
+      directorySpecifiedManually: project.directorySpecifiedManually === true,
     };
   }
   return null;
@@ -180,9 +352,8 @@ export async function getLinkFromDir<T = ProjectLink>(
         typeof orgId === 'string' &&
         orgId.length > 0;
       if (!hasPlainLinkIds) {
-        // `vercel pull` with a repo-level link writes settings-only `project.json`
-        // (see writeProjectSettings). Treat as no per-directory link and fall
-        // back to `.vercel/repo.json` resolution.
+        // Legacy: older `vercel pull` omitted ids for repo-linked paths. Treat as
+        // no per-directory link and fall back to `.vercel/repo.json` resolution.
         return null;
       }
       throw new Error(
@@ -289,7 +460,7 @@ async function hasProjectLink(
 export async function getLinkedProject(
   client: Client,
   path = client.cwd,
-  projectName?: string
+  projectName?: string | null
 ): Promise<ProjectLinkResult> {
   path = await resolveProjectCwd(path);
 
@@ -394,7 +565,12 @@ export async function getLinkedProject(
     return { status: 'not_linked', org: null, project: null };
   }
 
-  return { status: 'linked', org, project, repoRoot: link.repoRoot };
+  return {
+    status: 'linked',
+    org,
+    project: projectWithRepoLinkedRootDirectory(project, link),
+    repoRoot: link.repoRoot,
+  };
 }
 
 const VERCEL_DIR_README_CONTENT = `> Why do I have a folder named ".vercel" in my project?

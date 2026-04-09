@@ -30,6 +30,11 @@ export interface RepoProjectConfig {
   name: string;
   directory: string;
   orgId?: string;
+  /**
+   * When set, this entry was linked with a suggested local directory without
+   * updating the Vercel project's root directory setting.
+   */
+  directorySpecifiedManually?: boolean;
 }
 
 export interface RepoProjectsConfig {
