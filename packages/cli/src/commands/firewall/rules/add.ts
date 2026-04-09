@@ -56,6 +56,38 @@ export default async function add(client: Client, argv: string[]) {
 
   // Mode dispatch
   if (aiPrompt) {
+    // AI mode — blocked for agents/non-interactive (AI output requires human review)
+    if (client.nonInteractive || !client.stdin.isTTY) {
+      if (client.nonInteractive) {
+        outputAgentError(client, {
+          status: 'error',
+          reason: 'ai_not_available',
+          message:
+            'AI mode is not available in non-interactive mode. AI-generated rules require human review before staging. Use --json or --condition flags instead.',
+          next: [
+            {
+              command: withGlobalFlags(
+                client,
+                'firewall rules add "Name" --condition "type:op:value" --action deny --yes'
+              ),
+              when: 'create with flags',
+            },
+            {
+              command: withGlobalFlags(
+                client,
+                'firewall rules add --json \'{"name":"...","conditionGroup":[...],"action":{...}}\' --yes'
+              ),
+              when: 'create with JSON',
+            },
+          ],
+        });
+      }
+      output.error(
+        'AI mode is not available in non-interactive mode. Use --json or --condition flags instead.'
+      );
+      return 1;
+    }
+
     // AI mode
     const link = await ensureProjectLink(client);
     if (typeof link === 'number') return link;

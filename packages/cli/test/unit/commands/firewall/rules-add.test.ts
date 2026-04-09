@@ -1312,6 +1312,16 @@ describe('firewall rules add', () => {
   // ─── AI mode ───────────────────────────────────────────────────────
 
   describe('AI mode', () => {
+    it('should block AI mode in non-interactive mode', async () => {
+      client.setArgv('firewall', 'rules', 'add', '--ai', 'Block bots', '--yes');
+      (client.stdin as any).isTTY = false;
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput(
+        'AI mode is not available in non-interactive mode'
+      );
+      expect(await exitCodePromise).toEqual(1);
+    });
+
     it('should create a rule from AI with --yes', async () => {
       useListFirewallConfigs(createConfig(), null);
       usePatchDraft();
@@ -1396,13 +1406,16 @@ describe('firewall rules add', () => {
       expect(await exitCodePromise).toEqual(1);
     });
 
-    it('should show error when AI API fails in non-interactive mode', async () => {
+    it('should block AI mode when non-TTY even with API mock', async () => {
       useGenerateFirewallRuleError(500);
       (client.stdin as any).isTTY = false;
 
       client.setArgv('firewall', 'rules', 'add', '--ai', 'Block bots', '--yes');
       const exitCodePromise = firewall(client);
-      await expect(client.stderr).toOutput('Response Error');
+      // AI is blocked before the API call is ever made
+      await expect(client.stderr).toOutput(
+        'AI mode is not available in non-interactive mode'
+      );
       expect(await exitCodePromise).toEqual(1);
     });
 
