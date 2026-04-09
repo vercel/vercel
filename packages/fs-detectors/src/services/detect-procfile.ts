@@ -20,7 +20,7 @@ interface ProcfileEntry {
 }
 
 const PROCFILE = 'Procfile';
-const PROCFILE_LINE_RE = /^\s*([A-Za-z_][\w-]*):\s*(.+)/;
+const PROCFILE_LINE_RE = /^\s*([A-Za-z_][A-Za-z0-9_-]*):\s*(.+)/;
 
 // to handle entrypoints inferring from commands like:
 // web: gunicorn myapp.app:app
@@ -136,7 +136,8 @@ export async function detectProcfileServices(options: {
     const { processType, command } = entry;
     const tokens = command.split(/\s+/).filter(Boolean);
     const entrypoint = await extractEntrypoint(tokens, fs);
-    const isWorker = processType.includes('worker') || isWorkerCommand(tokens);
+    const isWorkerLikeProcess =
+      processType.includes('worker') || hasSupportedWorkerCommand(tokens);
 
     if (serviceNames.has(processType)) {
       errors.push({
@@ -148,10 +149,10 @@ export async function detectProcfileServices(options: {
     }
     serviceNames.add(processType);
 
-    if (isWorker) {
+    if (isWorkerLikeProcess) {
       // we can try to automatically infer config if that's Celery or Dramatiq CLIs,
       // and produce them in the output. Otherwise we'll fallback to a hint
-      if (isWorkerCommand(tokens) && entrypoint?.endsWith('.py')) {
+      if (hasSupportedWorkerCommand(tokens) && entrypoint?.endsWith('.py')) {
         services[processType] = {
           type: 'worker',
           entrypoint,
@@ -280,7 +281,7 @@ function hasSupportedExtension(token: string): boolean {
   return dot > 0 && SUPPORTED_EXTENSIONS.has(token.slice(dot));
 }
 
-function isWorkerCommand(tokens: string[]): boolean {
+function hasSupportedWorkerCommand(tokens: string[]): boolean {
   return tokens.some(t => SUPPORTED_WORKER_COMMANDS.has(baseCommand(t)));
 }
 

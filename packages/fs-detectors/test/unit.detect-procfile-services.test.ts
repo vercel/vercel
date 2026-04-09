@@ -297,7 +297,7 @@ describe('detectProcfileServices', () => {
 
       expect(result.errors).toEqual([]);
       expect(result.services).not.toBeNull();
-      expect(Object.keys(result.services!)).toHaveLength(2);
+      expect(Object.keys(result.services!).sort()).toEqual(['web', 'worker']);
       expect(result.services!.worker).toMatchObject({
         type: 'worker',
         entrypoint: 'myapp/celery.py',
@@ -379,6 +379,31 @@ describe('detectProcfileServices', () => {
       const dupError = result.errors.find(e => e.code === 'DUPLICATE_SERVICE');
       expect(dupError).toBeDefined();
       expect(dupError!.serviceName).toBe('worker');
+    });
+
+    it('should handle Python workers without web process', async () => {
+      const fs = new VirtualFilesystem({
+        Procfile: [
+          'worker-a: celery -A myapp.tasks_a worker',
+          'worker-b: celery -A myapp.tasks_b worker',
+        ].join('\n'),
+        'requirements.txt': 'celery',
+        'myapp/tasks_a.py': 'from celery import Celery\napp = Celery("myapp")',
+        'myapp/tasks_b.py': 'from celery import Celery\napp = Celery("myapp")',
+      });
+
+      const result = await detectProcfileServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      expect(result.services).not.toBeNull();
+      expect(result.services!['worker-a']).toMatchObject({
+        type: 'worker',
+        entrypoint: 'myapp/tasks_a.py',
+      });
+      expect(result.services!['worker-b']).toMatchObject({
+        type: 'worker',
+        entrypoint: 'myapp/tasks_b.py',
+      });
     });
 
     it('should emit worker hint for python worker.py', async () => {
