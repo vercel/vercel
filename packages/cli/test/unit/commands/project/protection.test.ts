@@ -129,7 +129,24 @@ describe('project protection (SSO)', () => {
       ).toBe(true);
       expect(
         payload.next?.some((n: { command: string }) =>
+          /project protection.*--customer-support-code-visibility/.test(
+            n.command
+          )
+        )
+      ).toBe(true);
+      expect(
+        payload.next?.some((n: { command: string }) =>
           /project protection.*--skew/.test(n.command)
+        )
+      ).toBe(true);
+      expect(
+        payload.next?.some((n: { command: string }) =>
+          /project protection.*--protection-bypass/.test(n.command)
+        )
+      ).toBe(true);
+      expect(
+        payload.next?.some((n: { command: string }) =>
+          /project protection.*--git-fork-protection/.test(n.command)
         )
       ).toBe(true);
     });
@@ -240,6 +257,69 @@ describe('project protection (password)', () => {
       projectId: 'prj_123',
       projectName: 'my-project',
       passwordProtection: true,
+    });
+  });
+});
+
+describe('project protection (customer support code visibility)', () => {
+  it('shows protection settings by default', async () => {
+    useProject({
+      ...defaultProject,
+      id: 'prj_123',
+      name: 'my-project',
+    });
+
+    client.setArgv('project', 'protection', 'my-project');
+    const exitCode = await project(client);
+
+    expect(exitCode).toBe(0);
+    await expect(client.stderr).toOutput('Protection settings');
+  });
+
+  it('requires flag for action mode', async () => {
+    useProject({
+      ...defaultProject,
+      id: 'prj_123',
+      name: 'my-project',
+    });
+
+    client.setArgv('project', 'protection', 'enable', 'my-project');
+    const exitCode = await project(client);
+
+    expect(exitCode).toBe(2);
+    await expect(client.stderr).toOutput('No protection selected');
+  });
+
+  it('sets customerSupportCodeVisibility', async () => {
+    useProject({
+      ...defaultProject,
+      id: 'prj_123',
+      name: 'my-project',
+    });
+
+    client.scenario.patch('/v9/projects/prj_123', (req, res) => {
+      expect(req.body).toEqual({ customerSupportCodeVisibility: true });
+      res.json({ id: 'prj_123' });
+    });
+
+    client.setArgv(
+      'project',
+      'protection',
+      'enable',
+      'my-project',
+      '--customer-support-code-visibility',
+      '--format',
+      'json'
+    );
+    const exitCode = await project(client);
+    expect(exitCode).toBe(0);
+
+    const out = JSON.parse(client.stdout.getFullOutput().trim());
+    expect(out).toMatchObject({
+      action: 'enable',
+      projectId: 'prj_123',
+      projectName: 'my-project',
+      customerSupportCodeVisibility: true,
     });
   });
 });
@@ -408,5 +488,122 @@ describe('project protection (skew)', () => {
       skewProtection: true,
       skewProtectionMaxAge: 2592000,
     });
+  });
+});
+
+describe('project protection (git fork)', () => {
+  it('sets gitForkProtection', async () => {
+    useProject({
+      ...defaultProject,
+      id: 'prj_123',
+      name: 'my-project',
+    });
+
+    client.scenario.patch('/v9/projects/prj_123', (req, res) => {
+      expect(req.body).toEqual({ gitForkProtection: false });
+      res.json({ id: 'prj_123' });
+    });
+
+    client.setArgv(
+      'project',
+      'protection',
+      'disable',
+      'my-project',
+      '--git-fork-protection'
+    );
+    const exitCode = await project(client);
+
+    expect(exitCode).toBe(0);
+  });
+
+  it('returns JSON for enable with --git-fork-protection', async () => {
+    useProject({
+      ...defaultProject,
+      id: 'prj_123',
+      name: 'my-project',
+    });
+
+    client.scenario.patch('/v9/projects/prj_123', (_req, res) => {
+      res.json({ id: 'prj_123' });
+    });
+
+    client.setArgv(
+      'project',
+      'protection',
+      'enable',
+      'my-project',
+      '--git-fork-protection',
+      '--format',
+      'json'
+    );
+    const exitCode = await project(client);
+    expect(exitCode).toBe(0);
+
+    const out = JSON.parse(client.stdout.getFullOutput().trim());
+    expect(out).toMatchObject({
+      action: 'enable',
+      projectId: 'prj_123',
+      projectName: 'my-project',
+      gitForkProtection: true,
+    });
+  });
+});
+
+describe('project protection (automation bypass)', () => {
+  it('enables protection bypass via project bypass endpoint', async () => {
+    useProject({
+      ...defaultProject,
+      id: 'prj_123',
+      name: 'my-project',
+    });
+
+    client.scenario.patch(
+      '/v1/projects/prj_123/protection-bypass',
+      (req, res) => {
+        expect(req.body).toEqual({
+          generate: {},
+        });
+        res.json({ protectionBypass: {} });
+      }
+    );
+
+    client.setArgv(
+      'project',
+      'protection',
+      'enable',
+      'my-project',
+      '--protection-bypass',
+      '--format',
+      'json'
+    );
+    const exitCode = await project(client);
+    expect(exitCode).toBe(0);
+
+    const out = JSON.parse(client.stdout.getFullOutput().trim());
+    expect(out).toMatchObject({
+      action: 'enable',
+      projectId: 'prj_123',
+      projectName: 'my-project',
+      protectionBypass: true,
+    });
+  });
+
+  it('requires bypass secret when disabling protection bypass', async () => {
+    useProject({
+      ...defaultProject,
+      id: 'prj_123',
+      name: 'my-project',
+    });
+
+    client.setArgv(
+      'project',
+      'protection',
+      'disable',
+      'my-project',
+      '--protection-bypass'
+    );
+    const exitCode = await project(client);
+    expect(exitCode).toBe(2);
+    await expect(client.stderr).toOutput('requires --protection-bypass-secret');
   });
 });
