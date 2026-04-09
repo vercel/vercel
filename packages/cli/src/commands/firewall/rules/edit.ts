@@ -148,8 +148,39 @@ export default async function edit(client: Client, argv: string[]) {
     return 1;
   }
 
-  // AI mode
+  // AI mode — blocked for agents/non-interactive (AI output requires human review)
   if (aiPrompt) {
+    if (client.nonInteractive || !client.stdin.isTTY) {
+      if (client.nonInteractive) {
+        outputAgentError(client, {
+          status: 'error',
+          reason: 'ai_not_available',
+          message:
+            'AI mode is not available in non-interactive mode. AI-generated changes require human review. Use --json or flag-based editing instead.',
+          next: [
+            {
+              command: withGlobalFlags(
+                client,
+                `firewall rules edit "${identifier}" --action challenge --yes`
+              ),
+              when: 'edit with flags',
+            },
+            {
+              command: withGlobalFlags(
+                client,
+                `firewall rules edit "${identifier}" --json '{"name":"...","conditionGroup":[...],"action":{...}}' --yes`
+              ),
+              when: 'edit with JSON',
+            },
+          ],
+        });
+      }
+      output.error(
+        'AI mode is not available in non-interactive mode. Use --json or flag-based editing instead.'
+      );
+      return 1;
+    }
+
     return handleAIEdit(client, project, teamId, originalRule, {
       prompt: aiPrompt,
       skipPrompts: !!parsed.flags['--yes'],

@@ -410,6 +410,27 @@ describe('firewall rules edit', () => {
   // ─── AI mode ───────────────────────────────────────────────────────
 
   describe('AI mode', () => {
+    it('should block AI mode in non-interactive mode', async () => {
+      const active = createConfig({ rules: [createRule(1)] });
+      useListFirewallConfigs(active, null);
+
+      client.setArgv(
+        'firewall',
+        'rules',
+        'edit',
+        'Test Rule 1',
+        '--ai',
+        'Change action',
+        '--yes'
+      );
+      (client.stdin as any).isTTY = false;
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput(
+        'AI mode is not available in non-interactive mode'
+      );
+      expect(await exitCodePromise).toEqual(1);
+    });
+
     it('should edit with AI and --yes', async () => {
       const active = createConfig({ rules: [createRule(1)] });
       useListFirewallConfigs(active, null);
