@@ -1,7 +1,7 @@
 import type Client from '../../util/client';
 import output from '../../output-manager';
 import { isAPIError } from '../../util/errors-ts';
-import { formatErrorJson } from './output';
+import { formatErrorJson, handleApiError } from './output';
 import type {
   Aggregation,
   MetricDetail,
@@ -63,16 +63,19 @@ export async function fetchMetricListOrExit(
   try {
     return await fetchMetricList(client, accountId);
   } catch (err: unknown) {
-    if (isAPIError(err) && (err.status === 401 || err.status === 403)) {
-      const message =
-        'The metrics schema API request was not authorized. Run `vercel login` to authenticate and `vercel switch` to select a team, then try again.';
-
-      if (jsonOutput) {
-        client.stdout.write(formatErrorJson('SCHEMA_UNAUTHORIZED', message));
-      } else {
-        output.error(message);
-      }
-      return 1;
+    if (isAPIError(err)) {
+      return handleApiError(err, jsonOutput, client, {
+        401: {
+          code: 'SCHEMA_UNAUTHORIZED',
+          message:
+            'The metrics schema API request was not authorized. Run `vercel login` to authenticate and `vercel switch` to select a team, then try again.',
+        },
+        403: {
+          code: 'SCHEMA_UNAUTHORIZED',
+          message:
+            'The metrics schema API request was not authorized. Run `vercel login` to authenticate and `vercel switch` to select a team, then try again.',
+        },
+      });
     }
 
     const message =
@@ -97,31 +100,19 @@ export async function fetchMetricDetailOrExit(
   try {
     return await fetchMetricDetail(client, accountId, metricId);
   } catch (err: unknown) {
-    if (isAPIError(err) && (err.status === 401 || err.status === 403)) {
-      const message =
-        'The metrics schema API request was not authorized. Run `vercel login` to authenticate and `vercel switch` to select a team, then try again.';
-
-      if (jsonOutput) {
-        client.stdout.write(formatErrorJson('SCHEMA_UNAUTHORIZED', message));
-      } else {
-        output.error(message);
-      }
-      return 1;
-    }
-
-    if (isAPIError(err) && err.status === 400) {
-      const message = err.serverMessage || `Unknown metric "${metricId}".`;
-      if (jsonOutput) {
-        client.stdout.write(
-          formatErrorJson(err.code || 'BAD_REQUEST', message, err.allowedValues)
-        );
-      } else {
-        output.error(message);
-        if (err.allowedValues && err.allowedValues.length > 0) {
-          output.print(`\nAvailable values: ${err.allowedValues.join(', ')}\n`);
-        }
-      }
-      return 1;
+    if (isAPIError(err)) {
+      return handleApiError(err, jsonOutput, client, {
+        401: {
+          code: 'SCHEMA_UNAUTHORIZED',
+          message:
+            'The metrics schema API request was not authorized. Run `vercel login` to authenticate and `vercel switch` to select a team, then try again.',
+        },
+        403: {
+          code: 'SCHEMA_UNAUTHORIZED',
+          message:
+            'The metrics schema API request was not authorized. Run `vercel login` to authenticate and `vercel switch` to select a team, then try again.',
+        },
+      });
     }
 
     const message =
