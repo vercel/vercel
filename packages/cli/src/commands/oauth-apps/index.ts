@@ -1,4 +1,3 @@
-import confirm from '@inquirer/confirm';
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
@@ -291,6 +290,78 @@ function emitOauthAppsApiError(
   return 1;
 }
 
+/**
+ * OAuth app APIs are team-scoped. Ensures `client.config.currentTeam` is set from scope.
+ */
+async function ensureTeamScopeForOauthAppsApi(
+  client: Client,
+  registerContext?: { name: string; slug: string }
+): Promise<boolean> {
+  const { team } = await getScope(client);
+  if (team) {
+    client.config.currentTeam = team.id;
+    return true;
+  }
+
+  if (registerContext) {
+    const { name, slug } = registerContext;
+    outputAgentError(
+      client,
+      {
+        status: 'error',
+        reason: AGENT_REASON.MISSING_SCOPE,
+        message:
+          'Registering a Vercel App requires a team. Switch scope with `vercel teams switch` or pass `--scope <team>`.',
+        hint: 'OAuth apps are owned by a team; personal (user-only) scope cannot create them.',
+        next: [
+          {
+            command: suggestVercelCommand(client, 'teams switch'),
+            when: 'Pick the team that will own the app',
+          },
+          {
+            command: suggestOauthAppsCommand(
+              client,
+              `register --name ${shellSingleQuoteArg(name)} --slug ${shellSingleQuoteArg(slug)}`
+            ),
+            when: 'Retry register after selecting a team',
+          },
+        ],
+      },
+      1
+    );
+    output.error(
+      'Registering a Vercel App requires a team. Use `vercel teams switch` or `--scope <team>`.'
+    );
+    return false;
+  }
+
+  outputAgentError(
+    client,
+    {
+      status: 'error',
+      reason: AGENT_REASON.MISSING_SCOPE,
+      message:
+        'OAuth app commands require a team. Switch scope with `vercel teams switch` or pass `--scope <team>`.',
+      hint: 'Installations and requests are scoped to a team; personal (user-only) scope cannot use these APIs.',
+      next: [
+        {
+          command: suggestVercelCommand(client, 'teams switch'),
+          when: 'Pick the team for OAuth app actions',
+        },
+        {
+          command: suggestOauthAppsCommand(client, 'list-requests'),
+          when: 'List pending installation requests after selecting a team',
+        },
+      ],
+    },
+    1
+  );
+  output.error(
+    'OAuth app commands require a team. Use `vercel teams switch` or `--scope <team>`.'
+  );
+  return false;
+}
+
 export default async function main(client: Client): Promise<number> {
   let parsedArgs;
   const flagsSpecification = getFlagsSpecification(oauthAppsCommand.options);
@@ -315,6 +386,13 @@ export default async function main(client: Client): Promise<number> {
     return 0;
   }
 
+  if (subcommand === undefined && args.length > 0 && !args[0].startsWith('-')) {
+    output.error(
+      `Invalid oauth-apps subcommand "${args[0]}". Use: dismiss | install | list-requests | register | remove`
+    );
+    return 1;
+  }
+
   function printHelp(command: Command): number {
     output.print(
       help(command, {
@@ -329,6 +407,9 @@ export default async function main(client: Client): Promise<number> {
     case 'dismiss': {
       if (needHelp) {
         return printHelp(dismissSubcommand);
+      }
+      if (!(await ensureTeamScopeForOauthAppsApi(client))) {
+        return 1;
       }
       const spec = getFlagsSpecification(dismissSubcommand.options);
       let p;
@@ -389,9 +470,10 @@ export default async function main(client: Client): Promise<number> {
         return 1;
       }
       if (!client.nonInteractive && !p.flags['--yes']) {
-        const ok = await confirm({
-          message: `Dismiss installation request for ${appId}?`,
-        });
+        const ok = await client.input.confirm(
+          `Dismiss installation request for ${appId}?`,
+          false
+        );
         if (!ok) {
           output.log('Canceled.');
           return 0;
@@ -493,39 +575,9 @@ export default async function main(client: Client): Promise<number> {
         return 1;
       }
 
-      const { team } = await getScope(client);
-      if (!team) {
-        outputAgentError(
-          client,
-          {
-            status: 'error',
-            reason: AGENT_REASON.MISSING_SCOPE,
-            message:
-              'Registering a Vercel App requires a team. Switch scope with `vercel teams switch` or pass `--scope <team>`.',
-            hint: 'OAuth apps are owned by a team; personal (user-only) scope cannot create them.',
-            next: [
-              {
-                command: suggestVercelCommand(client, 'teams switch'),
-                when: 'Pick the team that will own the app',
-              },
-              {
-                command: suggestOauthAppsCommand(
-                  client,
-                  `register --name ${shellSingleQuoteArg(name)} --slug ${shellSingleQuoteArg(slug)}`
-                ),
-                when: 'Retry register after selecting a team',
-              },
-            ],
-          },
-          1
-        );
-        output.error(
-          'Registering a Vercel App requires a team. Use `vercel teams switch` or `--scope <team>`.'
-        );
+      if (!(await ensureTeamScopeForOauthAppsApi(client, { name, slug }))) {
         return 1;
       }
-
-      client.config.currentTeam = team.id;
 
       const body: {
         name: string;
@@ -567,6 +619,9 @@ export default async function main(client: Client): Promise<number> {
     case 'install': {
       if (needHelp) {
         return printHelp(installSubcommand);
+      }
+      if (!(await ensureTeamScopeForOauthAppsApi(client))) {
+        return 1;
       }
       const spec = getFlagsSpecification(installSubcommand.options);
       let p;
@@ -680,6 +735,9 @@ export default async function main(client: Client): Promise<number> {
       if (needHelp) {
         return printHelp(removeSubcommand);
       }
+      if (!(await ensureTeamScopeForOauthAppsApi(client))) {
+        return 1;
+      }
       const spec = getFlagsSpecification(removeSubcommand.options);
       let p;
       try {
@@ -729,9 +787,10 @@ export default async function main(client: Client): Promise<number> {
         return 1;
       }
       if (!client.nonInteractive && !p.flags['--yes']) {
-        const ok = await confirm({
-          message: `Uninstall Vercel App installation ${installationId}?`,
-        });
+        const ok = await client.input.confirm(
+          `Uninstall Vercel App installation ${installationId}?`,
+          false
+        );
         if (!ok) {
           output.log('Canceled.');
           return 0;
@@ -761,6 +820,9 @@ export default async function main(client: Client): Promise<number> {
     default: {
       if (needHelp) {
         return printHelp(listRequestsSubcommand);
+      }
+      if (!(await ensureTeamScopeForOauthAppsApi(client))) {
+        return 1;
       }
       const spec = getFlagsSpecification(listRequestsSubcommand.options);
       let p;

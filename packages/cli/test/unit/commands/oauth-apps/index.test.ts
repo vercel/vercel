@@ -15,6 +15,14 @@ describe('oauth-apps', () => {
   });
 
   describe('install', () => {
+    beforeEach(() => {
+      vi.mocked(getScope).mockResolvedValue({
+        contextName: 'acme',
+        team: { id: 'team_oauth_install', slug: 'acme' } as any,
+        user: {} as any,
+      });
+    });
+
     it('writes structured JSON with hint and next when non-interactive and --client-id is missing', async () => {
       vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
         throw new Error(`exit:${code ?? 0}`);
@@ -71,6 +79,18 @@ describe('oauth-apps', () => {
       expect(payload.next?.[0]?.command).toBe(
         'vercel --non-interactive oauth-apps install --client-id cl_test123 --permission <scope>'
       );
+    });
+  });
+
+  describe('invalid subcommand', () => {
+    it('errors when the first token is not a known subcommand', async () => {
+      client.setArgv('oauth-apps', 'not-a-command');
+
+      const code = await oauthApps(client);
+      expect(code).toBe(1);
+      const err = client.stderr.getFullOutput();
+      expect(err).toContain('Invalid oauth-apps subcommand');
+      expect(err).toContain('not-a-command');
     });
   });
 
