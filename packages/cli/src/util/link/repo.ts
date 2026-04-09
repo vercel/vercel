@@ -1,26 +1,14 @@
 import chalk from 'chalk';
-import { Separator } from '@inquirer/checkbox';
 import pluralize from 'pluralize';
 import { homedir } from 'os';
-import slugify from '@sindresorhus/slugify';
-import { basename, join } from 'path';
+import { join } from 'path';
 import { normalizePath, traverseUpDirectories } from '@vercel/build-utils';
 import { lstat, readJSON, outputJSON } from 'fs-extra';
-import toHumanPath from '../humanize-path';
 import { VERCEL_DIR, VERCEL_DIR_REPO, writeReadme } from '../projects/link';
-import { getRemoteUrls } from '../create-git-meta';
-import link from '../output/link';
 import { emoji, prependEmoji } from '../emoji';
-import selectOrg from '../input/select-org';
 import { addToGitIgnore } from './add-to-gitignore';
 import type Client from '../client';
-import type { Framework } from '@vercel/frameworks';
-import type { Project } from '@vercel-internals/types';
-import createProject from '../projects/create-project';
-import { detectProjects } from '../projects/detect-projects';
-import { repoInfoToUrl } from '../git/repo-info-to-url';
-import { connectGitProvider, parseRepoUrl } from '../git/connect-git-provider';
-import { getGitConfigPath, getGitRootDirectory } from '../git-helpers';
+import { getGitRootDirectory } from '../git-helpers';
 import output from '../../output-manager';
 
 const home = homedir();
@@ -93,18 +81,6 @@ export function mergeRepoProjectEntries(
   return [...map.values()];
 }
 
-/** When set, `vc link --repo` / `vc link add` use the experimental discovery flow. */
-export function isExperimentalRepoLinkEnabled(): boolean {
-  return Boolean(process.env.VERCEL_EXPERIMENTAL_LINK);
-}
-
-interface NewProject {
-  newProject?: true;
-  rootDirectory?: string;
-  name: string;
-  framework: Framework;
-}
-
 /**
  * Given a directory path `cwd`, finds the root of the Git repository
  * and returns the parsed `.vercel/repo.json` file if the repository
@@ -130,11 +106,8 @@ export async function getRepoLink(
 }
 
 /**
- * Runs the project discovery flow: selects org, discovers/creates projects,
- * and returns the selected projects as `RepoProjectConfig[]`.
- *
- * When `VERCEL_EXPERIMENTAL_LINK` is set, delegates to the experimental
- * implementation in `experimental-repo/`. Otherwise uses the classic checkbox flow.
+ * Runs the project discovery flow (`vc link --repo` / `vc link add`): selects org,
+ * discovers/creates projects, and returns the selected projects as `RepoProjectConfig[]`.
  *
  * This is the shared core used by both `ensureRepoLink` and `addRepoLink`.
  *
@@ -152,289 +125,17 @@ async function discoverRepoProjects(
     existingDirectories?: Set<string>;
     /** When set, skip the remote selection prompt and use this remote. */
     existingRemoteName?: string;
-    /** Experimental: target project; excludes local “new project” suggestions. */
+    /** Target project by name; excludes local “new project” suggestions. */
     projectName?: string | null;
   }
 ): Promise<
   | { remoteName: string; projects: RepoProjectConfig[]; orgSlug: string }
   | undefined
 > {
-  if (isExperimentalRepoLinkEnabled()) {
-    const { discoverRepoProjectsExperimental } = await import(
-      './experimental-repo/discover-repo-projects'
-    );
-    return discoverRepoProjectsExperimental(client, rootPath, options);
-  }
-  return discoverRepoProjectsLegacy(client, rootPath, options);
-}
-
-async function discoverRepoProjectsLegacy(
-  client: Client,
-  rootPath: string,
-  {
-    yes,
-    existingProjectIds,
-    existingDirectories,
-    existingRemoteName,
-    projectName: _projectName,
-  }: {
-    yes: boolean;
-    existingProjectIds?: Set<string>;
-    existingDirectories?: Set<string>;
-    /** When set, skip the remote selection prompt and use this remote. */
-    existingRemoteName?: string;
-    projectName?: string | null;
-  }
-): Promise<
-  | { remoteName: string; projects: RepoProjectConfig[]; orgSlug: string }
-  | undefined
-> {
-  // Detect the projects on the filesystem out of band, so that
-  // they will be ready by the time the projects are listed
-  const detectedProjectsPromise = detectProjects(rootPath).catch(err => {
-    output.debug(`Failed to detect local projects: ${err}`);
-    return new Map<string, Framework[]>();
-  });
-
-  const promptAction = existingRemoteName ? 'add' : 'link';
-  const confirmMessage =
-    promptAction === 'add'
-      ? `Add Project(s) for Git repository at ${chalk.cyan(
-          `"${toHumanPath(rootPath)}"`
-        )}?`
-      : `Link Git repository at ${chalk.cyan(
-          `"${toHumanPath(rootPath)}"`
-        )} to your Project(s)?`;
-
-  const shouldLink = yes || (await client.input.confirm(confirmMessage, true));
-
-  if (!shouldLink) {
-    output.print(`Canceled. Repository not linked.\n`);
-    return;
-  }
-
-  const org = await selectOrg(
-    client,
-    'Which scope should contain your Project(s)?',
-    yes
+  const { discoverRepoProjectsExperimental } = await import(
+    './experimental-repo/discover-repo-projects'
   );
-  client.config.currentTeam = org.type === 'team' ? org.id : undefined;
-
-  // Use getGitConfigPath to correctly resolve the config path for
-  // regular repos, worktrees, and submodules. Falls back to the
-  // traditional path if git commands fail.
-  const gitConfigPath =
-    getGitConfigPath({ cwd: rootPath }) ?? join(rootPath, '.git/config');
-  const remoteUrls = await getRemoteUrls(gitConfigPath);
-  if (!remoteUrls) {
-    throw new Error('Could not determine Git remote URLs');
-  }
-
-  let remoteName: string;
-  if (existingRemoteName) {
-    // Re-use the remote from the existing repo.json
-    remoteName = existingRemoteName;
-    if (!remoteUrls[remoteName]) {
-      throw new Error(
-        `Git remote "${remoteName}" from repo.json no longer exists`
-      );
-    }
-  } else {
-    const remoteNames = Object.keys(remoteUrls).sort();
-    if (remoteNames.length === 1) {
-      remoteName = remoteNames[0];
-    } else {
-      // Prompt user to select which remote to use
-      const defaultRemote = remoteNames.includes('origin')
-        ? 'origin'
-        : remoteNames[0];
-      if (yes) {
-        remoteName = defaultRemote;
-      } else {
-        remoteName = await client.input.select({
-          message: 'Which Git remote should be used?',
-          choices: remoteNames.map(name => {
-            return { name: name, value: name };
-          }),
-          default: defaultRemote,
-        });
-      }
-    }
-  }
-  const repoUrl = remoteUrls[remoteName];
-  const parsedRepoUrl = parseRepoUrl(repoUrl);
-  if (!parsedRepoUrl) {
-    throw new Error(`Failed to parse Git URL: ${repoUrl}`);
-  }
-  const repoUrlLink = output.link(repoUrl, repoInfoToUrl(parsedRepoUrl), {
-    fallback: () => link(repoUrl),
-  });
-  output.spinner(
-    `Fetching Projects for ${repoUrlLink} under ${chalk.bold(org.slug)}…`
-  );
-  let projects: Project[] = [];
-  const query = new URLSearchParams({ repoUrl });
-  const projectsIterator = client.fetchPaginated<{
-    projects: Project[];
-  }>(`/v9/projects?${query}`);
-  const detectedProjects = await detectedProjectsPromise;
-  for await (const chunk of projectsIterator) {
-    projects = projects.concat(chunk.projects);
-    if (chunk.pagination.next) {
-      output.spinner(`Found ${chalk.bold(projects.length)} Projects…`, 0);
-    }
-  }
-
-  // Filter out projects that are already linked in repo.json (by ID or directory)
-  if (existingProjectIds || existingDirectories) {
-    projects = projects.filter(p => {
-      if (existingProjectIds?.has(p.id)) return false;
-      if (existingDirectories?.has(normalizePath(p.rootDirectory || '.')))
-        return false;
-      return true;
-    });
-  }
-
-  if (projects.length === 0) {
-    output.log(
-      `No Projects are linked to ${repoUrlLink} under ${chalk.bold(org.slug)}.`
-    );
-  } else {
-    output.log(
-      `Found ${pluralize(
-        'Project',
-        projects.length,
-        true
-      )} linked to ${repoUrlLink} under ${chalk.bold(org.slug)}`
-    );
-  }
-
-  // For any projects that already exists on Vercel, remove them from the
-  // locally detected directories. Any remaining ones will be prompted to
-  // create new Projects for.
-  for (const project of projects) {
-    detectedProjects.delete(project.rootDirectory ?? '');
-  }
-  // Also remove detected projects whose directories are already linked
-  // in the existing repo.json (e.g. linked to a different org).
-  // detectProjects() uses '' for root, while repo.json uses '.', so normalize.
-  if (existingDirectories) {
-    for (const dir of existingDirectories) {
-      detectedProjects.delete(dir === '.' ? '' : dir);
-    }
-  }
-
-  const detectedProjectsCount = Array.from(detectedProjects.values()).reduce(
-    (o, f) => o + f.length,
-    0
-  );
-  if (detectedProjectsCount > 0) {
-    output.log(
-      `Detected ${pluralize(
-        'new Project',
-        detectedProjectsCount,
-        true
-      )} that may be created.`
-    );
-  }
-
-  let selected: (Project | NewProject)[];
-  if (yes) {
-    selected = projects;
-  } else {
-    const addSeparators = projects.length > 0 && detectedProjectsCount > 0;
-    selected = await client.input.checkbox<Project | NewProject>({
-      message: `Which Projects should be ${
-        projects.length ? 'linked to' : 'created'
-      }?`,
-      choices: [
-        ...(addSeparators
-          ? [new Separator('----- Existing Projects -----')]
-          : []),
-        ...projects.map(project => {
-          const dir = project.rootDirectory || '.';
-          return {
-            name: `${org.slug}/${project.name} ${chalk.gray(`(${dir})`)}`,
-            value: project,
-            checked: true,
-          };
-        }),
-        ...(addSeparators
-          ? [new Separator('----- New Projects to be created -----')]
-          : []),
-        ...Array.from(detectedProjects.entries()).flatMap(
-          ([rootDirectory, frameworks]) =>
-            frameworks.map((framework, i) => {
-              const name = slugify(
-                [
-                  basename(rootDirectory) || basename(rootPath),
-                  i > 0 ? framework.slug : '',
-                ]
-                  .filter(Boolean)
-                  .join('-')
-              );
-              return {
-                name: `${org.slug}/${name} ${chalk.gray(`(${rootDirectory || '.'} · ${framework.name})`)}`,
-                value: {
-                  newProject: true,
-                  rootDirectory,
-                  name,
-                  framework,
-                },
-                // Checked by default when there are no other existing Projects
-                checked: projects.length === 0,
-              } as const;
-            })
-        ),
-      ],
-    });
-  }
-
-  if (selected.length === 0) {
-    output.print(`No Projects were selected. Repository not linked.\n`);
-    return;
-  }
-
-  for (let i = 0; i < selected.length; i++) {
-    const selection = selected[i];
-    if (!('newProject' in selection && selection.newProject)) continue;
-    const orgAndName = `${org.slug}/${selection.name}`;
-    output.spinner(`Creating new Project: ${orgAndName}`);
-    delete selection.newProject;
-    if (!selection.rootDirectory) delete selection.rootDirectory;
-    const project = (selected[i] = await createProject(client, {
-      ...selection,
-      framework: selection.framework.slug,
-    }));
-    await connectGitProvider(
-      client,
-      project.id,
-      parsedRepoUrl.provider,
-      `${parsedRepoUrl.org}/${parsedRepoUrl.repo}`
-    );
-    output.log(
-      `Created new Project: ${output.link(
-        orgAndName,
-        `https://vercel.com/${orgAndName}`,
-        { fallback: false }
-      )}`
-    );
-  }
-
-  const repoProjects = selected.map(project => {
-    if (!('id' in project)) {
-      // Shouldn't happen at this point, but just to make TS happy
-      throw new TypeError(`Not a Project: ${JSON.stringify(project)}`);
-    }
-    return {
-      id: project.id,
-      name: project.name,
-      directory: normalizePath(project.rootDirectory || '.'),
-      orgId: org.id,
-    };
-  });
-
-  return { remoteName, projects: repoProjects, orgSlug: org.slug };
+  return discoverRepoProjectsExperimental(client, rootPath, options);
 }
 
 export async function ensureRepoLink(

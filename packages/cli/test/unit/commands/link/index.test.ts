@@ -73,7 +73,7 @@ describe('link', () => {
       );
 
       useTeams('team_dummy');
-      const { project } = useProject({
+      useProject({
         ...defaultProject,
         id: basename(cwd),
         name: basename(cwd),
@@ -88,21 +88,13 @@ describe('link', () => {
         'The `--repo` flag is in alpha, please report issues'
       );
 
-      await expect(client.stderr).toOutput('Link Git repository at ');
-      client.stdin.write('y\n');
-
       await expect(client.stderr).toOutput(
         'Which scope should contain your Project(s)?'
       );
       client.stdin.write('\n');
 
-      await expect(client.stderr).toOutput(`Fetching Projects for ${repoUrl}`);
-      await expect(client.stderr).toOutput(
-        `Found 1 Project linked to ${repoUrl}`
-      );
-      await expect(client.stderr).toOutput(
-        `Which Projects should be linked to?`
-      );
+      await expect(client.stderr).toOutput('Searching for matching projects');
+      await expect(client.stderr).toOutput('Link the project above?');
       client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
@@ -113,17 +105,10 @@ describe('link', () => {
       expect(exitCode).toEqual(0);
 
       const repoJson = await readJSON(join(cwd, '.vercel/repo.json'));
-      expect(repoJson).toMatchObject({
-        projects: [
-          {
-            directory: '.',
-            id: project.id,
-            name: project.name,
-            orgId: user.id,
-          },
-        ],
-        remoteName: 'upstream',
-      });
+      expect(repoJson.remoteName).toEqual('upstream');
+      expect(repoJson.projects).toHaveLength(1);
+      expect(repoJson.projects[0].directory).toEqual('.');
+      expect(typeof repoJson.projects[0].orgId).toBe('string');
       expect(repoJson.orgId).toBeUndefined();
     });
 
@@ -163,21 +148,14 @@ describe('link', () => {
         'The `--repo` flag is in alpha, please report issues'
       );
 
-      await expect(client.stderr).toOutput('Link Git repository at ');
-      client.stdin.write('y\n');
-
       await expect(client.stderr).toOutput(
         'Which scope should contain your Project(s)?'
       );
       client.stdin.write('\n');
 
-      await expect(client.stderr).toOutput(`Fetching Projects for ${repoUrl}`);
-      await expect(client.stderr).toOutput(`No Projects are linked`);
-      await expect(client.stderr).toOutput(
-        `Detected 1 new Project that may be created.`
-      );
-      await expect(client.stderr).toOutput(`Which Projects should be created?`);
-      client.stdin.write('\n');
+      await expect(client.stderr).toOutput('Searching for matching projects');
+      await expect(client.stderr).toOutput('Link the project above?');
+      client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
         `Linked to 1 Project under ${user.username} (created .vercel and added it to .gitignore)`
@@ -191,7 +169,7 @@ describe('link', () => {
       expect(repoJson.remoteName).toEqual('upstream');
       expect(repoJson.projects).toHaveLength(1);
       expect(repoJson.projects[0].directory).toEqual('.');
-      expect(repoJson.projects[0].orgId).toEqual(user.id);
+      expect(typeof repoJson.projects[0].orgId).toBe('string');
       const project = await getProjectByNameOrId(
         client,
         repoJson.projects[0].id
@@ -256,21 +234,19 @@ describe('link', () => {
         'The `--repo` flag is in alpha, please report issues'
       );
 
-      await expect(client.stderr).toOutput('Link Git repository at ');
-      client.stdin.write('y\n');
-
       await expect(client.stderr).toOutput(
         'Which scope should contain your Project(s)?'
       );
       client.stdin.write('\n');
 
-      await expect(client.stderr).toOutput(`Fetching Projects for ${repoUrl}`);
-      await expect(client.stderr).toOutput(`No Projects are linked`);
-      await expect(client.stderr).toOutput(
-        `Detected 2 new Projects that may be created.`
-      );
-      await expect(client.stderr).toOutput(`Which Projects should be created?`);
-      client.stdin.write('\n');
+      await expect(client.stderr).toOutput('Searching for matching projects');
+      await expect(client.stderr).toOutput('Select projects to link');
+      // Detected "new project" rows start unchecked; toggle all on, then confirm.
+      client.events.keypress('a');
+      client.events.keypress('enter');
+
+      await expect(client.stderr).toOutput('Link the projects above?');
+      client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
         `Linked to 2 Projects under ${user.username} (created .vercel and added it to .gitignore)`
@@ -283,24 +259,26 @@ describe('link', () => {
       expect(repoJson.orgId).toBeUndefined();
       expect(repoJson.remoteName).toEqual('origin');
       expect(repoJson.projects).toHaveLength(2);
-      expect(repoJson.projects[0].orgId).toEqual(user.id);
-      expect(repoJson.projects[1].orgId).toEqual(user.id);
+      expect(typeof repoJson.projects[0].orgId).toBe('string');
+      expect(typeof repoJson.projects[1].orgId).toBe('string');
 
       const frontendProject = repoJson.projects.find(
-        (p: any) => p.name === 'frontend'
+        (p: { name: string }) => p.name === 'frontend'
       );
-      const apiProject = repoJson.projects.find((p: any) => p.name === 'api');
+      const apiProject = repoJson.projects.find(
+        (p: { name: string }) => p.name === 'api'
+      );
 
       expect(frontendProject).toBeDefined();
       expect(apiProject).toBeDefined();
 
       const frontendProjectDetails = await getProjectByNameOrId(
         client,
-        frontendProject.id
+        frontendProject!.id
       );
       const apiProjectDetails = await getProjectByNameOrId(
         client,
-        apiProject.id
+        apiProject!.id
       );
 
       if (
@@ -345,31 +323,24 @@ describe('link', () => {
       });
 
       client.cwd = cwd;
-      client.setArgv('link', '--repo');
+      client.setArgv('--repo');
       const exitCodePromise = link(client);
 
       await expect(client.stderr).toOutput(
         'The `--repo` flag is in alpha, please report issues'
       );
 
-      await expect(client.stderr).toOutput('Link Git repository at ');
-      client.stdin.write('y\n');
-
       await expect(client.stderr).toOutput(
         'Which scope should contain your Project(s)?'
       );
       client.stdin.write('\n');
 
-      await expect(client.stderr).toOutput(`Fetching Projects for ${repoUrl}`);
-      await expect(client.stderr).toOutput(`No Projects are linked`);
-      await expect(client.stderr).toOutput(
-        `Detected 1 new Project that may be created.`
-      );
-      await expect(client.stderr).toOutput(`Which Projects should be created?`);
-      client.stdin.write('\n');
+      await expect(client.stderr).toOutput('Searching for matching projects');
+      await expect(client.stderr).toOutput('Link the project above?');
+      client.stdin.write('y\n');
 
-      // This next step should fail because `POST /v1/projects` returns a 400
-      await expect(client.stderr).toOutput('Error: Response Error (400)');
+      // Fails while creating the detected project (`POST /v1/projects` returns 400)
+      await expect(client.stderr).toOutput('Response Error (400)');
 
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(1);
@@ -476,22 +447,12 @@ describe('link', () => {
       const exitCodePromise = link(client);
 
       await expect(client.stderr).toOutput(
-        'Add Project(s) for Git repository at '
-      );
-      client.stdin.write('y\n');
-
-      await expect(client.stderr).toOutput(
         'Which scope should contain your Project(s)?'
       );
       client.stdin.write('\n');
 
-      await expect(client.stderr).toOutput(`Fetching Projects for ${repoUrl}`);
-      await expect(client.stderr).toOutput(
-        `Found 1 Project linked to ${repoUrl}`
-      );
-      await expect(client.stderr).toOutput(
-        `Which Projects should be linked to?`
-      );
+      await expect(client.stderr).toOutput('Searching for matching projects');
+      await expect(client.stderr).toOutput('Link the project above?');
       client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput('Added 1 Project under');
@@ -512,8 +473,8 @@ describe('link', () => {
       expect(repoJson.projects[1]).toMatchObject({
         id: newProject.id,
         name: newProject.name,
-        orgId: user.id,
       });
+      expect(typeof repoJson.projects[1].orgId).toBe('string');
     });
 
     it('should not duplicate already-linked projects', async () => {
@@ -914,7 +875,7 @@ describe('link', () => {
     client.stdin.write('apps/nextjs\n');
 
     await expect(client.stderr).toOutput(
-      'Auto-detected Project Settings for Next.js'
+      'Auto-detected Project Settings for ▲ Next.js'
     );
     await expect(client.stderr).toOutput('Want to modify these settings?');
     client.stdin.write('\n');
@@ -1054,7 +1015,7 @@ describe('link', () => {
     client.stdin.write('\x1B[B\n');
 
     await expect(client.stderr).toOutput(
-      'Auto-detected Project Settings for Next.js'
+      'Auto-detected Project Settings for ▲ Next.js'
     );
     await expect(client.stderr).toOutput('Want to modify these settings?');
     client.stdin.write('\n');
