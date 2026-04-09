@@ -148,9 +148,7 @@ async function preferRepoJsonRootDirectory(
   const topOrg = repoConfig.orgId;
   const matchesForPath = findProjectsFromPath(repoConfig.projects, rel);
   const row = matchesForPath.find(
-    p =>
-      p.id === projectId &&
-      (p.orgId ?? topOrg) === orgId
+    p => p.id === projectId && (p.orgId ?? topOrg) === orgId
   );
   if (!row) {
     return parsed;
