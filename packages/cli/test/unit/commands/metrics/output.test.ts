@@ -9,21 +9,21 @@ describe('metrics output', () => {
   it('formats v2 schema list output', () => {
     const result = JSON.parse(
       formatSchemaListJson([
-        { id: 'vercel.requests.count', description: 'Count' },
+        { id: 'vercel.edge_requests.count', description: 'Count' },
       ])
     );
-    expect(result[0].id).toBe('vercel.requests.count');
+    expect(result[0].id).toBe('vercel.edge_requests.count');
   });
 
   it('formats prefix schema detail output', () => {
     const result = JSON.parse(
       formatSchemaDetailJson({
-        id: 'vercel.requests',
+        id: 'vercel.edge_requests',
         description: 'Request metrics',
         dimensions: [{ name: 'route', label: 'Route' }],
         metrics: [
           {
-            id: 'vercel.requests.count',
+            id: 'vercel.edge_requests.count',
             description: 'Count',
             unit: 'count',
             aggregations: ['sum'],
@@ -32,14 +32,14 @@ describe('metrics output', () => {
         ],
       })
     );
-    expect(result.metrics[0].id).toBe('vercel.requests.count');
+    expect(result.metrics[0].id).toBe('vercel.edge_requests.count');
   });
 
   it('formats query output with metric metadata', () => {
     const result = JSON.parse(
       formatQueryJson(
         {
-          metric: 'vercel.requests.count',
+          metric: 'vercel.edge_requests.count',
           aggregation: 'sum',
           groupBy: ['route'],
           filter: undefined,
@@ -54,6 +54,6 @@ describe('metrics output', () => {
         }
       )
     );
-    expect(result.query.metric).toBe('vercel.requests.count');
+    expect(result.query.metric).toBe('vercel.edge_requests.count');
   });
 });

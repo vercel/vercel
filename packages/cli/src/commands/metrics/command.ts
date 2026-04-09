@@ -28,7 +28,7 @@ export const schemaSubcommand = {
     },
     {
       name: 'Schema as JSON for agents',
-      value: `${packageName} metrics schema --metric vercel.requests.count --format=json`,
+      value: `${packageName} metrics schema --metric vercel.edge_requests.count --format=json`,
     },
   ],
 } as const;
@@ -59,7 +59,7 @@ export const metricsCommand = {
       shorthand: 'm',
       type: String,
       deprecated: false,
-      description: 'Metric id to query (e.g., vercel.requests.count)',
+      description: 'Metric id to query (e.g., vercel.edge_requests.count)',
       argument: 'NAME',
     },
     {
@@ -168,7 +168,7 @@ export const metricsCommand = {
     },
     {
       name: 'Show schema for a metric prefix',
-      value: `${packageName} metrics schema --metric vercel.requests`,
+      value: `${packageName} metrics schema --metric vercel.edge_requests`,
     },
     {
       name: 'Team-wide function executions by project',

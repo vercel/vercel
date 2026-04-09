@@ -49,11 +49,11 @@ describe('metrics query v2', () => {
 
   it('queries a metric through the v2 endpoint', async () => {
     client.scenario.get(
-      '/v2/observability/schema/vercel.requests.count',
+      '/v2/observability/schema/vercel.edge_requests.count',
       (_req, res) => {
         res.json([
           {
-            id: 'vercel.requests.count',
+            id: 'vercel.edge_requests.count',
             description: 'Count',
             unit: 'count',
             aggregations: ['sum'],
@@ -76,21 +76,21 @@ describe('metrics query v2', () => {
       });
     });
 
-    client.setArgv('metrics', '--metric', 'vercel.requests.count');
+    client.setArgv('metrics', '--metric', 'vercel.edge_requests.count');
 
     const exitCode = await query(client, new MockTelemetry());
 
     expect(exitCode).toBe(0);
-    expect(postedBody?.metric).toBe('vercel.requests.count');
+    expect(postedBody?.metric).toBe('vercel.edge_requests.count');
   });
 
   it('guides the user when a non-queryable metric is used for querying', async () => {
     client.scenario.get(
-      '/v2/observability/schema/vercel.requests',
+      '/v2/observability/schema/vercel.edge_requests',
       (_req, res) => {
         res.json([
           {
-            id: 'vercel.requests.count',
+            id: 'vercel.edge_requests.count',
             description: 'Count',
             unit: 'count',
             aggregations: ['sum'],
@@ -104,29 +104,29 @@ describe('metrics query v2', () => {
       res.status(400).json({
         error: {
           code: 'metric_not_queryable',
-          message: 'Metric "vercel.requests" is not directly queryable.',
-          allowedValues: ['vercel.requests.count'],
+          message: 'Metric "vercel.edge_requests" is not directly queryable.',
+          allowedValues: ['vercel.edge_requests.count'],
         },
       });
     });
 
-    client.setArgv('metrics', '--metric', 'vercel.requests');
+    client.setArgv('metrics', '--metric', 'vercel.edge_requests');
     const exitCode = await query(client, new MockTelemetry());
 
     expect(exitCode).toBe(1);
     expect(client.stderr.getFullOutput()).toContain('not directly queryable');
     expect(client.stderr.getFullOutput()).toContain(
-      'Available values: vercel.requests.count'
+      'Available values: vercel.edge_requests.count'
     );
   });
 
   it('surfaces the API quota message for 402 responses', async () => {
     client.scenario.get(
-      '/v2/observability/schema/vercel.requests.count',
+      '/v2/observability/schema/vercel.edge_requests.count',
       (_req, res) => {
         res.json([
           {
-            id: 'vercel.requests.count',
+            id: 'vercel.edge_requests.count',
             description: 'Count',
             unit: 'count',
             aggregations: ['sum'],
@@ -146,7 +146,7 @@ describe('metrics query v2', () => {
       });
     });
 
-    client.setArgv('metrics', '--metric', 'vercel.requests.count');
+    client.setArgv('metrics', '--metric', 'vercel.edge_requests.count');
 
     const exitCode = await query(client, new MockTelemetry());
 
@@ -158,11 +158,11 @@ describe('metrics query v2', () => {
 
   it('shows a friendly message for 429 responses', async () => {
     client.scenario.get(
-      '/v2/observability/schema/vercel.requests.count',
+      '/v2/observability/schema/vercel.edge_requests.count',
       (_req, res) => {
         res.json([
           {
-            id: 'vercel.requests.count',
+            id: 'vercel.edge_requests.count',
             description: 'Count',
             unit: 'count',
             aggregations: ['sum'],
@@ -182,7 +182,7 @@ describe('metrics query v2', () => {
       });
     });
 
-    client.setArgv('metrics', '--metric', 'vercel.requests.count');
+    client.setArgv('metrics', '--metric', 'vercel.edge_requests.count');
 
     const exitCode = await query(client, new MockTelemetry());
 
@@ -194,11 +194,11 @@ describe('metrics query v2', () => {
 
   it('shows available aggregations when the API rejects an aggregation', async () => {
     client.scenario.get(
-      '/v2/observability/schema/vercel.requests.count',
+      '/v2/observability/schema/vercel.edge_requests.count',
       (_req, res) => {
         res.json([
           {
-            id: 'vercel.requests.count',
+            id: 'vercel.edge_requests.count',
             description: 'Count',
             unit: 'count',
             aggregations: ['sum'],
@@ -213,7 +213,7 @@ describe('metrics query v2', () => {
         error: {
           code: 'invalid_aggregation',
           message:
-            'Aggregation "median" is not valid for metric "vercel.requests.count".',
+            'Aggregation "median" is not valid for metric "vercel.edge_requests.count".',
           allowedValues: ['sum'],
         },
       });
@@ -222,7 +222,7 @@ describe('metrics query v2', () => {
     client.setArgv(
       'metrics',
       '--metric',
-      'vercel.requests.count',
+      'vercel.edge_requests.count',
       '-a',
       'median'
     );
@@ -235,11 +235,11 @@ describe('metrics query v2', () => {
 
   it('shows available dimensions when the API rejects a groupBy dimension', async () => {
     client.scenario.get(
-      '/v2/observability/schema/vercel.requests.count',
+      '/v2/observability/schema/vercel.edge_requests.count',
       (_req, res) => {
         res.json([
           {
-            id: 'vercel.requests.count',
+            id: 'vercel.edge_requests.count',
             description: 'Count',
             unit: 'count',
             aggregations: ['sum'],
@@ -254,7 +254,7 @@ describe('metrics query v2', () => {
         error: {
           code: 'invalid_dimension',
           message:
-            'Group by uses invalid dimension "not_a_dimension" for metric "vercel.requests.count".',
+            'Group by uses invalid dimension "not_a_dimension" for metric "vercel.edge_requests.count".',
           allowedValues: ['route', 'request_path'],
         },
       });
@@ -263,7 +263,7 @@ describe('metrics query v2', () => {
     client.setArgv(
       'metrics',
       '--metric',
-      'vercel.requests.count',
+      'vercel.edge_requests.count',
       '--group-by',
       'not_a_dimension'
     );

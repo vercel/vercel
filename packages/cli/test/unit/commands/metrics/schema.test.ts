@@ -29,7 +29,7 @@ describe('metrics schema v2', () => {
   it('lists metrics by default', async () => {
     client.scenario.get('/v2/observability/schema', (_req, res) => {
       res.json({
-        metrics: [{ id: 'vercel.requests.count', description: 'Count' }],
+        metrics: [{ id: 'vercel.edge_requests.count', description: 'Count' }],
       });
     });
     client.setArgv('metrics', 'schema');
@@ -37,16 +37,16 @@ describe('metrics schema v2', () => {
     const exitCode = await schema(client, new MockTelemetry());
 
     expect(exitCode).toBe(0);
-    expect(client.stderr.getFullOutput()).toContain('vercel.requests.count');
+    expect(client.stderr.getFullOutput()).toMatchSnapshot();
   });
 
   it('shows prefix detail with --metric', async () => {
     client.scenario.get(
-      '/v2/observability/schema/vercel.requests',
+      '/v2/observability/schema/vercel.edge_requests',
       (_req, res) => {
         res.json([
           {
-            id: 'vercel.requests.count',
+            id: 'vercel.edge_requests.count',
             description: 'Count',
             unit: 'count',
             aggregations: ['sum'],
@@ -55,22 +55,24 @@ describe('metrics schema v2', () => {
         ]);
       }
     );
-    client.setArgv('metrics', 'schema', '--metric', 'vercel.requests');
+    client.setArgv('metrics', 'schema', '--metric', 'vercel.edge_requests');
 
     const exitCode = await schema(client, new MockTelemetry());
 
     expect(exitCode).toBe(0);
-    expect(client.stderr.getFullOutput()).toContain('vercel.requests.count');
+    expect(client.stderr.getFullOutput()).toContain(
+      'vercel.edge_requests.count'
+    );
   });
 
   describe('telemetry', () => {
     it('should track metric option', async () => {
       client.scenario.get(
-        '/v2/observability/schema/vercel.requests.count',
+        '/v2/observability/schema/vercel.edge_requests.count',
         (_req, res) => {
           res.json([
             {
-              id: 'vercel.requests.count',
+              id: 'vercel.edge_requests.count',
               description: 'Count',
               unit: 'count',
               aggregations: ['sum'],
@@ -79,12 +81,17 @@ describe('metrics schema v2', () => {
           ]);
         }
       );
-      client.setArgv('metrics', 'schema', '--metric', 'vercel.requests.count');
+      client.setArgv(
+        'metrics',
+        'schema',
+        '--metric',
+        'vercel.edge_requests.count'
+      );
 
       await schema(client, new MockTelemetry());
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        { key: 'option:metric', value: 'vercel.requests.count' },
+        { key: 'option:metric', value: 'vercel.edge_requests.count' },
       ]);
     });
 

@@ -37,7 +37,9 @@ function handleValidationError(
   client: Client
 ): number {
   if (jsonOutput) {
-    client.stdout.write(formatErrorJson(result.code, result.message));
+    client.stdout.write(
+      formatErrorJson(result.code, result.message, result.allowedValues)
+    );
   } else {
     output.error(result.message);
   }
@@ -308,7 +310,6 @@ export default async function query(
 
   // Build request body
   const body: MetricsQueryRequest = {
-    reason: 'api',
     scope,
     metric,
     aggregation: aggregation as Aggregation,

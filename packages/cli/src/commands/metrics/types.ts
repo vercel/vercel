@@ -56,7 +56,6 @@ export interface MetricListResponse {
 }
 
 export interface MetricsQueryRequest {
-  reason: 'api';
   scope: Scope;
   metric: string;
   aggregation?: Aggregation;
