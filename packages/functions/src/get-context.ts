@@ -1,3 +1,5 @@
+import type { IncomingMessage } from 'http';
+import type { Socket } from 'net';
 import { RuntimeCache } from './cache/types';
 import { PurgeApi } from './purge/types';
 import { AddCacheTagApi } from './addcachetag/types';
