@@ -2,7 +2,6 @@ import chalk from 'chalk';
 import { remove } from 'fs-extra';
 import { join, basename } from 'path';
 import type {
-  ProjectLink,
   ProjectLinkResult,
   ProjectSettings,
   Org,
@@ -68,11 +67,6 @@ export interface SetupAndLinkOptions {
   v0?: boolean;
   /** When true, search matching projects across teams before standard linking flow */
   searchAcrossTeams?: boolean;
-  /**
-   * Prefer this org/project when resolving `repo.json` (e.g. already chosen by a
-   * parent command in the same process).
-   */
-  preferProjectLink?: Pick<ProjectLink, 'orgId' | 'projectId'>;
 }
 
 export default async function setupAndLink(
@@ -89,7 +83,6 @@ export default async function setupAndLink(
     pullEnv = true,
     v0,
     searchAcrossTeams = false,
-    preferProjectLink,
   }: SetupAndLinkOptions
 ): Promise<ProjectLinkResult> {
   const { config } = client;
@@ -99,7 +92,7 @@ export default async function setupAndLink(
     return { status: 'error', exitCode: 1, reason: 'PATH_IS_FILE' };
   }
   if (!link) {
-    link = await getLinkedProject(client, path, undefined, preferProjectLink);
+    link = await getLinkedProject(client, path);
   }
   const isTTY = client.stdin.isTTY;
   let rootDirectory: string | null = null;

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import stripAnsi from 'strip-ansi';
 import { join } from 'path';
-import { mkdirp, writeJSON } from 'fs-extra';
+import { mkdirp, readJSON, writeJSON } from 'fs-extra';
 import {
   getLinkFromDir,
   getLinkedProject,
@@ -449,8 +449,8 @@ describe('getLinkedProject', () => {
     expect(link.repoRoot).toEqual(repoRoot);
   });
 
-  it('should skip project selector when prefer matches a duplicate-name repo row', async () => {
-    const repoRoot = setupTmpDir('repo-link-prefer-dup');
+  it('writes project.json when resolving duplicate repo rows and skips a second project prompt', async () => {
+    const repoRoot = setupTmpDir('repo-link-persist-dup');
     const cwd = join(repoRoot, 'apps', 'web');
     await mkdirp(cwd);
     await mkdirp(join(repoRoot, '.vercel'));
@@ -481,18 +481,38 @@ describe('getLinkedProject', () => {
       accountId: 'team_alpha',
     });
 
-    const selectSpy = vi.spyOn(client.input, 'select');
-    const link = await getLinkedProject(client, cwd, undefined, {
+    const selectSpy = vi
+      .spyOn(client.input, 'select')
+      .mockImplementation((async (opts: { choices: readonly unknown[] }) => {
+        const choices = opts.choices.filter(
+          (c: unknown): c is { name: string; value: unknown } =>
+            typeof c === 'object' && c !== null && 'value' in c && 'name' in c
+        );
+        return choices[0].value;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- match inquirer `select` signature
+      }) as any);
+
+    const link = await getLinkedProject(client, cwd);
+    expect(selectSpy).toHaveBeenCalledTimes(1);
+
+    const written = await readJSON(join(cwd, '.vercel', 'project.json'));
+    expect(written).toMatchObject({
       orgId: 'team_alpha',
       projectId: 'proj-a',
+      projectName: 'web-23',
     });
+    expect(written.settings).toBeUndefined();
+
+    selectSpy.mockClear();
+    const link2 = await getLinkedProject(client, cwd);
     expect(selectSpy).not.toHaveBeenCalled();
     selectSpy.mockRestore();
 
-    if (link.status !== 'linked') {
+    if (link.status !== 'linked' || link2.status !== 'linked') {
       throw new Error('Expected to be linked');
     }
     expect(link.project.id).toEqual('proj-a');
+    expect(link2.project.id).toEqual('proj-a');
     expect(link.repoRoot).toEqual(repoRoot);
   });
 

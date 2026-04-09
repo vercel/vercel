@@ -1,11 +1,7 @@
 import chalk from 'chalk';
 import { join } from 'node:path';
 import type Client from '../../util/client';
-import type {
-  ProjectEnvTarget,
-  ProjectLink,
-  ProjectLinked,
-} from '@vercel-internals/types';
+import type { ProjectEnvTarget, ProjectLinked } from '@vercel-internals/types';
 import { emoji, prependEmoji } from '../../util/emoji';
 import { parseArguments } from '../../util/get-args';
 import stamp from '../../util/output/stamp';
@@ -116,13 +112,11 @@ export async function pullCommandLogic(
   cwd: string,
   autoConfirm: boolean,
   environment: string,
-  flags: PullCommandFlags,
-  options?: { preferProjectLink?: Pick<ProjectLink, 'orgId' | 'projectId'> }
+  flags: PullCommandFlags
 ): Promise<number> {
   const link = await ensureLink('pull', client, cwd, {
     autoConfirm,
     pullEnv: false,
-    preferProjectLink: options?.preferProjectLink,
   });
   if (typeof link === 'number') {
     return link;

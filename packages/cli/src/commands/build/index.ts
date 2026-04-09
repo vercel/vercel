@@ -332,15 +332,7 @@ export default async function main(client: Client): Promise<number> {
       client.cwd,
       Boolean(parsedArgs.flags['--yes']),
       target,
-      parsedArgs.flags,
-      link
-        ? {
-            preferProjectLink: {
-              orgId: link.orgId,
-              projectId: link.projectId,
-            },
-          }
-        : undefined
+      parsedArgs.flags
     );
     if (result !== 0) {
       return result;

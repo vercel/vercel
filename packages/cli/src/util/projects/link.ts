@@ -79,12 +79,7 @@ export function getVercelDirectory(cwd: string): string {
 export async function getProjectLink(
   client: Client,
   path: string,
-  projectName?: string,
-  /**
-   * When resolving from `repo.json`, prefer this org/project pair (e.g. the user
-   * already chose it in the same process, such as `vc build` before nested `pull`).
-   */
-  prefer?: Pick<ProjectLink, 'orgId' | 'projectId'>
+  projectName?: string
 ): Promise<ProjectLink | null> {
   // Prefer an explicit per-directory link (`.vercel/project.json`) over a
   // repository-level link (`.vercel/repo.json`). This prevents scenarios where
@@ -135,12 +130,7 @@ export async function getProjectLink(
           output.debug(
             '`.vercel/project.json` does not match `repo.json` for this path; re-resolving link from the repository mapping'
           );
-          return await getProjectLinkFromRepoLink(
-            client,
-            path,
-            projectName,
-            prefer
-          );
+          return await getProjectLinkFromRepoLink(client, path, projectName);
         }
       }
 
@@ -150,7 +140,7 @@ export async function getProjectLink(
     return dirLink;
   }
 
-  return await getProjectLinkFromRepoLink(client, path, projectName, prefer);
+  return await getProjectLinkFromRepoLink(client, path, projectName);
 }
 
 function choiceLabelsForRepoProjectSelect(
@@ -172,11 +162,64 @@ function choiceLabelsForRepoProjectSelect(
   return choices;
 }
 
+/**
+ * After resolving a project from `repo.json`, persist `orgId` / `projectId` /
+ * `projectName` to `.vercel/project.json`. If the file already pointed at a
+ * different project, drop `settings` so stale pulled settings are not reused.
+ */
+async function persistRepoResolvedProjectJson(
+  projectCwd: string,
+  next: { orgId: string; projectId: string; projectName: string }
+): Promise<void> {
+  const vercelDir = getVercelDirectory(projectCwd);
+  const projectPath = join(vercelDir, VERCEL_DIR_PROJECT);
+  let existing: Record<string, unknown> | null = null;
+  try {
+    existing = JSON.parse(await readFile(projectPath, 'utf8')) as Record<
+      string,
+      unknown
+    >;
+  } catch (err: unknown) {
+    if (
+      isErrnoException(err) &&
+      err.code &&
+      ['ENOENT', 'ENOTDIR'].includes(err.code)
+    ) {
+      existing = null;
+    } else if (isError(err) && err.name === 'SyntaxError') {
+      existing = null;
+    } else {
+      throw err;
+    }
+  }
+
+  const same =
+    existing &&
+    existing.orgId === next.orgId &&
+    existing.projectId === next.projectId;
+  if (same) {
+    return;
+  }
+
+  await ensureDir(vercelDir);
+  await writeFile(
+    projectPath,
+    JSON.stringify(
+      {
+        orgId: next.orgId,
+        projectId: next.projectId,
+        projectName: next.projectName,
+      },
+      null,
+      2
+    )
+  );
+}
+
 async function getProjectLinkFromRepoLink(
   client: Client,
   path: string,
-  projectName?: string,
-  prefer?: Pick<ProjectLink, 'orgId' | 'projectId'>
+  projectName?: string
 ): Promise<ProjectLink | null> {
   const repoLink = await getRepoLink(client, path);
   if (!repoLink?.repoConfig) {
@@ -194,16 +237,8 @@ async function getProjectLinkFromRepoLink(
     const selectableProjects =
       projects.length > 0 ? projects : repoLink.repoConfig.projects;
 
-    if (prefer) {
-      project = selectableProjects.find(
-        p =>
-          p.id === prefer.projectId &&
-          (p.orgId ?? topOrg) === prefer.orgId
-      );
-    }
-
     // If --project flag was provided, try to find a matching project by name
-    if (projectName && !project) {
+    if (projectName) {
       project = selectableProjects.find(p => p.name === projectName);
     }
 
@@ -238,6 +273,11 @@ async function getProjectLinkFromRepoLink(
         `Could not determine org ID from repo.json config at "${repoLink.repoConfigPath}".${details} Please re-link the repository.`
       );
     }
+    await persistRepoResolvedProjectJson(path, {
+      orgId,
+      projectId: project.id,
+      projectName: project.name,
+    });
     return {
       repoRoot: repoLink.rootPath,
       orgId,
@@ -376,8 +416,7 @@ async function hasProjectLink(
 export async function getLinkedProject(
   client: Client,
   path = client.cwd,
-  projectName?: string,
-  prefer?: Pick<ProjectLink, 'orgId' | 'projectId'>
+  projectName?: string
 ): Promise<ProjectLinkResult> {
   path = await resolveProjectCwd(path);
 
@@ -399,7 +438,7 @@ export async function getLinkedProject(
   const link =
     VERCEL_ORG_ID && VERCEL_PROJECT_ID
       ? { orgId: VERCEL_ORG_ID, projectId: VERCEL_PROJECT_ID }
-      : await getProjectLink(client, path, projectName, prefer);
+      : await getProjectLink(client, path, projectName);
 
   if (!link) {
     return { status: 'not_linked', org: null, project: null };

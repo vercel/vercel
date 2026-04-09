@@ -16,7 +16,7 @@ When the experimental flow is used from a subdirectory that lies inside a known 
 
 `readProjectSettings` prefers the matching `repo.json` row’s `directory` as `settings.rootDirectory` when `project.json` references the same project and path, so the effective root matches the repo link instead of stale dashboard values from pull (no separate build-only override helper).
 
-When `vercel build` prompts to run `pull` because project settings are missing, the nested pull reuses the same `repo.json` project choice (no second “Please select a Project” for the same ambiguous mapping).
+Resolving a project from `repo.json` writes `orgId` / `projectId` / `projectName` to `.vercel/project.json` immediately; if the file previously pointed at another project, `settings` are omitted so nested `pull` (e.g. from `vercel build`) does not reuse stale settings or prompt again for the same mapping.
 
 When multiple projects share a name, the experimental link table and interactive project selection show `orgId` in parentheses for disambiguation. `repo.json` does not store a team slug; it continues to use `orgId` per project entry only.
 
