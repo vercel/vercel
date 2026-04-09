@@ -48,8 +48,7 @@ export default async function pull(client: Client): Promise<number> {
 
   let currentDirectory: string;
   if (repoRoot) {
-    const segment = project.rootDirectory ?? '';
-    currentDirectory = join(repoRoot, segment);
+    currentDirectory = join(repoRoot, project.rootDirectory || '');
   } else {
     currentDirectory = client.cwd;
   }

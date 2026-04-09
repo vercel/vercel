@@ -462,9 +462,9 @@ export default async function createGroup(client: Client): Promise<number> {
   const linkedProject = link.status === 'linked' ? link.project : undefined;
   if (linkedProject && linkedProject.id === defaultApp.id) {
     const repoRoot = link.status === 'linked' ? link.repoRoot : undefined;
-    const segment =
-      link.status === 'linked' ? (linkedProject.rootDirectory ?? '') : '';
-    const projectDir = repoRoot ? join(repoRoot, segment) : client.cwd;
+    const projectDir = repoRoot
+      ? join(repoRoot, linkedProject.rootDirectory || '')
+      : client.cwd;
     const configPath = join(projectDir, 'microfrontends.json');
     if (!existsSync(configPath)) {
       output.log('');
