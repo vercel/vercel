@@ -14,6 +14,7 @@ function toMetricDetail(metric: MetricDetailResponse[number]): MetricDetail {
   return {
     id: metric.id,
     description: metric.description,
+    dimensions: metric.dimensions,
     unit: metric.unit,
     aggregations: metric.aggregations as Aggregation[],
     defaultAggregation: metric.defaultAggregation as Aggregation,

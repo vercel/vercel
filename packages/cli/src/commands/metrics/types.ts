@@ -44,6 +44,7 @@ export interface MetricListItem {
 export interface MetricDetail {
   id: string;
   description: string;
+  dimensions: MetricDimension[];
   unit: string;
   aggregations: Aggregation[];
   defaultAggregation: Aggregation;
