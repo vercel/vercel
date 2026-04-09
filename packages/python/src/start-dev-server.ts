@@ -775,7 +775,14 @@ export const startDevServer: StartDevServer = async opts => {
   const detected = await detectPythonEntrypoint(
     framework as PythonFramework,
     workPath,
-    entrypoint ? { filePath: entrypoint, varName: handlerFunction } : undefined,
+    entrypoint
+      ? {
+          filePath: entrypoint,
+          // For cron services, the WSGI variable is always 'app' (created dynamically).
+          // For other services, handlerFunction is used as the entrypoint variable name.
+          varName: service?.type === 'cron' ? undefined : handlerFunction,
+        }
+      : undefined,
     service
   );
   if (detected?.entrypoint) {
