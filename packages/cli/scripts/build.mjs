@@ -90,43 +90,6 @@ const jsoncParserPlugin = {
   },
 };
 
-/** Walk up from `startDir` to find `node_modules/smol-toml/dist/index.js` (package.json has no exports for ./package.json). */
-function findSmolTomlEsmEntry(startDir) {
-  let dir = startDir;
-  for (let i = 0; i < 30 && dir; i++) {
-    const candidate = path.join(dir, 'node_modules', 'smol-toml', 'dist', 'index.js');
-    if (existsSync(candidate)) {
-      return candidate;
-    }
-    const parent = path.dirname(dir);
-    if (parent === dir) {
-      break;
-    }
-    dir = parent;
-  }
-  const fallback = path.join(cwd, 'node_modules', 'smol-toml', 'dist', 'index.js');
-  if (existsSync(fallback)) {
-    return fallback;
-  }
-  throw new Error(
-    `Could not find smol-toml/dist/index.js (started from ${startDir})`
-  );
-}
-
-/** Bundle smol-toml into dist (no runtime `import("smol-toml")` in chunks). */
-const smolTomlPlugin = {
-  name: 'smol-toml-esm-entry',
-  setup(build) {
-    build.onResolve({ filter: /^smol-toml$/ }, args => {
-      const start =
-        args.resolveDir ||
-        (args.importer ? path.dirname(args.importer) : cwd);
-      const entryAbs = findSmolTomlEsmEntry(start);
-      return { path: entryAbs, namespace: 'file' };
-    });
-  },
-};
-
 // Build entry points:
 // - src/index.ts (main entry)
 // - src/help.ts (standalone help for fast --help)
@@ -140,9 +103,6 @@ const entryPoints = [
 ];
 
 const distDir = join(cwd, 'dist');
-
-/** Bundled into the esbuild output so code-split chunks do not import these at runtime. */
-const BUNDLED_DEPENDENCIES = new Set(['smol-toml']);
 
 // Ensure commands output directories exist
 for (const cmd of PRIORITY_COMMANDS) {
@@ -159,11 +119,9 @@ await esbuild({
   splitting: true,
   chunkNames: 'chunks/[name]-[hash]',
   outdir: distDir,
-  external: getDependencies(cwd).filter(
-    name => !BUNDLED_DEPENDENCIES.has(name)
-  ),
+  external: getDependencies(),
   banner,
-  plugins: [jsoncParserPlugin, smolTomlPlugin],
+  plugins: [jsoncParserPlugin],
 });
 
 // Move priority command outputs to expected locations
