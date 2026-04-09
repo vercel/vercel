@@ -88,4 +88,11 @@ export class FlagsTelemetryClient
       value: actual,
     });
   }
+
+  trackCliSubcommandOverride(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'override',
+      value: actual,
+    });
+  }
 }
