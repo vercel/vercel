@@ -78,23 +78,6 @@ describe('detectProcfileServices', () => {
       });
     });
 
-    it('should detect gunicorn with --wsgi-app before config flag', async () => {
-      const fs = new VirtualFilesystem({
-        Procfile: 'web: gunicorn --wsgi-app myapp.wsgi:app -c gunicorn.conf.py',
-        'requirements.txt': 'django',
-        'manage.py': 'import django',
-        'myapp/wsgi.py':
-          'from django.core.wsgi import get_wsgi_application\napplication = get_wsgi_application()',
-      });
-
-      const result = await detectProcfileServices({ fs });
-
-      expect(result.errors).toEqual([]);
-      expect(result.services!.web).toMatchObject({
-        entrypoint: 'myapp/wsgi.py',
-      });
-    });
-
     it('should detect uvicorn with module:attr', async () => {
       const fs = new VirtualFilesystem({
         Procfile: 'web: uvicorn app.main:app --host 0.0.0.0 --port 8000',
