@@ -181,6 +181,7 @@ export default async function edit(client: Client, argv: string[]) {
     parsed.flags['--rate-limit-window'] ||
     parsed.flags['--rate-limit-requests'] ||
     parsed.flags['--rate-limit-keys'] ||
+    parsed.flags['--rate-limit-action'] ||
     parsed.flags['--redirect-url'] ||
     parsed.flags['--redirect-permanent'];
 
@@ -227,21 +228,25 @@ export default async function edit(client: Client, argv: string[]) {
   }
 
   // Non-interactive with no flags
-  outputAgentError(client, {
-    status: 'error',
-    reason: 'missing_flags',
-    message:
-      'No edit flags provided. Use --ai, --json, --condition, --action, --name, etc.',
-    next: [
-      {
-        command: withGlobalFlags(
-          client,
-          `firewall rules edit "${identifier}" --ai "Change action to challenge" --yes`
-        ),
-      },
-    ],
-  });
-  process.exit(1);
+  if (client.nonInteractive) {
+    outputAgentError(client, {
+      status: 'error',
+      reason: 'missing_flags',
+      message:
+        'No edit flags provided. Use --ai, --json, --condition, --action, --name, etc.',
+      next: [
+        {
+          command: withGlobalFlags(
+            client,
+            `firewall rules edit "${identifier}" --ai "Change action to challenge" --yes`
+          ),
+        },
+      ],
+    });
+  }
+  output.error(
+    'Interactive mode is not available. Use --ai, --json, or flag-based editing.'
+  );
   return 1;
 }
 
@@ -305,6 +310,22 @@ async function handleAIEdit(
           });
           continue;
         }
+        if (client.nonInteractive) {
+          outputAgentError(client, {
+            status: 'error',
+            reason: 'ai_generation_failed',
+            message: `AI could not update the rule: ${response.error}`,
+            next: [
+              {
+                command: withGlobalFlags(
+                  client,
+                  `firewall rules edit "${originalRule.name}" --ai "more specific description" --yes`
+                ),
+                when: 'try with a more specific description',
+              },
+            ],
+          });
+        }
         output.error(`AI could not update the rule: ${response.error}`);
         return 1;
       }
@@ -331,6 +352,23 @@ async function handleAIEdit(
               val.trim() ? true : 'Please describe the changes.',
           });
           continue;
+        }
+        if (client.nonInteractive) {
+          outputAgentError(client, {
+            status: 'error',
+            reason: 'ai_no_result',
+            message:
+              'AI did not return a rule. Try a more specific description.',
+            next: [
+              {
+                command: withGlobalFlags(
+                  client,
+                  `firewall rules edit "${originalRule.name}" --ai "more specific description" --yes`
+                ),
+                when: 'try again',
+              },
+            ],
+          });
         }
         output.error('AI did not return a rule.');
         return 1;
@@ -561,6 +599,10 @@ async function handleFlagEdit(
     modified.description = desc === '' ? undefined : desc;
   }
 
+  if (parsed.flags['--enabled'] && parsed.flags['--disabled']) {
+    output.error('Cannot use --enabled and --disabled together.');
+    return 1;
+  }
   if (parsed.flags['--enabled']) {
     modified.active = true;
   }
@@ -669,11 +711,18 @@ function buildActionFromFlags(
       return 'Rate limit --rate-limit-requests maximum is 10,000,000.';
     }
 
+    const rlAction = (flags['--rate-limit-action'] as string) || 'rate_limit';
+    const validRlActions = ['log', 'deny', 'challenge', 'rate_limit'];
+    if (!validRlActions.includes(rlAction)) {
+      return `Invalid rate limit action "${rlAction}". Valid: ${validRlActions.join(', ')}`;
+    }
+
     action.mitigate!.rateLimit = {
       algo: algo as 'fixed_window' | 'token_bucket',
       window,
       limit: requests,
       keys,
+      action: rlAction,
     };
   }
 
@@ -777,7 +826,6 @@ async function saveEdit(
           },
         ],
       });
-      process.exit(1);
       return 1;
     }
     output.error(msg);

@@ -7,6 +7,7 @@ import {
   useActivateConfig,
   usePatchDraft,
   useGenerateFirewallRule,
+  capturedRequests,
   createConfig,
   createRule,
   createChange,
@@ -27,6 +28,10 @@ describe('firewall rules edit', () => {
     });
     const cwd = setupUnitFixture('commands/firewall');
     client.cwd = cwd;
+    // Reset capturedRequests for test isolation
+    for (const key of Object.keys(capturedRequests)) {
+      delete (capturedRequests as Record<string, unknown>)[key];
+    }
   });
 
   // ─── Resolve + dispatch ────────────────────────────────────────────
@@ -360,6 +365,9 @@ describe('firewall rules edit', () => {
       const exitCodePromise = firewall(client);
       await expect(client.stderr).toOutput('JSON Updated');
       expect(await exitCodePromise).toEqual(0);
+      expect(lastPatchBody.action).toBe('rules.update');
+      expect(lastPatchBody.value.name).toBe('JSON Updated');
+      expect(lastPatchBody.value.action.mitigate.action).toBe('challenge');
     });
 
     it('should error on invalid JSON', async () => {
