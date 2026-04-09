@@ -267,11 +267,15 @@ export function getGlobalFlagsOnlyFromArgs(args: string[]): string[] {
     if (a.startsWith('--') && a.includes('=')) {
       const name = a.slice(2).split('=')[0];
       opt = GLOBAL_LONG_TO_OPT.get(`--${name}`);
-      if (opt) out.push(a);
+      if (opt && opt.name !== 'non-interactive') out.push(a);
       continue;
     }
     opt = GLOBAL_LONG_TO_OPT.get(a) || GLOBAL_SHORT_TO_OPT.get(a);
     if (!opt) continue;
+    // Non-interactive is now propagated as env var in suggested commands.
+    if (opt.name === 'non-interactive') {
+      continue;
+    }
     out.push(a);
     if (opt.type === String && !a.includes('=')) {
       const next = args[i + 1];
@@ -284,6 +288,23 @@ export function getGlobalFlagsOnlyFromArgs(args: string[]): string[] {
   return out;
 }
 
+function getNonInteractiveEnvFromArgs(args: string[]): '1' | '0' | undefined {
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    if (arg === '--non-interactive') {
+      const next = args[i + 1];
+      if (next === 'false' || next === '0') return '0';
+      return '1';
+    }
+    if (arg.startsWith('--non-interactive=')) {
+      const value = arg.slice('--non-interactive='.length).toLowerCase();
+      if (value === 'false' || value === '0') return '0';
+      if (value === 'true' || value === '1') return '1';
+    }
+  }
+  return undefined;
+}
+
 /**
  * Builds a suggested command with only global CLI flags preserved from argv.
  * Useful for agent next[] hints that should keep context flags like --cwd.
@@ -292,6 +313,10 @@ export function getCommandNameWithGlobalFlags(
   commandTemplate: string,
   argv: string[]
 ): string {
-  const flags = getGlobalFlagsOnlyFromArgs(argv.slice(2));
-  return getCommandNamePlain(`${commandTemplate} ${flags.join(' ')}`.trim());
+  const args = argv.slice(2);
+  const flags = getGlobalFlagsOnlyFromArgs(args);
+  const command = `${commandTemplate} ${flags.join(' ')}`.trim();
+  const nonInteractiveEnv = getNonInteractiveEnvFromArgs(args);
+  if (!nonInteractiveEnv) return getCommandNamePlain(command);
+  return `VERCEL_NON_INTERACTIVE=${nonInteractiveEnv} ${getCommandNamePlain(command)}`;
 }
