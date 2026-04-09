@@ -211,46 +211,31 @@ export async function detectDjangoPythonEntrypoint(
 }
 
 /**
- * Split a configured entrypoint like `"app/wsgi.py:my_app"` into the
- * normalised file path (`app/wsgi.py`) and the optional explicit variable
- * name (`my_app`).  Ensures the path always ends with `.py`.
- */
-function parseConfiguredEntrypoint(raw: string): {
-  entrypoint: string;
-  explicitVariable: string | undefined;
-} {
-  const colonIndex = raw.lastIndexOf(':');
-  const hasVariable = colonIndex !== -1;
-  const rawPath = hasVariable ? raw.slice(0, colonIndex) : raw;
-  return {
-    entrypoint: rawPath.endsWith('.py') ? rawPath : `${rawPath}.py`,
-    explicitVariable: hasVariable ? raw.slice(colonIndex + 1) : undefined,
-  };
-}
-
-/**
  * Detect a Python entrypoint path for a given framework relative to workPath, or return null if not found.
  */
 export async function detectPythonEntrypoint(
   framework: PythonFramework | undefined,
   workPath: string,
-  configuredEntrypoint?: string,
+  configuredEntrypoint?: { filePath: string; varName?: string },
   service?: { type?: string }
 ): Promise<DetectedPythonEntrypoint | null> {
   // If a configured entrypoint was provided, check it first
   if (configuredEntrypoint) {
-    const { entrypoint, explicitVariable } =
-      parseConfiguredEntrypoint(configuredEntrypoint);
+    const { filePath: configEntryFile, varName: configEntryVar } =
+      configuredEntrypoint;
+    const entrypoint = configEntryFile.endsWith('.py')
+      ? configEntryFile
+      : `${configEntryFile}.py`;
 
     let varName: string | null = null;
-    if (explicitVariable) {
+    if (configEntryVar) {
       const content = await fs.promises.readFile(
         join(workPath, entrypoint),
         'utf-8'
       );
-      const found = await containsTopLevelCallable(content, explicitVariable);
+      const found = await containsTopLevelCallable(content, configEntryVar);
       if (found) {
-        varName = explicitVariable;
+        varName = configEntryVar;
       }
     } else {
       varName = await checkEntrypoint(workPath, entrypoint);
@@ -270,8 +255,8 @@ export async function detectPythonEntrypoint(
       debug(`Using configured Python entrypoint: ${entrypoint}`);
       return { entrypoint: { entrypoint, variableName: varName } };
     } else {
-      const candidateNames = explicitVariable
-        ? `"${explicitVariable}"`
+      const candidateNames = configEntryVar
+        ? `"${configEntryVar}"`
         : `"app", "application", or "handler"`;
       return {
         error: new NowBuildError({
