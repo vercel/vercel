@@ -3,18 +3,7 @@ import { getContext } from '../get-context';
 
 const wss = new WebSocketServer({ noServer: true });
 
-export function upgradeWebSocket(request: Request): WebSocket {
-  if (
-    request === null ||
-    request === undefined ||
-    typeof request !== 'object' ||
-    !('headers' in request)
-  ) {
-    throw new TypeError(
-      `upgradeWebSocket requires a Request object, got ${typeof request}`
-    );
-  }
-
+export function upgradeWebSocket(): WebSocket {
   const ctx = getContext();
 
   if (typeof ctx.upgradeWebSocket !== 'function') {
