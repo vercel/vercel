@@ -109,6 +109,19 @@ export function useGetBypass(bypass: BypassRule[] = []) {
 export const capturedRequests: {
   activate?: { version: string };
   deleteDraft?: boolean;
+  patchDraft?: { action: string; id?: string; value?: unknown };
+  addBypass?: {
+    sourceIp?: string;
+    allSources?: boolean;
+    domain?: string;
+    projectScope?: boolean;
+    note?: string;
+  };
+  removeBypass?: { sourceIp?: string };
+  updateAttackMode?: {
+    attackModeEnabled: boolean;
+    attackModeActiveUntil?: string;
+  };
 } = {};
 
 export function useActivateConfig() {
@@ -139,8 +152,16 @@ export function useDeleteDraft() {
 }
 
 export function useAddBypass() {
+  delete capturedRequests.addBypass;
   client.scenario.post('/v1/security/firewall/bypass', (req: any, res: any) => {
     const { sourceIp, allSources, domain, projectScope, note } = req.body;
+    capturedRequests.addBypass = {
+      sourceIp,
+      allSources,
+      domain,
+      projectScope,
+      note,
+    };
     const ip = allSources ? '0.0.0.0/0' : sourceIp || '0.0.0.0';
     const bypassDomain = domain || (projectScope ? '*' : '*');
     res.json({
@@ -162,19 +183,55 @@ export function useAddBypass() {
 }
 
 export function useRemoveBypass() {
+  delete capturedRequests.removeBypass;
   client.scenario.delete(
     '/v1/security/firewall/bypass',
-    (_req: any, res: any) => {
+    (req: any, res: any) => {
+      capturedRequests.removeBypass = {
+        sourceIp: req.query.sourceIp || req.body?.sourceIp,
+      };
       res.json({ ok: true });
     }
   );
 }
 
 export function useUpdateAttackMode() {
+  delete capturedRequests.updateAttackMode;
   client.scenario.post('/security/attack-mode', (req: any, res: any) => {
+    capturedRequests.updateAttackMode = req.body;
     res.json({
       attackModeEnabled: req.body.attackModeEnabled,
       attackModeUpdatedAt: Date.now(),
     });
   });
+}
+
+export function usePatchDraft(
+  responseOverrides: Partial<FirewallConfigResponse> = {}
+) {
+  delete capturedRequests.patchDraft;
+  client.scenario.patch(
+    '/v1/security/firewall/config/draft',
+    (req: any, res: any) => {
+      const patch = req.body;
+      capturedRequests.patchDraft = {
+        action: patch.action,
+        id: patch.id,
+        value: patch.value,
+      };
+      res.json(
+        createConfig({
+          id: 'config_draft',
+          changes: [
+            {
+              action: patch.action,
+              id: patch.id || `generated_${Date.now()}`,
+              value: patch.value,
+            },
+          ],
+          ...responseOverrides,
+        })
+      );
+    }
+  );
 }

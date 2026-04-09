@@ -1,3 +1,4 @@
+import chalk from 'chalk';
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
@@ -9,6 +10,9 @@ import { outputAgentError, buildCommandWithYes } from '../../util/agent-output';
 import { AGENT_STATUS, AGENT_REASON } from '../../util/agent-output-constants';
 import { getGlobalFlagsOnlyFromArgs } from '../../util/arg-common';
 import type { Command } from '../help';
+import type { FirewallIpRule } from '../../util/firewall/types';
+import listFirewallConfigs from '../../util/firewall/list-firewall-configs';
+import activateFirewallConfig from '../../util/firewall/activate-firewall-config';
 
 export interface ParsedSubcommand {
   args: string[];
@@ -143,4 +147,93 @@ export async function confirmAction(
 export function outputJson(client: Client, data: unknown): void {
   output.stopSpinner();
   client.stdout.write(JSON.stringify(data, null, 2) + '\n');
+}
+
+/**
+ * Check if the project has an existing draft with changes.
+ * Returns true if a draft exists with at least one change.
+ */
+export async function detectExistingDraft(
+  client: Client,
+  projectId: string,
+  teamId?: string
+): Promise<boolean> {
+  const { draft } = await listFirewallConfigs(client, projectId, { teamId });
+  return draft !== null && draft.changes.length > 0;
+}
+
+/**
+ * After a draft mutation, offer to publish immediately.
+ * Mirrors routes' offerAutoPromote pattern.
+ */
+export async function offerAutoPublish(
+  client: Client,
+  projectId: string,
+  hadExistingDraft: boolean,
+  opts: { teamId?: string; skipPrompts?: boolean }
+): Promise<void> {
+  output.print(
+    `\n  ${chalk.gray(`This change is staged. Run ${chalk.cyan(getCommandName('firewall publish'))} to make it live, or ${chalk.cyan(getCommandName('firewall discard'))} to undo.`)}\n`
+  );
+
+  if (
+    !hadExistingDraft &&
+    !opts.skipPrompts &&
+    client.stdin.isTTY &&
+    !client.nonInteractive
+  ) {
+    output.print('\n');
+    const shouldPublish = await client.input.confirm(
+      'This is the only draft change. Publish to production now?',
+      false
+    );
+
+    if (shouldPublish) {
+      const { default: stamp } = await import('../../util/output/stamp');
+      const publishStamp = stamp();
+      output.spinner('Publishing to production');
+
+      try {
+        await activateFirewallConfig(client, projectId, 'draft', {
+          teamId: opts.teamId,
+        });
+        output.log(
+          `${chalk.cyan('Published')} to production ${chalk.gray(publishStamp())}`
+        );
+      } catch (e: unknown) {
+        const err = e as { message?: string };
+        output.error(
+          `Failed to publish to production: ${err.message || 'Unknown error'}`
+        );
+      }
+    }
+  } else if (hadExistingDraft) {
+    output.warn(
+      `There are other draft changes. Review with ${chalk.cyan(getCommandName('firewall diff'))} before publishing.`
+    );
+  }
+}
+
+/**
+ * Resolve an IP rule by ID or IP address.
+ * Returns all matching rules (caller handles disambiguation).
+ */
+export function resolveIpRule(
+  ips: FirewallIpRule[],
+  identifier: string
+): FirewallIpRule[] {
+  if (!identifier) return [];
+
+  // Exact ID match
+  const byId = ips.find(r => r.id === identifier);
+  if (byId) return [byId];
+
+  // Exact IP match (case-insensitive)
+  const query = identifier.toLowerCase();
+  const byIp = ips.filter(r => r.ip.toLowerCase() === query);
+  if (byIp.length > 0) return byIp;
+
+  // Partial ID match
+  const byPartialId = ips.filter(r => r.id.toLowerCase().includes(query));
+  return byPartialId;
 }
