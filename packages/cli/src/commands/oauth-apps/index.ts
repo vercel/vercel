@@ -22,6 +22,7 @@ import {
   getGlobalFlagsFromArgv,
   outputActionRequired,
   outputAgentError,
+  shouldEmitNonInteractiveCommandError,
 } from '../../util/agent-output';
 import { AGENT_REASON } from '../../util/agent-output-constants';
 import { isAPIError } from '../../util/errors-ts';
@@ -54,24 +55,12 @@ type InstallationRequest = {
 };
 
 /**
- * Global CLI flags from argv, stopping before `oauth-apps`, so suggested commands
- * do not append the current subcommand as stray tokens.
+ * Suggested `vercel [globals] <tail>` preserving global flags from the full argv
+ * (`--cwd`, `--non-interactive`, `--scope`, etc.) wherever they appear—unlike
+ * scanning only tokens before `oauth-apps`, which drops globals passed after the subcommand.
  */
-function getCliGlobalsBeforeOauthApps(client: Client): string[] {
-  const args = client.argv.slice(2);
-  const oauthIdx = args.indexOf('oauth-apps');
-  const onlyGlobals = oauthIdx <= 0 ? [] : args.slice(0, oauthIdx);
-  const pseudoArgv = [
-    client.argv[0] ?? 'node',
-    client.argv[1] ?? 'cli.js',
-    ...onlyGlobals,
-  ];
-  return getGlobalFlagsFromArgv(pseudoArgv);
-}
-
-/** Suggested `vercel [globals] <tail>` with the same globals as the current oauth-apps invocation. */
 function suggestVercelCommand(client: Client, commandTail: string): string {
-  const globals = getCliGlobalsBeforeOauthApps(client);
+  const globals = getGlobalFlagsFromArgv(client.argv);
   if (globals.length === 0) {
     return `${packageName} ${commandTail}`;
   }
@@ -84,6 +73,199 @@ function suggestOauthAppsCommand(
   oauthAppsTail: string
 ): string {
   return suggestVercelCommand(client, `oauth-apps ${oauthAppsTail}`);
+}
+
+/**
+ * Quote a value for suggested shell `next.command` strings: use single quotes so
+ * JSON output stays copy-pasteable (no JSON-escaped `\"`). Falls back to
+ * double-quoted escaping only if the value contains `'`.
+ */
+function shellSingleQuoteArg(value: string): string {
+  if (value === '') {
+    return `''`;
+  }
+  if (!value.includes("'")) {
+    return `'${value}'`;
+  }
+  return `"${value
+    .replace(/\\/g, '\\\\')
+    .replace(/"/g, '\\"')
+    .replace(/\$/g, '\\$')
+    .replace(/`/g, '\\`')
+    .replace(/\r?\n/g, '\\n')}"`;
+}
+
+const OPTION_REQUIRES_ARGUMENT_RE = /^option requires argument:\s*(\S+)/i;
+
+/** Best-effort parse of register args before `arg` succeeds (for suggested commands). */
+type RegisterFlagSnapshot = {
+  name?: string;
+  slug?: string;
+  description?: string;
+  redirectUris: string[];
+  /** Preserve `--format json` / `--json` in suggested retry command. */
+  outputFormatJson?: boolean;
+};
+
+function snapshotRegisterFlagsFromArgs(
+  registerArgs: string[]
+): RegisterFlagSnapshot {
+  const redirectUris: string[] = [];
+  let name: string | undefined;
+  let slug: string | undefined;
+  let description: string | undefined;
+  let outputFormatJson: boolean | undefined;
+
+  for (let i = 0; i < registerArgs.length; i++) {
+    const a = registerArgs[i];
+    if (a === '--name') {
+      const v = registerArgs[i + 1];
+      if (v !== undefined && !v.startsWith('-')) {
+        name = v;
+        i++;
+      }
+    } else if (a.startsWith('--name=')) {
+      name = a.slice('--name='.length);
+    } else if (a === '--slug') {
+      const v = registerArgs[i + 1];
+      if (v !== undefined && !v.startsWith('-')) {
+        slug = v;
+        i++;
+      }
+    } else if (a.startsWith('--slug=')) {
+      slug = a.slice('--slug='.length);
+    } else if (a === '--description') {
+      const v = registerArgs[i + 1];
+      if (v !== undefined && !v.startsWith('-')) {
+        description = v;
+        i++;
+      }
+    } else if (a.startsWith('--description=')) {
+      description = a.slice('--description='.length);
+    } else if (a === '--redirect-uri') {
+      const v = registerArgs[i + 1];
+      if (v !== undefined && !v.startsWith('-')) {
+        redirectUris.push(v);
+        i++;
+      }
+    } else if (a.startsWith('--redirect-uri=')) {
+      redirectUris.push(a.slice('--redirect-uri='.length));
+    } else if (a === '--json') {
+      outputFormatJson = true;
+    } else if (a === '--format') {
+      const v = registerArgs[i + 1];
+      if (v !== undefined && v.toLowerCase() === 'json') {
+        outputFormatJson = true;
+        i++;
+      }
+    } else if (a.startsWith('--format=')) {
+      const v = a.slice('--format='.length);
+      if (v.toLowerCase() === 'json') {
+        outputFormatJson = true;
+      }
+    }
+  }
+
+  return { name, slug, description, redirectUris, outputFormatJson };
+}
+
+function buildRegisterCommandTailForSuggestion(
+  s: RegisterFlagSnapshot
+): string {
+  const parts: string[] = ['register'];
+  parts.push(
+    s.name !== undefined
+      ? `--name ${shellSingleQuoteArg(s.name)}`
+      : '--name <display-name>'
+  );
+  parts.push(
+    s.slug !== undefined
+      ? `--slug ${shellSingleQuoteArg(s.slug)}`
+      : '--slug <slug>'
+  );
+  if (s.description !== undefined) {
+    parts.push(`--description ${shellSingleQuoteArg(s.description)}`);
+  }
+  for (const u of s.redirectUris) {
+    parts.push(`--redirect-uri ${shellSingleQuoteArg(u)}`);
+  }
+  if (s.outputFormatJson) {
+    parts.push('--format json');
+  }
+  return parts.join(' ');
+}
+
+function registerOptionErrorWhenLine(
+  snap: RegisterFlagSnapshot,
+  erroredFlag: string
+): string {
+  const needName = snap.name === undefined;
+  const needSlug = snap.slug === undefined;
+  if (!needName && needSlug && erroredFlag === '--slug') {
+    return 'Substitute <slug> only; `--name` was copied from your command. Keep the slug value immediately after `--slug`, before globals like `--cwd`.';
+  }
+  if (needName && needSlug) {
+    return 'Replace <display-name> and <slug>; keep the slug immediately after `--slug` when adding more flags.';
+  }
+  if (needSlug) {
+    return 'Replace <slug>; keep the slug immediately after `--slug` when adding more flags.';
+  }
+  if (needName) {
+    return 'Replace <display-name>.';
+  }
+  return 'Fix flag values and retry.';
+}
+
+/**
+ * `arg` throws before we see empty `--slug` as "missing slug"; e.g. `--slug --cwd=...`
+ * makes the next token start with `--`, so the slug value is absent. Emit agent JSON.
+ */
+function tryEmitRegisterOptionRequiresArgumentError(
+  client: Client,
+  err: unknown,
+  registerArgs: string[]
+): boolean {
+  if (!shouldEmitNonInteractiveCommandError(client)) {
+    return false;
+  }
+  if (
+    !(err instanceof Error) ||
+    !OPTION_REQUIRES_ARGUMENT_RE.test(err.message)
+  ) {
+    return false;
+  }
+  const flag = err.message.match(OPTION_REQUIRES_ARGUMENT_RE)?.[1] ?? 'option';
+
+  const snap = snapshotRegisterFlagsFromArgs(registerArgs);
+  const tail = buildRegisterCommandTailForSuggestion(snap);
+
+  const isSlug = flag === '--slug';
+  const message = isSlug
+    ? 'Missing value for `--slug`: the next token starts with `--`, so it was not treated as the slug.'
+    : `\`${flag}\` requires a value before the next \`--\` flag.`;
+
+  const hint = isSlug
+    ? `Put the slug immediately after \`--slug\`, before globals like \`--cwd\`. Example: \`${packageName} oauth-apps register --name <display-name> --slug <slug> --cwd <path> --non-interactive\`. The slug is a URL-safe id you choose (lowercase letters, numbers, hyphens).`
+    : `Reorder or quote values so each flag is followed by its argument. Example: \`${packageName} oauth-apps register --name <display-name> --slug <slug>\`.`;
+
+  outputAgentError(
+    client,
+    {
+      status: 'error',
+      reason: AGENT_REASON.INVALID_ARGUMENTS,
+      message,
+      hint,
+      next: [
+        {
+          command: suggestOauthAppsCommand(client, tail),
+          when: registerOptionErrorWhenLine(snap, flag),
+        },
+      ],
+    },
+    1
+  );
+  output.error(message);
+  return true;
 }
 
 export default async function main(client: Client): Promise<number> {
@@ -233,6 +415,9 @@ export default async function main(client: Client): Promise<number> {
       try {
         p = parseArguments(args, spec);
       } catch (e) {
+        if (tryEmitRegisterOptionRequiresArgumentError(client, e, args)) {
+          return 1;
+        }
         printError(e);
         return 1;
       }
@@ -254,14 +439,14 @@ export default async function main(client: Client): Promise<number> {
             status: 'error',
             reason: AGENT_REASON.MISSING_ARGUMENTS,
             message: 'Missing --name',
-            hint: `Provide a display name (3–200 characters, letters, numbers, spaces, hyphens, underscores). Example: \`${packageName} oauth-apps register --name "My App" --slug my-app\`.`,
+            hint: `Provide a display name (3–200 characters, letters, numbers, spaces, hyphens, underscores). Example: \`${packageName} oauth-apps register --name <display-name> --slug <slug>\`.`,
             next: [
               {
                 command: suggestOauthAppsCommand(
                   client,
-                  'register --name "My App" --slug my-app'
+                  'register --name <display-name> --slug <slug>'
                 ),
-                when: 'Minimal registration (add --redirect-uri as needed)',
+                when: 'Replace placeholders; add --redirect-uri for each callback URL if needed',
               },
             ],
           },
@@ -277,14 +462,14 @@ export default async function main(client: Client): Promise<number> {
             status: 'error',
             reason: AGENT_REASON.MISSING_ARGUMENTS,
             message: 'Missing --slug',
-            hint: `The slug is the URL-safe id (lowercase letters, numbers, hyphens). Example: \`${packageName} oauth-apps register --name "My App" --slug my-app\`.`,
+            hint: `You choose the slug when you register the app—it is not assigned by Vercel. Use a unique URL-safe id (at least 3 characters; lowercase letters, numbers, and hyphens only), often derived from the app name (e.g. \`acme-dashboard\`). Example: \`${packageName} oauth-apps register --name <display-name> --slug <slug>\`.`,
             next: [
               {
                 command: suggestOauthAppsCommand(
                   client,
-                  `register --name ${JSON.stringify(name)} --slug my-app`
+                  `register --name ${shellSingleQuoteArg(name)} --slug <slug>`
                 ),
-                when: 'Add a slug; repeat --redirect-uri for each callback URL',
+                when: 'Substitute <slug> with your chosen identifier; add --redirect-uri for each OAuth callback URL if needed',
               },
             ],
           },
@@ -312,7 +497,7 @@ export default async function main(client: Client): Promise<number> {
               {
                 command: suggestOauthAppsCommand(
                   client,
-                  `register --name ${JSON.stringify(name)} --slug ${JSON.stringify(slug)}`
+                  `register --name ${shellSingleQuoteArg(name)} --slug ${shellSingleQuoteArg(slug)}`
                 ),
                 when: 'Retry register after selecting a team',
               },
@@ -402,7 +587,7 @@ export default async function main(client: Client): Promise<number> {
             status: 'error',
             reason: AGENT_REASON.MISSING_ARGUMENTS,
             message: 'Missing --client-id',
-            hint: `The OAuth client ID (\`cl_...\`) is issued when a Vercel App is registered (\`${packageName} oauth-apps register\`, or the Vercel Dashboard developer flow) or supplied by the app author. Pending installs for your team may list it; run \`${packageName} oauth-apps list-requests\` (use \`--format=json\` in scripts).`,
+            hint: `The OAuth client ID (\`cl_...\`) is issued when a Vercel App is registered (\`${packageName} oauth-apps register --name <display-name> --slug <slug>\`, or the Vercel Dashboard developer flow) or supplied by the app author. Pending installs for your team may list it; run \`${packageName} oauth-apps list-requests\` (use \`--format=json\` in scripts).`,
             next: [
               {
                 command: suggestOauthAppsCommand(
@@ -414,9 +599,9 @@ export default async function main(client: Client): Promise<number> {
               {
                 command: suggestOauthAppsCommand(
                   client,
-                  'install --client-id <client-id> --permission read:project'
+                  'install --client-id <client-id> --permission <scope>'
                 ),
-                when: 'After you have a client id, substitute it for <client-id>; repeat --permission for each scope',
+                when: 'Replace <client-id> and <scope> (e.g. read:project); repeat --permission for each scope',
               },
             ],
           },
@@ -437,9 +622,9 @@ export default async function main(client: Client): Promise<number> {
               {
                 command: suggestOauthAppsCommand(
                   client,
-                  `install --client-id ${clientId} --permission read:project`
+                  `install --client-id ${clientId} --permission <scope>`
                 ),
-                when: 'Example with one scope; add more --permission flags as required',
+                when: 'Replace <scope> (e.g. read:project); repeat --permission for each scope',
               },
             ],
           },

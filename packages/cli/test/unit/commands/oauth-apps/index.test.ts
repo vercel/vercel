@@ -40,7 +40,7 @@ describe('oauth-apps', () => {
         'vercel --cwd /tmp/oauth-test --non-interactive oauth-apps list-requests --format=json'
       );
       expect(payload.next?.[1]?.command).toBe(
-        'vercel --cwd /tmp/oauth-test --non-interactive oauth-apps install --client-id <client-id> --permission read:project'
+        'vercel --cwd /tmp/oauth-test --non-interactive oauth-apps install --client-id <client-id> --permission <scope>'
       );
     });
 
@@ -67,7 +67,7 @@ describe('oauth-apps', () => {
         message: 'Provide at least one --permission (repeatable)',
       });
       expect(payload.next?.[0]?.command).toBe(
-        'vercel --non-interactive oauth-apps install --client-id cl_test123 --permission read:project'
+        'vercel --non-interactive oauth-apps install --client-id cl_test123 --permission <scope>'
       );
     });
   });
@@ -103,8 +103,39 @@ describe('oauth-apps', () => {
         reason: 'missing_arguments',
         message: 'Missing --name',
       });
-      expect(payload.next?.[0]?.command).toContain('oauth-apps register');
-      expect(payload.next?.[0]?.command).toContain('--name');
+      expect(payload.next?.[0]?.command).toBe(
+        'vercel --non-interactive oauth-apps register --name <display-name> --slug <slug>'
+      );
+    });
+
+    it('writes structured JSON when --slug has no value before another flag (arg parse error)', async () => {
+      vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+        throw new Error(`exit:${code ?? 0}`);
+      }) as () => never);
+
+      client.nonInteractive = true;
+      client.setArgv(
+        '--non-interactive',
+        'oauth-apps',
+        'register',
+        '--name',
+        'display-name',
+        '--slug',
+        '--cwd=/tmp/proj'
+      );
+
+      await expect(oauthApps(client)).rejects.toThrow('exit:1');
+
+      const payload = JSON.parse(client.stdout.getFullOutput().trim());
+      expect(payload).toMatchObject({
+        status: 'error',
+        reason: 'invalid_arguments',
+      });
+      expect(payload.message).toMatch(/--slug/i);
+      expect(payload.hint).toMatch(/slug|--cwd/i);
+      expect(payload.next?.[0]?.command).toContain(
+        "oauth-apps register --name 'display-name' --slug <slug>"
+      );
     });
 
     it('writes structured JSON when non-interactive and --slug is missing', async () => {
@@ -129,8 +160,8 @@ describe('oauth-apps', () => {
         reason: 'missing_arguments',
         message: 'Missing --slug',
       });
-      expect(payload.next?.[0]?.command).toMatch(
-        /oauth-apps register.*--slug my-app/
+      expect(payload.next?.[0]?.command).toBe(
+        "vercel --non-interactive oauth-apps register --name 'My App' --slug <slug>"
       );
     });
 
@@ -163,6 +194,9 @@ describe('oauth-apps', () => {
         status: 'error',
         reason: 'missing_scope',
       });
+      expect(payload.next?.[1]?.command).toBe(
+        "vercel --non-interactive oauth-apps register --name 'My App' --slug 'my-app'"
+      );
     });
 
     it('POSTs /v1/oauth-apps and prints JSON when --format=json', async () => {
