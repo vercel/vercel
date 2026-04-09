@@ -469,7 +469,6 @@ export interface PaginationOptions {
 export type ProjectLinked = {
   status: 'linked';
   org: Org;
-  /** `rootDirectory` reflects the repo link when linked via `repo.json` (see `getLinkedProject`). */
   project: Project;
   repoRoot?: string;
 };
