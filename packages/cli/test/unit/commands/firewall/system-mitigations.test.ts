@@ -2,7 +2,11 @@ import { describe, expect, it, beforeEach } from 'vitest';
 import { client } from '../../../mocks/client';
 import firewall from '../../../../src/commands/firewall';
 import { useUser } from '../../../mocks/user';
-import { useAddBypass, useRemoveBypass } from '../../../mocks/firewall';
+import {
+  useAddBypass,
+  useRemoveBypass,
+  capturedRequests,
+} from '../../../mocks/firewall';
 import { useProject, defaultProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
 import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
@@ -27,6 +31,8 @@ describe('firewall system-mitigations', () => {
       const exitCodePromise = firewall(client);
       await expect(client.stderr).toOutput('System mitigations paused');
       expect(await exitCodePromise).toEqual(0);
+      expect(capturedRequests.addBypass).toBeDefined();
+      expect(capturedRequests.addBypass?.allSources).toBe(true);
     });
 
     it('should mention auto-resume in success message', async () => {
@@ -51,6 +57,7 @@ describe('firewall system-mitigations', () => {
       const exitCodePromise = firewall(client);
       await expect(client.stderr).toOutput('System mitigations resumed');
       expect(await exitCodePromise).toEqual(0);
+      expect(capturedRequests.removeBypass).toBeDefined();
     });
   });
 
