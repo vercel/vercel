@@ -20,6 +20,59 @@ export const listRequestsSubcommand = {
   ],
 } as const;
 
+export const registerSubcommand = {
+  name: 'register',
+  aliases: ['create'],
+  description:
+    'Register a new Vercel App (OAuth) for the current team (issues a client id)',
+  arguments: [],
+  options: [
+    {
+      name: 'name',
+      shorthand: null,
+      type: String,
+      argument: 'NAME',
+      deprecated: false,
+      description: 'Display name of the app (required)',
+    },
+    {
+      name: 'slug',
+      shorthand: null,
+      type: String,
+      argument: 'SLUG',
+      deprecated: false,
+      description: 'URL-safe unique identifier (required)',
+    },
+    {
+      name: 'redirect-uri',
+      shorthand: null,
+      type: [String],
+      argument: 'URL',
+      deprecated: false,
+      description: 'Allowed OAuth redirect URI (repeatable)',
+    },
+    {
+      name: 'description',
+      shorthand: null,
+      type: String,
+      argument: 'TEXT',
+      deprecated: false,
+      description: 'Optional description shown to users',
+    },
+    formatOption,
+  ],
+  examples: [
+    {
+      name: 'Register with redirect URIs',
+      value: `${packageName} oauth-apps register --name "My App" --slug my-app --redirect-uri https://app.example.com/oauth/callback`,
+    },
+    {
+      name: 'JSON output (includes clientId)',
+      value: `${packageName} oauth-apps register --name "My App" --slug my-app --format json`,
+    },
+  ],
+} as const;
+
 export const dismissSubcommand = {
   name: 'dismiss',
   aliases: [],
@@ -103,10 +156,11 @@ export const removeSubcommand = {
 export const oauthAppsCommand = {
   name: 'oauth-apps',
   aliases: [],
-  description: 'Manage Vercel App (OAuth) installations for your team',
+  description: 'Register Vercel Apps (OAuth) and manage team installations',
   arguments: [],
   subcommands: [
     listRequestsSubcommand,
+    registerSubcommand,
     dismissSubcommand,
     installSubcommand,
     removeSubcommand,
