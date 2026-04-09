@@ -7,7 +7,9 @@ import selectOrg from '../../input/select-org';
 import type Client from '../../client';
 import type { Framework } from '@vercel/frameworks';
 import type { Org, Project } from '@vercel-internals/types';
+import { ProjectNotFound } from '../../errors-ts';
 import createProject from '../../projects/create-project';
+import getProjectByNameOrId from '../../projects/get-project-by-id-or-name';
 import { detectProjects } from '../../projects/detect-projects';
 import {
   connectGitProvider,
@@ -78,7 +80,6 @@ type GitLinkedProjectWithMisconfiguredRootDirectory = {
   suggestedDirectory: string;
   framework: string | null | undefined;
   orgId: string;
-  orgSlug: string;
   matchesFramework: boolean;
   matchesTeam: boolean;
   matchesRootDirectory: boolean;
@@ -97,7 +98,6 @@ type NonGitLinkedProject = {
   directory: string;
   suggestedDirectory: string;
   framework: string | null | undefined;
-  orgSlug: string;
   orgId: string;
   matchesFramework: boolean;
   matchesTeam: boolean;
@@ -352,12 +352,18 @@ export async function discoverRepoProjectsExperimental(
     existingProjectIds,
     existingDirectories,
     existingRemoteName,
+    projectNameOrId,
   }: {
     yes: boolean;
     existingProjectIds?: Set<string>;
     existingDirectories?: Set<string>;
     /** When set, skip the remote selection prompt and use this remote. */
     existingRemoteName?: string;
+    /**
+     * Resolve this project in the selected scope; run detection for path/git
+     * suggestions but do not offer local “new project” rows.
+     */
+    projectNameOrId?: string;
   }
 ): Promise<
   | { remoteName: string; projects: RepoProjectConfig[]; orgSlug: string }
@@ -393,6 +399,23 @@ export async function discoverRepoProjectsExperimental(
     yes
   );
   client.config.currentTeam = org.type === 'team' ? org.id : undefined;
+
+  let focusedProject: Project | undefined;
+  if (projectNameOrId?.trim()) {
+    const raw = projectNameOrId.trim();
+    const fetched = await getProjectByNameOrId(client, raw, org.id);
+    if (fetched instanceof ProjectNotFound) {
+      throw new Error(
+        `Project not found: "${raw}" under scope "${org.slug}". Check --project and --scope / --team.`
+      );
+    }
+    if (fetched.accountId !== org.id) {
+      throw new Error(
+        `Project "${fetched.name}" is not in the selected scope (${org.slug}).`
+      );
+    }
+    focusedProject = fetched;
+  }
 
   // Use getGitConfigPath to correctly resolve the config path for
   // regular repos, worktrees, and submodules. Falls back to the
@@ -537,7 +560,6 @@ export async function discoverRepoProjectsExperimental(
               suggestedDirectory: normalizeRootDirectoryPath(rootDirectory),
               framework: match.project.framework,
               orgId: match.org.id,
-              orgSlug: match.org.slug,
               matchesFramework: frameworks.some(
                 framework => framework.slug === match.project.framework
               ),
@@ -569,7 +591,6 @@ export async function discoverRepoProjectsExperimental(
             suggestedDirectory: normalizeRootDirectoryPath(rootDirectory),
             framework: match.project.framework,
             orgId: match.org.id,
-            orgSlug: match.org.slug,
             matchesFramework: frameworks.some(
               framework => framework.slug === match.project.framework
             ),
@@ -663,21 +684,21 @@ export async function discoverRepoProjectsExperimental(
 
   const normCwdFromRoot = cwdRelativePathFromRepoRoot(rootPath, client.cwd);
   const cwdProjectScope = resolveCwdLinkScope(normCwdFromRoot, p);
-  if (normCwdFromRoot !== '' && cwdProjectScope === null) {
-    output.print(
-      `${chalk.dim(
-        'Current directory is not a project folder. Showing link options for the whole repository.'
-      )}`
-    );
-  } else if (cwdProjectScope !== null) {
-    output.print(
-      `${chalk.dim(
-        `Showing projects for ${formatRootForDisplay(
-          cwdProjectScope
-        )} only (from your current directory).`
-      )}`
-    );
+  if (cwdProjectScope !== null) {
     filterRepoLinkBucketsByScope(cwdProjectScope, p);
+  }
+
+  if (!linkDemoId && focusedProject) {
+    filterRepoLinkBucketsToProjectId(p, focusedProject.id);
+    ensureFocusedProjectNonGitRowIfNeeded(
+      client,
+      rootPath,
+      org,
+      focusedProject,
+      p,
+      parsedRepoUrl
+    );
+    p.detectedProjects = new Map();
   }
 
   // output.log(
@@ -694,10 +715,16 @@ export async function discoverRepoProjectsExperimental(
     checked: boolean;
   };
 
+  const duplicatePrimaryNames = collectDuplicatePrimaryProjectNames(p);
+
   const gitLinkedCheckboxSpecs: CheckboxRowSpec[] = p.gitLinkedProjects.map(
     project => ({
       cells: [
-        chalk.bold(project.name),
+        projectNameCellForLinkTable(
+          project.name,
+          project.orgId,
+          duplicatePrimaryNames
+        ),
         chalk.dim(formatRootForDisplay(project.directory)),
         formatFrameworkLabel(project.framework),
         chalk.dim('Linked to repo'),
@@ -710,7 +737,11 @@ export async function discoverRepoProjectsExperimental(
   const misconfiguredCheckboxSpecs: CheckboxRowSpec[] =
     p.gitLinkedProjectsWithMisconfiguredRootDirectory.map(project => ({
       cells: [
-        chalk.bold(project.name),
+        projectNameCellForLinkTable(
+          project.name,
+          project.orgId,
+          duplicatePrimaryNames
+        ),
         chalk.dim('—'),
         formatFrameworkLabel(project.framework),
         chalk.yellow('Needs details'),
@@ -722,7 +753,11 @@ export async function discoverRepoProjectsExperimental(
   const nonGitCheckboxSpecs: CheckboxRowSpec[] = p.nonGitLinkedProjects.map(
     project => ({
       cells: [
-        chalk.bold(project.name),
+        projectNameCellForLinkTable(
+          project.name,
+          project.orgId,
+          duplicatePrimaryNames
+        ),
         chalk.dim(formatRootForDisplay(project.directory)),
         formatFrameworkLabel(project.framework),
         chalk.yellow('Not linked to this repository'),
@@ -772,6 +807,38 @@ export async function discoverRepoProjectsExperimental(
     ...detectedCheckboxSpecs,
   ];
 
+  // Non-interactive: creating projects from local detection is unsupported — no
+  // table, message, or repo.json write (same as canceling with nothing to apply).
+  if (
+    yes &&
+    allInteractiveSpecs.length > 0 &&
+    allInteractiveSpecs.every(spec => spec.value.type === 'detectedProject')
+  ) {
+    output.stopSpinner();
+    output.print(
+      `\n${chalk.yellow(
+        'Non-interactive mode (--yes) cannot create new Vercel projects from local detection, and no existing projects were found to link in the selected scope.'
+      )}\n`
+    );
+    return;
+  }
+
+  if (normCwdFromRoot !== '' && cwdProjectScope === null) {
+    output.print(
+      `${chalk.dim(
+        'Current directory is not a project folder. Showing link options for the whole repository.'
+      )}`
+    );
+  } else if (cwdProjectScope !== null) {
+    output.print(
+      `${chalk.dim(
+        `Showing projects for ${formatRootForDisplay(
+          cwdProjectScope
+        )} only (from your current directory).`
+      )}`
+    );
+  }
+
   output.stopSpinner();
 
   let selected2: Choice['value'][];
@@ -783,21 +850,18 @@ export async function discoverRepoProjectsExperimental(
     const soleRowNeedsSetupPhase =
       sole.value.type === 'nonGitLinkedProject' ||
       sole.value.type === 'gitLinkedProjectWithMisconfiguredRootDirectory';
-    output.print(
-      `\n${table([repoLinkSelectionTableHeaders, sole.cells], {
-        align: ['l', 'l', 'l', 'l'],
-        hsep: 2,
-      })}\n`
-    );
+    // With --yes, a row that runs the non-interactive setup phase would otherwise
+    // print this preview table and then printLinkSelectionSummary (post-setup) — duplicate.
+    const skipSingleRowPreviewForYesSetup = yes && soleRowNeedsSetupPhase;
+    if (!skipSingleRowPreviewForYesSetup) {
+      output.print(
+        `\n${table([repoLinkSelectionTableHeaders, sole.cells], {
+          align: ['l', 'l', 'l', 'l'],
+          hsep: 2,
+        })}\n`
+      );
+    }
     if (yes) {
-      if (sole.value.type === 'detectedProject') {
-        output.print(
-          `\n${chalk.yellow(
-            'Non-interactive mode (--yes) cannot create new Vercel projects.'
-          )}\n`
-        );
-        return;
-      }
       selected2 = [sole.value];
     } else if (soleRowNeedsSetupPhase) {
       // Preview is enough; go straight to project setup (connect / root dir, etc.).
@@ -847,14 +911,6 @@ export async function discoverRepoProjectsExperimental(
 
     if (yes) {
       selected2 = primaryCheckboxSpecs.map(spec => spec.value);
-      if (selected2.length === 0 && detectedCheckboxSpecs.length > 0) {
-        output.print(
-          `\n${chalk.yellow(
-            'Non-interactive mode (--yes) cannot create new Vercel projects, and no existing projects were available to link.'
-          )}\n`
-        );
-        return;
-      }
     } else {
       selected2 = await client.input.checkbox<Choice['value']>({
         message: 'Select projects to link',
@@ -899,7 +955,15 @@ export async function discoverRepoProjectsExperimental(
   }
 
   if (selected2.length === 0) {
-    output.print(`\n${chalk.yellow('No projects selected.')}\n`);
+    if (yes && allInteractiveSpecs.length === 0) {
+      output.print(
+        `\n${chalk.yellow(
+          'No Vercel projects found to link for this repository in the selected scope.'
+        )}\n`
+      );
+    } else {
+      output.print(`\n${chalk.yellow('No projects selected.')}\n`);
+    }
     return;
   }
 
@@ -980,6 +1044,96 @@ type RepoLinkBuckets = {
   nonGitLinkedProjects: NonGitLinkedProject[];
   detectedProjects: Map<string, Framework[]>;
 };
+
+function collectDuplicatePrimaryProjectNames(p: RepoLinkBuckets): Set<string> {
+  const counts = new Map<string, number>();
+  const bump = (name: string) => counts.set(name, (counts.get(name) ?? 0) + 1);
+  for (const g of p.gitLinkedProjects) bump(g.name);
+  for (const m of p.gitLinkedProjectsWithMisconfiguredRootDirectory)
+    bump(m.name);
+  for (const n of p.nonGitLinkedProjects) bump(n.name);
+  const dups = new Set<string>();
+  for (const [name, c] of counts) {
+    if (c > 1) dups.add(name);
+  }
+  return dups;
+}
+
+function projectNameCellForLinkTable(
+  name: string,
+  orgId: string,
+  duplicateNames: Set<string>
+): string {
+  if (duplicateNames.has(name)) {
+    return chalk.bold(name) + chalk.dim(` (${orgId})`);
+  }
+  return chalk.bold(name);
+}
+
+function filterRepoLinkBucketsToProjectId(
+  p: RepoLinkBuckets,
+  id: string
+): void {
+  p.gitLinkedProjects = p.gitLinkedProjects.filter(g => g.id === id);
+  p.gitLinkedProjectsWithMisconfiguredRootDirectory =
+    p.gitLinkedProjectsWithMisconfiguredRootDirectory.filter(m => m.id === id);
+  p.nonGitLinkedProjects = p.nonGitLinkedProjects.filter(n => n.id === id);
+}
+
+/**
+ * When `--project` targets an existing Vercel project but discovery would only
+ * show a “new project” row, synthesize a non–git-linked row so the user can
+ * connect Git / adjust root using the same flow as other primary rows.
+ */
+function ensureFocusedProjectNonGitRowIfNeeded(
+  client: Client,
+  rootPath: string,
+  org: Org,
+  focused: Project,
+  p: RepoLinkBuckets,
+  parsedRepoUrl: NonNullable<ReturnType<typeof parseRepoUrl>>
+): void {
+  const hasRow =
+    p.gitLinkedProjects.some(g => g.id === focused.id) ||
+    p.gitLinkedProjectsWithMisconfiguredRootDirectory.some(
+      m => m.id === focused.id
+    ) ||
+    p.nonGitLinkedProjects.some(n => n.id === focused.id);
+  if (hasRow) {
+    return;
+  }
+
+  const suggestedDirectory = cwdRelativePathFromRepoRoot(rootPath, client.cwd);
+  let frameworks: Framework[] = [];
+  for (const key of [
+    suggestedDirectory,
+    normalizePath(suggestedDirectory),
+    '',
+  ]) {
+    const f = p.detectedProjects.get(key);
+    if (f?.length) {
+      frameworks = f;
+      break;
+    }
+  }
+
+  const dirNorm = normalizeRootDirectoryPath(focused.rootDirectory);
+  const sugNorm = normalizeRootDirectoryPath(suggestedDirectory);
+
+  p.nonGitLinkedProjects.push({
+    type: 'nonGitLinkedProject',
+    id: focused.id,
+    name: focused.name,
+    directory: dirNorm,
+    suggestedDirectory: sugNorm,
+    framework: focused.framework,
+    orgId: org.id,
+    matchesFramework: frameworks.some(fw => fw.slug === focused.framework),
+    matchesTeam: true,
+    matchesRootDirectory: dirNorm === sugNorm,
+    isLinkedToThisRepo: isLinkedToRepo(focused, parsedRepoUrl),
+  });
+}
 
 function collectDirectoryRootsForCwdScope(p: RepoLinkBuckets): Set<string> {
   const roots = new Set<string>();

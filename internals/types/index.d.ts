@@ -438,6 +438,11 @@ export interface ProjectLink {
    */
   projectRootDirectory?: string;
   /**
+   * When linked via `repo.json`, true if that entry uses the suggested local
+   * directory without updating the Vercel project's root directory setting.
+   */
+  directorySpecifiedManually?: boolean;
+  /**
    * Name of the Vercel Project.
    */
   projectName?: string;
@@ -466,6 +471,13 @@ export type ProjectLinked = {
   org: Org;
   project: Project;
   repoRoot?: string;
+  /**
+   * When linked via `repo.json`, the relative path from the Git repo root to
+   * this project (same as `RepoProjectConfig.directory`). Use this for local
+   * filesystem paths; the API `project.rootDirectory` may differ when the user
+   * linked with a suggested path without updating project settings.
+   */
+  projectRootDirectory?: string;
 };
 
 export type ProjectNotLinked = {

@@ -3,11 +3,7 @@ import { parseArguments } from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
 import cmd from '../../util/output/cmd';
 import { ensureLink } from '../../util/link/ensure-link';
-import {
-  addRepoLink,
-  ensureRepoLink,
-  findRepoRoot,
-} from '../../util/link/repo';
+import { addRepoLink, ensureRepoLink } from '../../util/link/repo';
 import getTeams from '../../util/teams/get-teams';
 import { type Command, help } from '../help';
 import { addSubcommand, linkCommand } from './command';
@@ -21,6 +17,30 @@ import { autoInstallAgentTooling } from '../../util/agent/auto-install-agentic';
 const COMMAND_CONFIG = {
   add: getCommandAliases(addSubcommand),
 };
+
+async function resolveTeamScopeFromLinkFlags(
+  client: Client,
+  parsedFlags: Record<string, unknown>
+): Promise<void> {
+  if (client.config.currentTeam) {
+    return;
+  }
+  const raw =
+    (typeof parsedFlags['--scope'] === 'string' && parsedFlags['--scope']) ||
+    (typeof parsedFlags['--team'] === 'string' && parsedFlags['--team']);
+  if (typeof raw !== 'string') {
+    return;
+  }
+  try {
+    const teams = await getTeams(client);
+    const related = teams.find(t => t.id === raw || t.slug === raw);
+    if (related) {
+      client.config.currentTeam = related.id;
+    }
+  } catch {
+    // selectOrg or API may still prompt or error
+  }
+}
 
 export default async function link(client: Client) {
   let parsedArgs = null;
@@ -99,6 +119,8 @@ export default async function link(client: Client) {
   telemetry.trackCliFlagRepo(parsedArgs.flags['--repo']);
   telemetry.trackCliFlagYes(parsedArgs.flags['--yes']);
   telemetry.trackCliOptionProject(parsedArgs.flags['--project']);
+  telemetry.trackCliOptionScope(parsedArgs.flags['--scope']);
+  telemetry.trackCliOptionTeam(parsedArgs.flags['--team']);
 
   if ('--confirm' in parsedArgs.flags) {
     telemetry.trackCliFlagConfirm(parsedArgs.flags['--confirm']);
@@ -120,48 +142,30 @@ export default async function link(client: Client) {
     cwd = client.cwd;
   }
 
+  await resolveTeamScopeFromLinkFlags(client, parsedArgs.flags);
+
   if (parsedArgs.flags['--repo']) {
     output.warn(`The ${cmd('--repo')} flag is in alpha, please report issues`);
     try {
-      await ensureRepoLink(client, cwd, { yes, overwrite: true });
+      await ensureRepoLink(client, cwd, {
+        yes,
+        overwrite: true,
+        projectNameOrId:
+          typeof parsedArgs.flags['--project'] === 'string'
+            ? parsedArgs.flags['--project']
+            : undefined,
+      });
     } catch (err) {
       output.prettyError(err);
       return 1;
     }
   } else {
-    // Prefer the validated team ID set by the global handler (--team/--scope). When it is not set
-    // (e.g. no scope passed), currentTeam may be undefined or from saved config. If the user passed
-    // --team to link but currentTeam is still unset, resolve to a team ID and set it so selectOrg
-    // has a default; never set a raw slug (always use team ID).
-    const teamFlag = parsedArgs.flags['--team'];
-    if (typeof teamFlag === 'string' && !client.config.currentTeam) {
-      try {
-        const teams = await getTeams(client);
-        const related = teams.find(
-          t => t.id === teamFlag || t.slug === teamFlag
-        );
-        if (related) {
-          client.config.currentTeam = related.id;
-        }
-      } catch {
-        // Let ensureLink/selectOrg handle missing team or API errors
-      }
-    }
-
     // Non-interactive when flag is passed or when agent (e.g. no TTY) so JSON is output when confirmation needed
     const linkNonInteractive =
       client.nonInteractive || client.argv.includes('--non-interactive');
 
-    const repoRoot = await findRepoRoot(cwd);
-    const repoLink = await ensureRepoLink(client, cwd, {
-      yes,
-      overwrite: true,
-    });
-    return;
-
     const link = await ensureLink('link', client, cwd, {
       autoConfirm: yes, // Always confirm when linking from vc link command
-      skipSetupConfirm: true,
       forceDelete: true,
       projectName: parsedArgs.flags['--project'],
       successEmoji: 'success',

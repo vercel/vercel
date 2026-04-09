@@ -56,6 +56,41 @@ export interface RepoLink {
 export interface EnsureRepoLinkOptions {
   yes: boolean;
   overwrite: boolean;
+  /**
+   * Experimental repo link: resolve this project by name or id in the selected
+   * scope, run framework detection for path/git suggestions, and do not offer
+   * “new project” rows from local detection.
+   */
+  projectNameOrId?: string;
+}
+
+function mergeKeyForRepoProject(
+  p: RepoProjectConfig,
+  topLevelOrgId?: string
+): string {
+  const org = p.orgId ?? topLevelOrgId ?? '';
+  const dir = normalizePath(p.directory);
+  return `${org}\n${dir}`;
+}
+
+/**
+ * Merge `incoming` into `existing` by `(orgId, directory)` (org falls back to
+ * top-level `repo.json` orgId). Matching keys are replaced; other existing rows
+ * are kept.
+ */
+export function mergeRepoProjectEntries(
+  existing: RepoProjectConfig[],
+  incoming: RepoProjectConfig[],
+  topLevelOrgId?: string
+): RepoProjectConfig[] {
+  const map = new Map<string, RepoProjectConfig>();
+  for (const p of existing) {
+    map.set(mergeKeyForRepoProject(p, topLevelOrgId), p);
+  }
+  for (const p of incoming) {
+    map.set(mergeKeyForRepoProject(p, topLevelOrgId), p);
+  }
+  return [...map.values()];
 }
 
 /** When set, `vc link --repo` / `vc link add` use the experimental discovery flow. */
@@ -117,6 +152,8 @@ async function discoverRepoProjects(
     existingDirectories?: Set<string>;
     /** When set, skip the remote selection prompt and use this remote. */
     existingRemoteName?: string;
+    /** Experimental: target project; excludes local “new project” suggestions. */
+    projectNameOrId?: string;
   }
 ): Promise<
   | { remoteName: string; projects: RepoProjectConfig[]; orgSlug: string }
@@ -139,12 +176,14 @@ async function discoverRepoProjectsLegacy(
     existingProjectIds,
     existingDirectories,
     existingRemoteName,
+    projectNameOrId: _projectNameOrId,
   }: {
     yes: boolean;
     existingProjectIds?: Set<string>;
     existingDirectories?: Set<string>;
     /** When set, skip the remote selection prompt and use this remote. */
     existingRemoteName?: string;
+    projectNameOrId?: string;
   }
 ): Promise<
   | { remoteName: string; projects: RepoProjectConfig[]; orgSlug: string }
@@ -401,7 +440,7 @@ async function discoverRepoProjectsLegacy(
 export async function ensureRepoLink(
   client: Client,
   cwd: string,
-  { yes, overwrite }: EnsureRepoLinkOptions
+  { yes, overwrite, projectNameOrId }: EnsureRepoLinkOptions
 ): Promise<RepoLink | undefined> {
   const repoLink = await getRepoLink(client, cwd);
   if (repoLink) {
@@ -412,15 +451,30 @@ export async function ensureRepoLink(
   let { rootPath, repoConfig, repoConfigPath } = repoLink;
 
   if (overwrite || !repoConfig) {
-    const result = await discoverRepoProjects(client, rootPath, { yes });
+    const result = await discoverRepoProjects(client, rootPath, {
+      yes,
+      projectNameOrId,
+    });
     if (!result) {
       return;
     }
 
-    repoConfig = {
-      remoteName: result.remoteName,
-      projects: result.projects,
-    };
+    if (!repoConfig) {
+      repoConfig = {
+        remoteName: result.remoteName,
+        projects: result.projects,
+      };
+    } else {
+      repoConfig = {
+        ...repoConfig,
+        remoteName: result.remoteName,
+        projects: mergeRepoProjectEntries(
+          repoConfig.projects,
+          result.projects,
+          repoConfig.orgId
+        ),
+      };
+    }
     await outputJSON(repoConfigPath, repoConfig, { spaces: 2 });
 
     await writeReadme(rootPath);

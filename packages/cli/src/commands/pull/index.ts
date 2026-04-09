@@ -1,7 +1,11 @@
 import chalk from 'chalk';
 import { join } from 'node:path';
 import type Client from '../../util/client';
-import type { ProjectEnvTarget, ProjectLinked } from '@vercel-internals/types';
+import type {
+  ProjectEnvTarget,
+  ProjectLink,
+  ProjectLinked,
+} from '@vercel-internals/types';
 import { emoji, prependEmoji } from '../../util/emoji';
 import { parseArguments } from '../../util/get-args';
 import stamp from '../../util/output/stamp';
@@ -112,21 +116,27 @@ export async function pullCommandLogic(
   cwd: string,
   autoConfirm: boolean,
   environment: string,
-  flags: PullCommandFlags
+  flags: PullCommandFlags,
+  options?: { preferProjectLink?: Pick<ProjectLink, 'orgId' | 'projectId'> }
 ): Promise<number> {
   const link = await ensureLink('pull', client, cwd, {
     autoConfirm,
     pullEnv: false,
+    preferProjectLink: options?.preferProjectLink,
   });
   if (typeof link === 'number') {
     return link;
   }
 
-  const { project, org, repoRoot } = link;
+  const { project, org, repoRoot, projectRootDirectory } = link;
 
   let currentDirectory: string;
   if (repoRoot) {
-    currentDirectory = join(repoRoot, project.rootDirectory || '');
+    // Align with `vercel build`: use `repo.json` directory when present so pull
+    // writes `.vercel/project.json` where build reads it (API rootDirectory can
+    // differ when linking without updating project settings).
+    const segment = projectRootDirectory ?? project.rootDirectory ?? '';
+    currentDirectory = join(repoRoot, segment);
   } else {
     currentDirectory = cwd;
   }
@@ -146,8 +156,7 @@ export async function pullCommandLogic(
 
   output.print('\n');
   output.log('Downloading project settings');
-  const isRepoLinked = typeof repoRoot === 'string';
-  await writeProjectSettings(currentDirectory, project, org, isRepoLinked);
+  await writeProjectSettings(currentDirectory, project, org);
 
   const settingsStamp = stamp();
   output.print(

@@ -75,6 +75,13 @@ export default async function selectOrg(
     0
   );
 
+  const explicitScope = getScopeOrTeamFromArgv(client.argv);
+  const resolvedFromExplicitScope = explicitScope
+    ? choices.find(
+        c => c.value.id === explicitScope || c.value.slug === explicitScope
+      )?.value
+    : undefined;
+
   // Non-interactive: if user already passed --scope/--team (currentTeam set or via argv), use it; otherwise output choices and exit
   if (client.nonInteractive) {
     if (currentTeam) {
@@ -82,13 +89,7 @@ export default async function selectOrg(
       if (match) return match.value;
     }
 
-    const explicitScope = getScopeOrTeamFromArgv(client.argv);
-    if (explicitScope) {
-      const match = choices.find(
-        c => c.value.id === explicitScope || c.value.slug === explicitScope
-      );
-      if (match) return match.value;
-    }
+    if (resolvedFromExplicitScope) return resolvedFromExplicitScope;
 
     const actionRequired: ActionRequiredPayload = {
       status: 'action_required',
@@ -107,6 +108,11 @@ export default async function selectOrg(
     };
     outputActionRequired(client, actionRequired);
     process.exit(1);
+  }
+
+  // Interactive: explicit `--scope` / `--team` on the command line — use it, do not prompt
+  if (resolvedFromExplicitScope) {
+    return resolvedFromExplicitScope;
   }
 
   if (autoConfirm) {

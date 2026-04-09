@@ -59,7 +59,6 @@ type GitLinkedProjectWithMisconfiguredRootDirectory = {
   suggestedDirectory: string;
   framework: string | null | undefined;
   orgId: string;
-  orgSlug: string;
   matchesFramework: boolean;
   matchesTeam: boolean;
   matchesRootDirectory: boolean;
@@ -73,7 +72,6 @@ type NonGitLinkedProject = {
   directory: string;
   suggestedDirectory: string;
   framework: string | null | undefined;
-  orgSlug: string;
   orgId: string;
   matchesFramework: boolean;
   matchesTeam: boolean;
@@ -119,7 +117,6 @@ function demoMisconfigured(
     suggestedDirectory: row.suggestedDirectory,
     framework: row.framework,
     orgId: org.id,
-    orgSlug: org.slug,
     matchesFramework: true,
     matchesTeam: true,
     matchesRootDirectory: false,
@@ -144,7 +141,6 @@ function demoNonGit(
     suggestedDirectory: row.suggestedDirectory,
     framework: row.framework,
     orgId: org.id,
-    orgSlug: org.slug,
     matchesFramework: true,
     matchesTeam: true,
     matchesRootDirectory: false,

@@ -5,6 +5,7 @@ import type { RepoProjectConfig } from '../../../../src/util/link/repo';
 import {
   findProjectsFromPath,
   findRepoRoot,
+  mergeRepoProjectEntries,
 } from '../../../../src/util/link/repo';
 
 // Root of `vercel/vercel` repo
@@ -67,5 +68,33 @@ describe('findProjectsFromPath()', () => {
   it('should return empty array when there are no matching Projects', () => {
     const actual = findProjectsFromPath([projects[1]], '.');
     expect(actual).toHaveLength(0);
+  });
+});
+
+describe('mergeRepoProjectEntries()', () => {
+  const teamA = 'team_a';
+
+  it('replaces entries with same orgId and directory', () => {
+    const existing: RepoProjectConfig[] = [
+      { id: 'old', name: 'n1', directory: 'apps/web', orgId: teamA },
+      { id: 'keep', name: 'other', directory: 'apps/api', orgId: teamA },
+    ];
+    const incoming: RepoProjectConfig[] = [
+      { id: 'new', name: 'n1', directory: 'apps/web', orgId: teamA },
+    ];
+    const merged = mergeRepoProjectEntries(existing, incoming, undefined);
+    expect(merged).toHaveLength(2);
+    expect(merged.find(p => p.directory === 'apps/web')?.id).toBe('new');
+    expect(merged.find(p => p.directory === 'apps/api')?.id).toBe('keep');
+  });
+
+  it('uses top-level orgId for key when row omits orgId', () => {
+    const existing: RepoProjectConfig[] = [{ id: 'a', name: 'x', directory: '.' }];
+    const incoming: RepoProjectConfig[] = [
+      { id: 'b', name: 'y', directory: '.', orgId: teamA },
+    ];
+    const merged = mergeRepoProjectEntries(existing, incoming, teamA);
+    expect(merged).toHaveLength(1);
+    expect(merged[0].id).toBe('b');
   });
 });

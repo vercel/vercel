@@ -822,8 +822,12 @@ async function handleContinueSubcommand(
 
   // Resolve vercelOutputDir - prebuilt is implicit for continue
   let vercelOutputDir: string = join(cwd, '.vercel/output');
-  if (link.repoRoot && link.project.rootDirectory) {
-    vercelOutputDir = join(cwd, link.project.rootDirectory, '.vercel/output');
+  if (link.repoRoot) {
+    const sub =
+      link.projectRootDirectory ?? link.project.rootDirectory ?? '';
+    if (sub) {
+      vercelOutputDir = join(cwd, sub, '.vercel/output');
+    }
   }
 
   const prebuiltExists = await fs.pathExists(vercelOutputDir);
@@ -1083,8 +1087,12 @@ async function handleDefaultDeploy(
   if (parsedArguments.flags['--prebuilt']) {
     vercelOutputDir = join(cwd, '.vercel/output');
 
-    if (link.repoRoot && link.project.rootDirectory) {
-      vercelOutputDir = join(cwd, link.project.rootDirectory, '.vercel/output');
+    if (link.repoRoot) {
+      const sub =
+        link.projectRootDirectory ?? link.project.rootDirectory ?? '';
+      if (sub) {
+        vercelOutputDir = join(cwd, sub, '.vercel/output');
+      }
     }
 
     const prebuiltExists = await fs.pathExists(vercelOutputDir);

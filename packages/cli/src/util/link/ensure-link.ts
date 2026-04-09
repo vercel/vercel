@@ -45,7 +45,12 @@ export async function ensureLink(
       // and the repo-linked project is ambiguous).
       link = { status: 'not_linked', org: null, project: null };
     } else {
-      link = await getLinkedProject(client, cwd, opts.projectName);
+      link = await getLinkedProject(
+        client,
+        cwd,
+        opts.projectName,
+        opts.preferProjectLink
+      );
     }
     opts.link = link;
   }

@@ -332,7 +332,15 @@ export default async function main(client: Client): Promise<number> {
       client.cwd,
       Boolean(parsedArgs.flags['--yes']),
       target,
-      parsedArgs.flags
+      parsedArgs.flags,
+      link
+        ? {
+            preferProjectLink: {
+              orgId: link.orgId,
+              projectId: link.projectId,
+            },
+          }
+        : undefined
     );
     if (result !== 0) {
       return result;
@@ -341,6 +349,11 @@ export default async function main(client: Client): Promise<number> {
     client.argv = originalArgv;
     project = await readProjectSettings(vercelDir);
   }
+
+  if (!project?.settings) {
+    return 1;
+  }
+  const projectWithSettings = project as ProjectLinkAndSettings;
 
   // Delete output directory from potential previous build
   const defaultOutputDir = join(cwd, projectRootDirectory, OUTPUT_DIR);
@@ -436,12 +449,13 @@ export default async function main(client: Client): Promise<number> {
     }
 
     // For legacy Speed Insights
-    if (project.settings.analyticsId) {
+    if (projectWithSettings.settings.analyticsId) {
       // we pass the env down to the builder
       // inside the builder we decide if we want to keep it or not
 
       envToUnset.add('VERCEL_ANALYTICS_ID');
-      process.env.VERCEL_ANALYTICS_ID = project.settings.analyticsId;
+      process.env.VERCEL_ANALYTICS_ID =
+        projectWithSettings.settings.analyticsId;
     }
 
     // Some build processes use these env vars to platform detect Vercel
@@ -452,7 +466,15 @@ export default async function main(client: Client): Promise<number> {
       await rootSpan
         .child('vc.doBuild')
         .trace(span =>
-          doBuild(client, project, buildsJson, cwd, outputDir, span, standalone)
+          doBuild(
+            client,
+            projectWithSettings,
+            buildsJson,
+            cwd,
+            outputDir,
+            span,
+            standalone
+          )
         );
     } finally {
       await rootSpan.stop();

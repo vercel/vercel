@@ -49,6 +49,15 @@ export class LinkTelemetryClient
     }
   }
 
+  trackCliOptionScope(scope: string | undefined) {
+    if (scope) {
+      this.trackCliOption({
+        option: 'scope',
+        value: this.redactedValue,
+      });
+    }
+  }
+
   trackCliOptionProjectId(value: string | undefined) {
     if (value) {
       this.trackCliOption({

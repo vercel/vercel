@@ -2,6 +2,7 @@ import chalk from 'chalk';
 import { remove } from 'fs-extra';
 import { join, basename } from 'path';
 import type {
+  ProjectLink,
   ProjectLinkResult,
   ProjectSettings,
   Org,
@@ -67,8 +68,11 @@ export interface SetupAndLinkOptions {
   v0?: boolean;
   /** When true, search matching projects across teams before standard linking flow */
   searchAcrossTeams?: boolean;
-  /** When true, skip the setup confirmation prompt */
-  skipSetupConfirm?: boolean;
+  /**
+   * Prefer this org/project when resolving `repo.json` (e.g. already chosen by a
+   * parent command in the same process).
+   */
+  preferProjectLink?: Pick<ProjectLink, 'orgId' | 'projectId'>;
 }
 
 export default async function setupAndLink(
@@ -84,8 +88,8 @@ export default async function setupAndLink(
     nonInteractive = false,
     pullEnv = true,
     v0,
-    skipSetupConfirm = false,
     searchAcrossTeams = false,
+    preferProjectLink,
   }: SetupAndLinkOptions
 ): Promise<ProjectLinkResult> {
   const { config } = client;
@@ -95,7 +99,7 @@ export default async function setupAndLink(
     return { status: 'error', exitCode: 1, reason: 'PATH_IS_FILE' };
   }
   if (!link) {
-    link = await getLinkedProject(client, path);
+    link = await getLinkedProject(client, path, undefined, preferProjectLink);
   }
   const isTTY = client.stdin.isTTY;
   let rootDirectory: string | null = null;
@@ -116,14 +120,13 @@ export default async function setupAndLink(
     return { status: 'error', exitCode: 1, reason: 'HEADLESS' };
   }
 
-  const shouldStartSetup = skipSetupConfirm
-    ? true
-    : autoConfirm ||
-      nonInteractive ||
-      (await client.input.confirm(
-        `${setupMsg} ${chalk.cyan(`“${toHumanPath(path)}”`)}?`,
-        true
-      ));
+  const shouldStartSetup =
+    autoConfirm ||
+    nonInteractive ||
+    (await client.input.confirm(
+      `${setupMsg} ${chalk.cyan(`“${toHumanPath(path)}”`)}?`,
+      true
+    ));
 
   if (!shouldStartSetup) {
     output.print(`Canceled. Project not set up.\n`);

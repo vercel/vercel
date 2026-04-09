@@ -1,7 +1,13 @@
-import { join } from 'path';
-import { outputJSON, readFile } from 'fs-extra';
+import { dirname, join, relative } from 'path';
+import { normalizePath } from '@vercel/build-utils';
+import { outputJSON, readFile, readJSON } from 'fs-extra';
 import type { VercelConfig } from '@vercel/client';
-import { VERCEL_DIR, VERCEL_DIR_PROJECT } from './link';
+import { VERCEL_DIR, VERCEL_DIR_PROJECT, VERCEL_DIR_REPO } from './link';
+import {
+  findProjectsFromPath,
+  findRepoRoot,
+  type RepoProjectsConfig,
+} from '../link/repo';
 import type { PartialProjectSettings } from '../input/edit-project-settings';
 import type { Org, Project, ProjectLink } from '@vercel-internals/types';
 import { isErrnoException, isError } from '@vercel/error-utils';
@@ -23,12 +29,13 @@ export type ProjectLinkAndSettings = Partial<ProjectLink> & {
 
 // writeProjectSettings writes the project configuration to `vercel/project.json`
 // Write the project configuration to `.vercel/project.json`
-// that is needed for `vercel build` and `vercel dev` commands
+// that is needed for `vercel build` and `vercel dev` commands.
+// Always records `orgId` / `projectId` / `projectName` so monorepo paths can tell
+// which Vercel project the pulled settings belong to (see `getProjectLink`).
 export async function writeProjectSettings(
   cwd: string,
   project: Project,
-  org: Org,
-  isRepoLinked: boolean
+  org: Org
 ) {
   let analyticsId: string | undefined;
   if (
@@ -41,9 +48,9 @@ export async function writeProjectSettings(
   }
 
   const projectLinkAndSettings: ProjectLinkAndSettings = {
-    projectId: isRepoLinked ? undefined : project.id,
-    orgId: isRepoLinked ? undefined : org.id,
-    projectName: isRepoLinked ? undefined : project.name,
+    projectId: project.id,
+    orgId: org.id,
+    projectName: project.name,
     settings: {
       createdAt: project.createdAt,
       framework: project.framework,
@@ -63,9 +70,12 @@ export async function writeProjectSettings(
   });
 }
 
-export async function readProjectSettings(vercelDir: string) {
+export async function readProjectSettings(
+  vercelDir: string
+): Promise<ProjectLinkAndSettings | null> {
+  let parsed: unknown;
   try {
-    return JSON.parse(
+    parsed = JSON.parse(
       await readFile(join(vercelDir, VERCEL_DIR_PROJECT), 'utf8')
     );
   } catch (err: unknown) {
@@ -85,6 +95,78 @@ export async function readProjectSettings(vercelDir: string) {
 
     throw err;
   }
+
+  return (await preferRepoJsonRootDirectory(
+    vercelDir,
+    parsed
+  )) as ProjectLinkAndSettings | null;
+}
+
+/**
+ * When `.vercel/repo.json` maps the same project (`projectId` / `orgId`) as
+ * `project.json`, use that entry's `directory` as `settings.rootDirectory`
+ * so local repo link wins over stale dashboard values from pull.
+ */
+async function preferRepoJsonRootDirectory(
+  vercelDir: string,
+  parsed: unknown
+): Promise<unknown> {
+  if (!parsed || typeof parsed !== 'object') {
+    return parsed;
+  }
+  const raw = parsed as ProjectLinkAndSettings & {
+    projectId?: string;
+    orgId?: string;
+  };
+  if (!raw.settings) {
+    return parsed;
+  }
+  const projectId = raw.projectId;
+  const orgId = raw.orgId;
+  if (typeof projectId !== 'string' || typeof orgId !== 'string') {
+    return parsed;
+  }
+
+  const projectDir = dirname(vercelDir);
+  const rootPath = await findRepoRoot(projectDir);
+  if (!rootPath) {
+    return parsed;
+  }
+
+  const repoConfigPath = join(rootPath, VERCEL_DIR, VERCEL_DIR_REPO);
+  const repoConfig: RepoProjectsConfig | undefined = await readJSON(
+    repoConfigPath
+  ).catch((err: unknown) => {
+    if (isErrnoException(err) && err.code === 'ENOENT') return undefined;
+    throw err;
+  });
+  if (!repoConfig?.projects?.length) {
+    return parsed;
+  }
+
+  const rel = normalizePath(relative(rootPath, projectDir));
+  const topOrg = repoConfig.orgId;
+  const matchesForPath = findProjectsFromPath(repoConfig.projects, rel);
+  const row = matchesForPath.find(
+    p =>
+      p.id === projectId &&
+      (p.orgId ?? topOrg) === orgId
+  );
+  if (!row) {
+    return parsed;
+  }
+
+  const fromRepo = row.directory;
+  const rootDirectory =
+    fromRepo === '' || fromRepo === '.' ? null : normalizePath(fromRepo);
+
+  return {
+    ...raw,
+    settings: {
+      ...raw.settings,
+      rootDirectory,
+    },
+  };
 }
 
 export function pickOverrides(

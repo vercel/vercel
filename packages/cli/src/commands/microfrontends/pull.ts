@@ -44,11 +44,12 @@ export default async function pull(client: Client): Promise<number> {
     return link;
   }
 
-  const { project, org, repoRoot } = link;
+  const { project, org, repoRoot, projectRootDirectory } = link;
 
   let currentDirectory: string;
   if (repoRoot) {
-    currentDirectory = join(repoRoot, project.rootDirectory || '');
+    const segment = projectRootDirectory ?? project.rootDirectory ?? '';
+    currentDirectory = join(repoRoot, segment);
   } else {
     currentDirectory = client.cwd;
   }

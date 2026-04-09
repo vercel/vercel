@@ -38,6 +38,23 @@ describe('selectOrg', () => {
       await expect(selectOrgPromise).resolves.toHaveProperty('id', user.id);
     });
 
+    it('uses --scope or --team from argv without prompting (interactive)', async () => {
+      client.setArgv('link', '--repo', '--scope', team.slug);
+      const selectSpy = vi.spyOn(client.input, 'select');
+      const result = await selectOrg(
+        client,
+        'Which scope should contain your Project(s)?',
+        false
+      );
+      expect(selectSpy).not.toHaveBeenCalled();
+      expect(result).toEqual({
+        type: 'team',
+        id: team.id,
+        slug: team.slug,
+      });
+      selectSpy.mockRestore();
+    });
+
     describe('with a selected team scope', () => {
       beforeEach(() => {
         client.config.currentTeam = team.id;
