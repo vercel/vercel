@@ -235,7 +235,6 @@ async function extractEntrypoint(
     // detect celery's app entrypoint when command is similar to
     // `celery -A myapp.celery worker` if we by accident have `worker.py`,
     // meanwhile it won't break on
-    // `gunicorn --wsgi-app myapp.wsgi:app -c gunicorn.conf.py` or
     // `gunicorn -c gunicorn.conf.py myapp.wsgi:app` because
     // `gunicorn.conf.py` won't pass module existence check
     if (!firstModulePath && PY_MODULE_RE.test(token)) {
