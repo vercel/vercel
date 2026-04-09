@@ -57,3 +57,81 @@ export default async function searchProjectAcrossTeams(
 
   return matches;
 }
+
+/**
+ * Like multiple {@link searchProjectAcrossTeams} calls (one per detected root), but loads
+ * user/teams once and runs all project lookups in parallel — used by repo link discovery.
+ */
+export async function searchProjectsForLinkDiscoveryByRoots(
+  client: Client,
+  roots: Array<{ rootDirectory: string; folderName: string }>
+): Promise<Map<string, CrossTeamMatch[]>> {
+  const result = new Map<string, CrossTeamMatch[]>();
+  if (roots.length === 0) {
+    return result;
+  }
+
+  const [user, teams] = await Promise.all([getUser(client), getTeams(client)]);
+
+  const orgs: Org[] = [
+    ...(user.version === 'northstar'
+      ? []
+      : [{ type: 'user' as const, id: user.id, slug: user.username }]),
+    ...teams.map(t => ({
+      type: 'team' as const,
+      id: t.id,
+      slug: t.slug,
+    })),
+  ];
+
+  type TaskOutcome = {
+    rootDirectory: string;
+    match: CrossTeamMatch | null;
+  };
+
+  const tasks: Promise<TaskOutcome>[] = [];
+
+  for (const { rootDirectory, folderName } of roots) {
+    const slugifiedName = slugify(folderName);
+    const searchNames = [folderName];
+    if (slugifiedName !== folderName) {
+      searchNames.push(slugifiedName);
+    }
+    for (const org of orgs) {
+      for (const name of searchNames) {
+        tasks.push(
+          getProjectByIdOrName(client, name, org.id)
+            .then(
+              (projectResult): TaskOutcome => ({
+                rootDirectory,
+                match:
+                  projectResult instanceof ProjectNotFound
+                    ? null
+                    : { project: projectResult, org },
+              })
+            )
+            .catch((): TaskOutcome => ({ rootDirectory, match: null }))
+        );
+      }
+    }
+  }
+
+  const outcomes = await Promise.all(tasks);
+
+  const seenByRoot = new Map<string, Set<string>>();
+  for (const { rootDirectory, match } of outcomes) {
+    if (!match?.project.id) continue;
+    let seen = seenByRoot.get(rootDirectory);
+    if (!seen) {
+      seen = new Set();
+      seenByRoot.set(rootDirectory, seen);
+    }
+    if (seen.has(match.project.id)) continue;
+    seen.add(match.project.id);
+    const list = result.get(rootDirectory) ?? [];
+    list.push(match);
+    result.set(rootDirectory, list);
+  }
+
+  return result;
+}

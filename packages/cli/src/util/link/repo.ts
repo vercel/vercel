@@ -2,12 +2,11 @@ import chalk from 'chalk';
 import pluralize from 'pluralize';
 import { homedir } from 'os';
 import slugify from '@sindresorhus/slugify';
-import { basename, join } from 'path';
+import { basename, join, relative } from 'path';
 import { normalizePath, traverseUpDirectories } from '@vercel/build-utils';
 import { lstat, readJSON, outputJSON } from 'fs-extra';
 import { VERCEL_DIR, VERCEL_DIR_REPO, writeReadme } from '../projects/link';
 import { getRemoteUrls } from '../create-git-meta';
-import link from '../output/link';
 import { emoji, prependEmoji } from '../emoji';
 import selectOrg from '../input/select-org';
 import { addToGitIgnore } from './add-to-gitignore';
@@ -16,8 +15,8 @@ import type { Framework } from '@vercel/frameworks';
 import type { Org, Project } from '@vercel-internals/types';
 import createProject from '../projects/create-project';
 import { detectProjects } from '../projects/detect-projects';
-import { repoInfoToUrl } from '../git/repo-info-to-url';
 import { connectGitProvider, parseRepoUrl } from '../git/connect-git-provider';
+import { repoInfoToUrl } from '../git/repo-info-to-url';
 import { getGitConfigPath, getGitRootDirectory } from '../git-helpers';
 import output from '../../output-manager';
 import table from '../output/table';
@@ -26,7 +25,7 @@ import {
   formatFrameworkLabelFromFramework,
 } from '../format-framework-label';
 import { alignColumnCells } from '../align-column-cells';
-import searchProjectAcrossTeams from '../projects/search-project-across-teams';
+import { searchProjectsForLinkDiscoveryByRoots } from '../projects/search-project-across-teams';
 
 const home = homedir();
 
@@ -175,10 +174,10 @@ type DetectedProject = {
 type Choice = {
   name: string;
   value:
-  | GitLinkedProject
-  | GitLinkedProjectWithMisconfiguredRootDirectory
-  | NonGitLinkedProject
-  | DetectedProject;
+    | GitLinkedProject
+    | GitLinkedProjectWithMisconfiguredRootDirectory
+    | NonGitLinkedProject
+    | DetectedProject;
   checked: boolean;
 };
 
@@ -245,13 +244,10 @@ async function patchProjectRootDirectory(
   projectId: string,
   dirNorm: string
 ): Promise<void> {
-  await client.fetch<Project>(
-    `/v9/projects/${encodeURIComponent(projectId)}`,
-    {
-      method: 'PATCH',
-      body: { rootDirectory: dirNorm === '' ? null : dirNorm },
-    }
-  );
+  await client.fetch<Project>(`/v9/projects/${encodeURIComponent(projectId)}`, {
+    method: 'PATCH',
+    body: { rootDirectory: dirNorm === '' ? null : dirNorm },
+  });
 }
 
 async function applyRepoLinkSelections(
@@ -287,7 +283,7 @@ async function applyRepoLinkSelections(
           const name = slugify(
             [
               basename(sel.rootDirectory === '.' ? '' : sel.rootDirectory) ||
-              basename(rootPath),
+                basename(rootPath),
               i > 0 ? framework.slug : '',
             ]
               .filter(Boolean)
@@ -360,6 +356,28 @@ async function applyRepoLinkSelections(
   }
 
   return repoProjects;
+}
+
+async function fetchVercelProjectsLinkedToRepo(
+  client: Client,
+  orgSlug: string,
+  repoUrl: string
+): Promise<Project[]> {
+  output.spinner(
+    `Searching for matching projects under ${chalk.bold(orgSlug)}…`
+  );
+  const query = new URLSearchParams({ repoUrl });
+  const projectsIterator = client.fetchPaginated<{
+    projects: Project[];
+  }>(`/v9/projects?${query}`);
+  let acc: Project[] = [];
+  for await (const chunk of projectsIterator) {
+    acc = acc.concat(chunk.projects);
+    if (chunk.pagination.next) {
+      output.spinner(`Searching under ${chalk.bold(orgSlug)}…`, 0);
+    }
+  }
+  return acc;
 }
 
 /**
@@ -467,15 +485,14 @@ async function discoverRepoProjects(
   if (!parsedRepoUrl) {
     throw new Error(`Failed to parse Git URL: ${repoUrl}`);
   }
-  const repoUrlLink = output.link(repoUrl, repoInfoToUrl(parsedRepoUrl), {
-    fallback: () => link(repoUrl),
-  });
-  const detectedProjects = await detectedProjectsPromise;
+  output.debug(`Link discovery: ${repoUrl} → ${repoInfoToUrl(parsedRepoUrl)}`);
 
   const linkDemoId = process.env.LINK_DEMO?.trim();
   let projects: Project[] = [];
+  let detectedProjects: Map<string, Framework[]>;
 
   if (linkDemoId) {
+    detectedProjects = await detectedProjectsPromise;
     output.print(
       `${chalk.yellow(
         `LINK_DEMO=${linkDemoId} — loading fixture (skipping project API & search)`
@@ -484,20 +501,10 @@ async function discoverRepoProjects(
     const { applyLinkDemoScenario } = await import('./link-demo-scenarios');
     applyLinkDemoScenario(linkDemoId, org, p, detectedProjects);
   } else {
-    output.spinner(
-      `Fetching Projects for ${repoUrlLink} under ${chalk.bold(org.slug)}…`
-    );
-    const query = new URLSearchParams({ repoUrl });
-    // TODO: we may remove the team scope from this flow, if so, this will expand
-    const projectsIterator = client.fetchPaginated<{
-      projects: Project[];
-    }>(`/v9/projects?${query}`);
-    for await (const chunk of projectsIterator) {
-      projects = projects.concat(chunk.projects);
-      if (chunk.pagination.next) {
-        output.spinner(`Found ${chalk.bold(projects.length)} Projects…`, 0);
-      }
-    }
+    [detectedProjects, projects] = await Promise.all([
+      detectedProjectsPromise,
+      fetchVercelProjectsLinkedToRepo(client, org.slug, repoUrl),
+    ]);
 
     // Filter out projects that are already linked in repo.json (by ID or directory)
     if (existingProjectIds || existingDirectories) {
@@ -528,18 +535,31 @@ async function discoverRepoProjects(
 
     const cwdFolder = basename(client.cwd);
 
-    const nonGitLinkedProjects = new Map<string, FoundProject[]>();
-    const gitLinkedProjectsWithMisconfiguredRootDirectory = new Map<
-      string,
-      FoundProject[]
-    >();
-    for (const [rootDirectory, frameworks] of detectedProjects) {
+    const rootsForSearch: Array<{ rootDirectory: string; folderName: string }> =
+      [];
+    for (const [rootDirectory] of detectedProjects) {
       const folderName =
         normalizeRootDirectoryPath(rootDirectory) === ''
           ? cwdFolder
           : rootDirectory.split('/').pop();
       if (!folderName) continue;
-      const matches = await searchProjectAcrossTeams(client, folderName);
+      rootsForSearch.push({ rootDirectory, folderName });
+    }
+
+    const matchesByRootDirectory = await searchProjectsForLinkDiscoveryByRoots(
+      client,
+      rootsForSearch
+    );
+
+    const nonGitLinkedProjects = new Map<string, FoundProject[]>();
+    const gitLinkedProjectsWithMisconfiguredRootDirectory = new Map<
+      string,
+      FoundProject[]
+    >();
+    for (const { rootDirectory, folderName } of rootsForSearch) {
+      const frameworks = detectedProjects.get(rootDirectory);
+      if (!frameworks) continue;
+      const matches = matchesByRootDirectory.get(rootDirectory) ?? [];
       const foundProjectCandidates: FoundProject[] = [];
       const foundProjectCandidatesWithMisconfiguredRootDirectory: FoundProject[] =
         [];
@@ -685,6 +705,26 @@ async function discoverRepoProjects(
   // }
 
   p.detectedProjects = detectedProjects;
+
+  const normCwdFromRoot = cwdRelativePathFromRepoRoot(rootPath, client.cwd);
+  const cwdProjectScope = resolveCwdLinkScope(normCwdFromRoot, p);
+  if (normCwdFromRoot !== '' && cwdProjectScope === null) {
+    output.print(
+      `${chalk.dim(
+        'Current directory is not a project folder. Showing link options for the whole repository.'
+      )}`
+    );
+  } else if (cwdProjectScope !== null) {
+    output.print(
+      `${chalk.dim(
+        `Showing projects for ${formatRootForDisplay(
+          cwdProjectScope
+        )} only (from your current directory).`
+      )}`
+    );
+    filterRepoLinkBucketsByScope(cwdProjectScope, p);
+  }
+
   // output.log(
   //   `Auto - linking ${
   // pluralize(
@@ -785,7 +825,7 @@ async function discoverRepoProjects(
     selected2 = [];
   } else if (allInteractiveSpecs.length === 1) {
     const sole = allInteractiveSpecs[0];
-    const soleNeedsSetupPhase =
+    const soleRowNeedsSetupPhase =
       sole.value.type === 'nonGitLinkedProject' ||
       sole.value.type === 'gitLinkedProjectWithMisconfiguredRootDirectory';
     output.print(
@@ -804,18 +844,15 @@ async function discoverRepoProjects(
         return;
       }
       selected2 = [sole.value];
-    } else if (!soleNeedsSetupPhase) {
+    } else if (soleRowNeedsSetupPhase) {
+      // Preview is enough; go straight to project setup (connect / root dir, etc.).
+      selected2 = [sole.value];
+    } else {
       const linkThis = await client.input.confirm(
         linkRepoApplyConfirmMessage(1),
         true
       );
       selected2 = linkThis ? [sole.value] : [];
-    } else {
-      const include = await client.input.confirm(
-        'Include this project in the repository link?',
-        true
-      );
-      selected2 = include ? [sole.value] : [];
     }
   } else {
     const dataRowsForAlign = [
@@ -872,10 +909,7 @@ async function discoverRepoProjects(
             renderSelectedChoices: (
               selectedChoices: ReadonlyArray<{ value: Choice['value'] }>
             ) =>
-              formatRepoLinkCheckboxSelectionSummary(
-                rootPath,
-                selectedChoices
-              ),
+              formatRepoLinkCheckboxSelectionSummary(rootPath, selectedChoices),
           },
         },
       });
@@ -947,7 +981,7 @@ async function discoverRepoProjects(
         'LINK_DEMO — demo complete; exiting without creating projects, updating settings, or writing repo.json.'
       )}\n`
     );
-    output.print(JSON.stringify(selected2, null, 2));
+    // output.print(JSON.stringify(selected2, null, 2));
     return;
   }
 
@@ -1001,7 +1035,8 @@ export async function ensureRepoLink(
           'Project',
           result.projects.length,
           true
-        )} under ${chalk.bold(result.orgSlug)} (created ${VERCEL_DIR}${isGitIgnoreUpdated ? ' and added it to .gitignore' : ''
+        )} under ${chalk.bold(result.orgSlug)} (created ${VERCEL_DIR}${
+          isGitIgnoreUpdated ? ' and added it to .gitignore' : ''
         })`,
         emoji('link')
       ) + '\n'
@@ -1185,6 +1220,92 @@ function formatRootForDisplay(dir: string): string {
   return n === '' ? '.' : n;
 }
 
+/** Path from repo root to `cwd`, normalized for comparisons (`""` = repo root). */
+function cwdRelativePathFromRepoRoot(repoRoot: string, cwd: string): string {
+  const rel = relative(repoRoot, cwd);
+  if (!rel || rel === '') return '';
+  return normalizeRootDirectoryPath(normalizePath(rel));
+}
+
+type RepoLinkBuckets = {
+  gitLinkedProjects: GitLinkedProject[];
+  gitLinkedProjectsWithMisconfiguredRootDirectory: GitLinkedProjectWithMisconfiguredRootDirectory[];
+  nonGitLinkedProjects: NonGitLinkedProject[];
+  detectedProjects: Map<string, Framework[]>;
+};
+
+function collectDirectoryRootsForCwdScope(p: RepoLinkBuckets): Set<string> {
+  const roots = new Set<string>();
+  for (const g of p.gitLinkedProjects) {
+    roots.add(normalizeRootDirectoryPath(g.directory));
+  }
+  for (const m of p.gitLinkedProjectsWithMisconfiguredRootDirectory) {
+    roots.add(normalizeRootDirectoryPath(m.directory));
+    roots.add(normalizeRootDirectoryPath(m.suggestedDirectory));
+  }
+  for (const n of p.nonGitLinkedProjects) {
+    roots.add(normalizeRootDirectoryPath(n.directory));
+    roots.add(normalizeRootDirectoryPath(n.suggestedDirectory));
+  }
+  for (const k of p.detectedProjects.keys()) {
+    roots.add(normalizeRootDirectoryPath(k));
+  }
+  return roots;
+}
+
+/**
+ * When cwd is inside a known project root (Vercel or locally detected), returns
+ * that root directory key; otherwise `null` (treat as repo-wide / not a project folder).
+ */
+function resolveCwdLinkScope(
+  normCwdRelative: string,
+  p: RepoLinkBuckets
+): string | null {
+  if (normCwdRelative === '') {
+    return null;
+  }
+  const roots = collectDirectoryRootsForCwdScope(p);
+  let best: string | null = null;
+  let bestLen = -1;
+  for (const r of roots) {
+    let inside = false;
+    if (r === '') {
+      inside = normCwdRelative === '';
+    } else {
+      inside = normCwdRelative === r || normCwdRelative.startsWith(`${r}/`);
+    }
+    if (!inside) continue;
+    if (r.length > bestLen) {
+      bestLen = r.length;
+      best = r;
+    }
+  }
+  return best;
+}
+
+function filterRepoLinkBucketsByScope(scope: string, p: RepoLinkBuckets): void {
+  const sc = normalizeRootDirectoryPath(scope);
+  p.gitLinkedProjects = p.gitLinkedProjects.filter(
+    g => normalizeRootDirectoryPath(g.directory) === sc
+  );
+  p.gitLinkedProjectsWithMisconfiguredRootDirectory =
+    p.gitLinkedProjectsWithMisconfiguredRootDirectory.filter(
+      m =>
+        normalizeRootDirectoryPath(m.suggestedDirectory) === sc ||
+        normalizeRootDirectoryPath(m.directory) === sc
+    );
+  p.nonGitLinkedProjects = p.nonGitLinkedProjects.filter(
+    n =>
+      normalizeRootDirectoryPath(n.suggestedDirectory) === sc ||
+      normalizeRootDirectoryPath(n.directory) === sc
+  );
+  for (const k of [...p.detectedProjects.keys()]) {
+    if (normalizeRootDirectoryPath(k) !== sc) {
+      p.detectedProjects.delete(k);
+    }
+  }
+}
+
 function formatRootDirectoryCell(
   fromDisplay: string,
   toDisplay: string,
@@ -1209,7 +1330,7 @@ function rootCellForProjectWithDirectoryOptions(
   const isMoving =
     sel.moveDirectory != null &&
     normalizeRootDirectoryPath(sel.moveDirectory) !==
-    normalizeRootDirectoryPath(sel.directory);
+      normalizeRootDirectoryPath(sel.directory);
   return formatRootDirectoryCell(fromDisplay, toDisplay, {
     isMoving,
   });
@@ -1227,7 +1348,9 @@ function linkPlanActionCell(
     return chalk.dim('—');
   }
   const willConnectGit = sel.connectionOption === 'connect';
-  const willUpdateProjectSettings = Boolean(sel.updateDirectoryInProjectSettings);
+  const willUpdateProjectSettings = Boolean(
+    sel.updateDirectoryInProjectSettings
+  );
   if (willConnectGit) {
     return chalk.dim('Connect Git repo');
   }
@@ -1306,7 +1429,9 @@ function linkSelectionTableRow(
       return maybeAction([
         chalk.bold(proposedNames.join(', ')),
         formatRootForDisplay(sel.rootDirectory),
-        sel.frameworks.map(f => formatFrameworkLabelFromFramework(f)).join(', '),
+        sel.frameworks
+          .map(f => formatFrameworkLabelFromFramework(f))
+          .join(', '),
       ]);
     }
     default: {
@@ -1363,7 +1488,9 @@ function printLinkSelectionSummary(options: {
     return false;
   }
 
-  const includeActionColumn = selections.some(selectionHasNonemptyLinkPlanAction);
+  const includeActionColumn = selections.some(
+    selectionHasNonemptyLinkPlanAction
+  );
   const rows = selections.map(sel =>
     linkSelectionTableRow(sel, rootPath, includeActionColumn)
   );

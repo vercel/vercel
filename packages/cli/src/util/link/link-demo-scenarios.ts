@@ -9,20 +9,35 @@ function fw(slug: string): Framework {
   return f;
 }
 
-/** Exported for tests — stable scenario ids for `LINK_DEMO=…`. */
+/**
+ * Stable ids for `LINK_DEMO=…` interactive fixtures.
+ *
+ * **`nest-web`** / **`nest-api`** — Run from `apps/web` or `apps/api` (`cd …`) so the
+ * repo-link picker scopes to that subdirectory (mirrors “single option at root”).
+ */
 export const LINK_DEMO_SCENARIO_IDS = [
-  'monorepo-1',
-  'monorepo-2',
-  'simple-app',
-  'only-new',
-  'detected-multi',
-  'misconfig-only',
-  /** Single row: only a non-git-linked project (directory mismatch). */
-  'non-git-only',
-  /** Single row: one misconfigured root directory. */
-  'sole-misconfigured',
-  /** Two primary rows: git-linked + non-git (no detected / new projects). */
-  'git-and-non-git',
+  /** Git-linked + misconfigured + non-git + one detected “new” row. */
+  'mixed-all',
+  /** Dashboard at repo root vs suggested `apps/web` + local detect. */
+  'dash-split',
+  /** One git-linked project at repo root only. */
+  'root-linked',
+  /** Single locally detected app root (new project path). */
+  'one-detect',
+  /** Several detected roots, no API rows. */
+  'multi-detect',
+  /** Two misconfigured-root rows only. */
+  'dual-misconfig',
+  /** One non-git row (Vercel vs suggested mismatch). */
+  'solo-non-git',
+  /** One misconfigured row only. */
+  'solo-misconfig',
+  /** One git-linked + one non-git, no detections. */
+  'pair-git-nongit',
+  /** Under `apps/web` only — use after `cd apps/web`. */
+  'nest-web',
+  /** Under `apps/api` only — use after `cd apps/api`. */
+  'nest-api',
 ] as const;
 
 export type LinkDemoScenarioId = (typeof LINK_DEMO_SCENARIO_IDS)[number];
@@ -137,7 +152,7 @@ function demoNonGit(
   };
 }
 
-function scenarioMonorepo1(org: Org): LinkDemoPayload {
+function scenarioMixedAll(org: Org): LinkDemoPayload {
   return {
     gitLinkedProjects: [
       demoGitLinked(org, { name: 'web-2', directory: 'apps/web-2' }),
@@ -174,10 +189,9 @@ function scenarioMonorepo1(org: Org): LinkDemoPayload {
 }
 
 /**
- * Monorepo with no projects already git-linked on Vercel; one cross-team match
- * whose Vercel root is repo root (`""`) but local detection points at `apps/web`.
+ * No git-linked rows; one non-git match (Vercel root `""` vs suggested `apps/web`) + detect.
  */
-function scenarioMonorepo2(org: Org): LinkDemoPayload {
+function scenarioDashSplit(org: Org): LinkDemoPayload {
   return {
     gitLinkedProjects: [],
     gitLinkedProjectsWithMisconfiguredRootDirectory: [],
@@ -193,7 +207,7 @@ function scenarioMonorepo2(org: Org): LinkDemoPayload {
   };
 }
 
-function scenarioSimpleApp(org: Org): LinkDemoPayload {
+function scenarioRootLinked(org: Org): LinkDemoPayload {
   return {
     gitLinkedProjects: [
       demoGitLinked(org, {
@@ -208,8 +222,7 @@ function scenarioSimpleApp(org: Org): LinkDemoPayload {
   };
 }
 
-/** Single detected root only (one “origin”), for minimal new-project UX. */
-function scenarioOnlyNew(_org: Org): LinkDemoPayload {
+function scenarioOneDetect(_org: Org): LinkDemoPayload {
   return {
     gitLinkedProjects: [],
     gitLinkedProjectsWithMisconfiguredRootDirectory: [],
@@ -218,8 +231,7 @@ function scenarioOnlyNew(_org: Org): LinkDemoPayload {
   };
 }
 
-/** Multiple locally detected app roots only — no Vercel/API projects in the list. */
-function scenarioDetectedMulti(_org: Org): LinkDemoPayload {
+function scenarioMultiDetect(_org: Org): LinkDemoPayload {
   return {
     gitLinkedProjects: [],
     gitLinkedProjectsWithMisconfiguredRootDirectory: [],
@@ -232,7 +244,7 @@ function scenarioDetectedMulti(_org: Org): LinkDemoPayload {
   };
 }
 
-function scenarioMisconfigOnly(org: Org): LinkDemoPayload {
+function scenarioDualMisconfig(org: Org): LinkDemoPayload {
   return {
     gitLinkedProjects: [],
     gitLinkedProjectsWithMisconfiguredRootDirectory: [
@@ -254,8 +266,7 @@ function scenarioMisconfigOnly(org: Org): LinkDemoPayload {
   };
 }
 
-/** Sole primary row: non-git project only (Vercel root vs suggested differ). */
-function scenarioNonGitOnly(org: Org): LinkDemoPayload {
+function scenarioSoloNonGit(org: Org): LinkDemoPayload {
   return {
     gitLinkedProjects: [],
     gitLinkedProjectsWithMisconfiguredRootDirectory: [],
@@ -271,8 +282,7 @@ function scenarioNonGitOnly(org: Org): LinkDemoPayload {
   };
 }
 
-/** Sole primary row: one misconfigured git-linked project. */
-function scenarioSoleMisconfigured(org: Org): LinkDemoPayload {
+function scenarioSoloMisconfig(org: Org): LinkDemoPayload {
   return {
     gitLinkedProjects: [],
     gitLinkedProjectsWithMisconfiguredRootDirectory: [
@@ -288,8 +298,7 @@ function scenarioSoleMisconfigured(org: Org): LinkDemoPayload {
   };
 }
 
-/** Git-linked row + non-git row; no local-only detected “new project” rows. */
-function scenarioGitAndNonGit(org: Org): LinkDemoPayload {
+function scenarioPairGitNongit(org: Org): LinkDemoPayload {
   return {
     gitLinkedProjects: [
       demoGitLinked(org, {
@@ -311,16 +320,50 @@ function scenarioGitAndNonGit(org: Org): LinkDemoPayload {
   };
 }
 
+/** Fixture scoped to `apps/web` — run the CLI from that directory to test cwd narrowing. */
+function scenarioNestWeb(org: Org): LinkDemoPayload {
+  return {
+    gitLinkedProjects: [
+      demoGitLinked(org, {
+        name: 'storefront',
+        directory: 'apps/web',
+        framework: 'nextjs',
+      }),
+    ],
+    gitLinkedProjectsWithMisconfiguredRootDirectory: [],
+    nonGitLinkedProjects: [],
+    detectedProjects: new Map([['apps/web', [fw('nextjs')]]]),
+  };
+}
+
+/** Fixture scoped to `apps/api` — run the CLI from that directory to test cwd narrowing. */
+function scenarioNestApi(org: Org): LinkDemoPayload {
+  return {
+    gitLinkedProjects: [
+      demoGitLinked(org, {
+        name: 'api',
+        directory: 'apps/api',
+        framework: 'hono',
+      }),
+    ],
+    gitLinkedProjectsWithMisconfiguredRootDirectory: [],
+    nonGitLinkedProjects: [],
+    detectedProjects: new Map([['apps/api', [fw('hono')]]]),
+  };
+}
+
 const SCENARIOS: Record<LinkDemoScenarioId, (org: Org) => LinkDemoPayload> = {
-  'monorepo-1': scenarioMonorepo1,
-  'monorepo-2': scenarioMonorepo2,
-  'simple-app': scenarioSimpleApp,
-  'only-new': scenarioOnlyNew,
-  'detected-multi': scenarioDetectedMulti,
-  'misconfig-only': scenarioMisconfigOnly,
-  'non-git-only': scenarioNonGitOnly,
-  'sole-misconfigured': scenarioSoleMisconfigured,
-  'git-and-non-git': scenarioGitAndNonGit,
+  'mixed-all': scenarioMixedAll,
+  'dash-split': scenarioDashSplit,
+  'root-linked': scenarioRootLinked,
+  'one-detect': scenarioOneDetect,
+  'multi-detect': scenarioMultiDetect,
+  'dual-misconfig': scenarioDualMisconfig,
+  'solo-non-git': scenarioSoloNonGit,
+  'solo-misconfig': scenarioSoloMisconfig,
+  'pair-git-nongit': scenarioPairGitNongit,
+  'nest-web': scenarioNestWeb,
+  'nest-api': scenarioNestApi,
 };
 
 export function getLinkDemoScenarioIds(): LinkDemoScenarioId[] {
