@@ -268,6 +268,29 @@ function tryEmitRegisterOptionRequiresArgumentError(
   return true;
 }
 
+/** API failures: JSON on stdout for `--non-interactive` (via outputAgentError) or `--format json`. */
+function emitOauthAppsApiError(
+  client: Client,
+  message: string,
+  jsonOutputFlag: boolean
+): number {
+  const payload = {
+    status: 'error' as const,
+    reason: AGENT_REASON.API_ERROR,
+    message,
+  };
+  if (shouldEmitNonInteractiveCommandError(client)) {
+    outputAgentError(client, payload, 1);
+    return 1;
+  }
+  if (jsonOutputFlag) {
+    client.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
+    return 1;
+  }
+  output.error(message);
+  return 1;
+}
+
 export default async function main(client: Client): Promise<number> {
   let parsedArgs;
   const flagsSpecification = getFlagsSpecification(oauthAppsCommand.options);
@@ -392,16 +415,7 @@ export default async function main(client: Client): Promise<number> {
       } catch (err) {
         if (isAPIError(err)) {
           const msg = err.serverMessage || `API error (${err.status})`;
-          if (fr.jsonOutput) {
-            outputAgentError(
-              client,
-              { status: 'error', reason: 'api_error', message: msg },
-              1
-            );
-            return 1;
-          }
-          output.error(msg);
-          return 1;
+          return emitOauthAppsApiError(client, msg, fr.jsonOutput);
         }
         throw err;
       }
@@ -545,16 +559,7 @@ export default async function main(client: Client): Promise<number> {
       } catch (err) {
         if (isAPIError(err)) {
           const msg = err.serverMessage || `API error (${err.status})`;
-          if (fr.jsonOutput) {
-            outputAgentError(
-              client,
-              { status: 'error', reason: AGENT_REASON.API_ERROR, message: msg },
-              1
-            );
-            return 1;
-          }
-          output.error(msg);
-          return 1;
+          return emitOauthAppsApiError(client, msg, fr.jsonOutput);
         }
         throw err;
       }
@@ -665,8 +670,8 @@ export default async function main(client: Client): Promise<number> {
         return 0;
       } catch (err) {
         if (isAPIError(err)) {
-          output.error(err.serverMessage || `API error (${err.status})`);
-          return 1;
+          const msg = err.serverMessage || `API error (${err.status})`;
+          return emitOauthAppsApiError(client, msg, fr.jsonOutput);
         }
         throw err;
       }
@@ -747,8 +752,8 @@ export default async function main(client: Client): Promise<number> {
         return 0;
       } catch (err) {
         if (isAPIError(err)) {
-          output.error(err.serverMessage || `API error (${err.status})`);
-          return 1;
+          const msg = err.serverMessage || `API error (${err.status})`;
+          return emitOauthAppsApiError(client, msg, fr.jsonOutput);
         }
         throw err;
       }
@@ -792,8 +797,8 @@ export default async function main(client: Client): Promise<number> {
         return 0;
       } catch (err) {
         if (isAPIError(err)) {
-          output.error(err.serverMessage || `API error (${err.status})`);
-          return 1;
+          const msg = err.serverMessage || `API error (${err.status})`;
+          return emitOauthAppsApiError(client, msg, fr.jsonOutput);
         }
         throw err;
       }

@@ -1,6 +1,8 @@
+import { Response } from 'node-fetch';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import oauthApps from '../../../../src/commands/oauth-apps';
 import getScope from '../../../../src/util/get-scope';
+import { APIError } from '../../../../src/util/errors-ts';
 import { client } from '../../../mocks/client';
 
 vi.mock('../../../../src/util/get-scope', () => ({
@@ -235,6 +237,39 @@ describe('oauth-apps', () => {
       );
       const out = JSON.parse(client.stdout.getFullOutput().trim());
       expect(out.clientId).toBe('cl_regtest');
+    });
+
+    it('writes structured JSON API error when non-interactive and POST fails', async () => {
+      vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+        throw new Error(`exit:${code ?? 0}`);
+      }) as () => never);
+
+      vi.spyOn(client, 'fetch').mockRejectedValue(
+        new APIError(
+          'App slug is already taken.',
+          new Response(undefined, { status: 409 })
+        )
+      );
+
+      client.nonInteractive = true;
+      client.setArgv(
+        '--non-interactive',
+        'oauth-apps',
+        'register',
+        '--name',
+        'display-name',
+        '--slug',
+        'slug'
+      );
+
+      await expect(oauthApps(client)).rejects.toThrow('exit:1');
+
+      const payload = JSON.parse(client.stdout.getFullOutput().trim());
+      expect(payload).toMatchObject({
+        status: 'error',
+        reason: 'api_error',
+        message: 'App slug is already taken.',
+      });
     });
   });
 });
