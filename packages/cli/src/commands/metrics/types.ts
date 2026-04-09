@@ -108,6 +108,7 @@ export type ValidationError = {
   valid: false;
   code: string;
   message: string;
+  allowedValues?: string[];
 };
 
 export type ValidationResult = { valid: true } | ValidationError;

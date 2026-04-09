@@ -10,6 +10,7 @@ vi.mock('../../../../src/util/get-scope');
 
 const mockedGetLinkedProject = vi.mocked(linkModule.getLinkedProject);
 const mockedGetScope = vi.mocked(getScope);
+type ScopeResult = Awaited<ReturnType<typeof getScope>>;
 
 class MockTelemetry extends MetricsTelemetryClient {
   constructor() {
@@ -34,9 +35,9 @@ function mockLinkedProject() {
 function mockTeamScope() {
   mockedGetScope.mockResolvedValue({
     contextName: 'my-team',
-    team: { id: 'team_dummy', slug: 'my-team' } as never,
-    user: { id: 'user_dummy' } as never,
-  });
+    team: { id: 'team_dummy', slug: 'my-team' },
+    user: { id: 'user_dummy' },
+  } as ScopeResult);
 }
 
 describe('metrics query v2', () => {
@@ -45,6 +46,30 @@ describe('metrics query v2', () => {
     client.reset();
     mockLinkedProject();
     mockTeamScope();
+  });
+
+  it('rejects missing metric', async () => {
+    client.setArgv('metrics');
+
+    const exitCode = await query(client, new MockTelemetry());
+
+    expect(exitCode).toBe(1);
+    expect(client.stderr.getFullOutput()).toContain('--metric');
+  });
+
+  it('keeps --all / --project mutual exclusivity', async () => {
+    client.setArgv(
+      'metrics',
+      '--metric',
+      'vercel.edge_requests.count',
+      '--all',
+      '--project',
+      'my-app'
+    );
+
+    const exitCode = await query(client, new MockTelemetry());
+
+    expect(exitCode).toBe(1);
   });
 
   it('queries a metric through the v2 endpoint', async () => {

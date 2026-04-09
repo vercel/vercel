@@ -8,6 +8,7 @@ import { vi } from 'vitest';
 
 vi.mock('../../../../src/util/get-scope');
 const mockedGetScope = vi.mocked(getScope);
+type ScopeResult = Awaited<ReturnType<typeof getScope>>;
 
 class MockTelemetry extends MetricsTelemetryClient {
   constructor() {
@@ -21,9 +22,9 @@ describe('metrics schema v2', () => {
     client.reset();
     mockedGetScope.mockResolvedValue({
       contextName: 'my-team',
-      team: { id: 'team_dummy', slug: 'my-team' } as never,
-      user: { id: 'user_dummy' } as never,
-    });
+      team: { id: 'team_dummy', slug: 'my-team' },
+      user: { id: 'user_dummy' },
+    } as ScopeResult);
   });
 
   it('lists metrics by default', async () => {
