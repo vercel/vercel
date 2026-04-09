@@ -52,6 +52,7 @@ export default async function processDeployment({
   agent,
   manual,
   jsonOutput,
+  functionsBeta,
   ...args
 }: {
   now: Now;
@@ -76,6 +77,7 @@ export default async function processDeployment({
   bulkRedirectsPath?: string | null;
   manual?: boolean;
   jsonOutput?: boolean;
+  functionsBeta?: boolean;
 }) {
   const {
     now,
@@ -324,6 +326,16 @@ export default async function processDeployment({
       if (event.type === 'error') {
         stopSpinner();
 
+        // Check if solvable with --functions-beta
+        if (!functionsBeta) {
+          const maybeSizeError = handleErrorSolvableWithFunctionsBeta(
+            event.payload
+          );
+          if (maybeSizeError) {
+            throw maybeSizeError;
+          }
+        }
+
         if (!archive) {
           const maybeError = handleErrorSolvableWithArchive(event.payload);
           if (maybeError) {
@@ -372,6 +384,35 @@ export default async function processDeployment({
   } catch (err) {
     stopSpinner();
     throw err;
+  }
+}
+
+export class FunctionsSizeLimitError extends Error {
+  link = 'https://vercel.com/docs/errors/FUNCTIONS_BETA';
+}
+
+export function handleErrorSolvableWithFunctionsBeta(error: unknown) {
+  if (isErrorLike(error)) {
+    // Primary: match the Python-specific error code
+    const isLambdaSizeExceeded =
+      'errorCode' in error && error.errorCode === 'LAMBDA_SIZE_EXCEEDED';
+    // Fallback: match error message pattern for resilience
+    const isMessageMatch =
+      !isLambdaSizeExceeded &&
+      'errorMessage' in error &&
+      typeof error.errorMessage === 'string' &&
+      error.errorMessage.includes('exceeds') &&
+      (error.errorMessage.includes('Lambda size limit') ||
+        error.errorMessage.includes('Lambda ephemeral storage') ||
+        error.errorMessage.includes('exceeds Lambda limit'));
+
+    if (isLambdaSizeExceeded || isMessageMatch) {
+      return new FunctionsSizeLimitError(
+        (error as any).errorMessage ||
+          (error as any).message ||
+          'Function build exceeded the maximum size limit.'
+      );
+    }
   }
 }
 
