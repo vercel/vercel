@@ -26,10 +26,7 @@ export function upgradeWebSocket(request: Request): WebSocket {
     );
   }
 
-  const upgrade = ctx.upgradeWebSocket();
-  const req = upgrade.req as IncomingMessage;
-  const socket = upgrade.socket as Socket;
-  const head = upgrade.head as Buffer;
+  const { req, socket, head } = ctx.upgradeWebSocket();
 
   // Use ws to perform the WebSocket handshake and set up framing.
   // ws writes the 101 Switching Protocols response to the socket
