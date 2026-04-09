@@ -88,13 +88,12 @@ export function buildCommandWithYes(
   return `${pkgName} ${out.join(' ')}`;
 }
 
-/** Global flags that should be preserved in suggested "next" commands (e.g. --cwd, --non-interactive). */
+/** Global flags that should be preserved in suggested "next" commands (e.g. --cwd). */
 const GLOBAL_FLAG_NAMES = new Set([
   '--cwd',
   '--config',
   '--yes',
   '-y',
-  '--non-interactive',
   '--scope',
   '--team',
   '-S',
@@ -106,7 +105,7 @@ const GLOBAL_FLAG_NAMES = new Set([
 const BOOLEAN_GLOBAL_FLAG_NAMES = new Set(['--yes', '-y', '--non-interactive']);
 
 /**
- * Returns global flag args from argv so suggested commands can include them (e.g. --cwd, --non-interactive).
+ * Returns global flag args from argv so suggested commands can include them (e.g. --cwd).
  */
 export function getGlobalFlagsFromArgv(argv: string[]): string[] {
   const args = argv.slice(2);
@@ -128,6 +127,24 @@ export function getGlobalFlagsFromArgv(argv: string[]): string[] {
     }
   }
   return out;
+}
+
+function getNonInteractiveEnvFromArgv(argv: string[]): '1' | '0' | undefined {
+  const args = argv.slice(2);
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    if (arg === '--non-interactive') {
+      const next = args[i + 1];
+      if (next === 'false' || next === '0') return '0';
+      return '1';
+    }
+    if (arg.startsWith('--non-interactive=')) {
+      const value = arg.slice('--non-interactive='.length).toLowerCase();
+      if (value === 'false' || value === '0') return '0';
+      if (value === 'true' || value === '1') return '1';
+    }
+  }
+  return undefined;
 }
 
 /**
@@ -179,8 +196,8 @@ export interface BuildCommandWithGlobalFlagsOptions {
 
 /**
  * Builds a suggested command string from a template and appends global flags from argv
- * (e.g. --cwd, --non-interactive) so the next command can be run with the same context.
- * Use excludeFlags to omit flags that must not appear (e.g. --non-interactive for login).
+ * (e.g. --cwd) so the next command can be run with the same context.
+ * Use excludeFlags to omit flags that must not appear.
  */
 export function buildCommandWithGlobalFlags(
   argv: string[],
@@ -210,13 +227,17 @@ export function buildCommandWithGlobalFlags(
     preserved = out;
   }
   const base = `${pkgName} ${commandTemplate}`;
+  let command: string;
   if (preserved.length === 0) {
-    return base;
+    command = base;
+  } else if (options?.prependGlobalFlags) {
+    command = `${pkgName} ${preserved.join(' ')} ${commandTemplate}`;
+  } else {
+    command = `${base} ${preserved.join(' ')}`;
   }
-  if (options?.prependGlobalFlags) {
-    return `${pkgName} ${preserved.join(' ')} ${commandTemplate}`;
-  }
-  return `${base} ${preserved.join(' ')}`;
+  const nonInteractiveEnv = getNonInteractiveEnvFromArgv(argv);
+  if (!nonInteractiveEnv) return command;
+  return `VERCEL_NON_INTERACTIVE=${nonInteractiveEnv} ${command}`;
 }
 
 /**

@@ -284,6 +284,18 @@ describe('buildCommandWithScope', () => {
   });
 });
 
+describe('buildCommandWithGlobalFlags', () => {
+  it('uses VERCEL_NON_INTERACTIVE env prefix instead of preserving the flag', () => {
+    const command = buildCommandWithGlobalFlags(
+      ['/node', '/vc.js', 'env', 'add', '--cwd', '/tmp', '--non-interactive'],
+      'env add SOME_KEY'
+    );
+    expect(command).toBe(
+      'VERCEL_NON_INTERACTIVE=1 vercel env add SOME_KEY --cwd /tmp'
+    );
+  });
+});
+
 describe('enrichActionRequiredWithInvokingCommand', () => {
   it('adds link and invoking command with scope for each choice', () => {
     const payload: ActionRequiredPayload = {
