@@ -3,6 +3,10 @@ import type {
   FirewallConfigResponse,
   FirewallConfigChange,
   FirewallChangeAction,
+  FirewallRule,
+  FirewallConditionGroup,
+  FirewallCondition,
+  FirewallRuleAction,
   FirewallIpRule,
   BypassRule,
 } from './types';
@@ -327,6 +331,421 @@ export function formatDiffOutput(changes: FirewallConfigChange[]): string {
     const { symbol, color } = getDiffSymbol(change.action);
     const description = formatChangeDescription(change);
     lines.push(color(`  ${symbol} ${description}`));
+  }
+
+  return lines.join('\n');
+}
+
+// --- Rule formatting helpers ---
+
+const OPERATOR_LABELS: Record<string, string> = {
+  eq: 'equals',
+  neq: 'does not equal',
+  re: 'matches regex',
+  ex: 'exists',
+  nex: 'does not exist',
+  inc: 'is any of',
+  ninc: 'is not any of',
+  pre: 'starts with',
+  suf: 'ends with',
+  sub: 'contains',
+  gt: '>',
+  gte: '>=',
+  lt: '<',
+  lte: '<=',
+};
+
+const NEGATED_OPERATOR_LABELS: Record<string, string> = {
+  eq: 'does not equal',
+  neq: 'equals',
+  re: 'does not match regex',
+  ex: 'does not exist',
+  nex: 'exists',
+  inc: 'is not any of',
+  ninc: 'is any of',
+  pre: 'does not start with',
+  suf: 'does not end with',
+  sub: 'does not contain',
+  gt: 'NOT >',
+  gte: 'NOT >=',
+  lt: 'NOT <',
+  lte: 'NOT <=',
+};
+
+const CONDITION_TYPE_LABELS: Record<string, string> = {
+  path: 'path',
+  method: 'method',
+  host: 'host',
+  ip_address: 'IP address',
+  user_agent: 'user agent',
+  header: 'header',
+  cookie: 'cookie',
+  query: 'query string',
+  ja3_digest: 'JA3 digest',
+  ja4_digest: 'JA4 digest',
+  geo_country: 'geo country',
+  geo_city: 'geo city',
+  geo_as_number: 'geo AS number',
+  geo_continent: 'geo continent',
+  geo_region: 'geo region',
+  protocol: 'protocol',
+  scheme: 'scheme',
+  request_body: 'request body',
+  target_path: 'target path',
+  region: 'region',
+  environment: 'environment',
+  ssl: 'SSL',
+};
+
+function getConditionTypeLabel(type: string, key?: string): string {
+  const label = CONDITION_TYPE_LABELS[type] || type;
+  if (key) return `${label}[${key}]`;
+  return label;
+}
+
+function getOperatorLabel(op: string, neg?: boolean): string {
+  if (neg) {
+    return NEGATED_OPERATOR_LABELS[op] || `NOT ${OPERATOR_LABELS[op] || op}`;
+  }
+  return OPERATOR_LABELS[op] || op;
+}
+
+function formatConditionValue(condition: FirewallCondition): string {
+  if (condition.op === 'ex' || condition.op === 'nex') {
+    return '';
+  }
+  if (Array.isArray(condition.value)) {
+    return condition.value.join(', ');
+  }
+  return String(condition.value ?? '');
+}
+
+/**
+ * Format a single condition as a compact string.
+ * e.g., "path starts with /api" or "header[Authorization] exists"
+ */
+export function formatConditionCompact(condition: FirewallCondition): string {
+  const type = getConditionTypeLabel(condition.type, condition.key);
+  const op = getOperatorLabel(condition.op, condition.neg);
+  const value = formatConditionValue(condition);
+
+  if (!value) return `${type} ${op}`;
+  return `${type} ${op} ${value}`;
+}
+
+/**
+ * Format the action for display.
+ * e.g., "Deny (1h)", "Rate Limit (100/60s)", "Redirect → /new (301)"
+ */
+export function formatActionDisplay(action: FirewallRuleAction): string {
+  const mitigate = action.mitigate;
+  if (!mitigate) return chalk.dim('None');
+
+  const actionType = mitigate.action;
+  const duration = mitigate.actionDuration;
+
+  switch (actionType) {
+    case 'deny':
+      return duration ? `Deny (${duration})` : 'Deny';
+    case 'challenge':
+      return duration ? `Challenge (${duration})` : 'Challenge';
+    case 'log':
+      return 'Log';
+    case 'bypass':
+      return 'Bypass';
+    case 'rate_limit': {
+      const rl = mitigate.rateLimit;
+      if (rl) {
+        return `Rate Limit (${rl.limit}/${rl.window}s)`;
+      }
+      return 'Rate Limit';
+    }
+    case 'redirect': {
+      const rd = mitigate.redirect;
+      if (rd) {
+        const code = rd.permanent ? '301' : '307';
+        return `Redirect → ${rd.location} (${code})`;
+      }
+      return 'Redirect';
+    }
+    default:
+      return actionType;
+  }
+}
+
+// --- Rules list (annotated) ---
+
+export type RuleStatus = 'live' | 'added' | 'removed' | 'modified';
+
+export interface AnnotatedRule {
+  rule: FirewallRule;
+  status: RuleStatus;
+}
+
+/**
+ * Build an annotated list of rules showing draft state.
+ */
+export function annotateRules(
+  activeRules: FirewallRule[],
+  draftRules: FirewallRule[] | null,
+  changes: FirewallConfigChange[]
+): AnnotatedRule[] {
+  if (!draftRules) {
+    return activeRules.map(rule => ({ rule, status: 'live' as RuleStatus }));
+  }
+
+  const addedIds = new Set(
+    changes
+      .filter(c => c.action === 'rules.insert')
+      .map(c => c.id)
+      .filter((id): id is string => id !== null && id !== undefined)
+  );
+  const removedIds = new Set(
+    changes
+      .filter(c => c.action === 'rules.remove')
+      .map(c => c.id)
+      .filter((id): id is string => id !== null && id !== undefined)
+  );
+  const modifiedIds = new Set(
+    changes
+      .filter(c => c.action === 'rules.update' || c.action === 'rules.priority')
+      .map(c => c.id)
+      .filter((id): id is string => id !== null && id !== undefined)
+  );
+
+  const result: AnnotatedRule[] = [];
+
+  for (const rule of draftRules) {
+    if (addedIds.has(rule.id)) {
+      result.push({ rule, status: 'added' });
+    } else if (modifiedIds.has(rule.id)) {
+      result.push({ rule, status: 'modified' });
+    } else {
+      result.push({ rule, status: 'live' });
+    }
+  }
+
+  for (const rule of activeRules) {
+    if (removedIds.has(rule.id)) {
+      result.push({ rule, status: 'removed' });
+    }
+  }
+
+  return result;
+}
+
+export function formatRulesTable(annotated: AnnotatedRule[]): string {
+  const lines: string[] = [];
+
+  const gap = 3;
+  const prefixWidth = 2;
+  const numWidth = Math.max('#'.length, String(annotated.length).length);
+  const nameWidth = Math.max(
+    'Name'.length,
+    ...annotated.map(a => a.rule.name.length)
+  );
+  const statusWidth = Math.max(
+    'Status'.length,
+    ...annotated.map(a => (a.rule.active ? 'Active' : 'Inactive').length)
+  );
+  const actionTexts = annotated.map(a => formatActionDisplay(a.rule.action));
+  const actionWidth = Math.max(
+    'Action'.length,
+    ...actionTexts.map(t => t.length)
+  );
+
+  // Header
+  lines.push(
+    `  ${' '.repeat(prefixWidth)}${chalk.dim('#'.padEnd(numWidth + gap))}${chalk.dim('Name'.padEnd(nameWidth + gap))}${chalk.dim('Status'.padEnd(statusWidth + gap))}${chalk.dim('Action'.padEnd(actionWidth + gap))}${chalk.dim('Description')}`
+  );
+
+  for (let i = 0; i < annotated.length; i++) {
+    const { rule, status } = annotated[i];
+    const num = String(i + 1).padEnd(numWidth + gap);
+    const name = rule.name.padEnd(nameWidth + gap);
+    const activeStatus = (rule.active ? 'Active' : 'Inactive').padEnd(
+      statusWidth + gap
+    );
+    const actionText = actionTexts[i].padEnd(actionWidth + gap);
+    const description = rule.description || '';
+
+    let prefix = '  ';
+    let colorFn: (s: string) => string = (s: string) => s;
+
+    if (status === 'added') {
+      prefix = '+ ';
+      colorFn = chalk.green;
+    } else if (status === 'removed') {
+      prefix = '- ';
+      colorFn = chalk.red;
+    } else if (status === 'modified') {
+      prefix = '~ ';
+      colorFn = chalk.yellow;
+    }
+
+    lines.push(
+      colorFn(
+        `  ${prefix}${num}${name}${activeStatus}${actionText}${description}`
+      )
+    );
+  }
+
+  return lines.join('\n');
+}
+
+// --- Rules expanded view ---
+
+export function formatConditionGroup(
+  group: FirewallConditionGroup,
+  groupIndex: number,
+  totalGroups: number
+): string {
+  const lines: string[] = [];
+  const label =
+    totalGroups > 1 ? `Group ${groupIndex + 1} (AND):` : 'Conditions:';
+  lines.push(`     ${chalk.dim(label)}`);
+
+  for (const condition of group.conditions) {
+    lines.push(`       ${formatConditionCompact(condition)}`);
+  }
+
+  return lines.join('\n');
+}
+
+export function formatRuleExpanded(rule: FirewallRule, index?: number): string {
+  const lines: string[] = [];
+
+  const prefix = index !== undefined ? `${index + 1}. ` : '';
+  const status = rule.active ? 'Active' : chalk.dim('Inactive');
+  const action = formatActionDisplay(rule.action);
+
+  lines.push(`  ${prefix}${chalk.bold(rule.name)} [${status}]`);
+
+  if (rule.description) {
+    lines.push(`     ${chalk.dim(rule.description)}`);
+  }
+
+  lines.push('');
+
+  if (rule.conditionGroup.length === 0) {
+    lines.push(`     ${chalk.dim('No conditions')}`);
+  } else {
+    for (let i = 0; i < rule.conditionGroup.length; i++) {
+      lines.push(
+        formatConditionGroup(
+          rule.conditionGroup[i],
+          i,
+          rule.conditionGroup.length
+        )
+      );
+      if (i < rule.conditionGroup.length - 1) {
+        lines.push(`     ${chalk.dim('OR')}`);
+      }
+    }
+  }
+
+  // Action
+  lines.push('');
+  lines.push(`     ${chalk.dim('Action:')} ${action}`);
+
+  // Duration
+  const duration = rule.action.mitigate?.actionDuration;
+  if (duration) {
+    lines.push(`     ${chalk.dim('Duration:')} ${duration}`);
+  }
+
+  // Rate limit details
+  const rl = rule.action.mitigate?.rateLimit;
+  if (rl) {
+    lines.push(
+      `     ${chalk.dim('Rate Limit:')} ${rl.limit} req / ${rl.window}s (${rl.algo})`
+    );
+    lines.push(`     ${chalk.dim('Keys:')} ${rl.keys.join(', ')}`);
+    if (rl.action) {
+      lines.push(`     ${chalk.dim('Sub-action:')} ${rl.action}`);
+    }
+  }
+
+  // Redirect details
+  const rd = rule.action.mitigate?.redirect;
+  if (rd) {
+    lines.push(
+      `     ${chalk.dim('Redirect:')} ${rd.location} (${rd.permanent ? '301 permanent' : '307 temporary'})`
+    );
+  }
+
+  return lines.join('\n');
+}
+
+/**
+ * Format a single rule for inspect view (includes ID).
+ */
+export function formatRuleDetail(rule: FirewallRule): string {
+  const lines: string[] = [];
+
+  // Identity
+  lines.push(`  ${chalk.bold('Rule:')}        ${rule.name}`);
+  lines.push(`  ${chalk.bold('ID:')}          ${chalk.dim(rule.id)}`);
+  lines.push(
+    `  ${chalk.bold('Status:')}      ${rule.active ? chalk.green('Active') : chalk.dim('Inactive')}`
+  );
+  if (rule.description) {
+    lines.push(`  ${chalk.bold('Description:')} ${rule.description}`);
+  }
+
+  lines.push('');
+
+  // Conditions (the "IF")
+  if (rule.conditionGroup.length === 0) {
+    lines.push(`  ${chalk.bold('Conditions:')}  ${chalk.dim('No conditions')}`);
+  } else {
+    lines.push(`  ${chalk.bold('Conditions:')}`);
+    for (let i = 0; i < rule.conditionGroup.length; i++) {
+      if (rule.conditionGroup.length > 1) {
+        lines.push(`    ${chalk.dim(`Group ${i + 1} (AND):`)}`);
+      }
+      for (const condition of rule.conditionGroup[i].conditions) {
+        lines.push(`      ${formatConditionCompact(condition)}`);
+      }
+      if (i < rule.conditionGroup.length - 1) {
+        lines.push(`    ${chalk.dim('OR')}`);
+      }
+    }
+  }
+
+  lines.push('');
+
+  // Action (the "THEN")
+  lines.push(
+    `  ${chalk.bold('Action:')}      ${formatActionDisplay(rule.action)}`
+  );
+
+  const duration = rule.action.mitigate?.actionDuration;
+  if (duration) {
+    lines.push(`  ${chalk.bold('Duration:')}    ${duration}`);
+  }
+
+  // Rate limit details
+  const rl = rule.action.mitigate?.rateLimit;
+  if (rl) {
+    lines.push(`  ${chalk.bold('Rate Limit:')}`);
+    lines.push(`    Algorithm:  ${rl.algo}`);
+    lines.push(`    Window:     ${rl.window}s`);
+    lines.push(`    Limit:      ${rl.limit} requests`);
+    lines.push(`    Keys:       ${rl.keys.join(', ')}`);
+    if (rl.action) {
+      lines.push(`    Sub-action: ${rl.action}`);
+    }
+  }
+
+  // Redirect details
+  const rd = rule.action.mitigate?.redirect;
+  if (rd) {
+    lines.push(`  ${chalk.bold('Redirect:')}`);
+    lines.push(`    Location:   ${rd.location}`);
+    lines.push(
+      `    Type:       ${rd.permanent ? '301 (permanent)' : '307 (temporary)'}`
+    );
   }
 
   return lines.join('\n');
