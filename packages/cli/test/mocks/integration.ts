@@ -418,6 +418,32 @@ const configurations: Record<string, Configuration[]> = {
     },
   ],
   'acme-no-results': [],
+  'acme-multi': [
+    {
+      id: 'icfg_install_a',
+      integrationId: 'acme-multi',
+      ownerId: 'team_dummy',
+      slug: 'acme-multi',
+      teamId: 'team_dummy',
+      userId: 'user_dummy',
+      scopes: ['read-write:integration-resource'],
+      source: 'marketplace',
+      installationType: 'marketplace',
+      projects: [],
+    },
+    {
+      id: 'icfg_install_b',
+      integrationId: 'acme-multi',
+      ownerId: 'team_dummy',
+      slug: 'acme-multi',
+      teamId: 'team_dummy',
+      userId: 'user_dummy',
+      scopes: ['read-write:integration-resource'],
+      source: 'marketplace',
+      installationType: 'marketplace',
+      projects: [],
+    },
+  ],
 };
 
 const configurationPrepaymentInformation: Record<
@@ -975,6 +1001,77 @@ export function usePrepayment(responseKey: string) {
       res.json(prepaymentInfo);
     }
   );
+}
+
+/** Mocks integration fetch, marketplace installations, and `POST .../marketplace/install` (e.g. `integration accept-terms`). */
+export function useIntegration({
+  withInstallation,
+  ownerId,
+  installShouldFail,
+}: {
+  withInstallation: boolean;
+  ownerId?: string;
+  installShouldFail?: boolean;
+}) {
+  const resolvedOwnerId = ownerId ?? 'team_dummy';
+
+  client.scenario.get(
+    '/:version/integrations/integration/:slug',
+    (req, res) => {
+      const { slug } = req.params;
+      const integration = integrations[slug];
+
+      if (!integration) {
+        res.status(404);
+        res.end();
+        return;
+      }
+
+      res.json(integration);
+    }
+  );
+
+  client.scenario.get('/:version/integrations/configurations', (req, res) => {
+    const { installationType, integrationIdOrSlug } = req.query;
+
+    if (installationType !== 'marketplace') {
+      res.status(500);
+      res.end();
+      return;
+    }
+
+    res.json(
+      withInstallation
+        ? [
+            {
+              id: `${integrationIdOrSlug}-install`,
+              integrationId: integrationIdOrSlug,
+              installationType: 'marketplace',
+              ownerId: resolvedOwnerId,
+            },
+          ]
+        : []
+    );
+  });
+
+  const installRequestBodies: unknown[] = [];
+
+  client.scenario.post(
+    '/v2/integrations/integration/:integrationId/marketplace/install',
+    (req, res) => {
+      installRequestBodies.push(req.body);
+      if (installShouldFail) {
+        res.status(500);
+        res.json({ error: { message: 'Internal Server Error' } });
+        return;
+      }
+      res.json({
+        id: `${req.params.integrationId}-new-install`,
+      });
+    }
+  );
+
+  return { installRequestBodies, connectionRequestBodies: [] };
 }
 
 export function useAutoProvision(opts?: {

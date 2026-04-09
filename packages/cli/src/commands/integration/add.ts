@@ -6,6 +6,12 @@ import {
 import { addAutoProvision } from './add-auto-provision';
 import output from '../../output-manager';
 import { validateJsonOutput } from '../../util/output-format';
+import {
+  buildCommandWithGlobalFlags,
+  outputAgentError,
+} from '../../util/agent-output';
+import { AGENT_REASON } from '../../util/agent-output-constants';
+import { packageName } from '../../util/pkg-name';
 
 import type { IntegrationAddFlags } from './command';
 
@@ -42,7 +48,38 @@ export async function add(
   const rawArg = args[0];
 
   if (!rawArg) {
-    output.error('You must pass an integration slug');
+    const message = 'You must pass an integration slug';
+    outputAgentError(
+      client,
+      {
+        status: 'error',
+        reason: AGENT_REASON.MISSING_ARGUMENTS,
+        message,
+        hint: `Example: \`${packageName} integration add <integration-slug>\`. Run \`${packageName} integration discover\` to find slugs.`,
+        next: [
+          {
+            command: buildCommandWithGlobalFlags(
+              client.argv,
+              'integration discover',
+              packageName,
+              { prependGlobalFlags: true }
+            ),
+            when: 'List available marketplace integrations and slugs',
+          },
+          {
+            command: buildCommandWithGlobalFlags(
+              client.argv,
+              'integration add neon',
+              packageName,
+              { prependGlobalFlags: true }
+            ),
+            when: 'Install after replacing neon with a slug from discover',
+          },
+        ],
+      },
+      1
+    );
+    output.error(message);
     return 1;
   }
 
