@@ -52,8 +52,12 @@ describe('firewall rules add', () => {
       await expect(client.stderr).toOutput('Rule "Block test path" staged');
       expect(await exitCodePromise).toEqual(0);
       expect(capturedRequests.patchDraft?.action).toBe('rules.insert');
-      expect((capturedRequests.patchDraft?.value as any)?.action?.mitigate?.action).toBe('deny');
-      expect((capturedRequests.patchDraft?.value as any)?.conditionGroup).toHaveLength(1);
+      expect(
+        (capturedRequests.patchDraft?.value as any)?.action?.mitigate?.action
+      ).toBe('deny');
+      expect(
+        (capturedRequests.patchDraft?.value as any)?.conditionGroup
+      ).toHaveLength(1);
     });
 
     it('should create a multi-condition AND rule', async () => {
@@ -106,7 +110,9 @@ describe('firewall rules add', () => {
       await expect(client.stderr).toOutput('Rule "OR group rule" staged');
       expect(await exitCodePromise).toEqual(0);
       // 2 separate OR groups
-      expect((capturedRequests.patchDraft?.value as any)?.conditionGroup).toHaveLength(2);
+      expect(
+        (capturedRequests.patchDraft?.value as any)?.conditionGroup
+      ).toHaveLength(2);
     });
 
     it('should create a rule with three OR groups', async () => {
@@ -228,7 +234,8 @@ describe('firewall rules add', () => {
       const exitCodePromise = firewall(client);
       await expect(client.stderr).toOutput('Rule "Rate limit API" staged');
       expect(await exitCodePromise).toEqual(0);
-      const rl = (capturedRequests.patchDraft?.value as any)?.action?.mitigate?.rateLimit;
+      const rl = (capturedRequests.patchDraft?.value as any)?.action?.mitigate
+        ?.rateLimit;
       expect(rl).toBeDefined();
       expect(rl.window).toBe(60);
       expect(rl.limit).toBe(100);
@@ -282,7 +289,8 @@ describe('firewall rules add', () => {
       const exitCodePromise = firewall(client);
       await expect(client.stderr).toOutput('Rule "Redirect old path" staged');
       expect(await exitCodePromise).toEqual(0);
-      const redirect = (capturedRequests.patchDraft?.value as any)?.action?.mitigate?.redirect;
+      const redirect = (capturedRequests.patchDraft?.value as any)?.action
+        ?.mitigate?.redirect;
       expect(redirect).toBeDefined();
       expect(redirect.location).toBe('/new');
       expect(redirect.permanent).toBe(true);
@@ -357,7 +365,9 @@ describe('firewall rules add', () => {
       await expect(client.stderr).toOutput('Inactive rule');
       expect(await exitCodePromise).toEqual(0);
       expect((capturedRequests.patchDraft?.value as any)?.active).toBe(false);
-      expect((capturedRequests.patchDraft?.value as any)?.description).toBe('Test description');
+      expect((capturedRequests.patchDraft?.value as any)?.description).toBe(
+        'Test description'
+      );
     });
 
     it('should create a log rule', async () => {
@@ -960,7 +970,9 @@ describe('firewall rules add', () => {
       await expect(client.stderr).toOutput('Rule "JSON rule" staged');
       expect(await exitCodePromise).toEqual(0);
       expect(capturedRequests.patchDraft?.action).toBe('rules.insert');
-      expect((capturedRequests.patchDraft?.value as any)?.name).toBe('JSON rule');
+      expect((capturedRequests.patchDraft?.value as any)?.name).toBe(
+        'JSON rule'
+      );
     });
 
     it('should create a complex JSON rule with rate limit', async () => {
@@ -1175,7 +1187,9 @@ describe('firewall rules add', () => {
       await expect(client.stderr).toOutput('Rule "AI Generated Rule" staged');
       expect(await exitCodePromise).toEqual(0);
       expect(capturedRequests.patchDraft?.action).toBe('rules.insert');
-      expect((capturedRequests.patchDraft?.value as any)?.name).toBe('AI Generated Rule');
+      expect((capturedRequests.patchDraft?.value as any)?.name).toBe(
+        'AI Generated Rule'
+      );
     });
 
     it('should create a rule with specific AI-generated conditions', async () => {
