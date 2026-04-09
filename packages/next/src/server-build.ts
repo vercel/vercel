@@ -2063,6 +2063,30 @@ export async function serverBuild({
 
       ...(isNextDataServerResolving
         ? [
+            // remove x-nextjs-data header for non _next/data requests
+            {
+              src: path.posix.join(
+                '/',
+                entryDirectory,
+                '/(?!_next/data(?:/|$))(.*)'
+              ),
+              has: [
+                {
+                  type: 'header',
+                  key: 'x-nextjs-data',
+                },
+              ],
+              transforms: [
+                {
+                  type: 'request.headers',
+                  op: 'delete',
+                  target: {
+                    key: 'x-nextjs-data',
+                  },
+                },
+              ],
+              continue: true,
+            },
             // ensure x-nextjs-data header is always present
             // if we are doing middleware next data resolving
             {
