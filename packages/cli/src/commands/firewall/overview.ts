@@ -15,15 +15,7 @@ import {
   type AttackModeStatus,
 } from '../../util/firewall/format';
 import { outputAgentError } from '../../util/agent-output';
-
-interface ProjectSecurityResponse {
-  security?: {
-    attackModeEnabled?: boolean;
-    /** Epoch milliseconds */
-    attackModeActiveUntil?: number | null;
-    attackModeUpdatedAt?: number;
-  };
-}
+import type { ProjectSecurityResponse } from '../../util/firewall/types';
 
 export default async function overview(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, overviewSubcommand, client);

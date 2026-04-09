@@ -321,6 +321,89 @@ export const ipBlocksSubcommand = {
 } as const;
 
 // Attack Mode subcommands
+
+// Rules subcommands
+export const rulesListSubcommand = {
+  name: 'list',
+  aliases: ['ls'],
+  description:
+    'List all custom firewall rules, including any unpublished draft changes',
+  arguments: [],
+  options: [
+    {
+      name: 'expand',
+      shorthand: 'e',
+      type: Boolean,
+      deprecated: false,
+      description: 'Show full condition details for each rule',
+    },
+    {
+      name: 'json',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Output as JSON',
+    },
+  ],
+  examples: [
+    {
+      name: 'List rules',
+      value: `${packageName} firewall rules list`,
+    },
+    {
+      name: 'List rules with full condition details',
+      value: `${packageName} firewall rules list --expand`,
+    },
+  ],
+} as const;
+
+export const rulesInspectSubcommand = {
+  name: 'inspect',
+  aliases: [],
+  description:
+    'Show the full configuration of a custom firewall rule, including conditions, action, and rate limit settings',
+  arguments: [{ name: 'name-or-id', required: true }],
+  options: [
+    {
+      name: 'json',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Output as JSON',
+    },
+  ],
+  examples: [
+    {
+      name: 'Inspect a rule by name',
+      value: `${packageName} firewall rules inspect "Block bots"`,
+    },
+    {
+      name: 'Inspect a rule by ID',
+      value: `${packageName} firewall rules inspect rule_abc123`,
+    },
+  ],
+} as const;
+
+export const rulesSubcommand = {
+  name: 'rules',
+  aliases: [],
+  description:
+    'Manage custom firewall rules that control how traffic is handled based on conditions',
+  arguments: [],
+  subcommands: [rulesListSubcommand, rulesInspectSubcommand],
+  options: [],
+  examples: [
+    {
+      name: 'List rules',
+      value: `${packageName} firewall rules list`,
+    },
+    {
+      name: 'Inspect a rule',
+      value: `${packageName} firewall rules inspect "Block bots"`,
+    },
+  ],
+} as const;
+
 export const attackModeEnableSubcommand = {
   name: 'enable',
   aliases: [],
@@ -446,6 +529,7 @@ export const firewallCommand = {
     publishSubcommand,
     discardSubcommand,
     ipBlocksSubcommand,
+    rulesSubcommand,
     systemBypassSubcommand,
     attackModeSubcommand,
     systemMitigationsSubcommand,
