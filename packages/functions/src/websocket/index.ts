@@ -1,6 +1,4 @@
 import { WebSocketServer, type WebSocket } from 'ws';
-import type { IncomingMessage } from 'http';
-import type { Socket } from 'net';
 import { getContext } from '../get-context';
 
 const wss = new WebSocketServer({ noServer: true });
