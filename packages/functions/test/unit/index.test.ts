@@ -122,27 +122,3 @@ describe('@vercel/functions/middleware', () => {
     expect(exportedMethods).toEqual(EXPECTED_METHODS);
   });
 });
-
-describe('@vercel/functions/websocket', () => {
-  const EXPECTED_METHODS = ['upgradeWebSocket'];
-
-  test('load as CommonJS', async () => {
-    const code =
-      "console.log(JSON.stringify(Object.keys(require('@vercel/functions/websocket'))))";
-    const exportedMethods = await evalScript(code).then(output =>
-      JSON.parse(output)
-    );
-
-    expect(exportedMethods).toEqual(EXPECTED_METHODS);
-  });
-
-  test('load as ESM', async () => {
-    const code =
-      "import f from '@vercel/functions/websocket'; console.log(JSON.stringify(Object.keys(f)))";
-    const exportedMethods = await evalScript
-      .esm(code)
-      .then(output => JSON.parse(output));
-
-    expect(exportedMethods).toEqual(EXPECTED_METHODS);
-  });
-});
