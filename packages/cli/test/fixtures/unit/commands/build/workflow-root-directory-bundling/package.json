@@ -1,0 +1,7 @@
+{
+  "name": "workflow-root-directory-bundling",
+  "private": true,
+  "workspaces": [
+    "workbench/*"
+  ]
+}

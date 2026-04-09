@@ -18,7 +18,7 @@
 //
 
 const http = require('http');
-const { existsSync } = require('fs');
+const { existsSync, readFileSync } = require('fs');
 const { resolve } = require('path');
 const { pathToFileURL } = require('url');
 const { Readable } = require('stream');
@@ -34,6 +34,34 @@ const HTTP_METHODS = [
 ];
 
 const handlerCache = Object.create(null);
+let bundlingConfig;
+
+function getBundlingConfig() {
+  if (bundlingConfig !== undefined) {
+    return bundlingConfig;
+  }
+
+  try {
+    bundlingConfig = JSON.parse(
+      readFileSync(resolve('./___vc_bundled_api_config.json'), 'utf8')
+    );
+  } catch {
+    bundlingConfig = null;
+  }
+
+  return bundlingConfig;
+}
+
+function getEntrypointCandidates(entrypoint) {
+  const candidates = [entrypoint];
+  const entrypointPrefix = getBundlingConfig()?.entrypointPrefix;
+
+  if (typeof entrypointPrefix === 'string' && entrypointPrefix) {
+    candidates.push(entrypointPrefix + '/' + entrypoint);
+  }
+
+  return candidates;
+}
 
 /**
  * Resolve an extensionless entrypoint to an actual file path.
@@ -240,7 +268,14 @@ module.exports = async (req, res) => {
   const entrypoint = matchedPath.replace(/^\//, '') || 'index';
 
   if (!handlerCache[entrypoint]) {
-    const filePath = resolveEntrypoint(entrypoint);
+    let filePath = null;
+    for (const candidate of getEntrypointCandidates(entrypoint)) {
+      filePath = resolveEntrypoint(candidate);
+      if (filePath) {
+        break;
+      }
+    }
+
     if (!filePath) {
       res.statusCode = 404;
       res.end('No handler found for ' + entrypoint);
