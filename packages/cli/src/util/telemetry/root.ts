@@ -152,6 +152,13 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
+  trackCliCommandFirewall(actual: string) {
+    this.trackCliCommand({
+      command: 'firewall',
+      value: actual,
+    });
+  }
+
   trackCliCommandFlags(actual: string) {
     this.trackCliCommand({
       command: 'flags',
@@ -437,6 +444,38 @@ export class RootTelemetryClient extends TelemetryClient {
 
   trackVersion(version: string | undefined) {
     super.trackVersion(version);
+  }
+
+  trackProjectId(projectId: string | undefined) {
+    super.trackProjectId(projectId);
+  }
+
+  trackInvocationId(invocationId: string | undefined) {
+    super.trackInvocationId(invocationId);
+  }
+
+  trackDeviceId(deviceId: string | undefined) {
+    super.trackDeviceId(deviceId);
+  }
+
+  trackErrorStatus(status: number | string | undefined) {
+    super.trackErrorStatus(status);
+  }
+
+  trackErrorCode(code: string | undefined) {
+    super.trackErrorCode(code);
+  }
+
+  trackErrorSlug(slug: string | undefined) {
+    super.trackErrorSlug(slug);
+  }
+
+  trackErrorAction(action: string | undefined) {
+    super.trackErrorAction(action);
+  }
+
+  trackErrorServerMessage(serverMessage: string | undefined) {
+    super.trackErrorServerMessage(serverMessage);
   }
 
   trackCliOptionCwd(cwd: string | undefined) {
