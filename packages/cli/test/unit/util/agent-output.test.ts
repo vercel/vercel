@@ -460,10 +460,10 @@ describe('buildCommandWithGlobalFlags', () => {
         argv,
         'integration-resource remove r1 --disconnect-all --yes',
         'vercel',
-        { prependGlobalFlags: true }
+        { prependGlobalFlags: true, excludeFlags: ['--yes', '-y'] }
       )
     ).toBe(
-      'vercel --cwd /tmp/p --non-interactive --yes integration-resource remove r1 --disconnect-all --yes'
+      'vercel --cwd /tmp/p --non-interactive integration-resource remove r1 --disconnect-all --yes'
     );
   });
 });
