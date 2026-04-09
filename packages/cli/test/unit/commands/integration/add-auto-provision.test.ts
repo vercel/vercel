@@ -544,6 +544,68 @@ describe('integration add (auto-provision)', () => {
       );
     });
 
+    it('should emit action_required JSON and not wait for terms when non-interactive', async () => {
+      vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+        throw new Error(`exit:${code ?? 0}`);
+      }) as () => never);
+      client.reset();
+      useUser();
+      const teams = useTeams('team_dummy');
+      const t = Array.isArray(teams) ? teams[0] : teams.teams[0];
+      client.config.currentTeam = t.id;
+
+      useAutoProvision({
+        responseKey: 'provisioned',
+        withInstallation: false,
+      });
+
+      // No TTY triggers browser terms flow (same as CI / piped stdin)
+      client.stdin.isTTY = false;
+      client.isAgent = false;
+      client.nonInteractive = true;
+      client.setArgv(
+        'integration',
+        'add',
+        'acme',
+        '--non-interactive',
+        '--cwd',
+        '/tmp/proj'
+      );
+
+      await expect(integrationCommand(client)).rejects.toThrow('exit:1');
+
+      expect(openMock).toHaveBeenCalledWith(
+        expect.stringMatching(/\/integrations\/accept-terms\/acme/)
+      );
+
+      const payload = JSON.parse(client.stdout.getFullOutput().trim());
+      expect(payload.status).toBe('action_required');
+      expect(payload.reason).toBe('integration_terms_acceptance_required');
+      expect(payload.verification_uri).toMatch(
+        /\/integrations\/accept-terms\/acme/
+      );
+      expect(payload.userActionRequired).toBe(true);
+      expect(payload.policy_links?.marketplace_addendum).toMatch(
+        /vercel\.com\/legal\/integration-marketplace-end-users-addendum/
+      );
+      expect(payload.policy_links?.integration_privacy_policy).toMatch(
+        /example\.com\/privacy/
+      );
+      expect(payload.policy_links?.integration_eula).toMatch(
+        /example\.com\/eula/
+      );
+      expect(payload.next?.[0]?.command).toBe(
+        'vercel --non-interactive --cwd /tmp/proj integration add acme'
+      );
+      expect(payload.next?.[1]?.command).toBe(
+        'vercel --non-interactive --cwd /tmp/proj integration accept-terms acme --yes'
+      );
+
+      expect(client.stderr.getFullOutput()).not.toContain(
+        'Terms accepted in browser.'
+      );
+    });
+
     it('should exit with code 1 on browser terms timeout', async () => {
       client.reset();
       useUser();

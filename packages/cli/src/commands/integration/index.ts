@@ -4,13 +4,13 @@ import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import { printError } from '../../util/error';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import getInvalidSubcommand from '../../util/get-invalid-subcommand';
 import getSubcommand from '../../util/get-subcommand';
 import { IntegrationTelemetryClient } from '../../util/telemetry/commands/integration';
 import { type Command, help } from '../help';
 import { add } from './add';
 import { balance } from './balance';
 import {
+  acceptTermsSubcommand,
   addSubcommand,
   balanceSubcommand,
   discoverSubcommand,
@@ -30,9 +30,17 @@ import { discover } from './discover';
 import { guide } from './guide';
 import { printAddDynamicHelp } from './add-help';
 import installationsList from './installations-list';
+import acceptTerms from './accept-terms';
+import {
+  buildCommandWithGlobalFlags,
+  outputAgentError,
+} from '../../util/agent-output';
+import { AGENT_REASON } from '../../util/agent-output-constants';
+import { packageName } from '../../util/pkg-name';
 
 const COMMAND_CONFIG = {
   add: getCommandAliases(addSubcommand),
+  'accept-terms': getCommandAliases(acceptTermsSubcommand),
   open: getCommandAliases(openSubcommand),
   list: getCommandAliases(listSubcommand),
   installations: getCommandAliases(installationsSubcommand),
@@ -134,6 +142,15 @@ export default async function main(client: Client) {
         'integration add'
       );
     }
+    case 'accept-terms': {
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('integration', subcommandOriginal);
+        printHelp(acceptTermsSubcommand);
+        return 0;
+      }
+      telemetry.trackCliSubcommandAcceptTerms(subcommandOriginal);
+      return acceptTerms(client, subArgs);
+    }
     case 'list': {
       if (needHelp) {
         telemetry.trackCliFlagHelp('integration', subcommandOriginal);
@@ -195,7 +212,7 @@ export default async function main(client: Client) {
         return 0;
       }
       telemetry.trackCliSubcommandRemove(subcommandOriginal);
-      return remove(client);
+      return remove(client, subArgs);
     }
     case 'update': {
       if (needHelp) {
@@ -207,7 +224,51 @@ export default async function main(client: Client) {
       return update(client);
     }
     default: {
-      output.error(getInvalidSubcommand(COMMAND_CONFIG));
+      const validSubcommands = Object.keys(COMMAND_CONFIG).join(' | ');
+      const missingSubcommand = subArgs.length === 0;
+      const message = missingSubcommand
+        ? `Please specify a valid subcommand: ${validSubcommands}`
+        : `Unknown subcommand "${subArgs[0]}". Valid subcommands: ${validSubcommands}`;
+
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: missingSubcommand
+            ? AGENT_REASON.MISSING_ARGUMENTS
+            : AGENT_REASON.INVALID_ARGUMENTS,
+          message,
+          hint: missingSubcommand
+            ? `Pass a subcommand after \`integration\`, for example \`${packageName} integration installations\` or \`${packageName} integration list\`. Global flags such as \`--cwd\` may appear anywhere.`
+            : `Check the spelling or run \`${packageName} integration --help\` for the list of subcommands.`,
+          next: [
+            {
+              command: buildCommandWithGlobalFlags(
+                client.argv,
+                'integration --help',
+                packageName,
+                { prependGlobalFlags: true }
+              ),
+              when: 'Show all integration subcommands and options',
+            },
+            ...(missingSubcommand
+              ? [
+                  {
+                    command: buildCommandWithGlobalFlags(
+                      client.argv,
+                      'integration installations',
+                      packageName,
+                      { prependGlobalFlags: true }
+                    ),
+                    when: 'List marketplace installations for the current team',
+                  },
+                ]
+              : []),
+          ],
+        },
+        2
+      );
+      output.error(message);
       return 2;
     }
   }

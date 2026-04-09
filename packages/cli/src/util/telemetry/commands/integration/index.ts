@@ -13,6 +13,13 @@ export class IntegrationTelemetryClient
     });
   }
 
+  trackCliSubcommandAcceptTerms(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'accept-terms',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandList(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'list',

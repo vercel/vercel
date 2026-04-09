@@ -13,7 +13,6 @@ import {
   type PostProvisionOptions,
 } from '../../util/integration/post-provision-setup';
 import type {
-  AcceptedPolicies,
   BillingPlan,
   Integration,
   IntegrationInstallation,
@@ -40,6 +39,13 @@ import { createAuthorization } from '../../util/integration/create-authorization
 import sleep from '../../util/sleep';
 import { fetchAuthorization } from '../../util/integration/fetch-authorization';
 import { validateJsonOutput } from '../../util/output-format';
+import { installMarketplaceIntegration } from '../../util/integration/marketplace-install-integration';
+import {
+  buildCommandWithGlobalFlags,
+  outputAgentError,
+} from '../../util/agent-output';
+import { AGENT_REASON } from '../../util/agent-output-constants';
+import { packageName } from '../../util/pkg-name';
 
 import type { IntegrationAddFlags } from './command';
 
@@ -84,7 +90,38 @@ export async function add(
   const rawArg = args[0];
 
   if (!rawArg) {
-    output.error('You must pass an integration slug');
+    const message = 'You must pass an integration slug';
+    outputAgentError(
+      client,
+      {
+        status: 'error',
+        reason: AGENT_REASON.MISSING_ARGUMENTS,
+        message,
+        hint: `Example: \`${packageName} integration add <integration-slug>\`. Run \`${packageName} integration discover\` to find slugs.`,
+        next: [
+          {
+            command: buildCommandWithGlobalFlags(
+              client.argv,
+              'integration discover',
+              packageName,
+              { prependGlobalFlags: true }
+            ),
+            when: 'List available marketplace integrations and slugs',
+          },
+          {
+            command: buildCommandWithGlobalFlags(
+              client.argv,
+              'integration add neon',
+              packageName,
+              { prependGlobalFlags: true }
+            ),
+            when: 'Install after replacing neon with a slug from discover',
+          },
+        ],
+      },
+      1
+    );
+    output.error(message);
     return 1;
   }
 
@@ -370,21 +407,6 @@ function provisionResourceViaWebUI(
   output.debug(`Opening URL: ${url.href}`);
   open(url.href).catch((err: unknown) =>
     output.debug(`Failed to open browser: ${err}`)
-  );
-}
-
-async function installMarketplaceIntegration(
-  client: Client,
-  integrationId: string,
-  acceptedPolicies: AcceptedPolicies
-): Promise<{ id: string }> {
-  return await client.fetch<{ id: string }>(
-    `/v2/integrations/integration/${encodeURIComponent(integrationId)}/marketplace/install`,
-    {
-      method: 'POST',
-      json: true,
-      body: { acceptedPolicies, source: 'cli' },
-    }
   );
 }
 

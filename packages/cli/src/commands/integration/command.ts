@@ -161,6 +161,44 @@ export const addSubcommand = {
   ],
 } as const;
 
+export const acceptTermsSubcommand = {
+  name: 'accept-terms',
+  aliases: [],
+  description:
+    'Accept marketplace legal terms for an integration and install it on the current team (installation only; no product resource). Does not replace integrations that require a browser or device attestation.',
+  arguments: [
+    {
+      name: 'integration',
+      required: true,
+    },
+  ],
+  options: [
+    {
+      ...yesOption,
+      description:
+        "Non-interactive only: confirm acceptance of the Vercel Marketplace End User Addendum and this integration's privacy policy / EULA when applicable",
+    },
+    formatOption,
+  ],
+  examples: [
+    {
+      name: 'Accept terms interactively, then install on the team',
+      value: [
+        `${packageName} integration accept-terms <integration>`,
+        `${packageName} integration accept-terms neon`,
+      ],
+    },
+    {
+      name: 'Accept terms in CI (you must have read the linked policies)',
+      value: `${packageName} integration accept-terms neon --yes --non-interactive`,
+    },
+    {
+      name: 'Output result as JSON',
+      value: `${packageName} integration accept-terms neon --yes --format=json`,
+    },
+  ],
+} as const;
+
 type FlagValue<T> = T extends readonly [StringConstructor]
   ? string[]
   : T extends StringConstructor
@@ -543,6 +581,7 @@ export const integrationCommand = {
   arguments: [],
   subcommands: [
     addSubcommand,
+    acceptTermsSubcommand,
     balanceSubcommand,
     discoverSubcommand,
     guideSubcommand,

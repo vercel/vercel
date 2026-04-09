@@ -453,8 +453,10 @@ describe('integration', () => {
           expect(jsonOutput.next?.[0]?.command).toContain('--non-interactive');
           expect(jsonOutput.retry).toContain('--cwd /tmp/neon-proj');
           expect(jsonOutput.retry).toContain(
-            `integration remove ${integration} --yes --format=json`
+            `integration remove ${integration} --yes`
           );
+          expect(jsonOutput.retry).not.toContain('--format=json');
+          expect(jsonOutput.next?.[0]?.command).not.toMatch(/--yes.*--yes/);
         });
 
         it('should show agent approval warning when removing integration with resources as agent', async () => {

@@ -1598,6 +1598,33 @@ describe('integration', () => {
           );
         });
 
+        it('writes structured JSON when non-interactive and integration slug is missing', async () => {
+          vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+            throw new Error(`exit:${code ?? 0}`);
+          }) as () => never);
+          client.nonInteractive = true;
+          client.setArgv(
+            'integration',
+            'add',
+            '--non-interactive',
+            '--cwd',
+            '/tmp/example'
+          );
+          await expect(integrationCommand(client)).rejects.toThrow('exit:1');
+          const payload = JSON.parse(client.stdout.getFullOutput().trim());
+          expect(payload).toMatchObject({
+            status: 'error',
+            reason: 'missing_arguments',
+            message: 'You must pass an integration slug',
+          });
+          expect(payload.next?.[0]?.command).toMatch(
+            /vercel --non-interactive --cwd \/tmp\/example integration discover$/
+          );
+          expect(payload.next?.[1]?.command).toBe(
+            'vercel --non-interactive --cwd /tmp/example integration add neon'
+          );
+        });
+
         it('should error when more than one integration arugment was passed', async () => {
           client.setArgv('integration', 'add', 'acme', 'acme-two');
           const exitCode = await integrationCommand(client);

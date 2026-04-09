@@ -198,6 +198,15 @@ export async function remove(client: Client, argv: string[]) {
         output.stopSpinner();
         const approvalHint =
           'Remove each resource with --disconnect-all (non-interactive: include --yes). Get user approval before destructive resource removal.';
+        const resourceTail = asJson
+          ? '--disconnect-all --yes --format=json'
+          : '--disconnect-all --yes';
+        const integrationRemoveTail = asJson ? `--yes --format=json` : '--yes';
+        /** Template already includes `--yes`; omit it from prepended globals to avoid duplicates. */
+        const suggestNextOpts = {
+          prependGlobalFlags: true as const,
+          excludeFlags: ['--yes', '-y'],
+        };
         const payload = {
           status: 'error' as const,
           reason: AGENT_REASON.HAS_RESOURCES,
@@ -213,17 +222,17 @@ export async function remove(client: Client, argv: string[]) {
           next: resourceNames.map(name => ({
             command: buildCommandWithGlobalFlags(
               client.argv,
-              `integration-resource remove ${name} --disconnect-all --yes --format=json`,
+              `integration-resource remove ${name} ${resourceTail}`,
               packageName,
-              { prependGlobalFlags: true }
+              suggestNextOpts
             ),
             when: `Disconnect and remove resource ${name}; substitute the real resource name if different`,
           })),
           retry: buildCommandWithGlobalFlags(
             client.argv,
-            `integration remove ${integrationName} --yes --format=json`,
+            `integration remove ${integrationName} ${integrationRemoveTail}`,
             packageName,
-            { prependGlobalFlags: true }
+            suggestNextOpts
           ),
         };
         client.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
