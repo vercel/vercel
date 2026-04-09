@@ -32,7 +32,7 @@ import {
 import { addAutoProvision } from './add-auto-provision';
 import { fetchBillingPlans } from '../../util/integration/fetch-billing-plans';
 import { fetchInstallations } from '../../util/integration/fetch-installations';
-import { fetchIntegrationWithTelemetry } from '../../util/integration/fetch-integration';
+import { resolveAndFetchIntegration } from '../../util/integration/fetch-integration';
 import { selectProduct } from '../../util/integration/select-product';
 import output from '../../output-manager';
 import { IntegrationAddTelemetryClient } from '../../util/telemetry/commands/integration/add';
@@ -163,13 +163,17 @@ export async function add(
   }
   client.config.currentTeam = team.id;
 
-  const integration = await fetchIntegrationWithTelemetry(
+  const integration = await resolveAndFetchIntegration(
     client,
     integrationSlug,
     telemetry
   );
   if (!integration) {
     return 1;
+  }
+  integrationSlug = integration.slug;
+  if (integration.productSlug && !productSlug) {
+    productSlug = integration.productSlug;
   }
 
   if (!integration.products?.length) {
