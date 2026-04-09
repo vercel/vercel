@@ -189,6 +189,11 @@ describe('firewall rules add', () => {
       const exitCodePromise = firewall(client);
       await expect(client.stderr).toOutput('does not equal US');
       expect(await exitCodePromise).toEqual(0);
+      const cond = (capturedRequests.patchDraft?.value as any)
+        ?.conditionGroup[0]?.conditions[0];
+      expect(cond.op).toBe('eq');
+      expect(cond.neg).toBe(true);
+      expect(cond.value).toBe('US');
     });
 
     it('should create a rule with multi-value condition', async () => {
@@ -247,6 +252,37 @@ describe('firewall rules add', () => {
       expect(rl.window).toBe(60);
       expect(rl.limit).toBe(100);
       expect(rl.keys).toEqual(['ip', 'ja4']);
+      expect(rl.action).toBe('rate_limit'); // default exceeded action
+    });
+
+    it('should create a rate limit rule with explicit --rate-limit-action', async () => {
+      useListFirewallConfigs(createConfig(), null);
+      usePatchDraft();
+      useActivateConfig();
+
+      client.setArgv(
+        'firewall',
+        'rules',
+        'add',
+        'RL deny action',
+        '--condition',
+        'path:pre:/api',
+        '--action',
+        'rate_limit',
+        '--rate-limit-window',
+        '60',
+        '--rate-limit-requests',
+        '100',
+        '--rate-limit-action',
+        'deny',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('Rule "RL deny action" staged');
+      expect(await exitCodePromise).toEqual(0);
+      const rl2 = (capturedRequests.patchDraft?.value as any)?.action?.mitigate
+        ?.rateLimit;
+      expect(rl2.action).toBe('deny');
     });
 
     it('should create a rate limit rule with defaults (algo and keys)', async () => {
@@ -347,6 +383,10 @@ describe('firewall rules add', () => {
       const exitCodePromise = firewall(client);
       await expect(client.stderr).toOutput('Duration: 1h');
       expect(await exitCodePromise).toEqual(0);
+      expect(
+        (capturedRequests.patchDraft?.value as any)?.action?.mitigate
+          ?.actionDuration
+      ).toBe('1h');
     });
 
     it('should create an inactive rule with description', async () => {
@@ -396,6 +436,9 @@ describe('firewall rules add', () => {
       const exitCodePromise = firewall(client);
       await expect(client.stderr).toOutput('Rule "Log rule" staged');
       expect(await exitCodePromise).toEqual(0);
+      expect(
+        (capturedRequests.patchDraft?.value as any)?.action?.mitigate?.action
+      ).toBe('log');
     });
 
     it('should create a bypass rule', async () => {
@@ -949,6 +992,29 @@ describe('firewall rules add', () => {
       expect(await exitCodePromise).toEqual(1);
     });
 
+    it('should error on invalid --rate-limit-action', async () => {
+      client.setArgv(
+        'firewall',
+        'rules',
+        'add',
+        'Test',
+        '--condition',
+        'path:pre:/api',
+        '--action',
+        'rate_limit',
+        '--rate-limit-window',
+        '60',
+        '--rate-limit-requests',
+        '100',
+        '--rate-limit-action',
+        'invalid',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('Invalid rate limit action');
+      expect(await exitCodePromise).toEqual(1);
+    });
+
     it('should error in non-interactive mode without flags', async () => {
       client.setArgv('firewall', 'rules', 'add', 'Test Rule');
       (client.stdin as any).isTTY = false;
@@ -1099,6 +1165,68 @@ describe('firewall rules add', () => {
       );
       const exitCodePromise = firewall(client);
       await expect(client.stderr).toOutput('"action" field');
+      expect(await exitCodePromise).toEqual(1);
+    });
+
+    it('should error when conditionGroup entry missing conditions array', async () => {
+      client.setArgv(
+        'firewall',
+        'rules',
+        'add',
+        '--json',
+        JSON.stringify({
+          name: 'Test',
+          conditionGroup: [{ notConditions: [] }],
+          action: { mitigate: { action: 'deny' } },
+        }),
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput(
+        'conditionGroup[0] must have a "conditions" array'
+      );
+      expect(await exitCodePromise).toEqual(1);
+    });
+
+    it('should error when condition missing type field', async () => {
+      client.setArgv(
+        'firewall',
+        'rules',
+        'add',
+        '--json',
+        JSON.stringify({
+          name: 'Test',
+          conditionGroup: [{ conditions: [{ op: 'eq', value: 'test' }] }],
+          action: { mitigate: { action: 'deny' } },
+        }),
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput(
+        'conditionGroup[0].conditions[0] must have a "type" field'
+      );
+      expect(await exitCodePromise).toEqual(1);
+    });
+
+    it('should error when action missing mitigate field', async () => {
+      client.setArgv(
+        'firewall',
+        'rules',
+        'add',
+        '--json',
+        JSON.stringify({
+          name: 'Test',
+          conditionGroup: [
+            { conditions: [{ type: 'path', op: 'pre', value: '/api' }] },
+          ],
+          action: { notMitigate: {} },
+        }),
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput(
+        'action must have a "mitigate" field'
+      );
       expect(await exitCodePromise).toEqual(1);
     });
 

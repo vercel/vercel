@@ -12,6 +12,7 @@ import generateFirewallRule from '../../../util/firewall/generate-firewall-rule'
 import { formatRuleExpanded } from '../../../util/firewall/format';
 import type { FirewallRule } from '../../../util/firewall/types';
 import stamp from '../../../util/output/stamp';
+import { addInteractive } from './add-interactive';
 
 interface HandleAIAddOptions {
   prompt?: string;
@@ -262,7 +263,6 @@ export async function handleAIAdd(
     }
 
     if (choice === 'edit-manual') {
-      const { addInteractive } = await import('./add-interactive');
       return addInteractive(client, project, teamId, {
         prePopulated: currentRule,
         skipPrompts: opts.skipPrompts,
@@ -322,7 +322,25 @@ async function createFromGenerated(
     return 0;
   } catch (e: unknown) {
     const error = e as { message?: string };
-    output.error(error.message || 'Failed to stage rule');
+    const msg = error.message || 'Failed to stage rule';
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'staging_failed',
+          message: msg,
+          next: [
+            {
+              command: withGlobalFlags(client, 'firewall rules add --yes'),
+              when: 'try again',
+            },
+          ],
+        },
+        1
+      );
+    }
+    output.error(msg);
     return 1;
   }
 }
