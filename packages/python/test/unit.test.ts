@@ -182,7 +182,45 @@ afterEach(() => {
 });
 
 describe('prepareCache()', () => {
-  it('caches uv cache and the venv, excludes bytecode and user source', async () => {
+  const origPrepareCacheEnv = process.env.VERCEL_PYTHON_PREPARE_CACHE;
+
+  afterEach(() => {
+    if (origPrepareCacheEnv === undefined) {
+      delete process.env.VERCEL_PYTHON_PREPARE_CACHE;
+    } else {
+      process.env.VERCEL_PYTHON_PREPARE_CACHE = origPrepareCacheEnv;
+    }
+  });
+
+  it('returns empty object when VERCEL_PYTHON_PREPARE_CACHE is not set', async () => {
+    delete process.env.VERCEL_PYTHON_PREPARE_CACHE;
+    const workPath = path.join(
+      tmpdir(),
+      `vc-python-cache-${Math.floor(Math.random() * 1e6)}`
+    );
+
+    await fs.outputFile(
+      path.join(workPath, '.vercel/python/cache/uv/wheels/example.whl'),
+      ''
+    );
+
+    try {
+      const files = await prepareCache({
+        files: {},
+        entrypoint: 'app.py',
+        config: {},
+        workPath,
+        repoRootPath: workPath,
+      });
+
+      expect(Object.keys(files)).toHaveLength(0);
+    } finally {
+      await fs.remove(workPath);
+    }
+  });
+
+  it('caches uv cache and the venv, excludes bytecode and user source when enabled', async () => {
+    process.env.VERCEL_PYTHON_PREPARE_CACHE = '1';
     const workPath = path.join(
       tmpdir(),
       `vc-python-cache-${Math.floor(Math.random() * 1e6)}`
@@ -202,7 +240,7 @@ describe('prepareCache()', () => {
       path.join(workPath, '.vercel/python/cache/uv/archive/foo.pyc'),
       ''
     );
-    // Create venv files that should NOT be included (we only cache uv cache)
+    // Create venv files that should be included
     await fs.outputFile(
       path.join(workPath, '.vercel/python/.venv/pyvenv.cfg'),
       'home = /usr/bin\n'

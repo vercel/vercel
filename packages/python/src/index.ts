@@ -802,6 +802,12 @@ export const prepareCache: PrepareCache = async ({
   repoRootPath,
   workPath,
 }) => {
+  // Feature-gated: only enabled when the platform sets this env var.
+  // This allows incremental rollout to specific teams before general availability.
+  if (process.env.VERCEL_PYTHON_PREPARE_CACHE !== '1') {
+    return {};
+  }
+
   const root = repoRootPath || workPath;
   const ignore = ['**/*.pyc', '**/__pycache__/**'];
 
