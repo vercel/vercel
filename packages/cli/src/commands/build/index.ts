@@ -88,7 +88,11 @@ import stamp from '../../util/output/stamp';
 import parseTarget from '../../util/parse-target';
 import cliPkg from '../../util/pkg';
 import * as cli from '../../util/pkg-name';
-import { getProjectLink, VERCEL_DIR } from '../../util/projects/link';
+import {
+  getProjectLink,
+  repoLinkedFilesystemSegment,
+  VERCEL_DIR,
+} from '../../util/projects/link';
 import { resolveProjectCwd } from '../../util/projects/find-project-root';
 import {
   pickOverrides,
@@ -253,7 +257,7 @@ export default async function main(client: Client): Promise<number> {
   const link = await rootSpan
     .child('vc.getProjectLink')
     .trace(() => getProjectLink(client, cwd));
-  const projectRootDirectory = link?.projectRootDirectory ?? '';
+  const projectRootDirectory = repoLinkedFilesystemSegment(link);
   if (link?.repoRoot) {
     cwd = client.cwd = link.repoRoot;
   }
@@ -341,6 +345,11 @@ export default async function main(client: Client): Promise<number> {
     client.argv = originalArgv;
     project = await readProjectSettings(vercelDir);
   }
+
+  if (!project || !project.settings) {
+    return 1;
+  }
+  const buildProject: ProjectLinkAndSettings = project;
 
   // Delete output directory from potential previous build
   const defaultOutputDir = join(cwd, projectRootDirectory, OUTPUT_DIR);
@@ -436,12 +445,12 @@ export default async function main(client: Client): Promise<number> {
     }
 
     // For legacy Speed Insights
-    if (project.settings.analyticsId) {
+    if (buildProject.settings.analyticsId) {
       // we pass the env down to the builder
       // inside the builder we decide if we want to keep it or not
 
       envToUnset.add('VERCEL_ANALYTICS_ID');
-      process.env.VERCEL_ANALYTICS_ID = project.settings.analyticsId;
+      process.env.VERCEL_ANALYTICS_ID = buildProject.settings.analyticsId;
     }
 
     // Some build processes use these env vars to platform detect Vercel
@@ -452,7 +461,15 @@ export default async function main(client: Client): Promise<number> {
       await rootSpan
         .child('vc.doBuild')
         .trace(span =>
-          doBuild(client, project, buildsJson, cwd, outputDir, span, standalone)
+          doBuild(
+            client,
+            buildProject,
+            buildsJson,
+            cwd,
+            outputDir,
+            span,
+            standalone
+          )
         );
     } finally {
       await rootSpan.stop();

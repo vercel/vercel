@@ -122,14 +122,11 @@ export async function pullCommandLogic(
     return link;
   }
 
-  const { project, org, repoRoot, projectRootDirectory } = link;
+  const { project, org, repoRoot } = link;
 
   let currentDirectory: string;
   if (repoRoot) {
-    // Align with `vercel build`: use `repo.json` directory when present so pull
-    // writes `.vercel/project.json` where build reads it (API rootDirectory can
-    // differ when linking without updating project settings).
-    const segment = projectRootDirectory ?? project.rootDirectory ?? '';
+    const segment = project.rootDirectory ?? '';
     currentDirectory = join(repoRoot, segment);
   } else {
     currentDirectory = cwd;

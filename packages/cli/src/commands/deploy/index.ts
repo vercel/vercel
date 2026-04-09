@@ -823,8 +823,7 @@ async function handleContinueSubcommand(
   // Resolve vercelOutputDir - prebuilt is implicit for continue
   let vercelOutputDir: string = join(cwd, '.vercel/output');
   if (link.repoRoot) {
-    const sub =
-      link.projectRootDirectory ?? link.project.rootDirectory ?? '';
+    const sub = link.project.rootDirectory ?? '';
     if (sub) {
       vercelOutputDir = join(cwd, sub, '.vercel/output');
     }
@@ -1088,8 +1087,7 @@ async function handleDefaultDeploy(
     vercelOutputDir = join(cwd, '.vercel/output');
 
     if (link.repoRoot) {
-      const sub =
-        link.projectRootDirectory ?? link.project.rootDirectory ?? '';
+      const sub = link.project.rootDirectory ?? '';
       if (sub) {
         vercelOutputDir = join(cwd, sub, '.vercel/output');
       }

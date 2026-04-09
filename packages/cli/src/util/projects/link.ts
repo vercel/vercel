@@ -18,7 +18,11 @@ import type {
 } from '@vercel-internals/types';
 import { prependEmoji, emoji, type EmojiLabel } from '../emoji';
 import { isDirectory } from '../config/global-path';
-import { NowBuildError, getPlatformEnv } from '@vercel/build-utils';
+import {
+  NowBuildError,
+  getPlatformEnv,
+  normalizePath,
+} from '@vercel/build-utils';
 import outputCode from '../output/code';
 import { isErrnoException, isError } from '@vercel/error-utils';
 import { findProjectsFromPath, getRepoLink } from '../link/repo';
@@ -30,6 +34,46 @@ import { resolveProjectCwd } from './find-project-root';
 
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
+
+/** Maps `repo.json` `directory` to `Project.rootDirectory` (null = app at repo root). */
+function repoDirectoryToProjectRootDirectory(dir: string): string | null {
+  if (dir === '' || dir === '.') return null;
+  return normalizePath(dir);
+}
+
+/**
+ * When linked via `repo.json`, the API project’s `rootDirectory` can differ from
+ * the repo mapping; use the repo path for all CLI filesystem routing.
+ */
+function projectWithRepoLinkedRootDirectory(
+  project: Project,
+  link: ProjectLink
+): Project {
+  if (!link.repoRoot || link.projectRootDirectory === undefined) {
+    return project;
+  }
+  return {
+    ...project,
+    rootDirectory: repoDirectoryToProjectRootDirectory(
+      link.projectRootDirectory
+    ),
+  };
+}
+
+/**
+ * Relative path from the Git repo root to the linked app (for `join(repoRoot, …)`).
+ * Empty string when the app is at the repo root or when not repo-linked.
+ */
+export function repoLinkedFilesystemSegment(
+  link: ProjectLink | null | undefined
+): string {
+  if (!link?.repoRoot || link.projectRootDirectory === undefined) {
+    return '';
+  }
+  const d = link.projectRootDirectory;
+  if (d === '' || d === '.') return '';
+  return normalizePath(d);
+}
 
 export const VERCEL_DIR = '.vercel';
 export const VERCEL_DIR_FALLBACK = '.now';
@@ -524,12 +568,8 @@ export async function getLinkedProject(
   return {
     status: 'linked',
     org,
-    project,
+    project: projectWithRepoLinkedRootDirectory(project, link),
     repoRoot: link.repoRoot,
-    projectRootDirectory:
-      link.repoRoot && 'projectRootDirectory' in link
-        ? link.projectRootDirectory
-        : undefined,
   };
 }
 

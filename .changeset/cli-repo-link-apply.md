@@ -10,7 +10,7 @@ Non-interactive (`--yes`, experimental only): do not create new projects, PATCH 
 
 When the experimental flow is used from a subdirectory that lies inside a known project root (linked, suggested, or locally detected), the picker is limited to that directory. When the cwd is not under any such root, the CLI explains that and shows options for the whole repository (same as running from the repo root).
 
-`vc link --repo` merges new discovery results into an existing `repo.json`, replacing only rows that match the same `(orgId, directory)` key; other projects are preserved. `getLinkedProject` now forwards `projectRootDirectory` from `repo.json` so `vercel pull`, deploy `--prebuilt` paths, and microfrontends pull use the same filesystem root as `vercel build` when the Vercel dashboard root directory still differs (e.g. `directorySpecifiedManually`).
+`vc link --repo` merges new discovery results into an existing `repo.json`, replacing only rows that match the same `(orgId, directory)` key; other projects are preserved. `getLinkedProject` merges the repo mapping into `project.rootDirectory` when linked via `repo.json`, so pull, deploy `--prebuilt`, and microfrontends use the same filesystem root as `vercel build` when the dashboard root differs (no separate `projectRootDirectory` on `ProjectLinked`).
 
 `vc link --repo` respects `--scope` / `--team` (and the global scope) before org selection so `--yes` targets the intended team. With `--project`, the experimental flow resolves that project in the selected scope, keeps framework detection for path/git-link suggestions, omits local “new project” rows, and synthesizes a link row when discovery would otherwise only show a new-project detection.
 
