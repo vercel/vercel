@@ -28,20 +28,8 @@ export function prependEmoji(message: string, emoji?: string): string {
 }
 
 export function removeEmoji(message: string): string {
-  const emojiAtStart = message.search(stripEmojiRegex) === 0;
   const result = message.replace(stripEmojiRegex, '');
   // Multiline CLI output (e.g. `help()`) often starts with a leading newline;
   // trimStart() would strip that and break snapshots when NO_COLOR is set.
-  if (result.startsWith('\n')) {
-    return result;
-  }
-  // Padding after a leading emoji (e.g. `prependEmoji`) should be trimmed.
-  if (emojiAtStart) {
-    return result.trimStart();
-  }
-  // Preserve leading spaces (e.g. indented lines from `output.print` under a header).
-  if (result.startsWith(' ')) {
-    return result;
-  }
-  return result.trimStart();
+  return result.startsWith('\n') ? result : result.trimStart();
 }
