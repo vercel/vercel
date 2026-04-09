@@ -160,7 +160,20 @@ export default class Client extends EventEmitter implements Stdio {
         ),
       checkbox: <T>(opts: Parameters<typeof checkbox<T>>[0]) =>
         checkbox<T>(
-          { theme, ...opts },
+          {
+            ...opts,
+            theme:
+              opts.theme != null
+                ? {
+                    ...theme,
+                    ...opts.theme,
+                    style: {
+                      ...theme.style,
+                      ...opts.theme.style,
+                    },
+                  }
+                : theme,
+          },
           { input: this.stdin, output: this.stderr }
         ),
       expand: (opts: Parameters<typeof expand>[0]) =>
@@ -173,7 +186,12 @@ export default class Client extends EventEmitter implements Stdio {
       select: <T>(opts: Parameters<typeof select<T>>[0]) =>
         select<T>(
           { theme, ...opts },
-          { input: this.stdin, output: this.stderr }
+          {
+            input: this.stdin,
+            output: this.stderr,
+            // Avoid an extra blank line after the prompt completes (clearContent writes `\n`).
+            clearPromptOnDone: true,
+          }
         ),
       search: <T>(opts: Parameters<typeof search<T>>[0]) =>
         search<T>(

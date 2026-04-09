@@ -116,13 +116,14 @@ export default async function setupAndLink(
     return { status: 'error', exitCode: 1, reason: 'HEADLESS' };
   }
 
-  const shouldStartSetup = skipSetupConfirm ? true :
-    autoConfirm ||
-    nonInteractive ||
-    (await client.input.confirm(
-      `${setupMsg} ${chalk.cyan(`“${toHumanPath(path)}”`)}?`,
-      true
-    ));
+  const shouldStartSetup = skipSetupConfirm
+    ? true
+    : autoConfirm ||
+      nonInteractive ||
+      (await client.input.confirm(
+        `${setupMsg} ${chalk.cyan(`“${toHumanPath(path)}”`)}?`,
+        true
+      ));
 
   if (!shouldStartSetup) {
     output.print(`Canceled. Project not set up.\n`);

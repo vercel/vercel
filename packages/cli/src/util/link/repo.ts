@@ -1,18 +1,11 @@
 import chalk from 'chalk';
-import { Separator } from '@inquirer/checkbox';
 import pluralize from 'pluralize';
 import { homedir } from 'os';
 import slugify from '@sindresorhus/slugify';
 import { basename, join } from 'path';
 import { normalizePath, traverseUpDirectories } from '@vercel/build-utils';
 import { lstat, readJSON, outputJSON } from 'fs-extra';
-import toHumanPath from '../humanize-path';
-import {
-  linkFolderToProject,
-  VERCEL_DIR,
-  VERCEL_DIR_REPO,
-  writeReadme,
-} from '../projects/link';
+import { VERCEL_DIR, VERCEL_DIR_REPO, writeReadme } from '../projects/link';
 import { getRemoteUrls } from '../create-git-meta';
 import link from '../output/link';
 import { emoji, prependEmoji } from '../emoji';
@@ -42,6 +35,11 @@ export interface RepoProjectConfig {
   name: string;
   directory: string;
   orgId?: string;
+  /**
+   * Present only when `true`: the repo link uses the suggested directory locally,
+   * but the Vercel project's root directory setting was not updated to match.
+   */
+  directorySpecifiedManually?: boolean;
 }
 
 export interface RepoProjectsConfig {
@@ -63,14 +61,6 @@ export interface RepoLink {
 export interface EnsureRepoLinkOptions {
   yes: boolean;
   overwrite: boolean;
-  skipSetupConfirm?: boolean;
-}
-
-interface NewProject {
-  newProject?: true;
-  rootDirectory?: string;
-  name: string;
-  framework: Framework;
 }
 
 function frameworkToSlug(
@@ -142,6 +132,8 @@ type GitLinkedProjectWithMisconfiguredRootDirectory = {
   moveDirectory?: string | null;
   connectionOption?: 'connect' | 'link' | 'skip';
   updateDirectoryInProjectSettings?: boolean;
+  /** Set when using the suggested directory without updating project settings. */
+  directorySpecifiedManually?: boolean;
   id: string;
   name: string;
   directory: string;
@@ -161,6 +153,8 @@ type NonGitLinkedProject = {
   moveDirectory?: string | null;
   connectionOption?: 'connect' | 'link' | 'skip';
   updateDirectoryInProjectSettings?: boolean;
+  /** Set when using the suggested directory without updating project settings. */
+  directorySpecifiedManually?: boolean;
   name: string;
   directory: string;
   suggestedDirectory: string;
@@ -188,6 +182,186 @@ type Choice = {
   checked: boolean;
 };
 
+/** Cyan headers for the project-picker table (checkbox + single-option preview). */
+const repoLinkSelectionTableHeaders = [
+  'Project',
+  'Root Directory',
+  'Framework',
+  'Status',
+].map(h => chalk.cyan(chalk.bold(h)));
+
+function repoLinkSummaryTableHeaders(includeActionColumn: boolean): string[] {
+  const base = ['Project', 'Root Directory', 'Framework'].map(h =>
+    chalk.cyan(chalk.bold(h))
+  );
+  if (!includeActionColumn) {
+    return base;
+  }
+  return [...base, chalk.cyan(chalk.bold('Action'))];
+}
+
+/** Compact summary for the checkbox "answered" line (Inquirer joins full row labels by default). */
+function formatRepoLinkCheckboxSelectionSummary(
+  repoRoot: string,
+  selectedChoices: ReadonlyArray<{ value: Choice['value'] }>
+): string {
+  const labels = selectedChoices.map(({ value: v }) => {
+    if (v.type === 'detectedProject') {
+      const base =
+        basename(v.rootDirectory === '.' ? '' : v.rootDirectory) ||
+        basename(repoRoot);
+      return slugify(base);
+    }
+    return v.name;
+  });
+  const joined = labels.join(', ');
+  if (joined.length <= 72) {
+    return joined;
+  }
+  return `${selectedChoices.length} projects selected`;
+}
+
+function linkRepoApplyConfirmMessage(selectionCount: number): string {
+  return selectionCount === 1
+    ? 'Link the project above?'
+    : 'Link the projects above?';
+}
+
+function directoryForRepoJsonFromNormalizedPath(normalizedDir: string): string {
+  return normalizedDir === '' ? '.' : normalizePath(normalizedDir);
+}
+
+function canonicalDirectoryForSetup(
+  sel: NonGitLinkedProject | GitLinkedProjectWithMisconfiguredRootDirectory
+): string {
+  if (sel.moveDirectory != null) {
+    return normalizeRootDirectoryPath(sel.moveDirectory);
+  }
+  return normalizeRootDirectoryPath(sel.directory);
+}
+
+async function patchProjectRootDirectory(
+  client: Client,
+  projectId: string,
+  dirNorm: string
+): Promise<void> {
+  await client.fetch<Project>(
+    `/v9/projects/${encodeURIComponent(projectId)}`,
+    {
+      method: 'PATCH',
+      body: { rootDirectory: dirNorm === '' ? null : dirNorm },
+    }
+  );
+}
+
+async function applyRepoLinkSelections(
+  client: Client,
+  org: Org,
+  rootPath: string,
+  parsedRepoUrl: NonNullable<ReturnType<typeof parseRepoUrl>>,
+  selections: Choice['value'][],
+  { yes }: { yes: boolean }
+): Promise<RepoProjectConfig[]> {
+  const repoProjects: RepoProjectConfig[] = [];
+  const gitRepoPath = `${parsedRepoUrl.org}/${parsedRepoUrl.repo}`;
+
+  for (const sel of selections) {
+    switch (sel.type) {
+      case 'gitLinkedProject': {
+        repoProjects.push({
+          id: sel.id,
+          name: sel.name,
+          directory: directoryForRepoJsonFromNormalizedPath(
+            normalizeRootDirectoryPath(sel.directory)
+          ),
+          orgId: sel.orgId,
+        });
+        break;
+      }
+      case 'detectedProject': {
+        if (yes) {
+          break;
+        }
+        for (let i = 0; i < sel.frameworks.length; i++) {
+          const framework = sel.frameworks[i];
+          const name = slugify(
+            [
+              basename(sel.rootDirectory === '.' ? '' : sel.rootDirectory) ||
+              basename(rootPath),
+              i > 0 ? framework.slug : '',
+            ]
+              .filter(Boolean)
+              .join('-')
+          );
+          const orgAndName = `${org.slug}/${name}`;
+          output.spinner(`Creating new Project: ${orgAndName}`);
+          const project = await createProject(client, {
+            name,
+            ...(sel.rootDirectory ? { rootDirectory: sel.rootDirectory } : {}),
+            framework: frameworkToSlug(framework),
+          });
+          await connectGitProvider(
+            client,
+            project.id,
+            parsedRepoUrl.provider,
+            gitRepoPath
+          );
+          output.print(
+            `Created new Project: ${output.link(
+              orgAndName,
+              `https://vercel.com/${orgAndName}`,
+              { fallback: false }
+            )}\n`
+          );
+          repoProjects.push({
+            id: project.id,
+            name: project.name,
+            directory: directoryForRepoJsonFromNormalizedPath(
+              normalizeRootDirectoryPath(project.rootDirectory ?? '')
+            ),
+            orgId: org.id,
+          });
+        }
+        break;
+      }
+      case 'nonGitLinkedProject':
+      case 'gitLinkedProjectWithMisconfiguredRootDirectory': {
+        const dirNorm = canonicalDirectoryForSetup(sel);
+        if (!yes && sel.updateDirectoryInProjectSettings) {
+          output.spinner(`Updating project settings for ${sel.name}…`);
+          await patchProjectRootDirectory(client, sel.id, dirNorm);
+        }
+        if (!yes && sel.connectionOption === 'connect') {
+          output.spinner(`Connecting Git repository to ${sel.name}…`);
+          await connectGitProvider(
+            client,
+            sel.id,
+            parsedRepoUrl.provider,
+            gitRepoPath
+          );
+        }
+        const row: RepoProjectConfig = {
+          id: sel.id,
+          name: sel.name,
+          directory: directoryForRepoJsonFromNormalizedPath(dirNorm),
+          orgId: sel.orgId,
+        };
+        if (sel.directorySpecifiedManually) {
+          row.directorySpecifiedManually = true;
+        }
+        repoProjects.push(row);
+        break;
+      }
+      default: {
+        const _exhaustive: never = sel;
+        void _exhaustive;
+      }
+    }
+  }
+
+  return repoProjects;
+}
+
 /**
  * Runs the project discovery flow: selects org, discovers/creates projects,
  * and returns the selected projects as `RepoProjectConfig[]`.
@@ -207,15 +381,12 @@ async function discoverRepoProjects(
     existingProjectIds,
     existingDirectories,
     existingRemoteName,
-    skipSetupConfirm,
   }: {
     yes: boolean;
     existingProjectIds?: Set<string>;
     existingDirectories?: Set<string>;
     /** When set, skip the remote selection prompt and use this remote. */
     existingRemoteName?: string;
-    /** When true, skip the setup confirmation prompt */
-    skipSetupConfirm?: boolean;
   }
 ): Promise<
   | { remoteName: string; projects: RepoProjectConfig[]; orgSlug: string }
@@ -242,25 +413,6 @@ async function discoverRepoProjects(
     // keep existing logic for creating new projects
     detectedProjects: new Map<string, Framework[]>(),
   };
-
-  const promptAction = existingRemoteName ? 'add' : 'link';
-  const confirmMessage =
-    promptAction === 'add'
-      ? `Add Project(s) for Git repository at ${chalk.cyan(
-        `"${toHumanPath(rootPath)}"`
-      )}?`
-      : `Link Git repository at ${chalk.cyan(
-        `"${toHumanPath(rootPath)}"`
-      )} to your Project(s)?`;
-
-  const shouldLink = skipSetupConfirm
-    ? true
-    : yes || (await client.input.confirm(confirmMessage, true));
-
-  if (!shouldLink) {
-    output.print(`Canceled. Repository not linked.\n`);
-    return;
-  }
 
   const org = await selectOrg(
     client,
@@ -324,10 +476,10 @@ async function discoverRepoProjects(
   let projects: Project[] = [];
 
   if (linkDemoId) {
-    output.log(
-      chalk.yellow(
+    output.print(
+      `${chalk.yellow(
         `LINK_DEMO=${linkDemoId} — loading fixture (skipping project API & search)`
-      )
+      )}\n`
     );
     const { applyLinkDemoScenario } = await import('./link-demo-scenarios');
     applyLinkDemoScenario(linkDemoId, org, p, detectedProjects);
@@ -404,7 +556,9 @@ async function discoverRepoProjects(
               type: 'gitLinkedProjectWithMisconfiguredRootDirectory',
               id: match.project.id,
               name: match.project.name,
-              directory: normalizeRootDirectoryPath(match.project.rootDirectory),
+              directory: normalizeRootDirectoryPath(
+                match.project.rootDirectory
+              ),
               suggestedDirectory: normalizeRootDirectoryPath(rootDirectory),
               framework: match.project.framework,
               orgId: match.org.id,
@@ -530,14 +684,6 @@ async function discoverRepoProjects(
   //   );
   // }
 
-  if (
-    p.gitLinkedProjectsWithMisconfiguredRootDirectory.length === 0 &&
-    p.gitLinkedProjectsWithMisconfiguredRootDirectory.length === 0 &&
-    p.nonGitLinkedProjects.length === 1
-  ) {
-    await getProjectSetupInfo(client, p.nonGitLinkedProjects[0]);
-  }
-
   p.detectedProjects = detectedProjects;
   // output.log(
   //   `Auto - linking ${
@@ -553,22 +699,23 @@ async function discoverRepoProjects(
     checked: boolean;
   };
 
-  const gitLinkedCheckboxSpecs: CheckboxRowSpec[] =
-    p.gitLinkedProjects.map(project => ({
+  const gitLinkedCheckboxSpecs: CheckboxRowSpec[] = p.gitLinkedProjects.map(
+    project => ({
       cells: [
-        chalk.bold(`${org.slug}/${project.name}`),
+        chalk.bold(project.name),
         chalk.dim(formatRootForDisplay(project.directory)),
         formatFrameworkLabel(project.framework),
         chalk.dim('Linked to repo'),
       ],
       value: project,
       checked: true,
-    }));
+    })
+  );
 
   const misconfiguredCheckboxSpecs: CheckboxRowSpec[] =
     p.gitLinkedProjectsWithMisconfiguredRootDirectory.map(project => ({
       cells: [
-        chalk.bold(`${org.slug}/${project.name}`),
+        chalk.bold(project.name),
         chalk.dim('—'),
         formatFrameworkLabel(project.framework),
         chalk.yellow('Needs details'),
@@ -580,7 +727,7 @@ async function discoverRepoProjects(
   const nonGitCheckboxSpecs: CheckboxRowSpec[] = p.nonGitLinkedProjects.map(
     project => ({
       cells: [
-        chalk.bold(`${org.slug}/${project.name}`),
+        chalk.bold(project.name),
         chalk.dim(formatRootForDisplay(project.directory)),
         formatFrameworkLabel(project.framework),
         chalk.yellow('Not linked to this repository'),
@@ -597,17 +744,17 @@ async function discoverRepoProjects(
       const slugName = slugify(
         [
           basename(rootDirectory) || basename(rootPath),
-          i > 0 ? framework.slug ?? '' : '',
+          i > 0 ? (framework.slug ?? '') : '',
         ]
           .filter(Boolean)
           .join('-')
       );
       return {
         cells: [
-          chalk.bold(`${org.slug}/${slugName}`),
+          chalk.bold(slugName),
           chalk.dim(formatRootForDisplay(rootDirectory)),
           formatFrameworkLabelFromFramework(framework),
-          chalk.dim('New project'),
+          chalk.bold(chalk.yellow('New project')),
         ],
         value: {
           type: 'detectedProject' as const,
@@ -625,45 +772,115 @@ async function discoverRepoProjects(
     ...nonGitCheckboxSpecs,
   ];
 
-  const alignedPrimaryLines = alignColumnCells(
-    primaryCheckboxSpecs.map(r => r.cells),
-    3
-  );
-  const alignedDetectedLines = alignColumnCells(
-    detectedCheckboxSpecs.map(r => r.cells),
-    3
-  );
-
-  const choices: (Separator | Choice)[] = [];
-  primaryCheckboxSpecs.forEach((spec, i) => {
-    choices.push({
-      name: alignedPrimaryLines[i],
-      value: spec.value,
-      checked: spec.checked,
-    });
-  });
-  if (detectedCheckboxSpecs.length > 0 && primaryCheckboxSpecs.length > 0) {
-    choices.push(
-      new Separator(
-        chalk.dim(
-          '  ─────────────────────  New projects to create  ─────────────────────'
-        )
-      )
-    );
-  }
-  detectedCheckboxSpecs.forEach((spec, i) => {
-    choices.push({
-      name: alignedDetectedLines[i],
-      value: spec.value,
-      checked: spec.checked,
-    });
-  });
+  const allInteractiveSpecs: CheckboxRowSpec[] = [
+    ...primaryCheckboxSpecs,
+    ...detectedCheckboxSpecs,
+  ];
 
   output.stopSpinner();
-  const selected2 = await client.input.checkbox<Choice['value']>({
-    message: 'Select projects to link',
-    choices,
-  });
+
+  let selected2: Choice['value'][];
+
+  if (allInteractiveSpecs.length === 0) {
+    selected2 = [];
+  } else if (allInteractiveSpecs.length === 1) {
+    const sole = allInteractiveSpecs[0];
+    const soleNeedsSetupPhase =
+      sole.value.type === 'nonGitLinkedProject' ||
+      sole.value.type === 'gitLinkedProjectWithMisconfiguredRootDirectory';
+    output.print(
+      `\n${table([repoLinkSelectionTableHeaders, sole.cells], {
+        align: ['l', 'l', 'l', 'l'],
+        hsep: 2,
+      })}\n`
+    );
+    if (yes) {
+      if (sole.value.type === 'detectedProject') {
+        output.print(
+          `\n${chalk.yellow(
+            'Non-interactive mode (--yes) cannot create new Vercel projects.'
+          )}\n`
+        );
+        return;
+      }
+      selected2 = [sole.value];
+    } else if (!soleNeedsSetupPhase) {
+      const linkThis = await client.input.confirm(
+        linkRepoApplyConfirmMessage(1),
+        true
+      );
+      selected2 = linkThis ? [sole.value] : [];
+    } else {
+      const include = await client.input.confirm(
+        'Include this project in the repository link?',
+        true
+      );
+      selected2 = include ? [sole.value] : [];
+    }
+  } else {
+    const dataRowsForAlign = [
+      ...primaryCheckboxSpecs.map(r => r.cells),
+      ...detectedCheckboxSpecs.map(r => r.cells),
+    ];
+    const alignedBlock = alignColumnCells([
+      repoLinkSelectionTableHeaders,
+      ...dataRowsForAlign,
+    ]);
+    const alignedSelectionHeaderLine = alignedBlock[0];
+    const alignedPrimaryLines = alignedBlock.slice(
+      1,
+      1 + primaryCheckboxSpecs.length
+    );
+    const alignedDetectedLines = alignedBlock.slice(
+      1 + primaryCheckboxSpecs.length
+    );
+
+    output.print(`\n${alignedSelectionHeaderLine}\n`);
+
+    const choices: Choice[] = [];
+    primaryCheckboxSpecs.forEach((spec, i) => {
+      choices.push({
+        name: alignedPrimaryLines[i],
+        value: spec.value,
+        checked: spec.checked,
+      });
+    });
+    detectedCheckboxSpecs.forEach((spec, i) => {
+      choices.push({
+        name: alignedDetectedLines[i],
+        value: spec.value,
+        checked: spec.checked,
+      });
+    });
+
+    if (yes) {
+      selected2 = primaryCheckboxSpecs.map(spec => spec.value);
+      if (selected2.length === 0 && detectedCheckboxSpecs.length > 0) {
+        output.print(
+          `\n${chalk.yellow(
+            'Non-interactive mode (--yes) cannot create new Vercel projects, and no existing projects were available to link.'
+          )}\n`
+        );
+        return;
+      }
+    } else {
+      selected2 = await client.input.checkbox<Choice['value']>({
+        message: 'Select projects to link',
+        choices,
+        theme: {
+          style: {
+            renderSelectedChoices: (
+              selectedChoices: ReadonlyArray<{ value: Choice['value'] }>
+            ) =>
+              formatRepoLinkCheckboxSelectionSummary(
+                rootPath,
+                selectedChoices
+              ),
+          },
+        },
+      });
+    }
+  }
   const setupPhases = selected2.filter(
     (
       c
@@ -677,150 +894,71 @@ async function discoverRepoProjects(
   for (let i = 0; i < setupPhases.length; i++) {
     const choice = setupPhases[i];
     if (setupPhases.length > 1) {
-      if (i > 0) {
-        output.log('');
-      }
-      output.log(
-        chalk.dim(
-          `Project details · ${i + 1} of ${setupPhases.length}`
-        )
+      output.print(
+        `${chalk.dim(`Project details · ${i + 1} of ${setupPhases.length}`)}\n`
       );
     }
-    await getProjectSetupInfo(client, choice);
-  }
-  const hadLinkPlan = printLinkSelectionSummary({
-    orgSlug: org.slug,
-    rootPath,
-    selections: selected2,
-  });
-
-  if (!hadLinkPlan) {
-    return;
-  }
-
-  output.log('');
-  const proceedWithPlan =
-    yes ||
-    skipSetupConfirm ||
-    (await client.input.confirm(
-      `${chalk.bold('Continue with this link plan?')}\n${chalk.dim('  Review the table above, then confirm to apply it.')}`,
-      true
-    ));
-  if (!proceedWithPlan) {
-    output.print(`Canceled. Repository not linked.\n`);
-    return;
-  }
-
-  return;
-
-  const detectedProjectsCount = Array.from(detectedProjects.values()).reduce(
-    (o, f) => o + f.length,
-    0
-  );
-  if (detectedProjectsCount > 0) {
-    output.log(
-      `Detected ${pluralize(
-        'new Project',
-        detectedProjectsCount,
-        true
-      )} that may be created.`
-    );
-  }
-  let selected: (Project | NewProject)[];
-  if (yes) {
-    selected = projects;
-  } else {
-    const addSeparators = projects.length > 0 && detectedProjectsCount > 0;
-    selected = await client.input.checkbox<Project | NewProject>({
-      message: `Which Projects should be ${projects.length ? 'linked to' : 'created'
-        }?`,
-      choices: [
-        ...(addSeparators
-          ? [new Separator('----- Existing Projects -----')]
-          : []),
-        ...projects.map(project => {
-          const dir = project.rootDirectory || '.';
-          return {
-            name: `${org.slug}/${project.name} ${chalk.gray(`(${dir})`)}`,
-            value: project,
-            checked: true,
-          };
-        }),
-        ...(addSeparators
-          ? [new Separator('----- New Projects to be created -----')]
-          : []),
-        ...Array.from(detectedProjects.entries()).flatMap(
-          ([rootDirectory, frameworks]) =>
-            frameworks.map((framework, i) => {
-              const name = slugify(
-                [
-                  basename(rootDirectory) || basename(rootPath),
-                  i > 0 ? framework.slug : '',
-                ]
-                  .filter(Boolean)
-                  .join('-')
-              );
-              return {
-                name: `${org.slug}/${name} ${chalk.gray(`(${rootDirectory || '.'} · ${framework.name})`)}`,
-                value: {
-                  newProject: true,
-                  rootDirectory,
-                  name,
-                  framework,
-                },
-                // Checked by default when there are no other existing Projects
-                checked: projects.length === 0,
-              } as const;
-            })
-        ),
-      ],
-    });
-  }
-
-  if (selected.length === 0) {
-    output.print(`No Projects were selected. Repository not linked.\n`);
-    return;
-  }
-
-  for (let i = 0; i < selected.length; i++) {
-    const selection = selected[i];
-    if (!('newProject' in selection)) continue;
-    const np = selection as NewProject;
-    if (!np.newProject) continue;
-    const orgAndName = `${org.slug}/${np.name}`;
-    output.spinner(`Creating new Project: ${orgAndName}`);
-    const project = (selected[i] = await createProject(client, {
-      name: np.name,
-      ...(np.rootDirectory ? { rootDirectory: np.rootDirectory } : {}),
-      framework: frameworkToSlug(np.framework),
-    }));
-    await connectGitProvider(
-      client,
-      project.id,
-      parsedRepoUrl!.provider,
-      `${parsedRepoUrl!.org}/${parsedRepoUrl!.repo}`
-    );
-    output.log(
-      `Created new Project: ${output.link(
-        orgAndName,
-        `https://vercel.com/${orgAndName}`,
-        { fallback: false }
-      )}`
-    );
-  }
-
-  const repoProjects = selected.map(project => {
-    if (!('id' in project)) {
-      // Shouldn't happen at this point, but just to make TS happy
-      throw new TypeError(`Not a Project: ${JSON.stringify(project)}`);
+    if (yes) {
+      applyDefaultNonInteractiveProjectSetup(choice);
+    } else {
+      await getProjectSetupInfo(client, choice);
     }
-    return {
-      id: project.id,
-      name: project.name,
-      directory: normalizePath(project.rootDirectory || '.'),
-      orgId: org.id,
-    };
-  });
+  }
+
+  if (yes) {
+    selected2 = selected2.filter(s => s.type !== 'detectedProject');
+  }
+
+  if (selected2.length === 0) {
+    output.print(`\n${chalk.yellow('No projects selected.')}\n`);
+    return;
+  }
+
+  /** One row, no setup prompts — preview table already matched; skip duplicate summary + confirm. */
+  const skipFinalSummaryAndConfirm =
+    selected2.length === 1 && setupPhases.length === 0;
+
+  if (!skipFinalSummaryAndConfirm) {
+    const hadLinkPlan = printLinkSelectionSummary({
+      rootPath,
+      selections: selected2,
+    });
+
+    if (!hadLinkPlan) {
+      return;
+    }
+
+    output.print('\n');
+    const proceedWithPlan =
+      yes ||
+      (await client.input.confirm(
+        linkRepoApplyConfirmMessage(selected2.length),
+        true
+      ));
+    if (!proceedWithPlan) {
+      output.print(`Canceled. Repository not linked.\n`);
+      return;
+    }
+  }
+
+  if (linkDemoId) {
+    output.print(
+      `\n${chalk.yellow(
+        'LINK_DEMO — demo complete; exiting without creating projects, updating settings, or writing repo.json.'
+      )}\n`
+    );
+    output.print(JSON.stringify(selected2, null, 2));
+    return;
+  }
+
+  const repoProjects = await applyRepoLinkSelections(
+    client,
+    org,
+    rootPath,
+    parsedRepoUrl,
+    selected2,
+    { yes }
+  );
 
   return { remoteName, projects: repoProjects, orgSlug: org.slug };
 }
@@ -828,7 +966,7 @@ async function discoverRepoProjects(
 export async function ensureRepoLink(
   client: Client,
   cwd: string,
-  { yes, overwrite, skipSetupConfirm }: EnsureRepoLinkOptions
+  { yes, overwrite }: EnsureRepoLinkOptions
 ): Promise<RepoLink | undefined> {
   const repoLink = await getRepoLink(client, cwd);
   if (repoLink) {
@@ -841,7 +979,6 @@ export async function ensureRepoLink(
   if (overwrite || !repoConfig) {
     const result = await discoverRepoProjects(client, rootPath, {
       yes,
-      skipSetupConfirm,
     });
     if (!result) {
       return;
@@ -1053,25 +1190,16 @@ function formatRootDirectoryCell(
   toDisplay: string,
   options: {
     isMoving: boolean;
-    updateProjectSettings?: boolean;
   }
 ): string {
-  let cell: string;
   if (options.isMoving) {
-    cell = `${chalk.dim(fromDisplay)} ${chalk.dim('->')} ${chalk.hex('#FFB300')(toDisplay)}`;
-  } else {
-    cell = fromDisplay;
+    return `${chalk.dim(fromDisplay)} ${chalk.dim('->')} ${chalk.hex('#FFB300')(toDisplay)}`;
   }
-  if (options.updateProjectSettings) {
-    cell = `${cell}${chalk.dim(' · updates project settings')}`;
-  }
-  return cell;
+  return fromDisplay;
 }
 
 function rootCellForProjectWithDirectoryOptions(
-  sel:
-    | NonGitLinkedProject
-    | GitLinkedProjectWithMisconfiguredRootDirectory
+  sel: NonGitLinkedProject | GitLinkedProjectWithMisconfiguredRootDirectory
 ): string {
   const fromDisplay = formatRootForDisplay(sel.directory);
   const toDisplay =
@@ -1081,11 +1209,49 @@ function rootCellForProjectWithDirectoryOptions(
   const isMoving =
     sel.moveDirectory != null &&
     normalizeRootDirectoryPath(sel.moveDirectory) !==
-      normalizeRootDirectoryPath(sel.directory);
+    normalizeRootDirectoryPath(sel.directory);
   return formatRootDirectoryCell(fromDisplay, toDisplay, {
     isMoving,
-    updateProjectSettings: sel.updateDirectoryInProjectSettings,
   });
+}
+
+/** Planned repo-link actions after setup prompts (summary table only). */
+function linkPlanActionCell(
+  sel:
+    | GitLinkedProject
+    | GitLinkedProjectWithMisconfiguredRootDirectory
+    | NonGitLinkedProject
+    | DetectedProject
+): string {
+  if (sel.type === 'gitLinkedProject' || sel.type === 'detectedProject') {
+    return chalk.dim('—');
+  }
+  const willConnectGit = sel.connectionOption === 'connect';
+  const willUpdateProjectSettings = Boolean(sel.updateDirectoryInProjectSettings);
+  if (willConnectGit) {
+    return chalk.dim('Connect Git repo');
+  }
+  if (willUpdateProjectSettings) {
+    return chalk.dim('Update project settings');
+  }
+  return chalk.dim('—');
+}
+
+/** True when the summary would show a non-placeholder value in the Action column. */
+function selectionHasNonemptyLinkPlanAction(
+  sel:
+    | GitLinkedProject
+    | GitLinkedProjectWithMisconfiguredRootDirectory
+    | NonGitLinkedProject
+    | DetectedProject
+): boolean {
+  if (sel.type === 'gitLinkedProject' || sel.type === 'detectedProject') {
+    return false;
+  }
+  return (
+    sel.connectionOption === 'connect' ||
+    Boolean(sel.updateDirectoryInProjectSettings)
+  );
 }
 
 function linkSelectionTableRow(
@@ -1094,66 +1260,94 @@ function linkSelectionTableRow(
     | GitLinkedProjectWithMisconfiguredRootDirectory
     | NonGitLinkedProject
     | DetectedProject,
-  orgSlug: string,
-  rootPath: string
+  rootPath: string,
+  includeActionColumn: boolean
 ): string[] {
+  const maybeAction = (cells: string[]): string[] =>
+    includeActionColumn ? [...cells, linkPlanActionCell(sel)] : cells;
+
   switch (sel.type) {
     case 'gitLinkedProject':
-      return [
-        `${orgSlug}/${sel.name}`,
+      return maybeAction([
+        chalk.bold(sel.name),
         formatRootForDisplay(sel.directory),
         formatFrameworkLabel(sel.framework),
-      ];
+      ]);
     case 'nonGitLinkedProject':
-      return [
-        `${sel.orgSlug}/${sel.name}`,
+      return maybeAction([
+        chalk.bold(sel.name),
         rootCellForProjectWithDirectoryOptions(sel),
         formatFrameworkLabel(sel.framework),
-      ];
+      ]);
     case 'gitLinkedProjectWithMisconfiguredRootDirectory':
-      return [
-        `${sel.orgSlug}/${sel.name}`,
+      return maybeAction([
+        chalk.bold(sel.name),
         rootCellForProjectWithDirectoryOptions(sel),
         formatFrameworkLabel(sel.framework),
-      ];
+      ]);
     case 'detectedProject': {
       if (sel.frameworks.length === 0) {
-        return [
-          '—',
+        return maybeAction([
+          chalk.dim('—'),
           formatRootForDisplay(sel.rootDirectory),
           chalk.dim('—'),
-        ];
+        ]);
       }
-      const proposedNames = sel.frameworks.map(
-        (framework, i) =>
-          `${orgSlug}/${slugify(
-            [
-              basename(sel.rootDirectory) || basename(rootPath),
-              i > 0 ? framework.slug : '',
-            ]
-              .filter(Boolean)
-              .join('-')
-          )}`
+      const proposedNames = sel.frameworks.map((framework, i) =>
+        slugify(
+          [
+            basename(sel.rootDirectory) || basename(rootPath),
+            i > 0 ? framework.slug : '',
+          ]
+            .filter(Boolean)
+            .join('-')
+        )
       );
-      return [
-        proposedNames.join(', '),
+      return maybeAction([
+        chalk.bold(proposedNames.join(', ')),
         formatRootForDisplay(sel.rootDirectory),
         sel.frameworks.map(f => formatFrameworkLabelFromFramework(f)).join(', '),
-      ];
+      ]);
     }
     default: {
       const _exhaustive: never = sel;
       void _exhaustive;
-      return ['—', '—', '—'];
+      const dash = chalk.dim('—');
+      return includeActionColumn
+        ? [dash, dash, dash, dash]
+        : [dash, dash, dash];
     }
   }
 }
 
 /**
- * Prints the link plan table. Returns whether any rows were shown (caller may confirm next).
+ * Non-interactive (`--yes`): write `repo.json` mappings only — no new projects,
+ * no PATCH to project settings, no Git connect. When Vercel root and suggested
+ * directory differ, use the suggested directory in `repo.json` with
+ * `directorySpecifiedManually: true`.
+ */
+function applyDefaultNonInteractiveProjectSetup(
+  project: NonGitLinkedProject | GitLinkedProjectWithMisconfiguredRootDirectory
+): void {
+  project.confirmed = true;
+  project.connectionOption = 'link';
+  project.updateDirectoryInProjectSettings = false;
+  delete project.directorySpecifiedManually;
+  if (
+    normalizeRootDirectoryPath(project.directory) !==
+    normalizeRootDirectoryPath(project.suggestedDirectory)
+  ) {
+    project.moveDirectory = project.suggestedDirectory;
+    project.directorySpecifiedManually = true;
+  } else {
+    project.moveDirectory = null;
+  }
+}
+
+/**
+ * Prints the selected-projects summary table. Returns whether any rows were shown (caller may confirm next).
  */
 function printLinkSelectionSummary(options: {
-  orgSlug: string;
   rootPath: string;
   selections: (
     | GitLinkedProject
@@ -1162,31 +1356,26 @@ function printLinkSelectionSummary(options: {
     | DetectedProject
   )[];
 }): boolean {
-  const { orgSlug, rootPath, selections } = options;
-
-  output.log('');
-  output.log(chalk.bold('Link plan'));
+  const { rootPath, selections } = options;
 
   if (selections.length === 0) {
-    output.log(chalk.yellow('\nNo projects selected.'));
+    output.print(`\n${chalk.yellow('No projects selected.')}\n`);
     return false;
   }
 
-  const header = [
-    chalk.bold('Project'),
-    chalk.bold('Root directory'),
-    chalk.bold('Framework'),
-  ].map(cell => chalk.cyan(cell));
-
+  const includeActionColumn = selections.some(selectionHasNonemptyLinkPlanAction);
   const rows = selections.map(sel =>
-    linkSelectionTableRow(sel, orgSlug, rootPath)
+    linkSelectionTableRow(sel, rootPath, includeActionColumn)
   );
+  const align = includeActionColumn
+    ? (['l', 'l', 'l', 'l'] as const)
+    : (['l', 'l', 'l'] as const);
 
-  output.log(
-    `\n${table([header, ...rows], {
-      align: ['l', 'l', 'l'],
+  output.print(
+    `\n${table([repoLinkSummaryTableHeaders(includeActionColumn), ...rows], {
+      align: [...align],
       hsep: 2,
-    })}`
+    })}\n`
   );
   return true;
 }
@@ -1203,7 +1392,7 @@ async function getProjectSetupInfo(
 
   if (project.type === 'nonGitLinkedProject') {
     connectionOption = await client.input.select({
-      message: `${chalk.blue(chalk.bold(project.name))} (${chalk.gray(project.orgSlug)}) is not linked to this repository`,
+      message: `${chalk.blue(chalk.bold(project.name))} is not linked to this repository`,
       default: 'connect',
       choices: [
         {
@@ -1219,7 +1408,7 @@ async function getProjectSetupInfo(
     normalizeRootDirectoryPath(project.suggestedDirectory)
   ) {
     const moveOption = await client.input.select({
-      message: `${chalk.blue(chalk.bold(project.name))} (${chalk.gray(project.orgSlug)}) the root directory is "${chalk.gray(normalizeRootDirectoryPath(project.directory) === '' ? '.' : normalizeRootDirectoryPath(project.directory))}", but the suggested directory is "${chalk.gray(normalizeRootDirectoryPath(project.suggestedDirectory))}".`,
+      message: `${chalk.blue(chalk.bold(project.name))}: the root directory is "${chalk.gray(normalizeRootDirectoryPath(project.directory) === '' ? '.' : normalizeRootDirectoryPath(project.directory))}", but the suggested directory is "${chalk.gray(normalizeRootDirectoryPath(project.suggestedDirectory))}".`,
       default: 'yes',
       choices: [
         { name: 'Yes', value: 'yes' },
@@ -1230,22 +1419,25 @@ async function getProjectSetupInfo(
         },
       ],
     });
-    if (moveOption !== 'no') {
-      updateDirectoryInProjectSettings = await client.input.confirm(
-        `Would you like to update the root directory in the project settings to "${chalk.gray(normalizeRootDirectoryPath(project.suggestedDirectory))}"?`,
-        true
-      );
-    }
     if (moveOption === 'yes') {
       directory = project.suggestedDirectory;
-    }
-    if (moveOption === 'no') {
+      updateDirectoryInProjectSettings = await client.input.confirm(
+        `Would you like to update the root directory in the project settings to "${chalk.gray(formatRootForDisplay(project.suggestedDirectory))}"?`,
+        true
+      );
+      if (!updateDirectoryInProjectSettings) {
+        project.directorySpecifiedManually = true;
+      }
+    } else if (moveOption === 'no') {
       directory = project.directory;
-    }
-    if (moveOption === 'choose-different-directory') {
+    } else if (moveOption === 'choose-different-directory') {
       directory = await client.input.text({
         message: 'Enter the new directory',
       });
+      updateDirectoryInProjectSettings = await client.input.confirm(
+        `Would you like to update the root directory in the project settings to "${chalk.gray(formatRootForDisplay(directory))}"?`,
+        true
+      );
     }
   }
   project.confirmed = true;
@@ -1297,5 +1489,3 @@ const isLinkedToRepo = (
   }
   return false;
 };
-
-

@@ -20,9 +20,7 @@ export function alignColumnCells(rows: string[][], gap = 2): string[] {
 
   const gapStr = ' '.repeat(gap);
   return rows.map(row =>
-    row
-      .map((cell, c) => padStyledCellToWidth(cell, maxWidths[c]))
-      .join(gapStr)
+    row.map((cell, c) => padStyledCellToWidth(cell, maxWidths[c])).join(gapStr)
   );
 }
 
