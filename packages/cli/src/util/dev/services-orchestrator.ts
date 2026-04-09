@@ -145,6 +145,9 @@ function getServiceRoutePrefixes(service: Service): string[] {
   if (service.type === 'cron') {
     return [getInternalServiceCronPathPrefix(service.name)];
   }
+  if (service.routingPaths && service.routingPaths.length > 0) {
+    return service.routingPaths;
+  }
   return [service.routePrefix || '/'];
 }
 
@@ -358,7 +361,11 @@ export class ServicesOrchestrator {
       env.VERCEL_QUEUE_TOKEN = 'vc-dev-token';
     }
 
-    if (service.routePrefix && service.routePrefix !== '/') {
+    if (
+      service.stripRoutePrefix &&
+      service.routePrefix &&
+      service.routePrefix !== '/'
+    ) {
       env.VERCEL_SERVICE_ROUTE_PREFIX = service.routePrefix;
       env.VERCEL_SERVICE_ROUTE_PREFIX_STRIP = '1';
     }

@@ -61,6 +61,22 @@ describe('validateConfig', () => {
     expect(error).toBeNull();
   });
 
+  it('should not error with experimentalServices routing config', async () => {
+    const config = {
+      experimentalServices: {
+        docs: {
+          entrypoint: 'services/docs/main.py',
+          framework: 'fastapi',
+          routing: {
+            paths: ['/docs', '/docs/legacy'],
+          },
+        },
+      },
+    } satisfies Parameters<typeof validateConfig>[0];
+    const error = validateConfig(config);
+    expect(error).toBeNull();
+  });
+
   it('should not error with builds and routes', async () => {
     const config = {
       builds: [{ src: 'api/index.js', use: '@vercel/node' }],

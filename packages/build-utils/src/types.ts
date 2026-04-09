@@ -580,6 +580,8 @@ export interface Service {
   /* web service config */
   routePrefix?: string;
   routePrefixSource?: 'configured' | 'generated';
+  routingPaths?: string[];
+  stripRoutePrefix?: boolean;
   subdomain?: string;
   /* cron service config */
   schedule?: string;
@@ -786,6 +788,11 @@ export interface ServiceMount {
   subdomain?: string;
 }
 
+export interface ServiceRouting {
+  /** URL path subtrees owned by this service. */
+  paths: string[];
+}
+
 /**
  * Configuration for a service in vercel.json.
  * @experimental This feature is experimental and may change.
@@ -819,6 +826,8 @@ export interface ExperimentalServiceConfig {
   /* Web service config */
   /** Preferred routing config alias for routePrefix/subdomain. */
   mount?: string | ServiceMount;
+  /** Simple subtree ownership rules without mount semantics. */
+  routing?: ServiceRouting;
   /** URL prefix for routing (deprecated, use mount instead) */
   routePrefix?: string;
   /** Subdomain this service should respond to (web services only). */

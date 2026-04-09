@@ -182,6 +182,24 @@ const serviceMountSchema = {
   ],
 };
 
+const serviceRoutingSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['paths'],
+  properties: {
+    paths: {
+      type: 'array',
+      minItems: 1,
+      maxItems: 64,
+      items: {
+        type: 'string',
+        minLength: 1,
+        maxLength: 512,
+      },
+    },
+  },
+};
+
 const serviceConfigSchema = {
   type: 'object',
   additionalProperties: false,
@@ -195,6 +213,7 @@ const serviceConfigSchema = {
       maxLength: 512,
     },
     mount: serviceMountSchema,
+    routing: serviceRoutingSchema,
     routePrefix: {
       type: 'string',
       minLength: 1,

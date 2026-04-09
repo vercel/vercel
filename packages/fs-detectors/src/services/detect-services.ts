@@ -279,26 +279,27 @@ export function generateServicesRoutes(services: Service[]): ServicesRoutes {
   const crons: Route[] = [];
   const workers: Route[] = [];
 
-  // Filter and sort web services by prefix length (longest first)
-  // so more specific routes match before broader ones.
-  const sortedWebServices = services
-    .filter(
-      (s): s is Service & { routePrefix: string } =>
-        s.type === 'web' && typeof s.routePrefix === 'string'
-    )
-    .sort((a, b) => b.routePrefix.length - a.routePrefix.length);
+  // Expand web services into owned path entries and sort by path length
+  // (longest first) so more specific routes match before broader ones.
+  const sortedWebRoutingEntries = getWebRoutingEntries(services).sort(
+    (a, b) => b.path.length - a.path.length
+  );
 
-  const allWebPrefixes = getWebRoutePrefixes(sortedWebServices);
+  const allWebPrefixes = getWebRoutePrefixes(sortedWebRoutingEntries);
   const explicitHostPrefixGuard =
     getExplicitHostPrefixNegativeLookahead(allWebPrefixes);
 
-  for (const service of sortedWebServices) {
-    const { routePrefix } = service;
+  for (const { service, path: routePrefix } of sortedWebRoutingEntries) {
     const normalizedPrefix = routePrefix.slice(1); // Strip leading /
     const ownershipGuard = getOwnershipGuard(routePrefix, allWebPrefixes);
     const hostCondition = getHostCondition(service);
 
-    if (hostCondition && routePrefix !== '/') {
+    if (
+      hostCondition &&
+      typeof service.routePrefix === 'string' &&
+      service.routePrefix === routePrefix &&
+      routePrefix !== '/'
+    ) {
       const normalizedRoutePrefix = normalizeRoutePrefix(routePrefix);
       hostRewrites.push({
         src: '^/$',
@@ -325,6 +326,8 @@ export function generateServicesRoutes(services: Service[]): ServicesRoutes {
     }
 
     if (isStaticBuild(service)) {
+      const outputRoutePrefix = service.routePrefix || routePrefix;
+      const normalizedOutputPrefix = outputRoutePrefix.slice(1);
       // Static/SPA service: serve index.html for client-side routing
       if (routePrefix === '/') {
         defaults.push({ handle: 'filesystem' });
@@ -338,7 +341,7 @@ export function generateServicesRoutes(services: Service[]): ServicesRoutes {
             `^/${normalizedPrefix}(?:/.*)?$`,
             ownershipGuard
           ),
-          dest: `/${normalizedPrefix}/index.html`,
+          dest: `/${normalizedOutputPrefix}/index.html`,
         });
       }
     } else if (service.runtime) {
@@ -403,13 +406,40 @@ function escapeRegex(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-function getWebRoutePrefixes(services: Service[]): string[] {
-  const unique = new Set<string>();
-  for (const service of services) {
-    if (service.type !== 'web' || typeof service.routePrefix !== 'string') {
-      continue;
+function getWebRoutingEntries(
+  services: Service[]
+): Array<{ service: Service & { type: 'web' }; path: string }> {
+  const entries: Array<{ service: Service & { type: 'web' }; path: string }> =
+    [];
+
+  for (const service of services.filter(
+    (candidate): candidate is Service & { type: 'web' } =>
+      candidate.type === 'web'
+  )) {
+    const ownedPaths =
+      service.routingPaths && service.routingPaths.length > 0
+        ? service.routingPaths
+        : typeof service.routePrefix === 'string'
+          ? [service.routePrefix]
+          : [];
+
+    for (const ownedPath of ownedPaths) {
+      entries.push({
+        service,
+        path: normalizeRoutePrefix(ownedPath),
+      });
     }
-    unique.add(normalizeRoutePrefix(service.routePrefix));
+  }
+
+  return entries;
+}
+
+function getWebRoutePrefixes(
+  entries: Array<{ service: Service & { type: 'web' }; path: string }>
+): string[] {
+  const unique = new Set<string>();
+  for (const entry of entries) {
+    unique.add(normalizeRoutePrefix(entry.path));
   }
   return Array.from(unique);
 }

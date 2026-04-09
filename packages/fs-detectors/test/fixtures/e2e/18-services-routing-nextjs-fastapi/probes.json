@@ -1,0 +1,59 @@
+{
+  "probes": [
+    {
+      "path": "/",
+      "status": 200,
+      "mustContain": "Hello from Next.js"
+    },
+    {
+      "path": "/does-not-exist",
+      "status": 404,
+      "mustContain": "404 from Next.js"
+    },
+    {
+      "path": "/api/parent",
+      "status": 200,
+      "mustContain": "Hello from Parent FastAPI"
+    },
+    {
+      "path": "/api/parent/health",
+      "status": 200,
+      "mustContain": "parent-ok"
+    },
+    {
+      "path": "/api/parent/child",
+      "status": 200,
+      "mustContain": "Hello from Child FastAPI"
+    },
+    {
+      "path": "/api/parent/child/health",
+      "status": 200,
+      "mustContain": "child-ok"
+    },
+    {
+      "path": "/api/parent/child/legacy",
+      "status": 200,
+      "mustContain": "Hello from Parent FastAPI"
+    },
+    {
+      "path": "/api/parent/child/legacy/health",
+      "status": 200,
+      "mustContain": "legacy-ok"
+    },
+    {
+      "path": "/api/parent/child/does-not-exist",
+      "status": 404,
+      "mustContain": "404 from Child FastAPI"
+    },
+    {
+      "path": "/api/parent/child/legacy/does-not-exist",
+      "status": 404,
+      "mustContain": "404 from Parent FastAPI"
+    },
+    {
+      "path": "/api/parent2",
+      "status": 404,
+      "mustContain": "404 from Next.js"
+    }
+  ]
+}

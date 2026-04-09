@@ -9,6 +9,7 @@ import type {
 import { getWorkerTopics } from '@vercel/build-utils';
 import {
   ENTRYPOINT_EXTENSIONS,
+  ROUTE_OWNING_BUILDERS,
   RUNTIME_BUILDERS,
   STATIC_BUILDERS,
   RUNTIME_MANIFESTS,
@@ -219,10 +220,84 @@ function isReservedServiceRoutePrefix(routePrefix: string): boolean {
   );
 }
 
+const ROUTING_PATTERN_HINT_RE = /[:*()[\]?+|^$]/;
+
+function normalizeServiceRoutingPaths(
+  name: string,
+  paths: unknown
+): {
+  paths?: string[];
+  error?: ServiceDetectionError;
+} {
+  if (!Array.isArray(paths) || paths.length === 0) {
+    return {
+      error: {
+        code: 'INVALID_ROUTING',
+        message: `Service "${name}" has invalid "routing" config. "routing.paths" must be a non-empty array of concrete paths like "/docs".`,
+        serviceName: name,
+      },
+    };
+  }
+
+  const normalizedPaths: string[] = [];
+  const seen = new Set<string>();
+
+  for (const value of paths) {
+    if (typeof value !== 'string') {
+      return {
+        error: {
+          code: 'INVALID_ROUTING',
+          message: `Service "${name}" has invalid "routing" config. Each entry in "routing.paths" must be a string.`,
+          serviceName: name,
+        },
+      };
+    }
+
+    if (!value.startsWith('/')) {
+      return {
+        error: {
+          code: 'INVALID_ROUTING',
+          message: `Service "${name}" has invalid routing path "${value}". Routing paths must start with "/".`,
+          serviceName: name,
+        },
+      };
+    }
+
+    if (ROUTING_PATTERN_HINT_RE.test(value)) {
+      return {
+        error: {
+          code: 'UNSUPPORTED_ROUTING_PATTERN',
+          message: `Service "${name}" has unsupported routing path "${value}". Services routing only supports concrete subtree paths like "/docs". Use microfrontends for dynamic or pattern-based app composition.`,
+          serviceName: name,
+        },
+      };
+    }
+
+    const normalized = normalizeRoutePrefix(value);
+    if (isReservedServiceRoutePrefix(normalized)) {
+      return {
+        error: {
+          code: 'RESERVED_ROUTE_PREFIX',
+          message: `Web service "${name}" cannot use routing path "${normalized}". The "${INTERNAL_SERVICE_PREFIX}" prefix is reserved for internal services routing.`,
+          serviceName: name,
+        },
+      };
+    }
+
+    if (!seen.has(normalized)) {
+      seen.add(normalized);
+      normalizedPaths.push(normalized);
+    }
+  }
+
+  return { paths: normalizedPaths };
+}
+
 interface ResolvedServiceRoutingConfig {
   routePrefix?: string;
   subdomain?: string;
   routePrefixConfigured: boolean;
+  routingPaths?: string[];
 }
 
 function resolveServiceRoutingConfig(
@@ -234,8 +309,9 @@ function resolveServiceRoutingConfig(
 } {
   const hasLegacyRoutePrefix = typeof config.routePrefix === 'string';
   const hasLegacySubdomain = typeof config.subdomain === 'string';
+  const hasRouting = config.routing !== undefined;
 
-  if (config.mount === undefined) {
+  if (config.mount === undefined && !hasRouting) {
     return {
       routing: {
         routePrefix: config.routePrefix,
@@ -245,12 +321,69 @@ function resolveServiceRoutingConfig(
     };
   }
 
-  if (hasLegacyRoutePrefix || hasLegacySubdomain) {
+  if (
+    config.mount !== undefined &&
+    (hasLegacyRoutePrefix || hasLegacySubdomain || hasRouting)
+  ) {
     return {
       error: {
         code: 'CONFLICTING_MOUNT_CONFIG',
-        message: `Service "${name}" cannot mix "mount" with "routePrefix" or "subdomain". Use only one routing configuration style.`,
+        message: `Service "${name}" cannot mix "mount" with "routing", "routePrefix", or "subdomain". Use only one routing configuration style.`,
         serviceName: name,
+      },
+    };
+  }
+
+  if (hasRouting) {
+    if (hasLegacyRoutePrefix || hasLegacySubdomain) {
+      return {
+        error: {
+          code: 'CONFLICTING_ROUTING_CONFIG',
+          message: `Service "${name}" cannot mix "routing" with "routePrefix" or "subdomain". Use only one routing configuration style.`,
+          serviceName: name,
+        },
+      };
+    }
+
+    if (
+      !config.routing ||
+      typeof config.routing !== 'object' ||
+      Array.isArray(config.routing)
+    ) {
+      return {
+        error: {
+          code: 'INVALID_ROUTING',
+          message: `Service "${name}" has invalid "routing" config. Use an object like { paths: ["/docs"] }.`,
+          serviceName: name,
+        },
+      };
+    }
+
+    const hasInvalidRoutingKeys = Object.keys(config.routing).some(
+      key => key !== 'paths'
+    );
+    if (hasInvalidRoutingKeys) {
+      return {
+        error: {
+          code: 'INVALID_ROUTING',
+          message: `Service "${name}" has invalid "routing" config. Only "paths" is supported.`,
+          serviceName: name,
+        },
+      };
+    }
+
+    const normalizedRouting = normalizeServiceRoutingPaths(
+      name,
+      config.routing.paths
+    );
+    if (normalizedRouting.error) {
+      return { error: normalizedRouting.error };
+    }
+
+    return {
+      routing: {
+        routePrefixConfigured: false,
+        routingPaths: normalizedRouting.paths,
       },
     };
   }
@@ -353,8 +486,11 @@ export function validateServiceConfig(
   }
   const configuredRoutePrefix = routingResult.routing?.routePrefix;
   const configuredSubdomain = routingResult.routing?.subdomain;
+  const configuredRoutingPaths = routingResult.routing?.routingPaths;
   const hasRoutePrefix = typeof configuredRoutePrefix === 'string';
   const hasSubdomain = typeof configuredSubdomain === 'string';
+  const hasRoutingPaths =
+    Array.isArray(configuredRoutingPaths) && configuredRoutingPaths.length > 0;
 
   if (hasSubdomain && !DNS_LABEL_RE.test(configuredSubdomain!)) {
     return {
@@ -364,10 +500,15 @@ export function validateServiceConfig(
     };
   }
 
-  if (serviceType === 'web' && !hasRoutePrefix && !hasSubdomain) {
+  if (
+    serviceType === 'web' &&
+    !hasRoutePrefix &&
+    !hasSubdomain &&
+    !hasRoutingPaths
+  ) {
     return {
       code: 'MISSING_ROUTE_PREFIX',
-      message: `Web service "${name}" must specify at least one of "mount", "routePrefix", or "subdomain".`,
+      message: `Web service "${name}" must specify at least one of "mount", "routing", "routePrefix", or "subdomain".`,
       serviceName: name,
     };
   }
@@ -384,11 +525,11 @@ export function validateServiceConfig(
   }
   if (
     (serviceType === 'worker' || serviceType === 'cron') &&
-    configuredRoutePrefix
+    (configuredRoutePrefix || hasRoutingPaths)
   ) {
     return {
       code: 'INVALID_ROUTE_PREFIX',
-      message: `${serviceType === 'worker' ? 'Worker' : 'Cron'} service "${name}" cannot have "routePrefix" or "mount". Only web services should specify path-based routing.`,
+      message: `${serviceType === 'worker' ? 'Worker' : 'Cron'} service "${name}" cannot have "routePrefix", "mount", or "routing". Only web services should specify path-based routing.`,
       serviceName: name,
     };
   }
@@ -493,6 +634,37 @@ export function validateServiceEntrypoint(
   return null;
 }
 
+function validateResolvedServiceRoutingSupport(
+  service: Service
+): ServiceDetectionError | null {
+  if (
+    service.type !== 'web' ||
+    !service.routingPaths ||
+    service.routingPaths.length === 0
+  ) {
+    return null;
+  }
+
+  const builderOrFramework = service.framework || service.builder.use;
+  if (STATIC_BUILDERS.has(service.builder.use)) {
+    return {
+      code: 'UNSUPPORTED_ROUTING_BUILDER',
+      message: `Web service "${service.name}" cannot use "routing" with "${builderOrFramework}". Static and frontend services need a canonical public base path. Use "mount" for stable subpath hosting.`,
+      serviceName: service.name,
+    };
+  }
+
+  if (ROUTE_OWNING_BUILDERS.has(service.builder.use)) {
+    return {
+      code: 'UNSUPPORTED_ROUTING_BUILDER',
+      message: `Web service "${service.name}" cannot use "routing" with "${builderOrFramework}" yet. Services routing currently supports simple subtree ownership for non-route-owning backends only. Use "mount" for canonical hosting, or microfrontends for richer app composition.`,
+      serviceName: service.name,
+    };
+  }
+
+  return null;
+}
+
 /**
  * Resolve a single service from user configuration.
  */
@@ -520,6 +692,7 @@ export async function resolveConfiguredService(
   }
   const configuredRoutePrefix = routingResult.routing?.routePrefix;
   const configuredSubdomain = routingResult.routing?.subdomain;
+  const configuredRoutingPaths = routingResult.routing?.routingPaths;
   const routePrefixWasConfigured =
     routingResult.routing?.routePrefixConfigured ?? false;
 
@@ -659,6 +832,9 @@ export async function resolveConfiguredService(
   const isStaticBuild = STATIC_BUILDERS.has(builderUse);
   const runtime = isStaticBuild ? undefined : inferredRuntime;
 
+  const stripRoutePrefix =
+    type === 'web' && typeof routePrefix === 'string' && routePrefix !== '/';
+
   // Pass routePrefix to builder config as a filesystem mountpoint.
   // static-build uses this to prefix output paths: '.' = root, 'admin' = /admin/
   // We strip the leading slash since it's a relative path, not a URL.
@@ -687,6 +863,8 @@ export async function resolveConfiguredService(
     entrypoint: resolvedEntrypointFile,
     routePrefix,
     routePrefixSource: resolvedRoutePrefixSource,
+    routingPaths: configuredRoutingPaths,
+    stripRoutePrefix,
     subdomain: normalizedSubdomain,
     framework: config.framework,
     builder: {
@@ -719,7 +897,7 @@ export async function resolveAllConfiguredServices(
 }> {
   const resolved: Service[] = [];
   const errors: ServiceDetectionError[] = [];
-  const webServicesByRoutePrefix = new Map<string, string>();
+  const webServicesByOwnedPath = new Map<string, string>();
 
   for (const name of Object.keys(services)) {
     const serviceConfig = services[name];
@@ -832,20 +1010,40 @@ export async function resolveAllConfiguredServices(
       routePrefixSource,
     });
 
-    if (service.type === 'web' && typeof service.routePrefix === 'string') {
-      const normalizedRoutePrefix = normalizeRoutePrefix(service.routePrefix);
-      const existingServiceName = webServicesByRoutePrefix.get(
-        normalizedRoutePrefix
-      );
-      if (existingServiceName) {
-        errors.push({
-          code: 'DUPLICATE_ROUTE_PREFIX',
-          message: `Web services "${existingServiceName}" and "${name}" cannot share routePrefix "${normalizedRoutePrefix}".`,
-          serviceName: name,
-        });
+    const resolvedRoutingError = validateResolvedServiceRoutingSupport(service);
+    if (resolvedRoutingError) {
+      errors.push(resolvedRoutingError);
+      continue;
+    }
+
+    if (service.type === 'web') {
+      const ownedPaths = service.routingPaths?.length
+        ? service.routingPaths
+        : typeof service.routePrefix === 'string'
+          ? [service.routePrefix]
+          : [];
+
+      let hasDuplicateOwnedPath = false;
+      for (const ownedPath of ownedPaths) {
+        const normalizedOwnedPath = normalizeRoutePrefix(ownedPath);
+        const existingServiceName =
+          webServicesByOwnedPath.get(normalizedOwnedPath);
+        if (existingServiceName) {
+          errors.push({
+            code: 'DUPLICATE_ROUTE_PREFIX',
+            message: `Web services "${existingServiceName}" and "${name}" cannot share routing path "${normalizedOwnedPath}".`,
+            serviceName: name,
+          });
+          hasDuplicateOwnedPath = true;
+          break;
+        }
+      }
+      if (hasDuplicateOwnedPath) {
         continue;
       }
-      webServicesByRoutePrefix.set(normalizedRoutePrefix, name);
+      for (const ownedPath of ownedPaths) {
+        webServicesByOwnedPath.set(normalizeRoutePrefix(ownedPath), name);
+      }
     }
 
     resolved.push(service);
