@@ -53,6 +53,20 @@ describe('integration', () => {
             description: 'Relational database',
             tags: ['Storage', 'Postgres'],
           },
+          {
+            name: 'Acme Product A',
+            slug: 'acme-two-products/acme-a',
+            provider: 'Acme Integration Two Products',
+            description: 'The Acme A product',
+            tags: ['Storage', 'Kv', 'Redis'],
+          },
+          {
+            name: 'Acme Product B',
+            slug: 'acme-two-products/acme-b',
+            provider: 'Acme Integration Two Products',
+            description: 'The Acme B product',
+            tags: ['Storage', 'Queue'],
+          },
         ],
       });
     });
@@ -70,6 +84,8 @@ describe('integration', () => {
       expect(stderr).toContain('Description: Serverless Postgres database');
       expect(stderr).toContain('Acme KV (acme-multi/acme-kv)');
       expect(stderr).toContain('Acme DB (acme-multi/acme-db)');
+      expect(stderr).toContain('Acme Product A (acme-two-products/acme-a)');
+      expect(stderr).toContain('Acme Product B (acme-two-products/acme-b)');
     });
 
     it('continues when categories endpoint fails', async () => {
@@ -107,6 +123,20 @@ describe('integration', () => {
             description: 'Relational database',
             tags: ['databases', 'Postgres'],
           },
+          {
+            name: 'Acme Product A',
+            slug: 'acme-two-products/acme-a',
+            provider: 'Acme Integration Two Products',
+            description: 'The Acme A product',
+            tags: ['databases', 'Kv', 'Redis'],
+          },
+          {
+            name: 'Acme Product B',
+            slug: 'acme-two-products/acme-b',
+            provider: 'Acme Integration Two Products',
+            description: 'The Acme B product',
+            tags: ['databases', 'Queue'],
+          },
         ],
       });
     });
@@ -142,10 +172,12 @@ describe('integration', () => {
         expect(exitCode, 'exit code for "integrationCommand"').toEqual(0);
 
         const output = JSON.parse(client.stdout.getFullOutput());
-        expect(output.products).toHaveLength(2);
+        expect(output.products).toHaveLength(4);
         expect(output.products.map((p: { name: string }) => p.name)).toEqual([
           'Acme KV',
           'Acme DB',
+          'Acme Product A',
+          'Acme Product B',
         ]);
       });
 
@@ -204,7 +236,7 @@ describe('integration', () => {
         expect(exitCode, 'exit code for "integrationCommand"').toEqual(0);
 
         const output = JSON.parse(client.stdout.getFullOutput());
-        expect(output.products).toHaveLength(3);
+        expect(output.products).toHaveLength(5);
       });
     });
 
