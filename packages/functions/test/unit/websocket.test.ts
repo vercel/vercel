@@ -49,7 +49,7 @@ describe('upgradeWebSocket', () => {
   });
 
   describe('delegation', () => {
-    test('calls context upgradeWebSocket and returns ws socket + response', () => {
+    test('calls context upgradeWebSocket and returns a WebSocket instance', () => {
       // Create a real socket pair so ws can operate on it
       const socket = new Socket();
       const req = new IncomingMessage(socket);
@@ -73,12 +73,13 @@ describe('upgradeWebSocket', () => {
         headers: { Upgrade: 'websocket' },
       });
 
-      const result = upgradeWebSocket(request);
+      const ws = upgradeWebSocket(request);
 
       expect(mockUpgrade).toHaveBeenCalled();
-      expect(result.socket).toBeDefined();
-      expect(typeof result.socket.send).toBe('function');
-      expect(typeof result.socket.close).toBe('function');
+      expect(ws).toBeDefined();
+      expect(typeof ws.send).toBe('function');
+      expect(typeof ws.close).toBe('function');
+      expect(typeof ws.on).toBe('function');
 
       // Clean up
       socket.destroy();

@@ -2,11 +2,10 @@ import { WebSocketServer, type WebSocket } from 'ws';
 import type { IncomingMessage } from 'http';
 import type { Socket } from 'net';
 import { getContext } from '../get-context';
-import type { WebSocketUpgradeResult } from './types';
 
 const wss = new WebSocketServer({ noServer: true });
 
-export function upgradeWebSocket(request: Request): WebSocketUpgradeResult {
+export function upgradeWebSocket(request: Request): WebSocket {
   if (
     request === null ||
     request === undefined ||
@@ -45,5 +44,5 @@ export function upgradeWebSocket(request: Request): WebSocketUpgradeResult {
     throw new Error('WebSocket upgrade failed');
   }
 
-  return { socket: ws };
+  return ws;
 }
