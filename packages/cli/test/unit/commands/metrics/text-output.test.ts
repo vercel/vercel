@@ -134,17 +134,20 @@ describe('text-output', () => {
       const result = ellipsizeMiddle('a'.repeat(100), 60);
       expect(result).toHaveLength(60);
       expect(result).toContain('…');
+      // With maxLength=60: endLength=29, startLength=30
       expect(result).toBe('a'.repeat(30) + '…' + 'a'.repeat(29));
     });
 
     it('should handle odd max length correctly', () => {
       const result = ellipsizeMiddle('abcdefghij', 5);
+      // endLength=2, startLength=2
       expect(result).toBe('ab…ij');
       expect(result).toHaveLength(5);
     });
 
     it('should handle even max length correctly', () => {
       const result = ellipsizeMiddle('abcdefghij', 6);
+      // endLength=2, startLength=3
       expect(result).toBe('abc…ij');
       expect(result).toHaveLength(6);
     });
