@@ -10,8 +10,20 @@ import {
 } from './shared';
 import listFirewallConfigs from '../../util/firewall/list-firewall-configs';
 import getBypass from '../../util/firewall/get-bypass';
-import { formatStatusOutput } from '../../util/firewall/format';
+import {
+  formatStatusOutput,
+  type AttackModeStatus,
+} from '../../util/firewall/format';
 import { outputAgentError } from '../../util/agent-output';
+
+interface ProjectSecurityResponse {
+  security?: {
+    attackModeEnabled?: boolean;
+    /** Epoch milliseconds */
+    attackModeActiveUntil?: number | null;
+    attackModeUpdatedAt?: number;
+  };
+}
 
 export default async function overview(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, overviewSubcommand, client);
@@ -26,24 +38,36 @@ export default async function overview(client: Client, argv: string[]) {
   output.spinner(`Fetching firewall overview for ${chalk.bold(project.name)}`);
 
   try {
-    const [configList, bypassList] = await Promise.all([
+    const [configList, bypassList, freshProject] = await Promise.all([
       listFirewallConfigs(client, project.id, { teamId }),
       getBypass(client, project.id, { teamId }),
+      client.fetch<ProjectSecurityResponse>(
+        `/v9/projects/${encodeURIComponent(project.id)}`,
+        { accountId: teamId }
+      ),
     ]);
 
     const { active, draft } = configList;
+
+    const attackMode: AttackModeStatus = {
+      enabled: freshProject.security?.attackModeEnabled ?? false,
+      activeUntil: freshProject.security?.attackModeActiveUntil,
+    };
 
     if (parsed.flags['--json']) {
       outputJson(client, {
         active,
         draft,
         bypass: bypassList.result,
+        attackMode,
       });
       return 0;
     }
 
     output.print('\n');
-    output.print(formatStatusOutput(active, draft, bypassList.result));
+    output.print(
+      formatStatusOutput(active, draft, bypassList.result, attackMode)
+    );
     output.print('\n\n');
 
     return 0;

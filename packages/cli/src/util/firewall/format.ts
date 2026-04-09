@@ -6,10 +6,67 @@ import type {
   BypassRule,
 } from './types';
 
+export interface AttackModeStatus {
+  enabled: boolean;
+  /** Epoch milliseconds */
+  activeUntil?: number | null;
+}
+
+export function isAllSourcesBypass(ip: string): boolean {
+  return ip === '0.0.0.0/0' || ip === '::/0';
+}
+
+export function isMitigationsPaused(bypass: BypassRule[]): boolean {
+  const now = Math.floor(Date.now() / 1000);
+  return bypass.some(
+    b =>
+      isAllSourcesBypass(b.Ip) &&
+      b.Domain === '*' &&
+      (b.ExpiresAt === null || b.ExpiresAt === undefined || b.ExpiresAt > now)
+  );
+}
+
+export function formatAttackModeStatus(status: AttackModeStatus): string {
+  if (!status.enabled) {
+    return chalk.dim('Off');
+  }
+  if (status.activeUntil) {
+    const remainingMs = status.activeUntil - Date.now();
+    if (remainingMs <= 0) {
+      return chalk.dim('Off (expired)');
+    }
+    const hours = Math.floor(remainingMs / (60 * 60 * 1000));
+    const minutes = Math.floor((remainingMs % (60 * 60 * 1000)) / (60 * 1000));
+    return chalk.red(`On (expires in ${hours}h ${minutes}m)`);
+  }
+  return chalk.red('On');
+}
+
+export function formatMitigationsStatus(bypass: BypassRule[]): string {
+  if (isMitigationsPaused(bypass)) {
+    const entry = bypass.find(
+      b => isAllSourcesBypass(b.Ip) && b.Domain === '*'
+    );
+    if (entry?.ExpiresAt) {
+      const remainingMs = entry.ExpiresAt * 1000 - Date.now();
+      if (remainingMs > 0) {
+        const hours = Math.floor(remainingMs / (60 * 60 * 1000));
+        const minutes = Math.floor(
+          (remainingMs % (60 * 60 * 1000)) / (60 * 1000)
+        );
+        return chalk.yellow(`Paused (auto-resumes in ${hours}h ${minutes}m)`);
+      }
+    }
+    return chalk.yellow('Paused');
+  }
+  return chalk.green('Active');
+}
+
 export function formatStatusOutput(
   active: FirewallConfigResponse | null,
   draft: FirewallConfigResponse | null,
-  bypass: BypassRule[]
+  bypass: BypassRule[],
+  attackMode?: AttackModeStatus
 ): string {
   const lines: string[] = [];
 
@@ -33,8 +90,20 @@ export function formatStatusOutput(
     );
   }
 
+  // Filter out the allSources bypass (system mitigations) from the count
+  const regularBypasses = bypass.filter(b => !isAllSourcesBypass(b.Ip));
   lines.push(
-    `  ${chalk.bold('System Bypass:')}        ${bypass.length} IP${bypass.length !== 1 ? 's' : ''}`
+    `  ${chalk.bold('System Bypass:')}        ${regularBypasses.length} IP${regularBypasses.length !== 1 ? 's' : ''}`
+  );
+
+  lines.push('');
+  if (attackMode) {
+    lines.push(
+      `  ${chalk.bold('Attack Mode:')}          ${formatAttackModeStatus(attackMode)}`
+    );
+  }
+  lines.push(
+    `  ${chalk.bold('System Mitigations:')}  ${formatMitigationsStatus(bypass)}`
   );
 
   if (draft && draft.changes.length > 0) {
@@ -43,6 +112,32 @@ export function formatStatusOutput(
       `  ${chalk.bold('Pending Draft:')}        ${chalk.yellow(`${draft.changes.length} unpublished change${draft.changes.length !== 1 ? 's' : ''}`)}`
     );
     lines.push(formatDiffOutput(draft.changes));
+  }
+
+  return lines.join('\n');
+}
+
+export function formatBypassTable(bypasses: BypassRule[]): string {
+  const lines: string[] = [];
+
+  const domains = bypasses.map(b =>
+    b.Domain === '*' ? 'All domains' : b.Domain
+  );
+  const ipWidth = Math.max('IP/CIDR'.length, ...bypasses.map(b => b.Ip.length));
+  const domainWidth = Math.max('Domain'.length, ...domains.map(d => d.length));
+  const gap = 3;
+
+  // Header
+  lines.push(
+    `  ${chalk.dim('IP/CIDR'.padEnd(ipWidth + gap))}${chalk.dim('Domain'.padEnd(domainWidth + gap))}${chalk.dim('Note')}`
+  );
+
+  for (let i = 0; i < bypasses.length; i++) {
+    const bypass = bypasses[i];
+    const ip = bypass.Ip.padEnd(ipWidth + gap);
+    const domain = domains[i].padEnd(domainWidth + gap);
+    const note = bypass.Note || '';
+    lines.push(`  ${ip}${domain}${note}`);
   }
 
   return lines.join('\n');

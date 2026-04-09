@@ -32,7 +32,7 @@ export default async function publish(client: Client, argv: string[]) {
     });
 
     if (!draft || draft.changes.length === 0) {
-      output.warn('No staged changes to publish.');
+      output.warn('No draft changes to publish.');
       return 0;
     }
 

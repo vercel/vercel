@@ -32,7 +32,7 @@ export default async function discard(client: Client, argv: string[]) {
     });
 
     if (!draft || draft.changes.length === 0) {
-      output.warn('No staged changes to discard.');
+      output.warn('No draft changes to discard.');
       return 0;
     }
 
@@ -45,7 +45,7 @@ export default async function discard(client: Client, argv: string[]) {
     const confirmed = await confirmAction(
       client,
       parsed.flags['--yes'],
-      'Discard all staged changes?',
+      'Discard all draft changes?',
       'This action cannot be undone.'
     );
 
@@ -55,18 +55,18 @@ export default async function discard(client: Client, argv: string[]) {
     }
 
     const updateStamp = stamp();
-    output.spinner('Discarding staged changes');
+    output.spinner('Discarding draft changes');
 
     await deleteFirewallDraft(client, project.id, { teamId });
 
     output.log(
-      `${chalk.cyan('Success!')} Staged changes discarded ${chalk.gray(updateStamp())}`
+      `${chalk.cyan('Success!')} Draft changes discarded ${chalk.gray(updateStamp())}`
     );
 
     return 0;
   } catch (e: unknown) {
     const error = e as { message?: string };
-    const msg = error.message || 'Failed to discard staged changes';
+    const msg = error.message || 'Failed to discard draft changes';
     if (client.nonInteractive) {
       outputAgentError(client, {
         status: 'error',

@@ -29,10 +29,12 @@ export function withGlobalFlags(
 export async function parseSubcommandArgs(
   argv: string[],
   command: Command,
-  client?: Client
+  client?: Client,
+  commandPath?: string
 ): Promise<ParsedSubcommand | number> {
   let parsedArgs;
   const flagsSpecification = getFlagsSpecification(command.options);
+  const fullPath = commandPath || command.name;
 
   try {
     // @ts-expect-error - TypeScript complains about the flags specification type
@@ -50,7 +52,7 @@ export async function parseSubcommandArgs(
           next: [
             {
               command: getCommandNamePlain(
-                `firewall ${command.name} ${flags.join(' ')}`.trim()
+                `firewall ${fullPath} ${flags.join(' ')}`.trim()
               ),
               when: 'fix flags and retry',
             },
@@ -115,7 +117,7 @@ export async function confirmAction(
 ): Promise<boolean> {
   if (skipConfirmation) return true;
 
-  if (client.nonInteractive) {
+  if (client.nonInteractive || !client.stdin.isTTY) {
     outputAgentError(client, {
       status: AGENT_STATUS.ERROR,
       reason: AGENT_REASON.CONFIRMATION_REQUIRED,

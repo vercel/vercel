@@ -106,14 +106,49 @@ export interface FirewallConfigListResponse {
 export interface BypassRule {
   OwnerId: string;
   Id: string;
-  Domain?: string;
-  Ip?: string;
+  Domain: string;
+  Ip: string;
   ProjectId?: string;
   Note?: string;
   IsProjectRule?: boolean;
+  CreatedAt?: string;
+  /** Expiration time in epoch seconds */
+  ExpiresAt?: number | null;
 }
 
 export interface BypassListResponse {
   result: BypassRule[];
   pagination?: { OwnerId: string; Id: string } | null;
+}
+
+export interface AddBypassRequest {
+  sourceIp?: string;
+  allSources?: boolean;
+  domain?: string;
+  projectScope?: boolean;
+  note?: string;
+  ttl?: number;
+}
+
+export interface AddBypassResponse {
+  ok: boolean;
+  result: BypassRule[];
+  pagination: null;
+}
+
+export interface RemoveBypassRequest {
+  sourceIp?: string;
+  allSources?: boolean;
+  domain?: string;
+  projectScope?: boolean;
+}
+
+export interface RemoveBypassResponse {
+  ok: boolean;
+}
+
+export interface UpdateAttackModeResponse {
+  attackModeEnabled: boolean;
+  /** Epoch milliseconds */
+  attackModeUpdatedAt: number;
 }

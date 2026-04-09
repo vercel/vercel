@@ -49,7 +49,7 @@ export function createBypassRule(index: number): BypassRule {
     OwnerId: 'team_dummy',
     Id: `bypass_${String(index).padStart(3, '0')}`,
     Ip: `192.168.1.${index}`,
-    Domain: index % 2 === 0 ? 'example.com' : undefined,
+    Domain: index % 2 === 0 ? 'example.com' : '*',
     ProjectId: 'firewall-test-project',
     Note: `Bypass note ${index}`,
     IsProjectRule: index % 2 !== 0,
@@ -136,4 +136,45 @@ export function useDeleteDraft() {
       res.status(204).end();
     }
   );
+}
+
+export function useAddBypass() {
+  client.scenario.post('/v1/security/firewall/bypass', (req: any, res: any) => {
+    const { sourceIp, allSources, domain, projectScope, note } = req.body;
+    const ip = allSources ? '0.0.0.0/0' : sourceIp || '0.0.0.0';
+    const bypassDomain = domain || (projectScope ? '*' : '*');
+    res.json({
+      ok: true,
+      result: [
+        {
+          OwnerId: 'team_dummy',
+          Id: `firewall-test-project#${ip}`,
+          Domain: bypassDomain,
+          Ip: ip,
+          ProjectId: 'firewall-test-project',
+          Note: note || '',
+          IsProjectRule: !!projectScope,
+        },
+      ],
+      pagination: null,
+    });
+  });
+}
+
+export function useRemoveBypass() {
+  client.scenario.delete(
+    '/v1/security/firewall/bypass',
+    (_req: any, res: any) => {
+      res.json({ ok: true });
+    }
+  );
+}
+
+export function useUpdateAttackMode() {
+  client.scenario.post('/security/attack-mode', (req: any, res: any) => {
+    res.json({
+      attackModeEnabled: req.body.attackModeEnabled,
+      attackModeUpdatedAt: Date.now(),
+    });
+  });
 }
