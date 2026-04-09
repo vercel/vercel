@@ -3,7 +3,7 @@ import { parseArguments } from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
 import cmd from '../../util/output/cmd';
 import { ensureLink } from '../../util/link/ensure-link';
-import { addRepoLink, ensureRepoLink } from '../../util/link/repo';
+import { addRepoLink, ensureRepoLink, findRepoRoot } from '../../util/link/repo';
 import getTeams from '../../util/teams/get-teams';
 import { type Command, help } from '../help';
 import { addSubcommand, linkCommand } from './command';
@@ -148,8 +148,13 @@ export default async function link(client: Client) {
     const linkNonInteractive =
       client.nonInteractive || client.argv.includes('--non-interactive');
 
+    const repoRoot = await findRepoRoot(cwd);
+    const repoLink = await ensureRepoLink(client, cwd, { yes, overwrite: true, skipSetupConfirm: true });
+    return
+
     const link = await ensureLink('link', client, cwd, {
-      autoConfirm: yes,
+      autoConfirm: yes, // Always confirm when linking from vc link command
+      skipSetupConfirm: true,
       forceDelete: true,
       projectName: parsedArgs.flags['--project'],
       successEmoji: 'success',

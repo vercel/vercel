@@ -67,6 +67,8 @@ export interface SetupAndLinkOptions {
   v0?: boolean;
   /** When true, search matching projects across teams before standard linking flow */
   searchAcrossTeams?: boolean;
+  /** When true, skip the setup confirmation prompt */
+  skipSetupConfirm?: boolean;
 }
 
 export default async function setupAndLink(
@@ -82,6 +84,7 @@ export default async function setupAndLink(
     nonInteractive = false,
     pullEnv = true,
     v0,
+    skipSetupConfirm = false,
     searchAcrossTeams = false,
   }: SetupAndLinkOptions
 ): Promise<ProjectLinkResult> {
@@ -113,7 +116,7 @@ export default async function setupAndLink(
     return { status: 'error', exitCode: 1, reason: 'HEADLESS' };
   }
 
-  const shouldStartSetup =
+  const shouldStartSetup = skipSetupConfirm ? true :
     autoConfirm ||
     nonInteractive ||
     (await client.input.confirm(
