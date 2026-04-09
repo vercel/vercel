@@ -30,47 +30,23 @@ import { isNodeBackendFramework } from '@vercel/build-utils';
 const frameworksBySlug = new Map(frameworkList.map(f => [f.slug, f]));
 
 /**
- * Match a Python `module:attr` entrypoint.
- *
+ * Match a Python `module:attr` entrypoint (e.g. `backend.jobs.scheduled:cleanup`).
  * Kept inline to avoid coupling fs-detectors to a Python-specific package.
  * Real verification would happen at the build time.
  */
-
-// Matches module notation: `module.path:attr` (dots as separators, no slashes).
 const PYTHON_MODULE_ATTR_RE =
   /^([A-Za-z_][\w]*(?:\.[A-Za-z_][\w]*)*):([A-Za-z_][\w]*)$/;
 
-// Matches file path notation: `path/to/file.py:variable` or `file.py:variable`.
-const PYTHON_FILE_ATTR_RE =
-  /^([\w./-]*\/[\w.-]+|[\w.-]+(?:\.py)):([A-Za-z_][\w]*)$/;
-
-/**
- * Parse a Python entrypoint string into a file path and callable name.
- * Handles module notation (`module.path:attr`, converted to a file path) and
- * file path notation (`path/to/file.py:variable`). Returns null if neither
- * format matches.
- */
 function parsePyModuleAttrEntrypoint(entrypoint: string): {
   attrName: string;
   filePath: string;
 } | null {
-  const fileMatch = PYTHON_FILE_ATTR_RE.exec(entrypoint);
-  if (fileMatch) {
-    return {
-      filePath: fileMatch[1].endsWith('.py')
-        ? fileMatch[1]
-        : `${fileMatch[1]}.py`,
-      attrName: fileMatch[2],
-    };
-  }
-  const moduleMatch = PYTHON_MODULE_ATTR_RE.exec(entrypoint);
-  if (moduleMatch) {
-    return {
-      attrName: moduleMatch[2],
-      filePath: moduleMatch[1].replace(/\./g, '/') + '.py',
-    };
-  }
-  return null;
+  const match = PYTHON_MODULE_ATTR_RE.exec(entrypoint);
+  if (!match) return null;
+  return {
+    attrName: match[2],
+    filePath: match[1].replace(/\./g, '/') + '.py',
+  };
 }
 
 const SERVICE_NAME_REGEX = /^[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$/;
