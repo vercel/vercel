@@ -116,4 +116,11 @@ describe('integration', () => {
     expect(client.stderr.getFullOutput()).toContain('icfg_1');
     expect(client.stderr.getFullOutput()).toContain('neon');
   });
+
+  it('errors when integration installations is given extra positional arguments', async () => {
+    client.setArgv('integration', 'installations', 'typo');
+    const exitCode = await integration(client);
+    expect(exitCode).toBe(1);
+    await expect(client.stderr).toOutput('Invalid number of arguments');
+  });
 });

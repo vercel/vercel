@@ -206,7 +206,7 @@ export default async function main(client: Client) {
         return 0;
       }
       telemetry.trackCliSubcommandUpdate(subcommandOriginal);
-      return update(client);
+      return update(client, subArgs);
     }
     default: {
       const validSubcommands = Object.keys(COMMAND_CONFIG).join(' | ');

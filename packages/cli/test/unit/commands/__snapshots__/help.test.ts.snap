@@ -2893,6 +2893,52 @@ exports[`help command > inspect help output snapshots > inspect help column widt
 "
 `;
 
+exports[`help command > integration help output snapshots > integration accept-terms subcommand > integration accept-terms subcommand help column width 120 1`] = `
+"
+  ▲ vercel integration accept-terms integration [options]
+
+  Accept marketplace legal terms for an integration and install it on the current team (installation only; no product   
+  resource). Does not replace integrations that require a browser or device attestation.                                
+
+  Options:
+
+  -F,  --format <FORMAT>  Specify the output format (json)                                                              
+  -y,  --yes              Non-interactive only: confirm acceptance of the Vercel Marketplace End User Addendum and this 
+                          integration's privacy policy / EULA when applicable                                           
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+       --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - Accept terms interactively, then install on the team
+
+    $ vercel integration accept-terms <integration>
+    $ vercel integration accept-terms neon
+
+  - Accept terms in CI (you must have read the linked policies)
+
+    $ vercel integration accept-terms neon --yes --non-interactive
+
+  - Output result as JSON
+
+    $ vercel integration accept-terms neon --yes --format=json
+
+"
+`;
+
 exports[`help command > integration help output snapshots > integration balance subcommand > integration balance subcommand help column width 120 1`] = `
 "
   ▲ vercel integration balance integration [options]
@@ -3408,6 +3454,49 @@ exports[`help command > integration help output snapshots > integration help col
   - Install a specific product from an integration
 
     $ vercel integration add acme/acme-redis
+
+"
+`;
+
+exports[`help command > integration help output snapshots > integration installations subcommand > integration installations subcommand help column width 120 1`] = `
+"
+  ▲ vercel integration installations [options]
+
+  List marketplace integration installations for the current team (account scope)                                       
+
+  Options:
+
+  -F,  --format <FORMAT>           Specify the output format (json)                                                     
+  -i,  --integration <SLUG_OR_ID>  Limit to installations of this integration (slug or id)                              
+
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+       --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - List all marketplace installations for the team
+
+    $ vercel integration installations
+
+  - Filter by integration slug
+
+    $ vercel integration installations --integration neon
+
+  - JSON output
+
+    $ vercel integration installations --format json
 
 "
 `;

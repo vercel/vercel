@@ -106,7 +106,7 @@ function emitUpdateCliError(
   output.error(message);
 }
 
-export async function update(client: Client) {
+export async function update(client: Client, argv: string[]) {
   const telemetry = new IntegrationUpdateTelemetryClient({
     opts: { store: client.telemetryEventStore },
   });
@@ -114,7 +114,7 @@ export async function update(client: Client) {
   let parsedArguments;
   const flagsSpecification = getFlagsSpecification(updateSubcommand.options);
   try {
-    parsedArguments = parseArguments(client.argv.slice(3), flagsSpecification);
+    parsedArguments = parseArguments(argv, flagsSpecification);
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
     outputAgentError(
@@ -154,7 +154,7 @@ export async function update(client: Client) {
     | string
     | undefined;
 
-  if (parsedArguments.args.length < 2) {
+  if (parsedArguments.args.length < 1) {
     const hadSubcommandOptsFirst =
       (projectsRaw !== undefined && projectsRaw.length > 0) ||
       plan !== undefined;
@@ -164,7 +164,7 @@ export async function update(client: Client) {
 
     emitUpdateCliError(client, msg, AGENT_REASON.MISSING_ARGUMENTS, 1, {
       hint: hadSubcommandOptsFirst
-        ? `You used \`--projects\` or \`--plan\` without a preceding integration name. Use \`integration update <integration> --projects …\`. Global flags such as \`--cwd\` may appear anywhere.`
+        ? `You used \`--projects\` or \`--plan\` without a preceding integration name. Use \`${packageName} integration update <integration> --projects …\`. Global flags such as \`--cwd\` may appear anywhere.`
         : `Run \`${packageName} integration installations\` to list slugs and installation IDs for your team.`,
       next: [
         {
@@ -189,7 +189,7 @@ export async function update(client: Client) {
     });
     return 1;
   }
-  if (parsedArguments.args.length > 2) {
+  if (parsedArguments.args.length > 1) {
     emitUpdateCliError(
       client,
       'Cannot specify more than one integration at a time.',
@@ -199,7 +199,7 @@ export async function update(client: Client) {
     return 2;
   }
 
-  const integrationSlug = parsedArguments.args[1];
+  const integrationSlug = parsedArguments.args[0];
 
   const hasPlan = plan !== undefined;
   const projectsOutcome =

@@ -441,6 +441,26 @@ describe('help command', () => {
         ).toMatchSnapshot();
       });
     });
+    describe('integration accept-terms subcommand', () => {
+      it('integration accept-terms subcommand help column width 120', () => {
+        expect(
+          help(integration.acceptTermsSubcommand, {
+            columns: 120,
+            parent: integration.integrationCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('integration installations subcommand', () => {
+      it('integration installations subcommand help column width 120', () => {
+        expect(
+          help(integration.installationsSubcommand, {
+            columns: 120,
+            parent: integration.integrationCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
     describe('integration balance subcommand', () => {
       it('integration balance subcommand help column width 120', () => {
         expect(

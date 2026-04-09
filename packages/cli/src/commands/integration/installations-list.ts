@@ -39,6 +39,12 @@ export default async function installationsList(
     output.error(fr.error);
     return 1;
   }
+  if (parsed.args.length > 0) {
+    output.error(
+      'Invalid number of arguments. Usage: `vercel integration installations [--integration <slug>] [--format json]`'
+    );
+    return 1;
+  }
   const filterSlug = parsed.flags['--integration'] as string | undefined;
 
   const { team } = await getScope(client);
