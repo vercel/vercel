@@ -37,7 +37,7 @@ import {
 } from '../../util/integration/format-schema-help';
 import type { Metadata } from '../../util/integration/types';
 
-export interface AddAutoProvisionOptions extends PostProvisionOptions {
+interface AddAutoProvisionOptions extends PostProvisionOptions {
   metadata?: string[];
   productSlug?: string;
   billingPlanId?: string;
@@ -146,7 +146,6 @@ export async function addAutoProvision(
     product_slug: product.slug,
     team_id: team.id,
     source: 'cli',
-    is_auto_provision: true,
   };
 
   telemetry.trackMarketplaceEvent(
@@ -162,7 +161,7 @@ export async function addAutoProvision(
     `Product metadataSchema: ${JSON.stringify(product.metadataSchema, null, 2)}`
   );
 
-  // 3b. Check if integration is installed on this team
+  // Check if integration is installed on this team
   const teamInstallation = installations.find(
     i => i.ownerId === team.id && i.installationType === 'marketplace'
   );
