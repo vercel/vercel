@@ -10,7 +10,6 @@ import {
   buildCommandWithGlobalFlags,
   getGlobalFlagsFromArgv,
   enrichActionRequiredWithInvokingCommand,
-  getGlobalFlagsFromArgv,
   type ActionRequiredPayload,
 } from '../../../src/util/agent-output';
 import { APIError, LinkRequiredError } from '../../../src/util/errors-ts';
