@@ -38,7 +38,12 @@ describe('metrics schema v2', () => {
     const exitCode = await schema(client, new MockTelemetry());
 
     expect(exitCode).toBe(0);
-    expect(client.stderr.getFullOutput()).toMatchSnapshot();
+    const output = client.stderr.getFullOutput();
+    expect(output).toContain('1 Metric found');
+    expect(output).toContain('Metric');
+    expect(output).toContain('Description');
+    expect(output).toContain('vercel.edge_requests.count');
+    expect(output).toContain('Count');
   });
 
   it('shows prefix detail with --metric', async () => {

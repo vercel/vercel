@@ -55,23 +55,25 @@ export default async function schema(
 
   if (metric) {
     // Metric detail
-    const detail = await fetchMetricDetailOrExit(
+    const detailOrExitCode = await fetchMetricDetailOrExit(
       client,
       team.id,
       metric,
       jsonOutput
     );
-    if (typeof detail === 'number') {
-      return detail;
+    // fetchMetricDetailOrExit() returns a numeric exit code when it already
+    // handled the error output for us.
+    if (typeof detailOrExitCode === 'number') {
+      return detailOrExitCode;
     }
 
     if (jsonOutput) {
-      client.stdout.write(JSON.stringify(detail, null, 2));
+      client.stdout.write(JSON.stringify(detailOrExitCode, null, 2));
       return 0;
     }
 
     output.log(`Metric: ${metric}`);
-    const metricsTable = formatMetricsTable(detail);
+    const metricsTable = formatMetricsTable(detailOrExitCode);
     if (metricsTable) {
       output.print(metricsTable);
       output.print('\n');
@@ -81,16 +83,22 @@ export default async function schema(
   }
 
   // Metric list
-  const metrics = await fetchMetricListOrExit(client, team.id, jsonOutput);
-  if (typeof metrics === 'number') {
-    return metrics;
+  const metricsOrExitCode = await fetchMetricListOrExit(
+    client,
+    team.id,
+    jsonOutput
+  );
+  // fetchMetricListOrExit() returns a numeric exit code when it already
+  // handled the error output for us.
+  if (typeof metricsOrExitCode === 'number') {
+    return metricsOrExitCode;
   }
 
   if (jsonOutput) {
-    client.stdout.write(JSON.stringify(metrics, null, 2));
+    client.stdout.write(JSON.stringify(metricsOrExitCode, null, 2));
   } else {
-    output.log(`${plural('Metric', metrics.length, true)} found`);
-    output.print(formatMetricListTable(metrics));
+    output.log(`${plural('Metric', metricsOrExitCode.length, true)} found`);
+    output.print(formatMetricListTable(metricsOrExitCode));
     output.print('\n');
   }
 

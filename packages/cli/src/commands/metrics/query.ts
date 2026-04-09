@@ -203,18 +203,20 @@ export default async function query(
   }
   const { scope, accountId, teamName, projectName } = scopeResult;
 
-  const detail = await fetchMetricDetailOrExit(
+  const detailOrExitCode = await fetchMetricDetailOrExit(
     client,
     accountId,
     metric,
     jsonOutput
   );
-  if (typeof detail === 'number') {
-    return detail;
+  // fetchMetricDetailOrExit() returns a numeric exit code when it already
+  // handled the error output for us.
+  if (typeof detailOrExitCode === 'number') {
+    return detailOrExitCode;
   }
 
   const aggregationInput =
-    aggregationFlag ?? getDefaultAggregation(detail, metric) ?? 'sum';
+    aggregationFlag ?? getDefaultAggregation(detailOrExitCode, metric) ?? 'sum';
   const aggregation = aggregationInput;
 
   // Resolve time range
@@ -309,7 +311,8 @@ export default async function query(
     client.stdout.write(
       formatText(response, {
         metric,
-        metricUnit: detail.find(item => item.id === metric)?.unit ?? 'count',
+        metricUnit:
+          detailOrExitCode.find(item => item.id === metric)?.unit ?? 'count',
         aggregation: aggregation as Aggregation,
         groupBy,
         filter,
