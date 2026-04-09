@@ -4210,13 +4210,11 @@ exports[`help command > login help output snapshots > login help column width 40
                               the       
                               default   
   -S,  --scope                Set a     
-                              custom    
-                              scope     
-  -t,  --token <TOKEN>        Login     
-                              token     
+                               custom    
+                               scope     
   -v,  --version              Output the
-                              version   
-                              number    
+                               version   
+                               number    
 
 
   Examples:
@@ -4246,7 +4244,6 @@ exports[`help command > login help output snapshots > login help column width 80
        --non-interactive      Run without interactive prompts; when an agent is 
                               detected this is the default                      
   -S,  --scope                Set a custom scope                                
-  -t,  --token <TOKEN>        Login token                                       
   -v,  --version              Output the version number                         
 
 
@@ -4275,7 +4272,6 @@ exports[`help command > login help output snapshots > login help column width 12
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
   -S,  --scope                Set a custom scope                                                                        
-  -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
 
 
@@ -6040,7 +6036,6 @@ exports[`help command > teams help output snapshots > teams switch help output s
        --no-color             No color mode (default off)                                                               
        --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
   -S,  --scope                Set a custom scope                                                                        
-  -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
 
 
