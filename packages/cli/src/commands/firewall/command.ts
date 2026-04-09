@@ -480,6 +480,14 @@ export const rulesAddSubcommand = {
         'Rate limit keys (repeatable): ip, ja4, header:name (default: ip)',
     },
     {
+      name: 'rate-limit-action',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description:
+        'Action when rate limit is exceeded: log, deny, challenge, rate_limit (default: rate_limit)',
+    },
+    {
       name: 'redirect-url',
       shorthand: null,
       type: String,

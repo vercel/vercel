@@ -27,6 +27,10 @@ describe('firewall rules add', () => {
     });
     const cwd = setupUnitFixture('commands/firewall');
     client.cwd = cwd;
+    // Reset capturedRequests for test isolation
+    for (const key of Object.keys(capturedRequests)) {
+      delete (capturedRequests as Record<string, unknown>)[key];
+    }
   });
 
   // ─── Flag mode: happy paths ────────────────────────────────────────
@@ -140,6 +144,9 @@ describe('firewall rules add', () => {
       const exitCodePromise = firewall(client);
       await expect(client.stderr).toOutput('Rule "Three groups" staged');
       expect(await exitCodePromise).toEqual(0);
+      expect(
+        (capturedRequests.patchDraft?.value as any)?.conditionGroup
+      ).toHaveLength(3);
     });
 
     it('should create a rule with key-based condition', async () => {
@@ -939,6 +946,14 @@ describe('firewall rules add', () => {
       );
       const exitCodePromise = firewall(client);
       await expect(client.stderr).toOutput('maximum is 10,000,000');
+      expect(await exitCodePromise).toEqual(1);
+    });
+
+    it('should error in non-interactive mode without flags', async () => {
+      client.setArgv('firewall', 'rules', 'add', 'Test Rule');
+      (client.stdin as any).isTTY = false;
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('Interactive mode is not available');
       expect(await exitCodePromise).toEqual(1);
     });
   });

@@ -124,29 +124,33 @@ export default async function add(client: Client, argv: string[]) {
   }
 
   // Non-interactive with no flags — error with guidance
-  outputAgentError(client, {
-    status: 'error',
-    reason: 'missing_flags',
-    message:
-      'No rule definition provided. Use --ai, --json, or --condition flags.',
-    next: [
-      {
-        command: withGlobalFlags(
-          client,
-          'firewall rules add --ai "Block bots from Russia" --yes'
-        ),
-        when: 'to create with AI',
-      },
-      {
-        command: withGlobalFlags(
-          client,
-          'firewall rules add --condition "user_agent:sub:crawler" --action deny --yes'
-        ),
-        when: 'to create with flags',
-      },
-    ],
-  });
-  process.exit(1);
+  if (client.nonInteractive) {
+    outputAgentError(client, {
+      status: 'error',
+      reason: 'missing_flags',
+      message:
+        'No rule definition provided. Use --ai, --json, or --condition flags.',
+      next: [
+        {
+          command: withGlobalFlags(
+            client,
+            'firewall rules add --ai "Block bots from Russia" --yes'
+          ),
+          when: 'to create with AI',
+        },
+        {
+          command: withGlobalFlags(
+            client,
+            'firewall rules add --condition "user_agent:sub:crawler" --action deny --yes'
+          ),
+          when: 'to create with flags',
+        },
+      ],
+    });
+  }
+  output.error(
+    'Interactive mode is not available. Use --ai, --json, or --condition flags to create a rule.'
+  );
   return 1;
 }
 
@@ -174,8 +178,46 @@ async function handleJsonAdd(
     output.error('JSON must include a "conditionGroup" field (array).');
     return 1;
   }
+  // Validate each condition group has a conditions array
+  for (let i = 0; i < (ruleData.conditionGroup as unknown[]).length; i++) {
+    const group = (ruleData.conditionGroup as Record<string, unknown>[])[i];
+    if (!group.conditions || !Array.isArray(group.conditions)) {
+      output.error(`conditionGroup[${i}] must have a "conditions" array.`);
+      return 1;
+    }
+    for (let j = 0; j < (group.conditions as unknown[]).length; j++) {
+      const cond = (group.conditions as Record<string, unknown>[])[j];
+      if (!cond.type || typeof cond.type !== 'string') {
+        output.error(
+          `conditionGroup[${i}].conditions[${j}] must have a "type" field.`
+        );
+        return 1;
+      }
+      if (!cond.op || typeof cond.op !== 'string') {
+        output.error(
+          `conditionGroup[${i}].conditions[${j}] must have an "op" field.`
+        );
+        return 1;
+      }
+    }
+  }
   if (!ruleData.action || typeof ruleData.action !== 'object') {
     output.error('JSON must include an "action" field (object).');
+    return 1;
+  }
+  // Validate action structure
+  const actionObj = ruleData.action as Record<string, unknown>;
+  if (!actionObj.mitigate || typeof actionObj.mitigate !== 'object') {
+    output.error(
+      'action must have a "mitigate" field. Example: { "mitigate": { "action": "deny" } }'
+    );
+    return 1;
+  }
+  const mitigateObj = actionObj.mitigate as Record<string, unknown>;
+  if (!mitigateObj.action || typeof mitigateObj.action !== 'string') {
+    output.error(
+      'action.mitigate must have an "action" field (string). Valid: deny, challenge, rate_limit, log, redirect.'
+    );
     return 1;
   }
 
@@ -364,11 +406,18 @@ function buildActionFromFlags(
       return 'Rate limit --rate-limit-requests maximum is 10,000,000.';
     }
 
+    const rlAction = (flags['--rate-limit-action'] as string) || 'rate_limit';
+    const validRlActions = ['log', 'deny', 'challenge', 'rate_limit'];
+    if (!validRlActions.includes(rlAction)) {
+      return `Invalid rate limit action "${rlAction}". Valid: ${validRlActions.join(', ')}`;
+    }
+
     action.mitigate!.rateLimit = {
       algo: algo as 'fixed_window' | 'token_bucket',
       window,
       limit: requests,
       keys,
+      action: rlAction,
     };
   }
 
@@ -469,7 +518,6 @@ async function createRule(
           },
         ],
       });
-      process.exit(1);
       return 1;
     }
     output.error(msg);

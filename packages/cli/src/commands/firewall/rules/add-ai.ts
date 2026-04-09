@@ -1,7 +1,12 @@
 import chalk from 'chalk';
 import type Client from '../../../util/client';
 import output from '../../../output-manager';
-import { detectExistingDraft, offerAutoPublish } from '../shared';
+import {
+  detectExistingDraft,
+  offerAutoPublish,
+  withGlobalFlags,
+} from '../shared';
+import { outputAgentError } from '../../../util/agent-output';
 import patchFirewallDraft from '../../../util/firewall/patch-firewall-draft';
 import generateFirewallRule from '../../../util/firewall/generate-firewall-rule';
 import { formatRuleExpanded } from '../../../util/firewall/format';
@@ -62,12 +67,60 @@ export async function handleAIAdd(
           output.warn(`AI generation failed: ${response.error}. Retrying...`);
           continue;
         }
+        if (client.nonInteractive) {
+          outputAgentError(
+            client,
+            {
+              status: 'error',
+              reason: 'ai_generation_failed',
+              message: `AI could not generate a rule: ${response.error}`,
+              next: [
+                {
+                  command: withGlobalFlags(
+                    client,
+                    'firewall rules add --ai "more specific prompt" --yes'
+                  ),
+                  when: 'try with a more specific description',
+                },
+                {
+                  command: withGlobalFlags(
+                    client,
+                    'firewall rules add "Name" --condition "type:op:value" --action deny --yes'
+                  ),
+                  when: 'create with flags instead',
+                },
+              ],
+            },
+            1
+          );
+        }
         output.error(`AI could not generate a rule: ${response.error}`);
         return 1;
       }
 
       if (!response.rule) {
         output.stopSpinner();
+        if (client.nonInteractive) {
+          outputAgentError(
+            client,
+            {
+              status: 'error',
+              reason: 'ai_no_result',
+              message:
+                'AI did not return a rule. Try a more specific description.',
+              next: [
+                {
+                  command: withGlobalFlags(
+                    client,
+                    'firewall rules add --ai "more specific prompt" --yes'
+                  ),
+                  when: 'try with a more specific description',
+                },
+              ],
+            },
+            1
+          );
+        }
         output.error(
           'AI did not return a rule. Try a more specific description.'
         );
@@ -76,8 +129,8 @@ export async function handleAIAdd(
 
       currentRule = response.rule;
 
-      // Apply name override if provided
-      if (opts.name && !currentRule.name) {
+      // User-provided name always takes priority over AI-generated name
+      if (opts.name) {
         currentRule.name = opts.name;
       }
 
@@ -95,6 +148,26 @@ export async function handleAIAdd(
       }
 
       if (!client.stdin.isTTY || client.nonInteractive || opts.skipPrompts) {
+        if (client.nonInteractive) {
+          outputAgentError(
+            client,
+            {
+              status: 'error',
+              reason: 'ai_generation_failed',
+              message: msg,
+              next: [
+                {
+                  command: withGlobalFlags(
+                    client,
+                    'firewall rules add --ai "more specific prompt" --yes'
+                  ),
+                  when: 'try again',
+                },
+              ],
+            },
+            1
+          );
+        }
         output.error(msg);
         return 1;
       }
