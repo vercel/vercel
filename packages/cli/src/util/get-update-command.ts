@@ -64,11 +64,10 @@ export async function isGlobal() {
     if (
       // Homebrew-managed global npm packages
       // on Apple Silicon macOS
-      installPath.includes(['', 'homebrew', 'bin', ''].join(sep)) ||
-      // on Intel macOS
-      installPath.includes(['', 'usr', 'local', 'bin', ''].join(sep)) ||
+      installPath.includes(['', 'opt', 'homebrew', 'lib', ''].join(sep)) ||
       // on Linux
-      installPath.includes(['', '.linuxbrew', 'bin', ''].join(sep))
+      installPath.includes(['', '.linuxbrew', 'lib', ''].join(sep))
+      // on Intel macOS, Homebrew uses /usr/local/lib, detected above as defaultPath
     ) {
       return true;
     }
