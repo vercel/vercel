@@ -288,10 +288,10 @@ export default async function list(client: Client) {
     // we don't output the table headers if we have no deployments
     if (!deployments.length) {
       if (asJson) {
-        const jsonOutput = { deployments: [], pagination };
+        const jsonOutput = { deployments: [], pagination, contextName };
         client.stdout.write(`${JSON.stringify(jsonOutput, null, 2)}\n`);
       } else {
-        log('No deployments found.');
+        log(`No deployments found under ${chalk.bold(contextName)}.`);
       }
       return 0;
     }
@@ -300,7 +300,9 @@ export default async function list(client: Client) {
       const deploymentsLabel =
         target === 'production' ? 'Production deployments' : 'Deployments';
       if (showAllProjects) {
-        log(`${deploymentsLabel} ${elapsed(Date.now() - start)}`);
+        log(
+          `${deploymentsLabel} under ${chalk.bold(contextName)} ${elapsed(Date.now() - start)}`
+        );
       } else {
         log(
           `${deploymentsLabel} for ${projectSlugLink} ${elapsed(Date.now() - start)}`
@@ -311,6 +313,7 @@ export default async function list(client: Client) {
 
   if (asJson) {
     const jsonOutput = {
+      contextName,
       deployments: deployments.sort(sortByCreatedAt).map(dep => ({
         id: dep.id,
         url: dep.url,

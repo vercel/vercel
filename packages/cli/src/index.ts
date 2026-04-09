@@ -51,7 +51,7 @@ import getTeams from './util/teams/get-teams';
 import Client from './util/client';
 import { printError } from './util/error';
 import reportError from './util/report-error';
-import getConfig from './util/get-config';
+import earlyGetConfig from './util/get-config';
 import * as configFiles from './util/config/files';
 import getGlobalPathConfig from './util/config/global-path';
 import {
@@ -64,7 +64,7 @@ import getUpdateCommand from './util/get-update-command';
 import { executeUpgrade } from './util/upgrade';
 import { getCommandName, getTitleName } from './util/pkg-name';
 import login from './commands/login';
-import type { AuthConfig, GlobalConfig } from '@vercel-internals/types';
+import type { AuthConfig, GlobalConfig, User } from '@vercel-internals/types';
 import type { VercelConfig } from '@vercel/client';
 import { Agent as HttpsAgent } from 'https';
 import box from './util/output/box';
@@ -77,7 +77,13 @@ import output from './output-manager';
 import { checkGuidanceStatus } from './util/guidance/check-status';
 import { determineAgent } from '@vercel/detect-agent';
 import { getLinkFromDir, getVercelDirectory } from './util/projects/link';
-import { getPlatformEnv } from '@vercel/build-utils';
+import {
+  getPlatformEnv,
+  Span,
+  type Reporter,
+  type TraceEvent,
+} from '@vercel/build-utils';
+import { mkdir, writeFile } from 'fs/promises';
 
 const VERCEL_DIR = getGlobalPathConfig();
 const VERCEL_CONFIG_PATH = configFiles.getConfigFilePath();
@@ -150,11 +156,25 @@ if (process.env.CLAUDECODE) {
   );
 }
 
+// Snapshot before any command has a chance to mutate process.env
+const SHOULD_CHECK_FOR_UPDATES =
+  !process.env.NO_UPDATE_NOTIFIER && !process.env.VERCEL;
+
 let { isTTY } = process.stdout;
 
 let apiUrl = 'https://api.vercel.com';
 
+class InMemoryReporter implements Reporter {
+  public events: TraceEvent[] = [];
+  report(event: TraceEvent) {
+    this.events.push(event);
+  }
+}
+
 const main = async () => {
+  const traceReporter = new InMemoryReporter();
+  const rootSpan = new Span({ name: 'vc.cli', reporter: traceReporter });
+
   if (process.env.FORCE_TTY === '1') {
     isTTY = true;
     process.stdout.isTTY = true;
@@ -186,7 +206,7 @@ const main = async () => {
 
   const localConfigPath = parsedArgs.flags['--local-config'];
   let localConfig: VercelConfig | Error | undefined =
-    await getConfig(localConfigPath);
+    await earlyGetConfig(localConfigPath);
 
   if (localConfig instanceof ERRORS.CantParseJSONFile) {
     output.error(`Couldn't parse JSON file ${localConfig.meta.file}.`);
@@ -399,6 +419,8 @@ const main = async () => {
     nonInteractive,
   });
 
+  client.rootSpan = rootSpan;
+
   // The `--cwd` flag is respected for all sub-commands
   if (parsedArgs.flags['--cwd']) {
     client.cwd = parsedArgs.flags['--cwd'];
@@ -458,6 +480,7 @@ const main = async () => {
     'help',
     'init',
     'build',
+    'sandbox',
     'telemetry',
     'upgrade',
     'skills',
@@ -476,6 +499,16 @@ const main = async () => {
 
   if (subcommand === 'flags' && subSubCommand === 'prepare') {
     subcommandsWithoutToken.push('flags');
+  }
+
+  // Check for VERCEL_TOKEN environment variable if --token flag not provided
+  // Track where the token came from for better error messages
+  let tokenSource: 'flag' | 'env' | undefined;
+  if (typeof parsedArgs.flags['--token'] === 'string') {
+    tokenSource = 'flag';
+  } else if (process.env.VERCEL_TOKEN) {
+    parsedArgs.flags['--token'] = process.env.VERCEL_TOKEN;
+    tokenSource = 'env';
   }
 
   // Prompt for login if there is no current token
@@ -521,16 +554,6 @@ const main = async () => {
       });
       return 1;
     }
-  }
-
-  // Check for VERCEL_TOKEN environment variable if --token flag not provided
-  // Track where the token came from for better error messages
-  let tokenSource: 'flag' | 'env' | undefined;
-  if (typeof parsedArgs.flags['--token'] === 'string') {
-    tokenSource = 'flag';
-  } else if (process.env.VERCEL_TOKEN) {
-    parsedArgs.flags['--token'] = process.env.VERCEL_TOKEN;
-    tokenSource = 'env';
   }
 
   if (
@@ -601,6 +624,7 @@ const main = async () => {
     typeof scope === 'string' &&
     targetCommand !== 'login' &&
     targetCommand !== 'build' &&
+    targetCommand !== 'sandbox' &&
     !(targetCommand === 'teams' && subSubCommand !== 'invite')
   ) {
     let user = null;
@@ -680,6 +704,7 @@ const main = async () => {
   }
 
   let exitCode;
+  let earlyGetUserPromise: Promise<User | undefined> | undefined;
 
   try {
     if (!targetCommand) {
@@ -808,9 +833,17 @@ const main = async () => {
           telemetry.trackCliCommandDns(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).dns;
           break;
+        case 'edge-config':
+          telemetry.trackCliCommandEdgeConfig(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).edgeConfig;
+          break;
         case 'domains':
           telemetry.trackCliCommandDomains(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).domains;
+          break;
+        case 'firewall':
+          telemetry.trackCliCommandFirewall(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).firewall;
           break;
         case 'flags':
           telemetry.trackCliCommandFlags(userSuppliedSubCommand);
@@ -922,6 +955,10 @@ const main = async () => {
           telemetry.trackCliCommandRollingRelease(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).rollingRelease;
           break;
+        case 'sandbox':
+          telemetry.trackCliCommandSandbox(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).sandbox;
+          break;
         case 'skills':
           telemetry.trackCliCommandSkills(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).skills;
@@ -933,6 +970,10 @@ const main = async () => {
         case 'teams':
           telemetry.trackCliCommandTeams(userSuppliedSubCommand);
           func = (await import('./commands-bulk.js')).teams;
+          break;
+        case 'tokens':
+          telemetry.trackCliCommandTokens(userSuppliedSubCommand);
+          func = (await import('./commands-bulk.js')).tokens;
           break;
         case 'telemetry':
           telemetry.trackCliCommandTelemetry(userSuppliedSubCommand);
@@ -975,7 +1016,13 @@ const main = async () => {
         func = func.default;
       }
 
-      exitCode = await func(client);
+      if (!telemetryEventStore.hasUserId && !client.authConfig.userId) {
+        earlyGetUserPromise = getUser(client).catch(() => undefined);
+      }
+
+      exitCode = await rootSpan
+        .child('vc.cli.command', { command: subcommand || 'deploy' })
+        .trace(() => func(client));
     }
   } catch (err: unknown) {
     if (isErrnoException(err) && err.code === 'ENOTFOUND') {
@@ -1045,13 +1092,21 @@ const main = async () => {
     return 1;
   }
 
+  const postCommandSpan = rootSpan.child('vc.postCommand');
+
   telemetryEventStore.updateTeamId(client.config.currentTeam);
+  telemetryEventStore.updateUserId(client.authConfig.userId);
   if (!telemetryEventStore.hasUserId) {
+    const getUserSpan = postCommandSpan.child('vc.postCommand.getUser');
     try {
-      const user = await getUser(client);
-      telemetryEventStore.updateUserId(user.id);
+      const user = await earlyGetUserPromise;
+      if (user) {
+        telemetryEventStore.updateUserId(user.id);
+      }
     } catch {
       // best-effort for telemetry
+    } finally {
+      getUserSpan.stop();
     }
   }
 
@@ -1071,16 +1126,31 @@ const main = async () => {
   }
 
   await telemetryEventStore.save();
+  postCommandSpan.stop();
+
+  rootSpan.stop();
+
+  // Flush trace events to disk. Only `vc build` sets traceDiagnosticsPath,
+  // so traces are not written for other commands (deploy, env, etc.).
+  if (client.traceDiagnosticsPath) {
+    try {
+      await mkdir(join(client.traceDiagnosticsPath, '..'), { recursive: true });
+      await writeFile(
+        client.traceDiagnosticsPath,
+        JSON.stringify(traceReporter.events)
+      );
+    } catch (err) {
+      output.error('Failed to write diagnostics trace file');
+      output.prettyError(err);
+    }
+  }
 
   return exitCode;
 };
 
 main()
   .then(async exitCode => {
-    const shouldCheckForUpdates =
-      !process.env.NO_UPDATE_NOTIFIER && !process.env.VERCEL;
-
-    if (shouldCheckForUpdates) {
+    if (SHOULD_CHECK_FOR_UPDATES) {
       const latest = getLatestVersion({
         pkg,
       });

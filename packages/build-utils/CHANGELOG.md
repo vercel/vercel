@@ -1,5 +1,29 @@
 # @vercel/build-utils
 
+## 13.14.0
+
+### Minor Changes
+
+- Support configuration via vercel.toml ([#15750](https://github.com/vercel/vercel/pull/15750))
+
+## 13.13.0
+
+### Minor Changes
+
+- Extend `finalizeLambda` with pluggable ZIP strategy (`createZip`), pre-digest validation hook (`validateZip`), and optional trace tags. Widen `getLambdaEnvironment` buffer param to `{ byteLength: number }`. ([#15856](https://github.com/vercel/vercel/pull/15856))
+
+## 13.12.2
+
+### Patch Changes
+
+- Extract finalize/validate function utils for build-utils ([#15776](https://github.com/vercel/vercel/pull/15776))
+
+## 13.12.1
+
+### Patch Changes
+
+- Switch to using smol-toml for toml parsing ([#15730](https://github.com/vercel/vercel/pull/15730))
+
 ## 13.12.0
 
 ### Minor Changes
