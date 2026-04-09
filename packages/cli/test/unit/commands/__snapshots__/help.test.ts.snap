@@ -4210,11 +4210,11 @@ exports[`help command > login help output snapshots > login help column width 40
                               the       
                               default   
   -S,  --scope                Set a     
-                               custom    
-                               scope     
+                              custom    
+                              scope     
   -v,  --version              Output the
-                               version   
-                               number    
+                              version   
+                              number    
 
 
   Examples:
