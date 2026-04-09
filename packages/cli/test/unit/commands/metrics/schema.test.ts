@@ -49,6 +49,10 @@ describe('metrics schema v2', () => {
           {
             id: 'vercel.edge_requests.count',
             description: 'Count',
+            dimensions: [
+              { name: 'route', label: 'Route' },
+              { name: 'http_status', label: 'HTTP Status' },
+            ],
             unit: 'count',
             aggregations: ['sum'],
             defaultAggregation: 'sum',
@@ -64,6 +68,7 @@ describe('metrics schema v2', () => {
     expect(client.stderr.getFullOutput()).toContain(
       'vercel.edge_requests.count'
     );
+    expect(client.stderr.getFullOutput()).toContain('sum (default)');
   });
 
   describe('telemetry', () => {
@@ -75,6 +80,10 @@ describe('metrics schema v2', () => {
             {
               id: 'vercel.edge_requests.count',
               description: 'Count',
+              dimensions: [
+                { name: 'route', label: 'Route' },
+                { name: 'http_status', label: 'HTTP Status' },
+              ],
               unit: 'count',
               aggregations: ['sum'],
               defaultAggregation: 'sum',
@@ -97,6 +106,11 @@ describe('metrics schema v2', () => {
     });
 
     it('should track format option', async () => {
+      client.scenario.get('/v2/observability/schema', (_req, res) => {
+        res.json({
+          metrics: [{ id: 'vercel.edge_requests.count', description: 'Count' }],
+        });
+      });
       client.setArgv('metrics', 'schema', '--format=json');
 
       await schema(client, new MockTelemetry());

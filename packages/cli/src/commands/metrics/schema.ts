@@ -114,15 +114,8 @@ function formatMetricsTable(metrics: MetricDetail[]) {
   }
   return indent(
     formatTable(
-      [
-        'Metric',
-        'Description',
-        'Dimensions',
-        'Unit',
-        'Aggregations',
-        'Default',
-      ],
-      ['l', 'l', 'l', 'l', 'l', 'l'],
+      ['Metric', 'Description', 'Dimensions', 'Unit', 'Aggregations'],
+      ['l', 'l', 'l', 'l', 'l'],
       [
         {
           rows: metrics.map(metric => [
@@ -131,8 +124,13 @@ function formatMetricsTable(metrics: MetricDetail[]) {
             metric.dimensions.map(dimension => dimension.name).join(', ') ||
               '—',
             metric.unit,
-            metric.aggregations.join(', '),
-            metric.defaultAggregation,
+            metric.aggregations
+              .map(aggregation =>
+                aggregation === metric.defaultAggregation
+                  ? `${aggregation} (default)`
+                  : aggregation
+              )
+              .join(', '),
           ]),
         },
       ]

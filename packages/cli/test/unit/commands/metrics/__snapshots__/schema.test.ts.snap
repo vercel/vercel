@@ -2,7 +2,7 @@
 
 exports[`metrics schema v2 > lists metrics by default 1`] = `
 "> 1 Metric found
-Metric                     Description    
-  vercel.edge_requests.count Count          
+Metric                             Description    
+  vercel.edge_requests.count         Count          
  "
 `;
