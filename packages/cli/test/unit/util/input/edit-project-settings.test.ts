@@ -198,4 +198,44 @@ describe('editProjectSettings', () => {
       await expect(client.stderr).toOutput('Auto-detected Project Settings');
     });
   });
+
+  describe('with configFileName override', () => {
+    test('should display vercel.toml when configFileName is vercel.toml', async () => {
+      const overrides = {
+        buildCommand: 'BUILD_COMMAND',
+        framework: 'nextjs',
+      };
+      const settings = await editProjectSettings(
+        client,
+        null,
+        nextJSFramework,
+        true,
+        overrides,
+        'vercel.toml'
+      );
+      expect(settings.buildCommand).toBe('BUILD_COMMAND');
+      await expect(client.stderr).toOutput(
+        'Local settings detected in vercel.toml:'
+      );
+    });
+
+    test('should display vercel.ts when configFileName is vercel.ts', async () => {
+      const overrides = {
+        buildCommand: 'BUILD_COMMAND',
+        framework: 'nextjs',
+      };
+      const settings = await editProjectSettings(
+        client,
+        null,
+        nextJSFramework,
+        true,
+        overrides,
+        'vercel.ts'
+      );
+      expect(settings.buildCommand).toBe('BUILD_COMMAND');
+      await expect(client.stderr).toOutput(
+        'Local settings detected in vercel.ts:'
+      );
+    });
+  });
 });
