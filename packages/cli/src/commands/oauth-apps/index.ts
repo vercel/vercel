@@ -35,6 +35,15 @@ const COMMAND_CONFIG = {
   remove: getCommandAliases(removeSubcommand),
 };
 
+/** Internal keys returned by `getSubcommand` for `COMMAND_CONFIG` (defensive guard). */
+const KNOWN_OAUTH_APPS_SUBCOMMANDS = new Set([
+  'listRequests',
+  'register',
+  'dismiss',
+  'install',
+  'remove',
+]);
+
 type RegisteredOauthApp = {
   clientId: string;
   name: string;
@@ -389,6 +398,16 @@ export default async function main(client: Client): Promise<number> {
   if (subcommand === undefined && args.length > 0 && !args[0].startsWith('-')) {
     output.error(
       `Invalid oauth-apps subcommand "${args[0]}". Use: dismiss | install | list-requests | register | remove`
+    );
+    return 1;
+  }
+
+  if (
+    typeof subcommand === 'string' &&
+    !KNOWN_OAUTH_APPS_SUBCOMMANDS.has(subcommand)
+  ) {
+    output.error(
+      `Invalid oauth-apps subcommand "${subcommand}". Use: dismiss | install | list-requests | register | remove`
     );
     return 1;
   }
