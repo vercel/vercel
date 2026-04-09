@@ -150,10 +150,7 @@ export default async function link(client: Client) {
       await ensureRepoLink(client, cwd, {
         yes,
         overwrite: true,
-        projectNameOrId:
-          typeof parsedArgs.flags['--project'] === 'string'
-            ? parsedArgs.flags['--project']
-            : undefined,
+        projectName: parsedArgs.flags['--project'],
       });
     } catch (err) {
       output.prettyError(err);

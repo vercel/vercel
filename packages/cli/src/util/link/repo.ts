@@ -61,7 +61,7 @@ export interface EnsureRepoLinkOptions {
    * scope, run framework detection for path/git suggestions, and do not offer
    * “new project” rows from local detection.
    */
-  projectNameOrId?: string;
+  projectName?: string | null;
 }
 
 function mergeKeyForRepoProject(
@@ -153,7 +153,7 @@ async function discoverRepoProjects(
     /** When set, skip the remote selection prompt and use this remote. */
     existingRemoteName?: string;
     /** Experimental: target project; excludes local “new project” suggestions. */
-    projectNameOrId?: string;
+    projectName?: string | null;
   }
 ): Promise<
   | { remoteName: string; projects: RepoProjectConfig[]; orgSlug: string }
@@ -176,14 +176,14 @@ async function discoverRepoProjectsLegacy(
     existingProjectIds,
     existingDirectories,
     existingRemoteName,
-    projectNameOrId: _projectNameOrId,
+    projectName: _projectName,
   }: {
     yes: boolean;
     existingProjectIds?: Set<string>;
     existingDirectories?: Set<string>;
     /** When set, skip the remote selection prompt and use this remote. */
     existingRemoteName?: string;
-    projectNameOrId?: string;
+    projectName?: string | null;
   }
 ): Promise<
   | { remoteName: string; projects: RepoProjectConfig[]; orgSlug: string }
@@ -440,7 +440,7 @@ async function discoverRepoProjectsLegacy(
 export async function ensureRepoLink(
   client: Client,
   cwd: string,
-  { yes, overwrite, projectNameOrId }: EnsureRepoLinkOptions
+  { yes, overwrite, projectName }: EnsureRepoLinkOptions
 ): Promise<RepoLink | undefined> {
   const repoLink = await getRepoLink(client, cwd);
   if (repoLink) {
@@ -453,7 +453,7 @@ export async function ensureRepoLink(
   if (overwrite || !repoConfig) {
     const result = await discoverRepoProjects(client, rootPath, {
       yes,
-      projectNameOrId,
+      projectName,
     });
     if (!result) {
       return;

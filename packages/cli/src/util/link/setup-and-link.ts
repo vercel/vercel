@@ -59,7 +59,7 @@ export interface SetupAndLinkOptions {
   link?: ProjectLinkResult;
   successEmoji?: EmojiLabel;
   setupMsg?: string;
-  projectName?: string;
+  projectName?: string | null;
   /** When true, avoid prompts and return action_required payload when scope/project choice is needed */
   nonInteractive?: boolean;
   pullEnv?: boolean;
@@ -86,6 +86,7 @@ export default async function setupAndLink(
   }: SetupAndLinkOptions
 ): Promise<ProjectLinkResult> {
   const { config } = client;
+  const resolvedProjectName = projectName ?? basename(path);
 
   if (!isDirectory(path)) {
     output.error(`Expected directory but found file: ${path}`);
@@ -132,7 +133,10 @@ export default async function setupAndLink(
     let crossTeamMatches: CrossTeamMatch[] = [];
     output.spinner('Searching for existing projects…', 1000);
     try {
-      crossTeamMatches = await searchProjectAcrossTeams(client, projectName);
+      crossTeamMatches = await searchProjectAcrossTeams(
+        client,
+        resolvedProjectName
+      );
     } catch (err) {
       output.debug(`Cross-team search failed: ${err}`);
     } finally {
@@ -278,7 +282,7 @@ export default async function setupAndLink(
     projectOrNewProjectName = await inputProject(
       client,
       org,
-      projectName,
+      resolvedProjectName,
       autoConfirm,
       skipAutoDetect
     );

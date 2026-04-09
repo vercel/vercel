@@ -123,7 +123,7 @@ export function getVercelDirectory(cwd: string): string {
 export async function getProjectLink(
   client: Client,
   path: string,
-  projectName?: string
+  projectName?: string | null
 ): Promise<ProjectLink | null> {
   // Prefer an explicit per-directory link (`.vercel/project.json`) over a
   // repository-level link (`.vercel/repo.json`). This prevents scenarios where
@@ -263,7 +263,7 @@ async function persistRepoResolvedProjectJson(
 async function getProjectLinkFromRepoLink(
   client: Client,
   path: string,
-  projectName?: string
+  projectName?: string | null
 ): Promise<ProjectLink | null> {
   const repoLink = await getRepoLink(client, path);
   if (!repoLink?.repoConfig) {
@@ -460,7 +460,7 @@ async function hasProjectLink(
 export async function getLinkedProject(
   client: Client,
   path = client.cwd,
-  projectName?: string
+  projectName?: string | null
 ): Promise<ProjectLinkResult> {
   path = await resolveProjectCwd(path);
 

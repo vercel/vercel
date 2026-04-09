@@ -352,7 +352,7 @@ export async function discoverRepoProjectsExperimental(
     existingProjectIds,
     existingDirectories,
     existingRemoteName,
-    projectNameOrId,
+    projectName,
   }: {
     yes: boolean;
     existingProjectIds?: Set<string>;
@@ -363,7 +363,7 @@ export async function discoverRepoProjectsExperimental(
      * Resolve this project in the selected scope; run detection for path/git
      * suggestions but do not offer local “new project” rows.
      */
-    projectNameOrId?: string;
+    projectName?: string | null;
   }
 ): Promise<
   | { remoteName: string; projects: RepoProjectConfig[]; orgSlug: string }
@@ -401,8 +401,8 @@ export async function discoverRepoProjectsExperimental(
   client.config.currentTeam = org.type === 'team' ? org.id : undefined;
 
   let focusedProject: Project | undefined;
-  if (projectNameOrId?.trim()) {
-    const raw = projectNameOrId.trim();
+  if (projectName?.trim()) {
+    const raw = projectName.trim();
     const fetched = await getProjectByNameOrId(client, raw, org.id);
     if (fetched instanceof ProjectNotFound) {
       throw new Error(
