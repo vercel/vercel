@@ -1785,6 +1785,58 @@ describe('handlerFunction validation', () => {
     ).rejects.toThrow(/Handler function "cleanup" not found/);
   });
 
+  it('uses handlerFunction as variable name for web services', async () => {
+    const files = {
+      'app.py': new FileBlob({
+        data: 'flask_app = lambda environ, start_response: None\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "x"\nversion = "0.0.1"\n',
+      }),
+    } as Record<string, FileBlob>;
+    await download(files, mockWorkPath);
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'app.py',
+      meta: { isDev: true },
+      config: { handlerFunction: 'flask_app', framework: 'flask' },
+      repoRootPath: mockWorkPath,
+    });
+
+    const handler =
+      getBuildOutputV2Lambda(result).files?.['vc__handler__python.py'];
+    if (!handler || !('data' in handler)) {
+      throw new Error('handler bootstrap not found');
+    }
+    const content = handler.data.toString();
+    expect(content).toContain('"__VC_HANDLER_VARIABLE_NAME": "flask_app"');
+  });
+
+  it('errors when handlerFunction variable does not exist for web services', async () => {
+    const files = {
+      'app.py': new FileBlob({
+        data: 'other_var = lambda environ, start_response: None\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "x"\nversion = "0.0.1"\n',
+      }),
+    } as Record<string, FileBlob>;
+    await download(files, mockWorkPath);
+
+    await expect(
+      build({
+        workPath: mockWorkPath,
+        files,
+        entrypoint: 'app.py',
+        meta: { isDev: true },
+        config: { handlerFunction: 'flask_app', framework: 'flask' },
+        repoRootPath: mockWorkPath,
+      })
+    ).rejects.toThrow(/Could not find a top-level "flask_app" in "app\.py"/);
+  });
+
   it('does not set __VC_HANDLER_FUNC_NAME when handlerFunction is not configured', async () => {
     const files = {
       'handler.py': new FileBlob({
