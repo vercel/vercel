@@ -283,6 +283,21 @@ const integrations: Record<string, Integration> = {
       },
     ],
   },
+  neon: {
+    id: 'neon',
+    name: 'Neon',
+    slug: 'neon',
+    products: [
+      {
+        id: 'neon-product',
+        name: 'Neon Postgres',
+        slug: 'neon',
+        type: 'storage',
+        shortDescription: 'Serverless Postgres database',
+        metadataSchema: metadataSchema1,
+      },
+    ],
+  },
   'acme-external': {
     id: 'acme-external',
     name: 'Acme Integration External',
@@ -1141,6 +1156,28 @@ const discoverIntegrations = [
         name: 'Acme DB',
         shortDescription: 'Relational database',
         tags: ['postgres'],
+      },
+    ],
+  },
+  {
+    slug: 'acme-two-products',
+    name: 'Acme Integration Two Products',
+    shortDescription: 'Two product integration',
+    tagIds: ['tag_databases'],
+    isMarketplace: true,
+    canInstall: true,
+    products: [
+      {
+        slug: 'acme-a',
+        name: 'Acme Product A',
+        shortDescription: 'The Acme A product',
+        tags: ['kv', 'redis'],
+      },
+      {
+        slug: 'acme-b',
+        name: 'Acme Product B',
+        shortDescription: 'The Acme B product',
+        tags: ['queue'],
       },
     ],
   },
