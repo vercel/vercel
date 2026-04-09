@@ -79,8 +79,6 @@ describe('upgradeWebSocket', () => {
       expect(result.socket).toBeDefined();
       expect(typeof result.socket.send).toBe('function');
       expect(typeof result.socket.close).toBe('function');
-      expect(result.response.status).toBe(101);
-      expect(result.response.statusText).toBe('Switching Protocols');
 
       // Clean up
       socket.destroy();

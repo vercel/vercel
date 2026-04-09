@@ -45,13 +45,5 @@ export function upgradeWebSocket(request: Request): WebSocketUpgradeResult {
     throw new Error('WebSocket upgrade failed');
   }
 
-  // Synthetic 101 response for frameworks that require returning a Response.
-  // The actual 101 has already been written to the socket by ws.
-  const response = new Response(null);
-  Object.defineProperty(response, 'status', { value: 101 });
-  Object.defineProperty(response, 'statusText', {
-    value: 'Switching Protocols',
-  });
-
-  return { socket: ws, response };
+  return { socket: ws };
 }
