@@ -15,9 +15,9 @@ type Context = {
    * tuple for use with libraries like `ws`.
    */
   upgradeWebSocket?: () => {
-    req: unknown;
-    socket: unknown;
-    head: unknown;
+    req: IncomingMessage;
+    socket: Socket;
+    head: Buffer;
   };
 };
 
