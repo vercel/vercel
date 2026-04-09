@@ -265,11 +265,25 @@ export const ipBlocksUnblockSubcommand = {
   description:
     'Remove an IP blocking rule to allow the address to access your project again',
   arguments: [{ name: 'id-or-ip', required: true }],
-  options: [yesOption],
+  options: [
+    {
+      name: 'hostname',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description:
+        'Narrow match to a specific hostname (useful when the same IP is blocked on multiple hosts)',
+    },
+    yesOption,
+  ],
   examples: [
     {
       name: 'Unblock by IP',
       value: `${packageName} firewall ip-blocks unblock 1.2.3.4`,
+    },
+    {
+      name: 'Unblock scoped to a hostname',
+      value: `${packageName} firewall ip-blocks unblock 1.2.3.4 --hostname example.com`,
     },
     {
       name: 'Unblock by rule ID',

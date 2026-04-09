@@ -46,7 +46,18 @@ export default async function unblock(client: Client, argv: string[]) {
 
     // Resolve against draft (if exists) or active — draft includes draft-added rules
     const currentIps = draft?.ips || active?.ips || [];
-    const matches = resolveIpRule(currentIps, identifier);
+    const hostnameFlag = parsed.flags['--hostname'] as string | undefined;
+    let matches = resolveIpRule(currentIps, identifier);
+
+    // If --hostname provided, narrow matches by hostname
+    if (hostnameFlag && matches.length > 1) {
+      const filtered = matches.filter(
+        r => r.hostname.toLowerCase() === hostnameFlag.toLowerCase()
+      );
+      if (filtered.length > 0) {
+        matches = filtered;
+      }
+    }
 
     if (matches.length === 0) {
       output.error(
@@ -66,20 +77,20 @@ export default async function unblock(client: Client, argv: string[]) {
             {
               status: 'error',
               reason: 'ambiguous_match',
-              message: `Multiple IP blocks match "${identifier}". Specify the full rule ID.`,
+              message: `Multiple IP blocks match "${identifier}". Use --hostname to narrow the match or specify the full rule ID.`,
               next: matches.map(r => ({
                 command: withGlobalFlags(
                   client,
-                  `firewall ip-blocks unblock "${r.id}" --yes`
+                  `firewall ip-blocks unblock "${identifier}" --hostname "${r.hostname}" --yes`
                 ),
-                when: `unblock ${r.ip}`,
+                when: `unblock on ${r.hostname === '*' ? 'all hosts' : r.hostname}`,
               })),
             },
             1
           );
         }
         output.error(
-          `Multiple IP blocks match "${identifier}". Specify the full rule ID to disambiguate.`
+          `Multiple IP blocks match "${identifier}". Use --hostname to narrow the match or specify the full rule ID.`
         );
         return 1;
       }

@@ -318,5 +318,70 @@ describe('firewall ip-blocks', () => {
       await expect(client.stderr).toOutput('Missing required argument');
       expect(await exitCodePromise).toEqual(1);
     });
+
+    it('should disambiguate with --hostname when same IP on multiple hosts', async () => {
+      const active = createConfig({
+        ips: [
+          {
+            id: 'ip_all',
+            ip: '10.0.0.1',
+            hostname: '*',
+            action: 'deny',
+            notes: 'All hosts',
+          },
+          {
+            id: 'ip_example',
+            ip: '10.0.0.1',
+            hostname: 'example.com',
+            action: 'deny',
+            notes: 'Example only',
+          },
+        ],
+      });
+      useListFirewallConfigs(active, null);
+      usePatchDraft();
+      useActivateConfig();
+
+      client.setArgv(
+        'firewall',
+        'ip-blocks',
+        'unblock',
+        '10.0.0.1',
+        '--hostname',
+        'example.com',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('staged');
+      expect(await exitCodePromise).toEqual(0);
+      expect(capturedRequests.patchDraft?.action).toBe('ip.remove');
+      expect(capturedRequests.patchDraft?.id).toBe('ip_example');
+    });
+
+    it('should error when same IP on multiple hosts without --hostname', async () => {
+      const active = createConfig({
+        ips: [
+          {
+            id: 'ip_all',
+            ip: '10.0.0.1',
+            hostname: '*',
+            action: 'deny',
+          },
+          {
+            id: 'ip_example',
+            ip: '10.0.0.1',
+            hostname: 'example.com',
+            action: 'deny',
+          },
+        ],
+      });
+      useListFirewallConfigs(active, null);
+
+      client.setArgv('firewall', 'ip-blocks', 'unblock', '10.0.0.1', '--yes');
+      (client.stdin as any).isTTY = false;
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('Multiple IP blocks match');
+      expect(await exitCodePromise).toEqual(1);
+    });
   });
 });
