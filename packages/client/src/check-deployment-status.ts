@@ -198,6 +198,19 @@ export async function* checkDeploymentStatus(
       }
     }
 
+    // v2 checks: if deployment-alias check has failed, exit immediately
+    if (
+      deploymentUpdate.checks?.['deployment-alias']?.state === 'failed' &&
+      !finishedEvents.has('checks-v2-failed')
+    ) {
+      debug('v2 deployment-alias check failed');
+      finishedEvents.add('checks-v2-failed');
+      return yield {
+        type: 'checks-v2-failed',
+        payload: deploymentUpdate,
+      };
+    }
+
     if (isAliasAssigned(deploymentUpdate)) {
       debug('Deployment alias assigned');
       return yield { type: 'alias-assigned', payload: deploymentUpdate };

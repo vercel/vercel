@@ -13,6 +13,7 @@ export function createRule(index: number): FirewallRule {
   return {
     id: `rule_${String(index).padStart(3, '0')}`,
     name: `Test Rule ${index}`,
+    description: `Description for rule ${index}`,
     active: index % 3 !== 0, // every 3rd rule is inactive
     conditionGroup: [
       {
@@ -29,6 +30,105 @@ export function createRule(index: number): FirewallRule {
       mitigate: {
         action: index % 2 === 0 ? 'deny' : 'challenge',
         actionDuration: '1h',
+      },
+    },
+  };
+}
+
+export function createEmptyConditionRule(): FirewallRule {
+  return {
+    id: 'rule_empty_cond',
+    name: 'Empty Conditions Rule',
+    description: 'Rule with no conditions',
+    active: true,
+    conditionGroup: [],
+    action: {
+      mitigate: {
+        action: 'log',
+        actionDuration: null,
+      },
+    },
+  };
+}
+
+export function createRateLimitRule(): FirewallRule {
+  return {
+    id: 'rule_rate_limit',
+    name: 'Rate Limit API',
+    description: 'Rate limit API endpoints',
+    active: true,
+    conditionGroup: [
+      {
+        conditions: [
+          { type: 'path', op: 'pre', value: '/api' },
+          { type: 'method', op: 'inc', value: ['POST', 'PUT', 'DELETE'] },
+        ],
+      },
+    ],
+    action: {
+      mitigate: {
+        action: 'rate_limit',
+        rateLimit: {
+          algo: 'fixed_window',
+          window: 60,
+          limit: 100,
+          keys: ['ip'],
+          action: 'deny',
+        },
+        actionDuration: null,
+      },
+    },
+  };
+}
+
+export function createMultiGroupRule(): FirewallRule {
+  return {
+    id: 'rule_multi_group',
+    name: 'Block Suspicious Traffic',
+    description: 'Block bots and suspicious IPs',
+    active: true,
+    conditionGroup: [
+      {
+        conditions: [
+          { type: 'user_agent', op: 'sub', value: 'crawler' },
+          { type: 'geo_country', op: 'inc', neg: true, value: ['US', 'CA'] },
+        ],
+      },
+      {
+        conditions: [{ type: 'ip_address', op: 'eq', value: '1.2.3.4' }],
+      },
+      {
+        conditions: [{ type: 'header', op: 'ex', key: 'X-Suspicious' }],
+      },
+    ],
+    action: {
+      mitigate: {
+        action: 'deny',
+        actionDuration: '1h',
+      },
+    },
+  };
+}
+
+export function createRedirectRule(): FirewallRule {
+  return {
+    id: 'rule_redirect',
+    name: 'Redirect Old Path',
+    description: 'Redirect /old to /new',
+    active: true,
+    conditionGroup: [
+      {
+        conditions: [{ type: 'path', op: 'pre', value: '/old' }],
+      },
+    ],
+    action: {
+      mitigate: {
+        action: 'redirect',
+        redirect: {
+          location: '/new',
+          permanent: true,
+        },
+        actionDuration: null,
       },
     },
   };
