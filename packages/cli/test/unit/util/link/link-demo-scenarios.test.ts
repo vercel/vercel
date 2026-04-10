@@ -24,8 +24,8 @@ describe('link-demo-scenarios', () => {
     expect(data.detectedProjects).toBeInstanceOf(Map);
   });
 
-  it('mixed-all includes git-linked, misconfigured, non-git, and detected rows', () => {
-    const data = buildLinkDemoPayload('mixed-all', demoOrg);
+  it('add-mixed: `vercel link add` — git-linked, misconfigured, non-git, and detected rows', () => {
+    const data = buildLinkDemoPayload('add-mixed', demoOrg);
     expect(data.gitLinkedProjects.length).toBeGreaterThan(0);
     expect(
       data.gitLinkedProjectsWithMisconfiguredRootDirectory.length
@@ -34,8 +34,8 @@ describe('link-demo-scenarios', () => {
     expect(data.detectedProjects.size).toBeGreaterThan(0);
   });
 
-  it('one-detect is detected-only with a single root', () => {
-    const data = buildLinkDemoPayload('one-detect', demoOrg);
+  it('add-local-one: detected-only with a single root (`vc link --repo` suppresses this)', () => {
+    const data = buildLinkDemoPayload('add-local-one', demoOrg);
     expect(data.gitLinkedProjects).toHaveLength(0);
     expect(data.gitLinkedProjectsWithMisconfiguredRootDirectory).toHaveLength(
       0
@@ -44,8 +44,8 @@ describe('link-demo-scenarios', () => {
     expect(data.detectedProjects.size).toBe(1);
   });
 
-  it('multi-detect has no API projects and several detected roots', () => {
-    const data = buildLinkDemoPayload('multi-detect', demoOrg);
+  it('add-local-many: no API projects and several detected roots', () => {
+    const data = buildLinkDemoPayload('add-local-many', demoOrg);
     expect(data.gitLinkedProjects).toHaveLength(0);
     expect(data.gitLinkedProjectsWithMisconfiguredRootDirectory).toHaveLength(
       0
@@ -59,8 +59,8 @@ describe('link-demo-scenarios', () => {
     );
   });
 
-  it('dash-split has no git-linked; non-git Vercel root "" vs suggested apps/web', () => {
-    const data = buildLinkDemoPayload('dash-split', demoOrg);
+  it('add-non-git-detect: non-git; Vercel root "" vs suggested apps/web + detect', () => {
+    const data = buildLinkDemoPayload('add-non-git-detect', demoOrg);
     expect(data.gitLinkedProjects).toHaveLength(0);
     expect(data.gitLinkedProjectsWithMisconfiguredRootDirectory).toHaveLength(
       0
@@ -72,8 +72,8 @@ describe('link-demo-scenarios', () => {
     expect(data.detectedProjects.get('apps/web')?.[0]?.slug).toBe('nextjs');
   });
 
-  it('solo-non-git is sole non-git with mismatch and no detected rows', () => {
-    const data = buildLinkDemoPayload('solo-non-git', demoOrg);
+  it('add-non-git-solo: sole non-git with mismatch and no detected rows', () => {
+    const data = buildLinkDemoPayload('add-non-git-solo', demoOrg);
     expect(data.gitLinkedProjects).toHaveLength(0);
     expect(data.gitLinkedProjectsWithMisconfiguredRootDirectory).toHaveLength(
       0
@@ -83,8 +83,8 @@ describe('link-demo-scenarios', () => {
     expect(data.nonGitLinkedProjects[0].suggestedDirectory).toBe('apps/web');
   });
 
-  it('solo-misconfig is a single misconfigured row only', () => {
-    const data = buildLinkDemoPayload('solo-misconfig', demoOrg);
+  it('add-misconfig-solo: a single misconfigured row only', () => {
+    const data = buildLinkDemoPayload('add-misconfig-solo', demoOrg);
     expect(data.gitLinkedProjects).toHaveLength(0);
     expect(data.nonGitLinkedProjects).toHaveLength(0);
     expect(data.gitLinkedProjectsWithMisconfiguredRootDirectory).toHaveLength(
@@ -93,8 +93,18 @@ describe('link-demo-scenarios', () => {
     expect(data.detectedProjects.size).toBe(0);
   });
 
-  it('pair-git-nongit has git-linked + non-git and no detected', () => {
-    const data = buildLinkDemoPayload('pair-git-nongit', demoOrg);
+  it('add-misconfig-dual: two misconfigured rows (add and `vc link --repo`)', () => {
+    const data = buildLinkDemoPayload('add-misconfig-dual', demoOrg);
+    expect(data.gitLinkedProjects).toHaveLength(0);
+    expect(data.nonGitLinkedProjects).toHaveLength(0);
+    expect(data.gitLinkedProjectsWithMisconfiguredRootDirectory).toHaveLength(
+      2
+    );
+    expect(data.detectedProjects.size).toBe(0);
+  });
+
+  it('add-pair-git-non-git: git-linked + non-git and no detected', () => {
+    const data = buildLinkDemoPayload('add-pair-git-non-git', demoOrg);
     expect(data.gitLinkedProjects).toHaveLength(1);
     expect(data.nonGitLinkedProjects).toHaveLength(1);
     expect(data.gitLinkedProjectsWithMisconfiguredRootDirectory).toHaveLength(
@@ -103,8 +113,19 @@ describe('link-demo-scenarios', () => {
     expect(data.detectedProjects.size).toBe(0);
   });
 
-  it('nest-web is apps/web only (use from cd apps/web)', () => {
-    const data = buildLinkDemoPayload('nest-web', demoOrg);
+  it('initial-root-one-git: one git-linked row at repo root (`vc link --repo`)', () => {
+    const data = buildLinkDemoPayload('initial-root-one-git', demoOrg);
+    expect(data.gitLinkedProjects).toHaveLength(1);
+    expect(data.gitLinkedProjects[0].directory).toBe('');
+    expect(data.gitLinkedProjectsWithMisconfiguredRootDirectory).toHaveLength(
+      0
+    );
+    expect(data.nonGitLinkedProjects).toHaveLength(0);
+    expect(data.detectedProjects.size).toBe(0);
+  });
+
+  it('initial-scope-apps-web: apps/web only (use from cd apps/web)', () => {
+    const data = buildLinkDemoPayload('initial-scope-apps-web', demoOrg);
     expect(data.gitLinkedProjects).toHaveLength(1);
     expect(data.gitLinkedProjects[0].directory).toBe('apps/web');
     expect(data.detectedProjects.has('apps/web')).toBe(true);
@@ -114,8 +135,8 @@ describe('link-demo-scenarios', () => {
     );
   });
 
-  it('nest-api is apps/api only (use from cd apps/api)', () => {
-    const data = buildLinkDemoPayload('nest-api', demoOrg);
+  it('initial-scope-apps-api: apps/api only (use from cd apps/api)', () => {
+    const data = buildLinkDemoPayload('initial-scope-apps-api', demoOrg);
     expect(data.gitLinkedProjects).toHaveLength(1);
     expect(data.gitLinkedProjects[0].directory).toBe('apps/api');
     expect(data.detectedProjects.has('apps/api')).toBe(true);

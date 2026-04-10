@@ -158,8 +158,6 @@ export async function getProjectLink(
           projectId: dirLink.projectId,
           repoRoot: repoLink.rootPath,
           projectRootDirectory: matchingRow.directory,
-          directorySpecifiedManually:
-            matchingRow.directorySpecifiedManually === true,
         };
       }
 
@@ -327,7 +325,6 @@ async function getProjectLinkFromRepoLink(
       orgId,
       projectId: project.id,
       projectRootDirectory: project.directory,
-      directorySpecifiedManually: project.directorySpecifiedManually === true,
     };
   }
   return null;

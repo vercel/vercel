@@ -5,7 +5,7 @@ export const addSubcommand = {
   name: 'add',
   aliases: [],
   description:
-    'Add additional Vercel Projects to an existing repository link. Requires an existing repo.json (created by `link --repo`).',
+    'Add projects to the repository link: connect existing Vercel projects that are not yet linked to this Git remote, create new projects from local detection, and fix root directories. Requires repo.json from `link --repo`.',
   arguments: [],
   options: [
     {
@@ -31,7 +31,8 @@ export const linkCommand = {
   options: [
     {
       name: 'repo',
-      description: 'Link multiple projects based on Git repository (alpha)',
+      description:
+        'Link this Git repository to Vercel projects already connected to this remote (alpha). Use `link add` to connect more projects or create new ones.',
       shorthand: 'r',
       type: Boolean,
       deprecated: false,
@@ -79,7 +80,7 @@ export const linkCommand = {
       value: `${packageName} link --cwd /path/to/project`,
     },
     {
-      name: 'Link to the current Git repository, allowing for multiple Vercel Projects to be linked simultaneously (useful for monorepos)',
+      name: 'Record which Vercel projects are already linked to this Git repository (monorepos)',
       value: `${packageName} link --repo`,
     },
     {

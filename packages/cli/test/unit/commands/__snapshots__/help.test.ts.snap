@@ -3637,12 +3637,17 @@ exports[`help command > link help output snapshots > link help column width 40 1
 
   Commands:
 
-  add    Add additional Vercel  
-         Projects to an existing
-         repository link.       
-         Requires an existing   
-         repo.json (created by  
-         \`link --repo\`).        
+  add    Add projects to the    
+         repository link:       
+         connect existing Vercel
+         projects that are not  
+         yet linked to this Git 
+         remote, create new     
+         projects from local    
+         detection, and fix root
+         directories. Requires  
+         repo.json from \`link   
+         --repo\`.               
 
 
   Options:
@@ -3654,13 +3659,23 @@ exports[`help command > link help output snapshots > link help column width 40 1
                                  (required
                                  for      
                                  non-inte…
-  -r,  --repo                    Link     
-                                 multiple 
-                                 projects 
-                                 based on 
+  -r,  --repo                    Link this
                                  Git      
                                  reposito…
-                                 (alpha)  
+                                 to Vercel
+                                 projects 
+                                 already  
+                                 connected
+                                 to this  
+                                 remote   
+                                 (alpha). 
+                                 Use \`link
+                                 add\` to  
+                                 connect  
+                                 more     
+                                 projects 
+                                 or create
+                                 new ones.
        --team <TEAM_ID_OR_SLUG>  Scope:   
                                  team ID  
                                  or slug  
@@ -3746,7 +3761,7 @@ exports[`help command > link help output snapshots > link help column width 40 1
 
     $ vercel link --cwd /path/to/project
 
-  - Link to the current Git repository, allowing for multiple Vercel Projects to be linked simultaneously (useful for monorepos)
+  - Record which Vercel projects are already linked to this Git repository (monorepos)
 
     $ vercel link --repo
 
@@ -3765,16 +3780,20 @@ exports[`help command > link help output snapshots > link help column width 80 1
 
   Commands:
 
-  add    Add additional Vercel Projects to an existing repository link. 
-         Requires an existing repo.json (created by \`link --repo\`).     
+  add    Add projects to the repository link: connect existing Vercel   
+         projects that are not yet linked to this Git remote, create new
+         projects from local detection, and fix root directories.       
+         Requires repo.json from \`link --repo\`.                         
 
 
   Options:
 
   -p,  --project <NAME_OR_ID>    Project name or ID to link to (required for      
                                  non-interactive)                                 
-  -r,  --repo                    Link multiple projects based on Git repository   
-                                 (alpha)                                          
+  -r,  --repo                    Link this Git repository to Vercel projects      
+                                 already connected to this remote (alpha). Use    
+                                 \`link add\` to connect more projects or create new
+                                 ones.                                            
        --team <TEAM_ID_OR_SLUG>  Scope: team ID or slug (use with --project for   
                                  non-interactive)                                 
   -y,  --yes                     Skip questions when setting up new project using 
@@ -3815,7 +3834,7 @@ exports[`help command > link help output snapshots > link help column width 80 1
 
     $ vercel link --cwd /path/to/project
 
-  - Link to the current Git repository, allowing for multiple Vercel Projects to be linked simultaneously (useful for monorepos)
+  - Record which Vercel projects are already linked to this Git repository (monorepos)
 
     $ vercel link --repo
 
@@ -3834,14 +3853,16 @@ exports[`help command > link help output snapshots > link help column width 120 
 
   Commands:
 
-  add    Add additional Vercel Projects to an existing repository link. Requires an existing repo.json (created 
-         by \`link --repo\`).                                                                                     
+  add    Add projects to the repository link: connect existing Vercel projects that are not yet linked to this  
+         Git remote, create new projects from local detection, and fix root directories. Requires repo.json from
+         \`link --repo\`.                                                                                         
 
 
   Options:
 
   -p,  --project <NAME_OR_ID>    Project name or ID to link to (required for non-interactive)                             
-  -r,  --repo                    Link multiple projects based on Git repository (alpha)                                   
+  -r,  --repo                    Link this Git repository to Vercel projects already connected to this remote (alpha). Use
+                                 \`link add\` to connect more projects or create new ones.                                  
        --team <TEAM_ID_OR_SLUG>  Scope: team ID or slug (use with --project for non-interactive)                          
   -y,  --yes                     Skip questions when setting up new project using default scope and settings              
 
@@ -3878,7 +3899,7 @@ exports[`help command > link help output snapshots > link help column width 120 
 
     $ vercel link --cwd /path/to/project
 
-  - Link to the current Git repository, allowing for multiple Vercel Projects to be linked simultaneously (useful for monorepos)
+  - Record which Vercel projects are already linked to this Git repository (monorepos)
 
     $ vercel link --repo
 

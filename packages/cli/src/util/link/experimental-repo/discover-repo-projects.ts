@@ -1,4 +1,5 @@
 import chalk from 'chalk';
+import pluralize from 'pluralize';
 import slugify from '@sindresorhus/slugify';
 import { basename, join, relative } from 'path';
 import { normalizePath } from '@vercel/build-utils';
@@ -18,6 +19,7 @@ import {
 import { repoInfoToUrl } from '../../git/repo-info-to-url';
 import { getGitConfigPath } from '../../git-helpers';
 import output from '../../../output-manager';
+import cmd from '../../output/cmd';
 import table from '../../output/table';
 import {
   formatFrameworkLabel,
@@ -60,6 +62,8 @@ type FoundProject = {
 type GitLinkedProject = {
   type: 'gitLinkedProject';
   confirmed?: boolean;
+  /** Present in `.vercel/repo.json` before this run (`vc link --repo` initial). */
+  alreadyInRepoJson?: boolean;
   id: string;
   name: string;
   directory: string;
@@ -72,8 +76,8 @@ type GitLinkedProjectWithMisconfiguredRootDirectory = {
   moveDirectory?: string | null;
   connectionOption?: 'connect' | 'link' | 'skip';
   updateDirectoryInProjectSettings?: boolean;
-  /** Set when using the suggested directory without updating project settings. */
-  directorySpecifiedManually?: boolean;
+  /** Present in `.vercel/repo.json` before this run (`vc link --repo` initial). */
+  alreadyInRepoJson?: boolean;
   id: string;
   name: string;
   directory: string;
@@ -92,8 +96,6 @@ type NonGitLinkedProject = {
   moveDirectory?: string | null;
   connectionOption?: 'connect' | 'link' | 'skip';
   updateDirectoryInProjectSettings?: boolean;
-  /** Set when using the suggested directory without updating project settings. */
-  directorySpecifiedManually?: boolean;
   name: string;
   directory: string;
   suggestedDirectory: string;
@@ -177,6 +179,78 @@ function linkRepoApplyConfirmMessage(selectionCount: number): string {
   return selectionCount === 1
     ? 'Link the project above?'
     : 'Link the projects above?';
+}
+
+function isProjectAlreadyInRepoJson(
+  projectId: string,
+  vercelRootDirectory: string | null | undefined,
+  existingProjectIds?: Set<string>,
+  existingDirectoryKeys?: Set<string>
+): boolean {
+  if (existingProjectIds?.has(projectId)) {
+    return true;
+  }
+  if (!existingDirectoryKeys?.size) {
+    return false;
+  }
+  const key = normalizePath(vercelRootDirectory || '.');
+  return existingDirectoryKeys.has(key);
+}
+
+/** One line above the link table: what we found in this repo / scope. */
+function formatRepoLinkSelectionPreamble(counts: {
+  linked: number;
+  needsDetails: number;
+  notLinkedToRepo: number;
+  newDetected: number;
+}): string {
+  const parts: string[] = [];
+  if (counts.linked > 0) {
+    parts.push(`${counts.linked} linked to this repo`);
+  }
+  if (counts.needsDetails > 0) {
+    parts.push(`${counts.needsDetails} need root directory details`);
+  }
+  if (counts.notLinkedToRepo > 0) {
+    parts.push(`${counts.notLinkedToRepo} not linked to this Git repository`);
+  }
+  if (counts.newDetected > 0) {
+    parts.push(
+      `${counts.newDetected} new local app(s) — create on Vercel if needed`
+    );
+  }
+  if (parts.length === 0) {
+    return '';
+  }
+  return `${chalk.dim(parts.join(' · '))}\n`;
+}
+
+/** Shown on `vc link --repo` when discovery found rows we do not list in this step. */
+function formatVcLinkAddSuppressedHint(
+  suppressedNonGit: number,
+  suppressedNewLocal: number
+): string {
+  if (suppressedNonGit <= 0 && suppressedNewLocal <= 0) {
+    return '';
+  }
+  const pieces: string[] = [];
+  if (suppressedNonGit > 0) {
+    pieces.push(
+      `${suppressedNonGit} existing ${pluralize('Vercel project', suppressedNonGit)} not linked to this Git repository`
+    );
+  }
+  if (suppressedNewLocal > 0) {
+    pieces.push(
+      `${suppressedNewLocal} ${pluralize('local package', suppressedNewLocal)} that could be added as new projects`
+    );
+  }
+  const listed =
+    pieces.length === 2 ? `${pieces[0]}, and ${pieces[1]}` : (pieces[0] ?? '');
+  return `${chalk.dim(
+    `We also found ${listed}. Run ${cmd(
+      'vercel link add'
+    )} to connect existing projects or add new ones.`
+  )}\n\n`;
 }
 
 function directoryForRepoJsonFromNormalizedPath(normalizedDir: string): string {
@@ -276,7 +350,7 @@ async function applyRepoLinkSelections(
       case 'nonGitLinkedProject':
       case 'gitLinkedProjectWithMisconfiguredRootDirectory': {
         const dirNorm = canonicalDirectoryForSetup(sel);
-        if (!yes && sel.updateDirectoryInProjectSettings) {
+        if (sel.updateDirectoryInProjectSettings) {
           output.spinner(`Updating project settings for ${sel.name}…`);
           await patchProjectRootDirectory(client, sel.id, dirNorm);
         }
@@ -289,16 +363,12 @@ async function applyRepoLinkSelections(
             gitRepoPath
           );
         }
-        const row: RepoProjectConfig = {
+        repoProjects.push({
           id: sel.id,
           name: sel.name,
           directory: directoryForRepoJsonFromNormalizedPath(dirNorm),
           orgId: sel.orgId,
-        };
-        if (sel.directorySpecifiedManually) {
-          row.directorySpecifiedManually = true;
-        }
-        repoProjects.push(row);
+        });
         break;
       }
       default: {
@@ -319,18 +389,22 @@ async function fetchVercelProjectsLinkedToRepo(
   output.spinner(
     `Searching for matching projects under ${chalk.bold(orgSlug)}…`
   );
-  const query = new URLSearchParams({ repoUrl });
-  const projectsIterator = client.fetchPaginated<{
-    projects: Project[];
-  }>(`/v9/projects?${query}`);
-  let acc: Project[] = [];
-  for await (const chunk of projectsIterator) {
-    acc = acc.concat(chunk.projects);
-    if (chunk.pagination.next) {
-      output.spinner(`Searching under ${chalk.bold(orgSlug)}…`, 0);
+  try {
+    const query = new URLSearchParams({ repoUrl });
+    const projectsIterator = client.fetchPaginated<{
+      projects: Project[];
+    }>(`/v9/projects?${query}`);
+    let acc: Project[] = [];
+    for await (const chunk of projectsIterator) {
+      acc = acc.concat(chunk.projects);
+      if (chunk.pagination.next) {
+        output.spinner(`Searching under ${chalk.bold(orgSlug)}…`, 0);
+      }
     }
+    return acc;
+  } finally {
+    output.stopSpinner();
   }
-  return acc;
 }
 
 /**
@@ -353,6 +427,7 @@ export async function discoverRepoProjectsExperimental(
     existingDirectories,
     existingRemoteName,
     projectName,
+    repoLinkMode = 'add',
   }: {
     yes: boolean;
     existingProjectIds?: Set<string>;
@@ -364,11 +439,27 @@ export async function discoverRepoProjectsExperimental(
      * suggestions but do not offer local “new project” rows.
      */
     projectName?: string | null;
+    /**
+     * `initial`: `vc link --repo` — git-linked + misconfigured roots only; never
+     * “new project” rows; existing Vercel projects not linked to this Git repo
+     * are omitted (use `vercel link add`). With `--project`, a sole matching
+     * non–git-linked row may still appear. `add`: `vc link add` — full picker.
+     */
+    repoLinkMode?: 'initial' | 'add';
   }
 ): Promise<
-  | { remoteName: string; projects: RepoProjectConfig[]; orgSlug: string }
+  | {
+      remoteName: string;
+      projects: RepoProjectConfig[];
+      orgSlug: string;
+      /** True when `vc link --repo` made no changes (already in repo.json). */
+      repoLinkNoop?: boolean;
+    }
   | undefined
 > {
+  let initialSuppressedNonGit = 0;
+  let initialSuppressedNewLocal = 0;
+
   // Detect the projects on the filesystem out of band, so that
   // they will be ready by the time the projects are listed
   const detectedProjectsPromise = detectProjects(rootPath).catch(
@@ -484,8 +575,11 @@ export async function discoverRepoProjectsExperimental(
       fetchVercelProjectsLinkedToRepo(client, org.slug, repoUrl),
     ]);
 
-    // Filter out projects that are already linked in repo.json (by ID or directory)
-    if (existingProjectIds || existingDirectories) {
+    // `vercel link add`: hide projects already listed in repo.json.
+    // `vc link --repo` (initial): keep them in the list and mark `alreadyInRepoJson`.
+    const hideExistingProjectsFromPicker =
+      repoLinkMode === 'add' && (existingProjectIds || existingDirectories);
+    if (hideExistingProjectsFromPicker) {
       projects = projects.filter(p => {
         if (existingProjectIds?.has(p.id)) return false;
         if (existingDirectories?.has(normalizePath(p.rootDirectory || '.')))
@@ -524,9 +618,18 @@ export async function discoverRepoProjectsExperimental(
       rootsForSearch.push({ rootDirectory, folderName });
     }
 
+    if (rootsForSearch.length > 0) {
+      output.spinner(
+        `Looking up existing projects by folder name under ${chalk.bold(
+          org.slug
+        )}…`
+      );
+    }
+
     const matchesByRootDirectory = await searchProjectsForLinkDiscoveryByRoots(
       client,
-      rootsForSearch
+      rootsForSearch,
+      org
     );
 
     const nonGitLinkedProjects = new Map<string, FoundProject[]>();
@@ -550,6 +653,14 @@ export async function discoverRepoProjectsExperimental(
               project => project.id !== match.project.id
             );
             detectedProjects.delete(rootDirectory);
+            const alreadyInRepoJsonMis =
+              repoLinkMode === 'initial' &&
+              isProjectAlreadyInRepoJson(
+                match.project.id,
+                match.project.rootDirectory,
+                existingProjectIds,
+                existingDirectories
+              );
             p.gitLinkedProjectsWithMisconfiguredRootDirectory.push({
               type: 'gitLinkedProjectWithMisconfiguredRootDirectory',
               id: match.project.id,
@@ -568,6 +679,7 @@ export async function discoverRepoProjectsExperimental(
                 normalizeRootDirectoryPath(match.project.rootDirectory) ===
                 normalizeRootDirectoryPath(rootDirectory),
               isLinkedToThisRepo,
+              ...(alreadyInRepoJsonMis ? { alreadyInRepoJson: true } : {}),
             });
             foundProjectCandidatesWithMisconfiguredRootDirectory.push({
               ...match,
@@ -626,6 +738,14 @@ export async function discoverRepoProjectsExperimental(
 
     if (projects.length > 0) {
       for (const project of projects) {
+        const alreadyInRepoJson =
+          repoLinkMode === 'initial' &&
+          isProjectAlreadyInRepoJson(
+            project.id,
+            project.rootDirectory,
+            existingProjectIds,
+            existingDirectories
+          );
         p.gitLinkedProjects.push({
           type: 'gitLinkedProject',
           id: project.id,
@@ -633,6 +753,7 @@ export async function discoverRepoProjectsExperimental(
           directory: normalizeRootDirectoryPath(project.rootDirectory),
           orgId: project.accountId,
           framework: project.framework,
+          ...(alreadyInRepoJson ? { alreadyInRepoJson: true } : {}),
         });
       }
     }
@@ -701,6 +822,18 @@ export async function discoverRepoProjectsExperimental(
     p.detectedProjects = new Map();
   }
 
+  if (!linkDemoId && repoLinkMode === 'initial') {
+    const nonGitBefore = p.nonGitLinkedProjects.length;
+    initialSuppressedNewLocal = Array.from(p.detectedProjects.values()).reduce(
+      (sum, fws) => sum + fws.length,
+      0
+    );
+    applyRepoLinkInitialScopePolicy(p, {
+      focusedProjectId: focusedProject?.id,
+    });
+    initialSuppressedNonGit = nonGitBefore - p.nonGitLinkedProjects.length;
+  }
+
   // output.log(
   //   `Auto - linking ${
   // pluralize(
@@ -727,7 +860,9 @@ export async function discoverRepoProjectsExperimental(
         ),
         chalk.dim(formatRootForDisplay(project.directory)),
         formatFrameworkLabel(project.framework),
-        chalk.dim('Linked to repo'),
+        chalk.dim(
+          project.alreadyInRepoJson ? 'Already linked' : 'Linked to repo'
+        ),
       ],
       value: project,
       checked: true,
@@ -744,7 +879,9 @@ export async function discoverRepoProjectsExperimental(
         ),
         chalk.dim('—'),
         formatFrameworkLabel(project.framework),
-        chalk.yellow('Needs details'),
+        chalk.yellow(
+          project.alreadyInRepoJson ? 'Already linked' : 'Needs details'
+        ),
       ],
       value: project,
       checked: true,
@@ -861,10 +998,25 @@ export async function discoverRepoProjectsExperimental(
         })}\n`
       );
     }
+    if (repoLinkMode === 'initial' && !linkDemoId) {
+      const addHint = formatVcLinkAddSuppressedHint(
+        initialSuppressedNonGit,
+        initialSuppressedNewLocal
+      );
+      if (addHint) {
+        output.print(addHint);
+      }
+    }
     if (yes) {
       selected2 = [sole.value];
     } else if (soleRowNeedsSetupPhase) {
       // Preview is enough; go straight to project setup (connect / root dir, etc.).
+      selected2 = [sole.value];
+    } else if (
+      sole.value.type === 'gitLinkedProject' &&
+      sole.value.alreadyInRepoJson
+    ) {
+      // Already in repo.json — nothing to confirm; proceed to noop exit.
       selected2 = [sole.value];
     } else {
       const linkThis = await client.input.confirm(
@@ -891,7 +1043,22 @@ export async function discoverRepoProjectsExperimental(
       1 + primaryCheckboxSpecs.length
     );
 
-    output.print(`\n${alignedSelectionHeaderLine}\n`);
+    const preamble = formatRepoLinkSelectionPreamble({
+      linked: gitLinkedCheckboxSpecs.length,
+      needsDetails: misconfiguredCheckboxSpecs.length,
+      notLinkedToRepo: nonGitCheckboxSpecs.length,
+      newDetected: detectedCheckboxSpecs.length,
+    });
+    const addSuppressedHint =
+      repoLinkMode === 'initial' && !linkDemoId
+        ? formatVcLinkAddSuppressedHint(
+            initialSuppressedNonGit,
+            initialSuppressedNewLocal
+          )
+        : '';
+    output.print(
+      `\n${preamble}${addSuppressedHint}${alignedSelectionHeaderLine}\n`
+    );
 
     const choices: Choice[] = [];
     primaryCheckboxSpecs.forEach((spec, i) => {
@@ -955,12 +1122,24 @@ export async function discoverRepoProjectsExperimental(
   }
 
   if (selected2.length === 0) {
-    if (yes && allInteractiveSpecs.length === 0) {
-      output.print(
-        `\n${chalk.yellow(
-          'No Vercel projects found to link for this repository in the selected scope.'
-        )}\n`
-      );
+    if (allInteractiveSpecs.length === 0) {
+      if (repoLinkMode === 'initial') {
+        output.print(
+          `\n${chalk.yellow(
+            `Nothing to update for this repository link from here. Run ${cmd(
+              'vercel link add'
+            )} to connect existing Vercel projects or create new ones.`
+          )}\n`
+        );
+      } else if (yes) {
+        output.print(
+          `\n${chalk.yellow(
+            'No Vercel projects found to link for this repository in the selected scope.'
+          )}\n`
+        );
+      } else {
+        output.print(`\n${chalk.yellow('No projects selected.')}\n`);
+      }
     } else {
       output.print(`\n${chalk.yellow('No projects selected.')}\n`);
     }
@@ -984,6 +1163,7 @@ export async function discoverRepoProjectsExperimental(
     output.print('\n');
     const proceedWithPlan =
       yes ||
+      repoLinkMode === 'initial' ||
       (await client.input.confirm(
         linkRepoApplyConfirmMessage(selected2.length),
         true
@@ -1002,6 +1182,22 @@ export async function discoverRepoProjectsExperimental(
     );
     // output.print(JSON.stringify(selected2, null, 2));
     return;
+  }
+
+  const isInitialRepoLinkNoop =
+    repoLinkMode === 'initial' &&
+    selected2.length === 1 &&
+    selected2[0].type === 'gitLinkedProject' &&
+    selected2[0].alreadyInRepoJson &&
+    setupPhases.length === 0;
+
+  if (isInitialRepoLinkNoop) {
+    return {
+      remoteName,
+      projects: [],
+      orgSlug: org.slug,
+      repoLinkNoop: true,
+    };
   }
 
   const repoProjects = await applyRepoLinkSelections(
@@ -1044,6 +1240,28 @@ type RepoLinkBuckets = {
   nonGitLinkedProjects: NonGitLinkedProject[];
   detectedProjects: Map<string, Framework[]>;
 };
+
+/**
+ * `vc link --repo` (initial): do not offer to create new Vercel projects from
+ * local detection. Omit existing Vercel projects that are not linked to this Git
+ * repository from the picker (`vercel link add` connects them). When `--project`
+ * resolves to only a non–git-linked row, keep that row so connect/root prompts
+ * can run.
+ */
+function applyRepoLinkInitialScopePolicy(
+  p: RepoLinkBuckets,
+  opts: { focusedProjectId?: string }
+): void {
+  p.detectedProjects = new Map();
+
+  if (opts.focusedProjectId) {
+    p.nonGitLinkedProjects = p.nonGitLinkedProjects.filter(
+      n => n.id === opts.focusedProjectId
+    );
+  } else {
+    p.nonGitLinkedProjects = [];
+  }
+}
 
 function collectDuplicatePrimaryProjectNames(p: RepoLinkBuckets): Set<string> {
   const counts = new Map<string, number>();
@@ -1348,25 +1566,23 @@ function linkSelectionTableRow(
 
 /**
  * Non-interactive (`--yes`): write `repo.json` mappings only — no new projects,
- * no PATCH to project settings, no Git connect. When Vercel root and suggested
- * directory differ, use the suggested directory in `repo.json` with
- * `directorySpecifiedManually: true`.
+ * no Git connect. When Vercel root and suggested directory differ, PATCH the
+ * project root on Vercel to match the suggested path, then write `repo.json`.
  */
 function applyDefaultNonInteractiveProjectSetup(
   project: NonGitLinkedProject | GitLinkedProjectWithMisconfiguredRootDirectory
 ): void {
   project.confirmed = true;
   project.connectionOption = 'link';
-  project.updateDirectoryInProjectSettings = false;
-  delete project.directorySpecifiedManually;
   if (
     normalizeRootDirectoryPath(project.directory) !==
     normalizeRootDirectoryPath(project.suggestedDirectory)
   ) {
     project.moveDirectory = project.suggestedDirectory;
-    project.directorySpecifiedManually = true;
+    project.updateDirectoryInProjectSettings = true;
   } else {
     project.moveDirectory = null;
+    project.updateDirectoryInProjectSettings = false;
   }
 }
 
@@ -1449,23 +1665,14 @@ async function getProjectSetupInfo(
     });
     if (moveOption === 'yes') {
       directory = project.suggestedDirectory;
-      updateDirectoryInProjectSettings = await client.input.confirm(
-        `Would you like to update the root directory in the project settings to "${chalk.gray(formatRootForDisplay(project.suggestedDirectory))}"?`,
-        true
-      );
-      if (!updateDirectoryInProjectSettings) {
-        project.directorySpecifiedManually = true;
-      }
+      updateDirectoryInProjectSettings = true;
     } else if (moveOption === 'no') {
       directory = project.directory;
     } else if (moveOption === 'choose-different-directory') {
       directory = await client.input.text({
         message: 'Enter the new directory',
       });
-      updateDirectoryInProjectSettings = await client.input.confirm(
-        `Would you like to update the root directory in the project settings to "${chalk.gray(formatRootForDisplay(directory ?? ''))}"?`,
-        true
-      );
+      updateDirectoryInProjectSettings = true;
     }
   }
   project.confirmed = true;

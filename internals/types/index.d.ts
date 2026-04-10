@@ -438,11 +438,6 @@ export interface ProjectLink {
    */
   projectRootDirectory?: string;
   /**
-   * When linked via `repo.json`, true if that entry uses the suggested local
-   * directory without updating the Vercel project's root directory setting.
-   */
-  directorySpecifiedManually?: boolean;
-  /**
    * Name of the Vercel Project.
    */
   projectName?: string;

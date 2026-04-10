@@ -112,240 +112,6 @@ describe('link', () => {
       expect(repoJson.orgId).toBeUndefined();
     });
 
-    it('should create new Project at repo root using repo folder name', async () => {
-      const user = useUser();
-      const cwd = setupTmpDir();
-
-      // Set up a `.git/config` file to simulate a repo
-      await mkdirp(join(cwd, '.git'));
-      const repoUrl = 'https://github.com/user/repo.git';
-      await writeFile(
-        join(cwd, '.git/config'),
-        `[remote "upstream"]\n\turl = ${repoUrl}\n\tfetch = +refs/heads/*:refs/remotes/upstream/*\n`
-      );
-
-      // Set up the root-level `package.json` to simulate a Next.js project
-      await writeJSON(join(cwd, 'package.json'), {
-        dependencies: {
-          next: 'latest',
-        },
-      });
-
-      useTeams('team_dummy');
-      useUnknownProject();
-      client.scenario.get(`/v9/projects`, (_req, res) => {
-        res.json({
-          projects: [],
-          pagination: { count: 0, next: null, prev: null },
-        });
-      });
-
-      client.cwd = cwd;
-      client.setArgv('--repo');
-      const exitCodePromise = link(client);
-
-      await expect(client.stderr).toOutput(
-        'The `--repo` flag is in alpha, please report issues'
-      );
-
-      await expect(client.stderr).toOutput(
-        'Which scope should contain your Project(s)?'
-      );
-      client.stdin.write('\n');
-
-      await expect(client.stderr).toOutput('Searching for matching projects');
-      await expect(client.stderr).toOutput('Link the project above?');
-      client.stdin.write('y\n');
-
-      await expect(client.stderr).toOutput(
-        `Linked to 1 Project under ${user.username} (created .vercel and added it to .gitignore)`
-      );
-
-      const exitCode = await exitCodePromise;
-      expect(exitCode).toEqual(0);
-
-      const repoJson = await readJSON(join(cwd, '.vercel/repo.json'));
-      expect(repoJson.orgId).toBeUndefined();
-      expect(repoJson.remoteName).toEqual('upstream');
-      expect(repoJson.projects).toHaveLength(1);
-      expect(repoJson.projects[0].directory).toEqual('.');
-      expect(typeof repoJson.projects[0].orgId).toBe('string');
-      const project = await getProjectByNameOrId(
-        client,
-        repoJson.projects[0].id
-      );
-      if (project instanceof ProjectNotFound) {
-        throw project;
-      }
-      expect(project.name).toEqual(repoJson.projects[0].name);
-      expect(project.name).toEqual(basename(cwd));
-      expect(project.framework).toEqual('nextjs');
-      expect(project.link?.repo).toEqual('user/repo');
-      expect(project.link?.type).toEqual('github');
-    });
-
-    it('should create projects using subdirectory names for monorepo workspaces', async () => {
-      const user = useUser();
-      const cwd = setupTmpDir();
-
-      await mkdirp(join(cwd, '.git'));
-      const repoUrl = 'https://github.com/user/repo.git';
-      await writeFile(
-        join(cwd, '.git/config'),
-        `[remote "origin"]\n\turl = ${repoUrl}\n\tfetch = +refs/heads/*:refs/remotes/origin/*\n`
-      );
-
-      await writeJSON(join(cwd, 'package.json'), {
-        name: 'my-monorepo',
-        private: true,
-        workspaces: ['packages/frontend', 'packages/api'],
-      });
-
-      await mkdirp(join(cwd, 'packages/frontend'));
-      await writeJSON(join(cwd, 'packages/frontend/package.json'), {
-        name: 'frontend',
-        dependencies: {
-          next: 'latest',
-        },
-      });
-
-      await mkdirp(join(cwd, 'packages/api'));
-      await writeJSON(join(cwd, 'packages/api/package.json'), {
-        name: 'api',
-        dependencies: {
-          '@remix-run/dev': 'latest',
-        },
-      });
-
-      useTeams('team_dummy');
-      useUnknownProject();
-      client.scenario.get(`/v9/projects`, (_req, res) => {
-        res.json({
-          projects: [],
-          pagination: { count: 0, next: null, prev: null },
-        });
-      });
-
-      client.cwd = cwd;
-      client.setArgv('--repo');
-      const exitCodePromise = link(client);
-
-      await expect(client.stderr).toOutput(
-        'The `--repo` flag is in alpha, please report issues'
-      );
-
-      await expect(client.stderr).toOutput(
-        'Which scope should contain your Project(s)?'
-      );
-      client.stdin.write('\n');
-
-      await expect(client.stderr).toOutput('Searching for matching projects');
-      await expect(client.stderr).toOutput('Select projects to link');
-      // Detected "new project" rows start unchecked; toggle all on, then confirm.
-      client.events.keypress('a');
-      client.events.keypress('enter');
-
-      await expect(client.stderr).toOutput('Link the projects above?');
-      client.stdin.write('y\n');
-
-      await expect(client.stderr).toOutput(
-        `Linked to 2 Projects under ${user.username} (created .vercel and added it to .gitignore)`
-      );
-
-      const exitCode = await exitCodePromise;
-      expect(exitCode).toEqual(0);
-
-      const repoJson = await readJSON(join(cwd, '.vercel/repo.json'));
-      expect(repoJson.orgId).toBeUndefined();
-      expect(repoJson.remoteName).toEqual('origin');
-      expect(repoJson.projects).toHaveLength(2);
-      expect(typeof repoJson.projects[0].orgId).toBe('string');
-      expect(typeof repoJson.projects[1].orgId).toBe('string');
-
-      const frontendProject = repoJson.projects.find(
-        (p: { name: string }) => p.name === 'frontend'
-      );
-      const apiProject = repoJson.projects.find(
-        (p: { name: string }) => p.name === 'api'
-      );
-
-      expect(frontendProject).toBeDefined();
-      expect(apiProject).toBeDefined();
-
-      const frontendProjectDetails = await getProjectByNameOrId(
-        client,
-        frontendProject!.id
-      );
-      const apiProjectDetails = await getProjectByNameOrId(
-        client,
-        apiProject!.id
-      );
-
-      if (
-        frontendProjectDetails instanceof ProjectNotFound ||
-        apiProjectDetails instanceof ProjectNotFound
-      ) {
-        throw new Error('Projects not found');
-      }
-
-      expect(frontendProjectDetails.framework).toEqual('nextjs');
-      expect(apiProjectDetails.framework).toEqual('remix');
-    });
-
-    it('should gracefully report error when creating new Project fails', async () => {
-      useUser();
-      const cwd = setupTmpDir();
-
-      // Set up a `.git/config` file to simulate a repo
-      await mkdirp(join(cwd, '.git'));
-      const repoUrl = 'https://github.com/user/repo.git';
-      await writeFile(
-        join(cwd, '.git/config'),
-        `[remote "upstream"]\n\turl = ${repoUrl}\n\tfetch = +refs/heads/*:refs/remotes/upstream/*\n`
-      );
-
-      // Set up the root-level `package.json` to simulate a Next.js project
-      await writeJSON(join(cwd, 'package.json'), {
-        dependencies: {
-          next: 'latest',
-        },
-      });
-
-      useTeams('team_dummy');
-      client.scenario.get(`/v9/projects`, (_req, res) => {
-        res.json({
-          projects: [],
-          pagination: { count: 0, next: null, prev: null },
-        });
-      });
-      client.scenario.post(`/v1/projects`, (_req, res) => {
-        res.status(400).send();
-      });
-
-      client.cwd = cwd;
-      client.setArgv('--repo');
-      const exitCodePromise = link(client);
-
-      await expect(client.stderr).toOutput(
-        'The `--repo` flag is in alpha, please report issues'
-      );
-
-      await expect(client.stderr).toOutput(
-        'Which scope should contain your Project(s)?'
-      );
-      client.stdin.write('\n');
-
-      await expect(client.stderr).toOutput('Searching for matching projects');
-      await expect(client.stderr).toOutput('Link the project above?');
-      client.stdin.write('y\n');
-
-      // Fails while creating the detected project (`POST /v1/projects` returns 400)
-      await expect(client.stderr).toOutput('Response Error (400)');
-
-      const exitCode = await exitCodePromise;
-      expect(exitCode).toEqual(1);
-    });
-
     it('should track use of `--repo` flag', async () => {
       useUser();
       const cwd = setupTmpDir();
@@ -405,6 +171,240 @@ describe('link', () => {
       const exitCode = await link(client);
 
       await expect(client.stderr).toOutput('No existing repository link found');
+      expect(exitCode).toEqual(1);
+    });
+
+    it('should create new Project at repo root using repo folder name', async () => {
+      const user = useUser();
+      const cwd = setupTmpDir();
+
+      await mkdirp(join(cwd, '.git'));
+      const repoUrl = 'https://github.com/user/repo.git';
+      await writeFile(
+        join(cwd, '.git/config'),
+        `[remote "upstream"]\n\turl = ${repoUrl}\n\tfetch = +refs/heads/*:refs/remotes/upstream/*\n`
+      );
+
+      await writeJSON(join(cwd, 'package.json'), {
+        dependencies: {
+          next: 'latest',
+        },
+      });
+
+      await mkdirp(join(cwd, '.vercel'));
+      await writeJSON(join(cwd, '.vercel/repo.json'), {
+        remoteName: 'upstream',
+        projects: [],
+      });
+
+      useTeams('team_dummy');
+      useUnknownProject();
+      client.scenario.get(`/v9/projects`, (_req, res) => {
+        res.json({
+          projects: [],
+          pagination: { count: 0, next: null, prev: null },
+        });
+      });
+
+      client.cwd = cwd;
+      client.setArgv('link', 'add');
+      const exitCodePromise = link(client);
+
+      await expect(client.stderr).toOutput(
+        'Which scope should contain your Project(s)?'
+      );
+      client.stdin.write('\n');
+
+      await expect(client.stderr).toOutput('Searching for matching projects');
+      await expect(client.stderr).toOutput('Link the project above?');
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput(
+        `Added 1 Project under ${user.username}`
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+
+      const repoJson = await readJSON(join(cwd, '.vercel/repo.json'));
+      expect(repoJson.orgId).toBeUndefined();
+      expect(repoJson.remoteName).toEqual('upstream');
+      expect(repoJson.projects).toHaveLength(1);
+      expect(repoJson.projects[0].directory).toEqual('.');
+      expect(typeof repoJson.projects[0].orgId).toBe('string');
+      const project = await getProjectByNameOrId(
+        client,
+        repoJson.projects[0].id
+      );
+      if (project instanceof ProjectNotFound) {
+        throw project;
+      }
+      expect(project.name).toEqual(repoJson.projects[0].name);
+      expect(project.name).toEqual(basename(cwd));
+      expect(project.framework).toEqual('nextjs');
+      expect(project.link?.repo).toEqual('user/repo');
+      expect(project.link?.type).toEqual('github');
+    });
+
+    it('should create projects using subdirectory names for monorepo workspaces', async () => {
+      const user = useUser();
+      const cwd = setupTmpDir();
+
+      await mkdirp(join(cwd, '.git'));
+      const repoUrl = 'https://github.com/user/repo.git';
+      await writeFile(
+        join(cwd, '.git/config'),
+        `[remote "origin"]\n\turl = ${repoUrl}\n\tfetch = +refs/heads/*:refs/remotes/origin/*\n`
+      );
+
+      await writeJSON(join(cwd, 'package.json'), {
+        name: 'my-monorepo',
+        private: true,
+        workspaces: ['packages/frontend', 'packages/api'],
+      });
+
+      await mkdirp(join(cwd, 'packages/frontend'));
+      await writeJSON(join(cwd, 'packages/frontend/package.json'), {
+        name: 'frontend',
+        dependencies: {
+          next: 'latest',
+        },
+      });
+
+      await mkdirp(join(cwd, 'packages/api'));
+      await writeJSON(join(cwd, 'packages/api/package.json'), {
+        name: 'api',
+        dependencies: {
+          '@remix-run/dev': 'latest',
+        },
+      });
+
+      await mkdirp(join(cwd, '.vercel'));
+      await writeJSON(join(cwd, '.vercel/repo.json'), {
+        remoteName: 'origin',
+        projects: [],
+      });
+
+      useTeams('team_dummy');
+      useUnknownProject();
+      client.scenario.get(`/v9/projects`, (_req, res) => {
+        res.json({
+          projects: [],
+          pagination: { count: 0, next: null, prev: null },
+        });
+      });
+
+      client.cwd = cwd;
+      client.setArgv('link', 'add');
+      const exitCodePromise = link(client);
+
+      await expect(client.stderr).toOutput(
+        'Which scope should contain your Project(s)?'
+      );
+      client.stdin.write('\n');
+
+      await expect(client.stderr).toOutput('Searching for matching projects');
+      await expect(client.stderr).toOutput('Select projects to link');
+      client.events.keypress('a');
+      client.events.keypress('enter');
+
+      await expect(client.stderr).toOutput('Link the projects above?');
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput(
+        `Added 2 Projects under ${user.username}`
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+
+      const repoJson = await readJSON(join(cwd, '.vercel/repo.json'));
+      expect(repoJson.orgId).toBeUndefined();
+      expect(repoJson.remoteName).toEqual('origin');
+      expect(repoJson.projects).toHaveLength(2);
+      expect(typeof repoJson.projects[0].orgId).toBe('string');
+      expect(typeof repoJson.projects[1].orgId).toBe('string');
+
+      const frontendProject = repoJson.projects.find(
+        (p: { name: string }) => p.name === 'frontend'
+      );
+      const apiProject = repoJson.projects.find(
+        (p: { name: string }) => p.name === 'api'
+      );
+
+      expect(frontendProject).toBeDefined();
+      expect(apiProject).toBeDefined();
+
+      const frontendProjectDetails = await getProjectByNameOrId(
+        client,
+        frontendProject!.id
+      );
+      const apiProjectDetails = await getProjectByNameOrId(
+        client,
+        apiProject!.id
+      );
+
+      if (
+        frontendProjectDetails instanceof ProjectNotFound ||
+        apiProjectDetails instanceof ProjectNotFound
+      ) {
+        throw new Error('Projects not found');
+      }
+
+      expect(frontendProjectDetails.framework).toEqual('nextjs');
+      expect(apiProjectDetails.framework).toEqual('remix');
+    });
+
+    it('should gracefully report error when creating new Project fails', async () => {
+      useUser();
+      const cwd = setupTmpDir();
+
+      await mkdirp(join(cwd, '.git'));
+      const repoUrl = 'https://github.com/user/repo.git';
+      await writeFile(
+        join(cwd, '.git/config'),
+        `[remote "upstream"]\n\turl = ${repoUrl}\n\tfetch = +refs/heads/*:refs/remotes/upstream/*\n`
+      );
+
+      await writeJSON(join(cwd, 'package.json'), {
+        dependencies: {
+          next: 'latest',
+        },
+      });
+
+      await mkdirp(join(cwd, '.vercel'));
+      await writeJSON(join(cwd, '.vercel/repo.json'), {
+        remoteName: 'upstream',
+        projects: [],
+      });
+
+      useTeams('team_dummy');
+      client.scenario.get(`/v9/projects`, (_req, res) => {
+        res.json({
+          projects: [],
+          pagination: { count: 0, next: null, prev: null },
+        });
+      });
+      client.scenario.post(`/v1/projects`, (_req, res) => {
+        res.status(400).send();
+      });
+
+      client.cwd = cwd;
+      client.setArgv('link', 'add');
+      const exitCodePromise = link(client);
+
+      await expect(client.stderr).toOutput(
+        'Which scope should contain your Project(s)?'
+      );
+      client.stdin.write('\n');
+
+      await expect(client.stderr).toOutput('Searching for matching projects');
+      await expect(client.stderr).toOutput('Link the project above?');
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput('Response Error (400)');
+
+      const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(1);
     });
 

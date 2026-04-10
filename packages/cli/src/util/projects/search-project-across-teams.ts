@@ -5,6 +5,7 @@ import getTeams from '../teams/get-teams';
 import getProjectByIdOrName from './get-project-by-id-or-name';
 import { ProjectNotFound } from '../errors-ts';
 import slugify from '@sindresorhus/slugify';
+import output from '../../output-manager';
 
 export interface CrossTeamMatch {
   project: Project;
@@ -61,28 +62,41 @@ export default async function searchProjectAcrossTeams(
 /**
  * Like multiple {@link searchProjectAcrossTeams} calls (one per detected root), but loads
  * user/teams once and runs all project lookups in parallel — used by repo link discovery.
+ *
+ * When `scope` is set (the scope the user chose for `vc link --repo`), only that org is
+ * queried. Otherwise every team (and the user) is searched — that fan-out is slow and is
+ * not needed once a scope is already selected.
  */
 export async function searchProjectsForLinkDiscoveryByRoots(
   client: Client,
-  roots: Array<{ rootDirectory: string; folderName: string }>
+  roots: Array<{ rootDirectory: string; folderName: string }>,
+  scope?: Org
 ): Promise<Map<string, CrossTeamMatch[]>> {
   const result = new Map<string, CrossTeamMatch[]>();
   if (roots.length === 0) {
     return result;
   }
 
-  const [user, teams] = await Promise.all([getUser(client), getTeams(client)]);
+  let orgs: Org[];
+  if (scope) {
+    orgs = [scope];
+  } else {
+    const [user, teams] = await Promise.all([
+      getUser(client),
+      getTeams(client),
+    ]);
 
-  const orgs: Org[] = [
-    ...(user.version === 'northstar'
-      ? []
-      : [{ type: 'user' as const, id: user.id, slug: user.username }]),
-    ...teams.map(t => ({
-      type: 'team' as const,
-      id: t.id,
-      slug: t.slug,
-    })),
-  ];
+    orgs = [
+      ...(user.version === 'northstar'
+        ? []
+        : [{ type: 'user' as const, id: user.id, slug: user.username }]),
+      ...teams.map(t => ({
+        type: 'team' as const,
+        id: t.id,
+        slug: t.slug,
+      })),
+    ];
+  }
 
   type TaskOutcome = {
     rootDirectory: string;
@@ -110,7 +124,12 @@ export async function searchProjectsForLinkDiscoveryByRoots(
                     : { project: projectResult, org },
               })
             )
-            .catch((): TaskOutcome => ({ rootDirectory, match: null }))
+            .catch((err: unknown): TaskOutcome => {
+              output.debug(
+                `Link discovery: project lookup failed for "${name}" in ${org.slug}: ${err}`
+              );
+              return { rootDirectory, match: null };
+            })
         );
       }
     }

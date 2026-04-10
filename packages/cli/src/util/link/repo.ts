@@ -18,11 +18,6 @@ export interface RepoProjectConfig {
   name: string;
   directory: string;
   orgId?: string;
-  /**
-   * Present only when `true`: the repo link uses the suggested directory locally,
-   * but the Vercel project's root directory setting was not updated to match.
-   */
-  directorySpecifiedManually?: boolean;
 }
 
 export interface RepoProjectsConfig {
@@ -127,9 +122,16 @@ async function discoverRepoProjects(
     existingRemoteName?: string;
     /** Target project by name; excludes local “new project” suggestions. */
     projectName?: string | null;
+    /** `initial` = `vc link --repo`; `add` = `vc link add`. */
+    repoLinkMode: 'initial' | 'add';
   }
 ): Promise<
-  | { remoteName: string; projects: RepoProjectConfig[]; orgSlug: string }
+  | {
+      remoteName: string;
+      projects: RepoProjectConfig[];
+      orgSlug: string;
+      repoLinkNoop?: boolean;
+    }
   | undefined
 > {
   const { discoverRepoProjectsExperimental } = await import(
@@ -155,9 +157,32 @@ export async function ensureRepoLink(
     const result = await discoverRepoProjects(client, rootPath, {
       yes,
       projectName,
+      repoLinkMode: 'initial',
+      ...(repoConfig?.projects?.length
+        ? {
+            existingProjectIds: new Set(repoConfig.projects.map(p => p.id)),
+            existingDirectories: new Set(
+              repoConfig.projects.map(p => p.directory)
+            ),
+          }
+        : {}),
     });
     if (!result) {
       return;
+    }
+
+    if (result.repoLinkNoop) {
+      output.print(
+        prependEmoji(
+          `Repository link is already saved (${VERCEL_DIR}/${VERCEL_DIR_REPO}).\n`,
+          emoji('link')
+        )
+      );
+      return {
+        repoConfig,
+        repoConfigPath,
+        rootPath,
+      };
     }
 
     if (!repoConfig) {
@@ -241,6 +266,7 @@ export async function addRepoLink(
     existingProjectIds,
     existingDirectories,
     existingRemoteName: repoConfig.remoteName,
+    repoLinkMode: 'add',
   });
   if (!result) {
     return;
