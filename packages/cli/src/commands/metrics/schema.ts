@@ -94,28 +94,6 @@ export default async function schema(
     return metricsOrExitCode;
   }
 
-  if (jsonOutput) {
-    client.stdout.write(JSON.stringify(metricsOrExitCode, null, 2));
-  } else {
-    output.log(`${plural('Metric', metricsOrExitCode.length, true)} found`);
-    output.print(formatMetricListTable(metricsOrExitCode));
-    output.print('\n');
-  }
-
-  return 0;
-}
-
-function formatMetricListTable(metrics: MetricListItem[]) {
-  return indent(
-    formatTable(
-      ['Metric', 'Description'],
-      ['l', 'l'],
-      [{ rows: metrics.map(metric => [metric.id, metric.description]) }]
-    ),
-    1
-  );
-}
-
 function formatMetricsTable(metrics: MetricDetail[]) {
   if (metrics.length === 0) {
     return null;

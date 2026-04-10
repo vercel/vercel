@@ -1,5 +1,55 @@
 # vercel
 
+## 50.43.0
+
+### Minor Changes
+
+- Add Deployment Checks support to `deploy --prod`. Shows "Running Checks..." spinner when checks are pending, detects check failures before alias promotion, and displays failed check run details with links to logs. ([#15884](https://github.com/vercel/vercel/pull/15884))
+
+- Extend marketplace integration CLI parity: add `vercel integration installations` to list team installations (with optional `--integration` filter and JSON output), align `vercel integration update` argument parsing with other subcommands (parse only tokens after `update`, so the integration slug is the first positional), and ship related help/telemetry updates. ([#15849](https://github.com/vercel/vercel/pull/15849))
+
+- Add `vercel project protection` actions for automation protection bypass via PATCH `/v1/projects/.../protection-bypass` (`--protection-bypass`). ([#15862](https://github.com/vercel/vercel/pull/15862))
+
+- Add `vercel project protection` actions for customer support code visibility (`--customer-support-code-visibility`). ([#15860](https://github.com/vercel/vercel/pull/15860))
+
+- Add `vercel project protection` actions for Git fork protection (`--git-fork-protection`). ([#15861](https://github.com/vercel/vercel/pull/15861))
+
+- [services] migrate python workers to Queues V3 API ([#15885](https://github.com/vercel/vercel/pull/15885))
+
+- [cli] Add `vercel flags override` subcommand to encrypt and decrypt flag override tokens for the `vercel-flag-overrides` cookie ([#15875](https://github.com/vercel/vercel/pull/15875))
+
+### Patch Changes
+
+- Persist CLI telemetry across invocations with bounded-time sessions, stable installation device IDs, and per-invocation identifiers. ([#15872](https://github.com/vercel/vercel/pull/15872))
+
+- Update the `vercel metrics` CLI to use the V2 observability metrics API with `--metric`-based schema inspection and querying. ([#15876](https://github.com/vercel/vercel/pull/15876))
+
+- Improve `vercel integration add` command to support fallback to the discover API and first-party integrations. ([#15788](https://github.com/vercel/vercel/pull/15788))
+
+- refactor(cli): remove FF_AUTO_PROVISION_INSTALL feature flag and dead code from `integration add` ([#15871](https://github.com/vercel/vercel/pull/15871))
+
+- Updated dependencies [[`5e02289f927050a6c1025cc0edb7eda607fd5e73`](https://github.com/vercel/vercel/commit/5e02289f927050a6c1025cc0edb7eda607fd5e73), [`2e15ee828f14de4a849a462429ca03feab161174`](https://github.com/vercel/vercel/commit/2e15ee828f14de4a849a462429ca03feab161174), [`a31c84d1bda56a60da6d7bc6d611b0b18ba3bf57`](https://github.com/vercel/vercel/commit/a31c84d1bda56a60da6d7bc6d611b0b18ba3bf57)]:
+  - @vercel/detect-agent@1.2.2
+  - @vercel/build-utils@13.14.1
+  - @vercel/backends@0.0.58
+  - @vercel/elysia@0.1.61
+  - @vercel/express@0.1.71
+  - @vercel/fastify@0.1.64
+  - @vercel/go@3.4.7
+  - @vercel/h3@0.1.70
+  - @vercel/hono@0.2.64
+  - @vercel/hydrogen@1.3.6
+  - @vercel/koa@0.1.44
+  - @vercel/nestjs@0.2.65
+  - @vercel/next@4.16.5
+  - @vercel/node@5.7.3
+  - @vercel/python@6.29.0
+  - @vercel/redwood@2.4.12
+  - @vercel/remix-builder@5.7.2
+  - @vercel/ruby@2.3.2
+  - @vercel/rust@1.1.0
+  - @vercel/static-build@2.9.11
+
 ## 50.42.0
 
 ### Minor Changes

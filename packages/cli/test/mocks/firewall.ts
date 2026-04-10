@@ -13,6 +13,7 @@ export function createRule(index: number): FirewallRule {
   return {
     id: `rule_${String(index).padStart(3, '0')}`,
     name: `Test Rule ${index}`,
+    description: `Description for rule ${index}`,
     active: index % 3 !== 0, // every 3rd rule is inactive
     conditionGroup: [
       {
@@ -29,6 +30,105 @@ export function createRule(index: number): FirewallRule {
       mitigate: {
         action: index % 2 === 0 ? 'deny' : 'challenge',
         actionDuration: '1h',
+      },
+    },
+  };
+}
+
+export function createEmptyConditionRule(): FirewallRule {
+  return {
+    id: 'rule_empty_cond',
+    name: 'Empty Conditions Rule',
+    description: 'Rule with no conditions',
+    active: true,
+    conditionGroup: [],
+    action: {
+      mitigate: {
+        action: 'log',
+        actionDuration: null,
+      },
+    },
+  };
+}
+
+export function createRateLimitRule(): FirewallRule {
+  return {
+    id: 'rule_rate_limit',
+    name: 'Rate Limit API',
+    description: 'Rate limit API endpoints',
+    active: true,
+    conditionGroup: [
+      {
+        conditions: [
+          { type: 'path', op: 'pre', value: '/api' },
+          { type: 'method', op: 'inc', value: ['POST', 'PUT', 'DELETE'] },
+        ],
+      },
+    ],
+    action: {
+      mitigate: {
+        action: 'rate_limit',
+        rateLimit: {
+          algo: 'fixed_window',
+          window: 60,
+          limit: 100,
+          keys: ['ip'],
+          action: 'deny',
+        },
+        actionDuration: null,
+      },
+    },
+  };
+}
+
+export function createMultiGroupRule(): FirewallRule {
+  return {
+    id: 'rule_multi_group',
+    name: 'Block Suspicious Traffic',
+    description: 'Block bots and suspicious IPs',
+    active: true,
+    conditionGroup: [
+      {
+        conditions: [
+          { type: 'user_agent', op: 'sub', value: 'crawler' },
+          { type: 'geo_country', op: 'inc', neg: true, value: ['US', 'CA'] },
+        ],
+      },
+      {
+        conditions: [{ type: 'ip_address', op: 'eq', value: '1.2.3.4' }],
+      },
+      {
+        conditions: [{ type: 'header', op: 'ex', key: 'X-Suspicious' }],
+      },
+    ],
+    action: {
+      mitigate: {
+        action: 'deny',
+        actionDuration: '1h',
+      },
+    },
+  };
+}
+
+export function createRedirectRule(): FirewallRule {
+  return {
+    id: 'rule_redirect',
+    name: 'Redirect Old Path',
+    description: 'Redirect /old to /new',
+    active: true,
+    conditionGroup: [
+      {
+        conditions: [{ type: 'path', op: 'pre', value: '/old' }],
+      },
+    ],
+    action: {
+      mitigate: {
+        action: 'redirect',
+        redirect: {
+          location: '/new',
+          permanent: true,
+        },
+        actionDuration: null,
       },
     },
   };
@@ -109,6 +209,19 @@ export function useGetBypass(bypass: BypassRule[] = []) {
 export const capturedRequests: {
   activate?: { version: string };
   deleteDraft?: boolean;
+  patchDraft?: { action: string; id?: string; value?: unknown };
+  addBypass?: {
+    sourceIp?: string;
+    allSources?: boolean;
+    domain?: string;
+    projectScope?: boolean;
+    note?: string;
+  };
+  removeBypass?: { sourceIp?: string };
+  updateAttackMode?: {
+    attackModeEnabled: boolean;
+    attackModeActiveUntil?: string;
+  };
 } = {};
 
 export function useActivateConfig() {
@@ -139,8 +252,16 @@ export function useDeleteDraft() {
 }
 
 export function useAddBypass() {
+  delete capturedRequests.addBypass;
   client.scenario.post('/v1/security/firewall/bypass', (req: any, res: any) => {
     const { sourceIp, allSources, domain, projectScope, note } = req.body;
+    capturedRequests.addBypass = {
+      sourceIp,
+      allSources,
+      domain,
+      projectScope,
+      note,
+    };
     const ip = allSources ? '0.0.0.0/0' : sourceIp || '0.0.0.0';
     const bypassDomain = domain || (projectScope ? '*' : '*');
     res.json({
@@ -162,19 +283,55 @@ export function useAddBypass() {
 }
 
 export function useRemoveBypass() {
+  delete capturedRequests.removeBypass;
   client.scenario.delete(
     '/v1/security/firewall/bypass',
-    (_req: any, res: any) => {
+    (req: any, res: any) => {
+      capturedRequests.removeBypass = {
+        sourceIp: req.query.sourceIp || req.body?.sourceIp,
+      };
       res.json({ ok: true });
     }
   );
 }
 
 export function useUpdateAttackMode() {
+  delete capturedRequests.updateAttackMode;
   client.scenario.post('/security/attack-mode', (req: any, res: any) => {
+    capturedRequests.updateAttackMode = req.body;
     res.json({
       attackModeEnabled: req.body.attackModeEnabled,
       attackModeUpdatedAt: Date.now(),
     });
   });
+}
+
+export function usePatchDraft(
+  responseOverrides: Partial<FirewallConfigResponse> = {}
+) {
+  delete capturedRequests.patchDraft;
+  client.scenario.patch(
+    '/v1/security/firewall/config/draft',
+    (req: any, res: any) => {
+      const patch = req.body;
+      capturedRequests.patchDraft = {
+        action: patch.action,
+        id: patch.id,
+        value: patch.value,
+      };
+      res.json(
+        createConfig({
+          id: 'config_draft',
+          changes: [
+            {
+              action: patch.action,
+              id: patch.id || `generated_${Date.now()}`,
+              value: patch.value,
+            },
+          ],
+          ...responseOverrides,
+        })
+      );
+    }
+  );
 }

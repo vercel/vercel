@@ -14,7 +14,6 @@ from .broker import VercelQueuesBroker, _envelope_to_message
 
 try:
     import dramatiq
-    from dramatiq.common import current_millis
     from dramatiq.message import Message
 except Exception as e:
     raise RuntimeError(
@@ -159,7 +158,7 @@ def handle_queue_callback(
     try:
         queue_name, consumer_group, message_id = queue_callback.parse_cloudevent(raw_body)
 
-        payload, delivery_count, created_at, ticket = queue_callback.receive_message_by_id(
+        payload, delivery_count, created_at, receipt_handle = queue_callback.receive_message_by_id(
             queue_name,
             consumer_group,
             message_id,
@@ -168,12 +167,12 @@ def handle_queue_callback(
         )
 
         # Keep the message locked while executing.
-        if ticket:
+        if receipt_handle:
             extender = queue_callback.VisibilityExtender(
                 queue_name,
                 consumer_group,
                 message_id,
-                ticket,
+                receipt_handle,
                 visibility_timeout_seconds=cfg.visibility_timeout_seconds,
                 refresh_interval_seconds=cfg.visibility_refresh_interval_seconds,
                 timeout=cfg.timeout,
@@ -183,59 +182,20 @@ def handle_queue_callback(
         # Parse the envelope and convert to Dramatiq message
         dramatiq_message = _envelope_to_message(payload)
 
-        # Handle eta (delayed messages)
-        eta = dramatiq_message.options.get("eta")
-        if eta is not None:
-            now = current_millis()
-            if eta > now:
-                delay_seconds = int((eta - now) / 1000)
-                if ticket:
-                    _finalize_visibility(
-                        extender,
-                        lambda: queue_callback.change_visibility(
-                            queue_name,
-                            consumer_group,
-                            message_id,
-                            ticket,
-                            delay_seconds,
-                            timeout=cfg.timeout,
-                        ),
-                    )
-                body = json.dumps(
-                    {
-                        "ok": True,
-                        "delayed": True,
-                        "timeoutSeconds": delay_seconds,
-                        "queue": queue_name,
-                        "consumer": consumer_group,
-                        "messageId": message_id,
-                        "deliveryCount": delivery_count,
-                        "createdAt": created_at,
-                    }
-                ).encode("utf-8")
-                return (
-                    200,
-                    [
-                        ("Content-Type", "application/json"),
-                        ("Content-Length", str(len(body))),
-                    ],
-                    body,
-                )
-
         try:
             # Execute the task
             outcome = _execute_message(broker, dramatiq_message)
             timeout_seconds = outcome.get("timeoutSeconds")
 
             if timeout_seconds is not None:
-                if ticket:
+                if receipt_handle:
                     _finalize_visibility(
                         extender,
                         lambda: queue_callback.change_visibility(
                             queue_name,
                             consumer_group,
                             message_id,
-                            ticket,
+                            receipt_handle,
                             int(timeout_seconds),
                             timeout=cfg.timeout,
                         ),
@@ -259,14 +219,14 @@ def handle_queue_callback(
                 )
 
             # Success: ack (delete) the message
-            if ticket:
+            if receipt_handle:
                 _finalize_visibility(
                     extender,
                     lambda: queue_callback.delete_message(
                         queue_name,
                         consumer_group,
                         message_id,
-                        ticket,
+                        receipt_handle,
                         timeout=cfg.timeout,
                     ),
                 )
@@ -297,14 +257,14 @@ def handle_queue_callback(
                 delay_ms = _retry_delay_ms(cfg, attempt)
                 delay_seconds = int(delay_ms / 1000)
 
-                if ticket:
+                if receipt_handle:
                     _finalize_visibility(
                         extender,
                         lambda: queue_callback.change_visibility(
                             queue_name,
                             consumer_group,
                             message_id,
-                            ticket,
+                            receipt_handle,
                             int(delay_seconds),
                             timeout=cfg.timeout,
                         ),
@@ -331,14 +291,14 @@ def handle_queue_callback(
                 )
 
             # Terminal failure: ack (delete) to prevent infinite retries
-            if ticket:
+            if receipt_handle:
                 _finalize_visibility(
                     extender,
                     lambda: queue_callback.delete_message(
                         queue_name,
                         consumer_group,
                         message_id,
-                        ticket,
+                        receipt_handle,
                         timeout=cfg.timeout,
                     ),
                 )
