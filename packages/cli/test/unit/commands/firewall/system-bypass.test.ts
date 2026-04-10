@@ -6,6 +6,7 @@ import {
   useGetBypass,
   useAddBypass,
   useRemoveBypass,
+  capturedRequests,
   createBypassRule,
 } from '../../../mocks/firewall';
 import { useProject, defaultProject } from '../../../mocks/project';
@@ -63,6 +64,8 @@ describe('firewall system-bypass', () => {
       const exitCodePromise = firewall(client);
       await expect(client.stderr).toOutput('Added system bypass');
       expect(await exitCodePromise).toEqual(0);
+      expect(capturedRequests.addBypass).toBeDefined();
+      expect(capturedRequests.addBypass?.sourceIp).toBe('10.0.0.1');
     });
 
     it('should add a bypass rule with --domain', async () => {
@@ -79,6 +82,8 @@ describe('firewall system-bypass', () => {
       const exitCodePromise = firewall(client);
       await expect(client.stderr).toOutput('Added system bypass');
       expect(await exitCodePromise).toEqual(0);
+      expect(capturedRequests.addBypass?.sourceIp).toBe('10.0.0.1');
+      expect(capturedRequests.addBypass?.domain).toBe('example.com');
     });
 
     it('should error when ip is missing', async () => {
@@ -114,6 +119,7 @@ describe('firewall system-bypass', () => {
       const exitCodePromise = firewall(client);
       await expect(client.stderr).toOutput('Added system bypass');
       expect(await exitCodePromise).toEqual(0);
+      expect(capturedRequests.addBypass?.sourceIp).toBe('10.0.0.0/24');
     });
 
     it('should reject invalid domain', async () => {
@@ -161,6 +167,7 @@ describe('firewall system-bypass', () => {
       const exitCodePromise = firewall(client);
       await expect(client.stderr).toOutput('Removed system bypass');
       expect(await exitCodePromise).toEqual(0);
+      expect(capturedRequests.removeBypass).toBeDefined();
     });
 
     it('should error when ip is missing', async () => {

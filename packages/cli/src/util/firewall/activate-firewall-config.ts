@@ -20,6 +20,7 @@ export default async function activateFirewallConfig(
   const url = `/v1/security/firewall/config/${configVersion}/activate?${query.toString()}`;
   return client.fetch<FirewallConfigResponse>(url, {
     method: 'POST',
-    body: {},
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({}),
   });
 }

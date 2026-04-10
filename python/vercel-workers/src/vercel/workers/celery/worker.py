@@ -74,7 +74,7 @@ class PollingWorker:
 
     def _process_message(self, msg: queue_callback.ReceivedMessage) -> None:
         message_id = msg["messageId"]
-        ticket = msg["ticket"]
+        receipt_handle = msg["receipt_handle"]
         payload = msg["payload"]
 
         try:
@@ -90,7 +90,7 @@ class PollingWorker:
                                 "deliveryCount": msg.get("deliveryCount"),
                                 "createdAt": msg.get("createdAt"),
                                 "contentType": msg.get("contentType"),
-                                "ticket": ticket,
+                                "receipt_handle": receipt_handle,
                                 "payload": payload,
                             },
                             indent=2,
@@ -117,7 +117,7 @@ class PollingWorker:
                     self.queue_name,
                     self.consumer_group,
                     message_id,
-                    ticket,
+                    receipt_handle,
                     int(timeout_seconds),
                 )
             else:
@@ -125,7 +125,7 @@ class PollingWorker:
                     self.queue_name,
                     self.consumer_group,
                     message_id,
-                    ticket,
+                    receipt_handle,
                 )
         except Exception:
             if self.debug:
@@ -145,7 +145,7 @@ class PollingWorker:
                         self.queue_name,
                         self.consumer_group,
                         message_id,
-                        ticket,
+                        receipt_handle,
                     )
                 except Exception:
                     pass
@@ -157,7 +157,7 @@ class PollingWorker:
                         self.queue_name,
                         self.consumer_group,
                         message_id,
-                        ticket,
+                        receipt_handle,
                         int(self.on_error_visibility_timeout_seconds),
                     )
                 except Exception:
