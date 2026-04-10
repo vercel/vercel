@@ -482,7 +482,16 @@ describe('firewall rules edit', () => {
   // ─── Non-interactive ───────────────────────────────────────────────
 
   describe('non-interactive', () => {
-    // Note: "no flags in non-TTY" test omitted — uses process.exit(1) which crashes vitest
+    it('should error in non-TTY with no flags', async () => {
+      const active = createConfig({ rules: [createRule(1)] });
+      useListFirewallConfigs(active, null);
+
+      client.setArgv('firewall', 'rules', 'edit', 'Test Rule 1');
+      (client.stdin as any).isTTY = false;
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('Interactive mode is not available');
+      expect(await exitCodePromise).toEqual(1);
+    });
 
     it('should work with flags in non-TTY', async () => {
       const active = createConfig({ rules: [createRule(1)] });
@@ -509,6 +518,62 @@ describe('firewall rules edit', () => {
   // ─── Edge cases ────────────────────────────────────────────────────
 
   describe('edge cases', () => {
+    it('should error when --enabled and --disabled are both passed', async () => {
+      const active = createConfig({ rules: [createRule(1)] });
+      useListFirewallConfigs(active, null);
+
+      client.setArgv(
+        'firewall',
+        'rules',
+        'edit',
+        'Test Rule 1',
+        '--enabled',
+        '--disabled',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput(
+        'Cannot use --enabled and --disabled together'
+      );
+      expect(await exitCodePromise).toEqual(1);
+    });
+
+    it('should error when --name exceeds 160 characters', async () => {
+      const active = createConfig({ rules: [createRule(1)] });
+      useListFirewallConfigs(active, null);
+
+      client.setArgv(
+        'firewall',
+        'rules',
+        'edit',
+        'Test Rule 1',
+        '--name',
+        'a'.repeat(161),
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('160 characters or less');
+      expect(await exitCodePromise).toEqual(1);
+    });
+
+    it('should error when --description exceeds 256 characters', async () => {
+      const active = createConfig({ rules: [createRule(1)] });
+      useListFirewallConfigs(active, null);
+
+      client.setArgv(
+        'firewall',
+        'rules',
+        'edit',
+        'Test Rule 1',
+        '--description',
+        'a'.repeat(257),
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('256 characters or less');
+      expect(await exitCodePromise).toEqual(1);
+    });
+
     it('should verify rules.update patch action is sent', async () => {
       const active = createConfig({ rules: [createRule(1)] });
       useListFirewallConfigs(active, null);
@@ -646,6 +711,36 @@ describe('firewall rules edit', () => {
       expect(lastPatchBody.value.action.mitigate.action).toBe('rate_limit');
       expect(lastPatchBody.value.action.mitigate.rateLimit.window).toBe(60);
       expect(lastPatchBody.value.action.mitigate.rateLimit.limit).toBe(100);
+      expect(lastPatchBody.value.action.mitigate.rateLimit.action).toBe(
+        'rate_limit'
+      ); // default
+    });
+
+    it('should change rate limit with custom --rate-limit-action', async () => {
+      const active = createConfig({ rules: [createRule(1)] });
+      useListFirewallConfigs(active, null);
+      usePatchDraft();
+      useActivateConfig();
+
+      client.setArgv(
+        'firewall',
+        'rules',
+        'edit',
+        'Test Rule 1',
+        '--action',
+        'rate_limit',
+        '--rate-limit-window',
+        '60',
+        '--rate-limit-requests',
+        '100',
+        '--rate-limit-action',
+        'deny',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('updated and staged');
+      expect(await exitCodePromise).toEqual(0);
+      expect(lastPatchBody.value.action.mitigate.rateLimit.action).toBe('deny');
     });
 
     it('should change to redirect action', async () => {

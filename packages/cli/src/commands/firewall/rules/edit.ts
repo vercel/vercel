@@ -569,12 +569,30 @@ async function handleJsonEdit(
       return 1;
     }
   }
+  // Validate action structure
+  const actionObj = ruleData.action as Record<string, unknown>;
+  if (!actionObj.mitigate || typeof actionObj.mitigate !== 'object') {
+    output.error(
+      'action must have a "mitigate" field. Example: { "mitigate": { "action": "deny" } }'
+    );
+    return 1;
+  }
+  const mitigateObj = actionObj.mitigate as Record<string, unknown>;
+  if (!mitigateObj.action || typeof mitigateObj.action !== 'string') {
+    output.error(
+      'action.mitigate must have an "action" field (string). Valid: deny, challenge, rate_limit, log, redirect.'
+    );
+    return 1;
+  }
 
   const modified: FirewallRule = {
     id: originalRule.id,
     name: ruleData.name as string,
     description: ruleData.description as string | undefined,
-    active: ruleData.active !== false,
+    active:
+      ruleData.active !== undefined
+        ? ruleData.active !== false
+        : originalRule.active !== false,
     conditionGroup: ruleData.conditionGroup as FirewallRule['conditionGroup'],
     action: ruleData.action as FirewallRule['action'],
   };
@@ -627,6 +645,10 @@ async function handleFlagEdit(
 
   if (parsed.flags['--description'] !== undefined) {
     const desc = parsed.flags['--description'] as string;
+    if (desc.length > 256) {
+      output.error('Description must be 256 characters or less.');
+      return 1;
+    }
     modified.description = desc === '' ? undefined : desc;
   }
 

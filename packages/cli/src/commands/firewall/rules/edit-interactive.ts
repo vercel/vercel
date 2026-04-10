@@ -108,6 +108,12 @@ export async function runInteractiveEditLoop(
         edited.description = await client.input.text({
           message: 'Description (press Enter to keep, empty to clear):',
           default: edited.description || '',
+          validate: (val: string) => {
+            if (val.length > 256) {
+              return 'Description must be 256 characters or less.';
+            }
+            return true;
+          },
         });
         if (edited.description === '') {
           edited.description = undefined;

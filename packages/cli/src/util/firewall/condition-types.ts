@@ -17,8 +17,10 @@ export interface ConditionTypeMeta {
   /** Preset values for select/multi-select in interactive mode */
   presetValues?: PresetValue[];
   /** Value validation type for interactive mode */
-  valueValidation?: 'digits' | null;
+  valueValidation?: 'ip' | 'path' | 'hostname' | 'digits' | null;
   planRequirement?: 'enterprise' | 'security-plus' | null;
+  /** Hidden from interactive builder by default (plan-gated or specialized) */
+  hiddenFromInteractive?: boolean;
   deprecated?: boolean;
 }
 
@@ -147,7 +149,10 @@ export const CONDITION_TYPES: ConditionTypeMeta[] = [
     category: 'request',
     requiresKey: false,
     operators: STRING_ONLY,
-    presetValues: ['http', 'https'],
+    presetValues: [
+      { label: 'http', value: 'http' },
+      { label: 'https', value: 'https' },
+    ],
   },
   {
     type: 'ssl',
