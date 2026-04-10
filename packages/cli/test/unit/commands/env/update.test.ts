@@ -93,7 +93,7 @@ describe('env update', () => {
       expect(payload.next[0].command).toMatch(/env update/);
       expect(payload.next[0].command).toContain('--value');
       expect(payload.next[0].command).toContain('--yes');
-      expect(payload.next[0].command).toContain('--non-interactive');
+      expect(payload.next[0].command).toContain('VERCEL_NON_INTERACTIVE=1');
 
       exitSpy.mockRestore();
       logSpy.mockRestore();

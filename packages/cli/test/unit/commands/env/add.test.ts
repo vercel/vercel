@@ -542,7 +542,7 @@ describe('env add', () => {
         expect(payload.next.length).toBeGreaterThanOrEqual(1);
         expect(payload.next[0].command).not.toMatch(/\u001b|\[\d+m/);
         expect(payload.next[0].command).toMatch(/env add/);
-        expect(payload.next[0].command).toContain('--non-interactive');
+        expect(payload.next[0].command).toContain('VERCEL_NON_INTERACTIVE=1');
 
         exitSpy.mockRestore();
         logSpy.mockRestore();
@@ -598,7 +598,7 @@ describe('env add', () => {
         expect(payload.next[1].command).toContain(
           '--cwd=../../../test-custom-deployment-id'
         );
-        expect(payload.next[1].command).toContain('--non-interactive');
+        expect(payload.next[1].command).toContain('VERCEL_NON_INTERACTIVE=1');
 
         exitSpy.mockRestore();
         logSpy.mockRestore();
@@ -668,7 +668,7 @@ describe('env add', () => {
         expect(payload.next[0].command).toContain(
           '--cwd=../../../test-custom-deployment-id'
         );
-        expect(payload.next[0].command).toContain('--non-interactive');
+        expect(payload.next[0].command).toContain('VERCEL_NON_INTERACTIVE=1');
 
         exitSpy.mockRestore();
         logSpy.mockRestore();

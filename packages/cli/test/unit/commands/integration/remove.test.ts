@@ -450,7 +450,7 @@ describe('integration', () => {
           expect(jsonOutput.next?.[0]?.command).toContain(
             '--cwd /tmp/neon-proj'
           );
-          expect(jsonOutput.next?.[0]?.command).toContain('--non-interactive');
+          expect(jsonOutput.next?.[0]?.command).toContain('VERCEL_NON_INTERACTIVE=1');
           expect(jsonOutput.retry).toContain('--cwd /tmp/neon-proj');
           expect(jsonOutput.retry).toContain(
             `integration remove ${integration} --yes`
