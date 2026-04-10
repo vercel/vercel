@@ -114,9 +114,9 @@ export function parseConditionFlag(flag: string): FirewallCondition | string {
   // Handle value based on operator
   const value = parsed.value;
 
-  if (op === 'ex') {
-    // Exists operator — no value needed
-  } else if (op === 'inc') {
+  if (op === 'ex' || op === 'nex') {
+    // Exists / not-exists operators — no value needed
+  } else if (op === 'inc' || op === 'ninc') {
     // Multi-value — accept array or comma-separated string
     if (!value) {
       return `Operator "inc" requires a "value" field. Example: {"type":"${type}","op":"inc","value":"val1,val2"}`;

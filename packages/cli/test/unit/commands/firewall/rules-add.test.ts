@@ -170,6 +170,57 @@ describe('firewall rules add', () => {
       expect(await exitCodePromise).toEqual(0);
     });
 
+    it('should create a rule with nex operator (not exists)', async () => {
+      useListFirewallConfigs(createConfig(), null);
+      usePatchDraft();
+      useActivateConfig();
+
+      client.setArgv(
+        'firewall',
+        'rules',
+        'add',
+        'No auth header',
+        '--condition',
+        '{"type":"header","key":"Authorization","op":"nex"}',
+        '--action',
+        'deny',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('Rule "No auth header" staged');
+      expect(await exitCodePromise).toEqual(0);
+      const cond = (capturedRequests.patchDraft?.value as any)
+        ?.conditionGroup[0]?.conditions[0];
+      expect(cond.op).toBe('nex');
+      expect(cond.key).toBe('Authorization');
+      expect(cond.value).toBeUndefined();
+    });
+
+    it('should create a rule with ninc operator (not any of)', async () => {
+      useListFirewallConfigs(createConfig(), null);
+      usePatchDraft();
+      useActivateConfig();
+
+      client.setArgv(
+        'firewall',
+        'rules',
+        'add',
+        'Block countries',
+        '--condition',
+        '{"type":"geo_country","op":"ninc","value":"US,CA,GB"}',
+        '--action',
+        'deny',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('Rule "Block countries" staged');
+      expect(await exitCodePromise).toEqual(0);
+      const cond = (capturedRequests.patchDraft?.value as any)
+        ?.conditionGroup[0]?.conditions[0];
+      expect(cond.op).toBe('ninc');
+      expect(cond.value).toEqual(['US', 'CA', 'GB']);
+    });
+
     it('should create a rule with negated condition', async () => {
       useListFirewallConfigs(createConfig(), null);
       usePatchDraft();

@@ -1,3 +1,4 @@
+import { isIP } from 'node:net';
 import chalk from 'chalk';
 import type Client from '../../../util/client';
 import output from '../../../output-manager';
@@ -531,7 +532,6 @@ function validateConditionValue(
       if (!val.startsWith('/')) return 'Path must start with /';
       return true;
     case 'ip': {
-      const { isIP } = require('node:net');
       if (isIP(val)) return true;
       // Check CIDR
       const slashIdx = val.lastIndexOf('/');
