@@ -1,5 +1,11 @@
 # vercel-workers
 
+## 0.0.14
+
+### Patch Changes
+
+- [services] migrate python workers to Queues V3 API ([#15885](https://github.com/vercel/vercel/pull/15885))
+
 ## 0.0.13
 
 ### Patch Changes
