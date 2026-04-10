@@ -4,7 +4,6 @@ import json
 import math
 import time
 from dataclasses import dataclass, replace
-from datetime import UTC, datetime
 from traceback import format_exception
 from typing import TYPE_CHECKING, Any, cast
 
@@ -21,7 +20,6 @@ try:
         TaskResultStatus,
     )
     from django.tasks.signals import task_finished, task_started  # type: ignore[import-untyped]
-    from django.utils import timezone as dj_timezone  # type: ignore[import-untyped]
 except Exception as e:
     raise RuntimeError(
         "django is required to use vercel.workers.django.worker. "
@@ -30,30 +28,6 @@ except Exception as e:
 
 
 __all__ = ["PollingWorker", "PollingWorkerConfig"]
-
-
-def _now_utc() -> datetime:
-    try:
-        return dj_timezone.now()
-    except Exception:
-        return datetime.now(UTC)
-
-
-def _parse_iso_datetime(value: str | None) -> datetime | None:
-    if not value or not isinstance(value, str):
-        return None
-    s = value.strip()
-    if not s:
-        return None
-    if s.endswith("Z"):
-        s = s[:-1] + "+00:00"
-    try:
-        dt = datetime.fromisoformat(s)
-    except Exception:
-        return None
-    if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=UTC)
-    return dt
 
 
 @dataclass(frozen=True, slots=True)
@@ -231,7 +205,7 @@ class PollingWorker:
 
     def _process_message(self, msg: queue_callback.ReceivedMessage) -> None:
         message_id = msg["messageId"]
-        ticket = msg["ticket"]
+        receipt_handle = msg["receipt_handle"]
         payload = msg["payload"]
 
         try:
@@ -240,30 +214,6 @@ class PollingWorker:
 
             env = self._parse_envelope(payload)
             task_info: dict[str, Any] = env.get("task") or {}
-            run_after_raw = task_info.get("run_after")
-            run_after = (
-                _parse_iso_datetime(run_after_raw) if isinstance(run_after_raw, str) else None
-            )
-
-            # Handle run_after delay.
-            if run_after is not None:
-                now = _now_utc()
-                if run_after > now:
-                    delay_seconds = int(max(0.0, (run_after - now).total_seconds()))
-                    queue_callback.change_visibility(
-                        self.cfg.queue_name,
-                        self.cfg.consumer_group,
-                        message_id,
-                        ticket,
-                        delay_seconds,
-                        timeout=self.cfg.timeout,
-                    )
-                    if self.cfg.debug:
-                        print(
-                            f"[django-tasks polling] delaying message {message_id} "
-                            f"for {delay_seconds}s (run_after)"
-                        )
-                    return
 
             # Load or init TaskResult.
             task_result = self.backend._load_or_init_result_from_envelope(
@@ -308,7 +258,7 @@ class PollingWorker:
                     task_result=task_result,
                     exc=exc,
                     message_id=message_id,
-                    ticket=ticket,
+                    receipt_handle=receipt_handle,
                 )
                 return
 
@@ -320,7 +270,7 @@ class PollingWorker:
                 self.cfg.queue_name,
                 self.cfg.consumer_group,
                 message_id,
-                ticket,
+                receipt_handle,
                 timeout=self.cfg.timeout,
             )
 
@@ -348,7 +298,7 @@ class PollingWorker:
                         self.cfg.queue_name,
                         self.cfg.consumer_group,
                         message_id,
-                        ticket,
+                        receipt_handle,
                         timeout=self.cfg.timeout,
                     )
                 except Exception:
@@ -361,7 +311,7 @@ class PollingWorker:
                         self.cfg.queue_name,
                         self.cfg.consumer_group,
                         message_id,
-                        ticket,
+                        receipt_handle,
                         int(self.cfg.on_error_visibility_timeout_seconds),
                         timeout=self.cfg.timeout,
                     )
@@ -377,7 +327,7 @@ class PollingWorker:
         task_result: Any,  # TaskResult
         exc: BaseException,
         message_id: str,
-        ticket: str,
+        receipt_handle: str,
     ) -> None:
         """Handle task execution error with retry logic."""
         # Record the error.
@@ -401,7 +351,7 @@ class PollingWorker:
                 self.cfg.queue_name,
                 self.cfg.consumer_group,
                 message_id,
-                ticket,
+                receipt_handle,
                 int(delay_seconds),
                 timeout=self.cfg.timeout,
             )
@@ -421,7 +371,7 @@ class PollingWorker:
                 self.cfg.queue_name,
                 self.cfg.consumer_group,
                 message_id,
-                ticket,
+                receipt_handle,
                 timeout=self.cfg.timeout,
             )
 
@@ -453,7 +403,7 @@ class PollingWorker:
                         "deliveryCount": msg.get("deliveryCount"),
                         "createdAt": msg.get("createdAt"),
                         "contentType": msg.get("contentType"),
-                        "ticket": msg["ticket"],
+                        "receipt_handle": msg["receipt_handle"],
                     },
                     indent=2,
                     default=str,

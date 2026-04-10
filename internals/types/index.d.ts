@@ -184,6 +184,14 @@ export type Deployment = {
   buildErrorAt?: number;
   buildingAt: number;
   canceledAt?: number;
+  checks?: Record<
+    string,
+    {
+      state: 'pending' | 'succeeded' | 'failed';
+      startedAt?: string;
+      completedAt?: string;
+    }
+  >;
   checksState?: 'completed' | 'registered' | 'running';
   checksConclusion?: 'canceled' | 'failed' | 'skipped' | 'succeeded';
   createdAt: number;

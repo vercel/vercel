@@ -34,6 +34,55 @@ export class FirewallTelemetryClient
     });
   }
 
+  trackCliSubcommandRules(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'rules',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandRulesList(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'rules:list',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandRulesInspect(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'rules:inspect',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandIpBlocks(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'ip-blocks',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandIpBlocksList(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'ip-blocks:list',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandIpBlocksBlock(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'ip-blocks:block',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandIpBlocksUnblock(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'ip-blocks:unblock',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandSystemBypass(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'system-bypass',
