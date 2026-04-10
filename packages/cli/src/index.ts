@@ -747,8 +747,7 @@ const main = async () => {
     typeof scope === 'string' &&
     targetCommand !== 'login' &&
     targetCommand !== 'build' &&
-    targetCommand !== 'sandbox' &&
-    !(targetCommand === 'teams' && subSubCommand !== 'invite')
+    targetCommand !== 'sandbox'
   ) {
     let user = null;
 

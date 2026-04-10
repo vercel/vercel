@@ -6157,6 +6157,12 @@ exports[`help command > teams help output snapshots > teams help column width 40
   switch   [name]    Switch to a
                      different  
                      team       
+  sso                Show SAML /
+                     SSO        
+                     configurat…
+                     for the    
+                     current    
+                     team       
   members            List       
                      members for
                      the        
@@ -6229,6 +6235,7 @@ exports[`help command > teams help output snapshots > teams help column width 80
   request  [userId]  Show join-request status for the current team      
                      (defaults to the authenticated user)               
   switch   [name]    Switch to a different team                         
+  sso                Show SAML / SSO configuration for the current team 
   members            List members for the currently scoped team         
 
 
@@ -6264,6 +6271,7 @@ exports[`help command > teams help output snapshots > teams help column width 12
   list               Show all teams that you're a member of                                                     
   request  [userId]  Show join-request status for the current team (defaults to the authenticated user)         
   switch   [name]    Switch to a different team                                                                 
+  sso                Show SAML / SSO configuration for the current team                                         
   members            List members for the currently scoped team                                                 
 
 
