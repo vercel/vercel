@@ -120,29 +120,62 @@ function formatMetricsTable(metrics: MetricDetail[]) {
   if (metrics.length === 0) {
     return null;
   }
-  return indent(
+  const dimensionsByMetric = metrics.map(metric =>
+    metric.dimensions.map(dimension => dimension.name)
+  );
+  const sharedDimensions = dimensionsByMetric[0]!.filter(dimension =>
+    dimensionsByMetric.every(metricDimensions =>
+      metricDimensions.includes(dimension)
+    )
+  );
+
+  const rows = metrics.map(metric => {
+    const extraDimensions = metric.dimensions
+      .map(dimension => dimension.name)
+      .filter(dimension => !sharedDimensions.includes(dimension))
+      .map(dimension => `+${dimension}`);
+
+    const aggregations = metric.aggregations
+      .map(aggregation =>
+        aggregation === metric.defaultAggregation
+          ? `${aggregation} (default)`
+          : aggregation
+      )
+      .join(', ');
+
+    return {
+      metric: metric.id,
+      aggregations,
+      extraDimensions,
+    };
+  });
+
+  const hasExtraDimensions = rows.some(row => row.extraDimensions.length > 0);
+
+  const tableHeaders = hasExtraDimensions
+    ? ['METRIC', 'AGGREGATIONS', 'DIMENSIONS']
+    : ['METRIC', 'AGGREGATIONS'];
+  const tableRows = rows.map(row =>
+    hasExtraDimensions
+      ? [row.metric, row.aggregations, row.extraDimensions.join(', ') || '—']
+      : [row.metric, row.aggregations]
+  );
+
+  const sharedDimensionsLine =
+    sharedDimensions.length > 0
+      ? `Dimensions (shared by all ${plural('metric', metrics.length, true)}):\n  ${sharedDimensions.join(', ')}`
+      : null;
+
+  const table = indent(
     formatTable(
-      ['Metric', 'Description', 'Dimensions', 'Unit', 'Aggregations'],
-      ['l', 'l', 'l', 'l', 'l'],
-      [
-        {
-          rows: metrics.map(metric => [
-            metric.id,
-            metric.description,
-            metric.dimensions.map(dimension => dimension.name).join(', ') ||
-              '—',
-            metric.unit,
-            metric.aggregations
-              .map(aggregation =>
-                aggregation === metric.defaultAggregation
-                  ? `${aggregation} (default)`
-                  : aggregation
-              )
-              .join(', '),
-          ]),
-        },
-      ]
+      tableHeaders,
+      hasExtraDimensions ? ['l', 'l', 'l'] : ['l', 'l'],
+      [{ rows: tableRows }]
     ),
     1
   );
+
+  return sharedDimensionsLine
+    ? `\n${sharedDimensionsLine}\n\n${table}`
+    : `\n${table}`;
 }

@@ -124,9 +124,7 @@ if (process.env.FF_GUIDANCE_MODE) {
   commandsStructs.push(guidanceCommand);
 }
 
-if (process.env.FF_METRICS) {
-  commandsStructs.push(metricsCommand);
-}
+commandsStructs.push(metricsCommand);
 
 export function getCommandAliases(command: Pick<Command, 'name' | 'aliases'>) {
   return [command.name].concat(command.aliases);
