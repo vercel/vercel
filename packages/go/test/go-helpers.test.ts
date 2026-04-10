@@ -67,6 +67,32 @@ describe('GoWrapper', () => {
     );
   });
 
+  it('calls go mod tidy', async () => {
+    mockedExeca.mockReturnValue(createResolvedSubprocess() as any);
+
+    const go = new GoWrapper(process.env as any);
+    await go.mod();
+
+    expect(mockedExeca).toHaveBeenCalledWith(
+      'go',
+      ['mod', 'tidy'],
+      expect.objectContaining({ stdio: 'pipe' })
+    );
+  });
+
+  it('calls go mod tidy with -e when tolerateErrors is true', async () => {
+    mockedExeca.mockReturnValue(createResolvedSubprocess() as any);
+
+    const go = new GoWrapper(process.env as any);
+    await go.mod({ tolerateErrors: true });
+
+    expect(mockedExeca).toHaveBeenCalledWith(
+      'go',
+      ['mod', 'tidy', '-e'],
+      expect.objectContaining({ stdio: 'pipe' })
+    );
+  });
+
   it('calls go mod vendor', async () => {
     mockedExeca.mockReturnValue(createResolvedSubprocess() as any);
 

@@ -241,8 +241,12 @@ export class GoWrapper {
     }
   }
 
-  mod() {
-    return this.execute('mod', 'tidy');
+  mod({ tolerateErrors = false } = {}) {
+    const args = ['mod', 'tidy'];
+    if (tolerateErrors) {
+      args.push('-e');
+    }
+    return this.execute(...args);
   }
 
   vendor() {

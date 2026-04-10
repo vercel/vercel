@@ -370,6 +370,13 @@ async function buildHandlerWithGoMod({
   const isVendored = await pathExists(vendorModulesPath);
   if (isVendored) {
     debug('Detected vendor directory in project');
+
+    const vendorModulesBackup = vendorModulesPath + '.bak';
+    await copy(vendorModulesPath, vendorModulesBackup);
+    undo.fileActions.push({
+      to: vendorModulesPath,
+      from: vendorModulesBackup,
+    });
   }
 
   const entrypointArr = entrypoint.split(posix.sep);
@@ -454,7 +461,10 @@ async function buildHandlerWithGoMod({
   debug('Tidy `go.mod` file...');
   try {
     // ensure go.mod up-to-date
-    await go.mod();
+    // When vendored, use -e to tolerate errors from private modules that
+    // cannot be resolved from the network. The vendor directory will be
+    // regenerated afterward to maintain consistency.
+    await go.mod({ tolerateErrors: isVendored });
   } catch (err) {
     console.error('failed to `go mod tidy`');
     throw err;
