@@ -8,7 +8,7 @@
     },
     {
       "path": "/api",
-      "mustContain": "<strong>hello</strong>"
+      "mustContain": "vendored-dep"
     }
   ]
 }
