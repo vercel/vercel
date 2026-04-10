@@ -12,6 +12,8 @@ export interface CheckRun {
     | 'skipped'
     | 'stale';
   source: { kind: string; jobName?: string } | string;
+  externalUrl?: string | null;
+  detailsUrl?: string | null;
   startedAt?: number;
   completedAt?: number;
 }
