@@ -1,5 +1,6 @@
 import { formatOption, limitOption } from '../../util/arg-common';
 import { packageName } from '../../util/pkg-name';
+import { rulesAggregateCommand } from './rules/command';
 
 export const listSubcommand = {
   name: 'ls',
@@ -56,9 +57,10 @@ export const inspectSubcommand = {
 export const alertsCommand = {
   name: 'alerts',
   aliases: [],
-  description: 'List alerts for a project or team.',
+  description:
+    'List alert groups, inspect a group, or manage alert rules (see `alerts rules`).',
   arguments: [],
-  subcommands: [listSubcommand, inspectSubcommand],
+  subcommands: [listSubcommand, inspectSubcommand, rulesAggregateCommand],
   options: [
     {
       name: 'type',

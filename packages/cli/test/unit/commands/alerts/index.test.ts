@@ -50,9 +50,9 @@ describe('alerts', () => {
     const exitCode = await alerts(client);
 
     expect(exitCode).toBe(0);
-    expect(client.stderr.getFullOutput()).toContain(
-      'List alerts for a project or team'
-    );
+    const helpOut = client.stderr.getFullOutput();
+    expect(helpOut).toContain('rules');
+    expect(helpOut).toContain('List alert groups');
     expect(client.stderr.getFullOutput()).toContain('--project');
   });
 

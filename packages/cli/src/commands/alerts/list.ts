@@ -8,10 +8,8 @@ import { printError } from '../../util/error';
 import output from '../../output-manager';
 import { alertsCommand } from './command';
 import { validateJsonOutput } from '../../util/output-format';
-import { getLinkedProject } from '../../util/projects/link';
-import getScope from '../../util/get-scope';
-import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name';
-import { ProjectNotFound, isAPIError } from '../../util/errors-ts';
+import { isAPIError } from '../../util/errors-ts';
+import { type AlertsScope, resolveAlertsScope } from './resolve-alerts-scope';
 import type { AlertsTelemetryClient } from '../../util/telemetry/commands/alerts';
 import {
   outputError,
@@ -32,11 +30,6 @@ interface ListFlags {
   '--until'?: string;
   '--limit'?: number;
   '--format'?: string;
-}
-
-interface AlertsScope {
-  teamId: string;
-  projectId?: string;
 }
 
 type ValidatedInputs = {
@@ -107,84 +100,6 @@ function getDefaultRange(): { from: string; to: string } {
   const to = new Date();
   const from = new Date(to.getTime() - 24 * 60 * 60 * 1000);
   return { from: from.toISOString(), to: to.toISOString() };
-}
-
-async function resolveScope(
-  client: Client,
-  opts: { project?: string; all?: boolean; jsonOutput: boolean }
-): Promise<AlertsScope | number> {
-  if (opts.all || opts.project) {
-    const { team } = await getScope(client);
-    if (!team) {
-      return outputError(
-        client,
-        opts.jsonOutput,
-        'NO_TEAM',
-        'No team context found. Run `vercel switch` to select a team, or use `vercel link` in a project directory.'
-      );
-    }
-
-    if (opts.all) {
-      return {
-        teamId: team.id,
-      };
-    }
-
-    let projectResult: Awaited<ReturnType<typeof getProjectByNameOrId>>;
-    try {
-      projectResult = await getProjectByNameOrId(
-        client,
-        opts.project!,
-        team.id
-      );
-    } catch (err) {
-      if (isAPIError(err)) {
-        return outputError(
-          client,
-          opts.jsonOutput,
-          err.code || 'API_ERROR',
-          err.serverMessage ||
-            (err.status === 403
-              ? `You do not have permission to access project "${opts.project}" in team "${team.slug}".`
-              : `API error (${err.status}).`)
-        );
-      }
-      throw err;
-    }
-
-    if (projectResult instanceof ProjectNotFound) {
-      return outputError(
-        client,
-        opts.jsonOutput,
-        'PROJECT_NOT_FOUND',
-        `Project "${opts.project}" was not found in team "${team.slug}".`
-      );
-    }
-
-    return {
-      teamId: team.id,
-      projectId: projectResult.id,
-    };
-  }
-
-  const linkedProject = await getLinkedProject(client);
-  if (linkedProject.status === 'error') {
-    return linkedProject.exitCode;
-  }
-
-  if (linkedProject.status === 'not_linked') {
-    return outputError(
-      client,
-      opts.jsonOutput,
-      'NOT_LINKED',
-      'No linked project found. Run `vercel link` to link a project, or use --project <name> or --all.'
-    );
-  }
-
-  return {
-    teamId: linkedProject.org.id,
-    projectId: linkedProject.project.id,
-  };
 }
 
 function getGroupTitle(group: AlertGroup): string {
@@ -470,7 +385,7 @@ export default async function list(
     return validatedInputs;
   }
 
-  const scope = await resolveScope(client, {
+  const scope = await resolveAlertsScope(client, {
     project: flags['--project'],
     all: flags['--all'],
     jsonOutput,

@@ -8,10 +8,19 @@ import output from '../../output-manager';
 import { getCommandAliases } from '..';
 import { AlertsTelemetryClient } from '../../util/telemetry/commands/alerts';
 import { alertsCommand, inspectSubcommand, listSubcommand } from './command';
+import {
+  rulesAddSubcommand,
+  rulesAggregateCommand,
+  rulesInspectSubcommand,
+  rulesLsSubcommand,
+  rulesRmSubcommand,
+  rulesUpdateSubcommand,
+} from './rules/command';
 
 const COMMAND_CONFIG = {
   inspect: getCommandAliases(inspectSubcommand),
   ls: getCommandAliases(listSubcommand),
+  rules: ['rules'],
 };
 
 export default async function alerts(client: Client): Promise<number> {
@@ -50,6 +59,37 @@ export default async function alerts(client: Client): Promise<number> {
       printHelp(inspectSubcommand);
       return 0;
     }
+    if (subcommand === 'rules') {
+      telemetry.trackCliFlagHelp('alerts', 'rules');
+      const nested = args[0];
+      if (nested === 'ls' || nested === 'list') {
+        printHelp(rulesLsSubcommand);
+        return 0;
+      }
+      if (nested === 'add' || nested === 'create') {
+        printHelp(rulesAddSubcommand);
+        return 0;
+      }
+      if (nested === 'inspect' || nested === 'get') {
+        printHelp(rulesInspectSubcommand);
+        return 0;
+      }
+      if (nested === 'rm' || nested === 'remove' || nested === 'delete') {
+        printHelp(rulesRmSubcommand);
+        return 0;
+      }
+      if (nested === 'update' || nested === 'patch') {
+        printHelp(rulesUpdateSubcommand);
+        return 0;
+      }
+      output.print(
+        help(rulesAggregateCommand, {
+          parent: alertsCommand,
+          columns: client.stderr.columns,
+        })
+      );
+      return 0;
+    }
     telemetry.trackCliFlagHelp('alerts', subcommandOriginal);
     output.print(help(alertsCommand, { columns: client.stderr.columns }));
     return 0;
@@ -60,6 +100,11 @@ export default async function alerts(client: Client): Promise<number> {
       telemetry.trackCliSubcommandInspect(subcommandOriginal);
       const inspectFn = (await import('./inspect')).default;
       return inspectFn(client, args);
+    }
+    case 'rules': {
+      telemetry.trackCliSubcommandRules(args[0] ?? 'ls');
+      const rulesFn = (await import('./rules')).default;
+      return rulesFn(client, args);
     }
     default: {
       telemetry.trackCliSubcommandLs(subcommandOriginal);
