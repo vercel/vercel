@@ -446,6 +446,38 @@ export class RootTelemetryClient extends TelemetryClient {
     super.trackVersion(version);
   }
 
+  trackProjectId(projectId: string | undefined) {
+    super.trackProjectId(projectId);
+  }
+
+  trackInvocationId(invocationId: string | undefined) {
+    super.trackInvocationId(invocationId);
+  }
+
+  trackDeviceId(deviceId: string | undefined) {
+    super.trackDeviceId(deviceId);
+  }
+
+  trackErrorStatus(status: number | string | undefined) {
+    super.trackErrorStatus(status);
+  }
+
+  trackErrorCode(code: string | undefined) {
+    super.trackErrorCode(code);
+  }
+
+  trackErrorSlug(slug: string | undefined) {
+    super.trackErrorSlug(slug);
+  }
+
+  trackErrorAction(action: string | undefined) {
+    super.trackErrorAction(action);
+  }
+
+  trackErrorServerMessage(serverMessage: string | undefined) {
+    super.trackErrorServerMessage(serverMessage);
+  }
+
   trackCliOptionCwd(cwd: string | undefined) {
     if (cwd) {
       this.trackCliOption({ option: 'cwd', value: this.redactedValue });

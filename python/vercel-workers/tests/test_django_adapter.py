@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import unittest
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
 from unittest.mock import MagicMock, patch
@@ -380,7 +380,7 @@ class TestDjangoAsgiApp(unittest.TestCase):
                     with patch.object(
                         vwd_app.queue_callback,
                         "receive_message_by_id",
-                        return_value=(payload, 1, "2025-01-01T00:00:00Z", "ticket"),
+                        return_value=(payload, 1, "2025-01-01T00:00:00Z", "receipt-handle"),
                     ):
                         with patch.object(
                             vwd_app.queue_callback,
@@ -426,14 +426,13 @@ class TestDjangoAsgiApp(unittest.TestCase):
         body = json.loads(sent[1]["body"].decode("utf-8"))
         self.assertTrue(body["ok"])
 
-    def test_post_callback_delays_until_run_after_by_changing_visibility(self) -> None:
-        """Test that run_after in the future delays the message."""
+    def test_post_callback_executes_task_with_run_after_normally(self) -> None:
+        # run_after delays are handled at send time via Vqs-Delay-Seconds, not on receive
         raw_body = (
             b'{"type":"com.vercel.queue.v1beta","data":'
             b'{"queueName":"q","consumerGroup":"c","messageId":"m"}}'
         )
-        fixed_now = datetime(2025, 1, 1, 0, 0, 0, tzinfo=UTC)
-        run_after = fixed_now + timedelta(seconds=123)
+        run_after = datetime(2025, 1, 1, 0, 2, 3, tzinfo=UTC)
 
         class FakeVisibilityExtender:
             def __init__(self, *args, **kwargs):
@@ -469,54 +468,45 @@ class TestDjangoAsgiApp(unittest.TestCase):
         }
 
         async def run():
-            with patch.object(vwd_app, "_now_utc", return_value=fixed_now):
-                with patch.object(vwd_app, "_resolve_backend", return_value=mock_backend):
+            with patch.object(vwd_app, "_resolve_backend", return_value=mock_backend):
+                with patch.object(
+                    vwd_app.queue_callback,
+                    "parse_cloudevent",
+                    return_value=("q", "c", "m"),
+                ):
                     with patch.object(
                         vwd_app.queue_callback,
-                        "parse_cloudevent",
-                        return_value=("q", "c", "m"),
+                        "receive_message_by_id",
+                        return_value=(payload, 1, "2025-01-01T00:00:00Z", "receipt-handle"),
                     ):
                         with patch.object(
                             vwd_app.queue_callback,
-                            "receive_message_by_id",
-                            return_value=(payload, 1, "2025-01-01T00:00:00Z", "ticket"),
+                            "VisibilityExtender",
+                            FakeVisibilityExtender,
                         ):
                             with patch.object(
                                 vwd_app.queue_callback,
-                                "VisibilityExtender",
-                                FakeVisibilityExtender,
-                            ):
-                                with patch.object(
-                                    vwd_app.queue_callback,
-                                    "change_visibility",
-                                ) as change_visibility:
-                                    with patch.object(
-                                        vwd_app.queue_callback,
-                                        "delete_message",
-                                    ) as delete_message:
-                                        app = vwd_app.get_asgi_app(backend_alias="default")
-                                        sent = await self._asgi_request(
-                                            app,
-                                            method="POST",
-                                            path="/callback",
-                                            headers=[
-                                                (b"content-type", b"application/cloudevents+json"),
-                                            ],
-                                            body=raw_body,
-                                        )
-                                        return sent, change_visibility, delete_message
+                                "delete_message",
+                            ) as delete_message:
+                                app = vwd_app.get_asgi_app(backend_alias="default")
+                                sent = await self._asgi_request(
+                                    app,
+                                    method="POST",
+                                    path="/callback",
+                                    headers=[
+                                        (b"content-type", b"application/cloudevents+json"),
+                                    ],
+                                    body=raw_body,
+                                )
+                                return sent, delete_message
 
-        sent, change_visibility, delete_message = asyncio.run(run())
+        sent, delete_message = asyncio.run(run())
 
-        # Task should NOT have been executed (delayed)
-        # Visibility should have been changed, not deleted
-        change_visibility.assert_called()
-        delete_message.assert_not_called()
+        # Task should execute normally, because delay is handled at send time
+        delete_message.assert_called_once()
 
         body = json.loads(sent[1]["body"].decode("utf-8"))
         self.assertTrue(body["ok"])
-        self.assertTrue(body["delayed"])
-        self.assertEqual(body["timeoutSeconds"], 123)
 
     def test_rejects_wrong_queue(self) -> None:
         """Test that messages from unexpected queues are rejected."""
@@ -652,7 +642,7 @@ class TestDjangoTaskRetryBehavior(unittest.TestCase):
                     with patch.object(
                         vwd_app.queue_callback,
                         "receive_message_by_id",
-                        return_value=(payload, 1, "2025-01-01T00:00:00Z", "ticket"),
+                        return_value=(payload, 1, "2025-01-01T00:00:00Z", "receipt-handle"),
                     ):
                         with patch.object(
                             vwd_app.queue_callback,

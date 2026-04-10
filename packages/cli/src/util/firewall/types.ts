@@ -109,6 +109,15 @@ export interface FirewallConfigPatch {
   value?: unknown;
 }
 
+export interface ProjectSecurityResponse {
+  security?: {
+    attackModeEnabled?: boolean;
+    /** Epoch milliseconds */
+    attackModeActiveUntil?: number | null;
+    attackModeUpdatedAt?: number;
+  };
+}
+
 export interface BypassRule {
   OwnerId: string;
   Id: string;
