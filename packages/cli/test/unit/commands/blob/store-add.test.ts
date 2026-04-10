@@ -132,9 +132,13 @@ describe('blob store add', () => {
         '--region',
         'sfo1'
       );
-      mockProjectListFetch(defaultProjects, { count: 2, next: null }, {
-        store: { id: 'store_test123', region: 'sfo1' },
-      });
+      mockProjectListFetch(
+        defaultProjects,
+        { count: 2, next: null },
+        {
+          store: { id: 'store_test123', region: 'sfo1' },
+        }
+      );
 
       const exitCode = await addStore(client, [
         'my-test-store',
@@ -200,9 +204,13 @@ describe('blob store add', () => {
 
     it('should display region in success message when API returns region', async () => {
       client.setArgv('blob', 'store', 'add', 'region-display-store');
-      mockProjectListFetch(defaultProjects, { count: 2, next: null }, {
-        store: { id: 'store_test123', region: 'iad1' },
-      });
+      mockProjectListFetch(
+        defaultProjects,
+        { count: 2, next: null },
+        {
+          store: { id: 'store_test123', region: 'iad1' },
+        }
+      );
 
       const exitCode = await addStore(client, ['region-display-store']);
 
@@ -253,9 +261,24 @@ describe('blob store add', () => {
 
     it('should sort projects by updatedAt (newest first)', async () => {
       mockProjectListFetch([
-        { id: 'proj_old', name: 'old-project', updatedAt: 1000, createdAt: 1000 },
-        { id: 'proj_new', name: 'new-project', updatedAt: 3000, createdAt: 3000 },
-        { id: 'proj_mid', name: 'mid-project', updatedAt: 2000, createdAt: 2000 },
+        {
+          id: 'proj_old',
+          name: 'old-project',
+          updatedAt: 1000,
+          createdAt: 1000,
+        },
+        {
+          id: 'proj_new',
+          name: 'new-project',
+          updatedAt: 3000,
+          createdAt: 3000,
+        },
+        {
+          id: 'proj_mid',
+          name: 'mid-project',
+          updatedAt: 2000,
+          createdAt: 2000,
+        },
       ]);
 
       await addStore(client, ['test-store']);
@@ -285,10 +308,7 @@ describe('blob store add', () => {
             pagination: { count: 100, next: 12345 },
           });
         }
-        if (
-          url ===
-          `/v9/projects/${encodeURIComponent('typed-project')}`
-        ) {
+        if (url === `/v9/projects/${encodeURIComponent('typed-project')}`) {
           return Promise.resolve({
             id: 'proj_typed',
             name: 'typed-project',
@@ -576,14 +596,24 @@ describe('blob store add', () => {
 
     it('should return 1 when store creation fails', async () => {
       const apiError = new Error('Store creation failed');
-      mockProjectListFetch(
-        [{ id: 'proj_123', name: 'my-project', updatedAt: Date.now(), createdAt: Date.now() }],
-      );
+      mockProjectListFetch([
+        {
+          id: 'proj_123',
+          name: 'my-project',
+          updatedAt: Date.now(),
+          createdAt: Date.now(),
+        },
+      ]);
       client.fetch = vi.fn().mockImplementation((url: string) => {
         if (url === '/v9/projects?limit=100') {
           return Promise.resolve({
             projects: [
-              { id: 'proj_123', name: 'my-project', updatedAt: Date.now(), createdAt: Date.now() },
+              {
+                id: 'proj_123',
+                name: 'my-project',
+                updatedAt: Date.now(),
+                createdAt: Date.now(),
+              },
             ],
             pagination: { count: 1, next: null },
           });
@@ -605,7 +635,12 @@ describe('blob store add', () => {
         if (url === '/v9/projects?limit=100') {
           return Promise.resolve({
             projects: [
-              { id: 'proj_123', name: 'my-project', updatedAt: Date.now(), createdAt: Date.now() },
+              {
+                id: 'proj_123',
+                name: 'my-project',
+                updatedAt: Date.now(),
+                createdAt: Date.now(),
+              },
             ],
             pagination: { count: 1, next: null },
           });
@@ -678,9 +713,13 @@ describe('blob store add', () => {
     });
 
     it('should handle different store IDs from API response', async () => {
-      mockProjectListFetch(defaultProjects, { count: 2, next: null }, {
-        store: { id: 'store_custom_id_456' },
-      });
+      mockProjectListFetch(
+        defaultProjects,
+        { count: 2, next: null },
+        {
+          store: { id: 'store_custom_id_456' },
+        }
+      );
 
       const exitCode = await addStore(client, ['custom-store']);
 
@@ -734,7 +773,12 @@ describe('blob store add', () => {
         if (url === '/v9/projects?limit=100') {
           return Promise.resolve({
             projects: [
-              { id: 'proj_123', name: 'my-project', updatedAt: Date.now(), createdAt: Date.now() },
+              {
+                id: 'proj_123',
+                name: 'my-project',
+                updatedAt: Date.now(),
+                createdAt: Date.now(),
+              },
             ],
             pagination: { count: 1, next: null },
           });
