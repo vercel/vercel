@@ -7,6 +7,7 @@ import {
   detectExistingDraft,
   offerAutoPublish,
 } from '../shared';
+import getScope from '../../../util/get-scope';
 import patchFirewallDraft from '../../../util/firewall/patch-firewall-draft';
 import {
   CONDITION_TYPES,
@@ -27,6 +28,11 @@ import type {
 } from '../../../util/firewall/types';
 import stamp from '../../../util/output/stamp';
 
+interface PlanInfo {
+  isEnterprise: boolean;
+  hasSecurityPlus: boolean;
+}
+
 interface AddInteractiveOptions {
   skipPrompts?: boolean;
   prePopulated?: Partial<FirewallRule>;
@@ -39,6 +45,22 @@ export async function addInteractive(
   opts: AddInteractiveOptions = {}
 ): Promise<number> {
   const pre = opts.prePopulated;
+
+  // Fetch team plan info for condition type filtering
+  let planInfo: PlanInfo = { isEnterprise: false, hasSecurityPlus: false };
+  try {
+    const { team } = await getScope(client);
+    if (team) {
+      planInfo = {
+        isEnterprise: team.billing.plan === 'enterprise',
+        hasSecurityPlus:
+          (team as unknown as { securityPlus?: { enabled?: boolean } })
+            .securityPlus?.enabled === true,
+      };
+    }
+  } catch {
+    // If we can't fetch team info, default to hiding plan-gated types
+  }
 
   // 1. Name
   const name = await client.input.text({
@@ -60,6 +82,7 @@ export async function addInteractive(
   // 3. Condition builder
   const conditionGroups = await buildConditionGroupLoop(
     client,
+    planInfo,
     pre?.conditionGroup
   );
 
@@ -141,6 +164,7 @@ export async function addInteractive(
 
 async function buildConditionGroupLoop(
   client: Client,
+  planInfo: PlanInfo,
   prePopulated?: FirewallConditionGroup[]
 ): Promise<FirewallConditionGroup[]> {
   const groups: FirewallConditionGroup[] = prePopulated
@@ -149,7 +173,7 @@ async function buildConditionGroupLoop(
 
   if (groups.length === 0) {
     // Build first condition
-    const condition = await buildConditionInteractive(client);
+    const condition = await buildConditionInteractive(client, planInfo);
     groups.push({ conditions: [condition] });
   }
 
@@ -192,7 +216,7 @@ async function buildConditionGroupLoop(
       break;
     }
 
-    const condition = await buildConditionInteractive(client);
+    const condition = await buildConditionInteractive(client, planInfo);
 
     if (choice === 'and') {
       groups[groups.length - 1].conditions.push(condition);
@@ -207,12 +231,19 @@ async function buildConditionGroupLoop(
 // --- Single condition builder ---
 
 async function buildConditionInteractive(
-  client: Client
+  client: Client,
+  planInfo: PlanInfo
 ): Promise<FirewallCondition> {
-  // Group visible condition types by category
-  // Plan-gated types (ja3, bot_name, bot_category) are hidden from
-  // Filter out deprecated types — plan-gated types are shown (API validates entitlements)
-  const visibleTypes = CONDITION_TYPES.filter(ct => !ct.deprecated);
+  // Filter condition types based on plan
+  // Enterprise types hidden for non-enterprise, Security Plus hidden for non-security-plus
+  const visibleTypes = CONDITION_TYPES.filter(ct => {
+    if (ct.deprecated) return false;
+    if (ct.planRequirement === 'enterprise' && !planInfo.isEnterprise)
+      return false;
+    if (ct.planRequirement === 'security-plus' && !planInfo.hasSecurityPlus)
+      return false;
+    return true;
+  });
 
   const categories = new Map<string, ConditionTypeMeta[]>();
   for (const ct of visibleTypes) {
