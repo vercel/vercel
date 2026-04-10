@@ -46,7 +46,7 @@ describe('metrics schema v2', () => {
     expect(output).toContain('Count');
   });
 
-  it('shows prefix detail with --metric', async () => {
+  it('shows prefix detail with a positional metric', async () => {
     client.scenario.get(
       '/v2/observability/schema/vercel.edge_requests',
       (_req, res) => {
@@ -77,7 +77,7 @@ describe('metrics schema v2', () => {
         ]);
       }
     );
-    client.setArgv('metrics', 'schema', '--metric', 'vercel.edge_requests');
+    client.setArgv('metrics', 'schema', 'vercel.edge_requests');
 
     const exitCode = await schema(client, new MockTelemetry());
 
@@ -132,7 +132,7 @@ describe('metrics schema v2', () => {
         ]);
       }
     );
-    client.setArgv('metrics', 'schema', '--metric', 'vercel.edge_requests');
+    client.setArgv('metrics', 'schema', 'vercel.edge_requests');
 
     const exitCode = await schema(client, new MockTelemetry());
 
@@ -172,12 +172,7 @@ describe('metrics schema v2', () => {
           ]);
         }
       );
-      client.setArgv(
-        'metrics',
-        'schema',
-        '--metric',
-        'vercel.edge_requests.count'
-      );
+      client.setArgv('metrics', 'schema', 'vercel.edge_requests.count');
 
       await schema(client, new MockTelemetry());
 

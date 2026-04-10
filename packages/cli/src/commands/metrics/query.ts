@@ -184,7 +184,7 @@ export default async function query(
   telemetry.trackCliFlagAll(all);
   telemetry.trackCliOptionFormat(flags['--format']);
 
-  // Validate --metric (required)
+  // Validate that a metric id was provided.
   const requiredMetric = validateRequiredMetric(metricFlag);
   if (!requiredMetric.valid) {
     return handleValidationError(requiredMetric, jsonOutput, client);
