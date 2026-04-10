@@ -77,7 +77,7 @@ describe('firewall rules add', () => {
         '--condition',
         '{"type":"user_agent","op":"sub","value":"crawler"}',
         '--condition',
-        '{"type":"geo_country","op":"inc","value":"CN,RU"}',
+        '{"type":"geo_country","op":"inc","value":"DE,FR"}',
         '--action',
         'challenge',
         '--yes'
@@ -1303,7 +1303,7 @@ describe('firewall rules add', () => {
         'rules',
         'add',
         '--ai',
-        'Block traffic from China and Russia',
+        'Rate limit API endpoints to 100 per minute',
         '--yes'
       );
       const exitCodePromise = firewall(client);
@@ -1515,7 +1515,7 @@ describe('firewall rules add', () => {
 
       // Enter prompt
       await expect(client.stderr).toOutput('Describe the rule');
-      client.stdin.write('Block traffic from China\n');
+      client.stdin.write('Challenge requests with suspicious user agents\n');
 
       // AI generates, shows preview, review menu
       await expect(client.stderr).toOutput('What would you like to do?');
