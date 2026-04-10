@@ -181,7 +181,9 @@ async function invokeBundledRoute(
     const handlerModule = await import(pathToFileURL(handlerPath).href);
     const handler = handlerModule.default ?? handlerModule;
     if (typeof handler !== 'function') {
-      throw new Error(`Expected ${lambda.handler} to export a function handler`);
+      throw new Error(
+        `Expected ${lambda.handler} to export a function handler`
+      );
     }
 
     server = createServer(async (req, res) => {
@@ -202,14 +204,17 @@ async function invokeBundledRoute(
       throw new Error('Expected server to listen on an object address');
     }
 
-    const response = await fetch(`http://127.0.0.1:${addr.port}${request.path}`, {
-      method: request.method ?? 'GET',
-      headers: {
-        'x-matched-path': request.matchedPath,
-        ...request.headers,
-      },
-      body: request.body,
-    });
+    const response = await fetch(
+      `http://127.0.0.1:${addr.port}${request.path}`,
+      {
+        method: request.method ?? 'GET',
+        headers: {
+          'x-matched-path': request.matchedPath,
+          ...request.headers,
+        },
+        body: request.body,
+      }
+    );
 
     return {
       status: response.status,
@@ -242,7 +247,9 @@ describe('monorepo builds with VERCEL_BUILD_MONOREPO_SUPPORT', () => {
     'should build workflow-style bundled node api routes from a rootDirectory',
     async () => {
       const rootDirectory = 'workbench/example';
-      const cwd = setupUnitFixture('commands/build/workflow-root-directory-bundling');
+      const cwd = setupUnitFixture(
+        'commands/build/workflow-root-directory-bundling'
+      );
       const output = join(cwd, '.vercel/output');
 
       useUser();
@@ -263,7 +270,12 @@ describe('monorepo builds with VERCEL_BUILD_MONOREPO_SUPPORT', () => {
 
       expect(exitCode).toEqual(0);
 
-      const funcDir = join(output, 'functions', 'api', 'test-direct-step-call.func');
+      const funcDir = join(
+        output,
+        'functions',
+        'api',
+        'test-direct-step-call.func'
+      );
       expect(await fs.pathExists(funcDir)).toBe(true);
 
       const lambda = await createLambdaFromFuncDir(funcDir, cwd);

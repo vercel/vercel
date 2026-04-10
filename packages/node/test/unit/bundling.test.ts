@@ -215,7 +215,9 @@ describe('experimentalAllowBundling', () => {
     expect(lambda.handler).toBe('___vc_bundled_api_handler.js');
     expect(configFile).toBeDefined();
     expect(
-      lambda.files[join('workbench', 'example', 'api', 'test-direct-step-call.js')]
+      lambda.files[
+        join('workbench', 'example', 'api', 'test-direct-step-call.js')
+      ]
     ).toBeDefined();
 
     if (!configFile || configFile.type !== 'FileBlob') {
