@@ -19,8 +19,6 @@ export interface ConditionTypeMeta {
   /** Value validation type for interactive mode */
   valueValidation?: 'ip' | 'path' | 'hostname' | 'digits' | null;
   planRequirement?: 'enterprise' | 'security-plus' | null;
-  /** Hidden from interactive builder by default (plan-gated or specialized) */
-  hiddenFromInteractive?: boolean;
   deprecated?: boolean;
 }
 
