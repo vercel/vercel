@@ -47,7 +47,7 @@ describe('firewall rules add', () => {
         'add',
         'Block test path',
         '--condition',
-        'path:pre:/test',
+        '{"type":"path","op":"pre","value":"/test"}',
         '--action',
         'deny',
         '--yes'
@@ -75,9 +75,9 @@ describe('firewall rules add', () => {
         'add',
         'Multi condition',
         '--condition',
-        'user_agent:sub:crawler',
+        '{"type":"user_agent","op":"sub","value":"crawler"}',
         '--condition',
-        'geo_country:inc:CN,RU',
+        '{"type":"geo_country","op":"inc","value":"CN,RU"}',
         '--action',
         'challenge',
         '--yes'
@@ -102,10 +102,10 @@ describe('firewall rules add', () => {
         'add',
         'OR group rule',
         '--condition',
-        'user_agent:sub:bot',
+        '{"type":"user_agent","op":"sub","value":"bot"}',
         '--or',
         '--condition',
-        'ip_address:eq:1.2.3.4',
+        '{"type":"ip_address","op":"eq","value":"1.2.3.4"}',
         '--action',
         'deny',
         '--yes'
@@ -130,13 +130,13 @@ describe('firewall rules add', () => {
         'add',
         'Three groups',
         '--condition',
-        'path:pre:/api',
+        '{"type":"path","op":"pre","value":"/api"}',
         '--or',
         '--condition',
-        'path:pre:/admin',
+        '{"type":"path","op":"pre","value":"/admin"}',
         '--or',
         '--condition',
-        'path:pre:/internal',
+        '{"type":"path","op":"pre","value":"/internal"}',
         '--action',
         'deny',
         '--yes'
@@ -160,7 +160,7 @@ describe('firewall rules add', () => {
         'add',
         'Header exists',
         '--condition',
-        'header:Authorization:ex',
+        '{"type":"header","key":"Authorization","op":"ex"}',
         '--action',
         'bypass',
         '--yes'
@@ -181,7 +181,7 @@ describe('firewall rules add', () => {
         'add',
         'Non-US traffic',
         '--condition',
-        'geo_country:!eq:US',
+        '{"type":"geo_country","op":"eq","neg":true,"value":"US"}',
         '--action',
         'challenge',
         '--yes'
@@ -207,7 +207,7 @@ describe('firewall rules add', () => {
         'add',
         'Block methods',
         '--condition',
-        'method:inc:DELETE,PUT,PATCH',
+        '{"type":"method","op":"inc","value":"DELETE,PUT,PATCH"}',
         '--action',
         'deny',
         '--yes'
@@ -228,7 +228,7 @@ describe('firewall rules add', () => {
         'add',
         'Rate limit API',
         '--condition',
-        'path:pre:/api',
+        '{"type":"path","op":"pre","value":"/api"}',
         '--action',
         'rate_limit',
         '--rate-limit-algo',
@@ -266,7 +266,7 @@ describe('firewall rules add', () => {
         'add',
         'RL deny action',
         '--condition',
-        'path:pre:/api',
+        '{"type":"path","op":"pre","value":"/api"}',
         '--action',
         'rate_limit',
         '--rate-limit-window',
@@ -296,7 +296,7 @@ describe('firewall rules add', () => {
         'add',
         'Rate limit default',
         '--condition',
-        'path:pre:/api',
+        '{"type":"path","op":"pre","value":"/api"}',
         '--action',
         'rate_limit',
         '--rate-limit-window',
@@ -321,7 +321,7 @@ describe('firewall rules add', () => {
         'add',
         'Redirect old path',
         '--condition',
-        'path:pre:/old',
+        '{"type":"path","op":"pre","value":"/old"}',
         '--action',
         'redirect',
         '--redirect-url',
@@ -350,7 +350,7 @@ describe('firewall rules add', () => {
         'add',
         'Temp redirect',
         '--condition',
-        'path:pre:/temp',
+        '{"type":"path","op":"pre","value":"/temp"}',
         '--action',
         'redirect',
         '--redirect-url',
@@ -373,7 +373,7 @@ describe('firewall rules add', () => {
         'add',
         'Deny with duration',
         '--condition',
-        'ip_address:eq:1.2.3.4',
+        '{"type":"ip_address","op":"eq","value":"1.2.3.4"}',
         '--action',
         'deny',
         '--duration',
@@ -400,7 +400,7 @@ describe('firewall rules add', () => {
         'add',
         'Inactive rule',
         '--condition',
-        'path:pre:/test',
+        '{"type":"path","op":"pre","value":"/test"}',
         '--action',
         'log',
         '--inactive',
@@ -428,7 +428,7 @@ describe('firewall rules add', () => {
         'add',
         'Log rule',
         '--condition',
-        'method:eq:DELETE',
+        '{"type":"method","op":"eq","value":"DELETE"}',
         '--action',
         'log',
         '--yes'
@@ -452,7 +452,7 @@ describe('firewall rules add', () => {
         'add',
         'Bypass rule',
         '--condition',
-        'ip_address:eq:10.0.0.0/24',
+        '{"type":"ip_address","op":"eq","value":"10.0.0.0/24"}',
         '--action',
         'bypass',
         '--yes'
@@ -473,7 +473,7 @@ describe('firewall rules add', () => {
         'add',
         'Preview test',
         '--condition',
-        'path:pre:/api',
+        '{"type":"path","op":"pre","value":"/api"}',
         '--action',
         'deny',
         '--yes'
@@ -495,143 +495,13 @@ describe('firewall rules add', () => {
         'add',
         'Colon value',
         '--condition',
-        'header:X-Forward:eq:1.2.3.4:8080',
+        '{"type":"header","key":"X-Forward","op":"eq","value":"1.2.3.4:8080"}',
         '--action',
         'deny',
         '--yes'
       );
       const exitCodePromise = firewall(client);
       await expect(client.stderr).toOutput('Rule "Colon value" staged');
-      expect(await exitCodePromise).toEqual(0);
-    });
-  });
-
-  // ─── Flag mode: readable operator aliases ──────────────────────────
-
-  describe('flag mode operator aliases', () => {
-    it('should accept readable operator: starts_with', async () => {
-      useListFirewallConfigs(createConfig(), null);
-      usePatchDraft();
-      useActivateConfig();
-
-      client.setArgv(
-        'firewall',
-        'rules',
-        'add',
-        'Alias test 1',
-        '--condition',
-        'path:starts_with:/api',
-        '--action',
-        'log',
-        '--yes'
-      );
-      const exitCodePromise = firewall(client);
-      await expect(client.stderr).toOutput('staged');
-      expect(await exitCodePromise).toEqual(0);
-    });
-
-    it('should accept readable operator: contains', async () => {
-      useListFirewallConfigs(createConfig(), null);
-      usePatchDraft();
-      useActivateConfig();
-
-      client.setArgv(
-        'firewall',
-        'rules',
-        'add',
-        'Alias test 2',
-        '--condition',
-        'user_agent:contains:crawler',
-        '--action',
-        'log',
-        '--yes'
-      );
-      const exitCodePromise = firewall(client);
-      await expect(client.stderr).toOutput('staged');
-      expect(await exitCodePromise).toEqual(0);
-    });
-
-    it('should accept readable operator: not_equals', async () => {
-      useListFirewallConfigs(createConfig(), null);
-      usePatchDraft();
-      useActivateConfig();
-
-      client.setArgv(
-        'firewall',
-        'rules',
-        'add',
-        'Alias test 3',
-        '--condition',
-        'geo_country:not_equals:US',
-        '--action',
-        'log',
-        '--yes'
-      );
-      const exitCodePromise = firewall(client);
-      await expect(client.stderr).toOutput('does not equal');
-      expect(await exitCodePromise).toEqual(0);
-    });
-
-    it('should accept readable operator: any_of', async () => {
-      useListFirewallConfigs(createConfig(), null);
-      usePatchDraft();
-      useActivateConfig();
-
-      client.setArgv(
-        'firewall',
-        'rules',
-        'add',
-        'Alias test 4',
-        '--condition',
-        'method:any_of:GET,POST,DELETE',
-        '--action',
-        'log',
-        '--yes'
-      );
-      const exitCodePromise = firewall(client);
-      await expect(client.stderr).toOutput('staged');
-      expect(await exitCodePromise).toEqual(0);
-    });
-
-    it('should accept readable operator: exists', async () => {
-      useListFirewallConfigs(createConfig(), null);
-      usePatchDraft();
-      useActivateConfig();
-
-      client.setArgv(
-        'firewall',
-        'rules',
-        'add',
-        'Alias test 5',
-        '--condition',
-        'header:Authorization:exists',
-        '--action',
-        'log',
-        '--yes'
-      );
-      const exitCodePromise = firewall(client);
-      await expect(client.stderr).toOutput('staged');
-      expect(await exitCodePromise).toEqual(0);
-    });
-
-    it('should accept readable operator: not_any_of', async () => {
-      useListFirewallConfigs(createConfig(), null);
-      usePatchDraft();
-      useActivateConfig();
-
-      client.setArgv(
-        'firewall',
-        'rules',
-        'add',
-        'Alias test 6',
-        '--condition',
-        'geo_country:not_any_of:CN,RU,IR',
-        '--action',
-        'log',
-        '--yes'
-      );
-      const exitCodePromise = firewall(client);
-      await expect(client.stderr).toOutput('staged');
       expect(await exitCodePromise).toEqual(0);
     });
   });
@@ -645,7 +515,7 @@ describe('firewall rules add', () => {
         'rules',
         'add',
         '--condition',
-        'path:pre:/test',
+        '{"type":"path","op":"pre","value":"/test"}',
         '--action',
         'deny',
         '--yes'
@@ -662,7 +532,7 @@ describe('firewall rules add', () => {
         'add',
         'Test',
         '--condition',
-        'path:pre:/test',
+        '{"type":"path","op":"pre","value":"/test"}',
         '--yes'
       );
       const exitCodePromise = firewall(client);
@@ -677,7 +547,7 @@ describe('firewall rules add', () => {
         'add',
         'Test',
         '--condition',
-        'path:pre:/test',
+        '{"type":"path","op":"pre","value":"/test"}',
         '--action',
         'invalid',
         '--yes'
@@ -687,31 +557,31 @@ describe('firewall rules add', () => {
       expect(await exitCodePromise).toEqual(1);
     });
 
-    it('should error on invalid condition format', async () => {
+    it('should error on invalid condition JSON', async () => {
       client.setArgv(
         'firewall',
         'rules',
         'add',
         'Test',
         '--condition',
-        'badformat',
+        'not-json',
         '--action',
         'deny',
         '--yes'
       );
       const exitCodePromise = firewall(client);
-      await expect(client.stderr).toOutput('Invalid condition format');
+      await expect(client.stderr).toOutput('Invalid condition JSON');
       expect(await exitCodePromise).toEqual(1);
     });
 
-    it('should error on invalid operator', async () => {
+    it('should error on invalid operator in JSON', async () => {
       client.setArgv(
         'firewall',
         'rules',
         'add',
         'Test',
         '--condition',
-        'path:badop:value',
+        '{"type":"path","op":"badop","value":"/test"}',
         '--action',
         'deny',
         '--yes'
@@ -728,13 +598,13 @@ describe('firewall rules add', () => {
         'add',
         'Test',
         '--condition',
-        'path:pre',
+        '{"type":"path","op":"pre"}',
         '--action',
         'deny',
         '--yes'
       );
       const exitCodePromise = firewall(client);
-      await expect(client.stderr).toOutput('requires a value');
+      await expect(client.stderr).toOutput('requires a "value" field');
       expect(await exitCodePromise).toEqual(1);
     });
 
@@ -745,13 +615,47 @@ describe('firewall rules add', () => {
         'add',
         'Test',
         '--condition',
-        'header:ex',
+        '{"type":"header","op":"ex"}',
         '--action',
         'deny',
         '--yes'
       );
       const exitCodePromise = firewall(client);
-      await expect(client.stderr).toOutput('requires a key');
+      await expect(client.stderr).toOutput('requires a "key" field');
+      expect(await exitCodePromise).toEqual(1);
+    });
+
+    it('should error on missing type in condition JSON', async () => {
+      client.setArgv(
+        'firewall',
+        'rules',
+        'add',
+        'Test',
+        '--condition',
+        '{"op":"eq","value":"test"}',
+        '--action',
+        'deny',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('"type" field');
+      expect(await exitCodePromise).toEqual(1);
+    });
+
+    it('should error on missing op in condition JSON', async () => {
+      client.setArgv(
+        'firewall',
+        'rules',
+        'add',
+        'Test',
+        '--condition',
+        '{"type":"path","value":"/test"}',
+        '--action',
+        'deny',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('"op" field');
       expect(await exitCodePromise).toEqual(1);
     });
 
@@ -762,7 +666,7 @@ describe('firewall rules add', () => {
         'add',
         'Test',
         '--condition',
-        'path:pre:/test',
+        '{"type":"path","op":"pre","value":"/test"}',
         '--action',
         'deny',
         '--duration',
@@ -781,7 +685,7 @@ describe('firewall rules add', () => {
         'add',
         'Test',
         '--condition',
-        'path:pre:/api',
+        '{"type":"path","op":"pre","value":"/api"}',
         '--action',
         'rate_limit',
         '--rate-limit-requests',
@@ -800,7 +704,7 @@ describe('firewall rules add', () => {
         'add',
         'Test',
         '--condition',
-        'path:pre:/api',
+        '{"type":"path","op":"pre","value":"/api"}',
         '--action',
         'rate_limit',
         '--rate-limit-window',
@@ -820,7 +724,7 @@ describe('firewall rules add', () => {
         'Test',
         '--or',
         '--condition',
-        'path:pre:/test',
+        '{"type":"path","op":"pre","value":"/test"}',
         '--action',
         'deny',
         '--yes'
@@ -837,7 +741,7 @@ describe('firewall rules add', () => {
         'add',
         'Test',
         '--condition',
-        'path:pre:/old',
+        '{"type":"path","op":"pre","value":"/old"}',
         '--action',
         'redirect',
         '--yes'
@@ -854,7 +758,7 @@ describe('firewall rules add', () => {
         'add',
         'Test',
         '--condition',
-        'path:pre:/old',
+        '{"type":"path","op":"pre","value":"/old"}',
         '--action',
         'redirect',
         '--redirect-url',
@@ -877,7 +781,7 @@ describe('firewall rules add', () => {
         'add',
         'Redirect path',
         '--condition',
-        'path:pre:/old',
+        '{"type":"path","op":"pre","value":"/old"}',
         '--action',
         'redirect',
         '--redirect-url',
@@ -900,7 +804,7 @@ describe('firewall rules add', () => {
         'add',
         'Redirect URL',
         '--condition',
-        'path:pre:/old',
+        '{"type":"path","op":"pre","value":"/old"}',
         '--action',
         'redirect',
         '--redirect-url',
@@ -919,7 +823,7 @@ describe('firewall rules add', () => {
         'add',
         'Test',
         '--condition',
-        'path:re:[invalid',
+        '{"type":"path","op":"re","value":"[invalid"}',
         '--action',
         'deny',
         '--yes'
@@ -940,7 +844,7 @@ describe('firewall rules add', () => {
         'add',
         'Regex rule',
         '--condition',
-        'path:re:^/api/v[0-9]+',
+        '{"type":"path","op":"re","value":"^/api/v[0-9]+"}',
         '--action',
         'deny',
         '--yes'
@@ -957,7 +861,7 @@ describe('firewall rules add', () => {
         'add',
         'Test',
         '--condition',
-        'path:pre:/api',
+        '{"type":"path","op":"pre","value":"/api"}',
         '--action',
         'rate_limit',
         '--rate-limit-window',
@@ -978,7 +882,7 @@ describe('firewall rules add', () => {
         'add',
         'Test',
         '--condition',
-        'path:pre:/api',
+        '{"type":"path","op":"pre","value":"/api"}',
         '--action',
         'rate_limit',
         '--rate-limit-window',
@@ -999,7 +903,7 @@ describe('firewall rules add', () => {
         'add',
         'Test',
         '--condition',
-        'path:pre:/api',
+        '{"type":"path","op":"pre","value":"/api"}',
         '--action',
         'rate_limit',
         '--rate-limit-window',
@@ -1262,7 +1166,7 @@ describe('firewall rules add', () => {
         '--ai',
         'Block bots',
         '--condition',
-        'path:pre:/test',
+        '{"type":"path","op":"pre","value":"/test"}',
         '--yes'
       );
       const exitCodePromise = firewall(client);
@@ -1280,7 +1184,7 @@ describe('firewall rules add', () => {
         '--json',
         '{"name":"test"}',
         '--condition',
-        'path:pre:/test',
+        '{"type":"path","op":"pre","value":"/test"}',
         '--yes'
       );
       const exitCodePromise = firewall(client);
@@ -1450,7 +1354,7 @@ describe('firewall rules add', () => {
         'add',
         'First change',
         '--condition',
-        'path:pre:/test',
+        '{"type":"path","op":"pre","value":"/test"}',
         '--action',
         'deny',
         '--yes'
@@ -1478,7 +1382,7 @@ describe('firewall rules add', () => {
         'add',
         'Second change',
         '--condition',
-        'path:pre:/test',
+        '{"type":"path","op":"pre","value":"/test"}',
         '--action',
         'deny',
         '--yes'
@@ -1504,7 +1408,7 @@ describe('firewall rules add', () => {
         'add',
         'Non-TTY rule',
         '--condition',
-        'path:pre:/test',
+        '{"type":"path","op":"pre","value":"/test"}',
         '--action',
         'deny',
         '--yes'

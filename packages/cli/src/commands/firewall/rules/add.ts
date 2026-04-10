@@ -68,7 +68,7 @@ export default async function add(client: Client, argv: string[]) {
             {
               command: withGlobalFlags(
                 client,
-                'firewall rules add "Name" --condition "type:op:value" --action deny --yes'
+                'firewall rules add "Name" --condition \'{"type":"path","op":"pre","value":"/api"}\' --action deny --yes'
               ),
               when: 'create with flags',
             },
@@ -173,7 +173,7 @@ export default async function add(client: Client, argv: string[]) {
         {
           command: withGlobalFlags(
             client,
-            'firewall rules add --condition "user_agent:sub:crawler" --action deny --yes'
+            'firewall rules add "Name" --condition \'{"type":"user_agent","op":"sub","value":"crawler"}\' --action deny --yes'
           ),
           when: 'to create with flags',
         },

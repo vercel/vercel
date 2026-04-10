@@ -411,7 +411,7 @@ export const rulesAddSubcommand = {
       type: [String] as unknown as StringConstructor,
       deprecated: false,
       description:
-        'Condition (repeatable). Format: type:op:value. Operators: equals, contains, starts_with, ends_with, matches, exists, any_of (or short: eq, sub, pre, suf, re, ex, inc). Negate with ! or not_ prefix.',
+        'Condition as JSON (repeatable). Example: \'{"type":"path","op":"pre","value":"/api"}\'. Fields: type, op, value, key (for header/cookie/query), neg (boolean). Use --or between conditions for OR groups.',
     },
     {
       name: 'or',
@@ -517,12 +517,12 @@ export const rulesAddSubcommand = {
       value: `${packageName} firewall rules add --json '{"name":"Block bots","active":true,"conditionGroup":[{"conditions":[{"type":"user_agent","op":"sub","value":"crawler"}]}],"action":{"mitigate":{"action":"deny"}}}'`,
     },
     {
-      name: 'Create with flags (single AND group)',
-      value: `${packageName} firewall rules add "Block bots" --condition "user_agent:contains:crawler" --action deny --yes`,
+      name: 'Create with flags',
+      value: `${packageName} firewall rules add "Block bots" --condition '{"type":"user_agent","op":"sub","value":"crawler"}' --action deny --yes`,
     },
     {
       name: 'Create with OR groups',
-      value: `${packageName} firewall rules add "Block suspicious" --condition "user_agent:contains:crawler" --or --condition "ip_address:equals:1.2.3.4" --action deny --yes`,
+      value: `${packageName} firewall rules add "Block suspicious" --condition '{"type":"user_agent","op":"sub","value":"crawler"}' --or --condition '{"type":"ip_address","op":"eq","value":"1.2.3.4"}' --action deny --yes`,
     },
   ],
 } as const;

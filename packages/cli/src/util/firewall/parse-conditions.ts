@@ -1,57 +1,6 @@
 import type { FirewallCondition, FirewallConditionGroup } from './types';
 import { CONDITION_TYPE_MAP, ALL_OPERATORS } from './condition-types';
 
-// Human-readable operator aliases → short codes
-// Both forms are accepted in --condition flags
-const OPERATOR_ALIASES: Record<string, string> = {
-  equals: 'eq',
-  not_equals: '!eq',
-  contains: 'sub',
-  not_contains: '!sub',
-  starts_with: 'pre',
-  not_starts_with: '!pre',
-  ends_with: 'suf',
-  not_ends_with: '!suf',
-  matches: 're',
-  not_matches: '!re',
-  matches_regex: 're',
-  not_matches_regex: '!re',
-  regex: 're',
-  exists: 'ex',
-  not_exists: '!ex',
-  any_of: 'inc',
-  is_any_of: 'inc',
-  not_any_of: '!inc',
-  is_not_any_of: '!inc',
-  greater_than: 'gt',
-  greater_or_equal: 'gte',
-  less_than: 'lt',
-  less_or_equal: 'lte',
-};
-
-/**
- * Resolve an operator alias to its short code.
- * Handles both aliases ("starts_with") and direct codes ("pre").
- * Also handles negation prefix ("!" or "not_").
- */
-function resolveOperator(opRaw: string): { op: string; neg: boolean } {
-  // Check alias first (including negated aliases like "not_equals")
-  const alias = OPERATOR_ALIASES[opRaw];
-  if (alias) {
-    if (alias.startsWith('!')) {
-      return { op: alias.slice(1), neg: true };
-    }
-    return { op: alias, neg: false };
-  }
-
-  // Handle ! prefix on short codes
-  if (opRaw.startsWith('!')) {
-    return { op: opRaw.slice(1), neg: true };
-  }
-
-  return { op: opRaw, neg: false };
-}
-
 export interface ParsedConditionGroups {
   groups: FirewallConditionGroup[];
 }
@@ -59,15 +8,13 @@ export interface ParsedConditionGroups {
 /**
  * Parse --condition flags and --or separators into condition groups.
  *
+ * Each --condition value is a JSON object matching the API's condition format:
+ *   {"type":"path","op":"pre","value":"/api"}
+ *   {"type":"geo_country","op":"eq","neg":true,"value":"US"}
+ *   {"type":"header","key":"Authorization","op":"ex"}
+ *
  * --condition flags within the same group are AND'd.
  * --or starts a new OR group.
- *
- * Example:
- *   --condition "user_agent:sub:crawler" --condition "geo_country:inc:CN,RU" --or --condition "ip_address:eq:1.2.3.4"
- *
- * Produces:
- *   Group 1 (AND): user_agent contains crawler AND geo_country is any of CN,RU
- *   Group 2 (OR):  ip_address equals 1.2.3.4
  */
 export function parseConditionFlags(
   conditionFlags: string[]
@@ -104,59 +51,54 @@ export function parseConditionFlags(
 }
 
 /**
- * Parse a single --condition flag value.
+ * Parse a single --condition flag value (JSON object).
  *
- * Format:
- *   Non-key types: "type:op:value"       → split on first 2 colons
- *   Key types:     "type:key:op:value"    → split on first 3 colons
- *   Negation:      "type:!op:value"       → neg: true, strip the !
- *   Multi-value:   "type:inc:val1,val2"   → string[] value
- *   Exists:        "type:ex" or "type:key:ex" → no value
+ * Required fields: type, op
+ * Optional fields: value, key, neg
  *
  * Returns a FirewallCondition object or an error string.
  */
 export function parseConditionFlag(flag: string): FirewallCondition | string {
-  const parts = flag.split(':');
-
-  if (parts.length < 2) {
-    return `Invalid condition format: "${flag}". Expected "type:op:value" or "type:key:op:value".`;
+  let parsed: Record<string, unknown>;
+  try {
+    parsed = JSON.parse(flag);
+  } catch {
+    return `Invalid condition JSON: "${flag}". Expected a JSON object like {"type":"path","op":"pre","value":"/api"}.`;
   }
 
-  const type = parts[0];
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+    return `Invalid condition: expected a JSON object, got ${typeof parsed}.`;
+  }
+
+  // Validate type
+  const type = parsed.type;
+  if (!type || typeof type !== 'string') {
+    return 'Condition must have a "type" field (string).';
+  }
   const meta = CONDITION_TYPE_MAP[type];
 
-  // Allow unknown types (lenient — the API will validate)
-  // but warn-level: we can still parse the format
-  const requiresKey = meta?.requiresKey ?? false;
-
-  let key: string | undefined;
-  let opRaw: string;
-  let valueRaw: string | undefined;
-
-  if (requiresKey) {
-    // type:key:op:value — split on first 3 colons
-    if (parts.length < 3) {
-      return `Condition type "${type}" requires a key. Format: "${type}:key:op:value".`;
-    }
-    key = parts[1];
-    opRaw = parts[2];
-    valueRaw = parts.length > 3 ? parts.slice(3).join(':') : undefined;
-  } else {
-    // type:op:value — split on first 2 colons
-    opRaw = parts[1];
-    valueRaw = parts.length > 2 ? parts.slice(2).join(':') : undefined;
+  // Validate op
+  const op = parsed.op;
+  if (!op || typeof op !== 'string') {
+    return `Condition must have an "op" field (string). Valid operators: ${ALL_OPERATORS.join(', ')}`;
   }
 
-  // Resolve operator — supports aliases (starts_with → pre) and negation (! prefix or not_ aliases)
-  const { op, neg } = resolveOperator(opRaw);
-
-  // Validate operator
   if (!ALL_OPERATORS.includes(op)) {
     const validOps = meta
       ? meta.operators.join(', ')
       : ALL_OPERATORS.join(', ');
-    return `Invalid operator "${opRaw}" for condition type "${type}". Valid operators: ${validOps}`;
+    return `Invalid operator "${op}" for condition type "${type}". Valid operators: ${validOps}`;
   }
+
+  // Validate key for keyed types
+  const requiresKey = meta?.requiresKey ?? false;
+  const key = parsed.key as string | undefined;
+  if (requiresKey && !key) {
+    return `Condition type "${type}" requires a "key" field. Example: {"type":"${type}","key":"name","op":"${op}","value":"..."}`;
+  }
+
+  // Validate neg
+  const neg = parsed.neg === true;
 
   // Build the condition
   const condition: FirewallCondition = { type, op };
@@ -170,41 +112,49 @@ export function parseConditionFlag(flag: string): FirewallCondition | string {
   }
 
   // Handle value based on operator
+  const value = parsed.value;
+
   if (op === 'ex') {
-    // Exists operator — no value
+    // Exists operator — no value needed
   } else if (op === 'inc') {
-    // Multi-value — split on commas
-    if (!valueRaw) {
-      return `Operator "inc" requires a value. Format: "${type}:inc:val1,val2".`;
+    // Multi-value — accept array or comma-separated string
+    if (!value) {
+      return `Operator "inc" requires a "value" field. Example: {"type":"${type}","op":"inc","value":"val1,val2"}`;
     }
-    condition.value = valueRaw.split(',').map(v => v.trim());
+    if (Array.isArray(value)) {
+      condition.value = value.map(String);
+    } else {
+      condition.value = String(value)
+        .split(',')
+        .map(v => v.trim());
+    }
   } else if (op === 'gt' || op === 'gte' || op === 'lt' || op === 'lte') {
     // Numeric operators
-    if (!valueRaw) {
-      return `Operator "${op}" requires a numeric value.`;
+    if (value === undefined || value === null) {
+      return `Operator "${op}" requires a numeric "value" field.`;
     }
-    const num = Number(valueRaw);
+    const num = Number(value);
     if (Number.isNaN(num)) {
-      return `Operator "${op}" requires a numeric value, got "${valueRaw}".`;
+      return `Operator "${op}" requires a numeric value, got "${value}".`;
     }
     condition.value = num;
   } else if (op === 're') {
-    // Regex operator — validate as valid RegExp
-    if (!valueRaw) {
-      return `Operator "re" requires a regex pattern.`;
+    // Regex operator
+    if (!value) {
+      return 'Operator "re" requires a "value" field with a regex pattern.';
     }
     try {
-      new RegExp(valueRaw);
+      new RegExp(String(value));
     } catch {
-      return `Invalid regex pattern: "${valueRaw}". Please provide a valid regular expression.`;
+      return `Invalid regex pattern: "${value}".`;
     }
-    condition.value = valueRaw;
+    condition.value = String(value);
   } else {
     // String operators — value required
-    if (!valueRaw) {
-      return `Operator "${op}" requires a value. Format: "${type}:${op}:value".`;
+    if (value === undefined || value === null) {
+      return `Operator "${op}" requires a "value" field.`;
     }
-    condition.value = valueRaw;
+    condition.value = String(value);
   }
 
   return condition;

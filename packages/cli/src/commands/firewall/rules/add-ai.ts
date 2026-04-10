@@ -86,7 +86,7 @@ export async function handleAIAdd(
                 {
                   command: withGlobalFlags(
                     client,
-                    'firewall rules add "Name" --condition "type:op:value" --action deny --yes'
+                    'firewall rules add "Name" --condition \'{"type":"path","op":"pre","value":"/api"}\' --action deny --yes'
                   ),
                   when: 'create with flags instead',
                 },
