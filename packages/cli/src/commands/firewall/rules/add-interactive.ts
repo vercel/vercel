@@ -211,9 +211,8 @@ async function buildConditionInteractive(
 ): Promise<FirewallCondition> {
   // Group visible condition types by category
   // Plan-gated types (ja3, bot_name, bot_category) are hidden from
-  // the interactive builder to match the dashboard behavior. They can
-  // still be used via --condition flags or --json.
-  const visibleTypes = CONDITION_TYPES.filter(ct => !ct.hiddenFromInteractive);
+  // Filter out deprecated types — plan-gated types are shown (API validates entitlements)
+  const visibleTypes = CONDITION_TYPES.filter(ct => !ct.deprecated);
 
   const categories = new Map<string, ConditionTypeMeta[]>();
   for (const ct of visibleTypes) {

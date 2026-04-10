@@ -14,8 +14,6 @@ export interface ConditionTypeMeta {
   /** Value validation type for interactive mode */
   valueValidation?: 'ip' | 'path' | 'hostname' | 'digits' | null;
   planRequirement?: 'enterprise' | 'security-plus' | null;
-  /** Hidden from interactive builder by default (plan-gated or deprecated) */
-  hiddenFromInteractive?: boolean;
   deprecated?: boolean;
 }
 
@@ -158,7 +156,6 @@ export const CONDITION_TYPES: ConditionTypeMeta[] = [
     requiresKey: false,
     operators: STRING_AND_MATCH,
     planRequirement: 'enterprise',
-    hiddenFromInteractive: true,
   },
   {
     type: 'rate_limit_api_id',
@@ -167,7 +164,6 @@ export const CONDITION_TYPES: ConditionTypeMeta[] = [
     category: 'request',
     requiresKey: false,
     operators: STRING_ONLY,
-    hiddenFromInteractive: true,
   },
 
   // Client
@@ -276,7 +272,6 @@ export const CONDITION_TYPES: ConditionTypeMeta[] = [
     requiresKey: false,
     operators: STRING_AND_MATCH,
     planRequirement: 'enterprise',
-    hiddenFromInteractive: true,
   },
 
   // Bot
@@ -288,7 +283,6 @@ export const CONDITION_TYPES: ConditionTypeMeta[] = [
     requiresKey: false,
     operators: STRING_AND_MATCH,
     planRequirement: 'security-plus',
-    hiddenFromInteractive: true,
   },
   {
     type: 'bot_category',
@@ -298,7 +292,6 @@ export const CONDITION_TYPES: ConditionTypeMeta[] = [
     requiresKey: false,
     operators: STRING_AND_MATCH,
     planRequirement: 'security-plus',
-    hiddenFromInteractive: true,
   },
 ];
 
