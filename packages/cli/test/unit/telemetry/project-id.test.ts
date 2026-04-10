@@ -58,4 +58,29 @@ describe('project_id tracking', () => {
       projectId: 'prj_xyz',
     });
   });
+
+  it('tracks project_id as a regular telemetry event', () => {
+    telemetryEventStore.updateProjectId('prj_xyz');
+    telemetry.trackProjectId('prj_xyz');
+
+    expect(telemetryEventStore.readonlyEvents).toMatchObject([
+      {
+        key: 'project_id',
+        value: 'prj_xyz',
+        projectId: 'prj_xyz',
+      },
+    ]);
+  });
+
+  it('tracks project_id with a sentinel when no project is linked', () => {
+    telemetry.trackProjectId(telemetryEventStore.currentProjectId);
+
+    expect(telemetryEventStore.readonlyEvents).toMatchObject([
+      {
+        key: 'project_id',
+        value: 'NO_PROJECT_ID',
+        projectId: 'NO_PROJECT_ID',
+      },
+    ]);
+  });
 });
