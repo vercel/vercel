@@ -411,14 +411,15 @@ export const rulesAddSubcommand = {
       type: [String] as unknown as StringConstructor,
       deprecated: false,
       description:
-        'Condition as JSON (repeatable). Example: \'{"type":"path","op":"pre","value":"/api"}\'. Fields: type, op, value, key (for header/cookie/query), neg (boolean). Use --or between conditions for OR groups.',
+        'Condition as JSON (repeatable). Multiple conditions are AND\'d together. Fields: type (required), op (required), value, key (for header/cookie/query), neg (boolean). Example: \'{"type":"path","op":"pre","value":"/api"}\'.',
     },
     {
       name: 'or',
       shorthand: null,
       type: Boolean,
       deprecated: false,
-      description: 'Start a new OR condition group',
+      description:
+        "Start a new OR group. Conditions before --or are AND'd, conditions after form a separate group. Example: --condition A --condition B --or --condition C matches (A AND B) OR C.",
     },
     {
       name: 'action',
@@ -510,7 +511,7 @@ export const rulesAddSubcommand = {
     },
     {
       name: 'Create with AI',
-      value: `${packageName} firewall rules add --ai "Block bots from Russia"`,
+      value: `${packageName} firewall rules add --ai "Rate limit /api to 100 requests per minute by IP"`,
     },
     {
       name: 'Create from JSON',
@@ -550,7 +551,7 @@ export const rulesSubcommand = {
     },
     {
       name: 'Create with AI',
-      value: `${packageName} firewall rules add --ai "Block bots from Russia"`,
+      value: `${packageName} firewall rules add --ai "Rate limit /api to 100 requests per minute by IP"`,
     },
   ],
 } as const;

@@ -31,7 +31,7 @@ export async function handleAIAdd(
   if (!prompt) {
     if (!client.stdin.isTTY || client.nonInteractive) {
       output.error(
-        '--ai requires a description. Example: firewall rules add --ai "Block bots from Russia" --yes'
+        '--ai requires a description. Example: firewall rules add --ai "Rate limit /api to 100 requests per minute by IP"'
       );
       return 1;
     }

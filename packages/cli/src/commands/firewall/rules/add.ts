@@ -160,22 +160,21 @@ export default async function add(client: Client, argv: string[]) {
     outputAgentError(client, {
       status: 'error',
       reason: 'missing_flags',
-      message:
-        'No rule definition provided. Use --ai, --json, or --condition flags.',
+      message: 'No rule definition provided. Use --json or --condition flags.',
       next: [
         {
           command: withGlobalFlags(
             client,
-            'firewall rules add --ai "Block bots from Russia" --yes'
+            'firewall rules add "Name" --condition \'{"type":"path","op":"pre","value":"/api"}\' --action deny --yes'
           ),
-          when: 'to create with AI',
+          when: 'create with flags',
         },
         {
           command: withGlobalFlags(
             client,
-            'firewall rules add "Name" --condition \'{"type":"user_agent","op":"sub","value":"crawler"}\' --action deny --yes'
+            'firewall rules add --json \'{"name":"Name","conditionGroup":[...],"action":{"mitigate":{"action":"deny"}}}\' --yes'
           ),
-          when: 'to create with flags',
+          when: 'create with JSON',
         },
       ],
     });

@@ -970,6 +970,21 @@ describe('firewall rules add', () => {
       expect(await exitCodePromise).toEqual(1);
     });
 
+    it('should error when --condition is specified without --action', async () => {
+      client.setArgv(
+        'firewall',
+        'rules',
+        'add',
+        'Test',
+        '--condition',
+        '{"type":"path","op":"pre","value":"/api"}',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('Missing --action');
+      expect(await exitCodePromise).toEqual(1);
+    });
+
     it('should error in non-interactive mode without flags', async () => {
       client.setArgv('firewall', 'rules', 'add', 'Test Rule');
       (client.stdin as any).isTTY = false;
