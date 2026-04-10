@@ -1,4 +1,4 @@
-import { isAPIError, UnsupportedTLD } from '../errors-ts';
+import { isAPIError, InvalidDomain, UnsupportedTLD } from '../errors-ts';
 import type Client from '../client';
 
 type Response = {
@@ -15,6 +15,10 @@ export default async function getDomainPrice(client: Client, name: string) {
     if (isAPIError(err)) {
       if (err.code === 'tld_not_supported') {
         return new UnsupportedTLD(name);
+      }
+
+      if (err.code === 'invalid_domain') {
+        return new InvalidDomain(name, err.serverMessage);
       }
 
       if (err.status < 500) {

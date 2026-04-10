@@ -12,11 +12,18 @@ import {
   UnsupportedTLD,
 } from '../../util/errors-ts';
 import chalk from 'chalk';
+import { DomainsPriceTelemetryClient } from '../../util/telemetry/commands/domains/price';
 
 export default async function price(
   client: Client,
   argv: string[]
 ): Promise<number> {
+  const telemetry = new DomainsPriceTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
+
   let parsedArgs;
   const flagsSpecification = getFlagsSpecification(priceSubcommand.options);
   try {
@@ -27,10 +34,16 @@ export default async function price(
   }
 
   const domain = parsedArgs.args[0];
+  telemetry.trackCliArgumentDomain(domain);
+
   const formatResult = validateJsonOutput(parsedArgs.flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
     return 1;
+  }
+
+  if (formatResult.jsonOutput) {
+    telemetry.trackCliOptionFormat('json');
   }
 
   if (!domain) {
@@ -51,7 +64,7 @@ export default async function price(
     return 1;
   }
   if (result instanceof InvalidDomain) {
-    const msg = `Invalid domain: ${result.meta.domain}`;
+    const msg = `Invalid domain: ${domain}`;
     if (formatResult.jsonOutput) {
       client.stdout.write(
         `${JSON.stringify({ error: 'invalid_domain', message: msg }, null, 2)}\n`
