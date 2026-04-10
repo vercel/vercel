@@ -8,7 +8,7 @@ import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 import output from '../../output-manager';
 import { outputAgentError, buildCommandWithYes } from '../../util/agent-output';
 import { AGENT_STATUS, AGENT_REASON } from '../../util/agent-output-constants';
-import { getGlobalFlagsOnlyFromArgs } from '../../util/arg-common';
+import { getCommandNameWithGlobalFlags } from '../../util/arg-common';
 import type { Command } from '../help';
 import type { FirewallIpRule, FirewallRule } from '../../util/firewall/types';
 import listFirewallConfigs from '../../util/firewall/list-firewall-configs';
@@ -20,14 +20,13 @@ export interface ParsedSubcommand {
 }
 
 /**
- * Plain suggested command with global flags from argv (--cwd, --non-interactive, etc.).
+ * Plain suggested command with global flags from argv (--cwd, etc.).
  */
 export function withGlobalFlags(
   client: Client,
   commandTemplate: string
 ): string {
-  const flags = getGlobalFlagsOnlyFromArgs(client.argv.slice(2));
-  return getCommandNamePlain(`${commandTemplate} ${flags.join(' ')}`.trim());
+  return getCommandNameWithGlobalFlags(commandTemplate, client.argv);
 }
 
 export async function parseSubcommandArgs(

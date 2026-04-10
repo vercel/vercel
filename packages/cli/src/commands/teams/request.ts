@@ -7,18 +7,16 @@ import { isAPIError, type APIError } from '../../util/errors-ts';
 import { requestSubcommand } from './command';
 import { validateJsonOutput } from '../../util/output-format';
 import { outputAgentError } from '../../util/agent-output';
-import { getCommandNamePlain } from '../../util/pkg-name';
 import {
-  getGlobalFlagsOnlyFromArgs,
   getSameSubcommandSuggestionFlags,
   getCommandNameWithGlobalFlags,
+  getGlobalFlagsOnlyFromArgs,
 } from '../../util/arg-common';
 import output from '../../output-manager';
 
-/** Append global argv flags (--cwd, --non-interactive, etc.) so agents can re-run with same context. */
+/** Append global argv flags (--cwd, etc.) so agents can re-run with same context. */
 function withGlobalFlags(client: Client, commandTemplate: string): string {
-  const flags = getGlobalFlagsOnlyFromArgs(client.argv.slice(2));
-  return getCommandNamePlain(`${commandTemplate} ${flags.join(' ')}`.trim());
+  return getCommandNameWithGlobalFlags(commandTemplate, client.argv);
 }
 
 function optionRoot(flagToken: string): string {
@@ -63,6 +61,10 @@ function teamsRequestNextCommand(client: Client): string {
       }
       continue;
     }
+    if (a === '--non-interactive' || a.startsWith('--non-interactive=')) {
+      i += 1;
+      continue;
+    }
     seen.add(root);
     extras.push(a);
     i += 1;
@@ -83,7 +85,7 @@ function teamsRequestNextCommand(client: Client): string {
   if (extras.length === 0) {
     return base;
   }
-  return getCommandNamePlain(`${base} ${extras.join(' ')}`.trim());
+  return `${base} ${extras.join(' ')}`.trim();
 }
 
 function apiFailureReason(err: APIError): string {

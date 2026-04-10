@@ -11,7 +11,7 @@ import getScope from '../../util/get-scope';
 import parseAddDNSRecordArgs from '../../util/dns/parse-add-dns-record-args';
 import getDNSData from '../../util/dns/get-dns-data';
 import stamp from '../../util/output/stamp';
-import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
+import { getCommandName } from '../../util/pkg-name';
 import output from '../../output-manager';
 import { DnsAddTelemetryClient } from '../../util/telemetry/commands/dns/add';
 import { addSubcommand } from './command';
@@ -27,11 +27,10 @@ import {
   AGENT_REASON,
   AGENT_STATUS,
 } from '../../util/agent-output-constants';
-import { getGlobalFlagsOnlyFromArgs } from '../../util/arg-common';
+import { getCommandNameWithGlobalFlags } from '../../util/arg-common';
 
 function withGlobalFlags(client: Client, commandTemplate: string): string {
-  const flags = getGlobalFlagsOnlyFromArgs(client.argv.slice(2));
-  return getCommandNamePlain(`${commandTemplate} ${flags.join(' ')}`.trim());
+  return getCommandNameWithGlobalFlags(commandTemplate, client.argv);
 }
 
 export default async function add(client: Client, argv: string[]) {
