@@ -42,6 +42,7 @@ export default async function addStore(
   if (!access) return 1;
 
   const region = flags['--region'] || 'iad1';
+  const projectFlag = flags['--project'];
 
   let name = nameArg;
   if (!name) {
@@ -59,9 +60,10 @@ export default async function addStore(
   telemetryClient.trackCliArgumentName(name);
   telemetryClient.trackCliOptionAccess(accessFlag);
   telemetryClient.trackCliOptionRegion(flags['--region']);
+  telemetryClient.trackCliOptionProject(projectFlag);
 
   const link = await getLinkedProject(client);
-  let accountId: string | undefined;
+  let accountId: string;
 
   if (link.status === 'linked') {
     accountId = link.org.id;
@@ -73,8 +75,22 @@ export default async function addStore(
     accountId = org.id;
   }
 
-  // Select a project to link the blob store to
-  const projectId = await selectProject(client, accountId);
+  // Resolve project: use --project flag if provided, otherwise interactive selection
+  let projectId: string;
+  if (projectFlag) {
+    const project = await getProjectByIdOrName(client, projectFlag, accountId);
+    if (project instanceof ProjectNotFound) {
+      output.error(`Project not found: ${projectFlag}`);
+      return 1;
+    }
+    projectId = project.id;
+  } else {
+    const result = await selectProject(client, accountId);
+    if (result === null) {
+      return 1;
+    }
+    projectId = result;
+  }
 
   let storeId: string;
   let storeRegion: string | undefined;
@@ -83,26 +99,18 @@ export default async function addStore(
 
     output.spinner('Creating new blob store');
 
-    const requestBody: {
-      name: string;
-      region: string;
-      access: 'public' | 'private';
-      projectId: string;
-      version: string;
-    } = {
-      name,
-      region,
-      access,
-      projectId,
-      version: '2',
-    };
-
     const res = await client.fetch<{ store: { id: string; region?: string } }>(
       '/v1/storage/stores/blob',
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody),
+        body: JSON.stringify({
+          name,
+          region,
+          access,
+          projectId,
+          version: '2',
+        }),
         accountId,
       }
     );
@@ -125,8 +133,8 @@ export default async function addStore(
 async function selectProject(
   client: Client,
   accountId: string
-): Promise<string> {
-  output.spinner('Fetching projects…', 1000);
+): Promise<string | null> {
+  output.spinner('Fetching projects...', 1000);
 
   const firstPage = await client.fetch<{
     projects: Project[];
@@ -142,7 +150,14 @@ async function selectProject(
     output.error(
       'No projects found. Create a project first before creating a blob store.'
     );
-    process.exit(1);
+    return null;
+  }
+
+  if (!client.stdin.isTTY) {
+    output.error(
+      'Missing required flag --project. Use --project <id-or-name> to specify the project in non-interactive mode.'
+    );
+    return null;
   }
 
   if (hasMoreProjects) {
@@ -162,7 +177,11 @@ async function selectProject(
         return true;
       },
     });
-    return selectedProject!.id;
+    if (!selectedProject) {
+      output.error('No project selected.');
+      return null;
+    }
+    return selectedProject.id;
   }
 
   const choices = projects
