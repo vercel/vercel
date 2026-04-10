@@ -203,7 +203,12 @@ export function buildRedirectsSuggestionFlags(
   options: { ensureYes?: boolean } = {}
 ): string[] {
   const after = getArgsAfterRedirectsSubcommand(fullArgs, subcommand);
-  const flagParts = after.filter(a => a.startsWith('-'));
+  const flagParts = after.filter(
+    a =>
+      a.startsWith('-') &&
+      !a.startsWith('--non-interactive') &&
+      a !== '--non-interactive'
+  );
   if (
     options.ensureYes !== false &&
     !flagParts.some(a => a === '--yes' || a === '-y')
@@ -211,4 +216,34 @@ export function buildRedirectsSuggestionFlags(
     flagParts.push('--yes');
   }
   return flagParts;
+}
+
+function getNonInteractiveEnvFromArgv(argv: string[]): '1' | '0' | undefined {
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i];
+    if (arg === '--non-interactive') {
+      const next = argv[i + 1];
+      if (next === 'false' || next === '0') return '0';
+      return '1';
+    }
+    if (arg.startsWith('--non-interactive=')) {
+      const value = arg.slice('--non-interactive='.length).toLowerCase();
+      if (value === 'false' || value === '0') return '0';
+      if (value === 'true' || value === '1') return '1';
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Builds a suggested redirect command with flags and env var prefix for non-interactive.
+ */
+export function buildRedirectCommand(
+  argv: string[],
+  commandTemplate: string
+): string {
+  const command = getCommandNamePlain(commandTemplate);
+  const nonInteractiveEnv = getNonInteractiveEnvFromArgv(argv);
+  if (!nonInteractiveEnv) return command;
+  return `VERCEL_NON_INTERACTIVE=${nonInteractiveEnv} ${command}`;
 }

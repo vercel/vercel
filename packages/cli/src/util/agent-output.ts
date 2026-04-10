@@ -84,8 +84,14 @@ export function buildCommandWithYes(
 ): string {
   const args = argv.slice(2);
   const hasYes = args.some(a => a === '--yes' || a === '-y');
-  const out = hasYes ? [...args] : [...args, '--yes'];
-  return `${pkgName} ${out.join(' ')}`;
+  const filtered = args.filter(
+    a => !a.startsWith('--non-interactive') && a !== '--non-interactive'
+  );
+  const out = hasYes ? [...filtered] : [...filtered, '--yes'];
+  const command = `${pkgName} ${out.join(' ')}`;
+  const nonInteractiveEnv = getNonInteractiveEnvFromArgv(argv);
+  if (!nonInteractiveEnv) return command;
+  return `VERCEL_NON_INTERACTIVE=${nonInteractiveEnv} ${command}`;
 }
 
 /** Global flags that should be preserved in suggested "next" commands (e.g. --cwd). */
@@ -259,7 +265,7 @@ export function getPreservedArgsForEnvAdd(argv: string[]): string[] {
 
 /**
  * Builds a suggested "env add" command with the given template and appends
- * preserved flags from argv (e.g. --cwd, --non-interactive) so the next command
+ * preserved flags from argv (e.g. --cwd) so the next command
  * can be run with the same context. Omits preserved flags that already appear
  * in the template (e.g. --yes) to avoid duplicates.
  */
@@ -285,9 +291,20 @@ export function buildEnvAddCommandWithPreservedArgs(
     }
     preserved = out;
   }
+  // Filter out --non-interactive (handled by env var prefix)
+  preserved = preserved.filter(
+    a => !a.startsWith('--non-interactive') && a !== '--non-interactive'
+  );
   const base = `${pkgName} ${commandTemplate}`;
-  if (preserved.length === 0) return base;
-  return `${base} ${preserved.join(' ')}`;
+  let command: string;
+  if (preserved.length === 0) {
+    command = base;
+  } else {
+    command = `${base} ${preserved.join(' ')}`;
+  }
+  const nonInteractiveEnv = getNonInteractiveEnvFromArgv(argv);
+  if (!nonInteractiveEnv) return command;
+  return `VERCEL_NON_INTERACTIVE=${nonInteractiveEnv} ${command}`;
 }
 
 /**
@@ -330,9 +347,20 @@ export function buildEnvRmCommandWithPreservedArgs(
   if (commandTemplate.includes('--yes')) {
     preserved = preserved.filter(a => a !== '--yes' && a !== '-y');
   }
+  // Filter out --non-interactive (handled by env var prefix)
+  preserved = preserved.filter(
+    a => !a.startsWith('--non-interactive') && a !== '--non-interactive'
+  );
   const base = `${pkgName} ${commandTemplate}`;
-  if (preserved.length === 0) return base;
-  return `${base} ${preserved.join(' ')}`;
+  let command: string;
+  if (preserved.length === 0) {
+    command = base;
+  } else {
+    command = `${base} ${preserved.join(' ')}`;
+  }
+  const nonInteractiveEnv = getNonInteractiveEnvFromArgv(argv);
+  if (!nonInteractiveEnv) return command;
+  return `VERCEL_NON_INTERACTIVE=${nonInteractiveEnv} ${command}`;
 }
 
 /**
@@ -375,9 +403,20 @@ export function buildEnvUpdateCommandWithPreservedArgs(
     }
     preserved = out;
   }
+  // Filter out --non-interactive (handled by env var prefix)
+  preserved = preserved.filter(
+    a => !a.startsWith('--non-interactive') && a !== '--non-interactive'
+  );
   const base = `${pkgName} ${commandTemplate}`;
-  if (preserved.length === 0) return base;
-  return `${base} ${preserved.join(' ')}`;
+  let command: string;
+  if (preserved.length === 0) {
+    command = base;
+  } else {
+    command = `${base} ${preserved.join(' ')}`;
+  }
+  const nonInteractiveEnv = getNonInteractiveEnvFromArgv(argv);
+  if (!nonInteractiveEnv) return command;
+  return `VERCEL_NON_INTERACTIVE=${nonInteractiveEnv} ${command}`;
 }
 
 /**
@@ -406,10 +445,20 @@ export function buildCommandWithScope(
     if (args[i].startsWith('--scope=') || args[i].startsWith('--team=')) {
       continue;
     }
+    // Skip --non-interactive (handled by env var prefix)
+    if (
+      args[i] === '--non-interactive' ||
+      args[i].startsWith('--non-interactive=')
+    ) {
+      continue;
+    }
     out.push(args[i]);
   }
   out.push('--scope', scopeSlug);
-  return `${pkgName} ${out.join(' ')}`;
+  const command = `${pkgName} ${out.join(' ')}`;
+  const nonInteractiveEnv = getNonInteractiveEnvFromArgv(argv);
+  if (!nonInteractiveEnv) return command;
+  return `VERCEL_NON_INTERACTIVE=${nonInteractiveEnv} ${command}`;
 }
 
 /**
