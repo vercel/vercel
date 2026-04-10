@@ -37,6 +37,10 @@ export default async function metrics(client: Client): Promise<number> {
     subArgs,
     COMMAND_CONFIG
   );
+  const positionalMetric =
+    subArgs[0] === 'query'
+      ? subArgs[1]
+      : (subArgs[0] ?? parsedArgs.flags['--metric']);
 
   const needHelp = parsedArgs.flags['--help'];
 
@@ -72,8 +76,8 @@ export default async function metrics(client: Client): Promise<number> {
         output.print(help(metricsCommand, { columns: client.stderr.columns }));
         return 0;
       }
-      // Show help if --metric is not provided (required for query)
-      if (!parsedArgs.flags['--metric']) {
+      // Show help if no metric was provided for the default query form.
+      if (!positionalMetric) {
         output.print(help(metricsCommand, { columns: client.stderr.columns }));
         return 2;
       }

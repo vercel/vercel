@@ -28,6 +28,9 @@ export default async function schema(
   }
 
   const flags = parsedArgs.flags;
+  const positionalArgs = parsedArgs.args.slice(1);
+  const positionalMetric =
+    positionalArgs[0] === 'schema' ? positionalArgs[1] : positionalArgs[0];
 
   // Validate output format
   const formatResult = validateJsonOutput(flags);
@@ -37,7 +40,7 @@ export default async function schema(
   }
   const jsonOutput = formatResult.jsonOutput;
 
-  const metric = flags['--metric'];
+  const metric = positionalMetric ?? flags['--metric'];
   telemetry.trackCliOptionMetric(metric);
   telemetry.trackCliOptionFormat(flags['--format']);
 
@@ -145,6 +148,8 @@ function formatMetricsTable(metrics: MetricDetail[]) {
 
     return {
       metric: metric.id,
+      description: metric.description,
+      unit: metric.unit,
       aggregations,
       extraDimensions,
     };
@@ -153,23 +158,31 @@ function formatMetricsTable(metrics: MetricDetail[]) {
   const hasExtraDimensions = rows.some(row => row.extraDimensions.length > 0);
 
   const tableHeaders = hasExtraDimensions
-    ? ['METRIC', 'AGGREGATIONS', 'DIMENSIONS']
-    : ['METRIC', 'AGGREGATIONS'];
+    ? ['Metric', 'Description', 'Unit', 'Aggregations', 'Dimensions']
+    : ['Metric', 'Description', 'Unit', 'Aggregations'];
   const tableRows = rows.map(row =>
     hasExtraDimensions
-      ? [row.metric, row.aggregations, row.extraDimensions.join(', ') || '—']
-      : [row.metric, row.aggregations]
+      ? [
+          row.metric,
+          row.description,
+          row.unit,
+          row.aggregations,
+          row.extraDimensions.join(', ') || '—',
+        ]
+      : [row.metric, row.description, row.unit, row.aggregations]
   );
 
   const sharedDimensionsLine =
     sharedDimensions.length > 0
-      ? `Dimensions (shared by all ${plural('metric', metrics.length, true)}):\n  ${sharedDimensions.join(', ')}`
+      ? metrics.length === 1
+        ? `Dimensions:\n  ${sharedDimensions.join(', ')}`
+        : `Shared dimensions:\n  ${sharedDimensions.join(', ')}`
       : null;
 
   const table = indent(
     formatTable(
       tableHeaders,
-      hasExtraDimensions ? ['l', 'l', 'l'] : ['l', 'l'],
+      hasExtraDimensions ? ['l', 'l', 'l', 'l', 'l'] : ['l', 'l', 'l', 'l'],
       [{ rows: tableRows }]
     ),
     1

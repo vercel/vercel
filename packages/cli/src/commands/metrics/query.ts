@@ -147,6 +147,9 @@ export default async function query(
   }
 
   const flags = parsedArgs.flags;
+  const positionalArgs = parsedArgs.args.slice(1);
+  const positionalMetric =
+    positionalArgs[0] === 'query' ? positionalArgs[1] : positionalArgs[0];
 
   // Validate output format
   const formatResult = validateJsonOutput(flags);
@@ -157,7 +160,7 @@ export default async function query(
   const jsonOutput = formatResult.jsonOutput;
 
   // Extract raw flag values
-  const metricFlag = flags['--metric'];
+  const metricFlag = positionalMetric ?? flags['--metric'];
   const aggregationFlag = flags['--aggregation'];
   const groupBy = flags['--group-by'] ?? [];
   const limit = flags['--limit'];

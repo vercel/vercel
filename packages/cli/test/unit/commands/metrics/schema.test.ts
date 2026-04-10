@@ -83,14 +83,20 @@ describe('metrics schema v2', () => {
 
     expect(exitCode).toBe(0);
     const output = client.stderr.getFullOutput();
-    expect(output).toContain('Dimensions (shared by all 2 metrics):');
+    expect(output).toContain('Shared dimensions:');
     expect(output).toContain('route, http_status');
-    expect(output).toContain('METRIC');
-    expect(output).toContain('AGGREGATIONS');
-    expect(output).toContain('DIMENSIONS');
+    expect(output).toContain('Metric');
+    expect(output).toContain('Description');
+    expect(output).toContain('Unit');
+    expect(output).toContain('Aggregations');
+    expect(output).toContain('Dimensions');
     expect(output).toContain('vercel.edge_requests.count');
+    expect(output).toContain('Count');
+    expect(output).toContain('count');
     expect(output).toContain('sum (default)');
     expect(output).toContain('vercel.edge_requests.request_duration_ms');
+    expect(output).toContain('Request Duration');
+    expect(output).toContain('milliseconds');
     expect(output).toContain('avg (default), p95');
     expect(output).toContain('+cache_result');
     expect(output).toContain('—');
@@ -132,11 +138,17 @@ describe('metrics schema v2', () => {
 
     expect(exitCode).toBe(0);
     const output = client.stderr.getFullOutput();
-    expect(output).toContain('Dimensions (shared by all 2 metrics):');
+    expect(output).toContain('Shared dimensions:');
     expect(output).toContain('route, http_status');
-    expect(output).toContain('METRIC');
-    expect(output).toContain('AGGREGATIONS');
-    expect(output).not.toContain('DIMENSIONS');
+    expect(output).toContain('Metric');
+    expect(output).toContain('Description');
+    expect(output).toContain('Unit');
+    expect(output).toContain('Aggregations');
+    expect(output).not.toContain('Dimensions');
+    expect(output).toContain('Count');
+    expect(output).toContain('Request Duration');
+    expect(output).toContain('count');
+    expect(output).toContain('milliseconds');
     expect(output).not.toContain('—');
   });
 

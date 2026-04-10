@@ -124,14 +124,29 @@ describe('metrics query v2', () => {
     mockTeamScope();
   });
 
-  describe('missing --metric', () => {
+  describe('missing metric', () => {
     it('should return error with schema suggestion', async () => {
       client.setArgv('metrics');
 
       const exitCode = await query(client, new MockTelemetry());
 
       expect(exitCode).toBe(1);
-      expect(client.stderr.getFullOutput()).toContain('Missing required flag');
+      expect(client.stderr.getFullOutput()).toContain(
+        'Missing required metric'
+      );
+    });
+  });
+
+  describe('positional metric', () => {
+    it('should accept a positional metric id', async () => {
+      mockMetricDetail();
+      mockApiSuccess();
+      client.setArgv('metrics', 'vercel.edge_requests.count', '--since', '1h');
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      expect(postedBody?.metric).toBe('vercel.edge_requests.count');
     });
   });
 
