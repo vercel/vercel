@@ -20,6 +20,11 @@ import {
   validateTimeBound,
   validateTimeOrder,
 } from '../../util/command-validation';
+import {
+  buildCommandWithGlobalFlags,
+  outputAgentError,
+} from '../../util/agent-output';
+import { AGENT_REASON } from '../../util/agent-output-constants';
 
 interface ListFlags {
   '--type'?: string[];
@@ -92,6 +97,42 @@ function handleApiError(
       : err.status >= 500
         ? `The alerts endpoint failed on the server (${err.status}). Re-run with --debug and share the x-vercel-id from the failed request.`
         : err.serverMessage || `API error (${err.status}).`;
+
+  const reason =
+    err.status === 401
+      ? 'not_authorized'
+      : err.status === 403
+        ? 'forbidden'
+        : err.status === 404
+          ? AGENT_REASON.NOT_FOUND
+          : err.status === 429
+            ? 'rate_limited'
+            : AGENT_REASON.API_ERROR;
+
+  outputAgentError(
+    client,
+    {
+      status: 'error',
+      reason,
+      message,
+      ...(err.status === 401 || err.status === 403
+        ? {
+            hint: 'Confirm team scope; use --scope <team-slug> if alerts belong to another team.',
+            next: [
+              {
+                command: buildCommandWithGlobalFlags(client.argv, 'whoami'),
+                when: 'See current user and team',
+              },
+              {
+                command: buildCommandWithGlobalFlags(client.argv, 'alerts'),
+                when: 'Retry listing alerts after fixing scope or permissions',
+              },
+            ],
+          }
+        : {}),
+    },
+    1
+  );
 
   return outputError(client, jsonOutput, err.code || 'API_ERROR', message);
 }
