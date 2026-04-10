@@ -1834,7 +1834,7 @@ describe('handlerFunction validation', () => {
         config: { handlerFunction: 'flask_app', framework: 'flask' },
         repoRootPath: mockWorkPath,
       })
-    ).rejects.toThrow(/Could not find a top-level "flask_app" in "app\.py"/);
+    ).rejects.toThrow(/Handler function "flask_app" not found in app\.py/);
   });
 
   it('does not set __VC_HANDLER_FUNC_NAME when handlerFunction is not configured', async () => {

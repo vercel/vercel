@@ -3,10 +3,7 @@ import { join, posix as pathPosix } from 'path';
 import { PythonFramework, NowBuildError } from '@vercel/build-utils';
 import { debug } from '@vercel/build-utils';
 import { readConfigFile } from '@vercel/build-utils';
-import {
-  findAppOrHandler,
-  containsTopLevelCallable,
-} from '@vercel/python-analysis';
+import { findAppOrHandler } from '@vercel/python-analysis';
 
 export interface PythonEntrypoint {
   /** Path to the entrypoint file (e.g. "src/app.py"). */
@@ -227,19 +224,8 @@ export async function detectPythonEntrypoint(
       ? configEntryFile
       : `${configEntryFile}.py`;
 
-    let varName: string | null = null;
-    if (configEntryVar) {
-      const content = await fs.promises.readFile(
-        join(workPath, entrypoint),
-        'utf-8'
-      );
-      const found = await containsTopLevelCallable(content, configEntryVar);
-      if (found) {
-        varName = configEntryVar;
-      }
-    } else {
-      varName = await checkEntrypoint(workPath, entrypoint);
-    }
+    let varName: string | null =
+      configEntryVar ?? (await checkEntrypoint(workPath, entrypoint));
 
     if (!varName) {
       const isSpecialService =
