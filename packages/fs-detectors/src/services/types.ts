@@ -63,25 +63,24 @@ export interface ResolvedServicesResult {
   warnings: ServiceDetectionWarning[];
 }
 
-export interface InferredService
-  extends Pick<
-    Service,
-    | 'name'
-    | 'type'
-    | 'workspace'
-    | 'entrypoint'
-    | 'framework'
-    | 'runtime'
-    | 'routePrefix'
-    | 'schedule'
-    | 'topics'
-    | 'consumer'
-  > {}
+export interface InferredService {
+  name: Service['name'];
+  type: Service['type'];
+  workspace: Service['workspace'];
+  entrypoint?: Service['entrypoint'];
+  framework?: Service['framework'];
+  runtime?: Service['runtime'];
+  routePrefix?: Service['routePrefix'];
+  schedule?: string;
+  topics?: string[];
+  consumer?: string;
+}
 
 export interface InferredServicesResult {
-  source: 'layout' | 'procfile';
+  source: 'layout' | 'procfile' | 'railway';
   config: ServicesConfig;
   services: InferredService[];
+  errors: ServiceDetectionError[];
   warnings: ServiceDetectionWarning[];
 }
 

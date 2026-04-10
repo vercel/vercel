@@ -3,6 +3,7 @@ import { stat } from 'fs/promises';
 import { join, dirname } from 'path';
 import { pathExists } from 'fs-extra';
 import { getBuildableServices } from './detect-services';
+import { isVercelTomlEnabled } from '../is-vercel-toml-enabled';
 import output from '../../output-manager';
 
 /**
@@ -39,9 +40,11 @@ export async function findProjectRoot(
 
     const hasVercelDir = await pathExists(join(dir, '.vercel'));
     const hasVercelJson = await pathExists(join(dir, 'vercel.json'));
+    const hasVercelToml =
+      isVercelTomlEnabled() && (await pathExists(join(dir, 'vercel.toml')));
     const hasGit = await pathExists(join(dir, '.git'));
 
-    if (hasVercelDir || hasVercelJson || hasGit) {
+    if (hasVercelDir || hasVercelJson || hasVercelToml || hasGit) {
       return dir;
     }
 
