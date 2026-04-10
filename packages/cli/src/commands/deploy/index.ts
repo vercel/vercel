@@ -2128,40 +2128,49 @@ async function handleFailedCheckRuns(
       message,
     });
 
-    const failedCheckRunsWithLogs = await Promise.all(
-      failedRuns.map(async run => {
-        let logs: { level: string; timestamp: number; message: string }[] = [];
-        try {
-          logs = await getDeploymentCheckRunLogs(client, deployment.id, run.id);
-        } catch {
-          // best-effort: if log fetching fails, continue without logs
-        }
-        return {
-          id: run.id,
-          name: run.name,
-          conclusion: run.conclusion,
-          source: run.source,
-          url: getCheckRunUrl(run),
-          logs,
-        };
-      })
-    );
+    let payload;
+    if (client.nonInteractive) {
+      const failedCheckRunsWithLogs = await Promise.all(
+        failedRuns.map(async run => {
+          let logs: { level: string; timestamp: number; message: string }[] =
+            [];
+          try {
+            logs = await getDeploymentCheckRunLogs(
+              client,
+              deployment.id,
+              run.id
+            );
+          } catch {
+            // best-effort: if log fetching fails, continue without logs
+          }
+          return {
+            id: run.id,
+            name: run.name,
+            conclusion: run.conclusion,
+            source: run.source,
+            url: getCheckRunUrl(run),
+            logs,
+          };
+        })
+      );
 
-    const payload = client.nonInteractive
-      ? {
-          status: AGENT_STATUS.ERROR,
-          reason: 'checks_failed',
-          message,
-          deployment: deploymentJson,
-          failedCheckRuns: failedCheckRunsWithLogs,
-          next: [
-            {
-              command: getCommandNameWithGlobalFlags('deploy', client.argv),
-              when: 'retry deploy after fixing check failures',
-            },
-          ],
-        }
-      : deploymentJson;
+      payload = {
+        status: AGENT_STATUS.ERROR,
+        reason: 'checks_failed',
+        message,
+        deployment: deploymentJson,
+        failedCheckRuns: failedCheckRunsWithLogs,
+        next: [
+          {
+            command: getCommandNameWithGlobalFlags('deploy', client.argv),
+            when: 'retry deploy after fixing check failures',
+          },
+        ],
+      };
+    } else {
+      payload = deploymentJson;
+    }
+
     client.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
   } else {
     output.error(message);
