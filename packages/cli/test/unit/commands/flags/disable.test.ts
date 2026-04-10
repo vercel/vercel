@@ -155,7 +155,7 @@ describe('flags disable', () => {
     expect(parsed.next.length).toBeGreaterThan(0);
     expect(parsed.next[0].command).toContain('flags disable');
     expect(parsed.next[0].command).toContain('--cwd');
-    expect(parsed.next[0].command).toContain('--non-interactive');
+    expect(parsed.next[0].command).toContain('VERCEL_NON_INTERACTIVE=1');
     exitSpy.mockRestore();
     client.nonInteractive = false;
   });
@@ -582,7 +582,7 @@ describe('flags disable', () => {
     expect(parsed.next[0].command).toContain(testFlags[0].slug);
     expect(parsed.next[0].command).toContain('--environment');
     expect(parsed.next[0].command).toContain('--cwd');
-    expect(parsed.next[0].command).toContain('--non-interactive');
+    expect(parsed.next[0].command).toContain('VERCEL_NON_INTERACTIVE=1');
     exitSpy.mockRestore();
     client.nonInteractive = false;
   });
@@ -618,7 +618,7 @@ describe('flags disable', () => {
     expect(parsed.next[0].command).toContain(testFlags[0].slug);
     expect(parsed.next[0].command).toContain('--environment');
     expect(parsed.next[0].command).toContain('--cwd');
-    expect(parsed.next[0].command).toContain('--non-interactive');
+    expect(parsed.next[0].command).toContain('VERCEL_NON_INTERACTIVE=1');
     exitSpy.mockRestore();
     client.nonInteractive = false;
   });

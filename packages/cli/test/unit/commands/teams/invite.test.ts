@@ -95,7 +95,7 @@ describe('teams invite', () => {
       expect(payload.next[0].command).toContain('<slug>');
       expect(payload.next[0].command).toContain('--cwd');
       expect(payload.next[0].command).toContain('/tmp/proj');
-      expect(payload.next[0].command).toContain('--non-interactive');
+      expect(payload.next[0].command).toContain('VERCEL_NON_INTERACTIVE=1');
 
       logSpy.mockRestore();
       exitSpy.mockRestore();

@@ -217,7 +217,7 @@ describe('redirects remove', () => {
       expect(payload.message).toContain('Missing required argument: source');
       expect(payload.next[0].command).toContain('redirects remove <source>');
       expect(payload.next[0].command).toContain('--cwd=/tmp/project');
-      expect(payload.next[0].command).toContain('--non-interactive');
+      expect(payload.next[0].command).toContain('VERCEL_NON_INTERACTIVE=1');
       expect(payload.next[0].command).toContain('--yes');
 
       logSpy.mockRestore();
