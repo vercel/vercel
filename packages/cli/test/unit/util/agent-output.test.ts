@@ -445,12 +445,7 @@ describe('getGlobalFlagsFromArgv', () => {
       'neon',
       '--yes',
     ];
-    expect(getGlobalFlagsFromArgv(argv)).toEqual([
-      '--cwd',
-      '/tmp/p',
-      '--non-interactive',
-      '--yes',
-    ]);
+    expect(getGlobalFlagsFromArgv(argv)).toEqual(['--cwd', '/tmp/p', '--yes']);
   });
 });
 
@@ -475,7 +470,7 @@ describe('buildCommandWithGlobalFlags', () => {
         { prependGlobalFlags: true, excludeFlags: ['--yes', '-y'] }
       )
     ).toBe(
-      'vercel --cwd /tmp/p --non-interactive integration-resource remove r1 --disconnect-all --yes'
+      'VERCEL_NON_INTERACTIVE=1 vercel --cwd /tmp/p integration-resource remove r1 --disconnect-all --yes'
     );
   });
 });

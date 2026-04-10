@@ -200,10 +200,10 @@ describe('integration', () => {
       });
       expect(payload.message).toMatch(/integration slug/i);
       expect(payload.next?.[0]?.command).toMatch(
-        /vercel --non-interactive --cwd \/tmp\/example integration update neon --projects all$/
+        /VERCEL_NON_INTERACTIVE=1 vercel --cwd \/tmp\/example integration update neon --projects all$/
       );
       expect(payload.next?.[1]?.command).toBe(
-        'vercel --non-interactive --cwd /tmp/example integration installations'
+        'VERCEL_NON_INTERACTIVE=1 vercel --cwd /tmp/example integration installations'
       );
     });
 
@@ -227,7 +227,7 @@ describe('integration', () => {
       expect(payload.message).toMatch(/immediately after `update`/i);
       expect(payload.hint).toMatch(/integration name/i);
       expect(payload.next?.[0]?.command).toMatch(
-        /vercel --cwd \/tmp\/example --non-interactive integration update neon --projects all$/
+        /VERCEL_NON_INTERACTIVE=1 vercel --cwd \/tmp\/example integration update neon --projects all$/
       );
     });
 

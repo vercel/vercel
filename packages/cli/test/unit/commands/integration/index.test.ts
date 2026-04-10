@@ -69,10 +69,10 @@ describe('integration', () => {
     });
     expect(payload.message).toMatch(/Please specify a valid subcommand/);
     expect(payload.next?.[0]?.command).toMatch(
-      /vercel --non-interactive --cwd \/tmp\/example integration --help$/
+      /VERCEL_NON_INTERACTIVE=1 vercel --cwd \/tmp\/example integration --help$/
     );
     expect(payload.next?.[1]?.command).toBe(
-      'vercel --non-interactive --cwd /tmp/example integration installations'
+      'VERCEL_NON_INTERACTIVE=1 vercel --cwd /tmp/example integration installations'
     );
   });
 
@@ -90,7 +90,7 @@ describe('integration', () => {
     });
     expect(payload.message).toContain('typo');
     expect(payload.next?.[0]?.command).toMatch(
-      /vercel --non-interactive integration --help$/
+      /VERCEL_NON_INTERACTIVE=1 vercel integration --help$/
     );
     expect(payload.next).toHaveLength(1);
   });
