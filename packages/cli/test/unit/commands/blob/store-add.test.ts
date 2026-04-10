@@ -2,41 +2,51 @@ import { describe, beforeEach, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import addStore from '../../../../src/commands/blob/store-add';
 import * as linkModule from '../../../../src/util/projects/link';
-import * as connectResourceModule from '../../../../src/util/integration-resource/connect-resource-to-project';
 import output from '../../../../src/output-manager';
 
 // Mock the external dependencies
 vi.mock('../../../../src/util/projects/link');
-vi.mock(
-  '../../../../src/util/integration-resource/connect-resource-to-project'
-);
 vi.mock('../../../../src/output-manager');
 
 const mockedGetLinkedProject = vi.mocked(linkModule.getLinkedProject);
-const mockedConnectResourceToProject = vi.mocked(
-  connectResourceModule.connectResourceToProject
-);
 const mockedOutput = vi.mocked(output);
 
 describe('blob store add', () => {
   const textInputMock = vi.fn().mockResolvedValue('test-store-name');
-  const confirmInputMock = vi.fn().mockResolvedValue(true);
-  const checkboxInputMock = vi
-    .fn()
-    .mockResolvedValue(['production', 'preview', 'development']);
+  const selectInputMock = vi.fn().mockResolvedValue('proj_selected');
 
   beforeEach(() => {
     vi.clearAllMocks();
     client.reset();
 
-    // Default successful mocks
-    client.fetch = vi.fn().mockResolvedValue({
-      store: { id: 'store_test123' },
+    // Default: API creates the store
+    client.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url === '/v9/projects?limit=100') {
+        return Promise.resolve({
+          projects: [
+            {
+              id: 'proj_123',
+              name: 'my-project',
+              updatedAt: Date.now(),
+              createdAt: Date.now(),
+            },
+            {
+              id: 'proj_456',
+              name: 'other-project',
+              updatedAt: Date.now() - 1000,
+              createdAt: Date.now() - 1000,
+            },
+          ],
+          pagination: { count: 2, next: null },
+        });
+      }
+      return Promise.resolve({
+        store: { id: 'store_test123' },
+      });
     });
 
     client.input.text = textInputMock;
-    client.input.confirm = confirmInputMock;
-    client.input.checkbox = checkboxInputMock;
+    client.input.select = selectInputMock;
 
     // Default linked project mock
     mockedGetLinkedProject.mockResolvedValue({
@@ -50,17 +60,21 @@ describe('blob store add', () => {
       },
       org: { id: 'org_123', slug: 'my-org', type: 'user' },
     });
-
-    mockedConnectResourceToProject.mockResolvedValue(undefined);
   });
 
   describe('successful store creation', () => {
-    it('should create store with provided name and track telemetry', async () => {
+    it('should create store with provided name and selected project', async () => {
       client.setArgv('blob', 'store', 'add', 'my-test-store');
 
       const exitCode = await addStore(client, ['my-test-store']);
 
       expect(exitCode).toBe(0);
+      expect(selectInputMock).toHaveBeenCalledWith({
+        message: 'Select a project to link to the blob store:',
+        choices: expect.arrayContaining([
+          expect.objectContaining({ name: 'my-project', value: 'proj_123' }),
+        ]),
+      });
       expect(client.fetch).toHaveBeenCalledWith('/v1/storage/stores/blob', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -68,6 +82,8 @@ describe('blob store add', () => {
           name: 'my-test-store',
           region: 'iad1',
           access: 'public',
+          projectId: 'proj_selected',
+          version: '2',
         }),
         accountId: 'org_123',
       });
@@ -90,7 +106,7 @@ describe('blob store add', () => {
       ]);
     });
 
-    it('should create store with specified region and track telemetry', async () => {
+    it('should create store with specified region', async () => {
       client.setArgv(
         'blob',
         'store',
@@ -99,8 +115,14 @@ describe('blob store add', () => {
         '--region',
         'sfo1'
       );
-      client.fetch = vi.fn().mockResolvedValue({
-        store: { id: 'store_test123', region: 'sfo1' },
+      const originalFetch = client.fetch;
+      client.fetch = vi.fn().mockImplementation((url: string) => {
+        if (url === '/v9/projects?limit=100') {
+          return (originalFetch as any)(url);
+        }
+        return Promise.resolve({
+          store: { id: 'store_test123', region: 'sfo1' },
+        });
       });
 
       const exitCode = await addStore(client, [
@@ -117,6 +139,8 @@ describe('blob store add', () => {
           name: 'my-test-store',
           region: 'sfo1',
           access: 'public',
+          projectId: 'proj_selected',
+          version: '2',
         }),
         accountId: 'org_123',
       });
@@ -149,6 +173,8 @@ describe('blob store add', () => {
           name: 'default-region-store',
           region: 'iad1',
           access: 'public',
+          projectId: 'proj_selected',
+          version: '2',
         }),
         accountId: 'org_123',
       });
@@ -163,8 +189,14 @@ describe('blob store add', () => {
 
     it('should display region in success message when API returns region', async () => {
       client.setArgv('blob', 'store', 'add', 'region-display-store');
-      client.fetch = vi.fn().mockResolvedValue({
-        store: { id: 'store_test123', region: 'iad1' },
+      const originalFetch = client.fetch;
+      client.fetch = vi.fn().mockImplementation((url: string) => {
+        if (url === '/v9/projects?limit=100') {
+          return (originalFetch as any)(url);
+        }
+        return Promise.resolve({
+          store: { id: 'store_test123', region: 'iad1' },
+        });
       });
 
       const exitCode = await addStore(client, ['region-display-store']);
@@ -192,114 +224,188 @@ describe('blob store add', () => {
           name: 'test-store-name',
           region: 'iad1',
           access: 'public',
+          projectId: 'proj_selected',
+          version: '2',
         }),
         accountId: 'org_123',
       });
     });
   });
 
-  describe('project linking', () => {
-    it('should link store to project when confirmed', async () => {
+  describe('project selection', () => {
+    it('should show project select when projects fit on one page', async () => {
       const exitCode = await addStore(client, ['test-store']);
 
       expect(exitCode).toBe(0);
-      expect(client.input.confirm).toHaveBeenCalledWith(
-        'Would you like to link this blob store to my-project?',
-        true
-      );
-      expect(client.input.checkbox).toHaveBeenCalledWith({
-        message: 'Select environments',
+      expect(selectInputMock).toHaveBeenCalledWith({
+        message: 'Select a project to link to the blob store:',
         choices: [
-          { name: 'Production', value: 'production', checked: true },
-          { name: 'Preview', value: 'preview', checked: true },
-          { name: 'Development', value: 'development', checked: true },
+          { name: 'my-project', value: 'proj_123' },
+          { name: 'other-project', value: 'proj_456' },
         ],
       });
-      expect(mockedConnectResourceToProject).toHaveBeenCalledWith(
-        client,
-        'proj_123',
-        'store_test123',
-        ['production', 'preview', 'development'],
-        { accountId: 'org_123' }
-      );
-      expect(mockedOutput.success).toHaveBeenCalledWith(
-        'Blob store created: test-store (store_test123)'
-      );
-      expect(mockedOutput.success).toHaveBeenCalledWith(
-        'Blob store test-store linked to my-project. Make sure to pull the new environment variables using `vercel env pull`'
-      );
     });
 
-    it('should not link store when user declines', async () => {
-      client.input.confirm = vi.fn().mockResolvedValue(false);
+    it('should sort projects by updatedAt (newest first)', async () => {
+      client.fetch = vi.fn().mockImplementation((url: string) => {
+        if (url === '/v9/projects?limit=100') {
+          return Promise.resolve({
+            projects: [
+              {
+                id: 'proj_old',
+                name: 'old-project',
+                updatedAt: 1000,
+                createdAt: 1000,
+              },
+              {
+                id: 'proj_new',
+                name: 'new-project',
+                updatedAt: 3000,
+                createdAt: 3000,
+              },
+              {
+                id: 'proj_mid',
+                name: 'mid-project',
+                updatedAt: 2000,
+                createdAt: 2000,
+              },
+            ],
+            pagination: { count: 3, next: null },
+          });
+        }
+        return Promise.resolve({ store: { id: 'store_test123' } });
+      });
+
+      await addStore(client, ['test-store']);
+
+      expect(selectInputMock).toHaveBeenCalledWith({
+        message: 'Select a project to link to the blob store:',
+        choices: [
+          { name: 'new-project', value: 'proj_new' },
+          { name: 'mid-project', value: 'proj_mid' },
+          { name: 'old-project', value: 'proj_old' },
+        ],
+      });
+    });
+
+    it('should use text input when there are more projects than one page', async () => {
+      const projectForValidation = {
+        id: 'proj_typed',
+        name: 'typed-project',
+        updatedAt: Date.now(),
+        createdAt: Date.now(),
+      };
+
+      client.fetch = vi.fn().mockImplementation((url: string) => {
+        if (url === '/v9/projects?limit=100') {
+          return Promise.resolve({
+            projects: [
+              {
+                id: 'proj_1',
+                name: 'project-1',
+                updatedAt: Date.now(),
+                createdAt: Date.now(),
+              },
+            ],
+            pagination: { count: 100, next: 12345 },
+          });
+        }
+        if (
+          url ===
+          `/v9/projects/${encodeURIComponent('typed-project')}`
+        ) {
+          return Promise.resolve(projectForValidation);
+        }
+        return Promise.resolve({ store: { id: 'store_test123' } });
+      });
+
+      // Mock text input to simulate user typing a project name
+      let validateFn: ((val: string) => Promise<true | string>) | undefined;
+      client.input.text = vi.fn().mockImplementation(async opts => {
+        if (opts.message.includes('project')) {
+          validateFn = opts.validate;
+          // Simulate calling validate with the project name
+          await opts.validate('typed-project');
+          return 'typed-project';
+        }
+        return 'test-store-name';
+      });
 
       const exitCode = await addStore(client, ['test-store']);
 
       expect(exitCode).toBe(0);
-      expect(client.input.confirm).toHaveBeenCalledWith(
-        'Would you like to link this blob store to my-project?',
-        true
-      );
-      expect(client.input.checkbox).not.toHaveBeenCalled();
-      expect(mockedConnectResourceToProject).not.toHaveBeenCalled();
+      expect(selectInputMock).not.toHaveBeenCalled();
     });
 
-    it('should handle linking with selected environments', async () => {
-      client.input.checkbox = vi.fn().mockResolvedValue(['production']);
-
-      const exitCode = await addStore(client, ['prod-store']);
-
-      expect(exitCode).toBe(0);
-      expect(mockedConnectResourceToProject).toHaveBeenCalledWith(
-        client,
-        'proj_123',
-        'store_test123',
-        ['production'],
-        { accountId: 'org_123' }
-      );
-    });
-
-    it('should skip linking when project is not linked', async () => {
-      mockedGetLinkedProject.mockResolvedValue({
-        org: null,
-        project: null,
-        status: 'not_linked',
+    it('should exit when no projects are found', async () => {
+      client.fetch = vi.fn().mockImplementation((url: string) => {
+        if (url === '/v9/projects?limit=100') {
+          return Promise.resolve({
+            projects: [],
+            pagination: { count: 0, next: null },
+          });
+        }
+        return Promise.resolve({ store: { id: 'store_test123' } });
       });
 
-      const exitCode = await addStore(client, ['standalone-store']);
+      const mockExit = vi
+        .spyOn(process, 'exit')
+        .mockImplementation(() => undefined as never);
+
+      await addStore(client, ['test-store']);
+
+      expect(mockedOutput.error).toHaveBeenCalledWith(
+        'No projects found. Create a project first before creating a blob store.'
+      );
+      expect(mockExit).toHaveBeenCalledWith(1);
+      mockExit.mockRestore();
+    });
+
+    it('should pass projectId and version in the API request', async () => {
+      selectInputMock.mockResolvedValue('proj_456');
+
+      const exitCode = await addStore(client, ['test-store']);
 
       expect(exitCode).toBe(0);
       expect(client.fetch).toHaveBeenCalledWith('/v1/storage/stores/blob', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: 'standalone-store',
+          name: 'test-store',
           region: 'iad1',
           access: 'public',
+          projectId: 'proj_456',
+          version: '2',
         }),
-        accountId: undefined,
+        accountId: 'org_123',
       });
-      expect(client.input.confirm).not.toHaveBeenCalled();
-      expect(mockedConnectResourceToProject).not.toHaveBeenCalled();
     });
   });
 
   describe('error cases', () => {
     it('should return 1 when argument parsing fails', async () => {
-      const parseError = new Error('Invalid argument');
-      vi.doMock('../../../../src/util/get-args', () => ({
-        parseArguments: vi.fn().mockImplementation(() => {
-          throw parseError;
-        }),
-      }));
-
       const exitCode = await addStore(client, ['--invalid-flag']);
       expect(exitCode).toBe(1);
     });
 
     it('should return 1 when store creation fails', async () => {
       const apiError = new Error('Store creation failed');
-      client.fetch = vi.fn().mockRejectedValue(apiError);
+      client.fetch = vi.fn().mockImplementation((url: string) => {
+        if (url === '/v9/projects?limit=100') {
+          return Promise.resolve({
+            projects: [
+              {
+                id: 'proj_123',
+                name: 'my-project',
+                updatedAt: Date.now(),
+                createdAt: Date.now(),
+              },
+            ],
+            pagination: { count: 1, next: null },
+          });
+        }
+        return Promise.reject(apiError);
+      });
 
       const exitCode = await addStore(client, ['test-store']);
 
@@ -312,28 +418,27 @@ describe('blob store add', () => {
 
     it('should handle API errors gracefully', async () => {
       const apiError = new Error('Network error');
-      client.fetch = vi.fn().mockRejectedValue(apiError);
+      client.fetch = vi.fn().mockImplementation((url: string) => {
+        if (url === '/v9/projects?limit=100') {
+          return Promise.resolve({
+            projects: [
+              {
+                id: 'proj_123',
+                name: 'my-project',
+                updatedAt: Date.now(),
+                createdAt: Date.now(),
+              },
+            ],
+            pagination: { count: 1, next: null },
+          });
+        }
+        return Promise.reject(apiError);
+      });
 
       const exitCode = await addStore(client, ['failing-store']);
 
       expect(exitCode).toBe(1);
       expect(mockedOutput.success).not.toHaveBeenCalled();
-    });
-
-    it('should handle linking errors after store creation', async () => {
-      const linkError = new Error('Linking failed');
-      mockedConnectResourceToProject.mockRejectedValue(linkError);
-
-      // This should still succeed even if linking fails
-      await expect(addStore(client, ['test-store'])).rejects.toThrow(
-        'Linking failed'
-      );
-
-      // Store should still be created successfully
-      expect(client.fetch).toHaveBeenCalled();
-      expect(mockedOutput.success).toHaveBeenCalledWith(
-        'Blob store created: test-store (store_test123)'
-      );
     });
   });
 
@@ -385,36 +490,22 @@ describe('blob store add', () => {
           name: 'linked-store',
           region: 'iad1',
           access: 'public',
+          projectId: 'proj_selected',
+          version: '2',
         }),
         accountId: 'org_123',
       });
     });
 
-    it('should not include accountId when project is not linked', async () => {
-      mockedGetLinkedProject.mockResolvedValue({
-        org: null,
-        project: null,
-        status: 'not_linked',
-      });
-
-      const exitCode = await addStore(client, ['unlinked-store']);
-
-      expect(exitCode).toBe(0);
-      expect(client.fetch).toHaveBeenCalledWith('/v1/storage/stores/blob', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: 'unlinked-store',
-          region: 'iad1',
-          access: 'public',
-        }),
-        accountId: undefined,
-      });
-    });
-
     it('should handle different store IDs from API response', async () => {
-      client.fetch = vi.fn().mockResolvedValue({
-        store: { id: 'store_custom_id_456' },
+      const originalFetch = client.fetch;
+      client.fetch = vi.fn().mockImplementation((url: string) => {
+        if (url === '/v9/projects?limit=100') {
+          return (originalFetch as any)(url);
+        }
+        return Promise.resolve({
+          store: { id: 'store_custom_id_456' },
+        });
       });
 
       const exitCode = await addStore(client, ['custom-store']);
@@ -447,28 +538,6 @@ describe('blob store add', () => {
         true
       );
     });
-
-    it('should show correct confirmation message with project name', async () => {
-      mockedGetLinkedProject.mockResolvedValue({
-        status: 'linked',
-        project: {
-          id: 'proj_456',
-          name: 'different-project',
-          accountId: 'org_456',
-          updatedAt: Date.now(),
-          createdAt: Date.now(),
-        },
-        org: { id: 'org_456', slug: 'different-org', type: 'user' },
-      });
-
-      const exitCode = await addStore(client, ['confirmation-test']);
-
-      expect(exitCode).toBe(0);
-      expect(client.input.confirm).toHaveBeenCalledWith(
-        'Would you like to link this blob store to different-project?',
-        true
-      );
-    });
   });
 
   describe('spinner and output behavior', () => {
@@ -485,18 +554,24 @@ describe('blob store add', () => {
       );
     });
 
-    it('should show linking spinner when connecting to project', async () => {
-      const exitCode = await addStore(client, ['link-spinner-test']);
-
-      expect(exitCode).toBe(0);
-      expect(mockedOutput.spinner).toHaveBeenCalledWith(
-        'Connecting link-spinner-test to my-project...'
-      );
-    });
-
     it('should not stop spinner on creation error', async () => {
       const apiError = new Error('Creation failed');
-      client.fetch = vi.fn().mockRejectedValue(apiError);
+      client.fetch = vi.fn().mockImplementation((url: string) => {
+        if (url === '/v9/projects?limit=100') {
+          return Promise.resolve({
+            projects: [
+              {
+                id: 'proj_123',
+                name: 'my-project',
+                updatedAt: Date.now(),
+                createdAt: Date.now(),
+              },
+            ],
+            pagination: { count: 1, next: null },
+          });
+        }
+        return Promise.reject(apiError);
+      });
 
       const exitCode = await addStore(client, ['error-test']);
 

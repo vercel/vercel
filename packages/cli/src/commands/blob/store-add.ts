@@ -1,15 +1,16 @@
 import type Client from '../../util/client';
+import type { Project } from '@vercel-internals/types';
 import output from '../../output-manager';
 import { getLinkedProject } from '../../util/projects/link';
-import { connectResourceToProject } from '../../util/integration-resource/connect-resource-to-project';
-import chalk from 'chalk';
-import { getCommandName } from '../../util/pkg-name';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { parseArguments } from '../../util/get-args';
 import { addStoreSubcommand } from './command';
 import { BlobAddStoreTelemetryClient } from '../../util/telemetry/commands/blob/store-add';
 import { printError } from '../../util/error';
 import { parseAccessFlag } from '../../util/blob/access';
+import getProjectByIdOrName from '../../util/projects/get-project-by-id-or-name';
+import { ProjectNotFound } from '../../util/errors-ts';
+import selectOrg from '../../util/input/select-org';
 
 export default async function addStore(
   client: Client,
@@ -60,6 +61,20 @@ export default async function addStore(
   telemetryClient.trackCliOptionRegion(flags['--region']);
 
   const link = await getLinkedProject(client);
+  let accountId: string | undefined;
+
+  if (link.status === 'linked') {
+    accountId = link.org.id;
+  } else {
+    const org = await selectOrg(
+      client,
+      'Which scope should own the blob store?'
+    );
+    accountId = org.id;
+  }
+
+  // Select a project to link the blob store to
+  const projectId = await selectProject(client, accountId);
 
   let storeId: string;
   let storeRegion: string | undefined;
@@ -72,10 +87,14 @@ export default async function addStore(
       name: string;
       region: string;
       access: 'public' | 'private';
+      projectId: string;
+      version: string;
     } = {
       name,
       region,
       access,
+      projectId,
+      version: '2',
     };
 
     const res = await client.fetch<{ store: { id: string; region?: string } }>(
@@ -84,7 +103,7 @@ export default async function addStore(
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestBody),
-        accountId: link.status === 'linked' ? link.org.id : undefined,
+        accountId,
       }
     );
 
@@ -100,41 +119,61 @@ export default async function addStore(
   const regionInfo = storeRegion ? ` in ${storeRegion}` : '';
   output.success(`Blob store created: ${name} (${storeId})${regionInfo}`);
 
-  if (link.status === 'linked') {
-    const res = await client.input.confirm(
-      `Would you like to link this blob store to ${link.project.name}?`,
-      true
+  return 0;
+}
+
+async function selectProject(
+  client: Client,
+  accountId: string
+): Promise<string> {
+  output.spinner('Fetching projects…', 1000);
+
+  const firstPage = await client.fetch<{
+    projects: Project[];
+    pagination: { count: number; next: number | null };
+  }>(`/v9/projects?limit=100`, { accountId });
+
+  output.stopSpinner();
+
+  const projects = firstPage.projects;
+  const hasMoreProjects = firstPage.pagination.next !== null;
+
+  if (projects.length === 0) {
+    output.error(
+      'No projects found. Create a project first before creating a blob store.'
     );
-
-    if (res) {
-      const environments = await client.input.checkbox({
-        message: 'Select environments',
-        choices: [
-          { name: 'Production', value: 'production', checked: true },
-          { name: 'Preview', value: 'preview', checked: true },
-          { name: 'Development', value: 'development', checked: true },
-        ],
-      });
-
-      output.spinner(
-        `Connecting ${chalk.bold(name)} to ${chalk.bold(link.project.name)}...`
-      );
-
-      await connectResourceToProject(
-        client,
-        link.project.id,
-        storeId,
-        environments,
-        { accountId: link.org.id }
-      );
-
-      output.success(
-        `Blob store ${chalk.bold(name)} linked to ${chalk.bold(
-          link.project.name
-        )}. Make sure to pull the new environment variables using ${getCommandName('env pull')}`
-      );
-    }
+    process.exit(1);
   }
 
-  return 0;
+  if (hasMoreProjects) {
+    // Too many projects to show in a list — ask the user to type a name
+    let selectedProject: Project | undefined;
+    await client.input.text({
+      message: 'Enter the name of the project to link to the blob store:',
+      validate: async val => {
+        if (!val) {
+          return 'Project name cannot be empty';
+        }
+        const project = await getProjectByIdOrName(client, val, accountId);
+        if (project instanceof ProjectNotFound) {
+          return 'Project not found';
+        }
+        selectedProject = project;
+        return true;
+      },
+    });
+    return selectedProject!.id;
+  }
+
+  const choices = projects
+    .sort((a, b) => b.updatedAt - a.updatedAt)
+    .map(project => ({
+      name: project.name,
+      value: project.id,
+    }));
+
+  return await client.input.select<string>({
+    message: 'Select a project to link to the blob store:',
+    choices,
+  });
 }
