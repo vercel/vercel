@@ -556,7 +556,7 @@ export const rulesEditSubcommand = {
       type: [String] as unknown as StringConstructor,
       deprecated: false,
       description:
-        'Replace conditions (repeatable). Format: type:op:value. Operators: equals, contains, starts_with, ends_with, matches, exists, any_of (or short: eq, sub, pre, suf, re, ex, inc). Negate with ! or not_ prefix.',
+        'Replace conditions as JSON (repeatable). Example: \'{"type":"path","op":"pre","value":"/api"}\'. Fields: type, op, value, key (for header/cookie/query), neg (boolean). Use --or between conditions for OR groups.',
     },
     {
       name: 'or',
@@ -675,7 +675,7 @@ export const rulesEditSubcommand = {
     },
     {
       name: 'Replace conditions',
-      value: `${packageName} firewall rules edit "My Rule" --condition "path:starts_with:/new" --yes`,
+      value: `${packageName} firewall rules edit "My Rule" --condition '{"type":"path","op":"pre","value":"/new"}' --yes`,
     },
     {
       name: 'Rename a rule',

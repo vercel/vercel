@@ -169,7 +169,7 @@ describe('firewall rules edit', () => {
         'edit',
         'Test Rule 1',
         '--condition',
-        'path:starts_with:/new',
+        '{"type":"path","op":"pre","value":"/new"}',
         '--yes'
       );
       const exitCodePromise = firewall(client);
@@ -323,10 +323,10 @@ describe('firewall rules edit', () => {
         'edit',
         'Test Rule 1',
         '--condition',
-        'path:starts_with:/a',
+        '{"type":"path","op":"pre","value":"/a"}',
         '--or',
         '--condition',
-        'path:starts_with:/b',
+        '{"type":"path","op":"pre","value":"/b"}',
         '--yes'
       );
       const exitCodePromise = firewall(client);
@@ -464,7 +464,7 @@ describe('firewall rules edit', () => {
         '--ai',
         'Change action',
         '--condition',
-        'path:pre:/x',
+        '{"type":"path","op":"pre","value":"/x"}',
         '--yes'
       );
       const exitCodePromise = firewall(client);
@@ -689,7 +689,7 @@ describe('firewall rules edit', () => {
         'edit',
         'Test Rule 1',
         '--condition',
-        'path:starts_with:/new-api',
+        '{"type":"path","op":"pre","value":"/new-api"}',
         '--yes'
       );
       const exitCodePromise = firewall(client);
