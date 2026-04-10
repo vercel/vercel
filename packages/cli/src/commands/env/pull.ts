@@ -103,6 +103,7 @@ export default async function pull(
   telemetryClient.trackCliFlagYes(skipConfirmation);
   telemetryClient.trackCliOptionGitBranch(gitBranch);
   telemetryClient.trackCliOptionEnvironment(opts['--environment']);
+  telemetryClient.trackCliOptionId(opts['--id']);
 
   const link = await getLinkedProject(client);
   if (link.status === 'error') {
@@ -143,6 +144,8 @@ export default async function pull(
   client.config.currentTeam =
     link.org.type === 'team' ? link.org.id : undefined;
 
+  const deploymentId = opts['--id'];
+
   const environment =
     parseTarget({
       flagName: 'environment',
@@ -157,7 +160,8 @@ export default async function pull(
     link,
     gitBranch,
     client.cwd,
-    source
+    source,
+    deploymentId
   );
 
   return 0;
@@ -171,7 +175,8 @@ export async function envPullCommandLogic(
   link: ProjectLinked,
   gitBranch: string | undefined,
   cwd: string,
-  source: EnvRecordsSource
+  source: EnvRecordsSource,
+  deploymentId?: string
 ) {
   const fullPath = resolve(cwd, filename);
   const head = tryReadHeadSync(fullPath, Buffer.byteLength(CONTENTS_PREFIX));
@@ -225,12 +230,16 @@ export async function envPullCommandLogic(
   const pullStamp = stamp();
   output.spinner('Downloading');
 
-  const records = (
-    await pullEnvRecords(client, link.project.id, source, {
-      target: environment || 'development',
-      gitBranch,
-    })
-  ).env;
+  const pullId = deploymentId || link.project.id;
+  const pullResult = await pullEnvRecords(client, pullId, source, {
+    target: environment || 'development',
+    gitBranch,
+  });
+  // When pulling by deployment ID, use buildEnv which always contains the full
+  // set of env vars. The `env` dict may only contain decryption keys when large
+  // env encryption is active (the actual values are in an encrypted blob for
+  // Lambda runtime use).
+  const records = deploymentId ? pullResult.buildEnv : pullResult.env;
 
   let deltaString = '';
   let oldEnv;

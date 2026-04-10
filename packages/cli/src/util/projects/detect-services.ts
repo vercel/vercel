@@ -23,7 +23,6 @@ export async function hasExperimentalServicesConfig(
   try {
     const compileResult = await compileVercelConfig(cwd);
     if (!compileResult.configPath) return false;
-
     const config = await readJSONFile<Record<string, unknown>>(
       compileResult.configPath
     );

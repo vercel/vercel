@@ -209,7 +209,6 @@ export async function detectServices(
   const configuredServices = vercelConfig?.experimentalServices;
   const hasConfiguredServices =
     configuredServices && Object.keys(configuredServices).length > 0;
-
   if (hasConfiguredServices) {
     const result = await resolveAllConfiguredServices(
       configuredServices,

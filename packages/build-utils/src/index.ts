@@ -162,3 +162,58 @@ export {
 } from './framework-helpers';
 
 export * from './python';
+export * from './node-entrypoint';
+
+export {
+  getEncryptedEnv,
+  type EncryptedEnvFile,
+} from './process-serverless/get-encrypted-env-file';
+export { getLambdaEnvironment } from './process-serverless/get-lambda-environment';
+export {
+  getLambdaPreloadScripts,
+  type BytecodeCachingOptions,
+} from './process-serverless/get-lambda-preload-scripts';
+export {
+  getLambdaSupportsStreaming,
+  type SupportsStreamingResult,
+} from './process-serverless/get-lambda-supports-streaming';
+
+export {
+  streamToDigestAsync,
+  sha256,
+  md5,
+  type FileDigest,
+} from './fs/stream-to-digest-async';
+
+export {
+  getBuildResultMetadata,
+  type BuildResultMetadata,
+} from './collect-build-result/get-build-result-metadata';
+export { getLambdaByOutputPath } from './collect-build-result/get-lambda-by-output-path';
+export { isRouteMiddleware } from './collect-build-result/is-route-middleware';
+export { getPrerenderChain } from './collect-build-result/get-prerender-chain';
+export {
+  streamWithExtendedPayload,
+  type ExtendedBodyData,
+} from './collect-build-result/stream-with-extended-payload';
+
+export { collectUncompressedSize } from './collect-uncompressed-size';
+
+export {
+  finalizeLambda,
+  type CreateZipResult,
+  type CreateZipFn,
+  type FinalizeLambdaParams,
+  type FinalizeLambdaResult,
+  type TraceFn,
+} from './finalize-lambda';
+
+export {
+  validateLambdaSize,
+  validateUncompressedLambdaSize,
+  FunctionSizeError,
+  MAX_LAMBDA_SIZE,
+  MAX_LAMBDA_UNCOMPRESSED_SIZE,
+  validateEnvWrapperSupport,
+  ENV_WRAPPER_SUPPORTED_FAMILIES,
+} from './validate-lambda-size';

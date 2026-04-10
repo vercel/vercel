@@ -1,6 +1,6 @@
 {
   "name": "@vercel/build-utils",
-  "version": "13.10.0",
+  "version": "13.14.1",
   "license": "Apache-2.0",
   "main": "./dist/index.js",
   "types": "./dist/index.d.js",
@@ -19,11 +19,15 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@vercel/python-analysis": "workspace:*"
+    "@vercel/python-analysis": "workspace:*",
+    "cjs-module-lexer": "1.2.3",
+    "es-module-lexer": "1.5.0"
   },
   "devDependencies": {
-    "@iarna/toml": "2.2.3",
+    "bytes": "3.1.2",
+    "smol-toml": "1.5.2",
     "@types/async-retry": "^1.2.1",
+    "@types/bytes": "3.1.1",
     "@types/cross-spawn": "6.0.0",
     "@types/end-of-stream": "^1.4.0",
     "@types/fs-extra": "9.0.13",

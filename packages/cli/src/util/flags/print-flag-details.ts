@@ -152,13 +152,10 @@ export function printFlagEnvironmentDetails(
           );
           output.print(`      ${chalk.dim('Default:')} ${defaultSummary}\n`);
         } else if (fallthrough.type === 'split') {
-          const weights = Object.entries(fallthrough.weights)
-            .map(([id, weight]) => {
-              const variant = flag.variants.find(v => v.id === id);
-              const summary = formatEnvironmentVariantSummary(variant, id);
-              return `${summary}: ${weight}%`;
-            })
-            .join(', ');
+          const weights = formatSplitWeights(
+            fallthrough.weights,
+            flag.variants
+          );
           output.print(`      ${chalk.dim('Default split:')} ${weights}\n`);
         }
       }
@@ -248,17 +245,31 @@ function formatEnvironmentOutcome(
   }
 
   if (outcome.type === 'split') {
-    const weights = Object.entries(outcome.weights)
-      .map(([id, weight]) => {
-        const variant = variants.find(v => v.id === id);
-        const summary = formatEnvironmentVariantSummary(variant, id);
-        return `${summary}: ${weight}%`;
-      })
-      .join(', ');
+    const weights = formatSplitWeights(outcome.weights, variants);
     return `split (${weights})`;
   }
 
   return 'unknown';
+}
+
+function formatSplitWeights(
+  weights: Record<string, number>,
+  variants: FlagVariant[]
+): string {
+  const total = Object.values(weights).reduce((sum, weight) => sum + weight, 0);
+
+  return Object.entries(weights)
+    .map(([id, weight]) => {
+      const variant = variants.find(v => v.id === id);
+      const summary = formatEnvironmentVariantSummary(variant, id);
+      const percentage = total > 0 ? (weight / total) * 100 : 0;
+      const formattedPercentage = Number.isInteger(percentage)
+        ? String(percentage)
+        : String(Number(percentage.toFixed(2)));
+
+      return `${summary}: ${formattedPercentage}%`;
+    })
+    .join(', ');
 }
 
 function formatEnvironmentVariantSummary(

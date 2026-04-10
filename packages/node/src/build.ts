@@ -404,6 +404,15 @@ function getAWSLambdaHandler(entrypoint: string, config: Config) {
   return '';
 }
 
+// Track whether bundling routes have already been emitted so they are only
+// included once across all bundled entrypoint builds.
+let bundlingRoutesEmitted = false;
+
+/** @internal Reset bundling routes state between test runs. */
+export function _resetBundlingRoutesEmitted() {
+  bundlingRoutesEmitted = false;
+}
+
 export const build = async ({
   files,
   entrypoint,
@@ -598,9 +607,65 @@ export const build = async ({
         ? true
         : undefined;
 
+    const enableBundling =
+      process.env.VERCEL_API_FUNCTION_BUNDLING === '1' &&
+      config.zeroConfig === true &&
+      !isMiddleware &&
+      !isEdgeFunction;
+
+    if (enableBundling) {
+      // All bundleable lambdas share this identical handler file so that
+      // groupLambdas can match their handler field and digest, grouping
+      // them into a single Lambda. At runtime, the shared handler uses
+      // x-matched-path to route to the correct user entrypoint.
+      const bundledHandlerName = '___vc_bundled_api_handler.js';
+      preparedFiles[bundledHandlerName] = new FileFsRef({
+        fsPath: join(dirname(__filename), 'bundling-handler.js'),
+      });
+      handler = bundledHandlerName;
+
+      // Inject x-matched-path as a request header so the bundled handler
+      // knows which entrypoint to invoke. These routes are identical for
+      // every bundled entrypoint, so only emit them once to avoid
+      // inflating the route table during route merging.
+      if (!bundlingRoutesEmitted) {
+        bundlingRoutesEmitted = true;
+        routes = [
+          { handle: 'hit' },
+          {
+            src: '/index(?:/)?',
+            transforms: [
+              {
+                type: 'request.headers' as const,
+                op: 'set' as const,
+                target: { key: 'x-matched-path' },
+                args: '/',
+              },
+            ],
+            continue: true,
+            important: true,
+          },
+          {
+            src: '/((?!index$).*?)(?:/)?',
+            transforms: [
+              {
+                type: 'request.headers' as const,
+                op: 'set' as const,
+                target: { key: 'x-matched-path' },
+                args: '/$1',
+              },
+            ],
+            continue: true,
+            important: true,
+          },
+        ];
+      }
+    }
+
     output = new NodejsLambda({
       files: preparedFiles,
       handler,
+      experimentalAllowBundling: enableBundling || undefined,
       architecture: staticConfig?.architecture,
       runtime: nodeVersion.runtime,
       useWebApi: isMiddleware ? true : useWebApi,

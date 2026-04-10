@@ -165,8 +165,9 @@ export const rolldown = async (
           // Track local files for NFT
           if (resolved?.id && isLocalImport(resolved.id)) {
             localBuildFiles.add(resolved.id);
-          } else if (!resolved) {
-            // Entry point or unresolved local file
+          } else if (!resolved && !(isBareImport(id) && importer)) {
+            // Entry point (no importer) or unresolved local file
+            // Skip bare imports from importers (e.g. @repo/pkg that failed to resolve)
             localBuildFiles.add(join(args.workPath, id));
           }
 

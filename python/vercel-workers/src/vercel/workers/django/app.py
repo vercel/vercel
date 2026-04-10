@@ -4,7 +4,6 @@ import json
 import math
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, replace
-from datetime import UTC, datetime
 from traceback import format_exception
 from typing import Any, cast
 
@@ -15,7 +14,6 @@ try:
         TaskResultStatus,
     )
     from django.tasks.signals import task_finished, task_started  # type: ignore[import-untyped]
-    from django.utils import timezone as dj_timezone  # type: ignore[import-untyped]
 except Exception as e:  # pragma: no cover
     raise RuntimeError(
         "django is required to use vercel.workers.django. "
@@ -26,7 +24,7 @@ from .. import callback as queue_callback
 from ..asgi import build_asgi_app
 from ..exceptions import VQSError
 from ..wsgi import build_wsgi_app, status_reason
-from .backend import DjangoTaskEnvelope, VercelQueuesBackend, _parse_iso_datetime
+from .backend import DjangoTaskEnvelope, VercelQueuesBackend
 
 ASGI = Callable[
     [
@@ -44,13 +42,6 @@ __all__ = [
     "get_asgi_app",
     "handle_queue_callback",
 ]
-
-
-def _now_utc() -> datetime:
-    try:
-        return dj_timezone.now()
-    except Exception:
-        return datetime.now(UTC)
 
 
 @dataclass(frozen=True, slots=True)
@@ -180,7 +171,7 @@ def handle_queue_callback(
                 body,
             )
 
-        payload, delivery_count, created_at, ticket = queue_callback.receive_message_by_id(
+        payload, delivery_count, created_at, receipt_handle = queue_callback.receive_message_by_id(
             queue_name,
             consumer_group,
             message_id,
@@ -189,12 +180,12 @@ def handle_queue_callback(
         )
 
         # Keep the message locked while executing.
-        if ticket:
+        if receipt_handle:
             extender = queue_callback.VisibilityExtender(
                 queue_name,
                 consumer_group,
                 message_id,
-                ticket,
+                receipt_handle,
                 visibility_timeout_seconds=cfg.visibility_timeout_seconds,
                 refresh_interval_seconds=cfg.visibility_refresh_interval_seconds,
                 timeout=cfg.timeout,
@@ -205,46 +196,6 @@ def handle_queue_callback(
         task_info: dict[str, Any] = cast(dict[str, Any], env.get("task") or {})
         module_path = str(task_info.get("module_path") or "")
         takes_context = bool(task_info.get("takes_context", False))
-        run_after_raw = task_info.get("run_after")
-        run_after = _parse_iso_datetime(run_after_raw) if isinstance(run_after_raw, str) else None
-
-        # Support `run_after` by delaying the message when it becomes visible too early.
-        if run_after is not None:
-            now = _now_utc()
-            if run_after > now:
-                delay_seconds = int(max(0.0, (run_after - now).total_seconds()))
-                if ticket:
-                    _finalize_visibility(
-                        extender,
-                        lambda: queue_callback.change_visibility(
-                            queue_name,
-                            consumer_group,
-                            message_id,
-                            ticket,
-                            delay_seconds,
-                            timeout=cfg.timeout,
-                        ),
-                    )
-                body = json.dumps(
-                    {
-                        "ok": True,
-                        "delayed": True,
-                        "timeoutSeconds": delay_seconds,
-                        "queue": queue_name,
-                        "consumer": consumer_group,
-                        "messageId": message_id,
-                        "deliveryCount": delivery_count,
-                        "createdAt": created_at,
-                    }
-                ).encode("utf-8")
-                return (
-                    200,
-                    [
-                        ("Content-Type", "application/json"),
-                        ("Content-Length", str(len(body))),
-                    ],
-                    body,
-                )
 
         # Load or create TaskResult record.
         task_result = backend._load_or_init_result_from_envelope(
@@ -300,14 +251,14 @@ def handle_queue_callback(
                 # Don't set finished_at for non-terminal failures.
                 object.__setattr__(task_result, "finished_at", None)
                 backend._store_result(task_result)
-                if ticket:
+                if receipt_handle:
                     _finalize_visibility(
                         extender,
                         lambda: queue_callback.change_visibility(
                             queue_name,
                             consumer_group,
                             message_id,
-                            ticket,
+                            receipt_handle,
                             int(delay_seconds),
                             timeout=cfg.timeout,
                         ),
@@ -334,14 +285,14 @@ def handle_queue_callback(
             # Terminal failure: mark FAILED and ack (delete).
             backend._mark_failed(task_result, exc)
             task_finished.send(sender=type(backend), task_result=task_result)
-            if ticket:
+            if receipt_handle:
                 _finalize_visibility(
                     extender,
                     lambda: queue_callback.delete_message(
                         queue_name,
                         consumer_group,
                         message_id,
-                        ticket,
+                        receipt_handle,
                         timeout=cfg.timeout,
                     ),
                 )
@@ -366,14 +317,14 @@ def handle_queue_callback(
         backend._mark_finished_success(task_result, raw_return_value)
         task_finished.send(sender=type(backend), task_result=task_result)
 
-        if ticket:
+        if receipt_handle:
             _finalize_visibility(
                 extender,
                 lambda: queue_callback.delete_message(
                     queue_name,
                     consumer_group,
                     message_id,
-                    ticket,
+                    receipt_handle,
                     timeout=cfg.timeout,
                 ),
             )
