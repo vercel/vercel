@@ -541,3 +541,34 @@ describe('exitWithNonInteractiveError', () => {
     vi.restoreAllMocks();
   });
 });
+
+describe('getGlobalFlagsFromArgv', () => {
+  it('does not treat the subcommand after --non-interactive as a flag value', () => {
+    expect(
+      getGlobalFlagsFromArgv([
+        'node',
+        'vc.js',
+        '--non-interactive',
+        'oauth-apps',
+        'register',
+        '--name',
+        'x',
+      ])
+    ).toEqual(['--non-interactive']);
+  });
+
+  it('collects --cwd and --non-interactive from anywhere in argv', () => {
+    expect(
+      getGlobalFlagsFromArgv([
+        'node',
+        'vc.js',
+        'oauth-apps',
+        'register',
+        '--name',
+        'display-name',
+        '--cwd=/tmp/proj',
+        '--non-interactive',
+      ])
+    ).toEqual(['--cwd=/tmp/proj', '--non-interactive']);
+  });
+});
