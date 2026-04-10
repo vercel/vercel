@@ -245,6 +245,10 @@ export class GoWrapper {
     return this.execute('mod', 'tidy');
   }
 
+  vendor() {
+    return this.execute('mod', 'vendor');
+  }
+
   get(src?: string) {
     const args = ['get'];
     if (src) {
@@ -256,12 +260,16 @@ export class GoWrapper {
     return this.execute(...args);
   }
 
-  build(src: string | string[], dest: string) {
+  build(src: string | string[], dest: string, { vendorMode = false } = {}) {
     debug(`Building optimized 'go' binary ${src} -> ${dest}`);
     const sources = Array.isArray(src) ? src : [src];
 
     const envGoBuildFlags = (this.env || this.opts.env).GO_BUILD_FLAGS;
-    const flags = envGoBuildFlags ? stringArgv(envGoBuildFlags) : GO_FLAGS;
+    const flags = envGoBuildFlags ? stringArgv(envGoBuildFlags) : [...GO_FLAGS];
+
+    if (vendorMode && !envGoBuildFlags) {
+      flags.push('-mod=vendor');
+    }
 
     return this.execute('build', ...flags, '-o', dest, ...sources);
   }

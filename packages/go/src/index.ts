@@ -360,6 +360,18 @@ async function buildHandlerWithGoMod({
     }
   }
 
+  // Detect vendored dependencies by checking for vendor/modules.txt,
+  // the canonical marker created by `go mod vendor`
+  const vendorModulesPath = join(
+    goModDirname || entrypointDirname,
+    'vendor',
+    'modules.txt'
+  );
+  const isVendored = await pathExists(vendorModulesPath);
+  if (isVendored) {
+    debug('Detected vendor directory in project');
+  }
+
   const entrypointArr = entrypoint.split(posix.sep);
   let goPackageName = `${packageName}/${packageName}`;
   const goFuncName = `${packageName}.${handlerFunctionName}`;
@@ -448,13 +460,26 @@ async function buildHandlerWithGoMod({
     throw err;
   }
 
+  // If the project uses vendored dependencies, regenerate the vendor
+  // directory after go.mod has been rewritten by writeGoMod() and tidied.
+  // This ensures vendor/modules.txt is consistent with the modified go.mod.
+  if (isVendored) {
+    debug('Regenerating vendor directory after go.mod rewrite...');
+    try {
+      await go.vendor();
+    } catch (err) {
+      console.error('failed to `go mod vendor`');
+      throw err;
+    }
+  }
+
   debug('Running `go build`...');
   const destPath = join(outDir, HANDLER_FILENAME);
 
   try {
     const src = [join(baseGoModPath, MAIN_GO_FILENAME)];
 
-    await go.build(src, destPath);
+    await go.build(src, destPath, { vendorMode: isVendored });
   } catch (err) {
     console.error('failed to `go build`');
     throw err;
