@@ -2,13 +2,16 @@ import { describe, beforeEach, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import addStore from '../../../../src/commands/blob/store-add';
 import * as linkModule from '../../../../src/util/projects/link';
+import * as selectOrgModule from '../../../../src/util/input/select-org';
 import output from '../../../../src/output-manager';
 
 // Mock the external dependencies
 vi.mock('../../../../src/util/projects/link');
+vi.mock('../../../../src/util/input/select-org');
 vi.mock('../../../../src/output-manager');
 
 const mockedGetLinkedProject = vi.mocked(linkModule.getLinkedProject);
+const mockedSelectOrg = vi.mocked(selectOrgModule.default);
 const mockedOutput = vi.mocked(output);
 
 function mockProjectListFetch(
@@ -268,13 +271,6 @@ describe('blob store add', () => {
     });
 
     it('should use text input when there are more projects than one page', async () => {
-      const projectForValidation = {
-        id: 'proj_typed',
-        name: 'typed-project',
-        updatedAt: Date.now(),
-        createdAt: Date.now(),
-      };
-
       client.fetch = vi.fn().mockImplementation((url: string) => {
         if (url === '/v9/projects?limit=100') {
           return Promise.resolve({
@@ -293,7 +289,12 @@ describe('blob store add', () => {
           url ===
           `/v9/projects/${encodeURIComponent('typed-project')}`
         ) {
-          return Promise.resolve(projectForValidation);
+          return Promise.resolve({
+            id: 'proj_typed',
+            name: 'typed-project',
+            updatedAt: Date.now(),
+            createdAt: Date.now(),
+          });
         }
         return Promise.resolve({ store: { id: 'store_test123' } });
       });
@@ -301,8 +302,6 @@ describe('blob store add', () => {
       // Mock text input to simulate user typing a project name
       client.input.text = vi.fn().mockImplementation(async opts => {
         if (opts.message.includes('project')) {
-          // Simulate calling validate with the project name
-          await opts.validate('typed-project');
           return 'typed-project';
         }
         return 'test-store-name';
@@ -523,10 +522,12 @@ describe('blob store add', () => {
         project: null,
         status: 'not_linked',
       });
+      mockedSelectOrg.mockResolvedValue({
+        id: 'org_from_prompt',
+        slug: 'prompted-org',
+        type: 'team',
+      });
 
-      // selectOrg is called internally; we mock its import indirectly
-      // by mocking the module. For this test, we verify the flow doesn't
-      // break by using the --project flag to skip interactive project selection.
       client.fetch = vi.fn().mockImplementation((url: string) => {
         if (url === `/v9/projects/${encodeURIComponent('my-project')}`) {
           return Promise.resolve({
@@ -541,9 +542,29 @@ describe('blob store add', () => {
         });
       });
 
-      // selectOrg will be called but it's not mocked here,
-      // so we test the linked path more thoroughly and trust
-      // selectOrg is tested in its own unit tests.
+      const exitCode = await addStore(client, [
+        'test-store',
+        '--project',
+        'my-project',
+      ]);
+
+      expect(exitCode).toBe(0);
+      expect(mockedSelectOrg).toHaveBeenCalledWith(
+        client,
+        'Which scope should own the blob store?'
+      );
+      expect(client.fetch).toHaveBeenCalledWith('/v1/storage/stores/blob', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: 'test-store',
+          region: 'iad1',
+          access: 'public',
+          projectId: 'proj_123',
+          version: '2',
+        }),
+        accountId: 'org_from_prompt',
+      });
     });
   });
 

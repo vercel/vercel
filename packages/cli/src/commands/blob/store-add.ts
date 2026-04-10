@@ -12,6 +12,8 @@ import getProjectByIdOrName from '../../util/projects/get-project-by-id-or-name'
 import { ProjectNotFound } from '../../util/errors-ts';
 import selectOrg from '../../util/input/select-org';
 
+const BLOB_STORE_API_VERSION = '2';
+
 export default async function addStore(
   client: Client,
   argv: string[]
@@ -109,7 +111,7 @@ export default async function addStore(
           region,
           access,
           projectId,
-          version: '2',
+          version: BLOB_STORE_API_VERSION,
         }),
         accountId,
       }
@@ -161,27 +163,23 @@ async function selectProject(
   }
 
   if (hasMoreProjects) {
-    // Too many projects to show in a list — ask the user to type a name
-    let selectedProject: Project | undefined;
-    await client.input.text({
+    // Too many projects to show in a list — ask the user to type a name,
+    // then validate once on submit to avoid hitting the API on every keystroke.
+    const projectName = await client.input.text({
       message: 'Enter the name of the project to link to the blob store:',
-      validate: async val => {
+      validate: val => {
         if (!val) {
           return 'Project name cannot be empty';
         }
-        const project = await getProjectByIdOrName(client, val, accountId);
-        if (project instanceof ProjectNotFound) {
-          return 'Project not found';
-        }
-        selectedProject = project;
         return true;
       },
     });
-    if (!selectedProject) {
-      output.error('No project selected.');
+    const project = await getProjectByIdOrName(client, projectName, accountId);
+    if (project instanceof ProjectNotFound) {
+      output.error(`Project not found: ${projectName}`);
       return null;
     }
-    return selectedProject.id;
+    return project.id;
   }
 
   const choices = projects
