@@ -184,6 +184,6 @@ export async function promptForInferredServicesSetup({
   }
 
   await writeServicesConfig(workPath, inferred.config);
-  output.print('Added services configuration to vercel.json.\n');
+  output.log('Added services configuration to vercel.json.');
   return { type: 'services' };
 }

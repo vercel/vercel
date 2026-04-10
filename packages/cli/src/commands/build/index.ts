@@ -88,11 +88,7 @@ import stamp from '../../util/output/stamp';
 import parseTarget from '../../util/parse-target';
 import cliPkg from '../../util/pkg';
 import * as cli from '../../util/pkg-name';
-import {
-  getProjectLink,
-  repoLinkedFilesystemSegment,
-  VERCEL_DIR,
-} from '../../util/projects/link';
+import { getProjectLink, VERCEL_DIR } from '../../util/projects/link';
 import { resolveProjectCwd } from '../../util/projects/find-project-root';
 import {
   pickOverrides,
@@ -257,7 +253,7 @@ export default async function main(client: Client): Promise<number> {
   const link = await rootSpan
     .child('vc.getProjectLink')
     .trace(() => getProjectLink(client, cwd));
-  const projectRootDirectory = repoLinkedFilesystemSegment(link);
+  const projectRootDirectory = link?.projectRootDirectory ?? '';
   if (link?.repoRoot) {
     cwd = client.cwd = link.repoRoot;
   }

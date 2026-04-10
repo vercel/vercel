@@ -875,7 +875,7 @@ describe('link', () => {
     client.stdin.write('apps/nextjs\n');
 
     await expect(client.stderr).toOutput(
-      'Auto-detected Project Settings for ▲ Next.js'
+      'Auto-detected Project Settings for Next.js'
     );
     await expect(client.stderr).toOutput('Want to modify these settings?');
     client.stdin.write('\n');
@@ -1015,7 +1015,7 @@ describe('link', () => {
     client.stdin.write('\x1B[B\n');
 
     await expect(client.stderr).toOutput(
-      'Auto-detected Project Settings for ▲ Next.js'
+      'Auto-detected Project Settings for Next.js'
     );
     await expect(client.stderr).toOutput('Want to modify these settings?');
     client.stdin.write('\n');

@@ -1,6 +1,5 @@
 import chalk from 'chalk';
 import { frameworkList, type Framework } from '@vercel/frameworks';
-import { formatFrameworkLabel } from '../format-framework-label';
 import type Client from '../client';
 import { isSettingValue } from '../is-setting-value';
 import type { ProjectSettings } from '@vercel-internals/types';
@@ -91,11 +90,25 @@ export async function editProjectSettings(
     return settings;
   }
 
+  const styledFramework = (frameworkName: string) => {
+    const frameworkStyle = {
+      text: frameworkName,
+      color: chalk.blue,
+    };
+
+    if (frameworkName === 'Hono') {
+      frameworkStyle.text = '🔥 Hono';
+      frameworkStyle.color = chalk.hex('#FFA500');
+    }
+
+    return chalk.bold(frameworkStyle.color(frameworkStyle.text));
+  };
+
   // A missing framework slug implies the "Other" framework was selected
   output.log(
     !framework.slug
       ? `No framework detected. Default Project Settings:\n`
-      : `Auto-detected Project Settings for ${formatFrameworkLabel(framework.slug, framework.name)}\n`
+      : `Auto-detected Project Settings for ${styledFramework(framework.name)}\n`
   );
 
   settings.framework = framework.slug;
