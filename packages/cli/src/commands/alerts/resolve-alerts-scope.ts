@@ -10,7 +10,7 @@ import {
 } from '../../util/agent-output';
 import { AGENT_REASON } from '../../util/agent-output-constants';
 
-function emitAlertsScopeError(
+export function emitAlertsScopeError(
   client: Client,
   jsonOutput: boolean,
   code: string,

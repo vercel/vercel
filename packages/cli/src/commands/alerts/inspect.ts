@@ -14,6 +14,13 @@ import {
   handleValidationError,
   validateAllProjectMutualExclusivity,
 } from '../../util/command-validation';
+import {
+  buildCommandWithGlobalFlags,
+  outputAgentError,
+} from '../../util/agent-output';
+import { AGENT_REASON } from '../../util/agent-output-constants';
+import { packageName } from '../../util/pkg-name';
+import { emitAlertsScopeError } from './resolve-alerts-scope';
 import chalk from 'chalk';
 
 type AlertScope = { teamId: string; projectId?: string };
@@ -31,18 +38,36 @@ async function resolveInspectScope(
     flags['--project']
   );
   if (!mutual.valid) {
+    outputAgentError(
+      client,
+      {
+        status: 'error',
+        reason: AGENT_REASON.INVALID_ARGUMENTS,
+        message: mutual.message,
+      },
+      1
+    );
     return handleValidationError(mutual, jsonOutput, client);
   }
 
   if (flags['--all']) {
     const { team } = await getScope(client);
     if (!team) {
-      return outputError(
-        client,
-        jsonOutput,
-        'NO_TEAM',
-        'No team context found. Run `vercel switch` to select a team, or use `vercel link`.'
-      );
+      const msg =
+        'No team context found. Run `vercel switch` to select a team, or use `vercel link`.';
+      return emitAlertsScopeError(client, jsonOutput, 'NO_TEAM', msg, {
+        reason: AGENT_REASON.MISSING_SCOPE,
+        next: [
+          {
+            command: buildCommandWithGlobalFlags(client.argv, 'whoami'),
+            when: 'See current user and team',
+          },
+          {
+            command: buildCommandWithGlobalFlags(client.argv, 'teams switch'),
+            when: 'Switch to a team that owns the project',
+          },
+        ],
+      });
     }
     return { teamId: team.id };
   }
@@ -50,31 +75,76 @@ async function resolveInspectScope(
   if (flags['--project']) {
     const { team } = await getScope(client);
     if (!team) {
-      return outputError(
-        client,
-        jsonOutput,
-        'NO_TEAM',
-        'No team context found. Run `vercel switch` to select a team.'
-      );
+      const msg =
+        'No team context found. Run `vercel switch` to select a team.';
+      return emitAlertsScopeError(client, jsonOutput, 'NO_TEAM', msg, {
+        reason: AGENT_REASON.MISSING_SCOPE,
+        next: [
+          {
+            command: buildCommandWithGlobalFlags(client.argv, 'whoami'),
+            when: 'See current user and team',
+          },
+          {
+            command: buildCommandWithGlobalFlags(client.argv, 'teams switch'),
+            when: 'Switch to a team that owns the project',
+          },
+        ],
+      });
     }
     try {
       const p = await getProjectByNameOrId(client, flags['--project'], team.id);
       if (p instanceof ProjectNotFound) {
-        return outputError(
+        const msg = `Project "${flags['--project']}" was not found.`;
+        return emitAlertsScopeError(
           client,
           jsonOutput,
           'PROJECT_NOT_FOUND',
-          `Project "${flags['--project']}" was not found.`
+          msg,
+          {
+            reason: AGENT_REASON.NOT_FOUND,
+            next: [
+              {
+                command: buildCommandWithGlobalFlags(
+                  client.argv,
+                  'alerts inspect <groupId> --project <name_or_id>'
+                ),
+                when: 'Retry with a valid project (replace placeholders)',
+              },
+            ],
+          }
         );
       }
       return { teamId: team.id, projectId: p.id };
     } catch (err) {
       if (isAPIError(err)) {
-        return outputError(
+        const msg =
+          err.serverMessage ||
+          (err.status === 403
+            ? `You do not have permission to access project "${flags['--project']}" in team "${team.slug}".`
+            : `API error (${err.status}).`);
+        const reason =
+          err.status === 401
+            ? 'not_authorized'
+            : err.status === 403
+              ? 'forbidden'
+              : AGENT_REASON.API_ERROR;
+        return emitAlertsScopeError(
           client,
           jsonOutput,
           err.code || 'API_ERROR',
-          err.serverMessage || `API error (${err.status}).`
+          msg,
+          {
+            reason,
+            next: [
+              {
+                command: buildCommandWithGlobalFlags(
+                  client.argv,
+                  'alerts inspect <groupId> --project <name_or_id>'
+                ),
+                when: 'Retry with a project you can access',
+              },
+            ],
+          }
         );
       }
       throw err;
@@ -86,12 +156,31 @@ async function resolveInspectScope(
     return linked.exitCode;
   }
   if (linked.status === 'not_linked') {
-    return outputError(
-      client,
-      jsonOutput,
-      'NOT_LINKED',
-      'No linked project. Run `vercel link` or pass --project <name> or --all.'
-    );
+    const msg =
+      'No linked project. Run `vercel link` or pass --project <name> or --all.';
+    return emitAlertsScopeError(client, jsonOutput, 'NOT_LINKED', msg, {
+      reason: AGENT_REASON.NOT_LINKED,
+      next: [
+        {
+          command: buildCommandWithGlobalFlags(client.argv, 'link'),
+          when: 'Link this directory to a Vercel project',
+        },
+        {
+          command: buildCommandWithGlobalFlags(
+            client.argv,
+            'alerts inspect <groupId> --project <name_or_id>'
+          ),
+          when: 'Inspect using an explicit project',
+        },
+        {
+          command: buildCommandWithGlobalFlags(
+            client.argv,
+            'alerts inspect <groupId> --all'
+          ),
+          when: 'Inspect using team-wide scope',
+        },
+      ],
+    });
   }
   return {
     teamId: linked.org.id,
@@ -108,6 +197,15 @@ export default async function inspect(
   try {
     parsedArgs = parseArguments(argv, spec);
   } catch (e) {
+    outputAgentError(
+      client,
+      {
+        status: 'error',
+        reason: AGENT_REASON.INVALID_ARGUMENTS,
+        message: e instanceof Error ? e.message : String(e),
+      },
+      1
+    );
     printError(e);
     return 1;
   }
@@ -115,11 +213,38 @@ export default async function inspect(
   const groupId = parsedArgs.args[0];
   const fr = validateJsonOutput(parsedArgs.flags);
   if (!fr.valid) {
+    outputAgentError(
+      client,
+      {
+        status: 'error',
+        reason: AGENT_REASON.INVALID_ARGUMENTS,
+        message: fr.error,
+      },
+      1
+    );
     output.error(fr.error);
     return 1;
   }
 
   if (!groupId) {
+    outputAgentError(
+      client,
+      {
+        status: 'error',
+        reason: AGENT_REASON.MISSING_ARGUMENTS,
+        message: `Missing group id. Example: ${packageName} alerts inspect <groupId>`,
+        next: [
+          {
+            command: buildCommandWithGlobalFlags(
+              client.argv,
+              'alerts inspect <groupId>'
+            ),
+            when: 'Replace <groupId> with a group id from `vercel alerts`',
+          },
+        ],
+      },
+      1
+    );
     return outputError(
       client,
       fr.jsonOutput,
@@ -158,12 +283,45 @@ export default async function inspect(
     return 0;
   } catch (err) {
     if (isAPIError(err)) {
-      return outputError(
+      const msg = err.serverMessage || `API error (${err.status}).`;
+      const reason =
+        err.status === 401
+          ? 'not_authorized'
+          : err.status === 403
+            ? 'forbidden'
+            : err.status === 404
+              ? AGENT_REASON.NOT_FOUND
+              : err.status === 429
+                ? 'rate_limited'
+                : AGENT_REASON.API_ERROR;
+      outputAgentError(
         client,
-        fr.jsonOutput,
-        err.code || 'API_ERROR',
-        err.serverMessage || `API error (${err.status}).`
+        {
+          status: 'error',
+          reason,
+          message: msg,
+          ...(err.status === 401 || err.status === 403
+            ? {
+                hint: 'Confirm team scope; use --scope <team-slug> if the group belongs to another team.',
+                next: [
+                  {
+                    command: buildCommandWithGlobalFlags(client.argv, 'whoami'),
+                    when: 'See current user and team',
+                  },
+                  {
+                    command: buildCommandWithGlobalFlags(
+                      client.argv,
+                      `alerts inspect ${groupId}`
+                    ),
+                    when: 'Retry after fixing scope or permissions',
+                  },
+                ],
+              }
+            : {}),
+        },
+        1
       );
+      return outputError(client, fr.jsonOutput, err.code || 'API_ERROR', msg);
     }
     throw err;
   } finally {
