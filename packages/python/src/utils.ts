@@ -52,6 +52,7 @@ export function createVenvEnv(
     ...getProtectedUvEnv(baseEnv),
     VIRTUAL_ENV: venvPath,
     UV_PROJECT_ENVIRONMENT: venvPath,
+    UV_NO_DEV: 'true',
   };
   const binDir = getVenvBinDir(venvPath);
   const existingPath = env.PATH || process.env.PATH || '';
