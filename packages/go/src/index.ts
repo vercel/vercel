@@ -731,7 +731,14 @@ async function writeGoMod({
         /^(replace .+=>\s*)(.+)$/gm,
         (orig, replaceStmt, replacePath) => {
           if (replacePath.startsWith('.')) {
-            return replaceStmt + join(goModRelPath, replacePath);
+            let newPath = join(goModRelPath, replacePath);
+            // path.join() strips the './' prefix when goModRelPath is
+            // empty.  Go requires replacement paths without a version to
+            // start with './' or '../', so restore the prefix when needed.
+            if (!newPath.startsWith('.') && !newPath.startsWith('/')) {
+              newPath = './' + newPath;
+            }
+            return replaceStmt + newPath;
           }
           return orig;
         }
