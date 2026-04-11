@@ -57,6 +57,7 @@ import {
   UV_PYTHON_DOWNLOADS_MODE,
   getProtectedUvEnv,
   getUvCacheDir,
+  findUvOnBuildImage,
 } from '../src/uv';
 import { VERCEL_WORKERS_VERSION } from '../src/package-versions';
 import { createPyprojectToml } from '../src/install';
@@ -594,6 +595,37 @@ describe('getInstalledPythonsFromFilesystem', () => {
         process.env.VERCEL_BUILD_IMAGE = origBuildImage;
       }
     }
+  });
+});
+
+describe('findUvOnBuildImage', () => {
+  const origBuildImage = process.env.VERCEL_BUILD_IMAGE;
+
+  afterEach(() => {
+    if (origBuildImage === undefined) {
+      delete process.env.VERCEL_BUILD_IMAGE;
+    } else {
+      process.env.VERCEL_BUILD_IMAGE = origBuildImage;
+    }
+  });
+
+  it('returns null when VERCEL_BUILD_IMAGE is not set', () => {
+    delete process.env.VERCEL_BUILD_IMAGE;
+    expect(findUvOnBuildImage()).toBeNull();
+  });
+
+  it('returns the known path when VERCEL_BUILD_IMAGE is set and file exists', () => {
+    process.env.VERCEL_BUILD_IMAGE = '1';
+    const mockUvPath = path.join(tmpPythonDir, 'mock-uv');
+    fs.mkdirSync(tmpPythonDir, { recursive: true });
+    fs.writeFileSync(mockUvPath, '');
+
+    expect(findUvOnBuildImage(mockUvPath)).toBe(mockUvPath);
+  });
+
+  it('returns null when VERCEL_BUILD_IMAGE is set but file does not exist', () => {
+    process.env.VERCEL_BUILD_IMAGE = '1';
+    expect(findUvOnBuildImage('/nonexistent/path/uv')).toBeNull();
   });
 });
 
