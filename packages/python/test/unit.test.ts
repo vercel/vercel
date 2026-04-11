@@ -47,6 +47,7 @@ import {
   resolvePythonVersion,
   DEFAULT_PYTHON_VERSION_STRING,
   resetInstalledPythonsCache,
+  getInstalledPythonsFromFilesystem,
 } from '../src/version';
 import type { PythonConstraint, PythonPackage } from '@vercel/python-analysis';
 import { build, prepareCache } from '../src/index';
@@ -536,6 +537,63 @@ describe('default Python version behavior', () => {
 
   it('DEFAULT_PYTHON_VERSION_STRING constant is exported and has expected value', () => {
     expect(DEFAULT_PYTHON_VERSION_STRING).toBe('3.12');
+  });
+});
+
+describe('getInstalledPythonsFromFilesystem', () => {
+  it('detects installed Pythons from filesystem bin directory', () => {
+    const basePath = path.join(tmpPythonDir, 'uv-python');
+    const binDir = path.join(basePath, 'bin');
+    fs.mkdirSync(binDir, { recursive: true });
+    fs.writeFileSync(path.join(binDir, 'python3.12'), '');
+    fs.writeFileSync(path.join(binDir, 'python3.13'), '');
+
+    const result = getInstalledPythonsFromFilesystem(basePath);
+    expect(result).toEqual(new Set(['3.12', '3.13']));
+  });
+
+  it('returns empty set when no Pythons are installed', () => {
+    const basePath = path.join(tmpPythonDir, 'uv-python-empty');
+    const binDir = path.join(basePath, 'bin');
+    fs.mkdirSync(binDir, { recursive: true });
+
+    const result = getInstalledPythonsFromFilesystem(basePath);
+    expect(result).toEqual(new Set());
+  });
+
+  it('ignores Python versions not in allOptions', () => {
+    const basePath = path.join(tmpPythonDir, 'uv-python-extra');
+    const binDir = path.join(basePath, 'bin');
+    fs.mkdirSync(binDir, { recursive: true });
+    fs.writeFileSync(path.join(binDir, 'python3.12'), '');
+    // 3.99 does not exist in allOptions
+    fs.writeFileSync(path.join(binDir, 'python3.99'), '');
+
+    const result = getInstalledPythonsFromFilesystem(basePath);
+    expect(result).toEqual(new Set(['3.12']));
+  });
+
+  it('uses filesystem fast path when VERCEL_BUILD_IMAGE is set', () => {
+    const basePath = path.join(tmpPythonDir, 'uv-python-integration');
+    const binDir = path.join(basePath, 'bin');
+    fs.mkdirSync(binDir, { recursive: true });
+    fs.writeFileSync(path.join(binDir, 'python3.12'), '');
+    fs.writeFileSync(path.join(binDir, 'python3.13'), '');
+    fs.writeFileSync(path.join(binDir, 'python3.14'), '');
+
+    const origBuildImage = process.env.VERCEL_BUILD_IMAGE;
+    process.env.VERCEL_BUILD_IMAGE = '1';
+    try {
+      resetInstalledPythonsCache();
+      const result = getInstalledPythonsFromFilesystem(basePath);
+      expect(result).toEqual(new Set(['3.12', '3.13', '3.14']));
+    } finally {
+      if (origBuildImage === undefined) {
+        delete process.env.VERCEL_BUILD_IMAGE;
+      } else {
+        process.env.VERCEL_BUILD_IMAGE = origBuildImage;
+      }
+    }
   });
 });
 
