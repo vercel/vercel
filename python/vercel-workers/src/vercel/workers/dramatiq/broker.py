@@ -127,7 +127,24 @@ def _message_to_envelope(message: Message, queue_name: str) -> DramatiqTaskEnvel
     Serialization goes through configured dramatiq's encoder so
     ephemeral options or custom types can be handled by the encoder.
     """
-    data = json.loads(message.encode())
+    # Prefer Dramatiq's configured encoder since it may strip ephemeral options.
+    #
+    # However, Dramatiq's default JSON encoder cannot serialize common Python types
+    # like UUID, datetime, or Decimal. Since our queue client supports these types
+    # (via WorkerJSONEncoder), fall back to building the envelope from raw message
+    # fields when encoding fails.
+    try:
+        data = json.loads(message.encode())
+    except Exception:
+        data = {
+            "queue_name": message.queue_name,
+            "actor_name": message.actor_name,
+            "message_id": message.message_id,
+            "message_timestamp": message.message_timestamp,
+            "args": list(message.args),
+            "kwargs": dict(message.kwargs),
+            "options": dict(message.options),
+        }
     data["queue_name"] = queue_name
     data["vercel"] = {"kind": "dramatiq", "version": 1}
     return DramatiqTaskEnvelope(data)
