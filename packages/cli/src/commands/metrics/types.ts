@@ -31,6 +31,44 @@ export type Granularity =
   | { hours: number }
   | { days: number };
 
+export interface MetricDimension {
+  name: string;
+  label: string;
+}
+
+export interface MetricListItem {
+  id: string;
+  description: string;
+}
+
+export interface MetricDetail {
+  id: string;
+  description: string;
+  dimensions: MetricDimension[];
+  unit: string;
+  aggregations: Aggregation[];
+  defaultAggregation: Aggregation;
+}
+
+export type MetricDetailResponse = MetricDetail[];
+
+export interface MetricListResponse {
+  metrics: MetricListItem[];
+}
+
+export interface MetricsQueryRequest {
+  scope: Scope;
+  metric: string;
+  aggregation?: Aggregation;
+  startTime: string;
+  endTime: string;
+  granularity: Granularity;
+  groupBy?: string[];
+  filter?: string;
+  limit?: number;
+  orderBy?: string;
+}
+
 export type MetricsApiDataCell = string | number | null;
 export type MetricsSummaryDataCell = string | number | null;
 
@@ -52,28 +90,13 @@ export interface MetricsQueryStatistics {
 }
 
 export interface QueryMetadata {
-  event: string;
-  measure: string;
+  metric: string;
   aggregation: Aggregation;
   groupBy: string[];
   filter: string | undefined;
   startTime: string;
   endTime: string;
   granularity: Granularity;
-}
-
-export interface MetricsQueryRequest {
-  reason: 'agent';
-  scope: Scope;
-  event: string;
-  rollups: Record<string, { measure: string; aggregation: Aggregation }>;
-  startTime: string;
-  endTime: string;
-  granularity: Granularity;
-  groupBy?: string[];
-  filter?: string;
-  limit?: number;
-  orderBy?: string;
 }
 
 export interface MetricsQueryResponse {

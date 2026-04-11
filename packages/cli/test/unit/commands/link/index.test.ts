@@ -749,8 +749,6 @@ describe('link', () => {
       const exitCode = await exitCodePromise;
       expect(exitCode, 'exit code for "link"').toEqual(0);
 
-      expect(client.stderr).toOutput('Linked to ');
-
       const projectJson = await readJSON(join(cwd, '.vercel/project.json'));
       expect(projectJson.orgId).toEqual(user.id);
       expect(projectJson.projectId).toEqual(project.id);
@@ -864,11 +862,6 @@ describe('link', () => {
 
     await expect(client.stderr).toOutput('Set up');
     client.stdin.write('y\n');
-
-    await expect(client.stderr).toOutput(
-      'Which scope should contain your project?'
-    );
-    client.stdin.write('\n');
 
     await expect(client.stderr).toOutput('Link to it?');
     client.stdin.write('y\n');
@@ -1582,11 +1575,6 @@ describe('link', () => {
       await expect(client.stderr).toOutput('Set up');
       client.stdin.write('y\n');
 
-      await expect(client.stderr).toOutput(
-        'Which scope should contain your project?'
-      );
-      client.stdin.write('\n');
-
       await expect(client.stderr).toOutput('Found project');
       client.stdin.write('y\n');
 
@@ -1629,11 +1617,6 @@ describe('link', () => {
       await expect(client.stderr).toOutput('Set up');
       client.stdin.write('y\n');
 
-      await expect(client.stderr).toOutput(
-        'Which scope should contain your project?'
-      );
-      client.stdin.write('\n');
-
       await expect(client.stderr).toOutput('Link to it?');
       client.stdin.write('y\n');
 
@@ -1674,11 +1657,6 @@ describe('link', () => {
       await expect(client.stderr).toOutput('Set up');
       client.stdin.write('y\n');
 
-      await expect(client.stderr).toOutput(
-        'Which scope should contain your project?'
-      );
-      client.stdin.write('\n');
-
       await expect(client.stderr).toOutput('Link to it?');
       client.stdin.write('y\n');
 
@@ -1718,11 +1696,6 @@ describe('link', () => {
 
       await expect(client.stderr).toOutput('Set up');
       client.stdin.write('y\n');
-
-      await expect(client.stderr).toOutput(
-        'Which scope should contain your project?'
-      );
-      client.stdin.write('\n');
 
       await expect(client.stderr).toOutput('Link to it?');
       client.stdin.write('y\n');
@@ -1771,11 +1744,6 @@ describe('link', () => {
       await expect(client.stderr).toOutput('Set up');
       client.stdin.write('y\n');
 
-      await expect(client.stderr).toOutput(
-        'Which scope should contain your project?'
-      );
-      client.stdin.write('\n');
-
       await expect(client.stderr).toOutput('Link to it?');
       client.stdin.write('y\n');
 
@@ -1820,11 +1788,6 @@ describe('link', () => {
       await expect(client.stderr).toOutput('Set up');
       client.stdin.write('y\n');
 
-      await expect(client.stderr).toOutput(
-        'Which scope should contain your project?'
-      );
-      client.stdin.write('\n');
-
       await expect(client.stderr).toOutput('Link to it?');
       client.stdin.write('y\n');
 
@@ -1866,11 +1829,6 @@ describe('link', () => {
 
       await expect(client.stderr).toOutput('Set up');
       client.stdin.write('y\n');
-
-      await expect(client.stderr).toOutput(
-        'Which scope should contain your project?'
-      );
-      client.stdin.write('\n');
 
       await expect(client.stderr).toOutput('Link to it?');
       client.stdin.write('y\n');
@@ -1914,11 +1872,6 @@ describe('link', () => {
       await expect(client.stderr).toOutput('Set up');
       client.stdin.write('y\n');
 
-      await expect(client.stderr).toOutput(
-        'Which scope should contain your project?'
-      );
-      client.stdin.write('\n');
-
       await expect(client.stderr).toOutput('Link to it?');
       client.stdin.write('y\n');
 
@@ -1940,6 +1893,397 @@ describe('link', () => {
 
       // Verify client.cwd is restored even when env pull throws
       expect(client.cwd).toEqual(originalCwd);
+    });
+  });
+
+  describe('cross-team search', () => {
+    it('should auto-link with --yes when project found across teams', async () => {
+      useUser();
+      const cwd = setupTmpDir();
+      useTeams('team_dummy');
+      const { project } = useProject({
+        ...defaultProject,
+        id: basename(cwd),
+        name: basename(cwd),
+      });
+      useUnknownProject();
+
+      client.cwd = cwd;
+      client.setArgv('--yes');
+      const exitCode = await link(client);
+
+      expect(exitCode, 'exit code for "link"').toEqual(0);
+
+      const projectJson = await readJSON(join(cwd, '.vercel/project.json'));
+      expect(projectJson.projectId).toEqual(project.id);
+      expect(projectJson.projectName).toEqual(project.name);
+    });
+
+    it('should prompt for confirmation when single match found interactively', async () => {
+      const user = useUser();
+      const cwd = setupTmpDir();
+      useTeams('team_dummy');
+      const { project } = useProject({
+        ...defaultProject,
+        id: basename(cwd),
+        name: basename(cwd),
+      });
+      useUnknownProject();
+
+      client.cwd = cwd;
+      const exitCodePromise = link(client);
+
+      await expect(client.stderr).toOutput('Set up');
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput('Link to it?');
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput(
+        `Linked to ${user.username}/${project.name} (created .vercel and added it to .gitignore)`
+      );
+
+      await expect(client.stderr).toOutput(
+        'Would you like to pull environment variables now?'
+      );
+      client.stdin.write('n\n');
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode, 'exit code for "link"').toEqual(0);
+
+      const projectJson = await readJSON(join(cwd, '.vercel/project.json'));
+      expect(projectJson.orgId).toEqual(user.id);
+      expect(projectJson.projectId).toEqual(project.id);
+      expect(projectJson.projectName).toEqual(project.name);
+    });
+
+    it('should fall through to selectOrg when user declines cross-team match', async () => {
+      const user = useUser();
+      const cwd = setupTmpDir();
+      useTeams('team_dummy');
+      const { project } = useProject({
+        ...defaultProject,
+        id: basename(cwd),
+        name: basename(cwd),
+      });
+      useUnknownProject();
+
+      client.cwd = cwd;
+      client.setArgv();
+      const exitCodePromise = link(client);
+
+      await expect(client.stderr).toOutput('Set up');
+      client.stdin.write('y\n');
+
+      // Decline cross-team match
+      await expect(client.stderr).toOutput('Link to it?');
+      client.stdin.write('n\n');
+
+      // Should fall through to selectOrg
+      await expect(client.stderr).toOutput(
+        'Which scope should contain your project?'
+      );
+      client.stdin.write('\n');
+
+      // inputProject runs with skipAutoDetect, so no duplicate search
+      await expect(client.stderr).toOutput('Link to existing project?');
+      client.stdin.write('y\n');
+
+      // Mock pagination returns {}, so hasMoreProjects is true → text input
+      await expect(client.stderr).toOutput(
+        'the name of your existing project?'
+      );
+      client.stdin.write(`${basename(cwd)}\n`);
+
+      await expect(client.stderr).toOutput(
+        `Linked to ${user.username}/${project.name}`
+      );
+
+      await expect(client.stderr).toOutput(
+        'Would you like to pull environment variables now?'
+      );
+      client.stdin.write('n\n');
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+    });
+
+    it('should fall through to selectOrg when no project found across teams', async () => {
+      useUser();
+      const cwd = setupTmpDir();
+      useTeams('team_dummy');
+      useUnknownProject();
+
+      client.cwd = cwd;
+      const exitCodePromise = link(client);
+
+      await expect(client.stderr).toOutput('Set up');
+      client.stdin.write('y\n');
+
+      // No match found during cross-team search, should go to selectOrg
+      await expect(client.stderr).toOutput(
+        'Which scope should contain your project?'
+      );
+      client.stdin.write('\n');
+
+      // inputProject runs auto-detect (skipAutoDetect=false), finds nothing
+      await expect(client.stderr).toOutput('Link to existing project?');
+      client.stdin.write('n\n');
+
+      await expect(client.stderr).toOutput('your project');
+      client.stdin.write(`${basename(cwd)}\n`);
+
+      await expect(client.stderr).toOutput(
+        'In which directory is your code located?'
+      );
+      client.stdin.write('\n');
+
+      await expect(client.stderr).toOutput('Want to modify these settings?');
+      client.stdin.write('\n');
+
+      await expect(client.stderr).toOutput(
+        'Do you want to change additional project settings?'
+      );
+      client.stdin.write('\n');
+
+      await expect(client.stderr).toOutput('Linked to');
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+    });
+
+    it('should not search personal account for northstar users', async () => {
+      useUser({ version: 'northstar' });
+      const cwd = setupTmpDir();
+      const projectName = basename(cwd);
+
+      useTeams('team_dummy');
+
+      // Track which teamIds are queried for the project
+      const queriedTeamIds: (string | undefined)[] = [];
+      const project = {
+        ...defaultProject,
+        id: projectName,
+        name: projectName,
+      };
+
+      client.scenario.get(`/v9/projects/${projectName}`, (req, res) => {
+        queriedTeamIds.push(req.query.teamId as string | undefined);
+        res.json(project);
+      });
+      useUnknownProject();
+
+      client.cwd = cwd;
+      client.setArgv('--yes');
+      const exitCode = await link(client);
+      expect(exitCode).toEqual(0);
+
+      // Should only query with team ID (team_dummy), not personal account
+      for (const teamId of queriedTeamIds) {
+        expect(teamId).toBeTruthy();
+      }
+    });
+
+    describe('multiple matches', () => {
+      it('should auto-link to current team match with --yes', async () => {
+        useUser();
+        const cwd = setupTmpDir();
+        const projectName = basename(cwd);
+
+        useTeams('team_a');
+        createTeam('team_b', 'team-b', 'Team B');
+
+        const projectA = {
+          ...defaultProject,
+          id: 'proj-on-a',
+          name: projectName,
+        };
+        const projectB = {
+          ...defaultProject,
+          id: 'proj-on-b',
+          name: projectName,
+        };
+
+        // Return different projects per team
+        client.scenario.get(`/v9/projects/${projectName}`, (req, res) => {
+          if (req.query.teamId === 'team_a') {
+            return res.json(projectA);
+          }
+          if (req.query.teamId === 'team_b') {
+            return res.json(projectB);
+          }
+          res.status(404).json({ error: { code: 'not_found' } });
+        });
+        useUnknownProject();
+
+        // Set current team to team_a so it auto-picks that match
+        client.config.currentTeam = 'team_a';
+        client.cwd = cwd;
+        client.setArgv('--yes');
+        const exitCode = await link(client);
+
+        expect(exitCode).toEqual(0);
+        const projectJson = await readJSON(join(cwd, '.vercel/project.json'));
+        expect(projectJson.projectId).toEqual('proj-on-a');
+        expect(projectJson.orgId).toEqual('team_a');
+      });
+
+      it('should prompt to select when --yes but no current team match', async () => {
+        useUser();
+        const cwd = setupTmpDir();
+        const projectName = basename(cwd);
+
+        useTeams('team_a');
+        createTeam('team_b', 'team-b', 'Team B');
+
+        const projectA = {
+          ...defaultProject,
+          id: 'proj-on-a',
+          name: projectName,
+        };
+        const projectB = {
+          ...defaultProject,
+          id: 'proj-on-b',
+          name: projectName,
+        };
+
+        client.scenario.get(`/v9/projects/${projectName}`, (req, res) => {
+          if (req.query.teamId === 'team_a') {
+            return res.json(projectA);
+          }
+          if (req.query.teamId === 'team_b') {
+            return res.json(projectB);
+          }
+          res.status(404).json({ error: { code: 'not_found' } });
+        });
+        useUnknownProject();
+
+        // No currentTeam set — can't auto-pick, must prompt
+        client.cwd = cwd;
+        client.setArgv('--yes');
+        const exitCodePromise = link(client);
+
+        await expect(client.stderr).toOutput(
+          'Found matching projects across teams'
+        );
+        // Select first option (team_a)
+        client.stdin.write('\n');
+
+        const exitCode = await exitCodePromise;
+        expect(exitCode).toEqual(0);
+
+        const projectJson = await readJSON(join(cwd, '.vercel/project.json'));
+        expect(projectJson.projectId).toEqual('proj-on-a');
+      });
+
+      it('should prompt to select interactively when multiple matches', async () => {
+        useUser();
+        const cwd = setupTmpDir();
+        const projectName = basename(cwd);
+
+        useTeams('team_a');
+        createTeam('team_b', 'team-b', 'Team B');
+
+        const projectA = {
+          ...defaultProject,
+          id: 'proj-on-a',
+          name: projectName,
+        };
+        const projectB = {
+          ...defaultProject,
+          id: 'proj-on-b',
+          name: projectName,
+        };
+
+        client.scenario.get(`/v9/projects/${projectName}`, (req, res) => {
+          if (req.query.teamId === 'team_a') {
+            return res.json(projectA);
+          }
+          if (req.query.teamId === 'team_b') {
+            return res.json(projectB);
+          }
+          res.status(404).json({ error: { code: 'not_found' } });
+        });
+        useUnknownProject();
+
+        client.cwd = cwd;
+        const exitCodePromise = link(client);
+
+        await expect(client.stderr).toOutput('Set up');
+        client.stdin.write('y\n');
+
+        await expect(client.stderr).toOutput(
+          'Found matching projects across teams'
+        );
+        // Select first option
+        client.stdin.write('\n');
+
+        await expect(client.stderr).toOutput('Linked to');
+
+        await expect(client.stderr).toOutput(
+          'Would you like to pull environment variables now?'
+        );
+        client.stdin.write('n\n');
+
+        const exitCode = await exitCodePromise;
+        expect(exitCode).toEqual(0);
+
+        const projectJson = await readJSON(join(cwd, '.vercel/project.json'));
+        expect(projectJson.projectId).toEqual('proj-on-a');
+      });
+
+      it('should fall through to selectOrg when non-interactive with multiple matches', async () => {
+        useUser({ version: 'northstar' });
+        const cwd = setupTmpDir();
+        const projectName = basename(cwd);
+
+        useTeams('team_a');
+        createTeam('team_b', 'team-b', 'Team B');
+
+        const projectA = {
+          ...defaultProject,
+          id: 'proj-on-a',
+          name: projectName,
+        };
+        const projectB = {
+          ...defaultProject,
+          id: 'proj-on-b',
+          name: projectName,
+        };
+
+        client.scenario.get(`/v9/projects/${projectName}`, (req, res) => {
+          if (req.query.teamId === 'team_a') {
+            return res.json(projectA);
+          }
+          if (req.query.teamId === 'team_b') {
+            return res.json(projectB);
+          }
+          res.status(404).json({ error: { code: 'not_found' } });
+        });
+        useUnknownProject();
+
+        client.cwd = cwd;
+        client.setArgv('link', '--non-interactive');
+        (client as { nonInteractive: boolean }).nonInteractive = true;
+
+        const exitSpy = vi
+          .spyOn(process, 'exit')
+          .mockImplementation((code?: number) => {
+            throw new Error(`process.exit(${code})`);
+          });
+        const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+        await expect(link(client)).rejects.toThrow('process.exit(1)');
+
+        expect(logSpy).toHaveBeenCalledTimes(1);
+        const payload = JSON.parse(logSpy.mock.calls[0][0]);
+        expect(payload.status).toBe('action_required');
+        expect(payload.reason).toBe('missing_scope');
+
+        exitSpy.mockRestore();
+        logSpy.mockRestore();
+        (client as { nonInteractive: boolean }).nonInteractive = false;
+      });
     });
   });
 });

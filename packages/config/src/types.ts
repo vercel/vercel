@@ -575,6 +575,15 @@ export interface VercelConfig {
        */
       workspace?: string;
       /**
+       * Preferred routing config alias for routePrefix/subdomain.
+       */
+      mount?:
+        | string
+        | {
+            path?: string;
+            subdomain?: string;
+          };
+      /**
        * URL prefix for routing (web services only).
        */
       routePrefix?: string;
