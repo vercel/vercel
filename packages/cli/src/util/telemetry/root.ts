@@ -138,9 +138,23 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
+  trackCliCommandEdgeConfig(actual: string) {
+    this.trackCliCommand({
+      command: 'edge-config',
+      value: actual,
+    });
+  }
+
   trackCliCommandEnv(actual: string) {
     this.trackCliCommand({
       command: 'env',
+      value: actual,
+    });
+  }
+
+  trackCliCommandFirewall(actual: string) {
+    this.trackCliCommand({
+      command: 'firewall',
       value: actual,
     });
   }
@@ -264,6 +278,13 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
+  trackCliCommandOauthApps(actual: string) {
+    this.trackCliCommand({
+      command: 'oauth-apps',
+      value: actual,
+    });
+  }
+
   trackCliCommandOpen(actual: string) {
     this.trackCliCommand({
       command: 'open',
@@ -341,6 +362,13 @@ export class RootTelemetryClient extends TelemetryClient {
     });
   }
 
+  trackCliCommandSandbox(actual: string) {
+    this.trackCliCommand({
+      command: 'sandbox',
+      value: actual,
+    });
+  }
+
   trackCliCommandTarget(actual: string) {
     this.trackCliCommand({
       command: 'target',
@@ -351,6 +379,13 @@ export class RootTelemetryClient extends TelemetryClient {
   trackCliCommandTeams(actual: string) {
     this.trackCliCommand({
       command: 'teams',
+      value: actual,
+    });
+  }
+
+  trackCliCommandTokens(actual: string) {
+    this.trackCliCommand({
+      command: 'tokens',
       value: actual,
     });
   }
@@ -416,6 +451,38 @@ export class RootTelemetryClient extends TelemetryClient {
 
   trackVersion(version: string | undefined) {
     super.trackVersion(version);
+  }
+
+  trackProjectId(projectId: string | undefined) {
+    super.trackProjectId(projectId);
+  }
+
+  trackInvocationId(invocationId: string | undefined) {
+    super.trackInvocationId(invocationId);
+  }
+
+  trackDeviceId(deviceId: string | undefined) {
+    super.trackDeviceId(deviceId);
+  }
+
+  trackErrorStatus(status: number | string | undefined) {
+    super.trackErrorStatus(status);
+  }
+
+  trackErrorCode(code: string | undefined) {
+    super.trackErrorCode(code);
+  }
+
+  trackErrorSlug(slug: string | undefined) {
+    super.trackErrorSlug(slug);
+  }
+
+  trackErrorAction(action: string | undefined) {
+    super.trackErrorAction(action);
+  }
+
+  trackErrorServerMessage(serverMessage: string | undefined) {
+    super.trackErrorServerMessage(serverMessage);
   }
 
   trackCliOptionCwd(cwd: string | undefined) {

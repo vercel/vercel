@@ -3,7 +3,13 @@ import type { JsonOutputOptions } from './types';
 
 export function outputJson(
   client: Client,
-  { data, fromDate, toDate, breakdownPeriod }: JsonOutputOptions
+  {
+    data,
+    fromDate,
+    toDate,
+    breakdownPeriod,
+    groupByDimension,
+  }: JsonOutputOptions
 ): void {
   const sortedServices = [...data.services.entries()].sort(
     (a, b) => b[1].billedCost - a[1].billedCost
@@ -42,6 +48,37 @@ export function outputJson(
             pricingQuantity: periodData.totalPricingQuantity,
             effectiveCost: periodData.totalEffectiveCost,
             billedCost: periodData.totalBilledCost,
+          },
+        };
+      }),
+    };
+  }
+
+  // Include group-by data if a dimension is specified
+  if (groupByDimension) {
+    const sortedGroups = [...data.groupByUsage.entries()].sort(
+      (a, b) => b[1].totalBilledCost - a[1].totalBilledCost
+    );
+
+    jsonOutput.groupBy = {
+      dimension: groupByDimension,
+      data: sortedGroups.map(([groupName, groupData]) => {
+        const sortedGroupServices = [...groupData.services.entries()].sort(
+          (a, b) => b[1].billedCost - a[1].billedCost
+        );
+        return {
+          name: groupName,
+          services: sortedGroupServices.map(([name, svc]) => ({
+            name,
+            pricingQuantity: svc.pricingQuantity,
+            pricingUnit: svc.pricingUnit,
+            effectiveCost: svc.effectiveCost,
+            billedCost: svc.billedCost,
+          })),
+          totals: {
+            pricingQuantity: groupData.totalPricingQuantity,
+            effectiveCost: groupData.totalEffectiveCost,
+            billedCost: groupData.totalBilledCost,
           },
         };
       }),

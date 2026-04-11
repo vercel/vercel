@@ -13,9 +13,23 @@ export class IntegrationTelemetryClient
     });
   }
 
+  trackCliSubcommandAcceptTerms(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'accept-terms',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandList(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'list',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandInstallations(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'installations',
       value: actual,
     });
   }
@@ -44,6 +58,13 @@ export class IntegrationTelemetryClient
   trackCliSubcommandRemove(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'remove',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandUpdate(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'update',
       value: actual,
     });
   }

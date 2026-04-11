@@ -3,11 +3,16 @@ import {
   isActionRequiredPayload,
   outputActionRequired,
   outputAgentError,
+  argvHasNonInteractive,
+  exitWithNonInteractiveError,
   buildCommandWithScope,
   buildCommandWithYes,
+  buildCommandWithGlobalFlags,
+  getGlobalFlagsFromArgv,
   enrichActionRequiredWithInvokingCommand,
   type ActionRequiredPayload,
 } from '../../../src/util/agent-output';
+import { APIError, LinkRequiredError } from '../../../src/util/errors-ts';
 import type Client from '../../../src/util/client';
 
 describe('isActionRequiredPayload', () => {
@@ -128,6 +133,22 @@ describe('outputActionRequired', () => {
     expect(parsed.status).toBe('action_required');
     expect(parsed.message).toBe(payload.message);
 
+    expect(exitSpy).toHaveBeenCalledWith(1);
+  });
+
+  it('logs JSON when argv includes --non-interactive even if client.nonInteractive is false', () => {
+    const stdoutWrite = vi.fn();
+    const client = {
+      nonInteractive: false,
+      stdout: { write: stdoutWrite },
+      argv: ['/node', '/vc.js', 'deploy', '--non-interactive'],
+    } as unknown as Client;
+
+    outputActionRequired(client, payload);
+    expect(stdoutWrite).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(String(stdoutWrite.mock.calls[0][0])).status).toBe(
+      'action_required'
+    );
     expect(exitSpy).toHaveBeenCalledWith(1);
   });
 
@@ -355,7 +376,10 @@ describe('outputAgentError', () => {
       throw new Error('should not exit');
     }) as never);
 
-    const client = { nonInteractive: false } as Client;
+    const client = {
+      nonInteractive: false,
+      argv: ['node', 'vc.js', 'login'],
+    } as Client;
     outputAgentError(client, {
       status: 'error',
       reason: 'no_credentials',
@@ -367,5 +391,184 @@ describe('outputAgentError', () => {
 
     logSpy.mockRestore();
     exitSpy.mockRestore();
+  });
+});
+
+describe('argvHasNonInteractive', () => {
+  it('detects --non-interactive', () => {
+    expect(argvHasNonInteractive(['node', 'vc.js', 'project', 'ls'])).toBe(
+      false
+    );
+    expect(
+      argvHasNonInteractive([
+        'node',
+        'vc.js',
+        'project',
+        'ls',
+        '--non-interactive',
+      ])
+    ).toBe(true);
+    expect(
+      argvHasNonInteractive([
+        'node',
+        'vc.js',
+        '--non-interactive=false',
+        'project',
+        'ls',
+      ])
+    ).toBe(false);
+  });
+});
+
+describe('getGlobalFlagsFromArgv', () => {
+  it('does not treat the subcommand after --non-interactive as a flag value', () => {
+    const argv = [
+      'node',
+      'vc.js',
+      '--cwd',
+      '/tmp/p',
+      '--non-interactive',
+      'integration',
+      'remove',
+      'neon',
+      '--yes',
+    ];
+    expect(getGlobalFlagsFromArgv(argv)).toEqual([
+      '--cwd',
+      '/tmp/p',
+      '--non-interactive',
+      '--yes',
+    ]);
+  });
+});
+
+describe('buildCommandWithGlobalFlags', () => {
+  it('prepends globals without swallowing the integration subcommand', () => {
+    const argv = [
+      'node',
+      'vc.js',
+      '--cwd',
+      '/tmp/p',
+      '--non-interactive',
+      'integration',
+      'remove',
+      'neon',
+      '--yes',
+    ];
+    expect(
+      buildCommandWithGlobalFlags(
+        argv,
+        'integration-resource remove r1 --disconnect-all --yes',
+        'vercel',
+        { prependGlobalFlags: true, excludeFlags: ['--yes', '-y'] }
+      )
+    ).toBe(
+      'vercel --cwd /tmp/p --non-interactive integration-resource remove r1 --disconnect-all --yes'
+    );
+  });
+});
+
+describe('exitWithNonInteractiveError', () => {
+  it('emits JSON when argv includes --non-interactive even if client.nonInteractive is false', async () => {
+    const { Response } = await import('node-fetch');
+    const res = new Response(
+      JSON.stringify({
+        error: { code: 'not_found', message: 'Project not found.' },
+      }),
+      { status: 404 }
+    );
+    const err = new APIError('Project not found.', res);
+
+    vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+      throw new Error(`exit:${code ?? 0}`);
+    }) as () => never);
+
+    const chunks: string[] = [];
+    const stdout = {
+      write: (s: string) => {
+        chunks.push(s);
+        return true;
+      },
+    };
+
+    const client = {
+      nonInteractive: false,
+      argv: ['node', 'vc.js', 'project', 'members', '--non-interactive'],
+      stdout,
+    } as unknown as Client;
+
+    expect(() => exitWithNonInteractiveError(client, err, 1)).toThrow('exit:1');
+    const payload = JSON.parse(chunks.join('').trim());
+    expect(payload).toMatchObject({
+      status: 'error',
+      reason: 'project_not_found',
+      message: 'Project not found.',
+    });
+
+    vi.restoreAllMocks();
+  });
+
+  it('emits link_required JSON for LinkRequiredError', () => {
+    vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+      throw new Error(`exit:${code ?? 0}`);
+    }) as () => never);
+
+    const chunks: string[] = [];
+    const stdout = {
+      write: (s: string) => {
+        chunks.push(s);
+        return true;
+      },
+    };
+
+    const client = {
+      nonInteractive: true,
+      argv: ['node', 'vc.js', 'project', 'members', '--non-interactive'],
+      stdout,
+    } as unknown as Client;
+
+    expect(() =>
+      exitWithNonInteractiveError(client, new LinkRequiredError(), 1, {
+        variant: 'members',
+      })
+    ).toThrow('exit:1');
+    const payload = JSON.parse(chunks.join('').trim());
+    expect(payload).toMatchObject({
+      status: 'error',
+      reason: 'link_required',
+    });
+
+    vi.restoreAllMocks();
+  });
+});
+
+describe('getGlobalFlagsFromArgv', () => {
+  it('does not treat the subcommand after --non-interactive as a flag value', () => {
+    expect(
+      getGlobalFlagsFromArgv([
+        'node',
+        'vc.js',
+        '--non-interactive',
+        'oauth-apps',
+        'register',
+        '--name',
+        'x',
+      ])
+    ).toEqual(['--non-interactive']);
+  });
+
+  it('collects --cwd and --non-interactive from anywhere in argv', () => {
+    expect(
+      getGlobalFlagsFromArgv([
+        'node',
+        'vc.js',
+        'oauth-apps',
+        'register',
+        '--name',
+        'display-name',
+        '--cwd=/tmp/proj',
+        '--non-interactive',
+      ])
+    ).toEqual(['--cwd=/tmp/proj', '--non-interactive']);
   });
 });

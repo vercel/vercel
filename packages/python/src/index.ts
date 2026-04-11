@@ -101,9 +101,22 @@ const frameworkHooks: Partial<Record<PythonFramework, FrameworkHook>> = {
       debug('Django hook: no manage.py detected, skipping');
       return;
     }
-    const settingsResult = await getDjangoSettings(projectDir, pythonEnv);
+    let settingsResult;
+    try {
+      settingsResult = await getDjangoSettings(projectDir, pythonEnv);
+    } catch (err: any) {
+      let detail: string;
+      if (err?.code === 'ENOENT') {
+        detail = `command not found: python\nHint: activate a venv or run with \`uv run vercel dev\``;
+      } else {
+        detail = err?.stderr || err?.message || String(err);
+      }
+      throw new NowBuildError({
+        code: 'DJANGO_SETTINGS_FAILED',
+        message: `Failed to read Django application settings from ${projectDir}/manage.py:\n${detail}`,
+      });
+    }
     debug(`Django settings: ${JSON.stringify(settingsResult)}`);
-    if (!settingsResult) return;
     const { djangoSettings, settingsModule, djangoVersion } = settingsResult;
     if (djangoVersion) {
       console.log(`Django ${djangoVersion.join('.')} detected`);
@@ -723,9 +736,7 @@ from vercel_runtime.vc_init import vc_handler
   // If there is a service name, we need to mount this under the
   // service properly, for a V2 build.
   // TODO: Ideally this should be handled by writeBuildResultV2.
-  const lambdaPath = service?.name
-    ? `_svc/${service.name}/index`
-    : entrypoint.replace(/\.py$/, '');
+  const lambdaPath = service?.name ? `_svc/${service.name}/index` : 'index';
   const staticFiles = djangoStatic?.cdnOutputDir
     ? await glob('**', { cwd: djangoStatic.cdnOutputDir })
     : {};

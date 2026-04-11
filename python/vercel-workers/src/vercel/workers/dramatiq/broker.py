@@ -298,6 +298,9 @@ class VercelQueuesBroker(Broker):
             message.message_id if self._cfg.use_message_id_as_idempotency_key else None
         )
 
+        # Compute send-time delay from the delay parameter (milliseconds).
+        delay_seconds = int(delay / 1000) if delay and delay > 0 else None
+
         if os.environ.get("VWD_DEBUG_PUBLISH") not in {None, "", "0", "false", "FALSE"}:
             try:
                 print(
@@ -312,6 +315,7 @@ class VercelQueuesBroker(Broker):
             envelope,
             idempotency_key=idempotency_key,
             retention_seconds=self._cfg.retention_seconds,
+            delay_seconds=delay_seconds,
             deployment_id=self._cfg.deployment_id,
             token=self._cfg.token,
             base_url=self._cfg.base_url,
