@@ -1,5 +1,40 @@
 # vercel
 
+## 50.44.0
+
+### Minor Changes
+
+- Add `vercel oauth-apps` to list installation requests, dismiss requests, install apps by OAuth client id, and remove installations. ([#15846](https://github.com/vercel/vercel/pull/15846))
+
+- Add `vercel teams sso` to show SAML/SSO configuration for the current team. ([#15847](https://github.com/vercel/vercel/pull/15847))
+
+### Patch Changes
+
+- Fetch check run logs inline and use `checkRunLog` deep-link for failed deployment checks. ([#15906](https://github.com/vercel/vercel/pull/15906))
+
+- Add `mount` support for experimental services across config validation and service resolution. ([#15882](https://github.com/vercel/vercel/pull/15882))
+
+- Updated dependencies [[`9b3ea340f23c1faad6d56c2a54d75bb2e77b0162`](https://github.com/vercel/vercel/commit/9b3ea340f23c1faad6d56c2a54d75bb2e77b0162), [`4362505f1f5bf9b8fa0738dec2ad3189edc933b2`](https://github.com/vercel/vercel/commit/4362505f1f5bf9b8fa0738dec2ad3189edc933b2)]:
+  - @vercel/build-utils@13.14.2
+  - @vercel/next@4.16.6
+  - @vercel/backends@0.0.59
+  - @vercel/elysia@0.1.62
+  - @vercel/express@0.1.72
+  - @vercel/fastify@0.1.65
+  - @vercel/go@3.4.7
+  - @vercel/h3@0.1.71
+  - @vercel/hono@0.2.65
+  - @vercel/hydrogen@1.3.6
+  - @vercel/koa@0.1.45
+  - @vercel/nestjs@0.2.66
+  - @vercel/node@5.7.4
+  - @vercel/python@6.29.0
+  - @vercel/redwood@2.4.12
+  - @vercel/remix-builder@5.7.2
+  - @vercel/ruby@2.3.2
+  - @vercel/rust@1.1.0
+  - @vercel/static-build@2.9.12
+
 ## 50.43.0
 
 ### Minor Changes
