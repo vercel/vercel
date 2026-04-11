@@ -10,7 +10,7 @@ from ..client import send
 
 try:
     from dramatiq.broker import Broker, Consumer, MessageProxy
-    from dramatiq.common import current_millis, dq_name
+    from dramatiq.common import current_millis
     from dramatiq.message import Message
 except Exception as e:
     raise RuntimeError(
@@ -123,17 +123,14 @@ class DramatiqTaskEnvelope(dict):
 def _message_to_envelope(message: Message, queue_name: str) -> DramatiqTaskEnvelope:
     """
     Convert a Dramatiq Message to a Vercel Queues envelope.
+
+    Serialization goes through configured dramatiq's encoder so
+    ephemeral options or custom types can be handled by the encoder.
     """
-    return DramatiqTaskEnvelope(
-        vercel={"kind": "dramatiq", "version": 1},
-        queue_name=queue_name,
-        actor_name=message.actor_name,
-        message_id=message.message_id,
-        message_timestamp=message.message_timestamp,
-        args=list(message.args) if message.args else [],
-        kwargs=dict(message.kwargs) if message.kwargs else {},
-        options=dict(message.options) if message.options else {},
-    )
+    data = json.loads(message.encode())
+    data["queue_name"] = queue_name
+    data["vercel"] = {"kind": "dramatiq", "version": 1}
+    return DramatiqTaskEnvelope(data)
 
 
 def _envelope_to_message(envelope: dict[str, Any]) -> Message:
@@ -281,11 +278,11 @@ class VercelQueuesBroker(Broker):
         """
         queue_name = message.queue_name
 
-        # Handle delay queues (Dramatiq uses separate delay queues)
+        # Handle delayed messages. Usually Dramatiq uses separate
+        # ".DQ" delay queues, but Vercel Queues handles delays natively
+        # via eta, so no need for a separate queue name.
         if delay is not None and delay > 0:
-            queue_name = dq_name(queue_name)
             message = message.copy(
-                queue_name=queue_name,
                 options={
                     **message.options,
                     "eta": current_millis() + delay,
@@ -355,8 +352,11 @@ class VercelQueuesBroker(Broker):
         return self._queues.copy()
 
     def get_declared_delay_queues(self) -> set[str]:
-        """Get the set of declared delay queue names."""
-        return {dq_name(q) for q in self._queues}
+        """Get the set of declared delay queue names.
+
+        Note: Vercel Queues handles delays natively using the original queue.
+        """
+        return set()
 
     def join(self, queue_name: str, *, timeout: int | None = None) -> None:
         """
