@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
+import json
+from datetime import UTC, datetime
+from decimal import Decimal
 from unittest.mock import MagicMock, patch
+from uuid import uuid4
 
 import pytest
 
@@ -12,6 +16,7 @@ pytest.importorskip("dramatiq")
 import dramatiq
 from dramatiq.message import Message
 
+from vercel.workers.client import WorkerJSONEncoder
 from vercel.workers.dramatiq import (
     DramatiqWorkerConfig,
     PollingWorker,
@@ -159,6 +164,27 @@ class TestMessageEnvelopeConversion:
         assert envelope["kwargs"] == {"x": 10}
         assert envelope["options"] == {"retries": 3}
 
+    def test_message_to_envelope_serializes_common_python_types(self):
+        uid = uuid4()
+        ts = datetime.now(UTC)
+        priority = Decimal("1.5")
+
+        message = Message(
+            queue_name="test-queue",
+            actor_name="test_actor",
+            args=(),
+            kwargs={"request_id": uid, "enqueued_at": ts, "priority": priority},
+            options={},
+        )
+
+        envelope = _message_to_envelope(message, "test-queue")
+
+        # Ensure the envelope can be serialized by the same encoder used by the queue client.
+        payload = json.loads(json.dumps(envelope, cls=WorkerJSONEncoder))
+        assert payload["kwargs"]["request_id"] == str(uid)
+        assert payload["kwargs"]["enqueued_at"] == ts.isoformat()
+        assert payload["kwargs"]["priority"] == float(priority)
+
     def test_envelope_to_message(self):
         envelope = {
             "vercel": {"kind": "dramatiq", "version": 1},
@@ -298,6 +324,32 @@ class TestActorIntegration:
         assert envelope["vercel"]["kind"] == "dramatiq"
         assert envelope["actor_name"] == "add_numbers_test"
         assert envelope["args"] == [10, 20]
+
+    @patch("vercel.workers.dramatiq.broker.send")
+    def test_actor_send_supports_common_python_types(self, mock_send: MagicMock):
+        mock_send.return_value = {"messageId": "msg-integration-123"}
+
+        broker = VercelQueuesBroker()
+        dramatiq.set_broker(broker)
+
+        @dramatiq.actor(queue_name="send-test", broker=broker)
+        def echo_payload(payload: dict) -> dict:
+            return payload
+
+        uid = uuid4()
+        ts = datetime.now(UTC)
+        priority = Decimal("1.5")
+
+        result = echo_payload.send({"request_id": uid, "enqueued_at": ts, "priority": priority})
+
+        assert result.message_id is not None
+        mock_send.assert_called_once()
+
+        envelope = mock_send.call_args[0][1]
+        payload = json.loads(json.dumps(envelope, cls=WorkerJSONEncoder))
+        assert payload["args"][0]["request_id"] == str(uid)
+        assert payload["args"][0]["enqueued_at"] == ts.isoformat()
+        assert payload["args"][0]["priority"] == float(priority)
 
 
 class TestMiddlewarePipeline:
