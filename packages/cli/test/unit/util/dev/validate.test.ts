@@ -35,6 +35,32 @@ describe('validateConfig', () => {
     expect(error).toBeNull();
   });
 
+  it('should not error with experimentalServices mount config', async () => {
+    const config = {
+      experimentalServices: {
+        frontend: {
+          framework: 'nextjs',
+          mount: '/',
+        },
+        api: {
+          entrypoint: 'api/index.ts',
+          mount: {
+            path: '/api',
+            subdomain: 'api',
+          },
+        },
+        docs: {
+          framework: 'nextjs',
+          mount: {
+            subdomain: 'docs',
+          },
+        },
+      },
+    } satisfies Parameters<typeof validateConfig>[0];
+    const error = validateConfig(config);
+    expect(error).toBeNull();
+  });
+
   it('should not error with builds and routes', async () => {
     const config = {
       builds: [{ src: 'api/index.js', use: '@vercel/node' }],

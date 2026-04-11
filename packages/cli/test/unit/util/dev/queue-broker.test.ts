@@ -40,9 +40,10 @@ function makeWebService(name: string): Service {
   } as Service;
 }
 
-/** Extract the CloudEvent body from the most recent mockFetch call. */
-function lastCloudEvent(): Record<string, unknown> {
-  const call = mockFetch.mock.calls[mockFetch.mock.calls.length - 1];
+/** Parse the CloudEvent JSON body from a specific mockFetch call. */
+function findCloudEvent(index?: number): any {
+  const i = index ?? mockFetch.mock.calls.length - 1;
+  const call = mockFetch.mock.calls[i];
   return JSON.parse((call[1] as any).body);
 }
 
@@ -147,11 +148,12 @@ describe('QueueBroker', () => {
       const [url, opts] = mockFetch.mock.calls[0];
       expect(url).toBe('http://localhost:3001/');
       expect((opts as any).method).toBe('POST');
+
       expect((opts as any).headers['Content-Type']).toBe(
         'application/cloudevents+json'
       );
 
-      const body = lastCloudEvent();
+      const body = findCloudEvent();
       expect(body.type).toBe('com.vercel.queue.v1beta');
       expect(body.data).toMatchObject({
         queueName: 'orders',
@@ -187,11 +189,8 @@ describe('QueueBroker', () => {
 
       expect(mockFetch).toHaveBeenCalledTimes(2);
 
-      const bodies = mockFetch.mock.calls.map(c =>
-        JSON.parse((c[1] as any).body)
-      );
-      expect(bodies[0].data.queueName).toBe('orders');
-      expect(bodies[1].data.queueName).toBe('events');
+      expect(findCloudEvent(0).data.queueName).toBe('orders');
+      expect(findCloudEvent(1).data.queueName).toBe('events');
     });
 
     it('does not cross-dispatch across topics during tick()', async () => {
@@ -302,7 +301,7 @@ describe('QueueBroker', () => {
       expect(result).not.toBeNull();
       expect(result!.payload).toEqual(payload);
       expect(result!.contentType).toBe('text/plain');
-      expect(result!.ticket).toBeTruthy();
+      expect(result!.receiptHandle).toBeTruthy();
       expect(result!.deliveryCount).toBe(1);
       expect(result!.createdAt).toBeTruthy();
     });
@@ -347,7 +346,11 @@ describe('QueueBroker', () => {
       await vi.advanceTimersByTimeAsync(0);
 
       const received = broker.receiveById(messageId, 'worker-a')!;
-      const acked = broker.acknowledge(messageId, 'worker-a', received.ticket);
+      const acked = broker.acknowledge(
+        messageId,
+        'worker-a',
+        received.receiptHandle
+      );
       expect(acked).toBe(true);
 
       // After ACK, receiveById for this group returns fresh data (no tracked state)
@@ -355,12 +358,12 @@ describe('QueueBroker', () => {
       const secondAck = broker.acknowledge(
         messageId,
         'worker-a',
-        received.ticket
+        received.receiptHandle
       );
       expect(secondAck).toBe(false);
     });
 
-    it('rejects ACK with wrong ticket', async () => {
+    it('rejects ACK with wrong receipt handle', async () => {
       broker = new QueueBroker(
         [makeWorkerService('worker-a', ['orders'])],
         getServiceOrigin
@@ -373,7 +376,11 @@ describe('QueueBroker', () => {
       );
       await vi.advanceTimersByTimeAsync(0);
 
-      const result = broker.acknowledge(messageId, 'worker-a', 'wrong-ticket');
+      const result = broker.acknowledge(
+        messageId,
+        'worker-a',
+        'wrong-receipt-handle'
+      );
       expect(result).toBe(false);
 
       // Message should still be receivable
@@ -387,7 +394,9 @@ describe('QueueBroker', () => {
         getServiceOrigin
       );
 
-      expect(broker.acknowledge('any', 'unknown-group', 'ticket')).toBe(false);
+      expect(broker.acknowledge('any', 'unknown-group', 'receipt-handle')).toBe(
+        false
+      );
     });
 
     it('cleans up message when acked in all groups', async () => {
@@ -403,8 +412,8 @@ describe('QueueBroker', () => {
       );
       await vi.advanceTimersByTimeAsync(0);
 
-      const ticket = broker.receiveById(messageId, 'worker-a')!.ticket;
-      broker.acknowledge(messageId, 'worker-a', ticket);
+      const handle = broker.receiveById(messageId, 'worker-a')!.receiptHandle;
+      broker.acknowledge(messageId, 'worker-a', handle);
 
       // Message no longer exists at all
       expect(broker.receiveById(messageId, 'worker-a')).toBeNull();
@@ -427,8 +436,8 @@ describe('QueueBroker', () => {
       await vi.advanceTimersByTimeAsync(0);
 
       // ACK in group A
-      const ticketA = broker.receiveById(messageId, 'worker-a')!.ticket;
-      broker.acknowledge(messageId, 'worker-a', ticketA);
+      const handleA = broker.receiveById(messageId, 'worker-a')!.receiptHandle;
+      broker.acknowledge(messageId, 'worker-a', handleA);
 
       // Still available in group B
       const resultB = broker.receiveById(messageId, 'worker-b');
@@ -437,7 +446,7 @@ describe('QueueBroker', () => {
   });
 
   describe('changeVisibility', () => {
-    it('returns true for in-flight message with valid ticket', async () => {
+    it('returns true for in-flight message with valid receipt handle', async () => {
       broker = new QueueBroker(
         [makeWorkerService('worker-a', ['orders'])],
         getServiceOrigin
@@ -450,11 +459,11 @@ describe('QueueBroker', () => {
       );
       await vi.advanceTimersByTimeAsync(0);
 
-      const ticket = broker.receiveById(messageId, 'worker-a')!.ticket;
+      const handle = broker.receiveById(messageId, 'worker-a')!.receiptHandle;
       const result = broker.changeVisibility(
         messageId,
         'worker-a',
-        ticket,
+        handle,
         300
       );
       expect(result).toBe(true);
@@ -478,7 +487,7 @@ describe('QueueBroker', () => {
       );
     });
 
-    it('returns false with wrong ticket', async () => {
+    it('returns false with wrong receipt handle', async () => {
       broker = new QueueBroker(
         [makeWorkerService('worker-a', ['orders'])],
         getServiceOrigin
@@ -492,7 +501,12 @@ describe('QueueBroker', () => {
       await vi.advanceTimersByTimeAsync(0);
 
       expect(
-        broker.changeVisibility(messageId, 'worker-a', 'wrong-ticket', 60)
+        broker.changeVisibility(
+          messageId,
+          'worker-a',
+          'wrong-receipt-handle',
+          60
+        )
       ).toBe(false);
     });
 
@@ -510,10 +524,10 @@ describe('QueueBroker', () => {
       await vi.advanceTimersByTimeAsync(0);
       mockFetch.mockClear();
 
-      const ticket = broker.receiveById(messageId, 'worker-a')!.ticket;
+      const handle = broker.receiveById(messageId, 'worker-a')!.receiptHandle;
 
       // Extend visibility to 5 minutes
-      broker.changeVisibility(messageId, 'worker-a', ticket, 300);
+      broker.changeVisibility(messageId, 'worker-a', handle, 300);
 
       // Advance past original 60s timeout but within new 300s timeout
       await vi.advanceTimersByTimeAsync(90_000);
@@ -521,8 +535,8 @@ describe('QueueBroker', () => {
       // Should NOT have retried — message is still in-flight
       expect(mockFetch).not.toHaveBeenCalled();
 
-      // Should still be acknowledgeable with the same ticket
-      expect(broker.acknowledge(messageId, 'worker-a', ticket)).toBe(true);
+      // Should still be acknowledgeable with the same receipt handle
+      expect(broker.acknowledge(messageId, 'worker-a', handle)).toBe(true);
     });
   });
 

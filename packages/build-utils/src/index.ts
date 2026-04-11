@@ -162,6 +162,7 @@ export {
 } from './framework-helpers';
 
 export * from './python';
+export * from './node-entrypoint';
 
 export {
   getEncryptedEnv,
@@ -200,6 +201,8 @@ export { collectUncompressedSize } from './collect-uncompressed-size';
 
 export {
   finalizeLambda,
+  type CreateZipResult,
+  type CreateZipFn,
   type FinalizeLambdaParams,
   type FinalizeLambdaResult,
   type TraceFn,
