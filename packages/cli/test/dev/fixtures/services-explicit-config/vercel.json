@@ -3,17 +3,17 @@
     "service-next": {
       "framework": "nextjs",
       "entrypoint": "service-next",
-      "routePrefix": "/"
+      "mount": "/"
     },
     "service-fastapi": {
       "framework": "fastapi",
       "entrypoint": "service-fastapi",
-      "routePrefix": "/api/fastapi"
+      "mount": "/api/fastapi"
     },
     "service-flask": {
       "framework": "flask",
       "entrypoint": "service-flask",
-      "routePrefix": "/api/flask"
+      "mount": "/api/flask"
     }
   }
 }

@@ -43,15 +43,12 @@ beforeEach(() => {
   openMock.mockReset().mockResolvedValue(undefined as never);
   pullMock.mockClear();
   connectMock.mockClear();
-  // Explicitly enable auto-provision so tests pass regardless of flag default
-  process.env.FF_AUTO_PROVISION_INSTALL = '1';
   // Mock Math.random to get predictable resource names (gray-apple suffix)
   vi.spyOn(Math, 'random').mockReturnValue(0);
 });
 
 afterEach(() => {
   vi.restoreAllMocks();
-  delete process.env.FF_AUTO_PROVISION_INSTALL;
 });
 
 describe('integration add (auto-provision)', () => {
@@ -541,6 +538,68 @@ describe('integration add (auto-provision)', () => {
       expect(exitCode).toEqual(0);
       expect(openMock).toHaveBeenCalledWith(
         expect.stringContaining('/~/integrations/accept-terms/aws-apg')
+      );
+    });
+
+    it('should emit action_required JSON and not wait for terms when non-interactive', async () => {
+      vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+        throw new Error(`exit:${code ?? 0}`);
+      }) as () => never);
+      client.reset();
+      useUser();
+      const teams = useTeams('team_dummy');
+      const t = Array.isArray(teams) ? teams[0] : teams.teams[0];
+      client.config.currentTeam = t.id;
+
+      useAutoProvision({
+        responseKey: 'provisioned',
+        withInstallation: false,
+      });
+
+      // No TTY triggers browser terms flow (same as CI / piped stdin)
+      client.stdin.isTTY = false;
+      client.isAgent = false;
+      client.nonInteractive = true;
+      client.setArgv(
+        'integration',
+        'add',
+        'acme',
+        '--non-interactive',
+        '--cwd',
+        '/tmp/proj'
+      );
+
+      await expect(integrationCommand(client)).rejects.toThrow('exit:1');
+
+      expect(openMock).toHaveBeenCalledWith(
+        expect.stringMatching(/\/integrations\/accept-terms\/acme/)
+      );
+
+      const payload = JSON.parse(client.stdout.getFullOutput().trim());
+      expect(payload.status).toBe('action_required');
+      expect(payload.reason).toBe('integration_terms_acceptance_required');
+      expect(payload.verification_uri).toMatch(
+        /\/integrations\/accept-terms\/acme/
+      );
+      expect(payload.userActionRequired).toBe(true);
+      expect(payload.policy_links?.marketplace_addendum).toMatch(
+        /vercel\.com\/legal\/integration-marketplace-end-users-addendum/
+      );
+      expect(payload.policy_links?.integration_privacy_policy).toMatch(
+        /example\.com\/privacy/
+      );
+      expect(payload.policy_links?.integration_eula).toMatch(
+        /example\.com\/eula/
+      );
+      expect(payload.next?.[0]?.command).toBe(
+        'vercel --non-interactive --cwd /tmp/proj integration add acme'
+      );
+      expect(payload.next?.[1]?.command).toBe(
+        'vercel --non-interactive --cwd /tmp/proj integration accept-terms acme --yes'
+      );
+
+      expect(client.stderr.getFullOutput()).not.toContain(
+        'Terms accepted in browser.'
       );
     });
 
@@ -1187,7 +1246,7 @@ describe('integration add (auto-provision)', () => {
       client.setArgv('integration', 'add', 'acme', '-n', 'shorthand-name');
       const exitCodePromise = integrationCommand(client);
 
-      // --name flag provides the name, server fills metadata defaults — no wizard prompts
+      // --name flag provides the name, server fills metadata defaults — no prompts
       await expect(client.stderr).toOutput(
         'Acme Product successfully provisioned: shorthand-name'
       );
@@ -1201,7 +1260,7 @@ describe('integration add (auto-provision)', () => {
       client.setArgv('integration', 'add', 'acme', '--name', maxName);
       const exitCodePromise = integrationCommand(client);
 
-      // --name flag provides the name, server fills metadata defaults — no wizard prompts
+      // --name flag provides the name, server fills metadata defaults — no prompts
       await expect(client.stderr).toOutput(
         `Acme Product successfully provisioned: ${maxName}`
       );
@@ -1448,6 +1507,51 @@ describe('integration add (auto-provision)', () => {
       useAutoProvision({ responseKey: 'provisioned' });
     });
 
+    it('should error when no integration argument was passed', async () => {
+      client.setArgv('integration', 'add');
+      const exitCode = await integrationCommand(client);
+      expect(exitCode, 'exit code for "integration"').toEqual(1);
+      await expect(client.stderr).toOutput(
+        'Error: You must pass an integration slug'
+      );
+    });
+
+    it('writes structured JSON when non-interactive and integration slug is missing', async () => {
+      vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+        throw new Error(`exit:${code ?? 0}`);
+      }) as () => never);
+      client.nonInteractive = true;
+      client.setArgv(
+        'integration',
+        'add',
+        '--non-interactive',
+        '--cwd',
+        '/tmp/example'
+      );
+      await expect(integrationCommand(client)).rejects.toThrow('exit:1');
+      const payload = JSON.parse(client.stdout.getFullOutput().trim());
+      expect(payload).toMatchObject({
+        status: 'error',
+        reason: 'missing_arguments',
+        message: 'You must pass an integration slug',
+      });
+      expect(payload.next?.[0]?.command).toMatch(
+        /vercel --non-interactive --cwd \/tmp\/example integration discover$/
+      );
+      expect(payload.next?.[1]?.command).toBe(
+        'vercel --non-interactive --cwd /tmp/example integration add neon'
+      );
+    });
+
+    it('should error when more than one integration argument was passed', async () => {
+      client.setArgv('integration', 'add', 'acme', 'acme-two');
+      const exitCode = await integrationCommand(client);
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput(
+        'Cannot install more than one integration at a time'
+      );
+    });
+
     it('should error when team not found', async () => {
       client.config.currentTeam = undefined;
       client.setArgv('integration', 'add', 'acme');
@@ -1592,10 +1696,6 @@ describe('integration add (auto-provision)', () => {
       await expect(client.stderr).toOutput(
         'Error: Metadata "region" must be one of: us-west-1, us-east-1'
       );
-      // Should NOT prompt for resource name since validation fails first
-      await expect(client.stderr).not.toOutput(
-        'What is the name of the resource?'
-      );
     });
 
     it('should error on unknown metadata key', async () => {
@@ -1628,7 +1728,7 @@ describe('integration add (auto-provision)', () => {
       );
     });
 
-    it('should accept valid metadata and skip wizard prompts', async () => {
+    it('should accept valid metadata and skip prompts', async () => {
       client.setArgv(
         'integration',
         'add',
@@ -1765,7 +1865,7 @@ describe('integration add (auto-provision)', () => {
         `Installing Acme Product A by Acme Integration Two Products under ${team.slug}`
       );
 
-      // Auto-generated name, server fills metadata defaults — no wizard prompts
+      // Auto-generated name, server fills metadata defaults — no prompts
       await expect(client.stderr).toOutput('successfully provisioned');
 
       const exitCode = await exitCodePromise;
@@ -1800,7 +1900,7 @@ describe('integration add (auto-provision)', () => {
         `Installing Acme Product A by Acme Integration Two Products under ${team.slug}`
       );
 
-      // --name flag provides the name, server fills metadata defaults — no wizard prompts
+      // --name flag provides the name, server fills metadata defaults — no prompts
       await expect(client.stderr).toOutput('successfully provisioned');
 
       const exitCode = await exitCodePromise;
@@ -1826,7 +1926,7 @@ describe('integration add (auto-provision)', () => {
         `Installing Acme Product A by Acme Integration Two Products under ${team.slug}`
       );
 
-      // Fully non-interactive — no product selection, no name prompt, no wizard
+      // Fully non-interactive — no product selection, no name prompt
       await expect(client.stderr).toOutput(
         'Acme Product A successfully provisioned: my-db'
       );
@@ -1870,7 +1970,7 @@ describe('integration add (auto-provision)', () => {
         `Installing Acme Product by Acme Integration under ${team.slug}`
       );
 
-      // Auto-generated name, server fills metadata defaults — no wizard prompts
+      // Auto-generated name, server fills metadata defaults — no prompts
       await expect(client.stderr).toOutput('successfully provisioned');
 
       const exitCode = await exitCodePromise;
@@ -1979,96 +2079,6 @@ describe('integration add (auto-provision)', () => {
     });
   });
 
-  describe('--installation-id FF gating', () => {
-    it('should not show --installation-id in --help when FF is off', async () => {
-      process.env.FF_AUTO_PROVISION_INSTALL = '0';
-      client.setArgv('integration', 'add', '--help');
-      const exitCode = await integrationCommand(client);
-      expect(exitCode).toEqual(0);
-      const stderr = client.stderr.getFullOutput();
-      expect(stderr).not.toContain('--installation-id');
-    });
-
-    it('should show --installation-id in --help when FF is on', async () => {
-      delete process.env.FF_AUTO_PROVISION_INSTALL;
-      client.setArgv('integration', 'add', '--help');
-      const exitCode = await integrationCommand(client);
-      expect(exitCode).toEqual(0);
-      const stderr = client.stderr.getFullOutput();
-      expect(stderr).toContain('--installation-id');
-    });
-
-    it('should reject --installation-id when FF is off', async () => {
-      process.env.FF_AUTO_PROVISION_INSTALL = '0';
-      client.setArgv(
-        'integration',
-        'add',
-        'acme',
-        '--installation-id',
-        'icfg_123'
-      );
-      const exitCode = await integrationCommand(client);
-      expect(exitCode).toEqual(1);
-      await expect(client.stderr).toOutput(
-        'Unknown or unexpected option: --installation-id'
-      );
-    });
-  });
-
-  describe('--installation-id FF gating (vc install alias)', () => {
-    it('should not show --installation-id in vc install --help when FF is off', async () => {
-      process.env.FF_AUTO_PROVISION_INSTALL = '0';
-      client.setArgv('install', '--help');
-      const exitCode = await install(client);
-      expect(exitCode).toEqual(0);
-      const stderr = client.stderr.getFullOutput();
-      expect(stderr).not.toContain('--installation-id');
-    });
-
-    it('should show --installation-id in vc install --help when FF is on', async () => {
-      delete process.env.FF_AUTO_PROVISION_INSTALL;
-      client.setArgv('install', '--help');
-      const exitCode = await install(client);
-      expect(exitCode).toEqual(0);
-      const stderr = client.stderr.getFullOutput();
-      expect(stderr).toContain('--installation-id');
-    });
-
-    it('should reject --installation-id in vc install when FF is off', async () => {
-      process.env.FF_AUTO_PROVISION_INSTALL = '0';
-      client.setArgv('install', 'acme', '--installation-id', 'icfg_123');
-      const exitCode = await install(client);
-      expect(exitCode).toEqual(1);
-      await expect(client.stderr).toOutput(
-        'Unknown or unexpected option: --installation-id'
-      );
-    });
-
-    it('should provision successfully via vc install with --installation-id', async () => {
-      const { requestBodies } = useAutoProvision({
-        responseKey: 'multiple_installations',
-      });
-
-      client.setArgv(
-        'install',
-        'acme',
-        '--installation-id',
-        'icfg_marketplace_1'
-      );
-      const exitCodePromise = install(client);
-
-      await expect(client.stderr).toOutput(
-        'Acme Product successfully provisioned: acme-gray-apple'
-      );
-
-      const exitCode = await exitCodePromise;
-      expect(exitCode).toEqual(0);
-      expect(requestBodies[0]).toMatchObject({
-        installationId: 'icfg_marketplace_1',
-      });
-    });
-  });
-
   describe('command name in error messages', () => {
     it('should use "vercel integration add" in multiple installations error via integration add', async () => {
       useAutoProvision({ responseKey: 'multiple_installations' });
@@ -2121,6 +2131,32 @@ describe('integration add (auto-provision)', () => {
       expect(exitCode).toEqual(1);
       const stderr = client.stderr.getFullOutput();
       expect(stderr).toContain('vercel integration add acme-two-products/');
+    });
+  });
+
+  describe('vc install --installation-id', () => {
+    it('should provision successfully via vc install with --installation-id', async () => {
+      const { requestBodies } = useAutoProvision({
+        responseKey: 'multiple_installations',
+      });
+
+      client.setArgv(
+        'install',
+        'acme',
+        '--installation-id',
+        'icfg_marketplace_1'
+      );
+      const exitCodePromise = install(client);
+
+      await expect(client.stderr).toOutput(
+        'Acme Product successfully provisioned: acme-gray-apple'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+      expect(requestBodies[0]).toMatchObject({
+        installationId: 'icfg_marketplace_1',
+      });
     });
   });
 
