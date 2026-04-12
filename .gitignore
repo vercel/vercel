@@ -43,3 +43,4 @@ junit.xml
 # CLI target command tests
 !packages/cli/test/unit/commands/target/
 !packages/cli/test/unit/commands/target/**
+.claude/settings.local.json
