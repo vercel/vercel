@@ -4728,6 +4728,9 @@ exports[`help command > project help output snapshots > project help column widt
                                    …
                                    a
                                    …
+  rename          name new-name    …
+                                   a
+                                   …
   remove          name             …
                                    a
                                    …
@@ -4816,6 +4819,7 @@ exports[`help command > project help output snapshots > project help column widt
                                    settings for a project                   
   web-analytics   [name]           Enable Web Analytics for a project       
   speed-insights  [name]           Enable Speed Insights for a project      
+  rename          name new-name    Rename a project                         
   remove          name             Delete a project                         
   token           [name]           Get a development OIDC token for a       
                                    project                                  
@@ -4860,6 +4864,7 @@ exports[`help command > project help output snapshots > project help column widt
   protection      [action] [name]  Show or toggle deployment protection settings for a project                      
   web-analytics   [name]           Enable Web Analytics for a project                                               
   speed-insights  [name]           Enable Speed Insights for a project                                              
+  rename          name new-name    Rename a project                                                                 
   remove          name             Delete a project                                                                 
   token           [name]           Get a development OIDC token for a project                                       
 
@@ -4978,6 +4983,35 @@ exports[`help command > project help output snapshots > project remove help outp
   -t,  --token <TOKEN>        Login token                                                                               
   -v,  --version              Output the version number                                                                 
 
+
+"
+`;
+
+exports[`help command > project help output snapshots > project rename help output snapshots > project rename help column width 120 1`] = `
+"
+  ▲ vercel project rename name new-name
+
+  Rename a project                                                                                                      
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single run of a command                          
+  -d,  --debug                Debug mode (default off)                                                                  
+  -Q,  --global-config <DIR>  Path to the global \`.vercel\` directory                                                    
+  -h,  --help                 Output usage information                                                                  
+  -A,  --local-config <FILE>  Path to the local \`vercel.json\` file                                                      
+       --no-color             No color mode (default off)                                                               
+       --non-interactive      Run without interactive prompts; when an agent is detected this is the default            
+  -S,  --scope                Set a custom scope                                                                        
+  -t,  --token <TOKEN>        Login token                                                                               
+  -v,  --version              Output the version number                                                                 
+
+
+  Examples:
+
+  - Rename a project
+
+    $ vercel project rename my-project my-renamed-project
 
 "
 `;

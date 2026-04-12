@@ -647,6 +647,16 @@ describe('help command', () => {
         ).toMatchSnapshot();
       });
     });
+    describe('project rename help output snapshots', () => {
+      it('project rename help column width 120', () => {
+        expect(
+          help(project.renameSubcommand, {
+            columns: 120,
+            parent: project.projectCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
   });
 
   describe('promote help output snapshots', () => {
