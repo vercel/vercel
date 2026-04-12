@@ -6,11 +6,13 @@ from collections.abc import Iterable
 from dataclasses import dataclass, replace
 from typing import Any
 
-from ..client import send
+from ..client import WorkerJSONEncoder, send
 
 try:
+    import dramatiq
     from dramatiq.broker import Broker, Consumer, MessageProxy
     from dramatiq.common import current_millis
+    from dramatiq.encoder import Encoder
     from dramatiq.message import Message
 except Exception as e:
     raise RuntimeError(
@@ -20,10 +22,33 @@ except Exception as e:
 
 
 __all__ = [
+    "VercelDramatiqEncoder",
     "VercelQueuesBroker",
     "VercelQueuesBrokerOptions",
     "DramatiqTaskEnvelope",
 ]
+
+
+class VercelDramatiqEncoder(Encoder):
+    """Dramatiq message encoder that handles common Python types."""
+
+    _json_encoder: type[json.JSONEncoder]
+
+    def __init__(self, json_encoder: type[json.JSONEncoder] | None = None) -> None:
+        self._json_encoder = json_encoder or WorkerJSONEncoder
+
+    def encode(self, data: dict[str, Any]) -> bytes:
+        return json.dumps(
+            data,
+            cls=self._json_encoder,
+            separators=(",", ":"),
+        ).encode("utf-8")
+
+    def decode(self, data: bytes) -> dict[str, Any]:
+        try:
+            return json.loads(data.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as e:
+            raise dramatiq.DecodeError(f"could not decode message: {data!r}", data, e) from None
 
 
 @dataclass(frozen=True, slots=True)
@@ -47,8 +72,8 @@ class VercelQueuesBrokerOptions:
     # Use message_id as idempotency key by default
     use_message_id_as_idempotency_key: bool = True
 
-    # Use custom JSON encoder class to send data
-    json_encoder: type[json.JSONEncoder] | None = None
+    # Custom dramatiq Encoder instance (overrides the default VercelDramatiqEncoder)
+    encoder: Encoder | None = None
 
     @classmethod
     def from_dict(cls, options: dict[str, Any]) -> VercelQueuesBrokerOptions:
@@ -93,9 +118,9 @@ class VercelQueuesBrokerOptions:
         if isinstance(use_msg_id, bool):
             cfg = replace(cfg, use_message_id_as_idempotency_key=use_msg_id)
 
-        json_encoder = options.get("json_encoder")
-        if isinstance(json_encoder, type) and issubclass(json_encoder, json.JSONEncoder):
-            cfg = replace(cfg, json_encoder=json_encoder)
+        encoder = options.get("encoder")
+        if isinstance(encoder, Encoder):
+            cfg = replace(cfg, encoder=encoder)
 
         return cfg
 
@@ -120,14 +145,21 @@ class DramatiqTaskEnvelope(dict):
     pass
 
 
-def _message_to_envelope(message: Message, queue_name: str) -> DramatiqTaskEnvelope:
+def _message_to_envelope(
+    message: Message,
+    queue_name: str,
+    encoder: Encoder | None = None,
+) -> DramatiqTaskEnvelope:
     """
     Convert a Dramatiq Message to a Vercel Queues envelope.
 
-    Serialization goes through configured dramatiq's encoder so
-    ephemeral options or custom types can be handled by the encoder.
+    Serialization goes through the provided `encoder` or the global
+    dramatiq encoder when `encoder` is None so that ephemeral
+    options and custom types are handled correctly.
     """
-    data = json.loads(message.encode())
+    if encoder is None:
+        encoder = dramatiq.get_encoder()
+    data = json.loads(encoder.encode(message.asdict()))
     data["queue_name"] = queue_name
     data["vercel"] = {"kind": "dramatiq", "version": 1}
     return DramatiqTaskEnvelope(data)
@@ -219,6 +251,11 @@ class VercelQueuesBroker(Broker):
         # may call get_declared_queues() during initialization.
         self._queues: set[str] = set()
         self._cfg = VercelQueuesBrokerOptions.from_dict(options or {})
+
+        # Per-instance encoder that handles UUID, datetime, Decimal out of
+        # the box.
+        self.encoder: Encoder = self._cfg.encoder or VercelDramatiqEncoder()
+
         super().__init__(middleware=middleware)
 
     @property
@@ -291,7 +328,7 @@ class VercelQueuesBroker(Broker):
 
         self.emit_before("enqueue", message, delay)
 
-        envelope = _message_to_envelope(message, queue_name)
+        envelope = _message_to_envelope(message, queue_name, encoder=self.encoder)
 
         # Use message_id for idempotency by default
         idempotency_key = (
@@ -321,7 +358,6 @@ class VercelQueuesBroker(Broker):
             base_url=self._cfg.base_url,
             base_path=self._cfg.base_path,
             timeout=self._cfg.timeout,
-            json_encoder=self._cfg.json_encoder,
         )
 
         self.emit_after("enqueue", message, delay)
