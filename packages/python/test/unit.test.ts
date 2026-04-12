@@ -49,10 +49,14 @@ import {
   resetInstalledPythonsCache,
 } from '../src/version';
 import type { PythonConstraint, PythonPackage } from '@vercel/python-analysis';
-import { build } from '../src/index';
+import { build, prepareCache } from '../src/index';
 import type { BuildResultV3, BuildResultV2 } from '@vercel/build-utils';
 import { createVenvEnv, getVenvBinDir } from '../src/utils';
-import { UV_PYTHON_DOWNLOADS_MODE, getProtectedUvEnv } from '../src/uv';
+import {
+  UV_PYTHON_DOWNLOADS_MODE,
+  getProtectedUvEnv,
+  getUvCacheDir,
+} from '../src/uv';
 import { VERCEL_WORKERS_VERSION } from '../src/package-versions';
 import { createPyprojectToml } from '../src/install';
 import { getDjangoSettings, runDjangoCollectStatic } from '../src/django';
@@ -175,6 +179,107 @@ afterEach(() => {
   if (fs.existsSync(tmpPythonDir)) {
     fs.removeSync(tmpPythonDir);
   }
+});
+
+describe('prepareCache()', () => {
+  const origPrepareCacheEnv = process.env.VERCEL_PYTHON_PREPARE_CACHE;
+
+  afterEach(() => {
+    if (origPrepareCacheEnv === undefined) {
+      delete process.env.VERCEL_PYTHON_PREPARE_CACHE;
+    } else {
+      process.env.VERCEL_PYTHON_PREPARE_CACHE = origPrepareCacheEnv;
+    }
+  });
+
+  it('returns empty object when VERCEL_PYTHON_PREPARE_CACHE is not set', async () => {
+    delete process.env.VERCEL_PYTHON_PREPARE_CACHE;
+    const workPath = path.join(
+      tmpdir(),
+      `vc-python-cache-${Math.floor(Math.random() * 1e6)}`
+    );
+
+    await fs.outputFile(
+      path.join(workPath, '.vercel/python/cache/uv/wheels/example.whl'),
+      ''
+    );
+
+    try {
+      const files = await prepareCache({
+        files: {},
+        entrypoint: 'app.py',
+        config: {},
+        workPath,
+        repoRootPath: workPath,
+      });
+
+      expect(Object.keys(files)).toHaveLength(0);
+    } finally {
+      await fs.remove(workPath);
+    }
+  });
+
+  it('caches uv cache and the venv, excludes bytecode and user source when enabled', async () => {
+    process.env.VERCEL_PYTHON_PREPARE_CACHE = '1';
+    const workPath = path.join(
+      tmpdir(),
+      `vc-python-cache-${Math.floor(Math.random() * 1e6)}`
+    );
+
+    // Create a fake uv cache with some files
+    await fs.outputFile(
+      path.join(workPath, '.vercel/python/cache/uv/wheels/example.whl'),
+      ''
+    );
+    await fs.outputFile(
+      path.join(workPath, '.vercel/python/cache/uv/archive/foo.tar.gz'),
+      ''
+    );
+    // Create a .pyc file that should be excluded
+    await fs.outputFile(
+      path.join(workPath, '.vercel/python/cache/uv/archive/foo.pyc'),
+      ''
+    );
+    // Create venv files that should be included
+    await fs.outputFile(
+      path.join(workPath, '.vercel/python/.venv/pyvenv.cfg'),
+      'home = /usr/bin\n'
+    );
+    await fs.outputFile(
+      path.join(workPath, '.vercel/python/.venv/lib/site-packages/pkg/mod.py'),
+      ''
+    );
+    // Create a user source file that should NOT be included
+    await fs.outputFile(path.join(workPath, 'app.py'), 'print("hello")\n');
+
+    try {
+      const files = await prepareCache({
+        files: {},
+        entrypoint: 'app.py',
+        config: {},
+        workPath,
+        repoRootPath: workPath,
+      });
+
+      // uv cache files should be present (minus .pyc)
+      expect(files['.vercel/python/cache/uv/wheels/example.whl']).toBeDefined();
+      expect(files['.vercel/python/cache/uv/archive/foo.tar.gz']).toBeDefined();
+
+      // .pyc in uv cache should be excluded
+      expect(files['.vercel/python/cache/uv/archive/foo.pyc']).toBeUndefined();
+
+      // venv files should be cached (uv sync prunes stale packages)
+      expect(files['.vercel/python/.venv/pyvenv.cfg']).toBeDefined();
+      expect(
+        files['.vercel/python/.venv/lib/site-packages/pkg/mod.py']
+      ).toBeDefined();
+
+      // user source files should NOT be cached
+      expect(files['app.py']).toBeUndefined();
+    } finally {
+      await fs.remove(workPath);
+    }
+  });
 });
 
 it('should only match supported versions, otherwise throw an error', () => {
@@ -2631,19 +2736,38 @@ describe('UV_PYTHON_DOWNLOADS environment variable protection', () => {
       expect(env.HOME).toBe('/home/user');
       expect(env.UV_PYTHON_DOWNLOADS).toBe(UV_PYTHON_DOWNLOADS_MODE);
     });
+
+    it('sets UV_CACHE_DIR when provided', () => {
+      const cacheDir = '/tmp/project/.vercel/python/cache/uv';
+      const env = getProtectedUvEnv({}, cacheDir);
+      expect(env.UV_CACHE_DIR).toBe(cacheDir);
+    });
+
+    it('does not set UV_CACHE_DIR when not provided', () => {
+      const env = getProtectedUvEnv({});
+      expect(env.UV_CACHE_DIR).toBeUndefined();
+    });
+  });
+
+  describe('getUvCacheDir', () => {
+    it('returns the correct cache directory path', () => {
+      expect(getUvCacheDir('/repo')).toBe('/repo/.vercel/python/cache/uv');
+    });
   });
 
   describe('createVenvEnv', () => {
-    it('sets VIRTUAL_ENV and PATH correctly while protecting UV_PYTHON_DOWNLOADS', () => {
+    it('sets VIRTUAL_ENV and PATH correctly while protecting uv env', () => {
       process.env.UV_PYTHON_DOWNLOADS = 'manual';
       process.env.PATH = '/usr/bin';
       const venvPath = '/path/to/venv';
-      const env = createVenvEnv(venvPath);
+      const cacheDir = getUvCacheDir('/repo');
+      const env = createVenvEnv(venvPath, process.env, cacheDir);
 
       expect(env.VIRTUAL_ENV).toBe(venvPath);
       expect(env.PATH).toContain(getVenvBinDir(venvPath));
       expect(env.PATH).toContain('/usr/bin');
       expect(env.UV_PYTHON_DOWNLOADS).toBe(UV_PYTHON_DOWNLOADS_MODE);
+      expect(env.UV_CACHE_DIR).toBe(cacheDir);
     });
   });
 });

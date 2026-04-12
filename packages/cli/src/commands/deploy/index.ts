@@ -25,6 +25,7 @@ import { createGitMeta } from '../../util/create-git-meta';
 import createDeploy from '../../util/deploy/create-deploy';
 import { getDeploymentChecks } from '../../util/deploy/get-deployment-checks';
 import { getDeploymentCheckRuns } from '../../util/deploy/get-deployment-check-runs';
+import { getDeploymentCheckRunLogs } from '../../util/deploy/get-deployment-check-run-logs';
 import getPrebuiltJson from '../../util/deploy/get-prebuilt-json';
 import { printDeploymentStatus } from '../../util/deploy/print-deployment-status';
 import { isValidArchive } from '../../util/deploy/validate-archive-format';
@@ -2108,11 +2109,17 @@ async function handleFailedCheckRuns(
 
   const message = `Running Checks: ${counterList}`;
 
-  const getSourceKind = (run: { source: { kind: string } | string }) =>
-    typeof run.source === 'object' ? run.source.kind : run.source;
-  const getJobName = (run: {
-    source: { kind: string; jobName?: string } | string;
-  }) => (typeof run.source === 'object' ? run.source.jobName : undefined);
+  const getCheckRunUrl = (run: {
+    id: string;
+    externalUrl?: string | null;
+    detailsUrl?: string | null;
+  }) => {
+    if (run.externalUrl) return run.externalUrl;
+    if (run.detailsUrl) return run.detailsUrl;
+    return deployment.inspectorUrl
+      ? `${deployment.inspectorUrl}?checkRunLog=${encodeURIComponent(run.id)}`
+      : null;
+  };
 
   if (asJson) {
     output.stopSpinner();
@@ -2120,36 +2127,55 @@ async function handleFailedCheckRuns(
       name: 'CHECKS_FAILED',
       message,
     });
-    const payload = client.nonInteractive
-      ? {
-          status: AGENT_STATUS.ERROR,
-          reason: 'checks_failed',
-          message,
-          deployment: deploymentJson,
-          failedCheckRuns: failedRuns.map(run => ({
+
+    let payload;
+    if (client.nonInteractive) {
+      const failedCheckRunsWithLogs = await Promise.all(
+        failedRuns.map(async run => {
+          let logs: { level: string; timestamp: number; message: string }[] =
+            [];
+          try {
+            logs = await getDeploymentCheckRunLogs(
+              client,
+              deployment.id,
+              run.id
+            );
+          } catch {
+            // best-effort: if log fetching fails, continue without logs
+          }
+          return {
             id: run.id,
             name: run.name,
             conclusion: run.conclusion,
             source: run.source,
-            logsEndpoint: `/v2/deployments/${deployment.id}/check-runs/${run.id}/logs${client.config.currentTeam ? `?teamId=${client.config.currentTeam}` : ''}`,
-          })),
-          next: [
-            {
-              command: getCommandNameWithGlobalFlags('deploy', client.argv),
-              when: 'retry deploy after fixing check failures',
-            },
-          ],
-        }
-      : deploymentJson;
+            url: getCheckRunUrl(run),
+            logs,
+          };
+        })
+      );
+
+      payload = {
+        status: AGENT_STATUS.ERROR,
+        reason: 'checks_failed',
+        message,
+        deployment: deploymentJson,
+        failedCheckRuns: failedCheckRunsWithLogs,
+        next: [
+          {
+            command: getCommandNameWithGlobalFlags('deploy', client.argv),
+            when: 'retry deploy after fixing check failures',
+          },
+        ],
+      };
+    } else {
+      payload = deploymentJson;
+    }
+
     client.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
   } else {
     output.error(message);
     for (const run of failedRuns) {
-      const jobName = getJobName(run);
-      const dashboardUrl =
-        getSourceKind(run) === 'vercel' && deployment.inspectorUrl && jobName
-          ? `${deployment.inspectorUrl}?logsTab=${encodeURIComponent(jobName)}`
-          : (deployment.inspectorUrl ?? null);
+      const dashboardUrl = getCheckRunUrl(run);
       const label = dashboardUrl
         ? output.link(run.name, dashboardUrl)
         : run.name;

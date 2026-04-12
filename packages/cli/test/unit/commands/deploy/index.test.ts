@@ -2478,6 +2478,20 @@ describe('deploy', () => {
       );
 
       client.scenario.get(
+        `/v2/deployments/dpl_checks_ni/check-runs/cr_fail/logs`,
+        (_req, res) => {
+          res.type('text/plain');
+          res.send(
+            [
+              '{"level":"command","timestamp":1700000000000,"message":"npm run lint"}',
+              '{"level":"error","timestamp":1700000001000,"message":"Exited with code 1."}',
+              '{"level":"eof","timestamp":1700000002000,"message":""}',
+            ].join('\n')
+          );
+        }
+      );
+
+      client.scenario.get(
         `/v3/now/deployments/dpl_checks_ni/events`,
         (_req, res) => {
           res.end();
@@ -2497,9 +2511,17 @@ describe('deploy', () => {
       expect(json.reason).toBe('checks_failed');
       expect(json.failedCheckRuns).toHaveLength(1);
       expect(json.failedCheckRuns[0].name).toBe('Lint');
-      expect(json.failedCheckRuns[0].logsEndpoint).toContain(
-        '/check-runs/cr_fail/logs'
+      expect(json.failedCheckRuns[0].url).toBe(
+        'https://vercel.com/test/dpl_checks_ni?checkRunLog=cr_fail'
       );
+      expect(json.failedCheckRuns[0].logs).toEqual([
+        { level: 'command', timestamp: 1700000000000, message: 'npm run lint' },
+        {
+          level: 'error',
+          timestamp: 1700000001000,
+          message: 'Exited with code 1.',
+        },
+      ]);
     });
 
     // v2 checks pending → shows "Running Checks..." spinner
