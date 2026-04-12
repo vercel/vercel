@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
+from decimal import Decimal
 from unittest.mock import MagicMock, patch
+from uuid import uuid4
 
 import pytest
 
@@ -15,6 +18,7 @@ from dramatiq.message import Message
 from vercel.workers.dramatiq import (
     DramatiqWorkerConfig,
     PollingWorker,
+    VercelDramatiqEncoder,
     VercelQueuesBroker,
     VercelQueuesBrokerOptions,
 )
@@ -428,6 +432,28 @@ class TestEncoderIntegration:
         assert envelope["kwargs"] == {"x": 10}
         assert envelope["options"]["retries"] == 3
 
+    def test_default_encoder_handles_uuid_datetime_decimal(self):
+        broker = VercelQueuesBroker()
+
+        uid = uuid4()
+        dt = datetime(2026, 1, 15, 12, 0, 0, tzinfo=UTC)
+        dec = Decimal("3.14")
+
+        message = Message(
+            queue_name="test-q",
+            actor_name="test_actor",
+            args=({"request_id": uid, "ts": dt, "price": dec},),
+            kwargs={},
+            options={},
+        )
+
+        envelope = _message_to_envelope(message, "test-q", encoder=broker.encoder)
+
+        payload = envelope["args"][0]
+        assert payload["request_id"] == str(uid)
+        assert payload["ts"] == dt.isoformat()
+        assert payload["price"] == float(dec)
+
     def test_custom_encoder_strips_options(self):
         original_encoder = dramatiq.get_encoder()
 
@@ -458,6 +484,28 @@ class TestEncoderIntegration:
             assert envelope["options"]["retries"] == 1
         finally:
             dramatiq.set_encoder(original_encoder)
+
+    def test_broker_accepts_custom_encoder_option(self):
+        calls = []
+
+        class TrackingEncoder(VercelDramatiqEncoder):
+            def encode(self, data):
+                calls.append("encode")
+                return super().encode(data)
+
+        encoder = TrackingEncoder()
+        broker = VercelQueuesBroker(options={"encoder": encoder})
+        assert broker.encoder is encoder
+
+        message = Message(
+            queue_name="test-q",
+            actor_name="test_actor",
+            args=(1,),
+            kwargs={},
+            options={},
+        )
+        _message_to_envelope(message, "test-q", encoder=broker.encoder)
+        assert "encode" in calls
 
     @patch("vercel.workers.dramatiq.broker.send")
     def test_enqueue_uses_encoder(self, mock_send):

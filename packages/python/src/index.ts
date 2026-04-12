@@ -26,6 +26,7 @@ import {
   type ShouldServe,
   FileFsRef,
   PythonFramework,
+  type PrepareCache,
 } from '@vercel/build-utils';
 import {
   discoverPackage,
@@ -35,7 +36,12 @@ import {
   installRequirement,
 } from './install';
 import { PythonDependencyExternalizer } from './dependency-externalizer';
-import { UvRunner, getUvBinaryOrInstall } from './uv';
+import {
+  UvRunner,
+  getUvBinaryOrInstall,
+  getUvCacheDir,
+  findUvInPath,
+} from './uv';
 import { resolvePythonVersion, pythonVersionString } from './version';
 import { generateProjectManifest } from './diagnostics';
 import { startDevServer } from './start-dev-server';
@@ -300,10 +306,19 @@ export const build: BuildVX = async ({
   const venvPath = service?.name
     ? join(workPath, '.vercel', 'python', 'services', service.name, '.venv')
     : join(workPath, '.vercel', 'python', '.venv');
+  const uvCacheDir = getUvCacheDir(workPath);
+  const hasCachedVenv = fs.existsSync(join(venvPath, 'pyvenv.cfg'));
+  const hasCachedUv = fs.existsSync(uvCacheDir);
+  if (hasCachedVenv || hasCachedUv) {
+    debug(
+      `Build cache detected: venv=${hasCachedVenv}, uv-cache=${hasCachedUv}`
+    );
+  }
   await builderSpan.child('vc.builder.python.venv').trace(async () => {
     await ensureVenv({
-      pythonPath: pythonVersion.pythonPath,
+      pythonVersion,
       venvPath,
+      uvCacheDir,
     });
   });
 
@@ -336,7 +351,7 @@ export const build: BuildVX = async ({
   }
 
   const baseEnv = spawnEnv || process.env;
-  const pythonEnv = createVenvEnv(venvPath, baseEnv);
+  const pythonEnv = createVenvEnv(venvPath, baseEnv, uvCacheDir);
 
   pythonEnv.VERCEL_PYTHON_VENV_PATH = venvPath;
 
@@ -348,7 +363,7 @@ export const build: BuildVX = async ({
   let uv: UvRunner;
   try {
     const uvPath = await getUvBinaryOrInstall(pythonVersion.pythonPath);
-    uv = new UvRunner(uvPath);
+    uv = new UvRunner(uvPath, uvCacheDir);
     const uvVersionOutput = execSync(`${uvPath} --version`, {
       encoding: 'utf8',
     }).trim();
@@ -373,6 +388,15 @@ export const build: BuildVX = async ({
     })
     .trace(async () => {
       if (projectInstallCommand) {
+        // Custom commands may not prune removed packages, so always
+        // start from a fresh venv to avoid stale dependency accumulation.
+        await fs.promises.rm(venvPath, { recursive: true, force: true });
+        await ensureVenv({
+          pythonVersion,
+          venvPath,
+          uvCacheDir,
+          quiet: true,
+        });
         console.log(
           `Running "install" command: \`${projectInstallCommand}\`...`
         );
@@ -385,18 +409,27 @@ export const build: BuildVX = async ({
       } else {
         // Check and run a custom vercel install command from project manifest.
         // This will return `false` if no script was ran.
-        assumeDepsInstalled = await runPyprojectScript(
+        const hasCustomScript = await runPyprojectScript(
           workPath,
           ['vercel-install', 'now-install', 'install'],
           pythonEnv,
           /* useUserVirtualEnv */ false
         );
-        if (assumeDepsInstalled) {
+        if (hasCustomScript) {
+          assumeDepsInstalled = true;
           hasCustomCommand = true;
         }
       }
 
       if (!assumeDepsInstalled) {
+        // Compute the path where we stash a copy of the generated uv.lock
+        // so `uv lock` can validate it on the next build instead of
+        // re-resolving all packages from PyPI.
+        const lockCacheKey = service?.name
+          ? `uv.lock.${service.name}`
+          : 'uv.lock';
+        const cachedLockPath = join(uvCacheDir, lockCacheKey);
+
         // Default installation path: use uv to normalize manifests into a uv.lock and
         // sync dependencies into the virtualenv, including required runtime deps.
         // Ensure all installation paths are normalized into a pyproject.toml and uv.lock
@@ -409,8 +442,8 @@ export const build: BuildVX = async ({
             pythonPackage,
             pythonVersion: pythonVersionString(pythonVersion),
             uv,
-            generateLockFile: true,
             requireBinaryWheels: false,
+            cachedLockPath,
           });
 
         uvLockPath = lockPath;
@@ -430,6 +463,13 @@ export const build: BuildVX = async ({
           frozen: lockFileProvidedByUser,
           locked: !lockFileProvidedByUser,
         });
+
+        // Stash the lock file into the cache dir so prepareCache
+        // preserves it and the next build can skip full resolution.
+        if (lockPath && fs.existsSync(lockPath)) {
+          await fs.promises.mkdir(uvCacheDir, { recursive: true });
+          await fs.promises.copyFile(lockPath, cachedLockPath);
+        }
       }
     });
 
@@ -757,6 +797,39 @@ from vercel_runtime.vc_init import vc_handler
 };
 
 export { startDevServer };
+
+export const prepareCache: PrepareCache = async ({
+  repoRootPath,
+  workPath,
+}) => {
+  // Feature-gated: only enabled when the platform sets this env var.
+  // This allows incremental rollout to specific teams before general availability.
+  if (process.env.VERCEL_PYTHON_PREPARE_CACHE !== '1') {
+    return {};
+  }
+
+  const root = repoRootPath || workPath;
+  const ignore = ['**/*.pyc', '**/__pycache__/**'];
+
+  // Prune pre-built wheels from the uv cache (source-built wheels are retained).
+  const uvCacheDir = getUvCacheDir(workPath);
+  try {
+    const uvPath = findUvInPath();
+    if (uvPath) {
+      const uv = new UvRunner(uvPath, uvCacheDir);
+      await uv.cachePrune();
+    }
+  } catch {
+    // best-effort; don't fail the build
+  }
+
+  // Cache the uv package cache, the default venv, and any service-namespaced
+  // venvs so that subsequent builds can skip dependency installation.
+  return glob('**/.vercel/python/{.venv,services/*/.venv,cache/uv}/**', {
+    cwd: root,
+    ignore,
+  });
+};
 
 export const shouldServe: ShouldServe = opts => {
   const framework = opts.config.framework;
