@@ -587,7 +587,6 @@ export interface Service {
   handlerFunction?: string;
   /* worker service config */
   topics?: string[];
-  consumer?: string;
   /** custom prefix to inject service URL env vars */
   envPrefix?: string;
 }
@@ -830,7 +829,6 @@ export interface ExperimentalServiceConfig {
 
   /* Worker service config */
   topics?: string[];
-  consumer?: string;
 
   /** Custom prefix to use to inject service URL env vars */
   envPrefix?: string;

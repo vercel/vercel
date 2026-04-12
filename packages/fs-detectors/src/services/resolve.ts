@@ -575,8 +575,6 @@ export async function resolveConfiguredService(
   }
 
   const topics = type === 'worker' ? getWorkerTopics(config) : config.topics;
-  const consumer =
-    type === 'worker' ? config.consumer || 'default' : config.consumer;
 
   let builderUse: string;
   let builderSrc: string;
@@ -700,7 +698,6 @@ export async function resolveConfiguredService(
     schedule: config.schedule,
     handlerFunction: moduleAttrParsed?.attrName,
     topics,
-    consumer,
     envPrefix: config.envPrefix,
   };
 }

@@ -16,7 +16,6 @@ import {
 import {
   getInternalServiceCronPath,
   getInternalServiceFunctionPath,
-  getInternalServiceWorkerPath,
   isFrontendFramework,
   isRouteOwningBuilder,
   isStaticBuild,
@@ -265,8 +264,7 @@ export async function detectServices(
  * Build Output API builders, etc.) are not given synthetic routes here.
  *
  * - Worker services:
- *   Internal queue callback routes under `/_svc/{serviceName}/workers/{entry}/{handler}`
- *   that rewrite to `/_svc/{serviceName}/index`.
+ *   Use private path routing. The generated function is not publicly acceptable.
  *
  * - Cron services:
  *   Internal cron callback routes under `/_svc/{serviceName}/crons/{entry}/{handler}`
@@ -363,22 +361,6 @@ export function generateServicesRoutes(services: Service[]): ServicesRoutes {
         });
       }
     }
-  }
-
-  const workerServices = services.filter(s => s.type === 'worker');
-  for (const service of workerServices) {
-    const workerEntrypoint =
-      service.entrypoint || service.builder.src || 'index';
-    const workerPath = getInternalServiceWorkerPath(
-      service.name,
-      workerEntrypoint
-    );
-    const functionPath = getInternalServiceFunctionPath(service.name);
-    workers.push({
-      src: `^${escapeRegex(workerPath)}$`,
-      dest: functionPath,
-      check: true,
-    });
   }
 
   const cronServices = services.filter(s => s.type === 'cron');
