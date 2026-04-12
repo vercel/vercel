@@ -31,6 +31,10 @@ describe('ai-gateway api-keys create', () => {
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
+          key: 'subcommand:api-keys',
+          value: 'api-keys',
+        },
+        {
           key: 'flag:help',
           value: 'ai-gateway api-keys:create',
         },
