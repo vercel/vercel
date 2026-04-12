@@ -2,16 +2,16 @@ import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
 import { printError } from '../../util/error';
-import createApiKey from './create-api-key';
-import { aiGatewayCommand, createApiKeySubcommand } from './command';
-import { type Command, help } from '../help';
+import apiKeys from './api-keys';
+import { aiGatewayCommand, apiKeysSubcommand } from './command';
+import { help } from '../help';
 import { getCommandAliases } from '..';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { AiGatewayTelemetryClient } from '../../util/telemetry/commands/ai-gateway';
 import output from '../../output-manager';
 
 const COMMAND_CONFIG = {
-  'create-api-key': getCommandAliases(createApiKeySubcommand),
+  'api-keys': getCommandAliases(apiKeysSubcommand),
 };
 
 export default async function main(client: Client) {
@@ -32,7 +32,7 @@ export default async function main(client: Client) {
     },
   });
 
-  const { subcommand, args, subcommandOriginal } = getSubcommand(
+  const { subcommand, subcommandOriginal } = getSubcommand(
     parsedArgs.args.slice(1),
     COMMAND_CONFIG
   );
@@ -45,24 +45,10 @@ export default async function main(client: Client) {
     return 2;
   }
 
-  function printHelp(command: Command) {
-    output.print(
-      help(command, {
-        parent: aiGatewayCommand,
-        columns: client.stderr.columns,
-      })
-    );
-    return 2;
-  }
-
   switch (subcommand) {
-    case 'create-api-key':
-      if (needHelp) {
-        telemetry.trackCliFlagHelp('ai-gateway', subcommandOriginal);
-        return printHelp(createApiKeySubcommand);
-      }
-      telemetry.trackCliSubcommandCreateApiKey(subcommandOriginal);
-      return createApiKey(client, args);
+    case 'api-keys':
+      telemetry.trackCliSubcommandApiKeys(subcommandOriginal);
+      return apiKeys(client);
     default:
       if (needHelp) {
         telemetry.trackCliFlagHelp('ai-gateway', subcommandOriginal);

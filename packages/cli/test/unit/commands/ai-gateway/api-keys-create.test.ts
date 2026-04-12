@@ -22,17 +22,17 @@ function useCreateApiKey(response = mockApiKeyResponse) {
   });
 }
 
-describe('ai-gateway create-api-key', () => {
+describe('ai-gateway api-keys create', () => {
   describe('--help', () => {
     it('returns exit code 2', async () => {
-      client.setArgv('ai-gateway', 'create-api-key', '--help');
+      client.setArgv('ai-gateway', 'api-keys', 'create', '--help');
       const exitCode = await aiGateway(client);
       expect(exitCode).toBe(2);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
           key: 'flag:help',
-          value: 'ai-gateway:create-api-key',
+          value: 'ai-gateway api-keys:create',
         },
       ]);
     });
@@ -44,7 +44,7 @@ describe('ai-gateway create-api-key', () => {
       useUser();
       useCreateApiKey();
       client.config.currentTeam = team.id;
-      client.setArgv('ai-gateway', 'create-api-key');
+      client.setArgv('ai-gateway', 'api-keys', 'create');
 
       const exitCodePromise = aiGateway(client);
 
@@ -62,7 +62,8 @@ describe('ai-gateway create-api-key', () => {
       client.config.currentTeam = team.id;
       client.setArgv(
         'ai-gateway',
-        'create-api-key',
+        'api-keys',
+        'create',
         '--name',
         'my-key',
         '--budget',
@@ -85,7 +86,8 @@ describe('ai-gateway create-api-key', () => {
       useUser();
       client.setArgv(
         'ai-gateway',
-        'create-api-key',
+        'api-keys',
+        'create',
         '--refresh-period',
         'yearly'
       );
@@ -98,21 +100,25 @@ describe('ai-gateway create-api-key', () => {
 
     it('fails with negative --budget', async () => {
       useUser();
-      client.setArgv('ai-gateway', 'create-api-key', '--budget', '-5');
+      client.setArgv('ai-gateway', 'api-keys', 'create', '--budget', '-5');
 
       const exitCodePromise = aiGateway(client);
 
-      await expect(client.stderr).toOutput('Budget must be a positive number in dollars');
+      await expect(client.stderr).toOutput(
+        'Budget must be a positive number in dollars'
+      );
       expect(await exitCodePromise).toBe(1);
     });
 
     it('fails with zero --budget', async () => {
       useUser();
-      client.setArgv('ai-gateway', 'create-api-key', '--budget', '0');
+      client.setArgv('ai-gateway', 'api-keys', 'create', '--budget', '0');
 
       const exitCodePromise = aiGateway(client);
 
-      await expect(client.stderr).toOutput('Budget must be a positive number in dollars');
+      await expect(client.stderr).toOutput(
+        'Budget must be a positive number in dollars'
+      );
       expect(await exitCodePromise).toBe(1);
     });
   });
@@ -120,6 +126,12 @@ describe('ai-gateway create-api-key', () => {
   describe('parent help', () => {
     it('returns exit code 2 for ai-gateway --help', async () => {
       client.setArgv('ai-gateway', '--help');
+      const exitCode = await aiGateway(client);
+      expect(exitCode).toBe(2);
+    });
+
+    it('returns exit code 2 for ai-gateway api-keys --help', async () => {
+      client.setArgv('ai-gateway', 'api-keys', '--help');
       const exitCode = await aiGateway(client);
       expect(exitCode).toBe(2);
     });

@@ -4,8 +4,8 @@ import createApiKeyRequest from '../../util/ai-gateway/create-api-key';
 import selectOrg from '../../util/input/select-org';
 import stamp from '../../util/output/stamp';
 import output from '../../output-manager';
-import { AiGatewayCreateApiKeyTelemetryClient } from '../../util/telemetry/commands/ai-gateway/create-api-key';
-import { createApiKeySubcommand } from './command';
+import { AiGatewayApiKeysCreateTelemetryClient } from '../../util/telemetry/commands/ai-gateway/api-keys-create';
+import { createSubcommand } from './command';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
@@ -17,17 +17,15 @@ import type { AiGatewayQuota } from '../../util/ai-gateway/create-api-key';
 
 const VALID_REFRESH_PERIODS = ['daily', 'weekly', 'monthly', 'none'] as const;
 
-export default async function createApiKey(client: Client, argv: string[]) {
-  const telemetry = new AiGatewayCreateApiKeyTelemetryClient({
+export default async function create(client: Client, argv: string[]) {
+  const telemetry = new AiGatewayApiKeysCreateTelemetryClient({
     opts: {
       store: client.telemetryEventStore,
     },
   });
 
   let parsedArgs;
-  const flagsSpecification = getFlagsSpecification(
-    createApiKeySubcommand.options
-  );
+  const flagsSpecification = getFlagsSpecification(createSubcommand.options);
   try {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
@@ -59,7 +57,7 @@ export default async function createApiKey(client: Client, argv: string[]) {
         next: [
           {
             command: getCommandNamePlain(
-              'ai-gateway create-api-key --budget 500'
+              'ai-gateway api-keys create --budget 500'
             ),
           },
         ],
@@ -87,7 +85,7 @@ export default async function createApiKey(client: Client, argv: string[]) {
         next: [
           {
             command: getCommandNamePlain(
-              'ai-gateway create-api-key --refresh-period monthly'
+              'ai-gateway api-keys create --refresh-period monthly'
             ),
           },
         ],
@@ -116,7 +114,7 @@ export default async function createApiKey(client: Client, argv: string[]) {
   if (!client.config.currentTeam) {
     if (!client.stdin.isTTY) {
       output.error(
-        'No team selected. Use `vercel --scope <team-slug> ai-gateway create-api-key` or run `vercel switch` first.'
+        'No team selected. Use `vercel --scope <team-slug> ai-gateway api-keys create` or run `vercel switch` first.'
       );
       return 1;
     }

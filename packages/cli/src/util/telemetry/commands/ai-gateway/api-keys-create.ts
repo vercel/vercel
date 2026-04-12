@@ -1,10 +1,10 @@
 import { TelemetryClient } from '../..';
 import type { TelemetryMethods } from '../../types';
-import type { createApiKeySubcommand } from '../../../../commands/ai-gateway/command';
+import type { createSubcommand } from '../../../../commands/ai-gateway/command';
 
-export class AiGatewayCreateApiKeyTelemetryClient
+export class AiGatewayApiKeysCreateTelemetryClient
   extends TelemetryClient
-  implements TelemetryMethods<typeof createApiKeySubcommand>
+  implements TelemetryMethods<typeof createSubcommand>
 {
   trackCliOptionName(name: string | undefined) {
     if (name) {

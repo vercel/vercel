@@ -1,7 +1,7 @@
 import { packageName } from '../../util/pkg-name';
 
-export const createApiKeySubcommand = {
-  name: 'create-api-key',
+export const createSubcommand = {
+  name: 'create',
   aliases: [],
   description: 'Create a new AI Gateway API key',
   arguments: [],
@@ -42,13 +42,23 @@ export const createApiKeySubcommand = {
   examples: [
     {
       name: 'Create an API key with defaults',
-      value: `${packageName} ai-gateway create-api-key`,
+      value: `${packageName} ai-gateway api-keys create`,
     },
     {
       name: 'Create an API key with a budget',
-      value: `${packageName} ai-gateway create-api-key --name my-key --budget 500 --refresh-period monthly`,
+      value: `${packageName} ai-gateway api-keys create --name my-key --budget 500 --refresh-period monthly`,
     },
   ],
+} as const;
+
+export const apiKeysSubcommand = {
+  name: 'api-keys',
+  aliases: [],
+  description: 'Manage AI Gateway API keys',
+  arguments: [],
+  subcommands: [createSubcommand],
+  options: [],
+  examples: [],
 } as const;
 
 export const aiGatewayCommand = {
@@ -56,7 +66,7 @@ export const aiGatewayCommand = {
   aliases: [],
   description: 'Manage AI Gateway resources',
   arguments: [],
-  subcommands: [createApiKeySubcommand],
+  subcommands: [apiKeysSubcommand],
   options: [],
   examples: [],
 } as const;
