@@ -19,7 +19,7 @@ module.exports = function setupTests(groupIndex) {
   }
 
   for (const fixture of fixtures) {
-    it(`should build ${fixture}`, async () => {
+    it.concurrent(`should build ${fixture}`, async () => {
       await expect(
         testDeployment(path.join(fixturesPath, fixture))
       ).resolves.toBeDefined();
