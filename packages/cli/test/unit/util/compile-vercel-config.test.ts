@@ -335,7 +335,7 @@ describe('compileVercelConfig', () => {
     await writeFile(vercelJsonPath, '{}');
 
     await expect(compileVercelConfig(tmpDir)).rejects.toThrow(
-      /Both vercel.ts and vercel.json exist/
+      /Multiple config files found/
     );
   });
 

@@ -16,7 +16,9 @@ import { deployCommand } from './deploy/command';
 import { devCommand } from './dev/command';
 import { dnsCommand } from './dns/command';
 import { domainsCommand } from './domains/command';
+import { edgeConfigCommand } from './edge-config/command';
 import { envCommand } from './env/command';
+import { firewallCommand } from './firewall/command';
 import { flagsCommand } from './flags/command';
 import { gitCommand } from './git/command';
 import { guidanceCommand } from './guidance/command';
@@ -34,6 +36,7 @@ import { logsCommand } from './logs/command';
 import { mcpCommand } from './mcp/command';
 import { metricsCommand } from './metrics/command';
 import { microfrontendsCommand } from './microfrontends/command';
+import { oauthAppsCommand } from './oauth-apps/command';
 import { openCommand } from './open/command';
 import { projectCommand } from './project/command';
 import { promoteCommand } from './promote/command';
@@ -44,9 +47,11 @@ import { removeCommand } from './remove/command';
 import { routesCommand } from './routes/command';
 import { rollbackCommand } from './rollback/command';
 import { rollingReleaseCommand } from './rolling-release/command';
+import { sandboxCommand } from './sandbox/command';
 import { skillsCommand } from './skills/command';
 import { targetCommand } from './target/command';
 import { teamsCommand } from './teams/command';
+import { tokensCommand } from './tokens/command';
 import { telemetryCommand } from './telemetry/command';
 import { upgradeCommand } from './upgrade/command';
 import { usageCommand } from './usage/command';
@@ -76,7 +81,9 @@ const commandsStructs = [
   devCommand,
   dnsCommand,
   domainsCommand,
+  edgeConfigCommand,
   envCommand,
+  firewallCommand,
   flagsCommand,
   gitCommand,
   httpstatCommand,
@@ -92,6 +99,7 @@ const commandsStructs = [
   logsCommand,
   mcpCommand,
   microfrontendsCommand,
+  oauthAppsCommand,
   openCommand,
   projectCommand,
   promoteCommand,
@@ -102,9 +110,11 @@ const commandsStructs = [
   routesCommand,
   rollbackCommand,
   rollingReleaseCommand,
+  sandboxCommand,
   skillsCommand,
   targetCommand,
   teamsCommand,
+  tokensCommand,
   telemetryCommand,
   upgradeCommand,
   webhooksCommand,

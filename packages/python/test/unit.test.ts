@@ -49,19 +49,29 @@ import {
   resetInstalledPythonsCache,
 } from '../src/version';
 import type { PythonConstraint, PythonPackage } from '@vercel/python-analysis';
-import { build } from '../src/index';
+import { build, prepareCache } from '../src/index';
 import type { BuildResultV3, BuildResultV2 } from '@vercel/build-utils';
 import { createVenvEnv, getVenvBinDir } from '../src/utils';
-import { UV_PYTHON_DOWNLOADS_MODE, getProtectedUvEnv } from '../src/uv';
+import {
+  UV_PYTHON_DOWNLOADS_MODE,
+  getProtectedUvEnv,
+  getUvCacheDir,
+} from '../src/uv';
 import { VERCEL_WORKERS_VERSION } from '../src/package-versions';
 import { createPyprojectToml } from '../src/install';
-import { detectDjangoPythonEntrypoint } from '../src/entrypoint';
 import { getDjangoSettings, runDjangoCollectStatic } from '../src/django';
-import { FileBlob } from '@vercel/build-utils';
+import { FileBlob, download } from '@vercel/build-utils';
 
 function getBuildOutputV2(result: Awaited<ReturnType<typeof build>>) {
   expect(result.resultVersion).toBe(2);
   return (result as any).result as BuildResultV2;
+}
+
+function getBuildOutputV2Lambda(result: Awaited<ReturnType<typeof build>>) {
+  const v2 = getBuildOutputV2(result) as any;
+  const lambdas = Object.values(v2.output).filter((o: any) => 'handler' in o);
+  expect(lambdas).toHaveLength(1);
+  return lambdas[0] as BuildResultV3['output'];
 }
 
 function getBuildOutputV3(result: Awaited<ReturnType<typeof build>>) {
@@ -169,6 +179,107 @@ afterEach(() => {
   if (fs.existsSync(tmpPythonDir)) {
     fs.removeSync(tmpPythonDir);
   }
+});
+
+describe('prepareCache()', () => {
+  const origPrepareCacheEnv = process.env.VERCEL_PYTHON_PREPARE_CACHE;
+
+  afterEach(() => {
+    if (origPrepareCacheEnv === undefined) {
+      delete process.env.VERCEL_PYTHON_PREPARE_CACHE;
+    } else {
+      process.env.VERCEL_PYTHON_PREPARE_CACHE = origPrepareCacheEnv;
+    }
+  });
+
+  it('returns empty object when VERCEL_PYTHON_PREPARE_CACHE is not set', async () => {
+    delete process.env.VERCEL_PYTHON_PREPARE_CACHE;
+    const workPath = path.join(
+      tmpdir(),
+      `vc-python-cache-${Math.floor(Math.random() * 1e6)}`
+    );
+
+    await fs.outputFile(
+      path.join(workPath, '.vercel/python/cache/uv/wheels/example.whl'),
+      ''
+    );
+
+    try {
+      const files = await prepareCache({
+        files: {},
+        entrypoint: 'app.py',
+        config: {},
+        workPath,
+        repoRootPath: workPath,
+      });
+
+      expect(Object.keys(files)).toHaveLength(0);
+    } finally {
+      await fs.remove(workPath);
+    }
+  });
+
+  it('caches uv cache and the venv, excludes bytecode and user source when enabled', async () => {
+    process.env.VERCEL_PYTHON_PREPARE_CACHE = '1';
+    const workPath = path.join(
+      tmpdir(),
+      `vc-python-cache-${Math.floor(Math.random() * 1e6)}`
+    );
+
+    // Create a fake uv cache with some files
+    await fs.outputFile(
+      path.join(workPath, '.vercel/python/cache/uv/wheels/example.whl'),
+      ''
+    );
+    await fs.outputFile(
+      path.join(workPath, '.vercel/python/cache/uv/archive/foo.tar.gz'),
+      ''
+    );
+    // Create a .pyc file that should be excluded
+    await fs.outputFile(
+      path.join(workPath, '.vercel/python/cache/uv/archive/foo.pyc'),
+      ''
+    );
+    // Create venv files that should be included
+    await fs.outputFile(
+      path.join(workPath, '.vercel/python/.venv/pyvenv.cfg'),
+      'home = /usr/bin\n'
+    );
+    await fs.outputFile(
+      path.join(workPath, '.vercel/python/.venv/lib/site-packages/pkg/mod.py'),
+      ''
+    );
+    // Create a user source file that should NOT be included
+    await fs.outputFile(path.join(workPath, 'app.py'), 'print("hello")\n');
+
+    try {
+      const files = await prepareCache({
+        files: {},
+        entrypoint: 'app.py',
+        config: {},
+        workPath,
+        repoRootPath: workPath,
+      });
+
+      // uv cache files should be present (minus .pyc)
+      expect(files['.vercel/python/cache/uv/wheels/example.whl']).toBeDefined();
+      expect(files['.vercel/python/cache/uv/archive/foo.tar.gz']).toBeDefined();
+
+      // .pyc in uv cache should be excluded
+      expect(files['.vercel/python/cache/uv/archive/foo.pyc']).toBeUndefined();
+
+      // venv files should be cached (uv sync prunes stale packages)
+      expect(files['.vercel/python/.venv/pyvenv.cfg']).toBeDefined();
+      expect(
+        files['.vercel/python/.venv/lib/site-packages/pkg/mod.py']
+      ).toBeDefined();
+
+      // user source files should NOT be cached
+      expect(files['app.py']).toBeUndefined();
+    } finally {
+      await fs.remove(workPath);
+    }
+  });
 });
 
 it('should only match supported versions, otherwise throw an error', () => {
@@ -999,7 +1110,8 @@ describe('uv workspace lockfile resolution (workspace root above workPath)', () 
       repoRootPath: repoRoot,
     });
 
-    const handler = getBuildOutputV3(result).files?.['vc__handler__python.py'];
+    const handler =
+      getBuildOutputV2Lambda(result).files?.['vc__handler__python.py'];
     expect(handler).toBeDefined();
 
     fs.removeSync(repoRoot);
@@ -1025,7 +1137,7 @@ describe('fastapi entrypoint discovery', () => {
       build({
         workPath: mockWorkPath,
         files,
-        entrypoint: 'main.py',
+        entrypoint: '<detect>',
         meta: { isDev: true },
         config: { framework: 'fastapi' },
         repoRootPath: mockWorkPath,
@@ -1052,17 +1164,20 @@ describe('fastapi entrypoint discovery - positive cases', () => {
         data: 'from fastapi import FastAPI\napp = FastAPI()\n',
       }),
     } as Record<string, FileBlob>;
+    // isDev mode assumes files are already present
+    await download(files, workPath);
 
     const result = await build({
       workPath,
       files,
-      entrypoint: 'server.py',
+      entrypoint: '<detect>',
       meta: { isDev: true },
       config: { framework: 'fastapi' },
       repoRootPath: workPath,
     });
 
-    const handler = getBuildOutputV3(result).files?.['vc__handler__python.py'];
+    const handler =
+      getBuildOutputV2Lambda(result).files?.['vc__handler__python.py'];
     if (!handler || !('data' in handler)) {
       throw new Error('handler bootstrap not found');
     }
@@ -1085,17 +1200,20 @@ describe('fastapi entrypoint discovery - positive cases', () => {
         data: 'import fastapi\n\napp = fastapi.FastAPI()',
       }),
     } as Record<string, FileBlob>;
+    // isDev mode assumes files are already present
+    await download(files, workPath);
 
     const result = await build({
       workPath,
       files,
-      entrypoint: 'server.py',
+      entrypoint: '<detect>',
       meta: { isDev: true },
       config: { framework: 'fastapi' },
       repoRootPath: workPath,
     });
 
-    const handler = getBuildOutputV3(result).files?.['vc__handler__python.py'];
+    const handler =
+      getBuildOutputV2Lambda(result).files?.['vc__handler__python.py'];
     if (!handler || !('data' in handler)) {
       throw new Error('handler bootstrap not found');
     }
@@ -1119,17 +1237,20 @@ describe('fastapi entrypoint discovery - positive cases', () => {
         data: 'import fastapi\nfrom fastapi import FastAPI\napp = FastAPI()\n',
       }),
     } as Record<string, FileBlob>;
+    // isDev mode assumes files are already present
+    await download(files, workPath);
 
     const result = await build({
       workPath,
       files,
-      entrypoint: 'server.py',
+      entrypoint: '<detect>',
       meta: { isDev: true },
       config: { framework: 'fastapi' },
       repoRootPath: workPath,
     });
 
-    const handler = getBuildOutputV3(result).files?.['vc__handler__python.py'];
+    const handler =
+      getBuildOutputV2Lambda(result).files?.['vc__handler__python.py'];
     if (!handler || !('data' in handler)) {
       throw new Error('handler bootstrap not found');
     }
@@ -1141,43 +1262,11 @@ describe('fastapi entrypoint discovery - positive cases', () => {
 });
 
 describe('Django entrypoint discovery', () => {
-  async function writeFiles(
-    workPath: string,
-    files: Record<string, string>
-  ): Promise<void> {
-    for (const [rel, content] of Object.entries(files)) {
-      const full = path.join(workPath, rel);
-      fs.mkdirSync(path.dirname(full), { recursive: true });
-      fs.writeFileSync(full, content);
-    }
-  }
-
-  it('uses configured entrypoint when it exists and is valid', async () => {
-    const workPath = path.join(
-      tmpdir(),
-      `python-django-configured-${Date.now()}`
-    );
-    fs.mkdirSync(workPath, { recursive: true });
-
-    await writeFiles(workPath, {
-      'hello/world.py': `application = lambda env, start: None`,
-    });
-
-    const result = await detectDjangoPythonEntrypoint(
-      workPath,
-      'hello/world.py'
-    );
-    expect(result).toEqual({
-      entrypoint: { entrypoint: 'hello/world.py', variableName: 'application' },
-    });
-
-    if (fs.existsSync(workPath)) fs.removeSync(workPath);
-  });
-
   it('build() resolves Django entrypoint from WSGI_APPLICATION (hello.wsgi.application -> hello/wsgi.py)', async () => {
     vi.mocked(getDjangoSettings).mockResolvedValueOnce({
       settingsModule: 'hello.settings',
       djangoSettings: { WSGI_APPLICATION: 'hello.wsgi.application' },
+      djangoVersion: [5, 1, 0],
     });
     const workPath = path.join(tmpdir(), `python-django-wsgi-${Date.now()}`);
     fs.mkdirSync(workPath, { recursive: true });
@@ -1194,17 +1283,20 @@ describe('Django entrypoint discovery', () => {
         data: 'application = lambda env, start: None\n',
       }),
     } as Record<string, FileBlob>;
+    // isDev mode assumes files are already present
+    await download(files, workPath);
 
     const result = await build({
       workPath,
       files,
-      entrypoint: 'index.py',
+      entrypoint: '<detect>',
       meta: { isDev: true },
       config: { framework: 'django' },
       repoRootPath: workPath,
     });
 
-    const handler = getBuildOutputV3(result).files?.['vc__handler__python.py'];
+    const handler =
+      getBuildOutputV2Lambda(result).files?.['vc__handler__python.py'];
     if (!handler || !('data' in handler)) {
       throw new Error('handler bootstrap not found');
     }
@@ -1228,17 +1320,20 @@ describe('Django entrypoint discovery', () => {
         data: 'application = lambda env, start: None\n',
       }),
     } as Record<string, FileBlob>;
+    // isDev mode assumes files are already present
+    await download(files, workPath);
 
     const result = await build({
       workPath,
       files,
-      entrypoint: 'index.py',
+      entrypoint: '<detect>',
       meta: { isDev: true },
       config: { framework: 'django' },
       repoRootPath: workPath,
     });
 
-    const handler = getBuildOutputV3(result).files?.['vc__handler__python.py'];
+    const handler =
+      getBuildOutputV2Lambda(result).files?.['vc__handler__python.py'];
     if (!handler || !('data' in handler)) {
       throw new Error('handler bootstrap not found');
     }
@@ -1253,6 +1348,7 @@ describe('Django entrypoint discovery', () => {
     vi.mocked(getDjangoSettings).mockResolvedValueOnce({
       settingsModule: 'hello.settings',
       djangoSettings: { WSGI_APPLICATION: 'hello.wsgi.application' },
+      djangoVersion: [5, 1, 0],
     });
     const workPath = path.join(
       tmpdir(),
@@ -1269,17 +1365,20 @@ describe('Django entrypoint discovery', () => {
         data: "WSGI_APPLICATION = 'hello.wsgi.application'\n",
       }),
     } as Record<string, FileBlob>;
+    // isDev mode assumes files are already present
+    await download(files, workPath);
 
     const result = await build({
       workPath,
       files,
-      entrypoint: 'index.py',
+      entrypoint: '<detect>',
       meta: { isDev: true },
       config: { framework: 'django' },
       repoRootPath: workPath,
     });
 
-    const handler = getBuildOutputV3(result).files?.['vc__handler__python.py'];
+    const handler =
+      getBuildOutputV2Lambda(result).files?.['vc__handler__python.py'];
     if (!handler || !('data' in handler)) {
       throw new Error('handler bootstrap not found');
     }
@@ -1294,6 +1393,7 @@ describe('Django entrypoint discovery', () => {
     vi.mocked(getDjangoSettings).mockResolvedValueOnce({
       settingsModule: 'config.settings',
       djangoSettings: { WSGI_APPLICATION: 'config.wsgi.application' },
+      djangoVersion: [5, 1, 0],
     });
     const workPath = path.join(
       tmpdir(),
@@ -1314,17 +1414,20 @@ describe('Django entrypoint discovery', () => {
         data: 'application = lambda env, start: None\n',
       }),
     } as Record<string, FileBlob>;
+    // isDev mode assumes files are already present
+    await download(files, workPath);
 
     const result = await build({
       workPath,
       files,
-      entrypoint: 'index.py',
+      entrypoint: '<detect>',
       meta: { isDev: true },
       config: { framework: 'django' },
       repoRootPath: workPath,
     });
 
-    const handler = getBuildOutputV3(result).files?.['vc__handler__python.py'];
+    const handler =
+      getBuildOutputV2Lambda(result).files?.['vc__handler__python.py'];
     if (!handler || !('data' in handler)) {
       throw new Error('handler bootstrap not found');
     }
@@ -1339,6 +1442,7 @@ describe('Django entrypoint discovery', () => {
     vi.mocked(getDjangoSettings).mockResolvedValueOnce({
       settingsModule: 'hello.settings',
       djangoSettings: { WSGI_APPLICATION: 'hello.world.application' },
+      djangoVersion: [5, 1, 0],
     });
     const workPath = path.join(tmpdir(), `python-django-build-${Date.now()}`);
     fs.mkdirSync(workPath, { recursive: true });
@@ -1355,17 +1459,20 @@ describe('Django entrypoint discovery', () => {
         data: 'application = lambda env, start: None\n',
       }),
     } as Record<string, FileBlob>;
+    // isDev mode assumes files are already present
+    await download(files, workPath);
 
     const result = await build({
       workPath,
       files,
-      entrypoint: 'index.py',
+      entrypoint: '<detect>',
       meta: { isDev: true },
       config: { framework: 'django' },
       repoRootPath: workPath,
     });
 
-    const handler = getBuildOutputV3(result).files?.['vc__handler__python.py'];
+    const handler =
+      getBuildOutputV2Lambda(result).files?.['vc__handler__python.py'];
     if (!handler || !('data' in handler)) {
       throw new Error('handler bootstrap not found');
     }
@@ -1383,6 +1490,7 @@ describe('Django entrypoint discovery', () => {
         STATIC_URL: '/static/',
         STATIC_ROOT: 'staticfiles',
       },
+      djangoVersion: [5, 1, 0],
     });
     // Simulate collectstatic succeeding
     vi.mocked(runDjangoCollectStatic).mockImplementationOnce(
@@ -1405,8 +1513,6 @@ describe('Django entrypoint discovery', () => {
     fs.mkdirSync(workPath, { recursive: true });
     makeMockPython('3.9');
 
-    // Omit the configured entrypoint from files so that framework detection
-    // runs and sets detected.baseDir, which the Django hook requires.
     const files = {
       'manage.py': new FileBlob({
         data: "os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'myapp.settings')\n",
@@ -1416,11 +1522,13 @@ describe('Django entrypoint discovery', () => {
       }),
       'static/app.css': new FileBlob({ data: 'body {}' }),
     } as Record<string, FileBlob>;
+    // isDev mode assumes files are already present
+    await download(files, workPath);
 
     const result = await build({
       workPath: workPath,
       files,
-      entrypoint: 'index.py',
+      entrypoint: '<detect>',
       meta: { isDev: false },
       config: { framework: 'django', zeroConfig: true },
       repoRootPath: workPath,
@@ -1429,11 +1537,11 @@ describe('Django entrypoint discovery', () => {
     const v2result = getBuildOutputV2(result);
     expect(v2result.routes).toContainEqual({ handle: 'filesystem' });
     expect(v2result.routes).toContainEqual(
-      expect.objectContaining({ src: '/(.*)', dest: '/myapp/wsgi' })
+      expect.objectContaining({ src: '/(.*)', dest: '/index' })
     );
-    const lambda = v2result.output['myapp/wsgi'];
+    const lambda = v2result.output['index'];
     expect(lambda).toBeDefined(); // Lambda keyed by entrypoint sans extension
-    expect((lambda as any).files?.['static/app.css']).toBeUndefined(); // Excluded from Lambda bundle
+    expect((lambda as any).files?.['static/app.css']).toBeDefined(); // Included in Lambda bundle
     expect(v2result.output['static/app.css']).toBeDefined(); // Static file from collectstatic
 
     if (fs.existsSync(workPath)) fs.removeSync(workPath);
@@ -1474,17 +1582,20 @@ describe('pyproject.toml entrypoint detection', () => {
         data: 'from fastapi import FastAPI\napp = FastAPI()\n',
       }),
     } as Record<string, FileBlob>;
+    // isDev mode assumes files are already present
+    await download(files, workPath);
 
     const result = await buildWithMocks({
       workPath,
       files,
-      entrypoint: 'missing.py',
+      entrypoint: '<detect>',
       meta: { isDev: true },
       config: { framework: 'fastapi' },
       repoRootPath: workPath,
     });
 
-    const handler = getBuildOutputV3(result).files?.['vc__handler__python.py'];
+    const handler =
+      getBuildOutputV2Lambda(result).files?.['vc__handler__python.py'];
     if (!handler || !('data' in handler)) {
       throw new Error('handler bootstrap not found');
     }
@@ -1518,17 +1629,20 @@ describe('pyproject.toml entrypoint detection', () => {
         data: 'from flask import Flask\napp = Flask(__name__)\n',
       }),
     } as Record<string, FileBlob>;
+    // isDev mode assumes files are already present
+    await download(files, workPath);
 
     const result = await buildWithMocks({
       workPath,
       files,
-      entrypoint: 'missing.py',
+      entrypoint: '<detect>',
       meta: { isDev: true },
       config: { framework: 'flask' },
       repoRootPath: workPath,
     });
 
-    const handler = getBuildOutputV3(result).files?.['vc__handler__python.py'];
+    const handler =
+      getBuildOutputV2Lambda(result).files?.['vc__handler__python.py'];
     if (!handler || !('data' in handler)) {
       throw new Error('handler bootstrap not found');
     }
@@ -1559,17 +1673,20 @@ describe('pyproject.toml entrypoint detection', () => {
         data: 'from flask import Flask\napp = Flask(__name__)\n',
       }),
     } as Record<string, FileBlob>;
+    // isDev mode assumes files are already present
+    await download(files, workPath);
 
     const result = await buildWithMocks({
       workPath,
       files,
-      entrypoint: 'missing.py',
+      entrypoint: '<detect>',
       meta: { isDev: true },
       config: { framework: 'flask' },
       repoRootPath: workPath,
     });
 
-    const handler = getBuildOutputV3(result).files?.['vc__handler__python.py'];
+    const handler =
+      getBuildOutputV2Lambda(result).files?.['vc__handler__python.py'];
     if (!handler || !('data' in handler)) {
       throw new Error('handler bootstrap not found');
     }
@@ -2619,19 +2736,38 @@ describe('UV_PYTHON_DOWNLOADS environment variable protection', () => {
       expect(env.HOME).toBe('/home/user');
       expect(env.UV_PYTHON_DOWNLOADS).toBe(UV_PYTHON_DOWNLOADS_MODE);
     });
+
+    it('sets UV_CACHE_DIR when provided', () => {
+      const cacheDir = '/tmp/project/.vercel/python/cache/uv';
+      const env = getProtectedUvEnv({}, cacheDir);
+      expect(env.UV_CACHE_DIR).toBe(cacheDir);
+    });
+
+    it('does not set UV_CACHE_DIR when not provided', () => {
+      const env = getProtectedUvEnv({});
+      expect(env.UV_CACHE_DIR).toBeUndefined();
+    });
+  });
+
+  describe('getUvCacheDir', () => {
+    it('returns the correct cache directory path', () => {
+      expect(getUvCacheDir('/repo')).toBe('/repo/.vercel/python/cache/uv');
+    });
   });
 
   describe('createVenvEnv', () => {
-    it('sets VIRTUAL_ENV and PATH correctly while protecting UV_PYTHON_DOWNLOADS', () => {
+    it('sets VIRTUAL_ENV and PATH correctly while protecting uv env', () => {
       process.env.UV_PYTHON_DOWNLOADS = 'manual';
       process.env.PATH = '/usr/bin';
       const venvPath = '/path/to/venv';
-      const env = createVenvEnv(venvPath);
+      const cacheDir = getUvCacheDir('/repo');
+      const env = createVenvEnv(venvPath, process.env, cacheDir);
 
       expect(env.VIRTUAL_ENV).toBe(venvPath);
       expect(env.PATH).toContain(getVenvBinDir(venvPath));
       expect(env.PATH).toContain('/usr/bin');
       expect(env.UV_PYTHON_DOWNLOADS).toBe(UV_PYTHON_DOWNLOADS_MODE);
+      expect(env.UV_CACHE_DIR).toBe(cacheDir);
     });
   });
 });

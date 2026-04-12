@@ -49,6 +49,15 @@ export const AGENT_REASON = {
   INVALID_DNS_TYPE: 'invalid_dns_type',
   DNS_ADD_FAILED: 'dns_add_failed',
   INVALID_DOMAIN: 'invalid_domain',
+  /** User must accept marketplace integration terms in the browser before install can continue. */
+  INTEGRATION_TERMS_ACCEPTANCE_REQUIRED:
+    'integration_terms_acceptance_required',
+  /** Integration uninstall blocked because team-scoped resources still exist. */
+  HAS_RESOURCES: 'has_resources',
+  // Tokens
+  CLASSIC_TOKEN_REQUIRED: 'classic_token_required',
+  /** Classic token lacks full user/account scope (e.g. team- or product-scoped token). */
+  TOKEN_USER_SCOPE_REQUIRED: 'token_user_scope_required',
   // Webhooks
   MISSING_URL: 'missing_url',
   MISSING_EVENTS: 'missing_events',

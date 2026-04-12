@@ -1,6 +1,30 @@
 import { packageName } from '../../util/pkg-name';
 import { formatOption, nextOption } from '../../util/arg-common';
 
+export const requestSubcommand = {
+  name: 'request',
+  aliases: ['access-request'],
+  description:
+    'Show join-request status for the current team (defaults to the authenticated user)',
+  arguments: [
+    {
+      name: 'userId',
+      required: false,
+    },
+  ],
+  options: [formatOption],
+  examples: [
+    {
+      name: 'Status for your pending request',
+      value: `${packageName} teams request`,
+    },
+    {
+      name: 'Status for another user id',
+      value: `${packageName} teams request user_abc123`,
+    },
+  ],
+} as const;
+
 export const addSubcommand = {
   name: 'add',
   aliases: ['create'],
@@ -99,6 +123,46 @@ export const inviteSubcommand = {
   ],
 } as const;
 
+export const ssoSubcommand = {
+  name: 'sso',
+  aliases: [],
+  description: 'Show SAML / SSO configuration for the current team',
+  arguments: [],
+  options: [formatOption],
+  examples: [
+    {
+      name: 'Human-readable SAML summary',
+      value: `${packageName} teams sso`,
+    },
+    {
+      name: 'JSON',
+      value: `${packageName} teams sso --format json`,
+    },
+  ],
+} as const;
+
+export const membersSubcommand = {
+  name: 'members',
+  aliases: ['member'],
+  description: 'List members for the currently scoped team',
+  arguments: [],
+  options: [nextOption, formatOption],
+  examples: [
+    {
+      name: 'List team members',
+      value: `${packageName} teams members`,
+    },
+    {
+      name: 'List team members as JSON',
+      value: `${packageName} teams members --format json`,
+    },
+    {
+      name: 'Paginate results, where `1584722256178` is the time in milliseconds since the UNIX epoch',
+      value: `${packageName} teams members --next 1584722256178`,
+    },
+  ],
+} as const;
+
 export const teamsCommand = {
   name: 'teams',
   aliases: ['switch', 'team'],
@@ -108,7 +172,10 @@ export const teamsCommand = {
     addSubcommand,
     inviteSubcommand,
     listSubcommand,
+    requestSubcommand,
     switchSubcommand,
+    ssoSubcommand,
+    membersSubcommand,
   ],
   options: [],
   examples: [],
