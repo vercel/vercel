@@ -239,6 +239,7 @@ describe('monorepo builds with VERCEL_BUILD_MONOREPO_SUPPORT', () => {
 
   afterEach(() => {
     delete process.env.VERCEL_BUILD_MONOREPO_SUPPORT;
+    delete process.env.VERCEL_API_FUNCTION_BUNDLING;
     delete process.env.VERCEL_EXPERIMENTAL_BACKENDS;
     delete process.env.TURBO_FORCE;
   });
@@ -263,6 +264,7 @@ describe('monorepo builds with VERCEL_BUILD_MONOREPO_SUPPORT', () => {
       });
 
       process.env.VERCEL_BUILD_MONOREPO_SUPPORT = '1';
+      process.env.VERCEL_API_FUNCTION_BUNDLING = '1';
 
       client.cwd = cwd;
       client.setArgv('build', '--yes');
@@ -300,6 +302,58 @@ describe('monorepo builds with VERCEL_BUILD_MONOREPO_SUPPORT', () => {
 
       expect(response.status).toBe(200);
       expect(JSON.parse(response.body)).toEqual({ result: 5 });
+    }
+  );
+
+  it.skipIf(process.platform === 'win32')(
+    'should build workflow-style unbundled node api routes from a rootDirectory',
+    async () => {
+      const rootDirectory = 'workbench/example';
+      const cwd = setupUnitFixture(
+        'commands/build/workflow-root-directory-bundling'
+      );
+      const output = join(cwd, '.vercel/output');
+
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'prj_workflow_example',
+        name: 'workflow-example',
+        framework: null,
+        rootDirectory,
+      });
+
+      process.env.VERCEL_BUILD_MONOREPO_SUPPORT = '1';
+      // Explicitly do NOT set VERCEL_API_FUNCTION_BUNDLING
+
+      client.cwd = cwd;
+      client.setArgv('build', '--yes');
+      const exitCode = await build(client);
+
+      expect(exitCode).toEqual(0);
+
+      const funcDir = join(
+        output,
+        'functions',
+        'api',
+        'test-direct-step-call.func'
+      );
+      expect(await fs.pathExists(funcDir)).toBe(true);
+
+      const lambda = await createLambdaFromFuncDir(funcDir, cwd);
+
+      // Without bundling, the handler should be the raw entrypoint path
+      expect(lambda.handler).toEqual(
+        join('workbench', 'example', 'api', 'test-direct-step-call.js')
+      );
+      expect(lambda.files?.['___vc_bundled_api_handler.js']).toBeUndefined();
+      expect(lambda.files?.['___vc_bundled_api_config.json']).toBeUndefined();
+      expect(
+        lambda.files?.[
+          join('workbench', 'example', 'api', 'test-direct-step-call.js')
+        ]
+      ).toBeDefined();
     }
   );
 
