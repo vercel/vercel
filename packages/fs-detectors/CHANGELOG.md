@@ -1,5 +1,14 @@
 # @vercel/fs-detectors
 
+## 5.15.2
+
+### Patch Changes
+
+- Add `mount` support for experimental services across config validation and service resolution. ([#15882](https://github.com/vercel/vercel/pull/15882))
+
+- Updated dependencies [[`9b3ea340f23c1faad6d56c2a54d75bb2e77b0162`](https://github.com/vercel/vercel/commit/9b3ea340f23c1faad6d56c2a54d75bb2e77b0162)]:
+  - @vercel/build-utils@13.14.2
+
 ## 5.15.1
 
 ### Patch Changes

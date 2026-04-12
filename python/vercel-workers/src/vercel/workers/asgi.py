@@ -52,12 +52,18 @@ async def _read_body(receive: Callable[[], Awaitable[dict[str, Any]]]) -> bytes:
     return b"".join(chunks)
 
 
-def build_asgi_app(handler: Handler) -> ASGI:
+def build_asgi_app(
+    handler: Handler,
+    *,
+    on_startup: Callable[[], None] | None = None,
+    on_shutdown: Callable[[], None] | None = None,
+) -> ASGI:
     """
     Build an ASGI application that:
       - responds to GET / with "ok" (healthcheck)
       - accepts POST with Content-Type application/cloudevents+json
       - delegates CloudEvent handling to `handler(raw_body)` on a thread
+      - fires on_startup/on_shutdown during ASGI lifespan
     """
 
     async def app(
@@ -67,14 +73,17 @@ def build_asgi_app(handler: Handler) -> ASGI:
     ) -> None:
         scope_type = scope.get("type")
 
-        # Minimal lifespan support so ASGI servers don't warn.
         if scope_type == "lifespan":
             while True:
                 message = await receive()
                 msg_type = message.get("type")
                 if msg_type == "lifespan.startup":
+                    if on_startup is not None:
+                        on_startup()
                     await send({"type": "lifespan.startup.complete"})
                 elif msg_type == "lifespan.shutdown":
+                    if on_shutdown is not None:
+                        on_shutdown()
                     await send({"type": "lifespan.shutdown.complete"})
                     return
 
