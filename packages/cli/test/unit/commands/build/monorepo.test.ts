@@ -224,7 +224,7 @@ async function invokeBundledRoute(
     process.chdir(originalCwd);
     if (server) {
       await new Promise<void>((resolve, reject) =>
-        server.close(err => (err ? reject(err) : resolve()))
+        server!.close(err => (err ? reject(err) : resolve()))
       );
     }
     await rm(tempDir, { recursive: true, force: true });
