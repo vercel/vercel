@@ -207,7 +207,12 @@ describe('buildClaudeActionRequiredMessage', () => {
       }
     );
 
-    expect(message).toContain('older version of the Vercel Plugin');
-    expect(message).toContain('official Claude Plugin Marketplace');
+    expect(message).toContain(
+      'updating the Vercel Plugin for Claude Code from the Claude Marketplace'
+    );
+    expect(message).toContain(
+      'claude plugins install vercel@claude-plugins-official'
+    );
+    expect(message).toContain('claude plugins uninstall vercel-plugin@vercel');
   });
 });

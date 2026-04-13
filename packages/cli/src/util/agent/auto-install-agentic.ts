@@ -379,12 +379,12 @@ export function buildClaudeActionRequiredMessage(
   status: ClaudePluginStatus,
   plan: ClaudePluginMigrationPlan
 ): string {
-  if (
-    status.state === 'legacy-only' ||
-    status.state === 'both' ||
-    plan.removeLegacy
-  ) {
+  if (status.state === 'legacy-only') {
     return `It's also suggesting updating the Vercel Plugin for Claude Code from the Claude Marketplace. It will run:\n1. claude plugins install ${CLAUDE_OFFICIAL_PLUGIN_ID}\n2. claude plugins uninstall ${CLAUDE_LEGACY_PLUGIN_ID}\nWould you like me to update it?`;
+  }
+
+  if (status.state === 'both' || plan.removeLegacy) {
+    return `It's also suggesting updating the Vercel Plugin for Claude Code from the Claude Marketplace. It will run:\n1. claude plugins uninstall ${CLAUDE_LEGACY_PLUGIN_ID}\nWould you like me to update it?`;
   }
 
   if (plan.updateOfficial) {
@@ -418,6 +418,10 @@ function getClaudeActionRequiredCommand(
     return `claude plugins install ${CLAUDE_OFFICIAL_PLUGIN_ID}`;
   }
 
+  if (status.state === 'both' && plan.removeLegacy) {
+    return `claude plugins uninstall ${CLAUDE_LEGACY_PLUGIN_ID}`;
+  }
+
   if (plan.updateOfficial && status.state === 'official-only') {
     return `claude plugins update ${CLAUDE_OFFICIAL_PLUGIN_ID}`;
   }
@@ -436,10 +440,7 @@ function getClaudeActionRequiredNextSteps(
     },
   ];
 
-  if (
-    (status.state === 'legacy-only' || status.state === 'both') &&
-    plan.removeLegacy
-  ) {
+  if (status.state === 'legacy-only' && plan.removeLegacy) {
     next.push({
       command: `claude plugins uninstall ${CLAUDE_LEGACY_PLUGIN_ID}`,
       when: 'Remove the old plugin after the update',
