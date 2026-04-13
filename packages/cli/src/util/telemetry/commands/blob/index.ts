@@ -62,6 +62,20 @@ export class BlobTelemetryClient
     });
   }
 
+  trackCliSubcommandListStores(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'list-stores',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandEmptyStore(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'empty-store',
+      value: actual,
+    });
+  }
+
   trackCliOptionRwToken() {
     this.trackCliOption({
       option: '--rw-token',
