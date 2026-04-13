@@ -29,9 +29,12 @@ export default async function removeStore(
     return 1;
   }
 
-  let {
-    args: [storeId],
+  const {
+    args: [storeIdArg],
+    flags: { '--yes': yes },
   } = parsedArgs;
+
+  let storeId = storeIdArg;
 
   if (!storeId && rwToken.success) {
     const [, , , id] = rwToken.token.split('_');
@@ -76,14 +79,16 @@ export default async function removeStore(
       connectionsResponse.connections
     );
 
-    const res = await client.input.confirm(
-      `Are you sure you want to remove ${label}?${projectsInfo} This action cannot be undone.`,
-      false
-    );
+    if (!yes) {
+      const res = await client.input.confirm(
+        `Are you sure you want to remove ${label}?${projectsInfo} This action cannot be undone.`,
+        false
+      );
 
-    if (!res) {
-      output.success('Blob store not removed');
-      return 0;
+      if (!res) {
+        output.success('Blob store not removed');
+        return 0;
+      }
     }
 
     output.debug('Deleting blob store');

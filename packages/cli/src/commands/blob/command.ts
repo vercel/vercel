@@ -277,7 +277,7 @@ export const removeStoreSubcommand = {
       required: false,
     },
   ],
-  options: [],
+  options: [yesOption],
   examples: [],
 } as const;
 
@@ -343,7 +343,7 @@ export const deleteStoreSubcommand = {
       required: false,
     },
   ],
-  options: [],
+  options: [yesOption],
   examples: [],
 } as const;
 

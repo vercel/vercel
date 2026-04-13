@@ -2,6 +2,7 @@
 'vercel': patch
 ---
 
-feat(cli): add --all flag to blob list-stores
+feat(cli): add --all flag to blob list-stores, --yes flag to blob delete-store
 
-When in a linked project directory, `blob list-stores` now hints about `--all` when no stores are connected to the project. Use `--all` to list all team stores regardless of project connection, matching the pattern from `integration list --all`.
+- `blob list-stores --all`: list all team stores regardless of project connection. Hints about `--all` when no stores are connected to the current project.
+- `blob delete-store --yes`: skip confirmation prompt for CI/scripts.
