@@ -90,12 +90,20 @@ export const build: BuildV2 = async args => {
       span: buildSpan,
     });
 
-    const introspectionPromise = introspection({
-      ...args,
-      span: buildSpan,
-      files: rolldownResult.files,
-      handler: rolldownResult.handler,
-    });
+    // Only hono's introspection is supported for now
+    const introspectionPromise =
+      rolldownResult.framework.slug === 'hono'
+        ? introspection({
+            ...args,
+            span: buildSpan,
+            files: rolldownResult.files,
+            handler: rolldownResult.handler,
+          })
+        : Promise.resolve({
+            routes: [],
+            additionalFolders: [],
+            additionalDeps: [],
+          });
 
     // This must come after the build command since turbo repo worksapce deps may need to be transpiled.
     const typescriptPromise = typescript({
