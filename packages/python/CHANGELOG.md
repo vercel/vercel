@@ -1,5 +1,11 @@
 # @vercel/python
 
+## 6.30.1
+
+### Patch Changes
+
+- Replace subprocess calls with fs.existsSync ([#15913](https://github.com/vercel/vercel/pull/15913))
+
 ## 6.30.0
 
 ### Minor Changes
