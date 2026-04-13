@@ -1,11 +1,11 @@
 import path from 'path';
 import { URL } from 'url';
-import fetch from 'node-fetch';
+import nodeFetch from 'node-fetch';
 import express from 'express';
 import { createServer } from 'http';
 import { listen } from 'async-listen';
 import { apiFetch } from './helpers/api-fetch';
-import fs, { writeFile, readFile, remove, ensureDir, mkdir } from 'fs-extra';
+import fs, { writeFile, readFile, remove, ensureDir } from 'fs-extra';
 import sleep from '../src/util/sleep';
 import waitForPrompt from './helpers/wait-for-prompt';
 import { execCli } from './helpers/exec';
@@ -120,9 +120,7 @@ beforeAll(async () => {
     const team = await teamPromise;
     await prepareE2EFixtures(team.slug, binaryPath);
   } catch (err) {
-    // eslint-disable-next-line no-console
     console.log('Failed test suite `beforeAll`');
-    // eslint-disable-next-line no-console
     console.log(err);
 
     // force test suite to actually stop
@@ -145,7 +143,7 @@ afterAll(async () => {
 });
 
 // https://linear.app/vercel/issue/ZERO-2555/fix-or-skip-assign-a-domain-to-a-project-test
-// eslint-disable-next-line jest/no-disabled-tests
+// biome-ignore lint/suspicious/noSkippedTests: temporarily disabled
 test.skip('assign a domain to a project', async () => {
   const team = await teamPromise;
   const domain = `project-domain.${team.slug}.vercel.app`;
@@ -187,7 +185,7 @@ test('ensure `github` and `scope` are not sent to the API', async () => {
 });
 
 // TODO: fix: --public does not make deployments public
-// eslint-disable-next-line jest/no-disabled-tests
+// biome-ignore lint/suspicious/noSkippedTests: temporarily disabled
 test.skip('should show prompts to set up project during first deploy', async () => {
   const dir = await setupE2EFixture('project-link-deploy');
   const projectName = `project-link-deploy-${
@@ -237,7 +235,7 @@ test.skip('should show prompts to set up project during first deploy', async () 
   const { href } = new URL(output.stdout);
 
   // Send a test request to the deployment
-  const response = await fetch(href);
+  const response = await nodeFetch(href);
   const text = await response.text();
   expect(text).toContain('<h1>custom hello</h1>');
 
@@ -263,7 +261,7 @@ test.skip('should show prompts to set up project during first deploy', async () 
       });
     });
 
-    const res2 = await fetch(`http://localhost:${port}/`);
+    const res2 = await nodeFetch(`http://localhost:${port}/`);
     const text2 = await res2.text();
     expect(text2).toContain('<h1>custom hello</h1>');
   } finally {
@@ -477,12 +475,12 @@ test('use `rootDirectory` from project when deploying', async () => {
 
   const { href } = new URL(secondResult.stdout);
 
-  const pageResponse1 = await fetch(href);
+  const pageResponse1 = await nodeFetch(href);
   expect(pageResponse1.status).toBe(200);
   expect(await pageResponse1.text()).toMatch(/I am a website/gm);
 
   // Ensures that the `now.json` file has been applied
-  const pageResponse2 = await fetch(`${secondResult.stdout}/i-do-exist`);
+  const pageResponse2 = await nodeFetch(`${secondResult.stdout}/i-do-exist`);
   expect(pageResponse2.status).toBe(200);
   expect(await pageResponse2.text()).toMatch(/I am a website/gm);
 
@@ -536,7 +534,7 @@ test('add a sensitive env var', async () => {
 
   const link = require(path.join(dir, '.vercel/project.json'));
 
-  const addEnvCommand = execCli(
+  const output = await execCli(
     binaryPath,
     ['env', 'add', 'envVarName', 'production', '--sensitive'],
     {
@@ -544,13 +542,9 @@ test('add a sensitive env var', async () => {
         VERCEL_ORG_ID: link.orgId,
         VERCEL_PROJECT_ID: link.projectId,
       },
+      input: 'test\n',
     }
   );
-
-  await waitForPrompt(addEnvCommand, /What's the value of [^?]+\?/);
-  addEnvCommand.stdin?.write('test\n');
-
-  const output = await addEnvCommand;
 
   expect(output.exitCode, formatOutput(output)).toBe(0);
   expect(output.stderr).toContain(
@@ -590,18 +584,14 @@ test('override an existing env var', async () => {
   };
 
   // 1. Initial add
-  const addEnvCommand = execCli(
+  const output = await execCli(
     binaryPath,
     ['env', 'add', 'envVarName', 'production'],
-    options
+    {
+      ...options,
+      input: 'test\n',
+    }
   );
-
-  await waitForPrompt(addEnvCommand, /Mark as sensitive\?/);
-  addEnvCommand.stdin?.write('n\n');
-  await waitForPrompt(addEnvCommand, /What's the value of [^?]+\?/);
-  addEnvCommand.stdin?.write('test\n');
-
-  const output = await addEnvCommand;
 
   expect(output.exitCode, formatOutput(output)).toBe(0);
   expect(output.stderr).toContain(
@@ -609,18 +599,14 @@ test('override an existing env var', async () => {
   );
 
   // 2. Override
-  const overrideEnvCommand = execCli(
+  const outputOverride = await execCli(
     binaryPath,
     ['env', 'add', 'envVarName', 'production', '--force'],
-    options
+    {
+      ...options,
+      input: 'test\n',
+    }
   );
-
-  await waitForPrompt(overrideEnvCommand, /Mark as sensitive\?/);
-  overrideEnvCommand.stdin?.write('n\n');
-  await waitForPrompt(overrideEnvCommand, /What's the value of [^?]+\?/);
-  overrideEnvCommand.stdin?.write('test\n');
-
-  const outputOverride = await overrideEnvCommand;
 
   expect(outputOverride.exitCode, formatOutput(outputOverride)).toBe(0);
   expect(outputOverride.stderr).toContain(
@@ -807,7 +793,7 @@ test('deploys with only now.json and README.md', async () => {
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
   const { host } = new URL(stdout);
-  const res = await fetch(`https://${host}/README.md`);
+  const res = await nodeFetch(`https://${host}/README.md`);
   const text = await res.text();
   expect(text).toMatch(/readme contents/);
 });
@@ -834,7 +820,7 @@ test('deploys with only vercel.json and README.md', async () => {
   );
 
   const { host } = new URL(stdout);
-  const res = await fetch(`https://${host}/README.md`);
+  const res = await nodeFetch(`https://${host}/README.md`);
   const text = await res.text();
   expect(text).toMatch(/readme contents/);
 });
@@ -863,7 +849,6 @@ test('`vc --debug project ls` should output the projects listing', async () => {
   expect(stderr).toContain('> Projects found under');
 });
 
-// eslint-disable-next-line jest/no-disabled-tests
 test.skip(
   'deploy gatsby twice and print cached directories',
   async () => {
@@ -908,7 +893,7 @@ test.skip(
 );
 
 // TODO: fix: --public does not make deployments public
-// eslint-disable-next-line jest/no-disabled-tests
+// biome-ignore lint/suspicious/noSkippedTests: temporarily disabled
 test.skip('deploy pnpm twice using pnp and symlink=false', async () => {
   const directory = path.join(__dirname, 'fixtures/unit/pnpm-pnp-symlink');
 
@@ -934,14 +919,14 @@ test.skip('deploy pnpm twice using pnp and symlink=false', async () => {
   let { exitCode, stdout, stderr } = await firstDeploy;
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
-  let page = await fetch(stdout);
+  let page = await nodeFetch(stdout);
   let text = await page.text();
   expect(text).toBe('no cache\n');
 
   ({ exitCode, stdout, stderr } = await deploy());
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
-  page = await fetch(stdout);
+  page = await nodeFetch(stdout);
   text = await page.text();
 
   expect(text).toContain('cache exists\n');
@@ -1012,7 +997,7 @@ test('[vc link] should detect frameworks in project rootDirectory', async () => 
   vc.stdin?.write(`${projectRootDir}\n`);
 
   // This means the framework detection worked!
-  await waitForPrompt(vc, 'Auto-detected Project Settings (Next.js)');
+  await waitForPrompt(vc, 'Auto-detected Project Settings for Next.js');
 
   vc.kill();
 });
@@ -1085,7 +1070,7 @@ test('[vc dev] should show prompts to set up project', async () => {
 
   // Ensure that `vc dev` also works
   try {
-    const response = await fetch(`http://localhost:${port}/`);
+    const response = await nodeFetch(`http://localhost:${port}/`);
     const text = await response.text();
     expect(text).toContain('<h1>custom hello</h1>');
   } finally {
@@ -1176,7 +1161,7 @@ test('[vc dev] should send the platform proxy request headers to frontend dev se
 
   // Ensure that `vc dev` also works
   try {
-    const response = await fetch(`http://localhost:${port}/`);
+    const response = await nodeFetch(`http://localhost:${port}/`);
     const body = await response.json();
     expect(body.headers['x-vercel-deployment-url']).toBe(`localhost:${port}`);
     expect(body.env.NOW_REGION).toBe('dev1');
@@ -1266,7 +1251,7 @@ test('[vc build] should not include .vercel when zeroConfig is true and outputDi
 });
 
 // TODO: fix: --public does not make deployments public
-// eslint-disable-next-line jest/no-disabled-tests
+// biome-ignore lint/suspicious/noSkippedTests: temporarily disabled
 test.skip('vercel.json configuration overrides in a new project prompt user and merges settings correctly', async () => {
   let directory = await setupE2EFixture(
     'vercel-json-configuration-overrides-merging-prompts'
@@ -1324,7 +1309,7 @@ test.skip('vercel.json configuration overrides in a new project prompt user and 
   const deployment = await vc;
   expect(deployment.exitCode, formatOutput(deployment)).toBe(0);
   // assert the command were executed
-  const page = await fetch(deployment.stdout);
+  const page = await nodeFetch(deployment.stdout);
   const text = await page.text();
   expect(text).toBe('1\n');
   // Since this test asserts that we can create a new project based on the folder name, delete it after the test
@@ -1353,14 +1338,14 @@ test('vercel.json configuration overrides in an existing project do not prompt u
   // Step 1. Create a simple static deployment with no configuration.
   // Deployment should succeed and page should display "0"
 
-  await mkdir(path.join(directory, 'public'));
+  await ensureDir(path.join(directory, 'public'));
   await writeFile(path.join(directory, 'public/index.txt'), '0');
 
   // auto-confirm this deployment
   let deployment = await deploy(true);
 
   const { href } = new URL(deployment.stdout);
-  let page = await fetch(href);
+  let page = await nodeFetch(href);
   let text = await page.text();
   expect(text).toBe('0');
 
@@ -1379,12 +1364,12 @@ test('vercel.json configuration overrides in an existing project do not prompt u
   );
 
   deployment = await deploy();
-  page = await fetch(deployment.stdout);
+  page = await nodeFetch(deployment.stdout);
   text = await page.text();
   expect(text).toBe('1\n');
 
   // // Step 3. Do a more complex deployment using a framework this time
-  await mkdir(`${directory}/pages`);
+  await ensureDir(`${directory}/pages`);
   await writeFile(
     `${directory}/pages/index.js`,
     `export default () => 'Next.js Test'`
@@ -1412,7 +1397,7 @@ test('vercel.json configuration overrides in an existing project do not prompt u
   );
 
   deployment = await deploy();
-  page = await fetch(deployment.stdout);
+  page = await nodeFetch(deployment.stdout);
   text = await page.text();
   expect(text).toMatch(/Next\.js Test/);
 });
@@ -1426,63 +1411,63 @@ test.each([
     vercelAuth: 'standard',
     expectedStatus: 401,
   },
-] as const)(
-  '[vc deploy] should allow a project to be created with Vercel Auth disabled or enabled with prompts - vercelAuth: %s',
-  async ({ vercelAuth, expectedStatus }) => {
-    const dir = await setupE2EFixture('project-vercel-auth');
-    const projectName = `project-vercel-auth-${
-      Math.random().toString(36).split('.')[1]
-    }`;
+] as const)('[vc deploy] should allow a project to be created with Vercel Auth disabled or enabled with prompts - vercelAuth: %s', async ({
+  vercelAuth,
+  expectedStatus,
+}) => {
+  const dir = await setupE2EFixture('project-vercel-auth');
+  const projectName = `project-vercel-auth-${
+    Math.random().toString(36).split('.')[1]
+  }`;
 
-    // remove previously linked project if it exists
-    await remove(path.join(dir, '.vercel'));
+  // remove previously linked project if it exists
+  await remove(path.join(dir, '.vercel'));
 
-    const now = execCli(binaryPath, [dir], {
-      env: {
-        FORCE_TTY: '1',
-      },
-    });
+  const now = execCli(binaryPath, [dir], {
+    env: {
+      FORCE_TTY: '1',
+    },
+  });
 
-    await setupProject(
-      now,
-      projectName,
-      {
-        buildCommand: `mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html`,
-        outputDirectory: 'o',
-      },
-      {
-        vercelAuth,
-      }
-    );
+  await setupProject(
+    now,
+    projectName,
+    {
+      buildCommand: `mkdir -p o && echo '<h1>custom hello</h1>' > o/index.html`,
+      outputDirectory: 'o',
+    },
+    {
+      vercelAuth,
+    }
+  );
 
-    const output = await now;
+  const output = await now;
 
-    // Ensure the exit code is right
-    expect(output.exitCode, formatOutput(output)).toBe(0);
+  // Ensure the exit code is right
+  expect(output.exitCode, formatOutput(output)).toBe(0);
 
-    // Ensure .gitignore is created
-    const gitignore = await readFile(path.join(dir, '.gitignore'), 'utf8');
-    expect(gitignore).toBe('.vercel\n');
+  // Ensure .gitignore is created
+  const gitignore = await readFile(path.join(dir, '.gitignore'), 'utf8');
+  expect(gitignore).toBe('.vercel\n');
 
-    // Ensure .vercel/project.json and .vercel/README.txt are created
-    expect(
-      fs.existsSync(path.join(dir, '.vercel', 'project.json')),
-      'project.json'
-    ).toBe(true);
-    expect(
-      fs.existsSync(path.join(dir, '.vercel', 'README.txt')),
-      'README.txt'
-    ).toBe(true);
+  // Ensure .vercel/project.json and .vercel/README.txt are created
+  expect(
+    fs.existsSync(path.join(dir, '.vercel', 'project.json')),
+    'project.json'
+  ).toBe(true);
+  expect(
+    fs.existsSync(path.join(dir, '.vercel', 'README.txt')),
+    'README.txt'
+  ).toBe(true);
 
-    const { href } = new URL(output.stdout);
+  const { href } = new URL(output.stdout);
 
-    // Send a test request to the deployment
-    const response = await fetch(href);
-    expect(response.status).toBe(expectedStatus);
+  // Send a test request to the deployment
+  const response = await nodeFetch(href);
+  expect(response.status).toBe(expectedStatus);
 
-    const projectResponse = await apiFetch(`/projects/${projectName}`, {
-      method: 'DELETE',
-    });
-    expect(projectResponse.status).toBe(204);
-  }
-);
+  const projectResponse = await apiFetch(`/projects/${projectName}`, {
+    method: 'DELETE',
+  });
+  expect(projectResponse.status).toBe(204);
+});

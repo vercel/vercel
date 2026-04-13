@@ -24,7 +24,6 @@ import {
   runNpmInstall,
   runPackageJsonScript,
   getNodeVersion,
-  getSpawnOptions,
   debug,
   isSymbolicLink,
   walkParentDirs,
@@ -63,8 +62,7 @@ interface DownloadOptions {
 
 const require_ = createRequire(__filename);
 
-// eslint-disable-next-line no-useless-escape
-const libPathRegEx = /^node_modules|[\/\\]node_modules[\/\\]/;
+const libPathRegEx = /^node_modules|[/\\]node_modules[/\\]/;
 
 async function downloadInstallAndBundle({
   files,
@@ -82,7 +80,6 @@ async function downloadInstallAndBundle({
     config,
     meta
   );
-  const spawnOpts = getSpawnOptions(meta, nodeVersion);
 
   const {
     cliType,
@@ -91,11 +88,11 @@ async function downloadInstallAndBundle({
     turboSupportsCorepackHome,
   } = await scanParentDirs(entrypointFsDirname, true);
 
-  spawnOpts.env = getEnvForPackageManager({
+  const spawnEnv = getEnvForPackageManager({
     cliType,
     lockfileVersion,
     packageJsonPackageManager,
-    env: spawnOpts.env || {},
+    env: process.env,
     turboSupportsCorepackHome,
     projectCreatedAt: config.projectSettings?.createdAt,
   });
@@ -105,7 +102,7 @@ async function downloadInstallAndBundle({
     if (installCommand.trim()) {
       console.log(`Running "install" command: \`${installCommand}\`...`);
       await execCommand(installCommand, {
-        ...spawnOpts,
+        env: spawnEnv,
         cwd: entrypointFsDirname,
       });
     } else {
@@ -115,13 +112,13 @@ async function downloadInstallAndBundle({
     await runNpmInstall(
       entrypointFsDirname,
       [],
-      spawnOpts,
+      { env: spawnEnv },
       meta,
       config.projectSettings?.createdAt
     );
   }
   const entrypointPath = downloadedFiles[entrypoint].fsPath;
-  return { entrypointPath, entrypointFsDirname, nodeVersion, spawnOpts };
+  return { entrypointPath, entrypointFsDirname, nodeVersion, spawnEnv };
 }
 
 function renameTStoJS(path: string) {
@@ -147,8 +144,7 @@ async function compile(
   config: Config,
   meta: Meta,
   nodeVersion: NodeVersion,
-  isEdgeFunction: boolean,
-  useTypescript5 = false
+  isEdgeFunction: boolean
 ): Promise<{
   preparedFiles: Files;
   shouldAddSourcemapSupport: boolean;
@@ -190,7 +186,6 @@ async function compile(
         project: path, // Resolve tsconfig.json from entrypoint dir
         files: true, // Include all files such as global `.d.ts`
         nodeVersionMajor: nodeVersion.major,
-        useTypescript5,
       });
     }
     const { code, map } = tsCompile(source, path);
@@ -294,7 +289,6 @@ async function compile(
       },
     }
   );
-
   for (const warning of warnings) {
     debug(`Warning from trace: ${warning.message}`);
   }
@@ -410,6 +404,15 @@ function getAWSLambdaHandler(entrypoint: string, config: Config) {
   return '';
 }
 
+// Track whether bundling routes have already been emitted so they are only
+// included once across all bundled entrypoint builds.
+let bundlingRoutesEmitted = false;
+
+/** @internal Reset bundling routes state between test runs. */
+export function _resetBundlingRoutesEmitted() {
+  bundlingRoutesEmitted = false;
+}
+
 export const build = async ({
   files,
   entrypoint,
@@ -440,7 +443,7 @@ export const build = async ({
     entrypointPath: _entrypointPath,
     entrypointFsDirname,
     nodeVersion,
-    spawnOpts,
+    spawnEnv,
   } = await downloadInstallAndBundle({
     files,
     entrypoint,
@@ -459,13 +462,11 @@ export const build = async ({
   // primary builder
   if (projectBuildCommand && considerBuildCommand) {
     await execCommand(projectBuildCommand, {
-      ...spawnOpts,
-
       // Yarn v2 PnP mode may be activated, so force
       // "node-modules" linker style
       env: {
         YARN_NODE_LINKER: 'node-modules',
-        ...spawnOpts.env,
+        ...spawnEnv,
       },
 
       cwd: workPath,
@@ -478,7 +479,7 @@ export const build = async ({
     await runPackageJsonScript(
       entrypointFsDirname,
       possibleScripts,
-      spawnOpts,
+      { env: spawnEnv },
       config.projectSettings?.createdAt
     );
   }
@@ -519,8 +520,6 @@ export const build = async ({
     isBun: isBunVersion(nodeVersion),
   });
 
-  // Opt backend builders to use typescript5
-  const useTypescript5 = considerBuildCommand;
   debug('Tracing input files...');
   const traceTime = Date.now();
   const { preparedFiles, shouldAddSourcemapSupport } = await compile(
@@ -530,8 +529,7 @@ export const build = async ({
     config,
     meta,
     nodeVersion,
-    isEdgeFunction,
-    useTypescript5
+    isEdgeFunction
   );
   debug(`Trace complete [${Date.now() - traceTime}ms]`);
 
@@ -609,9 +607,65 @@ export const build = async ({
         ? true
         : undefined;
 
+    const enableBundling =
+      process.env.VERCEL_API_FUNCTION_BUNDLING === '1' &&
+      config.zeroConfig === true &&
+      !isMiddleware &&
+      !isEdgeFunction;
+
+    if (enableBundling) {
+      // All bundleable lambdas share this identical handler file so that
+      // groupLambdas can match their handler field and digest, grouping
+      // them into a single Lambda. At runtime, the shared handler uses
+      // x-matched-path to route to the correct user entrypoint.
+      const bundledHandlerName = '___vc_bundled_api_handler.js';
+      preparedFiles[bundledHandlerName] = new FileFsRef({
+        fsPath: join(dirname(__filename), 'bundling-handler.js'),
+      });
+      handler = bundledHandlerName;
+
+      // Inject x-matched-path as a request header so the bundled handler
+      // knows which entrypoint to invoke. These routes are identical for
+      // every bundled entrypoint, so only emit them once to avoid
+      // inflating the route table during route merging.
+      if (!bundlingRoutesEmitted) {
+        bundlingRoutesEmitted = true;
+        routes = [
+          { handle: 'hit' },
+          {
+            src: '/index(?:/)?',
+            transforms: [
+              {
+                type: 'request.headers' as const,
+                op: 'set' as const,
+                target: { key: 'x-matched-path' },
+                args: '/',
+              },
+            ],
+            continue: true,
+            important: true,
+          },
+          {
+            src: '/((?!index$).*?)(?:/)?',
+            transforms: [
+              {
+                type: 'request.headers' as const,
+                op: 'set' as const,
+                target: { key: 'x-matched-path' },
+                args: '/$1',
+              },
+            ],
+            continue: true,
+            important: true,
+          },
+        ];
+      }
+    }
+
     output = new NodejsLambda({
       files: preparedFiles,
       handler,
+      experimentalAllowBundling: enableBundling || undefined,
       architecture: staticConfig?.architecture,
       runtime: nodeVersion.runtime,
       useWebApi: isMiddleware ? true : useWebApi,

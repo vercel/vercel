@@ -1,63 +1,45 @@
-import { mkdir, writeFile, unlink, access } from 'fs/promises';
+import { mkdir, readFile, writeFile, unlink, access } from 'fs/promises';
 import { join, basename } from 'path';
 import { fork } from 'child_process';
 import { config as dotenvConfig } from 'dotenv';
+import { parse as tomlParse } from 'smol-toml';
 import output from '../output-manager';
-import { NowBuildError } from '@vercel/build-utils';
 import { VERCEL_DIR } from './projects/link';
 import { ConflictingConfigFiles } from './errors-ts';
+import { NowBuildError } from '@vercel/build-utils';
+import { isVercelTomlEnabled } from './is-vercel-toml-enabled';
+import type {
+  RouteWithSrc,
+  Rewrite,
+  Redirect,
+  Header,
+} from '@vercel/routing-utils';
+import type { VercelConfig } from '@vercel/client';
 
-function isRouteFormat(item: any): boolean {
-  return item && typeof item === 'object' && 'src' in item;
-}
+type RouteInput = RouteWithSrc | Rewrite | Redirect | Header;
 
-function toRouteFormat(item: any, isRedirect: boolean): any {
-  const {
-    source,
-    destination,
-    statusCode,
-    permanent,
-    respectOriginCacheControl,
-    ...rest
-  } = item;
+function toRouteFormat(item: RouteInput): RouteWithSrc {
+  if ('src' in item) return item;
 
-  const route: any = {
+  const { source, destination, headers, statusCode, permanent, ...rest } =
+    item as Rewrite & Redirect & Header;
+
+  const route: RouteWithSrc = {
     src: source,
-    dest: destination,
     ...rest,
   };
 
-  if (isRedirect) {
-    route.redirect = true;
-    route.status = statusCode || (permanent ? 308 : 307);
-  } else {
-    if (respectOriginCacheControl !== undefined) {
-      route.respectOriginCacheControl = respectOriginCacheControl;
-    }
-    if (statusCode !== undefined) {
-      route.status = statusCode;
-    }
+  if (destination) route.dest = destination;
+  if (headers)
+    route.headers = Object.fromEntries(headers.map(h => [h.key, h.value]));
+
+  if (statusCode !== undefined) {
+    route.status = statusCode;
+  } else if (permanent !== undefined) {
+    route.status = permanent ? 308 : 307;
   }
 
   return route;
-}
-
-function normalizeArrayField(
-  items: any[] | undefined,
-  isRedirect: boolean
-): any[] | null {
-  if (!items || !Array.isArray(items) || items.length === 0) {
-    return null;
-  }
-
-  const hasRouteFormat = items.some(isRouteFormat);
-  if (!hasRouteFormat) {
-    return null;
-  }
-
-  return items.map(item =>
-    isRouteFormat(item) ? item : toRouteFormat(item, isRedirect)
-  );
 }
 
 /**
@@ -70,34 +52,65 @@ function normalizeArrayField(
  * If routes and rewrites/redirects are BOTH explicitly defined,
  * returns unchanged to let schema validation fail.
  */
-export function normalizeConfig(config: any): any {
+export function normalizeConfig(config: VercelConfig): VercelConfig {
   const normalized = { ...config };
-  let allRoutes: any[] = normalized.routes || [];
+  const { rewrites, redirects, headers } = normalized;
+  let allRoutes: RouteInput[] = (normalized.routes as RouteInput[]) || [];
 
   const hasRoutes = allRoutes.length > 0;
-  const hasRewrites = normalized.rewrites?.length > 0;
-  const hasRedirects = normalized.redirects?.length > 0;
+  const hasRewrites = (rewrites?.length ?? 0) > 0;
+  const hasRedirects = (redirects?.length ?? 0) > 0;
+  const hasHeaders = (headers?.length ?? 0) > 0;
 
-  // If routes explicitly exists alongside rewrites/redirects, don't merge - let schema validation fail
-  if (hasRoutes && (hasRewrites || hasRedirects)) {
+  function hasRouteFormat(items: RouteInput[] | undefined): boolean {
+    return items?.some(item => 'src' in item) ?? false;
+  }
+
+  // If routes explicitly exists alongside rewrites/redirects/headers, don't merge - let schema validation fail
+  if (hasRoutes && (hasRewrites || hasRedirects || hasHeaders)) {
     return normalized;
   }
 
-  const convertedRewrites = normalizeArrayField(normalized.rewrites, false);
-  const convertedRedirects = normalizeArrayField(normalized.redirects, true);
+  // If some arrays will convert to routes but others won't, throw a more specific & helpful error
+  const shouldConvertRewrites = hasRewrites && hasRouteFormat(rewrites);
+  const shouldConvertRedirects = hasRedirects && hasRouteFormat(redirects);
+  const shouldConvertHeaders = hasHeaders && hasRouteFormat(headers);
 
-  if (convertedRewrites) {
-    allRoutes = [...allRoutes, ...convertedRewrites];
+  const someWillConvert =
+    shouldConvertRewrites || shouldConvertRedirects || shouldConvertHeaders;
+  const someWontConvert =
+    (hasRewrites && !shouldConvertRewrites) ||
+    (hasRedirects && !shouldConvertRedirects) ||
+    (hasHeaders && !shouldConvertHeaders);
+
+  if (someWillConvert && someWontConvert) {
+    throw new NowBuildError({
+      code: 'INVALID_VERCEL_CONFIG',
+      message:
+        'Transforms (e.g., requestHeaders) require the `routes` format, ' +
+        'which cannot be used alongside `rewrites`, `redirects`, or `headers`. ' +
+        'Move everything into the `routes` array instead.',
+      link: 'https://vercel.com/docs/projects/project-configuration#routes',
+    });
+  }
+
+  if (rewrites && shouldConvertRewrites) {
+    allRoutes = [...allRoutes, ...rewrites.map(toRouteFormat)];
     delete normalized.rewrites;
   }
 
-  if (convertedRedirects) {
-    allRoutes = [...allRoutes, ...convertedRedirects];
+  if (redirects && shouldConvertRedirects) {
+    allRoutes = [...allRoutes, ...redirects.map(toRouteFormat)];
     delete normalized.redirects;
   }
 
+  if (headers && shouldConvertHeaders) {
+    allRoutes = [...allRoutes, ...headers.map(toRouteFormat)];
+    delete normalized.headers;
+  }
+
   if (allRoutes.length > 0) {
-    normalized.routes = allRoutes;
+    normalized.routes = allRoutes.map(toRouteFormat);
   }
 
   return normalized;
@@ -152,6 +165,12 @@ export async function findSourceVercelConfigFile(
       return basename(configPath);
     }
   }
+  if (isVercelTomlEnabled()) {
+    const tomlPath = join(workPath, 'vercel.toml');
+    if (await fileExists(tomlPath)) {
+      return 'vercel.toml';
+    }
+  }
   return null;
 }
 
@@ -203,35 +222,33 @@ export async function compileVercelConfig(
 ): Promise<CompileConfigResult> {
   const vercelJsonPath = join(workPath, 'vercel.json');
   const nowJsonPath = join(workPath, 'now.json');
+  const vercelTomlPath = join(workPath, 'vercel.toml');
   const hasVercelJson = await fileExists(vercelJsonPath);
   const hasNowJson = await fileExists(nowJsonPath);
-
-  // Check for conflicting vercel.json and now.json
-  if (hasVercelJson && hasNowJson) {
-    throw new ConflictingConfigFiles([vercelJsonPath, nowJsonPath]);
-  }
+  const hasVercelToml =
+    isVercelTomlEnabled() && (await fileExists(vercelTomlPath));
 
   const vercelConfigPath = await findVercelConfigFile(workPath);
   const vercelDir = join(workPath, VERCEL_DIR);
   const compiledConfigPath = join(vercelDir, 'vercel.json');
 
-  if (vercelConfigPath && hasNowJson) {
+  // Collect all found config files for conflict detection
+  const foundConfigs: string[] = [];
+  if (hasVercelJson) foundConfigs.push(vercelJsonPath);
+  if (hasNowJson) foundConfigs.push(nowJsonPath);
+  if (hasVercelToml) foundConfigs.push(vercelTomlPath);
+  if (vercelConfigPath) foundConfigs.push(vercelConfigPath);
+
+  if (foundConfigs.length > 1) {
     throw new ConflictingConfigFiles(
-      [vercelConfigPath, nowJsonPath],
-      `Both ${basename(vercelConfigPath)} and now.json exist in your project. Please use only one configuration method.`,
+      foundConfigs,
+      `Multiple config files found: ${foundConfigs.map(f => basename(f)).join(', ')}. Please use only one configuration method.`,
       'https://vercel.com/docs/projects/project-configuration'
     );
   }
 
-  if (vercelConfigPath && hasVercelJson) {
-    throw new ConflictingConfigFiles(
-      [vercelConfigPath, vercelJsonPath],
-      `Both ${basename(vercelConfigPath)} and vercel.json exist in your project. Please use only one configuration method.`,
-      'https://vercel.com/docs/projects/project-configuration'
-    );
-  }
-
-  if (!vercelConfigPath) {
+  // No TS/JS config and no TOML — return JSON/now.json paths directly
+  if (!vercelConfigPath && !hasVercelToml) {
     if (hasVercelJson) {
       return {
         configPath: vercelJsonPath,
@@ -260,6 +277,41 @@ export async function compileVercelConfig(
     };
   }
 
+  // Handle vercel.toml — parse and write to .vercel/vercel.json
+  if (hasVercelToml) {
+    try {
+      const tomlContent = await readFile(vercelTomlPath, 'utf8');
+      const config = tomlParse(tomlContent) as unknown as VercelConfig;
+      const normalizedConfig = normalizeConfig(config);
+
+      await mkdir(vercelDir, { recursive: true });
+      await writeFile(
+        compiledConfigPath,
+        JSON.stringify(normalizedConfig, null, 2),
+        'utf-8'
+      );
+
+      output.debug(`Compiled ${vercelTomlPath} -> ${compiledConfigPath}`);
+
+      return {
+        configPath: compiledConfigPath,
+        wasCompiled: true,
+        sourceFile: 'vercel.toml',
+      };
+    } catch (error: any) {
+      throw new NowBuildError({
+        code: error.code ?? 'vercel_toml_parse_failed',
+        message: `Failed to parse vercel.toml: ${error.message}`,
+        link:
+          error.link ??
+          'https://vercel.com/docs/projects/project-configuration',
+      });
+    }
+  }
+
+  // At this point, vercelConfigPath is guaranteed to be non-null (TS/JS config)
+  const sourceConfigPath = vercelConfigPath!;
+
   dotenvConfig({ path: join(workPath, '.env') });
   dotenvConfig({ path: join(workPath, '.env.local') });
 
@@ -272,7 +324,7 @@ export async function compileVercelConfig(
     await mkdir(vercelDir, { recursive: true });
 
     await build({
-      entryPoints: [vercelConfigPath],
+      entryPoints: [sourceConfigPath],
       bundle: true,
       platform: 'node',
       format: 'esm',
@@ -348,14 +400,14 @@ export async function compileVercelConfig(
       });
     });
 
-    const normalizedConfig = normalizeConfig(config);
+    const normalizedConfig = normalizeConfig(config as VercelConfig);
     await writeFile(
       compiledConfigPath,
       JSON.stringify(normalizedConfig, null, 2),
       'utf-8'
     );
 
-    output.debug(`Compiled ${vercelConfigPath} -> ${compiledConfigPath}`);
+    output.debug(`Compiled ${sourceConfigPath} -> ${compiledConfigPath}`);
 
     return {
       configPath: compiledConfigPath,
@@ -364,9 +416,10 @@ export async function compileVercelConfig(
     };
   } catch (error: any) {
     throw new NowBuildError({
-      code: 'vercel_ts_compilation_failed',
-      message: `Failed to compile ${vercelConfigPath}: ${error.message}`,
-      link: 'https://vercel.com/docs/projects/project-configuration',
+      code: error.code ?? 'vercel_ts_compilation_failed',
+      message: `Failed to compile ${basename(sourceConfigPath)}: ${error.message}`,
+      link:
+        error.link ?? 'https://vercel.com/docs/projects/project-configuration',
     });
   } finally {
     await Promise.all([
@@ -387,10 +440,15 @@ export async function compileVercelConfig(
 export async function getVercelConfigPath(workPath: string): Promise<string> {
   const vercelJsonPath = join(workPath, 'vercel.json');
   const nowJsonPath = join(workPath, 'now.json');
+  const vercelTomlPath = join(workPath, 'vercel.toml');
   const compiledConfigPath = join(workPath, VERCEL_DIR, 'vercel.json');
 
   if (await fileExists(vercelJsonPath)) {
     return vercelJsonPath;
+  }
+
+  if (isVercelTomlEnabled() && (await fileExists(vercelTomlPath))) {
+    return vercelTomlPath;
   }
 
   if (await fileExists(nowJsonPath)) {

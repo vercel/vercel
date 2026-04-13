@@ -1,5 +1,386 @@
 # @vercel/client
 
+## 17.3.1
+
+### Patch Changes
+
+- Updated dependencies [[`9b3ea340f23c1faad6d56c2a54d75bb2e77b0162`](https://github.com/vercel/vercel/commit/9b3ea340f23c1faad6d56c2a54d75bb2e77b0162)]:
+  - @vercel/build-utils@13.14.2
+
+## 17.3.0
+
+### Minor Changes
+
+- Add Deployment Checks support to `deploy --prod`. Shows "Running Checks..." spinner when checks are pending, detects check failures before alias promotion, and displays failed check run details with links to logs. ([#15884](https://github.com/vercel/vercel/pull/15884))
+
+### Patch Changes
+
+- Updated dependencies [[`2e15ee828f14de4a849a462429ca03feab161174`](https://github.com/vercel/vercel/commit/2e15ee828f14de4a849a462429ca03feab161174), [`a31c84d1bda56a60da6d7bc6d611b0b18ba3bf57`](https://github.com/vercel/vercel/commit/a31c84d1bda56a60da6d7bc6d611b0b18ba3bf57)]:
+  - @vercel/build-utils@13.14.1
+
+## 17.2.69
+
+### Patch Changes
+
+- Updated dependencies [[`42b6ff3113eb7ba5302b8469f8dd10070ecec6f0`](https://github.com/vercel/vercel/commit/42b6ff3113eb7ba5302b8469f8dd10070ecec6f0)]:
+  - @vercel/build-utils@13.14.0
+
+## 17.2.68
+
+### Patch Changes
+
+- Updated dependencies [[`a80217a9ed60d7b7f3e98537b0468cc5488078c1`](https://github.com/vercel/vercel/commit/a80217a9ed60d7b7f3e98537b0468cc5488078c1)]:
+  - @vercel/build-utils@13.13.0
+
+## 17.2.67
+
+### Patch Changes
+
+- Updated dependencies [[`c98a02d87276f41b1580b78d37f9f671fd9d1f12`](https://github.com/vercel/vercel/commit/c98a02d87276f41b1580b78d37f9f671fd9d1f12)]:
+  - @vercel/build-utils@13.12.2
+
+## 17.2.66
+
+### Patch Changes
+
+- Updated dependencies [[`6cb5c6e1216d7a0dbaa6f740875a36f1b7166900`](https://github.com/vercel/vercel/commit/6cb5c6e1216d7a0dbaa6f740875a36f1b7166900)]:
+  - @vercel/build-utils@13.12.1
+
+## 17.2.65
+
+### Patch Changes
+
+- Updated dependencies [[`3427149c3751192b54bb4fad9d3b50f171a28666`](https://github.com/vercel/vercel/commit/3427149c3751192b54bb4fad9d3b50f171a28666)]:
+  - @vercel/build-utils@13.12.0
+
+## 17.2.64
+
+### Patch Changes
+
+- Add --archive support to `deploy continue` command. ([#15197](https://github.com/vercel/vercel/pull/15197))
+
+- Updated dependencies [[`a54b8f246ac6b43ac8f1674093402e3fe145fd64`](https://github.com/vercel/vercel/commit/a54b8f246ac6b43ac8f1674093402e3fe145fd64)]:
+  - @vercel/build-utils@13.11.0
+
+## 17.2.63
+
+### Patch Changes
+
+- Updated dependencies [[`4839214ae9cbcc95d448429bf93133e58284e03f`](https://github.com/vercel/vercel/commit/4839214ae9cbcc95d448429bf93133e58284e03f), [`13f719da050ba4b73b95b51e8edf7141c967b9a2`](https://github.com/vercel/vercel/commit/13f719da050ba4b73b95b51e8edf7141c967b9a2), [`ece813e0a9a75e3ad262817f00050c62f5ad67eb`](https://github.com/vercel/vercel/commit/ece813e0a9a75e3ad262817f00050c62f5ad67eb), [`d7107d025500d6be305895dfd5cd89d87e6eb9f0`](https://github.com/vercel/vercel/commit/d7107d025500d6be305895dfd5cd89d87e6eb9f0), [`25a6a2daa46baba6e8d7dec90eb49213b8150b8c`](https://github.com/vercel/vercel/commit/25a6a2daa46baba6e8d7dec90eb49213b8150b8c)]:
+  - @vercel/build-utils@13.10.0
+  - @vercel/routing-utils@6.1.1
+
+## 17.2.62
+
+### Patch Changes
+
+- Updated dependencies [[`e5564b684ee40dd60f745327ef206bbe58a5191a`](https://github.com/vercel/vercel/commit/e5564b684ee40dd60f745327ef206bbe58a5191a)]:
+  - @vercel/build-utils@13.9.0
+
+## 17.2.61
+
+### Patch Changes
+
+- Updated dependencies [[`62b9c34a92fe6d60d73f81a1674c2e483f12fc8f`](https://github.com/vercel/vercel/commit/62b9c34a92fe6d60d73f81a1674c2e483f12fc8f)]:
+  - @vercel/routing-utils@6.1.0
+  - @vercel/build-utils@13.8.2
+
+## 17.2.60
+
+### Patch Changes
+
+- Updated dependencies [[`761dd2d91fd2d21f5cb99ece4539c257c83ef3bf`](https://github.com/vercel/vercel/commit/761dd2d91fd2d21f5cb99ece4539c257c83ef3bf)]:
+  - @vercel/build-utils@13.8.2
+
+## 17.2.59
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/build-utils@13.8.1
+
+## 17.2.58
+
+### Patch Changes
+
+- Fix bulkRedirectsPath with --prebuilt to support directories ([#15484](https://github.com/vercel/vercel/pull/15484))
+
+  When using `bulkRedirectsPath` with `--prebuilt` deployments, the path can now point to either a file or a directory containing redirect files. Previously, only single files were supported, causing deployments to fail with "No files found at path" when using a directory.
+
+## 17.2.57
+
+### Patch Changes
+
+- Updated dependencies [[`b5542a65e3f1b0e1d1a4b93b89ef7b14d1abfab6`](https://github.com/vercel/vercel/commit/b5542a65e3f1b0e1d1a4b93b89ef7b14d1abfab6), [`8a3558f680d592b4ea47ac7e48c99145d6368941`](https://github.com/vercel/vercel/commit/8a3558f680d592b4ea47ac7e48c99145d6368941)]:
+  - @vercel/build-utils@13.8.0
+
+## 17.2.56
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/build-utils@13.7.2
+
+## 17.2.55
+
+### Patch Changes
+
+- Updated dependencies [[`768300b7bfb247613908984d8d86974434ee5473`](https://github.com/vercel/vercel/commit/768300b7bfb247613908984d8d86974434ee5473)]:
+  - @vercel/build-utils@13.7.1
+
+## 17.2.54
+
+### Patch Changes
+
+- Updated dependencies [[`83e804013528fc54de31082960ae31f58339bd71`](https://github.com/vercel/vercel/commit/83e804013528fc54de31082960ae31f58339bd71), [`921314f958c4ec85adb09e020310a5becb7f866c`](https://github.com/vercel/vercel/commit/921314f958c4ec85adb09e020310a5becb7f866c)]:
+  - @vercel/build-utils@13.7.0
+
+## 17.2.53
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/build-utils@13.6.3
+
+## 17.2.52
+
+### Patch Changes
+
+- Updated dependencies [[`e6c736fb74bedb975caad76d4c1f1e589a1c6cc9`](https://github.com/vercel/vercel/commit/e6c736fb74bedb975caad76d4c1f1e589a1c6cc9)]:
+  - @vercel/routing-utils@6.0.2
+  - @vercel/build-utils@13.6.2
+
+## 17.2.51
+
+### Patch Changes
+
+- Updated dependencies [[`9721f4948a72d273f792c54f5393aa50ac279209`](https://github.com/vercel/vercel/commit/9721f4948a72d273f792c54f5393aa50ac279209)]:
+  - @vercel/build-utils@13.6.2
+
+## 17.2.50
+
+### Patch Changes
+
+- Updated dependencies [[`b3b94f2335026634f4fa9fdfe0671677fa00000e`](https://github.com/vercel/vercel/commit/b3b94f2335026634f4fa9fdfe0671677fa00000e)]:
+  - @vercel/routing-utils@6.0.1
+  - @vercel/build-utils@13.6.1
+
+## 17.2.49
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/build-utils@13.6.1
+
+## 17.2.48
+
+### Patch Changes
+
+- rename fetch to fetchApi ([#15231](https://github.com/vercel/vercel/pull/15231))
+
+- Updated dependencies [[`e64a85daec784b4fe571abe7405a80aca150007a`](https://github.com/vercel/vercel/commit/e64a85daec784b4fe571abe7405a80aca150007a), [`2db57840669ca2fa8dadf492bd38c21bf9e3cfeb`](https://github.com/vercel/vercel/commit/2db57840669ca2fa8dadf492bd38c21bf9e3cfeb), [`0d42acfd22e51e51cb0e4a5aea7c19f3886ed496`](https://github.com/vercel/vercel/commit/0d42acfd22e51e51cb0e4a5aea7c19f3886ed496), [`8404a7315260851495d708f1c7c6e870d7ffa007`](https://github.com/vercel/vercel/commit/8404a7315260851495d708f1c7c6e870d7ffa007), [`b3a96cc4f276ce8d16c695eabd499d3a17e73aa8`](https://github.com/vercel/vercel/commit/b3a96cc4f276ce8d16c695eabd499d3a17e73aa8), [`9a6358529f0737415110cf03d626dc9ee8e99126`](https://github.com/vercel/vercel/commit/9a6358529f0737415110cf03d626dc9ee8e99126), [`af6a651229cad4ddb7fcc15bd14d06355c2b77ee`](https://github.com/vercel/vercel/commit/af6a651229cad4ddb7fcc15bd14d06355c2b77ee)]:
+  - @vercel/routing-utils@6.0.0
+  - @vercel/build-utils@13.6.0
+
+## 17.2.47
+
+### Patch Changes
+
+- Updated dependencies [[`0c961fce30d495620542066249dae447764d2eba`](https://github.com/vercel/vercel/commit/0c961fce30d495620542066249dae447764d2eba)]:
+  - @vercel/routing-utils@5.4.0
+  - @vercel/build-utils@13.5.0
+
+## 17.2.46
+
+### Patch Changes
+
+- Updated dependencies [[`cb79f6f8080fddd3673a8911566085e0265b060b`](https://github.com/vercel/vercel/commit/cb79f6f8080fddd3673a8911566085e0265b060b)]:
+  - @vercel/build-utils@13.5.0
+
+## 17.2.45
+
+### Patch Changes
+
+- Updated dependencies [[`09b3540742ac86b768de9775929fef1ef36db412`](https://github.com/vercel/vercel/commit/09b3540742ac86b768de9775929fef1ef36db412)]:
+  - @vercel/build-utils@13.4.3
+
+## 17.2.44
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/build-utils@13.4.2
+
+## 17.2.43
+
+### Patch Changes
+
+- Updated dependencies [[`e7685ebeba19b30ae6549860aa8fcd07ba49a6d0`](https://github.com/vercel/vercel/commit/e7685ebeba19b30ae6549860aa8fcd07ba49a6d0)]:
+  - @vercel/build-utils@13.4.1
+
+## 17.2.42
+
+### Patch Changes
+
+- Add experimental manual deployment support ([#14857](https://github.com/vercel/vercel/pull/14857))
+
+## 17.2.41
+
+### Patch Changes
+
+- Updated dependencies [[`3cd0b559f1815fdb13f7aa05114bae2b0b0b0e68`](https://github.com/vercel/vercel/commit/3cd0b559f1815fdb13f7aa05114bae2b0b0b0e68)]:
+  - @vercel/routing-utils@5.3.3
+  - @vercel/build-utils@13.4.0
+
+## 17.2.40
+
+### Patch Changes
+
+- Updated dependencies [[`8f2c79045858cd41fa89522ee13f2ce5d6c81be1`](https://github.com/vercel/vercel/commit/8f2c79045858cd41fa89522ee13f2ce5d6c81be1), [`2686071de8e17161babea397fcd12226de8ecce9`](https://github.com/vercel/vercel/commit/2686071de8e17161babea397fcd12226de8ecce9), [`2b9147bd5678dd9c6b4710aa5c1e8388f993898c`](https://github.com/vercel/vercel/commit/2b9147bd5678dd9c6b4710aa5c1e8388f993898c)]:
+  - @vercel/build-utils@13.4.0
+
+## 17.2.39
+
+### Patch Changes
+
+- Updated dependencies [[`012a8e410d09d9a5dcf060b30b4b24b08500823d`](https://github.com/vercel/vercel/commit/012a8e410d09d9a5dcf060b30b4b24b08500823d)]:
+  - @vercel/build-utils@13.3.5
+
+## 17.2.38
+
+### Patch Changes
+
+- Remove `customErrorPage` configuration support from `vercel.json` ([#14832](https://github.com/vercel/vercel/pull/14832))
+
+- Updated dependencies [[`45963f54f26a3e54df58a3b6a30e383de4094dd1`](https://github.com/vercel/vercel/commit/45963f54f26a3e54df58a3b6a30e383de4094dd1), [`87ff85b1277d84021bc83aec6fc97021d3fdab9d`](https://github.com/vercel/vercel/commit/87ff85b1277d84021bc83aec6fc97021d3fdab9d)]:
+  - @vercel/build-utils@13.3.4
+
+## 17.2.37
+
+### Patch Changes
+
+- Pass detected agent name as `actor` in deployment request body ([#14955](https://github.com/vercel/vercel/pull/14955))
+
+## 17.2.36
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/build-utils@13.3.3
+
+## 17.2.35
+
+### Patch Changes
+
+- Updated dependencies [[`fc357e11cb4b00ab8ec413a0ea3586a87e733f0e`](https://github.com/vercel/vercel/commit/fc357e11cb4b00ab8ec413a0ea3586a87e733f0e), [`ff320caa5c8a0857aad0b989699207a6a703256f`](https://github.com/vercel/vercel/commit/ff320caa5c8a0857aad0b989699207a6a703256f)]:
+  - @vercel/build-utils@13.3.2
+
+## 17.2.34
+
+### Patch Changes
+
+- Updated dependencies [[`f45189244c2ca28083b0077532be4e2d9945faf0`](https://github.com/vercel/vercel/commit/f45189244c2ca28083b0077532be4e2d9945faf0)]:
+  - @vercel/build-utils@13.3.1
+
+## 17.2.33
+
+### Patch Changes
+
+- Updated dependencies [[`3ee91bd6782888e626486c706dcba65fd51ba0e5`](https://github.com/vercel/vercel/commit/3ee91bd6782888e626486c706dcba65fd51ba0e5), [`ce9208286ed6d29d6764ea4d290680ad98e65d22`](https://github.com/vercel/vercel/commit/ce9208286ed6d29d6764ea4d290680ad98e65d22)]:
+  - @vercel/build-utils@13.3.0
+
+## 17.2.32
+
+### Patch Changes
+
+- Updated dependencies [[`4500f1f482cdc19e0904be3b0e5922ceffc6de62`](https://github.com/vercel/vercel/commit/4500f1f482cdc19e0904be3b0e5922ceffc6de62), [`6d87d02723d4385ed1d08bb855fcc43f9466a984`](https://github.com/vercel/vercel/commit/6d87d02723d4385ed1d08bb855fcc43f9466a984)]:
+  - @vercel/build-utils@13.2.17
+
+## 17.2.31
+
+### Patch Changes
+
+- Add up to 30 seconds of random skew to APIs returning `Retry-After` headers to prevent thundering herds fighting over a single rate limit token. ([#14737](https://github.com/vercel/vercel/pull/14737))
+
+## 17.2.30
+
+### Patch Changes
+
+- Updated dependencies [[`556d9b418d411e74bd59f682264a31dc71163026`](https://github.com/vercel/vercel/commit/556d9b418d411e74bd59f682264a31dc71163026), [`556d9b418d411e74bd59f682264a31dc71163026`](https://github.com/vercel/vercel/commit/556d9b418d411e74bd59f682264a31dc71163026)]:
+  - @vercel/build-utils@13.2.16
+
+## 17.2.29
+
+### Patch Changes
+
+- Updated dependencies [[`ee4463453cfe0711bf46491c080f97b196bdaa5a`](https://github.com/vercel/vercel/commit/ee4463453cfe0711bf46491c080f97b196bdaa5a)]:
+  - @vercel/build-utils@13.2.15
+
+## 17.2.28
+
+### Patch Changes
+
+- Add `experimentalServices` to `vercel.json` ([#14612](https://github.com/vercel/vercel/pull/14612))
+
+- Updated dependencies [[`c762e424822819ba1bd8dd0f1fe6496741f7b586`](https://github.com/vercel/vercel/commit/c762e424822819ba1bd8dd0f1fe6496741f7b586)]:
+  - @vercel/build-utils@13.2.14
+
+## 17.2.27
+
+### Patch Changes
+
+- Updated dependencies [[`5f085b86b26310e027de5b757a4aac3ff88a9c02`](https://github.com/vercel/vercel/commit/5f085b86b26310e027de5b757a4aac3ff88a9c02)]:
+  - @vercel/build-utils@13.2.13
+
+## 17.2.26
+
+### Patch Changes
+
+- Updated dependencies [[`186967277069593406948c0e3099477ba43e181a`](https://github.com/vercel/vercel/commit/186967277069593406948c0e3099477ba43e181a)]:
+  - @vercel/build-utils@13.2.12
+
+## 17.2.25
+
+### Patch Changes
+
+- Updated dependencies [[`06bf941478bf7bfe479193ca77cfe3b00ff1a85e`](https://github.com/vercel/vercel/commit/06bf941478bf7bfe479193ca77cfe3b00ff1a85e)]:
+  - @vercel/build-utils@13.2.11
+
+## 17.2.24
+
+### Patch Changes
+
+- Updated dependencies [[`f46cab88668c148f2ff9728dd8cafc4f4ea6dda6`](https://github.com/vercel/vercel/commit/f46cab88668c148f2ff9728dd8cafc4f4ea6dda6)]:
+  - @vercel/build-utils@13.2.10
+
+## 17.2.23
+
+### Patch Changes
+
+- Updated dependencies [[`74a6b49c53a5cee731c89437b06fc875731c0a87`](https://github.com/vercel/vercel/commit/74a6b49c53a5cee731c89437b06fc875731c0a87)]:
+  - @vercel/build-utils@13.2.9
+
+## 17.2.22
+
+### Patch Changes
+
+- Updated dependencies [[`92fe2dfd81c617fb733fec95a2547024d120a408`](https://github.com/vercel/vercel/commit/92fe2dfd81c617fb733fec95a2547024d120a408)]:
+  - @vercel/build-utils@13.2.8
+
+## 17.2.21
+
+### Patch Changes
+
+- Updated dependencies [[`b7fe57260459697e7bb16fabde80f4caf147aec4`](https://github.com/vercel/vercel/commit/b7fe57260459697e7bb16fabde80f4caf147aec4), [`460443ef814240f03bb385f95f22431bf496b5fa`](https://github.com/vercel/vercel/commit/460443ef814240f03bb385f95f22431bf496b5fa)]:
+  - @vercel/build-utils@13.2.7
+
+## 17.2.20
+
+### Patch Changes
+
+- Updated dependencies [[`984164ff5f148fb6fd397902d16db780e9b98e6c`](https://github.com/vercel/vercel/commit/984164ff5f148fb6fd397902d16db780e9b98e6c), [`6d3c5b66324221f33290022897674af54461333e`](https://github.com/vercel/vercel/commit/6d3c5b66324221f33290022897674af54461333e)]:
+  - @vercel/build-utils@13.2.6
+
 ## 17.2.19
 
 ### Patch Changes

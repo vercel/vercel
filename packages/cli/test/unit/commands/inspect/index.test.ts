@@ -204,6 +204,43 @@ describe('inspect', () => {
       });
     });
 
+    describe('--format', async () => {
+      it('tracks telemetry for --format json', async () => {
+        const user = useUser();
+        const deployment = useDeployment({ creator: user });
+        client.setArgv('inspect', deployment.url, '--format', 'json');
+        const exitCode = await inspect(client);
+        expect(exitCode).toEqual(0);
+
+        expect(client.telemetryEventStore).toHaveTelemetryEvents([
+          {
+            key: 'argument:deploymentIdOrHost',
+            value: '[REDACTED]',
+          },
+          {
+            key: 'option:format',
+            value: 'json',
+          },
+        ]);
+      });
+
+      it('outputs deployment as valid JSON that can be piped to jq', async () => {
+        const user = useUser();
+        const deployment = useDeployment({ creator: user });
+        client.setArgv('inspect', deployment.url, '--format', 'json');
+        const exitCode = await inspect(client);
+        expect(exitCode).toEqual(0);
+
+        const output = client.stdout.getFullOutput();
+        // Should be valid JSON - this will throw if not parseable
+        const jsonOutput = JSON.parse(output);
+
+        expect(jsonOutput).toHaveProperty('id');
+        expect(jsonOutput).toHaveProperty('url');
+        expect(jsonOutput).toHaveProperty('readyState');
+      });
+    });
+
     it('tracks deplomymentUrl as telemetry', async () => {
       const user = useUser();
       const deployment = useDeployment({ creator: user });
@@ -333,8 +370,9 @@ describe('inspect', () => {
       await expect(client.stderr).toOutput(
         `Fetching deployment "${deployment.url}" in ${user.username}`
       );
-      expect(client.getFullOutput().split('\n').slice(1).join('\n'))
-        .toMatchInlineSnapshot(`
+      expect(
+        client.getFullOutput().split('\n').slice(1).join('\n')
+      ).toMatchInlineSnapshot(`
         "status	● Queued
         "
       `);
@@ -357,8 +395,9 @@ describe('inspect', () => {
       await expect(client.stderr).toOutput(
         `Fetching deployment "${deployment.url}" in ${user.username}`
       );
-      expect(client.getFullOutput().split('\n').slice(1).join('\n'))
-        .toMatchInlineSnapshot(`
+      expect(
+        client.getFullOutput().split('\n').slice(1).join('\n')
+      ).toMatchInlineSnapshot(`
         "2024-06-03T15:01:10.339Z  Hello, world!
         2024-06-03T15:01:10.340Z  Bye...
         status	● Error
@@ -401,8 +440,9 @@ describe('inspect', () => {
       await Promise.all<void>([runInspect(), slowlyDeploy()]);
 
       expect(exitCode).toEqual(0);
-      expect(client.getFullOutput().split('\n').slice(1).join('\n'))
-        .toMatchInlineSnapshot(`
+      expect(
+        client.getFullOutput().split('\n').slice(1).join('\n')
+      ).toMatchInlineSnapshot(`
         "2024-06-03T15:01:10.339Z  Hello, world!
         2024-06-03T15:01:10.340Z  building...
         2024-06-03T15:01:11.000Z  build complete

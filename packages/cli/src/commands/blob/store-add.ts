@@ -3,12 +3,17 @@ import output from '../../output-manager';
 import { getLinkedProject } from '../../util/projects/link';
 import { connectResourceToProject } from '../../util/integration-resource/connect-resource-to-project';
 import chalk from 'chalk';
-import { getCommandName } from '../../util/pkg-name';
+import { envPullCommandLogic } from '../env/pull';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { parseArguments } from '../../util/get-args';
 import { addStoreSubcommand } from './command';
 import { BlobAddStoreTelemetryClient } from '../../util/telemetry/commands/blob/store-add';
 import { printError } from '../../util/error';
+import { parseAccessFlag } from '../../util/blob/access';
+import {
+  VALID_ENVIRONMENTS,
+  validateEnvironments,
+} from '../../util/integration/post-provision-setup';
 
 export default async function addStore(
   client: Client,
@@ -35,10 +40,51 @@ export default async function addStore(
     flags,
   } = parsedArgs;
 
+  const yes = flags['--yes'] ?? false;
+  const environmentFlags = flags['--environment'];
+
+  // Validate --environment values early
+  if (environmentFlags?.length) {
+    const envValidation = validateEnvironments(environmentFlags);
+    if (!envValidation.valid) {
+      output.error(
+        `Invalid environment value: ${envValidation.invalid.map(e => `"${e}"`).join(', ')}. Must be one of: ${VALID_ENVIRONMENTS.join(', ')}`
+      );
+      return 1;
+    }
+  }
+
+  let accessFlag = flags['--access'];
+  if (!accessFlag && client.stdin.isTTY) {
+    accessFlag = await client.input.select<'public' | 'private'>({
+      message: 'Choose the access type for the blob store',
+      choices: [
+        {
+          name: 'Private',
+          value: 'private',
+          description:
+            'For sensitive documents, user content, and apps with custom auth. https://vercel.com/docs/vercel-blob/private-storage',
+        },
+        {
+          name: 'Public',
+          value: 'public',
+          description:
+            'For images, videos, large media, and public assets. https://vercel.com/docs/vercel-blob/public-storage',
+        },
+      ],
+    });
+  }
+  const access = parseAccessFlag(accessFlag);
+  if (!access) return 1;
+
   const region = flags['--region'] || 'iad1';
 
   let name = nameArg;
   if (!name) {
+    if (!client.stdin.isTTY) {
+      output.error('Missing required argument: name');
+      return 1;
+    }
     name = await client.input.text({
       message: 'Enter a name for your blob store',
       validate: value => {
@@ -51,6 +97,7 @@ export default async function addStore(
   }
 
   telemetryClient.trackCliArgumentName(name);
+  telemetryClient.trackCliOptionAccess(accessFlag);
   telemetryClient.trackCliOptionRegion(flags['--region']);
 
   const link = await getLinkedProject(client);
@@ -62,17 +109,12 @@ export default async function addStore(
 
     output.spinner('Creating new blob store');
 
-    const requestBody: { name: string; region: string } = {
-      name,
-      region,
-    };
-
     const res = await client.fetch<{ store: { id: string; region?: string } }>(
       '/v1/storage/stores/blob',
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody),
+        body: JSON.stringify({ name, region, access }),
         accountId: link.status === 'linked' ? link.org.id : undefined,
       }
     );
@@ -88,22 +130,37 @@ export default async function addStore(
 
   const regionInfo = storeRegion ? ` in ${storeRegion}` : '';
   output.success(`Blob store created: ${name} (${storeId})${regionInfo}`);
+  const docsUrl =
+    access === 'public'
+      ? 'https://vercel.com/docs/vercel-blob/public-storage'
+      : 'https://vercel.com/docs/vercel-blob/private-storage';
+  output.log(`Access: ${access}. Learn more: ${output.link(docsUrl, docsUrl)}`);
 
   if (link.status === 'linked') {
-    const res = await client.input.confirm(
-      `Would you like to link this blob store to ${link.project.name}?`,
-      true
-    );
+    let shouldLink = yes;
+    if (!shouldLink) {
+      shouldLink = await client.input.confirm(
+        `Would you like to link this blob store to ${link.project.name}?`,
+        true
+      );
+    }
 
-    if (res) {
-      const environments = await client.input.checkbox({
-        message: 'Select environments',
-        choices: [
-          { name: 'Production', value: 'production', checked: true },
-          { name: 'Preview', value: 'preview', checked: true },
-          { name: 'Development', value: 'development', checked: true },
-        ],
-      });
+    if (shouldLink) {
+      let environments: string[];
+      if (environmentFlags?.length) {
+        environments = environmentFlags;
+      } else if (yes) {
+        environments = [...VALID_ENVIRONMENTS];
+      } else {
+        environments = await client.input.checkbox({
+          message: 'Select environments',
+          choices: [
+            { name: 'Production', value: 'production', checked: true },
+            { name: 'Preview', value: 'preview', checked: true },
+            { name: 'Development', value: 'development', checked: true },
+          ],
+        });
+      }
 
       output.spinner(
         `Connecting ${chalk.bold(name)} to ${chalk.bold(link.project.name)}...`
@@ -114,13 +171,27 @@ export default async function addStore(
         link.project.id,
         storeId,
         environments,
-        link.org.id
+        { accountId: link.org.id }
       );
 
       output.success(
         `Blob store ${chalk.bold(name)} linked to ${chalk.bold(
           link.project.name
-        )}. Make sure to pull the new environment variables using ${getCommandName('env pull')}`
+        )}`
+      );
+
+      client.config.currentTeam =
+        link.org.type === 'team' ? link.org.id : undefined;
+
+      await envPullCommandLogic(
+        client,
+        '.env.local',
+        true,
+        'development',
+        link,
+        undefined,
+        client.cwd,
+        'vercel-cli:blob:store-add'
       );
     }
   }

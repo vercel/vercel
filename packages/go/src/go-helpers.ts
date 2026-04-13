@@ -1,6 +1,7 @@
-import tar from 'tar';
+import { createHash } from 'crypto';
+import { extract } from 'tar';
 import execa from 'execa';
-import fetch from 'node-fetch';
+import nodeFetch from 'node-fetch';
 import {
   createWriteStream,
   mkdirp,
@@ -18,13 +19,14 @@ import { tmpdir } from 'os';
 import yauzl from 'yauzl-promise';
 import XDGAppPaths from 'xdg-app-paths';
 import type { Env } from '@vercel/build-utils';
-import { getWriteableDirectory } from '@vercel/build-utils';
 
 const streamPipeline = promisify(pipeline);
 
 const versionMap = new Map([
-  ['1.24', '1.24.5'],
-  ['1.23', '1.23.11'],
+  ['1.26', '1.26.1'],
+  ['1.25', '1.25.8'],
+  ['1.24', '1.24.13'],
+  ['1.23', '1.23.12'],
   ['1.22', '1.22.12'],
   ['1.21', '1.21.13'],
   ['1.20', '1.20.14'],
@@ -86,6 +88,38 @@ interface Analyzed {
   functionName: string;
   packageName: string;
   watch?: boolean;
+}
+
+type GoCommandError = Error & {
+  all?: string;
+  stderr?: string;
+  stdout?: string;
+};
+
+function getGoCommandOutput(error: GoCommandError) {
+  const stderr = error.stderr?.trim();
+  const stdout = error.stdout?.trim();
+  const all = error.all?.trim();
+
+  if (stderr && stdout && stdout !== stderr) {
+    return `stderr:\n${stderr}\n\nstdout:\n${stdout}`;
+  }
+
+  return stderr || stdout || all;
+}
+
+function enrichGoCommandError(error: unknown) {
+  if (!(error instanceof Error)) {
+    return error;
+  }
+
+  const output = getGoCommandOutput(error as GoCommandError);
+  if (!output || error.message.includes(output)) {
+    return error;
+  }
+
+  error.message = `${error.message}\n\n${output}`;
+  return error;
 }
 
 /**
@@ -178,7 +212,7 @@ export class GoWrapper {
     this.opts = opts;
   }
 
-  private execute(...args: string[]) {
+  private async execute(...args: string[]) {
     const { opts, env } = this;
     debug(
       `Exec: go ${args.map(a => (a.includes(' ') ? `"${a}"` : a)).join(' ')}`
@@ -186,11 +220,37 @@ export class GoWrapper {
     debug(`  CWD=${opts.cwd}`);
     debug(`  GOROOT=${(env || opts.env).GOROOT}`);
     debug(`  GO_BUILD_FLAGS=${(env || opts.env).GO_BUILD_FLAGS}`);
-    return execa('go', args, { stdio: 'inherit', ...opts, env });
+
+    const captureAndForwardOutput =
+      opts.stdio === undefined || opts.stdio === 'inherit';
+    const subprocess = execa('go', args, {
+      ...opts,
+      env,
+      stdio: captureAndForwardOutput ? 'pipe' : opts.stdio,
+    });
+
+    if (captureAndForwardOutput) {
+      subprocess.stdout?.pipe(process.stdout);
+      subprocess.stderr?.pipe(process.stderr);
+    }
+
+    try {
+      return await subprocess;
+    } catch (error) {
+      throw enrichGoCommandError(error);
+    }
   }
 
-  mod() {
-    return this.execute('mod', 'tidy');
+  mod({ tolerateErrors = false } = {}) {
+    const args = ['mod', 'tidy'];
+    if (tolerateErrors) {
+      args.push('-e');
+    }
+    return this.execute(...args);
+  }
+
+  vendor() {
+    return this.execute('mod', 'vendor');
   }
 
   get(src?: string) {
@@ -204,12 +264,16 @@ export class GoWrapper {
     return this.execute(...args);
   }
 
-  build(src: string | string[], dest: string) {
+  build(src: string | string[], dest: string, { vendorMode = false } = {}) {
     debug(`Building optimized 'go' binary ${src} -> ${dest}`);
     const sources = Array.isArray(src) ? src : [src];
 
     const envGoBuildFlags = (this.env || this.opts.env).GO_BUILD_FLAGS;
-    const flags = envGoBuildFlags ? stringArgv(envGoBuildFlags) : GO_FLAGS;
+    const flags = envGoBuildFlags ? stringArgv(envGoBuildFlags) : [...GO_FLAGS];
+
+    if (vendorMode && !envGoBuildFlags) {
+      flags.push('-mod=vendor');
+    }
 
     return this.execute('build', ...flags, '-o', dest, ...sources);
   }
@@ -308,16 +372,22 @@ export async function createGo({
       goDir = goCacheDir;
     } else if (isUnix && goDir === goCacheDir) {
       // Using local cache → link temp writable directories
-      const tmpBase = await getWriteableDirectory();
-      const tmpModCache = join(tmpBase, 'pkg');
-      const tmpBuildCache = join(tmpBase, '.cache');
+      // Use deterministic path based on workPath so all function builds
+      // within the same deployment share the same cache paths
+      const hash = createHash('md5').update(workPath).digest('hex').slice(0, 8);
+      const tmpBase = join(tmpdir(), `vercel-go-cache-${hash}`);
+      const tmpModCache = join(tmpBase, 'mod');
+      const tmpBuildCache = join(tmpBase, 'go-build');
 
-      await Promise.all([
-        mkdirp(join(goDir, 'pkg', 'mod')),
-        mkdirp(join(goDir, '.cache', 'go-build')),
-        symlink(join(goCacheDir, 'pkg', 'mod'), tmpModCache),
-        symlink(join(goCacheDir, '.cache', 'go-build'), tmpBuildCache),
-      ]);
+      await mkdirp(join(goDir, 'pkg', 'mod'));
+      await mkdirp(join(goDir, 'go-build'));
+
+      // Create symlinks (remove first to handle broken symlinks)
+      await mkdirp(tmpBase);
+      await remove(tmpModCache);
+      await symlink(join(goCacheDir, 'pkg', 'mod'), tmpModCache);
+      await remove(tmpBuildCache);
+      await symlink(join(goCacheDir, 'go-build'), tmpBuildCache);
 
       setEnvPaths(tmpModCache, tmpBuildCache);
     }
@@ -386,7 +456,7 @@ export async function createGo({
 async function download({ dest, version }: { dest: string; version: string }) {
   const { filename, url } = getGoUrl(version);
   console.log(`Downloading go: ${url}`);
-  const res = await fetch(url);
+  const res = await nodeFetch(url);
 
   if (!res.ok) {
     throw new Error(`Failed to download: ${url} (${res.status})`);
@@ -432,7 +502,7 @@ async function download({ dest, version }: { dest: string; version: string }) {
   await new Promise((resolve, reject) => {
     res.body
       .on('error', reject)
-      .pipe(tar.extract({ cwd: dest, strip: 1 }))
+      .pipe(extract({ cwd: dest, strip: 1 }))
       .on('error', reject)
       .on('finish', resolve);
   });

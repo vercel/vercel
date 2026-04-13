@@ -51,12 +51,12 @@ describe('help command', () => {
         line: ['a', '  ', '   ', 'b', 'c'],
         expected: 'a     b c',
       },
-    ])(
-      'should insert spaces between non-whitespace items only; $line',
-      ({ line, expected }) => {
-        expect(lineToString(line)).toBe(expected);
-      }
-    );
+    ])('should insert spaces between non-whitespace items only; $line', ({
+      line,
+      expected,
+    }) => {
+      expect(lineToString(line)).toBe(expected);
+    });
   });
 
   describe('outputArrayToString', () => {
@@ -74,7 +74,7 @@ describe('help command', () => {
         client.setArgv('dev', '--help');
         const exitCode = await dev(client);
         expect(exitCode).toEqual(2);
-        expect(client.stderr.read()).toMatchSnapshot();
+        expect(client.stderr.getFullOutput()).toMatchSnapshot();
       });
     });
   });
@@ -270,6 +270,16 @@ describe('help command', () => {
         ).toMatchSnapshot();
       });
     });
+    describe('domains price help output snapshots', () => {
+      it('domains price help column width 120', () => {
+        expect(
+          help(domains.priceSubcommand, {
+            columns: 120,
+            parent: domains.domainsCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
     describe('domains inspect help output snapshots', () => {
       it('domains inspect help column width 120', () => {
         expect(
@@ -441,6 +451,76 @@ describe('help command', () => {
         ).toMatchSnapshot();
       });
     });
+    describe('integration accept-terms subcommand', () => {
+      it('integration accept-terms subcommand help column width 120', () => {
+        expect(
+          help(integration.acceptTermsSubcommand, {
+            columns: 120,
+            parent: integration.integrationCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('integration installations subcommand', () => {
+      it('integration installations subcommand help column width 120', () => {
+        expect(
+          help(integration.installationsSubcommand, {
+            columns: 120,
+            parent: integration.integrationCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('integration balance subcommand', () => {
+      it('integration balance subcommand help column width 120', () => {
+        expect(
+          help(integration.balanceSubcommand, {
+            columns: 120,
+            parent: integration.integrationCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('integration guide subcommand', () => {
+      it('integration guide subcommand help column width 120', () => {
+        expect(
+          help(integration.guideSubcommand, {
+            columns: 120,
+            parent: integration.integrationCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('integration discover subcommand', () => {
+      it('integration discover subcommand help column width 120', () => {
+        expect(
+          help(integration.discoverSubcommand, {
+            columns: 120,
+            parent: integration.integrationCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('integration remove subcommand', () => {
+      it('integration remove subcommand help column width 120', () => {
+        expect(
+          help(integration.removeSubcommand, {
+            columns: 120,
+            parent: integration.integrationCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('integration update subcommand', () => {
+      it('integration update subcommand help column width 120', () => {
+        expect(
+          help(integration.updateSubcommand, {
+            columns: 120,
+            parent: integration.integrationCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
   });
 
   describe('integration-resource help output snapshots', () => {
@@ -473,6 +553,16 @@ describe('help command', () => {
       it('integration-resource remove subcommand help column width 120', () => {
         expect(
           help(integrationResource.removeSubcommand, {
+            columns: 120,
+            parent: integrationResource.integrationResourceCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
+    describe('integration-resource create-threshold subcommand', () => {
+      it('integration-resource create-threshold subcommand help column width 120', () => {
+        expect(
+          help(integrationResource.createThresholdSubcommand, {
             columns: 120,
             parent: integrationResource.integrationResourceCommand,
           })

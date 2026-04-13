@@ -1,6 +1,7 @@
 import { packageName } from '../../util/pkg-name';
 import {
   forceOption,
+  formatOption,
   limitOption,
   nextOption,
   yesOption,
@@ -12,7 +13,7 @@ export const listSubcommand = {
   description: 'Show all domains in a list',
   default: true,
   arguments: [],
-  options: [limitOption, nextOption],
+  options: [limitOption, nextOption, formatOption],
   examples: [
     {
       name: 'Paginate results, where `1584722256178` is the time in milliseconds since the UNIX epoch',
@@ -88,6 +89,29 @@ export const removeSubcommand = {
   examples: [],
 } as const;
 
+export const priceSubcommand = {
+  name: 'price',
+  aliases: [],
+  description: 'Show registrar price quote for a domain',
+  arguments: [
+    {
+      name: 'domain',
+      required: true,
+    },
+  ],
+  options: [formatOption],
+  examples: [
+    {
+      name: 'Price quote for a domain',
+      value: `${packageName} domains price example.com`,
+    },
+    {
+      name: 'JSON output',
+      value: `${packageName} domains price example.com --format json`,
+    },
+  ],
+} as const;
+
 export const buySubcommand = {
   name: 'buy',
   aliases: [],
@@ -158,6 +182,7 @@ export const domainsCommand = {
     addSubcommand,
     buySubcommand,
     moveSubcommand,
+    priceSubcommand,
     transferInSubcommand,
     removeSubcommand,
   ],

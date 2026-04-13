@@ -45,6 +45,13 @@ import {
   OUT_EXTENSION,
 } from './go-helpers';
 
+import { GO_CANDIDATE_ENTRYPOINTS, detectGoEntrypoint } from './entrypoint';
+
+import {
+  buildStandaloneServer,
+  startStandaloneDevServer,
+} from './standalone-server';
+
 export { shouldServe };
 
 // in order to allow the user to have `main.go`,
@@ -109,13 +116,10 @@ type UndoActions = {
 
 export const version = 3;
 
-export async function build({
-  files,
-  entrypoint,
-  config,
-  workPath,
-  meta = {},
-}: BuildOptions) {
+export async function build(options: BuildOptions) {
+  const { files, config, workPath, meta = {} } = options;
+  let { entrypoint } = options;
+
   const goPath = await getWriteableDirectory();
   const srcPath = join(goPath, 'src', 'lambda');
   const downloadPath = meta.skipDownload ? workPath : srcPath;
@@ -151,6 +155,21 @@ export async function build({
   We highly recommend you leverage Go Modules in your project.
   Learn more: https://github.com/golang/go/wiki/Modules
   `);
+    }
+
+    // Standalone server mode when framework is 'go' or 'services'
+    if (config?.framework === 'go' || config?.framework === 'services') {
+      const resolvedEntrypoint = await detectGoEntrypoint(workPath, entrypoint);
+      if (!resolvedEntrypoint) {
+        throw new Error(
+          `No Go entrypoint found. Expected one of: ${GO_CANDIDATE_ENTRYPOINTS.join(', ')}`
+        );
+      }
+      debug(`Using standalone Go server mode for ${resolvedEntrypoint}`);
+      return buildStandaloneServer({
+        ...options,
+        entrypoint: resolvedEntrypoint,
+      });
     }
 
     const originalEntrypointAbsolute = join(workPath, entrypoint);
@@ -255,6 +274,7 @@ export async function build({
       files: { ...(await glob('**', outDir)), ...includedFiles },
       handler: HANDLER_FILENAME,
       runtime,
+      runtimeLanguage: 'go',
       supportsWrapper: true,
       environment: {},
     });
@@ -340,6 +360,25 @@ async function buildHandlerWithGoMod({
     }
   }
 
+  // Detect vendored dependencies by checking for vendor/modules.txt,
+  // the canonical marker created by `go mod vendor`
+  const vendorModulesPath = join(
+    goModDirname || entrypointDirname,
+    'vendor',
+    'modules.txt'
+  );
+  const isVendored = await pathExists(vendorModulesPath);
+  if (isVendored) {
+    debug('Detected vendor directory in project');
+
+    const vendorModulesBackup = vendorModulesPath + '.bak';
+    await copy(vendorModulesPath, vendorModulesBackup);
+    undo.fileActions.push({
+      to: vendorModulesPath,
+      from: vendorModulesBackup,
+    });
+  }
+
   const entrypointArr = entrypoint.split(posix.sep);
   let goPackageName = `${packageName}/${packageName}`;
   const goFuncName = `${packageName}.${handlerFunctionName}`;
@@ -422,10 +461,26 @@ async function buildHandlerWithGoMod({
   debug('Tidy `go.mod` file...');
   try {
     // ensure go.mod up-to-date
-    await go.mod();
+    // When vendored, use -e to tolerate errors from private modules that
+    // cannot be resolved from the network. The vendor directory will be
+    // regenerated afterward to maintain consistency.
+    await go.mod({ tolerateErrors: isVendored });
   } catch (err) {
     console.error('failed to `go mod tidy`');
     throw err;
+  }
+
+  // If the project uses vendored dependencies, regenerate the vendor
+  // directory after go.mod has been rewritten by writeGoMod() and tidied.
+  // This ensures vendor/modules.txt is consistent with the modified go.mod.
+  if (isVendored) {
+    debug('Regenerating vendor directory after go.mod rewrite...');
+    try {
+      await go.vendor();
+    } catch (err) {
+      console.error('failed to `go mod vendor`');
+      throw err;
+    }
   }
 
   debug('Running `go build`...');
@@ -434,7 +489,7 @@ async function buildHandlerWithGoMod({
   try {
     const src = [join(baseGoModPath, MAIN_GO_FILENAME)];
 
-    await go.build(src, destPath);
+    await go.build(src, destPath, { vendorMode: isVendored });
   } catch (err) {
     console.error('failed to `go build`');
     throw err;
@@ -676,7 +731,14 @@ async function writeGoMod({
         /^(replace .+=>\s*)(.+)$/gm,
         (orig, replaceStmt, replacePath) => {
           if (replacePath.startsWith('.')) {
-            return replaceStmt + join(goModRelPath, replacePath);
+            let newPath = join(goModRelPath, replacePath);
+            // path.join() strips the './' prefix when goModRelPath is
+            // empty.  Go requires replacement paths without a version to
+            // start with './' or '../', so restore the prefix when needed.
+            if (!newPath.startsWith('.') && !newPath.startsWith('/')) {
+              newPath = './' + newPath;
+            }
+            return replaceStmt + newPath;
           }
           return orig;
         }
@@ -816,9 +878,8 @@ async function writeGoWork(
 export async function startDevServer(
   opts: StartDevServerOptions
 ): Promise<StartDevServerResult> {
-  const { entrypoint, workPath, meta = {} } = opts;
+  const { entrypoint, workPath, config, meta = {} } = opts;
   const { devCacheDir = join(workPath, '.vercel', 'cache') } = meta;
-  const entrypointDir = dirname(entrypoint);
 
   // For some reason, if `entrypoint` is a path segment (filename contains `[]`
   // brackets) then the `.go` suffix on the entrypoint is missing. Fix that here…
@@ -827,6 +888,21 @@ export async function startDevServer(
     entrypointWithExt += '.go';
   }
 
+  // Standalone server mode when framework is 'go' or 'services'
+  if (config?.framework === 'go' || config?.framework === 'services') {
+    const resolvedEntrypoint = await detectGoEntrypoint(
+      workPath,
+      entrypointWithExt
+    );
+    if (!resolvedEntrypoint) {
+      throw new Error(
+        `No Go entrypoint found. Expected one of: ${GO_CANDIDATE_ENTRYPOINTS.join(', ')}`
+      );
+    }
+    return startStandaloneDevServer(opts, resolvedEntrypoint);
+  }
+
+  const entrypointDir = dirname(entrypointWithExt);
   const tmp = join(devCacheDir, 'go', Math.random().toString(32).substring(2));
   const tmpPackage = join(tmp, entrypointDir);
   await mkdirp(tmpPackage);
@@ -886,7 +962,23 @@ export async function startDevServer(
   const child = spawn(executable, [], {
     cwd: tmp,
     env,
-    stdio: ['ignore', 'inherit', 'inherit', 'pipe'],
+    stdio: ['ignore', 'pipe', 'pipe', 'pipe'],
+  });
+  child.stdout?.on('data', data => {
+    const chunk = Buffer.isBuffer(data) ? data : Buffer.from(data);
+    if (opts.onStdout) {
+      opts.onStdout(chunk);
+    } else {
+      process.stdout.write(chunk.toString());
+    }
+  });
+  child.stderr?.on('data', data => {
+    const chunk = Buffer.isBuffer(data) ? data : Buffer.from(data);
+    if (opts.onStderr) {
+      opts.onStderr(chunk);
+    } else {
+      process.stderr.write(chunk.toString());
+    }
   });
 
   child.on('close', async () => {
@@ -918,7 +1010,7 @@ export async function startDevServer(
   if (isPortInfo(result)) {
     return {
       port: result.port,
-      pid: child.pid,
+      pid: child.pid!,
     };
   } else if (Array.isArray(result)) {
     // Got "exit" event from child process

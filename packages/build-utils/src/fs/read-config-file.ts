@@ -1,7 +1,9 @@
 import yaml from 'js-yaml';
-import toml from '@iarna/toml';
+import { parse as tomlParse } from 'smol-toml';
 import { readFile } from 'fs-extra';
 import { isErrnoException } from '@vercel/error-utils';
+import { join } from 'path';
+import type { PackageJson } from '../types';
 
 async function readFileOrNull(file: string) {
   try {
@@ -33,15 +35,29 @@ export async function readConfigFile<T>(
         if (name.endsWith('.json')) {
           return JSON.parse(str) as T;
         } else if (name.endsWith('.toml')) {
-          return toml.parse(str) as unknown as T;
+          return tomlParse(str) as unknown as T;
         } else if (name.endsWith('.yaml') || name.endsWith('.yml')) {
           return yaml.safeLoad(str, { filename: name }) as T;
         }
-      } catch (error: unknown) {
+      } catch (_error: unknown) {
         console.log(`Error while parsing config file: "${name}"`);
       }
     }
   }
 
   return null;
+}
+
+/**
+ * Reads and parses the package.json file from a directory.
+ * Returns an empty object if the file doesn't exist or can't be parsed.
+ */
+export async function getPackageJson(dir: string): Promise<PackageJson> {
+  const packagePath = join(dir, 'package.json');
+
+  try {
+    return JSON.parse(await readFile(packagePath, 'utf8'));
+  } catch (_err) {
+    return {};
+  }
 }

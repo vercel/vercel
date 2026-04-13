@@ -1,16 +1,54 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { join } from 'path';
-import { getLinkedProject } from '../../../../src/util/projects/link';
+import { mkdirp, writeJSON } from 'fs-extra';
+import {
+  getLinkFromDir,
+  getLinkedProject,
+} from '../../../../src/util/projects/link';
 import { client } from '../../../mocks/client';
 
 import { defaultProject, useProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
+import { setupTmpDir } from '../../../helpers/setup-unit-fixture';
 
 type UnPromisify<T> = T extends Promise<infer U> ? U : T;
 
 const fixture = (name: string) =>
   join(__dirname, '../../../fixtures/unit', name);
+
+describe('getLinkFromDir', () => {
+  it('returns null for settings-only project.json (repo-linked pull output)', async () => {
+    const repoRoot = setupTmpDir('settings-only-project-json');
+    const vercelDir = join(repoRoot, '.vercel');
+    await mkdirp(vercelDir);
+    await writeJSON(join(vercelDir, 'project.json'), {
+      settings: {
+        createdAt: 1555413045188,
+        framework: null,
+        outputDirectory: 'dist',
+        rootDirectory: 'dashboard',
+      },
+    });
+
+    await expect(getLinkFromDir(vercelDir)).resolves.toBeNull();
+  });
+
+  it('throws when project.json has link ids but fails schema validation', async () => {
+    const repoRoot = setupTmpDir('invalid-link-project-json');
+    const vercelDir = join(repoRoot, '.vercel');
+    await mkdirp(vercelDir);
+    await writeJSON(join(vercelDir, 'project.json'), {
+      orgId: 'team_x',
+      projectId: 'proj_x',
+      projectName: 123,
+    });
+
+    await expect(getLinkFromDir(vercelDir)).rejects.toThrow(
+      /Project Settings are invalid/
+    );
+  });
+});
 
 describe('getLinkedProject', () => {
   it('should fail to return a link when token is missing', async () => {
@@ -202,6 +240,82 @@ describe('getLinkedProject', () => {
     expect(link.repoRoot).toEqual(cwd);
   });
 
+  it('should prefer `project.json` over `repo.json` when both exist', async () => {
+    const repoRoot = setupTmpDir('project-link-precedence');
+    const cwd = join(repoRoot, 'apps', 'docs');
+
+    // Repo-level link that would normally require disambiguation.
+    await mkdirp(join(repoRoot, '.vercel'));
+    await writeJSON(join(repoRoot, '.vercel', 'repo.json'), {
+      remoteName: 'origin',
+      projects: [
+        {
+          id: 'repo-proj-1',
+          name: 'repo-proj-1',
+          directory: '.',
+          orgId: 'team_dummy',
+        },
+        {
+          id: 'repo-proj-2',
+          name: 'repo-proj-2',
+          directory: '.',
+          orgId: 'team_dummy',
+        },
+      ],
+    });
+
+    // Explicit directory-level link should win.
+    await mkdirp(join(cwd, '.vercel'));
+    await writeJSON(join(cwd, '.vercel', 'project.json'), {
+      orgId: 'team_dummy',
+      projectId: 'project-json-project',
+      projectName: 'project-json-project',
+    });
+
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      id: 'project-json-project',
+      name: 'project-json-project',
+    });
+
+    const selectSpy = vi.spyOn(client.input, 'select');
+    const link = await getLinkedProject(client, cwd);
+
+    // If repo.json was consulted, we'd have prompted to disambiguate.
+    expect(selectSpy).not.toHaveBeenCalled();
+    selectSpy.mockRestore();
+
+    if (link.status !== 'linked') {
+      throw new Error('Expected to be linked');
+    }
+    expect(link.project.id).toEqual('project-json-project');
+    expect(link.repoRoot).toBeUndefined();
+  });
+
+  it('should return link with legacy `repo.json` (top-level orgId)', async () => {
+    const cwd = fixture('monorepo-link-legacy');
+
+    useUser();
+    useTeams('team_dummy');
+
+    useProject({
+      ...defaultProject,
+      id: 'QmbKpqpiUqbcke',
+      name: 'monorepo-dashboard',
+    });
+    const link = await getLinkedProject(client, join(cwd, 'dashboard'));
+    if (link.status !== 'linked') {
+      throw new Error('Expected to be linked');
+    }
+    // Should fall back to top-level orgId when project-level orgId is not set
+    expect(link.org.id).toEqual('team_dummy');
+    expect(link.org.type).toEqual('team');
+    expect(link.project.id).toEqual('QmbKpqpiUqbcke');
+    expect(link.repoRoot).toEqual(cwd);
+  });
+
   it('should show project selector prompt link with `repo.json`', async () => {
     const cwd = fixture('monorepo-link');
 
@@ -228,6 +342,50 @@ describe('getLinkedProject', () => {
     expect(link.org.id).toEqual('team_dummy');
     expect(link.org.type).toEqual('team');
     expect(link.project.id).toEqual('QmbKpqpiUqbcke');
+    expect(link.repoRoot).toEqual(cwd);
+  });
+
+  it('should auto-select project with `repo.json` when projectName is provided', async () => {
+    const cwd = fixture('monorepo-link');
+
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      id: 'QmX6P93ChNDoZP',
+      name: 'monorepo-marketing',
+    });
+
+    // When projectName is provided, it should auto-select without prompting
+    const link = await getLinkedProject(client, cwd, 'monorepo-marketing');
+    if (link.status !== 'linked') {
+      throw new Error('Expected to be linked');
+    }
+    expect(link.org.id).toEqual('team_dummy');
+    expect(link.org.type).toEqual('team');
+    expect(link.project.id).toEqual('QmX6P93ChNDoZP');
+    expect(link.repoRoot).toEqual(cwd);
+  });
+
+  it('should auto-select first matching project when projectName matches in `repo.json`', async () => {
+    const cwd = fixture('monorepo-link');
+
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      id: 'QmScb7GPQt6gsS',
+      name: 'monorepo-blog',
+    });
+
+    // When projectName is provided, it should auto-select without prompting
+    const link = await getLinkedProject(client, cwd, 'monorepo-blog');
+    if (link.status !== 'linked') {
+      throw new Error('Expected to be linked');
+    }
+    expect(link.org.id).toEqual('team_dummy');
+    expect(link.org.type).toEqual('team');
+    expect(link.project.id).toEqual('QmScb7GPQt6gsS');
     expect(link.repoRoot).toEqual(cwd);
   });
 });

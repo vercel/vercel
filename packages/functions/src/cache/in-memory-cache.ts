@@ -1,7 +1,7 @@
 import { RuntimeCache } from './types';
 
 interface CacheEntry {
-  value: unknown;
+  value: string; // JSON-serialized value for consistency with BuildCache
   tags: Set<string>;
   lastModified: number; // Timestamp of when the entry was last modified in epoch milliseconds
   ttl?: number; // Time to live in seconds
@@ -18,7 +18,7 @@ export class InMemoryCache implements RuntimeCache {
         await this.delete(key);
         return null;
       }
-      return entry.value;
+      return JSON.parse(entry.value);
     }
     return null;
   }
@@ -28,8 +28,10 @@ export class InMemoryCache implements RuntimeCache {
     value: unknown,
     options?: { ttl?: number; tags?: string[] }
   ): Promise<void> {
+    // JSON.stringify(undefined) returns undefined (not a string), so coerce to null
+    const serialized = JSON.stringify(value ?? null);
     this.cache[key] = {
-      value,
+      value: serialized,
       lastModified: Date.now(),
       ttl: options?.ttl,
       tags: new Set(options?.tags || []),

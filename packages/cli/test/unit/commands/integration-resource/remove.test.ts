@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import integrationResourceCommand from '../../../../src/commands/integration-resource';
 import { client } from '../../../mocks/client';
 import { useResources } from '../../../mocks/integration';
@@ -62,6 +62,25 @@ describe('integration-resource', () => {
         await expect(exitCodePromise).resolves.toEqual(0);
       });
 
+      it('parses resource when global flags precede integration-resource', async () => {
+        useResources();
+        mockDeleteResource();
+        const resource = 'store-acme-no-projects';
+
+        client.setArgv(
+          '--cwd',
+          '/tmp/p',
+          '--non-interactive',
+          'integration-resource',
+          'remove',
+          resource,
+          '--yes'
+        );
+        const exitCode = await integrationResourceCommand(client);
+        expect(exitCode).toBe(0);
+        await expect(client.stderr).toOutput('Deleting resource…');
+      });
+
       it('exits gracefully when no resource is found to delete', async () => {
         useResources();
         const resource = 'not-a-real-project-to-find';
@@ -74,7 +93,7 @@ describe('integration-resource', () => {
           `Error: No resource ${resource} found.`
         );
 
-        await expect(exitCodePromise).resolves.toEqual(0);
+        await expect(exitCodePromise).resolves.toEqual(1);
       });
 
       it('exits gracefully when cancelling confirmation for deleting a resource', async () => {
@@ -267,6 +286,104 @@ describe('integration-resource', () => {
       });
     });
 
+    describe('--format=json', () => {
+      let team: Team;
+      beforeEach(() => {
+        const teams = useTeams('team_dummy');
+        team = Array.isArray(teams) ? teams[0] : teams.teams[0];
+        client.config.currentTeam = team.id;
+        useResources();
+      });
+
+      it('returns JSON output when deleting a resource with --yes', async () => {
+        useResources();
+        mockDeleteResource();
+        const resource = 'store-acme-no-projects';
+
+        client.setArgv(
+          'integration-resource',
+          'remove',
+          resource,
+          '--yes',
+          '--format=json'
+        );
+        const exitCode = await integrationResourceCommand(client);
+        expect(exitCode).toEqual(0);
+
+        const jsonOutput = JSON.parse(client.stdout.getFullOutput());
+        expect(jsonOutput).toEqual({
+          resource,
+          removed: true,
+        });
+      });
+
+      it('should error when --format=json is used without --yes', async () => {
+        const resource = 'store-acme-no-projects';
+
+        client.setArgv(
+          'integration-resource',
+          'remove',
+          resource,
+          '--format=json'
+        );
+        const exitCode = await integrationResourceCommand(client);
+        expect(exitCode).toEqual(1);
+        await expect(client.stderr).toOutput(
+          'Error: --format=json requires --yes to skip confirmation prompts'
+        );
+      });
+
+      it('should track --format option in telemetry', async () => {
+        useResources();
+        mockDeleteResource();
+        const resource = 'store-acme-no-projects';
+
+        client.setArgv(
+          'integration-resource',
+          'remove',
+          resource,
+          '--yes',
+          '--format=json'
+        );
+        const exitCode = await integrationResourceCommand(client);
+        expect(exitCode).toEqual(0);
+
+        expect(client.telemetryEventStore).toHaveTelemetryEvents([
+          {
+            key: 'subcommand:remove',
+            value: 'remove',
+          },
+          {
+            key: 'option:format',
+            value: 'json',
+          },
+          {
+            key: 'argument:resource',
+            value: '[REDACTED]',
+          },
+          {
+            key: 'flag:yes',
+            value: 'TRUE',
+          },
+        ]);
+      });
+
+      it('should error with an invalid format value', async () => {
+        client.setArgv(
+          'integration-resource',
+          'remove',
+          'acme',
+          '--yes',
+          '--format=xml'
+        );
+        const exitCode = await integrationResourceCommand(client);
+        expect(exitCode).toEqual(1);
+        await expect(client.stderr).toOutput(
+          'Error: Invalid output format: "xml"'
+        );
+      });
+    });
+
     describe('errors', () => {
       describe('without team', () => {
         it('should error when there is no team', async () => {
@@ -289,6 +406,10 @@ describe('integration-resource', () => {
           useResources();
         });
 
+        afterEach(() => {
+          vi.restoreAllMocks();
+        });
+
         it('should error when no arguments passed', async () => {
           client.setArgv('integration-resource', 'remove');
           const exitCodePromise = integrationResourceCommand(client);
@@ -305,6 +426,32 @@ describe('integration-resource', () => {
             'Cannot specify more than one resource at a time.'
           );
           await expect(exitCodePromise).resolves.toEqual(1);
+        });
+
+        it('writes structured JSON in non-interactive mode when more than one resource is passed', async () => {
+          vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+            throw new Error(`exit:${code ?? 0}`);
+          }) as () => never);
+          client.nonInteractive = true;
+          client.setArgv(
+            '--cwd',
+            '/tmp/r',
+            'integration-resource',
+            'remove',
+            'a',
+            'b',
+            '--yes'
+          );
+          await expect(integrationResourceCommand(client)).rejects.toThrow(
+            'exit:1'
+          );
+          const payload = JSON.parse(client.stdout.getFullOutput().trim());
+          expect(payload.status).toBe('error');
+          expect(payload.reason).toBe('invalid_arguments');
+          expect(payload.next?.[0]?.command).toContain(
+            'integration-resource remove <resource> --disconnect-all --yes'
+          );
+          expect(payload.next?.[0]?.command).toContain('--cwd /tmp/r');
         });
 
         it('should error when attempting to remove a resource with projects', async () => {

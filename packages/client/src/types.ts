@@ -5,6 +5,8 @@ import type {
   Images,
   ProjectSettings,
   Cron,
+  ExperimentalServices,
+  ExperimentalServiceGroups,
 } from '@vercel/build-utils';
 import type { Header, Route, Redirect, Rewrite } from '@vercel/routing-utils';
 
@@ -35,6 +37,16 @@ export interface VercelClientOptions {
   archive?: ArchiveFormat;
   agent?: Agent;
   projectName?: string;
+  /**
+   * Path to a file containing bulk redirects (relative to the project root).
+   * This file will be included in prebuilt deployments.
+   */
+  bulkRedirectsPath?: string | null;
+  /**
+   * When true, creates an experimental manual deployment. This mode requires
+   * that the user later continues the deployment with an API call.
+   */
+  manual?: boolean;
 }
 
 /** @deprecated Use VercelClientOptions instead. */
@@ -94,6 +106,14 @@ export interface Deployment {
   alias: string[];
   aliasAssigned: boolean;
   aliasError: string | null;
+  checks?: Record<
+    string,
+    {
+      state: 'pending' | 'succeeded' | 'failed';
+      startedAt?: string;
+      completedAt?: string;
+    }
+  >;
   expiration?: number;
   proposedExpiration?: number;
   undeletedAt?: number;
@@ -164,12 +184,19 @@ export interface VercelConfig {
   images?: Images;
   crons?: Cron[];
   bunVersion?: string;
-  customErrorPage?:
-    | string
-    | {
-        default5xx?: string;
-        default4xx?: string;
-      };
+  /**
+   * Path to a file containing bulk redirects (relative to the project root).
+   * This file will be included in prebuilt deployments.
+   */
+  bulkRedirectsPath?: string | null;
+  /**
+   * @experimental This feature is experimental and may change.
+   */
+  experimentalServices?: ExperimentalServices;
+  /**
+   * @experimental This feature is experimental and may change.
+   */
+  experimentalServiceGroups?: ExperimentalServiceGroups;
 }
 
 export interface GitMetadata {
@@ -206,12 +233,7 @@ export interface DeploymentOptions {
   meta?: Dictionary<string>;
   projectSettings?: ProjectSettings;
   gitMetadata?: GitMetadata;
+  actor?: string;
   autoAssignCustomDomains?: boolean;
   customEnvironmentSlugOrId?: string;
-  customErrorPage?:
-    | string
-    | {
-        default5xx?: string;
-        default4xx?: string;
-      };
 }

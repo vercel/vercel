@@ -155,25 +155,168 @@ const cronsSchema = {
   },
 };
 
-const customErrorPageSchema = {
+const serviceMountSchema = {
   oneOf: [
-    { type: 'string', minLength: 1 },
+    {
+      type: 'string',
+      minLength: 1,
+      maxLength: 512,
+    },
     {
       type: 'object',
       additionalProperties: false,
-      minProperties: 1,
       properties: {
-        default5xx: {
+        path: {
           type: 'string',
           minLength: 1,
+          maxLength: 512,
         },
-        default4xx: {
+        subdomain: {
           type: 'string',
           minLength: 1,
+          maxLength: 63,
         },
       },
+      anyOf: [{ required: ['path'] }, { required: ['subdomain'] }],
     },
   ],
+};
+
+const serviceConfigSchema = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    type: {
+      enum: ['web', 'cron', 'worker'],
+    },
+    entrypoint: {
+      type: 'string',
+      minLength: 1,
+      maxLength: 512,
+    },
+    mount: serviceMountSchema,
+    routePrefix: {
+      type: 'string',
+      minLength: 1,
+      maxLength: 512,
+    },
+    subdomain: {
+      type: 'string',
+      minLength: 1,
+      maxLength: 63,
+    },
+    framework: {
+      type: 'string',
+      minLength: 1,
+      maxLength: 256,
+    },
+    builder: {
+      type: 'string',
+      minLength: 1,
+      maxLength: 256,
+    },
+    runtime: {
+      type: 'string',
+      minLength: 1,
+      maxLength: 256,
+    },
+    buildCommand: {
+      type: 'string',
+      minLength: 1,
+      maxLength: 2048,
+    },
+    installCommand: {
+      type: 'string',
+      minLength: 1,
+      maxLength: 2048,
+    },
+    memory: {
+      type: 'integer',
+      minimum: 128,
+      maximum: 10240,
+    },
+    maxDuration: {
+      oneOf: [
+        { type: 'integer', minimum: 1, maximum: 900 },
+        { type: 'string', enum: ['max'] },
+      ],
+    },
+    includeFiles: {
+      oneOf: [
+        { type: 'string', minLength: 1 },
+        {
+          type: 'array',
+          items: { type: 'string', minLength: 1 },
+        },
+      ],
+    },
+    excludeFiles: {
+      oneOf: [
+        { type: 'string', minLength: 1 },
+        {
+          type: 'array',
+          items: { type: 'string', minLength: 1 },
+        },
+      ],
+    },
+    // Cron-specific
+    schedule: {
+      type: 'string',
+      minLength: 9,
+      maxLength: 256,
+    },
+    // Worker-specific
+    topics: {
+      type: 'array',
+      items: {
+        type: 'string',
+        minLength: 1,
+        maxLength: 256,
+      },
+      minItems: 1,
+    },
+    consumer: {
+      type: 'string',
+      minLength: 1,
+      maxLength: 256,
+    },
+  },
+};
+
+/**
+ * Schema for experimental services configuration.
+ * Map of service name to service configuration.
+ * @experimental This feature is experimental and may change.
+ */
+const experimentalServicesSchema = {
+  type: 'object',
+  propertyNames: {
+    pattern: '^[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$',
+    maxLength: 64,
+  },
+  additionalProperties: serviceConfigSchema,
+};
+
+/**
+ * Schema for experimental service groups configuration.
+ * Map of group name to array of service names belonging to that group.
+ * @experimental This feature is experimental and may change.
+ * @example { "app": ["site", "backend"], "admin": ["admin", "backend"] }
+ */
+const experimentalServiceGroupsSchema = {
+  type: 'object',
+  propertyNames: {
+    pattern: '^[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$',
+    maxLength: 64,
+  },
+  additionalProperties: {
+    type: 'array',
+    items: {
+      type: 'string',
+      minLength: 1,
+      maxLength: 256,
+    },
+  },
 };
 
 const vercelConfigSchema = {
@@ -192,8 +335,9 @@ const vercelConfigSchema = {
     functions: functionsSchema,
     images: imagesSchema,
     crons: cronsSchema,
-    customErrorPage: customErrorPageSchema,
     bunVersion: { type: 'string' },
+    experimentalServices: experimentalServicesSchema,
+    experimentalServiceGroups: experimentalServiceGroupsSchema,
   },
 };
 
@@ -217,6 +361,30 @@ export function validateConfig(config: VercelConfig): NowBuildError | null {
       message:
         'The `functions` property cannot be used in conjunction with the `builds` property. Please remove one of them.',
       link: 'https://vercel.link/functions-and-builds',
+    });
+  }
+
+  if (config.experimentalServices && config.builds) {
+    return new NowBuildError({
+      code: 'SERVICES_AND_BUILDS',
+      message:
+        'The `experimentalServices` property cannot be used in conjunction with the `builds` property. Please remove one of them.',
+    });
+  }
+
+  if (config.experimentalServices && config.functions) {
+    return new NowBuildError({
+      code: 'SERVICES_AND_FUNCTIONS',
+      message:
+        'The `experimentalServices` property cannot be used in conjunction with the `functions` property. Please remove one of them.',
+    });
+  }
+
+  if (config.experimentalServiceGroups && !config.experimentalServices) {
+    return new NowBuildError({
+      code: 'SERVICE_GROUPS_WITHOUT_SERVICES',
+      message:
+        'The `experimentalServiceGroups` property requires `experimentalServices` to be defined. Service groups reference services by name.',
     });
   }
 

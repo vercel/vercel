@@ -20,6 +20,13 @@ export class BlobTelemetryClient
     });
   }
 
+  trackCliSubcommandGet(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'get',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandDel(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'del',
@@ -34,9 +41,37 @@ export class BlobTelemetryClient
     });
   }
 
-  trackCliSubcommandStore(actual: string) {
+  trackCliSubcommandCreateStore(actual: string) {
     this.trackCliSubcommand({
-      subcommand: 'store',
+      subcommand: 'create-store',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandDeleteStore(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'delete-store',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandGetStore(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'get-store',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandListStores(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'list-stores',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandEmptyStore(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'empty-store',
       value: actual,
     });
   }

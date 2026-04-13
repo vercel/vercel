@@ -16,7 +16,7 @@ describe('refreshToken', () => {
   let cliDataDir: string;
   let tokenDataDir: string;
 
-  const projectId = 'test-project-id';
+  const projectId = 'prj_test123';
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -51,7 +51,7 @@ describe('refreshToken', () => {
     vi.mocked(findRootDir).mockReturnValue(rootDir);
     vi.mocked(getUserDataDir).mockReturnValue(userDataDir);
 
-    vi.spyOn(tokenUtil, 'getVercelCliToken').mockResolvedValue('test');
+    vi.spyOn(tokenUtil, 'getVercelToken').mockResolvedValue('test');
     vi.spyOn(tokenUtil, 'getVercelOidcToken').mockResolvedValue({
       token: 'test-token',
     });
@@ -77,5 +77,163 @@ describe('refreshToken', () => {
     const tokenPath = path.join(tokenDataDir, `${projectId}.json`);
     const token = JSON.parse(fs.readFileSync(tokenPath, 'utf8'));
     expect(token).toEqual({ token: 'test-token' });
+  });
+
+  test('should use provided team and project instead of reading project.json', async () => {
+    const customProjectId = 'prj_custom123';
+    const customTeamId = 'team_custom456';
+
+    const getVercelOidcTokenSpy = vi.spyOn(tokenUtil, 'getVercelOidcToken');
+    const findRootDirSpy = vi.mocked(findRootDir);
+
+    await refreshToken({ team: customTeamId, project: customProjectId });
+
+    // Should not try to read from project.json when both are provided
+    expect(findRootDirSpy).not.toHaveBeenCalled();
+
+    // Should call API with custom values
+    expect(getVercelOidcTokenSpy).toHaveBeenCalledWith(
+      'test',
+      customProjectId,
+      customTeamId
+    );
+
+    // Should save token with custom project
+    const tokenPath = path.join(tokenDataDir, `${customProjectId}.json`);
+    expect(fs.existsSync(tokenPath)).toBe(true);
+    const savedToken = JSON.parse(fs.readFileSync(tokenPath, 'utf8'));
+    expect(savedToken).toEqual({ token: 'test-token' });
+  });
+
+  test('should merge provided project with team from project.json', async () => {
+    const customProjectId = 'prj_custom234';
+    const projectTeamId = 'team_fromproject567';
+
+    fs.writeFileSync(
+      path.join(rootDir, '.vercel', 'project.json'),
+      JSON.stringify({ projectId, orgId: projectTeamId })
+    );
+
+    const getVercelOidcTokenSpy = vi.spyOn(tokenUtil, 'getVercelOidcToken');
+
+    await refreshToken({ project: customProjectId });
+
+    // Should read team from project.json
+    expect(getVercelOidcTokenSpy).toHaveBeenCalledWith(
+      'test',
+      customProjectId,
+      projectTeamId
+    );
+  });
+
+  test('should merge provided team with project from project.json', async () => {
+    const customTeamId = 'team_custom789';
+    const projectProjectId = 'prj_fromjson123';
+
+    fs.writeFileSync(
+      path.join(rootDir, '.vercel', 'project.json'),
+      JSON.stringify({ projectId: projectProjectId, orgId: 'original-team' })
+    );
+
+    const getVercelOidcTokenSpy = vi.spyOn(tokenUtil, 'getVercelOidcToken');
+
+    await refreshToken({ team: customTeamId });
+
+    // Should read project from project.json
+    expect(getVercelOidcTokenSpy).toHaveBeenCalledWith(
+      'test',
+      projectProjectId,
+      customTeamId
+    );
+  });
+
+  test('should use cached token when valid with custom project', async () => {
+    const customProjectId = 'prj_customcached123';
+    const customTeamId = 'team_customcached456';
+
+    // Save a valid token for the custom project
+    const cachedToken = { token: 'cached-valid-token' };
+    const tokenPath = path.join(tokenDataDir, `${customProjectId}.json`);
+    fs.writeFileSync(tokenPath, JSON.stringify(cachedToken));
+
+    const getVercelOidcTokenSpy = vi.spyOn(tokenUtil, 'getVercelOidcToken');
+
+    await refreshToken({ team: customTeamId, project: customProjectId });
+
+    // Should not fetch new token since cached one is valid
+    expect(getVercelOidcTokenSpy).not.toHaveBeenCalled();
+    expect(process.env.VERCEL_OIDC_TOKEN).toBe('cached-valid-token');
+  });
+
+  test('should refresh token when cached token expires within buffer', async () => {
+    const customProjectId = 'prj_buffertest123';
+    const customTeamId = 'team_buffertest456';
+
+    // Save a token that expires in 3 minutes
+    const cachedToken = { token: 'expiring-soon-token' };
+    const tokenPath = path.join(tokenDataDir, `${customProjectId}.json`);
+    fs.writeFileSync(tokenPath, JSON.stringify(cachedToken));
+
+    // Mock getTokenPayload to return a token that expires in 3 minutes (180000ms)
+    const expiresIn3Minutes = Math.floor((Date.now() + 180000) / 1000);
+    vi.spyOn(tokenUtil, 'getTokenPayload').mockReturnValue({
+      sub: 'test-sub',
+      name: 'test-name',
+      exp: expiresIn3Minutes,
+    });
+
+    const getVercelOidcTokenSpy = vi
+      .spyOn(tokenUtil, 'getVercelOidcToken')
+      .mockResolvedValue({ token: 'fresh-token' });
+
+    // Request with 5 minute buffer (300000ms)
+    await refreshToken({
+      team: customTeamId,
+      project: customProjectId,
+      expirationBufferMs: 300000,
+    });
+
+    // Should fetch new token since cached one expires within buffer
+    expect(getVercelOidcTokenSpy).toHaveBeenCalledWith(
+      'test',
+      customProjectId,
+      customTeamId
+    );
+    expect(process.env.VERCEL_OIDC_TOKEN).toBe('fresh-token');
+
+    // Verify the fresh token was saved
+    const savedToken = JSON.parse(fs.readFileSync(tokenPath, 'utf8'));
+    expect(savedToken).toEqual({ token: 'fresh-token' });
+  });
+
+  test('should use cached token when it does not expire within buffer', async () => {
+    const customProjectId = 'prj_buffervalid123';
+    const customTeamId = 'team_buffervalid456';
+
+    // Save a token that expires in 10 minutes
+    const cachedToken = { token: 'valid-cached-token' };
+    const tokenPath = path.join(tokenDataDir, `${customProjectId}.json`);
+    fs.writeFileSync(tokenPath, JSON.stringify(cachedToken));
+
+    // Mock getTokenPayload to return a token that expires in 10 minutes (600000ms)
+    const expiresIn10Minutes = Math.floor((Date.now() + 600000) / 1000);
+    vi.spyOn(tokenUtil, 'getTokenPayload').mockReturnValue({
+      sub: 'test-sub',
+      name: 'test-name',
+      exp: expiresIn10Minutes,
+    });
+
+    const getVercelOidcTokenSpy = vi.spyOn(tokenUtil, 'getVercelOidcToken');
+
+    // Request with 5 minute buffer (300000ms)
+    await refreshToken({
+      team: customTeamId,
+      project: customProjectId,
+      expirationBufferMs: 300000,
+    });
+
+    // Should not fetch new token since cached one is valid beyond buffer
+    expect(getVercelOidcTokenSpy).not.toHaveBeenCalled();
+    expect(process.env.VERCEL_OIDC_TOKEN).toBe('valid-cached-token');
   });
 });

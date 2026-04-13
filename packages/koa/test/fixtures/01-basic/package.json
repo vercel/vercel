@@ -1,0 +1,9 @@
+{
+  "name": "koa-basic",
+  "version": "1.0.0",
+  "type": "module",
+  "dependencies": {
+    "koa": "^2.15.0"
+  }
+}
+

@@ -4,8 +4,24 @@ import chalk from 'chalk';
 import FormData from 'form-data';
 import type Client from '../../util/client';
 import output from '../../output-manager';
+import {
+  outputActionRequired,
+  buildCommandWithYes,
+} from '../../util/agent-output';
+import {
+  AGENT_STATUS,
+  AGENT_REASON,
+  AGENT_ACTION,
+} from '../../util/agent-output-constants';
 import { uploadSubcommand } from './command';
-import { parseSubcommandArgs, ensureProjectLink } from './shared';
+import {
+  parseSubcommandArgs,
+  ensureProjectLink,
+  getArgsAfterRedirectsSubcommand,
+  getRedirectPromoteSuggestionFlags,
+  buildRedirectsSuggestionFlags,
+} from './shared';
+import { getCommandNamePlain } from '../../util/pkg-name';
 import stamp from '../../util/output/stamp';
 import getRedirectVersions from '../../util/redirects/get-redirect-versions';
 import updateRedirectVersion from '../../util/redirects/update-redirect-version';
@@ -43,15 +59,57 @@ export default async function upload(client: Client, argv: string[]) {
   const teamId = org.type === 'team' ? org.id : undefined;
 
   const { args, flags } = parsed;
-  const skipPrompts = flags['--yes'];
-  const overwrite = flags['--overwrite'] || false;
+  const skipPrompts = flags['--yes'] || false;
 
   const filePath = args[0];
 
   if (!filePath) {
+    if (client.nonInteractive) {
+      const flagParts = buildRedirectsSuggestionFlags(
+        client.argv.slice(2),
+        'upload'
+      );
+      const cmd = getCommandNamePlain(
+        `redirects upload <file> ${flagParts.join(' ')}`.trim()
+      );
+      outputActionRequired(
+        client,
+        {
+          status: AGENT_STATUS.ACTION_REQUIRED,
+          reason: AGENT_REASON.MISSING_ARGUMENTS,
+          action: AGENT_ACTION.MISSING_ARGUMENTS,
+          message: `File path is required. Run: ${cmd}`,
+          next: [
+            {
+              command: cmd,
+              when: 'to upload redirects from a CSV or JSON file',
+            },
+          ],
+        },
+        1
+      );
+    }
     output.error('File path is required. Use: vercel redirects upload <file>');
     return 1;
   }
+
+  if (client.nonInteractive && !skipPrompts) {
+    const cmd = buildCommandWithYes(client.argv);
+    outputActionRequired(
+      client,
+      {
+        status: AGENT_STATUS.ACTION_REQUIRED,
+        reason: AGENT_REASON.CONFIRMATION_REQUIRED,
+        action: AGENT_ACTION.CONFIRMATION_REQUIRED,
+        message: `In non-interactive mode use --yes to confirm upload. Run: ${cmd}`,
+        next: [{ command: cmd, when: 'to confirm upload' }],
+      },
+      1
+    );
+    return 1;
+  }
+
+  const overwrite = flags['--overwrite'] || false;
 
   const fileValidation = validateUploadFile(filePath);
   if (!fileValidation.valid) {
@@ -143,7 +201,7 @@ export default async function upload(client: Client, argv: string[]) {
 
       try {
         redirects = JSON.parse(content);
-      } catch (err) {
+      } catch (_err) {
         output.error('Invalid JSON file format');
         return 1;
       }
@@ -172,6 +230,45 @@ export default async function upload(client: Client, argv: string[]) {
         method: 'PUT',
         body,
       });
+    }
+
+    if (client.nonInteractive) {
+      output.stopSpinner();
+      const afterUpload = getArgsAfterRedirectsSubcommand(
+        client.argv.slice(2),
+        'upload'
+      );
+      const promoteFlagParts = getRedirectPromoteSuggestionFlags(afterUpload);
+      const promoteCmd = getCommandNamePlain(
+        `redirects promote ${result.version.id} ${promoteFlagParts.join(' ')}`.trim()
+      );
+      const jsonOutput: Record<string, unknown> = {
+        status: AGENT_STATUS.OK,
+        version: {
+          id: result.version.id,
+          name: result.version.name || result.version.id,
+          ...(result.version.redirectCount !== undefined && {
+            redirectCount: result.version.redirectCount,
+          }),
+        },
+        ...(result.alias && {
+          alias: result.alias,
+          testUrl: `https://${result.alias}`,
+        }),
+        ...(!existingStagingVersion && {
+          next: [
+            {
+              command: promoteCmd,
+              when: 'To promote this staging version to production',
+            },
+          ],
+        }),
+        ...(existingStagingVersion && {
+          hint: `Review staged changes with ${getCommandNamePlain('redirects list --staging')} before promoting.`,
+        }),
+      };
+      client.stdout.write(`${JSON.stringify(jsonOutput, null, 2)}\n`);
+      return 0;
     }
 
     output.log(
@@ -276,7 +373,7 @@ export default async function upload(client: Client, argv: string[]) {
       output.warn(
         `There are other staged changes. Please review all changes with ${chalk.cyan('vercel redirects list --staging')} before promoting to production.`
       );
-    } else if (!skipPrompts) {
+    } else if (!skipPrompts && !client.nonInteractive) {
       const shouldPromote = await client.input.confirm(
         'This is the only staged change. Do you want to promote it to production now?',
         false
@@ -298,6 +395,10 @@ export default async function upload(client: Client, argv: string[]) {
           `${chalk.cyan('✓')} Version promoted to production ${chalk.gray(promoteStamp())}`
         );
       }
+    } else if (!existingStagingVersion && client.nonInteractive) {
+      output.print(
+        `  Run ${chalk.cyan(`vercel redirects promote ${result.version.id} --yes`)} to promote this staging version to production.\n\n`
+      );
     }
 
     return 0;

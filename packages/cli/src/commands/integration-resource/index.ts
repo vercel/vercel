@@ -34,18 +34,20 @@ export default async function main(client: Client) {
     getFlagsSpecification(integrationResourceCommand.options),
     { permissive: true }
   );
-  const { subcommand, subcommandOriginal } = getSubcommand(
-    args.slice(1),
-    COMMAND_CONFIG
-  );
+  const {
+    subcommand,
+    subcommandOriginal,
+    args: subArgs,
+  } = getSubcommand(args.slice(1), COMMAND_CONFIG);
 
   const needHelp = flags['--help'];
 
   if (!subcommand && needHelp) {
+    telemetry.trackCliFlagHelp('integration-resource');
     output.print(
       help(integrationResourceCommand, { columns: client.stderr.columns })
     );
-    return 2;
+    return 0;
   }
 
   function printHelp(command: Command) {
@@ -62,28 +64,28 @@ export default async function main(client: Client) {
       if (needHelp) {
         telemetry.trackCliFlagHelp('integration-resource', subcommandOriginal);
         printHelp(createThresholdSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandCreateThreshold(subcommandOriginal);
-      return createThreshold(client);
+      return createThreshold(client, subArgs);
     }
     case 'remove': {
       if (needHelp) {
         telemetry.trackCliFlagHelp('integration-resource', subcommandOriginal);
         printHelp(removeSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandRemove(subcommandOriginal);
-      return remove(client);
+      return remove(client, subArgs);
     }
     case 'disconnect': {
       if (needHelp) {
         telemetry.trackCliFlagHelp('integration-resource', subcommandOriginal);
         printHelp(disconnectSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandDisconnect(subcommandOriginal);
-      return disconnect(client);
+      return disconnect(client, subArgs);
     }
     default: {
       output.error(getInvalidSubcommand(COMMAND_CONFIG));

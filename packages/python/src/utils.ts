@@ -1,8 +1,10 @@
 import fs from 'fs';
+import os from 'os';
 import { delimiter as pathDelimiter, join } from 'path';
 import { readConfigFile, execCommand, debug } from '@vercel/build-utils';
-
+import * as detectLibc from 'detect-libc';
 import execa from 'execa';
+import { getProtectedUvEnv } from './uv';
 
 const isWin = process.platform === 'win32';
 
@@ -44,32 +46,100 @@ export function useVirtualEnv(
 
 export function createVenvEnv(
   venvPath: string,
-  baseEnv: NodeJS.ProcessEnv = process.env
+  baseEnv: NodeJS.ProcessEnv = process.env,
+  uvCacheDir?: string
 ): NodeJS.ProcessEnv {
-  const env: NodeJS.ProcessEnv = { ...baseEnv, VIRTUAL_ENV: venvPath };
+  const env: NodeJS.ProcessEnv = {
+    ...getProtectedUvEnv(baseEnv, uvCacheDir),
+    VIRTUAL_ENV: venvPath,
+  };
   const binDir = getVenvBinDir(venvPath);
   const existingPath = env.PATH || process.env.PATH || '';
   env.PATH = existingPath ? `${binDir}${pathDelimiter}${existingPath}` : binDir;
   return env;
 }
 
+/**
+ * Parse the `version` field from a pyvenv.cfg file and return the
+ * "major.minor" string.  Returns null if the file
+ * cannot be read or the version line is missing.
+ */
+async function readVenvPythonVersion(
+  pyvenvCfgPath: string
+): Promise<string | null> {
+  try {
+    const content = await fs.promises.readFile(pyvenvCfgPath, 'utf-8');
+    const match = content.match(/^version\s*=\s*(\d+)\.(\d+)/m);
+    return match ? `${match[1]}.${match[2]}` : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function ensureVenv({
-  pythonPath,
+  pythonVersion,
   venvPath,
+  uvPath,
+  uvCacheDir,
+  quiet,
 }: {
-  pythonPath: string;
+  pythonVersion: { pythonPath: string; major?: number; minor?: number };
   venvPath: string;
+  uvPath?: string | null;
+  uvCacheDir?: string;
+  quiet?: boolean;
 }) {
   const marker = join(venvPath, 'pyvenv.cfg');
+  let venvExists = false;
+
   try {
     await fs.promises.access(marker);
-    return;
+    venvExists = true;
   } catch {
-    // fall through to creation
+    // venv doesn't exist yet
   }
-  await fs.promises.mkdir(venvPath, { recursive: true });
-  console.log(`Creating virtual environment at "${venvPath}"...`);
-  await execa(pythonPath, ['-m', 'venv', venvPath]);
+
+  // Invalidate if the cached venv was built with a different Python version.
+  if (
+    venvExists &&
+    pythonVersion.major != null &&
+    pythonVersion.minor != null
+  ) {
+    const expected = `${pythonVersion.major}.${pythonVersion.minor}`;
+    const cachedVersion = await readVenvPythonVersion(marker);
+    if (cachedVersion && cachedVersion !== expected) {
+      if (!quiet) {
+        console.log(
+          `Cached venv Python ${cachedVersion} differs from requested ${expected}, recreating...`
+        );
+      }
+      await fs.promises.rm(venvPath, { recursive: true, force: true });
+      venvExists = false;
+    }
+  }
+
+  if (venvExists) {
+    debug(`Refreshing cached virtual environment at "${venvPath}"`);
+  } else {
+    await fs.promises.mkdir(venvPath, { recursive: true });
+    if (!quiet) {
+      console.log(`Creating virtual environment at "${venvPath}"...`);
+    }
+  }
+
+  if (uvPath) {
+    // --allow-existing allows uv to reuse a cached venv
+    const args = ['venv', venvPath, '--allow-existing'];
+    // vc dev uses system python so we skip passing the python version to uv
+    if (pythonVersion.major != null && pythonVersion.minor != null) {
+      args.push('--python', `${pythonVersion.major}.${pythonVersion.minor}`);
+    }
+    await execa(uvPath, args, {
+      env: getProtectedUvEnv(process.env, uvCacheDir),
+    });
+  } else {
+    await execa(pythonVersion.pythonPath, ['-m', 'venv', venvPath]);
+  }
 }
 
 export function getVenvPythonBin(venvPath: string) {
@@ -128,59 +198,101 @@ export async function runPyprojectScript(
   return false;
 }
 
-export async function runUvCommand(options: {
-  uvPath: string | null;
-  args: string[];
-  cwd: string;
-  venvPath: string;
-}) {
-  const { uvPath, args, cwd, venvPath } = options;
-
-  const pretty = `uv ${args.join(' ')}`;
-  debug(`Running "${pretty}"...`);
-
-  if (!uvPath) {
-    throw new Error(`uv is required to run "${pretty}" but is not available`);
-  }
-
-  try {
-    await execa(uvPath, args, {
-      cwd,
-      env: createVenvEnv(venvPath),
-    });
-    return true;
-  } catch (err) {
-    const error = new Error(
-      `Failed to run "${pretty}": ${err instanceof Error ? err.message : String(err)}`
-    ) as Error & { code?: number | string };
-    // retain code/signal to ensure it's treated as a build error
-    if (err && typeof err === 'object') {
-      if ('code' in err) {
-        error.code = (err as { code: number | string }).code;
-      } else if ('signal' in err) {
-        error.code = (err as { signal: string }).signal;
-      }
-    }
-    throw error;
-  }
+export interface PlatformInfo {
+  /** Wheel tag OS name: "manylinux" or "musllinux" */
+  osName: string;
+  /** Wheel tag arch: "x86_64", "aarch64", etc. */
+  archName: string;
+  /** Libc major version (glibc major or musl major) */
+  osMajor: number;
+  /** Libc minor version */
+  osMinor: number;
+  /** High-level OS for PythonBuild: "linux", "macos", or "windows" */
+  os: string;
+  /** PEP 508 sys_platform value: "linux", "win32", or "darwin" */
+  sysPlatform: string;
+  /** High-level libc for PythonBuild: "gnu" or "musl" */
+  libc: string;
 }
 
-export function findDir({
-  file,
-  entryDirectory,
-  workPath,
-  fsFiles,
-}: {
-  file: string;
-  entryDirectory: string;
-  workPath: string;
-  fsFiles: Record<string, any>;
-}): string | null {
-  if (fsFiles[join(entryDirectory, file)]) {
-    return join(workPath, entryDirectory);
+// Map Node.js arch names to uv platform tag arch names
+const ARCH_MAP: Record<string, string> = {
+  x64: 'x86_64',
+  arm64: 'aarch64',
+  ia32: 'i686',
+  arm: 'armv7l',
+  ppc64: 'ppc64le',
+  s390x: 's390x',
+};
+
+/**
+ * Detect the host platform for wheel compatibility checking and build selection.
+ *
+ * On the Vercel build image (Linux), we use `detect-libc` to get the exact
+ * glibc/musl version. For local `vercel build` on non-Linux hosts we fall
+ * back to conservative manylinux defaults for wheel tags (since the host
+ * doesn't have a Linux libc).
+ */
+export function detectPlatform(): PlatformInfo {
+  const arch = os.arch();
+  const archName = ARCH_MAP[arch] || arch;
+
+  // Detect libc family and version from the host. On the Vercel build
+  // image this matches the Lambda runtime; on non-Linux hosts it will
+  // be null and we fall back to conservative defaults.
+  const libcFamily = detectLibc.familySync();
+  const libcVersion = detectLibc.versionSync();
+
+  let osName: string;
+  let osMajor: number;
+  let osMinor: number;
+
+  if (libcFamily === detectLibc.MUSL) {
+    osName = 'musllinux';
+  } else {
+    osName = 'manylinux';
   }
-  if (fsFiles[file]) {
-    return workPath;
+
+  if (libcVersion) {
+    const parts = libcVersion.split('.');
+    osMajor = parseInt(parts[0], 10);
+    osMinor = parseInt(parts[1], 10) || 0;
+  } else if (libcFamily === detectLibc.GLIBC) {
+    // glibc detected but version unknown -- use conservative default
+    osMajor = 2;
+    osMinor = 17;
+  } else {
+    // Non-Linux host (local `vercel build` on macOS/Windows).
+    // Fall back to conservative manylinux defaults.
+    osMajor = 2;
+    osMinor = 17;
   }
-  return null;
+
+  const libc = libcFamily === detectLibc.MUSL ? 'musl' : 'gnu';
+
+  // PEP 508 sys_platform value derived from the Node.js process platform.
+  const SYS_PLATFORM_MAP: Record<string, string> = {
+    linux: 'linux',
+    win32: 'win32',
+    darwin: 'darwin',
+  };
+  const sysPlatform = SYS_PLATFORM_MAP[process.platform] || 'linux';
+
+  // High-level OS for PythonBuild selection, derived from the host platform.
+  const OS_MAP: Record<string, string> = {
+    linux: 'linux',
+    win32: 'windows',
+    darwin: 'macos',
+  };
+  const detectedOs = OS_MAP[process.platform] || 'linux';
+
+  return {
+    osName,
+    archName,
+    osMajor,
+    osMinor,
+    os: detectedOs,
+    sysPlatform,
+    libc,
+  };
 }

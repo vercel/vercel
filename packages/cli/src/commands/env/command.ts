@@ -1,6 +1,6 @@
 import { packageName } from '../../util/pkg-name';
 import { getEnvTargetPlaceholder } from '../../util/env/env-target';
-import { forceOption, yesOption } from '../../util/arg-common';
+import { forceOption, formatOption, yesOption } from '../../util/arg-common';
 
 const targetPlaceholder = getEnvTargetPlaceholder();
 
@@ -19,6 +19,7 @@ export const listSubcommand = {
     },
   ],
   options: [
+    formatOption,
     {
       name: 'guidance',
       description: 'Receive command suggestions once command is complete',
@@ -43,6 +44,10 @@ export const addSubcommand = {
       name: 'environment',
       required: false,
     },
+    {
+      name: 'git-branch',
+      required: false,
+    },
   ],
   options: [
     {
@@ -58,10 +63,24 @@ export const addSubcommand = {
       shorthand: null,
     },
     {
+      ...yesOption,
+      description:
+        'Skip the confirmation prompt when adding an Environment Variable',
+    },
+    {
       name: 'guidance',
       description: 'Receive command suggestions once command is complete',
       shorthand: null,
       type: Boolean,
+      deprecated: false,
+    },
+    {
+      name: 'value',
+      description:
+        'Value for the variable (non-interactive). Otherwise use stdin or you will be prompted.',
+      shorthand: null,
+      type: String,
+      argument: 'VALUE',
       deprecated: false,
     },
   ],
@@ -91,7 +110,7 @@ export const addSubcommand = {
     {
       name: 'Add a new Environment Variable for a specific Environment and Git Branch',
       value: [
-        `${packageName} env add <name> ${targetPlaceholder} <git-branch>`,
+        `${packageName} env add <name> ${targetPlaceholder} <gitbranch>`,
         `${packageName} env add DB_PASS preview feat1`,
       ],
     },
@@ -102,6 +121,10 @@ export const addSubcommand = {
         `cat ~/.npmrc | ${packageName} env add NPM_RC preview`,
         `${packageName} env add API_URL production < url.txt`,
       ],
+    },
+    {
+      name: 'Add with value as argument (non-interactive)',
+      value: `${packageName} env add API_TOKEN production --value "secret" --yes`,
     },
   ],
 } as const;
@@ -182,6 +205,15 @@ export const pullSubcommand = {
       deprecated: false,
     },
     {
+      name: 'id',
+      description:
+        'Pull environment variables for a specific deployment (e.g. dpl_xxx)',
+      shorthand: null,
+      type: String,
+      argument: 'ID',
+      deprecated: false,
+    },
+    {
       ...yesOption,
       description:
         'Skip the confirmation prompt when removing an environment variable',
@@ -194,6 +226,10 @@ export const pullSubcommand = {
         `${packageName} env pull <file>`,
         `${packageName} env pull .env.development.local`,
       ],
+    },
+    {
+      name: 'Pull environment variables for a specific deployment',
+      value: `${packageName} env pull --id dpl_xxx`,
     },
   ],
 } as const;
@@ -269,6 +305,15 @@ export const updateSubcommand = {
       ...yesOption,
       description:
         'Skip the confirmation prompt when updating an Environment Variable',
+    },
+    {
+      name: 'value',
+      description:
+        'New value for the variable (non-interactive). Otherwise use stdin or you will be prompted.',
+      shorthand: null,
+      type: String,
+      argument: 'VALUE',
+      deprecated: false,
     },
   ],
   examples: [

@@ -1,11 +1,17 @@
 import { TelemetryClient } from '../..';
-import type { listStoreSubcommand } from '../../../../commands/blob/command';
+import type { listStoresSubcommand } from '../../../../commands/blob/command';
 import type { TelemetryMethods } from '../../types';
 
-export class BlobStoreListTelemetryClient
+export class BlobListStoresTelemetryClient
   extends TelemetryClient
-  implements TelemetryMethods<typeof listStoreSubcommand>
+  implements TelemetryMethods<typeof listStoresSubcommand>
 {
+  trackCliFlagAll(v: boolean | undefined) {
+    if (v) {
+      this.trackCliFlag('all');
+    }
+  }
+
   trackCliFlagJson(value: boolean | undefined) {
     if (value) {
       this.trackCliFlag('json');

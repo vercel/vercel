@@ -18,7 +18,10 @@ const settingKeys = Object.keys(settingMap).sort() as unknown as readonly [
   ConfigKeys,
 ];
 
-export type PartialProjectSettings = Pick<ProjectSettings, ConfigKeys>;
+export type PartialProjectSettings = Pick<
+  ProjectSettings,
+  ConfigKeys | 'monorepoManager'
+>;
 
 export async function editProjectSettings(
   client: Client,
@@ -102,33 +105,38 @@ export async function editProjectSettings(
   };
 
   // A missing framework slug implies the "Other" framework was selected
-  output.print(
+  output.log(
     !framework.slug
       ? `No framework detected. Default Project Settings:\n`
-      : `Auto-detected Project Settings (${styledFramework(framework.name)}):\n`
+      : `Auto-detected Project Settings for ${styledFramework(framework.name)}\n`
   );
 
   settings.framework = framework.slug;
 
   // Now print defaults for the provided framework whether it was auto-detected or overwritten
-  for (const setting of settingKeys) {
-    if (setting === 'framework' || setting === 'commandForIgnoringBuildStep') {
-      continue;
-    }
+  if (!framework.slug) {
+    for (const setting of settingKeys) {
+      if (
+        setting === 'framework' ||
+        setting === 'commandForIgnoringBuildStep'
+      ) {
+        continue;
+      }
 
-    const defaultSetting = framework.settings[setting];
-    const override = localConfigurationOverrides?.[setting];
+      const defaultSetting = framework.settings[setting];
+      const override = localConfigurationOverrides?.[setting];
 
-    if (!override && defaultSetting) {
-      output.print(
-        `${chalk.dim(
-          `- ${chalk.bold(`${settingMap[setting]}:`)} ${
-            isSettingValue(defaultSetting)
-              ? defaultSetting.value
-              : chalk.italic(`${defaultSetting.placeholder}`)
-          }`
-        )}\n`
-      );
+      if (!override && defaultSetting) {
+        output.print(
+          `${chalk.dim(
+            `- ${chalk.bold(`${settingMap[setting]}:`)} ${
+              isSettingValue(defaultSetting)
+                ? defaultSetting.value
+                : chalk.italic(`${defaultSetting.placeholder}`)
+            }`
+          )}\n`
+        );
+      }
     }
   }
 

@@ -1,4 +1,4 @@
-import { yesOption } from '../../util/arg-common';
+import { formatOption, yesOption } from '../../util/arg-common';
 import { packageName } from '../../util/pkg-name';
 
 export const removeSubcommand = {
@@ -24,6 +24,7 @@ export const removeSubcommand = {
       ...yesOption,
       description: 'Skip the confirmation prompt when deleting a resource',
     },
+    formatOption,
   ],
   examples: [
     {
@@ -40,6 +41,10 @@ export const removeSubcommand = {
         `${packageName} integration-resource remove my-acme-resource --disconnect-all`,
         `${packageName} integration-resource remove my-acme-resource -a`,
       ],
+    },
+    {
+      name: 'Output as JSON',
+      value: `${packageName} integration-resource remove my-acme-resource --format=json --yes`,
     },
   ],
 } as const;
@@ -70,10 +75,11 @@ export const disconnectSubcommand = {
       ...yesOption,
       description: 'Skip the confirmation prompt when disconnecting a resource',
     },
+    formatOption,
   ],
   examples: [
     {
-      name: 'Disconnect a resource from the current projecct',
+      name: 'Disconnect a resource from the current project',
       value: [
         `${packageName} integration-resource disconnect <resource>`,
         `${packageName} integration-resource disconnect my-acme-resource`,
@@ -82,7 +88,7 @@ export const disconnectSubcommand = {
     {
       name: 'Disconnect all projects from a resource',
       value: [
-        `${packageName} integration-resource disconnect <resource> --unlink-all`,
+        `${packageName} integration-resource disconnect <resource> --all`,
         `${packageName} integration-resource disconnect my-acme-resource --all`,
         `${packageName} integration-resource disconnect my-acme-resource -a`,
       ],
@@ -93,6 +99,10 @@ export const disconnectSubcommand = {
         `${packageName} integration-resource disconnect <resource> <project>`,
         `${packageName} integration-resource disconnect my-acme-resource my-project`,
       ],
+    },
+    {
+      name: 'Output as JSON',
+      value: `${packageName} integration-resource disconnect my-acme-resource --format=json --yes`,
     },
   ],
 } as const;
@@ -131,8 +141,8 @@ export const createThresholdSubcommand = {
       name: 'create threshold',
       value: [
         `${packageName} integration-resource create-threshold <resource> <minimum> <spend> <limit> [options]`,
-        `${packageName} integration-resource create-threshold my-acme-resource 100 50 2000`,
-        `${packageName} integration-resource create-threshold my-acme-resource 100 50 2000 --yes`,
+        `${packageName} integration-resource create-threshold my-acme-resource 50 100 2000`,
+        `${packageName} integration-resource create-threshold my-acme-resource 50 100 2000 --yes`,
       ],
     },
   ],
@@ -144,6 +154,10 @@ export const integrationResourceCommand = {
   description: 'Manage marketplace integration resources',
   options: [],
   arguments: [],
-  subcommands: [disconnectSubcommand, removeSubcommand],
+  subcommands: [
+    createThresholdSubcommand,
+    disconnectSubcommand,
+    removeSubcommand,
+  ],
   examples: [],
 } as const;
