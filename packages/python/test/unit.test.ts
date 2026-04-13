@@ -47,6 +47,7 @@ import {
   resolvePythonVersion,
   DEFAULT_PYTHON_VERSION_STRING,
   resetInstalledPythonsCache,
+  getInstalledPythonsFromFilesystem,
 } from '../src/version';
 import type { PythonConstraint, PythonPackage } from '@vercel/python-analysis';
 import { build, prepareCache } from '../src/index';
@@ -56,6 +57,7 @@ import {
   UV_PYTHON_DOWNLOADS_MODE,
   getProtectedUvEnv,
   getUvCacheDir,
+  findUvOnBuildImage,
 } from '../src/uv';
 import { VERCEL_WORKERS_VERSION } from '../src/package-versions';
 import { createPyprojectToml } from '../src/install';
@@ -536,6 +538,94 @@ describe('default Python version behavior', () => {
 
   it('DEFAULT_PYTHON_VERSION_STRING constant is exported and has expected value', () => {
     expect(DEFAULT_PYTHON_VERSION_STRING).toBe('3.12');
+  });
+});
+
+describe('getInstalledPythonsFromFilesystem', () => {
+  it('detects installed Pythons from filesystem bin directory', () => {
+    const basePath = path.join(tmpPythonDir, 'uv-python');
+    const binDir = path.join(basePath, 'bin');
+    fs.mkdirSync(binDir, { recursive: true });
+    fs.writeFileSync(path.join(binDir, 'python3.12'), '');
+    fs.writeFileSync(path.join(binDir, 'python3.13'), '');
+
+    const result = getInstalledPythonsFromFilesystem(basePath);
+    expect(result).toEqual(new Set(['3.12', '3.13']));
+  });
+
+  it('returns empty set when no Pythons are installed', () => {
+    const basePath = path.join(tmpPythonDir, 'uv-python-empty');
+    const binDir = path.join(basePath, 'bin');
+    fs.mkdirSync(binDir, { recursive: true });
+
+    const result = getInstalledPythonsFromFilesystem(basePath);
+    expect(result).toEqual(new Set());
+  });
+
+  it('ignores Python versions not in allOptions', () => {
+    const basePath = path.join(tmpPythonDir, 'uv-python-extra');
+    const binDir = path.join(basePath, 'bin');
+    fs.mkdirSync(binDir, { recursive: true });
+    fs.writeFileSync(path.join(binDir, 'python3.12'), '');
+    // 3.99 does not exist in allOptions
+    fs.writeFileSync(path.join(binDir, 'python3.99'), '');
+
+    const result = getInstalledPythonsFromFilesystem(basePath);
+    expect(result).toEqual(new Set(['3.12']));
+  });
+
+  it('uses filesystem fast path when VERCEL_BUILD_IMAGE is set', () => {
+    const basePath = path.join(tmpPythonDir, 'uv-python-integration');
+    const binDir = path.join(basePath, 'bin');
+    fs.mkdirSync(binDir, { recursive: true });
+    fs.writeFileSync(path.join(binDir, 'python3.12'), '');
+    fs.writeFileSync(path.join(binDir, 'python3.13'), '');
+    fs.writeFileSync(path.join(binDir, 'python3.14'), '');
+
+    const origBuildImage = process.env.VERCEL_BUILD_IMAGE;
+    process.env.VERCEL_BUILD_IMAGE = '1';
+    try {
+      resetInstalledPythonsCache();
+      const result = getInstalledPythonsFromFilesystem(basePath);
+      expect(result).toEqual(new Set(['3.12', '3.13', '3.14']));
+    } finally {
+      if (origBuildImage === undefined) {
+        delete process.env.VERCEL_BUILD_IMAGE;
+      } else {
+        process.env.VERCEL_BUILD_IMAGE = origBuildImage;
+      }
+    }
+  });
+});
+
+describe('findUvOnBuildImage', () => {
+  const origBuildImage = process.env.VERCEL_BUILD_IMAGE;
+
+  afterEach(() => {
+    if (origBuildImage === undefined) {
+      delete process.env.VERCEL_BUILD_IMAGE;
+    } else {
+      process.env.VERCEL_BUILD_IMAGE = origBuildImage;
+    }
+  });
+
+  it('returns null when VERCEL_BUILD_IMAGE is not set', () => {
+    delete process.env.VERCEL_BUILD_IMAGE;
+    expect(findUvOnBuildImage()).toBeNull();
+  });
+
+  it('returns the known path when VERCEL_BUILD_IMAGE is set and file exists', () => {
+    process.env.VERCEL_BUILD_IMAGE = '1';
+    const mockUvPath = path.join(tmpPythonDir, 'mock-uv');
+    fs.mkdirSync(tmpPythonDir, { recursive: true });
+    fs.writeFileSync(mockUvPath, '');
+
+    expect(findUvOnBuildImage(mockUvPath)).toBe(mockUvPath);
+  });
+
+  it('returns null when VERCEL_BUILD_IMAGE is set but file does not exist', () => {
+    process.env.VERCEL_BUILD_IMAGE = '1';
+    expect(findUvOnBuildImage('/nonexistent/path/uv')).toBeNull();
   });
 });
 
