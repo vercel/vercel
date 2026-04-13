@@ -136,15 +136,6 @@ export const putSubcommand = {
       description: 'Overwrite the file if it already exists (default: false)',
       argument: 'Boolean',
     },
-    {
-      name: 'force',
-      shorthand: 'f',
-      type: Boolean,
-      deprecated: true,
-      description:
-        'Overwrite the file if it already exists (deprecated, use --allow-overwrite)',
-      argument: 'Boolean',
-    },
     ifMatchOption,
   ],
   examples: [],
@@ -368,16 +359,6 @@ export const getStoreInfoSubcommand = {
   examples: [],
 } as const;
 
-export const storeSubcommand = {
-  name: 'store',
-  aliases: [],
-  description: 'Manage or create a Blob store',
-  arguments: [],
-  subcommands: [addStoreSubcommand, removeStoreSubcommand, getStoreSubcommand],
-  options: [],
-  examples: [],
-} as const;
-
 export const blobCommand = {
   name: 'blob',
   aliases: [],
@@ -392,7 +373,6 @@ export const blobCommand = {
     createStoreSubcommand,
     deleteStoreSubcommand,
     getStoreInfoSubcommand,
-    storeSubcommand,
   ],
   options: [
     {
