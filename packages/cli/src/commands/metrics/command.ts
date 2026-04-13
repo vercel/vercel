@@ -6,17 +6,7 @@ export const schemaSubcommand = {
   aliases: [],
   description: 'List available metrics or inspect a specific metric.',
   arguments: [{ name: 'metric-or-prefix', required: false }],
-  options: [
-    {
-      name: 'metric',
-      shorthand: 'm',
-      type: String,
-      deprecated: false,
-      description: 'Show details for a specific metric',
-      argument: 'NAME',
-    },
-    formatOption,
-  ],
+  options: [formatOption],
   examples: [
     {
       name: 'List all metrics',
@@ -54,14 +44,6 @@ export const metricsCommand = {
     schemaSubcommand,
   ],
   options: [
-    {
-      name: 'metric',
-      shorthand: 'm',
-      type: String,
-      deprecated: false,
-      description: 'Metric id to query (e.g., vercel.edge_requests.count)',
-      argument: 'NAME',
-    },
     {
       name: 'aggregation',
       shorthand: 'a',

@@ -160,7 +160,7 @@ export default async function query(
   const jsonOutput = formatResult.jsonOutput;
 
   // Extract raw flag values
-  const metricFlag = positionalMetric ?? flags['--metric'];
+  const metricFlag = positionalMetric;
   const aggregationFlag = flags['--aggregation'];
   const groupBy = flags['--group-by'] ?? [];
   const limit = flags['--limit'];

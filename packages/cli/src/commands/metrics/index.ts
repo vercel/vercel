@@ -37,10 +37,7 @@ export default async function metrics(client: Client): Promise<number> {
     subArgs,
     COMMAND_CONFIG
   );
-  const positionalMetric =
-    subArgs[0] === 'query'
-      ? subArgs[1]
-      : (subArgs[0] ?? parsedArgs.flags['--metric']);
+  const positionalMetric = subArgs[0] === 'query' ? subArgs[1] : subArgs[0];
 
   const needHelp = parsedArgs.flags['--help'];
 

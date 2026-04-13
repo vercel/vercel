@@ -40,7 +40,7 @@ export default async function schema(
   }
   const jsonOutput = formatResult.jsonOutput;
 
-  const metric = positionalMetric ?? flags['--metric'];
+  const metric = positionalMetric;
   telemetry.trackCliOptionMetric(metric);
   telemetry.trackCliOptionFormat(flags['--format']);
 
@@ -189,6 +189,6 @@ function formatMetricsTable(metrics: MetricDetail[]) {
   );
 
   return sharedDimensionsLine
-    ? `\n${sharedDimensionsLine}\n\n${table}`
+    ? `\n${table}\n\n${sharedDimensionsLine}`
     : `\n${table}`;
 }
