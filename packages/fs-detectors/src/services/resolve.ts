@@ -58,6 +58,41 @@ interface ResolvedEntrypointPath {
   isDirectory: boolean;
 }
 
+async function getServiceFs(
+  fs: DetectorFilesystem,
+  serviceName: string,
+  root?: string
+): Promise<{
+  fs: DetectorFilesystem;
+  error?: ServiceDetectionError;
+}> {
+  if (!root) {
+    return { fs };
+  }
+  const normalizedRoot = posixPath.normalize(root);
+  if (!(await fs.hasPath(normalizedRoot))) {
+    return {
+      fs,
+      error: {
+        code: 'ROOT_NOT_FOUND',
+        message: `Service "${serviceName}" has root "${root}" but that directory does not exist.`,
+        serviceName,
+      },
+    };
+  }
+  if (await fs.isFile(normalizedRoot)) {
+    return {
+      fs,
+      error: {
+        code: 'ROOT_NOT_DIRECTORY',
+        message: `Service "${serviceName}" has root "${root}" but that path is a file, not a directory.`,
+        serviceName,
+      },
+    };
+  }
+  return { fs: fs.chdir(normalizedRoot) };
+}
+
 function normalizeServiceEntrypoint(entrypoint: string): string {
   const normalized = posixPath.normalize(entrypoint);
   return normalized === '' ? '.' : normalized;
@@ -100,7 +135,9 @@ type RoutePrefixSource = 'configured' | 'generated';
 interface ResolveConfiguredServiceOptions {
   name: string;
   config: ExperimentalServiceConfig;
-  fs: DetectorFilesystem;
+  /** Filesystem scoped to the service root (via chdir) when root is set, otherwise the project-level fs. */
+  serviceFs: DetectorFilesystem;
+  root?: string;
   group?: string;
   resolvedEntrypoint?: ResolvedEntrypointPath;
   routePrefixSource?: RoutePrefixSource;
@@ -406,6 +443,23 @@ export function validateServiceConfig(
       serviceName: name,
     };
   }
+  if (config.root !== undefined) {
+    const normalizedRoot = posixPath.normalize(config.root);
+    if (normalizedRoot.startsWith('/')) {
+      return {
+        code: 'INVALID_ROOT',
+        message: `Service "${name}" has invalid "root" "${config.root}". Must be a relative path.`,
+        serviceName: name,
+      };
+    }
+    if (normalizedRoot === '..' || normalizedRoot.startsWith('../')) {
+      return {
+        code: 'INVALID_ROOT',
+        message: `Service "${name}" has invalid "root" "${config.root}". Must not escape the project root.`,
+        serviceName: name,
+      };
+    }
+  }
   if (config.envPrefix !== undefined) {
     if (!ENV_PREFIX_RE.test(config.envPrefix)) {
       return {
@@ -502,7 +556,8 @@ export async function resolveConfiguredService(
   const {
     name,
     config,
-    fs,
+    serviceFs,
+    root,
     group,
     resolvedEntrypoint,
     routePrefixSource = 'configured',
@@ -529,7 +584,7 @@ export async function resolveConfiguredService(
       ? moduleAttrParsed.filePath
       : rawEntrypoint;
     const resolved = await resolveEntrypointPath({
-      fs,
+      fs: serviceFs,
       serviceName: name,
       entrypoint: entrypointToResolve,
     });
@@ -559,7 +614,7 @@ export async function resolveConfiguredService(
   } else {
     // File entrypoints infer workspace from nearest runtime manifest.
     const inferredWorkspace = await inferWorkspaceFromNearestManifest({
-      fs,
+      fs: serviceFs,
       entrypoint: resolvedEntrypointFile,
       runtime: inferredRuntime,
     });
@@ -571,6 +626,17 @@ export async function resolveConfiguredService(
           inferredWorkspace
         );
       }
+    }
+  }
+
+  // When root is provided, prefix workspace to make it project-root-relative.
+  if (root) {
+    const normalizedRoot = posixPath.normalize(root);
+    if (normalizedRoot !== '.') {
+      workspace =
+        workspace === '.'
+          ? normalizedRoot
+          : posixPath.join(normalizedRoot, workspace);
     }
   }
 
@@ -730,13 +796,22 @@ export async function resolveAllConfiguredServices(
       continue;
     }
 
+    // Scope filesystem to root if specified
+    const root = serviceConfig.root;
+    const serviceFsResult = await getServiceFs(fs, name, root);
+    if (serviceFsResult.error) {
+      errors.push(serviceFsResult.error);
+      continue;
+    }
+    const serviceFs = serviceFsResult.fs;
+
     let resolvedEntrypoint: ResolvedEntrypointPath | undefined;
     if (typeof serviceConfig.entrypoint === 'string') {
       const moduleAttr = parsePyModuleAttrEntrypoint(serviceConfig.entrypoint);
       const entrypointToResolve =
         moduleAttr?.filePath ?? serviceConfig.entrypoint;
       const resolvedPath = await resolveEntrypointPath({
-        fs,
+        fs: serviceFs,
         serviceName: name,
         entrypoint: entrypointToResolve,
       });
@@ -767,7 +842,7 @@ export async function resolveAllConfiguredServices(
         });
         const workspace = resolvedEntrypoint.normalized;
         const { framework, error } = await detectFrameworkFromWorkspace({
-          fs,
+          fs: serviceFs,
           workspace,
           runtime: inferredRuntime,
           serviceName: name,
@@ -796,7 +871,7 @@ export async function resolveAllConfiguredServices(
 
         if (inferredRuntime) {
           const inferredWorkspace = await inferWorkspaceFromNearestManifest({
-            fs,
+            fs: serviceFs,
             entrypoint: resolvedEntrypoint.normalized,
             runtime: inferredRuntime,
           });
@@ -804,7 +879,7 @@ export async function resolveAllConfiguredServices(
             inferredWorkspace ??
             posixPath.dirname(resolvedEntrypoint.normalized);
           const detection = await detectFrameworkFromWorkspace({
-            fs,
+            fs: serviceFs,
             workspace,
             serviceName: name,
             runtime: inferredRuntime,
@@ -822,7 +897,8 @@ export async function resolveAllConfiguredServices(
     const service = await resolveConfiguredService({
       name,
       config: resolvedConfig,
-      fs,
+      serviceFs,
+      root,
       resolvedEntrypoint,
       routePrefixSource,
     });
