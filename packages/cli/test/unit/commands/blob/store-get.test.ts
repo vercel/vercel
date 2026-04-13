@@ -2,7 +2,7 @@ import { describe, beforeEach, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import getStore from '../../../../src/commands/blob/store-get';
 import * as linkModule from '../../../../src/util/projects/link';
-import * as getScopeModule from '../../../../src/util/get-scope';
+import getScopeModule from '../../../../src/util/get-scope';
 import output from '../../../../src/output-manager';
 import dfns from 'date-fns';
 import type { BlobRWToken } from '../../../../src/util/blob/token';
@@ -15,7 +15,7 @@ vi.mock('../../../../src/output-manager');
 const formatSpy = vi.spyOn(dfns, 'format');
 
 const mockedGetLinkedProject = vi.mocked(linkModule.getLinkedProject);
-const mockedGetScope = vi.mocked(getScopeModule.getScope);
+const mockedGetScope = vi.mocked(getScopeModule);
 const mockedOutput = vi.mocked(output);
 
 describe('blob store get', () => {
@@ -340,9 +340,10 @@ describe('blob store get', () => {
         project: null,
       });
       mockedGetScope.mockResolvedValue({
+        contextName: 'my-team',
         team: { id: 'team_123', slug: 'my-team' },
-        user: { id: 'user_123' },
-      } as Awaited<ReturnType<typeof getScopeModule.getScope>>);
+        user: { id: 'user_123', username: 'testuser', email: 'test@test.com' },
+      } as Awaited<ReturnType<typeof getScopeModule>>);
 
       client.fetch = vi.fn().mockResolvedValue({
         store: {

@@ -5,7 +5,7 @@ import { printError } from '../../util/error';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { getLinkedProject } from '../../util/projects/link';
-import { getScope } from '../../util/get-scope';
+import getScope from '../../util/get-scope';
 import { getStoreSubcommand } from './command';
 import { BlobGetStoreTelemetryClient } from '../../util/telemetry/commands/blob/store-get';
 import {
