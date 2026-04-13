@@ -241,13 +241,10 @@ export async function detectPythonEntrypoint(
       debug(`Using configured Python entrypoint: ${entrypoint}`);
       return { entrypoint: { entrypoint, variableName: varName } };
     } else {
-      const candidateNames = configEntryVar
-        ? `"${configEntryVar}"`
-        : `"app", "application", or "handler"`;
       return {
         error: new NowBuildError({
           code: 'PYTHON_ENTRYPOINT_NOT_FOUND',
-          message: `Could not find a top-level ${candidateNames} in "${entrypoint}".`,
+          message: `Could not find a top-level "app", "application", or "handler" in "${entrypoint}".`,
           link: 'https://vercel.com/docs/functions/serverless-functions/runtimes/python',
           action: 'Learn More',
         }),
