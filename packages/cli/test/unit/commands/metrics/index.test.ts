@@ -32,7 +32,7 @@ describe('metrics', () => {
       // Shows schema subcommand
       expect(output).toContain('schema');
       // Shows positional metric examples
-      expect(output).toContain('metrics vercel.function_execution.count');
+      expect(output).toContain('metrics vercel.function_invocation.count');
     });
 
     it('should track telemetry for help', async () => {
@@ -63,7 +63,7 @@ describe('metrics', () => {
     });
 
     it('should route to query as default subcommand', async () => {
-      client.setArgv('metrics', 'vercel.edge_requests.count');
+      client.setArgv('metrics', 'vercel.request.count');
 
       const exitCode = await metrics(client);
 
@@ -95,7 +95,7 @@ describe('metrics', () => {
 
     expect(exitCode).toBe(2);
     expect(client.stderr.getFullOutput()).toContain(
-      'metrics vercel.function_execution.count'
+      'metrics vercel.function_invocation.count'
     );
   });
 });

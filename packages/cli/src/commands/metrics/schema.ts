@@ -41,7 +41,7 @@ export default async function schema(
   const jsonOutput = formatResult.jsonOutput;
 
   const metric = positionalMetric;
-  telemetry.trackCliOptionMetric(metric);
+  telemetry.trackCliArgumentMetricId(metric);
   telemetry.trackCliOptionFormat(flags['--format']);
 
   const { team } = await getScope(client);

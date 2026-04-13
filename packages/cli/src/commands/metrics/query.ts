@@ -172,7 +172,7 @@ export default async function query(
   const all = flags['--all'];
 
   // Track telemetry
-  telemetry.trackCliOptionMetric(metricFlag);
+  telemetry.trackCliArgumentMetricId(metricFlag);
   telemetry.trackCliOptionAggregation(aggregationFlag);
   telemetry.trackCliOptionGroupBy(groupBy.length > 0 ? groupBy : undefined);
   telemetry.trackCliOptionLimit(limit);
