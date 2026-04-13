@@ -6,11 +6,13 @@ import { printError } from '../../../util/error';
 import { type Command, help } from '../../help';
 import list from './list';
 import inspect from './inspect';
+import add from './add';
 import {
   firewallCommand,
   rulesSubcommand,
   rulesListSubcommand,
   rulesInspectSubcommand,
+  rulesAddSubcommand,
 } from '../command';
 import { getFlagsSpecification } from '../../../util/get-flags-specification';
 import output from '../../../output-manager';
@@ -20,6 +22,7 @@ import { FirewallTelemetryClient } from '../../../util/telemetry/commands/firewa
 const COMMAND_CONFIG = {
   list: getCommandAliases(rulesListSubcommand),
   inspect: getCommandAliases(rulesInspectSubcommand),
+  add: getCommandAliases(rulesAddSubcommand),
 };
 
 export default async function main(client: Client, args: string[]) {
@@ -85,6 +88,14 @@ export default async function main(client: Client, args: string[]) {
       }
       telemetry.trackCliSubcommandRulesInspect(subcommandOriginal);
       return inspect(client, subArgs);
+    case 'add':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('firewall', `rules:${subcommandOriginal}`);
+        printHelp(rulesAddSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandRulesAdd(subcommandOriginal);
+      return add(client, subArgs);
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
       output.print(
