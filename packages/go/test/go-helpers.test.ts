@@ -19,6 +19,13 @@ function createRejectedSubprocess(error: Error) {
   });
 }
 
+function createResolvedSubprocess() {
+  return Object.assign(Promise.resolve({ stdout: '', stderr: '' }), {
+    stdout: undefined,
+    stderr: undefined,
+  });
+}
+
 describe('GoWrapper', () => {
   beforeEach(() => {
     mockedExeca.mockReset();
@@ -56,6 +63,85 @@ describe('GoWrapper', () => {
     expect(mockedExeca).toHaveBeenCalledWith(
       'go',
       ['build', '-ldflags', '-s -w', '-o', '/tmp/3db69a0d/user-server', '.'],
+      expect.objectContaining({ stdio: 'pipe' })
+    );
+  });
+
+  it('calls go mod tidy', async () => {
+    mockedExeca.mockReturnValue(createResolvedSubprocess() as any);
+
+    const go = new GoWrapper(process.env as any);
+    await go.mod();
+
+    expect(mockedExeca).toHaveBeenCalledWith(
+      'go',
+      ['mod', 'tidy'],
+      expect.objectContaining({ stdio: 'pipe' })
+    );
+  });
+
+  it('calls go mod tidy with -e when tolerateErrors is true', async () => {
+    mockedExeca.mockReturnValue(createResolvedSubprocess() as any);
+
+    const go = new GoWrapper(process.env as any);
+    await go.mod({ tolerateErrors: true });
+
+    expect(mockedExeca).toHaveBeenCalledWith(
+      'go',
+      ['mod', 'tidy', '-e'],
+      expect.objectContaining({ stdio: 'pipe' })
+    );
+  });
+
+  it('calls go mod vendor', async () => {
+    mockedExeca.mockReturnValue(createResolvedSubprocess() as any);
+
+    const go = new GoWrapper(process.env as any);
+    await go.vendor();
+
+    expect(mockedExeca).toHaveBeenCalledWith(
+      'go',
+      ['mod', 'vendor'],
+      expect.objectContaining({ stdio: 'pipe' })
+    );
+  });
+
+  it('includes -mod=vendor flag when vendorMode is true', async () => {
+    mockedExeca.mockReturnValue(createResolvedSubprocess() as any);
+
+    const go = new GoWrapper(process.env as any);
+    await go.build('.', '/tmp/out', { vendorMode: true });
+
+    expect(mockedExeca).toHaveBeenCalledWith(
+      'go',
+      ['build', '-ldflags', '-s -w', '-mod=vendor', '-o', '/tmp/out', '.'],
+      expect.objectContaining({ stdio: 'pipe' })
+    );
+  });
+
+  it('does not add -mod=vendor when GO_BUILD_FLAGS is set', async () => {
+    mockedExeca.mockReturnValue(createResolvedSubprocess() as any);
+
+    const env = { ...process.env, GO_BUILD_FLAGS: '-tags test' };
+    const go = new GoWrapper(env as any);
+    await go.build('.', '/tmp/out', { vendorMode: true });
+
+    expect(mockedExeca).toHaveBeenCalledWith(
+      'go',
+      ['build', '-tags', 'test', '-o', '/tmp/out', '.'],
+      expect.objectContaining({ stdio: 'pipe' })
+    );
+  });
+
+  it('does not add -mod=vendor when vendorMode is false', async () => {
+    mockedExeca.mockReturnValue(createResolvedSubprocess() as any);
+
+    const go = new GoWrapper(process.env as any);
+    await go.build('.', '/tmp/out');
+
+    expect(mockedExeca).toHaveBeenCalledWith(
+      'go',
+      ['build', '-ldflags', '-s -w', '-o', '/tmp/out', '.'],
       expect.objectContaining({ stdio: 'pipe' })
     );
   });
