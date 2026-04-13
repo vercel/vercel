@@ -1,5 +1,5 @@
 ---
-'vercel': patch
+'vercel': minor
 ---
 
 feat(cli): add --all flag to blob list-stores, --yes flag to blob delete-store
