@@ -220,13 +220,34 @@ describe('blob list-stores', () => {
   });
 
   describe('empty store list', () => {
-    it('should show message when no stores found', async () => {
+    it('should show generic message when no stores found without linked project', async () => {
+      mockedGetLinkFromDir.mockResolvedValue(null);
+      mockedGetScope.mockResolvedValue({
+        contextName: 'my-team',
+        team: { id: 'team_123', slug: 'my-team' } as any,
+        user: {} as any,
+      });
       client.fetch = vi.fn().mockResolvedValue({ stores: [] });
 
       const exitCode = await listStores(client, []);
 
       expect(exitCode).toBe(0);
       expect(mockedOutput.log).toHaveBeenCalledWith('No blob stores found');
+      expect(selectInputMock).not.toHaveBeenCalled();
+    });
+
+    it('should hint about --all when no stores found in linked project', async () => {
+      client.fetch = vi.fn().mockResolvedValue({ stores: [] });
+
+      const exitCode = await listStores(client, []);
+
+      expect(exitCode).toBe(0);
+      expect(mockedOutput.log).toHaveBeenCalledWith(
+        expect.stringContaining('No blob stores connected to')
+      );
+      expect(mockedOutput.log).toHaveBeenCalledWith(
+        expect.stringContaining('--all')
+      );
       expect(selectInputMock).not.toHaveBeenCalled();
     });
 
