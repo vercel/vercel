@@ -325,6 +325,10 @@ module.exports = requireFromContext('${pkgName}');
       `Unable to resolve build handler for entrypoint: ${args.entrypoint}`
     );
   }
-  console.log(c.gray(`${c.bold(c.cyan('✓'))} Build complete`));
+  console.log(
+    c.gray(
+      `${c.bold(c.cyan('✓'))} Build complete — Using ${c.bold(args.entrypoint)} as the root entrypoint.`
+    )
+  );
   return { files, handler, framework, localBuildFiles };
 };

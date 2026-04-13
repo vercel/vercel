@@ -11,4 +11,16 @@ export class BlobListStoresTelemetryClient
       this.trackCliFlag('all');
     }
   }
+
+  trackCliFlagJson(value: boolean | undefined) {
+    if (value) {
+      this.trackCliFlag('json');
+    }
+  }
+
+  trackCliFlagNoProjects(value: boolean | undefined) {
+    if (value) {
+      this.trackCliFlag('no-projects');
+    }
+  }
 }

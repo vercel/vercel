@@ -87,6 +87,14 @@ export async function buildStandaloneServer({
   const userServerPath = join(outDir, 'user-server');
   const bootstrapPath = join(outDir, 'executable');
 
+  // Detect vendored dependencies by checking for vendor/modules.txt,
+  // the canonical marker created by `go mod vendor`
+  const vendorModulesPath = join(workPath, 'vendor', 'modules.txt');
+  const isVendored = await pathExists(vendorModulesPath);
+  if (isVendored) {
+    debug('Detected vendor directory, using -mod=vendor for build');
+  }
+
   // Determine build target based on entrypoint location
   // - main.go at root: build '.'
   // - cmd/api/main.go: build './cmd/api'
@@ -98,7 +106,7 @@ export async function buildStandaloneServer({
   );
 
   try {
-    await go.build(buildTarget, userServerPath);
+    await go.build(buildTarget, userServerPath, { vendorMode: isVendored });
   } catch (err) {
     console.error(`Failed to build standalone Go server: ${buildTarget}`);
     throw err;
