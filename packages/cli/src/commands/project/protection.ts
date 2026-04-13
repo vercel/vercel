@@ -200,7 +200,14 @@ export default async function protection(
 
   const ssoSelected = Boolean(parsedArgs.flags['--sso']);
   const passwordSelected = Boolean(parsedArgs.flags['--password']);
+  const customerSupportCodeVisibilitySelected = Boolean(
+    parsedArgs.flags['--customer-support-code-visibility']
+  );
   const skewSelected = Boolean(parsedArgs.flags['--skew']);
+  const bypassSelected = Boolean(parsedArgs.flags['--protection-bypass']);
+  const protectionBypassSecret = parsedArgs.flags[
+    '--protection-bypass-secret'
+  ] as string | undefined;
   const gitForkProtectionSelected = Boolean(
     parsedArgs.flags['--git-fork-protection']
   );
@@ -208,18 +215,20 @@ export default async function protection(
     action &&
     !ssoSelected &&
     !passwordSelected &&
+    !customerSupportCodeVisibilitySelected &&
     !skewSelected &&
+    !bypassSelected &&
     !gitForkProtectionSelected
   ) {
     const msg =
-      'No protection selected. Pass --sso, --password, --skew, or --git-fork-protection. Usage: `vercel project protection enable|disable [name] --sso|--password|--skew|--git-fork-protection`';
+      'No protection selected. Pass --sso, --password, --customer-support-code-visibility, --skew, --protection-bypass, or --git-fork-protection. Usage: `vercel project protection enable|disable [name] --sso|--password|--customer-support-code-visibility|--skew|--protection-bypass|--git-fork-protection`';
     outputAgentError(
       client,
       {
         status: 'error',
         reason: AGENT_REASON.MISSING_ARGUMENTS,
         message: msg,
-        hint: 'Use `project protection enable|disable` with a protection flag (e.g. --sso, --password, --skew, or --git-fork-protection).',
+        hint: 'Use `project protection enable|disable` with a protection flag (e.g. --sso, --password, --customer-support-code-visibility, --skew, --protection-bypass, or --git-fork-protection).',
         next: [
           {
             command: buildCommandWithGlobalFlags(
@@ -238,9 +247,23 @@ export default async function protection(
           {
             command: buildCommandWithGlobalFlags(
               client.argv,
+              `project protection ${action} --customer-support-code-visibility`
+            ),
+            when: 'Example: same action with customer support code visibility selected',
+          },
+          {
+            command: buildCommandWithGlobalFlags(
+              client.argv,
               `project protection ${action} --skew`
             ),
             when: 'Example: same action with skew protection selected',
+          },
+          {
+            command: buildCommandWithGlobalFlags(
+              client.argv,
+              `project protection ${action} --protection-bypass`
+            ),
+            when: 'Example: same action with automation protection bypass',
           },
           {
             command: buildCommandWithGlobalFlags(
@@ -279,6 +302,60 @@ export default async function protection(
         ? (enableSkewMaxAgeSeconds ?? DEFAULT_SKEW_PROTECTION_MAX_AGE)
         : 0;
 
+    if (bypassSelected) {
+      if (action === 'disable' && !protectionBypassSecret) {
+        const secretMsg =
+          'Disabling protection bypass requires --protection-bypass-secret <secret>.';
+        outputAgentError(
+          client,
+          {
+            status: 'error',
+            reason: AGENT_REASON.MISSING_ARGUMENTS,
+            message: secretMsg,
+            hint: 'Pass the existing automation bypass secret to revoke it.',
+            next: [
+              {
+                command: buildCommandWithGlobalFlags(
+                  client.argv,
+                  'project protection disable --protection-bypass --protection-bypass-secret <secret>'
+                ),
+                when: 'Replace <secret> with the bypass secret to revoke',
+              },
+            ],
+          },
+          2
+        );
+        output.error(secretMsg);
+        return 2;
+      }
+      try {
+        const bypassBody =
+          action === 'enable'
+            ? {
+                generate: protectionBypassSecret
+                  ? { secret: protectionBypassSecret }
+                  : {},
+              }
+            : {
+                revoke: {
+                  secret: protectionBypassSecret,
+                  regenerate: false,
+                },
+              };
+        await client.fetch(
+          `/v1/projects/${encodeURIComponent(project.id)}/protection-bypass`,
+          {
+            method: 'PATCH',
+            body: bypassBody,
+          }
+        );
+      } catch (err: unknown) {
+        exitWithNonInteractiveError(client, err, 1, { variant: 'protection' });
+        printError(err);
+        return 1;
+      }
+    }
+
     const patchBody: JSONObject = {};
     if (ssoSelected) {
       patchBody.ssoProtection =
@@ -292,6 +369,9 @@ export default async function protection(
           ? { deploymentType: ENABLED_DEPLOYMENT_TYPE }
           : null;
     }
+    if (customerSupportCodeVisibilitySelected) {
+      patchBody.customerSupportCodeVisibility = action === 'enable';
+    }
     if (skewSelected) {
       patchBody.skewProtectionMaxAge = skewProtectionMaxAge;
     }
@@ -299,15 +379,17 @@ export default async function protection(
       patchBody.gitForkProtection = action === 'enable';
     }
 
-    try {
-      await client.fetch(`/v9/projects/${encodeURIComponent(project.id)}`, {
-        method: 'PATCH',
-        body: patchBody,
-      });
-    } catch (err: unknown) {
-      exitWithNonInteractiveError(client, err, 1, { variant: 'protection' });
-      printError(err);
-      return 1;
+    if (Object.keys(patchBody).length > 0) {
+      try {
+        await client.fetch(`/v9/projects/${encodeURIComponent(project.id)}`, {
+          method: 'PATCH',
+          body: patchBody,
+        });
+      } catch (err: unknown) {
+        exitWithNonInteractiveError(client, err, 1, { variant: 'protection' });
+        printError(err);
+        return 1;
+      }
     }
 
     if (preferJson) {
@@ -321,12 +403,16 @@ export default async function protection(
             passwordProtection: passwordSelected
               ? action === 'enable'
               : undefined,
+            customerSupportCodeVisibility: customerSupportCodeVisibilitySelected
+              ? action === 'enable'
+              : undefined,
             skewProtection: skewSelected ? action === 'enable' : undefined,
             ...(skewSelected
               ? action === 'enable'
                 ? { skewProtectionMaxAge }
                 : { skewProtectionMaxAge: 0 }
               : {}),
+            protectionBypass: bypassSelected ? action === 'enable' : undefined,
             gitForkProtection: gitForkProtectionSelected
               ? action === 'enable'
               : undefined,

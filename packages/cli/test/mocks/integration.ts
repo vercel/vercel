@@ -4,7 +4,6 @@ import type {
   Configuration,
   InstallationBalancesAndThresholds,
   Integration,
-  MarketplaceBillingAuthorizationState,
   MetadataSchema,
 } from '../../src/util/integration/types';
 import type { Resource } from '../../src/util/integration-resource/types';
@@ -175,53 +174,6 @@ const metadataFullTypes: MetadataSchema = {
   required: ['region'],
 };
 
-const metadataUnsupported: MetadataSchema = {
-  type: 'object',
-  properties: {
-    region: {
-      'ui:control': 'select',
-      'ui:label': 'Primary Region',
-      default: 'us-east-1',
-      description: 'Primary region where your database will be hosted',
-      'ui:placeholder': 'Choose your region',
-      type: 'string',
-      'ui:options': [
-        {
-          value: 'us-west-1',
-          label: 'West US (North California)',
-        },
-        {
-          value: 'us-east-1',
-          label: 'East US (North Virginia)',
-        },
-      ],
-    },
-    storage: {
-      type: 'number',
-      'ui:control': 'input',
-      'ui:hidden': { expr: "Region == 'us-east-1" },
-      'ui:label': 'Storage',
-      description: 'Disk space in GiB',
-      minimum: 1,
-      maximum: 256,
-    },
-  },
-  required: ['region'],
-};
-
-const metadataNoDefaults: MetadataSchema = {
-  type: 'object',
-  properties: {
-    tier: {
-      'ui:control': 'select',
-      'ui:label': 'Tier',
-      type: 'string',
-      'ui:options': ['starter', 'pro', 'enterprise'],
-    },
-  },
-  required: ['tier'],
-};
-
 const integrations: Record<string, Integration> = {
   acme: {
     id: 'acme',
@@ -283,6 +235,21 @@ const integrations: Record<string, Integration> = {
       },
     ],
   },
+  neon: {
+    id: 'neon',
+    name: 'Neon',
+    slug: 'neon',
+    products: [
+      {
+        id: 'neon-product',
+        name: 'Neon Postgres',
+        slug: 'neon',
+        type: 'storage',
+        shortDescription: 'Serverless Postgres database',
+        metadataSchema: metadataSchema1,
+      },
+    ],
+  },
   'acme-external': {
     id: 'acme-external',
     name: 'Acme Integration External',
@@ -321,53 +288,6 @@ const integrations: Record<string, Integration> = {
         type: 'ai',
         shortDescription: 'The Acme product',
         metadataSchema: metadataSchema1,
-      },
-    ],
-  },
-  'acme-required': {
-    id: 'acme-required',
-    name: 'Acme Required',
-    slug: 'acme-required',
-    products: [
-      {
-        id: 'acme-product',
-        name: 'Acme Product',
-        slug: 'acme',
-        type: 'storage',
-        shortDescription: 'The Acme product with required metadata',
-        metadataSchema: metadataNoDefaults,
-      },
-    ],
-  },
-  'acme-multi': {
-    id: 'acme-multi',
-    name: 'Acme Multi',
-    slug: 'acme-multi',
-    products: [
-      {
-        id: 'acme-product',
-        name: 'Acme Product',
-        slug: 'acme',
-        type: 'storage',
-        shortDescription: 'The Acme product with multiple fields',
-        metadataSchema: metadataSchema2,
-      },
-    ],
-  },
-  'acme-unsupported': {
-    id: 'acme-unsupported',
-    name: 'Acme Integration',
-    slug: 'acme-unsupported',
-    eulaDocUri: 'https://example.com/eula',
-    privacyDocUri: 'https://example.com/privacy',
-    products: [
-      {
-        id: 'acme-product',
-        name: 'Acme Product',
-        slug: 'acme',
-        type: 'storage',
-        shortDescription: 'The Acme product',
-        metadataSchema: metadataUnsupported,
       },
     ],
   },
@@ -469,20 +389,6 @@ const configurations: Record<string, Configuration[]> = {
       projects: ['acme-project'],
     },
   ],
-  'acme-two-projects': [
-    {
-      id: 'acme-first',
-      integrationId: 'acme',
-      ownerId: 'team_dummy',
-      slug: 'acme-two-projects',
-      teamId: 'team_dummy',
-      userId: 'user_dummy',
-      scopes: ['read-write:integration-resource'],
-      source: 'marketplace',
-      installationType: 'marketplace',
-      projects: ['acme-1', 'acme-2'],
-    },
-  ],
   'acme-no-projects': [
     {
       id: 'acme-first',
@@ -512,203 +418,32 @@ const configurations: Record<string, Configuration[]> = {
     },
   ],
   'acme-no-results': [],
-};
-
-const integrationPlans: Record<string, unknown> = {
-  acme: {
-    plans: [
-      {
-        id: 'pro',
-        type: 'subscription',
-        name: 'Pro Plan',
-        scope: 'installation',
-        description:
-          'Dedicated CPU • 1 GB RAM • 100K MAU • 8 GB database space • 250 GB bandwidth • 100 GB file storage',
-        paymentMethodRequired: true,
-        details: [
-          {
-            label: 'New Project - Micro Compute',
-            value: '$10/m',
-          },
-          {
-            label: 'Pro Plan',
-            value: '$25/m',
-          },
-          {
-            label: 'Compute Credits',
-            value: '-$10/m',
-          },
-        ],
-        highlightedDetails: [],
-      },
-      {
-        id: 'team',
-        type: 'subscription',
-        name: 'Team Plan',
-        scope: 'installation',
-        description:
-          'SOC2 • SSO for Supabase Dashboard • Priority email support & SLAs • 28-day log retention',
-        paymentMethodRequired: true,
-        details: [
-          {
-            label: 'New Project - Micro Compute',
-            value: '$10/m',
-          },
-          {
-            label: 'Team Plan',
-            value: '$599/m',
-          },
-          {
-            label: 'Compute Credits',
-            value: '-$10/m',
-          },
-        ],
-        highlightedDetails: [],
-      },
-      {
-        id: 'free',
-        type: 'subscription',
-        name: 'Free Plan',
-        scope: 'installation',
-        description:
-          'Unlimited API requests • Shared CPU • 500 MB RAM • 50K MAU • 500 MB database space • 5 GB bandwidth • 1 GB file storage',
-        paymentMethodRequired: false,
-        details: [],
-        highlightedDetails: [
-          {
-            label:
-              'Unavailable - The following members have reached their 2 project Free Plan limit: luka.hartwig@vercel.com. All active projects in Free Plan organizations count towards this limit.',
-          },
-        ],
-        disabled: true,
-      },
-    ],
-  },
-  'acme-unsupported': {
-    plans: [
-      {
-        id: 'pro',
-        type: 'subscription',
-        name: 'Pro Plan',
-        scope: 'installation',
-        description: 'Pro Plan',
-        paymentMethodRequired: true,
-        details: [],
-        highlightedDetails: [],
-      },
-    ],
-  },
-  'acme-multi': {
-    plans: [
-      {
-        id: 'pro',
-        type: 'subscription',
-        name: 'Pro Plan',
-        scope: 'installation',
-        description: 'Pro Plan',
-        paymentMethodRequired: true,
-        details: [],
-        highlightedDetails: [],
-      },
-    ],
-  },
-  'acme-two-products': {
-    plans: [
-      {
-        id: 'pro',
-        type: 'subscription',
-        name: 'Pro Plan',
-        scope: 'installation',
-        description: 'Pro Plan',
-        paymentMethodRequired: true,
-        details: [],
-        highlightedDetails: [],
-      },
-    ],
-  },
-  'aws-apg': {
-    plans: [
-      {
-        id: 'pro',
-        type: 'subscription',
-        name: 'Pro Plan',
-        scope: 'installation',
-        description: 'Aurora PostgreSQL Pro Plan',
-        paymentMethodRequired: true,
-        details: [],
-        highlightedDetails: [],
-      },
-    ],
-  },
-  'acme-prepayment': {
-    plans: [
-      {
-        id: 'pro',
-        type: 'prepayment',
-        name: 'Pro Plan',
-        scope: 'installation',
-        description:
-          'Dedicated CPU • 1 GB RAM • 100K MAU • 8 GB database space • 250 GB bandwidth • 100 GB file storage',
-        paymentMethodRequired: true,
-        details: [
-          {
-            label: 'New Project - Micro Compute',
-            value: '$10/m',
-          },
-          {
-            label: 'Pro Plan',
-            value: '$25/m',
-          },
-          {
-            label: 'Compute Credits',
-            value: '-$10/m',
-          },
-        ],
-        highlightedDetails: [],
-      },
-      {
-        id: 'team',
-        type: 'prepayment',
-        name: 'Team Plan',
-        scope: 'installation',
-        description:
-          'SOC2 • SSO for Supabase Dashboard • Priority email support & SLAs • 28-day log retention',
-        paymentMethodRequired: true,
-        details: [
-          {
-            label: 'New Project - Micro Compute',
-            value: '$10/m',
-          },
-          {
-            label: 'Team Plan',
-            value: '$599/m',
-          },
-          {
-            label: 'Compute Credits',
-            value: '-$10/m',
-          },
-        ],
-        highlightedDetails: [],
-      },
-      {
-        id: 'free',
-        type: 'subscription',
-        name: 'Free Plan',
-        scope: 'installation',
-        description:
-          'Unlimited API requests • Shared CPU • 500 MB RAM • 50K MAU • 500 MB database space • 5 GB bandwidth • 1 GB file storage',
-        paymentMethodRequired: false,
-        details: [],
-        highlightedDetails: [
-          {
-            label:
-              'Unavailable - The following members have reached their 2 project Free Plan limit: luka.hartwig@vercel.com. All active projects in Free Plan organizations count towards this limit.',
-          },
-        ],
-        disabled: true,
-      },
-    ],
-  },
+  'acme-multi': [
+    {
+      id: 'icfg_install_a',
+      integrationId: 'acme-multi',
+      ownerId: 'team_dummy',
+      slug: 'acme-multi',
+      teamId: 'team_dummy',
+      userId: 'user_dummy',
+      scopes: ['read-write:integration-resource'],
+      source: 'marketplace',
+      installationType: 'marketplace',
+      projects: [],
+    },
+    {
+      id: 'icfg_install_b',
+      integrationId: 'acme-multi',
+      ownerId: 'team_dummy',
+      slug: 'acme-multi',
+      teamId: 'team_dummy',
+      userId: 'user_dummy',
+      scopes: ['read-write:integration-resource'],
+      source: 'marketplace',
+      installationType: 'marketplace',
+      projects: [],
+    },
+  ],
 };
 
 const configurationPrepaymentInformation: Record<
@@ -1007,27 +742,6 @@ const resources: { stores: Resource[] } = {
   ],
 };
 
-const authorizations: Record<string, MarketplaceBillingAuthorizationState> = {
-  'success-case': {
-    id: 'success-case',
-    ownerId: 'team_dummy',
-    integrationId: 'acme',
-    status: 'succeeded',
-    amountCent: 100,
-    createdAt: 1,
-    updatedAt: 1,
-  },
-  'failure-case': {
-    id: 'failure-case',
-    ownerId: 'team_dummy',
-    integrationId: 'acme',
-    status: 'failed',
-    amountCent: 100,
-    createdAt: 1,
-    updatedAt: 1,
-  },
-};
-
 // Auto-provision mock responses
 const autoProvisionIntegration = {
   id: 'acme',
@@ -1145,6 +859,28 @@ const discoverIntegrations = [
     ],
   },
   {
+    slug: 'acme-two-products',
+    name: 'Acme Integration Two Products',
+    shortDescription: 'Two product integration',
+    tagIds: ['tag_databases'],
+    isMarketplace: true,
+    canInstall: true,
+    products: [
+      {
+        slug: 'acme-a',
+        name: 'Acme Product A',
+        shortDescription: 'The Acme A product',
+        tags: ['kv', 'redis'],
+      },
+      {
+        slug: 'acme-b',
+        name: 'Acme Product B',
+        shortDescription: 'The Acme B product',
+        tags: ['queue'],
+      },
+    ],
+  },
+  {
     slug: 'acme-hidden',
     name: 'Acme Hidden',
     shortDescription: 'Should be filtered out because canInstall is false',
@@ -1247,7 +983,7 @@ export function useConfiguration() {
 export function usePrepayment(responseKey: string) {
   client.scenario.get(
     '/v1/integrations/installations/:installationId/billing/balance',
-    (req, res) => {
+    (_req, res) => {
       if (responseKey === 'error') {
         res.status(500);
         res.end();
@@ -1267,32 +1003,7 @@ export function usePrepayment(responseKey: string) {
   );
 }
 
-export function usePreauthorization(opts?: {
-  id?: MarketplaceBillingAuthorizationState['id'];
-  initialStatus?: MarketplaceBillingAuthorizationState['status'];
-}) {
-  client.scenario.post('/v1/integrations/billing/authorization', (req, res) => {
-    const authorization = authorizations[opts?.id ?? 'success-case'];
-    res.json({
-      authorization: {
-        ...authorization,
-        status: opts?.initialStatus ?? authorization.status,
-      },
-    });
-    res.end();
-  });
-
-  client.scenario.get(
-    '/v1/integrations/billing/authorization/:authorizationId',
-    (req, res) => {
-      const { authorizationId } = req.params;
-      const authorization = authorizations[authorizationId ?? 'success-case'];
-      res.json(authorization);
-      res.end();
-    }
-  );
-}
-
+/** Mocks integration fetch, marketplace installations, and `POST .../marketplace/install` (e.g. `integration accept-terms`). */
 export function useIntegration({
   withInstallation,
   ownerId,
@@ -1302,7 +1013,7 @@ export function useIntegration({
   ownerId?: string;
   installShouldFail?: boolean;
 }) {
-  const storeId = 'store_123';
+  const resolvedOwnerId = ownerId ?? 'team_dummy';
 
   client.scenario.get(
     '/:version/integrations/integration/:slug',
@@ -1336,53 +1047,12 @@ export function useIntegration({
               id: `${integrationIdOrSlug}-install`,
               integrationId: integrationIdOrSlug,
               installationType: 'marketplace',
-              ownerId,
+              ownerId: resolvedOwnerId,
             },
           ]
         : []
     );
   });
-
-  client.scenario.get(
-    '/:version/integrations/integration/:integrationIdOrSlug/products/:productIdOrSlug/plans',
-    (req, res) => {
-      const { integrationIdOrSlug } = req.params;
-      const plans = integrationPlans[integrationIdOrSlug];
-
-      if (!plans) {
-        res.status(404);
-        res.end();
-        return;
-      }
-
-      res.json(plans);
-    }
-  );
-
-  client.scenario.post('/:version/storage/stores/integration', (_req, res) => {
-    res.json({
-      store: {
-        id: storeId,
-      },
-    });
-  });
-
-  const connectionRequestBodies: unknown[] = [];
-
-  client.scenario.post(
-    '/v1/storage/stores/:storeId/connections',
-    (req, res) => {
-      if (req.params.storeId !== storeId) {
-        res.status(404);
-        res.end();
-        return;
-      }
-
-      connectionRequestBodies.push(req.body);
-      res.status(200);
-      res.end();
-    }
-  );
 
   const installRequestBodies: unknown[] = [];
 
@@ -1401,14 +1071,13 @@ export function useIntegration({
     }
   );
 
-  return { installRequestBodies, connectionRequestBodies };
+  return { installRequestBodies, connectionRequestBodies: [] };
 }
 
 export function useAutoProvision(opts?: {
   responseKey?: keyof typeof autoProvisionResponses;
   withInstallation?: boolean;
   installationAppearsAfterPolls?: number;
-  ownerId?: string;
 }) {
   const withInstallation = opts?.withInstallation ?? true;
   const storeId = 'resource_123';
@@ -1454,7 +1123,7 @@ export function useAutoProvision(opts?: {
             id: 'acme-install',
             integrationId: integrationIdOrSlug,
             installationType: 'marketplace',
-            ownerId: opts?.ownerId ?? 'team_dummy',
+            ownerId: 'team_dummy',
           },
         ]);
         return;
@@ -1470,7 +1139,7 @@ export function useAutoProvision(opts?: {
               id: 'acme-install',
               integrationId: integrationIdOrSlug,
               installationType: 'marketplace',
-              ownerId: opts?.ownerId ?? 'team_dummy',
+              ownerId: 'team_dummy',
             },
           ]
         : []
