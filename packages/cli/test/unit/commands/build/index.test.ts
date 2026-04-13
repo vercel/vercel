@@ -1110,17 +1110,12 @@ describe.skipIf(flakey)('build', () => {
     ]);
   });
 
-  it('should not include crons for service builders that do not produce them', async () => {
-    // Node-based cron services don't produce crons — only builders with
-    // cron support (e.g. @vercel/python) include them in BuildResult.
+  it('should fail build when cron service builder does not produce crons', async () => {
     const cwd = fixture('with-services-cron');
-    const output = join(cwd, '.vercel', 'output');
     client.cwd = cwd;
     const exitCode = await build(client);
-    expect(exitCode).toBe(0);
-
-    const config = await fs.readJSON(join(output, 'config.json'));
-    expect(config.crons ?? []).toEqual([]);
+    expect(exitCode).toBe(1);
+    await expect(client.stderr).toOutput('did not produce any cron entries');
   });
 
   it('should fail build when CRON_SECRET contains invalid HTTP header characters', async () => {

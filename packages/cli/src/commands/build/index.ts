@@ -1221,6 +1221,16 @@ async function doBuild(
         attachWorkerServiceTrigger(buildResult.output, service);
       }
 
+      if (
+        service?.type === 'cron' &&
+        !('crons' in buildResult && buildResult.crons?.length)
+      ) {
+        throw new NowBuildError({
+          code: 'CRON_SERVICE_NO_CRONS',
+          message: `Cron service "${service.name}" did not produce any cron entries. The builder "${builderPkg.name}" may not support cron services.`,
+        });
+      }
+
       let mergedBuildResult: BuildResult | BuildOutputConfig = buildResult;
       if ('buildOutputPath' in buildResult) {
         // Read this builder's own Build Output API config directly. When
