@@ -131,7 +131,7 @@ export default async function inspect(client: Client, argv: string[]) {
         message: `Multiple rules match "${identifier}". Select one:`,
         choices: matches.map(r => ({
           value: r.id,
-          name: `${r.name} [${r.active ? 'Active' : 'Inactive'}] (${r.id})`,
+          name: `${r.name} [${r.active ? 'Enabled' : 'Disabled'}] (${r.id})`,
         })),
       });
 

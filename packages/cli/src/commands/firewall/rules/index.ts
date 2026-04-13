@@ -7,12 +7,14 @@ import { type Command, help } from '../../help';
 import list from './list';
 import inspect from './inspect';
 import add from './add';
+import edit from './edit';
 import {
   firewallCommand,
   rulesSubcommand,
   rulesListSubcommand,
   rulesInspectSubcommand,
   rulesAddSubcommand,
+  rulesEditSubcommand,
 } from '../command';
 import { getFlagsSpecification } from '../../../util/get-flags-specification';
 import output from '../../../output-manager';
@@ -23,6 +25,7 @@ const COMMAND_CONFIG = {
   list: getCommandAliases(rulesListSubcommand),
   inspect: getCommandAliases(rulesInspectSubcommand),
   add: getCommandAliases(rulesAddSubcommand),
+  edit: getCommandAliases(rulesEditSubcommand),
 };
 
 export default async function main(client: Client, args: string[]) {
@@ -96,6 +99,14 @@ export default async function main(client: Client, args: string[]) {
       }
       telemetry.trackCliSubcommandRulesAdd(subcommandOriginal);
       return add(client, subArgs);
+    case 'edit':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('firewall', `rules:${subcommandOriginal}`);
+        printHelp(rulesEditSubcommand);
+        return 2;
+      }
+      telemetry.trackCliSubcommandRulesEdit(subcommandOriginal);
+      return edit(client, subArgs);
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
       output.print(
