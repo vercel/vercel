@@ -38,6 +38,11 @@
       }
     },
     {
+      "path": "/dynamic/id-1",
+      "status": 200,
+      "mustContain": "Dynamic route"
+    },
+    {
       "path": "/_next/data/build-TfctsWXpff2fKS/en/rewrite-to-site.json",
       "status": 200,
       "headers": {

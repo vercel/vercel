@@ -761,14 +761,15 @@ export function localizeDynamicRoutes(
       const isLocalePrefixed =
         isFallback || isBlocking || isAutoExport || isServerMode;
 
+      const shouldUseNonLocalePrefixedRoute =
+        skipDefaultLocaleRewrite &&
+        isLocalePrefixed &&
+        routesManifest?.i18n?.localeDetection === false;
+
       // when locale detection is disabled we don't add the default locale
       // to the path while resolving routes so we need to be able to match
       // without it being present
-      if (
-        skipDefaultLocaleRewrite &&
-        isLocalePrefixed &&
-        routesManifest?.i18n?.localeDetection === false
-      ) {
+      if (shouldUseNonLocalePrefixedRoute) {
         const nonLocalePrefixedRoute = JSON.parse(JSON.stringify(route));
         nonLocalePrefixedRoute.src = nonLocalePrefixedRoute.src.replace(
           '^',
@@ -781,7 +782,11 @@ export function localizeDynamicRoutes(
         '^',
         `^${dynamicPrefix ? `${dynamicPrefix}[/]?` : '[/]?'}(?${
           isLocalePrefixed ? '<nextLocale>' : ':'
-        }${i18n.locales.map(locale => escapeStringRegexp(locale)).join('|')})`
+        }${i18n.locales.map(locale => escapeStringRegexp(locale)).join('|')})${
+          // Only require the locale when a sibling non-locale route exists.
+          // Other i18n configs still need to match default-locale URLs.
+          shouldUseNonLocalePrefixedRoute ? '' : '?'
+        }`
       );
 
       if (
