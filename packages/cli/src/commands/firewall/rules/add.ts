@@ -9,6 +9,7 @@ import {
   detectExistingDraft,
   offerAutoPublish,
   withGlobalFlags,
+  printActionImpactWarning,
 } from '../shared';
 import patchFirewallDraft from '../../../util/firewall/patch-firewall-draft';
 import { parseConditionFlags } from '../../../util/firewall/parse-conditions';
@@ -443,6 +444,7 @@ async function createRule(
     output.log(
       `${chalk.cyan('Success!')} Rule "${chalk.bold(rule.name)}" staged ${chalk.gray(createStamp())}`
     );
+    printActionImpactWarning(rule.action);
 
     await offerAutoPublish(client, project.id, hadExistingDraft, {
       teamId,

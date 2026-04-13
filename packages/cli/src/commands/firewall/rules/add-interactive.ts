@@ -5,6 +5,7 @@ import {
   confirmAction,
   detectExistingDraft,
   offerAutoPublish,
+  printActionImpactWarning,
 } from '../shared';
 import {
   fetchPlanInfo,
@@ -134,6 +135,7 @@ export async function addInteractive(
     output.log(
       `${chalk.cyan('Success!')} Rule "${chalk.bold(name)}" staged ${chalk.gray(createStamp())}`
     );
+    printActionImpactWarning(action);
 
     await offerAutoPublish(client, project.id, hadExistingDraft, {
       teamId,

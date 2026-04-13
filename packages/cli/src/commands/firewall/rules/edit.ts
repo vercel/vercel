@@ -10,6 +10,7 @@ import {
   offerAutoPublish,
   resolveRule,
   withGlobalFlags,
+  printActionImpactWarning,
 } from '../shared';
 import listFirewallConfigs from '../../../util/firewall/list-firewall-configs';
 import patchFirewallDraft from '../../../util/firewall/patch-firewall-draft';
@@ -750,6 +751,7 @@ async function saveEdit(
     output.log(
       `${chalk.cyan('Success!')} Rule "${chalk.bold(modified.name)}" updated and staged ${chalk.gray(editStamp())}`
     );
+    printActionImpactWarning(modified.action);
 
     await offerAutoPublish(client, project.id, hadExistingDraft, {
       teamId,

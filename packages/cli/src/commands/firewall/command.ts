@@ -684,6 +684,89 @@ export const rulesEditSubcommand = {
   ],
 } as const;
 
+export const rulesEnableSubcommand = {
+  name: 'enable',
+  aliases: [],
+  description: 'Enable a disabled custom firewall rule',
+  arguments: [{ name: 'name-or-id', required: true }],
+  options: [yesOption],
+  examples: [
+    {
+      name: 'Enable a rule',
+      value: `${packageName} firewall rules enable "My Rule"`,
+    },
+  ],
+} as const;
+
+export const rulesDisableSubcommand = {
+  name: 'disable',
+  aliases: [],
+  description: 'Disable a custom firewall rule without removing it',
+  arguments: [{ name: 'name-or-id', required: true }],
+  options: [yesOption],
+  examples: [
+    {
+      name: 'Disable a rule',
+      value: `${packageName} firewall rules disable "My Rule"`,
+    },
+  ],
+} as const;
+
+export const rulesRemoveSubcommand = {
+  name: 'remove',
+  aliases: ['rm', 'delete'],
+  description: 'Remove a custom firewall rule',
+  arguments: [{ name: 'name-or-id', required: true }],
+  options: [yesOption],
+  examples: [
+    {
+      name: 'Remove a rule',
+      value: `${packageName} firewall rules remove "My Rule" --yes`,
+    },
+  ],
+} as const;
+
+export const rulesReorderSubcommand = {
+  name: 'reorder',
+  aliases: ['move'],
+  description: 'Change the priority order of a custom firewall rule',
+  arguments: [{ name: 'name-or-id', required: true }],
+  options: [
+    {
+      name: 'position',
+      shorthand: null,
+      type: Number,
+      deprecated: false,
+      description: 'Target position (1-based)',
+    },
+    {
+      name: 'first',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Move to first position',
+    },
+    {
+      name: 'last',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Move to last position',
+    },
+    yesOption,
+  ],
+  examples: [
+    {
+      name: 'Move to first position',
+      value: `${packageName} firewall rules reorder "My Rule" --first --yes`,
+    },
+    {
+      name: 'Move to position 3',
+      value: `${packageName} firewall rules reorder "My Rule" --position 3 --yes`,
+    },
+  ],
+} as const;
+
 export const rulesSubcommand = {
   name: 'rules',
   aliases: [],
@@ -695,6 +778,10 @@ export const rulesSubcommand = {
     rulesInspectSubcommand,
     rulesAddSubcommand,
     rulesEditSubcommand,
+    rulesEnableSubcommand,
+    rulesDisableSubcommand,
+    rulesRemoveSubcommand,
+    rulesReorderSubcommand,
   ],
   options: [],
   examples: [
