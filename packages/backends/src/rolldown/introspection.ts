@@ -85,6 +85,7 @@ export const introspection = async (
     }
 
     let introspectionData: z.infer<typeof introspectionSchema> | undefined;
+    let introspectionError: string | undefined;
 
     await new Promise<void>(resolvePromise => {
       try {
@@ -139,11 +140,11 @@ export const introspection = async (
         const timeout = setTimeout(() => {
           debug('Introspection timeout, killing process with SIGTERM');
           child.kill('SIGTERM');
-        }, 8000);
+        }, 5000);
         const timeout2 = setTimeout(() => {
           debug('Introspection timeout, killing process with SIGKILL');
           child.kill('SIGKILL');
-        }, 9000);
+        }, 6000);
 
         const cleanup = () => {
           clearTimeout(timeout);
@@ -158,7 +159,8 @@ export const introspection = async (
 
         child.on('error', err => {
           cleanup();
-          debug(`Loader error: ${err.message}`);
+          introspectionError = `Loader error: ${err.message}`;
+          debug(introspectionError);
           if (!streamClosed) {
             writeStream.end(() => {
               streamClosed = true;
@@ -204,11 +206,13 @@ export const introspection = async (
                     debug('Introspection data parsed successfully');
                   }
                 } else {
+                  introspectionError = `Introspection markers not found. stderr: ${stderrBuffer}`;
                   debug(
                     `Introspection markers not found.\nstdout:\n${stdoutBuffer}\nstderr:\n${stderrBuffer}`
                   );
                 }
               } catch (error) {
+                introspectionError = `Error parsing introspection data: ${error}. stderr: ${stderrBuffer}`;
                 debug(
                   `Error parsing introspection data: ${error}\nstdout:\n${stdoutBuffer}\nstderr:\n${stderrBuffer}`
                 );
@@ -227,6 +231,7 @@ export const introspection = async (
           }
         });
       } catch (error) {
+        introspectionError = `Introspection error: ${error}`;
         debug('Introspection error', error);
         resolvePromise();
       }
@@ -236,6 +241,9 @@ export const introspection = async (
       introspectionSpan.setAttributes({
         'introspection.success': 'false',
         'introspection.routes': '0',
+        ...(introspectionError && {
+          'introspection.error': introspectionError.slice(0, 1024),
+        }),
       });
       return defaultResult;
     }
