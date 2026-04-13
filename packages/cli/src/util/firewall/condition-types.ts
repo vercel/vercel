@@ -148,15 +148,7 @@ export const CONDITION_TYPES: ConditionTypeMeta[] = [
     requiresKey: false,
     operators: ['ex'],
   },
-  {
-    type: 'request_body',
-    displayName: 'Request Body',
-    description: 'Request body content (Enterprise)',
-    category: 'request',
-    requiresKey: false,
-    operators: STRING_AND_MATCH,
-    planRequirement: 'enterprise',
-  },
+
   {
     type: 'rate_limit_api_id',
     displayName: 'Rate Limit API ID',
